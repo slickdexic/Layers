@@ -4,5 +4,31 @@
 			"Your Name"
 		]
 	},
-	"boilerplate-desc": "This is an example extension"
+	"layers-desc": "Non-destructive image annotation extension for MediaWiki",
+	"layers-editor-title": "Edit Layers",
+	"layers-editor-save": "Save",
+	"layers-editor-cancel": "Cancel",
+	"layers-tool-text": "Text",
+	"layers-tool-arrow": "Arrow", 
+	"layers-tool-rectangle": "Rectangle",
+	"layers-tool-circle": "Circle",
+	"layers-tool-line": "Line",
+	"layers-tool-highlight": "Highlight",
+	"layers-layer-name": "Layer Name",
+	"layers-layer-visible": "Visible",
+	"layers-layer-locked": "Locked",
+	"layers-add-layer": "Add Layer",
+	"layers-delete-layer": "Delete Layer",
+	"layers-save-success": "Layers saved successfully",
+	"layers-save-error": "Error saving layers",
+	"layers-permission-denied": "You do not have permission to edit layers",
+	"layers-not-file-page": "Layers can only be edited on file pages",
+	"layers-file-not-found": "File not found",
+	"layers-undo": "Undo",
+	"layers-redo": "Redo",
+	"layers-delete-selected": "Delete Selected",
+	"layers-duplicate-selected": "Duplicate Selected",
+	"right-editlayers": "Edit image layers",
+	"right-createlayers": "Create reusable layer assets",
+	"right-managelayerlibrary": "Manage layer library assets"
 }

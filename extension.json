@@ -1,52 +1,108 @@
 {
-	"name": "BoilerPlate",
+	"name": "Layers",
 	"author": [
 		"Your Name"
 	],
-	"url": "https://www.mediawiki.org/wiki/Extension:BoilerPlate",
-	"descriptionmsg": "boilerplate-desc",
+	"url": "https://www.mediawiki.org/wiki/Extension:Layers",
+	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
 	"requires": {
 		"MediaWiki": ">= 1.35.0"
 	},
+	"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Hooks::onLoadExtensionSchemaUpdates",
 	"AutoloadNamespaces": {
-		"MediaWiki\\Extension\\BoilerPlate\\": "src/"
+		"MediaWiki\\Extension\\Layers\\": "src/"
 	},
 	"config": {
-		"BoilerPlateEnableFoo": {
+		"LayersEnableFoo": {
 			"description": "Enable the Foo feature.",
 			"value": true
 		},
-		"BoilerPlateVandalizeEachPage": {
-			"description": "Write 'BoilerPlate was here' on each page",
+		"LayersVandalizeEachPage": {
+			"description": "Write 'Layers was here' on each page",
 			"value": false
 		}
 	},
 	"HookHandlers": {
-		"BoilerPlateHooks": {
-			"class": "MediaWiki\\Extension\\BoilerPlate\\Hooks"
+		"LayersHooks": {
+			"class": "MediaWiki\\Extension\\Layers\\Hooks"
 		}
 	},
 	"Hooks": {
-		"BeforePageDisplay": "BoilerPlateHooks"
+		"BeforePageDisplay": "LayersHooks",
+		"FileDeleteComplete": "LayersHooks",
+		"ParserFirstCallInit": "LayersHooks",
+		"SkinTemplateNavigation": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onSkinTemplateNavigation",
+		"UnknownAction": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onUnknownAction",
+		"ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onParserMakeImageParams"
 	},
 	"MessagesDirs": {
-		"BoilerPlate": [
+		"Layers": [
 			"i18n"
 		]
 	},
 	"ResourceModules": {
-		"ext.boilerPlate": {
-			"localBasePath": "resources/ext.boilerPlate",
-			"remoteExtPath": "BoilerPlate/resources/ext.boilerPlate",
+		"ext.layers": {
+			"localBasePath": "resources/ext.layers",
+			"remoteExtPath": "Layers/resources/ext.layers",
 			"dependencies": [],
 			"styles": [],
 			"packageFiles": [
-				"init.js"
+				"init.js",
+				"LayersViewer.js"
 			],
 			"messages": []
+		},
+		"ext.layers.editor": {
+			"localBasePath": "resources/ext.layers.editor",
+			"remoteExtPath": "Layers/resources/ext.layers.editor",
+			"dependencies": [
+				"oojs-ui-core",
+				"mediawiki.util",
+				"mediawiki.api"
+			],
+			"packageFiles": [
+				"LayersEditor.js",
+				"CanvasManager.js",
+				"LayerPanel.js",
+				"Toolbar.js"
+			],
+			"styles": [
+				"editor.css"
+			],
+			"messages": [
+				"layers-editor-title",
+				"layers-editor-save",
+				"layers-editor-cancel",
+				"layers-tool-text",
+				"layers-tool-arrow",
+				"layers-tool-rectangle",
+				"layers-tool-circle"
+			]
 		}
+	},
+	"AvailableRights": [
+		"editlayers",
+		"createlayers", 
+		"managelayerlibrary"
+	],
+	"GroupPermissions": {
+		"user": {
+			"editlayers": true
+		},
+		"autoconfirmed": {
+			"createlayers": true
+		},
+		"sysop": {
+			"editlayers": true,
+			"createlayers": true,
+			"managelayerlibrary": true
+		}
+	},
+	"APIModules": {
+		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
+		"layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo"
 	},
 	"manifest_version": 2
 }

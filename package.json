@@ -1,5 +1,5 @@
 {
-	"name": "BoilerPlate",
+	"name": "layers",
 	"private": true,
 	"scripts": {
 		"test": "grunt test"
