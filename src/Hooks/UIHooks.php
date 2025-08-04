@@ -130,12 +130,13 @@ class UIHooks {
 
     /**
      * Add layers parameter to file thumbnails
-     * @param \File $file
+     * @param \Title $title
+     * @param \File $file  
      * @param array &$params
      * @param \Parser $parser
      * @return bool
      */
-    public static function onParserMakeImageParams( \File $file, array &$params, \Parser $parser ): bool {
+    public static function onParserMakeImageParams( \Title $title, \File $file, array &$params, \Parser $parser ): bool {
         // Check if layers parameter is specified
         if ( !isset( $params['layers'] ) ) {
             return true;

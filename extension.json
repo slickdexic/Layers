@@ -62,8 +62,8 @@
         "LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Hooks::onLoadExtensionSchemaUpdates",
         "SkinTemplateNavigation": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onSkinTemplateNavigation",
         "UnknownAction": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onUnknownAction",
-        "ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onParserMakeImageParams",
-        "ThumbnailBeforeProduceHTML": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onThumbnailBeforeProduceHTML"
+        "BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform",
+        "ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks::onParserMakeImageParams"
     },
     "APIModules": {
         "layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
