@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Layers Extension - Canvas Drawing Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .test-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .test-canvas {
+            border: 2px solid #ccc;
+            display: block;
+            margin: 10px 0;
+        }
+        .test-controls {
+            margin: 10px 0;
+        }
+        .test-controls button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-controls button:hover {
+            background: #0056b3;
+        }
+        .test-controls button.active {
+            background: #28a745;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .test-result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .layer-list {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            min-height: 100px;
+            background: #f9f9f9;
+        }
+        .layer-item {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 5px 10px;
+            margin: 2px 0;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Layers Extension - Canvas Drawing Test</h1>
+    <p>This page tests the core drawing functionality independently of MediaWiki.</p>
+
+    <div class="test-container">
+        <h2>Canvas Drawing Test</h2>
+        <div class="test-controls">
+            <button onclick="selectTool('pointer')" id="btn-pointer">Select (V)</button>
+            <button onclick="selectTool('text')" id="btn-text">Text (T)</button>
+            <button onclick="selectTool('rectangle')" id="btn-rectangle">Rectangle (R)</button>
+            <button onclick="selectTool('circle')" id="btn-circle">Circle (C)</button>
+            <button onclick="selectTool('line')" id="btn-line">Line (L)</button>
+            <button onclick="selectTool('arrow')" id="btn-arrow">Arrow (A)</button>
+            <button onclick="selectTool('highlight')" id="btn-highlight">Highlight (H)</button>
+        </div>
+        
+        <div class="test-controls">
+            <label>Color: <input type="color" id="color-picker" value="#000000" onchange="updateStyle()"></label>
+            <label>Size: <input type="number" id="size-input" value="16" min="8" max="72" onchange="updateStyle()"></label>
+            <label>Width: <input type="number" id="width-input" value="2" min="1" max="20" onchange="updateStyle()"></label>
+        </div>
+        
+        <canvas id="test-canvas" class="test-canvas" width="600" height="400"></canvas>
+        
+        <div class="test-controls">
+            <button onclick="undo()">Undo (Ctrl+Z)</button>
+            <button onclick="redo()">Redo (Ctrl+Y)</button>
+            <button onclick="clearLayers()">Clear All</button>
+            <button onclick="exportLayers()">Export JSON</button>
+        </div>
+        
+        <div id="test-results" class="test-result" style="display: none;"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Layers List</h2>
+        <div id="layer-list" class="layer-list">
+            <em>No layers yet. Draw something above!</em>
+        </div>
+    </div>
+
+    <script>
+        // Mock MediaWiki environment
+        window.mw = {
+            config: {
+                get: function(key) {
+                    return {
+                        'wgServer': 'http://localhost',
+                        'wgScriptPath': '/mediawiki'
+                    }[key] || '';
+                }
+            },
+            Api: function() {
+                return {
+                    get: function() {
+                        return { 
+                            done: function() { return this; },
+                            fail: function() { return this; }
+                        };
+                    },
+                    postWithToken: function() {
+                        return { 
+                            done: function() { return this; },
+                            fail: function() { return this; }
+                        };
+                    }
+                };
+            },
+            notify: function(msg, opts) {
+                console.log('MW Notify:', msg, opts);
+            },
+            msg: function(key) {
+                return key;
+            }
+        };
+
+        // Test implementation
+        var testEditor = {
+            filename: 'test-image.png',
+            layers: [],
+            undoStack: [],
+            redoStack: [],
+            selectedLayerId: null,
+            currentTool: 'pointer',
+            
+            addLayer: function(layerData) {
+                layerData.id = 'layer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                layerData.visible = layerData.visible !== false;
+                
+                this.layers.push(layerData);
+                this.renderLayers();
+                this.updateLayersList();
+                
+                showResult('Layer added: ' + layerData.type, 'success');
+                console.log('Added layer:', layerData);
+            },
+            
+            renderLayers: function() {
+                if (this.canvasManager) {
+                    this.canvasManager.renderLayers(this.layers);
+                }
+            },
+            
+            updateLayer: function(layerId, changes) {
+                var layer = this.getLayerById(layerId);
+                if (layer) {
+                    Object.assign(layer, changes);
+                    this.renderLayers();
+                    this.updateLayersList();
+                }
+            },
+            
+            removeLayer: function(layerId) {
+                this.layers = this.layers.filter(function(layer) {
+                    return layer.id !== layerId;
+                });
+                this.renderLayers();
+                this.updateLayersList();
+            },
+            
+            getLayerById: function(layerId) {
+                return this.layers.find(function(layer) {
+                    return layer.id === layerId;
+                });
+            },
+            
+            setCurrentTool: function(tool) {
+                this.currentTool = tool;
+                if (this.canvasManager) {
+                    this.canvasManager.setTool(tool);
+                }
+                updateToolButtons();
+            },
+            
+            selectLayer: function(layerId) {
+                this.selectedLayerId = layerId;
+                if (this.canvasManager) {
+                    this.canvasManager.selectLayer(layerId);
+                }
+                this.updateLayersList();
+            },
+            
+            updateLayersList: function() {
+                var listEl = document.getElementById('layer-list');
+                if (this.layers.length === 0) {
+                    listEl.innerHTML = '<em>No layers yet. Draw something above!</em>';
+                    return;
+                }
+                
+                var html = this.layers.map(function(layer, index) {
+                    var selected = layer.id === testEditor.selectedLayerId ? ' style="background: #e3f2fd;"' : '';
+                    var name = layer.type;
+                    if (layer.type === 'text') name += ': "' + (layer.text || '').substring(0, 20) + '"';
+                    
+                    return '<div class="layer-item"' + selected + ' onclick="testEditor.selectLayer(\'' + layer.id + '\')">' +
+                           (index + 1) + '. ' + name + 
+                           ' <button onclick="testEditor.removeLayer(\'' + layer.id + '\'); event.stopPropagation();" style="float: right; font-size: 10px;">×</button>' +
+                           '</div>';
+                }).join('');
+                
+                listEl.innerHTML = html;
+            }
+        };
+
+        // Initialize canvas manager
+        var canvas = document.getElementById('test-canvas');
+        var ctx = canvas.getContext('2d');
+        
+        // Draw test background
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#ddd';
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#666';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Test Canvas - Draw Here!', canvas.width / 2, canvas.height / 2);
+
+        // Load CanvasManager when available
+        function initializeCanvasManager() {
+            if (typeof window.CanvasManager !== 'undefined') {
+                testEditor.canvasManager = new window.CanvasManager({
+                    container: canvas.parentNode,
+                    editor: testEditor
+                });
+                
+                // Override background image loading for test
+                testEditor.canvasManager.backgroundImage = null;
+                testEditor.canvasManager.canvas = canvas;
+                testEditor.canvasManager.ctx = ctx;
+                
+                showResult('Canvas Manager initialized successfully!', 'success');
+                console.log('Canvas Manager initialized');
+            } else {
+                showResult('Canvas Manager not available', 'error');
+            }
+        }
+
+        // Tool selection
+        function selectTool(tool) {
+            testEditor.setCurrentTool(tool);
+            showResult('Selected tool: ' + tool, 'success');
+        }
+
+        function updateToolButtons() {
+            document.querySelectorAll('.test-controls button').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            var activeBtn = document.getElementById('btn-' + testEditor.currentTool);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+        }
+
+        function updateStyle() {
+            var color = document.getElementById('color-picker').value;
+            var fontSize = document.getElementById('size-input').value;
+            var strokeWidth = document.getElementById('width-input').value;
+            
+            var style = {
+                color: color,
+                fontSize: parseInt(fontSize),
+                strokeWidth: parseInt(strokeWidth)
+            };
+            
+            if (testEditor.canvasManager) {
+                testEditor.canvasManager.updateStyleOptions(style);
+            }
+        }
+
+        function undo() {
+            showResult('Undo functionality would go here', 'success');
+        }
+
+        function redo() {
+            showResult('Redo functionality would go here', 'success');
+        }
+
+        function clearLayers() {
+            testEditor.layers = [];
+            testEditor.renderLayers();
+            testEditor.updateLayersList();
+            showResult('All layers cleared', 'success');
+        }
+
+        function exportLayers() {
+            var json = JSON.stringify(testEditor.layers, null, 2);
+            console.log('Exported layers:', json);
+            showResult('Layers exported to console', 'success');
+        }
+
+        function showResult(message, type) {
+            var resultsEl = document.getElementById('test-results');
+            resultsEl.textContent = message;
+            resultsEl.className = 'test-result ' + type;
+            resultsEl.style.display = 'block';
+            
+            setTimeout(function() {
+                resultsEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (!e.ctrlKey && !e.metaKey && !e.target.matches('input')) {
+                switch(e.key.toLowerCase()) {
+                    case 'v': selectTool('pointer'); break;
+                    case 't': selectTool('text'); break;
+                    case 'r': selectTool('rectangle'); break;
+                    case 'c': selectTool('circle'); break;
+                    case 'l': selectTool('line'); break;
+                    case 'a': selectTool('arrow'); break;
+                    case 'h': selectTool('highlight'); break;
+                }
+            }
+        });
+
+        // Initialize
+        updateToolButtons();
+        showResult('Test page loaded. Waiting for Canvas Manager...', 'success');
+        
+        // Try to initialize Canvas Manager periodically
+        var initAttempts = 0;
+        var initInterval = setInterval(function() {
+            initAttempts++;
+            if (typeof window.CanvasManager !== 'undefined') {
+                initializeCanvasManager();
+                clearInterval(initInterval);
+            } else if (initAttempts > 10) {
+                showResult('Canvas Manager not loaded after 10 attempts. Check console.', 'error');
+                clearInterval(initInterval);
+            }
+        }, 1000);
+
+    </script>
+</body>
+</html>

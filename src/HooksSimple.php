@@ -10,7 +10,6 @@ namespace MediaWiki\Extension\Layers;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
-use Exception;
 
 // Define constants if not already defined
 if ( !defined( 'NS_FILE' ) ) {
@@ -64,16 +63,13 @@ class Hooks {
      * ParserFirstCallInit hook handler
      */
     public static function onParserFirstCallInit( $parser ) {
-        // Temporarily disable parser function registration to avoid Special:Version errors
-        // TODO: Re-enable once proper configuration is working
-        /*
+        // Register parser functions with error handling
         try {
             $parser->setFunctionHook( 'layerlist', [ self::class, 'layerListParserFunction' ] );
             $parser->setFunctionHook( 'layeredit', [ self::class, 'layerEditParserFunction' ] );
         } catch ( Exception $e ) {
             error_log( 'Layers: Error registering parser functions: ' . $e->getMessage() );
         }
-        */
     }
 
     /**

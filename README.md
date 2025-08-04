@@ -1,26 +1,87 @@
 # Layers MediaWiki Extension
 
-This is a blank extension template. It doesn't really do anything on its own.
-It is intended to provide a boiler template for an actual MediaWiki extension.
+A **non-destructive image annotation extension** for MediaWiki that allows users to add text, shapes, arrows, and highlights directly to images in the wiki without modifying the original files.
 
-If you are checking this out from Git and intend to use it, you may use the
-following commands to make a clean directory of just this template without the
-Git meta-data and other examples.
+## ⚠️ Current Status: DEVELOPMENT VERSION
+
+**This extension is currently in active development and is NOT ready for production use.**
+
+### What Works Now (v0.8 - August 2025)
+- ✅ Full-featured image editor with all drawing tools
+- ✅ Layer management (add, edit, delete, reorder, hide/show)
+- ✅ Data persistence to database with versioning
+- ✅ "Edit Layers" tab on file pages
+- ✅ Undo/redo system (50 steps)
+- ✅ Security validation and user permissions
+
+### Critical Missing Features
+- ❌ **Server-side thumbnail rendering** - Images with layers don't display in articles yet
+- ❌ **Complete wikitext integration** - `[[File:Example.jpg|layers=on]]` syntax exists but limited
+- ❌ **Production testing** - Not tested at scale
+- ❌ **Mobile interface** - Desktop only
+
+### Estimated Completion: ~60% of Phase 1
+The foundation is solid, but key integration pieces are still in development.
+
+## Installation (For Developers/Testers Only)
 
 ```bash
 cd extensions
 git clone https://github.com/slickdexic/Layers.git
-cp -r Layers ./MyExtension
-rm -rf ./MyExtension/.git
+cd Layers
+composer install
+npm install
 ```
 
-This automates the recommended code checkers for PHP and JavaScript code in Wikimedia projects
-(see <https://www.mediawiki.org/wiki/Continuous_integration/Entry_points>).
-To take advantage of this automation.
+Add to `LocalSettings.php`:
+```php
+wfLoadExtension( 'Layers' );
+$wgLayersEnable = true;
+$wgGroupPermissions['user']['editlayers'] = true;
+```
 
-1. install nodejs, npm, and PHP composer
-2. change to the extension's directory
-3. `npm install`
-4. `composer install`
+Run database updates:
+```bash
+php maintenance/update.php
+```
 
-Once set up, running `npm test` and `composer test` will run automated code checks.
+## Development Setup
+
+For code quality checks:
+```bash
+npm test          # JavaScript linting
+composer test     # PHP code standards
+```
+
+## Contributing
+
+This extension is under active development. Contributors welcome!
+
+### Priority Development Areas:
+1. **Server-side rendering** (CRITICAL) - ImageMagick integration for thumbnails
+2. **Wikitext parser integration** (CRITICAL) - Complete [[File:...layers=on]] support  
+3. **Performance optimization** - Large image handling
+4. **Mobile interface** - Touch-friendly editing
+5. **Comprehensive testing** - Unit and integration tests
+
+## Architecture
+
+- **Frontend**: HTML5 Canvas with custom drawing tools
+- **Backend**: MediaWiki extension with API endpoints
+- **Storage**: JSON layer data with database versioning
+- **Rendering**: Server-side ImageMagick composition (in development)
+
+## Security
+
+- Input validation and sanitization
+- CSRF protection on API endpoints
+- User permission integration
+- Rate limiting support
+
+## License
+
+GPL-2.0-or-later
+
+---
+
+**Note**: This is a development version. The documentation may describe planned features that are not yet fully implemented. Check the current status above for what actually works.

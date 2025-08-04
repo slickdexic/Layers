@@ -31,27 +31,103 @@
         this.redoStack = [];
         this.maxUndoSteps = 50;
         
+        // Wait for all dependencies to be available, then initialize components
+        this.waitForDependencies().then( function() {
+            this.initializeComponents();
+        }.bind( this ) ).catch( function( error ) {
+            console.error( 'Layers: Failed to initialize editor:', error );
+            this.showError( 'Failed to initialize editor: ' + error.message );
+        }.bind( this ) );
+    };
+    
+    LayersEditor.prototype.waitForDependencies = function () {
+        var self = this;
+        
+        // Simple Promise polyfill for older browsers
+        if ( typeof Promise === 'undefined' ) {
+            console.warn( 'Layers: Promise not available, falling back to synchronous initialization' );
+            return {
+                then: function( callback ) {
+                    if ( window.CanvasManager && window.LayerPanel && window.Toolbar ) {
+                        callback();
+                    } else {
+                        var missing = [];
+                        if ( !window.CanvasManager ) missing.push( 'CanvasManager' );
+                        if ( !window.LayerPanel ) missing.push( 'LayerPanel' );
+                        if ( !window.Toolbar ) missing.push( 'Toolbar' );
+                        throw new Error( 'Missing dependencies: ' + missing.join( ', ' ) );
+                    }
+                    return this;
+                },
+                catch: function( callback ) {
+                    return this;
+                }
+            };
+        }
+        
+        return new Promise( function( resolve, reject ) {
+            var maxAttempts = 50; // Wait up to 5 seconds
+            var attempt = 0;
+            
+            function checkDependencies() {
+                attempt++;
+                
+                if ( window.CanvasManager && window.LayerPanel && window.Toolbar ) {
+                    console.log( 'Layers: All dependencies loaded successfully' );
+                    resolve();
+                    return;
+                }
+                
+                if ( attempt >= maxAttempts ) {
+                    var missing = [];
+                    if ( !window.CanvasManager ) missing.push( 'CanvasManager' );
+                    if ( !window.LayerPanel ) missing.push( 'LayerPanel' );
+                    if ( !window.Toolbar ) missing.push( 'Toolbar' );
+                    
+                    reject( new Error( 'Missing dependencies: ' + missing.join( ', ' ) ) );
+                    return;
+                }
+                
+                console.log( 'Layers: Waiting for dependencies... (attempt ' + attempt + ')' );
+                setTimeout( checkDependencies, 100 );
+            }
+            
+            checkDependencies();
+        } );
+    };
+    
+    LayersEditor.prototype.initializeComponents = function () {
         // Initialize components
-        this.canvasManager = new window.CanvasManager( {
-            container: this.$canvas.get( 0 ),
-            editor: this
-        } );
-        
-        this.layerPanel = new window.LayerPanel( {
-            container: this.$layerPanel.get( 0 ),
-            editor: this
-        } );
-        
-        this.toolbar = new window.Toolbar( {
-            container: this.$toolbar.get( 0 ),
-            editor: this
-        } );
+        try {
+            this.canvasManager = new window.CanvasManager( {
+                container: this.$canvas.get( 0 ),
+                editor: this
+            } );
+            
+            this.layerPanel = new window.LayerPanel( {
+                container: this.$layerPanel.get( 0 ),
+                editor: this
+            } );
+            
+            this.toolbar = new window.Toolbar( {
+                container: this.$toolbar.get( 0 ),
+                editor: this
+            } );
+            
+            console.log( 'Layers: Editor components initialized successfully' );
+        } catch ( error ) {
+            console.error( 'Layers: Error initializing editor components:', error );
+            this.showError( 'Failed to initialize editor: ' + error.message );
+            return;
+        }
         
         // Load existing layers if any
         this.loadLayers();
         
         // Set up event handlers
         this.setupEventHandlers();
+        
+        console.log( 'Layers: Editor fully initialized for file:', this.filename );
     };
 
     LayersEditor.prototype.createInterface = function () {
@@ -113,10 +189,17 @@
         } ).done( function ( data ) {
             if ( data.layersinfo && data.layersinfo.layerset ) {
                 self.layers = data.layersinfo.layerset.data.layers || [];
-                self.renderLayers();
+                console.log( 'Layers: Loaded', self.layers.length, 'existing layers' );
+            } else {
+                self.layers = [];
+                console.log( 'Layers: No existing layers found, starting fresh' );
             }
+            self.renderLayers();
         } ).fail( function ( err ) {
             console.error( 'Failed to load layers:', err );
+            self.layers = [];
+            self.renderLayers();
+            // Don't show error to user as this is expected for new files
         } );
     };
 
@@ -130,6 +213,9 @@
         if ( this.layerPanel ) {
             this.layerPanel.updateLayers( this.layers );
         }
+        
+        // Update UI state
+        this.updateUIState();
     };
 
     LayersEditor.prototype.addLayer = function ( layerData ) {
@@ -138,12 +224,16 @@
         
         // Add new layer
         layerData.id = this.generateLayerId();
+        layerData.visible = layerData.visible !== false; // Default to visible
+        
         this.layers.push( layerData );
         this.renderLayers();
         this.markDirty();
         
-        // Update UI state
-        this.updateUIState();
+        // Select the newly created layer
+        this.selectLayer( layerData.id );
+        
+        console.log( 'Added layer:', layerData );
     };
 
     LayersEditor.prototype.updateLayer = function ( layerId, changes ) {
@@ -247,10 +337,20 @@
     // Selection Management
     LayersEditor.prototype.selectLayer = function ( layerId ) {
         this.selectedLayerId = layerId;
+        
+        // Update canvas selection
+        if ( this.canvasManager ) {
+            this.canvasManager.selectLayer( layerId );
+        }
+        
+        // Update layer panel selection
         if ( this.layerPanel ) {
             this.layerPanel.selectLayer( layerId );
         }
+        
         this.updateUIState();
+        
+        console.log( 'Selected layer:', layerId );
     };
 
     LayersEditor.prototype.deleteSelected = function () {
@@ -325,6 +425,21 @@
     LayersEditor.prototype.markClean = function () {
         this.isDirty = false;
         // Update UI to show saved state
+    };
+
+    LayersEditor.prototype.showError = function ( message ) {
+        // Create error display in the editor
+        var $error = $( '<div>' )
+            .addClass( 'layers-error' )
+            .text( message )
+            .appendTo( this.$container );
+        
+        // Auto-hide after 5 seconds
+        setTimeout( function () {
+            $error.fadeOut();
+        }, 5000 );
+        
+        console.error( 'Layers Editor Error:', message );
     };
 
     LayersEditor.prototype.handleResize = function () {

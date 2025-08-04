@@ -40,10 +40,60 @@ mw.layers = {
             return; // Basic permission check - should be more sophisticated
         }
         
+        // Note: Edit Layers tab should be added via PHP hook (UIHooks::onSkinTemplateNavigation)
+        // But let's check if we need JavaScript fallback
+        console.log( 'Layers: File page integration initialized' );
+        console.log( 'Layers: Checking for existing Edit Layers tab...' );
+        
+        // Check if PHP hook created the tab
+        setTimeout( function() {
+            var existingTab = document.querySelector( 'a[href*="action=editlayers"]' ) ||
+                             document.getElementById( 'ca-editlayers' );
+            
+            if ( !existingTab ) {
+                console.log( 'Layers: No PHP-created tab found, adding JavaScript fallback' );
+                mw.layers.addEditLayersTab();
+            } else {
+                console.log( 'Layers: PHP-created tab found, no JavaScript fallback needed' );
+            }
+        }, 100 );
+    },
+        
+        // Initialize edit layer functionality on file pages
+        this.initializeFilePageIntegration();
+        
+        // Listen for editor initialization from PHP hook
+        var self = this;
+        mw.hook( 'layers.editor.init' ).add( function( config ) {
+            self.createEditor( config.filename, config.container );
+        } );
+        
+        // Re-initialize when content changes
+        mw.hook( 'wikipage.content' ).add( function () {
+            self.initializeLayerThumbnails();
+            self.initializeFilePageIntegration();
+        } );
+    },
+    
+    /**
+     * Initialize file page edit layer functionality
+     */
+    initializeFilePageIntegration: function () {
+        // Only on file namespace pages
+        if ( mw.config.get( 'wgNamespaceNumber' ) !== 6 ) {
+            return;
+        }
+        
+        // Check if user has edit layers permission
+        if ( !mw.config.get( 'wgUserGroups' ).includes( 'user' ) ) {
+            return; // Basic permission check - should be more sophisticated
+        }
+        
         // Add "Edit Layers" tab to file pages
+        // This provides fallback if PHP hooks are not working
         this.addEditLayersTab();
         
-        console.log( 'Layers: File page integration initialized' );
+        console.log( 'Layers: File page integration initialized with JavaScript tab fallback' );
     },
     
     /**
@@ -157,28 +207,48 @@ mw.layers = {
             try {
                 var layerData = JSON.parse( thumbnail.getAttribute( 'data-layer-data' ) );
                 if ( layerData && layerData.layers ) {
-                    thumbnail.layersViewer = this.createViewer( {
-                        container: thumbnail,
-                        layers: layerData.layers
+                    // Create overlay canvas for this thumbnail
+                    var canvas = document.createElement( 'canvas' );
+                    canvas.className = 'layers-overlay';
+                    canvas.style.position = 'absolute';
+                    canvas.style.top = '0';
+                    canvas.style.left = '0';
+                    canvas.style.pointerEvents = 'none';
+                    
+                    // Make thumbnail container relative for overlay positioning
+                    var container = thumbnail.parentNode;
+                    container.style.position = 'relative';
+                    container.appendChild( canvas );
+                    
+                    // Create viewer
+                    var viewer = new window.LayersViewer( {
+                        canvas: canvas,
+                        baseImage: thumbnail,
+                        layers: layerData.layers,
+                        readonly: true
                     } );
+                    
+                    thumbnail.layersViewer = viewer;
                 }
-            } catch ( error ) {
-                console.warn( 'Layers: Error parsing layer data for thumbnail:', error );
+            } catch ( e ) {
+                if ( window.console && console.warn ) {
+                    console.warn( 'Layers: Failed to initialize thumbnail viewer:', e );
+                }
             }
-        }.bind( this ) );
+        } );
     },
     
     /**
-     * Create a layer viewer for a thumbnail
+     * Create a new layers viewer
      * @param {Object} config Configuration object
+     * @return {LayersViewer} New viewer instance
      */
     createViewer: function ( config ) {
-        // TODO: Implement layer viewer for thumbnails
-        console.log( 'Layers: Creating viewer for thumbnail with', config.layers.length, 'layers' );
+        return new window.LayersViewer( config );
     }
 };
 
-// Initialize when page is ready
+// Auto-initialize when DOM is ready
 if ( document.readyState === 'loading' ) {
     document.addEventListener( 'DOMContentLoaded', function () {
         mw.layers.init();

@@ -39,16 +39,66 @@
         var self = this;
         var filename = this.editor.filename;
         
-        // Create image URL for the file
-        var imageUrl = mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) + 
-                      '/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename );
+        // Create image URL for the file - try multiple URL patterns
+        var imageUrls = [
+            mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) + 
+            '/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename ),
+            
+            mw.config.get( 'wgServer' ) + mw.config.get( 'wgArticlePath' ).replace( '$1', 'File:' + encodeURIComponent( filename ) ),
+            
+            // Fallback for direct file access
+            mw.config.get( 'wgServer' ) + '/wiki/File:' + encodeURIComponent( filename )
+        ];
+        
+        this.tryLoadImage( imageUrls, 0 );
+    };
+
+    CanvasManager.prototype.tryLoadImage = function ( urls, index ) {
+        var self = this;
+        
+        if ( index >= urls.length ) {
+            console.error( 'Layers: Failed to load image from any URL' );
+            this.showImageError();
+            return;
+        }
         
         this.backgroundImage = new Image();
         this.backgroundImage.onload = function () {
+            console.log( 'Layers: Background image loaded successfully' );
             self.resizeCanvas();
             self.redraw();
+            self.renderLayers( self.editor.layers );
         };
-        this.backgroundImage.src = imageUrl;
+        
+        this.backgroundImage.onerror = function () {
+            console.warn( 'Layers: Failed to load image from:', urls[index] );
+            self.tryLoadImage( urls, index + 1 );
+        };
+        
+        console.log( 'Layers: Attempting to load image from:', urls[index] );
+        this.backgroundImage.src = urls[index];
+    };
+
+    CanvasManager.prototype.showImageError = function () {
+        // Display placeholder when image cannot be loaded
+        this.canvas.width = 800;
+        this.canvas.height = 600;
+        
+        this.ctx.fillStyle = '#f0f0f0';
+        this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+        
+        this.ctx.strokeStyle = '#ddd';
+        this.ctx.strokeRect( 0, 0, this.canvas.width, this.canvas.height );
+        
+        this.ctx.fillStyle = '#666';
+        this.ctx.font = '16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText( 'Image could not be loaded', this.canvas.width / 2, this.canvas.height / 2 );
+        this.ctx.fillText( 'You can still add layers', this.canvas.width / 2, this.canvas.height / 2 + 25 );
+        
+        // Style the canvas
+        this.canvas.style.width = '800px';
+        this.canvas.style.height = '600px';
     };
 
     CanvasManager.prototype.resizeCanvas = function () {
@@ -291,6 +341,9 @@
         // Use current style options if available
         var style = this.currentStyle || {};
         
+        // Reset any previous temp layer
+        this.tempLayer = null;
+        
         // Prepare for drawing based on current tool
         switch ( this.currentTool ) {
             case 'text':
@@ -311,14 +364,18 @@
             case 'highlight':
                 this.startHighlightTool( point, style );
                 break;
-            // Add more tools as needed
+            default:
+                console.warn( 'Unknown tool:', this.currentTool );
         }
     };
 
     CanvasManager.prototype.continueDrawing = function ( point ) {
         // Continue drawing based on current tool
-        this.redraw();
-        this.drawPreview( point );
+        if ( this.tempLayer ) {
+            this.redraw();
+            this.renderLayers( this.editor.layers );
+            this.drawPreview( point );
+        }
     };
 
     CanvasManager.prototype.finishDrawing = function ( point ) {
@@ -327,24 +384,156 @@
         if ( layerData ) {
             this.editor.addLayer( layerData );
         }
+        
+        // Clean up
+        this.tempLayer = null;
+        this.redraw();
+        this.renderLayers( this.editor.layers );
     };
 
     CanvasManager.prototype.startTextTool = function ( point, style ) {
-        // For text tool, we immediately create the layer and let user edit
-        var text = prompt( 'Enter text:' );
-        if ( text ) {
-            var layerData = {
-                type: 'text',
-                text: text,
-                x: point.x,
-                y: point.y,
-                fontSize: style.fontSize || 16,
-                fontFamily: 'Arial',
-                fill: style.color || '#000000'
-            };
-            this.editor.addLayer( layerData );
-        }
+        // Create a more sophisticated text input dialog
+        var self = this;
+        
+        // Create modal for text input
+        var modal = this.createTextInputModal( point, style );
+        document.body.appendChild( modal );
+        
+        // Focus on text input
+        var textInput = modal.querySelector( '.text-input' );
+        textInput.focus();
+        
         this.isDrawing = false;
+    };
+
+    CanvasManager.prototype.createTextInputModal = function ( point, style ) {
+        var self = this;
+        
+        // Create modal overlay
+        var overlay = document.createElement( 'div' );
+        overlay.className = 'text-input-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Create modal content
+        var modal = document.createElement( 'div' );
+        modal.className = 'text-input-modal';
+        modal.style.cssText = `
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            min-width: 300px;
+        `;
+        
+        modal.innerHTML = `
+            <h3 style="margin: 0 0 15px 0;">Add Text</h3>
+            <textarea class="text-input" placeholder="Enter your text..." style="
+                width: 100%; 
+                height: 80px; 
+                border: 1px solid #ddd; 
+                border-radius: 4px; 
+                padding: 8px;
+                font-family: inherit;
+                resize: vertical;
+            "></textarea>
+            <div style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">Font Size:</label>
+                <input type="number" class="font-size-input" value="${style.fontSize || 16}" min="8" max="72" style="
+                    width: 80px;
+                    padding: 4px 8px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                ">
+                <label style="display: inline-block; margin-left: 15px; margin-right: 5px;">Color:</label>
+                <input type="color" class="color-input" value="${style.color || '#000000'}" style="
+                    width: 40px;
+                    height: 30px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                ">
+            </div>
+            <div style="text-align: right; margin-top: 20px;">
+                <button class="cancel-btn" style="
+                    background: #f8f9fa;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    padding: 8px 16px;
+                    margin-right: 10px;
+                    cursor: pointer;
+                ">Cancel</button>
+                <button class="add-btn" style="
+                    background: #007bff;
+                    color: white;
+                    border: 1px solid #007bff;
+                    border-radius: 4px;
+                    padding: 8px 16px;
+                    cursor: pointer;
+                ">Add Text</button>
+            </div>
+        `;
+        
+        overlay.appendChild( modal );
+        
+        // Event handlers
+        var textInput = modal.querySelector( '.text-input' );
+        var fontSizeInput = modal.querySelector( '.font-size-input' );
+        var colorInput = modal.querySelector( '.color-input' );
+        var addBtn = modal.querySelector( '.add-btn' );
+        var cancelBtn = modal.querySelector( '.cancel-btn' );
+        
+        function addText() {
+            var text = textInput.value.trim();
+            if ( text ) {
+                var layerData = {
+                    type: 'text',
+                    text: text,
+                    x: point.x,
+                    y: point.y,
+                    fontSize: parseInt( fontSizeInput.value ) || 16,
+                    fontFamily: 'Arial',
+                    fill: colorInput.value
+                };
+                self.editor.addLayer( layerData );
+            }
+            document.body.removeChild( overlay );
+        }
+        
+        function cancel() {
+            document.body.removeChild( overlay );
+        }
+        
+        addBtn.addEventListener( 'click', addText );
+        cancelBtn.addEventListener( 'click', cancel );
+        
+        // Allow Enter to add text (but not Shift+Enter for new lines)
+        textInput.addEventListener( 'keydown', function ( e ) {
+            if ( e.key === 'Enter' && !e.shiftKey ) {
+                e.preventDefault();
+                addText();
+            } else if ( e.key === 'Escape' ) {
+                cancel();
+            }
+        } );
+        
+        // Click outside to cancel
+        overlay.addEventListener( 'click', function ( e ) {
+            if ( e.target === overlay ) {
+                cancel();
+            }
+        } );
+        
+        return overlay;
     };
 
     CanvasManager.prototype.startRectangleTool = function ( point, style ) {
@@ -502,11 +691,20 @@
     };
 
     CanvasManager.prototype.renderLayers = function ( layers ) {
+        // Redraw background
         this.redraw();
         
-        layers.forEach( function ( layer ) {
-            this.drawLayer( layer );
-        }.bind( this ) );
+        // Render each layer in order
+        if ( layers && layers.length > 0 ) {
+            layers.forEach( function ( layer ) {
+                this.drawLayer( layer );
+            }.bind( this ) );
+        }
+        
+        // Draw selection indicators if any layer is selected
+        if ( this.selectedLayerId ) {
+            this.drawSelectionIndicators( this.selectedLayerId );
+        }
     };
 
     CanvasManager.prototype.redraw = function () {
