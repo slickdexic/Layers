@@ -11,6 +11,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use ApiMain;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 use File;
 use RepoGroup;
 
@@ -27,6 +28,12 @@ class ApiLayersSave extends ApiBase {
             $this->dieWithError( 'layers-permission-denied', 'permissiondenied' );
         }
 
+        // Rate limiting check
+        $rateLimiter = new RateLimiter();
+        if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
+            $this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+        }
+
         // Get parameters
         $params = $this->extractRequestParams();
         $filename = $params['filename'];
@@ -35,6 +42,20 @@ class ApiLayersSave extends ApiBase {
 
         if ( $layersData === null ) {
             $this->dieWithError( 'Invalid JSON data', 'invalidjson' );
+        }
+
+        // Security: Check data size limits
+        $maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
+        if ( strlen( $params['data'] ) > $maxBytes ) {
+            $this->dieWithError( 
+                [ 'layers-data-too-large', $maxBytes ], 
+                'toolarge' 
+            );
+        }
+
+        // Security: Validate filename
+        if ( !$this->isValidFilename( $filename ) ) {
+            $this->dieWithError( 'Invalid filename', 'invalidfilename' );
         }
 
         // Get file information
@@ -46,6 +67,18 @@ class ApiLayersSave extends ApiBase {
         // Validate layer data structure
         if ( !$this->validateLayersData( $layersData ) ) {
             $this->dieWithError( 'Invalid layer data structure', 'invaliddata' );
+        }
+
+        // Additional security: Sanitize layer data
+        $layersData = $this->sanitizeLayersData( $layersData );
+
+        // Performance checks
+        if ( !$rateLimiter->isLayerCountAllowed( count( $layersData ) ) ) {
+            $this->dieWithError( 'Too many layers', 'toolayers' );
+        }
+
+        if ( !$rateLimiter->isComplexityAllowed( $layersData ) ) {
+            $this->dieWithError( 'Layer set too complex', 'toocomplex' );
         }
 
         // Save to database
@@ -83,6 +116,11 @@ class ApiLayersSave extends ApiBase {
             return false;
         }
 
+        // Limit number of layers to prevent abuse
+        if ( count( $layersData ) > 100 ) {
+            return false;
+        }
+
         foreach ( $layersData as $layer ) {
             if ( !is_array( $layer ) ) {
                 return false;
@@ -93,6 +131,11 @@ class ApiLayersSave extends ApiBase {
                 return false;
             }
 
+            // Validate layer ID format
+            if ( !is_string( $layer['id'] ) || strlen( $layer['id'] ) > 100 ) {
+                return false;
+            }
+
             // Validate layer type
             $validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'line', 'highlight' ];
             if ( !in_array( $layer['type'], $validTypes ) ) {
@@ -100,15 +143,111 @@ class ApiLayersSave extends ApiBase {
             }
 
             // Basic coordinate validation
-            if ( isset( $layer['x'] ) && !is_numeric( $layer['x'] ) ) {
+            if ( isset( $layer['x'] ) && ( !is_numeric( $layer['x'] ) || abs( $layer['x'] ) > 50000 ) ) {
                 return false;
             }
-            if ( isset( $layer['y'] ) && !is_numeric( $layer['y'] ) ) {
+            if ( isset( $layer['y'] ) && ( !is_numeric( $layer['y'] ) || abs( $layer['y'] ) > 50000 ) ) {
                 return false;
+            }
+
+            // Validate text content length for text layers
+            if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
+                if ( !is_string( $layer['text'] ) || strlen( $layer['text'] ) > 1000 ) {
+                    return false;
+                }
             }
         }
 
         return true;
+    }
+
+    /**
+     * Sanitize layer data to prevent XSS
+     * @param array $layersData
+     * @return array
+     */
+    private function sanitizeLayersData( array $layersData ): array {
+        $sanitized = [];
+        
+        foreach ( $layersData as $layer ) {
+            $cleanLayer = [];
+            
+            // Copy safe fields
+            $safeFields = [ 'id', 'type', 'x', 'y', 'width', 'height', 'radius', 
+                           'x1', 'y1', 'x2', 'y2', 'stroke', 'fill', 'strokeWidth',
+                           'fontSize', 'fontFamily', 'opacity' ];
+            
+            foreach ( $safeFields as $field ) {
+                if ( isset( $layer[$field] ) ) {
+                    $cleanLayer[$field] = $layer[$field];
+                }
+            }
+            
+            // Special handling for text content
+            if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
+                $cleanLayer['text'] = htmlspecialchars( $layer['text'], ENT_QUOTES, 'UTF-8' );
+            }
+            
+            // Validate color values
+            foreach ( [ 'stroke', 'fill' ] as $colorField ) {
+                if ( isset( $cleanLayer[$colorField] ) ) {
+                    $cleanLayer[$colorField] = $this->sanitizeColor( $cleanLayer[$colorField] );
+                }
+            }
+            
+            $sanitized[] = $cleanLayer;
+        }
+        
+        return $sanitized;
+    }
+
+    /**
+     * Validate filename for security
+     * @param string $filename
+     * @return bool
+     */
+    private function isValidFilename( string $filename ): bool {
+        // Basic filename validation
+        if ( strlen( $filename ) > 255 || strlen( $filename ) < 1 ) {
+            return false;
+        }
+        
+        // Check for path traversal attempts
+        if ( strpos( $filename, '..' ) !== false || strpos( $filename, '/' ) !== false ) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Sanitize color values
+     * @param mixed $color
+     * @return string
+     */
+    private function sanitizeColor( $color ): string {
+        if ( !is_string( $color ) ) {
+            return '#000000';
+        }
+        
+        // Allow hex colors, rgb/rgba, and named colors
+        if ( preg_match( '/^#[0-9a-fA-F]{3,8}$/', $color ) ) {
+            return $color;
+        }
+        
+        if ( preg_match( '/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+)?\s*\)$/', $color ) ) {
+            return $color;
+        }
+        
+        // List of safe named colors
+        $safeColors = [ 'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange', 
+                       'purple', 'pink', 'gray', 'brown', 'transparent' ];
+        
+        if ( in_array( strtolower( $color ), $safeColors ) ) {
+            return $color;
+        }
+        
+        return '#000000'; // Default to black if invalid
     }
 
     public function getAllowedParams() {

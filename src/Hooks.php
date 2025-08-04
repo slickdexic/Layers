@@ -21,17 +21,20 @@ namespace MediaWiki\Extension\Layers;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\UIHooks;
+use MediaWiki\Extension\Layers\ThumbnailRenderer;
 use DatabaseUpdater;
 use OutputPage;
 use Skin;
 use File;
 use Parser;
+use Exception;
 
 class Hooks implements 
     \MediaWiki\Hook\BeforePageDisplayHook,
     \MediaWiki\Hook\FileDeleteCompleteHook,
     \MediaWiki\Hook\ParserFirstCallInitHook,
-    \MediaWiki\Hook\LoadExtensionSchemaUpdatesHook {
+    \MediaWiki\Hook\LoadExtensionSchemaUpdatesHook,
+    \MediaWiki\Hook\FileTransformHook {
 
     /**
      * @see https://www.mediawiki.org/wiki/Manual:Hooks/BeforePageDisplay
@@ -40,9 +43,10 @@ class Hooks implements
      */
     public function onBeforePageDisplay( $out, $skin ): void {
         $config = $out->getConfig();
-        if ( $config->get( 'LayersVandalizeEachPage' ) ) {
-            $out->addModules( 'oojs-ui-core' );
-            $out->addHTML( \Html::element( 'p', [], 'Layers was here' ) );
+        
+        // Check if Layers extension is enabled
+        if ( !$config->get( 'LayersEnable' ) ) {
+            return;
         }
 
         // Check if this page has files with layers
@@ -52,7 +56,26 @@ class Hooks implements
             if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
                 $out->addModules( 'ext.layers.editor' );
             }
+            
+            // Always add viewer resources for displaying layers
+            $out->addModules( 'ext.layers' );
         }
+        
+        // Add viewer resources if page content includes layered images
+        if ( $this->pageHasLayeredImages( $out ) ) {
+            $out->addModules( 'ext.layers' );
+        }
+    }
+    
+    /**
+     * Check if page content includes images with layer parameters
+     * @param OutputPage $out
+     * @return bool
+     */
+    private function pageHasLayeredImages( OutputPage $out ): bool {
+        // This is a simplified check - in practice, we'd scan the page content
+        // for [[File:...]] with layers= parameters
+        return false; // TODO: Implement proper detection
     }
 
     /**
@@ -80,6 +103,9 @@ class Hooks implements
         // Register parser functions
         $parser->setFunctionHook( 'layerlist', [ self::class, 'layerListParserFunction' ] );
         $parser->setFunctionHook( 'layeredit', [ self::class, 'layerEditParserFunction' ] );
+        
+        // Register image parameter handler
+        $parser->setHook( 'layerimage', [ self::class, 'layerImageTag' ] );
     }
 
     /**
@@ -102,8 +128,31 @@ class Hooks implements
             return '';
         }
 
-        // TODO: Implement layer list functionality
-        return '';
+        try {
+            // Get file object
+            $fileObj = \RepoGroup::singleton()->findFile( $file );
+            if ( !$fileObj || !$fileObj->exists() ) {
+                return '';
+            }
+
+            // Get layer sets for this file
+            $db = new LayersDatabase();
+            $layerSets = $db->getLayerSetsForImage( $fileObj->getName(), $fileObj->getSha1() );
+            
+            // Extract layer set names
+            $names = [];
+            foreach ( $layerSets as $layerSet ) {
+                if ( !empty( $layerSet['name'] ) ) {
+                    $names[] = $layerSet['name'];
+                }
+            }
+            
+            return implode( ', ', $names );
+            
+        } catch ( Exception $e ) {
+            wfLogWarning( 'Layers: Error in layerListParserFunction: ' . $e->getMessage() );
+            return '';
+        }
     }
 
     /**
@@ -115,7 +164,84 @@ class Hooks implements
             return '';
         }
 
-        // TODO: Implement edit link functionality
-        return '';
+        try {
+            // Check if file exists
+            $fileObj = \RepoGroup::singleton()->findFile( $file );
+            if ( !$fileObj || !$fileObj->exists() ) {
+                return '';
+            }
+
+            // Create file title
+            $fileTitle = \Title::makeTitle( NS_FILE, $file );
+            if ( !$fileTitle ) {
+                return '';
+            }
+
+            // Generate edit URL
+            $editUrl = $fileTitle->getLocalURL( [
+                'action' => 'editlayers'
+            ] );
+            
+            // Create edit link
+            $linkText = wfMessage( 'layers-editor-title' )->text();
+            $link = \Linker::makeExternalLink( $editUrl, $linkText, false, '', [] );
+            
+            return [ $link, 'noparse' => true, 'isHTML' => true ];
+            
+        } catch ( Exception $e ) {
+            wfLogWarning( 'Layers: Error in layerEditParserFunction: ' . $e->getMessage() );
+            return '';
+        }
+    }
+    
+    /**
+     * Handle <layerimage> tag for embedding images with layers
+     * @param string $content
+     * @param array $attributes
+     * @param Parser $parser
+     * @return string
+     */
+    public static function layerImageTag( $content, array $attributes, Parser $parser ) {
+        $file = $attributes['file'] ?? '';
+        $layers = $attributes['layers'] ?? 'on';
+        
+        if ( empty( $file ) ) {
+            return '<div class="error">Error: No file specified for layerimage tag</div>';
+        }
+        
+        // TODO: Implement proper layer image rendering
+        // For now, return a placeholder
+        return "        // TODO: Implement layerimage tag for $file with layers=$layers -->";
+    }
+
+    /**
+     * Hook into file transformation to add layer rendering
+     * @param File $file
+     * @param array $params
+     * @param MediaWiki\FileBackend\FileBackend $backend
+     */
+    public function onFileTransform( $file, array &$params, $backend ): void {
+        // Only process if layers parameter is present
+        if ( !isset( $params['layers'] ) ) {
+            return;
+        }
+
+        // Check if extension is enabled
+        if ( !$this->getConfig()->get( 'LayersEnable' ) ) {
+            return;
+        }
+
+        try {
+            $renderer = new ThumbnailRenderer();
+            $thumbnailPath = $renderer->generateLayeredThumbnail( $file, $params );
+            
+            if ( $thumbnailPath ) {
+                // Override the transform to use our layered thumbnail
+                $params['layered_thumbnail_path'] = $thumbnailPath;
+            }
+        } catch ( Exception $e ) {
+            wfLogWarning( 'Layers: Transform hook failed: ' . $e->getMessage() );
+        }
+    }";
     }
 }

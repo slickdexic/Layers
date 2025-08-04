@@ -28,6 +28,10 @@
 	"layers-redo": "Redo",
 	"layers-delete-selected": "Delete Selected",
 	"layers-duplicate-selected": "Duplicate Selected",
+	"layers-data-too-large": "Layer data exceeds maximum size limit of $1 bytes",
+	"layers-invalid-data": "Invalid layer data structure",
+	"layers-load-error": "Error loading layer data",
+	"layers-no-layers": "No layers found for this image",
 	"right-editlayers": "Edit image layers",
 	"right-createlayers": "Create reusable layer assets",
 	"right-managelayerlibrary": "Manage layer library assets"

@@ -198,4 +198,34 @@ class UIHooks {
             $params['layerData'] = $layerSet['data'];
         }
     }
+    
+    /**
+     * Modify thumbnail generation to include layers
+     * @param \ThumbnailImage $thumbnail
+     * @param array &$attribs
+     * @param array &$linkAttribs
+     * @return bool
+     */
+    public static function onThumbnailBeforeProduceHTML( $thumbnail, array &$attribs, array &$linkAttribs ): bool {
+        // Check if this thumbnail should include layers
+        if ( !isset( $attribs['layerSetId'] ) && !isset( $attribs['layerData'] ) ) {
+            return true;
+        }
+        
+        // TODO: Implement server-side layer rendering
+        // For now, add a CSS class to indicate this thumbnail has layers
+        $classes = $attribs['class'] ?? '';
+        $attribs['class'] = trim( $classes . ' layers-thumbnail' );
+        
+        // Add data attributes for client-side rendering
+        if ( isset( $attribs['layerSetId'] ) ) {
+            $attribs['data-layer-set-id'] = $attribs['layerSetId'];
+        }
+        
+        if ( isset( $attribs['layerData'] ) ) {
+            $attribs['data-layer-data'] = json_encode( $attribs['layerData'] );
+        }
+        
+        return true;
+    }
 }

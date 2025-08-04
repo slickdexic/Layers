@@ -15,13 +15,37 @@
 		"MediaWiki\\Extension\\Layers\\": "src/"
 	},
 	"config": {
-		"LayersEnableFoo": {
-			"description": "Enable the Foo feature.",
+		"LayersEnable": {
+			"description": "Master switch for Layers extension functionality",
 			"value": true
 		},
-		"LayersVandalizeEachPage": {
-			"description": "Write 'Layers was here' on each page",
+		"LayersMaxBytes": {
+			"description": "Maximum JSON size per layer set in bytes",
+			"value": 2097152
+		},
+		"LayersUseBinaryOverlays": {
+			"description": "Enable legacy binary overlay files (.l01, .l02, etc)",
 			"value": false
+		},
+		"LayersDefaultFonts": {
+			"description": "Available fonts in the layer editor",
+			"value": ["Arial", "Roboto", "Noto Sans", "Times New Roman", "Courier New"]
+		},
+		"LayersMaxImageSize": {
+			"description": "Maximum image size for layer editing in pixels",
+			"value": 4096
+		},
+		"LayersThumbnailCache": {
+			"description": "Enable caching of composite thumbnails",
+			"value": true
+		},
+		"LayersImageMagickTimeout": {
+			"description": "Timeout in seconds for ImageMagick operations",
+			"value": 30
+		},
+		"LayersMaxImageDimensions": {
+			"description": "Maximum width/height for layer processing",
+			"value": 8192
 		}
 	},
 	"HookHandlers": {
@@ -33,9 +57,11 @@
 		"BeforePageDisplay": "LayersHooks",
 		"FileDeleteComplete": "LayersHooks",
 		"ParserFirstCallInit": "LayersHooks",
+		"FileTransform": "LayersHooks",
 		"SkinTemplateNavigation": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onSkinTemplateNavigation",
 		"UnknownAction": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onUnknownAction",
-		"ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onParserMakeImageParams"
+		"ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onParserMakeImageParams",
+		"ThumbnailBeforeProduceHTML": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onThumbnailBeforeProduceHTML"
 	},
 	"MessagesDirs": {
 		"Layers": [
