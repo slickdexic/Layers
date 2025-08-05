@@ -58,72 +58,20 @@
             this.container.appendChild( this.canvas );
         }
         
-        // Set default canvas size immediately
-        this.canvas.width = 800;
-        this.canvas.height = 600;
-        
         this.ctx = this.canvas.getContext( '2d' );
         
         console.log( 'Layers: Canvas found/created:', this.canvas );
-        console.log( 'Layers: Canvas size:', this.canvas.width, 'x', this.canvas.height );
         console.log( 'Layers: Context:', this.ctx );
-        
-        // Draw initial background immediately
-        this.drawInitialBackground();
-        
-        // Set initial canvas display size
-        this.resizeCanvas();
         
         // Set up event handlers
         this.setupEventHandlers();
         
-        // Load background image (this will eventually replace the initial background)
+        // Load background image first, then set canvas size based on it
         this.loadBackgroundImage();
         
         console.log( 'Layers: CanvasManager initialization complete' );
     };
 
-    CanvasManager.prototype.drawInitialBackground = function () {
-        console.log( 'Layers: Drawing initial background...' );
-        
-        // Clear canvas
-        this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
-        
-        // Draw background
-        this.ctx.fillStyle = '#f8f9fa';
-        this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
-        this.ctx.strokeStyle = '#dee2e6';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect( 1, 1, this.canvas.width - 2, this.canvas.height - 2 );
-        
-        // Add text
-        this.ctx.fillStyle = '#6c757d';
-        this.ctx.font = '24px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText( this.editor.filename || 'Sample Image', this.canvas.width / 2, this.canvas.height / 2 - 20 );
-        this.ctx.font = '16px Arial';
-        this.ctx.fillText( 'Sample Image for Layer Editing', this.canvas.width / 2, this.canvas.height / 2 + 20 );
-        this.ctx.font = '12px Arial';
-        this.ctx.fillStyle = '#adb5bd';
-        this.ctx.fillText( 'Draw shapes and text using the tools above', this.canvas.width / 2, this.canvas.height / 2 + 50 );
-        
-        // Add some design elements
-        this.ctx.strokeStyle = '#e9ecef';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.arc( 200, 150, 50, 0, 2 * Math.PI );
-        this.ctx.stroke();
-        
-        this.ctx.strokeRect( 500, 300, 100, 80 );
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo( 100, 400 );
-        this.ctx.lineTo( 300, 500 );
-        this.ctx.stroke();
-        
-        console.log( 'Layers: Initial background drawn' );
-    };
 
     CanvasManager.prototype.loadBackgroundImage = function () {
         var self = this;
@@ -205,7 +153,16 @@
         this.backgroundImage.onload = function () {
             console.log( 'Layers: Background image loaded successfully from:', currentUrl );
             console.log( 'Layers: Image dimensions:', self.backgroundImage.width, 'x', self.backgroundImage.height );
+            
+            // Set canvas size to match the image
+            self.canvas.width = self.backgroundImage.width;
+            self.canvas.height = self.backgroundImage.height;
+            console.log( 'Layers: Canvas size set to:', self.canvas.width, 'x', self.canvas.height );
+            
+            // Resize canvas display to fit container
             self.resizeCanvas();
+            
+            // Draw the image and any layers
             self.redraw();
             if ( self.editor.layers ) {
                 self.renderLayers( self.editor.layers );
@@ -235,6 +192,12 @@
         this.backgroundImage.onload = function () {
             console.log( 'Layers: Test SVG image loaded successfully' );
             console.log( 'Layers: Test image dimensions:', self.backgroundImage.width, 'x', self.backgroundImage.height );
+            
+            // Set canvas size to match the image (800x600 for the test image)
+            self.canvas.width = 800;
+            self.canvas.height = 600;
+            console.log( 'Layers: Canvas size set to:', self.canvas.width, 'x', self.canvas.height );
+            
             self.resizeCanvas();
             self.redraw();
             if ( self.editor.layers ) {
@@ -339,15 +302,16 @@
         console.log( 'Layers: Container:', container );
         console.log( 'Layers: Container dimensions:', container.clientWidth, 'x', container.clientHeight );
         
-        // Set default canvas size if no background image
-        var canvasWidth = this.backgroundImage ? this.backgroundImage.width : 800;
-        var canvasHeight = this.backgroundImage ? this.backgroundImage.height : 600;
+        // If no canvas size is set yet, use default
+        if ( this.canvas.width === 0 || this.canvas.height === 0 ) {
+            this.canvas.width = 800;
+            this.canvas.height = 600;
+        }
         
-        // Set canvas logical size
-        this.canvas.width = canvasWidth;
-        this.canvas.height = canvasHeight;
+        var canvasWidth = this.canvas.width;
+        var canvasHeight = this.canvas.height;
         
-        console.log( 'Layers: Canvas logical size set to', this.canvas.width, 'x', this.canvas.height );
+        console.log( 'Layers: Canvas logical size:', canvasWidth, 'x', canvasHeight );
         
         // Calculate available space in container (with padding)
         var availableWidth = Math.max(container.clientWidth - 40, 400);
@@ -360,8 +324,8 @@
         var scaleY = availableHeight / canvasHeight;
         var scale = Math.min( scaleX, scaleY );
         
-        // Ensure reasonable scale bounds
-        scale = Math.max(0.1, Math.min(scale, 2.0));
+        // Ensure reasonable scale bounds (don't make it too tiny or huge)
+        scale = Math.max(0.1, Math.min(scale, 3.0));
         
         // Calculate final display size
         var displayWidth = Math.floor(canvasWidth * scale);
@@ -370,8 +334,10 @@
         // Set CSS size for display
         this.canvas.style.width = displayWidth + 'px';
         this.canvas.style.height = displayHeight + 'px';
-        this.canvas.style.maxWidth = '100%';
-        this.canvas.style.maxHeight = '100%';
+        this.canvas.style.maxWidth = 'none';
+        this.canvas.style.maxHeight = 'none';
+        this.canvas.style.border = '1px solid #ddd';
+        this.canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         
         // Set zoom and pan
         this.zoom = scale;
@@ -383,8 +349,8 @@
         console.log( 'Layers: Final canvas styles:', {
             width: this.canvas.style.width,
             height: this.canvas.style.height,
-            maxWidth: this.canvas.style.maxWidth,
-            maxHeight: this.canvas.style.maxHeight
+            border: this.canvas.style.border,
+            boxShadow: this.canvas.style.boxShadow
         });
     };
 

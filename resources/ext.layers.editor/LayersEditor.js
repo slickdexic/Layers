@@ -100,7 +100,7 @@
         // Initialize components
         try {
             console.log( 'Layers: Initializing components...' );
-            console.log( 'Layers: Canvas container:', this.$canvas.get( 0 ) );
+            console.log( 'Layers: Canvas container:', this.$canvasContainer.get( 0 ) );
             console.log( 'Layers: Layer panel container:', this.$layerPanel.get( 0 ) );
             console.log( 'Layers: Toolbar container:', this.$toolbar.get( 0 ) );
             
@@ -109,7 +109,7 @@
             console.log( 'Layers: Parent image URL:', parentImageUrl );
             
             this.canvasManager = new window.CanvasManager( {
-                container: this.$canvas.get( 0 ),
+                container: this.$canvasContainer.get( 0 ),
                 editor: this,
                 backgroundImageUrl: parentImageUrl
             } );
@@ -212,12 +212,6 @@
                 'position': 'relative'
             })
             .appendTo( this.$content );
-            
-        this.$canvas = $( '<canvas>' )
-            .addClass( 'layers-canvas' )
-            .attr( 'width', 800 )
-            .attr( 'height', 600 )
-            .appendTo( this.$canvasContainer );
     };
 
     LayersEditor.prototype.setupEventHandlers = function () {

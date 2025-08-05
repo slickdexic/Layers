@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layers Editor Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        .test-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #f5f5f5;
+        }
+        #test-image {
+            width: 400px;
+            height: 300px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            margin: 20px;
+            border: 2px solid #333;
+            border-radius: 8px;
+        }
+        #test-button {
+            margin: 20px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #test-button:hover {
+            background: #0056b3;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Mock MediaWiki APIs
+        window.mw = {
+            config: {
+                get: function(key) {
+                    switch(key) {
+                        case 'wgServer': return 'http://localhost:8080';
+                        case 'wgScriptPath': return '';
+                        default: return '';
+                    }
+                }
+            },
+            hook: function(name) {
+                return {
+                    add: function(callback) {
+                        window.layersHookCallback = callback;
+                    }
+                };
+            },
+            Api: function() {
+                return {
+                    get: function() {
+                        return {
+                            done: function(callback) {
+                                // Mock empty layers response
+                                callback({layersinfo: null});
+                                return this;
+                            },
+                            fail: function(callback) {
+                                return this;
+                            }
+                        };
+                    },
+                    postWithToken: function() {
+                        return {
+                            done: function(callback) {
+                                callback({layerssave: {success: true}});
+                                return this;
+                            },
+                            fail: function(callback) {
+                                return this;
+                            }
+                        };
+                    }
+                };
+            },
+            notify: function(message, options) {
+                console.log('MW Notify:', message, options);
+            },
+            msg: function(key) {
+                return key;
+            }
+        };
+        
+        // Mock MediaWiki loader
+        window.mw.loader = {
+            using: function(modules, callback) {
+                callback();
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="test-container">
+        <div id="test-image"></div>
+        <button id="test-button">Open Layers Editor</button>
+    </div>
+
+    <!-- Load the Layers editor scripts -->
+    <script src="resources/ext.layers.editor/CanvasManager.js"></script>
+    <script src="resources/ext.layers.editor/LayersEditor.js"></script>
+    <script>
+        // Mock additional components
+        window.LayerPanel = function(config) {
+            this.config = config;
+            this.updateLayers = function() {};
+            this.selectLayer = function() {};
+        };
+        
+        window.Toolbar = function(config) {
+            this.config = config;
+            this.updateUndoRedoState = function() {};
+            this.updateDeleteState = function() {};
+            this.updateZoomDisplay = function() {};
+        };
+        
+        document.getElementById('test-button').addEventListener('click', function() {
+            // Create a test image URL
+            var canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 400;
+            var ctx = canvas.getContext('2d');
+            
+            // Draw a test image
+            var gradient = ctx.createLinearGradient(0, 0, 600, 400);
+            gradient.addColorStop(0, '#ff6b6b');
+            gradient.addColorStop(1, '#4ecdc4');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 600, 400);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '48px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Test Image', 300, 200);
+            
+            var imageUrl = canvas.toDataURL();
+            
+            // Launch the editor
+            if (window.layersHookCallback) {
+                window.layersHookCallback({
+                    filename: 'test-image.png',
+                    imageUrl: imageUrl,
+                    container: document.body
+                });
+            }
+        });
+    </script>
+</body>
+</html>
