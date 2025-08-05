@@ -39,27 +39,94 @@
 
     CanvasManager.prototype.init = function () {
         console.log( 'Layers: CanvasManager initializing...' );
+        console.log( 'Layers: Container element:', this.container );
         
-        this.canvas = this.container.querySelector( 'canvas' ) || 
-                    this.container.appendChild( document.createElement( 'canvas' ) );
+        // Find or create canvas
+        this.canvas = this.container.querySelector( 'canvas' );
+        if ( !this.canvas ) {
+            console.log( 'Layers: No canvas found, creating one...' );
+            this.canvas = document.createElement( 'canvas' );
+            this.canvas.className = 'layers-canvas';
+            this.container.appendChild( this.canvas );
+        }
+        
+        // Set default canvas size immediately
+        this.canvas.width = 800;
+        this.canvas.height = 600;
+        
         this.ctx = this.canvas.getContext( '2d' );
         
-        console.log( 'Layers: Canvas created, size:', this.canvas.width, 'x', this.canvas.height );
+        console.log( 'Layers: Canvas found/created:', this.canvas );
+        console.log( 'Layers: Canvas size:', this.canvas.width, 'x', this.canvas.height );
+        console.log( 'Layers: Context:', this.ctx );
         
-        // Load background image
-        this.loadBackgroundImage();
+        // Draw initial background immediately
+        this.drawInitialBackground();
+        
+        // Set initial canvas display size
+        this.resizeCanvas();
         
         // Set up event handlers
         this.setupEventHandlers();
         
+        // Load background image (this will eventually replace the initial background)
+        this.loadBackgroundImage();
+        
         console.log( 'Layers: CanvasManager initialization complete' );
+    };
+
+    CanvasManager.prototype.drawInitialBackground = function () {
+        console.log( 'Layers: Drawing initial background...' );
+        
+        // Clear canvas
+        this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
+        
+        // Draw background
+        this.ctx.fillStyle = '#f8f9fa';
+        this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+        this.ctx.strokeStyle = '#dee2e6';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect( 1, 1, this.canvas.width - 2, this.canvas.height - 2 );
+        
+        // Add text
+        this.ctx.fillStyle = '#6c757d';
+        this.ctx.font = '24px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText( this.editor.filename || 'Sample Image', this.canvas.width / 2, this.canvas.height / 2 - 20 );
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText( 'Sample Image for Layer Editing', this.canvas.width / 2, this.canvas.height / 2 + 20 );
+        this.ctx.font = '12px Arial';
+        this.ctx.fillStyle = '#adb5bd';
+        this.ctx.fillText( 'Draw shapes and text using the tools above', this.canvas.width / 2, this.canvas.height / 2 + 50 );
+        
+        // Add some design elements
+        this.ctx.strokeStyle = '#e9ecef';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.arc( 200, 150, 50, 0, 2 * Math.PI );
+        this.ctx.stroke();
+        
+        this.ctx.strokeRect( 500, 300, 100, 80 );
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo( 100, 400 );
+        this.ctx.lineTo( 300, 500 );
+        this.ctx.stroke();
+        
+        console.log( 'Layers: Initial background drawn' );
     };
 
     CanvasManager.prototype.loadBackgroundImage = function () {
         var self = this;
         var filename = this.editor.filename;
         
-        // Create image URL for the file - try multiple URL patterns
+        console.log( 'Layers: Starting background image load for:', filename );
+        
+        // For testing, immediately use the test image
+        this.useTestImage();
+        
+        // Also try to load real images in background (for future MediaWiki integration)
         var imageUrls = [];
         
         // Try MediaWiki patterns only if mw is properly configured
@@ -76,16 +143,11 @@
             }
             
             imageUrls.push( mw.config.get( 'wgServer' ) + '/wiki/File:' + encodeURIComponent( filename ) );
+            
+            // Try loading real images in background
+            console.log( 'Layers: Also trying MediaWiki URLs in background:', imageUrls );
+            this.tryLoadImage( imageUrls, 0 );
         }
-        
-        // Add test placeholder image
-        imageUrls.push( 'https://via.placeholder.com/800x600/f8f9fa/666666?text=' + encodeURIComponent( filename + ' - Sample Image' ) );
-        
-        // Always add test SVG as final fallback
-        imageUrls.push( 'data:image/svg+xml;base64,' + btoa( this.createTestImage( filename ) ) );
-        
-        console.log( 'Layers: Trying to load background image from URLs:', imageUrls );
-        this.tryLoadImage( imageUrls, 0 );
     };
 
     CanvasManager.prototype.tryLoadImage = function ( urls, index ) {
@@ -123,15 +185,18 @@
     };
 
     CanvasManager.prototype.useTestImage = function () {
-        // Create a test image when no real image is available
         var self = this;
-        this.backgroundImage = new Image();
+        console.log( 'Layers: Creating test background image...' );
         
-        var testImageData = this.createTestImage( this.editor.filename );
-        this.backgroundImage.src = 'data:image/svg+xml;base64,' + btoa( testImageData );
+        // Try SVG first
+        var svgData = this.createTestImage( this.editor.filename );
+        var svgDataUrl = 'data:image/svg+xml;base64,' + btoa( svgData );
+        
+        this.backgroundImage = new Image();
+        this.backgroundImage.crossOrigin = 'anonymous';
         
         this.backgroundImage.onload = function () {
-            console.log( 'Layers: Test background image loaded successfully' );
+            console.log( 'Layers: Test SVG image loaded successfully' );
             console.log( 'Layers: Test image dimensions:', self.backgroundImage.width, 'x', self.backgroundImage.height );
             self.resizeCanvas();
             self.redraw();
@@ -141,9 +206,19 @@
         };
         
         this.backgroundImage.onerror = function () {
-            console.error( 'Layers: Even test image failed to load, creating canvas background' );
+            console.warn( 'Layers: SVG test image failed, creating canvas background directly' );
             self.createCanvasBackground();
         };
+        
+        this.backgroundImage.src = svgDataUrl;
+        
+        // Also create canvas background immediately as backup
+        setTimeout( function () {
+            if ( !self.backgroundImage || !self.backgroundImage.complete ) {
+                console.log( 'Layers: SVG taking too long, using canvas background' );
+                self.createCanvasBackground();
+            }
+        }, 1000 );
     };
 
     CanvasManager.prototype.createCanvasBackground = function () {
@@ -154,6 +229,9 @@
         // Set default canvas size
         this.canvas.width = 800;
         this.canvas.height = 600;
+        
+        // Clear and set up the canvas
+        this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
         
         // Draw background
         this.ctx.fillStyle = '#f8f9fa';
@@ -167,9 +245,12 @@
         this.ctx.font = '24px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        this.ctx.fillText( this.editor.filename, this.canvas.width / 2, this.canvas.height / 2 - 20 );
+        this.ctx.fillText( this.editor.filename || 'Sample Image', this.canvas.width / 2, this.canvas.height / 2 - 20 );
         this.ctx.font = '16px Arial';
         this.ctx.fillText( 'Sample Image for Layer Editing', this.canvas.width / 2, this.canvas.height / 2 + 20 );
+        this.ctx.font = '12px Arial';
+        this.ctx.fillStyle = '#adb5bd';
+        this.ctx.fillText( 'Draw shapes and text using the tools above', this.canvas.width / 2, this.canvas.height / 2 + 50 );
         
         // Add some design elements
         this.ctx.strokeStyle = '#e9ecef';
@@ -185,15 +266,14 @@
         this.ctx.lineTo( 300, 500 );
         this.ctx.stroke();
         
-        // Set up canvas display
-        this.canvas.style.width = '800px';
-        this.canvas.style.height = '600px';
-        this.zoom = 1.0;
-        this.panX = 0;
-        this.panY = 0;
+        // Resize canvas to fit container
+        this.resizeCanvas();
         
         console.log( 'Layers: Canvas background created successfully' );
+        console.log( 'Layers: Canvas size:', this.canvas.width, 'x', this.canvas.height );
+        console.log( 'Layers: Canvas display size:', this.canvas.style.width, 'x', this.canvas.style.height );
         
+        // Render any existing layers
         if ( this.editor && this.editor.layers ) {
             this.renderLayers( this.editor.layers );
         }
@@ -215,32 +295,42 @@
     };
 
     CanvasManager.prototype.resizeCanvas = function () {
-        if ( !this.backgroundImage ) return;
+        // Set default canvas size if no background image
+        var canvasWidth = this.backgroundImage ? this.backgroundImage.width : 800;
+        var canvasHeight = this.backgroundImage ? this.backgroundImage.height : 600;
         
-        // Set canvas logical size to image size
-        this.canvas.width = this.backgroundImage.width;
-        this.canvas.height = this.backgroundImage.height;
+        // Set canvas logical size
+        this.canvas.width = canvasWidth;
+        this.canvas.height = canvasHeight;
         
-        console.log( 'Layers: Canvas resized to', this.canvas.width, 'x', this.canvas.height );
+        console.log( 'Layers: Canvas logical size set to', this.canvas.width, 'x', this.canvas.height );
         
         // Calculate display size that fits in container
         var container = this.canvas.parentElement;
         var containerWidth = container.clientWidth - 40; // padding
         var containerHeight = container.clientHeight - 40;
         
-        var scaleX = containerWidth / this.backgroundImage.width;
-        var scaleY = containerHeight / this.backgroundImage.height;
+        // Ensure minimum container size
+        if ( containerWidth < 200 ) containerWidth = 600;
+        if ( containerHeight < 200 ) containerHeight = 400;
+        
+        var scaleX = containerWidth / canvasWidth;
+        var scaleY = containerHeight / canvasHeight;
         var scale = Math.min( scaleX, scaleY, 1 ); // Don't scale up initially
         
+        // Ensure minimum scale
+        if ( scale < 0.1 ) scale = 0.5;
+        
         // Set CSS size for display
-        this.canvas.style.width = ( this.backgroundImage.width * scale ) + 'px';
-        this.canvas.style.height = ( this.backgroundImage.height * scale ) + 'px';
+        this.canvas.style.width = ( canvasWidth * scale ) + 'px';
+        this.canvas.style.height = ( canvasHeight * scale ) + 'px';
         
         // Initialize zoom to fit
         this.zoom = scale;
         this.panX = 0;
         this.panY = 0;
         
+        console.log( 'Layers: Canvas display size set to', this.canvas.style.width, 'x', this.canvas.style.height );
         console.log( 'Layers: Initial zoom set to', this.zoom );
     };
 
@@ -311,6 +401,8 @@
     CanvasManager.prototype.handleMouseDown = function ( e ) {
         var point = this.getMousePoint( e );
         this.startPoint = point;
+        
+        console.log( 'Layers: Mouse down at', point, 'tool:', this.currentTool );
         
         // Handle middle mouse button or space+click for panning
         if ( e.button === 1 || ( e.button === 0 && e.spaceKey ) ) {
@@ -856,6 +948,8 @@
     };
 
     CanvasManager.prototype.startDrawing = function ( point ) {
+        console.log( 'Layers: Starting to draw with tool:', this.currentTool, 'at point:', point );
+        
         // Use current style options if available
         var style = this.currentStyle || {};
         
@@ -888,6 +982,8 @@
             default:
                 console.warn( 'Unknown tool:', this.currentTool );
         }
+        
+        console.log( 'Layers: Temp layer created:', this.tempLayer );
     };
 
     CanvasManager.prototype.continueDrawing = function ( point ) {
@@ -1220,6 +1316,7 @@
     };
 
     CanvasManager.prototype.setTool = function ( tool ) {
+        console.log( 'Layers: Setting tool to:', tool );
         this.currentTool = tool;
         this.canvas.style.cursor = this.getToolCursor( tool );
     };
@@ -1255,9 +1352,16 @@
         // Clear canvas
         this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
         
-        // Draw background image
-        if ( this.backgroundImage ) {
+        // Draw background image if available
+        if ( this.backgroundImage && this.backgroundImage.complete ) {
             this.ctx.drawImage( this.backgroundImage, 0, 0 );
+        } else {
+            // Draw a simple background if no image
+            this.ctx.fillStyle = '#f8f9fa';
+            this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+            this.ctx.strokeStyle = '#dee2e6';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect( 1, 1, this.canvas.width - 2, this.canvas.height - 2 );
         }
         
         // Draw grid if enabled

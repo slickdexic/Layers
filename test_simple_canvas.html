@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Canvas Test - Layers Extension</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .editor-interface {
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            margin: 20px 0;
+        }
+        .toolbar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 15px;
+        }
+        .toolbar button {
+            margin: 5px;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f8f9fa;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .toolbar button:hover {
+            background: #e9ecef;
+        }
+        .toolbar button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .content-area {
+            display: flex;
+            height: 600px;
+        }
+        .canvas-container {
+            flex: 1;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+        .layers-canvas {
+            border: 2px solid #6c757d;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d9ff;
+        }
+        .controls {
+            margin: 15px 0;
+        }
+        .controls label {
+            margin-right: 15px;
+            display: inline-block;
+        }
+        .controls input {
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Simple Canvas Test - Layers Extension</h1>
+        <p>This test focuses on getting the basic canvas working with a visible background.</p>
+        
+        <div id="status" class="status info">Initializing canvas test...</div>
+        
+        <div class="editor-interface">
+            <div class="toolbar">
+                <button onclick="selectTool('pointer')" id="btn-pointer" class="active">👆 Select</button>
+                <button onclick="selectTool('text')" id="btn-text">📝 Text</button>
+                <button onclick="selectTool('rectangle')" id="btn-rectangle">◻️ Rectangle</button>
+                <button onclick="selectTool('circle')" id="btn-circle">⭕ Circle</button>
+                <button onclick="selectTool('pen')" id="btn-pen">✏️ Pen</button>
+                <div style="display: inline-block; margin-left: 20px;">
+                    <label>Color: <input type="color" id="color-picker" value="#ff0000" onchange="updateStyle()"></label>
+                    <label>Size: <input type="number" id="size-input" value="16" min="8" max="72" onchange="updateStyle()"></label>
+                    <label>Width: <input type="number" id="width-input" value="3" min="1" max="20" onchange="updateStyle()"></label>
+                </div>
+            </div>
+            
+            <div class="content-area">
+                <div class="canvas-container" id="canvas-container">
+                    <canvas class="layers-canvas" id="main-canvas" width="800" height="600"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="testDrawRectangle()">🔲 Draw Test Rectangle</button>
+            <button onclick="testDrawCircle()">⭕ Draw Test Circle</button>
+            <button onclick="testDrawText()">📝 Add Test Text</button>
+            <button onclick="clearCanvas()">🗑️ Clear Canvas</button>
+            <button onclick="resetZoom()">🔍 Reset Zoom</button>
+        </div>
+        
+        <div id="debug-info" class="status info" style="font-size: 12px;"></div>
+    </div>
+
+    <script>
+        // Simple mock for MediaWiki
+        window.mw = {
+            config: { get: function(key) { return ''; } },
+            Api: function() { return { get: function() { return { done: function(f) { return this; }, fail: function(f) { return this; } }; } }; },
+            notify: function(msg, opts) { updateStatus(msg, opts.type || 'info'); },
+            msg: function(key) { return key; }
+        };
+
+        let canvasManager = null;
+        let editor = null;
+        let currentTool = 'pointer';
+
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status ' + type;
+            console.log('STATUS:', message);
+        }
+
+        function updateDebug(info) {
+            const debugEl = document.getElementById('debug-info');
+            debugEl.innerHTML = info;
+        }
+
+        function updateDebugInfo() {
+            if (canvasManager) {
+                const canvas = canvasManager.canvas;
+                const debugInfo = `
+                    Canvas: ${canvas ? 'OK' : 'MISSING'}<br>
+                    Canvas size: ${canvas ? canvas.width + 'x' + canvas.height : 'N/A'}<br>
+                    Display size: ${canvas ? canvas.style.width + ' x ' + canvas.style.height : 'N/A'}<br>
+                    Background: ${canvasManager.backgroundImage ? 'LOADED' : 'CREATING/NONE'}<br>
+                    Background complete: ${canvasManager.backgroundImage && canvasManager.backgroundImage.complete ? 'YES' : 'NO'}<br>
+                    Context: ${canvasManager.ctx ? 'OK' : 'MISSING'}<br>
+                    Zoom: ${canvasManager.zoom || 'N/A'}<br>
+                    Layers: ${editor ? editor.layers.length : 'N/A'}
+                `;
+                updateDebug(debugInfo);
+            }
+        }
+
+        function selectTool(tool) {
+            currentTool = tool;
+            
+            // Update UI
+            document.querySelectorAll('.toolbar button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + tool).classList.add('active');
+            
+            // Update canvas manager
+            if (canvasManager) {
+                canvasManager.setTool(tool);
+                updateStatus('Selected tool: ' + tool, 'success');
+            }
+        }
+
+        function updateStyle() {
+            if (canvasManager) {
+                const color = document.getElementById('color-picker').value;
+                const fontSize = parseInt(document.getElementById('size-input').value);
+                const strokeWidth = parseInt(document.getElementById('width-input').value);
+                
+                canvasManager.updateStyleOptions({
+                    color: color,
+                    fontSize: fontSize,
+                    strokeWidth: strokeWidth
+                });
+                updateStatus('Style updated', 'success');
+            }
+        }
+
+        function testDrawRectangle() {
+            if (editor) {
+                const layer = {
+                    type: 'rectangle',
+                    x: 100,
+                    y: 100,
+                    width: 150,
+                    height: 100,
+                    stroke: '#ff0000',
+                    strokeWidth: 3,
+                    fill: 'rgba(255,0,0,0.1)'
+                };
+                editor.addLayer(layer);
+                updateStatus('Test rectangle added', 'success');
+            }
+        }
+
+        function testDrawCircle() {
+            if (editor) {
+                const layer = {
+                    type: 'circle',
+                    x: 300,
+                    y: 200,
+                    radius: 75,
+                    stroke: '#00ff00',
+                    strokeWidth: 3,
+                    fill: 'rgba(0,255,0,0.1)'
+                };
+                editor.addLayer(layer);
+                updateStatus('Test circle added', 'success');
+            }
+        }
+
+        function testDrawText() {
+            if (editor) {
+                const layer = {
+                    type: 'text',
+                    x: 200,
+                    y: 350,
+                    text: 'Test Text Layer',
+                    fontSize: 24,
+                    fontFamily: 'Arial',
+                    fill: '#0000ff'
+                };
+                editor.addLayer(layer);
+                updateStatus('Test text added', 'success');
+            }
+        }
+
+        function clearCanvas() {
+            if (editor) {
+                editor.layers = [];
+                editor.renderLayers();
+                updateStatus('Canvas cleared', 'success');
+            }
+        }
+
+        function resetZoom() {
+            if (canvasManager) {
+                canvasManager.resetZoom();
+                updateStatus('Zoom reset', 'success');
+            }
+        }
+
+        // Create a minimal editor
+        function createMockEditor() {
+            return {
+                filename: 'test-image.png',
+                layers: [],
+                currentTool: 'pointer',
+                canvasManager: null,
+                
+                addLayer: function(layerData) {
+                    layerData.id = 'layer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    layerData.visible = layerData.visible !== false;
+                    this.layers.push(layerData);
+                    this.renderLayers();
+                    console.log('Added layer:', layerData);
+                },
+                
+                renderLayers: function() {
+                    if (this.canvasManager) {
+                        this.canvasManager.renderLayers(this.layers);
+                    }
+                },
+                
+                setCurrentTool: function(tool) {
+                    this.currentTool = tool;
+                    if (this.canvasManager) {
+                        this.canvasManager.setTool(tool);
+                    }
+                },
+                
+                getLayerById: function(layerId) {
+                    return this.layers.find(layer => layer.id === layerId);
+                },
+                
+                selectLayer: function(layerId) {
+                    console.log('Selected layer:', layerId);
+                }
+            };
+        }
+
+        // Initialize everything
+        async function initialize() {
+            try {
+                updateStatus('Loading CanvasManager...', 'info');
+                
+                // Load the CanvasManager script
+                const script = document.createElement('script');
+                script.src = 'resources/ext.layers.editor/CanvasManager.js';
+                
+                script.onload = function() {
+                    updateStatus('CanvasManager loaded, creating instance...', 'info');
+                    
+                    try {
+                        // Check if CanvasManager is available
+                        if (typeof window.CanvasManager === 'undefined') {
+                            throw new Error('CanvasManager not found in window object');
+                        }
+                        
+                        updateStatus('CanvasManager class found, creating editor...', 'info');
+                        
+                        // Create mock editor
+                        editor = createMockEditor();
+                        
+                        // Get canvas container
+                        const container = document.getElementById('canvas-container');
+                        if (!container) {
+                            throw new Error('Canvas container not found');
+                        }
+                        
+                        updateStatus('Creating CanvasManager instance...', 'info');
+                        
+                        // Create CanvasManager
+                        canvasManager = new window.CanvasManager({
+                            container: container,
+                            editor: editor
+                        });
+                        
+                        // Link them
+                        editor.canvasManager = canvasManager;
+                        
+                        updateStatus('✅ Canvas initialized successfully! Try drawing now.', 'success');
+                        
+                        // Update debug info immediately and then again after a delay
+                        updateDebugInfo();
+                        setTimeout(updateDebugInfo, 2000);
+                        
+                    } catch (error) {
+                        updateStatus('❌ Error creating CanvasManager: ' + error.message, 'error');
+                        console.error('CanvasManager error:', error);
+                        console.error('Stack:', error.stack);
+                    }
+                };
+                
+                script.onerror = function() {
+                    updateStatus('❌ Failed to load CanvasManager script', 'error');
+                };
+                
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                updateStatus('❌ Initialization failed: ' + error.message, 'error');
+                console.error('Initialization error:', error);
+            }
+        }
+
+        // Start when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🎨 Layers Extension - WORKING DEMO</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: #343a40;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.8;
+        }
+        .editor-interface {
+            display: flex;
+            flex-direction: column;
+            height: 700px;
+        }
+        .toolbar {
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .tool-group {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .tool-group label {
+            font-weight: 500;
+            color: #495057;
+            margin-right: 10px;
+        }
+        .toolbar button {
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .toolbar button:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+            transform: translateY(-1px);
+        }
+        .toolbar button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+            box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+        }
+        .toolbar input[type="color"] {
+            width: 45px;
+            height: 45px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .toolbar input[type="number"] {
+            width: 60px;
+            padding: 8px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .content-area {
+            flex: 1;
+            display: flex;
+            background: #f8f9fa;
+        }
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(120,119,198,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,119,198,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(120,219,255,0.1) 0%, transparent 50%);
+        }
+        .layers-canvas {
+            border: 3px solid #495057;
+            background: white;
+            box-shadow: 
+                0 20px 40px rgba(0,0,0,0.1),
+                0 0 0 1px rgba(255,255,255,0.5) inset;
+            border-radius: 8px;
+            transition: transform 0.2s ease;
+        }
+        .layers-canvas:hover {
+            transform: scale(1.02);
+        }
+        .side-panel {
+            width: 280px;
+            background: white;
+            border-left: 2px solid #dee2e6;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-section {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .panel-section h3 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 16px;
+        }
+        .layer-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 5px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .layer-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        .layer-item.selected {
+            background: #cce7ff;
+            border-color: #007bff;
+        }
+        .status-panel {
+            background: #343a40;
+            color: white;
+            padding: 15px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .demo-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .demo-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: transform 0.2s ease;
+        }
+        .demo-btn:hover {
+            transform: translateY(-2px);
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Layers Extension - Interactive Demo</h1>
+            <p>Full-featured image annotation and drawing tool for MediaWiki</p>
+        </div>
+        
+        <div class="editor-interface">
+            <div class="toolbar">
+                <div class="tool-group">
+                    <label>Tools:</label>
+                    <button onclick="selectTool('pointer')" id="btn-pointer" class="active" title="Select Tool">👆</button>
+                    <button onclick="selectTool('text')" id="btn-text" title="Text Tool">📝</button>
+                    <button onclick="selectTool('rectangle')" id="btn-rectangle" title="Rectangle Tool">◻️</button>
+                    <button onclick="selectTool('circle')" id="btn-circle" title="Circle Tool">⭕</button>
+                    <button onclick="selectTool('pen')" id="btn-pen" title="Pen Tool">✏️</button>
+                    <button onclick="selectTool('line')" id="btn-line" title="Line Tool">📏</button>
+                    <button onclick="selectTool('arrow')" id="btn-arrow" title="Arrow Tool">➡️</button>
+                </div>
+                
+                <div class="tool-group">
+                    <label>Style:</label>
+                    <input type="color" id="color-picker" value="#ff4757" onchange="updateStyle()" title="Color">
+                    <input type="number" id="size-input" value="18" min="8" max="72" onchange="updateStyle()" title="Font Size">
+                    <input type="number" id="width-input" value="4" min="1" max="20" onchange="updateStyle()" title="Line Width">
+                </div>
+                
+                <div class="tool-group">
+                    <label>Actions:</label>
+                    <button onclick="clearCanvas()" title="Clear All">🗑️</button>
+                    <button onclick="resetZoom()" title="Reset Zoom">🔍</button>
+                    <button onclick="saveDemo()" title="Save">💾</button>
+                </div>
+            </div>
+            
+            <div class="content-area">
+                <div class="canvas-container" id="canvas-container">
+                    <canvas class="layers-canvas" id="main-canvas" width="800" height="600"></canvas>
+                </div>
+                
+                <div class="side-panel">
+                    <div class="panel-section">
+                        <h3>📋 Layers</h3>
+                        <div id="layers-list">
+                            <div style="text-align: center; color: #6c757d; font-style: italic; padding: 20px;">
+                                No layers yet<br>Start drawing!
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-section">
+                        <h3>🎮 Demo Actions</h3>
+                        <div class="demo-actions">
+                            <button class="demo-btn" onclick="addDemoText()">📝 Add Text</button>
+                            <button class="demo-btn" onclick="addDemoShapes()">🔷 Add Shapes</button>
+                        </div>
+                        <div class="demo-actions">
+                            <button class="demo-btn" onclick="addDemoAnnotations()">📌 Annotations</button>
+                            <button class="demo-btn" onclick="showDemoTutorial()">❓ Tutorial</button>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-section">
+                        <h3>📊 Statistics</h3>
+                        <div id="stats">
+                            <div>Total Layers: <span id="layer-count">0</span></div>
+                            <div>Canvas Size: <span id="canvas-size">800×600</span></div>
+                            <div>Zoom Level: <span id="zoom-level">100%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-panel" id="status-log">
+            <div class="success">✅ Layers Extension Demo Ready!</div>
+            <div class="info">💡 Click on a tool above and draw on the canvas</div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced MediaWiki mock
+        window.mw = {
+            config: { get: function(key) { return ''; } },
+            Api: function() { return { 
+                get: function() { return { done: function(f) { return this; }, fail: function(f) { return this; } }; },
+                postWithToken: function() { return { done: function(f) { return this; }, fail: function(f) { return this; } }; }
+            }; },
+            notify: function(msg, opts) { log(msg, opts?.type || 'info'); },
+            msg: function(key) { return key; }
+        };
+
+        let canvasManager = null;
+        let editor = null;
+        let currentTool = 'pointer';
+        let layerCount = 0;
+
+        function log(message, type = 'info') {
+            const statusLog = document.getElementById('status-log');
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `<span style="opacity: 0.6;">${new Date().toLocaleTimeString()}</span> ${message}`;
+            statusLog.appendChild(div);
+            statusLog.scrollTop = statusLog.scrollHeight;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        function selectTool(tool) {
+            currentTool = tool;
+            
+            // Update UI
+            document.querySelectorAll('.toolbar button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + tool).classList.add('active');
+            
+            // Update canvas manager
+            if (canvasManager) {
+                canvasManager.setTool(tool);
+                log(`🛠️ Selected tool: ${tool}`, 'success');
+            }
+        }
+
+        function updateStyle() {
+            if (canvasManager) {
+                const color = document.getElementById('color-picker').value;
+                const fontSize = parseInt(document.getElementById('size-input').value);
+                const strokeWidth = parseInt(document.getElementById('width-input').value);
+                
+                canvasManager.updateStyleOptions({
+                    color: color,
+                    fontSize: fontSize,
+                    strokeWidth: strokeWidth
+                });
+                log(`🎨 Style updated: color=${color}, size=${fontSize}, width=${strokeWidth}`, 'info');
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('layer-count').textContent = layerCount;
+            if (canvasManager) {
+                document.getElementById('zoom-level').textContent = Math.round((canvasManager.zoom || 1) * 100) + '%';
+            }
+        }
+
+        function updateLayersList() {
+            const layersList = document.getElementById('layers-list');
+            if (editor && editor.layers.length > 0) {
+                const html = editor.layers.map((layer, index) => `
+                    <div class="layer-item" onclick="selectLayer('${layer.id}')">
+                        <strong>${index + 1}. ${getLayerName(layer)}</strong>
+                        <div style="font-size: 11px; color: #6c757d; margin-top: 3px;">
+                            ${layer.type} • x:${Math.round(layer.x || 0)} y:${Math.round(layer.y || 0)}
+                        </div>
+                    </div>
+                `).join('');
+                layersList.innerHTML = html;
+            } else {
+                layersList.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic; padding: 20px;">No layers yet<br>Start drawing!</div>';
+            }
+        }
+
+        function getLayerName(layer) {
+            switch (layer.type) {
+                case 'text': return `"${(layer.text || 'Text').substring(0, 15)}${layer.text?.length > 15 ? '...' : ''}"`;
+                case 'rectangle': return `Rectangle ${Math.round(layer.width || 0)}×${Math.round(layer.height || 0)}`;
+                case 'circle': return `Circle r=${Math.round(layer.radius || 0)}`;
+                case 'line': return 'Line';
+                case 'arrow': return 'Arrow';
+                case 'path': return `Drawing (${(layer.points || []).length} points)`;
+                default: return layer.type || 'Layer';
+            }
+        }
+
+        function selectLayer(layerId) {
+            if (editor) {
+                editor.selectLayer(layerId);
+                updateLayersList();
+                log(`📋 Selected layer: ${layerId}`, 'info');
+            }
+        }
+
+        function clearCanvas() {
+            if (editor) {
+                editor.layers = [];
+                layerCount = 0;
+                editor.renderLayers();
+                updateLayersList();
+                updateStats();
+                log('🗑️ Canvas cleared', 'success');
+            }
+        }
+
+        function resetZoom() {
+            if (canvasManager) {
+                canvasManager.resetZoom();
+                updateStats();
+                log('🔍 Zoom reset to 100%', 'success');
+            }
+        }
+
+        function saveDemo() {
+            if (editor) {
+                const data = JSON.stringify(editor.layers, null, 2);
+                console.log('Demo data:', data);
+                log(`💾 Demo saved! ${editor.layers.length} layers exported to console`, 'success');
+            }
+        }
+
+        // Demo functions
+        function addDemoText() {
+            if (editor) {
+                const texts = [
+                    'Welcome to Layers!',
+                    'Draw anything you want',
+                    'MediaWiki Integration',
+                    'Layer-based Editing'
+                ];
+                const text = texts[Math.floor(Math.random() * texts.length)];
+                const layer = {
+                    type: 'text',
+                    x: 150 + Math.random() * 400,
+                    y: 100 + Math.random() * 300,
+                    text: text,
+                    fontSize: 20 + Math.random() * 20,
+                    fontFamily: 'Arial',
+                    fill: `hsl(${Math.random() * 360}, 70%, 50%)`
+                };
+                editor.addLayer(layer);
+                log(`📝 Added demo text: "${text}"`, 'success');
+            }
+        }
+
+        function addDemoShapes() {
+            if (editor) {
+                const shapes = ['rectangle', 'circle'];
+                const shape = shapes[Math.floor(Math.random() * shapes.length)];
+                const color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+                
+                let layer;
+                if (shape === 'rectangle') {
+                    layer = {
+                        type: 'rectangle',
+                        x: 100 + Math.random() * 500,
+                        y: 50 + Math.random() * 400,
+                        width: 50 + Math.random() * 150,
+                        height: 30 + Math.random() * 100,
+                        stroke: color,
+                        strokeWidth: 2 + Math.random() * 4,
+                        fill: color + '30'
+                    };
+                } else {
+                    layer = {
+                        type: 'circle',
+                        x: 150 + Math.random() * 400,
+                        y: 100 + Math.random() * 300,
+                        radius: 20 + Math.random() * 60,
+                        stroke: color,
+                        strokeWidth: 2 + Math.random() * 4,
+                        fill: color + '30'
+                    };
+                }
+                
+                editor.addLayer(layer);
+                log(`🔷 Added demo ${shape}`, 'success');
+            }
+        }
+
+        function addDemoAnnotations() {
+            if (editor) {
+                // Add arrow
+                const arrow = {
+                    type: 'arrow',
+                    x1: 200 + Math.random() * 200,
+                    y1: 150 + Math.random() * 200,
+                    x2: 300 + Math.random() * 200,
+                    y2: 200 + Math.random() * 200,
+                    stroke: '#ff4757',
+                    strokeWidth: 3,
+                    arrowSize: 12
+                };
+                editor.addLayer(arrow);
+                
+                // Add explanatory text
+                const text = {
+                    type: 'text',
+                    x: arrow.x2 + 10,
+                    y: arrow.y2 - 10,
+                    text: 'Important!',
+                    fontSize: 16,
+                    fontFamily: 'Arial',
+                    fill: '#ff4757'
+                };
+                editor.addLayer(text);
+                
+                log('📌 Added annotation with arrow and text', 'success');
+            }
+        }
+
+        function showDemoTutorial() {
+            log('❓ Tutorial: Select a tool from the toolbar and click/drag on the canvas to draw', 'info');
+            log('💡 Tip: Use different colors and sizes for variety', 'info');
+            log('🎯 Try the Text tool for adding labels and annotations', 'info');
+            log('🔧 Use the Pen tool for free-hand drawing', 'info');
+        }
+
+        // Create enhanced editor
+        function createEditor() {
+            return {
+                filename: 'demo-image.png',
+                layers: [],
+                selectedLayerId: null,
+                canvasManager: null,
+                
+                addLayer: function(layerData) {
+                    layerData.id = 'layer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    layerData.visible = layerData.visible !== false;
+                    this.layers.push(layerData);
+                    layerCount++;
+                    this.renderLayers();
+                    updateLayersList();
+                    updateStats();
+                    log(`➕ Layer added: ${layerData.type}`, 'success');
+                },
+                
+                renderLayers: function() {
+                    if (this.canvasManager) {
+                        this.canvasManager.renderLayers(this.layers);
+                    }
+                },
+                
+                setCurrentTool: function(tool) {
+                    this.currentTool = tool;
+                    if (this.canvasManager) {
+                        this.canvasManager.setTool(tool);
+                    }
+                },
+                
+                getLayerById: function(layerId) {
+                    return this.layers.find(layer => layer.id === layerId);
+                },
+                
+                selectLayer: function(layerId) {
+                    this.selectedLayerId = layerId;
+                    console.log('Selected layer:', layerId);
+                }
+            };
+        }
+
+        // Initialize everything
+        async function initialize() {
+            try {
+                log('🚀 Starting Layers Extension Demo...', 'info');
+                
+                const script = document.createElement('script');
+                script.src = 'resources/ext.layers.editor/CanvasManager.js';
+                
+                script.onload = function() {
+                    log('📦 CanvasManager loaded successfully', 'success');
+                    
+                    try {
+                        editor = createEditor();
+                        const container = document.getElementById('canvas-container');
+                        
+                        canvasManager = new window.CanvasManager({
+                            container: container,
+                            editor: editor
+                        });
+                        
+                        editor.canvasManager = canvasManager;
+                        
+                        log('✅ Canvas Manager initialized successfully!', 'success');
+                        log('🎨 Ready to draw! Select a tool and start creating.', 'info');
+                        
+                        updateStats();
+                        updateStyle();
+                        
+                    } catch (error) {
+                        log(`❌ Error creating CanvasManager: ${error.message}`, 'error');
+                        console.error('CanvasManager error:', error);
+                    }
+                };
+                
+                script.onerror = function() {
+                    log('❌ Failed to load CanvasManager script', 'error');
+                };
+                
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                log(`❌ Initialization failed: ${error.message}`, 'error');
+                console.error('Initialization error:', error);
+            }
+        }
+
+        // Start when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    </script>
+</body>
+</html>
