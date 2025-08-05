@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layers Editor Debug Test</title>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 10px;
+            border: 2px solid #007cba;
+            border-radius: 8px;
+            z-index: 20000;
+            max-width: 300px;
+            font-size: 12px;
+        }
+        
+        .debug-panel h3 {
+            margin: 0 0 10px 0;
+            color: #007cba;
+        }
+        
+        .status {
+            margin: 5px 0;
+            padding: 3px 6px;
+            border-radius: 3px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #005a87;
+        }
+        
+        .canvas-demo {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid #007cba;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-panel">
+        <h3>🔧 Debug Status</h3>
+        <div id="status-log"></div>
+        <button onclick="testCanvasBasic()">Test Canvas Basic</button>
+        <button onclick="testLayersEditor()">Test Layers Editor</button>
+        <button onclick="clearCanvas()">Clear Canvas</button>
+    </div>
+
+    <script>
+        // Simple logging system
+        function log(message, type = 'info') {
+            const statusLog = document.getElementById('status-log');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'status ' + type;
+            statusDiv.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            statusLog.appendChild(statusDiv);
+            console.log('[DEBUG]', message);
+            
+            // Keep only last 10 messages
+            while (statusLog.children.length > 10) {
+                statusLog.removeChild(statusLog.firstChild);
+            }
+        }
+        
+        // Test basic canvas functionality
+        function testCanvasBasic() {
+            log('Testing basic canvas...', 'info');
+            
+            try {
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 300;
+                canvas.className = 'canvas-demo';
+                
+                // Get context
+                const ctx = canvas.getContext('2d');
+                
+                // Draw test content
+                ctx.fillStyle = '#f8f9fa';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.strokeStyle = '#007cba';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+                
+                ctx.fillStyle = '#007cba';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Canvas Working!', canvas.width/2, canvas.height/2 - 20);
+                
+                ctx.fillStyle = '#666';
+                ctx.font = '14px Arial';
+                ctx.fillText('Size: ' + canvas.width + 'x' + canvas.height, canvas.width/2, canvas.height/2 + 10);
+                
+                // Add to document
+                document.body.appendChild(canvas);
+                
+                log('Canvas created and drawn successfully!', 'success');
+                
+                // Add click handler for basic interaction
+                canvas.addEventListener('click', function(e) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    ctx.fillStyle = '#ff4444';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    log('Click at: ' + Math.round(x) + ', ' + Math.round(y), 'info');
+                });
+                
+            } catch (error) {
+                log('Canvas test failed: ' + error.message, 'error');
+                console.error('Canvas test error:', error);
+            }
+        }
+        
+        // Test layers editor components
+        function testLayersEditor() {
+            log('Testing Layers Editor components...', 'info');
+            
+            // Mock MediaWiki environment
+            window.mw = {
+                config: {
+                    get: function(key) {
+                        const config = {
+                            'wgServer': 'http://localhost',
+                            'wgScriptPath': '',
+                            'wgArticlePath': '/wiki/$1',
+                            'wgNamespaceNumber': 6,
+                            'wgUserGroups': ['user'],
+                            'wgTitle': 'Test_Image.jpg'
+                        };
+                        return config[key];
+                    }
+                },
+                msg: function(key) {
+                    const messages = {
+                        'layers-editor-save': 'Save',
+                        'layers-editor-cancel': 'Cancel',
+                        'layers-editor-title': 'Layers',
+                        'layers-add-layer': 'Add Layer',
+                        'layers-save-success': 'Layers saved successfully',
+                        'layers-save-error': 'Error saving layers',
+                        'layers-tool-text': 'Text',
+                        'layers-tool-rectangle': 'Rectangle',
+                        'layers-tool-circle': 'Circle',
+                        'layers-tool-arrow': 'Arrow'
+                    };
+                    return messages[key] || key;
+                },
+                notify: function(message, options) {
+                    log('MW Notify: ' + message, options && options.type === 'error' ? 'error' : 'info');
+                },
+                hook: function(name) {
+                    return {
+                        add: function(callback) {
+                            log('Hook added: ' + name, 'info');
+                        }
+                    };
+                },
+                loader: {
+                    using: function(module) {
+                        return {
+                            then: function(callback) {
+                                callback();
+                                return { catch: function() {} };
+                            }
+                        };
+                    }
+                },
+                Api: function() {
+                    return {
+                        get: function(params) {
+                            return {
+                                done: function(callback) {
+                                    callback({ layersinfo: { layerset: { data: { layers: [] } } } });
+                                    return { fail: function() {} };
+                                }
+                            };
+                        },
+                        postWithToken: function(token, params) {
+                            return {
+                                done: function(callback) {
+                                    callback({ layerssave: { success: true } });
+                                    return { fail: function() {} };
+                                }
+                            };
+                        }
+                    };
+                }
+            };
+            
+            // Simple jQuery mock
+            window.$ = function(selector) {
+                if (typeof selector === 'string') {
+                    if (selector === '<div>') {
+                        const div = document.createElement('div');
+                        return {
+                            get: (i) => i === 0 ? div : null,
+                            addClass: (c) => { div.className += ' ' + c; return this; },
+                            appendTo: (p) => { 
+                                const parent = typeof p === 'string' ? document.querySelector(p) : 
+                                               p && p.get ? p.get(0) : p;
+                                if (parent) parent.appendChild(div);
+                                return this;
+                            }
+                        };
+                    } else if (selector === '<canvas>') {
+                        const canvas = document.createElement('canvas');
+                        return {
+                            get: (i) => i === 0 ? canvas : null,
+                            addClass: (c) => { canvas.className += ' ' + c; return this; },
+                            appendTo: (p) => { 
+                                const parent = typeof p === 'string' ? document.querySelector(p) : 
+                                               p && p.get ? p.get(0) : p;
+                                if (parent) parent.appendChild(canvas);
+                                return this;
+                            }
+                        };
+                    }
+                }
+                return { on: () => this };
+            };
+            
+            $.extend = function(target, source) {
+                for (let key in source) target[key] = source[key];
+                return target;
+            };
+            
+            // Load and test components
+            loadScript('resources/ext.layers.editor/CanvasManager.js')
+                .then(() => loadScript('resources/ext.layers.editor/LayerPanel.js'))
+                .then(() => loadScript('resources/ext.layers.editor/Toolbar.js'))
+                .then(() => loadScript('resources/ext.layers.editor/LayersEditor.js'))
+                .then(() => {
+                    log('All scripts loaded, testing LayersEditor...', 'info');
+                    
+                    if (window.LayersEditor) {
+                        const editor = new window.LayersEditor({
+                            filename: 'Test_Image_Debug.jpg'
+                        });
+                        log('LayersEditor created successfully!', 'success');
+                        window.testEditor = editor;
+                    } else {
+                        log('LayersEditor class not found!', 'error');
+                    }
+                })
+                .catch(error => {
+                    log('Failed to load scripts: ' + error.message, 'error');
+                });
+        }
+        
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    log('Loaded: ' + src, 'success');
+                    resolve();
+                };
+                script.onerror = () => {
+                    log('Failed to load: ' + src, 'error');
+                    reject(new Error('Script load failed: ' + src));
+                };
+                document.head.appendChild(script);
+            });
+        }
+        
+        function clearCanvas() {
+            const canvases = document.querySelectorAll('canvas');
+            canvases.forEach(canvas => canvas.remove());
+            
+            if (window.testEditor) {
+                window.testEditor.destroy();
+                window.testEditor = null;
+            }
+            
+            log('Cleared all canvases', 'info');
+        }
+        
+        // Auto-start basic test
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Debug page loaded', 'success');
+        });
+    </script>
+</body>
+</html>

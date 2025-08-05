@@ -38,15 +38,21 @@
     }
 
     CanvasManager.prototype.init = function () {
+        console.log( 'Layers: CanvasManager initializing...' );
+        
         this.canvas = this.container.querySelector( 'canvas' ) || 
                     this.container.appendChild( document.createElement( 'canvas' ) );
         this.ctx = this.canvas.getContext( '2d' );
+        
+        console.log( 'Layers: Canvas created, size:', this.canvas.width, 'x', this.canvas.height );
         
         // Load background image
         this.loadBackgroundImage();
         
         // Set up event handlers
         this.setupEventHandlers();
+        
+        console.log( 'Layers: CanvasManager initialization complete' );
     };
 
     CanvasManager.prototype.loadBackgroundImage = function () {
@@ -54,16 +60,31 @@
         var filename = this.editor.filename;
         
         // Create image URL for the file - try multiple URL patterns
-        var imageUrls = [
-            mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) + 
-            '/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename ),
-            
-            mw.config.get( 'wgServer' ) + mw.config.get( 'wgArticlePath' ).replace( '$1', 'File:' + encodeURIComponent( filename ) ),
-            
-            // Fallback for direct file access
-            mw.config.get( 'wgServer' ) + '/wiki/File:' + encodeURIComponent( filename )
-        ];
+        var imageUrls = [];
         
+        // Try MediaWiki patterns only if mw is properly configured
+        if ( mw && mw.config && mw.config.get( 'wgServer' ) && mw.config.get( 'wgScriptPath' ) ) {
+            imageUrls.push( 
+                mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) + 
+                '/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename )
+            );
+            
+            if ( mw.config.get( 'wgArticlePath' ) ) {
+                imageUrls.push( 
+                    mw.config.get( 'wgServer' ) + mw.config.get( 'wgArticlePath' ).replace( '$1', 'File:' + encodeURIComponent( filename ) )
+                );
+            }
+            
+            imageUrls.push( mw.config.get( 'wgServer' ) + '/wiki/File:' + encodeURIComponent( filename ) );
+        }
+        
+        // Add test placeholder image
+        imageUrls.push( 'https://via.placeholder.com/800x600/f8f9fa/666666?text=' + encodeURIComponent( filename + ' - Sample Image' ) );
+        
+        // Always add test SVG as final fallback
+        imageUrls.push( 'data:image/svg+xml;base64,' + btoa( this.createTestImage( filename ) ) );
+        
+        console.log( 'Layers: Trying to load background image from URLs:', imageUrls );
         this.tryLoadImage( imageUrls, 0 );
     };
 
@@ -71,64 +92,156 @@
         var self = this;
         
         if ( index >= urls.length ) {
-            console.error( 'Layers: Failed to load image from any URL' );
-            this.showImageError();
+            console.error( 'Layers: Failed to load image from any URL, using test image' );
+            this.useTestImage();
             return;
         }
         
+        var currentUrl = urls[index];
+        console.log( 'Layers: Attempting to load image from:', currentUrl );
+        
         this.backgroundImage = new Image();
+        this.backgroundImage.crossOrigin = 'anonymous'; // Allow cross-origin images
+        
         this.backgroundImage.onload = function () {
-            console.log( 'Layers: Background image loaded successfully' );
+            console.log( 'Layers: Background image loaded successfully from:', currentUrl );
+            console.log( 'Layers: Image dimensions:', self.backgroundImage.width, 'x', self.backgroundImage.height );
             self.resizeCanvas();
             self.redraw();
-            self.renderLayers( self.editor.layers );
+            if ( self.editor.layers ) {
+                self.renderLayers( self.editor.layers );
+            }
         };
         
         this.backgroundImage.onerror = function () {
-            console.warn( 'Layers: Failed to load image from:', urls[index] );
+            console.warn( 'Layers: Failed to load image from:', currentUrl );
+            // Try next URL
             self.tryLoadImage( urls, index + 1 );
         };
         
-        console.log( 'Layers: Attempting to load image from:', urls[index] );
-        this.backgroundImage.src = urls[index];
+        this.backgroundImage.src = currentUrl;
     };
 
-    CanvasManager.prototype.showImageError = function () {
-        // Display placeholder when image cannot be loaded
+    CanvasManager.prototype.useTestImage = function () {
+        // Create a test image when no real image is available
+        var self = this;
+        this.backgroundImage = new Image();
+        
+        var testImageData = this.createTestImage( this.editor.filename );
+        this.backgroundImage.src = 'data:image/svg+xml;base64,' + btoa( testImageData );
+        
+        this.backgroundImage.onload = function () {
+            console.log( 'Layers: Test background image loaded successfully' );
+            console.log( 'Layers: Test image dimensions:', self.backgroundImage.width, 'x', self.backgroundImage.height );
+            self.resizeCanvas();
+            self.redraw();
+            if ( self.editor.layers ) {
+                self.renderLayers( self.editor.layers );
+            }
+        };
+        
+        this.backgroundImage.onerror = function () {
+            console.error( 'Layers: Even test image failed to load, creating canvas background' );
+            self.createCanvasBackground();
+        };
+    };
+
+    CanvasManager.prototype.createCanvasBackground = function () {
+        // Create a simple background directly on canvas when even SVG fails
+        console.log( 'Layers: Creating canvas background as final fallback' );
+        this.backgroundImage = null;
+        
+        // Set default canvas size
         this.canvas.width = 800;
         this.canvas.height = 600;
         
-        this.ctx.fillStyle = '#f0f0f0';
+        // Draw background
+        this.ctx.fillStyle = '#f8f9fa';
         this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+        this.ctx.strokeStyle = '#dee2e6';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect( 1, 1, this.canvas.width - 2, this.canvas.height - 2 );
         
-        this.ctx.strokeStyle = '#ddd';
-        this.ctx.strokeRect( 0, 0, this.canvas.width, this.canvas.height );
-        
-        this.ctx.fillStyle = '#666';
-        this.ctx.font = '16px Arial';
+        // Add text
+        this.ctx.fillStyle = '#6c757d';
+        this.ctx.font = '24px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText( 'Image could not be loaded', this.canvas.width / 2, this.canvas.height / 2 );
-        this.ctx.fillText( 'You can still add layers', this.canvas.width / 2, this.canvas.height / 2 + 25 );
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText( this.editor.filename, this.canvas.width / 2, this.canvas.height / 2 - 20 );
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText( 'Sample Image for Layer Editing', this.canvas.width / 2, this.canvas.height / 2 + 20 );
         
-        // Style the canvas
+        // Add some design elements
+        this.ctx.strokeStyle = '#e9ecef';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.arc( 200, 150, 50, 0, 2 * Math.PI );
+        this.ctx.stroke();
+        
+        this.ctx.strokeRect( 500, 300, 100, 80 );
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo( 100, 400 );
+        this.ctx.lineTo( 300, 500 );
+        this.ctx.stroke();
+        
+        // Set up canvas display
         this.canvas.style.width = '800px';
         this.canvas.style.height = '600px';
+        this.zoom = 1.0;
+        this.panX = 0;
+        this.panY = 0;
+        
+        console.log( 'Layers: Canvas background created successfully' );
+        
+        if ( this.editor && this.editor.layers ) {
+            this.renderLayers( this.editor.layers );
+        }
+    };
+
+    CanvasManager.prototype.createTestImage = function ( filename ) {
+        return '<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">' +
+            '<rect width="100%" height="100%" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>' +
+            '<text x="50%" y="45%" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#495057">' + 
+            (filename || 'Sample Image').replace(/[<>&"]/g, function(match) {
+                return {'<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;'}[match];
+            }) + '</text>' +
+            '<text x="50%" y="55%" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">Sample Image for Layer Editing</text>' +
+            '<circle cx="200" cy="150" r="50" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
+            '<rect x="500" y="300" width="100" height="80" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
+            '<line x1="100" y1="400" x2="300" y2="500" stroke="#e9ecef" stroke-width="2"/>' +
+            '<text x="50%" y="85%" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#adb5bd">Draw shapes and text using the tools above</text>' +
+            '</svg>';
     };
 
     CanvasManager.prototype.resizeCanvas = function () {
         if ( !this.backgroundImage ) return;
         
-        // Set canvas size to image size
+        // Set canvas logical size to image size
         this.canvas.width = this.backgroundImage.width;
         this.canvas.height = this.backgroundImage.height;
         
-        // Apply initial transform
-        this.updateCanvasTransform();
+        console.log( 'Layers: Canvas resized to', this.canvas.width, 'x', this.canvas.height );
         
-        // Fit to window on initial load
-        if ( this.zoom === 1.0 && this.panX === 0 && this.panY === 0 ) {
-            this.fitToWindow();
-        }
+        // Calculate display size that fits in container
+        var container = this.canvas.parentElement;
+        var containerWidth = container.clientWidth - 40; // padding
+        var containerHeight = container.clientHeight - 40;
+        
+        var scaleX = containerWidth / this.backgroundImage.width;
+        var scaleY = containerHeight / this.backgroundImage.height;
+        var scale = Math.min( scaleX, scaleY, 1 ); // Don't scale up initially
+        
+        // Set CSS size for display
+        this.canvas.style.width = ( this.backgroundImage.width * scale ) + 'px';
+        this.canvas.style.height = ( this.backgroundImage.height * scale ) + 'px';
+        
+        // Initialize zoom to fit
+        this.zoom = scale;
+        this.panX = 0;
+        this.panY = 0;
+        
+        console.log( 'Layers: Initial zoom set to', this.zoom );
     };
 
     CanvasManager.prototype.setupEventHandlers = function () {
@@ -207,6 +320,11 @@
             return;
         }
         
+        // Ignore right click
+        if ( e.button === 2 ) {
+            return;
+        }
+        
         this.isDrawing = true;
         
         if ( this.currentTool === 'pointer' ) {
@@ -223,11 +341,19 @@
             var deltaX = e.clientX - this.lastPanPoint.x;
             var deltaY = e.clientY - this.lastPanPoint.y;
             
-            this.panX += deltaX;
-            this.panY += deltaY;
+            // Apply pan offset to canvas position
+            var currentTranslateX = this.panX || 0;
+            var currentTranslateY = this.panY || 0;
+            
+            this.panX = currentTranslateX + deltaX;
+            this.panY = currentTranslateY + deltaY;
             
             this.lastPanPoint = { x: e.clientX, y: e.clientY };
-            this.updateCanvasTransform();
+            
+            // Update canvas position
+            this.canvas.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
+            this.canvas.style.transformOrigin = '0 0';
+            
             return;
         }
         
@@ -258,26 +384,31 @@
     };
 
     CanvasManager.prototype.handleWheel = function ( e ) {
+        e.preventDefault();
+        
         var delta = e.deltaY > 0 ? -0.1 : 0.1;
         var newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, this.zoom + delta ) );
         
         if ( newZoom !== this.zoom ) {
+            // Get mouse position relative to canvas before zoom
             var rect = this.canvas.getBoundingClientRect();
             var mouseX = e.clientX - rect.left;
             var mouseY = e.clientY - rect.top;
             
-            // Zoom toward mouse position
-            var zoomFactor = newZoom / this.zoom;
-            this.panX = mouseX - ( mouseX - this.panX ) * zoomFactor;
-            this.panY = mouseY - ( mouseY - this.panY ) * zoomFactor;
+            // Calculate the point on the canvas that the mouse is over
+            var canvasPointX = mouseX / this.zoom;
+            var canvasPointY = mouseY / this.zoom;
             
+            // Update zoom
             this.zoom = newZoom;
-            this.updateCanvasTransform();
             
-            // Notify editor of zoom change
-            if ( this.editor.toolbar ) {
-                this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
+            // Update CSS size
+            if ( this.backgroundImage ) {
+                this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
+                this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
             }
+            
+            this.updateCanvasTransform();
         }
     };
 
@@ -313,22 +444,22 @@
                 case 'ArrowUp':
                     e.preventDefault();
                     this.panY += panDistance;
-                    this.updateCanvasTransform();
+                    this.canvas.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
                     break;
                 case 'ArrowDown':
                     e.preventDefault();
                     this.panY -= panDistance;
-                    this.updateCanvasTransform();
+                    this.canvas.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
                     break;
                 case 'ArrowLeft':
                     e.preventDefault();
                     this.panX += panDistance;
-                    this.updateCanvasTransform();
+                    this.canvas.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
                     this.panX -= panDistance;
-                    this.updateCanvasTransform();
+                    this.canvas.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
                     break;
             }
         }
@@ -351,17 +482,28 @@
 
     CanvasManager.prototype.setZoom = function ( newZoom ) {
         this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
+        
+        // Update CSS size based on zoom
+        if ( this.backgroundImage ) {
+            this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
+            this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
+        }
+        
         this.updateCanvasTransform();
         
-        if ( this.editor.toolbar ) {
-            this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
-        }
+        console.log( 'Layers: Zoom set to', this.zoom );
     };
 
     CanvasManager.prototype.resetZoom = function () {
         this.zoom = 1.0;
         this.panX = 0;
         this.panY = 0;
+        
+        if ( this.backgroundImage ) {
+            this.canvas.style.width = this.backgroundImage.width + 'px';
+            this.canvas.style.height = this.backgroundImage.height + 'px';
+        }
+        
         this.updateCanvasTransform();
         
         if ( this.editor.toolbar ) {
@@ -381,18 +523,37 @@
         var scale = Math.min( scaleX, scaleY );
         
         this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, scale ) );
-        this.panX = ( containerWidth - this.backgroundImage.width * this.zoom ) / 2;
-        this.panY = ( containerHeight - this.backgroundImage.height * this.zoom ) / 2;
+        this.panX = 0;
+        this.panY = 0;
+        
+        // Update CSS size
+        this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
+        this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
+        
         this.updateCanvasTransform();
         
         if ( this.editor.toolbar ) {
             this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
         }
+        
+        console.log( 'Layers: Fit to window - zoom:', this.zoom );
     };
 
     CanvasManager.prototype.updateCanvasTransform = function () {
-        this.canvas.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
+        // Update zoom display
+        if ( this.editor.toolbar ) {
+            this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
+        }
+        
+        // Apply CSS transform for zoom and pan
+        var scale = this.zoom;
+        var translateX = this.panX;
+        var translateY = this.panY;
+        
+        this.canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
         this.canvas.style.transformOrigin = '0 0';
+        
+        console.log( 'Layers: Canvas transform updated - zoom:', this.zoom, 'pan:', this.panX, this.panY );
     };
 
     CanvasManager.prototype.handleLayerSelection = function ( point ) {
@@ -673,13 +834,20 @@
     CanvasManager.prototype.getMousePoint = function ( e ) {
         var rect = this.canvas.getBoundingClientRect();
         
-        // Account for zoom and pan transformations
+        // Get mouse position relative to canvas
         var clientX = e.clientX - rect.left;
         var clientY = e.clientY - rect.top;
         
-        // Convert from screen coordinates to canvas coordinates
-        var canvasX = ( clientX - this.panX ) / this.zoom;
-        var canvasY = ( clientY - this.panY ) / this.zoom;
+        // Convert from display coordinates to canvas coordinates
+        // Account for CSS transforms (zoom and pan)
+        var canvasX = clientX / this.zoom;
+        var canvasY = clientY / this.zoom;
+        
+        // Snap to grid if enabled
+        if ( this.snapToGrid ) {
+            canvasX = Math.round( canvasX / this.gridSize ) * this.gridSize;
+            canvasY = Math.round( canvasY / this.gridSize ) * this.gridSize;
+        }
         
         return {
             x: canvasX,
@@ -1255,8 +1423,21 @@
     };
 
     CanvasManager.prototype.handleResize = function () {
-        this.resizeCanvas();
-        this.redraw();
+        // Recalculate fit to window if canvas is at fit zoom level
+        if ( this.backgroundImage ) {
+            var container = this.canvas.parentElement;
+            var containerWidth = container.clientWidth - 40;
+            var containerHeight = container.clientHeight - 40;
+            
+            var scaleX = containerWidth / this.backgroundImage.width;
+            var scaleY = containerHeight / this.backgroundImage.height;
+            var fitScale = Math.min( scaleX, scaleY );
+            
+            // If we're close to fit zoom, re-fit to window
+            if ( Math.abs( this.zoom - fitScale ) < 0.1 ) {
+                this.fitToWindow();
+            }
+        }
     };
 
     // Export CanvasManager to global scope

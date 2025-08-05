@@ -99,6 +99,11 @@
     LayersEditor.prototype.initializeComponents = function () {
         // Initialize components
         try {
+            console.log( 'Layers: Initializing components...' );
+            console.log( 'Layers: Canvas container:', this.$canvas.get( 0 ) );
+            console.log( 'Layers: Layer panel container:', this.$layerPanel.get( 0 ) );
+            console.log( 'Layers: Toolbar container:', this.$toolbar.get( 0 ) );
+            
             this.canvasManager = new window.CanvasManager( {
                 container: this.$canvas.get( 0 ),
                 editor: this
@@ -115,6 +120,9 @@
             } );
             
             console.log( 'Layers: Editor components initialized successfully' );
+            console.log( 'Layers: CanvasManager:', this.canvasManager );
+            console.log( 'Layers: LayerPanel:', this.layerPanel );
+            console.log( 'Layers: Toolbar:', this.toolbar );
         } catch ( error ) {
             console.error( 'Layers: Error initializing editor components:', error );
             this.showError( 'Failed to initialize editor: ' + error.message );

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas Diagnostic Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        canvas { border: 2px solid #007bff; }
+        .status { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Canvas Drawing Diagnostic</h1>
+    
+    <div class="test">
+        <h2>1. Basic Canvas Test</h2>
+        <canvas id="basic-canvas" width="400" height="300"></canvas>
+        <div class="status" id="basic-status"></div>
+    </div>
+    
+    <div class="test">
+        <h2>2. SVG Test Image</h2>
+        <img id="test-image" width="400" height="300" style="border: 2px solid #007bff;">
+        <div class="status" id="image-status"></div>
+    </div>
+    
+    <div class="test">
+        <h2>3. Canvas with SVG Background</h2>
+        <canvas id="svg-canvas" width="400" height="300"></canvas>
+        <div class="status" id="svg-status"></div>
+    </div>
+    
+    <div class="test">
+        <h2>4. CanvasManager Test</h2>
+        <div id="canvas-container" style="border: 2px solid #007bff; width: 400px; height: 300px;">
+            <canvas width="400" height="300"></canvas>
+        </div>
+        <div class="status" id="manager-status"></div>
+    </div>
+
+    <script>
+        function log(id, message, type = 'info') {
+            const el = document.getElementById(id);
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            el.innerHTML += `<div style="color: ${color}; margin: 2px 0;">${message}</div>`;
+        }
+
+        // Test 1: Basic Canvas
+        const basicCanvas = document.getElementById('basic-canvas');
+        const basicCtx = basicCanvas.getContext('2d');
+        
+        // Draw simple test pattern
+        basicCtx.fillStyle = '#f0f0f0';
+        basicCtx.fillRect(0, 0, basicCanvas.width, basicCanvas.height);
+        basicCtx.fillStyle = '#333';
+        basicCtx.font = '16px Arial';
+        basicCtx.textAlign = 'center';
+        basicCtx.fillText('Basic Canvas Test', basicCanvas.width/2, basicCanvas.height/2);
+        log('basic-status', 'Basic canvas drawing complete', 'success');
+
+        // Test 2: SVG Test Image
+        function createTestSVG(filename) {
+            return '<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">' +
+                '<rect width="100%" height="100%" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>' +
+                '<text x="50%" y="45%" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#495057">' + 
+                (filename || 'Test Image') + '</text>' +
+                '<text x="50%" y="55%" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#6c757d">SVG Background Test</text>' +
+                '<circle cx="100" cy="80" r="30" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
+                '<rect x="250" y="150" width="60" height="40" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
+                '<line x1="50" y1="200" x2="150" y2="250" stroke="#e9ecef" stroke-width="2"/>' +
+                '</svg>';
+        }
+
+        const testImage = document.getElementById('test-image');
+        const svgData = createTestSVG('Diagnostic Test');
+        const svgBlob = new Blob([svgData], {type: 'image/svg+xml'});
+        const svgUrl = URL.createObjectURL(svgBlob);
+
+        testImage.onload = function() {
+            log('image-status', 'SVG image loaded successfully', 'success');
+            log('image-status', `Image dimensions: ${this.naturalWidth} x ${this.naturalHeight}`, 'info');
+        };
+        testImage.onerror = function() {
+            log('image-status', 'SVG image failed to load', 'error');
+        };
+        testImage.src = svgUrl;
+
+        // Test 3: Canvas with SVG Background
+        const svgCanvas = document.getElementById('svg-canvas');
+        const svgCtx = svgCanvas.getContext('2d');
+        
+        const bgImage = new Image();
+        bgImage.onload = function() {
+            log('svg-status', 'Background image loaded for canvas', 'success');
+            
+            // Draw background
+            svgCtx.drawImage(bgImage, 0, 0);
+            
+            // Draw overlay
+            svgCtx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            svgCtx.fillRect(50, 50, 100, 80);
+            svgCtx.fillStyle = '#ff0000';
+            svgCtx.font = '14px Arial';
+            svgCtx.fillText('Overlay Text', 70, 95);
+            
+            log('svg-status', 'Canvas with SVG background complete', 'success');
+        };
+        bgImage.onerror = function() {
+            log('svg-status', 'Background image failed to load', 'error');
+        };
+        bgImage.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+
+        // Test 4: Load CanvasManager and test
+        function loadCanvasManager() {
+            const script = document.createElement('script');
+            script.src = 'resources/ext.layers.editor/CanvasManager.js';
+            script.onload = function() {
+                log('manager-status', 'CanvasManager script loaded', 'success');
+                testCanvasManager();
+            };
+            script.onerror = function() {
+                log('manager-status', 'Failed to load CanvasManager script', 'error');
+            };
+            document.head.appendChild(script);
+        }
+
+        function testCanvasManager() {
+            // Mock MW
+            window.mw = {
+                config: {
+                    get: function(key) {
+                        return {
+                            'wgServer': '',
+                            'wgScriptPath': ''
+                        }[key] || '';
+                    }
+                }
+            };
+
+            if (typeof window.CanvasManager === 'undefined') {
+                log('manager-status', 'CanvasManager not available', 'error');
+                return;
+            }
+
+            try {
+                log('manager-status', 'Creating CanvasManager instance...', 'info');
+                
+                const mockEditor = {
+                    filename: 'diagnostic-test.png',
+                    layers: []
+                };
+
+                const container = document.getElementById('canvas-container');
+                const canvasManager = new window.CanvasManager({
+                    container: container,
+                    editor: mockEditor
+                });
+
+                log('manager-status', 'CanvasManager created successfully', 'success');
+                log('manager-status', 'Canvas: ' + (canvasManager.canvas ? 'OK' : 'MISSING'), 
+                    canvasManager.canvas ? 'success' : 'error');
+                log('manager-status', 'Context: ' + (canvasManager.ctx ? 'OK' : 'MISSING'), 
+                    canvasManager.ctx ? 'success' : 'error');
+
+                // Wait for background to load
+                setTimeout(() => {
+                    if (canvasManager.backgroundImage) {
+                        log('manager-status', 'Background image loaded', 'success');
+                    } else {
+                        log('manager-status', 'Background image not loaded yet', 'info');
+                    }
+                }, 2000);
+
+            } catch (error) {
+                log('manager-status', 'Error creating CanvasManager: ' + error.message, 'error');
+            }
+        }
+
+        // Start the CanvasManager test
+        loadCanvasManager();
+
+    </script>
+</body>
+</html>

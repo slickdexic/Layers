@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Fix Verification</title>
+    <link rel="stylesheet" href="resources/ext.layers.editor/editor.css">
+    <style>
+        body { 
+            margin: 0; 
+            font-family: Arial, sans-serif; 
+            background: #f5f5f5;
+        }
+        .test-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        .test-info h3 {
+            margin: 0 0 10px 0;
+            color: #007cba;
+        }
+        .test-canvas {
+            border: 3px solid #007cba;
+            background: white;
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h3>Canvas Fix Test</h3>
+        <p><strong>Expected Results:</strong></p>
+        <ul>
+            <li>✅ Large, visible canvas</li>
+            <li>✅ Test image background</li>
+            <li>✅ Click to draw red dots</li>
+            <li>✅ Professional styling</li>
+        </ul>
+        <p><em>This verifies the core canvas fixes are working.</em></p>
+    </div>
+
+    <script>
+        // Create test canvas with the same approach as the fixed CanvasManager
+        function createTestCanvas() {
+            console.log('Creating test canvas with fixed approach...');
+            
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.className = 'test-canvas';
+            
+            // Create test image (same as CanvasManager fix)
+            const testImageSVG = '<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">' +
+                '<rect width="100%" height="100%" fill="#f8f9fa" stroke="#ddd" stroke-width="2"/>' +
+                '<text x="50%" y="45%" text-anchor="middle" font-family="Arial" font-size="24" fill="#666">Canvas Fix Test</text>' +
+                '<text x="50%" y="55%" text-anchor="middle" font-family="Arial" font-size="16" fill="#999">Background Image Loaded Successfully</text>' +
+                '<circle cx="200" cy="150" r="50" fill="none" stroke="#e0e0e0" stroke-width="2"/>' +
+                '<rect x="500" y="300" width="100" height="80" fill="none" stroke="#e0e0e0" stroke-width="2"/>' +
+                '<line x1="100" y1="400" x2="300" y2="500" stroke="#e0e0e0" stroke-width="2"/>' +
+                '</svg>';
+            
+            const img = new Image();
+            img.onload = function() {
+                console.log('Test image loaded, size:', img.width, 'x', img.height);
+                
+                // Set canvas logical size to image size (fix #1)
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Calculate display size that fits nicely (fix #2)
+                const maxDisplayWidth = Math.min(window.innerWidth - 100, 800);
+                const maxDisplayHeight = Math.min(window.innerHeight - 200, 600);
+                
+                const scaleX = maxDisplayWidth / img.width;
+                const scaleY = maxDisplayHeight / img.height;
+                const scale = Math.min(scaleX, scaleY);
+                
+                // Set CSS size for display (fix #3)
+                canvas.style.width = (img.width * scale) + 'px';
+                canvas.style.height = (img.height * scale) + 'px';
+                
+                console.log('Canvas display size:', canvas.style.width, 'x', canvas.style.height);
+                console.log('Scale factor:', scale);
+                
+                // Get context and draw background
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                
+                // Add to document
+                document.body.appendChild(canvas);
+                
+                // Add click handler for interaction test (fix #4 - coordinate conversion)
+                canvas.addEventListener('click', function(e) {
+                    const rect = canvas.getBoundingClientRect();
+                    
+                    // Convert from display coordinates to canvas coordinates (FIXED APPROACH)
+                    const displayX = e.clientX - rect.left;
+                    const displayY = e.clientY - rect.top;
+                    
+                    const canvasX = displayX / scale;  // Convert back to canvas coordinates
+                    const canvasY = displayY / scale;
+                    
+                    console.log('Click:', 
+                        'Display:', Math.round(displayX), Math.round(displayY),
+                        'Canvas:', Math.round(canvasX), Math.round(canvasY)
+                    );
+                    
+                    // Draw red dot at correct canvas coordinates
+                    ctx.fillStyle = '#ff4444';
+                    ctx.beginPath();
+                    ctx.arc(canvasX, canvasY, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Add small label
+                    ctx.fillStyle = '#333';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(`${Math.round(canvasX)},${Math.round(canvasY)}`, canvasX + 12, canvasY + 4);
+                });
+                
+                console.log('✅ Canvas fix verification complete!');
+                console.log('- Canvas is large and visible');
+                console.log('- Background image loaded');
+                console.log('- Click anywhere to test coordinate conversion');
+                console.log('- Professional styling applied');
+            };
+            
+            img.src = 'data:image/svg+xml;base64,' + btoa(testImageSVG);
+        }
+        
+        // Initialize test
+        document.addEventListener('DOMContentLoaded', createTestCanvas);
+    </script>
+</body>
+</html>

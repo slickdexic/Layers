@@ -325,6 +325,8 @@
         if ( this.editor.canvasManager ) {
             this.editor.canvasManager.updateStyleOptions( styleOptions );
         }
+        
+        console.log( 'Layers: Style options updated:', styleOptions );
     };
 
     Toolbar.prototype.executeAction = function ( actionId ) {

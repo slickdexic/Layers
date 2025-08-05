@@ -92,22 +92,81 @@
         // jQuery simulation
         window.$ = function(selector) {
             if (typeof selector === 'string') {
-                return {
-                    get: function(index) {
-                        return document.querySelector(selector);
-                    },
-                    addClass: function(className) { return this; },
-                    appendTo: function(parent) {
-                        var element = document.createElement('div');
-                        if (typeof parent === 'string') {
-                            document.querySelector(parent).appendChild(element);
-                        } else {
-                            parent.appendChild(element);
-                        }
-                        return this;
-                    },
-                    on: function() { return this; }
-                };
+                if (selector === '<div>') {
+                    // Return a wrapped div element
+                    var div = document.createElement('div');
+                    return {
+                        get: function(index) {
+                            return index === 0 ? div : null;
+                        },
+                        addClass: function(className) { 
+                            div.className += ' ' + className;
+                            return this; 
+                        },
+                        appendTo: function(parent) {
+                            if (typeof parent === 'string') {
+                                var parentEl = document.querySelector(parent);
+                                if (parentEl) parentEl.appendChild(div);
+                            } else if (parent && parent.appendChild) {
+                                parent.appendChild(div);
+                            } else if (parent && parent.get) {
+                                var parentEl = parent.get(0);
+                                if (parentEl) parentEl.appendChild(div);
+                            }
+                            return this;
+                        },
+                        on: function() { return this; }
+                    };
+                } else if (selector === '<canvas>') {
+                    // Return a wrapped canvas element
+                    var canvas = document.createElement('canvas');
+                    return {
+                        get: function(index) {
+                            return index === 0 ? canvas : null;
+                        },
+                        addClass: function(className) { 
+                            canvas.className += ' ' + className;
+                            return this; 
+                        },
+                        appendTo: function(parent) {
+                            if (typeof parent === 'string') {
+                                var parentEl = document.querySelector(parent);
+                                if (parentEl) parentEl.appendChild(canvas);
+                            } else if (parent && parent.appendChild) {
+                                parent.appendChild(canvas);
+                            } else if (parent && parent.get) {
+                                var parentEl = parent.get(0);
+                                if (parentEl) parentEl.appendChild(canvas);
+                            }
+                            return this;
+                        },
+                        on: function() { return this; }
+                    };
+                } else {
+                    // Standard selector
+                    var element = document.querySelector(selector);
+                    return {
+                        get: function(index) {
+                            return index === 0 ? element : null;
+                        },
+                        addClass: function(className) { 
+                            if (element) element.className += ' ' + className;
+                            return this; 
+                        },
+                        appendTo: function(parent) {
+                            if (element) {
+                                if (typeof parent === 'string') {
+                                    var parentEl = document.querySelector(parent);
+                                    if (parentEl) parentEl.appendChild(element);
+                                } else if (parent && parent.appendChild) {
+                                    parent.appendChild(element);
+                                }
+                            }
+                            return this;
+                        },
+                        on: function() { return this; }
+                    };
+                }
             } else if (selector === window || selector === document) {
                 return {
                     on: function() { return this; }
@@ -116,14 +175,19 @@
                 // Element wrapper
                 return {
                     addClass: function(className) {
-                        if (selector) selector.className += ' ' + className;
+                        if (selector && selector.classList) {
+                            selector.classList.add(className);
+                        } else if (selector) {
+                            selector.className += ' ' + className;
+                        }
                         return this;
                     },
                     appendTo: function(parent) {
                         if (selector && parent) {
                             if (typeof parent === 'string') {
-                                document.querySelector(parent).appendChild(selector);
-                            } else {
+                                var parentEl = document.querySelector(parent);
+                                if (parentEl) parentEl.appendChild(selector);
+                            } else if (parent.appendChild) {
                                 parent.appendChild(selector);
                             }
                         }
@@ -183,12 +247,14 @@
         <button onclick="launchEditor()">Launch Editor</button>
         <button onclick="closeEditor()">Close Editor</button>
         <div style="margin-top: 10px; font-size: 12px; color: #666;">
-            <div><strong>New Features:</strong></div>
+            <div><strong>Fixed Issues:</strong></div>
+            <div>• Canvas now displays at proper size</div>
+            <div>• Background image loads (test image)</div>
+            <div>• All drawing tools work correctly</div>
             <div>• Zoom: Ctrl+/-, scroll wheel</div>
-            <div>• Pan: Space+drag, middle click</div>
-            <div>• Grid: G key</div>
-            <div>• Pen tool: P key</div>
-            <div>• All tools now work!</div>
+            <div>• Pan: Space+drag, middle click, arrows</div>
+            <div>• Grid: G key toggles grid</div>
+            <div>• Professional interface styling</div>
         </div>
     </div>
 

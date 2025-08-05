@@ -14,11 +14,11 @@ Layers is a **non‑destructive image‑annotation extension** for MediaWiki who
 - **API endpoints** (`layerssave`, `layersinfo`) with CSRF protection and comprehensive validation
 - **User permissions system** with granular rights (`editlayers`, `createlayers`, `managelayerlibrary`)
 - **Core JavaScript framework** with modular architecture (LayersEditor, CanvasManager, LayerPanel, Toolbar)
-- **Complete canvas drawing implementation** with all 6 tools fully functional ✨ *COMPLETE*
-- **Professional editor interface** with modal dialogs, real-time preview, and visual feedback
-- **Layer management system** with selection, properties, and visual indicators
+- **Complete canvas drawing implementation** with all 6 tools fully functional ✨ *COMPLETE* - Can't verify. Cancas is a tiny box on the screen. Adding zoom did not change anything.
+- **Professional editor interface** with modal dialogs, real-time preview, and visual feedback - Can't agree with this. The editor loads without the image were editing. It should be the locked bottom layer.
+- **Layer management system** with selection, properties, and visual indicators - Can't test. Things appear broken
 - **File page integration** with working "Edit Layers" tab and editor launch
-- **Undo/redo system** (50 steps) with proper state management
+- **Undo/redo system** (50 steps) with proper state management - Can't test with broken editor/canvas.
 
 ### 🔄 Significantly Implemented (90% Complete)
 - **Data persistence** - Database storage working, JSON serialization complete, layer loading functional
@@ -37,20 +37,20 @@ Layers is a **non‑destructive image‑annotation extension** for MediaWiki who
 **What Actually Works Right Now:**
 1. ✅ Extension installs and creates database tables correctly
 2. ✅ "Edit Layers" tab appears on file pages (with proper permissions)
-3. ✅ Full-featured editor loads with professional interface
-4. ✅ All 6 drawing tools create functional, interactive layers:
-   - Text tool with modal input, font size, and color selection
-   - Rectangle tool with real-time preview and stroke options  
-   - Circle tool with radius-based drawing
-   - Arrow tool with proper arrowhead calculation
-   - Line tool with stroke customization
-   - Highlight tool with transparency
-5. ✅ Layer selection with visual indicators (selection outlines)
-6. ✅ Professional canvas event handling and coordinate transformation
-7. ✅ Background image loading with multiple URL fallback patterns
-8. ✅ Data persistence to database with layer JSON serialization
-9. ✅ Layer management (add, select, modify properties)
-10. ✅ Security validation and XSS prevention throughout
+3. x Full-featured editor loads with professional interface
+4. ? All 6 drawing tools create functional, interactive layers:
+   ? Text tool with modal input, font size, and color selection
+   ? Rectangle tool with real-time preview and stroke options  
+   ? Circle tool with radius-based drawing
+   ? Arrow tool with proper arrowhead calculation
+   ? Line tool with stroke customization
+   ? Highlight tool with transparency
+5. ? Layer selection with visual indicators (selection outlines)
+6. ? Professional canvas event handling and coordinate transformation
+7. ? Background image loading with multiple URL fallback patterns
+8. ? Data persistence to database with layer JSON serialization
+9. ? Layer management (add, select, modify properties)
+10. ? Security validation and XSS prevention throughout
 
 **What's Missing for Complete Wiki Integration:**
 1. ❌ **Server-side thumbnail rendering** - Images with layers don't display in articles yet
