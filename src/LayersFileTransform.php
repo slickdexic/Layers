@@ -22,12 +22,13 @@ class LayersFileTransform {
      * Transform hook for layered images
      * Called by MediaWiki's file transform system
      * 
+     * @param object $handler
      * @param object $file
      * @param array &$params
      * @param object &$thumb
      * @return bool
      */
-    public static function onBitmapHandlerTransform( $file, array &$params, &$thumb = null ): bool {
+    public static function onBitmapHandlerTransform( $handler, $file, array &$params, &$thumb = null ): bool {
         // Only process if layers parameter is present
         if ( !isset( $params['layers'] ) || $params['layers'] === 'off' ) {
             return true; // Continue with normal processing

@@ -142,6 +142,85 @@
     border-radius: 4px;
 }
 
+/* Text Stroke Controls */
+.text-stroke-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stroke-color-label {
+    font-size: 12px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.text-stroke-color {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.text-stroke-width {
+    width: 60px;
+}
+
+.text-stroke-value {
+    font-size: 12px;
+    color: #666;
+    min-width: 15px;
+}
+
+/* Text Shadow Controls */
+.text-shadow-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.shadow-label {
+    font-size: 12px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.text-shadow-toggle {
+    margin: 0;
+}
+
+.text-shadow-color {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+}
+
+/* Arrow Style Controls */
+.arrow-style-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.arrow-label {
+    font-size: 12px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.arrow-style-select {
+    padding: 2px 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    background: white;
+}
+
 .toolbar-separator {
     width: 1px;
     height: 24px;
@@ -248,22 +327,6 @@
 .layer-name:focus {
     background: white;
     box-shadow: 0 0 0 2px #2196f3;
-}
-
-.layers-add-button {
-    margin: 8px;
-    background: #00a32a;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 10px 16px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
-
-.layers-add-button:hover {
-    background: #008a20;
 }
 
 /* Properties Panel */
@@ -601,4 +664,197 @@
 .toolbar-button:focus {
     outline: 2px solid #007cba;
     outline-offset: 2px;
+}
+
+/* Phase 2 Enhancements - Effects group styles */
+.effects-group {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px;
+    margin: 5px;
+    min-width: 250px;
+}
+
+.effects-group .toolbar-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #495057;
+    margin: 0 5px 3px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.toolbar-slider {
+    width: 80px;
+    height: 20px;
+    margin: 0 5px;
+    appearance: none;
+    background: #e9ecef;
+    border-radius: 10px;
+    outline: none;
+}
+
+.toolbar-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.toolbar-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #007bff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.toolbar-display {
+    font-size: 11px;
+    color: #6c757d;
+    min-width: 35px;
+    text-align: center;
+}
+
+.toolbar-select {
+    padding: 4px 6px;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    font-size: 11px;
+    background: white;
+    color: #495057;
+    margin: 0 3px;
+}
+
+.effect-toggle {
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    background: #f8f9fa;
+    color: #495057;
+    font-size: 10px;
+    cursor: pointer;
+    margin: 0 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.effect-toggle:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.effect-toggle.active {
+    background: #007bff;
+    color: white;
+    border-color: #0056b3;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Enhanced toolbar button styles */
+.toolbar-button.primary {
+    background: #28a745;
+    color: white;
+    border-color: #1e7e34;
+    font-weight: 600;
+}
+
+.toolbar-button.primary:hover {
+    background: #218838;
+    border-color: #1c7430;
+}
+
+.toolbar-button.secondary {
+    background: #6c757d;
+    color: white;
+    border-color: #545b62;
+}
+
+.toolbar-button.secondary:hover {
+    background: #5a6268;
+    border-color: #4e555b;
+}
+
+/* Tool group organization */
+.tools-group .toolbar-button {
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    position: relative;
+}
+
+.tools-group .toolbar-button::after {
+    content: attr(data-key);
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: #6c757d;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Professional spacing and layout */
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 4px;
+}
+
+.toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: #dee2e6;
+    margin: 0 6px;
+}
+
+/* Marquee selection styles */
+.marquee-selection {
+    position: absolute;
+    border: 1px dashed #007bff;
+    background: rgba(0, 123, 255, 0.1);
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Multi-selection indicators */
+.multi-selection-indicator {
+    position: absolute;
+    border: 2px solid #28a745;
+    background: rgba(40, 167, 69, 0.1);
+    pointer-events: none;
+}
+
+/* Responsive toolbar */
+@media (max-width: 768px) {
+    .effects-group {
+        min-width: auto;
+        flex-wrap: wrap;
+    }
+    
+    .toolbar-slider {
+        width: 60px;
+    }
+    
+    .tools-group {
+        flex-wrap: wrap;
+    }
+    
+    .tools-group .toolbar-button::after {
+        display: none; /* Hide keyboard shortcuts on mobile */
+    }
 }

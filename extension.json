@@ -1,135 +1,135 @@
 {
-    "manifest_version": 2,
-    "name": "Layers",
-    "author": [
-        "Paul Vodrazka and the Layers Team"
-    ],
-    "url": "https://www.mediawiki.org/wiki/Extension:Layers",
-    "descriptionmsg": "layers-desc",
-    "license-name": "GPL-2.0-or-later",
-    "type": "other",
-    "version": "0.8.1",
-    "requires": {
-        "MediaWiki": ">= 1.44.0"
-    },
-    "AutoloadNamespaces": {
-        "MediaWiki\\Extension\\Layers\\": "src/"
-    },
-    "config": {
-        "LayersEnable": {
-            "description": "Master switch for Layers extension functionality",
-            "value": true
-        },
-        "LayersMaxBytes": {
-            "description": "Maximum JSON size per layer set in bytes",
-            "value": 2097152
-        },
-        "LayersUseBinaryOverlays": {
-            "description": "Enable legacy binary overlay files (.l01, .l02, etc)",
-            "value": false
-        },
-        "LayersDefaultFonts": {
-            "description": "Available fonts in the layer editor",
-            "value": [
-                "Arial",
-                "Roboto",
-                "Noto Sans",
-                "Times New Roman",
-                "Courier New"
-            ]
-        },
-        "LayersMaxImageSize": {
-            "description": "Maximum image size for layer editing in pixels",
-            "value": 4096
-        },
-        "LayersThumbnailCache": {
-            "description": "Enable caching of composite thumbnails",
-            "value": true
-        },
-        "LayersImageMagickTimeout": {
-            "description": "Timeout in seconds for ImageMagick operations",
-            "value": 30
-        },
-        "LayersMaxImageDimensions": {
-            "description": "Maximum width/height for layer processing",
-            "value": 8192
-        }
-    },
-    "HookHandlers": {},
-    "Hooks": {
-        "BeforePageDisplay": "MediaWiki\\Extension\\Layers\\Hooks::onBeforePageDisplay",
-        "FileDeleteComplete": "MediaWiki\\Extension\\Layers\\Hooks::onFileDeleteComplete",
-        "LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Hooks::onLoadExtensionSchemaUpdates",
-        "SkinTemplateNavigation": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onSkinTemplateNavigation",
-        "UnknownAction": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onUnknownAction",
-        "BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform",
-        "ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks::onParserMakeImageParams"
-    },
-    "APIModules": {
-        "layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
-        "layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo"
-    },
-    "MessagesDirs": {
-        "Layers": [
-            "i18n"
-        ]
-    },
-    "ResourceModules": {
-        "ext.layers": {
-            "localBasePath": "resources/ext.layers",
-            "remoteExtPath": "Layers/resources/ext.layers",
-            "dependencies": [],
-            "styles": [],
-            "scripts": [
-                "LayersViewer.js",
-                "init.js"
-            ],
-            "messages": []
-        },
-        "ext.layers.editor": {
-            "localBasePath": "resources/ext.layers.editor",
-            "remoteExtPath": "Layers/resources/ext.layers.editor",
-            "dependencies": [
-                "oojs-ui-core",
-                "mediawiki.util",
-                "mediawiki.api"
-            ],
-            "scripts": [
-                "CanvasManager.js",
-                "LayerPanel.js",
-                "Toolbar.js",
-                "LayersEditor.js"
-            ],
-            "styles": [
-                "editor.css"
-            ],
-            "messages": [
-                "layers-editor-title",
-                "layers-editor-save",
-                "layers-editor-cancel",
-                "layers-tool-text",
-                "layers-tool-arrow",
-                "layers-tool-rectangle",
-                "layers-tool-circle"
-            ]
-        }
-    },
-    "AvailableRights": [
-        "editlayers",
-        "createlayers",
-        "managelayerlibrary"
-    ],
-    "GroupPermissions": {
-        "user": {
-            "editlayers": true
-        },
-        "autoconfirmed": {
-            "createlayers": true
-        },
-        "sysop": {
-            "editlayers": true,
-            "createlayers": true,
-            "managelayerlibrary": true
-        }
-    }
+	"manifest_version": 2,
+	"name": "Layers",
+	"author": [
+		"Paul Vodrazka and the Layers Team"
+	],
+	"url": "https://www.mediawiki.org/wiki/Extension:Layers",
+	"descriptionmsg": "layers-desc",
+	"license-name": "GPL-2.0-or-later",
+	"type": "other",
+	"version": "0.8.1",
+	"requires": {
+		"MediaWiki": ">= 1.44.0"
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\Layers\\": "src/"
+	},
+	"config": {
+		"LayersEnable": {
+			"description": "Master switch for Layers extension functionality",
+			"value": true
+		},
+		"LayersMaxBytes": {
+			"description": "Maximum JSON size per layer set in bytes",
+			"value": 2097152
+		},
+		"LayersUseBinaryOverlays": {
+			"description": "Enable legacy binary overlay files (.l01, .l02, etc)",
+			"value": false
+		},
+		"LayersDefaultFonts": {
+			"description": "Available fonts in the layer editor",
+			"value": [
+				"Arial",
+				"Roboto",
+				"Noto Sans",
+				"Times New Roman",
+				"Courier New"
+			]
+		},
+		"LayersMaxImageSize": {
+			"description": "Maximum image size for layer editing in pixels",
+			"value": 4096
+		},
+		"LayersThumbnailCache": {
+			"description": "Enable caching of composite thumbnails",
+			"value": true
+		},
+		"LayersImageMagickTimeout": {
+			"description": "Timeout in seconds for ImageMagick operations",
+			"value": 30
+		},
+		"LayersMaxImageDimensions": {
+			"description": "Maximum width/height for layer processing",
+			"value": 8192
+		}
+	},
+	"HookHandlers": {},
+	"Hooks": {
+		"BeforePageDisplay": "MediaWiki\\Extension\\Layers\\Hooks::onBeforePageDisplay",
+		"FileDeleteComplete": "MediaWiki\\Extension\\Layers\\Hooks::onFileDeleteComplete",
+		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Hooks::onLoadExtensionSchemaUpdates",
+		"SkinTemplateNavigation": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onSkinTemplateNavigation",
+		"UnknownAction": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onUnknownAction",
+		"BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform",
+		"ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks::onParserMakeImageParams"
+	},
+	"APIModules": {
+		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
+		"layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo"
+	},
+	"MessagesDirs": {
+		"Layers": [
+			"i18n"
+		]
+	},
+	"ResourceModules": {
+		"ext.layers": {
+			"localBasePath": "resources/ext.layers",
+			"remoteExtPath": "Layers/resources/ext.layers",
+			"dependencies": [],
+			"styles": [],
+			"scripts": [
+				"LayersViewer.js",
+				"init.js"
+			],
+			"messages": []
+		},
+		"ext.layers.editor": {
+			"localBasePath": "resources/ext.layers.editor",
+			"remoteExtPath": "Layers/resources/ext.layers.editor",
+			"dependencies": [
+				"oojs-ui-core",
+				"mediawiki.util",
+				"mediawiki.api"
+			],
+			"scripts": [
+				"CanvasManager.js",
+				"LayerPanel.js",
+				"Toolbar.js",
+				"LayersEditor.js"
+			],
+			"styles": [
+				"editor.css"
+			],
+			"messages": [
+				"layers-editor-title",
+				"layers-editor-save",
+				"layers-editor-cancel",
+				"layers-tool-text",
+				"layers-tool-arrow",
+				"layers-tool-rectangle",
+				"layers-tool-circle"
+			]
+		}
+	},
+	"AvailableRights": [
+		"editlayers",
+		"createlayers",
+		"managelayerlibrary"
+	],
+	"GroupPermissions": {
+		"user": {
+			"editlayers": true
+		},
+		"autoconfirmed": {
+			"createlayers": true
+		},
+		"sysop": {
+			"editlayers": true,
+			"createlayers": true,
+			"managelayerlibrary": true
+		}
+	}
 }

@@ -137,7 +137,7 @@ class ApiLayersSave extends ApiBase {
             }
 
             // Validate layer type
-            $validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'line', 'highlight' ];
+            $validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'highlight', 'path' ];
             if ( !in_array( $layer['type'], $validTypes ) ) {
                 return false;
             }
@@ -153,6 +153,28 @@ class ApiLayersSave extends ApiBase {
             // Validate text content length for text layers
             if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
                 if ( !is_string( $layer['text'] ) || strlen( $layer['text'] ) > 1000 ) {
+                    return false;
+                }
+            }
+
+            // Validate points array for path, polygon layers
+            if ( in_array( $layer['type'], [ 'path', 'polygon' ] ) && isset( $layer['points'] ) ) {
+                if ( !is_array( $layer['points'] ) || count( $layer['points'] ) > 1000 ) {
+                    return false;
+                }
+                foreach ( $layer['points'] as $point ) {
+                    if ( !is_array( $point ) || !isset( $point['x'] ) || !isset( $point['y'] ) ||
+                         !is_numeric( $point['x'] ) || !is_numeric( $point['y'] ) ||
+                         abs( $point['x'] ) > 50000 || abs( $point['y'] ) > 50000 ) {
+                        return false;
+                    }
+                }
+            }
+
+            // Validate numeric properties
+            $numericFields = [ 'radiusX', 'radiusY', 'innerRadius', 'outerRadius', 'sides', 'zIndex' ];
+            foreach ( $numericFields as $field ) {
+                if ( isset( $layer[$field] ) && ( !is_numeric( $layer[$field] ) || abs( $layer[$field] ) > 50000 ) ) {
                     return false;
                 }
             }
@@ -175,7 +197,8 @@ class ApiLayersSave extends ApiBase {
             // Copy safe fields
             $safeFields = [ 'id', 'type', 'x', 'y', 'width', 'height', 'radius', 
                            'x1', 'y1', 'x2', 'y2', 'stroke', 'fill', 'strokeWidth',
-                           'fontSize', 'fontFamily', 'opacity' ];
+                           'fontSize', 'fontFamily', 'opacity', 'points', 'radiusX', 'radiusY',
+                           'innerRadius', 'outerRadius', 'sides', 'visible', 'zIndex' ];
             
             foreach ( $safeFields as $field ) {
                 if ( isset( $layer[$field] ) ) {
@@ -186,6 +209,21 @@ class ApiLayersSave extends ApiBase {
             // Special handling for text content
             if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
                 $cleanLayer['text'] = htmlspecialchars( $layer['text'], ENT_QUOTES, 'UTF-8' );
+            }
+
+            // Special handling for points array (path, polygon layers)
+            if ( in_array( $layer['type'], [ 'path', 'polygon' ] ) && isset( $layer['points'] ) && is_array( $layer['points'] ) ) {
+                $cleanPoints = [];
+                foreach ( $layer['points'] as $point ) {
+                    if ( is_array( $point ) && isset( $point['x'] ) && isset( $point['y'] ) &&
+                         is_numeric( $point['x'] ) && is_numeric( $point['y'] ) ) {
+                        $cleanPoints[] = [
+                            'x' => (float)$point['x'],
+                            'y' => (float)$point['y']
+                        ];
+                    }
+                }
+                $cleanLayer['points'] = $cleanPoints;
             }
             
             // Validate color values
