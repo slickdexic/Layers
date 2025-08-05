@@ -131,6 +131,8 @@
             case 'circle': return 'Circle';
             case 'arrow': return 'Arrow';
             case 'line': return 'Line';
+            case 'path': return 'Drawing';
+            case 'highlight': return 'Highlight';
             default: return 'Layer';
         }
     };

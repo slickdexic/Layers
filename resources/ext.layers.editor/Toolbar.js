@@ -32,6 +32,7 @@
         // Create tool groups
         this.createToolGroup();
         this.createStyleGroup();
+        this.createZoomGroup();
         this.createActionGroup();
     };
 
@@ -42,6 +43,7 @@
         var tools = [
             { id: 'pointer', icon: '↖', title: 'Select Tool', key: 'V' },
             { id: 'text', icon: 'T', title: 'Text Tool', key: 'T' },
+            { id: 'pen', icon: '✏', title: 'Pen Tool', key: 'P' },
             { id: 'rectangle', icon: '▢', title: 'Rectangle Tool', key: 'R' },
             { id: 'circle', icon: '○', title: 'Circle Tool', key: 'C' },
             { id: 'arrow', icon: '→', title: 'Arrow Tool', key: 'A' },
@@ -139,6 +141,49 @@
         this.fontSizeContainer = fontSizeContainer;
     };
 
+    Toolbar.prototype.createZoomGroup = function () {
+        var zoomGroup = document.createElement( 'div' );
+        zoomGroup.className = 'toolbar-group zoom-group';
+        
+        // Zoom out button
+        var zoomOutBtn = document.createElement( 'button' );
+        zoomOutBtn.className = 'toolbar-button zoom-button';
+        zoomOutBtn.innerHTML = '−';
+        zoomOutBtn.title = 'Zoom Out (Ctrl+-)';
+        zoomOutBtn.dataset.action = 'zoom-out';
+        
+        // Zoom display/reset
+        var zoomDisplay = document.createElement( 'button' );
+        zoomDisplay.className = 'toolbar-button zoom-display';
+        zoomDisplay.textContent = '100%';
+        zoomDisplay.title = 'Reset Zoom (Ctrl+0)';
+        zoomDisplay.dataset.action = 'zoom-reset';
+        
+        // Zoom in button
+        var zoomInBtn = document.createElement( 'button' );
+        zoomInBtn.className = 'toolbar-button zoom-button';
+        zoomInBtn.innerHTML = '+';
+        zoomInBtn.title = 'Zoom In (Ctrl++)';
+        zoomInBtn.dataset.action = 'zoom-in';
+        
+        // Fit to window button
+        var fitBtn = document.createElement( 'button' );
+        fitBtn.className = 'toolbar-button fit-button';
+        fitBtn.innerHTML = '⌂';
+        fitBtn.title = 'Fit to Window';
+        fitBtn.dataset.action = 'fit-window';
+        
+        zoomGroup.appendChild( zoomOutBtn );
+        zoomGroup.appendChild( zoomDisplay );
+        zoomGroup.appendChild( zoomInBtn );
+        zoomGroup.appendChild( fitBtn );
+        
+        this.container.appendChild( zoomGroup );
+        
+        // Store references
+        this.zoomDisplay = zoomDisplay;
+    };
+
     Toolbar.prototype.createActionGroup = function () {
         var actionGroup = document.createElement( 'div' );
         actionGroup.className = 'toolbar-group action-group';
@@ -147,7 +192,8 @@
             { id: 'undo', icon: '↶', title: 'Undo', key: 'Ctrl+Z' },
             { id: 'redo', icon: '↷', title: 'Redo', key: 'Ctrl+Y' },
             { id: 'delete', icon: '🗑', title: 'Delete Selected', key: 'Delete' },
-            { id: 'duplicate', icon: '⧉', title: 'Duplicate Selected', key: 'Ctrl+D' }
+            { id: 'duplicate', icon: '⧉', title: 'Duplicate Selected', key: 'Ctrl+D' },
+            { id: 'grid', icon: '⊞', title: 'Toggle Grid', key: 'G' }
         ];
         
         actions.forEach( function ( action ) {
@@ -199,6 +245,10 @@
                 self.selectTool( e.target.dataset.tool );
             } else if ( e.target.classList.contains( 'action-button' ) ) {
                 self.executeAction( e.target.dataset.action );
+            } else if ( e.target.dataset.action && e.target.dataset.action.startsWith( 'zoom' ) ) {
+                self.executeZoomAction( e.target.dataset.action );
+            } else if ( e.target.dataset.action === 'fit-window' ) {
+                self.executeZoomAction( e.target.dataset.action );
             }
         } );
         
@@ -291,6 +341,46 @@
             case 'duplicate':
                 this.editor.duplicateSelected();
                 break;
+            case 'grid':
+                this.toggleGrid();
+                break;
+        }
+    };
+
+    Toolbar.prototype.toggleGrid = function () {
+        if ( this.editor.canvasManager ) {
+            this.editor.canvasManager.toggleGrid();
+        }
+        
+        // Update button state
+        var gridButton = this.container.querySelector( '[data-action="grid"]' );
+        if ( gridButton ) {
+            gridButton.classList.toggle( 'active' );
+        }
+    };
+
+    Toolbar.prototype.executeZoomAction = function ( actionId ) {
+        if ( !this.editor.canvasManager ) return;
+        
+        switch ( actionId ) {
+            case 'zoom-in':
+                this.editor.canvasManager.zoomIn();
+                break;
+            case 'zoom-out':
+                this.editor.canvasManager.zoomOut();
+                break;
+            case 'zoom-reset':
+                this.editor.canvasManager.resetZoom();
+                break;
+            case 'fit-window':
+                this.editor.canvasManager.fitToWindow();
+                break;
+        }
+    };
+
+    Toolbar.prototype.updateZoomDisplay = function ( zoomPercent ) {
+        if ( this.zoomDisplay ) {
+            this.zoomDisplay.textContent = zoomPercent + '%';
         }
     };
 
@@ -335,6 +425,9 @@
                 case 't':
                     this.selectTool( 'text' );
                     break;
+                case 'p':
+                    this.selectTool( 'pen' );
+                    break;
                 case 'r':
                     this.selectTool( 'rectangle' );
                     break;
@@ -349,6 +442,9 @@
                     break;
                 case 'h':
                     this.selectTool( 'highlight' );
+                    break;
+                case 'g':
+                    this.toggleGrid();
                     break;
                 case 'delete':
                 case 'backspace':

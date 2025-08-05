@@ -20,6 +20,20 @@
         this.isDrawing = false;
         this.startPoint = null;
         
+        // Zoom and pan functionality
+        this.zoom = 1.0;
+        this.minZoom = 0.1;
+        this.maxZoom = 5.0;
+        this.panX = 0;
+        this.panY = 0;
+        this.isPanning = false;
+        this.lastPanPoint = null;
+        
+        // Grid settings
+        this.showGrid = false;
+        this.gridSize = 20;
+        this.snapToGrid = false;
+        
         this.init();
     }
 
@@ -108,17 +122,13 @@
         this.canvas.width = this.backgroundImage.width;
         this.canvas.height = this.backgroundImage.height;
         
-        // Style the canvas to fit container while maintaining aspect ratio
-        var container = this.canvas.parentElement;
-        var containerWidth = container.clientWidth;
-        var containerHeight = container.clientHeight;
+        // Apply initial transform
+        this.updateCanvasTransform();
         
-        var scaleX = containerWidth / this.canvas.width;
-        var scaleY = containerHeight / this.canvas.height;
-        var scale = Math.min( scaleX, scaleY );
-        
-        this.canvas.style.width = ( this.canvas.width * scale ) + 'px';
-        this.canvas.style.height = ( this.canvas.height * scale ) + 'px';
+        // Fit to window on initial load
+        if ( this.zoom === 1.0 && this.panX === 0 && this.panY === 0 ) {
+            this.fitToWindow();
+        }
     };
 
     CanvasManager.prototype.setupEventHandlers = function () {
@@ -137,15 +147,66 @@
             self.handleMouseUp( e );
         } );
         
+        // Wheel event for zooming
+        this.canvas.addEventListener( 'wheel', function ( e ) {
+            e.preventDefault();
+            self.handleWheel( e );
+        } );
+        
         // Prevent context menu
         this.canvas.addEventListener( 'contextmenu', function ( e ) {
             e.preventDefault();
+        } );
+        
+        // Keyboard events for pan and zoom
+        document.addEventListener( 'keydown', function ( e ) {
+            self.handleKeyDown( e );
+        } );
+        
+        document.addEventListener( 'keyup', function ( e ) {
+            self.handleKeyUp( e );
+        } );
+        
+        // Touch events for mobile support
+        this.canvas.addEventListener( 'touchstart', function ( e ) {
+            e.preventDefault();
+            var touch = e.touches[0];
+            var mouseEvent = new MouseEvent( 'mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            } );
+            self.canvas.dispatchEvent( mouseEvent );
+        } );
+        
+        this.canvas.addEventListener( 'touchmove', function ( e ) {
+            e.preventDefault();
+            var touch = e.touches[0];
+            var mouseEvent = new MouseEvent( 'mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            } );
+            self.canvas.dispatchEvent( mouseEvent );
+        } );
+        
+        this.canvas.addEventListener( 'touchend', function ( e ) {
+            e.preventDefault();
+            var mouseEvent = new MouseEvent( 'mouseup', {} );
+            self.canvas.dispatchEvent( mouseEvent );
         } );
     };
 
     CanvasManager.prototype.handleMouseDown = function ( e ) {
         var point = this.getMousePoint( e );
         this.startPoint = point;
+        
+        // Handle middle mouse button or space+click for panning
+        if ( e.button === 1 || ( e.button === 0 && e.spaceKey ) ) {
+            this.isPanning = true;
+            this.lastPanPoint = { x: e.clientX, y: e.clientY };
+            this.canvas.style.cursor = 'grabbing';
+            return;
+        }
+        
         this.isDrawing = true;
         
         if ( this.currentTool === 'pointer' ) {
@@ -155,6 +216,183 @@
             // Start drawing new layer
             this.startDrawing( point );
         }
+    };
+
+    CanvasManager.prototype.handleMouseMove = function ( e ) {
+        if ( this.isPanning ) {
+            var deltaX = e.clientX - this.lastPanPoint.x;
+            var deltaY = e.clientY - this.lastPanPoint.y;
+            
+            this.panX += deltaX;
+            this.panY += deltaY;
+            
+            this.lastPanPoint = { x: e.clientX, y: e.clientY };
+            this.updateCanvasTransform();
+            return;
+        }
+        
+        if ( !this.isDrawing ) return;
+        
+        var point = this.getMousePoint( e );
+        
+        if ( this.currentTool !== 'pointer' ) {
+            this.continueDrawing( point );
+        }
+    };
+
+    CanvasManager.prototype.handleMouseUp = function ( e ) {
+        if ( this.isPanning ) {
+            this.isPanning = false;
+            this.canvas.style.cursor = this.getToolCursor( this.currentTool );
+            return;
+        }
+        
+        if ( !this.isDrawing ) return;
+        
+        var point = this.getMousePoint( e );
+        this.isDrawing = false;
+        
+        if ( this.currentTool !== 'pointer' ) {
+            this.finishDrawing( point );
+        }
+    };
+
+    CanvasManager.prototype.handleWheel = function ( e ) {
+        var delta = e.deltaY > 0 ? -0.1 : 0.1;
+        var newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, this.zoom + delta ) );
+        
+        if ( newZoom !== this.zoom ) {
+            var rect = this.canvas.getBoundingClientRect();
+            var mouseX = e.clientX - rect.left;
+            var mouseY = e.clientY - rect.top;
+            
+            // Zoom toward mouse position
+            var zoomFactor = newZoom / this.zoom;
+            this.panX = mouseX - ( mouseX - this.panX ) * zoomFactor;
+            this.panY = mouseY - ( mouseY - this.panY ) * zoomFactor;
+            
+            this.zoom = newZoom;
+            this.updateCanvasTransform();
+            
+            // Notify editor of zoom change
+            if ( this.editor.toolbar ) {
+                this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
+            }
+        }
+    };
+
+    CanvasManager.prototype.handleKeyDown = function ( e ) {
+        // Don't handle keys when typing in input fields
+        if ( e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true' ) {
+            return;
+        }
+        
+        // Zoom shortcuts
+        if ( e.ctrlKey || e.metaKey ) {
+            switch ( e.key ) {
+                case '=':
+                case '+':
+                    e.preventDefault();
+                    this.zoomIn();
+                    break;
+                case '-':
+                    e.preventDefault();
+                    this.zoomOut();
+                    break;
+                case '0':
+                    e.preventDefault();
+                    this.resetZoom();
+                    break;
+            }
+        }
+        
+        // Pan shortcuts with arrow keys
+        if ( !e.ctrlKey && !e.metaKey ) {
+            var panDistance = 20;
+            switch ( e.key ) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.panY += panDistance;
+                    this.updateCanvasTransform();
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.panY -= panDistance;
+                    this.updateCanvasTransform();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.panX += panDistance;
+                    this.updateCanvasTransform();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.panX -= panDistance;
+                    this.updateCanvasTransform();
+                    break;
+            }
+        }
+        
+        // Space key for temporary pan mode
+        if ( e.code === 'Space' && !e.repeat ) {
+            e.preventDefault();
+            e.spaceKey = true;
+            this.canvas.style.cursor = 'grab';
+        }
+    };
+
+    CanvasManager.prototype.zoomIn = function () {
+        this.setZoom( this.zoom + 0.1 );
+    };
+
+    CanvasManager.prototype.zoomOut = function () {
+        this.setZoom( this.zoom - 0.1 );
+    };
+
+    CanvasManager.prototype.setZoom = function ( newZoom ) {
+        this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
+        this.updateCanvasTransform();
+        
+        if ( this.editor.toolbar ) {
+            this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
+        }
+    };
+
+    CanvasManager.prototype.resetZoom = function () {
+        this.zoom = 1.0;
+        this.panX = 0;
+        this.panY = 0;
+        this.updateCanvasTransform();
+        
+        if ( this.editor.toolbar ) {
+            this.editor.toolbar.updateZoomDisplay( 100 );
+        }
+    };
+
+    CanvasManager.prototype.fitToWindow = function () {
+        if ( !this.backgroundImage ) return;
+        
+        var container = this.canvas.parentElement;
+        var containerWidth = container.clientWidth - 40; // padding
+        var containerHeight = container.clientHeight - 40;
+        
+        var scaleX = containerWidth / this.backgroundImage.width;
+        var scaleY = containerHeight / this.backgroundImage.height;
+        var scale = Math.min( scaleX, scaleY );
+        
+        this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, scale ) );
+        this.panX = ( containerWidth - this.backgroundImage.width * this.zoom ) / 2;
+        this.panY = ( containerHeight - this.backgroundImage.height * this.zoom ) / 2;
+        this.updateCanvasTransform();
+        
+        if ( this.editor.toolbar ) {
+            this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
+        }
+    };
+
+    CanvasManager.prototype.updateCanvasTransform = function () {
+        this.canvas.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
+        this.canvas.style.transformOrigin = '0 0';
     };
 
     CanvasManager.prototype.handleLayerSelection = function ( point ) {
@@ -183,6 +421,8 @@
                 return this.isPointInRectangle( point, layer );
             case 'circle':
                 return this.isPointInCircle( point, layer );
+            case 'path':
+                return this.isPointInPath( point, layer );
             default:
                 return false;
         }
@@ -235,6 +475,110 @@
         var distance = Math.sqrt( dx * dx + dy * dy );
         
         return distance <= radius;
+    };
+
+    CanvasManager.prototype.isPointInPath = function ( point, layer ) {
+        if ( !layer.points || layer.points.length < 2 ) return false;
+        
+        var tolerance = ( layer.strokeWidth || 2 ) + 3; // Click tolerance
+        
+        // Check if point is near any line segment in the path
+        for ( var i = 0; i < layer.points.length - 1; i++ ) {
+            var p1 = layer.points[i];
+            var p2 = layer.points[i + 1];
+            
+            var distance = this.distanceToLineSegment( point, p1, p2 );
+            if ( distance <= tolerance ) {
+                return true;
+            }
+        }
+        
+        return false;
+    };
+
+    CanvasManager.prototype.distanceToLineSegment = function ( point, lineStart, lineEnd ) {
+        var A = point.x - lineStart.x;
+        var B = point.y - lineStart.y;
+        var C = lineEnd.x - lineStart.x;
+        var D = lineEnd.y - lineStart.y;
+
+        var dot = A * C + B * D;
+        var lenSq = C * C + D * D;
+        var param = -1;
+        
+        if ( lenSq !== 0 ) {
+            param = dot / lenSq;
+        }
+
+        var xx, yy;
+
+        if ( param < 0 ) {
+            xx = lineStart.x;
+            yy = lineStart.y;
+        } else if ( param > 1 ) {
+            xx = lineEnd.x;
+            yy = lineEnd.y;
+        } else {
+            xx = lineStart.x + param * C;
+            yy = lineStart.y + param * D;
+        }
+
+        var dx = point.x - xx;
+        var dy = point.y - yy;
+        return Math.sqrt( dx * dx + dy * dy );
+    };
+
+    CanvasManager.prototype.handleKeyUp = function ( e ) {
+        // Handle space key release for pan mode
+        if ( e.code === 'Space' ) {
+            e.preventDefault();
+            this.canvas.style.cursor = this.getToolCursor( this.currentTool );
+        }
+    };
+
+    CanvasManager.prototype.toggleGrid = function () {
+        this.showGrid = !this.showGrid;
+        this.redraw();
+        this.renderLayers( this.editor.layers );
+    };
+
+    CanvasManager.prototype.snapToGridPoint = function ( point ) {
+        if ( !this.snapToGrid ) return point;
+        
+        return {
+            x: Math.round( point.x / this.gridSize ) * this.gridSize,
+            y: Math.round( point.y / this.gridSize ) * this.gridSize
+        };
+    };
+
+    CanvasManager.prototype.drawGrid = function () {
+        if ( !this.showGrid ) return;
+        
+        this.ctx.save();
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        this.ctx.lineWidth = 1;
+        
+        var gridSize = this.gridSize;
+        var width = this.canvas.width;
+        var height = this.canvas.height;
+        
+        // Draw vertical lines
+        for ( var x = 0; x <= width; x += gridSize ) {
+            this.ctx.beginPath();
+            this.ctx.moveTo( x, 0 );
+            this.ctx.lineTo( x, height );
+            this.ctx.stroke();
+        }
+        
+        // Draw horizontal lines
+        for ( var y = 0; y <= height; y += gridSize ) {
+            this.ctx.beginPath();
+            this.ctx.moveTo( 0, y );
+            this.ctx.lineTo( width, y );
+            this.ctx.stroke();
+        }
+        
+        this.ctx.restore();
     };
 
     CanvasManager.prototype.selectLayer = function ( layerId ) {
@@ -328,12 +672,18 @@
 
     CanvasManager.prototype.getMousePoint = function ( e ) {
         var rect = this.canvas.getBoundingClientRect();
-        var scaleX = this.canvas.width / rect.width;
-        var scaleY = this.canvas.height / rect.height;
+        
+        // Account for zoom and pan transformations
+        var clientX = e.clientX - rect.left;
+        var clientY = e.clientY - rect.top;
+        
+        // Convert from screen coordinates to canvas coordinates
+        var canvasX = ( clientX - this.panX ) / this.zoom;
+        var canvasY = ( clientY - this.panY ) / this.zoom;
         
         return {
-            x: ( e.clientX - rect.left ) * scaleX,
-            y: ( e.clientY - rect.top ) * scaleY
+            x: canvasX,
+            y: canvasY
         };
     };
 
@@ -348,6 +698,9 @@
         switch ( this.currentTool ) {
             case 'text':
                 this.startTextTool( point, style );
+                break;
+            case 'pen':
+                this.startPenTool( point, style );
                 break;
             case 'rectangle':
                 this.startRectangleTool( point, style );
@@ -404,6 +757,17 @@
         textInput.focus();
         
         this.isDrawing = false;
+    };
+
+    CanvasManager.prototype.startPenTool = function ( point, style ) {
+        // Create a path for free-hand drawing
+        this.tempLayer = {
+            type: 'path',
+            points: [ point ],
+            stroke: style.color || '#000000',
+            strokeWidth: style.strokeWidth || 2,
+            fill: 'none'
+        };
     };
 
     CanvasManager.prototype.createTextInputModal = function ( point, style ) {
@@ -628,6 +992,11 @@
                 this.tempLayer.width = point.x - this.tempLayer.x;
                 this.drawHighlight( this.tempLayer );
                 break;
+            case 'path':
+                // Add point to path for pen tool
+                this.tempLayer.points.push( point );
+                this.drawPath( this.tempLayer );
+                break;
         }
     };
 
@@ -659,6 +1028,9 @@
             case 'highlight':
                 layer.width = point.x - layer.x;
                 break;
+            case 'path':
+                // Path is already complete
+                break;
         }
         
         // Don't create tiny shapes
@@ -670,6 +1042,9 @@
         }
         if ( ( layer.type === 'line' || layer.type === 'arrow' ) && 
              Math.sqrt( Math.pow( layer.x2 - layer.x1, 2 ) + Math.pow( layer.y2 - layer.y1, 2 ) ) < 5 ) {
+            return null;
+        }
+        if ( layer.type === 'path' && layer.points.length < 2 ) {
             return null;
         }
         
@@ -684,6 +1059,7 @@
     CanvasManager.prototype.getToolCursor = function ( tool ) {
         switch ( tool ) {
             case 'text': return 'text';
+            case 'pen': return 'crosshair';
             case 'rectangle':
             case 'circle': return 'crosshair';
             default: return 'default';
@@ -715,6 +1091,9 @@
         if ( this.backgroundImage ) {
             this.ctx.drawImage( this.backgroundImage, 0, 0 );
         }
+        
+        // Draw grid if enabled
+        this.drawGrid();
     };
 
     CanvasManager.prototype.drawLayer = function ( layer ) {
@@ -741,6 +1120,9 @@
                 break;
             case 'highlight':
                 this.drawHighlight( layer );
+                break;
+            case 'path':
+                this.drawPath( layer );
                 break;
             // Add more layer types as needed
         }
@@ -849,6 +1231,26 @@
         this.ctx.fillStyle = layer.fill || '#ffff0080';
         this.ctx.fillRect( layer.x, layer.y, layer.width, layer.height );
         
+        this.ctx.restore();
+    };
+
+    CanvasManager.prototype.drawPath = function ( layer ) {
+        if ( !layer.points || layer.points.length < 2 ) return;
+        
+        this.ctx.save();
+        this.ctx.strokeStyle = layer.stroke || '#000000';
+        this.ctx.lineWidth = layer.strokeWidth || 2;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo( layer.points[0].x, layer.points[0].y );
+        
+        for ( var i = 1; i < layer.points.length; i++ ) {
+            this.ctx.lineTo( layer.points[i].x, layer.points[i].y );
+        }
+        
+        this.ctx.stroke();
         this.ctx.restore();
     };
 

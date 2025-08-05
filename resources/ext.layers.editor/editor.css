@@ -80,6 +80,27 @@
     background: #008a20;
 }
 
+/* Zoom Controls */
+.zoom-group {
+    border-left: 1px solid #eee;
+    border-right: 1px solid #eee;
+}
+
+.zoom-button {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.zoom-display {
+    min-width: 50px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.fit-button {
+    font-size: 16px;
+}
+
 /* Style Controls */
 .color-picker {
     width: 36px;
@@ -319,6 +340,19 @@
     cursor: text;
 }
 
+.layers-canvas.pen-tool {
+    cursor: crosshair;
+}
+
+.layers-canvas.panning {
+    cursor: grabbing !important;
+}
+
+/* Selection feedback */
+.layers-canvas.has-selection {
+    cursor: move;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .layers-panel {
@@ -457,4 +491,103 @@
 .layers-list::-webkit-scrollbar-thumb:hover,
 .layers-properties::-webkit-scrollbar-thumb:hover {
     background: #a1a1a1;
+}
+
+/* Text Input Modal Styles */
+.text-input-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 10001 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.text-input-modal {
+    background: white !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    min-width: 300px !important;
+    max-width: 500px !important;
+}
+
+.text-input-modal h3 {
+    margin: 0 0 15px 0 !important;
+    color: #333 !important;
+    font-size: 18px !important;
+}
+
+.text-input-modal textarea {
+    width: 100% !important;
+    height: 80px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    font-family: inherit !important;
+    resize: vertical !important;
+    font-size: 14px !important;
+}
+
+.text-input-modal input[type="number"],
+.text-input-modal input[type="color"] {
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+}
+
+.text-input-modal button {
+    background: #f8f9fa !important;
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 8px 16px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    transition: background-color 0.2s !important;
+}
+
+.text-input-modal button:hover {
+    background: #e9ecef !important;
+}
+
+.text-input-modal .add-btn {
+    background: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+}
+
+.text-input-modal .add-btn:hover {
+    background: #0056b3 !important;
+}
+
+/* Improved Canvas styling */
+.layers-canvas-container {
+    background: #f8f9fa;
+    background-image: 
+        linear-gradient(45deg, #e9ecef 25%, transparent 25%), 
+        linear-gradient(-45deg, #e9ecef 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #e9ecef 75%), 
+        linear-gradient(-45deg, transparent 75%, #e9ecef 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* Add some modern touches */
+.toolbar-group:first-child {
+    padding-left: 0;
+}
+
+.toolbar-group:last-child {
+    padding-right: 0;
+    border-right: none;
+}
+
+/* Improve button focus states */
+.toolbar-button:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
 }
