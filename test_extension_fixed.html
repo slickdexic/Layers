@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layers Extension Test - Fixed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        
+        .test-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-image {
+            max-width: 200px;
+            max-height: 200px;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+        }
+        
+        .layers-editor {
+            display: none;
+        }
+        
+        .layers-editor.active {
+            display: block !important;
+        }
+        
+        button {
+            background: #0073aa;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #005a87;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>Layers Extension Test - Fixed Version</h1>
+        <p>This test verifies that the Layers extension can properly:</p>
+        <ul>
+            <li>Create a full-screen editor interface</li>
+            <li>Load and display the parent image</li>
+            <li>Provide working drawing tools</li>
+            <li>Create and manage layers</li>
+        </ul>
+        
+        <h3>Test Image:</h3>
+        <img src="https://picsum.photos/400/300?random=1" alt="Test Image" class="test-image" id="testImage">
+        
+        <div>
+            <button onclick="openEditor()">Open Layers Editor</button>
+            <button onclick="runDiagnostics()">Run Diagnostics</button>
+        </div>
+        
+        <div id="diagnostics" style="margin-top: 20px; display: none;">
+            <h3>Diagnostic Results:</h3>
+            <div id="diagnosticOutput"></div>
+        </div>
+    </div>
+
+    <!-- MediaWiki Mock -->
+    <script>
+        // Mock MediaWiki environment
+        window.mw = {
+            config: {
+                _values: {
+                    'wgServer': window.location.protocol + '//' + window.location.host,
+                    'wgScriptPath': '',
+                    'wgArticlePath': '/wiki/$1'
+                },
+                get: function(key) {
+                    return this._values[key];
+                }
+            },
+            hook: function(name) {
+                return {
+                    add: function(callback) {
+                        // Store for later execution
+                        if (!window._mwHooks) window._mwHooks = {};
+                        if (!window._mwHooks[name]) window._mwHooks[name] = [];
+                        window._mwHooks[name].push(callback);
+                    },
+                    fire: function(data) {
+                        if (window._mwHooks && window._mwHooks[name]) {
+                            window._mwHooks[name].forEach(callback => callback(data));
+                        }
+                    }
+                };
+            },
+            Api: function() {
+                return {
+                    get: function(params) {
+                        return {
+                            done: function(callback) {
+                                // Mock response - no existing layers
+                                setTimeout(() => callback({
+                                    layersinfo: {
+                                        layerset: {
+                                            data: {
+                                                layers: []
+                                            }
+                                        }
+                                    }
+                                }), 100);
+                                return this;
+                            },
+                            fail: function(callback) {
+                                return this;
+                            }
+                        };
+                    },
+                    post: function(params) {
+                        return {
+                            done: function(callback) {
+                                setTimeout(() => callback({success: true}), 100);
+                                return this;
+                            },
+                            fail: function(callback) {
+                                return this;
+                            }
+                        };
+                    }
+                };
+            },
+            notify: function(message, options) {
+                console.log('MediaWiki notification:', message, options);
+            },
+            msg: function(key) {
+                var messages = {
+                    'layers-save-success': 'Layers saved successfully',
+                    'layers-save-error': 'Failed to save layers'
+                };
+                return messages[key] || key;
+            }
+        };
+
+        // Mock jQuery
+        if (!window.$) {
+            window.$ = function(selector) {
+                if (typeof selector === 'function') {
+                    // Document ready
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', selector);
+                    } else {
+                        selector();
+                    }
+                    return;
+                }
+                
+                var elements = document.querySelectorAll(selector);
+                var jqObject = Array.from(elements);
+                
+                // Add jQuery-like methods
+                jqObject.addClass = function(className) {
+                    this.forEach(el => el.classList.add(className));
+                    return this;
+                };
+                
+                jqObject.removeClass = function(className) {
+                    this.forEach(el => el.classList.remove(className));
+                    return this;
+                };
+                
+                jqObject.css = function(styles) {
+                    this.forEach(el => {
+                        Object.assign(el.style, styles);
+                    });
+                    return this;
+                };
+                
+                jqObject.attr = function(name, value) {
+                    if (value !== undefined) {
+                        this.forEach(el => el.setAttribute(name, value));
+                        return this;
+                    }
+                    return this[0] ? this[0].getAttribute(name) : null;
+                };
+                
+                jqObject.appendTo = function(parent) {
+                    var parentEl = typeof parent === 'string' ? document.querySelector(parent) : parent;
+                    this.forEach(el => parentEl.appendChild(el));
+                    return this;
+                };
+                
+                jqObject.append = function(child) {
+                    var childEl = typeof child === 'string' ? document.createElement(child) : child;
+                    this.forEach(el => el.appendChild(childEl));
+                    return this;
+                };
+                
+                jqObject.text = function(text) {
+                    if (text !== undefined) {
+                        this.forEach(el => el.textContent = text);
+                        return this;
+                    }
+                    return this[0] ? this[0].textContent : '';
+                };
+                
+                jqObject.fadeOut = function() {
+                    this.forEach(el => {
+                        el.style.transition = 'opacity 0.3s';
+                        el.style.opacity = '0';
+                        setTimeout(() => el.style.display = 'none', 300);
+                    });
+                    return this;
+                };
+                
+                jqObject.remove = function() {
+                    this.forEach(el => el.remove());
+                    return this;
+                };
+                
+                jqObject.on = function(event, handler) {
+                    this.forEach(el => el.addEventListener(event.split('.')[0], handler));
+                    return this;
+                };
+                
+                jqObject.off = function(event) {
+                    // Simplified - just for testing
+                    return this;
+                };
+                
+                jqObject.get = function(index) {
+                    return this[index];
+                };
+                
+                jqObject.length = elements.length;
+                jqObject.first = function() {
+                    return $([this[0]]);
+                };
+                
+                return jqObject;
+            };
+            
+            // Create element function
+            window.$ = function(input) {
+                if (typeof input === 'string' && input.startsWith('<')) {
+                    var tagName = input.match(/<(\w+)/)[1];
+                    var element = document.createElement(tagName);
+                    var result = [element];
+                    
+                    // Add jQuery methods to single element array
+                    Object.getOwnPropertyNames(window.$.fn || {}).forEach(method => {
+                        result[method] = window.$.fn[method];
+                    });
+                    
+                    // Add the methods defined above
+                    result.addClass = function(className) {
+                        element.classList.add(className);
+                        return this;
+                    };
+                    
+                    result.css = function(styles) {
+                        Object.assign(element.style, styles);
+                        return this;
+                    };
+                    
+                    result.attr = function(name, value) {
+                        element.setAttribute(name, value);
+                        return this;
+                    };
+                    
+                    result.appendTo = function(parent) {
+                        var parentEl = typeof parent === 'string' ? document.querySelector(parent) : parent;
+                        parentEl.appendChild(element);
+                        return this;
+                    };
+                    
+                    result.get = function(index) {
+                        return index === 0 ? element : null;
+                    };
+                    
+                    result.remove = function() {
+                        element.remove();
+                        return this;
+                    };
+                    
+                    result.text = function(text) {
+                        element.textContent = text;
+                        return this;
+                    };
+                    
+                    result.fadeOut = function() {
+                        element.style.transition = 'opacity 0.3s';
+                        element.style.opacity = '0';
+                        setTimeout(() => element.style.display = 'none', 300);
+                        return this;
+                    };
+                    
+                    return result;
+                }
+                
+                // Original selector logic
+                return window.$originalSelector(input);
+            };
+            
+            // Store the original selector function
+            window.$originalSelector = window.$;
+        }
+    </script>
+
+    <!-- Load Layers Extension Components -->
+    <script src="resources/ext.layers.editor/CanvasManager.js"></script>
+    <script src="resources/ext.layers.editor/LayerPanel.js"></script>
+    <script src="resources/ext.layers.editor/Toolbar.js"></script>
+    <script src="resources/ext.layers.editor/LayersEditor.js"></script>
+
+    <script>
+        let currentEditor = null;
+
+        function openEditor() {
+            console.log('Opening Layers Editor...');
+            
+            // Get the test image URL
+            var testImage = document.getElementById('testImage');
+            var imageUrl = testImage.src;
+            
+            console.log('Using image URL:', imageUrl);
+            
+            // Create editor configuration
+            var config = {
+                filename: 'test-image.jpg',
+                imageUrl: imageUrl
+            };
+            
+            console.log('Editor config:', config);
+            
+            // Initialize the editor
+            try {
+                currentEditor = new window.LayersEditor(config);
+                console.log('Editor created successfully:', currentEditor);
+            } catch (error) {
+                console.error('Failed to create editor:', error);
+                alert('Failed to create editor: ' + error.message);
+            }
+        }
+
+        function runDiagnostics() {
+            console.log('Running diagnostics...');
+            
+            var diagnosticsDiv = document.getElementById('diagnostics');
+            var outputDiv = document.getElementById('diagnosticOutput');
+            
+            diagnosticsDiv.style.display = 'block';
+            outputDiv.innerHTML = '<p>Running diagnostics...</p>';
+            
+            var results = [];
+            
+            // Check if classes are loaded
+            results.push(`LayersEditor: ${typeof window.LayersEditor !== 'undefined' ? '✓ Loaded' : '✗ Missing'}`);
+            results.push(`CanvasManager: ${typeof window.CanvasManager !== 'undefined' ? '✓ Loaded' : '✗ Missing'}`);
+            results.push(`LayerPanel: ${typeof window.LayerPanel !== 'undefined' ? '✓ Loaded' : '✗ Missing'}`);
+            results.push(`Toolbar: ${typeof window.Toolbar !== 'undefined' ? '✓ Loaded' : '✗ Missing'}`);
+            
+            // Check MediaWiki mock
+            results.push(`MediaWiki Mock: ${typeof window.mw !== 'undefined' ? '✓ Available' : '✗ Missing'}`);
+            results.push(`jQuery Mock: ${typeof window.$ !== 'undefined' ? '✓ Available' : '✗ Missing'}`);
+            
+            // Check test image
+            var testImage = document.getElementById('testImage');
+            results.push(`Test Image: ${testImage && testImage.src ? '✓ Available (' + testImage.src + ')' : '✗ Missing'}`);
+            
+            // Test canvas creation
+            try {
+                var testCanvas = document.createElement('canvas');
+                var testCtx = testCanvas.getContext('2d');
+                results.push(`Canvas Support: ${testCtx ? '✓ Available' : '✗ Not supported'}`);
+            } catch (e) {
+                results.push(`Canvas Support: ✗ Error - ${e.message}`);
+            }
+            
+            outputDiv.innerHTML = results.map(result => `<div style="margin: 5px 0; font-family: monospace;">${result}</div>`).join('');
+            
+            console.log('Diagnostic results:', results);
+        }
+
+        // Run diagnostics on page load
+        window.addEventListener('load', function() {
+            console.log('Page loaded, running initial diagnostics...');
+            setTimeout(runDiagnostics, 500);
+        });
+    </script>
+</body>
+</html>

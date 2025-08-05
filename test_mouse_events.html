@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mouse Events Debug Test</title>
+    <link rel="stylesheet" href="resources/ext.layers.editor/editor.css">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 20000;
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .clear-btn {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-panel">
+        <button class="clear-btn" onclick="clearDebug()">Clear</button>
+        <div id="debugOutput">Loading...</div>
+    </div>
+
+    <!-- MediaWiki and jQuery mocks -->
+    <script>
+        window.mw = {
+            config: { get: (key) => ({ 'wgServer': location.protocol + '//' + location.host, 'wgScriptPath': '' }[key]) },
+            hook: (name) => ({ add: (cb) => cb, fire: (data) => {} }),
+            Api: () => ({ get: () => ({ done: (cb) => setTimeout(() => cb({layersinfo: {layerset: {data: {layers: []}}}}), 10), fail: () => ({}) }), post: () => ({ done: (cb) => setTimeout(() => cb({success: true}), 10), fail: () => ({}) }) }),
+            notify: () => {}, msg: (key) => key
+        };
+
+        window.$ = function(sel) {
+            if (typeof sel === 'function') return document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', sel) : sel();
+            var els = typeof sel === 'string' ? (sel.startsWith('<') ? [document.createElement(sel.match(/<(\w+)/)[1])] : Array.from(document.querySelectorAll(sel))) : [sel];
+            var jq = Object.assign(els, {
+                addClass: function(c) { this.forEach(el => el.classList.add(c)); return this; },
+                css: function(s) { this.forEach(el => Object.assign(el.style, s)); return this; },
+                attr: function(n, v) { if (v !== undefined) { this.forEach(el => el.setAttribute(n, v)); return this; } return this[0]?.getAttribute(n); },
+                appendTo: function(p) { var parent = typeof p === 'string' ? document.querySelector(p) : p; this.forEach(el => parent.appendChild(el)); return this; },
+                get: function(i) { return this[i]; }, remove: function() { this.forEach(el => el.remove()); return this; },
+                text: function(t) { if (t !== undefined) { this.forEach(el => el.textContent = t); return this; } return this[0]?.textContent; },
+                fadeOut: function() { this.forEach(el => { el.style.opacity = '0'; setTimeout(() => el.style.display = 'none', 300); }); return this; },
+                on: function(e, h) { this.forEach(el => el.addEventListener(e.split('.')[0], h)); return this; },
+                off: function() { return this; }
+            });
+            return jq;
+        };
+
+        function debugLog(msg) {
+            var output = document.getElementById('debugOutput');
+            var time = new Date().toLocaleTimeString();
+            output.innerHTML += time + ': ' + msg + '<br>';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearDebug() {
+            document.getElementById('debugOutput').innerHTML = 'Debug cleared<br>';
+        }
+
+        // Override console methods
+        var originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            debugLog('LOG: ' + args.join(' '));
+        };
+
+        var originalError = console.error;
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            debugLog('ERROR: ' + args.join(' '));
+        };
+
+        var originalWarn = console.warn;
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            debugLog('WARN: ' + args.join(' '));
+        };
+    </script>
+
+    <script src="resources/ext.layers.editor/CanvasManager.js"></script>
+    <script src="resources/ext.layers.editor/LayerPanel.js"></script>
+    <script src="resources/ext.layers.editor/Toolbar.js"></script>
+    <script src="resources/ext.layers.editor/LayersEditor.js"></script>
+
+    <script>
+        function startTest() {
+            debugLog('=== Starting Mouse Events Debug Test ===');
+            
+            try {
+                var editor = new window.LayersEditor({
+                    filename: 'debug-test.jpg',
+                    imageUrl: 'https://picsum.photos/600/400?random=99'
+                });
+
+                // Add extra event listeners to monitor all mouse activity
+                setTimeout(() => {
+                    var canvas = document.querySelector('.layers-canvas');
+                    if (canvas) {
+                        debugLog('Canvas found: ' + canvas.width + 'x' + canvas.height);
+                        
+                        canvas.addEventListener('mousedown', function(e) {
+                            debugLog('RAW mousedown: button=' + e.button + ' at ' + e.clientX + ',' + e.clientY);
+                        }, true);
+
+                        canvas.addEventListener('mouseup', function(e) {
+                            debugLog('RAW mouseup: button=' + e.button + ' at ' + e.clientX + ',' + e.clientY);
+                        }, true);
+
+                        canvas.addEventListener('mousemove', function(e) {
+                            if (editor.canvasManager && editor.canvasManager.isDrawing) {
+                                debugLog('RAW mousemove while drawing: ' + e.clientX + ',' + e.clientY);
+                            }
+                        }, true);
+
+                        canvas.addEventListener('click', function(e) {
+                            debugLog('RAW click: ' + e.clientX + ',' + e.clientY);
+                        }, true);
+
+                        debugLog('Extra event listeners added to canvas');
+                    } else {
+                        debugLog('ERROR: Canvas not found!');
+                    }
+                }, 1000);
+
+            } catch (error) {
+                debugLog('FAILED: ' + error.message);
+                console.error('Test failed:', error);
+            }
+        }
+
+        // Start when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startTest);
+        } else {
+            startTest();
+        }
+    </script>
+</body>
+</html>

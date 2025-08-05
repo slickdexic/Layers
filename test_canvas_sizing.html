@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas Sizing Test</title>
+    <link rel="stylesheet" href="resources/ext.layers.editor/editor.css">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        .test-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 20000;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info" id="testInfo">
+        Loading...
+    </div>
+
+    <!-- MediaWiki and jQuery mocks -->
+    <script>
+        window.mw = {
+            config: {
+                get: (key) => ({ 'wgServer': location.protocol + '//' + location.host, 'wgScriptPath': '' }[key]),
+            },
+            hook: (name) => ({ add: (cb) => cb, fire: (data) => {} }),
+            Api: () => ({
+                get: () => ({ done: (cb) => setTimeout(() => cb({layersinfo: {layerset: {data: {layers: []}}}}), 10), fail: () => ({}) }),
+                post: () => ({ done: (cb) => setTimeout(() => cb({success: true}), 10), fail: () => ({}) })
+            }),
+            notify: () => {},
+            msg: (key) => key
+        };
+
+        window.$ = function(sel) {
+            if (typeof sel === 'function') return document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', sel) : sel();
+            
+            var els = typeof sel === 'string' ? 
+                (sel.startsWith('<') ? [document.createElement(sel.match(/<(\w+)/)[1])] : Array.from(document.querySelectorAll(sel))) : 
+                [sel];
+            
+            var jq = Object.assign(els, {
+                addClass: function(c) { this.forEach(el => el.classList.add(c)); return this; },
+                css: function(s) { this.forEach(el => Object.assign(el.style, s)); return this; },
+                attr: function(n, v) { if (v !== undefined) { this.forEach(el => el.setAttribute(n, v)); return this; } return this[0]?.getAttribute(n); },
+                appendTo: function(p) { var parent = typeof p === 'string' ? document.querySelector(p) : p; this.forEach(el => parent.appendChild(el)); return this; },
+                get: function(i) { return this[i]; },
+                remove: function() { this.forEach(el => el.remove()); return this; },
+                text: function(t) { if (t !== undefined) { this.forEach(el => el.textContent = t); return this; } return this[0]?.textContent; },
+                fadeOut: function() { this.forEach(el => { el.style.opacity = '0'; setTimeout(() => el.style.display = 'none', 300); }); return this; },
+                on: function(e, h) { this.forEach(el => el.addEventListener(e.split('.')[0], h)); return this; },
+                off: function() { return this; }
+            });
+            return jq;
+        };
+    </script>
+
+    <script src="resources/ext.layers.editor/CanvasManager.js"></script>
+    <script src="resources/ext.layers.editor/LayerPanel.js"></script>
+    <script src="resources/ext.layers.editor/Toolbar.js"></script>
+    <script src="resources/ext.layers.editor/LayersEditor.js"></script>
+
+    <script>
+        function updateTestInfo() {
+            var info = document.getElementById('testInfo');
+            var canvas = document.querySelector('.layers-canvas');
+            var container = document.querySelector('.layers-canvas-container');
+            
+            var infoText = 'Canvas Test Info:\n';
+            
+            if (container) {
+                infoText += `Container: ${container.clientWidth}x${container.clientHeight}\n`;
+            } else {
+                infoText += 'Container: Not found\n';
+            }
+            
+            if (canvas) {
+                infoText += `Canvas logical: ${canvas.width}x${canvas.height}\n`;
+                infoText += `Canvas display: ${canvas.style.width} x ${canvas.style.height}\n`;
+                infoText += `Canvas actual: ${canvas.clientWidth}x${canvas.clientHeight}\n`;
+            } else {
+                infoText += 'Canvas: Not found\n';
+            }
+            
+            infoText += `Window: ${window.innerWidth}x${window.innerHeight}\n`;
+            infoText += `Ready: ${document.readyState}`;
+            
+            info.textContent = infoText;
+        }
+
+        // Start the test
+        function startTest() {
+            console.log('Starting canvas sizing test...');
+            updateTestInfo();
+            
+            try {
+                new window.LayersEditor({
+                    filename: 'test.jpg',
+                    imageUrl: 'https://picsum.photos/800/600?random=3'
+                });
+                
+                // Update info every second to track changes
+                setInterval(updateTestInfo, 1000);
+            } catch (error) {
+                console.error('Test failed:', error);
+                document.getElementById('testInfo').textContent = 'ERROR: ' + error.message;
+            }
+        }
+
+        // Start when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startTest);
+        } else {
+            startTest();
+        }
+    </script>
+</body>
+</html>

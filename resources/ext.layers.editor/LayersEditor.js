@@ -104,9 +104,14 @@
             console.log( 'Layers: Layer panel container:', this.$layerPanel.get( 0 ) );
             console.log( 'Layers: Toolbar container:', this.$toolbar.get( 0 ) );
             
+            // Get the parent image URL
+            var parentImageUrl = this.getParentImageUrl();
+            console.log( 'Layers: Parent image URL:', parentImageUrl );
+            
             this.canvasManager = new window.CanvasManager( {
                 container: this.$canvas.get( 0 ),
-                editor: this
+                editor: this,
+                backgroundImageUrl: parentImageUrl
             } );
             
             this.layerPanel = new window.LayerPanel( {
@@ -142,30 +147,76 @@
         // Create main editor container
         this.$container = $( '<div>' )
             .addClass( 'layers-editor' )
+            .css({
+                'position': 'fixed',
+                'top': '0',
+                'left': '0',
+                'width': '100%',
+                'height': '100%',
+                'background': '#f5f5f5',
+                'z-index': '10000',
+                'display': 'flex',
+                'flex-direction': 'column'
+            })
             .appendTo( 'body' );
             
         // Create toolbar
         this.$toolbar = $( '<div>' )
             .addClass( 'layers-toolbar' )
+            .css({
+                'background': '#ffffff',
+                'border-bottom': '1px solid #ddd',
+                'padding': '8px 16px',
+                'display': 'flex',
+                'align-items': 'center',
+                'gap': '16px',
+                'box-shadow': '0 2px 4px rgba(0,0,0,0.1)',
+                'flex-shrink': '0'
+            })
             .appendTo( this.$container );
             
         // Create main content area
         this.$content = $( '<div>' )
             .addClass( 'layers-content' )
+            .css({
+                'flex': '1',
+                'display': 'flex',
+                'overflow': 'hidden'
+            })
             .appendTo( this.$container );
             
         // Create layer panel
         this.$layerPanel = $( '<div>' )
             .addClass( 'layers-panel' )
+            .css({
+                'width': '280px',
+                'background': '#ffffff',
+                'border-right': '1px solid #ddd',
+                'display': 'flex',
+                'flex-direction': 'column',
+                'overflow': 'hidden'
+            })
             .appendTo( this.$content );
             
         // Create canvas container
         this.$canvasContainer = $( '<div>' )
             .addClass( 'layers-canvas-container' )
+            .css({
+                'flex': '1',
+                'overflow': 'hidden',
+                'background': '#e9ecef',
+                'display': 'flex',
+                'align-items': 'center',
+                'justify-content': 'center',
+                'padding': '20px',
+                'position': 'relative'
+            })
             .appendTo( this.$content );
             
         this.$canvas = $( '<canvas>' )
             .addClass( 'layers-canvas' )
+            .attr( 'width', 800 )
+            .attr( 'height', 600 )
             .appendTo( this.$canvasContainer );
     };
 
@@ -435,6 +486,35 @@
         // Update UI to show saved state
     };
 
+    LayersEditor.prototype.getParentImageUrl = function () {
+        // Priority 1: Use imageUrl from config (passed by MediaWiki)
+        if (this.config.imageUrl) {
+            console.log('Layers: Using imageUrl from config:', this.config.imageUrl);
+            return this.config.imageUrl;
+        }
+        
+        // Priority 2: Try to construct URL using MediaWiki file path
+        if (this.filename) {
+            // Method 1: Construct URL using MediaWiki file path
+            var imageUrl = mw.config.get('wgServer') + mw.config.get('wgScriptPath') + 
+                          '/index.php?title=Special:Redirect/file/' + encodeURIComponent(this.filename);
+            console.log('Layers: Using MediaWiki file URL:', imageUrl);
+            return imageUrl;
+        }
+        
+        // Priority 3: Look for current page image
+        var $pageImage = $('.mw-file-element img, .fullImageLink img, .filehistory img').first();
+        if ($pageImage.length) {
+            var pageImageUrl = $pageImage.attr('src');
+            console.log('Layers: Using page image URL:', pageImageUrl);
+            return pageImageUrl;
+        }
+        
+        // Priority 4: Use a default fallback
+        console.log('Layers: No parent image found, using fallback');
+        return null;
+    };
+
     LayersEditor.prototype.showError = function ( message ) {
         // Create error display in the editor
         var $error = $( '<div>' )
@@ -451,8 +531,16 @@
     };
 
     LayersEditor.prototype.handleResize = function () {
+        console.log( 'Layers: Handling window resize...' );
         if ( this.canvasManager ) {
             this.canvasManager.handleResize();
+        }
+        
+        // Also trigger a canvas resize to ensure proper sizing
+        if ( this.canvasManager && this.canvasManager.resizeCanvas ) {
+            setTimeout(() => {
+                this.canvasManager.resizeCanvas();
+            }, 100); // Small delay to let CSS settle
         }
     };
 

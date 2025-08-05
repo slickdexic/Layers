@@ -20,6 +20,14 @@
         this.isDrawing = false;
         this.startPoint = null;
         
+        // Initialize default style
+        this.currentStyle = {
+            color: '#000000',
+            strokeWidth: 2,
+            fontSize: 16,
+            fontFamily: 'Arial, sans-serif'
+        };
+        
         // Zoom and pan functionality
         this.zoom = 1.0;
         this.minZoom = 0.1;
@@ -120,33 +128,62 @@
     CanvasManager.prototype.loadBackgroundImage = function () {
         var self = this;
         var filename = this.editor.filename;
+        var backgroundImageUrl = this.config.backgroundImageUrl;
         
         console.log( 'Layers: Starting background image load for:', filename );
+        console.log( 'Layers: Background image URL from config:', backgroundImageUrl );
         
-        // For testing, immediately use the test image
-        this.useTestImage();
-        
-        // Also try to load real images in background (for future MediaWiki integration)
         var imageUrls = [];
         
-        // Try MediaWiki patterns only if mw is properly configured
-        if ( mw && mw.config && mw.config.get( 'wgServer' ) && mw.config.get( 'wgScriptPath' ) ) {
-            imageUrls.push( 
+        // Priority 1: Use the specific background image URL from config
+        if ( backgroundImageUrl ) {
+            imageUrls.push( backgroundImageUrl );
+            console.log( 'Layers: Added config URL to try:', backgroundImageUrl );
+        }
+        
+        // Priority 2: Try to find the current page image
+        var pageImages = document.querySelectorAll('.mw-file-element img, .fullImageLink img, .filehistory img, img[src*="' + filename + '"]');
+        if ( pageImages.length > 0 ) {
+            for ( var i = 0; i < pageImages.length; i++ ) {
+                var imgSrc = pageImages[i].src;
+                if ( imgSrc && !imageUrls.includes( imgSrc ) ) {
+                    imageUrls.push( imgSrc );
+                    console.log( 'Layers: Added page image URL to try:', imgSrc );
+                }
+            }
+        }
+        
+        // Priority 3: Try MediaWiki patterns if mw is available
+        if ( filename && mw && mw.config && mw.config.get( 'wgServer' ) && mw.config.get( 'wgScriptPath' ) ) {
+            var mwUrls = [
                 mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) + 
-                '/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename )
-            );
+                '/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename ),
+                
+                mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) + 
+                '/index.php?title=File:' + encodeURIComponent( filename )
+            ];
             
             if ( mw.config.get( 'wgArticlePath' ) ) {
-                imageUrls.push( 
+                mwUrls.push( 
                     mw.config.get( 'wgServer' ) + mw.config.get( 'wgArticlePath' ).replace( '$1', 'File:' + encodeURIComponent( filename ) )
                 );
             }
             
-            imageUrls.push( mw.config.get( 'wgServer' ) + '/wiki/File:' + encodeURIComponent( filename ) );
-            
-            // Try loading real images in background
-            console.log( 'Layers: Also trying MediaWiki URLs in background:', imageUrls );
+            mwUrls.forEach( function( url ) {
+                if ( !imageUrls.includes( url ) ) {
+                    imageUrls.push( url );
+                    console.log( 'Layers: Added MediaWiki URL to try:', url );
+                }
+            });
+        }
+        
+        // If we have URLs to try, start loading
+        if ( imageUrls.length > 0 ) {
+            console.log( 'Layers: Attempting to load real images, URLs:', imageUrls );
             this.tryLoadImage( imageUrls, 0 );
+        } else {
+            console.log( 'Layers: No real image URLs available, using test image' );
+            this.useTestImage();
         }
     };
 
@@ -295,6 +332,13 @@
     };
 
     CanvasManager.prototype.resizeCanvas = function () {
+        console.log( 'Layers: Resizing canvas...' );
+        
+        // Get container dimensions
+        var container = this.canvas.parentElement;
+        console.log( 'Layers: Container:', container );
+        console.log( 'Layers: Container dimensions:', container.clientWidth, 'x', container.clientHeight );
+        
         // Set default canvas size if no background image
         var canvasWidth = this.backgroundImage ? this.backgroundImage.width : 800;
         var canvasHeight = this.backgroundImage ? this.backgroundImage.height : 600;
@@ -305,33 +349,43 @@
         
         console.log( 'Layers: Canvas logical size set to', this.canvas.width, 'x', this.canvas.height );
         
-        // Calculate display size that fits in container
-        var container = this.canvas.parentElement;
-        var containerWidth = container.clientWidth - 40; // padding
-        var containerHeight = container.clientHeight - 40;
+        // Calculate available space in container (with padding)
+        var availableWidth = Math.max(container.clientWidth - 40, 400);
+        var availableHeight = Math.max(container.clientHeight - 40, 300);
         
-        // Ensure minimum container size
-        if ( containerWidth < 200 ) containerWidth = 600;
-        if ( containerHeight < 200 ) containerHeight = 400;
+        console.log( 'Layers: Available space:', availableWidth, 'x', availableHeight );
         
-        var scaleX = containerWidth / canvasWidth;
-        var scaleY = containerHeight / canvasHeight;
-        var scale = Math.min( scaleX, scaleY, 1 ); // Don't scale up initially
+        // Calculate scale to fit the canvas in the container
+        var scaleX = availableWidth / canvasWidth;
+        var scaleY = availableHeight / canvasHeight;
+        var scale = Math.min( scaleX, scaleY );
         
-        // Ensure minimum scale
-        if ( scale < 0.1 ) scale = 0.5;
+        // Ensure reasonable scale bounds
+        scale = Math.max(0.1, Math.min(scale, 2.0));
+        
+        // Calculate final display size
+        var displayWidth = Math.floor(canvasWidth * scale);
+        var displayHeight = Math.floor(canvasHeight * scale);
         
         // Set CSS size for display
-        this.canvas.style.width = ( canvasWidth * scale ) + 'px';
-        this.canvas.style.height = ( canvasHeight * scale ) + 'px';
+        this.canvas.style.width = displayWidth + 'px';
+        this.canvas.style.height = displayHeight + 'px';
+        this.canvas.style.maxWidth = '100%';
+        this.canvas.style.maxHeight = '100%';
         
-        // Initialize zoom to fit
+        // Set zoom and pan
         this.zoom = scale;
         this.panX = 0;
         this.panY = 0;
         
-        console.log( 'Layers: Canvas display size set to', this.canvas.style.width, 'x', this.canvas.style.height );
-        console.log( 'Layers: Initial zoom set to', this.zoom );
+        console.log( 'Layers: Canvas display size set to', displayWidth, 'x', displayHeight );
+        console.log( 'Layers: Scale factor:', scale );
+        console.log( 'Layers: Final canvas styles:', {
+            width: this.canvas.style.width,
+            height: this.canvas.style.height,
+            maxWidth: this.canvas.style.maxWidth,
+            maxHeight: this.canvas.style.maxHeight
+        });
     };
 
     CanvasManager.prototype.setupEventHandlers = function () {
@@ -1024,6 +1078,8 @@
     };
 
     CanvasManager.prototype.startPenTool = function ( point, style ) {
+        console.log( 'Layers: Starting pen tool at point:', point, 'with style:', style );
+        
         // Create a path for free-hand drawing
         this.tempLayer = {
             type: 'path',
@@ -1032,6 +1088,8 @@
             strokeWidth: style.strokeWidth || 2,
             fill: 'none'
         };
+        
+        console.log( 'Layers: Created temp layer for pen:', this.tempLayer );
     };
 
     CanvasManager.prototype.createTextInputModal = function ( point, style ) {
@@ -1349,19 +1407,41 @@
     };
 
     CanvasManager.prototype.redraw = function () {
+        console.log( 'Layers: Redrawing canvas...' );
+        console.log( 'Layers: Background image status:', this.backgroundImage ? 'loaded' : 'none', 
+                    this.backgroundImage ? ('complete: ' + this.backgroundImage.complete) : '' );
+        
         // Clear canvas
         this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
         
         // Draw background image if available
         if ( this.backgroundImage && this.backgroundImage.complete ) {
+            console.log( 'Layers: Drawing background image', this.backgroundImage.width + 'x' + this.backgroundImage.height );
             this.ctx.drawImage( this.backgroundImage, 0, 0 );
         } else {
-            // Draw a simple background if no image
-            this.ctx.fillStyle = '#f8f9fa';
+            // Draw a pattern background to show that this is the canvas area
+            this.ctx.fillStyle = '#ffffff';
             this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
-            this.ctx.strokeStyle = '#dee2e6';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect( 1, 1, this.canvas.width - 2, this.canvas.height - 2 );
+            
+            // Draw a checker pattern to indicate "no image loaded"
+            this.ctx.fillStyle = '#f0f0f0';
+            var checkerSize = 20;
+            for ( var x = 0; x < this.canvas.width; x += checkerSize * 2 ) {
+                for ( var y = 0; y < this.canvas.height; y += checkerSize * 2 ) {
+                    this.ctx.fillRect( x, y, checkerSize, checkerSize );
+                    this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
+                }
+            }
+            
+            // Draw a message in the center
+            this.ctx.fillStyle = '#666666';
+            this.ctx.font = '24px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            var text = this.backgroundImage ? 'Loading image...' : 'No image loaded';
+            this.ctx.fillText( text, this.canvas.width / 2, this.canvas.height / 2 );
+            
+            console.log( 'Layers: Drew placeholder background with message:', text );
         }
         
         // Draw grid if enabled

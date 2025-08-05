@@ -11,6 +11,7 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Html\Html;
 use SkinTemplate;
 use Title;
 use User;
@@ -115,10 +116,12 @@ class UIHooks {
         $out->addHTML( '<div id="layers-editor-container"></div>' );
         
         // Add initialization script
+        $fileUrl = $file->getFullUrl();
         $out->addInlineScript(
             "mw.loader.using('ext.layers.editor', function() {" .
             "mw.hook('layers.editor.init').fire({" .
-            "filename: " . \Html::encodeJsVar( $file->getName() ) . "," .
+            "filename: " . json_encode( $file->getName() ) . "," .
+            "imageUrl: " . json_encode( $fileUrl ) . "," .
             "container: document.getElementById('layers-editor-container')" .
             "});" .
             "});"
