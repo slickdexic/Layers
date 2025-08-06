@@ -303,17 +303,17 @@
 
 	CanvasManager.prototype.createTestImage = function ( filename ) {
 		return '<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">' +
-            '<rect width="100%" height="100%" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>' +
-            '<text x="50%" y="45%" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#495057">' +
-            ( filename || 'Sample Image' ).replace( /[<>&"]/g, function ( match ) {
-            	return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ match ];
-            } ) + '</text>' +
-            '<text x="50%" y="55%" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">Sample Image for Layer Editing</text>' +
-            '<circle cx="200" cy="150" r="50" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
-            '<rect x="500" y="300" width="100" height="80" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
-            '<line x1="100" y1="400" x2="300" y2="500" stroke="#e9ecef" stroke-width="2"/>' +
-            '<text x="50%" y="85%" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#adb5bd">Draw shapes and text using the tools above</text>' +
-            '</svg>';
+			'<rect width="100%" height="100%" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>' +
+			'<text x="50%" y="45%" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#495057">' +
+			( filename || 'Sample Image' ).replace( /[<>&"]/g, function ( match ) {
+				return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ match ];
+			} ) + '</text>' +
+			'<text x="50%" y="55%" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">Sample Image for Layer Editing</text>' +
+			'<circle cx="200" cy="150" r="50" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
+			'<rect x="500" y="300" width="100" height="80" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
+			'<line x1="100" y1="400" x2="300" y2="500" stroke="#e9ecef" stroke-width="2"/>' +
+			'<text x="50%" y="85%" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#adb5bd">Draw shapes and text using the tools above</text>' +
+			'</svg>';
 	};
 
 	CanvasManager.prototype.resizeCanvas = function () {
@@ -631,8 +631,8 @@
 
 	CanvasManager.prototype.handleResize = function ( point, event ) {
 		var layer = this.editor.getLayerById( this.selectedLayerId );
-		if ( !layer || !this.originalLayerState ) { 
-			return; 
+		if ( !layer || !this.originalLayerState ) {
+			return;
 		}
 
 		var deltaX = point.x - this.dragStartPoint.x;
@@ -640,15 +640,15 @@
 
 		// Get modifier keys from the event
 		var modifiers = {
-			proportional: event && event.shiftKey,  // Shift key for proportional scaling
-			fromCenter: event && event.altKey       // Alt key for scaling from center
+			proportional: event && event.shiftKey, // Shift key for proportional scaling
+			fromCenter: event && event.altKey // Alt key for scaling from center
 		};
 
 		// Calculate new dimensions based on handle type
-		var updates = this.calculateResize( 
-			this.originalLayerState, 
-			this.resizeHandle.type, 
-			deltaX, 
+		var updates = this.calculateResize(
+			this.originalLayerState,
+			this.resizeHandle.type,
+			deltaX,
 			deltaY,
 			modifiers
 		);
@@ -666,7 +666,7 @@
 
 	CanvasManager.prototype.calculateResize = function ( originalLayer, handleType, deltaX, deltaY, modifiers ) {
 		modifiers = modifiers || {};
-		
+
 		switch ( originalLayer.type ) {
 			case 'rectangle':
 				return this.calculateRectangleResize( originalLayer, handleType, deltaX, deltaY, modifiers );
@@ -818,8 +818,8 @@
 
 	CanvasManager.prototype.handleRotation = function ( point, event ) {
 		var layer = this.editor.getLayerById( this.selectedLayerId );
-		if ( !layer || !this.rotationHandle ) { 
-			return; 
+		if ( !layer || !this.rotationHandle ) {
+			return;
 		}
 
 		// Calculate angle from rotation center to mouse position
@@ -847,7 +847,9 @@
 
 	CanvasManager.prototype.handleDrag = function ( point ) {
 		var layer = this.editor.getLayerById( this.selectedLayerId );
-		if ( !layer || !this.originalLayerState ) { return; }
+		if ( !layer || !this.originalLayerState ) {
+			return;
+		}
 
 		var deltaX = point.x - this.dragStartPoint.x;
 		var deltaY = point.y - this.dragStartPoint.y;
@@ -869,10 +871,10 @@
 				break;
 			case 'path':
 				if ( layer.points && this.originalLayerState.points ) {
-					layer.points = this.originalLayerState.points.map( function ( point ) {
+					layer.points = this.originalLayerState.points.map( function ( pt ) {
 						return {
-							x: point.x + deltaX,
-							y: point.y + deltaY
+							x: pt.x + deltaX,
+							y: pt.y + deltaY
 						};
 					} );
 				}
@@ -952,7 +954,9 @@
 			return;
 		}
 
-		if ( !this.isDrawing ) { return; }
+		if ( !this.isDrawing ) {
+			return;
+		}
 
 		var point = this.getMousePoint( e );
 		this.isDrawing = false;
@@ -1551,8 +1555,8 @@
 	};
 
 	CanvasManager.prototype.pasteFromClipboard = function () {
-		if ( !this.clipboard || this.clipboard.length === 0 ) { 
-			return; 
+		if ( !this.clipboard || this.clipboard.length === 0 ) {
+			return;
 		}
 
 		// Save state for undo
@@ -1566,23 +1570,23 @@
 			newLayer.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 
 			// Offset the pasted layer slightly to avoid overlap
-			if ( newLayer.x !== undefined ) { 
-				newLayer.x += 20; 
+			if ( newLayer.x !== undefined ) {
+				newLayer.x += 20;
 			}
-			if ( newLayer.y !== undefined ) { 
-				newLayer.y += 20; 
+			if ( newLayer.y !== undefined ) {
+				newLayer.y += 20;
 			}
-			
+
 			// Handle line/arrow offset
-			if ( newLayer.x1 !== undefined ) { 
-				newLayer.x1 += 20; 
-				newLayer.x2 += 20; 
+			if ( newLayer.x1 !== undefined ) {
+				newLayer.x1 += 20;
+				newLayer.x2 += 20;
 			}
-			if ( newLayer.y1 !== undefined ) { 
-				newLayer.y1 += 20; 
-				newLayer.y2 += 20; 
+			if ( newLayer.y1 !== undefined ) {
+				newLayer.y1 += 20;
+				newLayer.y2 += 20;
 			}
-			
+
 			// Handle path points offset
 			if ( newLayer.points && Array.isArray( newLayer.points ) ) {
 				newLayer.points = newLayer.points.map( function ( point ) {
@@ -2299,12 +2303,12 @@
 		alignButtons.forEach( function ( btn ) {
 			btn.addEventListener( 'click', function ( e ) {
 				e.preventDefault();
-				
+
 				// Remove active state from all buttons
 				alignButtons.forEach( function ( b ) {
 					b.style.background = '#f8f9fa';
 				} );
-				
+
 				// Set active state for clicked button
 				this.style.background = '#e9ecef';
 				currentAlignment = this.dataset.align;
@@ -2485,14 +2489,14 @@
 				this.drawEllipse( this.tempLayer );
 				break;
 			case 'polygon':
-				var dx = point.x - this.tempLayer.x;
-				var dy = point.y - this.tempLayer.y;
+				dx = point.x - this.tempLayer.x;
+				dy = point.y - this.tempLayer.y;
 				this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
 				this.drawPolygon( this.tempLayer );
 				break;
 			case 'star':
-				var dx = point.x - this.tempLayer.x;
-				var dy = point.y - this.tempLayer.y;
+				dx = point.x - this.tempLayer.x;
+				dy = point.y - this.tempLayer.y;
 				this.tempLayer.outerRadius = Math.sqrt( dx * dx + dy * dy );
 				this.tempLayer.innerRadius = this.tempLayer.outerRadius * 0.5;
 				this.drawStar( this.tempLayer );
@@ -2541,13 +2545,13 @@
 				layer.radiusY = Math.abs( point.y - layer.y );
 				break;
 			case 'polygon':
-				var dx = point.x - layer.x;
-				var dy = point.y - layer.y;
+				dx = point.x - layer.x;
+				dy = point.y - layer.y;
 				layer.radius = Math.sqrt( dx * dx + dy * dy );
 				break;
 			case 'star':
-				var dx = point.x - layer.x;
-				var dy = point.y - layer.y;
+				dx = point.x - layer.x;
+				dy = point.y - layer.y;
 				layer.outerRadius = Math.sqrt( dx * dx + dy * dy );
 				layer.innerRadius = layer.outerRadius * 0.5;
 				break;

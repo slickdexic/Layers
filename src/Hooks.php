@@ -8,174 +8,173 @@
 
 namespace MediaWiki\Extension\Layers;
 
-use MediaWiki\Extension\Layers\Database\LayersDatabase;
-use MediaWiki\Extension\Layers\ThumbnailRenderer;
 use Exception;
+use MediaWiki\Extension\Layers\Database\LayersDatabase;
 
 // Define constants if not already defined
 if ( !defined( 'NS_FILE' ) ) {
-    define( 'NS_FILE', 6 );
+	define( 'NS_FILE', 6 );
 }
 
 class Hooks {
 
-    /**
-     * BeforePageDisplay hook handler
-     */
-    public static function onBeforePageDisplay( $out, $skin ) {
-        $config = $out->getConfig();
-        
-        // Check if Layers extension is enabled
-        if ( !$config->get( 'LayersEnable' ) ) {
-            return;
-        }
+	/**
+	 * BeforePageDisplay hook handler
+	 */
+	public static function onBeforePageDisplay( $out, $skin ) {
+		$config = $out->getConfig();
 
-        // Check if this page has files with layers
-        $title = $out->getTitle();
-        if ( $title && $title->inNamespace( NS_FILE ) ) {
-            // Add editor resources if user has permission
-            if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
-                $out->addModules( 'ext.layers.editor' );
-            }
-            
-            // Always add viewer resources for displaying layers
-            $out->addModules( 'ext.layers' );
-        }
-    }
+		// Check if Layers extension is enabled
+		if ( !$config->get( 'LayersEnable' ) ) {
+			return;
+		}
 
-    /**
-     * FileDeleteComplete hook handler
-     */
-    public static function onFileDeleteComplete( $file, $oldimage, $article, $user, $reason ) {
-        if ( !$file ) {
-            return;
-        }
-        
-        try {
-            $db = new LayersDatabase();
-            $db->deleteLayerSetsForImage( $file->getName(), $file->getSha1() );
-        } catch ( Exception $e ) {
-            // Log error but don't break deletion
-            error_log( 'Layers: Error cleaning up layer sets: ' . $e->getMessage() );
-        }
-    }
+		// Check if this page has files with layers
+		$title = $out->getTitle();
+		if ( $title && $title->inNamespace( NS_FILE ) ) {
+			// Add editor resources if user has permission
+			if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
+				$out->addModules( 'ext.layers.editor' );
+			}
 
-    /**
-     * ParserFirstCallInit hook handler
-     */
-    public static function onParserFirstCallInit( $parser ) {
-        // Temporarily disable parser function registration to avoid Special:Version errors
-        // TODO: Re-enable once proper configuration is working
-        /*
-        try {
-            $parser->setFunctionHook( 'layerlist', [ self::class, 'layerListParserFunction' ] );
-            $parser->setFunctionHook( 'layeredit', [ self::class, 'layerEditParserFunction' ] );
-        } catch ( Exception $e ) {
-            error_log( 'Layers: Error registering parser functions: ' . $e->getMessage() );
-        }
-        */
-    }
+			// Always add viewer resources for displaying layers
+			$out->addModules( 'ext.layers' );
+		}
+	}
 
-    /**
-     * LoadExtensionSchemaUpdates hook handler
-     */
-    public static function onLoadExtensionSchemaUpdates( $updater ) {
-        $base = __DIR__ . '/..';
-        $updater->addExtensionTable( 'layer_sets', "$base/sql/layers_tables.sql" );
-        $updater->addExtensionTable( 'layer_assets', "$base/sql/layers_tables.sql" );
-        $updater->addExtensionTable( 'layer_set_usage', "$base/sql/layers_tables.sql" );
-    }
+	/**
+	 * FileDeleteComplete hook handler
+	 */
+	public static function onFileDeleteComplete( $file, $oldimage, $article, $user, $reason ) {
+		if ( !$file ) {
+			return;
+		}
 
-    /**
-     * FileTransform hook handler
-     */
-    public static function onFileTransform( $file, &$params, $backend ) {
-        // Only process if layers parameter is present
-        if ( !isset( $params['layers'] ) ) {
-            return;
-        }
+		try {
+			$db = new LayersDatabase();
+			$db->deleteLayerSetsForImage( $file->getName(), $file->getSha1() );
+		} catch ( Exception $e ) {
+			// Log error but don't break deletion
+			error_log( 'Layers: Error cleaning up layer sets: ' . $e->getMessage() );
+		}
+	}
 
-        try {
-            $renderer = new ThumbnailRenderer();
-            $thumbnailPath = $renderer->generateLayeredThumbnail( $file, $params );
-            
-            if ( $thumbnailPath ) {
-                $params['layered_thumbnail_path'] = $thumbnailPath;
-            }
-        } catch ( Exception $e ) {
-            error_log( 'Layers: Transform hook failed: ' . $e->getMessage() );
-        }
-    }
+	/**
+	 * ParserFirstCallInit hook handler
+	 */
+	public static function onParserFirstCallInit( $parser ) {
+		// Temporarily disable parser function registration to avoid Special:Version errors
+		// TODO: Re-enable once proper configuration is working
+		/*
+		try {
+			$parser->setFunctionHook( 'layerlist', [ self::class, 'layerListParserFunction' ] );
+			$parser->setFunctionHook( 'layeredit', [ self::class, 'layerEditParserFunction' ] );
+		} catch ( Exception $e ) {
+			error_log( 'Layers: Error registering parser functions: ' . $e->getMessage() );
+		}
+		*/
+	}
 
-    /**
-     * Parser function: {{#layerlist:File=Example.jpg}}
-     */
-    public static function layerListParserFunction( $parser, $file = '' ) {
-        if ( empty( $file ) ) {
-            return '';
-        }
+	/**
+	 * LoadExtensionSchemaUpdates hook handler
+	 */
+	public static function onLoadExtensionSchemaUpdates( $updater ) {
+		$base = __DIR__ . '/..';
+		$updater->addExtensionTable( 'layer_sets', "$base/sql/layers_tables.sql" );
+		$updater->addExtensionTable( 'layer_assets', "$base/sql/layers_tables.sql" );
+		$updater->addExtensionTable( 'layer_set_usage', "$base/sql/layers_tables.sql" );
+	}
 
-        try {
-            // Check if RepoGroup class exists (fallback for older MW versions)
-            if ( !class_exists( 'RepoGroup' ) ) {
-                return '';
-            }
-            
-            $fileObj = \RepoGroup::singleton()->findFile( $file );
-            if ( !$fileObj || !$fileObj->exists() ) {
-                return '';
-            }
+	/**
+	 * FileTransform hook handler
+	 */
+	public static function onFileTransform( $file, &$params, $backend ) {
+		// Only process if layers parameter is present
+		if ( !isset( $params['layers'] ) ) {
+			return;
+		}
 
-            $db = new LayersDatabase();
-            $layerSets = $db->getLayerSetsForImage( $fileObj->getName(), $fileObj->getSha1() );
-            
-            $names = [];
-            foreach ( $layerSets as $layerSet ) {
-                if ( !empty( $layerSet['name'] ) ) {
-                    $names[] = $layerSet['name'];
-                }
-            }
-            
-            return implode( ', ', $names );
-            
-        } catch ( Exception $e ) {
-            error_log( 'Layers: Error in layerListParserFunction: ' . $e->getMessage() );
-            return '';
-        }
-    }
+		try {
+			$renderer = new ThumbnailRenderer();
+			$thumbnailPath = $renderer->generateLayeredThumbnail( $file, $params );
 
-    /**
-     * Parser function: {{#layeredit:File=Example.jpg|set=pcb-callouts}}
-     */
-    public static function layerEditParserFunction( $parser, $file = '', $set = '' ) {
-        if ( empty( $file ) ) {
-            return '';
-        }
+			if ( $thumbnailPath ) {
+				$params['layered_thumbnail_path'] = $thumbnailPath;
+			}
+		} catch ( Exception $e ) {
+			error_log( 'Layers: Transform hook failed: ' . $e->getMessage() );
+		}
+	}
 
-        try {
-            // Check class existence for compatibility
-            if ( !class_exists( 'RepoGroup' ) || !class_exists( 'Title' ) ) {
-                return '';
-            }
-            
-            $fileObj = \RepoGroup::singleton()->findFile( $file );
-            if ( !$fileObj || !$fileObj->exists() ) {
-                return '';
-            }
+	/**
+	 * Parser function: {{#layerlist:File=Example.jpg}}
+	 */
+	public static function layerListParserFunction( $parser, $file = '' ) {
+		if ( empty( $file ) ) {
+			return '';
+		}
 
-            $fileTitle = \Title::makeTitle( NS_FILE, $file );
-            if ( !$fileTitle ) {
-                return '';
-            }
+		try {
+			// Check if RepoGroup class exists (fallback for older MW versions)
+			if ( !class_exists( 'RepoGroup' ) ) {
+				return '';
+			}
 
-            $editUrl = $fileTitle->getLocalURL( [ 'action' => 'editlayers' ] );
-            $linkText = 'Edit Layers';
-            
-            return "[$editUrl $linkText]";
-            
-        } catch ( Exception $e ) {
-            error_log( 'Layers: Error in layerEditParserFunction: ' . $e->getMessage() );
-            return '';
-        }
-    }
+			$fileObj = \RepoGroup::singleton()->findFile( $file );
+			if ( !$fileObj || !$fileObj->exists() ) {
+				return '';
+			}
+
+			$db = new LayersDatabase();
+			$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), $fileObj->getSha1() );
+
+			$names = [];
+			foreach ( $layerSets as $layerSet ) {
+				if ( !empty( $layerSet['name'] ) ) {
+					$names[] = $layerSet['name'];
+				}
+			}
+
+			return implode( ', ', $names );
+
+		} catch ( Exception $e ) {
+			error_log( 'Layers: Error in layerListParserFunction: ' . $e->getMessage() );
+			return '';
+		}
+	}
+
+	/**
+	 * Parser function: {{#layeredit:File=Example.jpg|set=pcb-callouts}}
+	 */
+	public static function layerEditParserFunction( $parser, $file = '', $set = '' ) {
+		if ( empty( $file ) ) {
+			return '';
+		}
+
+		try {
+			// Check class existence for compatibility
+			if ( !class_exists( 'RepoGroup' ) || !class_exists( 'Title' ) ) {
+				return '';
+			}
+
+			$fileObj = \RepoGroup::singleton()->findFile( $file );
+			if ( !$fileObj || !$fileObj->exists() ) {
+				return '';
+			}
+
+			$fileTitle = \Title::makeTitle( NS_FILE, $file );
+			if ( !$fileTitle ) {
+				return '';
+			}
+
+			$editUrl = $fileTitle->getLocalURL( [ 'action' => 'editlayers' ] );
+			$linkText = 'Edit Layers';
+
+			return "[$editUrl $linkText]";
+
+		} catch ( Exception $e ) {
+			error_log( 'Layers: Error in layerEditParserFunction: ' . $e->getMessage() );
+			return '';
+		}
+	}
 }

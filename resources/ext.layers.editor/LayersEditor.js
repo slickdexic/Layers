@@ -225,14 +225,14 @@
 				// console.log( 'Layers: No existing layers found, starting fresh' );
 			}
 			self.renderLayers();
-			
+
 			// Save initial state for undo system
 			self.saveState( 'initial' );
 		} ).fail( function () {
 			// console.error( 'Failed to load layers:', err );
 			self.layers = [];
 			self.renderLayers();
-			
+
 			// Save initial empty state for undo system
 			self.saveState( 'initial' );
 			// Don't show error to user as this is expected for new files
@@ -393,7 +393,14 @@
 
 	LayersEditor.prototype.cancel = function () {
 		if ( this.isDirty ) {
-			if ( confirm( 'You have unsaved changes. Are you sure you want to cancel?' ) ) {
+			var confirmMessage = 'You have unsaved changes. Are you sure you want to cancel?';
+			if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
+				OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
+					if ( confirmed ) {
+						this.destroy();
+					}
+				}.bind( this ) );
+			} else if ( confirm( confirmMessage ) ) {
 				this.destroy();
 			}
 		} else {

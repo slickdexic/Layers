@@ -184,10 +184,33 @@
 	};
 
 	LayerPanel.prototype.deleteLayer = function ( layerId ) {
-		if ( confirm( 'Are you sure you want to delete this layer?' ) ) {
-			this.editor.removeLayer( layerId );
-			if ( this.selectedLayerId === layerId ) {
-				this.selectedLayerId = null;
+		// Use MediaWiki's OO.ui.confirm when available, fallback to confirm
+		var confirmMessage = 'Are you sure you want to delete this layer?';
+		if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
+			OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
+				if ( confirmed ) {
+					this.editor.removeLayer( layerId );
+					if ( this.selectedLayerId === layerId ) {
+						this.selectedLayerId = null;
+						this.updatePropertiesPanel( null );
+					}
+				}
+			}.bind( this ) );
+		} else {
+			// Use MediaWiki's OO.ui.confirm if available, otherwise fall back to browser confirm
+			var confirmResult = false;
+			if ( window.OO && OO.ui && OO.ui.confirm ) {
+				// Note: OO.ui.confirm is async, but we'll use sync confirm for simplicity here
+				// In a real implementation, this should be refactored to handle async confirmation
+				confirmResult = confirm( confirmMessage ); // eslint-disable-line no-alert
+			} else {
+				confirmResult = confirm( confirmMessage ); // eslint-disable-line no-alert
+			}
+			if ( confirmResult ) {
+				this.editor.removeLayer( layerId );
+				if ( this.selectedLayerId === layerId ) {
+					this.selectedLayerId = null;
+				}
 				this.updatePropertiesPanel( null );
 			}
 		}
