@@ -20,6 +20,7 @@
 	"layers-add-layer": "Add Layer",
 	"layers-delete-layer": "Delete Layer",
 	"layers-save-success": "Layers saved successfully",
+	"layers-saving": "Saving layers...",
 	"layers-save-error": "Error saving layers",
 	"layers-permission-denied": "You do not have permission to edit layers",
 	"layers-not-file-page": "Layers can only be edited on file pages",

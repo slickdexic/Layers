@@ -35,6 +35,11 @@
 		this.isMarqueeSelecting = false;
 		this.marqueeStart = { x: 0, y: 0 };
 		this.marqueeEnd = { x: 0, y: 0 };
+		
+		// Drag visual feedback
+		this.dragPreview = false;
+		this.dragOffset = { x: 0, y: 0 };
+		this.showDragGhost = true;
 
 		// Initialize default style
 		this.currentStyle = {
@@ -546,10 +551,24 @@
 		this.isDragging = true;
 		this.canvas.style.cursor = 'move';
 
-		// Store original layer state
-		var layer = this.editor.getLayerById( this.selectedLayerId );
-		if ( layer ) {
-			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
+		// Store original layer state(s)
+		if ( this.selectedLayerIds.length > 1 ) {
+			// Multi-selection: store all selected layer states
+			this.originalMultiLayerStates = {};
+			for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
+				var layerId = this.selectedLayerIds[ i ];
+				var multiLayer = this.editor.getLayerById( layerId );
+				if ( multiLayer ) {
+					this.originalMultiLayerStates[ layerId ] =
+						JSON.parse( JSON.stringify( multiLayer ) );
+				}
+			}
+		} else {
+			// Single selection: store single layer state
+			var singleLayer = this.editor.getLayerById( this.selectedLayerId );
+			if ( singleLayer ) {
+				this.originalLayerState = JSON.parse( JSON.stringify( singleLayer ) );
+			}
 		}
 
 		// console.log( 'Layers: Starting drag' );
@@ -846,32 +865,92 @@
 	};
 
 	CanvasManager.prototype.handleDrag = function ( point ) {
-		var layer = this.editor.getLayerById( this.selectedLayerId );
-		if ( !layer || !this.originalLayerState ) {
-			return;
-		}
-
 		var deltaX = point.x - this.dragStartPoint.x;
 		var deltaY = point.y - this.dragStartPoint.y;
 
-		// Update layer position based on type
+		// Enable drag preview mode for visual feedback
+		this.showDragPreview = true;
+
+		// Support multi-selection dragging
+		var layersToMove = [];
+		if ( this.selectedLayerIds.length > 1 ) {
+			// Multi-selection: move all selected layers
+			for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
+				var multiLayer = this.editor.getLayerById( this.selectedLayerIds[ i ] );
+				if ( multiLayer ) {
+					layersToMove.push( multiLayer );
+				}
+			}
+		} else {
+			// Single selection: move just the selected layer
+			var singleLayer = this.editor.getLayerById( this.selectedLayerId );
+			if ( singleLayer && this.originalLayerState ) {
+				layersToMove.push( singleLayer );
+			}
+		}
+
+		// Move all layers in the selection
+		for ( var j = 0; j < layersToMove.length; j++ ) {
+			var layerToMove = layersToMove[ j ];
+			var originalState = this.originalLayerState;
+			
+			// For multi-selection, we need to get individual original states
+			if ( this.selectedLayerIds.length > 1 && this.originalMultiLayerStates ) {
+				originalState = this.originalMultiLayerStates[ layerToMove.id ];
+			}
+			
+			if ( !originalState ) {
+				continue;
+			}
+
+			// Apply snap-to-grid if enabled
+			var adjustedDeltaX = deltaX;
+			var adjustedDeltaY = deltaY;
+			
+			if ( this.snapToGrid && this.gridSize > 0 ) {
+				var newX = ( originalState.x || 0 ) + deltaX;
+				var newY = ( originalState.y || 0 ) + deltaY;
+				var snappedPoint = this.snapPointToGrid( { x: newX, y: newY } );
+				adjustedDeltaX = snappedPoint.x - ( originalState.x || 0 );
+				adjustedDeltaY = snappedPoint.y - ( originalState.y || 0 );
+			}
+
+			// Update layer position based on type
+			this.updateLayerPosition( layerToMove, originalState, adjustedDeltaX, adjustedDeltaY );
+		}
+
+		// Re-render
+		this.renderLayers( this.editor.layers );
+	};
+
+	/**
+	 * Update layer position during drag operation
+	 * @param {Object} layer Layer to update
+	 * @param {Object} originalState Original state before drag
+	 * @param {number} deltaX X offset
+	 * @param {number} deltaY Y offset
+	 */
+	CanvasManager.prototype.updateLayerPosition = function ( layer, originalState, deltaX, deltaY ) {
 		switch ( layer.type ) {
 			case 'rectangle':
 			case 'circle':
 			case 'text':
-				layer.x = ( this.originalLayerState.x || 0 ) + deltaX;
-				layer.y = ( this.originalLayerState.y || 0 ) + deltaY;
+			case 'ellipse':
+			case 'polygon':
+			case 'star':
+				layer.x = ( originalState.x || 0 ) + deltaX;
+				layer.y = ( originalState.y || 0 ) + deltaY;
 				break;
 			case 'line':
 			case 'arrow':
-				layer.x1 = ( this.originalLayerState.x1 || 0 ) + deltaX;
-				layer.y1 = ( this.originalLayerState.y1 || 0 ) + deltaY;
-				layer.x2 = ( this.originalLayerState.x2 || 0 ) + deltaX;
-				layer.y2 = ( this.originalLayerState.y2 || 0 ) + deltaY;
+				layer.x1 = ( originalState.x1 || 0 ) + deltaX;
+				layer.y1 = ( originalState.y1 || 0 ) + deltaY;
+				layer.x2 = ( originalState.x2 || 0 ) + deltaX;
+				layer.y2 = ( originalState.y2 || 0 ) + deltaY;
 				break;
 			case 'path':
-				if ( layer.points && this.originalLayerState.points ) {
-					layer.points = this.originalLayerState.points.map( function ( pt ) {
+				if ( layer.points && originalState.points ) {
+					layer.points = originalState.points.map( function ( pt ) {
 						return {
 							x: pt.x + deltaX,
 							y: pt.y + deltaY
@@ -880,9 +959,6 @@
 				}
 				break;
 		}
-
-		// Re-render
-		this.renderLayers( this.editor.layers );
 	};
 
 	CanvasManager.prototype.updateCursor = function ( point ) {
@@ -909,9 +985,14 @@
 		// Check for layer hover
 		var layerUnderMouse = this.getLayerAtPoint( point );
 		if ( layerUnderMouse ) {
-			this.canvas.style.cursor = 'pointer';
+			// If this is the selected layer, show move cursor
+			if ( this.selectedLayerId && layerUnderMouse.id === this.selectedLayerId ) {
+				this.canvas.style.cursor = 'move';
+			} else {
+				this.canvas.style.cursor = 'pointer';
+			}
 		} else {
-			this.canvas.style.cursor = 'default';
+			this.canvas.style.cursor = 'crosshair';
 		}
 	};
 
@@ -993,7 +1074,9 @@
 
 	CanvasManager.prototype.finishDrag = function () {
 		this.isDragging = false;
+		this.showDragPreview = false;
 		this.originalLayerState = null;
+		this.originalMultiLayerStates = null;
 		this.dragStartPoint = null;
 		this.canvas.style.cursor = 'default';
 

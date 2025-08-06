@@ -411,6 +411,9 @@
 	LayersEditor.prototype.save = function () {
 		var self = this;
 
+		// Show saving indicator
+		mw.notify( mw.msg( 'layers-saving' ) || 'Saving...', { type: 'info' } );
+
 		// Save layers to API
 		var api = new mw.Api();
 		api.postWithToken( 'csrf', {
@@ -419,15 +422,24 @@
 			data: JSON.stringify( this.layers ),
 			format: 'json'
 		} ).done( function ( data ) {
+			// console.log( 'Save response:', data );
 			if ( data.layerssave && data.layerssave.success ) {
 				self.markClean();
 				mw.notify( mw.msg( 'layers-save-success' ), { type: 'success' } );
 			} else {
-				mw.notify( mw.msg( 'layers-save-error' ), { type: 'error' } );
+				var errorMsg = ( data.error && data.error.info ) ||
+					( data.layerssave && data.layerssave.error ) ||
+					mw.msg( 'layers-save-error' );
+				// console.error( 'Save failed:', data );
+				mw.notify( errorMsg, { type: 'error' } );
 			}
-		} ).fail( function () {
-			// console.error( 'Failed to save layers:', err );
-			mw.notify( mw.msg( 'layers-save-error' ), { type: 'error' } );
+		} ).fail( function ( code, result ) {
+			// console.error( 'Save API call failed:', code, result );
+			var errorMsg = mw.msg( 'layers-save-error' );
+			if ( result && result.error && result.error.info ) {
+				errorMsg = result.error.info;
+			}
+			mw.notify( errorMsg, { type: 'error' } );
 		} );
 	};
 

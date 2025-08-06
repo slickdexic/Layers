@@ -19,6 +19,23 @@ if ( !defined( 'NS_FILE' ) ) {
 class Hooks {
 
 	/**
+	 * UserGetRights hook handler
+	 * Grant editlayers permission to all users by default
+	 */
+	public static function onUserGetRights( $user, &$rights ) {
+		// Grant editlayers permission to all logged-in users by default
+		if ( $user->isRegistered() ) {
+			$rights[] = 'editlayers';
+		}
+		
+		// Grant to anonymous users as well if configured
+		global $wgLayersAllowAnonymousEdit;
+		if ( $wgLayersAllowAnonymousEdit ?? false ) {
+			$rights[] = 'editlayers';
+		}
+	}
+
+	/**
 	 * BeforePageDisplay hook handler
 	 */
 	public static function onBeforePageDisplay( $out, $skin ) {

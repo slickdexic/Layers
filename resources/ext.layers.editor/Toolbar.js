@@ -25,6 +25,9 @@
 	Toolbar.prototype.init = function () {
 		this.createInterface();
 		this.setupEventHandlers();
+		
+		// Set default tool
+		this.selectTool( 'pointer' );
 	};
 
 	Toolbar.prototype.createInterface = function () {

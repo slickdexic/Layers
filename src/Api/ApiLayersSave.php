@@ -24,6 +24,15 @@ class ApiLayersSave extends ApiBase {
 		// Check permissions
 		$user = $this->getUser();
 		if ( !$user->isAllowed( 'editlayers' ) ) {
+			// Add debugging information
+			$userGroups = $user->getGroups();
+			$userRights = $user->getRights();
+			$hasEditLayers = in_array( 'editlayers', $userRights );
+			
+			error_log( 'Layers Save: Permission denied for user ID: ' . $user->getId() . 
+					  ', Groups: ' . implode( ',', $userGroups ) . 
+					  ', Has editlayers: ' . ( $hasEditLayers ? 'yes' : 'no' ) );
+			
 			$this->dieWithError( 'layers-permission-denied', 'permissiondenied' );
 		}
 

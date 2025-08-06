@@ -63,7 +63,8 @@
 		"SkinTemplateNavigation": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onSkinTemplateNavigation",
 		"UnknownAction": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onUnknownAction",
 		"BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform",
-		"ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks::onParserMakeImageParams"
+		"ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks::onParserMakeImageParams",
+		"UserGetRights": "MediaWiki\\Extension\\Layers\\Hooks::onUserGetRights"
 	},
 	"APIModules": {
 		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
