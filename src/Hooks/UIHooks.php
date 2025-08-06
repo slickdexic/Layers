@@ -43,13 +43,33 @@ class UIHooks {
             return;
         }
         
-        // Add edit layers tab
-        $links['views']['editlayers'] = [
+        // Create edit layers tab data
+        $editLayersTab = [
             'class' => false,
             'text' => wfMessage( 'layers-editor-title' )->text(),
             'href' => self::getEditLayersURL( $title ),
             'context' => 'main',
         ];
+        
+        // Insert the edit layers tab after 'edit' and before 'history'
+        // We need to rebuild the views array to control the order
+        $newViews = [];
+        
+        foreach ( $links['views'] as $key => $tab ) {
+            $newViews[$key] = $tab;
+            
+            // Insert our tab after the 'edit' tab (which could be 've-edit' for Visual Editor)
+            if ( $key === 'edit' || $key === 've-edit' ) {
+                $newViews['editlayers'] = $editLayersTab;
+            }
+        }
+        
+        // If we haven't inserted the tab yet (no edit tab found), insert it at the beginning
+        if ( !isset( $newViews['editlayers'] ) ) {
+            $newViews = ['editlayers' => $editLayersTab] + $newViews;
+        }
+        
+        $links['views'] = $newViews;
     }
 
     /**

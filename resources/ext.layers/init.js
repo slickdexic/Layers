@@ -79,7 +79,21 @@ mw.layers = {
 		link.title = 'Edit image layers and annotations';
 
 		editLayersTab.appendChild( link );
-		views.appendChild( editLayersTab );
+
+		// Find the position to insert after 'edit' and before 'history'
+		var editTab = document.getElementById( 'ca-edit' ) || document.getElementById( 'ca-ve-edit' );
+		var historyTab = document.getElementById( 'ca-history' );
+
+		if ( editTab && editTab.nextSibling ) {
+			// Insert after the edit tab
+			views.insertBefore( editLayersTab, editTab.nextSibling );
+		} else if ( historyTab ) {
+			// Insert before the history tab
+			views.insertBefore( editLayersTab, historyTab );
+		} else {
+			// Fallback: append to views
+			views.appendChild( editLayersTab );
+		}
 
 		// Add click handler
 		link.addEventListener( 'click', function ( e ) {
@@ -176,7 +190,8 @@ mw.layers = {
 	 */
 	createViewer: function () {
 		// TODO: Implement layer viewer for thumbnails
-		// console.log( 'Layers: Creating viewer for thumbnail with', config.layers.length, 'layers' );
+		// console.log( 'Layers: Creating viewer for thumbnail with',
+		//     config.layers.length, 'layers' );
 	}
 };
 
