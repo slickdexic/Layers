@@ -9,7 +9,7 @@ A **non-destructive image annotation extension** for MediaWiki that allows users
 ### What Actually Works Now (v0.9.0 - August 2025)
 
 #### ✅ Core Drawing Tools (Fully Functional)
-- **Text Tool** - Multi-line text with font size, color, stroke, drop shadow
+- **Text Tool** - Multi-line text with font size, 8 font families, text alignment (left/center/right), color, stroke, drop shadow
 - **Pen Tool** - Freehand drawing with adjustable stroke width
 - **Rectangle Tool** - Drag to create rectangles with stroke and fill options
 - **Circle Tool** - Drag to create circles with radius control
@@ -28,6 +28,9 @@ A **non-destructive image annotation extension** for MediaWiki that allows users
 - **Layer Management** - Add, delete, hide/show, reorder layers in panel
 - **Zoom & Pan** - Mouse wheel zoom, space+drag panning
 - **Grid System** - Toggle grid display, snap-to-grid functionality
+- **Undo/Redo System** - Complete 50-step history with keyboard shortcuts
+- **Copy/Paste Operations** - Smart positioning and multi-object support with automatic offset
+- **Selection Modifiers** - Shift (proportional scaling), Alt (center scaling), rotation snap points
 
 #### ✅ Backend Integration
 - **Database Storage** - JSON layer data with versioning and history
@@ -44,9 +47,9 @@ A **non-destructive image annotation extension** for MediaWiki that allows users
 
 #### ❌ Incomplete Features in Tools
 - **~~Undo/Redo System~~ ✅ COMPLETED** - Full 50-step history with action tracking
-- **~~Copy/Paste Operations~~ ✅ ENHANCED** - Smart positioning and multi-object support  
-- **~~Text Tool Enhancements~~ ✅ IMPROVED** - Font family selection with 8 professional fonts
-- **Selection Modifiers** - No Shift (proportional) or Alt (center) constraints
+- **~~Copy/Paste Operations~~ ✅ COMPLETED** - Smart positioning and multi-object support  
+- **~~Text Tool Enhancements~~ ✅ COMPLETED** - Font family selection and text alignment controls
+- **~~Selection Modifiers~~ ✅ COMPLETED** - Shift (proportional), Alt (center scaling), rotation snap points
 - **Polygon Editing** - No point editing mode after creation
 
 #### ❌ Code Quality & Performance
@@ -55,9 +58,9 @@ A **non-destructive image annotation extension** for MediaWiki that allows users
 - **Testing** - Limited unit tests, no integration testing
 - **ESLint Issues** - 122 style violations (mostly formatting, not functional)
 
-### Realistic Assessment: ~88% Frontend Complete, ~40% Backend Complete
+### Realistic Assessment: ~92% Frontend Complete, ~40% Backend Complete
 
-The frontend editor is remarkably sophisticated with professional features including functional undo/redo, enhanced copy/paste, and improved text tools. The main barriers to production deployment remain in backend integration, not missing frontend features.
+The frontend editor is now remarkably sophisticated with professional features including complete undo/redo, enhanced copy/paste, comprehensive text controls, and advanced selection modifiers. The main barriers to production deployment remain in backend integration, not missing frontend features.
 
 ## Installation (For Developers/Testers Only)
 

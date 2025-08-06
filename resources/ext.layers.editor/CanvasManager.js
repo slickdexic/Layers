@@ -609,7 +609,7 @@
 		}
 
 		if ( this.isRotating && this.dragStartPoint ) {
-			this.handleRotation( point );
+			this.handleRotation( point, e );
 			return;
 		}
 
@@ -715,32 +715,73 @@
 				}
 				break;
 			case 'ne':
-				updates.y = origY + deltaY;
-				updates.width = origW + deltaX;
-				updates.height = origH - deltaY;
+				if ( modifiers.fromCenter ) {
+					updates.x = centerX - ( origW + deltaX ) / 2;
+					updates.y = centerY - ( origH - deltaY ) / 2;
+					updates.width = origW + deltaX;
+					updates.height = origH - deltaY;
+				} else {
+					updates.y = origY + deltaY;
+					updates.width = origW + deltaX;
+					updates.height = origH - deltaY;
+				}
 				break;
 			case 'sw':
-				updates.x = origX + deltaX;
-				updates.width = origW - deltaX;
-				updates.height = origH + deltaY;
+				if ( modifiers.fromCenter ) {
+					updates.x = centerX - ( origW - deltaX ) / 2;
+					updates.y = centerY - ( origH + deltaY ) / 2;
+					updates.width = origW - deltaX;
+					updates.height = origH + deltaY;
+				} else {
+					updates.x = origX + deltaX;
+					updates.width = origW - deltaX;
+					updates.height = origH + deltaY;
+				}
 				break;
 			case 'se':
-				updates.width = origW + deltaX;
-				updates.height = origH + deltaY;
+				if ( modifiers.fromCenter ) {
+					updates.x = centerX - ( origW + deltaX ) / 2;
+					updates.y = centerY - ( origH + deltaY ) / 2;
+					updates.width = origW + deltaX;
+					updates.height = origH + deltaY;
+				} else {
+					updates.width = origW + deltaX;
+					updates.height = origH + deltaY;
+				}
 				break;
 			case 'n':
-				updates.y = origY + deltaY;
-				updates.height = origH - deltaY;
+				if ( modifiers.fromCenter ) {
+					updates.y = centerY - ( origH - deltaY ) / 2;
+					updates.height = origH - deltaY;
+				} else {
+					updates.y = origY + deltaY;
+					updates.height = origH - deltaY;
+				}
 				break;
 			case 's':
-				updates.height = origH + deltaY;
+				if ( modifiers.fromCenter ) {
+					updates.y = centerY - ( origH + deltaY ) / 2;
+					updates.height = origH + deltaY;
+				} else {
+					updates.height = origH + deltaY;
+				}
 				break;
 			case 'w':
-				updates.x = origX + deltaX;
-				updates.width = origW - deltaX;
+				if ( modifiers.fromCenter ) {
+					updates.x = centerX - ( origW - deltaX ) / 2;
+					updates.width = origW - deltaX;
+				} else {
+					updates.x = origX + deltaX;
+					updates.width = origW - deltaX;
+				}
 				break;
 			case 'e':
-				updates.width = origW + deltaX;
+				if ( modifiers.fromCenter ) {
+					updates.x = centerX - ( origW + deltaX ) / 2;
+					updates.width = origW + deltaX;
+				} else {
+					updates.width = origW + deltaX;
+				}
 				break;
 		}
 
@@ -775,9 +816,11 @@
 		return updates;
 	};
 
-	CanvasManager.prototype.handleRotation = function ( point ) {
+	CanvasManager.prototype.handleRotation = function ( point, event ) {
 		var layer = this.editor.getLayerById( this.selectedLayerId );
-		if ( !layer || !this.rotationHandle ) { return; }
+		if ( !layer || !this.rotationHandle ) { 
+			return; 
+		}
 
 		// Calculate angle from rotation center to mouse position
 		var centerX = this.rotationHandle.centerX;
@@ -788,6 +831,12 @@
 
 		var angleDelta = currentAngle - startAngle;
 		var degrees = angleDelta * ( 180 / Math.PI );
+
+		// Apply snap-to-angle if Shift key is held (15-degree increments)
+		if ( event && event.shiftKey ) {
+			var snapAngle = 15;
+			degrees = Math.round( degrees / snapAngle ) * snapAngle;
+		}
 
 		// Store rotation (we'll implement actual rotation rendering later)
 		layer.rotation = ( this.originalLayerState.rotation || 0 ) + degrees;
@@ -2184,6 +2233,31 @@
                     'border: 1px solid #ddd;' +
                     'border-radius: 4px;' +
                 '">' +
+                '<br><br>' +
+                '<label style="display: block; margin-bottom: 5px;">Text Alignment:</label>' +
+                '<div class="text-align-buttons" style="display: flex; gap: 5px; margin-bottom: 10px;">' +
+                    '<button type="button" class="align-btn align-left active" data-align="left" style="' +
+                        'padding: 6px 12px;' +
+                        'border: 1px solid #ddd;' +
+                        'background: #e9ecef;' +
+                        'border-radius: 4px;' +
+                        'cursor: pointer;' +
+                    '">Left</button>' +
+                    '<button type="button" class="align-btn align-center" data-align="center" style="' +
+                        'padding: 6px 12px;' +
+                        'border: 1px solid #ddd;' +
+                        'background: #f8f9fa;' +
+                        'border-radius: 4px;' +
+                        'cursor: pointer;' +
+                    '">Center</button>' +
+                    '<button type="button" class="align-btn align-right" data-align="right" style="' +
+                        'padding: 6px 12px;' +
+                        'border: 1px solid #ddd;' +
+                        'background: #f8f9fa;' +
+                        'border-radius: 4px;' +
+                        'cursor: pointer;' +
+                    '">Right</button>' +
+                '</div>' +
             '</div>' +
             '<div style="text-align: right; margin-top: 20px;">' +
                 '<button class="cancel-btn" style="' +
@@ -2211,6 +2285,7 @@
 		var fontFamilyInput = modal.querySelector( '.font-family-input' );
 		var fontSizeInput = modal.querySelector( '.font-size-input' );
 		var colorInput = modal.querySelector( '.color-input' );
+		var alignButtons = modal.querySelectorAll( '.align-btn' );
 		var addBtn = modal.querySelector( '.add-btn' );
 		var cancelBtn = modal.querySelector( '.cancel-btn' );
 
@@ -2218,6 +2293,23 @@
 		if ( fontFamilyInput && style.fontFamily ) {
 			fontFamilyInput.value = style.fontFamily;
 		}
+
+		// Handle text alignment button clicks
+		var currentAlignment = 'left';
+		alignButtons.forEach( function ( btn ) {
+			btn.addEventListener( 'click', function ( e ) {
+				e.preventDefault();
+				
+				// Remove active state from all buttons
+				alignButtons.forEach( function ( b ) {
+					b.style.background = '#f8f9fa';
+				} );
+				
+				// Set active state for clicked button
+				this.style.background = '#e9ecef';
+				currentAlignment = this.dataset.align;
+			} );
+		} );
 
 		function addText() {
 			var text = textInput.value.trim();
@@ -2229,6 +2321,7 @@
 					y: point.y,
 					fontSize: parseInt( fontSizeInput.value ) || 16,
 					fontFamily: fontFamilyInput.value || 'Arial, sans-serif',
+					textAlign: currentAlignment,
 					fill: colorInput.value,
 					textStrokeColor: style.textStrokeColor || '#000000',
 					textStrokeWidth: style.textStrokeWidth || 0,
@@ -2610,6 +2703,7 @@
 	CanvasManager.prototype.drawText = function ( layer ) {
 		this.ctx.save();
 		this.ctx.font = ( layer.fontSize || 16 ) + 'px ' + ( layer.fontFamily || 'Arial' );
+		this.ctx.textAlign = layer.textAlign || 'left';
 
 		var text = layer.text || '';
 		var x = layer.x || 0;

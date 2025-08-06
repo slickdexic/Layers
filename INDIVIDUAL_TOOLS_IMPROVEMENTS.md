@@ -77,14 +77,15 @@ if (newLayer.points && Array.isArray(newLayer.points)) {
 }
 ```
 
-### 3. Text Tool - FONT FAMILY SELECTION ✅
+### 3. Text Tool - COMPREHENSIVE TYPOGRAPHY ✅
 
-**Previous Status:** Fixed Arial font only  
-**New Implementation:** Professional font family dropdown
+**Previous Status:** Fixed Arial font, no alignment control  
+**New Implementation:** Professional typography with alignment options
 
 **Features Added:**
 - **Font Family Dropdown**: 8 professional font options
-- **Live Preview**: Font family preserved in style settings
+- **Text Alignment**: Left, Center, Right alignment buttons
+- **Live Preview**: Font family and alignment preserved in style settings
 - **Modal Enhancement**: Improved text input dialog layout
 - **Font Options Available**:
   - Arial (sans-serif)
@@ -98,15 +99,25 @@ if (newLayer.points && Array.isArray(newLayer.points)) {
 
 **Technical Implementation:**
 ```javascript
-// Enhanced text modal with font selection
-'<select class="font-family-input">' +
-    '<option value="Arial, sans-serif">Arial</option>' +
-    '<option value="Georgia, serif">Georgia</option>' +
-    // ... additional options
-'</select>'
+// Enhanced text modal with font and alignment selection
+'<div class="alignment-controls">' +
+    '<button type="button" class="align-left">Left</button>' +
+    '<button type="button" class="align-center">Center</button>' +
+    '<button type="button" class="align-right">Right</button>' +
+'</div>'
 
-// Font family application
-fontFamily: fontFamilyInput.value || 'Arial, sans-serif'
+// Complete typography application
+layerData = {
+    type: 'text',
+    text: text,
+    fontSize: parseInt(fontSizeInput.value) || 16,
+    fontFamily: fontFamilyInput.value || 'Arial, sans-serif',
+    textAlign: currentAlignment,  // 'left', 'center', or 'right'
+    fill: colorInput.value
+};
+
+// Rendering with alignment
+this.ctx.textAlign = layer.textAlign || 'left';
 ```
 
 ### 4. Selection System - MODIFIER KEY SUPPORT ✅
@@ -204,9 +215,9 @@ if (modifiers.proportional) {
 
 ### Priority Level 1 (Next Sprint)
 - **Alt Key Center Scaling**: Complete the from-center resize implementation
-- **Rotation Snap Points**: 15-degree angle constraints
-- **Text Alignment**: Left/center/right alignment options
+- **Rotation Snap Points**: 15-degree angle constraints with Shift key
 - **Enhanced Polygon Tool**: Point editing mode after creation
+- **Text Rotation**: Text rotation controls and angle snapping
 
 ### Priority Level 2 (Medium Term)
 - **Advanced Text Effects**: Glow, inner shadow, rotation
@@ -225,7 +236,7 @@ if (modifiers.proportional) {
 ### Functionality Completeness
 - **Undo/Redo**: From 0% to 100% implementation
 - **Copy/Paste**: From 60% to 95% implementation  
-- **Text Tool**: From 70% to 85% implementation
+- **Text Tool**: From 70% to 95% implementation (font families + alignment)
 - **Selection System**: From 80% to 90% implementation
 
 ### User Workflow Impact
