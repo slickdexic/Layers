@@ -58,6 +58,14 @@
 		this.gridSize = 20;
 		this.snapToGrid = false;
 
+		// History/Undo system
+		this.history = [];
+		this.historyIndex = -1;
+		this.maxHistorySteps = 50;
+
+		// Clipboard for copy/paste
+		this.clipboard = [];
+
 		this.init();
 	}
 
@@ -596,7 +604,7 @@
 		}
 
 		if ( this.isResizing && this.resizeHandle && this.dragStartPoint ) {
-			this.handleResize( point );
+			this.handleResize( point, e );
 			return;
 		}
 
@@ -621,15 +629,29 @@
 		}
 	};
 
-	CanvasManager.prototype.handleResize = function ( point ) {
+	CanvasManager.prototype.handleResize = function ( point, event ) {
 		var layer = this.editor.getLayerById( this.selectedLayerId );
-		if ( !layer || !this.originalLayerState ) { return; }
+		if ( !layer || !this.originalLayerState ) { 
+			return; 
+		}
 
 		var deltaX = point.x - this.dragStartPoint.x;
 		var deltaY = point.y - this.dragStartPoint.y;
 
+		// Get modifier keys from the event
+		var modifiers = {
+			proportional: event && event.shiftKey,  // Shift key for proportional scaling
+			fromCenter: event && event.altKey       // Alt key for scaling from center
+		};
+
 		// Calculate new dimensions based on handle type
-		var updates = this.calculateResize( this.originalLayerState, this.resizeHandle.type, deltaX, deltaY );
+		var updates = this.calculateResize( 
+			this.originalLayerState, 
+			this.resizeHandle.type, 
+			deltaX, 
+			deltaY,
+			modifiers
+		);
 
 		// Apply updates to layer
 		if ( updates ) {
@@ -642,12 +664,14 @@
 		}
 	};
 
-	CanvasManager.prototype.calculateResize = function ( originalLayer, handleType, deltaX, deltaY ) {
+	CanvasManager.prototype.calculateResize = function ( originalLayer, handleType, deltaX, deltaY, modifiers ) {
+		modifiers = modifiers || {};
+		
 		switch ( originalLayer.type ) {
 			case 'rectangle':
-				return this.calculateRectangleResize( originalLayer, handleType, deltaX, deltaY );
+				return this.calculateRectangleResize( originalLayer, handleType, deltaX, deltaY, modifiers );
 			case 'circle':
-				return this.calculateCircleResize( originalLayer, handleType, deltaX, deltaY );
+				return this.calculateCircleResize( originalLayer, handleType, deltaX, deltaY, modifiers );
 			case 'text':
 				// Text doesn't resize, only repositions
 				return null;
@@ -656,19 +680,39 @@
 		}
 	};
 
-	CanvasManager.prototype.calculateRectangleResize = function ( originalLayer, handleType, deltaX, deltaY ) {
+	CanvasManager.prototype.calculateRectangleResize = function ( originalLayer, handleType, deltaX, deltaY, modifiers ) {
+		modifiers = modifiers || {};
 		var updates = {};
 		var origX = originalLayer.x || 0;
 		var origY = originalLayer.y || 0;
 		var origW = originalLayer.width || 0;
 		var origH = originalLayer.height || 0;
 
+		// Calculate aspect ratio for proportional scaling
+		var aspectRatio = origW / origH;
+		var centerX = origX + origW / 2;
+		var centerY = origY + origH / 2;
+
+		if ( modifiers.proportional ) {
+			// Proportional scaling: maintain aspect ratio
+			var maxDelta = Math.max( Math.abs( deltaX ), Math.abs( deltaY ) );
+			deltaX = deltaX < 0 ? -maxDelta : maxDelta;
+			deltaY = deltaY < 0 ? -maxDelta / aspectRatio : maxDelta / aspectRatio;
+		}
+
 		switch ( handleType ) {
 			case 'nw':
-				updates.x = origX + deltaX;
-				updates.y = origY + deltaY;
-				updates.width = origW - deltaX;
-				updates.height = origH - deltaY;
+				if ( modifiers.fromCenter ) {
+					updates.x = centerX - ( origW - deltaX ) / 2;
+					updates.y = centerY - ( origH - deltaY ) / 2;
+					updates.width = origW - deltaX;
+					updates.height = origH - deltaY;
+				} else {
+					updates.x = origX + deltaX;
+					updates.y = origY + deltaY;
+					updates.width = origW - deltaX;
+					updates.height = origH - deltaY;
+				}
 				break;
 			case 'ne':
 				updates.y = origY + deltaY;
@@ -1458,7 +1502,12 @@
 	};
 
 	CanvasManager.prototype.pasteFromClipboard = function () {
-		if ( !this.clipboard || this.clipboard.length === 0 ) { return; }
+		if ( !this.clipboard || this.clipboard.length === 0 ) { 
+			return; 
+		}
+
+		// Save state for undo
+		this.saveState( 'paste' );
 
 		var self = this;
 		var newLayerIds = [];
@@ -1467,9 +1516,33 @@
 			var newLayer = JSON.parse( JSON.stringify( layerData ) );
 			newLayer.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 
-			// Offset the pasted layer slightly
-			if ( newLayer.x !== undefined ) { newLayer.x += 10; }
-			if ( newLayer.y !== undefined ) { newLayer.y += 10; }
+			// Offset the pasted layer slightly to avoid overlap
+			if ( newLayer.x !== undefined ) { 
+				newLayer.x += 20; 
+			}
+			if ( newLayer.y !== undefined ) { 
+				newLayer.y += 20; 
+			}
+			
+			// Handle line/arrow offset
+			if ( newLayer.x1 !== undefined ) { 
+				newLayer.x1 += 20; 
+				newLayer.x2 += 20; 
+			}
+			if ( newLayer.y1 !== undefined ) { 
+				newLayer.y1 += 20; 
+				newLayer.y2 += 20; 
+			}
+			
+			// Handle path points offset
+			if ( newLayer.points && Array.isArray( newLayer.points ) ) {
+				newLayer.points = newLayer.points.map( function ( point ) {
+					return {
+						x: point.x + 20,
+						y: point.y + 20
+					};
+				} );
+			}
 
 			self.editor.layers.push( newLayer );
 			newLayerIds.push( newLayer.id );
@@ -1478,6 +1551,14 @@
 		// Select the pasted layers
 		this.selectedLayerIds = newLayerIds;
 		this.selectedLayerId = newLayerIds[ newLayerIds.length - 1 ];
+
+		// Update layer panel
+		if ( this.editor.layerPanel ) {
+			this.editor.layerPanel.updateLayerList();
+		}
+
+		// Mark as dirty
+		this.editor.markDirty();
 
 		this.redraw();
 		this.renderLayers( this.editor.layers );
@@ -1507,13 +1588,97 @@
 		// console.log( 'Deleted selected layers' );
 	};
 
-	// Undo/Redo stubs
+	// History management methods
+	CanvasManager.prototype.saveState = function ( action ) {
+		// Deep clone the current layers state
+		var state = {
+			layers: JSON.parse( JSON.stringify( this.editor.layers || [] ) ),
+			action: action || 'action',
+			timestamp: Date.now()
+		};
+
+		// Remove any states after current index (if we're not at the end)
+		this.history = this.history.slice( 0, this.historyIndex + 1 );
+
+		// Add new state
+		this.history.push( state );
+		this.historyIndex = this.history.length - 1;
+
+		// Limit history size
+		if ( this.history.length > this.maxHistorySteps ) {
+			this.history.shift();
+			this.historyIndex--;
+		}
+
+		// Update toolbar undo/redo buttons
+		this.updateUndoRedoButtons();
+	};
+
+	CanvasManager.prototype.updateUndoRedoButtons = function () {
+		if ( this.editor && this.editor.toolbar ) {
+			var canUndo = this.historyIndex > 0;
+			var canRedo = this.historyIndex < this.history.length - 1;
+			this.editor.toolbar.updateUndoRedoState( canUndo, canRedo );
+		}
+	};
+
+	// Undo/Redo implementation
 	CanvasManager.prototype.undo = function () {
-		// console.log( 'Undo functionality to be implemented' );
+		if ( this.historyIndex <= 0 ) {
+			return false;
+		}
+
+		this.historyIndex--;
+		var state = this.history[ this.historyIndex ];
+
+		// Restore the layers state
+		this.editor.layers = JSON.parse( JSON.stringify( state.layers ) );
+
+		// Clear selection and redraw
+		this.deselectAll();
+		this.renderLayers( this.editor.layers );
+
+		// Update layer panel
+		if ( this.editor.layerPanel ) {
+			this.editor.layerPanel.updateLayerList();
+		}
+
+		// Update buttons
+		this.updateUndoRedoButtons();
+
+		// Mark editor as dirty
+		this.editor.markDirty();
+
+		return true;
 	};
 
 	CanvasManager.prototype.redo = function () {
-		// console.log( 'Redo functionality to be implemented' );
+		if ( this.historyIndex >= this.history.length - 1 ) {
+			return false;
+		}
+
+		this.historyIndex++;
+		var state = this.history[ this.historyIndex ];
+
+		// Restore the layers state
+		this.editor.layers = JSON.parse( JSON.stringify( state.layers ) );
+
+		// Clear selection and redraw
+		this.deselectAll();
+		this.renderLayers( this.editor.layers );
+
+		// Update layer panel
+		if ( this.editor.layerPanel ) {
+			this.editor.layerPanel.updateLayerList();
+		}
+
+		// Update buttons
+		this.updateUndoRedoButtons();
+
+		// Mark editor as dirty
+		this.editor.markDirty();
+
+		return true;
 	};
 
 	// Marquee selection methods
@@ -1987,7 +2152,25 @@
                 'resize: vertical;' +
             '"></textarea>' +
             '<div style="margin: 15px 0;">' +
-                '<label style="display: block; margin-bottom: 5px;">Font Size:</label>' +
+                '<label style="display: block; margin-bottom: 5px;">Font Family:</label>' +
+                '<select class="font-family-input" style="' +
+                    'width: 150px;' +
+                    'padding: 4px 8px;' +
+                    'border: 1px solid #ddd;' +
+                    'border-radius: 4px;' +
+                    'margin-bottom: 10px;' +
+                '">' +
+                    '<option value="Arial, sans-serif">Arial</option>' +
+                    '<option value="Georgia, serif">Georgia</option>' +
+                    '<option value="Times New Roman, serif">Times New Roman</option>' +
+                    '<option value="Verdana, sans-serif">Verdana</option>' +
+                    '<option value="Helvetica, sans-serif">Helvetica</option>' +
+                    '<option value="Courier New, monospace">Courier New</option>' +
+                    '<option value="Impact, sans-serif">Impact</option>' +
+                    '<option value="Comic Sans MS, cursive">Comic Sans MS</option>' +
+                '</select>' +
+                '<br>' +
+                '<label style="display: inline-block; margin-bottom: 5px; margin-right: 10px;">Font Size:</label>' +
                 '<input type="number" class="font-size-input" value="' + ( style.fontSize || 16 ) + '" min="8" max="72" style="' +
                     'width: 80px;' +
                     'padding: 4px 8px;' +
@@ -2025,10 +2208,16 @@
 
 		// Event handlers
 		var textInput = modal.querySelector( '.text-input' );
+		var fontFamilyInput = modal.querySelector( '.font-family-input' );
 		var fontSizeInput = modal.querySelector( '.font-size-input' );
 		var colorInput = modal.querySelector( '.color-input' );
 		var addBtn = modal.querySelector( '.add-btn' );
 		var cancelBtn = modal.querySelector( '.cancel-btn' );
+
+		// Set default font family if provided in style
+		if ( fontFamilyInput && style.fontFamily ) {
+			fontFamilyInput.value = style.fontFamily;
+		}
 
 		function addText() {
 			var text = textInput.value.trim();
@@ -2039,7 +2228,7 @@
 					x: point.x,
 					y: point.y,
 					fontSize: parseInt( fontSizeInput.value ) || 16,
-					fontFamily: 'Arial',
+					fontFamily: fontFamilyInput.value || 'Arial, sans-serif',
 					fill: colorInput.value,
 					textStrokeColor: style.textStrokeColor || '#000000',
 					textStrokeWidth: style.textStrokeWidth || 0,

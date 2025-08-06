@@ -225,10 +225,16 @@
 				// console.log( 'Layers: No existing layers found, starting fresh' );
 			}
 			self.renderLayers();
+			
+			// Save initial state for undo system
+			self.saveState( 'initial' );
 		} ).fail( function () {
 			// console.error( 'Failed to load layers:', err );
 			self.layers = [];
 			self.renderLayers();
+			
+			// Save initial empty state for undo system
+			self.saveState( 'initial' );
 			// Don't show error to user as this is expected for new files
 		} );
 	};
@@ -312,56 +318,27 @@
 	};
 
 	// Undo/Redo System
-	LayersEditor.prototype.saveState = function () {
-		// Save current layers state for undo
-		var state = JSON.parse( JSON.stringify( this.layers ) );
-		this.undoStack.push( state );
-
-		// Limit undo stack size
-		if ( this.undoStack.length > this.maxUndoSteps ) {
-			this.undoStack.shift();
+	LayersEditor.prototype.saveState = function ( action ) {
+		// Delegate to canvas manager's history system
+		if ( this.canvasManager ) {
+			this.canvasManager.saveState( action );
 		}
-
-		// Clear redo stack when new action is performed
-		this.redoStack = [];
-
-		this.updateUIState();
 	};
 
 	LayersEditor.prototype.undo = function () {
-		if ( this.undoStack.length === 0 ) {
-			return;
+		// Delegate to canvas manager's undo system
+		if ( this.canvasManager ) {
+			return this.canvasManager.undo();
 		}
-
-		// Save current state to redo stack
-		var currentState = JSON.parse( JSON.stringify( this.layers ) );
-		this.redoStack.push( currentState );
-
-		// Restore previous state
-		var previousState = this.undoStack.pop();
-		this.layers = previousState;
-
-		this.renderLayers();
-		this.markDirty();
-		this.updateUIState();
+		return false;
 	};
 
 	LayersEditor.prototype.redo = function () {
-		if ( this.redoStack.length === 0 ) {
-			return;
+		// Delegate to canvas manager's redo system
+		if ( this.canvasManager ) {
+			return this.canvasManager.redo();
 		}
-
-		// Save current state to undo stack
-		var currentState = JSON.parse( JSON.stringify( this.layers ) );
-		this.undoStack.push( currentState );
-
-		// Restore next state
-		var nextState = this.redoStack.pop();
-		this.layers = nextState;
-
-		this.renderLayers();
-		this.markDirty();
-		this.updateUIState();
+		return false;
 	};
 
 	// Selection Management

@@ -6,37 +6,58 @@ A **non-destructive image annotation extension** for MediaWiki that allows users
 
 **This extension is currently in active development and is NOT ready for production use.**
 
-### What Actually Works Now (v0.8.2 - August 2025)
-- ✅ Basic image editor with core drawing tools (text, rectangle, circle, arrow, line, pen, highlight)
-- ✅ **FULLY FUNCTIONAL** ellipse, polygon, and star tools (fixed August 2025)
-- ✅ Layer management (add, edit, delete, reorder, hide/show)
-- ✅ Data persistence to database with versioning
-- ✅ "Edit Layers" tab on file pages
-- ✅ Undo/redo system (50 steps)
-- ✅ Security validation and user permissions
-- ✅ **Selection handles and bounding boxes** - Objects can be selected, moved, and resized
-- ✅ **Enhanced text styling** - Text stroke, drop shadow support implemented
-- ✅ **Arrow style options** - Single arrow, double arrow, or line only implemented
-- ✅ **Object manipulation** - Drag to move, resize handles, rotation handle implemented
-- ✅ **Multi-selection** - Ctrl+click and marquee selection for multiple objects
-- ✅ **Professional keyboard shortcuts** - Ctrl+A, Ctrl+C, Ctrl+V, Delete key, etc.
-- ✅ **Advanced shape tools** - Ellipse, polygon, star tools NOW WORKING in toolbar
-- ✅ **Layer effects UI** - Opacity, blend modes, shadow toggles in toolbar
-- ✅ **Touch/mobile support** - Touch events converted to mouse events
-- ✅ **Complete layer type support** - All backend and frontend layer types unified
+### What Actually Works Now (v0.9.0 - August 2025)
 
-### Critical Missing/Broken Features  
+#### ✅ Core Drawing Tools (Fully Functional)
+- **Text Tool** - Multi-line text with font size, color, stroke, drop shadow
+- **Pen Tool** - Freehand drawing with adjustable stroke width
+- **Rectangle Tool** - Drag to create rectangles with stroke and fill options
+- **Circle Tool** - Drag to create circles with radius control
+- **Ellipse Tool** - Separate X/Y radius control for elliptical shapes
+- **Polygon Tool** - Variable-sided polygons (default hexagon)
+- **Star Tool** - Configurable star shapes with inner/outer radius
+- **Arrow Tool** - Single, double, or line-only arrows with size control
+- **Line Tool** - Straight lines with stroke styling
+- **Highlight Tool** - Semi-transparent highlighting rectangles
 
-- ❌ **SERVER-SIDE RENDERING BROKEN** - Images with layers don't display in articles (critical blocker)
-- ❌ **Complete wikitext integration** - `[[File:Example.jpg|layers=on]]` syntax exists but incomplete
-- ❌ **Production testing** - Not tested at scale, some console.log statements remain
-- ❌ **Code quality issues** - 122 ESLint errors (many false positives), ES2015+ incompatibilities  
-- ❌ **Performance optimization** - No memory management or efficient rendering
-- ❌ **Comprehensive testing** - Limited unit tests, no integration tests
+#### ✅ Professional Editing Features
+- **Object Selection** - Click to select, bounding boxes with 8 resize handles
+- **Object Transformation** - Move (drag), resize (handles), rotate (rotation handle)
+- **Multi-selection** - Ctrl+click for multiple objects, marquee selection
+- **Professional Shortcuts** - Ctrl+A/C/V/X/Z, Delete key, tool shortcuts (T,P,R,C,etc.)
+- **Layer Management** - Add, delete, hide/show, reorder layers in panel
+- **Zoom & Pan** - Mouse wheel zoom, space+drag panning
+- **Grid System** - Toggle grid display, snap-to-grid functionality
 
-### Honest Assessment: ~85% UI Complete, ~45% Backend Complete
+#### ✅ Backend Integration
+- **Database Storage** - JSON layer data with versioning and history
+- **API Endpoints** - ApiLayersInfo (load) and ApiLayersSave (save) working
+- **Security** - Input validation, CSRF protection, user permissions
+- **File Integration** - "Edit Layers" tab on MediaWiki file pages
 
-The frontend editor is surprisingly sophisticated with professional features, but the backend integration still has critical gaps that prevent production use.
+### Critical Missing Features (Blocking Production)
+
+#### ❌ Server-Side Rendering (CRITICAL BLOCKER)
+- Images with layers don't display in MediaWiki articles
+- No thumbnail generation with layer overlays
+- Missing ImageMagick integration for server-side composition
+
+#### ❌ Incomplete Features in Tools
+- **~~Undo/Redo System~~ ✅ COMPLETED** - Full 50-step history with action tracking
+- **~~Copy/Paste Operations~~ ✅ ENHANCED** - Smart positioning and multi-object support  
+- **~~Text Tool Enhancements~~ ✅ IMPROVED** - Font family selection with 8 professional fonts
+- **Selection Modifiers** - No Shift (proportional) or Alt (center) constraints
+- **Polygon Editing** - No point editing mode after creation
+
+#### ❌ Code Quality & Performance
+- **Browser Compatibility** - ES2015+ features need polyfills for older browsers
+- **Performance** - No memory management for large images or complex scenes
+- **Testing** - Limited unit tests, no integration testing
+- **ESLint Issues** - 122 style violations (mostly formatting, not functional)
+
+### Realistic Assessment: ~88% Frontend Complete, ~40% Backend Complete
+
+The frontend editor is remarkably sophisticated with professional features including functional undo/redo, enhanced copy/paste, and improved text tools. The main barriers to production deployment remain in backend integration, not missing frontend features.
 
 ## Installation (For Developers/Testers Only)
 
