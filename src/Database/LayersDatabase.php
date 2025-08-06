@@ -258,4 +258,59 @@ class LayersDatabase {
             return false;
         }
     }
+
+    /**
+     * Get a layer set by name
+     * 
+     * @param string $imgName Image filename
+     * @param string $sha1 Image SHA1 hash
+     * @param string $setName Layer set name
+     * @return array|null Layer set data or null if not found
+     */
+    public function getLayerSetByName( string $imgName, string $sha1, string $setName ): ?array {
+        try {
+            $res = $this->dbr->selectRow(
+                'layer_sets',
+                [
+                    'ls_id',
+                    'ls_img_name',
+                    'ls_img_sha1',
+                    'ls_img_major_mime',
+                    'ls_img_minor_mime',
+                    'ls_revision',
+                    'ls_data',
+                    'ls_timestamp',
+                    'ls_user_id',
+                    'ls_set_name'
+                ],
+                [
+                    'ls_img_name' => $imgName,
+                    'ls_img_sha1' => $sha1,
+                    'ls_set_name' => $setName
+                ],
+                __METHOD__,
+                [ 'ORDER BY' => 'ls_revision DESC' ]
+            );
+
+            if ( !$res ) {
+                return null;
+            }
+
+            return [
+                'id' => (int)$res->ls_id,
+                'imgName' => $res->ls_img_name,
+                'imgSha1' => $res->ls_img_sha1,
+                'majorMime' => $res->ls_img_major_mime,
+                'minorMime' => $res->ls_img_minor_mime,
+                'revision' => (int)$res->ls_revision,
+                'data' => json_decode( $res->ls_data, true ),
+                'timestamp' => $res->ls_timestamp,
+                'userId' => (int)$res->ls_user_id,
+                'setName' => $res->ls_set_name
+            ];
+        } catch ( DBError $e ) {
+            wfLogWarning( 'Failed to get layer set by name: ' . $e->getMessage() );
+            return null;
+        }
+    }
 }

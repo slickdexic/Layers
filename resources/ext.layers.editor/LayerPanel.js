@@ -120,6 +120,9 @@
 			case 'text': return 'Text: ' + ( layer.text || 'Empty' ).slice( 0, 20 );
 			case 'rectangle': return 'Rectangle';
 			case 'circle': return 'Circle';
+			case 'ellipse': return 'Ellipse';
+			case 'polygon': return 'Polygon';
+			case 'star': return 'Star';
 			case 'arrow': return 'Arrow';
 			case 'line': return 'Line';
 			case 'path': return 'Drawing';

@@ -89,7 +89,6 @@
 	};
 
 	CanvasManager.prototype.loadBackgroundImage = function () {
-		var self = this;
 		var filename = this.editor.filename;
 		var backgroundImageUrl = this.config.backgroundImageUrl;
 
@@ -508,7 +507,7 @@
                point.y >= rect.y && point.y <= rect.y + rect.height;
 	};
 
-	CanvasManager.prototype.startResize = function ( handle, point ) {
+	CanvasManager.prototype.startResize = function ( handle ) {
 		this.isResizing = true;
 		this.resizeHandle = handle;
 		this.canvas.style.cursor = this.getResizeCursor( handle.type );
@@ -522,7 +521,7 @@
 		// console.log( 'Layers: Starting resize with handle:', handle.type );
 	};
 
-	CanvasManager.prototype.startRotation = function ( point ) {
+	CanvasManager.prototype.startRotation = function () {
 		this.isRotating = true;
 		this.canvas.style.cursor = 'grabbing';
 
@@ -535,7 +534,7 @@
 		// console.log( 'Layers: Starting rotation' );
 	};
 
-	CanvasManager.prototype.startDrag = function ( point ) {
+	CanvasManager.prototype.startDrag = function () {
 		this.isDragging = true;
 		this.canvas.style.cursor = 'move';
 
@@ -644,8 +643,6 @@
 	};
 
 	CanvasManager.prototype.calculateResize = function ( originalLayer, handleType, deltaX, deltaY ) {
-		var updates = {};
-
 		switch ( originalLayer.type ) {
 			case 'rectangle':
 				return this.calculateRectangleResize( originalLayer, handleType, deltaX, deltaY );
@@ -916,15 +913,6 @@
 		var newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, this.zoom + delta ) );
 
 		if ( newZoom !== this.zoom ) {
-			// Get mouse position relative to canvas before zoom
-			var rect = this.canvas.getBoundingClientRect();
-			var mouseX = e.clientX - rect.left;
-			var mouseY = e.clientY - rect.top;
-
-			// Calculate the point on the canvas that the mouse is over
-			var canvasPointX = mouseX / this.zoom;
-			var canvasPointY = mouseY / this.zoom;
-
 			// Update zoom
 			this.zoom = newZoom;
 
@@ -1150,6 +1138,12 @@
 				return this.isPointInRectangle( point, layer );
 			case 'circle':
 				return this.isPointInCircle( point, layer );
+			case 'ellipse':
+				return this.isPointInEllipse( point, layer );
+			case 'polygon':
+				return this.isPointInPolygon( point, layer );
+			case 'star':
+				return this.isPointInStar( point, layer );
 			case 'path':
 				return this.isPointInPath( point, layer );
 			default:
@@ -1255,6 +1249,68 @@
 		var dx = point.x - xx;
 		var dy = point.y - yy;
 		return Math.sqrt( dx * dx + dy * dy );
+	};
+
+	CanvasManager.prototype.isPointInEllipse = function ( point, layer ) {
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var radiusX = layer.radiusX || layer.width / 2 || 0;
+		var radiusY = layer.radiusY || layer.height / 2 || 0;
+
+		var dx = ( point.x - x ) / radiusX;
+		var dy = ( point.y - y ) / radiusY;
+		return ( dx * dx + dy * dy ) <= 1;
+	};
+
+	CanvasManager.prototype.isPointInPolygon = function ( point, layer ) {
+		var sides = layer.sides || 6;
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var radius = layer.radius || 50;
+
+		// Generate polygon points
+		var points = [];
+		for ( var i = 0; i < sides; i++ ) {
+			var angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
+			points.push( {
+				x: x + radius * Math.cos( angle ),
+				y: y + radius * Math.sin( angle )
+			} );
+		}
+
+		return this.isPointInPolygonByPoints( point, points );
+	};
+
+	CanvasManager.prototype.isPointInStar = function ( point, layer ) {
+		var points = layer.points || 5;
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var outerRadius = layer.outerRadius || layer.radius || 50;
+		var innerRadius = layer.innerRadius || outerRadius * 0.5;
+
+		// Generate star points
+		var starPoints = [];
+		for ( var i = 0; i < points * 2; i++ ) {
+			var angle = ( i * Math.PI ) / points - Math.PI / 2;
+			var radius = i % 2 === 0 ? outerRadius : innerRadius;
+			starPoints.push( {
+				x: x + radius * Math.cos( angle ),
+				y: y + radius * Math.sin( angle )
+			} );
+		}
+
+		return this.isPointInPolygonByPoints( point, starPoints );
+	};
+
+	CanvasManager.prototype.isPointInPolygonByPoints = function ( point, vertices ) {
+		var inside = false;
+		for ( var i = 0, j = vertices.length - 1; i < vertices.length; j = i++ ) {
+			if ( ( ( vertices[ i ].y > point.y ) !== ( vertices[ j ].y > point.y ) ) &&
+				( point.x < ( vertices[ j ].x - vertices[ i ].x ) * ( point.y - vertices[ i ].y ) / ( vertices[ j ].y - vertices[ i ].y ) + vertices[ i ].x ) ) {
+				inside = !inside;
+			}
+		}
+		return inside;
 	};
 
 	CanvasManager.prototype.handleKeyUp = function ( e ) {
@@ -1581,22 +1637,22 @@
 	CanvasManager.prototype.getLayerBounds = function ( layer ) {
 		switch ( layer.type ) {
 			case 'rectangle':
-				var x = layer.x || 0;
-				var y = layer.y || 0;
+				var rectX = layer.x || 0;
+				var rectY = layer.y || 0;
 				var width = layer.width || 0;
 				var height = layer.height || 0;
 
 				// Handle negative dimensions
 				if ( width < 0 ) {
-					x += width;
+					rectX += width;
 					width = -width;
 				}
 				if ( height < 0 ) {
-					y += height;
+					rectY += height;
 					height = -height;
 				}
 
-				return { x: x, y: y, width: width, height: height };
+				return { x: rectX, y: rectY, width: width, height: height };
 
 			case 'circle':
 				var centerX = layer.x || 0;
@@ -1610,8 +1666,8 @@
 				};
 
 			case 'text':
-				var x = layer.x || 0;
-				var y = layer.y || 0;
+				var textX = layer.x || 0;
+				var textY = layer.y || 0;
 				var fontSize = layer.fontSize || 16;
 				var text = layer.text || '';
 
@@ -1622,8 +1678,8 @@
 				this.ctx.restore();
 
 				return {
-					x: x,
-					y: y - fontSize,
+					x: textX,
+					y: textY - fontSize,
 					width: metrics.width,
 					height: fontSize
 				};
@@ -1815,6 +1871,15 @@
 			case 'circle':
 				this.startCircleTool( point, style );
 				break;
+			case 'ellipse':
+				this.startEllipseTool( point, style );
+				break;
+			case 'polygon':
+				this.startPolygonTool( point, style );
+				break;
+			case 'star':
+				this.startStarTool( point, style );
+				break;
 			case 'line':
 				this.startLineTool( point, style );
 				break;
@@ -1855,7 +1920,6 @@
 
 	CanvasManager.prototype.startTextTool = function ( point, style ) {
 		// Create a more sophisticated text input dialog
-		var self = this;
 
 		// Create modal for text input
 		var modal = this.createTextInputModal( point, style );
@@ -2078,6 +2142,46 @@
 		};
 	};
 
+	CanvasManager.prototype.startEllipseTool = function ( point, style ) {
+		this.tempLayer = {
+			type: 'ellipse',
+			x: point.x,
+			y: point.y,
+			radiusX: 0,
+			radiusY: 0,
+			stroke: style.color || '#000000',
+			strokeWidth: style.strokeWidth || 2,
+			fill: 'transparent'
+		};
+	};
+
+	CanvasManager.prototype.startPolygonTool = function ( point, style ) {
+		this.tempLayer = {
+			type: 'polygon',
+			x: point.x,
+			y: point.y,
+			radius: 0,
+			sides: 6, // Default hexagon
+			stroke: style.color || '#000000',
+			strokeWidth: style.strokeWidth || 2,
+			fill: 'transparent'
+		};
+	};
+
+	CanvasManager.prototype.startStarTool = function ( point, style ) {
+		this.tempLayer = {
+			type: 'star',
+			x: point.x,
+			y: point.y,
+			outerRadius: 0,
+			innerRadius: 0,
+			points: 5, // Default 5-pointed star
+			stroke: style.color || '#000000',
+			strokeWidth: style.strokeWidth || 2,
+			fill: 'transparent'
+		};
+	};
+
 	CanvasManager.prototype.drawPreview = function ( point ) {
 		if ( !this.tempLayer ) { return; }
 
@@ -2092,6 +2196,24 @@
 				var dy = point.y - this.tempLayer.y;
 				this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
 				this.drawCircle( this.tempLayer );
+				break;
+			case 'ellipse':
+				this.tempLayer.radiusX = Math.abs( point.x - this.tempLayer.x );
+				this.tempLayer.radiusY = Math.abs( point.y - this.tempLayer.y );
+				this.drawEllipse( this.tempLayer );
+				break;
+			case 'polygon':
+				var dx = point.x - this.tempLayer.x;
+				var dy = point.y - this.tempLayer.y;
+				this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
+				this.drawPolygon( this.tempLayer );
+				break;
+			case 'star':
+				var dx = point.x - this.tempLayer.x;
+				var dy = point.y - this.tempLayer.y;
+				this.tempLayer.outerRadius = Math.sqrt( dx * dx + dy * dy );
+				this.tempLayer.innerRadius = this.tempLayer.outerRadius * 0.5;
+				this.drawStar( this.tempLayer );
 				break;
 			case 'line':
 				this.tempLayer.x2 = point.x;
@@ -2131,6 +2253,21 @@
 				var dx = point.x - layer.x;
 				var dy = point.y - layer.y;
 				layer.radius = Math.sqrt( dx * dx + dy * dy );
+				break;
+			case 'ellipse':
+				layer.radiusX = Math.abs( point.x - layer.x );
+				layer.radiusY = Math.abs( point.y - layer.y );
+				break;
+			case 'polygon':
+				var dx = point.x - layer.x;
+				var dy = point.y - layer.y;
+				layer.radius = Math.sqrt( dx * dx + dy * dy );
+				break;
+			case 'star':
+				var dx = point.x - layer.x;
+				var dy = point.y - layer.y;
+				layer.outerRadius = Math.sqrt( dx * dx + dy * dy );
+				layer.innerRadius = layer.outerRadius * 0.5;
 				break;
 			case 'line':
 				layer.x2 = point.x;
@@ -2257,6 +2394,15 @@
 			case 'circle':
 				this.drawCircle( layer );
 				break;
+			case 'ellipse':
+				this.drawEllipse( layer );
+				break;
+			case 'polygon':
+				this.drawPolygon( layer );
+				break;
+			case 'star':
+				this.drawStar( layer );
+				break;
 			case 'line':
 				this.drawLine( layer );
 				break;
@@ -2269,7 +2415,6 @@
 			case 'path':
 				this.drawPath( layer );
 				break;
-            // Add more layer types as needed
 		}
 	};
 
@@ -2430,6 +2575,112 @@
 		}
 
 		this.ctx.stroke();
+		this.ctx.restore();
+	};
+
+	CanvasManager.prototype.drawEllipse = function ( layer ) {
+		this.ctx.save();
+		this.ctx.beginPath();
+
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var radiusX = layer.radiusX || layer.width / 2 || 0;
+		var radiusY = layer.radiusY || layer.height / 2 || 0;
+
+		// Create ellipse using scaling transformation
+		this.ctx.translate( x, y );
+		this.ctx.scale( radiusX, radiusY );
+		this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
+		this.ctx.restore();
+
+		this.ctx.save();
+		if ( layer.fill && layer.fill !== 'transparent' ) {
+			this.ctx.fillStyle = layer.fill;
+			this.ctx.fill();
+		}
+
+		if ( layer.stroke ) {
+			this.ctx.strokeStyle = layer.stroke;
+			this.ctx.lineWidth = layer.strokeWidth || 1;
+			this.ctx.stroke();
+		}
+
+		this.ctx.restore();
+	};
+
+	CanvasManager.prototype.drawPolygon = function ( layer ) {
+		var sides = layer.sides || 6;
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var radius = layer.radius || 50;
+
+		this.ctx.save();
+		this.ctx.beginPath();
+
+		for ( var i = 0; i < sides; i++ ) {
+			var angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
+			var px = x + radius * Math.cos( angle );
+			var py = y + radius * Math.sin( angle );
+
+			if ( i === 0 ) {
+				this.ctx.moveTo( px, py );
+			} else {
+				this.ctx.lineTo( px, py );
+			}
+		}
+
+		this.ctx.closePath();
+
+		if ( layer.fill && layer.fill !== 'transparent' ) {
+			this.ctx.fillStyle = layer.fill;
+			this.ctx.fill();
+		}
+
+		if ( layer.stroke ) {
+			this.ctx.strokeStyle = layer.stroke;
+			this.ctx.lineWidth = layer.strokeWidth || 1;
+			this.ctx.stroke();
+		}
+
+		this.ctx.restore();
+	};
+
+	CanvasManager.prototype.drawStar = function ( layer ) {
+		var points = layer.points || 5;
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var outerRadius = layer.outerRadius || layer.radius || 50;
+		var innerRadius = layer.innerRadius || outerRadius * 0.5;
+
+		this.ctx.save();
+		this.ctx.beginPath();
+
+		for ( var i = 0; i < points * 2; i++ ) {
+			var angle = ( i * Math.PI ) / points - Math.PI / 2;
+			var radius = i % 2 === 0 ? outerRadius : innerRadius;
+			var px = x + radius * Math.cos( angle );
+			var py = y + radius * Math.sin( angle );
+
+			if ( i === 0 ) {
+				this.ctx.moveTo( px, py );
+			} else {
+				this.ctx.lineTo( px, py );
+			}
+		}
+
+		this.ctx.closePath();
+
+		if ( layer.fill && layer.fill !== 'transparent' ) {
+			this.ctx.fillStyle = layer.fill;
+			this.ctx.fill();
+		}
+
+		if ( layer.stroke ) {
+			this.ctx.strokeStyle = layer.stroke;
+			this.ctx.lineWidth = layer.strokeWidth || 1;
+			this.ctx.stroke();
+		}
+
 		this.ctx.restore();
 	};
 

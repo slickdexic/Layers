@@ -86,7 +86,9 @@
                 };
             },
             notify: function(message, options) {
-                console.log('MW Notify:', message, options);
+                // console.log('MW Notify:', message, options);
+                // Show notification in test environment
+                alert(message + (options && options.type ? ' (' + options.type + ')' : ''));
             },
             msg: function(key) {
                 return key;

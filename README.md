@@ -6,8 +6,9 @@ A **non-destructive image annotation extension** for MediaWiki that allows users
 
 **This extension is currently in active development and is NOT ready for production use.**
 
-### What Actually Works Now (v0.8.1 - August 2025)
+### What Actually Works Now (v0.8.2 - August 2025)
 - ✅ Basic image editor with core drawing tools (text, rectangle, circle, arrow, line, pen, highlight)
+- ✅ **FULLY FUNCTIONAL** ellipse, polygon, and star tools (fixed August 2025)
 - ✅ Layer management (add, edit, delete, reorder, hide/show)
 - ✅ Data persistence to database with versioning
 - ✅ "Edit Layers" tab on file pages
@@ -19,21 +20,23 @@ A **non-destructive image annotation extension** for MediaWiki that allows users
 - ✅ **Object manipulation** - Drag to move, resize handles, rotation handle implemented
 - ✅ **Multi-selection** - Ctrl+click and marquee selection for multiple objects
 - ✅ **Professional keyboard shortcuts** - Ctrl+A, Ctrl+C, Ctrl+V, Delete key, etc.
-- ✅ **Advanced shape tools** - Ellipse, polygon, star tools in toolbar
+- ✅ **Advanced shape tools** - Ellipse, polygon, star tools NOW WORKING in toolbar
 - ✅ **Layer effects UI** - Opacity, blend modes, shadow toggles in toolbar
 - ✅ **Touch/mobile support** - Touch events converted to mouse events
+- ✅ **Complete layer type support** - All backend and frontend layer types unified
 
 ### Critical Missing/Broken Features  
+
 - ❌ **SERVER-SIDE RENDERING BROKEN** - Images with layers don't display in articles (critical blocker)
-- ❌ **BACKEND VALIDATION BUG** - Cannot save ellipse, polygon, star, path layers (breaks functionality)
 - ❌ **Complete wikitext integration** - `[[File:Example.jpg|layers=on]]` syntax exists but incomplete
-- ❌ **Production testing** - Not tested at scale, many console.log statements
-- ❌ **Code quality issues** - 88+ ESLint errors, ES2015+ incompatibilities
+- ❌ **Production testing** - Not tested at scale, some console.log statements remain
+- ❌ **Code quality issues** - 122 ESLint errors (many false positives), ES2015+ incompatibilities  
 - ❌ **Performance optimization** - No memory management or efficient rendering
 - ❌ **Comprehensive testing** - Limited unit tests, no integration tests
 
-### Honest Assessment: ~85% UI Complete, ~35% Backend Complete
-The frontend editor is surprisingly sophisticated with professional features, but the backend integration is incomplete and has critical bugs that prevent production use.
+### Honest Assessment: ~85% UI Complete, ~45% Backend Complete
+
+The frontend editor is surprisingly sophisticated with professional features, but the backend integration still has critical gaps that prevent production use.
 
 ## Installation (For Developers/Testers Only)
 

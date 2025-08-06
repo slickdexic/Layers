@@ -190,8 +190,8 @@ class UIHooks {
         } elseif ( strpos( $layersParam, 'name:' ) === 0 ) {
             // Layer set by name
             $layerSetName = substr( $layersParam, 5 );
-            // TODO: Implement getLayerSetByName method
-            $layerSet = null;
+            $db = new LayersDatabase();
+            $layerSet = $db->getLayerSetByName( $file->getName(), $file->getSha1(), $layerSetName );
         } else {
             // Legacy format or other formats
             $layerSet = null;
