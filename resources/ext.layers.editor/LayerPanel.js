@@ -8,8 +8,10 @@
 	/**
 	 * LayerPanel class
 	 *
-	 * @param config
 	 * @class
+	 * @param {Object} config Configuration object
+	 * @param {HTMLElement} config.container The container element for the panel
+	 * @param {window.LayersEditor} config.editor A reference to the main editor instance
 	 */
 	function LayerPanel( config ) {
 		this.config = config || {};
@@ -45,6 +47,13 @@
 		this.propertiesPanel.className = 'layers-properties';
 		this.propertiesPanel.innerHTML = '<h4>Properties</h4><div class="properties-content"></div>';
 		this.container.appendChild( this.propertiesPanel );
+
+		// Create layers code panel
+		this.codePanel = document.createElement( 'div' );
+		this.codePanel.className = 'layers-code-panel';
+		this.codePanel.innerHTML = '<h4>Wikitext Code</h4><div class="code-content"></div>';
+		this.container.appendChild( this.codePanel );
+		this.updateCodePanel();
 	};
 
 	LayerPanel.prototype.setupEventHandlers = function () {
@@ -62,6 +71,7 @@
 	LayerPanel.prototype.updateLayers = function ( layers ) {
 		this.layers = layers || [];
 		this.renderLayerList();
+		this.updateCodePanel();
 	};
 
 	LayerPanel.prototype.renderLayerList = function () {
@@ -117,17 +127,28 @@
 
 	LayerPanel.prototype.getDefaultLayerName = function ( layer ) {
 		switch ( layer.type ) {
-			case 'text': return 'Text: ' + ( layer.text || 'Empty' ).slice( 0, 20 );
-			case 'rectangle': return 'Rectangle';
-			case 'circle': return 'Circle';
-			case 'ellipse': return 'Ellipse';
-			case 'polygon': return 'Polygon';
-			case 'star': return 'Star';
-			case 'arrow': return 'Arrow';
-			case 'line': return 'Line';
-			case 'path': return 'Drawing';
-			case 'highlight': return 'Highlight';
-			default: return 'Layer';
+			case 'text':
+				return 'Text: ' + ( layer.text || 'Empty' ).slice( 0, 20 );
+			case 'rectangle':
+				return 'Rectangle';
+			case 'circle':
+				return 'Circle';
+			case 'ellipse':
+				return 'Ellipse';
+			case 'polygon':
+				return 'Polygon';
+			case 'star':
+				return 'Star';
+			case 'arrow':
+				return 'Arrow';
+			case 'line':
+				return 'Line';
+			case 'path':
+				return 'Drawing';
+			case 'highlight':
+				return 'Highlight';
+			default:
+				return 'Layer';
 		}
 	};
 
@@ -135,12 +156,16 @@
 		var target = e.target;
 		var layerItem = target.closest( '.layer-item' );
 
-		if ( !layerItem ) { return; }
+		if ( !layerItem ) {
+			return;
+		}
 
 		var layerId = layerItem.dataset.layerId;
 		var layer = this.editor.getLayerById( layerId );
 
-		if ( !layer ) { return; }
+		if ( !layer ) {
+			return;
+		}
 
 		if ( target.classList.contains( 'layer-visibility' ) ) {
 			this.toggleLayerVisibility( layerId );
@@ -172,6 +197,7 @@
 			layer.visible = layer.visible === false;
 			this.editor.renderLayers();
 			this.renderLayerList();
+			this.updateCodePanel(); // Update the code when visibility changes
 		}
 	};
 
@@ -422,6 +448,78 @@
 			this.editor.renderLayers();
 			this.renderLayerList();
 		}
+	};
+
+	LayerPanel.prototype.updateCodePanel = function () {
+		if ( !this.codePanel ) {
+			return;
+		}
+
+		var content = this.codePanel.querySelector( '.code-content' );
+		if ( !content ) {
+			return;
+		}
+
+		// Get visible layers
+		var visibleLayers = this.layers.filter( function ( layer ) {
+			return layer.visible !== false;
+		} );
+
+		var filename = this.editor && this.editor.filename ? this.editor.filename : 'YourImage.jpg';
+		var codeHtml = '';
+
+		if ( visibleLayers.length === 0 ) {
+			codeHtml = '<p><strong>No layers visible.</strong> Enable layers to see the code.</p>';
+		} else if ( visibleLayers.length === this.layers.length ) {
+			// All layers visible
+			codeHtml = '<p><strong>All layers visible:</strong></p>' +
+				'<code class="layers-code">[[File:' + filename + '|500px|layers=all|Your caption]]</code>' +
+				'<button class="copy-btn" data-code="layers=all">Copy</button>';
+		} else {
+			// Specific layers visible
+			var layerIds = visibleLayers.map( function ( layer ) {
+				return layer.id ? layer.id.slice( 0, 4 ) : 'unknown';
+			} );
+			var layersParam = layerIds.join( ',' );
+
+			codeHtml = '<p><strong>Selected layers visible:</strong></p>' +
+				'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|Your caption]]</code>' +
+				'<button class="copy-btn" data-code="layers=' + layersParam + '">Copy</button>';
+		}
+
+		content.innerHTML = codeHtml;
+
+		// Add click handlers for copy buttons
+		var copyBtns = content.querySelectorAll( '.copy-btn' );
+		copyBtns.forEach( function ( btn ) {
+			btn.addEventListener( 'click', function () {
+				var code = btn.getAttribute( 'data-code' );
+
+				// Use fallback method for better browser compatibility
+				var textArea = document.createElement( 'textarea' );
+				textArea.value = code;
+				document.body.appendChild( textArea );
+				textArea.select();
+
+				try {
+					var successful = document.execCommand( 'copy' );
+					if ( successful ) {
+						btn.textContent = 'Copied!';
+						setTimeout( function () {
+							btn.textContent = 'Copy';
+						}, 2000 );
+					}
+				} catch ( err ) {
+					// Copy failed
+					btn.textContent = 'Copy failed';
+					setTimeout( function () {
+						btn.textContent = 'Copy';
+					}, 2000 );
+				}
+
+				document.body.removeChild( textArea );
+			} );
+		} );
 	};
 
 	// Export LayerPanel to global scope

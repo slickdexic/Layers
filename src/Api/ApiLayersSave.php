@@ -10,16 +10,25 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiMain;
+use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
-use RepoGroup;
+use MediaWiki\MediaWikiServices;
 
 class ApiLayersSave extends ApiBase {
 
+	/**
+	 * Constructor
+	 * @param ApiMain $main
+	 * @param string $action
+	 */
 	public function __construct( ApiMain $main, $action ) {
 		parent::__construct( $main, $action );
 	}
 
+	/**
+	 * Execute the API request
+	 */
 	public function execute() {
 		// Check permissions
 		$user = $this->getUser();
@@ -28,11 +37,11 @@ class ApiLayersSave extends ApiBase {
 			$userGroups = $user->getGroups();
 			$userRights = $user->getRights();
 			$hasEditLayers = in_array( 'editlayers', $userRights );
-			
-			error_log( 'Layers Save: Permission denied for user ID: ' . $user->getId() . 
-					  ', Groups: ' . implode( ',', $userGroups ) . 
+
+			error_log( 'Layers Save: Permission denied for user ID: ' . $user->getId() .
+					  ', Groups: ' . implode( ',', $userGroups ) .
 					  ', Has editlayers: ' . ( $hasEditLayers ? 'yes' : 'no' ) );
-			
+
 			$this->dieWithError( 'layers-permission-denied', 'permissiondenied' );
 		}
 
@@ -67,7 +76,8 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		// Get file information
-		$file = RepoGroup::singleton()->findFile( $filename );
+		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+		$file = $repoGroup->findFile( $filename );
 		if ( !$file || !$file->exists() ) {
 			$this->dieWithError( 'File not found', 'filenotfound' );
 		}
@@ -91,15 +101,27 @@ class ApiLayersSave extends ApiBase {
 
 		// Save to database
 		$db = new LayersDatabase();
-		$layerSetId = $db->saveLayerSet(
-			$file->getName(),
-			$file->getMimeType(),
-			$file->getMinorMimeType(),
-			$file->getSha1(),
-			$layersData,
-			$user->getId(),
-			$setName
-		);
+
+		// Split MIME type into major and minor parts
+		$mimeType = $file->getMimeType();
+		$mimeParts = $file->splitMime( $mimeType );
+		$majorMime = $mimeParts[0] ?? 'unknown';
+		$minorMime = $mimeParts[1] ?? 'unknown';
+
+		try {
+			$layerSetId = $db->saveLayerSet(
+				$file->getName(),
+				$majorMime,
+				$minorMime,
+				$file->getSha1(),
+				$layersData,
+				$user->getId(),
+				$setName
+			);
+
+		} catch ( Exception $e ) {
+			$this->dieWithError( 'Database error: ' . $e->getMessage(), 'dberror' );
+		}
 
 		if ( $layerSetId === false ) {
 			$this->dieWithError( 'Failed to save layer data', 'savefailed' );
@@ -296,6 +318,10 @@ class ApiLayersSave extends ApiBase {
 		return '#000000'; // Default to black if invalid
 	}
 
+	/**
+	 * Get allowed parameters for this API module
+	 * @return array
+	 */
 	public function getAllowedParams() {
 		return [
 			'filename' => [
@@ -317,14 +343,26 @@ class ApiLayersSave extends ApiBase {
 		];
 	}
 
+	/**
+	 * Check if this API module needs a token
+	 * @return string
+	 */
 	public function needsToken() {
 		return 'csrf';
 	}
 
+	/**
+	 * Check if this API module is in write mode
+	 * @return bool
+	 */
 	public function isWriteMode() {
 		return true;
 	}
 
+	/**
+	 * Get example messages for this API module
+	 * @return array
+	 */
 	public function getExamplesMessages() {
 		return [
 			'action=layerssave&filename=Example.jpg&data=[{"id":"1","type":"text","text":"Hello","x":100,"y":50}]&token=123ABC'

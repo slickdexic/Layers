@@ -8,7 +8,7 @@
 	/**
 	 * CanvasManager class
 	 *
-	 * @param config
+	 * @param {Object} config
 	 * @class
 	 */
 	function CanvasManager( config ) {
@@ -35,7 +35,7 @@
 		this.isMarqueeSelecting = false;
 		this.marqueeStart = { x: 0, y: 0 };
 		this.marqueeEnd = { x: 0, y: 0 };
-		
+
 		// Drag visual feedback
 		this.dragPreview = false;
 		this.dragOffset = { x: 0, y: 0 };
@@ -893,12 +893,12 @@
 		for ( var j = 0; j < layersToMove.length; j++ ) {
 			var layerToMove = layersToMove[ j ];
 			var originalState = this.originalLayerState;
-			
+
 			// For multi-selection, we need to get individual original states
 			if ( this.selectedLayerIds.length > 1 && this.originalMultiLayerStates ) {
 				originalState = this.originalMultiLayerStates[ layerToMove.id ];
 			}
-			
+
 			if ( !originalState ) {
 				continue;
 			}
@@ -906,7 +906,7 @@
 			// Apply snap-to-grid if enabled
 			var adjustedDeltaX = deltaX;
 			var adjustedDeltaY = deltaY;
-			
+
 			if ( this.snapToGrid && this.gridSize > 0 ) {
 				var newX = ( originalState.x || 0 ) + deltaX;
 				var newY = ( originalState.y || 0 ) + deltaY;
@@ -925,6 +925,7 @@
 
 	/**
 	 * Update layer position during drag operation
+	 *
 	 * @param {Object} layer Layer to update
 	 * @param {Object} originalState Original state before drag
 	 * @param {number} deltaX X offset
@@ -1240,7 +1241,9 @@
 	};
 
 	CanvasManager.prototype.fitToWindow = function () {
-		if ( !this.backgroundImage ) { return; }
+		if ( !this.backgroundImage ) {
+			return;
+		}
 
 		var container = this.canvas.parentNode;
 		var containerWidth = container.clientWidth - 40; // padding
@@ -1381,7 +1384,9 @@
 	};
 
 	CanvasManager.prototype.isPointInPath = function ( point, layer ) {
-		if ( !layer.points || layer.points.length < 2 ) { return false; }
+		if ( !layer.points || layer.points.length < 2 ) {
+			return false;
+		}
 
 		var tolerance = ( layer.strokeWidth || 2 ) + 3; // Click tolerance
 
@@ -1508,7 +1513,9 @@
 	};
 
 	CanvasManager.prototype.snapToGridPoint = function ( point ) {
-		if ( !this.snapToGrid ) { return point; }
+		if ( !this.snapToGrid ) {
+			return point;
+		}
 
 		return {
 			x: Math.round( point.x / this.gridSize ) * this.gridSize,
@@ -1517,7 +1524,9 @@
 	};
 
 	CanvasManager.prototype.drawGrid = function () {
-		if ( !this.showGrid ) { return; }
+		if ( !this.showGrid ) {
+			return;
+		}
 
 		this.ctx.save();
 		this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
@@ -1619,7 +1628,9 @@
 
 	// Clipboard operations (stubs for now)
 	CanvasManager.prototype.copySelected = function () {
-		if ( this.selectedLayerIds.length === 0 ) { return; }
+		if ( this.selectedLayerIds.length === 0 ) {
+			return;
+		}
 
 		var selectedLayers = this.selectedLayerIds.map( function ( id ) {
 			return this.editor.getLayerById( id );
@@ -1704,7 +1715,9 @@
 	};
 
 	CanvasManager.prototype.deleteSelected = function () {
-		if ( this.selectedLayerIds.length === 0 ) { return; }
+		if ( this.selectedLayerIds.length === 0 ) {
+			return;
+		}
 
 		var self = this;
 		this.selectedLayerIds.forEach( function ( layerId ) {
@@ -1825,7 +1838,9 @@
 	};
 
 	CanvasManager.prototype.updateMarqueeSelection = function ( point ) {
-		if ( !this.isMarqueeSelecting ) { return; }
+		if ( !this.isMarqueeSelecting ) {
+			return;
+		}
 
 		this.marqueeEnd = { x: point.x, y: point.y };
 		this.redraw();
@@ -1834,7 +1849,9 @@
 	};
 
 	CanvasManager.prototype.finishMarqueeSelection = function () {
-		if ( !this.isMarqueeSelecting ) { return; }
+		if ( !this.isMarqueeSelecting ) {
+			return;
+		}
 
 		var marqueeRect = this.getMarqueeRect();
 		var selectedLayers = this.getLayersInRect( marqueeRect );

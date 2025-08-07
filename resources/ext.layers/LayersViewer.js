@@ -8,8 +8,11 @@
 	/**
 	 * LayersViewer class
 	 *
-	 * @param config
 	 * @class
+	 * @param {Object} config Configuration object
+	 * @param {HTMLElement} config.container The container element for the viewer.
+	 * @param {HTMLImageElement} config.imageElement The image element to overlay.
+	 * @param {Object} config.layerData The layer data to render.
 	 */
 	function LayersViewer( config ) {
 		this.config = config || {};
@@ -358,7 +361,9 @@
 	};
 
 	LayersViewer.prototype.renderPath = function ( layer ) {
-		if ( !layer.points || layer.points.length < 2 ) { return; }
+		if ( !layer.points || layer.points.length < 2 ) {
+			return;
+		}
 
 		this.ctx.save();
 		this.ctx.strokeStyle = layer.stroke || '#000000';
@@ -385,11 +390,19 @@
 				var layerData = JSON.parse( img.dataset.layers );
 				var container = img.parentNode;
 
-				new LayersViewer( {
+				// This is a valid use of 'new' for its side effects (instantiating the viewer)
+				var viewer = new LayersViewer( {
 					container: container,
 					imageElement: img,
 					layerData: layerData
 				} );
+				// The 'viewer' variable can be used for debugging if needed.
+				if ( window.mw && window.mw.config.get( 'debug' ) ) {
+					if ( !window.layersViewers ) {
+						window.layersViewers = [];
+					}
+					window.layersViewers.push( viewer );
+				}
 			} catch ( e ) {
 				// console.warn( 'Failed to initialize layers viewer:', e );
 			}

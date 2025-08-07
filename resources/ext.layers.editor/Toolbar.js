@@ -8,8 +8,10 @@
 	/**
 	 * Toolbar class
 	 *
-	 * @param config
 	 * @class
+	 * @param {Object} config Configuration object
+	 * @param {HTMLElement} config.container The container element for the toolbar
+	 * @param {window.LayersEditor} config.editor A reference to the main editor instance
 	 */
 	function Toolbar( config ) {
 		this.config = config || {};
@@ -25,7 +27,7 @@
 	Toolbar.prototype.init = function () {
 		this.createInterface();
 		this.setupEventHandlers();
-		
+
 		// Set default tool
 		this.selectTool( 'pointer' );
 	};
@@ -594,7 +596,9 @@
 	};
 
 	Toolbar.prototype.executeZoomAction = function ( actionId ) {
-		if ( !this.editor.canvasManager ) { return; }
+		if ( !this.editor.canvasManager ) {
+			return;
+		}
 
 		switch ( actionId ) {
 			case 'zoom-in':

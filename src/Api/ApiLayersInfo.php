@@ -11,14 +11,22 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use ApiMain;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
-use RepoGroup;
+use MediaWiki\MediaWikiServices;
 
 class ApiLayersInfo extends ApiBase {
 
+	/**
+	 * Constructor
+	 * @param ApiMain $main
+	 * @param string $action
+	 */
 	public function __construct( ApiMain $main, $action ) {
 		parent::__construct( $main, $action );
 	}
 
+	/**
+	 * Execute the API request
+	 */
 	public function execute() {
 		// Get parameters
 		$params = $this->extractRequestParams();
@@ -26,7 +34,8 @@ class ApiLayersInfo extends ApiBase {
 		$layerSetId = $params['layersetid'] ?? null;
 
 		// Get file information
-		$file = RepoGroup::singleton()->findFile( $filename );
+		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+		$file = $repoGroup->findFile( $filename );
 		if ( !$file || !$file->exists() ) {
 			$this->dieWithError( 'File not found', 'filenotfound' );
 		}
@@ -66,6 +75,10 @@ class ApiLayersInfo extends ApiBase {
 		$this->getResult()->addValue( null, $this->getModuleName(), $result );
 	}
 
+	/**
+	 * Get allowed parameters for this API module
+	 * @return array
+	 */
 	public function getAllowedParams() {
 		return [
 			'filename' => [
@@ -79,6 +92,10 @@ class ApiLayersInfo extends ApiBase {
 		];
 	}
 
+	/**
+	 * Get example messages for this API module
+	 * @return array
+	 */
 	public function getExamplesMessages() {
 		return [
 			'action=layersinfo&filename=Example.jpg'

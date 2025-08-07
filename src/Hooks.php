@@ -10,6 +10,7 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\MediaWikiServices;
 
 // Define constants if not already defined
 if ( !defined( 'NS_FILE' ) ) {
@@ -27,7 +28,7 @@ class Hooks {
 		if ( $user->isRegistered() ) {
 			$rights[] = 'editlayers';
 		}
-		
+
 		// Grant to anonymous users as well if configured
 		global $wgLayersAllowAnonymousEdit;
 		if ( $wgLayersAllowAnonymousEdit ?? false ) {
@@ -132,12 +133,9 @@ class Hooks {
 		}
 
 		try {
-			// Check if RepoGroup class exists (fallback for older MW versions)
-			if ( !class_exists( 'RepoGroup' ) ) {
-				return '';
-			}
-
-			$fileObj = \RepoGroup::singleton()->findFile( $file );
+			// Get file using MediaWikiServices
+			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+			$fileObj = $repoGroup->findFile( $file );
 			if ( !$fileObj || !$fileObj->exists() ) {
 				return '';
 			}
@@ -174,7 +172,8 @@ class Hooks {
 				return '';
 			}
 
-			$fileObj = \RepoGroup::singleton()->findFile( $file );
+			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+			$fileObj = $repoGroup->findFile( $file );
 			if ( !$fileObj || !$fileObj->exists() ) {
 				return '';
 			}

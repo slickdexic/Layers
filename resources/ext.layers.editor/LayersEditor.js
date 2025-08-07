@@ -8,12 +8,15 @@
 	/**
 	 * LayersEditor main class
 	 *
-	 * @param config
 	 * @class
+	 * @param {Object} config Configuration object
+	 * @param {string} config.filename The name of the file being edited.
+	 * @param {string} config.imageUrl The direct URL to the image being edited.
 	 */
 	function LayersEditor( config ) {
 		this.config = config || {};
 		this.filename = this.config.filename;
+		this.containerElement = this.config.container; // Store the container from config
 		this.canvasManager = null;
 		this.layerPanel = null;
 		this.toolbar = null;
@@ -67,6 +70,8 @@
 				if ( window.mw && window.mw.log ) {
 					mw.log.error( 'Layers: Missing dependencies after 5 seconds: ' + missing.join( ', ' ) );
 				}
+				// Force initialization even with missing dependencies for debugging
+				self.initializeComponents();
 			}
 		}
 
@@ -76,14 +81,29 @@
 	LayersEditor.prototype.initializeComponents = function () {
 		// Initialize components
 		try {
-			// console.log( 'Layers: Initializing components...' );
-			// console.log( 'Layers: Canvas container:', this.$canvasContainer.get( 0 ) );
-			// console.log( 'Layers: Layer panel container:', this.$layerPanel.get( 0 ) );
-			// console.log( 'Layers: Toolbar container:', this.$toolbar.get( 0 ) );
+			if ( window.mw && window.mw.log ) {
+				mw.log( 'Layers: Initializing components...' );
+				mw.log( 'Layers: Canvas container:', this.$canvasContainer.get( 0 ) );
+				mw.log( 'Layers: Layer panel container:', this.$layerPanel.get( 0 ) );
+				mw.log( 'Layers: Toolbar container:', this.$toolbar.get( 0 ) );
+			}
+
+			// Check for required dependencies
+			if ( !window.CanvasManager ) {
+				throw new Error( 'CanvasManager not available' );
+			}
+			if ( !window.LayerPanel ) {
+				throw new Error( 'LayerPanel not available' );
+			}
+			if ( !window.Toolbar ) {
+				throw new Error( 'Toolbar not available' );
+			}
 
 			// Get the parent image URL
 			var parentImageUrl = this.getParentImageUrl();
-			// console.log( 'Layers: Parent image URL:', parentImageUrl );
+			if ( window.mw && window.mw.log ) {
+				mw.log( 'Layers: Parent image URL:', parentImageUrl );
+			}
 
 			this.canvasManager = new window.CanvasManager( {
 				container: this.$canvasContainer.get( 0 ),
@@ -101,12 +121,16 @@
 				editor: this
 			} );
 
-			// console.log( 'Layers: Editor components initialized successfully' );
-			// console.log( 'Layers: CanvasManager:', this.canvasManager );
-			// console.log( 'Layers: LayerPanel:', this.layerPanel );
-			// console.log( 'Layers: Toolbar:', this.toolbar );
+			if ( window.mw && window.mw.log ) {
+				mw.log( 'Layers: Editor components initialized successfully' );
+				mw.log( 'Layers: CanvasManager:', this.canvasManager );
+				mw.log( 'Layers: LayerPanel:', this.layerPanel );
+				mw.log( 'Layers: Toolbar:', this.toolbar );
+			}
 		} catch ( error ) {
-			// console.error( 'Layers: Error initializing editor components:', error );
+			if ( window.mw && window.mw.log ) {
+				mw.log.error( 'Layers: Error initializing editor components:', error );
+			}
 			this.showError( 'Failed to initialize editor: ' + error.message );
 			return;
 		}
@@ -117,92 +141,62 @@
 		// Set up event handlers
 		this.setupEventHandlers();
 
-		// console.log( 'Layers: Editor fully initialized for file:', this.filename );
+		if ( window.mw && window.mw.log ) {
+			mw.log( 'Layers: Editor fully initialized for file:', this.filename );
+		}
 	};
 
 	LayersEditor.prototype.createInterface = function () {
-		// Create main editor container
-		this.$container = $( '<div>' )
-			.addClass( 'layers-editor' )
-			.css( {
-				position: 'fixed',
-				top: '0',
-				left: '0',
-				width: '100%',
-				height: '100%',
-				background: '#f5f5f5',
-				'z-index': '10000',
-				display: 'flex',
-				'flex-direction': 'column'
-			} )
-			.appendTo( 'body' );
+		// Use provided container or create a new one
+		if ( this.containerElement ) {
+			this.container = this.containerElement;
+			this.container.className = 'layers-editor';
+		} else {
+			// Create main editor container and add to body
+			this.container = document.createElement( 'div' );
+			this.container.className = 'layers-editor';
+			document.body.appendChild( this.container );
+		}
 
 		// Create toolbar
-		this.$toolbar = $( '<div>' )
-			.addClass( 'layers-toolbar' )
-			.css( {
-				background: '#ffffff',
-				'border-bottom': '1px solid #ddd',
-				padding: '8px 16px',
-				display: 'flex',
-				'align-items': 'center',
-				gap: '16px',
-				'box-shadow': '0 2px 4px rgba(0,0,0,0.1)',
-				'flex-shrink': '0'
-			} )
-			.appendTo( this.$container );
+		this.toolbarContainer = document.createElement( 'div' );
+		this.toolbarContainer.className = 'layers-toolbar';
+		this.container.appendChild( this.toolbarContainer );
 
 		// Create main content area
-		this.$content = $( '<div>' )
-			.addClass( 'layers-content' )
-			.css( {
-				flex: '1',
-				display: 'flex',
-				overflow: 'hidden'
-			} )
-			.appendTo( this.$container );
+		this.content = document.createElement( 'div' );
+		this.content.className = 'layers-content';
+		this.container.appendChild( this.content );
 
 		// Create layer panel
-		this.$layerPanel = $( '<div>' )
-			.addClass( 'layers-panel' )
-			.css( {
-				width: '280px',
-				background: '#ffffff',
-				'border-right': '1px solid #ddd',
-				display: 'flex',
-				'flex-direction': 'column',
-				overflow: 'hidden'
-			} )
-			.appendTo( this.$content );
+		this.layerPanelContainer = document.createElement( 'div' );
+		this.layerPanelContainer.className = 'layers-panel';
+		this.content.appendChild( this.layerPanelContainer );
 
 		// Create canvas container
-		this.$canvasContainer = $( '<div>' )
-			.addClass( 'layers-canvas-container' )
-			.css( {
-				flex: '1',
-				overflow: 'hidden',
-				background: '#e9ecef',
-				display: 'flex',
-				'align-items': 'center',
-				'justify-content': 'center',
-				padding: '20px',
-				position: 'relative'
-			} )
-			.appendTo( this.$content );
+		this.canvasContainer = document.createElement( 'div' );
+		this.canvasContainer.className = 'layers-canvas-container';
+		this.content.appendChild( this.canvasContainer );
+
+		// Create jQuery-style references for compatibility
+		this.$canvasContainer = $( this.canvasContainer );
+		this.$layerPanel = $( this.layerPanelContainer );
+		this.$toolbar = $( this.toolbarContainer );
 	};
 
 	LayersEditor.prototype.setupEventHandlers = function () {
 		var self = this;
 
 		// Handle window resize
-		$( window ).on( 'resize.layerseditor', function () {
+		window.addEventListener( 'resize', function () {
 			self.handleResize();
 		} );
 
 		// Handle unsaved changes warning
-		$( window ).on( 'beforeunload.layerseditor', function () {
+		window.addEventListener( 'beforeunload', function ( e ) {
 			if ( self.isDirty ) {
-				return 'You have unsaved changes. Are you sure you want to leave?';
+				e.preventDefault();
+				e.returnValue = '';
 			}
 		} );
 	};
@@ -394,14 +388,18 @@
 	LayersEditor.prototype.cancel = function () {
 		if ( this.isDirty ) {
 			var confirmMessage = 'You have unsaved changes. Are you sure you want to cancel?';
+			// Use OOUI confirm dialog if available, otherwise fallback to browser confirm
 			if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
-				OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
+				window.OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
 					if ( confirmed ) {
 						this.destroy();
 					}
 				}.bind( this ) );
-			} else if ( confirm( confirmMessage ) ) {
-				this.destroy();
+			} else {
+				// eslint-disable-next-line no-alert
+				if ( window.confirm( confirmMessage ) ) {
+					this.destroy();
+				}
 			}
 		} else {
 			this.destroy();
@@ -422,7 +420,6 @@
 			data: JSON.stringify( this.layers ),
 			format: 'json'
 		} ).done( function ( data ) {
-			// console.log( 'Save response:', data );
 			if ( data.layerssave && data.layerssave.success ) {
 				self.markClean();
 				mw.notify( mw.msg( 'layers-save-success' ), { type: 'success' } );
@@ -430,16 +427,14 @@
 				var errorMsg = ( data.error && data.error.info ) ||
 					( data.layerssave && data.layerssave.error ) ||
 					mw.msg( 'layers-save-error' );
-				// console.error( 'Save failed:', data );
-				mw.notify( errorMsg, { type: 'error' } );
+				mw.notify( 'Save failed: ' + errorMsg, { type: 'error' } );
 			}
 		} ).fail( function ( code, result ) {
-			// console.error( 'Save API call failed:', code, result );
 			var errorMsg = mw.msg( 'layers-save-error' );
 			if ( result && result.error && result.error.info ) {
 				errorMsg = result.error.info;
 			}
-			mw.notify( errorMsg, { type: 'error' } );
+			mw.notify( 'API Error: ' + errorMsg, { type: 'error' } );
 		} );
 	};
 
@@ -470,9 +465,9 @@
 		}
 
 		// Priority 3: Look for current page image
-		var $pageImage = $( '.mw-file-element img, .fullImageLink img, .filehistory img' ).first();
-		if ( $pageImage.length ) {
-			var pageImageUrl = $pageImage.attr( 'src' );
+		var pageImage = document.querySelector( '.mw-file-element img, .fullImageLink img, .filehistory img' );
+		if ( pageImage ) {
+			var pageImageUrl = pageImage.getAttribute( 'src' );
 			// console.log('Layers: Using page image URL:', pageImageUrl);
 			return pageImageUrl;
 		}
@@ -484,17 +479,20 @@
 
 	LayersEditor.prototype.showError = function ( message ) {
 		// Create error display in the editor
-		var $error = $( '<div>' )
-			.addClass( 'layers-error' )
-			.text( message )
-			.appendTo( this.$container );
+		var errorEl = document.createElement( 'div' );
+		errorEl.className = 'layers-error';
+		errorEl.textContent = message;
+		this.container.appendChild( errorEl );
 
 		// Auto-hide after 5 seconds
 		setTimeout( function () {
-			$error.fadeOut();
+			errorEl.style.opacity = '0';
+			setTimeout( function () {
+				if ( errorEl.parentNode ) {
+					errorEl.parentNode.removeChild( errorEl );
+				}
+			}, 500 ); // Allow fade out transition
 		}, 5000 );
-
-		// console.error( 'Layers Editor Error:', message );
 	};
 
 	LayersEditor.prototype.handleResize = function () {
@@ -514,9 +512,10 @@
 
 	LayersEditor.prototype.destroy = function () {
 		// Cleanup
-		$( window ).off( '.layerseditor' );
-		if ( this.$container ) {
-			this.$container.remove();
+		window.removeEventListener( 'resize', this.handleResize );
+		window.removeEventListener( 'beforeunload', this.handleBeforeUnload );
+		if ( this.container && this.container.parentNode ) {
+			this.container.parentNode.removeChild( this.container );
 		}
 	};
 
@@ -525,7 +524,12 @@
 
 	// Initialize editor when appropriate
 	mw.hook( 'layers.editor.init' ).add( function ( config ) {
-		new LayersEditor( config );
+		var editor = new LayersEditor( config );
+		// This is a valid use of 'new' for its side effects (instantiating the editor)
+		// The 'editor' variable can be used for debugging if needed.
+		if ( window.mw && window.mw.config.get( 'debug' ) ) {
+			window.layersEditorInstance = editor;
+		}
 	} );
 
 }() );

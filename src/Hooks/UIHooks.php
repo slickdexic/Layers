@@ -36,7 +36,8 @@ class UIHooks {
 		}
 
 		// Check if file exists
-		$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
+		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+		$file = $repoGroup->findFile( $title );
 		if ( !$file || !$file->exists() ) {
 			return;
 		}
@@ -108,7 +109,8 @@ class UIHooks {
 		}
 
 		// Check if file exists
-		$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
+		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+		$file = $repoGroup->findFile( $title );
 		if ( !$file || !$file->exists() ) {
 			$out->showErrorPage( 'error', 'layers-file-not-found' );
 			return false;
@@ -137,10 +139,16 @@ class UIHooks {
 		$fileUrl = $file->getFullUrl();
 		$out->addInlineScript(
 			"mw.loader.using('ext.layers.editor', function() {" .
+			"console.log('Layers: Module loaded, starting editor...');" .
+			"var container = document.getElementById('layers-editor-container');" .
+			"if (!container) {" .
+			"console.error('Layers: Container not found!');" .
+			"return;" .
+			"}" .
 			"mw.hook('layers.editor.init').fire({" .
 			"filename: " . json_encode( $file->getName() ) . "," .
 			"imageUrl: " . json_encode( $fileUrl ) . "," .
-			"container: document.getElementById('layers-editor-container')" .
+			"container: container" .
 			"});" .
 			"});"
 		);

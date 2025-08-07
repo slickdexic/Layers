@@ -66,11 +66,11 @@ class HooksTest extends \MediaWikiUnitTestCase {
 			->willReturn( $config );
 		$outputPageMock->expects( $this->never() )
 			->method( 'addModules' );
-		
+
 		$skinMock = $this->getMockBuilder( \Skin::class )
 			->disableOriginalConstructor()
 			->getMock();
-		
+
 		( new Hooks )->onBeforePageDisplay( $outputPageMock, $skinMock );
 	}
 

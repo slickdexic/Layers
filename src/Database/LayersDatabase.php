@@ -9,10 +9,15 @@
 namespace MediaWiki\Extension\Layers\Database;
 
 use MediaWiki\MediaWikiServices;
+use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\DBError;
 use Wikimedia\Rdbms\IDatabase;
+use Wikimedia\Rdbms\ILoadBalancer;
 
 class LayersDatabase {
+
+	/** @var ILoadBalancer */
+	private $loadBalancer;
 
 	/** @var IDatabase */
 	private $dbw;
@@ -20,9 +25,16 @@ class LayersDatabase {
 	/** @var IDatabase */
 	private $dbr;
 
+	/** @var LoggerInterface */
+	private $logger;
+
 	public function __construct() {
-		$this->dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
-		$this->dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
+		$this->loadBalancer = MediaWikiServices::getInstance()->getDBLoadBalancer();
+		// Use ILoadBalancer constants for MediaWiki 1.44+
+		$this->dbw = $this->loadBalancer->getConnection( ILoadBalancer::DB_PRIMARY );
+		$this->dbr = $this->loadBalancer->getConnection( ILoadBalancer::DB_REPLICA );
+		// TODO: Fix logger initialization for MediaWiki 1.44
+		$this->logger = null;
 	}
 
 	/**
@@ -45,16 +57,17 @@ class LayersDatabase {
 		array $layersData,
 		int $userId,
 		?string $setName = null
- ) {
+	) {
 		try {
 			// Get next revision number for this image
 			$revision = $this->getNextRevision( $imgName, $sha1 );
+			$timestamp = $this->dbw->timestamp();
 
 			// Prepare JSON data
 			$jsonBlob = json_encode( [
 				'revision' => $revision,
 				'schema' => 1,
-				'created' => wfTimestampNow(),
+				'created' => $timestamp,
 				'layers' => $layersData
 			] );
 
@@ -72,7 +85,7 @@ class LayersDatabase {
 					'ls_img_sha1' => $sha1,
 					'ls_json_blob' => $jsonBlob,
 					'ls_user_id' => $userId,
-					'ls_timestamp' => $this->dbw->timestamp(),
+					'ls_timestamp' => $timestamp,
 					'ls_revision' => $revision,
 					'ls_name' => $setName
 				],
@@ -82,7 +95,9 @@ class LayersDatabase {
 			return $this->dbw->insertId();
 
 		} catch ( DBError $e ) {
-			wfLogWarning( 'Failed to save layer set: ' . $e->getMessage() );
+			if ( $this->logger ) {
+				$this->logger->warning( 'Failed to save layer set: {message}', [ 'message' => $e->getMessage() ] );
+			}
 			return false;
 		}
 	}
@@ -208,6 +223,7 @@ class LayersDatabase {
 			'layer_sets',
 			[
 				'ls_id',
+				'ls_json_blob',
 				'ls_revision',
 				'ls_name',
 				'ls_user_id',
@@ -224,11 +240,12 @@ class LayersDatabase {
 		$layerSets = [];
 		foreach ( $result as $row ) {
 			$layerSets[] = [
-				'id' => (int)$row->ls_id,
-				'revision' => (int)$row->ls_revision,
-				'name' => $row->ls_name,
-				'userId' => (int)$row->ls_user_id,
-				'timestamp' => $row->ls_timestamp
+				'ls_id' => (int)$row->ls_id,
+				'ls_json_blob' => $row->ls_json_blob,
+				'ls_revision' => (int)$row->ls_revision,
+				'ls_name' => $row->ls_name,
+				'ls_user_id' => (int)$row->ls_user_id,
+				'ls_timestamp' => $row->ls_timestamp
 			];
 		}
 
@@ -254,7 +271,9 @@ class LayersDatabase {
 			);
 			return true;
 		} catch ( DBError $e ) {
-			wfLogWarning( 'Failed to delete layer sets: ' . $e->getMessage() );
+			if ( $this->logger ) {
+				$this->logger->warning( 'Failed to delete layer sets: {message}', [ 'message' => $e->getMessage() ] );
+			}
 			return false;
 		}
 	}
@@ -309,7 +328,9 @@ class LayersDatabase {
 				'setName' => $res->ls_set_name
 			];
 		} catch ( DBError $e ) {
-			wfLogWarning( 'Failed to get layer set by name: ' . $e->getMessage() );
+			if ( $this->logger ) {
+				$this->logger->warning( 'Failed to get layer set by name: {message}', [ 'message' => $e->getMessage() ] );
+			}
 			return null;
 		}
 	}

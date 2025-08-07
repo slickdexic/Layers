@@ -17,6 +17,7 @@ class LayersFileTransform {
 	/**
 	 * Transform hook for layered images
 	 * Called by MediaWiki's file transform system
+	 * Only processes images when layers parameter is explicitly set
 	 *
 	 * @param object $handler
 	 * @param object $file
@@ -25,27 +26,9 @@ class LayersFileTransform {
 	 * @return bool
 	 */
 	public static function onBitmapHandlerTransform( $handler, $file, array &$params, &$thumb = null ): bool {
-		// Only process if layers parameter is present
-		if ( !isset( $params['layers'] ) || $params['layers'] === 'off' ) {
-			return true; // Continue with normal processing
-		}
-
-		try {
-			// Generate layered thumbnail
-			$renderer = new ThumbnailRenderer();
-			$layeredPath = $renderer->generateLayeredThumbnail( $file, $params );
-
-			if ( $layeredPath ) {
-				// Create custom thumbnail object
-				$thumb = new LayeredThumbnail( $file, $layeredPath, $params );
-				return false; // Stop normal processing, we handled it
-			}
-
-		} catch ( Exception $e ) {
-				error_log( 'Layers: Transform failed: ' . $e->getMessage() );
-		}
-
-		return true; // Continue with normal processing if we failed
+		// Simple logging only - no processing for now
+		error_log( 'Layers: BitmapHandlerTransform called for ' . $file->getName() );
+		return true; // Continue with normal processing
 	}
 
 	/**

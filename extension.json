@@ -62,8 +62,6 @@
 		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Hooks::onLoadExtensionSchemaUpdates",
 		"SkinTemplateNavigation": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onSkinTemplateNavigation",
 		"UnknownAction": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onUnknownAction",
-		"BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform",
-		"ParserMakeImageParams": "MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks::onParserMakeImageParams",
 		"UserGetRights": "MediaWiki\\Extension\\Layers\\Hooks::onUserGetRights"
 	},
 	"APIModules": {
@@ -93,7 +91,8 @@
 			"dependencies": [
 				"oojs-ui-core",
 				"mediawiki.util",
-				"mediawiki.api"
+				"mediawiki.api",
+				"jquery"
 			],
 			"scripts": [
 				"CanvasManager.js",
@@ -111,7 +110,12 @@
 				"layers-tool-text",
 				"layers-tool-arrow",
 				"layers-tool-rectangle",
-				"layers-tool-circle"
+				"layers-tool-circle",
+				"layers-tool-line",
+				"layers-tool-highlight",
+				"layers-saving",
+				"layers-save-success",
+				"layers-save-error"
 			]
 		}
 	},
@@ -121,6 +125,9 @@
 		"managelayerlibrary"
 	],
 	"GroupPermissions": {
+		"*": {
+			"editlayers": true
+		},
 		"user": {
 			"editlayers": true
 		},
