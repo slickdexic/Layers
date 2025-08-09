@@ -11,7 +11,6 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
-use MediaTransformOutput;
 
 class LayersFileTransform {
 
@@ -20,17 +19,18 @@ class LayersFileTransform {
 	 * Called by MediaWiki's file transform system
 	 * Only processes images when layers parameter is explicitly set
 	 *
-	 * @param object $handler
-	 * @param object $file
+	 * @param mixed $handler
+	 * @param mixed $file
 	 * @param array &$params
-	 * @param object|null &$thumb
+	 * @param mixed|null &$thumb
 	 * @return bool
 	 */
 	public static function onBitmapHandlerTransform( $handler, $file, array &$params, &$thumb = null ): bool {
 		try {
 			// Only act when layer data requested and present
 			if ( empty( $params['layers'] ) || empty( $params['layerData'] ) ) {
-				return true; // Let core handle
+				// Let core handle
+				return true;
 			}
 
 			$renderer = new ThumbnailRenderer();
@@ -42,7 +42,8 @@ class LayersFileTransform {
 
 			// Build custom transform output so MW uses our composite
 			$thumb = new LayeredThumbnail( $file, $path, $params );
-			return false; // We handled it
+			// We handled it
+			return false;
 
 		} catch ( Exception $e ) {
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
@@ -56,7 +57,7 @@ class LayersFileTransform {
 	/**
 	 * Check if image has layers and should be processed
 	 *
-	 * @param object $file
+	 * @param mixed $file
 	 * @return bool
 	 */
 	public static function hasLayers( $file ): bool {

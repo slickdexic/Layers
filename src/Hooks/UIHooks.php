@@ -9,7 +9,7 @@
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
-use MediaWiki\Extension\Layers\Database\LayersDatabase;
+// Intentionally avoid hard dependency imports here; use services at runtime
 
 // Define constants if not already defined (for static analysis/local tools)
 if ( !\defined( 'NS_FILE' ) ) {
@@ -20,14 +20,14 @@ class UIHooks {
 
 	/**
 	 * Add "Edit Layers" tab to file pages
-	 * @param mixed $sktemplate
-	 * @param array &$links
+	 * @param mixed $sktemplate SkinTemplate or Skin
+	 * @param array &$links Navigation links bucket
 	 */
 	public static function onSkinTemplateNavigation( $sktemplate, array &$links ): void {
 		// Force debug mode for now to diagnose issues - this will be removed once working
 		$dbg = true;
 		$req = null;
-		
+
 		// Critical debug: Log that this hook is being called
 		error_log( 'LAYERS HOOK CALLED: SkinTemplateNavigation hook is running' );
 		try {
@@ -46,9 +46,11 @@ class UIHooks {
 					}
 				}
 			}
-		} catch ( \Throwable $e ) {}
-		$log = function( $msg ) use ( $dbg ) {
-			if ( !$dbg ) { return; }
+		} catch ( \Throwable $e ) {
+		}
+		$log = static function ( $msg ) use ( $dbg ) {
+			if ( !$dbg ) { return;
+			}
 			try {
 				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
@@ -56,7 +58,8 @@ class UIHooks {
 				}
 				// ALSO output directly for immediate visibility during debugging
 				error_log( 'LAYERS DEBUG: ' . $msg );
-			} catch ( \Throwable $e ) {}
+			} catch ( \Throwable $e ) {
+			}
 		};
 		// Be defensive about how we get Title/User across skins/versions
 		$title = null;
@@ -94,14 +97,14 @@ class UIHooks {
 				return;
 			}
 		}
-		
+
 		if ( $user && !method_exists( $user, 'isAllowed' ) ) {
 			$log( 'Skip: user object has no isAllowed method' );
 			if ( !$dbg ) {
 				return;
 			}
 		}
-		
+
 		if ( $user && method_exists( $user, 'isAllowed' ) && !$user->isAllowed( 'editlayers' ) ) {
 			$log( 'Skip: user missing editlayers permission - user groups: ' . implode( ',', $user->getGroups() ) );
 			if ( !$dbg ) {
@@ -201,30 +204,33 @@ class UIHooks {
 
 	/**
 	 * Add "Edit Layers" tab using universal hook signature for newer MW versions.
-	 * @param mixed $skin
-	 * @param array &$links
+	 * This delegates to onSkinTemplateNavigation to avoid duplication.
+	 *
+	 * @param mixed $skin Skin or SkinTemplate
+	 * @param array &$links Navigation array (modified by reference)
+	 * @return void
 	 */
-	public static function onSkinTemplateNavigation__Universal( $skin, array &$links ): void {
+	public static function onSkinTemplateNavigation__Universal( $skin, array &$links ): void /* phpcs:ignore MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName */ {
 		// Reuse the main implementation; Skin or SkinTemplate exposes getTitle/getUser in modern MW
 		self::onSkinTemplateNavigation( $skin, $links );
 	}
 
 	/**
 	 * Generate URL for editing layers
-	* @param mixed $title
+	 * @param mixed $title
 	 * @return string
 	 */
-    private static function getEditLayersURL( $title ): string {
+	private static function getEditLayersURL( $title ): string {
 		return $title->getLocalURL( [ 'action' => 'editlayers' ] );
 	}
 
 	/**
 	 * Handle edit layers action
-	* @param string $action
-	* @param mixed $article
+	 * @param string $action
+	 * @param mixed $article
 	 * @return bool
 	 */
-    public static function onUnknownAction( string $action, $article ): bool {
+	public static function onUnknownAction( string $action, $article ): bool {
 		if ( $action !== 'editlayers' ) {
 			return true;
 		}
@@ -262,8 +268,8 @@ class UIHooks {
 
 	/**
 	 * Show the layers editor interface
-	* @param mixed $out
-	* @param mixed $file
+	 * @param mixed $out
+	 * @param mixed $file
 	 */
 	private static function showLayersEditor( $out, $file ): void {
 		// Set page title
@@ -273,14 +279,12 @@ class UIHooks {
 		// Add editor resources
 		$out->addModules( 'ext.layers.editor' );
 
-
 		// Pass editor init config via JS config vars for CSP-safe startup
 		$fileUrl = self::getPublicImageUrl( $file );
 		$out->addJsConfigVars( 'wgLayersEditorInit', [
 			'filename' => $file->getName(),
 			'imageUrl' => $fileUrl,
 		] );
-
 	}
 
 	/**
@@ -320,6 +324,6 @@ class UIHooks {
 	}
 
 	/**
-	* (Removed) ThumbnailBeforeProduceHTML handled in WikitextHooks to avoid duplication.
-	*/
+	 * (Removed) ThumbnailBeforeProduceHTML handled in WikitextHooks to avoid duplication.
+	 */
 }

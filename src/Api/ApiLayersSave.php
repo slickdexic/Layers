@@ -39,16 +39,16 @@ class ApiLayersSave extends ApiBase {
 					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 					$logger->warning( 'Layers Save: Permission denied', [ 'userId' => $user->getId() ] );
 				} catch ( \Throwable $e ) {
-					// ignore logging failures
+					// ignore
 				}
 			}
-			$this->dieWithError( 'layers-permission-denied', 'permissiondenied' );
+			$this->dieWithError( $this->msg( 'layers-permission-denied' ), 'permissiondenied' );
 		}
 
 		// Rate limiting check
 		$rateLimiter = new RateLimiter();
 		if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
-			$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+			$this->dieWithError( $this->msg( 'layers-rate-limited' ), 'ratelimited' );
 		}
 
 		// Get parameters
@@ -58,30 +58,33 @@ class ApiLayersSave extends ApiBase {
 		$setName = $params['setname'] ?? null;
 
 		if ( $layersData === null ) {
-			$this->dieWithError( 'layers-invalid-data', 'invalidjson' );
+			$this->dieWithError( $this->msg( 'layers-invalid-data' ), 'invalidjson' );
 		}
 
 		// Security: Check data size limits
 		$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
 		if ( strlen( $params['data'] ) > $maxBytes ) {
-			$this->dieWithError( [ 'layers-data-too-large', $maxBytes ], 'toolarge' );
+			$this->dieWithError(
+				[ $this->msg( 'layers-data-too-large' )->plain(), $maxBytes ],
+				'toolarge'
+			);
 		}
 
 		// Security: Validate filename
 		if ( !$this->isValidFilename( $filename ) ) {
-			$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+			$this->dieWithError( $this->msg( 'layers-invalid-filename' ), 'invalidfilename' );
 		}
 
 		// Get file information
 		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
 		$file = $repoGroup->findFile( $filename );
 		if ( !$file || !$file->exists() ) {
-			$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
+			$this->dieWithError( $this->msg( 'layers-file-not-found' ), 'filenotfound' );
 		}
 
 		// Validate layer data structure
 		if ( !$this->validateLayersData( $layersData ) ) {
-			$this->dieWithError( 'layers-invalid-data', 'invaliddata' );
+			$this->dieWithError( $this->msg( 'layers-invalid-data' ), 'invaliddata' );
 		}
 
 		// Additional security: Sanitize layer data
@@ -89,11 +92,11 @@ class ApiLayersSave extends ApiBase {
 
 		// Performance checks
 		if ( !$rateLimiter->isLayerCountAllowed( count( $layersData ) ) ) {
-			$this->dieWithError( 'layers-too-many-layers', 'toolayers' );
+			$this->dieWithError( $this->msg( 'layers-too-many-layers' ), 'toolayers' );
 		}
 
 		if ( !$rateLimiter->isComplexityAllowed( $layersData ) ) {
-			$this->dieWithError( 'layers-too-complex', 'toocomplex' );
+			$this->dieWithError( $this->msg( 'layers-too-complex' ), 'toocomplex' );
 		}
 
 		// Save to database
@@ -117,19 +120,26 @@ class ApiLayersSave extends ApiBase {
 			);
 
 		} catch ( Exception $e ) {
-			$this->dieWithError( [ 'layers-db-error', $e->getMessage() ], 'dberror' );
+			$this->dieWithError(
+				[ $this->msg( 'layers-db-error' )->plain(), $e->getMessage() ],
+				'dberror'
+			);
 		}
 
 		if ( $layerSetId === false ) {
-			$this->dieWithError( 'layers-save-failed', 'savefailed' );
+			$this->dieWithError( $this->msg( 'layers-save-failed' ), 'savefailed' );
 		}
 
 		// Return success response
-		$this->getResult()->addValue( null, $this->getModuleName(), [
-			'success' => true,
-			'layersetid' => $layerSetId,
-			'message' => ( \function_exists( 'wfMessage' ) ? \wfMessage( 'layers-save-success' )->text() : 'Layers saved successfully' )
-		] );
+		$this->getResult()->addValue(
+			null,
+			$this->getModuleName(),
+			[
+				'success' => true,
+				'layersetid' => $layerSetId,
+				'message' => $this->msg( 'layers-save-success' )->text(),
+			]
+		);
 	}
 
 	/**
@@ -159,7 +169,7 @@ class ApiLayersSave extends ApiBase {
 			}
 
 			// Validate layer ID format - prevent code injection
-			if ( !is_string( $layer['id'] ) || strlen( $layer['id'] ) > 100 || 
+			if ( !is_string( $layer['id'] ) || strlen( $layer['id'] ) > 100 ||
 				 !preg_match( '/^[a-zA-Z0-9_-]+$/', $layer['id'] ) ) {
 				return false;
 			}
@@ -193,15 +203,15 @@ class ApiLayersSave extends ApiBase {
 
 			// Validate font family - prevent injection
 			if ( isset( $layer['fontFamily'] ) ) {
-				if ( !is_string( $layer['fontFamily'] ) || 
-					 !preg_match( '/^[a-zA-Z0-9\s,-]+$/', $layer['fontFamily'] ) || 
+				if ( !is_string( $layer['fontFamily'] ) ||
+					 !preg_match( '/^[a-zA-Z0-9\s,-]+$/', $layer['fontFamily'] ) ||
 					 strlen( $layer['fontFamily'] ) > 100 ) {
 					return false;
 				}
 			}
 
 			// Validate points array for path, polygon layers with stricter limits
-			if ( in_array( $layer['type'], [ 'path', 'polygon' ] ) && isset( $layer['points'] ) ) {
+				if ( in_array( $layer['type'], [ 'path', 'polygon' ] ) && isset( $layer['points'] ) ) {
 				if ( !is_array( $layer['points'] ) || count( $layer['points'] ) > 500 ) {
 					return false;
 				}
@@ -212,7 +222,7 @@ class ApiLayersSave extends ApiBase {
 						return false;
 					}
 				}
-			}
+				}
 
 			// Validate numeric properties with bounds
 			$numericFields = [ 'innerRadius', 'outerRadius', 'sides', 'zIndex', 'rotation', 'fontSize', 'strokeWidth', 'opacity' ];
@@ -221,7 +231,7 @@ class ApiLayersSave extends ApiBase {
 					if ( !is_numeric( $layer[$field] ) ) {
 						return false;
 					}
-					
+
 					// Field-specific validation
 					switch ( $field ) {
 						case 'sides':
@@ -436,7 +446,8 @@ class ApiLayersSave extends ApiBase {
 			return $color;
 		}
 
-		return '#000000'; // Default to black if invalid
+		// Default to black if invalid
+		return '#000000';
 	}
 
 	/**
@@ -486,8 +497,10 @@ class ApiLayersSave extends ApiBase {
 	 */
 	public function getExamplesMessages() {
 		return [
-			'action=layerssave&filename=Example.jpg&data=[{"id":"1","type":"text","text":"Hello","x":100,"y":50}]&token=123ABC'
-				=> 'apihelp-layerssave-example-1',
+			// Example: action=layerssave&filename=Example.jpg&data=[{"id":"1","type":"text","text":"Hello","x":100,"y":50}]&token=123ABC
+			'action=layerssave&filename=Example.jpg&data=' .
+				'[{"id":"1","type":"text","text":"Hello","x":100,"y":50}]&token=123ABC' =>
+				'apihelp-layerssave-example-1',
 		];
 	}
 }

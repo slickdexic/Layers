@@ -19,10 +19,16 @@ class WikitextHooks {
 	 * Handle file parameter parsing in wikitext
 	 * Called when MediaWiki processes [[File:...]] syntax
 	 *
-	 * @param mixed $title
-	 * @param mixed $file
-	 * @param array &$params
-	 * @param mixed $parser
+	 * @param mixed &$dummy Kept for signature compatibility
+	 * @param mixed $title Title object
+	 * @param mixed $file File object
+	 * @param array &$attribs Image attributes
+	 * @param array &$linkAttribs Link attributes
+	 * @param bool $isLinked Link flag
+	 * @param mixed $thumb Thumbnail
+	 * @param mixed $parser Parser
+	 * @param mixed $frameParams Frame params
+	 * @param int $page Page number
 	 * @return bool
 	 */
 	public static function onImageBeforeProduceHTML(
@@ -96,9 +102,11 @@ class WikitextHooks {
 			}
 
 			// Parse the layers parameter
-			$layersParam = 'off'; // default to off
+			// default to off
+			$layersParam = 'off';
 			if ( !empty( $layersArg ) && strpos( $layersArg, 'layers=' ) === 0 ) {
-				$layersParam = substr( $layersArg, 7 ); // Remove 'layers=' prefix
+				// Remove 'layers=' prefix
+				$layersParam = substr( $layersArg, 7 );
 			} elseif ( $layersArg === 'layers' || $layersArg === 'on' ) {
 				$layersParam = 'on';
 			}
@@ -111,7 +119,8 @@ class WikitextHooks {
 			$file = $repoGroup ? $repoGroup->findFile( $filename ) : null;
 
 			if ( !$file ) {
-				return '<span class="error">File not found: ' . htmlspecialchars( $filename ) . '</span>';
+				$fn = htmlspecialchars( $filename );
+				return '<span class="error">File not found: ' . $fn . '</span>';
 			}
 
 			// If layers are not requested, fall back to normal image display
@@ -134,7 +143,8 @@ class WikitextHooks {
 			} elseif ( preg_match( '/x(\d+)px/', $size, $sizeMatch ) ) {
 				$width = intval( $sizeMatch[1] );
 			} elseif ( $size === 'thumb' ) {
-				$width = 220; // MediaWiki default thumb size
+				// MediaWiki default thumb size
+				$width = 220;
 			}
 
 			// Generate layered thumbnail
@@ -146,7 +156,9 @@ class WikitextHooks {
 				$title = !empty( $caption ) ? htmlspecialchars( $caption ) : '';
 
 				$destTitle = \Title::newFromText( 'File:' . $filename );
-				$href = $destTitle ? $destTitle->getLocalURL() : ( '/wiki/File:' . rawurlencode( $filename ) );
+				$href = $destTitle
+					? $destTitle->getLocalURL()
+					: ( '/wiki/File:' . rawurlencode( $filename ) );
 				return '<span class="mw-default-size" typeof="mw:File">' .
 				   '<a href="' . htmlspecialchars( $href ) . '" class="mw-file-description"' .
 				   ( $title ? ' title="' . $title . '"' : '' ) . '>' .
@@ -195,7 +207,8 @@ class WikitextHooks {
 			}
 
 			// Find the right layer set
-			$selectedLayerSet = $layerSets[0]; // Default to first
+			// Default to first
+			$selectedLayerSet = $layerSets[0];
 
 			if ( $layersParam !== 'on' ) {
 				foreach ( $layerSets as $layerSet ) {
@@ -355,7 +368,16 @@ class WikitextHooks {
 		return true;
 	}
 
-    public static function onParserMakeImageParams( $title, $file, array &$params, $parser ): bool {
+	/**
+	 * Normalize and interpret the layers parameter during image param assembly.
+	 *
+	 * @param mixed $title Title
+	 * @param mixed $file File
+	 * @param array &$params Parameters (modified by reference)
+	 * @param mixed $parser Parser
+	 * @return bool
+	 */
+	public static function onParserMakeImageParams( $title, $file, array &$params, $parser ): bool {
 		// Normalize and interpret layers parameter
 		if ( !isset( $params['layers'] ) ) {
 			return true;

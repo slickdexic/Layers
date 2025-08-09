@@ -65,7 +65,13 @@ class ThumbnailRenderer {
 			$uploadDir = $this->config ? $this->config->get( 'UploadDirectory' ) : sys_get_temp_dir();
 			$thumbDir = rtrim( $uploadDir, '/\\' ) . '/thumb/layers';
 			if ( !is_dir( $thumbDir ) ) {
-				@mkdir( $thumbDir, 0755, true );
+				$ok = @mkdir( $thumbDir, 0755, true );
+				if ( !$ok && !is_dir( $thumbDir ) ) {
+					if ( $this->logger ) {
+						$this->logger->error( 'Layers: failed to create thumb directory', [ 'dir' => $thumbDir ] );
+					}
+					return null;
+				}
 			}
 
 			$outputPath = $thumbDir . '/' . $file->getSha1() . '_' . md5( serialize( $params ) ) . '.png';
@@ -136,7 +142,7 @@ class ThumbnailRenderer {
 			];
 		} catch ( \Throwable $e ) {
 			// If config keys missing, proceed with defaults
-			$limits = [ 'time' => (int)($this->config->get( 'LayersImageMagickTimeout' ) ?? 30) ];
+			$limits = [ 'time' => (int)( $this->config->get( 'LayersImageMagickTimeout' ) ?? 30 ) ];
 		}
 
 		if ( \class_exists( '\\MediaWiki\\Shell\\Shell' ) ) {
@@ -160,19 +166,11 @@ class ThumbnailRenderer {
 				return false;
 			}
 		} else {
-			// Fallback to exec() if Shell is unavailable (older MW or limited env)
-			$escaped = array_map( 'escapeshellarg', $args );
-			$cmd = implode( ' ', $escaped );
-			$output = [];
-			$returnVar = 0;
-			@exec( $cmd . ' 2>&1', $output, $returnVar );
-			if ( $returnVar !== 0 ) {
-				$stderr = implode( "\n", $output );
-				if ( $this->logger ) {
-					$this->logger->error( 'Layers: ImageMagick failed (exec)', [ 'stderr' => $stderr, 'args' => $args ] );
-				}
-				return false;
+			// Shell not available; cannot safely execute ImageMagick
+			if ( $this->logger ) {
+				$this->logger->warning( 'Layers: Shell class not available; skipping overlay' );
 			}
+			return false;
 		}
 
 		return file_exists( $outputPath );

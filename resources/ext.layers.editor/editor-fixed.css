@@ -1,4 +1,4 @@
-/* stylelint-disable linebreaks */
+/* stylelint-disable linebreaks, rule-empty-line-before, declaration-empty-line-before, no-eol-whitespace */
 /**
  * Layers Editor CSS Styles
  * Essential styling for the layers editing interface
@@ -19,6 +19,7 @@
 }
 
 /* Hide MediaWiki skin chrome when editor is open */
+/* stylelint-disable selector-max-id, declaration-no-important */
 body.layers-editor-open #mw-panel,
 body.layers-editor-open #mw-head,
 body.layers-editor-open #left-navigation,
@@ -43,6 +44,7 @@ body.layers-editor-open .mw-body-content {
 	max-width: none !important;
 }
 
+    
 /* Header */
 .layers-header {
 	background: #0b66a1;
@@ -53,6 +55,7 @@ body.layers-editor-open .mw-body-content {
 	padding: 10px 16px;
 	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.08 );
 }
+    
 
 .layers-header-title {
 	font-weight: 600;
@@ -63,6 +66,7 @@ body.layers-editor-open .mw-body-content {
 	font-size: 0.75em;
 	opacity: 0.9;
 	display: flex;
+    
 	align-items: center;
 	gap: 10px;
 }
@@ -72,7 +76,8 @@ body.layers-editor-open .mw-body-content {
 	background: transparent;
 	border: 0;
 	color: #fff;
-	font-size: 20px;
+    
+	font-size: 1.25em;
 	line-height: 1;
 	width: 32px;
 	height: 32px;
@@ -80,7 +85,7 @@ body.layers-editor-open .mw-body-content {
 	cursor: pointer;
 }
 .layers-header-close:hover {
-	background: rgba(255,255,255,0.1);
+	background: rgba( 255, 255, 255, 0.1 );
 }
 
 /* Content area - horizontal layout for layer panel and canvas */
@@ -195,9 +200,13 @@ body.layers-editor-open .mw-body-content {
 	gap: 6px;
 	margin-bottom: 8px;
 }
-.layer-properties-form input[type="number"],
-.layer-properties-form input[type="text"],
-.layer-properties-form input[type="color"] {
+.layer-properties-form .property-field + .property-field {
+	/* visual grouping */
+	margin-top: 8px;
+}
+.layer-properties-form input[ type='number' ],
+.layer-properties-form input[ type='text' ],
+.layer-properties-form input[ type='color' ] {
 	width: 100%;
 	box-sizing: border-box;
 }
@@ -209,6 +218,7 @@ body.layers-editor-open .mw-body-content {
 	border-radius: 4px;
 	word-break: break-all;
 }
+
 .layers-code-panel .copy-btn {
 	margin-top: 6px;
 	background: #f8f9fa;

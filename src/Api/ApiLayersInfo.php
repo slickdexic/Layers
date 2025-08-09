@@ -46,7 +46,7 @@ class ApiLayersInfo extends ApiBase {
 			// Get specific layer set
 			$layerSet = $db->getLayerSet( $layerSetId );
 			if ( !$layerSet ) {
-				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
+				$this->dieWithError( $this->msg( 'layers-layerset-not-found' ), 'layersetnotfound' );
 			}
 
 			$result = [
@@ -59,7 +59,7 @@ class ApiLayersInfo extends ApiBase {
 			if ( !$layerSet ) {
 				$result = [
 					'layerset' => null,
-					'message' => ( \function_exists( 'wfMessage' ) ? \wfMessage( 'layers-no-layers' )->text() : 'No layers found for this image' )
+					'message' => $this->msg( 'layers-no-layers' )->text()
 				];
 			} else {
 				$result = [

@@ -2,6 +2,7 @@
 /**
  * Diagnostic script for the Layers MediaWiki extension
  * Run from MediaWiki root directory: php extensions/Layers/diagnose-layers.php
+ * phpcs:disable MediaWiki.Files.ClassMatchesFilename.NotMatch,MediaWiki.WhiteSpace.SpaceAfterClosure.NoWhitespaceAfterClosure
  */
 
 // Ensure we're running from MediaWiki root
@@ -54,7 +55,7 @@ class LayersDiagnostic extends Maintenance {
 		}
 
 		// 3. Check database tables
-		$this->output( "\n3. Checking database tables...\n" );
+	$this->output( "\n3. Checking database tables...\n" );
 		$db = $this->getDB( DB_REPLICA );
 		$tables = [
 			'layer_sets' => 'Main layer storage table',
@@ -80,7 +81,7 @@ class LayersDiagnostic extends Maintenance {
 		// 4. Check user permissions
 		$this->output( "\n4. Checking user permissions...\n" );
 		global $wgGroupPermissions;
-		
+
 		if ( !isset( $wgGroupPermissions['user']['editlayers'] ) || !$wgGroupPermissions['user']['editlayers'] ) {
 			$this->output( "   ❌ FAILED: 'user' group does not have 'editlayers' permission\n" );
 			$this->output( "   💡 FIX: Extension.json should automatically grant this, check LocalSettings.php\n" );
@@ -92,7 +93,7 @@ class LayersDiagnostic extends Maintenance {
 		// 5. Check ResourceLoader modules
 		$this->output( "\n5. Checking ResourceLoader modules...\n" );
 		$resourceLoader = MediaWiki\MediaWikiServices::getInstance()->getResourceLoader();
-		
+
 		$modules = [
 			'ext.layers' => 'Layers viewer module',
 			'ext.layers.editor' => 'Layers editor module'
@@ -131,7 +132,7 @@ class LayersDiagnostic extends Maintenance {
 			} else {
 				$this->output( "   ✅ PASS: Hook '$hook' is registered\n" );
 				if ( $verbose ) {
-					$this->output( "        Handlers: " . implode( ', ', array_map( function( $h ) {
+					$this->output( "        Handlers: " . implode( ', ', array_map( static function( $h ) {
 						return is_array( $h ) ? implode( '::', $h ) : (string)$h;
 					}, $wgHooks[$hook] ) ) . "\n" );
 				}
@@ -144,7 +145,7 @@ class LayersDiagnostic extends Maintenance {
 			$repo = MediaWiki\MediaWikiServices::getInstance()->getRepoGroup();
 			$testFiles = [ 'Example.jpg', 'Example.png', 'Test.jpg' ];
 			$foundFile = null;
-			
+
 			foreach ( $testFiles as $testFile ) {
 				$file = $repo->findFile( $testFile );
 				if ( $file && $file->exists() ) {
@@ -152,14 +153,14 @@ class LayersDiagnostic extends Maintenance {
 					break;
 				}
 			}
-			
+
 			if ( $foundFile ) {
 				$this->output( "   ✅ PASS: Found test file: " . $foundFile->getName() . "\n" );
-				
+
 				// Test creating a layer
 				if ( class_exists( 'MediaWiki\\Extension\\Layers\\Database\\LayersDatabase' ) ) {
 					$this->output( "   ✅ PASS: LayersDatabase class is available\n" );
-					
+
 					// Check for existing layers
 					try {
 						$db = new MediaWiki\Extension\Layers\Database\LayersDatabase();
@@ -187,7 +188,7 @@ class LayersDiagnostic extends Maintenance {
 		try {
 			$apiMain = new ApiMain();
 			$moduleManager = $apiMain->getModuleManager();
-			
+
 			$apiModules = [ 'layersinfo', 'layerssave' ];
 			foreach ( $apiModules as $module ) {
 				if ( $moduleManager->moduleExists( $module ) ) {
@@ -218,7 +219,7 @@ class LayersDiagnostic extends Maintenance {
 		$this->output( "2. Look for the 'Edit Layers' tab\n" );
 		$this->output( "3. Test image display with [[File:Example.jpg|layers=all]]\n" );
 		$this->output( "\nIf issues persist, check the MediaWiki debug log for errors.\n" );
-		
+
 		return $issues === 0;
 	}
 

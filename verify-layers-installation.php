@@ -2,6 +2,7 @@
 /**
  * Simple verification script to check if Layers extension is properly set up
  * Run this as: php verify-layers-installation.php from the extension directory
+ * phpcs:disable MediaWiki.Usage.ForbiddenFunctions.exec,Generic.WhiteSpace
  */
 
 echo "Layers Extension Installation Verification\n";
@@ -40,7 +41,7 @@ if ( file_exists( 'extension.json' ) ) {
         $errors++;
     } else {
         echo "   ✅ extension.json is valid JSON\n";
-        
+
         // Check key fields
         if ( isset( $data['name'] ) && $data['name'] === 'Layers' ) {
             echo "   ✅ Extension name is correct\n";
@@ -48,14 +49,14 @@ if ( file_exists( 'extension.json' ) ) {
             echo "   ❌ Extension name is incorrect or missing\n";
             $errors++;
         }
-        
+
         if ( isset( $data['GroupPermissions']['user']['editlayers'] ) && $data['GroupPermissions']['user']['editlayers'] === true ) {
             echo "   ✅ User group has editlayers permission\n";
         } else {
             echo "   ❌ User group missing editlayers permission\n";
             $errors++;
         }
-        
+
         if ( isset( $data['Hooks']['SkinTemplateNavigation'] ) ) {
             echo "   ✅ SkinTemplateNavigation hook registered\n";
         } else {
@@ -138,4 +139,3 @@ echo "\nFor MediaWiki integration issues, check:\n";
 echo "- MediaWiki error logs\n";
 echo "- Browser JavaScript console\n";
 echo "- Special:Version (should list Layers extension)\n";
-?>

@@ -6,6 +6,7 @@
 	},
 	"layers-desc": "{{desc|name=Layers|url=https://www.mediawiki.org/wiki/Extension:Layers}}",
 	"layers-editor-title": "Title of the Layers editor interface shown on file pages",
+	"layers-editor-close": "Label or tooltip for the close button in the Layers editor header",
 	"layers-editor-save": "Label for the Save button in the editor toolbar",
 	"layers-editor-cancel": "Label for the Cancel button in the editor toolbar",
 	"layers-error-init": "Error shown if the client-side editor fails to initialize",

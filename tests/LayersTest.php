@@ -9,9 +9,13 @@
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
 
-class LayersExtensionTest {
-
+/**
+ * @coversNothing
+ */
+class LayersTest {
+	/** @var int */
 	private $passed = 0;
+	/** @var int */
 	private $failed = 0;
 
 	private function output( $msg ) {
@@ -21,13 +25,13 @@ class LayersExtensionTest {
 	public function run() {
 		$this->output( "=== Layers Extension Test Suite ===\n" );
 
-		$this->testDatabaseTables();
-		$this->testLayersDatabase();
-		$this->testConfigurationValues();
-		$this->testUserPermissions();
-		$this->testResourceModules();
-		$this->testApiEndpoints();
-		$this->testThumbnailRenderer();
+	$this->testDatabaseTables();
+	$this->testLayersDatabase();
+	$this->testConfigurationValues();
+	$this->testUserPermissions();
+	$this->testResourceModules();
+	$this->testApiEndpoints();
+	$this->testThumbnailRenderer();
 
 		$this->output( "\n=== Test Results ===" );
 		$this->output( "Passed: {$this->passed}" );
@@ -52,6 +56,9 @@ class LayersExtensionTest {
 		}
 	}
 
+	/**
+	 * @covers MediaWiki\\Extension\\Layers\\Database\\LayersDatabase
+	 */
 	private function testDatabaseTables() {
 		$this->output( "\n--- Database Tables ---" );
 
@@ -77,6 +84,9 @@ class LayersExtensionTest {
 		);
 	}
 
+	/**
+	 * @covers MediaWiki\\Extension\\Layers\\Database\\LayersDatabase
+	 */
 	private function testLayersDatabase() {
 		$this->output( "\n--- LayersDatabase Class ---" );
 
@@ -112,6 +122,9 @@ class LayersExtensionTest {
 		}
 	}
 
+	/**
+	 * @covers Nothing
+	 */
 	private function testConfigurationValues() {
 		$this->output( "\n--- Configuration ---" );
 
@@ -140,6 +153,9 @@ class LayersExtensionTest {
 		}
 	}
 
+	/**
+	 * @covers Nothing
+	 */
 	private function testUserPermissions() {
 		$this->output( "\n--- User Permissions ---" );
 
@@ -163,6 +179,9 @@ class LayersExtensionTest {
 		);
 	}
 
+	/**
+	 * @covers Nothing
+	 */
 	private function testResourceModules() {
 		$this->output( "\n--- Resource Modules ---" );
 
@@ -190,6 +209,10 @@ class LayersExtensionTest {
 		);
 	}
 
+	/**
+	 * @covers MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo
+	 * @covers MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave
+	 */
 	private function testApiEndpoints() {
 		$this->output( "\n--- API Endpoints ---" );
 
@@ -217,6 +240,9 @@ class LayersExtensionTest {
 		);
 	}
 
+	/**
+	 * @covers MediaWiki\\Extension\\Layers\\ThumbnailRenderer
+	 */
 	private function testThumbnailRenderer() {
 		$this->output( "\n--- Thumbnail Renderer ---" );
 
@@ -261,7 +287,7 @@ class LayersExtensionTest {
 
 // Run the test if called directly
 if ( defined( 'MEDIAWIKI' ) ) {
-	$test = new LayersExtensionTest();
+	$test = new LayersTest();
 	$success = $test->run();
 	exit( $success ? 0 : 1 );
 } else {

@@ -13,6 +13,7 @@ use User;
 
 class RateLimiter {
 
+	/** @var \Config */
 	private $config;
 
 	public function __construct() {
@@ -40,19 +41,28 @@ class RateLimiter {
 		// Default limits if not configured
 		$defaultLimits = [
 			'editlayers-save' => [
-				'user' => [ 30, 3600 ], // 30 saves per hour for users
-				'newbie' => [ 5, 3600 ], // 5 saves per hour for new users
-				'autoconfirmed' => [ 50, 3600 ], // 50 saves per hour for autoconfirmed
+				// 30 saves per hour for users
+				'user' => [ 30, 3600 ],
+				// 5 saves per hour for new users
+				'newbie' => [ 5, 3600 ],
+				// 50 saves per hour for autoconfirmed
+				'autoconfirmed' => [ 50, 3600 ],
 			],
 			'editlayers-render' => [
-				'user' => [ 100, 3600 ], // 100 renders per hour
-				'newbie' => [ 20, 3600 ], // 20 renders per hour for new users
-				'autoconfirmed' => [ 200, 3600 ], // 200 renders per hour for autoconfirmed
+				// 100 renders per hour
+				'user' => [ 100, 3600 ],
+				// 20 renders per hour for new users
+				'newbie' => [ 20, 3600 ],
+				// 200 renders per hour for autoconfirmed
+				'autoconfirmed' => [ 200, 3600 ],
 			],
 			'editlayers-create' => [
-				'user' => [ 10, 3600 ], // 10 new layer sets per hour
-				'newbie' => [ 2, 3600 ], // 2 new layer sets per hour for new users
-				'autoconfirmed' => [ 20, 3600 ], // 20 new layer sets per hour for autoconfirmed
+				// 10 new layer sets per hour
+				'user' => [ 10, 3600 ],
+				// 2 new layer sets per hour for new users
+				'newbie' => [ 2, 3600 ],
+				// 20 new layer sets per hour for autoconfirmed
+				'autoconfirmed' => [ 20, 3600 ],
 			],
 		];
 
@@ -60,7 +70,8 @@ class RateLimiter {
 		$limits = $rateLimits[$limitKey] ?? $defaultLimits[$limitKey] ?? null;
 
 		if ( !$limits ) {
-			return true; // No limits configured
+			// No limits configured
+			return true;
 		}
 
 		// Set the limits in MediaWiki's rate limiting system
@@ -114,7 +125,8 @@ class RateLimiter {
 					$complexity += 1;
 					break;
 				case 'arrow':
-					$complexity += 3; // More complex to render
+					// More complex to render
+					$complexity += 3;
 					break;
 				case 'highlight':
 					$complexity += 1;

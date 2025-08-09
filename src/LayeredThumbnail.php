@@ -6,30 +6,26 @@
  * @ingroup Extensions
  */
 
-namespace {
-	if ( !class_exists( 'MediaTransformOutput' ) ) {
-		class MediaTransformOutput { }
-	}
-}
-
 namespace MediaWiki\Extension\Layers {
 
 class LayeredThumbnail extends \MediaTransformOutput {
-
+	/** @var mixed File */
 	private $file;
+	/** @var string */
 	private $layeredPath;
+	/** @var string */
 	private $url;
+	/** @var string */
 	private $path;
+	/** @var int|null */
 	private $width;
+	/** @var int|null */
 	private $height;
 
 	/**
 	 * @param mixed $file MediaWiki File object
 	 * @param string $layeredPath Path to the composite thumbnail
 	 * @param array $params Transform parameters
-	 */
-	/**
-	 * @param mixed $file MediaWiki File object
 	 */
 	public function __construct( $file, string $layeredPath, array $params ) {
 		$this->file = $file;
@@ -85,7 +81,7 @@ class LayeredThumbnail extends \MediaTransformOutput {
 		}
 
 		// Fallback - this shouldn't happen in normal operation
-	return rtrim( $uploadPath, '/' ) . '/thumb/layers/' . basename( $path );
+		return rtrim( $uploadPath, '/' ) . '/thumb/layers/' . basename( $path );
 	}
 
 	/**
@@ -140,15 +136,22 @@ class LayeredThumbnail extends \MediaTransformOutput {
 
 	/**
 	 * Expose URL for callers that need it
+	 * @return string
 	 */
 	public function getUrl() {
 		return $this->url;
 	}
 
+	/**
+	 * @return int|null
+	 */
 	public function getWidth() {
 		return $this->width;
 	}
 
+	/**
+	 * @return int|null
+	 */
 	public function getHeight() {
 		return $this->height;
 	}

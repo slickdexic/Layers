@@ -75,6 +75,8 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 
 	/**
 	 * Test that extremely large coordinates are handled safely
+	 *
+	 * @covers ::buildTextCommand
 	 */
 	public function testCoordinateBounds() {
 		$renderer = new ThumbnailRenderer();

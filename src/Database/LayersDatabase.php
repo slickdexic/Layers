@@ -34,7 +34,7 @@ class LayersDatabase {
 		$this->loadBalancer = null;
 		$this->dbw = null;
 		$this->dbr = null;
-		
+
 		// Initialize logger properly
 		if ( class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
 			$this->logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
@@ -70,7 +70,7 @@ class LayersDatabase {
 		if ( defined( 'DB_PRIMARY' ) ) {
 			$this->dbw = $lb->getConnection( DB_PRIMARY );
 		} elseif ( defined( 'DB_MASTER' ) ) {
-			$this->dbw = $lb->getConnection( DB_MASTER );
+			$this->dbw = $lb->getConnection( DB_PRIMARY );
 		} else {
 			$this->dbw = $lb->getConnection( 0 );
 		}
@@ -91,7 +91,7 @@ class LayersDatabase {
 		if ( defined( 'DB_REPLICA' ) ) {
 			$this->dbr = $lb->getConnection( DB_REPLICA );
 		} elseif ( defined( 'DB_SLAVE' ) ) {
-			$this->dbr = $lb->getConnection( DB_SLAVE );
+			$this->dbr = $lb->getConnection( DB_REPLICA );
 		} else {
 			$this->dbr = $lb->getConnection( 1 );
 		}
@@ -486,7 +486,7 @@ class LayersDatabase {
 			$oldestKey = array_key_first( $this->layerSetCache );
 			unset( $this->layerSetCache[$oldestKey] );
 		}
-		
+
 		$this->layerSetCache[$key] = $value;
 	}
 

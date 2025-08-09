@@ -37,7 +37,8 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 		$this->assertTrue( $limiter->isComplexityAllowed( $simpleLayers ) );
 
 		// Too many complex layers should be rejected
-		$complexLayers = array_fill( 0, 50, [ 'type' => 'arrow' ] ); // 50 arrows = 150 complexity
+		// 50 arrows = 150 complexity
+		$complexLayers = array_fill( 0, 50, [ 'type' => 'arrow' ] );
 
 		$this->assertFalse( $limiter->isComplexityAllowed( $complexLayers ) );
 	}

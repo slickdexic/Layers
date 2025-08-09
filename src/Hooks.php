@@ -10,6 +10,7 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+
 // Avoid direct hard dependency on MediaWiki classes for static analysis
 
 // Define constants if not already defined
@@ -21,6 +22,10 @@ class Hooks {
 
 	/**
 	 * BeforePageDisplay hook handler
+	 *
+	 * @param mixed $out OutputPage
+	 * @param mixed $skin Skin
+	 * @return void
 	 */
 	public static function onBeforePageDisplay( $out, $skin ) {
 		try {
@@ -58,7 +63,8 @@ class Hooks {
 
 	/**
 	 * Get logger instance with fallback
-	 * @return object
+	 *
+	 * @return mixed Logger instance (Psr\Log\LoggerInterface or fallback)
 	 */
 	private static function getLogger() {
 		static $logger = null;
@@ -68,15 +74,35 @@ class Hooks {
 			} else {
 				// Fallback logger that uses error_log
 				$logger = new class {
+					/**
+					 * Log an informational message
+					 * @param string $message
+					 * @param array $context
+					 * @return void
+					 */
 					public function info( $message, $context = [] ) {
 						error_log( "Layers INFO: $message" );
 					}
+
+					/**
+					 * Log an error message
+					 * @param string $message
+					 * @param array $context
+					 * @return void
+					 */
 					public function error( $message, $context = [] ) {
 						error_log( "Layers ERROR: $message" );
 						if ( isset( $context['exception'] ) ) {
 							error_log( "Exception: " . $context['exception'] );
 						}
 					}
+
+					/**
+					 * Log a warning message
+					 * @param string $message
+					 * @param array $context
+					 * @return void
+					 */
 					public function warning( $message, $context = [] ) {
 						error_log( "Layers WARNING: $message" );
 					}
@@ -89,6 +115,10 @@ class Hooks {
 	/**
 	 * Ensure the viewer module is considered in the startup payload on every page.
 	 * This can help skins/environments that defer module loads.
+	 *
+	 * @param array &$vars
+	 * @param mixed $out OutputPage
+	 * @return bool
 	 */
 	public static function onMakeGlobalVariablesScript( &$vars, $out ) {
 		try {
@@ -105,6 +135,13 @@ class Hooks {
 
 	/**
 	 * FileDeleteComplete hook handler
+	 *
+	 * @param mixed $file File
+	 * @param mixed $oldimage OldLocalFile|mixed
+	 * @param mixed $article Article|WikiPage|mixed
+	 * @param mixed $user User
+	 * @param string $reason
+	 * @return void
 	 */
 	public static function onFileDeleteComplete( $file, $oldimage, $article, $user, $reason ) {
 		if ( !$file ) {
@@ -125,6 +162,9 @@ class Hooks {
 
 	/**
 	 * ParserFirstCallInit hook handler
+	 *
+	 * @param mixed $parser Parser
+	 * @return void
 	 */
 	public static function onParserFirstCallInit( $parser ) {
 		// Register parser functions
@@ -141,6 +181,9 @@ class Hooks {
 
 	/**
 	 * LoadExtensionSchemaUpdates hook handler
+	 *
+	 * @param mixed $updater DatabaseUpdater
+	 * @return void
 	 */
 	public static function onLoadExtensionSchemaUpdates( $updater ) {
 		$dir = dirname( __DIR__ );
@@ -152,11 +195,17 @@ class Hooks {
 
 	/**
 	 * FileTransform hook handler
+	 *
+	 * @return void
 	 */
 	// NOTE: Transform processing is handled downstream via ThumbnailBeforeProduceHTML/UI hooks
 
 	/**
 	 * Parser function: {{#layerlist:File=Example.jpg}}
+	 *
+	 * @param mixed $parser Parser
+	 * @param string $file
+	 * @return string
 	 */
 	public static function layerListParserFunction( $parser, $file = '' ) {
 		if ( empty( $file ) ) {
@@ -197,6 +246,11 @@ class Hooks {
 
 	/**
 	 * Parser function: {{#layeredit:File=Example.jpg|set=pcb-callouts}}
+	 *
+	 * @param mixed $parser Parser
+	 * @param string $file
+	 * @param string $set
+	 * @return string
 	 */
 	public static function layerEditParserFunction( $parser, $file = '', $set = '' ) {
 		if ( empty( $file ) ) {

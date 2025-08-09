@@ -3,42 +3,7 @@
  * EditLayersAction - dedicated Action to render the Layers editor
  */
 
-namespace {
-	if ( !class_exists( 'Action' ) ) {
-		class Action {
-			public function getName() { return ''; }
-			public function requiresWrite() { return false; }
-			public function requiresUnblock() { return false; }
-			public function show() {}
-			// Minimal shims for static analysis/tools outside MediaWiki
-			public function getOutput() {
-				return new class {
-					public function showErrorPage( $a = null, $b = null ) {}
-					public function setPageTitle( $t ) {}
-					public function addModules( $m ) {}
-					public function addHTML( $h ) {}
-					public function addInlineScript( $s ) {}
-					public function addJsConfigVars( $key, $value = null ) {}
-					public function setArticleBodyOnly( $b ) {}
-				};
-			}
-			public function getUser() {
-				return new class {
-					public function isAllowed( $right ) { return true; }
-				};
-			}
-			public function getTitle() {
-				return new class {
-					public function inNamespace( $ns ) { return true; }
-				};
-			}
-		}
-	}
-}
-
 namespace MediaWiki\Extension\Layers\Action {
-
-use MediaWiki\Extension\Layers\Database\LayersDatabase;
 
 class EditLayersAction extends \Action {
 	/** @inheritDoc */
@@ -88,14 +53,12 @@ class EditLayersAction extends \Action {
 		// Load editor module
 		$out->addModules( 'ext.layers.editor' );
 
-
 		// Init config via JS config vars; module will bootstrap itself
 		$fileUrl = $this->getPublicImageUrl( $file );
 		$out->addJsConfigVars( 'wgLayersEditorInit', [
 			'filename' => $file->getName(),
 			'imageUrl' => $fileUrl,
 		] );
-
 	}
 
 	/**
