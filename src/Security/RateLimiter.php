@@ -27,32 +27,44 @@ class RateLimiter {
 	 * @return bool True if allowed, false if rate limited
 	 */
 	public function checkRateLimit( User $user, string $action ): bool {
-		// Get rate limits from config
-		$rateLimits = $this->config->get( 'RateLimits' );
+		// Skip rate limiting for privileged users
+		if ( $user->isAllowed( 'managelayerlibrary' ) ) {
+			return true;
+		}
+
+		// Get rate limits from config with proper fallback
+		$rateLimits = $this->config->get( 'RateLimits' ) ?? [];
 
 		$limitKey = "editlayers-{$action}";
 
 		// Default limits if not configured
 		$defaultLimits = [
 			'editlayers-save' => [
-				'user' => [ 50, 3600 ], // 50 saves per hour for users
-				'newbie' => [ 10, 3600 ], // 10 saves per hour for new users
+				'user' => [ 30, 3600 ], // 30 saves per hour for users
+				'newbie' => [ 5, 3600 ], // 5 saves per hour for new users
+				'autoconfirmed' => [ 50, 3600 ], // 50 saves per hour for autoconfirmed
 			],
 			'editlayers-render' => [
 				'user' => [ 100, 3600 ], // 100 renders per hour
 				'newbie' => [ 20, 3600 ], // 20 renders per hour for new users
+				'autoconfirmed' => [ 200, 3600 ], // 200 renders per hour for autoconfirmed
 			],
 			'editlayers-create' => [
-				'user' => [ 20, 3600 ], // 20 new layer sets per hour
-				'newbie' => [ 5, 3600 ], // 5 new layer sets per hour for new users
+				'user' => [ 10, 3600 ], // 10 new layer sets per hour
+				'newbie' => [ 2, 3600 ], // 2 new layer sets per hour for new users
+				'autoconfirmed' => [ 20, 3600 ], // 20 new layer sets per hour for autoconfirmed
 			],
 		];
 
+		// Use configured limits or fall back to defaults
 		$limits = $rateLimits[$limitKey] ?? $defaultLimits[$limitKey] ?? null;
 
 		if ( !$limits ) {
 			return true; // No limits configured
 		}
+
+		// Set the limits in MediaWiki's rate limiting system
+		$this->config->set( 'RateLimits', array_merge( $rateLimits, [ $limitKey => $limits ] ) );
 
 		// Check against MediaWiki's rate limiting system
 		return !$user->pingLimiter( $limitKey );

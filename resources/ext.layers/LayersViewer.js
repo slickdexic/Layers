@@ -256,25 +256,22 @@
 
 	LayersViewer.prototype.renderEllipse = function ( layer ) {
 		this.ctx.save();
-		this.ctx.beginPath();
-
 		var x = layer.x || 0;
 		var y = layer.y || 0;
 		var radiusX = layer.radiusX || layer.width / 2 || 0;
 		var radiusY = layer.radiusY || layer.height / 2 || 0;
 
-		// Create ellipse using scaling transformation
+		// Build the ellipse path under a scaled transform
 		this.ctx.translate( x, y );
-		this.ctx.scale( radiusX, radiusY );
+		this.ctx.beginPath();
+		this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
 		this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
-		this.ctx.restore();
 
-		this.ctx.save();
+		// Fill/stroke while the transform is active
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
 			this.ctx.fill();
 		}
-
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = layer.strokeWidth || 1;
@@ -382,41 +379,7 @@
 		this.ctx.restore();
 	};
 
-	// Auto-initialize viewers on page load
-	function initViewers() {
-		var images = document.querySelectorAll( 'img[data-layers]' );
-		images.forEach( function ( img ) {
-			try {
-				var layerData = JSON.parse( img.dataset.layers );
-				var container = img.parentNode;
-
-				// This is a valid use of 'new' for its side effects (instantiating the viewer)
-				var viewer = new LayersViewer( {
-					container: container,
-					imageElement: img,
-					layerData: layerData
-				} );
-				// The 'viewer' variable can be used for debugging if needed.
-				if ( window.mw && window.mw.config.get( 'debug' ) ) {
-					if ( !window.layersViewers ) {
-						window.layersViewers = [];
-					}
-					window.layersViewers.push( viewer );
-				}
-			} catch ( e ) {
-				// console.warn( 'Failed to initialize layers viewer:', e );
-			}
-		} );
-	}
-
-	// Initialize when DOM is ready
-	if ( document.readyState === 'loading' ) {
-		document.addEventListener( 'DOMContentLoaded', initViewers );
-	} else {
-		initViewers();
-	}
-
-	// Export for manual initialization
+	// Export for manual initialization; bootstrap handled in ext.layers/init.js
 	window.LayersViewer = LayersViewer;
 
 }() );

@@ -16,7 +16,7 @@
 	function LayersEditor( config ) {
 		this.config = config || {};
 		this.filename = this.config.filename;
-		this.containerElement = this.config.container; // Store the container from config
+		this.containerElement = this.config.container; // Optional legacy container
 		this.canvasManager = null;
 		this.layerPanel = null;
 		this.toolbar = null;
@@ -70,8 +70,8 @@
 				if ( window.mw && window.mw.log ) {
 					mw.log.error( 'Layers: Missing dependencies after 5 seconds: ' + missing.join( ', ' ) );
 				}
-				// Force initialization even with missing dependencies for debugging
-				self.initializeComponents();
+				// Do not initialize if core dependencies failed to load
+				self.showError( ( mw.message ? mw.message( 'layers-error-init' ).text() : 'Failed to initialize Layers editor' ) + ' (' + missing.join( ', ' ) + ')' );
 			}
 		}
 
@@ -147,16 +147,40 @@
 	};
 
 	LayersEditor.prototype.createInterface = function () {
-		// Use provided container or create a new one
-		if ( this.containerElement ) {
-			this.container = this.containerElement;
-			this.container.className = 'layers-editor';
-		} else {
-			// Create main editor container and add to body
-			this.container = document.createElement( 'div' );
-			this.container.className = 'layers-editor';
-			document.body.appendChild( this.container );
-		}
+		// Always create a full-screen overlay container at body level
+		this.container = document.createElement( 'div' );
+		this.container.className = 'layers-editor';
+		document.body.appendChild( this.container );
+
+		// Add body class to hide skin chrome while editor is open
+		document.body.classList.add( 'layers-editor-open' );
+
+		// Header
+		var header = document.createElement( 'div' );
+		header.className = 'layers-header';
+		var title = document.createElement( 'div' );
+		title.className = 'layers-header-title';
+		title.textContent = ( mw.message ? mw.message( 'layers-editor-title' ).text() : ( mw.msg ? mw.msg( 'layers-editor-title' ) : 'Layers Editor' ) ) +
+			( this.filename ? ' — ' + this.filename : '' );
+		header.appendChild( title );
+		var headerRight = document.createElement( 'div' );
+		headerRight.className = 'layers-header-right';
+		// Zoom readout mirrors toolbar
+		var zoomReadout = document.createElement( 'span' );
+		zoomReadout.className = 'layers-zoom-readout';
+		zoomReadout.textContent = '100%';
+		headerRight.appendChild( zoomReadout );
+
+		// Close button (returns to File: page)
+		var closeBtn = document.createElement( 'button' );
+		closeBtn.className = 'layers-header-close';
+		closeBtn.type = 'button';
+		closeBtn.setAttribute( 'aria-label', ( mw.message ? mw.message( 'layers-editor-close' ).text() : 'Close' ) );
+		closeBtn.title = ( mw.message ? mw.message( 'layers-editor-close' ).text() : 'Close' );
+		closeBtn.innerHTML = '&times;';
+		headerRight.appendChild( closeBtn );
+		header.appendChild( headerRight );
+		this.container.appendChild( header );
 
 		// Create toolbar
 		this.toolbarContainer = document.createElement( 'div' );
@@ -182,23 +206,41 @@
 		this.$canvasContainer = $( this.canvasContainer );
 		this.$layerPanel = $( this.layerPanelContainer );
 		this.$toolbar = $( this.toolbarContainer );
+
+		// Bridge toolbar zoom display to header readout
+		var self = this;
+		Object.defineProperty( this, 'zoomReadoutEl', { value: zoomReadout } );
+		// Toolbar will update zoom; also update from CanvasManager hook
+		this.updateZoomReadout = function ( percent ) {
+			self.zoomReadoutEl.textContent = percent + '%';
+		};
+
+		// Wire close button
+		closeBtn.addEventListener( 'click', function () {
+			// navigateBack=true
+			self.cancel( true );
+		} );
 	};
 
 	LayersEditor.prototype.setupEventHandlers = function () {
 		var self = this;
 
-		// Handle window resize
-		window.addEventListener( 'resize', function () {
+		// Bind and store handlers so we can remove them on destroy
+		this.onResizeHandler = function () {
 			self.handleResize();
-		} );
-
-		// Handle unsaved changes warning
-		window.addEventListener( 'beforeunload', function ( e ) {
+		};
+		this.onBeforeUnloadHandler = function ( e ) {
 			if ( self.isDirty ) {
 				e.preventDefault();
 				e.returnValue = '';
 			}
-		} );
+		};
+
+		// Handle window resize
+		window.addEventListener( 'resize', this.onResizeHandler );
+
+		// Handle unsaved changes warning
+		window.addEventListener( 'beforeunload', this.onBeforeUnloadHandler );
 	};
 
 	LayersEditor.prototype.loadLayers = function () {
@@ -212,7 +254,15 @@
 			format: 'json'
 		} ).done( function ( data ) {
 			if ( data.layersinfo && data.layersinfo.layerset ) {
-				self.layers = data.layersinfo.layerset.data.layers || [];
+				self.layers = ( data.layersinfo.layerset.data.layers || [] )
+					.map( function ( layer ) {
+						// Ensure every layer has an id
+						if ( !layer.id ) {
+							layer.id = 'layer_' + Date.now() + '_' +
+								Math.random().toString( 36 ).slice( 2, 9 );
+						}
+						return layer;
+					} );
 				// console.log( 'Layers: Loaded', self.layers.length, 'existing layers' );
 			} else {
 				self.layers = [];
@@ -377,32 +427,58 @@
 	LayersEditor.prototype.updateUIState = function () {
 		// Update toolbar state
 		if ( this.toolbar ) {
-			this.toolbar.updateUndoRedoState(
-				this.undoStack.length > 0,
-				this.redoStack.length > 0
-			);
+			var canUndo = this.canvasManager ? this.canvasManager.historyIndex > 0 : false;
+			var canRedo = this.canvasManager ? (
+				this.canvasManager.historyIndex <
+				this.canvasManager.history.length - 1
+			) : false;
+			this.toolbar.updateUndoRedoState( canUndo, canRedo );
 			this.toolbar.updateDeleteState( !!this.selectedLayerId );
 		}
 	};
 
-	LayersEditor.prototype.cancel = function () {
+	LayersEditor.prototype.cancel = function ( navigateBack ) {
 		if ( this.isDirty ) {
-			var confirmMessage = 'You have unsaved changes. Are you sure you want to cancel?';
+			var confirmMessage = ( mw.message ? mw.message( 'layers-unsaved-cancel-confirm' ).text() : 'You have unsaved changes. Are you sure you want to cancel?' );
 			// Use OOUI confirm dialog if available, otherwise fallback to browser confirm
 			if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
 				window.OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
 					if ( confirmed ) {
 						this.destroy();
+						this.navigateBackToFile();
 					}
 				}.bind( this ) );
 			} else {
 				// eslint-disable-next-line no-alert
 				if ( window.confirm( confirmMessage ) ) {
 					this.destroy();
+					this.navigateBackToFile();
 				}
 			}
 		} else {
 			this.destroy();
+			if ( navigateBack ) {
+				this.navigateBackToFile();
+			}
+		}
+	};
+
+	LayersEditor.prototype.navigateBackToFile = function () {
+		try {
+			if ( this.filename && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
+				var url = mw.util.getUrl( 'File:' + this.filename );
+				window.location.href = url;
+				return;
+			}
+			// Fallbacks
+			if ( window.history && window.history.length > 1 ) {
+				window.history.back();
+			} else {
+				window.location.reload();
+			}
+		} catch ( e ) {
+			// As a last resort, reload
+			window.location.reload();
 		}
 	};
 
@@ -410,7 +486,15 @@
 		var self = this;
 
 		// Show saving indicator
-		mw.notify( mw.msg( 'layers-saving' ) || 'Saving...', { type: 'info' } );
+		mw.notify( ( mw.message ? mw.message( 'layers-saving' ).text() : ( mw.msg ? mw.msg( 'layers-saving' ) : 'Saving...' ) ), { type: 'info' } );
+
+		// Disable save button briefly
+		if ( this.toolbar && this.toolbar.saveButton ) {
+			this.toolbar.saveButton.disabled = true;
+			setTimeout( function () {
+				self.toolbar.saveButton.disabled = false;
+			}, 2000 );
+		}
 
 		// Save layers to API
 		var api = new mw.Api();
@@ -422,15 +506,17 @@
 		} ).done( function ( data ) {
 			if ( data.layerssave && data.layerssave.success ) {
 				self.markClean();
-				mw.notify( mw.msg( 'layers-save-success' ), { type: 'success' } );
+				mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type: 'success' } );
+				// After a successful save, keep the editor open but update title indicator
+				// Optionally, navigate back quickly if user clicked header close earlier
 			} else {
 				var errorMsg = ( data.error && data.error.info ) ||
 					( data.layerssave && data.layerssave.error ) ||
-					mw.msg( 'layers-save-error' );
+					( mw.message ? mw.message( 'layers-save-error' ).text() : ( mw.msg ? mw.msg( 'layers-save-error' ) : 'Error saving layers' ) );
 				mw.notify( 'Save failed: ' + errorMsg, { type: 'error' } );
 			}
 		} ).fail( function ( code, result ) {
-			var errorMsg = mw.msg( 'layers-save-error' );
+			var errorMsg = ( mw.message ? mw.message( 'layers-save-error' ).text() : ( mw.msg ? mw.msg( 'layers-save-error' ) : 'Error saving layers' ) );
 			if ( result && result.error && result.error.info ) {
 				errorMsg = result.error.info;
 			}
@@ -481,10 +567,11 @@
 		// Create error display in the editor
 		var errorEl = document.createElement( 'div' );
 		errorEl.className = 'layers-error';
-		errorEl.textContent = message;
+		errorEl.innerHTML = '<h3>Error</h3><p>' + message + '</p>';
+		errorEl.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #d63638; border-radius: 8px; z-index: 10001; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
 		this.container.appendChild( errorEl );
 
-		// Auto-hide after 5 seconds
+		// Auto-hide after 10 seconds
 		setTimeout( function () {
 			errorEl.style.opacity = '0';
 			setTimeout( function () {
@@ -492,7 +579,7 @@
 					errorEl.parentNode.removeChild( errorEl );
 				}
 			}, 500 ); // Allow fade out transition
-		}, 5000 );
+		}, 10000 );
 	};
 
 	LayersEditor.prototype.handleResize = function () {
@@ -512,11 +599,20 @@
 
 	LayersEditor.prototype.destroy = function () {
 		// Cleanup
-		window.removeEventListener( 'resize', this.handleResize );
-		window.removeEventListener( 'beforeunload', this.handleBeforeUnload );
+		if ( this.onResizeHandler ) {
+			window.removeEventListener( 'resize', this.onResizeHandler );
+			this.onResizeHandler = null;
+		}
+		if ( this.onBeforeUnloadHandler ) {
+			window.removeEventListener( 'beforeunload', this.onBeforeUnloadHandler );
+			this.onBeforeUnloadHandler = null;
+		}
 		if ( this.container && this.container.parentNode ) {
 			this.container.parentNode.removeChild( this.container );
 		}
+
+		// Remove body class when editor closes
+		document.body.classList.remove( 'layers-editor-open' );
 	};
 
 	// Export LayersEditor to global scope
@@ -525,11 +621,27 @@
 	// Initialize editor when appropriate
 	mw.hook( 'layers.editor.init' ).add( function ( config ) {
 		var editor = new LayersEditor( config );
-		// This is a valid use of 'new' for its side effects (instantiating the editor)
-		// The 'editor' variable can be used for debugging if needed.
 		if ( window.mw && window.mw.config.get( 'debug' ) ) {
 			window.layersEditorInstance = editor;
 		}
 	} );
+
+	// Auto-bootstrap if server provided config via wgLayersEditorInit
+	( function autoBootstrap() {
+		try {
+			var init = mw && mw.config && mw.config.get ? mw.config.get( 'wgLayersEditorInit' ) : null;
+			if ( !init ) {
+				return;
+			}
+			var container = document.getElementById( 'layers-editor-container' );
+			mw.hook( 'layers.editor.init' ).fire( {
+				filename: init.filename,
+				imageUrl: init.imageUrl,
+				container: container || document.body
+			} );
+		} catch ( e ) {
+			// noop
+		}
+	}() );
 
 }() );

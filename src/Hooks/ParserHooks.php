@@ -19,10 +19,7 @@ class ParserHooks {
 	 * @return bool
 	 */
 	public static function onParserMakeImageParams( $title, $file, &$params, $parser ) {
-		// Just log for debugging - keep it simple
-		error_log( 'Layers: ParserMakeImageParams called for file: ' . $file->getName() );
-		error_log( 'Layers: Available params: ' . implode( ', ', array_keys( $params ) ) );
-
+		// Intentionally left minimal; normalization is handled in WikitextHooks
 		return true;
 	}
 }

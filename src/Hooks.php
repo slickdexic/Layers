@@ -10,7 +10,7 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
-use MediaWiki\MediaWikiServices;
+// Avoid direct hard dependency on MediaWiki classes for static analysis
 
 // Define constants if not already defined
 if ( !defined( 'NS_FILE' ) ) {
@@ -20,44 +20,87 @@ if ( !defined( 'NS_FILE' ) ) {
 class Hooks {
 
 	/**
-	 * UserGetRights hook handler
-	 * Grant editlayers permission to all users by default
+	 * BeforePageDisplay hook handler
 	 */
-	public static function onUserGetRights( $user, &$rights ) {
-		// Grant editlayers permission to all logged-in users by default
-		if ( $user->isRegistered() ) {
-			$rights[] = 'editlayers';
-		}
+	public static function onBeforePageDisplay( $out, $skin ) {
+		try {
+			// Always add viewer resources so layered thumbnails on any page can render
+			// This is critical for layers to display properly
+			$out->addModules( 'ext.layers' );
 
-		// Grant to anonymous users as well if configured
-		global $wgLayersAllowAnonymousEdit;
-		if ( $wgLayersAllowAnonymousEdit ?? false ) {
-			$rights[] = 'editlayers';
+			// Use proper logger instead of conditional calls
+			$logger = self::getLogger();
+			$logger->info( 'Layers: BeforePageDisplay hook called, added viewer module' );
+
+			// Check if extension is enabled for additional features
+			$config = $out->getConfig();
+			if ( !$config->get( 'LayersEnable' ) ) {
+				$logger->info( 'Layers: Extension disabled, not loading editor module' );
+				return;
+			}
+
+			// Add editor resources on file pages when the user can edit layers
+			$title = $out->getTitle();
+			if ( $title && $title->inNamespace( NS_FILE ) ) {
+				if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
+					$logger->info( 'Layers: Adding editor module for file page' );
+					$out->addModules( 'ext.layers.editor' );
+				}
+			}
+		} catch ( \Throwable $e ) {
+			// Log error but don't break page rendering
+			self::getLogger()->error( 'Layers: Error in BeforePageDisplay hook', [
+				'exception' => $e->getMessage(),
+				'trace' => $e->getTraceAsString()
+			] );
 		}
 	}
 
 	/**
-	 * BeforePageDisplay hook handler
+	 * Get logger instance with fallback
+	 * @return object
 	 */
-	public static function onBeforePageDisplay( $out, $skin ) {
-		$config = $out->getConfig();
-
-		// Check if Layers extension is enabled
-		if ( !$config->get( 'LayersEnable' ) ) {
-			return;
-		}
-
-		// Check if this page has files with layers
-		$title = $out->getTitle();
-		if ( $title && $title->inNamespace( NS_FILE ) ) {
-			// Add editor resources if user has permission
-			if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
-				$out->addModules( 'ext.layers.editor' );
+	private static function getLogger() {
+		static $logger = null;
+		if ( $logger === null ) {
+			if ( class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
+				$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
+			} else {
+				// Fallback logger that uses error_log
+				$logger = new class {
+					public function info( $message, $context = [] ) {
+						error_log( "Layers INFO: $message" );
+					}
+					public function error( $message, $context = [] ) {
+						error_log( "Layers ERROR: $message" );
+						if ( isset( $context['exception'] ) ) {
+							error_log( "Exception: " . $context['exception'] );
+						}
+					}
+					public function warning( $message, $context = [] ) {
+						error_log( "Layers WARNING: $message" );
+					}
+				};
 			}
-
-			// Always add viewer resources for displaying layers
-			$out->addModules( 'ext.layers' );
 		}
+		return $logger;
+	}
+
+	/**
+	 * Ensure the viewer module is considered in the startup payload on every page.
+	 * This can help skins/environments that defer module loads.
+	 */
+	public static function onMakeGlobalVariablesScript( &$vars, $out ) {
+		try {
+			$vars['wgLayersEnabled'] = true;
+			// Also proactively register the viewer module to be safe
+			if ( method_exists( $out, 'addModules' ) ) {
+				$out->addModules( 'ext.layers' );
+			}
+		} catch ( \Throwable $e ) {
+			// ignore
+		}
+		return true;
 	}
 
 	/**
@@ -73,7 +116,10 @@ class Hooks {
 			$db->deleteLayerSetsForImage( $file->getName(), $file->getSha1() );
 		} catch ( Exception $e ) {
 			// Log error but don't break deletion
-			error_log( 'Layers: Error cleaning up layer sets: ' . $e->getMessage() );
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->error( 'Layers: Error cleaning up layer sets', [ 'exception' => $e ] );
+			}
 		}
 	}
 
@@ -81,48 +127,33 @@ class Hooks {
 	 * ParserFirstCallInit hook handler
 	 */
 	public static function onParserFirstCallInit( $parser ) {
-		// Temporarily disable parser function registration to avoid Special:Version errors
-		// TODO: Re-enable once proper configuration is working
-		/*
+		// Register parser functions
 		try {
 			$parser->setFunctionHook( 'layerlist', [ self::class, 'layerListParserFunction' ] );
 			$parser->setFunctionHook( 'layeredit', [ self::class, 'layerEditParserFunction' ] );
 		} catch ( Exception $e ) {
-			error_log( 'Layers: Error registering parser functions: ' . $e->getMessage() );
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->error( 'Layers: Error registering parser functions', [ 'exception' => $e ] );
+			}
 		}
-		*/
 	}
 
 	/**
 	 * LoadExtensionSchemaUpdates hook handler
 	 */
 	public static function onLoadExtensionSchemaUpdates( $updater ) {
-		$base = __DIR__ . '/..';
-		$updater->addExtensionTable( 'layer_sets', "$base/sql/layers_tables.sql" );
-		$updater->addExtensionTable( 'layer_assets', "$base/sql/layers_tables.sql" );
-		$updater->addExtensionTable( 'layer_set_usage', "$base/sql/layers_tables.sql" );
+		$dir = dirname( __DIR__ );
+		$schema = $dir . '/sql/layers_tables.sql';
+		$updater->addExtensionTable( 'layer_sets', $schema );
+		$updater->addExtensionTable( 'layer_assets', $schema );
+		$updater->addExtensionTable( 'layer_set_usage', $schema );
 	}
 
 	/**
 	 * FileTransform hook handler
 	 */
-	public static function onFileTransform( $file, &$params, $backend ) {
-		// Only process if layers parameter is present
-		if ( !isset( $params['layers'] ) ) {
-			return;
-		}
-
-		try {
-			$renderer = new ThumbnailRenderer();
-			$thumbnailPath = $renderer->generateLayeredThumbnail( $file, $params );
-
-			if ( $thumbnailPath ) {
-				$params['layered_thumbnail_path'] = $thumbnailPath;
-			}
-		} catch ( Exception $e ) {
-			error_log( 'Layers: Transform hook failed: ' . $e->getMessage() );
-		}
-	}
+	// NOTE: Transform processing is handled downstream via ThumbnailBeforeProduceHTML/UI hooks
 
 	/**
 	 * Parser function: {{#layerlist:File=Example.jpg}}
@@ -133,9 +164,12 @@ class Hooks {
 		}
 
 		try {
-			// Get file using MediaWikiServices
-			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
-			$fileObj = $repoGroup->findFile( $file );
+			// Get file using MediaWikiServices if available
+			$services = \is_callable( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+				: null;
+			$repoGroup = $services ? $services->getRepoGroup() : null;
+			$fileObj = $repoGroup ? $repoGroup->findFile( $file ) : null;
 			if ( !$fileObj || !$fileObj->exists() ) {
 				return '';
 			}
@@ -153,7 +187,10 @@ class Hooks {
 			return implode( ', ', $names );
 
 		} catch ( Exception $e ) {
-			error_log( 'Layers: Error in layerListParserFunction: ' . $e->getMessage() );
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->error( 'Layers: Error in layerListParserFunction', [ 'exception' => $e ] );
+			}
 			return '';
 		}
 	}
@@ -172,8 +209,11 @@ class Hooks {
 				return '';
 			}
 
-			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
-			$fileObj = $repoGroup->findFile( $file );
+			$services = \is_callable( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+				: null;
+			$repoGroup = $services ? $services->getRepoGroup() : null;
+			$fileObj = $repoGroup ? $repoGroup->findFile( $file ) : null;
 			if ( !$fileObj || !$fileObj->exists() ) {
 				return '';
 			}
@@ -189,7 +229,10 @@ class Hooks {
 			return "[$editUrl $linkText]";
 
 		} catch ( Exception $e ) {
-			error_log( 'Layers: Error in layerEditParserFunction: ' . $e->getMessage() );
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->error( 'Layers: Error in layerEditParserFunction', [ 'exception' => $e ] );
+			}
 			return '';
 		}
 	}

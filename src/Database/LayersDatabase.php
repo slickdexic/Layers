@@ -8,33 +8,94 @@
 
 namespace MediaWiki\Extension\Layers\Database;
 
-use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
-use Wikimedia\Rdbms\DBError;
-use Wikimedia\Rdbms\IDatabase;
-use Wikimedia\Rdbms\ILoadBalancer;
 
 class LayersDatabase {
 
-	/** @var ILoadBalancer */
+	/** @var mixed */
 	private $loadBalancer;
 
-	/** @var IDatabase */
+	/** @var mixed */
 	private $dbw;
 
-	/** @var IDatabase */
+	/** @var mixed */
 	private $dbr;
 
 	/** @var LoggerInterface */
 	private $logger;
 
+	/** @var array Cache for layer sets to avoid repeated queries */
+	private $layerSetCache = [];
+
+	/** @var int Maximum cache size */
+	private const MAX_CACHE_SIZE = 100;
+
 	public function __construct() {
-		$this->loadBalancer = MediaWikiServices::getInstance()->getDBLoadBalancer();
-		// Use ILoadBalancer constants for MediaWiki 1.44+
-		$this->dbw = $this->loadBalancer->getConnection( ILoadBalancer::DB_PRIMARY );
-		$this->dbr = $this->loadBalancer->getConnection( ILoadBalancer::DB_REPLICA );
-		// TODO: Fix logger initialization for MediaWiki 1.44
-		$this->logger = null;
+		$this->loadBalancer = null;
+		$this->dbw = null;
+		$this->dbr = null;
+		
+		// Initialize logger properly
+		if ( class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
+			$this->logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
+		}
+	}
+
+	/**
+	 * Lazy-load MediaWiki DB load balancer
+	 * @return mixed
+	 */
+	private function getLoadBalancer() {
+		if ( $this->loadBalancer ) {
+			return $this->loadBalancer;
+		}
+		$services = \is_callable( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+			? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+			: null;
+		$this->loadBalancer = $services ? $services->getDBLoadBalancer() : null;
+		return $this->loadBalancer;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	private function getWriteDb() {
+		if ( $this->dbw ) {
+			return $this->dbw;
+		}
+		$lb = $this->getLoadBalancer();
+		if ( !$lb ) {
+			return null;
+		}
+		if ( defined( 'DB_PRIMARY' ) ) {
+			$this->dbw = $lb->getConnection( DB_PRIMARY );
+		} elseif ( defined( 'DB_MASTER' ) ) {
+			$this->dbw = $lb->getConnection( DB_MASTER );
+		} else {
+			$this->dbw = $lb->getConnection( 0 );
+		}
+		return $this->dbw;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	private function getReadDb() {
+		if ( $this->dbr ) {
+			return $this->dbr;
+		}
+		$lb = $this->getLoadBalancer();
+		if ( !$lb ) {
+			return null;
+		}
+		if ( defined( 'DB_REPLICA' ) ) {
+			$this->dbr = $lb->getConnection( DB_REPLICA );
+		} elseif ( defined( 'DB_SLAVE' ) ) {
+			$this->dbr = $lb->getConnection( DB_SLAVE );
+		} else {
+			$this->dbr = $lb->getConnection( 1 );
+		}
+		return $this->dbr;
 	}
 
 	/**
@@ -59,24 +120,48 @@ class LayersDatabase {
 		?string $setName = null
 	) {
 		try {
+			$dbw = $this->getWriteDb();
+			if ( !$dbw ) {
+				return false;
+			}
+
+			// Input validation
+			if ( empty( $imgName ) || empty( $sha1 ) || $userId <= 0 ) {
+				$this->logError( 'Invalid parameters for saveLayerSet', [
+					'imgName' => $imgName,
+					'sha1' => $sha1,
+					'userId' => $userId
+				] );
+				return false;
+			}
+
+			// Start transaction for data consistency
+			$dbw->startAtomic( __METHOD__ );
+
 			// Get next revision number for this image
 			$revision = $this->getNextRevision( $imgName, $sha1 );
-			$timestamp = $this->dbw->timestamp();
+			$timestamp = $dbw->timestamp();
 
-			// Prepare JSON data
+			// Prepare JSON data with validation
 			$jsonBlob = json_encode( [
 				'revision' => $revision,
 				'schema' => 1,
 				'created' => $timestamp,
 				'layers' => $layersData
-			] );
+			], JSON_UNESCAPED_UNICODE );
 
 			if ( $jsonBlob === false ) {
+				$dbw->endAtomic( __METHOD__ );
+				$this->logError( 'JSON encoding failed for layer set' );
 				return false;
 			}
 
+			// Calculate size and layer count for performance tracking
+			$dataSize = strlen( $jsonBlob );
+			$layerCount = count( $layersData );
+
 			// Insert layer set
-			$this->dbw->insert(
+			$dbw->insert(
 				'layer_sets',
 				[
 					'ls_img_name' => $imgName,
@@ -87,61 +172,94 @@ class LayersDatabase {
 					'ls_user_id' => $userId,
 					'ls_timestamp' => $timestamp,
 					'ls_revision' => $revision,
-					'ls_name' => $setName
+					'ls_name' => $setName,
+					'ls_size' => $dataSize,
+					'ls_layer_count' => $layerCount
 				],
 				__METHOD__
 			);
 
-			return $this->dbw->insertId();
+			$layerSetId = $dbw->insertId();
+			$dbw->endAtomic( __METHOD__ );
 
-		} catch ( DBError $e ) {
-			if ( $this->logger ) {
-				$this->logger->warning( 'Failed to save layer set: {message}', [ 'message' => $e->getMessage() ] );
+			// Clear relevant cache entries
+			$this->clearCache( $imgName );
+
+			return $layerSetId;
+
+		} catch ( \Throwable $e ) {
+			if ( isset( $dbw ) ) {
+				$dbw->endAtomic( __METHOD__ );
 			}
+			$this->logError( 'Failed to save layer set: ' . $e->getMessage() );
 			return false;
 		}
 	}
 
 	/**
-	 * Get layer set by ID
+	 * Get layer set by ID with caching
 	 *
 	 * @param int $layerSetId Layer set ID
 	 * @return array|false Layer set data or false if not found
 	 */
 	public function getLayerSet( int $layerSetId ) {
-		$row = $this->dbr->selectRow(
-			'layer_sets',
-			[
-				'ls_id',
-				'ls_img_name',
-				'ls_json_blob',
-				'ls_user_id',
-				'ls_timestamp',
-				'ls_revision',
-				'ls_name'
-			],
-			[ 'ls_id' => $layerSetId ],
-			__METHOD__
-		);
-
-		if ( !$row ) {
-			return false;
+		// Check cache first
+		$cacheKey = 'layerset_' . $layerSetId;
+		if ( isset( $this->layerSetCache[$cacheKey] ) ) {
+			return $this->layerSetCache[$cacheKey];
 		}
 
-		$jsonData = json_decode( $row->ls_json_blob, true );
-		if ( $jsonData === null ) {
+		try {
+			$dbr = $this->getReadDb();
+			if ( !$dbr ) {
+				return false;
+			}
+
+			$row = $dbr->selectRow(
+				'layer_sets',
+				[
+					'ls_id',
+					'ls_img_name',
+					'ls_json_blob',
+					'ls_user_id',
+					'ls_timestamp',
+					'ls_revision',
+					'ls_name'
+				],
+				[ 'ls_id' => $layerSetId ],
+				__METHOD__
+			);
+
+			if ( !$row ) {
+				// Cache negative results to avoid repeated queries
+				$this->addToCache( $cacheKey, false );
+				return false;
+			}
+
+			$jsonData = json_decode( $row->ls_json_blob, true );
+			if ( $jsonData === null ) {
+				$this->logError( 'Invalid JSON in layer set ID: ' . $layerSetId );
+				return false;
+			}
+
+			$result = [
+				'id' => (int)$row->ls_id,
+				'imgName' => $row->ls_img_name,
+				'userId' => (int)$row->ls_user_id,
+				'timestamp' => $row->ls_timestamp,
+				'revision' => (int)$row->ls_revision,
+				'name' => $row->ls_name,
+				'data' => $jsonData
+			];
+
+			// Cache the result
+			$this->addToCache( $cacheKey, $result );
+			return $result;
+
+		} catch ( \Throwable $e ) {
+			$this->logError( 'Failed to get layer set: ' . $e->getMessage() );
 			return false;
 		}
-
-		return [
-			'id' => (int)$row->ls_id,
-			'imgName' => $row->ls_img_name,
-			'userId' => (int)$row->ls_user_id,
-			'timestamp' => $row->ls_timestamp,
-			'revision' => (int)$row->ls_revision,
-			'name' => $row->ls_name,
-			'data' => $jsonData
-		];
 	}
 
 	/**
@@ -152,7 +270,11 @@ class LayersDatabase {
 	 * @return array|false Layer set data or false if not found
 	 */
 	public function getLatestLayerSet( string $imgName, string $sha1 ) {
-		$row = $this->dbr->selectRow(
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return false;
+		}
+		$row = $dbr->selectRow(
 			'layer_sets',
 			[
 				'ls_id',
@@ -198,7 +320,11 @@ class LayersDatabase {
 	 * @return int Next revision number
 	 */
 	private function getNextRevision( string $imgName, string $sha1 ): int {
-		$maxRevision = $this->dbr->selectField(
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return 1;
+		}
+		$maxRevision = $dbr->selectField(
 			'layer_sets',
 			'MAX(ls_revision)',
 			[
@@ -219,7 +345,11 @@ class LayersDatabase {
 	 * @return array Array of layer set data
 	 */
 	public function getLayerSetsForImage( string $imgName, string $sha1 ): array {
-		$result = $this->dbr->select(
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return [];
+		}
+		$result = $dbr->select(
 			'layer_sets',
 			[
 				'ls_id',
@@ -261,7 +391,11 @@ class LayersDatabase {
 	 */
 	public function deleteLayerSetsForImage( string $imgName, string $sha1 ): bool {
 		try {
-			$this->dbw->delete(
+			$dbw = $this->getWriteDb();
+			if ( !$dbw ) {
+				return false;
+			}
+			$dbw->delete(
 				'layer_sets',
 				[
 					'ls_img_name' => $imgName,
@@ -270,7 +404,7 @@ class LayersDatabase {
 				__METHOD__
 			);
 			return true;
-		} catch ( DBError $e ) {
+		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
 				$this->logger->warning( 'Failed to delete layer sets: {message}', [ 'message' => $e->getMessage() ] );
 			}
@@ -288,7 +422,11 @@ class LayersDatabase {
 	 */
 	public function getLayerSetByName( string $imgName, string $sha1, string $setName ): ?array {
 		try {
-			$res = $this->dbr->selectRow(
+			$dbr = $this->getReadDb();
+			if ( !$dbr ) {
+				return null;
+			}
+			$res = $dbr->selectRow(
 				'layer_sets',
 				[
 					'ls_id',
@@ -297,15 +435,15 @@ class LayersDatabase {
 					'ls_img_major_mime',
 					'ls_img_minor_mime',
 					'ls_revision',
-					'ls_data',
+					'ls_json_blob',
 					'ls_timestamp',
 					'ls_user_id',
-					'ls_set_name'
+					'ls_name'
 				],
 				[
 					'ls_img_name' => $imgName,
 					'ls_img_sha1' => $sha1,
-					'ls_set_name' => $setName
+					'ls_name' => $setName
 				],
 				__METHOD__,
 				[ 'ORDER BY' => 'ls_revision DESC' ]
@@ -322,16 +460,67 @@ class LayersDatabase {
 				'majorMime' => $res->ls_img_major_mime,
 				'minorMime' => $res->ls_img_minor_mime,
 				'revision' => (int)$res->ls_revision,
-				'data' => json_decode( $res->ls_data, true ),
+				'data' => json_decode( $res->ls_json_blob, true ),
 				'timestamp' => $res->ls_timestamp,
 				'userId' => (int)$res->ls_user_id,
-				'setName' => $res->ls_set_name
+				'setName' => $res->ls_name
 			];
-		} catch ( DBError $e ) {
+		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
 				$this->logger->warning( 'Failed to get layer set by name: {message}', [ 'message' => $e->getMessage() ] );
 			}
 			return null;
+		}
+	}
+
+	/**
+	 * Add item to cache with size management
+	 *
+	 * @param string $key Cache key
+	 * @param mixed $value Value to cache
+	 */
+	private function addToCache( string $key, $value ): void {
+		// Manage cache size to prevent memory issues
+		if ( count( $this->layerSetCache ) >= self::MAX_CACHE_SIZE ) {
+			// Remove oldest entry (simple FIFO)
+			$oldestKey = array_key_first( $this->layerSetCache );
+			unset( $this->layerSetCache[$oldestKey] );
+		}
+		
+		$this->layerSetCache[$key] = $value;
+	}
+
+	/**
+	 * Log error with proper fallback
+	 *
+	 * @param string $message Error message
+	 * @param array $context Additional context
+	 */
+	private function logError( string $message, array $context = [] ): void {
+		if ( $this->logger ) {
+			$this->logger->error( $message, $context );
+		} else {
+			// Fallback to error_log if logger not available
+			error_log( "Layers Database Error: $message" );
+		}
+	}
+
+	/**
+	 * Clear cache when data changes
+	 *
+	 * @param string|null $pattern Optional pattern to match keys
+	 */
+	private function clearCache( ?string $pattern = null ): void {
+		if ( $pattern === null ) {
+			$this->layerSetCache = [];
+			return;
+		}
+
+		// Clear cache entries matching pattern
+		foreach ( array_keys( $this->layerSetCache ) as $key ) {
+			if ( strpos( $key, $pattern ) !== false ) {
+				unset( $this->layerSetCache[$key] );
+			}
 		}
 	}
 }

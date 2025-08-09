@@ -6,22 +6,32 @@
  * @ingroup Extensions
  */
 
-namespace MediaWiki\Extension\Layers;
+namespace {
+	if ( !class_exists( 'MediaTransformOutput' ) ) {
+		class MediaTransformOutput { }
+	}
+}
 
-use File;
-use MediaTransformOutput;
-use MediaWiki\MediaWikiServices;
+namespace MediaWiki\Extension\Layers {
 
-class LayeredThumbnail extends MediaTransformOutput {
+class LayeredThumbnail extends \MediaTransformOutput {
 
+	private $file;
 	private $layeredPath;
+	private $url;
+	private $path;
+	private $width;
+	private $height;
 
 	/**
-	 * @param File $file
+	 * @param mixed $file MediaWiki File object
 	 * @param string $layeredPath Path to the composite thumbnail
 	 * @param array $params Transform parameters
 	 */
-	public function __construct( File $file, string $layeredPath, array $params ) {
+	/**
+	 * @param mixed $file MediaWiki File object
+	 */
+	public function __construct( $file, string $layeredPath, array $params ) {
 		$this->file = $file;
 		$this->layeredPath = $layeredPath;
 		$this->url = $this->getLayeredUrl( $layeredPath );
@@ -51,21 +61,35 @@ class LayeredThumbnail extends MediaTransformOutput {
 	 * @return string
 	 */
 	private function getLayeredUrl( string $path ): string {
-		$config = MediaWikiServices::getInstance()->getMainConfig();
-		$uploadDir = $config->get( 'UploadDirectory' );
-		$uploadPath = $config->get( 'UploadPath' );
+		// Prefer MediaWikiServices when available; otherwise fallback to globals
+		$uploadDir = null;
+		$uploadPath = null;
+		if ( \class_exists( '\\MediaWiki\\MediaWikiServices' ) ) {
+			$config = \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )->getMainConfig();
+			$uploadDir = $config->get( 'UploadDirectory' );
+			$uploadPath = $config->get( 'UploadPath' );
+		} else {
+			$uploadDir = $GLOBALS['wgUploadDirectory'] ?? sys_get_temp_dir();
+			$uploadPath = $GLOBALS['wgUploadPath'] ?? '/images';
+		}
 
 		// Convert absolute path to relative URL
-		if ( strpos( $path, $uploadDir ) === 0 ) {
-			$relativePath = substr( $path, strlen( $uploadDir ) );
-			return $uploadPath . $relativePath;
+		// Normalize slashes for Windows paths
+		$normPath = str_replace( '\\', '/', $path );
+		$normUploadDir = str_replace( '\\', '/', $uploadDir );
+		$normUploadDir = rtrim( $normUploadDir, '/' );
+		if ( strpos( $normPath, $normUploadDir ) === 0 ) {
+			$relativePath = substr( $normPath, strlen( $normUploadDir ) );
+			$relativePath = str_replace( '\\', '/', $relativePath );
+			return rtrim( $uploadPath, '/' ) . $relativePath;
 		}
 
 		// Fallback - this shouldn't happen in normal operation
-		return $uploadPath . '/thumb/layers/' . basename( $path );
+	return rtrim( $uploadPath, '/' ) . '/thumb/layers/' . basename( $path );
 	}
 
 	/**
+	 * @param array $options HTML generation options
 	 * @return string HTML for the thumbnail
 	 */
 	public function toHtml( $options = [] ) {
@@ -84,14 +108,17 @@ class LayeredThumbnail extends MediaTransformOutput {
 			$attribs['title'] = $title;
 		}
 
-		$html = \Html::element( 'img', $attribs );
+		// Build minimal IMG tag without relying on Html helper
+		$attrs = [];
+		foreach ( $attribs as $k => $v ) {
+			$attrs[] = htmlspecialchars( $k, ENT_QUOTES ) . '="' . htmlspecialchars( (string)$v, ENT_QUOTES ) . '"';
+		}
+		$html = '<img ' . implode( ' ', $attrs ) . ' />';
 
 		// Add layer data attributes for viewer
 		if ( !empty( $options['layers'] ) ) {
-			$html = \Html::rawElement( 'div', [
-				'class' => 'layers-image-container',
-				'data-layers' => htmlspecialchars( json_encode( $options['layers'] ) )
-			], $html );
+			$dataLayers = htmlspecialchars( json_encode( $options['layers'] ) );
+			$html = '<div class="layers-image-container" data-layers="' . $dataLayers . '">' . $html . '</div>';
 		}
 
 		return $html;
@@ -110,4 +137,20 @@ class LayeredThumbnail extends MediaTransformOutput {
 	public function getLocalCopyPath() {
 		return $this->path;
 	}
+
+	/**
+	 * Expose URL for callers that need it
+	 */
+	public function getUrl() {
+		return $this->url;
+	}
+
+	public function getWidth() {
+		return $this->width;
+	}
+
+	public function getHeight() {
+		return $this->height;
+	}
+}
 }

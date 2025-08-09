@@ -33,15 +33,15 @@ class ApiLayersSave extends ApiBase {
 		// Check permissions
 		$user = $this->getUser();
 		if ( !$user->isAllowed( 'editlayers' ) ) {
-			// Add debugging information
-			$userGroups = $user->getGroups();
-			$userRights = $user->getRights();
-			$hasEditLayers = in_array( 'editlayers', $userRights );
-
-			error_log( 'Layers Save: Permission denied for user ID: ' . $user->getId() .
-					  ', Groups: ' . implode( ',', $userGroups ) .
-					  ', Has editlayers: ' . ( $hasEditLayers ? 'yes' : 'no' ) );
-
+			// Log and return a localized error
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				try {
+					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+					$logger->warning( 'Layers Save: Permission denied', [ 'userId' => $user->getId() ] );
+				} catch ( \Throwable $e ) {
+					// ignore logging failures
+				}
+			}
 			$this->dieWithError( 'layers-permission-denied', 'permissiondenied' );
 		}
 
@@ -58,33 +58,30 @@ class ApiLayersSave extends ApiBase {
 		$setName = $params['setname'] ?? null;
 
 		if ( $layersData === null ) {
-			$this->dieWithError( 'Invalid JSON data', 'invalidjson' );
+			$this->dieWithError( 'layers-invalid-data', 'invalidjson' );
 		}
 
 		// Security: Check data size limits
 		$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
 		if ( strlen( $params['data'] ) > $maxBytes ) {
-			$this->dieWithError(
-				[ 'layers-data-too-large', $maxBytes ],
-				'toolarge'
- );
+			$this->dieWithError( [ 'layers-data-too-large', $maxBytes ], 'toolarge' );
 		}
 
 		// Security: Validate filename
 		if ( !$this->isValidFilename( $filename ) ) {
-			$this->dieWithError( 'Invalid filename', 'invalidfilename' );
+			$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
 		}
 
 		// Get file information
 		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
 		$file = $repoGroup->findFile( $filename );
 		if ( !$file || !$file->exists() ) {
-			$this->dieWithError( 'File not found', 'filenotfound' );
+			$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
 		}
 
 		// Validate layer data structure
 		if ( !$this->validateLayersData( $layersData ) ) {
-			$this->dieWithError( 'Invalid layer data structure', 'invaliddata' );
+			$this->dieWithError( 'layers-invalid-data', 'invaliddata' );
 		}
 
 		// Additional security: Sanitize layer data
@@ -92,19 +89,19 @@ class ApiLayersSave extends ApiBase {
 
 		// Performance checks
 		if ( !$rateLimiter->isLayerCountAllowed( count( $layersData ) ) ) {
-			$this->dieWithError( 'Too many layers', 'toolayers' );
+			$this->dieWithError( 'layers-too-many-layers', 'toolayers' );
 		}
 
 		if ( !$rateLimiter->isComplexityAllowed( $layersData ) ) {
-			$this->dieWithError( 'Layer set too complex', 'toocomplex' );
+			$this->dieWithError( 'layers-too-complex', 'toocomplex' );
 		}
 
 		// Save to database
 		$db = new LayersDatabase();
 
 		// Split MIME type into major and minor parts
-		$mimeType = $file->getMimeType();
-		$mimeParts = $file->splitMime( $mimeType );
+		$mimeType = (string)$file->getMimeType();
+		$mimeParts = explode( '/', $mimeType, 2 );
 		$majorMime = $mimeParts[0] ?? 'unknown';
 		$minorMime = $mimeParts[1] ?? 'unknown';
 
@@ -120,18 +117,18 @@ class ApiLayersSave extends ApiBase {
 			);
 
 		} catch ( Exception $e ) {
-			$this->dieWithError( 'Database error: ' . $e->getMessage(), 'dberror' );
+			$this->dieWithError( [ 'layers-db-error', $e->getMessage() ], 'dberror' );
 		}
 
 		if ( $layerSetId === false ) {
-			$this->dieWithError( 'Failed to save layer data', 'savefailed' );
+			$this->dieWithError( 'layers-save-failed', 'savefailed' );
 		}
 
 		// Return success response
 		$this->getResult()->addValue( null, $this->getModuleName(), [
 			'success' => true,
 			'layersetid' => $layerSetId,
-			'message' => 'Layers saved successfully'
+			'message' => ( \function_exists( 'wfMessage' ) ? \wfMessage( 'layers-save-success' )->text() : 'Layers saved successfully' )
 		] );
 	}
 
@@ -161,51 +158,107 @@ class ApiLayersSave extends ApiBase {
 				return false;
 			}
 
-			// Validate layer ID format
-			if ( !is_string( $layer['id'] ) || strlen( $layer['id'] ) > 100 ) {
+			// Validate layer ID format - prevent code injection
+			if ( !is_string( $layer['id'] ) || strlen( $layer['id'] ) > 100 || 
+				 !preg_match( '/^[a-zA-Z0-9_-]+$/', $layer['id'] ) ) {
 				return false;
 			}
 
-			// Validate layer type
+			// Validate layer type - strict whitelist
 			$validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'highlight', 'path' ];
-			if ( !in_array( $layer['type'], $validTypes ) ) {
+			if ( !in_array( $layer['type'], $validTypes, true ) ) {
 				return false;
 			}
 
-			// Basic coordinate validation
-			if ( isset( $layer['x'] ) && ( !is_numeric( $layer['x'] ) || abs( $layer['x'] ) > 50000 ) ) {
-				return false;
-			}
-			if ( isset( $layer['y'] ) && ( !is_numeric( $layer['y'] ) || abs( $layer['y'] ) > 50000 ) ) {
-				return false;
-			}
-
-			// Validate text content length for text layers
-			if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
-				if ( !is_string( $layer['text'] ) || strlen( $layer['text'] ) > 1000 ) {
-					return false;
-				}
-			}
-
-			// Validate points array for path, polygon layers
-			if ( in_array( $layer['type'], [ 'path', 'polygon' ] ) && isset( $layer['points'] ) ) {
-				if ( !is_array( $layer['points'] ) || count( $layer['points'] ) > 1000 ) {
-					return false;
-				}
-				foreach ( $layer['points'] as $point ) {
-					if ( !is_array( $point ) || !isset( $point['x'] ) || !isset( $point['y'] ) ||
-						 !is_numeric( $point['x'] ) || !is_numeric( $point['y'] ) ||
-						 abs( $point['x'] ) > 50000 || abs( $point['y'] ) > 50000 ) {
+			// Basic coordinate validation with stricter bounds
+			$coordinateFields = [ 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'radius', 'radiusX', 'radiusY' ];
+			foreach ( $coordinateFields as $field ) {
+				if ( isset( $layer[$field] ) ) {
+					if ( !is_numeric( $layer[$field] ) || abs( $layer[$field] ) > 10000 ) {
 						return false;
 					}
 				}
 			}
 
-			// Validate numeric properties
-			$numericFields = [ 'radiusX', 'radiusY', 'innerRadius', 'outerRadius', 'sides', 'zIndex' ];
-			foreach ( $numericFields as $field ) {
-				if ( isset( $layer[$field] ) && ( !is_numeric( $layer[$field] ) || abs( $layer[$field] ) > 50000 ) ) {
+			// Validate text content length for text layers with HTML stripping
+			if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
+				if ( !is_string( $layer['text'] ) || strlen( $layer['text'] ) > 500 ) {
 					return false;
+				}
+				// Check for potential script injection
+				if ( preg_match( '/<script|javascript:|data:|vbscript:/i', $layer['text'] ) ) {
+					return false;
+				}
+			}
+
+			// Validate font family - prevent injection
+			if ( isset( $layer['fontFamily'] ) ) {
+				if ( !is_string( $layer['fontFamily'] ) || 
+					 !preg_match( '/^[a-zA-Z0-9\s,-]+$/', $layer['fontFamily'] ) || 
+					 strlen( $layer['fontFamily'] ) > 100 ) {
+					return false;
+				}
+			}
+
+			// Validate points array for path, polygon layers with stricter limits
+			if ( in_array( $layer['type'], [ 'path', 'polygon' ] ) && isset( $layer['points'] ) ) {
+				if ( !is_array( $layer['points'] ) || count( $layer['points'] ) > 500 ) {
+					return false;
+				}
+				foreach ( $layer['points'] as $point ) {
+					if ( !is_array( $point ) || !isset( $point['x'] ) || !isset( $point['y'] ) ||
+						 !is_numeric( $point['x'] ) || !is_numeric( $point['y'] ) ||
+						 abs( $point['x'] ) > 10000 || abs( $point['y'] ) > 10000 ) {
+						return false;
+					}
+				}
+			}
+
+			// Validate numeric properties with bounds
+			$numericFields = [ 'innerRadius', 'outerRadius', 'sides', 'zIndex', 'rotation', 'fontSize', 'strokeWidth', 'opacity' ];
+			foreach ( $numericFields as $field ) {
+				if ( isset( $layer[$field] ) ) {
+					if ( !is_numeric( $layer[$field] ) ) {
+						return false;
+					}
+					
+					// Field-specific validation
+					switch ( $field ) {
+						case 'sides':
+							if ( $layer[$field] < 3 || $layer[$field] > 20 ) {
+								return false;
+							}
+							break;
+						case 'fontSize':
+							if ( $layer[$field] < 1 || $layer[$field] > 200 ) {
+								return false;
+							}
+							break;
+						case 'strokeWidth':
+							if ( $layer[$field] < 0 || $layer[$field] > 50 ) {
+								return false;
+							}
+							break;
+						case 'opacity':
+							if ( $layer[$field] < 0 || $layer[$field] > 1 ) {
+								return false;
+							}
+							break;
+						default:
+							if ( abs( $layer[$field] ) > 10000 ) {
+								return false;
+							}
+					}
+				}
+			}
+
+			// Validate color values strictly
+			$colorFields = [ 'stroke', 'fill', 'textStrokeColor', 'textShadowColor' ];
+			foreach ( $colorFields as $colorField ) {
+				if ( isset( $layer[$colorField] ) ) {
+					if ( !$this->isValidColor( $layer[$colorField] ) ) {
+						return false;
+					}
 				}
 			}
 		}
@@ -226,9 +279,9 @@ class ApiLayersSave extends ApiBase {
 
 			// Copy safe fields
 			$safeFields = [ 'id', 'type', 'x', 'y', 'width', 'height', 'radius',
-						   'x1', 'y1', 'x2', 'y2', 'stroke', 'fill', 'strokeWidth',
-						   'fontSize', 'fontFamily', 'opacity', 'points', 'radiusX', 'radiusY',
-						   'innerRadius', 'outerRadius', 'sides', 'visible', 'zIndex' ];
+					   'x1', 'y1', 'x2', 'y2', 'stroke', 'fill', 'strokeWidth',
+					   'fontSize', 'fontFamily', 'opacity', 'points', 'radiusX', 'radiusY',
+					   'innerRadius', 'outerRadius', 'sides', 'visible', 'zIndex', 'rotation' ];
 
 			foreach ( $safeFields as $field ) {
 				if ( isset( $layer[$field] ) ) {
@@ -236,9 +289,16 @@ class ApiLayersSave extends ApiBase {
 				}
 			}
 
-			// Special handling for text content
+			// Special handling for text content: ensure string and limit length
 			if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
-				$cleanLayer['text'] = htmlspecialchars( $layer['text'], ENT_QUOTES, 'UTF-8' );
+				$cleanText = is_string( $layer['text'] ) ? $layer['text'] : (string)$layer['text'];
+				// Strip control characters
+				$cleanText = preg_replace( '/[\x00-\x1F\x7F]/u', '', $cleanText );
+				// Enforce max length
+				if ( strlen( $cleanText ) > 1000 ) {
+					$cleanText = substr( $cleanText, 0, 1000 );
+				}
+				$cleanLayer['text'] = $cleanText;
 			}
 
 			// Special handling for points array (path, polygon layers)
@@ -285,7 +345,68 @@ class ApiLayersSave extends ApiBase {
 			return false;
 		}
 
+		// Allow alphanumerics, spaces, dots, dashes, underscores and parentheses
+		if ( !preg_match( '/^[\w .()\-]+$/u', $filename ) ) {
+			return false;
+		}
+
 		return true;
+	}
+
+	/**
+	 * Validate color values with enhanced security
+	 * @param mixed $color
+	 * @return bool
+	 */
+	private function isValidColor( $color ): bool {
+		if ( !is_string( $color ) ) {
+			return false;
+		}
+
+		// Prevent extremely long color strings (potential DoS)
+		if ( strlen( $color ) > 50 ) {
+			return false;
+		}
+
+		// Allow hex colors (3, 4, 6, 8 digits)
+		if ( preg_match( '/^#[0-9a-fA-F]{3,8}$/', $color ) ) {
+			return true;
+		}
+
+		// Allow rgb/rgba with strict validation
+		if ( preg_match( '/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/', $color, $matches ) ) {
+			// Validate RGB values are in 0-255 range
+			for ( $i = 1; $i <= 3; $i++ ) {
+				if ( isset( $matches[$i] ) && ( (int)$matches[$i] < 0 || (int)$matches[$i] > 255 ) ) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		// Allow HSL/HSLA with strict validation
+		if ( preg_match( '/^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/', $color, $matches ) ) {
+			// Validate HSL values
+			if ( isset( $matches[1] ) && ( (int)$matches[1] < 0 || (int)$matches[1] > 360 ) ) {
+				return false;
+			}
+			if ( isset( $matches[2] ) && ( (int)$matches[2] < 0 || (int)$matches[2] > 100 ) ) {
+				return false;
+			}
+			if ( isset( $matches[3] ) && ( (int)$matches[3] < 0 || (int)$matches[3] > 100 ) ) {
+				return false;
+			}
+			return true;
+		}
+
+		// Strict whitelist of named colors (prevent CSS injection)
+		$safeColors = [
+			'transparent', 'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange',
+			'purple', 'pink', 'gray', 'grey', 'brown', 'cyan', 'magenta', 'lime',
+			'navy', 'maroon', 'olive', 'teal', 'silver', 'aqua', 'fuchsia'
+		];
+
+		return in_array( strtolower( $color ), $safeColors, true );
 	}
 
 	/**

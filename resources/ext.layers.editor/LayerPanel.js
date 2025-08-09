@@ -34,24 +34,34 @@
 		// Create header
 		var header = document.createElement( 'div' );
 		header.className = 'layers-panel-header';
-		header.innerHTML = '<h3>' + mw.msg( 'layers-editor-title' ) + '</h3>';
+		var title = document.createElement( 'h3' );
+		title.textContent = ( mw.message ? mw.message( 'layers-panel-title' ).text() : 'Layers' );
+		header.appendChild( title );
+		var subtitle = document.createElement( 'div' );
+		subtitle.className = 'layers-panel-subtitle';
+		subtitle.textContent = ( mw.message ? mw.message( 'layers-panel-subtitle' ).text() : 'Drag to reorder • Click name to rename' );
+		header.appendChild( subtitle );
 		this.container.appendChild( header );
 
 		// Create layer list container
 		this.layerList = document.createElement( 'div' );
 		this.layerList.className = 'layers-list';
+		var emptyState = document.createElement( 'div' );
+		emptyState.className = 'layers-empty';
+		emptyState.textContent = ( mw.message ? mw.message( 'layers-empty' ).text() : 'No layers yet. Choose a tool to begin.' );
+		this.layerList.appendChild( emptyState );
 		this.container.appendChild( this.layerList );
 
 		// Create properties panel
 		this.propertiesPanel = document.createElement( 'div' );
 		this.propertiesPanel.className = 'layers-properties';
-		this.propertiesPanel.innerHTML = '<h4>Properties</h4><div class="properties-content"></div>';
+		this.propertiesPanel.innerHTML = '<h4>' + ( mw.message ? mw.message( 'layers-properties-title' ).text() : 'Properties' ) + '</h4><div class="properties-content"></div>';
 		this.container.appendChild( this.propertiesPanel );
 
 		// Create layers code panel
 		this.codePanel = document.createElement( 'div' );
 		this.codePanel.className = 'layers-code-panel';
-		this.codePanel.innerHTML = '<h4>Wikitext Code</h4><div class="code-content"></div>';
+		this.codePanel.innerHTML = '<h4>' + ( mw.message ? mw.message( 'layers-code-title' ).text() : 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
 		this.container.appendChild( this.codePanel );
 		this.updateCodePanel();
 	};
@@ -81,6 +91,13 @@
 			var layerItem = this.createLayerItem( layer, index );
 			this.layerList.appendChild( layerItem );
 		}.bind( this ) );
+
+		if ( this.layers.length === 0 ) {
+			var empty = document.createElement( 'div' );
+			empty.className = 'layers-empty';
+			empty.textContent = ( mw.message ? mw.message( 'layers-empty' ).text() : 'No layers yet. Choose a tool to begin.' );
+			this.layerList.appendChild( empty );
+		}
 	};
 
 	LayerPanel.prototype.createLayerItem = function ( layer, index ) {
@@ -97,7 +114,8 @@
 		var visibilityBtn = document.createElement( 'button' );
 		visibilityBtn.className = 'layer-visibility';
 		visibilityBtn.innerHTML = layer.visible !== false ? '👁' : '👁‍🗨';
-		visibilityBtn.title = 'Toggle visibility';
+		visibilityBtn.title = ( mw.message ? mw.message( 'layers-toggle-visibility' ).text() : 'Toggle visibility' );
+		visibilityBtn.type = 'button';
 
 		// Layer name
 		var name = document.createElement( 'span' );
@@ -109,13 +127,15 @@
 		var lockBtn = document.createElement( 'button' );
 		lockBtn.className = 'layer-lock';
 		lockBtn.innerHTML = layer.locked ? '🔒' : '🔓';
-		lockBtn.title = 'Toggle lock';
+		lockBtn.title = ( mw.message ? mw.message( 'layers-toggle-lock' ).text() : 'Toggle lock' );
+		lockBtn.type = 'button';
 
 		// Delete button
 		var deleteBtn = document.createElement( 'button' );
 		deleteBtn.className = 'layer-delete';
 		deleteBtn.innerHTML = '🗑';
-		deleteBtn.title = 'Delete layer';
+		deleteBtn.title = ( mw.message ? mw.message( 'layers-delete-layer-button' ).text() : 'Delete layer' );
+		deleteBtn.type = 'button';
 
 		item.appendChild( visibilityBtn );
 		item.appendChild( name );
@@ -127,28 +147,31 @@
 
 	LayerPanel.prototype.getDefaultLayerName = function ( layer ) {
 		switch ( layer.type ) {
-			case 'text':
-				return 'Text: ' + ( layer.text || 'Empty' ).slice( 0, 20 );
+			case 'text': {
+				var prefix = ( mw.message ? mw.message( 'layers-default-text-prefix' ).text() : 'Text: ' );
+				var emptyText = ( mw.message ? mw.message( 'layers-default-empty' ).text() : 'Empty' );
+				return prefix + ( ( layer.text || emptyText ).slice( 0, 20 ) );
+			}
 			case 'rectangle':
-				return 'Rectangle';
+				return ( mw.message ? mw.message( 'layers-type-rectangle' ).text() : 'Rectangle' );
 			case 'circle':
-				return 'Circle';
+				return ( mw.message ? mw.message( 'layers-type-circle' ).text() : 'Circle' );
 			case 'ellipse':
-				return 'Ellipse';
+				return ( mw.message ? mw.message( 'layers-type-ellipse' ).text() : 'Ellipse' );
 			case 'polygon':
-				return 'Polygon';
+				return ( mw.message ? mw.message( 'layers-type-polygon' ).text() : 'Polygon' );
 			case 'star':
-				return 'Star';
+				return ( mw.message ? mw.message( 'layers-type-star' ).text() : 'Star' );
 			case 'arrow':
-				return 'Arrow';
+				return ( mw.message ? mw.message( 'layers-type-arrow' ).text() : 'Arrow' );
 			case 'line':
-				return 'Line';
+				return ( mw.message ? mw.message( 'layers-type-line' ).text() : 'Line' );
 			case 'path':
-				return 'Drawing';
+				return ( mw.message ? mw.message( 'layers-type-path' ).text() : 'Drawing' );
 			case 'highlight':
-				return 'Highlight';
+				return ( mw.message ? mw.message( 'layers-type-highlight' ).text() : 'Highlight' );
 			default:
-				return 'Layer';
+				return ( mw.message ? mw.message( 'layers-type-layer' ).text() : 'Layer' );
 		}
 	};
 
@@ -211,7 +234,7 @@
 
 	LayerPanel.prototype.deleteLayer = function ( layerId ) {
 		// Use MediaWiki's OO.ui.confirm when available, fallback to confirm
-		var confirmMessage = 'Are you sure you want to delete this layer?';
+		var confirmMessage = ( mw.message ? mw.message( 'layers-delete-confirm' ).text() : 'Are you sure you want to delete this layer?' );
 		if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
 			OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
 				if ( confirmed ) {
@@ -267,13 +290,13 @@
 		var contentDiv = this.propertiesPanel.querySelector( '.properties-content' );
 
 		if ( !layerId ) {
-			contentDiv.innerHTML = '<p>No layer selected</p>';
+			contentDiv.innerHTML = '<p>' + ( mw.message ? mw.message( 'layers-no-layer-selected' ).text() : 'No layer selected' ) + '</p>';
 			return;
 		}
 
 		var layer = this.editor.getLayerById( layerId );
 		if ( !layer ) {
-			contentDiv.innerHTML = '<p>Layer not found</p>';
+			contentDiv.innerHTML = '<p>' + ( mw.message ? mw.message( 'layers-layer-not-found' ).text() : 'Layer not found' ) + '</p>';
 			return;
 		}
 
@@ -288,11 +311,11 @@
 		form.className = 'layer-properties-form';
 
 		// Common properties
-		this.addPropertyField( form, 'X Position', 'number', layer.x || 0, function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-x' ).text() : 'X Position' ), 'number', layer.x || 0, function ( value ) {
 			this.editor.updateLayer( layer.id, { x: parseFloat( value ) } );
 		}.bind( this ) );
 
-		this.addPropertyField( form, 'Y Position', 'number', layer.y || 0, function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-y' ).text() : 'Y Position' ), 'number', layer.y || 0, function ( value ) {
 			this.editor.updateLayer( layer.id, { y: parseFloat( value ) } );
 		}.bind( this ) );
 
@@ -334,15 +357,15 @@
 	LayerPanel.prototype.addTextProperties = function ( form, layer ) {
 		var self = this;
 
-		this.addPropertyField( form, 'Text', 'text', layer.text || '', function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-text' ).text() : 'Text' ), 'text', layer.text || '', function ( value ) {
 			self.editor.updateLayer( layer.id, { text: value } );
 		} );
 
-		this.addPropertyField( form, 'Font Size', 'number', layer.fontSize || 16, function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-font-size' ).text() : 'Font Size' ), 'number', layer.fontSize || 16, function ( value ) {
 			self.editor.updateLayer( layer.id, { fontSize: parseInt( value ) } );
 		} );
 
-		this.addPropertyField( form, 'Color', 'color', layer.fill || '#000000', function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-color' ).text() : 'Color' ), 'color', layer.fill || '#000000', function ( value ) {
 			self.editor.updateLayer( layer.id, { fill: value } );
 		} );
 	};
@@ -350,19 +373,19 @@
 	LayerPanel.prototype.addRectangleProperties = function ( form, layer ) {
 		var self = this;
 
-		this.addPropertyField( form, 'Width', 'number', layer.width || 0, function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-width' ).text() : 'Width' ), 'number', layer.width || 0, function ( value ) {
 			self.editor.updateLayer( layer.id, { width: parseFloat( value ) } );
 		} );
 
-		this.addPropertyField( form, 'Height', 'number', layer.height || 0, function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-height' ).text() : 'Height' ), 'number', layer.height || 0, function ( value ) {
 			self.editor.updateLayer( layer.id, { height: parseFloat( value ) } );
 		} );
 
-		this.addPropertyField( form, 'Stroke Color', 'color', layer.stroke || '#000000', function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' ), 'color', layer.stroke || '#000000', function ( value ) {
 			self.editor.updateLayer( layer.id, { stroke: value } );
 		} );
 
-		this.addPropertyField( form, 'Fill Color', 'color', layer.fill || '#ffffff', function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-fill-color' ).text() : 'Fill Color' ), 'color', layer.fill || '#ffffff', function ( value ) {
 			self.editor.updateLayer( layer.id, { fill: value } );
 		} );
 	};
@@ -370,15 +393,15 @@
 	LayerPanel.prototype.addCircleProperties = function ( form, layer ) {
 		var self = this;
 
-		this.addPropertyField( form, 'Radius', 'number', layer.radius || 0, function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-radius' ).text() : 'Radius' ), 'number', layer.radius || 0, function ( value ) {
 			self.editor.updateLayer( layer.id, { radius: parseFloat( value ) } );
 		} );
 
-		this.addPropertyField( form, 'Stroke Color', 'color', layer.stroke || '#000000', function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' ), 'color', layer.stroke || '#000000', function ( value ) {
 			self.editor.updateLayer( layer.id, { stroke: value } );
 		} );
 
-		this.addPropertyField( form, 'Fill Color', 'color', layer.fill || '#ffffff', function ( value ) {
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-fill-color' ).text() : 'Fill Color' ), 'color', layer.fill || '#ffffff', function ( value ) {
 			self.editor.updateLayer( layer.id, { fill: value } );
 		} );
 	};
@@ -469,12 +492,12 @@
 		var codeHtml = '';
 
 		if ( visibleLayers.length === 0 ) {
-			codeHtml = '<p><strong>No layers visible.</strong> Enable layers to see the code.</p>';
+			codeHtml = '<p><strong>' + ( mw.message ? mw.message( 'layers-code-none' ).text() : 'No layers visible.' ) + '</strong> ' + ( mw.message ? mw.message( 'layers-code-enable' ).text() : 'Enable layers to see the code.' ) + '</p>';
 		} else if ( visibleLayers.length === this.layers.length ) {
 			// All layers visible
-			codeHtml = '<p><strong>All layers visible:</strong></p>' +
-				'<code class="layers-code">[[File:' + filename + '|500px|layers=all|Your caption]]</code>' +
-				'<button class="copy-btn" data-code="layers=all">Copy</button>';
+			codeHtml = '<p><strong>' + ( mw.message ? mw.message( 'layers-code-all-visible' ).text() : 'All layers visible:' ) + '</strong></p>' +
+				'<code class="layers-code">[[File:' + filename + '|500px|layers=all|' + ( mw.message ? mw.message( 'layers-code-caption' ).text() : 'Your caption' ) + ']]</code>' +
+				'<button class="copy-btn" data-code="layers=all">' + ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' ) + '</button>';
 		} else {
 			// Specific layers visible
 			var layerIds = visibleLayers.map( function ( layer ) {
@@ -482,9 +505,9 @@
 			} );
 			var layersParam = layerIds.join( ',' );
 
-			codeHtml = '<p><strong>Selected layers visible:</strong></p>' +
-				'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|Your caption]]</code>' +
-				'<button class="copy-btn" data-code="layers=' + layersParam + '">Copy</button>';
+			codeHtml = '<p><strong>' + ( mw.message ? mw.message( 'layers-code-selected-visible' ).text() : 'Selected layers visible:' ) + '</strong></p>' +
+				'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|' + ( mw.message ? mw.message( 'layers-code-caption' ).text() : 'Your caption' ) + ']]</code>' +
+				'<button class="copy-btn" data-code="layers=' + layersParam + '">' + ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' ) + '</button>';
 		}
 
 		content.innerHTML = codeHtml;
@@ -495,29 +518,54 @@
 			btn.addEventListener( 'click', function () {
 				var code = btn.getAttribute( 'data-code' );
 
-				// Use fallback method for better browser compatibility
-				var textArea = document.createElement( 'textarea' );
-				textArea.value = code;
-				document.body.appendChild( textArea );
-				textArea.select();
-
-				try {
-					var successful = document.execCommand( 'copy' );
-					if ( successful ) {
-						btn.textContent = 'Copied!';
-						setTimeout( function () {
-							btn.textContent = 'Copy';
-						}, 2000 );
-					}
-				} catch ( err ) {
-					// Copy failed
-					btn.textContent = 'Copy failed';
+				var onSuccess = function () {
+					btn.textContent = ( mw.message ? mw.message( 'layers-code-copied' ).text() : 'Copied!' );
 					setTimeout( function () {
-						btn.textContent = 'Copy';
+						btn.textContent = ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' );
 					}, 2000 );
-				}
+				};
+				var onFailure = function () {
+					btn.textContent = ( mw.message ? mw.message( 'layers-code-copy-failed' ).text() : 'Copy failed' );
+					setTimeout( function () {
+						btn.textContent = ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' );
+					}, 2000 );
+				};
 
-				document.body.removeChild( textArea );
+				if ( navigator.clipboard && navigator.clipboard.writeText ) {
+					navigator.clipboard.writeText( code ).then( onSuccess ).catch( function () {
+						// Fallback to execCommand
+						var ta = document.createElement( 'textarea' );
+						ta.value = code;
+						document.body.appendChild( ta );
+						ta.select();
+						try {
+							if ( document.execCommand( 'copy' ) ) {
+								onSuccess();
+							} else {
+								onFailure();
+							}
+						} catch ( e ) {
+							onFailure();
+						}
+						document.body.removeChild( ta );
+					} );
+				} else {
+					// Fallback method for older browsers
+					var textArea = document.createElement( 'textarea' );
+					textArea.value = code;
+					document.body.appendChild( textArea );
+					textArea.select();
+					try {
+						if ( document.execCommand( 'copy' ) ) {
+							onSuccess();
+						} else {
+							onFailure();
+						}
+					} catch ( err ) {
+						onFailure();
+					}
+					document.body.removeChild( textArea );
+				}
 			} );
 		} );
 	};

@@ -1,0 +1,400 @@
+/* stylelint-disable linebreaks */
+/**
+ * Layers Editor CSS Styles
+ * Essential styling for the layers editing interface
+ */
+
+/* Main Editor Container */
+.layers-editor {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: #f5f5f5;
+	z-index: 999999; /* Ensure above skin chrome */
+	display: flex;
+	flex-direction: column;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Hide MediaWiki skin chrome when editor is open */
+body.layers-editor-open #mw-panel,
+body.layers-editor-open #mw-head,
+body.layers-editor-open #left-navigation,
+body.layers-editor-open #right-navigation,
+body.layers-editor-open #contentSub,
+body.layers-editor-open .vector-sticky-header,
+body.layers-editor-open .mw-footer,
+body.layers-editor-open .mw-portlet,
+body.layers-editor-open .skin-vector table#toc,
+body.layers-editor-open .mw-indicators,
+body.layers-editor-open .mw-body-header {
+	display: none !important;
+}
+
+/* Expand content area to full screen context where skins force constraints */
+body.layers-editor-open .mw-body,
+body.layers-editor-open #content,
+body.layers-editor-open .mw-workspace-container,
+body.layers-editor-open .mw-body-content {
+	margin: 0 !important;
+	padding: 0 !important;
+	max-width: none !important;
+}
+
+/* Header */
+.layers-header {
+	background: #0b66a1;
+	color: #fff;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 16px;
+	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.08 );
+}
+
+.layers-header-title {
+	font-weight: 600;
+	font-size: 0.875em;
+}
+
+.layers-header-right {
+	font-size: 0.75em;
+	opacity: 0.9;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* Header close button */
+.layers-header-close {
+	background: transparent;
+	border: 0;
+	color: #fff;
+	font-size: 20px;
+	line-height: 1;
+	width: 32px;
+	height: 32px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+.layers-header-close:hover {
+	background: rgba(255,255,255,0.1);
+}
+
+/* Content area - horizontal layout for layer panel and canvas */
+.layers-content {
+	flex: 1;
+	display: flex;
+	overflow: hidden;
+}
+
+/* Toolbar Styles */
+.layers-toolbar {
+	background: #fff;
+	border-bottom: 1px solid #ddd;
+	padding: 8px 16px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	box-shadow: 0 2px 4px rgba( 0, 0, 0, 0.1 );
+}
+
+.toolbar-group {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 0 8px;
+}
+
+.toolbar-group:not( :last-child ) {
+	border-right: 1px solid #eee;
+}
+
+.toolbar-button {
+	background: #f8f9fa;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	padding: 10px 14px;
+	cursor: pointer;
+	font-size: 1em;
+	transition: all 0.2s;
+	min-width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.toolbar-button:hover {
+	background: #e9ecef;
+	border-color: #bbb;
+}
+
+.toolbar-button.active {
+	background: #007cba;
+	color: #fff;
+	border-color: #005a87;
+}
+
+.toolbar-button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Layer Panel */
+.layers-panel {
+	width: 280px;
+	background: #fff;
+	border-right: 1px solid #ddd;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.layers-panel-header {
+	padding: 16px;
+	border-bottom: 1px solid #eee;
+	background: #f8f9fa;
+}
+
+.layers-panel-header h3 {
+	margin: 0;
+	font-size: 1em;
+	font-weight: 600;
+	color: #333;
+}
+
+.layers-panel-subtitle {
+	margin-top: 4px;
+	font-size: 0.75em;
+	color: #6c757d;
+}
+
+.layers-list {
+	flex: 1 1 auto;
+	overflow: auto;
+	padding: 8px;
+}
+
+/* Properties + Code panel sections */
+.layers-properties,
+.layers-code-panel {
+	border-top: 1px solid #eee;
+	padding: 10px 12px;
+}
+.layers-properties h4,
+.layers-code-panel h4 {
+	margin: 0 0 8px 0;
+	font-size: 0.9em;
+}
+.layer-properties-form .property-field {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+.layer-properties-form input[type="number"],
+.layer-properties-form input[type="text"],
+.layer-properties-form input[type="color"] {
+	width: 100%;
+	box-sizing: border-box;
+}
+.layers-code-panel .layers-code {
+	display: block;
+	background: #f8f9fa;
+	border: 1px solid #eee;
+	padding: 6px 8px;
+	border-radius: 4px;
+	word-break: break-all;
+}
+.layers-code-panel .copy-btn {
+	margin-top: 6px;
+	background: #f8f9fa;
+	border: 1px solid #ddd;
+	padding: 6px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+.layers-code-panel .copy-btn:hover {
+	background: #e9ecef;
+}
+
+.layers-empty {
+	color: #6c757d;
+	font-size: 0.8125em;
+	padding: 12px;
+	text-align: center;
+}
+
+/* Canvas Container */
+.layers-canvas-container {
+	flex: 1;
+	overflow: hidden;
+	background: #e9ecef;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	position: relative;
+}
+
+.layers-canvas {
+	border: 2px solid #6c757d;
+	background: #fff;
+	box-shadow: 0 8px 32px rgba( 0, 0, 0, 0.2 );
+	cursor: crosshair;
+	border-radius: 4px;
+	transform-origin: 0 0;
+}
+
+/* Layer Items */
+.layer-item {
+	display: flex;
+	align-items: center;
+	padding: 8px;
+	margin-bottom: 4px;
+	background: #f8f9fa;
+	border: 1px solid #eee;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s;
+	gap: 8px;
+}
+
+.layer-item .layer-visibility,
+.layer-item .layer-lock,
+.layer-item .layer-delete {
+	background: transparent;
+	border: 0;
+	font-size: 1em;
+	cursor: pointer;
+}
+
+.layer-item .layer-visibility:hover,
+.layer-item .layer-lock:hover,
+.layer-item .layer-delete:hover {
+	opacity: 0.8;
+}
+
+.layer-item:hover {
+	background: #e9ecef;
+	border-color: #ddd;
+}
+
+.layer-item.selected {
+	background: #e3f2fd;
+	border-color: #2196f3;
+}
+
+.layer-name {
+	flex: 1;
+	font-size: 0.875em;
+	color: #333;
+	padding: 2px 4px;
+	border-radius: 2px;
+}
+
+/* Text Input Modal */
+.text-input-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba( 0, 0, 0, 0.5 );
+	z-index: 10001;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.text-input-modal {
+	background: #fff;
+	border-radius: 8px;
+	padding: 20px;
+	box-shadow: 0 4px 20px rgba( 0, 0, 0, 0.3 );
+	min-width: 300px;
+	max-width: 500px;
+}
+
+.text-input-modal h3 {
+	margin: 0 0 15px 0;
+	color: #333;
+	font-size: 1.125em;
+}
+
+.text-input-modal textarea {
+	width: 100%;
+	height: 80px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	padding: 8px;
+	font-family: inherit;
+	resize: vertical;
+	font-size: 0.875em;
+}
+
+/* Error Display */
+.layers-error {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate( -50%, -50% );
+	background: #fff;
+	border: 2px solid #d63638;
+	border-radius: 8px;
+	padding: 20px;
+	z-index: 10001;
+	max-width: 400px;
+	box-shadow: 0 4px 20px rgba( 0, 0, 0, 0.3 );
+	transition: opacity 0.5s ease;
+}
+
+.layers-error h3 {
+	margin: 0 0 10px 0;
+	color: #d63638;
+	font-size: 1.125em;
+}
+
+.layers-error p {
+	margin: 0;
+	color: #333;
+}
+
+/* Responsive Design */
+@media ( max-width: 1024px ) {
+	.layers-panel {
+		width: 240px;
+	}
+
+	.toolbar-group {
+		gap: 2px;
+		padding: 0 4px;
+	}
+
+	.toolbar-button {
+		min-width: 34px;
+		height: 34px;
+		padding: 8px 10px;
+	}
+}
+
+@media ( max-width: 768px ) {
+	.layers-content {
+		flex-direction: column;
+	}
+
+	.layers-panel {
+		width: 100%;
+		height: 200px;
+		border-right: 0;
+		border-bottom: 1px solid #ddd;
+	}
+
+	.layers-canvas-container {
+		flex: 1;
+		padding: 10px;
+	}
+}

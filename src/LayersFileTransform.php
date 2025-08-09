@@ -11,6 +11,7 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaTransformOutput;
 
 class LayersFileTransform {
 
@@ -26,9 +27,30 @@ class LayersFileTransform {
 	 * @return bool
 	 */
 	public static function onBitmapHandlerTransform( $handler, $file, array &$params, &$thumb = null ): bool {
-		// Simple logging only - no processing for now
-		error_log( 'Layers: BitmapHandlerTransform called for ' . $file->getName() );
-		return true; // Continue with normal processing
+		try {
+			// Only act when layer data requested and present
+			if ( empty( $params['layers'] ) || empty( $params['layerData'] ) ) {
+				return true; // Let core handle
+			}
+
+			$renderer = new ThumbnailRenderer();
+			$path = $renderer->generateLayeredThumbnail( $file, $params );
+			if ( !$path ) {
+				// Fall back to core
+				return true;
+			}
+
+			// Build custom transform output so MW uses our composite
+			$thumb = new LayeredThumbnail( $file, $path, $params );
+			return false; // We handled it
+
+		} catch ( Exception $e ) {
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->error( 'Layers: Exception in BitmapHandlerTransform', [ 'exception' => $e ] );
+			}
+			return true;
+		}
 	}
 
 	/**

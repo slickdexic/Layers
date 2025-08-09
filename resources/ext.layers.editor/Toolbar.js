@@ -49,18 +49,18 @@
 		toolGroup.className = 'toolbar-group tools-group';
 
 		var tools = [
-			{ id: 'pointer', icon: '↖', title: 'Select Tool (V)', key: 'V' },
-			{ id: 'text', icon: 'T', title: 'Text Tool (T)', key: 'T' },
-			{ id: 'pen', icon: '✏', title: 'Pen Tool (P)', key: 'P' },
-			{ id: 'rectangle', icon: '▢', title: 'Rectangle Tool (R)', key: 'R' },
-			{ id: 'circle', icon: '○', title: 'Circle Tool (C)', key: 'C' },
-			{ id: 'ellipse', icon: '○', title: 'Ellipse Tool (E)', key: 'E' },
-			{ id: 'polygon', icon: '⬟', title: 'Polygon Tool (G)', key: 'G' },
-			{ id: 'star', icon: '★', title: 'Star Tool (S)', key: 'S' },
-			{ id: 'arrow', icon: '→', title: 'Arrow Tool (A)', key: 'A' },
-			{ id: 'line', icon: '/', title: 'Line Tool (L)', key: 'L' },
-			{ id: 'highlight', icon: '▒', title: 'Highlight Tool (H)', key: 'H' },
-			{ id: 'marquee', icon: '⬚', title: 'Marquee Select (M)', key: 'M' }
+			{ id: 'pointer', icon: '↖', title: ( mw.message ? mw.message( 'layers-tool-select' ).text() : 'Select Tool' ), key: 'V' },
+			{ id: 'text', icon: 'T', title: ( mw.message ? mw.message( 'layers-tool-text' ).text() : 'Text Tool' ), key: 'T' },
+			{ id: 'pen', icon: '✏', title: ( mw.message ? mw.message( 'layers-tool-pen' ).text() : 'Pen Tool' ), key: 'P' },
+			{ id: 'rectangle', icon: '▢', title: ( mw.message ? mw.message( 'layers-tool-rectangle' ).text() : 'Rectangle Tool' ), key: 'R' },
+			{ id: 'circle', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-circle' ).text() : 'Circle Tool' ), key: 'C' },
+			{ id: 'ellipse', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-ellipse' ).text() : 'Ellipse Tool' ), key: 'E' },
+			{ id: 'polygon', icon: '⬟', title: ( mw.message ? mw.message( 'layers-tool-polygon' ).text() : 'Polygon Tool' ), key: 'G' },
+			{ id: 'star', icon: '★', title: ( mw.message ? mw.message( 'layers-tool-star' ).text() : 'Star Tool' ), key: 'S' },
+			{ id: 'arrow', icon: '→', title: ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow Tool' ), key: 'A' },
+			{ id: 'line', icon: '/', title: ( mw.message ? mw.message( 'layers-tool-line' ).text() : 'Line Tool' ), key: 'L' },
+			{ id: 'highlight', icon: '▒', title: ( mw.message ? mw.message( 'layers-tool-highlight' ).text() : 'Highlight Tool' ), key: 'H' },
+			{ id: 'marquee', icon: '⬚', title: ( mw.message ? mw.message( 'layers-tool-marquee' ).text() : 'Marquee Select' ), key: 'M' }
 		];
 
 		tools.forEach( function ( tool ) {
@@ -77,6 +77,8 @@
 		button.dataset.tool = tool.id;
 		button.innerHTML = tool.icon;
 		button.title = tool.title + ( tool.key ? ' (' + tool.key + ')' : '' );
+		button.setAttribute( 'aria-label', tool.title );
+		button.type = 'button';
 
 		if ( tool.id === this.currentTool ) {
 			button.classList.add( 'active' );
@@ -94,7 +96,7 @@
 		colorPicker.type = 'color';
 		colorPicker.className = 'color-picker';
 		colorPicker.value = this.currentColor;
-		colorPicker.title = 'Color';
+		colorPicker.title = ( mw.message ? mw.message( 'layers-prop-color' ).text() : 'Color' );
 		styleGroup.appendChild( colorPicker );
 
 		// Stroke width
@@ -102,7 +104,7 @@
 		strokeWidthContainer.className = 'stroke-width-container';
 
 		var strokeLabel = document.createElement( 'label' );
-		strokeLabel.textContent = 'Width:';
+		strokeLabel.textContent = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ':';
 		strokeLabel.className = 'stroke-label';
 
 		var strokeWidth = document.createElement( 'input' );
@@ -111,7 +113,7 @@
 		strokeWidth.max = '20';
 		strokeWidth.value = this.currentStrokeWidth;
 		strokeWidth.className = 'stroke-width';
-		strokeWidth.title = 'Stroke Width';
+		strokeWidth.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' );
 
 		var strokeValue = document.createElement( 'span' );
 		strokeValue.className = 'stroke-value';
@@ -128,7 +130,7 @@
 		fontSizeContainer.style.display = 'none';
 
 		var fontLabel = document.createElement( 'label' );
-		fontLabel.textContent = 'Size:';
+		fontLabel.textContent = ( mw.message ? mw.message( 'layers-prop-font-size' ).text() : 'Font Size' ) + ':';
 		fontLabel.className = 'font-label';
 
 		var fontSize = document.createElement( 'input' );
@@ -137,7 +139,7 @@
 		fontSize.max = '72';
 		fontSize.value = '16';
 		fontSize.className = 'font-size';
-		fontSize.title = 'Font Size';
+		fontSize.title = ( mw.message ? mw.message( 'layers-prop-font-size' ).text() : 'Font Size' );
 
 		fontSizeContainer.appendChild( fontLabel );
 		fontSizeContainer.appendChild( fontSize );
@@ -149,14 +151,14 @@
 		strokeContainer.style.display = 'none';
 
 		var strokeColorLabel = document.createElement( 'label' );
-		strokeColorLabel.textContent = 'Stroke:';
+		strokeColorLabel.textContent = ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' ) + ':';
 		strokeColorLabel.className = 'stroke-color-label';
 
 		var strokeColor = document.createElement( 'input' );
 		strokeColor.type = 'color';
 		strokeColor.value = '#000000';
 		strokeColor.className = 'text-stroke-color';
-		strokeColor.title = 'Text Stroke Color';
+		strokeColor.title = ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Text Stroke Color' );
 
 		var strokeWidthInput = document.createElement( 'input' );
 		strokeWidthInput.type = 'range';
@@ -164,7 +166,7 @@
 		strokeWidthInput.max = '10';
 		strokeWidthInput.value = '0';
 		strokeWidthInput.className = 'text-stroke-width';
-		strokeWidthInput.title = 'Text Stroke Width';
+		strokeWidthInput.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Text Stroke Width' );
 
 		var strokeWidthValue = document.createElement( 'span' );
 		strokeWidthValue.className = 'text-stroke-value';
@@ -182,19 +184,19 @@
 		shadowContainer.style.display = 'none';
 
 		var shadowLabel = document.createElement( 'label' );
-		shadowLabel.textContent = 'Shadow:';
+		shadowLabel.textContent = ( mw.message ? mw.message( 'layers-effect-shadow' ).text() : 'Shadow' ) + ':';
 		shadowLabel.className = 'shadow-label';
 
 		var shadowToggle = document.createElement( 'input' );
 		shadowToggle.type = 'checkbox';
 		shadowToggle.className = 'text-shadow-toggle';
-		shadowToggle.title = 'Enable Drop Shadow';
+		shadowToggle.title = ( mw.message ? mw.message( 'layers-effect-shadow-enable' ).text() : 'Enable Drop Shadow' );
 
 		var shadowColor = document.createElement( 'input' );
 		shadowColor.type = 'color';
 		shadowColor.value = '#000000';
 		shadowColor.className = 'text-shadow-color';
-		shadowColor.title = 'Shadow Color';
+		shadowColor.title = ( mw.message ? mw.message( 'layers-effect-shadow-color' ).text() : 'Shadow Color' );
 		shadowColor.style.display = 'none';
 
 		shadowContainer.appendChild( shadowLabel );
@@ -208,15 +210,15 @@
 		arrowContainer.style.display = 'none';
 
 		var arrowLabel = document.createElement( 'label' );
-		arrowLabel.textContent = 'Arrow:';
+		arrowLabel.textContent = ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow' ) + ':';
 		arrowLabel.className = 'arrow-label';
 
 		var arrowStyleSelect = document.createElement( 'select' );
 		arrowStyleSelect.className = 'arrow-style-select';
 		arrowStyleSelect.innerHTML =
-            '<option value="single">Single →</option>' +
-            '<option value="double">Double ↔</option>' +
-            '<option value="none">Line only</option>';
+			'<option value="single">' + ( mw.message ? mw.message( 'layers-arrow-single' ).text() : 'Single →' ) + '</option>' +
+			'<option value="double">' + ( mw.message ? mw.message( 'layers-arrow-double' ).text() : 'Double ↔' ) + '</option>' +
+			'<option value="none">' + ( mw.message ? mw.message( 'layers-arrow-none' ).text() : 'Line only' ) + '</option>';
 
 		arrowContainer.appendChild( arrowLabel );
 		arrowContainer.appendChild( arrowStyleSelect );
@@ -247,7 +249,7 @@
 
 		// Layer opacity control
 		var opacityLabel = document.createElement( 'label' );
-		opacityLabel.textContent = 'Opacity:';
+		opacityLabel.textContent = ( mw.message ? mw.message( 'layers-prop-opacity' ).text() : 'Opacity' ) + ':';
 		opacityLabel.className = 'toolbar-label';
 		effectsGroup.appendChild( opacityLabel );
 
@@ -257,7 +259,7 @@
 		opacitySlider.max = '100';
 		opacitySlider.value = '100';
 		opacitySlider.className = 'toolbar-slider opacity-slider';
-		opacitySlider.title = 'Layer Opacity';
+		opacitySlider.title = ( mw.message ? mw.message( 'layers-prop-opacity' ).text() : 'Layer Opacity' );
 		effectsGroup.appendChild( opacitySlider );
 
 		var opacityDisplay = document.createElement( 'span' );
@@ -267,27 +269,27 @@
 
 		// Layer blend mode
 		var blendLabel = document.createElement( 'label' );
-		blendLabel.textContent = 'Blend:';
+		blendLabel.textContent = ( mw.message ? mw.message( 'layers-prop-blend' ).text() : 'Blend' ) + ':';
 		blendLabel.className = 'toolbar-label';
 		effectsGroup.appendChild( blendLabel );
 
 		var blendSelect = document.createElement( 'select' );
 		blendSelect.className = 'toolbar-select blend-mode-select';
-		blendSelect.title = 'Blend Mode';
+		blendSelect.title = ( mw.message ? mw.message( 'layers-prop-blend' ).text() : 'Blend Mode' );
 
 		var blendModes = [
-			{ value: 'normal', text: 'Normal' },
-			{ value: 'multiply', text: 'Multiply' },
-			{ value: 'screen', text: 'Screen' },
-			{ value: 'overlay', text: 'Overlay' },
-			{ value: 'soft-light', text: 'Soft Light' },
-			{ value: 'hard-light', text: 'Hard Light' },
-			{ value: 'color-dodge', text: 'Color Dodge' },
-			{ value: 'color-burn', text: 'Color Burn' },
-			{ value: 'darken', text: 'Darken' },
-			{ value: 'lighten', text: 'Lighten' },
-			{ value: 'difference', text: 'Difference' },
-			{ value: 'exclusion', text: 'Exclusion' }
+			{ value: 'normal', text: ( mw.message ? mw.message( 'layers-blend-normal' ).text() : 'Normal' ) },
+			{ value: 'multiply', text: ( mw.message ? mw.message( 'layers-blend-multiply' ).text() : 'Multiply' ) },
+			{ value: 'screen', text: ( mw.message ? mw.message( 'layers-blend-screen' ).text() : 'Screen' ) },
+			{ value: 'overlay', text: ( mw.message ? mw.message( 'layers-blend-overlay' ).text() : 'Overlay' ) },
+			{ value: 'soft-light', text: ( mw.message ? mw.message( 'layers-blend-soft-light' ).text() : 'Soft Light' ) },
+			{ value: 'hard-light', text: ( mw.message ? mw.message( 'layers-blend-hard-light' ).text() : 'Hard Light' ) },
+			{ value: 'color-dodge', text: ( mw.message ? mw.message( 'layers-blend-color-dodge' ).text() : 'Color Dodge' ) },
+			{ value: 'color-burn', text: ( mw.message ? mw.message( 'layers-blend-color-burn' ).text() : 'Color Burn' ) },
+			{ value: 'darken', text: ( mw.message ? mw.message( 'layers-blend-darken' ).text() : 'Darken' ) },
+			{ value: 'lighten', text: ( mw.message ? mw.message( 'layers-blend-lighten' ).text() : 'Lighten' ) },
+			{ value: 'difference', text: ( mw.message ? mw.message( 'layers-blend-difference' ).text() : 'Difference' ) },
+			{ value: 'exclusion', text: ( mw.message ? mw.message( 'layers-blend-exclusion' ).text() : 'Exclusion' ) }
 		];
 
 		blendModes.forEach( function ( mode ) {
@@ -301,26 +303,26 @@
 
 		// Layer effects toggles
 		var effectsLabel = document.createElement( 'label' );
-		effectsLabel.textContent = 'Effects:';
+		effectsLabel.textContent = ( mw.message ? mw.message( 'layers-effects' ).text() : 'Effects' ) + ':';
 		effectsLabel.className = 'toolbar-label';
 		effectsGroup.appendChild( effectsLabel );
 
 		var shadowToggle = document.createElement( 'button' );
 		shadowToggle.className = 'toolbar-button effect-toggle shadow-toggle';
-		shadowToggle.textContent = 'Shadow';
-		shadowToggle.title = 'Toggle Drop Shadow';
+		shadowToggle.textContent = ( mw.message ? mw.message( 'layers-effect-shadow' ).text() : 'Shadow' );
+		shadowToggle.title = ( mw.message ? mw.message( 'layers-effect-shadow-toggle' ).text() : 'Toggle Drop Shadow' );
 		effectsGroup.appendChild( shadowToggle );
 
 		var glowToggle = document.createElement( 'button' );
 		glowToggle.className = 'toolbar-button effect-toggle glow-toggle';
-		glowToggle.textContent = 'Glow';
-		glowToggle.title = 'Toggle Glow Effect';
+		glowToggle.textContent = ( mw.message ? mw.message( 'layers-effect-glow' ).text() : 'Glow' );
+		glowToggle.title = ( mw.message ? mw.message( 'layers-effect-glow-toggle' ).text() : 'Toggle Glow Effect' );
 		effectsGroup.appendChild( glowToggle );
 
 		var strokeToggle = document.createElement( 'button' );
 		strokeToggle.className = 'toolbar-button effect-toggle stroke-toggle';
-		strokeToggle.textContent = 'Stroke';
-		strokeToggle.title = 'Toggle Stroke Effect';
+		strokeToggle.textContent = ( mw.message ? mw.message( 'layers-effect-stroke' ).text() : 'Stroke' );
+		strokeToggle.title = ( mw.message ? mw.message( 'layers-effect-stroke-toggle' ).text() : 'Toggle Stroke Effect' );
 		effectsGroup.appendChild( strokeToggle );
 
 		this.container.appendChild( effectsGroup );
@@ -342,28 +344,28 @@
 		var zoomOutBtn = document.createElement( 'button' );
 		zoomOutBtn.className = 'toolbar-button zoom-button';
 		zoomOutBtn.innerHTML = '−';
-		zoomOutBtn.title = 'Zoom Out (Ctrl+-)';
+		zoomOutBtn.title = ( mw.message ? mw.message( 'layers-zoom-out' ).text() : 'Zoom Out' ) + ' (Ctrl+-)';
 		zoomOutBtn.dataset.action = 'zoom-out';
 
 		// Zoom display/reset
 		var zoomDisplay = document.createElement( 'button' );
 		zoomDisplay.className = 'toolbar-button zoom-display';
 		zoomDisplay.textContent = '100%';
-		zoomDisplay.title = 'Reset Zoom (Ctrl+0)';
+		zoomDisplay.title = ( mw.message ? mw.message( 'layers-zoom-reset' ).text() : 'Reset Zoom' ) + ' (Ctrl+0)';
 		zoomDisplay.dataset.action = 'zoom-reset';
 
 		// Zoom in button
 		var zoomInBtn = document.createElement( 'button' );
 		zoomInBtn.className = 'toolbar-button zoom-button';
 		zoomInBtn.innerHTML = '+';
-		zoomInBtn.title = 'Zoom In (Ctrl++)';
+		zoomInBtn.title = ( mw.message ? mw.message( 'layers-zoom-in' ).text() : 'Zoom In' ) + ' (Ctrl++)';
 		zoomInBtn.dataset.action = 'zoom-in';
 
 		// Fit to window button
 		var fitBtn = document.createElement( 'button' );
 		fitBtn.className = 'toolbar-button fit-button';
 		fitBtn.innerHTML = '⌂';
-		fitBtn.title = 'Fit to Window';
+		fitBtn.title = ( mw.message ? mw.message( 'layers-zoom-fit' ).text() : 'Fit to Window' );
 		fitBtn.dataset.action = 'fit-window';
 
 		zoomGroup.appendChild( zoomOutBtn );
@@ -382,11 +384,11 @@
 		actionGroup.className = 'toolbar-group action-group';
 
 		var actions = [
-			{ id: 'undo', icon: '↶', title: 'Undo', key: 'Ctrl+Z' },
-			{ id: 'redo', icon: '↷', title: 'Redo', key: 'Ctrl+Y' },
-			{ id: 'delete', icon: '🗑', title: 'Delete Selected', key: 'Delete' },
-			{ id: 'duplicate', icon: '⧉', title: 'Duplicate Selected', key: 'Ctrl+D' },
-			{ id: 'grid', icon: '⊞', title: 'Toggle Grid', key: 'G' }
+			{ id: 'undo', icon: '↶', title: ( mw.message ? mw.message( 'layers-undo' ).text() : 'Undo' ), key: 'Ctrl+Z' },
+			{ id: 'redo', icon: '↷', title: ( mw.message ? mw.message( 'layers-redo' ).text() : 'Redo' ), key: 'Ctrl+Y' },
+			{ id: 'delete', icon: '🗑', title: ( mw.message ? mw.message( 'layers-delete-selected' ).text() : 'Delete Selected' ), key: 'Delete' },
+			{ id: 'duplicate', icon: '⧉', title: ( mw.message ? mw.message( 'layers-duplicate-selected' ).text() : 'Duplicate Selected' ), key: 'Ctrl+D' },
+			{ id: 'grid', icon: '⊞', title: ( mw.message ? mw.message( 'layers-toggle-grid' ).text() : 'Toggle Grid' ), key: 'G' }
 		];
 
 		actions.forEach( function ( action ) {
@@ -402,14 +404,14 @@
 		// Save and Cancel buttons
 		var saveButton = document.createElement( 'button' );
 		saveButton.className = 'toolbar-button save-button primary';
-		saveButton.textContent = mw.msg( 'layers-editor-save' );
-		saveButton.title = 'Save Changes (Ctrl+S)';
+		saveButton.textContent = ( mw.message ? mw.message( 'layers-editor-save' ).text() : ( mw.msg ? mw.msg( 'layers-editor-save' ) : 'Save' ) );
+		saveButton.title = ( mw.message ? mw.message( 'layers-save-changes' ).text() : 'Save Changes' ) + ' (Ctrl+S)';
 		actionGroup.appendChild( saveButton );
 
 		var cancelButton = document.createElement( 'button' );
 		cancelButton.className = 'toolbar-button cancel-button';
-		cancelButton.textContent = mw.msg( 'layers-editor-cancel' );
-		cancelButton.title = 'Cancel Changes (Escape)';
+		cancelButton.textContent = ( mw.message ? mw.message( 'layers-editor-cancel' ).text() : ( mw.msg ? mw.msg( 'layers-editor-cancel' ) : 'Cancel' ) );
+		cancelButton.title = ( mw.message ? mw.message( 'layers-cancel-changes' ).text() : 'Cancel Changes' ) + ' (Escape)';
 		actionGroup.appendChild( cancelButton );
 
 		this.container.appendChild( actionGroup );
@@ -442,6 +444,14 @@
 				self.executeZoomAction( e.target.dataset.action );
 			} else if ( e.target.dataset.action === 'fit-window' ) {
 				self.executeZoomAction( e.target.dataset.action );
+			}
+		} );
+
+		// Also support keyboard navigation on tool buttons for accessibility
+		this.container.addEventListener( 'keydown', function ( e ) {
+			if ( e.target.classList && e.target.classList.contains( 'tool-button' ) && ( e.key === 'Enter' || e.key === ' ' ) ) {
+				e.preventDefault();
+				self.selectTool( e.target.dataset.tool );
 			}
 		} );
 
@@ -521,6 +531,12 @@
 
 		// Notify editor
 		this.editor.setCurrentTool( toolId );
+
+		// Ensure focus remains on selected tool for keyboard users
+		var focusedBtn = this.container.querySelector( '[data-tool="' + toolId + '"]' );
+		if ( focusedBtn ) {
+			focusedBtn.focus();
+		}
 	};
 
 	Toolbar.prototype.updateToolOptions = function ( toolId ) {

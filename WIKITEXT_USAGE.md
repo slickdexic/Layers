@@ -4,29 +4,33 @@
 
 The Layers extension supports controlling which layers are displayed using the `layers=` parameter in standard MediaWiki file syntax:
 
-```
+```text
 [[File:ImageTest02.jpg|500px|layers=all|Your caption]]
 ```
 
 ## Layer Parameter Options
 
 ### Show All Layers
-```
+
+```text
 [[File:MyImage.jpg|500px|layers=all|Caption]]
 ```
 
 ### Hide All Layers (Normal Image)
-```
+
+```text
 [[File:MyImage.jpg|500px|layers=none|Caption]]
 ```
 or simply omit the layers parameter:
-```
+
+```text
 [[File:MyImage.jpg|500px|Caption]]
 ```
 
 ### Show Specific Layers
 Use short layer IDs (first 4 characters) separated by commas:
-```
+
+```text
 [[File:MyImage.jpg|500px|layers=4bfa,77e5,0cf2|Caption]]
 ```
 
@@ -53,28 +57,33 @@ Click the "Copy" button next to any code sample to copy just the `layers=` param
 ## Examples
 
 Display a technical diagram with only annotation layers:
-```
+
+```text
 [[File:Circuit-Board.jpg|800px|layers=anno,labels|PCB with annotations]]
 ```
 
 Show all layers of an artwork:
-```
+
+```text
 [[File:My-Artwork.png|thumb|layers=all|Complete layered artwork]]
 ```
 
 Display base image without any layers:
-```
+
+```text
 [[File:Photo.jpg|600px|layers=none|Original photo without annotations]]
 ```
 
 ## How It Works
 
 The extension automatically:
+
 1. Detects the `layers=` parameter in your wikitext
 2. Looks up layer data for the specified image
 3. Renders only the requested layers
-4. Generates a composite thumbnail
+4. Generates a composite thumbnail on the server (cached like normal thumbs)
 5. Caches the result for performance
+
 
 ## Performance Notes
 

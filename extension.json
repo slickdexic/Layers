@@ -20,6 +20,10 @@
 			"description": "Master switch for Layers extension functionality",
 			"value": true
 		},
+		"LayersDebug": {
+			"description": "Enable verbose debug logging to the 'Layers' log channel",
+			"value": false
+		},
 		"LayersMaxBytes": {
 			"description": "Maximum JSON size per layer set in bytes",
 			"value": 2097152
@@ -55,14 +59,33 @@
 			"value": 8192
 		}
 	},
-	"HookHandlers": {},
+	"HookHandlers": {
+		"LayersHooks": {
+			"class": "MediaWiki\\Extension\\Layers\\Hooks"
+		},
+		"LayersUIHooks": {
+			"class": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks"
+		},
+		"LayersWikitextHooks": {
+			"class": "MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks"
+		}
+	},
 	"Hooks": {
-		"BeforePageDisplay": "MediaWiki\\Extension\\Layers\\Hooks::onBeforePageDisplay",
-		"FileDeleteComplete": "MediaWiki\\Extension\\Layers\\Hooks::onFileDeleteComplete",
-		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Hooks::onLoadExtensionSchemaUpdates",
-		"SkinTemplateNavigation": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onSkinTemplateNavigation",
-		"UnknownAction": "MediaWiki\\Extension\\Layers\\Hooks\\UIHooks::onUnknownAction",
-		"UserGetRights": "MediaWiki\\Extension\\Layers\\Hooks::onUserGetRights"
+		"BeforePageDisplay": "LayersHooks",
+		"FileDeleteComplete": "LayersHooks",
+		"LoadExtensionSchemaUpdates": "LayersHooks",
+		"MakeGlobalVariablesScript": "LayersHooks",
+		"ParserFirstCallInit": "LayersWikitextHooks",
+		"ImageBeforeProduceHTML": "LayersWikitextHooks",
+		"ThumbnailBeforeProduceHTML": "LayersWikitextHooks",
+		"ParserMakeImageParams": "LayersWikitextHooks",
+		"SkinTemplateNavigation": "LayersUIHooks",
+		"SkinTemplateNavigation::Universal": "LayersUIHooks",
+		"UnknownAction": "LayersUIHooks",
+		"BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform"
+	},
+	"Actions": {
+		"editlayers": "MediaWiki\\Extension\\Layers\\Action\\EditLayersAction"
 	},
 	"APIModules": {
 		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
@@ -77,17 +100,29 @@
 		"ext.layers": {
 			"localBasePath": "resources/ext.layers",
 			"remoteExtPath": "Layers/resources/ext.layers",
-			"dependencies": [],
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [
+				"mediawiki.util",
+				"mediawiki.hook"
+			],
 			"styles": [],
 			"scripts": [
 				"LayersViewer.js",
 				"init.js"
 			],
-			"messages": []
+			"messages": [
+				"layers-error-init",
+				"layers-panel-title",
+				"layers-panel-subtitle",
+				"layers-empty",
+				"layers-properties-title",
+				"layers-code-title"
+			]
 		},
 		"ext.layers.editor": {
 			"localBasePath": "resources/ext.layers.editor",
 			"remoteExtPath": "Layers/resources/ext.layers.editor",
+			"targets": [ "desktop", "mobile" ],
 			"dependencies": [
 				"oojs-ui-core",
 				"mediawiki.util",
@@ -101,21 +136,98 @@
 				"LayersEditor.js"
 			],
 			"styles": [
-				"editor.css"
+				"editor-fixed.css"
 			],
 			"messages": [
 				"layers-editor-title",
 				"layers-editor-save",
 				"layers-editor-cancel",
+				"layers-editor-close",
+				"layers-tool-select",
 				"layers-tool-text",
+				"layers-tool-pen",
 				"layers-tool-arrow",
 				"layers-tool-rectangle",
 				"layers-tool-circle",
+				"layers-tool-ellipse",
+				"layers-tool-polygon",
+				"layers-tool-star",
 				"layers-tool-line",
 				"layers-tool-highlight",
+				"layers-tool-marquee",
 				"layers-saving",
 				"layers-save-success",
-				"layers-save-error"
+				"layers-save-error",
+				"layers-toggle-visibility",
+				"layers-toggle-lock",
+				"layers-delete-layer-button",
+				"layers-delete-confirm",
+				"layers-no-layer-selected",
+				"layers-layer-not-found",
+				"layers-prop-x",
+				"layers-prop-y",
+				"layers-prop-text",
+				"layers-prop-font-size",
+				"layers-prop-color",
+				"layers-prop-width",
+				"layers-prop-stroke-width",
+				"layers-prop-height",
+				"layers-prop-stroke-color",
+				"layers-prop-fill-color",
+				"layers-prop-radius",
+				"layers-prop-opacity",
+				"layers-prop-blend",
+				"layers-code-none",
+				"layers-code-enable",
+				"layers-code-all-visible",
+				"layers-code-selected-visible",
+				"layers-code-caption",
+				"layers-code-copy",
+				"layers-code-copied",
+				"layers-code-copy-failed",
+				"layers-default-text-prefix",
+				"layers-default-empty",
+				"layers-type-rectangle",
+				"layers-type-circle",
+				"layers-type-ellipse",
+				"layers-type-polygon",
+				"layers-type-star",
+				"layers-type-arrow",
+				"layers-type-line",
+				"layers-type-path",
+				"layers-type-highlight",
+				"layers-type-layer",
+				"layers-arrow-single",
+				"layers-arrow-double",
+				"layers-arrow-none",
+				"layers-effects",
+				"layers-effect-shadow",
+				"layers-effect-shadow-enable",
+				"layers-effect-shadow-color",
+				"layers-effect-shadow-toggle",
+				"layers-effect-glow",
+				"layers-effect-glow-toggle",
+				"layers-effect-stroke",
+				"layers-effect-stroke-toggle",
+				"layers-zoom-out",
+				"layers-zoom-reset",
+				"layers-zoom-in",
+				"layers-zoom-fit",
+				"layers-toggle-grid",
+				"layers-save-changes",
+				"layers-cancel-changes",
+				"layers-blend-normal",
+				"layers-blend-multiply",
+				"layers-blend-screen",
+				"layers-blend-overlay",
+				"layers-blend-soft-light",
+				"layers-blend-hard-light",
+				"layers-blend-color-dodge",
+				"layers-blend-color-burn",
+				"layers-blend-darken",
+				"layers-blend-lighten",
+				"layers-blend-difference",
+				"layers-blend-exclusion"
 			]
 		}
 	},
@@ -126,7 +238,7 @@
 	],
 	"GroupPermissions": {
 		"*": {
-			"editlayers": true
+			"editlayers": false
 		},
 		"user": {
 			"editlayers": true

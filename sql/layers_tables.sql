@@ -12,10 +12,14 @@ CREATE TABLE /*_*/layer_sets (
     ls_timestamp binary(14) NOT NULL,
     ls_revision int unsigned NOT NULL DEFAULT 1,
     ls_name varchar(255) DEFAULT NULL,
+    ls_size int unsigned NOT NULL DEFAULT 0,
+    ls_layer_count tinyint unsigned NOT NULL DEFAULT 0,
     PRIMARY KEY (ls_id),
+    UNIQUE KEY ls_img_name_revision (ls_img_name, ls_img_sha1, ls_revision),
     KEY ls_img_lookup (ls_img_name, ls_img_sha1),
     KEY ls_user_timestamp (ls_user_id, ls_timestamp),
-    KEY ls_img_name_revision (ls_img_name, ls_revision)
+    KEY ls_timestamp (ls_timestamp),
+    KEY ls_size_performance (ls_size, ls_layer_count)
 ) /*$wgDBTableOptions*/;
 
 CREATE TABLE /*_*/layer_assets (
@@ -25,16 +29,20 @@ CREATE TABLE /*_*/layer_assets (
     la_preview_sha1 varchar(32) DEFAULT NULL,
     la_user_id int unsigned NOT NULL,
     la_timestamp binary(14) NOT NULL,
+    la_size int unsigned NOT NULL DEFAULT 0,
     PRIMARY KEY (la_id),
     UNIQUE KEY la_title (la_title),
-    KEY la_user_timestamp (la_user_id, la_timestamp)
+    KEY la_user_timestamp (la_user_id, la_timestamp),
+    KEY la_size (la_size)
 ) /*$wgDBTableOptions*/;
 
 CREATE TABLE /*_*/layer_set_usage (
     lsu_layer_set_id int unsigned NOT NULL,
     lsu_page_id int unsigned NOT NULL,
     lsu_timestamp binary(14) NOT NULL,
+    lsu_usage_count int unsigned NOT NULL DEFAULT 1,
     PRIMARY KEY (lsu_layer_set_id, lsu_page_id),
     KEY lsu_page_id (lsu_page_id),
-    KEY lsu_timestamp (lsu_timestamp)
+    KEY lsu_timestamp (lsu_timestamp),
+    KEY lsu_usage_count (lsu_usage_count)
 ) /*$wgDBTableOptions*/;

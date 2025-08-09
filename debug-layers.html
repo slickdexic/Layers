@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Layers Extension Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; margin: 10px 0; padding: 15px; }
+        .test-section h3 { margin-top: 0; }
+        .test-image { border: 2px solid #eee; margin: 10px 0; }
+        .debug-info { background: #f0f0f0; padding: 10px; font-family: monospace; white-space: pre-wrap; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Layers Extension Debug Test</h1>
+    <p>This page helps debug the Layers extension functionality.</p>
+
+    <div class="test-section">
+        <h3>Test 1: Basic Image (should show in console if module loads)</h3>
+        <img src="../images/1/16/ImageTest01.png" alt="Test Image 1" width="200" />
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: Image with layers-thumbnail class (simulates server-side class addition)</h3>
+        <img src="../images/8/8b/ImageTest02.jpg" alt="Test Image 2" width="200" class="layers-thumbnail" />
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: Image with layer data (simulates full server-side processing)</h3>
+        <img src="../images/1/16/ImageTest01.png" alt="Test Image 3" width="200" 
+             class="layers-thumbnail" 
+             data-layer-data='{"layers": [{"id": "test1", "type": "rectangle", "x": 10, "y": 10, "width": 50, "height": 30, "fill": "#ff0000", "stroke": "#000000", "strokeWidth": 2, "visible": true}]}' />
+    </div>
+
+    <div class="test-section">
+        <h3>Test 4: Image with multiple layers</h3>
+        <img src="../images/8/8b/ImageTest02.jpg" alt="Test Image 4" width="200" 
+             class="layers-thumbnail" 
+             data-layer-data='{"layers": [
+                {"id": "rect1", "type": "rectangle", "x": 20, "y": 20, "width": 40, "height": 25, "fill": "#ff0000", "stroke": "#000000", "strokeWidth": 1, "visible": true},
+                {"id": "text1", "type": "text", "x": 30, "y": 80, "text": "Test Text", "fontSize": 14, "fill": "#0000ff", "visible": true},
+                {"id": "circle1", "type": "circle", "x": 100, "y": 50, "radius": 15, "fill": "#00ff00", "stroke": "#000000", "strokeWidth": 1, "visible": true}
+             ]}' />
+    </div>
+
+    <div class="test-section">
+        <h3>Console Output</h3>
+        <div class="debug-info" id="debug-output">Open browser console to see Layers extension debug messages...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>Module Loading Test</h3>
+        <button onclick="testModuleLoading()">Test Module Loading</button>
+        <div id="module-test-output"></div>
+    </div>
+
+    <script>
+        // Capture console messages for display
+        var originalLog = console.log;
+        var originalError = console.error;
+        var debugOutput = document.getElementById('debug-output');
+        
+        function addToOutput(message, type) {
+            var timestamp = new Date().toISOString().substr(11, 8);
+            var className = type === 'error' ? 'error' : (type === 'info' ? 'info' : 'success');
+            debugOutput.innerHTML += '[' + timestamp + '] <span class="' + className + '">' + message + '</span>\n';
+        }
+        
+        console.log = function() {
+            var message = Array.prototype.slice.call(arguments).join(' ');
+            addToOutput(message, 'info');
+            originalLog.apply(console, arguments);
+        };
+        
+        console.error = function() {
+            var message = Array.prototype.slice.call(arguments).join(' ');
+            addToOutput(message, 'error');
+            originalError.apply(console, arguments);
+        };
+
+        function testModuleLoading() {
+            var output = document.getElementById('module-test-output');
+            output.innerHTML = '<p>Testing module availability...</p>';
+            
+            // Test if MediaWiki is available
+            if (typeof mw !== 'undefined') {
+                output.innerHTML += '<p class="success">✓ MediaWiki (mw) object available</p>';
+                
+                // Test if our extension loaded
+                if (typeof mw.layers !== 'undefined') {
+                    output.innerHTML += '<p class="success">✓ mw.layers object available</p>';
+                    
+                    // Test viewer class
+                    if (typeof window.LayersViewer !== 'undefined') {
+                        output.innerHTML += '<p class="success">✓ LayersViewer class available</p>';
+                    } else {
+                        output.innerHTML += '<p class="error">✗ LayersViewer class not available</p>';
+                    }
+                    
+                    // Test editor class
+                    if (typeof window.LayersEditor !== 'undefined') {
+                        output.innerHTML += '<p class="success">✓ LayersEditor class available</p>';
+                    } else {
+                        output.innerHTML += '<p class="info">ℹ LayersEditor class not available (expected if not on file page)</p>';
+                    }
+                } else {
+                    output.innerHTML += '<p class="error">✗ mw.layers object not available</p>';
+                }
+            } else {
+                output.innerHTML += '<p class="error">✗ MediaWiki (mw) object not available</p>';
+            }
+        }
+
+        // Auto-run module test after page loads
+        window.addEventListener('load', function() {
+            setTimeout(testModuleLoading, 1000);
+        });
+    </script>
+</body>
+</html>

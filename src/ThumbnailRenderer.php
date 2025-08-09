@@ -1,7 +1,6 @@
 <?php
 /**
  * Server-side thumbnail renderer for layered images
- * This is the MOST CRITICAL missing piece
  *
  * @file
  * @ingroup Extensions
@@ -9,85 +8,92 @@
 
 namespace MediaWiki\Extension\Layers;
 
-use Config;
 use Exception;
-use File;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
-use MediaWiki\MediaWikiServices;
-use MediaWiki\Shell\Shell;
 use Psr\Log\LoggerInterface;
 
 class ThumbnailRenderer {
-	/** @var Config */
+	/** @var mixed */
 	private $config;
+
+	/** @var LayersDatabase */
 	private $layersDb;
-	/** @var LoggerInterface */
+
+	/** @var LoggerInterface|null */
 	private $logger;
 
 	public function __construct() {
-		$this->config = MediaWikiServices::getInstance()->getMainConfig();
+		$services = \is_callable( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+			? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+			: null;
+		$this->config = $services ? $services->getMainConfig() : null;
 		$this->layersDb = new LayersDatabase();
-		// TODO: Fix logger initialization for MediaWiki 1.44
-		$this->logger = null;
+		$this->logger = \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' )
+			? \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' )
+			: null;
 	}
 
 	/**
 	 * Generate thumbnail with layers overlaid
 	 *
-	 * @param File $file
-	 * @param array $params Transform parameters
-	 * @return string|false Path to generated thumbnail or false on failure
+	 * @param mixed $file MediaWiki File
+	 * @param array $params Transform parameters (must include 'layers' and 'layerData')
+	 * @return string|null Path to generated thumbnail or null on failure
 	 */
-	public function generateLayeredThumbnail( File $file, array $params ) {
-		// Check if layers are requested and data is available
+	public function generateLayeredThumbnail( $file, array $params ) {
 		if ( empty( $params['layers'] ) || empty( $params['layerData'] ) ) {
-			return null; // Let normal thumbnail generation handle this
+			return null;
 		}
 
 		try {
-			$layers = $params['layerData']; // Expects a pre-processed array of layers
-
+			$layers = $params['layerData'];
 			if ( empty( $layers ) ) {
-				return null; // No layers to draw
+				return null;
 			}
 
-			// Generate base thumbnail first, removing our custom params
+			// Produce the base thumbnail first
 			$baseParams = $params;
 			unset( $baseParams['layers'], $baseParams['layerSetId'], $baseParams['layerData'] );
-			$baseThumbnail = $file->transform( $baseParams );
-
-			if ( !$baseThumbnail || $baseThumbnail->isError() ) {
+			$baseThumb = $file->transform( $baseParams );
+			if ( !$baseThumb || ( method_exists( $baseThumb, 'isError' ) && $baseThumb->isError() ) ) {
 				if ( $this->logger ) {
-					$this->logger->warning( 'Base thumbnail generation failed.' );
+					$this->logger->warning( 'Layers: base thumbnail generation failed' );
 				}
 				return null;
 			}
 
-			// Create output path
-			$thumbDir = $this->config->get( 'UploadDirectory' ) . '/thumb/layers';
+			$uploadDir = $this->config ? $this->config->get( 'UploadDirectory' ) : sys_get_temp_dir();
+			$thumbDir = rtrim( $uploadDir, '/\\' ) . '/thumb/layers';
 			if ( !is_dir( $thumbDir ) ) {
-				mkdir( $thumbDir, 0755, true );
+				@mkdir( $thumbDir, 0755, true );
 			}
 
-			$outputPath = $thumbDir . '/' . $file->getSha1() . '_' .
-						 md5( serialize( $params ) ) . '.png';
-
-			// Check if already exists (caching)
+			$outputPath = $thumbDir . '/' . $file->getSha1() . '_' . md5( serialize( $params ) ) . '.png';
 			if ( file_exists( $outputPath ) ) {
 				return $outputPath;
 			}
 
-			// Render layers on top of base image
-			$basePath = $baseThumbnail->getLocalCopyPath();
-
-			if ( $this->overlayLayers( $basePath, $layers, $outputPath ) ) {
-				return $outputPath;
+			$basePath = method_exists( $baseThumb, 'getLocalCopyPath' )
+				? $baseThumb->getLocalCopyPath()
+				: ( $baseThumb->getFile() ? $baseThumb->getFile()->getLocalRefPath() : null );
+			if ( !$basePath ) {
+				return null;
 			}
 
+			// Determine scale from original to target dimensions
+			$origW = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : 0;
+			$origH = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : 0;
+			$targetW = isset( $baseParams['width'] ) ? (int)$baseParams['width'] : $origW;
+			$targetH = isset( $baseParams['height'] ) ? (int)$baseParams['height'] : ( $origW > 0 && $origH > 0 && $targetW > 0 ? (int)round( $origH * ( $targetW / $origW ) ) : $origH );
+			$scaleX = $origW > 0 ? ( $targetW / $origW ) : 1.0;
+			$scaleY = $origH > 0 ? ( $targetH / $origH ) : $scaleX;
+
+			if ( $this->overlayLayers( $basePath, $layers, $outputPath, $scaleX, $scaleY ) ) {
+				return $outputPath;
+			}
 		} catch ( Exception $e ) {
-			error_log( 'Layers: Exception in generateLayeredThumbnail: ' . $e->getMessage() );
 			if ( $this->logger ) {
-				$this->logger->warning( 'Thumbnail generation failed: {message}', [ 'message' => $e->getMessage() ] );
+				$this->logger->warning( 'Layers: thumbnail generation failed: {message}', [ 'exception' => $e, 'message' => $e->getMessage() ] );
 			}
 		}
 
@@ -96,152 +102,122 @@ class ThumbnailRenderer {
 
 	/**
 	 * Use ImageMagick to overlay layers on base image
-	 *
-	 * @param string $basePath
-	 * @param array $layers
-	 * @param string $outputPath
-	 * @return bool
 	 */
-	private function overlayLayers( string $basePath, array $layers, string $outputPath ): bool {
-		// Check ImageMagick availability
-		if ( !$this->config->get( 'UseImageMagick' ) ) {
+	private function overlayLayers( string $basePath, array $layers, string $outputPath, float $scaleX, float $scaleY ): bool {
+		if ( !$this->config || !$this->config->get( 'UseImageMagick' ) ) {
 			return false;
 		}
-
 		$convert = $this->config->get( 'ImageMagickConvertCommand' );
 		if ( !$convert ) {
 			return false;
 		}
 
-		// Build command arguments array
 		$args = [ $convert, $basePath ];
 
-		// Add each layer
 		foreach ( $layers as $layer ) {
 			if ( ( $layer['visible'] ?? true ) === false ) {
 				continue;
 			}
-
-			$layerArgs = $this->buildLayerArguments( $layer );
-			$args = array_merge( $args, $layerArgs );
+			$args = array_merge( $args, $this->buildLayerArguments( $layer, $scaleX, $scaleY ) );
 		}
 
-		// Add output path
 		$args[] = $outputPath;
 
-		// Execute command
-		$result = Shell::command( $args )->execute();
-		$retval = $result->getExitCode();
+		// Use MediaWiki Shell abstraction for safety and resource limits
+		$limits = [];
+		try {
+			$limits = [
+				'memory' => $this->config->get( 'MaxShellMemory' ),
+				'time' => min(
+					(int)$this->config->get( 'MaxShellTime' ),
+					(int)$this->config->get( 'LayersImageMagickTimeout' )
+				),
+				'filesize' => $this->config->get( 'MaxShellFileSize' ),
+			];
+		} catch ( \Throwable $e ) {
+			// If config keys missing, proceed with defaults
+			$limits = [ 'time' => (int)($this->config->get( 'LayersImageMagickTimeout' ) ?? 30) ];
+		}
 
-		if ( $retval !== 0 ) {
-			error_log( 'Layers: ImageMagick failed with exit code ' . $retval . ': ' . $result->getStderr() );
-			if ( $this->logger ) {
-				$this->logger->warning(
-					'ImageMagick command failed with exit code {retval}. Args: {args} Stderr: {stderr}',
-					[
-						'retval' => $retval,
-						'args' => $args,
-						'stderr' => $result->getStderr()
-					]
-				);
+		if ( \class_exists( '\\MediaWiki\\Shell\\Shell' ) ) {
+			try {
+				$result = \call_user_func( [ '\\MediaWiki\\Shell\\Shell', 'command' ], ...$args )
+					->limits( $limits )
+					->includeStderr()
+					->execute();
+
+				if ( method_exists( $result, 'getExitCode' ) ? $result->getExitCode() !== 0 : ( method_exists( $result, 'isOK' ) ? !$result->isOK() : false ) ) {
+					$stderr = method_exists( $result, 'getStderr' ) ? $result->getStderr() : '';
+					if ( $this->logger ) {
+						$this->logger->error( 'Layers: ImageMagick failed', [ 'stderr' => $stderr, 'args' => $args ] );
+					}
+					return false;
+				}
+			} catch ( \Throwable $e ) {
+				if ( $this->logger ) {
+					$this->logger->error( 'Layers: Shell execution failed', [ 'exception' => $e, 'args' => $args ] );
+				}
+				return false;
 			}
-			return false;
+		} else {
+			// Fallback to exec() if Shell is unavailable (older MW or limited env)
+			$escaped = array_map( 'escapeshellarg', $args );
+			$cmd = implode( ' ', $escaped );
+			$output = [];
+			$returnVar = 0;
+			@exec( $cmd . ' 2>&1', $output, $returnVar );
+			if ( $returnVar !== 0 ) {
+				$stderr = implode( "\n", $output );
+				if ( $this->logger ) {
+					$this->logger->error( 'Layers: ImageMagick failed (exec)', [ 'stderr' => $stderr, 'args' => $args ] );
+				}
+				return false;
+			}
 		}
 
 		return file_exists( $outputPath );
 	}
 
 	/**
-	 * Build ImageMagick arguments array for individual layer
-	 *
-	 * @param array $layer
-	 * @return array
+	 * Build args for a layer (scaled)
 	 */
-	private function buildLayerArguments( array $layer ): array {
+	private function buildLayerArguments( array $layer, float $scaleX, float $scaleY ): array {
 		switch ( $layer['type'] ) {
 			case 'text':
-				return $this->buildTextArguments( $layer );
+				return $this->buildTextArguments( $layer, $scaleX, $scaleY );
 			case 'rectangle':
-				return $this->buildRectangleArguments( $layer );
+				return $this->buildRectangleArguments( $layer, $scaleX, $scaleY );
 			case 'circle':
-				return $this->buildCircleArguments( $layer );
+				return $this->buildCircleArguments( $layer, $scaleX, $scaleY );
 			case 'ellipse':
-				return $this->buildEllipseArguments( $layer );
+				return $this->buildEllipseArguments( $layer, $scaleX, $scaleY );
 			case 'polygon':
-				return $this->buildPolygonArguments( $layer );
+				return $this->buildPolygonArguments( $layer, $scaleX, $scaleY );
 			case 'star':
-				return $this->buildStarArguments( $layer );
+				return $this->buildStarArguments( $layer, $scaleX, $scaleY );
 			case 'path':
-				return $this->buildPathArguments( $layer );
+				return $this->buildPathArguments( $layer, $scaleX, $scaleY );
 			case 'arrow':
-				return $this->buildArrowArguments( $layer );
+				return $this->buildArrowArguments( $layer, $scaleX, $scaleY );
 			case 'line':
-				return $this->buildLineArguments( $layer );
+				return $this->buildLineArguments( $layer, $scaleX, $scaleY );
 			case 'highlight':
-				return $this->buildHighlightArguments( $layer );
+				return $this->buildHighlightArguments( $layer, $scaleX, $scaleY );
 			default:
 				return [];
 		}
 	}
 
-	/**
-	 * Build ImageMagick command for individual layer
-	 *
-	 * @param array $layer
-	 * @return string
-	 */
-	private function buildLayerCommand( array $layer ): string {
-		$cmd = '';
-
-		switch ( $layer['type'] ) {
-			case 'text':
-				$cmd .= $this->buildTextCommand( $layer );
-				break;
-			case 'rectangle':
-				$cmd .= $this->buildRectangleCommand( $layer );
-				break;
-			case 'circle':
-				$cmd .= $this->buildCircleCommand( $layer );
-				break;
-			case 'ellipse':
-				$cmd .= $this->buildEllipseCommand( $layer );
-				break;
-			case 'polygon':
-				$cmd .= $this->buildPolygonCommand( $layer );
-				break;
-			case 'star':
-				$cmd .= $this->buildStarCommand( $layer );
-				break;
-			case 'path':
-				$cmd .= $this->buildPathCommand( $layer );
-				break;
-			case 'arrow':
-				$cmd .= $this->buildArrowCommand( $layer );
-				break;
-			case 'line':
-				$cmd .= $this->buildLineCommand( $layer );
-				break;
-			case 'highlight':
-				$cmd .= $this->buildHighlightCommand( $layer );
-				break;
-		}
-
-		return $cmd;
-	}
-
-	/**
-	 * Build text layer arguments
-	 */
-	private function buildTextArguments( array $layer ): array {
-		$x = $layer['x'] ?? 0;
-		$y = $layer['y'] ?? 0;
-		$text = $layer['text'] ?? '';
-		$fontSize = $layer['fontSize'] ?? 14;
-		$fill = $layer['fill'] ?? '#000000';
-		$font = $layer['fontFamily'] ?? 'DejaVu-Sans'; // Use a font that exists in most systems
+	private function buildTextArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$text = (string)( $layer['text'] ?? '' );
+		$fontSize = (int)round( ( $layer['fontSize'] ?? 14 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$fill = (string)( $layer['fill'] ?? '#000000' );
+		$font = (string)( $layer['fontFamily'] ?? 'DejaVu-Sans' );
 
 		return [
-			'-pointsize', (string)(int)$fontSize,
+			'-pointsize', (string)$fontSize,
 			'-fill', $fill,
 			'-font', $font,
 			'-annotate', '+' . (int)$x . '+' . (int)$y,
@@ -249,232 +225,139 @@ class ThumbnailRenderer {
 		];
 	}
 
-	// Placeholder methods for other layer types
-	private function buildRectangleArguments( array $layer ): array {
- return [];
+	private function buildRectangleArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$width = ( $layer['width'] ?? 100 ) * $scaleX;
+		$height = ( $layer['height'] ?? 100 ) * $scaleY;
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$fill = (string)( $layer['fill'] ?? 'none' );
+
+		return [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', 'rectangle ' . (int)$x . ',' . (int)$y . ' ' . (int)( $x + $width ) . ',' . (int)( $y + $height )
+		];
 	}
 
-	private function buildCircleArguments( array $layer ): array {
- return [];
+	private function buildCircleArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$radius = ( $layer['radius'] ?? 50 ) * ( ( $scaleX + $scaleY ) / 2 );
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$fill = (string)( $layer['fill'] ?? 'none' );
+
+		return [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', 'circle ' . (int)$x . ',' . (int)$y . ' ' . (int)( $x + $radius ) . ',' . (int)$y
+		];
 	}
 
-	private function buildEllipseArguments( array $layer ): array {
- return [];
+	private function buildEllipseArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$radiusX = ( $layer['radiusX'] ?? 50 ) * $scaleX;
+		$radiusY = ( $layer['radiusY'] ?? 25 ) * $scaleY;
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$fill = (string)( $layer['fill'] ?? 'none' );
+
+		return [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', 'ellipse ' . (int)$x . ',' . (int)$y . ' ' . (int)$radiusX . ',' . (int)$radiusY . ' 0,360'
+		];
 	}
 
-	private function buildPolygonArguments( array $layer ): array {
- return [];
-	}
+	private function buildPolygonArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$radius = ( $layer['radius'] ?? 50 ) * ( ( $scaleX + $scaleY ) / 2 );
+		$sides = (int)( $layer['sides'] ?? 6 );
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$fill = (string)( $layer['fill'] ?? 'none' );
 
-	private function buildStarArguments( array $layer ): array {
- return [];
-	}
-
-	private function buildPathArguments( array $layer ): array {
- return [];
-	}
-
-	private function buildArrowArguments( array $layer ): array {
- return [];
-	}
-
-	private function buildLineArguments( array $layer ): array {
- return [];
-	}
-
-	private function buildHighlightArguments( array $layer ): array {
- return [];
-	}
-
-	private function buildTextCommand( array $layer ): string {
-		$x = $layer['x'] ?? 0;
-		$y = $layer['y'] ?? 0;
-		$text = $layer['text'] ?? '';
-		$fontSize = $layer['fontSize'] ?? 14;
-		$fill = $layer['fill'] ?? '#000000';
-		$font = $layer['fontFamily'] ?? 'Arial';
-
-		return sprintf(
-			' -pointsize %d -fill %s -font %s -annotate +%d+%d %s',
-			(int)$fontSize,
-			Shell::escape( $fill ),
-			Shell::escape( $font ),
-			(int)$x,
-			(int)$y,
-			Shell::escape( $text )
-		);
-	}
-
-	private function buildRectangleCommand( array $layer ): string {
-		$x = $layer['x'] ?? 0;
-		$y = $layer['y'] ?? 0;
-		$width = $layer['width'] ?? 100;
-		$height = $layer['height'] ?? 100;
-		$stroke = $layer['stroke'] ?? '#000000';
-		$strokeWidth = $layer['strokeWidth'] ?? 1;
-		$fill = $layer['fill'] ?? 'none';
-
-		return sprintf(
-			' -stroke %s -strokewidth %d -fill %s -draw "rectangle %d,%d %d,%d"',
-			Shell::escape( $stroke ),
-			(int)$strokeWidth,
-			Shell::escape( $fill ),
-			(int)$x,
-			(int)$y,
-			(int)( $x + $width ),
-			(int)( $y + $height )
-		);
-	}
-
-	private function buildCircleCommand( array $layer ): string {
-		$x = $layer['x'] ?? 0;
-		$y = $layer['y'] ?? 0;
-		$radius = $layer['radius'] ?? 50;
-		$stroke = $layer['stroke'] ?? '#000000';
-		$strokeWidth = $layer['strokeWidth'] ?? 1;
-		$fill = $layer['fill'] ?? 'none';
-
-		return sprintf(
-			' -stroke %s -strokewidth %d -fill %s -draw "circle %d,%d %d,%d"',
-			Shell::escape( $stroke ),
-			(int)$strokeWidth,
-			Shell::escape( $fill ),
-			(int)$x,
-			(int)$y,
-			(int)( $x + $radius ),
-			(int)$y
-		);
-	}
-
-	private function buildEllipseCommand( array $layer ): string {
-		$x = $layer['x'] ?? 0;
-		$y = $layer['y'] ?? 0;
-		$radiusX = $layer['radiusX'] ?? 50;
-		$radiusY = $layer['radiusY'] ?? 25;
-		$stroke = $layer['stroke'] ?? '#000000';
-		$strokeWidth = $layer['strokeWidth'] ?? 1;
-		$fill = $layer['fill'] ?? 'none';
-
-		return sprintf(
-			' -stroke %s -strokewidth %d -fill %s -draw "ellipse %d,%d %d,%d 0,360"',
-			Shell::escape( $stroke ),
-			(int)$strokeWidth,
-			Shell::escape( $fill ),
-			(int)$x,
-			(int)$y,
-			(int)$radiusX,
-			(int)$radiusY
-		);
-	}
-
-	private function buildPolygonCommand( array $layer ): string {
-		$x = $layer['x'] ?? 0;
-		$y = $layer['y'] ?? 0;
-		$radius = $layer['radius'] ?? 50;
-		$sides = $layer['sides'] ?? 6;
-		$stroke = $layer['stroke'] ?? '#000000';
-		$strokeWidth = $layer['strokeWidth'] ?? 1;
-		$fill = $layer['fill'] ?? 'none';
-
-		$points = [];
+		$pts = [];
 		for ( $i = 0; $i < $sides; $i++ ) {
 			$angle = ( $i * 2 * M_PI / $sides ) - ( M_PI / 2 );
-			$points[] = (int)( $x + $radius * cos( $angle ) );
-			$points[] = (int)( $y + $radius * sin( $angle ) );
+			$pts[] = (int)( $x + $radius * cos( $angle ) ) . ',' . (int)( $y + $radius * sin( $angle ) );
 		}
 
-		return sprintf(
-			' -stroke %s -strokewidth %d -fill %s -draw "polygon %s"',
-			Shell::escape( $stroke ),
-			(int)$strokeWidth,
-			Shell::escape( $fill ),
-			implode( ' ', $points )
-		);
+		return [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', 'polygon ' . implode( ' ', $pts )
+		];
 	}
 
-	private function buildStarCommand( array $layer ): string {
-		$x = $layer['x'] ?? 0;
-		$y = $layer['y'] ?? 0;
-		$outerRadius = $layer['outerRadius'] ?? 50;
-		$innerRadius = $layer['innerRadius'] ?? 25;
-		$numPoints = $layer['points'] ?? 5;
-		$stroke = $layer['stroke'] ?? '#000000';
-		$strokeWidth = $layer['strokeWidth'] ?? 1;
-		$fill = $layer['fill'] ?? 'none';
+	private function buildStarArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$outerRadius = ( $layer['outerRadius'] ?? 50 ) * ( ( $scaleX + $scaleY ) / 2 );
+		$innerRadius = ( $layer['innerRadius'] ?? 25 ) * ( ( $scaleX + $scaleY ) / 2 );
+		$numPoints = (int)( $layer['points'] ?? 5 );
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$fill = (string)( $layer['fill'] ?? 'none' );
 
-		$points = [];
+		$pts = [];
 		for ( $i = 0; $i < $numPoints * 2; $i++ ) {
-			$radius = ( $i % 2 == 0 ) ? $outerRadius : $innerRadius;
+			$radius = ( $i % 2 === 0 ) ? $outerRadius : $innerRadius;
 			$angle = ( $i * M_PI / $numPoints ) - ( M_PI / 2 );
-			$points[] = (int)( $x + $radius * cos( $angle ) );
-			$points[] = (int)( $y + $radius * sin( $angle ) );
+			$pts[] = (int)( $x + $radius * cos( $angle ) ) . ',' . (int)( $y + $radius * sin( $angle ) );
 		}
 
-		return sprintf(
-			' -stroke %s -strokewidth %d -fill %s -draw "polygon %s"',
-			Shell::escape( $stroke ),
-			(int)$strokeWidth,
-			Shell::escape( $fill ),
-			implode( ' ', $points )
-		);
+		return [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', 'polygon ' . implode( ' ', $pts )
+		];
 	}
 
-	private function buildPathCommand( array $layer ): string {
+	private function buildPathArguments( array $layer, float $scaleX, float $scaleY ): array {
 		$points = $layer['points'] ?? [];
 		if ( count( $points ) < 2 ) {
-			return '';
+			return [];
 		}
-		$stroke = $layer['stroke'] ?? '#000000';
-		$strokeWidth = $layer['strokeWidth'] ?? 1;
-		$fill = $layer['fill'] ?? 'none';
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$fill = (string)( $layer['fill'] ?? 'none' );
 
-		$pathString = 'M ' . (int)$points[0]['x'] . ',' . (int)$points[0]['y'];
+		$cmd = 'path "M ' . (int)( $points[0]['x'] * $scaleX ) . ',' . (int)( $points[0]['y'] * $scaleY ) . ' ';
 		for ( $i = 1; $i < count( $points ); $i++ ) {
-			$pathString .= ' L ' . (int)$points[$i]['x'] . ',' . (int)$points[$i]['y'];
+			$cmd .= 'L ' . (int)( $points[$i]['x'] * $scaleX ) . ',' . (int)( $points[$i]['y'] * $scaleY ) . ' ';
 		}
+		$cmd .= '"';
 
-		return sprintf(
-			' -stroke %s -strokewidth %d -fill %s -draw "path \'%s\'"',
-			Shell::escape( $stroke ),
-			(int)$strokeWidth,
-			Shell::escape( $fill ),
-			$pathString
-		);
+		return [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', $cmd
+		];
 	}
 
-	private function buildLineCommand( array $layer ): string {
-		$x1 = $layer['x1'] ?? 0;
-		$y1 = $layer['y1'] ?? 0;
-		$x2 = $layer['x2'] ?? 100;
-		$y2 = $layer['y2'] ?? 100;
-		$stroke = $layer['stroke'] ?? '#000000';
-		$strokeWidth = $layer['strokeWidth'] ?? 1;
+	private function buildArrowArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$lineArgs = $this->buildLineArguments( $layer, $scaleX, $scaleY );
 
-		return sprintf(
-			' -stroke %s -strokewidth %d -draw "line %d,%d %d,%d"',
-			Shell::escape( $stroke ),
-			(int)$strokeWidth,
-			(int)$x1,
-			(int)$y1,
-			(int)$x2,
-			(int)$y2
-		);
-	}
+		$x2 = ( $layer['x2'] ?? 100 ) * $scaleX;
+		$y2 = ( $layer['y2'] ?? 100 ) * $scaleY;
+		$x1 = ( $layer['x1'] ?? 0 ) * $scaleX;
+		$y1 = ( $layer['y1'] ?? 0 ) * $scaleY;
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 
-	private function buildArrowCommand( array $layer ): string {
-		// Simplified arrow as line + arrowhead
-		$lineCmd = $this->buildLineCommand( $layer );
-
-		$x2 = $layer['x2'] ?? 100;
-		$y2 = $layer['y2'] ?? 100;
-		$x1 = $layer['x1'] ?? 0;
-		$y1 = $layer['y1'] ?? 0;
-		$stroke = $layer['stroke'] ?? '#000000';
-		$strokeWidth = $layer['strokeWidth'] ?? 1;
-
-		// Calculate arrowhead
 		$angle = atan2( $y2 - $y1, $x2 - $x1 );
-		$arrowLength = 10;
+		$arrowLength = 10 * ( ( $scaleX + $scaleY ) / 2 );
 		$arrowAngle = 0.5;
 
 		$arrowX1 = $x2 - $arrowLength * cos( $angle - $arrowAngle );
@@ -482,21 +365,34 @@ class ThumbnailRenderer {
 		$arrowX2 = $x2 - $arrowLength * cos( $angle + $arrowAngle );
 		$arrowY2 = $y2 - $arrowLength * sin( $angle + $arrowAngle );
 
-		$arrowCmd = sprintf(
-			' -fill %s -stroke %s -strokewidth %d -draw "polygon %d,%d %d,%d %d,%d"',
-			Shell::escape( $stroke ),
-			Shell::escape( $stroke ),
-			(int)$strokeWidth,
-			(int)$x2, (int)$y2, (int)$arrowX1, (int)$arrowY1, (int)$arrowX2, (int)$arrowY2
-		);
+		$arrowArgs = [
+			'-fill', $stroke,
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-draw', 'polygon ' . (int)$x2 . ',' . (int)$y2 . ' ' . (int)$arrowX1 . ',' . (int)$arrowY1 . ' ' . (int)$arrowX2 . ',' . (int)$arrowY2
+		];
 
-		return $lineCmd . $arrowCmd;
+		return array_merge( $lineArgs, $arrowArgs );
 	}
 
-	private function buildHighlightCommand( array $layer ): string {
-		// Semi-transparent rectangle
-		$layer['fill'] = $layer['fill'] ?? '#ffff0080'; // Yellow with alpha
+	private function buildLineArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x1 = ( $layer['x1'] ?? 0 ) * $scaleX;
+		$y1 = ( $layer['y1'] ?? 0 ) * $scaleY;
+		$x2 = ( $layer['x2'] ?? 100 ) * $scaleX;
+		$y2 = ( $layer['y2'] ?? 100 ) * $scaleY;
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+
+		return [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-draw', 'line ' . (int)$x1 . ',' . (int)$y1 . ' ' . (int)$x2 . ',' . (int)$y2
+		];
+	}
+
+	private function buildHighlightArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$layer['fill'] = $layer['fill'] ?? '#ffff0080';
 		$layer['stroke'] = 'none';
-		return $this->buildRectangleCommand( $layer );
+		return $this->buildRectangleArguments( $layer, $scaleX, $scaleY );
 	}
 }

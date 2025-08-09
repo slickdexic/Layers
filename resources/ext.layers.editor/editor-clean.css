@@ -1,0 +1,199 @@
+/* stylelint-disable */
+/* Editor container */
+.layers-editor-container {
+position: relative;
+width: 100%;
+min-height: 600px;
+}
+
+/* Main toolbar */
+.layers-toolbar {
+display: flex;
+flex-wrap: wrap;
+gap: 0.5em;
+padding: 0.5em;
+background: #f8f9fa;
+border: 0.063em solid #ddd;
+border-radius: 0.25em;
+margin-bottom: 1em;
+font-family: 'Roboto', sans-serif;
+}
+
+/* Toolbar groups */
+.toolbar-group {
+display: flex;
+gap: 0.25em;
+align-items: center;
+}
+
+.toolbar-group:not(:last-child) {
+margin-right: 1em;
+}
+
+/* Basic button styles */
+.toolbar-button {
+padding: 0.5em 1em;
+border: 0.063em solid #ccc;
+background: #fff;
+border-radius: 0.25em;
+cursor: pointer;
+font-size: 0.875em;
+transition: all 0.2s ease;
+}
+
+.toolbar-button:hover {
+background: #f0f0f0;
+border-color: #999;
+}
+
+.toolbar-button.active {
+background: #007cba;
+color: #fff;
+border-color: #005a87;
+}
+
+/* Primary button */
+.toolbar-button.primary {
+background: #0073aa;
+color: #fff;
+border-color: #005a87;
+}
+
+.toolbar-button.primary:hover {
+background: #005a87;
+border-color: #046;
+}
+
+/* Tool specific styles */
+.color-picker {
+width: 2em;
+height: 2em;
+border: 0.063em solid #ccc;
+border-radius: 0.25em;
+cursor: pointer;
+}
+
+.size-slider {
+width: 6em;
+margin: 0 0.5em;
+}
+
+.opacity-slider {
+width: 6em;
+margin: 0 0.5em;
+}
+
+/* Layer panel */
+.layers-panel {
+position: absolute;
+top: 0;
+right: 0;
+width: 15em;
+background: #fff;
+border: 0.063em solid #ddd;
+border-radius: 0.25em;
+padding: 1em;
+box-shadow: 0 0.125em 0.25em rgba(0, 0, 0, 0.1);
+}
+
+.layers-panel h3 {
+margin: 0 0 1em 0;
+font-size: 1em;
+font-weight: bold;
+}
+
+.layer-list {
+list-style: none;
+padding: 0;
+margin: 0;
+}
+
+.layer-item {
+padding: 0.5em;
+border: 0.063em solid #ddd;
+margin-bottom: 0.25em;
+border-radius: 0.25em;
+cursor: pointer;
+background: #f9f9f9;
+display: flex;
+align-items: center;
+justify-content: space-between;
+}
+
+.layer-item.active {
+background: #e6f3ff;
+border-color: #007cba;
+}
+
+.layer-item:hover {
+background: #f0f0f0;
+}
+
+/* Canvas container */
+.layers-canvas-container {
+position: relative;
+display: inline-block;
+border: 0.063em solid #ccc;
+background: repeating-conic-gradient(#f0f0f0 0% 25%, #ffffff 0% 50%) 0 0/20px 20px;
+margin-right: 16em;
+}
+
+.layers-canvas {
+display: block;
+cursor: crosshair;
+}
+
+/* Canvas tools overlay */
+.canvas-overlay {
+position: absolute;
+top: 0;
+left: 0;
+pointer-events: none;
+}
+
+.selection-box {
+position: absolute;
+border: 0.125em dashed #007cba;
+background: rgba(0, 124, 186, 0.1);
+pointer-events: none;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+	.layers-toolbar { flex-direction: column; gap: 0.5em; }
+	.toolbar-group { justify-content: center; }
+	.layers-panel { position: static; width: 100%; margin-top: 1em; }
+	.layers-canvas-container { margin-right: 0; }
+	.toolbar-group:not(:last-child) { margin-right: 0; margin-bottom: 0.5em; }
+	.toolbar-separator { display: none; }
+}
+
+/* Button loading state */
+.toolbar-button[data-loading="true"] {
+opacity: 0.7;
+cursor: wait;
+}
+
+.toolbar-button[disabled] {
+opacity: 0.5;
+cursor: not-allowed;
+}
+
+/* Error states */
+.error {
+color: #d63638;
+background: #fff0f0;
+border-color: #d63638;
+padding: 0.5em;
+border-radius: 0.25em;
+margin: 0.5em 0;
+}
+
+.success {
+color: #008a00;
+background: #f0fff0;
+border-color: #008a00;
+padding: 0.5em;
+border-radius: 0.25em;
+margin: 0.5em 0;
+}

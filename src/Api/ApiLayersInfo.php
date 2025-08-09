@@ -37,7 +37,7 @@ class ApiLayersInfo extends ApiBase {
 		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
 		$file = $repoGroup->findFile( $filename );
 		if ( !$file || !$file->exists() ) {
-			$this->dieWithError( 'File not found', 'filenotfound' );
+			$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
 		}
 
 		$db = new LayersDatabase();
@@ -46,7 +46,7 @@ class ApiLayersInfo extends ApiBase {
 			// Get specific layer set
 			$layerSet = $db->getLayerSet( $layerSetId );
 			if ( !$layerSet ) {
-				$this->dieWithError( 'Layer set not found', 'layersetnotfound' );
+				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
 			}
 
 			$result = [
@@ -59,7 +59,7 @@ class ApiLayersInfo extends ApiBase {
 			if ( !$layerSet ) {
 				$result = [
 					'layerset' => null,
-					'message' => 'No layers found for this file'
+					'message' => ( \function_exists( 'wfMessage' ) ? \wfMessage( 'layers-no-layers' )->text() : 'No layers found for this image' )
 				];
 			} else {
 				$result = [
