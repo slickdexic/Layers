@@ -132,10 +132,10 @@
 		if ( filename && mw && mw.config && mw.config.get( 'wgServer' ) && mw.config.get( 'wgScriptPath' ) ) {
 			var mwUrls = [
 				mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
-                '/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename ),
+				'/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename ),
 
 				mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
-                '/index.php?title=File:' + encodeURIComponent( filename )
+				'/index.php?title=File:' + encodeURIComponent( filename )
 			];
 
 			if ( mw.config.get( 'wgArticlePath' ) ) {
@@ -529,7 +529,7 @@
 
 	CanvasManager.prototype.isPointInRect = function ( point, rect ) {
 		return point.x >= rect.x && point.x <= rect.x + rect.width &&
-               point.y >= rect.y && point.y <= rect.y + rect.height;
+			   point.y >= rect.y && point.y <= rect.y + rect.height;
 	};
 
 	CanvasManager.prototype.startResize = function ( handle ) {
@@ -1632,9 +1632,9 @@
 
 	CanvasManager.prototype.rectsIntersect = function ( rect1, rect2 ) {
 		return rect1.x < rect2.x + rect2.width &&
-               rect1.x + rect1.width > rect2.x &&
-               rect1.y < rect2.y + rect2.height &&
-               rect1.y + rect1.height > rect2.y;
+			   rect1.x + rect1.width > rect2.x &&
+			   rect1.y < rect2.y + rect2.height &&
+			   rect1.y + rect1.height > rect2.y;
 	};
 
 	CanvasManager.prototype.drawMarqueeBox = function () {
@@ -2151,7 +2151,7 @@
 				this.startHighlightTool( point, style );
 				break;
 			default:
-                // console.warn( 'Unknown tool:', this.currentTool );
+				// console.warn( 'Unknown tool:', this.currentTool );
 		}
 
 		// console.log( 'Layers: Temp layer created:', this.tempLayer );
@@ -2215,115 +2215,115 @@
 		var overlay = document.createElement( 'div' );
 		overlay.className = 'text-input-overlay';
 		overlay.style.cssText =
-            'position: fixed;' +
-            'top: 0;' +
-            'left: 0;' +
-            'width: 100%;' +
-            'height: 100%;' +
-            'background: rgba(0, 0, 0, 0.5);' +
-            'z-index: 10001;' +
-            'display: flex;' +
-            'align-items: center;' +
-            'justify-content: center;';
+			'position: fixed;' +
+			'top: 0;' +
+			'left: 0;' +
+			'width: 100%;' +
+			'height: 100%;' +
+			'background: rgba(0, 0, 0, 0.5);' +
+			'z-index: 10001;' +
+			'display: flex;' +
+			'align-items: center;' +
+			'justify-content: center;';
 
 		// Create modal content
 		var modal = document.createElement( 'div' );
 		modal.className = 'text-input-modal';
 		modal.style.cssText =
-            'background: white;' +
-            'border-radius: 8px;' +
-            'padding: 20px;' +
-            'box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);' +
-            'min-width: 300px;';
+			'background: white;' +
+			'border-radius: 8px;' +
+			'padding: 20px;' +
+			'box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);' +
+			'min-width: 300px;';
 
 		modal.innerHTML =
-            '<h3 style="margin: 0 0 15px 0;">Add Text</h3>' +
-            '<textarea class="text-input" placeholder="Enter your text..." style="' +
-                'width: 100%; ' +
-                'height: 80px; ' +
-                'border: 1px solid #ddd; ' +
-                'border-radius: 4px; ' +
-                'padding: 8px;' +
-                'font-family: inherit;' +
-                'resize: vertical;' +
-            '"></textarea>' +
-            '<div style="margin: 15px 0;">' +
-                '<label style="display: block; margin-bottom: 5px;">Font Family:</label>' +
-                '<select class="font-family-input" style="' +
-                    'width: 150px;' +
-                    'padding: 4px 8px;' +
-                    'border: 1px solid #ddd;' +
-                    'border-radius: 4px;' +
-                    'margin-bottom: 10px;' +
-                '">' +
-                    '<option value="Arial, sans-serif">Arial</option>' +
-                    '<option value="Georgia, serif">Georgia</option>' +
-                    '<option value="Times New Roman, serif">Times New Roman</option>' +
-                    '<option value="Verdana, sans-serif">Verdana</option>' +
-                    '<option value="Helvetica, sans-serif">Helvetica</option>' +
-                    '<option value="Courier New, monospace">Courier New</option>' +
-                    '<option value="Impact, sans-serif">Impact</option>' +
-                    '<option value="Comic Sans MS, cursive">Comic Sans MS</option>' +
-                '</select>' +
-                '<br>' +
-                '<label style="display: inline-block; margin-bottom: 5px; margin-right: 10px;">Font Size:</label>' +
-                '<input type="number" class="font-size-input" value="' + ( style.fontSize || 16 ) + '" min="8" max="72" style="' +
-                    'width: 80px;' +
-                    'padding: 4px 8px;' +
-                    'border: 1px solid #ddd;' +
-                    'border-radius: 4px;' +
-                '">' +
-                '<label style="display: inline-block; margin-left: 15px; margin-right: 5px;">Color:</label>' +
-                '<input type="color" class="color-input" value="' + ( style.color || '#000000' ) + '" style="' +
-                    'width: 40px;' +
-                    'height: 30px;' +
-                    'border: 1px solid #ddd;' +
-                    'border-radius: 4px;' +
-                '">' +
-                '<br><br>' +
-                '<label style="display: block; margin-bottom: 5px;">Text Alignment:</label>' +
-                '<div class="text-align-buttons" style="display: flex; gap: 5px; margin-bottom: 10px;">' +
-                    '<button type="button" class="align-btn align-left active" data-align="left" style="' +
-                        'padding: 6px 12px;' +
-                        'border: 1px solid #ddd;' +
-                        'background: #e9ecef;' +
-                        'border-radius: 4px;' +
-                        'cursor: pointer;' +
-                    '">Left</button>' +
-                    '<button type="button" class="align-btn align-center" data-align="center" style="' +
-                        'padding: 6px 12px;' +
-                        'border: 1px solid #ddd;' +
-                        'background: #f8f9fa;' +
-                        'border-radius: 4px;' +
-                        'cursor: pointer;' +
-                    '">Center</button>' +
-                    '<button type="button" class="align-btn align-right" data-align="right" style="' +
-                        'padding: 6px 12px;' +
-                        'border: 1px solid #ddd;' +
-                        'background: #f8f9fa;' +
-                        'border-radius: 4px;' +
-                        'cursor: pointer;' +
-                    '">Right</button>' +
-                '</div>' +
-            '</div>' +
-            '<div style="text-align: right; margin-top: 20px;">' +
-                '<button class="cancel-btn" style="' +
-                    'background: #f8f9fa;' +
-                    'border: 1px solid #ddd;' +
-                    'border-radius: 4px;' +
-                    'padding: 8px 16px;' +
-                    'margin-right: 10px;' +
-                    'cursor: pointer;' +
-                '">Cancel</button>' +
-                '<button class="add-btn" style="' +
-                    'background: #007bff;' +
-                    'color: white;' +
-                    'border: 1px solid #007bff;' +
-                    'border-radius: 4px;' +
-                    'padding: 8px 16px;' +
-                    'cursor: pointer;' +
-                '">Add Text</button>' +
-            '</div>';
+			'<h3 style="margin: 0 0 15px 0;">Add Text</h3>' +
+			'<textarea class="text-input" placeholder="Enter your text..." style="' +
+				'width: 100%; ' +
+				'height: 80px; ' +
+				'border: 1px solid #ddd; ' +
+				'border-radius: 4px; ' +
+				'padding: 8px;' +
+				'font-family: inherit;' +
+				'resize: vertical;' +
+			'"></textarea>' +
+			'<div style="margin: 15px 0;">' +
+				'<label style="display: block; margin-bottom: 5px;">Font Family:</label>' +
+				'<select class="font-family-input" style="' +
+					'width: 150px;' +
+					'padding: 4px 8px;' +
+					'border: 1px solid #ddd;' +
+					'border-radius: 4px;' +
+					'margin-bottom: 10px;' +
+				'">' +
+					'<option value="Arial, sans-serif">Arial</option>' +
+					'<option value="Georgia, serif">Georgia</option>' +
+					'<option value="Times New Roman, serif">Times New Roman</option>' +
+					'<option value="Verdana, sans-serif">Verdana</option>' +
+					'<option value="Helvetica, sans-serif">Helvetica</option>' +
+					'<option value="Courier New, monospace">Courier New</option>' +
+					'<option value="Impact, sans-serif">Impact</option>' +
+					'<option value="Comic Sans MS, cursive">Comic Sans MS</option>' +
+				'</select>' +
+				'<br>' +
+				'<label style="display: inline-block; margin-bottom: 5px; margin-right: 10px;">Font Size:</label>' +
+				'<input type="number" class="font-size-input" value="' + ( style.fontSize || 16 ) + '" min="8" max="72" style="' +
+					'width: 80px;' +
+					'padding: 4px 8px;' +
+					'border: 1px solid #ddd;' +
+					'border-radius: 4px;' +
+				'">' +
+				'<label style="display: inline-block; margin-left: 15px; margin-right: 5px;">Color:</label>' +
+				'<input type="color" class="color-input" value="' + ( style.color || '#000000' ) + '" style="' +
+					'width: 40px;' +
+					'height: 30px;' +
+					'border: 1px solid #ddd;' +
+					'border-radius: 4px;' +
+				'">' +
+				'<br><br>' +
+				'<label style="display: block; margin-bottom: 5px;">Text Alignment:</label>' +
+				'<div class="text-align-buttons" style="display: flex; gap: 5px; margin-bottom: 10px;">' +
+					'<button type="button" class="align-btn align-left active" data-align="left" style="' +
+						'padding: 6px 12px;' +
+						'border: 1px solid #ddd;' +
+						'background: #e9ecef;' +
+						'border-radius: 4px;' +
+						'cursor: pointer;' +
+					'">Left</button>' +
+					'<button type="button" class="align-btn align-center" data-align="center" style="' +
+						'padding: 6px 12px;' +
+						'border: 1px solid #ddd;' +
+						'background: #f8f9fa;' +
+						'border-radius: 4px;' +
+						'cursor: pointer;' +
+					'">Center</button>' +
+					'<button type="button" class="align-btn align-right" data-align="right" style="' +
+						'padding: 6px 12px;' +
+						'border: 1px solid #ddd;' +
+						'background: #f8f9fa;' +
+						'border-radius: 4px;' +
+						'cursor: pointer;' +
+					'">Right</button>' +
+				'</div>' +
+			'</div>' +
+			'<div style="text-align: right; margin-top: 20px;">' +
+				'<button class="cancel-btn" style="' +
+					'background: #f8f9fa;' +
+					'border: 1px solid #ddd;' +
+					'border-radius: 4px;' +
+					'padding: 8px 16px;' +
+					'margin-right: 10px;' +
+					'cursor: pointer;' +
+				'">Cancel</button>' +
+				'<button class="add-btn" style="' +
+					'background: #007bff;' +
+					'color: white;' +
+					'border: 1px solid #007bff;' +
+					'border-radius: 4px;' +
+					'padding: 8px 16px;' +
+					'cursor: pointer;' +
+				'">Add Text</button>' +
+			'</div>';
 
 		overlay.appendChild( modal );
 

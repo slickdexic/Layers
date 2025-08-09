@@ -29,13 +29,22 @@ if ( isset( $_GET['action'] ) && $_GET['action'] === 'debug' ) {
         echo '<li>❌ editlayers permission is NOT defined for user group</li>';
     }
 
-    // Check current user
-    global $wgUser;
-    if ( $wgUser && method_exists( $wgUser, 'isAllowed' ) ) {
-        $canEdit = $wgUser->isAllowed( 'editlayers' );
+    // Check current user (avoid deprecated $wgUser)
+    $dbgUser = null;
+    try {
+        if ( class_exists( '\\RequestContext' ) ) {
+            $ctx = \call_user_func( [ '\\RequestContext', 'getMain' ] );
+            if ( $ctx && method_exists( $ctx, 'getUser' ) ) {
+                $dbgUser = $ctx->getUser();
+            }
+        }
+    } catch ( \Throwable $e ) {
+    }
+    if ( $dbgUser && method_exists( $dbgUser, 'isAllowed' ) ) {
+        $canEdit = $dbgUser->isAllowed( 'editlayers' );
         echo '<li>Current user editlayers permission: ' . ( $canEdit ? '✅ YES' : '❌ NO' ) . '</li>';
-        echo '<li>User is logged in: ' . ( $wgUser->isLoggedIn() ? '✅ YES' : '❌ NO' ) . '</li>';
-        echo '<li>User groups: ' . implode( ', ', $wgUser->getGroups() ) . '</li>';
+        echo '<li>User is logged in: ' . ( $dbgUser->isLoggedIn() ? '✅ YES' : '❌ NO' ) . '</li>';
+        echo '<li>User groups: ' . implode( ', ', $dbgUser->getGroups() ) . '</li>';
     } else {
         echo '<li>❌ Cannot check user permissions</li>';
     }

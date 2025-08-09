@@ -38,7 +38,11 @@ class UIHooks {
 				}
 			}
 			if ( is_object( $sktemplate ) ) {
-				$req = method_exists( $sktemplate, 'getRequest' ) ? $sktemplate->getRequest() : ( method_exists( $sktemplate, 'getContext' ) ? $sktemplate->getContext()->getRequest() : null );
+				$req = method_exists( $sktemplate, 'getRequest' )
+					? $sktemplate->getRequest()
+					: ( method_exists( $sktemplate, 'getContext' )
+						? $sktemplate->getContext()->getRequest()
+						: null );
 				if ( $req && method_exists( $req, 'getVal' ) ) {
 					$paramDbg = $req->getVal( 'layersdebug' );
 					if ( $paramDbg !== null && $paramDbg !== '' && $paramDbg !== '0' && $paramDbg !== 'false' ) {
@@ -142,7 +146,11 @@ class UIHooks {
 		try {
 			// $req may already be set above
 			if ( !$req && is_object( $sktemplate ) ) {
-				$req = method_exists( $sktemplate, 'getRequest' ) ? $sktemplate->getRequest() : ( method_exists( $sktemplate, 'getContext' ) ? $sktemplate->getContext()->getRequest() : null );
+				$req = method_exists( $sktemplate, 'getRequest' )
+					? $sktemplate->getRequest()
+					: ( method_exists( $sktemplate, 'getContext' )
+						? $sktemplate->getContext()->getRequest()
+						: null );
 			}
 			$isSelected = $req && method_exists( $req, 'getVal' ) && $req->getVal( 'action' ) === 'editlayers';
 			$log( 'Selected? ' . ( $isSelected ? 'yes' : 'no' ) );
@@ -194,7 +202,11 @@ class UIHooks {
 			$debugTab = [
 				'class' => false,
 				'text' => 'Edit Layers (DEBUG)',
-				'href' => ( $title && method_exists( $title, 'getLocalURL' ) ) ? self::getEditLayersURL( $title ) : '#debug'
+				'href' => (
+					$title && method_exists( $title, 'getLocalURL' )
+				)
+					? self::getEditLayersURL( $title )
+					: '#debug'
 			];
 			$links['actions']['editlayers-debug'] = $debugTab;
 			$links['views']['editlayers-debug'] = $debugTab;
@@ -202,18 +214,24 @@ class UIHooks {
 		}
 	}
 
+	/* phpcs:disable MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName */
+
 	/**
-	 * Add "Edit Layers" tab using universal hook signature for newer MW versions.
-	 * This delegates to onSkinTemplateNavigation to avoid duplication.
+	 * Universal SkinTemplateNavigation hook for newer MW versions.
+	 * Delegates to onSkinTemplateNavigation to avoid duplication.
 	 *
 	 * @param mixed $skin Skin or SkinTemplate
 	 * @param array &$links Navigation array (modified by reference)
 	 * @return void
 	 */
-	public static function onSkinTemplateNavigation__Universal( $skin, array &$links ): void /* phpcs:ignore MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName */ {
-		// Reuse the main implementation; Skin or SkinTemplate exposes getTitle/getUser in modern MW
+	public static function onSkinTemplateNavigation__Universal(
+		$skin,
+		array &$links
+	): void {
 		self::onSkinTemplateNavigation( $skin, $links );
 	}
+
+	/* phpcs:enable MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName */
 
 	/**
 	 * Generate URL for editing layers
@@ -273,7 +291,11 @@ class UIHooks {
 	 */
 	private static function showLayersEditor( $out, $file ): void {
 		// Set page title
-		$titleText = ( \function_exists( 'wfMessage' ) ? \wfMessage( 'layers-editor-title' )->text() : 'Layers Editor' );
+		$titleText = (
+			\function_exists( 'wfMessage' )
+				? \wfMessage( 'layers-editor-title' )->text()
+				: 'Layers Editor'
+		);
 		$out->setPageTitle( $titleText . ': ' . $file->getName() );
 
 		// Add editor resources
@@ -288,7 +310,7 @@ class UIHooks {
 	}
 
 	/**
-	 * Resolve a best-effort public URL for the image, with a robust fallback for private repos.
+	 * Get a public URL for an image file, falling back across MW versions.
 	 * @param mixed $file
 	 * @return string
 	 */
@@ -305,7 +327,6 @@ class UIHooks {
 			// ignore and try fallback
 		}
 
-		// Fallback: Special:Redirect/file/Title to stream file through MediaWiki
 		try {
 			$title = method_exists( $file, 'getTitle' ) ? $file->getTitle() : null;
 			if ( $title && \class_exists( '\\SpecialPage' ) ) {
@@ -316,7 +337,7 @@ class UIHooks {
 				}
 			}
 		} catch ( \Throwable $e ) {
-			// last resort below
+			// ignore and try final fallback
 		}
 
 		// Last resort: return description URL

@@ -48,7 +48,12 @@ class EditLayersAction extends \Action {
 		}
 
 		// Page title
-		$out->setPageTitle( ( function_exists( 'wfMessage' ) ? wfMessage( 'layers-editor-title' )->text() : 'Edit Layers' ) . ': ' . $file->getName() );
+		$out->setPageTitle(
+			( function_exists( 'wfMessage' )
+				? wfMessage( 'layers-editor-title' )->text()
+				: 'Edit Layers'
+			) . ': ' . $file->getName()
+		);
 
 		// Load editor module
 		$out->addModules( 'ext.layers.editor' );

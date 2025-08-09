@@ -486,7 +486,7 @@
 		var self = this;
 
 		// Show saving indicator
-		mw.notify( ( mw.message ? mw.message( 'layers-saving' ).text() : ( mw.msg ? mw.msg( 'layers-saving' ) : 'Saving...' ) ), { type: 'info' } );
+		mw.notify( ( mw.message ? mw.message( 'layers-saving' ).text() : ( mw.msg ? mw.msg( 'layers-saving' ) : 'Saving...' ) ), { type : 'info' } );
 
 		// Disable save button briefly
 		if ( this.toolbar && this.toolbar.saveButton ) {
@@ -506,7 +506,7 @@
 		} ).done( function ( data ) {
 			if ( data.layerssave && data.layerssave.success ) {
 				self.markClean();
-				mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type: 'success' } );
+				mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type : 'success' } );
 				// After a successful save, keep the editor open but update title indicator
 				// Optionally, navigate back quickly if user clicked header close earlier
 			} else {
@@ -545,7 +545,7 @@
 		if ( this.filename ) {
 			// Method 1: Construct URL using MediaWiki file path
 			var imageUrl = mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
-                          '/index.php?title=Special:Redirect/file/' + encodeURIComponent( this.filename );
+						  '/index.php?title=Special:Redirect/file/' + encodeURIComponent( this.filename );
 			// console.log('Layers: Using MediaWiki file URL:', imageUrl);
 			return imageUrl;
 		}

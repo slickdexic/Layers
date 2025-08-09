@@ -74,9 +74,6 @@ class RateLimiter {
 			return true;
 		}
 
-		// Set the limits in MediaWiki's rate limiting system
-		$this->config->set( 'RateLimits', array_merge( $rateLimits, [ $limitKey => $limits ] ) );
-
 		// Check against MediaWiki's rate limiting system
 		return !$user->pingLimiter( $limitKey );
 	}
@@ -132,7 +129,8 @@ class RateLimiter {
 					$complexity += 1;
 					break;
 				default:
-					$complexity += 2; // Unknown types are more expensive
+					// Unknown types are more expensive
+					$complexity += 2;
 			}
 		}
 

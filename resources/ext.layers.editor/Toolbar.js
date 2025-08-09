@@ -49,18 +49,18 @@
 		toolGroup.className = 'toolbar-group tools-group';
 
 		var tools = [
-			{ id: 'pointer', icon: '↖', title: ( mw.message ? mw.message( 'layers-tool-select' ).text() : 'Select Tool' ), key: 'V' },
-			{ id: 'text', icon: 'T', title: ( mw.message ? mw.message( 'layers-tool-text' ).text() : 'Text Tool' ), key: 'T' },
-			{ id: 'pen', icon: '✏', title: ( mw.message ? mw.message( 'layers-tool-pen' ).text() : 'Pen Tool' ), key: 'P' },
-			{ id: 'rectangle', icon: '▢', title: ( mw.message ? mw.message( 'layers-tool-rectangle' ).text() : 'Rectangle Tool' ), key: 'R' },
-			{ id: 'circle', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-circle' ).text() : 'Circle Tool' ), key: 'C' },
-			{ id: 'ellipse', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-ellipse' ).text() : 'Ellipse Tool' ), key: 'E' },
-			{ id: 'polygon', icon: '⬟', title: ( mw.message ? mw.message( 'layers-tool-polygon' ).text() : 'Polygon Tool' ), key: 'G' },
-			{ id: 'star', icon: '★', title: ( mw.message ? mw.message( 'layers-tool-star' ).text() : 'Star Tool' ), key: 'S' },
-			{ id: 'arrow', icon: '→', title: ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow Tool' ), key: 'A' },
-			{ id: 'line', icon: '/', title: ( mw.message ? mw.message( 'layers-tool-line' ).text() : 'Line Tool' ), key: 'L' },
-			{ id: 'highlight', icon: '▒', title: ( mw.message ? mw.message( 'layers-tool-highlight' ).text() : 'Highlight Tool' ), key: 'H' },
-			{ id: 'marquee', icon: '⬚', title: ( mw.message ? mw.message( 'layers-tool-marquee' ).text() : 'Marquee Select' ), key: 'M' }
+			{ id: 'pointer', icon: '↖', title: ( mw.message ? mw.message( 'layers-tool-select' ).text() : 'Select Tool' ), key : 'V' },
+			{ id: 'text', icon: 'T', title: ( mw.message ? mw.message( 'layers-tool-text' ).text() : 'Text Tool' ), key : 'T' },
+			{ id: 'pen', icon: '✏', title: ( mw.message ? mw.message( 'layers-tool-pen' ).text() : 'Pen Tool' ), key : 'P' },
+			{ id: 'rectangle', icon: '▢', title: ( mw.message ? mw.message( 'layers-tool-rectangle' ).text() : 'Rectangle Tool' ), key : 'R' },
+			{ id: 'circle', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-circle' ).text() : 'Circle Tool' ), key : 'C' },
+			{ id: 'ellipse', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-ellipse' ).text() : 'Ellipse Tool' ), key : 'E' },
+			{ id: 'polygon', icon: '⬟', title: ( mw.message ? mw.message( 'layers-tool-polygon' ).text() : 'Polygon Tool' ), key : 'G' },
+			{ id: 'star', icon: '★', title: ( mw.message ? mw.message( 'layers-tool-star' ).text() : 'Star Tool' ), key : 'S' },
+			{ id: 'arrow', icon: '→', title: ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow Tool' ), key : 'A' },
+			{ id: 'line', icon: '/', title: ( mw.message ? mw.message( 'layers-tool-line' ).text() : 'Line Tool' ), key : 'L' },
+			{ id: 'highlight', icon: '▒', title: ( mw.message ? mw.message( 'layers-tool-highlight' ).text() : 'Highlight Tool' ), key : 'H' },
+			{ id: 'marquee', icon: '⬚', title: ( mw.message ? mw.message( 'layers-tool-marquee' ).text() : 'Marquee Select' ), key : 'M' }
 		];
 
 		tools.forEach( function ( tool ) {
@@ -384,11 +384,11 @@
 		actionGroup.className = 'toolbar-group action-group';
 
 		var actions = [
-			{ id: 'undo', icon: '↶', title: ( mw.message ? mw.message( 'layers-undo' ).text() : 'Undo' ), key: 'Ctrl+Z' },
-			{ id: 'redo', icon: '↷', title: ( mw.message ? mw.message( 'layers-redo' ).text() : 'Redo' ), key: 'Ctrl+Y' },
-			{ id: 'delete', icon: '🗑', title: ( mw.message ? mw.message( 'layers-delete-selected' ).text() : 'Delete Selected' ), key: 'Delete' },
-			{ id: 'duplicate', icon: '⧉', title: ( mw.message ? mw.message( 'layers-duplicate-selected' ).text() : 'Duplicate Selected' ), key: 'Ctrl+D' },
-			{ id: 'grid', icon: '⊞', title: ( mw.message ? mw.message( 'layers-toggle-grid' ).text() : 'Toggle Grid' ), key: 'G' }
+			{ id: 'undo', icon: '↶', title: ( mw.message ? mw.message( 'layers-undo' ).text() : 'Undo' ), key : 'Ctrl+Z' },
+			{ id: 'redo', icon: '↷', title: ( mw.message ? mw.message( 'layers-redo' ).text() : 'Redo' ), key : 'Ctrl+Y' },
+			{ id: 'delete', icon: '🗑', title: ( mw.message ? mw.message( 'layers-delete-selected' ).text() : 'Delete Selected' ), key : 'Delete' },
+			{ id: 'duplicate', icon: '⧉', title: ( mw.message ? mw.message( 'layers-duplicate-selected' ).text() : 'Duplicate Selected' ), key : 'Ctrl+D' },
+			{ id: 'grid', icon: '⊞', title: ( mw.message ? mw.message( 'layers-toggle-grid' ).text() : 'Toggle Grid' ), key : 'G' }
 		];
 
 		actions.forEach( function ( action ) {

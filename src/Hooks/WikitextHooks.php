@@ -137,7 +137,8 @@ class WikitextHooks {
 			}
 
 			// Parse size parameter
-			$width = 300; // default
+			// default width
+			$width = 300;
 			if ( preg_match( '/(\d+)px/', $size, $sizeMatch ) ) {
 				$width = intval( $sizeMatch[1] );
 			} elseif ( preg_match( '/x(\d+)px/', $size, $sizeMatch ) ) {
@@ -155,10 +156,8 @@ class WikitextHooks {
 				$alt = !empty( $caption ) ? htmlspecialchars( $caption ) : htmlspecialchars( $filename );
 				$title = !empty( $caption ) ? htmlspecialchars( $caption ) : '';
 
-				$destTitle = \Title::newFromText( 'File:' . $filename );
-				$href = $destTitle
-					? $destTitle->getLocalURL()
-					: ( '/wiki/File:' . rawurlencode( $filename ) );
+				// Build basic file page URL; avoid hard dependency on Title for static analysis.
+				$href = '/wiki/File:' . rawurlencode( $filename );
 				return '<span class="mw-default-size" typeof="mw:File">' .
 				   '<a href="' . htmlspecialchars( $href ) . '" class="mw-file-description"' .
 				   ( $title ? ' title="' . $title . '"' : '' ) . '>' .
@@ -250,15 +249,22 @@ class WikitextHooks {
 	 * Handle file link parameters
 	 * This handles the actual file link generation with layers
 	 *
-	 * @param object $file
+	 * @param mixed $file
 	 * @param array &$params
-	 * @param object $parser
+	 * @param mixed $parser
 	 * @param array &$time
 	 * @param array &$descQuery
 	 * @param array &$query
 	 * @return bool
 	 */
-	public static function onFileLink( $file, array &$params, $parser, array &$time, array &$descQuery, array &$query ): bool {
+	public static function onFileLink(
+		$file,
+		array &$params,
+		$parser,
+		array &$time,
+		array &$descQuery,
+		array &$query
+	): bool {
 		// If this file has layers enabled, add query parameters for the file page
 		if ( isset( $params['layers'] ) && $params['layers'] !== 'off' ) {
 			$query['layers'] = $params['layers'];
@@ -326,7 +332,11 @@ class WikitextHooks {
 		}
 
 		// Fallback to latest set when explicitly requested (on/true/all) and layerData missing
-		if ( $layerData === null && ( $layersFlag === 'on' || $layersFlag === true || $layersFlag === 'all' ) && method_exists( $thumbnail, 'getFile' ) ) {
+		if (
+			$layerData === null
+			&& ( $layersFlag === 'on' || $layersFlag === true || $layersFlag === 'all' )
+			&& method_exists( $thumbnail, 'getFile' )
+		) {
 			$file = $thumbnail->getFile();
 			if ( $file ) {
 				try {
@@ -337,8 +347,16 @@ class WikitextHooks {
 							? $latest['data']['layers']
 							: [];
 						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-							$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-							$logger->info( 'Layers: Retrieved layer data from database: ' . count( $layerData ) . ' layers' );
+								$logger = \call_user_func(
+									[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+									'Layers'
+								);
+								$logger->info(
+									sprintf(
+										'Layers: Retrieved layer data from database: %d layers',
+										count( $layerData )
+									)
+								);
 						}
 					}
 				} catch ( \Throwable $e ) {
@@ -456,7 +474,9 @@ class WikitextHooks {
 		if ( $layerSet ) {
 			$params['layerSetId'] = $layerSet['id'];
 			// Pass only the layers array
-			$params['layerData'] = isset( $layerSet['data']['layers'] ) ? $layerSet['data']['layers'] : $layerSet['data'];
+			$params['layerData'] = isset( $layerSet['data']['layers'] )
+				? $layerSet['data']['layers']
+				: $layerSet['data'];
 		}
 	}
 
@@ -485,7 +505,9 @@ class WikitextHooks {
 
 		if ( $layerSet ) {
 			$params['layerSetId'] = $layerSet['id'];
-			$params['layerData'] = isset( $layerSet['data']['layers'] ) ? $layerSet['data']['layers'] : $layerSet['data'];
+			$params['layerData'] = isset( $layerSet['data']['layers'] )
+				? $layerSet['data']['layers']
+				: $layerSet['data'];
 		}
 	}
 

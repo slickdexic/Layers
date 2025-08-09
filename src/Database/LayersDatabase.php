@@ -466,9 +466,12 @@ class LayersDatabase {
 				'setName' => $res->ls_name
 			];
 		} catch ( \Throwable $e ) {
-			if ( $this->logger ) {
-				$this->logger->warning( 'Failed to get layer set by name: {message}', [ 'message' => $e->getMessage() ] );
-			}
+					if ( $this->logger ) {
+						$this->logger->warning(
+							'Failed to get layer set by name: {message}',
+							[ 'message' => $e->getMessage() ]
+						);
+					}
 			return null;
 		}
 	}

@@ -50,7 +50,10 @@ if ( file_exists( 'extension.json' ) ) {
             $errors++;
         }
 
-        if ( isset( $data['GroupPermissions']['user']['editlayers'] ) && $data['GroupPermissions']['user']['editlayers'] === true ) {
+        if (
+            isset( $data['GroupPermissions']['user']['editlayers'] )
+            && $data['GroupPermissions']['user']['editlayers'] === true
+        ) {
             echo "   ✅ User group has editlayers permission\n";
         } else {
             echo "   ❌ User group missing editlayers permission\n";

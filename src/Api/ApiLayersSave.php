@@ -175,7 +175,10 @@ class ApiLayersSave extends ApiBase {
 			}
 
 			// Validate layer type - strict whitelist
-			$validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'highlight', 'path' ];
+			$validTypes = [
+				'text', 'arrow', 'rectangle', 'circle', 'ellipse',
+				'polygon', 'star', 'line', 'highlight', 'path'
+			];
 			if ( !in_array( $layer['type'], $validTypes, true ) ) {
 				return false;
 			}
@@ -225,7 +228,10 @@ class ApiLayersSave extends ApiBase {
 				}
 
 			// Validate numeric properties with bounds
-			$numericFields = [ 'innerRadius', 'outerRadius', 'sides', 'zIndex', 'rotation', 'fontSize', 'strokeWidth', 'opacity' ];
+			$numericFields = [
+				'innerRadius', 'outerRadius', 'sides', 'zIndex',
+				'rotation', 'fontSize', 'strokeWidth', 'opacity'
+			];
 			foreach ( $numericFields as $field ) {
 				if ( isset( $layer[$field] ) ) {
 					if ( !is_numeric( $layer[$field] ) ) {
@@ -312,7 +318,11 @@ class ApiLayersSave extends ApiBase {
 			}
 
 			// Special handling for points array (path, polygon layers)
-			if ( in_array( $layer['type'], [ 'path', 'polygon' ] ) && isset( $layer['points'] ) && is_array( $layer['points'] ) ) {
+			if (
+				in_array( $layer['type'], [ 'path', 'polygon' ] )
+				&& isset( $layer['points'] )
+				&& is_array( $layer['points'] )
+			) {
 				$cleanPoints = [];
 				foreach ( $layer['points'] as $point ) {
 					if ( is_array( $point ) && isset( $point['x'] ) && isset( $point['y'] ) &&
@@ -384,7 +394,13 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		// Allow rgb/rgba with strict validation
-		if ( preg_match( '/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/', $color, $matches ) ) {
+		if (
+			preg_match(
+				'/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/',
+				$color,
+				$matches
+			)
+		) {
 			// Validate RGB values are in 0-255 range
 			for ( $i = 1; $i <= 3; $i++ ) {
 				if ( isset( $matches[$i] ) && ( (int)$matches[$i] < 0 || (int)$matches[$i] > 255 ) ) {
@@ -395,7 +411,13 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		// Allow HSL/HSLA with strict validation
-		if ( preg_match( '/^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/', $color, $matches ) ) {
+		if (
+			preg_match(
+				'/^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/',
+				$color,
+				$matches
+			)
+		) {
 			// Validate HSL values
 			if ( isset( $matches[1] ) && ( (int)$matches[1] < 0 || (int)$matches[1] > 360 ) ) {
 				return false;
@@ -434,13 +456,20 @@ class ApiLayersSave extends ApiBase {
 			return $color;
 		}
 
-		if ( preg_match( '/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+)?\s*\)$/', $color ) ) {
+		if (
+			preg_match(
+				'/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+)?\s*\)$/',
+				$color
+			)
+		) {
 			return $color;
 		}
 
 		// List of safe named colors
-		$safeColors = [ 'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange',
-					   'purple', 'pink', 'gray', 'brown', 'transparent' ];
+		$safeColors = [
+			'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange',
+			'purple', 'pink', 'gray', 'brown', 'transparent'
+		];
 
 		if ( in_array( strtolower( $color ), $safeColors ) ) {
 			return $color;

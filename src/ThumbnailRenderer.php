@@ -65,7 +65,7 @@ class ThumbnailRenderer {
 			$uploadDir = $this->config ? $this->config->get( 'UploadDirectory' ) : sys_get_temp_dir();
 			$thumbDir = rtrim( $uploadDir, '/\\' ) . '/thumb/layers';
 			if ( !is_dir( $thumbDir ) ) {
-				$ok = @mkdir( $thumbDir, 0755, true );
+				$ok = mkdir( $thumbDir, 0755, true );
 				if ( !$ok && !is_dir( $thumbDir ) ) {
 					if ( $this->logger ) {
 						$this->logger->error( 'Layers: failed to create thumb directory', [ 'dir' => $thumbDir ] );
@@ -90,7 +90,13 @@ class ThumbnailRenderer {
 			$origW = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : 0;
 			$origH = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : 0;
 			$targetW = isset( $baseParams['width'] ) ? (int)$baseParams['width'] : $origW;
-			$targetH = isset( $baseParams['height'] ) ? (int)$baseParams['height'] : ( $origW > 0 && $origH > 0 && $targetW > 0 ? (int)round( $origH * ( $targetW / $origW ) ) : $origH );
+			$targetH = isset( $baseParams['height'] )
+				? (int)$baseParams['height']
+				: (
+					$origW > 0 && $origH > 0 && $targetW > 0
+						? (int)round( $origH * ( $targetW / $origW ) )
+						: $origH
+				);
 			$scaleX = $origW > 0 ? ( $targetW / $origW ) : 1.0;
 			$scaleY = $origH > 0 ? ( $targetH / $origH ) : $scaleX;
 
@@ -99,7 +105,10 @@ class ThumbnailRenderer {
 			}
 		} catch ( Exception $e ) {
 			if ( $this->logger ) {
-				$this->logger->warning( 'Layers: thumbnail generation failed: {message}', [ 'exception' => $e, 'message' => $e->getMessage() ] );
+				$this->logger->warning(
+					'Layers: thumbnail generation failed: {message}',
+					[ 'exception' => $e, 'message' => $e->getMessage() ]
+				);
 			}
 		}
 
@@ -109,7 +118,13 @@ class ThumbnailRenderer {
 	/**
 	 * Use ImageMagick to overlay layers on base image
 	 */
-	private function overlayLayers( string $basePath, array $layers, string $outputPath, float $scaleX, float $scaleY ): bool {
+	private function overlayLayers(
+		string $basePath,
+		array $layers,
+		string $outputPath,
+		float $scaleX,
+		float $scaleY
+	): bool {
 		if ( !$this->config || !$this->config->get( 'UseImageMagick' ) ) {
 			return false;
 		}
@@ -152,16 +167,26 @@ class ThumbnailRenderer {
 					->includeStderr()
 					->execute();
 
-				if ( method_exists( $result, 'getExitCode' ) ? $result->getExitCode() !== 0 : ( method_exists( $result, 'isOK' ) ? !$result->isOK() : false ) ) {
+				if (
+					method_exists( $result, 'getExitCode' )
+						? $result->getExitCode() !== 0
+						: ( method_exists( $result, 'isOK' ) ? !$result->isOK() : false )
+				) {
 					$stderr = method_exists( $result, 'getStderr' ) ? $result->getStderr() : '';
 					if ( $this->logger ) {
-						$this->logger->error( 'Layers: ImageMagick failed', [ 'stderr' => $stderr, 'args' => $args ] );
+						$this->logger->error(
+							'Layers: ImageMagick failed',
+							[ 'stderr' => $stderr, 'args' => $args ]
+						);
 					}
 					return false;
 				}
 			} catch ( \Throwable $e ) {
 				if ( $this->logger ) {
-					$this->logger->error( 'Layers: Shell execution failed', [ 'exception' => $e, 'args' => $args ] );
+					$this->logger->error(
+						'Layers: Shell execution failed',
+						[ 'exception' => $e, 'args' => $args ]
+					);
 				}
 				return false;
 			}
@@ -367,7 +392,11 @@ class ThumbnailRenderer {
 			'-fill', $stroke,
 			'-stroke', $stroke,
 			'-strokewidth', (string)$strokeWidth,
-			'-draw', 'polygon ' . (int)$x2 . ',' . (int)$y2 . ' ' . (int)$arrowX1 . ',' . (int)$arrowY1 . ' ' . (int)$arrowX2 . ',' . (int)$arrowY2
+			'-draw',
+			'polygon '
+				. (int)$x2 . ',' . (int)$y2 . ' '
+				. (int)$arrowX1 . ',' . (int)$arrowY1 . ' '
+				. (int)$arrowX2 . ',' . (int)$arrowY2
 		];
 
 		return array_merge( $lineArgs, $arrowArgs );
