@@ -237,6 +237,8 @@ class ThumbnailRenderer {
 		$text = (string)( $layer['text'] ?? '' );
 		$fontSize = (int)round( ( $layer['fontSize'] ?? 14 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? '#000000' );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( $fill, $opacity );
 		$font = (string)( $layer['fontFamily'] ?? 'DejaVu-Sans' );
 
 		return [
@@ -256,6 +258,9 @@ class ThumbnailRenderer {
 		$stroke = (string)( $layer['stroke'] ?? '#000000' );
 		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? 'none' );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( $fill, $opacity );
+		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		return [
 			'-stroke', $stroke,
@@ -272,6 +277,9 @@ class ThumbnailRenderer {
 		$stroke = (string)( $layer['stroke'] ?? '#000000' );
 		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? 'none' );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( $fill, $opacity );
+		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		return [
 			'-stroke', $stroke,
@@ -289,6 +297,9 @@ class ThumbnailRenderer {
 		$stroke = (string)( $layer['stroke'] ?? '#000000' );
 		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? 'none' );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( $fill, $opacity );
+		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		return [
 			'-stroke', $stroke,
@@ -306,6 +317,9 @@ class ThumbnailRenderer {
 		$stroke = (string)( $layer['stroke'] ?? '#000000' );
 		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? 'none' );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( $fill, $opacity );
+		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		$pts = [];
 		for ( $i = 0; $i < $sides; $i++ ) {
@@ -330,6 +344,9 @@ class ThumbnailRenderer {
 		$stroke = (string)( $layer['stroke'] ?? '#000000' );
 		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? 'none' );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( $fill, $opacity );
+		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		$pts = [];
 		for ( $i = 0; $i < $numPoints * 2; $i++ ) {
@@ -354,6 +371,9 @@ class ThumbnailRenderer {
 		$stroke = (string)( $layer['stroke'] ?? '#000000' );
 		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? 'none' );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( $fill, $opacity );
+		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		$cmd = 'path "M ' . (int)( $points[0]['x'] * $scaleX ) . ',' . (int)( $points[0]['y'] * $scaleY ) . ' ';
 		for ( $i = 1; $i < count( $points ); $i++ ) {
@@ -378,6 +398,8 @@ class ThumbnailRenderer {
 		$y1 = ( $layer['y1'] ?? 0 ) * $scaleY;
 		$stroke = (string)( $layer['stroke'] ?? '#000000' );
 		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$strokeWithA = $this->withOpacity( $stroke, $opacity );
 
 		$angle = atan2( $y2 - $y1, $x2 - $x1 );
 		$arrowLength = 10 * ( ( $scaleX + $scaleY ) / 2 );
@@ -389,8 +411,8 @@ class ThumbnailRenderer {
 		$arrowY2 = $y2 - $arrowLength * sin( $angle + $arrowAngle );
 
 		$arrowArgs = [
-			'-fill', $stroke,
-			'-stroke', $stroke,
+			'-fill', $strokeWithA,
+			'-stroke', $strokeWithA,
 			'-strokewidth', (string)$strokeWidth,
 			'-draw',
 			'polygon '
@@ -409,6 +431,8 @@ class ThumbnailRenderer {
 		$y2 = ( $layer['y2'] ?? 100 ) * $scaleY;
 		$stroke = (string)( $layer['stroke'] ?? '#000000' );
 		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		return [
 			'-stroke', $stroke,
@@ -420,6 +444,90 @@ class ThumbnailRenderer {
 	private function buildHighlightArguments( array $layer, float $scaleX, float $scaleY ): array {
 		$layer['fill'] = $layer['fill'] ?? '#ffff0080';
 		$layer['stroke'] = 'none';
+		// Respect layer opacity if set
+		if ( isset( $layer['opacity'] ) ) {
+			$layer['fill'] = $this->withOpacity( (string)$layer['fill'], (float)$layer['opacity'] );
+		}
 		return $this->buildRectangleArguments( $layer, $scaleX, $scaleY );
+	}
+
+	/**
+	 * Convert a color to include the given opacity, returning a form ImageMagick accepts.
+	 * Supports #RGB, #RGBA, #RRGGBB, #RRGGBBAA, rgb(), rgba(), 'none'/'transparent'.
+	 */
+	private function withOpacity( string $color, float $opacity ): string {
+		$opacity = max( 0.0, min( 1.0, $opacity ) );
+		$lc = strtolower( trim( $color ) );
+		if ( $lc === '' ) {
+			return $color;
+		}
+		if ( $lc === 'none' ) {
+			return 'none';
+		}
+		if ( $lc === 'transparent' ) {
+			return 'rgba(0,0,0,0)';
+		}
+		// Hex forms
+		if ( $lc[0] === '#' ) {
+			$hex = substr( $lc, 1 );
+			if ( strlen( $hex ) === 3 ) { // RGB -> RRGGBB
+				$r = hexdec( str_repeat( $hex[0], 2 ) );
+				$g = hexdec( str_repeat( $hex[1], 2 ) );
+				$b = hexdec( str_repeat( $hex[2], 2 ) );
+				$a = 1.0;
+			} elseif ( strlen( $hex ) === 4 ) { // RGBA -> RRGGBBAA
+				$r = hexdec( str_repeat( $hex[0], 2 ) );
+				$g = hexdec( str_repeat( $hex[1], 2 ) );
+				$b = hexdec( str_repeat( $hex[2], 2 ) );
+				$aa = hexdec( str_repeat( $hex[3], 2 ) );
+				$a = $aa / 255.0;
+			} elseif ( strlen( $hex ) === 6 ) { // RRGGBB
+				$r = hexdec( substr( $hex, 0, 2 ) );
+				$g = hexdec( substr( $hex, 2, 2 ) );
+				$b = hexdec( substr( $hex, 4, 2 ) );
+				$a = 1.0;
+			} elseif ( strlen( $hex ) === 8 ) { // RRGGBBAA
+				$r = hexdec( substr( $hex, 0, 2 ) );
+				$g = hexdec( substr( $hex, 2, 2 ) );
+				$b = hexdec( substr( $hex, 4, 2 ) );
+				$aa = hexdec( substr( $hex, 6, 2 ) );
+				$a = $aa / 255.0;
+			} else {
+				return $color;
+			}
+			$a = max( 0.0, min( 1.0, $a * $opacity ) );
+			return sprintf( 'rgba(%d,%d,%d,%.3f)', $r, $g, $b, $a );
+		}
+
+		// rgb/rgba forms
+		if ( strpos( $lc, 'rgba(' ) === 0 ) {
+			$inside = trim( substr( $lc, 5, -1 ) );
+			$parts = array_map( 'trim', explode( ',', $inside ) );
+			if ( count( $parts ) === 4 ) {
+				$r = (int)$parts[0];
+				$g = (int)$parts[1];
+				$b = (int)$parts[2];
+				$a = (float)$parts[3];
+				$a = max( 0.0, min( 1.0, $a * $opacity ) );
+				return sprintf( 'rgba(%d,%d,%d,%.3f)', $r, $g, $b, $a );
+			}
+			return $color;
+		}
+		if ( strpos( $lc, 'rgb(' ) === 0 ) {
+			$inside = trim( substr( $lc, 4, -1 ) );
+			$parts = array_map( 'trim', explode( ',', $inside ) );
+			if ( count( $parts ) === 3 ) {
+				$r = (int)$parts[0];
+				$g = (int)$parts[1];
+				$b = (int)$parts[2];
+				$a = max( 0.0, min( 1.0, $opacity ) );
+				return sprintf( 'rgba(%d,%d,%d,%.3f)', $r, $g, $b, $a );
+			}
+			return $color;
+		}
+
+		// Unknown (e.g., named colors). Best effort: if opacity < 1, return rgba black with that opacity? No.
+		// Keep original to avoid unexpected color changes.
+		return $color;
 	}
 }

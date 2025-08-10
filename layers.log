@@ -1380,3 +1380,271 @@ Query: INSERT INTO `T01layer_sets` (ls_img_name,ls_img_major_mime,ls_img_minor_m
 2025-08-10 06:53:10 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
 2025-08-10 06:53:10 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
 2025-08-10 06:53:10 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: onLinkerMakeMediaLinkFile fired
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: LinkerMakeMediaLinkFile result snippet: Original file
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in LinkerMakeMediaLinkFile (2 layers)
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:02:01 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:02:04 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:02:04 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:02:04 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-10 07:02:04 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:02:04 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:02:04 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:02:05 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:02:05 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:03:22 41d7ff746b60 my_wiki-T01: layer_sets.ls_layer_count missing – schema update needed; inserting without it
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: onLinkerMakeMediaLinkFile fired
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: LinkerMakeMediaLinkFile result snippet: Original file
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in LinkerMakeMediaLinkFile (2 layers)
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:03:26 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:03:27 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:27 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:03:34 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:34 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:03:35 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:35 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:03:39 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:39 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:03:39 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:39 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:03:41 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:41 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:03:45 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:45 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: onLinkerMakeMediaLinkFile fired
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: LinkerMakeMediaLinkFile result snippet: Original file
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in LinkerMakeMediaLinkFile (2 layers)
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:03:56 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:04:05 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:05 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:04:07 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:07 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe001
+2025-08-10 07:04:07 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:07 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:04:26 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:26 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:04:27 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:27 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:04:28 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:28 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: onLinkerMakeMediaLinkFile fired
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: LinkerMakeMediaLinkFile result snippet: Original file
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in LinkerMakeMediaLinkFile (2 layers)
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:30 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:04:32 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:32 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:04:32 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-10 07:04:32 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:04:32 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:04:32 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:04:33 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:04:33 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:05:41 41d7ff746b60 my_wiki-T01: layer_sets.ls_layer_count missing – schema update needed; inserting without it
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: onLinkerMakeMediaLinkFile fired
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: LinkerMakeMediaLinkFile result snippet: Original file
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in LinkerMakeMediaLinkFile (2 layers)
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:05:46 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:05:47 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:05:47 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:05:50 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:05:50 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:05:50 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:05:50 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:05:54 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:05:54 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:05:57 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:05:57 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:06:02 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:06:02 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:06:03 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:06:03 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: ImageBeforeProduceHTML fired
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in ImageBeforeProduceHTML (2 layers)
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: ImageBeforeProduceHTML fired
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in ImageBeforeProduceHTML (2 layers)
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:06:04 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:06:05 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:06:05 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: onLinkerMakeMediaLinkFile fired
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: LinkerMakeMediaLinkFile result snippet: Original file
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in LinkerMakeMediaLinkFile (2 layers)
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:06:19 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:06:20 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:06:20 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:06:22 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:06:22 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:06:22 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-10 07:06:22 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:06:22 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:06:22 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:06:22 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:06:22 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:06:57 41d7ff746b60 my_wiki-T01: layer_sets.ls_layer_count missing – schema update needed; inserting without it
+2025-08-10 07:07:47 41d7ff746b60 my_wiki-T01: layer_sets.ls_layer_count missing – schema update needed; inserting without it
+2025-08-10 07:07:52 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: onLinkerMakeMediaLinkFile fired
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: LinkerMakeMediaLinkFile result snippet: Original file
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in LinkerMakeMediaLinkFile (2 layers)
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:07:53 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:07:56 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:07:56 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:07:57 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:07:57 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:07:59 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:07:59 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:07:59 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:07:59 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: ImageBeforeProduceHTML fired
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in ImageBeforeProduceHTML (2 layers)
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: ImageBeforeProduceHTML fired
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in ImageBeforeProduceHTML (2 layers)
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:08:00 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:08:01 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:08:01 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: onLinkerMakeMediaLinkFile fired
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: LinkerMakeMediaLinkFile result snippet: Original file
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: Injected attributes in LinkerMakeMediaLinkFile (2 layers)
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: ThumbnailBeforeProduceHTML hook called
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: layersFlag = null
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: DB fallback provided 2 layers for thumbnail
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: Added layer data attribute with 2 layers
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:08:48 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:08:51 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:08:51 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-10 07:08:51 41d7ff746b60 my_wiki-T01: [Tab] Selected? no
+2025-08-10 07:08:51 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-10 07:08:51 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-10 07:08:51 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-10 07:08:52 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:08:52 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:09:16 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:09:16 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-10 07:09:18 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:09:18 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: DeleteMe002
+2025-08-10 07:09:18 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-10 07:09:18 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page

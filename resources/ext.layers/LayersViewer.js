@@ -174,6 +174,20 @@
 			}
 		}
 
+		// Apply per-layer effects (opacity, blend) around the draw
+		this.ctx.save();
+		if ( typeof layer.opacity === 'number' ) {
+			// Clamp to [0,1]
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		if ( layer.blend ) {
+			try {
+				this.ctx.globalCompositeOperation = String( layer.blend );
+			} catch ( e ) {
+				// ignore unsupported blend modes
+			}
+		}
+
 		switch ( L.type ) {
 			case 'text':
 				this.renderText( L );
@@ -206,6 +220,9 @@
 				this.renderPath( L );
 				break;
 		}
+
+		// Restore to pre-layer state
+		this.ctx.restore();
 	};
 
 	LayersViewer.prototype.renderText = function ( layer ) {
