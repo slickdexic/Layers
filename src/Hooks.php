@@ -123,6 +123,13 @@ class Hooks {
 	public static function onMakeGlobalVariablesScript( &$vars, $out ) {
 		try {
 			$vars['wgLayersEnabled'] = true;
+			// Surface server config toggle for client-side debug logging
+			try {
+				$config = $out->getConfig();
+				$vars['wgLayersDebug'] = (bool)$config->get( 'LayersDebug' );
+			} catch ( \Throwable $e2 ) {
+				$vars['wgLayersDebug'] = false;
+			}
 			// Also proactively register the viewer module to be safe
 			if ( method_exists( $out, 'addModules' ) ) {
 				$out->addModules( 'ext.layers' );
@@ -187,10 +194,35 @@ class Hooks {
 	 */
 	public static function onLoadExtensionSchemaUpdates( $updater ) {
 		$dir = dirname( __DIR__ );
-		$schema = $dir . '/sql/layers_tables.sql';
-		$updater->addExtensionTable( 'layer_sets', $schema );
-		$updater->addExtensionTable( 'layer_assets', $schema );
-		$updater->addExtensionTable( 'layer_set_usage', $schema );
+		$tablesDir = $dir . '/sql/tables';
+		$monolithic = $dir . '/sql/layers_tables.sql';
+
+		// Prefer per-table files to avoid re-running a monolithic schema multiple times
+		if ( is_dir( $tablesDir )
+			&& file_exists( $tablesDir . '/layer_sets.sql' )
+			&& file_exists( $tablesDir . '/layer_assets.sql' )
+			&& file_exists( $tablesDir . '/layer_set_usage.sql' )
+		) {
+			$updater->addExtensionTable( 'layer_sets', $tablesDir . '/layer_sets.sql' );
+			$updater->addExtensionTable( 'layer_assets', $tablesDir . '/layer_assets.sql' );
+			$updater->addExtensionTable( 'layer_set_usage', $tablesDir . '/layer_set_usage.sql' );
+		} else {
+			// Fallback: run the monolithic schema once, anchored on layer_sets
+			if ( file_exists( $monolithic ) ) {
+				$updater->addExtensionTable( 'layer_sets', $monolithic );
+			}
+		}
+
+		// Add post-install patches for added columns (Updater will no-op if already present)
+		$patchDir = $dir . '/sql/patches';
+		$patchSize = $patchDir . '/patch-layer_sets-add-ls_size.sql';
+		$patchCount = $patchDir . '/patch-layer_sets-add-ls_layer_count.sql';
+		if ( file_exists( $patchSize ) ) {
+			$updater->addExtensionField( 'layer_sets', 'ls_size', $patchSize );
+		}
+		if ( file_exists( $patchCount ) ) {
+			$updater->addExtensionField( 'layer_sets', 'ls_layer_count', $patchCount );
+		}
 	}
 
 	/**

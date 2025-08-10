@@ -49,18 +49,19 @@
 		toolGroup.className = 'toolbar-group tools-group';
 
 		var tools = [
-			{ id: 'pointer', icon: '↖', title: ( mw.message ? mw.message( 'layers-tool-select' ).text() : 'Select Tool' ), key : 'V' },
-			{ id: 'text', icon: 'T', title: ( mw.message ? mw.message( 'layers-tool-text' ).text() : 'Text Tool' ), key : 'T' },
-			{ id: 'pen', icon: '✏', title: ( mw.message ? mw.message( 'layers-tool-pen' ).text() : 'Pen Tool' ), key : 'P' },
-			{ id: 'rectangle', icon: '▢', title: ( mw.message ? mw.message( 'layers-tool-rectangle' ).text() : 'Rectangle Tool' ), key : 'R' },
-			{ id: 'circle', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-circle' ).text() : 'Circle Tool' ), key : 'C' },
-			{ id: 'ellipse', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-ellipse' ).text() : 'Ellipse Tool' ), key : 'E' },
-			{ id: 'polygon', icon: '⬟', title: ( mw.message ? mw.message( 'layers-tool-polygon' ).text() : 'Polygon Tool' ), key : 'G' },
-			{ id: 'star', icon: '★', title: ( mw.message ? mw.message( 'layers-tool-star' ).text() : 'Star Tool' ), key : 'S' },
-			{ id: 'arrow', icon: '→', title: ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow Tool' ), key : 'A' },
-			{ id: 'line', icon: '/', title: ( mw.message ? mw.message( 'layers-tool-line' ).text() : 'Line Tool' ), key : 'L' },
-			{ id: 'highlight', icon: '▒', title: ( mw.message ? mw.message( 'layers-tool-highlight' ).text() : 'Highlight Tool' ), key : 'H' },
-			{ id: 'marquee', icon: '⬚', title: ( mw.message ? mw.message( 'layers-tool-marquee' ).text() : 'Marquee Select' ), key : 'M' }
+			{ id: 'pointer', icon: '↖', title: ( mw.message ? mw.message( 'layers-tool-select' ).text() : 'Select Tool' ), key: 'V' },
+			{ id: 'text', icon: 'T', title: ( mw.message ? mw.message( 'layers-tool-text' ).text() : 'Text Tool' ), key: 'T' },
+			{ id: 'pen', icon: '✏', title: ( mw.message ? mw.message( 'layers-tool-pen' ).text() : 'Pen Tool' ), key: 'P' },
+			{ id: 'rectangle', icon: '▢', title: ( mw.message ? mw.message( 'layers-tool-rectangle' ).text() : 'Rectangle Tool' ), key: 'R' },
+			{ id: 'circle', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-circle' ).text() : 'Circle Tool' ), key: 'C' },
+			{ id: 'ellipse', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-ellipse' ).text() : 'Ellipse Tool' ), key: 'E' },
+			{ id: 'polygon', icon: '⬟', title: ( mw.message ? mw.message( 'layers-tool-polygon' ).text() : 'Polygon Tool' ), key: 'G' },
+			{ id: 'star', icon: '★', title: ( mw.message ? mw.message( 'layers-tool-star' ).text() : 'Star Tool' ), key: 'S' },
+			{ id: 'arrow', icon: '→', title: ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow Tool' ), key: 'A' },
+			{ id: 'line', icon: '/', title: ( mw.message ? mw.message( 'layers-tool-line' ).text() : 'Line Tool' ), key: 'L' },
+			{ id: 'highlight', icon: '▒', title: ( mw.message ? mw.message( 'layers-tool-highlight' ).text() : 'Highlight Tool' ), key: 'H' },
+			{ id: 'blur', icon: '◼︎', title: ( mw.message ? mw.message( 'layers-tool-blur' ).text() : 'Blur/Redact Tool' ), key: 'B' },
+			{ id: 'marquee', icon: '⬚', title: ( mw.message ? mw.message( 'layers-tool-marquee' ).text() : 'Marquee Select' ), key: 'M' }
 		];
 
 		tools.forEach( function ( tool ) {
@@ -384,11 +385,15 @@
 		actionGroup.className = 'toolbar-group action-group';
 
 		var actions = [
-			{ id: 'undo', icon: '↶', title: ( mw.message ? mw.message( 'layers-undo' ).text() : 'Undo' ), key : 'Ctrl+Z' },
-			{ id: 'redo', icon: '↷', title: ( mw.message ? mw.message( 'layers-redo' ).text() : 'Redo' ), key : 'Ctrl+Y' },
-			{ id: 'delete', icon: '🗑', title: ( mw.message ? mw.message( 'layers-delete-selected' ).text() : 'Delete Selected' ), key : 'Delete' },
-			{ id: 'duplicate', icon: '⧉', title: ( mw.message ? mw.message( 'layers-duplicate-selected' ).text() : 'Duplicate Selected' ), key : 'Ctrl+D' },
-			{ id: 'grid', icon: '⊞', title: ( mw.message ? mw.message( 'layers-toggle-grid' ).text() : 'Toggle Grid' ), key : 'G' }
+			{ id: 'undo', icon: '↶', title: ( mw.message ? mw.message( 'layers-undo' ).text() : 'Undo' ), key: 'Ctrl+Z' },
+			{ id: 'redo', icon: '↷', title: ( mw.message ? mw.message( 'layers-redo' ).text() : 'Redo' ), key: 'Ctrl+Y' },
+			{ id: 'delete', icon: '🗑', title: ( mw.message ? mw.message( 'layers-delete-selected' ).text() : 'Delete Selected' ), key: 'Delete' },
+			{ id: 'duplicate', icon: '⧉', title: ( mw.message ? mw.message( 'layers-duplicate-selected' ).text() : 'Duplicate Selected' ), key: 'Ctrl+D' },
+			{ id: 'grid', icon: '⊞', title: ( mw.message ? mw.message( 'layers-toggle-grid' ).text() : 'Toggle Grid' ), key: 'G' },
+			{ id: 'rulers', icon: '📏', title: ( mw.message ? mw.message( 'layers-toggle-rulers' ).text() : 'Toggle Rulers' ) },
+			{ id: 'guides', icon: '➕', title: ( mw.message ? mw.message( 'layers-toggle-guides' ).text() : 'Toggle Guides' ) },
+			{ id: 'snap-grid', icon: '🧲⊞', title: ( mw.message ? mw.message( 'layers-toggle-snap-grid' ).text() : 'Snap to Grid' ) },
+			{ id: 'snap-guides', icon: '🧲▭', title: ( mw.message ? mw.message( 'layers-toggle-snap-guides' ).text() : 'Snap to Guides' ) }
 		];
 
 		actions.forEach( function ( action ) {
@@ -511,6 +516,46 @@
 		document.addEventListener( 'keydown', function ( e ) {
 			self.handleKeyboardShortcuts( e );
 		} );
+
+		// Layer-level effects: opacity, blend, toggles
+		if ( this.opacitySlider ) {
+			this.opacitySlider.addEventListener( 'input', function () {
+				var raw = parseInt( self.opacitySlider.value, 10 ) || 0;
+				var value = Math.max( 0, Math.min( 100, raw ) );
+				self.opacityDisplay.textContent = value + '%';
+				self.editor.applyToSelection( function ( layer ) {
+					layer.opacity = value / 100;
+				} );
+			} );
+		}
+
+		if ( this.blendSelect ) {
+			this.blendSelect.addEventListener( 'change', function () {
+				var mode = self.blendSelect.value || 'normal';
+				self.editor.applyToSelection( function ( layer ) {
+					layer.blend = mode;
+				} );
+			} );
+		}
+
+		var toggleEffect = function ( prop ) {
+			return function () {
+				var isActive = this.classList.toggle( 'active' );
+				self.editor.applyToSelection( function ( layer ) {
+					layer[ prop ] = isActive;
+				} );
+			};
+		};
+
+		if ( this.shadowToggle ) {
+			this.shadowToggle.addEventListener( 'click', toggleEffect( 'shadow' ) );
+		}
+		if ( this.glowToggle ) {
+			this.glowToggle.addEventListener( 'click', toggleEffect( 'glow' ) );
+		}
+		if ( this.strokeToggle ) {
+			this.strokeToggle.addEventListener( 'click', toggleEffect( 'strokeEffect' ) );
+		}
 	};
 
 	Toolbar.prototype.selectTool = function ( toolId ) {
@@ -596,6 +641,37 @@
 			case 'grid':
 				this.toggleGrid();
 				break;
+			case 'rulers':
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.toggleRulers();
+				}
+				this.toggleButtonState( 'rulers' );
+				break;
+			case 'guides':
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.toggleGuidesVisibility();
+				}
+				this.toggleButtonState( 'guides' );
+				break;
+			case 'snap-grid':
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.toggleSnapToGrid();
+				}
+				this.toggleButtonState( 'snap-grid' );
+				break;
+			case 'snap-guides':
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.toggleSnapToGuides();
+				}
+				this.toggleButtonState( 'snap-guides' );
+				break;
+		}
+	};
+
+	Toolbar.prototype.toggleButtonState = function ( id ) {
+		var btn = this.container.querySelector( '[data-action="' + id + '"]' );
+		if ( btn ) {
+			btn.classList.toggle( 'active' );
 		}
 	};
 
@@ -687,6 +763,9 @@
 					break;
 				case 'c':
 					this.selectTool( 'circle' );
+					break;
+				case 'b':
+					this.selectTool( 'blur' );
 					break;
 				case 'a':
 					this.selectTool( 'arrow' );

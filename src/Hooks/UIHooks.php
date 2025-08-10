@@ -24,18 +24,17 @@ class UIHooks {
 	 * @param array &$links Navigation links bucket
 	 */
 	public static function onSkinTemplateNavigation( $sktemplate, array &$links ): void {
-		// Force debug mode for now to diagnose issues - this will be removed once working
-		$dbg = true;
-		$req = null;
-
-		// Critical debug: Log that this hook is being called
-		error_log( 'LAYERS HOOK CALLED: SkinTemplateNavigation hook is running' );
+	// Debug flag comes from config; request param can only narrow when config already enabled
+	$dbg = false;
+	$req = null;
 		try {
-			if ( is_object( $sktemplate ) && method_exists( $sktemplate, 'getConfig' ) ) {
-				$cfg = $sktemplate->getConfig();
-				if ( $cfg && method_exists( $cfg, 'get' ) ) {
-					$dbg = (bool)$cfg->get( 'LayersDebug' );
-				}
+			$cfg = ( is_object( $sktemplate ) && method_exists( $sktemplate, 'getConfig' ) )
+				? $sktemplate->getConfig()
+				: null;
+			if ( $cfg && method_exists( $cfg, 'get' ) ) {
+				$dbgCfg = (bool)$cfg->get( 'LayersDebug' );
+			} else {
+				$dbgCfg = false;
 			}
 			if ( is_object( $sktemplate ) ) {
 				$req = method_exists( $sktemplate, 'getRequest' )
@@ -45,10 +44,20 @@ class UIHooks {
 						: null );
 				if ( $req && method_exists( $req, 'getVal' ) ) {
 					$paramDbg = $req->getVal( 'layersdebug' );
-					if ( $paramDbg !== null && $paramDbg !== '' && $paramDbg !== '0' && $paramDbg !== 'false' ) {
-						$dbg = true;
+					// Only honor request param when config debug is enabled
+					if ( $dbgCfg && $paramDbg !== null ) {
+						$val = strtolower( trim( (string)$paramDbg ) );
+						if ( $val === '1' || $val === 'true' || $val === 'yes' ) {
+							$dbg = true;
+						} elseif ( $val === '0' || $val === 'false' || $val === 'no' ) {
+							$dbg = false;
+						}
 					}
 				}
+			}
+			// Default to config if request param didn't set it
+			if ( !isset( $dbg ) || $dbg === false ) {
+				$dbg = (bool)$dbgCfg;
 			}
 		} catch ( \Throwable $e ) {
 		}
@@ -60,8 +69,6 @@ class UIHooks {
 					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 					$logger->info( '[Tab] ' . $msg );
 				}
-				// ALSO output directly for immediate visibility during debugging
-				error_log( 'LAYERS DEBUG: ' . $msg );
 			} catch ( \Throwable $e ) {
 			}
 		};
@@ -86,12 +93,10 @@ class UIHooks {
 			}
 		}
 
-		// Only add to file pages (unless debugging, then we allow insertion to prove the hook runs)
+		// Only add to file pages
 		if ( !$title || !$title->inNamespace( NS_FILE ) ) {
 			$log( 'Skip: not a file page - title: ' . ( $title ? $title->getFullText() : 'null' ) );
-			if ( !$dbg ) {
-				return;
-			}
+			return;
 		}
 
 		// Only add for users with editlayers permission (unless debugging enabled)
@@ -196,21 +201,16 @@ class UIHooks {
 		}
 		$log( 'Inserted into views (after edit when present)' );
 
-		// When debugging, add an explicit debug-only action so we can see something even if above conditions would skip
+		// Optional: when debugging, add a subtle debug-only action alongside the normal tab
 		if ( $dbg ) {
-			// Force tab insertion for debugging
 			$debugTab = [
 				'class' => false,
 				'text' => 'Edit Layers (DEBUG)',
-				'href' => (
-					$title && method_exists( $title, 'getLocalURL' )
-				)
-					? self::getEditLayersURL( $title )
-					: '#debug'
+				'href' => self::getEditLayersURL( $title ),
+				'context' => 'actions',
 			];
 			$links['actions']['editlayers-debug'] = $debugTab;
-			$links['views']['editlayers-debug'] = $debugTab;
-			$log( 'Debug mode: injected editlayers-debug action AND view tab' );
+			$log( 'Debug mode: injected editlayers-debug action' );
 		}
 	}
 

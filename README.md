@@ -275,6 +275,13 @@ The Layers MediaWiki extension is actively developed and functional with the fol
 
 Use `test-installation.php` to verify your installation is working correctly.
 
+---
+
+## Troubleshooting
+
+- Quick guide: docs/layers-all-troubleshooting.md — end‑to‑end checks when images don’t show layers with layers=all.
+- General tips: TROUBLESHOOTING.md and STEP-BY-STEP-TROUBLESHOOTING.html.
+
 ### Developer quick checks
 
 After installing PHP and Node dev dependencies, you can run the basic static checks:

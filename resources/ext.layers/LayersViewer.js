@@ -19,6 +19,8 @@
 		this.container = this.config.container;
 		this.imageElement = this.config.imageElement;
 		this.layerData = this.config.layerData || [];
+		this.baseWidth = ( this.layerData && this.layerData.baseWidth ) || null;
+		this.baseHeight = ( this.layerData && this.layerData.baseHeight ) || null;
 		this.canvas = null;
 		this.ctx = null;
 
@@ -42,7 +44,7 @@
 		this.canvas.style.top = '0';
 		this.canvas.style.left = '0';
 		this.canvas.style.pointerEvents = 'none';
-		this.canvas.style.zIndex = '1';
+		this.canvas.style.zIndex = '1000';
 
 		this.ctx = this.canvas.getContext( '2d' );
 
@@ -65,21 +67,29 @@
 				self.resizeCanvasAndRender();
 			} );
 		}
+
+		// Re-render on window resize to keep overlay aligned
+		window.addEventListener( 'resize', function () {
+			self.resizeCanvasAndRender();
+		} );
 	};
 
 	LayersViewer.prototype.resizeCanvasAndRender = function () {
-		// Set canvas size to match image display size
+		// Set canvas pixel size to MATCH the displayed image size for crisp alignment
+		var displayW = this.imageElement.offsetWidth;
+		var displayH = this.imageElement.offsetHeight;
+		if ( !displayW || !displayH ) {
+			// Fallback to natural dimensions when offsets are 0 (e.g., image hidden)
+			displayW = this.imageElement.naturalWidth || this.imageElement.width || 0;
+			displayH = this.imageElement.naturalHeight || this.imageElement.height || 0;
+		}
 
-		this.canvas.width = this.imageElement.naturalWidth || this.imageElement.width;
-		this.canvas.height = this.imageElement.naturalHeight || this.imageElement.height;
+		this.canvas.width = displayW;
+		this.canvas.height = displayH;
 
-		// Scale canvas to match image display size
-		this.canvas.style.width = this.imageElement.offsetWidth + 'px';
-		this.canvas.style.height = this.imageElement.offsetHeight + 'px';
-
-		// Calculate scale factors
-		this.scaleX = this.canvas.width / this.imageElement.offsetWidth;
-		this.scaleY = this.canvas.height / this.imageElement.offsetHeight;
+		// Ensure CSS size matches exactly
+		this.canvas.style.width = displayW + 'px';
+		this.canvas.style.height = displayH + 'px';
 
 		this.renderLayers();
 	};
@@ -104,43 +114,111 @@
 			return;
 		}
 
-		switch ( layer.type ) {
+		// Compute scaling from saved coordinates to current canvas size
+		var sx = 1;
+		var sy = 1;
+		if ( this.baseWidth && this.baseHeight ) {
+			sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			sy = ( this.canvas.height || 1 ) / this.baseHeight;
+		}
+
+		// Create a shallow copy and scale known coords
+		var L = layer;
+		if ( this.baseWidth && this.baseHeight ) {
+			L = {};
+			for ( var k in layer ) {
+				if ( Object.prototype.hasOwnProperty.call( layer, k ) ) {
+					L[ k ] = layer[ k ];
+				}
+			}
+			if ( typeof L.x === 'number' ) {
+				L.x = L.x * sx;
+			}
+			if ( typeof L.y === 'number' ) {
+				L.y = L.y * sy;
+			}
+			if ( typeof L.width === 'number' ) {
+				L.width = L.width * sx;
+			}
+			if ( typeof L.height === 'number' ) {
+				L.height = L.height * sy;
+			}
+			if ( typeof L.radius === 'number' ) {
+				L.radius = L.radius * ( ( sx + sy ) / 2 );
+			}
+			if ( typeof L.radiusX === 'number' ) {
+				L.radiusX = L.radiusX * sx;
+			}
+			if ( typeof L.radiusY === 'number' ) {
+				L.radiusY = L.radiusY * sy;
+			}
+			if ( typeof L.x1 === 'number' ) {
+				L.x1 = L.x1 * sx;
+			}
+			if ( typeof L.y1 === 'number' ) {
+				L.y1 = L.y1 * sy;
+			}
+			if ( typeof L.x2 === 'number' ) {
+				L.x2 = L.x2 * sx;
+			}
+			if ( typeof L.y2 === 'number' ) {
+				L.y2 = L.y2 * sy;
+			}
+			if ( Array.isArray( L.points ) ) {
+				var pts = [];
+				for ( var i = 0; i < L.points.length; i++ ) {
+					var p = L.points[ i ];
+					pts.push( { x: p.x * sx, y: p.y * sy } );
+				}
+				L.points = pts;
+			}
+		}
+
+		switch ( L.type ) {
 			case 'text':
-				this.renderText( layer );
+				this.renderText( L );
 				break;
 			case 'rectangle':
-				this.renderRectangle( layer );
+				this.renderRectangle( L );
 				break;
 			case 'circle':
-				this.renderCircle( layer );
+				this.renderCircle( L );
 				break;
 			case 'ellipse':
-				this.renderEllipse( layer );
+				this.renderEllipse( L );
 				break;
 			case 'polygon':
-				this.renderPolygon( layer );
+				this.renderPolygon( L );
 				break;
 			case 'star':
-				this.renderStar( layer );
+				this.renderStar( L );
 				break;
 			case 'line':
-				this.renderLine( layer );
+				this.renderLine( L );
 				break;
 			case 'arrow':
-				this.renderArrow( layer );
+				this.renderArrow( L );
 				break;
 			case 'highlight':
-				this.renderHighlight( layer );
+				this.renderHighlight( L );
 				break;
 			case 'path':
-				this.renderPath( layer );
+				this.renderPath( L );
 				break;
 		}
 	};
 
 	LayersViewer.prototype.renderText = function ( layer ) {
 		this.ctx.save();
-		this.ctx.font = ( layer.fontSize || 16 ) + 'px ' + ( layer.fontFamily || 'Arial' );
+		var scaleAvg = 1;
+		if ( this.baseWidth && this.baseHeight ) {
+			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			scaleAvg = ( sx + sy ) / 2;
+		}
+		var fontPx = layer.fontSize || 16;
+		fontPx = Math.max( 1, Math.round( fontPx * scaleAvg ) );
+		this.ctx.font = fontPx + 'px ' + ( layer.fontFamily || 'Arial' );
 		this.ctx.fillStyle = layer.fill || '#000000';
 
 		// Handle text shadow
@@ -162,6 +240,21 @@
 		var y = layer.y || 0;
 		var width = layer.width || 0;
 		var height = layer.height || 0;
+		var strokeW = layer.strokeWidth || 1;
+		if ( this.baseWidth && this.baseHeight ) {
+			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			strokeW = strokeW * ( ( sx + sy ) / 2 );
+		}
+
+		var hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+		if ( hasRotation ) {
+			// rotate around rectangle center
+			this.ctx.translate( x + width / 2, y + height / 2 );
+			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			x = -width / 2;
+			y = -height / 2;
+		}
 
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
@@ -170,7 +263,7 @@
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = layer.strokeWidth || 1;
+			this.ctx.lineWidth = strokeW;
 			this.ctx.strokeRect( x, y, width, height );
 		}
 
@@ -189,7 +282,13 @@
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = layer.strokeWidth || 1;
+			var sw = layer.strokeWidth || 1;
+			if ( this.baseWidth && this.baseHeight ) {
+				var sx2 = ( this.canvas.width || 1 ) / this.baseWidth;
+				var sy2 = ( this.canvas.height || 1 ) / this.baseHeight;
+				sw = sw * ( ( sx2 + sy2 ) / 2 );
+			}
+			this.ctx.lineWidth = sw;
 			this.ctx.stroke();
 		}
 
@@ -199,7 +298,13 @@
 	LayersViewer.prototype.renderLine = function ( layer ) {
 		this.ctx.save();
 		this.ctx.strokeStyle = layer.stroke || '#000000';
-		this.ctx.lineWidth = layer.strokeWidth || 1;
+		var sw = layer.strokeWidth || 1;
+		if ( this.baseWidth && this.baseHeight ) {
+			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			sw = sw * ( ( sx + sy ) / 2 );
+		}
+		this.ctx.lineWidth = sw;
 
 		this.ctx.beginPath();
 		this.ctx.moveTo( layer.x1 || 0, layer.y1 || 0 );
@@ -213,13 +318,21 @@
 		this.ctx.save();
 		this.ctx.strokeStyle = layer.stroke || '#000000';
 		this.ctx.fillStyle = layer.stroke || '#000000';
-		this.ctx.lineWidth = layer.strokeWidth || 1;
+		var sw = layer.strokeWidth || 1;
+		var arrowSize = layer.arrowSize || 10;
+		if ( this.baseWidth && this.baseHeight ) {
+			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			var avg = ( sx + sy ) / 2;
+			sw = sw * avg;
+			arrowSize = arrowSize * avg;
+		}
+		this.ctx.lineWidth = sw;
 
 		var x1 = layer.x1 || 0;
 		var y1 = layer.y1 || 0;
 		var x2 = layer.x2 || 0;
 		var y2 = layer.y2 || 0;
-		var arrowSize = layer.arrowSize || 10;
 
 		// Draw line
 		this.ctx.beginPath();

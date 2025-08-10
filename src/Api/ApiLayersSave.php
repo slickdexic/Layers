@@ -451,28 +451,18 @@ class ApiLayersSave extends ApiBase {
 			return '#000000';
 		}
 
-		// Allow hex colors, rgb/rgba, and named colors
-		if ( preg_match( '/^#[0-9a-fA-F]{3,8}$/', $color ) ) {
+		// If it passes strict validator, return as-is
+		if ( $this->isValidColor( $color ) ) {
 			return $color;
 		}
 
-		if (
-			preg_match(
-				'/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+)?\s*\)$/',
-				$color
-			)
-		) {
-			return $color;
-		}
+		// Try to coerce common slightly-off formats (e.g., spaces/no spaces in rgba/hsl)
+		$normalized = trim( $color );
+		// Collapse multiple spaces
+		$normalized = preg_replace( '/\s+/', ' ', $normalized );
 
-		// List of safe named colors
-		$safeColors = [
-			'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange',
-			'purple', 'pink', 'gray', 'brown', 'transparent'
-		];
-
-		if ( in_array( strtolower( $color ), $safeColors ) ) {
-			return $color;
+		if ( $this->isValidColor( $normalized ) ) {
+			return $normalized;
 		}
 
 		// Default to black if invalid

@@ -17,6 +17,7 @@
 		this.config = config || {};
 		this.container = this.config.container;
 		this.editor = this.config.editor;
+		this.inspectorContainer = this.config.inspectorContainer || null;
 		this.layers = [];
 		this.selectedLayerId = null;
 
@@ -52,17 +53,43 @@
 		this.layerList.appendChild( emptyState );
 		this.container.appendChild( this.layerList );
 
-		// Create properties panel
+		// Create properties and code panels
 		this.propertiesPanel = document.createElement( 'div' );
 		this.propertiesPanel.className = 'layers-properties';
 		this.propertiesPanel.innerHTML = '<h4>' + ( mw.message ? mw.message( 'layers-properties-title' ).text() : 'Properties' ) + '</h4><div class="properties-content"></div>';
-		this.container.appendChild( this.propertiesPanel );
 
-		// Create layers code panel
 		this.codePanel = document.createElement( 'div' );
 		this.codePanel.className = 'layers-code-panel';
 		this.codePanel.innerHTML = '<h4>' + ( mw.message ? mw.message( 'layers-code-title' ).text() : 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
-		this.container.appendChild( this.codePanel );
+
+		// If an inspector container is provided by the editor, mount panels there
+		if ( this.inspectorContainer ) {
+			// Ensure inspector container is empty and styled
+			this.inspectorContainer.innerHTML = '';
+			if ( !this.inspectorContainer.classList.contains( 'layers-inspector' ) ) {
+				this.inspectorContainer.classList.add( 'layers-inspector' );
+			}
+
+			// Create a two-column layout inside inspector: properties left, code right
+			var inspectorInner = document.createElement( 'div' );
+			inspectorInner.className = 'layers-inspector-inner';
+			this.inspectorContainer.appendChild( inspectorInner );
+
+			var leftCol = document.createElement( 'div' );
+			leftCol.className = 'inspector-left';
+			var rightCol = document.createElement( 'div' );
+			rightCol.className = 'inspector-right';
+
+			inspectorInner.appendChild( leftCol );
+			inspectorInner.appendChild( rightCol );
+
+			leftCol.appendChild( this.propertiesPanel );
+			rightCol.appendChild( this.codePanel );
+		} else {
+			// Fallback: mount below list in sidebar
+			this.container.appendChild( this.propertiesPanel );
+			this.container.appendChild( this.codePanel );
+		}
 		this.updateCodePanel();
 	};
 
@@ -154,6 +181,8 @@
 			}
 			case 'rectangle':
 				return ( mw.message ? mw.message( 'layers-type-rectangle' ).text() : 'Rectangle' );
+			case 'blur':
+				return ( mw.message ? mw.message( 'layers-type-blur' ).text() : 'Blur/Redaction' );
 			case 'circle':
 				return ( mw.message ? mw.message( 'layers-type-circle' ).text() : 'Circle' );
 			case 'ellipse':
@@ -330,6 +359,9 @@
 			case 'circle':
 				this.addCircleProperties( form, layer );
 				break;
+			case 'blur':
+				this.addBlurProperties( form, layer );
+				break;
 		}
 
 		return form;
@@ -404,6 +436,33 @@
 		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-fill-color' ).text() : 'Fill Color' ), 'color', layer.fill || '#ffffff', function ( value ) {
 			self.editor.updateLayer( layer.id, { fill: value } );
 		} );
+	};
+
+	LayerPanel.prototype.addBlurProperties = function ( form, layer ) {
+		var self = this;
+
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-width' ).text() : 'Width' ), 'number', layer.width || 0, function ( value ) {
+			self.editor.updateLayer( layer.id, { width: parseFloat( value ) } );
+		} );
+
+		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-height' ).text() : 'Height' ), 'number', layer.height || 0, function ( value ) {
+			self.editor.updateLayer( layer.id, { height: parseFloat( value ) } );
+		} );
+
+		this.addPropertyField(
+			form,
+			( mw.message ? mw.message( 'layers-prop-blur-radius' ).text() : 'Blur Radius' ),
+			'number',
+			layer.blurRadius || 12,
+			function ( value ) {
+				self.editor.updateLayer( layer.id, {
+					blurRadius: Math.max(
+						1,
+						Math.min( 64, parseInt( value, 10 ) || 12 )
+					)
+				} );
+			}
+		);
 	};
 
 	LayerPanel.prototype.setupDragAndDrop = function () {

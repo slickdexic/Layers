@@ -113,7 +113,8 @@
 
 			this.layerPanel = new window.LayerPanel( {
 				container: this.$layerPanel.get( 0 ),
-				editor: this
+				editor: this,
+				inspectorContainer: this.inspectorContainer
 			} );
 
 			this.toolbar = new window.Toolbar( {
@@ -140,6 +141,16 @@
 
 		// Set up event handlers
 		this.setupEventHandlers();
+
+		// Seed status bar with initial values
+		if ( typeof this.updateStatus === 'function' ) {
+			this.updateStatus( {
+				tool: this.currentTool || 'pointer',
+				zoomPercent: 100,
+				pos: { x: 0, y: 0 },
+				selectionCount: 0
+			} );
+		}
 
 		if ( window.mw && window.mw.log ) {
 			mw.log( 'Layers: Editor fully initialized for file:', this.filename );
@@ -187,20 +198,41 @@
 		this.toolbarContainer.className = 'layers-toolbar';
 		this.container.appendChild( this.toolbarContainer );
 
-		// Create main content area
+		// Create main content area (column layout: main row + bottom inspector)
 		this.content = document.createElement( 'div' );
 		this.content.className = 'layers-content';
 		this.container.appendChild( this.content );
 
-		// Create layer panel
+		// Main row holds sidebar and canvas
+		var mainRow = document.createElement( 'div' );
+		mainRow.className = 'layers-main';
+		this.content.appendChild( mainRow );
+
+		// Create layer panel (sidebar)
 		this.layerPanelContainer = document.createElement( 'div' );
 		this.layerPanelContainer.className = 'layers-panel';
-		this.content.appendChild( this.layerPanelContainer );
+		mainRow.appendChild( this.layerPanelContainer );
 
-		// Create canvas container
+		// Create canvas container (stage)
 		this.canvasContainer = document.createElement( 'div' );
 		this.canvasContainer.className = 'layers-canvas-container';
-		this.content.appendChild( this.canvasContainer );
+		mainRow.appendChild( this.canvasContainer );
+
+		// Bottom inspector (properties + code)
+		this.inspectorContainer = document.createElement( 'div' );
+		this.inspectorContainer.className = 'layers-inspector';
+		this.content.appendChild( this.inspectorContainer );
+
+		// Status bar at the very bottom
+		this.statusBar = document.createElement( 'div' );
+		this.statusBar.className = 'layers-statusbar';
+		this.statusBar.innerHTML = '' +
+			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-tool' ).text() : 'Tool' ) + ':</span> <span class="status-value" data-status="tool">pointer</span></span>' +
+			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-zoom' ).text() : 'Zoom' ) + ':</span> <span class="status-value" data-status="zoom">100%</span></span>' +
+			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-pos' ).text() : 'Pos' ) + ':</span> <span class="status-value" data-status="pos">0,0</span></span>' +
+			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-size' ).text() : 'Size' ) + ':</span> <span class="status-value" data-status="size">-</span></span>' +
+			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-selection' ).text() : 'Selection' ) + ':</span> <span class="status-value" data-status="selection">0</span></span>';
+		this.container.appendChild( this.statusBar );
 
 		// Create jQuery-style references for compatibility
 		this.$canvasContainer = $( this.canvasContainer );
@@ -213,6 +245,49 @@
 		// Toolbar will update zoom; also update from CanvasManager hook
 		this.updateZoomReadout = function ( percent ) {
 			self.zoomReadoutEl.textContent = percent + '%';
+		};
+
+		// Expose simple status update helpers used by CanvasManager
+		this.updateStatus = function ( fields ) {
+			if ( !fields ) {
+				return;
+			}
+			var root = self.statusBar;
+			if ( !root ) {
+				return;
+			}
+			if ( fields.tool !== null && fields.tool !== undefined ) {
+				var elTool = root.querySelector( '[data-status="tool"]' );
+				if ( elTool ) {
+					elTool.textContent = String( fields.tool );
+				}
+			}
+			if ( fields.zoomPercent !== null && fields.zoomPercent !== undefined ) {
+				var elZoom = root.querySelector( '[data-status="zoom"]' );
+				if ( elZoom ) {
+					elZoom.textContent = Math.round( fields.zoomPercent ) + '%';
+				}
+			}
+			if ( fields.pos !== null && fields.pos !== undefined &&
+				typeof fields.pos.x === 'number' && typeof fields.pos.y === 'number' ) {
+				var elPos = root.querySelector( '[data-status="pos"]' );
+				if ( elPos ) {
+					elPos.textContent = Math.round( fields.pos.x ) + ',' + Math.round( fields.pos.y );
+				}
+			}
+			if ( fields.size !== null && fields.size !== undefined &&
+				typeof fields.size.width === 'number' && typeof fields.size.height === 'number' ) {
+				var elSize = root.querySelector( '[data-status="size"]' );
+				if ( elSize ) {
+					elSize.textContent = Math.round( fields.size.width ) + '×' + Math.round( fields.size.height );
+				}
+			}
+			if ( fields.selectionCount !== null && fields.selectionCount !== undefined ) {
+				var elSel = root.querySelector( '[data-status="selection"]' );
+				if ( elSel ) {
+					elSel.textContent = String( fields.selectionCount );
+				}
+			}
 		};
 
 		// Wire close button
@@ -437,6 +512,34 @@
 		}
 	};
 
+	// Apply a mutator function to all selected layers; saves state and marks dirty
+	LayersEditor.prototype.applyToSelection = function ( mutator ) {
+		if ( typeof mutator !== 'function' ) {
+			return;
+		}
+		var ids = this.getSelectedLayerIds();
+		if ( !ids.length ) {
+			return;
+		}
+		this.saveState();
+		for ( var i = 0; i < ids.length; i++ ) {
+			var layer = this.getLayerById( ids[ i ] );
+			if ( layer ) {
+				mutator( layer );
+			}
+		}
+		this.renderLayers();
+		this.markDirty();
+	};
+
+	// Return selected layer ids from CanvasManager or fallback to single selection
+	LayersEditor.prototype.getSelectedLayerIds = function () {
+		if ( this.canvasManager && Array.isArray( this.canvasManager.selectedLayerIds ) ) {
+			return this.canvasManager.selectedLayerIds.slice();
+		}
+		return this.selectedLayerId ? [ this.selectedLayerId ] : [];
+	};
+
 	LayersEditor.prototype.cancel = function ( navigateBack ) {
 		if ( this.isDirty ) {
 			var confirmMessage = ( mw.message ? mw.message( 'layers-unsaved-cancel-confirm' ).text() : 'You have unsaved changes. Are you sure you want to cancel?' );
@@ -486,7 +589,7 @@
 		var self = this;
 
 		// Show saving indicator
-		mw.notify( ( mw.message ? mw.message( 'layers-saving' ).text() : ( mw.msg ? mw.msg( 'layers-saving' ) : 'Saving...' ) ), { type : 'info' } );
+		mw.notify( ( mw.message ? mw.message( 'layers-saving' ).text() : ( mw.msg ? mw.msg( 'layers-saving' ) : 'Saving...' ) ), { type: 'info' } );
 
 		// Disable save button briefly
 		if ( this.toolbar && this.toolbar.saveButton ) {
@@ -506,7 +609,7 @@
 		} ).done( function ( data ) {
 			if ( data.layerssave && data.layerssave.success ) {
 				self.markClean();
-				mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type : 'success' } );
+				mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type: 'success' } );
 				// After a successful save, keep the editor open but update title indicator
 				// Optionally, navigate back quickly if user clicked header close earlier
 			} else {
@@ -545,7 +648,7 @@
 		if ( this.filename ) {
 			// Method 1: Construct URL using MediaWiki file path
 			var imageUrl = mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
-						  '/index.php?title=Special:Redirect/file/' + encodeURIComponent( this.filename );
+				'/index.php?title=Special:Redirect/file/' + encodeURIComponent( this.filename );
 			// console.log('Layers: Using MediaWiki file URL:', imageUrl);
 			return imageUrl;
 		}

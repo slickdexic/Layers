@@ -76,6 +76,13 @@
 		"LoadExtensionSchemaUpdates": "LayersHooks",
 		"MakeGlobalVariablesScript": "LayersHooks",
 		"ParserFirstCallInit": "LayersWikitextHooks",
+		"FileLink": "LayersWikitextHooks",
+		"GetLinkParamDefinitions": "LayersWikitextHooks",
+		"GetLinkParamTypes": "LayersWikitextHooks",
+		"ParserGetImageLinkParams": "LayersWikitextHooks",
+		"MakeImageLink2": "LayersWikitextHooks",
+		"LinkerMakeImageLink": "LayersWikitextHooks",
+		"LinkerMakeMediaLinkFile": "LayersWikitextHooks",
 		"ImageBeforeProduceHTML": "LayersWikitextHooks",
 		"ThumbnailBeforeProduceHTML": "LayersWikitextHooks",
 		"ParserMakeImageParams": "LayersWikitextHooks",
@@ -101,10 +108,7 @@
 			"localBasePath": "resources/ext.layers",
 			"remoteExtPath": "Layers/resources/ext.layers",
 			"targets": [ "desktop", "mobile" ],
-			"dependencies": [
-				"mediawiki.util",
-				"mediawiki.hook"
-			],
+			"dependencies": [ "jquery" ],
 			"styles": [],
 			"scripts": [
 				"LayersViewer.js",

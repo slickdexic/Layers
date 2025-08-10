@@ -1,4 +1,4 @@
-/* stylelint-disable linebreaks, rule-empty-line-before, declaration-empty-line-before, no-eol-whitespace */
+/* stylelint-disable rule-empty-line-before, declaration-empty-line-before */
 /**
  * Layers Editor CSS Styles
  * Essential styling for the layers editing interface
@@ -44,7 +44,6 @@ body.layers-editor-open .mw-body-content {
 	max-width: none !important;
 }
 
-
 /* Header */
 .layers-header {
 	background: #0b66a1;
@@ -55,7 +54,6 @@ body.layers-editor-open .mw-body-content {
 	padding: 10px 16px;
 	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.08 );
 }
-
 
 .layers-header-title {
 	font-weight: 600;
@@ -92,7 +90,34 @@ body.layers-editor-open .mw-body-content {
 .layers-content {
 	flex: 1;
 	display: flex;
+	flex-direction: column;
 	overflow: hidden;
+}
+
+/* Main row holds sidebar and canvas */
+.layers-main {
+	flex: 1 1 auto;
+	display: flex;
+	overflow: hidden;
+}
+
+/* Bottom inspector */
+.layers-inspector {
+	flex: 0 0 auto;
+	background: #fff;
+	border-top: 1px solid #ddd;
+	padding: 8px 12px;
+}
+
+.layers-inspector-inner {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+
+.layers-inspector .inspector-left,
+.layers-inspector .inspector-right {
+	min-width: 0;
 }
 
 /* Toolbar Styles */
@@ -373,6 +398,33 @@ body.layers-editor-open .mw-body-content {
 	color: #333;
 }
 
+/* Status bar */
+.layers-statusbar {
+	flex: 0 0 auto;
+	background: #fbfbfb;
+	border-top: 1px solid #ddd;
+	padding: 6px 10px;
+	font-size: 0.75em;
+	color: #495057;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.layers-statusbar .status-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.layers-statusbar .status-label {
+	color: #6c757d;
+}
+
+.layers-statusbar .status-value {
+	font-variant-numeric: tabular-nums;
+}
+
 /* Responsive Design */
 @media ( max-width: 1024px ) {
 	.layers-panel {
@@ -392,10 +444,6 @@ body.layers-editor-open .mw-body-content {
 }
 
 @media ( max-width: 768px ) {
-	.layers-content {
-		flex-direction: column;
-	}
-
 	.layers-panel {
 		width: 100%;
 		height: 200px;
@@ -406,5 +454,9 @@ body.layers-editor-open .mw-body-content {
 	.layers-canvas-container {
 		flex: 1;
 		padding: 10px;
+	}
+
+	.layers-inspector-inner {
+		grid-template-columns: 1fr;
 	}
 }

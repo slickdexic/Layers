@@ -20,21 +20,32 @@ The Layers editor is a single-page web application (loaded when a user clicks "E
 The editor window is divided into functional areas (panels), as shown below:
 
 ```
-+--------------------------------------------------------------------+
-| Top Toolbar: [Tool icons] [Style controls] [Effects] [Zoom] [Actions] |
-+---------+----------------------------------------------------------+
-| Layers  |                                                          |
-| Panel   |                 Canvas (Image & Drawing Area)            |
-|         |   (zoom/pan, with grid, guides, and snapping features)   |
-+---------+----------------------------------------------------------+
-|       Properties / Inspector Panel (for selected object/layer)     |
-+--------------------------------------------------------------------+
++---------------------------------------------------------------------------------------+
+|        [Tools]       | [Zoom 10–1600% Fit] [Undo/Redo] [Grid/Rulers] | [Save] [Close] |
++------------+--------------------------------------------------------------------------+
+| Layers     |                                                                          |
+|            |                                                                          |
+|            |                                                                          |
+|            |                                                                          |
+|            |                                                                          |
++------------+                         Canvas (Image + Overlays)                        |
+|   Layer    |                       Pan/Zoom | Guides | Snapping                       |
+| Properties |                                                                          |
+|            |                                                                          |
+|            |                                                                          |
+|            |                                                                          |
+|            |                                                                          |
+|            |                                                                          |
+|            |                                                                          |
+|            +--------------------------------------------------------------------------+
+|            |                   Status Bar: cursor (x,y), selection W×H, zoom %, hints |
++------------+--------------------------------------------------------------------------+
 ```
 
-* **Top Toolbar:** Stretches across the top, containing tool buttons, quick style controls, layer effects toggles, zoom controls, and action buttons.
+* **Top Toolbar:** Stretches across the top, containing tool buttons, quick style controls, zoom controls, and action buttons.
 * **Layers Panel (Sidebar):** Docked on the left side (can be alternatively on right if desired by configuration). It displays the list of layers (each annotation or group) in the image. This panel can be vertically scrolled if layers exceed the view and can be resized horizontally by dragging its edge. It includes controls for layer visibility (eye icon), locking, and ordering.
 * **Canvas Area:** The central workspace where the image and overlays are displayed. This area is the HTML5 canvas (or SVG) where users draw and manipulate annotations. It is bounded by the image’s dimensions. The canvas supports panning and zooming, and can display helpers like grids, rulers, and guides.
-* **Properties Panel (Inspector):** Docked along the bottom (or optionally on a side in future UI layouts) and shows detailed properties for the currently selected object or layer. It can be toggled or collapsed. The panel may be organized into tabs or sections (e.g. Appearance, Text, Effects) to group properties. Users can adjust numeric values via input fields or sliders, pick colors, toggle effect checkboxes, etc. The panel updates contextually based on selection (showing object-specific fields or layer-level settings).
+* **Properties Panel (Inspector):** Docked along the left and below the layers panel, it shows detailed properties for the currently selected object or layer. It can be toggled or collapsed. The panel may be organized into tabs or sections (e.g. Appearance, Text, Effects) to group properties. Users can adjust numeric values via input fields or sliders, pick colors, toggle effect checkboxes, etc. The panel updates contextually based on selection (showing object-specific fields or layer-level settings).
 
 All panels are designed to be **adjustable**: the Layers panel and Properties panel can be resized or collapsed to maximize canvas space. The layout is responsive; for smaller screens, panels might stack or become overlay tabs. The overall look and feel uses MediaWiki’s UI framework (OOUI) for consistent styling, with custom CSS for a modern editor appearance. The interface supports common window behaviors like dragging panel dividers, scrolling panels, and focusing/highlighting the active tool or selection.
 

@@ -30,14 +30,17 @@ class LayersDatabase {
 	/** @var int Maximum cache size */
 	private const MAX_CACHE_SIZE = 100;
 
+	/** @var array Cached table->columns map for schema checks */
+	private $tableColumnsCache = [];
+
 	public function __construct() {
 		$this->loadBalancer = null;
 		$this->dbw = null;
 		$this->dbr = null;
 
-		// Initialize logger properly
-		if ( class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
-			$this->logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
+		// Initialize logger when available; tolerate non-MW static analysis contexts
+		if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+			$this->logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 		}
 	}
 
@@ -70,7 +73,7 @@ class LayersDatabase {
 		if ( defined( 'DB_PRIMARY' ) ) {
 			$this->dbw = $lb->getConnection( DB_PRIMARY );
 		} elseif ( defined( 'DB_MASTER' ) ) {
-			$this->dbw = $lb->getConnection( DB_PRIMARY );
+			$this->dbw = $lb->getConnection( DB_MASTER );
 		} else {
 			$this->dbw = $lb->getConnection( 0 );
 		}
@@ -91,7 +94,7 @@ class LayersDatabase {
 		if ( defined( 'DB_REPLICA' ) ) {
 			$this->dbr = $lb->getConnection( DB_REPLICA );
 		} elseif ( defined( 'DB_SLAVE' ) ) {
-			$this->dbr = $lb->getConnection( DB_REPLICA );
+			$this->dbr = $lb->getConnection( DB_SLAVE );
 		} else {
 			$this->dbr = $lb->getConnection( 1 );
 		}
@@ -160,24 +163,34 @@ class LayersDatabase {
 			$dataSize = strlen( $jsonBlob );
 			$layerCount = count( $layersData );
 
+			// Build insert row with backward-compat for older schemas (without ls_size / ls_layer_count)
+			$row = [
+				'ls_img_name' => $imgName,
+				'ls_img_major_mime' => $majorMime,
+				'ls_img_minor_mime' => $minorMime,
+				'ls_img_sha1' => $sha1,
+				'ls_json_blob' => $jsonBlob,
+				'ls_user_id' => $userId,
+				'ls_timestamp' => $timestamp,
+				'ls_revision' => $revision,
+				'ls_name' => $setName
+			];
+
+			$hasSize = $this->tableHasColumn( 'layer_sets', 'ls_size' );
+			$hasCount = $this->tableHasColumn( 'layer_sets', 'ls_layer_count' );
+			if ( $hasSize ) {
+				$row['ls_size'] = $dataSize;
+			} else if ( $this->logger ) {
+				$this->logger->warning( 'layer_sets.ls_size missing – schema update needed; inserting without it' );
+			}
+			if ( $hasCount ) {
+				$row['ls_layer_count'] = $layerCount;
+			} else if ( $this->logger ) {
+				$this->logger->warning( 'layer_sets.ls_layer_count missing – schema update needed; inserting without it' );
+			}
+
 			// Insert layer set
-			$dbw->insert(
-				'layer_sets',
-				[
-					'ls_img_name' => $imgName,
-					'ls_img_major_mime' => $majorMime,
-					'ls_img_minor_mime' => $minorMime,
-					'ls_img_sha1' => $sha1,
-					'ls_json_blob' => $jsonBlob,
-					'ls_user_id' => $userId,
-					'ls_timestamp' => $timestamp,
-					'ls_revision' => $revision,
-					'ls_name' => $setName,
-					'ls_size' => $dataSize,
-					'ls_layer_count' => $layerCount
-				],
-				__METHOD__
-			);
+			$dbw->insert( 'layer_sets', $row, __METHOD__ );
 
 			$layerSetId = $dbw->insertId();
 			$dbw->endAtomic( __METHOD__ );
@@ -524,6 +537,53 @@ class LayersDatabase {
 			if ( strpos( $key, $pattern ) !== false ) {
 				unset( $this->layerSetCache[$key] );
 			}
+		}
+	}
+
+	/**
+	 * Check if a given table has a specific column. Caches results per request.
+	 *
+	 * @param string $table
+	 * @param string $column
+	 * @return bool
+	 */
+	private function tableHasColumn( string $table, string $column ): bool {
+		try {
+			// Use read connection for schema introspection
+			$dbr = $this->getReadDb();
+			if ( !$dbr ) {
+				return false;
+			}
+			$cacheKey = $table;
+			if ( isset( $this->tableColumnsCache[$cacheKey] ) ) {
+				return in_array( $column, $this->tableColumnsCache[$cacheKey], true );
+			}
+
+			$cols = [];
+			// MediaWiki IDatabase supports fieldInfo in most versions
+			$fieldInfo = $dbr->fieldInfo( $table, $column );
+			if ( $fieldInfo ) {
+				// If fieldInfo returns non-null, the column exists
+				$cols[] = $column;
+			} else {
+				// Fall back: try to fetch all columns via schema
+				// SHOW COLUMNS is supported by MySQL/MariaDB; for other backends, fieldInfo above should suffice
+				try {
+					$res = $dbr->query( 'SHOW COLUMNS FROM ' . $dbr->tableName( $table ) );
+					foreach ( $res as $row ) {
+						if ( isset( $row->Field ) ) {
+							$cols[] = $row->Field;
+						}
+					}
+				} catch ( \Throwable $e ) {
+					// ignore – best effort
+				}
+			}
+
+			$this->tableColumnsCache[$cacheKey] = $cols;
+			return in_array( $column, $cols, true );
+		} catch ( \Throwable $e ) {
+			return false;
 		}
 	}
 }

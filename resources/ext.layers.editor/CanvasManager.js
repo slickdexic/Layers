@@ -63,6 +63,18 @@
 		this.gridSize = 20;
 		this.snapToGrid = false;
 
+		// Rulers & guides
+		this.showRulers = false;
+		this.showGuides = false;
+		this.snapToGuides = false;
+		this.smartGuides = false; // reserved for future smart alignment
+		this.rulerSize = 20;
+		this.horizontalGuides = []; // y positions in canvas coords
+		this.verticalGuides = []; // x positions in canvas coords
+		this.isDraggingGuide = false;
+		this.dragGuideOrientation = null; // 'h' | 'v'
+		this.dragGuidePos = 0;
+
 		// History/Undo system
 		this.history = [];
 		this.historyIndex = -1;
@@ -458,6 +470,20 @@
 
 		// console.log( 'Layers: Mouse down at', point, 'tool:', this.currentTool );
 
+		// Begin guide creation when clicking in ruler zones
+		if ( this.showRulers ) {
+			var rp = this.getRawClientPoint( e );
+			var inTopRuler = rp.canvasY < this.rulerSize;
+			var inLeftRuler = rp.canvasX < this.rulerSize;
+			if ( inTopRuler || inLeftRuler ) {
+				this.isDraggingGuide = true;
+				this.dragGuideOrientation = inTopRuler ? 'h' : 'v';
+				this.dragGuidePos = inTopRuler ? point.y : point.x;
+				this.canvas.style.cursor = 'grabbing';
+				return;
+			}
+		}
+
 		// Handle middle mouse button or space+click for panning
 		if ( e.button === 1 || ( e.button === 0 && this.spacePressed ) ) {
 			this.isPanning = true;
@@ -529,7 +555,7 @@
 
 	CanvasManager.prototype.isPointInRect = function ( point, rect ) {
 		return point.x >= rect.x && point.x <= rect.x + rect.width &&
-			   point.y >= rect.y && point.y <= rect.y + rect.height;
+			point.y >= rect.y && point.y <= rect.y + rect.height;
 	};
 
 	CanvasManager.prototype.startResize = function ( handle ) {
@@ -607,6 +633,21 @@
 
 	CanvasManager.prototype.handleMouseMove = function ( e ) {
 		var point = this.getMousePoint( e );
+		// Guide drag preview rendering
+		if ( this.isDraggingGuide ) {
+			this.dragGuidePos = ( this.dragGuideOrientation === 'h' ) ? point.y : point.x;
+			this.redraw();
+			this.renderLayers( this.editor.layers );
+			this.drawGuidePreview();
+			return;
+		}
+
+		// Update status: live cursor position
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( {
+				pos: { x: point.x, y: point.y }
+			} );
+		}
 
 		// Handle marquee selection
 		if ( this.isMarqueeSelecting ) {
@@ -702,6 +743,10 @@
 
 		switch ( originalLayer.type ) {
 			case 'rectangle':
+				return this.calculateRectangleResize(
+					originalLayer, handleType, deltaX, deltaY, modifiers
+				);
+			case 'blur':
 				return this.calculateRectangleResize(
 					originalLayer, handleType, deltaX, deltaY, modifiers
 				);
@@ -961,6 +1006,7 @@
 	) {
 		switch ( layer.type ) {
 			case 'rectangle':
+			case 'blur':
 			case 'circle':
 			case 'text':
 			case 'ellipse':
@@ -1048,6 +1094,14 @@
 				return point.x >= rMinX && point.x <= rMinX + rW &&
 					point.y >= rMinY && point.y <= rMinY + rH;
 			}
+			case 'blur': {
+				var bMinX = Math.min( layer.x, layer.x + layer.width );
+				var bMinY = Math.min( layer.y, layer.y + layer.height );
+				var bW = Math.abs( layer.width );
+				var bH = Math.abs( layer.height );
+				return point.x >= bMinX && point.x <= bMinX + bW &&
+					point.y >= bMinY && point.y <= bMinY + bH;
+			}
 			case 'circle': {
 				var dx = point.x - ( layer.x || 0 );
 				var dy = point.y - ( layer.y || 0 );
@@ -1133,6 +1187,21 @@
 		// Handle marquee selection completion
 		if ( this.isMarqueeSelecting ) {
 			this.finishMarqueeSelection();
+			return;
+		}
+
+		// Finish guide creation
+		if ( this.isDraggingGuide ) {
+			if ( this.dragGuideOrientation === 'h' ) {
+				this.addHorizontalGuide( this.dragGuidePos );
+			} else if ( this.dragGuideOrientation === 'v' ) {
+				this.addVerticalGuide( this.dragGuidePos );
+			}
+			this.isDraggingGuide = false;
+			this.dragGuideOrientation = null;
+			this.canvas.style.cursor = this.getToolCursor( this.currentTool );
+			this.redraw();
+			this.renderLayers( this.editor.layers );
 			return;
 		}
 
@@ -1341,6 +1410,11 @@
 
 		this.updateCanvasTransform();
 
+		// Update status zoom percent
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { zoomPercent: this.zoom * 100 } );
+		}
+
 		// console.log( 'Layers: Zoom set to', this.zoom );
 	};
 
@@ -1361,6 +1435,9 @@
 		}
 		if ( this.editor && typeof this.editor.updateZoomReadout === 'function' ) {
 			this.editor.updateZoomReadout( 100 );
+		}
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { zoomPercent: 100 } );
 		}
 	};
 
@@ -1399,6 +1476,9 @@
 		}
 		if ( this.editor && typeof this.editor.updateZoomReadout === 'function' ) {
 			this.editor.updateZoomReadout( Math.round( this.zoom * 100 ) );
+		}
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { zoomPercent: this.zoom * 100 } );
 		}
 
 		// Apply CSS transform for zoom and pan
@@ -1600,6 +1680,10 @@
 		this.redraw();
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
+
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { selectionCount: ( this.selectedLayerIds || [] ).length } );
+		}
 	};
 
 	CanvasManager.prototype.getMarqueeRect = function () {
@@ -1632,9 +1716,91 @@
 
 	CanvasManager.prototype.rectsIntersect = function ( rect1, rect2 ) {
 		return rect1.x < rect2.x + rect2.width &&
-			   rect1.x + rect1.width > rect2.x &&
-			   rect1.y < rect2.y + rect2.height &&
-			   rect1.y + rect1.height > rect2.y;
+			rect1.x + rect1.width > rect2.x &&
+			rect1.y < rect2.y + rect2.height &&
+			rect1.y + rect1.height > rect2.y;
+	};
+
+	// Apply opacity, blend mode, and simple effects per layer scope
+	CanvasManager.prototype.applyLayerEffects = function ( layer, drawCallback ) {
+		this.ctx.save();
+		// Opacity
+		if ( typeof layer.opacity === 'number' ) {
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		// Blend mode
+		if ( layer.blend ) {
+			try {
+				this.ctx.globalCompositeOperation = String( layer.blend );
+			} catch ( e ) {
+				// ignore unsupported modes
+			}
+		}
+		// Effects: shadow/glow/strokeEffect (basic interpretations)
+		if ( layer.shadow ) {
+			this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
+			this.ctx.shadowBlur = layer.shadowBlur || 8;
+			this.ctx.shadowOffsetX = layer.shadowOffsetX || 2;
+			this.ctx.shadowOffsetY = layer.shadowOffsetY || 2;
+		}
+
+		// Draw with effects
+		try {
+			if ( typeof drawCallback === 'function' ) {
+				drawCallback();
+			}
+			// Optional glow: simulate by extra stroke around path-like shapes
+			if ( layer.glow && ( layer.type === 'rectangle' || layer.type === 'circle' || layer.type === 'ellipse' || layer.type === 'polygon' || layer.type === 'star' || layer.type === 'line' || layer.type === 'arrow' || layer.type === 'path' ) ) {
+				// Simple glow by re-stroking with wider, translucent stroke
+				var prevAlpha = this.ctx.globalAlpha;
+				this.ctx.globalAlpha = ( prevAlpha || 1 ) * 0.3;
+				this.ctx.save();
+				this.ctx.strokeStyle = ( layer.stroke || '#000' );
+				this.ctx.lineWidth = ( layer.strokeWidth || 1 ) + 6;
+				// Redraw the shape outline only where possible
+				switch ( layer.type ) {
+					case 'rectangle':
+						this.ctx.strokeRect(
+							layer.x || 0,
+							layer.y || 0,
+							layer.width || 0,
+							layer.height || 0
+						);
+						break;
+					case 'circle':
+						this.ctx.beginPath();
+						this.ctx.arc(
+							layer.x || 0,
+							layer.y || 0,
+							layer.radius || 0,
+							0,
+							2 * Math.PI
+						);
+						this.ctx.stroke();
+						break;
+					case 'ellipse':
+						this.ctx.save();
+						this.ctx.translate( layer.x || 0, layer.y || 0 );
+						this.ctx.scale( layer.radiusX || 1, layer.radiusY || 1 );
+						this.ctx.beginPath();
+						this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
+						this.ctx.stroke();
+						this.ctx.restore();
+						break;
+					case 'polygon':
+					case 'star':
+					case 'line':
+					case 'arrow':
+					case 'path':
+						// Skip extra stroke pass for these for now (draw functions already handled)
+						break;
+				}
+				this.ctx.restore();
+				this.ctx.globalAlpha = prevAlpha;
+			}
+		} finally {
+			this.ctx.restore();
+		}
 	};
 
 	CanvasManager.prototype.drawMarqueeBox = function () {
@@ -1741,6 +1907,24 @@
 					return p.y;
 				} ) );
 				return { x: rMinX, y: rMinY, width: rMaxX - rMinX, height: rMaxY - rMinY };
+
+			case 'blur':
+				var bx = layer.x || 0;
+				var by = layer.y || 0;
+				var bw = layer.width || 0;
+				var bh = layer.height || 0;
+
+				// Handle negative dimensions
+				if ( bw < 0 ) {
+					bx += bw;
+					bw = -bw;
+				}
+				if ( bh < 0 ) {
+					by += bh;
+					bh = -bh;
+				}
+
+				return { x: bx, y: by, width: bw, height: bh };
 
 			case 'circle':
 				var centerX = layer.x || 0;
@@ -1934,6 +2118,9 @@
 		this.selectionHandles = [];
 		this.redraw();
 		this.renderLayers( this.editor.layers );
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { selectionCount: this.selectedLayerIds.length } );
+		}
 	};
 
 	CanvasManager.prototype.selectAll = function () {
@@ -1945,6 +2132,9 @@
 		this.redraw();
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { selectionCount: this.selectedLayerIds.length } );
+		}
 	};
 
 	CanvasManager.prototype.deselectAll = function () {
@@ -1954,6 +2144,9 @@
 		this.rotationHandle = null;
 		this.redraw();
 		this.renderLayers( this.editor.layers );
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { selectionCount: 0, size: { width: 0, height: 0 } } );
+		}
 	};
 
 	CanvasManager.prototype.handleLayerSelection = function ( point, isCtrlClick ) {
@@ -2108,6 +2301,59 @@
 		};
 	};
 
+	// Raw mapping without snapping, useful for ruler hit testing
+	CanvasManager.prototype.getRawClientPoint = function ( e ) {
+		var rect = this.canvas.getBoundingClientRect();
+		var clientX = e.clientX - rect.left;
+		var clientY = e.clientY - rect.top;
+		return {
+			canvasX: clientX / this.zoom,
+			canvasY: clientY / this.zoom
+		};
+	};
+
+	CanvasManager.prototype.addHorizontalGuide = function ( y ) {
+		if ( typeof y !== 'number' ) {
+			return;
+		}
+		if ( this.horizontalGuides.indexOf( y ) === -1 ) {
+			this.horizontalGuides.push( y );
+		}
+	};
+
+	CanvasManager.prototype.addVerticalGuide = function ( x ) {
+		if ( typeof x !== 'number' ) {
+			return;
+		}
+		if ( this.verticalGuides.indexOf( x ) === -1 ) {
+			this.verticalGuides.push( x );
+		}
+	};
+
+	CanvasManager.prototype.toggleRulers = function () {
+		this.showRulers = !this.showRulers;
+		this.redraw();
+		this.renderLayers( this.editor.layers );
+	};
+
+	CanvasManager.prototype.toggleGuidesVisibility = function () {
+		this.showGuides = !this.showGuides;
+		this.redraw();
+		this.renderLayers( this.editor.layers );
+	};
+
+	CanvasManager.prototype.toggleSnapToGrid = function () {
+		this.snapToGrid = !this.snapToGrid;
+	};
+
+	CanvasManager.prototype.toggleSnapToGuides = function () {
+		this.snapToGuides = !this.snapToGuides;
+	};
+
+	CanvasManager.prototype.toggleSmartGuides = function () {
+		this.smartGuides = !this.smartGuides;
+	};
+
 	CanvasManager.prototype.startDrawing = function ( point ) {
 		// console.log( 'Layers: Starting to draw with tool:',
 		//  this.currentTool, 'at point:', point );
@@ -2120,6 +2366,9 @@
 
 		// Prepare for drawing based on current tool
 		switch ( this.currentTool ) {
+			case 'blur':
+				this.startBlurTool( point, style );
+				break;
 			case 'text':
 				this.startTextTool( point, style );
 				break;
@@ -2170,6 +2419,19 @@
 		// Finish drawing and create layer
 		var layerData = this.createLayerFromDrawing( point );
 		if ( layerData ) {
+			// Convert rectangle to blur layer when blur tool is active
+			if ( this.currentTool === 'blur' ) {
+				if ( layerData.type === 'rectangle' ) {
+					layerData = {
+						type: 'blur',
+						x: layerData.x,
+						y: layerData.y,
+						width: layerData.width,
+						height: layerData.height,
+						blurRadius: 12
+					};
+				}
+			}
 			this.editor.addLayer( layerData );
 		}
 
@@ -2641,10 +2903,14 @@
 		// console.log( 'Layers: Setting tool to:', tool );
 		this.currentTool = tool;
 		this.canvas.style.cursor = this.getToolCursor( tool );
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { tool: tool } );
+		}
 	};
 
 	CanvasManager.prototype.getToolCursor = function ( tool ) {
 		switch ( tool ) {
+			case 'blur': return 'crosshair';
 			case 'text': return 'text';
 			case 'pen': return 'crosshair';
 			case 'rectangle':
@@ -2733,6 +2999,11 @@
 			}
 			this.renderLayers( this.editor.layers );
 		}
+
+		// Reflect selection count in status bar
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { selectionCount: ( this.selectedLayerIds || [] ).length } );
+		}
 	};
 
 	CanvasManager.prototype.renderLayers = function ( layers ) {
@@ -2755,7 +3026,9 @@
 
 					layers.forEach( function ( layer ) {
 						if ( layer.visible !== false ) { // Skip invisible layers early
-							this.drawLayer( layer );
+							this.applyLayerEffects( layer, function () {
+								this.drawLayer( layer );
+							}.bind( this ) );
 						}
 					}.bind( this ) );
 
@@ -2765,7 +3038,29 @@
 				// Draw selection indicators if any layer is selected
 				if ( this.selectedLayerId ) {
 					this.drawSelectionIndicators( this.selectedLayerId );
+
+					// Update status with selection size
+					try {
+						var sel = null;
+						if ( this.editor && this.editor.getLayerById ) {
+							sel = this.editor.getLayerById( this.selectedLayerId );
+						}
+						if ( sel && this.editor && typeof this.editor.updateStatus === 'function' ) {
+							var b = this.getLayerBounds( sel );
+							if ( b ) {
+								this.editor.updateStatus( {
+									size: { width: b.width, height: b.height }
+								} );
+							}
+						}
+					} catch ( _e ) {}
 				}
+
+				// Draw guides on top
+				this.drawGuides();
+
+				// Draw preview guide while dragging from ruler
+				this.drawGuidePreview();
 			} catch ( error ) {
 				// Log error to MediaWiki if available, otherwise to console as fallback
 				if ( window.mw && window.mw.log ) {
@@ -2819,6 +3114,9 @@
 
 		// Draw grid if enabled
 		this.drawGrid();
+
+		// Draw rulers after background/grid
+		this.drawRulers();
 	};
 
 	CanvasManager.prototype.drawLayer = function ( layer ) {
@@ -2828,6 +3126,9 @@
 		}
 
 		switch ( layer.type ) {
+			case 'blur':
+				this.drawBlur( layer );
+				break;
 			case 'text':
 				this.drawText( layer );
 				break;
@@ -2859,6 +3160,196 @@
 				this.drawPath( layer );
 				break;
 		}
+	};
+
+	CanvasManager.prototype.startBlurTool = function ( point, style ) {
+		// Use rectangle preview for blur region
+		this.tempLayer = {
+			type: 'rectangle',
+			x: point.x,
+			y: point.y,
+			width: 0,
+			height: 0,
+			stroke: style.color || '#000000',
+			strokeWidth: style.strokeWidth || 2,
+			fill: 'transparent'
+		};
+	};
+
+	CanvasManager.prototype.drawBlur = function ( layer ) {
+		// Draw a blurred version of the background inside the rect
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var w = layer.width || 0;
+		var h = layer.height || 0;
+		if ( w <= 0 || h <= 0 ) {
+			return;
+		}
+		this.ctx.save();
+		this.ctx.beginPath();
+		this.ctx.rect( x, y, w, h );
+		this.ctx.clip();
+		var radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+		var prevFilter = this.ctx.filter || 'none';
+		this.ctx.filter = 'blur(' + radius + 'px)';
+		if ( this.backgroundImage && this.backgroundImage.complete ) {
+			this.ctx.drawImage( this.backgroundImage, 0, 0 );
+		} else {
+			// Fallback: blur current canvas content by redrawing nothing special
+			// (kept for compatibility; effect minimal when no background)
+		}
+		this.ctx.filter = prevFilter;
+		this.ctx.restore();
+	};
+
+	// Draw rulers (top and left bars with ticks)
+	CanvasManager.prototype.drawRulers = function () {
+		if ( !this.showRulers ) {
+			return;
+		}
+
+		var size = this.rulerSize;
+		var w = this.canvas.width;
+		var h = this.canvas.height;
+
+		this.ctx.save();
+		this.ctx.fillStyle = '#f3f3f3';
+		this.ctx.fillRect( 0, 0, w, size );
+		this.ctx.fillRect( 0, 0, size, h );
+		this.ctx.strokeStyle = '#ddd';
+		this.ctx.beginPath();
+		this.ctx.moveTo( 0, size + 0.5 );
+		this.ctx.lineTo( w, size + 0.5 );
+		this.ctx.moveTo( size + 0.5, 0 );
+		this.ctx.lineTo( size + 0.5, h );
+		this.ctx.stroke();
+
+		// ticks
+		var tickStep = 50;
+		this.ctx.fillStyle = '#666';
+		this.ctx.strokeStyle = '#bbb';
+		this.ctx.font = '10px Arial';
+		this.ctx.textAlign = 'center';
+		for ( var x = size; x <= w; x += tickStep ) {
+			this.ctx.beginPath();
+			this.ctx.moveTo( x + 0.5, 0 );
+			this.ctx.lineTo( x + 0.5, size );
+			this.ctx.stroke();
+			this.ctx.fillText( Math.round( ( x - size ) ), x, size - 6 );
+		}
+		this.ctx.textAlign = 'right';
+		this.ctx.textBaseline = 'middle';
+		for ( var y = size; y <= h; y += tickStep ) {
+			this.ctx.beginPath();
+			this.ctx.moveTo( 0, y + 0.5 );
+			this.ctx.lineTo( size, y + 0.5 );
+			this.ctx.stroke();
+			this.ctx.fillText( Math.round( ( y - size ) ), size - 4, y );
+		}
+		this.ctx.restore();
+	};
+
+	CanvasManager.prototype.drawGuides = function () {
+		if ( !this.showGuides ) {
+			return;
+		}
+		this.ctx.save();
+		this.ctx.strokeStyle = '#26c6da';
+		this.ctx.lineWidth = 1;
+		this.ctx.setLineDash( [ 4, 4 ] );
+		var size = this.rulerSize;
+		for ( var i = 0; i < this.verticalGuides.length; i++ ) {
+			var gx = this.verticalGuides[ i ];
+			this.ctx.beginPath();
+			this.ctx.moveTo( gx + 0.5, 0 );
+			this.ctx.lineTo( gx + 0.5, this.canvas.height );
+			this.ctx.stroke();
+			if ( this.showRulers ) {
+				this.ctx.fillStyle = '#26c6da';
+				this.ctx.fillRect( gx - 1, 0, 2, size );
+			}
+		}
+		for ( var j = 0; j < this.horizontalGuides.length; j++ ) {
+			var gy = this.horizontalGuides[ j ];
+			this.ctx.beginPath();
+			this.ctx.moveTo( 0, gy + 0.5 );
+			this.ctx.lineTo( this.canvas.width, gy + 0.5 );
+			this.ctx.stroke();
+			if ( this.showRulers ) {
+				this.ctx.fillStyle = '#26c6da';
+				this.ctx.fillRect( 0, gy - 1, size, 2 );
+			}
+		}
+		this.ctx.restore();
+	};
+
+	CanvasManager.prototype.drawGuidePreview = function () {
+		if ( !this.isDraggingGuide ) {
+			return;
+		}
+		this.ctx.save();
+		this.ctx.strokeStyle = '#ff4081';
+		this.ctx.lineWidth = 1;
+		this.ctx.setLineDash( [ 8, 4 ] );
+		if ( this.dragGuideOrientation === 'h' ) {
+			this.ctx.beginPath();
+			this.ctx.moveTo( 0, this.dragGuidePos + 0.5 );
+			this.ctx.lineTo( this.canvas.width, this.dragGuidePos + 0.5 );
+			this.ctx.stroke();
+		} else if ( this.dragGuideOrientation === 'v' ) {
+			this.ctx.beginPath();
+			this.ctx.moveTo( this.dragGuidePos + 0.5, 0 );
+			this.ctx.lineTo( this.dragGuidePos + 0.5, this.canvas.height );
+			this.ctx.stroke();
+		}
+		this.ctx.restore();
+	};
+
+	CanvasManager.prototype.getGuideSnapDelta = function ( bounds, deltaX, deltaY, tol ) {
+		tol = tol || 6;
+		var dx = 0;
+		var dy = 0;
+		if ( this.verticalGuides && this.verticalGuides.length ) {
+			var left = ( bounds.x || 0 ) + deltaX;
+			var right = left + ( bounds.width || 0 );
+			var centerX = left + ( bounds.width || 0 ) / 2;
+			for ( var i = 0; i < this.verticalGuides.length; i++ ) {
+				var gx = this.verticalGuides[ i ];
+				if ( Math.abs( gx - left ) <= tol ) {
+					dx = gx - left;
+					break;
+				}
+				if ( Math.abs( gx - right ) <= tol ) {
+					dx = gx - right;
+					break;
+				}
+				if ( Math.abs( gx - centerX ) <= tol ) {
+					dx = gx - centerX;
+					break;
+				}
+			}
+		}
+		if ( this.horizontalGuides && this.horizontalGuides.length ) {
+			var top = ( bounds.y || 0 ) + deltaY;
+			var bottom = top + ( bounds.height || 0 );
+			var centerY = top + ( bounds.height || 0 ) / 2;
+			for ( var j = 0; j < this.horizontalGuides.length; j++ ) {
+				var gy = this.horizontalGuides[ j ];
+				if ( Math.abs( gy - top ) <= tol ) {
+					dy = gy - top;
+					break;
+				}
+				if ( Math.abs( gy - bottom ) <= tol ) {
+					dy = gy - bottom;
+					break;
+				}
+				if ( Math.abs( gy - centerY ) <= tol ) {
+					dy = gy - centerY;
+					break;
+				}
+			}
+		}
+		return { dx: dx, dy: dy };
 	};
 
 	CanvasManager.prototype.drawText = function ( layer ) {
