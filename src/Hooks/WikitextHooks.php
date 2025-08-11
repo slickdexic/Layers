@@ -193,7 +193,16 @@ class WikitextHooks {
 	 * @param mixed ...$rest Additional parameters provided by core for forward-compat
 	 * @return bool
 	 */
-	public static function onMakeImageLink2( $skin, $title, $file, $frameParams, $handlerParams, $time, &$res, ...$rest ): bool {
+	public static function onMakeImageLink2(
+		$skin,
+		$title,
+		$file,
+		$frameParams,
+		$handlerParams,
+		$time,
+		&$res,
+		...$rest
+ ): bool {
 		try {
 			// Determine if layers are requested
 			$layersFlag = null;
@@ -214,7 +223,8 @@ class WikitextHooks {
 				}
 			}
 			// Last resort: parse data-mw JSON for original args (when params were not preserved)
-			if ( $layersFlag === null && is_string( $res ) && strpos( $res, 'data-mw=' ) !== false ) {
+			if ( $layersFlag === null && is_string( $res ) &&
+				strpos( $res, 'data-mw=' ) !== false ) {
 				$parsed = self::extractLayersFromDataMw( (string)$res );
 				if ( $parsed !== null ) {
 					$layersFlag = $parsed;
@@ -225,7 +235,8 @@ class WikitextHooks {
 				return true;
 			}
 
-			if ( $file && ( $layersFlag === 'all' || $layersFlag === 'on' || isset( $handlerParams['layersjson'] ) || isset( $handlerParams['layerData'] ) ) ) {
+			if ( $file && ( $layersFlag === 'all' || $layersFlag === 'on' ||
+				isset( $handlerParams['layersjson'] ) || isset( $handlerParams['layerData'] ) ) ) {
 				// Prefer JSON param, then array param, then DB fallback
 				$layersArray = null;
 				if ( isset( $handlerParams['layersjson'] ) && is_string( $handlerParams['layersjson'] ) ) {
@@ -822,14 +833,14 @@ class WikitextHooks {
 		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 			$logger->info( 'Layers: ThumbnailBeforeProduceHTML hook called' );
-			
+
 			// Log what we received
 			$fileName = 'unknown';
 			if ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() ) {
 				$fileName = $thumbnail->getFile()->getName();
 			}
 			$logger->info( 'Layers: Processing thumbnail for file: ' . $fileName );
-			
+
 			// Log current attributes
 			$hasLayerData = isset( $attribs['data-layer-data'] );
 			$hasLayerClass = isset( $attribs['class'] ) && strpos( $attribs['class'], 'layers-thumbnail' ) !== false;
@@ -906,12 +917,12 @@ class WikitextHooks {
 	// but don't have layer data yet
 	if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
 		$shouldFallback = false;
-		
+
 		// Check if layers flag indicates we should show layers
 		if ( $layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === true ) {
 			$shouldFallback = true;
 		}
-		
+
 		// Also check link attributes for layers parameter as additional fallback
 		if ( !$shouldFallback && isset( $linkAttribs['href'] ) ) {
 			$href = (string)$linkAttribs['href'];
@@ -919,7 +930,7 @@ class WikitextHooks {
 				$shouldFallback = true;
 			}
 		}
-		
+
 		// DEBUG MODE: If debug is enabled and we still haven't found a reason to show layers,
 		// but the image actually has layers, show them anyway. This helps diagnose parameter detection issues.
 		global $wgLayersDebug;
@@ -941,7 +952,7 @@ class WikitextHooks {
 				}
 			}
 		}
-		
+
 		if ( $shouldFallback ) {
 			$file = $thumbnail->getFile();
 			if ( $file ) {

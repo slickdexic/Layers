@@ -101,4 +101,84 @@ class ApiLayersSaveTest extends MediaWikiUnitTestCase {
 		$this->assertEquals( '#000000', $method->invoke( $api, 'javascript:alert(1)' ) );
 		$this->assertEquals( '#000000', $method->invoke( $api, 123 ) );
 	}
+
+	/**
+	 * Test XSS protection in text validation
+	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::validateLayersData
+	 */
+	public function testValidateLayersDataXSSProtection() {
+		$api = $this->createPartialMock( ApiLayersSave::class, [] );
+
+		$method = new \ReflectionMethod( $api, 'validateLayersData' );
+		$method->setAccessible( true );
+
+		// Test script injection attempts
+		$maliciousData = [
+			[
+				'id' => 'layer_123',
+				'type' => 'text',
+				'x' => 100,
+				'y' => 50,
+				'text' => '<script>alert("xss")</script>'
+			]
+		];
+
+		$this->assertFalse( $method->invoke( $api, $maliciousData ),
+			'Should reject text containing script tags' );
+
+		// Test event handler injection
+		$eventHandlerData = [
+			[
+				'id' => 'layer_124',
+				'type' => 'text',
+				'x' => 100,
+				'y' => 50,
+				'text' => 'Hello onclick="alert(1)" world'
+			]
+		];
+
+		$this->assertFalse( $method->invoke( $api, $eventHandlerData ),
+			'Should reject text containing event handlers' );
+
+		// Test javascript: protocol
+		$jsProtocolData = [
+			[
+				'id' => 'layer_125',
+				'type' => 'text',
+				'x' => 100,
+				'y' => 50,
+				'text' => 'javascript:alert(1)'
+			]
+		];
+
+		$this->assertFalse( $method->invoke( $api, $jsProtocolData ),
+			'Should reject text containing javascript: protocol' );
+	}
+
+	/**
+	 * Test coordinate validation bounds
+	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::validateLayersData
+	 */
+	public function testValidateLayersDataCoordinateBounds() {
+		$api = $this->createPartialMock( ApiLayersSave::class, [] );
+
+		$method = new \ReflectionMethod( $api, 'validateLayersData' );
+		$method->setAccessible( true );
+
+		// Test coordinates beyond allowed bounds
+		$outOfBoundsData = [
+			[
+				'id' => 'layer_123',
+				'type' => 'rectangle',
+				// Beyond 10000 limit
+				'x' => 99999,
+				'y' => 50,
+				'width' => 100,
+				'height' => 50
+			]
+		];
+
+		$this->assertFalse( $method->invoke( $api, $outOfBoundsData ),
+			'Should reject coordinates beyond allowed bounds' );
+	}
 }

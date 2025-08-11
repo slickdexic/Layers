@@ -30,6 +30,15 @@
 	}
 
 	LayersEditor.prototype.init = function () {
+		// Add immediate visual feedback
+		document.title = '🔄 Layers Editor Loading...';
+		
+		// Check browser compatibility first
+		if ( !this.checkBrowserCompatibility() ) {
+			this.showBrowserCompatibilityWarning();
+			return;
+		}
+
 		// Create the main editor interface
 		this.createInterface();
 
@@ -42,6 +51,74 @@
 		this.waitForDependencies();
 	};
 
+	/**
+	 * Check if the browser supports required features
+	 *
+	 * @return {boolean} True if browser is compatible
+	 */
+	LayersEditor.prototype.checkBrowserCompatibility = function () {
+		// Check for essential APIs
+		var requiredFeatures = [
+			'HTMLCanvasElement' in window,
+			'JSON' in window,
+			'addEventListener' in document,
+			'querySelector' in document,
+			'FileReader' in window,
+			'Blob' in window
+		];
+
+		// Check for Canvas 2D context support
+		if ( window.HTMLCanvasElement ) {
+			try {
+				var testCanvas = document.createElement( 'canvas' );
+				var ctx = testCanvas.getContext( '2d' );
+				requiredFeatures.push( !!ctx );
+			} catch ( e ) {
+				requiredFeatures.push( false );
+			}
+		}
+
+		// Check if all required features are available
+		return requiredFeatures.every( function ( feature ) {
+			return feature === true;
+		} );
+	};
+
+	/**
+	 * Show browser compatibility warning
+	 */
+	LayersEditor.prototype.showBrowserCompatibilityWarning = function () {
+		var message = mw.message ?
+			mw.message( 'layers-browser-compatibility' ).text() :
+			'Your browser may not support all layer features';
+
+		if ( window.mw && window.mw.notify ) {
+			mw.notify( message, { type: 'warn', autoHide: false } );
+		} else {
+			// Fallback notification for very old browsers
+			// eslint-disable-next-line no-alert
+			alert( message );
+		}
+
+		// Try to show a basic interface anyway
+		this.createBasicInterface();
+	};
+
+	/**
+	 * Create a basic interface for unsupported browsers
+	 */
+	LayersEditor.prototype.createBasicInterface = function () {
+		this.container = document.createElement( 'div' );
+		this.container.className = 'layers-editor layers-editor-basic';
+		this.container.innerHTML = '<div class="layers-unsupported">' +
+			'<h3>Browser Not Fully Supported</h3>' +
+			'<p>The Layers editor requires a modern browser with Canvas support.</p>' +
+			'<p>Please consider upgrading your browser for the full experience.</p>' +
+			'<button onclick="this.parentNode.parentNode.style.display=\'none\'">Close</button>' +
+			'</div>';
+		document.body.appendChild( this.container );
+	};
+
 	LayersEditor.prototype.waitForDependencies = function () {
 		var self = this;
 		var maxAttempts = 50; // Wait up to 5 seconds
@@ -49,6 +126,14 @@
 
 		function checkDependencies() {
 			attempt++;
+
+			// Log what we have available for debugging
+			if ( window.mw && window.mw.log ) {
+				mw.log( 'Layers: Dependency check attempt ' + attempt );
+				mw.log( 'Layers: CanvasManager available:', !!window.CanvasManager );
+				mw.log( 'Layers: LayerPanel available:', !!window.LayerPanel );
+				mw.log( 'Layers: Toolbar available:', !!window.Toolbar );
+			}
 
 			if ( window.CanvasManager && window.LayerPanel && window.Toolbar ) {
 				// Use MediaWiki logging if available
@@ -163,6 +248,8 @@
 		// Always create a full-screen overlay container at body level
 		this.container = document.createElement( 'div' );
 		this.container.className = 'layers-editor';
+		this.container.setAttribute( 'role', 'application' );
+		this.container.setAttribute( 'aria-label', 'Layers Image Editor' );
 		document.body.appendChild( this.container );
 
 		// Add body class to hide skin chrome while editor is open
@@ -171,8 +258,11 @@
 		// Header
 		var header = document.createElement( 'div' );
 		header.className = 'layers-header';
+		header.setAttribute( 'role', 'banner' );
 		var title = document.createElement( 'div' );
 		title.className = 'layers-header-title';
+		title.setAttribute( 'role', 'heading' );
+		title.setAttribute( 'aria-level', '1' );
 		title.textContent = ( mw.message ? mw.message( 'layers-editor-title' ).text() : ( mw.msg ? mw.msg( 'layers-editor-title' ) : 'Layers Editor' ) ) +
 			( this.filename ? ' — ' + this.filename : '' );
 		header.appendChild( title );
@@ -181,6 +271,7 @@
 		// Zoom readout mirrors toolbar
 		var zoomReadout = document.createElement( 'span' );
 		zoomReadout.className = 'layers-zoom-readout';
+		zoomReadout.setAttribute( 'aria-label', 'Current zoom level' );
 		zoomReadout.textContent = '100%';
 		headerRight.appendChild( zoomReadout );
 
@@ -193,6 +284,9 @@
 		revWrap.appendChild( revLabel );
 		var revSelect = document.createElement( 'select' );
 		revSelect.className = 'layers-revision-select';
+		revSelect.setAttribute( 'aria-label', 'Select revision to load' );
+		revLabel.setAttribute( 'for', 'layers-revision-select-' + Math.random().toString( 36 ).slice( 2, 11 ) );
+		revSelect.id = revLabel.getAttribute( 'for' );
 		revWrap.appendChild( revSelect );
 
 		// Optional revision name input used on next save
@@ -200,12 +294,14 @@
 		revName.type = 'text';
 		revName.className = 'layers-revision-name';
 		revName.placeholder = ( mw.message ? mw.message( 'layers-revision-name-placeholder' ).text() : 'Revision name (optional)' );
+		revName.setAttribute( 'aria-label', 'Revision name for next save (optional)' );
 		revName.maxLength = 255;
 		revWrap.appendChild( revName );
 		var revLoadBtn = document.createElement( 'button' );
 		revLoadBtn.type = 'button';
 		revLoadBtn.className = 'layers-revision-load';
 		revLoadBtn.textContent = ( mw.message ? mw.message( 'layers-revision-load' ).text() : 'Load' );
+		revLoadBtn.setAttribute( 'aria-label', 'Load selected revision' );
 		revWrap.appendChild( revLoadBtn );
 		headerRight.appendChild( revWrap );
 
@@ -938,7 +1034,9 @@
 
 	// Initialize editor when appropriate
 	mw.hook( 'layers.editor.init' ).add( function ( config ) {
+		document.title = '🎨 Layers Editor Initializing...';
 		var editor = new LayersEditor( config );
+		document.title = '🎨 Layers Editor - ' + (config.filename || 'Unknown File');
 		if ( window.mw && window.mw.config.get( 'debug' ) ) {
 			window.layersEditorInstance = editor;
 		}
@@ -946,19 +1044,59 @@
 
 	// Auto-bootstrap if server provided config via wgLayersEditorInit
 	( function autoBootstrap() {
-		try {
-			var init = mw && mw.config && mw.config.get ? mw.config.get( 'wgLayersEditorInit' ) : null;
-			if ( !init ) {
-				return;
+		function tryBootstrap() {
+			try {
+				// Add debug logging
+				if ( window.console && console.log ) {
+					console.log( 'Layers: Auto-bootstrap starting...' );
+				}
+				
+				// Ensure MediaWiki is available
+				if ( !window.mw || !mw.config || !mw.config.get ) {
+					if ( window.console && console.log ) {
+						console.log( 'Layers: MediaWiki not ready, retrying in 100ms...' );
+					}
+					setTimeout( tryBootstrap, 100 );
+					return;
+				}
+				
+				var init = mw.config.get( 'wgLayersEditorInit' );
+				if ( window.console && console.log ) {
+					console.log( 'Layers: wgLayersEditorInit config:', init );
+				}
+				
+				if ( !init ) {
+					if ( window.console && console.log ) {
+						console.log( 'Layers: No wgLayersEditorInit config found, not auto-bootstrapping' );
+					}
+					return;
+				}
+				var container = document.getElementById( 'layers-editor-container' );
+				if ( window.console && console.log ) {
+					console.log( 'Layers: Container element:', container );
+				}
+				
+				mw.hook( 'layers.editor.init' ).fire( {
+					filename: init.filename,
+					imageUrl: init.imageUrl,
+					container: container || document.body
+				} );
+				
+				if ( window.console && console.log ) {
+					console.log( 'Layers: Auto-bootstrap fired layers.editor.init hook' );
+				}
+			} catch ( e ) {
+				if ( window.console && console.error ) {
+					console.error( 'Layers: Auto-bootstrap error:', e );
+				}
 			}
-			var container = document.getElementById( 'layers-editor-container' );
-			mw.hook( 'layers.editor.init' ).fire( {
-				filename: init.filename,
-				imageUrl: init.imageUrl,
-				container: container || document.body
-			} );
-		} catch ( e ) {
-			// noop
+		}
+		
+		// Try bootstrapping immediately, or when DOM is ready
+		if ( document.readyState === 'loading' ) {
+			document.addEventListener( 'DOMContentLoaded', tryBootstrap );
+		} else {
+			tryBootstrap();
 		}
 	}() );
 

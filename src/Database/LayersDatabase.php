@@ -141,60 +141,89 @@ class LayersDatabase {
 			// Start transaction for data consistency
 			$dbw->startAtomic( __METHOD__ );
 
-			// Get next revision number for this image
-			$revision = $this->getNextRevision( $imgName, $sha1 );
-			$timestamp = $dbw->timestamp();
+			// Get next revision number for this image with retry logic for race conditions
+			$maxRetries = 3;
+			$retryCount = 0;
+			$revision = null;
+			$layerSetId = null;
 
-			// Prepare JSON data with validation
-			$jsonBlob = json_encode( [
-				'revision' => $revision,
-				'schema' => 1,
-				'created' => $timestamp,
-				'layers' => $layersData
-			], JSON_UNESCAPED_UNICODE );
+			while ( $retryCount < $maxRetries ) {
+				try {
+					$revision = $this->getNextRevision( $imgName, $sha1 );
+					$timestamp = $dbw->timestamp();
 
-			if ( $jsonBlob === false ) {
-				$dbw->endAtomic( __METHOD__ );
-				$this->logError( 'JSON encoding failed for layer set' );
-				return false;
+					// Prepare JSON data with validation
+					$jsonBlob = json_encode( [
+						'revision' => $revision,
+						'schema' => 1,
+						'created' => $timestamp,
+						'layers' => $layersData
+					], JSON_UNESCAPED_UNICODE );
+
+					if ( $jsonBlob === false ) {
+						$dbw->endAtomic( __METHOD__ );
+						$this->logError( 'JSON encoding failed for layer set' );
+						return false;
+					}
+
+					// Calculate size and layer count for performance tracking
+					$dataSize = strlen( $jsonBlob );
+					$layerCount = count( $layersData );
+
+					// Build insert row with backward-compat for older schemas (without ls_size / ls_layer_count)
+					$row = [
+						'ls_img_name' => $imgName,
+						'ls_img_major_mime' => $majorMime,
+						'ls_img_minor_mime' => $minorMime,
+						'ls_img_sha1' => $sha1,
+						'ls_json_blob' => $jsonBlob,
+						'ls_user_id' => $userId,
+						'ls_timestamp' => $timestamp,
+						'ls_revision' => $revision,
+						'ls_name' => $setName
+					];
+
+					$hasSize = $this->tableHasColumn( 'layer_sets', 'ls_size' );
+					$hasCount = $this->tableHasColumn( 'layer_sets', 'ls_layer_count' );
+					if ( $hasSize ) {
+						$row['ls_size'] = $dataSize;
+					} elseif ( $this->logger ) {
+						$this->logger->warning( 'layer_sets.ls_size missing – schema update needed; inserting without it' );
+					}
+					if ( $hasCount ) {
+						$row['ls_layer_count'] = $layerCount;
+					} elseif ( $this->logger ) {
+						$this->logger->warning(
+							'layer_sets.ls_layer_count missing – schema update needed; inserting without it'
+						);
+					}
+
+					// Insert layer set
+					$dbw->insert( 'layer_sets', $row, __METHOD__ );
+
+					$layerSetId = $dbw->insertId();
+					break; // Success, exit retry loop
+
+				} catch ( \Exception $e ) {
+					// Check if this is a duplicate key error (race condition)
+					if ( strpos( strtolower( $e->getMessage() ), 'duplicate' ) !== false ||
+						 strpos( strtolower( $e->getMessage() ), 'unique' ) !== false ) {
+						$retryCount++;
+						if ( $retryCount >= $maxRetries ) {
+							$dbw->endAtomic( __METHOD__ );
+							$this->logError( 'Race condition detected, max retries exceeded: ' . $e->getMessage() );
+							return false;
+						}
+						// Log and retry with new revision number
+						$this->logError( 'Race condition detected, retrying (attempt ' . ($retryCount + 1) . '): ' . $e->getMessage() );
+						continue;
+					} else {
+						// Non-duplicate error, don't retry
+						throw $e;
+					}
+				}
 			}
 
-			// Calculate size and layer count for performance tracking
-			$dataSize = strlen( $jsonBlob );
-			$layerCount = count( $layersData );
-
-			// Build insert row with backward-compat for older schemas (without ls_size / ls_layer_count)
-			$row = [
-				'ls_img_name' => $imgName,
-				'ls_img_major_mime' => $majorMime,
-				'ls_img_minor_mime' => $minorMime,
-				'ls_img_sha1' => $sha1,
-				'ls_json_blob' => $jsonBlob,
-				'ls_user_id' => $userId,
-				'ls_timestamp' => $timestamp,
-				'ls_revision' => $revision,
-				'ls_name' => $setName
-			];
-
-			$hasSize = $this->tableHasColumn( 'layer_sets', 'ls_size' );
-			$hasCount = $this->tableHasColumn( 'layer_sets', 'ls_layer_count' );
-			if ( $hasSize ) {
-				$row['ls_size'] = $dataSize;
-			} elseif ( $this->logger ) {
-				$this->logger->warning( 'layer_sets.ls_size missing – schema update needed; inserting without it' );
-			}
-			if ( $hasCount ) {
-				$row['ls_layer_count'] = $layerCount;
-			} elseif ( $this->logger ) {
-				$this->logger->warning(
-					'layer_sets.ls_layer_count missing – schema update needed; inserting without it'
-				);
-			}
-
-			// Insert layer set
-			$dbw->insert( 'layer_sets', $row, __METHOD__ );
-
-			$layerSetId = $dbw->insertId();
 			$dbw->endAtomic( __METHOD__ );
 
 			// Clear relevant cache entries

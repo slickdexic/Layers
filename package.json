@@ -2,7 +2,10 @@
 	"name": "layers",
 	"private": true,
 	"scripts": {
-		"test": "grunt test"
+		"test": "grunt test",
+		"build": "webpack --mode=production",
+		"build:dev": "webpack --mode=development",
+		"watch": "webpack --mode=development --watch"
 	},
 	"devDependencies": {
 		"eslint-config-wikimedia": "0.24.0",
@@ -10,9 +13,15 @@
 		"grunt-banana-checker": "0.10.0",
 		"grunt-eslint": "24.0.0",
 		"grunt-stylelint": "0.18.0",
-		"stylelint-config-wikimedia": "0.14.0"
+		"stylelint-config-wikimedia": "0.14.0",
+		"webpack": "^5.88.0",
+		"webpack-cli": "^5.1.0",
+		"babel-loader": "^9.1.0",
+		"@babel/core": "^7.22.0",
+		"@babel/preset-env": "^7.22.0"
 	},
 	"eslintIgnore": [
-		"vendor/**"
+		"vendor/**",
+		"dist/**"
 	]
 }

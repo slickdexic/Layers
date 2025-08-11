@@ -231,7 +231,13 @@
 				"layers-blend-darken",
 				"layers-blend-lighten",
 				"layers-blend-difference",
-				"layers-blend-exclusion"
+				"layers-blend-exclusion",
+				"layers-confirm-title",
+				"layers-confirm-yes",
+				"layers-confirm-no",
+				"layers-alert-title",
+				"layers-alert-ok",
+				"layers-progress-title"
 			]
 		}
 	},

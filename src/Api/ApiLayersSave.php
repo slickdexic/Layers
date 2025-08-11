@@ -199,7 +199,7 @@ class ApiLayersSave extends ApiBase {
 					return false;
 				}
 				// Check for potential script injection
-				if ( preg_match( '/<script|javascript:|data:|vbscript:/i', $layer['text'] ) ) {
+				if ( preg_match( '/<script|javascript:|data:|vbscript:|on\w+\s*=/i', $layer['text'] ) ) {
 					return false;
 				}
 			}
@@ -305,20 +305,24 @@ class ApiLayersSave extends ApiBase {
 				}
 			}
 
-			// Special handling for text content: ensure string and limit length
-			if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
-				$cleanText = is_string( $layer['text'] ) ? $layer['text'] : (string)$layer['text'];
-				// Strip control characters
-				$cleanText = preg_replace( '/[\x00-\x1F\x7F]/u', '', $cleanText );
-				// Enforce max length
-				if ( strlen( $cleanText ) > 1000 ) {
-					$cleanText = substr( $cleanText, 0, 1000 );
-				}
-				$cleanLayer['text'] = $cleanText;
+		// Special handling for text content: ensure string and limit length
+		if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
+			$cleanText = is_string( $layer['text'] ) ? $layer['text'] : (string)$layer['text'];
+			// Strip control characters and potential HTML/script tags
+			$cleanText = preg_replace( '/[\x00-\x1F\x7F]/u', '', $cleanText );
+			$cleanText = htmlspecialchars( $cleanText, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+			// Remove any potential script tags or event handlers
+			$cleanText = preg_replace( '/<script[^>]*>.*?<\/script>/si', '', $cleanText );
+			$cleanText = preg_replace( '/on\w+\s*=\s*["\'][^"\']*["\']/i', '', $cleanText );
+			// Enforce max length
+			if ( strlen( $cleanText ) > 1000 ) {
+				$cleanText = substr( $cleanText, 0, 1000 );
 			}
+			$cleanLayer['text'] = $cleanText;
+		}
 
-			// Special handling for points array (path, polygon layers)
-			if (
+		// Special handling for points array (path, polygon layers)
+		if (
 				in_array( $layer['type'], [ 'path', 'polygon' ] )
 				&& isset( $layer['points'] )
 				&& is_array( $layer['points'] )
@@ -334,7 +338,7 @@ class ApiLayersSave extends ApiBase {
 					}
 				}
 				$cleanLayer['points'] = $cleanPoints;
-			}
+		}
 
 			// Validate color values
 			foreach ( [ 'stroke', 'fill' ] as $colorField ) {

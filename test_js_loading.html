@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Layers JavaScript Loading Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <h1>Layers Extension JavaScript Loading Test</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        function addTestResult(name, success, message) {
+            const results = document.getElementById('test-results');
+            const div = document.createElement('div');
+            div.className = 'test-result ' + (success ? 'success' : 'error');
+            div.innerHTML = '<strong>' + name + ':</strong> ' + message;
+            results.appendChild(div);
+        }
+        
+        function runTests() {
+            // Test 1: Check if window objects are available
+            addTestResult('CanvasManager', !!window.CanvasManager, 
+                window.CanvasManager ? 'Available' : 'Not found');
+            addTestResult('LayerPanel', !!window.LayerPanel, 
+                window.LayerPanel ? 'Available' : 'Not found');
+            addTestResult('Toolbar', !!window.Toolbar, 
+                window.Toolbar ? 'Available' : 'Not found');
+            addTestResult('LayersEditor', !!window.LayersEditor, 
+                window.LayersEditor ? 'Available' : 'Not found');
+                
+            // Test 2: Check dependency objects
+            addTestResult('LayersHistoryManager', !!window.LayersHistoryManager, 
+                window.LayersHistoryManager ? 'Available' : 'Not found');
+            addTestResult('LayersDialogManager', !!window.LayersDialogManager, 
+                window.LayersDialogManager ? 'Available' : 'Not found');
+            addTestResult('LayersImageLoader', !!window.LayersImageLoader, 
+                window.LayersImageLoader ? 'Available' : 'Not found');
+            addTestResult('LayersRenderer', !!window.LayersRenderer, 
+                window.LayersRenderer ? 'Available' : 'Not found');
+                
+            // Test 3: Try to instantiate LayersEditor
+            try {
+                if (window.LayersEditor) {
+                    // Don't actually instantiate, just test if the constructor exists
+                    addTestResult('LayersEditor Constructor', typeof window.LayersEditor === 'function', 
+                        typeof window.LayersEditor === 'function' ? 'Function available' : 'Not a function');
+                }
+            } catch (e) {
+                addTestResult('LayersEditor Test', false, 'Error: ' + e.message);
+            }
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('load', runTests);
+    </script>
+    
+    <!-- Load the Layers scripts manually to test -->
+    <script src="src/js/editor/HistoryManager.js"></script>
+    <script src="src/js/editor/DialogManager.js"></script>
+    <script src="src/js/editor/ImageLoader.js"></script>
+    <script src="src/js/editor/Renderer.js"></script>
+    <script src="resources/ext.layers.editor/CanvasManager.js"></script>
+    <script src="resources/ext.layers.editor/LayerPanel.js"></script>
+    <script src="resources/ext.layers.editor/Toolbar.js"></script>
+    <script src="resources/ext.layers.editor/LayersEditor.js"></script>
+</body>
+</html>

@@ -69,23 +69,44 @@ class ApiLayersInfo extends ApiBase {
 
 			// Also get list of all layer sets for this file
 			$allLayerSets = $db->getLayerSetsForImage( $file->getName(), $file->getSha1() );
-			// Enrich with user names for display convenience
+			// Enrich with user names for display convenience - batch lookup to avoid N+1 queries
 			try {
 				$userFactory = MediaWikiServices::getInstance()->getUserFactory();
-				foreach ( $allLayerSets as &$row ) {
+				
+				// Collect all unique user IDs
+				$userIds = [];
+				foreach ( $allLayerSets as $row ) {
 					$userId = (int)( $row['ls_user_id'] ?? 0 );
-					$userName = 'Anonymous';
 					if ( $userId > 0 ) {
-						$user = $userFactory->newFromId( $userId );
-						if ( $user ) {
-							$userName = $user->getName();
+						$userIds[] = $userId;
+					}
+				}
+				
+				// Batch load users
+				$users = [];
+				if ( !empty( $userIds ) ) {
+					$userIds = array_unique( $userIds );
+					$loadedUsers = $userFactory->newFromIds( $userIds );
+					foreach ( $loadedUsers as $user ) {
+						if ( $user && $user->getId() > 0 ) {
+							$users[$user->getId()] = $user->getName();
 						}
 					}
-					$row['ls_user_name'] = $userName;
+				}
+				
+				// Apply user names to layer sets
+				foreach ( $allLayerSets as &$row ) {
+					$userId = (int)( $row['ls_user_id'] ?? 0 );
+					$row['ls_user_name'] = $users[$userId] ?? 'Anonymous';
 				}
 				unset( $row );
 			} catch ( \Throwable $e ) {
 				// If user lookup fails in some environments, proceed without names
+				// Log the error for debugging
+				if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+					$logger->warning( 'Failed to batch load user names for layer sets: ' . $e->getMessage() );
+				}
 			}
 			$result['all_layersets'] = $allLayerSets;
 		}

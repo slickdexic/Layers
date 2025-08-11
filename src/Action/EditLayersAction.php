@@ -60,10 +60,35 @@ class EditLayersAction extends \Action {
 
 		// Init config via JS config vars; module will bootstrap itself
 		$fileUrl = $this->getPublicImageUrl( $file );
-		$out->addJsConfigVars( 'wgLayersEditorInit', [
-			'filename' => $file->getName(),
-			'imageUrl' => $fileUrl,
+		$out->addJsConfigVars( [
+			'wgLayersEditorInit' => [
+				'filename' => $file->getName(),
+				'imageUrl' => $fileUrl,
+			],
+			'wgLayersCurrentImageUrl' => $fileUrl,
+			'wgLayersImageBaseUrl' => $this->getImageBaseUrl()
 		] );
+
+		// Add basic HTML content to ensure page has content
+		$out->addHTML( '<div id="layers-editor-container"></div>' );
+		
+		// Add manual initialization script
+		$out->addHTML( '<script>
+			if (typeof mw !== "undefined" && mw.loader) {
+				mw.loader.using("ext.layers.editor").done(function() {
+					if (window.LayersEditor && mw.config.get("wgLayersEditorInit")) {
+						var config = mw.config.get("wgLayersEditorInit");
+						setTimeout(function() {
+							new window.LayersEditor({
+								filename: config.filename,
+								imageUrl: config.imageUrl,
+								container: document.getElementById("layers-editor-container")
+							});
+						}, 100);
+					}
+				});
+			}
+		</script>' );
 	}
 
 	/**
@@ -98,6 +123,15 @@ class EditLayersAction extends \Action {
 		}
 
 		return method_exists( $file, 'getUrl' ) ? (string)$file->getUrl() : '';
+	}
+
+	/**
+	 * Get the base URL for image access
+	 * @return string
+	 */
+	private function getImageBaseUrl(): string {
+		global $wgUploadPath;
+		return $wgUploadPath . '/';
 	}
 }
 }

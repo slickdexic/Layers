@@ -415,6 +415,28 @@
 			self.handleMouseUp( e );
 		} );
 
+		// Touch events for mobile support
+		this.canvas.addEventListener( 'touchstart', function ( e ) {
+			e.preventDefault(); // Prevent scrolling
+			self.handleTouchStart( e );
+		} );
+
+		this.canvas.addEventListener( 'touchmove', function ( e ) {
+			e.preventDefault(); // Prevent scrolling
+			self.handleTouchMove( e );
+		} );
+
+		this.canvas.addEventListener( 'touchend', function ( e ) {
+			e.preventDefault();
+			self.handleTouchEnd( e );
+		} );
+
+		// Handle pinch-to-zoom on touch devices
+		this.canvas.addEventListener( 'touchcancel', function ( e ) {
+			e.preventDefault();
+			self.handleTouchEnd( e );
+		} );
+
 		// Wheel event for zooming
 		this.canvas.addEventListener( 'wheel', function ( e ) {
 			e.preventDefault();
@@ -1249,6 +1271,152 @@
 		this.editor.markDirty();
 
 		// console.log( 'Layers: Resize finished' );
+	};
+
+	// Touch event handlers for mobile support
+	CanvasManager.prototype.handleTouchStart = function ( e ) {
+		var touch = e.touches[ 0 ];
+		if ( !touch ) {
+			return;
+		}
+
+		// Handle multi-touch gestures
+		if ( e.touches.length > 1 ) {
+			this.handlePinchStart( e );
+			return;
+		}
+
+		// Convert touch to mouse event
+		var mouseEvent = {
+			clientX: touch.clientX,
+			clientY: touch.clientY,
+			button: 0,
+			preventDefault: function () {},
+			stopPropagation: function () {}
+		};
+
+		this.lastTouchTime = Date.now();
+		this.handleMouseDown( mouseEvent );
+	};
+
+	CanvasManager.prototype.handleTouchMove = function ( e ) {
+		var touch = e.touches[ 0 ];
+		if ( !touch ) {
+			return;
+		}
+
+		// Handle multi-touch gestures
+		if ( e.touches.length > 1 ) {
+			this.handlePinchMove( e );
+			return;
+		}
+
+		// Convert touch to mouse event
+		var mouseEvent = {
+			clientX: touch.clientX,
+			clientY: touch.clientY,
+			button: 0,
+			preventDefault: function () {},
+			stopPropagation: function () {}
+		};
+
+		this.handleMouseMove( mouseEvent );
+	};
+
+	CanvasManager.prototype.handleTouchEnd = function ( e ) {
+		// Handle double-tap for zoom
+		var now = Date.now();
+		if ( this.lastTouchTime && ( now - this.lastTouchTime ) < 300 ) {
+			this.handleDoubleTap( e );
+			return;
+		}
+
+		// Handle pinch end
+		if ( this.isPinching ) {
+			this.handlePinchEnd( e );
+			return;
+		}
+
+		// Convert touch to mouse event
+		var mouseEvent = {
+			clientX: 0,
+			clientY: 0,
+			button: 0,
+			preventDefault: function () {},
+			stopPropagation: function () {}
+		};
+
+		this.handleMouseUp( mouseEvent );
+	};
+
+	CanvasManager.prototype.handlePinchStart = function ( e ) {
+		if ( e.touches.length !== 2 ) {
+			return;
+		}
+
+		this.isPinching = true;
+		var touch1 = e.touches[ 0 ];
+		var touch2 = e.touches[ 1 ];
+
+		this.initialPinchDistance = Math.sqrt(
+			Math.pow( touch2.clientX - touch1.clientX, 2 ) +
+			Math.pow( touch2.clientY - touch1.clientY, 2 )
+		);
+		this.initialZoom = this.zoom;
+	};
+
+	CanvasManager.prototype.handlePinchMove = function ( e ) {
+		if ( !this.isPinching || e.touches.length !== 2 ) {
+			return;
+		}
+
+		var touch1 = e.touches[ 0 ];
+		var touch2 = e.touches[ 1 ];
+
+		var currentDistance = Math.sqrt(
+			Math.pow( touch2.clientX - touch1.clientX, 2 ) +
+			Math.pow( touch2.clientY - touch1.clientY, 2 )
+		);
+
+		var scale = currentDistance / this.initialPinchDistance;
+		var newZoom = this.initialZoom * scale;
+
+		// Clamp zoom level
+		newZoom = Math.max( 0.1, Math.min( 5.0, newZoom ) );
+
+		this.setZoom( newZoom );
+	};
+
+	CanvasManager.prototype.handlePinchEnd = function () {
+		this.isPinching = false;
+		this.initialPinchDistance = null;
+		this.initialZoom = null;
+	};
+
+	CanvasManager.prototype.handleDoubleTap = function () {
+		// Toggle between fit-to-screen and 100% zoom
+		if ( this.zoom < 1.0 ) {
+			this.resetZoom();
+		} else {
+			this.fitToWindow();
+		}
+	};
+
+	CanvasManager.prototype.setZoom = function ( newZoom ) {
+		this.zoom = newZoom;
+		this.updateCanvasTransform();
+
+		// Update zoom display
+		var zoomPercent = Math.round( this.zoom * 100 );
+		if ( this.editor.toolbar ) {
+			this.editor.toolbar.updateZoomDisplay( zoomPercent );
+		}
+		if ( this.editor && typeof this.editor.updateZoomReadout === 'function' ) {
+			this.editor.updateZoomReadout( zoomPercent );
+		}
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { zoomPercent: zoomPercent } );
+		}
 	};
 
 	CanvasManager.prototype.finishRotation = function () {

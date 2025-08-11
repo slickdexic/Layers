@@ -16,6 +16,11 @@
 	font-size: 0.75em;
 }
 
+.layers-revision-select:focus {
+	outline: 2px solid #0645ad;
+	outline-offset: 2px;
+}
+
 .layers-revision-name {
 	height: 26px;
 	font-size: 0.75em;
@@ -23,9 +28,28 @@
 	min-width: 160px;
 }
 
+.layers-revision-name:focus {
+	outline: 2px solid #0645ad;
+	outline-offset: 2px;
+}
+
 .layers-revision-load {
 	height: 28px;
 	font-size: 0.75em;
+}
+
+.layers-revision-load:focus {
+	outline: 2px solid #0645ad;
+	outline-offset: 2px;
+}
+
+/* Accessibility focus styles */
+button:focus,
+input:focus,
+select:focus,
+.toolbar-button:focus {
+	outline: 2px solid #0645ad;
+	outline-offset: 2px;
 }
 /* stylelint-disable */
 /* Editor container */

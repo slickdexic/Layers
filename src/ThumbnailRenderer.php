@@ -202,7 +202,12 @@ class ThumbnailRenderer {
 	}
 
 	/**
-	 * Build args for a layer (scaled)
+	 * Build ImageMagick arguments for a layer with scaling applied
+	 *
+	 * @param array $layer Layer configuration array containing type and properties
+	 * @param float $scaleX Horizontal scaling factor to apply to coordinates
+	 * @param float $scaleY Vertical scaling factor to apply to coordinates
+	 * @return array Array of ImageMagick command arguments for this layer
 	 */
 	private function buildLayerArguments( array $layer, float $scaleX, float $scaleY ): array {
 		switch ( $layer['type'] ) {
@@ -454,6 +459,10 @@ class ThumbnailRenderer {
 	/**
 	 * Convert a color to include the given opacity, returning a form ImageMagick accepts.
 	 * Supports #RGB, #RGBA, #RRGGBB, #RRGGBBAA, rgb(), rgba(), 'none'/'transparent'.
+	 *
+	 * @param string $color Color in various CSS formats
+	 * @param float $opacity Opacity value between 0.0 (transparent) and 1.0 (opaque)
+	 * @return string Color in rgba() format that ImageMagick can process
 	 */
 	private function withOpacity( string $color, float $opacity ): string {
 		$opacity = max( 0.0, min( 1.0, $opacity ) );
@@ -470,23 +479,27 @@ class ThumbnailRenderer {
 		// Hex forms
 		if ( $lc[0] === '#' ) {
 			$hex = substr( $lc, 1 );
-			if ( strlen( $hex ) === 3 ) { // RGB -> RRGGBB
+			// RGB -> RRGGBB
+			if ( strlen( $hex ) === 3 ) {
 				$r = hexdec( str_repeat( $hex[0], 2 ) );
 				$g = hexdec( str_repeat( $hex[1], 2 ) );
 				$b = hexdec( str_repeat( $hex[2], 2 ) );
 				$a = 1.0;
-			} elseif ( strlen( $hex ) === 4 ) { // RGBA -> RRGGBBAA
+			// RGBA -> RRGGBBAA
+			} elseif ( strlen( $hex ) === 4 ) {
 				$r = hexdec( str_repeat( $hex[0], 2 ) );
 				$g = hexdec( str_repeat( $hex[1], 2 ) );
 				$b = hexdec( str_repeat( $hex[2], 2 ) );
 				$aa = hexdec( str_repeat( $hex[3], 2 ) );
 				$a = $aa / 255.0;
-			} elseif ( strlen( $hex ) === 6 ) { // RRGGBB
+			// RRGGBB
+			} elseif ( strlen( $hex ) === 6 ) {
 				$r = hexdec( substr( $hex, 0, 2 ) );
 				$g = hexdec( substr( $hex, 2, 2 ) );
 				$b = hexdec( substr( $hex, 4, 2 ) );
 				$a = 1.0;
-			} elseif ( strlen( $hex ) === 8 ) { // RRGGBBAA
+			// RRGGBBAA
+			} elseif ( strlen( $hex ) === 8 ) {
 				$r = hexdec( substr( $hex, 0, 2 ) );
 				$g = hexdec( substr( $hex, 2, 2 ) );
 				$b = hexdec( substr( $hex, 4, 2 ) );

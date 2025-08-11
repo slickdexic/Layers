@@ -1,0 +1,40 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# JavaScript files
+[*.js]
+indent_style = tab
+indent_size = 1
+
+# JSON files
+[*.json]
+indent_style = tab
+indent_size = 1
+
+# PHP files
+[*.php]
+indent_style = tab
+indent_size = 1
+
+# CSS files
+[*.css]
+indent_style = tab
+indent_size = 1
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+
+# YAML files
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
