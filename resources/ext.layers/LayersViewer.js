@@ -23,6 +23,9 @@
 		this.baseHeight = ( this.layerData && this.layerData.baseHeight ) || null;
 		this.canvas = null;
 		this.ctx = null;
+		this.resizeObserver = null; // ResizeObserver instance
+		this.rAFId = null; // throttle reflows
+		this.boundWindowResize = null; // handler reference
 
 		this.init();
 	}
@@ -69,9 +72,51 @@
 		}
 
 		// Re-render on window resize to keep overlay aligned
-		window.addEventListener( 'resize', function () {
+		this.boundWindowResize = function () {
+			self.scheduleResize();
+		};
+		window.addEventListener( 'resize', this.boundWindowResize );
+
+		// Re-render when the image element's box size changes (responsive layout, thumb swaps)
+		if ( typeof window.ResizeObserver === 'function' ) {
+			try {
+				this.resizeObserver = new window.ResizeObserver( function () {
+					self.scheduleResize();
+				} );
+				this.resizeObserver.observe( this.imageElement );
+			} catch ( e ) { /* ignore */ }
+		}
+	};
+
+	// Coalesce multiple resize calls into a single frame
+	LayersViewer.prototype.scheduleResize = function () {
+		var self = this;
+		if ( this.rAFId ) {
+			return;
+		}
+		this.rAFId = window.requestAnimationFrame( function () {
+			self.rAFId = null;
 			self.resizeCanvasAndRender();
 		} );
+	};
+
+	// Cleanup observers and listeners if the element is removed
+	LayersViewer.prototype.destroy = function () {
+		if ( this.resizeObserver && typeof this.resizeObserver.disconnect === 'function' ) {
+			try {
+				this.resizeObserver.disconnect();
+			} catch ( e ) {}
+		}
+		if ( this.boundWindowResize ) {
+			window.removeEventListener( 'resize', this.boundWindowResize );
+			this.boundWindowResize = null;
+		}
+		if ( this.rAFId ) {
+			try {
+				window.cancelAnimationFrame( this.rAFId );
+			} catch ( e ) {}
+			this.rAFId = null;
+		}
 	};
 
 	LayersViewer.prototype.resizeCanvasAndRender = function () {

@@ -70,6 +70,18 @@ The **Top Toolbar** is divided into sections logically grouping controls:
 
 Overall, the UI is designed for efficiency: most actions have keyboard shortcuts, dragging operations provide real-time feedback (with tooltips or measurements where relevant), and right-click context menus may be provided for operations like “Delete” or “Bring to Front/Back” on selected objects. The interface strives to remain intuitive for new users while packing powerful options for advanced users.
 
+### Revision history and naming
+
+The editor maintains an append-only revision history for each image’s annotations. Every Save creates a new revision; older revisions remain available for viewing and loading.
+
+* History selector: A Revision dropdown in the header lists entries as “#rev — name — timestamp”. Use the Load button to switch the working state to that revision.
+* Safe loading: If there are unsaved changes, the editor prompts before replacing the current state when loading a different revision.
+* Naming: An optional “Revision name” input in the header labels the next save; the name is stored and shown in the selector.
+* Non-destructive: Loading an older revision does not overwrite history. Saving after loading an old revision creates a brand new revision.
+* Scope: Revisions are keyed by file name and SHA1 (file content). Re-uploads that change the file content start a separate history.
+
+After a successful save, the selector refreshes automatically so the new revision appears immediately.
+
 ### Layer Management Interface
 
 The **Layers Panel** (typically on the left side) manages the stacking order and organization of all annotation layers. Each layer in this context corresponds to an individual drawn object or a grouped set of objects. The base image itself is treated as a locked background layer (often listed as **Layer 0** or "Background") which cannot be edited or reordered. Above the base image, each new annotation (text box, shape, etc.) resides on its own layer by default, similar to how Photoshop or Inkscape handle separate objects.

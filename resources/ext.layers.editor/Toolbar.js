@@ -39,7 +39,6 @@
 		// Create tool groups
 		this.createToolGroup();
 		this.createStyleGroup();
-		this.createEffectsGroup();
 		this.createZoomGroup();
 		this.createActionGroup();
 	};
@@ -244,98 +243,7 @@
 		this.arrowStyleSelect = arrowStyleSelect;
 	};
 
-	Toolbar.prototype.createEffectsGroup = function () {
-		var effectsGroup = document.createElement( 'div' );
-		effectsGroup.className = 'toolbar-group effects-group';
-
-		// Layer opacity control
-		var opacityLabel = document.createElement( 'label' );
-		opacityLabel.textContent = ( mw.message ? mw.message( 'layers-prop-opacity' ).text() : 'Opacity' ) + ':';
-		opacityLabel.className = 'toolbar-label';
-		effectsGroup.appendChild( opacityLabel );
-
-		var opacitySlider = document.createElement( 'input' );
-		opacitySlider.type = 'range';
-		opacitySlider.min = '0';
-		opacitySlider.max = '100';
-		opacitySlider.value = '100';
-		opacitySlider.className = 'toolbar-slider opacity-slider';
-		opacitySlider.title = ( mw.message ? mw.message( 'layers-prop-opacity' ).text() : 'Layer Opacity' );
-		effectsGroup.appendChild( opacitySlider );
-
-		var opacityDisplay = document.createElement( 'span' );
-		opacityDisplay.textContent = '100%';
-		opacityDisplay.className = 'toolbar-display opacity-display';
-		effectsGroup.appendChild( opacityDisplay );
-
-		// Layer blend mode
-		var blendLabel = document.createElement( 'label' );
-		blendLabel.textContent = ( mw.message ? mw.message( 'layers-prop-blend' ).text() : 'Blend' ) + ':';
-		blendLabel.className = 'toolbar-label';
-		effectsGroup.appendChild( blendLabel );
-
-		var blendSelect = document.createElement( 'select' );
-		blendSelect.className = 'toolbar-select blend-mode-select';
-		blendSelect.title = ( mw.message ? mw.message( 'layers-prop-blend' ).text() : 'Blend Mode' );
-
-		var blendModes = [
-			{ value: 'normal', text: ( mw.message ? mw.message( 'layers-blend-normal' ).text() : 'Normal' ) },
-			{ value: 'multiply', text: ( mw.message ? mw.message( 'layers-blend-multiply' ).text() : 'Multiply' ) },
-			{ value: 'screen', text: ( mw.message ? mw.message( 'layers-blend-screen' ).text() : 'Screen' ) },
-			{ value: 'overlay', text: ( mw.message ? mw.message( 'layers-blend-overlay' ).text() : 'Overlay' ) },
-			{ value: 'soft-light', text: ( mw.message ? mw.message( 'layers-blend-soft-light' ).text() : 'Soft Light' ) },
-			{ value: 'hard-light', text: ( mw.message ? mw.message( 'layers-blend-hard-light' ).text() : 'Hard Light' ) },
-			{ value: 'color-dodge', text: ( mw.message ? mw.message( 'layers-blend-color-dodge' ).text() : 'Color Dodge' ) },
-			{ value: 'color-burn', text: ( mw.message ? mw.message( 'layers-blend-color-burn' ).text() : 'Color Burn' ) },
-			{ value: 'darken', text: ( mw.message ? mw.message( 'layers-blend-darken' ).text() : 'Darken' ) },
-			{ value: 'lighten', text: ( mw.message ? mw.message( 'layers-blend-lighten' ).text() : 'Lighten' ) },
-			{ value: 'difference', text: ( mw.message ? mw.message( 'layers-blend-difference' ).text() : 'Difference' ) },
-			{ value: 'exclusion', text: ( mw.message ? mw.message( 'layers-blend-exclusion' ).text() : 'Exclusion' ) }
-		];
-
-		blendModes.forEach( function ( mode ) {
-			var option = document.createElement( 'option' );
-			option.value = mode.value;
-			option.textContent = mode.text;
-			blendSelect.appendChild( option );
-		} );
-
-		effectsGroup.appendChild( blendSelect );
-
-		// Layer effects toggles
-		var effectsLabel = document.createElement( 'label' );
-		effectsLabel.textContent = ( mw.message ? mw.message( 'layers-effects' ).text() : 'Effects' ) + ':';
-		effectsLabel.className = 'toolbar-label';
-		effectsGroup.appendChild( effectsLabel );
-
-		var shadowToggle = document.createElement( 'button' );
-		shadowToggle.className = 'toolbar-button effect-toggle shadow-toggle';
-		shadowToggle.textContent = ( mw.message ? mw.message( 'layers-effect-shadow' ).text() : 'Shadow' );
-		shadowToggle.title = ( mw.message ? mw.message( 'layers-effect-shadow-toggle' ).text() : 'Toggle Drop Shadow' );
-		effectsGroup.appendChild( shadowToggle );
-
-		var glowToggle = document.createElement( 'button' );
-		glowToggle.className = 'toolbar-button effect-toggle glow-toggle';
-		glowToggle.textContent = ( mw.message ? mw.message( 'layers-effect-glow' ).text() : 'Glow' );
-		glowToggle.title = ( mw.message ? mw.message( 'layers-effect-glow-toggle' ).text() : 'Toggle Glow Effect' );
-		effectsGroup.appendChild( glowToggle );
-
-		var strokeToggle = document.createElement( 'button' );
-		strokeToggle.className = 'toolbar-button effect-toggle stroke-toggle';
-		strokeToggle.textContent = ( mw.message ? mw.message( 'layers-effect-stroke' ).text() : 'Stroke' );
-		strokeToggle.title = ( mw.message ? mw.message( 'layers-effect-stroke-toggle' ).text() : 'Toggle Stroke Effect' );
-		effectsGroup.appendChild( strokeToggle );
-
-		this.container.appendChild( effectsGroup );
-
-		// Store references
-		this.opacitySlider = opacitySlider;
-		this.opacityDisplay = opacityDisplay;
-		this.blendSelect = blendSelect;
-		this.shadowToggle = shadowToggle;
-		this.glowToggle = glowToggle;
-		this.strokeToggle = strokeToggle;
-	};
+	// Effects group removed; moved to LayerPanel Properties
 
 	Toolbar.prototype.createZoomGroup = function () {
 		var zoomGroup = document.createElement( 'div' );
@@ -406,6 +314,26 @@
 		separator.className = 'toolbar-separator';
 		actionGroup.appendChild( separator );
 
+		// Import button + hidden file input
+		var importButton = document.createElement( 'button' );
+		importButton.className = 'toolbar-button import-button';
+		importButton.textContent = ( mw.message ? mw.message( 'layers-import' ).text() : 'Import JSON' );
+		importButton.title = ( mw.message ? mw.message( 'layers-import' ).text() : 'Import JSON' );
+		actionGroup.appendChild( importButton );
+
+		var importInput = document.createElement( 'input' );
+		importInput.type = 'file';
+		importInput.accept = '.json,application/json';
+		importInput.style.display = 'none';
+		actionGroup.appendChild( importInput );
+
+		// Export button
+		var exportButton = document.createElement( 'button' );
+		exportButton.className = 'toolbar-button export-button';
+		exportButton.textContent = ( mw.message ? mw.message( 'layers-export' ).text() : 'Export JSON' );
+		exportButton.title = ( mw.message ? mw.message( 'layers-export' ).text() : 'Export JSON' );
+		actionGroup.appendChild( exportButton );
+
 		// Save and Cancel buttons
 		var saveButton = document.createElement( 'button' );
 		saveButton.className = 'toolbar-button save-button primary';
@@ -424,6 +352,9 @@
 		// Store references
 		this.saveButton = saveButton;
 		this.cancelButton = cancelButton;
+		this.importButton = importButton;
+		this.importInput = importInput;
+		this.exportButton = exportButton;
 	};
 
 	Toolbar.prototype.createActionButton = function ( action ) {
@@ -467,6 +398,110 @@
 
 		this.cancelButton.addEventListener( 'click', function () {
 			self.editor.cancel();
+		} );
+
+		// Import JSON
+		this.importButton.addEventListener( 'click', function () {
+			self.importInput.click();
+		} );
+
+		this.importInput.addEventListener( 'change', function () {
+			var file = this.files && this.files[ 0 ];
+			if ( !file ) {
+				return;
+			}
+			// Confirm overwrite if there are unsaved changes
+			if ( self.editor && self.editor.isDirty ) {
+				var msg = ( mw.message ? mw.message( 'layers-import-unsaved-confirm' ).text() : 'You have unsaved changes. Import anyway?' );
+				// eslint-disable-next-line no-alert
+				if ( !window.confirm( msg ) ) {
+					self.importInput.value = '';
+					return;
+				}
+			}
+			var reader = new FileReader();
+			reader.onload = function () {
+				try {
+					var text = String( reader.result || '' );
+					var parsed = JSON.parse( text );
+					var layers;
+					if ( Array.isArray( parsed ) ) {
+						layers = parsed;
+					} else if ( parsed && Array.isArray( parsed.layers ) ) {
+						layers = parsed.layers;
+					} else {
+						layers = [];
+					}
+					if ( !Array.isArray( layers ) ) {
+						throw new Error( 'Invalid JSON format' );
+					}
+					// Save state and replace layers
+					if ( self.editor && typeof self.editor.saveState === 'function' ) {
+						self.editor.saveState( 'import' );
+					}
+					self.editor.layers = layers.map( function ( layer ) {
+						var obj = layer || {};
+						if ( !obj.id ) {
+							obj.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
+						}
+						return obj;
+					} );
+					if ( self.editor && typeof self.editor.renderLayers === 'function' ) {
+						self.editor.renderLayers();
+					}
+					if ( self.editor && typeof self.editor.markDirty === 'function' ) {
+						self.editor.markDirty();
+					}
+					if ( window.mw && window.mw.notify ) {
+						mw.notify( ( mw.message ? mw.message( 'layers-import-success' ).text() : 'Import complete' ), { type: 'success' } );
+					}
+				} catch ( err ) {
+					if ( window.mw && window.mw.notify ) {
+						mw.notify( ( mw.message ? mw.message( 'layers-import-error' ).text() : 'Import failed' ), { type: 'error' } );
+					}
+				}
+				self.importInput.value = '';
+			};
+			reader.onerror = function () {
+				if ( window.mw && window.mw.notify ) {
+					mw.notify( ( mw.message ? mw.message( 'layers-import-error' ).text() : 'Import failed' ), { type: 'error' } );
+				}
+				self.importInput.value = '';
+			};
+			reader.readAsText( file );
+		} );
+
+		// Export JSON
+		this.exportButton.addEventListener( 'click', function () {
+			try {
+				var data = [];
+				if ( self.editor && Array.isArray( self.editor.layers ) ) {
+					data = self.editor.layers;
+				}
+				var json = JSON.stringify( data, null, 2 );
+				var fname = ( self.editor && self.editor.filename ? self.editor.filename : 'layers' ) + '.layers.json';
+				var blob = new Blob( [ json ], { type: 'application/json' } );
+				// IE 11 and old Edge
+				if ( window.navigator && window.navigator.msSaveOrOpenBlob ) {
+					window.navigator.msSaveOrOpenBlob( blob, fname );
+					return;
+				}
+
+				var a = document.createElement( 'a' );
+				a.style.display = 'none';
+				a.download = fname;
+				// Use data URL for broad compatibility without relying on window.URL
+				a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent( json );
+				document.body.appendChild( a );
+				a.click();
+				setTimeout( function () {
+					document.body.removeChild( a );
+				}, 0 );
+			} catch ( e ) {
+				if ( window.mw && window.mw.notify ) {
+					mw.notify( 'Export failed', { type: 'error' } );
+				}
+			}
 		} );
 
 		// Color picker
@@ -517,45 +552,7 @@
 			self.handleKeyboardShortcuts( e );
 		} );
 
-		// Layer-level effects: opacity, blend, toggles
-		if ( this.opacitySlider ) {
-			this.opacitySlider.addEventListener( 'input', function () {
-				var raw = parseInt( self.opacitySlider.value, 10 ) || 0;
-				var value = Math.max( 0, Math.min( 100, raw ) );
-				self.opacityDisplay.textContent = value + '%';
-				self.editor.applyToSelection( function ( layer ) {
-					layer.opacity = value / 100;
-				} );
-			} );
-		}
-
-		if ( this.blendSelect ) {
-			this.blendSelect.addEventListener( 'change', function () {
-				var mode = self.blendSelect.value || 'normal';
-				self.editor.applyToSelection( function ( layer ) {
-					layer.blend = mode;
-				} );
-			} );
-		}
-
-		var toggleEffect = function ( prop ) {
-			return function () {
-				var isActive = this.classList.toggle( 'active' );
-				self.editor.applyToSelection( function ( layer ) {
-					layer[ prop ] = isActive;
-				} );
-			};
-		};
-
-		if ( this.shadowToggle ) {
-			this.shadowToggle.addEventListener( 'click', toggleEffect( 'shadow' ) );
-		}
-		if ( this.glowToggle ) {
-			this.glowToggle.addEventListener( 'click', toggleEffect( 'glow' ) );
-		}
-		if ( this.strokeToggle ) {
-			this.strokeToggle.addEventListener( 'click', toggleEffect( 'strokeEffect' ) );
-		}
+		// Layer-level effects removed: opacity, blend, toggles are in Properties panel
 	};
 
 	Toolbar.prototype.selectTool = function ( toolId ) {

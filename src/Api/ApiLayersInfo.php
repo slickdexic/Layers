@@ -69,6 +69,24 @@ class ApiLayersInfo extends ApiBase {
 
 			// Also get list of all layer sets for this file
 			$allLayerSets = $db->getLayerSetsForImage( $file->getName(), $file->getSha1() );
+			// Enrich with user names for display convenience
+			try {
+				$userFactory = MediaWikiServices::getInstance()->getUserFactory();
+				foreach ( $allLayerSets as &$row ) {
+					$userId = (int)( $row['ls_user_id'] ?? 0 );
+					$userName = 'Anonymous';
+					if ( $userId > 0 ) {
+						$user = $userFactory->newFromId( $userId );
+						if ( $user ) {
+							$userName = $user->getName();
+						}
+					}
+					$row['ls_user_name'] = $userName;
+				}
+				unset( $row );
+			} catch ( \Throwable $e ) {
+				// If user lookup fails in some environments, proceed without names
+			}
 			$result['all_layersets'] = $allLayerSets;
 		}
 

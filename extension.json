@@ -22,7 +22,7 @@
 		},
 		"LayersDebug": {
 			"description": "Enable verbose debug logging to the 'Layers' log channel",
-			"value": false
+			"value": true
 		},
 		"LayersMaxBytes": {
 			"description": "Maximum JSON size per layer set in bytes",

@@ -1,11 +1,4 @@
 <?php
-/**
- * Wikitext parser integration for layers parameter
- * Handles [[File:Example.jpg|layers=on]] syntax
- *
- * @file
- * @ingroup Extensions
- */
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
@@ -27,8 +20,9 @@ class WikitextHooks {
 	 * @param bool $isLinked Link flag
 	 * @param mixed $thumb Thumbnail
 	 * @param mixed $parser Parser
-	 * @param mixed $frameParams Frame params
-	 * @param int $page Page number
+	 * @param mixed $time Timestamp or time param (core-provided)
+	 * @param int|null $page Page number
+	 * @param mixed ...$rest Additional parameters provided by core for forward-compat
 	 * @return bool
 	 */
 	public static function onImageBeforeProduceHTML(
@@ -69,9 +63,8 @@ class WikitextHooks {
 				return true;
 			}
 
-			// Inject when explicitly requested or when rendering on a File: page
-			$onFilePage = ( $title && method_exists( $title, 'inNamespace' ) && defined( 'NS_FILE' ) && $title->inNamespace( NS_FILE ) );
-			if ( ( $layersFlag === 'all' || $layersFlag === 'on' || $layersFlag === true || $onFilePage ) && $file ) {
+			// Inject only when explicitly requested
+			if ( ( $layersFlag === 'all' || $layersFlag === 'on' || $layersFlag === true ) && $file ) {
 				$db = new LayersDatabase();
 				$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
 				if ( $latest && isset( $latest['data'] ) ) {
@@ -93,7 +86,10 @@ class WikitextHooks {
 					$attribs['data-layer-data'] = json_encode( $payload, JSON_UNESCAPED_UNICODE );
 					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-						$logger->info( 'Layers: Injected attributes in ImageBeforeProduceHTML (' . count( $layerData ) . ' layers)' );
+						$logger->info(
+							'Layers: Injected attributes in ImageBeforeProduceHTML ('
+							. count( $layerData ) . ' layers)'
+						);
 					}
 				}
 			}
@@ -101,7 +97,10 @@ class WikitextHooks {
 			// Swallow errors to avoid breaking rendering; optionally log
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Error in ImageBeforeProduceHTML', [ 'exception' => $e ] );
+				$logger->error(
+					'Layers: Error in ImageBeforeProduceHTML',
+					[ 'exception' => $e ]
+				);
 			}
 		}
 
@@ -124,16 +123,74 @@ class WikitextHooks {
 	}
 
 	/**
+	 * Attempt to extract layers flag from data-mw JSON embedded in generated HTML.
+	 * Looks into originalArgs and options arrays for 'layers' or 'layer'.
+	 *
+	 * @param string $html
+	 * @return string|null 'all'|'on'|'off'|'none' or null if not found
+	 */
+	private static function extractLayersFromDataMw( string $html ): ?string {
+		try {
+			// data-mw='{"attribs":[["class","..."],...],"body":{...},"parts":[{"template"...}]}'
+			if ( !preg_match( '/\bdata-mw\s*=\s*("|\")(.*?)(\1)/is', $html, $m ) ) {
+				return null;
+			}
+			$raw = html_entity_decode( $m[2], ENT_QUOTES );
+			$dmw = json_decode( $raw, true );
+			if ( !is_array( $dmw ) ) {
+				return null;
+			}
+			// Common slot for image: dmw.attrs.origArgs or dmw.caption/attrs.options depending on core version
+			$paths = [
+				[ 'attrs', 'originalArgs' ],
+				[ 'attrs', 'options' ],
+				[ 'body', 'attrs', 'options' ],
+			];
+			foreach ( $paths as $path ) {
+				$node = $dmw;
+				foreach ( $path as $seg ) {
+					if ( is_array( $node ) && array_key_exists( $seg, $node ) ) {
+						$node = $node[$seg];
+					} else {
+						$node = null;
+						break;
+					}
+				}
+				if ( is_array( $node ) ) {
+					// args often like ["thumb","x500px","layers=all",...] or options like {layers:"all"}
+					if ( array_values( $node ) === $node ) {
+						foreach ( $node as $val ) {
+							if ( is_string( $val ) && preg_match( '/^layers\s*=\s*(.+)$/i', $val, $mm ) ) {
+								return strtolower( trim( $mm[1] ) );
+							}
+						}
+					} else {
+						foreach ( [ 'layers', 'layer' ] as $k ) {
+							if ( isset( $node[$k] ) && is_string( $node[$k] ) ) {
+								return strtolower( trim( (string)$node[$k] ) );
+							}
+						}
+					}
+				}
+			}
+		} catch ( \Throwable $e ) {
+			// ignore
+		}
+		return null;
+	}
+
+	/**
 	 * MakeImageLink2 hook: last-chance injection point to alter the generated <img> HTML.
 	 * This helps in galleries and contexts where Thumbnail/Image hooks miss.
 	 *
 	 * @param mixed $skin
 	 * @param mixed $title
 	 * @param mixed $file
-	 * @param mixed $frameParams
+	 * @param array $frameParams
 	 * @param array $handlerParams
 	 * @param string $time
-	 * @param array $res
+	 * @param string &$res Resulting HTML (modified by reference)
+	 * @param mixed ...$rest Additional parameters provided by core for forward-compat
 	 * @return bool
 	 */
 	public static function onMakeImageLink2( $skin, $title, $file, $frameParams, $handlerParams, $time, &$res, ...$rest ): bool {
@@ -144,12 +201,23 @@ class WikitextHooks {
 				$layersFlag = strtolower( (string)$handlerParams['layers'] );
 			} elseif ( isset( $handlerParams['layer'] ) ) {
 				$layersFlag = strtolower( (string)$handlerParams['layer'] );
+			} elseif ( isset( $frameParams['layers'] ) ) {
+				$layersFlag = strtolower( (string)$frameParams['layers'] );
+			} elseif ( isset( $frameParams['layer'] ) ) {
+				$layersFlag = strtolower( (string)$frameParams['layer'] );
 			}
 			if ( $layersFlag === null && isset( $frameParams['link-url'] ) ) {
 				$href = (string)$frameParams['link-url'];
 				if ( strpos( $href, 'layers=all' ) !== false || strpos( $href, 'layers=on' ) !== false
 					|| strpos( $href, 'layer=all' ) !== false || strpos( $href, 'layer=on' ) !== false ) {
 					$layersFlag = 'all';
+				}
+			}
+			// Last resort: parse data-mw JSON for original args (when params were not preserved)
+			if ( $layersFlag === null && is_string( $res ) && strpos( $res, 'data-mw=' ) !== false ) {
+				$parsed = self::extractLayersFromDataMw( (string)$res );
+				if ( $parsed !== null ) {
+					$layersFlag = $parsed;
 				}
 			}
 
@@ -200,7 +268,7 @@ class WikitextHooks {
 					$json = htmlspecialchars( json_encode( $payload, JSON_UNESCAPED_UNICODE ), ENT_QUOTES );
 
 					// Update first <img ...> tag in $res: append class and add/replace data-layer-data
-					$res = preg_replace_callback( '/<img\b([^>]*)>/i', function ( $m ) use ( $json ) {
+					$res = preg_replace_callback( '/<img\b([^>]*)>/i', static function ( $m ) use ( $json ) {
 						$attrs = $m[1];
 
 						// Append layers-thumbnail to existing class or add new class attr
@@ -227,7 +295,10 @@ class WikitextHooks {
 
 					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-						$logger->info( 'Layers: Injected attributes in MakeImageLink2 (' . count( $layersArray ) . ' layers)' );
+						$logger->info(
+							'Layers: Injected attributes in MakeImageLink2 ('
+							. count( $layersArray ) . ' layers)'
+						);
 					}
 				}
 			}
@@ -245,13 +316,14 @@ class WikitextHooks {
 	 * LinkerMakeImageLink hook: MW 1.44 path for altering generated <img> HTML.
 	 * Mirrors onMakeImageLink2 so we work across core versions.
 	 *
-	 * @param mixed $linker
-	 * @param mixed $title
-	 * @param mixed $file
-	 * @param array $frameParams
-	 * @param array $handlerParams
-	 * @param string $time
-	 * @param string &$res
+	 * @param mixed $linker Linker object
+	 * @param mixed $title Title object
+	 * @param mixed $file File object
+	 * @param array $frameParams Frame parameters
+	 * @param array $handlerParams Handler parameters
+	 * @param string $time Timestamp or time param (core-provided)
+	 * @param string &$res Resulting HTML (modified by reference)
+	 * @param mixed ...$rest Additional parameters provided by core for forward-compat
 	 * @return bool
 	 */
 	public static function onLinkerMakeImageLink( $linker, $title, $file, $frameParams, $handlerParams, $time, &$res, ...$rest ): bool {
@@ -266,6 +338,16 @@ class WikitextHooks {
 				$layersFlag = strtolower( (string)$handlerParams['layers'] );
 			} elseif ( isset( $handlerParams['layer'] ) ) {
 				$layersFlag = strtolower( (string)$handlerParams['layer'] );
+			} elseif ( isset( $frameParams['layers'] ) ) {
+				$layersFlag = strtolower( (string)$frameParams['layers'] );
+			} elseif ( isset( $frameParams['layer'] ) ) {
+				$layersFlag = strtolower( (string)$frameParams['layer'] );
+			}
+			if ( $layersFlag === null && is_string( $res ) && strpos( $res, 'data-mw=' ) !== false ) {
+				$parsed = self::extractLayersFromDataMw( (string)$res );
+				if ( $parsed !== null ) {
+					$layersFlag = $parsed;
+				}
 			}
 			// Do not rely on href sniffing here; handler params are authoritative
 
@@ -309,7 +391,7 @@ class WikitextHooks {
 						$payload['baseHeight'] = $baseHeight;
 					}
 					$json = htmlspecialchars( json_encode( $payload, JSON_UNESCAPED_UNICODE ), ENT_QUOTES );
-					$res = preg_replace_callback( '/<img\b([^>]*)>/i', function ( $m ) use ( $json ) {
+					$res = preg_replace_callback( '/<img\b([^>]*)>/i', static function ( $m ) use ( $json ) {
 						$attrs = $m[1];
 						// Ensure class contains layers-thumbnail
 						if ( preg_match( '/\bclass\s*=\s*("|\')(.*?)(\1)/i', $attrs, $cm ) ) {
@@ -332,7 +414,10 @@ class WikitextHooks {
 
 					if ( \class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
 						$logger = \call_user_func( [ '\MediaWiki\Logger\LoggerFactory', 'getInstance' ], 'Layers' );
-						$logger->info( 'Layers: Injected attributes in LinkerMakeImageLink (' . count( $layersArray ) . ' layers)' );
+						$logger->info(
+							'Layers: Injected attributes in LinkerMakeImageLink ('
+							. count( $layersArray ) . ' layers)'
+						);
 					}
 				}
 			}
@@ -350,13 +435,12 @@ class WikitextHooks {
 	 * LinkerMakeMediaLinkFile hook: another path used by MW to render <img> HTML within links.
 	 * We mirror the same injection logic here.
 	 *
-	 * @param mixed $linker
-	 * @param mixed $title
-	 * @param mixed $file
-	 * @param array $frameParams
-	 * @param array $handlerParams
-	 * @param string $time
-	 * @param string &$res
+	 * @param mixed $title Title object
+	 * @param mixed $file File object
+	 * @param string &$res Resulting HTML (modified by reference)
+	 * @param array &$attribs Image attributes (modified by reference)
+	 * @param string $time Timestamp or time param (core-provided)
+	 * @param mixed ...$rest Additional parameters provided by core for forward-compat
 	 * @return bool
 	 */
 	public static function onLinkerMakeMediaLinkFile( $title, $file, &$res, &$attribs, $time, ...$rest ): bool {
@@ -366,9 +450,28 @@ class WikitextHooks {
 				$logger->info( 'Layers: onLinkerMakeMediaLinkFile fired' );
 			}
 
-			// In this hook variant, handler params are not provided; when present on file pages,
-			// we conservatively overlay the latest layer set for this file.
+			// In this hook variant, handler params are not provided; only inject when explicitly requested
 			if ( $file ) {
+				$shouldInject = false;
+				// Try to infer layers flag from generated HTML attributes/URL
+				$resStr = (string)$res;
+				// Check href or query strings with layers=on/all
+				if ( preg_match( '/\blayers=(on|all)\b/i', $resStr ) ) {
+					$shouldInject = true;
+				}
+				// Also check if attribs contains a link with layers param
+				if ( !$shouldInject && is_array( $attribs ) ) {
+					foreach ( [ 'href', 'data-mw-href' ] as $k ) {
+						if ( isset( $attribs[$k] ) && preg_match( '/\blayers=(on|all)\b/i', (string)$attribs[$k] ) ) {
+							$shouldInject = true;
+							break;
+						}
+					}
+				}
+
+				if ( !$shouldInject ) {
+					return true;
+				}
 				$layersArray = null;
 				$db = new LayersDatabase();
 				$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
@@ -400,7 +503,7 @@ class WikitextHooks {
 						$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
 						$attribs['data-layer-data'] = $rawJson;
 					}
-					$res = preg_replace_callback( '/<img\b([^>]*)>/i', function ( $m ) use ( $json ) {
+					$res = preg_replace_callback( '/<img\b([^>]*)>/i', static function ( $m ) use ( $json ) {
 						$attrs = $m[1];
 						if ( preg_match( '/\bclass\s*=\s*("|\')(.*?)(\1)/i', $attrs, $cm ) ) {
 							$full = $cm[0];
@@ -423,12 +526,17 @@ class WikitextHooks {
 						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 							$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 							$snippet = substr( strip_tags( (string)$res ), 0, 200 );
-							$logger->info( 'Layers: LinkerMakeMediaLinkFile result snippet: ' . $snippet );
+							$logger->info(
+								'Layers: LinkerMakeMediaLinkFile result snippet: ' . $snippet
+							);
 						}
 
 					if ( \class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
 						$logger = \call_user_func( [ '\MediaWiki\Logger\LoggerFactory', 'getInstance' ], 'Layers' );
-						$logger->info( 'Layers: Injected attributes in LinkerMakeMediaLinkFile (' . count( $layersArray ) . ' layers)' );
+						$logger->info(
+							'Layers: Injected attributes in LinkerMakeMediaLinkFile ('
+							. count( $layersArray ) . ' layers)'
+						);
 					}
 				}
 			}
@@ -692,15 +800,9 @@ class WikitextHooks {
 	}
 
 	/**
-	 * Handle file link parameters
-	 * This handles the actual file link generation with layers
+	 * Handle file link parameters (variadic for forward/back-compat across MW versions).
 	 *
-	 * @param mixed $file
-	 * @param array &$params
-	 * @param mixed $parser
-	 * @param array &$time
-	 * @param array &$descQuery
-	 * @param array &$query
+	 * @param mixed ...$args Raw arguments as provided by core hook signature
 	 * @return bool
 	 */
 	public static function onFileLink( ...$args ): bool {
@@ -720,6 +822,18 @@ class WikitextHooks {
 		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 			$logger->info( 'Layers: ThumbnailBeforeProduceHTML hook called' );
+			
+			// Log what we received
+			$fileName = 'unknown';
+			if ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() ) {
+				$fileName = $thumbnail->getFile()->getName();
+			}
+			$logger->info( 'Layers: Processing thumbnail for file: ' . $fileName );
+			
+			// Log current attributes
+			$hasLayerData = isset( $attribs['data-layer-data'] );
+			$hasLayerClass = isset( $attribs['class'] ) && strpos( $attribs['class'], 'layers-thumbnail' ) !== false;
+			$logger->info( 'Layers: Current attributes - has data-layer-data: ' . ( $hasLayerData ? 'yes' : 'no' ) . ', has layers-thumbnail class: ' . ( $hasLayerClass ? 'yes' : 'no' ) );
 		}
 
 		// Prefer layer data passed via transform params (when available), else fall back to latest set
@@ -763,7 +877,7 @@ class WikitextHooks {
 
 		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-			$logger->info( 'Layers: layersFlag = ' . ( $layersFlag ?: 'null' ) );
+			$logger->info( 'Layers: layersFlag = ' . ( $layersFlag ?: 'null' ) . ', layerData present = ' . ( $layerData !== null ? 'yes' : 'no' ) );
 		}
 
 		// Respect explicit off/none
@@ -775,8 +889,60 @@ class WikitextHooks {
 			return true;
 		}
 
-		// Fallback to latest set when layerData missing; if not explicitly disabled, we enable overlays
-		if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
+		// Additional check: look for layers parameter in link attributes if not found in transform params
+		if ( $layersFlag === null && isset( $linkAttribs['href'] ) ) {
+			$href = (string)$linkAttribs['href'];
+			if ( strpos( $href, 'layers=all' ) !== false || strpos( $href, 'layers=on' ) !== false
+				|| strpos( $href, 'layer=all' ) !== false || strpos( $href, 'layer=on' ) !== false ) {
+				$layersFlag = 'all';
+				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+					$logger->info( 'Layers: Found layers parameter in link href: ' . $href );
+				}
+			}
+		}
+
+	// Fallback to DB when layers flag is explicitly on/all, or when we detect layers should be shown
+	// but don't have layer data yet
+	if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
+		$shouldFallback = false;
+		
+		// Check if layers flag indicates we should show layers
+		if ( $layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === true ) {
+			$shouldFallback = true;
+		}
+		
+		// Also check link attributes for layers parameter as additional fallback
+		if ( !$shouldFallback && isset( $linkAttribs['href'] ) ) {
+			$href = (string)$linkAttribs['href'];
+			if ( strpos( $href, 'layers=all' ) !== false || strpos( $href, 'layers=on' ) !== false ) {
+				$shouldFallback = true;
+			}
+		}
+		
+		// DEBUG MODE: If debug is enabled and we still haven't found a reason to show layers,
+		// but the image actually has layers, show them anyway. This helps diagnose parameter detection issues.
+		global $wgLayersDebug;
+		if ( !$shouldFallback && !empty( $wgLayersDebug ) ) {
+			$file = $thumbnail->getFile();
+			if ( $file ) {
+				try {
+					$db = new LayersDatabase();
+					$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
+					if ( $latest && isset( $latest['data'] ) && isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] ) && count( $latest['data']['layers'] ) > 0 ) {
+						$shouldFallback = true;
+						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+							$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+							$logger->info( 'Layers: DEBUG MODE - showing layers for image with layer data despite no explicit flag detected' );
+						}
+					}
+				} catch ( \Throwable $e ) {
+					// ignore
+				}
+			}
+		}
+		
+		if ( $shouldFallback ) {
 			$file = $thumbnail->getFile();
 			if ( $file ) {
 				try {
@@ -791,7 +957,12 @@ class WikitextHooks {
 									[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
 									'Layers'
 								);
-							$logger->info( sprintf( 'Layers: DB fallback provided %d layers for thumbnail', count( $layerData ) ) );
+							$logger->info(
+								sprintf(
+									'Layers: DB fallback provided %d layers for thumbnail',
+									count( $layerData )
+								)
+							);
 						}
 					}
 				} catch ( \Throwable $e ) {
@@ -803,8 +974,10 @@ class WikitextHooks {
 				}
 			}
 		}
+	}
 
-		if ( $layerData !== null ) {
+	// If transform params provided data, render regardless of missing flag (treat as on)
+	if ( $layerData !== null ) {
 			// Include base dimensions to allow correct scaling in the viewer
 			$baseWidth = ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() && method_exists( $thumbnail->getFile(), 'getWidth' ) )
 				? (int)$thumbnail->getFile()->getWidth()
@@ -821,14 +994,16 @@ class WikitextHooks {
 			$attribs['data-layer-data'] = json_encode( $payload );
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info( 'Layers: Added layer data attribute with ' . count( $layerData ) . ' layers' );
+				$logger->info(
+					'Layers: Added layer data attribute with ' . count( $layerData ) . ' layers'
+				);
 			}
-		} else {
+	} else {
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 				$logger->info( 'Layers: No layer data to add' );
 			}
-		}
+	}
 
 		return true;
 	}
@@ -1007,4 +1182,5 @@ class WikitextHooks {
 			$params['layerData'] = $subset;
 		}
 	}
+
 }

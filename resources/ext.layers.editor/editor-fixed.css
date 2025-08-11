@@ -1,3 +1,32 @@
+/* Revision selector styles */
+.layers-revision-wrap {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-right: 12px;
+}
+
+.layers-revision-label {
+	font-size: 0.75em;
+	opacity: 0.8;
+}
+
+.layers-revision-select {
+	height: 28px;
+	font-size: 0.75em;
+}
+
+.layers-revision-name {
+	height: 26px;
+	font-size: 0.75em;
+	padding: 2px 6px;
+	min-width: 160px;
+}
+
+.layers-revision-load {
+	height: 28px;
+	font-size: 0.75em;
+}
 /* stylelint-disable rule-empty-line-before, declaration-empty-line-before */
 /**
  * Layers Editor CSS Styles
@@ -101,24 +130,7 @@ body.layers-editor-open .mw-body-content {
 	overflow: hidden;
 }
 
-/* Bottom inspector */
-.layers-inspector {
-	flex: 0 0 auto;
-	background: #fff;
-	border-top: 1px solid #ddd;
-	padding: 8px 12px;
-}
-
-.layers-inspector-inner {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 12px;
-}
-
-.layers-inspector .inspector-left,
-.layers-inspector .inspector-right {
-	min-width: 0;
-}
+/* No bottom inspector; properties live in sidebar */
 
 /* Toolbar Styles */
 .layers-toolbar {
@@ -175,7 +187,7 @@ body.layers-editor-open .mw-body-content {
 
 /* Layer Panel */
 .layers-panel {
-	width: 280px;
+	width: 300px;
 	background: #fff;
 	border-right: 1px solid #ddd;
 	display: flex;
@@ -221,19 +233,48 @@ body.layers-editor-open .mw-body-content {
 }
 .layer-properties-form .property-field {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: auto 1fr;
 	gap: 6px;
+	align-items: center;
 	margin-bottom: 8px;
 }
 .layer-properties-form .property-field + .property-field {
 	/* visual grouping */
 	margin-top: 8px;
 }
+.layer-properties-form label {
+	color: #444;
+	font-size: 0.75em;
+}
 .layer-properties-form input[ type='number' ],
-.layer-properties-form input[ type='text' ],
-.layer-properties-form input[ type='color' ] {
-	width: 100%;
+.layer-properties-form input[ type='text' ] {
+	width: 120px;
 	box-sizing: border-box;
+	font-variant-numeric: tabular-nums;
+}
+.layer-properties-form input[ type='color' ] {
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+}
+
+/* Compound fields: number + slider side by side */
+.layer-properties-form .property-field--compound {
+	grid-template-columns: auto 1fr;
+}
+.layer-properties-form .compact-controls {
+	display: grid;
+	grid-template-columns: 70px 1fr;
+	gap: 6px;
+	align-items: center;
+}
+.layer-properties-form .compact-number {
+	width: 70px;
+}
+.layer-properties-form .compact-range {
+	width: 100%;
 }
 .layers-code-panel .layers-code {
 	display: block;

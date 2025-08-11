@@ -1803,6 +1803,22 @@
 		}
 	};
 
+	// Helper: run drawing with multiplied alpha (used for fill/stroke opacity)
+	CanvasManager.prototype.withLocalAlpha = function ( factor, fn ) {
+		var f = ( typeof factor === 'number' ) ? Math.max( 0, Math.min( 1, factor ) ) : 1;
+		if ( f === 1 ) {
+			fn();
+			return;
+		}
+		var prev = this.ctx.globalAlpha;
+		this.ctx.globalAlpha = ( prev || 1 ) * f;
+		try {
+			fn();
+		} finally {
+			this.ctx.globalAlpha = prev;
+		}
+	};
+
 	CanvasManager.prototype.drawMarqueeBox = function () {
 		if ( !this.isMarqueeSelecting ) {
 			return;
@@ -3376,9 +3392,12 @@
 			this.ctx.strokeText( text, x, y );
 		}
 
-		// Draw text fill
+		// Draw text fill (respect optional fillOpacity)
 		this.ctx.fillStyle = layer.fill || '#000000';
-		this.ctx.fillText( text, x, y );
+		var tFillOp = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
+		this.withLocalAlpha( tFillOp, function () {
+			this.ctx.fillText( text, x, y );
+		}.bind( this ) );
 
 		this.ctx.restore();
 	};
@@ -3401,15 +3420,21 @@
 			y = -h / 2;
 		}
 
-		if ( layer.fill && layer.fill !== 'transparent' ) {
+		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fillRect( x, y, w, h );
+			var fOp = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
+			this.withLocalAlpha( fOp, function () {
+				this.ctx.fillRect( x, y, w, h );
+			}.bind( this ) );
 		}
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = layer.strokeWidth || 1;
-			this.ctx.strokeRect( x, y, w, h );
+			var sOp = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+			this.withLocalAlpha( sOp, function () {
+				this.ctx.strokeRect( x, y, w, h );
+			}.bind( this ) );
 		}
 
 		this.ctx.restore();
@@ -3420,15 +3445,21 @@
 		this.ctx.beginPath();
 		this.ctx.arc( layer.x, layer.y, layer.radius, 0, 2 * Math.PI );
 
-		if ( layer.fill && layer.fill !== 'transparent' ) {
+		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
+			var fOp2 = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
+			this.withLocalAlpha( fOp2, function () {
+				this.ctx.fill();
+			}.bind( this ) );
 		}
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = layer.strokeWidth || 1;
-			this.ctx.stroke();
+			var sOp2 = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+			this.withLocalAlpha( sOp2, function () {
+				this.ctx.stroke();
+			}.bind( this ) );
 		}
 
 		this.ctx.restore();
@@ -3442,7 +3473,10 @@
 		this.ctx.beginPath();
 		this.ctx.moveTo( layer.x1, layer.y1 );
 		this.ctx.lineTo( layer.x2, layer.y2 );
-		this.ctx.stroke();
+		var sOp3 = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+		this.withLocalAlpha( sOp3, function () {
+			this.ctx.stroke();
+		}.bind( this ) );
 
 		this.ctx.restore();
 	};
@@ -3464,7 +3498,10 @@
 		this.ctx.beginPath();
 		this.ctx.moveTo( x1, y1 );
 		this.ctx.lineTo( x2, y2 );
-		this.ctx.stroke();
+		var sOp4 = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+		this.withLocalAlpha( sOp4, function () {
+			this.ctx.stroke();
+		}.bind( this ) );
 
 		// Draw arrowheads based on style
 		if ( arrowStyle === 'single' || arrowStyle === 'double' ) {
@@ -3495,7 +3532,15 @@
 			tipX - size * Math.cos( angle + arrowAngle ),
 			tipY - size * Math.sin( angle + arrowAngle )
 		);
-		this.ctx.stroke();
+		var sOpAH = 1;
+		if ( this.editor && this.editor.getLayerById && this.selectedLayerId ) {
+			// Try to respect stroke opacity of selected layer if available
+			var lay = this.editor.getLayerById( this.selectedLayerId );
+			sOpAH = ( lay && typeof lay.strokeOpacity === 'number' ) ? lay.strokeOpacity : 1;
+		}
+		this.withLocalAlpha( sOpAH, function () {
+			this.ctx.stroke();
+		}.bind( this ) );
 	};
 
 	CanvasManager.prototype.drawHighlight = function ( layer ) {
@@ -3503,7 +3548,10 @@
 
 		// Draw semi-transparent highlight
 		this.ctx.fillStyle = layer.fill || '#ffff0080';
-		this.ctx.fillRect( layer.x, layer.y, layer.width, layer.height );
+		var fOpH = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
+		this.withLocalAlpha( fOpH, function () {
+			this.ctx.fillRect( layer.x, layer.y, layer.width, layer.height );
+		}.bind( this ) );
 
 		this.ctx.restore();
 	};
@@ -3526,7 +3574,10 @@
 			this.ctx.lineTo( layer.points[ i ].x, layer.points[ i ].y );
 		}
 
-		this.ctx.stroke();
+		var sOpP = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+		this.withLocalAlpha( sOpP, function () {
+			this.ctx.stroke();
+		}.bind( this ) );
 		this.ctx.restore();
 	};
 
@@ -3546,15 +3597,21 @@
 		this.ctx.restore();
 
 		this.ctx.save();
-		if ( layer.fill && layer.fill !== 'transparent' ) {
+		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
+			var fOpE = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
+			this.withLocalAlpha( fOpE, function () {
+				this.ctx.fill();
+			}.bind( this ) );
 		}
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = layer.strokeWidth || 1;
-			this.ctx.stroke();
+			var sOpE = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+			this.withLocalAlpha( sOpE, function () {
+				this.ctx.stroke();
+			}.bind( this ) );
 		}
 
 		this.ctx.restore();
@@ -3583,15 +3640,21 @@
 
 		this.ctx.closePath();
 
-		if ( layer.fill && layer.fill !== 'transparent' ) {
+		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
+			var fOpPg = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
+			this.withLocalAlpha( fOpPg, function () {
+				this.ctx.fill();
+			}.bind( this ) );
 		}
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = layer.strokeWidth || 1;
-			this.ctx.stroke();
+			var sOpPg = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+			this.withLocalAlpha( sOpPg, function () {
+				this.ctx.stroke();
+			}.bind( this ) );
 		}
 
 		this.ctx.restore();
@@ -3622,15 +3685,21 @@
 
 		this.ctx.closePath();
 
-		if ( layer.fill && layer.fill !== 'transparent' ) {
+		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
+			var fOpS = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
+			this.withLocalAlpha( fOpS, function () {
+				this.ctx.fill();
+			}.bind( this ) );
 		}
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = layer.strokeWidth || 1;
-			this.ctx.stroke();
+			var sOpS = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+			this.withLocalAlpha( sOpS, function () {
+				this.ctx.stroke();
+			}.bind( this ) );
 		}
 
 		this.ctx.restore();

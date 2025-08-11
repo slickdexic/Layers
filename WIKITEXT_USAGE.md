@@ -8,6 +8,8 @@ The Layers extension supports controlling which layers are displayed using the `
 [[File:ImageTest02.jpg|500px|layers=all|Your caption]]
 ```
 
+Note: Overlays are opt-in. Layers are rendered only when the `layers` parameter is present and set to a supported value (e.g., `all` or a list of IDs). If `layers` is omitted or set to `none`, only the original image is shown.
+
 ## Layer Parameter Options
 
 ### Show All Layers

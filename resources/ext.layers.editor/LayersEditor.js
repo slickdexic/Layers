@@ -21,6 +21,8 @@
 		this.layerPanel = null;
 		this.toolbar = null;
 		this.layers = [];
+		this.allLayerSets = [];
+		this.currentLayerSetId = null;
 		this.currentTool = 'pointer';
 		this.isDirty = false;
 
@@ -182,6 +184,31 @@
 		zoomReadout.textContent = '100%';
 		headerRight.appendChild( zoomReadout );
 
+		// Revision selector container
+		var revWrap = document.createElement( 'div' );
+		revWrap.className = 'layers-revision-wrap';
+		var revLabel = document.createElement( 'label' );
+		revLabel.className = 'layers-revision-label';
+		revLabel.textContent = ( mw.message ? mw.message( 'layers-revision-label' ).text() : 'Revision' ) + ':';
+		revWrap.appendChild( revLabel );
+		var revSelect = document.createElement( 'select' );
+		revSelect.className = 'layers-revision-select';
+		revWrap.appendChild( revSelect );
+
+		// Optional revision name input used on next save
+		var revName = document.createElement( 'input' );
+		revName.type = 'text';
+		revName.className = 'layers-revision-name';
+		revName.placeholder = ( mw.message ? mw.message( 'layers-revision-name-placeholder' ).text() : 'Revision name (optional)' );
+		revName.maxLength = 255;
+		revWrap.appendChild( revName );
+		var revLoadBtn = document.createElement( 'button' );
+		revLoadBtn.type = 'button';
+		revLoadBtn.className = 'layers-revision-load';
+		revLoadBtn.textContent = ( mw.message ? mw.message( 'layers-revision-load' ).text() : 'Load' );
+		revWrap.appendChild( revLoadBtn );
+		headerRight.appendChild( revWrap );
+
 		// Close button (returns to File: page)
 		var closeBtn = document.createElement( 'button' );
 		closeBtn.className = 'layers-header-close';
@@ -198,7 +225,7 @@
 		this.toolbarContainer.className = 'layers-toolbar';
 		this.container.appendChild( this.toolbarContainer );
 
-		// Create main content area (column layout: main row + bottom inspector)
+		// Create main content area (column layout)
 		this.content = document.createElement( 'div' );
 		this.content.className = 'layers-content';
 		this.container.appendChild( this.content );
@@ -218,10 +245,7 @@
 		this.canvasContainer.className = 'layers-canvas-container';
 		mainRow.appendChild( this.canvasContainer );
 
-		// Bottom inspector (properties + code)
-		this.inspectorContainer = document.createElement( 'div' );
-		this.inspectorContainer.className = 'layers-inspector';
-		this.content.appendChild( this.inspectorContainer );
+		// No separate bottom inspector; properties are shown under the Layers panel
 
 		// Status bar at the very bottom
 		this.statusBar = document.createElement( 'div' );
@@ -246,6 +270,29 @@
 		this.updateZoomReadout = function ( percent ) {
 			self.zoomReadoutEl.textContent = percent + '%';
 		};
+
+		// Wire revision selector
+		Object.defineProperty( this, 'revSelectEl', { value: revSelect } );
+		Object.defineProperty( this, 'revLoadBtnEl', { value: revLoadBtn } );
+		Object.defineProperty( this, 'revNameInputEl', { value: revName } );
+		revLoadBtn.addEventListener( 'click', function () {
+			var val = 0;
+			if ( self.revSelectEl && self.revSelectEl.value ) {
+				val = parseInt( self.revSelectEl.value, 10 );
+			}
+			if ( val ) {
+				self.loadRevisionById( val );
+			}
+		} );
+
+		// Disable Load button if currently selected revision is already loaded
+		revSelect.addEventListener( 'change', function () {
+			var v = parseInt( this.value, 10 ) || 0;
+			if ( self.revLoadBtnEl ) {
+				var isCurrent = ( self.currentLayerSetId && v === self.currentLayerSetId );
+				self.revLoadBtnEl.disabled = !v || isCurrent;
+			}
+		} );
 
 		// Expose simple status update helpers used by CanvasManager
 		this.updateStatus = function ( fields ) {
@@ -338,10 +385,17 @@
 						}
 						return layer;
 					} );
+				self.currentLayerSetId = data.layersinfo.layerset.id || null;
 				// console.log( 'Layers: Loaded', self.layers.length, 'existing layers' );
 			} else {
 				self.layers = [];
 				// console.log( 'Layers: No existing layers found, starting fresh' );
+			}
+
+			// Populate revision list if provided
+			if ( data.layersinfo && Array.isArray( data.layersinfo.all_layersets ) ) {
+				self.allLayerSets = data.layersinfo.all_layersets.slice();
+				self.buildRevisionSelector();
 			}
 			self.renderLayers();
 
@@ -355,6 +409,159 @@
 			// Save initial empty state for undo system
 			self.saveState( 'initial' );
 			// Don't show error to user as this is expected for new files
+		} );
+	};
+
+	LayersEditor.prototype.buildRevisionSelector = function () {
+		var select = this.revSelectEl;
+		if ( !select ) {
+			return;
+		}
+		select.innerHTML = '';
+		// Latest option
+		var optLatest = document.createElement( 'option' );
+		optLatest.value = String( this.currentLayerSetId || 0 );
+		optLatest.textContent = ( mw.message ? mw.message( 'layers-revision-latest' ).text() : 'Latest' );
+		select.appendChild( optLatest );
+		// Other revisions
+		var self = this;
+		// Sort by numeric revision desc, then timestamp desc for stability
+		var sorted = this.allLayerSets.slice().sort( function ( a, b ) {
+			var ra = parseInt( a.ls_revision, 10 ) || 0;
+			var rb = parseInt( b.ls_revision, 10 ) || 0;
+			if ( rb !== ra ) {
+				return rb - ra;
+			}
+			var ta = a.ls_timestamp || '';
+			var tb = b.ls_timestamp || '';
+			return tb.localeCompare( ta );
+		} );
+		sorted.forEach( function ( row ) {
+			var rid = parseInt( row.ls_id, 10 );
+			var rev = parseInt( row.ls_revision, 10 );
+			var whenRaw = row.ls_timestamp || '';
+			var when = self.formatTimestamp( whenRaw );
+			var name = row.ls_name || '';
+			var uname = row.ls_user_name || ( row.ls_user_id ? ( 'User ' + row.ls_user_id ) : '' );
+			var byTxt = ( mw.message ? mw.message( 'layers-revision-by', uname ).text() : ( uname ? ( 'by ' + uname ) : '' ) );
+			var isCurrentRev = ( self.currentLayerSetId && rid === self.currentLayerSetId );
+			var currentSuffix = isCurrentRev ? (
+				mw.message ? mw.message( 'layers-revision-current-suffix' ).text() : ' (current)'
+			) : '';
+			var label = '#' + rev +
+				( name ? ( ' — ' + name ) : '' ) +
+				( when ? ( ' — ' + when ) : '' ) +
+				( byTxt ? ( ' — ' + byTxt ) : '' ) +
+				currentSuffix;
+			var opt = document.createElement( 'option' );
+			opt.value = String( rid );
+			opt.textContent = label;
+			select.appendChild( opt );
+		} );
+
+		// Ensure Load button state reflects selection
+		if ( this.revLoadBtnEl ) {
+			var latestIsCurrent = (
+				this.currentLayerSetId && String( this.currentLayerSetId ) === optLatest.value
+			);
+			this.revLoadBtnEl.disabled = !!latestIsCurrent;
+		}
+	};
+
+	// Convert MediaWiki DB timestamp (YYYYMMDDHHMMSS) or ISO to a short local string
+	LayersEditor.prototype.formatTimestamp = function ( ts ) {
+		if ( !ts || typeof ts !== 'string' ) {
+			return '';
+		}
+		var d;
+		if ( /^\d{14}$/.test( ts ) ) {
+			// YYYYMMDDHHMMSS
+			var y = parseInt( ts.slice( 0, 4 ), 10 );
+			var m = parseInt( ts.slice( 4, 6 ), 10 ) - 1;
+			var day = parseInt( ts.slice( 6, 8 ), 10 );
+			var hh = parseInt( ts.slice( 8, 10 ), 10 );
+			var mm = parseInt( ts.slice( 10, 12 ), 10 );
+			var ss = parseInt( ts.slice( 12, 14 ), 10 );
+			d = new Date( Date.UTC( y, m, day, hh, mm, ss ) );
+		} else {
+			// Try native parse
+			d = new Date( ts );
+		}
+		if ( isNaN( d.getTime() ) ) {
+			return ts;
+		}
+		try {
+			return d.toLocaleString();
+		} catch ( e ) {
+			return ts;
+		}
+	};
+
+	LayersEditor.prototype.loadRevisionById = function ( layerSetId ) {
+		// Prevent redundant load
+		if ( this.currentLayerSetId && layerSetId === this.currentLayerSetId ) {
+			mw.notify( ( mw.message ? mw.message( 'layers-revision-already-current' ).text() : 'That revision is already loaded' ), { type: 'info' } );
+			return;
+		}
+		// Confirm if there are unsaved changes
+		if ( this.isDirty ) {
+			var confirmMsg = ( mw.message ? mw.message( 'layers-load-revision-unsaved-confirm' ).text() : 'You have unsaved changes. Load revision anyway?' );
+			// eslint-disable-next-line no-alert
+			if ( !window.confirm( confirmMsg ) ) {
+				return;
+			}
+		}
+		var found = null;
+		for ( var i = 0; i < this.allLayerSets.length; i++ ) {
+			if ( parseInt( this.allLayerSets[ i ].ls_id, 10 ) === layerSetId ) {
+				found = this.allLayerSets[ i ];
+				break;
+			}
+		}
+		if ( !found ) {
+			mw.notify( ( mw.message ? mw.message( 'layers-revision-not-found' ).text() : 'Revision not found' ), { type: 'warn' } );
+			return;
+		}
+		try {
+			var blob = typeof found.ls_json_blob === 'string' ? JSON.parse( found.ls_json_blob ) : ( found.ls_json_blob || {} );
+			var layers = Array.isArray( blob.layers ) ? blob.layers : [];
+			// Save state and replace
+			this.saveState( 'load-revision' );
+			this.layers = layers.map( function ( layer ) {
+				if ( !layer.id ) {
+					layer.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
+				}
+				return layer;
+			} );
+			this.currentLayerSetId = layerSetId;
+			this.renderLayers();
+			this.markDirty();
+			mw.notify( ( mw.message ? mw.message( 'layers-revision-loaded' ).text() : 'Revision loaded' ), { type: 'info' } );
+		} catch ( e ) {
+			mw.notify( ( mw.message ? mw.message( 'layers-revision-load-error' ).text() : 'Failed to load revision' ), { type: 'error' } );
+		}
+	};
+
+	LayersEditor.prototype.reloadRevisions = function () {
+		var self = this;
+		var api = new mw.Api();
+		api.get( {
+			action: 'layersinfo',
+			filename: this.filename,
+			format: 'json'
+		} ).done( function ( data ) {
+			if ( data.layersinfo ) {
+				if ( Array.isArray( data.layersinfo.all_layersets ) ) {
+					self.allLayerSets = data.layersinfo.all_layersets.slice();
+				}
+				if ( data.layersinfo.layerset && data.layersinfo.layerset.id ) {
+					self.currentLayerSetId = data.layersinfo.layerset.id;
+				}
+				self.buildRevisionSelector();
+				if ( self.revNameInputEl ) {
+					self.revNameInputEl.value = '';
+				}
+			}
 		} );
 	};
 
@@ -601,17 +808,25 @@
 
 		// Save layers to API
 		var api = new mw.Api();
-		api.postWithToken( 'csrf', {
+		var payload = {
 			action: 'layerssave',
 			filename: this.filename,
 			data: JSON.stringify( this.layers ),
 			format: 'json'
-		} ).done( function ( data ) {
+		};
+		if ( this.revNameInputEl && this.revNameInputEl.value ) {
+			var setname = this.revNameInputEl.value.trim();
+			if ( setname ) {
+				payload.setname = setname;
+			}
+		}
+		api.postWithToken( 'csrf', payload ).done( function ( data ) {
 			if ( data.layerssave && data.layerssave.success ) {
 				self.markClean();
 				mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type: 'success' } );
 				// After a successful save, keep the editor open but update title indicator
 				// Optionally, navigate back quickly if user clicked header close earlier
+				self.reloadRevisions();
 			} else {
 				var errorMsg = ( data.error && data.error.info ) ||
 					( data.layerssave && data.layerssave.error ) ||

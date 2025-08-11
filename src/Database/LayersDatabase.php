@@ -73,7 +73,7 @@ class LayersDatabase {
 		if ( defined( 'DB_PRIMARY' ) ) {
 			$this->dbw = $lb->getConnection( DB_PRIMARY );
 		} elseif ( defined( 'DB_MASTER' ) ) {
-			$this->dbw = $lb->getConnection( DB_MASTER );
+			$this->dbw = $lb->getConnection( DB_PRIMARY );
 		} else {
 			$this->dbw = $lb->getConnection( 0 );
 		}
@@ -94,7 +94,7 @@ class LayersDatabase {
 		if ( defined( 'DB_REPLICA' ) ) {
 			$this->dbr = $lb->getConnection( DB_REPLICA );
 		} elseif ( defined( 'DB_SLAVE' ) ) {
-			$this->dbr = $lb->getConnection( DB_SLAVE );
+			$this->dbr = $lb->getConnection( DB_REPLICA );
 		} else {
 			$this->dbr = $lb->getConnection( 1 );
 		}
@@ -180,13 +180,15 @@ class LayersDatabase {
 			$hasCount = $this->tableHasColumn( 'layer_sets', 'ls_layer_count' );
 			if ( $hasSize ) {
 				$row['ls_size'] = $dataSize;
-			} else if ( $this->logger ) {
+			} elseif ( $this->logger ) {
 				$this->logger->warning( 'layer_sets.ls_size missing – schema update needed; inserting without it' );
 			}
 			if ( $hasCount ) {
 				$row['ls_layer_count'] = $layerCount;
-			} else if ( $this->logger ) {
-				$this->logger->warning( 'layer_sets.ls_layer_count missing – schema update needed; inserting without it' );
+			} elseif ( $this->logger ) {
+				$this->logger->warning(
+					'layer_sets.ls_layer_count missing – schema update needed; inserting without it'
+				);
 			}
 
 			// Insert layer set
@@ -541,7 +543,7 @@ class LayersDatabase {
 	}
 
 	/**
-	 * Check if a given table has a specific column. Caches results per request.
+	 * Check if a given table has a specific column. Caches full column lists per table.
 	 *
 	 * @param string $table
 	 * @param string $column
@@ -560,23 +562,17 @@ class LayersDatabase {
 			}
 
 			$cols = [];
-			// MediaWiki IDatabase supports fieldInfo in most versions
-			$fieldInfo = $dbr->fieldInfo( $table, $column );
-			if ( $fieldInfo ) {
-				// If fieldInfo returns non-null, the column exists
-				$cols[] = $column;
+			// Prefer listFields to obtain all columns at once, then cache them
+			if ( \is_callable( [ $dbr, 'listFields' ] ) ) {
+				$fields = $dbr->listFields( $table );
+				if ( is_array( $fields ) ) {
+					$cols = array_map( 'strval', $fields );
+				}
 			} else {
-				// Fall back: try to fetch all columns via schema
-				// SHOW COLUMNS is supported by MySQL/MariaDB; for other backends, fieldInfo above should suffice
-				try {
-					$res = $dbr->query( 'SHOW COLUMNS FROM ' . $dbr->tableName( $table ) );
-					foreach ( $res as $row ) {
-						if ( isset( $row->Field ) ) {
-							$cols[] = $row->Field;
-						}
-					}
-				} catch ( \Throwable $e ) {
-					// ignore – best effort
+				// Fallback: single column probe without poisoning the cache for other columns
+				$fieldInfo = $dbr->fieldInfo( $table, $column );
+				if ( $fieldInfo ) {
+					$cols = [ $column ];
 				}
 			}
 

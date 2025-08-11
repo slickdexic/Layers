@@ -5,6 +5,10 @@
 ( function () {
 	'use strict';
 
+	function layersMsgDefault( k, d ) {
+		return d;
+	}
+
 	/**
 	 * LayerPanel class
 	 *
@@ -29,18 +33,156 @@
 		this.setupEventHandlers();
 	};
 
+	// Resolve i18n text with a whitelist of known keys to avoid dynamic mw.message usage
+	LayerPanel.prototype.msg = function ( key, fallback ) {
+		function pick( txt, fb ) {
+			if ( txt && txt.indexOf && txt.indexOf( '⧼' ) === -1 ) {
+				return txt;
+			}
+			return fb;
+		}
+		switch ( key ) {
+			case 'layers-panel-title':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-panel-title' ).text() : null, fallback );
+			case 'layers-panel-subtitle':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-panel-subtitle' ).text() : null, fallback );
+			case 'layers-empty':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-empty' ).text() : null, fallback );
+			case 'layers-properties-title':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-properties-title' ).text() : null, fallback );
+			case 'layers-code-title':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-title' ).text() : null, fallback );
+			case 'layers-delete-confirm':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-delete-confirm' ).text() : null, fallback );
+			case 'layers-no-layer-selected':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-no-layer-selected' ).text() : null, fallback );
+			case 'layers-layer-not-found':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-layer-not-found' ).text() : null, fallback );
+			case 'layers-section-transform':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-section-transform' ).text() : null, fallback );
+			case 'layers-prop-x':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-x' ).text() : null, fallback );
+			case 'layers-prop-y':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-y' ).text() : null, fallback );
+			case 'layers-prop-rotation':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-rotation' ).text() : null, fallback );
+			case 'layers-prop-width':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-width' ).text() : null, fallback );
+			case 'layers-prop-height':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-height' ).text() : null, fallback );
+			case 'layers-prop-radius':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-radius' ).text() : null, fallback );
+			case 'layers-prop-sides':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-sides' ).text() : null, fallback );
+			case 'layers-prop-points':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-points' ).text() : null, fallback );
+			case 'layers-prop-outer-radius':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-outer-radius' ).text() : null, fallback );
+			case 'layers-prop-inner-radius':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-inner-radius' ).text() : null, fallback );
+			case 'layers-prop-text':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-text' ).text() : null, fallback );
+			case 'layers-prop-font-size':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-font-size' ).text() : null, fallback );
+			case 'layers-prop-arrow-size':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-arrow-size' ).text() : null, fallback );
+			case 'layers-prop-arrow-style':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-arrow-style' ).text() : null, fallback );
+			case 'layers-arrow-single':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-arrow-single' ).text() : null, fallback );
+			case 'layers-arrow-double':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-arrow-double' ).text() : null, fallback );
+			case 'layers-arrow-none':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-arrow-none' ).text() : null, fallback );
+			case 'layers-section-appearance':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-section-appearance' ).text() : null, fallback );
+			case 'layers-prop-stroke-color':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-stroke-color' ).text() : null, fallback );
+			case 'layers-prop-stroke-width':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-stroke-width' ).text() : null, fallback );
+			case 'layers-prop-stroke-opacity':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-stroke-opacity' ).text() : null, fallback );
+			case 'layers-prop-fill-color':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-fill-color' ).text() : null, fallback );
+			case 'layers-prop-fill-opacity':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-fill-opacity' ).text() : null, fallback );
+			case 'layers-section-effects':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-section-effects' ).text() : null, fallback );
+			case 'layers-prop-opacity':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-opacity' ).text() : null, fallback );
+			case 'layers-prop-blend':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-blend' ).text() : null, fallback );
+			case 'layers-blend-normal':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-normal' ).text() : null, fallback );
+			case 'layers-blend-multiply':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-multiply' ).text() : null, fallback );
+			case 'layers-blend-screen':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-screen' ).text() : null, fallback );
+			case 'layers-blend-overlay':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-overlay' ).text() : null, fallback );
+			case 'layers-blend-soft-light':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-soft-light' ).text() : null, fallback );
+			case 'layers-blend-hard-light':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-hard-light' ).text() : null, fallback );
+			case 'layers-blend-color-dodge':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-color-dodge' ).text() : null, fallback );
+			case 'layers-blend-color-burn':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-color-burn' ).text() : null, fallback );
+			case 'layers-blend-darken':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-darken' ).text() : null, fallback );
+			case 'layers-blend-lighten':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-lighten' ).text() : null, fallback );
+			case 'layers-blend-difference':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-difference' ).text() : null, fallback );
+			case 'layers-blend-exclusion':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-exclusion' ).text() : null, fallback );
+			case 'layers-effect-shadow':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow' ).text() : null, fallback );
+			case 'layers-effect-shadow-color':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-color' ).text() : null, fallback );
+			case 'layers-effect-shadow-blur':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-blur' ).text() : null, fallback );
+			case 'layers-effect-shadow-spread':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-spread' ).text() : null, fallback );
+			case 'layers-effect-shadow-offset-x':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-offset-x' ).text() : null, fallback );
+			case 'layers-effect-shadow-offset-y':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-offset-y' ).text() : null, fallback );
+			case 'layers-code-none':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-none' ).text() : null, fallback );
+			case 'layers-code-enable':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-enable' ).text() : null, fallback );
+			case 'layers-code-all-visible':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-all-visible' ).text() : null, fallback );
+			case 'layers-code-caption':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-caption' ).text() : null, fallback );
+			case 'layers-code-copy':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-copy' ).text() : null, fallback );
+			case 'layers-code-selected-visible':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-selected-visible' ).text() : null, fallback );
+			case 'layers-code-copied':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-copied' ).text() : null, fallback );
+			case 'layers-code-copy-failed':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-copy-failed' ).text() : null, fallback );
+			default:
+				return fallback;
+		}
+	};
+
 	LayerPanel.prototype.createInterface = function () {
 		this.container.innerHTML = '';
+
+		var t = this.msg.bind( this );
 
 		// Create header
 		var header = document.createElement( 'div' );
 		header.className = 'layers-panel-header';
 		var title = document.createElement( 'h3' );
-		title.textContent = ( mw.message ? mw.message( 'layers-panel-title' ).text() : 'Layers' );
+		title.textContent = t( 'layers-panel-title', 'Layers' );
 		header.appendChild( title );
 		var subtitle = document.createElement( 'div' );
 		subtitle.className = 'layers-panel-subtitle';
-		subtitle.textContent = ( mw.message ? mw.message( 'layers-panel-subtitle' ).text() : 'Drag to reorder • Click name to rename' );
+		subtitle.textContent = t( 'layers-panel-subtitle', 'Drag to reorder • Click name to rename' );
 		header.appendChild( subtitle );
 		this.container.appendChild( header );
 
@@ -49,47 +191,22 @@
 		this.layerList.className = 'layers-list';
 		var emptyState = document.createElement( 'div' );
 		emptyState.className = 'layers-empty';
-		emptyState.textContent = ( mw.message ? mw.message( 'layers-empty' ).text() : 'No layers yet. Choose a tool to begin.' );
+		emptyState.textContent = t( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
 		this.layerList.appendChild( emptyState );
 		this.container.appendChild( this.layerList );
 
 		// Create properties and code panels
 		this.propertiesPanel = document.createElement( 'div' );
 		this.propertiesPanel.className = 'layers-properties';
-		this.propertiesPanel.innerHTML = '<h4>' + ( mw.message ? mw.message( 'layers-properties-title' ).text() : 'Properties' ) + '</h4><div class="properties-content"></div>';
+		this.propertiesPanel.innerHTML = '<h4>' + t( 'layers-properties-title', 'Properties' ) + '</h4><div class="properties-content"></div>';
 
 		this.codePanel = document.createElement( 'div' );
 		this.codePanel.className = 'layers-code-panel';
-		this.codePanel.innerHTML = '<h4>' + ( mw.message ? mw.message( 'layers-code-title' ).text() : 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
+		this.codePanel.innerHTML = '<h4>' + t( 'layers-code-title', 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
 
-		// If an inspector container is provided by the editor, mount panels there
-		if ( this.inspectorContainer ) {
-			// Ensure inspector container is empty and styled
-			this.inspectorContainer.innerHTML = '';
-			if ( !this.inspectorContainer.classList.contains( 'layers-inspector' ) ) {
-				this.inspectorContainer.classList.add( 'layers-inspector' );
-			}
-
-			// Create a two-column layout inside inspector: properties left, code right
-			var inspectorInner = document.createElement( 'div' );
-			inspectorInner.className = 'layers-inspector-inner';
-			this.inspectorContainer.appendChild( inspectorInner );
-
-			var leftCol = document.createElement( 'div' );
-			leftCol.className = 'inspector-left';
-			var rightCol = document.createElement( 'div' );
-			rightCol.className = 'inspector-right';
-
-			inspectorInner.appendChild( leftCol );
-			inspectorInner.appendChild( rightCol );
-
-			leftCol.appendChild( this.propertiesPanel );
-			rightCol.appendChild( this.codePanel );
-		} else {
-			// Fallback: mount below list in sidebar
-			this.container.appendChild( this.propertiesPanel );
-			this.container.appendChild( this.codePanel );
-		}
+		// Mount below list in the sidebar (left column)
+		this.container.appendChild( this.propertiesPanel );
+		this.container.appendChild( this.codePanel );
 		this.updateCodePanel();
 	};
 
@@ -113,6 +230,7 @@
 
 	LayerPanel.prototype.renderLayerList = function () {
 		this.layerList.innerHTML = '';
+		var t = this.msg.bind( this );
 
 		this.layers.forEach( function ( layer, index ) {
 			var layerItem = this.createLayerItem( layer, index );
@@ -122,7 +240,7 @@
 		if ( this.layers.length === 0 ) {
 			var empty = document.createElement( 'div' );
 			empty.className = 'layers-empty';
-			empty.textContent = ( mw.message ? mw.message( 'layers-empty' ).text() : 'No layers yet. Choose a tool to begin.' );
+			empty.textContent = t( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
 			this.layerList.appendChild( empty );
 		}
 	};
@@ -132,6 +250,7 @@
 		item.className = 'layer-item';
 		item.dataset.layerId = layer.id;
 		item.dataset.index = index;
+		var t = this.msg.bind( this );
 
 		if ( layer.id === this.selectedLayerId ) {
 			item.classList.add( 'selected' );
@@ -141,7 +260,7 @@
 		var visibilityBtn = document.createElement( 'button' );
 		visibilityBtn.className = 'layer-visibility';
 		visibilityBtn.innerHTML = layer.visible !== false ? '👁' : '👁‍🗨';
-		visibilityBtn.title = ( mw.message ? mw.message( 'layers-toggle-visibility' ).text() : 'Toggle visibility' );
+		visibilityBtn.title = ( window.mw ? ( t( 'layers-toggle-visibility', 'Toggle visibility' ) ) : 'Toggle visibility' );
 		visibilityBtn.type = 'button';
 
 		// Layer name
@@ -154,14 +273,14 @@
 		var lockBtn = document.createElement( 'button' );
 		lockBtn.className = 'layer-lock';
 		lockBtn.innerHTML = layer.locked ? '🔒' : '🔓';
-		lockBtn.title = ( mw.message ? mw.message( 'layers-toggle-lock' ).text() : 'Toggle lock' );
+		lockBtn.title = ( window.mw ? ( t( 'layers-toggle-lock', 'Toggle lock' ) ) : 'Toggle lock' );
 		lockBtn.type = 'button';
 
 		// Delete button
 		var deleteBtn = document.createElement( 'button' );
 		deleteBtn.className = 'layer-delete';
 		deleteBtn.innerHTML = '🗑';
-		deleteBtn.title = ( mw.message ? mw.message( 'layers-delete-layer-button' ).text() : 'Delete layer' );
+		deleteBtn.title = ( window.mw ? ( t( 'layers-delete-layer-button', 'Delete layer' ) ) : 'Delete layer' );
 		deleteBtn.type = 'button';
 
 		item.appendChild( visibilityBtn );
@@ -173,34 +292,40 @@
 	};
 
 	LayerPanel.prototype.getDefaultLayerName = function ( layer ) {
+		var t;
+		if ( this.msg && this.msg.bind ) {
+			t = this.msg.bind( this );
+		} else {
+			t = layersMsgDefault;
+		}
 		switch ( layer.type ) {
 			case 'text': {
-				var prefix = ( mw.message ? mw.message( 'layers-default-text-prefix' ).text() : 'Text: ' );
-				var emptyText = ( mw.message ? mw.message( 'layers-default-empty' ).text() : 'Empty' );
+				var prefix = ( window.mw ? t( 'layers-default-text-prefix', 'Text: ' ) : 'Text: ' );
+				var emptyText = ( window.mw ? t( 'layers-default-empty', 'Empty' ) : 'Empty' );
 				return prefix + ( ( layer.text || emptyText ).slice( 0, 20 ) );
 			}
 			case 'rectangle':
-				return ( mw.message ? mw.message( 'layers-type-rectangle' ).text() : 'Rectangle' );
+				return ( window.mw ? t( 'layers-type-rectangle', 'Rectangle' ) : 'Rectangle' );
 			case 'blur':
-				return ( mw.message ? mw.message( 'layers-type-blur' ).text() : 'Blur/Redaction' );
+				return ( window.mw ? t( 'layers-type-blur', 'Blur/Redaction' ) : 'Blur/Redaction' );
 			case 'circle':
-				return ( mw.message ? mw.message( 'layers-type-circle' ).text() : 'Circle' );
+				return ( window.mw ? t( 'layers-type-circle', 'Circle' ) : 'Circle' );
 			case 'ellipse':
-				return ( mw.message ? mw.message( 'layers-type-ellipse' ).text() : 'Ellipse' );
+				return ( window.mw ? t( 'layers-type-ellipse', 'Ellipse' ) : 'Ellipse' );
 			case 'polygon':
-				return ( mw.message ? mw.message( 'layers-type-polygon' ).text() : 'Polygon' );
+				return ( window.mw ? t( 'layers-type-polygon', 'Polygon' ) : 'Polygon' );
 			case 'star':
-				return ( mw.message ? mw.message( 'layers-type-star' ).text() : 'Star' );
+				return ( window.mw ? t( 'layers-type-star', 'Star' ) : 'Star' );
 			case 'arrow':
-				return ( mw.message ? mw.message( 'layers-type-arrow' ).text() : 'Arrow' );
+				return ( window.mw ? t( 'layers-type-arrow', 'Arrow' ) : 'Arrow' );
 			case 'line':
-				return ( mw.message ? mw.message( 'layers-type-line' ).text() : 'Line' );
+				return ( window.mw ? t( 'layers-type-line', 'Line' ) : 'Line' );
 			case 'path':
-				return ( mw.message ? mw.message( 'layers-type-path' ).text() : 'Drawing' );
+				return ( window.mw ? t( 'layers-type-path', 'Drawing' ) : 'Drawing' );
 			case 'highlight':
-				return ( mw.message ? mw.message( 'layers-type-highlight' ).text() : 'Highlight' );
+				return ( window.mw ? t( 'layers-type-highlight', 'Highlight' ) : 'Highlight' );
 			default:
-				return ( mw.message ? mw.message( 'layers-type-layer' ).text() : 'Layer' );
+				return ( window.mw ? t( 'layers-type-layer', 'Layer' ) : 'Layer' );
 		}
 	};
 
@@ -263,7 +388,8 @@
 
 	LayerPanel.prototype.deleteLayer = function ( layerId ) {
 		// Use MediaWiki's OO.ui.confirm when available, fallback to confirm
-		var confirmMessage = ( mw.message ? mw.message( 'layers-delete-confirm' ).text() : 'Are you sure you want to delete this layer?' );
+		var t = this.msg.bind( this );
+		var confirmMessage = ( window.mw ? t( 'layers-delete-confirm', 'Are you sure you want to delete this layer?' ) : 'Are you sure you want to delete this layer?' );
 		if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
 			OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
 				if ( confirmed ) {
@@ -318,14 +444,15 @@
 	LayerPanel.prototype.updatePropertiesPanel = function ( layerId ) {
 		var contentDiv = this.propertiesPanel.querySelector( '.properties-content' );
 
+		var t = this.msg.bind( this );
 		if ( !layerId ) {
-			contentDiv.innerHTML = '<p>' + ( mw.message ? mw.message( 'layers-no-layer-selected' ).text() : 'No layer selected' ) + '</p>';
+			contentDiv.innerHTML = '<p>' + t( 'layers-no-layer-selected', 'No layer selected' ) + '</p>';
 			return;
 		}
 
 		var layer = this.editor.getLayerById( layerId );
 		if ( !layer ) {
-			contentDiv.innerHTML = '<p>' + ( mw.message ? mw.message( 'layers-layer-not-found' ).text() : 'Layer not found' ) + '</p>';
+			contentDiv.innerHTML = '<p>' + t( 'layers-layer-not-found', 'Layer not found' ) + '</p>';
 			return;
 		}
 
@@ -338,31 +465,664 @@
 	LayerPanel.prototype.createPropertiesForm = function ( layer ) {
 		var form = document.createElement( 'form' );
 		form.className = 'layer-properties-form';
+		var t = this.msg.bind( this );
 
-		// Common properties
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-x' ).text() : 'X Position' ), 'number', layer.x || 0, function ( value ) {
-			this.editor.updateLayer( layer.id, { x: parseFloat( value ) } );
-		}.bind( this ) );
+		// Helpers
+		var self = this;
+		var addSection = function ( title ) {
+			var h = document.createElement( 'h5' );
+			h.textContent = title;
+			form.appendChild( h );
+		};
+		var addInput = function ( opts ) {
+			var wrapper = document.createElement( 'div' );
+			wrapper.className = 'property-field';
+			var labelEl = document.createElement( 'label' );
+			labelEl.textContent = opts.label;
+			var input = document.createElement( 'input' );
+			input.type = opts.type || 'text';
+			if ( opts.min !== undefined ) {
+				input.min = String( opts.min );
+			}
+			if ( opts.max !== undefined ) {
+				input.max = String( opts.max );
+			}
+			if ( opts.step !== undefined ) {
+				input.step = String( opts.step );
+			}
+			if ( opts.decimals === 1 && input.type === 'number' && input.step === '' ) {
+				input.step = '0.1';
+			}
+			input.value = ( opts.value !== undefined && opts.value !== null ) ? opts.value : '';
+			input.addEventListener( 'change', function () {
+				opts.onChange( input.value );
+			} );
+			if ( opts.decimals === 1 && input.type === 'number' ) {
+				input.addEventListener( 'blur', function () {
+					var n = parseFloat( input.value );
+					if ( !isNaN( n ) ) {
+						input.value = n.toFixed( 1 );
+					}
+				} );
+			}
+			wrapper.appendChild( labelEl );
+			wrapper.appendChild( input );
+			form.appendChild( wrapper );
+			return input;
+		};
+		var addSelect = function ( opts ) {
+			var wrapper = document.createElement( 'div' );
+			wrapper.className = 'property-field';
+			var labelEl = document.createElement( 'label' );
+			labelEl.textContent = opts.label;
+			var select = document.createElement( 'select' );
+			( opts.options || [] ).forEach( function ( o ) {
+				var opt = document.createElement( 'option' );
+				opt.value = o.value;
+				opt.textContent = o.text;
+				if ( o.value === opts.value ) {
+					opt.selected = true;
+				}
+				select.appendChild( opt );
+			} );
+			select.addEventListener( 'change', function () {
+				opts.onChange( select.value );
+			} );
+			wrapper.appendChild( labelEl );
+			wrapper.appendChild( select );
+			form.appendChild( wrapper );
+			return select;
+		};
+		var addCheckbox = function ( opts ) {
+			var wrapper = document.createElement( 'div' );
+			wrapper.className = 'property-field';
+			var labelEl = document.createElement( 'label' );
+			labelEl.textContent = opts.label;
+			var input = document.createElement( 'input' );
+			input.type = 'checkbox';
+			input.checked = !!opts.value;
+			input.addEventListener( 'change', function () {
+				opts.onChange( input.checked );
+			} );
+			wrapper.appendChild( labelEl );
+			wrapper.appendChild( input );
+			form.appendChild( wrapper );
+			return input;
+		};
 
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-y' ).text() : 'Y Position' ), 'number', layer.y || 0, function ( value ) {
-			this.editor.updateLayer( layer.id, { y: parseFloat( value ) } );
-		}.bind( this ) );
+		// Transform
+		addSection( t( 'layers-section-transform', 'Transform' ) );
+		addInput( {
+			label: t( 'layers-prop-x', 'X' ),
+			type: 'number',
+			value: layer.x || 0,
+			step: 1,
+			decimals: 1,
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { x: parseFloat( v ) } );
+			}
+		} );
+		addInput( {
+			label: t( 'layers-prop-y', 'Y' ),
+			type: 'number',
+			value: layer.y || 0,
+			step: 1,
+			decimals: 1,
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { y: parseFloat( v ) } );
+			}
+		} );
+		addInput( {
+			label: t( 'layers-prop-rotation', 'Rotation' ),
+			type: 'number',
+			value: layer.rotation || 0,
+			step: 1,
+			decimals: 1,
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { rotation: parseFloat( v ) } );
+			}
+		} );
 
-		// Type-specific properties
+		// Size/geometry per type
 		switch ( layer.type ) {
-			case 'text':
-				this.addTextProperties( form, layer );
-				break;
 			case 'rectangle':
-				this.addRectangleProperties( form, layer );
+				addInput( {
+					label: t( 'layers-prop-width', 'Width' ),
+					type: 'number',
+					value: layer.width || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { width: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-height', 'Height' ),
+					type: 'number',
+					value: layer.height || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { height: parseFloat( v ) } );
+					}
+				} );
 				break;
 			case 'circle':
-				this.addCircleProperties( form, layer );
+				addInput( {
+					label: t( 'layers-prop-radius', 'Radius' ),
+					type: 'number',
+					value: layer.radius || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { radius: parseFloat( v ) } );
+					}
+				} );
+				break;
+			case 'ellipse':
+				addInput( {
+					label: t( 'layers-prop-width', 'Width' ),
+					type: 'number',
+					value: layer.width || ( ( layer.radiusX || 0 ) * 2 ),
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						var valX = parseFloat( v );
+						self.editor.updateLayer( layer.id, { width: valX, radiusX: valX / 2 } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-height', 'Height' ),
+					type: 'number',
+					value: layer.height || ( ( layer.radiusY || 0 ) * 2 ),
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						var valY = parseFloat( v );
+						self.editor.updateLayer( layer.id, { height: valY, radiusY: valY / 2 } );
+					}
+				} );
+				break;
+			case 'polygon':
+				addInput( {
+					label: t( 'layers-prop-sides', 'Sides' ),
+					type: 'number',
+					value: layer.sides || 6,
+					min: 3,
+					step: 1,
+					onChange: function ( v ) {
+						var sidesVal = Math.max( 3, parseInt( v, 10 ) || 6 );
+						self.editor.updateLayer( layer.id, { sides: sidesVal } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-radius', 'Radius' ),
+					type: 'number',
+					value: layer.radius || 50,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { radius: parseFloat( v ) } );
+					}
+				} );
+				break;
+			case 'star':
+				addInput( {
+					label: t( 'layers-prop-points', 'Points' ),
+					type: 'number',
+					value: layer.points || 5,
+					min: 3,
+					step: 1,
+					onChange: function ( v ) {
+						var ptsVal = Math.max( 3, parseInt( v, 10 ) || 5 );
+						self.editor.updateLayer( layer.id, { points: ptsVal } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-outer-radius', 'Outer Radius' ),
+					type: 'number',
+					value: layer.outerRadius || layer.radius || 50,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { outerRadius: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-inner-radius', 'Inner Radius' ),
+					type: 'number',
+					value: layer.innerRadius || ( ( layer.outerRadius || 50 ) * 0.5 ),
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { innerRadius: parseFloat( v ) } );
+					}
+				} );
+				break;
+			case 'line':
+				addInput( {
+					label: 'x1',
+					type: 'number',
+					value: layer.x1 || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { x1: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: 'y1',
+					type: 'number',
+					value: layer.y1 || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { y1: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: 'x2',
+					type: 'number',
+					value: layer.x2 || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { x2: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: 'y2',
+					type: 'number',
+					value: layer.y2 || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { y2: parseFloat( v ) } );
+					}
+				} );
+				break;
+			case 'arrow':
+				addInput( {
+					label: 'x1',
+					type: 'number',
+					value: layer.x1 || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { x1: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: 'y1',
+					type: 'number',
+					value: layer.y1 || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { y1: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: 'x2',
+					type: 'number',
+					value: layer.x2 || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { x2: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: 'y2',
+					type: 'number',
+					value: layer.y2 || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { y2: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-arrow-size', 'Arrow Size' ),
+					type: 'number',
+					value: layer.arrowSize || 10,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { arrowSize: parseFloat( v ) } );
+					}
+				} );
+				addSelect( {
+					label: t( 'layers-prop-arrow-style', 'Arrow Style' ),
+					value: layer.arrowStyle || 'single',
+					options: [
+						{ value: 'single', text: t( 'layers-arrow-single', 'Single' ) },
+						{ value: 'double', text: t( 'layers-arrow-double', 'Double' ) },
+						{ value: 'none', text: t( 'layers-arrow-none', 'Line only' ) }
+					],
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { arrowStyle: v } );
+					}
+				} );
+				break;
+			case 'text':
+				addInput( {
+					label: t( 'layers-prop-text', 'Text' ),
+					type: 'text',
+					value: layer.text || '',
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { text: v } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-font-size', 'Font Size' ),
+					type: 'number',
+					value: layer.fontSize || 16,
+					min: 1,
+					step: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { fontSize: parseInt( v, 10 ) } );
+					}
+				} );
+				break;
+			case 'highlight':
+				addInput( {
+					label: t( 'layers-prop-width', 'Width' ),
+					type: 'number',
+					value: layer.width || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { width: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-height', 'Height' ),
+					type: 'number',
+					value: layer.height || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { height: parseFloat( v ) } );
+					}
+				} );
 				break;
 			case 'blur':
-				this.addBlurProperties( form, layer );
+				addInput( {
+					label: t( 'layers-prop-width', 'Width' ),
+					type: 'number',
+					value: layer.width || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { width: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-height', 'Height' ),
+					type: 'number',
+					value: layer.height || 0,
+					step: 1,
+					decimals: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { height: parseFloat( v ) } );
+					}
+				} );
+				addInput( {
+					label: t( 'layers-prop-blur-radius', 'Blur Radius' ),
+					type: 'number',
+					value: layer.blurRadius || 12,
+					min: 1,
+					max: 64,
+					step: 1,
+					onChange: function ( v ) {
+						var br = Math.max( 1, Math.min( 64, parseInt( v, 10 ) || 12 ) );
+						self.editor.updateLayer( layer.id, { blurRadius: br } );
+					}
+				} );
 				break;
 		}
+
+		// Appearance
+		addSection( t( 'layers-section-appearance', 'Appearance' ) );
+		// Stroke color
+		addInput( {
+			label: t( 'layers-prop-stroke-color', 'Stroke Color' ),
+			type: 'color',
+			value: layer.stroke || '#000000',
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { stroke: v } );
+			}
+		} );
+		// Stroke width
+		addInput( {
+			label: t( 'layers-prop-stroke-width', 'Stroke Width' ),
+			type: 'number',
+			value: layer.strokeWidth || 1,
+			min: 0,
+			step: 1,
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { strokeWidth: parseFloat( v ) } );
+			}
+		} );
+		// Stroke opacity
+		var strokeOpacityValue = ( layer.strokeOpacity !== null &&
+			layer.strokeOpacity !== undefined ) ? layer.strokeOpacity : 1;
+		strokeOpacityValue = Math.round( strokeOpacityValue * 100 );
+		// Stroke opacity: number (0–100) + compact slider
+		( function () {
+			var field = document.createElement( 'div' );
+			field.className = 'property-field property-field--compound';
+			var labelEl = document.createElement( 'label' );
+			labelEl.textContent = t( 'layers-prop-stroke-opacity', 'Stroke Opacity' );
+			var number = document.createElement( 'input' );
+			number.type = 'number';
+			number.min = '0';
+			number.max = '100';
+			number.step = '1';
+			number.value = String( strokeOpacityValue );
+			number.className = 'compact-number';
+			var slider = document.createElement( 'input' );
+			slider.type = 'range';
+			slider.min = '0';
+			slider.max = '100';
+			slider.step = '1';
+			slider.value = String( strokeOpacityValue );
+			slider.className = 'compact-range';
+			number.addEventListener( 'change', function () {
+				var v = Math.max( 0, Math.min( 100, parseInt( number.value, 10 ) || 0 ) );
+				number.value = String( v );
+				slider.value = String( v );
+				self.editor.updateLayer( layer.id, { strokeOpacity: v / 100 } );
+			} );
+			slider.addEventListener( 'input', function () {
+				number.value = slider.value;
+				var soVal = parseInt( slider.value, 10 ) / 100;
+				self.editor.updateLayer( layer.id, { strokeOpacity: soVal } );
+			} );
+			field.appendChild( labelEl );
+			var controls = document.createElement( 'div' );
+			controls.className = 'compact-controls';
+			controls.appendChild( number );
+			controls.appendChild( slider );
+			field.appendChild( controls );
+			form.appendChild( field );
+		}() );
+		// Fill
+		addInput( {
+			label: t( 'layers-prop-fill-color', 'Fill Color' ),
+			type: 'color',
+			value: layer.fill || '#ffffff',
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { fill: v } );
+			}
+		} );
+		var fillOpacityValue = ( layer.fillOpacity !== null &&
+			layer.fillOpacity !== undefined ) ? layer.fillOpacity : 1;
+		fillOpacityValue = Math.round( fillOpacityValue * 100 );
+		// Fill opacity: number (0–100) + compact slider
+		( function () {
+			var field = document.createElement( 'div' );
+			field.className = 'property-field property-field--compound';
+			var labelEl = document.createElement( 'label' );
+			labelEl.textContent = t( 'layers-prop-fill-opacity', 'Fill Opacity' );
+			var number = document.createElement( 'input' );
+			number.type = 'number';
+			number.min = '0';
+			number.max = '100';
+			number.step = '1';
+			number.value = String( fillOpacityValue );
+			number.className = 'compact-number';
+			var slider = document.createElement( 'input' );
+			slider.type = 'range';
+			slider.min = '0';
+			slider.max = '100';
+			slider.step = '1';
+			slider.value = String( fillOpacityValue );
+			slider.className = 'compact-range';
+			number.addEventListener( 'change', function () {
+				var v = Math.max( 0, Math.min( 100, parseInt( number.value, 10 ) || 0 ) );
+				number.value = String( v );
+				slider.value = String( v );
+				self.editor.updateLayer( layer.id, { fillOpacity: v / 100 } );
+			} );
+			slider.addEventListener( 'input', function () {
+				number.value = slider.value;
+				var foVal = parseInt( slider.value, 10 ) / 100;
+				self.editor.updateLayer( layer.id, { fillOpacity: foVal } );
+			} );
+			field.appendChild( labelEl );
+			var controls = document.createElement( 'div' );
+			controls.className = 'compact-controls';
+			controls.appendChild( number );
+			controls.appendChild( slider );
+			field.appendChild( controls );
+			form.appendChild( field );
+		}() );
+
+		// Effects (layer-level)
+		addSection( t( 'layers-section-effects', 'Effects' ) );
+		var layerOpacityValue = ( layer.opacity !== null && layer.opacity !== undefined ) ?
+			layer.opacity : 1;
+		layerOpacityValue = Math.round( layerOpacityValue * 100 );
+		// Layer opacity: number (0–100) + compact slider
+		( function () {
+			var field = document.createElement( 'div' );
+			field.className = 'property-field property-field--compound';
+			var labelEl = document.createElement( 'label' );
+			labelEl.textContent = t( 'layers-prop-opacity', 'Layer Opacity' );
+			var number = document.createElement( 'input' );
+			number.type = 'number';
+			number.min = '0';
+			number.max = '100';
+			number.step = '1';
+			number.value = String( layerOpacityValue );
+			number.className = 'compact-number';
+			var slider = document.createElement( 'input' );
+			slider.type = 'range';
+			slider.min = '0';
+			slider.max = '100';
+			slider.step = '1';
+			slider.value = String( layerOpacityValue );
+			slider.className = 'compact-range';
+			number.addEventListener( 'change', function () {
+				var v = Math.max( 0, Math.min( 100, parseInt( number.value, 10 ) || 0 ) );
+				number.value = String( v );
+				slider.value = String( v );
+				self.editor.applyToSelection( function ( l ) {
+					if ( l.id === layer.id ) {
+						l.opacity = v / 100;
+					}
+				} );
+			} );
+			slider.addEventListener( 'input', function () {
+				number.value = slider.value;
+				self.editor.applyToSelection( function ( l ) {
+					if ( l.id === layer.id ) {
+						l.opacity = parseInt( slider.value, 10 ) / 100;
+					}
+				} );
+			} );
+			field.appendChild( labelEl );
+			var controls = document.createElement( 'div' );
+			controls.className = 'compact-controls';
+			controls.appendChild( number );
+			controls.appendChild( slider );
+			field.appendChild( controls );
+			form.appendChild( field );
+		}() );
+		addSelect( { label: t( 'layers-prop-blend', 'Blend' ), value: layer.blend || 'normal', options: [
+			{ value: 'normal', text: t( 'layers-blend-normal', 'Normal' ) },
+			{ value: 'multiply', text: t( 'layers-blend-multiply', 'Multiply' ) },
+			{ value: 'screen', text: t( 'layers-blend-screen', 'Screen' ) },
+			{ value: 'overlay', text: t( 'layers-blend-overlay', 'Overlay' ) },
+			{ value: 'soft-light', text: t( 'layers-blend-soft-light', 'Soft Light' ) },
+			{ value: 'hard-light', text: t( 'layers-blend-hard-light', 'Hard Light' ) },
+			{ value: 'color-dodge', text: t( 'layers-blend-color-dodge', 'Color Dodge' ) },
+			{ value: 'color-burn', text: t( 'layers-blend-color-burn', 'Color Burn' ) },
+			{ value: 'darken', text: t( 'layers-blend-darken', 'Darken' ) },
+			{ value: 'lighten', text: t( 'layers-blend-lighten', 'Lighten' ) },
+			{ value: 'difference', text: t( 'layers-blend-difference', 'Difference' ) },
+			{ value: 'exclusion', text: t( 'layers-blend-exclusion', 'Exclusion' ) }
+		], onChange: function ( v ) { self.editor.updateLayer( layer.id, { blend: v } ); } } );
+
+		addCheckbox( {
+			label: t( 'layers-effect-shadow', 'Drop Shadow' ),
+			value: !!layer.shadow,
+			onChange: function ( checked ) {
+				self.editor.updateLayer( layer.id, { shadow: !!checked } );
+			}
+		} );
+		addInput( {
+			label: t( 'layers-effect-shadow-color', 'Shadow Color' ),
+			type: 'color',
+			value: layer.shadowColor || '#000000',
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { shadowColor: v } );
+			}
+		} );
+		addInput( {
+			label: t( 'layers-effect-shadow-blur', 'Shadow Size' ),
+			type: 'number',
+			value: layer.shadowBlur || 8,
+			min: 0,
+			max: 64,
+			step: 1,
+			onChange: function ( v ) {
+				var s = Math.max( 0, Math.min( 64, parseInt( v, 10 ) || 0 ) );
+				self.editor.updateLayer( layer.id, { shadowBlur: s } );
+			}
+		} );
+		addInput( {
+			label: t( 'layers-effect-shadow-spread', 'Shadow Spread' ),
+			type: 'number',
+			value: layer.shadowSpread || 0,
+			min: 0,
+			max: 64,
+			step: 1,
+			onChange: function ( v ) {
+				var sp = Math.max( 0, parseInt( v, 10 ) || 0 );
+				self.editor.updateLayer( layer.id, { shadowSpread: sp } );
+			}
+		} );
+		addInput( {
+			label: t( 'layers-effect-shadow-offset-x', 'Shadow Offset X' ),
+			type: 'number',
+			value: layer.shadowOffsetX || 2,
+			step: 1,
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { shadowOffsetX: parseFloat( v ) } );
+			}
+		} );
+		addInput( {
+			label: t( 'layers-effect-shadow-offset-y', 'Shadow Offset Y' ),
+			type: 'number',
+			value: layer.shadowOffsetY || 2,
+			step: 1,
+			onChange: function ( v ) {
+				self.editor.updateLayer( layer.id, { shadowOffsetY: parseFloat( v ) } );
+			}
+		} );
 
 		return form;
 	};
@@ -386,84 +1146,15 @@
 		form.appendChild( wrapper );
 	};
 
-	LayerPanel.prototype.addTextProperties = function ( form, layer ) {
-		var self = this;
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-text' ).text() : 'Text' ), 'text', layer.text || '', function ( value ) {
-			self.editor.updateLayer( layer.id, { text: value } );
-		} );
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-font-size' ).text() : 'Font Size' ), 'number', layer.fontSize || 16, function ( value ) {
-			self.editor.updateLayer( layer.id, { fontSize: parseInt( value ) } );
-		} );
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-color' ).text() : 'Color' ), 'color', layer.fill || '#000000', function ( value ) {
-			self.editor.updateLayer( layer.id, { fill: value } );
-		} );
+	LayerPanel.prototype.addTextProperties = function () {
+		// Back-compat helper; new system builds fields in createPropertiesForm
 	};
 
-	LayerPanel.prototype.addRectangleProperties = function ( form, layer ) {
-		var self = this;
+	LayerPanel.prototype.addRectangleProperties = function () {};
 
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-width' ).text() : 'Width' ), 'number', layer.width || 0, function ( value ) {
-			self.editor.updateLayer( layer.id, { width: parseFloat( value ) } );
-		} );
+	LayerPanel.prototype.addCircleProperties = function () {};
 
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-height' ).text() : 'Height' ), 'number', layer.height || 0, function ( value ) {
-			self.editor.updateLayer( layer.id, { height: parseFloat( value ) } );
-		} );
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' ), 'color', layer.stroke || '#000000', function ( value ) {
-			self.editor.updateLayer( layer.id, { stroke: value } );
-		} );
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-fill-color' ).text() : 'Fill Color' ), 'color', layer.fill || '#ffffff', function ( value ) {
-			self.editor.updateLayer( layer.id, { fill: value } );
-		} );
-	};
-
-	LayerPanel.prototype.addCircleProperties = function ( form, layer ) {
-		var self = this;
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-radius' ).text() : 'Radius' ), 'number', layer.radius || 0, function ( value ) {
-			self.editor.updateLayer( layer.id, { radius: parseFloat( value ) } );
-		} );
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' ), 'color', layer.stroke || '#000000', function ( value ) {
-			self.editor.updateLayer( layer.id, { stroke: value } );
-		} );
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-fill-color' ).text() : 'Fill Color' ), 'color', layer.fill || '#ffffff', function ( value ) {
-			self.editor.updateLayer( layer.id, { fill: value } );
-		} );
-	};
-
-	LayerPanel.prototype.addBlurProperties = function ( form, layer ) {
-		var self = this;
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-width' ).text() : 'Width' ), 'number', layer.width || 0, function ( value ) {
-			self.editor.updateLayer( layer.id, { width: parseFloat( value ) } );
-		} );
-
-		this.addPropertyField( form, ( mw.message ? mw.message( 'layers-prop-height' ).text() : 'Height' ), 'number', layer.height || 0, function ( value ) {
-			self.editor.updateLayer( layer.id, { height: parseFloat( value ) } );
-		} );
-
-		this.addPropertyField(
-			form,
-			( mw.message ? mw.message( 'layers-prop-blur-radius' ).text() : 'Blur Radius' ),
-			'number',
-			layer.blurRadius || 12,
-			function ( value ) {
-				self.editor.updateLayer( layer.id, {
-					blurRadius: Math.max(
-						1,
-						Math.min( 64, parseInt( value, 10 ) || 12 )
-					)
-				} );
-			}
-		);
-	};
+	LayerPanel.prototype.addBlurProperties = function () {};
 
 	LayerPanel.prototype.setupDragAndDrop = function () {
 		var self = this;
@@ -542,6 +1233,8 @@
 			return;
 		}
 
+		var t = this.msg.bind( this );
+
 		// Get visible layers
 		var visibleLayers = this.layers.filter( function ( layer ) {
 			return layer.visible !== false;
@@ -551,12 +1244,12 @@
 		var codeHtml = '';
 
 		if ( visibleLayers.length === 0 ) {
-			codeHtml = '<p><strong>' + ( mw.message ? mw.message( 'layers-code-none' ).text() : 'No layers visible.' ) + '</strong> ' + ( mw.message ? mw.message( 'layers-code-enable' ).text() : 'Enable layers to see the code.' ) + '</p>';
+			codeHtml = '<p><strong>' + t( 'layers-code-none', 'No layers visible.' ) + '</strong> ' + t( 'layers-code-enable', 'Enable layers to see the code.' ) + '</p>';
 		} else if ( visibleLayers.length === this.layers.length ) {
 			// All layers visible
-			codeHtml = '<p><strong>' + ( mw.message ? mw.message( 'layers-code-all-visible' ).text() : 'All layers visible:' ) + '</strong></p>' +
-				'<code class="layers-code">[[File:' + filename + '|500px|layers=all|' + ( mw.message ? mw.message( 'layers-code-caption' ).text() : 'Your caption' ) + ']]</code>' +
-				'<button class="copy-btn" data-code="layers=all">' + ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' ) + '</button>';
+			codeHtml = '<p><strong>' + t( 'layers-code-all-visible', 'All layers visible:' ) + '</strong></p>' +
+				'<code class="layers-code">[[File:' + filename + '|500px|layers=all|' + t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
+				'<button class="copy-btn" data-code="layers=all">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
 		} else {
 			// Specific layers visible
 			var layerIds = visibleLayers.map( function ( layer ) {
@@ -564,9 +1257,9 @@
 			} );
 			var layersParam = layerIds.join( ',' );
 
-			codeHtml = '<p><strong>' + ( mw.message ? mw.message( 'layers-code-selected-visible' ).text() : 'Selected layers visible:' ) + '</strong></p>' +
-				'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|' + ( mw.message ? mw.message( 'layers-code-caption' ).text() : 'Your caption' ) + ']]</code>' +
-				'<button class="copy-btn" data-code="layers=' + layersParam + '">' + ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' ) + '</button>';
+			codeHtml = '<p><strong>' + t( 'layers-code-selected-visible', 'Selected layers visible:' ) + '</strong></p>' +
+				'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|' + t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
+				'<button class="copy-btn" data-code="layers=' + layersParam + '">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
 		}
 
 		content.innerHTML = codeHtml;
@@ -578,15 +1271,15 @@
 				var code = btn.getAttribute( 'data-code' );
 
 				var onSuccess = function () {
-					btn.textContent = ( mw.message ? mw.message( 'layers-code-copied' ).text() : 'Copied!' );
+					btn.textContent = t( 'layers-code-copied', 'Copied!' );
 					setTimeout( function () {
-						btn.textContent = ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' );
+						btn.textContent = t( 'layers-code-copy', 'Copy' );
 					}, 2000 );
 				};
 				var onFailure = function () {
-					btn.textContent = ( mw.message ? mw.message( 'layers-code-copy-failed' ).text() : 'Copy failed' );
+					btn.textContent = t( 'layers-code-copy-failed', 'Copy failed' );
 					setTimeout( function () {
-						btn.textContent = ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' );
+						btn.textContent = t( 'layers-code-copy', 'Copy' );
 					}, 2000 );
 				};
 

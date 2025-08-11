@@ -1,3 +1,32 @@
+/* Revision selector styles */
+.layers-revision-wrap {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-right: 12px;
+}
+
+.layers-revision-label {
+	font-size: 0.75em;
+	opacity: 0.8;
+}
+
+.layers-revision-select {
+	height: 28px;
+	font-size: 0.75em;
+}
+
+.layers-revision-name {
+	height: 26px;
+	font-size: 0.75em;
+	padding: 2px 6px;
+	min-width: 160px;
+}
+
+.layers-revision-load {
+	height: 28px;
+	font-size: 0.75em;
+}
 /* stylelint-disable */
 /* Editor container */
 .layers-editor-container {
