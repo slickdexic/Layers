@@ -548,11 +548,11 @@
 			if ( data.layersinfo && data.layersinfo.layerset ) {
 				self.debugLog( 'Layers: Found layerset data, processing layers...' );
 				self.debugLog( 'Layers: Raw layerset data:', data.layersinfo.layerset );
-				
+
 				var rawLayers = data.layersinfo.layerset.data.layers || [];
 				self.debugLog( 'Layers: Raw layers array length:', rawLayers.length );
 				self.debugLog( 'Layers: Raw layers array:', rawLayers );
-				
+
 				self.layers = rawLayers
 					.map( function ( layer ) {
 						// Ensure every layer has an id
@@ -577,7 +577,7 @@
 						return layer;
 					} );
 				self.currentLayerSetId = data.layersinfo.layerset.id || null;
-				
+
 				self.debugLog( 'Layers: Processed layers count:', self.layers.length );
 				self.debugLog( 'Layers: Processed layers array:', self.layers );
 

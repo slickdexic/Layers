@@ -3511,7 +3511,7 @@
 
 			// Draw preview guide while dragging from ruler
 			this.drawGuidePreview();
-			
+
 			if ( window.mw && window.mw.log ) {
 				mw.log( 'Layers: renderLayers completed successfully' );
 			}
