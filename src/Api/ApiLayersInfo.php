@@ -17,8 +17,9 @@ class ApiLayersInfo extends ApiBase {
 
 	/**
 	 * Constructor
-	 * @param ApiMain $main
-	 * @param string $action
+	 * 
+	 * @param ApiMain $main The main API instance
+	 * @param string $action The action name for this module
 	 */
 	public function __construct( ApiMain $main, $action ) {
 		parent::__construct( $main, $action );
@@ -26,6 +27,8 @@ class ApiLayersInfo extends ApiBase {
 
 	/**
 	 * Execute the API request
+	 * 
+	 * @throws \ApiUsageException When file is not found or other errors occur
 	 */
 	public function execute() {
 		// Get parameters
@@ -116,7 +119,8 @@ class ApiLayersInfo extends ApiBase {
 
 	/**
 	 * Get allowed parameters for this API module
-	 * @return array
+	 * 
+	 * @return array Array of parameter definitions for filename and layersetid
 	 */
 	public function getAllowedParams() {
 		return [
@@ -133,7 +137,8 @@ class ApiLayersInfo extends ApiBase {
 
 	/**
 	 * Get example messages for this API module
-	 * @return array
+	 * 
+	 * @return array Array of example API calls with message keys
 	 */
 	public function getExamplesMessages() {
 		return [

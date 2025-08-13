@@ -10,8 +10,9 @@ class ApiLayersSave extends ApiBase {
 
 	/**
 	 * Main execution function
-	 * @throws \ApiUsageException
-	 * @throws \Exception
+	 * 
+	 * @throws \ApiUsageException When user lacks permission or data is invalid
+	 * @throws \Exception When database operations fail
 	 */
 	public function execute() {
 		$user = $this->getUser();
@@ -87,7 +88,8 @@ class ApiLayersSave extends ApiBase {
 
 	/**
 	 * Check whether required DB schema exists
-	 * @return bool
+	 * 
+	 * @return bool True if layer tables exist and are accessible
 	 */
 	private function isSchemaInstalled(): bool {
 		try {
@@ -118,8 +120,8 @@ class ApiLayersSave extends ApiBase {
 	 * Validates and sanitizes layer data.
 	 * Returns sanitized data array on success, false on failure.
 	 *
-	 * @param array $layersData
-	 * @return array|false
+	 * @param array $layersData The raw layer data array to validate
+	 * @return array|false Sanitized layer data array on success, false on validation failure
 	 */
 	private function validateAndSanitizeLayersData( array $layersData ) {
 		if ( !is_array( $layersData ) ) {
@@ -243,8 +245,9 @@ class ApiLayersSave extends ApiBase {
 
 	/**
 	 * Validate filename for security
-	 * @param string $filename
-	 * @return bool
+	 * 
+	 * @param string $filename The filename to validate
+	 * @return bool True if filename is safe and valid
 	 */
 	private function isValidFilename( string $filename ): bool {
 		// Basic filename validation
@@ -267,8 +270,9 @@ class ApiLayersSave extends ApiBase {
 
 	/**
 	 * Validate color values with enhanced security
-	 * @param mixed $color
-	 * @return bool
+	 * 
+	 * @param mixed $color The color value to validate (string, array, or other)
+	 * @return bool True if color is valid and safe
 	 */
 	private function isValidColor( $color ): bool {
 		if ( !is_string( $color ) ) {
@@ -334,9 +338,10 @@ class ApiLayersSave extends ApiBase {
 	}
 
 	/**
-	 * Sanitize color values
-	 * @param mixed $color
-	 * @return string
+	 * Sanitize color values to prevent injection attacks
+	 * 
+	 * @param mixed $color The color value to sanitize
+	 * @return string Safe, sanitized color value
 	 */
 	private function sanitizeColor( $color ): string {
 		if ( !is_string( $color ) ) {
@@ -363,7 +368,8 @@ class ApiLayersSave extends ApiBase {
 
 	/**
 	 * Get allowed parameters for this API module
-	 * @return array
+	 * 
+	 * @return array Array of parameter definitions for filename, data, setname, and token
 	 */
 	public function getAllowedParams() {
 		return [
@@ -388,7 +394,8 @@ class ApiLayersSave extends ApiBase {
 
 	/**
 	 * Check if this API module needs a token
-	 * @return string
+	 * 
+	 * @return string Type of token required ('csrf' for write operations)
 	 */
 	public function needsToken() {
 		return 'csrf';
@@ -396,7 +403,8 @@ class ApiLayersSave extends ApiBase {
 
 	/**
 	 * Check if this API module is in write mode
-	 * @return bool
+	 * 
+	 * @return bool True since this module modifies data
 	 */
 	public function isWriteMode() {
 		return true;
@@ -404,7 +412,8 @@ class ApiLayersSave extends ApiBase {
 
 	/**
 	 * Get example messages for this API module
-	 * @return array
+	 * 
+	 * @return array Array of example API calls with descriptions
 	 */
 	public function getExamplesMessages() {
 		return [

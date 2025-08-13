@@ -116,9 +116,9 @@ class Hooks {
 	 * Ensure the viewer module is considered in the startup payload on every page.
 	 * This can help skins/environments that defer module loads.
 	 *
-	 * @param array &$vars
-	 * @param mixed $out OutputPage
-	 * @return bool
+	 * @param array &$vars Global JavaScript variables array (passed by reference)
+	 * @param mixed $out OutputPage instance
+	 * @return bool Always returns true to continue hook processing
 	 */
 	public static function onMakeGlobalVariablesScript( &$vars, $out ) {
 		try {
@@ -142,12 +142,13 @@ class Hooks {
 
 	/**
 	 * FileDeleteComplete hook handler
+	 * Cleans up layer data when files are deleted
 	 *
-	 * @param mixed $file File
-	 * @param mixed $oldimage OldLocalFile|mixed
-	 * @param mixed $article Article|WikiPage|mixed
-	 * @param mixed $user User
-	 * @param string $reason
+	 * @param mixed $file The File object being deleted
+	 * @param mixed $oldimage The OldLocalFile object (or mixed type)
+	 * @param mixed $article The Article or WikiPage object (or mixed type)
+	 * @param mixed $user The User performing the deletion
+	 * @param string $reason The reason for deletion
 	 * @return void
 	 */
 	public static function onFileDeleteComplete( $file, $oldimage, $article, $user, $reason ) {

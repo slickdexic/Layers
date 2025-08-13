@@ -583,10 +583,13 @@
 	CanvasManager.prototype.startResize = function ( handle ) {
 		this.isResizing = true;
 		this.resizeHandle = handle;
-		this.canvas.style.cursor = this.getResizeCursor( handle.type );
+		
+		// Get rotation for proper cursor
+		var layer = this.editor.getLayerById( this.selectedLayerId );
+		var rotation = layer ? layer.rotation : 0;
+		this.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
 
 		// Store original layer state
-		var layer = this.editor.getLayerById( this.selectedLayerId );
 		if ( layer ) {
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
@@ -634,23 +637,50 @@
 		// console.log( 'Layers: Starting drag' );
 	};
 
-	CanvasManager.prototype.getResizeCursor = function ( handleType ) {
-		switch ( handleType ) {
-			case 'nw':
-			case 'se':
-				return 'nw-resize';
-			case 'ne':
-			case 'sw':
-				return 'ne-resize';
-			case 'n':
-			case 's':
-				return 'n-resize';
-			case 'e':
-			case 'w':
-				return 'e-resize';
-			default:
-				return 'default';
+	CanvasManager.prototype.getResizeCursor = function ( handleType, rotation ) {
+		// If no rotation, use the original cursor logic
+		if ( !rotation || rotation === 0 ) {
+			switch ( handleType ) {
+				case 'nw':
+				case 'se':
+					return 'nw-resize';
+				case 'ne':
+				case 'sw':
+					return 'ne-resize';
+				case 'n':
+				case 's':
+					return 'n-resize';
+				case 'e':
+				case 'w':
+					return 'e-resize';
+				default:
+					return 'default';
+			}
 		}
+
+		// For rotated objects, we need to calculate the effective cursor direction
+		// based on the handle type and rotation angle
+		var normalizedRotation = ( ( rotation % 360 ) + 360 ) % 360;
+		var cursorIndex = Math.round( normalizedRotation / 45 ) % 8;
+
+		// Map handle types to base cursor directions (0 = north)
+		var baseCursors = {
+			n: 0,
+			ne: 1,
+			e: 2,
+			se: 3,
+			s: 4,
+			sw: 5,
+			w: 6,
+			nw: 7
+		};
+
+		// Calculate the effective cursor direction
+		var effectiveDirection = ( baseCursors[ handleType ] + cursorIndex ) % 8;
+
+		// Map back to cursor names
+		var cursors = [ 'n-resize', 'ne-resize', 'e-resize', 'ne-resize', 'n-resize', 'ne-resize', 'e-resize', 'nw-resize' ];
+		return cursors[ effectiveDirection ];
 	};
 
 	CanvasManager.prototype.handleMouseMove = function ( e ) {
@@ -1205,7 +1235,9 @@
 		if ( this.selectedLayerId ) {
 			var handleHit = this.hitTestSelectionHandles( point );
 			if ( handleHit ) {
-				this.canvas.style.cursor = this.getResizeCursor( handleHit.type );
+				var selectedLayer = this.editor.getLayerById( this.selectedLayerId );
+				var rotation = selectedLayer ? selectedLayer.rotation : 0;
+				this.canvas.style.cursor = this.getResizeCursor( handleHit.type, rotation );
 				return;
 			}
 
@@ -2152,11 +2184,31 @@
 
 		this.ctx.save();
 
-		// Get layer bounds
+		// Get layer bounds (unrotated)
 		var bounds = this.getLayerBounds( layer );
 		if ( !bounds ) {
 			this.ctx.restore();
 			return;
+		}
+
+		// Apply rotation transformation if the layer has rotation
+		var rotation = layer.rotation || 0;
+		if ( rotation !== 0 ) {
+			// Calculate center of the original bounds for rotation
+			var centerX = bounds.x + bounds.width / 2;
+			var centerY = bounds.y + bounds.height / 2;
+			
+			// Apply the same rotation as the layer
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( rotation * Math.PI / 180 );
+			
+			// Adjust bounds to be relative to the rotation center
+			bounds = {
+				x: -bounds.width / 2,
+				y: -bounds.height / 2,
+				width: bounds.width,
+				height: bounds.height
+			};
 		}
 
 		// Draw selection outline
@@ -2166,10 +2218,10 @@
 		this.ctx.strokeRect( bounds.x - 1, bounds.y - 1, bounds.width + 2, bounds.height + 2 );
 
 		// Draw selection handles
-		this.drawSelectionHandles( bounds );
+		this.drawSelectionHandles( bounds, layer );
 
 		// Draw rotation handle
-		this.drawRotationHandle( bounds );
+		this.drawRotationHandle( bounds, layer );
 
 		this.ctx.restore();
 	};
@@ -2302,12 +2354,13 @@
 		}
 	};
 
-	CanvasManager.prototype.drawSelectionHandles = function ( bounds ) {
+	CanvasManager.prototype.drawSelectionHandles = function ( bounds, layer ) {
 		this.selectionHandles = []; // Reset handles array
 
 		var handleSize = 8;
 		var handleColor = '#2196f3';
 		var handleBorderColor = '#ffffff';
+		var rotation = ( layer && layer.rotation ) || 0;
 
 		// Define handle positions (8 handles: 4 corners + 4 midpoints)
 		var handles = [
@@ -2321,17 +2374,48 @@
 			{ type: 'w', x: bounds.x, y: bounds.y + bounds.height / 2 }
 		];
 
-		// Draw handles
-		handles.forEach( function ( handle ) {
-			// Store handle info for hit testing
-			this.selectionHandles.push( {
-				type: handle.type,
-				x: handle.x - handleSize / 2,
-				y: handle.y - handleSize / 2,
-				width: handleSize,
-				height: handleSize
-			} );
+		// Calculate actual world coordinates for hit testing (transform back from rotated space)
+		var actualHandles = [];
+		if ( rotation !== 0 && layer ) {
+			// Get the original layer bounds for calculating the center
+			var originalBounds = this.getLayerBounds( layer );
+			var centerX = originalBounds.x + originalBounds.width / 2;
+			var centerY = originalBounds.y + originalBounds.height / 2;
+			var rotRad = rotation * Math.PI / 180;
+			var cos = Math.cos( rotRad );
+			var sin = Math.sin( rotRad );
 
+			handles.forEach( function ( handle ) {
+				// Transform handle position back to world coordinates
+				var worldX = centerX + handle.x * cos - handle.y * sin;
+				var worldY = centerY + handle.x * sin + handle.y * cos;
+				
+				actualHandles.push( {
+					type: handle.type,
+					x: worldX - handleSize / 2,
+					y: worldY - handleSize / 2,
+					width: handleSize,
+					height: handleSize
+				} );
+			} );
+		} else {
+			// No rotation, use handles as-is
+			handles.forEach( function ( handle ) {
+				actualHandles.push( {
+					type: handle.type,
+					x: handle.x - handleSize / 2,
+					y: handle.y - handleSize / 2,
+					width: handleSize,
+					height: handleSize
+				} );
+			} );
+		}
+
+		// Store handles for hit testing
+		this.selectionHandles = actualHandles;
+
+		// Draw handles in the current transformed coordinate space
+		handles.forEach( function ( handle ) {
 			// Draw handle
 			this.ctx.fillStyle = handleColor;
 			this.ctx.strokeStyle = handleBorderColor;
@@ -2353,27 +2437,52 @@
 		}.bind( this ) );
 	};
 
-	CanvasManager.prototype.drawRotationHandle = function ( bounds ) {
+	CanvasManager.prototype.drawRotationHandle = function ( bounds, layer ) {
 		var handleSize = 8;
 		var handleColor = '#ff9800';
 		var handleBorderColor = '#ffffff';
 		var lineColor = '#2196f3';
+		var rotation = ( layer && layer.rotation ) || 0;
 
 		// Rotation handle position (above the selection)
 		var rotationHandleX = bounds.x + bounds.width / 2;
 		var rotationHandleY = bounds.y - 25;
 
-		// Store rotation handle for hit testing
+		// Calculate actual world coordinates for hit testing
+		var actualHandleX = rotationHandleX;
+		var actualHandleY = rotationHandleY;
+		var centerX = bounds.x + bounds.width / 2;
+		var centerY = bounds.y + bounds.height / 2;
+
+		if ( rotation !== 0 && layer ) {
+			// Get the original layer bounds for calculating the center
+			var originalBounds = this.getLayerBounds( layer );
+			var originalCenterX = originalBounds.x + originalBounds.width / 2;
+			var originalCenterY = originalBounds.y + originalBounds.height / 2;
+			var rotRad = rotation * Math.PI / 180;
+			var cos = Math.cos( rotRad );
+			var sin = Math.sin( rotRad );
+
+			// Transform rotation handle position back to world coordinates
+			actualHandleX = originalCenterX + rotationHandleX * cos - rotationHandleY * sin;
+			actualHandleY = originalCenterY + rotationHandleX * sin + rotationHandleY * cos;
+			
+			// Use original center for rotation center in hit testing
+			centerX = originalCenterX;
+			centerY = originalCenterY;
+		}
+
+		// Store rotation handle for hit testing (in world coordinates)
 		this.rotationHandle = {
-			x: rotationHandleX - handleSize / 2,
-			y: rotationHandleY - handleSize / 2,
+			x: actualHandleX - handleSize / 2,
+			y: actualHandleY - handleSize / 2,
 			width: handleSize,
 			height: handleSize,
-			centerX: bounds.x + bounds.width / 2,
-			centerY: bounds.y + bounds.height / 2
+			centerX: centerX,
+			centerY: centerY
 		};
 
-		// Draw connection line
+		// Draw connection line (in transformed coordinate space)
 		this.ctx.strokeStyle = lineColor;
 		this.ctx.lineWidth = 1;
 		this.ctx.setLineDash( [] );
@@ -2382,7 +2491,7 @@
 		this.ctx.lineTo( rotationHandleX, rotationHandleY );
 		this.ctx.stroke();
 
-		// Draw rotation handle (circle)
+		// Draw rotation handle (circle) (in transformed coordinate space)
 		this.ctx.fillStyle = handleColor;
 		this.ctx.strokeStyle = handleBorderColor;
 		this.ctx.lineWidth = 1;

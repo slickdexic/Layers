@@ -3,6 +3,9 @@
 	"private": true,
 	"scripts": {
 		"test": "grunt test",
+		"test:js": "jest",
+		"test:watch": "jest --watch",
+		"test:coverage": "jest --coverage",
 		"build": "webpack --mode=production",
 		"build:dev": "webpack --mode=development",
 		"watch": "webpack --mode=development --watch"
@@ -18,10 +21,14 @@
 		"webpack-cli": "^5.1.0",
 		"babel-loader": "^9.1.0",
 		"@babel/core": "^7.22.0",
-		"@babel/preset-env": "^7.22.0"
+		"@babel/preset-env": "^7.22.0",
+		"jest": "^29.7.0",
+		"jest-environment-jsdom": "^29.7.0",
+		"@testing-library/jest-dom": "^6.1.0"
 	},
 	"eslintIgnore": [
 		"vendor/**",
-		"dist/**"
+		"dist/**",
+		"tests/jest/**"
 	]
 }

@@ -142,6 +142,11 @@
 				"jquery"
 			],
 			"scripts": [
+				"EventHandler.js",
+				"RenderEngine.js",
+				"SelectionManager.js",
+				"HistoryManager.js",
+				"ToolManager.js",
 				"CanvasManager.js",
 				"LayerPanel.js",
 				"LayersValidator.js",
