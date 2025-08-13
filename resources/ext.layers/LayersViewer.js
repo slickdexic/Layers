@@ -361,13 +361,29 @@
 
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fillRect( x, y, width, height );
+			// Apply fill opacity if specified
+			if ( typeof layer.fillOpacity === 'number' ) {
+				var savedAlpha = this.ctx.globalAlpha;
+				this.ctx.globalAlpha = savedAlpha * layer.fillOpacity;
+				this.ctx.fillRect( x, y, width, height );
+				this.ctx.globalAlpha = savedAlpha;
+			} else {
+				this.ctx.fillRect( x, y, width, height );
+			}
 		}
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = strokeW;
-			this.ctx.strokeRect( x, y, width, height );
+			// Apply stroke opacity if specified
+			if ( typeof layer.strokeOpacity === 'number' ) {
+				var savedAlpha2 = this.ctx.globalAlpha;
+				this.ctx.globalAlpha = savedAlpha2 * layer.strokeOpacity;
+				this.ctx.strokeRect( x, y, width, height );
+				this.ctx.globalAlpha = savedAlpha2;
+			} else {
+				this.ctx.strokeRect( x, y, width, height );
+			}
 		}
 
 		this.ctx.restore();

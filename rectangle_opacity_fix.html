@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rectangle Fill Opacity - Fix Verification</title>
+    <style>
+        body { margin: 20px; font-family: Arial; }
+        .test-container { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        .status { padding: 5px 10px; margin: 5px 0; display: inline-block; }
+        .fixed { background: #afa; color: #050; }
+        code { background: #f5f5f5; padding: 2px 4px; font-family: monospace; }
+        .step { margin: 10px 0; padding: 10px; background: #f9f9f9; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>Rectangle Fill Opacity Issue - Fix Verification</h1>
+
+    <div class="test-container">
+        <h2>Issue: Rectangle fill opacity not saving/loading</h2>
+        <div class="status fixed">FIXED</div>
+        
+        <h3>Root Cause Analysis</h3>
+        <p><strong>Problem:</strong> The <code>fillOpacity</code> and <code>strokeOpacity</code> properties were missing from the API validation whitelist in <code>ApiLayersSave.php</code>.</p>
+        
+        <p><strong>Evidence:</strong></p>
+        <ul>
+            <li>CanvasManager.js properly renders fill opacity: <code>var fOp = (typeof layer.fillOpacity === 'number') ? layer.fillOpacity : 1;</code></li>
+            <li>LayerPanel.js has fill opacity controls that save values</li>
+            <li>API was rejecting these properties during save validation</li>
+        </ul>
+
+        <h3>Solution Applied</h3>
+        <p>Added missing opacity properties to the API validation:</p>
+        <ul>
+            <li><code>'fillOpacity' => 'numeric'</code></li>
+            <li><code>'strokeOpacity' => 'numeric'</code></li>
+        </ul>
+        
+        <p>Also enhanced LayersViewer.js to respect fill/stroke opacity for display consistency.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Files Modified</h2>
+        <ul>
+            <li><code>src/Api/ApiLayersSave.php</code> - Added fillOpacity and strokeOpacity to allowed properties</li>
+            <li><code>resources/ext.layers/LayersViewer.js</code> - Added opacity support for rectangles in viewer</li>
+        </ul>
+    </div>
+
+    <div class="test-container">
+        <h2>Verification Steps</h2>
+        
+        <div class="step">
+            <strong>Step 1:</strong> Create a rectangle layer in the editor
+        </div>
+        
+        <div class="step">
+            <strong>Step 2:</strong> Set fill opacity to a value less than 100% (e.g., 50%)
+            <br><small>Check in Layer Properties panel → Effects → Fill Opacity</small>
+        </div>
+        
+        <div class="step">
+            <strong>Step 3:</strong> Save the layer data
+            <br><small>Use the save button in the editor</small>
+        </div>
+        
+        <div class="step">
+            <strong>Step 4:</strong> Close and reopen the editor
+            <br><small>Or refresh the page and reload the layer data</small>
+        </div>
+        
+        <div class="step">
+            <strong>Step 5:</strong> Verify fill opacity is preserved
+            <br><small>Check that the rectangle still appears semi-transparent and the Fill Opacity setting shows the correct value</small>
+        </div>
+        
+        <div class="step">
+            <strong>Step 6:</strong> Test stroke opacity as well
+            <br><small>Set stroke opacity to different value and verify it persists after save/load</small>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Technical Details</h2>
+        
+        <h3>API Validation Fix</h3>
+        <p>Before:</p>
+        <pre><code>'opacity' => 'numeric', 'blendMode' => 'string'</code></pre>
+        
+        <p>After:</p>
+        <pre><code>'opacity' => 'numeric', 'fillOpacity' => 'numeric', 'strokeOpacity' => 'numeric',
+'blendMode' => 'string'</code></pre>
+
+        <h3>LayersViewer Enhancement</h3>
+        <p>Added opacity handling to rectangle rendering:</p>
+        <pre><code>if (typeof layer.fillOpacity === 'number') {
+    var savedAlpha = this.ctx.globalAlpha;
+    this.ctx.globalAlpha = savedAlpha * layer.fillOpacity;
+    this.ctx.fillRect(x, y, width, height);
+    this.ctx.globalAlpha = savedAlpha;
+}</code></pre>
+
+        <h3>Flow Verification</h3>
+        <ol>
+            <li><strong>Editor:</strong> User sets fillOpacity in LayerPanel</li>
+            <li><strong>Data:</strong> Property stored in layer object</li>
+            <li><strong>Save:</strong> API now accepts fillOpacity property</li>
+            <li><strong>Load:</strong> Property restored from saved data</li>
+            <li><strong>Render:</strong> Both editor and viewer respect opacity</li>
+        </ol>
+    </div>
+
+    <div class="test-container">
+        <h2>Expected Results</h2>
+        <p><strong>✅ Rectangle fill opacity should now:</strong></p>
+        <ul>
+            <li>Save correctly when set in the layer properties</li>
+            <li>Load correctly when reopening the editor</li>
+            <li>Display consistently in both editor and viewer modes</li>
+            <li>Persist across browser sessions</li>
+        </ul>
+        
+        <p><strong>✅ Stroke opacity should also work the same way</strong></p>
+    </div>
+
+    <script>
+        console.log('Rectangle fill opacity fix verification loaded');
+        console.log('Properties added to API validation:');
+        console.log('- fillOpacity: numeric');
+        console.log('- strokeOpacity: numeric');
+        console.log('LayersViewer enhanced with opacity support');
+    </script>
+</body>
+</html>
