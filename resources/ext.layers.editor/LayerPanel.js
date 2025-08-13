@@ -171,6 +171,9 @@
 
 	LayerPanel.prototype.createInterface = function () {
 		this.container.innerHTML = '';
+		this.container.setAttribute( 'role', 'region' );
+		var t = this.msg ? this.msg.bind( this ) : function( k, d ) { return d; };
+		this.container.setAttribute( 'aria-label', t( 'layers-panel-title', 'Layers' ) );
 
 		var t = this.msg.bind( this );
 
@@ -186,28 +189,117 @@
 		header.appendChild( subtitle );
 		this.container.appendChild( header );
 
+		// Create sidebar inner container for resizable layout
+		var sidebarInner = document.createElement( 'div' );
+		sidebarInner.className = 'layers-panel-inner';
+		sidebarInner.style.display = 'flex';
+		sidebarInner.style.flexDirection = 'column';
+		sidebarInner.style.height = '100%';
+
 		// Create layer list container
 		this.layerList = document.createElement( 'div' );
 		this.layerList.className = 'layers-list';
+		this.layerList.setAttribute( 'role', 'listbox' );
+		this.layerList.setAttribute( 'aria-label', t( 'layers-panel-title', 'Layers' ) );
 		var emptyState = document.createElement( 'div' );
 		emptyState.className = 'layers-empty';
 		emptyState.textContent = t( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
 		this.layerList.appendChild( emptyState );
-		this.container.appendChild( this.layerList );
+
+		// Divider
+		var divider = document.createElement( 'div' );
+		divider.className = 'layers-panel-divider';
+		divider.setAttribute( 'tabindex', '0' );
+		divider.setAttribute( 'role', 'separator' );
+		divider.setAttribute( 'aria-orientation', 'horizontal' );
+		divider.title = t( 'layers-panel-divider', 'Drag to resize panels' );
 
 		// Create properties and code panels
 		this.propertiesPanel = document.createElement( 'div' );
 		this.propertiesPanel.className = 'layers-properties';
+		this.propertiesPanel.setAttribute( 'role', 'region' );
+		this.propertiesPanel.setAttribute( 'aria-label', t( 'layers-properties-title', 'Properties' ) );
 		this.propertiesPanel.innerHTML = '<h4>' + t( 'layers-properties-title', 'Properties' ) + '</h4><div class="properties-content"></div>';
 
 		this.codePanel = document.createElement( 'div' );
 		this.codePanel.className = 'layers-code-panel';
+		this.codePanel.setAttribute( 'role', 'region' );
+		this.codePanel.setAttribute( 'aria-label', t( 'layers-code-title', 'Wikitext Code' ) );
 		this.codePanel.innerHTML = '<h4>' + t( 'layers-code-title', 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
 
-		// Mount below list in the sidebar (left column)
-		this.container.appendChild( this.propertiesPanel );
+		// Compose sidebar
+		sidebarInner.appendChild( this.layerList );
+		sidebarInner.appendChild( divider );
+		sidebarInner.appendChild( this.propertiesPanel );
+		this.container.appendChild( header );
+		this.container.appendChild( sidebarInner );
 		this.container.appendChild( this.codePanel );
 		this.updateCodePanel();
+
+		// Resizable divider logic
+		var isDragging = false;
+		var minListHeight = 60;
+		var minPropsHeight = 80;
+		divider.addEventListener( 'mousedown', function () {
+			isDragging = true;
+			document.body.style.cursor = 'row-resize';
+			document.body.style.userSelect = 'none';
+		} );
+		document.addEventListener( 'mousemove', function ( e ) {
+			if ( !isDragging ) {
+				return;
+			}
+			var rect = sidebarInner.getBoundingClientRect();
+			var offset = e.clientY - rect.top;
+			var totalHeight = sidebarInner.offsetHeight;
+			var newListHeight = offset;
+			var newPropsHeight = totalHeight - offset - divider.offsetHeight;
+			if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
+				return;
+			}
+			// Set heights
+			sidebarInner.childNodes[ 0 ].style.flex = 'none';
+			sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
+			sidebarInner.childNodes[ 2 ].style.flex = 'none';
+			sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
+		} );
+		document.addEventListener( 'mouseup', function () {
+			if ( isDragging ) {
+				isDragging = false;
+				document.body.style.cursor = '';
+				document.body.style.userSelect = '';
+			}
+		} );
+		// Touch support
+		divider.addEventListener( 'touchstart', function () {
+			isDragging = true;
+			document.body.style.cursor = 'row-resize';
+			document.body.style.userSelect = 'none';
+		} );
+		document.addEventListener( 'touchmove', function ( e ) {
+			if ( !isDragging ) {
+				return;
+			}
+			var rect = sidebarInner.getBoundingClientRect();
+			var offset = e.touches[ 0 ].clientY - rect.top;
+			var totalHeight = sidebarInner.offsetHeight;
+			var newListHeight = offset;
+			var newPropsHeight = totalHeight - offset - divider.offsetHeight;
+			if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
+				return;
+			}
+			sidebarInner.childNodes[ 0 ].style.flex = 'none';
+			sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
+			sidebarInner.childNodes[ 2 ].style.flex = 'none';
+			sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
+		}, { passive: false } );
+		document.addEventListener( 'touchend', function () {
+			if ( isDragging ) {
+				isDragging = false;
+				document.body.style.cursor = '';
+				document.body.style.userSelect = '';
+			}
+		} );
 	};
 
 	LayerPanel.prototype.setupEventHandlers = function () {
@@ -256,12 +348,30 @@
 			item.classList.add( 'selected' );
 		}
 
-		// Visibility toggle
+		// Add a wide grab area for layer selection/move, larger and accessible
+		var grabArea = document.createElement( 'div' );
+		grabArea.className = 'layer-grab-area';
+		grabArea.title = t( 'layers-grab-area', 'Drag to move/select' );
+		grabArea.setAttribute( 'tabindex', '0' );
+		grabArea.setAttribute( 'role', 'button' );
+		grabArea.setAttribute( 'aria-label', t( 'layers-grab-area', 'Drag to move/select' ) );
+		grabArea.style.width = '36px';
+		grabArea.style.height = '36px';
+		grabArea.style.display = 'flex';
+		grabArea.style.alignItems = 'center';
+		grabArea.style.justifyContent = 'center';
+		grabArea.style.cursor = 'grab';
+		grabArea.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2.5" fill="#bbb"/><circle cx="17" cy="7" r="2.5" fill="#bbb"/><circle cx="7" cy="17" r="2.5" fill="#bbb"/><circle cx="17" cy="17" r="2.5" fill="#bbb"/></svg>';
+
+		// Visibility toggle (SVG eye icon, larger, accessible)
 		var visibilityBtn = document.createElement( 'button' );
 		visibilityBtn.className = 'layer-visibility';
-		visibilityBtn.innerHTML = layer.visible !== false ? '👁' : '👁‍🗨';
-		visibilityBtn.title = ( window.mw ? ( t( 'layers-toggle-visibility', 'Toggle visibility' ) ) : 'Toggle visibility' );
+		visibilityBtn.innerHTML = layer.visible !== false ? '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="7" fill="none" stroke="#666" stroke-width="2.5"/><circle cx="12" cy="12" r="3.5" fill="#666"/></svg>' : '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="7" fill="none" stroke="#aaa" stroke-width="2.5"/><line x1="5" y1="21" x2="21" y2="5" stroke="#c00" stroke-width="2.5"/></svg>';
+		visibilityBtn.title = t( 'layers-toggle-visibility', 'Toggle visibility' );
 		visibilityBtn.type = 'button';
+		visibilityBtn.setAttribute( 'aria-label', t( 'layers-toggle-visibility', 'Toggle visibility' ) );
+		visibilityBtn.style.width = '36px';
+		visibilityBtn.style.height = '36px';
 
 		// Layer name
 		var name = document.createElement( 'span' );
@@ -269,20 +379,27 @@
 		name.textContent = layer.name || this.getDefaultLayerName( layer );
 		name.contentEditable = true;
 
-		// Lock toggle
+		// Lock toggle (SVG padlock, larger, accessible)
 		var lockBtn = document.createElement( 'button' );
 		lockBtn.className = 'layer-lock';
-		lockBtn.innerHTML = layer.locked ? '🔒' : '🔓';
-		lockBtn.title = ( window.mw ? ( t( 'layers-toggle-lock', 'Toggle lock' ) ) : 'Toggle lock' );
+		lockBtn.innerHTML = layer.locked ? '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="8" rx="3" fill="#eee" stroke="#666" stroke-width="2"/><rect x="10" y="16" width="4" height="3" rx="1.5" fill="#bbb"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#666" stroke-width="2"/></svg>' : '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="8" rx="3" fill="#fff" stroke="#aaa" stroke-width="2"/><rect x="10" y="16" width="4" height="3" rx="1.5" fill="#ccc"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#aaa" stroke-width="2"/></svg>';
+		lockBtn.title = t( 'layers-toggle-lock', 'Toggle lock' );
 		lockBtn.type = 'button';
+		lockBtn.setAttribute( 'aria-label', t( 'layers-toggle-lock', 'Toggle lock' ) );
+		lockBtn.style.width = '36px';
+		lockBtn.style.height = '36px';
 
-		// Delete button
+		// Delete button (SVG trash can, larger, accessible)
 		var deleteBtn = document.createElement( 'button' );
 		deleteBtn.className = 'layer-delete';
-		deleteBtn.innerHTML = '🗑';
-		deleteBtn.title = ( window.mw ? ( t( 'layers-delete-layer-button', 'Delete layer' ) ) : 'Delete layer' );
+		deleteBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="8" rx="2.5" fill="#fff" stroke="#c00" stroke-width="2"/><rect x="10" y="5" width="4" height="3" rx="1.5" fill="#c00"/><line x1="9" y1="13" x2="15" y2="19" stroke="#c00" stroke-width="1.8"/><line x1="15" y1="13" x2="9" y2="19" stroke="#c00" stroke-width="1.8"/></svg>';
+		deleteBtn.title = t( 'layers-delete-layer-button', 'Delete layer' );
 		deleteBtn.type = 'button';
+		deleteBtn.setAttribute( 'aria-label', t( 'layers-delete-layer-button', 'Delete layer' ) );
+		deleteBtn.style.width = '36px';
+		deleteBtn.style.height = '36px';
 
+		item.appendChild( grabArea );
 		item.appendChild( visibilityBtn );
 		item.appendChild( name );
 		item.appendChild( lockBtn );
@@ -371,7 +488,7 @@
 	LayerPanel.prototype.toggleLayerVisibility = function ( layerId ) {
 		var layer = this.editor.getLayerById( layerId );
 		if ( layer ) {
-			layer.visible = layer.visible === false;
+			layer.visible = !( layer.visible !== false );
 			this.editor.renderLayers();
 			this.renderLayerList();
 			this.updateCodePanel(); // Update the code when visibility changes
@@ -824,6 +941,34 @@
 						self.editor.updateLayer( layer.id, { fontSize: parseInt( v, 10 ) } );
 					}
 				} );
+				// Text stroke width
+				addInput( {
+					label: t( 'layers-prop-stroke-width', 'Text Stroke Width' ),
+					type: 'number',
+					value: layer.textStrokeWidth || 0,
+					min: 0,
+					max: 10,
+					step: 1,
+					onChange: function ( v ) {
+						self.editor.updateLayer( layer.id, { textStrokeWidth: parseInt( v, 10 ) } );
+					}
+				} );
+				// Text stroke color (only show if stroke width > 0)
+				if ( ( layer.textStrokeWidth || 0 ) > 0 ) {
+					var textStrokeColorRow = document.createElement( 'div' );
+					textStrokeColorRow.className = 'property-field';
+					var textStrokeLabel = document.createElement( 'label' );
+					textStrokeLabel.textContent = t( 'layers-prop-stroke-color', 'Text Stroke Color' );
+					var textStrokeInput = document.createElement( 'input' );
+					textStrokeInput.type = 'color';
+					textStrokeInput.value = layer.textStrokeColor || '#000000';
+					textStrokeInput.addEventListener( 'change', function () {
+						self.editor.updateLayer( layer.id, { textStrokeColor: textStrokeInput.value } );
+					} );
+					textStrokeColorRow.appendChild( textStrokeLabel );
+					textStrokeColorRow.appendChild( textStrokeInput );
+					form.appendChild( textStrokeColorRow );
+				}
 				break;
 			case 'highlight':
 				addInput( {
@@ -885,172 +1030,100 @@
 
 		// Appearance
 		addSection( t( 'layers-section-appearance', 'Appearance' ) );
-		// Stroke color
-		addInput( {
-			label: t( 'layers-prop-stroke-color', 'Stroke Color' ),
-			type: 'color',
-			value: layer.stroke || '#000000',
-			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { stroke: v } );
-			}
+		// Stroke and fill color selectors, side by side, with clear labels
+		var colorRow = document.createElement( 'div' );
+		colorRow.className = 'property-field property-field--compound';
+		var strokeLabel = document.createElement( 'label' );
+		strokeLabel.textContent = t( 'layers-prop-stroke-color', 'Stroke Color' );
+		strokeLabel.setAttribute( 'for', 'stroke-color-input' );
+		var strokeInput = document.createElement( 'input' );
+		strokeInput.type = 'color';
+		strokeInput.id = 'stroke-color-input';
+		strokeInput.value = layer.stroke || '#000000';
+		strokeInput.setAttribute( 'aria-label', t( 'layers-prop-stroke-color', 'Stroke Color' ) );
+		strokeInput.addEventListener( 'change', function () {
+			self.editor.updateLayer( layer.id, { stroke: strokeInput.value } );
 		} );
-		// Stroke width
+		var fillLabel = document.createElement( 'label' );
+		fillLabel.textContent = t( 'layers-prop-fill-color', 'Fill Color' );
+		fillLabel.setAttribute( 'for', 'fill-color-input' );
+		var fillInput = document.createElement( 'input' );
+		fillInput.type = 'color';
+		fillInput.id = 'fill-color-input';
+		fillInput.value = layer.fill || '#ffffff';
+		fillInput.setAttribute( 'aria-label', t( 'layers-prop-fill-color', 'Fill Color' ) );
+		fillInput.addEventListener( 'change', function () {
+			self.editor.updateLayer( layer.id, { fill: fillInput.value } );
+		} );
+		colorRow.appendChild( strokeLabel );
+		colorRow.appendChild( strokeInput );
+		colorRow.appendChild( fillLabel );
+		colorRow.appendChild( fillInput );
+		form.appendChild( colorRow );
+		// Stroke width (no slider, up to 200)
 		addInput( {
 			label: t( 'layers-prop-stroke-width', 'Stroke Width' ),
 			type: 'number',
 			value: layer.strokeWidth || 1,
 			min: 0,
+			max: 200,
 			step: 1,
 			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { strokeWidth: parseFloat( v ) } );
+				var val = Math.max( 0, Math.min( 200, parseFloat( v ) ) );
+				self.editor.updateLayer( layer.id, { strokeWidth: val } );
 			}
 		} );
-		// Stroke opacity
-		var strokeOpacityValue = ( layer.strokeOpacity !== null &&
-			layer.strokeOpacity !== undefined ) ? layer.strokeOpacity : 1;
-		strokeOpacityValue = Math.round( strokeOpacityValue * 100 );
-		// Stroke opacity: number (0–100) + compact slider
-		( function () {
-			var field = document.createElement( 'div' );
-			field.className = 'property-field property-field--compound';
-			var labelEl = document.createElement( 'label' );
-			labelEl.textContent = t( 'layers-prop-stroke-opacity', 'Stroke Opacity' );
-			var number = document.createElement( 'input' );
-			number.type = 'number';
-			number.min = '0';
-			number.max = '100';
-			number.step = '1';
-			number.value = String( strokeOpacityValue );
-			number.className = 'compact-number';
-			var slider = document.createElement( 'input' );
-			slider.type = 'range';
-			slider.min = '0';
-			slider.max = '100';
-			slider.step = '1';
-			slider.value = String( strokeOpacityValue );
-			slider.className = 'compact-range';
-			number.addEventListener( 'change', function () {
-				var v = Math.max( 0, Math.min( 100, parseInt( number.value, 10 ) || 0 ) );
-				number.value = String( v );
-				slider.value = String( v );
-				self.editor.updateLayer( layer.id, { strokeOpacity: v / 100 } );
-			} );
-			slider.addEventListener( 'input', function () {
-				number.value = slider.value;
-				var soVal = parseInt( slider.value, 10 ) / 100;
-				self.editor.updateLayer( layer.id, { strokeOpacity: soVal } );
-			} );
-			field.appendChild( labelEl );
-			var controls = document.createElement( 'div' );
-			controls.className = 'compact-controls';
-			controls.appendChild( number );
-			controls.appendChild( slider );
-			field.appendChild( controls );
-			form.appendChild( field );
-		}() );
-		// Fill
+		// Stroke opacity (number only, 0-100)
 		addInput( {
-			label: t( 'layers-prop-fill-color', 'Fill Color' ),
-			type: 'color',
-			value: layer.fill || '#ffffff',
+			label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ),
+			type: 'number',
+			value: ( layer.strokeOpacity !== null && layer.strokeOpacity !== undefined ) ?
+				Math.round( layer.strokeOpacity * 100 ) :
+				100,
+			min: 0,
+			max: 100,
+			step: 1,
 			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { fill: v } );
+				var so = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 100 ) );
+				self.editor.updateLayer( layer.id, { strokeOpacity: so / 100 } );
 			}
 		} );
-		var fillOpacityValue = ( layer.fillOpacity !== null &&
-			layer.fillOpacity !== undefined ) ? layer.fillOpacity : 1;
-		fillOpacityValue = Math.round( fillOpacityValue * 100 );
-		// Fill opacity: number (0–100) + compact slider
-		( function () {
-			var field = document.createElement( 'div' );
-			field.className = 'property-field property-field--compound';
-			var labelEl = document.createElement( 'label' );
-			labelEl.textContent = t( 'layers-prop-fill-opacity', 'Fill Opacity' );
-			var number = document.createElement( 'input' );
-			number.type = 'number';
-			number.min = '0';
-			number.max = '100';
-			number.step = '1';
-			number.value = String( fillOpacityValue );
-			number.className = 'compact-number';
-			var slider = document.createElement( 'input' );
-			slider.type = 'range';
-			slider.min = '0';
-			slider.max = '100';
-			slider.step = '1';
-			slider.value = String( fillOpacityValue );
-			slider.className = 'compact-range';
-			number.addEventListener( 'change', function () {
-				var v = Math.max( 0, Math.min( 100, parseInt( number.value, 10 ) || 0 ) );
-				number.value = String( v );
-				slider.value = String( v );
-				self.editor.updateLayer( layer.id, { fillOpacity: v / 100 } );
-			} );
-			slider.addEventListener( 'input', function () {
-				number.value = slider.value;
-				var foVal = parseInt( slider.value, 10 ) / 100;
-				self.editor.updateLayer( layer.id, { fillOpacity: foVal } );
-			} );
-			field.appendChild( labelEl );
-			var controls = document.createElement( 'div' );
-			controls.className = 'compact-controls';
-			controls.appendChild( number );
-			controls.appendChild( slider );
-			field.appendChild( controls );
-			form.appendChild( field );
-		}() );
+		// Fill opacity (number only, 0-100)
+		addInput( {
+			label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ),
+			type: 'number',
+			value: ( layer.fillOpacity !== null && layer.fillOpacity !== undefined ) ?
+				Math.round( layer.fillOpacity * 100 ) :
+				100,
+			min: 0,
+			max: 100,
+			step: 1,
+			onChange: function ( v ) {
+				var fo = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 100 ) );
+				self.editor.updateLayer( layer.id, { fillOpacity: fo / 100 } );
+			}
+		} );
 
 		// Effects (layer-level)
 		addSection( t( 'layers-section-effects', 'Effects' ) );
-		var layerOpacityValue = ( layer.opacity !== null && layer.opacity !== undefined ) ?
-			layer.opacity : 1;
+		var layerOpacityValue = (
+			layer.opacity !== null &&
+			layer.opacity !== undefined
+		) ? layer.opacity : 1;
 		layerOpacityValue = Math.round( layerOpacityValue * 100 );
-		// Layer opacity: number (0–100) + compact slider
-		( function () {
-			var field = document.createElement( 'div' );
-			field.className = 'property-field property-field--compound';
-			var labelEl = document.createElement( 'label' );
-			labelEl.textContent = t( 'layers-prop-opacity', 'Layer Opacity' );
-			var number = document.createElement( 'input' );
-			number.type = 'number';
-			number.min = '0';
-			number.max = '100';
-			number.step = '1';
-			number.value = String( layerOpacityValue );
-			number.className = 'compact-number';
-			var slider = document.createElement( 'input' );
-			slider.type = 'range';
-			slider.min = '0';
-			slider.max = '100';
-			slider.step = '1';
-			slider.value = String( layerOpacityValue );
-			slider.className = 'compact-range';
-			number.addEventListener( 'change', function () {
-				var v = Math.max( 0, Math.min( 100, parseInt( number.value, 10 ) || 0 ) );
-				number.value = String( v );
-				slider.value = String( v );
-				self.editor.applyToSelection( function ( l ) {
-					if ( l.id === layer.id ) {
-						l.opacity = v / 100;
-					}
-				} );
-			} );
-			slider.addEventListener( 'input', function () {
-				number.value = slider.value;
-				self.editor.applyToSelection( function ( l ) {
-					if ( l.id === layer.id ) {
-						l.opacity = parseInt( slider.value, 10 ) / 100;
-					}
-				} );
-			} );
-			field.appendChild( labelEl );
-			var controls = document.createElement( 'div' );
-			controls.className = 'compact-controls';
-			controls.appendChild( number );
-			controls.appendChild( slider );
-			field.appendChild( controls );
-			form.appendChild( field );
-		}() );
+		// Layer opacity: number (0–100) only, no slider
+		addInput( {
+			label: t( 'layers-prop-opacity', 'Layer Opacity' ),
+			type: 'number',
+			value: layerOpacityValue,
+			min: 0,
+			max: 100,
+			step: 1,
+			onChange: function ( v ) {
+				var val = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 0 ) );
+				self.editor.updateLayer( layer.id, { opacity: val / 100 } );
+			}
+		} );
 		addSelect( { label: t( 'layers-prop-blend', 'Blend' ), value: layer.blend || 'normal', options: [
 			{ value: 'normal', text: t( 'layers-blend-normal', 'Normal' ) },
 			{ value: 'multiply', text: t( 'layers-blend-multiply', 'Multiply' ) },
@@ -1070,7 +1143,23 @@
 			label: t( 'layers-effect-shadow', 'Drop Shadow' ),
 			value: !!layer.shadow,
 			onChange: function ( checked ) {
-				self.editor.updateLayer( layer.id, { shadow: !!checked } );
+				var updates = { shadow: !!checked };
+				// Set default shadow properties if enabling shadow and they don't exist
+				if ( checked ) {
+					if ( !layer.shadowColor ) {
+						updates.shadowColor = '#000000';
+					}
+					if ( typeof layer.shadowBlur === 'undefined' ) {
+						updates.shadowBlur = 8;
+					}
+					if ( typeof layer.shadowOffsetX === 'undefined' ) {
+						updates.shadowOffsetX = 2;
+					}
+					if ( typeof layer.shadowOffsetY === 'undefined' ) {
+						updates.shadowOffsetY = 2;
+					}
+				}
+				self.editor.updateLayer( layer.id, updates );
 			}
 		} );
 		addInput( {

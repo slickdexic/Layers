@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Layers Save Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .log { max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>Layers Save Debug Tool</h1>
+    
+    <div class="debug-section info">
+        <h2>Instructions</h2>
+        <ol>
+            <li>Open this page in the same browser where you're using the Layers editor</li>
+            <li>Go to the Layers editor and try to save a layer with drop shadow</li>
+            <li>When you get the "Save failed" error, come back to this page</li>
+            <li>Click "Check Network Logs" to see what actually happened</li>
+        </ol>
+    </div>
+
+    <div class="debug-section">
+        <h2>Debug Actions</h2>
+        <button onclick="checkNetworkLogs()">Check Network Logs</button>
+        <button onclick="checkConsoleErrors()">Check Console Errors</button>
+        <button onclick="testValidation()">Test Layer Validation</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Debug Output</h2>
+        <pre id="debugOutput" class="log">Click a debug button to start...</pre>
+    </div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('debugOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('debugOutput').textContent = '';
+        }
+
+        function checkNetworkLogs() {
+            log('=== CHECKING NETWORK REQUESTS ===');
+            
+            // Check if we can access performance API
+            if (performance && performance.getEntriesByType) {
+                const networkEntries = performance.getEntriesByType('navigation').concat(
+                    performance.getEntriesByType('resource')
+                );
+                
+                log(`Found ${networkEntries.length} network entries`);
+                
+                // Look for API requests
+                const apiRequests = networkEntries.filter(entry => 
+                    entry.name.includes('api.php') || entry.name.includes('layerssave')
+                );
+                
+                if (apiRequests.length > 0) {
+                    log(`Found ${apiRequests.length} API requests:`);
+                    apiRequests.forEach((req, index) => {
+                        log(`  ${index + 1}. ${req.name}`);
+                        log(`     Duration: ${req.duration}ms`);
+                        log(`     Response: ${req.responseEnd - req.responseStart}ms`);
+                    });
+                } else {
+                    log('No API requests found in performance entries');
+                }
+            } else {
+                log('Performance API not available');
+            }
+
+            // Check for any stored error information
+            if (window.localStorage) {
+                const layersErrors = localStorage.getItem('layers_debug_errors');
+                if (layersErrors) {
+                    log('=== STORED ERRORS ===');
+                    log(layersErrors);
+                }
+            }
+        }
+
+        function checkConsoleErrors() {
+            log('=== CONSOLE ERROR CHECK ===');
+            log('This will show any JavaScript errors in the console.');
+            log('Please open Browser Developer Tools (F12) and check the Console tab for errors.');
+            log('Look specifically for:');
+            log('- Failed to fetch errors');
+            log('- 400/500 HTTP status errors');
+            log('- Validation errors');
+            log('- CORS errors');
+            
+            // Override console.error to capture errors
+            if (!window.originalConsoleError) {
+                window.originalConsoleError = console.error;
+                window.capturedErrors = [];
+                console.error = function(...args) {
+                    window.capturedErrors.push(args.join(' '));
+                    window.originalConsoleError.apply(console, arguments);
+                };
+            }
+            
+            if (window.capturedErrors && window.capturedErrors.length > 0) {
+                log('=== CAPTURED CONSOLE ERRORS ===');
+                window.capturedErrors.forEach((error, index) => {
+                    log(`${index + 1}. ${error}`);
+                });
+            } else {
+                log('No console errors captured yet.');
+            }
+        }
+
+        function testValidation() {
+            log('=== TESTING LAYER VALIDATION ===');
+            
+            // Test layer data with drop shadow
+            const testLayer = {
+                id: 'test-shadow-1',
+                type: 'text',
+                text: 'Test Drop Shadow',
+                x: 100,
+                y: 100,
+                shadow: true,
+                shadowColor: '#000000',
+                shadowBlur: 5,
+                shadowOffsetX: 2,
+                shadowOffsetY: 2,
+                shadowSpread: 1
+            };
+            
+            log('Test layer data:');
+            log(JSON.stringify(testLayer, null, 2));
+            
+            // Check if LayersValidator is available
+            if (window.LayersValidator) {
+                log('LayersValidator found - testing validation...');
+                try {
+                    const validator = new window.LayersValidator();
+                    const result = validator.validateLayers([testLayer], 100);
+                    
+                    log(`Validation result: ${result.isValid ? 'VALID' : 'INVALID'}`);
+                    
+                    if (!result.isValid) {
+                        log('Validation errors:');
+                        result.errors.forEach((error, index) => {
+                            log(`  ${index + 1}. ${error}`);
+                        });
+                    }
+                    
+                    if (result.warnings && result.warnings.length > 0) {
+                        log('Validation warnings:');
+                        result.warnings.forEach((warning, index) => {
+                            log(`  ${index + 1}. ${warning}`);
+                        });
+                    }
+                } catch (error) {
+                    log(`Validation test failed: ${error.message}`);
+                }
+            } else {
+                log('LayersValidator not found - validation may not be working');
+            }
+
+            // Test JSON serialization
+            try {
+                const jsonData = JSON.stringify([testLayer]);
+                log(`JSON serialization: OK (${jsonData.length} chars)`);
+                
+                // Test JSON parsing
+                const parsed = JSON.parse(jsonData);
+                log(`JSON parsing: OK (${parsed.length} layers)`);
+            } catch (error) {
+                log(`JSON error: ${error.message}`);
+            }
+        }
+
+        // Monitor for any Layers-related errors
+        window.addEventListener('error', function(event) {
+            if (event.message && event.message.includes('Layers')) {
+                log(`JavaScript Error: ${event.message}`);
+                log(`  File: ${event.filename}:${event.lineno}`);
+            }
+        });
+
+        // Try to hook into any MediaWiki API calls
+        if (window.mw && window.mw.Api) {
+            log('MediaWiki API detected - setting up monitoring...');
+            
+            // Store original postWithToken method
+            const originalPostWithToken = window.mw.Api.prototype.postWithToken;
+            
+            // Override to monitor layerssave calls
+            window.mw.Api.prototype.postWithToken = function(tokenType, params, ajaxOptions) {
+                if (params && params.action === 'layerssave') {
+                    log('=== LAYERSSAVE API CALL DETECTED ===');
+                    log(`Data length: ${params.data ? params.data.length : 'undefined'} chars`);
+                    log(`Filename: ${params.filename || 'undefined'}`);
+                    
+                    if (params.data) {
+                        try {
+                            const layersData = JSON.parse(params.data);
+                            log(`Layers count: ${layersData.length}`);
+                            log('Layer types: ' + layersData.map(l => l.type).join(', '));
+                            
+                            // Check for shadow properties
+                            const shadowLayers = layersData.filter(l => l.shadow);
+                            if (shadowLayers.length > 0) {
+                                log(`Found ${shadowLayers.length} layers with shadow enabled`);
+                            }
+                        } catch (e) {
+                            log(`Failed to parse layer data: ${e.message}`);
+                        }
+                    }
+                }
+                
+                // Call original method and monitor response
+                const promise = originalPostWithToken.call(this, tokenType, params, ajaxOptions);
+                
+                if (params && params.action === 'layerssave') {
+                    promise.done(function(data) {
+                        log('=== API RESPONSE SUCCESS ===');
+                        log(JSON.stringify(data, null, 2));
+                    }).fail(function(code, result) {
+                        log('=== API RESPONSE FAILURE ===');
+                        log(`Error code: ${code}`);
+                        log(`Result: ${JSON.stringify(result, null, 2)}`);
+                    });
+                }
+                
+                return promise;
+            };
+        }
+
+        log('Debug tool initialized. Ready to monitor Layers save operations.');
+    </script>
+</body>
+</html>

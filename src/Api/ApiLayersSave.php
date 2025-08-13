@@ -1,336 +1,225 @@
 <?php
-/**
- * API module for saving layer data
- *
- * @file
- * @ingroup Extensions
- */
-
 namespace MediaWiki\Extension\Layers\Api;
 
+use MediaWiki\MediaWikiServices;
 use ApiBase;
-use ApiMain;
-use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
-use MediaWiki\MediaWikiServices;
 
 class ApiLayersSave extends ApiBase {
 
 	/**
-	 * Constructor
-	 * @param ApiMain $main
-	 * @param string $action
-	 */
-	public function __construct( ApiMain $main, $action ) {
-		parent::__construct( $main, $action );
-	}
-
-	/**
-	 * Execute the API request
+	 * Main execution function
+	 * @throws \ApiUsageException
+	 * @throws \Exception
 	 */
 	public function execute() {
-		// Check permissions
 		$user = $this->getUser();
-		if ( !$user->isAllowed( 'editlayers' ) ) {
-			// Log and return a localized error
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				try {
-					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-					$logger->warning( 'Layers Save: Permission denied', [ 'userId' => $user->getId() ] );
-				} catch ( \Throwable $e ) {
-					// ignore
-				}
-			}
-			$this->dieWithError( $this->msg( 'layers-permission-denied' ), 'permissiondenied' );
+		$params = $this->extractRequestParams();
+		$this->checkUserRightsAny( 'editlayers' );
+		// Ensure DB schema is present (helpful error if extension tables are missing)
+		if ( !$this->isSchemaInstalled() ) {
+			$this->dieWithError( [ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ], 'dbschema-missing' );
 		}
 
-		// Rate limiting check
+		$fileName = $params['filename'];
+		$data = $params['data'];
+		$setName = $params['setname'] ?? 'default';
+
+		if ( !$this->isValidFilename( $fileName ) ) {
+			$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+		}
+
+		$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' ) ?: 2097152;
+		if ( strlen( $data ) > $maxBytes ) {
+			$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
+		}
+
+		$layersData = json_decode( $data, true );
+		if ( $layersData === null ) {
+			$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
+		}
+
+		$sanitizedData = $this->validateAndSanitizeLayersData( $layersData );
+		if ( $sanitizedData === false ) {
+			$this->dieWithError( 'layers-invalid-data', 'invaliddata' );
+		}
+
+		// Rate limiting
 		$rateLimiter = new RateLimiter();
 		if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
-			$this->dieWithError( $this->msg( 'layers-rate-limited' ), 'ratelimited' );
+			$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
 		}
 
-		// Get parameters
-		$params = $this->extractRequestParams();
-		$filename = $params['filename'];
-		$layersData = json_decode( $params['data'], true );
-		$setName = $params['setname'] ?? null;
-
-		if ( $layersData === null ) {
-			$this->dieWithError( $this->msg( 'layers-invalid-data' ), 'invalidjson' );
-		}
-
-		// Security: Check data size limits
-		$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
-		if ( strlen( $params['data'] ) > $maxBytes ) {
-			$this->dieWithError(
-				[ $this->msg( 'layers-data-too-large' )->plain(), $maxBytes ],
-				'toolarge'
-			);
-		}
-
-		// Security: Validate filename
-		if ( !$this->isValidFilename( $filename ) ) {
-			$this->dieWithError( $this->msg( 'layers-invalid-filename' ), 'invalidfilename' );
-		}
-
-		// Get file information
+		// Resolve file and gather metadata
 		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
-		$file = $repoGroup->findFile( $filename );
+		$file = $repoGroup->findFile( $fileName );
 		if ( !$file || !$file->exists() ) {
-			$this->dieWithError( $this->msg( 'layers-file-not-found' ), 'filenotfound' );
+			$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
 		}
+		$mime = $file->getMimeType() ?: '';
+		$parts = explode( '/', $mime, 2 );
+		$majorMime = $parts[0] ?? '';
+		$minorMime = $parts[1] ?? '';
+		$sha1 = $file->getSha1();
 
-		// Validate layer data structure
-		if ( !$this->validateLayersData( $layersData ) ) {
-			$this->dieWithError( $this->msg( 'layers-invalid-data' ), 'invaliddata' );
-		}
-
-		// Additional security: Sanitize layer data
-		$layersData = $this->sanitizeLayersData( $layersData );
-
-		// Performance checks
-		if ( !$rateLimiter->isLayerCountAllowed( count( $layersData ) ) ) {
-			$this->dieWithError( $this->msg( 'layers-too-many-layers' ), 'toolayers' );
-		}
-
-		if ( !$rateLimiter->isComplexityAllowed( $layersData ) ) {
-			$this->dieWithError( $this->msg( 'layers-too-complex' ), 'toocomplex' );
-		}
-
-		// Save to database
 		$db = new LayersDatabase();
-
-		// Split MIME type into major and minor parts
-		$mimeType = (string)$file->getMimeType();
-		$mimeParts = explode( '/', $mimeType, 2 );
-		$majorMime = $mimeParts[0] ?? 'unknown';
-		$minorMime = $mimeParts[1] ?? 'unknown';
-
-		try {
-			$layerSetId = $db->saveLayerSet(
-				$file->getName(),
-				$majorMime,
-				$minorMime,
-				$file->getSha1(),
-				$layersData,
-				$user->getId(),
-				$setName
-			);
-
-		} catch ( Exception $e ) {
-			$this->dieWithError(
-				[ $this->msg( 'layers-db-error' )->plain(), $e->getMessage() ],
-				'dberror'
-			);
-		}
-
-		if ( $layerSetId === false ) {
-			$this->dieWithError( $this->msg( 'layers-save-failed' ), 'savefailed' );
-		}
-
-		// Return success response
-		$this->getResult()->addValue(
-			null,
-			$this->getModuleName(),
-			[
-				'success' => true,
-				'layersetid' => $layerSetId,
-				'message' => $this->msg( 'layers-save-success' )->text(),
-			]
+		$result = $db->saveLayerSet(
+			$file->getName(),
+			$majorMime,
+			$minorMime,
+			$sha1,
+			$sanitizedData,
+			(int)$user->getId(),
+			$setName
 		);
+
+		if ( $result ) {
+			$this->getResult()->addValue( null, $this->getModuleName(), [
+				'success' => 1,
+				'layersetid' => (int)$result,
+				'result' => 'Success'
+			] );
+		} else {
+			$this->dieWithError( 'layers-save-failed', 'savefailed' );
+		}
 	}
 
 	/**
-	 * Validate the structure of layer data
-	 * @param array $layersData
+	 * Check whether required DB schema exists
 	 * @return bool
 	 */
-	private function validateLayersData( array $layersData ): bool {
-		// Basic validation - check if it's an array of layer objects
+	private function isSchemaInstalled(): bool {
+		try {
+			$services = MediaWikiServices::getInstance();
+			$lb = $services->getDBLoadBalancer();
+			if ( !$lb ) {
+				return false;
+			}
+			// Use write connection to match the target of INSERTs and avoid schema drift on replicas
+			if ( defined( 'DB_PRIMARY' ) ) {
+				$dbr = $lb->getConnection( DB_PRIMARY );
+			} elseif ( defined( 'DB_MASTER' ) ) {
+				$dbr = $lb->getConnection( DB_MASTER );
+			} else {
+				$dbr = $lb->getConnection( 0 );
+			}
+			if ( !\is_object( $dbr ) ) {
+				return false;
+			}
+			// fieldInfo handles table prefixes; existence implies table is created
+			return (bool)$dbr->fieldInfo( 'layer_sets', 'ls_id' );
+		} catch ( \Throwable $e ) {
+			return false;
+		}
+	}
+
+	/**
+	 * Validates and sanitizes layer data.
+	 * Returns sanitized data array on success, false on failure.
+	 *
+	 * @param array $layersData
+	 * @return array|false
+	 */
+	private function validateAndSanitizeLayersData( array $layersData ) {
 		if ( !is_array( $layersData ) ) {
 			return false;
 		}
-
-		// Limit number of layers to prevent abuse
-		if ( count( $layersData ) > 100 ) {
+		$maxLayers = $this->getConfig()->get( 'LayersMaxLayerCount' ) ?: 100;
+		if ( count( $layersData ) > $maxLayers ) {
 			return false;
 		}
+		$validTypes = [
+			'text', 'arrow', 'rectangle', 'circle', 'ellipse',
+			'polygon', 'star', 'line', 'highlight', 'path', 'blur'
+		];
 
-		foreach ( $layersData as $layer ) {
-			if ( !is_array( $layer ) ) {
-				return false;
-			}
-
-			// Each layer must have at least id and type
-			if ( !isset( $layer['id'] ) || !isset( $layer['type'] ) ) {
-				return false;
-			}
-
-			// Validate layer ID format - prevent code injection
-			if ( !is_string( $layer['id'] ) || strlen( $layer['id'] ) > 100 ||
-				 !preg_match( '/^[a-zA-Z0-9_-]+$/', $layer['id'] ) ) {
-				return false;
-			}
-
-			// Validate layer type - strict whitelist
-			$validTypes = [
-				'text', 'arrow', 'rectangle', 'circle', 'ellipse',
-				'polygon', 'star', 'line', 'highlight', 'path'
-			];
-			if ( !in_array( $layer['type'], $validTypes, true ) ) {
-				return false;
-			}
-
-			// Basic coordinate validation with stricter bounds
-			$coordinateFields = [ 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'radius', 'radiusX', 'radiusY' ];
-			foreach ( $coordinateFields as $field ) {
-				if ( isset( $layer[$field] ) ) {
-					if ( !is_numeric( $layer[$field] ) || abs( $layer[$field] ) > 10000 ) {
-						return false;
-					}
-				}
-			}
-
-			// Validate text content length for text layers with HTML stripping
-			if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
-				if ( !is_string( $layer['text'] ) || strlen( $layer['text'] ) > 500 ) {
-					return false;
-				}
-				// Check for potential script injection
-				if ( preg_match( '/<script|javascript:|data:|vbscript:|on\w+\s*=/i', $layer['text'] ) ) {
-					return false;
-				}
-			}
-
-			// Validate font family - prevent injection
-			if ( isset( $layer['fontFamily'] ) ) {
-				if ( !is_string( $layer['fontFamily'] ) ||
-					 !preg_match( '/^[a-zA-Z0-9\s,-]+$/', $layer['fontFamily'] ) ||
-					 strlen( $layer['fontFamily'] ) > 100 ) {
-					return false;
-				}
-			}
-
-			// Validate points array for path, polygon layers with stricter limits
-				if ( in_array( $layer['type'], [ 'path', 'polygon' ] ) && isset( $layer['points'] ) ) {
-				if ( !is_array( $layer['points'] ) || count( $layer['points'] ) > 500 ) {
-					return false;
-				}
-				foreach ( $layer['points'] as $point ) {
-					if ( !is_array( $point ) || !isset( $point['x'] ) || !isset( $point['y'] ) ||
-						 !is_numeric( $point['x'] ) || !is_numeric( $point['y'] ) ||
-						 abs( $point['x'] ) > 10000 || abs( $point['y'] ) > 10000 ) {
-						return false;
-					}
-				}
-				}
-
-			// Validate numeric properties with bounds
-			$numericFields = [
-				'innerRadius', 'outerRadius', 'sides', 'zIndex',
-				'rotation', 'fontSize', 'strokeWidth', 'opacity'
-			];
-			foreach ( $numericFields as $field ) {
-				if ( isset( $layer[$field] ) ) {
-					if ( !is_numeric( $layer[$field] ) ) {
-						return false;
-					}
-
-					// Field-specific validation
-					switch ( $field ) {
-						case 'sides':
-							if ( $layer[$field] < 3 || $layer[$field] > 20 ) {
-								return false;
-							}
-							break;
-						case 'fontSize':
-							if ( $layer[$field] < 1 || $layer[$field] > 200 ) {
-								return false;
-							}
-							break;
-						case 'strokeWidth':
-							if ( $layer[$field] < 0 || $layer[$field] > 50 ) {
-								return false;
-							}
-							break;
-						case 'opacity':
-							if ( $layer[$field] < 0 || $layer[$field] > 1 ) {
-								return false;
-							}
-							break;
-						default:
-							if ( abs( $layer[$field] ) > 10000 ) {
-								return false;
-							}
-					}
-				}
-			}
-
-			// Validate color values strictly
-			$colorFields = [ 'stroke', 'fill', 'textStrokeColor', 'textShadowColor' ];
-			foreach ( $colorFields as $colorField ) {
-				if ( isset( $layer[$colorField] ) ) {
-					if ( !$this->isValidColor( $layer[$colorField] ) ) {
-						return false;
-					}
-				}
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Sanitize layer data to prevent XSS
-	 * @param array $layersData
-	 * @return array
-	 */
-	private function sanitizeLayersData( array $layersData ): array {
 		$sanitized = [];
-
 		foreach ( $layersData as $layer ) {
+			if ( !is_array( $layer ) || !isset( $layer['type'] ) || !in_array( $layer['type'], $validTypes, true ) ) {
+				return false; // Invalid layer structure
+			}
+
 			$cleanLayer = [];
+			// Whitelist of allowed properties and their expected types
+			$allowedProps = [
+				'type' => 'string', 'x' => 'numeric', 'y' => 'numeric',
+				'text' => 'string', 'fontSize' => 'numeric', 'color' => 'string',
+				'width' => 'numeric', 'strokeWidth' => 'numeric', 'height' => 'numeric',
+				'stroke' => 'string', 'fill' => 'string', 'radius' => 'numeric',
+				'opacity' => 'numeric', 'blendMode' => 'string', 'id' => 'string',
+				'name' => 'string', 'visible' => 'boolean', 'locked' => 'boolean',
+				'textStrokeColor' => 'string', 'textStrokeWidth' => 'numeric', 'textShadowColor' => 'string',
+				'shadowColor' => 'string', 'points' => 'array', 'sides' => 'numeric',
+				'startAngle' => 'numeric', 'endAngle' => 'numeric', 'innerRadius' => 'numeric',
+				'outerRadius' => 'numeric', 'arrowhead' => 'string',
+				// Line coordinates for line and arrow layers
+				'x1' => 'numeric', 'y1' => 'numeric', 'x2' => 'numeric', 'y2' => 'numeric',
+				// Effects used by CanvasManager
+				'shadow' => 'boolean', 'shadowBlur' => 'numeric',
+				'shadowOffsetX' => 'numeric', 'shadowOffsetY' => 'numeric',
+				'shadowSpread' => 'numeric',
+				// Text-specific shadow toggle used by drawText
+				'textShadow' => 'boolean',
+				'glow' => 'boolean',
+				// Blur layer property
+				'blurRadius' => 'numeric',
+				// Ellipse properties
+				'radiusX' => 'numeric', 'radiusY' => 'numeric',
+				// Arrow properties
+				'arrowSize' => 'numeric', 'arrowStyle' => 'string',
+				// Common editor props
+				'rotation' => 'numeric', 'fontFamily' => 'string',
+				// Accept editor alias for blend mode
+				'blend' => 'string'
+			];
 
-			// Copy safe fields
-			$safeFields = [ 'id', 'type', 'x', 'y', 'width', 'height', 'radius',
-					   'x1', 'y1', 'x2', 'y2', 'stroke', 'fill', 'strokeWidth',
-					   'fontSize', 'fontFamily', 'opacity', 'points', 'radiusX', 'radiusY',
-					   'innerRadius', 'outerRadius', 'sides', 'visible', 'zIndex', 'rotation' ];
-
-			foreach ( $safeFields as $field ) {
-				if ( isset( $layer[$field] ) ) {
-					$cleanLayer[$field] = $layer[$field];
+			foreach ( $allowedProps as $prop => $type ) {
+				if ( isset( $layer[$prop] ) ) {
+					$value = $layer[$prop];
+					$isValid = false;
+					
+					// Type validation with flexible boolean handling
+					if ( $type === 'string' && is_string( $value ) ) {
+						$isValid = true;
+					} elseif ( $type === 'numeric' && is_numeric( $value ) ) {
+						$isValid = true;
+					} elseif ( $type === 'boolean' ) {
+						// Accept various boolean representations from JavaScript
+						if ( is_bool( $value ) || $value === 1 || $value === 0 || $value === '1' || $value === '0' || $value === 'true' || $value === 'false' ) {
+							$isValid = true;
+							// Normalize to proper boolean
+							$value = (bool)$value;
+							if ( $value === '0' || $value === 'false' ) {
+								$value = false;
+							}
+						}
+					} elseif ( $type === 'array' && is_array( $value ) ) {
+						$isValid = true;
+					}
+					
+					if ( $isValid ) {
+						$cleanLayer[$prop] = $value;
+					}
 				}
 			}
 
-		// Special handling for text content: ensure string and limit length
-		if ( $layer['type'] === 'text' && isset( $layer['text'] ) ) {
-			$cleanText = is_string( $layer['text'] ) ? $layer['text'] : (string)$layer['text'];
-			// Strip control characters and potential HTML/script tags
-			$cleanText = preg_replace( '/[\x00-\x1F\x7F]/u', '', $cleanText );
-			$cleanText = htmlspecialchars( $cleanText, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-			// Remove any potential script tags or event handlers
-			$cleanText = preg_replace( '/<script[^>]*>.*?<\/script>/si', '', $cleanText );
-			$cleanText = preg_replace( '/on\w+\s*=\s*["\'][^"\']*["\']/i', '', $cleanText );
-			// Enforce max length
-			if ( strlen( $cleanText ) > 1000 ) {
-				$cleanText = substr( $cleanText, 0, 1000 );
+			// Normalize alias: if 'blend' provided, map to 'blendMode' if not already set (keep original too for client)
+			if ( isset( $cleanLayer['blend'] ) && !isset( $cleanLayer['blendMode'] ) && is_string( $cleanLayer['blend'] ) ) {
+				$cleanLayer['blendMode'] = $cleanLayer['blend'];
 			}
-			$cleanLayer['text'] = $cleanText;
-		}
 
-		// Special handling for points array (path, polygon layers)
-		if (
-				in_array( $layer['type'], [ 'path', 'polygon' ] )
-				&& isset( $layer['points'] )
-				&& is_array( $layer['points'] )
+			// Special handling for points array (path, polygon layers)
+			if (
+				isset( $cleanLayer['type'] ) &&
+				in_array( $cleanLayer['type'], [ 'path', 'polygon' ] ) &&
+				isset( $cleanLayer['points'] ) &&
+				is_array( $cleanLayer['points'] )
 			) {
 				$cleanPoints = [];
-				foreach ( $layer['points'] as $point ) {
+				foreach ( $cleanLayer['points'] as $point ) {
 					if ( is_array( $point ) && isset( $point['x'] ) && isset( $point['y'] ) &&
-						 is_numeric( $point['x'] ) && is_numeric( $point['y'] ) ) {
+						is_numeric( $point['x'] ) && is_numeric( $point['y'] ) ) {
 						$cleanPoints[] = [
 							'x' => (float)$point['x'],
 							'y' => (float)$point['y']
@@ -338,18 +227,16 @@ class ApiLayersSave extends ApiBase {
 					}
 				}
 				$cleanLayer['points'] = $cleanPoints;
-		}
+			}
 
 			// Validate color values
-			foreach ( [ 'stroke', 'fill' ] as $colorField ) {
+			foreach ( [ 'stroke', 'fill', 'color', 'textStrokeColor', 'textShadowColor', 'shadowColor' ] as $colorField ) {
 				if ( isset( $cleanLayer[$colorField] ) ) {
 					$cleanLayer[$colorField] = $this->sanitizeColor( $cleanLayer[$colorField] );
 				}
 			}
-
 			$sanitized[] = $cleanLayer;
 		}
-
 		return $sanitized;
 	}
 

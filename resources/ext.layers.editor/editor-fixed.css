@@ -194,6 +194,29 @@ body.layers-editor-open .mw-body-content {
 	flex-direction: column;
 	overflow: hidden;
 }
+.layers-panel {
+	width: 320px;
+	min-width: 220px;
+	max-width: 600px;
+	background: #fff;
+	border-right: 1px solid #ddd;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	resize: horizontal;
+	box-sizing: border-box;
+	position: relative;
+}
+
+.layers-panel-divider {
+	height: 8px;
+	background: #e9ecef;
+	cursor: row-resize;
+	width: 100%;
+	border-top: 1px solid #eee;
+	border-bottom: 1px solid #eee;
+	z-index: 2;
+}
 
 .layers-panel-header {
 	padding: 16px;
@@ -219,12 +242,27 @@ body.layers-editor-open .mw-body-content {
 	overflow: auto;
 	padding: 8px;
 }
+.layers-list {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 8px;
+	min-height: 80px;
+	max-height: 40vh;
+}
 
 /* Properties + Code panel sections */
 .layers-properties,
 .layers-code-panel {
 	border-top: 1px solid #eee;
 	padding: 10px 12px;
+}
+.layers-properties,
+.layers-code-panel {
+	border-top: 1px solid #eee;
+	padding: 10px 12px;
+	overflow-y: auto;
+	max-height: 40vh;
 }
 .layers-properties h4,
 .layers-code-panel h4 {
@@ -338,6 +376,19 @@ body.layers-editor-open .mw-body-content {
 	transition: all 0.2s;
 	gap: 8px;
 }
+.layer-item {
+	display: flex;
+	align-items: center;
+	padding: 8px 4px;
+	margin-bottom: 6px;
+	background: #f8f9fa;
+	border: 1px solid #eee;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s;
+	gap: 12px;
+	min-height: 44px;
+}
 
 .layer-item .layer-visibility,
 .layer-item .layer-lock,
@@ -346,6 +397,33 @@ body.layers-editor-open .mw-body-content {
 	border: 0;
 	font-size: 1em;
 	cursor: pointer;
+}
+.layer-item .layer-visibility,
+.layer-item .layer-lock,
+.layer-item .layer-delete {
+	background: transparent;
+	border: 0;
+	font-size: 1.2em;
+	cursor: pointer;
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	transition: background 0.2s;
+}
+.layer-item .layer-visibility:focus,
+.layer-item .layer-lock:focus,
+.layer-item .layer-delete:focus {
+	outline: 2px solid #007cba;
+	background: #e3f2fd;
+}
+.layer-item .layer-visibility:hover,
+.layer-item .layer-lock:hover,
+.layer-item .layer-delete:hover {
+	background: #e9ecef;
+	opacity: 1;
 }
 
 .layer-item .layer-visibility:hover,
@@ -371,6 +449,15 @@ body.layers-editor-open .mw-body-content {
 	padding: 2px 4px;
 	border-radius: 2px;
 }
+.layer-name {
+	flex: 1;
+	font-size: 1em;
+	color: #333;
+	padding: 4px 8px;
+	border-radius: 3px;
+	min-width: 0;
+	outline: none;
+}
 
 /* Text Input Modal */
 .text-input-overlay {
@@ -384,6 +471,24 @@ body.layers-editor-open .mw-body-content {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+.layer-grab-area {
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: grab;
+	border-radius: 4px;
+	margin-right: 2px;
+	transition: background 0.2s;
+}
+.layer-grab-area:focus {
+	outline: 2px solid #007cba;
+	background: #e3f2fd;
+}
+.layer-grab-area:hover {
+	background: #e9ecef;
 }
 
 .text-input-modal {

@@ -11,6 +11,9 @@ namespace MediaWiki\Extension\Layers\Database;
 use Psr\Log\LoggerInterface;
 
 class LayersDatabase {
+	// NOTE: This class does not implement a migration/versioning system for schema changes.
+	//       All schema changes must be applied manually via SQL patches.
+	//       There are no referential integrity (foreign key) constraints in the schema.
 
 	/** @var mixed */
 	private $loadBalancer;
@@ -73,7 +76,7 @@ class LayersDatabase {
 		if ( defined( 'DB_PRIMARY' ) ) {
 			$this->dbw = $lb->getConnection( DB_PRIMARY );
 		} elseif ( defined( 'DB_MASTER' ) ) {
-			$this->dbw = $lb->getConnection( DB_PRIMARY );
+			$this->dbw = $lb->getConnection( DB_MASTER );
 		} else {
 			$this->dbw = $lb->getConnection( 0 );
 		}
@@ -138,6 +141,17 @@ class LayersDatabase {
 				return false;
 			}
 
+			// Audit log for layer set save
+			if ( $this->logger ) {
+				$this->logger->info( 'Layer set saved', [
+					'imgName' => $imgName,
+					'userId' => $userId,
+					'revision' => isset($revision) ? $revision : null,
+					'timestamp' => isset($timestamp) ? $timestamp : null,
+					'setName' => $setName
+				] );
+			}
+
 			// Start transaction for data consistency
 			$dbw->startAtomic( __METHOD__ );
 
@@ -164,6 +178,11 @@ class LayersDatabase {
 						$dbw->endAtomic( __METHOD__ );
 						$this->logError( 'JSON encoding failed for layer set' );
 						return false;
+					}
+
+					// Debug: Log what we're about to save
+					if ( function_exists( 'error_log' ) ) {
+						error_log( 'Layers: Saving JSON blob: ' . $jsonBlob );
 					}
 
 					// Calculate size and layer count for performance tracking
@@ -199,7 +218,22 @@ class LayersDatabase {
 					}
 
 					// Insert layer set
-					$dbw->insert( 'layer_sets', $row, __METHOD__ );
+					try {
+						$dbw->insert( 'layer_sets', $row, __METHOD__ );
+					} catch ( \Throwable $ex ) {
+						// Be maximally defensive: drop optional perf columns and retry once regardless of message
+						$hadSize = isset( $row['ls_size'] );
+						$hadCount = isset( $row['ls_layer_count'] );
+						unset( $row['ls_size'], $row['ls_layer_count'] );
+						if ( $this->logger ) {
+							$this->logger->warning( 'Insert failed, retrying without optional columns', [ 'dropped_ls_size' => $hadSize, 'dropped_ls_layer_count' => $hadCount, 'error' => $ex->getMessage() ] );
+						}
+						try {
+							$dbw->insert( 'layer_sets', $row, __METHOD__ );
+						} catch ( \Throwable $ex2 ) {
+							throw $ex2; // Bubble up if even the minimal insert fails
+						}
+					}
 
 					$layerSetId = $dbw->insertId();
 					break; // Success, exit retry loop
@@ -447,6 +481,13 @@ class LayersDatabase {
 				],
 				__METHOD__
 			);
+			// Audit log for layer set delete
+			if ( $this->logger ) {
+				$this->logger->info( 'Layer sets deleted for image', [
+					'imgName' => $imgName,
+					'sha1' => $sha1
+				] );
+			}
 			return true;
 		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
@@ -454,6 +495,21 @@ class LayersDatabase {
 			}
 			return false;
 		}
+	}
+
+	/**
+	 * Cleanup orphaned layer sets (for files that no longer exist)
+	 * This should be run periodically by a maintenance script.
+	 * @return int Number of deleted orphaned layer sets
+	 */
+	public function cleanupOrphanedLayerSets(): int {
+		$dbw = $this->getWriteDb();
+		if ( !$dbw ) {
+			return 0;
+		}
+		// NOTE: This is a placeholder. Actual implementation should check against the MediaWiki file table.
+		// For now, this is a stub for future development.
+		return 0;
 	}
 
 	/**
@@ -580,9 +636,10 @@ class LayersDatabase {
 	 */
 	private function tableHasColumn( string $table, string $column ): bool {
 		try {
-			// Use read connection for schema introspection
-			$dbr = $this->getReadDb();
-			if ( !$dbr ) {
+			// IMPORTANT: Use WRITE connection for schema introspection to match the target of INSERTs.
+			// In some deployments, replicas may have a different schema than primary during migrations.
+			$db = $this->getWriteDb();
+			if ( !$db ) {
 				return false;
 			}
 			$cacheKey = $table;
@@ -592,14 +649,14 @@ class LayersDatabase {
 
 			$cols = [];
 			// Prefer listFields to obtain all columns at once, then cache them
-			if ( \is_callable( [ $dbr, 'listFields' ] ) ) {
-				$fields = $dbr->listFields( $table );
+			if ( \is_callable( [ $db, 'listFields' ] ) ) {
+				$fields = $db->listFields( $table );
 				if ( is_array( $fields ) ) {
 					$cols = array_map( 'strval', $fields );
 				}
 			} else {
 				// Fallback: single column probe without poisoning the cache for other columns
-				$fieldInfo = $dbr->fieldInfo( $table, $column );
+				$fieldInfo = $db->fieldInfo( $table, $column );
 				if ( $fieldInfo ) {
 					$cols = [ $column ];
 				}

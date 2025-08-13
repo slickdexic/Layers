@@ -7,9 +7,9 @@
 
 	/**
 	 * CanvasManager class
-	 *
 	 * @param {Object} config
 	 * @class
+
 	 */
 	function CanvasManager( config ) {
 		this.config = config || {};
@@ -765,9 +765,6 @@
 
 		switch ( originalLayer.type ) {
 			case 'rectangle':
-				return this.calculateRectangleResize(
-					originalLayer, handleType, deltaX, deltaY, modifiers
-				);
 			case 'blur':
 				return this.calculateRectangleResize(
 					originalLayer, handleType, deltaX, deltaY, modifiers
@@ -776,12 +773,108 @@
 				return this.calculateCircleResize(
 					originalLayer, handleType, deltaX, deltaY, modifiers
 				);
+			case 'ellipse':
+				return this.calculateEllipseResize(
+					originalLayer, handleType, deltaX, deltaY, modifiers
+				);
+			case 'polygon':
+			case 'star':
+				return this.calculatePolygonResize(
+					originalLayer, handleType, deltaX, deltaY, modifiers
+				);
+			case 'line':
+			case 'arrow':
+				return this.calculateLineResize(
+					originalLayer, handleType, deltaX, deltaY, modifiers
+				);
+			case 'path':
+				return this.calculatePathResize(
+					originalLayer, handleType, deltaX, deltaY, modifiers
+				);
 			case 'text':
-				// Text doesn't resize, only repositions
-				return null;
+				// Text can be resized by changing font size
+				return this.calculateTextResize(
+					originalLayer, handleType, deltaX, deltaY, modifiers
+				);
 			default:
 				return null;
 		}
+// Ellipse resize: adjust radiusX and radiusY
+		// Ellipse resize: adjust radiusX and radiusY
+		CanvasManager.prototype.calculateEllipseResize = function (
+			origLayerEllipse, handleEllipse, dXEllipse, dYEllipse
+		) {
+			var updates = {};
+			var origRX = origLayerEllipse.radiusX || 1;
+			var origRY = origLayerEllipse.radiusY || 1;
+			if ( handleEllipse === 'e' || handleEllipse === 'w' ) {
+				updates.radiusX = Math.max(
+					5,
+					origRX + ( handleEllipse === 'e' ? dXEllipse : -dXEllipse )
+				);
+			}
+			if ( handleEllipse === 'n' || handleEllipse === 's' ) {
+				updates.radiusY = Math.max(
+					5,
+					origRY + ( handleEllipse === 's' ? dYEllipse : -dYEllipse )
+				);
+			}
+			return updates;
+		};
+
+		// Polygon/star resize: scale width/height (bounding box)
+		CanvasManager.prototype.calculatePolygonResize = function (
+			origLayerPoly, handlePoly, dXPoly, dYPoly
+		) {
+			var updates = {};
+			var origW = origLayerPoly.width || 1;
+			var origH = origLayerPoly.height || 1;
+			if ( handlePoly === 'e' || handlePoly === 'w' ) {
+				updates.width = Math.max(
+					5,
+					origW + ( handlePoly === 'e' ? dXPoly : -dXPoly )
+				);
+			}
+			if ( handlePoly === 'n' || handlePoly === 's' ) {
+				updates.height = Math.max(
+					5,
+					origH + ( handlePoly === 's' ? dYPoly : -dYPoly )
+				);
+			}
+			return updates;
+		};
+
+		// Line/arrow resize: move x2/y2
+		CanvasManager.prototype.calculateLineResize = function (
+			origLayerLine, handleLine, dXLine, dYLine
+		) {
+			var updates = {};
+			updates.x2 = ( origLayerLine.x2 || 0 ) + dXLine;
+			updates.y2 = ( origLayerLine.y2 || 0 ) + dYLine;
+			return updates;
+		};
+
+		// Path resize: scale all points
+		CanvasManager.prototype.calculatePathResize = function (
+			origLayerPath, handlePath, dXPath, dYPath
+		) {
+			if ( !origLayerPath.points ) {
+				return null;
+			}
+			var updates = { points: [] };
+			var scaleX = 1 + dXPath / 100;
+			var scaleY = 1 + dYPath / 100;
+			for ( var i = 0; i < origLayerPath.points.length; i++ ) {
+				updates.points.push( {
+					x: origLayerPath.points[ i ].x * scaleX,
+					y: origLayerPath.points[ i ].y * scaleY
+				} );
+			}
+			return updates;
+		};
+
+
+
 	};
 
 	CanvasManager.prototype.calculateRectangleResize = function (
@@ -921,6 +1014,51 @@
 		}
 
 		updates.radius = Math.max( 5, ( originalLayer.radius || 0 ) + radiusChange );
+		return updates;
+	};
+
+	CanvasManager.prototype.calculateTextResize = function (
+		originalLayer, handleType, deltaX, deltaY, modifiers
+	) {
+		var updates = {};
+		var originalFontSize = originalLayer.fontSize || 16;
+
+		// Calculate font size change based on diagonal movement
+		var diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
+		var fontSizeChange = diagonalDelta * 0.2; // Scale factor
+
+		// Determine if we're growing or shrinking based on handle direction
+		var isGrowing = false;
+		switch ( handleType ) {
+			case 'se':
+			case 'e':
+			case 's':
+				isGrowing = ( deltaX > 0 || deltaY > 0 );
+				break;
+			case 'nw':
+			case 'w':
+			case 'n':
+				isGrowing = ( deltaX < 0 || deltaY < 0 );
+				break;
+			case 'ne':
+				isGrowing = ( deltaX > 0 || deltaY < 0 );
+				break;
+			case 'sw':
+				isGrowing = ( deltaX < 0 || deltaY > 0 );
+				break;
+		}
+
+		var newFontSize = originalFontSize;
+		if ( isGrowing ) {
+			newFontSize += fontSizeChange;
+		} else {
+			newFontSize -= fontSizeChange;
+		}
+
+		// Clamp font size to reasonable bounds
+		newFontSize = Math.max( 8, Math.min( 144, newFontSize ) );
+		updates.fontSize = Math.round( newFontSize );
+
 		return updates;
 	};
 
@@ -3538,12 +3676,36 @@
 
 	CanvasManager.prototype.drawText = function ( layer ) {
 		this.ctx.save();
+		
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		
 		this.ctx.font = ( layer.fontSize || 16 ) + 'px ' + ( layer.fontFamily || 'Arial' );
 		this.ctx.textAlign = layer.textAlign || 'left';
 
+		// Input sanitization: strip control characters and dangerous HTML from text
 		var text = layer.text || '';
-		var x = layer.x || 0;
-		var y = layer.y || 0;
+		text = String( text ).replace( /[\x00-\x1F\x7F]/g, '' );
+		text = text.replace( /<[^>]+>/g, '' );
+
+		// Calculate text dimensions for proper rotation centering
+		var textMetrics = this.ctx.measureText( text );
+		var textWidth = textMetrics.width;
+		var textHeight = layer.fontSize || 16;
+		
+		// Calculate text center for rotation
+		var centerX = x + ( textWidth / 2 );
+		var centerY = y - ( textHeight / 4 ); // Adjust for text baseline
+		
+		// Apply rotation if present
+		if ( layer.rotation && layer.rotation !== 0 ) {
+			var rotationRadians = ( layer.rotation * Math.PI ) / 180;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( rotationRadians );
+			// Adjust drawing position to account for center rotation
+			x = -( textWidth / 2 );
+			y = textHeight / 4;
+		}
 
 		// Apply text shadow if enabled
 		if ( layer.textShadow ) {
@@ -3569,6 +3731,14 @@
 
 		this.ctx.restore();
 	};
+// Accessibility: Add ARIA roles and keyboard navigation stubs
+// TODO: Implement more comprehensive keyboard navigation and screen reader support for canvas elements
+
+// Analytics: Stub for usage tracking
+// TODO: Add analytics hooks for canvas actions (e.g., draw, select, delete)
+
+// Testing: Stub for unit/E2E tests
+// TODO: Add unit and integration tests for CanvasManager
 
 	CanvasManager.prototype.drawRectangle = function ( layer ) {
 		this.ctx.save();

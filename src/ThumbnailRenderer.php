@@ -236,63 +236,109 @@ class ThumbnailRenderer {
 		}
 	}
 
-	private function buildTextArguments( array $layer, float $scaleX, float $scaleY ): array {
-		$x = ( $layer['x'] ?? 0 ) * $scaleX;
-		$y = ( $layer['y'] ?? 0 ) * $scaleY;
-		$text = (string)( $layer['text'] ?? '' );
-		$fontSize = (int)round( ( $layer['fontSize'] ?? 14 ) * ( ( $scaleX + $scaleY ) / 2 ) );
-		$fill = (string)( $layer['fill'] ?? '#000000' );
-		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
-		$fill = $this->withOpacity( $fill, $opacity );
-		$font = (string)( $layer['fontFamily'] ?? 'DejaVu-Sans' );
+	   private function buildTextArguments( array $layer, float $scaleX, float $scaleY ): array {
+		   $x = ( $layer['x'] ?? 0 ) * $scaleX;
+		   $y = ( $layer['y'] ?? 0 ) * $scaleY;
+		   $text = (string)( $layer['text'] ?? '' );
+		   $fontSize = (int)round( ( $layer['fontSize'] ?? 14 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		   $fill = (string)( $layer['fill'] ?? '#000000' );
+		   $opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		   $fill = $this->withOpacity( $fill, $opacity );
+		   $font = (string)( $layer['fontFamily'] ?? 'DejaVu-Sans' );
 
-		return [
-			'-pointsize', (string)$fontSize,
-			'-fill', $fill,
-			'-font', $font,
-			'-annotate', '+' . (int)$x . '+' . (int)$y,
-			$text
-		];
-	}
+		   $args = [];
+		   // Shadow support
+		   if ( !empty( $layer['shadow'] ) ) {
+			   $shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
+			   $shadowBlur = $layer['shadowBlur'] ?? 8;
+			   $shadowOffsetX = $layer['shadowOffsetX'] ?? 2;
+			   $shadowOffsetY = $layer['shadowOffsetY'] ?? 2;
+			   $shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+			   $args = array_merge( $args, [
+				   '-fill', $shadowColor,
+				   '-pointsize', (string)$fontSize,
+				   '-font', $font,
+				   '-annotate', '+' . (int)($x + $shadowOffsetX) . '+' . (int)($y + $shadowOffsetY),
+				   $text,
+				   '-blur', '0x' . (int)$shadowBlur
+			   ] );
+		   }
+		   $args = array_merge( $args, [
+			   '-pointsize', (string)$fontSize,
+			   '-fill', $fill,
+			   '-font', $font,
+			   '-annotate', '+' . (int)$x . '+' . (int)$y,
+			   $text
+		   ] );
+		   return $args;
+	   }
 
-	private function buildRectangleArguments( array $layer, float $scaleX, float $scaleY ): array {
-		$x = ( $layer['x'] ?? 0 ) * $scaleX;
-		$y = ( $layer['y'] ?? 0 ) * $scaleY;
-		$width = ( $layer['width'] ?? 100 ) * $scaleX;
-		$height = ( $layer['height'] ?? 100 ) * $scaleY;
-		$stroke = (string)( $layer['stroke'] ?? '#000000' );
-		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
-		$fill = (string)( $layer['fill'] ?? 'none' );
-		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
-		$fill = $this->withOpacity( $fill, $opacity );
-		$stroke = $this->withOpacity( $stroke, $opacity );
+	   private function buildRectangleArguments( array $layer, float $scaleX, float $scaleY ): array {
+		   $x = ( $layer['x'] ?? 0 ) * $scaleX;
+		   $y = ( $layer['y'] ?? 0 ) * $scaleY;
+		   $width = ( $layer['width'] ?? 100 ) * $scaleX;
+		   $height = ( $layer['height'] ?? 100 ) * $scaleY;
+		   $stroke = (string)( $layer['stroke'] ?? '#000000' );
+		   $strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		   $fill = (string)( $layer['fill'] ?? 'none' );
+		   $opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		   $fill = $this->withOpacity( $fill, $opacity );
+		   $stroke = $this->withOpacity( $stroke, $opacity );
 
-		return [
-			'-stroke', $stroke,
-			'-strokewidth', (string)$strokeWidth,
-			'-fill', $fill,
-			'-draw', 'rectangle ' . (int)$x . ',' . (int)$y . ' ' . (int)( $x + $width ) . ',' . (int)( $y + $height )
-		];
-	}
+		   $args = [];
+		   if ( !empty( $layer['shadow'] ) ) {
+			   $shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
+			   $shadowBlur = $layer['shadowBlur'] ?? 8;
+			   $shadowOffsetX = $layer['shadowOffsetX'] ?? 2;
+			   $shadowOffsetY = $layer['shadowOffsetY'] ?? 2;
+			   $shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+			   $args = array_merge( $args, [
+				   '-fill', $shadowColor,
+				   '-draw', 'rectangle ' . (int)($x + $shadowOffsetX) . ',' . (int)($y + $shadowOffsetY) . ' ' . (int)($x + $width + $shadowOffsetX) . ',' . (int)($y + $height + $shadowOffsetY),
+				   '-blur', '0x' . (int)$shadowBlur
+			   ] );
+		   }
+		   $args = array_merge( $args, [
+			   '-stroke', $stroke,
+			   '-strokewidth', (string)$strokeWidth,
+			   '-fill', $fill,
+			   '-draw', 'rectangle ' . (int)$x . ',' . (int)$y . ' ' . (int)( $x + $width ) . ',' . (int)( $y + $height )
+		   ] );
+		   return $args;
+	   }
 
-	private function buildCircleArguments( array $layer, float $scaleX, float $scaleY ): array {
-		$x = ( $layer['x'] ?? 0 ) * $scaleX;
-		$y = ( $layer['y'] ?? 0 ) * $scaleY;
-		$radius = ( $layer['radius'] ?? 50 ) * ( ( $scaleX + $scaleY ) / 2 );
-		$stroke = (string)( $layer['stroke'] ?? '#000000' );
-		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
-		$fill = (string)( $layer['fill'] ?? 'none' );
-		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
-		$fill = $this->withOpacity( $fill, $opacity );
-		$stroke = $this->withOpacity( $stroke, $opacity );
+	   private function buildCircleArguments( array $layer, float $scaleX, float $scaleY ): array {
+		   $x = ( $layer['x'] ?? 0 ) * $scaleX;
+		   $y = ( $layer['y'] ?? 0 ) * $scaleY;
+		   $radius = ( $layer['radius'] ?? 50 ) * ( ( $scaleX + $scaleY ) / 2 );
+		   $stroke = (string)( $layer['stroke'] ?? '#000000' );
+		   $strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		   $fill = (string)( $layer['fill'] ?? 'none' );
+		   $opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		   $fill = $this->withOpacity( $fill, $opacity );
+		   $stroke = $this->withOpacity( $stroke, $opacity );
 
-		return [
-			'-stroke', $stroke,
-			'-strokewidth', (string)$strokeWidth,
-			'-fill', $fill,
-			'-draw', 'circle ' . (int)$x . ',' . (int)$y . ' ' . (int)( $x + $radius ) . ',' . (int)$y
-		];
-	}
+		   $args = [];
+		   if ( !empty( $layer['shadow'] ) ) {
+			   $shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
+			   $shadowBlur = $layer['shadowBlur'] ?? 8;
+			   $shadowOffsetX = $layer['shadowOffsetX'] ?? 2;
+			   $shadowOffsetY = $layer['shadowOffsetY'] ?? 2;
+			   $shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+			   $args = array_merge( $args, [
+				   '-fill', $shadowColor,
+				   '-draw', 'circle ' . (int)($x + $shadowOffsetX) . ',' . (int)($y + $shadowOffsetY) . ' ' . (int)($x + $radius + $shadowOffsetX) . ',' . (int)($y + $shadowOffsetY),
+				   '-blur', '0x' . (int)$shadowBlur
+			   ] );
+		   }
+		   $args = array_merge( $args, [
+			   '-stroke', $stroke,
+			   '-strokewidth', (string)$strokeWidth,
+			   '-fill', $fill,
+			   '-draw', 'circle ' . (int)$x . ',' . (int)$y . ' ' . (int)( $x + $radius ) . ',' . (int)$y
+		   ] );
+		   return $args;
+	   }
 
 	private function buildEllipseArguments( array $layer, float $scaleX, float $scaleY ): array {
 		$x = ( $layer['x'] ?? 0 ) * $scaleX;

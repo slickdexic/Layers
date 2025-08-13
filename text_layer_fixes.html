@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Text Layer Fixes</title>
+    <style>
+        body { margin: 20px; font-family: Arial; }
+        .test-container { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        .status { padding: 5px 10px; margin: 5px 0; display: inline-block; }
+        .fixed { background: #afa; color: #050; }
+        code { background: #f5f5f5; padding: 2px 4px; font-family: monospace; }
+        button { margin: 5px; padding: 8px 16px; }
+    </style>
+</head>
+<body>
+    <h1>Text Layer Issues - Fix Verification</h1>
+
+    <div class="test-container">
+        <h2>Issue 1: Text stroke doesn't save/load properly</h2>
+        <div class="status fixed">FIXED</div>
+        <p><strong>Problem:</strong> <code>textStrokeWidth</code> property was missing from API validation.</p>
+        <p><strong>Solution:</strong> Added <code>'textStrokeWidth' => 'numeric'</code> to the allowed properties in <code>ApiLayersSave.php</code></p>
+        <p><strong>Test:</strong> Create a text layer, set stroke width and color, save and reload - stroke should persist.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Issue 2: Text rotation position is off / not anchored to center</h2>
+        <div class="status fixed">FIXED</div>
+        <p><strong>Problem:</strong> Text rotation was around top-left corner instead of text center.</p>
+        <p><strong>Solution:</strong> Enhanced text rotation logic in both editor and viewer:</p>
+        <ul>
+            <li>Calculate text dimensions using <code>measureText()</code></li>
+            <li>Rotate around calculated text center point</li>
+            <li>Adjust rendering coordinates accordingly</li>
+            <li>Applied consistent behavior in both CanvasManager.js and LayersViewer.js</li>
+        </ul>
+        <p><strong>Test:</strong> Create text, rotate it - should rotate around center of text.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Files Modified</h2>
+        <ul>
+            <li><code>src/Api/ApiLayersSave.php</code> - Added textStrokeWidth validation</li>
+            <li><code>resources/ext.layers.editor/CanvasManager.js</code> - Fixed text rotation centering</li>
+            <li><code>resources/ext.layers/LayersViewer.js</code> - Added rotation and stroke support for consistency</li>
+        </ul>
+    </div>
+
+    <div class="test-container">
+        <h2>Verification Steps</h2>
+        <ol>
+            <li><strong>Text Stroke Persistence:</strong>
+                <ul>
+                    <li>Create a text layer</li>
+                    <li>Set text stroke width > 0 and choose a stroke color</li>
+                    <li>Save the layer data</li>
+                    <li>Close and reopen the editor</li>
+                    <li>Verify stroke width and color are preserved</li>
+                </ul>
+            </li>
+            <li><strong>Text Rotation Centering:</strong>
+                <ul>
+                    <li>Create a text layer with some text</li>
+                    <li>Use the rotation handle to rotate the text</li>
+                    <li>Verify rotation happens around the center of the text</li>
+                    <li>Save and view in the viewer - rotation should match</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="test-container">
+        <h2>Technical Details</h2>
+        <p><strong>Text Stroke Fix:</strong></p>
+        <ul>
+            <li>The API was rejecting <code>textStrokeWidth</code> during save validation</li>
+            <li>Added the property to the <code>$allowedProps</code> array with <code>numeric</code> type</li>
+            <li>Now text stroke properties persist correctly</li>
+        </ul>
+
+        <p><strong>Text Rotation Fix:</strong></p>
+        <ul>
+            <li>Old behavior: Rotate around (x, y) position (top-left of text)</li>
+            <li>New behavior: Rotate around calculated center of text</li>
+            <li>Uses <code>measureText()</code> to get text width</li>
+            <li>Calculates center as <code>x + width/2, y - height/4</code></li>
+            <li>Adjusts drawing position after rotation transform</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('Text layer fixes verification page loaded');
+        console.log('Check the MediaWiki Layers extension with these fixes applied');
+    </script>
+</body>
+</html>

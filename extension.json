@@ -15,6 +15,10 @@
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
 	},
+	"AutoloadClasses": {
+		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave": "src/Api/ApiLayersSave.php",
+		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo": "src/Api/ApiLayersInfo.php"
+	},
 	"config": {
 		"LayersEnable": {
 			"description": "Master switch for Layers extension functionality",
@@ -27,6 +31,10 @@
 		"LayersMaxBytes": {
 			"description": "Maximum JSON size per layer set in bytes",
 			"value": 2097152
+		},
+		"LayersMaxLayerCount": {
+			"description": "Maximum number of layers per layer set",
+			"value": 100
 		},
 		"LayersUseBinaryOverlays": {
 			"description": "Enable legacy binary overlay files (.l01, .l02, etc)",
@@ -136,6 +144,7 @@
 			"scripts": [
 				"CanvasManager.js",
 				"LayerPanel.js",
+				"LayersValidator.js",
 				"Toolbar.js",
 				"LayersEditor.js"
 			],

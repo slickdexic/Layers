@@ -20,6 +20,10 @@
 		this.currentTool = 'pointer';
 		this.currentColor = '#000000';
 		this.currentStrokeWidth = 2;
+		
+		// Initialize validator for real-time input validation
+		this.validator = window.LayersValidator ? new window.LayersValidator() : null;
+		this.inputValidators = [];
 
 		this.init();
 	}
@@ -35,6 +39,8 @@
 	Toolbar.prototype.createInterface = function () {
 		this.container.innerHTML = '';
 		this.container.className = 'layers-toolbar';
+		this.container.setAttribute( 'role', 'toolbar' );
+		this.container.setAttribute( 'aria-label', ( mw.message ? mw.message( 'layers-toolbar-title' ).text() : 'Toolbar' ) );
 
 		// Create tool groups
 		this.createToolGroup();
@@ -241,6 +247,66 @@
 		this.textShadowToggle = shadowToggle;
 		this.textShadowColor = shadowColor;
 		this.arrowStyleSelect = arrowStyleSelect;
+
+		// Add client-side validation to input fields
+		this.setupInputValidation();
+	};
+
+	Toolbar.prototype.setupInputValidation = function () {
+		if (!this.validator) {
+			return; // Validator not available
+		}
+
+		var self = this;
+
+		// Font size validation (1-200)
+		if (this.fontSize) {
+			this.inputValidators.push(
+				this.validator.createInputValidator(this.fontSize, 'number', {
+					min: 1,
+					max: 200
+				})
+			);
+		}
+
+		// Stroke width validation (0-50)
+		if (this.strokeWidth) {
+			this.inputValidators.push(
+				this.validator.createInputValidator(this.strokeWidth, 'number', {
+					min: 0,
+					max: 50
+				})
+			);
+		}
+
+		// Text stroke width validation (0-10)
+		if (this.textStrokeWidth) {
+			this.inputValidators.push(
+				this.validator.createInputValidator(this.textStrokeWidth, 'number', {
+					min: 0,
+					max: 10
+				})
+			);
+		}
+
+		// Color validation
+		if (this.colorPicker) {
+			this.inputValidators.push(
+				this.validator.createInputValidator(this.colorPicker, 'color')
+			);
+		}
+
+		if (this.textStrokeColor) {
+			this.inputValidators.push(
+				this.validator.createInputValidator(this.textStrokeColor, 'color')
+			);
+		}
+
+		if (this.textShadowColor) {
+			this.inputValidators.push(
+				this.validator.createInputValidator(this.textShadowColor, 'color')
+			);
+		}
 	};
 
 	// Effects group removed; moved to LayerPanel Properties

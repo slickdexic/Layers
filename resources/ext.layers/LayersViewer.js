@@ -219,7 +219,7 @@
 			}
 		}
 
-		// Apply per-layer effects (opacity, blend) around the draw
+		// Apply per-layer effects (opacity, blend, shadow) around the draw
 		this.ctx.save();
 		if ( typeof layer.opacity === 'number' ) {
 			// Clamp to [0,1]
@@ -230,6 +230,24 @@
 				this.ctx.globalCompositeOperation = String( layer.blend );
 			} catch ( e ) {
 				// ignore unsupported blend modes
+			}
+		}
+		
+		// Apply shadow effects - support both flat and nested shadow formats
+		if ( layer.shadow ) {
+			// New flat format from editor (shadow: true, shadowColor: '#000', etc.)
+			if ( typeof layer.shadow === 'boolean' && layer.shadow ) {
+				this.ctx.shadowColor = layer.shadowColor || '#000000';
+				this.ctx.shadowBlur = layer.shadowBlur || 0;
+				this.ctx.shadowOffsetX = layer.shadowOffsetX || 0;
+				this.ctx.shadowOffsetY = layer.shadowOffsetY || 0;
+			}
+			// Legacy nested format (shadow: {color: '#000', blur: 5, etc.})
+			else if ( typeof layer.shadow === 'object' && layer.shadow ) {
+				this.ctx.shadowColor = layer.shadow.color || '#000000';
+				this.ctx.shadowBlur = layer.shadow.blur || 0;
+				this.ctx.shadowOffsetX = layer.shadow.offsetX || 0;
+				this.ctx.shadowOffsetY = layer.shadow.offsetY || 0;
 			}
 		}
 
@@ -266,7 +284,7 @@
 				break;
 		}
 
-		// Restore to pre-layer state
+		// Restore to pre-layer state (clears shadow effects too)
 		this.ctx.restore();
 	};
 
@@ -281,17 +299,40 @@
 		var fontPx = layer.fontSize || 16;
 		fontPx = Math.max( 1, Math.round( fontPx * scaleAvg ) );
 		this.ctx.font = fontPx + 'px ' + ( layer.fontFamily || 'Arial' );
+		this.ctx.textAlign = layer.textAlign || 'left';
 		this.ctx.fillStyle = layer.fill || '#000000';
 
-		// Handle text shadow
-		if ( layer.shadow ) {
-			this.ctx.shadowColor = layer.shadow.color || '#000000';
-			this.ctx.shadowBlur = layer.shadow.blur || 0;
-			this.ctx.shadowOffsetX = layer.shadow.offsetX || 0;
-			this.ctx.shadowOffsetY = layer.shadow.offsetY || 0;
+		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var text = layer.text || '';
+
+		// Calculate text dimensions for proper rotation centering
+		var textMetrics = this.ctx.measureText( text );
+		var textWidth = textMetrics.width;
+		var textHeight = fontPx;
+		
+		// Calculate text center for rotation
+		var centerX = x + ( textWidth / 2 );
+		var centerY = y - ( textHeight / 4 ); // Adjust for text baseline
+		
+		// Apply rotation if present
+		if ( layer.rotation && layer.rotation !== 0 ) {
+			var rotationRadians = ( layer.rotation * Math.PI ) / 180;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( rotationRadians );
+			// Adjust drawing position to account for center rotation
+			x = -( textWidth / 2 );
+			y = textHeight / 4;
 		}
 
-		this.ctx.fillText( layer.text || '', layer.x || 0, layer.y || 0 );
+		// Draw text stroke if enabled
+		if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
+			this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
+			this.ctx.lineWidth = layer.textStrokeWidth * scaleAvg;
+			this.ctx.strokeText( text, x, y );
+		}
+
+		this.ctx.fillText( text, x, y );
 		this.ctx.restore();
 	};
 

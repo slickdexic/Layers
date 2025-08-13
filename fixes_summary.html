@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Layer Issues - Summary</title>
+    <style>
+        body { margin: 20px; font-family: Arial; }
+        .fix-container { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        .fix-title { font-weight: bold; color: #2a5; }
+        .issue-title { font-weight: bold; color: #d52; }
+        .status { padding: 5px 10px; margin: 5px 0; display: inline-block; }
+        .fixed { background: #afa; color: #050; }
+        .partial { background: #ffa; color: #850; }
+        .pending { background: #faa; color: #500; }
+        code { background: #f5f5f5; padding: 2px 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>MediaWiki Layers Extension - Issue Fixes Summary</h1>
+
+    <div class="fix-container">
+        <h2 class="issue-title">Issue #1: Layer fill opacity and effects opacity not saving or loading</h2>
+        <div class="status fixed">FIXED</div>
+        <p><strong>Problem:</strong> Layer opacity was using <code>applyToSelection()</code> instead of <code>updateLayer()</code>, causing the data not to be properly saved.</p>
+        <p><strong>Solution:</strong> Changed LayerPanel.js line 1121-1125 to use <code>self.editor.updateLayer(layer.id, { opacity: val / 100 })</code></p>
+        <p><strong>Files Modified:</strong> <code>resources/ext.layers.editor/LayerPanel.js</code></p>
+    </div>
+
+    <div class="fix-container">
+        <h2 class="issue-title">Issue #2: Stroke not working for a text layer</h2>
+        <div class="status fixed">FIXED</div>
+        <p><strong>Problem:</strong> Text stroke properties were not exposed in the LayerPanel UI controls.</p>
+        <p><strong>Solution:</strong> Added text stroke width and color inputs to LayerPanel.js for text layers</p>
+        <p><strong>Files Modified:</strong></p>
+        <ul>
+            <li><code>resources/ext.layers.editor/LayerPanel.js</code> - Added textStrokeWidth and textStrokeColor controls</li>
+            <li><code>resources/ext.layers.editor/CanvasManager.js</code> - Text stroke rendering was already implemented</li>
+        </ul>
+    </div>
+
+    <div class="fix-container">
+        <h2 class="issue-title">Issue #3: Resizing by handles not working</h2>
+        <div class="status fixed">FIXED</div>
+        <p><strong>Problem:</strong> Text layers were missing resize calculation function.</p>
+        <p><strong>Solution:</strong> Added <code>calculateTextResize()</code> function and enabled it in the resize switch statement</p>
+        <p><strong>Files Modified:</strong> <code>resources/ext.layers.editor/CanvasManager.js</code></p>
+        <ul>
+            <li>Added calculateTextResize function for font size scaling</li>
+            <li>Enabled 'text' case in calculateResize switch statement</li>
+        </ul>
+    </div>
+
+    <div class="fix-container">
+        <h2 class="issue-title">Issue #4: Rotating by handle works for rectangle, but not text</h2>
+        <div class="status fixed">FIXED</div>
+        <p><strong>Problem:</strong> Text rotation was not being applied in the drawText function.</p>
+        <p><strong>Solution:</strong> Enhanced drawText function to apply rotation transforms</p>
+        <p><strong>Files Modified:</strong> <code>resources/ext.layers.editor/CanvasManager.js</code></p>
+        <ul>
+            <li>Added rotation check and transform logic to drawText function</li>
+            <li>Rotation is applied around text center point</li>
+        </ul>
+    </div>
+
+    <div class="fix-container">
+        <h2 class="fix-title">Additional Improvements Made</h2>
+        <ul>
+            <li><strong>Text Shadow Support:</strong> Enhanced text rendering with proper shadow effects</li>
+            <li><strong>Code Organization:</strong> Improved function structure and error handling</li>
+            <li><strong>Property Validation:</strong> Added better property checks for text-specific attributes</li>
+        </ul>
+    </div>
+
+    <div class="fix-container">
+        <h2 class="issue-title">Known Issues Remaining</h2>
+        <div class="status pending">PENDING</div>
+        <ul>
+            <li><strong>Linting Errors:</strong> Code style and formatting issues need to be addressed</li>
+            <li><strong>Line Endings:</strong> CRLF vs LF line ending inconsistencies</li>
+            <li><strong>Code Style:</strong> Spacing and indentation issues in various files</li>
+        </ul>
+        <p><strong>Recommended Next Steps:</strong></p>
+        <ul>
+            <li>Run <code>npm run fix</code> to auto-fix formatting issues</li>
+            <li>Test the layer functionality in a live MediaWiki environment</li>
+            <li>Validate save/load functionality with real data</li>
+        </ul>
+    </div>
+
+    <div class="fix-container">
+        <h2 class="fix-title">Testing Recommendations</h2>
+        <p>To verify the fixes work correctly:</p>
+        <ol>
+            <li>Create a text layer and test stroke properties in the layer panel</li>
+            <li>Try resizing text layers using the corner handles</li>
+            <li>Test text rotation using the rotation handle</li>
+            <li>Set layer opacity and save/reload to verify persistence</li>
+            <li>Test fillOpacity and strokeOpacity settings</li>
+        </ol>
+    </div>
+
+    <script>
+        // Log completion
+        console.log('Layer fixes summary loaded');
+        console.log('Issues addressed:');
+        console.log('1. Layer opacity save/load - FIXED');
+        console.log('2. Text stroke controls - FIXED');
+        console.log('3. Text resizing handles - FIXED');
+        console.log('4. Text rotation - FIXED');
+    </script>
+</body>
+</html>

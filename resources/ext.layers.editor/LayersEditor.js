@@ -464,6 +464,9 @@
 	LayersEditor.prototype.loadLayers = function () {
 		var self = this;
 
+		// Show loading spinner
+		self.showSpinner( mw.message ? mw.message( 'layers-loading' ).text() : 'Loading...' );
+
 		// Load existing layers from API
 		var api = new mw.Api();
 		api.get( {
@@ -471,6 +474,23 @@
 			filename: this.filename,
 			format: 'json'
 		} ).done( function ( data ) {
+			self.hideSpinner();
+			
+			// Debug: Log raw API response
+			if ( window.console ) {
+				console.log('Raw layersinfo API response:', data);
+				if ( data.layersinfo && data.layersinfo.layerset ) {
+					console.log('Raw layerset data:', data.layersinfo.layerset);
+					if ( data.layersinfo.layerset.data && data.layersinfo.layerset.data.layers ) {
+						console.log('Raw layers array:', data.layersinfo.layerset.data.layers);
+						// Show each raw layer in detail
+						data.layersinfo.layerset.data.layers.forEach(function(layer, index) {
+							console.log('Raw Layer ' + index + ':', JSON.stringify(layer, null, 2));
+						});
+					}
+				}
+			}
+			
 			if ( data.layersinfo && data.layersinfo.layerset ) {
 				self.layers = ( data.layersinfo.layerset.data.layers || [] )
 					.map( function ( layer ) {
@@ -479,13 +499,42 @@
 							layer.id = 'layer_' + Date.now() + '_' +
 								Math.random().toString( 36 ).slice( 2, 9 );
 						}
+						
+						// Fix boolean properties that may have been converted to empty strings
+						var booleanProps = ['shadow', 'textShadow', 'glow', 'visible', 'locked'];
+						booleanProps.forEach(function(prop) {
+							if (layer[prop] === '0' || layer[prop] === 'false') {
+								layer[prop] = false;
+							} else if (layer[prop] === '' || layer[prop] === '1' || layer[prop] === 'true') {
+								// Treat empty string as true since it indicates the property was set
+								// This handles the MediaWiki boolean serialization issue
+								layer[prop] = true;
+							}
+							// Leave actual booleans unchanged
+						});
+						
 						return layer;
 					} );
 				self.currentLayerSetId = data.layersinfo.layerset.id || null;
-				// console.log( 'Layers: Loaded', self.layers.length, 'existing layers' );
+				
+				// Debug: Log loaded layers and their shadow properties
+				if ( window.console ) {
+					console.log('Loaded layers count:', self.layers.length);
+					self.layers.forEach(function(layer, index) {
+						console.log('Loaded Layer ' + index + ':', layer);
+						// Show shadow properties specifically
+						console.log('  Shadow after normalization:', {
+							shadow: layer.shadow,
+							shadowType: typeof layer.shadow,
+							shadowColor: layer.shadowColor,
+							shadowBlur: layer.shadowBlur,
+							shadowOffsetX: layer.shadowOffsetX,
+							shadowOffsetY: layer.shadowOffsetY
+						});
+					});
+				}
 			} else {
 				self.layers = [];
-				// console.log( 'Layers: No existing layers found, starting fresh' );
 			}
 
 			// Populate revision list if provided
@@ -497,15 +546,37 @@
 
 			// Save initial state for undo system
 			self.saveState( 'initial' );
-		} ).fail( function () {
-			// console.error( 'Failed to load layers:', err );
+		} ).fail( function ( code, result ) {
+			self.hideSpinner();
 			self.layers = [];
 			self.renderLayers();
-
-			// Save initial empty state for undo system
 			self.saveState( 'initial' );
-			// Don't show error to user as this is expected for new files
+			var errorMsg = ( mw.message ? mw.message( 'layers-load-error' ).text() : 'Failed to load layers' );
+			if ( result && result.error && result.error.info ) {
+					errorMsg = result.error.info;
+			}
+			mw.notify( errorMsg, { type: 'error' } );
 		} );
+	};
+
+	// Show/hide spinner for long operations
+	LayersEditor.prototype.showSpinner = function ( message ) {
+		if ( this.spinnerEl ) {
+			this.spinnerEl.remove();
+		}
+		this.spinnerEl = document.createElement( 'div' );
+		this.spinnerEl.className = 'layers-spinner';
+		this.spinnerEl.setAttribute( 'role', 'status' );
+		this.spinnerEl.setAttribute( 'aria-live', 'polite' );
+		this.spinnerEl.innerHTML = '<span class="spinner"></span> ' + ( message || '' );
+		this.container.appendChild( this.spinnerEl );
+	};
+
+	LayersEditor.prototype.hideSpinner = function () {
+		if ( this.spinnerEl ) {
+			this.spinnerEl.remove();
+			this.spinnerEl = null;
+		}
 	};
 
 	LayersEditor.prototype.buildRevisionSelector = function () {
@@ -888,55 +959,131 @@
 		}
 	};
 
-	LayersEditor.prototype.save = function () {
-		var self = this;
+		LayersEditor.prototype.save = function () {
+			var self = this;
 
-		// Show saving indicator
-		mw.notify( ( mw.message ? mw.message( 'layers-saving' ).text() : ( mw.msg ? mw.msg( 'layers-saving' ) : 'Saving...' ) ), { type: 'info' } );
+			// Client-side validation before saving
+			if ( window.LayersValidator ) {
+				var validator = new window.LayersValidator();
+				// Use default max layers
+				var validationResult = validator.validateLayers( this.layers, 100 );
 
-		// Disable save button briefly
-		if ( this.toolbar && this.toolbar.saveButton ) {
-			this.toolbar.saveButton.disabled = true;
-			setTimeout( function () {
-				self.toolbar.saveButton.disabled = false;
-			}, 2000 );
-		}
+				if ( !validationResult.isValid ) {
+					// Show validation errors to user
+					validator.showValidationErrors( validationResult.errors, 'save' );
+					return; // Don't proceed with save
+				}
 
-		// Save layers to API
-		var api = new mw.Api();
-		var payload = {
-			action: 'layerssave',
-			filename: this.filename,
-			data: JSON.stringify( this.layers ),
-			format: 'json'
+				// Show warnings if any (but still allow save)
+				if ( validationResult.warnings && validationResult.warnings.length > 0 ) {
+					if ( window.mw && window.mw.notify ) {
+						var warningMsg = 'Warnings: ' + validationResult.warnings.join( '; ' );
+						mw.notify( warningMsg, { type: 'warn' } );
+					}
+				}
+			}
+
+			// Show saving spinner
+			self.showSpinner( mw.message ? mw.message( 'layers-saving' ).text() : 'Saving...' );
+
+			// Disable save button briefly
+			if ( this.toolbar && this.toolbar.saveButton ) {
+				this.toolbar.saveButton.disabled = true;
+				setTimeout( function () {
+					self.toolbar.saveButton.disabled = false;
+				}, 2000 );
+			}
+
+			// Save layers to API
+			var api = new mw.Api();
+			var payload = {
+				action: 'layerssave',
+				filename: this.filename,
+				data: JSON.stringify( this.layers ),
+				format: 'json'
+			};
+			if ( this.revNameInputEl && this.revNameInputEl.value ) {
+				var setname = this.revNameInputEl.value.trim();
+				if ( setname ) {
+					payload.setname = setname;
+				}
+			}
+			if ( window.console ) {
+				console.log('Layers save payload:', payload);
+				// Debug: Show detailed layer data
+				console.log('Layer count:', this.layers.length);
+				this.layers.forEach(function(layer, index) {
+					console.log('Layer ' + index + ':', layer);
+					if (layer.shadow) {
+						console.log('  Shadow properties:', {
+							shadow: layer.shadow,
+							shadowColor: layer.shadowColor,
+							shadowBlur: layer.shadowBlur,
+							shadowOffsetX: layer.shadowOffsetX,
+							shadowOffsetY: layer.shadowOffsetY,
+							shadowSpread: layer.shadowSpread
+						});
+					}
+				});
+			}
+			api.postWithToken( 'csrf', payload ).done( function ( data ) {
+				self.hideSpinner();
+				
+				// Debug: Log the actual API response
+				if ( window.console ) {
+					console.log('Layers save API response:', data);
+				}
+				
+				if ( data.layerssave && data.layerssave.success ) {
+					self.markClean();
+					mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type: 'success' } );
+					self.reloadRevisions();
+				} else {
+					var errorMsg = ( data.error && data.error.info ) ||
+						( data.layerssave && data.layerssave.error ) ||
+						( mw.message ? mw.message( 'layers-save-error' ).text() : 'Error saving layers' );
+					
+					// Debug: Show what we're looking for vs what we got
+					if ( window.console ) {
+						console.log('Save failed. Expected data.layerssave.success, got:');
+						console.log('data.layerssave:', data.layerssave);
+						console.log('data.error:', data.error);
+					}
+					
+					mw.notify( 'Save failed: ' + errorMsg, { type: 'error' } );
+					// Always show a modal with error details
+					self.showError( 'Save failed: ' + errorMsg );
+					// Log full API response for debugging
+					if ( window.console ) {
+						console.error( 'Layers save API error:', data );
+					}
+				}
+			} ).fail( function ( code, result ) {
+				self.hideSpinner();
+				var errorMsg = ( mw.message ? mw.message( 'layers-save-error' ).text() : 'Error saving layers' );
+				if ( result && result.error && result.error.info ) {
+					errorMsg = result.error.info;
+				}
+				mw.notify( 'API Error: ' + errorMsg, { type: 'error' } );
+				// Always show a modal with error details
+				self.showError( 'API Error: ' + errorMsg );
+				// Log full API error for debugging
+				if ( window.console ) {
+					console.error( 'Layers save API failure:', code, result );
+				}
+			} );
 		};
-		if ( this.revNameInputEl && this.revNameInputEl.value ) {
-			var setname = this.revNameInputEl.value.trim();
-			if ( setname ) {
-				payload.setname = setname;
-			}
-		}
-		api.postWithToken( 'csrf', payload ).done( function ( data ) {
-			if ( data.layerssave && data.layerssave.success ) {
-				self.markClean();
-				mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type: 'success' } );
-				// After a successful save, keep the editor open but update title indicator
-				// Optionally, navigate back quickly if user clicked header close earlier
-				self.reloadRevisions();
-			} else {
-				var errorMsg = ( data.error && data.error.info ) ||
-					( data.layerssave && data.layerssave.error ) ||
-					( mw.message ? mw.message( 'layers-save-error' ).text() : ( mw.msg ? mw.msg( 'layers-save-error' ) : 'Error saving layers' ) );
-				mw.notify( 'Save failed: ' + errorMsg, { type: 'error' } );
-			}
-		} ).fail( function ( code, result ) {
-			var errorMsg = ( mw.message ? mw.message( 'layers-save-error' ).text() : ( mw.msg ? mw.msg( 'layers-save-error' ) : 'Error saving layers' ) );
-			if ( result && result.error && result.error.info ) {
-				errorMsg = result.error.info;
-			}
-			mw.notify( 'API Error: ' + errorMsg, { type: 'error' } );
-		} );
-	};
+// Accessibility: Add ARIA roles and keyboard navigation stubs
+// TODO: Implement more comprehensive keyboard navigation and screen reader support
+
+// Security: Input sanitization before rendering user content
+// TODO: Ensure all user-generated content is sanitized before rendering in the DOM or canvas
+
+// Analytics: Stub for usage tracking
+// TODO: Add analytics hooks for editor usage (e.g., save, load, tool usage)
+
+// Testing: Stub for unit/E2E tests
+// TODO: Add unit and integration tests for LayersEditor and CanvasManager
 
 	LayersEditor.prototype.markDirty = function () {
 		this.isDirty = true;
@@ -1036,7 +1183,7 @@
 	mw.hook( 'layers.editor.init' ).add( function ( config ) {
 		document.title = '🎨 Layers Editor Initializing...';
 		var editor = new LayersEditor( config );
-		document.title = '🎨 Layers Editor - ' + (config.filename || 'Unknown File');
+		document.title = '🎨 Layers Editor - ' + ( config.filename || 'Unknown File' );
 		if ( window.mw && window.mw.config.get( 'debug' ) ) {
 			window.layersEditorInstance = editor;
 		}
