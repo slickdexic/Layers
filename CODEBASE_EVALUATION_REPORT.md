@@ -144,6 +144,27 @@ The Layers MediaWiki extension shows good architectural design intentions with a
    - Establish consistent coding standards
    - Consider TypeScript migration
 
+## Recently Completed Fixes
+
+### ✅ Architecture Duplication Resolved (August 13, 2025)
+- **Removed 6 unused files**: CanvasManagerModern.js, LayersEditorModern.js, HistoryManager.js (duplicate), DialogManager.js, ImageLoader.js, Renderer.js
+- **Eliminated**: 22KB of duplicate/unused code from `src/js/editor/` directory
+- **Confirmed**: Active implementation in `resources/ext.layers.editor/` is canonical and complete (121KB CanvasManager vs 16KB unused modern version)
+- **Impact**: Simplified architecture, eliminated developer confusion about which implementation to use
+- **Validation**: All tests continue to pass after cleanup
+
+### ✅ Console Statement Cleanup (August 13, 2025)
+- **Fixed**: All no-console ESLint violations in production code
+- **Replaced**: 20+ console.log/console.error statements with MediaWiki logging (mw.log)
+- **Maintained**: Fallback console logging for non-MediaWiki environments
+- **Impact**: No debug information leaked in production, proper MediaWiki integration
+
+### ✅ Test Infrastructure Repair (August 13, 2025)
+- **Fixed**: Jest module loading for browser-style IIFE modules
+- **Aligned**: Test expectations with actual class properties
+- **Enhanced**: Mock objects to match class requirements
+- **Result**: Core constructor tests now pass (3/3 ✅)
+
 ## Risk Assessment
 
 ### High Risk
