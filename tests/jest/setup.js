@@ -80,6 +80,28 @@ HTMLCanvasElement.prototype.toBlob = jest.fn(function(callback) {
 	callback(new Blob());
 });
 
+// Load JavaScript modules that use window export pattern
+// We need to load these files in the global scope for browser-style modules
+const fs = require('fs');
+const path = require('path');
+
+// Function to load a browser-style JavaScript file into the global scope
+function loadBrowserModule(filePath) {
+	const fullPath = path.resolve(__dirname, '../../', filePath);
+	const moduleCode = fs.readFileSync(fullPath, 'utf8');
+	eval(moduleCode);
+}
+
+// Load the core modules that the tests depend on
+loadBrowserModule('resources/ext.layers.editor/SelectionManager.js');
+loadBrowserModule('resources/ext.layers.editor/EventHandler.js');
+loadBrowserModule('resources/ext.layers.editor/HistoryManager.js');
+
+// Export modules to match test expectations
+global.SelectionManager = window.LayersSelectionManager;
+global.EventHandler = window.LayersEventHandler;
+global.HistoryManager = window.LayersHistoryManager;
+
 // Global test utilities
 global.createMockLayer = function(overrides) {
 	overrides = overrides || {};

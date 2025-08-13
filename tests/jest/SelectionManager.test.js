@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-const SelectionManager = require('../../resources/ext.layers.editor/SelectionManager.js');
+// SelectionManager is loaded globally by Jest setup
 
 describe('SelectionManager', () => {
 	let selectionManager;
@@ -50,20 +50,29 @@ describe('SelectionManager', () => {
 			selectedLayerIds: [],
 			redraw: jest.fn(),
 			saveState: jest.fn(),
-			isModified: false
+			isModified: false,
+			editor: {
+				layers: mockLayers,
+				markDirty: jest.fn(),
+				updateStatus: jest.fn(),
+				layerPanel: {
+					updateLayers: jest.fn(),
+					updateSelection: jest.fn()
+				}
+			}
 		};
 
 		// Create SelectionManager instance
-		selectionManager = new SelectionManager(mockCanvasManager);
+		selectionManager = new SelectionManager({}, mockCanvasManager);
 	});
 
 	describe('initialization', () => {
 		test('should create SelectionManager with correct properties', () => {
 			expect(selectionManager.canvasManager).toBe(mockCanvasManager);
 			expect(selectionManager.selectedLayerIds).toEqual([]);
-			expect(selectionManager.marqueeStart).toBeNull();
-			expect(selectionManager.marqueeEnd).toBeNull();
-			expect(selectionManager.dragStart).toBeNull();
+			expect(selectionManager.marqueeStart).toEqual({x: 0, y: 0});
+			expect(selectionManager.marqueeEnd).toEqual({x: 0, y: 0});
+			expect(selectionManager.dragStartPoint).toBeNull();
 			expect(selectionManager.isDragging).toBe(false);
 		});
 	});

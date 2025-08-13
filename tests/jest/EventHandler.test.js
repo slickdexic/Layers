@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-const EventHandler = require('../../resources/ext.layers.editor/EventHandler.js');
+// EventHandler is loaded globally by Jest setup
 
 describe('EventHandler', () => {
 	let eventHandler;
@@ -38,7 +38,7 @@ describe('EventHandler', () => {
 		};
 
 		// Create EventHandler instance
-		eventHandler = new EventHandler(mockCanvasManager);
+		eventHandler = new EventHandler({}, mockCanvasManager);
 	});
 
 	afterEach(() => {
@@ -50,7 +50,8 @@ describe('EventHandler', () => {
 			expect(eventHandler.canvasManager).toBe(mockCanvasManager);
 			expect(eventHandler.canvas).toBe(mockCanvas);
 			expect(eventHandler.isMouseDown).toBe(false);
-			expect(eventHandler.lastTouchTime).toBe(0);
+			expect(eventHandler.lastMousePoint).toBeNull();
+			expect(eventHandler.touches).toEqual({});
 		});
 
 		test('should setup event listeners on canvas', () => {

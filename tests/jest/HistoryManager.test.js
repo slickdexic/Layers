@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-const HistoryManager = require('../../resources/ext.layers.editor/HistoryManager.js');
+// HistoryManager is loaded globally by Jest setup
 
 describe('HistoryManager', () => {
 	let historyManager;
@@ -27,20 +27,42 @@ describe('HistoryManager', () => {
 			layers: mockLayers,
 			selectedLayerIds: [],
 			redraw: jest.fn(),
-			isModified: false
+			isModified: false,
+			editor: {
+				layers: mockLayers,
+				markDirty: jest.fn(),
+				updateStatus: jest.fn(),
+				layerPanel: {
+					updateLayers: jest.fn()
+				},
+				toolbar: {
+					container: {
+						querySelector: jest.fn(function(selector) {
+							return {
+								disabled: false,
+								classList: {
+									add: jest.fn(),
+									remove: jest.fn()
+								}
+							};
+						})
+					}
+				}
+			},
+			renderLayers: jest.fn()
 		};
 
 		// Create HistoryManager instance
-		historyManager = new HistoryManager(mockCanvasManager);
+		historyManager = new HistoryManager({}, mockCanvasManager);
 	});
 
 	describe('initialization', () => {
 		test('should create HistoryManager with correct properties', () => {
 			expect(historyManager.canvasManager).toBe(mockCanvasManager);
 			expect(historyManager.history).toEqual([]);
-			expect(historyManager.currentIndex).toBe(-1);
-			expect(historyManager.maxHistorySize).toBe(50);
-			expect(historyManager.batchOperations).toEqual([]);
+			expect(historyManager.historyIndex).toBe(-1);
+			expect(historyManager.maxHistorySteps).toBe(50);
+			expect(historyManager.batchChanges).toEqual([]);
 			expect(historyManager.batchMode).toBe(false);
 		});
 	});
