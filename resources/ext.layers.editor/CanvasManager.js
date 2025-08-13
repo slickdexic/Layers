@@ -3446,32 +3446,43 @@
 		this.isRendering = true;
 
 		try {
-			console.log( 'Layers: Starting renderLayers with', layers ? layers.length : 0, 'layers' );
-			
+			if ( window.mw && window.mw.log ) {
+				mw.log( 'Layers: Starting renderLayers with', layers ? layers.length : 0, 'layers' );
+			}
 			// Redraw background
 			this.redraw();
 
 			// Render each layer in order
 			if ( layers && layers.length > 0 ) {
-				console.log( 'Layers: Processing layers array' );
+				if ( window.mw && window.mw.log ) {
+					mw.log( 'Layers: Processing layers array' );
+				}
 				// Batch operations for better performance
 				this.ctx.save();
 
 				layers.forEach( function ( layer, index ) {
-					console.log( 'Layers: Processing layer', index, 'visible:', layer.visible, 'type:', layer.type );
+					if ( window.mw && window.mw.log ) {
+						mw.log( 'Layers: Processing layer', index, 'visible:', layer.visible, 'type:', layer.type );
+					}
 					if ( layer.visible !== false ) { // Skip invisible layers early
 						this.applyLayerEffects( layer, function () {
-							console.log( 'Layers: Drawing layer', index, layer.type );
+							if ( window.mw && window.mw.log ) {
+								mw.log( 'Layers: Drawing layer', index, layer.type );
+							}
 							this.drawLayer( layer );
 						}.bind( this ) );
 					} else {
-						console.log( 'Layers: Skipping invisible layer', index );
+						if ( window.mw && window.mw.log ) {
+							mw.log( 'Layers: Skipping invisible layer', index );
+						}
 					}
 				}.bind( this ) );
 
 				this.ctx.restore();
 			} else {
-				console.log( 'Layers: No layers to render' );
+				if ( window.mw && window.mw.log ) {
+					mw.log( 'Layers: No layers to render' );
+				}
 			}
 
 			// Draw selection indicators if any layer is selected
@@ -3501,12 +3512,16 @@
 			// Draw preview guide while dragging from ruler
 			this.drawGuidePreview();
 			
-			console.log( 'Layers: renderLayers completed successfully' );
+			if ( window.mw && window.mw.log ) {
+				mw.log( 'Layers: renderLayers completed successfully' );
+			}
 		} catch ( error ) {
-			console.error( 'Layers: Error during rendering:', error );
 			// Log error to MediaWiki if available, otherwise to console as fallback
 			if ( window.mw && window.mw.log ) {
-				window.mw.log.error( 'Layers: Error during rendering:', error );
+				mw.log.error( 'Layers: Error during rendering:', error );
+			} else {
+				// eslint-disable-next-line no-console
+				console.error( 'Layers: Error during rendering:', error );
 			}
 		} finally {
 			this.isRendering = false;

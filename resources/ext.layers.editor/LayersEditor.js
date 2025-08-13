@@ -37,9 +37,8 @@
 	 * @param {...*} args Arguments to log
 	 */
 	LayersEditor.prototype.debugLog = function () {
-		if ( this.debug && window.console && console.log ) {
-			// eslint-disable-next-line no-console
-			console.log.apply( console, arguments );
+		if ( this.debug && window.mw && window.mw.log ) {
+			mw.log.apply( mw, arguments );
 		}
 	};
 
@@ -49,7 +48,11 @@
 	 * @param {...*} args Arguments to log
 	 */
 	LayersEditor.prototype.errorLog = function () {
-		if ( window.console && console.error ) {
+		if ( window.mw && window.mw.log ) {
+			mw.log.error.apply( mw.log, arguments );
+		// eslint-disable-next-line no-console
+		} else if ( window.console && console.error ) {
+			// Fallback to console for environments without MediaWiki
 			// eslint-disable-next-line no-console
 			console.error.apply( console, arguments );
 		}
@@ -511,20 +514,20 @@
 	LayersEditor.prototype.loadLayers = function () {
 		var self = this;
 
-		console.log( 'Layers: loadLayers called for filename:', this.filename );
+		this.debugLog( 'Layers: loadLayers called for filename:', this.filename );
 
 		// Show loading spinner
 		self.showSpinner( mw.message ? mw.message( 'layers-loading' ).text() : 'Loading...' );
 
 		// Load existing layers from API
 		var api = new mw.Api();
-		console.log( 'Layers: Making API call to layersinfo for filename:', this.filename );
+		this.debugLog( 'Layers: Making API call to layersinfo for filename:', this.filename );
 		api.get( {
 			action: 'layersinfo',
 			filename: this.filename,
 			format: 'json'
 		} ).done( function ( data ) {
-			console.log( 'Layers: API call successful, received data:', data );
+			self.debugLog( 'Layers: API call successful, received data:', data );
 			self.hideSpinner();
 
 			// Debug: Log raw API response (only in debug mode)
@@ -543,12 +546,12 @@
 			}
 
 			if ( data.layersinfo && data.layersinfo.layerset ) {
-				console.log( 'Layers: Found layerset data, processing layers...' );
-				console.log( 'Layers: Raw layerset data:', data.layersinfo.layerset );
+				self.debugLog( 'Layers: Found layerset data, processing layers...' );
+				self.debugLog( 'Layers: Raw layerset data:', data.layersinfo.layerset );
 				
 				var rawLayers = data.layersinfo.layerset.data.layers || [];
-				console.log( 'Layers: Raw layers array length:', rawLayers.length );
-				console.log( 'Layers: Raw layers array:', rawLayers );
+				self.debugLog( 'Layers: Raw layers array length:', rawLayers.length );
+				self.debugLog( 'Layers: Raw layers array:', rawLayers );
 				
 				self.layers = rawLayers
 					.map( function ( layer ) {
@@ -575,8 +578,8 @@
 					} );
 				self.currentLayerSetId = data.layersinfo.layerset.id || null;
 				
-				console.log( 'Layers: Processed layers count:', self.layers.length );
-				console.log( 'Layers: Processed layers array:', self.layers );
+				self.debugLog( 'Layers: Processed layers count:', self.layers.length );
+				self.debugLog( 'Layers: Processed layers array:', self.layers );
 
 				// Debug: Log loaded layers and their shadow properties
 				self.debugLog( 'Loaded layers count:', self.layers.length );
@@ -593,11 +596,11 @@
 					} );
 				} );
 			} else {
-				console.log( 'Layers: No layerset data found in API response' );
+				self.debugLog( 'Layers: No layerset data found in API response' );
 				self.layers = [];
 			}
 
-			console.log( 'Layers: Final layers array length before renderLayers:', self.layers.length );
+			self.debugLog( 'Layers: Final layers array length before renderLayers:', self.layers.length );
 
 			// Populate revision list if provided
 			if ( data.layersinfo && Array.isArray( data.layersinfo.all_layersets ) ) {
@@ -609,7 +612,7 @@
 			// Save initial state for undo system
 			self.saveState( 'initial' );
 		} ).fail( function ( code, result ) {
-			console.log( 'Layers: API call failed with code:', code, 'result:', result );
+			self.errorLog( 'Layers: API call failed with code:', code, 'result:', result );
 			self.hideSpinner();
 			self.layers = [];
 			self.renderLayers();
@@ -1271,38 +1274,33 @@
 				var debug = ( window.location && window.location.search && window.location.search.indexOf( 'layers_debug=1' ) > -1 ) ||
 					( window.mw && mw.config && mw.config.get( 'wgLayersDebug' ) );
 
-				if ( debug && window.console && console.log ) {
-					// eslint-disable-next-line no-console
-					console.log( 'Layers: Auto-bootstrap starting...' );
+				if ( debug && window.mw && window.mw.log ) {
+					mw.log( 'Layers: Auto-bootstrap starting...' );
 				}
 
 				// Ensure MediaWiki is available
 				if ( !window.mw || !mw.config || !mw.config.get ) {
-					if ( debug && window.console && console.log ) {
-						// eslint-disable-next-line no-console
-						console.log( 'Layers: MediaWiki not ready, retrying in 100ms...' );
+					if ( debug && window.mw && window.mw.log ) {
+						mw.log( 'Layers: MediaWiki not ready, retrying in 100ms...' );
 					}
 					setTimeout( tryBootstrap, 100 );
 					return;
 				}
 
 				var init = mw.config.get( 'wgLayersEditorInit' );
-				if ( debug && window.console && console.log ) {
-					// eslint-disable-next-line no-console
-					console.log( 'Layers: wgLayersEditorInit config:', init );
+				if ( debug && window.mw && window.mw.log ) {
+					mw.log( 'Layers: wgLayersEditorInit config:', init );
 				}
 
 				if ( !init ) {
-					if ( debug && window.console && console.log ) {
-						// eslint-disable-next-line no-console
-						console.log( 'Layers: No wgLayersEditorInit config found, not auto-bootstrapping' );
+					if ( debug && window.mw && window.mw.log ) {
+						mw.log( 'Layers: No wgLayersEditorInit config found, not auto-bootstrapping' );
 					}
 					return;
 				}
 				var container = document.getElementById( 'layers-editor-container' );
-				if ( debug && window.console && console.log ) {
-					// eslint-disable-next-line no-console
-					console.log( 'Layers: Container element:', container );
+				if ( debug && window.mw && window.mw.log ) {
+					mw.log( 'Layers: Container element:', container );
 				}
 
 				mw.hook( 'layers.editor.init' ).fire( {
@@ -1311,12 +1309,14 @@
 					container: container || document.body
 				} );
 
-				if ( debug && window.console && console.log ) {
-					// eslint-disable-next-line no-console
-					console.log( 'Layers: Auto-bootstrap fired layers.editor.init hook' );
+				if ( debug && window.mw && window.mw.log ) {
+					mw.log( 'Layers: Auto-bootstrap fired layers.editor.init hook' );
 				}
 			} catch ( e ) {
-				if ( window.console && console.error ) {
+				if ( window.mw && window.mw.log ) {
+					mw.log.error( 'Layers: Auto-bootstrap error:', e );
+				// eslint-disable-next-line no-console
+				} else if ( window.console && console.error ) {
 					// eslint-disable-next-line no-console
 					console.error( 'Layers: Auto-bootstrap error:', e );
 				}
