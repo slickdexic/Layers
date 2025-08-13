@@ -7,9 +7,10 @@
 
 	/**
 	 * CanvasManager class
+	 *
 	 * @param {Object} config
 	 * @class
-
+	 *
 	 */
 	function CanvasManager( config ) {
 		this.config = config || {};
@@ -583,7 +584,7 @@
 	CanvasManager.prototype.startResize = function ( handle ) {
 		this.isResizing = true;
 		this.resizeHandle = handle;
-		
+
 		// Get rotation for proper cursor
 		var layer = this.editor.getLayerById( this.selectedLayerId );
 		var rotation = layer ? layer.rotation : 0;
@@ -824,89 +825,104 @@
 			case 'text':
 				// Text can be resized by changing font size
 				return this.calculateTextResize(
-					originalLayer, handleType, deltaX, deltaY, modifiers
+					originalLayer, handleType, deltaX, deltaY
 				);
 			default:
 				return null;
 		}
-// Ellipse resize: adjust radiusX and radiusY
-		// Ellipse resize: adjust radiusX and radiusY
-		CanvasManager.prototype.calculateEllipseResize = function (
-			origLayerEllipse, handleEllipse, dXEllipse, dYEllipse
-		) {
-			var updates = {};
-			var origRX = origLayerEllipse.radiusX || 1;
-			var origRY = origLayerEllipse.radiusY || 1;
-			if ( handleEllipse === 'e' || handleEllipse === 'w' ) {
-				updates.radiusX = Math.max(
-					5,
-					origRX + ( handleEllipse === 'e' ? dXEllipse : -dXEllipse )
-				);
-			}
-			if ( handleEllipse === 'n' || handleEllipse === 's' ) {
-				updates.radiusY = Math.max(
-					5,
-					origRY + ( handleEllipse === 's' ? dYEllipse : -dYEllipse )
-				);
-			}
-			return updates;
-		};
-
-		// Polygon/star resize: scale width/height (bounding box)
-		CanvasManager.prototype.calculatePolygonResize = function (
-			origLayerPoly, handlePoly, dXPoly, dYPoly
-		) {
-			var updates = {};
-			var origW = origLayerPoly.width || 1;
-			var origH = origLayerPoly.height || 1;
-			if ( handlePoly === 'e' || handlePoly === 'w' ) {
-				updates.width = Math.max(
-					5,
-					origW + ( handlePoly === 'e' ? dXPoly : -dXPoly )
-				);
-			}
-			if ( handlePoly === 'n' || handlePoly === 's' ) {
-				updates.height = Math.max(
-					5,
-					origH + ( handlePoly === 's' ? dYPoly : -dYPoly )
-				);
-			}
-			return updates;
-		};
-
-		// Line/arrow resize: move x2/y2
-		CanvasManager.prototype.calculateLineResize = function (
-			origLayerLine, handleLine, dXLine, dYLine
-		) {
-			var updates = {};
-			updates.x2 = ( origLayerLine.x2 || 0 ) + dXLine;
-			updates.y2 = ( origLayerLine.y2 || 0 ) + dYLine;
-			return updates;
-		};
-
-		// Path resize: scale all points
-		CanvasManager.prototype.calculatePathResize = function (
-			origLayerPath, handlePath, dXPath, dYPath
-		) {
-			if ( !origLayerPath.points ) {
-				return null;
-			}
-			var updates = { points: [] };
-			var scaleX = 1 + dXPath / 100;
-			var scaleY = 1 + dYPath / 100;
-			for ( var i = 0; i < origLayerPath.points.length; i++ ) {
-				updates.points.push( {
-					x: origLayerPath.points[ i ].x * scaleX,
-					y: origLayerPath.points[ i ].y * scaleY
-				} );
-			}
-			return updates;
-		};
-
-
-
 	};
 
+	/**
+	 * Calculate ellipse resize adjustments for radiusX and radiusY
+	 *
+	 * @param {Object} origLayerEllipse Original layer ellipse properties
+	 * @param {string} handleEllipse Handle being dragged ('e', 'w', 'n', 's', etc.)
+	 * @param {number} dXEllipse Delta X movement
+	 * @param {number} dYEllipse Delta Y movement
+	 * @return {Object} Updates object with new radiusX/radiusY values
+	 */
+	CanvasManager.prototype.calculateEllipseResize = function (
+		origLayerEllipse, handleEllipse, dXEllipse, dYEllipse
+	) {
+		var updates = {};
+		var origRX = origLayerEllipse.radiusX || 1;
+		var origRY = origLayerEllipse.radiusY || 1;
+		if ( handleEllipse === 'e' || handleEllipse === 'w' ) {
+			updates.radiusX = Math.max(
+				5,
+				origRX + ( handleEllipse === 'e' ? dXEllipse : -dXEllipse )
+			);
+		}
+		if ( handleEllipse === 'n' || handleEllipse === 's' ) {
+			updates.radiusY = Math.max(
+				5,
+				origRY + ( handleEllipse === 's' ? dYEllipse : -dYEllipse )
+			);
+		}
+		return updates;
+	};
+
+	// Polygon/star resize: scale width/height (bounding box)
+	CanvasManager.prototype.calculatePolygonResize = function (
+		origLayerPoly, handlePoly, dXPoly, dYPoly
+	) {
+		var updates = {};
+		var origW = origLayerPoly.width || 1;
+		var origH = origLayerPoly.height || 1;
+		if ( handlePoly === 'e' || handlePoly === 'w' ) {
+			updates.width = Math.max(
+				5,
+				origW + ( handlePoly === 'e' ? dXPoly : -dXPoly )
+			);
+		}
+		if ( handlePoly === 'n' || handlePoly === 's' ) {
+			updates.height = Math.max(
+				5,
+				origH + ( handlePoly === 's' ? dYPoly : -dYPoly )
+			);
+		}
+		return updates;
+	};
+
+	// Line/arrow resize: move x2/y2
+	CanvasManager.prototype.calculateLineResize = function (
+		origLayerLine, handleLine, dXLine, dYLine
+	) {
+		var updates = {};
+		updates.x2 = ( origLayerLine.x2 || 0 ) + dXLine;
+		updates.y2 = ( origLayerLine.y2 || 0 ) + dYLine;
+		return updates;
+	};
+
+	// Path resize: scale all points
+	CanvasManager.prototype.calculatePathResize = function (
+		origLayerPath, handlePath, dXPath, dYPath
+	) {
+		if ( !origLayerPath.points ) {
+			return null;
+		}
+		var updates = { points: [] };
+		var scaleX = 1 + dXPath / 100;
+		var scaleY = 1 + dYPath / 100;
+		for ( var i = 0; i < origLayerPath.points.length; i++ ) {
+			updates.points.push( {
+				x: origLayerPath.points[ i ].x * scaleX,
+				y: origLayerPath.points[ i ].y * scaleY
+			} );
+		}
+		return updates;
+	};
+
+	/**
+	 * Calculate rectangle resize adjustments
+	 *
+	 * @param {Object} originalLayer Original layer properties
+	 * @param {string} handleType Handle being dragged
+	 * @param {number} deltaX Delta X movement
+	 * @param {number} deltaY Delta Y movement
+	 * @param {Object} modifiers Modifier keys state
+	 * @return {Object} Updates object with new dimensions
+	 */
 	CanvasManager.prototype.calculateRectangleResize = function (
 		originalLayer, handleType, deltaX, deltaY, modifiers
 	) {
@@ -1048,7 +1064,7 @@
 	};
 
 	CanvasManager.prototype.calculateTextResize = function (
-		originalLayer, handleType, deltaX, deltaY, modifiers
+		originalLayer, handleType, deltaX, deltaY
 	) {
 		var updates = {};
 		var originalFontSize = originalLayer.fontSize || 16;
@@ -1572,22 +1588,7 @@
 		}
 	};
 
-	CanvasManager.prototype.setZoom = function ( newZoom ) {
-		this.zoom = newZoom;
-		this.updateCanvasTransform();
-
-		// Update zoom display
-		var zoomPercent = Math.round( this.zoom * 100 );
-		if ( this.editor.toolbar ) {
-			this.editor.toolbar.updateZoomDisplay( zoomPercent );
-		}
-		if ( this.editor && typeof this.editor.updateZoomReadout === 'function' ) {
-			this.editor.updateZoomReadout( zoomPercent );
-		}
-		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-			this.editor.updateStatus( { zoomPercent: zoomPercent } );
-		}
-	};
+	// Duplicate setZoom removed; see the later definition that clamps, updates CSS size, and status
 
 	CanvasManager.prototype.finishRotation = function () {
 		this.isRotating = false;
@@ -2197,11 +2198,11 @@
 			// Calculate center of the original bounds for rotation
 			var centerX = bounds.x + bounds.width / 2;
 			var centerY = bounds.y + bounds.height / 2;
-			
+
 			// Apply the same rotation as the layer
 			this.ctx.translate( centerX, centerY );
 			this.ctx.rotate( rotation * Math.PI / 180 );
-			
+
 			// Adjust bounds to be relative to the rotation center
 			bounds = {
 				x: -bounds.width / 2,
@@ -2389,7 +2390,7 @@
 				// Transform handle position back to world coordinates
 				var worldX = centerX + handle.x * cos - handle.y * sin;
 				var worldY = centerY + handle.x * sin + handle.y * cos;
-				
+
 				actualHandles.push( {
 					type: handle.type,
 					x: worldX - handleSize / 2,
@@ -2466,7 +2467,7 @@
 			// Transform rotation handle position back to world coordinates
 			actualHandleX = originalCenterX + rotationHandleX * cos - rotationHandleY * sin;
 			actualHandleY = originalCenterY + rotationHandleX * sin + rotationHandleY * cos;
-			
+
 			// Use original center for rotation center in hit testing
 			centerX = originalCenterX;
 			centerY = originalCenterY;
@@ -3444,63 +3445,72 @@
 		}
 		this.isRendering = true;
 
-		// Use requestAnimationFrame for better performance
-		requestAnimationFrame( function () {
-			try {
-				// Redraw background
-				this.redraw();
+		try {
+			console.log( 'Layers: Starting renderLayers with', layers ? layers.length : 0, 'layers' );
+			
+			// Redraw background
+			this.redraw();
 
-				// Render each layer in order
-				if ( layers && layers.length > 0 ) {
-					// Batch operations for better performance
-					this.ctx.save();
+			// Render each layer in order
+			if ( layers && layers.length > 0 ) {
+				console.log( 'Layers: Processing layers array' );
+				// Batch operations for better performance
+				this.ctx.save();
 
-					layers.forEach( function ( layer ) {
-						if ( layer.visible !== false ) { // Skip invisible layers early
-							this.applyLayerEffects( layer, function () {
-								this.drawLayer( layer );
-							}.bind( this ) );
-						}
-					}.bind( this ) );
+				layers.forEach( function ( layer, index ) {
+					console.log( 'Layers: Processing layer', index, 'visible:', layer.visible, 'type:', layer.type );
+					if ( layer.visible !== false ) { // Skip invisible layers early
+						this.applyLayerEffects( layer, function () {
+							console.log( 'Layers: Drawing layer', index, layer.type );
+							this.drawLayer( layer );
+						}.bind( this ) );
+					} else {
+						console.log( 'Layers: Skipping invisible layer', index );
+					}
+				}.bind( this ) );
 
-					this.ctx.restore();
-				}
-
-				// Draw selection indicators if any layer is selected
-				if ( this.selectedLayerId ) {
-					this.drawSelectionIndicators( this.selectedLayerId );
-
-					// Update status with selection size
-					try {
-						var sel = null;
-						if ( this.editor && this.editor.getLayerById ) {
-							sel = this.editor.getLayerById( this.selectedLayerId );
-						}
-						if ( sel && this.editor && typeof this.editor.updateStatus === 'function' ) {
-							var b = this.getLayerBounds( sel );
-							if ( b ) {
-								this.editor.updateStatus( {
-									size: { width: b.width, height: b.height }
-								} );
-							}
-						}
-					} catch ( _e ) {}
-				}
-
-				// Draw guides on top
-				this.drawGuides();
-
-				// Draw preview guide while dragging from ruler
-				this.drawGuidePreview();
-			} catch ( error ) {
-				// Log error to MediaWiki if available, otherwise to console as fallback
-				if ( window.mw && window.mw.log ) {
-					window.mw.log.error( 'Layers: Error during rendering:', error );
-				}
-			} finally {
-				this.isRendering = false;
+				this.ctx.restore();
+			} else {
+				console.log( 'Layers: No layers to render' );
 			}
-		}.bind( this ) );
+
+			// Draw selection indicators if any layer is selected
+			if ( this.selectedLayerId ) {
+				this.drawSelectionIndicators( this.selectedLayerId );
+
+				// Update status with selection size
+				try {
+					var sel = null;
+					if ( this.editor && this.editor.getLayerById ) {
+						sel = this.editor.getLayerById( this.selectedLayerId );
+					}
+					if ( sel && this.editor && typeof this.editor.updateStatus === 'function' ) {
+						var b = this.getLayerBounds( sel );
+						if ( b ) {
+							this.editor.updateStatus( {
+								size: { width: b.width, height: b.height }
+							} );
+						}
+					}
+				} catch ( _e ) {}
+			}
+
+			// Draw guides on top
+			this.drawGuides();
+
+			// Draw preview guide while dragging from ruler
+			this.drawGuidePreview();
+			
+			console.log( 'Layers: renderLayers completed successfully' );
+		} catch ( error ) {
+			console.error( 'Layers: Error during rendering:', error );
+			// Log error to MediaWiki if available, otherwise to console as fallback
+			if ( window.mw && window.mw.log ) {
+				window.mw.log.error( 'Layers: Error during rendering:', error );
+			}
+		} finally {
+			this.isRendering = false;
+		}
 	};
 
 	CanvasManager.prototype.redraw = function () {
@@ -3785,10 +3795,10 @@
 
 	CanvasManager.prototype.drawText = function ( layer ) {
 		this.ctx.save();
-		
+
 		var x = layer.x || 0;
 		var y = layer.y || 0;
-		
+
 		this.ctx.font = ( layer.fontSize || 16 ) + 'px ' + ( layer.fontFamily || 'Arial' );
 		this.ctx.textAlign = layer.textAlign || 'left';
 
@@ -3801,11 +3811,11 @@
 		var textMetrics = this.ctx.measureText( text );
 		var textWidth = textMetrics.width;
 		var textHeight = layer.fontSize || 16;
-		
+
 		// Calculate text center for rotation
 		var centerX = x + ( textWidth / 2 );
 		var centerY = y - ( textHeight / 4 ); // Adjust for text baseline
-		
+
 		// Apply rotation if present
 		if ( layer.rotation && layer.rotation !== 0 ) {
 			var rotationRadians = ( layer.rotation * Math.PI ) / 180;
@@ -3840,14 +3850,14 @@
 
 		this.ctx.restore();
 	};
-// Accessibility: Add ARIA roles and keyboard navigation stubs
-// TODO: Implement more comprehensive keyboard navigation and screen reader support for canvas elements
+	// Accessibility: Add ARIA roles and keyboard navigation stubs
+	// TODO: Implement more comprehensive keyboard navigation and screen reader support for canvas elements
 
-// Analytics: Stub for usage tracking
-// TODO: Add analytics hooks for canvas actions (e.g., draw, select, delete)
+	// Analytics: Stub for usage tracking
+	// TODO: Add analytics hooks for canvas actions (e.g., draw, select, delete)
 
-// Testing: Stub for unit/E2E tests
-// TODO: Add unit and integration tests for CanvasManager
+	// Testing: Stub for unit/E2E tests
+	// TODO: Add unit and integration tests for CanvasManager
 
 	CanvasManager.prototype.drawRectangle = function ( layer ) {
 		this.ctx.save();

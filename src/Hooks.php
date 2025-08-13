@@ -50,6 +50,30 @@ class Hooks {
 				if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
 					$logger->info( 'Layers: Adding editor module for file page' );
 					$out->addModules( 'ext.layers.editor' );
+
+					// Add a strict Content Security Policy to reduce XSS risk in the editor UI
+					// Note: MediaWiki may already send a site-wide CSP. Here we add a page-level header conservatively.
+					try {
+						$policy = [];
+						$policy[] = "default-src 'self'";
+						$policy[] = "img-src 'self' data: blob:";
+						$policy[] = "style-src 'self' 'unsafe-inline'"; // allow inline styles used by MW/OOUI
+						$policy[] = "script-src 'self' 'unsafe-eval'"; // ResourceLoader may require eval in debug
+						$policy[] = "connect-src 'self'";
+						$policy[] = "font-src 'self' data:";
+						$policy[] = "object-src 'none'";
+						$policy[] = "base-uri 'self'";
+						$policy[] = "frame-ancestors 'self'";
+						$header = 'Content-Security-Policy: ' . implode( '; ', $policy );
+						if ( method_exists( $out, 'addExtraHeader' ) ) {
+							$out->addExtraHeader( $header );
+						} elseif ( method_exists( $out, 'addMeta' ) ) {
+							// Fallback for older MW: send as meta http-equiv
+							$out->addMeta( 'http:Content-Security-Policy', implode( '; ', $policy ) );
+						}
+					} catch ( \Throwable $e2 ) {
+						$logger->warning( 'Layers: Failed to set CSP header: ' . $e2->getMessage() );
+					}
 				}
 			}
 		} catch ( \Throwable $e ) {
@@ -127,8 +151,10 @@ class Hooks {
 			try {
 				$config = $out->getConfig();
 				$vars['wgLayersDebug'] = (bool)$config->get( 'LayersDebug' );
+				$vars['wgLayersMaxBytes'] = (int)$config->get( 'LayersMaxBytes' );
 			} catch ( \Throwable $e2 ) {
 				$vars['wgLayersDebug'] = false;
+				$vars['wgLayersMaxBytes'] = 0;
 			}
 			// Also proactively register the viewer module to be safe
 			if ( method_exists( $out, 'addModules' ) ) {

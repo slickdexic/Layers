@@ -15,12 +15,12 @@
 	function HistoryManager( config, canvasManager ) {
 		this.config = config || {};
 		this.canvasManager = canvasManager;
-		
+
 		// History state
 		this.history = [];
 		this.historyIndex = -1;
 		this.maxHistorySteps = this.config.maxHistorySteps || 50;
-		
+
 		// Batch operations
 		this.batchMode = false;
 		this.batchChanges = [];
@@ -88,7 +88,7 @@
 		this.historyIndex--;
 		this.restoreState( this.history[ this.historyIndex ] );
 		this.updateUndoRedoButtons();
-		
+
 		return true;
 	};
 
@@ -105,7 +105,7 @@
 		this.historyIndex++;
 		this.restoreState( this.history[ this.historyIndex ] );
 		this.updateUndoRedoButtons();
-		
+
 		return true;
 	};
 
@@ -149,8 +149,8 @@
 		this.canvasManager.renderLayers( this.canvasManager.editor.layers );
 
 		// Update layer panel
-		if ( this.canvasManager.editor.layerPanel && 
-			 typeof this.canvasManager.editor.layerPanel.updateLayers === 'function' ) {
+		if ( this.canvasManager.editor.layerPanel &&
+			typeof this.canvasManager.editor.layerPanel.updateLayers === 'function' ) {
 			this.canvasManager.editor.layerPanel.updateLayers( this.canvasManager.editor.layers );
 		}
 
@@ -172,14 +172,14 @@
 
 			if ( undoBtn ) {
 				undoBtn.disabled = !canUndo;
-				undoBtn.title = canUndo ? 
+				undoBtn.title = canUndo ?
 					'Undo: ' + this.history[ this.historyIndex - 1 ].description :
 					'Nothing to undo';
 			}
 
 			if ( redoBtn ) {
 				redoBtn.disabled = !canRedo;
-				redoBtn.title = canRedo ? 
+				redoBtn.title = canRedo ?
 					'Redo: ' + this.history[ this.historyIndex + 1 ].description :
 					'Nothing to redo';
 			}
@@ -265,7 +265,7 @@
 	HistoryManager.prototype.getHistoryEntries = function ( limit ) {
 		limit = limit || 10;
 		var start = Math.max( 0, this.history.length - limit );
-		
+
 		return this.history.slice( start ).map( function ( entry, index ) {
 			var actualIndex = start + index;
 			return {
@@ -292,7 +292,7 @@
 		this.historyIndex = targetIndex;
 		this.restoreState( this.history[ this.historyIndex ] );
 		this.updateUndoRedoButtons();
-		
+
 		return true;
 	};
 
@@ -307,10 +307,10 @@
 		// Keep recent half of history
 		var keepCount = Math.floor( this.maxHistorySteps / 2 );
 		var removeCount = this.history.length - keepCount;
-		
+
 		this.history = this.history.slice( removeCount );
 		this.historyIndex = Math.max( 0, this.historyIndex - removeCount );
-		
+
 		this.updateUndoRedoButtons();
 	};
 
@@ -321,7 +321,7 @@
 	 */
 	HistoryManager.prototype.setMaxHistorySteps = function ( maxSteps ) {
 		this.maxHistorySteps = Math.max( 1, maxSteps );
-		
+
 		// Trim current history if needed
 		if ( this.history.length > this.maxHistorySteps ) {
 			var removeCount = this.history.length - this.maxHistorySteps;
@@ -343,7 +343,7 @@
 
 		var currentLayers = this.getLayersSnapshot();
 		var lastSavedLayers = this.history[ this.historyIndex ].layers;
-		
+
 		return JSON.stringify( currentLayers ) !== JSON.stringify( lastSavedLayers );
 	};
 
@@ -383,7 +383,7 @@
 	HistoryManager.prototype.getMemoryUsage = function () {
 		var totalSize = 0;
 		var layerCounts = [];
-		
+
 		this.history.forEach( function ( entry ) {
 			var serialized = JSON.stringify( entry );
 			totalSize += serialized.length;
@@ -394,7 +394,7 @@
 			estimatedBytes: totalSize,
 			estimatedKB: Math.round( totalSize / 1024 ),
 			entryCount: this.history.length,
-			averageLayersPerEntry: layerCounts.length > 0 ? 
+			averageLayersPerEntry: layerCounts.length > 0 ?
 				Math.round( layerCounts.reduce( function ( a, b ) { return a + b; }, 0 ) / layerCounts.length ) : 0,
 			maxLayersInEntry: layerCounts.length > 0 ? Math.max.apply( Math, layerCounts ) : 0
 		};

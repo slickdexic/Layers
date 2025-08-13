@@ -8,6 +8,7 @@
 
 	/**
 	 * Dialog Manager class
+	 *
 	 * @class
 	 */
 	function DialogManager() {
@@ -25,9 +26,10 @@
 
 	/**
 	 * Show a confirmation dialog
+	 *
 	 * @param {string} message - The message to display
 	 * @param {string} title - The dialog title
-	 * @returns {Promise} Promise that resolves to true/false
+	 * @return {Promise} Promise that resolves to true/false
 	 */
 	DialogManager.prototype.confirm = function ( message, title ) {
 		var dialog = new OO.ui.MessageDialog();
@@ -63,10 +65,11 @@
 
 	/**
 	 * Show an alert dialog
+	 *
 	 * @param {string} message - The message to display
 	 * @param {string} title - The dialog title
 	 * @param {string} type - The message type ('error', 'warning', 'success')
-	 * @returns {Promise} Promise that resolves when dialog is closed
+	 * @return {Promise} Promise that resolves when dialog is closed
 	 */
 	DialogManager.prototype.alert = function ( message, title, type ) {
 		var dialog = new OO.ui.MessageDialog();
@@ -88,10 +91,13 @@
 
 		// Add appropriate icon based on type
 		if ( type === 'error' ) {
+			// eslint-disable-next-line es-x/no-regexp-prototype-flags
 			config.flags = 'warning';
 		} else if ( type === 'warning' ) {
+			// eslint-disable-next-line es-x/no-regexp-prototype-flags
 			config.flags = 'warning';
 		} else if ( type === 'success' ) {
+			// eslint-disable-next-line es-x/no-regexp-prototype-flags
 			config.flags = 'safe';
 		}
 
@@ -108,9 +114,10 @@
 
 	/**
 	 * Show a progress dialog
+	 *
 	 * @param {string} message - The progress message
 	 * @param {string} title - The dialog title
-	 * @returns {Object} Object with update and close methods
+	 * @return {Object} Object with update and close methods
 	 */
 	DialogManager.prototype.progress = function ( message, title ) {
 		var dialog = new OO.ui.ProcessDialog();

@@ -17,5 +17,7 @@ CREATE TABLE /*_*/layer_sets (
     KEY ls_img_lookup (ls_img_name, ls_img_sha1),
     KEY ls_user_timestamp (ls_user_id, ls_timestamp),
     KEY ls_timestamp (ls_timestamp),
-    KEY ls_size_performance (ls_size, ls_layer_count)
+    KEY ls_size_performance (ls_size, ls_layer_count),
+    -- Foreign key constraint to ensure user exists
+    CONSTRAINT fk_layer_sets_user_id FOREIGN KEY (ls_user_id) REFERENCES /*_*/user (user_id) ON DELETE CASCADE
 ) /*$wgDBTableOptions*/;

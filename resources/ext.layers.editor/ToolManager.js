@@ -15,13 +15,13 @@
 	function ToolManager( config, canvasManager ) {
 		this.config = config || {};
 		this.canvasManager = canvasManager;
-		
+
 		// Tool state
 		this.currentTool = 'pointer';
 		this.isDrawing = false;
 		this.startPoint = null;
 		this.tempLayer = null;
-		
+
 		// Tool settings
 		this.currentStyle = {
 			color: '#000000',
@@ -30,11 +30,11 @@
 			fontFamily: 'Arial, sans-serif',
 			fill: 'transparent'
 		};
-		
+
 		// Path drawing state
 		this.pathPoints = [];
 		this.isPathComplete = false;
-		
+
 		// Text editing state
 		this.textEditor = null;
 		this.editingTextLayer = null;
@@ -48,10 +48,10 @@
 	ToolManager.prototype.setTool = function ( toolName ) {
 		// Finish any current drawing operation
 		this.finishCurrentDrawing();
-		
+
 		this.currentTool = toolName;
 		this.updateCursor();
-		
+
 		// Tool-specific initialization
 		this.initializeTool( toolName );
 	};
@@ -295,9 +295,10 @@
 	/**
 	 * Finish selection with pointer tool
 	 *
-	 * @param {Object} point End point
-	 * @param {Object} event Original event
+	 * @param {Object} point End point (unused)
+	 * @param {Object} event Original event (unused)
 	 */
+	// eslint-disable-next-line no-unused-vars
 	ToolManager.prototype.finishSelection = function ( point, event ) {
 		if ( this.canvasManager.selectionManager ) {
 			if ( this.canvasManager.selectionManager.isResizing ) {
@@ -342,8 +343,9 @@
 	/**
 	 * Finish pen drawing
 	 *
-	 * @param {Object} point End point
+	 * @param {Object} point End point (unused)
 	 */
+	// eslint-disable-next-line no-unused-vars
 	ToolManager.prototype.finishPenDrawing = function ( point ) {
 		if ( this.tempLayer && this.tempLayer.points && this.tempLayer.points.length > 1 ) {
 			this.addLayerToCanvas( this.tempLayer );
@@ -517,7 +519,7 @@
 				Math.pow( point.x - firstPoint.x, 2 ) +
 				Math.pow( point.y - firstPoint.y, 2 )
 			);
-			
+
 			if ( distance < 10 ) {
 				this.completePath();
 			}
@@ -617,8 +619,9 @@
 	/**
 	 * Finish shape drawing
 	 *
-	 * @param {Object} point End point
+	 * @param {Object} point End point (unused)
 	 */
+	// eslint-disable-next-line no-unused-vars
 	ToolManager.prototype.finishShapeDrawing = function ( point ) {
 		if ( this.tempLayer ) {
 			// Only add layer if it has meaningful size
@@ -825,7 +828,7 @@
 	 */
 	ToolManager.prototype.hitTestLayers = function ( point ) {
 		var layers = this.canvasManager.editor.layers || [];
-		
+
 		// Test in reverse order (top to bottom)
 		for ( var i = layers.length - 1; i >= 0; i-- ) {
 			var layer = layers[ i ];
@@ -833,7 +836,7 @@
 				return layer;
 			}
 		}
-		
+
 		return null;
 	};
 
@@ -847,10 +850,10 @@
 	ToolManager.prototype.pointInLayer = function ( point, layer ) {
 		var bounds = this.canvasManager.getLayerBounds( layer );
 		return bounds &&
-			   point.x >= bounds.x &&
-			   point.x <= bounds.x + bounds.width &&
-			   point.y >= bounds.y &&
-			   point.y <= bounds.y + bounds.height;
+			point.x >= bounds.x &&
+			point.x <= bounds.x + bounds.width &&
+			point.y >= bounds.y &&
+			point.y <= bounds.y + bounds.height;
 	};
 
 	/**
@@ -886,7 +889,12 @@
 	 * @param {Object} style Style object
 	 */
 	ToolManager.prototype.updateStyle = function ( style ) {
-		Object.assign( this.currentStyle, style );
+		// Use manual property assignment instead of Object.assign for IE11 compatibility
+		for ( var prop in style ) {
+			if ( Object.prototype.hasOwnProperty.call( style, prop ) ) {
+				this.currentStyle[ prop ] = style[ prop ];
+			}
+		}
 	};
 
 	/**
@@ -895,7 +903,14 @@
 	 * @return {Object} Current style object
 	 */
 	ToolManager.prototype.getStyle = function () {
-		return Object.assign( {}, this.currentStyle );
+		// Create shallow copy manually for IE11 compatibility
+		var copy = {};
+		for ( var prop in this.currentStyle ) {
+			if ( Object.prototype.hasOwnProperty.call( this.currentStyle, prop ) ) {
+				copy[ prop ] = this.currentStyle[ prop ];
+			}
+		}
+		return copy;
 	};
 
 	/**
@@ -904,7 +919,7 @@
 	 * @return {string} Unique layer ID
 	 */
 	ToolManager.prototype.generateLayerId = function () {
-		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).substr( 2, 9 );
+		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	};
 
 	// Export ToolManager to global scope

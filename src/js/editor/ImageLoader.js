@@ -9,6 +9,7 @@
 
 	/**
 	 * Image Loader class
+	 *
 	 * @class
 	 */
 	function ImageLoader() {
@@ -17,9 +18,10 @@
 
 	/**
 	 * Load an image with proper error handling
+	 *
 	 * @param {string} imageUrl - Direct URL to the image
 	 * @param {Object} options - Loading options
-	 * @returns {Promise} Promise that resolves with the loaded image
+	 * @return {Promise} Promise that resolves with the loaded image
 	 */
 	ImageLoader.prototype.loadImage = function ( imageUrl, options ) {
 		options = options || {};
@@ -66,10 +68,11 @@
 	/**
 	 * Get the proper image URL from MediaWiki configuration
 	 * This should be called from the backend and passed via mw.config
+	 *
 	 * @param {string} filename - The filename
 	 * @param {number} width - Desired width (optional)
 	 * @param {number} height - Desired height (optional)
-	 * @returns {string} The image URL
+	 * @return {string} The image URL
 	 */
 	ImageLoader.prototype.getImageUrl = function ( filename, width, height ) {
 		// Get the base URL from MediaWiki config (set by backend)
@@ -84,7 +87,7 @@
 		// Fallback: construct URL
 		if ( baseUrl && filename ) {
 			var url = baseUrl + encodeURIComponent( filename );
-			
+
 			// Add thumbnail parameters if specified
 			if ( width || height ) {
 				url += '?';
@@ -95,7 +98,7 @@
 					url += ( width ? '&' : '' ) + 'height=' + height;
 				}
 			}
-			
+
 			return url;
 		}
 
@@ -104,9 +107,10 @@
 
 	/**
 	 * Preload multiple images
+	 *
 	 * @param {Array} urls - Array of image URLs
 	 * @param {Object} options - Loading options
-	 * @returns {Promise} Promise that resolves when all images are loaded
+	 * @return {Promise} Promise that resolves when all images are loaded
 	 */
 	ImageLoader.prototype.preloadImages = function ( urls, options ) {
 		var promises = urls.map( function ( url ) {
@@ -125,7 +129,8 @@
 
 	/**
 	 * Get cache size
-	 * @returns {number} Number of cached images
+	 *
+	 * @return {number} Number of cached images
 	 */
 	ImageLoader.prototype.getCacheSize = function () {
 		return this.cache.size;

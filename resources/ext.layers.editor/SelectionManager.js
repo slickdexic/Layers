@@ -15,7 +15,7 @@
 	function SelectionManager( config, canvasManager ) {
 		this.config = config || {};
 		this.canvasManager = canvasManager;
-		
+
 		// Selection state
 		this.selectedLayerIds = [];
 		this.selectionHandles = [];
@@ -25,12 +25,12 @@
 		this.resizeHandle = null;
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
-		
+
 		// Marquee selection
 		this.isMarqueeSelecting = false;
 		this.marqueeStart = { x: 0, y: 0 };
 		this.marqueeEnd = { x: 0, y: 0 };
-		
+
 		// Multi-selection support
 		this.multiSelectMode = false;
 		this.lastSelectedId = null;
@@ -65,9 +65,9 @@
 		var index = this.selectedLayerIds.indexOf( layerId );
 		if ( index !== -1 ) {
 			this.selectedLayerIds.splice( index, 1 );
-			
+
 			if ( this.lastSelectedId === layerId ) {
-				this.lastSelectedId = this.selectedLayerIds.length > 0 ? 
+				this.lastSelectedId = this.selectedLayerIds.length > 0 ?
 					this.selectedLayerIds[ this.selectedLayerIds.length - 1 ] : null;
 			}
 		}
@@ -94,7 +94,7 @@
 		this.selectedLayerIds = layers.map( function ( layer ) {
 			return layer.id;
 		} );
-		
+
 		if ( this.selectedLayerIds.length > 0 ) {
 			this.lastSelectedId = this.selectedLayerIds[ this.selectedLayerIds.length - 1 ];
 		}
@@ -156,7 +156,7 @@
 		}
 
 		this.marqueeEnd = { x: point.x, y: point.y };
-		
+
 		// Find layers within marquee
 		var marqueeRect = this.getMarqueeRect();
 		var layers = this.canvasManager.editor.layers || [];
@@ -210,9 +210,9 @@
 	 */
 	SelectionManager.prototype.rectIntersects = function ( rect1, rect2 ) {
 		return rect1.x < rect2.x + rect2.width &&
-			   rect1.x + rect1.width > rect2.x &&
-			   rect1.y < rect2.y + rect2.height &&
-			   rect1.y + rect1.height > rect2.y;
+			rect1.x + rect1.width > rect2.x &&
+			rect1.y < rect2.y + rect2.height &&
+			rect1.y + rect1.height > rect2.y;
 	};
 
 	/**
@@ -251,7 +251,7 @@
 			{ x: bounds.x + bounds.width, y: bounds.y, type: 'ne' },
 			{ x: bounds.x + bounds.width, y: bounds.y + bounds.height, type: 'se' },
 			{ x: bounds.x, y: bounds.y + bounds.height, type: 'sw' },
-			
+
 			// Edge handles
 			{ x: bounds.x + bounds.width / 2, y: bounds.y, type: 'n' },
 			{ x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2, type: 'e' },
@@ -377,9 +377,9 @@
 	 */
 	SelectionManager.prototype.pointInRect = function ( point, rect ) {
 		return point.x >= rect.x &&
-			   point.x <= rect.x + rect.width &&
-			   point.y >= rect.y &&
-			   point.y <= rect.y + rect.height;
+			point.x <= rect.x + rect.width &&
+			point.y >= rect.y &&
+			point.y <= rect.y + rect.height;
 	};
 
 	/**
@@ -413,7 +413,7 @@
 		this.selectedLayerIds.forEach( function ( layerId ) {
 			var layer = this.getLayerById( layerId );
 			var originalLayer = this.originalLayerState[ layerId ];
-			
+
 			if ( layer && originalLayer ) {
 				this.applyResize( layer, originalLayer, deltaX, deltaY, modifiers );
 			}
@@ -430,7 +430,7 @@
 		this.resizeHandle = null;
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
-		
+
 		// Save state for undo
 		this.canvasManager.saveState();
 	};
@@ -457,16 +457,16 @@
 		}
 
 		// Calculate rotation angle
-		var bounds = this.getMultiSelectionBounds() || 
-					 this.canvasManager.getLayerBounds( this.getLayerById( this.selectedLayerIds[ 0 ] ) );
-		
+		var bounds = this.getMultiSelectionBounds() ||
+			this.canvasManager.getLayerBounds( this.getLayerById( this.selectedLayerIds[ 0 ] ) );
+
 		if ( !bounds ) {
 			return;
 		}
 
 		var centerX = bounds.x + bounds.width / 2;
 		var centerY = bounds.y + bounds.height / 2;
-		
+
 		var startAngle = Math.atan2( this.dragStartPoint.y - centerY, this.dragStartPoint.x - centerX );
 		var currentAngle = Math.atan2( point.y - centerY, point.x - centerX );
 		var deltaAngle = ( currentAngle - startAngle ) * 180 / Math.PI;
@@ -475,7 +475,7 @@
 		this.selectedLayerIds.forEach( function ( layerId ) {
 			var layer = this.getLayerById( layerId );
 			var originalLayer = this.originalLayerState[ layerId ];
-			
+
 			if ( layer && originalLayer ) {
 				layer.rotation = ( originalLayer.rotation || 0 ) + deltaAngle;
 			}
@@ -491,7 +491,7 @@
 		this.isRotating = false;
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
-		
+
 		// Save state for undo
 		this.canvasManager.saveState();
 	};
@@ -531,7 +531,7 @@
 		this.selectedLayerIds.forEach( function ( layerId ) {
 			var layer = this.getLayerById( layerId );
 			var originalLayer = this.originalLayerState[ layerId ];
-			
+
 			if ( layer && originalLayer ) {
 				this.applyDrag( layer, originalLayer, deltaX, deltaY );
 			}
@@ -547,7 +547,7 @@
 		this.isDragging = false;
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
-		
+
 		// Save state for undo
 		this.canvasManager.saveState();
 	};
@@ -564,10 +564,15 @@
 	SelectionManager.prototype.applyResize = function ( layer, originalLayer, deltaX, deltaY, modifiers ) {
 		// Delegate to canvas manager's existing implementation
 		if ( typeof this.canvasManager.calculateResize === 'function' ) {
-			var newProps = this.canvasManager.calculateResize( 
-				originalLayer, this.resizeHandle.type, deltaX, deltaY, modifiers 
+			var newProps = this.canvasManager.calculateResize(
+				originalLayer, this.resizeHandle.type, deltaX, deltaY, modifiers
 			);
-			Object.assign( layer, newProps );
+			// Use manual property assignment instead of Object.assign for IE11 compatibility
+			for ( var prop in newProps ) {
+				if ( Object.prototype.hasOwnProperty.call( newProps, prop ) ) {
+					layer[ prop ] = newProps[ prop ];
+				}
+			}
 		}
 	};
 
@@ -646,14 +651,14 @@
 	 */
 	SelectionManager.prototype.notifySelectionChange = function () {
 		if ( this.canvasManager.editor && typeof this.canvasManager.editor.updateStatus === 'function' ) {
-			this.canvasManager.editor.updateStatus( { 
-				selectionCount: this.selectedLayerIds.length 
+			this.canvasManager.editor.updateStatus( {
+				selectionCount: this.selectedLayerIds.length
 			} );
 		}
 
 		// Update layer panel if available
-		if ( this.canvasManager.editor.layerPanel && 
-			 typeof this.canvasManager.editor.layerPanel.updateSelection === 'function' ) {
+		if ( this.canvasManager.editor.layerPanel &&
+			typeof this.canvasManager.editor.layerPanel.updateSelection === 'function' ) {
 			this.canvasManager.editor.layerPanel.updateSelection( this.selectedLayerIds );
 		}
 	};
@@ -667,7 +672,7 @@
 		}
 
 		var layers = this.canvasManager.editor.layers || [];
-		
+
 		// Remove selected layers
 		this.canvasManager.editor.layers = layers.filter( function ( layer ) {
 			return this.selectedLayerIds.indexOf( layer.id ) === -1;
@@ -696,7 +701,7 @@
 		selectedLayers.forEach( function ( layer ) {
 			var clone = JSON.parse( JSON.stringify( layer ) );
 			clone.id = this.generateLayerId();
-			
+
 			// Offset duplicate
 			if ( typeof clone.x === 'number' ) {
 				clone.x += 20;
@@ -704,7 +709,7 @@
 			if ( typeof clone.y === 'number' ) {
 				clone.y += 20;
 			}
-			
+
 			newLayers.push( clone );
 			newSelection.push( clone.id );
 		}.bind( this ) );
@@ -727,7 +732,7 @@
 	 * @return {string} Unique layer ID
 	 */
 	SelectionManager.prototype.generateLayerId = function () {
-		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).substr( 2, 9 );
+		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	};
 
 	// Export SelectionManager to global scope

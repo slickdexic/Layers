@@ -9,6 +9,7 @@
 
 	/**
 	 * Renderer class
+	 *
 	 * @param {Object} config Configuration object
 	 * @class
 	 */
@@ -93,6 +94,7 @@
 
 	/**
 	 * Set the background image
+	 *
 	 * @param {HTMLImageElement} image The background image
 	 */
 	Renderer.prototype.setBackgroundImage = function ( image ) {
@@ -102,6 +104,7 @@
 
 	/**
 	 * Set the layers data
+	 *
 	 * @param {Array} layers Array of layer objects
 	 */
 	Renderer.prototype.setLayers = function ( layers ) {
@@ -111,6 +114,7 @@
 
 	/**
 	 * Mark a specific layer as dirty for re-rendering
+	 *
 	 * @param {string} layerType Type of layer ('background', 'drawing', 'overlay')
 	 */
 	Renderer.prototype.markDirty = function ( layerType ) {
@@ -185,6 +189,7 @@
 
 	/**
 	 * Render a single layer
+	 *
 	 * @param {Object} layer Layer object to render
 	 * @param {CanvasRenderingContext2D} ctx Context to render to
 	 */
@@ -215,6 +220,7 @@
 				this.renderPathLayer( layer, ctx );
 				break;
 			default:
+				// eslint-disable-next-line no-console
 				console.warn( 'Unknown layer type:', layer.type );
 		}
 
@@ -223,6 +229,7 @@
 
 	/**
 	 * Render a text layer
+	 *
 	 * @param {Object} layer Text layer object
 	 * @param {CanvasRenderingContext2D} ctx Rendering context
 	 */
@@ -241,6 +248,7 @@
 
 	/**
 	 * Render a rectangle layer
+	 *
 	 * @param {Object} layer Rectangle layer object
 	 * @param {CanvasRenderingContext2D} ctx Rendering context
 	 */
@@ -264,6 +272,7 @@
 
 	/**
 	 * Render a circle layer
+	 *
 	 * @param {Object} layer Circle layer object
 	 * @param {CanvasRenderingContext2D} ctx Rendering context
 	 */
@@ -289,6 +298,7 @@
 
 	/**
 	 * Render a path layer
+	 *
 	 * @param {Object} layer Path layer object
 	 * @param {CanvasRenderingContext2D} ctx Rendering context
 	 */
@@ -321,6 +331,7 @@
 
 	/**
 	 * Resize all canvas layers
+	 *
 	 * @param {number} width New width
 	 * @param {number} height New height
 	 */
@@ -340,7 +351,8 @@
 
 	/**
 	 * Get the overlay canvas for event handling
-	 * @returns {HTMLCanvasElement} The overlay canvas
+	 *
+	 * @return {HTMLCanvasElement} The overlay canvas
 	 */
 	Renderer.prototype.getEventCanvas = function () {
 		return this.overlayCanvas;
@@ -348,7 +360,8 @@
 
 	/**
 	 * Get the overlay context for UI rendering
-	 * @returns {CanvasRenderingContext2D} The overlay context
+	 *
+	 * @return {CanvasRenderingContext2D} The overlay context
 	 */
 	Renderer.prototype.getOverlayContext = function () {
 		return this.overlayCtx;

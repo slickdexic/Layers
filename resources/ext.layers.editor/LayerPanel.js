@@ -172,7 +172,7 @@
 	LayerPanel.prototype.createInterface = function () {
 		this.container.innerHTML = '';
 		this.container.setAttribute( 'role', 'region' );
-		var t = this.msg ? this.msg.bind( this ) : function( k, d ) { return d; };
+		var t = this.msg ? this.msg.bind( this ) : function ( k, d ) { return d; };
 		this.container.setAttribute( 'aria-label', t( 'layers-panel-title', 'Layers' ) );
 
 		var t = this.msg.bind( this );

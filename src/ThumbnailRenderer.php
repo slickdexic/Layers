@@ -258,7 +258,7 @@ class ThumbnailRenderer {
 				   '-fill', $shadowColor,
 				   '-pointsize', (string)$fontSize,
 				   '-font', $font,
-				   '-annotate', '+' . (int)($x + $shadowOffsetX) . '+' . (int)($y + $shadowOffsetY),
+				   '-annotate', '+' . (int)( $x + $shadowOffsetX ) . '+' . (int)( $y + $shadowOffsetY ),
 				   $text,
 				   '-blur', '0x' . (int)$shadowBlur
 			   ] );
@@ -294,7 +294,7 @@ class ThumbnailRenderer {
 			   $shadowColor = $this->withOpacity( $shadowColor, 1.0 );
 			   $args = array_merge( $args, [
 				   '-fill', $shadowColor,
-				   '-draw', 'rectangle ' . (int)($x + $shadowOffsetX) . ',' . (int)($y + $shadowOffsetY) . ' ' . (int)($x + $width + $shadowOffsetX) . ',' . (int)($y + $height + $shadowOffsetY),
+				   '-draw', 'rectangle ' . (int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' . (int)( $x + $width + $shadowOffsetX ) . ',' . (int)( $y + $height + $shadowOffsetY ),
 				   '-blur', '0x' . (int)$shadowBlur
 			   ] );
 		   }
@@ -327,7 +327,7 @@ class ThumbnailRenderer {
 			   $shadowColor = $this->withOpacity( $shadowColor, 1.0 );
 			   $args = array_merge( $args, [
 				   '-fill', $shadowColor,
-				   '-draw', 'circle ' . (int)($x + $shadowOffsetX) . ',' . (int)($y + $shadowOffsetY) . ' ' . (int)($x + $radius + $shadowOffsetX) . ',' . (int)($y + $shadowOffsetY),
+				   '-draw', 'circle ' . (int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' . (int)( $x + $radius + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ),
 				   '-blur', '0x' . (int)$shadowBlur
 			   ] );
 		   }

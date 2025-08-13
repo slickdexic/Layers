@@ -17,7 +17,7 @@ class ApiLayersInfo extends ApiBase {
 
 	/**
 	 * Constructor
-	 * 
+	 *
 	 * @param ApiMain $main The main API instance
 	 * @param string $action The action name for this module
 	 */
@@ -27,7 +27,7 @@ class ApiLayersInfo extends ApiBase {
 
 	/**
 	 * Execute the API request
-	 * 
+	 *
 	 * @throws \ApiUsageException When file is not found or other errors occur
 	 */
 	public function execute() {
@@ -75,7 +75,7 @@ class ApiLayersInfo extends ApiBase {
 			// Enrich with user names for display convenience - batch lookup to avoid N+1 queries
 			try {
 				$userFactory = MediaWikiServices::getInstance()->getUserFactory();
-				
+
 				// Collect all unique user IDs
 				$userIds = [];
 				foreach ( $allLayerSets as $row ) {
@@ -84,7 +84,7 @@ class ApiLayersInfo extends ApiBase {
 						$userIds[] = $userId;
 					}
 				}
-				
+
 				// Batch load users
 				$users = [];
 				if ( !empty( $userIds ) ) {
@@ -96,7 +96,7 @@ class ApiLayersInfo extends ApiBase {
 						}
 					}
 				}
-				
+
 				// Apply user names to layer sets
 				foreach ( $allLayerSets as &$row ) {
 					$userId = (int)( $row['ls_user_id'] ?? 0 );
@@ -119,7 +119,7 @@ class ApiLayersInfo extends ApiBase {
 
 	/**
 	 * Get allowed parameters for this API module
-	 * 
+	 *
 	 * @return array Array of parameter definitions for filename and layersetid
 	 */
 	public function getAllowedParams() {
@@ -137,7 +137,7 @@ class ApiLayersInfo extends ApiBase {
 
 	/**
 	 * Get example messages for this API module
-	 * 
+	 *
 	 * @return array Array of example API calls with message keys
 	 */
 	public function getExamplesMessages() {

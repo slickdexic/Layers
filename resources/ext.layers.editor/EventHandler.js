@@ -7,6 +7,7 @@
 
 	/**
 	 * EventHandler class
+	 *
 	 * @param {Object} config Configuration object
 	 * @param {CanvasManager} canvasManager Reference to the canvas manager
 	 * @class
@@ -15,12 +16,12 @@
 		this.config = config || {};
 		this.canvasManager = canvasManager;
 		this.canvas = canvasManager.canvas;
-		
+
 		// Event state
 		this.isMouseDown = false;
 		this.lastMousePoint = null;
 		this.touches = {};
-		
+
 		this.setupEventListeners();
 	}
 
@@ -93,42 +94,46 @@
 
 	/**
 	 * Handle mouse down events
+	 *
 	 * @param {MouseEvent} e Mouse event
 	 */
 	EventHandler.prototype.handleMouseDown = function ( e ) {
 		this.isMouseDown = true;
 		var point = this.getMousePoint( e );
 		this.lastMousePoint = point;
-		
+
 		// Delegate to canvas manager
 		this.canvasManager.handleMouseDown( e );
 	};
 
 	/**
 	 * Handle mouse move events
+	 *
 	 * @param {MouseEvent} e Mouse event
 	 */
 	EventHandler.prototype.handleMouseMove = function ( e ) {
 		var point = this.getMousePoint( e );
 		this.lastMousePoint = point;
-		
+
 		// Delegate to canvas manager
 		this.canvasManager.handleMouseMove( e );
 	};
 
 	/**
 	 * Handle mouse up events
+	 *
 	 * @param {MouseEvent} e Mouse event
 	 */
 	EventHandler.prototype.handleMouseUp = function ( e ) {
 		this.isMouseDown = false;
-		
+
 		// Delegate to canvas manager
 		this.canvasManager.handleMouseUp( e );
 	};
 
 	/**
 	 * Handle touch start events
+	 *
 	 * @param {TouchEvent} e Touch event
 	 */
 	EventHandler.prototype.handleTouchStart = function ( e ) {
@@ -138,7 +143,7 @@
 			clientY: touch.clientY
 		} );
 		this.handleMouseDown( mouseEvent );
-		
+
 		// Store touch for multi-touch gestures
 		for ( var i = 0; i < e.touches.length; i++ ) {
 			var t = e.touches[ i ];
@@ -152,6 +157,7 @@
 
 	/**
 	 * Handle touch move events
+	 *
 	 * @param {TouchEvent} e Touch event
 	 */
 	EventHandler.prototype.handleTouchMove = function ( e ) {
@@ -161,7 +167,7 @@
 			clientY: touch.clientY
 		} );
 		this.handleMouseMove( mouseEvent );
-		
+
 		// Handle pinch-to-zoom
 		if ( e.touches.length === 2 ) {
 			this.handlePinchZoom( e );
@@ -170,6 +176,7 @@
 
 	/**
 	 * Handle touch end events
+	 *
 	 * @param {TouchEvent} e Touch event
 	 */
 	EventHandler.prototype.handleTouchEnd = function ( e ) {
@@ -178,7 +185,7 @@
 			clientY: this.lastMousePoint ? this.lastMousePoint.clientY : 0
 		} );
 		this.handleMouseUp( mouseEvent );
-		
+
 		// Clean up touch tracking
 		for ( var i = 0; i < e.changedTouches.length; i++ ) {
 			var touch = e.changedTouches[ i ];
@@ -188,43 +195,46 @@
 
 	/**
 	 * Handle mouse wheel events for zooming
+	 *
 	 * @param {WheelEvent} e Wheel event
 	 */
 	EventHandler.prototype.handleWheel = function ( e ) {
 		var delta = e.deltaY > 0 ? -0.1 : 0.1;
 		var point = this.getMousePoint( e );
-		
+
 		// Delegate to canvas manager
 		this.canvasManager.zoom( delta, point );
 	};
 
 	/**
 	 * Handle pinch-to-zoom gestures
+	 *
 	 * @param {TouchEvent} e Touch event
 	 */
 	EventHandler.prototype.handlePinchZoom = function ( e ) {
 		var touch1 = e.touches[ 0 ];
 		var touch2 = e.touches[ 1 ];
-		
+
 		var currentDistance = Math.sqrt(
 			Math.pow( touch2.clientX - touch1.clientX, 2 ) +
 			Math.pow( touch2.clientY - touch1.clientY, 2 )
 		);
-		
+
 		if ( this.lastPinchDistance ) {
 			var delta = ( currentDistance - this.lastPinchDistance ) * 0.01;
 			var centerX = ( touch1.clientX + touch2.clientX ) / 2;
 			var centerY = ( touch1.clientY + touch2.clientY ) / 2;
-			
+
 			var point = this.getMousePointFromClient( centerX, centerY );
 			this.canvasManager.zoom( delta, point );
 		}
-		
+
 		this.lastPinchDistance = currentDistance;
 	};
 
 	/**
 	 * Handle keyboard down events
+	 *
 	 * @param {KeyboardEvent} e Keyboard event
 	 */
 	EventHandler.prototype.handleKeyDown = function ( e ) {
@@ -324,6 +334,7 @@
 
 	/**
 	 * Handle keyboard up events
+	 *
 	 * @param {KeyboardEvent} e Keyboard event
 	 */
 	EventHandler.prototype.handleKeyUp = function ( e ) {
@@ -343,6 +354,7 @@
 
 	/**
 	 * Get mouse point in canvas coordinates
+	 *
 	 * @param {MouseEvent} e Mouse event
 	 * @return {Object} Point with x, y coordinates
 	 */
@@ -352,6 +364,7 @@
 
 	/**
 	 * Get mouse point from client coordinates
+	 *
 	 * @param {number} clientX Client X coordinate
 	 * @param {number} clientY Client Y coordinate
 	 * @return {Object} Point with x, y coordinates

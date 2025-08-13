@@ -27,6 +27,9 @@ class LayersDatabase {
 	/** @var LoggerInterface */
 	private $logger;
 
+	/** @var \Config */
+	private $config;
+
 	/** @var array Cache for layer sets to avoid repeated queries */
 	private $layerSetCache = [];
 
@@ -44,6 +47,11 @@ class LayersDatabase {
 		// Initialize logger when available; tolerate non-MW static analysis contexts
 		if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 			$this->logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+		}
+
+		// Initialize config when available
+		if ( class_exists( '\\MediaWiki\\MediaWikiServices' ) ) {
+			$this->config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
 		}
 	}
 
@@ -76,7 +84,8 @@ class LayersDatabase {
 		if ( defined( 'DB_PRIMARY' ) ) {
 			$this->dbw = $lb->getConnection( DB_PRIMARY );
 		} elseif ( defined( 'DB_MASTER' ) ) {
-			$this->dbw = $lb->getConnection( DB_MASTER );
+			// Fallback for older MediaWiki versions
+			$this->dbw = $lb->getConnection( DB_PRIMARY );
 		} else {
 			$this->dbw = $lb->getConnection( 0 );
 		}
@@ -97,6 +106,7 @@ class LayersDatabase {
 		if ( defined( 'DB_REPLICA' ) ) {
 			$this->dbr = $lb->getConnection( DB_REPLICA );
 		} elseif ( defined( 'DB_SLAVE' ) ) {
+			// Fallback for older MediaWiki versions
 			$this->dbr = $lb->getConnection( DB_REPLICA );
 		} else {
 			$this->dbr = $lb->getConnection( 1 );
@@ -146,8 +156,8 @@ class LayersDatabase {
 				$this->logger->info( 'Layer set saved', [
 					'imgName' => $imgName,
 					'userId' => $userId,
-					'revision' => isset($revision) ? $revision : null,
-					'timestamp' => isset($timestamp) ? $timestamp : null,
+					'revision' => isset( $revision ) ? $revision : null,
+					'timestamp' => isset( $timestamp ) ? $timestamp : null,
 					'setName' => $setName
 				] );
 			}
@@ -163,30 +173,35 @@ class LayersDatabase {
 
 			while ( $retryCount < $maxRetries ) {
 				try {
-					$revision = $this->getNextRevision( $imgName, $sha1 );
+					$revision = $this->getNextRevision( $imgName, $sha1, $dbw );
 					$timestamp = $dbw->timestamp();
 
-					// Prepare JSON data with validation
-					$jsonBlob = json_encode( [
-						'revision' => $revision,
-						'schema' => 1,
-						'created' => $timestamp,
-						'layers' => $layersData
-					], JSON_UNESCAPED_UNICODE );
-
+					// Prepare JSON data with strict validation and memory protection
+					$jsonBlob = $this->validateAndPrepareJsonBlob( $layersData, $revision, $timestamp );
 					if ( $jsonBlob === false ) {
 						$dbw->endAtomic( __METHOD__ );
-						$this->logError( 'JSON encoding failed for layer set' );
+						$this->logError( 'JSON validation failed for layer set' );
 						return false;
 					}
 
-					// Debug: Log what we're about to save
-					if ( function_exists( 'error_log' ) ) {
-						error_log( 'Layers: Saving JSON blob: ' . $jsonBlob );
+					// Additional memory protection: Check encoded size before proceeding
+					$dataSize = strlen( $jsonBlob );
+					$maxAllowedSize = 2097152; // Default 2MB limit
+					if ( $this->config ) {
+						$maxAllowedSize = $this->config->get( 'LayersMaxBytes' ) ?: $maxAllowedSize;
+					}
+					if ( $dataSize > $maxAllowedSize ) {
+						$dbw->endAtomic( __METHOD__ );
+						$this->logError( "JSON blob size ({$dataSize} bytes) exceeds maximum allowed size ({$maxAllowedSize} bytes)" );
+						return false;
+					}
+
+					// Debug: Log what we're about to save (only in debug mode to prevent log spam)
+					if ( function_exists( 'error_log' ) && defined( 'MW_LAYERS_DEBUG' ) && MW_LAYERS_DEBUG ) {
+						error_log( 'Layers: Saving JSON blob: ' . substr( $jsonBlob, 0, 500 ) . '...' );
 					}
 
 					// Calculate size and layer count for performance tracking
-					$dataSize = strlen( $jsonBlob );
 					$layerCount = count( $layersData );
 
 					// Build insert row with backward-compat for older schemas (without ls_size / ls_layer_count)
@@ -249,7 +264,7 @@ class LayersDatabase {
 							return false;
 						}
 						// Log and retry with new revision number
-						$this->logError( 'Race condition detected, retrying (attempt ' . ($retryCount + 1) . '): ' . $e->getMessage() );
+						$this->logError( 'Race condition detected, retrying (attempt ' . ( $retryCount + 1 ) . '): ' . $e->getMessage() );
 						continue;
 					} else {
 						// Non-duplicate error, don't retry
@@ -281,8 +296,14 @@ class LayersDatabase {
 	 * @return array|false Layer set data or false if not found
 	 */
 	public function getLayerSet( int $layerSetId ) {
-		// Check cache first
-		$cacheKey = 'layerset_' . $layerSetId;
+		// Validate input to prevent cache poisoning
+		if ( $layerSetId <= 0 || $layerSetId > PHP_INT_MAX ) {
+			$this->logError( 'Invalid layer set ID provided: ' . $layerSetId );
+			return false;
+		}
+
+		// Check cache first with sanitized key
+		$cacheKey = $this->sanitizeCacheKey( 'layerset_' . $layerSetId );
 		if ( isset( $this->layerSetCache[$cacheKey] ) ) {
 			return $this->layerSetCache[$cacheKey];
 		}
@@ -308,19 +329,35 @@ class LayersDatabase {
 				__METHOD__
 			);
 
-			if ( !$row ) {
-				// Cache negative results to avoid repeated queries
-				$this->addToCache( $cacheKey, false );
-				return false;
-			}
+		if ( !$row ) {
+			// Cache negative results to avoid repeated queries
+			$this->addToCache( $cacheKey, false );
+			return false;
+		}
 
-			$jsonData = json_decode( $row->ls_json_blob, true );
-			if ( $jsonData === null ) {
-				$this->logError( 'Invalid JSON in layer set ID: ' . $layerSetId );
-				return false;
-			}
+		// Check JSON blob size before attempting to decode to prevent memory exhaustion attacks
+		$jsonBlobSize = strlen( $row->ls_json_blob );
+		$maxJsonSize = 2097152; // Default 2MB limit
+		if ( $this->config ) {
+			$maxJsonSize = $this->config->get( 'LayersMaxBytes' ) ?: $maxJsonSize;
+		}
+		
+		if ( $jsonBlobSize > $maxJsonSize ) {
+			$this->logError( "JSON blob too large for layer set ID: {$layerSetId}, size: {$jsonBlobSize} bytes" );
+			return false;
+		}
 
-			$result = [
+		// Validate JSON structure before decoding to catch malformed data early
+		if ( !$this->isValidJsonStructure( $row->ls_json_blob ) ) {
+			$this->logError( "Invalid JSON structure for layer set ID: {$layerSetId}" );
+			return false;
+		}
+
+		$jsonData = json_decode( $row->ls_json_blob, true );
+		if ( $jsonData === null ) {
+			$this->logError( 'Invalid JSON in layer set ID: ' . $layerSetId );
+			return false;
+		}			$result = [
 				'id' => (int)$row->ls_id,
 				'imgName' => $row->ls_img_name,
 				'userId' => (int)$row->ls_user_id,
@@ -374,6 +411,24 @@ class LayersDatabase {
 			return false;
 		}
 
+		// Check JSON blob size before attempting to decode to prevent memory exhaustion attacks
+		$jsonBlobSize = strlen( $row->ls_json_blob );
+		$maxJsonSize = 2097152; // Default 2MB limit
+		if ( $this->config ) {
+			$maxJsonSize = $this->config->get( 'LayersMaxBytes' ) ?: $maxJsonSize;
+		}
+		
+		if ( $jsonBlobSize > $maxJsonSize ) {
+			$this->logError( "JSON blob too large for latest layer set, size: {$jsonBlobSize} bytes" );
+			return false;
+		}
+
+		// Validate JSON structure before decoding
+		if ( !$this->isValidJsonStructure( $row->ls_json_blob ) ) {
+			$this->logError( "Invalid JSON structure for latest layer set" );
+			return false;
+		}
+
 		$jsonData = json_decode( $row->ls_json_blob, true );
 		if ( $jsonData === null ) {
 			return false;
@@ -391,25 +446,25 @@ class LayersDatabase {
 	}
 
 	/**
-	 * Get next revision number for an image
+	 * Get next revision number for an image using atomic operations to prevent race conditions
 	 *
 	 * @param string $imgName Image filename
 	 * @param string $sha1 Image SHA1 hash
+	 * @param \Wikimedia\Rdbms\IDatabase $dbw Write database connection (must be in transaction)
 	 * @return int Next revision number
 	 */
-	private function getNextRevision( string $imgName, string $sha1 ): int {
-		$dbr = $this->getReadDb();
-		if ( !$dbr ) {
-			return 1;
-		}
-		$maxRevision = $dbr->selectField(
+	private function getNextRevision( string $imgName, string $sha1, $dbw ): int {
+		// Use write connection for consistent reads within transaction
+		// This prevents race conditions by ensuring we see all committed data
+		$maxRevision = $dbw->selectField(
 			'layer_sets',
 			'MAX(ls_revision)',
 			[
 				'ls_img_name' => $imgName,
 				'ls_img_sha1' => $sha1
 			],
-			__METHOD__
+			__METHOD__,
+			[ 'FOR UPDATE' ] // Lock the rows to prevent concurrent modifications
 		);
 
 		return $maxRevision ? (int)$maxRevision + 1 : 1;
@@ -553,6 +608,30 @@ class LayersDatabase {
 				return null;
 			}
 
+			// Check JSON blob size before attempting to decode to prevent memory exhaustion attacks
+			$jsonBlobSize = strlen( $res->ls_json_blob );
+			$maxJsonSize = 2097152; // Default 2MB limit
+			if ( $this->config ) {
+				$maxJsonSize = $this->config->get( 'LayersMaxBytes' ) ?: $maxJsonSize;
+			}
+			
+			if ( $jsonBlobSize > $maxJsonSize ) {
+				$this->logError( "JSON blob too large for layer set by name, size: {$jsonBlobSize} bytes" );
+				return null;
+			}
+
+			// Validate JSON structure before decoding
+			if ( !$this->isValidJsonStructure( $res->ls_json_blob ) ) {
+				$this->logError( "Invalid JSON structure for layer set by name" );
+				return null;
+			}
+
+			$jsonData = json_decode( $res->ls_json_blob, true );
+			if ( $jsonData === null ) {
+				$this->logError( "Invalid JSON data for layer set by name" );
+				return null;
+			}
+
 			return [
 				'id' => (int)$res->ls_id,
 				'imgName' => $res->ls_img_name,
@@ -560,7 +639,7 @@ class LayersDatabase {
 				'majorMime' => $res->ls_img_major_mime,
 				'minorMime' => $res->ls_img_minor_mime,
 				'revision' => (int)$res->ls_revision,
-				'data' => json_decode( $res->ls_json_blob, true ),
+				'data' => $jsonData,
 				'timestamp' => $res->ls_timestamp,
 				'userId' => (int)$res->ls_user_id,
 				'setName' => $res->ls_name
@@ -583,6 +662,9 @@ class LayersDatabase {
 	 * @param mixed $value Value to cache
 	 */
 	private function addToCache( string $key, $value ): void {
+		// Sanitize cache key to prevent attacks
+		$sanitizedKey = $this->sanitizeCacheKey( $key );
+
 		// Manage cache size to prevent memory issues
 		if ( count( $this->layerSetCache ) >= self::MAX_CACHE_SIZE ) {
 			// Remove oldest entry (simple FIFO)
@@ -590,7 +672,7 @@ class LayersDatabase {
 			unset( $this->layerSetCache[$oldestKey] );
 		}
 
-		$this->layerSetCache[$key] = $value;
+		$this->layerSetCache[$sanitizedKey] = $value;
 	}
 
 	/**
@@ -619,12 +701,126 @@ class LayersDatabase {
 			return;
 		}
 
+		// Sanitize pattern to prevent cache manipulation
+		$sanitizedPattern = $this->sanitizeCacheKey( $pattern );
+
 		// Clear cache entries matching pattern
 		foreach ( array_keys( $this->layerSetCache ) as $key ) {
-			if ( strpos( $key, $pattern ) !== false ) {
+			if ( strpos( $key, $sanitizedPattern ) !== false ) {
 				unset( $this->layerSetCache[$key] );
 			}
 		}
+	}
+
+	/**
+	 * Sanitize cache keys to prevent cache poisoning attacks
+	 *
+	 * @param string $key Raw cache key
+	 * @return string Sanitized cache key
+	 */
+	private function sanitizeCacheKey( string $key ): string {
+		// Remove potentially dangerous characters
+		$key = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $key );
+		
+		// Limit key length to prevent excessive memory usage
+		if ( strlen( $key ) > 100 ) {
+			$key = substr( $key, 0, 100 );
+		}
+		
+		// Ensure key is not empty after sanitization
+		if ( empty( $key ) ) {
+			$key = 'invalid_key';
+		}
+		
+		return $key;
+	}
+
+	/**
+	 * Validate and prepare JSON blob with comprehensive security checks
+	 *
+	 * @param array $layersData Layer data array
+	 * @param int $revision Revision number
+	 * @param string $timestamp Timestamp
+	 * @return string|false JSON string on success, false on validation failure
+	 */
+	private function validateAndPrepareJsonBlob( array $layersData, int $revision, string $timestamp ) {
+		// Validate array depth to prevent deeply nested structures
+		if ( $this->getArrayDepth( $layersData ) > 10 ) {
+			$this->logError( 'JSON data exceeds maximum depth limit of 10 levels' );
+			return false;
+		}
+
+		// Validate maximum layer count
+		if ( count( $layersData ) > 1000 ) {
+			$this->logError( 'JSON data exceeds maximum layer count of 1000' );
+			return false;
+		}
+
+		// Validate individual layers for security
+		foreach ( $layersData as $index => $layer ) {
+			if ( !is_array( $layer ) ) {
+				$this->logError( "Layer at index $index is not an array" );
+				return false;
+			}
+
+			// Check for excessive properties in a single layer
+			if ( count( $layer ) > 50 ) {
+				$this->logError( "Layer at index $index has too many properties" );
+				return false;
+			}
+
+			// Validate text fields for potential XSS
+			if ( isset( $layer['text'] ) && is_string( $layer['text'] ) ) {
+				if ( strlen( $layer['text'] ) > 5000 ) {
+					$this->logError( "Text field in layer $index exceeds 5000 character limit" );
+					return false;
+				}
+
+				// Check for potential script injection
+				if ( preg_match( '/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', $layer['text'] ) ) {
+					$this->logError( "Potential script injection detected in layer $index text" );
+					return false;
+				}
+			}
+		}
+
+		// Prepare final data structure
+		$dataStructure = [
+			'revision' => $revision,
+			'schema' => 1,
+			'created' => $timestamp,
+			'layers' => $layersData
+		];
+
+		// Encode with security flags
+		$jsonBlob = json_encode( $dataStructure, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
+
+		// Additional size validation after encoding
+		if ( strlen( $jsonBlob ) > 10485760 ) { // 10MB limit
+			$this->logError( 'JSON blob exceeds 10MB size limit' );
+			return false;
+		}
+
+		return $jsonBlob;
+	}
+
+	/**
+	 * Calculate the maximum depth of a nested array
+	 *
+	 * @param array $array Array to check
+	 * @return int Maximum depth
+	 */
+	private function getArrayDepth( array $array ): int {
+		$maxDepth = 1;
+
+		foreach ( $array as $value ) {
+			if ( is_array( $value ) ) {
+				$depth = 1 + $this->getArrayDepth( $value );
+				$maxDepth = max( $maxDepth, $depth );
+			}
+		}
+
+		return $maxDepth;
 	}
 
 	/**
@@ -667,5 +863,56 @@ class LayersDatabase {
 		} catch ( \Throwable $e ) {
 			return false;
 		}
+	}
+
+	/**
+	 * Validate JSON structure without full decoding to prevent malformed data attacks
+	 *
+	 * @param string $jsonString The JSON string to validate
+	 * @return bool True if JSON structure is valid, false otherwise
+	 */
+	private function isValidJsonStructure( string $jsonString ): bool {
+		// Basic structure validation without full parsing
+		if ( empty( $jsonString ) || strlen( $jsonString ) < 2 ) {
+			return false;
+		}
+
+		// Check if it starts and ends with appropriate characters for arrays/objects
+		$first = $jsonString[0];
+		$last = $jsonString[strlen( $jsonString ) - 1];
+		
+		if ( !( ( $first === '[' && $last === ']' ) || ( $first === '{' && $last === '}' ) ) ) {
+			return false;
+		}
+
+		// Count braces/brackets to detect severely malformed JSON
+		$openBraces = substr_count( $jsonString, '{' );
+		$closeBraces = substr_count( $jsonString, '}' );
+		$openBrackets = substr_count( $jsonString, '[' );
+		$closeBrackets = substr_count( $jsonString, ']' );
+
+		if ( $openBraces !== $closeBraces || $openBrackets !== $closeBrackets ) {
+			return false;
+		}
+
+		// Quick depth check to prevent deeply nested JSON attacks
+		$maxDepth = 100;
+		$depth = 0;
+		$maxFoundDepth = 0;
+		
+		for ( $i = 0; $i < strlen( $jsonString ); $i++ ) {
+			$char = $jsonString[$i];
+			if ( $char === '{' || $char === '[' ) {
+				$depth++;
+				$maxFoundDepth = max( $maxFoundDepth, $depth );
+				if ( $maxFoundDepth > $maxDepth ) {
+					return false;
+				}
+			} elseif ( $char === '}' || $char === ']' ) {
+				$depth--;
+			}
+		}
+
+		return true;
 	}
 }

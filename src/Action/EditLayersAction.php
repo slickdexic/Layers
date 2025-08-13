@@ -71,7 +71,7 @@ class EditLayersAction extends \Action {
 
 		// Add basic HTML content to ensure page has content
 		$out->addHTML( '<div id="layers-editor-container"></div>' );
-		
+
 		// Add manual initialization script
 		$out->addHTML( '<script>
 			if (typeof mw !== "undefined" && mw.loader) {

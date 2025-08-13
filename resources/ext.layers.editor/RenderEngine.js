@@ -17,14 +17,14 @@
 		this.canvasManager = canvasManager;
 		this.canvas = canvasManager.canvas;
 		this.ctx = canvasManager.ctx;
-		
+
 		// Rendering state
 		this.isRendering = false;
 		this.renderQueue = [];
 		this.lastRenderTime = 0;
 		this.targetFPS = 60;
 		this.frameTime = 1000 / this.targetFPS;
-		
+
 		// Performance optimization flags
 		this.enableDirtyRectRendering = true;
 		this.enableObjectCulling = true;
@@ -42,6 +42,7 @@
 			return;
 		}
 
+		// eslint-disable-next-line no-unused-vars
 		options = options || {};
 		this.isRendering = true;
 
@@ -77,6 +78,7 @@
 			if ( window.mw && window.mw.log ) {
 				window.mw.log.error( 'Layers: Error during rendering:', error );
 			} else {
+				// eslint-disable-next-line no-console
 				console.error( 'Layers: Error during rendering:', error );
 			}
 		} finally {
@@ -251,7 +253,7 @@
 		}
 
 		// Apply object culling if enabled
-		var visibleLayers = this.enableObjectCulling ? 
+		var visibleLayers = this.enableObjectCulling ?
 			this.cullLayers( layers ) : layers;
 
 		// Render each visible layer
@@ -270,7 +272,7 @@
 	 */
 	RenderEngine.prototype.cullLayers = function ( layers ) {
 		var viewport = this.getViewport();
-		
+
 		return layers.filter( function ( layer ) {
 			var bounds = this.getLayerBounds( layer );
 			return bounds && this.intersectsViewport( bounds, viewport );
@@ -300,9 +302,9 @@
 	 */
 	RenderEngine.prototype.intersectsViewport = function ( bounds, viewport ) {
 		return bounds.x < viewport.x + viewport.width &&
-			   bounds.x + bounds.width > viewport.x &&
-			   bounds.y < viewport.y + viewport.height &&
-			   bounds.y + bounds.height > viewport.y;
+			bounds.x + bounds.width > viewport.x &&
+			bounds.y < viewport.y + viewport.height &&
+			bounds.y + bounds.height > viewport.y;
 	};
 
 	/**

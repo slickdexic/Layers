@@ -232,7 +232,7 @@
 				// ignore unsupported blend modes
 			}
 		}
-		
+
 		// Apply shadow effects - support both flat and nested shadow formats
 		if ( layer.shadow ) {
 			// New flat format from editor (shadow: true, shadowColor: '#000', etc.)
@@ -310,11 +310,11 @@
 		var textMetrics = this.ctx.measureText( text );
 		var textWidth = textMetrics.width;
 		var textHeight = fontPx;
-		
+
 		// Calculate text center for rotation
 		var centerX = x + ( textWidth / 2 );
 		var centerY = y - ( textHeight / 4 ); // Adjust for text baseline
-		
+
 		// Apply rotation if present
 		if ( layer.rotation && layer.rotation !== 0 ) {
 			var rotationRadians = ( layer.rotation * Math.PI ) / 180;

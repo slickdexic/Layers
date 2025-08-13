@@ -10,5 +10,7 @@ CREATE TABLE /*_*/layer_assets (
     PRIMARY KEY (la_id),
     UNIQUE KEY la_title (la_title),
     KEY la_user_timestamp (la_user_id, la_timestamp),
-    KEY la_size (la_size)
+    KEY la_size (la_size),
+    -- Foreign key constraint to ensure user exists
+    CONSTRAINT fk_layer_assets_user_id FOREIGN KEY (la_user_id) REFERENCES /*_*/user (user_id) ON DELETE CASCADE
 ) /*$wgDBTableOptions*/;
