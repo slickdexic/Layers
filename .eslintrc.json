@@ -9,5 +9,22 @@
 		"no-implicit-globals": "off",
 		"es-x/no-array-prototype-fill": "off",
 		"es-x/no-string-prototype-repeat": "off"
-	}
+	},
+	"overrides": [
+		{
+			"files": [ "webpack.config.js", "jest.config.js", "Gruntfile.js" ],
+			"env": {
+				"node": true,
+				"es6": true
+			},
+			"parserOptions": {
+				"ecmaVersion": 2015,
+				"sourceType": "module"
+			},
+			"extends": [ "wikimedia/server" ],
+			"rules": {
+				"es-x/no-block-scoped-variables": "off"
+			}
+		}
+	]
 }

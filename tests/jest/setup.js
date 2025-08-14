@@ -7,7 +7,7 @@
 // require('@testing-library/jest-dom');
 
 // Mock console methods in tests to avoid noise
-global.console = Object.assign({}, console, {
+global.console = Object.assign( {}, console, {
 	// Keep log, warn, error for debugging
 	log: jest.fn(),
 	warn: jest.fn(),
@@ -15,14 +15,14 @@ global.console = Object.assign({}, console, {
 	// Silence debug and info
 	debug: jest.fn(),
 	info: jest.fn()
-});
+} );
 
 // Mock window.alert and confirm
 global.alert = jest.fn();
-global.confirm = jest.fn(function() { return true; });
+global.confirm = jest.fn( function () { return true; } );
 
 // Mock browser APIs that might be used
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty( window, 'localStorage', {
 	value: {
 		getItem: jest.fn(),
 		setItem: jest.fn(),
@@ -30,9 +30,9 @@ Object.defineProperty(window, 'localStorage', {
 		clear: jest.fn()
 	},
 	writable: true
-});
+} );
 
-Object.defineProperty(window, 'sessionStorage', {
+Object.defineProperty( window, 'sessionStorage', {
 	value: {
 		getItem: jest.fn(),
 		setItem: jest.fn(),
@@ -40,17 +40,17 @@ Object.defineProperty(window, 'sessionStorage', {
 		clear: jest.fn()
 	},
 	writable: true
-});
+} );
 
 // Mock HTMLCanvasElement and its context
-HTMLCanvasElement.prototype.getContext = jest.fn(function() {
+HTMLCanvasElement.prototype.getContext = jest.fn( function () {
 	return {
 		fillRect: jest.fn(),
 		strokeRect: jest.fn(),
 		clearRect: jest.fn(),
-		getImageData: jest.fn(function() { return { data: new Array(4) }; }),
+		getImageData: jest.fn( function () { return { data: new Array( 4 ) }; } ),
 		putImageData: jest.fn(),
-		createImageData: jest.fn(function() { return { data: new Array(4) }; }),
+		createImageData: jest.fn( function () { return { data: new Array( 4 ) }; } ),
 		setTransform: jest.fn(),
 		resetTransform: jest.fn(),
 		save: jest.fn(),
@@ -68,23 +68,23 @@ HTMLCanvasElement.prototype.getContext = jest.fn(function() {
 		arc: jest.fn(),
 		rect: jest.fn(),
 		drawImage: jest.fn(),
-		measureText: jest.fn(function() { return { width: 100 }; }),
+		measureText: jest.fn( function () { return { width: 100 }; } ),
 		fillText: jest.fn(),
 		strokeText: jest.fn()
 	};
-});
+} );
 
 // Mock HTMLCanvasElement methods
-HTMLCanvasElement.prototype.toDataURL = jest.fn(function() { return 'data:image/png;base64,test'; });
-HTMLCanvasElement.prototype.toBlob = jest.fn(function(callback) {
-	callback(new Blob());
-});
+HTMLCanvasElement.prototype.toDataURL = jest.fn( function () { return 'data:image/png;base64,test'; } );
+HTMLCanvasElement.prototype.toBlob = jest.fn( function ( callback ) {
+	callback( new Blob() );
+} );
 
 // Global test utilities
-global.createMockLayer = function(overrides) {
+global.createMockLayer = function ( overrides ) {
 	overrides = overrides || {};
-	return Object.assign({
-		id: 'test-layer-' + Math.random().toString(36).substr(2, 9),
+	return Object.assign( {
+		id: 'test-layer-' + Math.random().toString( 36 ).slice( 2, 11 ),
 		type: 'rectangle',
 		x: 0,
 		y: 0,
@@ -97,13 +97,13 @@ global.createMockLayer = function(overrides) {
 		visible: true,
 		locked: false,
 		name: 'Test Layer'
-	}, overrides);
+	}, overrides );
 };
 
-global.createMockEditor = function() {
+global.createMockEditor = function () {
 	return {
-		canvas: document.createElement('canvas'),
-		context: document.createElement('canvas').getContext('2d'),
+		canvas: document.createElement( 'canvas' ),
+		context: document.createElement( 'canvas' ).getContext( '2d' ),
 		layers: [],
 		selectedLayerIds: [],
 		currentTool: 'pointer',

@@ -147,9 +147,6 @@
 			filename: this.filename
 		} );
 
-		// Set up canvas event handlers
-		var self = this;
-
 		// Listen for changes to update UI state
 		this.canvasManager.on = this.canvasManager.on || function () {}; // Fallback
 

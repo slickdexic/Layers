@@ -241,9 +241,8 @@
 				this.ctx.shadowBlur = layer.shadowBlur || 0;
 				this.ctx.shadowOffsetX = layer.shadowOffsetX || 0;
 				this.ctx.shadowOffsetY = layer.shadowOffsetY || 0;
-			}
-			// Legacy nested format (shadow: {color: '#000', blur: 5, etc.})
-			else if ( typeof layer.shadow === 'object' && layer.shadow ) {
+			} else if ( typeof layer.shadow === 'object' && layer.shadow ) {
+				// Legacy nested format (shadow: {color: '#000', blur: 5, etc.})
 				this.ctx.shadowColor = layer.shadow.color || '#000000';
 				this.ctx.shadowBlur = layer.shadow.blur || 0;
 				this.ctx.shadowOffsetX = layer.shadow.offsetX || 0;

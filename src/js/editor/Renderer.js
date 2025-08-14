@@ -118,7 +118,7 @@
 	 * @param {string} layerType Type of layer ('background', 'drawing', 'overlay')
 	 */
 	Renderer.prototype.markDirty = function ( layerType ) {
-		if ( layerType && this.isDirty.hasOwnProperty( layerType ) ) {
+		if ( layerType && Object.prototype.hasOwnProperty.call( this.isDirty, layerType ) ) {
 			this.isDirty[ layerType ] = true;
 		} else {
 			// Mark all layers dirty

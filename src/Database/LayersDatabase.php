@@ -745,8 +745,8 @@ class LayersDatabase {
 	 */
 	private function validateAndPrepareJsonBlob( array $layersData, int $revision, string $timestamp ) {
 		// Validate array depth to prevent deeply nested structures
-		if ( $this->getArrayDepth( $layersData ) > 10 ) {
-			$this->logError( 'JSON data exceeds maximum depth limit of 10 levels' );
+		if ( $this->getArrayDepth( $layersData ) > 5 ) {
+			$this->logError( 'JSON data exceeds maximum depth limit of 5 levels' );
 			return false;
 		}
 
@@ -796,8 +796,8 @@ class LayersDatabase {
 		$jsonBlob = json_encode( $dataStructure, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
 
 		// Additional size validation after encoding
-		if ( strlen( $jsonBlob ) > 10485760 ) { // 10MB limit
-			$this->logError( 'JSON blob exceeds 10MB size limit' );
+		if ( strlen( $jsonBlob ) > 2097152 ) { // 2MB limit
+			$this->logError( 'JSON blob exceeds 2MB size limit' );
 			return false;
 		}
 
@@ -896,7 +896,7 @@ class LayersDatabase {
 		}
 
 		// Quick depth check to prevent deeply nested JSON attacks
-		$maxDepth = 100;
+		$maxDepth = 20;
 		$depth = 0;
 		$maxFoundDepth = 0;
 		

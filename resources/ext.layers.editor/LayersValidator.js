@@ -114,8 +114,8 @@
 	/**
 	 * Validate required fields
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer Layer data object
+	 * @param {Object} result Validation result object
 	 */
 	LayersValidator.prototype.validateRequired = function ( layer, result ) {
 		if ( !layer.id ) {
@@ -132,8 +132,8 @@
 	/**
 	 * Validate layer type
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer Layer data object
+	 * @param {Object} result Validation result object
 	 */
 	LayersValidator.prototype.validateLayerType = function ( layer, result ) {
 		if ( layer.type && this.validationRules.validTypes.indexOf( layer.type ) === -1 ) {
@@ -207,7 +207,8 @@
 				result.errors.push( this.getMessage( 'layers-validation-fontsize-invalid' ) );
 			} else {
 				var fontSize = parseFloat( layer.fontSize );
-				if ( fontSize < this.validationRules.minFontSize || fontSize > this.validationRules.maxFontSize ) {
+				if ( fontSize < this.validationRules.minFontSize ||
+					fontSize > this.validationRules.maxFontSize ) {
 					result.isValid = false;
 					result.errors.push( this.getMessage( 'layers-validation-fontsize-range',
 						this.validationRules.minFontSize, this.validationRules.maxFontSize ) );
@@ -622,12 +623,74 @@
 	 *
 	 * @param key
 	 */
+	/**
+	 * Get internationalized message
+	 *
+	 * @param {string} key - Message key. Valid validation keys include:
+	 *   'layers-validation-layer-invalid', 'layers-validation-id-required', 'layers-validation-type-required',
+	 *   'layers-validation-type-invalid', 'layers-validation-id-type', 'layers-validation-id-too-long',
+	 *   'layers-validation-id-invalid-chars', 'layers-validation-coordinate-invalid', 'layers-validation-coordinate-too-large',
+	 *   'layers-validation-fontsize-invalid', 'layers-validation-fontsize-range', 'layers-validation-strokewidth-invalid',
+	 *   'layers-validation-strokewidth-range', 'layers-validation-opacity-invalid', 'layers-validation-opacity-range',
+	 *   'layers-validation-sides-invalid', 'layers-validation-sides-range', 'layers-validation-blurradius-invalid',
+	 *   'layers-validation-blurradius-range', 'layers-validation-text-type', 'layers-validation-text-too-long'
+	 * @param {...*} args - Message parameters
+	 * @return {string} Localized message
+	 */
 	LayersValidator.prototype.getMessage = function ( key ) {
 		var args = Array.prototype.slice.call( arguments, 1 );
 
 		// Try MediaWiki message system
 		if ( window.mw && window.mw.message ) {
-			var msg = mw.message( key );
+			var msg;
+			// Create message object based on possible validation keys
+			if ( key === 'layers-validation-layer-invalid' ) {
+				msg = mw.message( 'layers-validation-layer-invalid' );
+			} else if ( key === 'layers-validation-id-required' ) {
+				msg = mw.message( 'layers-validation-id-required' );
+			} else if ( key === 'layers-validation-type-required' ) {
+				msg = mw.message( 'layers-validation-type-required' );
+			} else if ( key === 'layers-validation-type-invalid' ) {
+				msg = mw.message( 'layers-validation-type-invalid' );
+			} else if ( key === 'layers-validation-id-type' ) {
+				msg = mw.message( 'layers-validation-id-type' );
+			} else if ( key === 'layers-validation-id-too-long' ) {
+				msg = mw.message( 'layers-validation-id-too-long' );
+			} else if ( key === 'layers-validation-id-invalid-chars' ) {
+				msg = mw.message( 'layers-validation-id-invalid-chars' );
+			} else if ( key === 'layers-validation-coordinate-invalid' ) {
+				msg = mw.message( 'layers-validation-coordinate-invalid' );
+			} else if ( key === 'layers-validation-coordinate-too-large' ) {
+				msg = mw.message( 'layers-validation-coordinate-too-large' );
+			} else if ( key === 'layers-validation-fontsize-invalid' ) {
+				msg = mw.message( 'layers-validation-fontsize-invalid' );
+			} else if ( key === 'layers-validation-fontsize-range' ) {
+				msg = mw.message( 'layers-validation-fontsize-range' );
+			} else if ( key === 'layers-validation-strokewidth-invalid' ) {
+				msg = mw.message( 'layers-validation-strokewidth-invalid' );
+			} else if ( key === 'layers-validation-strokewidth-range' ) {
+				msg = mw.message( 'layers-validation-strokewidth-range' );
+			} else if ( key === 'layers-validation-opacity-invalid' ) {
+				msg = mw.message( 'layers-validation-opacity-invalid' );
+			} else if ( key === 'layers-validation-opacity-range' ) {
+				msg = mw.message( 'layers-validation-opacity-range' );
+			} else if ( key === 'layers-validation-sides-invalid' ) {
+				msg = mw.message( 'layers-validation-sides-invalid' );
+			} else if ( key === 'layers-validation-sides-range' ) {
+				msg = mw.message( 'layers-validation-sides-range' );
+			} else if ( key === 'layers-validation-blurradius-invalid' ) {
+				msg = mw.message( 'layers-validation-blurradius-invalid' );
+			} else if ( key === 'layers-validation-blurradius-range' ) {
+				msg = mw.message( 'layers-validation-blurradius-range' );
+			} else if ( key === 'layers-validation-text-type' ) {
+				msg = mw.message( 'layers-validation-text-type' );
+			} else if ( key === 'layers-validation-text-too-long' ) {
+				msg = mw.message( 'layers-validation-text-too-long' );
+			} else {
+				// Fallback for unknown message keys
+				// eslint-disable-next-line mediawiki/msg-doc
+				msg = mw.message( key );
+			}
 			if ( args.length > 0 ) {
 				return msg.params( args ).text();
 			}

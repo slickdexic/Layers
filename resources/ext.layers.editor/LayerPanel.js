@@ -172,20 +172,21 @@
 	LayerPanel.prototype.createInterface = function () {
 		this.container.innerHTML = '';
 		this.container.setAttribute( 'role', 'region' );
-		var t = this.msg ? this.msg.bind( this ) : function ( k, d ) { return d; };
-		this.container.setAttribute( 'aria-label', t( 'layers-panel-title', 'Layers' ) );
-
-		var t = this.msg.bind( this );
+		var msgFunction = this.msg ? this.msg.bind( this ) : function ( k, d ) {
+			return d;
+		};
+		this.container.setAttribute( 'aria-label', msgFunction( 'layers-panel-title', 'Layers' ) );
 
 		// Create header
 		var header = document.createElement( 'div' );
 		header.className = 'layers-panel-header';
 		var title = document.createElement( 'h3' );
-		title.textContent = t( 'layers-panel-title', 'Layers' );
+		title.className = 'layers-panel-title';
+		title.textContent = msgFunction( 'layers-panel-title', 'Layers' );
 		header.appendChild( title );
 		var subtitle = document.createElement( 'div' );
 		subtitle.className = 'layers-panel-subtitle';
-		subtitle.textContent = t( 'layers-panel-subtitle', 'Drag to reorder • Click name to rename' );
+		subtitle.textContent = msgFunction( 'layers-panel-subtitle', 'Drag to reorder • Click name to rename' );
 		header.appendChild( subtitle );
 		this.container.appendChild( header );
 
@@ -200,10 +201,10 @@
 		this.layerList = document.createElement( 'div' );
 		this.layerList.className = 'layers-list';
 		this.layerList.setAttribute( 'role', 'listbox' );
-		this.layerList.setAttribute( 'aria-label', t( 'layers-panel-title', 'Layers' ) );
+		this.layerList.setAttribute( 'aria-label', msgFunction( 'layers-panel-title', 'Layers' ) );
 		var emptyState = document.createElement( 'div' );
 		emptyState.className = 'layers-empty';
-		emptyState.textContent = t( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
+		emptyState.textContent = msgFunction( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
 		this.layerList.appendChild( emptyState );
 
 		// Divider
@@ -212,20 +213,20 @@
 		divider.setAttribute( 'tabindex', '0' );
 		divider.setAttribute( 'role', 'separator' );
 		divider.setAttribute( 'aria-orientation', 'horizontal' );
-		divider.title = t( 'layers-panel-divider', 'Drag to resize panels' );
+		divider.title = msgFunction( 'layers-panel-divider', 'Drag to resize panels' );
 
 		// Create properties and code panels
 		this.propertiesPanel = document.createElement( 'div' );
 		this.propertiesPanel.className = 'layers-properties';
 		this.propertiesPanel.setAttribute( 'role', 'region' );
-		this.propertiesPanel.setAttribute( 'aria-label', t( 'layers-properties-title', 'Properties' ) );
-		this.propertiesPanel.innerHTML = '<h4>' + t( 'layers-properties-title', 'Properties' ) + '</h4><div class="properties-content"></div>';
+		this.propertiesPanel.setAttribute( 'aria-label', msgFunction( 'layers-properties-title', 'Properties' ) );
+		this.propertiesPanel.innerHTML = '<h4>' + msgFunction( 'layers-properties-title', 'Properties' ) + '</h4><div class="properties-content"></div>';
 
 		this.codePanel = document.createElement( 'div' );
 		this.codePanel.className = 'layers-code-panel';
 		this.codePanel.setAttribute( 'role', 'region' );
-		this.codePanel.setAttribute( 'aria-label', t( 'layers-code-title', 'Wikitext Code' ) );
-		this.codePanel.innerHTML = '<h4>' + t( 'layers-code-title', 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
+		this.codePanel.setAttribute( 'aria-label', msgFunction( 'layers-code-title', 'Wikitext Code' ) );
+		this.codePanel.innerHTML = '<h4>' + msgFunction( 'layers-code-title', 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
 
 		// Compose sidebar
 		sidebarInner.appendChild( this.layerList );
@@ -963,7 +964,9 @@
 					textStrokeInput.type = 'color';
 					textStrokeInput.value = layer.textStrokeColor || '#000000';
 					textStrokeInput.addEventListener( 'change', function () {
-						self.editor.updateLayer( layer.id, { textStrokeColor: textStrokeInput.value } );
+						self.editor.updateLayer( layer.id, {
+							textStrokeColor: textStrokeInput.value
+						} );
 					} );
 					textStrokeColorRow.appendChild( textStrokeLabel );
 					textStrokeColorRow.appendChild( textStrokeInput );

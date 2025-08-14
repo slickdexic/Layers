@@ -244,11 +244,18 @@ class Hooks {
 		$patchDir = $dir . '/sql/patches';
 		$patchSize = $patchDir . '/patch-layer_sets-add-ls_size.sql';
 		$patchCount = $patchDir . '/patch-layer_sets-add-ls_layer_count.sql';
+		$patchConstraints = $patchDir . '/patch-add-check-constraints.sql';
+		
 		if ( file_exists( $patchSize ) ) {
 			$updater->addExtensionField( 'layer_sets', 'ls_size', $patchSize );
 		}
 		if ( file_exists( $patchCount ) ) {
 			$updater->addExtensionField( 'layer_sets', 'ls_layer_count', $patchCount );
+		}
+		
+		// Add check constraints for data integrity
+		if ( file_exists( $patchConstraints ) ) {
+			$updater->addExtensionUpdate( [ 'addCheckConstraints', $patchConstraints ] );
 		}
 	}
 

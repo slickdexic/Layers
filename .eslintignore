@@ -1,0 +1,13 @@
+# Backup files
+*-backup.js
+*.backup.js
+
+# Build output
+resources/dist/
+node_modules/
+
+# Vendor files
+vendor/
+
+# Test files that might have different standards
+tests/

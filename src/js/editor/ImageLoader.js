@@ -13,7 +13,7 @@
 	 * @class
 	 */
 	function ImageLoader() {
-		this.cache = new Map();
+		this.cache = {};
 	}
 
 	/**
@@ -29,8 +29,8 @@
 		var cacheKey = imageUrl + JSON.stringify( options );
 
 		// Check cache first
-		if ( this.cache.has( cacheKey ) ) {
-			return $.Deferred().resolve( this.cache.get( cacheKey ) ).promise();
+		if ( Object.prototype.hasOwnProperty.call( this.cache, cacheKey ) ) {
+			return $.Deferred().resolve( this.cache[ cacheKey ] ).promise();
 		}
 
 		var img = new Image();
@@ -43,7 +43,7 @@
 
 		img.onload = function () {
 			// Cache the loaded image
-			self.cache.set( cacheKey, img );
+			self.cache[ cacheKey ] = img;
 			deferred.resolve( img );
 		};
 
@@ -124,7 +124,7 @@
 	 * Clear the image cache
 	 */
 	ImageLoader.prototype.clearCache = function () {
-		this.cache.clear();
+		this.cache = {};
 	};
 
 	/**
@@ -133,7 +133,7 @@
 	 * @return {number} Number of cached images
 	 */
 	ImageLoader.prototype.getCacheSize = function () {
-		return this.cache.size;
+		return Object.keys( this.cache ).length;
 	};
 
 	// Export for use in other modules

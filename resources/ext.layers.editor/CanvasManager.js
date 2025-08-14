@@ -3446,32 +3446,44 @@
 		this.isRendering = true;
 
 		try {
-			console.log( 'Layers: Starting renderLayers with', layers ? layers.length : 0, 'layers' );
-			
+			// Debug: Log rendering start (only if debug mode enabled)
+			if ( this.editor && this.editor.debug ) {
+				this.editor.debugLog( 'Starting renderLayers with', layers ? layers.length : 0, 'layers' );
+			}
+
 			// Redraw background
 			this.redraw();
 
 			// Render each layer in order
 			if ( layers && layers.length > 0 ) {
-				console.log( 'Layers: Processing layers array' );
+				// Debug: Log layers processing (only if debug mode enabled)
+				if ( this.editor && this.editor.debug ) {
+					this.editor.debugLog( 'Processing layers array' );
+				}
 				// Batch operations for better performance
 				this.ctx.save();
 
 				layers.forEach( function ( layer, index ) {
-					console.log( 'Layers: Processing layer', index, 'visible:', layer.visible, 'type:', layer.type );
+					// Debug: Log layer processing (only if debug mode enabled)
+					if ( this.editor && this.editor.debug ) {
+						this.editor.debugLog( 'Processing layer', index, 'visible:', layer.visible, 'type:', layer.type );
+					}
 					if ( layer.visible !== false ) { // Skip invisible layers early
 						this.applyLayerEffects( layer, function () {
-							console.log( 'Layers: Drawing layer', index, layer.type );
+							// Debug: Log layer drawing (only if debug mode enabled)
+							if ( this.editor && this.editor.debug ) {
+								this.editor.debugLog( 'Drawing layer', index, layer.type );
+							}
 							this.drawLayer( layer );
 						}.bind( this ) );
-					} else {
-						console.log( 'Layers: Skipping invisible layer', index );
+					} else if ( this.editor && this.editor.debug ) {
+						this.editor.debugLog( 'Skipping invisible layer', index );
 					}
 				}.bind( this ) );
 
 				this.ctx.restore();
-			} else {
-				console.log( 'Layers: No layers to render' );
+			} else if ( this.editor && this.editor.debug ) {
+				this.editor.debugLog( 'No layers to render' );
 			}
 
 			// Draw selection indicators if any layer is selected
@@ -3500,10 +3512,16 @@
 
 			// Draw preview guide while dragging from ruler
 			this.drawGuidePreview();
-			
-			console.log( 'Layers: renderLayers completed successfully' );
+
+			// Debug: Log completion (only if debug mode enabled)
+			if ( this.editor && this.editor.debug ) {
+				this.editor.debugLog( 'renderLayers completed successfully' );
+			}
 		} catch ( error ) {
-			console.error( 'Layers: Error during rendering:', error );
+			// Log error using proper error handling
+			if ( this.editor && this.editor.errorLog ) {
+				this.editor.errorLog( 'Error during rendering:', error );
+			}
 			// Log error to MediaWiki if available, otherwise to console as fallback
 			if ( window.mw && window.mw.log ) {
 				window.mw.log.error( 'Layers: Error during rendering:', error );
@@ -3804,7 +3822,8 @@
 
 		// Input sanitization: strip control characters and dangerous HTML from text
 		var text = layer.text || '';
-		text = String( text ).replace( /[\x00-\x1F\x7F]/g, '' );
+		// Remove control characters - keep only printable ASCII and Unicode characters
+		text = String( text ).replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
 		text = text.replace( /<[^>]+>/g, '' );
 
 		// Calculate text dimensions for proper rotation centering
@@ -3851,7 +3870,8 @@
 		this.ctx.restore();
 	};
 	// Accessibility: Add ARIA roles and keyboard navigation stubs
-	// TODO: Implement more comprehensive keyboard navigation and screen reader support for canvas elements
+	// TODO: Implement more comprehensive keyboard navigation and screen reader support
+	// for canvas elements
 
 	// Analytics: Stub for usage tracking
 	// TODO: Add analytics hooks for canvas actions (e.g., draw, select, delete)

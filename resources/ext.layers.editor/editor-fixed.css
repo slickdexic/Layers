@@ -187,14 +187,6 @@ body.layers-editor-open .mw-body-content {
 
 /* Layer Panel */
 .layers-panel {
-	width: 300px;
-	background: #fff;
-	border-right: 1px solid #ddd;
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-}
-.layers-panel {
 	width: 320px;
 	min-width: 220px;
 	max-width: 600px;
@@ -239,11 +231,6 @@ body.layers-editor-open .mw-body-content {
 
 .layers-list {
 	flex: 1 1 auto;
-	overflow: auto;
-	padding: 8px;
-}
-.layers-list {
-	flex: 1 1 auto;
 	overflow-y: auto;
 	overflow-x: hidden;
 	padding: 8px;
@@ -252,11 +239,6 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Properties + Code panel sections */
-.layers-properties,
-.layers-code-panel {
-	border-top: 1px solid #eee;
-	padding: 10px 12px;
-}
 .layers-properties,
 .layers-code-panel {
 	border-top: 1px solid #eee;
@@ -367,18 +349,6 @@ body.layers-editor-open .mw-body-content {
 .layer-item {
 	display: flex;
 	align-items: center;
-	padding: 8px;
-	margin-bottom: 4px;
-	background: #f8f9fa;
-	border: 1px solid #eee;
-	border-radius: 4px;
-	cursor: pointer;
-	transition: all 0.2s;
-	gap: 8px;
-}
-.layer-item {
-	display: flex;
-	align-items: center;
 	padding: 8px 4px;
 	margin-bottom: 6px;
 	background: #f8f9fa;
@@ -390,14 +360,6 @@ body.layers-editor-open .mw-body-content {
 	min-height: 44px;
 }
 
-.layer-item .layer-visibility,
-.layer-item .layer-lock,
-.layer-item .layer-delete {
-	background: transparent;
-	border: 0;
-	font-size: 1em;
-	cursor: pointer;
-}
 .layer-item .layer-visibility,
 .layer-item .layer-lock,
 .layer-item .layer-delete {
@@ -426,12 +388,6 @@ body.layers-editor-open .mw-body-content {
 	opacity: 1;
 }
 
-.layer-item .layer-visibility:hover,
-.layer-item .layer-lock:hover,
-.layer-item .layer-delete:hover {
-	opacity: 0.8;
-}
-
 .layer-item:hover {
 	background: #e9ecef;
 	border-color: #ddd;
@@ -444,19 +400,12 @@ body.layers-editor-open .mw-body-content {
 
 .layer-name {
 	flex: 1;
-	font-size: 0.875em;
-	color: #333;
-	padding: 2px 4px;
-	border-radius: 2px;
-}
-.layer-name {
-	flex: 1;
 	font-size: 1em;
 	color: #333;
 	padding: 4px 8px;
 	border-radius: 3px;
 	min-width: 0;
-	outline: none;
+	outline: 2px solid #007cba;
 }
 
 /* Text Input Modal */
