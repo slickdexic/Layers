@@ -772,9 +772,7 @@
 			// Use MediaWiki logging as fallback
 			mw.log.error( 'Layers validation errors:', errors );
 		} else {
-			// Last resort: log to console instead of alert
-			// eslint-disable-next-line no-console
-			console.error( 'Layers validation errors:', errors );
+			// Console logging disabled - rely on MediaWiki logging only
 		}
 	};
 

@@ -33,28 +33,97 @@
 
 	/**
 	 * Debug logging utility that only logs when debug mode is enabled
+	 * Sanitizes messages to prevent information disclosure
 	 *
 	 * @param {...*} args Arguments to log
 	 */
 	LayersEditor.prototype.debugLog = function () {
 		if ( this.debug ) {
+			// Sanitize arguments to prevent sensitive data exposure
+			var sanitizedArgs = Array.prototype.slice.call( arguments ).map( function ( arg ) {
+				return LayersEditor.prototype.sanitizeLogMessage( arg );
+			} );
+
 			// Using MediaWiki's logging system for consistent debug output
 			if ( mw.log ) {
-				mw.log.apply( mw, arguments );
+				mw.log.apply( mw, sanitizedArgs );
 			}
 		}
 	};
 
 	/**
-	 * Error logging utility
+	 * Error logging utility with message sanitization
+	 * Ensures no sensitive information is exposed in console logs
 	 *
 	 * @param {...*} args Arguments to log
 	 */
 	LayersEditor.prototype.errorLog = function () {
+		// Sanitize error messages before logging
+		var sanitizedArgs = Array.prototype.slice.call( arguments ).map( function ( arg ) {
+			return LayersEditor.prototype.sanitizeLogMessage( arg );
+		} );
+
 		// Always log errors using MediaWiki's error handling
 		if ( mw.log ) {
-			mw.log.error.apply( mw.log, arguments );
+			mw.log.error.apply( mw.log, sanitizedArgs );
 		}
+	};
+
+	/**
+	 * Sanitize log messages to prevent sensitive information disclosure
+	 * Uses a whitelist approach for better security
+	 *
+	 * @param {*} message The message to sanitize
+	 * @return {*} Sanitized message
+	 */
+	LayersEditor.prototype.sanitizeLogMessage = function ( message ) {
+		// Don't modify non-string values
+		if ( typeof message !== 'string' ) {
+			// For objects, use a whitelist approach for safety
+			if ( typeof message === 'object' && message !== null ) {
+				var safeKeys = [ 'type', 'action', 'status', 'tool', 'layer', 'count', 'x', 'y', 'width', 'height' ];
+				var obj = {};
+				for ( var key in message ) {
+					if ( Object.prototype.hasOwnProperty.call( message, key ) ) {
+						if ( safeKeys.indexOf( key ) !== -1 ) {
+							obj[ key ] = message[ key ];
+						} else {
+							obj[ key ] = '[FILTERED]';
+						}
+					}
+				}
+				return obj;
+			}
+			return message;
+		}
+
+		// For strings, apply comprehensive sanitization
+		var result = String( message );
+
+		// Remove any token-like patterns (base64, hex, etc.)
+		result = result.replace( /[a-zA-Z0-9+/=]{20,}/g, '[TOKEN]' );
+		result = result.replace( /[a-fA-F0-9]{16,}/g, '[HEX]' );
+
+		// Remove file paths completely
+		result = result.replace( /[A-Za-z]:[\\/]][\w\s\\.-]*/g, '[PATH]' );
+		result = result.replace( /\/[\w\s.-]+/g, '[PATH]' );
+
+		// Remove URLs and connection strings
+		result = result.replace( /https?:\/\/[^\s'"<>&]*/gi, '[URL]' );
+		result = result.replace( /\w+:\/\/[^\s'"<>&]*/gi, '[CONNECTION]' );
+
+		// Remove IP addresses and ports
+		result = result.replace( /\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[IP]' );
+
+		// Remove email addresses
+		result = result.replace( /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]' );
+
+		// Limit length to prevent log flooding
+		if ( result.length > 200 ) {
+			result = result.slice( 0, 200 ) + '[TRUNCATED]';
+		}
+
+		return result;
 	};
 
 	LayersEditor.prototype.init = function () {
@@ -948,6 +1017,7 @@
 			this.layerPanel.selectLayer( layerId );
 		}
 
+		// Update UI state (toolbar buttons, etc.)
 		this.updateUIState();
 
 		// console.log( 'Selected layer:', layerId );
@@ -1251,7 +1321,7 @@
 	LayersEditor.prototype.handleResize = function () {
 		// console.log( 'Layers: Handling window resize...' );
 		if ( this.canvasManager ) {
-			this.canvasManager.handleResize();
+			this.canvasManager.handleCanvasResize();
 		}
 
 		// Also trigger a canvas resize to ensure proper sizing
@@ -1264,7 +1334,21 @@
 	};
 
 	LayersEditor.prototype.destroy = function () {
-		// Cleanup
+		// Cleanup canvas manager first to prevent memory leaks
+		if ( this.canvasManager && typeof this.canvasManager.destroy === 'function' ) {
+			this.canvasManager.destroy();
+		}
+
+		// Cleanup other components
+		if ( this.layerPanel && typeof this.layerPanel.destroy === 'function' ) {
+			this.layerPanel.destroy();
+		}
+
+		if ( this.toolbar && typeof this.toolbar.destroy === 'function' ) {
+			this.toolbar.destroy();
+		}
+
+		// Remove event listeners to prevent memory leaks
 		if ( this.onResizeHandler ) {
 			window.removeEventListener( 'resize', this.onResizeHandler );
 			this.onResizeHandler = null;
@@ -1273,12 +1357,41 @@
 			window.removeEventListener( 'beforeunload', this.onBeforeUnloadHandler );
 			this.onBeforeUnloadHandler = null;
 		}
+
+		// Clean up DOM elements
 		if ( this.container && this.container.parentNode ) {
 			this.container.parentNode.removeChild( this.container );
 		}
 
+		// Remove spinner if still showing
+		if ( this.spinnerEl && this.spinnerEl.parentNode ) {
+			this.spinnerEl.parentNode.removeChild( this.spinnerEl );
+			this.spinnerEl = null;
+		}
+
+		// Clear object references to prevent memory leaks
+		this.canvasManager = null;
+		this.layerPanel = null;
+		this.toolbar = null;
+		this.container = null;
+		this.containerElement = null;
+		this.$canvasContainer = null;
+		this.$layerPanel = null;
+		this.$toolbar = null;
+
+		// Clear arrays
+		this.layers = [];
+		this.allLayerSets = [];
+		this.undoStack = [];
+		this.redoStack = [];
+
 		// Remove body class when editor closes
 		document.body.classList.remove( 'layers-editor-open' );
+
+		// Reset document title
+		if ( document.title.indexOf( 'Layers Editor' ) !== -1 ) {
+			document.title = document.title.replace( /🎨 Layers Editor.*/, '' ).trim();
+		}
 	};
 
 	// Export LayersEditor to global scope
@@ -1309,36 +1422,31 @@
 				}
 
 				// Ensure MediaWiki is available
+				// Check if MediaWiki is available
 				if ( !window.mw || !mw.config || !mw.config.get ) {
-					if ( debug ) {
-						if ( mw.log ) {
-							mw.log( 'Layers: MediaWiki not ready, retrying in 100ms...' );
-						}
+					if ( debug && mw.log ) {
+						mw.log( 'Layers: MediaWiki not ready, retrying in 100ms...' );
 					}
 					setTimeout( tryBootstrap, 100 );
 					return;
 				}
 
+				// Try to get config from MediaWiki config vars
 				var init = mw.config.get( 'wgLayersEditorInit' );
-				if ( debug ) {
-					if ( mw.log ) {
-						mw.log( 'Layers: wgLayersEditorInit config:', init );
-					}
+				if ( debug && mw.log ) {
+					mw.log( 'Layers: wgLayersEditorInit config:', init );
 				}
 
 				if ( !init ) {
-					if ( debug ) {
-						if ( mw.log ) {
-							mw.log( 'Layers: No wgLayersEditorInit config found, not auto-bootstrapping' );
-						}
+					if ( debug && mw.log ) {
+						mw.log( 'Layers: No wgLayersEditorInit config found, not auto-bootstrapping' );
 					}
 					return;
 				}
+
 				var container = document.getElementById( 'layers-editor-container' );
-				if ( debug ) {
-					if ( mw.log ) {
-						mw.log( 'Layers: Container element:', container );
-					}
+				if ( debug && mw.log ) {
+					mw.log( 'Layers: Container element:', container );
 				}
 
 				mw.hook( 'layers.editor.init' ).fire( {
@@ -1347,10 +1455,8 @@
 					container: container || document.body
 				} );
 
-				if ( debug ) {
-					if ( mw.log ) {
-						mw.log( 'Layers: Auto-bootstrap fired layers.editor.init hook' );
-					}
+				if ( debug && mw.log ) {
+					mw.log( 'Layers: Auto-bootstrap fired layers.editor.init hook' );
 				}
 			} catch ( e ) {
 				if ( mw.log ) {

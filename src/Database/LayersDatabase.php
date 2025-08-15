@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
 class LayersDatabase {
 	// NOTE: This class does not implement a migration/versioning system for schema changes.
 	//       All schema changes must be applied manually via SQL patches.
-	//       There are no referential integrity (foreign key) constraints in the schema.
+	//       Foreign key constraints are defined in the schema for referential integrity.
 
 	/** @var mixed */
 	private $loadBalancer;
@@ -39,6 +39,10 @@ class LayersDatabase {
 	/** @var array Cached table->columns map for schema checks */
 	private $tableColumnsCache = [];
 
+	/**
+	 * Constructor for LayersDatabase
+	 * Initializes database connections and logger when available
+	 */
 	public function __construct() {
 		$this->loadBalancer = null;
 		$this->dbw = null;
@@ -57,7 +61,8 @@ class LayersDatabase {
 
 	/**
 	 * Lazy-load MediaWiki DB load balancer
-	 * @return mixed
+	 *
+	 * @return mixed Database load balancer instance or null if not available
 	 */
 	private function getLoadBalancer() {
 		if ( $this->loadBalancer ) {
@@ -71,7 +76,9 @@ class LayersDatabase {
 	}
 
 	/**
-	 * @return mixed
+	 * Get write database connection with fallback for different MediaWiki versions
+	 *
+	 * @return mixed Database write connection or null if not available
 	 */
 	private function getWriteDb() {
 		if ( $this->dbw ) {
@@ -93,7 +100,9 @@ class LayersDatabase {
 	}
 
 	/**
-	 * @return mixed
+	 * Get read database connection with fallback for different MediaWiki versions
+	 *
+	 * @return mixed Database read connection or null if not available
 	 */
 	private function getReadDb() {
 		if ( $this->dbr ) {
@@ -341,7 +350,7 @@ class LayersDatabase {
 		if ( $this->config ) {
 			$maxJsonSize = $this->config->get( 'LayersMaxBytes' ) ?: $maxJsonSize;
 		}
-		
+
 		if ( $jsonBlobSize > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for layer set ID: {$layerSetId}, size: {$jsonBlobSize} bytes" );
 			return false;
@@ -417,7 +426,7 @@ class LayersDatabase {
 		if ( $this->config ) {
 			$maxJsonSize = $this->config->get( 'LayersMaxBytes' ) ?: $maxJsonSize;
 		}
-		
+
 		if ( $jsonBlobSize > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for latest layer set, size: {$jsonBlobSize} bytes" );
 			return false;
@@ -614,7 +623,7 @@ class LayersDatabase {
 			if ( $this->config ) {
 				$maxJsonSize = $this->config->get( 'LayersMaxBytes' ) ?: $maxJsonSize;
 			}
-			
+
 			if ( $jsonBlobSize > $maxJsonSize ) {
 				$this->logError( "JSON blob too large for layer set by name, size: {$jsonBlobSize} bytes" );
 				return null;
@@ -714,25 +723,48 @@ class LayersDatabase {
 
 	/**
 	 * Sanitize cache keys to prevent cache poisoning attacks
+	 * Enhanced security validation to prevent bypass attempts
 	 *
 	 * @param string $key Raw cache key
 	 * @return string Sanitized cache key
 	 */
 	private function sanitizeCacheKey( string $key ): string {
-		// Remove potentially dangerous characters
-		$key = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $key );
-		
-		// Limit key length to prevent excessive memory usage
-		if ( strlen( $key ) > 100 ) {
-			$key = substr( $key, 0, 100 );
+		// First, validate input type and basic structure
+		if ( !is_string( $key ) || empty( $key ) ) {
+			return 'invalid_key_' . hash( 'sha256', 'empty_or_invalid' );
 		}
-		
-		// Ensure key is not empty after sanitization
-		if ( empty( $key ) ) {
-			$key = 'invalid_key';
+
+		// Prevent extremely long keys that could cause DoS
+		if ( strlen( $key ) > 250 ) {
+			// Use hash of long keys to maintain uniqueness while preventing abuse
+			return 'long_key_' . hash( 'sha256', $key );
 		}
-		
-		return $key;
+
+		// Remove all non-alphanumeric characters except underscore and hyphen
+		// This is more restrictive than the previous implementation
+		$sanitized = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $key );
+
+		// Ensure we still have a meaningful key after sanitization
+		if ( empty( $sanitized ) || strlen( $sanitized ) < 3 ) {
+			// Generate a deterministic but safe key from the original
+			return 'sanitized_' . hash( 'sha256', $key );
+		}
+
+		// Additional validation: prevent keys that could be confused with internal keys
+		$reservedPrefixes = [ 'system_', 'internal_', 'admin_', 'config_', 'temp_' ];
+		foreach ( $reservedPrefixes as $prefix ) {
+			if ( strpos( $sanitized, $prefix ) === 0 ) {
+				$sanitized = 'user_' . $sanitized;
+				break;
+			}
+		}
+
+		// Final length check after all transformations
+		if ( strlen( $sanitized ) > 100 ) {
+			$sanitized = substr( $sanitized, 0, 100 );
+		}
+
+		return $sanitized;
 	}
 
 	/**
@@ -880,7 +912,7 @@ class LayersDatabase {
 		// Check if it starts and ends with appropriate characters for arrays/objects
 		$first = $jsonString[0];
 		$last = $jsonString[strlen( $jsonString ) - 1];
-		
+
 		if ( !( ( $first === '[' && $last === ']' ) || ( $first === '{' && $last === '}' ) ) ) {
 			return false;
 		}
@@ -899,7 +931,7 @@ class LayersDatabase {
 		$maxDepth = 20;
 		$depth = 0;
 		$maxFoundDepth = 0;
-		
+
 		for ( $i = 0; $i < strlen( $jsonString ); $i++ ) {
 			$char = $jsonString[$i];
 			if ( $char === '{' || $char === '[' ) {

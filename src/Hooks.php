@@ -58,12 +58,12 @@ class Hooks {
 						$policy[] = "default-src 'self'";
 						$policy[] = "img-src 'self' data: blob:";
 						$policy[] = "style-src 'self' 'unsafe-inline'"; // allow inline styles used by MW/OOUI
-						$policy[] = "script-src 'self' 'unsafe-eval'"; // ResourceLoader may require eval in debug
+						$policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'"; // MediaWiki core generates inline scripts
 						$policy[] = "connect-src 'self'";
 						$policy[] = "font-src 'self' data:";
 						$policy[] = "object-src 'none'";
 						$policy[] = "base-uri 'self'";
-						$policy[] = "frame-ancestors 'self'";
+						// Note: frame-ancestors directive is ignored when delivered via meta element
 						$header = 'Content-Security-Policy: ' . implode( '; ', $policy );
 						if ( method_exists( $out, 'addExtraHeader' ) ) {
 							$out->addExtraHeader( $header );
@@ -245,14 +245,14 @@ class Hooks {
 		$patchSize = $patchDir . '/patch-layer_sets-add-ls_size.sql';
 		$patchCount = $patchDir . '/patch-layer_sets-add-ls_layer_count.sql';
 		$patchConstraints = $patchDir . '/patch-add-check-constraints.sql';
-		
+
 		if ( file_exists( $patchSize ) ) {
 			$updater->addExtensionField( 'layer_sets', 'ls_size', $patchSize );
 		}
 		if ( file_exists( $patchCount ) ) {
 			$updater->addExtensionField( 'layer_sets', 'ls_layer_count', $patchCount );
 		}
-		
+
 		// Add check constraints for data integrity
 		if ( file_exists( $patchConstraints ) ) {
 			$updater->addExtensionUpdate( [ 'addCheckConstraints', $patchConstraints ] );

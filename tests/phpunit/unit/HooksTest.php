@@ -11,6 +11,7 @@ class HooksTest extends \MediaWikiUnitTestCase {
 
 	/**
 	 * @covers ::onBeforePageDisplay
+	 * @covers \MediaWiki\Extension\Layers\Hooks::onBeforePageDisplay
 	 */
 	public function testOnBeforePageDisplayWithFileNamespace() {
 		$config = new \HashConfig( [
@@ -54,6 +55,7 @@ class HooksTest extends \MediaWikiUnitTestCase {
 
 	/**
 	 * @covers ::onBeforePageDisplay
+	 * @covers \MediaWiki\Extension\Layers\Hooks::onBeforePageDisplay
 	 */
 	public function testOnBeforePageDisplayDisabled() {
 		$config = new \HashConfig( [

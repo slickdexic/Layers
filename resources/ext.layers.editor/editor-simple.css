@@ -85,3 +85,59 @@
 	display: block;
 	cursor: crosshair;
 }
+
+/* Property input fields - reasonable sizing and precision */
+.property-field {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 0.5em;
+}
+
+.property-field input[ type='number' ] {
+	width: 80px;
+	height: 28px;
+	padding: 4px 8px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 0.875em;
+	font-family: monospace;
+}
+
+.property-field select {
+	width: 160px;
+	height: 32px;
+	padding: 4px 8px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 0.875em;
+	background: #fff;
+}
+
+/* Layer list improvements */
+.layer-item {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-height: 44px;
+	padding: 4px;
+	border: 1px solid #ddd;
+	margin-bottom: 2px;
+	border-radius: 4px;
+	cursor: pointer;
+	background: #f9f9f9;
+}
+
+.layer-visibility,
+.layer-lock,
+.layer-delete {
+	width: 36px !important;
+	height: 36px !important;
+	border: none !important;
+	background: transparent !important;
+	cursor: pointer !important;
+	border-radius: 4px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 0 !important;
+}

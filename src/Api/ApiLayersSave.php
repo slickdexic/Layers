@@ -151,7 +151,7 @@ class ApiLayersSave extends ApiBase {
 		];
 
 		$sanitized = [];
-		
+
 		// Define strict value constraints for enhanced security
 		$valueConstraints = [
 			'type' => $validTypes,
@@ -160,7 +160,7 @@ class ApiLayersSave extends ApiBase {
 			'arrowStyle' => [ 'solid', 'dashed', 'dotted' ],
 			'fontFamily' => [ 'Arial', 'Helvetica', 'Times', 'Times New Roman', 'Courier', 'Courier New', 'Verdana', 'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact' ]
 		];
-		
+
 		foreach ( $layersData as $layer ) {
 			if ( !is_array( $layer ) || !isset( $layer['type'] ) || !in_array( $layer['type'], $validTypes, true ) ) {
 				return false; // Invalid layer structure
@@ -287,18 +287,18 @@ class ApiLayersSave extends ApiBase {
 				$cleanPoints = [];
 				$maxPoints = 1000; // Prevent DoS attacks with excessive points
 				$pointCount = 0;
-				
+
 				foreach ( $cleanLayer['points'] as $point ) {
 					if ( $pointCount >= $maxPoints ) {
 						break; // Limit number of points
 					}
-					
+
 					if ( is_array( $point ) && isset( $point['x'] ) && isset( $point['y'] ) &&
 						is_numeric( $point['x'] ) && is_numeric( $point['y'] ) ) {
-						
+
 						$x = (float)$point['x'];
 						$y = (float)$point['y'];
-						
+
 						// Validate coordinate ranges to prevent extreme values
 						if ( $x >= -100000 && $x <= 100000 && $y >= -100000 && $y <= 100000 ) {
 							$cleanPoints[] = [
@@ -366,7 +366,7 @@ class ApiLayersSave extends ApiBase {
 
 		// Remove any whitespace and convert to lowercase for consistent validation
 		$color = trim( strtolower( $color ) );
-		
+
 		// Reject empty strings
 		if ( empty( $color ) ) {
 			return false;
@@ -421,7 +421,7 @@ class ApiLayersSave extends ApiBase {
 			$hue = (int)$matches[1];
 			$saturation = (int)$matches[2];
 			$lightness = (int)$matches[3];
-			
+
 			if ( $hue < 0 || $hue > 360 || $saturation < 0 || $saturation > 100 || $lightness < 0 || $lightness > 100 ) {
 				return false;
 			}
@@ -434,8 +434,8 @@ class ApiLayersSave extends ApiBase {
 			$saturation = (int)$matches[2];
 			$lightness = (int)$matches[3];
 			$alpha = (float)$matches[4];
-			
-			if ( $hue < 0 || $hue > 360 || $saturation < 0 || $saturation > 100 || 
+
+			if ( $hue < 0 || $hue > 360 || $saturation < 0 || $saturation > 100 ||
 				 $lightness < 0 || $lightness > 100 || $alpha < 0 || $alpha > 1 ) {
 				return false;
 			}
@@ -541,16 +541,16 @@ class ApiLayersSave extends ApiBase {
 
 		// Simple but secure approach: strip all HTML tags first
 		$text = strip_tags( $text );
-		
+
 		// Remove any protocol handlers that could be dangerous
 		$text = preg_replace( '/(?:javascript|data|vbscript|file|about):/i', '', $text );
-		
+
 		// Remove event handlers that might slip through
 		$text = preg_replace( '/on\w+\s*=/i', '', $text );
-		
+
 		// Remove any remaining angle brackets to prevent HTML injection
 		$text = str_replace( [ '<', '>' ], '', $text );
-		
+
 		// Final safety: encode any remaining special characters
 		$text = htmlspecialchars( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8', false );
 

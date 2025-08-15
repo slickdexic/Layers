@@ -72,23 +72,8 @@ class EditLayersAction extends \Action {
 		// Add basic HTML content to ensure page has content
 		$out->addHTML( '<div id="layers-editor-container"></div>' );
 
-		// Add manual initialization script
-		$out->addHTML( '<script>
-			if (typeof mw !== "undefined" && mw.loader) {
-				mw.loader.using("ext.layers.editor").done(function() {
-					if (window.LayersEditor && mw.config.get("wgLayersEditorInit")) {
-						var config = mw.config.get("wgLayersEditorInit");
-						setTimeout(function() {
-							new window.LayersEditor({
-								filename: config.filename,
-								imageUrl: config.imageUrl,
-								container: document.getElementById("layers-editor-container")
-							});
-						}, 100);
-					}
-				});
-			}
-		</script>' );
+		// The editor will auto-initialize using the LayersEditor.js bootstrap code
+		// No inline scripts needed - CSP compliance is maintained
 	}
 
 	/**

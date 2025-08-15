@@ -77,10 +77,8 @@
 		} catch ( error ) {
 			if ( window.mw && window.mw.log ) {
 				window.mw.log.error( 'Layers: Error during rendering:', error );
-			} else {
-				// eslint-disable-next-line no-console
-				console.error( 'Layers: Error during rendering:', error );
 			}
+			// Error handling without console fallback - rely on MediaWiki logging
 		} finally {
 			this.isRendering = false;
 		}

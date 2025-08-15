@@ -58,6 +58,7 @@
 		this.panY = 0;
 		this.isPanning = false;
 		this.lastPanPoint = null;
+		this.userHasSetZoom = false; // Track if user has manually adjusted zoom
 
 		// Grid settings
 		this.showGrid = false;
@@ -385,10 +386,16 @@
 		this.canvas.style.border = '1px solid #ddd';
 		this.canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
 
-		// Set zoom and pan
-		this.zoom = scale;
-		this.panX = 0;
-		this.panY = 0;
+		// Set zoom and pan only if user hasn't manually set zoom
+		if ( !this.userHasSetZoom ) {
+			this.zoom = scale;
+			this.panX = 0;
+			this.panY = 0;
+		} else {
+			// User has manually set zoom - preserve it but update canvas size with current zoom
+			this.canvas.style.width = ( canvasWidth * this.zoom ) + 'px';
+			this.canvas.style.height = ( canvasHeight * this.zoom ) + 'px';
+		}
 
 		// console.log( 'Layers: Canvas display size set to', displayWidth, 'x', displayHeight );
 		// console.log( 'Layers: Scale factor:', scale );
@@ -537,14 +544,10 @@
 
 		this.isDrawing = true;
 
-		if ( this.currentTool === 'pointer' || this.currentTool === 'marquee' ) {
-			// Check for selection handle interaction first
-			var handle = this.hitTestSelectionHandles( point );
-			if ( handle ) {
-				this.startResize( handle );
-				return;
-			}
-
+		if ( this.currentTool === 'zoom' ) {
+			// Handle zoom tool - click to zoom in, shift+click to zoom out
+			this.handleZoomClick( point, e );
+		} else if ( this.currentTool === 'pointer' || this.currentTool === 'marquee' ) {
 			// Handle layer selection and dragging
 			var isCtrlClick = e.ctrlKey || e.metaKey;
 			var selectedLayer = null;
@@ -567,9 +570,11 @@
 	};
 
 	CanvasManager.prototype.hitTestSelectionHandles = function ( point ) {
+		console.log( 'Layers: Hit testing handles at point:', point, 'handles:', this.selectionHandles.length );
 		for ( var i = 0; i < this.selectionHandles.length; i++ ) {
 			var handle = this.selectionHandles[ i ];
 			if ( this.isPointInRect( point, handle ) ) {
+				console.log( 'Layers: Handle hit detected:', handle.type );
 				return handle;
 			}
 		}
@@ -584,6 +589,7 @@
 	CanvasManager.prototype.startResize = function ( handle ) {
 		this.isResizing = true;
 		this.resizeHandle = handle;
+		this.dragStartPoint = this.startPoint; // Use the point from handleMouseDown
 
 		// Get rotation for proper cursor
 		var layer = this.editor.getLayerById( this.selectedLayerId );
@@ -595,7 +601,9 @@
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
 
-		// console.log( 'Layers: Starting resize with handle:', handle.type );
+		console.log( 'Layers: Starting resize with handle:', handle.type );
+		console.log( 'Layers: dragStartPoint set to:', this.dragStartPoint );
+		console.log( 'Layers: originalLayerState:', this.originalLayerState );
 	};
 
 	CanvasManager.prototype.startRotation = function () {
@@ -686,6 +694,12 @@
 
 	CanvasManager.prototype.handleMouseMove = function ( e ) {
 		var point = this.getMousePoint( e );
+		
+		// Debug: Log mouse move when in resize mode
+		if ( this.isResizing ) {
+			console.log( 'Layers: Mouse move during resize mode. isResizing:', this.isResizing, 'resizeHandle:', this.resizeHandle, 'dragStartPoint:', this.dragStartPoint );
+		}
+		
 		// Guide drag preview rendering
 		if ( this.isDraggingGuide ) {
 			this.dragGuidePos = ( this.dragGuideOrientation === 'h' ) ? point.y : point.x;
@@ -729,7 +743,12 @@
 		}
 
 		if ( this.isResizing && this.resizeHandle && this.dragStartPoint ) {
-			this.handleResize( point, e );
+			console.log( 'Layers: Mouse move during resize, calling handleResize' );
+			try {
+				this.handleResize( point, e );
+			} catch ( error ) {
+				console.error( 'Layers: Error in handleResize:', error );
+			}
 			return;
 		}
 
@@ -749,25 +768,54 @@
 			return;
 		}
 
+		// Handle zoom tool drag
+		if ( this.currentTool === 'zoom' && this.isDrawing ) {
+			this.handleZoomDrag( point );
+			return;
+		}
+
 		if ( this.currentTool !== 'pointer' ) {
 			this.continueDrawing( point );
 		}
 	};
 
 	CanvasManager.prototype.handleResize = function ( point, event ) {
+		console.log( 'Layers: handleResize called with point:', point );
 		var layer = this.editor.getLayerById( this.selectedLayerId );
+		console.log( 'Layers: selectedLayerId:', this.selectedLayerId, 'layer:', layer );
+		console.log( 'Layers: originalLayerState:', this.originalLayerState );
+		
 		if ( !layer || !this.originalLayerState ) {
+			console.log( 'Layers: handleResize early return - no layer or originalLayerState' );
+			console.log( 'Layers: layer exists:', !!layer, 'originalLayerState exists:', !!this.originalLayerState );
 			return;
 		}
 
 		var deltaX = point.x - this.dragStartPoint.x;
 		var deltaY = point.y - this.dragStartPoint.y;
+		console.log( 'Layers: Resize delta:', { x: deltaX, y: deltaY } );
+
+		// Limit delta values to prevent sudden jumps during rapid mouse movements
+		var maxDelta = 1000; // Reasonable maximum delta in pixels
+		deltaX = Math.max( -maxDelta, Math.min( maxDelta, deltaX ) );
+		deltaY = Math.max( -maxDelta, Math.min( maxDelta, deltaY ) );
 
 		// Get modifier keys from the event
 		var modifiers = {
 			proportional: event && event.shiftKey, // Shift key for proportional scaling
 			fromCenter: event && event.altKey // Alt key for scaling from center
 		};
+
+		// Debug logging
+		if ( this.editor && this.editor.debug ) {
+			this.editor.debugLog( 'Resize:', {
+				handle: this.resizeHandle.type,
+				delta: { x: deltaX, y: deltaY },
+				layer: layer.type,
+				original: this.originalLayerState,
+				modifiers: modifiers
+			} );
+		}
 
 		// Calculate new dimensions based on handle type
 		var updates = this.calculateResize(
@@ -777,15 +825,22 @@
 			deltaY,
 			modifiers
 		);
+		console.log( 'Layers: Calculated resize updates:', updates );
 
 		// Apply updates to layer
 		if ( updates ) {
+			if ( this.editor && this.editor.debug ) {
+				this.editor.debugLog( 'Applying updates:', updates );
+			}
 			Object.keys( updates ).forEach( function ( key ) {
 				layer[ key ] = updates[ key ];
 			} );
+			console.log( 'Layers: Applied updates to layer:', layer );
 
 			// Re-render
 			this.renderLayers( this.editor.layers );
+		} else if ( this.editor && this.editor.debug ) {
+			this.editor.debugLog( 'No updates calculated for resize' );
 		}
 	};
 
@@ -867,20 +922,64 @@
 		origLayerPoly, handlePoly, dXPoly, dYPoly
 	) {
 		var updates = {};
-		var origW = origLayerPoly.width || 1;
-		var origH = origLayerPoly.height || 1;
-		if ( handlePoly === 'e' || handlePoly === 'w' ) {
-			updates.width = Math.max(
-				5,
-				origW + ( handlePoly === 'e' ? dXPoly : -dXPoly )
-			);
+		var origRadius = origLayerPoly.radius || 50;
+
+		// Calculate distance from center to determine new radius
+		var deltaDistance = 0;
+
+		switch ( handlePoly ) {
+			case 'e':
+			case 'w':
+				deltaDistance = Math.abs( dXPoly );
+				break;
+			case 'n':
+			case 's':
+				deltaDistance = Math.abs( dYPoly );
+				break;
+			case 'ne':
+			case 'nw':
+			case 'se':
+			case 'sw':
+				// For corner handles, use the larger delta
+				deltaDistance = Math.max( Math.abs( dXPoly ), Math.abs( dYPoly ) );
+				break;
 		}
-		if ( handlePoly === 'n' || handlePoly === 's' ) {
-			updates.height = Math.max(
-				5,
-				origH + ( handlePoly === 's' ? dYPoly : -dYPoly )
-			);
+
+		// Determine direction (growing or shrinking)
+		var growing = false;
+		switch ( handlePoly ) {
+			case 'e':
+				growing = dXPoly > 0;
+				break;
+			case 'w':
+				growing = dXPoly < 0;
+				break;
+			case 'n':
+				growing = dYPoly < 0;
+				break;
+			case 's':
+				growing = dYPoly > 0;
+				break;
+			case 'ne':
+				growing = dXPoly > 0 || dYPoly < 0;
+				break;
+			case 'nw':
+				growing = dXPoly < 0 || dYPoly < 0;
+				break;
+			case 'se':
+				growing = dXPoly > 0 || dYPoly > 0;
+				break;
+			case 'sw':
+				growing = dXPoly < 0 || dYPoly > 0;
+				break;
 		}
+
+		// Apply the change
+		var newRadius = growing ?
+			origRadius + deltaDistance :
+			Math.max( 10, origRadius - deltaDistance );
+
+		updates.radius = newRadius;
 		return updates;
 	};
 
@@ -940,9 +1039,22 @@
 
 		if ( modifiers.proportional ) {
 			// Proportional scaling: maintain aspect ratio
-			var maxDelta = Math.max( Math.abs( deltaX ), Math.abs( deltaY ) );
-			deltaX = deltaX < 0 ? -maxDelta : maxDelta;
-			deltaY = deltaY < 0 ? -maxDelta / aspectRatio : maxDelta / aspectRatio;
+			// Prevent division by zero and extreme aspect ratios
+			if ( aspectRatio === 0 || !isFinite( aspectRatio ) ) {
+				aspectRatio = 1.0;
+			}
+
+			// Use the dimension that changed the most to drive the scaling
+			var absDeltaX = Math.abs( deltaX );
+			var absDeltaY = Math.abs( deltaY );
+
+			if ( absDeltaX > absDeltaY ) {
+				// X dimension changed more - scale based on X
+				deltaY = deltaY < 0 ? -absDeltaX / aspectRatio : absDeltaX / aspectRatio;
+			} else {
+				// Y dimension changed more - scale based on Y
+				deltaX = deltaX < 0 ? -absDeltaY * aspectRatio : absDeltaY * aspectRatio;
+			}
 		}
 
 		switch ( handleType ) {
@@ -1030,6 +1142,28 @@
 				break;
 		}
 
+		// Apply minimum size constraints
+		if ( updates.width !== undefined ) {
+			updates.width = Math.max( 5, updates.width );
+		}
+		if ( updates.height !== undefined ) {
+			updates.height = Math.max( 5, updates.height );
+		}
+
+		// Prevent extreme coordinate values that could cause rendering issues
+		if ( updates.x !== undefined ) {
+			updates.x = Math.max( -10000, Math.min( 10000, updates.x ) );
+		}
+		if ( updates.y !== undefined ) {
+			updates.y = Math.max( -10000, Math.min( 10000, updates.y ) );
+		}
+		if ( updates.width !== undefined ) {
+			updates.width = Math.min( 10000, updates.width );
+		}
+		if ( updates.height !== undefined ) {
+			updates.height = Math.min( 10000, updates.height );
+		}
+
 		return updates;
 	};
 
@@ -1037,29 +1171,56 @@
 		originalLayer, handleType, deltaX, deltaY
 	) {
 		var updates = {};
-		var distance = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
+		var origRadius = originalLayer.radius || 50;
+		var origX = originalLayer.x || 0;
+		var origY = originalLayer.y || 0;
 
-		// For circles, any handle adjusts the radius
-		var radiusChange = 0;
+		// Calculate new position based on handle and delta
+		var handleX, handleY;
 		switch ( handleType ) {
 			case 'e':
+				handleX = origX + origRadius + deltaX;
+				handleY = origY;
+				break;
 			case 'w':
-				radiusChange = Math.abs( deltaX );
+				handleX = origX - origRadius + deltaX;
+				handleY = origY;
 				break;
 			case 'n':
+				handleX = origX;
+				handleY = origY - origRadius + deltaY;
+				break;
 			case 's':
-				radiusChange = Math.abs( deltaY );
+				handleX = origX;
+				handleY = origY + origRadius + deltaY;
+				break;
+			case 'ne':
+				handleX = origX + origRadius * Math.cos( Math.PI / 4 ) + deltaX;
+				handleY = origY - origRadius * Math.sin( Math.PI / 4 ) + deltaY;
+				break;
+			case 'nw':
+				handleX = origX - origRadius * Math.cos( Math.PI / 4 ) + deltaX;
+				handleY = origY - origRadius * Math.sin( Math.PI / 4 ) + deltaY;
+				break;
+			case 'se':
+				handleX = origX + origRadius * Math.cos( Math.PI / 4 ) + deltaX;
+				handleY = origY + origRadius * Math.sin( Math.PI / 4 ) + deltaY;
+				break;
+			case 'sw':
+				handleX = origX - origRadius * Math.cos( Math.PI / 4 ) + deltaX;
+				handleY = origY + origRadius * Math.sin( Math.PI / 4 ) + deltaY;
 				break;
 			default:
-				radiusChange = distance;
+				return null;
 		}
 
-		// Determine if we're growing or shrinking
-		if ( handleType === 'nw' || handleType === 'n' || handleType === 'w' ) {
-			radiusChange = -radiusChange;
-		}
+		// Calculate new radius based on distance from center to new handle position
+		var newRadius = Math.sqrt(
+			( handleX - origX ) * ( handleX - origX ) +
+			( handleY - origY ) * ( handleY - origY )
+		);
 
-		updates.radius = Math.max( 5, ( originalLayer.radius || 0 ) + radiusChange );
+		updates.radius = Math.max( 5, newRadius );
 		return updates;
 	};
 
@@ -1356,10 +1517,38 @@
 			}
 			case 'polygon':
 			case 'star': {
-				// Use bounding box for hit test as a simple approximation
-				var bb = this.getLayerBounds( layer );
-				return bb && point.x >= bb.x && point.x <= bb.x + bb.width &&
-					point.y >= bb.y && point.y <= bb.y + bb.height;
+				// Create polygon points for hit testing
+				var polySides = layer.sides || 6;
+				var polyX = layer.x || 0;
+				var polyY = layer.y || 0;
+				var polyRadius = layer.radius || 50;
+				var polyRotation = ( layer.rotation || 0 ) * Math.PI / 180;
+
+				var polyPoints = [];
+				if ( layer.type === 'polygon' ) {
+					for ( var si = 0; si < polySides; si++ ) {
+						var angle = ( si * 2 * Math.PI ) / polySides - Math.PI / 2 + polyRotation;
+						polyPoints.push( {
+							x: polyX + polyRadius * Math.cos( angle ),
+							y: polyY + polyRadius * Math.sin( angle )
+						} );
+					}
+				} else { // star
+					var starPoints = layer.points || layer.starPoints || 5;
+					var outerRadius = polyRadius;
+					var innerRadius = polyRadius * 0.4;
+					for ( var sti = 0; sti < starPoints * 2; sti++ ) {
+						var starAngle = ( sti * Math.PI ) / starPoints - Math.PI / 2 + polyRotation;
+						var starR = ( sti % 2 === 0 ) ? outerRadius : innerRadius;
+						polyPoints.push( {
+							x: polyX + starR * Math.cos( starAngle ),
+							y: polyY + starR * Math.sin( starAngle )
+						} );
+					}
+				}
+
+				// Point-in-polygon test using ray casting
+				return this.isPointInPolygon( point, polyPoints );
 			}
 			case 'highlight': {
 				var hx = Math.min( layer.x, layer.x + layer.width );
@@ -1389,6 +1578,26 @@
 		var projX = x1 + t * dx;
 		var projY = y1 + t * dy;
 		return Math.sqrt( Math.pow( px - projX, 2 ) + Math.pow( py - projY, 2 ) );
+	};
+
+	CanvasManager.prototype.isPointInPolygon = function ( point, polygonPoints ) {
+		var x = point.x;
+		var y = point.y;
+		var inside = false;
+
+		for ( var i = 0, j = polygonPoints.length - 1; i < polygonPoints.length; j = i++ ) {
+			var xi = polygonPoints[ i ].x;
+			var yi = polygonPoints[ i ].y;
+			var xj = polygonPoints[ j ].x;
+			var yj = polygonPoints[ j ].y;
+
+			if ( ( ( yi > y ) !== ( yj > y ) ) &&
+				( x < ( xj - xi ) * ( y - yi ) / ( yj - yi ) + xi ) ) {
+				inside = !inside;
+			}
+		}
+
+		return inside;
 	};
 
 	CanvasManager.prototype.handleMouseUp = function ( e ) {
@@ -1447,11 +1656,14 @@
 	};
 
 	CanvasManager.prototype.finishResize = function () {
+		console.log( 'Layers: finishResize called' );
 		this.isResizing = false;
 		this.resizeHandle = null;
 		this.originalLayerState = null;
 		this.dragStartPoint = null;
-		this.canvas.style.cursor = 'default';
+
+		// Reset cursor to appropriate tool cursor instead of hardcoded 'default'
+		this.canvas.style.cursor = this.getToolCursor( this.currentTool );
 
 		// Mark editor as dirty
 		this.editor.markDirty();
@@ -1594,7 +1806,9 @@
 		this.isRotating = false;
 		this.originalLayerState = null;
 		this.dragStartPoint = null;
-		this.canvas.style.cursor = 'default';
+
+		// Reset cursor to appropriate tool cursor
+		this.canvas.style.cursor = this.getToolCursor( this.currentTool );
 
 		// Mark editor as dirty
 		this.editor.markDirty();
@@ -1608,7 +1822,9 @@
 		this.originalLayerState = null;
 		this.originalMultiLayerStates = null;
 		this.dragStartPoint = null;
-		this.canvas.style.cursor = 'default';
+
+		// Reset cursor to appropriate tool cursor
+		this.canvas.style.cursor = this.getToolCursor( this.currentTool );
 
 		// Mark editor as dirty
 		this.editor.markDirty();
@@ -1617,6 +1833,12 @@
 	};
 
 	CanvasManager.prototype.handleWheel = function ( e ) {
+		// Don't zoom when resizing, rotating, or dragging
+		if ( this.isResizing || this.isRotating || this.isDragging || this.isPanning ) {
+			e.preventDefault();
+			return;
+		}
+
 		e.preventDefault();
 
 		var delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -1625,6 +1847,7 @@
 		if ( newZoom !== this.zoom ) {
 			// Update zoom
 			this.zoom = newZoom;
+			this.userHasSetZoom = true; // Mark that user has manually set zoom
 
 			// Update CSS size
 			if ( this.backgroundImage ) {
@@ -1740,6 +1963,7 @@
 
 	CanvasManager.prototype.setZoom = function ( newZoom ) {
 		this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
+		this.userHasSetZoom = true; // Mark that user has manually set zoom
 
 		// Update CSS size based on zoom
 		if ( this.backgroundImage ) {
@@ -1761,6 +1985,7 @@
 		this.zoom = 1.0;
 		this.panX = 0;
 		this.panY = 0;
+		this.userHasSetZoom = true; // Mark that user has manually reset zoom
 
 		if ( this.backgroundImage ) {
 			this.canvas.style.width = this.backgroundImage.width + 'px';
@@ -1796,6 +2021,7 @@
 		this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, scale ) );
 		this.panX = 0;
 		this.panY = 0;
+		this.userHasSetZoom = true; // Mark that user has manually set zoom
 
 		// Update CSS size
 		this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
@@ -1830,6 +2056,78 @@
 
 		// console.log( 'Layers: Canvas transform updated - zoom:',
 		//  this.zoom, 'pan:', this.panX, this.panY );
+	};
+
+	/**
+	 * Handle zoom tool click - zoom in at point, or zoom out with shift
+	 *
+	 * @param {Object} point Mouse point in canvas coordinates
+	 * @param {MouseEvent} event Mouse event with modifier keys
+	 */
+	CanvasManager.prototype.handleZoomClick = function ( point, event ) {
+		// Set up for potential drag operation
+		this.initialDragZoom = this.zoom;
+
+		var zoomFactor = event.shiftKey ? 0.8 : 1.25; // Zoom out if shift, zoom in otherwise
+		var newZoom = this.zoom * zoomFactor;
+
+		// Clamp zoom level
+		newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
+
+		if ( newZoom !== this.zoom ) {
+			// Calculate zoom center - zoom towards the clicked point
+			var centerX = point.x;
+			var centerY = point.y;
+
+			// Adjust pan to zoom towards the clicked point
+			var zoomChange = newZoom / this.zoom;
+			this.panX = centerX - ( centerX - this.panX ) * zoomChange;
+			this.panY = centerY - ( centerY - this.panY ) * zoomChange;
+
+			this.zoom = newZoom;
+			this.userHasSetZoom = true;
+
+			// Update CSS size
+			if ( this.backgroundImage ) {
+				this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
+				this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
+			}
+
+			this.updateCanvasTransform();
+		}
+	};
+
+	/**
+	 * Handle zoom tool drag - drag up/down to zoom in/out dynamically
+	 *
+	 * @param {Object} point Current mouse point
+	 */
+	CanvasManager.prototype.handleZoomDrag = function ( point ) {
+		if ( !this.dragStartPoint ) {
+			return;
+		}
+
+		var deltaY = this.dragStartPoint.y - point.y; // Negative = drag down = zoom out
+		var sensitivity = 0.01; // Zoom sensitivity
+		var zoomChange = 1 + ( deltaY * sensitivity );
+
+		var newZoom = this.initialDragZoom * zoomChange;
+
+		// Clamp zoom level
+		newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
+
+		if ( newZoom !== this.zoom ) {
+			this.zoom = newZoom;
+			this.userHasSetZoom = true;
+
+			// Update CSS size
+			if ( this.backgroundImage ) {
+				this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
+				this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
+			}
+
+			this.updateCanvasTransform();
+		}
 	};
 
 	CanvasManager.prototype.saveState = function ( action ) {
@@ -2350,6 +2648,57 @@
 					height: maxY - minY
 				};
 
+			case 'polygon':
+			case 'star':
+				var polyX = layer.x || 0;
+				var polyY = layer.y || 0;
+				var polyRadius = layer.radius || 50;
+
+				return {
+					x: polyX - polyRadius,
+					y: polyY - polyRadius,
+					width: polyRadius * 2,
+					height: polyRadius * 2
+				};
+
+			case 'ellipse':
+				var ellipseX = layer.x || 0;
+				var ellipseY = layer.y || 0;
+				var radX = layer.radiusX || layer.radius || 50;
+				var radY = layer.radiusY || layer.radius || 50;
+
+				return {
+					x: ellipseX - radX,
+					y: ellipseY - radY,
+					width: radX * 2,
+					height: radY * 2
+				};
+
+			case 'path':
+				if ( !layer.points || layer.points.length === 0 ) {
+					return null;
+				}
+
+				var pathMinX = layer.points[ 0 ].x;
+				var pathMaxX = layer.points[ 0 ].x;
+				var pathMinY = layer.points[ 0 ].y;
+				var pathMaxY = layer.points[ 0 ].y;
+
+				for ( var pi = 1; pi < layer.points.length; pi++ ) {
+					var point = layer.points[ pi ];
+					pathMinX = Math.min( pathMinX, point.x );
+					pathMaxX = Math.max( pathMaxX, point.x );
+					pathMinY = Math.min( pathMinY, point.y );
+					pathMaxY = Math.max( pathMaxY, point.y );
+				}
+
+				return {
+					x: pathMinX,
+					y: pathMinY,
+					width: pathMaxX - pathMinX,
+					height: pathMaxY - pathMinY
+				};
+
 			default:
 				return null;
 		}
@@ -2358,7 +2707,7 @@
 	CanvasManager.prototype.drawSelectionHandles = function ( bounds, layer ) {
 		this.selectionHandles = []; // Reset handles array
 
-		var handleSize = 8;
+		var handleSize = 12;
 		var handleColor = '#2196f3';
 		var handleBorderColor = '#ffffff';
 		var rotation = ( layer && layer.rotation ) || 0;
@@ -2375,33 +2724,53 @@
 			{ type: 'w', x: bounds.x, y: bounds.y + bounds.height / 2 }
 		];
 
-		// Calculate actual world coordinates for hit testing (transform back from rotated space)
+		// Calculate actual world coordinates for hit testing
+		// These need to be in the same coordinate space as getMousePoint()
 		var actualHandles = [];
+
+		// Get the original bounds in world coordinates
+		var originalBounds = this.getLayerBounds( layer );
+		if ( !originalBounds ) {
+			return;
+		}
+		var centerX = originalBounds.x + originalBounds.width / 2;
+		var centerY = originalBounds.y + originalBounds.height / 2;
+
+		// Define handles in world coordinates based on original bounds
+		var worldHandles = [
+			{ type: 'nw', x: originalBounds.x, y: originalBounds.y },
+			{ type: 'n', x: originalBounds.x + originalBounds.width / 2, y: originalBounds.y },
+			{ type: 'ne', x: originalBounds.x + originalBounds.width, y: originalBounds.y },
+			{ type: 'e', x: originalBounds.x + originalBounds.width, y: originalBounds.y + originalBounds.height / 2 },
+			{ type: 'se', x: originalBounds.x + originalBounds.width, y: originalBounds.y + originalBounds.height },
+			{ type: 's', x: originalBounds.x + originalBounds.width / 2, y: originalBounds.y + originalBounds.height },
+			{ type: 'sw', x: originalBounds.x, y: originalBounds.y + originalBounds.height },
+			{ type: 'w', x: originalBounds.x, y: originalBounds.y + originalBounds.height / 2 }
+		];
+
 		if ( rotation !== 0 && layer ) {
-			// Get the original layer bounds for calculating the center
-			var originalBounds = this.getLayerBounds( layer );
-			var centerX = originalBounds.x + originalBounds.width / 2;
-			var centerY = originalBounds.y + originalBounds.height / 2;
 			var rotRad = rotation * Math.PI / 180;
 			var cos = Math.cos( rotRad );
 			var sin = Math.sin( rotRad );
 
-			handles.forEach( function ( handle ) {
-				// Transform handle position back to world coordinates
-				var worldX = centerX + handle.x * cos - handle.y * sin;
-				var worldY = centerY + handle.x * sin + handle.y * cos;
+			worldHandles.forEach( function ( handle ) {
+				// Translate to origin, rotate, then translate back
+				var relX = handle.x - centerX;
+				var relY = handle.y - centerY;
+				var rotatedX = centerX + relX * cos - relY * sin;
+				var rotatedY = centerY + relX * sin + relY * cos;
 
 				actualHandles.push( {
 					type: handle.type,
-					x: worldX - handleSize / 2,
-					y: worldY - handleSize / 2,
+					x: rotatedX - handleSize / 2,
+					y: rotatedY - handleSize / 2,
 					width: handleSize,
 					height: handleSize
 				} );
 			} );
 		} else {
 			// No rotation, use handles as-is
-			handles.forEach( function ( handle ) {
+			worldHandles.forEach( function ( handle ) {
 				actualHandles.push( {
 					type: handle.type,
 					x: handle.x - handleSize / 2,
@@ -2412,8 +2781,9 @@
 			} );
 		}
 
-		// Store handles for hit testing
+		// Store handles for hit testing in world coordinates
 		this.selectionHandles = actualHandles;
+		console.log( 'Layers: Created', actualHandles.length, 'selection handles:', actualHandles );
 
 		// Draw handles in the current transformed coordinate space
 		handles.forEach( function ( handle ) {
@@ -2439,7 +2809,7 @@
 	};
 
 	CanvasManager.prototype.drawRotationHandle = function ( bounds, layer ) {
-		var handleSize = 8;
+		var handleSize = 12;
 		var handleColor = '#ff9800';
 		var handleBorderColor = '#ffffff';
 		var lineColor = '#2196f3';
@@ -2544,7 +2914,7 @@
 	};
 
 	// Selection helpers
-	CanvasManager.prototype.selectLayer = function ( layerId ) {
+	CanvasManager.prototype.selectLayer = function ( layerId, fromPanel ) {
 		this.selectedLayerId = layerId || null;
 		this.selectedLayerIds = this.selectedLayerId ? [ this.selectedLayerId ] : [];
 		this.selectionHandles = [];
@@ -2552,6 +2922,11 @@
 		this.renderLayers( this.editor.layers );
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { selectionCount: this.selectedLayerIds.length } );
+		}
+
+		// Only sync with layer panel if this wasn't called from panel (prevent circular calls)
+		if ( !fromPanel && this.editor && this.editor.layerPanel ) {
+			this.editor.layerPanel.selectLayer( layerId, true );
 		}
 	};
 
@@ -2608,6 +2983,12 @@
 		this.redraw();
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
+
+		// Sync selection with layer panel
+		if ( this.editor && this.editor.layerPanel ) {
+			this.editor.layerPanel.selectLayer( this.selectedLayerId, true );
+		}
+
 		return hit;
 	};
 
@@ -2702,7 +3083,7 @@
 	};
 
 	// External resize hook used by editor
-	CanvasManager.prototype.handleResize = function () {
+	CanvasManager.prototype.handleCanvasResize = function () {
 		this.resizeCanvas();
 		this.updateCanvasTransform();
 		this.renderLayers( this.editor.layers );
@@ -2717,8 +3098,8 @@
 
 		// Convert from display coordinates to canvas coordinates
 		// Account for CSS transforms (zoom and pan)
-		var canvasX = clientX / this.zoom;
-		var canvasY = clientY / this.zoom;
+		var canvasX = ( clientX - ( this.panX || 0 ) ) / this.zoom;
+		var canvasY = ( clientY - ( this.panY || 0 ) ) / this.zoom;
 
 		// Snap to grid if enabled (optimize with cached grid size)
 		if ( this.snapToGrid && this.gridSize > 0 ) {
@@ -2739,8 +3120,8 @@
 		var clientX = e.clientX - rect.left;
 		var clientY = e.clientY - rect.top;
 		return {
-			canvasX: clientX / this.zoom,
-			canvasY: clientY / this.zoom
+			canvasX: ( clientX - ( this.panX || 0 ) ) / this.zoom,
+			canvasY: ( clientY - ( this.panY || 0 ) ) / this.zoom
 		};
 	};
 
@@ -4099,8 +4480,17 @@
 		var x = layer.x || 0;
 		var y = layer.y || 0;
 		var radius = layer.radius || 50;
+		var rotation = layer.rotation || 0;
 
 		this.ctx.save();
+
+		// Apply rotation if specified
+		if ( rotation !== 0 ) {
+			this.ctx.translate( x, y );
+			this.ctx.rotate( rotation * Math.PI / 180 );
+			this.ctx.translate( -x, -y );
+		}
+
 		this.ctx.beginPath();
 
 		for ( var i = 0; i < sides; i++ ) {
@@ -4183,6 +4573,80 @@
 	};
 
 	// Duplicate resize helpers removed to avoid overriding earlier implementations.
+
+	/**
+	 * Destroy the CanvasManager and clean up resources to prevent memory leaks
+	 * This method should be called when the editor is closed or destroyed
+	 */
+	CanvasManager.prototype.destroy = function () {
+		// Remove all event listeners to prevent memory leaks
+		if ( this.canvas ) {
+			this.canvas.removeEventListener( 'mousedown', this.onMouseDownHandler );
+			this.canvas.removeEventListener( 'mousemove', this.onMouseMoveHandler );
+			this.canvas.removeEventListener( 'mouseup', this.onMouseUpHandler );
+			this.canvas.removeEventListener( 'wheel', this.onWheelHandler );
+			this.canvas.removeEventListener( 'contextmenu', this.onContextMenuHandler );
+			this.canvas.removeEventListener( 'click', this.onClickHandler );
+			this.canvas.removeEventListener( 'dblclick', this.onDoubleClickHandler );
+
+			// Touch events for mobile support
+			this.canvas.removeEventListener( 'touchstart', this.onTouchStartHandler );
+			this.canvas.removeEventListener( 'touchmove', this.onTouchMoveHandler );
+			this.canvas.removeEventListener( 'touchend', this.onTouchEndHandler );
+		}
+
+		// Remove window event listeners
+		if ( this.onResizeHandler ) {
+			window.removeEventListener( 'resize', this.onResizeHandler );
+		}
+		if ( this.onKeyDownHandler ) {
+			window.removeEventListener( 'keydown', this.onKeyDownHandler );
+		}
+		if ( this.onKeyUpHandler ) {
+			window.removeEventListener( 'keyup', this.onKeyUpHandler );
+		}
+
+		// Clear canvas context
+		if ( this.ctx ) {
+			this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
+		}
+
+		// Clear background image reference
+		if ( this.backgroundImage ) {
+			this.backgroundImage.onload = null;
+			this.backgroundImage.onerror = null;
+			this.backgroundImage = null;
+		}
+
+		// Clear all object references to prevent circular references
+		this.canvas = null;
+		this.ctx = null;
+		this.container = null;
+		this.editor = null;
+
+		// Clear arrays and objects
+		this.history = [];
+		this.clipboard = [];
+		this.selectedLayerIds = [];
+		this.selectionHandles = [];
+		this.horizontalGuides = [];
+		this.verticalGuides = [];
+
+		// Clear timers if any exist
+		if ( this.renderTimer ) {
+			clearTimeout( this.renderTimer );
+			this.renderTimer = null;
+		}
+		if ( this.resizeTimer ) {
+			clearTimeout( this.resizeTimer );
+			this.resizeTimer = null;
+		}
+
+		// Log for debugging (only in debug mode)
+		if ( this.debug ) {
+			mw.log( 'CanvasManager destroyed and cleaned up' );
+		}
+	};
 
 	// Export CanvasManager to global scope
 	window.CanvasManager = CanvasManager;

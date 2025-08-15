@@ -18,8 +18,9 @@
 		this.container = this.config.container;
 		this.editor = this.config.editor;
 		this.currentTool = 'pointer';
-		this.currentColor = '#000000';
-		this.currentStrokeWidth = 2;
+		this.currentStrokeWidth = 2.0;
+		this.strokeColorNone = false;
+		this.fillColorNone = false;
 
 		// Initialize validator for real-time input validation
 		this.validator = window.LayersValidator ? new window.LayersValidator() : null;
@@ -55,6 +56,7 @@
 
 		var tools = [
 			{ id: 'pointer', icon: '↖', title: ( mw.message ? mw.message( 'layers-tool-select' ).text() : 'Select Tool' ), key: 'V' },
+			{ id: 'zoom', icon: '🔍', title: ( mw.message ? mw.message( 'layers-tool-zoom' ).text() : 'Zoom Tool' ), key: 'Z' },
 			{ id: 'text', icon: 'T', title: ( mw.message ? mw.message( 'layers-tool-text' ).text() : 'Text Tool' ), key: 'T' },
 			{ id: 'pen', icon: '✏', title: ( mw.message ? mw.message( 'layers-tool-pen' ).text() : 'Pen Tool' ), key: 'P' },
 			{ id: 'rectangle', icon: '▢', title: ( mw.message ? mw.message( 'layers-tool-rectangle' ).text() : 'Rectangle Tool' ), key: 'R' },
@@ -97,37 +99,65 @@
 		var styleGroup = document.createElement( 'div' );
 		styleGroup.className = 'toolbar-group style-group';
 
-		// Color picker
-		var colorPicker = document.createElement( 'input' );
-		colorPicker.type = 'color';
-		colorPicker.className = 'color-picker';
-		colorPicker.value = this.currentColor;
-		colorPicker.title = ( mw.message ? mw.message( 'layers-prop-color' ).text() : 'Color' );
-		styleGroup.appendChild( colorPicker );
+		// Color pickers - stroke and fill side by side
+		var colorContainer = document.createElement( 'div' );
+		colorContainer.className = 'color-input-group';
 
-		// Stroke width
+		// Stroke color
+		var strokeColorWrapper = document.createElement( 'div' );
+		strokeColorWrapper.className = 'color-input-wrapper';
+		var strokeColorPicker = document.createElement( 'input' );
+		strokeColorPicker.type = 'color';
+		strokeColorPicker.className = 'color-picker stroke-color';
+		strokeColorPicker.value = '#000000';
+		strokeColorPicker.title = ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' );
+		var strokeNoneBtn = document.createElement( 'button' );
+		strokeNoneBtn.className = 'color-none-btn stroke-none';
+		strokeNoneBtn.title = 'No Stroke';
+		strokeNoneBtn.innerHTML = '×';
+		strokeNoneBtn.type = 'button';
+		strokeColorWrapper.appendChild( strokeColorPicker );
+		strokeColorWrapper.appendChild( strokeNoneBtn );
+		colorContainer.appendChild( strokeColorWrapper );
+
+		// Fill color
+		var fillColorWrapper = document.createElement( 'div' );
+		fillColorWrapper.className = 'color-input-wrapper';
+		var fillColorPicker = document.createElement( 'input' );
+		fillColorPicker.type = 'color';
+		fillColorPicker.className = 'color-picker fill-color';
+		fillColorPicker.value = '#ffffff';
+		fillColorPicker.title = ( mw.message ? mw.message( 'layers-prop-fill-color' ).text() : 'Fill Color' );
+		var fillNoneBtn = document.createElement( 'button' );
+		fillNoneBtn.className = 'color-none-btn fill-none';
+		fillNoneBtn.title = 'No Fill';
+		fillNoneBtn.innerHTML = '×';
+		fillNoneBtn.type = 'button';
+		fillColorWrapper.appendChild( fillColorPicker );
+		fillColorWrapper.appendChild( fillNoneBtn );
+		colorContainer.appendChild( fillColorWrapper );
+
+		styleGroup.appendChild( colorContainer );
+
+		// Stroke width with numeric input only
 		var strokeWidthContainer = document.createElement( 'div' );
 		strokeWidthContainer.className = 'stroke-width-container';
 
 		var strokeLabel = document.createElement( 'label' );
-		strokeLabel.textContent = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ':';
+		strokeLabel.textContent = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke' ) + ':';
 		strokeLabel.className = 'stroke-label';
 
 		var strokeWidth = document.createElement( 'input' );
-		strokeWidth.type = 'range';
-		strokeWidth.min = '1';
-		strokeWidth.max = '20';
-		strokeWidth.value = this.currentStrokeWidth;
-		strokeWidth.className = 'stroke-width';
+		strokeWidth.type = 'number';
+		strokeWidth.min = '0';
+		strokeWidth.max = '999.9';
+		strokeWidth.step = '0.1';
+		strokeWidth.value = '2.0';
+		strokeWidth.className = 'stroke-width-input';
 		strokeWidth.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' );
-
-		var strokeValue = document.createElement( 'span' );
-		strokeValue.className = 'stroke-value';
-		strokeValue.textContent = this.currentStrokeWidth;
 
 		strokeWidthContainer.appendChild( strokeLabel );
 		strokeWidthContainer.appendChild( strokeWidth );
-		strokeWidthContainer.appendChild( strokeValue );
 		styleGroup.appendChild( strokeWidthContainer );
 
 		// Font size (for text tool)
@@ -233,9 +263,11 @@
 		this.container.appendChild( styleGroup );
 
 		// Store references
-		this.colorPicker = colorPicker;
+		this.strokeColorPicker = strokeColorPicker;
+		this.strokeNoneBtn = strokeNoneBtn;
+		this.fillColorPicker = fillColorPicker;
+		this.fillNoneBtn = fillNoneBtn;
 		this.strokeWidth = strokeWidth;
-		this.strokeValue = strokeValue;
 		this.fontSize = fontSize;
 		this.fontSizeContainer = fontSizeContainer;
 		this.strokeContainer = strokeContainer;
@@ -247,6 +279,10 @@
 		this.textShadowToggle = shadowToggle;
 		this.textShadowColor = shadowColor;
 		this.arrowStyleSelect = arrowStyleSelect;
+
+		// Set up state tracking for "none" colors
+		this.strokeColorNone = false;
+		this.fillColorNone = false;
 
 		// Add client-side validation to input fields
 		this.setupInputValidation();
@@ -270,12 +306,12 @@
 			);
 		}
 
-		// Stroke width validation (0-50)
+		// Stroke width validation (0-999.9)
 		if ( this.strokeWidth ) {
 			this.inputValidators.push(
 				this.validator.createInputValidator( this.strokeWidth, 'number', {
 					min: 0,
-					max: 50
+					max: 999.9
 				} )
 			);
 		}
@@ -291,9 +327,15 @@
 		}
 
 		// Color validation
-		if ( this.colorPicker ) {
+		if ( this.strokeColorPicker ) {
 			this.inputValidators.push(
-				this.validator.createInputValidator( this.colorPicker, 'color' )
+				this.validator.createInputValidator( this.strokeColorPicker, 'color' )
+			);
+		}
+
+		if ( this.fillColorPicker ) {
+			this.inputValidators.push(
+				this.validator.createInputValidator( this.fillColorPicker, 'color' )
 			);
 		}
 
@@ -571,17 +613,43 @@
 			}
 		} );
 
-		// Color picker
-		this.colorPicker.addEventListener( 'change', function () {
-			self.currentColor = this.value;
+		// Stroke and fill color pickers
+		this.strokeColorPicker.addEventListener( 'change', function () {
+			self.strokeColorNone = false;
+			self.updateStrokeNoneButton();
 			self.updateStyleOptions();
 		} );
 
-		// Stroke width
-		this.strokeWidth.addEventListener( 'input', function () {
-			self.currentStrokeWidth = parseInt( this.value );
-			self.strokeValue.textContent = self.currentStrokeWidth;
+		this.fillColorPicker.addEventListener( 'change', function () {
+			self.fillColorNone = false;
+			self.updateFillNoneButton();
 			self.updateStyleOptions();
+		} );
+
+		// Color "none" buttons
+		this.strokeNoneBtn.addEventListener( 'click', function ( e ) {
+			e.preventDefault();
+			self.strokeColorNone = !self.strokeColorNone;
+			self.updateStrokeNoneButton();
+			self.updateStyleOptions();
+		} );
+
+		this.fillNoneBtn.addEventListener( 'click', function ( e ) {
+			e.preventDefault();
+			self.fillColorNone = !self.fillColorNone;
+			self.updateFillNoneButton();
+			self.updateStyleOptions();
+		} );
+
+		// Stroke width input
+		this.strokeWidth.addEventListener( 'input', function () {
+			var val = parseFloat( this.value );
+			if ( !isNaN( val ) ) {
+				val = Math.max( 0, Math.min( 999.9, Math.round( val * 10 ) / 10 ) );
+				this.value = val.toFixed( 1 );
+				self.currentStrokeWidth = val;
+				self.updateStyleOptions();
+			}
 		} );
 
 		// Font size
@@ -671,7 +739,8 @@
 	Toolbar.prototype.updateStyleOptions = function () {
 		// Update current style settings and notify editor
 		var styleOptions = {
-			color: this.currentColor,
+			strokeColor: this.strokeColorNone ? 'none' : this.strokeColorPicker.value,
+			fillColor: this.fillColorNone ? 'none' : this.fillColorPicker.value,
 			strokeWidth: this.currentStrokeWidth,
 			fontSize: parseInt( this.fontSize.value ),
 			textStrokeColor: this.textStrokeColor.value,
@@ -686,6 +755,30 @@
 		}
 
 		// console.log( 'Layers: Style options updated:', styleOptions );
+	};
+
+	Toolbar.prototype.updateStrokeNoneButton = function () {
+		if ( this.strokeColorNone ) {
+			this.strokeNoneBtn.classList.add( 'active' );
+			this.strokeNoneBtn.innerHTML = '×';
+			this.strokeNoneBtn.title = 'Enable Stroke';
+		} else {
+			this.strokeNoneBtn.classList.remove( 'active' );
+			this.strokeNoneBtn.innerHTML = '';
+			this.strokeNoneBtn.title = 'No Stroke';
+		}
+	};
+
+	Toolbar.prototype.updateFillNoneButton = function () {
+		if ( this.fillColorNone ) {
+			this.fillNoneBtn.classList.add( 'active' );
+			this.fillNoneBtn.innerHTML = '×';
+			this.fillNoneBtn.title = 'Enable Fill';
+		} else {
+			this.fillNoneBtn.classList.remove( 'active' );
+			this.fillNoneBtn.innerHTML = '';
+			this.fillNoneBtn.title = 'No Fill';
+		}
 	};
 
 	Toolbar.prototype.executeAction = function ( actionId ) {

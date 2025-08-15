@@ -11,6 +11,7 @@
 	"layers-editor-close": "Close",
 	"layers-tool-text": "Text",
 	"layers-tool-select": "Select Tool",
+	"layers-tool-zoom": "Zoom Tool",
 	"layers-tool-pen": "Pen",
 	"layers-tool-arrow": "Arrow",
 	"layers-tool-rectangle": "Rectangle",
@@ -63,6 +64,15 @@
 	"layers-prop-opacity": "Opacity",
 	"layers-prop-blend": "Blend",
 	"layers-prop-blur-radius": "Blur Radius",
+	"layers-prop-rotation": "Rotation",
+	"layers-prop-sides": "Sides",
+	"layers-prop-points": "Points",
+
+	"layers-grab-area": "Drag to move/select",
+
+	"layers-section-transform": "Transform",
+	"layers-section-appearance": "Appearance",
+	"layers-section-effects": "Effects",
 
 	"layers-arrow-single": "Single →",
 	"layers-arrow-double": "Double ↔",

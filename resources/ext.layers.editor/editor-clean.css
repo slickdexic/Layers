@@ -119,14 +119,12 @@ border-color: #046;
 
 /* Tool specific styles */
 .color-picker {
-width: 2em;
-height: 2em;
-border: 0.063em solid #ccc;
-border-radius: 0.25em;
-cursor: pointer;
-}
-
-.size-slider {
+	width: 2em;
+	height: 2em;
+	border: 0.063em solid #ccc;
+	border-radius: 0.25em;
+	cursor: pointer;
+}.size-slider {
 width: 6em;
 margin: 0 0.5em;
 }
@@ -211,6 +209,53 @@ background: rgba(0, 124, 186, 0.1);
 pointer-events: none;
 }
 
+/* Selection handles */
+.selection-handle {
+	position: absolute;
+	width: 8px;
+	height: 8px;
+	background: #007cba;
+	border: 1px solid #fff;
+	border-radius: 1px;
+	pointer-events: all;
+	cursor: pointer;
+}
+
+.selection-handle.nw-resize { cursor: nw-resize; }
+.selection-handle.n-resize { cursor: n-resize; }
+.selection-handle.ne-resize { cursor: ne-resize; }
+.selection-handle.e-resize { cursor: e-resize; }
+.selection-handle.se-resize { cursor: se-resize; }
+.selection-handle.s-resize { cursor: s-resize; }
+.selection-handle.sw-resize { cursor: sw-resize; }
+.selection-handle.w-resize { cursor: w-resize; }
+.selection-handle.move { cursor: move; }
+.selection-handle.rotate { cursor: crosshair; }
+
+/* Canvas cursors */
+.layers-canvas {
+	display: block;
+}
+
+.layers-canvas.tool-pointer { cursor: default; }
+.layers-canvas.tool-text { cursor: text; }
+.layers-canvas.tool-pen { cursor: crosshair; }
+.layers-canvas.tool-rectangle { cursor: crosshair; }
+.layers-canvas.tool-circle { cursor: crosshair; }
+.layers-canvas.tool-ellipse { cursor: crosshair; }
+.layers-canvas.tool-polygon { cursor: crosshair; }
+.layers-canvas.tool-star { cursor: crosshair; }
+.layers-canvas.tool-arrow { cursor: crosshair; }
+.layers-canvas.tool-line { cursor: crosshair; }
+.layers-canvas.tool-highlight { cursor: crosshair; }
+.layers-canvas.tool-blur { cursor: crosshair; }
+.layers-canvas.tool-marquee { cursor: crosshair; }
+
+/* Dragging states */
+.layers-canvas.dragging { cursor: move !important; }
+.layers-canvas.resizing { cursor: nw-resize !important; }
+.layers-canvas.rotating { cursor: crosshair !important; }
+
 /* Mobile responsive */
 @media (max-width: 768px) {
 	.layers-toolbar { flex-direction: column; gap: 0.5em; }
@@ -232,21 +277,336 @@ opacity: 0.5;
 cursor: not-allowed;
 }
 
+/* Property input fields - reasonable sizing and precision */
+.property-field {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 0.5em;
+}
+
+.property-field label {
+	font-size: 0.875em;
+	font-weight: 600;
+	margin-bottom: 0.25em;
+	color: #333;
+}
+
+.property-field input[type="number"] {
+	width: 70px;
+	height: 28px;
+	padding: 4px 8px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 0.875em;
+	font-family: monospace;
+}
+
+.property-field input[type="number"]:focus {
+	outline: 2px solid #0645ad;
+	outline-offset: 1px;
+	border-color: #0645ad;
+}
+
+.property-field input[type="text"] {
+	width: 200px;
+	height: 28px;
+	padding: 4px 8px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 0.875em;
+}
+
+.property-field input[type="color"] {
+	width: 32px;
+	height: 32px;
+	padding: 2px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.property-field select {
+	width: 140px;
+	height: 32px;
+	padding: 4px 8px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 0.875em;
+	background: white;
+}
+
+.property-field--compound {
+	flex-direction: row;
+	align-items: center;
+	gap: 12px;
+}
+
+.property-field--compound label {
+	margin-bottom: 0;
+	min-width: 80px;
+}
+
+/* Layer list improvements - make icons fully clickable */
+.layer-item {
+	padding: 4px;
+	border: 1px solid #ddd;
+	margin-bottom: 2px;
+	border-radius: 4px;
+	cursor: pointer;
+	background: #f9f9f9;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-height: 44px; /* Ensure sufficient touch target size */
+}
+
+.layer-item.selected {
+	background: #e6f3ff;
+	border-color: #007cba;
+}
+
+.layer-item:hover {
+	background: #f0f0f0;
+}
+
+.layer-grab-area {
+	flex-shrink: 0;
+	width: 36px !important;
+	height: 36px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	cursor: grab !important;
+	border-radius: 4px;
+	transition: background-color 0.2s;
+}
+
+.layer-grab-area:hover {
+	background-color: rgba(0, 0, 0, 0.1);
+}
+
+.layer-visibility,
+.layer-lock,
+.layer-delete {
+	flex-shrink: 0;
+	width: 36px !important;
+	height: 36px !important;
+	border: none !important;
+	background: transparent !important;
+	cursor: pointer !important;
+	border-radius: 4px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	transition: background-color 0.2s;
+	padding: 0 !important;
+}
+
+.layer-visibility:hover,
+.layer-lock:hover {
+	background-color: rgba(0, 123, 186, 0.1) !important;
+}
+
+.layer-delete:hover {
+	background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.layer-name {
+	flex: 1;
+	min-width: 0;
+	padding: 4px 8px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: transparent;
+	font-size: 0.875em;
+	line-height: 1.4;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.layer-name:focus {
+	outline: none;
+	border-color: #0645ad;
+	background: white;
+}
+
+/* Toolbar stroke width input improvements */
+.stroke-width-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.stroke-width-input {
+	width: 70px;
+	height: 28px;
+	padding: 4px 8px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 0.875em;
+	font-family: monospace;
+}
+
+.stroke-width-input:focus {
+	outline: 2px solid #0645ad;
+	outline-offset: 1px;
+	border-color: #0645ad;
+}
+
+/* Color picker improvements */
+.color-input-group {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.color-input-wrapper {
+	position: relative;
+	display: inline-block;
+}
+
+.color-none-btn {
+	position: absolute;
+	top: 2px;
+	right: 2px;
+	width: 16px;
+	height: 16px;
+	background: linear-gradient(45deg, transparent 0%, transparent 46%, #ff0000 48%, #ff0000 52%, transparent 54%, transparent 100%),
+	            linear-gradient(-45deg, #ffffff 0%, #ffffff 46%, transparent 48%, transparent 52%, #ffffff 54%, #ffffff 100%);
+	border: 1px solid #999;
+	border-radius: 2px;
+	cursor: pointer;
+	font-size: 0px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2;
+}
+
+.color-none-btn:hover {
+	border-color: #666;
+	box-shadow: 0 0 3px rgba(0,0,0,0.3);
+}
+
+.color-none-btn.active {
+	background: linear-gradient(45deg, #ff0000 0%, #ff0000 100%);
+	color: white;
+	font-size: 8px;
+}
+
+/* Property sections */
+h5 {
+	margin: 16px 0 8px 0;
+	font-size: 0.9em;
+	font-weight: 600;
+	color: #555;
+	border-bottom: 1px solid #eee;
+	padding-bottom: 4px;
+}
+
+h5:first-child {
+	margin-top: 8px;
+}
+
 /* Error states */
 .error {
-color: #d63638;
-background: #fff0f0;
-border-color: #d63638;
-padding: 0.5em;
-border-radius: 0.25em;
-margin: 0.5em 0;
+	color: #d63638;
+	background: #fff0f0;
+	border-color: #d63638;
+	padding: 0.5em;
+	border-radius: 0.25em;
+	margin: 0.5em 0;
 }
 
 .success {
-color: #008a00;
-background: #f0fff0;
-border-color: #008a00;
-padding: 0.5em;
-border-radius: 0.25em;
-margin: 0.5em 0;
+	color: #008a00;
+	background: #f0fff0;
+	border-color: #008a00;
+	padding: 0.5em;
+	border-radius: 0.25em;
+	margin: 0.5em 0;
+}
+
+/* Layers panel resizable divider */
+.layers-panel-divider {
+	height: 4px;
+	background: #e0e0e0;
+	cursor: row-resize;
+	border-radius: 2px;
+	margin: 4px 0;
+	transition: background-color 0.2s;
+}
+
+.layers-panel-divider:hover,
+.layers-panel-divider:focus {
+	background: #0645ad;
+}
+
+/* Code panel styling */
+.layers-code-panel {
+	margin-top: 16px;
+	padding: 12px;
+	background: #f8f9fa;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+.layers-code-panel h4 {
+	margin: 0 0 12px 0;
+	font-size: 0.9em;
+	font-weight: 600;
+	color: #333;
+}
+
+.layers-code {
+	display: block;
+	background: #fff;
+	border: 1px solid #ccc;
+	padding: 8px;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 0.85em;
+	word-break: break-all;
+	margin: 8px 0;
+}
+
+.copy-btn {
+	background: #0073aa;
+	color: white;
+	border: none;
+	padding: 6px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.8em;
+	transition: background-color 0.2s;
+}
+
+.copy-btn:hover {
+	background: #005a87;
+}
+
+/* Accessibility improvements */
+.layer-item:focus,
+.toolbar-button:focus,
+.property-field input:focus,
+.property-field select:focus {
+	outline: 2px solid #0645ad;
+	outline-offset: 2px;
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+	.layer-visibility,
+	.layer-lock,
+	.layer-delete,
+	.layer-grab-area {
+		min-width: 44px !important;
+		min-height: 44px !important;
+	}
+	
+	.toolbar-button {
+		min-height: 44px;
+		padding: 8px 12px;
+	}
 }

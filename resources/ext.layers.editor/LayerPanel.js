@@ -5,10 +5,6 @@
 ( function () {
 	'use strict';
 
-	function layersMsgDefault( k, d ) {
-		return d;
-	}
-
 	/**
 	 * LayerPanel class
 	 *
@@ -164,6 +160,34 @@
 				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-copied' ).text() : null, fallback );
 			case 'layers-code-copy-failed':
 				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-copy-failed' ).text() : null, fallback );
+			case 'layers-default-text-prefix':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-default-text-prefix' ).text() : null, fallback );
+			case 'layers-default-empty':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-default-empty' ).text() : null, fallback );
+			case 'layers-type-rectangle':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-rectangle' ).text() : null, fallback );
+			case 'layers-type-circle':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-circle' ).text() : null, fallback );
+			case 'layers-type-ellipse':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-ellipse' ).text() : null, fallback );
+			case 'layers-type-polygon':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-polygon' ).text() : null, fallback );
+			case 'layers-type-star':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-star' ).text() : null, fallback );
+			case 'layers-type-blur':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-blur' ).text() : null, fallback );
+			case 'layers-type-arrow':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-arrow' ).text() : null, fallback );
+			case 'layers-type-line':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-line' ).text() : null, fallback );
+			case 'layers-type-path':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-path' ).text() : null, fallback );
+			case 'layers-type-highlight':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-highlight' ).text() : null, fallback );
+			case 'layers-type-layer':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-layer' ).text() : null, fallback );
+			case 'layers-type-text':
+				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-type-text' ).text() : null, fallback );
 			default:
 				return fallback;
 		}
@@ -383,7 +407,9 @@
 		// Lock toggle (SVG padlock, larger, accessible)
 		var lockBtn = document.createElement( 'button' );
 		lockBtn.className = 'layer-lock';
-		lockBtn.innerHTML = layer.locked ? '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="8" rx="3" fill="#eee" stroke="#666" stroke-width="2"/><rect x="10" y="16" width="4" height="3" rx="1.5" fill="#bbb"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#666" stroke-width="2"/></svg>' : '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="8" rx="3" fill="#fff" stroke="#aaa" stroke-width="2"/><rect x="10" y="16" width="4" height="3" rx="1.5" fill="#ccc"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#aaa" stroke-width="2"/></svg>';
+		lockBtn.innerHTML = layer.locked ?
+			'<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2" fill="#ff6b6b" stroke="#d63031" stroke-width="1.5"/><path d="M9 10V7a3 3 0 0 1 6 0v3" fill="none" stroke="#d63031" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="15" r="1.5" fill="#fff"/></svg>' :
+			'<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2" fill="#a8e6cf" stroke="#27ae60" stroke-width="1.5"/><path d="M9 10V7a3 3 0 0 1 6 0v1" fill="none" stroke="#27ae60" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="15" r="1.5" fill="#27ae60"/></svg>';
 		lockBtn.title = t( 'layers-toggle-lock', 'Toggle lock' );
 		lockBtn.type = 'button';
 		lockBtn.setAttribute( 'aria-label', t( 'layers-toggle-lock', 'Toggle lock' ) );
@@ -393,7 +419,7 @@
 		// Delete button (SVG trash can, larger, accessible)
 		var deleteBtn = document.createElement( 'button' );
 		deleteBtn.className = 'layer-delete';
-		deleteBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="8" rx="2.5" fill="#fff" stroke="#c00" stroke-width="2"/><rect x="10" y="5" width="4" height="3" rx="1.5" fill="#c00"/><line x1="9" y1="13" x2="15" y2="19" stroke="#c00" stroke-width="1.8"/><line x1="15" y1="13" x2="9" y2="19" stroke="#c00" stroke-width="1.8"/></svg>';
+		deleteBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#e74c3c" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#e74c3c" stroke-width="2" stroke-linecap="round"/></svg>';
 		deleteBtn.title = t( 'layers-delete-layer-button', 'Delete layer' );
 		deleteBtn.type = 'button';
 		deleteBtn.setAttribute( 'aria-label', t( 'layers-delete-layer-button', 'Delete layer' ) );
@@ -410,40 +436,36 @@
 	};
 
 	LayerPanel.prototype.getDefaultLayerName = function ( layer ) {
-		var t;
-		if ( this.msg && this.msg.bind ) {
-			t = this.msg.bind( this );
-		} else {
-			t = layersMsgDefault;
-		}
+		var t = this.msg.bind( this );
+		var LAYER_TYPES = window.LayersConstants ? window.LayersConstants.LAYER_TYPES : {};
 		switch ( layer.type ) {
-			case 'text': {
-				var prefix = ( window.mw ? t( 'layers-default-text-prefix', 'Text: ' ) : 'Text: ' );
-				var emptyText = ( window.mw ? t( 'layers-default-empty', 'Empty' ) : 'Empty' );
+			case LAYER_TYPES.TEXT || 'text': {
+				var prefix = t( 'layers-default-text-prefix', 'Text: ' );
+				var emptyText = t( 'layers-default-empty', 'Empty' );
 				return prefix + ( ( layer.text || emptyText ).slice( 0, 20 ) );
 			}
-			case 'rectangle':
-				return ( window.mw ? t( 'layers-type-rectangle', 'Rectangle' ) : 'Rectangle' );
-			case 'blur':
-				return ( window.mw ? t( 'layers-type-blur', 'Blur/Redaction' ) : 'Blur/Redaction' );
-			case 'circle':
-				return ( window.mw ? t( 'layers-type-circle', 'Circle' ) : 'Circle' );
-			case 'ellipse':
-				return ( window.mw ? t( 'layers-type-ellipse', 'Ellipse' ) : 'Ellipse' );
-			case 'polygon':
-				return ( window.mw ? t( 'layers-type-polygon', 'Polygon' ) : 'Polygon' );
-			case 'star':
-				return ( window.mw ? t( 'layers-type-star', 'Star' ) : 'Star' );
-			case 'arrow':
-				return ( window.mw ? t( 'layers-type-arrow', 'Arrow' ) : 'Arrow' );
-			case 'line':
-				return ( window.mw ? t( 'layers-type-line', 'Line' ) : 'Line' );
-			case 'path':
-				return ( window.mw ? t( 'layers-type-path', 'Drawing' ) : 'Drawing' );
-			case 'highlight':
-				return ( window.mw ? t( 'layers-type-highlight', 'Highlight' ) : 'Highlight' );
+			case LAYER_TYPES.RECTANGLE || 'rectangle':
+				return t( 'layers-type-rectangle', 'Rectangle' );
+			case LAYER_TYPES.BLUR || 'blur':
+				return t( 'layers-type-blur', 'Blur/Redaction' );
+			case LAYER_TYPES.CIRCLE || 'circle':
+				return t( 'layers-type-circle', 'Circle' );
+			case LAYER_TYPES.ELLIPSE || 'ellipse':
+				return t( 'layers-type-ellipse', 'Ellipse' );
+			case LAYER_TYPES.POLYGON || 'polygon':
+				return t( 'layers-type-polygon', 'Polygon' );
+			case LAYER_TYPES.STAR || 'star':
+				return t( 'layers-type-star', 'Star' );
+			case LAYER_TYPES.ARROW || 'arrow':
+				return t( 'layers-type-arrow', 'Arrow' );
+			case LAYER_TYPES.LINE || 'line':
+				return t( 'layers-type-line', 'Line' );
+			case LAYER_TYPES.PATH || 'path':
+				return t( 'layers-type-path', 'Drawing' );
+			case LAYER_TYPES.HIGHLIGHT || 'highlight':
+				return t( 'layers-type-highlight', 'Highlight' );
 			default:
-				return ( window.mw ? t( 'layers-type-layer', 'Layer' ) : 'Layer' );
+				return t( 'layers-type-layer', 'Layer' );
 		}
 	};
 
@@ -462,27 +484,33 @@
 			return;
 		}
 
-		if ( target.classList.contains( 'layer-visibility' ) ) {
+		// Check if click is on buttons or their child elements (like SVGs)
+		var visibilityBtn = target.closest( '.layer-visibility' );
+		var lockBtn = target.closest( '.layer-lock' );
+		var deleteBtn = target.closest( '.layer-delete' );
+		var nameEl = target.closest( '.layer-name' );
+
+		if ( visibilityBtn ) {
 			this.toggleLayerVisibility( layerId );
-		} else if ( target.classList.contains( 'layer-lock' ) ) {
+		} else if ( lockBtn ) {
 			this.toggleLayerLock( layerId );
-		} else if ( target.classList.contains( 'layer-delete' ) ) {
+		} else if ( deleteBtn ) {
 			this.deleteLayer( layerId );
-		} else if ( target.classList.contains( 'layer-name' ) ) {
-			this.editLayerName( layerId, target );
+		} else if ( nameEl ) {
+			this.editLayerName( layerId, nameEl );
 		} else {
 			this.selectLayer( layerId );
 		}
 	};
 
-	LayerPanel.prototype.selectLayer = function ( layerId ) {
+	LayerPanel.prototype.selectLayer = function ( layerId, fromCanvas ) {
 		this.selectedLayerId = layerId;
 		this.renderLayerList();
 		this.updatePropertiesPanel( layerId );
 
-		// Notify editor of selection
-		if ( this.editor.canvasManager ) {
-			this.editor.canvasManager.selectLayer( layerId );
+		// Only notify canvas if this wasn't called from canvas (prevent circular calls)
+		if ( !fromCanvas && this.editor.canvasManager ) {
+			this.editor.canvasManager.selectLayer( layerId, true );
 		}
 	};
 
@@ -493,6 +521,8 @@
 			this.editor.renderLayers();
 			this.renderLayerList();
 			this.updateCodePanel(); // Update the code when visibility changes
+			// Save state for undo/redo functionality
+			this.editor.saveState( layer.visible ? 'Show Layer' : 'Hide Layer' );
 		}
 	};
 
@@ -501,6 +531,8 @@
 		if ( layer ) {
 			layer.locked = !layer.locked;
 			this.renderLayerList();
+			// Save state for undo/redo functionality
+			this.editor.saveState( layer.locked ? 'Lock Layer' : 'Unlock Layer' );
 		}
 	};
 
@@ -516,6 +548,8 @@
 						this.selectedLayerId = null;
 						this.updatePropertiesPanel( null );
 					}
+					// Save state for undo/redo functionality
+					this.editor.saveState( 'Delete Layer' );
 				}
 			}.bind( this ) );
 		} else {
@@ -534,6 +568,8 @@
 					this.selectedLayerId = null;
 				}
 				this.updatePropertiesPanel( null );
+				// Save state for undo/redo functionality
+				this.editor.saveState( 'Delete Layer' );
 			}
 		}
 	};
@@ -546,6 +582,8 @@
 			var newName = nameElement.textContent.trim();
 			if ( newName && newName !== originalName ) {
 				self.editor.updateLayer( layerId, { name: newName } );
+				// Save state for undo/redo functionality
+				self.editor.saveState( 'Rename Layer' );
 			}
 		} );
 
@@ -580,6 +618,29 @@
 		contentDiv.appendChild( form );
 	};
 
+	/**
+	 * Creates the properties form for editing layer properties.
+	 * Uses modern sectioned layout with visual groupings.
+	 *
+	 * CSS Classes:
+	 * - property-section: Container for each property group
+	 * - property-section-header: Section header with title and icon
+	 * - property-section-header--transform: Transform section styling
+	 * - property-section-header--appearance: Appearance section styling
+	 * - property-section-header--effects: Effects section styling
+	 * - property-section-body: Section content area
+	 * - property-field: Individual form field wrapper
+	 * - property-field--checkbox: Checkbox field variant
+	 * - property-field--compound: Compound control (number + slider)
+	 * - compact-controls: Container for number+slider pairs
+	 * - compact-number: Number input in compound control
+	 * - compact-range: Range slider in compound control
+	 * - property-field-error: Error message display
+	 * - color-display-button: Color picker trigger button
+	 *
+	 * @param {Object} layer The layer object to create properties for
+	 * @return {HTMLFormElement} The created form element
+	 */
 	LayerPanel.prototype.createPropertiesForm = function ( layer ) {
 		var form = document.createElement( 'form' );
 		form.className = 'layer-properties-form';
@@ -587,14 +648,35 @@
 
 		// Helpers
 		var self = this;
-		var addSection = function ( title ) {
-			var h = document.createElement( 'h5' );
-			h.textContent = title;
-			form.appendChild( h );
+		var currentSection = null;
+		var currentSectionBody = null;
+
+		var addSection = function ( title, type ) {
+			currentSection = document.createElement( 'div' );
+			currentSection.className = 'property-section';
+
+			var header = document.createElement( 'div' );
+			header.className = 'property-section-header';
+			// Add type-specific class
+			if ( type === 'transform' ) {
+				header.classList.add( 'property-section-header--transform' );
+			} else if ( type === 'appearance' ) {
+				header.classList.add( 'property-section-header--appearance' );
+			} else if ( type === 'effects' ) {
+				header.classList.add( 'property-section-header--effects' );
+			}
+			header.textContent = title;
+
+			currentSectionBody = document.createElement( 'div' );
+			currentSectionBody.className = 'property-section-body';
+
+			currentSection.appendChild( header );
+			currentSection.appendChild( currentSectionBody );
+			form.appendChild( currentSection );
 		};
 		var addInput = function ( opts ) {
 			var wrapper = document.createElement( 'div' );
-			wrapper.className = 'property-field';
+			wrapper.className = opts.type === 'checkbox' ? 'property-field property-field--checkbox' : 'property-field';
 			var labelEl = document.createElement( 'label' );
 			labelEl.textContent = opts.label;
 			var input = document.createElement( 'input' );
@@ -612,20 +694,139 @@
 				input.step = '0.1';
 			}
 			input.value = ( opts.value !== undefined && opts.value !== null ) ? opts.value : '';
-			input.addEventListener( 'change', function () {
-				opts.onChange( input.value );
-			} );
-			if ( opts.decimals === 1 && input.type === 'number' ) {
-				input.addEventListener( 'blur', function () {
-					var n = parseFloat( input.value );
-					if ( !isNaN( n ) ) {
-						input.value = n.toFixed( 1 );
+
+			// Store the last valid value for fallback
+			var lastValidValue = input.value;
+
+			// Create error indicator
+			var errorIndicator = document.createElement( 'span' );
+			errorIndicator.className = 'property-field-error';
+
+			// Validation function
+			var validateInput = function ( value, showError ) {
+				if ( input.type === 'number' ) {
+					var num = parseFloat( value );
+					var isValid = true;
+					var errorMessage = '';
+
+					if ( value.trim() === '' ) {
+						isValid = false;
+						errorMessage = 'This field is required';
+					} else if ( isNaN( num ) ) {
+						isValid = false;
+						errorMessage = 'Please enter a valid number';
+					} else if ( opts.min !== undefined && num < parseFloat( opts.min ) ) {
+						isValid = false;
+						errorMessage = 'Value must be at least ' + opts.min;
+					} else if ( opts.max !== undefined && num > parseFloat( opts.max ) ) {
+						isValid = false;
+						errorMessage = 'Value must be at most ' + opts.max;
 					}
-				} );
+
+					// Visual feedback
+					if ( isValid ) {
+						input.classList.remove( 'error' );
+						errorIndicator.classList.remove( 'show' );
+						lastValidValue = value;
+					} else if ( showError ) {
+						input.classList.add( 'error' );
+						errorIndicator.textContent = errorMessage;
+						errorIndicator.classList.add( 'show' );
+					}
+
+					return isValid;
+				}
+				return true; // Non-numeric fields are always valid for now
+			};
+
+			// Add input event handler for real-time validation
+			input.addEventListener( 'input', function () {
+				var value = input.value;
+				// Don't show error on input, just on blur/change
+				validateInput( value, false );
+
+				if ( input.type === 'number' && opts.decimals === 1 ) {
+					var n = parseFloat( value );
+					if ( !isNaN( n ) ) {
+						// Limit to 1 decimal place during input
+						var rounded = Math.round( n * 10 ) / 10;
+						if ( value !== String( rounded ) ) {
+							setTimeout( function () {
+								input.value = rounded.toFixed( 1 );
+								lastValidValue = input.value;
+							}, 0 );
+						}
+					}
+				}
+			} );
+
+			input.addEventListener( 'change', function () {
+				var value = input.value;
+				var isValid = validateInput( value, true );
+
+				if ( isValid ) {
+					if ( input.type === 'number' && opts.decimals === 1 ) {
+						var n = parseFloat( value );
+						if ( !isNaN( n ) ) {
+							var rounded = Math.round( n * 10 ) / 10;
+							input.value = rounded.toFixed( 1 );
+							opts.onChange( rounded );
+						}
+					} else if ( input.type === 'number' ) {
+						var num = parseFloat( value );
+						if ( !isNaN( num ) ) {
+							// Ensure the value is within bounds
+							if ( opts.min !== undefined ) {
+								num = Math.max( num, parseFloat( opts.min ) );
+							}
+							if ( opts.max !== undefined ) {
+								num = Math.min( num, parseFloat( opts.max ) );
+							}
+							input.value = String( num );
+							opts.onChange( num );
+						}
+					} else if ( input.type === 'checkbox' ) {
+						opts.onChange( input.checked );
+					} else {
+						opts.onChange( value );
+					}
+					lastValidValue = input.value;
+				} else {
+					// Revert to last valid value if current value is invalid
+					setTimeout( function () {
+						input.value = lastValidValue;
+						validateInput( lastValidValue, false );
+					}, 100 );
+				}
+			} );
+
+			input.addEventListener( 'blur', function () {
+				var value = input.value;
+				var isValid = validateInput( value, true );
+
+				if ( !isValid ) {
+					// Revert to last valid value
+					input.value = lastValidValue;
+					validateInput( lastValidValue, false );
+				} else if ( input.type === 'number' && opts.decimals === 1 ) {
+					var n = parseFloat( value );
+					if ( !isNaN( n ) ) {
+						var rounded = Math.round( n * 10 ) / 10;
+						input.value = rounded.toFixed( 1 );
+						lastValidValue = input.value;
+					}
+				}
+			} );
+
+			// Add checkbox handling
+			if ( input.type === 'checkbox' ) {
+				input.checked = !!opts.value;
 			}
+
 			wrapper.appendChild( labelEl );
 			wrapper.appendChild( input );
-			form.appendChild( wrapper );
+			wrapper.appendChild( errorIndicator );
+			( currentSectionBody || form ).appendChild( wrapper );
 			return input;
 		};
 		var addSelect = function ( opts ) {
@@ -648,12 +849,286 @@
 			} );
 			wrapper.appendChild( labelEl );
 			wrapper.appendChild( select );
-			form.appendChild( wrapper );
+			( currentSectionBody || form ).appendChild( wrapper );
 			return select;
 		};
+		var addColorPicker = function ( opts ) {
+			var wrapper = document.createElement( 'div' );
+			wrapper.className = 'property-field property-field--color';
+			var labelEl = document.createElement( 'label' );
+			labelEl.textContent = opts.label;
+
+			// Color display button that opens the picker
+			var colorButton = document.createElement( 'button' );
+			colorButton.type = 'button';
+			colorButton.className = 'color-display-button';
+			colorButton.style.width = '30px';
+			colorButton.style.height = '30px';
+			colorButton.style.border = '1px solid #ccc';
+			colorButton.style.borderRadius = '4px';
+			colorButton.style.cursor = 'pointer';
+			colorButton.style.marginLeft = '8px';
+
+			// Set initial color display
+			var updateColorDisplay = function ( color ) {
+				if ( !color || color === 'none' || color === 'transparent' ) {
+					// Show transparent pattern
+					colorButton.style.background = 'repeating-linear-gradient(45deg, #ff0000 0, #ff0000 4px, transparent 4px, transparent 8px)';
+					colorButton.title = 'Transparent';
+				} else {
+					colorButton.style.background = color;
+					colorButton.title = color;
+				}
+			};
+			updateColorDisplay( opts.value );
+
+			// Create professional color picker dialog
+			var createColorPickerDialog = function () {
+				// Get button position for positioning the dialog
+				var buttonRect = colorButton.getBoundingClientRect();
+
+				var overlay = document.createElement( 'div' );
+				overlay.className = 'color-picker-overlay';
+				overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 999999;';
+
+				var dialog = document.createElement( 'div' );
+				dialog.className = 'color-picker-dialog';
+
+				// Position dialog near the button
+				var dialogTop = buttonRect.bottom + 5;
+				var dialogLeft = buttonRect.left;
+
+				// Ensure dialog stays within viewport
+				var maxTop = window.innerHeight - 420; // Approximate dialog height
+				var maxLeft = window.innerWidth - 300; // Approximate dialog width
+
+				if ( dialogTop > maxTop ) {
+					dialogTop = buttonRect.top - 420 - 5; // Position above button
+				}
+				if ( dialogLeft > maxLeft ) {
+					dialogLeft = maxLeft;
+				}
+				if ( dialogLeft < 10 ) {
+					dialogLeft = 10;
+				}
+				if ( dialogTop < 10 ) {
+					dialogTop = 10;
+				}
+
+				dialog.style.cssText = 'position: fixed; top: ' + Math.floor( dialogTop ) + 'px; left: ' + Math.floor( dialogLeft ) + 'px; background: white; border: 2px solid #333; border-radius: 6px; padding: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); width: 260px; z-index: 1000000;';
+
+				// Title
+				var title = document.createElement( 'h3' );
+				title.textContent = 'Choose Color';
+				title.style.cssText = 'margin: 0 0 16px 0; font-size: 16px; color: #333;';
+				dialog.appendChild( title );
+
+				// Standard color palette grid
+				var paletteContainer = document.createElement( 'div' );
+				paletteContainer.style.cssText = 'margin-bottom: 16px;';
+
+				var paletteTitle = document.createElement( 'div' );
+				paletteTitle.textContent = 'Standard Colors';
+				paletteTitle.style.cssText = 'font-size: 12px; color: #666; margin-bottom: 8px;';
+				paletteContainer.appendChild( paletteTitle );
+
+				var paletteGrid = document.createElement( 'div' );
+				paletteGrid.style.cssText = 'display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin-bottom: 12px;';
+
+				// Standard color palette
+				var standardColors = [
+					'#000000', '#404040', '#808080', '#c0c0c0', '#ffffff', '#ff0000', '#ffff00', '#00ff00',
+					'#00ffff', '#0000ff', '#ff00ff', '#800000', '#808000', '#008000', '#008080', '#000080',
+					'#800080', '#ff4500', '#ffa500', '#ffff00', '#adff2f', '#00ff7f', '#00bfff', '#1e90ff',
+					'#9370db', '#ff69b4', '#ffdab9', '#f0e68c', '#e0ffff', '#ffe4e1', '#dcdcdc', '#a9a9a9'
+				];
+
+				// Selection tracking
+				var selectedColor = opts.value === 'none' ? 'none' : ( opts.value || '#000000' );
+				var selectedButton = null;
+
+				var updateSelection = function ( button ) {
+					// Remove previous selection
+					if ( selectedButton ) {
+						selectedButton.style.borderColor = '#999';
+						selectedButton.style.borderWidth = '1px';
+					}
+					// Highlight new selection
+					if ( button ) {
+						button.style.borderColor = '#007cba';
+						button.style.borderWidth = '2px';
+						selectedButton = button;
+					}
+				};
+
+				// Add "none/transparent" as first option
+				var noneButton = document.createElement( 'button' );
+				noneButton.type = 'button';
+				noneButton.style.cssText = 'width: 24px; height: 24px; border: 1px solid #999; border-radius: 3px; cursor: pointer; background: repeating-linear-gradient(45deg, #ff0000 0, #ff0000 2px, white 2px, white 4px); position: relative;';
+				noneButton.title = 'No Fill (Transparent)';
+				noneButton.addEventListener( 'click', function () {
+					selectedColor = 'none';
+					updateSelection( noneButton );
+				} );
+				paletteGrid.appendChild( noneButton );
+
+				// Add standard colors
+				standardColors.forEach( function ( color ) {
+					var colorBtn = document.createElement( 'button' );
+					colorBtn.type = 'button';
+					colorBtn.style.cssText = 'width: 24px; height: 24px; border: 1px solid #999; border-radius: 3px; cursor: pointer; background-color: ' + color + ';';
+					colorBtn.title = color;
+					colorBtn.addEventListener( 'click', function () {
+						selectedColor = color;
+						updateSelection( colorBtn );
+					} );
+					paletteGrid.appendChild( colorBtn );
+				} );
+
+				paletteContainer.appendChild( paletteGrid );
+				dialog.appendChild( paletteContainer );
+
+				// Custom color slots (user-saved colors)
+				var customContainer = document.createElement( 'div' );
+				customContainer.style.cssText = 'margin-bottom: 16px;';
+
+				var customTitle = document.createElement( 'div' );
+				customTitle.textContent = 'Custom Colors';
+				customTitle.style.cssText = 'font-size: 12px; color: #666; margin-bottom: 8px;';
+				customContainer.appendChild( customTitle );
+
+				var customGrid = document.createElement( 'div' );
+				customGrid.style.cssText = 'display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin-bottom: 12px;';
+
+				// Create 16 custom color slots
+				var savedCustomColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
+
+				var createCustomButtonClickHandler = function ( button ) {
+					return function () {
+						selectedColor = button.style.backgroundColor;
+						updateSelection( button );
+					};
+				};
+
+				for ( var i = 0; i < 16; i++ ) {
+					var customBtn = document.createElement( 'button' );
+					customBtn.type = 'button';
+					customBtn.style.cssText = 'width: 24px; height: 24px; border: 1px solid #999; border-radius: 3px; cursor: pointer;';
+					customBtn.dataset.slot = i;
+					if ( savedCustomColors[ i ] ) {
+						customBtn.style.backgroundColor = savedCustomColors[ i ];
+						customBtn.title = savedCustomColors[ i ];
+						customBtn.addEventListener( 'click', createCustomButtonClickHandler( customBtn ) );
+					} else {
+						customBtn.style.backgroundColor = '#f5f5f5';
+						customBtn.title = 'Empty slot - colors will be saved here automatically';
+					}
+					customGrid.appendChild( customBtn );
+				}
+
+				customContainer.appendChild( customGrid );
+				dialog.appendChild( customContainer );
+
+				// Custom color picker
+				var customSection = document.createElement( 'div' );
+				customSection.style.cssText = 'margin-bottom: 16px;';
+
+				var customLabel = document.createElement( 'div' );
+				customLabel.textContent = 'Custom Color';
+				customLabel.style.cssText = 'font-size: 12px; color: #666; margin-bottom: 8px;';
+				customSection.appendChild( customLabel );
+
+				var customInput = document.createElement( 'input' );
+				customInput.type = 'color';
+				customInput.style.cssText = 'width: 30px; height: 30px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;';
+				customInput.addEventListener( 'change', function () {
+					selectedColor = customInput.value;
+				} );
+				customSection.appendChild( customInput );
+
+				dialog.appendChild( customSection );
+
+				// Set initial selection
+				if ( selectedColor === 'none' ) {
+					updateSelection( noneButton );
+				}
+
+				// Buttons
+				var buttonContainer = document.createElement( 'div' );
+				buttonContainer.style.cssText = 'display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;';
+
+				var cancelBtn = document.createElement( 'button' );
+				cancelBtn.type = 'button';
+				cancelBtn.textContent = 'Cancel';
+				cancelBtn.style.cssText = 'padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;';
+				cancelBtn.addEventListener( 'click', function () {
+					document.body.removeChild( overlay );
+					document.body.removeChild( dialog );
+				} );
+
+				var okBtn = document.createElement( 'button' );
+				okBtn.type = 'button';
+				okBtn.textContent = 'OK';
+				okBtn.style.cssText = 'padding: 8px 16px; border: 1px solid #007cba; border-radius: 4px; background: #007cba; color: white; cursor: pointer;';
+				okBtn.addEventListener( 'click', function () {
+					// Save to custom colors if it's a new color
+					if ( selectedColor !== 'none' && selectedColor !== opts.value ) {
+						var customColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
+						if ( customColors.indexOf( selectedColor ) === -1 ) {
+							customColors.unshift( selectedColor );
+							customColors = customColors.slice( 0, 16 ); // Keep only 16 most recent
+							localStorage.setItem( 'layers-custom-colors', JSON.stringify( customColors ) );
+						}
+					}
+
+					// Apply the color
+					opts.onChange( selectedColor );
+					updateColorDisplay( selectedColor );
+					document.body.removeChild( overlay );
+					document.body.removeChild( dialog );
+				} );
+
+				buttonContainer.appendChild( cancelBtn );
+				buttonContainer.appendChild( okBtn );
+				dialog.appendChild( buttonContainer );
+
+				// Close on overlay click
+				overlay.addEventListener( 'click', function ( e ) {
+					if ( e.target === overlay ) {
+						document.body.removeChild( overlay );
+						document.body.removeChild( dialog );
+					}
+				} );
+
+				// Close on Escape key
+				var escapeHandler = function ( e ) {
+					if ( e.key === 'Escape' ) {
+						document.body.removeChild( overlay );
+						document.body.removeChild( dialog );
+						document.removeEventListener( 'keydown', escapeHandler );
+					}
+				};
+				document.addEventListener( 'keydown', escapeHandler );
+
+				return { overlay: overlay, dialog: dialog };
+			};
+
+			// Open color picker on button click
+			colorButton.addEventListener( 'click', function () {
+				var components = createColorPickerDialog();
+				document.body.appendChild( components.overlay );
+				document.body.appendChild( components.dialog );
+			} );
+
+			wrapper.appendChild( labelEl );
+			wrapper.appendChild( colorButton );
+			( currentSectionBody || form ).appendChild( wrapper );
+			return colorButton;
+		};
+
 		var addCheckbox = function ( opts ) {
 			var wrapper = document.createElement( 'div' );
-			wrapper.className = 'property-field';
+			wrapper.className = 'property-field property-field--checkbox';
 			var labelEl = document.createElement( 'label' );
 			labelEl.textContent = opts.label;
 			var input = document.createElement( 'input' );
@@ -664,12 +1139,65 @@
 			} );
 			wrapper.appendChild( labelEl );
 			wrapper.appendChild( input );
-			form.appendChild( wrapper );
+			( currentSectionBody || form ).appendChild( wrapper );
 			return input;
 		};
 
+		// Composite control: number input + range slider
+		var addSliderInput = function ( opts ) {
+			var wrapper = document.createElement( 'div' );
+			wrapper.className = 'property-field property-field--compound';
+			var labelEl = document.createElement( 'label' );
+			labelEl.textContent = opts.label;
+
+			var controls = document.createElement( 'div' );
+			controls.className = 'compact-controls';
+
+			var numberInput = document.createElement( 'input' );
+			numberInput.type = 'number';
+			numberInput.className = 'compact-number';
+			numberInput.min = String( opts.min || 0 );
+			numberInput.max = String( opts.max || 100 );
+			numberInput.step = String( opts.step || 1 );
+			numberInput.value = String( opts.value || 0 );
+
+			var rangeInput = document.createElement( 'input' );
+			rangeInput.type = 'range';
+			rangeInput.className = 'compact-range';
+			rangeInput.min = String( opts.min || 0 );
+			rangeInput.max = String( opts.max || 100 );
+			rangeInput.step = String( opts.step || 1 );
+			rangeInput.value = String( opts.value || 0 );
+
+			// Sync inputs
+			var updateValue = function ( value ) {
+				var num = parseFloat( value );
+				if ( !isNaN( num ) ) {
+					num = Math.max( opts.min || 0, Math.min( opts.max || 100, num ) );
+					numberInput.value = String( num );
+					rangeInput.value = String( num );
+					opts.onChange( num );
+				}
+			};
+
+			numberInput.addEventListener( 'input', function () {
+				updateValue( numberInput.value );
+			} );
+
+			rangeInput.addEventListener( 'input', function () {
+				updateValue( rangeInput.value );
+			} );
+
+			controls.appendChild( numberInput );
+			controls.appendChild( rangeInput );
+			wrapper.appendChild( labelEl );
+			wrapper.appendChild( controls );
+			( currentSectionBody || form ).appendChild( wrapper );
+			return { number: numberInput, range: rangeInput };
+		};
+
 		// Transform
-		addSection( t( 'layers-section-transform', 'Transform' ) );
+		addSection( t( 'layers-section-transform', 'Transform' ), 'transform' );
 		addInput( {
 			label: t( 'layers-prop-x', 'X' ),
 			type: 'number',
@@ -702,8 +1230,11 @@
 		} );
 
 		// Size/geometry per type
+		var LAYER_TYPES = window.LayersConstants ? window.LayersConstants.LAYER_TYPES : {};
+		var DEFAULTS = window.LayersConstants ? window.LayersConstants.DEFAULTS : {};
+		var LIMITS = window.LayersConstants ? window.LayersConstants.LIMITS : {};
 		switch ( layer.type ) {
-			case 'rectangle':
+			case LAYER_TYPES.RECTANGLE || 'rectangle':
 				addInput( {
 					label: t( 'layers-prop-width', 'Width' ),
 					type: 'number',
@@ -725,11 +1256,11 @@
 					}
 				} );
 				break;
-			case 'circle':
+			case LAYER_TYPES.CIRCLE || 'circle':
 				addInput( {
 					label: t( 'layers-prop-radius', 'Radius' ),
 					type: 'number',
-					value: layer.radius || 0,
+					value: layer.radius || DEFAULTS.RADIUS || 50,
 					step: 1,
 					decimals: 1,
 					onChange: function ( v ) {
@@ -737,7 +1268,7 @@
 					}
 				} );
 				break;
-			case 'ellipse':
+			case LAYER_TYPES.ELLIPSE || 'ellipse':
 				addInput( {
 					label: t( 'layers-prop-width', 'Width' ),
 					type: 'number',
@@ -761,22 +1292,24 @@
 					}
 				} );
 				break;
-			case 'polygon':
+			case LAYER_TYPES.POLYGON || 'polygon':
 				addInput( {
 					label: t( 'layers-prop-sides', 'Sides' ),
 					type: 'number',
-					value: layer.sides || 6,
-					min: 3,
+					value: layer.sides || DEFAULTS.POLYGON_SIDES || 6,
+					min: LIMITS.MIN_POLYGON_SIDES || 3,
+					max: LIMITS.MAX_POLYGON_SIDES || 20,
 					step: 1,
 					onChange: function ( v ) {
-						var sidesVal = Math.max( 3, parseInt( v, 10 ) || 6 );
+						var minSides = LIMITS.MIN_POLYGON_SIDES || 3;
+						var sidesVal = Math.max( minSides, parseInt( v, 10 ) || 6 );
 						self.editor.updateLayer( layer.id, { sides: sidesVal } );
 					}
 				} );
 				addInput( {
 					label: t( 'layers-prop-radius', 'Radius' ),
 					type: 'number',
-					value: layer.radius || 50,
+					value: layer.radius || DEFAULTS.RADIUS || 50,
 					step: 1,
 					decimals: 1,
 					onChange: function ( v ) {
@@ -784,15 +1317,17 @@
 					}
 				} );
 				break;
-			case 'star':
+			case LAYER_TYPES.STAR || 'star':
 				addInput( {
 					label: t( 'layers-prop-points', 'Points' ),
 					type: 'number',
-					value: layer.points || 5,
-					min: 3,
+					value: layer.points || DEFAULTS.STAR_POINTS || 5,
+					min: LIMITS.MIN_STAR_POINTS || 3,
+					max: LIMITS.MAX_STAR_POINTS || 20,
 					step: 1,
 					onChange: function ( v ) {
-						var ptsVal = Math.max( 3, parseInt( v, 10 ) || 5 );
+						var minPoints = LIMITS.MIN_STAR_POINTS || 3;
+						var ptsVal = Math.max( minPoints, parseInt( v, 10 ) || 5 );
 						self.editor.updateLayer( layer.id, { points: ptsVal } );
 					}
 				} );
@@ -817,7 +1352,7 @@
 					}
 				} );
 				break;
-			case 'line':
+			case LAYER_TYPES.LINE || 'line':
 				addInput( {
 					label: 'x1',
 					type: 'number',
@@ -859,7 +1394,7 @@
 					}
 				} );
 				break;
-			case 'arrow':
+			case LAYER_TYPES.ARROW || 'arrow':
 				addInput( {
 					label: 'x1',
 					type: 'number',
@@ -956,21 +1491,16 @@
 				} );
 				// Text stroke color (only show if stroke width > 0)
 				if ( ( layer.textStrokeWidth || 0 ) > 0 ) {
-					var textStrokeColorRow = document.createElement( 'div' );
-					textStrokeColorRow.className = 'property-field';
-					var textStrokeLabel = document.createElement( 'label' );
-					textStrokeLabel.textContent = t( 'layers-prop-stroke-color', 'Text Stroke Color' );
-					var textStrokeInput = document.createElement( 'input' );
-					textStrokeInput.type = 'color';
-					textStrokeInput.value = layer.textStrokeColor || '#000000';
-					textStrokeInput.addEventListener( 'change', function () {
-						self.editor.updateLayer( layer.id, {
-							textStrokeColor: textStrokeInput.value
-						} );
+					addColorPicker( {
+						label: t( 'layers-prop-stroke-color', 'Text Stroke Color' ),
+						value: layer.textStrokeColor,
+						property: 'textStrokeColor',
+						onChange: function ( newColor ) {
+							self.editor.updateLayer( layer.id, {
+								textStrokeColor: newColor
+							} );
+						}
 					} );
-					textStrokeColorRow.appendChild( textStrokeLabel );
-					textStrokeColorRow.appendChild( textStrokeInput );
-					form.appendChild( textStrokeColorRow );
 				}
 				break;
 			case 'highlight':
@@ -1032,37 +1562,26 @@
 		}
 
 		// Appearance
-		addSection( t( 'layers-section-appearance', 'Appearance' ) );
-		// Stroke and fill color selectors, side by side, with clear labels
-		var colorRow = document.createElement( 'div' );
-		colorRow.className = 'property-field property-field--compound';
-		var strokeLabel = document.createElement( 'label' );
-		strokeLabel.textContent = t( 'layers-prop-stroke-color', 'Stroke Color' );
-		strokeLabel.setAttribute( 'for', 'stroke-color-input' );
-		var strokeInput = document.createElement( 'input' );
-		strokeInput.type = 'color';
-		strokeInput.id = 'stroke-color-input';
-		strokeInput.value = layer.stroke || '#000000';
-		strokeInput.setAttribute( 'aria-label', t( 'layers-prop-stroke-color', 'Stroke Color' ) );
-		strokeInput.addEventListener( 'change', function () {
-			self.editor.updateLayer( layer.id, { stroke: strokeInput.value } );
+		addSection( t( 'layers-section-appearance', 'Appearance' ), 'appearance' );
+		// Stroke and fill color selectors (text layers use textStrokeColor instead)
+		if ( layer.type !== 'text' ) {
+			addColorPicker( {
+				label: t( 'layers-prop-stroke-color', 'Stroke Color' ),
+				value: layer.stroke,
+				property: 'stroke',
+				onChange: function ( newColor ) {
+					self.editor.updateLayer( layer.id, { stroke: newColor } );
+				}
+			} );
+		}
+		addColorPicker( {
+			label: t( 'layers-prop-fill-color', 'Fill Color' ),
+			value: layer.fill,
+			property: 'fill',
+			onChange: function ( newColor ) {
+				self.editor.updateLayer( layer.id, { fill: newColor } );
+			}
 		} );
-		var fillLabel = document.createElement( 'label' );
-		fillLabel.textContent = t( 'layers-prop-fill-color', 'Fill Color' );
-		fillLabel.setAttribute( 'for', 'fill-color-input' );
-		var fillInput = document.createElement( 'input' );
-		fillInput.type = 'color';
-		fillInput.id = 'fill-color-input';
-		fillInput.value = layer.fill || '#ffffff';
-		fillInput.setAttribute( 'aria-label', t( 'layers-prop-fill-color', 'Fill Color' ) );
-		fillInput.addEventListener( 'change', function () {
-			self.editor.updateLayer( layer.id, { fill: fillInput.value } );
-		} );
-		colorRow.appendChild( strokeLabel );
-		colorRow.appendChild( strokeInput );
-		colorRow.appendChild( fillLabel );
-		colorRow.appendChild( fillInput );
-		form.appendChild( colorRow );
 		// Stroke width (no slider, up to 200)
 		addInput( {
 			label: t( 'layers-prop-stroke-width', 'Stroke Width' ),
@@ -1076,10 +1595,9 @@
 				self.editor.updateLayer( layer.id, { strokeWidth: val } );
 			}
 		} );
-		// Stroke opacity (number only, 0-100)
-		addInput( {
+		// Stroke opacity (number + slider, 0-100)
+		addSliderInput( {
 			label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ),
-			type: 'number',
 			value: ( layer.strokeOpacity !== null && layer.strokeOpacity !== undefined ) ?
 				Math.round( layer.strokeOpacity * 100 ) :
 				100,
@@ -1087,14 +1605,12 @@
 			max: 100,
 			step: 1,
 			onChange: function ( v ) {
-				var so = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 100 ) );
-				self.editor.updateLayer( layer.id, { strokeOpacity: so / 100 } );
+				self.editor.updateLayer( layer.id, { strokeOpacity: v / 100 } );
 			}
 		} );
-		// Fill opacity (number only, 0-100)
-		addInput( {
+		// Fill opacity (number + slider, 0-100)
+		addSliderInput( {
 			label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ),
-			type: 'number',
 			value: ( layer.fillOpacity !== null && layer.fillOpacity !== undefined ) ?
 				Math.round( layer.fillOpacity * 100 ) :
 				100,
@@ -1102,29 +1618,26 @@
 			max: 100,
 			step: 1,
 			onChange: function ( v ) {
-				var fo = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 100 ) );
-				self.editor.updateLayer( layer.id, { fillOpacity: fo / 100 } );
+				self.editor.updateLayer( layer.id, { fillOpacity: v / 100 } );
 			}
 		} );
 
 		// Effects (layer-level)
-		addSection( t( 'layers-section-effects', 'Effects' ) );
+		addSection( t( 'layers-section-effects', 'Effects' ), 'effects' );
 		var layerOpacityValue = (
 			layer.opacity !== null &&
 			layer.opacity !== undefined
 		) ? layer.opacity : 1;
 		layerOpacityValue = Math.round( layerOpacityValue * 100 );
-		// Layer opacity: number (0–100) only, no slider
-		addInput( {
+		// Layer opacity: number + slider (0–100)
+		addSliderInput( {
 			label: t( 'layers-prop-opacity', 'Layer Opacity' ),
-			type: 'number',
 			value: layerOpacityValue,
 			min: 0,
 			max: 100,
 			step: 1,
 			onChange: function ( v ) {
-				var val = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 0 ) );
-				self.editor.updateLayer( layer.id, { opacity: val / 100 } );
+				self.editor.updateLayer( layer.id, { opacity: v / 100 } );
 			}
 		} );
 		addSelect( { label: t( 'layers-prop-blend', 'Blend' ), value: layer.blend || 'normal', options: [
@@ -1312,6 +1825,8 @@
 			this.editor.layers = this.layers;
 			this.editor.renderLayers();
 			this.renderLayerList();
+			// Save state for undo/redo functionality
+			this.editor.saveState( 'Reorder Layers' );
 		}
 	};
 
@@ -1345,7 +1860,7 @@
 		} else {
 			// Specific layers visible
 			var layerIds = visibleLayers.map( function ( layer ) {
-				return layer.id ? layer.id.slice( 0, 4 ) : 'unknown';
+				return layer.id || ( 'layer_' + Math.random().toString( 36 ).slice( 2, 6 ) );
 			} );
 			var layersParam = layerIds.join( ',' );
 

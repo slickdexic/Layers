@@ -238,63 +238,313 @@ body.layers-editor-open .mw-body-content {
 	max-height: 40vh;
 }
 
-/* Properties + Code panel sections */
+/* Color picker with "none" option */
+.color-picker-group {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-wrap: wrap;
+	max-width: 300px;
+}
+
+.color-btn {
+	width: 24px;
+	height: 24px;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	cursor: pointer;
+	margin: 1px;
+	padding: 0;
+	outline: none;
+}
+
+.color-btn:hover {
+	border-color: #999;
+}
+
+.color-btn.selected {
+	border-color: #007cba;
+	border-width: 2px;
+	margin: 0px;
+}
+
+.color-none-btn {
+	width: 32px;
+	height: 32px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	cursor: pointer;
+	background: linear-gradient( 45deg, #f00 25%, transparent 25% ), linear-gradient( -45deg, #f00 25%, transparent 25% ), linear-gradient( 45deg, transparent 75%, #f00 75% ), linear-gradient( -45deg, transparent 75%, #f00 75% );
+	background-size: 8px 8px;
+	background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+	color: #fff;
+	font-weight: bold;
+	font-size: 1em;
+	text-align: center;
+	position: relative;
+}
+
+.color-none-btn:hover {
+	border-color: #999;
+}
+
+.color-none-btn.active {
+	border-color: #f44336;
+	box-shadow: 0 0 3px rgba( 244, 67, 54, 0.5 );
+}
+
+/* Toolbar color inputs - make them square */
+.layers-toolbar input[type="color"] {
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.layers-toolbar .color-picker {
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+/* Properties form layout improvements */
 .layers-properties,
 .layers-code-panel {
 	border-top: 1px solid #eee;
-	padding: 10px 12px;
+	padding: 12px;
 	overflow-y: auto;
 	max-height: 40vh;
 }
 .layers-properties h4,
 .layers-code-panel h4 {
-	margin: 0 0 8px 0;
-	font-size: 0.9em;
+	margin: 0 0 12px 0;
+	font-size: 0.95em;
+	font-weight: 600;
 }
+
+/* Property sections with modern fieldset styling */
+.property-section {
+	border: 1px solid #e3e6ea;
+	border-radius: 6px;
+	margin-bottom: 16px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.property-section:last-child {
+	margin-bottom: 0;
+}
+
+.property-section-header {
+	background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+	border-bottom: 1px solid #e3e6ea;
+	border-radius: 5px 5px 0 0;
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 0.85em;
+	color: #495057;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.property-section-header::before {
+	content: '';
+	width: 12px;
+	height: 12px;
+	border-radius: 2px;
+	flex-shrink: 0;
+}
+
+.property-section-header--transform::before {
+	background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.property-section-header--appearance::before {
+	background: linear-gradient(135deg, #007bff, #6f42c1);
+}
+
+.property-section-header--effects::before {
+	background: linear-gradient(135deg, #fd7e14, #e83e8c);
+}
+
+.property-section-body {
+	padding: 12px;
+}
+
 .layer-properties-form .property-field {
 	display: grid;
-	grid-template-columns: auto 1fr;
-	gap: 6px;
+	grid-template-columns: 1fr 120px;
+	gap: 8px;
 	align-items: center;
-	margin-bottom: 8px;
+	margin-bottom: 10px;
 }
-.layer-properties-form .property-field + .property-field {
-	/* visual grouping */
-	margin-top: 8px;
+
+.layer-properties-form .property-field:last-child {
+	margin-bottom: 0;
 }
+
 .layer-properties-form label {
-	color: #444;
-	font-size: 0.75em;
+	color: #495057;
+	font-size: 0.8em;
+	font-weight: 500;
+	line-height: 1.2;
 }
-.layer-properties-form input[ type='number' ],
-.layer-properties-form input[ type='text' ] {
-	width: 120px;
-	box-sizing: border-box;
+
+.layer-properties-form input[type='number'],
+.layer-properties-form input[type='text'] {
+	width: 100%;
+	height: 32px;
+	padding: 6px 8px;
+	border: 1px solid #ced4da;
+	border-radius: 4px;
+	font-size: 0.85em;
 	font-variant-numeric: tabular-nums;
+	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
-.layer-properties-form input[ type='color' ] {
-	width: 24px;
-	height: 24px;
+
+.layer-properties-form input[type='number']:focus,
+.layer-properties-form input[type='text']:focus {
+	border-color: #80bdff;
+	outline: 0;
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.layer-properties-form select {
+	width: 100%;
+	height: 32px;
+	padding: 6px 8px;
+	border: 1px solid #ced4da;
+	border-radius: 4px;
+	font-size: 0.85em;
+	background-color: #fff;
+	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.layer-properties-form select:focus {
+	border-color: #80bdff;
+	outline: 0;
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.layer-properties-form input[type='color'] {
+	width: 40px;
+	height: 32px;
 	padding: 0;
-	border: 1px solid #ccc;
-	border-radius: 3px;
+	border: 1px solid #ced4da;
+	border-radius: 4px;
+	cursor: pointer;
 }
 
 /* Compound fields: number + slider side by side */
 .layer-properties-form .property-field--compound {
-	grid-template-columns: auto 1fr;
+	grid-template-columns: 1fr 120px;
 }
+
 .layer-properties-form .compact-controls {
 	display: grid;
-	grid-template-columns: 70px 1fr;
-	gap: 6px;
+	grid-template-columns: 80px 1fr;
+	gap: 8px;
 	align-items: center;
 }
+
 .layer-properties-form .compact-number {
-	width: 70px;
+	width: 80px;
+	height: 28px;
+	padding: 4px 6px;
+	font-size: 0.8em;
 }
+
 .layer-properties-form .compact-range {
 	width: 100%;
+	height: 6px;
+	border-radius: 3px;
+	background: #e9ecef;
+	outline: none;
+	appearance: none;
+}
+
+.layer-properties-form .compact-range::-webkit-slider-thumb {
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #007bff;
+	cursor: pointer;
+	border: 2px solid #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.layer-properties-form .compact-range::-moz-range-thumb {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #007bff;
+	cursor: pointer;
+	border: 2px solid #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Checkbox styling */
+.layer-properties-form .property-field--checkbox {
+	grid-template-columns: 1fr auto;
+	gap: 8px;
+}
+
+.layer-properties-form input[type='checkbox'] {
+	width: 18px;
+	height: 18px;
+	accent-color: #007bff;
+	cursor: pointer;
+}
+
+/* Color picker button styling */
+.color-display-button {
+	width: 40px !important;
+	height: 32px !important;
+	border: 1px solid #ced4da !important;
+	border-radius: 4px !important;
+	cursor: pointer !important;
+	transition: border-color 0.15s ease-in-out !important;
+}
+
+.color-display-button:hover {
+	border-color: #80bdff !important;
+}
+
+.color-display-button:focus {
+	outline: 0 !important;
+	border-color: #80bdff !important;
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+}
+
+/* Error styling */
+.property-field-error {
+	grid-column: 1 / -1;
+	color: #dc3545 !important;
+	font-size: 0.75em !important;
+	margin-top: 4px !important;
+	display: none !important;
+}
+
+.property-field-error.show {
+	display: block !important;
+}
+
+/* Input error state */
+.layer-properties-form input.error {
+	border-color: #dc3545 !important;
+	background-color: #fff5f5 !important;
+}
+
+.layer-properties-form input.error:focus {
+	border-color: #dc3545 !important;
+	box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
 }
 .layers-code-panel .layers-code {
 	display: block;
