@@ -182,6 +182,13 @@
 	"layers-alert-title": "Notice",
 	"layers-alert-ok": "OK",
 	"layers-progress-title": "Processing",
+	"layers-error-api": "Failed to save changes. Please try again.",
+	"layers-error-canvas": "Drawing error occurred. Please refresh if issues persist.",
+	"layers-error-validation": "Invalid data entered. Please check your input.",
+	"layers-error-load": "Failed to load layer data. Please refresh the page.",
+	"layers-error-save": "Failed to save layer data. Please try again.",
+	"layers-error-render": "Rendering error occurred. Please try again.",
+	"layers-error-general": "An unexpected error occurred. Please refresh if issues persist.",
 	"right-editlayers": "Edit image layers",
 	"right-createlayers": "Create reusable layer assets",
 	"right-managelayerlibrary": "Manage layer library assets"

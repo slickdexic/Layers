@@ -252,45 +252,96 @@
 		this.codePanel.setAttribute( 'aria-label', msgFunction( 'layers-code-title', 'Wikitext Code' ) );
 		this.codePanel.innerHTML = '<h4>' + msgFunction( 'layers-code-title', 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
 
-		// Compose sidebar
+		// Create second divider for properties/code split
+		var divider2 = document.createElement( 'div' );
+		divider2.className = 'layers-panel-divider';
+		divider2.setAttribute( 'tabindex', '0' );
+		divider2.setAttribute( 'role', 'separator' );
+		divider2.setAttribute( 'aria-orientation', 'horizontal' );
+		divider2.title = msgFunction( 'layers-panel-divider', 'Drag to resize panels' );
+
+		// Compose sidebar - all panels in one container for proper flex layout
 		sidebarInner.appendChild( this.layerList );
 		sidebarInner.appendChild( divider );
 		sidebarInner.appendChild( this.propertiesPanel );
+		sidebarInner.appendChild( divider2 );
+		sidebarInner.appendChild( this.codePanel );
 		this.container.appendChild( header );
 		this.container.appendChild( sidebarInner );
-		this.container.appendChild( this.codePanel );
 		this.updateCodePanel();
 
 		// Resizable divider logic
 		var isDragging = false;
+		var isDragging2 = false;
 		var minListHeight = 60;
 		var minPropsHeight = 80;
+		var minCodeHeight = 60;
+		
+		// First divider (between layers and properties)
 		divider.addEventListener( 'mousedown', function () {
 			isDragging = true;
 			document.body.style.cursor = 'row-resize';
 			document.body.style.userSelect = 'none';
 		} );
+		
+		// Second divider (between properties and code)
+		divider2.addEventListener( 'mousedown', function () {
+			isDragging2 = true;
+			document.body.style.cursor = 'row-resize';
+			document.body.style.userSelect = 'none';
+		} );
+		
 		document.addEventListener( 'mousemove', function ( e ) {
-			if ( !isDragging ) {
+			if ( !isDragging && !isDragging2 ) {
 				return;
 			}
+			
 			var rect = sidebarInner.getBoundingClientRect();
 			var offset = e.clientY - rect.top;
 			var totalHeight = sidebarInner.offsetHeight;
-			var newListHeight = offset;
-			var newPropsHeight = totalHeight - offset - divider.offsetHeight;
-			if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
-				return;
-			}
-			// Set heights
-			sidebarInner.childNodes[ 0 ].style.flex = 'none';
-			sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
-			sidebarInner.childNodes[ 2 ].style.flex = 'none';
-			sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
-		} );
-		document.addEventListener( 'mouseup', function () {
+			var dividerHeight = divider.offsetHeight;
+			var divider2Height = divider2.offsetHeight;
+			var newListHeight, newPropsHeight, newCodeHeight;
+			
 			if ( isDragging ) {
+				// Dragging first divider (layers/properties)
+				newListHeight = offset;
+				var remainingHeight = totalHeight - newListHeight - dividerHeight - divider2Height;
+				var currentCodeHeight = sidebarInner.childNodes[ 4 ].offsetHeight; // codePanel
+				newPropsHeight = remainingHeight - currentCodeHeight;
+				
+				if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
+					return;
+				}
+				
+				sidebarInner.childNodes[ 0 ].style.flex = 'none'; // layerList
+				sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
+				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
+				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
+			}
+			
+			if ( isDragging2 ) {
+				// Dragging second divider (properties/code)
+				var currentListHeight = sidebarInner.childNodes[ 0 ].offsetHeight; // layerList
+				newPropsHeight = offset - currentListHeight - dividerHeight;
+				newCodeHeight = totalHeight - currentListHeight - dividerHeight -
+					newPropsHeight - divider2Height;
+				
+				if ( newPropsHeight < minPropsHeight || newCodeHeight < minCodeHeight ) {
+					return;
+				}
+				
+				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
+				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
+				sidebarInner.childNodes[ 4 ].style.flex = 'none'; // codePanel
+				sidebarInner.childNodes[ 4 ].style.height = newCodeHeight + 'px';
+			}
+		} );
+		
+		document.addEventListener( 'mouseup', function () {
+			if ( isDragging || isDragging2 ) {
 				isDragging = false;
+				isDragging2 = false;
 				document.body.style.cursor = '';
 				document.body.style.userSelect = '';
 			}
@@ -301,26 +352,64 @@
 			document.body.style.cursor = 'row-resize';
 			document.body.style.userSelect = 'none';
 		} );
+		
+		divider2.addEventListener( 'touchstart', function () {
+			isDragging2 = true;
+			document.body.style.cursor = 'row-resize';
+			document.body.style.userSelect = 'none';
+		} );
+		
 		document.addEventListener( 'touchmove', function ( e ) {
-			if ( !isDragging ) {
+			if ( !isDragging && !isDragging2 ) {
 				return;
 			}
+			
 			var rect = sidebarInner.getBoundingClientRect();
 			var offset = e.touches[ 0 ].clientY - rect.top;
 			var totalHeight = sidebarInner.offsetHeight;
-			var newListHeight = offset;
-			var newPropsHeight = totalHeight - offset - divider.offsetHeight;
-			if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
-				return;
-			}
-			sidebarInner.childNodes[ 0 ].style.flex = 'none';
-			sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
-			sidebarInner.childNodes[ 2 ].style.flex = 'none';
-			sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
-		}, { passive: false } );
-		document.addEventListener( 'touchend', function () {
+			var dividerHeight = divider.offsetHeight;
+			var divider2Height = divider2.offsetHeight;
+			var newListHeight, newPropsHeight, newCodeHeight;
+			
 			if ( isDragging ) {
+				// Dragging first divider (layers/properties)
+				newListHeight = offset;
+				var remainingHeight = totalHeight - newListHeight - dividerHeight - divider2Height;
+				var currentCodeHeight = sidebarInner.childNodes[ 4 ].offsetHeight; // codePanel
+				newPropsHeight = remainingHeight - currentCodeHeight;
+				
+				if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
+					return;
+				}
+				
+				sidebarInner.childNodes[ 0 ].style.flex = 'none'; // layerList
+				sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
+				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
+				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
+			}
+			
+			if ( isDragging2 ) {
+				// Dragging second divider (properties/code)
+				var currentListHeight = sidebarInner.childNodes[ 0 ].offsetHeight; // layerList
+				newPropsHeight = offset - currentListHeight - dividerHeight;
+				newCodeHeight = totalHeight - currentListHeight - dividerHeight -
+					newPropsHeight - divider2Height;
+				
+				if ( newPropsHeight < minPropsHeight || newCodeHeight < minCodeHeight ) {
+					return;
+				}
+				
+				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
+				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
+				sidebarInner.childNodes[ 4 ].style.flex = 'none'; // codePanel
+				sidebarInner.childNodes[ 4 ].style.height = newCodeHeight + 'px';
+			}
+		}, { passive: false } );
+		
+		document.addEventListener( 'touchend', function () {
+			if ( isDragging || isDragging2 ) {
 				isDragging = false;
+				isDragging2 = false;
 				document.body.style.cursor = '';
 				document.body.style.userSelect = '';
 			}
@@ -577,6 +666,22 @@
 	LayerPanel.prototype.editLayerName = function ( layerId, nameElement ) {
 		var self = this;
 		var originalName = nameElement.textContent;
+		var maxLength = 100; // Max length for layer names
+
+		nameElement.addEventListener( 'input', function () {
+			var currentText = nameElement.textContent;
+			if ( currentText.length > maxLength ) {
+				// Trim to max length
+				nameElement.textContent = currentText.slice( 0, maxLength );
+				// Move cursor to end
+				var range = document.createRange();
+				var sel = window.getSelection();
+				range.selectNodeContents( nameElement );
+				range.collapse( false );
+				sel.removeAllRanges();
+				sel.addRange( range );
+			}
+		} );
 
 		nameElement.addEventListener( 'blur', function () {
 			var newName = nameElement.textContent.trim();
@@ -693,6 +798,9 @@
 			if ( opts.decimals === 1 && input.type === 'number' && input.step === '' ) {
 				input.step = '0.1';
 			}
+			if ( opts.maxLength !== undefined && input.type === 'text' ) {
+				input.maxLength = opts.maxLength;
+			}
 			input.value = ( opts.value !== undefined && opts.value !== null ) ? opts.value : '';
 
 			// Store the last valid value for fallback
@@ -704,10 +812,11 @@
 
 			// Validation function
 			var validateInput = function ( value, showError ) {
+				var isValid = true;
+				var errorMessage = '';
+
 				if ( input.type === 'number' ) {
 					var num = parseFloat( value );
-					var isValid = true;
-					var errorMessage = '';
 
 					if ( value.trim() === '' ) {
 						isValid = false;
@@ -722,28 +831,48 @@
 						isValid = false;
 						errorMessage = 'Value must be at most ' + opts.max;
 					}
+				} else if ( input.type === 'text' ) {
+					// Text length validation
+					var textLength = value.length;
+					var maxLength = opts.maxLength || 1000; // Default max length
+					var warnLength = Math.floor( maxLength * 0.95 ); // Warn at 95% of limit
 
-					// Visual feedback
-					if ( isValid ) {
-						input.classList.remove( 'error' );
-						errorIndicator.classList.remove( 'show' );
-						lastValidValue = value;
-					} else if ( showError ) {
-						input.classList.add( 'error' );
+					if ( textLength > maxLength ) {
+						isValid = false;
+						errorMessage = 'Text is too long. Maximum ' + maxLength + ' characters allowed.';
+					} else if ( textLength > warnLength && showError ) {
+						// Show warning but don't mark as invalid
+						errorMessage = 'Approaching character limit (' + textLength + '/' + maxLength + ')';
 						errorIndicator.textContent = errorMessage;
-						errorIndicator.classList.add( 'show' );
+						errorIndicator.classList.add( 'show', 'warning' );
+						input.classList.add( 'warning' );
+						input.classList.remove( 'error' );
+						return true; // Still valid, just a warning
 					}
-
-					return isValid;
 				}
-				return true; // Non-numeric fields are always valid for now
+
+				// Visual feedback
+				if ( isValid ) {
+					input.classList.remove( 'error', 'warning' );
+					errorIndicator.classList.remove( 'show', 'warning' );
+					lastValidValue = value;
+				} else if ( showError ) {
+					input.classList.add( 'error' );
+					input.classList.remove( 'warning' );
+					errorIndicator.classList.remove( 'warning' );
+					errorIndicator.textContent = errorMessage;
+					errorIndicator.classList.add( 'show' );
+				}
+
+				return isValid;
 			};
 
 			// Add input event handler for real-time validation
 			input.addEventListener( 'input', function () {
 				var value = input.value;
-				// Don't show error on input, just on blur/change
-				validateInput( value, false );
+				// Show warnings for text inputs in real-time, errors only on blur/change
+				var showWarnings = input.type === 'text';
+				validateInput( value, showWarnings );
 
 				if ( input.type === 'number' && opts.decimals === 1 ) {
 					var n = parseFloat( value );
@@ -1463,6 +1592,7 @@
 					label: t( 'layers-prop-text', 'Text' ),
 					type: 'text',
 					value: layer.text || '',
+					maxLength: 1000,
 					onChange: function ( v ) {
 						self.editor.updateLayer( layer.id, { text: v } );
 					}
@@ -1471,7 +1601,7 @@
 					label: t( 'layers-prop-font-size', 'Font Size' ),
 					type: 'number',
 					value: layer.fontSize || 16,
-					min: 1,
+					min: 6,
 					step: 1,
 					onChange: function ( v ) {
 						self.editor.updateLayer( layer.id, { fontSize: parseInt( v, 10 ) } );

@@ -1,3 +1,90 @@
+/* Error notification styles */
+.layers-error-notifications {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	z-index: 10000;
+	max-width: 400px;
+}
+
+.layers-error-notification {
+	background: #fff;
+	border-left: 4px solid #d73027;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	margin-bottom: 8px;
+	padding: 12px;
+	position: relative;
+	animation: slideIn 0.3s ease-out;
+}
+
+.layers-error-notification.layers-error-medium {
+	border-left-color: #ff9500;
+}
+
+.layers-error-notification.layers-error-low {
+	border-left-color: #0073aa;
+}
+
+.layers-error-notification .error-content {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.layers-error-notification .error-icon {
+	color: #d73027;
+	font-size: 16px;
+	line-height: 1;
+	margin-top: 2px;
+}
+
+.layers-error-notification .error-details {
+	flex: 1;
+	min-width: 0;
+}
+
+.layers-error-notification .error-message {
+	font-weight: 500;
+	margin-bottom: 4px;
+	word-wrap: break-word;
+}
+
+.layers-error-notification .error-time {
+	color: #666;
+	font-size: 0.85em;
+}
+
+.layers-error-notification .error-close {
+	background: none;
+	border: none;
+	color: #999;
+	cursor: pointer;
+	font-size: 18px;
+	line-height: 1;
+	padding: 0;
+	position: absolute;
+	right: 8px;
+	top: 8px;
+	width: 20px;
+	height: 20px;
+}
+
+.layers-error-notification .error-close:hover {
+	color: #333;
+}
+
+@keyframes slideIn {
+	from {
+		opacity: 0;
+		transform: translateX(100%);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
 /* Revision selector styles */
 .layers-revision-wrap {
 	display: inline-flex;
@@ -180,9 +267,11 @@ body.layers-editor-open .mw-body-content {
 	border-color: #005a87;
 }
 
-.toolbar-button:disabled {
+.toolbar-button:disabled,
+.toolbar-button[disabled] {
 	opacity: 0.5;
 	cursor: not-allowed;
+	background-color: #f0f0f0;
 }
 
 /* Layer Panel */
@@ -293,6 +382,21 @@ body.layers-editor-open .mw-body-content {
 	box-shadow: 0 0 3px rgba( 244, 67, 54, 0.5 );
 }
 
+/* Disabled states for color buttons */
+.color-btn:disabled,
+.color-btn[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.color-none-btn:disabled,
+.color-none-btn[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
 /* Toolbar color inputs - make them square */
 .layers-toolbar input[type="color"] {
 	width: 32px;
@@ -318,7 +422,8 @@ body.layers-editor-open .mw-body-content {
 	border-top: 1px solid #eee;
 	padding: 12px;
 	overflow-y: auto;
-	max-height: 40vh;
+	flex: 1;
+	min-height: 80px;
 }
 .layers-properties h4,
 .layers-code-panel h4 {
@@ -536,6 +641,11 @@ body.layers-editor-open .mw-body-content {
 	display: block !important;
 }
 
+/* Warning state styling */
+.property-field-error.warning {
+	color: #856404 !important;
+}
+
 /* Input error state */
 .layer-properties-form input.error {
 	border-color: #dc3545 !important;
@@ -545,6 +655,17 @@ body.layers-editor-open .mw-body-content {
 .layer-properties-form input.error:focus {
 	border-color: #dc3545 !important;
 	box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+}
+
+/* Input warning state */
+.layer-properties-form input.warning {
+	border-color: #ffc107 !important;
+	background-color: #fffbf0 !important;
+}
+
+.layer-properties-form input.warning:focus {
+	border-color: #ffc107 !important;
+	box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.1) !important;
 }
 .layers-code-panel .layers-code {
 	display: block;
@@ -565,6 +686,14 @@ body.layers-editor-open .mw-body-content {
 }
 .layers-code-panel .copy-btn:hover {
 	background: #e9ecef;
+}
+
+/* Disabled states for copy buttons */
+.copy-btn:disabled,
+.copy-btn[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	background-color: #f0f0f0;
 }
 
 .layers-empty {

@@ -60,6 +60,13 @@
 		this.lastPanPoint = null;
 		this.userHasSetZoom = false; // Track if user has manually adjusted zoom
 
+		// Smooth zoom animation properties
+		this.isAnimatingZoom = false;
+		this.zoomAnimationDuration = 300; // milliseconds
+		this.zoomAnimationStartTime = 0;
+		this.zoomAnimationStartZoom = 1.0;
+		this.zoomAnimationTargetZoom = 1.0;
+
 		// Grid settings
 		this.showGrid = false;
 		this.gridSize = 20;
@@ -570,11 +577,9 @@
 	};
 
 	CanvasManager.prototype.hitTestSelectionHandles = function ( point ) {
-		console.log( 'Layers: Hit testing handles at point:', point, 'handles:', this.selectionHandles.length );
 		for ( var i = 0; i < this.selectionHandles.length; i++ ) {
 			var handle = this.selectionHandles[ i ];
 			if ( this.isPointInRect( point, handle ) ) {
-				console.log( 'Layers: Handle hit detected:', handle.type );
 				return handle;
 			}
 		}
@@ -600,10 +605,6 @@
 		if ( layer ) {
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
-
-		console.log( 'Layers: Starting resize with handle:', handle.type );
-		console.log( 'Layers: dragStartPoint set to:', this.dragStartPoint );
-		console.log( 'Layers: originalLayerState:', this.originalLayerState );
 	};
 
 	CanvasManager.prototype.startRotation = function () {
@@ -694,12 +695,7 @@
 
 	CanvasManager.prototype.handleMouseMove = function ( e ) {
 		var point = this.getMousePoint( e );
-		
-		// Debug: Log mouse move when in resize mode
-		if ( this.isResizing ) {
-			console.log( 'Layers: Mouse move during resize mode. isResizing:', this.isResizing, 'resizeHandle:', this.resizeHandle, 'dragStartPoint:', this.dragStartPoint );
-		}
-		
+
 		// Guide drag preview rendering
 		if ( this.isDraggingGuide ) {
 			this.dragGuidePos = ( this.dragGuideOrientation === 'h' ) ? point.y : point.x;
@@ -743,11 +739,9 @@
 		}
 
 		if ( this.isResizing && this.resizeHandle && this.dragStartPoint ) {
-			console.log( 'Layers: Mouse move during resize, calling handleResize' );
 			try {
 				this.handleResize( point, e );
 			} catch ( error ) {
-				console.error( 'Layers: Error in handleResize:', error );
 			}
 			return;
 		}
@@ -762,9 +756,12 @@
 			return;
 		}
 
-		if ( !this.isDrawing ) {
-			// Update cursor based on what's under the mouse
+		// Always update cursor when not actively resizing/rotating/dragging
+		if ( !this.isResizing && !this.isRotating && !this.isDragging ) {
 			this.updateCursor( point );
+		}
+
+		if ( !this.isDrawing ) {
 			return;
 		}
 
@@ -780,20 +777,14 @@
 	};
 
 	CanvasManager.prototype.handleResize = function ( point, event ) {
-		console.log( 'Layers: handleResize called with point:', point );
 		var layer = this.editor.getLayerById( this.selectedLayerId );
-		console.log( 'Layers: selectedLayerId:', this.selectedLayerId, 'layer:', layer );
-		console.log( 'Layers: originalLayerState:', this.originalLayerState );
-		
+
 		if ( !layer || !this.originalLayerState ) {
-			console.log( 'Layers: handleResize early return - no layer or originalLayerState' );
-			console.log( 'Layers: layer exists:', !!layer, 'originalLayerState exists:', !!this.originalLayerState );
 			return;
 		}
 
 		var deltaX = point.x - this.dragStartPoint.x;
 		var deltaY = point.y - this.dragStartPoint.y;
-		console.log( 'Layers: Resize delta:', { x: deltaX, y: deltaY } );
 
 		// Limit delta values to prevent sudden jumps during rapid mouse movements
 		var maxDelta = 1000; // Reasonable maximum delta in pixels
@@ -825,7 +816,6 @@
 			deltaY,
 			modifiers
 		);
-		console.log( 'Layers: Calculated resize updates:', updates );
 
 		// Apply updates to layer
 		if ( updates ) {
@@ -835,7 +825,6 @@
 			Object.keys( updates ).forEach( function ( key ) {
 				layer[ key ] = updates[ key ];
 			} );
-			console.log( 'Layers: Applied updates to layer:', layer );
 
 			// Re-render
 			this.renderLayers( this.editor.layers );
@@ -1262,8 +1251,8 @@
 			newFontSize -= fontSizeChange;
 		}
 
-		// Clamp font size to reasonable bounds
-		newFontSize = Math.max( 8, Math.min( 144, newFontSize ) );
+		// Clamp font size to reasonable bounds (minimum 6px for readability)
+		newFontSize = Math.max( 6, Math.min( 144, newFontSize ) );
 		updates.fontSize = Math.round( newFontSize );
 
 		return updates;
@@ -1656,7 +1645,6 @@
 	};
 
 	CanvasManager.prototype.finishResize = function () {
-		console.log( 'Layers: finishResize called' );
 		this.isResizing = false;
 		this.resizeHandle = null;
 		this.originalLayerState = null;
@@ -1954,11 +1942,15 @@
 	};
 
 	CanvasManager.prototype.zoomIn = function () {
-		this.setZoom( this.zoom + 0.1 );
+		var targetZoom = this.zoom + 0.2; // Slightly larger increment for better UX
+		this.smoothZoomTo( targetZoom );
+		this.userHasSetZoom = true;
 	};
 
 	CanvasManager.prototype.zoomOut = function () {
-		this.setZoom( this.zoom - 0.1 );
+		var targetZoom = this.zoom - 0.2; // Slightly larger decrement for better UX
+		this.smoothZoomTo( targetZoom );
+		this.userHasSetZoom = true;
 	};
 
 	CanvasManager.prototype.setZoom = function ( newZoom ) {
@@ -1982,17 +1974,12 @@
 	};
 
 	CanvasManager.prototype.resetZoom = function () {
-		this.zoom = 1.0;
 		this.panX = 0;
 		this.panY = 0;
 		this.userHasSetZoom = true; // Mark that user has manually reset zoom
 
-		if ( this.backgroundImage ) {
-			this.canvas.style.width = this.backgroundImage.width + 'px';
-			this.canvas.style.height = this.backgroundImage.height + 'px';
-		}
-
-		this.updateCanvasTransform();
+		// Smoothly animate back to 100% zoom
+		this.smoothZoomTo( 1.0 );
 
 		if ( this.editor.toolbar ) {
 			this.editor.toolbar.updateZoomDisplay( 100 );
@@ -2002,6 +1989,84 @@
 		}
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { zoomPercent: 100 } );
+		}
+	};
+
+	/**
+	 * Smoothly animate zoom to a target level
+	 *
+	 * @param {number} targetZoom Target zoom level
+	 * @param {number} duration Animation duration in milliseconds (optional)
+	 */
+	CanvasManager.prototype.smoothZoomTo = function ( targetZoom, duration ) {
+		// Clamp target zoom to valid range
+		targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
+		duration = duration || this.zoomAnimationDuration;
+
+		// If already at target zoom or very close, don't animate
+		if ( Math.abs( this.zoom - targetZoom ) < 0.01 ) {
+			return;
+		}
+
+		this.isAnimatingZoom = true;
+		this.zoomAnimationStartTime = performance.now();
+		this.zoomAnimationStartZoom = this.zoom;
+		this.zoomAnimationTargetZoom = targetZoom;
+		this.zoomAnimationDuration = duration;
+
+		this.animateZoom();
+	};
+
+	/**
+	 * Animation frame function for smooth zooming
+	 */
+	CanvasManager.prototype.animateZoom = function () {
+		if ( !this.isAnimatingZoom ) {
+			return;
+		}
+
+		var currentTime = performance.now();
+		var elapsed = currentTime - this.zoomAnimationStartTime;
+		var progress = Math.min( elapsed / this.zoomAnimationDuration, 1.0 );
+
+		// Use easing function for smooth animation (ease-out)
+		var easedProgress = 1 - Math.pow( 1 - progress, 3 );
+
+		// Calculate current zoom level
+		var currentZoom = this.zoomAnimationStartZoom +
+			( this.zoomAnimationTargetZoom - this.zoomAnimationStartZoom ) * easedProgress;
+
+		this.setZoomDirect( currentZoom );
+
+		if ( progress < 1.0 ) {
+			// Continue animation
+			requestAnimationFrame( this.animateZoom.bind( this ) );
+		} else {
+			// Animation complete
+			this.isAnimatingZoom = false;
+			this.setZoomDirect( this.zoomAnimationTargetZoom );
+		}
+	};
+
+	/**
+	 * Set zoom directly without triggering user zoom flag (for animations)
+	 *
+	 * @param {number} newZoom New zoom level
+	 */
+	CanvasManager.prototype.setZoomDirect = function ( newZoom ) {
+		this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
+
+		// Update CSS size based on zoom
+		if ( this.backgroundImage ) {
+			this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
+			this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
+		}
+
+		this.updateCanvasTransform();
+
+		// Update status zoom percent
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { zoomPercent: this.zoom * 100 } );
 		}
 	};
 
@@ -2016,22 +2081,128 @@
 
 		var scaleX = containerWidth / this.backgroundImage.width;
 		var scaleY = containerHeight / this.backgroundImage.height;
-		var scale = Math.min( scaleX, scaleY );
+		var targetZoom = Math.min( scaleX, scaleY );
 
-		this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, scale ) );
+		// Clamp to zoom limits
+		targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
+
+		// Reset pan position
 		this.panX = 0;
 		this.panY = 0;
 		this.userHasSetZoom = true; // Mark that user has manually set zoom
 
-		// Update CSS size
-		this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
-		this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
-
-		this.updateCanvasTransform();
+		// Animate to fit zoom level
+		this.smoothZoomTo( targetZoom );
 
 		if ( this.editor.toolbar ) {
-			this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
+			this.editor.toolbar.updateZoomDisplay( Math.round( targetZoom * 100 ) );
 		}
+	};
+
+	/**
+	 * Zoom to fit all layers in the viewport
+	 */
+	CanvasManager.prototype.zoomToFitLayers = function () {
+		if ( this.editor.layers.length === 0 ) {
+			this.fitToWindow(); // Fall back to fitting canvas
+			return;
+		}
+
+		// Calculate bounding box of all layers
+		var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+		var hasVisibleLayers = false;
+
+		for ( var i = 0; i < this.editor.layers.length; i++ ) {
+			var layer = this.editor.layers[ i ];
+			if ( !layer.visible ) {
+				continue; // Skip invisible layers
+			}
+
+			hasVisibleLayers = true;
+			var layerBounds = this.getLayerBounds( layer );
+			if ( layerBounds ) {
+				minX = Math.min( minX, layerBounds.left );
+				minY = Math.min( minY, layerBounds.top );
+				maxX = Math.max( maxX, layerBounds.right );
+				maxY = Math.max( maxY, layerBounds.bottom );
+			}
+		}
+
+		if ( !hasVisibleLayers ) {
+			this.fitToWindow(); // Fall back to fitting canvas
+			return;
+		}
+
+		// Add some padding around the content
+		var padding = 50;
+		var contentWidth = ( maxX - minX ) + ( padding * 2 );
+		var contentHeight = ( maxY - minY ) + ( padding * 2 );
+
+		var container = this.canvas.parentNode;
+		var containerWidth = container.clientWidth - 40;
+		var containerHeight = container.clientHeight - 40;
+
+		var scaleX = containerWidth / contentWidth;
+		var scaleY = containerHeight / contentHeight;
+		var targetZoom = Math.min( scaleX, scaleY );
+
+		// Clamp to zoom limits
+		targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
+
+		// Center the content
+		var centerX = ( minX + maxX ) / 2;
+		var centerY = ( minY + maxY ) / 2;
+		var canvasCenterX = this.canvas.width / 2;
+		var canvasCenterY = this.canvas.height / 2;
+
+		this.panX = ( canvasCenterX - centerX ) * targetZoom;
+		this.panY = ( canvasCenterY - centerY ) * targetZoom;
+		this.userHasSetZoom = true;
+
+		// Animate to fit zoom level
+		this.smoothZoomTo( targetZoom );
+	};
+
+	/**
+	 * Get bounding box of a layer
+	 *
+	 * @param {Object} layer Layer object
+	 * @return {Object|null} Bounding box with left, top, right, bottom properties
+	 */
+	CanvasManager.prototype.getLayerBounds = function ( layer ) {
+		if ( !layer ) {
+			return null;
+		}
+
+		var bounds = { left: 0, top: 0, right: 0, bottom: 0 };
+
+		switch ( layer.type ) {
+			case 'text':
+				bounds.left = layer.x || 0;
+				bounds.top = ( layer.y || 0 ) - ( layer.fontSize || 16 );
+				// Estimate text width (rough approximation)
+				var textWidth = ( layer.text || '' ).length * ( layer.fontSize || 16 ) * 0.6;
+				bounds.right = bounds.left + textWidth;
+				bounds.bottom = layer.y || 0;
+				break;
+			case 'rectangle':
+			case 'ellipse':
+			case 'circle':
+				bounds.left = layer.x || 0;
+				bounds.top = layer.y || 0;
+				bounds.right = bounds.left + ( layer.width || 100 );
+				bounds.bottom = bounds.top + ( layer.height || 100 );
+				break;
+			default:
+				// For other layer types, use position with default size
+				bounds.left = ( layer.x || 0 ) - 50;
+				bounds.top = ( layer.y || 0 ) - 50;
+				bounds.right = ( layer.x || 0 ) + 50;
+				bounds.bottom = ( layer.y || 0 ) + 50;
+				break;
+		}
+
+		return bounds;
 	};
 
 	CanvasManager.prototype.updateCanvasTransform = function () {
@@ -2783,7 +2954,6 @@
 
 		// Store handles for hit testing in world coordinates
 		this.selectionHandles = actualHandles;
-		console.log( 'Layers: Created', actualHandles.length, 'selection handles:', actualHandles );
 
 		// Draw handles in the current transformed coordinate space
 		handles.forEach( function ( handle ) {
@@ -4192,6 +4362,46 @@
 		return { dx: dx, dy: dy };
 	};
 
+	/**
+	 * Helper function to wrap text into multiple lines
+	 *
+	 * @param {string} text The text to wrap
+	 * @param {number} maxWidth Maximum width in pixels
+	 * @param {CanvasRenderingContext2D} ctx Canvas context for measuring text
+	 * @return {Array} Array of text lines
+	 */
+	CanvasManager.prototype.wrapText = function ( text, maxWidth, ctx ) {
+		if ( !text || !maxWidth || maxWidth <= 0 ) {
+			return [ text || '' ];
+		}
+
+		var words = text.split( ' ' );
+		var lines = [];
+		var currentLine = '';
+
+		for ( var i = 0; i < words.length; i++ ) {
+			var word = words[ i ];
+			var testLine = currentLine + ( currentLine ? ' ' : '' ) + word;
+			var metrics = ctx.measureText( testLine );
+			var testWidth = metrics.width;
+
+			if ( testWidth > maxWidth && currentLine !== '' ) {
+				// Current line is full, start a new line
+				lines.push( currentLine );
+				currentLine = word;
+			} else {
+				currentLine = testLine;
+			}
+		}
+
+		// Add the last line
+		if ( currentLine ) {
+			lines.push( currentLine );
+		}
+
+		return lines.length > 0 ? lines : [ '' ];
+	};
+
 	CanvasManager.prototype.drawText = function ( layer ) {
 		this.ctx.save();
 
@@ -4207,14 +4417,28 @@
 		text = String( text ).replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
 		text = text.replace( /<[^>]+>/g, '' );
 
-		// Calculate text dimensions for proper rotation centering
-		var textMetrics = this.ctx.measureText( text );
-		var textWidth = textMetrics.width;
-		var textHeight = layer.fontSize || 16;
+		// Determine if text wrapping is needed (for long text content)
+		var fontSize = layer.fontSize || 16;
+		// Default to 80% of canvas width for text wrapping
+		var maxLineWidth = layer.maxWidth || ( this.canvas.width * 0.8 );
+		var lines = this.wrapText( text, maxLineWidth, this.ctx );
+		var lineHeight = fontSize * 1.2; // Standard line height
+
+		// Calculate total text dimensions for proper centering
+		var totalTextWidth = 0;
+		var totalTextHeight = lines.length * lineHeight;
+
+		// Find the longest line for centering calculations
+		for ( var i = 0; i < lines.length; i++ ) {
+			var lineMetrics = this.ctx.measureText( lines[ i ] );
+			if ( lineMetrics.width > totalTextWidth ) {
+				totalTextWidth = lineMetrics.width;
+			}
+		}
 
 		// Calculate text center for rotation
-		var centerX = x + ( textWidth / 2 );
-		var centerY = y - ( textHeight / 4 ); // Adjust for text baseline
+		var centerX = x + ( totalTextWidth / 2 );
+		var centerY = y + ( totalTextHeight / 2 );
 
 		// Apply rotation if present
 		if ( layer.rotation && layer.rotation !== 0 ) {
@@ -4222,8 +4446,8 @@
 			this.ctx.translate( centerX, centerY );
 			this.ctx.rotate( rotationRadians );
 			// Adjust drawing position to account for center rotation
-			x = -( textWidth / 2 );
-			y = textHeight / 4;
+			x = -( totalTextWidth / 2 );
+			y = -( totalTextHeight / 2 ) + fontSize; // Adjust for baseline
 		}
 
 		// Apply text shadow if enabled
@@ -4234,19 +4458,25 @@
 			this.ctx.shadowBlur = 4;
 		}
 
-		// Draw text stroke if enabled
-		if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
-			this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
-			this.ctx.lineWidth = layer.textStrokeWidth;
-			this.ctx.strokeText( text, x, y );
-		}
+		// Draw each line of text
+		for ( var j = 0; j < lines.length; j++ ) {
+			var lineText = lines[ j ];
+			var lineY = y + ( j * lineHeight );
 
-		// Draw text fill (respect optional fillOpacity)
-		this.ctx.fillStyle = layer.fill || '#000000';
-		var tFillOp = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
-		this.withLocalAlpha( tFillOp, function () {
-			this.ctx.fillText( text, x, y );
-		}.bind( this ) );
+			// Draw text stroke if enabled
+			if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
+				this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
+				this.ctx.lineWidth = layer.textStrokeWidth;
+				this.ctx.strokeText( lineText, x, lineY );
+			}
+
+			// Draw text fill (respect optional fillOpacity)
+			this.ctx.fillStyle = layer.fill || '#000000';
+			var tFillOp = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
+			this.withLocalAlpha( tFillOp, function ( currentLineText, currentLineY ) {
+				this.ctx.fillText( currentLineText, x, currentLineY );
+			}.bind( this, lineText, lineY ) );
+		}
 
 		this.ctx.restore();
 	};

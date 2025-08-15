@@ -272,9 +272,11 @@ opacity: 0.7;
 cursor: wait;
 }
 
+.toolbar-button:disabled,
 .toolbar-button[disabled] {
-opacity: 0.5;
-cursor: not-allowed;
+	opacity: 0.5;
+	cursor: not-allowed;
+	background-color: #f0f0f0;
 }
 
 /* Property input fields - reasonable sizing and precision */
@@ -495,6 +497,21 @@ cursor: not-allowed;
 	font-size: 8px;
 }
 
+/* Disabled states for color buttons */
+.color-btn:disabled,
+.color-btn[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.color-none-btn:disabled,
+.color-none-btn[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
 /* Property sections */
 h5 {
 	margin: 16px 0 8px 0;
@@ -514,6 +531,16 @@ h5:first-child {
 	color: #d63638;
 	background: #fff0f0;
 	border-color: #d63638;
+	padding: 0.5em;
+	border-radius: 0.25em;
+	margin: 0.5em 0;
+}
+
+/* Warning states */
+.warning {
+	color: #856404;
+	background: #fffbf0;
+	border-color: #ffc107;
 	padding: 0.5em;
 	border-radius: 0.25em;
 	margin: 0.5em 0;
@@ -545,11 +572,14 @@ h5:first-child {
 
 /* Code panel styling */
 .layers-code-panel {
-	margin-top: 16px;
+	margin-top: 0;
 	padding: 12px;
 	background: #f8f9fa;
 	border: 1px solid #ddd;
 	border-radius: 4px;
+	flex: 1;
+	min-height: 80px;
+	overflow-y: auto;
 }
 
 .layers-code-panel h4 {
@@ -584,6 +614,14 @@ h5:first-child {
 
 .copy-btn:hover {
 	background: #005a87;
+}
+
+/* Disabled states for copy buttons */
+.copy-btn:disabled,
+.copy-btn[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	background-color: #f0f0f0;
 }
 
 /* Accessibility improvements */

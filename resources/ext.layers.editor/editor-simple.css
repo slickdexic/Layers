@@ -64,6 +64,13 @@
 	color: #fff;
 }
 
+.toolbar-button:disabled,
+.toolbar-button[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	background-color: #f0f0f0;
+}
+
 .layers-panel {
 	position: absolute;
 	top: 0;

@@ -142,6 +142,7 @@
 				"jquery"
 			],
 			"scripts": [
+				"ErrorHandler.js",
 				"LayersConstants.js",
 				"EventHandler.js",
 				"RenderEngine.js",
