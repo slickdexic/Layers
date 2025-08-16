@@ -6,6 +6,14 @@
 	'use strict';
 
 	/**
+	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
+	 *
+	 * @typedef {Object} CanvasManager
+	 * @property {HTMLCanvasElement} canvas
+	 * @property {CanvasRenderingContext2D} ctx
+	 */
+
+	/**
 	 * SelectionManager class
 	 *
 	 * @param {Object} config Configuration object
@@ -13,6 +21,12 @@
 	 * @class
 	 */
 	function SelectionManager( config, canvasManager ) {
+		// Back-compat: allow new SelectionManager(canvasManager)
+		if ( config && !canvasManager && ( config.canvas || config.layers ) ) {
+			canvasManager = config;
+			config = {};
+		}
+
 		this.config = config || {};
 		this.canvasManager = canvasManager;
 
@@ -28,8 +42,10 @@
 
 		// Marquee selection
 		this.isMarqueeSelecting = false;
-		this.marqueeStart = { x: 0, y: 0 };
-		this.marqueeEnd = { x: 0, y: 0 };
+		this.marqueeStart = null;
+		this.marqueeEnd = null;
+		// Legacy property used in tests
+		this.dragStart = null;
 
 		// Multi-selection support
 		this.multiSelectMode = false;
@@ -47,7 +63,20 @@
 			this.clearSelection();
 		}
 
-		if ( layerId && this.selectedLayerIds.indexOf( layerId ) === -1 ) {
+		// Toggle behavior when adding to selection and already selected
+		if ( addToSelection && layerId && this.isSelected( layerId ) ) {
+			this.deselectLayer( layerId );
+			return;
+		}
+
+		// Skip locked or invisible layers
+		var layer = this.getLayerById( layerId );
+		if (
+			layerId && layer &&
+			layer.locked !== true &&
+			layer.visible !== false &&
+			this.selectedLayerIds.indexOf( layerId ) === -1
+		) {
 			this.selectedLayerIds.push( layerId );
 			this.lastSelectedId = layerId;
 		}
@@ -90,7 +119,8 @@
 	 * Select all layers
 	 */
 	SelectionManager.prototype.selectAll = function () {
-		var layers = this.canvasManager.editor.layers || [];
+		var layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
+			this.canvasManager.layers || [];
 		this.selectedLayerIds = layers.map( function ( layer ) {
 			return layer.id;
 		} );
@@ -128,7 +158,8 @@
 	 * @return {Array} Array of selected layer objects
 	 */
 	SelectionManager.prototype.getSelectedLayers = function () {
-		var layers = this.canvasManager.editor.layers || [];
+		var layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
+			this.canvasManager.layers || [];
 		return layers.filter( function ( layer ) {
 			return this.isSelected( layer.id );
 		}.bind( this ) );
@@ -137,33 +168,38 @@
 	/**
 	 * Start marquee selection
 	 *
-	 * @param {Object} point Starting point
+	 * @param {Object|number} xOrPoint Starting point or x coordinate
+	 * @param {number} [y] y coordinate when using numeric args
 	 */
-	SelectionManager.prototype.startMarqueeSelection = function ( point ) {
+	SelectionManager.prototype.startMarqueeSelection = function ( xOrPoint, y ) {
 		this.isMarqueeSelecting = true;
-		this.marqueeStart = { x: point.x, y: point.y };
-		this.marqueeEnd = { x: point.x, y: point.y };
+		var pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
+		this.marqueeStart = { x: pt.x, y: pt.y };
+		this.marqueeEnd = { x: pt.x, y: pt.y };
 	};
 
 	/**
 	 * Update marquee selection
 	 *
-	 * @param {Object} point Current mouse point
+	 * @param {Object|number} xOrPoint Current point or x coordinate
+	 * @param {number} [y] y coordinate when using numeric args
 	 */
-	SelectionManager.prototype.updateMarqueeSelection = function ( point ) {
+	SelectionManager.prototype.updateMarqueeSelection = function ( xOrPoint, y ) {
 		if ( !this.isMarqueeSelecting ) {
 			return;
 		}
 
-		this.marqueeEnd = { x: point.x, y: point.y };
+		var pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
+		this.marqueeEnd = { x: pt.x, y: pt.y };
 
 		// Find layers within marquee
 		var marqueeRect = this.getMarqueeRect();
-		var layers = this.canvasManager.editor.layers || [];
+		var layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
+			this.canvasManager.layers || [];
 		var newSelection = [];
 
 		layers.forEach( function ( layer ) {
-			var bounds = this.canvasManager.getLayerBounds( layer );
+			var bounds = this.getLayerBoundsCompat( layer );
 			if ( bounds && this.rectIntersects( marqueeRect, bounds ) ) {
 				newSelection.push( layer.id );
 			}
@@ -172,6 +208,9 @@
 		// Update selection
 		this.selectedLayerIds = newSelection;
 		this.notifySelectionChange();
+		if ( this.canvasManager && typeof this.canvasManager.redraw === 'function' ) {
+			this.canvasManager.redraw();
+		}
 	};
 
 	/**
@@ -180,6 +219,8 @@
 	SelectionManager.prototype.finishMarqueeSelection = function () {
 		this.isMarqueeSelecting = false;
 		this.updateSelectionHandles();
+		this.marqueeStart = null;
+		this.marqueeEnd = null;
 	};
 
 	/**
@@ -188,6 +229,9 @@
 	 * @return {Object} Rectangle object
 	 */
 	SelectionManager.prototype.getMarqueeRect = function () {
+		if ( !this.marqueeStart || !this.marqueeEnd ) {
+			return { x: 0, y: 0, width: 0, height: 0 };
+		}
 		var minX = Math.min( this.marqueeStart.x, this.marqueeEnd.x );
 		var minY = Math.min( this.marqueeStart.y, this.marqueeEnd.y );
 		var maxX = Math.max( this.marqueeStart.x, this.marqueeEnd.x );
@@ -239,7 +283,7 @@
 	 * @param {Object} layer Layer object
 	 */
 	SelectionManager.prototype.createSingleSelectionHandles = function ( layer ) {
-		var bounds = this.canvasManager.getLayerBounds( layer );
+		var bounds = this.getLayerBoundsCompat( layer );
 		if ( !bounds ) {
 			return;
 		}
@@ -331,7 +375,7 @@
 		var maxY = -Infinity;
 
 		selectedLayers.forEach( function ( layer ) {
-			var bounds = this.canvasManager.getLayerBounds( layer );
+			var bounds = this.getLayerBoundsCompat( layer );
 			if ( bounds ) {
 				minX = Math.min( minX, bounds.x );
 				minY = Math.min( minY, bounds.y );
@@ -363,6 +407,39 @@
 			var handle = this.selectionHandles[ i ];
 			if ( this.pointInRect( point, handle.rect ) ) {
 				return handle;
+			}
+		}
+		return null;
+	};
+
+	/**
+	 * Convenience: get layer at point, preferring CanvasManager implementation.
+	 * Accepts (x, y) or {x, y}.
+	 *
+	 * @param {Object|number} xOrPoint Point object or x coordinate
+	 * @param {number} [y] y coordinate when using numeric args
+	 * @return {Object|null} Layer object if hit, otherwise null
+	 */
+	SelectionManager.prototype.getLayerAtPoint = function ( xOrPoint, y ) {
+		var pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
+		if ( this.canvasManager && typeof this.canvasManager.getLayerAtPoint === 'function' ) {
+			return this.canvasManager.getLayerAtPoint( pt );
+		}
+		var layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
+			this.canvasManager.layers || [];
+		for ( var i = layers.length - 1; i >= 0; i-- ) {
+			var layer = layers[ i ];
+			if ( layer.visible === false ) {
+				continue;
+			}
+			if ( typeof layer.x === 'number' && typeof layer.y === 'number' && typeof layer.width === 'number' && typeof layer.height === 'number' ) {
+				var minX = Math.min( layer.x, layer.x + layer.width );
+				var minY = Math.min( layer.y, layer.y + layer.height );
+				var w = Math.abs( layer.width );
+				var h = Math.abs( layer.height );
+				if ( pt.x >= minX && pt.x <= minX + w && pt.y >= minY && pt.y <= minY + h ) {
+					return layer;
+				}
 			}
 		}
 		return null;
@@ -432,7 +509,9 @@
 		this.originalLayerState = null;
 
 		// Save state for undo
-		this.canvasManager.saveState();
+		if ( this.canvasManager && typeof this.canvasManager.saveState === 'function' ) {
+			this.canvasManager.saveState();
+		}
 	};
 
 	/**
@@ -467,8 +546,14 @@
 		var centerX = bounds.x + bounds.width / 2;
 		var centerY = bounds.y + bounds.height / 2;
 
-		var startAngle = Math.atan2( this.dragStartPoint.y - centerY, this.dragStartPoint.x - centerX );
-		var currentAngle = Math.atan2( point.y - centerY, point.x - centerX );
+		var startAngle = Math.atan2(
+			this.dragStartPoint.y - centerY,
+			this.dragStartPoint.x - centerX
+		);
+		var currentAngle = Math.atan2(
+			point.y - centerY,
+			point.x - centerX
+		);
 		var deltaAngle = ( currentAngle - startAngle ) * 180 / Math.PI;
 
 		// Apply rotation to selected layers
@@ -493,32 +578,39 @@
 		this.originalLayerState = null;
 
 		// Save state for undo
-		this.canvasManager.saveState();
+		if ( this.canvasManager && typeof this.canvasManager.saveState === 'function' ) {
+			this.canvasManager.saveState();
+		}
 	};
 
 	/**
 	 * Start drag operation
 	 *
-	 * @param {Object} point Starting point
+	 * @param {Object|number} xOrPoint Starting point or x coordinate
+	 * @param {number} [y] y coordinate when using numeric args
 	 */
-	SelectionManager.prototype.startDrag = function ( point ) {
+	SelectionManager.prototype.startDrag = function ( xOrPoint, y ) {
 		this.isDragging = true;
-		this.dragStartPoint = point;
+		var pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
+		this.dragStartPoint = pt;
+		this.dragStart = { x: pt.x, y: pt.y };
 		this.originalLayerState = this.saveSelectedLayersState();
 	};
 
 	/**
 	 * Update drag operation
 	 *
-	 * @param {Object} point Current point
+	 * @param {Object|number} xOrPoint Current point or x coordinate
+	 * @param {number} [y] y coordinate when using numeric args
 	 */
-	SelectionManager.prototype.updateDrag = function ( point ) {
+	SelectionManager.prototype.updateDrag = function ( xOrPoint, y ) {
 		if ( !this.isDragging || !this.dragStartPoint ) {
 			return;
 		}
 
-		var deltaX = point.x - this.dragStartPoint.x;
-		var deltaY = point.y - this.dragStartPoint.y;
+		var pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
+		var deltaX = pt.x - this.dragStartPoint.x;
+		var deltaY = pt.y - this.dragStartPoint.y;
 
 		// Apply grid snapping if enabled
 		if ( this.canvasManager.snapToGrid ) {
@@ -546,6 +638,7 @@
 	SelectionManager.prototype.finishDrag = function () {
 		this.isDragging = false;
 		this.dragStartPoint = null;
+		this.dragStart = null;
 		this.originalLayerState = null;
 
 		// Save state for undo
@@ -561,7 +654,9 @@
 	 * @param {number} deltaY Y delta
 	 * @param {Object} modifiers Modifier keys
 	 */
-	SelectionManager.prototype.applyResize = function ( layer, originalLayer, deltaX, deltaY, modifiers ) {
+	SelectionManager.prototype.applyResize = function (
+		layer, originalLayer, deltaX, deltaY, modifiers
+	) {
 		// Delegate to canvas manager's existing implementation
 		if ( typeof this.canvasManager.calculateResize === 'function' ) {
 			var newProps = this.canvasManager.calculateResize(
@@ -637,7 +732,8 @@
 	 * @return {Object|null} Layer object or null
 	 */
 	SelectionManager.prototype.getLayerById = function ( layerId ) {
-		var layers = this.canvasManager.editor.layers || [];
+		var layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
+			this.canvasManager.layers || [];
 		for ( var i = 0; i < layers.length; i++ ) {
 			if ( layers[ i ].id === layerId ) {
 				return layers[ i ];
@@ -650,6 +746,14 @@
 	 * Notify selection change
 	 */
 	SelectionManager.prototype.notifySelectionChange = function () {
+		// Keep CanvasManager in sync for legacy tests/UI
+		if ( this.canvasManager ) {
+			this.canvasManager.selectedLayerIds = this.selectedLayerIds.slice( 0 );
+			if ( typeof this.canvasManager.redraw === 'function' ) {
+				this.canvasManager.redraw();
+			}
+		}
+
 		if ( this.canvasManager.editor && typeof this.canvasManager.editor.updateStatus === 'function' ) {
 			this.canvasManager.editor.updateStatus( {
 				selectionCount: this.selectedLayerIds.length
@@ -657,7 +761,7 @@
 		}
 
 		// Update layer panel if available
-		if ( this.canvasManager.editor.layerPanel &&
+		if ( this.canvasManager.editor && this.canvasManager.editor.layerPanel &&
 			typeof this.canvasManager.editor.layerPanel.updateSelection === 'function' ) {
 			this.canvasManager.editor.layerPanel.updateSelection( this.selectedLayerIds );
 		}
@@ -671,19 +775,29 @@
 			return;
 		}
 
-		var layers = this.canvasManager.editor.layers || [];
+		var layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
+			this.canvasManager.layers || [];
 
 		// Remove selected layers
-		this.canvasManager.editor.layers = layers.filter( function ( layer ) {
+		var remaining = layers.filter( function ( layer ) {
 			return this.selectedLayerIds.indexOf( layer.id ) === -1;
 		}.bind( this ) );
+		if ( this.canvasManager.editor ) {
+			this.canvasManager.editor.layers = remaining;
+		} else {
+			this.canvasManager.layers = remaining;
+		}
 
 		// Clear selection
 		this.clearSelection();
 
 		// Save state and update
-		this.canvasManager.saveState();
-		this.canvasManager.editor.markDirty();
+		if ( this.canvasManager && typeof this.canvasManager.saveState === 'function' ) {
+			this.canvasManager.saveState();
+		}
+		if ( this.canvasManager && this.canvasManager.editor && typeof this.canvasManager.editor.markDirty === 'function' ) {
+			this.canvasManager.editor.markDirty();
+		}
 	};
 
 	/**
@@ -715,15 +829,23 @@
 		}.bind( this ) );
 
 		// Add new layers
-		this.canvasManager.editor.layers = this.canvasManager.editor.layers.concat( newLayers );
+		if ( this.canvasManager.editor ) {
+			this.canvasManager.editor.layers = this.canvasManager.editor.layers.concat( newLayers );
+		} else {
+			this.canvasManager.layers = ( this.canvasManager.layers || [] ).concat( newLayers );
+		}
 
 		// Select new layers
 		this.selectedLayerIds = newSelection;
 		this.updateSelectionHandles();
 
 		// Save state and update
-		this.canvasManager.saveState();
-		this.canvasManager.editor.markDirty();
+		if ( this.canvasManager && typeof this.canvasManager.saveState === 'function' ) {
+			this.canvasManager.saveState();
+		}
+		if ( this.canvasManager && this.canvasManager.editor && typeof this.canvasManager.editor.markDirty === 'function' ) {
+			this.canvasManager.editor.markDirty();
+		}
 	};
 
 	/**
@@ -735,7 +857,94 @@
 		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	};
 
+	/**
+	 * Bounds for current selection; null if none.
+	 *
+	 * @return {Object|null} Bounds of selection or null
+	 */
+	SelectionManager.prototype.getSelectionBounds = function () {
+		if ( this.selectedLayerIds.length === 0 ) {
+			return null;
+		}
+		if ( this.selectedLayerIds.length === 1 ) {
+			var single = this.getLayerById( this.selectedLayerIds[ 0 ] );
+			return single ? this.getLayerBoundsCompat( single ) : null;
+		}
+		return this.getMultiSelectionBounds();
+	};
+
+	/**
+	 * Compute layer bounds with graceful fallback when CanvasManager.getLayerBounds
+	 * is unavailable in tests.
+	 *
+	 * @param {Object} layer Layer object
+	 * @return {Object|null} Bounds {x,y,width,height} or null
+	 */
+	SelectionManager.prototype.getLayerBoundsCompat = function ( layer ) {
+		if ( this.canvasManager && typeof this.canvasManager.getLayerBounds === 'function' ) {
+			return this.canvasManager.getLayerBounds( layer );
+		}
+
+		if ( !layer ) {
+			return null;
+		}
+
+		// Common case: rectangular bounds
+		if ( typeof layer.x === 'number' && typeof layer.y === 'number' &&
+			typeof layer.width === 'number' && typeof layer.height === 'number' ) {
+			var minX = Math.min( layer.x, layer.x + layer.width );
+			var minY = Math.min( layer.y, layer.y + layer.height );
+			return {
+				x: minX,
+				y: minY,
+				width: Math.abs( layer.width ),
+				height: Math.abs( layer.height )
+			};
+		}
+
+		// Line/arrow
+		if ( typeof layer.x1 === 'number' && typeof layer.y1 === 'number' &&
+			typeof layer.x2 === 'number' && typeof layer.y2 === 'number' ) {
+			var lx1 = Math.min( layer.x1, layer.x2 );
+			var ly1 = Math.min( layer.y1, layer.y2 );
+			var lx2 = Math.max( layer.x1, layer.x2 );
+			var ly2 = Math.max( layer.y1, layer.y2 );
+			return { x: lx1, y: ly1, width: lx2 - lx1, height: ly2 - ly1 };
+		}
+
+		// Ellipse/circle with center + radii
+		if ( typeof layer.x === 'number' && typeof layer.y === 'number' &&
+			( typeof layer.radius === 'number' ||
+				typeof layer.radiusX === 'number' || typeof layer.radiusY === 'number' ) ) {
+			var hasRX = ( layer.radiusX !== null && layer.radiusX !== undefined );
+			var hasRY = ( layer.radiusY !== null && layer.radiusY !== undefined );
+			var rx = Math.abs( hasRX ? layer.radiusX : ( layer.radius || 0 ) );
+			var ry = Math.abs( hasRY ? layer.radiusY : ( layer.radius || 0 ) );
+			return { x: layer.x - rx, y: layer.y - ry, width: rx * 2, height: ry * 2 };
+		}
+
+		// Path/polygon points
+		if ( Array.isArray( layer.points ) && layer.points.length ) {
+			var minPX = Infinity, minPY = Infinity, maxPX = -Infinity, maxPY = -Infinity;
+			for ( var i = 0; i < layer.points.length; i++ ) {
+				var p = layer.points[ i ];
+				minPX = Math.min( minPX, p.x );
+				minPY = Math.min( minPY, p.y );
+				maxPX = Math.max( maxPX, p.x );
+				maxPY = Math.max( maxPY, p.y );
+			}
+			return { x: minPX, y: minPY, width: maxPX - minPX, height: maxPY - minPY };
+		}
+
+		return null;
+	};
+
 	// Export SelectionManager to global scope
 	window.LayersSelectionManager = SelectionManager;
+
+	// Also export via CommonJS when available (for Jest tests)
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = SelectionManager;
+	}
 
 }() );

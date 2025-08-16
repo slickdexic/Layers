@@ -13,6 +13,17 @@
 	 *
 	 */
 	function CanvasManager( config ) {
+		// Back-compat: allow new CanvasManager(editorLike)
+		if (
+			config && !config.container &&
+			( config.canvas || config.layers || config.getLayerById )
+		) {
+			config = {
+				editor: config,
+				container: ( config.container || null ),
+				canvas: config.canvas
+			};
+		}
 		this.config = config || {};
 		this.container = this.config.container;
 		this.editor = this.config.editor;
@@ -27,7 +38,8 @@
 		this.dirtyRegion = null; // Track dirty regions to avoid full redraws
 		this.animationFrameId = null; // For requestAnimationFrame
 		this.redrawScheduled = false; // Prevent multiple redraws in same frame
-		this.layersCache = new window.Map(); // Cache rendered layers
+		// Use a plain object for cache to satisfy environments without ES2015 Map
+		this.layersCache = Object.create( null ); // Cache rendered layers
 		this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 }; // For culling
 
 		// Selection and manipulation state
@@ -107,16 +119,23 @@
 	}
 
 	CanvasManager.prototype.init = function () {
-		// console.log( 'Layers: CanvasManager initializing...' );
-		// console.log( 'Layers: Container element:', this.container );
-
-		// Find or create canvas
-		this.canvas = this.container.querySelector( 'canvas' );
-		if ( !this.canvas ) {
-			// console.log( 'Layers: No canvas found, creating one...' );
-			this.canvas = document.createElement( 'canvas' );
-			this.canvas.className = 'layers-canvas';
-			this.container.appendChild( this.canvas );
+		// Support headless/test scenarios: if container is missing, either
+		// use a provided canvas in config or create a detached canvas.
+		if ( !this.container ) {
+			if ( this.config.canvas && this.config.canvas.getContext ) {
+				this.canvas = this.config.canvas;
+			} else {
+				this.canvas = document.createElement( 'canvas' );
+				this.canvas.className = 'layers-canvas';
+			}
+		} else {
+			// Find or create canvas
+			this.canvas = this.container.querySelector( 'canvas' );
+			if ( !this.canvas ) {
+				this.canvas = document.createElement( 'canvas' );
+				this.canvas.className = 'layers-canvas';
+				this.container.appendChild( this.canvas );
+			}
 		}
 
 		this.ctx = this.canvas.getContext( '2d' );
@@ -127,8 +146,11 @@
 		// Set up event handlers
 		this.setupEventHandlers();
 
-		// Load background image first, then set canvas size based on it
-		this.loadBackgroundImage();
+		// Load background image if editor/filename is present; otherwise
+		// skip image detection during tests.
+		if ( this.editor && this.editor.filename ) {
+			this.loadBackgroundImage();
+		}
 
 		// console.log( 'Layers: CanvasManager initialization complete' );
 	};
@@ -161,7 +183,10 @@
 		}
 
 		// Priority 3: Try MediaWiki patterns if mw is available
-		if ( filename && mw && mw.config && mw.config.get( 'wgServer' ) && mw.config.get( 'wgScriptPath' ) ) {
+		if (
+			filename && typeof mw !== 'undefined' && mw && mw.config &&
+			mw.config.get( 'wgServer' ) && mw.config.get( 'wgScriptPath' )
+		) {
 			var mwUrls = [
 				mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
 				'/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename ),
@@ -743,8 +768,7 @@
 			this.lastPanPoint = { x: e.clientX, y: e.clientY };
 
 			// Update canvas position
-			this.canvas.style.transform = 'translate(' + this.panX + 'px, ' + this.panY + 'px) scale(' + this.zoom + ')';
-			this.canvas.style.transformOrigin = '0 0';
+			this.updateCanvasTransform();
 
 			return;
 		}
@@ -1832,7 +1856,7 @@
 	};
 
 	CanvasManager.prototype.handleWheel = function ( e ) {
-		// Don't zoom when resizing, rotating, or dragging
+		// Don't zoom when resizing, rotating, dragging or panning
 		if ( this.isResizing || this.isRotating || this.isDragging || this.isPanning ) {
 			e.preventDefault();
 			return;
@@ -1840,22 +1864,12 @@
 
 		e.preventDefault();
 
+		// Wheel delta: positive deltaY zooms out, negative zooms in
 		var delta = e.deltaY > 0 ? -0.1 : 0.1;
-		var newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, this.zoom + delta ) );
 
-		if ( newZoom !== this.zoom ) {
-			// Update zoom
-			this.zoom = newZoom;
-			this.userHasSetZoom = true; // Mark that user has manually set zoom
-
-			// Update CSS size
-			if ( this.backgroundImage ) {
-				this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
-				this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
-			}
-
-			this.updateCanvasTransform();
-		}
+		// Compute anchor in canvas coordinates under the mouse
+		var point = this.getMousePoint( e );
+		this.zoomBy( delta, point );
 	};
 
 	CanvasManager.prototype.handleKeyDown = function ( e ) {
@@ -1924,22 +1938,22 @@
 				case 'ArrowUp':
 					e.preventDefault();
 					this.panY += panDistance;
-					this.canvas.style.transform = 'translate(' + this.panX + 'px, ' + this.panY + 'px) scale(' + this.zoom + ')';
+					this.updateCanvasTransform();
 					break;
 				case 'ArrowDown':
 					e.preventDefault();
 					this.panY -= panDistance;
-					this.canvas.style.transform = 'translate(' + this.panX + 'px, ' + this.panY + 'px) scale(' + this.zoom + ')';
+					this.updateCanvasTransform();
 					break;
 				case 'ArrowLeft':
 					e.preventDefault();
 					this.panX += panDistance;
-					this.canvas.style.transform = 'translate(' + this.panX + 'px, ' + this.panY + 'px) scale(' + this.zoom + ')';
+					this.updateCanvasTransform();
 					break;
 				case 'ArrowRight':
 					e.preventDefault();
 					this.panX -= panDistance;
-					this.canvas.style.transform = 'translate(' + this.panX + 'px, ' + this.panY + 'px) scale(' + this.zoom + ')';
+					this.updateCanvasTransform();
 					break;
 			}
 		}
@@ -1968,20 +1982,23 @@
 		this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
 		this.userHasSetZoom = true; // Mark that user has manually set zoom
 
-		// Update CSS size based on zoom
-		if ( this.backgroundImage ) {
-			this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
-			this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
-		}
-
+		// Prefer transform-based zooming; avoid resizing CSS width/height here
+		// to prevent double-scaling
 		this.updateCanvasTransform();
 
 		// Update status zoom percent
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { zoomPercent: this.zoom * 100 } );
 		}
+	};
 
-		// console.log( 'Layers: Zoom set to', this.zoom );
+	/**
+	 * Update the canvas CSS transform from current pan/zoom state.
+	 */
+	CanvasManager.prototype.updateCanvasTransform = function () {
+		this.canvas.style.transform = 'translate(' + this.panX + 'px, ' +
+			this.panY + 'px) scale(' + this.zoom + ')';
+		this.canvas.style.transformOrigin = '0 0';
 	};
 
 	CanvasManager.prototype.resetZoom = function () {
@@ -2066,16 +2083,7 @@
 	 */
 	CanvasManager.prototype.setZoomDirect = function ( newZoom ) {
 		this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
-
-		// Update CSS size based on zoom
-		if ( this.backgroundImage ) {
-			this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
-			this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
-		}
-
 		this.updateCanvasTransform();
-
-		// Update status zoom percent
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { zoomPercent: this.zoom * 100 } );
 		}
@@ -2309,29 +2317,16 @@
 
 		var zoomFactor = event.shiftKey ? 0.8 : 1.25; // Zoom out if shift, zoom in otherwise
 		var newZoom = this.zoom * zoomFactor;
-
-		// Clamp zoom level
 		newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
 
 		if ( newZoom !== this.zoom ) {
-			// Calculate zoom center - zoom towards the clicked point
-			var centerX = point.x;
-			var centerY = point.y;
-
-			// Adjust pan to zoom towards the clicked point
-			var zoomChange = newZoom / this.zoom;
-			this.panX = centerX - ( centerX - this.panX ) * zoomChange;
-			this.panY = centerY - ( centerY - this.panY ) * zoomChange;
-
+			// Keep the clicked canvas point under the cursor stable
+			var screenX = this.panX + this.zoom * point.x;
+			var screenY = this.panY + this.zoom * point.y;
 			this.zoom = newZoom;
+			this.panX = screenX - this.zoom * point.x;
+			this.panY = screenY - this.zoom * point.y;
 			this.userHasSetZoom = true;
-
-			// Update CSS size
-			if ( this.backgroundImage ) {
-				this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
-				this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
-			}
-
 			this.updateCanvasTransform();
 		}
 	};
@@ -2356,17 +2351,36 @@
 		newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
 
 		if ( newZoom !== this.zoom ) {
+			// Anchor zoom around drag start point
+			var anchor = this.dragStartPoint;
+			var screenX = this.panX + this.zoom * anchor.x;
+			var screenY = this.panY + this.zoom * anchor.y;
 			this.zoom = newZoom;
+			this.panX = screenX - this.zoom * anchor.x;
+			this.panY = screenY - this.zoom * anchor.y;
 			this.userHasSetZoom = true;
-
-			// Update CSS size
-			if ( this.backgroundImage ) {
-				this.canvas.style.width = ( this.backgroundImage.width * this.zoom ) + 'px';
-				this.canvas.style.height = ( this.backgroundImage.height * this.zoom ) + 'px';
-			}
-
 			this.updateCanvasTransform();
 		}
+	};
+
+	/**
+	 * Public zoom helper used by external handlers (wheel/pinch)
+	 *
+	 * @param {number} delta Positive to zoom in, negative to zoom out (in zoom units)
+	 * @param {{x:number,y:number}} point Canvas coordinate under the cursor to anchor zoom around
+	 */
+	CanvasManager.prototype.zoomBy = function ( delta, point ) {
+		var target = Math.max( this.minZoom, Math.min( this.maxZoom, this.zoom + delta ) );
+		if ( target === this.zoom ) {
+			return;
+		}
+		var screenX = this.panX + this.zoom * point.x;
+		var screenY = this.panY + this.zoom * point.y;
+		this.zoom = target;
+		this.panX = screenX - this.zoom * point.x;
+		this.panY = screenY - this.zoom * point.y;
+		this.userHasSetZoom = true;
+		this.updateCanvasTransform();
 	};
 
 	CanvasManager.prototype.saveState = function ( action ) {
@@ -2615,12 +2629,12 @@
 		// Effects: shadow/glow/strokeEffect (basic interpretations)
 		if ( layer.shadow ) {
 			this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
-			this.ctx.shadowBlur = layer.shadowBlur || 8;
-			// Scale shadow offsets to account for canvas coordinate space transformation
-			var shadowOffsetX = layer.shadowOffsetX || 2;
-			var shadowOffsetY = layer.shadowOffsetY || 2;
-			this.ctx.shadowOffsetX = shadowOffsetX * ( this.zoom || 1 );
-			this.ctx.shadowOffsetY = shadowOffsetY * ( this.zoom || 1 );
+			this.ctx.shadowBlur = Math.round( layer.shadowBlur || 8 );
+			// Keep shadow offsets constant in canvas coordinates (do not scale with zoom)
+			var shadowOffsetX = Math.round( layer.shadowOffsetX || 2 );
+			var shadowOffsetY = Math.round( layer.shadowOffsetY || 2 );
+			this.ctx.shadowOffsetX = shadowOffsetX;
+			this.ctx.shadowOffsetY = shadowOffsetY;
 		}
 
 		// Draw with effects
@@ -3032,7 +3046,9 @@
 			this.ctx.fillStyle = handleColor;
 			this.ctx.strokeStyle = handleBorderColor;
 			this.ctx.lineWidth = 1;
-			this.ctx.setLineDash( [] );
+			if ( typeof this.ctx.setLineDash === 'function' ) {
+				this.ctx.setLineDash( [] );
+			}
 
 			this.ctx.fillRect(
 				handle.x - handleSize / 2,
@@ -3097,7 +3113,9 @@
 		// Draw connection line (in transformed coordinate space)
 		this.ctx.strokeStyle = lineColor;
 		this.ctx.lineWidth = 1;
-		this.ctx.setLineDash( [] );
+		if ( typeof this.ctx.setLineDash === 'function' ) {
+			this.ctx.setLineDash( [] );
+		}
 		this.ctx.beginPath();
 		this.ctx.moveTo( bounds.x + bounds.width / 2, bounds.y );
 		this.ctx.lineTo( rotationHandleX, rotationHandleY );
@@ -3127,7 +3145,9 @@
 		this.ctx.save();
 		this.ctx.strokeStyle = '#e9ecef';
 		this.ctx.lineWidth = 1;
-		this.ctx.setLineDash( [] );
+		if ( typeof this.ctx.setLineDash === 'function' ) {
+			this.ctx.setLineDash( [] );
+		}
 
 		// Vertical lines
 		for ( var x = 0; x <= w; x += size ) {
@@ -3331,28 +3351,35 @@
 	};
 
 	CanvasManager.prototype.getMousePoint = function ( e ) {
+		return this.getMousePointFromClient( e.clientX, e.clientY );
+	};
+
+	/**
+	 * Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.
+	 * Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
+	 *
+	 * @param {number} clientX
+	 * @param {number} clientY
+	 * @return {{x:number,y:number}}
+	 */
+	CanvasManager.prototype.getMousePointFromClient = function ( clientX, clientY ) {
 		var rect = this.canvas.getBoundingClientRect();
+		// Position within the displayed (transformed) element
+		var relX = clientX - rect.left;
+		var relY = clientY - rect.top;
+		// Scale to logical canvas pixels
+		var scaleX = this.canvas.width / rect.width;
+		var scaleY = this.canvas.height / rect.height;
+		var canvasX = relX * scaleX;
+		var canvasY = relY * scaleY;
 
-		// Get mouse position relative to canvas
-		var clientX = e.clientX - rect.left;
-		var clientY = e.clientY - rect.top;
-
-		// Convert from display coordinates to canvas coordinates
-		// Account for CSS transforms (zoom and pan)
-		var canvasX = ( clientX - ( this.panX || 0 ) ) / this.zoom;
-		var canvasY = ( clientY - ( this.panY || 0 ) ) / this.zoom;
-
-		// Snap to grid if enabled (optimize with cached grid size)
 		if ( this.snapToGrid && this.gridSize > 0 ) {
-			var gridSize = this.gridSize; // Cache to avoid repeated property access
+			var gridSize = this.gridSize;
 			canvasX = Math.round( canvasX / gridSize ) * gridSize;
 			canvasY = Math.round( canvasY / gridSize ) * gridSize;
 		}
 
-		return {
-			x: canvasX,
-			y: canvasY
-		};
+		return { x: canvasX, y: canvasY };
 	};
 
 	// Raw mapping without snapping, useful for ruler hit testing
@@ -4163,7 +4190,8 @@
 			// console.log( 'Layers: Redrawing canvas...' );
 			// console.log( 'Layers: Background image status:',
 			//  this.backgroundImage ? 'loaded' : 'none',
-			//             this.backgroundImage ? ('complete: ' + this.backgroundImage.complete) : '' );
+			//             this.backgroundImage ?
+			//                 ('complete: ' + this.backgroundImage.complete) : '' );
 
 			// Clear canvas
 			this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
@@ -4179,59 +4207,68 @@
 			} else {
 				// Draw a pattern background to show that this is the canvas area
 				this.ctx.fillStyle = '#ffffff';
-			this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+				this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
 
-			// Draw a checker pattern to indicate "no image loaded"
-			this.ctx.fillStyle = '#f0f0f0';
-			var checkerSize = 20;
-			for ( var x = 0; x < this.canvas.width; x += checkerSize * 2 ) {
-				for ( var y = 0; y < this.canvas.height; y += checkerSize * 2 ) {
-					this.ctx.fillRect( x, y, checkerSize, checkerSize );
-					this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
+				// Draw a checker pattern to indicate "no image loaded"
+				this.ctx.fillStyle = '#f0f0f0';
+				var checkerSize = 20;
+				for ( var x = 0; x < this.canvas.width; x += checkerSize * 2 ) {
+					for ( var y = 0; y < this.canvas.height; y += checkerSize * 2 ) {
+						this.ctx.fillRect( x, y, checkerSize, checkerSize );
+						this.ctx.fillRect(
+							x + checkerSize,
+							y + checkerSize,
+							checkerSize,
+							checkerSize
+						);
+					}
 				}
-			}
 
-			// Draw a message in the center
-			this.ctx.fillStyle = '#666666';
-			this.ctx.font = '24px Arial';
-			this.ctx.textAlign = 'center';
-			this.ctx.textBaseline = 'middle';
-			var text = this.backgroundImage ? 'Loading image...' : 'No image loaded';
-			this.ctx.fillText( text, this.canvas.width / 2, this.canvas.height / 2 );
+				// Draw a message in the center
+				this.ctx.fillStyle = '#666666';
+				this.ctx.font = '24px Arial';
+				this.ctx.textAlign = 'center';
+				this.ctx.textBaseline = 'middle';
+				var text = this.backgroundImage ? 'Loading image...' : 'No image loaded';
+				this.ctx.fillText( text, this.canvas.width / 2, this.canvas.height / 2 );
 
 			// console.log( 'Layers: Drew placeholder background with message:', text );
-		}
+			}
 
-		// Draw grid if enabled
-		this.drawGrid();
+			// Draw grid if enabled
+			this.drawGrid();
 
-		// Draw rulers after background/grid
-		this.drawRulers();
-	} catch ( error ) {
+			// Draw rulers after background/grid
+			this.drawRulers();
+		} catch ( error ) {
 		// Error recovery for canvas operations
-		if ( this.editor && this.editor.errorLog ) {
-			this.editor.errorLog( 'Canvas redraw failed:', error );
+			if ( this.editor && this.editor.errorLog ) {
+				this.editor.errorLog( 'Canvas redraw failed:', error );
+			}
+
+			// Attempt to recover by restoring a basic state
+			try {
+				this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
+				this.ctx.fillStyle = '#ffffff';
+				this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+
+				// Draw error message
+				this.ctx.fillStyle = '#cc0000';
+				this.ctx.font = '16px Arial';
+				this.ctx.textAlign = 'center';
+				this.ctx.textBaseline = 'middle';
+				this.ctx.fillText( 'Canvas error - reloading recommended',
+					this.canvas.width / 2, this.canvas.height / 2 );
+			} catch ( recoveryError ) {
+			// If even recovery fails, log the error without using console (eslint no-console)
+				if ( window.mw && window.mw.log && typeof window.mw.log.error === 'function' ) {
+					window.mw.log.error( 'Layers: Canvas error recovery failed:', recoveryError );
+				} else if ( this.editor && typeof this.editor.errorLog === 'function' ) {
+					this.editor.errorLog( 'Canvas error recovery failed:', recoveryError );
+				}
+			}
 		}
-		
-		// Attempt to recover by restoring a basic state
-		try {
-			this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
-			this.ctx.fillStyle = '#ffffff';
-			this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
-			
-			// Draw error message
-			this.ctx.fillStyle = '#cc0000';
-			this.ctx.font = '16px Arial';
-			this.ctx.textAlign = 'center';
-			this.ctx.textBaseline = 'middle';
-			this.ctx.fillText( 'Canvas error - reloading recommended', 
-				this.canvas.width / 2, this.canvas.height / 2 );
-		} catch ( recoveryError ) {
-			// If even recovery fails, log the error
-			console.error( 'Canvas error recovery failed:', recoveryError );
-		}
-	}
-};
+	};
 
 	CanvasManager.prototype.redrawOptimized = function () {
 		// Optimize redraws using requestAnimationFrame
@@ -4397,22 +4434,22 @@
 			if ( this.editor && this.editor.errorLog ) {
 				this.editor.errorLog( 'Layer drawing failed for', layer.type, 'layer:', error );
 			}
-			
+
 			// Draw error placeholder for the layer
 			try {
 				this.ctx.save();
 				this.ctx.fillStyle = '#ff9999';
 				this.ctx.strokeStyle = '#cc0000';
 				this.ctx.lineWidth = 2;
-				
+
 				var x = layer.x || 0;
 				var y = layer.y || 0;
 				var width = layer.width || 50;
 				var height = layer.height || 50;
-				
+
 				this.ctx.fillRect( x, y, width, height );
 				this.ctx.strokeRect( x, y, width, height );
-				
+
 				// Draw error icon (X)
 				this.ctx.strokeStyle = '#ffffff';
 				this.ctx.lineWidth = 3;
@@ -4422,10 +4459,14 @@
 				this.ctx.moveTo( x + width - 10, y + 10 );
 				this.ctx.lineTo( x + 10, y + height - 10 );
 				this.ctx.stroke();
-				
+
 				this.ctx.restore();
 			} catch ( recoveryError ) {
-				console.error( 'Layer error recovery failed:', recoveryError );
+				if ( window.mw && window.mw.log && typeof window.mw.log.error === 'function' ) {
+					window.mw.log.error( 'Layers: Layer error recovery failed:', recoveryError );
+				} else if ( this.editor && typeof this.editor.errorLog === 'function' ) {
+					this.editor.errorLog( 'Layer error recovery failed:', recoveryError );
+				}
 			}
 		}
 	};
@@ -5079,7 +5120,7 @@
 
 		// Clear layer cache
 		if ( this.layersCache ) {
-			this.layersCache.clear();
+			this.layersCache = Object.create( null );
 		}
 
 		// Remove all event listeners to prevent memory leaks
@@ -5165,5 +5206,9 @@
 
 	// Export CanvasManager to global scope
 	window.CanvasManager = CanvasManager;
+	// Also export via CommonJS when available (tests)
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = CanvasManager;
+	}
 
 }() );

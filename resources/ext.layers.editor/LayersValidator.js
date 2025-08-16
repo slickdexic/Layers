@@ -210,8 +210,13 @@
 				if ( fontSize < this.validationRules.minFontSize ||
 					fontSize > this.validationRules.maxFontSize ) {
 					result.isValid = false;
-					result.errors.push( this.getMessage( 'layers-validation-fontsize-range',
-						this.validationRules.minFontSize, this.validationRules.maxFontSize ) );
+					result.errors.push(
+						this.getMessage(
+							'layers-validation-fontsize-range',
+							this.validationRules.minFontSize,
+							this.validationRules.maxFontSize
+						)
+					);
 				}
 			}
 		}
@@ -223,10 +228,18 @@
 				result.errors.push( this.getMessage( 'layers-validation-strokewidth-invalid' ) );
 			} else {
 				var strokeWidth = parseFloat( layer.strokeWidth );
-				if ( strokeWidth < this.validationRules.minStrokeWidth || strokeWidth > this.validationRules.maxStrokeWidth ) {
+				if (
+					strokeWidth < this.validationRules.minStrokeWidth ||
+					strokeWidth > this.validationRules.maxStrokeWidth
+				) {
 					result.isValid = false;
-					result.errors.push( this.getMessage( 'layers-validation-strokewidth-range',
-						this.validationRules.minStrokeWidth, this.validationRules.maxStrokeWidth ) );
+					result.errors.push(
+						this.getMessage(
+							'layers-validation-strokewidth-range',
+							this.validationRules.minStrokeWidth,
+							this.validationRules.maxStrokeWidth
+						)
+					);
 				}
 			}
 		}
@@ -238,7 +251,10 @@
 				result.errors.push( this.getMessage( 'layers-validation-opacity-invalid' ) );
 			} else {
 				var opacity = parseFloat( layer.opacity );
-				if ( opacity < this.validationRules.minOpacity || opacity > this.validationRules.maxOpacity ) {
+				if (
+					opacity < this.validationRules.minOpacity ||
+					opacity > this.validationRules.maxOpacity
+				) {
 					result.isValid = false;
 					result.errors.push( this.getMessage( 'layers-validation-opacity-range',
 						this.validationRules.minOpacity, this.validationRules.maxOpacity ) );
@@ -255,10 +271,18 @@
 				result.errors.push( this.getMessage( 'layers-validation-sides-invalid' ) );
 			} else {
 				var sides = parseInt( layer.sides );
-				if ( sides < this.validationRules.minSides || sides > this.validationRules.maxSides ) {
+				if (
+					sides < this.validationRules.minSides ||
+					sides > this.validationRules.maxSides
+				) {
 					result.isValid = false;
-					result.errors.push( this.getMessage( 'layers-validation-sides-range',
-						this.validationRules.minSides, this.validationRules.maxSides ) );
+					result.errors.push(
+						this.getMessage(
+							'layers-validation-sides-range',
+							this.validationRules.minSides,
+							this.validationRules.maxSides
+						)
+					);
 				}
 			}
 		}
@@ -270,10 +294,18 @@
 				result.errors.push( this.getMessage( 'layers-validation-blurradius-invalid' ) );
 			} else {
 				var blurRadius = parseFloat( layer.blurRadius );
-				if ( blurRadius < this.validationRules.minBlurRadius || blurRadius > this.validationRules.maxBlurRadius ) {
+				if (
+					blurRadius < this.validationRules.minBlurRadius ||
+					blurRadius > this.validationRules.maxBlurRadius
+				) {
 					result.isValid = false;
-					result.errors.push( this.getMessage( 'layers-validation-blurradius-range',
-						this.validationRules.minBlurRadius, this.validationRules.maxBlurRadius ) );
+					result.errors.push(
+						this.getMessage(
+							'layers-validation-blurradius-range',
+							this.validationRules.minBlurRadius,
+							this.validationRules.maxBlurRadius
+						)
+					);
 				}
 			}
 		}
@@ -579,7 +611,10 @@
 			var matches = color.match( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
 			// Validate RGB values are in 0-255 range
 			for ( var i = 1; i <= 3; i++ ) {
-				if ( matches[ i ] && ( parseInt( matches[ i ] ) < 0 || parseInt( matches[ i ] ) > 255 ) ) {
+				if (
+					matches[ i ] &&
+					( parseInt( matches[ i ] ) < 0 || parseInt( matches[ i ] ) > 255 )
+				) {
 					return false;
 				}
 			}
@@ -590,13 +625,22 @@
 		if ( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/.test( color ) ) {
 			var hslMatches = color.match( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
 			// Validate HSL values
-			if ( hslMatches[ 1 ] && ( parseInt( hslMatches[ 1 ] ) < 0 || parseInt( hslMatches[ 1 ] ) > 360 ) ) {
+			if (
+				hslMatches[ 1 ] &&
+				( parseInt( hslMatches[ 1 ] ) < 0 || parseInt( hslMatches[ 1 ] ) > 360 )
+			) {
 				return false;
 			}
-			if ( hslMatches[ 2 ] && ( parseInt( hslMatches[ 2 ] ) < 0 || parseInt( hslMatches[ 2 ] ) > 100 ) ) {
+			if (
+				hslMatches[ 2 ] &&
+				( parseInt( hslMatches[ 2 ] ) < 0 || parseInt( hslMatches[ 2 ] ) > 100 )
+			) {
 				return false;
 			}
-			if ( hslMatches[ 3 ] && ( parseInt( hslMatches[ 3 ] ) < 0 || parseInt( hslMatches[ 3 ] ) > 100 ) ) {
+			if (
+				hslMatches[ 3 ] &&
+				( parseInt( hslMatches[ 3 ] ) < 0 || parseInt( hslMatches[ 3 ] ) > 100 )
+			) {
 				return false;
 			}
 			return true;
@@ -631,13 +675,27 @@
 	 * Get internationalized message
 	 *
 	 * @param {string} key - Message key. Valid validation keys include:
-	 *   'layers-validation-layer-invalid', 'layers-validation-id-required', 'layers-validation-type-required',
-	 *   'layers-validation-type-invalid', 'layers-validation-id-type', 'layers-validation-id-too-long',
-	 *   'layers-validation-id-invalid-chars', 'layers-validation-coordinate-invalid', 'layers-validation-coordinate-too-large',
-	 *   'layers-validation-fontsize-invalid', 'layers-validation-fontsize-range', 'layers-validation-strokewidth-invalid',
-	 *   'layers-validation-strokewidth-range', 'layers-validation-opacity-invalid', 'layers-validation-opacity-range',
-	 *   'layers-validation-sides-invalid', 'layers-validation-sides-range', 'layers-validation-blurradius-invalid',
-	 *   'layers-validation-blurradius-range', 'layers-validation-text-type', 'layers-validation-text-too-long'
+	 *   'layers-validation-layer-invalid',
+	 *   'layers-validation-id-required',
+	 *   'layers-validation-type-required',
+	 *   'layers-validation-type-invalid',
+	 *   'layers-validation-id-type',
+	 *   'layers-validation-id-too-long',
+	 *   'layers-validation-id-invalid-chars',
+	 *   'layers-validation-coordinate-invalid',
+	 *   'layers-validation-coordinate-too-large',
+	 *   'layers-validation-fontsize-invalid',
+	 *   'layers-validation-fontsize-range',
+	 *   'layers-validation-strokewidth-invalid',
+	 *   'layers-validation-strokewidth-range',
+	 *   'layers-validation-opacity-invalid',
+	 *   'layers-validation-opacity-range',
+	 *   'layers-validation-sides-invalid',
+	 *   'layers-validation-sides-range',
+	 *   'layers-validation-blurradius-invalid',
+	 *   'layers-validation-blurradius-range',
+	 *   'layers-validation-text-type',
+	 *   'layers-validation-text-too-long'
 	 * @param {...*} args - Message parameters
 	 * @return {string} Localized message
 	 */
@@ -758,8 +816,8 @@
 	/**
 	 * Show validation errors to the user
 	 *
-	 * @param errors Array of error messages
-	 * @param context Context information (unused)
+	 * @param {Array<string>} errors Array of error messages
+	 * @param {Object} [context] Context information (unused)
 	 */
 	// eslint-disable-next-line no-unused-vars
 	LayersValidator.prototype.showValidationErrors = function ( errors, context ) {
@@ -851,7 +909,10 @@
 					break;
 
 				case 'text':
-					if ( value && value.length > ( options.maxLength || self.validationRules.maxTextLength ) ) {
+					if (
+						value &&
+						value.length > ( options.maxLength || self.validationRules.maxTextLength )
+					) {
 						isValid = false;
 						errorMessage = 'Text too long (max: ' + ( options.maxLength || self.validationRules.maxTextLength ) + ')';
 					}

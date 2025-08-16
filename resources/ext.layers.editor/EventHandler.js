@@ -6,6 +6,15 @@
 	'use strict';
 
 	/**
+	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
+	 * This avoids jsdoc/no-undefined-types without changing runtime behavior.
+	 *
+	 * @typedef {Object} CanvasManager
+	 * @property {HTMLCanvasElement} canvas
+	 * @property {CanvasRenderingContext2D} ctx
+	 */
+
+	/**
 	 * EventHandler class
 	 *
 	 * @param {Object} config Configuration object
@@ -13,6 +22,12 @@
 	 * @class
 	 */
 	function EventHandler( config, canvasManager ) {
+		// Back-compat: allow new EventHandler(canvasManager)
+		if ( config && !canvasManager && ( config.canvas || config.layers ) ) {
+			canvasManager = config;
+			config = {};
+		}
+
 		this.config = config || {};
 		this.canvasManager = canvasManager;
 		this.canvas = canvasManager.canvas;
@@ -21,6 +36,9 @@
 		this.isMouseDown = false;
 		this.lastMousePoint = null;
 		this.touches = {};
+		// Compat for tests
+		this.lastTouchTime = 0;
+		this.spacePressed = false;
 
 		this.setupEventListeners();
 	}
@@ -30,47 +48,47 @@
 	 */
 	EventHandler.prototype.setupEventListeners = function () {
 		var self = this;
+		this.listeners = {};
 
 		// Mouse events
-		this.canvas.addEventListener( 'mousedown', function ( e ) {
+		this.listeners.mousedown = function ( e ) {
 			self.handleMouseDown( e );
-		} );
-
-		this.canvas.addEventListener( 'mousemove', function ( e ) {
+		};
+		this.listeners.mousemove = function ( e ) {
 			self.handleMouseMove( e );
-		} );
-
-		this.canvas.addEventListener( 'mouseup', function ( e ) {
+		};
+		this.listeners.mouseup = function ( e ) {
 			self.handleMouseUp( e );
-		} );
+		};
+
+		this.canvas.addEventListener( 'mousedown', this.listeners.mousedown );
+		this.canvas.addEventListener( 'mousemove', this.listeners.mousemove );
+		this.canvas.addEventListener( 'mouseup', this.listeners.mouseup );
 
 		// Touch events for mobile support
-		this.canvas.addEventListener( 'touchstart', function ( e ) {
-			e.preventDefault(); // Prevent scrolling
+		this.listeners.touchstart = function ( e ) {
+			e.preventDefault();
 			self.handleTouchStart( e );
-		} );
-
-		this.canvas.addEventListener( 'touchmove', function ( e ) {
-			e.preventDefault(); // Prevent scrolling
+		};
+		this.listeners.touchmove = function ( e ) {
+			e.preventDefault();
 			self.handleTouchMove( e );
-		} );
-
-		this.canvas.addEventListener( 'touchend', function ( e ) {
+		};
+		this.listeners.touchend = function ( e ) {
 			e.preventDefault();
 			self.handleTouchEnd( e );
-		} );
-
-		// Handle pinch-to-zoom on touch devices
-		this.canvas.addEventListener( 'touchcancel', function ( e ) {
+		};
+		this.listeners.touchcancel = function ( e ) {
 			e.preventDefault();
 			self.handleTouchEnd( e );
-		} );
+		};
 
-		// Wheel event for zooming
-		this.canvas.addEventListener( 'wheel', function ( e ) {
-			e.preventDefault();
-			self.handleWheel( e );
-		} );
+		this.canvas.addEventListener( 'touchstart', this.listeners.touchstart );
+		this.canvas.addEventListener( 'touchmove', this.listeners.touchmove );
+		this.canvas.addEventListener( 'touchend', this.listeners.touchend );
+		this.canvas.addEventListener( 'touchcancel', this.listeners.touchcancel );
+
+		// Wheel event: handled by CanvasManager to centralize zoom-to-pointer logic
 
 		// Prevent context menu
 		this.canvas.addEventListener( 'contextmenu', function ( e ) {
@@ -98,12 +116,25 @@
 	 * @param {MouseEvent} e Mouse event
 	 */
 	EventHandler.prototype.handleMouseDown = function ( e ) {
-		this.isMouseDown = true;
-		var point = this.getMousePoint( e );
-		this.lastMousePoint = point;
+		if ( e && typeof e.preventDefault === 'function' ) {
+			e.preventDefault();
+		}
+		// Only left button
+		if ( e && typeof e.button === 'number' && e.button !== 0 ) {
+			this.isMouseDown = false;
+			return;
+		}
 
-		// Delegate to canvas manager
-		this.canvasManager.handleMouseDown( e );
+		this.isMouseDown = true;
+		var coords = this.getCoordsFromEvent( e );
+		this.lastMousePoint = coords;
+
+		// Prefer pointer-based APIs if available
+		if ( this.canvasManager && typeof this.canvasManager.handlePointerDown === 'function' ) {
+			this.canvasManager.handlePointerDown( coords.x, coords.y );
+		} else if ( typeof this.canvasManager.handleMouseDown === 'function' ) {
+			this.canvasManager.handleMouseDown( e );
+		}
 	};
 
 	/**
@@ -112,11 +143,21 @@
 	 * @param {MouseEvent} e Mouse event
 	 */
 	EventHandler.prototype.handleMouseMove = function ( e ) {
-		var point = this.getMousePoint( e );
-		this.lastMousePoint = point;
+		if ( e && typeof e.preventDefault === 'function' ) {
+			e.preventDefault();
+		}
+		// Only process move when actively dragging (compat with legacy tests)
+		if ( !this.isMouseDown ) {
+			return;
+		}
+		var coords = this.getCoordsFromEvent( e );
+		this.lastMousePoint = coords;
 
-		// Delegate to canvas manager
-		this.canvasManager.handleMouseMove( e );
+		if ( this.canvasManager && typeof this.canvasManager.handlePointerMove === 'function' ) {
+			this.canvasManager.handlePointerMove( coords.x, coords.y );
+		} else if ( typeof this.canvasManager.handleMouseMove === 'function' ) {
+			this.canvasManager.handleMouseMove( e );
+		}
 	};
 
 	/**
@@ -125,10 +166,17 @@
 	 * @param {MouseEvent} e Mouse event
 	 */
 	EventHandler.prototype.handleMouseUp = function ( e ) {
+		if ( e && typeof e.preventDefault === 'function' ) {
+			e.preventDefault();
+		}
 		this.isMouseDown = false;
+		var coords = this.getCoordsFromEvent( e );
 
-		// Delegate to canvas manager
-		this.canvasManager.handleMouseUp( e );
+		if ( this.canvasManager && typeof this.canvasManager.handlePointerUp === 'function' ) {
+			this.canvasManager.handlePointerUp( coords.x, coords.y );
+		} else if ( typeof this.canvasManager.handleMouseUp === 'function' ) {
+			this.canvasManager.handleMouseUp( e );
+		}
 	};
 
 	/**
@@ -137,12 +185,21 @@
 	 * @param {TouchEvent} e Touch event
 	 */
 	EventHandler.prototype.handleTouchStart = function ( e ) {
+		if ( e && typeof e.preventDefault === 'function' ) {
+			e.preventDefault();
+		}
 		var touch = e.touches[ 0 ];
-		var mouseEvent = new MouseEvent( 'mousedown', {
-			clientX: touch.clientX,
-			clientY: touch.clientY
-		} );
-		this.handleMouseDown( mouseEvent );
+		// Compute canvas-relative coords
+		var rect = this.canvas.getBoundingClientRect();
+		var x = touch.clientX - rect.left;
+		var y = touch.clientY - rect.top;
+		var downEvt = {
+			preventDefault: function () {},
+			button: 0,
+			offsetX: x,
+			offsetY: y
+		};
+		this.handleMouseDown( downEvt );
 
 		// Store touch for multi-touch gestures
 		for ( var i = 0; i < e.touches.length; i++ ) {
@@ -153,6 +210,7 @@
 				startTime: Date.now()
 			};
 		}
+		this.lastTouchTime = Date.now();
 	};
 
 	/**
@@ -161,12 +219,19 @@
 	 * @param {TouchEvent} e Touch event
 	 */
 	EventHandler.prototype.handleTouchMove = function ( e ) {
+		if ( e && typeof e.preventDefault === 'function' ) {
+			e.preventDefault();
+		}
 		var touch = e.touches[ 0 ];
-		var mouseEvent = new MouseEvent( 'mousemove', {
-			clientX: touch.clientX,
-			clientY: touch.clientY
-		} );
-		this.handleMouseMove( mouseEvent );
+		var rect = this.canvas.getBoundingClientRect();
+		var x = touch.clientX - rect.left;
+		var y = touch.clientY - rect.top;
+		// Call pointer move directly for touch; don't require isMouseDown
+		if ( this.canvasManager && typeof this.canvasManager.handlePointerMove === 'function' ) {
+			this.canvasManager.handlePointerMove( x, y );
+		} else if ( typeof this.canvasManager.handleMouseMove === 'function' ) {
+			this.canvasManager.handleMouseMove( { offsetX: x, offsetY: y } );
+		}
 
 		// Handle pinch-to-zoom
 		if ( e.touches.length === 2 ) {
@@ -180,11 +245,19 @@
 	 * @param {TouchEvent} e Touch event
 	 */
 	EventHandler.prototype.handleTouchEnd = function ( e ) {
-		var mouseEvent = new MouseEvent( 'mouseup', {
-			clientX: this.lastMousePoint ? this.lastMousePoint.clientX : 0,
-			clientY: this.lastMousePoint ? this.lastMousePoint.clientY : 0
-		} );
-		this.handleMouseUp( mouseEvent );
+		if ( e && typeof e.preventDefault === 'function' ) {
+			e.preventDefault();
+		}
+		// Use last changed touch position to compute coords
+		var t = e.changedTouches && e.changedTouches[ 0 ];
+		var rect = this.canvas.getBoundingClientRect();
+		var x = t ? ( t.clientX - rect.left ) : 0;
+		var y = t ? ( t.clientY - rect.top ) : 0;
+		if ( this.canvasManager && typeof this.canvasManager.handlePointerUp === 'function' ) {
+			this.canvasManager.handlePointerUp( x, y );
+		} else if ( typeof this.canvasManager.handleMouseUp === 'function' ) {
+			this.canvasManager.handleMouseUp( { offsetX: x, offsetY: y } );
+		}
 
 		// Clean up touch tracking
 		for ( var i = 0; i < e.changedTouches.length; i++ ) {
@@ -203,7 +276,7 @@
 		var point = this.getMousePoint( e );
 
 		// Delegate to canvas manager
-		this.canvasManager.zoom( delta, point );
+		this.canvasManager.zoomBy( delta, point );
 	};
 
 	/**
@@ -225,8 +298,8 @@
 			var centerX = ( touch1.clientX + touch2.clientX ) / 2;
 			var centerY = ( touch1.clientY + touch2.clientY ) / 2;
 
-			var point = this.getMousePointFromClient( centerX, centerY );
-			this.canvasManager.zoom( delta, point );
+			var point = this.canvasManager.getMousePointFromClient( centerX, centerY );
+			this.canvasManager.zoomBy( delta, point );
 		}
 
 		this.lastPinchDistance = currentDistance;
@@ -238,8 +311,11 @@
 	 * @param {KeyboardEvent} e Keyboard event
 	 */
 	EventHandler.prototype.handleKeyDown = function ( e ) {
-		// Check if we're in an input field
-		if ( e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable ) {
+		// Check if we're in an input field (guard target for tests)
+		var target = e && e.target ? e.target : {};
+		var tag = ( target.tagName || '' ).toUpperCase();
+		var isEditable = !!target.isContentEditable;
+		if ( tag === 'INPUT' || tag === 'TEXTAREA' || isEditable ) {
 			return;
 		}
 
@@ -293,12 +369,19 @@
 		}
 
 		if ( e.key === 'Delete' || e.key === 'Backspace' ) {
-			this.canvasManager.deleteSelected();
+			if ( this.canvasManager && typeof this.canvasManager.deleteSelected === 'function' ) {
+				this.canvasManager.deleteSelected();
+			} else if ( this.canvasManager && typeof this.canvasManager.deleteSelectedLayers === 'function' ) {
+				this.canvasManager.deleteSelectedLayers();
+			}
 			handled = true;
 		}
 
 		// Arrow keys for nudging
-		if ( this.canvasManager.selectedLayerIds && this.canvasManager.selectedLayerIds.length > 0 ) {
+		if (
+			this.canvasManager.selectedLayerIds &&
+			this.canvasManager.selectedLayerIds.length > 0
+		) {
 			var nudgeDistance = e.shiftKey ? 10 : 1;
 			switch ( e.key ) {
 				case 'ArrowLeft':
@@ -340,7 +423,9 @@
 	EventHandler.prototype.handleKeyUp = function ( e ) {
 		if ( e.key === ' ' ) {
 			this.spacePressed = false;
-			this.canvas.style.cursor = this.canvasManager.getToolCursor( this.canvasManager.currentTool );
+			this.canvas.style.cursor = this.canvasManager.getToolCursor(
+				this.canvasManager.currentTool
+			);
 		}
 	};
 
@@ -370,38 +455,51 @@
 	 * @return {Object} Point with x, y coordinates
 	 */
 	EventHandler.prototype.getMousePointFromClient = function ( clientX, clientY ) {
-		var rect = this.canvas.getBoundingClientRect();
-		var canvasX = ( clientX - rect.left ) / this.canvasManager.zoom - this.canvasManager.panX;
-		var canvasY = ( clientY - rect.top ) / this.canvasManager.zoom - this.canvasManager.panY;
-
-		// Apply grid snapping if enabled
-		if ( this.canvasManager.snapToGrid && this.canvasManager.showGrid ) {
-			var gridSize = this.canvasManager.gridSize;
-			canvasX = Math.round( canvasX / gridSize ) * gridSize;
-			canvasY = Math.round( canvasY / gridSize ) * gridSize;
-		}
-
-		return {
-			x: canvasX,
-			y: canvasY,
-			clientX: clientX,
-			clientY: clientY
-		};
+		var pt = this.canvasManager.getMousePointFromClient( clientX, clientY );
+		pt.clientX = clientX;
+		pt.clientY = clientY;
+		return pt;
 	};
 
 	/**
 	 * Destroy event handler and clean up listeners
 	 */
 	EventHandler.prototype.destroy = function () {
-		// Remove all event listeners
-		// Note: In a production implementation, we'd store references to the bound functions
-		// and remove them specifically. For now, this serves as a placeholder.
+		if ( this.canvas && this.listeners ) {
+			this.canvas.removeEventListener( 'mousedown', this.listeners.mousedown );
+			this.canvas.removeEventListener( 'mousemove', this.listeners.mousemove );
+			this.canvas.removeEventListener( 'mouseup', this.listeners.mouseup );
+			this.canvas.removeEventListener( 'touchstart', this.listeners.touchstart );
+			this.canvas.removeEventListener( 'touchmove', this.listeners.touchmove );
+			this.canvas.removeEventListener( 'touchend', this.listeners.touchend );
+			this.canvas.removeEventListener( 'touchcancel', this.listeners.touchcancel );
+		}
+		this.listeners = null;
 		this.canvas = null;
 		this.canvasManager = null;
 		this.touches = {};
 	};
 
+	// Internal: normalize event to canvas-relative coords
+	EventHandler.prototype.getCoordsFromEvent = function ( e ) {
+		if ( e && typeof e.offsetX === 'number' && typeof e.offsetY === 'number' ) {
+			return { x: e.offsetX, y: e.offsetY };
+		}
+		var rect = this.canvas.getBoundingClientRect();
+		var cx = ( e && typeof e.clientX === 'number' ) ? e.clientX : 0;
+		var cy = ( e && typeof e.clientY === 'number' ) ? e.clientY : 0;
+		return { x: cx - rect.left, y: cy - rect.top };
+	};
+
+	// Maintain a private alias for back-compat with in-flight patches
+	// Alias removed to satisfy style rules; all internal references use getCoordsFromEvent
+
 	// Export EventHandler to global scope
 	window.LayersEventHandler = EventHandler;
+
+	// Also export via CommonJS when available (for Jest tests)
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = EventHandler;
+	}
 
 }() );

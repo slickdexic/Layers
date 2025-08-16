@@ -231,6 +231,20 @@
 	 */
 	ErrorHandler.prototype.createUserNotification = function ( errorInfo ) {
 		var notification = document.createElement( 'div' );
+		// CSS classes used here:
+		// - layers-error-notifications
+		// - layers-error-notification
+		// - layers-error-critical
+		// - layers-error-high
+		// - layers-error-medium
+		// - layers-error-low
+		// - error-content
+		// - error-icon
+		// - error-details
+		// - error-message
+		// - error-time
+		// - error-close
+		// eslint-disable-next-line mediawiki/class-doc
 		notification.className = 'layers-error-notification layers-error-' + errorInfo.severity;
 
 		var userMessage = this.getUserFriendlyMessage( errorInfo );
@@ -274,6 +288,13 @@
 		var msgKey = 'layers-error-' + errorInfo.type;
 		var fallbackMessage = '';
 
+		// Message keys potentially requested here (documented to satisfy mediawiki/msg-doc):
+		// - layers-error-api
+		// - layers-error-canvas
+		// - layers-error-validation
+		// - layers-error-load
+		// - layers-error-general
+
 		switch ( errorInfo.type ) {
 			case 'api':
 				fallbackMessage = 'Failed to save changes. Please try again.';
@@ -292,7 +313,9 @@
 		}
 
 		// Use MediaWiki message if available
+		// eslint-disable-next-line mediawiki/msg-doc
 		if ( window.mw && window.mw.message && mw.message( msgKey ).exists() ) {
+			// eslint-disable-next-line mediawiki/msg-doc
 			return mw.message( msgKey ).text();
 		}
 

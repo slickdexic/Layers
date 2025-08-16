@@ -65,7 +65,7 @@
 }
 
 .toolbar-button:disabled,
-.toolbar-button[disabled] {
+.toolbar-button[ disabled ] {
 	opacity: 0.5;
 	cursor: not-allowed;
 	background-color: #f0f0f0;
@@ -134,12 +134,13 @@
 	background: #f9f9f9;
 }
 
+/* stylelint-disable declaration-no-important */
 .layer-visibility,
 .layer-lock,
 .layer-delete {
 	width: 36px !important;
 	height: 36px !important;
-	border: none !important;
+	border-width: 0 !important;
 	background: transparent !important;
 	cursor: pointer !important;
 	border-radius: 4px !important;
@@ -148,3 +149,4 @@
 	justify-content: center !important;
 	padding: 0 !important;
 }
+/* stylelint-enable declaration-no-important */

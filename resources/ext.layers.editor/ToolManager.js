@@ -6,6 +6,14 @@
 	'use strict';
 
 	/**
+	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
+	 *
+	 * @typedef {Object} CanvasManager
+	 * @property {HTMLCanvasElement} canvas
+	 * @property {CanvasRenderingContext2D} ctx
+	 */
+
+	/**
 	 * ToolManager class
 	 *
 	 * @param {Object} config Configuration object
@@ -280,14 +288,18 @@
 	 */
 	ToolManager.prototype.updateSelection = function ( point, event ) {
 		if ( this.canvasManager.selectionManager ) {
-			if ( this.canvasManager.selectionManager.isResizing ) {
-				this.canvasManager.selectionManager.updateResize( point, this.getModifiers( event ) );
-			} else if ( this.canvasManager.selectionManager.isRotating ) {
-				this.canvasManager.selectionManager.updateRotation( point );
-			} else if ( this.canvasManager.selectionManager.isDragging ) {
-				this.canvasManager.selectionManager.updateDrag( point );
-			} else if ( this.canvasManager.selectionManager.isMarqueeSelecting ) {
-				this.canvasManager.selectionManager.updateMarqueeSelection( point );
+			var sm = this.canvasManager.selectionManager;
+			if ( sm.isResizing ) {
+				sm.updateResize(
+					point,
+					this.getModifiers( event )
+				);
+			} else if ( sm.isRotating ) {
+				sm.updateRotation( point );
+			} else if ( sm.isDragging ) {
+				sm.updateDrag( point );
+			} else if ( sm.isMarqueeSelecting ) {
+				sm.updateMarqueeSelection( point );
 			}
 		}
 	};
@@ -744,7 +756,9 @@
 
 		// Update layer panel
 		if ( this.canvasManager.editor.layerPanel ) {
-			this.canvasManager.editor.layerPanel.updateLayers( this.canvasManager.editor.layers );
+			this.canvasManager.editor.layerPanel.updateLayers(
+				this.canvasManager.editor.layers
+			);
 		}
 	};
 
@@ -832,7 +846,10 @@
 		// Test in reverse order (top to bottom)
 		for ( var i = layers.length - 1; i >= 0; i-- ) {
 			var layer = layers[ i ];
-			if ( layer.visible !== false && this.pointInLayer( point, layer ) ) {
+			if (
+				layer.visible !== false &&
+				this.pointInLayer( point, layer )
+			) {
 				return layer;
 			}
 		}

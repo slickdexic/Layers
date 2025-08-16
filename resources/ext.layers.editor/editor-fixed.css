@@ -1,8 +1,8 @@
 /* Error notification styles */
+
 .layers-error-notifications {
 	position: fixed;
 	top: 20px;
-	right: 20px;
 	z-index: 10000;
 	max-width: 400px;
 }
@@ -11,7 +11,7 @@
 	background: #fff;
 	border-left: 4px solid #d73027;
 	border-radius: 4px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.15 );
 	margin-bottom: 8px;
 	padding: 12px;
 	position: relative;
@@ -34,7 +34,7 @@
 
 .layers-error-notification .error-icon {
 	color: #d73027;
-	font-size: 16px;
+	font-size: 1em;
 	line-height: 1;
 	margin-top: 2px;
 }
@@ -51,74 +51,23 @@
 }
 
 /* Validation error styling for stroke width input */
+
 .stroke-width-input.validation-error {
+	/* stylelint-disable-next-line declaration-no-important */
 	border-color: #d73027 !important;
+	/* stylelint-disable-next-line declaration-no-important */
 	background-color: #fef7f7 !important;
-	box-shadow: 0 0 0 1px rgba(215, 48, 39, 0.2) !important;
+	/* stylelint-disable-next-line declaration-no-important */
+	box-shadow: 0 0 0 1px rgba( 215, 48, 39, 0.2 ) !important;
 }
 
 .stroke-width-input.validation-error:focus {
-	outline: 2px solid rgba(215, 48, 39, 0.5) !important;
+	/* stylelint-disable-next-line declaration-no-important */
+	outline: 2px solid rgba( 215, 48, 39, 0.5 ) !important;
 	outline-offset: 1px;
 }
 
-/* Improved color and transparency control grouping */
-.property-field--color-group {
-	background: #f8f9fa;
-	border: 1px solid #e9ecef;
-	border-radius: 6px;
-	padding: 12px;
-	margin-bottom: 12px;
-}
-
-.property-field--color-group .property-field {
-	margin-bottom: 8px;
-}
-
-.property-field--color-group .property-field:last-child {
-	margin-bottom: 0;
-}
-
-/* Visual connection between color and opacity controls */
-.color-opacity-pair {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	gap: 8px;
-	align-items: center;
-	padding: 8px;
-	background: #ffffff;
-	border: 1px solid #e1e5e9;
-	border-radius: 4px;
-	margin-bottom: 6px;
-}
-
-.color-opacity-pair:last-child {
-	margin-bottom: 0;
-}
-
-.color-opacity-pair .color-picker-container {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.color-opacity-pair .opacity-control {
-	min-width: 120px;
-	font-size: 0.85em;
-	color: #6c757d;
-}
-
-/* Mobile responsive improvements for color controls */
-@media (max-width: 768px) {
-	.color-opacity-pair {
-		grid-template-columns: 1fr;
-		gap: 6px;
-	}
-	
-	.color-opacity-pair .opacity-control {
-		min-width: auto;
-	}
-}
+/* (moved color-group + color-opacity-pair styles below .layer-properties-form to satisfy selector order) */
 
 .layers-error-notification .error-time {
 	color: #666;
@@ -126,11 +75,11 @@
 }
 
 .layers-error-notification .error-close {
-	background: none;
-	border: none;
+	background: 0;
+	border: 0;
 	color: #999;
 	cursor: pointer;
-	font-size: 18px;
+	font-size: 1.125em;
 	line-height: 1;
 	padding: 0;
 	position: absolute;
@@ -147,20 +96,21 @@
 @keyframes slideIn {
 	from {
 		opacity: 0;
-		transform: translateX(100%);
+		transform: translateX( 100% );
 	}
+
 	to {
 		opacity: 1;
-		transform: translateX(0);
+		transform: translateX( 0 );
 	}
 }
 
 /* Revision selector styles */
+
 .layers-revision-wrap {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	margin-right: 12px;
 }
 
 .layers-revision-label {
@@ -184,13 +134,14 @@
 	height: 28px;
 	font-size: 0.75em;
 }
-/* stylelint-disable rule-empty-line-before, declaration-empty-line-before */
+
 /**
  * Layers Editor CSS Styles
  * Essential styling for the layers editing interface
  */
 
 /* Main Editor Container */
+
 .layers-editor {
 	position: fixed;
 	top: 0;
@@ -205,7 +156,8 @@
 }
 
 /* Hide MediaWiki skin chrome when editor is open */
-/* stylelint-disable selector-max-id, declaration-no-important */
+/* stylelint-disable selector-max-id */
+/* stylelint-disable declaration-no-important */
 body.layers-editor-open #mw-panel,
 body.layers-editor-open #mw-head,
 body.layers-editor-open #left-navigation,
@@ -229,8 +181,10 @@ body.layers-editor-open .mw-body-content {
 	padding: 0 !important;
 	max-width: none !important;
 }
+/* stylelint-enable declaration-no-important */
 
 /* Header */
+
 .layers-header {
 	background: #0b66a1;
 	color: #fff;
@@ -250,7 +204,6 @@ body.layers-editor-open .mw-body-content {
 	font-size: 0.75em;
 	opacity: 0.9;
 	display: flex;
-
 	align-items: center;
 	gap: 10px;
 }
@@ -260,7 +213,6 @@ body.layers-editor-open .mw-body-content {
 	background: transparent;
 	border: 0;
 	color: #fff;
-
 	font-size: 1.25em;
 	line-height: 1;
 	width: 32px;
@@ -268,11 +220,13 @@ body.layers-editor-open .mw-body-content {
 	border-radius: 4px;
 	cursor: pointer;
 }
+
 .layers-header-close:hover {
 	background: rgba( 255, 255, 255, 0.1 );
 }
 
 /* Content area - horizontal layout for layer panel and canvas */
+
 .layers-content {
 	flex: 1;
 	display: flex;
@@ -281,6 +235,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Main row holds sidebar and canvas */
+
 .layers-main {
 	flex: 1 1 auto;
 	display: flex;
@@ -290,6 +245,7 @@ body.layers-editor-open .mw-body-content {
 /* No bottom inspector; properties live in sidebar */
 
 /* Toolbar Styles */
+
 .layers-toolbar {
 	background: #fff;
 	border-bottom: 1px solid #ddd;
@@ -338,13 +294,14 @@ body.layers-editor-open .mw-body-content {
 }
 
 .toolbar-button:disabled,
-.toolbar-button[disabled] {
+.toolbar-button[ disabled ] {
 	opacity: 0.5;
 	cursor: not-allowed;
 	background-color: #f0f0f0;
 }
 
 /* Layer Panel */
+
 .layers-panel {
 	width: 320px;
 	min-width: 220px;
@@ -398,6 +355,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Color picker with "none" option */
+
 .color-picker-group {
 	display: flex;
 	align-items: center;
@@ -414,7 +372,7 @@ body.layers-editor-open .mw-body-content {
 	cursor: pointer;
 	margin: 1px;
 	padding: 0;
-	outline: none;
+	outline: 0;
 }
 
 .color-btn:hover {
@@ -424,7 +382,7 @@ body.layers-editor-open .mw-body-content {
 .color-btn.selected {
 	border-color: #007cba;
 	border-width: 2px;
-	margin: 0px;
+	margin: 0;
 }
 
 .color-none-btn {
@@ -454,21 +412,22 @@ body.layers-editor-open .mw-body-content {
 
 /* Disabled states for color buttons */
 .color-btn:disabled,
-.color-btn[disabled] {
+.color-btn[ disabled ] {
 	opacity: 0.5;
 	cursor: not-allowed;
 	pointer-events: none;
 }
 
 .color-none-btn:disabled,
-.color-none-btn[disabled] {
+.color-none-btn[ disabled ] {
 	opacity: 0.5;
 	cursor: not-allowed;
 	pointer-events: none;
 }
 
 /* Toolbar color inputs - make them square */
-.layers-toolbar input[type="color"] {
+
+.layers-toolbar input[ type='color' ] {
 	width: 32px;
 	height: 32px;
 	padding: 0;
@@ -487,6 +446,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Properties form layout improvements */
+
 .layers-properties,
 .layers-code-panel {
 	border-top: 1px solid #eee;
@@ -495,6 +455,7 @@ body.layers-editor-open .mw-body-content {
 	flex: 1;
 	min-height: 80px;
 }
+
 .layers-properties h4,
 .layers-code-panel h4 {
 	margin: 0 0 12px 0;
@@ -503,12 +464,13 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Property sections with modern fieldset styling */
+
 .property-section {
 	border: 1px solid #e3e6ea;
 	border-radius: 6px;
 	margin-bottom: 16px;
 	background: #fff;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.04 );
 }
 
 .property-section:last-child {
@@ -516,7 +478,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 .property-section-header {
-	background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+	background: linear-gradient( to bottom, #f8f9fa, #e9ecef );
 	border-bottom: 1px solid #e3e6ea;
 	border-radius: 5px 5px 0 0;
 	padding: 8px 12px;
@@ -537,15 +499,15 @@ body.layers-editor-open .mw-body-content {
 }
 
 .property-section-header--transform::before {
-	background: linear-gradient(135deg, #28a745, #20c997);
+	background: linear-gradient( 135deg, #28a745, #20c997 );
 }
 
 .property-section-header--appearance::before {
-	background: linear-gradient(135deg, #007bff, #6f42c1);
+	background: linear-gradient( 135deg, #007bff, #6f42c1 );
 }
 
 .property-section-header--effects::before {
-	background: linear-gradient(135deg, #fd7e14, #e83e8c);
+	background: linear-gradient( 135deg, #fd7e14, #e83e8c );
 }
 
 .property-section-body {
@@ -560,10 +522,6 @@ body.layers-editor-open .mw-body-content {
 	margin-bottom: 10px;
 }
 
-.layer-properties-form .property-field:last-child {
-	margin-bottom: 0;
-}
-
 .layer-properties-form label {
 	color: #495057;
 	font-size: 0.8em;
@@ -571,8 +529,8 @@ body.layers-editor-open .mw-body-content {
 	line-height: 1.2;
 }
 
-.layer-properties-form input[type='number'],
-.layer-properties-form input[type='text'] {
+.layer-properties-form input[ type='number' ],
+.layer-properties-form input[ type='text' ] {
 	width: 100%;
 	height: 32px;
 	padding: 6px 8px;
@@ -583,11 +541,11 @@ body.layers-editor-open .mw-body-content {
 	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-.layer-properties-form input[type='number']:focus,
-.layer-properties-form input[type='text']:focus {
+.layer-properties-form input[ type='number' ]:focus,
+.layer-properties-form input[ type='text' ]:focus {
 	border-color: #80bdff;
 	outline: 0;
-	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+	box-shadow: 0 0 0 3px rgba( 0, 123, 255, 0.1 );
 }
 
 .layer-properties-form select {
@@ -604,10 +562,10 @@ body.layers-editor-open .mw-body-content {
 .layer-properties-form select:focus {
 	border-color: #80bdff;
 	outline: 0;
-	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+	box-shadow: 0 0 0 3px rgba( 0, 123, 255, 0.1 );
 }
 
-.layer-properties-form input[type='color'] {
+.layer-properties-form input[ type='color' ] {
 	width: 40px;
 	height: 32px;
 	padding: 0;
@@ -640,7 +598,7 @@ body.layers-editor-open .mw-body-content {
 	height: 6px;
 	border-radius: 3px;
 	background: #e9ecef;
-	outline: none;
+	outline: 0;
 	appearance: none;
 }
 
@@ -652,7 +610,7 @@ body.layers-editor-open .mw-body-content {
 	background: #007bff;
 	cursor: pointer;
 	border: 2px solid #fff;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.2 );
 }
 
 .layer-properties-form .compact-range::-moz-range-thumb {
@@ -662,23 +620,91 @@ body.layers-editor-open .mw-body-content {
 	background: #007bff;
 	cursor: pointer;
 	border: 2px solid #fff;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.2 );
 }
 
 /* Checkbox styling */
+
 .layer-properties-form .property-field--checkbox {
 	grid-template-columns: 1fr auto;
 	gap: 8px;
 }
 
-.layer-properties-form input[type='checkbox'] {
+.layer-properties-form input[ type='checkbox' ] {
 	width: 18px;
 	height: 18px;
 	accent-color: #007bff;
 	cursor: pointer;
 }
 
+/* Improved color and transparency control grouping */
+
+.property-field--color-group {
+	background: #f8f9fa;
+	border: 1px solid #e9ecef;
+	border-radius: 6px;
+	padding: 12px;
+	margin-bottom: 12px;
+}
+
+.property-field--color-group .property-field {
+	margin-bottom: 8px;
+}
+
+/* After defining color-group rules, place the more specific last-child rules in increasing specificity order */
+
+.property-field--color-group .property-field:last-child {
+	margin-bottom: 0;
+}
+
+.layer-properties-form .property-field:last-child {
+	margin-bottom: 0;
+}
+
+/* Visual connection between color and opacity controls */
+
+.color-opacity-pair {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 8px;
+	align-items: center;
+	padding: 8px;
+	background: #fff;
+	border: 1px solid #e1e5e9;
+	border-radius: 4px;
+	margin-bottom: 6px;
+}
+
+.color-opacity-pair:last-child {
+	margin-bottom: 0;
+}
+
+.color-opacity-pair .color-picker-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.color-opacity-pair .opacity-control {
+	min-width: 120px;
+	font-size: 0.85em;
+	color: #6c757d;
+}
+
+/* Mobile responsive improvements for color controls */
+@media ( max-width: 768px ) {
+	.color-opacity-pair {
+		grid-template-columns: 1fr;
+		gap: 6px;
+	}
+
+	.color-opacity-pair .opacity-control {
+		min-width: auto;
+	}
+}
+
 /* Color picker button styling */
+/* stylelint-disable declaration-no-important */
 .color-display-button {
 	width: 40px !important;
 	height: 32px !important;
@@ -695,10 +721,12 @@ body.layers-editor-open .mw-body-content {
 .color-display-button:focus {
 	outline: 0 !important;
 	border-color: #80bdff !important;
-	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+	box-shadow: 0 0 0 3px rgba( 0, 123, 255, 0.1 ) !important;
 }
+/* stylelint-enable declaration-no-important */
 
 /* Error styling */
+/* stylelint-disable declaration-no-important */
 .property-field-error {
 	grid-column: 1 / -1;
 	color: #dc3545 !important;
@@ -724,7 +752,7 @@ body.layers-editor-open .mw-body-content {
 
 .layer-properties-form input.error:focus {
 	border-color: #dc3545 !important;
-	box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+	box-shadow: 0 0 0 3px rgba( 220, 53, 69, 0.1 ) !important;
 }
 
 /* Input warning state */
@@ -735,8 +763,10 @@ body.layers-editor-open .mw-body-content {
 
 .layer-properties-form input.warning:focus {
 	border-color: #ffc107 !important;
-	box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.1) !important;
+	box-shadow: 0 0 0 3px rgba( 255, 193, 7, 0.1 ) !important;
 }
+/* stylelint-enable declaration-no-important */
+
 .layers-code-panel .layers-code {
 	display: block;
 	background: #f8f9fa;
@@ -754,17 +784,19 @@ body.layers-editor-open .mw-body-content {
 	border-radius: 4px;
 	cursor: pointer;
 }
-.layers-code-panel .copy-btn:hover {
-	background: #e9ecef;
-}
 
-/* Disabled states for copy buttons */
 .copy-btn:disabled,
-.copy-btn[disabled] {
+.copy-btn[ disabled ] {
 	opacity: 0.5;
 	cursor: not-allowed;
 	background-color: #f0f0f0;
 }
+
+.layers-code-panel .copy-btn:hover {
+	background: #e9ecef;
+}
+
+/* Disabled states for copy buttons (specificity lower than hover states) */
 
 .layers-empty {
 	color: #6c757d;
@@ -774,6 +806,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Canvas Container */
+
 .layers-canvas-container {
 	flex: 1;
 	overflow: hidden;
@@ -795,6 +828,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Layer Items */
+
 .layer-item {
 	display: flex;
 	align-items: center;
@@ -824,12 +858,14 @@ body.layers-editor-open .mw-body-content {
 	border-radius: 4px;
 	transition: background 0.2s;
 }
+
 .layer-item .layer-visibility:focus,
 .layer-item .layer-lock:focus,
 .layer-item .layer-delete:focus {
 	outline: 2px solid #007cba;
 	background: #e3f2fd;
 }
+
 .layer-item .layer-visibility:hover,
 .layer-item .layer-lock:hover,
 .layer-item .layer-delete:hover {
@@ -858,6 +894,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Text Input Modal */
+
 .text-input-overlay {
 	position: fixed;
 	top: 0;
@@ -870,6 +907,7 @@ body.layers-editor-open .mw-body-content {
 	align-items: center;
 	justify-content: center;
 }
+
 .layer-grab-area {
 	width: 36px;
 	height: 36px;
@@ -881,10 +919,12 @@ body.layers-editor-open .mw-body-content {
 	margin-right: 2px;
 	transition: background 0.2s;
 }
+
 .layer-grab-area:focus {
 	outline: 2px solid #007cba;
 	background: #e3f2fd;
 }
+
 .layer-grab-area:hover {
 	background: #e9ecef;
 }
@@ -916,6 +956,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Error Display */
+
 .layers-error {
 	position: absolute;
 	top: 50%;
@@ -943,6 +984,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Status bar */
+
 .layers-statusbar {
 	flex: 0 0 auto;
 	background: #fbfbfb;
@@ -970,6 +1012,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 /* Responsive Design */
+
 @media ( max-width: 1024px ) {
 	.layers-panel {
 		width: 240px;

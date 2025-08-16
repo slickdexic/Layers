@@ -6,6 +6,14 @@
 	'use strict';
 
 	/**
+	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
+	 *
+	 * @typedef {Object} CanvasManager
+	 * @property {HTMLCanvasElement} canvas
+	 * @property {CanvasRenderingContext2D} ctx
+	 */
+
+	/**
 	 * RenderEngine class
 	 *
 	 * @param {Object} config Configuration object
@@ -111,7 +119,10 @@
 	 * Draw background image or pattern
 	 */
 	RenderEngine.prototype.drawBackground = function () {
-		if ( this.canvasManager.backgroundImage && this.canvasManager.backgroundImage.complete ) {
+		if (
+			this.canvasManager.backgroundImage &&
+			this.canvasManager.backgroundImage.complete
+		) {
 			this.ctx.drawImage( this.canvasManager.backgroundImage, 0, 0 );
 		} else {
 			this.drawPlaceholderBackground();
@@ -488,7 +499,10 @@
 			this.drawSelectionForLayer( this.canvasManager.selectedLayerId );
 		}
 
-		if ( this.canvasManager.selectedLayerIds && this.canvasManager.selectedLayerIds.length > 0 ) {
+		if (
+			this.canvasManager.selectedLayerIds &&
+			this.canvasManager.selectedLayerIds.length > 0
+		) {
 			this.canvasManager.selectedLayerIds.forEach( function ( layerId ) {
 				this.drawSelectionForLayer( layerId );
 			}.bind( this ) );
