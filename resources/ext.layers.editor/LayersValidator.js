@@ -145,8 +145,8 @@
 	/**
 	 * Validate layer ID
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateLayerId = function ( layer, result ) {
 		if ( layer.id ) {
@@ -170,8 +170,8 @@
 	/**
 	 * Validate coordinate fields
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateCoordinates = function ( layer, result ) {
 		var coordinateFields = [ 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'radius', 'radiusX', 'radiusY' ];
@@ -196,8 +196,8 @@
 	/**
 	 * Validate numeric properties with specific ranges
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateNumericProperties = function ( layer, result ) {
 		// Font size validation
@@ -351,8 +351,8 @@
 	/**
 	 * Validate text content
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateTextContent = function ( layer, result ) {
 		if ( layer.type === 'text' && layer.text !== undefined ) {
@@ -403,8 +403,8 @@
 	/**
 	 * Validate color values
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateColors = function ( layer, result ) {
 		var colorFields = [ 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor' ];
@@ -423,8 +423,8 @@
 	/**
 	 * Validate points array for path layers
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validatePoints = function ( layer, result ) {
 		if ( layer.points !== undefined ) {
@@ -464,8 +464,8 @@
 	/**
 	 * Validate type-specific properties
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateTypeSpecificProperties = function ( layer, result ) {
 		// Arrow style validation
@@ -489,8 +489,9 @@
 	/**
 	 * Validate a complete layers array (multiple layers)
 	 *
-	 * @param layers
-	 * @param maxLayers
+	 * @param {Array} layers
+	 * @param {number} maxLayers
+	 * @return {Object} Validation result with isValid and errors properties
 	 */
 	LayersValidator.prototype.validateLayers = function ( layers, maxLayers ) {
 		var result = {
@@ -545,7 +546,8 @@
 	/**
 	 * Helper function to check if a value is a valid number
 	 *
-	 * @param value
+	 * @param {*} value
+	 * @return {boolean} True if value is a valid number
 	 */
 	LayersValidator.prototype.isValidNumber = function ( value ) {
 		return typeof value === 'number' && !isNaN( value ) && isFinite( value );
@@ -554,7 +556,8 @@
 	/**
 	 * Helper function to validate color values
 	 *
-	 * @param color
+	 * @param {string} color
+	 * @return {boolean} True if color is valid
 	 */
 	LayersValidator.prototype.isValidColor = function ( color ) {
 		if ( typeof color !== 'string' ) {
@@ -612,7 +615,8 @@
 	/**
 	 * Check for potential script injection in text content
 	 *
-	 * @param text
+	 * @param {string} text
+	 * @return {boolean} True if text contains potential script injection
 	 */
 	LayersValidator.prototype.containsScriptInjection = function ( text ) {
 		return /<script|javascript:|data:|vbscript:|on\w+\s*=/i.test( text );
@@ -779,9 +783,10 @@
 	/**
 	 * Create input validation helper for real-time validation
 	 *
-	 * @param input
-	 * @param validationType
-	 * @param options
+	 * @param {*} input
+	 * @param {string} validationType
+	 * @param {Object} options
+	 * @return {Object} Input validator with enable and disable methods
 	 */
 	LayersValidator.prototype.createInputValidator = function ( input, validationType, options ) {
 		options = options || {};

@@ -947,4 +947,62 @@ class LayersDatabase {
 
 		return true;
 	}
+
+	/**
+	 * Whitelist validation for ORDER BY clause to prevent SQL injection
+	 * This addresses potential security gaps in dynamic sorting operations
+	 *
+	 * @param string $sortColumn Column name to sort by
+	 * @return string Safe column name or default
+	 */
+	private function validateSortColumn( string $sortColumn ): string {
+		// Define whitelist of allowed sort columns for layer_sets table
+		$validSortColumns = [
+			'ls_created',
+			'ls_modified',
+			'ls_size',
+			'ls_revision',
+			'ls_timestamp',
+			'ls_id',
+			'ls_name'
+		];
+
+		// Validate against whitelist
+		if ( in_array( $sortColumn, $validSortColumns, true ) ) {
+			return $sortColumn;
+		}
+
+		// Default to ls_created if invalid column provided
+		return 'ls_created';
+	}
+
+	/**
+	 * Validate sort direction to prevent SQL injection
+	 *
+	 * @param string $sortDirection Direction to sort
+	 * @return string Safe direction (ASC or DESC)
+	 */
+	private function validateSortDirection( string $sortDirection ): string {
+		$direction = strtoupper( trim( $sortDirection ) );
+
+		if ( $direction === 'DESC' ) {
+			return 'DESC';
+		}
+
+		// Default to ASC for any invalid input
+		return 'ASC';
+	}
+
+	/**
+	 * Safely build ORDER BY clause with validated parameters
+	 *
+	 * @param array $params Parameters containing 'sort' and 'direction'
+	 * @return array ORDER BY clause for MediaWiki database methods
+	 */
+	private function buildSafeOrderBy( array $params = [] ): array {
+		$sortColumn = $this->validateSortColumn( $params['sort'] ?? 'ls_created' );
+		$sortDirection = $this->validateSortDirection( $params['direction'] ?? 'DESC' );
+
+		return [ 'ORDER BY' => "$sortColumn $sortDirection" ];
+	}
 }

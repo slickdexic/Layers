@@ -276,68 +276,68 @@
 		var minListHeight = 60;
 		var minPropsHeight = 80;
 		var minCodeHeight = 60;
-		
+
 		// First divider (between layers and properties)
 		divider.addEventListener( 'mousedown', function () {
 			isDragging = true;
 			document.body.style.cursor = 'row-resize';
 			document.body.style.userSelect = 'none';
 		} );
-		
+
 		// Second divider (between properties and code)
 		divider2.addEventListener( 'mousedown', function () {
 			isDragging2 = true;
 			document.body.style.cursor = 'row-resize';
 			document.body.style.userSelect = 'none';
 		} );
-		
+
 		document.addEventListener( 'mousemove', function ( e ) {
 			if ( !isDragging && !isDragging2 ) {
 				return;
 			}
-			
+
 			var rect = sidebarInner.getBoundingClientRect();
 			var offset = e.clientY - rect.top;
 			var totalHeight = sidebarInner.offsetHeight;
 			var dividerHeight = divider.offsetHeight;
 			var divider2Height = divider2.offsetHeight;
 			var newListHeight, newPropsHeight, newCodeHeight;
-			
+
 			if ( isDragging ) {
 				// Dragging first divider (layers/properties)
 				newListHeight = offset;
 				var remainingHeight = totalHeight - newListHeight - dividerHeight - divider2Height;
 				var currentCodeHeight = sidebarInner.childNodes[ 4 ].offsetHeight; // codePanel
 				newPropsHeight = remainingHeight - currentCodeHeight;
-				
+
 				if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
 					return;
 				}
-				
+
 				sidebarInner.childNodes[ 0 ].style.flex = 'none'; // layerList
 				sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
 				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
 				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
 			}
-			
+
 			if ( isDragging2 ) {
 				// Dragging second divider (properties/code)
 				var currentListHeight = sidebarInner.childNodes[ 0 ].offsetHeight; // layerList
 				newPropsHeight = offset - currentListHeight - dividerHeight;
 				newCodeHeight = totalHeight - currentListHeight - dividerHeight -
 					newPropsHeight - divider2Height;
-				
+
 				if ( newPropsHeight < minPropsHeight || newCodeHeight < minCodeHeight ) {
 					return;
 				}
-				
+
 				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
 				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
 				sidebarInner.childNodes[ 4 ].style.flex = 'none'; // codePanel
 				sidebarInner.childNodes[ 4 ].style.height = newCodeHeight + 'px';
 			}
 		} );
-		
+
 		document.addEventListener( 'mouseup', function () {
 			if ( isDragging || isDragging2 ) {
 				isDragging = false;
@@ -352,60 +352,60 @@
 			document.body.style.cursor = 'row-resize';
 			document.body.style.userSelect = 'none';
 		} );
-		
+
 		divider2.addEventListener( 'touchstart', function () {
 			isDragging2 = true;
 			document.body.style.cursor = 'row-resize';
 			document.body.style.userSelect = 'none';
 		} );
-		
+
 		document.addEventListener( 'touchmove', function ( e ) {
 			if ( !isDragging && !isDragging2 ) {
 				return;
 			}
-			
+
 			var rect = sidebarInner.getBoundingClientRect();
 			var offset = e.touches[ 0 ].clientY - rect.top;
 			var totalHeight = sidebarInner.offsetHeight;
 			var dividerHeight = divider.offsetHeight;
 			var divider2Height = divider2.offsetHeight;
 			var newListHeight, newPropsHeight, newCodeHeight;
-			
+
 			if ( isDragging ) {
 				// Dragging first divider (layers/properties)
 				newListHeight = offset;
 				var remainingHeight = totalHeight - newListHeight - dividerHeight - divider2Height;
 				var currentCodeHeight = sidebarInner.childNodes[ 4 ].offsetHeight; // codePanel
 				newPropsHeight = remainingHeight - currentCodeHeight;
-				
+
 				if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
 					return;
 				}
-				
+
 				sidebarInner.childNodes[ 0 ].style.flex = 'none'; // layerList
 				sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
 				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
 				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
 			}
-			
+
 			if ( isDragging2 ) {
 				// Dragging second divider (properties/code)
 				var currentListHeight = sidebarInner.childNodes[ 0 ].offsetHeight; // layerList
 				newPropsHeight = offset - currentListHeight - dividerHeight;
 				newCodeHeight = totalHeight - currentListHeight - dividerHeight -
 					newPropsHeight - divider2Height;
-				
+
 				if ( newPropsHeight < minPropsHeight || newCodeHeight < minCodeHeight ) {
 					return;
 				}
-				
+
 				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
 				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
 				sidebarInner.childNodes[ 4 ].style.flex = 'none'; // codePanel
 				sidebarInner.childNodes[ 4 ].style.height = newCodeHeight + 'px';
 			}
 		}, { passive: false } );
-		
+
 		document.addEventListener( 'touchend', function () {
 			if ( isDragging || isDragging2 ) {
 				isDragging = false;

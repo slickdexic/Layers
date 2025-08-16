@@ -149,12 +149,13 @@
 
 		var strokeWidth = document.createElement( 'input' );
 		strokeWidth.type = 'number';
-		strokeWidth.min = '0';
-		strokeWidth.max = '999.9';
+		strokeWidth.min = '0.1';
+		strokeWidth.max = '100';
 		strokeWidth.step = '0.1';
 		strokeWidth.value = '2.0';
 		strokeWidth.className = 'stroke-width-input';
-		strokeWidth.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' );
+		strokeWidth.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ': 2.0px';
+		strokeWidth.placeholder = '0.1-100px';
 
 		strokeWidthContainer.appendChild( strokeLabel );
 		strokeWidthContainer.appendChild( strokeWidth );
@@ -641,14 +642,47 @@
 			self.updateStyleOptions();
 		} );
 
-		// Stroke width input
+		// Stroke width input with improved validation and units consistency
 		this.strokeWidth.addEventListener( 'input', function () {
 			var val = parseFloat( this.value );
-			if ( !isNaN( val ) ) {
-				val = Math.max( 0, Math.min( 999.9, Math.round( val * 10 ) / 10 ) );
-				this.value = val.toFixed( 1 );
+			var isValid = !isNaN( val ) && val >= 0.1 && val <= 100;
+
+			if ( isValid ) {
+				// Ensure consistent precision (1 decimal place)
+				val = Math.round( val * 10 ) / 10;
 				self.currentStrokeWidth = val;
+
+				// Update display with px unit for clarity
+				this.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ': ' + val + 'px';
+
+				// Remove error styling
+				this.classList.remove( 'validation-error' );
+
+				// Update canvas with new stroke width
 				self.updateStyleOptions();
+			} else {
+				// Apply error styling for invalid values
+				this.classList.add( 'validation-error' );
+
+				// Show validation message in title
+				if ( isNaN( val ) ) {
+					this.title = 'Please enter a valid number between 0.1 and 100';
+				} else if ( val < 0.1 ) {
+					this.title = 'Minimum stroke width: 0.1px';
+				} else if ( val > 100 ) {
+					this.title = 'Maximum stroke width: 100px';
+				}
+			}
+		} );
+
+		// Also handle blur event to reset invalid values
+		this.strokeWidth.addEventListener( 'blur', function () {
+			var val = parseFloat( this.value );
+			if ( isNaN( val ) || val < 0.1 || val > 100 ) {
+				// Reset to last valid value or default
+				this.value = self.currentStrokeWidth.toFixed( 1 );
+				this.classList.remove( 'validation-error' );
+				this.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ': ' + self.currentStrokeWidth + 'px';
 			}
 		} );
 

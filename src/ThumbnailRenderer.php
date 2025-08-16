@@ -250,9 +250,9 @@ class ThumbnailRenderer {
 		   // Shadow support
 		   if ( !empty( $layer['shadow'] ) ) {
 			   $shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
-			   $shadowBlur = ((float)($layer['shadowBlur'] ?? 8)) * min($scaleX, $scaleY);
-			   $shadowOffsetX = ((float)($layer['shadowOffsetX'] ?? 2)) * $scaleX;
-			   $shadowOffsetY = ((float)($layer['shadowOffsetY'] ?? 2)) * $scaleY;
+			   $shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
+			   $shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
+			   $shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
 			   $shadowColor = $this->withOpacity( $shadowColor, 1.0 );
 			   $args = array_merge( $args, [
 				   '-fill', $shadowColor,
@@ -288,9 +288,9 @@ class ThumbnailRenderer {
 		   $args = [];
 		   if ( !empty( $layer['shadow'] ) ) {
 			   $shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
-			   $shadowBlur = ((float)($layer['shadowBlur'] ?? 8)) * min($scaleX, $scaleY);
-			   $shadowOffsetX = ((float)($layer['shadowOffsetX'] ?? 2)) * $scaleX;
-			   $shadowOffsetY = ((float)($layer['shadowOffsetY'] ?? 2)) * $scaleY;
+			   $shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
+			   $shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
+			   $shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
 			   $shadowColor = $this->withOpacity( $shadowColor, 1.0 );
 			   $args = array_merge( $args, [
 				   '-fill', $shadowColor,
@@ -321,9 +321,9 @@ class ThumbnailRenderer {
 		   $args = [];
 		   if ( !empty( $layer['shadow'] ) ) {
 			   $shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
-			   $shadowBlur = ((float)($layer['shadowBlur'] ?? 8)) * min($scaleX, $scaleY);
-			   $shadowOffsetX = ((float)($layer['shadowOffsetX'] ?? 2)) * $scaleX;
-			   $shadowOffsetY = ((float)($layer['shadowOffsetY'] ?? 2)) * $scaleY;
+			   $shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
+			   $shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
+			   $shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
 			   $shadowColor = $this->withOpacity( $shadowColor, 1.0 );
 			   $args = array_merge( $args, [
 				   '-fill', $shadowColor,

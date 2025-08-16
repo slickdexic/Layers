@@ -23,6 +23,13 @@
 		this.isDrawing = false;
 		this.startPoint = null;
 
+		// Performance optimization properties
+		this.dirtyRegion = null; // Track dirty regions to avoid full redraws
+		this.animationFrameId = null; // For requestAnimationFrame
+		this.redrawScheduled = false; // Prevent multiple redraws in same frame
+		this.layersCache = new window.Map(); // Cache rendered layers
+		this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 }; // For culling
+
 		// Selection and manipulation state
 		this.selectedLayerId = null;
 		this.selectedLayerIds = []; // Multi-selection support
@@ -91,6 +98,10 @@
 
 		// Clipboard for copy/paste
 		this.clipboard = [];
+
+		// Canvas pooling for temporary canvas operations to prevent memory leaks
+		this.canvasPool = [];
+		this.maxPoolSize = 5;
 
 		this.init();
 	}
@@ -2205,6 +2216,63 @@
 		return bounds;
 	};
 
+	/**
+	 * Get a temporary canvas from the pool or create a new one
+	 * This prevents memory leaks from constantly creating new canvas elements
+	 *
+	 * @param {number} width Canvas width
+	 * @param {number} height Canvas height
+	 * @return {Object} Object with canvas and context properties
+	 */
+	CanvasManager.prototype.getTempCanvas = function ( width, height ) {
+		var tempCanvasObj = this.canvasPool.pop();
+		if ( tempCanvasObj ) {
+			// Reuse existing canvas from pool
+			tempCanvasObj.canvas.width = width || 100;
+			tempCanvasObj.canvas.height = height || 100;
+			// Clear the canvas
+			var canvas = tempCanvasObj.canvas;
+			tempCanvasObj.context.clearRect( 0, 0, canvas.width, canvas.height );
+		} else {
+			// Create new canvas object
+			var tempCanvas = document.createElement( 'canvas' );
+			tempCanvas.width = width || 100;
+			tempCanvas.height = height || 100;
+			tempCanvasObj = {
+				canvas: tempCanvas,
+				context: tempCanvas.getContext( '2d' )
+			};
+		}
+		return tempCanvasObj;
+	};
+
+	/**
+	 * Return a temporary canvas to the pool for reuse
+	 *
+	 * @param {Object} tempCanvasObj Object with canvas and context properties
+	 */
+	CanvasManager.prototype.returnTempCanvas = function ( tempCanvasObj ) {
+		if ( !tempCanvasObj || !tempCanvasObj.canvas || !tempCanvasObj.context ) {
+			return;
+		}
+
+		// Only keep a limited number of canvases in the pool
+		if ( this.canvasPool.length < this.maxPoolSize ) {
+			// Clear the canvas before returning to pool
+			var canvas = tempCanvasObj.canvas;
+			tempCanvasObj.context.clearRect( 0, 0, canvas.width, canvas.height );
+			// Reset context state
+			tempCanvasObj.context.setTransform( 1, 0, 0, 1, 0, 0 );
+			tempCanvasObj.context.globalAlpha = 1;
+			tempCanvasObj.context.globalCompositeOperation = 'source-over';
+			this.canvasPool.push( tempCanvasObj );
+		} else {
+			// Pool is full, let the canvas be garbage collected
+			tempCanvasObj.canvas = null;
+			tempCanvasObj.context = null;
+		}
+	};
+
 	CanvasManager.prototype.updateCanvasTransform = function () {
 		// Update zoom display
 		if ( this.editor.toolbar ) {
@@ -2548,8 +2616,11 @@
 		if ( layer.shadow ) {
 			this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
 			this.ctx.shadowBlur = layer.shadowBlur || 8;
-			this.ctx.shadowOffsetX = layer.shadowOffsetX || 2;
-			this.ctx.shadowOffsetY = layer.shadowOffsetY || 2;
+			// Scale shadow offsets to account for canvas coordinate space transformation
+			var shadowOffsetX = layer.shadowOffsetX || 2;
+			var shadowOffsetY = layer.shadowOffsetY || 2;
+			this.ctx.shadowOffsetX = shadowOffsetX * ( this.zoom || 1 );
+			this.ctx.shadowOffsetY = shadowOffsetY * ( this.zoom || 1 );
 		}
 
 		// Draw with effects
@@ -4019,7 +4090,8 @@
 					if ( this.editor && this.editor.debug ) {
 						this.editor.debugLog( 'Processing layer', index, 'visible:', layer.visible, 'type:', layer.type );
 					}
-					if ( layer.visible !== false ) { // Skip invisible layers early
+					// Original visibility check plus performance optimization with layer culling
+					if ( layer.visible !== false && this.isLayerInViewport( layer ) ) {
 						this.applyLayerEffects( layer, function () {
 							// Debug: Log layer drawing (only if debug mode enabled)
 							if ( this.editor && this.editor.debug ) {
@@ -4028,7 +4100,11 @@
 							this.drawLayer( layer );
 						}.bind( this ) );
 					} else if ( this.editor && this.editor.debug ) {
-						this.editor.debugLog( 'Skipping invisible layer', index );
+						if ( layer.visible === false ) {
+							this.editor.debugLog( 'Skipping invisible layer', index );
+						} else {
+							this.editor.debugLog( 'Skipping off-screen layer', index );
+						}
 					}
 				}.bind( this ) );
 
@@ -4083,22 +4159,26 @@
 	};
 
 	CanvasManager.prototype.redraw = function () {
-		// console.log( 'Layers: Redrawing canvas...' );
-		// console.log( 'Layers: Background image status:',
-		//  this.backgroundImage ? 'loaded' : 'none',
-		//             this.backgroundImage ? ('complete: ' + this.backgroundImage.complete) : '' );
+		try {
+			// console.log( 'Layers: Redrawing canvas...' );
+			// console.log( 'Layers: Background image status:',
+			//  this.backgroundImage ? 'loaded' : 'none',
+			//             this.backgroundImage ? ('complete: ' + this.backgroundImage.complete) : '' );
 
-		// Clear canvas
-		this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
+			// Clear canvas
+			this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
-		// Draw background image if available
-		if ( this.backgroundImage && this.backgroundImage.complete ) {
-			// console.log( 'Layers: Drawing background image',
-			//  this.backgroundImage.width + 'x' + this.backgroundImage.height );
-			this.ctx.drawImage( this.backgroundImage, 0, 0 );
-		} else {
-			// Draw a pattern background to show that this is the canvas area
-			this.ctx.fillStyle = '#ffffff';
+			// Update viewport bounds for culling
+			this.updateViewportBounds();
+
+			// Draw background image if available
+			if ( this.backgroundImage && this.backgroundImage.complete ) {
+				// console.log( 'Layers: Drawing background image',
+				//  this.backgroundImage.width + 'x' + this.backgroundImage.height );
+				this.ctx.drawImage( this.backgroundImage, 0, 0 );
+			} else {
+				// Draw a pattern background to show that this is the canvas area
+				this.ctx.fillStyle = '#ffffff';
 			this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
 
 			// Draw a checker pattern to indicate "no image loaded"
@@ -4127,6 +4207,147 @@
 
 		// Draw rulers after background/grid
 		this.drawRulers();
+	} catch ( error ) {
+		// Error recovery for canvas operations
+		if ( this.editor && this.editor.errorLog ) {
+			this.editor.errorLog( 'Canvas redraw failed:', error );
+		}
+		
+		// Attempt to recover by restoring a basic state
+		try {
+			this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
+			this.ctx.fillStyle = '#ffffff';
+			this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+			
+			// Draw error message
+			this.ctx.fillStyle = '#cc0000';
+			this.ctx.font = '16px Arial';
+			this.ctx.textAlign = 'center';
+			this.ctx.textBaseline = 'middle';
+			this.ctx.fillText( 'Canvas error - reloading recommended', 
+				this.canvas.width / 2, this.canvas.height / 2 );
+		} catch ( recoveryError ) {
+			// If even recovery fails, log the error
+			console.error( 'Canvas error recovery failed:', recoveryError );
+		}
+	}
+};
+
+	CanvasManager.prototype.redrawOptimized = function () {
+		// Optimize redraws using requestAnimationFrame
+		if ( this.redrawScheduled ) {
+			return; // Already scheduled
+		}
+
+		this.redrawScheduled = true;
+
+		if ( window.requestAnimationFrame ) {
+			this.animationFrameId = window.requestAnimationFrame( function () {
+				this.redraw();
+				this.redrawScheduled = false;
+			}.bind( this ) );
+		} else {
+			// Fallback for older browsers
+			setTimeout( function () {
+				this.redraw();
+				this.redrawScheduled = false;
+			}.bind( this ), 16 ); // ~60fps
+		}
+	};
+
+	CanvasManager.prototype.updateViewportBounds = function () {
+		// Update viewport bounds for layer culling
+		this.viewportBounds.x = 0;
+		this.viewportBounds.y = 0;
+		this.viewportBounds.width = this.canvas.width;
+		this.viewportBounds.height = this.canvas.height;
+	};
+
+	CanvasManager.prototype.isLayerInViewport = function ( layer ) {
+		// Basic layer culling - check if layer intersects with viewport
+		if ( !layer ) {
+			return false;
+		}
+
+		// If viewport bounds aren't properly initialized, show all layers
+		if ( !this.viewportBounds || this.viewportBounds.width <= 0 ||
+			this.viewportBounds.height <= 0 ) {
+			return true;
+		}
+
+		// Get layer bounds
+		var layerBounds = this.getLayerBounds( layer );
+		if ( !layerBounds ) {
+			return true; // If we can't determine bounds, assume visible
+		}
+
+		// Check if layer intersects with viewport
+		return !( layerBounds.x + layerBounds.width < this.viewportBounds.x ||
+				layerBounds.x > this.viewportBounds.x + this.viewportBounds.width ||
+				layerBounds.y + layerBounds.height < this.viewportBounds.y ||
+				layerBounds.y > this.viewportBounds.y + this.viewportBounds.height );
+	};
+
+	CanvasManager.prototype.getLayerBounds = function ( layer ) {
+		// Calculate layer bounds for culling
+		switch ( layer.type ) {
+			case 'text':
+				var fontSize = layer.fontSize || 14;
+				// Rough estimate of text width
+				var textWidth = layer.text ? layer.text.length * fontSize * 0.6 : 0;
+				return {
+					x: layer.x || 0,
+					y: ( layer.y || 0 ) - fontSize,
+					width: textWidth,
+					height: fontSize
+				};
+			case 'rectangle':
+			case 'highlight':
+				return {
+					x: layer.x || 0,
+					y: layer.y || 0,
+					width: layer.width || 0,
+					height: layer.height || 0
+				};
+			case 'circle':
+				var radius = layer.radius || 0;
+				return {
+					x: ( layer.x || 0 ) - radius,
+					y: ( layer.y || 0 ) - radius,
+					width: radius * 2,
+					height: radius * 2
+				};
+			case 'ellipse':
+				var radiusX = layer.radiusX || 0;
+				var radiusY = layer.radiusY || 0;
+				return {
+					x: ( layer.x || 0 ) - radiusX,
+					y: ( layer.y || 0 ) - radiusY,
+					width: radiusX * 2,
+					height: radiusY * 2
+				};
+			case 'line':
+			case 'arrow':
+				var x1 = layer.x1 || layer.x || 0;
+				var y1 = layer.y1 || layer.y || 0;
+				var x2 = layer.x2 || 0;
+				var y2 = layer.y2 || 0;
+				return {
+					x: Math.min( x1, x2 ),
+					y: Math.min( y1, y2 ),
+					width: Math.abs( x2 - x1 ),
+					height: Math.abs( y2 - y1 )
+				};
+			default:
+				// For complex shapes, use a bounding box approach
+				var margin = 50; // Add some margin for complex shapes
+				return {
+					x: ( layer.x || 0 ) - margin,
+					y: ( layer.y || 0 ) - margin,
+					width: ( layer.width || 100 ) + margin * 2,
+					height: ( layer.height || 100 ) + margin * 2
+				};
+		}
 	};
 
 	CanvasManager.prototype.drawLayer = function ( layer ) {
@@ -4135,40 +4356,77 @@
 			return;
 		}
 
-		switch ( layer.type ) {
-			case 'blur':
-				this.drawBlur( layer );
-				break;
-			case 'text':
-				this.drawText( layer );
-				break;
-			case 'rectangle':
-				this.drawRectangle( layer );
-				break;
-			case 'circle':
-				this.drawCircle( layer );
-				break;
-			case 'ellipse':
-				this.drawEllipse( layer );
-				break;
-			case 'polygon':
-				this.drawPolygon( layer );
-				break;
-			case 'star':
-				this.drawStar( layer );
-				break;
-			case 'line':
-				this.drawLine( layer );
-				break;
-			case 'arrow':
-				this.drawArrow( layer );
-				break;
-			case 'highlight':
-				this.drawHighlight( layer );
-				break;
-			case 'path':
-				this.drawPath( layer );
-				break;
+		try {
+			switch ( layer.type ) {
+				case 'blur':
+					this.drawBlur( layer );
+					break;
+				case 'text':
+					this.drawText( layer );
+					break;
+				case 'rectangle':
+					this.drawRectangle( layer );
+					break;
+				case 'circle':
+					this.drawCircle( layer );
+					break;
+				case 'ellipse':
+					this.drawEllipse( layer );
+					break;
+				case 'polygon':
+					this.drawPolygon( layer );
+					break;
+				case 'star':
+					this.drawStar( layer );
+					break;
+				case 'line':
+					this.drawLine( layer );
+					break;
+				case 'arrow':
+					this.drawArrow( layer );
+					break;
+				case 'highlight':
+					this.drawHighlight( layer );
+					break;
+				case 'path':
+					this.drawPath( layer );
+					break;
+			}
+		} catch ( error ) {
+			// Error recovery for layer drawing
+			if ( this.editor && this.editor.errorLog ) {
+				this.editor.errorLog( 'Layer drawing failed for', layer.type, 'layer:', error );
+			}
+			
+			// Draw error placeholder for the layer
+			try {
+				this.ctx.save();
+				this.ctx.fillStyle = '#ff9999';
+				this.ctx.strokeStyle = '#cc0000';
+				this.ctx.lineWidth = 2;
+				
+				var x = layer.x || 0;
+				var y = layer.y || 0;
+				var width = layer.width || 50;
+				var height = layer.height || 50;
+				
+				this.ctx.fillRect( x, y, width, height );
+				this.ctx.strokeRect( x, y, width, height );
+				
+				// Draw error icon (X)
+				this.ctx.strokeStyle = '#ffffff';
+				this.ctx.lineWidth = 3;
+				this.ctx.beginPath();
+				this.ctx.moveTo( x + 10, y + 10 );
+				this.ctx.lineTo( x + width - 10, y + height - 10 );
+				this.ctx.moveTo( x + width - 10, y + 10 );
+				this.ctx.lineTo( x + 10, y + height - 10 );
+				this.ctx.stroke();
+				
+				this.ctx.restore();
+			} catch ( recoveryError ) {
+				console.error( 'Layer error recovery failed:', recoveryError );
+			}
 		}
 	};
 
@@ -4453,8 +4711,9 @@
 		// Apply text shadow if enabled
 		if ( layer.textShadow ) {
 			this.ctx.shadowColor = layer.textShadowColor || '#000000';
-			this.ctx.shadowOffsetX = 2;
-			this.ctx.shadowOffsetY = 2;
+			// Scale text shadow offsets to account for canvas coordinate space transformation
+			this.ctx.shadowOffsetX = 2 * ( this.zoom || 1 );
+			this.ctx.shadowOffsetY = 2 * ( this.zoom || 1 );
 			this.ctx.shadowBlur = 4;
 		}
 
@@ -4809,6 +5068,20 @@
 	 * This method should be called when the editor is closed or destroyed
 	 */
 	CanvasManager.prototype.destroy = function () {
+		// Cancel any pending animation frames to prevent memory leaks
+		if ( this.animationFrameId ) {
+			if ( window.cancelAnimationFrame ) {
+				window.cancelAnimationFrame( this.animationFrameId );
+			}
+			this.animationFrameId = null;
+		}
+		this.redrawScheduled = false;
+
+		// Clear layer cache
+		if ( this.layersCache ) {
+			this.layersCache.clear();
+		}
+
 		// Remove all event listeners to prevent memory leaks
 		if ( this.canvas ) {
 			this.canvas.removeEventListener( 'mousedown', this.onMouseDownHandler );
@@ -4861,6 +5134,18 @@
 		this.selectionHandles = [];
 		this.horizontalGuides = [];
 		this.verticalGuides = [];
+
+		// Clear canvas pool to prevent memory leaks
+		if ( this.canvasPool ) {
+			for ( var i = 0; i < this.canvasPool.length; i++ ) {
+				var pooledCanvas = this.canvasPool[ i ];
+				if ( pooledCanvas ) {
+					pooledCanvas.canvas = null;
+					pooledCanvas.context = null;
+				}
+			}
+			this.canvasPool = [];
+		}
 
 		// Clear timers if any exist
 		if ( this.renderTimer ) {

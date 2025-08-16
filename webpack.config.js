@@ -2,8 +2,8 @@ const path = require( 'path' );
 
 module.exports = {
 	entry: {
-		'ext.layers': './src/js/viewer/index.js',
-		'ext.layers.editor': './src/js/editor/index.js'
+		'ext.layers': './resources/ext.layers/init.js',
+		'ext.layers.editor': './resources/ext.layers.editor/LayersEditor.js'
 	},
 	output: {
 		path: path.resolve( __dirname, 'resources/dist' ),

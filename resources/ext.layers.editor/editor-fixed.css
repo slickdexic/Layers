@@ -50,6 +50,76 @@
 	word-wrap: break-word;
 }
 
+/* Validation error styling for stroke width input */
+.stroke-width-input.validation-error {
+	border-color: #d73027 !important;
+	background-color: #fef7f7 !important;
+	box-shadow: 0 0 0 1px rgba(215, 48, 39, 0.2) !important;
+}
+
+.stroke-width-input.validation-error:focus {
+	outline: 2px solid rgba(215, 48, 39, 0.5) !important;
+	outline-offset: 1px;
+}
+
+/* Improved color and transparency control grouping */
+.property-field--color-group {
+	background: #f8f9fa;
+	border: 1px solid #e9ecef;
+	border-radius: 6px;
+	padding: 12px;
+	margin-bottom: 12px;
+}
+
+.property-field--color-group .property-field {
+	margin-bottom: 8px;
+}
+
+.property-field--color-group .property-field:last-child {
+	margin-bottom: 0;
+}
+
+/* Visual connection between color and opacity controls */
+.color-opacity-pair {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 8px;
+	align-items: center;
+	padding: 8px;
+	background: #ffffff;
+	border: 1px solid #e1e5e9;
+	border-radius: 4px;
+	margin-bottom: 6px;
+}
+
+.color-opacity-pair:last-child {
+	margin-bottom: 0;
+}
+
+.color-opacity-pair .color-picker-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.color-opacity-pair .opacity-control {
+	min-width: 120px;
+	font-size: 0.85em;
+	color: #6c757d;
+}
+
+/* Mobile responsive improvements for color controls */
+@media (max-width: 768px) {
+	.color-opacity-pair {
+		grid-template-columns: 1fr;
+		gap: 6px;
+	}
+	
+	.color-opacity-pair .opacity-control {
+		min-width: auto;
+	}
+}
+
 .layers-error-notification .error-time {
 	color: #666;
 	font-size: 0.85em;

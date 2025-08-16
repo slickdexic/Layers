@@ -57,6 +57,7 @@
 
 	/**
 	 * Handle errors with classification and user feedback
+	 *
 	 * @param {Error|string} error - The error object or message
 	 * @param {string} context - Context where the error occurred
 	 * @param {string} type - Type of error (api, canvas, validation, etc.)
@@ -159,6 +160,7 @@
 
 	/**
 	 * Add error to internal queue with size management
+	 *
 	 * @param {Object} errorInfo - Processed error information
 	 */
 	ErrorHandler.prototype.addToErrorQueue = function ( errorInfo ) {
@@ -172,6 +174,7 @@
 
 	/**
 	 * Log error for developers
+	 *
 	 * @param {Object} errorInfo - Error information
 	 */
 	ErrorHandler.prototype.logError = function ( errorInfo ) {
@@ -192,8 +195,9 @@
 
 	/**
 	 * Get appropriate console log level for severity
+	 *
 	 * @param {string} severity - Error severity
-	 * @returns {string} Console method name
+	 * @return {string} Console method name
 	 */
 	ErrorHandler.prototype.getLogLevel = function ( severity ) {
 		switch ( severity ) {
@@ -209,6 +213,7 @@
 
 	/**
 	 * Show user notification based on error severity
+	 *
 	 * @param {Object} errorInfo - Error information
 	 */
 	ErrorHandler.prototype.showUserNotification = function ( errorInfo ) {
@@ -221,6 +226,7 @@
 
 	/**
 	 * Create user-visible error notification
+	 *
 	 * @param {Object} errorInfo - Error information
 	 */
 	ErrorHandler.prototype.createUserNotification = function ( errorInfo ) {
@@ -260,8 +266,9 @@
 
 	/**
 	 * Convert technical error to user-friendly message
+	 *
 	 * @param {Object} errorInfo - Error information
-	 * @returns {string} User-friendly message
+	 * @return {string} User-friendly message
 	 */
 	ErrorHandler.prototype.getUserFriendlyMessage = function ( errorInfo ) {
 		var msgKey = 'layers-error-' + errorInfo.type;
@@ -294,8 +301,9 @@
 
 	/**
 	 * Escape HTML to prevent XSS in error messages
+	 *
 	 * @param {string} str - String to escape
-	 * @returns {string} HTML-escaped string
+	 * @return {string} HTML-escaped string
 	 */
 	ErrorHandler.prototype.escapeHtml = function ( str ) {
 		var div = document.createElement( 'div' );
@@ -305,6 +313,7 @@
 
 	/**
 	 * Report error to external monitoring service
+	 *
 	 * @param {Object} errorInfo - Error information
 	 */
 	ErrorHandler.prototype.reportError = function ( errorInfo ) {
@@ -331,8 +340,9 @@
 
 	/**
 	 * Get recent errors for debugging
+	 *
 	 * @param {number} limit - Maximum number of errors to return
-	 * @returns {Array} Recent error information
+	 * @return {Array} Recent error information
 	 */
 	ErrorHandler.prototype.getRecentErrors = function ( limit ) {
 		limit = limit || 5;
@@ -351,6 +361,7 @@
 
 	/**
 	 * Set debug mode
+	 *
 	 * @param {boolean} enabled - Whether to enable debug mode
 	 */
 	ErrorHandler.prototype.setDebugMode = function ( enabled ) {
