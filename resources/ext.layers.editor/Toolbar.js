@@ -37,11 +37,273 @@
 		this.selectTool( 'pointer' );
 	};
 
+	// Resolve i18n text safely, avoiding placeholder leakage
+	Toolbar.prototype.msg = function ( key, fallback ) {
+		function pick( txt, fb ) {
+			if ( txt && txt.indexOf && txt.indexOf( '⧼' ) === -1 ) {
+				return txt;
+			}
+			return fb;
+		}
+		switch ( key ) {
+			case 'layers-toolbar-title': {
+				var t0 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-toolbar-title' ).text() : null;
+				return pick( t0, fallback );
+			}
+			// Tools
+			case 'layers-tool-select': {
+				var t1 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-select' ).text() : null;
+				return pick( t1, fallback );
+			}
+			case 'layers-tool-zoom': {
+				var t2 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-zoom' ).text() : null;
+				return pick( t2, fallback );
+			}
+			case 'layers-tool-text': {
+				var t3 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-text' ).text() : null;
+				return pick( t3, fallback );
+			}
+			case 'layers-tool-pen': {
+				var t4 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-pen' ).text() : null;
+				return pick( t4, fallback );
+			}
+			case 'layers-tool-rectangle': {
+				var t5 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-rectangle' ).text() : null;
+				return pick( t5, fallback );
+			}
+			case 'layers-tool-circle': {
+				var t6 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-circle' ).text() : null;
+				return pick( t6, fallback );
+			}
+			case 'layers-tool-ellipse': {
+				var t7 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-ellipse' ).text() : null;
+				return pick( t7, fallback );
+			}
+			case 'layers-tool-polygon': {
+				var t8 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-polygon' ).text() : null;
+				return pick( t8, fallback );
+			}
+			case 'layers-tool-star': {
+				var t9 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-star' ).text() : null;
+				return pick( t9, fallback );
+			}
+			case 'layers-tool-arrow': {
+				var t10 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-arrow' ).text() : null;
+				return pick( t10, fallback );
+			}
+			case 'layers-tool-line': {
+				var t11 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-line' ).text() : null;
+				return pick( t11, fallback );
+			}
+			case 'layers-tool-highlight': {
+				var t12 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-highlight' ).text() : null;
+				return pick( t12, fallback );
+			}
+			case 'layers-tool-blur': {
+				var t13 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-blur' ).text() : null;
+				return pick( t13, fallback );
+			}
+			case 'layers-tool-marquee': {
+				var t14 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-tool-marquee' ).text() : null;
+				return pick( t14, fallback );
+			}
+			// Properties/labels
+			case 'layers-prop-stroke-color': {
+				var p1 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-prop-stroke-color' ).text() : null;
+				return pick( p1, fallback );
+			}
+			case 'layers-prop-fill-color': {
+				var p2 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-prop-fill-color' ).text() : null;
+				return pick( p2, fallback );
+			}
+			case 'layers-prop-stroke-width': {
+				var p3 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-prop-stroke-width' ).text() : null;
+				return pick( p3, fallback );
+			}
+			case 'layers-prop-font-size': {
+				var p4 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-prop-font-size' ).text() : null;
+				return pick( p4, fallback );
+			}
+			case 'layers-effect-shadow': {
+				var p5 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-effect-shadow' ).text() : null;
+				return pick( p5, fallback );
+			}
+			case 'layers-effect-shadow-enable': {
+				var p6 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-effect-shadow-enable' ).text() : null;
+				return pick( p6, fallback );
+			}
+			case 'layers-effect-shadow-color': {
+				var p7 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-effect-shadow-color' ).text() : null;
+				return pick( p7, fallback );
+			}
+			// Arrow styles
+			case 'layers-arrow-single': {
+				var a1 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-arrow-single' ).text() : null;
+				return pick( a1, fallback );
+			}
+			case 'layers-arrow-double': {
+				var a2 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-arrow-double' ).text() : null;
+				return pick( a2, fallback );
+			}
+			case 'layers-arrow-none': {
+				var a3 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-arrow-none' ).text() : null;
+				return pick( a3, fallback );
+			}
+			// Zoom
+			case 'layers-zoom-out': {
+				var z1 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-zoom-out' ).text() : null;
+				return pick( z1, fallback );
+			}
+			case 'layers-zoom-reset': {
+				var z2 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-zoom-reset' ).text() : null;
+				return pick( z2, fallback );
+			}
+			case 'layers-zoom-in': {
+				var z3 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-zoom-in' ).text() : null;
+				return pick( z3, fallback );
+			}
+			case 'layers-zoom-fit': {
+				var z4 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-zoom-fit' ).text() : null;
+				return pick( z4, fallback );
+			}
+			// Actions
+			case 'layers-undo': {
+				var ac1 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-undo' ).text() : null;
+				return pick( ac1, fallback );
+			}
+			case 'layers-redo': {
+				var ac2 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-redo' ).text() : null;
+				return pick( ac2, fallback );
+			}
+			case 'layers-delete-selected': {
+				var ac3 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-delete-selected' ).text() : null;
+				return pick( ac3, fallback );
+			}
+			case 'layers-duplicate-selected': {
+				var ac4 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-duplicate-selected' ).text() : null;
+				return pick( ac4, fallback );
+			}
+			case 'layers-toggle-grid': {
+				var ac5 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-toggle-grid' ).text() : null;
+				return pick( ac5, fallback );
+			}
+			case 'layers-toggle-rulers': {
+				var ac6 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-toggle-rulers' ).text() : null;
+				return pick( ac6, fallback );
+			}
+			case 'layers-toggle-guides': {
+				var ac7 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-toggle-guides' ).text() : null;
+				return pick( ac7, fallback );
+			}
+			case 'layers-toggle-snap-grid': {
+				var ac8 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-toggle-snap-grid' ).text() : null;
+				return pick( ac8, fallback );
+			}
+			case 'layers-toggle-snap-guides': {
+				var ac9 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-toggle-snap-guides' ).text() : null;
+				return pick( ac9, fallback );
+			}
+			// Import/Export
+			case 'layers-import': {
+				var ie1 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-import' ).text() : null;
+				return pick( ie1, fallback );
+			}
+			case 'layers-export': {
+				var ie2 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-export' ).text() : null;
+				return pick( ie2, fallback );
+			}
+			case 'layers-import-unsaved-confirm': {
+				var ie3 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-import-unsaved-confirm' ).text() : null;
+				return pick( ie3, fallback );
+			}
+			case 'layers-import-success': {
+				var ie4 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-import-success' ).text() : null;
+				return pick( ie4, fallback );
+			}
+			case 'layers-import-error': {
+				var ie5 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-import-error' ).text() : null;
+				return pick( ie5, fallback );
+			}
+			// Save/Cancel
+			case 'layers-editor-save': {
+				var sc1 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-editor-save' ).text() : null;
+				return pick( sc1, fallback );
+			}
+			case 'layers-save-changes': {
+				var sc2 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-save-changes' ).text() : null;
+				return pick( sc2, fallback );
+			}
+			case 'layers-editor-cancel': {
+				var sc3 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-editor-cancel' ).text() : null;
+				return pick( sc3, fallback );
+			}
+			case 'layers-cancel-changes': {
+				var sc4 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-cancel-changes' ).text() : null;
+				return pick( sc4, fallback );
+			}
+			// Misc
+			case 'layers-transparent': {
+				var mi1 = ( window.mw && mw.message ) ?
+					mw.message( 'layers-transparent' ).text() : null;
+				return pick( mi1, fallback );
+			}
+			default:
+				return fallback;
+		}
+	};
+
 	Toolbar.prototype.createInterface = function () {
 		this.container.innerHTML = '';
 		this.container.className = 'layers-toolbar';
 		this.container.setAttribute( 'role', 'toolbar' );
-		this.container.setAttribute( 'aria-label', ( mw.message ? mw.message( 'layers-toolbar-title' ).text() : 'Toolbar' ) );
+		this.container.setAttribute( 'aria-label', this.msg( 'layers-toolbar-title', 'Toolbar' ) );
 
 		// Create tool groups
 		this.createToolGroup();
@@ -53,22 +315,23 @@
 	Toolbar.prototype.createToolGroup = function () {
 		var toolGroup = document.createElement( 'div' );
 		toolGroup.className = 'toolbar-group tools-group';
+		var t = this.msg.bind( this );
 
 		var tools = [
-			{ id: 'pointer', icon: '↖', title: ( mw.message ? mw.message( 'layers-tool-select' ).text() : 'Select Tool' ), key: 'V' },
-			{ id: 'zoom', icon: '🔍', title: ( mw.message ? mw.message( 'layers-tool-zoom' ).text() : 'Zoom Tool' ), key: 'Z' },
-			{ id: 'text', icon: 'T', title: ( mw.message ? mw.message( 'layers-tool-text' ).text() : 'Text Tool' ), key: 'T' },
-			{ id: 'pen', icon: '✏', title: ( mw.message ? mw.message( 'layers-tool-pen' ).text() : 'Pen Tool' ), key: 'P' },
-			{ id: 'rectangle', icon: '▢', title: ( mw.message ? mw.message( 'layers-tool-rectangle' ).text() : 'Rectangle Tool' ), key: 'R' },
-			{ id: 'circle', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-circle' ).text() : 'Circle Tool' ), key: 'C' },
-			{ id: 'ellipse', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-ellipse' ).text() : 'Ellipse Tool' ), key: 'E' },
-			{ id: 'polygon', icon: '⬟', title: ( mw.message ? mw.message( 'layers-tool-polygon' ).text() : 'Polygon Tool' ), key: 'G' },
-			{ id: 'star', icon: '★', title: ( mw.message ? mw.message( 'layers-tool-star' ).text() : 'Star Tool' ), key: 'S' },
-			{ id: 'arrow', icon: '→', title: ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow Tool' ), key: 'A' },
-			{ id: 'line', icon: '/', title: ( mw.message ? mw.message( 'layers-tool-line' ).text() : 'Line Tool' ), key: 'L' },
-			{ id: 'highlight', icon: '▒', title: ( mw.message ? mw.message( 'layers-tool-highlight' ).text() : 'Highlight Tool' ), key: 'H' },
-			{ id: 'blur', icon: '◼︎', title: ( mw.message ? mw.message( 'layers-tool-blur' ).text() : 'Blur/Redact Tool' ), key: 'B' },
-			{ id: 'marquee', icon: '⬚', title: ( mw.message ? mw.message( 'layers-tool-marquee' ).text() : 'Marquee Select' ), key: 'M' }
+			{ id: 'pointer', icon: '↖', title: t( 'layers-tool-select', 'Select Tool' ), key: 'V' },
+			{ id: 'zoom', icon: '🔍', title: t( 'layers-tool-zoom', 'Zoom Tool' ), key: 'Z' },
+			{ id: 'text', icon: 'T', title: t( 'layers-tool-text', 'Text Tool' ), key: 'T' },
+			{ id: 'pen', icon: '✏', title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P' },
+			{ id: 'rectangle', icon: '▢', title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R' },
+			{ id: 'circle', icon: '○', title: t( 'layers-tool-circle', 'Circle Tool' ), key: 'C' },
+			{ id: 'ellipse', icon: '○', title: t( 'layers-tool-ellipse', 'Ellipse Tool' ), key: 'E' },
+			{ id: 'polygon', icon: '⬟', title: t( 'layers-tool-polygon', 'Polygon Tool' ), key: 'G' },
+			{ id: 'star', icon: '★', title: t( 'layers-tool-star', 'Star Tool' ), key: 'S' },
+			{ id: 'arrow', icon: '→', title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A' },
+			{ id: 'line', icon: '/', title: t( 'layers-tool-line', 'Line Tool' ), key: 'L' },
+			{ id: 'highlight', icon: '▒', title: t( 'layers-tool-highlight', 'Highlight Tool' ), key: 'H' },
+			{ id: 'blur', icon: '◼︎', title: t( 'layers-tool-blur', 'Blur/Redact Tool' ), key: 'B' },
+			{ id: 'marquee', icon: '⬚', title: t( 'layers-tool-marquee', 'Marquee Select' ), key: 'M' }
 		];
 
 		tools.forEach( function ( tool ) {
@@ -98,44 +361,284 @@
 	Toolbar.prototype.createStyleGroup = function () {
 		var styleGroup = document.createElement( 'div' );
 		styleGroup.className = 'toolbar-group style-group';
+		var self = this;
+		var t = this.msg.bind( this );
 
-		// Color pickers - stroke and fill side by side
+		// Color pickers (modern dialog-based)
 		var colorContainer = document.createElement( 'div' );
 		colorContainer.className = 'color-input-group';
 
-		// Stroke color
+		// Local helper to update button display for a color
+		var updateColorButtonDisplay = function ( btn, color, transparentLabel ) {
+			if ( !color || color === 'none' || color === 'transparent' ) {
+				btn.style.background = 'repeating-linear-gradient(45deg, #ff0000 0, #ff0000 4px, transparent 4px, transparent 8px)';
+				btn.title = transparentLabel || 'Transparent';
+			} else {
+				btn.style.background = color;
+				btn.title = color;
+			}
+		};
+
+		// Color picker dialog factory (based on LayerPanel implementation)
+		var openColorPickerDialog = function ( anchorButton, initialValue, options ) {
+			options = options || {};
+			var transparentTitle = options.transparentTitle || 'No Color (Transparent)';
+			var onApply = options.onApply || function () {};
+
+			var buttonRect = anchorButton.getBoundingClientRect();
+			var overlay = document.createElement( 'div' );
+			overlay.className = 'color-picker-overlay';
+			overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 999999;';
+
+			var dialog = document.createElement( 'div' );
+			dialog.className = 'color-picker-dialog';
+
+			var dialogTop = buttonRect.bottom + 5;
+			var dialogLeft = buttonRect.left;
+			var maxTop = window.innerHeight - 420;
+			var maxLeft = window.innerWidth - 300;
+			if ( dialogTop > maxTop ) {
+				dialogTop = buttonRect.top - 420 - 5;
+			}
+			if ( dialogLeft > maxLeft ) {
+				dialogLeft = maxLeft;
+			}
+			if ( dialogLeft < 10 ) {
+				dialogLeft = 10;
+			}
+			if ( dialogTop < 10 ) {
+				dialogTop = 10;
+			}
+
+			dialog.style.cssText = 'position: fixed; top: ' + Math.floor( dialogTop ) + 'px; left: ' + Math.floor( dialogLeft ) + 'px; background: white; border: 2px solid #333; border-radius: 6px; padding: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); width: 260px; z-index: 1000000;';
+
+			var title = document.createElement( 'h3' );
+			title.textContent = options.title || 'Choose Color';
+			title.style.cssText = 'margin: 0 0 16px 0; font-size: 16px; color: #333;';
+			dialog.appendChild( title );
+
+			var paletteContainer = document.createElement( 'div' );
+			paletteContainer.style.cssText = 'margin-bottom: 16px;';
+			var paletteTitle = document.createElement( 'div' );
+			paletteTitle.textContent = 'Standard Colors';
+			paletteTitle.style.cssText = 'font-size: 12px; color: #666; margin-bottom: 8px;';
+			paletteContainer.appendChild( paletteTitle );
+			var paletteGrid = document.createElement( 'div' );
+			paletteGrid.style.cssText = 'display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin-bottom: 12px;';
+
+			var standardColors = [
+				'#000000', '#404040', '#808080', '#c0c0c0', '#ffffff', '#ff0000', '#ffff00', '#00ff00',
+				'#00ffff', '#0000ff', '#ff00ff', '#800000', '#808000', '#008000', '#008080', '#000080',
+				'#800080', '#ff4500', '#ffa500', '#ffff00', '#adff2f', '#00ff7f', '#00bfff', '#1e90ff',
+				'#9370db', '#ff69b4', '#ffdab9', '#f0e68c', '#e0ffff', '#ffe4e1', '#dcdcdc', '#a9a9a9'
+			];
+
+			var selectedColor = ( initialValue === 'none' ) ? 'none' : ( initialValue || '#000000' );
+			var selectedButton = null;
+			var updateSelection = function ( button ) {
+				if ( selectedButton ) {
+					selectedButton.style.borderColor = '#999';
+					selectedButton.style.borderWidth = '1px';
+				}
+				if ( button ) {
+					button.style.borderColor = '#007cba';
+					button.style.borderWidth = '2px';
+					selectedButton = button;
+				}
+			};
+
+			var noneButton = document.createElement( 'button' );
+			noneButton.type = 'button';
+			noneButton.style.cssText = 'width: 24px; height: 24px; border: 1px solid #999; border-radius: 3px; cursor: pointer; background: repeating-linear-gradient(45deg, #ff0000 0, #ff0000 2px, white 2px, white 4px); position: relative;';
+			noneButton.title = transparentTitle;
+			noneButton.addEventListener( 'click', function () {
+				selectedColor = 'none';
+				updateSelection( noneButton );
+			} );
+			paletteGrid.appendChild( noneButton );
+
+			standardColors.forEach( function ( color ) {
+				var colorBtn = document.createElement( 'button' );
+				colorBtn.type = 'button';
+				colorBtn.style.cssText = 'width: 24px; height: 24px; border: 1px solid #999; border-radius: 3px; cursor: pointer; background-color: ' + color + ';';
+				colorBtn.title = color;
+				colorBtn.addEventListener( 'click', function () {
+					selectedColor = color;
+					updateSelection( colorBtn );
+				} );
+				paletteGrid.appendChild( colorBtn );
+			} );
+
+			paletteContainer.appendChild( paletteGrid );
+			dialog.appendChild( paletteContainer );
+
+			var customContainer = document.createElement( 'div' );
+			customContainer.style.cssText = 'margin-bottom: 16px;';
+			var customTitle = document.createElement( 'div' );
+			customTitle.textContent = 'Custom Colors';
+			customTitle.style.cssText = 'font-size: 12px; color: #666; margin-bottom: 8px;';
+			customContainer.appendChild( customTitle );
+			var customGrid = document.createElement( 'div' );
+			customGrid.style.cssText = 'display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin-bottom: 12px;';
+			var savedCustomColors = [];
+			try {
+				savedCustomColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
+			} catch ( e ) {}
+
+			var createCustomButtonClickHandler = function ( button ) {
+				return function () {
+					selectedColor = button.style.backgroundColor;
+					updateSelection( button );
+				};
+			};
+
+			for ( var i = 0; i < 16; i++ ) {
+				var customBtn = document.createElement( 'button' );
+				customBtn.type = 'button';
+				customBtn.style.cssText = 'width: 24px; height: 24px; border: 1px solid #999; border-radius: 3px; cursor: pointer;';
+				customBtn.dataset.slot = i;
+				if ( savedCustomColors[ i ] ) {
+					customBtn.style.backgroundColor = savedCustomColors[ i ];
+					customBtn.title = savedCustomColors[ i ];
+					customBtn.addEventListener( 'click', createCustomButtonClickHandler( customBtn ) );
+				} else {
+					customBtn.style.backgroundColor = '#f5f5f5';
+					customBtn.title = 'Empty slot';
+				}
+				customGrid.appendChild( customBtn );
+			}
+
+			customContainer.appendChild( customGrid );
+			dialog.appendChild( customContainer );
+
+			var customSection = document.createElement( 'div' );
+			customSection.style.cssText = 'margin-bottom: 16px;';
+			var customLabel = document.createElement( 'div' );
+			customLabel.textContent = 'Custom Color';
+			customLabel.style.cssText = 'font-size: 12px; color: #666; margin-bottom: 8px;';
+			customSection.appendChild( customLabel );
+			var customInput = document.createElement( 'input' );
+			customInput.type = 'color';
+			customInput.style.cssText = 'width: 30px; height: 30px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;';
+			customInput.addEventListener( 'change', function () {
+				selectedColor = customInput.value;
+			} );
+			customSection.appendChild( customInput );
+			dialog.appendChild( customSection );
+
+			if ( selectedColor === 'none' ) {
+				updateSelection( noneButton );
+			}
+
+			var buttonContainer = document.createElement( 'div' );
+			buttonContainer.style.cssText = 'display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;';
+			var cancelBtn = document.createElement( 'button' );
+			cancelBtn.type = 'button';
+			cancelBtn.textContent = 'Cancel';
+			cancelBtn.style.cssText = 'padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;';
+			cancelBtn.addEventListener( 'click', function () {
+				document.body.removeChild( overlay );
+				document.body.removeChild( dialog );
+			} );
+			var okBtn = document.createElement( 'button' );
+			okBtn.type = 'button';
+			okBtn.textContent = 'OK';
+			okBtn.style.cssText = 'padding: 8px 16px; border: 1px solid #007cba; border-radius: 4px; background: #007cba; color: white; cursor: pointer;';
+			okBtn.addEventListener( 'click', function () {
+				if ( selectedColor !== 'none' && selectedColor !== initialValue ) {
+					try {
+						var customColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
+						if ( customColors.indexOf( selectedColor ) === -1 ) {
+							customColors.unshift( selectedColor );
+							customColors = customColors.slice( 0, 16 );
+							localStorage.setItem( 'layers-custom-colors', JSON.stringify( customColors ) );
+						}
+					} catch ( e ) {}
+				}
+				onApply( selectedColor );
+				document.body.removeChild( overlay );
+				document.body.removeChild( dialog );
+			} );
+			buttonContainer.appendChild( cancelBtn );
+			buttonContainer.appendChild( okBtn );
+			dialog.appendChild( buttonContainer );
+
+			overlay.addEventListener( 'click', function ( e ) {
+				if ( e.target === overlay ) {
+					document.body.removeChild( overlay );
+					document.body.removeChild( dialog );
+				}
+			} );
+			var escapeHandler = function ( e ) {
+				if ( e.key === 'Escape' ) {
+					document.body.removeChild( overlay );
+					document.body.removeChild( dialog );
+					document.removeEventListener( 'keydown', escapeHandler );
+				}
+			};
+			document.addEventListener( 'keydown', escapeHandler );
+
+			document.body.appendChild( overlay );
+			document.body.appendChild( dialog );
+		};
+
+		// Stroke color button
 		var strokeColorWrapper = document.createElement( 'div' );
 		strokeColorWrapper.className = 'color-input-wrapper';
-		var strokeColorPicker = document.createElement( 'input' );
-		strokeColorPicker.type = 'color';
-		strokeColorPicker.className = 'color-picker stroke-color';
-		strokeColorPicker.value = '#000000';
-		strokeColorPicker.title = ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' );
-		var strokeNoneBtn = document.createElement( 'button' );
-		strokeNoneBtn.className = 'color-none-btn stroke-none';
-		strokeNoneBtn.title = 'No Stroke';
-		strokeNoneBtn.innerHTML = '×';
-		strokeNoneBtn.type = 'button';
-		strokeColorWrapper.appendChild( strokeColorPicker );
-		strokeColorWrapper.appendChild( strokeNoneBtn );
+		var strokeBtn = document.createElement( 'button' );
+		strokeBtn.type = 'button';
+		strokeBtn.className = 'color-display-button stroke-color';
+		strokeBtn.style.cssText = 'width: 30px; height: 30px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;';
+		strokeBtn.setAttribute( 'aria-label', t( 'layers-prop-stroke-color', 'Stroke Color' ) );
+		updateColorButtonDisplay( strokeBtn, '#000000', t( 'layers-transparent', 'Transparent' ) );
+		strokeColorWrapper.appendChild( strokeBtn );
 		colorContainer.appendChild( strokeColorWrapper );
+		strokeBtn.addEventListener( 'click', function () {
+			openColorPickerDialog( strokeBtn, self.strokeColorNone ? 'none' : self.strokeColorValue, {
+				title: t( 'layers-prop-stroke-color', 'Stroke Color' ),
+				transparentTitle: t( 'layers-transparent', 'No Stroke (Transparent)' ),
+				onApply: function ( chosen ) {
+					if ( chosen === 'none' ) {
+						self.strokeColorNone = true;
+						updateColorButtonDisplay( self.strokeColorButton, 'none', t( 'layers-transparent', 'Transparent' ) );
+					} else {
+						self.strokeColorNone = false;
+						self.strokeColorValue = chosen;
+						updateColorButtonDisplay( self.strokeColorButton, chosen, t( 'layers-transparent', 'Transparent' ) );
+					}
+					self.updateStyleOptions();
+				}
+			} );
+		} );
 
-		// Fill color
+		// Fill color button
 		var fillColorWrapper = document.createElement( 'div' );
 		fillColorWrapper.className = 'color-input-wrapper';
-		var fillColorPicker = document.createElement( 'input' );
-		fillColorPicker.type = 'color';
-		fillColorPicker.className = 'color-picker fill-color';
-		fillColorPicker.value = '#ffffff';
-		fillColorPicker.title = ( mw.message ? mw.message( 'layers-prop-fill-color' ).text() : 'Fill Color' );
-		var fillNoneBtn = document.createElement( 'button' );
-		fillNoneBtn.className = 'color-none-btn fill-none';
-		fillNoneBtn.title = 'No Fill';
-		fillNoneBtn.innerHTML = '×';
-		fillNoneBtn.type = 'button';
-		fillColorWrapper.appendChild( fillColorPicker );
-		fillColorWrapper.appendChild( fillNoneBtn );
+		var fillBtn = document.createElement( 'button' );
+		fillBtn.type = 'button';
+		fillBtn.className = 'color-display-button fill-color';
+		fillBtn.style.cssText = 'width: 30px; height: 30px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;';
+		fillBtn.setAttribute( 'aria-label', t( 'layers-prop-fill-color', 'Fill Color' ) );
+		updateColorButtonDisplay( fillBtn, '#ffffff', t( 'layers-transparent', 'Transparent' ) );
+		fillColorWrapper.appendChild( fillBtn );
 		colorContainer.appendChild( fillColorWrapper );
+		fillBtn.addEventListener( 'click', function () {
+			openColorPickerDialog( fillBtn, self.fillColorNone ? 'none' : self.fillColorValue, {
+				title: t( 'layers-prop-fill-color', 'Fill Color' ),
+				transparentTitle: t( 'layers-transparent', 'No Fill (Transparent)' ),
+				onApply: function ( chosen ) {
+					if ( chosen === 'none' ) {
+						self.fillColorNone = true;
+						updateColorButtonDisplay( self.fillColorButton, 'none', t( 'layers-transparent', 'Transparent' ) );
+					} else {
+						self.fillColorNone = false;
+						self.fillColorValue = chosen;
+						updateColorButtonDisplay( self.fillColorButton, chosen, t( 'layers-transparent', 'Transparent' ) );
+					}
+					self.updateStyleOptions();
+				}
+			} );
+		} );
 
 		styleGroup.appendChild( colorContainer );
 
@@ -144,18 +647,18 @@
 		strokeWidthContainer.className = 'stroke-width-container';
 
 		var strokeLabel = document.createElement( 'label' );
-		strokeLabel.textContent = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke' ) + ':';
+		strokeLabel.textContent = t( 'layers-prop-stroke-width', 'Stroke' ) + ':';
 		strokeLabel.className = 'stroke-label';
 
 		var strokeWidth = document.createElement( 'input' );
 		strokeWidth.type = 'number';
-		strokeWidth.min = '0.1';
+		strokeWidth.min = '0';
 		strokeWidth.max = '100';
-		strokeWidth.step = '0.1';
-		strokeWidth.value = '2.0';
+		strokeWidth.step = '1';
+		strokeWidth.value = '2';
 		strokeWidth.className = 'stroke-width-input';
-		strokeWidth.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ': 2.0px';
-		strokeWidth.placeholder = '0.1-100px';
+		strokeWidth.title = t( 'layers-prop-stroke-width', 'Stroke Width' ) + ': 2px';
+		strokeWidth.placeholder = '0-100px';
 
 		strokeWidthContainer.appendChild( strokeLabel );
 		strokeWidthContainer.appendChild( strokeWidth );
@@ -167,7 +670,7 @@
 		fontSizeContainer.style.display = 'none';
 
 		var fontLabel = document.createElement( 'label' );
-		fontLabel.textContent = ( mw.message ? mw.message( 'layers-prop-font-size' ).text() : 'Font Size' ) + ':';
+		fontLabel.textContent = t( 'layers-prop-font-size', 'Font Size' ) + ':';
 		fontLabel.className = 'font-label';
 
 		var fontSize = document.createElement( 'input' );
@@ -176,7 +679,7 @@
 		fontSize.max = '72';
 		fontSize.value = '16';
 		fontSize.className = 'font-size';
-		fontSize.title = ( mw.message ? mw.message( 'layers-prop-font-size' ).text() : 'Font Size' );
+		fontSize.title = t( 'layers-prop-font-size', 'Font Size' );
 
 		fontSizeContainer.appendChild( fontLabel );
 		fontSizeContainer.appendChild( fontSize );
@@ -188,14 +691,14 @@
 		strokeContainer.style.display = 'none';
 
 		var strokeColorLabel = document.createElement( 'label' );
-		strokeColorLabel.textContent = ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' ) + ':';
+		strokeColorLabel.textContent = t( 'layers-prop-stroke-color', 'Stroke Color' ) + ':';
 		strokeColorLabel.className = 'stroke-color-label';
 
 		var strokeColor = document.createElement( 'input' );
 		strokeColor.type = 'color';
 		strokeColor.value = '#000000';
 		strokeColor.className = 'text-stroke-color';
-		strokeColor.title = ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Text Stroke Color' );
+		strokeColor.title = t( 'layers-prop-stroke-color', 'Text Stroke Color' );
 
 		var strokeWidthInput = document.createElement( 'input' );
 		strokeWidthInput.type = 'range';
@@ -203,7 +706,7 @@
 		strokeWidthInput.max = '10';
 		strokeWidthInput.value = '0';
 		strokeWidthInput.className = 'text-stroke-width';
-		strokeWidthInput.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Text Stroke Width' );
+		strokeWidthInput.title = t( 'layers-prop-stroke-width', 'Text Stroke Width' );
 
 		var strokeWidthValue = document.createElement( 'span' );
 		strokeWidthValue.className = 'text-stroke-value';
@@ -221,19 +724,19 @@
 		shadowContainer.style.display = 'none';
 
 		var shadowLabel = document.createElement( 'label' );
-		shadowLabel.textContent = ( mw.message ? mw.message( 'layers-effect-shadow' ).text() : 'Shadow' ) + ':';
+		shadowLabel.textContent = t( 'layers-effect-shadow', 'Shadow' ) + ':';
 		shadowLabel.className = 'shadow-label';
 
 		var shadowToggle = document.createElement( 'input' );
 		shadowToggle.type = 'checkbox';
 		shadowToggle.className = 'text-shadow-toggle';
-		shadowToggle.title = ( mw.message ? mw.message( 'layers-effect-shadow-enable' ).text() : 'Enable Drop Shadow' );
+		shadowToggle.title = t( 'layers-effect-shadow-enable', 'Enable Drop Shadow' );
 
 		var shadowColor = document.createElement( 'input' );
 		shadowColor.type = 'color';
 		shadowColor.value = '#000000';
 		shadowColor.className = 'text-shadow-color';
-		shadowColor.title = ( mw.message ? mw.message( 'layers-effect-shadow-color' ).text() : 'Shadow Color' );
+		shadowColor.title = t( 'layers-effect-shadow-color', 'Shadow Color' );
 		shadowColor.style.display = 'none';
 
 		shadowContainer.appendChild( shadowLabel );
@@ -247,15 +750,15 @@
 		arrowContainer.style.display = 'none';
 
 		var arrowLabel = document.createElement( 'label' );
-		arrowLabel.textContent = ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow' ) + ':';
+		arrowLabel.textContent = t( 'layers-tool-arrow', 'Arrow' ) + ':';
 		arrowLabel.className = 'arrow-label';
 
 		var arrowStyleSelect = document.createElement( 'select' );
 		arrowStyleSelect.className = 'arrow-style-select';
 		arrowStyleSelect.innerHTML =
-			'<option value="single">' + ( mw.message ? mw.message( 'layers-arrow-single' ).text() : 'Single →' ) + '</option>' +
-			'<option value="double">' + ( mw.message ? mw.message( 'layers-arrow-double' ).text() : 'Double ↔' ) + '</option>' +
-			'<option value="none">' + ( mw.message ? mw.message( 'layers-arrow-none' ).text() : 'Line only' ) + '</option>';
+			'<option value="single">' + t( 'layers-arrow-single', 'Single →' ) + '</option>' +
+			'<option value="double">' + t( 'layers-arrow-double', 'Double ↔' ) + '</option>' +
+			'<option value="none">' + t( 'layers-arrow-none', 'Line only' ) + '</option>';
 
 		arrowContainer.appendChild( arrowLabel );
 		arrowContainer.appendChild( arrowStyleSelect );
@@ -263,11 +766,11 @@
 
 		this.container.appendChild( styleGroup );
 
-		// Store references
-		this.strokeColorPicker = strokeColorPicker;
-		this.strokeNoneBtn = strokeNoneBtn;
-		this.fillColorPicker = fillColorPicker;
-		this.fillNoneBtn = fillNoneBtn;
+		// Store references and initial state
+		this.strokeColorButton = strokeBtn;
+		this.fillColorButton = fillBtn;
+		this.strokeColorValue = '#000000';
+		this.fillColorValue = '#ffffff';
 		this.strokeWidth = strokeWidth;
 		this.fontSize = fontSize;
 		this.fontSizeContainer = fontSizeContainer;
@@ -281,7 +784,7 @@
 		this.textShadowColor = shadowColor;
 		this.arrowStyleSelect = arrowStyleSelect;
 
-		// Set up state tracking for "none" colors
+		// Set up state tracking for transparent colors
 		this.strokeColorNone = false;
 		this.fillColorNone = false;
 
@@ -307,12 +810,12 @@
 			);
 		}
 
-		// Stroke width validation (0-999.9)
+		// Stroke width validation (0-100 integer)
 		if ( this.strokeWidth ) {
 			this.inputValidators.push(
 				this.validator.createInputValidator( this.strokeWidth, 'number', {
 					min: 0,
-					max: 999.9
+					max: 100
 				} )
 			);
 		}
@@ -327,18 +830,7 @@
 			);
 		}
 
-		// Color validation
-		if ( this.strokeColorPicker ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.strokeColorPicker, 'color' )
-			);
-		}
-
-		if ( this.fillColorPicker ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.fillColorPicker, 'color' )
-			);
-		}
+		// Color inputs for text stroke/shadow are still validated
 
 		if ( this.textStrokeColor ) {
 			this.inputValidators.push(
@@ -358,33 +850,34 @@
 	Toolbar.prototype.createZoomGroup = function () {
 		var zoomGroup = document.createElement( 'div' );
 		zoomGroup.className = 'toolbar-group zoom-group';
+		var t2 = this.msg.bind( this );
 
 		// Zoom out button
 		var zoomOutBtn = document.createElement( 'button' );
 		zoomOutBtn.className = 'toolbar-button zoom-button';
 		zoomOutBtn.innerHTML = '−';
-		zoomOutBtn.title = ( mw.message ? mw.message( 'layers-zoom-out' ).text() : 'Zoom Out' ) + ' (Ctrl+-)';
+		zoomOutBtn.title = t2( 'layers-zoom-out', 'Zoom Out' ) + ' (Ctrl+-)';
 		zoomOutBtn.dataset.action = 'zoom-out';
 
 		// Zoom display/reset
 		var zoomDisplay = document.createElement( 'button' );
 		zoomDisplay.className = 'toolbar-button zoom-display';
 		zoomDisplay.textContent = '100%';
-		zoomDisplay.title = ( mw.message ? mw.message( 'layers-zoom-reset' ).text() : 'Reset Zoom' ) + ' (Ctrl+0)';
+		zoomDisplay.title = t2( 'layers-zoom-reset', 'Reset Zoom' ) + ' (Ctrl+0)';
 		zoomDisplay.dataset.action = 'zoom-reset';
 
 		// Zoom in button
 		var zoomInBtn = document.createElement( 'button' );
 		zoomInBtn.className = 'toolbar-button zoom-button';
 		zoomInBtn.innerHTML = '+';
-		zoomInBtn.title = ( mw.message ? mw.message( 'layers-zoom-in' ).text() : 'Zoom In' ) + ' (Ctrl++)';
+		zoomInBtn.title = t2( 'layers-zoom-in', 'Zoom In' ) + ' (Ctrl++)';
 		zoomInBtn.dataset.action = 'zoom-in';
 
 		// Fit to window button
 		var fitBtn = document.createElement( 'button' );
 		fitBtn.className = 'toolbar-button fit-button';
 		fitBtn.innerHTML = '⌂';
-		fitBtn.title = ( mw.message ? mw.message( 'layers-zoom-fit' ).text() : 'Fit to Window' );
+		fitBtn.title = t2( 'layers-zoom-fit', 'Fit to Window' );
 		fitBtn.dataset.action = 'fit-window';
 
 		zoomGroup.appendChild( zoomOutBtn );
@@ -401,17 +894,18 @@
 	Toolbar.prototype.createActionGroup = function () {
 		var actionGroup = document.createElement( 'div' );
 		actionGroup.className = 'toolbar-group action-group';
+		var t = this.msg.bind( this );
 
 		var actions = [
-			{ id: 'undo', icon: '↶', title: ( mw.message ? mw.message( 'layers-undo' ).text() : 'Undo' ), key: 'Ctrl+Z' },
-			{ id: 'redo', icon: '↷', title: ( mw.message ? mw.message( 'layers-redo' ).text() : 'Redo' ), key: 'Ctrl+Y' },
-			{ id: 'delete', icon: '🗑', title: ( mw.message ? mw.message( 'layers-delete-selected' ).text() : 'Delete Selected' ), key: 'Delete' },
-			{ id: 'duplicate', icon: '⧉', title: ( mw.message ? mw.message( 'layers-duplicate-selected' ).text() : 'Duplicate Selected' ), key: 'Ctrl+D' },
-			{ id: 'grid', icon: '⊞', title: ( mw.message ? mw.message( 'layers-toggle-grid' ).text() : 'Toggle Grid' ), key: 'G' },
-			{ id: 'rulers', icon: '📏', title: ( mw.message ? mw.message( 'layers-toggle-rulers' ).text() : 'Toggle Rulers' ) },
-			{ id: 'guides', icon: '➕', title: ( mw.message ? mw.message( 'layers-toggle-guides' ).text() : 'Toggle Guides' ) },
-			{ id: 'snap-grid', icon: '🧲⊞', title: ( mw.message ? mw.message( 'layers-toggle-snap-grid' ).text() : 'Snap to Grid' ) },
-			{ id: 'snap-guides', icon: '🧲▭', title: ( mw.message ? mw.message( 'layers-toggle-snap-guides' ).text() : 'Snap to Guides' ) }
+			{ id: 'undo', icon: '↶', title: t( 'layers-undo', 'Undo' ), key: 'Ctrl+Z' },
+			{ id: 'redo', icon: '↷', title: t( 'layers-redo', 'Redo' ), key: 'Ctrl+Y' },
+			{ id: 'delete', icon: '🗑', title: t( 'layers-delete-selected', 'Delete Selected' ), key: 'Delete' },
+			{ id: 'duplicate', icon: '⧉', title: t( 'layers-duplicate-selected', 'Duplicate Selected' ), key: 'Ctrl+D' },
+			{ id: 'grid', icon: '⊞', title: t( 'layers-toggle-grid', 'Toggle Grid' ), key: 'G' },
+			{ id: 'rulers', icon: '📏', title: t( 'layers-toggle-rulers', 'Toggle Rulers' ) },
+			{ id: 'guides', icon: '➕', title: t( 'layers-toggle-guides', 'Toggle Guides' ) },
+			{ id: 'snap-grid', icon: '🧲⊞', title: t( 'layers-toggle-snap-grid', 'Snap to Grid' ) },
+			{ id: 'snap-guides', icon: '🧲▭', title: t( 'layers-toggle-snap-guides', 'Snap to Guides' ) }
 		];
 
 		actions.forEach( function ( action ) {
@@ -427,8 +921,8 @@
 		// Import button + hidden file input
 		var importButton = document.createElement( 'button' );
 		importButton.className = 'toolbar-button import-button';
-		importButton.textContent = ( mw.message ? mw.message( 'layers-import' ).text() : 'Import JSON' );
-		importButton.title = ( mw.message ? mw.message( 'layers-import' ).text() : 'Import JSON' );
+		importButton.textContent = t( 'layers-import', 'Import' );
+		importButton.title = t( 'layers-import', 'Import' );
 		actionGroup.appendChild( importButton );
 
 		var importInput = document.createElement( 'input' );
@@ -440,21 +934,21 @@
 		// Export button
 		var exportButton = document.createElement( 'button' );
 		exportButton.className = 'toolbar-button export-button';
-		exportButton.textContent = ( mw.message ? mw.message( 'layers-export' ).text() : 'Export JSON' );
-		exportButton.title = ( mw.message ? mw.message( 'layers-export' ).text() : 'Export JSON' );
+		exportButton.textContent = t( 'layers-export', 'Export' );
+		exportButton.title = t( 'layers-export', 'Export' );
 		actionGroup.appendChild( exportButton );
 
 		// Save and Cancel buttons
 		var saveButton = document.createElement( 'button' );
 		saveButton.className = 'toolbar-button save-button primary';
-		saveButton.textContent = ( mw.message ? mw.message( 'layers-editor-save' ).text() : ( mw.msg ? mw.msg( 'layers-editor-save' ) : 'Save' ) );
-		saveButton.title = ( mw.message ? mw.message( 'layers-save-changes' ).text() : 'Save Changes' ) + ' (Ctrl+S)';
+		saveButton.textContent = t( 'layers-editor-save', 'Save' );
+		saveButton.title = t( 'layers-save-changes', 'Save Changes' ) + ' (Ctrl+S)';
 		actionGroup.appendChild( saveButton );
 
 		var cancelButton = document.createElement( 'button' );
 		cancelButton.className = 'toolbar-button cancel-button';
-		cancelButton.textContent = ( mw.message ? mw.message( 'layers-editor-cancel' ).text() : ( mw.msg ? mw.msg( 'layers-editor-cancel' ) : 'Cancel' ) );
-		cancelButton.title = ( mw.message ? mw.message( 'layers-cancel-changes' ).text() : 'Cancel Changes' ) + ' (Escape)';
+		cancelButton.textContent = t( 'layers-editor-cancel', 'Cancel' );
+		cancelButton.title = t( 'layers-cancel-changes', 'Cancel Changes' ) + ' (Escape)';
 		actionGroup.appendChild( cancelButton );
 
 		this.container.appendChild( actionGroup );
@@ -614,46 +1108,19 @@
 			}
 		} );
 
-		// Stroke and fill color pickers
-		this.strokeColorPicker.addEventListener( 'change', function () {
-			self.strokeColorNone = false;
-			self.updateStrokeNoneButton();
-			self.updateStyleOptions();
-		} );
+		// Stroke and fill color pickers are wired in createStyleGroup()
 
-		this.fillColorPicker.addEventListener( 'change', function () {
-			self.fillColorNone = false;
-			self.updateFillNoneButton();
-			self.updateStyleOptions();
-		} );
-
-		// Color "none" buttons
-		this.strokeNoneBtn.addEventListener( 'click', function ( e ) {
-			e.preventDefault();
-			self.strokeColorNone = !self.strokeColorNone;
-			self.updateStrokeNoneButton();
-			self.updateStyleOptions();
-		} );
-
-		this.fillNoneBtn.addEventListener( 'click', function ( e ) {
-			e.preventDefault();
-			self.fillColorNone = !self.fillColorNone;
-			self.updateFillNoneButton();
-			self.updateStyleOptions();
-		} );
-
-		// Stroke width input with improved validation and units consistency
+		// Stroke width input with improved validation (integer-only) and units consistency
 		this.strokeWidth.addEventListener( 'input', function () {
-			var val = parseFloat( this.value );
-			var isValid = !isNaN( val ) && val >= 0.1 && val <= 100;
+			var val = parseInt( this.value, 10 );
+			var isValid = !isNaN( val ) && val >= 0 && val <= 100;
 
 			if ( isValid ) {
-				// Ensure consistent precision (1 decimal place)
-				val = Math.round( val * 10 ) / 10;
+				val = Math.round( val );
 				self.currentStrokeWidth = val;
 
 				// Update display with px unit for clarity
-				this.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ': ' + val + 'px';
+				this.title = self.msg( 'layers-prop-stroke-width', 'Stroke Width' ) + ': ' + val + 'px';
 
 				// Remove error styling
 				this.classList.remove( 'validation-error' );
@@ -666,9 +1133,9 @@
 
 				// Show validation message in title
 				if ( isNaN( val ) ) {
-					this.title = 'Please enter a valid number between 0.1 and 100';
-				} else if ( val < 0.1 ) {
-					this.title = 'Minimum stroke width: 0.1px';
+					this.title = 'Please enter a valid number between 0 and 100';
+				} else if ( val < 0 ) {
+					this.title = 'Minimum stroke width: 0px';
 				} else if ( val > 100 ) {
 					this.title = 'Maximum stroke width: 100px';
 				}
@@ -677,12 +1144,13 @@
 
 		// Also handle blur event to reset invalid values
 		this.strokeWidth.addEventListener( 'blur', function () {
-			var val = parseFloat( this.value );
-			if ( isNaN( val ) || val < 0.1 || val > 100 ) {
+			var val = parseInt( this.value, 10 );
+			if ( isNaN( val ) || val < 0 || val > 100 ) {
 				// Reset to last valid value or default
-				this.value = self.currentStrokeWidth.toFixed( 1 );
+				this.value = String( self.currentStrokeWidth );
 				this.classList.remove( 'validation-error' );
-				this.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ': ' + self.currentStrokeWidth + 'px';
+				this.title = self.msg( 'layers-prop-stroke-width', 'Stroke Width' ) + ': ' +
+					self.currentStrokeWidth + 'px';
 			}
 		} );
 
@@ -773,47 +1241,33 @@
 	Toolbar.prototype.updateStyleOptions = function () {
 		// Update current style settings and notify editor
 		var styleOptions = {
-			strokeColor: this.strokeColorNone ? 'none' : this.strokeColorPicker.value,
-			fillColor: this.fillColorNone ? 'none' : this.fillColorPicker.value,
+			color: this.strokeColorNone ? 'transparent' : this.strokeColorValue,
+			fill: this.fillColorNone ? 'transparent' : this.fillColorValue,
 			strokeWidth: this.currentStrokeWidth,
-			fontSize: parseInt( this.fontSize.value ),
+			fontSize: parseInt( this.fontSize.value, 10 ),
 			textStrokeColor: this.textStrokeColor.value,
-			textStrokeWidth: parseInt( this.textStrokeWidth.value ),
+			textStrokeWidth: parseInt( this.textStrokeWidth.value, 10 ),
 			textShadow: this.textShadowToggle.checked,
 			textShadowColor: this.textShadowColor.value,
 			arrowStyle: this.arrowStyleSelect.value
 		};
 
-		if ( this.editor.canvasManager ) {
+		if ( this.editor.canvasManager && typeof this.editor.canvasManager.updateStyleOptions === 'function' ) {
 			this.editor.canvasManager.updateStyleOptions( styleOptions );
 		}
-
-		// console.log( 'Layers: Style options updated:', styleOptions );
-	};
-
-	Toolbar.prototype.updateStrokeNoneButton = function () {
-		if ( this.strokeColorNone ) {
-			this.strokeNoneBtn.classList.add( 'active' );
-			this.strokeNoneBtn.innerHTML = '×';
-			this.strokeNoneBtn.title = 'Enable Stroke';
-		} else {
-			this.strokeNoneBtn.classList.remove( 'active' );
-			this.strokeNoneBtn.innerHTML = '';
-			this.strokeNoneBtn.title = 'No Stroke';
+		if ( this.editor.toolManager && typeof this.editor.toolManager.updateStyle === 'function' ) {
+			this.editor.toolManager.updateStyle( {
+				color: styleOptions.color,
+				fill: styleOptions.fill,
+				strokeWidth: styleOptions.strokeWidth,
+				fontSize: styleOptions.fontSize,
+				// Ensure new arrows use the chosen arrowStyle by default
+				arrowStyle: styleOptions.arrowStyle
+			} );
 		}
 	};
 
-	Toolbar.prototype.updateFillNoneButton = function () {
-		if ( this.fillColorNone ) {
-			this.fillNoneBtn.classList.add( 'active' );
-			this.fillNoneBtn.innerHTML = '×';
-			this.fillNoneBtn.title = 'Enable Fill';
-		} else {
-			this.fillNoneBtn.classList.remove( 'active' );
-			this.fillNoneBtn.innerHTML = '';
-			this.fillNoneBtn.title = 'No Fill';
-		}
-	};
+	// Removed legacy none buttons; transparent selection is integrated in the color dialog
 
 	Toolbar.prototype.executeAction = function ( actionId ) {
 		switch ( actionId ) {

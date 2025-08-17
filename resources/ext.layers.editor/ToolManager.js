@@ -36,7 +36,9 @@
 			strokeWidth: 2,
 			fontSize: 16,
 			fontFamily: 'Arial, sans-serif',
-			fill: 'transparent'
+			fill: 'transparent',
+			// Default arrow style for new arrows
+			arrowStyle: 'single'
 		};
 
 		// Path drawing state
@@ -270,6 +272,10 @@
 			// Check for layer hits
 			var hitLayer = this.hitTestLayers( point );
 			if ( hitLayer ) {
+				// Respect lock: do not select/drag locked layers
+				if ( hitLayer.locked === true ) {
+					return;
+				}
 				var addToSelection = event.ctrlKey || event.metaKey;
 				this.canvasManager.selectionManager.selectLayer( hitLayer.id, addToSelection );
 				this.canvasManager.selectionManager.startDrag( point );
@@ -485,6 +491,8 @@
 	ToolManager.prototype.startArrowTool = function ( point ) {
 		this.startLineTool( point );
 		this.tempLayer.type = 'arrow';
+		// Apply default arrow-specific properties from currentStyle
+		this.tempLayer.arrowStyle = this.currentStyle.arrowStyle || 'single';
 	};
 
 	/**
@@ -738,7 +746,8 @@
 		layer.id = this.generateLayerId();
 
 		// Add to layers array
-		this.canvasManager.editor.layers.push( layer );
+		// Insert at top so top of list = top of draw order
+		this.canvasManager.editor.layers.unshift( layer );
 
 		// Select new layer
 		if ( this.canvasManager.selectionManager ) {
@@ -846,10 +855,10 @@
 		// Test in reverse order (top to bottom)
 		for ( var i = layers.length - 1; i >= 0; i-- ) {
 			var layer = layers[ i ];
-			if (
-				layer.visible !== false &&
-				this.pointInLayer( point, layer )
-			) {
+			if ( layer.visible === false || layer.locked === true ) {
+				continue;
+			}
+			if ( this.pointInLayer( point, layer ) ) {
 				return layer;
 			}
 		}

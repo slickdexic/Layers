@@ -461,7 +461,7 @@
 
 		// No separate bottom inspector; properties are shown under the Layers panel
 
-		// Status bar at the very bottom
+		// Status bar at the very bottom (with right-aligned Wikitext code slot)
 		this.statusBar = document.createElement( 'div' );
 		this.statusBar.className = 'layers-statusbar';
 		this.statusBar.innerHTML = '' +
@@ -469,7 +469,12 @@
 			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-zoom' ).text() : 'Zoom' ) + ':</span> <span class="status-value" data-status="zoom">100%</span></span>' +
 			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-pos' ).text() : 'Pos' ) + ':</span> <span class="status-value" data-status="pos">0,0</span></span>' +
 			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-size' ).text() : 'Size' ) + ':</span> <span class="status-value" data-status="size">-</span></span>' +
-			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-selection' ).text() : 'Selection' ) + ':</span> <span class="status-value" data-status="selection">0</span></span>';
+			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-selection' ).text() : 'Selection' ) + ':</span> <span class="status-value" data-status="selection">0</span></span>' +
+			'<span class="status-spacer"></span>' +
+			'<span class="status-code" aria-label="' + ( mw.message ? mw.message( 'layers-code-title' ).text() : 'Wikitext Code' ) + '">' +
+				'<code class="status-code-text" title="' + ( mw.message ? mw.message( 'layers-code-title' ).text() : 'Wikitext Code' ) + '"></code>' +
+				'<button class="status-copy-btn" type="button">' + ( mw.message ? mw.message( 'layers-code-copy' ).text() : 'Copy' ) + '</button>' +
+			'</span>';
 		this.container.appendChild( this.statusBar );
 
 		// Create jQuery-style references for compatibility
@@ -910,6 +915,75 @@
 		// Update layer panel
 		if ( this.layerPanel ) {
 			this.layerPanel.updateLayers( this.layers );
+			// Populate compact code slot in status bar
+			if ( typeof this.layerPanel.renderCodeSnippet === 'function' && this.statusBar ) {
+				var codeHtml = this.layerPanel.renderCodeSnippet( this.layers );
+				var codeTextMatch = codeHtml.match( /<code[^>]*>([\s\S]*?)<\/code>/i );
+				var codeParamMatch = codeHtml.match( /data-code="([^"]+)"/i );
+				var codeStr = codeTextMatch ? codeTextMatch[ 1 ] : '';
+				var codeParam = codeParamMatch ? codeParamMatch[ 1 ] : '';
+				var codeEl = this.statusBar.querySelector( '.status-code-text' );
+				var copyBtn = this.statusBar.querySelector( '.status-copy-btn' );
+				if ( codeEl ) {
+					codeEl.textContent = codeStr;
+				}
+				if ( copyBtn ) {
+					var t = this.layerPanel.msg ?
+						this.layerPanel.msg.bind( this.layerPanel ) :
+						function ( k, d ) { return d; };
+					copyBtn.onclick = function () {
+						var toCopy = codeParam || codeStr;
+						var onSuccess = function () {
+							copyBtn.textContent = t( 'layers-code-copied', 'Copied!' );
+							setTimeout( function () {
+								copyBtn.textContent = t( 'layers-code-copy', 'Copy' );
+							}, 1500 );
+						};
+						var onFailure = function () {
+							copyBtn.textContent = t( 'layers-code-copy-failed', 'Copy failed' );
+							setTimeout( function () {
+								copyBtn.textContent = t( 'layers-code-copy', 'Copy' );
+							}, 1500 );
+						};
+						if ( navigator.clipboard && navigator.clipboard.writeText ) {
+							navigator.clipboard
+								.writeText( toCopy )
+								.then( onSuccess )
+								.catch( function () {
+									var ta = document.createElement( 'textarea' );
+									ta.value = toCopy;
+									document.body.appendChild( ta );
+									ta.select();
+									try {
+										if ( document.execCommand( 'copy' ) ) {
+											onSuccess();
+										} else {
+											onFailure();
+										}
+									} catch ( e ) {
+										onFailure();
+									}
+									document.body.removeChild( ta );
+								} );
+						} else {
+							var textArea = document.createElement( 'textarea' );
+							textArea.value = toCopy;
+							document.body.appendChild( textArea );
+							textArea.select();
+							try {
+								if ( document.execCommand( 'copy' ) ) {
+									onSuccess();
+								} else {
+									onFailure();
+								}
+							} catch ( err ) {
+								onFailure();
+							}
+							document.body.removeChild( textArea );
+						}
+					};
+				}
+			}
 		}
 
 		// Update UI state
@@ -924,7 +998,8 @@
 		layerData.id = this.generateLayerId();
 		layerData.visible = layerData.visible !== false; // Default to visible
 
-		this.layers.push( layerData );
+		// Insert at top so top of list = top of draw order
+		this.layers.unshift( layerData );
 		this.renderLayers();
 		this.markDirty();
 

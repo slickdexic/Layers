@@ -150,3 +150,88 @@
 	padding: 0 !important;
 }
 /* stylelint-enable declaration-no-important */
+
+/* Footer Wikitext code area (simple) */
+.layers-footer-code {
+	background: #f8f9fa;
+	border-top: 1px solid #ddd;
+	padding: 8px 12px;
+}
+
+.layers-footer-code .footer-code-header {
+	margin: 0 0 6px 0;
+	font-size: 0.85em;
+	font-weight: 600;
+}
+
+.layers-footer-code .footer-code-content {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.layers-footer-code .layers-code {
+	display: block;
+	background: #fff;
+	border: 1px solid #ccc;
+	padding: 4px 6px;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 0.85em;
+}
+
+.layers-footer-code .copy-btn {
+	background: #f8f9fa;
+	border: 1px solid #ddd;
+	padding: 4px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.8em;
+}
+
+/* Compact Wikitext code slot in status bar */
+.layers-statusbar .status-spacer {
+	flex: 1 1 auto;
+}
+
+.layers-statusbar .status-code {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	max-width: 50%;
+	overflow: hidden;
+}
+
+.layers-statusbar .status-code-text {
+	display: inline-block;
+	max-width: 28ch;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-family: monospace;
+	background: #f4f4f4;
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 2px 6px;
+}
+
+.layers-statusbar .status-copy-btn {
+	background: #f8f9fa;
+	border: 1px solid #ddd;
+	padding: 4px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.75em;
+}
+
+.layers-statusbar .status-copy-btn:hover {
+	background: #e9ecef;
+}
+
+.layers-statusbar .status-copy-btn:disabled,
+.layers-statusbar .status-copy-btn[ disabled ] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	background-color: #f0f0f0;
+}

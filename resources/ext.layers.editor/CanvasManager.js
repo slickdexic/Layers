@@ -1464,10 +1464,14 @@
 	};
 
 	CanvasManager.prototype.getLayerAtPoint = function ( point ) {
-		// Find layer at click point (reverse order for top-most first)
-		for ( var i = this.editor.layers.length - 1; i >= 0; i-- ) {
+		// Find layer at click point in visual top-most-first order
+		// We draw from end->start, so index 0 is top-most and should be tested first
+		for ( var i = 0; i < this.editor.layers.length; i++ ) {
 			var layer = this.editor.layers[ i ];
-			if ( layer.visible !== false && this.isPointInLayer( point, layer ) ) {
+			if ( layer.visible === false || layer.locked === true ) {
+				continue;
+			}
+			if ( this.isPointInLayer( point, layer ) ) {
 				return layer;
 			}
 		}
@@ -2696,6 +2700,79 @@
 		}
 	};
 
+	// Wrapper: draw a single layer with effects, without creating closures in hot loops
+	CanvasManager.prototype.drawLayerWithEffects = function ( layer ) {
+		this.ctx.save();
+		// Opacity
+		if ( typeof layer.opacity === 'number' ) {
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		// Blend mode
+		if ( layer.blend ) {
+			try {
+				this.ctx.globalCompositeOperation = String( layer.blend );
+			} catch ( _e ) {}
+		}
+		// Shadow
+		if ( layer.shadow ) {
+			this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
+			this.ctx.shadowBlur = Math.round( layer.shadowBlur || 8 );
+			var shadowOffsetX2 = Math.round( layer.shadowOffsetX || 2 );
+			var shadowOffsetY2 = Math.round( layer.shadowOffsetY || 2 );
+			this.ctx.shadowOffsetX = shadowOffsetX2;
+			this.ctx.shadowOffsetY = shadowOffsetY2;
+		}
+
+		try {
+			this.drawLayer( layer );
+			// Optional glow pass for supported shapes
+			if ( layer.glow && ( layer.type === 'rectangle' || layer.type === 'circle' || layer.type === 'ellipse' || layer.type === 'polygon' || layer.type === 'star' || layer.type === 'line' || layer.type === 'arrow' || layer.type === 'path' ) ) {
+				var prevAlpha2 = this.ctx.globalAlpha;
+				this.ctx.globalAlpha = ( prevAlpha2 || 1 ) * 0.3;
+				this.ctx.save();
+				this.ctx.strokeStyle = ( layer.stroke || '#000' );
+				this.ctx.lineWidth = ( layer.strokeWidth || 1 ) + 6;
+				switch ( layer.type ) {
+					case 'rectangle':
+						this.ctx.strokeRect(
+							layer.x || 0,
+							layer.y || 0,
+							layer.width || 0,
+							layer.height || 0
+						);
+						break;
+					case 'circle':
+						this.ctx.beginPath();
+						this.ctx.arc(
+							layer.x || 0,
+							layer.y || 0,
+							layer.radius || 0,
+							0,
+							2 * Math.PI
+						);
+						this.ctx.stroke();
+						break;
+					case 'ellipse':
+						this.ctx.save();
+						this.ctx.translate( layer.x || 0, layer.y || 0 );
+						this.ctx.scale( layer.radiusX || 1, layer.radiusY || 1 );
+						this.ctx.beginPath();
+						this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
+						this.ctx.stroke();
+						this.ctx.restore();
+						break;
+					default:
+						// Skip extra pass for other shapes (already outlined by draw function)
+						break;
+				}
+				this.ctx.restore();
+				this.ctx.globalAlpha = prevAlpha2;
+			}
+		} finally {
+			this.ctx.restore();
+		}
+	};
+
 	// Helper: run drawing with multiplied alpha (used for fill/stroke opacity)
 	CanvasManager.prototype.withLocalAlpha = function ( factor, fn ) {
 		var f = ( typeof factor === 'number' ) ? Math.max( 0, Math.min( 1, factor ) ) : 1;
@@ -3311,7 +3388,8 @@
 			clone.id = ( self.editor && self.editor.generateLayerId ) ?
 				self.editor.generateLayerId() :
 				( 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 ) );
-			self.editor.layers.push( clone );
+			// Insert pasted clone at top so it appears above others
+			self.editor.layers.unshift( clone );
 			self.selectedLayerId = clone.id;
 		} );
 
@@ -4020,6 +4098,7 @@
 		};
 		var next = {
 			color: has( options.color ) ? options.color : prev.color,
+			fill: has( options.fill ) ? options.fill : prev.fill,
 			strokeWidth: has( options.strokeWidth ) ? options.strokeWidth : prev.strokeWidth,
 			fontSize: has( options.fontSize ) ? options.fontSize : prev.fontSize,
 			fontFamily: prev.fontFamily || 'Arial, sans-serif',
@@ -4047,6 +4126,11 @@
 					layer.fill = next.color;
 				} else {
 					layer.stroke = next.color;
+				}
+			}
+			if ( next.fill ) {
+				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
+					layer.fill = next.fill;
 				}
 			}
 			if ( next.strokeWidth !== undefined && next.strokeWidth !== null ) {
@@ -4103,7 +4187,8 @@
 			// Redraw background
 			this.redraw();
 
-			// Render each layer in order
+			// Render layers so that "top of list" (index 0) is drawn last (on top)
+			// i.e., draw from bottom of list (end of array) to top of list (start of array)
 			if ( layers && layers.length > 0 ) {
 				// Debug: Log layers processing (only if debug mode enabled)
 				if ( this.editor && this.editor.debug ) {
@@ -4112,20 +4197,19 @@
 				// Batch operations for better performance
 				this.ctx.save();
 
-				layers.forEach( function ( layer, index ) {
+				for ( var di = layers.length - 1; di >= 0; di-- ) {
+					var layer = layers[ di ];
+					var index = di; // preserve index for debug logs
 					// Debug: Log layer processing (only if debug mode enabled)
 					if ( this.editor && this.editor.debug ) {
 						this.editor.debugLog( 'Processing layer', index, 'visible:', layer.visible, 'type:', layer.type );
 					}
-					// Original visibility check plus performance optimization with layer culling
+					// Visibility check plus culling
 					if ( layer.visible !== false && this.isLayerInViewport( layer ) ) {
-						this.applyLayerEffects( layer, function () {
-							// Debug: Log layer drawing (only if debug mode enabled)
-							if ( this.editor && this.editor.debug ) {
-								this.editor.debugLog( 'Drawing layer', index, layer.type );
-							}
-							this.drawLayer( layer );
-						}.bind( this ) );
+						if ( this.editor && this.editor.debug ) {
+							this.editor.debugLog( 'Drawing layer', index, layer.type );
+						}
+						this.drawLayerWithEffects( layer );
 					} else if ( this.editor && this.editor.debug ) {
 						if ( layer.visible === false ) {
 							this.editor.debugLog( 'Skipping invisible layer', index );
@@ -4133,7 +4217,7 @@
 							this.editor.debugLog( 'Skipping off-screen layer', index );
 						}
 					}
-				}.bind( this ) );
+				}
 
 				this.ctx.restore();
 			} else if ( this.editor && this.editor.debug ) {

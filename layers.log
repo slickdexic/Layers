@@ -1592,3 +1592,84 @@
 2025-08-16 15:55:35 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
 2025-08-16 15:55:36 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
 2025-08-16 15:55:36 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-16 16:16:47 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 16:16:47 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-16 16:16:47 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-16 16:16:47 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-16 16:16:47 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-16 16:16:47 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-16 16:16:50 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-16 16:16:50 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 16:16:50 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-16 16:17:58 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 16:17:58 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-16 16:17:59 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-16 16:17:59 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-16 16:17:59 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-16 16:17:59 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-16 16:17:59 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-16 16:17:59 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 16:17:59 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-16 16:25:50 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 16:25:50 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-16 16:25:50 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-16 16:25:50 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-16 16:25:50 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-16 16:25:50 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-16 16:25:53 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-16 16:25:53 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 16:25:53 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-16 16:39:25 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 16:39:25 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-16 16:39:25 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-16 16:39:25 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-16 16:39:25 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-16 16:39:25 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-16 16:39:28 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-16 16:39:28 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 16:39:28 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-16 17:12:01 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 17:12:01 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-16 17:12:01 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-16 17:12:01 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-16 17:12:01 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-16 17:12:01 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-16 17:12:04 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-16 17:12:04 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 17:12:04 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-16 18:50:51 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 18:50:51 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-16 18:50:51 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-16 18:50:51 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-16 18:50:51 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-16 18:50:51 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-16 18:50:54 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-16 18:50:55 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 18:50:55 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-16 19:57:52 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 19:57:52 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-16 19:57:52 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-16 19:57:52 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-16 19:57:52 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-16 19:57:52 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-16 19:57:55 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-16 19:57:55 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 19:57:55 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-16 21:26:36 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 21:26:36 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-16 21:26:36 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-16 21:26:36 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-16 21:26:36 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-16 21:26:36 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-16 21:26:40 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-16 21:26:40 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-16 21:26:40 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page
+2025-08-17 01:07:39 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-17 01:07:39 41d7ff746b60 my_wiki-T01: Layers: Adding editor module for file page
+2025-08-17 01:07:39 41d7ff746b60 my_wiki-T01: [Tab] Selected? yes
+2025-08-17 01:07:39 41d7ff746b60 my_wiki-T01: [Tab] Inserted into actions
+2025-08-17 01:07:39 41d7ff746b60 my_wiki-T01: [Tab] Inserted into views (after edit when present)
+2025-08-17 01:07:39 41d7ff746b60 my_wiki-T01: [Tab] Debug mode: injected editlayers-debug action
+2025-08-17 01:07:43 41d7ff746b60 my_wiki-T01: Failed to batch load user names for layer sets: Call to undefined method MediaWiki\User\UserFactory::newFromIds()
+2025-08-17 01:07:43 41d7ff746b60 my_wiki-T01: Layers: BeforePageDisplay hook called, added viewer module
+2025-08-17 01:07:43 41d7ff746b60 my_wiki-T01: [Tab] Skip: not a file page - title: Main Page

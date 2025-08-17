@@ -194,6 +194,7 @@
 	};
 
 	LayerPanel.prototype.createInterface = function () {
+		var self = this;
 		this.container.innerHTML = '';
 		this.container.setAttribute( 'role', 'region' );
 		var msgFunction = this.msg ? this.msg.bind( this ) : function ( k, d ) {
@@ -245,107 +246,50 @@
 		this.propertiesPanel.setAttribute( 'role', 'region' );
 		this.propertiesPanel.setAttribute( 'aria-label', msgFunction( 'layers-properties-title', 'Properties' ) );
 		this.propertiesPanel.innerHTML = '<h4>' + msgFunction( 'layers-properties-title', 'Properties' ) + '</h4><div class="properties-content"></div>';
-
-		this.codePanel = document.createElement( 'div' );
-		this.codePanel.className = 'layers-code-panel';
-		this.codePanel.setAttribute( 'role', 'region' );
-		this.codePanel.setAttribute( 'aria-label', msgFunction( 'layers-code-title', 'Wikitext Code' ) );
-		this.codePanel.innerHTML = '<h4>' + msgFunction( 'layers-code-title', 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
-
-		// Create second divider for properties/code split
-		var divider2 = document.createElement( 'div' );
-		divider2.className = 'layers-panel-divider';
-		divider2.setAttribute( 'tabindex', '0' );
-		divider2.setAttribute( 'role', 'separator' );
-		divider2.setAttribute( 'aria-orientation', 'horizontal' );
-		divider2.title = msgFunction( 'layers-panel-divider', 'Drag to resize panels' );
-
 		// Compose sidebar - all panels in one container for proper flex layout
 		sidebarInner.appendChild( this.layerList );
 		sidebarInner.appendChild( divider );
 		sidebarInner.appendChild( this.propertiesPanel );
-		sidebarInner.appendChild( divider2 );
-		sidebarInner.appendChild( this.codePanel );
-		this.container.appendChild( header );
+		// No code panel or second divider; code moved to status bar in LayersEditor
 		this.container.appendChild( sidebarInner );
-		this.updateCodePanel();
-
-		// Resizable divider logic
+		// Footer in LayersEditor will render code; keep legacy method for compatibility
+		// Resizable divider logic (single divider)
 		var isDragging = false;
-		var isDragging2 = false;
 		var minListHeight = 60;
 		var minPropsHeight = 80;
-		var minCodeHeight = 60;
-
-		// First divider (between layers and properties)
+		// Divider (between layers and properties)
 		divider.addEventListener( 'mousedown', function () {
 			isDragging = true;
 			document.body.style.cursor = 'row-resize';
 			document.body.style.userSelect = 'none';
 		} );
 
-		// Second divider (between properties and code)
-		divider2.addEventListener( 'mousedown', function () {
-			isDragging2 = true;
-			document.body.style.cursor = 'row-resize';
-			document.body.style.userSelect = 'none';
-		} );
-
 		document.addEventListener( 'mousemove', function ( e ) {
-			if ( !isDragging && !isDragging2 ) {
+			if ( !isDragging ) {
 				return;
 			}
-
 			var rect = sidebarInner.getBoundingClientRect();
 			var offset = e.clientY - rect.top;
 			var totalHeight = sidebarInner.offsetHeight;
 			var dividerHeight = divider.offsetHeight;
-			var divider2Height = divider2.offsetHeight;
-			var newListHeight, newPropsHeight, newCodeHeight;
+			var maxListHeight = totalHeight - dividerHeight - minPropsHeight;
+			var newListHeight = Math.max( minListHeight, Math.min( offset, maxListHeight ) );
+			var newPropsHeight = totalHeight - newListHeight - dividerHeight;
 
-			if ( isDragging ) {
-				// Dragging first divider (layers/properties)
-				newListHeight = offset;
-				var remainingHeight = totalHeight - newListHeight - dividerHeight - divider2Height;
-				var currentCodeHeight = sidebarInner.childNodes[ 4 ].offsetHeight; // codePanel
-				newPropsHeight = remainingHeight - currentCodeHeight;
-
-				if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
-					return;
-				}
-
-				sidebarInner.childNodes[ 0 ].style.flex = 'none'; // layerList
-				sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
-				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
-				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
-			}
-
-			if ( isDragging2 ) {
-				// Dragging second divider (properties/code)
-				var currentListHeight = sidebarInner.childNodes[ 0 ].offsetHeight; // layerList
-				newPropsHeight = offset - currentListHeight - dividerHeight;
-				newCodeHeight = totalHeight - currentListHeight - dividerHeight -
-					newPropsHeight - divider2Height;
-
-				if ( newPropsHeight < minPropsHeight || newCodeHeight < minCodeHeight ) {
-					return;
-				}
-
-				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
-				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
-				sidebarInner.childNodes[ 4 ].style.flex = 'none'; // codePanel
-				sidebarInner.childNodes[ 4 ].style.height = newCodeHeight + 'px';
-			}
+			self.layerList.style.flex = 'none';
+			self.layerList.style.height = newListHeight + 'px';
+			self.propertiesPanel.style.flex = 'none';
+			self.propertiesPanel.style.height = newPropsHeight + 'px';
 		} );
 
 		document.addEventListener( 'mouseup', function () {
-			if ( isDragging || isDragging2 ) {
+			if ( isDragging ) {
 				isDragging = false;
-				isDragging2 = false;
 				document.body.style.cursor = '';
 				document.body.style.userSelect = '';
 			}
 		} );
+
 		// Touch support
 		divider.addEventListener( 'touchstart', function () {
 			isDragging = true;
@@ -353,69 +297,24 @@
 			document.body.style.userSelect = 'none';
 		} );
 
-		divider2.addEventListener( 'touchstart', function () {
-			isDragging2 = true;
-			document.body.style.cursor = 'row-resize';
-			document.body.style.userSelect = 'none';
-		} );
-
 		document.addEventListener( 'touchmove', function ( e ) {
-			if ( !isDragging && !isDragging2 ) {
+			if ( !isDragging ) {
 				return;
 			}
-
 			var rect = sidebarInner.getBoundingClientRect();
 			var offset = e.touches[ 0 ].clientY - rect.top;
 			var totalHeight = sidebarInner.offsetHeight;
 			var dividerHeight = divider.offsetHeight;
-			var divider2Height = divider2.offsetHeight;
-			var newListHeight, newPropsHeight, newCodeHeight;
+			var maxListHeight = totalHeight - dividerHeight - minPropsHeight;
+			var newListHeight = Math.max( minListHeight, Math.min( offset, maxListHeight ) );
+			var newPropsHeight = totalHeight - newListHeight - dividerHeight;
 
-			if ( isDragging ) {
-				// Dragging first divider (layers/properties)
-				newListHeight = offset;
-				var remainingHeight = totalHeight - newListHeight - dividerHeight - divider2Height;
-				var currentCodeHeight = sidebarInner.childNodes[ 4 ].offsetHeight; // codePanel
-				newPropsHeight = remainingHeight - currentCodeHeight;
-
-				if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
-					return;
-				}
-
-				sidebarInner.childNodes[ 0 ].style.flex = 'none'; // layerList
-				sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
-				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
-				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
-			}
-
-			if ( isDragging2 ) {
-				// Dragging second divider (properties/code)
-				var currentListHeight = sidebarInner.childNodes[ 0 ].offsetHeight; // layerList
-				newPropsHeight = offset - currentListHeight - dividerHeight;
-				newCodeHeight = totalHeight - currentListHeight - dividerHeight -
-					newPropsHeight - divider2Height;
-
-				if ( newPropsHeight < minPropsHeight || newCodeHeight < minCodeHeight ) {
-					return;
-				}
-
-				sidebarInner.childNodes[ 2 ].style.flex = 'none'; // propertiesPanel
-				sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
-				sidebarInner.childNodes[ 4 ].style.flex = 'none'; // codePanel
-				sidebarInner.childNodes[ 4 ].style.height = newCodeHeight + 'px';
-			}
+			self.layerList.style.flex = 'none';
+			self.layerList.style.height = newListHeight + 'px';
+			self.propertiesPanel.style.flex = 'none';
+			self.propertiesPanel.style.height = newPropsHeight + 'px';
 		}, { passive: false } );
-
-		document.addEventListener( 'touchend', function () {
-			if ( isDragging || isDragging2 ) {
-				isDragging = false;
-				isDragging2 = false;
-				document.body.style.cursor = '';
-				document.body.style.userSelect = '';
-			}
-		} );
 	};
-
 	LayerPanel.prototype.setupEventHandlers = function () {
 		var self = this;
 
@@ -431,7 +330,7 @@
 	LayerPanel.prototype.updateLayers = function ( layers ) {
 		this.layers = layers || [];
 		this.renderLayerList();
-		this.updateCodePanel();
+		// Footer code area will be updated by LayersEditor using renderCodeSnippet()
 	};
 
 	LayerPanel.prototype.renderLayerList = function () {
@@ -1960,103 +1859,31 @@
 		}
 	};
 
-	LayerPanel.prototype.updateCodePanel = function () {
-		if ( !this.codePanel ) {
-			return;
-		}
-
-		var content = this.codePanel.querySelector( '.code-content' );
-		if ( !content ) {
-			return;
-		}
-
+	// Provide a pure renderer for the Wikitext code UI so LayersEditor can embed it in the footer
+	LayerPanel.prototype.renderCodeSnippet = function ( layers ) {
 		var t = this.msg.bind( this );
-
-		// Get visible layers
-		var visibleLayers = this.layers.filter( function ( layer ) {
+		var list = Array.isArray( layers ) ? layers : ( this.layers || [] );
+		var visibleLayers = list.filter( function ( layer ) {
 			return layer.visible !== false;
 		} );
-
 		var filename = this.editor && this.editor.filename ? this.editor.filename : 'YourImage.jpg';
 		var codeHtml = '';
-
 		if ( visibleLayers.length === 0 ) {
 			codeHtml = '<p><strong>' + t( 'layers-code-none', 'No layers visible.' ) + '</strong> ' + t( 'layers-code-enable', 'Enable layers to see the code.' ) + '</p>';
-		} else if ( visibleLayers.length === this.layers.length ) {
-			// All layers visible
+		} else if ( visibleLayers.length === list.length ) {
 			codeHtml = '<p><strong>' + t( 'layers-code-all-visible', 'All layers visible:' ) + '</strong></p>' +
 				'<code class="layers-code">[[File:' + filename + '|500px|layers=all|' + t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
 				'<button class="copy-btn" data-code="layers=all">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
 		} else {
-			// Specific layers visible
 			var layerIds = visibleLayers.map( function ( layer ) {
 				return layer.id || ( 'layer_' + Math.random().toString( 36 ).slice( 2, 6 ) );
 			} );
 			var layersParam = layerIds.join( ',' );
-
 			codeHtml = '<p><strong>' + t( 'layers-code-selected-visible', 'Selected layers visible:' ) + '</strong></p>' +
 				'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|' + t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
 				'<button class="copy-btn" data-code="layers=' + layersParam + '">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
 		}
-
-		content.innerHTML = codeHtml;
-
-		// Add click handlers for copy buttons
-		var copyBtns = content.querySelectorAll( '.copy-btn' );
-		copyBtns.forEach( function ( btn ) {
-			btn.addEventListener( 'click', function () {
-				var code = btn.getAttribute( 'data-code' );
-
-				var onSuccess = function () {
-					btn.textContent = t( 'layers-code-copied', 'Copied!' );
-					setTimeout( function () {
-						btn.textContent = t( 'layers-code-copy', 'Copy' );
-					}, 2000 );
-				};
-				var onFailure = function () {
-					btn.textContent = t( 'layers-code-copy-failed', 'Copy failed' );
-					setTimeout( function () {
-						btn.textContent = t( 'layers-code-copy', 'Copy' );
-					}, 2000 );
-				};
-
-				if ( navigator.clipboard && navigator.clipboard.writeText ) {
-					navigator.clipboard.writeText( code ).then( onSuccess ).catch( function () {
-						// Fallback to execCommand
-						var ta = document.createElement( 'textarea' );
-						ta.value = code;
-						document.body.appendChild( ta );
-						ta.select();
-						try {
-							if ( document.execCommand( 'copy' ) ) {
-								onSuccess();
-							} else {
-								onFailure();
-							}
-						} catch ( e ) {
-							onFailure();
-						}
-						document.body.removeChild( ta );
-					} );
-				} else {
-					// Fallback method for older browsers
-					var textArea = document.createElement( 'textarea' );
-					textArea.value = code;
-					document.body.appendChild( textArea );
-					textArea.select();
-					try {
-						if ( document.execCommand( 'copy' ) ) {
-							onSuccess();
-						} else {
-							onFailure();
-						}
-					} catch ( err ) {
-						onFailure();
-					}
-					document.body.removeChild( textArea );
-				}
-			} );
-		} );
+		return codeHtml;
 	};
 
 	// Export LayerPanel to global scope
