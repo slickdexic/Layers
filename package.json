@@ -29,6 +29,8 @@
 	"eslintIgnore": [
 		"vendor/**",
 		"dist/**",
-		"tests/jest/**"
+		"tests/jest/**",
+		".stylelintrc.json",
+		"resources/ext.layers.editor/LayerPanel.js"
 	]
 }

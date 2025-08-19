@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Layers Extension Test Suite
  * Run this script to verify basic functionality
@@ -12,286 +13,295 @@ use MediaWiki\Extension\Layers\ThumbnailRenderer;
 /**
  * @coversNothing
  */
-class LayersTest {
-	/** @var int */
-	private $passed = 0;
-	/** @var int */
-	private $failed = 0;
+class LayersTest
+{
+    /** @var int */
+    private $passed = 0;
+    /** @var int */
+    private $failed = 0;
 
-	private function output( $msg ) {
-		echo $msg . "\n";
-	}
+    private function output($msg)
+    {
+        echo $msg . "\n";
+    }
 
-	public function run() {
-		$this->output( "=== Layers Extension Test Suite ===\n" );
+    public function run()
+    {
+        $this->output("=== Layers Extension Test Suite ===\n");
 
-	$this->testDatabaseTables();
-	$this->testLayersDatabase();
-	$this->testConfigurationValues();
-	$this->testUserPermissions();
-	$this->testResourceModules();
-	$this->testApiEndpoints();
-	$this->testThumbnailRenderer();
+        $this->testDatabaseTables();
+        $this->testLayersDatabase();
+        $this->testConfigurationValues();
+        $this->testUserPermissions();
+        $this->testResourceModules();
+        $this->testApiEndpoints();
+        $this->testThumbnailRenderer();
 
-		$this->output( "\n=== Test Results ===" );
-		$this->output( "Passed: {$this->passed}" );
-		$this->output( "Failed: {$this->failed}" );
+        $this->output("\n=== Test Results ===");
+        $this->output("Passed: {$this->passed}");
+        $this->output("Failed: {$this->failed}");
 
-		if ( $this->failed === 0 ) {
-			$this->output( "✅ All tests passed! Extension appears to be working correctly." );
-		} else {
-			$this->output( "❌ Some tests failed. Check the output above for details." );
-		}
+        if ($this->failed === 0) {
+            $this->output("✅ All tests passed! Extension appears to be working correctly.");
+        } else {
+            $this->output("❌ Some tests failed. Check the output above for details.");
+        }
 
-		return $this->failed === 0;
-	}
+        return $this->failed === 0;
+    }
 
-	private function test( $name, $condition, $details = '' ) {
-		if ( $condition ) {
-			$this->output( "✅ $name" );
-			$this->passed++;
-		} else {
-			$this->output( "❌ $name" . ( $details ? " - $details" : '' ) );
-			$this->failed++;
-		}
-	}
+    private function test($name, $condition, $details = '')
+    {
+        if ($condition) {
+            $this->output("✅ $name");
+            $this->passed++;
+        } else {
+            $this->output("❌ $name" . ( $details ? " - $details" : '' ));
+            $this->failed++;
+        }
+    }
 
-	/**
-	 * @covers MediaWiki\\Extension\\Layers\\Database\\LayersDatabase
-	 */
-	private function testDatabaseTables() {
-		$this->output( "\n--- Database Tables ---" );
+    /**
+     * @covers MediaWiki\\Extension\\Layers\\Database\\LayersDatabase
+     */
+    private function testDatabaseTables()
+    {
+        $this->output("\n--- Database Tables ---");
 
-		// Define constants for compatibility if not available
-		if ( !defined( 'DB_REPLICA' ) ) {
-			define( 'DB_REPLICA', -1 );
-		}
-		$dbr = wfGetDB( DB_REPLICA );
+        // Define constants for compatibility if not available
+        if (!defined('DB_REPLICA')) {
+            define('DB_REPLICA', -1);
+        }
+        $dbr = wfGetDB(DB_REPLICA);
 
-		$this->test(
-			"layer_sets table exists",
-			$dbr->tableExists( 'layer_sets' )
-		);
+        $this->test(
+            "layer_sets table exists",
+            $dbr->tableExists('layer_sets')
+        );
 
-		$this->test(
-			"layer_assets table exists",
-			$dbr->tableExists( 'layer_assets' )
-		);
+        $this->test(
+            "layer_assets table exists",
+            $dbr->tableExists('layer_assets')
+        );
 
-		$this->test(
-			"layer_set_usage table exists",
-			$dbr->tableExists( 'layer_set_usage' )
-		);
-	}
+        $this->test(
+            "layer_set_usage table exists",
+            $dbr->tableExists('layer_set_usage')
+        );
+    }
 
-	/**
-	 * @covers MediaWiki\\Extension\\Layers\\Database\\LayersDatabase
-	 */
-	private function testLayersDatabase() {
-		$this->output( "\n--- LayersDatabase Class ---" );
+    /**
+     * @covers MediaWiki\\Extension\\Layers\\Database\\LayersDatabase
+     */
+    private function testLayersDatabase()
+    {
+        $this->output("\n--- LayersDatabase Class ---");
 
-		try {
-			$db = new LayersDatabase();
-			$this->test( "LayersDatabase instantiates", true );
+        try {
+            $db = new LayersDatabase();
+            $this->test("LayersDatabase instantiates", true);
 
-			// Test basic database operations
-			$testData = [
-				'layers' => [
-					[
-						'id' => 'test-layer-1',
-						'type' => 'text',
-						'text' => 'Test Layer',
-						'x' => 100,
-						'y' => 100
-					]
-				]
-			];
+            // Test basic database operations
+            $testData = [
+                'layers' => [
+                    [
+                        'id' => 'test-layer-1',
+                        'type' => 'text',
+                        'text' => 'Test Layer',
+                        'x' => 100,
+                        'y' => 100
+                    ]
+                ]
+            ];
 
-			$this->test(
-				"Can save layer set",
-				method_exists( $db, 'saveLayerSet' )
-			);
+            $this->test(
+                "Can save layer set",
+                method_exists($db, 'saveLayerSet')
+            );
 
-			$this->test(
-				"Can get layer sets",
-				method_exists( $db, 'getLayerSetsForImage' )
-			);
+            $this->test(
+                "Can get layer sets",
+                method_exists($db, 'getLayerSetsForImage')
+            );
+        } catch (Exception $e) {
+            $this->test("LayersDatabase instantiates", false, $e->getMessage());
+        }
+    }
 
-		} catch ( Exception $e ) {
-			$this->test( "LayersDatabase instantiates", false, $e->getMessage() );
-		}
-	}
+    /**
+     * @covers Nothing
+     */
+    private function testConfigurationValues()
+    {
+        $this->output("\n--- Configuration ---");
 
-	/**
-	 * @covers Nothing
-	 */
-	private function testConfigurationValues() {
-		$this->output( "\n--- Configuration ---" );
+        $config = MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
 
-		$config = MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+        $this->test(
+            "LayersEnable config exists",
+            $config->has('LayersEnable')
+        );
 
-		$this->test(
-			"LayersEnable config exists",
-			$config->has( 'LayersEnable' )
-		);
+        $this->test(
+            "LayersMaxBytes config exists",
+            $config->has('LayersMaxBytes')
+        );
 
-		$this->test(
-			"LayersMaxBytes config exists",
-			$config->has( 'LayersMaxBytes' )
-		);
+        $this->test(
+            "LayersDefaultFonts config exists",
+            $config->has('LayersDefaultFonts')
+        );
 
-		$this->test(
-			"LayersDefaultFonts config exists",
-			$config->has( 'LayersDefaultFonts' )
-		);
+        if ($config->has('LayersEnable')) {
+            $this->test(
+                "Extension is enabled",
+                $config->get('LayersEnable') === true
+            );
+        }
+    }
 
-		if ( $config->has( 'LayersEnable' ) ) {
-			$this->test(
-				"Extension is enabled",
-				$config->get( 'LayersEnable' ) === true
-			);
-		}
-	}
+    /**
+     * @covers Nothing
+     */
+    private function testUserPermissions()
+    {
+        $this->output("\n--- User Permissions ---");
 
-	/**
-	 * @covers Nothing
-	 */
-	private function testUserPermissions() {
-		$this->output( "\n--- User Permissions ---" );
+        global $wgGroupPermissions;
 
-		global $wgGroupPermissions;
+        $this->test(
+            "editlayers permission defined",
+            isset($wgGroupPermissions['user']['editlayers']) ||
+            isset($wgGroupPermissions['*']['editlayers'])
+        );
 
-		$this->test(
-			"editlayers permission defined",
-			isset( $wgGroupPermissions['user']['editlayers'] ) ||
-			isset( $wgGroupPermissions['*']['editlayers'] )
-		);
+        $this->test(
+            "createlayers permission defined",
+            isset($wgGroupPermissions['autoconfirmed']['createlayers']) ||
+            isset($wgGroupPermissions['user']['createlayers'])
+        );
 
-		$this->test(
-			"createlayers permission defined",
-			isset( $wgGroupPermissions['autoconfirmed']['createlayers'] ) ||
-			isset( $wgGroupPermissions['user']['createlayers'] )
-		);
+        $this->test(
+            "managelayerlibrary permission defined",
+            isset($wgGroupPermissions['sysop']['managelayerlibrary'])
+        );
+    }
 
-		$this->test(
-			"managelayerlibrary permission defined",
-			isset( $wgGroupPermissions['sysop']['managelayerlibrary'] )
-		);
-	}
+    /**
+     * @covers Nothing
+     */
+    private function testResourceModules()
+    {
+        $this->output("\n--- Resource Modules ---");
 
-	/**
-	 * @covers Nothing
-	 */
-	private function testResourceModules() {
-		$this->output( "\n--- Resource Modules ---" );
+        $resourceLoader = MediaWiki\MediaWikiServices::getInstance()->getResourceLoader();
 
-		$resourceLoader = MediaWiki\MediaWikiServices::getInstance()->getResourceLoader();
+        $this->test(
+            "ext.layers module exists",
+            $resourceLoader->isModuleRegistered('ext.layers')
+        );
 
-		$this->test(
-			"ext.layers module exists",
-			$resourceLoader->isModuleRegistered( 'ext.layers' )
-		);
+        $this->test(
+            "ext.layers.editor module exists",
+            $resourceLoader->isModuleRegistered('ext.layers.editor')
+        );
 
-		$this->test(
-			"ext.layers.editor module exists",
-			$resourceLoader->isModuleRegistered( 'ext.layers.editor' )
-		);
+        // Test if JavaScript files exist
+        $this->test(
+            "LayersEditor.js exists",
+            file_exists(__DIR__ . '/../resources/ext.layers.editor/LayersEditor.js')
+        );
 
-		// Test if JavaScript files exist
-		$this->test(
-			"LayersEditor.js exists",
-			file_exists( __DIR__ . '/../resources/ext.layers.editor/LayersEditor.js' )
-		);
+        $this->test(
+            "CanvasManager.js exists",
+            file_exists(__DIR__ . '/../resources/ext.layers.editor/CanvasManager.js')
+        );
+    }
 
-		$this->test(
-			"CanvasManager.js exists",
-			file_exists( __DIR__ . '/../resources/ext.layers.editor/CanvasManager.js' )
-		);
-	}
+    /**
+     * @covers MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo
+     * @covers MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave
+     */
+    private function testApiEndpoints()
+    {
+        $this->output("\n--- API Endpoints ---");
 
-	/**
-	 * @covers MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo
-	 * @covers MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave
-	 */
-	private function testApiEndpoints() {
-		$this->output( "\n--- API Endpoints ---" );
+        global $wgAPIModules;
 
-		global $wgAPIModules;
+        $this->test(
+            "layerssave API module registered",
+            isset($wgAPIModules['layerssave'])
+        );
 
-		$this->test(
-			"layerssave API module registered",
-			isset( $wgAPIModules['layerssave'] )
-		);
+        $this->test(
+            "layersinfo API module registered",
+            isset($wgAPIModules['layersinfo'])
+        );
 
-		$this->test(
-			"layersinfo API module registered",
-			isset( $wgAPIModules['layersinfo'] )
-		);
+        // Test class existence
+        $this->test(
+            "ApiLayersSave class exists",
+            class_exists('MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave')
+        );
 
-		// Test class existence
-		$this->test(
-			"ApiLayersSave class exists",
-			class_exists( 'MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave' )
-		);
+        $this->test(
+            "ApiLayersInfo class exists",
+            class_exists('MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo')
+        );
+    }
 
-		$this->test(
-			"ApiLayersInfo class exists",
-			class_exists( 'MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo' )
-		);
-	}
+    /**
+     * @covers MediaWiki\\Extension\\Layers\\ThumbnailRenderer
+     */
+    private function testThumbnailRenderer()
+    {
+        $this->output("\n--- Thumbnail Renderer ---");
 
-	/**
-	 * @covers MediaWiki\\Extension\\Layers\\ThumbnailRenderer
-	 */
-	private function testThumbnailRenderer() {
-		$this->output( "\n--- Thumbnail Renderer ---" );
+        $this->test(
+            "ThumbnailRenderer class exists",
+            class_exists('MediaWiki\\Extension\\Layers\\ThumbnailRenderer')
+        );
 
-		$this->test(
-			"ThumbnailRenderer class exists",
-			class_exists( 'MediaWiki\\Extension\\Layers\\ThumbnailRenderer' )
-		);
+        try {
+            $renderer = new ThumbnailRenderer();
+            $this->test("ThumbnailRenderer instantiates", true);
 
-		try {
-			$renderer = new ThumbnailRenderer();
-			$this->test( "ThumbnailRenderer instantiates", true );
+            $this->test(
+                "ThumbnailRenderer has generateLayeredThumbnail method",
+                method_exists($renderer, 'generateLayeredThumbnail')
+            );
+        } catch (Exception $e) {
+            $this->test("ThumbnailRenderer instantiates", false, $e->getMessage());
+        }
 
-			$this->test(
-				"ThumbnailRenderer has generateLayeredThumbnail method",
-				method_exists( $renderer, 'generateLayeredThumbnail' )
-			);
+        // Test ImageMagick availability
+        $config = MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+        $useImageMagick = $config->get('UseImageMagick');
 
-		} catch ( Exception $e ) {
-			$this->test( "ThumbnailRenderer instantiates", false, $e->getMessage() );
-		}
+        $this->test(
+            "ImageMagick is enabled",
+            $useImageMagick,
+            "Set \$wgUseImageMagick = true; for server-side rendering"
+        );
 
-		// Test ImageMagick availability
-		$config = MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
-		$useImageMagick = $config->get( 'UseImageMagick' );
-
-		$this->test(
-			"ImageMagick is enabled",
-			$useImageMagick,
-			"Set \$wgUseImageMagick = true; for server-side rendering"
-		);
-
-		if ( $useImageMagick ) {
-			$convertCommand = $config->get( 'ImageMagickConvertCommand' );
-			$this->test(
-				"ImageMagick convert command exists",
-				file_exists( $convertCommand ),
-				"Check \$wgImageMagickConvertCommand path"
-			);
-		}
-	}
+        if ($useImageMagick) {
+            $convertCommand = $config->get('ImageMagickConvertCommand');
+            $this->test(
+                "ImageMagick convert command exists",
+                file_exists($convertCommand),
+                "Check \$wgImageMagickConvertCommand path"
+            );
+        }
+    }
 }
 
 // Run the test if called directly
-if ( defined( 'MEDIAWIKI' ) ) {
-	$test = new LayersTest();
-	$success = $test->run();
-	exit( $success ? 0 : 1 );
+if (defined('MEDIAWIKI')) {
+    $test = new LayersTest();
+    $success = $test->run();
+    exit($success ? 0 : 1);
 } else {
-	echo "This script must be run from MediaWiki maintenance environment.\n";
-	echo "Usage: php maintenance/runScript.php extensions/Layers/tests/LayersTest.php\n";
-	exit( 1 );
+    echo "This script must be run from MediaWiki maintenance environment.\n";
+    echo "Usage: php maintenance/runScript.php extensions/Layers/tests/LayersTest.php\n";
+    exit(1);
 }

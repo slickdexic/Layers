@@ -152,6 +152,7 @@
 	z-index: 999999; /* Ensure above skin chrome */
 	display: flex;
 	flex-direction: column;
+	min-height: 0; /* allow children to size without overflowing */
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
@@ -240,6 +241,7 @@ body.layers-editor-open .mw-body-content {
 	flex: 1 1 auto;
 	display: flex;
 	overflow: hidden;
+	min-height: 0; /* enable proper flexbox scrolling behavior */
 }
 
 /* No bottom inspector; properties live in sidebar */
@@ -310,10 +312,15 @@ body.layers-editor-open .mw-body-content {
 	border-right: 1px solid #ddd;
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
+	/* Allow vertical scrolling so bottom controls remain reachable */
+	overflow-x: hidden;
+	overflow-y: auto;
 	resize: horizontal;
 	box-sizing: border-box;
 	position: relative;
+	z-index: 1; /* ensure above canvas background */
+	/* Reserve space so content does not sit under the status bar */
+	padding-bottom: 64px;
 }
 
 .layers-panel-divider {
@@ -352,6 +359,13 @@ body.layers-editor-open .mw-body-content {
 	padding: 8px;
 	min-height: 80px;
 	max-height: 40vh;
+	/* Keep last items visible above the fixed-height status bar */
+	padding-bottom: 72px;
+}
+
+.layers-panel,
+.layers-properties {
+	min-height: 0; /* prevent overflow into the status bar area */
 }
 
 /* Color picker with "none" option */
@@ -420,6 +434,8 @@ body.layers-editor-open .mw-body-content {
 	overflow-y: auto;
 	flex: 1;
 	min-height: 80px;
+	/* Keep controls from being obscured by the status bar */
+	padding-bottom: 72px;
 }
 
 .layers-properties h4,
@@ -961,6 +977,9 @@ body.layers-editor-open .mw-body-content {
 	display: flex;
 	align-items: center;
 	gap: 16px;
+	z-index: 2; /* keep above sidebars and scrollables */
+	/* Establish stacking and reserve visual space */
+	min-height: 40px;
 }
 
 .layers-statusbar .status-item {

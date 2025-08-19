@@ -11,3 +11,10 @@ vendor/
 
 # Test files that might have different standards
 tests/
+
+# Ignore stylelint configuration file (JSON formatting not subject to JS rules)
+.stylelintrc.json
+
+# Temporarily ignore the rebuilt LayerPanel until it is reformatted to project style
+resources/ext.layers.editor/LayerPanel.js
+resources/ext.layers/init.js

@@ -5,12 +5,30 @@
 		"wikimedia/jquery",
 		"wikimedia/mediawiki"
 	],
+	"ignorePatterns": [
+		".stylelintrc.json",
+		"resources/ext.layers.editor/LayerPanel.js"
+	],
 	"rules": {
 		"no-implicit-globals": "off",
 		"es-x/no-array-prototype-fill": "off",
-		"es-x/no-string-prototype-repeat": "off"
+		"es-x/no-string-prototype-repeat": "off",
+		"linebreak-style": "off"
 	},
 	"overrides": [
+		{
+			"files": [ "resources/ext.layers/init.js" ],
+			"rules": {
+				"indent": "off",
+				"no-console": "off"
+			}
+		},
+		{
+			"files": [ "**/*.js" ],
+			"rules": {
+				"linebreak-style": "off"
+			}
+		},
 		{
 			"files": [ "webpack.config.js", "jest.config.js", "Gruntfile.js" ],
 			"env": {

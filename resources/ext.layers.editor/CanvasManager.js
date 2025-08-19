@@ -56,6 +56,10 @@
 		this.marqueeStart = { x: 0, y: 0 };
 		this.marqueeEnd = { x: 0, y: 0 };
 
+		// Throttle transform event emission for live UI sync
+		this.transformEventScheduled = false;
+		this.lastTransformPayload = null;
+
 		// Drag visual feedback
 		this.dragPreview = false;
 		this.dragOffset = { x: 0, y: 0 };
@@ -861,8 +865,9 @@
 				layer[ key ] = updates[ key ];
 			} );
 
-			// Re-render
+			// Re-render and emit live-transform event
 			this.renderLayers( this.editor.layers );
+			this.emitTransforming( layer );
 		} else if ( this.editor && this.editor.debug ) {
 			this.editor.debugLog( 'No updates calculated for resize' );
 		}
@@ -1321,8 +1326,9 @@
 		// Store rotation (we'll implement actual rotation rendering later)
 		layer.rotation = ( this.originalLayerState.rotation || 0 ) + degrees;
 
-		// Re-render
+		// Re-render and emit live-transform event
 		this.renderLayers( this.editor.layers );
+		this.emitTransforming( layer );
 	};
 
 	CanvasManager.prototype.handleDrag = function ( point ) {
@@ -1380,8 +1386,42 @@
 			this.updateLayerPosition( layerToMove, originalState, adjustedDeltaX, adjustedDeltaY );
 		}
 
-		// Re-render
+		// Re-render and emit live-transform event for the primary selected layer
 		this.renderLayers( this.editor.layers );
+		var active = this.editor.getLayerById( this.selectedLayerId );
+		if ( active ) {
+			this.emitTransforming( active );
+		}
+	};
+
+	/**
+	 * Emit a throttled custom event with current transform values
+	 * to allow the properties panel to live-sync during manipulation.
+	 *
+	 * @param {Object} layer The layer object to serialize and emit
+	 */
+	CanvasManager.prototype.emitTransforming = function ( layer ) {
+		if ( !layer ) {
+			return;
+		}
+		this.lastTransformPayload = layer;
+		if ( this.transformEventScheduled ) {
+			return;
+		}
+		this.transformEventScheduled = true;
+		var self = this;
+		window.requestAnimationFrame( function () {
+			self.transformEventScheduled = false;
+			var target = ( self.editor && self.editor.container ) || self.container || document;
+			try {
+				var detail = {
+					id: self.lastTransformPayload.id,
+					layer: JSON.parse( JSON.stringify( self.lastTransformPayload ) )
+				};
+				var evt = new CustomEvent( 'layers:transforming', { detail: detail } );
+				target.dispatchEvent( evt );
+			} catch ( _e ) { /* ignore */ }
+		} );
 	};
 
 	/**

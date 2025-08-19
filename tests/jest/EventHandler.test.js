@@ -5,276 +5,276 @@
 const EventHandler = require('../../resources/ext.layers.editor/EventHandler.js');
 
 describe('EventHandler', () => {
-	let eventHandler;
-	let mockCanvasManager;
-	let mockCanvas;
+    let eventHandler;
+    let mockCanvasManager;
+    let mockCanvas;
 
-	beforeEach(() => {
-		// Create mock canvas
-		mockCanvas = document.createElement('canvas');
-		mockCanvas.width = 800;
-		mockCanvas.height = 600;
-		
-		// Create mock CanvasManager
-		mockCanvasManager = {
-			canvas: mockCanvas,
-			layers: [],
-			selectedLayerIds: [],
-			currentTool: 'pointer',
-			scale: 1,
-			offsetX: 0,
-			offsetY: 0,
-			startDrawing: jest.fn(),
-			updateDrawing: jest.fn(),
-			finishDrawing: jest.fn(),
-			handlePointerDown: jest.fn(),
-			handlePointerMove: jest.fn(),
-			handlePointerUp: jest.fn(),
-			selectLayer: jest.fn(),
-			deleteSelectedLayers: jest.fn(),
-			undo: jest.fn(),
-			redo: jest.fn(),
-			isModified: false
-		};
+    beforeEach(() => {
+        // Create mock canvas
+        mockCanvas = document.createElement('canvas');
+        mockCanvas.width = 800;
+        mockCanvas.height = 600;
 
-		// Create EventHandler instance
-		eventHandler = new EventHandler(mockCanvasManager);
-	});
+        // Create mock CanvasManager
+        mockCanvasManager = {
+            canvas: mockCanvas,
+            layers: [],
+            selectedLayerIds: [],
+            currentTool: 'pointer',
+            scale: 1,
+            offsetX: 0,
+            offsetY: 0,
+            startDrawing: jest.fn(),
+            updateDrawing: jest.fn(),
+            finishDrawing: jest.fn(),
+            handlePointerDown: jest.fn(),
+            handlePointerMove: jest.fn(),
+            handlePointerUp: jest.fn(),
+            selectLayer: jest.fn(),
+            deleteSelectedLayers: jest.fn(),
+            undo: jest.fn(),
+            redo: jest.fn(),
+            isModified: false
+        };
 
-	afterEach(() => {
-		eventHandler.destroy();
-	});
+        // Create EventHandler instance
+        eventHandler = new EventHandler(mockCanvasManager);
+    });
 
-	describe('initialization', () => {
-		test('should create EventHandler with correct properties', () => {
-			expect(eventHandler.canvasManager).toBe(mockCanvasManager);
-			expect(eventHandler.canvas).toBe(mockCanvas);
-			expect(eventHandler.isMouseDown).toBe(false);
-			expect(eventHandler.lastTouchTime).toBe(0);
-		});
+    afterEach(() => {
+        eventHandler.destroy();
+    });
 
-		test('should setup event listeners on canvas', () => {
-			const addEventListenerSpy = jest.spyOn(mockCanvas, 'addEventListener');
-			
-			const newEventHandler = new EventHandler(mockCanvasManager);
-			
-			expect(addEventListenerSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
-			expect(addEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
-			expect(addEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
-			expect(addEventListenerSpy).toHaveBeenCalledWith('touchstart', expect.any(Function));
-			expect(addEventListenerSpy).toHaveBeenCalledWith('touchmove', expect.any(Function));
-			expect(addEventListenerSpy).toHaveBeenCalledWith('touchend', expect.any(Function));
-			
-			newEventHandler.destroy();
-		});
-	});
+    describe('initialization', () => {
+        test('should create EventHandler with correct properties', () => {
+            expect(eventHandler.canvasManager).toBe(mockCanvasManager);
+            expect(eventHandler.canvas).toBe(mockCanvas);
+            expect(eventHandler.isMouseDown).toBe(false);
+            expect(eventHandler.lastTouchTime).toBe(0);
+        });
 
-	describe('mouse events', () => {
-		test('should handle mouse down event', () => {
-			const mockEvent = {
-				preventDefault: jest.fn(),
-				offsetX: 100,
-				offsetY: 150,
-				button: 0
-			};
+        test('should setup event listeners on canvas', () => {
+            const addEventListenerSpy = jest.spyOn(mockCanvas, 'addEventListener');
 
-			eventHandler.handleMouseDown(mockEvent);
+            const newEventHandler = new EventHandler(mockCanvasManager);
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(eventHandler.isMouseDown).toBe(true);
-			expect(mockCanvasManager.handlePointerDown).toHaveBeenCalledWith(100, 150);
-		});
+            expect(addEventListenerSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
+            expect(addEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
+            expect(addEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
+            expect(addEventListenerSpy).toHaveBeenCalledWith('touchstart', expect.any(Function));
+            expect(addEventListenerSpy).toHaveBeenCalledWith('touchmove', expect.any(Function));
+            expect(addEventListenerSpy).toHaveBeenCalledWith('touchend', expect.any(Function));
 
-		test('should ignore non-left mouse button', () => {
-			const mockEvent = {
-				preventDefault: jest.fn(),
-				offsetX: 100,
-				offsetY: 150,
-				button: 1 // Right click
-			};
+            newEventHandler.destroy();
+        });
+    });
 
-			eventHandler.handleMouseDown(mockEvent);
+    describe('mouse events', () => {
+        test('should handle mouse down event', () => {
+            const mockEvent = {
+                preventDefault: jest.fn(),
+                offsetX: 100,
+                offsetY: 150,
+                button: 0
+            };
 
-			expect(eventHandler.isMouseDown).toBe(false);
-			expect(mockCanvasManager.handlePointerDown).not.toHaveBeenCalled();
-		});
+            eventHandler.handleMouseDown(mockEvent);
 
-		test('should handle mouse move when mouse is down', () => {
-			eventHandler.isMouseDown = true;
-			
-			const mockEvent = {
-				preventDefault: jest.fn(),
-				offsetX: 120,
-				offsetY: 180
-			};
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(eventHandler.isMouseDown).toBe(true);
+            expect(mockCanvasManager.handlePointerDown).toHaveBeenCalledWith(100, 150);
+        });
 
-			eventHandler.handleMouseMove(mockEvent);
+        test('should ignore non-left mouse button', () => {
+            const mockEvent = {
+                preventDefault: jest.fn(),
+                offsetX: 100,
+                offsetY: 150,
+                button: 1 // Right click
+            };
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(mockCanvasManager.handlePointerMove).toHaveBeenCalledWith(120, 180);
-		});
+            eventHandler.handleMouseDown(mockEvent);
 
-		test('should not handle mouse move when mouse is not down', () => {
-			eventHandler.isMouseDown = false;
-			
-			const mockEvent = {
-				preventDefault: jest.fn(),
-				offsetX: 120,
-				offsetY: 180
-			};
+            expect(eventHandler.isMouseDown).toBe(false);
+            expect(mockCanvasManager.handlePointerDown).not.toHaveBeenCalled();
+        });
 
-			eventHandler.handleMouseMove(mockEvent);
+        test('should handle mouse move when mouse is down', () => {
+            eventHandler.isMouseDown = true;
 
-			expect(mockCanvasManager.handlePointerMove).not.toHaveBeenCalled();
-		});
+            const mockEvent = {
+                preventDefault: jest.fn(),
+                offsetX: 120,
+                offsetY: 180
+            };
 
-		test('should handle mouse up event', () => {
-			eventHandler.isMouseDown = true;
-			
-			const mockEvent = {
-				preventDefault: jest.fn(),
-				offsetX: 140,
-				offsetY: 200
-			};
+            eventHandler.handleMouseMove(mockEvent);
 
-			eventHandler.handleMouseUp(mockEvent);
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(mockCanvasManager.handlePointerMove).toHaveBeenCalledWith(120, 180);
+        });
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(eventHandler.isMouseDown).toBe(false);
-			expect(mockCanvasManager.handlePointerUp).toHaveBeenCalledWith(140, 200);
-		});
-	});
+        test('should not handle mouse move when mouse is not down', () => {
+            eventHandler.isMouseDown = false;
 
-	describe('touch events', () => {
-		test('should handle single touch start', () => {
-			const mockEvent = {
-				preventDefault: jest.fn(),
-				touches: [{
-					clientX: 250,
-					clientY: 300
-				}]
-			};
+            const mockEvent = {
+                preventDefault: jest.fn(),
+                offsetX: 120,
+                offsetY: 180
+            };
 
-			// Mock getBoundingClientRect
-			mockCanvas.getBoundingClientRect = jest.fn().mockReturnValue({
-				left: 50,
-				top: 100
-			});
+            eventHandler.handleMouseMove(mockEvent);
 
-			eventHandler.handleTouchStart(mockEvent);
+            expect(mockCanvasManager.handlePointerMove).not.toHaveBeenCalled();
+        });
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(mockCanvasManager.handlePointerDown).toHaveBeenCalledWith(200, 200);
-		});
+        test('should handle mouse up event', () => {
+            eventHandler.isMouseDown = true;
 
-		test('should handle touch move', () => {
-			const mockEvent = {
-				preventDefault: jest.fn(),
-				touches: [{
-					clientX: 270,
-					clientY: 320
-				}]
-			};
+            const mockEvent = {
+                preventDefault: jest.fn(),
+                offsetX: 140,
+                offsetY: 200
+            };
 
-			mockCanvas.getBoundingClientRect = jest.fn().mockReturnValue({
-				left: 50,
-				top: 100
-			});
+            eventHandler.handleMouseUp(mockEvent);
 
-			eventHandler.handleTouchMove(mockEvent);
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(eventHandler.isMouseDown).toBe(false);
+            expect(mockCanvasManager.handlePointerUp).toHaveBeenCalledWith(140, 200);
+        });
+    });
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(mockCanvasManager.handlePointerMove).toHaveBeenCalledWith(220, 220);
-		});
+    describe('touch events', () => {
+        test('should handle single touch start', () => {
+            const mockEvent = {
+                preventDefault: jest.fn(),
+                touches: [{
+                    clientX: 250,
+                    clientY: 300
+                }]
+            };
 
-		test('should handle touch end', () => {
-			const mockEvent = {
-				preventDefault: jest.fn(),
-				changedTouches: [{
-					clientX: 290,
-					clientY: 340
-				}]
-			};
+            // Mock getBoundingClientRect
+            mockCanvas.getBoundingClientRect = jest.fn().mockReturnValue({
+                left: 50,
+                top: 100
+            });
 
-			mockCanvas.getBoundingClientRect = jest.fn().mockReturnValue({
-				left: 50,
-				top: 100
-			});
+            eventHandler.handleTouchStart(mockEvent);
 
-			eventHandler.handleTouchEnd(mockEvent);
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(mockCanvasManager.handlePointerDown).toHaveBeenCalledWith(200, 200);
+        });
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(mockCanvasManager.handlePointerUp).toHaveBeenCalledWith(240, 240);
-		});
-	});
+        test('should handle touch move', () => {
+            const mockEvent = {
+                preventDefault: jest.fn(),
+                touches: [{
+                    clientX: 270,
+                    clientY: 320
+                }]
+            };
 
-	describe('keyboard events', () => {
-		test('should handle delete key', () => {
-			const mockEvent = {
-				key: 'Delete',
-				preventDefault: jest.fn()
-			};
+            mockCanvas.getBoundingClientRect = jest.fn().mockReturnValue({
+                left: 50,
+                top: 100
+            });
 
-			eventHandler.handleKeyDown(mockEvent);
+            eventHandler.handleTouchMove(mockEvent);
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(mockCanvasManager.deleteSelectedLayers).toHaveBeenCalled();
-		});
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(mockCanvasManager.handlePointerMove).toHaveBeenCalledWith(220, 220);
+        });
 
-		test('should handle Ctrl+Z (undo)', () => {
-			const mockEvent = {
-				key: 'z',
-				ctrlKey: true,
-				shiftKey: false,
-				preventDefault: jest.fn()
-			};
+        test('should handle touch end', () => {
+            const mockEvent = {
+                preventDefault: jest.fn(),
+                changedTouches: [{
+                    clientX: 290,
+                    clientY: 340
+                }]
+            };
 
-			eventHandler.handleKeyDown(mockEvent);
+            mockCanvas.getBoundingClientRect = jest.fn().mockReturnValue({
+                left: 50,
+                top: 100
+            });
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(mockCanvasManager.undo).toHaveBeenCalled();
-		});
+            eventHandler.handleTouchEnd(mockEvent);
 
-		test('should handle Ctrl+Shift+Z (redo)', () => {
-			const mockEvent = {
-				key: 'z',
-				ctrlKey: true,
-				shiftKey: true,
-				preventDefault: jest.fn()
-			};
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(mockCanvasManager.handlePointerUp).toHaveBeenCalledWith(240, 240);
+        });
+    });
 
-			eventHandler.handleKeyDown(mockEvent);
+    describe('keyboard events', () => {
+        test('should handle delete key', () => {
+            const mockEvent = {
+                key: 'Delete',
+                preventDefault: jest.fn()
+            };
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(mockCanvasManager.redo).toHaveBeenCalled();
-		});
+            eventHandler.handleKeyDown(mockEvent);
 
-		test('should handle Ctrl+Y (redo)', () => {
-			const mockEvent = {
-				key: 'y',
-				ctrlKey: true,
-				preventDefault: jest.fn()
-			};
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(mockCanvasManager.deleteSelectedLayers).toHaveBeenCalled();
+        });
 
-			eventHandler.handleKeyDown(mockEvent);
+        test('should handle Ctrl+Z (undo)', () => {
+            const mockEvent = {
+                key: 'z',
+                ctrlKey: true,
+                shiftKey: false,
+                preventDefault: jest.fn()
+            };
 
-			expect(mockEvent.preventDefault).toHaveBeenCalled();
-			expect(mockCanvasManager.redo).toHaveBeenCalled();
-		});
-	});
+            eventHandler.handleKeyDown(mockEvent);
 
-	describe('destruction', () => {
-		test('should remove event listeners when destroyed', () => {
-			const removeEventListenerSpy = jest.spyOn(mockCanvas, 'removeEventListener');
-			
-			eventHandler.destroy();
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(mockCanvasManager.undo).toHaveBeenCalled();
+        });
 
-			expect(removeEventListenerSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
-			expect(removeEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
-			expect(removeEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
-			expect(removeEventListenerSpy).toHaveBeenCalledWith('touchstart', expect.any(Function));
-			expect(removeEventListenerSpy).toHaveBeenCalledWith('touchmove', expect.any(Function));
-			expect(removeEventListenerSpy).toHaveBeenCalledWith('touchend', expect.any(Function));
-		});
-	});
+        test('should handle Ctrl+Shift+Z (redo)', () => {
+            const mockEvent = {
+                key: 'z',
+                ctrlKey: true,
+                shiftKey: true,
+                preventDefault: jest.fn()
+            };
+
+            eventHandler.handleKeyDown(mockEvent);
+
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(mockCanvasManager.redo).toHaveBeenCalled();
+        });
+
+        test('should handle Ctrl+Y (redo)', () => {
+            const mockEvent = {
+                key: 'y',
+                ctrlKey: true,
+                preventDefault: jest.fn()
+            };
+
+            eventHandler.handleKeyDown(mockEvent);
+
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
+            expect(mockCanvasManager.redo).toHaveBeenCalled();
+        });
+    });
+
+    describe('destruction', () => {
+        test('should remove event listeners when destroyed', () => {
+            const removeEventListenerSpy = jest.spyOn(mockCanvas, 'removeEventListener');
+
+            eventHandler.destroy();
+
+            expect(removeEventListenerSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
+            expect(removeEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
+            expect(removeEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
+            expect(removeEventListenerSpy).toHaveBeenCalledWith('touchstart', expect.any(Function));
+            expect(removeEventListenerSpy).toHaveBeenCalledWith('touchmove', expect.any(Function));
+            expect(removeEventListenerSpy).toHaveBeenCalledWith('touchend', expect.any(Function));
+        });
+    });
 });

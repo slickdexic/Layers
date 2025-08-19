@@ -147,10 +147,13 @@
 		// Clear canvas
 		this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
-		// Render each layer
-		this.layerData.layers.forEach( function ( layer ) {
-			this.renderLayer( layer );
-		}.bind( this ) );
+		// Render layers from bottom to top so top-most (index 0 in editor) is drawn last.
+		// The editor maintains layers with index 0 as visually top-most and draws end->start;
+		// mirror that here by iterating from the array end to start.
+		var layers = Array.isArray( this.layerData.layers ) ? this.layerData.layers : [];
+		for ( var i = layers.length - 1; i >= 0; i-- ) {
+			this.renderLayer( layers[ i ] );
+		}
 	};
 
 	LayersViewer.prototype.renderLayer = function ( layer ) {
@@ -234,19 +237,27 @@
 		}
 
 		// Apply shadow effects - support both flat and nested shadow formats
+		// Scale shadow properties with the same factors used for coordinates
+		var shadowScaleX = 1, shadowScaleY = 1, shadowScaleAvg = 1;
+		if ( this.baseWidth && this.baseHeight ) {
+			shadowScaleX = ( this.canvas.width || 1 ) / this.baseWidth;
+			shadowScaleY = ( this.canvas.height || 1 ) / this.baseHeight;
+			shadowScaleAvg = ( shadowScaleX + shadowScaleY ) / 2;
+		}
+
 		if ( layer.shadow ) {
 			// New flat format from editor (shadow: true, shadowColor: '#000', etc.)
 			if ( typeof layer.shadow === 'boolean' && layer.shadow ) {
 				this.ctx.shadowColor = layer.shadowColor || '#000000';
-				this.ctx.shadowBlur = layer.shadowBlur || 0;
-				this.ctx.shadowOffsetX = layer.shadowOffsetX || 0;
-				this.ctx.shadowOffsetY = layer.shadowOffsetY || 0;
+				this.ctx.shadowBlur = ( layer.shadowBlur || 0 ) * shadowScaleAvg;
+				this.ctx.shadowOffsetX = ( layer.shadowOffsetX || 0 ) * shadowScaleX;
+				this.ctx.shadowOffsetY = ( layer.shadowOffsetY || 0 ) * shadowScaleY;
 			} else if ( typeof layer.shadow === 'object' && layer.shadow ) {
 				// Legacy nested format (shadow: {color: '#000', blur: 5, etc.})
 				this.ctx.shadowColor = layer.shadow.color || '#000000';
-				this.ctx.shadowBlur = layer.shadow.blur || 0;
-				this.ctx.shadowOffsetX = layer.shadow.offsetX || 0;
-				this.ctx.shadowOffsetY = layer.shadow.offsetY || 0;
+				this.ctx.shadowBlur = ( layer.shadow.blur || 0 ) * shadowScaleAvg;
+				this.ctx.shadowOffsetX = ( layer.shadow.offsetX || 0 ) * shadowScaleX;
+				this.ctx.shadowOffsetY = ( layer.shadow.offsetY || 0 ) * shadowScaleY;
 			}
 		}
 

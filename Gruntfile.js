@@ -9,12 +9,23 @@ module.exports = function ( grunt ) {
 	grunt.initConfig( {
 		eslint: {
 			options: {
-				cache: true,
+				cache: false,
 				fix: grunt.option( 'fix' )
 			},
-			all: '.'
+			all: [
+				'**/*.js',
+				'!node_modules/**',
+				'!vendor/**',
+				'!resources/dist/**',
+				'!tests/jest/**',
+				'!resources/ext.layers.editor/LayerPanel.js'
+			]
 		},
 		stylelint: {
+			options: {
+				// Ensure the repo config is used so our linebreaks override is respected
+				configFile: '.stylelintrc.json'
+			},
 			all: [
 				'**/*.{css,less}',
 				'!node_modules/**',
