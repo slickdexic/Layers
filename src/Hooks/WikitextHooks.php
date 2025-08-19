@@ -1104,67 +1104,49 @@ class WikitextHooks
             $shouldFallback = true;
         }
 
-        // FALLBACK: Only enable for images that have some indication they should have layers
-        // Don't auto-enable just because pageHasLayers=true, as that affects ALL images on page
+        // FALLBACK: Check if pageHasLayers indicates layers should be shown but no flag detected
         if (!$shouldFallback && self::$pageHasLayers) {
-            // Only enable fallback if there's some image-specific indication of layer intent
-            // Check if this specific image has any layer-related markers
-            $hasLayerIntent = false;
-            
-            // Check if image has layer-related attributes or classes
-            if (isset($attribs['class']) && strpos($attribs['class'], 'layers') !== false) {
-                $hasLayerIntent = true;
+            // If we detected layers=all in wikitext, enable fallback for all images
+            $shouldFallback = true;
+            if (\class_exists('\\MediaWiki\\Logger\\LoggerFactory')) {
+                $logger = \call_user_func([ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers');
+                $logger->info('Layers: pageHasLayers=true, enabling fallback layer data fetch');
             }
-            
-            // Check if link has layer parameters
-            if (!$hasLayerIntent && isset($linkAttribs['href'])) {
-                $href = (string)$linkAttribs['href'];
-                if (strpos($href, 'layers=') !== false || strpos($href, 'layer=') !== false) {
-                    $hasLayerIntent = true;
-                }
-            }
-            
-            // Only enable fallback if there's specific intent for this image
-            if ($hasLayerIntent) {
+        }
+
+        // Also check link attributes for layers parameter as additional fallback
+        if (!$shouldFallback && isset($linkAttribs['href'])) {
+            $href = (string)$linkAttribs['href'];
+            if (strpos($href, 'layers=all') !== false || strpos($href, 'layers=on') !== false) {
                 $shouldFallback = true;
-                if (\class_exists('\\MediaWiki\\Logger\\LoggerFactory')) {
-                    $logger = \call_user_func([ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers');
-                    $logger->info('Layers: pageHasLayers=true with image-specific layer intent, enabling fallback layer data fetch');
-                }
             }
-        }            // Also check link attributes for layers parameter as additional fallback
-            if (!$shouldFallback && isset($linkAttribs['href'])) {
-                $href = (string)$linkAttribs['href'];
-                if (strpos($href, 'layers=all') !== false || strpos($href, 'layers=on') !== false) {
-                    $shouldFallback = true;
-                }
-            }
+        }
 
-            // Strict gating: do not auto-enable overlays in debug mode without explicit layers intent.
+        // Strict gating: do not auto-enable overlays in debug mode without explicit layers intent.
 
-            if ($shouldFallback) {
-                $file = $thumbnail->getFile();
-                if ($file) {
-                    try {
-                        $db = new LayersDatabase();
-                        $latest = $db->getLatestLayerSet($file->getName(), $file->getSha1());
-                        if ($latest && isset($latest['data'])) {
-                            $layerData = isset($latest['data']['layers']) && is_array($latest['data']['layers'])
+        if ($shouldFallback) {
+            $file = $thumbnail->getFile();
+            if ($file) {
+                try {
+                    $db = new LayersDatabase();
+                    $latest = $db->getLatestLayerSet($file->getName(), $file->getSha1());
+                    if ($latest && isset($latest['data'])) {
+                        $layerData = isset($latest['data']['layers']) && is_array($latest['data']['layers'])
                             ? $latest['data']['layers']
                             : [];
-                            if (\class_exists('\\MediaWiki\\Logger\\LoggerFactory')) {
-                                $logger = \call_user_func(
-                                    [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-                                    'Layers'
-                                );
-                                $logger->info(
-                                    sprintf(
-                                        'Layers: DB fallback provided %d layers for thumbnail',
-                                        count($layerData)
-                                    )
-                                );
-                            }
+                        if (\class_exists('\\MediaWiki\\Logger\\LoggerFactory')) {
+                            $logger = \call_user_func(
+                                [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+                                'Layers'
+                            );
+                            $logger->info(
+                                sprintf(
+                                    'Layers: DB fallback provided %d layers for thumbnail',
+                                    count($layerData)
+                                )
+                            );
                         }
+                    }
                     } catch (\Throwable $e) {
                         if (\class_exists('\\MediaWiki\\Logger\\LoggerFactory')) {
                             $logger = \call_user_func([ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers');
@@ -1219,11 +1201,10 @@ class WikitextHooks
             if ($layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === true) {
                 $attribs['class'] = trim(( $attribs['class'] ?? '' ) . ' layers-thumbnail');
                 $attribs['data-layers-intent'] = 'on';
-            } else {
-                // Explicitly mark this instance as no-layers to prevent inheritance
-                if (self::$pageHasLayers) {
-                    $attribs['data-layers-intent'] = 'none';
-                }
+            } else if (self::$pageHasLayers) {
+                // If pageHasLayers=true (detected layers=all in wikitext), enable layers
+                $attribs['class'] = trim(( $attribs['class'] ?? '' ) . ' layers-thumbnail');
+                $attribs['data-layers-intent'] = 'on';
             }
         }
 
@@ -1396,14 +1377,23 @@ class WikitextHooks
             if (\class_exists('\\MediaWiki\\Logger\\LoggerFactory')) {
                 $logger = \call_user_func([ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers');
                 $logger->info('Layers: ParserBeforeInternalParse called with text length: ' . strlen($text));
+                // Debug: Show actual text content for debugging
+                if (strlen($text) < 200) {
+                    $logger->info('Layers: Text content: ' . $text);
+                } else if (strpos($text, 'File:') !== false) {
+                    $logger->info('Layers: Text contains File: reference');
+                }
             }
             
             // Multiple patterns to catch different variations
+            // Fixed patterns to properly handle layers= appearing directly after first pipe
             $patterns = [
-                '/\[\[File:[^|\]]*\|[^|\]]*layers\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)[^|\]]*\]\]/',
-                '/\[\[File:[^|\]]*\|[^|\]]*layer\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)[^|\]]*\]\]/',
-                '/\[\[File:[^|\]]*\|.*layers\s*=\s*(all|on|true|id:\d+|name:[^|\]]+)[^|\]]*\]\]/',
-                '/\[\[File:[^|\]]*\|.*layer\s*=\s*(all|on|true|id:\d+|name:[^|\]]+)[^|\]]*\]\]/'
+                '/\[\[File:[^|\]]*\|layers\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)/',
+                '/\[\[File:[^|\]]*\|layer\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)/',
+                '/\[\[File:[^|\]]*\|[^|\]]*layers\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)/',
+                '/\[\[File:[^|\]]*\|[^|\]]*layer\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)/',
+                '/\[\[File:[^|\]]*\|.*layers\s*=\s*(all|on|true|id:\d+|name:[^|\]]+)/',
+                '/\[\[File:[^|\]]*\|.*layer\s*=\s*(all|on|true|id:\d+|name:[^|\]]+)/'
             ];
             
             foreach ($patterns as $pattern) {
