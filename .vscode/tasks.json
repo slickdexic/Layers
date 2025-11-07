@@ -5,26 +5,25 @@
 			"label": "npm test (Layers)",
 			"type": "shell",
 			"command": "npm",
-			"args": [
-				"test"
-			],
+			"args": ["test"],
 			"isBackground": false,
-			"problemMatcher": [
-				"$eslint-stylish"
-			],
+			"group": "build",
+			"problemMatcher": ["$eslint-stylish"]
+		},
+		{
+			"label": "npm test:php (Layers)",
+			"type": "shell",
+			"command": "npm",
+			"args": ["run", "test:php"],
+			"isBackground": false,
 			"group": "build"
 		},
 		{
-			"label": "composer test (Layers)",
+			"label": "npm fix:php (Layers)",
 			"type": "shell",
-			"command": "composer",
-			"args": [
-				"test"
-			],
+			"command": "npm",
+			"args": ["run", "fix:php"],
 			"isBackground": false,
-			"problemMatcher": [
-				"$phpcs"
-			],
 			"group": "build"
 		}
 	]

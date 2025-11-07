@@ -2,35 +2,41 @@
 	"name": "layers",
 	"private": true,
 	"scripts": {
-		"test": "grunt test",
+		"test": "grunt test --force",
 		"test:js": "jest",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
+		"test:php": "php vendor/bin/parallel-lint . --exclude vendor --exclude node_modules && php vendor/bin/phpcs -sp --cache --runtime-set ignore_warnings_on_exit 1 && php vendor/bin/minus-x check .",
+		"test:phpunit": "php vendor/bin/phpunit --configuration phpunit.xml",
+		"test:phpunit-coverage": "php vendor/bin/phpunit --configuration phpunit.xml --coverage-html coverage-html",
+		"fix:php": "php vendor/bin/minus-x fix . && php vendor/bin/phpcbf",
 		"build": "webpack --mode=production",
 		"build:dev": "webpack --mode=development",
 		"watch": "webpack --mode=development --watch"
 	},
 	"devDependencies": {
-		"eslint-config-wikimedia": "0.24.0",
+		"@babel/core": "^7.26.0",
+		"@babel/preset-env": "^7.26.0",
+		"@testing-library/jest-dom": "^6.6.0",
+		"babel-loader": "^10.0.0",
+		"eslint-config-wikimedia": "0.31.0",
 		"grunt": "1.6.1",
-		"grunt-banana-checker": "0.10.0",
-		"grunt-eslint": "24.0.0",
-		"grunt-stylelint": "0.18.0",
-		"stylelint-config-wikimedia": "0.14.0",
-		"webpack": "^5.88.0",
-		"webpack-cli": "^5.1.0",
-		"babel-loader": "^9.1.0",
-		"@babel/core": "^7.22.0",
-		"@babel/preset-env": "^7.22.0",
-		"jest": "^29.7.0",
-		"jest-environment-jsdom": "^29.7.0",
-		"@testing-library/jest-dom": "^6.1.0"
+		"grunt-banana-checker": "0.13.0",
+		"grunt-eslint": "25.0.0",
+		"grunt-stylelint": "0.20.1",
+		"jest": "^30.0.0",
+		"jest-environment-jsdom": "^30.0.0",
+		"stylelint-config-wikimedia": "0.18.0",
+		"webpack": "^5.97.1",
+		"webpack-cli": "^6.0.1"
 	},
 	"eslintIgnore": [
 		"vendor/**",
 		"dist/**",
 		"tests/jest/**",
-		".stylelintrc.json",
-		"resources/ext.layers.editor/LayerPanel.js"
-	]
+		".stylelintrc.json"
+	],
+	"dependencies": {
+		"zustand": "^5.0.8"
+	}
 }

@@ -18,7 +18,7 @@ module.exports = function ( grunt ) {
 				'!vendor/**',
 				'!resources/dist/**',
 				'!tests/jest/**',
-				'!resources/ext.layers.editor/LayerPanel.js'
+				'!.eslintrc.json'
 			]
 		},
 		stylelint: {

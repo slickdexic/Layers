@@ -1,0 +1,509 @@
+<?php
+
+namespace MediaWiki\Extension\Layers\Validation;
+
+use MediaWiki\MediaWikiServices;
+
+/**
+ * Server-side layer validator implementation
+ *
+ * This class provides comprehensive validation and sanitization
+ * of layer data with security-focused validation rules.
+ */
+class ServerSideLayerValidator implements LayerValidatorInterface {
+
+	/** @var TextSanitizer */
+	private $textSanitizer;
+
+	/** @var ColorValidator */
+	private $colorValidator;
+
+	/** @var array Configuration cache */
+	private $config;
+
+	/** @var array Supported layer types */
+	private const SUPPORTED_LAYER_TYPES = [
+		'text', 'arrow', 'rectangle', 'circle', 'ellipse',
+		'polygon', 'star', 'line', 'highlight', 'path', 'blur'
+	];
+
+	/** @var array Allowed properties and their types */
+	private const ALLOWED_PROPERTIES = [
+		'type' => 'string',
+		'id' => 'string',
+		'name' => 'string',
+		'x' => 'numeric',
+		'y' => 'numeric',
+		'width' => 'numeric',
+		'height' => 'numeric',
+		'radius' => 'numeric',
+		'radiusX' => 'numeric',
+		'radiusY' => 'numeric',
+		'x1' => 'numeric',
+		'y1' => 'numeric',
+		'x2' => 'numeric',
+		'y2' => 'numeric',
+		'rotation' => 'numeric',
+		'text' => 'string',
+		'fontSize' => 'numeric',
+		'fontFamily' => 'string',
+		'color' => 'string',
+		'stroke' => 'string',
+		'fill' => 'string',
+		'strokeWidth' => 'numeric',
+		'opacity' => 'numeric',
+		'fillOpacity' => 'numeric',
+		'strokeOpacity' => 'numeric',
+		'blendMode' => 'string',
+		'blend' => 'string', // Alias for blendMode
+		'visible' => 'boolean',
+		'locked' => 'boolean',
+		'textStrokeColor' => 'string',
+		'textStrokeWidth' => 'numeric',
+		'textShadow' => 'boolean',
+		'textShadowColor' => 'string',
+		'shadow' => 'boolean',
+		'shadowColor' => 'string',
+		'shadowBlur' => 'numeric',
+		'shadowOffsetX' => 'numeric',
+		'shadowOffsetY' => 'numeric',
+		'shadowSpread' => 'numeric',
+		'glow' => 'boolean',
+		'arrowhead' => 'string',
+		'arrowStyle' => 'string',
+		'arrowSize' => 'numeric',
+		'blurRadius' => 'numeric',
+		'points' => 'array',
+		'sides' => 'numeric',
+		'startAngle' => 'numeric',
+		'endAngle' => 'numeric',
+		'innerRadius' => 'numeric',
+		'outerRadius' => 'numeric'
+	];
+
+	/** @var array Value constraints for enum-like properties */
+	private const VALUE_CONSTRAINTS = [
+		'blendMode' => [
+			'normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten',
+			'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference',
+			'exclusion'
+		],
+		'arrowhead' => [ 'none', 'arrow', 'circle', 'diamond', 'triangle' ],
+		'arrowStyle' => [ 'solid', 'dashed', 'dotted' ]
+	];
+
+	/** @var array Numeric constraints */
+	private const NUMERIC_CONSTRAINTS = [
+		'opacity' => [ 'min' => 0, 'max' => 1 ],
+		'fillOpacity' => [ 'min' => 0, 'max' => 1 ],
+		'strokeOpacity' => [ 'min' => 0, 'max' => 1 ],
+		'fontSize' => [ 'min' => 1, 'max' => 200 ],
+		'strokeWidth' => [ 'min' => 0, 'max' => 100 ],
+		'width' => [ 'min' => 0, 'max' => 10000 ],
+		'height' => [ 'min' => 0, 'max' => 10000 ],
+		'radius' => [ 'min' => 0, 'max' => 5000 ],
+		'radiusX' => [ 'min' => 0, 'max' => 5000 ],
+		'radiusY' => [ 'min' => 0, 'max' => 5000 ],
+		'arrowSize' => [ 'min' => 1, 'max' => 100 ],
+		'blurRadius' => [ 'min' => 0, 'max' => 100 ]
+	];
+
+	/** @var int Maximum points in a path/polygon */
+	private const MAX_POINTS = 1000;
+
+	public function __construct() {
+		$this->textSanitizer = new TextSanitizer();
+		$this->colorValidator = new ColorValidator();
+		$this->loadConfig();
+	}
+
+	/**
+	 * Load configuration values
+	 */
+	private function loadConfig(): void {
+		try {
+			if ( class_exists( MediaWikiServices::class ) ) {
+				$config = MediaWikiServices::getInstance()->getMainConfig();
+				$this->config = [
+					'maxLayers' => $config->get( 'LayersMaxLayerCount' ) ?? 100,
+					'defaultFonts' => $config->get( 'LayersDefaultFonts' ) ?? [ 'Arial', 'sans-serif' ]
+				];
+			} else {
+				$this->config = [
+					'maxLayers' => 100,
+					'defaultFonts' => [ 'Arial', 'sans-serif' ]
+				];
+			}
+		} catch ( \Throwable $e ) {
+			// Fallback configuration
+			$this->config = [
+				'maxLayers' => 100,
+				'defaultFonts' => [ 'Arial', 'sans-serif' ]
+			];
+		}
+	}
+
+	/**
+	 * Validate and sanitize an array of layers
+	 *
+	 * @param array $layersData Raw layer data from client
+	 * @return ValidationResult Result containing validated data and any issues
+	 */
+	public function validateLayers( array $layersData ): ValidationResult {
+		$result = new ValidationResult();
+
+		// Check layer count
+		if ( count( $layersData ) > $this->getMaxLayerCount() ) {
+			$result->addError( "Too many layers: " . count( $layersData ) . " (max: " . $this->getMaxLayerCount() . ")" );
+			return $result;
+		}
+
+		if ( empty( $layersData ) ) {
+			$result->addWarning( "No layers provided" );
+			return ValidationResult::success( [] );
+		}
+
+		$validatedLayers = [];
+		$layerIndex = 0;
+
+		foreach ( $layersData as $layer ) {
+			$layerResult = $this->validateLayer( $layer );
+
+			if ( $layerResult->isValid() ) {
+				$validatedLayers[] = $layerResult->getData();
+			} else {
+				foreach ( $layerResult->getErrors() as $error ) {
+					$result->addError( "Layer $layerIndex: $error" );
+				}
+			}
+
+			foreach ( $layerResult->getWarnings() as $warning ) {
+				$result->addWarning( "Layer $layerIndex: $warning" );
+			}
+
+			$layerIndex++;
+		}
+
+		if ( $result->hasErrors() ) {
+			return $result;
+		}
+
+		$result->setMetadata( 'originalLayerCount', count( $layersData ) );
+		$result->setMetadata( 'validatedLayerCount', count( $validatedLayers ) );
+
+		return ValidationResult::success( $validatedLayers, $result->getWarnings(), $result->getMetadata() );
+	}
+
+	/**
+	 * Validate a single layer
+	 *
+	 * @param array $layer Raw layer data
+	 * @return ValidationResult Result for the single layer
+	 */
+	public function validateLayer( array $layer ): ValidationResult {
+		$result = new ValidationResult();
+
+		// Check if layer has required type
+		if ( !isset( $layer['type'] ) || !is_string( $layer['type'] ) ) {
+			$result->addError( "Missing or invalid layer type" );
+			return $result;
+		}
+
+		$type = $layer['type'];
+		if ( !$this->isLayerTypeSupported( $type ) ) {
+			$result->addError( "Unsupported layer type: $type" );
+			return $result;
+		}
+
+		$cleanLayer = [ 'type' => $type ];
+
+		// Validate each property
+		foreach ( self::ALLOWED_PROPERTIES as $property => $expectedType ) {
+			if ( !isset( $layer[$property] ) ) {
+				continue;
+			}
+
+			$value = $layer[$property];
+			$validationResult = $this->validateProperty( $property, $value, $expectedType );
+
+			if ( $validationResult['valid'] ) {
+				$cleanLayer[$property] = $validationResult['value'];
+			} else {
+				$result->addWarning( "Invalid property '$property': " . $validationResult['error'] );
+			}
+		}
+
+		// Handle blend mode alias
+		if ( isset( $cleanLayer['blend'] ) && !isset( $cleanLayer['blendMode'] ) ) {
+			$cleanLayer['blendMode'] = $cleanLayer['blend'];
+		}
+		unset( $cleanLayer['blend'] );
+
+		// Layer-specific validation
+		$layerValidation = $this->validateLayerSpecific( $cleanLayer );
+		if ( !$layerValidation['valid'] ) {
+			$result->addError( $layerValidation['error'] );
+			return $result;
+		}
+
+		return ValidationResult::success( $cleanLayer );
+	}
+
+	/**
+	 * Validate a specific property
+	 *
+	 * @param string $property Property name
+	 * @param mixed $value Property value
+	 * @param string $expectedType Expected type
+	 * @return array Validation result with 'valid', 'value', and optionally 'error'
+	 */
+	private function validateProperty( string $property, $value, string $expectedType ): array {
+		switch ( $expectedType ) {
+			case 'string':
+				return $this->validateStringProperty( $property, $value );
+			case 'numeric':
+				return $this->validateNumericProperty( $property, $value );
+			case 'boolean':
+				return $this->validateBooleanProperty( $value );
+			case 'array':
+				return $this->validateArrayProperty( $property, $value );
+			default:
+				return [ 'valid' => false, 'error' => "Unknown property type: $expectedType" ];
+		}
+	}
+
+	/**
+	 * Validate string property
+	 *
+	 * @param string $property Property name
+	 * @param mixed $value Property value
+	 * @return array Validation result
+	 */
+	private function validateStringProperty( string $property, $value ): array {
+		if ( !is_string( $value ) ) {
+			return [ 'valid' => false, 'error' => 'Must be a string' ];
+		}
+
+		// Length check
+		if ( strlen( $value ) > 1000 ) {
+			return [ 'valid' => false, 'error' => 'String too long' ];
+		}
+
+		// Handle different string types
+		if ( in_array( $property, [ 'text', 'name' ], true ) ) {
+			// User text - sanitize
+			$sanitized = $this->textSanitizer->sanitizeText( $value );
+			if ( empty( trim( $sanitized ) ) && $property === 'text' ) {
+				return [ 'valid' => false, 'error' => 'Text cannot be empty' ];
+			}
+			return [ 'valid' => true, 'value' => $sanitized ];
+		}
+
+		if ( in_array( $property, [ 'id', 'type', 'fontFamily' ], true ) ) {
+			// Identifiers - sanitize
+			$sanitized = $this->textSanitizer->sanitizeIdentifier( $value );
+			if ( $property === 'fontFamily' && !in_array( $sanitized, $this->config['defaultFonts'], true ) ) {
+				return [ 'valid' => false, 'error' => 'Font not in allowed list' ];
+			}
+			return [ 'valid' => true, 'value' => $sanitized ];
+		}
+
+		if ( in_array( $property, [ 'blendMode', 'arrowhead', 'arrowStyle' ], true ) ) {
+			// Constrained values
+			if ( isset( self::VALUE_CONSTRAINTS[$property] ) ) {
+				if ( !in_array( $value, self::VALUE_CONSTRAINTS[$property], true ) ) {
+					return [ 'valid' => false, 'error' => 'Invalid value for ' . $property ];
+				}
+			}
+			return [ 'valid' => true, 'value' => $value ];
+		}
+
+		// Colors
+		if ( in_array( $property, [ 'color', 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor' ], true ) ) {
+			if ( !$this->colorValidator->isSafeColor( $value ) ) {
+				return [ 'valid' => false, 'error' => 'Unsafe color value' ];
+			}
+			$sanitized = $this->colorValidator->sanitizeColor( $value );
+			return [ 'valid' => true, 'value' => $sanitized ];
+		}
+
+		return [ 'valid' => true, 'value' => $value ];
+	}
+
+	/**
+	 * Validate numeric property
+	 *
+	 * @param string $property Property name
+	 * @param mixed $value Property value
+	 * @return array Validation result
+	 */
+	private function validateNumericProperty( string $property, $value ): array {
+		if ( !is_numeric( $value ) ) {
+			return [ 'valid' => false, 'error' => 'Must be numeric' ];
+		}
+
+		$numValue = (float)$value;
+
+		// Check for NaN and infinite values
+		if ( !is_finite( $numValue ) ) {
+			return [ 'valid' => false, 'error' => 'Invalid numeric value' ];
+		}
+
+		// Apply constraints
+		if ( isset( self::NUMERIC_CONSTRAINTS[$property] ) ) {
+			$constraints = self::NUMERIC_CONSTRAINTS[$property];
+			if ( isset( $constraints['min'] ) && $numValue < $constraints['min'] ) {
+				return [ 'valid' => false, 'error' => "Value too small (min: {$constraints['min']})" ];
+			}
+			if ( isset( $constraints['max'] ) && $numValue > $constraints['max'] ) {
+				return [ 'valid' => false, 'error' => "Value too large (max: {$constraints['max']})" ];
+			}
+		} else {
+			// General numeric limits
+			if ( $numValue < -100000 || $numValue > 100000 ) {
+				return [ 'valid' => false, 'error' => 'Value out of allowed range' ];
+			}
+		}
+
+		return [ 'valid' => true, 'value' => $numValue ];
+	}
+
+	/**
+	 * Validate boolean property
+	 *
+	 * @param mixed $value Property value
+	 * @return array Validation result
+	 */
+	private function validateBooleanProperty( $value ): array {
+		if ( is_bool( $value ) ) {
+			return [ 'valid' => true, 'value' => $value ];
+		}
+
+		if ( $value === 1 || $value === 0 ) {
+			return [ 'valid' => true, 'value' => (bool)$value ];
+		}
+
+		if ( $value === '1' || $value === 'true' ) {
+			return [ 'valid' => true, 'value' => true ];
+		}
+
+		if ( $value === '0' || $value === 'false' ) {
+			return [ 'valid' => true, 'value' => false ];
+		}
+
+		return [ 'valid' => false, 'error' => 'Must be boolean' ];
+	}
+
+	/**
+	 * Validate array property (like points)
+	 *
+	 * @param string $property Property name
+	 * @param mixed $value Property value
+	 * @return array Validation result
+	 */
+	private function validateArrayProperty( string $property, $value ): array {
+		if ( !is_array( $value ) ) {
+			return [ 'valid' => false, 'error' => 'Must be an array' ];
+		}
+
+		if ( $property === 'points' ) {
+			if ( count( $value ) > self::MAX_POINTS ) {
+				return [ 'valid' => false, 'error' => 'Too many points' ];
+			}
+
+			$validPoints = [];
+			foreach ( $value as $point ) {
+				if ( !is_array( $point ) || !isset( $point['x'] ) || !isset( $point['y'] ) ) {
+					continue;
+				}
+				if ( !is_numeric( $point['x'] ) || !is_numeric( $point['y'] ) ) {
+					continue;
+				}
+				$validPoints[] = [
+					'x' => (float)$point['x'],
+					'y' => (float)$point['y']
+				];
+			}
+
+			return [ 'valid' => true, 'value' => $validPoints ];
+		}
+
+		return [ 'valid' => true, 'value' => $value ];
+	}
+
+	/**
+	 * Perform layer-specific validation
+	 *
+	 * @param array $layer Validated layer data
+	 * @return array Validation result
+	 */
+	private function validateLayerSpecific( array $layer ): array {
+		$type = $layer['type'];
+
+		switch ( $type ) {
+			case 'text':
+				if ( !isset( $layer['text'] ) || empty( trim( $layer['text'] ) ) ) {
+					return [ 'valid' => false, 'error' => 'Text layer must have text content' ];
+				}
+				break;
+
+			case 'rectangle':
+			case 'ellipse':
+				if ( !isset( $layer['width'] ) || !isset( $layer['height'] ) ) {
+					return [ 'valid' => false, 'error' => "$type layer must have width and height" ];
+				}
+				break;
+
+			case 'circle':
+				if ( !isset( $layer['radius'] ) ) {
+					return [ 'valid' => false, 'error' => 'Circle layer must have radius' ];
+				}
+				break;
+
+			case 'line':
+			case 'arrow':
+				if ( !isset( $layer['x1'] ) || !isset( $layer['y1'] ) ||
+					 !isset( $layer['x2'] ) || !isset( $layer['y2'] ) ) {
+					return [ 'valid' => false, 'error' => "$type layer must have x1, y1, x2, y2" ];
+				}
+				break;
+
+			case 'polygon':
+			case 'path':
+				if ( !isset( $layer['points'] ) || empty( $layer['points'] ) ) {
+					return [ 'valid' => false, 'error' => "$type layer must have points" ];
+				}
+				break;
+		}
+
+		return [ 'valid' => true ];
+	}
+
+	/**
+	 * Get the maximum number of layers allowed
+	 *
+	 * @return int Maximum layer count
+	 */
+	public function getMaxLayerCount(): int {
+		return $this->config['maxLayers'];
+	}
+
+	/**
+	 * Get the list of supported layer types
+	 *
+	 * @return array Supported layer types
+	 */
+	public function getSupportedLayerTypes(): array {
+		return self::SUPPORTED_LAYER_TYPES;
+	}
+
+	/**
+	 * Check if a layer type is supported
+	 *
+	 * @param string $type Layer type to check
+	 * @return bool True if supported
+	 */
+	public function isLayerTypeSupported( string $type ): bool {
+		return in_array( $type, self::SUPPORTED_LAYER_TYPES, true );
+	}
+}

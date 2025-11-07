@@ -74,6 +74,23 @@ var mw = {
         using: function ( modules ) {
             return Promise.resolve();
         }
+    },
+
+    hook: function ( name ) {
+        var callbacks = [];
+        return {
+            add: function ( callback ) {
+                callbacks.push( callback );
+                return this;
+            },
+            fire: function () {
+                var args = Array.prototype.slice.call( arguments );
+                callbacks.forEach( function ( callback ) {
+                    callback.apply( null, args );
+                } );
+                return this;
+            }
+        };
     }
 };
 

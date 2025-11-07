@@ -12,135 +12,195 @@ namespace MediaWiki\Extension\Layers\Security;
 use MediaWiki\MediaWikiServices;
 use User;
 
-class RateLimiter
-{
-    /** @var \Config */
-    private $config;
+class RateLimiter {
+	/** @var \Config */
+	private $config;
 
-    public function __construct()
-    {
-        $this->config = MediaWikiServices::getInstance()->getMainConfig();
-    }
+	public function __construct() {
+		$this->config = MediaWikiServices::getInstance()->getMainConfig();
+	}
 
-    /**
-     * Check if user is within rate limits for layer operations
-     *
-     * @param User $user
-     * @param string $action Type of action: 'save', 'render', 'create'
-     * @return bool True if allowed, false if rate limited
-     */
-    public function checkRateLimit(User $user, string $action): bool
-    {
-        // Skip rate limiting for privileged users
-        if ($user->isAllowed('managelayerlibrary')) {
-            return true;
-        }
+	/**
+	 * Check if user is within rate limits for layer operations
+	 * Implements separate rate limits for privileged users to prevent resource exhaustion
+	 * attacks from compromised admin accounts
+	 *
+	 * @param User $user
+	 * @param string $action Type of action: 'save', 'render', 'create'
+	 * @return bool True if allowed, false if rate limited
+	 */
+	public function checkRateLimit( User $user, string $action ): bool {
+		// Get rate limits from config with proper fallback
+		$rateLimits = $this->config->get( 'RateLimits' ) ?? [];
 
-        // Get rate limits from config with proper fallback
-        $rateLimits = $this->config->get('RateLimits') ?? [];
+		$limitKey = "editlayers-{$action}";
 
-        $limitKey = "editlayers-{$action}";
+		// Default limits if not configured - includes privileged user limits
+		$defaultLimits = [
+			'editlayers-save' => [
+				// 30 saves per hour for users
+				'user' => [ 30, 3600 ],
+				// 5 saves per hour for new users
+				'newbie' => [ 5, 3600 ],
+				// 50 saves per hour for autoconfirmed
+				'autoconfirmed' => [ 50, 3600 ],
+				// Higher but limited rate for privileged users (prevents abuse)
+				'sysop' => [ 100, 3600 ],
+				// Separate limit for library managers
+				'managelayerlibrary' => [ 200, 3600 ],
+			],
+			'editlayers-render' => [
+				// 100 renders per hour
+				'user' => [ 100, 3600 ],
+				// 20 renders per hour for new users
+				'newbie' => [ 20, 3600 ],
+				// 200 renders per hour for autoconfirmed
+				'autoconfirmed' => [ 200, 3600 ],
+				// Higher but limited rate for privileged users
+				'sysop' => [ 500, 3600 ],
+				'managelayerlibrary' => [ 1000, 3600 ],
+			],
+			'editlayers-create' => [
+				// 10 new layer sets per hour
+				'user' => [ 10, 3600 ],
+				// 2 new layer sets per hour for new users
+				'newbie' => [ 2, 3600 ],
+				// 20 new layer sets per hour for autoconfirmed
+				'autoconfirmed' => [ 20, 3600 ],
+				// Higher but limited rate for privileged users
+				'sysop' => [ 50, 3600 ],
+				'managelayerlibrary' => [ 100, 3600 ],
+			],
+		];
 
-        // Default limits if not configured
-        $defaultLimits = [
-            'editlayers-save' => [
-                // 30 saves per hour for users
-                'user' => [ 30, 3600 ],
-                // 5 saves per hour for new users
-                'newbie' => [ 5, 3600 ],
-                // 50 saves per hour for autoconfirmed
-                'autoconfirmed' => [ 50, 3600 ],
-            ],
-            'editlayers-render' => [
-                // 100 renders per hour
-                'user' => [ 100, 3600 ],
-                // 20 renders per hour for new users
-                'newbie' => [ 20, 3600 ],
-                // 200 renders per hour for autoconfirmed
-                'autoconfirmed' => [ 200, 3600 ],
-            ],
-            'editlayers-create' => [
-                // 10 new layer sets per hour
-                'user' => [ 10, 3600 ],
-                // 2 new layer sets per hour for new users
-                'newbie' => [ 2, 3600 ],
-                // 20 new layer sets per hour for autoconfirmed
-                'autoconfirmed' => [ 20, 3600 ],
-            ],
-        ];
+		// Use configured limits or fall back to defaults
+		$limits = $rateLimits[$limitKey] ?? $defaultLimits[$limitKey] ?? null;
 
-        // Use configured limits or fall back to defaults
-        $limits = $rateLimits[$limitKey] ?? $defaultLimits[$limitKey] ?? null;
+		if ( !$limits ) {
+			// No limits configured - allow but log this condition
+			$this->logRateLimitEvent( $user, $action, 'no_limits_configured' );
+			return true;
+		}
 
-        if (!$limits) {
-            // No limits configured
-            return true;
-        }
+		// Check against MediaWiki's rate limiting system
+		// This will automatically handle different user groups and their limits
+		$isLimited = $user->pingLimiter( $limitKey );
 
-        // Check against MediaWiki's rate limiting system
-        return !$user->pingLimiter($limitKey);
-    }
+		if ( $isLimited ) {
+			$this->logRateLimitEvent( $user, $action, 'rate_limited' );
+		}
 
-    /**
-     * Validate image size for processing
-     *
-     * @param int $width
-     * @param int $height
-     * @return bool
-     */
-    public function isImageSizeAllowed(int $width, int $height): bool
-    {
-        $maxDimensions = $this->config->get('LayersMaxImageDimensions');
+		return !$isLimited;
+	}
 
-        return $width <= $maxDimensions && $height <= $maxDimensions;
-    }
+	/**
+	 * Log rate limiting events for security monitoring
+	 *
+	 * @param User $user The user being rate limited
+	 * @param string $action The action being performed
+	 * @param string $result The result (rate_limited, no_limits_configured, etc.)
+	 */
+	private function logRateLimitEvent( User $user, string $action, string $result ): void {
+		// Use MediaWiki logging if available
+		if ( function_exists( 'wfLogWarning' ) ) {
+			wfLogWarning( sprintf(
+				'Layers rate limit: user=%d action=%s result=%s',
+				$user->getId(),
+				$action,
+				$result
+			) );
+		}
+	}
 
-    /**
-     * Check if layer count is within limits
-     *
-     * @param int $layerCount
-     * @return bool
-     */
-    public function isLayerCountAllowed(int $layerCount): bool
-    {
-        // Prevent abuse with too many layers
-        return $layerCount <= 50;
-    }
+	/**
+	 * Validate image size for processing
+	 *
+	 * @param int $width
+	 * @param int $height
+	 * @return bool
+	 */
+	public function isImageSizeAllowed( int $width, int $height ): bool {
+		$maxDimensions = $this->config->get( 'LayersMaxImageDimensions' );
 
-    /**
-     * Validate layer complexity (approximate processing cost)
-     *
-     * @param array $layers
-     * @return bool
-     */
-    public function isComplexityAllowed(array $layers): bool
-    {
-        $complexity = 0;
+		// Support both scalar (single max edge) and array [maxW, maxH] or ['width'=>, 'height'=>]
+		if ( is_array( $maxDimensions ) ) {
+			$maxW = null;
+			$maxH = null;
+			if ( isset( $maxDimensions['width'] ) || isset( $maxDimensions['height'] ) ) {
+				$w = $maxDimensions['width'] ?? ( $maxDimensions['height'] ?? 0 );
+				$h = $maxDimensions['height'] ?? ( $maxDimensions['width'] ?? 0 );
+				$maxW = (int)$w;
+				$maxH = (int)$h;
+			} else {
+				$maxW = (int)( $maxDimensions[0] ?? 0 );
+				$maxH = (int)( $maxDimensions[1] ?? $maxW );
+			}
+			if ( $maxW <= 0 || $maxH <= 0 ) {
+				// no effective limit configured
+				return true;
+			}
+			return ( $width <= $maxW && $height <= $maxH );
+		}
 
-        foreach ($layers as $layer) {
-            switch ($layer['type']) {
-                case 'text':
-                    $complexity += 2;
-                    break;
-                case 'rectangle':
-                case 'circle':
-                case 'line':
-                    $complexity += 1;
-                    break;
-                case 'arrow':
-                    // More complex to render
-                    $complexity += 3;
-                    break;
-                case 'highlight':
-                    $complexity += 1;
-                    break;
-                default:
-                    // Unknown types are more expensive
-                    $complexity += 2;
-            }
-        }
+		// Fallback to single edge limit, prefer LayersMaxImageDimensions, else LayersMaxImageSize
+		$maxEdge = (int)$maxDimensions;
+		if ( $maxEdge <= 0 ) {
+			$maxEdge = (int)( $this->config->get( 'LayersMaxImageSize' ) ?? 0 );
+		}
+		if ( $maxEdge <= 0 ) {
+			return true;
+		}
+		return ( $width <= $maxEdge && $height <= $maxEdge );
+	}
 
-        // Maximum complexity threshold
-        return $complexity <= 100;
-    }
+	/**
+	 * Check if layer count is within limits
+	 *
+	 * @param int $layerCount
+	 * @return bool
+	 */
+	public function isLayerCountAllowed( int $layerCount ): bool {
+		// Use configured limit with a safe default
+		$maxLayers = (int)( $this->config->get( 'LayersMaxLayerCount' ) ?? 100 );
+		if ( $maxLayers <= 0 ) {
+			$maxLayers = 100;
+		}
+		return $layerCount <= $maxLayers;
+	}
+
+	/**
+	 * Validate layer complexity (approximate processing cost)
+	 *
+	 * @param array $layers
+	 * @return bool
+	 */
+	public function isComplexityAllowed( array $layers ): bool {
+		$complexity = 0;
+
+		foreach ( $layers as $layer ) {
+			switch ( $layer['type'] ) {
+				case 'text':
+					$complexity += 2;
+					break;
+				case 'rectangle':
+				case 'circle':
+				case 'line':
+					$complexity += 1;
+					break;
+				case 'arrow':
+					// More complex to render
+					$complexity += 3;
+					break;
+				case 'highlight':
+					$complexity += 1;
+					break;
+				default:
+					// Unknown types are more expensive
+					$complexity += 2;
+			}
+		}
+
+		// Maximum complexity threshold
+		return $complexity <= 100;
+	}
 }

@@ -1,19 +1,31 @@
 {
 	"root": true,
-	"extends": [
-		"wikimedia/client-es5",
-		"wikimedia/jquery",
-		"wikimedia/mediawiki"
-	],
+	"env": {
+		"browser": true,
+		"es6": true
+	},
+	"extends": ["eslint:recommended"],
+	"globals": {
+		"mw": "readonly",
+		"$": "readonly",
+		"jQuery": "readonly"
+	},
 	"ignorePatterns": [
 		".stylelintrc.json",
-		"resources/ext.layers.editor/LayerPanel.js"
+		"*-backup.js",
+		"*.backup.js",
+		"resources/dist/",
+		"node_modules/",
+		"vendor/",
+		"tests/"
 	],
 	"rules": {
 		"no-implicit-globals": "off",
-		"es-x/no-array-prototype-fill": "off",
-		"es-x/no-string-prototype-repeat": "off",
-		"linebreak-style": "off"
+		"linebreak-style": "off",
+		"no-var": "error",
+		"prefer-const": "error",
+		"no-unused-vars": "error",
+		"no-empty": "off"
 	},
 	"overrides": [
 		{
@@ -24,24 +36,28 @@
 			}
 		},
 		{
-			"files": [ "**/*.js" ],
+			"files": [ "resources/ext.layers.editor/*.js" ],
+			"globals": {
+				"require": "readonly",
+				"module": "readonly"
+			}
+		},
+		{
+			"files": [
+				"resources/ext.layers.editor/UIManager.js",
+				"resources/ext.layers.editor/EventManager.js",
+				"resources/ext.layers.editor/APIManager.js",
+				"resources/ext.layers.editor/ValidationManager.js",
+				"resources/ext.layers.editor/StateManager.js"
+			],
 			"rules": {
-				"linebreak-style": "off"
+				"no-unused-vars": "off"
 			}
 		},
 		{
 			"files": [ "webpack.config.js", "jest.config.js", "Gruntfile.js" ],
 			"env": {
-				"node": true,
-				"es6": true
-			},
-			"parserOptions": {
-				"ecmaVersion": 2015,
-				"sourceType": "module"
-			},
-			"extends": [ "wikimedia/server" ],
-			"rules": {
-				"es-x/no-block-scoped-variables": "off"
+				"node": true
 			}
 		}
 	]

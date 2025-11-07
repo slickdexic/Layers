@@ -47,7 +47,7 @@
 	 * Set up all event listeners
 	 */
 	EventHandler.prototype.setupEventListeners = function () {
-		var self = this;
+		const self = this;
 		this.listeners = {};
 
 		// Mouse events
@@ -91,21 +91,21 @@
 		// Wheel event: handled by CanvasManager to centralize zoom-to-pointer logic
 
 		// Prevent context menu
-		this.canvas.addEventListener( 'contextmenu', function ( e ) {
+		this.canvas.addEventListener( 'contextmenu', ( e ) => {
 			e.preventDefault();
 		} );
 
 		// Keyboard events for pan and zoom
-		document.addEventListener( 'keydown', function ( e ) {
+		document.addEventListener( 'keydown', ( e ) => {
 			self.handleKeyDown( e );
 		} );
 
-		document.addEventListener( 'keyup', function ( e ) {
+		document.addEventListener( 'keyup', ( e ) => {
 			self.handleKeyUp( e );
 		} );
 
 		// Window resize
-		window.addEventListener( 'resize', function () {
+		window.addEventListener( 'resize', () => {
 			self.handleResize();
 		} );
 	};
@@ -126,7 +126,7 @@
 		}
 
 		this.isMouseDown = true;
-		var coords = this.getCoordsFromEvent( e );
+		const coords = this.getCoordsFromEvent( e );
 		this.lastMousePoint = coords;
 
 		// Prefer pointer-based APIs if available
@@ -150,7 +150,7 @@
 		if ( !this.isMouseDown ) {
 			return;
 		}
-		var coords = this.getCoordsFromEvent( e );
+		const coords = this.getCoordsFromEvent( e );
 		this.lastMousePoint = coords;
 
 		if ( this.canvasManager && typeof this.canvasManager.handlePointerMove === 'function' ) {
@@ -170,7 +170,7 @@
 			e.preventDefault();
 		}
 		this.isMouseDown = false;
-		var coords = this.getCoordsFromEvent( e );
+		const coords = this.getCoordsFromEvent( e );
 
 		if ( this.canvasManager && typeof this.canvasManager.handlePointerUp === 'function' ) {
 			this.canvasManager.handlePointerUp( coords.x, coords.y );
@@ -188,12 +188,12 @@
 		if ( e && typeof e.preventDefault === 'function' ) {
 			e.preventDefault();
 		}
-		var touch = e.touches[ 0 ];
+		const touch = e.touches[ 0 ];
 		// Compute canvas-relative coords
-		var rect = this.canvas.getBoundingClientRect();
-		var x = touch.clientX - rect.left;
-		var y = touch.clientY - rect.top;
-		var downEvt = {
+		const rect = this.canvas.getBoundingClientRect();
+		const x = touch.clientX - rect.left;
+		const y = touch.clientY - rect.top;
+		const downEvt = {
 			preventDefault: function () {},
 			button: 0,
 			offsetX: x,
@@ -202,8 +202,8 @@
 		this.handleMouseDown( downEvt );
 
 		// Store touch for multi-touch gestures
-		for ( var i = 0; i < e.touches.length; i++ ) {
-			var t = e.touches[ i ];
+		for ( let i = 0; i < e.touches.length; i++ ) {
+			const t = e.touches[ i ];
 			this.touches[ t.identifier ] = {
 				x: t.clientX,
 				y: t.clientY,
@@ -222,10 +222,10 @@
 		if ( e && typeof e.preventDefault === 'function' ) {
 			e.preventDefault();
 		}
-		var touch = e.touches[ 0 ];
-		var rect = this.canvas.getBoundingClientRect();
-		var x = touch.clientX - rect.left;
-		var y = touch.clientY - rect.top;
+		const touch = e.touches[ 0 ];
+		const rect = this.canvas.getBoundingClientRect();
+		const x = touch.clientX - rect.left;
+		const y = touch.clientY - rect.top;
 		// Call pointer move directly for touch; don't require isMouseDown
 		if ( this.canvasManager && typeof this.canvasManager.handlePointerMove === 'function' ) {
 			this.canvasManager.handlePointerMove( x, y );
@@ -249,10 +249,10 @@
 			e.preventDefault();
 		}
 		// Use last changed touch position to compute coords
-		var t = e.changedTouches && e.changedTouches[ 0 ];
-		var rect = this.canvas.getBoundingClientRect();
-		var x = t ? ( t.clientX - rect.left ) : 0;
-		var y = t ? ( t.clientY - rect.top ) : 0;
+		const t = e.changedTouches && e.changedTouches[ 0 ];
+		const rect = this.canvas.getBoundingClientRect();
+		const x = t ? ( t.clientX - rect.left ) : 0;
+		const y = t ? ( t.clientY - rect.top ) : 0;
 		if ( this.canvasManager && typeof this.canvasManager.handlePointerUp === 'function' ) {
 			this.canvasManager.handlePointerUp( x, y );
 		} else if ( typeof this.canvasManager.handleMouseUp === 'function' ) {
@@ -260,8 +260,8 @@
 		}
 
 		// Clean up touch tracking
-		for ( var i = 0; i < e.changedTouches.length; i++ ) {
-			var touch = e.changedTouches[ i ];
+		for ( let i = 0; i < e.changedTouches.length; i++ ) {
+			const touch = e.changedTouches[ i ];
 			delete this.touches[ touch.identifier ];
 		}
 	};
@@ -272,8 +272,8 @@
 	 * @param {WheelEvent} e Wheel event
 	 */
 	EventHandler.prototype.handleWheel = function ( e ) {
-		var delta = e.deltaY > 0 ? -0.1 : 0.1;
-		var point = this.getMousePoint( e );
+		const delta = e.deltaY > 0 ? -0.1 : 0.1;
+		const point = this.getMousePoint( e );
 
 		// Delegate to canvas manager
 		this.canvasManager.zoomBy( delta, point );
@@ -285,20 +285,20 @@
 	 * @param {TouchEvent} e Touch event
 	 */
 	EventHandler.prototype.handlePinchZoom = function ( e ) {
-		var touch1 = e.touches[ 0 ];
-		var touch2 = e.touches[ 1 ];
+		const touch1 = e.touches[ 0 ];
+		const touch2 = e.touches[ 1 ];
 
-		var currentDistance = Math.sqrt(
+		const currentDistance = Math.sqrt(
 			Math.pow( touch2.clientX - touch1.clientX, 2 ) +
 			Math.pow( touch2.clientY - touch1.clientY, 2 )
 		);
 
 		if ( this.lastPinchDistance ) {
-			var delta = ( currentDistance - this.lastPinchDistance ) * 0.01;
-			var centerX = ( touch1.clientX + touch2.clientX ) / 2;
-			var centerY = ( touch1.clientY + touch2.clientY ) / 2;
+			const delta = ( currentDistance - this.lastPinchDistance ) * 0.01;
+			const centerX = ( touch1.clientX + touch2.clientX ) / 2;
+			const centerY = ( touch1.clientY + touch2.clientY ) / 2;
 
-			var point = this.canvasManager.getMousePointFromClient( centerX, centerY );
+			const point = this.canvasManager.getMousePointFromClient( centerX, centerY );
 			this.canvasManager.zoomBy( delta, point );
 		}
 
@@ -312,14 +312,14 @@
 	 */
 	EventHandler.prototype.handleKeyDown = function ( e ) {
 		// Check if we're in an input field (guard target for tests)
-		var target = e && e.target ? e.target : {};
-		var tag = ( target.tagName || '' ).toUpperCase();
-		var isEditable = !!target.isContentEditable;
+		const target = e && e.target ? e.target : {};
+		const tag = ( target.tagName || '' ).toUpperCase();
+		const isEditable = !!target.isContentEditable;
 		if ( tag === 'INPUT' || tag === 'TEXTAREA' || isEditable ) {
 			return;
 		}
 
-		var handled = false;
+		let handled = false;
 
 		// Zoom shortcuts
 		if ( e.ctrlKey || e.metaKey ) {
@@ -382,7 +382,7 @@
 			this.canvasManager.selectedLayerIds &&
 			this.canvasManager.selectedLayerIds.length > 0
 		) {
-			var nudgeDistance = e.shiftKey ? 10 : 1;
+			const nudgeDistance = e.shiftKey ? 10 : 1;
 			switch ( e.key ) {
 				case 'ArrowLeft':
 					this.canvasManager.nudgeSelected( -nudgeDistance, 0 );
@@ -455,7 +455,7 @@
 	 * @return {Object} Point with x, y coordinates
 	 */
 	EventHandler.prototype.getMousePointFromClient = function ( clientX, clientY ) {
-		var pt = this.canvasManager.getMousePointFromClient( clientX, clientY );
+		const pt = this.canvasManager.getMousePointFromClient( clientX, clientY );
 		pt.clientX = clientX;
 		pt.clientY = clientY;
 		return pt;
@@ -485,9 +485,9 @@
 		if ( e && typeof e.offsetX === 'number' && typeof e.offsetY === 'number' ) {
 			return { x: e.offsetX, y: e.offsetY };
 		}
-		var rect = this.canvas.getBoundingClientRect();
-		var cx = ( e && typeof e.clientX === 'number' ) ? e.clientX : 0;
-		var cy = ( e && typeof e.clientY === 'number' ) ? e.clientY : 0;
+		const rect = this.canvas.getBoundingClientRect();
+		const cx = ( e && typeof e.clientX === 'number' ) ? e.clientX : 0;
+		const cy = ( e && typeof e.clientY === 'number' ) ? e.clientY : 0;
 		return { x: cx - rect.left, y: cy - rect.top };
 	};
 

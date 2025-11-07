@@ -41,11 +41,17 @@
 		this.maxHistorySteps = this.config.maxHistorySteps || 50;
 		// Backward-compat properties expected by legacy tests
 		Object.defineProperty( this, 'currentIndex', {
-			get: function () { return this.historyIndex; }.bind( this )
+			get: function () {
+				return this.historyIndex;
+			}.bind( this )
 		} );
 		Object.defineProperty( this, 'maxHistorySize', {
-			get: function () { return this.maxHistorySteps; }.bind( this ),
-			set: function ( v ) { this.setMaxHistorySteps( v ); }.bind( this )
+			get: function () {
+				return this.maxHistorySteps;
+			}.bind( this ),
+			set: function ( v ) {
+				this.setMaxHistorySteps( v );
+			}.bind( this )
 		} );
 
 		// Batch operations
@@ -77,12 +83,12 @@
 		// Keep the earlier entries and the current one; drop only the redo tail
 		if ( this.historyIndex < this.history.length - 1 ) {
 			// Keep one future entry (the immediate redo), drop the rest
-			var keepUntil = Math.min( this.history.length, this.historyIndex + 2 );
+			const keepUntil = Math.min( this.history.length, this.historyIndex + 2 );
 			this.history = this.history.slice( 0, keepUntil );
 		}
 
 		// Add new state
-		var state = {
+		const state = {
 			layers: this.getLayersSnapshot(),
 			description: description || 'Edit',
 			timestamp: Date.now()
@@ -107,7 +113,7 @@
 	 * @return {Array} Deep copy of layers array
 	 */
 	HistoryManager.prototype.getLayersSnapshot = function () {
-		var layers =
+		const layers =
 			( this.canvasManager && this.canvasManager.editor &&
 				this.canvasManager.editor.layers ) ||
 			( this.canvasManager && this.canvasManager.layers ) || [];
@@ -173,7 +179,7 @@
 	 */
 	HistoryManager.prototype.restoreState = function ( state ) {
 		// Restore layers to either editor.layers or canvasManager.layers
-		var restored = JSON.parse( JSON.stringify( state.layers ) );
+		const restored = JSON.parse( JSON.stringify( state.layers ) );
 		if ( this.canvasManager && this.canvasManager.editor ) {
 			this.canvasManager.editor.layers = restored;
 		} else if ( this.canvasManager ) {
@@ -190,7 +196,7 @@
 		}
 
 		// Re-render
-		var currentLayers =
+		const currentLayers =
 			( this.canvasManager && this.canvasManager.editor &&
 				this.canvasManager.editor.layers ) ||
 			( this.canvasManager && this.canvasManager.layers ) || [];
@@ -218,14 +224,17 @@
 	 * Update undo/redo button states
 	 */
 	HistoryManager.prototype.updateUndoRedoButtons = function () {
-		var canUndo = this.canUndo();
-		var canRedo = this.canRedo();
+		const canUndo = this.canUndo();
+		const canRedo = this.canRedo();
 
 		// Update toolbar buttons if available
 		if ( this.canvasManager && this.canvasManager.editor &&
 			this.canvasManager.editor.toolbar ) {
-			var undoBtn = this.canvasManager.editor.toolbar.container.querySelector( '.undo-btn' );
-			var redoBtn = this.canvasManager.editor.toolbar.container.querySelector( '.redo-btn' );
+			// Try both old and new selector patterns for compatibility
+			const undoBtn = this.canvasManager.editor.toolbar.container.querySelector( '[data-action="undo"]' ) ||
+				this.canvasManager.editor.toolbar.container.querySelector( '.undo-btn' );
+			const redoBtn = this.canvasManager.editor.toolbar.container.querySelector( '[data-action="redo"]' ) ||
+				this.canvasManager.editor.toolbar.container.querySelector( '.redo-btn' );
 
 			if ( undoBtn ) {
 				undoBtn.disabled = !canUndo;
@@ -293,13 +302,13 @@
 	HistoryManager.prototype.cancelBatch = function () {
 		// Revert to snapshot from start of batch if available
 		if ( this.batchStartSnapshot && this.canvasManager ) {
-			var snapshot = JSON.parse( JSON.stringify( this.batchStartSnapshot ) );
+			const snapshot = JSON.parse( JSON.stringify( this.batchStartSnapshot ) );
 			if ( this.canvasManager.editor ) {
 				this.canvasManager.editor.layers = snapshot;
 			} else {
 				this.canvasManager.layers = snapshot;
 			}
-			var layers =
+			const layers =
 				( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
 				this.canvasManager.layers || [];
 			if ( typeof this.canvasManager.renderLayers === 'function' ) {
@@ -360,10 +369,10 @@
 	 */
 	HistoryManager.prototype.getHistoryEntries = function ( limit ) {
 		limit = limit || 10;
-		var start = Math.max( 0, this.history.length - limit );
+		const start = Math.max( 0, this.history.length - limit );
 
-		return this.history.slice( start ).map( function ( entry, index ) {
-			var actualIndex = start + index;
+		return this.history.slice( start ).map( ( entry, index ) => {
+			const actualIndex = start + index;
 			return {
 				index: actualIndex,
 				description: entry.description,
@@ -371,7 +380,7 @@
 				isCurrent: actualIndex === this.historyIndex,
 				canRevertTo: actualIndex <= this.historyIndex
 			};
-		}.bind( this ) );
+		} );
 	};
 
 	/**
@@ -405,8 +414,8 @@
 		}
 
 		// Keep recent half of history
-		var keepCount = Math.floor( this.maxHistorySteps / 2 );
-		var removeCount = this.history.length - keepCount;
+		const keepCount = Math.floor( this.maxHistorySteps / 2 );
+		const removeCount = this.history.length - keepCount;
 
 		this.history = this.history.slice( removeCount );
 		this.historyIndex = Math.max( 0, this.historyIndex - removeCount );
@@ -424,7 +433,7 @@
 
 		// Trim current history if needed
 		if ( this.history.length > this.maxHistorySteps ) {
-			var removeCount = this.history.length - this.maxHistorySteps;
+			const removeCount = this.history.length - this.maxHistorySteps;
 			this.history = this.history.slice( removeCount );
 			this.historyIndex = Math.max( 0, this.historyIndex - removeCount );
 			this.updateUndoRedoButtons();
@@ -438,15 +447,15 @@
 	 */
 	HistoryManager.prototype.hasUnsavedChanges = function () {
 		if ( this.history.length === 0 ) {
-			var initialLayers =
+			const initialLayers =
 				( this.canvasManager && this.canvasManager.editor &&
 					this.canvasManager.editor.layers ) ||
 				( this.canvasManager && this.canvasManager.layers ) || [];
 			return initialLayers.length > 0;
 		}
 
-		var currentLayers = this.getLayersSnapshot();
-		var lastSavedLayers = this.history[ this.historyIndex ].layers;
+		const currentLayers = this.getLayersSnapshot();
+		const lastSavedLayers = this.history[ this.historyIndex ].layers;
 
 		return JSON.stringify( currentLayers ) !== JSON.stringify( lastSavedLayers );
 	};
@@ -466,13 +475,11 @@
 	 */
 	HistoryManager.prototype.exportHistory = function () {
 		return {
-			history: this.history.map( function ( entry ) {
-				return {
-					description: entry.description,
-					timestamp: entry.timestamp,
-					layerCount: entry.layers.length
-				};
-			} ),
+			history: this.history.map( ( entry ) => ( {
+				description: entry.description,
+				timestamp: entry.timestamp,
+				layerCount: entry.layers.length
+			} ) ),
 			historyIndex: this.historyIndex,
 			maxHistorySteps: this.maxHistorySteps,
 			batchMode: this.batchMode
@@ -485,11 +492,11 @@
 	 * @return {Object} Memory usage information
 	 */
 	HistoryManager.prototype.getMemoryUsage = function () {
-		var totalSize = 0;
-		var layerCounts = [];
+		let totalSize = 0;
+		const layerCounts = [];
 
-		this.history.forEach( function ( entry ) {
-			var serialized = JSON.stringify( entry );
+		this.history.forEach( ( entry ) => {
+			const serialized = JSON.stringify( entry );
 			totalSize += serialized.length;
 			layerCounts.push( entry.layers.length );
 		} );
@@ -499,7 +506,7 @@
 	};
 
 	// Export HistoryManager to global scope
-	window.LayersHistoryManager = HistoryManager;
+	window.HistoryManager = HistoryManager;
 	// Also export via CommonJS when available (for Jest tests)
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = HistoryManager;

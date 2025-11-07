@@ -107,8 +107,29 @@ global.createMockLayer = function ( overrides ) {
 
 // Provide a minimal mw global early to avoid ReferenceError in modules that check typeof mw
 if ( typeof global.mw === 'undefined' ) {
-    global.mw = { config: { get: function () {
-        return undefined; } } };
+    global.mw = {
+        config: {
+            get: function () {
+                return undefined;
+            }
+        },
+        hook: function ( name ) {
+            var callbacks = [];
+            return {
+                add: function ( callback ) {
+                    callbacks.push( callback );
+                    return this;
+                },
+                fire: function () {
+                    var args = Array.prototype.slice.call( arguments );
+                    callbacks.forEach( function ( callback ) {
+                        callback.apply( null, args );
+                    } );
+                    return this;
+                }
+            };
+        }
+    };
 }
 
 global.createMockEditor = function () {

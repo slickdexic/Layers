@@ -24,7 +24,8 @@ describe('Resize Handles', () => {
             currentTool: 'pointer',
             getLayerById: jest.fn(),
             redraw: jest.fn(),
-            saveState: jest.fn()
+            saveState: jest.fn(),
+            selectLayer: jest.fn()
         };
 
         // Create CanvasManager instance

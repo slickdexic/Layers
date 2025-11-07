@@ -249,15 +249,17 @@
 			// New flat format from editor (shadow: true, shadowColor: '#000', etc.)
 			if ( typeof layer.shadow === 'boolean' && layer.shadow ) {
 				this.ctx.shadowColor = layer.shadowColor || '#000000';
-				this.ctx.shadowBlur = ( layer.shadowBlur || 0 ) * shadowScaleAvg;
-				this.ctx.shadowOffsetX = ( layer.shadowOffsetX || 0 ) * shadowScaleX;
-				this.ctx.shadowOffsetY = ( layer.shadowOffsetY || 0 ) * shadowScaleY;
+				// Use sensible defaults: blur=8, offset=2 if not specified
+				this.ctx.shadowBlur = ( typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8 ) * shadowScaleAvg;
+				this.ctx.shadowOffsetX = ( typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2 ) * shadowScaleX;
+				this.ctx.shadowOffsetY = ( typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2 ) * shadowScaleY;
 			} else if ( typeof layer.shadow === 'object' && layer.shadow ) {
 				// Legacy nested format (shadow: {color: '#000', blur: 5, etc.})
 				this.ctx.shadowColor = layer.shadow.color || '#000000';
-				this.ctx.shadowBlur = ( layer.shadow.blur || 0 ) * shadowScaleAvg;
-				this.ctx.shadowOffsetX = ( layer.shadow.offsetX || 0 ) * shadowScaleX;
-				this.ctx.shadowOffsetY = ( layer.shadow.offsetY || 0 ) * shadowScaleY;
+				// Use sensible defaults: blur=8, offset=2 if not specified
+				this.ctx.shadowBlur = ( typeof layer.shadow.blur === 'number' ? layer.shadow.blur : 8 ) * shadowScaleAvg;
+				this.ctx.shadowOffsetX = ( typeof layer.shadow.offsetX === 'number' ? layer.shadow.offsetX : 2 ) * shadowScaleX;
+				this.ctx.shadowOffsetY = ( typeof layer.shadow.offsetY === 'number' ? layer.shadow.offsetY : 2 ) * shadowScaleY;
 			}
 		}
 
