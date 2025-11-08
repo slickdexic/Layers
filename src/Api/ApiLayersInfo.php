@@ -11,7 +11,6 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiMain;
-use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\MediaWikiServices;
 
 class ApiLayersInfo extends ApiBase {

@@ -548,27 +548,26 @@ class APIManager {
 			this.enableSaveButton();
 			this.handleSaveSuccess( data );
 			resolve( data );
-		} ).catch( ( error ) => {
-			// DEBUG: Log the actual error BEFORE processing
+		} ).catch( ( code, result ) => {
+			// This is the correct signature for mw.Api().catch()
 			console.error( '[APIManager] Save error caught (RAW):', {
-				error: error,
-				errorString: JSON.stringify( error, null, 2 ),
-				errorKeys: Object.keys( error || {} ),
-				errorError: error && error.error ? JSON.stringify( error.error, null, 2 ) : 'no error.error',
+				code: code,
+				result: result,
 				attempt: attempt
 			} );
-			
+
+			const error = ( result && result.error ) || { code: code, info: ( result && result.exception ) || 'No details' };
 			const isRetryable = this.isRetryableError( error );
-			const canRetry = attempt < this.maxRetries && isRetryable;
+			const canRetry = attempt < this.maxRetries - 1 && isRetryable;
 
 			if ( canRetry ) {
 				const delay = this.retryDelay * Math.pow( 2, attempt ); // Exponential backoff
-				console.log( '[APIManager] Retrying save after delay:', delay );
+				console.log( `[APIManager] Retrying save after delay: ${delay}ms` );
 				setTimeout( () => {
 					this.performSaveWithRetry( payload, attempt + 1, resolve, reject );
 				}, delay );
 			} else {
-				console.error( '[APIManager] Save failed after', attempt, 'attempts' );
+				console.error( `[APIManager] Save failed after ${attempt + 1} attempts` );
 				this.editor.uiManager.hideSpinner();
 				this.enableSaveButton();
 				this.handleSaveError( error );
@@ -605,8 +604,13 @@ class APIManager {
 	}
 
 	handleSaveError( error ) {
-		// Use centralized error handling - no double display
-		return this.handleError( error, 'save', { error: error } );
+		// Log the raw error object for maximum detail.
+		const errorCode = error.code || 'unknown';
+		const errorInfo = error.info || 'No additional information';
+		console.error( `[APIManager] Detailed Save Error. Code: ${errorCode}, Info: ${errorInfo}`, error );
+
+		// Use centralized error handling
+		return this.handleError( error, 'save', { rawError: error } );
 	}
 
 	reloadRevisions() {

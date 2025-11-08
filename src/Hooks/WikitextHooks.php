@@ -5,6 +5,7 @@ namespace MediaWiki\Extension\Layers\Hooks;
 use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
+use MediaWiki\MediaWikiServices;
 
 class WikitextHooks {
 	/**

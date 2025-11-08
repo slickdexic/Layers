@@ -101,7 +101,7 @@
 	"Hooks": {
 		"BeforePageDisplay": "LayersHooks",
 		"FileDeleteComplete": "LayersHooks",
-		"LoadExtensionSchemaUpdates": "LayersHooks",
+		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Database\\LayersSchemaManager::onLoadExtensionSchemaUpdates",
 		"MakeGlobalVariablesScript": "LayersHooks",
 		"ParserFirstCallInit": "LayersWikitextHooks",
 		"ParserBeforeInternalParse": "LayersWikitextHooks",

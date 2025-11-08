@@ -822,7 +822,7 @@
 		input.style.color = this.currentStyle.color;
 		input.style.border = '1px solid #ccc';
 		input.style.background = 'white';
-		input.style.zIndex = '1000';
+		input.style.zIndex = '1001'; // Higher z-index
 
 		const self = this;
 		input.addEventListener( 'keydown', ( e ) => {
@@ -837,7 +837,12 @@
 			self.finishTextEditing( input, point );
 		} );
 
-		this.canvasManager.container.appendChild( input );
+		// Append to the main editor container for correct stacking context
+		if ( this.canvasManager.editor && this.canvasManager.editor.ui && this.canvasManager.editor.ui.mainContainer ) {
+			this.canvasManager.editor.ui.mainContainer.appendChild( input );
+		} else {
+			this.canvasManager.container.appendChild( input );
+		}
 		this.textEditor = input;
 		input.focus();
 	};

@@ -2,6 +2,7 @@
 
 namespace MediaWiki\Extension\Layers\Database;
 
+use MediaWiki\Installer\DatabaseUpdater;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -13,6 +14,88 @@ use Psr\Log\LoggerInterface;
  * performance issues and complex fallback logic.
  */
 class LayersSchemaManager {
+
+	/**
+	 * Implements the LoadExtensionSchemaUpdates hook.
+	 *
+	 * @param DatabaseUpdater $updater
+	 */
+	public static function onLoadExtensionSchemaUpdates( DatabaseUpdater $updater ) {
+		$dbType = $updater->getDB()->getType();
+		$base = __DIR__ . '/../../sql';
+
+		// Initial schema. These will only run if the tables do not exist.
+		$updater->addExtensionTable( 'layer_sets', "$base/layers_tables.sql" );
+		$updater->addExtensionTable( 'layer_assets', "$base/layers_tables.sql" );
+		$updater->addExtensionTable( 'layer_set_usage', "$base/layers_tables.sql" );
+
+		// Patches for existing installations.
+		// Note: The 'field' argument to addExtensionField is used to check if the patch is already applied.
+		// It should be the column (or index) that the patch adds.
+		if ( $dbType === 'mysql' || $dbType === 'sqlite' ) {
+			// Add lsu_usage_count column if it doesn't exist.
+			$updater->addExtensionField(
+				'layer_set_usage',
+				'lsu_usage_count',
+				"$base/patches/patch-add-lsu_usage_count.sql"
+			);
+
+			// For now, we'll use a dedicated method.
+			$updater->addExtensionUpdate( [ 'MediaWiki\Extension\Layers\Database\LayersSchemaManager::runCheckConstraintsPatch' ] );
+		}
+	}
+
+	/**
+	 * Apply the patch-add-check-constraints.sql patch idempotently.
+	 *
+	 * @param DatabaseUpdater $updater
+	 * @return bool
+	 */
+	public static function runCheckConstraintsPatch( DatabaseUpdater $updater ): bool {
+		$dbw = $updater->getDB();
+
+		$constraints = [
+			'layer_sets' => [
+				'chk_ls_size_positive' => 'CHECK (ls_size >= 0)',
+				'chk_ls_size_reasonable' => 'CHECK (ls_size <= 2097152)',
+				'chk_ls_layer_count_positive' => 'CHECK (ls_layer_count >= 0)',
+				'chk_ls_layer_count_reasonable' => 'CHECK (ls_layer_count <= 100)',
+				'chk_ls_revision_positive' => 'CHECK (ls_revision >= 1)',
+				'chk_ls_img_name_not_empty' => "CHECK (ls_img_name != '')",
+				'chk_ls_img_sha1_format' => 'CHECK (ls_img_sha1 IS NULL OR LENGTH(ls_img_sha1) <= 40)',
+			],
+			'layer_assets' => [
+				'chk_la_title_not_empty' => "CHECK (la_title != '')",
+			],
+			'layer_set_usage' => [
+				'chk_lsu_usage_count_positive' => 'CHECK (lsu_usage_count >= 0)',
+				'chk_lsu_usage_count_reasonable' => 'CHECK (lsu_usage_count <= 1000000)',
+			]
+		];
+
+		foreach ( $constraints as $tableNameSuffix => $tableConstraints ) {
+			$tableName = $dbw->tableName( $tableNameSuffix );
+			$updater->output( "Applying constraints for {$tableName}...\n" );
+			foreach ( $tableConstraints as $constraintName => $checkClause ) {
+				try {
+					$dbw->query(
+						"ALTER TABLE {$tableName} ADD CONSTRAINT {$constraintName} {$checkClause}",
+						__METHOD__
+					);
+					$updater->output( "   Added constraint {$constraintName}.\n" );
+				} catch ( \Wikimedia\Rdbms\DBQueryError $e ) {
+					$message = $e->getMessage();
+					if ( preg_match( '/^Error (\d+):/', $message, $matches ) && $matches[1] == 3822 ) {
+						$updater->output( "   ...constraint {$constraintName} already exists.\n" );
+					} else {
+						throw $e;
+					}
+				}
+			}
+		}
+
+		return true;
+	}
 
 	/** @var LoggerInterface */
 	private $logger;
