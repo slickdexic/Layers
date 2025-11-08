@@ -512,10 +512,20 @@ class APIManager {
 
 	buildSavePayload() {
 		const layers = this.editor.stateManager.get( 'layers' ) || [];
+		const layersJson = JSON.stringify( layers );
+		
+		// DEBUG: Log what we're sending
+		console.log( '[APIManager] Building save payload:', {
+			filename: this.editor.filename,
+			layerCount: layers.length,
+			dataSize: layersJson.length,
+			dataSample: layersJson.substring( 0, 200 )
+		} );
+		
 		const payload = {
 			action: 'layerssave',
 			filename: this.editor.filename,
-			data: JSON.stringify( layers ),
+			data: layersJson,
 			format: 'json'
 		};
 
@@ -531,20 +541,34 @@ class APIManager {
 
 	performSaveWithRetry( payload, attempt, resolve, reject ) {
 		this.api.postWithToken( 'csrf', payload ).then( ( data ) => {
+			// DEBUG: Log the actual response
+			console.log( '[APIManager] Save response received:', JSON.stringify( data ) );
+			
 			this.editor.uiManager.hideSpinner();
 			this.enableSaveButton();
 			this.handleSaveSuccess( data );
 			resolve( data );
 		} ).catch( ( error ) => {
+			// DEBUG: Log the actual error BEFORE processing
+			console.error( '[APIManager] Save error caught (RAW):', {
+				error: error,
+				errorString: JSON.stringify( error, null, 2 ),
+				errorKeys: Object.keys( error || {} ),
+				errorError: error && error.error ? JSON.stringify( error.error, null, 2 ) : 'no error.error',
+				attempt: attempt
+			} );
+			
 			const isRetryable = this.isRetryableError( error );
 			const canRetry = attempt < this.maxRetries && isRetryable;
 
 			if ( canRetry ) {
 				const delay = this.retryDelay * Math.pow( 2, attempt ); // Exponential backoff
+				console.log( '[APIManager] Retrying save after delay:', delay );
 				setTimeout( () => {
 					this.performSaveWithRetry( payload, attempt + 1, resolve, reject );
 				}, delay );
 			} else {
+				console.error( '[APIManager] Save failed after', attempt, 'attempts' );
 				this.editor.uiManager.hideSpinner();
 				this.enableSaveButton();
 				this.handleSaveError( error );
@@ -581,15 +605,8 @@ class APIManager {
 	}
 
 	handleSaveError( error ) {
-		// Use the new standardized error handling
-		const standardizedError = this.handleError( error, 'save', { error: error } );
-		
-		// Additional UI updates specific to save operations
-		if ( this.editor && this.editor.uiManager ) {
-			this.editor.uiManager.showError( 'Save failed: ' + standardizedError.userMessage );
-		}
-		
-		return standardizedError;
+		// Use centralized error handling - no double display
+		return this.handleError( error, 'save', { error: error } );
 	}
 
 	reloadRevisions() {

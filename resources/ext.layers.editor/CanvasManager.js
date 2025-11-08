@@ -4149,7 +4149,13 @@
 			textShadow: has( options.textShadow ) ? options.textShadow : prev.textShadow,
 			textShadowColor: has( options.textShadowColor ) ?
 				options.textShadowColor : prev.textShadowColor,
-			arrowStyle: has( options.arrowStyle ) ? options.arrowStyle : prev.arrowStyle
+			arrowStyle: has( options.arrowStyle ) ? options.arrowStyle : prev.arrowStyle,
+			// Add general shadow properties for all layer types
+			shadow: has( options.shadow ) ? options.shadow : prev.shadow,
+			shadowColor: has( options.shadowColor ) ? options.shadowColor : prev.shadowColor,
+			shadowBlur: has( options.shadowBlur ) ? options.shadowBlur : prev.shadowBlur,
+			shadowOffsetX: has( options.shadowOffsetX ) ? options.shadowOffsetX : prev.shadowOffsetX,
+			shadowOffsetY: has( options.shadowOffsetY ) ? options.shadowOffsetY : prev.shadowOffsetY
 		};
 		this.currentStyle = next;
 
@@ -4195,6 +4201,22 @@
 			}
 			if ( layer.type === 'arrow' && next.arrowStyle ) {
 				layer.arrowStyle = next.arrowStyle;
+			}
+			// Apply general shadow properties to all layer types
+			if ( next.shadow !== undefined && next.shadow !== null ) {
+				layer.shadow = next.shadow;
+			}
+			if ( next.shadowColor !== undefined && next.shadowColor !== null ) {
+				layer.shadowColor = next.shadowColor;
+			}
+			if ( next.shadowBlur !== undefined && next.shadowBlur !== null ) {
+				layer.shadowBlur = next.shadowBlur;
+			}
+			if ( next.shadowOffsetX !== undefined && next.shadowOffsetX !== null ) {
+				layer.shadowOffsetX = next.shadowOffsetX;
+			}
+			if ( next.shadowOffsetY !== undefined && next.shadowOffsetY !== null ) {
+				layer.shadowOffsetY = next.shadowOffsetY;
 			}
 		};
 
@@ -4364,6 +4386,18 @@
 
 			// Draw rulers after background/grid
 			this.drawRulers();
+
+			// Render all layers - CRITICAL: must render after clearing canvas
+			if ( this.editor && this.editor.layers ) {
+				this.renderLayers( this.editor.layers );
+			}
+
+			// Draw selection indicators on top
+			if ( this.selectedLayerIds && this.selectedLayerIds.length > 0 ) {
+				for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
+					this.drawSelectionIndicators( this.selectedLayerIds[ i ] );
+				}
+			}
 		} catch ( error ) {
 		// Error recovery for canvas operations
 			if ( this.editor && this.editor.errorLog ) {

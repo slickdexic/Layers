@@ -158,7 +158,8 @@
 
 	LayersViewer.prototype.renderLayer = function ( layer ) {
 		// Skip invisible layers
-		if ( layer.visible === false ) {
+		// Empty string '' is treated as visible (default), only explicit false hides layer
+		if ( layer.visible === false || layer.visible === 'false' || layer.visible === '0' || layer.visible === 0 ) {
 			return;
 		}
 
@@ -223,6 +224,7 @@
 		}
 
 		// Apply per-layer effects (opacity, blend, shadow) around the draw
+		// Shadow MUST be applied at this outer context level to persist through rendering
 		this.ctx.save();
 		if ( typeof layer.opacity === 'number' ) {
 			// Clamp to [0,1]
@@ -236,8 +238,8 @@
 			}
 		}
 
-		// Apply shadow effects - support both flat and nested shadow formats
-		// Scale shadow properties with the same factors used for coordinates
+		// Apply shadow at OUTER context - critical for proper rendering
+		// Calculate shadow scale factors
 		var shadowScaleX = 1, shadowScaleY = 1, shadowScaleAvg = 1;
 		if ( this.baseWidth && this.baseHeight ) {
 			shadowScaleX = ( this.canvas.width || 1 ) / this.baseWidth;
@@ -245,22 +247,23 @@
 			shadowScaleAvg = ( shadowScaleX + shadowScaleY ) / 2;
 		}
 
-		if ( layer.shadow ) {
-			// New flat format from editor (shadow: true, shadowColor: '#000', etc.)
-			if ( typeof layer.shadow === 'boolean' && layer.shadow ) {
-				this.ctx.shadowColor = layer.shadowColor || '#000000';
-				// Use sensible defaults: blur=8, offset=2 if not specified
-				this.ctx.shadowBlur = ( typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8 ) * shadowScaleAvg;
-				this.ctx.shadowOffsetX = ( typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2 ) * shadowScaleX;
-				this.ctx.shadowOffsetY = ( typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2 ) * shadowScaleY;
-			} else if ( typeof layer.shadow === 'object' && layer.shadow ) {
-				// Legacy nested format (shadow: {color: '#000', blur: 5, etc.})
-				this.ctx.shadowColor = layer.shadow.color || '#000000';
-				// Use sensible defaults: blur=8, offset=2 if not specified
-				this.ctx.shadowBlur = ( typeof layer.shadow.blur === 'number' ? layer.shadow.blur : 8 ) * shadowScaleAvg;
-				this.ctx.shadowOffsetX = ( typeof layer.shadow.offsetX === 'number' ? layer.shadow.offsetX : 2 ) * shadowScaleX;
-				this.ctx.shadowOffsetY = ( typeof layer.shadow.offsetY === 'number' ? layer.shadow.offsetY : 2 ) * shadowScaleY;
-			}
+		// Apply shadow settings at outer context
+		// Check if shadow properties exist (handles case where shadow: "" but shadowColor is set)
+		var hasShadowData = layer.shadowColor || layer.shadowBlur || layer.shadowOffsetX || layer.shadowOffsetY;
+		var shadowExplicitlyEnabled = layer.shadow === true || layer.shadow === 'true' || layer.shadow === 1 || layer.shadow === '1';
+		
+		if ( shadowExplicitlyEnabled || hasShadowData ) {
+			// Apply shadow properties - works with flat format
+			this.ctx.shadowColor = layer.shadowColor || '#000000';
+			this.ctx.shadowBlur = ( typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8 ) * shadowScaleAvg;
+			this.ctx.shadowOffsetX = ( typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2 ) * shadowScaleX;
+			this.ctx.shadowOffsetY = ( typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2 ) * shadowScaleY;
+		} else if ( typeof layer.shadow === 'object' && layer.shadow ) {
+			// Legacy nested format (shadow: {color: '#000', blur: 5, etc.})
+			this.ctx.shadowColor = layer.shadow.color || '#000000';
+			this.ctx.shadowBlur = ( typeof layer.shadow.blur === 'number' ? layer.shadow.blur : 8 ) * shadowScaleAvg;
+			this.ctx.shadowOffsetX = ( typeof layer.shadow.offsetX === 'number' ? layer.shadow.offsetX : 2 ) * shadowScaleX;
+			this.ctx.shadowOffsetY = ( typeof layer.shadow.offsetY === 'number' ? layer.shadow.offsetY : 2 ) * shadowScaleY;
 		}
 
 		switch ( L.type ) {
@@ -296,12 +299,13 @@
 				break;
 		}
 
-		// Restore to pre-layer state (clears shadow effects too)
+		// Restore to pre-layer state
 		this.ctx.restore();
 	};
 
 	LayersViewer.prototype.renderText = function ( layer ) {
 		this.ctx.save();
+		
 		var scaleAvg = 1;
 		if ( this.baseWidth && this.baseHeight ) {
 			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
@@ -403,6 +407,7 @@
 
 	LayersViewer.prototype.renderCircle = function ( layer ) {
 		this.ctx.save();
+		
 		this.ctx.beginPath();
 		this.ctx.arc( layer.x || 0, layer.y || 0, layer.radius || 0, 0, 2 * Math.PI );
 
@@ -428,6 +433,7 @@
 
 	LayersViewer.prototype.renderLine = function ( layer ) {
 		this.ctx.save();
+		
 		this.ctx.strokeStyle = layer.stroke || '#000000';
 		var sw = layer.strokeWidth || 1;
 		if ( this.baseWidth && this.baseHeight ) {
@@ -447,6 +453,7 @@
 
 	LayersViewer.prototype.renderArrow = function ( layer ) {
 		this.ctx.save();
+		
 		this.ctx.strokeStyle = layer.stroke || '#000000';
 		this.ctx.fillStyle = layer.stroke || '#000000';
 		var sw = layer.strokeWidth || 1;
@@ -493,6 +500,7 @@
 
 	LayersViewer.prototype.renderHighlight = function ( layer ) {
 		this.ctx.save();
+		
 		this.ctx.fillStyle = layer.fill || '#ffff0080';
 		this.ctx.fillRect( layer.x || 0, layer.y || 0, layer.width || 0, layer.height || 0 );
 		this.ctx.restore();
@@ -500,6 +508,7 @@
 
 	LayersViewer.prototype.renderEllipse = function ( layer ) {
 		this.ctx.save();
+		
 		var x = layer.x || 0;
 		var y = layer.y || 0;
 		var radiusX = layer.radiusX || layer.width / 2 || 0;
@@ -528,6 +537,12 @@
 	LayersViewer.prototype.renderPolygon = function ( layer ) {
 		var sides = layer.sides || 6;
 		var x = layer.x || 0;
+		var y = layer.y || 0;
+		var radius = layer.radius || 50;
+
+		this.ctx.save();
+		
+		this.ctx.beginPath();
 		var y = layer.y || 0;
 		var radius = layer.radius || 50;
 
@@ -570,6 +585,13 @@
 		var innerRadius = layer.innerRadius || outerRadius * 0.5;
 
 		this.ctx.save();
+		
+		this.ctx.beginPath();
+		var y = layer.y || 0;
+		var outerRadius = layer.outerRadius || layer.radius || 50;
+		var innerRadius = layer.innerRadius || outerRadius * 0.5;
+
+		this.ctx.save();
 		this.ctx.beginPath();
 
 		for ( var i = 0; i < points * 2; i++ ) {
@@ -607,6 +629,7 @@
 		}
 
 		this.ctx.save();
+		
 		this.ctx.strokeStyle = layer.stroke || '#000000';
 		this.ctx.lineWidth = layer.strokeWidth || 2;
 		this.ctx.lineCap = 'round';
