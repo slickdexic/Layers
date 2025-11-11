@@ -442,7 +442,10 @@ class APIManager {
 				this.editor.uiManager.hideSpinner();
 				if ( data.layersinfo && data.layersinfo.layerset ) {
 					this.extractLayerSetData( data.layersinfo.layerset );
-					this.editor.stateManager.set( 'allLayerSets', data.layersinfo.all_layersets || [] );
+					// Only update allLayerSets if response contains data (preserve existing list)
+					if ( data.layersinfo.all_layersets && data.layersinfo.all_layersets.length > 0 ) {
+						this.editor.stateManager.set( 'allLayerSets', data.layersinfo.all_layersets );
+					}
 					this.editor.buildRevisionSelector();
 					this.editor.renderLayers();
 					this.editor.stateManager.set( 'isDirty', false );

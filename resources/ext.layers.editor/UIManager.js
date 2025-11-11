@@ -18,18 +18,12 @@ class UIManager {
 	 * Create the main editor interface
 	 */
 	createInterface() {
-		console.log( '[UIManager] createInterface() called' );
-
 		// Always create a full-screen overlay container at body level
 		this.container = document.createElement( 'div' );
 		this.container.className = 'layers-editor';
 		this.container.setAttribute( 'role', 'application' );
 		this.container.setAttribute( 'aria-label', 'Layers Image Editor' );
 		document.body.appendChild( this.container );
-
-		console.log( '[UIManager] Main container created and appended to body:', this.container );
-		console.log( '[UIManager] Main container in DOM:', document.body.contains( this.container ) );
-		console.log( '[UIManager] Main container HTML:', this.container.outerHTML );
 
 		// Add body class to hide skin chrome while editor is open
 		document.body.classList.add( 'layers-editor-open' );
@@ -39,17 +33,6 @@ class UIManager {
 		this.createMainContent();
 		this.createStatusBar();
 
-		console.log( '[UIManager] All UI components created' );
-		console.log( '[UIManager] Final container structure:', {
-			main: this.container,
-			toolbar: this.toolbarContainer,
-			layerPanel: this.layerPanelContainer,
-			canvas: this.canvasContainer,
-			statusBar: this.statusBar
-		});
-		console.log( '[UIManager] Container children count:', this.container.children.length );
-		console.log( '[UIManager] Container children:', Array.from( this.container.children ).map( child => child.className ) );
-
 		// Create jQuery-style references for compatibility
 		this.editor.$canvasContainer = $( this.canvasContainer );
 		this.editor.$layerPanel = $( this.layerPanelContainer );
@@ -58,7 +41,10 @@ class UIManager {
 		this.setupStatusUpdates();
 		this.setupRevisionControls();
 
-		console.log( '[UIManager] createInterface() completed' );
+		// SECURITY FIX: Use mw.log instead of console.log
+		if ( mw.log && mw.config.get( 'wgLayersDebug' ) ) {
+			mw.log( '[UIManager] createInterface() completed' );
+		}
 	}
 
 	createHeader() {
@@ -153,7 +139,6 @@ class UIManager {
 	}
 
 	createMainContent() {
-		console.log( '[UIManager] createMainContent() called' );
 
 		this.content = document.createElement( 'div' );
 		this.content.className = 'layers-content';
@@ -170,10 +155,6 @@ class UIManager {
 		this.canvasContainer = document.createElement( 'div' );
 		this.canvasContainer.className = 'layers-canvas-container';
 		mainRow.appendChild( this.canvasContainer );
-
-		console.log( '[UIManager] Canvas container created:', this.canvasContainer );
-		console.log( '[UIManager] Layer panel container created:', this.layerPanelContainer );
-		console.log( '[UIManager] Main row children:', Array.from( mainRow.children ).map( child => child.className ) );
 	}
 
 	createStatusBar() {

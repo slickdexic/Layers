@@ -35,11 +35,18 @@ class ApiLayersSave extends ApiBase {
 			$data = $params['data'];
 			$setName = $params['setname'] ?? 'default';
 
-			// Sanitize set name
-			$setName = htmlspecialchars( $setName, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-			if ( strlen( $setName ) > 255 ) {
-				$setName = substr( $setName, 0, 255 );
-			}
+			// SECURITY FIX: Validate and sanitize set name more strictly
+			// Remove path traversal, control characters, and dangerous patterns
+			$setName = trim( $setName );
+			// Remove any path traversal attempts, null bytes, and control characters
+			$setName = preg_replace( '/[\x00-\x1F\x7F\/\\\\]/', '', $setName );
+			// Allow only safe characters: alphanumeric, spaces, dashes, underscores
+			$setName = preg_replace( '/[^a-zA-Z0-9_\-\s]/', '', $setName );
+			// Collapse multiple spaces
+			$setName = preg_replace( '/\s+/', ' ', $setName );
+			// Truncate to safe length
+			$setName = substr( $setName, 0, 255 );
+			// Ensure not empty after sanitization
 			if ( $setName === '' ) {
 				$setName = 'default';
 			}
@@ -113,12 +120,21 @@ class ApiLayersSave extends ApiBase {
 				$this->dieWithError( 'layers-save-failed', 'savefailed' );
 			}
 		} catch ( \Throwable $e ) {
-			// Log the full error to a file for debugging
-			$logMessage = "[DEBUG] " . date( 'Y-m-d H:i:s' ) . " ApiLayersSave Exception: " . $e->getMessage() . "\n";
-			file_put_contents( dirname( __DIR__, 2 ) . '/layers.log', $logMessage, FILE_APPEND );
+			// SECURITY FIX: Use MediaWiki's logging system instead of file_put_contents
+			// This prevents disk exhaustion attacks and information disclosure
+			$this->getLogger()->error(
+				'Layer save failed: {message}',
+				[
+					'message' => $e->getMessage(),
+					'exception' => $e,
+					'user_id' => $user->getId(),
+					'filename' => $fileName
+				]
+			);
 
-			// Die with a structured error for the client, including the message for debugging
-			$this->dieStatus( \StatusValue::newFatal( 'layers-save-failed-internal', $e->getMessage() ) );
+			// SECURITY FIX: Return generic error to client, not exception details
+			// This prevents information disclosure of internal system details
+			$this->dieWithError( 'layers-save-failed', 'savefailed' );
 		}
 	}
 

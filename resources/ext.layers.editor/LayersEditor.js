@@ -516,6 +516,27 @@
 	};
 
 	/**
+	 * Parse MediaWiki binary(14) timestamp format (YYYYMMDDHHmmss) to Date
+	 * @param {string} mwTimestamp MediaWiki timestamp string
+	 * @return {Date} Parsed date object
+	 */
+	LayersEditor.prototype.parseMWTimestamp = function ( mwTimestamp ) {
+		if ( !mwTimestamp || typeof mwTimestamp !== 'string' ) {
+			return new Date();
+		}
+
+		// MediaWiki binary(14) format: YYYYMMDDHHmmss
+		const year = parseInt( mwTimestamp.substring( 0, 4 ), 10 );
+		const month = parseInt( mwTimestamp.substring( 4, 6 ), 10 ) - 1; // JS months are 0-indexed
+		const day = parseInt( mwTimestamp.substring( 6, 8 ), 10 );
+		const hour = parseInt( mwTimestamp.substring( 8, 10 ), 10 );
+		const minute = parseInt( mwTimestamp.substring( 10, 12 ), 10 );
+		const second = parseInt( mwTimestamp.substring( 12, 14 ), 10 );
+
+		return new Date( year, month, day, hour, minute, second );
+	};
+
+	/**
 	 * Build the revision selector dropdown
 	 * @return {void}
 	 */
@@ -543,8 +564,14 @@
 					const userName = layerSet.ls_user_name || layerSet.userName || 'Unknown';
 					const name = layerSet.ls_name || layerSet.name || '';
 
-					let displayText = new Date( timestamp * 1000 ).toLocaleString();
-					displayText += ' ' + this.getMessage( 'layers-revision-by' ) + ' ' + userName;
+					// Parse MediaWiki binary(14) timestamp format
+					const date = this.parseMWTimestamp( timestamp );
+					let displayText = date.toLocaleString();
+					
+					// Use MediaWiki message system with parameter replacement
+					const byUserText = mw.message( 'layers-revision-by', userName ).text();
+					displayText += ' ' + byUserText;
+					
 					if ( name ) {
 						displayText += ' (' + name + ')';
 					}
@@ -1103,72 +1130,38 @@
 		}
 
 		const hookListener = function ( config ) {
-			if ( mw.config.get( 'wgLayersDebug' ) ) {
-				// Sanitize debug information to prevent information disclosure
-				const sanitizedConfig = {
-					hasFilename: !!( config && config.filename ),
-					hasImageUrl: !!( config && config.imageUrl ),
-					hasContainer: !!( config && config.container ),
-					filename: config && config.filename ? '[FILENAME]' : null,
-					imageUrl: config && config.imageUrl ? '[URL]' : null,
-					container: config && config.container ? '[ELEMENT]' : null
-				};
-				console.log( '[LayersEditor] Hook listener called with config (sanitized):', sanitizedConfig );
-			}
+			// Debug mode handled by debugLog method
 			document.title = '🎨 Layers Editor Initializing...';
 			try {
-				if ( mw.config.get( 'wgLayersDebug' ) ) {
-					console.log( '[LayersEditor] Hook listener: About to create LayersEditor instance' );
-				}
 				const editor = new LayersEditor( config );
-				if ( mw.config.get( 'wgLayersDebug' ) ) {
-					console.log( '[LayersEditor] LayersEditor instance created successfully' );
-				}
 				document.title = '🎨 Layers Editor - ' + ( config.filename || 'Unknown File' );
 				// Always set the global instance for duplicate prevention
 				window.layersEditorInstance = editor;
 				if ( window.mw && window.mw.config.get( 'debug' ) ) {
 					window.layersEditorInstance = editor;
 				}
-				if ( mw.config.get( 'wgLayersDebug' ) ) {
-					console.log( '[LayersEditor] Hook listener: Editor creation completed successfully' );
-				}
 			} catch ( e ) {
-				// Sanitize error message to prevent information disclosure
+				// SECURITY FIX: Sanitize error message to prevent information disclosure
 				const sanitizedError = sanitizeGlobalErrorMessage( e );
-				console.error( '[LayersEditor] Error creating LayersEditor:', sanitizedError );
+				// Use mw.log.error instead of console.error
+				if ( mw.log ) {
+					mw.log.error( '[LayersEditor] Error creating LayersEditor:', sanitizedError );
+				}
 				throw e;
 			}
 		};
 
-		if ( mw.config.get( 'wgLayersDebug' ) ) {
-			console.log( '[LayersEditor] Calling mw.hook("layers.editor.init").add()' );
-		}
-
 		mw.hook( 'layers.editor.init' ).add( hookListener );
-
-		if ( mw.config.get( 'wgLayersDebug' ) ) {
-			console.log( '[LayersEditor] Hook listener registered successfully' );
-		}
 	} else {
 		// Fallback: try to add hook listener when mw becomes available
 		const addHookListener = function () {
 			if ( typeof mw !== 'undefined' && mw.hook ) {
-				if ( mw.config.get( 'wgLayersDebug' ) ) {
-					console.log( '[LayersEditor] Fallback: mw.hook is now available, registering hook listener' );
-				}
 				// ... existing fallback code ...
 			} else {
 				// Retry after a short delay
-				if ( mw.config.get( 'wgLayersDebug' ) ) {
-					console.log( '[LayersEditor] Fallback: mw.hook not available yet, retrying in 50ms' );
-				}
 				setTimeout( addHookListener, 50 );
 			}
 		};
-		if ( mw.config.get( 'wgLayersDebug' ) ) {
-			console.log( '[LayersEditor] Initial mw.hook check:', typeof mw !== 'undefined' && mw.hook );
-		}
 		addHookListener();
 	}
 

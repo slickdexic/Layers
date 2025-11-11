@@ -163,7 +163,10 @@ class StateManager {
 			clearTimeout( this.lockTimeout );
 		}
 		this.lockTimeout = setTimeout( () => {
-			console.warn( '[StateManager] Force unlocking state after timeout' );
+			// SECURITY FIX: Use mw.log instead of console.warn
+			if ( mw.log ) {
+				mw.log.warn( '[StateManager] Force unlocking state after timeout' );
+			}
 			this.unlockState();
 		}, 5000 ); // 5 second timeout
 	}
@@ -218,7 +221,10 @@ class StateManager {
 				try {
 					callback( newValue, oldValue, key );
 				} catch ( error ) {
-					console.error( 'State listener error:', error.message || 'Unknown error' );
+					// SECURITY FIX: Use mw.log instead of console.error
+					if ( mw.log ) {
+						mw.log.error( 'State listener error:', error.message || 'Unknown error' );
+					}
 				}
 			} );
 		}
@@ -229,7 +235,10 @@ class StateManager {
 				try {
 					callback( key, newValue, oldValue );
 				} catch ( error ) {
-					console.error( 'Global state listener error:', error.message || 'Unknown error' );
+					// SECURITY FIX: Use mw.log instead of console.error
+					if ( mw.log ) {
+						mw.log.error( 'Global state listener error:', error.message || 'Unknown error' );
+					}
 				}
 			} );
 		}

@@ -1392,8 +1392,7 @@
 				this.editor.layers = layers;
 			}
 			if ( this.editor.canvasManager ) {
-				// Mark canvas dirty instead of rendering directly to avoid duplicate rendering
-				this.editor.canvasManager.markCanvasDirty();
+				// Redraw canvas to reflect new layer order
 				this.editor.canvasManager.redraw();
 			}
 			this.renderLayerList();

@@ -146,7 +146,7 @@
 		this.startPoint = point;
 
 		// eslint-disable-next-line no-console
-		console.info( '[ToolManager] startTool called for tool:', this.currentTool, 'at point:', point );
+
 
 		switch ( this.currentTool ) {
 			// Pointer tool is handled by CanvasManager directly

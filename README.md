@@ -1,6 +1,8 @@
 # Layers – MediaWiki Extension
 
-*A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today’s most popular image editors.*
+*A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
+
+> **🔒 Security Update (November 10, 2025):** Critical security vulnerabilities have been fixed in this version. See [SECURITY_FIXES_2025-11-10.md](SECURITY_FIXES_2025-11-10.md) for details. Users running older versions should upgrade immediately.
 
 ---
 

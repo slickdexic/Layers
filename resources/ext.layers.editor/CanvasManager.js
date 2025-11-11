@@ -825,6 +825,18 @@
 		var deltaX = point.x - this.dragStartPoint.x;
 		var deltaY = point.y - this.dragStartPoint.y;
 
+		// If layer has rotation, transform the delta into the layer's local coordinate system
+		var rotation = layer.rotation || 0;
+		if ( rotation !== 0 ) {
+			var rotRad = -rotation * Math.PI / 180; // Negative to reverse the rotation
+			var cos = Math.cos( rotRad );
+			var sin = Math.sin( rotRad );
+			var rotatedDeltaX = deltaX * cos - deltaY * sin;
+			var rotatedDeltaY = deltaX * sin + deltaY * cos;
+			deltaX = rotatedDeltaX;
+			deltaY = rotatedDeltaY;
+		}
+
 		// Limit delta values to prevent sudden jumps during rapid mouse movements
 		var maxDelta = 1000; // Reasonable maximum delta in pixels
 		deltaX = Math.max( -maxDelta, Math.min( maxDelta, deltaX ) );
@@ -3682,7 +3694,7 @@
 			'width: 100%;' +
 			'height: 100%;' +
 			'background: rgba(0, 0, 0, 0.5);' +
-			'z-index: 10001;' +
+			'z-index: 1000000;' +
 			'display: flex;' +
 			'align-items: center;' +
 			'justify-content: center;';
@@ -3742,6 +3754,21 @@
 					'border-radius: 4px;' +
 				'">' +
 				'<br><br>' +
+				'<label style="display: inline-block; margin-bottom: 5px; margin-right: 10px;">Stroke Width:</label>' +
+				'<input type="number" class="stroke-width-input" value="' + ( style.textStrokeWidth || 0 ) + '" min="0" max="10" step="0.5" style="' +
+					'width: 80px;' +
+					'padding: 4px 8px;' +
+					'border: 1px solid #ddd;' +
+					'border-radius: 4px;' +
+				'">' +
+				'<label style="display: inline-block; margin-left: 15px; margin-right: 5px;">Stroke Color:</label>' +
+				'<input type="color" class="stroke-color-input" value="' + ( style.textStrokeColor || '#000000' ) + '" style="' +
+					'width: 40px;' +
+					'height: 30px;' +
+					'border: 1px solid #ddd;' +
+					'border-radius: 4px;' +
+				'">' +
+				'<br><br>' +
 				'<label style="display: block; margin-bottom: 5px;">Text Alignment:</label>' +
 				'<div class="text-align-buttons" style="display: flex; gap: 5px; margin-bottom: 10px;">' +
 					'<button type="button" class="align-btn align-left active" data-align="left" style="' +
@@ -3788,16 +3815,16 @@
 
 		overlay.appendChild( modal );
 
-		// Event handlers
-		var textInput = modal.querySelector( '.text-input' );
-		var fontFamilyInput = modal.querySelector( '.font-family-input' );
-		var fontSizeInput = modal.querySelector( '.font-size-input' );
-		var colorInput = modal.querySelector( '.color-input' );
-		var alignButtons = modal.querySelectorAll( '.align-btn' );
-		var addBtn = modal.querySelector( '.add-btn' );
-		var cancelBtn = modal.querySelector( '.cancel-btn' );
-
-		// Set default font family if provided in style
+	// Event handlers
+	var textInput = modal.querySelector( '.text-input' );
+	var fontFamilyInput = modal.querySelector( '.font-family-input' );
+	var fontSizeInput = modal.querySelector( '.font-size-input' );
+	var colorInput = modal.querySelector( '.color-input' );
+	var strokeWidthInput = modal.querySelector( '.stroke-width-input' );
+	var strokeColorInput = modal.querySelector( '.stroke-color-input' );
+	var alignButtons = modal.querySelectorAll( '.align-btn' );
+	var addBtn = modal.querySelector( '.add-btn' );
+	var cancelBtn = modal.querySelector( '.cancel-btn' );		// Set default font family if provided in style
 		if ( fontFamilyInput && style.fontFamily ) {
 			fontFamilyInput.value = style.fontFamily;
 		}
@@ -3831,8 +3858,8 @@
 					fontFamily: fontFamilyInput.value || 'Arial, sans-serif',
 					textAlign: currentAlignment,
 					fill: colorInput.value,
-					textStrokeColor: style.textStrokeColor || '#000000',
-					textStrokeWidth: style.textStrokeWidth || 0,
+					textStrokeColor: strokeColorInput.value || '#000000',
+					textStrokeWidth: parseFloat( strokeWidthInput.value ) || 0,
 					textShadow: style.textShadow || false,
 					textShadowColor: style.textShadowColor || '#000000'
 				};

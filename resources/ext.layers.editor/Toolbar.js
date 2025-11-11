@@ -22,9 +22,7 @@
 		this.strokeColorNone = false;
 		this.fillColorNone = false;
 
-		console.log( '[Toolbar] Constructor called with config:', this.config );
-		console.log( '[Toolbar] Container element:', this.container );
-		console.log( '[Toolbar] Container in DOM:', this.container && document.body.contains( this.container ) );
+		// Debug logging removed - use mw.config.get('wgLayersDebug') if needed
 
 		// Initialize validator for real-time input validation
 		this.validator = window.LayersValidator ? new window.LayersValidator() : null;
@@ -34,17 +32,11 @@
 	}
 
 	Toolbar.prototype.init = function () {
-		console.log( '[Toolbar] init() called' );
-		console.log( '[Toolbar] init() - container:', this.container );
-		console.log( '[Toolbar] init() - container in DOM:', this.container && document.body.contains( this.container ) );
-
 		this.createInterface();
 		this.setupEventHandlers();
 
 		// Set default tool
 		this.selectTool( 'pointer' );
-
-		console.log( '[Toolbar] init() completed' );
 	};
 
 	// Update the visual state of a color display button
@@ -69,9 +61,12 @@
 		const buttonRect = anchorButton.getBoundingClientRect();
 		const overlay = document.createElement( 'div' );
 		overlay.className = 'color-picker-overlay';
+		overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000000;';
 
 		const dialog = document.createElement( 'div' );
 		dialog.className = 'color-picker-dialog';
+		dialog.style.position = 'fixed';
+		dialog.style.zIndex = '1000001';
 
 		let dialogTop = buttonRect.bottom + 5;
 		let dialogLeft = buttonRect.left;

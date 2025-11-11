@@ -79,6 +79,10 @@ class LayersDatabase {
 			return null;
 		}		$maxRetries = 3;
 		for ( $retryCount = 0; $retryCount < $maxRetries; $retryCount++ ) {
+			// PERFORMANCE FIX: Add exponential backoff to prevent DB hammering
+			if ( $retryCount > 0 ) {
+				usleep( $retryCount * 100000 ); // 100ms, 200ms on retries
+			}
 			$dbw->startAtomic( __METHOD__ );
 			try {
 				$revision = $this->getNextRevision( $imgName, $sha1, $dbw );
