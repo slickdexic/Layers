@@ -82,16 +82,43 @@
 		this.selectTool( 'pointer' );
 	};
 
+	Toolbar.prototype.getColorPickerStrings = function () {
+		var t = this.msg.bind( this );
+		return {
+			title: t( 'layers-color-picker-title', 'Choose color' ),
+			standard: t( 'layers-color-picker-standard', 'Standard colors' ),
+			saved: t( 'layers-color-picker-saved', 'Saved colors' ),
+			customSection: t( 'layers-color-picker-custom-section', 'Custom color' ),
+			none: t( 'layers-color-picker-none', 'No fill (transparent)' ),
+			emptySlot: t( 'layers-color-picker-empty-slot', 'Empty slot - colors will be saved here automatically' ),
+			cancel: t( 'layers-color-picker-cancel', 'Cancel' ),
+			apply: t( 'layers-color-picker-apply', 'Apply' ),
+			transparent: t( 'layers-color-picker-transparent', 'Transparent' ),
+			swatchTemplate: t( 'layers-color-picker-color-swatch', 'Set color to $1' ),
+			previewTemplate: t( 'layers-color-picker-color-preview', 'Current color: $1' )
+		};
+	};
+
 	// Update the visual state of a color display button
-	Toolbar.prototype.updateColorButtonDisplay = function ( btn, color, transparentLabel ) {
+	Toolbar.prototype.updateColorButtonDisplay = function ( btn, color, transparentLabel, previewTemplate ) {
+		var labelValue = color;
 		if ( !color || color === 'none' || color === 'transparent' ) {
 			btn.classList.add( 'is-transparent' );
 			btn.title = transparentLabel || 'Transparent';
 			btn.style.background = '';
+			labelValue = transparentLabel || 'Transparent';
 		} else {
 			btn.classList.remove( 'is-transparent' );
 			btn.style.background = color;
 			btn.title = color;
+		}
+		if ( previewTemplate ) {
+			var previewText = previewTemplate.indexOf( '$1' ) !== -1 ?
+				previewTemplate.replace( '$1', labelValue ) :
+				previewTemplate + ' ' + labelValue;
+			btn.setAttribute( 'aria-label', previewText );
+		} else if ( labelValue ) {
+			btn.setAttribute( 'aria-label', labelValue );
 		}
 	};
 
@@ -99,29 +126,47 @@
 	Toolbar.prototype.openColorPickerDialog = function ( anchorButton, initialValue, options ) {
 		options = options || {};
 		const toolbar = this;
-		const transparentTitle = options.transparentTitle || 'No Color (Transparent)';
+		const colorPickerStrings = this.getColorPickerStrings();
 		const onApply = options.onApply || function () {};
-
+		const transparentTitle = options.transparentTitle || colorPickerStrings.none;
+		const formatTemplate = function ( template, value ) {
+			if ( typeof template !== 'string' ) {
+				return value;
+			}
+			return template.indexOf( '$1' ) !== -1 ? template.replace( '$1', value ) : template + ' ' + value;
+		};
 		const buttonRect = anchorButton.getBoundingClientRect();
+		const previouslyFocused = document.activeElement;
 		const overlay = document.createElement( 'div' );
 		overlay.className = 'color-picker-overlay';
-		overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000000;';
-
+		overlay.setAttribute( 'role', 'presentation' );
+		overlay.setAttribute( 'aria-hidden', 'true' );
 		const dialog = document.createElement( 'div' );
 		dialog.className = 'color-picker-dialog';
-		dialog.style.position = 'fixed';
-		dialog.style.zIndex = '1000001';
+		dialog.setAttribute( 'role', 'dialog' );
+		dialog.setAttribute( 'aria-modal', 'true' );
+		dialog.setAttribute( 'tabindex', '-1' );
 		let escapeHandler = null;
+		let focusTrapHandler = null;
+		const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 		const cleanup = function () {
 			if ( escapeHandler ) {
 				document.removeEventListener( 'keydown', escapeHandler );
 				escapeHandler = null;
+			}
+			if ( focusTrapHandler ) {
+				dialog.removeEventListener( 'keydown', focusTrapHandler );
+				focusTrapHandler = null;
 			}
 			if ( overlay && overlay.parentNode ) {
 				overlay.parentNode.removeChild( overlay );
 			}
 			if ( dialog && dialog.parentNode ) {
 				dialog.parentNode.removeChild( dialog );
+			}
+			anchorButton.setAttribute( 'aria-expanded', 'false' );
+			if ( previouslyFocused && typeof previouslyFocused.focus === 'function' ) {
+				previouslyFocused.focus();
 			}
 			if ( toolbar && Array.isArray( toolbar.dialogCleanups ) ) {
 				toolbar.dialogCleanups = toolbar.dialogCleanups.filter( function ( fn ) {
@@ -130,7 +175,6 @@
 			}
 		};
 		this.registerDialogCleanup( cleanup );
-
 		let dialogTop = buttonRect.bottom + 5;
 		let dialogLeft = buttonRect.left;
 		const maxTop = window.innerHeight - 420;
@@ -147,31 +191,31 @@
 		if ( dialogTop < 10 ) {
 			dialogTop = 10;
 		}
-
 		dialog.style.top = Math.floor( dialogTop ) + 'px';
 		dialog.style.left = Math.floor( dialogLeft ) + 'px';
-
+		const dialogId = 'layers-color-picker-' + Math.random().toString( 36 ).slice( 2 );
 		const title = document.createElement( 'h3' );
 		title.className = 'color-picker-title';
-		title.textContent = options.title || 'Choose Color';
+		title.id = dialogId + '-title';
+		title.textContent = options.title || colorPickerStrings.title;
+		dialog.setAttribute( 'aria-labelledby', title.id );
 		dialog.appendChild( title );
-
 		const paletteContainer = document.createElement( 'div' );
 		paletteContainer.className = 'color-picker-section';
 		const paletteTitle = document.createElement( 'div' );
 		paletteTitle.className = 'color-picker-section-title';
-		paletteTitle.textContent = 'Standard Colors';
+		paletteTitle.id = dialogId + '-standard';
+		paletteTitle.textContent = colorPickerStrings.standard;
+		dialog.setAttribute( 'aria-describedby', paletteTitle.id );
 		paletteContainer.appendChild( paletteTitle );
 		const paletteGrid = document.createElement( 'div' );
 		paletteGrid.className = 'color-picker-grid';
-
 		const standardColors = [
 			'#000000', '#404040', '#808080', '#c0c0c0', '#ffffff', '#ff0000', '#ffff00', '#00ff00',
 			'#00ffff', '#0000ff', '#ff00ff', '#800000', '#808000', '#008000', '#008080', '#000080',
 			'#800080', '#ff4500', '#ffa500', '#ffff00', '#adff2f', '#00ff7f', '#00bfff', '#1e90ff',
 			'#9370db', '#ff69b4', '#ffdab9', '#f0e68c', '#e0ffff', '#ffe4e1', '#dcdcdc', '#a9a9a9'
 		];
-
 		let selectedColor = ( initialValue === 'none' ) ? 'none' : ( initialValue || '#000000' );
 		let selectedButton = null;
 		const updateSelection = function ( button ) {
@@ -183,53 +227,54 @@
 				selectedButton = button;
 			}
 		};
-
 		const noneButton = document.createElement( 'button' );
 		noneButton.type = 'button';
 		noneButton.className = 'color-picker-none-btn';
 		noneButton.title = transparentTitle;
-		noneButton.addEventListener( 'click', () => {
+		noneButton.setAttribute( 'aria-label', transparentTitle );
+		noneButton.addEventListener( 'click', function () {
 			selectedColor = 'none';
 			updateSelection( noneButton );
 		} );
 		paletteGrid.appendChild( noneButton );
-
-		standardColors.forEach( ( color ) => {
+		standardColors.forEach( function ( color ) {
 			const colorBtn = document.createElement( 'button' );
 			colorBtn.type = 'button';
 			colorBtn.className = 'color-picker-swatch-btn';
 			colorBtn.style.backgroundColor = color;
 			colorBtn.title = color;
-			colorBtn.addEventListener( 'click', () => {
+			colorBtn.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.swatchTemplate, color ) );
+			colorBtn.addEventListener( 'click', function () {
 				selectedColor = color;
 				updateSelection( colorBtn );
 			} );
+			if ( color.toLowerCase() === String( selectedColor ).toLowerCase() ) {
+				updateSelection( colorBtn );
+			}
 			paletteGrid.appendChild( colorBtn );
 		} );
-
 		paletteContainer.appendChild( paletteGrid );
 		dialog.appendChild( paletteContainer );
-
 		const customContainer = document.createElement( 'div' );
 		customContainer.className = 'color-picker-section';
 		const customTitle = document.createElement( 'div' );
 		customTitle.className = 'color-picker-section-title';
-		customTitle.textContent = 'Custom Colors';
+		customTitle.textContent = colorPickerStrings.saved;
 		customContainer.appendChild( customTitle );
 		const customGrid = document.createElement( 'div' );
 		customGrid.className = 'color-picker-grid';
 		let savedCustomColors = [];
 		try {
 			savedCustomColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
-		} catch ( e ) {}
-
+		} catch ( err ) {
+			savedCustomColors = [];
+		}
 		const createCustomButtonClickHandler = function ( button ) {
 			return function () {
 				selectedColor = button.style.backgroundColor;
 				updateSelection( button );
 			};
 		};
-
 		for ( let i = 0; i < 16; i++ ) {
 			const customBtn = document.createElement( 'button' );
 			customBtn.type = 'button';
@@ -238,58 +283,63 @@
 			if ( savedCustomColors[ i ] ) {
 				customBtn.style.backgroundColor = savedCustomColors[ i ];
 				customBtn.title = savedCustomColors[ i ];
+				customBtn.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.swatchTemplate, savedCustomColors[ i ] ) );
 				customBtn.addEventListener( 'click', createCustomButtonClickHandler( customBtn ) );
+				if ( savedCustomColors[ i ].toLowerCase && savedCustomColors[ i ].toLowerCase() === String( selectedColor ).toLowerCase() ) {
+					updateSelection( customBtn );
+				}
 			} else {
-				customBtn.title = 'Empty slot';
+				customBtn.title = colorPickerStrings.emptySlot;
+				customBtn.setAttribute( 'aria-label', colorPickerStrings.emptySlot );
 			}
 			customGrid.appendChild( customBtn );
 		}
-
 		customContainer.appendChild( customGrid );
 		dialog.appendChild( customContainer );
-
 		const customSection = document.createElement( 'div' );
 		customSection.className = 'color-picker-section';
 		const customLabel = document.createElement( 'div' );
 		customLabel.className = 'color-picker-section-title';
-		customLabel.textContent = 'Custom Color';
+		customLabel.textContent = colorPickerStrings.customSection;
 		customSection.appendChild( customLabel );
 		const customInput = document.createElement( 'input' );
 		customInput.type = 'color';
 		customInput.className = 'color-picker-custom-input';
-		customInput.addEventListener( 'change', () => {
+		customInput.setAttribute( 'aria-label', colorPickerStrings.customSection );
+		customInput.addEventListener( 'change', function () {
 			selectedColor = customInput.value;
+			updateSelection( null );
 		} );
 		customSection.appendChild( customInput );
 		dialog.appendChild( customSection );
-
 		if ( selectedColor === 'none' ) {
 			updateSelection( noneButton );
 		}
-
 		const buttonContainer = document.createElement( 'div' );
 		buttonContainer.className = 'color-picker-actions';
 		const cancelBtn = document.createElement( 'button' );
 		cancelBtn.type = 'button';
-		cancelBtn.textContent = 'Cancel';
-		cancelBtn.className = 'color-picker-btn';
-		cancelBtn.addEventListener( 'click', () => {
+		cancelBtn.className = 'color-picker-btn color-picker-btn--secondary';
+		cancelBtn.textContent = colorPickerStrings.cancel;
+		cancelBtn.addEventListener( 'click', function () {
 			cleanup();
 		} );
 		const okBtn = document.createElement( 'button' );
 		okBtn.type = 'button';
-		okBtn.textContent = 'OK';
 		okBtn.className = 'color-picker-btn color-picker-btn--primary';
-		okBtn.addEventListener( 'click', () => {
+		okBtn.textContent = colorPickerStrings.apply;
+		okBtn.addEventListener( 'click', function () {
 			if ( selectedColor !== 'none' && selectedColor !== initialValue ) {
 				try {
 					let customColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
-					if ( !customColors.includes( selectedColor ) ) {
+					if ( customColors.indexOf( selectedColor ) === -1 ) {
 						customColors.unshift( selectedColor );
 						customColors = customColors.slice( 0, 16 );
 						localStorage.setItem( 'layers-custom-colors', JSON.stringify( customColors ) );
 					}
-				} catch ( e ) {}
+				} catch ( err ) {
+					// Ignore storage failures
+				}
 			}
 			onApply( selectedColor );
 			cleanup();
@@ -297,8 +347,7 @@
 		buttonContainer.appendChild( cancelBtn );
 		buttonContainer.appendChild( okBtn );
 		dialog.appendChild( buttonContainer );
-
-		overlay.addEventListener( 'click', ( e ) => {
+		overlay.addEventListener( 'click', function ( e ) {
 			if ( e.target === overlay ) {
 				cleanup();
 			}
@@ -309,9 +358,37 @@
 			}
 		};
 		document.addEventListener( 'keydown', escapeHandler );
-
+		focusTrapHandler = function ( e ) {
+			if ( e.key !== 'Tab' ) {
+				return;
+			}
+			const focusable = dialog.querySelectorAll( focusableSelector );
+			if ( !focusable.length ) {
+				return;
+			}
+			const first = focusable[ 0 ];
+			const last = focusable[ focusable.length - 1 ];
+			if ( e.shiftKey && document.activeElement === first ) {
+				e.preventDefault();
+				last.focus();
+			} else if ( !e.shiftKey && document.activeElement === last ) {
+				e.preventDefault();
+				first.focus();
+			}
+		};
+		dialog.addEventListener( 'keydown', focusTrapHandler );
+		const focusInitial = function () {
+			const focusable = dialog.querySelectorAll( focusableSelector );
+			if ( focusable.length ) {
+				focusable[ 0 ].focus();
+			} else {
+				dialog.focus();
+			}
+		};
 		document.body.appendChild( overlay );
 		document.body.appendChild( dialog );
+		anchorButton.setAttribute( 'aria-expanded', 'true' );
+		focusInitial();
 	};
 
 	// Resolve i18n text safely, avoiding placeholder leakage
@@ -647,6 +724,7 @@
 		styleGroup.className = 'toolbar-group style-group';
 		const self = this;
 		const t = this.msg.bind( this );
+		const colorPickerStrings = this.getColorPickerStrings();
 
 		// Color pickers (modern dialog-based)
 		const colorContainer = document.createElement( 'div' );
@@ -659,21 +737,24 @@
 		strokeBtn.type = 'button';
 		strokeBtn.className = 'color-display-button stroke-color';
 		strokeBtn.setAttribute( 'aria-label', t( 'layers-prop-stroke-color', 'Stroke Color' ) );
-		self.updateColorButtonDisplay( strokeBtn, '#000000', t( 'layers-transparent', 'Transparent' ) );
+		strokeBtn.setAttribute( 'aria-haspopup', 'dialog' );
+		strokeBtn.setAttribute( 'aria-expanded', 'false' );
+		self.updateColorButtonDisplay( strokeBtn, '#000000', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
 		strokeColorWrapper.appendChild( strokeBtn );
 		colorContainer.appendChild( strokeColorWrapper );
 		strokeBtn.addEventListener( 'click', () => {
 			self.openColorPickerDialog( strokeBtn, self.strokeColorNone ? 'none' : self.strokeColorValue, {
 				title: t( 'layers-prop-stroke-color', 'Stroke Color' ),
 				transparentTitle: t( 'layers-transparent', 'No Stroke (Transparent)' ),
+				previewTemplate: colorPickerStrings.previewTemplate,
 				onApply: function ( chosen ) {
 					if ( chosen === 'none' ) {
 						self.strokeColorNone = true;
-						self.updateColorButtonDisplay( self.strokeColorButton, 'none', t( 'layers-transparent', 'Transparent' ) );
+						self.updateColorButtonDisplay( self.strokeColorButton, 'none', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
 					} else {
 						self.strokeColorNone = false;
 						self.strokeColorValue = chosen;
-						self.updateColorButtonDisplay( self.strokeColorButton, chosen, t( 'layers-transparent', 'Transparent' ) );
+						self.updateColorButtonDisplay( self.strokeColorButton, chosen, colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
 					}
 					self.updateStyleOptions();
 				}
@@ -687,21 +768,24 @@
 		fillBtn.type = 'button';
 		fillBtn.className = 'color-display-button fill-color';
 		fillBtn.setAttribute( 'aria-label', t( 'layers-prop-fill-color', 'Fill Color' ) );
-		self.updateColorButtonDisplay( fillBtn, '#ffffff', t( 'layers-transparent', 'Transparent' ) );
+		fillBtn.setAttribute( 'aria-haspopup', 'dialog' );
+		fillBtn.setAttribute( 'aria-expanded', 'false' );
+		self.updateColorButtonDisplay( fillBtn, '#ffffff', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
 		fillColorWrapper.appendChild( fillBtn );
 		colorContainer.appendChild( fillColorWrapper );
 		fillBtn.addEventListener( 'click', () => {
 			self.openColorPickerDialog( fillBtn, self.fillColorNone ? 'none' : self.fillColorValue, {
 				title: t( 'layers-prop-fill-color', 'Fill Color' ),
 				transparentTitle: t( 'layers-transparent', 'No Fill (Transparent)' ),
+				previewTemplate: colorPickerStrings.previewTemplate,
 				onApply: function ( chosen ) {
 					if ( chosen === 'none' ) {
 						self.fillColorNone = true;
-						self.updateColorButtonDisplay( self.fillColorButton, 'none', t( 'layers-transparent', 'Transparent' ) );
+						self.updateColorButtonDisplay( self.fillColorButton, 'none', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
 					} else {
 						self.fillColorNone = false;
 						self.fillColorValue = chosen;
-						self.updateColorButtonDisplay( self.fillColorButton, chosen, t( 'layers-transparent', 'Transparent' ) );
+						self.updateColorButtonDisplay( self.fillColorButton, chosen, colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
 					}
 					self.updateStyleOptions();
 				}

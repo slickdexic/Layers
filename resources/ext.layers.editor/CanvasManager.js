@@ -3886,6 +3886,8 @@
 
 	CanvasManager.prototype.startRectangleTool = function ( point, style ) {
 		// Store starting point for rectangle
+		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'rectangle',
 			x: point.x,
@@ -3894,12 +3896,14 @@
 			height: 0,
 			stroke: style.color || '#000000',
 			strokeWidth: style.strokeWidth || 2,
-			fill: 'transparent'
+			fill: fillColor
 		};
 	};
 
 	CanvasManager.prototype.startCircleTool = function ( point, style ) {
 		// Store starting point for circle
+		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'circle',
 			x: point.x,
@@ -3907,7 +3911,7 @@
 			radius: 0,
 			stroke: style.color || '#000000',
 			strokeWidth: style.strokeWidth || 2,
-			fill: 'transparent'
+			fill: fillColor
 		};
 	};
 
@@ -3949,6 +3953,8 @@
 	};
 
 	CanvasManager.prototype.startEllipseTool = function ( point, style ) {
+		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'ellipse',
 			x: point.x,
@@ -3957,11 +3963,13 @@
 			radiusY: 0,
 			stroke: style.color || '#000000',
 			strokeWidth: style.strokeWidth || 2,
-			fill: 'transparent'
+			fill: fillColor
 		};
 	};
 
 	CanvasManager.prototype.startPolygonTool = function ( point, style ) {
+		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'polygon',
 			x: point.x,
@@ -3970,11 +3978,13 @@
 			sides: 6, // Default hexagon
 			stroke: style.color || '#000000',
 			strokeWidth: style.strokeWidth || 2,
-			fill: 'transparent'
+			fill: fillColor
 		};
 	};
 
 	CanvasManager.prototype.startStarTool = function ( point, style ) {
+		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'star',
 			x: point.x,
@@ -3984,7 +3994,7 @@
 			points: 5, // Default 5-pointed star
 			stroke: style.color || '#000000',
 			strokeWidth: style.strokeWidth || 2,
-			fill: 'transparent'
+			fill: fillColor
 		};
 	};
 
