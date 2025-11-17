@@ -1,0 +1,10 @@
+[
+	{
+		"resourceModule": "ext.layers",
+		"maxSize": "40 KB"
+	},
+	{
+		"resourceModule": "ext.layers.editor",
+		"maxSize": "480 KB"
+	}
+]

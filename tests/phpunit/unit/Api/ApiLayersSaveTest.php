@@ -388,4 +388,23 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 		// For now, just verify the class exists
 		$this->assertTrue( class_exists( RateLimiter::class ) );
 	}
+
+	/**
+	 * Ensure set names retain international characters while remaining safe
+	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::sanitizeSetName
+	 */
+	public function testSanitizeSetNameAllowsUnicodeScripts() {
+		$api = $this->createMockApi();
+		$method = new \ReflectionMethod( $api, 'sanitizeSetName' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( $api, "  Пример-набор 层 集  " );
+		$this->assertSame( 'Пример-набор 层 集', $result );
+
+		$fallback = $method->invoke( $api, "悪い/../name\x00試験!" );
+		$this->assertSame( '悪いname試験', $fallback );
+
+		$empty = $method->invoke( $api, "\x00" );
+		$this->assertSame( 'default', $empty );
+	}
 }

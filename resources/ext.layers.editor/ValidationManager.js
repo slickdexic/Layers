@@ -86,7 +86,8 @@ class ValidationManager {
 			if ( layer.text && layer.text.length > 1000 ) {
 				errors.push( this.getMessage( 'layers-validation-text-too-long' ) );
 			}
-			if ( layer.fontSize && ( typeof layer.fontSize !== 'number' || layer.fontSize < 8 || layer.fontSize > 200 ) ) {
+			// FIX 2025-11-14: Updated max from 200 to 1000
+			if ( layer.fontSize && ( typeof layer.fontSize !== 'number' || layer.fontSize < 8 || layer.fontSize > 1000 ) ) {
 				errors.push( this.getMessage( 'layers-validation-fontsize-range' ) );
 			}
 		}

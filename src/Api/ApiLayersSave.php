@@ -3,27 +3,101 @@
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
+use ApiUsageException;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
+use Psr\Log\LoggerInterface;
 
+/**
+ * API module for saving layer data to a MediaWiki file.
+ *
+ * This module provides a secure endpoint for persisting non-destructive image annotations.
+ * It implements a defense-in-depth security model with multiple validation layers:
+ *
+ * SECURITY ARCHITECTURE:
+ * 1. Authentication & Authorization: Requires 'editlayers' right and CSRF token
+ * 2. Input Validation: Multi-stage validation of filename, data size, JSON structure
+ * 3. Rate Limiting: Prevents abuse via MediaWiki's rate limiter system
+ * 4. Data Sanitization: ServerSideLayerValidator enforces strict property whitelists
+ * 5. Database Safety: Transaction retry logic with exponential backoff
+ * 6. Error Handling: Generic error messages to prevent information disclosure
+ *
+ * WORKFLOW:
+ * 1. Check user permissions ('editlayers' right)
+ * 2. Verify database schema is ready
+ * 3. Sanitize and validate setname (prevents path traversal, XSS)
+ * 4. Validate filename exists in MediaWiki file namespace
+ * 5. Check payload size against configured limit
+ * 6. Parse and validate JSON structure
+ * 7. Run comprehensive layer data validation (40+ field types)
+ * 8. Check rate limits to prevent abuse
+ * 9. Verify target file exists and extract metadata
+ * 10. Save to database with automatic revision incrementing
+ * 11. Return success response with new layer set ID
+ *
+ * DATA MODEL:
+ * Client sends: JSON array of layer objects (see data model in copilot-instructions.md)
+ * Server stores: Wrapped structure { revision, schema: 1, created, layers: [] }
+ *
+ * CONFIGURATION:
+ * - $wgLayersMaxBytes: Maximum JSON payload size (default 2MB)
+ * - $wgLayersMaxLayerCount: Maximum layers per set (default 100)
+ * - $wgRateLimits['editlayers-save']: Rate limit configuration
+ *
+ * ERROR HANDLING:
+ * All errors return i18n message keys for consistent client-side display.
+ * Internal error details are logged but never exposed to clients (security).
+ *
+ * @see https://www.mediawiki.org/wiki/Extension:Layers
+ * @see ServerSideLayerValidator for validation rules
+ * @see LayersDatabase::saveLayerSet() for persistence logic
+ */
 class ApiLayersSave extends ApiBase {
 
+	/** @var LoggerInterface|null */
+	private ?LoggerInterface $logger = null;
+
 	/**
-	 * Main execution function
+	 * Main execution function for the layerssave API endpoint.
+	 *
+	 * Implements a comprehensive validation pipeline with defense-in-depth security:
+	 * - Permission checks (editlayers right + CSRF token via needsToken())
+	 * - Input sanitization (setname, filename, data)
+	 * - Size limits (payload bytes, layer count)
+	 * - Rate limiting (prevent abuse)
+	 * - Schema validation (strict property whitelists)
+	 * - Database integrity (retry logic for conflicts)
+	 *
+	 * SECURITY NOTES:
+	 * - All validation errors use i18n keys (never expose internal details)
+	 * - Exceptions are caught and logged server-side with full context
+	 * - Clients receive generic 'layers-save-failed' on unexpected errors
+	 * - This prevents information disclosure attacks
 	 *
 	 * @throws \ApiUsageException When user lacks permission or data is invalid
 	 */
 	public function execute() {
+		// Get authenticated user and request parameters
+		// MediaWiki guarantees $user is valid (anonymous or logged in)
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
+		$requestedFilename = $params['filename'];
+		
+		// SECURITY: Verify user has editlayers permission
+		// This throws ApiUsageException if user lacks the right
+		// CSRF token is automatically checked by needsToken() return value
 		$this->checkUserRightsAny( 'editlayers' );
 
 		try {
+			// Get LayersDatabase service via dependency injection
+			// Service is wired in services.php with LoadBalancer, Config, Logger, SchemaManager
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
 
-			// Ensure DB schema is present
+			// CRITICAL: Verify database schema exists before any operations
+			// Prevents cryptic SQL errors if admin hasn't run update.php
+			// Schema is created/updated via LayersSchemaManager on LoadExtensionSchemaUpdates hook
 			if ( !$db->isSchemaReady() ) {
 				$this->dieWithError(
 					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
@@ -31,52 +105,71 @@ class ApiLayersSave extends ApiBase {
 				);
 			}
 
-			$fileName = $params['filename'];
+			// Extract parameters from the API request
+			$fileName = $requestedFilename;
 			$data = $params['data'];
-			$setName = $params['setname'] ?? 'default';
+			$setName = $this->sanitizeSetName( $params['setname'] ?? 'default' );
 
-			// SECURITY FIX: Validate and sanitize set name more strictly
-			// Remove path traversal, control characters, and dangerous patterns
-			$setName = trim( $setName );
-			// Remove any path traversal attempts, null bytes, and control characters
-			$setName = preg_replace( '/[\x00-\x1F\x7F\/\\\\]/', '', $setName );
-			// Allow only safe characters: alphanumeric, spaces, dashes, underscores
-			$setName = preg_replace( '/[^a-zA-Z0-9_\-\s]/', '', $setName );
-			// Collapse multiple spaces
-			$setName = preg_replace( '/\s+/', ' ', $setName );
-			// Truncate to safe length
-			$setName = substr( $setName, 0, 255 );
-			// Ensure not empty after sanitization
-			if ( $setName === '' ) {
-				$setName = 'default';
-			}
-
+			// VALIDATION: Ensure filename is valid and exists in File namespace
+			// Title::newFromText normalizes the filename and validates format
+			// NS_FILE ensures we're working with the File: namespace only
+			// This prevents attempts to attach layers to non-file pages
 			$title = Title::newFromText( $fileName, NS_FILE );
 			if ( !$title || !$title->exists() ) {
 				$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
 			}
-			$fileName = $title->getText();
+			
+			// Use DB key form for database operations
+			// This ensures consistency (spaces -> underscores) across save/load paths
+			$fileDbKey = $title->getDBkey();
+			if ( $fileDbKey === '' ) {
+				$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+			}
 
+			// SIZE LIMIT: Check payload size before expensive JSON parsing
+			// This prevents DoS attacks via large payloads that could:
+			// - Exhaust PHP memory during json_decode()
+			// - Fill database with excessive data
+			// - Slow down validation of malicious large structures
+			// Default: 2MB (configurable via $wgLayersMaxBytes)
 			$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
 				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
 			}
 
+			// PARSE: Decode JSON structure from client
+			// Client sends array of layer objects: [{id, type, x, y, ...}, ...]
+			// json_decode with associative=true converts to PHP array
 			$layersData = json_decode( $data, true );
 			if ( $layersData === null ) {
+				// JSON parsing failed - invalid syntax, encoding issues, or malformed data
 				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
 			}
 
+			// VALIDATION PIPELINE: Comprehensive security-focused validation
+			// ServerSideLayerValidator enforces:
+			// - Layer count limits ($wgLayersMaxLayerCount, default 100)
+			// - Strict property whitelist (40+ allowed fields, see ALLOWED_PROPERTIES)
+			// - Type validation (numeric ranges, enum values, boolean conversions)
+			// - Sanitization (text XSS prevention, color validation, coordinate bounds)
+			// - Duplicate ID detection
+			// Unknown properties are SILENTLY DROPPED (not errors)
 			$validator = new ServerSideLayerValidator();
 			$validationResult = $validator->validateLayers( $layersData );
 
+			// Check for validation errors (structural problems, invalid values)
 			if ( !$validationResult->isValid() ) {
+				// Combine all error messages with i18n keys for client display
 				$errors = implode( '; ', $validationResult->getErrors() );
 				$this->dieWithError( [ 'layers-validation-failed', $errors ], 'validationfailed' );
 			}
 
+			// Extract sanitized data (validator has cleaned/normalized all fields)
+			// This is the data we'll persist to database
 			$sanitizedData = $validationResult->getData();
 
+			// Log warnings (non-fatal issues like dropped unknown properties)
+			// These are logged server-side but don't block the save operation
 			if ( $validationResult->hasWarnings() ) {
 				$warnings = implode( '; ', $validationResult->getWarnings() );
 				$this->getLogger()->warning(
@@ -85,61 +178,160 @@ class ApiLayersSave extends ApiBase {
 				);
 			}
 
+			// RATE LIMITING: Prevent abuse by limiting save operations per user
+			// Uses MediaWiki's core rate limiter via User::pingLimiter()
+			// Configuration in LocalSettings.php:
+			//   $wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ]; // 30 saves per hour
+			//   $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ]; // stricter for new users
+			// Rate limit is checked AFTER validation to avoid wasting limit on invalid data
 			$rateLimiter = new RateLimiter();
 			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
 				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
 			}
 
+			// FILE VERIFICATION: Ensure target file exists and is accessible
+			// RepoGroup handles both local and foreign (wikimedia commons) files
+			// This is a secondary check after Title validation
 			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
-			$file = $repoGroup->findFile( $fileName );
+			$file = $repoGroup->findFile( $title );
 			if ( !$file || !$file->exists() ) {
 				$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
 			}
 
+			// Extract file metadata for database association
+			// SHA1: Ensures layers are associated with specific file version
+			// MIME: Allows future filtering (e.g., only allow layers on images)
+			// If file is replaced, SHA1 changes, creating logical separation
 			$imgMetadata = [
 				'mime' => $file->getMimeType(),
 				'sha1' => $file->getSha1(),
 			];
 
+			// DATABASE SAVE: Persist layer set with automatic versioning
+			// LayersDatabase::saveLayerSet() performs:
+			// - Automatic revision number incrementing (per-image counter)
+			// - Transaction with retry logic (3 attempts with exponential backoff)
+			// - Wraps data in structure: {revision, schema: 1, created, layers: [...]}
+			// - Calculates and stores size for monitoring/limits
+			// Returns: new layer set ID (ls_id) or null on failure
 			$layerSetId = $db->saveLayerSet(
-				$fileName,
+				$fileDbKey,
 				$imgMetadata,
 				$sanitizedData,
 				$user->getId(),
 				$setName
 			);
 
+			// Build success response
 			if ( $layerSetId ) {
+				// Response format matches MediaWiki API conventions
+				// Client can use layersetid to fetch this specific revision later
 				$resultData = [
 					'success' => 1,
 					'layersetid' => $layerSetId,
 					'result' => 'Success'
 				];
+				// Add to result under module name ('layerssave')
+				// Client access: response.layerssave.layersetid
 				$this->getResult()->addValue( null, $this->getModuleName(), $resultData );
 			} else {
+				// Database operation failed (unlikely after all validation)
+				// Possible causes: disk full, connection loss, constraint violation
 				$this->dieWithError( 'layers-save-failed', 'savefailed' );
 			}
+		} catch ( ApiUsageException $e ) {
+			throw $e;
 		} catch ( \Throwable $e ) {
-			// SECURITY FIX: Use MediaWiki's logging system instead of file_put_contents
-			// This prevents disk exhaustion attacks and information disclosure
+			// GLOBAL EXCEPTION HANDLER: Catch any unexpected errors
+			// This catch block is the last line of defense for:
+			// - Database exceptions (connection failures, constraint violations)
+			// - PHP errors (out of memory, type errors)
+			// - Service initialization failures
+			// - Any other unexpected conditions
+			
+			// SECURITY CRITICAL: Log full details server-side for debugging
+			// Uses MediaWiki's PSR-3 logger which:
+			// - Routes to configured log handlers (file, syslog, etc.)
+			// - Prevents disk exhaustion (respects log rotation policies)
+			// - Includes structured context for monitoring/alerting
+			// - Never exposed to clients (prevents information disclosure)
 			$this->getLogger()->error(
 				'Layer save failed: {message}',
 				[
 					'message' => $e->getMessage(),
-					'exception' => $e,
+					'exception' => $e, // Full stack trace for debugging
 					'user_id' => $user->getId(),
 					'filename' => $fileName
 				]
 			);
 
-			// SECURITY FIX: Return generic error to client, not exception details
-			// This prevents information disclosure of internal system details
+			// SECURITY CRITICAL: Return generic error message to client
+			// NEVER expose:
+			// - Database schema details (table names, column names)
+			// - File paths (reveals server structure)
+			// - Stack traces (reveals code structure, library versions)
+			// - Configuration values
+			// Generic message prevents attackers from learning about system internals
 			$this->dieWithError( 'layers-save-failed', 'savefailed' );
 		}
 	}
 
 	/**
-	 * @inheritDoc
+	 * Sanitize a user-supplied layer set name while allowing multilingual scripts.
+	 *
+	 * @param string $rawSetName
+	 * @return string
+	 */
+	protected function sanitizeSetName( string $rawSetName ): string {
+		$setName = trim( $rawSetName );
+
+		// Remove control chars and path separators to avoid traversal and logging issues
+		$setName = preg_replace( '/[\x00-\x1F\x7F\/\\]/u', '', $setName );
+
+		// Allow any letter/number from any script plus underscore, dash, and spaces
+		$unicodeSafe = preg_replace( '/[^\p{L}\p{N}_\-\s]/u', '', $setName );
+		if ( $unicodeSafe === null ) {
+			// Fallback for environments without unicode PCRE support
+			$unicodeSafe = preg_replace( '/[^a-zA-Z0-9_\-\s]/', '', $setName );
+		}
+		$setName = $unicodeSafe ?? '';
+
+		// Collapse repeated whitespace
+		$setName = preg_replace( '/\s+/u', ' ', $setName );
+
+		// Enforce database column limit with multibyte-aware substring when possible
+		if ( function_exists( 'mb_substr' ) ) {
+			$setName = mb_substr( $setName, 0, 255 );
+		} else {
+			$setName = substr( $setName, 0, 255 );
+		}
+
+		return $setName === '' ? 'default' : $setName;
+	}
+
+	/**
+	 * Define allowed API parameters with validation rules.
+	 *
+	 * MediaWiki automatically validates types and required status before execute() runs.
+	 *
+	 * API CONTRACT:
+	 * - filename: Name of file in File: namespace (e.g., "Example.jpg", not "File:Example.jpg")
+	 *             MediaWiki normalizes namespace prefixes automatically
+	 * - data:     JSON string containing array of layer objects
+	 *             Format: '[{"id":"01","type":"text","x":100,"y":50,...}, ...]'
+	 *             Server wraps this in structure with revision, schema, created timestamp
+	 * - setname:  Optional human-readable label for this layer set revision
+	 *             Defaults to "default" if not provided
+	 *             Sanitized to prevent XSS and path traversal
+	 * - token:    CSRF token (automatically validated by needsToken())
+	 *             Client obtains via mw.Api().postWithToken('csrf', ...)
+	 *
+	 * SECURITY NOTES:
+	 * - All parameters are strings (prevents type juggling attacks)
+	 * - Additional validation in execute() for each parameter
+	 * - Token validation prevents CSRF attacks
+	 *
+	 * @return array Parameter definitions for MediaWiki API framework
 	 */
 	public function getAllowedParams() {
 		return [
@@ -163,7 +355,25 @@ class ApiLayersSave extends ApiBase {
 	}
 
 	/**
-	 * Check if this API module needs a token
+	 * Specify token requirement for CSRF protection.
+	 *
+	 * Returning 'csrf' tells MediaWiki to:
+	 * 1. Require a valid CSRF token in the 'token' parameter
+	 * 2. Automatically validate the token before calling execute()
+	 * 3. Reject requests with missing, invalid, or expired tokens
+	 *
+	 * SECURITY: This prevents Cross-Site Request Forgery attacks where
+	 * malicious sites try to make requests on behalf of logged-in users.
+	 *
+	 * CLIENT USAGE:
+	 *   var api = new mw.Api();
+	 *   api.postWithToken('csrf', {
+	 *     action: 'layerssave',
+	 *     filename: 'Example.jpg',
+	 *     data: JSON.stringify(layersArray)
+	 *   });
+	 *
+	 * The token is automatically fetched and included by mw.Api().
 	 *
 	 * @return string Type of token required ('csrf' for write operations)
 	 */
@@ -172,7 +382,20 @@ class ApiLayersSave extends ApiBase {
 	}
 
 	/**
-	 * Check if this API module is in write mode
+	 * Indicate this module performs write operations.
+	 *
+	 * Returning true tells MediaWiki that this module:
+	 * 1. Modifies server-side data (database writes)
+	 * 2. Must be called via POST (not GET) for HTTP semantics
+	 * 3. Requires authentication (anonymous users see permission error)
+	 * 4. Should not be cached by proxies or browsers
+	 * 5. Counts against rate limits
+	 *
+	 * MediaWiki enforces these restrictions automatically.
+	 *
+	 * READ-ONLY vs WRITE MODE:
+	 * - ApiLayersInfo: isWriteMode() = false (just reads data)
+	 * - ApiLayersSave:  isWriteMode() = true (writes to database)
 	 *
 	 * @return bool True since this module modifies data
 	 */
@@ -181,7 +404,24 @@ class ApiLayersSave extends ApiBase {
 	}
 
 	/**
-	 * Get example messages for this API module
+	 * Provide example API calls for documentation and testing.
+	 *
+	 * These examples appear on Special:ApiHelp/layerssave and in API docs.
+	 * Each example shows:
+	 * - Complete API call syntax
+	 * - Required parameters
+	 * - Data format
+	 *
+	 * The example shows a minimal layer set with one text layer.
+	 * Real-world usage would include more layer properties:
+	 * - fontSize, fontFamily, color for text
+	 * - stroke, fill, strokeWidth for shapes
+	 * - opacity, blendMode for effects
+	 * See ServerSideLayerValidator::ALLOWED_PROPERTIES for full field list.
+	 *
+	 * MESSAGE KEY:
+	 * The value 'apihelp-layerssave-example-1' maps to i18n/en.json
+	 * for localized example descriptions.
 	 *
 	 * @return array Array of example API calls with descriptions
 	 */
@@ -191,5 +431,15 @@ class ApiLayersSave extends ApiBase {
 				'[{"id":"1","type":"text","text":"Hello","x":100,"y":50}]&token=123ABC' =>
 				'apihelp-layerssave-example-1',
 		];
+	}
+
+	/**
+	 * Lazily resolve the Layers-specific logger.
+	 */
+	private function getLogger(): LoggerInterface {
+		if ( $this->logger === null ) {
+			$this->logger = MediaWikiServices::getInstance()->get( 'LayersLogger' );
+		}
+		return $this->logger;
 	}
 }

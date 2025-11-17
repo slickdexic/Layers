@@ -15,6 +15,7 @@
 		this.maxErrors = 10;
 		this.notificationContainer = null;
 		this.debugMode = false;
+		this.globalListeners = [];
 
 		// Initialize error container
 		this.initErrorContainer();
@@ -37,17 +38,20 @@
 	/**
 	 * Set up global error handler for unhandled errors
 	 */
-	ErrorHandler.prototype.setupGlobalErrorHandler = function () {
-		const self = this;
+	ErrorHandler.prototype.registerWindowListener = function ( type, handler, options ) {
+		window.addEventListener( type, handler, options );
+		this.globalListeners.push( { type: type, handler: handler, options: options } );
+	};
 
+	ErrorHandler.prototype.setupGlobalErrorHandler = function () {
 		// Handle unhandled promise rejections
-		window.addEventListener( 'unhandledrejection', ( event ) => {
-			self.handleError( event.reason, 'Unhandled Promise Rejection', 'promise' );
+		this.registerWindowListener( 'unhandledrejection', ( event ) => {
+			this.handleError( event.reason, 'Unhandled Promise Rejection', 'promise' );
 		} );
 
 		// Handle general JavaScript errors
-		window.addEventListener( 'error', ( event ) => {
-			self.handleError( event.error, 'JavaScript Error', 'script', {
+		this.registerWindowListener( 'error', ( event ) => {
+			this.handleError( event.error, 'JavaScript Error', 'script', {
 				filename: event.filename,
 				lineno: event.lineno,
 				colno: event.colno
@@ -528,8 +532,17 @@
 		if ( this.notificationContainer && this.notificationContainer.parentNode ) {
 			this.notificationContainer.parentNode.removeChild( this.notificationContainer );
 		}
+		if ( this.globalListeners && this.globalListeners.length ) {
+			this.globalListeners.forEach( function ( listener ) {
+				window.removeEventListener( listener.type, listener.handler, listener.options );
+			} );
+		}
 		this.errorQueue = [];
 		this.notificationContainer = null;
+		this.globalListeners = [];
+		if ( window.layersErrorHandler === this ) {
+			window.layersErrorHandler = null;
+		}
 	};
 
 	// Export ErrorHandler

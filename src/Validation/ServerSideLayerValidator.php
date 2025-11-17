@@ -97,7 +97,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'opacity' => [ 'min' => 0, 'max' => 1 ],
 		'fillOpacity' => [ 'min' => 0, 'max' => 1 ],
 		'strokeOpacity' => [ 'min' => 0, 'max' => 1 ],
-		'fontSize' => [ 'min' => 1, 'max' => 200 ],
+		// FIX 2025-11-14: Increased max from 200 to 1000 for large display use cases (posters, billboards)
+		'fontSize' => [ 'min' => 1, 'max' => 1000 ],
 		'strokeWidth' => [ 'min' => 0, 'max' => 100 ],
 		'width' => [ 'min' => 0, 'max' => 10000 ],
 		'height' => [ 'min' => 0, 'max' => 10000 ],
@@ -160,7 +161,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 		if ( empty( $layersData ) ) {
 			$result->addWarning( "No layers provided" );
-			return ValidationResult::success( [] );
+			return ValidationResult::success( [], $result->getWarnings(), $result->getMetadata() );
 		}
 
 		$validatedLayers = [];
@@ -246,7 +247,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return $result;
 		}
 
-		return ValidationResult::success( $cleanLayer );
+		return ValidationResult::success( $cleanLayer, $result->getWarnings(), $result->getMetadata() );
 	}
 
 	/**
@@ -468,15 +469,49 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				}
 				break;
 
-			case 'polygon':
+			case 'polygon': {
+				$hasPoints = $this->hasValidPointArray( $layer, 3 );
+				$hasParametricDefinition = $this->hasParametricPolygonDefinition( $layer );
+				if ( !$hasPoints && !$hasParametricDefinition ) {
+					return [
+						'valid' => false,
+						'error' => 'Polygon layer must include points array or radius/sides definition'
+					];
+				}
+				break;
+			}
+
 			case 'path':
-				if ( !isset( $layer['points'] ) || empty( $layer['points'] ) ) {
-					return [ 'valid' => false, 'error' => "$type layer must have points" ];
+				if ( !$this->hasValidPointArray( $layer, 2 ) ) {
+					return [ 'valid' => false, 'error' => 'path layer must have points' ];
 				}
 				break;
 		}
 
 		return [ 'valid' => true ];
+	}
+
+	/**
+	 * Determine if a layer has a usable points array.
+	 */
+	private function hasValidPointArray( array $layer, int $minPoints ): bool {
+		return isset( $layer['points'] )
+			&& is_array( $layer['points'] )
+			&& count( $layer['points'] ) >= $minPoints;
+	}
+
+	/**
+	 * Check for parametric polygon definitions (center + radius + sides).
+	 */
+	private function hasParametricPolygonDefinition( array $layer ): bool {
+		if ( !isset( $layer['x'], $layer['y'], $layer['radius'], $layer['sides'] ) ) {
+			return false;
+		}
+
+		$radius = (float)$layer['radius'];
+		$sides = (int)floor( $layer['sides'] );
+
+		return $radius > 0 && $sides >= 3;
 	}
 
 	/**

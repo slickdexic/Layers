@@ -6,8 +6,7 @@
  * @file
  * @ingroup Extensions
  */
-
-namespace MediaWiki\Extension\Layers {
+namespace MediaWiki\Extension\Layers;
 
 	class LayeredThumbnail extends \MediaTransformOutput {
 
@@ -158,4 +157,3 @@ namespace MediaWiki\Extension\Layers {
 			return $this->height;
 		}
 	}
-}

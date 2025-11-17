@@ -55,6 +55,8 @@
 		this.isMarqueeSelecting = false;
 		this.marqueeStart = { x: 0, y: 0 };
 		this.marqueeEnd = { x: 0, y: 0 };
+		this.lastTouchPoint = null;
+		this.lastTouchTime = 0;
 
 		// Throttle transform event emission for live UI sync
 		this.transformEventScheduled = false;
@@ -455,89 +457,58 @@
 	};
 
 	CanvasManager.prototype.setupEventHandlers = function () {
-		var self = this;
+		if ( !this.canvas ) {
+			return;
+		}
 
 		// Mouse events
-		this.canvas.addEventListener( 'mousedown', function ( e ) {
-			self.handleMouseDown( e );
-		} );
-
-		this.canvas.addEventListener( 'mousemove', function ( e ) {
-			self.handleMouseMove( e );
-		} );
-
-		this.canvas.addEventListener( 'mouseup', function ( e ) {
-			self.handleMouseUp( e );
-		} );
+		this.onMouseDownHandler = this.handleMouseDown.bind( this );
+		this.onMouseMoveHandler = this.handleMouseMove.bind( this );
+		this.onMouseUpHandler = this.handleMouseUp.bind( this );
+		this.canvas.addEventListener( 'mousedown', this.onMouseDownHandler );
+		this.canvas.addEventListener( 'mousemove', this.onMouseMoveHandler );
+		this.canvas.addEventListener( 'mouseup', this.onMouseUpHandler );
 
 		// Touch events for mobile support
-		this.canvas.addEventListener( 'touchstart', function ( e ) {
-			e.preventDefault(); // Prevent scrolling
-			self.handleTouchStart( e );
-		} );
-
-		this.canvas.addEventListener( 'touchmove', function ( e ) {
-			e.preventDefault(); // Prevent scrolling
-			self.handleTouchMove( e );
-		} );
-
-		this.canvas.addEventListener( 'touchend', function ( e ) {
+		this.onTouchStartHandler = function ( e ) {
 			e.preventDefault();
-			self.handleTouchEnd( e );
-		} );
-
-		// Handle pinch-to-zoom on touch devices
-		this.canvas.addEventListener( 'touchcancel', function ( e ) {
+			this.handleTouchStart( e );
+		}.bind( this );
+		this.onTouchMoveHandler = function ( e ) {
 			e.preventDefault();
-			self.handleTouchEnd( e );
-		} );
+			this.handleTouchMove( e );
+		}.bind( this );
+		this.onTouchEndHandler = function ( e ) {
+			e.preventDefault();
+			this.handleTouchEnd( e );
+		}.bind( this );
+		this.onTouchCancelHandler = function ( e ) {
+			e.preventDefault();
+			this.handleTouchEnd( e );
+		}.bind( this );
+		this.canvas.addEventListener( 'touchstart', this.onTouchStartHandler );
+		this.canvas.addEventListener( 'touchmove', this.onTouchMoveHandler );
+		this.canvas.addEventListener( 'touchend', this.onTouchEndHandler );
+		this.canvas.addEventListener( 'touchcancel', this.onTouchCancelHandler );
 
 		// Wheel event for zooming
-		this.canvas.addEventListener( 'wheel', function ( e ) {
+		this.onWheelHandler = function ( e ) {
 			e.preventDefault();
-			self.handleWheel( e );
-		} );
+			this.handleWheel( e );
+		}.bind( this );
+		this.canvas.addEventListener( 'wheel', this.onWheelHandler );
 
 		// Prevent context menu
-		this.canvas.addEventListener( 'contextmenu', function ( e ) {
+		this.onContextMenuHandler = function ( e ) {
 			e.preventDefault();
-		} );
+		}.bind( this );
+		this.canvas.addEventListener( 'contextmenu', this.onContextMenuHandler );
 
 		// Keyboard events for pan and zoom
-		document.addEventListener( 'keydown', function ( e ) {
-			self.handleKeyDown( e );
-		} );
-
-		document.addEventListener( 'keyup', function ( e ) {
-			self.handleKeyUp( e );
-		} );
-
-		// Touch events for mobile support
-		this.canvas.addEventListener( 'touchstart', function ( e ) {
-			e.preventDefault();
-			var touch = e.touches[ 0 ];
-			var mouseEvent = new MouseEvent( 'mousedown', {
-				clientX: touch.clientX,
-				clientY: touch.clientY
-			} );
-			self.canvas.dispatchEvent( mouseEvent );
-		} );
-
-		this.canvas.addEventListener( 'touchmove', function ( e ) {
-			e.preventDefault();
-			var touch = e.touches[ 0 ];
-			var mouseEvent = new MouseEvent( 'mousemove', {
-				clientX: touch.clientX,
-				clientY: touch.clientY
-			} );
-			self.canvas.dispatchEvent( mouseEvent );
-		} );
-
-		this.canvas.addEventListener( 'touchend', function ( e ) {
-			e.preventDefault();
-			var mouseEvent = new MouseEvent( 'mouseup', {} );
-			self.canvas.dispatchEvent( mouseEvent );
-		} );
+		this.onDocumentKeyDownHandler = this.handleKeyDown.bind( this );
+		this.onDocumentKeyUpHandler = this.handleKeyUp.bind( this );
+		document.addEventListener( 'keydown', this.onDocumentKeyDownHandler );
+		document.addEventListener( 'keyup', this.onDocumentKeyUpHandler );
 	};
 
 	CanvasManager.prototype.handleMouseDown = function ( e ) {
@@ -1756,6 +1727,7 @@
 		if ( !touch ) {
 			return;
 		}
+		this.lastTouchPoint = { clientX: touch.clientX, clientY: touch.clientY };
 
 		// Handle multi-touch gestures
 		if ( e.touches.length > 1 ) {
@@ -1781,6 +1753,7 @@
 		if ( !touch ) {
 			return;
 		}
+		this.lastTouchPoint = { clientX: touch.clientX, clientY: touch.clientY };
 
 		// Handle multi-touch gestures
 		if ( e.touches.length > 1 ) {
@@ -1801,6 +1774,10 @@
 	};
 
 	CanvasManager.prototype.handleTouchEnd = function ( e ) {
+		var changedTouch = ( e.changedTouches && e.changedTouches[ 0 ] ) || null;
+		if ( changedTouch ) {
+			this.lastTouchPoint = { clientX: changedTouch.clientX, clientY: changedTouch.clientY };
+		}
 		// Handle double-tap for zoom
 		var now = Date.now();
 		if ( this.lastTouchTime && ( now - this.lastTouchTime ) < 300 ) {
@@ -1814,10 +1791,12 @@
 			return;
 		}
 
-		// Convert touch to mouse event
+		// Convert touch to mouse event using the last real touch coordinates
+		var clientX = this.lastTouchPoint ? this.lastTouchPoint.clientX : 0;
+		var clientY = this.lastTouchPoint ? this.lastTouchPoint.clientY : 0;
 		var mouseEvent = {
-			clientX: 0,
-			clientY: 0,
+			clientX: clientX,
+			clientY: clientY,
 			button: 0,
 			preventDefault: function () {},
 			stopPropagation: function () {}
@@ -2242,42 +2221,204 @@
 	 * Get bounding box of a layer
 	 *
 	 * @param {Object} layer Layer object
-	 * @return {Object|null} Bounding box with left, top, right, bottom properties
+	 * @return {Object|null} Bounding box including raw and axis-aligned data
 	 */
 	CanvasManager.prototype.getLayerBounds = function ( layer ) {
 		if ( !layer ) {
 			return null;
 		}
 
-		var bounds = { left: 0, top: 0, right: 0, bottom: 0 };
-
-		switch ( layer.type ) {
-			case 'text':
-				bounds.left = layer.x || 0;
-				bounds.top = ( layer.y || 0 ) - ( layer.fontSize || 16 );
-				// Estimate text width (rough approximation)
-				var textWidth = ( layer.text || '' ).length * ( layer.fontSize || 16 ) * 0.6;
-				bounds.right = bounds.left + textWidth;
-				bounds.bottom = layer.y || 0;
-				break;
-			case 'rectangle':
-			case 'ellipse':
-			case 'circle':
-				bounds.left = layer.x || 0;
-				bounds.top = layer.y || 0;
-				bounds.right = bounds.left + ( layer.width || 100 );
-				bounds.bottom = bounds.top + ( layer.height || 100 );
-				break;
-			default:
-				// For other layer types, use position with default size
-				bounds.left = ( layer.x || 0 ) - 50;
-				bounds.top = ( layer.y || 0 ) - 50;
-				bounds.right = ( layer.x || 0 ) + 50;
-				bounds.bottom = ( layer.y || 0 ) + 50;
-				break;
+		var baseBounds = this._getRawLayerBounds( layer );
+		if ( !baseBounds ) {
+			return null;
 		}
 
-		return bounds;
+		var rotation = layer.rotation || 0;
+		var aabb = this._computeAxisAlignedBounds( baseBounds, rotation );
+
+		return {
+			x: baseBounds.x,
+			y: baseBounds.y,
+			width: baseBounds.width,
+			height: baseBounds.height,
+			rotation: rotation,
+			centerX: baseBounds.x + ( baseBounds.width / 2 ),
+			centerY: baseBounds.y + ( baseBounds.height / 2 ),
+			left: aabb.left,
+			top: aabb.top,
+			right: aabb.right,
+			bottom: aabb.bottom
+		};
+	};
+
+	CanvasManager.prototype._getRawLayerBounds = function ( layer ) {
+		var safeWidth;
+		var safeHeight;
+		var rectX;
+		var rectY;
+
+		switch ( layer.type ) {
+			case 'text': {
+				var textMetrics = this.measureTextLayer( layer );
+				if ( !textMetrics ) {
+					return null;
+				}
+				return {
+					x: textMetrics.originX,
+					y: textMetrics.originY,
+					width: textMetrics.width,
+					height: textMetrics.height
+				};
+			}
+			case 'rectangle':
+			case 'highlight':
+			case 'blur': {
+				rectX = layer.x || 0;
+				rectY = layer.y || 0;
+				safeWidth = layer.width || 0;
+				safeHeight = layer.height || 0;
+				if ( safeWidth < 0 ) {
+					rectX += safeWidth;
+					safeWidth = Math.abs( safeWidth );
+				}
+				if ( safeHeight < 0 ) {
+					rectY += safeHeight;
+					safeHeight = Math.abs( safeHeight );
+				}
+				return {
+					x: rectX,
+					y: rectY,
+					width: safeWidth,
+					height: safeHeight
+				};
+			}
+			case 'circle': {
+				var radius = Math.abs( layer.radius || 0 );
+				var cx = layer.x || 0;
+				var cy = layer.y || 0;
+				return {
+					x: cx - radius,
+					y: cy - radius,
+					width: radius * 2,
+					height: radius * 2
+				};
+			}
+			case 'ellipse': {
+				var radiusX = Math.abs( layer.radiusX || layer.radius || 0 );
+				var radiusY = Math.abs( layer.radiusY || layer.radius || 0 );
+				var ex = layer.x || 0;
+				var ey = layer.y || 0;
+				return {
+					x: ex - radiusX,
+					y: ey - radiusY,
+					width: radiusX * 2,
+					height: radiusY * 2
+				};
+			}
+			case 'line':
+			case 'arrow': {
+				var x1 = ( typeof layer.x1 === 'number' ? layer.x1 : ( layer.x || 0 ) );
+				var y1 = ( typeof layer.y1 === 'number' ? layer.y1 : ( layer.y || 0 ) );
+				var x2 = ( typeof layer.x2 === 'number' ? layer.x2 : ( layer.x || 0 ) );
+				var y2 = ( typeof layer.y2 === 'number' ? layer.y2 : ( layer.y || 0 ) );
+				return {
+					x: Math.min( x1, x2 ),
+					y: Math.min( y1, y2 ),
+					width: Math.max( Math.abs( x2 - x1 ), 1 ),
+					height: Math.max( Math.abs( y2 - y1 ), 1 )
+				};
+			}
+			case 'polygon':
+			case 'star':
+			case 'path': {
+				if ( Array.isArray( layer.points ) && layer.points.length ) {
+					var minX = layer.points[ 0 ].x;
+					var maxX = layer.points[ 0 ].x;
+					var minY = layer.points[ 0 ].y;
+					var maxY = layer.points[ 0 ].y;
+					for ( var i = 1; i < layer.points.length; i++ ) {
+						var pt = layer.points[ i ];
+						minX = Math.min( minX, pt.x );
+						maxX = Math.max( maxX, pt.x );
+						minY = Math.min( minY, pt.y );
+						maxY = Math.max( maxY, pt.y );
+					}
+					return {
+						x: minX,
+						y: minY,
+						width: Math.max( maxX - minX, 1 ),
+						height: Math.max( maxY - minY, 1 )
+					};
+				}
+				var radiusFallback = Math.abs( layer.radius || 50 );
+				return {
+					x: ( layer.x || 0 ) - radiusFallback,
+					y: ( layer.y || 0 ) - radiusFallback,
+					width: radiusFallback * 2,
+					height: radiusFallback * 2
+				};
+			}
+			default: {
+				rectX = layer.x || 0;
+				rectY = layer.y || 0;
+				safeWidth = Math.abs( layer.width || 50 ) || 50;
+				safeHeight = Math.abs( layer.height || 50 ) || 50;
+				return {
+					x: rectX,
+					y: rectY,
+					width: safeWidth,
+					height: safeHeight
+				};
+			}
+		}
+	};
+
+	CanvasManager.prototype._computeAxisAlignedBounds = function ( rect, rotationDegrees ) {
+		if ( !rect ) {
+			return { left: 0, top: 0, right: 0, bottom: 0 };
+		}
+
+		var rotation = ( rotationDegrees || 0 ) * Math.PI / 180;
+		if ( rotation === 0 ) {
+			return {
+				left: rect.x,
+				top: rect.y,
+				right: rect.x + rect.width,
+				bottom: rect.y + rect.height
+			};
+		}
+
+		var centerX = rect.x + ( rect.width / 2 );
+		var centerY = rect.y + ( rect.height / 2 );
+		var corners = [
+			{ x: rect.x, y: rect.y },
+			{ x: rect.x + rect.width, y: rect.y },
+			{ x: rect.x + rect.width, y: rect.y + rect.height },
+			{ x: rect.x, y: rect.y + rect.height }
+		];
+		var cosR = Math.cos( rotation );
+		var sinR = Math.sin( rotation );
+		var rotated = corners.map( function ( point ) {
+			var dx = point.x - centerX;
+			var dy = point.y - centerY;
+			return {
+				x: centerX + dx * cosR - dy * sinR,
+				y: centerY + dx * sinR + dy * cosR
+			};
+		} );
+		var xs = rotated.map( function ( point ) {
+			return point.x;
+		} );
+		var ys = rotated.map( function ( point ) {
+			return point.y;
+		} );
+
+		return {
+			left: Math.min.apply( null, xs ),
+			top: Math.min.apply( null, ys ),
+			right: Math.max.apply( null, xs ),
+			bottom: Math.max.apply( null, ys )
+		};
 	};
 
 	/**
@@ -2661,10 +2802,30 @@
 	};
 
 	CanvasManager.prototype.rectsIntersect = function ( rect1, rect2 ) {
-		return rect1.x < rect2.x + rect2.width &&
-			rect1.x + rect1.width > rect2.x &&
-			rect1.y < rect2.y + rect2.height &&
-			rect1.y + rect1.height > rect2.y;
+		var a = this._rectToAabb( rect1 );
+		var b = this._rectToAabb( rect2 );
+		return a.left < b.right && a.right > b.left &&
+			a.top < b.bottom && a.bottom > b.top;
+	};
+
+	CanvasManager.prototype._rectToAabb = function ( rect ) {
+		if ( !rect ) {
+			return { left: 0, top: 0, right: 0, bottom: 0 };
+		}
+		if ( typeof rect.left === 'number' && typeof rect.right === 'number' &&
+			typeof rect.top === 'number' && typeof rect.bottom === 'number' ) {
+			return rect;
+		}
+		var x = rect.x || 0;
+		var y = rect.y || 0;
+		var width = rect.width || 0;
+		var height = rect.height || 0;
+		return {
+			left: x,
+			top: y,
+			right: x + width,
+			bottom: y + height
+		};
 	};
 
 	// Apply opacity, blend mode, and simple effects per layer scope
@@ -2910,184 +3071,6 @@
 		this.ctx.restore();
 	};
 
-	CanvasManager.prototype.getLayerBounds = function ( layer ) {
-		switch ( layer.type ) {
-			case 'rectangle':
-				var rectX = layer.x || 0;
-				var rectY = layer.y || 0;
-				var width = layer.width || 0;
-				var height = layer.height || 0;
-				var rotation = ( layer.rotation || 0 ) * Math.PI / 180;
-
-				// Handle negative dimensions
-				if ( width < 0 ) {
-					rectX += width;
-					width = -width;
-				}
-				if ( height < 0 ) {
-					rectY += height;
-					height = -height;
-				}
-
-				if ( rotation === 0 ) {
-					return { x: rectX, y: rectY, width: width, height: height };
-				}
-
-				// Compute rotated AABB for selection box
-				var cx = rectX + width / 2;
-				var cy = rectY + height / 2;
-				var corners = [
-					{ x: rectX, y: rectY },
-					{ x: rectX + width, y: rectY },
-					{ x: rectX + width, y: rectY + height },
-					{ x: rectX, y: rectY + height }
-				];
-				var cos = Math.cos( rotation );
-				var sin = Math.sin( rotation );
-				var rx = corners.map( function ( p ) {
-					var dx = p.x - cx;
-					var dy = p.y - cy;
-					return {
-						x: cx + dx * cos - dy * sin,
-						y: cy + dx * sin + dy * cos
-					};
-				} );
-				var rMinX = Math.min.apply( null, rx.map( function ( p ) {
-					return p.x;
-				} ) );
-				var rMaxX = Math.max.apply( null, rx.map( function ( p ) {
-					return p.x;
-				} ) );
-				var rMinY = Math.min.apply( null, rx.map( function ( p ) {
-					return p.y;
-				} ) );
-				var rMaxY = Math.max.apply( null, rx.map( function ( p ) {
-					return p.y;
-				} ) );
-				return { x: rMinX, y: rMinY, width: rMaxX - rMinX, height: rMaxY - rMinY };
-
-			case 'blur':
-				var bx = layer.x || 0;
-				var by = layer.y || 0;
-				var bw = layer.width || 0;
-				var bh = layer.height || 0;
-
-				// Handle negative dimensions
-				if ( bw < 0 ) {
-					bx += bw;
-					bw = -bw;
-				}
-				if ( bh < 0 ) {
-					by += bh;
-					bh = -bh;
-				}
-
-				return { x: bx, y: by, width: bw, height: bh };
-
-			case 'circle':
-				var centerX = layer.x || 0;
-				var centerY = layer.y || 0;
-				var radius = layer.radius || 0;
-				return {
-					x: centerX - radius,
-					y: centerY - radius,
-					width: radius * 2,
-					height: radius * 2
-				};
-
-			case 'text':
-				var textX = layer.x || 0;
-				var textY = layer.y || 0;
-				var fontSize = layer.fontSize || 16;
-				var text = layer.text || '';
-
-				// Estimate text dimensions
-				this.ctx.save();
-				this.ctx.font = fontSize + 'px ' + ( layer.fontFamily || 'Arial' );
-				var metrics = this.ctx.measureText( text );
-				this.ctx.restore();
-
-				return {
-					x: textX,
-					y: textY - fontSize,
-					width: metrics.width,
-					height: fontSize
-				};
-
-			case 'line':
-			case 'arrow':
-				var x1 = layer.x1 || 0;
-				var y1 = layer.y1 || 0;
-				var x2 = layer.x2 || 0;
-				var y2 = layer.y2 || 0;
-
-				var minX = Math.min( x1, x2 );
-				var minY = Math.min( y1, y2 );
-				var maxX = Math.max( x1, x2 );
-				var maxY = Math.max( y1, y2 );
-
-				return {
-					x: minX,
-					y: minY,
-					width: maxX - minX,
-					height: maxY - minY
-				};
-
-			case 'polygon':
-			case 'star':
-				var polyX = layer.x || 0;
-				var polyY = layer.y || 0;
-				var polyRadius = layer.radius || 50;
-
-				return {
-					x: polyX - polyRadius,
-					y: polyY - polyRadius,
-					width: polyRadius * 2,
-					height: polyRadius * 2
-				};
-
-			case 'ellipse':
-				var ellipseX = layer.x || 0;
-				var ellipseY = layer.y || 0;
-				var radX = layer.radiusX || layer.radius || 50;
-				var radY = layer.radiusY || layer.radius || 50;
-
-				return {
-					x: ellipseX - radX,
-					y: ellipseY - radY,
-					width: radX * 2,
-					height: radY * 2
-				};
-
-			case 'path':
-				if ( !layer.points || layer.points.length === 0 ) {
-					return null;
-				}
-
-				var pathMinX = layer.points[ 0 ].x;
-				var pathMaxX = layer.points[ 0 ].x;
-				var pathMinY = layer.points[ 0 ].y;
-				var pathMaxY = layer.points[ 0 ].y;
-
-				for ( var pi = 1; pi < layer.points.length; pi++ ) {
-					var point = layer.points[ pi ];
-					pathMinX = Math.min( pathMinX, point.x );
-					pathMaxX = Math.max( pathMaxX, point.x );
-					pathMinY = Math.min( pathMinY, point.y );
-					pathMaxY = Math.max( pathMaxY, point.y );
-				}
-
-				return {
-					x: pathMinX,
-					y: pathMinY,
-					width: pathMaxX - pathMinX,
-					height: pathMaxY - pathMinY
-				};
-
-			default:
-				return null;
-		}
-	};
 
 	CanvasManager.prototype.drawSelectionHandles = function ( bounds, layer ) {
 		this.selectionHandles = []; // Reset handles array
@@ -3644,6 +3627,9 @@
 				}
 			}
 			this.editor.addLayer( layerData );
+			if ( typeof this.editor.setCurrentTool === 'function' ) {
+				this.editor.setCurrentTool( 'pointer' );
+			}
 		}
 
 		// Clean up
@@ -3864,6 +3850,9 @@
 					textShadowColor: style.textShadowColor || '#000000'
 				};
 				self.editor.addLayer( layerData );
+				if ( typeof self.editor.setCurrentTool === 'function' ) {
+					self.editor.setCurrentTool( 'pointer' );
+				}
 			}
 			document.body.removeChild( overlay );
 		}
@@ -4498,79 +4487,18 @@
 		}
 
 		// Get layer bounds
-		var layerBounds = this.getLayerBounds( layer );
-		if ( !layerBounds ) {
+		var bounds = this.getLayerBounds( layer );
+		if ( !bounds ) {
 			return true; // If we can't determine bounds, assume visible
 		}
 
-		// Check if layer intersects with viewport
-		return !( layerBounds.x + layerBounds.width < this.viewportBounds.x ||
-				layerBounds.x > this.viewportBounds.x + this.viewportBounds.width ||
-				layerBounds.y + layerBounds.height < this.viewportBounds.y ||
-				layerBounds.y > this.viewportBounds.y + this.viewportBounds.height );
+		var viewport = this.viewportBounds;
+		return !( bounds.right < viewport.x ||
+				bounds.left > viewport.x + viewport.width ||
+				bounds.bottom < viewport.y ||
+				bounds.top > viewport.y + viewport.height );
 	};
 
-	CanvasManager.prototype.getLayerBounds = function ( layer ) {
-		// Calculate layer bounds for culling
-		switch ( layer.type ) {
-			case 'text':
-				var fontSize = layer.fontSize || 14;
-				// Rough estimate of text width
-				var textWidth = layer.text ? layer.text.length * fontSize * 0.6 : 0;
-				return {
-					x: layer.x || 0,
-					y: ( layer.y || 0 ) - fontSize,
-					width: textWidth,
-					height: fontSize
-				};
-			case 'rectangle':
-			case 'highlight':
-				return {
-					x: layer.x || 0,
-					y: layer.y || 0,
-					width: layer.width || 0,
-					height: layer.height || 0
-				};
-			case 'circle':
-				var radius = layer.radius || 0;
-				return {
-					x: ( layer.x || 0 ) - radius,
-					y: ( layer.y || 0 ) - radius,
-					width: radius * 2,
-					height: radius * 2
-				};
-			case 'ellipse':
-				var radiusX = layer.radiusX || 0;
-				var radiusY = layer.radiusY || 0;
-				return {
-					x: ( layer.x || 0 ) - radiusX,
-					y: ( layer.y || 0 ) - radiusY,
-					width: radiusX * 2,
-					height: radiusY * 2
-				};
-			case 'line':
-			case 'arrow':
-				var x1 = layer.x1 || layer.x || 0;
-				var y1 = layer.y1 || layer.y || 0;
-				var x2 = layer.x2 || 0;
-				var y2 = layer.y2 || 0;
-				return {
-					x: Math.min( x1, x2 ),
-					y: Math.min( y1, y2 ),
-					width: Math.abs( x2 - x1 ),
-					height: Math.abs( y2 - y1 )
-				};
-			default:
-				// For complex shapes, use a bounding box approach
-				var margin = 50; // Add some margin for complex shapes
-				return {
-					x: ( layer.x || 0 ) - margin,
-					y: ( layer.y || 0 ) - margin,
-					width: ( layer.width || 100 ) + margin * 2,
-					height: ( layer.height || 100 ) + margin * 2
-				};
-		}
-	};
 
 	CanvasManager.prototype.drawLayer = function ( layer ) {
 		// Skip invisible layers
@@ -4846,6 +4774,13 @@
 		return { dx: dx, dy: dy };
 	};
 
+	CanvasManager.prototype.sanitizeTextContent = function ( text ) {
+		var safeText = text == null ? '' : String( text );
+		safeText = safeText.replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
+		safeText = safeText.replace( /<[^>]+>/g, '' );
+		return safeText;
+	};
+
 	/**
 	 * Helper function to wrap text into multiple lines
 	 *
@@ -4886,52 +4821,126 @@
 		return lines.length > 0 ? lines : [ '' ];
 	};
 
+	CanvasManager.prototype.measureTextLayer = function ( layer ) {
+		if ( !layer ) {
+			return null;
+		}
+
+		var fontSize = layer.fontSize || 16;
+		var fontFamily = layer.fontFamily || 'Arial';
+		var sanitizedText = this.sanitizeTextContent( layer.text || '' );
+		var lineHeight = fontSize * 1.2;
+		var context = this.ctx;
+		var canvasWidth = this.canvas ? this.canvas.width : 0;
+		var maxLineWidth = layer.maxWidth || ( canvasWidth ? canvasWidth * 0.8 : fontSize * Math.max( sanitizedText.length, 1 ) );
+
+		if ( !context ) {
+			return {
+				lines: [ sanitizedText ],
+				fontSize: fontSize,
+				fontFamily: fontFamily,
+				lineHeight: lineHeight,
+				width: Math.max( sanitizedText.length * fontSize * 0.6, fontSize ),
+				height: lineHeight,
+				originX: layer.x || 0,
+				originY: ( layer.y || 0 ) - fontSize,
+				ascent: fontSize,
+				descent: fontSize * 0.2,
+				baselineY: layer.y || 0
+			};
+		}
+
+		context.save();
+		context.font = fontSize + 'px ' + fontFamily;
+		var lines = this.wrapText( sanitizedText, maxLineWidth, context );
+		if ( !lines.length ) {
+			lines = [ '' ];
+		}
+
+		var totalTextWidth = 0;
+		var metricsForLongest = null;
+		for ( var i = 0; i < lines.length; i++ ) {
+			var lineMetrics = context.measureText( lines[ i ] || ' ' );
+			if ( lineMetrics.width > totalTextWidth ) {
+				totalTextWidth = lineMetrics.width;
+				metricsForLongest = lineMetrics;
+			}
+		}
+		if ( totalTextWidth === 0 ) {
+			var fallbackMetrics = context.measureText( sanitizedText || ' ' );
+			totalTextWidth = fallbackMetrics.width;
+			metricsForLongest = fallbackMetrics;
+		}
+
+		context.restore();
+
+		var ascent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxAscent === 'number' ?
+			metricsForLongest.actualBoundingBoxAscent : fontSize * 0.8;
+		var descent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxDescent === 'number' ?
+			metricsForLongest.actualBoundingBoxDescent : fontSize * 0.2;
+		var totalHeight = ascent + descent;
+		if ( lines.length > 1 ) {
+			totalHeight = ascent + descent + ( lines.length - 1 ) * lineHeight;
+		}
+
+		var textAlign = layer.textAlign || 'left';
+		var alignOffset = 0;
+		switch ( textAlign ) {
+			case 'center':
+				alignOffset = totalTextWidth / 2;
+				break;
+			case 'right':
+			case 'end':
+				alignOffset = totalTextWidth;
+				break;
+			default:
+				alignOffset = 0;
+		}
+
+		var originX = ( layer.x || 0 ) - alignOffset;
+		var originY = ( layer.y || 0 ) - ascent;
+
+		return {
+			lines: lines,
+			fontSize: fontSize,
+			fontFamily: fontFamily,
+			lineHeight: lineHeight,
+			width: totalTextWidth,
+			height: totalHeight,
+			originX: originX,
+			originY: originY,
+			ascent: ascent,
+			descent: descent,
+			baselineY: layer.y || 0,
+			alignOffset: alignOffset
+		};
+	};
+
 	CanvasManager.prototype.drawText = function ( layer ) {
 		this.ctx.save();
 
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-
-		this.ctx.font = ( layer.fontSize || 16 ) + 'px ' + ( layer.fontFamily || 'Arial' );
-		this.ctx.textAlign = layer.textAlign || 'left';
-
-		// Input sanitization: strip control characters and dangerous HTML from text
-		var text = layer.text || '';
-		// Remove control characters - keep only printable ASCII and Unicode characters
-		text = String( text ).replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
-		text = text.replace( /<[^>]+>/g, '' );
-
-		// Determine if text wrapping is needed (for long text content)
-		var fontSize = layer.fontSize || 16;
-		// Default to 80% of canvas width for text wrapping
-		var maxLineWidth = layer.maxWidth || ( this.canvas.width * 0.8 );
-		var lines = this.wrapText( text, maxLineWidth, this.ctx );
-		var lineHeight = fontSize * 1.2; // Standard line height
-
-		// Calculate total text dimensions for proper centering
-		var totalTextWidth = 0;
-		var totalTextHeight = lines.length * lineHeight;
-
-		// Find the longest line for centering calculations
-		for ( var i = 0; i < lines.length; i++ ) {
-			var lineMetrics = this.ctx.measureText( lines[ i ] );
-			if ( lineMetrics.width > totalTextWidth ) {
-				totalTextWidth = lineMetrics.width;
-			}
+		var metrics = this.measureTextLayer( layer );
+		if ( !metrics ) {
+			this.ctx.restore();
+			return;
 		}
 
-		// Calculate text center for rotation
-		var centerX = x + ( totalTextWidth / 2 );
-		var centerY = y + ( totalTextHeight / 2 );
+		var drawX = metrics.originX;
+		var baselineStart = metrics.baselineY;
+		var centerX = metrics.originX + ( metrics.width / 2 );
+		var centerY = metrics.originY + ( metrics.height / 2 );
+
+		this.ctx.font = metrics.fontSize + 'px ' + metrics.fontFamily;
+		this.ctx.textAlign = 'left';
+		this.ctx.textBaseline = 'alphabetic';
 
 		// Apply rotation if present
 		if ( layer.rotation && layer.rotation !== 0 ) {
 			var rotationRadians = ( layer.rotation * Math.PI ) / 180;
 			this.ctx.translate( centerX, centerY );
 			this.ctx.rotate( rotationRadians );
-			// Adjust drawing position to account for center rotation
-			x = -( totalTextWidth / 2 );
-			y = -( totalTextHeight / 2 ) + fontSize; // Adjust for baseline
+			drawX = -( metrics.width / 2 );
+			baselineStart = -( metrics.height / 2 ) + metrics.ascent;
 		}
 
 		// Apply text shadow if enabled
@@ -4944,22 +4953,22 @@
 		}
 
 		// Draw each line of text
-		for ( var j = 0; j < lines.length; j++ ) {
-			var lineText = lines[ j ];
-			var lineY = y + ( j * lineHeight );
+		for ( var j = 0; j < metrics.lines.length; j++ ) {
+			var lineText = metrics.lines[ j ];
+			var lineY = baselineStart + ( j * metrics.lineHeight );
 
 			// Draw text stroke if enabled
 			if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
 				this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
 				this.ctx.lineWidth = layer.textStrokeWidth;
-				this.ctx.strokeText( lineText, x, lineY );
+				this.ctx.strokeText( lineText, drawX, lineY );
 			}
 
 			// Draw text fill (respect optional fillOpacity)
 			this.ctx.fillStyle = layer.fill || '#000000';
 			var tFillOp = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
 			this.withLocalAlpha( tFillOp, function ( currentLineText, currentLineY ) {
-				this.ctx.fillText( currentLineText, x, currentLineY );
+				this.ctx.fillText( currentLineText, drawX, currentLineY );
 			}.bind( this, lineText, lineY ) );
 		}
 
@@ -5310,29 +5319,52 @@
 
 		// Remove all event listeners to prevent memory leaks
 		if ( this.canvas ) {
-			this.canvas.removeEventListener( 'mousedown', this.onMouseDownHandler );
-			this.canvas.removeEventListener( 'mousemove', this.onMouseMoveHandler );
-			this.canvas.removeEventListener( 'mouseup', this.onMouseUpHandler );
-			this.canvas.removeEventListener( 'wheel', this.onWheelHandler );
-			this.canvas.removeEventListener( 'contextmenu', this.onContextMenuHandler );
-			this.canvas.removeEventListener( 'click', this.onClickHandler );
-			this.canvas.removeEventListener( 'dblclick', this.onDoubleClickHandler );
+			if ( this.onMouseDownHandler ) {
+				this.canvas.removeEventListener( 'mousedown', this.onMouseDownHandler );
+			}
+			if ( this.onMouseMoveHandler ) {
+				this.canvas.removeEventListener( 'mousemove', this.onMouseMoveHandler );
+			}
+			if ( this.onMouseUpHandler ) {
+				this.canvas.removeEventListener( 'mouseup', this.onMouseUpHandler );
+			}
+			if ( this.onWheelHandler ) {
+				this.canvas.removeEventListener( 'wheel', this.onWheelHandler );
+			}
+			if ( this.onContextMenuHandler ) {
+				this.canvas.removeEventListener( 'contextmenu', this.onContextMenuHandler );
+			}
+			if ( this.onClickHandler ) {
+				this.canvas.removeEventListener( 'click', this.onClickHandler );
+			}
+			if ( this.onDoubleClickHandler ) {
+				this.canvas.removeEventListener( 'dblclick', this.onDoubleClickHandler );
+			}
 
 			// Touch events for mobile support
-			this.canvas.removeEventListener( 'touchstart', this.onTouchStartHandler );
-			this.canvas.removeEventListener( 'touchmove', this.onTouchMoveHandler );
-			this.canvas.removeEventListener( 'touchend', this.onTouchEndHandler );
+			if ( this.onTouchStartHandler ) {
+				this.canvas.removeEventListener( 'touchstart', this.onTouchStartHandler );
+			}
+			if ( this.onTouchMoveHandler ) {
+				this.canvas.removeEventListener( 'touchmove', this.onTouchMoveHandler );
+			}
+			if ( this.onTouchEndHandler ) {
+				this.canvas.removeEventListener( 'touchend', this.onTouchEndHandler );
+			}
+			if ( this.onTouchCancelHandler ) {
+				this.canvas.removeEventListener( 'touchcancel', this.onTouchCancelHandler );
+			}
 		}
 
 		// Remove window event listeners
 		if ( this.onResizeHandler ) {
 			window.removeEventListener( 'resize', this.onResizeHandler );
 		}
-		if ( this.onKeyDownHandler ) {
-			window.removeEventListener( 'keydown', this.onKeyDownHandler );
+		if ( this.onDocumentKeyDownHandler ) {
+			document.removeEventListener( 'keydown', this.onDocumentKeyDownHandler );
 		}
-		if ( this.onKeyUpHandler ) {
-			window.removeEventListener( 'keyup', this.onKeyUpHandler );
+		if ( this.onDocumentKeyUpHandler ) {
+			document.removeEventListener( 'keyup', this.onDocumentKeyUpHandler );
 		}
 
 		// Clear canvas context

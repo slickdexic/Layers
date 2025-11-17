@@ -20,14 +20,107 @@
 		this.inspectorContainer = this.config.inspectorContainer || null;
 		this.layers = [];
 		this.selectedLayerId = null;
-
-		console.log( '[LayerPanel] Constructor called with config:', this.config );
-		console.log( '[LayerPanel] Container element:', this.container );
-		console.log( '[LayerPanel] Container in DOM:', this.container && document.body.contains( this.container ) );
+		this.documentListeners = [];
+		this.targetListeners = [];
+		this.dialogCleanups = [];
 
 		this.createInterface();
 		this.setupEventHandlers();
-	}
+		}
+
+		LayerPanel.prototype.isDebugEnabled = function () {
+			return !!( window.mw && window.mw.config && window.mw.config.get( 'wgLayersDebug' ) );
+		};
+
+		LayerPanel.prototype.logDebug = function () {
+			if ( this.isDebugEnabled() && window.mw && window.mw.log ) {
+				var args = Array.prototype.slice.call( arguments );
+				args.unshift( '[LayerPanel]' );
+				window.mw.log.apply( window.mw, args );
+			}
+		};
+
+		LayerPanel.prototype.logWarn = function () {
+			if ( window.mw && window.mw.log && typeof window.mw.log.warn === 'function' ) {
+				var args = Array.prototype.slice.call( arguments );
+				args.unshift( '[LayerPanel]' );
+				window.mw.log.warn.apply( window.mw.log, args );
+			}
+		};
+
+		LayerPanel.prototype.logError = function () {
+			if ( window.mw && window.mw.log && typeof window.mw.log.error === 'function' ) {
+				var args = Array.prototype.slice.call( arguments );
+				args.unshift( '[LayerPanel]' );
+				window.mw.log.error.apply( window.mw.log, args );
+			}
+		};
+
+		LayerPanel.prototype.addDocumentListener = function ( event, handler, options ) {
+			if ( !event || typeof handler !== 'function' ) {
+				return;
+			}
+			document.addEventListener( event, handler, options );
+			this.documentListeners.push( { event: event, handler: handler, options: options } );
+		};
+
+		LayerPanel.prototype.addTargetListener = function ( target, event, handler, options ) {
+			if ( !target || typeof target.addEventListener !== 'function' || typeof handler !== 'function' ) {
+				return;
+			}
+			target.addEventListener( event, handler, options );
+			this.targetListeners.push( { target: target, event: event, handler: handler, options: options } );
+		};
+
+		LayerPanel.prototype.removeDocumentListeners = function () {
+			if ( !this.documentListeners ) {
+				return;
+			}
+			while ( this.documentListeners.length ) {
+				var info = this.documentListeners.pop();
+				document.removeEventListener( info.event, info.handler, info.options );
+			}
+		};
+
+		LayerPanel.prototype.removeTargetListeners = function () {
+			if ( !this.targetListeners ) {
+				return;
+			}
+			while ( this.targetListeners.length ) {
+				var info = this.targetListeners.pop();
+				if ( info.target && typeof info.target.removeEventListener === 'function' ) {
+					info.target.removeEventListener( info.event, info.handler, info.options );
+				}
+			}
+		};
+
+		LayerPanel.prototype.registerDialogCleanup = function ( cleanupFn ) {
+			if ( typeof cleanupFn === 'function' ) {
+				this.dialogCleanups.push( cleanupFn );
+			}
+		};
+
+		LayerPanel.prototype.runDialogCleanups = function () {
+			while ( this.dialogCleanups && this.dialogCleanups.length ) {
+				var cleanup = this.dialogCleanups.pop();
+				try {
+					cleanup();
+				} catch ( _err ) {
+					// Ignore cleanup errors to avoid cascading failures during teardown
+				}
+			}
+			this.dialogCleanups = [];
+		};
+
+		LayerPanel.prototype.destroy = function () {
+			this.runDialogCleanups();
+			this.removeDocumentListeners();
+			this.removeTargetListeners();
+			document.body.classList.remove( 'layers-resize-cursor' );
+			this.dialogCleanups = [];
+			this.documentListeners = [];
+			this.targetListeners = [];
+		};
 
 	// Minimal i18n helper with safe fallbacks
 	LayerPanel.prototype.msg = function ( key, fallback ) {
@@ -194,9 +287,6 @@
 
 	LayerPanel.prototype.createInterface = function () {
 		var self = this;
-		console.log( '[LayerPanel] createInterface called, container exists:', !!this.container );
-		console.log( '[LayerPanel] Container element:', this.container );
-		console.log( '[LayerPanel] Container in DOM:', this.container && document.body.contains( this.container ) );
 		// Clear container safely without innerHTML
 		while ( this.container.firstChild ) {
 			this.container.removeChild( this.container.firstChild );
@@ -260,19 +350,16 @@
 		sidebarInner.appendChild( this.propertiesPanel );
 		this.container.appendChild( sidebarInner );
 
-		console.log( '[LayerPanel] createInterface completed, container children:', this.container.children.length );
-		console.log( '[LayerPanel] Layer list created:', !!this.layerList );
-		console.log( '[LayerPanel] Properties panel created:', !!this.propertiesPanel );
 
 		// Resizable divider logic
 		var isDragging = false;
 		var minListHeight = 60;
 		var minPropsHeight = 80;
-		divider.addEventListener( 'mousedown', function () {
+		this.addTargetListener( divider, 'mousedown', function () {
 			isDragging = true;
 			document.body.classList.add( 'layers-resize-cursor' );
 		} );
-		document.addEventListener( 'mousemove', function ( e ) {
+		var handleMouseMove = function ( e ) {
 			if ( !isDragging ) {
 				return;
 			}
@@ -283,24 +370,30 @@
 			var maxListHeight = totalHeight - dividerHeight - minPropsHeight;
 			var newListHeight = Math.max( minListHeight, Math.min( offset, maxListHeight ) );
 			var newPropsHeight = totalHeight - newListHeight - dividerHeight;
-			self.layerList.className = self.layerList.className + ' layers-fixed-height';
-			self.layerList.style.height = newListHeight + 'px';
-			self.propertiesPanel.className = self.propertiesPanel.className + ' layers-fixed-height';
-			self.propertiesPanel.style.height = newPropsHeight + 'px';
-		} );
-		document.addEventListener( 'mouseup', function () {
+			if ( self.layerList && self.layerList.classList ) {
+				self.layerList.classList.add( 'layers-fixed-height' );
+				self.layerList.style.height = newListHeight + 'px';
+			}
+			if ( self.propertiesPanel && self.propertiesPanel.classList ) {
+				self.propertiesPanel.classList.add( 'layers-fixed-height' );
+				self.propertiesPanel.style.height = newPropsHeight + 'px';
+			}
+		};
+		this.addDocumentListener( 'mousemove', handleMouseMove );
+		var handleMouseUp = function () {
 			if ( isDragging ) {
 				isDragging = false;
 				document.body.classList.remove( 'layers-resize-cursor' );
 			}
-		} );
+		};
+		this.addDocumentListener( 'mouseup', handleMouseUp );
 
 		// Touch support
-		divider.addEventListener( 'touchstart', function () {
+		this.addTargetListener( divider, 'touchstart', function () {
 			isDragging = true;
 			document.body.classList.add( 'layers-resize-cursor' );
 		} );
-		document.addEventListener( 'touchmove', function ( e ) {
+		var handleTouchMove = function ( e ) {
 			if ( !isDragging ) {
 				return;
 			}
@@ -311,26 +404,39 @@
 			var maxListHeight = totalHeight - dividerHeight - minPropsHeight;
 			var newListHeight = Math.max( minListHeight, Math.min( offset, maxListHeight ) );
 			var newPropsHeight = totalHeight - newListHeight - dividerHeight;
-			self.layerList.className = self.layerList.className + ' layers-fixed-height';
-			self.layerList.style.height = newListHeight + 'px';
-			self.propertiesPanel.className = self.propertiesPanel.className + ' layers-fixed-height';
-			self.propertiesPanel.style.height = newPropsHeight + 'px';
-		}, { passive: false } );
+			if ( self.layerList && self.layerList.classList ) {
+				self.layerList.classList.add( 'layers-fixed-height' );
+				self.layerList.style.height = newListHeight + 'px';
+			}
+			if ( self.propertiesPanel && self.propertiesPanel.classList ) {
+				self.propertiesPanel.classList.add( 'layers-fixed-height' );
+				self.propertiesPanel.style.height = newPropsHeight + 'px';
+			}
+		};
+		this.addDocumentListener( 'touchmove', handleTouchMove, { passive: false } );
+		var handleTouchEnd = function () {
+			if ( isDragging ) {
+				isDragging = false;
+				document.body.classList.remove( 'layers-resize-cursor' );
+			}
+		};
+		this.addDocumentListener( 'touchend', handleTouchEnd );
 	};
 
 	LayerPanel.prototype.setupEventHandlers = function () {
 		var self = this;
-		console.log( '[LayerPanel] setupEventHandlers called' );
 		// Clicks in the list
-		this.layerList.addEventListener( 'click', function ( e ) {
-			self.handleLayerListClick( e );
-		} );
+		if ( this.layerList ) {
+			this.addTargetListener( this.layerList, 'click', function ( e ) {
+				self.handleLayerListClick( e );
+			} );
+		}
 		// Drag and drop reordering
 		this.setupDragAndDrop();
 		// Live transform sync from CanvasManager during manipulation
 		try {
 			var target = ( this.editor && this.editor.container ) || document;
-			target.addEventListener( 'layers:transforming', function ( e ) {
+			this.addTargetListener( target, 'layers:transforming', function ( e ) {
 				var detail = e && e.detail || {};
 				if ( !detail || !detail.id ) {
 					return;
@@ -341,7 +447,6 @@
 				self.syncPropertiesFromLayer( detail.layer || detail );
 			} );
 		} catch ( _err ) { /* ignore */ }
-		console.log( '[LayerPanel] setupEventHandlers completed' );
 	};
 
 	LayerPanel.prototype.updateLayers = function ( layers ) {
@@ -557,6 +662,8 @@
 			OO.ui.confirm( confirmMessage ).done( function ( userConfirmed ) {
 				if ( userConfirmed ) {
 					self.editor.removeLayer( layerId );
+					self.renderLayerList();
+					self.updateCodePanel();
 					if ( self.selectedLayerId === layerId ) {
 						self.selectedLayerId = null;
 						self.updatePropertiesPanel( null );
@@ -566,9 +673,10 @@
 			} );
 		} else {
 			// Fallback confirmation for environments without OO.ui
-			var confirmed = mw.user && mw.user.options && mw.user.options.get( 'gadget-ConfirmEdit' ) !== null;
-			if ( confirmed || this.simpleConfirm( confirmMessage ) ) {
+			if ( this.simpleConfirm( confirmMessage ) ) {
 				this.editor.removeLayer( layerId );
+				this.renderLayerList();
+				this.updateCodePanel();
 				if ( this.selectedLayerId === layerId ) {
 					this.selectedLayerId = null;
 				}
@@ -780,8 +888,8 @@
 					// Log error but don't re-throw to prevent breaking the UI
 					if ( window.mw && window.mw.log ) {
 						mw.log.error( 'LayerPanel: Error in onChange handler:', error );
-					} else if ( console && console.error ) {
-						console.error( 'LayerPanel: Error in onChange handler:', error );
+					} else if ( self && typeof self.logError === 'function' ) {
+						self.logError( 'LayerPanel: Error in onChange handler:', error );
 					}
 					// Try to show user-friendly error
 					if ( window.mw && window.mw.notify ) {
@@ -822,8 +930,8 @@
 				} catch ( error ) {
 					if ( window.mw && window.mw.log ) {
 						mw.log.error( 'LayerPanel: Error in input event handler:', error );
-					} else if ( console && console.error ) {
-						console.error( 'LayerPanel: Error in input event handler:', error );
+					} else if ( self && typeof self.logError === 'function' ) {
+						self.logError( 'LayerPanel: Error in input event handler:', error );
 					}
 				}
 			} );
@@ -866,8 +974,8 @@
 				} catch ( error ) {
 					if ( window.mw && window.mw.log ) {
 						mw.log.error( 'LayerPanel: Error in change event handler:', error );
-					} else if ( console && console.error ) {
-						console.error( 'LayerPanel: Error in change event handler:', error );
+					} else if ( self && typeof self.logError === 'function' ) {
+						self.logError( 'LayerPanel: Error in change event handler:', error );
 					}
 				}
 			} );
@@ -889,8 +997,8 @@
 				} catch ( error ) {
 					if ( window.mw && window.mw.log ) {
 						mw.log.error( 'LayerPanel: Error in blur event handler:', error );
-					} else if ( console && console.error ) {
-						console.error( 'LayerPanel: Error in blur event handler:', error );
+					} else if ( self && typeof self.logError === 'function' ) {
+						self.logError( 'LayerPanel: Error in blur event handler:', error );
 					}
 				}
 			} );
@@ -929,6 +1037,25 @@
 		};
 
 		var addColorPicker = function ( opts ) {
+			var colorPickerStrings = {
+				title: t( 'layers-color-picker-title', 'Choose color' ),
+				standard: t( 'layers-color-picker-standard', 'Standard colors' ),
+				saved: t( 'layers-color-picker-saved', 'Saved colors' ),
+				customSection: t( 'layers-color-picker-custom-section', 'Custom color' ),
+				none: t( 'layers-color-picker-none', 'No fill (transparent)' ),
+				emptySlot: t( 'layers-color-picker-empty-slot', 'Empty slot - colors will be saved here automatically' ),
+				cancel: t( 'layers-color-picker-cancel', 'Cancel' ),
+				apply: t( 'layers-color-picker-apply', 'Apply' ),
+				transparent: t( 'layers-color-picker-transparent', 'Transparent' ),
+				swatchTemplate: t( 'layers-color-picker-color-swatch', 'Set color to $1' ),
+				previewTemplate: t( 'layers-color-picker-color-preview', 'Current color: $1' )
+			};
+			var formatTemplate = function ( template, value ) {
+				if ( typeof template !== 'string' ) {
+					return value;
+				}
+				return template.indexOf( '$1' ) !== -1 ? template.replace( '$1', value ) : template + ' ' + value;
+			};
 			var wrapper = document.createElement( 'div' );
 			wrapper.className = 'property-field property-field--color';
 			var labelEl = document.createElement( 'label' );
@@ -942,22 +1069,33 @@
 			colorButton.style.borderRadius = '4px';
 			colorButton.style.cursor = 'pointer';
 			colorButton.style.marginLeft = '8px';
+			colorButton.setAttribute( 'aria-haspopup', 'dialog' );
+			colorButton.setAttribute( 'aria-expanded', 'false' );
+			colorButton.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.previewTemplate, colorPickerStrings.transparent ) );
 			var updateColorDisplay = function ( color ) {
+				var labelValue = color;
 				if ( !color || color === 'none' || color === 'transparent' ) {
 					colorButton.style.background = 'repeating-linear-gradient(45deg, #ff0000 0, #ff0000 4px, transparent 4px, transparent 8px)';
-					colorButton.title = 'Transparent';
+					labelValue = colorPickerStrings.transparent;
 				} else {
 					colorButton.style.background = color;
-					colorButton.title = color;
 				}
+				colorButton.title = labelValue;
+				colorButton.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.previewTemplate, labelValue ) );
 			};
 			updateColorDisplay( opts.value );
 			var createColorPickerDialog = function () {
 				var buttonRect = colorButton.getBoundingClientRect();
+				var previouslyFocused = document.activeElement;
 				var overlay = document.createElement( 'div' );
 				overlay.className = 'color-picker-overlay';
+				overlay.setAttribute( 'role', 'presentation' );
+				overlay.setAttribute( 'aria-hidden', 'true' );
 				var dialog = document.createElement( 'div' );
 				dialog.className = 'color-picker-dialog';
+				dialog.setAttribute( 'role', 'dialog' );
+				dialog.setAttribute( 'aria-modal', 'true' );
+				dialog.setAttribute( 'tabindex', '-1' );
 				var dialogTop = buttonRect.bottom + 5;
 				var dialogLeft = buttonRect.left;
 				var maxTop = window.innerHeight - 420;
@@ -976,15 +1114,20 @@
 				}
 				dialog.style.top = Math.floor( dialogTop ) + 'px';
 				dialog.style.left = Math.floor( dialogLeft ) + 'px';
+				var dialogId = 'layers-color-picker-' + Math.random().toString( 36 ).slice( 2 );
 				var title = document.createElement( 'h3' );
 				title.className = 'color-picker-title';
-				title.textContent = 'Choose Color';
+				title.id = dialogId + '-title';
+				title.textContent = colorPickerStrings.title;
+				dialog.setAttribute( 'aria-labelledby', title.id );
 				dialog.appendChild( title );
 				var paletteContainer = document.createElement( 'div' );
 				paletteContainer.className = 'color-picker-section';
 				var paletteTitle = document.createElement( 'div' );
 				paletteTitle.className = 'color-picker-section-title';
-				paletteTitle.textContent = 'Standard Colors';
+				paletteTitle.id = dialogId + '-standard';
+				paletteTitle.textContent = colorPickerStrings.standard;
+				dialog.setAttribute( 'aria-describedby', paletteTitle.id );
 				paletteContainer.appendChild( paletteTitle );
 				var paletteGrid = document.createElement( 'div' );
 				paletteGrid.className = 'color-picker-grid';
@@ -1003,7 +1146,8 @@
 				var noneButton = document.createElement( 'button' );
 				noneButton.type = 'button';
 				noneButton.className = 'color-picker-none-btn';
-				noneButton.title = 'No Fill (Transparent)';
+				noneButton.title = colorPickerStrings.none;
+				noneButton.setAttribute( 'aria-label', colorPickerStrings.none );
 				noneButton.addEventListener( 'click', function () {
 					selectedColor = 'none';
 					updateSelection( noneButton );
@@ -1015,6 +1159,7 @@
 					colorBtn.className = 'color-picker-swatch-btn';
 					colorBtn.style.backgroundColor = color;
 					colorBtn.title = color;
+					colorBtn.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.swatchTemplate, color ) );
 					colorBtn.addEventListener( 'click', function () {
 						selectedColor = color;
 						updateSelection( colorBtn );
@@ -1027,7 +1172,7 @@
 				customContainer.className = 'color-picker-section';
 				var customTitle = document.createElement( 'div' );
 				customTitle.className = 'color-picker-section-title';
-				customTitle.textContent = 'Custom Colors';
+				customTitle.textContent = colorPickerStrings.saved;
 				customContainer.appendChild( customTitle );
 				var customGrid = document.createElement( 'div' ); customGrid.className = 'color-picker-grid';
 				var savedCustomColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
@@ -1045,10 +1190,12 @@
 					if ( savedCustomColors[ i ] ) {
 						customBtn.style.backgroundColor = savedCustomColors[ i ];
 						customBtn.title = savedCustomColors[ i ];
+						customBtn.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.swatchTemplate, savedCustomColors[ i ] ) );
 						customBtn.addEventListener( 'click', createCustomButtonClickHandler( customBtn ) );
 					} else {
 						customBtn.style.backgroundColor = '#f5f5f5';
-						customBtn.title = 'Empty slot - colors will be saved here automatically';
+						customBtn.title = colorPickerStrings.emptySlot;
+						customBtn.setAttribute( 'aria-label', colorPickerStrings.emptySlot );
 					}
 					customGrid.appendChild( customBtn );
 				}
@@ -1058,11 +1205,12 @@
 				customSection.className = 'color-picker-section';
 				var customLabel = document.createElement( 'div' );
 				customLabel.className = 'color-picker-section-title';
-				customLabel.textContent = 'Custom Color';
+				customLabel.textContent = colorPickerStrings.customSection;
 				customSection.appendChild( customLabel );
 				var customInput = document.createElement( 'input' );
 				customInput.type = 'color';
 				customInput.className = 'color-picker-custom-input';
+				customInput.setAttribute( 'aria-label', colorPickerStrings.customSection );
 				customInput.addEventListener( 'change', function () {
 					selectedColor = customInput.value;
 				} );
@@ -1074,15 +1222,43 @@
 				var cancelBtn = document.createElement( 'button' );
 				cancelBtn.type = 'button';
 				cancelBtn.className = 'color-picker-btn color-picker-btn--secondary';
-				cancelBtn.textContent = 'Cancel';
+				cancelBtn.textContent = colorPickerStrings.cancel;
+				var escapeHandler = null;
+				var focusTrapHandler = null;
+				var focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+				var cleanup = function () {
+					if ( escapeHandler ) {
+						document.removeEventListener( 'keydown', escapeHandler );
+						escapeHandler = null;
+					}
+					if ( focusTrapHandler ) {
+						dialog.removeEventListener( 'keydown', focusTrapHandler );
+						focusTrapHandler = null;
+					}
+					if ( overlay && overlay.parentNode ) {
+						overlay.parentNode.removeChild( overlay );
+					}
+					if ( dialog && dialog.parentNode ) {
+						dialog.parentNode.removeChild( dialog );
+					}
+					colorButton.setAttribute( 'aria-expanded', 'false' );
+					if ( previouslyFocused && typeof previouslyFocused.focus === 'function' ) {
+						previouslyFocused.focus();
+					}
+					if ( self && Array.isArray( self.dialogCleanups ) ) {
+						self.dialogCleanups = self.dialogCleanups.filter( function ( fn ) {
+							return fn !== cleanup;
+						} );
+					}
+				};
+				self.registerDialogCleanup( cleanup );
 				cancelBtn.addEventListener( 'click', function () {
-					document.body.removeChild( overlay );
-					document.body.removeChild( dialog );
+					cleanup();
 				} );
 				var okBtn = document.createElement( 'button' );
 				okBtn.type = 'button';
 				okBtn.className = 'color-picker-btn color-picker-btn--primary';
-				okBtn.textContent = 'OK';
+				okBtn.textContent = colorPickerStrings.apply;
 				okBtn.addEventListener( 'click', function () {
 					if ( selectedColor !== 'none' && selectedColor !== opts.value ) {
 						var customColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
@@ -1095,32 +1271,57 @@
 					}
 					opts.onChange( selectedColor );
 					updateColorDisplay( selectedColor );
-					document.body.removeChild( overlay );
-					document.body.removeChild( dialog );
+					cleanup();
 				} );
 				buttonContainer.appendChild( cancelBtn );
 				buttonContainer.appendChild( okBtn );
 				dialog.appendChild( buttonContainer );
 				overlay.addEventListener( 'click', function ( e ) {
 					if ( e.target === overlay ) {
-						document.body.removeChild( overlay );
-						document.body.removeChild( dialog );
+						cleanup();
 					}
 				} );
-				var escapeHandler = function ( e ) {
+				escapeHandler = function ( e ) {
 					if ( e.key === 'Escape' ) {
-						document.body.removeChild( overlay );
-						document.body.removeChild( dialog );
-						document.removeEventListener( 'keydown', escapeHandler );
+						cleanup();
 					}
 				};
 				document.addEventListener( 'keydown', escapeHandler );
-				return { overlay: overlay, dialog: dialog };
+				focusTrapHandler = function ( e ) {
+					if ( e.key !== 'Tab' ) {
+						return;
+					}
+					var focusable = dialog.querySelectorAll( focusableSelector );
+					if ( !focusable.length ) {
+						return;
+					}
+					var first = focusable[ 0 ];
+					var last = focusable[ focusable.length - 1 ];
+					if ( e.shiftKey && document.activeElement === first ) {
+						e.preventDefault();
+						last.focus();
+					} else if ( !e.shiftKey && document.activeElement === last ) {
+						e.preventDefault();
+						first.focus();
+					}
+				};
+				dialog.addEventListener( 'keydown', focusTrapHandler );
+				var focusInitial = function () {
+					var focusable = dialog.querySelectorAll( focusableSelector );
+					if ( focusable.length ) {
+						focusable[ 0 ].focus();
+					} else {
+						dialog.focus();
+					}
+				};
+				return { overlay: overlay, dialog: dialog, cleanup: cleanup, focusInitial: focusInitial };
 			};
 			colorButton.addEventListener( 'click', function () {
 				var components = createColorPickerDialog();
 				document.body.appendChild( components.overlay );
 				document.body.appendChild( components.dialog );
+				colorButton.setAttribute( 'aria-expanded', 'true' );
+				components.focusInitial();
 			} );
 			wrapper.appendChild( labelEl ); wrapper.appendChild( colorButton ); ( currentSectionBody || form ).appendChild( wrapper );
 			return colorButton;
@@ -1255,8 +1456,9 @@
 				break;
 			case 'text':
 				addInput( { label: t( 'layers-prop-text', 'Text' ), type: 'text', value: layer.text || '', maxLength: 1000, onChange: function ( v ) { self.editor.updateLayer( layer.id, { text: v } ); } } );
-				addInput( { label: t( 'layers-prop-font-size', 'Font Size' ), type: 'number', value: layer.fontSize || 16, min: 6, step: 1, prop: 'fontSize', onChange: function ( v ) { self.editor.updateLayer( layer.id, { fontSize: parseInt( v, 10 ) } ); } } );
-				addInput( { label: t( 'layers-prop-stroke-width', 'Text Stroke Width' ), type: 'number', value: layer.textStrokeWidth || 0, min: 0, max: 10, step: 1, onChange: function ( v ) { self.editor.updateLayer( layer.id, { textStrokeWidth: parseInt( v, 10 ) } ); } } );
+				addInput( { label: t( 'layers-prop-font-size', 'Font Size' ), type: 'number', value: layer.fontSize || 16, min: 6, max: 1000, step: 1, prop: 'fontSize', onChange: function ( v ) { var fs = Math.max( 6, Math.min( 1000, parseInt( v, 10 ) ) ); self.editor.updateLayer( layer.id, { fontSize: fs } ); } } );
+				// FIX 2025-11-14: Increased max from 10 to 200 to match shape stroke width
+			addInput( { label: t( 'layers-prop-stroke-width', 'Text Stroke Width' ), type: 'number', value: layer.textStrokeWidth || 0, min: 0, max: 200, step: 1, onChange: function ( v ) { self.editor.updateLayer( layer.id, { textStrokeWidth: parseInt( v, 10 ) } ); } } );
 				if ( ( layer.textStrokeWidth || 0 ) > 0 ) {
 					addColorPicker( { label: t( 'layers-prop-stroke-color', 'Text Stroke Color' ), value: layer.textStrokeColor, property: 'textStrokeColor', onChange: function ( newColor ) { self.editor.updateLayer( layer.id, { textStrokeColor: newColor } ); } } );
 				}
@@ -1276,10 +1478,10 @@
 		addSection( t( 'layers-section-appearance', 'Appearance' ), 'appearance' );
 		if ( layer.type !== 'text' ) {
 			addColorPicker( { label: t( 'layers-prop-stroke-color', 'Stroke Color' ), value: layer.stroke, property: 'stroke', onChange: function ( newColor ) { self.editor.updateLayer( layer.id, { stroke: newColor } ); } } );
+			addInput( { label: t( 'layers-prop-stroke-width', 'Stroke Width' ), type: 'number', value: layer.strokeWidth || 1, min: 0, max: 200, step: 1, onChange: function ( v ) { var val = Math.max( 0, Math.min( 200, parseInt( v, 10 ) ) ); self.editor.updateLayer( layer.id, { strokeWidth: val } ); } } );
 		}
-		addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { self.editor.updateLayer( layer.id, { fill: newColor } ); } } );
-		addInput( { label: t( 'layers-prop-stroke-width', 'Stroke Width' ), type: 'number', value: layer.strokeWidth || 1, min: 0, max: 200, step: 1, onChange: function ( v ) { var val = Math.max( 0, Math.min( 200, parseInt( v, 10 ) ) ); self.editor.updateLayer( layer.id, { strokeWidth: val } ); } } );
 		addSliderInput( { label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ), value: ( layer.strokeOpacity != null ) ? Math.round( layer.strokeOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { self.editor.updateLayer( layer.id, { strokeOpacity: v / 100 } ); } } );
+		addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { self.editor.updateLayer( layer.id, { fill: newColor } ); } } );
 		addSliderInput( { label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ), value: ( layer.fillOpacity != null ) ? Math.round( layer.fillOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { self.editor.updateLayer( layer.id, { fillOpacity: v / 100 } ); } } );
 
 		// Effects
@@ -1351,13 +1553,16 @@
 
 	LayerPanel.prototype.setupDragAndDrop = function () {
 		var self = this;
-		this.layerList.addEventListener( 'dragstart', function ( e ) {
+		if ( !this.layerList ) {
+			return;
+		}
+		this.addTargetListener( this.layerList, 'dragstart', function ( e ) {
 			var li = e.target.closest( '.layer-item' );
 			if ( li ) { e.dataTransfer.setData( 'text/plain', li.dataset.layerId ); li.classList.add( 'dragging' ); }
 		} );
-		this.layerList.addEventListener( 'dragend', function ( e ) { var li = e.target.closest( '.layer-item' ); if ( li ) { li.classList.remove( 'dragging' ); } } );
-		this.layerList.addEventListener( 'dragover', function ( e ) { e.preventDefault(); } );
-		this.layerList.addEventListener( 'drop', function ( e ) {
+		this.addTargetListener( this.layerList, 'dragend', function ( e ) { var li = e.target.closest( '.layer-item' ); if ( li ) { li.classList.remove( 'dragging' ); } } );
+		this.addTargetListener( this.layerList, 'dragover', function ( e ) { e.preventDefault(); } );
+		this.addTargetListener( this.layerList, 'drop', function ( e ) {
 			e.preventDefault();
 			var draggedId = e.dataTransfer.getData( 'text/plain' );
 			var targetItem = e.target.closest( '.layer-item' );
@@ -1406,9 +1611,12 @@
 	 * @return {boolean} - User's choice
 	 */
 	LayerPanel.prototype.simpleConfirm = function ( message ) {
-		// Simple fallback - in production this could be enhanced with a custom modal
-		// For now, return true to avoid blocking functionality
-		console.warn( 'LayerPanel: Confirmation required:', message );
+		if ( typeof window !== 'undefined' && typeof window.confirm === 'function' ) {
+			return window.confirm( message );
+		}
+		if ( typeof this.logWarn === 'function' ) {
+			this.logWarn( 'Confirmation dialog unavailable; auto-confirming action', message );
+		}
 		return true;
 	};
 

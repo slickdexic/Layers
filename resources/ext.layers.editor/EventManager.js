@@ -5,18 +5,19 @@
 class EventManager {
 	constructor( editor ) {
 		this.editor = editor;
-		this.handlers = {};
+		this.listeners = [];
 		this.setupGlobalHandlers();
 	}
 
-	setupGlobalHandlers() {
-		this.handlers.resize = this.handleResize.bind( this );
-		this.handlers.beforeUnload = this.handleBeforeUnload.bind( this );
-		this.handlers.keyDown = this.handleKeyDown.bind( this );
+	registerListener( target, type, handler, options ) {
+		target.addEventListener( type, handler, options );
+		this.listeners.push( { target, type, handler, options } );
+	}
 
-		window.addEventListener( 'resize', this.handlers.resize );
-		window.addEventListener( 'beforeunload', this.handlers.beforeUnload );
-		document.addEventListener( 'keydown', this.handlers.keyDown );
+	setupGlobalHandlers() {
+		this.registerListener( window, 'resize', this.handleResize.bind( this ) );
+		this.registerListener( window, 'beforeunload', this.handleBeforeUnload.bind( this ) );
+		this.registerListener( document, 'keydown', this.handleKeyDown.bind( this ) );
 	}
 
 	handleResize() {
@@ -108,13 +109,10 @@ class EventManager {
 	}
 
 	destroy() {
-		Object.values( this.handlers ).forEach( handler => {
-			if ( typeof handler === 'function' ) {
-				// Remove event listeners - we'd need to track which elements they were added to
-				// For now, this is a placeholder for cleanup
-			}
+		this.listeners.forEach( listener => {
+			listener.target.removeEventListener( listener.type, listener.handler, listener.options );
 		} );
-		this.handlers = {};
+		this.listeners = [];
 	}
 }
 

@@ -4,9 +4,9 @@
  * EditLayersAction - dedicated Action to render the Layers editor
  */
 
-namespace MediaWiki\Extension\Layers\Action {
+namespace MediaWiki\Extension\Layers\Action;
 
-	class EditLayersAction extends \Action {
+class EditLayersAction extends \Action {
 
 		/** @inheritDoc */
 		public function getName() {
@@ -120,5 +120,4 @@ namespace MediaWiki\Extension\Layers\Action {
 			global $wgUploadPath;
 			return $wgUploadPath . '/';
 		}
-	}
 }

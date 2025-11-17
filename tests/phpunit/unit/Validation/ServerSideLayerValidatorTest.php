@@ -40,7 +40,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayers
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayers
 	 */
 	public function testValidateLayersSuccess() {
 		$validator = $this->createValidator();
@@ -59,7 +59,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayers
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayers
 	 */
 	public function testValidateLayersEmpty() {
 		$validator = $this->createValidator();
@@ -72,7 +72,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayers
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayers
 	 */
 	public function testValidateLayersTooMany() {
 		$validator = $this->createValidator();
@@ -88,7 +88,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerSuccess() {
 		$validator = $this->createValidator();
@@ -102,7 +102,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerMissingType() {
 		$validator = $this->createValidator();
@@ -121,7 +121,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerUnsupportedType() {
 		$validator = $this->createValidator();
@@ -140,7 +140,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerTextSpecific() {
 		$validator = $this->createValidator();
@@ -159,7 +159,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerRectangleSpecific() {
 		$validator = $this->createValidator();
@@ -178,7 +178,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerCircleSpecific() {
 		$validator = $this->createValidator();
@@ -197,7 +197,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerBlendModeAlias() {
 		$validator = $this->createValidator();
@@ -220,7 +220,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::getMaxLayerCount
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::getMaxLayerCount
 	 */
 	public function testGetMaxLayerCount() {
 		$validator = $this->createValidator();
@@ -231,7 +231,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::getSupportedLayerTypes
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::getSupportedLayerTypes
 	 */
 	public function testGetSupportedLayerTypes() {
 		$validator = $this->createValidator();
@@ -244,7 +244,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::isLayerTypeSupported
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::isLayerTypeSupported
 	 */
 	public function testIsLayerTypeSupported() {
 		$validator = $this->createValidator();
@@ -256,7 +256,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerNumericConstraints() {
 		$validator = $this->createValidator();
@@ -273,7 +273,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers ::validateLayer
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerArrayProperties() {
 		$validator = $this->createValidator();
@@ -293,5 +293,37 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$data = $result->getData();
 		$this->assertArrayHasKey( 'points', $data );
 		$this->assertCount( 3, $data['points'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateLayerPolygonParametricDefinition() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'type' => 'polygon',
+			'x' => 100,
+			'y' => 120,
+			'radius' => 45,
+			'sides' => 6,
+			'stroke' => '#000000'
+		];
+
+		$result = $validator->validateLayer( $layer );
+		$this->assertTrue( $result->isValid(), 'Polygon defined via radius/sides should validate' );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateLayerPolygonMissingGeometry() {
+		$validator = $this->createValidator();
+
+		$layer = [ 'type' => 'polygon' ];
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertFalse( $result->isValid() );
+		$this->assertStringContainsString( 'Polygon layer must', $result->getErrors()[0] );
 	}
 }

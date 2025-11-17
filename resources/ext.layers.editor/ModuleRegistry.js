@@ -337,9 +337,12 @@
 	}
 
 	// Initialize core dependencies
-	registry.registerInstance( 'window', window );
-	registry.registerInstance( 'document', document );
-	
+	if ( typeof window !== 'undefined' ) {
+		registry.registerInstance( 'window', window );
+	}
+	if ( typeof document !== 'undefined' ) {
+		registry.registerInstance( 'document', document );
+	}
 	if ( typeof mw !== 'undefined' ) {
 		registry.registerInstance( 'mw', mw );
 	}

@@ -27,22 +27,6 @@ describe('Layers Editor Regression Tests', () => {
             this.destroy = jest.fn();
         });
 
-        // Mock TransformationEngine
-        window.TransformationEngine = jest.fn().mockImplementation(function(canvas, config) {
-            this.canvas = canvas;
-            this.panX = 0;
-            this.panY = 0;
-            this.zoom = 1;
-            this.userHasSetZoom = false;
-            this.panByPixels = jest.fn();
-            this.getZoom = jest.fn().mockReturnValue(1);
-            this.getPan = jest.fn().mockReturnValue({x: 0, y: 0});
-            this.updateCanvasTransform = jest.fn();
-            this.updateViewportBounds = jest.fn();
-            this.fitToWindow = jest.fn();
-            this.destroy = jest.fn();
-        });
-
         // Mock LayerRenderer
         window.LayerRenderer = jest.fn().mockImplementation(function(ctx, config) {
             this.ctx = ctx;
@@ -103,6 +87,9 @@ describe('Layers Editor Regression Tests', () => {
     });
 
     afterEach(() => {
+        if (manager && typeof manager.destroy === 'function') {
+            manager.destroy();
+        }
         jest.restoreAllMocks();
         if (container && container.parentNode) {
             container.parentNode.removeChild(container);
@@ -132,91 +119,107 @@ describe('Layers Editor Regression Tests', () => {
     });
 
     describe('Pan-by-arrow-keys functionality', () => {
-        test('panByPixels method exists and works', () => {
-            // Verify TransformationEngine was created and has panByPixels
-            expect(manager.transformationEngine).toBeDefined();
-            expect(typeof manager.transformationEngine.panByPixels).toBe('function');
+        test('arrow keys adjust pan and update transform', () => {
+            const transformSpy = jest.spyOn(manager, 'updateCanvasTransform').mockImplementation(() => {});
+            const mockEvent = {
+                key: 'ArrowUp',
+                preventDefault: jest.fn(),
+                target: { tagName: 'BODY', contentEditable: 'false' },
+                ctrlKey: false,
+                metaKey: false
+            };
 
-            // Test calling panByPixels
-            manager.transformationEngine.panByPixels(10, 20);
-            expect(manager.transformationEngine.panByPixels).toHaveBeenCalledWith(10, 20);
+            manager.panY = 0;
+            manager.handleKeyDown(mockEvent);
+
+            expect(manager.panY).toBe(20);
+            expect(transformSpy).toHaveBeenCalled();
+            expect(mockEvent.preventDefault).toHaveBeenCalled();
         });
 
         test('arrow key handling does not throw errors', () => {
             const mockEvent = {
-                key: 'ArrowUp',
+                key: 'ArrowRight',
                 preventDefault: jest.fn(),
-                target: { tagName: 'BODY' }
+                target: { tagName: 'BODY', contentEditable: 'false' },
+                ctrlKey: false,
+                metaKey: false
             };
 
-            // This should not throw an error
-            expect(() => {
-                manager.handleKeyDown(mockEvent);
-            }).not.toThrow();
-
-            // Should have called preventDefault for arrow keys
+            expect(() => manager.handleKeyDown(mockEvent)).not.toThrow();
             expect(mockEvent.preventDefault).toHaveBeenCalled();
         });
     });
 
-    describe('RenderingCore constructor argument fix', () => {
-        test('RenderingCore is initialized with canvas element, not 2D context', () => {
-            // Verify RenderingCore was created with canvas
-            expect(manager.renderingCore).toBeDefined();
-            expect(manager.renderingCore.canvas).toBe(manager.canvas);
-            // Verify it has a 2D context (the exact instance may vary due to mocking)
-            expect(manager.renderingCore.ctx).toBeDefined();
-            expect(typeof manager.renderingCore.ctx.clearRect).toBe('function');
+    describe('Canvas context initialization', () => {
+        test('CanvasManager provides a 2D context bound to the canvas element', () => {
+            expect(manager.canvas).toBeInstanceOf(HTMLCanvasElement);
+            expect(manager.ctx).toBeDefined();
+            expect(typeof manager.ctx.clearRect).toBe('function');
         });
     });
 
-    describe('API mismatches between CanvasManager and RenderingCore', () => {
-        test('drawBackgroundImage is called without parameters', () => {
-            // Set up a background image
-            const testImage = { width: 100, height: 100, complete: true };
-            manager.backgroundImage = testImage;
+    describe('Rendering pipeline', () => {
+        test('renderLayers delegates to drawLayerWithEffects for visible layers', () => {
+            jest.spyOn(manager, 'redraw').mockImplementation(() => {});
+            jest.spyOn(manager, 'isLayerInViewport').mockReturnValue(true);
+            const drawSpy = jest.spyOn(manager, 'drawLayerWithEffects').mockImplementation(() => {});
 
-            // Spy on the RenderingCore method
-            const drawBackgroundImageSpy = jest.spyOn(manager.renderingCore, 'drawBackgroundImage');
+            const layer = { id: '1', type: 'rectangle', visible: true };
+            manager.renderLayers([ layer ]);
 
-            // Trigger performRedraw directly (bypass async redraw)
-            manager.performRedraw();
-
-            // Should be called without parameters
-            expect(drawBackgroundImageSpy).toHaveBeenCalledWith();
+            expect(drawSpy).toHaveBeenCalledWith(layer);
         });
 
-        test('renderLayer uses drawLayer method', () => {
-            const layer = { id: '1', type: 'rectangle', x: 0, y: 0, width: 100, height: 100, visible: true };
+        test('renderLayers skips invisible layers', () => {
+            jest.spyOn(manager, 'redraw').mockImplementation(() => {});
+            const drawSpy = jest.spyOn(manager, 'drawLayerWithEffects').mockImplementation(() => {});
 
-            // Spy on RenderingCore.drawLayer
-            const drawLayerSpy = jest.spyOn(manager.renderingCore, 'drawLayer');
+            const layer = { id: 'hidden', type: 'rectangle', visible: false };
+            manager.renderLayers([ layer ]);
 
-            // Temporarily set layerRenderer to null to force fallback to RenderingCore
-            const originalLayerRenderer = manager.layerRenderer;
-            manager.layerRenderer = null;
-
-            // Render the layer
-            manager.renderLayer(layer);
-
-            // Restore original layerRenderer
-            manager.layerRenderer = originalLayerRenderer;
-
-            // Should have called drawLayer with the layer
-            expect(drawLayerSpy).toHaveBeenCalledWith(layer);
+            expect(drawSpy).not.toHaveBeenCalled();
         });
     });
 
     describe('Background image lifecycle', () => {
-        test('backgroundImage is propagated to RenderingCore on load', () => {
-            const testImage = { width: 100, height: 100, complete: true };
+        test('successful image load resizes canvas and triggers redraw', () => {
+            manager.destroy();
+            const OriginalImage = global.Image;
+            const images = [];
+            global.Image = class {
+                constructor() {
+                    images.push(this);
+                }
+                set crossOrigin(_value) {}
+                set src(value) {
+                    this._src = value;
+                }
+            };
 
-            // Simulate background image load
-            manager.onBackgroundImageLoad(testImage);
+            try {
+                manager = new window.CanvasManager({
+                    container,
+                    editor: mockEditor,
+                    backgroundImageUrl: 'https://example.test/test.png'
+                });
+                const image = images[0];
+                manager.resizeCanvas = jest.fn();
+                manager.redraw = jest.fn();
+                manager.renderLayers = jest.fn();
 
-            // Verify backgroundImage was set on both manager and renderingCore
-            expect(manager.backgroundImage).toBe(testImage);
-            expect(manager.renderingCore.backgroundImage).toBe(testImage);
+                image.width = 321;
+                image.height = 123;
+                image.complete = true;
+                image.onload();
+
+                expect(manager.canvas.width).toBe(321);
+                expect(manager.canvas.height).toBe(123);
+                expect(manager.resizeCanvas).toHaveBeenCalled();
+                expect(manager.redraw).toHaveBeenCalled();
+            } finally {
+                global.Image = OriginalImage;
+            }
         });
     });
 });

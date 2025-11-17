@@ -818,13 +818,14 @@ The backend encompasses the PHP code that integrates with MediaWiki's databases,
 
 * **API Modules:**
 
-  * **ApiLayersInfo (action=layersinfo):** This is called by the editor when it loads, to get the existing layers data for an image. The API likely takes parameters like file name (and maybe revision ID if needed) and returns the JSON blob along with maybe metadata. It uses LayersDatabase to get the latest layer set or specific one. If none exists, it may return an empty set indicating no annotations yet.
+  * **ApiLayersInfo (action=layersinfo):** This is called by the editor when it loads, to get the existing layers data for an image. Callers must supply the file name, and optionally a specific `layersetid` plus a `limit` (default 50, max 200) to bound how many historical revisions are returned in `all_layersets`. The module now normalizes the title, enforces `Title::userCan( 'read' )`, and verifies that any requested layer set actually belongs to the same file before returning the JSON blob. If none exists, it returns an empty set indicating no annotations yet.
   * **ApiLayersSave (action=layerssave):** Called when the user hits "Save" in the editor. It receives the full JSON of the layer set (likely via POST, given it can be large). It then:
 
     * Validates the data (size against \$wgLayersMaxBytes, scans for any disallowed content).
     * Possibly sanitizes the input (ensuring no malicious SVG content or scripts can slip through via layer names or text etc.).
     * Saves it to the database: likely inserts a new row in `layer_sets` with a new ID, marks it as current. Or it might update an existing row if they decided to not keep history (but design suggests keeping history).
     * Returns a success or error. On success, it might return the new layer set ID or a revision number.
+    * `setname` is sanitized via `sanitizeSetName()` so it still accepts international scripts while stripping control characters, slashes, and excess whitespace before truncating to 255 bytes.
   * These APIs enforce permissions (user must have editlayers, etc.) and a CSRF token (as they are write actions). The code also likely prevents too rapid saving (maybe rate limiting in Hooks or in ApiLayersSave to avoid spam).
 
 * **LayersDatabase class:** A PHP helper that wraps database operations. It has methods like `getLayerSetsForImage($filename, $fileSha1)` to get all sets (for possibly listing), `getLatestLayerSet($filename, $sha1)`, `saveLayerSet(...)` to insert a new set, `deleteLayerSetsForImage($filename, $sha1)` to remove all data when a file is deleted, etc. Using a dedicated class abstracts direct SQL and helps maintain consistency.
@@ -848,7 +849,7 @@ The backend encompasses the PHP code that integrates with MediaWiki's databases,
 Putting it all together, a typical user interaction flows like this:
 
 1. **Launch Editor:** User clicks "Edit Layers" on a File page. The request goes to `index.php?title=File:Example.jpg&action=editlayers`. MediaWiki calls our UnknownAction hook, which initializes the editor page. The browser loads the HTML with the container and the JS modules.
-2. **Load Existing Data:** The JS (LayersEditor) fires and calls the API `action=layersinfo&file=Example.jpg`. The PHP returns the JSON of the latest layer set for that image (or an empty structure if none). The editor then populates the internal state (if any).
+2. **Load Existing Data:** The JS (LayersEditor) fires and calls the API `action=layersinfo&filename=Example.jpg&limit=50`. The PHP enforces the user's read rights on the file, confirms any requested layer set matches the file, and then returns the JSON of the latest layer set for that image (or an empty structure if none). The editor then populates the internal state (if any) and the `limit` parameter bounds how many historical revisions are included in `all_layersets`.
 3. **Editing Session:** The user draws, edits, adds layers. All changes are happening client-side, updating the JS model and re-rendering canvas. The extension might not continuously save (no mention of autosave) – it's manual save. Undo/redo is handled in JS by keeping history of states up to maybe 50 steps by default.
 4. **Save:** When the user clicks "Save", the editor gathers the entire layer set data structure. This is serialized to JSON (if not already in JSON form) and sent via `action=layerssave` POST. The server receives it, validates length and content, then writes it to `layer_sets` table (new row) and perhaps marks it as current. The API responds success.
 

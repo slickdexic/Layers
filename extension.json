@@ -232,6 +232,17 @@
 				"layers-prop-radius",
 				"layers-prop-opacity",
 				"layers-prop-blend",
+				"layers-color-picker-title",
+				"layers-color-picker-standard",
+				"layers-color-picker-saved",
+				"layers-color-picker-custom-section",
+				"layers-color-picker-none",
+				"layers-color-picker-empty-slot",
+				"layers-color-picker-cancel",
+				"layers-color-picker-apply",
+				"layers-color-picker-transparent",
+				"layers-color-picker-color-swatch",
+				"layers-color-picker-color-preview",
 				"layers-code-none",
 				"layers-code-enable",
 				"layers-code-all-visible",
@@ -356,9 +367,6 @@
 				"layers-validation-too-many-layers",
 				"layers-validation-layer-error",
 				"layers-validation-duplicate-id"
-			],
-			"cssClasses": [
-				"layers-fixed-height"
 			]
 		}
 	},

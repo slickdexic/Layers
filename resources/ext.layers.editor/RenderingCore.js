@@ -6,6 +6,13 @@
 ( function () {
 	'use strict';
 
+	const clampOpacity = function ( value ) {
+		if ( typeof value !== 'number' || Number.isNaN( value ) ) {
+			return 1;
+		}
+		return Math.max( 0, Math.min( 1, value ) );
+	};
+
 	/**
 	 * RenderingCore - Manages core canvas rendering operations
 	 *
@@ -128,68 +135,48 @@
 	 * Apply current transformations (zoom, pan) to canvas context
 	 */
 	RenderingCore.prototype.applyTransformations = function () {
-		this.ctx.setTransform(
-			this.zoom, 0, 0, this.zoom,
-			this.panX * this.zoom,
-			this.panY * this.zoom
-		);
+		const zoom = this.zoom || 1;
+
+		// Reset previous transform before applying the new state
+		this.ctx.setTransform( 1, 0, 0, 1, 0, 0 );
+		this.ctx.translate( this.panX, this.panY );
+		this.ctx.scale( zoom, zoom );
 	};
 
 	/**
-	 * Draw background image
-	 */
-	RenderingCore.prototype.drawBackgroundImage = function () {
-		if ( !this.backgroundImage || !this.backgroundImage.complete ) {
-			return;
-		}
-
-		// Get base dimensions from config if available
-		const canvasManager = this.config.canvasManager;
-		const imgWidth = ( canvasManager && canvasManager.baseWidth ) || this.backgroundImage.naturalWidth;
-		const imgHeight = ( canvasManager && canvasManager.baseHeight ) || this.backgroundImage.naturalHeight;
-
-		// Draw background image at world origin (0,0) with canvas transformations applied
-		// The transformations (zoom/pan) are already applied in performRedraw
-		this.ctx.drawImage( this.backgroundImage, 0, 0, imgWidth, imgHeight );
-	};
-
-	/**
-	 * Render array of layers
+	 * Render all layers in the order they should appear on canvas
 	 *
 	 * @param {Array} layers - Array of layer objects
 	 */
 	RenderingCore.prototype.renderLayers = function ( layers ) {
-		if ( !layers || !Array.isArray( layers ) ) {
+		if ( !Array.isArray( layers ) || layers.length === 0 ) {
 			return;
 		}
 
-		for ( let i = 0; i < layers.length; i++ ) {
+		for ( let i = layers.length - 1; i >= 0; i-- ) {
 			const layer = layers[ i ];
-			if ( layer && layer.visible !== false ) {
-				this.drawLayer( layer );
+
+			if ( !layer || layer.visible === false ) {
+				continue;
 			}
+
+			this.drawLayer( layer );
 		}
 	};
 
 	/**
-	 * Draw a single layer based on its type
+	 * Dispatch drawing of a single layer
 	 *
-	 * @param {Object} layer - Layer object to draw
+	 * @param {Object} layer - Layer definition
 	 */
 	RenderingCore.prototype.drawLayer = function ( layer ) {
-		if ( !layer || layer.visible === false ) {
-			return;
-		}
-
 		try {
 			switch ( layer.type ) {
-				case 'blur':
-					this.drawBlur( layer );
-					break;
 				case 'text':
 					this.drawText( layer );
 					break;
 				case 'rectangle':
+				case 'rect':
 					this.drawRectangle( layer );
 					break;
 				case 'circle':
@@ -216,6 +203,9 @@
 				case 'path':
 					this.drawPath( layer );
 					break;
+				case 'blur':
+					this.drawBlur( layer );
+					break;
 				default:
 					this.drawErrorPlaceholder( layer );
 			}
@@ -223,6 +213,92 @@
 			// Error recovery for layer drawing
 			this.handleDrawingError( layer, error );
 		}
+	};
+
+	/**
+	 * Draw text layer
+	 *
+	 * @param {Object} layer - Text layer object
+	 */
+	RenderingCore.prototype.drawText = function ( layer ) {
+		if ( !layer || !layer.text ) {
+			return;
+		}
+
+		this.ctx.save();
+
+		const textAlign = layer.textAlign || 'left';
+		let x = layer.x || 0;
+		let y = layer.y || 0;
+		const fontSize = layer.fontSize || 16;
+		const fontFamily = layer.fontFamily || 'Arial';
+		this.ctx.font = fontSize + 'px ' + fontFamily;
+		this.ctx.textAlign = textAlign;
+		this.ctx.textBaseline = 'top';
+
+		let text = String( layer.text );
+		text = text.replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
+		text = text.replace( /<[^>]+>/g, '' );
+
+		const maxLineWidth = layer.maxWidth || layer.width || ( this.canvas.width * 0.8 );
+		const lines = this.wrapText( text, maxLineWidth, this.ctx );
+		const lineHeight = fontSize * 1.2;
+		let totalTextWidth = 0;
+		const totalTextHeight = lines.length * lineHeight;
+
+		for ( let i = 0; i < lines.length; i++ ) {
+			const lineMetrics = this.ctx.measureText( lines[ i ] );
+			if ( lineMetrics.width > totalTextWidth ) {
+				totalTextWidth = lineMetrics.width;
+			}
+		}
+
+		const anchorLeft = this.getTextAnchorLeft( textAlign, x, totalTextWidth );
+		const centerX = anchorLeft + ( totalTextWidth / 2 );
+		const centerY = y + ( totalTextHeight / 2 );
+		let drawX = x;
+		let drawY = y;
+
+		if ( layer.rotation && layer.rotation !== 0 ) {
+			const rotationRadians = ( layer.rotation * Math.PI ) / 180;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( rotationRadians );
+			this.ctx.textAlign = 'left';
+			drawX = anchorLeft - centerX;
+			drawY = -( totalTextHeight / 2 );
+		}
+
+		if ( layer.textShadow ) {
+			this.ctx.shadowColor = layer.textShadowColor || '#000000';
+			const zoomFactor = this.zoom || 1;
+			this.ctx.shadowOffsetX = 2 * zoomFactor;
+			this.ctx.shadowOffsetY = 2 * zoomFactor;
+			this.ctx.shadowBlur = 4;
+		}
+
+		const baseAlpha = this.ctx.globalAlpha;
+		const fillColor = layer.fill || layer.color || '#000000';
+		const fillOpacity = clampOpacity( layer.fillOpacity );
+		const strokeOpacity = clampOpacity( layer.strokeOpacity );
+
+		for ( let j = 0; j < lines.length; j++ ) {
+			const lineText = lines[ j ];
+			const lineY = drawY + ( j * lineHeight );
+
+			if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
+				this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
+				this.ctx.lineWidth = layer.textStrokeWidth;
+				this.ctx.globalAlpha = baseAlpha * strokeOpacity;
+				this.ctx.strokeText( lineText, drawX, lineY );
+			}
+
+			this.ctx.fillStyle = fillColor;
+			this.ctx.globalAlpha = baseAlpha * fillOpacity;
+			this.ctx.fillText( lineText, drawX, lineY );
+		}
+
+		this.ctx.globalAlpha = baseAlpha;
+		this.ctx.restore();
 	};
 
 	/**
@@ -295,48 +371,6 @@
 		}
 
 		this.ctx.filter = prevFilter;
-		this.ctx.restore();
-	};
-
-	/**
-	 * Draw text layer
-	 *
-	 * @param {Object} layer - Text layer object
-	 */
-	RenderingCore.prototype.drawText = function ( layer ) {
-		if ( !layer.text ) {
-			return;
-		}
-
-		this.ctx.save();
-
-		// Set text properties
-		const fontSize = layer.fontSize || 16;
-		const fontFamily = layer.fontFamily || 'Arial, sans-serif';
-		this.ctx.font = fontSize + 'px ' + fontFamily;
-		this.ctx.fillStyle = layer.color || '#000000';
-		this.ctx.textAlign = layer.textAlign || 'left';
-		this.ctx.textBaseline = layer.textBaseline || 'top';
-
-		// Apply rotation if specified
-		if ( layer.rotation ) {
-			const centerX = layer.x + ( layer.width || 0 ) / 2;
-			const centerY = layer.y + ( layer.height || 0 ) / 2;
-			this.ctx.translate( centerX, centerY );
-			this.ctx.rotate( layer.rotation * Math.PI / 180 );
-			this.ctx.translate( -centerX, -centerY );
-		}
-
-		// Draw text stroke if specified
-		if ( layer.textStrokeWidth && layer.textStrokeColor ) {
-			this.ctx.strokeStyle = layer.textStrokeColor;
-			this.ctx.lineWidth = layer.textStrokeWidth;
-			this.ctx.strokeText( layer.text, layer.x || 0, layer.y || 0 );
-		}
-
-		// Draw text fill
-		this.ctx.fillText( layer.text, layer.x || 0, layer.y || 0 );
-
 		this.ctx.restore();
 	};
 
@@ -457,12 +491,21 @@
 		this.ctx.beginPath();
 		this.ctx.ellipse( centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI );
 
-		if ( layer.fill || layer.fillOpacity > 0 ) {
+		const baseOpacity = this.ctx.globalAlpha;
+		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
+			this.ctx.fillStyle = layer.fill;
+			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
 			this.ctx.fill();
 		}
-		if ( layer.stroke || layer.strokeWidth > 0 ) {
+		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
+			this.ctx.strokeStyle = layer.stroke;
+			if ( layer.strokeWidth ) {
+				this.ctx.lineWidth = layer.strokeWidth;
+			}
+			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
 			this.ctx.stroke();
 		}
+		this.ctx.globalAlpha = baseOpacity;
 
 		this.ctx.restore();
 	};
@@ -481,7 +524,10 @@
 		const endX = layer.x2 || ( layer.x || 0 ) + ( layer.width || 0 );
 		const endY = layer.y2 || ( layer.y || 0 ) + ( layer.height || 0 );
 		this.ctx.lineTo( endX, endY );
+		const baseOpacity = this.ctx.globalAlpha;
+		this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
 		this.ctx.stroke();
+		this.ctx.globalAlpha = baseOpacity;
 
 		this.ctx.restore();
 	};
@@ -706,6 +752,7 @@
 		}
 
 		this.ctx.save();
+		this.applyLayerStyle( layer );
 		this.ctx.beginPath();
 
 		// Move to first point
@@ -718,16 +765,19 @@
 
 		this.ctx.closePath();
 
-		// Apply styles
-		if ( layer.fill ) {
+		var baseOpacity = this.ctx.globalAlpha;
+		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
+			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
 			this.ctx.fill();
 		}
-		if ( layer.stroke ) {
+		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = layer.strokeWidth || 1;
+			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
 			this.ctx.stroke();
 		}
+		this.ctx.globalAlpha = baseOpacity;
 
 		this.ctx.restore();
 	};
@@ -745,6 +795,7 @@
 		const innerRadius = radius * 0.5;
 
 		this.ctx.save();
+		this.applyLayerStyle( layer );
 		this.ctx.beginPath();
 
 		for ( let i = 0; i < points * 2; i++ ) {
@@ -762,16 +813,19 @@
 
 		this.ctx.closePath();
 
-		// Apply styles
-		if ( layer.fill ) {
+		const baseOpacity = this.ctx.globalAlpha;
+		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
+			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
 			this.ctx.fill();
 		}
-		if ( layer.stroke ) {
+		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = layer.strokeWidth || 1;
+			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
 			this.ctx.stroke();
 		}
+		this.ctx.globalAlpha = baseOpacity;
 
 		this.ctx.restore();
 	};
@@ -791,6 +845,9 @@
 		this.ctx.save();
 		this.ctx.strokeStyle = layer.stroke || '#000000';
 		this.ctx.lineWidth = layer.strokeWidth || 2;
+		const baseOpacity = this.ctx.globalAlpha;
+		const strokeAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
+		this.ctx.globalAlpha = strokeAlpha;
 
 		// Draw main line
 		this.ctx.beginPath();
@@ -814,6 +871,7 @@
 			y2 - headSize * Math.sin( angle + headAngle )
 		);
 		this.ctx.stroke();
+		this.ctx.globalAlpha = baseOpacity;
 
 		this.ctx.restore();
 	};
@@ -857,6 +915,8 @@
 		this.ctx.lineWidth = layer.strokeWidth || 2;
 		this.ctx.lineCap = 'round';
 		this.ctx.lineJoin = 'round';
+		const baseOpacity = this.ctx.globalAlpha;
+		this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
 
 		this.ctx.beginPath();
 		this.ctx.moveTo( layer.points[ 0 ].x, layer.points[ 0 ].y );
@@ -866,7 +926,50 @@
 		}
 
 		this.ctx.stroke();
+		this.ctx.globalAlpha = baseOpacity;
 		this.ctx.restore();
+	};
+
+	RenderingCore.prototype.wrapText = function ( text, maxWidth, ctx ) {
+		if ( !text || !maxWidth || maxWidth <= 0 ) {
+			return [ text || '' ];
+		}
+
+		const words = text.split( ' ' );
+		const lines = [];
+		let currentLine = '';
+
+		for ( let i = 0; i < words.length; i++ ) {
+			const word = words[ i ];
+			const testLine = currentLine + ( currentLine ? ' ' : '' ) + word;
+			const metrics = ctx.measureText( testLine );
+			if ( metrics.width > maxWidth && currentLine !== '' ) {
+				lines.push( currentLine );
+				currentLine = word;
+			} else {
+				currentLine = testLine;
+			}
+		}
+
+		if ( currentLine ) {
+			lines.push( currentLine );
+		}
+
+		return lines.length > 0 ? lines : [ '' ];
+	};
+
+	RenderingCore.prototype.getTextAnchorLeft = function ( textAlign, x, width ) {
+		const align = ( textAlign || 'left' ).toLowerCase();
+		switch ( align ) {
+			case 'center':
+				return x - ( width / 2 );
+			case 'right':
+			case 'end':
+				return x - width;
+			case 'start':
+			default:
+				return x;
+		}
 	};
 
 	/**

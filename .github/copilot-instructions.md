@@ -8,19 +8,26 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 
 - Backend (PHP, `src/`)
   - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.44)
+  - Service wiring: `services.php` registers 3 services: LayersLogger, LayersSchemaManager, LayersDatabase (uses DI pattern)
   - API modules (`src/Api/`)
     - `ApiLayersInfo`: read-only fetch of layer data and revision list for a file
     - `ApiLayersSave`: write endpoint to save a new layer set revision (requires CSRF token + rights)
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
+    - Uses LoadBalancer for DB connections (lazy init pattern with getWriteDb/getReadDb)
+    - Implements retry logic with exponential backoff (3 retries, 100ms base delay) for transaction conflicts
   - Hooks and Actions: `src/Hooks/*` and `Action/EditLayersAction.php` wire the editor into File pages and parser/wikitext
-  - Security helpers: `src/Security/RateLimiter.php` (uses MediaWiki's pingLimiter + config)
+  - Security/Validation: `src/Security/RateLimiter.php` + `src/Validation/*` (TextSanitizer, ColorValidator, ServerSideLayerValidator)
+    - Validator uses strict property whitelists (see ALLOWED_PROPERTIES constant with 40+ fields)
+    - All validation errors use i18n keys (layers-validation-*) for consistent error messages
 
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
-  - Core editor modules: `CanvasManager.js` (rendering/interactions), `ToolManager.js`, `RenderEngine.js`, `SelectionManager.js`, `HistoryManager.js`
-  - UI: `Toolbar.js`, `LayerPanel.js`, plus editor CSS (fixed/clean/simple themes)
+  - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
+  - Core editor modules: `CanvasManager.js` (5,462 lines - rendering/interactions), `ToolManager.js`, `RenderingCore.js`, `SelectionManager.js`, `HistoryManager.js`
+  - UI: `Toolbar.js`, `LayerPanel.js`, plus editor CSS (editor-fixed.css theme)
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
+  - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.
 
@@ -100,17 +107,22 @@ Install
 - composer install (PHP Composer; ensure it’s the PHP tool, not a Python package with the same name)
 
 Lint & tests
-- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana)
+- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana; use `--force` to continue on warnings)
 - JS unit tests (Jest): `npm run test:js` (optional `:watch` or `:coverage`)
-- PHP style/lint: `composer test` (parallel-lint, phpcs, minus-x). PHP unit tests live under `tests/phpunit/` and require a MediaWiki test env.
+- PHP style/lint: `composer test` or `npm run test:php` (parallel-lint, phpcs, minus-x)
+- PHP unit tests: `npm run test:phpunit` (requires MediaWiki test env; use `:phpunit-coverage` for HTML report)
+- PHP fixes: `npm run fix:php` (runs minus-x fix and phpcbf auto-formatter)
+- VS Code tasks available: "npm test (Layers)", "npm test:php (Layers)", "npm fix:php (Layers)"
 
 Build
 - Dev build: `npm run build:dev` (sources under `resources/ext.layers*`)
 - Prod build: `npm run build` (writes `resources/dist/*.js`; not used by ResourceLoader modules by default)
+- Watch mode: `npm run watch` (auto-rebuild on changes; useful for testing outside ResourceLoader)
 
 Database
-- Initial schema: `sql/layers_tables.sql`; patches in `sql/patches/`
+- Initial schema: `sql/layers_tables.sql`; patches in `sql/patches/` (13 migration files for schema evolution)
 - Apply/upgrade via MediaWiki: `php maintenance/update.php` from the MediaWiki root
+- Schema manager: `src/Database/LayersSchemaManager.php` handles LoadExtensionSchemaUpdates hook
 
 ## 6) Internationalization (i18n)
 
@@ -137,12 +149,15 @@ Database
 
 ## 9) Known lint/test conventions
 
-- ESLint is configured to ignore:
-  - `resources/dist/**`
-  - `tests/jest/**`
-  - `resources/ext.layers.editor/LayerPanel.js`
-  - `resources/ext.layers/init.js`
+- ESLint config (`.eslintrc.json`):
+  - Globals: mw, $, jQuery (MediaWiki environment)
+  - Enforces no-var, prefer-const, no-unused-vars (with overrides for Manager files)
+  - Ignores: `resources/dist/**`, `tests/**`, backup files (`*-backup.js`, `*.backup.js`), `.stylelintrc.json`
+  - Special overrides: init.js (indent/console off), Manager files (no-unused-vars off)
+- Stylelint: extends wikimedia config; disables @stylistic/linebreaks (Windows line endings allowed)
+- PHP: MediaWiki coding standards via phpcs; current codebase has ~21 doc errors, ~50 style warnings (mostly minor)
 - If you refactor ignored files, update the ignore list or conform to the code style before re-enabling linting
+- Backup files: ESLint ignores patterns like `*-backup.js` and `*.backup.js` for WIP code
 
 ## 10) Troubleshooting tips
 
@@ -153,7 +168,8 @@ Database
 
 ## 11) Quick reference (contracts)
 
-- GET action=layersinfo&filename=File.jpg[&layersetid=ID]
+- GET action=layersinfo&filename=File.jpg[&layersetid=ID][&limit=50]
+  - Respects File:Title read rights and will only return layer sets that belong to the requested file; optional `limit` caps `all_layersets` (default 50, max 200).
   - Returns: { layersinfo: { layerset: { id, data:{revision,schema,created,layers:[]}, baseWidth, baseHeight, ... }, all_layersets:[...] } }
 - POST action=layerssave (CSRF)
   - Params: filename, data='[ {...layer...} ]', setname?, token

@@ -10,7 +10,13 @@ use MediaWiki\Extension\Layers\Security\RateLimiter;
 class RateLimiterTest extends \MediaWikiUnitTestCase {
 
 	private function createRateLimiter() {
-		return new RateLimiter();
+		$config = new \HashConfig( [
+			'LayersMaxImageDimensions' => 8192,
+			'LayersMaxImageSize' => 8192,
+			'LayersMaxLayerCount' => 100,
+			'RateLimits' => []
+		] );
+		return new RateLimiter( $config );
 	}
 
 	private function getValidLayers() {

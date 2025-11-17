@@ -537,5 +537,7 @@ class StateManager {
 	}
 }
 
-// Export StateManager to global scope
-window.StateManager = StateManager;
+if ( typeof window !== 'undefined' ) {
+	window.StateManager = StateManager;
+	window.stateManager = new StateManager();
+}

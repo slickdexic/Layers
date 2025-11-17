@@ -12,6 +12,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use ApiMain;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 class ApiLayersInfo extends ApiBase {
 	/**
@@ -34,25 +35,44 @@ class ApiLayersInfo extends ApiBase {
 		$params = $this->extractRequestParams();
 		$filename = $params['filename'];
 		$layerSetId = $params['layersetid'] ?? null;
+		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : 50;
+		$limit = max( 1, min( $limit, 200 ) );
+
+		$title = $this->getTitleFromFilename( $filename );
+		if ( !$title ) {
+			$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+		}
+
+		$user = $this->getUser();
+		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
+		if ( !$permissionManager->userCan( 'read', $user, $title ) ) {
+			$this->dieWithError( 'badaccess-group0', 'permissiondenied' );
+		}
 
 		// Get file information
-		$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
-		$file = $repoGroup->findFile( $filename );
+		$repoGroup = $this->getRepoGroup();
+		$file = $repoGroup->findFile( $title );
 		if ( !$file || !$file->exists() ) {
 			$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
 		}
+
+		$normalizedName = str_replace( ' ', '_', $file->getName() );
 
 		// Capture original image dimensions for client-side scaling
 		$origWidth = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : null;
 		$origHeight = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : null;
 
-		$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+		$db = $this->getLayersDatabase();
 
 		if ( $layerSetId ) {
 			// Get specific layer set
 			$layerSet = $db->getLayerSet( $layerSetId );
 			if ( !$layerSet ) {
-				$this->dieWithError( $this->msg( 'layers-layerset-not-found' ), 'layersetnotfound' );
+				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
+			}
+
+			if ( str_replace( ' ', '_', (string)( $layerSet['imgName'] ?? '' ) ) !== $normalizedName ) {
+				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
 			}
 
 			// Enrich with base dimensions to allow correct scaling by clients
@@ -85,7 +105,16 @@ class ApiLayersInfo extends ApiBase {
 			}
 
 			// Also get list of all layer sets for this file
-			$allLayerSets = $db->getLayerSetsForImage( $file->getName(), $file->getSha1() );
+			$allLayerSets = $db->getLayerSetsForImageWithOptions(
+				$file->getName(),
+				$file->getSha1(),
+				[
+					'sort' => 'ls_revision',
+					'direction' => 'DESC',
+					'limit' => $limit,
+					'includeData' => false
+				]
+			);
 			// Enrich with user names for display convenience - batch lookup to avoid N+1 queries
 			try {
 				// Collect all unique user IDs
@@ -149,6 +178,12 @@ class ApiLayersInfo extends ApiBase {
 				ApiBase::PARAM_TYPE => 'integer',
 				ApiBase::PARAM_REQUIRED => false,
 			],
+			'limit' => [
+				ApiBase::PARAM_TYPE => 'integer',
+				ApiBase::PARAM_REQUIRED => false,
+				ApiBase::PARAM_MIN => 1,
+				ApiBase::PARAM_MAX => 200,
+			],
 		];
 	}
 
@@ -164,5 +199,33 @@ class ApiLayersInfo extends ApiBase {
 			'action=layersinfo&filename=Example.jpg&layersetid=123'
 				=> 'apihelp-layersinfo-example-2',
 		];
+	}
+
+	/**
+	 * Resolve the RepoGroup service. Extracted for easier testing/mocking.
+	 *
+	 * @return mixed RepoGroup instance
+	 */
+	protected function getRepoGroup() {
+		return MediaWikiServices::getInstance()->getRepoGroup();
+	}
+
+	/**
+	 * Resolve the LayersDatabase service. Extracted for easier testing/mocking.
+	 *
+	 * @return mixed LayersDatabase service instance
+	 */
+	protected function getLayersDatabase() {
+		return MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+	}
+
+	/**
+	 * Build a Title object for the provided filename. Extracted for easier testing.
+	 *
+	 * @param string $filename
+	 * @return Title|null
+	 */
+	protected function getTitleFromFilename( string $filename ) {
+		return Title::makeTitleSafe( NS_FILE, $filename );
 	}
 }

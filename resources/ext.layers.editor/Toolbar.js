@@ -27,9 +27,52 @@
 		// Initialize validator for real-time input validation
 		this.validator = window.LayersValidator ? new window.LayersValidator() : null;
 		this.inputValidators = [];
+		this.documentListeners = [];
+		this.dialogCleanups = [];
+		this.keyboardShortcutHandler = null;
 
 		this.init();
 	}
+
+	Toolbar.prototype.addDocumentListener = function ( event, handler, options ) {
+		if ( !event || typeof handler !== 'function' ) {
+			return;
+		}
+		document.addEventListener( event, handler, options );
+		this.documentListeners.push( { event: event, handler: handler, options: options } );
+	};
+
+	Toolbar.prototype.removeDocumentListeners = function () {
+		while ( this.documentListeners && this.documentListeners.length ) {
+			var listener = this.documentListeners.pop();
+			document.removeEventListener( listener.event, listener.handler, listener.options );
+		}
+	};
+
+	Toolbar.prototype.registerDialogCleanup = function ( cleanupFn ) {
+		if ( typeof cleanupFn === 'function' ) {
+			this.dialogCleanups.push( cleanupFn );
+		}
+	};
+
+	Toolbar.prototype.runDialogCleanups = function () {
+		while ( this.dialogCleanups && this.dialogCleanups.length ) {
+			var cleanup = this.dialogCleanups.pop();
+			try {
+				cleanup();
+			} catch ( _err ) {
+				// Ignore cleanup errors
+			}
+		}
+	};
+
+	Toolbar.prototype.destroy = function () {
+		this.runDialogCleanups();
+		this.removeDocumentListeners();
+		this.keyboardShortcutHandler = null;
+		this.dialogCleanups = [];
+		this.documentListeners = [];
+	};
 
 	Toolbar.prototype.init = function () {
 		this.createInterface();
@@ -55,6 +98,7 @@
 	// Show a modal color picker dialog near an anchor button
 	Toolbar.prototype.openColorPickerDialog = function ( anchorButton, initialValue, options ) {
 		options = options || {};
+		const toolbar = this;
 		const transparentTitle = options.transparentTitle || 'No Color (Transparent)';
 		const onApply = options.onApply || function () {};
 
@@ -67,6 +111,25 @@
 		dialog.className = 'color-picker-dialog';
 		dialog.style.position = 'fixed';
 		dialog.style.zIndex = '1000001';
+		let escapeHandler = null;
+		const cleanup = function () {
+			if ( escapeHandler ) {
+				document.removeEventListener( 'keydown', escapeHandler );
+				escapeHandler = null;
+			}
+			if ( overlay && overlay.parentNode ) {
+				overlay.parentNode.removeChild( overlay );
+			}
+			if ( dialog && dialog.parentNode ) {
+				dialog.parentNode.removeChild( dialog );
+			}
+			if ( toolbar && Array.isArray( toolbar.dialogCleanups ) ) {
+				toolbar.dialogCleanups = toolbar.dialogCleanups.filter( function ( fn ) {
+					return fn !== cleanup;
+				} );
+			}
+		};
+		this.registerDialogCleanup( cleanup );
 
 		let dialogTop = buttonRect.bottom + 5;
 		let dialogLeft = buttonRect.left;
@@ -211,8 +274,7 @@
 		cancelBtn.textContent = 'Cancel';
 		cancelBtn.className = 'color-picker-btn';
 		cancelBtn.addEventListener( 'click', () => {
-			document.body.removeChild( overlay );
-			document.body.removeChild( dialog );
+			cleanup();
 		} );
 		const okBtn = document.createElement( 'button' );
 		okBtn.type = 'button';
@@ -230,8 +292,7 @@
 				} catch ( e ) {}
 			}
 			onApply( selectedColor );
-			document.body.removeChild( overlay );
-			document.body.removeChild( dialog );
+			cleanup();
 		} );
 		buttonContainer.appendChild( cancelBtn );
 		buttonContainer.appendChild( okBtn );
@@ -239,15 +300,12 @@
 
 		overlay.addEventListener( 'click', ( e ) => {
 			if ( e.target === overlay ) {
-				document.body.removeChild( overlay );
-				document.body.removeChild( dialog );
+				cleanup();
 			}
 		} );
-		const escapeHandler = function ( e ) {
+		escapeHandler = function ( e ) {
 			if ( e.key === 'Escape' ) {
-				document.body.removeChild( overlay );
-				document.body.removeChild( dialog );
-				document.removeEventListener( 'keydown', escapeHandler );
+				cleanup();
 			}
 		};
 		document.addEventListener( 'keydown', escapeHandler );
@@ -1219,9 +1277,10 @@
 		} );
 
 		// Keyboard shortcuts
-		document.addEventListener( 'keydown', ( e ) => {
+		this.keyboardShortcutHandler = function ( e ) {
 			self.handleKeyboardShortcuts( e );
-		} );
+		};
+		this.addDocumentListener( 'keydown', this.keyboardShortcutHandler );
 
 		// Layer-level effects removed: opacity, blend, toggles are in Properties panel
 	};
@@ -1245,7 +1304,7 @@
 		this.updateToolOptions( toolId );
 
 		// Notify editor
-		this.editor.setCurrentTool( toolId );
+		this.editor.setCurrentTool( toolId, { skipToolbarSync: true } );
 
 		// Ensure focus remains on selected tool for keyboard users
 		const focusedBtn = this.container.querySelector( '[data-tool="' + toolId + '"]' );

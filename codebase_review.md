@@ -1,9 +1,260 @@
 # Layers MediaWiki Extension - Comprehensive Code Review
 
-**Review Date:** November 10, 2025  
+**Review Date:** November 17, 2025  
 **Version:** 0.8.1-dev  
-**Reviewer:** GitHub Copilot (Claude Sonnet 4.5)  
-**Review Type:** Deep Critical Analysis
+**Reviewer:** GitHub Copilot (GPT-5.1-Codex Preview)  
+**Review Type:** Deep Critical Analysis  
+**Previous Review:** November 16, 2025
+
+> **Update (Nov 17, 2025):** Touch editing is still broken because `handleTouchEnd()` finishes drawings at (0, 0), the revision history API sends every `ls_json_blob` in `all_layersets`, LayerPanel keeps piling up `layers:transforming` listeners, and the color picker dialog is English-only with no dialog semantics or focus trap. The legacy CLI test harness still instantiates `LayersDatabase` without dependencies, so automated smoke tests cannot run. Overall score slips to 5.3/10 until touch, API payload, modal accessibility, and tooling regressions are corrected.
+
+> **Update (Nov 16, 2025):** Read-side API drift allows anyone who can guess a `ls_id` to download layer JSON for unrelated files, CanvasManager never unregisters document-level keyboard listeners (stacking duplicate shortcuts after every edit session) and doubles every touch gesture by wiring two separate `touch*` pipelines. LayerPanel’s fallback “confirmation” always returns true, so destructive operations go through without user consent, and the new sanitized logging utilities in `LayersEditor` are dead code because the constructor pre-binds console loggers that shadow the prototype methods. These regressions drop the overall score back below 6/10 despite the Nov 15 fixes.
+
+> **Update (Nov 15, 2025):** Regression sweep targeting three blocking defects reported by QA: (1) save pipeline failures caused by a missing logger accessor, (2) arrow/star layers ignoring rotation handles, and (3) arrowheads degenerating into flat bars when stroke width increases. Backend logging now routes through the DI-provided LayersLogger, and the rendering stack (CanvasManager, LayerRenderer, RenderingCore) applies consistent transforms plus filled arrowheads so visual fidelity is maintained at any width.
+
+### Current Assessment (2025-11-17)
+
+| Category | Score | Status | Trend |
+|----------|-------|--------|-------|
+| Architecture & Design | 5/10 | 🟠 API/data layering eroding in layersinfo feed | ↓ |
+| Code Quality | 4/10 | 🔴 5k-line modules + `/* eslint-disable */` in LayerPanel | ↓ |
+| Security | 6/10 | 🟡 Revision listings leak full layer JSON blobs | ↓ |
+| Performance | 4/10 | 🔴 Revision payloads + non-virtualized layer list | ↓ |
+| Accessibility | 3/10 | 🔴 Color picker + layer list fail WCAG 2.1 focus rules | ↓ |
+| Documentation | 8/10 | 🟢 Living docs still up to date | → |
+| Testing | 4/10 | 🔴 CLI harness still fatals before any assertion | ↓ |
+| Error Handling | 6/10 | 🟡 Server logs ok; UI silently swallows failures | → |
+| Maintainability | 5/10 | 🟡 Event listener leaks and dead config knobs | ↓ |
+| Resource Management | 4/10 | 🔴 Touch handlers + DOM listeners never cleaned | ↓ |
+
+**Overall Score: 5.3/10 — tablet interaction, API payload discipline, and accessibility remain below release quality.**
+
+### Feature-Level Scores (2025-11-17)
+
+| Feature / Module | Functionality | Code Quality | Notes |
+|------------------|---------------|--------------|-------|
+| CanvasManager touch stack | 6/10 | 3/10 | `handleTouchEnd()` (resources/ext.layers.editor/CanvasManager.js, lines 1764-1798) finishes drawings at `(0,0)`, so every touch gesture collapses when the finger lifts. |
+| layersinfo revision feed | 6/10 | 4/10 | `getLayerSetsForImageWithOptions()` (src/Database/LayersDatabase.php, lines 182-214) includes every `ls_json_blob` in `all_layersets`, leaking full layer payloads when the UI only needs metadata. |
+| LayerPanel | 5/10 | 3/10 | `renderLayerList()` (resources/ext.layers.editor/LayerPanel.js, lines 432-467) rebuilds the DOM on every update, nukes focus, and drag/drop listeners from `setupEventHandlers()` (lines 404-425) are never removed. |
+| Toolbar color picker | 6/10 | 3/10 | `openColorPickerDialog()` (resources/ext.layers.editor/Toolbar.js, lines 60-213) hard-codes English strings, lacks `role="dialog"`, and never traps or restores focus. |
+| Legacy CLI smoke test | 3/10 | 2/10 | `tests/LayersTest.php` (lines 72-110) instantiates `new LayersDatabase()` without the four constructor dependencies, so the suite always fatal-errors before exercising code. |
+
+### Critical Findings (Nov 17, 2025)
+
+1. 🔴 **Touch releases snap every shape to the origin.** `handleTouchEnd()` creates a synthetic mouse event with `clientX/clientY = 0` (resources/ext.layers.editor/CanvasManager.js, lines 1764-1798). `finishDrawing()` then uses those zeros, so rectangles, arrows, and highlights collapse to the top-left as soon as the finger lifts. Tablet annotation is unusable until the last touch point is preserved.
+2. 🟠 **Revision history API leaks every layer JSON blob.** `LayersDatabase::getLayerSetsForImageWithOptions()` returns `ls_json_blob` for every revision and `ApiLayersInfo` blindly exposes it via `all_layersets` (src/Database/LayersDatabase.php, lines 182-214 and src/Api/ApiLayersInfo.php, lines 92-137). A single history request can dump megabytes of layer data and bypasses the intended “metadata-only” contract.
+3. 🟠 **LayerPanel event listeners leak across sessions.** `setupEventHandlers()` attaches a `layers:transforming` listener to `this.editor.container` (resources/ext.layers.editor/LayerPanel.js, lines 404-423) but `destroy()` only removes listeners tracked via `addDocumentListener()`. Opening the editor multiple times stacks identical callbacks, causing duplicate property syncs and gradual performance decay.
+4. 🟠 **Color picker dialog misses localization and dialog semantics.** The modal created in `Toolbar.openColorPickerDialog()` (resources/ext.layers.editor/Toolbar.js, lines 60-213) hardcodes strings like “Standard Colors”, never sets `role="dialog"`/`aria-modal`, and does not trap or restore focus, failing WCAG 2.1.2 and 2.4.3.
+5. 🟠 **CLI smoke tests still cannot run.** `tests/LayersTest.php` (lines 72-110) calls `new LayersDatabase()` with zero parameters even though the constructor requires `LoadBalancer`, `Config`, `LoggerInterface`, and `LayersSchemaManager`. `maintenance/runScript.php extensions/Layers/tests/LayersTest.php` therefore fatal-errors before any assertion, giving a false sense of coverage.
+6. 🟠 **Fallback confirmations auto-approve destructive actions.** `LayerPanel.prototype.simpleConfirm()` (resources/ext.layers.editor/LayerPanel.js, lines 1496-1513) returns `true` whenever `window.confirm` is unavailable (headless testing, certain mobile shells), so deletes/locks cannot be canceled in those environments.
+
+### Missing & Broken Features (Nov 17, 2025)
+
+- **Revision history lacks a metadata-only mode.** Because `ls_json_blob` is returned for every entry (src/Database/LayersDatabase.php, lines 182-214), there is no lightweight way to fetch “latest 20 revisions” without shipping the entire layer payload for each.
+- **Server never enforces configured image/complexity caps.** `ApiLayersSave` only calls `RateLimiter::checkRateLimit()` and never invokes `isImageSizeAllowed`, `isLayerCountAllowed`, or `isComplexityAllowed` (src/Api/ApiLayersSave.php, lines 60-210 and src/Security/RateLimiter.php, lines 120-210), so `$wgLayersMaxImageDimensions`, `$wgLayersMaxLayerCount`, and `$wgLayersMaxBytes` are effectively advisory.
+- **No responsive layout or alternative navigation.** `.layers-panel` is fixed at ~320 px wide with `position: fixed` chrome (resources/ext.layers.editor/editor-fixed.css, lines 150-215) so the sidebar consumes half of an iPad viewport and there is no collapsed/mobile presentation.
+- **Layer reordering remains mouse-only.** Drag/drop is the sole interaction (LayerPanel.js, lines 1372-1488); there are no keyboard shortcuts, aria-grabbed attributes, or move up/down buttons.
+- **Rate-limited operations lack user feedback.** The backend can return `layers-rate-limited`, but the UI has no dedicated messaging or cooldown indicator, so users see a generic toast at best.
+
+### UI / Accessibility Review (Nov 17, 2025)
+
+- **Layer list refocuses on every render.** `renderLayerList()` fully rebuilds the DOM (LayerPanel.js, lines 432-467), so focus and scroll position jump to the top each time visibility/lock toggles fire. This violates WCAG 2.4.3 and makes keyboard usage painful.
+- **Editable names lack semantics.** The `span.layer-name` elements are `contentEditable` without `role="textbox"`, `aria-label`, or description (LayerPanel.js, lines 484-505). Screen readers announce “blank” with no context.
+- **No aria-live region for errors.** `.layers-error-notification` is purely visual (editor-fixed.css, lines 1-60). Save failures never reach assistive technologies.
+- **Color picker dialog unusable for AT users.** Beyond missing localization, the dialog lacks focus trap/return, `aria-modal`, or Escape hints (Toolbar.js, lines 60-213).
+- **Fixed-width layout ignores small screens.** `.layers-editor` and `.layers-panel` rely on pixel widths and hide MediaWiki chrome completely (editor-fixed.css, lines 120-220), leaving no responsive breakpoints or safe-area handling.
+
+### Testing & Tooling Gaps (Nov 17, 2025)
+
+- **CLI harness is nonfunctional.** `tests/LayersTest.php` fatal-errors before evaluating any behavior because required constructor arguments are missing.
+- **Critical files bypass ESLint.** `resources/ext.layers.editor/LayerPanel.js` starts with `/* eslint-disable */`, so regressions in the 1,500-line UI component sail past CI.
+- **Zero coverage for touch/keyboard flows.** No Jest tests exercise `handleTouchEnd`, drag/drop, or the color picker, so the regressions noted above go undetected.
+- **Banana/i18n checks miss hard-coded strings.** The color picker and various tooltips never call `mw.message`, so Banana cannot enforce translation completeness.
+
+### Recommended Immediate Actions
+
+1. **Fix touch release handling** by storing the last touch point and feeding it to `finishDrawing()` before resetting tool state.
+2. **Split metadata vs payload in `layersinfo`.** Stop returning `ls_json_blob` inside `all_layersets`, add pagination, and require an explicit `prop=data` flag for heavy payloads.
+3. **Track and remove all LayerPanel listeners.** Expose an `addTargetListener()` helper similar to `addDocumentListener()` so `destroy()` can unwind custom DOM events.
+4. **Rebuild the color picker dialog** with `role="dialog"`, focus management, Escape handling, and i18n strings registered in `i18n/*.json`.
+5. **Replace the CLI smoke test with real phpunit coverage** that injects mocks (LoadBalancer, Logger, SchemaManager) instead of calling constructors directly.
+6. **Honor the documented size/complexity caps** by invoking the relevant `RateLimiter` helpers (and surfacing errors in the UI) before the expensive validation pipeline.
+
+### Remediation Plan (Nov 17, 2025)
+
+| Phase | Scope | Technical Approach | Target Files |
+|-------|-------|--------------------|--------------|
+| P0 – Completed | Touch release + revision history leak | Preserve `lastTouchPoint/Time` in `CanvasManager` and add `includeData` option in `LayersDatabase`/`ApiLayersInfo` so revision feeds stay metadata-only. Covered by unit tests in `tests/phpunit/unit/Api/ApiLayersInfoTest.php` and `tests/phpunit/unit/Database/LayersDatabaseTest.php`. | `CanvasManager.js`, `LayersDatabase.php`, `ApiLayersInfo.php`, PHPUnit suites |
+| P1 – Listener Containment | Stop LayerPanel/toolbox listener leaks | Add `this.targetListeners` registry, provide `addTargetListener( node, type, handler, options )`, and flush it from `destroy()`. Audit `setupEventHandlers`, drag/drop, and custom `layers:*` events to ensure every listener uses the registry. | `resources/ext.layers.editor/LayerPanel.js`, optional shared helper |
+| P1 – Accessible Color Picker | Localize + add dialog semantics | Extract strings to `i18n/en.json`/`qqq.json`, declare messages in `extension.json`, and wrap the picker in an OOUI-like focus trap: `role="dialog"`, `aria-modal="true"`, initial focus on the first swatch, loop tab order, close on Escape, restore focus to the triggering button. | `resources/ext.layers.editor/Toolbar.js`, `resources/ext.layers.editor/editor-fixed.css`, `i18n/*.json`, `extension.json` |
+| P1 – CLI/Unit Harness | Replace legacy CLI test with dependency-injected phpunit tests | Drop `tests/LayersTest.php` in favor of proper PHPUnit coverage. Introduce stubs for `LoadBalancer`, `LayersSchemaManager`, `LoggerInterface`, and `Config` so `LayersDatabase` can be exercised without MediaWiki core. Wire tests through `composer phpunit`. | `tests/phpunit/unit/Database/LayersDatabaseTest.php`, new integration tests |
+| P2 – RateLimiter Enforcement | Enforce size/layer/complexity caps server-side | Invoke `RateLimiter::isImageSizeAllowed()`, `isLayerCountAllowed()`, and `isComplexityAllowed()` inside `ApiLayersSave` before validation. Surface i18n error messages to the client and add PHPUnit coverage to lock behavior. | `src/Api/ApiLayersSave.php`, `src/Security/RateLimiter.php`, PHPUnit |
+| P2 – Accessibility Polish | Layer list focus, confirmations, announcements | Rebuild `simpleConfirm()` to use OOUI dialogs in no-gadget environments, preserve focus/scroll in `renderLayerList()`, add `aria-live` to error/status toasts, and provide keyboard reordering shortcuts. | `LayerPanel.js`, `UIManager.js`, `editor-fixed.css`, i18n |
+| P3 – Performance/Refactor | Dirty-region rendering + module splits | After stability/accessibility improvements, resume splitting `CanvasManager` into rendering/event modules and implement dirty-rectangle redraw scheduling to cut repaints on large canvases. | `CanvasManager.js`, `RenderingCore.js`, `LayerRenderer.js` |
+
+
+### Current Assessment (2025-11-16)
+
+| Category | Score | Status | Trend |
+|----------|-------|--------|-------|
+| Architecture & Design | 6/10 | 🟡 layersinfo contract drifted | ↓ |
+| Code Quality | 5/10 | 🟡 Monolithic JS + shadowed helpers | ↓ |
+| Security | 5/10 | 🔴 Read API leaks unrelated layer sets | ↓ |
+| Performance | 5/10 | 🟡 Dirty-region infra unused, duplicate touch handlers | ↓ |
+| Accessibility | 3/10 | 🔴 Panel and color picker fail WCAG keyboard rules | ↓ |
+| Documentation | 8/10 | 🟢 Living docs still accurate | → |
+| Testing | 4/10 | 🔴 CLI test harness cannot run | ↓ |
+| Error Handling | 6/10 | 🟡 Sanitized logging never invoked | ↓ |
+| Maintainability | 5/10 | 🟡 ESLint disabled on key modules | ↓ |
+| Resource Management | 4/10 | 🔴 Global listeners never cleaned up | ↓ |
+
+**Overall Score: 5.7/10 — Backend security and frontend UX regressions outweigh yesterday’s stability gains.**
+
+### Feature-Level Scores (2025-11-16)
+
+| Feature / Module | Functionality | Code Quality | Notes |
+|------------------|---------------|--------------|-------|
+| layersinfo API (PHP) | 7/10 | 4/10 | File parameter is ignored once `layersetid` is supplied, so any ls_id can be exfiltrated regardless of filename or Title permissions (`src/Api/ApiLayersInfo.php`, lines 33-95). |
+| CanvasManager (JS) | 6/10 | 3/10 | Two separate `touch*` pipelines fire per gesture and document-level keyboard shortcuts are never deregistered, causing double actions and repeated listeners (`resources/.../CanvasManager.js`, lines 470-520 & 1750-1880). |
+| LayerPanel (JS) | 6/10 | 4/10 | UI works but fallback confirmations always auto-accept, and drag/drop has no keyboard alternative or focus retention (`LayerPanel.js`, lines 602-671 & 1495-1510). |
+| Toolbar & Color Picker | 7/10 | 5/10 | Feature set is rich, yet dialog strings are hard-coded English and there is no focus trap or return-to-anchor logic (`Toolbar.js`, lines 160-340). |
+| State/History stack | 6/10 | 5/10 | Bridge property keeps legacy code alive but sanitized debug logger never executes because instance methods shadow the prototype (`LayersEditor.js`, lines 24-120 & 130-210). |
+
+### Critical Findings (Nov 16, 2025)
+
+1. 🔴 **layersinfo leaks arbitrary layer sets.** When `layersetid` is passed the module never verifies that the requested `ls_id` belongs to the supplied filename, nor does it gate on `Title::userCan()`/`File::userCan()` (see `src/Api/ApiLayersInfo.php`, lines 33-101). Anyone who can guess or enumerate `layer_sets.ls_id` can download JSON for private files by pairing it with an unrelated filename that merely exists. This is both an information disclosure bug and a rights bypass for private archives.
+2. 🟠 **Global keyboard shortcuts leak across sessions.** `CanvasManager` attaches `document.addEventListener('keydown'/'keyup', function...)` during init (lines ~470-520) but `destroy()` only tries to remove `window` listeners referenced by never-initialized `this.onKeyDownHandler` fields (lines 5341-5365). Opening/closing the editor stacks redundant listeners that all fire, causing duplicate deletions/undoes and a steady memory leak.
+3. 🟠 **Touch gestures execute twice.** The same file wires `touchstart/move/end` twice: once to call `handleTouch*` directly and again to synthesize mouse events (lines 470-515). Because `handleTouchStart` already converts touches to mouse semantics (lines 1750-1830), taps and drags are processed twice, doubling shapes and making panning on tablets unusably jittery.
+4. 🟠 **Destructive actions skip confirmation.** The fallback branch in `LayerPanel.deleteLayer()` treats the presence of `mw.user.options.get('gadget-ConfirmEdit')` as a green light and, when that gadget is absent, calls `simpleConfirm()` which simply logs a warning and returns `true` (lines 620-670 & 1495-1508). In environments without OOUI the user can never cancel a delete or lock toggle, violating basic UX expectations.
+5. 🟠 **Sanitized logging never runs.** The constructor assigns `this.debugLog = function(){ console.log(...) }` and similar helpers before the prototype defines the sanitized versions (lines 24-80). Because own-properties shadow prototype methods, every later call hits the unsanitized console logger, re-exposing filenames and tokens despite the security comments.
+6. 🟢 **Layer-set names keep i18n characters.** `ApiLayersSave` now routes `setname` through `sanitizeSetName()`, which trims control characters and separators while whitelisting any Unicode letter or number (plus `_ -` and spaces). Multilingual titles survive intact instead of collapsing to “default”.
+7. 🟡 **Revision listings are unbounded.** `ApiLayersInfo` always returns every revision (`getLayerSetsForImage`) and then manually batches user names with a raw `user` table query (lines 94-134). Busy files with hundreds of revisions will return multi-megabyte payloads and hammer replicas because there is no pagination or limit parameter.
+
+### Missing & Broken Features (Nov 16, 2025)
+
+- **RateLimiter helpers are unused.** Methods such as `isImageSizeAllowed`, `isLayerCountAllowed`, and `isComplexityAllowed` are never called outside PHPUnit stubs, so configured caps on giant bitmaps or complex annotations are unenforced (`src/Security/RateLimiter.php`). Only `layerssave` pings the MW limiter; render/create endpoints still lack throttles.
+- **Dirty-region rendering remains aspirational.** `CanvasManager` declares `dirtyRegion`, `redrawScheduled`, and `layersCache` fields (lines 30-45) but never mutates them, so every slider tick forces a full-canvas redraw. Performance could be 3-4× better on 4k images if dirty rectangles and RAF scheduling were actually wired.
+- **Automated tests do not execute.** `tests/LayersTest.php` invokes `new LayersDatabase()` without the four required dependencies and assumes global functions like `wfGetDB()` are available, so running it via `maintenance/runScript.php` fatals long before exercising any logic.
+- **layersinfo still lacks pagination/filtering.** There is no way to request “latest 20 revisions” despite the UI only needing a short list, keeping the door open for API responses exceeding `$wgMaxArticleSize`.
+- **Code review guardrails are off in critical files.** `resources/ext.layers.editor/LayerPanel.js` starts with `/* eslint-disable */`, turning off every lint rule for 1,500 lines of UI logic. Regressions (like the confirmation bug) slip in because tooling is silent.
+
+### UI / Accessibility Review (Nov 16, 2025)
+
+- **LayerPanel keyboard parity is absent.** Reordering is mouse-only (`dragstart`/`drop` handlers at lines 1451-1488); there is no roving tabindex, `aria-grabbed`, or alternative keystrokes, and each `renderLayerList()` rebuild wipes focus and scroll position, violating WCAG 2.1.1/2.4.3.
+- **Color picker dialog ignores localization and focus management.** Strings like “Standard Colors”, “Custom Color”, “Cancel”, and “OK” are hard-coded English (Toolbar.js lines 160-330), there is no `role="dialog"`, no initial focus, no focus trap, and no logic to return focus to the invoking button—failures under WCAG 2.1.2 and common UX heuristics.
+- **Status + toast messaging lacks announcements.** `.layers-error-notification` elements are purely visual (CSS lines 1-80); there is no `aria-live` region, so screen readers never hear save errors. Zoom/position readouts also lack live regions in `UIManager` even though they change with every drag.
+- **Full-screen layout is fixed-width and non-responsive.** The editor forcibly hides the skin and uses pixel widths (`editor-fixed.css`, lines 90-210 & 350-450) without breakpoints, so on tablets the 320px sidebar covers half the viewport and the toolbar wraps awkwardly. Industry-standard responsive adjustments (stacked layout, collapsible panels) are missing.
+- **Panel delete and property controls lack proper labelling.** `contentEditable` layer names, unlabeled numeric inputs, and toggle buttons rely on tooltips instead of programmatic labels (`LayerPanel.js`, lines 500-850). Screen readers announce generic “button”/“edit text” without context.
+
+### Testing & Tooling Gaps (Nov 16, 2025)
+
+- CLI smoke test cannot even instantiate dependencies, so CI gives false positives.
+- Jest configuration exists but there are still zero assertions around `LayerPanel`, `Toolbar`, or `CanvasManager`; the color picker, drag/drop, and rate-limiter logic remain untested.
+- ESLint/stylelint are bypassed for key bundles (`LayerPanel.js`, large sections of `CanvasManager.js`), preventing automated detection of the very leaks noted above.
+- No integration test covers `layersinfo`/`layerssave` contract, so the data-leak regression went unnoticed until manual review.
+
+### Recommended Immediate Actions (Ranked)
+
+1. **Secure the read API.** Require the supplied filename to match `ls_img_name`/`ls_img_sha1`, run `Title::userCan( 'read' )`, and add pagination/limits before shipping another build.
+2. **Fix global listener lifecycles.** Store handler references (`this.onKeyDownHandler`, etc.), register once, and unregister in `destroy()`; also eliminate the duplicate touch-to-mouse pipeline.
+3. **Restore real confirmations.** Replace `simpleConfirm()` with an OOUI/MediaWiki dialog fallback that actually blocks until the user accepts, and do not auto-confirm when the gadget option exists.
+4. **Re-enable linting + add Jest smoke tests** for LayerPanel/Toolbar so regressions like the above are caught automatically.
+5. **Implement the promised limits.** Wire `RateLimiter::isImageSizeAllowed()` (and friends) into API entrypoints and surface actionable errors in the UI so oversized jobs are rejected before rendering.
+
+### Current Assessment (2025-11-15)
+
+| Category | Score | Status | Trend |
+|----------|-------|--------|-------|
+| Architecture & Design | 7/10 | 🟡 Strict layering still holds | → |
+| Code Quality | 6/10 | 🟡 Rendering code refactored for clarity | ↑ |
+| Security | 8/10 | 🟢 Save API logging no longer fatal | ↑ |
+| Performance | 6/10 | 🟡 Full-canvas redraws remain | → |
+| Accessibility | 4/10 | 🔴 ARIA/keyboard backlog untouched | → |
+| Documentation | 8/10 | 🟢 Living review doc up to date | → |
+| Testing | 5/10 | 🟡 No new coverage added today | → |
+| Error Handling | 7/10 | 🟡 Save retries now surface cleanly | ↑ |
+| Maintainability | 6/10 | 🟡 Modules still large but improving | ↑ |
+| Resource Management | 5/10 | 🟡 Event/listener cleanup tracking | → |
+
+**Overall Score: 6.4/10 — Save reliability fixed; visual fidelity restored for vector layers.**
+
+### Feature-Level Scores (2025-11-15)
+
+| Feature / Module | Functionality | Code Quality | Notes |
+|------------------|---------------|--------------|-------|
+| Layers API (PHP) | 9/10 | 8/10 | Logger wiring prevents fatal retries; validation unchanged |
+| Save/Retry Pipeline | 8/10 | 7/10 | Logger-backed error paths now deterministic |
+| Arrow & Star Rendering | 7/10 | 6/10 | Rotation + arrowhead fills implemented across all renderers |
+| CanvasManager | 6/10 | 5/10 | Still monolithic but less brittle for vector shapes |
+| Toolbar | 7/10 | 5/10 | Stable; pending accessibility polish |
+| LayerPanel | 6/10 | 5/10 | Functional, needs virtualization for large sets |
+| Validation Stack | 8/10 | 7/10 | Server/client parity maintained |
+
+### Critical Findings & Resolutions (Nov 15, 2025)
+
+1. **API save crashed on every warning** — `ApiLayersSave` called `$this->getLogger()` without supplying an implementation, throwing `Call to undefined method` whenever validation emitted warnings (files: `src/Api/ApiLayersSave.php`). Added a lazily-resolved `LayersLogger` accessor so retries log cleanly. Severity: 🔴 **blocking**.
+2. **Arrow/star layers ignored rotations** — Selection handles updated `layer.rotation`, but `CanvasManager`, `LayerRenderer`, and `RenderingCore` never applied transforms for these shapes. Users saw rotating bounding boxes with static artwork (files: `resources/ext.layers.editor/CanvasManager.js`, `LayerRenderer.js`, `RenderingCore.js`). Added consistent translate/rotate logic so geometry matches handles. Severity: 🔴 **blocking for annotation fidelity**.
+3. **Arrowheads collapsed at wide strokes** — Arrowheads were drawn as two independent strokes, so bumping `strokeWidth` produced flattened rectangles with no point. Replaced the head rendering with filled triangles that respect `fill`/`stroke` opacities, yielding crisp tips regardless of width (same files as above). Severity: 🟠 **major UX defect**.
+4. **Polygon saves always failed** — Frontend polygon tool stores center/radius/sides instead of explicit point arrays, but `ServerSideLayerValidator` insisted on `points`, so every revision containing a polygon tripped `validationfailed` (surfaced to users as `savefailed` because `ApiLayersSave` caught the exception). Validator now accepts parametric polygons, adds regression tests, and the API re-throws `ApiUsageException` so users see the real error code. Severity: 🔴 **blocking data-loss**.
+
+### Remaining High-Risk Items
+
+- CanvasManager still performs full-canvas redraws and mixes event/render logic; dirty-region rendering plus module splits remain a priority.
+- Accessibility backlog (ARIA labels, keyboard focus management, announcements) untouched in this pass.
+- Automated coverage has not expanded; regressions around new arrow geometry need Jest/selenium coverage.
+
+---
+
+### Previous Assessment (2025-11-14)
+
+| Category | Score | Status | Trend |
+|----------|-------|--------|-------|
+| Architecture & Design | 7/10 | 🟡 Solid layering, still complex | → |
+| Code Quality | 5/10 | 🟡 Stabilising after leak fixes | ↑ |
+| Security | 7/10 | 🟡 No outstanding critical vulns | ↑ |
+| Performance | 6/10 | 🟡 Rendering churn still present | → |
+| Accessibility | 4/10 | 🔴 ARIA/keyboard gaps remain | → |
+| Documentation | 8/10 | 🟢 Accurate and comprehensive | → |
+| Testing | 5/10 | 🟡 Needs broader coverage | → |
+| Error Handling | 6/10 | 🟡 Logging consistent in UI | ↑ |
+| Maintainability | 6/10 | 🟡 Large modules but improving | ↑ |
+| Resource Management | 5/10 | 🟡 Major leaks resolved, keep auditing | ↑ |
+
+**Overall Score: 6.1/10 — Security stabilised; focus now on accessibility, performance, and maintainability.**
+
+### Feature-Level Scores (Functionality vs Code Quality)
+
+| Feature / Module | Functionality | Code Quality | Notes |
+|------------------|---------------|--------------|-------|
+| Layers API (PHP) | 8/10 | 7/10 | Validation & logging solid; expand PHPUnit coverage |
+| LayersEditor Shell | 7/10 | 6/10 | Modular bootstrap; auto-init logging still noisy |
+| LayerPanel | 6/10 | 5/10 | UX works but required listener + CSS fixes |
+| Toolbar | 7/10 | 5/10 | Feature-rich; now cleans up global handlers |
+| CanvasManager | 6/10 | 4/10 | Powerful but monolithic; refactor + perf work pending |
+| Validation Stack | 8/10 | 7/10 | Strong rules; client/server parity needs more automated tests |
+
+### Critical Findings & Resolutions (Nov 14, 2025)
+
+1. **LayerPanel resizer corrupted CSS classes and RAM usage – FIXED.** Every mousemove concatenated `" layers-fixed-height"` onto `className`, creating unbounded strings and reflows. Replaced with `classList.add` and guarded DOM references (`resources/ext.layers.editor/LayerPanel.js`).
+2. **Unbounded global listeners in LayerPanel & Toolbar – FIXED.** Document-level mouse, touch, and keyboard handlers persisted after the editor closed, accumulating duplicate shortcuts and degrading performance. Added tracked `addDocumentListener`/`destroy` helpers plus teardown wiring in both `LayerPanel.js` and `Toolbar.js`.
+3. **Color picker dialogs leaked DOM + Escape handlers – FIXED.** Both LayerPanel and Toolbar instantiated modal dialogs without removing the Escape key listener when closing via buttons/overlay, leaving orphaned handlers referencing detached nodes. Centralised `cleanup()` routines now remove DOM nodes, unregister listeners, and deregister the cleanup from teardown queues.
+
+### Remaining High-Risk Items
+
+- CanvasManager (5k+ lines) still mixes rendering, eventing, and tool logic; dirty-region rendering and modularisation remain high priority.
+- Accessibility gaps (missing ARIA labels, keyboard navigation, and announcement hooks) continue to block WCAG compliance.
+- Testing debt unchanged: no automated regression tests covering LayerPanel/Toolbar flows; flakes likely to recur without Jest suites.
+
+### Recommended Next Steps
+
+1. Extract LayerPanel property editors into smaller components with typed state to further reduce DOM thrash.
+2. Introduce AbortController-based listener management for CanvasManager to match the toolbar/panel pattern.
+3. Author Jest smoke tests for color picker, resizer, and keyboard shortcuts to guard against regressions.
+4. Kick off accessibility audit (ARIA labels, focus traps, screen reader announcements).
+
+---
+
+## Previous Review (November 10, 2025)
 
 ## Executive Summary
 

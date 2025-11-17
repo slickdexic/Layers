@@ -71,13 +71,16 @@ class LayersDatabase {
 
 		$mime = $imgMetadata['mime'] ?? '';
 		$sha1 = $imgMetadata['sha1'] ?? '';
+		$normalizedImgName = $this->normalizeImageName( $imgName );
 
-		if ( empty( $imgName ) || empty( $sha1 ) || $userId <= 0 ) {
+		if ( empty( $normalizedImgName ) || empty( $sha1 ) || $userId <= 0 ) {
 			$this->logError( 'Invalid parameters for saveLayerSet', [
 				'imgName' => $imgName, 'sha1' => $sha1, 'userId' => $userId
 			] );
 			return null;
-		}		$maxRetries = 3;
+		}
+
+		$maxRetries = 3;
 		for ( $retryCount = 0; $retryCount < $maxRetries; $retryCount++ ) {
 			// PERFORMANCE FIX: Add exponential backoff to prevent DB hammering
 			if ( $retryCount > 0 ) {
@@ -85,7 +88,7 @@ class LayersDatabase {
 			}
 			$dbw->startAtomic( __METHOD__ );
 			try {
-				$revision = $this->getNextRevision( $imgName, $sha1, $dbw );
+				$revision = $this->getNextRevision( $normalizedImgName, $sha1, $dbw );
 				$timestamp = $dbw->timestamp();
 
 				$dataStructure = [
@@ -106,7 +109,7 @@ class LayersDatabase {
 				list( $majorMime, $minorMime ) = explode( '/', $mime, 2 ) + [ '', '' ];
 
 				$row = [
-					'ls_img_name' => $imgName,
+					'ls_img_name' => $normalizedImgName,
 					'ls_img_major_mime' => $majorMime,
 					'ls_img_minor_mime' => $minorMime,
 					'ls_img_sha1' => $sha1,
@@ -123,7 +126,7 @@ class LayersDatabase {
 				$layerSetId = $dbw->insertId();
 				$dbw->endAtomic( __METHOD__ );
 
-				$this->clearCache( $imgName );
+				$this->clearCache( $normalizedImgName );
 				return $layerSetId;
 			} catch ( \Throwable $e ) {
 				$dbw->endAtomic( __METHOD__ );
@@ -202,7 +205,10 @@ class LayersDatabase {
 		$row = $dbr->selectRow(
 			'layer_sets',
 			[ 'ls_id', 'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name' ],
-			[ 'ls_img_name' => $imgName, 'ls_img_sha1' => $sha1 ],
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1
+			],
 			__METHOD__,
 			[ 'ORDER BY' => 'ls_revision DESC' ]
 		);
@@ -239,7 +245,10 @@ class LayersDatabase {
 		$maxRevision = $dbw->selectField(
 			'layer_sets',
 			'MAX(ls_revision)',
-			[ 'ls_img_name' => $imgName, 'ls_img_sha1' => $sha1 ],
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1
+			],
 			__METHOD__,
 			[ 'FOR UPDATE' ]
 		);
@@ -253,25 +262,37 @@ class LayersDatabase {
 		}
 
 		$queryOptions = $this->buildSafeQueryOptions( $options );
+		$includeData = !empty( $options['includeData'] );
+
+		$fields = [ 'ls_id', 'ls_revision', 'ls_name', 'ls_user_id', 'ls_timestamp' ];
+		if ( $includeData ) {
+			$fields[] = 'ls_json_blob';
+		}
 
 		$result = $dbr->select(
 			'layer_sets',
-			[ 'ls_id', 'ls_json_blob', 'ls_revision', 'ls_name', 'ls_user_id', 'ls_timestamp' ],
-			[ 'ls_img_name' => $imgName, 'ls_img_sha1' => $sha1 ],
+			$fields,
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1
+			],
 			__METHOD__,
 			$queryOptions
 		);
 
 		$layerSets = [];
 		foreach ( $result as $row ) {
-			$layerSets[] = [
+			$layerSet = [
 				'ls_id' => (int)$row->ls_id,
-				'ls_json_blob' => $row->ls_json_blob,
 				'ls_revision' => (int)$row->ls_revision,
 				'ls_name' => $row->ls_name,
 				'ls_user_id' => (int)$row->ls_user_id,
 				'ls_timestamp' => $row->ls_timestamp
 			];
+			if ( $includeData ) {
+				$layerSet['ls_json_blob'] = $row->ls_json_blob;
+			}
+			$layerSets[] = $layerSet;
 		}
 		return $layerSets;
 	}
@@ -279,7 +300,8 @@ class LayersDatabase {
 	public function getLayerSetsForImage( string $imgName, string $sha1 ): array {
 		return $this->getLayerSetsForImageWithOptions( $imgName, $sha1, [
 			'sort' => 'ls_revision',
-			'direction' => 'DESC'
+			'direction' => 'DESC',
+			'includeData' => true
 		] );
 	}
 
@@ -291,7 +313,10 @@ class LayersDatabase {
 			}
 			$dbw->delete(
 				'layer_sets',
-				[ 'ls_img_name' => $imgName, 'ls_img_sha1' => $sha1 ],
+				[
+					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+					'ls_img_sha1' => $sha1
+				],
 				__METHOD__
 			);
 			$this->logger->info( 'Layer sets deleted for image', [
@@ -313,7 +338,11 @@ class LayersDatabase {
 			'layer_sets',
 			[ 'ls_id', 'ls_img_name', 'ls_img_sha1', 'ls_img_major_mime', 'ls_img_minor_mime',
 				'ls_revision', 'ls_json_blob', 'ls_timestamp', 'ls_user_id', 'ls_name' ],
-			[ 'ls_img_name' => $imgName, 'ls_img_sha1' => $sha1, 'ls_name' => $setName ],
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName
+			],
 			__METHOD__,
 			[ 'ORDER BY' => 'ls_revision DESC' ]
 		);
@@ -415,5 +444,22 @@ class LayersDatabase {
 			return 'DESC';
 		}
 		return 'ASC';
+	}
+
+	private function normalizeImageName( string $imgName ): string {
+		$trimmed = trim( $imgName );
+		if ( $trimmed === '' ) {
+			return '';
+		}
+		return str_replace( ' ', '_', $trimmed );
+	}
+
+	private function buildImageNameLookup( string $imgName ): array {
+		$normalized = $this->normalizeImageName( $imgName );
+		$variants = [ $normalized, str_replace( '_', ' ', $normalized ), $imgName, str_replace( '_', ' ', $imgName ) ];
+		$filtered = array_values( array_unique( array_filter( $variants, static function ( $value ) {
+			return $value !== null && $value !== '';
+		} ) ) );
+		return $filtered ?: [ $normalized ];
 	}
 }

@@ -29,7 +29,8 @@
 			idPattern: /^[a-zA-Z0-9_-]+$/,
 
 			// Numeric field limits
-			maxFontSize: 200,
+			// FIX 2025-11-14: Increased from 200 to 1000 to match server validation
+			maxFontSize: 1000,
 			minFontSize: 1,
 			maxStrokeWidth: 50,
 			minStrokeWidth: 0,

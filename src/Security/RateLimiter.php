@@ -9,15 +9,27 @@
 
 namespace MediaWiki\Extension\Layers\Security;
 
+use Config;
 use MediaWiki\MediaWikiServices;
 use User;
 
 class RateLimiter {
-	/** @var \Config */
+	/** @var Config|null */
 	private $config;
 
-	public function __construct() {
-		$this->config = MediaWikiServices::getInstance()->getMainConfig();
+	public function __construct( ?Config $config = null ) {
+		$this->config = $config;
+	}
+
+	private function getConfig(): Config {
+		if ( $this->config ) {
+			return $this->config;
+		}
+		if ( class_exists( MediaWikiServices::class ) ) {
+			$this->config = MediaWikiServices::getInstance()->getMainConfig();
+			return $this->config;
+		}
+		return new \HashConfig( [] );
 	}
 
 	/**
@@ -31,7 +43,8 @@ class RateLimiter {
 	 */
 	public function checkRateLimit( User $user, string $action ): bool {
 		// Get rate limits from config with proper fallback
-		$rateLimits = $this->config->get( 'RateLimits' ) ?? [];
+		$config = $this->getConfig();
+		$rateLimits = $config->get( 'RateLimits' ) ?? [];
 
 		$limitKey = "editlayers-{$action}";
 
@@ -120,7 +133,8 @@ class RateLimiter {
 	 * @return bool
 	 */
 	public function isImageSizeAllowed( int $width, int $height ): bool {
-		$maxDimensions = $this->config->get( 'LayersMaxImageDimensions' );
+		$config = $this->getConfig();
+		$maxDimensions = $config->get( 'LayersMaxImageDimensions' );
 
 		// Support both scalar (single max edge) and array [maxW, maxH] or ['width'=>, 'height'=>]
 		if ( is_array( $maxDimensions ) ) {
@@ -145,7 +159,7 @@ class RateLimiter {
 		// Fallback to single edge limit, prefer LayersMaxImageDimensions, else LayersMaxImageSize
 		$maxEdge = (int)$maxDimensions;
 		if ( $maxEdge <= 0 ) {
-			$maxEdge = (int)( $this->config->get( 'LayersMaxImageSize' ) ?? 0 );
+			$maxEdge = (int)( $config->get( 'LayersMaxImageSize' ) ?? 0 );
 		}
 		if ( $maxEdge <= 0 ) {
 			return true;
@@ -161,7 +175,8 @@ class RateLimiter {
 	 */
 	public function isLayerCountAllowed( int $layerCount ): bool {
 		// Use configured limit with a safe default
-		$maxLayers = (int)( $this->config->get( 'LayersMaxLayerCount' ) ?? 100 );
+		$config = $this->getConfig();
+		$maxLayers = (int)( $config->get( 'LayersMaxLayerCount' ) ?? 100 );
 		if ( $maxLayers <= 0 ) {
 			$maxLayers = 100;
 		}

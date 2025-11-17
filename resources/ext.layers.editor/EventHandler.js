@@ -47,40 +47,33 @@
 	 * Set up all event listeners
 	 */
 	EventHandler.prototype.setupEventListeners = function () {
-		const self = this;
 		this.listeners = {};
 
 		// Mouse events
-		this.listeners.mousedown = function ( e ) {
-			self.handleMouseDown( e );
-		};
-		this.listeners.mousemove = function ( e ) {
-			self.handleMouseMove( e );
-		};
-		this.listeners.mouseup = function ( e ) {
-			self.handleMouseUp( e );
-		};
+		this.listeners.mousedown = this.handleMouseDown.bind( this );
+		this.listeners.mousemove = this.handleMouseMove.bind( this );
+		this.listeners.mouseup = this.handleMouseUp.bind( this );
 
 		this.canvas.addEventListener( 'mousedown', this.listeners.mousedown );
 		this.canvas.addEventListener( 'mousemove', this.listeners.mousemove );
 		this.canvas.addEventListener( 'mouseup', this.listeners.mouseup );
 
 		// Touch events for mobile support
-		this.listeners.touchstart = function ( e ) {
+		this.listeners.touchstart = ( e ) => {
 			e.preventDefault();
-			self.handleTouchStart( e );
+			this.handleTouchStart( e );
 		};
-		this.listeners.touchmove = function ( e ) {
+		this.listeners.touchmove = ( e ) => {
 			e.preventDefault();
-			self.handleTouchMove( e );
+			this.handleTouchMove( e );
 		};
-		this.listeners.touchend = function ( e ) {
+		this.listeners.touchend = ( e ) => {
 			e.preventDefault();
-			self.handleTouchEnd( e );
+			this.handleTouchEnd( e );
 		};
-		this.listeners.touchcancel = function ( e ) {
+		this.listeners.touchcancel = ( e ) => {
 			e.preventDefault();
-			self.handleTouchEnd( e );
+			this.handleTouchEnd( e );
 		};
 
 		this.canvas.addEventListener( 'touchstart', this.listeners.touchstart );
@@ -91,23 +84,21 @@
 		// Wheel event: handled by CanvasManager to centralize zoom-to-pointer logic
 
 		// Prevent context menu
-		this.canvas.addEventListener( 'contextmenu', ( e ) => {
+		this.listeners.contextmenu = ( e ) => {
 			e.preventDefault();
-		} );
+		};
+		this.canvas.addEventListener( 'contextmenu', this.listeners.contextmenu );
 
 		// Keyboard events for pan and zoom
-		document.addEventListener( 'keydown', ( e ) => {
-			self.handleKeyDown( e );
-		} );
+		this.listeners.keydown = this.handleKeyDown.bind( this );
+		document.addEventListener( 'keydown', this.listeners.keydown );
 
-		document.addEventListener( 'keyup', ( e ) => {
-			self.handleKeyUp( e );
-		} );
+		this.listeners.keyup = this.handleKeyUp.bind( this );
+		document.addEventListener( 'keyup', this.listeners.keyup );
 
 		// Window resize
-		window.addEventListener( 'resize', () => {
-			self.handleResize();
-		} );
+		this.listeners.windowResize = this.handleResize.bind( this );
+		window.addEventListener( 'resize', this.listeners.windowResize );
 	};
 
 	/**
@@ -473,7 +464,19 @@
 			this.canvas.removeEventListener( 'touchmove', this.listeners.touchmove );
 			this.canvas.removeEventListener( 'touchend', this.listeners.touchend );
 			this.canvas.removeEventListener( 'touchcancel', this.listeners.touchcancel );
+			this.canvas.removeEventListener( 'contextmenu', this.listeners.contextmenu );
 		}
+
+		if ( this.listeners && this.listeners.keydown ) {
+			document.removeEventListener( 'keydown', this.listeners.keydown );
+		}
+		if ( this.listeners && this.listeners.keyup ) {
+			document.removeEventListener( 'keyup', this.listeners.keyup );
+		}
+		if ( this.listeners && this.listeners.windowResize ) {
+			window.removeEventListener( 'resize', this.listeners.windowResize );
+		}
+
 		this.listeners = null;
 		this.canvas = null;
 		this.canvasManager = null;

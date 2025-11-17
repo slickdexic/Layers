@@ -30,19 +30,6 @@
 		// Debug mode - check MediaWiki config first, then fallback to config
 		this.debug = mw.config.get( 'wgLayersDebug' ) || this.config.debug || false;
 
-		// Debug logging helper
-		this.debugLog = function() {
-			if ( this.debug ) {
-				console.log.apply( console, arguments );
-			}
-		}.bind( this );
-
-		this.debugInfo = function() {
-			if ( this.debug ) {
-				console.info.apply( console, arguments );
-			}
-		}.bind( this );
-
 		this.debugLog( '[LayersEditor] Constructor called with config:', this.config );
 		this.debugLog( '[LayersEditor] Constructor config details:', {
 			hasFilename: !!this.filename,
@@ -630,12 +617,13 @@
 		return ( mw.message ? mw.message( key ).text() : ( mw.msg ? mw.msg( key ) : fallback ) );
 	};
 
-	LayersEditor.prototype.setCurrentTool = function ( tool ) {
+	LayersEditor.prototype.setCurrentTool = function ( tool, options ) {
+		const opts = options || {};
 		this.stateManager.set( 'currentTool', tool );
 		if ( this.canvasManager ) {
 			this.canvasManager.setTool( tool );
 		}
-		if ( this.toolbar ) {
+		if ( this.toolbar && !opts.skipToolbarSync ) {
 			this.toolbar.setActiveTool( tool );
 		}
 	};

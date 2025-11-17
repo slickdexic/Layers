@@ -9,29 +9,27 @@
 
 namespace MediaWiki\Extension\Layers;
 
+use Config;
 use Exception;
-use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
 class ThumbnailRenderer {
-	/** @var mixed */
+	/** @var Config */
 	private $config;
-
-	/** @var LayersDatabase */
-	private $layersDb;
 
 	/** @var LoggerInterface|null */
 	private $logger;
 
-	public function __construct() {
-		$services = \is_callable( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-			? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-			: null;
-		$this->config = $services ? $services->getMainConfig() : null;
-		$this->layersDb = new LayersDatabase();
-		$this->logger = \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' )
-			? \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' )
-			: null;
+	public function __construct( ?Config $config = null, ?LoggerInterface $logger = null ) {
+		if ( $config === null && class_exists( MediaWikiServices::class ) ) {
+			$config = MediaWikiServices::getInstance()->getMainConfig();
+		}
+		$this->config = $config ?? new \HashConfig( [] );
+		if ( $logger === null && \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+		}
+		$this->logger = $logger;
 	}
 
 	/**
@@ -63,7 +61,10 @@ class ThumbnailRenderer {
 				return null;
 			}
 
-			$uploadDir = $this->config ? $this->config->get( 'UploadDirectory' ) : sys_get_temp_dir();
+			$uploadDir = $this->config->get( 'UploadDirectory' );
+			if ( !$uploadDir ) {
+				$uploadDir = sys_get_temp_dir();
+			}
 			$thumbDir = rtrim( $uploadDir, '/\\' ) . '/thumb/layers';
 			if ( !is_dir( $thumbDir ) ) {
 				$ok = mkdir( $thumbDir, 0755, true );
