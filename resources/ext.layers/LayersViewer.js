@@ -166,9 +166,11 @@
 		// Compute scaling from saved coordinates to current canvas size
 		var sx = 1;
 		var sy = 1;
+		var scaleAvg = 1;
 		if ( this.baseWidth && this.baseHeight ) {
 			sx = ( this.canvas.width || 1 ) / this.baseWidth;
 			sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			scaleAvg = ( sx + sy ) / 2;
 		}
 
 		// Create a shallow copy and scale known coords
@@ -193,7 +195,13 @@
 				L.height = L.height * sy;
 			}
 			if ( typeof L.radius === 'number' ) {
-				L.radius = L.radius * ( ( sx + sy ) / 2 );
+				L.radius = L.radius * scaleAvg;
+			}
+			if ( typeof L.outerRadius === 'number' ) {
+				L.outerRadius = L.outerRadius * scaleAvg;
+			}
+			if ( typeof L.innerRadius === 'number' ) {
+				L.innerRadius = L.innerRadius * scaleAvg;
 			}
 			if ( typeof L.radiusX === 'number' ) {
 				L.radiusX = L.radiusX * sx;
@@ -527,7 +535,13 @@
 		}
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = layer.strokeWidth || 1;
+			var ellipseStroke = layer.strokeWidth || 1;
+			if ( this.baseWidth && this.baseHeight ) {
+				var ellipseSx = ( this.canvas.width || 1 ) / this.baseWidth;
+				var ellipseSy = ( this.canvas.height || 1 ) / this.baseHeight;
+				ellipseStroke = ellipseStroke * ( ( ellipseSx + ellipseSy ) / 2 );
+			}
+			this.ctx.lineWidth = ellipseStroke;
 			this.ctx.stroke();
 		}
 
@@ -570,7 +584,13 @@
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = layer.strokeWidth || 1;
+			var polygonStroke = layer.strokeWidth || 1;
+			if ( this.baseWidth && this.baseHeight ) {
+				var polySx = ( this.canvas.width || 1 ) / this.baseWidth;
+				var polySy = ( this.canvas.height || 1 ) / this.baseHeight;
+				polygonStroke = polygonStroke * ( ( polySx + polySy ) / 2 );
+			}
+			this.ctx.lineWidth = polygonStroke;
 			this.ctx.stroke();
 		}
 
@@ -616,7 +636,13 @@
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = layer.strokeWidth || 1;
+			var starStroke = layer.strokeWidth || 1;
+			if ( this.baseWidth && this.baseHeight ) {
+				var starSx = ( this.canvas.width || 1 ) / this.baseWidth;
+				var starSy = ( this.canvas.height || 1 ) / this.baseHeight;
+				starStroke = starStroke * ( ( starSx + starSy ) / 2 );
+			}
+			this.ctx.lineWidth = starStroke;
 			this.ctx.stroke();
 		}
 

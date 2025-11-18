@@ -847,6 +847,11 @@
 			Object.keys( updates ).forEach( function ( key ) {
 				layer[ key ] = updates[ key ];
 			} );
+			if ( layer.type === 'star' && Object.prototype.hasOwnProperty.call( updates, 'radius' ) ) {
+				layer.radius = Math.max( 5, Math.abs( layer.radius || 0 ) );
+				layer.outerRadius = layer.radius;
+				layer.innerRadius = layer.radius * 0.5;
+			}
 
 			// Re-render and emit live-transform event
 			this.renderLayers( this.editor.layers );
@@ -1568,15 +1573,13 @@
 			}
 			case 'polygon':
 			case 'star': {
-				// Create polygon points for hit testing
-				var polySides = layer.sides || 6;
 				var polyX = layer.x || 0;
 				var polyY = layer.y || 0;
-				var polyRadius = layer.radius || 50;
 				var polyRotation = ( layer.rotation || 0 ) * Math.PI / 180;
-
 				var polyPoints = [];
 				if ( layer.type === 'polygon' ) {
+					var polySides = layer.sides || 6;
+					var polyRadius = Math.abs( layer.radius || layer.outerRadius || 50 );
 					for ( var si = 0; si < polySides; si++ ) {
 						var angle = ( si * 2 * Math.PI ) / polySides - Math.PI / 2 + polyRotation;
 						polyPoints.push( {
@@ -1584,10 +1587,10 @@
 							y: polyY + polyRadius * Math.sin( angle )
 						} );
 					}
-				} else { // star
+				} else {
 					var starPoints = layer.points || layer.starPoints || 5;
-					var outerRadius = polyRadius;
-					var innerRadius = polyRadius * 0.4;
+					var outerRadius = Math.abs( layer.outerRadius || layer.radius || 50 );
+					var innerRadius = Math.abs( layer.innerRadius || outerRadius * 0.4 );
 					for ( var sti = 0; sti < starPoints * 2; sti++ ) {
 						var starAngle = ( sti * Math.PI ) / starPoints - Math.PI / 2 + polyRotation;
 						var starR = ( sti % 2 === 0 ) ? outerRadius : innerRadius;
@@ -1598,7 +1601,6 @@
 					}
 				}
 
-				// Point-in-polygon test using ray casting
 				return this.isPointInPolygon( point, polyPoints );
 			}
 			case 'highlight': {
@@ -3989,6 +3991,7 @@
 			type: 'star',
 			x: point.x,
 			y: point.y,
+			radius: 0,
 			outerRadius: 0,
 			innerRadius: 0,
 			points: 5, // Default 5-pointed star
@@ -4030,6 +4033,7 @@
 				dx = point.x - this.tempLayer.x;
 				dy = point.y - this.tempLayer.y;
 				this.tempLayer.outerRadius = Math.sqrt( dx * dx + dy * dy );
+				this.tempLayer.radius = this.tempLayer.outerRadius;
 				this.tempLayer.innerRadius = this.tempLayer.outerRadius * 0.5;
 				this.drawStar( this.tempLayer );
 				break;
@@ -4088,6 +4092,7 @@
 				dy = point.y - layer.y;
 				layer.outerRadius = Math.sqrt( dx * dx + dy * dy );
 				layer.innerRadius = layer.outerRadius * 0.5;
+				layer.radius = layer.outerRadius;
 				break;
 			case 'line':
 				layer.x2 = point.x;
@@ -4962,6 +4967,8 @@
 			this.ctx.shadowBlur = 4;
 		}
 
+		var textStrokeOpacity = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+
 		// Draw each line of text
 		for ( var j = 0; j < metrics.lines.length; j++ ) {
 			var lineText = metrics.lines[ j ];
@@ -4971,7 +4978,9 @@
 			if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
 				this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
 				this.ctx.lineWidth = layer.textStrokeWidth;
-				this.ctx.strokeText( lineText, drawX, lineY );
+				this.withLocalAlpha( textStrokeOpacity, function ( currentLineText, currentLineY ) {
+					this.ctx.strokeText( currentLineText, drawX, currentLineY );
+				}.bind( this, lineText, lineY ) );
 			}
 
 			// Draw text fill (respect optional fillOpacity)
@@ -5267,8 +5276,14 @@
 		var y = layer.y || 0;
 		var outerRadius = layer.outerRadius || layer.radius || 50;
 		var innerRadius = layer.innerRadius || outerRadius * 0.5;
+ 		var rotation = ( layer.rotation || 0 ) * Math.PI / 180;
 
 		this.ctx.save();
+		if ( rotation !== 0 ) {
+			this.ctx.translate( x, y );
+			this.ctx.rotate( rotation );
+			this.ctx.translate( -x, -y );
+		}
 		this.ctx.beginPath();
 
 		for ( var i = 0; i < points * 2; i++ ) {

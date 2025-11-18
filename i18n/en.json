@@ -250,6 +250,8 @@
 	"layers-validation-point-invalid": "Invalid point at index $1",
 	"layers-validation-point-coordinates": "Invalid coordinates for point at index $1",
 	"layers-validation-point-too-large": "Point coordinates too large at index $1",
+	"layers-validation-star-points-invalid": "Star point count must be a whole number",
+	"layers-validation-star-points-range": "Star point count must be between $1 and $2",
 	"layers-validation-arrowstyle-invalid": "Invalid arrow style",
 	"layers-validation-blendmode-invalid": "Invalid blend mode",
 	"layers-validation-layers-array": "Layers must be an array",

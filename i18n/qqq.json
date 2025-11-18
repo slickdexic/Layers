@@ -245,6 +245,8 @@
 	"layers-validation-point-invalid": "Validation: a points entry is not an object; $1 is index",
 	"layers-validation-point-coordinates": "Validation: a points entry lacks valid x/y; $1 is index",
 	"layers-validation-point-too-large": "Validation: a points entry exceeds coordinate bounds; $1 is index",
+	"layers-validation-star-points-invalid": "Validation: star point count must be an integer",
+	"layers-validation-star-points-range": "Validation: star point count outside allowed range; $1 min, $2 max",
 	"layers-validation-arrowstyle-invalid": "Validation: arrowStyle not in allowed values",
 	"layers-validation-blendmode-invalid": "Validation: blend mode not in allowed values",
 	"layers-validation-layers-array": "Validation: layers must be an array",

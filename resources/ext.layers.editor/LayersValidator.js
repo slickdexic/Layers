@@ -10,6 +10,7 @@
 	 * Provides validation methods and user feedback for layer data
 	 */
 	function LayersValidator() {
+		const limits = ( window.LayersConstants && window.LayersConstants.LIMITS ) || {};
 		this.validationRules = {
 			// Layer type whitelist (must match server-side validation)
 			validTypes: [
@@ -36,10 +37,14 @@
 			minStrokeWidth: 0,
 			maxOpacity: 1,
 			minOpacity: 0,
-			maxSides: 20,
-			minSides: 3,
+			maxSides: limits.MAX_POLYGON_SIDES || 20,
+			minSides: limits.MIN_POLYGON_SIDES || 3,
 			maxBlurRadius: 100,
 			minBlurRadius: 1,
+
+			// Star point limits
+			minStarPoints: limits.MIN_STAR_POINTS || 3,
+			maxStarPoints: limits.MAX_STAR_POINTS || 20,
 
 			// Font family validation
 			fontFamilyPattern: /^[a-zA-Z0-9\s,-]+$/,
@@ -460,37 +465,73 @@
 	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validatePoints = function ( layer, result ) {
-		if ( layer.points !== undefined ) {
-			if ( !Array.isArray( layer.points ) ) {
+		if ( layer.type === 'star' ) {
+			this.validateStarPointCount( layer, result );
+			return;
+		}
+
+		if ( layer.points === undefined ) {
+			return;
+		}
+
+		if ( !Array.isArray( layer.points ) ) {
+			// Only path (and future freehand types) require coordinate arrays.
+			if ( layer.type === 'path' ) {
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-points-array' ) );
-				return;
 			}
+			return;
+		}
 
-			if ( layer.points.length > this.validationRules.maxPoints ) {
+		if ( layer.points.length > this.validationRules.maxPoints ) {
+			result.isValid = false;
+			result.errors.push( this.getMessage( 'layers-validation-points-too-many', this.validationRules.maxPoints ) );
+			return;
+		}
+
+		const self = this;
+		layer.points.forEach( ( point, index ) => {
+			if ( !point || typeof point !== 'object' ) {
 				result.isValid = false;
-				result.errors.push( this.getMessage( 'layers-validation-points-too-many', this.validationRules.maxPoints ) );
-				return;
-			}
-
-			const self = this;
-			layer.points.forEach( ( point, index ) => {
-				if ( !point || typeof point !== 'object' ) {
+				result.errors.push( self.getMessage( 'layers-validation-point-invalid', index ) );
+			} else {
+				if ( !self.isValidNumber( point.x ) || !self.isValidNumber( point.y ) ) {
 					result.isValid = false;
-					result.errors.push( self.getMessage( 'layers-validation-point-invalid', index ) );
+					result.errors.push( self.getMessage( 'layers-validation-point-coordinates', index ) );
 				} else {
-					if ( !self.isValidNumber( point.x ) || !self.isValidNumber( point.y ) ) {
+					if ( Math.abs( point.x ) > self.validationRules.maxCoordinate ||
+						Math.abs( point.y ) > self.validationRules.maxCoordinate ) {
 						result.isValid = false;
-						result.errors.push( self.getMessage( 'layers-validation-point-coordinates', index ) );
-					} else {
-						if ( Math.abs( point.x ) > self.validationRules.maxCoordinate ||
-							Math.abs( point.y ) > self.validationRules.maxCoordinate ) {
-							result.isValid = false;
-							result.errors.push( self.getMessage( 'layers-validation-point-too-large', index ) );
-						}
+						result.errors.push( self.getMessage( 'layers-validation-point-too-large', index ) );
 					}
 				}
-			} );
+			}
+		} );
+	};
+
+	LayersValidator.prototype.validateStarPointCount = function ( layer, result ) {
+		if ( layer.points === undefined ) {
+			return;
+		}
+
+		if ( !this.isValidNumber( layer.points ) ) {
+			result.isValid = false;
+			result.errors.push( this.getMessage( 'layers-validation-star-points-invalid' ) );
+			return;
+		}
+
+		const value = parseFloat( layer.points );
+		if ( value % 1 !== 0 ) {
+			result.isValid = false;
+			result.errors.push( this.getMessage( 'layers-validation-star-points-invalid' ) );
+			return;
+		}
+
+		const min = this.validationRules.minStarPoints;
+		const max = this.validationRules.maxStarPoints;
+		if ( value < min || value > max ) {
+			result.isValid = false;
+			result.errors.push( this.getMessage( 'layers-validation-star-points-range', min, max ) );
 		}
 	};
 

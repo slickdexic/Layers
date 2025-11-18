@@ -790,17 +790,17 @@
 	RenderingCore.prototype.drawStar = function ( layer ) {
 		const x = layer.x || 0;
 		const y = layer.y || 0;
-		const radius = layer.radius || 50;
 		const points = layer.points || 5;
-		const innerRadius = radius * 0.5;
+		const outerRadius = layer.outerRadius || layer.radius || 50;
+		const innerRadius = layer.innerRadius || outerRadius * 0.5;
 
 		this.ctx.save();
 		this.applyLayerStyle( layer );
 		this.ctx.beginPath();
 
 		for ( let i = 0; i < points * 2; i++ ) {
-			const angle = ( i * Math.PI ) / points;
-			const r = i % 2 === 0 ? radius : innerRadius;
+			const angle = ( i * Math.PI ) / points - Math.PI / 2;
+			const r = i % 2 === 0 ? outerRadius : innerRadius;
 			const px = x + Math.cos( angle ) * r;
 			const py = y + Math.sin( angle ) * r;
 

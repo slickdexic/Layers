@@ -1,0 +1,984 @@
+diff --git a/resources/ext.layers.editor/CanvasManager.js b/resources/ext.layers.editor/CanvasManager.js
+index 4c7e715..0b3e829 100644
+--- a/resources/ext.layers.editor/CanvasManager.js
++++ b/resources/ext.layers.editor/CanvasManager.js
+@@ -18,112 +18,22 @@
+ 			config && !config.container &&
+ 			( config.canvas || config.layers || config.getLayerById )
+ 		) {
+-			config = {
+-				editor: config,
+-				container: ( config.container || null ),
+-				canvas: config.canvas
+-			};
+-		}
+-		this.config = config || {};
+-		this.container = this.config.container;
+-		this.editor = this.config.editor;
+-		this.canvas = null;
+-		this.ctx = null;
+-		this.backgroundImage = null;
+-		this.currentTool = 'pointer';
+-		this.isDrawing = false;
+-		this.startPoint = null;
+-
+-		// Performance optimization properties
+-		this.dirtyRegion = null; // Track dirty regions to avoid full redraws
+-		this.animationFrameId = null; // For requestAnimationFrame
+-		this.redrawScheduled = false; // Prevent multiple redraws in same frame
+-		// Use a plain object for cache to satisfy environments without ES2015 Map
+-		this.layersCache = Object.create( null ); // Cache rendered layers
+-		this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 }; // For culling
+-
+-		// Selection and manipulation state
+-		this.selectedLayerId = null;
+-		this.selectedLayerIds = []; // Multi-selection support
+-		this.selectionHandles = [];
+-		this.isResizing = false;
+-		this.isRotating = false;
+-		this.isDragging = false;
+-		this.resizeHandle = null;
+-		this.dragStartPoint = null;
+-		this.originalLayerState = null;
+-		this.isMarqueeSelecting = false;
+-		this.marqueeStart = { x: 0, y: 0 };
+-		this.marqueeEnd = { x: 0, y: 0 };
+-		this.lastTouchPoint = null;
+-		this.lastTouchTime = 0;
+-
+-		// Throttle transform event emission for live UI sync
+-		this.transformEventScheduled = false;
+-		this.lastTransformPayload = null;
+-
+-		// Drag visual feedback
+-		this.dragPreview = false;
+-		this.dragOffset = { x: 0, y: 0 };
+-		this.showDragGhost = true;
+-
+-		// Initialize default style
+-		this.currentStyle = {
+-			color: '#000000',
+-			strokeWidth: 2,
+-			fontSize: 16,
+-			fontFamily: 'Arial, sans-serif'
+-		};
+-
+-		// Zoom and pan functionality
+-		this.zoom = 1.0;
+-		this.minZoom = 0.1;
+-		this.maxZoom = 5.0;
+-		this.panX = 0;
+-		this.panY = 0;
+-		this.isPanning = false;
+-		this.lastPanPoint = null;
+-		this.userHasSetZoom = false; // Track if user has manually adjusted zoom
+-
+-		// Smooth zoom animation properties
+-		this.isAnimatingZoom = false;
+-		this.zoomAnimationDuration = 300; // milliseconds
+-		this.zoomAnimationStartTime = 0;
+-		this.zoomAnimationStartZoom = 1.0;
+-		this.zoomAnimationTargetZoom = 1.0;
+-
+-		// Grid settings
+-		this.showGrid = false;
+-		this.gridSize = 20;
+-		this.snapToGrid = false;
+-
+-		// Rulers & guides
+-		this.showRulers = false;
+-		this.showGuides = false;
+-		this.snapToGuides = false;
+-		this.smartGuides = false; // reserved for future smart alignment
+-		this.rulerSize = 20;
+-		this.horizontalGuides = []; // y positions in canvas coords
+-		this.verticalGuides = []; // x positions in canvas coords
+-		this.isDraggingGuide = false;
+-		this.dragGuideOrientation = null; // 'h' | 'v'
+-		this.dragGuidePos = 0;
+-
+-		// History/Undo system
+-		this.history = [];
+-		this.historyIndex = -1;
+-		this.maxHistorySteps = 50;
+-
+-		// Clipboard for copy/paste
+-		this.clipboard = [];
+-
+-		// Canvas pooling for temporary canvas operations to prevent memory leaks
+-		this.canvasPool = [];
+-		this.maxPoolSize = 5;
+-
++			case 'rectangle':
++			case 'blur':
++			case 'circle':
++			case 'text':
++			case 'line':
++			case 'arrow':
++			case 'path':
++			case 'ellipse':
++			case 'polygon':
++			case 'star':
++			case 'highlight':
++				return this.checkLayerHit(point, layer);
+ 		this.init();
+ 	}
+ 
++
+ 	CanvasManager.prototype.init = function () {
+ 		// Support headless/test scenarios: if container is missing, either
+ 		// use a provided canvas in config or create a detached canvas.
+@@ -221,228 +131,7 @@
+ 			this.tryLoadImage( imageUrls, 0 );
+ 		} else {
+ 			// console.log( 'Layers: No real image URLs available, using test image' );
+-			this.useTestImage();
+-		}
+-	};
+-
+-	CanvasManager.prototype.tryLoadImage = function ( urls, index ) {
+-		var self = this;
+-
+-		if ( index >= urls.length ) {
+-			// console.error( 'Layers: Failed to load image from any URL, using test image' );
+-			this.useTestImage();
+-			return;
+-		}
+-
+-		var currentUrl = urls[ index ];
+-		// console.log( 'Layers: Attempting to load image from:', currentUrl );
+-
+-		this.backgroundImage = new Image();
+-		this.backgroundImage.crossOrigin = 'anonymous'; // Allow cross-origin images
+-
+-		this.backgroundImage.onload = function () {
+-			// console.log( 'Layers: Background image loaded successfully from:', currentUrl );
+-			// console.log( 'Layers: Image dimensions:',
+-			//  self.backgroundImage.width, 'x', self.backgroundImage.height );
+-
+-			// Set canvas size to match the image
+-			self.canvas.width = self.backgroundImage.width;
+-			self.canvas.height = self.backgroundImage.height;
+-			// console.log( 'Layers: Canvas size set to:',
+-			//  self.canvas.width, 'x', self.canvas.height );
+-
+-			// Resize canvas display to fit container
+-			self.resizeCanvas();
+-
+-			// Draw the image and any layers
+-			self.redraw();
+-			if ( self.editor.layers ) {
+-				self.renderLayers( self.editor.layers );
+-			}
+-		};
+-
+-		this.backgroundImage.onerror = function () {
+-			// console.warn( 'Layers: Failed to load image from:', currentUrl );
+-			// Try next URL
+-			self.tryLoadImage( urls, index + 1 );
+-		};
+-
+-		this.backgroundImage.src = currentUrl;
+-	};
+ 
+-	CanvasManager.prototype.useTestImage = function () {
+-		var self = this;
+-		// console.log( 'Layers: Creating test background image...' );
+-
+-		// Try SVG first
+-		var svgData = this.createTestImage( this.editor.filename );
+-		var svgDataUrl = 'data:image/svg+xml;base64,' + btoa( svgData );
+-
+-		this.backgroundImage = new Image();
+-		this.backgroundImage.crossOrigin = 'anonymous';
+-
+-		this.backgroundImage.onload = function () {
+-			// console.log( 'Layers: Test SVG image loaded successfully' );
+-			// console.log( 'Layers: Test image dimensions:',
+-			//  self.backgroundImage.width, 'x', self.backgroundImage.height );
+-
+-			// Set canvas size to match the image (800x600 for the test image)
+-			self.canvas.width = 800;
+-			self.canvas.height = 600;
+-			// console.log( 'Layers: Canvas size set to:',
+-			//  self.canvas.width, 'x', self.canvas.height );
+-
+-			self.resizeCanvas();
+-			self.redraw();
+-			if ( self.editor.layers ) {
+-				self.renderLayers( self.editor.layers );
+-			}
+-		};
+-
+-		this.backgroundImage.onerror = function () {
+-			// console.warn( 'Layers: SVG test image failed, creating canvas background directly' );
+-			self.createCanvasBackground();
+-		};
+-
+-		this.backgroundImage.src = svgDataUrl;
+-
+-		// Also create canvas background immediately as backup
+-		setTimeout( function () {
+-			if ( !self.backgroundImage || !self.backgroundImage.complete ) {
+-				// console.log( 'Layers: SVG taking too long, using canvas background' );
+-				self.createCanvasBackground();
+-			}
+-		}, 1000 );
+-	};
+-
+-	CanvasManager.prototype.createCanvasBackground = function () {
+-		// Create a simple background directly on canvas when even SVG fails
+-		// console.log( 'Layers: Creating canvas background as final fallback' );
+-		this.backgroundImage = null;
+-
+-		// Set default canvas size
+-		this.canvas.width = 800;
+-		this.canvas.height = 600;
+-
+-		// Clear and set up the canvas
+-		this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
+-
+-		// Draw background
+-		this.ctx.fillStyle = '#f8f9fa';
+-		this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+-		this.ctx.strokeStyle = '#dee2e6';
+-		this.ctx.lineWidth = 2;
+-		this.ctx.strokeRect( 1, 1, this.canvas.width - 2, this.canvas.height - 2 );
+-
+-		// Add text
+-		this.ctx.fillStyle = '#6c757d';
+-		this.ctx.font = '24px Arial';
+-		this.ctx.textAlign = 'center';
+-		this.ctx.textBaseline = 'middle';
+-		this.ctx.fillText( this.editor.filename || 'Sample Image', this.canvas.width / 2, this.canvas.height / 2 - 20 );
+-		this.ctx.font = '16px Arial';
+-		this.ctx.fillText( 'Sample Image for Layer Editing', this.canvas.width / 2, this.canvas.height / 2 + 20 );
+-		this.ctx.font = '12px Arial';
+-		this.ctx.fillStyle = '#adb5bd';
+-		this.ctx.fillText( 'Draw shapes and text using the tools above', this.canvas.width / 2, this.canvas.height / 2 + 50 );
+-
+-		// Add some design elements
+-		this.ctx.strokeStyle = '#e9ecef';
+-		this.ctx.lineWidth = 1;
+-		this.ctx.beginPath();
+-		this.ctx.arc( 200, 150, 50, 0, 2 * Math.PI );
+-		this.ctx.stroke();
+-
+-		this.ctx.strokeRect( 500, 300, 100, 80 );
+-
+-		this.ctx.beginPath();
+-		this.ctx.moveTo( 100, 400 );
+-		this.ctx.lineTo( 300, 500 );
+-		this.ctx.stroke();
+-
+-		// Resize canvas to fit container
+-		this.resizeCanvas();
+-
+-		// console.log( 'Layers: Canvas background created successfully' );
+-		// console.log( 'Layers: Canvas size:', this.canvas.width, 'x', this.canvas.height );
+-		// console.log( 'Layers: Canvas display size:',
+-		//  this.canvas.style.width, 'x', this.canvas.style.height );
+-
+-		// Render any existing layers
+-		if ( this.editor && this.editor.layers ) {
+-			this.renderLayers( this.editor.layers );
+-		}
+-	};
+-
+-	CanvasManager.prototype.createTestImage = function ( filename ) {
+-		return '<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">' +
+-			'<rect width="100%" height="100%" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>' +
+-			'<text x="50%" y="45%" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#495057">' +
+-			( filename || 'Sample Image' ).replace( /[<>&"]/g, function ( match ) {
+-				return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ match ];
+-			} ) + '</text>' +
+-			'<text x="50%" y="55%" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">Sample Image for Layer Editing</text>' +
+-			'<circle cx="200" cy="150" r="50" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
+-			'<rect x="500" y="300" width="100" height="80" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
+-			'<line x1="100" y1="400" x2="300" y2="500" stroke="#e9ecef" stroke-width="2"/>' +
+-			'<text x="50%" y="85%" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#adb5bd">Draw shapes and text using the tools above</text>' +
+-			'</svg>';
+-	};
+-
+-	CanvasManager.prototype.resizeCanvas = function () {
+-		// console.log( 'Layers: Resizing canvas...' );
+-
+-		// Get container dimensions
+-		var container = this.canvas.parentNode;
+-		// console.log( 'Layers: Container:', container );
+-		// console.log( 'Layers: Container dimensions:',
+-		//  container.clientWidth, 'x', container.clientHeight );
+-
+-		// If no canvas size is set yet, use default
+-		if ( this.canvas.width === 0 || this.canvas.height === 0 ) {
+-			this.canvas.width = 800;
+-			this.canvas.height = 600;
+-		}
+-
+-		var canvasWidth = this.canvas.width;
+-		var canvasHeight = this.canvas.height;
+-
+-		// console.log( 'Layers: Canvas logical size:', canvasWidth, 'x', canvasHeight );
+-
+-		// Calculate available space in container (with padding)
+-		var availableWidth = Math.max( container.clientWidth - 40, 400 );
+-		var availableHeight = Math.max( container.clientHeight - 40, 300 );
+-
+-		// console.log( 'Layers: Available space:', availableWidth, 'x', availableHeight );
+-
+-		// Calculate scale to fit the canvas in the container
+-		var scaleX = availableWidth / canvasWidth;
+-		var scaleY = availableHeight / canvasHeight;
+-		var scale = Math.min( scaleX, scaleY );
+-
+-		// Ensure reasonable scale bounds (don't make it too tiny or huge)
+-		scale = Math.max( 0.1, Math.min( scale, 3.0 ) );
+-
+-		// Calculate final display size
+-		var displayWidth = Math.floor( canvasWidth * scale );
+-		var displayHeight = Math.floor( canvasHeight * scale );
+-
+-		// Set CSS size for display
+-		this.canvas.style.width = displayWidth + 'px';
+-		this.canvas.style.height = displayHeight + 'px';
+-		this.canvas.style.maxWidth = 'none';
+-		this.canvas.style.maxHeight = 'none';
+-		this.canvas.style.border = '1px solid #ddd';
+-		this.canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+-
+-		// Set zoom and pan only if user hasn't manually set zoom
+-		if ( !this.userHasSetZoom ) {
+-			this.zoom = scale;
+-			this.panX = 0;
+-			this.panY = 0;
+-		} else {
+-			// User has manually set zoom - preserve it but update canvas size with current zoom
+-			this.canvas.style.width = ( canvasWidth * this.zoom ) + 'px';
+ 			this.canvas.style.height = ( canvasHeight * this.zoom ) + 'px';
+ 		}
+ 
+@@ -534,119 +223,6 @@
+ 
+ 		// Handle middle mouse button or space+click for panning
+ 		if ( e.button === 1 || ( e.button === 0 && this.spacePressed ) ) {
+-			this.isPanning = true;
+-			this.lastPanPoint = { x: e.clientX, y: e.clientY };
+-			this.canvas.style.cursor = 'grabbing';
+-			return;
+-		}
+-
+-		// Ignore right click
+-		if ( e.button === 2 ) {
+-			return;
+-		}
+-
+-		// Check for selection handle clicks first
+-		if ( this.currentTool === 'pointer' && this.selectedLayerId ) {
+-			var handleHit = this.hitTestSelectionHandles( point );
+-			if ( handleHit ) {
+-				this.startResize( handleHit );
+-				return;
+-			}
+-
+-			// Check for rotation handle
+-			if ( this.rotationHandle && this.isPointInRect( point, this.rotationHandle ) ) {
+-				this.startRotation( point );
+-				return;
+-			}
+-		}
+-
+-		this.isDrawing = true;
+-
+-		if ( this.currentTool === 'zoom' ) {
+-			// Handle zoom tool - click to zoom in, shift+click to zoom out
+-			this.handleZoomClick( point, e );
+-		} else if ( this.currentTool === 'pointer' || this.currentTool === 'marquee' ) {
+-			// Handle layer selection and dragging
+-			var isCtrlClick = e.ctrlKey || e.metaKey;
+-			var selectedLayer = null;
+-			if ( this.currentTool === 'pointer' ) {
+-				selectedLayer = this.handleLayerSelection( point, isCtrlClick );
+-				if ( selectedLayer && !isCtrlClick ) {
+-					this.startDrag( point );
+-				} else if ( !selectedLayer && !isCtrlClick ) {
+-					// Start marquee selection when clicking empty space
+-					this.startMarqueeSelection( point );
+-				}
+-			} else {
+-				// Explicit marquee tool: always start marquee selection
+-				this.startMarqueeSelection( point );
+-			}
+-		} else {
+-			// Start drawing new layer
+-			this.startDrawing( point );
+-		}
+-	};
+-
+-	CanvasManager.prototype.hitTestSelectionHandles = function ( point ) {
+-		for ( var i = 0; i < this.selectionHandles.length; i++ ) {
+-			var handle = this.selectionHandles[ i ];
+-			if ( this.isPointInRect( point, handle ) ) {
+-				return handle;
+-			}
+-		}
+-		return null;
+-	};
+-
+-	CanvasManager.prototype.isPointInRect = function ( point, rect ) {
+-		return point.x >= rect.x && point.x <= rect.x + rect.width &&
+-			point.y >= rect.y && point.y <= rect.y + rect.height;
+-	};
+-
+-	CanvasManager.prototype.startResize = function ( handle ) {
+-		this.isResizing = true;
+-		this.resizeHandle = handle;
+-		this.dragStartPoint = this.startPoint; // Use the point from handleMouseDown
+-
+-		// Get rotation for proper cursor
+-		var layer = this.editor.getLayerById( this.selectedLayerId );
+-		var rotation = layer ? layer.rotation : 0;
+-		this.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
+-
+-		// Store original layer state
+-		if ( layer ) {
+-			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
+-		}
+-	};
+-
+-	CanvasManager.prototype.startRotation = function () {
+-		this.isRotating = true;
+-		this.canvas.style.cursor = 'grabbing';
+-
+-		// Store original layer state
+-		var layer = this.editor.getLayerById( this.selectedLayerId );
+-		if ( layer ) {
+-			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
+-		}
+-
+-		// console.log( 'Layers: Starting rotation' );
+-	};
+-
+-	CanvasManager.prototype.startDrag = function () {
+-		this.isDragging = true;
+-		this.canvas.style.cursor = 'move';
+-
+-		// Store original layer state(s)
+-		if ( this.selectedLayerIds.length > 1 ) {
+-			// Multi-selection: store all selected layer states
+-			this.originalMultiLayerStates = {};
+-			for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
+-				var layerId = this.selectedLayerIds[ i ];
+-				var multiLayer = this.editor.getLayerById( layerId );
+-				if ( multiLayer ) {
+-					this.originalMultiLayerStates[ layerId ] =
+-						JSON.parse( JSON.stringify( multiLayer ) );
+-				}
+-			}
+ 		} else {
+ 			// Single selection: store single layer state
+ 			var singleLayer = this.editor.getLayerById( this.selectedLayerId );
+@@ -908,103 +484,6 @@
+ 	 * @param {number} dYEllipse Delta Y movement
+ 	 * @return {Object} Updates object with new radiusX/radiusY values
+ 	 */
+-	CanvasManager.prototype.calculateEllipseResize = function (
+-		origLayerEllipse, handleEllipse, dXEllipse, dYEllipse
+-	) {
+-		var updates = {};
+-		var origRX = origLayerEllipse.radiusX || 1;
+-		var origRY = origLayerEllipse.radiusY || 1;
+-		if ( handleEllipse === 'e' || handleEllipse === 'w' ) {
+-			updates.radiusX = Math.max(
+-				5,
+-				origRX + ( handleEllipse === 'e' ? dXEllipse : -dXEllipse )
+-			);
+-		}
+-		if ( handleEllipse === 'n' || handleEllipse === 's' ) {
+-			updates.radiusY = Math.max(
+-				5,
+-				origRY + ( handleEllipse === 's' ? dYEllipse : -dYEllipse )
+-			);
+-		}
+-		return updates;
+-	};
+-
+-	// Polygon/star resize: scale width/height (bounding box)
+-	CanvasManager.prototype.calculatePolygonResize = function (
+-		origLayerPoly, handlePoly, dXPoly, dYPoly
+-	) {
+-		var updates = {};
+-		var origRadius = origLayerPoly.radius || 50;
+-
+-		// Calculate distance from center to determine new radius
+-		var deltaDistance = 0;
+-
+-		switch ( handlePoly ) {
+-			case 'e':
+-			case 'w':
+-				deltaDistance = Math.abs( dXPoly );
+-				break;
+-			case 'n':
+-			case 's':
+-				deltaDistance = Math.abs( dYPoly );
+-				break;
+-			case 'ne':
+-			case 'nw':
+-			case 'se':
+-			case 'sw':
+-				// For corner handles, use the larger delta
+-				deltaDistance = Math.max( Math.abs( dXPoly ), Math.abs( dYPoly ) );
+-				break;
+-		}
+-
+-		// Determine direction (growing or shrinking)
+-		var growing = false;
+-		switch ( handlePoly ) {
+-			case 'e':
+-				growing = dXPoly > 0;
+-				break;
+-			case 'w':
+-				growing = dXPoly < 0;
+-				break;
+-			case 'n':
+-				growing = dYPoly < 0;
+-				break;
+-			case 's':
+-				growing = dYPoly > 0;
+-				break;
+-			case 'ne':
+-				growing = dXPoly > 0 || dYPoly < 0;
+-				break;
+-			case 'nw':
+-				growing = dXPoly < 0 || dYPoly < 0;
+-				break;
+-			case 'se':
+-				growing = dXPoly > 0 || dYPoly > 0;
+-				break;
+-			case 'sw':
+-				growing = dXPoly < 0 || dYPoly > 0;
+-				break;
+-		}
+-
+-		// Apply the change
+-		var newRadius = growing ?
+-			origRadius + deltaDistance :
+-			Math.max( 10, origRadius - deltaDistance );
+-
+-		updates.radius = newRadius;
+-		return updates;
+-	};
+-
+-	// Line/arrow resize: move x2/y2
+-	CanvasManager.prototype.calculateLineResize = function (
+-		origLayerLine, handleLine, dXLine, dYLine
+-	) {
+-		var updates = {};
+-		updates.x2 = ( origLayerLine.x2 || 0 ) + dXLine;
+-		updates.y2 = ( origLayerLine.y2 || 0 ) + dYLine;
+-		return updates;
+-	};
+-
+ 	// Path resize: scale all points
+ 	CanvasManager.prototype.calculatePathResize = function (
+ 		origLayerPath, handlePath, dXPath, dYPath
+@@ -1501,117 +980,6 @@
+ 		return null;
+ 	};
+ 
+-	CanvasManager.prototype.isPointInLayer = function ( point, layer ) {
+-		if ( !layer ) {
+-			return false;
+-		}
+-		switch ( layer.type ) {
+-			case 'rectangle': {
+-				var rMinX = Math.min( layer.x, layer.x + layer.width );
+-				var rMinY = Math.min( layer.y, layer.y + layer.height );
+-				var rW = Math.abs( layer.width );
+-				var rH = Math.abs( layer.height );
+-				return point.x >= rMinX && point.x <= rMinX + rW &&
+-					point.y >= rMinY && point.y <= rMinY + rH;
+-			}
+-			case 'blur': {
+-				var bMinX = Math.min( layer.x, layer.x + layer.width );
+-				var bMinY = Math.min( layer.y, layer.y + layer.height );
+-				var bW = Math.abs( layer.width );
+-				var bH = Math.abs( layer.height );
+-				return point.x >= bMinX && point.x <= bMinX + bW &&
+-					point.y >= bMinY && point.y <= bMinY + bH;
+-			}
+-			case 'circle': {
+-				var dx = point.x - ( layer.x || 0 );
+-				var dy = point.y - ( layer.y || 0 );
+-				var r = layer.radius || 0;
+-				return ( dx * dx + dy * dy ) <= r * r;
+-			}
+-			case 'text': {
+-				var bounds = this.getLayerBounds( layer );
+-				return bounds &&
+-					point.x >= bounds.x && point.x <= bounds.x + bounds.width &&
+-					point.y >= bounds.y && point.y <= bounds.y + bounds.height;
+-			}
+-			case 'line':
+-			case 'arrow': {
+-				return this.isPointNearLine( point, layer.x1, layer.y1, layer.x2, layer.y2,
+-					Math.max( 6, ( layer.strokeWidth || 2 ) + 4 ) );
+-			}
+-			case 'path': {
+-				if ( !layer.points || layer.points.length < 2 ) {
+-					return false;
+-				}
+-				var tol = Math.max( 6, ( layer.strokeWidth || 2 ) + 4 );
+-				for ( var i = 0; i < layer.points.length - 1; i++ ) {
+-					if ( this.isPointNearLine( point,
+-						layer.points[ i ].x, layer.points[ i ].y,
+-						layer.points[ i + 1 ].x, layer.points[ i + 1 ].y,
+-						tol ) ) {
+-						return true;
+-					}
+-				}
+-				return false;
+-			}
+-			case 'ellipse': {
+-				var ex = layer.x || 0;
+-				var ey = layer.y || 0;
+-				var radX = Math.abs( layer.radiusX || 0 );
+-				var radY = Math.abs( layer.radiusY || 0 );
+-				if ( radX === 0 || radY === 0 ) {
+-					return false;
+-				}
+-				var nx = ( point.x - ex ) / radX;
+-				var ny = ( point.y - ey ) / radY;
+-				return nx * nx + ny * ny <= 1;
+-			}
+-			case 'polygon':
+-			case 'star': {
+-				// Create polygon points for hit testing
+-				var polySides = layer.sides || 6;
+-				var polyX = layer.x || 0;
+-				var polyY = layer.y || 0;
+-				var polyRadius = layer.radius || 50;
+-				var polyRotation = ( layer.rotation || 0 ) * Math.PI / 180;
+-
+-				var polyPoints = [];
+-				if ( layer.type === 'polygon' ) {
+-					for ( var si = 0; si < polySides; si++ ) {
+-						var angle = ( si * 2 * Math.PI ) / polySides - Math.PI / 2 + polyRotation;
+-						polyPoints.push( {
+-							x: polyX + polyRadius * Math.cos( angle ),
+-							y: polyY + polyRadius * Math.sin( angle )
+-						} );
+-					}
+-				} else { // star
+-					var starPoints = layer.points || layer.starPoints || 5;
+-					var outerRadius = polyRadius;
+-					var innerRadius = polyRadius * 0.4;
+-					for ( var sti = 0; sti < starPoints * 2; sti++ ) {
+-						var starAngle = ( sti * Math.PI ) / starPoints - Math.PI / 2 + polyRotation;
+-						var starR = ( sti % 2 === 0 ) ? outerRadius : innerRadius;
+-						polyPoints.push( {
+-							x: polyX + starR * Math.cos( starAngle ),
+-							y: polyY + starR * Math.sin( starAngle )
+-						} );
+-					}
+-				}
+-
+-				// Point-in-polygon test using ray casting
+-				return this.isPointInPolygon( point, polyPoints );
+-			}
+-			case 'highlight': {
+-				var hx = Math.min( layer.x, layer.x + layer.width );
+-				var hy = Math.min( layer.y, layer.y + ( layer.height || 20 ) );
+-				var hw = Math.abs( layer.width );
+-				var hh = Math.abs( layer.height || 20 );
+-				return point.x >= hx && point.x <= hx + hw &&
+-					point.y >= hy && point.y <= hy + hh;
+-			}
+-		}
+-		return false;
+-	};
+ 
+ 	CanvasManager.prototype.isPointNearLine = function ( point, x1, y1, x2, y2, tolerance ) {
+ 		var dist = this.pointToSegmentDistance( point.x, point.y, x1, y1, x2, y2 );
+@@ -2373,117 +1741,115 @@
+ 		}
+ 	};
+ 
+-	CanvasManager.prototype._computeAxisAlignedBounds = function ( rect, rotationDegrees ) {
+-		if ( !rect ) {
+-			return { left: 0, top: 0, right: 0, bottom: 0 };
+-		}
+-
+-		var rotation = ( rotationDegrees || 0 ) * Math.PI / 180;
+-		if ( rotation === 0 ) {
+-			return {
+-				left: rect.x,
+-				top: rect.y,
+-				right: rect.x + rect.width,
+-				bottom: rect.y + rect.height
+-			};
+-		}
+-
+-		var centerX = rect.x + ( rect.width / 2 );
+-		var centerY = rect.y + ( rect.height / 2 );
+-		var corners = [
+-			{ x: rect.x, y: rect.y },
+-			{ x: rect.x + rect.width, y: rect.y },
+-			{ x: rect.x + rect.width, y: rect.y + rect.height },
+-			{ x: rect.x, y: rect.y + rect.height }
+-		];
+-		var cosR = Math.cos( rotation );
+-		var sinR = Math.sin( rotation );
+-		var rotated = corners.map( function ( point ) {
+-			var dx = point.x - centerX;
+-			var dy = point.y - centerY;
+-			return {
+-				x: centerX + dx * cosR - dy * sinR,
+-				y: centerY + dx * sinR + dy * cosR
+-			};
+-		} );
+-		var xs = rotated.map( function ( point ) {
+-			return point.x;
+-		} );
+-		var ys = rotated.map( function ( point ) {
+-			return point.y;
+-		} );
+-
+-		return {
+-			left: Math.min.apply( null, xs ),
+-			top: Math.min.apply( null, ys ),
+-			right: Math.max.apply( null, xs ),
+-			bottom: Math.max.apply( null, ys )
+-		};
+-	};
+-
+-	/**
+-	 * Get a temporary canvas from the pool or create a new one
+-	 * This prevents memory leaks from constantly creating new canvas elements
+-	 *
+-	 * @param {number} width Canvas width
+-	 * @param {number} height Canvas height
+-	 * @return {Object} Object with canvas and context properties
+-	 */
+-	CanvasManager.prototype.getTempCanvas = function ( width, height ) {
+-		var tempCanvasObj = this.canvasPool.pop();
+-		if ( tempCanvasObj ) {
+-			// Reuse existing canvas from pool
+-			tempCanvasObj.canvas.width = width || 100;
+-			tempCanvasObj.canvas.height = height || 100;
+-			// Clear the canvas
+-			var canvas = tempCanvasObj.canvas;
+-			tempCanvasObj.context.clearRect( 0, 0, canvas.width, canvas.height );
+-		} else {
+-			// Create new canvas object
+-			var tempCanvas = document.createElement( 'canvas' );
+-			tempCanvas.width = width || 100;
+-			tempCanvas.height = height || 100;
+-			tempCanvasObj = {
+-				canvas: tempCanvas,
+-				context: tempCanvas.getContext( '2d' )
+-			};
++	CanvasManager.prototype.isPointInLayer = function ( point, layer ) {
++		if ( !layer ) {
++			return false;
+ 		}
+-		return tempCanvasObj;
+-	};
++		switch ( layer.type ) {
++			case 'rectangle': {
++				var rMinX = Math.min( layer.x, layer.x + layer.width );
++				var rMinY = Math.min( layer.y, layer.y + layer.height );
++				var rW = Math.abs( layer.width );
++				var rH = Math.abs( layer.height );
++				return point.x >= rMinX && point.x <= rMinX + rW &&
++					point.y >= rMinY && point.y <= rMinY + rH;
++			}
++			case 'blur': {
++				var bMinX = Math.min( layer.x, layer.x + layer.width );
++				var bMinY = Math.min( layer.y, layer.y + layer.height );
++				var bW = Math.abs( layer.width );
++				var bH = Math.abs( layer.height );
++				return point.x >= bMinX && point.x <= bMinX + bW &&
++					point.y >= bMinY && point.y <= bMinY + bH;
++			}
++			case 'circle': {
++				var dx = point.x - ( layer.x || 0 );
++				var dy = point.y - ( layer.y || 0 );
++				var r = Math.abs( layer.radius || 0 );
++				return ( dx * dx + dy * dy ) <= r * r;
++			}
++			case 'text': {
++				var bounds = this.getLayerBounds( layer );
++				return bounds &&
++					point.x >= bounds.x && point.x <= bounds.x + bounds.width &&
++					point.y >= bounds.y && point.y <= bounds.y + bounds.height;
++			}
++			case 'line':
++			case 'arrow': {
++				return this.isPointNearLine( point, layer.x1, layer.y1, layer.x2, layer.y2,
++					Math.max( 6, ( layer.strokeWidth || 2 ) + 4 ) );
++			}
++			case 'path': {
++				if ( !layer.points || layer.points.length < 2 ) {
++					return false;
++				}
++				var tol = Math.max( 6, ( layer.strokeWidth || 2 ) + 4 );
++				for ( var i = 0; i < layer.points.length - 1; i++ ) {
++					if ( this.isPointNearLine( point,
++						layer.points[ i ].x, layer.points[ i ].y,
++						layer.points[ i + 1 ].x, layer.points[ i + 1 ].y,
++						tol ) ) {
++						return true;
++					}
++				}
++				return false;
++			}
++			case 'ellipse': {
++				var ex = layer.x || 0;
++				var ey = layer.y || 0;
++				var radX = Math.abs( layer.radiusX || 0 );
++				var radY = Math.abs( layer.radiusY || 0 );
++				if ( radX === 0 || radY === 0 ) {
++					return false;
++				}
++				var nx = ( point.x - ex ) / radX;
++				var ny = ( point.y - ey ) / radY;
++				return nx * nx + ny * ny <= 1;
++			}
++			case 'polygon':
++			case 'star': {
++				var polyX = layer.x || 0;
++				var polyY = layer.y || 0;
++				var polyRotation = ( layer.rotation || 0 ) * Math.PI / 180;
++				var polyPoints = [];
+ 
+-	/**
+-	 * Return a temporary canvas to the pool for reuse
+-	 *
+-	 * @param {Object} tempCanvasObj Object with canvas and context properties
+-	 */
+-	CanvasManager.prototype.returnTempCanvas = function ( tempCanvasObj ) {
+-		if ( !tempCanvasObj || !tempCanvasObj.canvas || !tempCanvasObj.context ) {
+-			return;
+-		}
++				if ( layer.type === 'polygon' ) {
++					var sides = layer.sides || 6;
++					var polyRadius = Math.abs( layer.radius || layer.outerRadius || 50 );
++					for ( var si = 0; si < sides; si++ ) {
++						var angle = ( si * 2 * Math.PI ) / sides - Math.PI / 2 + polyRotation;
++						polyPoints.push( {
++							x: polyX + polyRadius * Math.cos( angle ),
++							y: polyY + polyRadius * Math.sin( angle )
++						} );
++					}
++				} else {
++					var starPoints = layer.points || layer.starPoints || 5;
++					var outerRadius = Math.abs( layer.outerRadius || layer.radius || 50 );
++					var innerRadius = Math.abs( layer.innerRadius || outerRadius * 0.4 );
++					for ( var sti = 0; sti < starPoints * 2; sti++ ) {
++						var starAngle = ( sti * Math.PI ) / starPoints - Math.PI / 2 + polyRotation;
++						var starR = ( sti % 2 === 0 ) ? outerRadius : innerRadius;
++						polyPoints.push( {
++							x: polyX + starR * Math.cos( starAngle ),
++							y: polyY + starR * Math.sin( starAngle )
++						} );
++					}
++				}
+ 
+-		// Only keep a limited number of canvases in the pool
+-		if ( this.canvasPool.length < this.maxPoolSize ) {
+-			// Clear the canvas before returning to pool
+-			var canvas = tempCanvasObj.canvas;
+-			tempCanvasObj.context.clearRect( 0, 0, canvas.width, canvas.height );
+-			// Reset context state
+-			tempCanvasObj.context.setTransform( 1, 0, 0, 1, 0, 0 );
+-			tempCanvasObj.context.globalAlpha = 1;
+-			tempCanvasObj.context.globalCompositeOperation = 'source-over';
+-			this.canvasPool.push( tempCanvasObj );
+-		} else {
+-			// Pool is full, let the canvas be garbage collected
+-			tempCanvasObj.canvas = null;
+-			tempCanvasObj.context = null;
++				return this.isPointInPolygon( point, polyPoints );
++			}
++			case 'highlight': {
++				var hx = Math.min( layer.x, layer.x + layer.width );
++				var hy = Math.min( layer.y, layer.y + ( layer.height || 20 ) );
++				var hw = Math.abs( layer.width );
++				var hh = Math.abs( layer.height || 20 );
++				return point.x >= hx && point.x <= hx + hw &&
++					point.y >= hy && point.y <= hy + hh;
++			}
+ 		}
++		return false;
+ 	};
+-
+-	CanvasManager.prototype.updateCanvasTransform = function () {
+-		// Update zoom display
+-		if ( this.editor.toolbar ) {
+-			this.editor.toolbar.updateZoomDisplay( Math.round( this.zoom * 100 ) );
+-		}
+-		if ( this.editor && typeof this.editor.updateZoomReadout === 'function' ) {
+ 			this.editor.updateZoomReadout( Math.round( this.zoom * 100 ) );
+ 		}
+ 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+@@ -3989,6 +3355,7 @@
+ 			type: 'star',
+ 			x: point.x,
+ 			y: point.y,
++			radius: 0,
+ 			outerRadius: 0,
+ 			innerRadius: 0,
+ 			points: 5, // Default 5-pointed star
+@@ -4030,6 +3397,7 @@
+ 				dx = point.x - this.tempLayer.x;
+ 				dy = point.y - this.tempLayer.y;
+ 				this.tempLayer.outerRadius = Math.sqrt( dx * dx + dy * dy );
++				this.tempLayer.radius = this.tempLayer.outerRadius;
+ 				this.tempLayer.innerRadius = this.tempLayer.outerRadius * 0.5;
+ 				this.drawStar( this.tempLayer );
+ 				break;
+@@ -4088,6 +3456,7 @@
+ 				dy = point.y - layer.y;
+ 				layer.outerRadius = Math.sqrt( dx * dx + dy * dy );
+ 				layer.innerRadius = layer.outerRadius * 0.5;
++				layer.radius = layer.outerRadius;
+ 				break;
+ 			case 'line':
+ 				layer.x2 = point.x;
+@@ -4962,6 +4331,8 @@
+ 			this.ctx.shadowBlur = 4;
+ 		}
+ 
++		var textStrokeOpacity = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
++
+ 		// Draw each line of text
+ 		for ( var j = 0; j < metrics.lines.length; j++ ) {
+ 			var lineText = metrics.lines[ j ];
+@@ -4971,7 +4342,9 @@
+ 			if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
+ 				this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
+ 				this.ctx.lineWidth = layer.textStrokeWidth;
+-				this.ctx.strokeText( lineText, drawX, lineY );
++				this.withLocalAlpha( textStrokeOpacity, function ( currentLineText, currentLineY ) {
++					this.ctx.strokeText( currentLineText, drawX, currentLineY );
++				}.bind( this, lineText, lineY ) );
+ 			}
+ 
+ 			// Draw text fill (respect optional fillOpacity)
+@@ -5267,8 +4640,16 @@
+ 		var y = layer.y || 0;
+ 		var outerRadius = layer.outerRadius || layer.radius || 50;
+ 		var innerRadius = layer.innerRadius || outerRadius * 0.5;
++		var rotation = ( layer.rotation || 0 ) * Math.PI / 180;
+ 
+ 		this.ctx.save();
++
++		if ( rotation !== 0 ) {
++			this.ctx.translate( x, y );
++			this.ctx.rotate( rotation );
++			this.ctx.translate( -x, -y );
++		}
++
+ 		this.ctx.beginPath();
+ 
+ 		for ( var i = 0; i < points * 2; i++ ) {

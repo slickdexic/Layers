@@ -662,6 +662,7 @@
 			const dy = point.y - this.startPoint.y;
 			const radius = Math.sqrt( dx * dx + dy * dy );
 			this.tempLayer.outerRadius = radius;
+			this.tempLayer.radius = radius;
 			this.tempLayer.innerRadius = radius * 0.4;
 			this.renderTempLayer();
 		}

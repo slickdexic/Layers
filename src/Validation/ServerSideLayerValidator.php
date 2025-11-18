@@ -112,6 +112,10 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	/** @var int Maximum points in a path/polygon */
 	private const MAX_POINTS = 1000;
 
+	/** @var int Minimum/maximum star points allowed */
+	private const MIN_STAR_POINTS = 3;
+	private const MAX_STAR_POINTS = 20;
+
 	public function __construct() {
 		$this->textSanitizer = new TextSanitizer();
 		$this->colorValidator = new ColorValidator();
@@ -225,6 +229,12 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			}
 
 			$value = $layer[$property];
+
+			// Allow star layers to persist numeric point counts without forcing array structures
+			if ( $property === 'points' && $type === 'star' && !is_array( $value ) && is_numeric( $value ) ) {
+				$cleanLayer[$property] = (int)floor( $value );
+				continue;
+			}
 			$validationResult = $this->validateProperty( $property, $value, $expectedType );
 
 			if ( $validationResult['valid'] ) {
@@ -480,6 +490,26 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				}
 				break;
 			}
+
+			case 'star':
+				$starPoints = $layer['points'] ?? null;
+				if ( !is_numeric( $starPoints ) ) {
+					return [ 'valid' => false, 'error' => 'Star layer must define an integer point count' ];
+				}
+
+				$starPoints = (int)floor( $starPoints );
+				if ( $starPoints < self::MIN_STAR_POINTS || $starPoints > self::MAX_STAR_POINTS ) {
+					return [
+						'valid' => false,
+						'error' => 'Star layer point count must be between ' . self::MIN_STAR_POINTS . ' and ' . self::MAX_STAR_POINTS
+					];
+				}
+
+				$outerRadius = $layer['outerRadius'] ?? $layer['radius'] ?? null;
+				if ( $outerRadius === null || $outerRadius <= 0 ) {
+					return [ 'valid' => false, 'error' => 'Star layer must define a positive radius or outerRadius' ];
+				}
+				break;
 
 			case 'path':
 				if ( !$this->hasValidPointArray( $layer, 2 ) ) {

@@ -297,11 +297,18 @@
 		const y = layer.y || 0;
 		const outerRadius = layer.outerRadius || layer.radius || 50;
 		const innerRadius = layer.innerRadius || outerRadius * 0.5;
+		const rotation = ( layer.rotation || 0 ) * Math.PI / 180;
 
 		this.ctx.save();
 
 		// Apply drop shadow
 		this.applyShadow( layer );
+
+		if ( rotation !== 0 ) {
+			this.ctx.translate( x, y );
+			this.ctx.rotate( rotation );
+			this.ctx.translate( -x, -y );
+		}
 
 		this.ctx.beginPath();
 

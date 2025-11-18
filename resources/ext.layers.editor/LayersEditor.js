@@ -433,6 +433,12 @@
 			// Save current state for undo
 			this.saveState();
 
+			// Keep derived geometry fields in sync
+			if ( Object.prototype.hasOwnProperty.call( changes, 'outerRadius' ) &&
+				!Object.prototype.hasOwnProperty.call( changes, 'radius' ) ) {
+				changes.radius = changes.outerRadius;
+			}
+
 			// Sanitize changes for security
 			changes = this.validationManager.sanitizeLayerData( changes );
 

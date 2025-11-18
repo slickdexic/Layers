@@ -1459,9 +1459,7 @@
 				addInput( { label: t( 'layers-prop-font-size', 'Font Size' ), type: 'number', value: layer.fontSize || 16, min: 6, max: 1000, step: 1, prop: 'fontSize', onChange: function ( v ) { var fs = Math.max( 6, Math.min( 1000, parseInt( v, 10 ) ) ); self.editor.updateLayer( layer.id, { fontSize: fs } ); } } );
 				// FIX 2025-11-14: Increased max from 10 to 200 to match shape stroke width
 			addInput( { label: t( 'layers-prop-stroke-width', 'Text Stroke Width' ), type: 'number', value: layer.textStrokeWidth || 0, min: 0, max: 200, step: 1, onChange: function ( v ) { self.editor.updateLayer( layer.id, { textStrokeWidth: parseInt( v, 10 ) } ); } } );
-				if ( ( layer.textStrokeWidth || 0 ) > 0 ) {
-					addColorPicker( { label: t( 'layers-prop-stroke-color', 'Text Stroke Color' ), value: layer.textStrokeColor, property: 'textStrokeColor', onChange: function ( newColor ) { self.editor.updateLayer( layer.id, { textStrokeColor: newColor } ); } } );
-				}
+				addColorPicker( { label: t( 'layers-prop-stroke-color', 'Text Stroke Color' ), value: layer.textStrokeColor || '#000000', property: 'textStrokeColor', onChange: function ( newColor ) { self.editor.updateLayer( layer.id, { textStrokeColor: newColor } ); } } );
 				break;
 			case 'highlight':
 				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: layer.width || 0, step: 1, decimals: 1, prop: 'width', onChange: function ( v ) { self.editor.updateLayer( layer.id, { width: parseFloat( v ) } ); } } );
