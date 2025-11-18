@@ -110,12 +110,12 @@ class ApiLayersSave extends ApiBase {
 			$data = $params['data'];
 			$setName = $this->sanitizeSetName( $params['setname'] ?? 'default' );
 
-			// VALIDATION: Ensure filename is valid and exists in File namespace
-			// Title::newFromText normalizes the filename and validates format
-			// NS_FILE ensures we're working with the File: namespace only
-			// This prevents attempts to attach layers to non-file pages
+			// VALIDATION: Ensure filename resolves to a valid File namespace title
+			// Title::newFromText normalizes and validates the format, but does not require
+			// the file page to exist locally. This allows saving layers on files served
+			// from shared repositories (e.g., Wikimedia Commons remotes).
 			$title = Title::newFromText( $fileName, NS_FILE );
-			if ( !$title || !$title->exists() ) {
+			if ( !$title || $title->getNamespace() !== NS_FILE ) {
 				$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
 			}
 			

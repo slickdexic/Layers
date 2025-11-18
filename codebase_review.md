@@ -1,18 +1,87 @@
 # Layers MediaWiki Extension - Comprehensive Code Review
 
-**Review Date:** November 17, 2025  
+**Review Date:** November 18, 2025  
 **Version:** 0.8.1-dev  
 **Reviewer:** GitHub Copilot (GPT-5.1-Codex Preview)  
 **Review Type:** Deep Critical Analysis  
-**Previous Review:** November 16, 2025
+**Previous Review:** November 17, 2025
 
-> **Update (Nov 17, 2025):** Touch editing is still broken because `handleTouchEnd()` finishes drawings at (0, 0), the revision history API sends every `ls_json_blob` in `all_layersets`, LayerPanel keeps piling up `layers:transforming` listeners, and the color picker dialog is English-only with no dialog semantics or focus trap. The legacy CLI test harness still instantiates `LayersDatabase` without dependencies, so automated smoke tests cannot run. Overall score slips to 5.3/10 until touch, API payload, modal accessibility, and tooling regressions are corrected.
+> **Update (Nov 18, 2025):** `ApiLayersInfo` now requests metadata-only revision lists via `includeData => false`, and the toolbar color picker finally ships with localized strings, dialog semantics, and a focus trap (`resources/ext.layers.editor/Toolbar.js`, lines 60-220). Write operations still reject Commons/ForeignAPI files because `ApiLayersSave` insists on `Title::exists()`, configured image-dimension/complexity caps are unused, the revision history cannot be paged beyond the first 200 rows, and the layer list continues to rebuild the DOM on every interaction, dropping focus and excluding keyboard reordering. Overall score inches up to 5.6/10, but remote-file saves, pagination, and accessible list management remain blocking issues for a production launch.
+
+## Current Assessment (2025-11-18)
+
+| Category | Score | Status | Trend |
+|----------|-------|--------|-------|
+| Architecture & Design | 6/10 | 🟡 Remote file saves still blocked; metadata leak resolved | ↑ |
+| Code Quality | 5/10 | 🟠 `LayerPanel.js` disables ESLint and CanvasManager remains 5.4k lines | → |
+| Security | 6/10 | 🟡 Configured dimension/complexity caps are not enforced server-side | → |
+| Performance | 5/10 | 🟠 Revision feed capped at 200 without pagination; layer list re-renders whole DOM | ↑ |
+| Accessibility | 4/10 | 🔴 Layer list drops focus, no keyboard reordering, unbound labels | → |
+| Documentation | 8/10 | 🟢 Living docs remain accurate | → |
+| Testing | 4/10 | 🔴 CLI harness still fatal; minimal Jest coverage outside confirmation flows | → |
+| Error Handling | 6/10 | 🟡 API manager surfaces localized errors but no rate-limit cooldown UI | → |
+| Maintainability | 5/10 | 🟡 Monolithic CanvasManager plus disabled linting hinder review velocity | → |
+| Resource Management | 5/10 | 🟡 Listener tracking improved, yet DOM churn still wastes work | ↑ |
+
+**Overall Score: 5.6/10 — No-regression progress on the read API and color picker, but remote saves, pagination, and accessibility remain unresolved.**
+
+## Feature-Level Scores (2025-11-18)
+
+| Feature / Module | Functionality | Code Quality | Notes |
+|------------------|---------------|--------------|-------|
+| `ApiLayersSave` (PHP) | 6/10 | 5/10 | Requires `Title::exists()` before saving (lines 88-110) so Commons/ForeignAPI files can never be annotated locally, and it never consults `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` when persisting (`src/Api/ApiLayersSave.php`, lines 118-205; `src/Security/RateLimiter.php`, lines 135-205). |
+| `layersinfo` revision feed | 7/10 | 6/10 | `includeData => false` prevents JSON leaks, but the module exposes only a `limit` parameter (no `offset`/`continue`), so more than 200 revisions are unreachable via API (`src/Api/ApiLayersInfo.php`, lines 42-150). |
+| LayerPanel list rendering | 6/10 | 4/10 | `renderLayerList()` wipes and rebuilds the entire DOM on every toggle (lines 418-435) and there is no keyboard-based reordering path—drag/drop listeners (lines 1537-1568) require a pointer device. |
+| LayerPanel renaming & properties | 5/10 | 4/10 | Layer names rely on a naked `contentEditable` span with no role or `aria-label` (lines 520-545, 689-719) and property labels are not associated with inputs because `addInput()` never assigns matching `for`/`id` attributes (lines 780-815). |
+| `tests/LayersTest.php` CLI harness | 2/10 | 2/10 | Still instantiates `new LayersDatabase()` without the four required constructor dependencies (lines 89-116), so the script fatals before running assertions. |
+
+## Critical Findings (Nov 18, 2025)
+
+1. 🔴 **`layerssave` cannot annotate Commons or ForeignAPI files.** `ApiLayersSave` rejects any filename whose `Title` record does not already exist locally (lines 88-110), even though `RepoGroup->findFile()` would load remote assets later in the request. Wikis that rely on shared repositories therefore have a read/write split: viewing works, saving always returns `layers-invalid-filename`.
+2. 🟠 **Configured image-dimension and complexity caps are a no-op.** The service exposes `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` (src/Security/RateLimiter.php, lines 135-205), yet `ApiLayersSave` never calls them. `$wgLayersMaxImageDimensions`, `$wgLayersMaxImageSize`, and the complexity threshold cannot actually stop huge 12k × 12k canvases or path-heavy submissions.
+3. 🟠 **Revision history stops at 200 entries.** `ApiLayersInfo::getAllowedParams()` omits any pagination/offset control, so even though `LayersDatabase::getLayerSetsForImageWithOptions()` supports `OFFSET`, the API never exposes it. Attempting to audit older revisions results in silently truncated lists for busy files.
+4. 🟠 **LayerPanel continually rebuilds its DOM and excludes keyboard users.** `renderLayerList()` clears `this.layerList` with `removeChild` loops (lines 418-435), immediately dropping focus/scroll position, and reordering is drag-only (lines 1537-1568). Industry-standard accessibility (WCAG 2.1.1/2.4.3) requires persistent focus and keyboard options.
+5. 🟠 **Editable names and property forms fail WCAG 1.3.1.** Layer names use a bare `contentEditable` span (lines 520-545) without `role="textbox"` or `aria-label`, and the property form creates `<label>` elements that are never bound to inputs (lines 780-815), so assistive tech hears "edit text" with no context.
+6. 🟡 **Legacy CLI smoke tests still cannot run.** `tests/LayersTest.php` constructs `new LayersDatabase()` without the LoadBalancer, Config, Logger, or SchemaManager dependencies (lines 89-116), causing immediate fatal errors and giving teams a false sense of coverage.
+
+## Missing & Broken Features (Nov 18, 2025)
+
+- **Remote/Commons file authoring is unsupported.** Because of the `Title::exists()` guard, only files with a local description page can be annotated. Shared-repo workflows remain blocked despite the read-side supporting them.
+- **Revision pagination is absent.** There is no API parameter to fetch revisions beyond the first 200 rows, so clients cannot build lazy-loaded history or moderation tools.
+- **Keyboard reordering and accessible confirmations are missing.** Drag-and-drop is the only ordering mechanism (LayerPanel.js, lines 1537-1568), and the fallback confirmation path (`simpleConfirm`, lines 1603-1615) auto-approves destructive actions whenever `window.confirm` is unavailable.
+- **LayerPanel still disables ESLint globally.** The `/* eslint-disable */` banner at the top of `LayerPanel.js` (line 1) keeps critical UI logic outside automated checks.
+
+## UI / Accessibility Review (Nov 18, 2025)
+
+- `renderLayerList()` erases and rebuilds the layer list on every change (lines 418-435), which resets focus/scroll and violates WCAG 2.4.3.
+- Layer names are `contentEditable` spans without semantic roles or labels (lines 520-545), so screen readers announce an unlabeled editing region.
+- Property controls render `<label>` text, but `addInput()` never binds `for`/`id` attributes (lines 780-815), leaving assistive tech unable to map labels to inputs.
+- Reordering is pointer-only (`setupDragAndDrop`, lines 1537-1568); there are no keyboard shortcuts, `aria-grabbed` states, or announcements for changes.
+- `simpleConfirm()` auto-approves whenever `window.confirm` is missing (lines 1603-1615), so destructive actions cannot be canceled in kiosk/mobile shells and no dialog semantics are provided.
+- Positive note: the color picker now uses localized strings, `role="dialog"`, `aria-modal`, and a focus trap (`Toolbar.js`, lines 60-220), so earlier accessibility issues in that component are resolved.
+
+## Testing & Tooling Gaps (Nov 18, 2025)
+
+- `tests/LayersTest.php` still fatals immediately because it instantiates `LayersDatabase` with zero constructor arguments (lines 89-116), so `maintenance/runScript.php` suites cannot be trusted.
+- `LayerPanel.js` disables ESLint for the entire 1,600-line module (line 1), keeping regressions out of CI.
+- `CanvasManager.js` remains a 5,457-line monolith with TODOs about missing keyboard/a11y coverage and zero Jest tests guarding its event code (see lines 4,997-5,004).
+- Jest coverage for the UI is limited to confirmation fallbacks (`tests/jest/LayerPanelConfirmations.test.js`), so focus management, keyboard flows, and pagination logic remain untested.
+
+## Recommended Immediate Actions (Nov 18, 2025)
+
+1. **Allow remote file saves.** Replace the `Title::exists()` gate with `Title::makeTitleSafe()` + `RepoGroup->findFile()` checks so Commons/ForeignAPI files can be annotated.
+2. **Enforce configured caps.** Call `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` before persisting and surface `layers-image-too-large`-style errors to the client.
+3. **Add pagination to `layersinfo`.** Introduce `continue`/`offset` parameters and plumb them through `getLayerSetsForImageWithOptions()`.
+4. **Make the layer list keyboard-accessible.** Preserve focus/scroll when re-rendering, add arrow key reordering, and expose `aria-grabbed` states for screen readers.
+5. **Bind labels and edit fields.** Assign `id`/`for` pairs in `addInput()`, set `role="textbox"`/`aria-label` on `layer-name`, and sanitize contentEditable updates.
+6. **Retire the CLI script or inject dependencies.** Rewrite `tests/LayersTest.php` as PHPUnit coverage with mocks so automated smoke tests actually run.
+
 
 > **Update (Nov 16, 2025):** Read-side API drift allows anyone who can guess a `ls_id` to download layer JSON for unrelated files, CanvasManager never unregisters document-level keyboard listeners (stacking duplicate shortcuts after every edit session) and doubles every touch gesture by wiring two separate `touch*` pipelines. LayerPanel’s fallback “confirmation” always returns true, so destructive operations go through without user consent, and the new sanitized logging utilities in `LayersEditor` are dead code because the constructor pre-binds console loggers that shadow the prototype methods. These regressions drop the overall score back below 6/10 despite the Nov 15 fixes.
 
 > **Update (Nov 15, 2025):** Regression sweep targeting three blocking defects reported by QA: (1) save pipeline failures caused by a missing logger accessor, (2) arrow/star layers ignoring rotation handles, and (3) arrowheads degenerating into flat bars when stroke width increases. Backend logging now routes through the DI-provided LayersLogger, and the rendering stack (CanvasManager, LayerRenderer, RenderingCore) applies consistent transforms plus filled arrowheads so visual fidelity is maintained at any width.
 
-### Current Assessment (2025-11-17)
+### Historical Assessment (2025-11-17)
 
 | Category | Score | Status | Trend |
 |----------|-------|--------|-------|
