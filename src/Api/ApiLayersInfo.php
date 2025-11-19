@@ -11,10 +11,13 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiMain;
+use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
 class ApiLayersInfo extends ApiBase {
+	use LayersContinuationTrait;
+
 	/**
 	 * Constructor
 	 *
@@ -37,6 +40,11 @@ class ApiLayersInfo extends ApiBase {
 		$layerSetId = $params['layersetid'] ?? null;
 		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : 50;
 		$limit = max( 1, min( $limit, 200 ) );
+		$offset = isset( $params['offset'] ) ? (int)$params['offset'] : 0;
+		$offset = max( 0, $offset );
+		if ( isset( $params['continue'] ) && $params['continue'] !== '' ) {
+			$offset = max( $offset, $this->parseContinueParameter( (string)$params['continue'] ) );
+		}
 
 		$title = $this->getTitleFromFilename( $filename );
 		if ( !$title ) {
@@ -104,17 +112,26 @@ class ApiLayersInfo extends ApiBase {
 				];
 			}
 
-			// Also get list of all layer sets for this file
+			$fetchLimit = min( $limit + 1, 201 );
 			$allLayerSets = $db->getLayerSetsForImageWithOptions(
 				$file->getName(),
 				$file->getSha1(),
 				[
 					'sort' => 'ls_revision',
 					'direction' => 'DESC',
-					'limit' => $limit,
+					'limit' => $fetchLimit,
+					'offset' => $offset,
 					'includeData' => false
 				]
 			);
+			$hasMore = count( $allLayerSets ) > $limit;
+			if ( $hasMore ) {
+				$allLayerSets = array_slice( $allLayerSets, 0, $limit );
+			}
+			$hasMore = count( $allLayerSets ) > $limit;
+			if ( $hasMore ) {
+				$allLayerSets = array_slice( $allLayerSets, 0, $limit );
+			}
 			// Enrich with user names for display convenience - batch lookup to avoid N+1 queries
 			try {
 				// Collect all unique user IDs
@@ -158,6 +175,15 @@ class ApiLayersInfo extends ApiBase {
 				}
 			}
 			$result['all_layersets'] = $allLayerSets;
+			if ( $hasMore ) {
+				$nextOffset = $offset + $limit;
+				$continuation = [
+					'offset' => $nextOffset,
+					'continue' => $this->formatContinueParameter( $nextOffset )
+				];
+				$result['continuation'] = $continuation;
+				$this->setContinueEnumParameter( 'continue', $continuation['continue'] );
+			}
 		}
 
 		$this->getResult()->addValue( null, $this->getModuleName(), $result );
@@ -184,7 +210,41 @@ class ApiLayersInfo extends ApiBase {
 				ApiBase::PARAM_MIN => 1,
 				ApiBase::PARAM_MAX => 200,
 			],
+			'offset' => [
+				ApiBase::PARAM_TYPE => 'integer',
+				ApiBase::PARAM_REQUIRED => false,
+				ApiBase::PARAM_MIN => 0,
+			],
+			'continue' => [
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false,
+			],
 		];
+	}
+
+	/**
+	 * Parse the continue parameter into an offset integer.
+	 *
+	 * @param string $continue
+	 * @return int
+	 */
+	protected function parseContinueParameter( string $continue ): int {
+		if ( strpos( $continue, 'offset|' ) === 0 ) {
+			$parts = explode( '|', $continue );
+			$offset = (int)( $parts[1] ?? 0 );
+			return max( 0, $offset );
+		}
+		return max( 0, (int)$continue );
+	}
+
+	/**
+	 * Build a continue parameter for the next offset.
+	 *
+	 * @param int $offset
+	 * @return string
+	 */
+	protected function formatContinueParameter( int $offset ): string {
+		return 'offset|' . max( 0, $offset );
 	}
 
 	/**

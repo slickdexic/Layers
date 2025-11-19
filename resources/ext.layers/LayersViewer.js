@@ -119,6 +119,26 @@
 		}
 	};
 
+// Temporarily adjusts global alpha for a draw call and restores afterward
+LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
+	if ( typeof drawFn !== 'function' ) {
+		return;
+	}
+	if ( typeof alpha !== 'number' ) {
+		drawFn.call( this );
+		return;
+	}
+
+	var clampedAlpha = Math.max( 0, Math.min( 1, alpha ) );
+	var previousAlpha = this.ctx.globalAlpha;
+	this.ctx.globalAlpha = previousAlpha * clampedAlpha;
+	try {
+		drawFn.call( this );
+	} finally {
+		this.ctx.globalAlpha = previousAlpha;
+	}
+};
+
 	LayersViewer.prototype.resizeCanvasAndRender = function () {
 		// Set canvas pixel size to MATCH the displayed image size for crisp alignment
 		var displayW = this.imageElement.offsetWidth;
@@ -385,29 +405,17 @@
 
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
-			// Apply fill opacity if specified
-			if ( typeof layer.fillOpacity === 'number' ) {
-				var savedAlpha = this.ctx.globalAlpha;
-				this.ctx.globalAlpha = savedAlpha * layer.fillOpacity;
+			this.withLocalAlpha( layer.fillOpacity, function () {
 				this.ctx.fillRect( x, y, width, height );
-				this.ctx.globalAlpha = savedAlpha;
-			} else {
-				this.ctx.fillRect( x, y, width, height );
-			}
+			} );
 		}
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			this.ctx.lineWidth = strokeW;
-			// Apply stroke opacity if specified
-			if ( typeof layer.strokeOpacity === 'number' ) {
-				var savedAlpha2 = this.ctx.globalAlpha;
-				this.ctx.globalAlpha = savedAlpha2 * layer.strokeOpacity;
+			this.withLocalAlpha( layer.strokeOpacity, function () {
 				this.ctx.strokeRect( x, y, width, height );
-				this.ctx.globalAlpha = savedAlpha2;
-			} else {
-				this.ctx.strokeRect( x, y, width, height );
-			}
+			} );
 		}
 
 		this.ctx.restore();
@@ -421,7 +429,9 @@
 
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
+			this.withLocalAlpha( layer.fillOpacity, function () {
+				this.ctx.fill();
+			} );
 		}
 
 		if ( layer.stroke ) {
@@ -433,7 +443,9 @@
 				sw = sw * ( ( sx2 + sy2 ) / 2 );
 			}
 			this.ctx.lineWidth = sw;
-			this.ctx.stroke();
+			this.withLocalAlpha( layer.strokeOpacity, function () {
+				this.ctx.stroke();
+			} );
 		}
 
 		this.ctx.restore();
@@ -531,7 +543,9 @@
 		// Fill/stroke while the transform is active
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
+			this.withLocalAlpha( layer.fillOpacity, function () {
+				this.ctx.fill();
+			} );
 		}
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
@@ -542,7 +556,9 @@
 				ellipseStroke = ellipseStroke * ( ( ellipseSx + ellipseSy ) / 2 );
 			}
 			this.ctx.lineWidth = ellipseStroke;
-			this.ctx.stroke();
+			this.withLocalAlpha( layer.strokeOpacity, function () {
+				this.ctx.stroke();
+			} );
 		}
 
 		this.ctx.restore();
@@ -579,7 +595,9 @@
 
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
+			this.withLocalAlpha( layer.fillOpacity, function () {
+				this.ctx.fill();
+			} );
 		}
 
 		if ( layer.stroke ) {
@@ -591,7 +609,9 @@
 				polygonStroke = polygonStroke * ( ( polySx + polySy ) / 2 );
 			}
 			this.ctx.lineWidth = polygonStroke;
-			this.ctx.stroke();
+			this.withLocalAlpha( layer.strokeOpacity, function () {
+				this.ctx.stroke();
+			} );
 		}
 
 		this.ctx.restore();
@@ -631,7 +651,9 @@
 
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
+			this.withLocalAlpha( layer.fillOpacity, function () {
+				this.ctx.fill();
+			} );
 		}
 
 		if ( layer.stroke ) {
@@ -643,7 +665,9 @@
 				starStroke = starStroke * ( ( starSx + starSy ) / 2 );
 			}
 			this.ctx.lineWidth = starStroke;
-			this.ctx.stroke();
+			this.withLocalAlpha( layer.strokeOpacity, function () {
+				this.ctx.stroke();
+			} );
 		}
 
 		this.ctx.restore();

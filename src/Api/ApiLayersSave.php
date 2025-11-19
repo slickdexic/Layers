@@ -4,6 +4,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiUsageException;
+use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\MediaWikiServices;
@@ -55,6 +56,7 @@ use Psr\Log\LoggerInterface;
  * @see LayersDatabase::saveLayerSet() for persistence logic
  */
 class ApiLayersSave extends ApiBase {
+	use LayerSaveGuardsTrait;
 
 	/** @var LoggerInterface|null */
 	private ?LoggerInterface $logger = null;
@@ -167,6 +169,7 @@ class ApiLayersSave extends ApiBase {
 			// Extract sanitized data (validator has cleaned/normalized all fields)
 			// This is the data we'll persist to database
 			$sanitizedData = $validationResult->getData();
+			$layerCount = count( $sanitizedData );
 
 			// Log warnings (non-fatal issues like dropped unknown properties)
 			// These are logged server-side but don't block the save operation
@@ -178,13 +181,15 @@ class ApiLayersSave extends ApiBase {
 				);
 			}
 
-			// RATE LIMITING: Prevent abuse by limiting save operations per user
+			// RATE LIMITING & SAFEGUARDS: Prevent abuse by limiting save operations per user
+			// and enforce configured image/complexity caps before performing expensive work.
+			$rateLimiter = $this->createRateLimiter();
+			$this->enforceLayerLimits( $rateLimiter, $sanitizedData, $layerCount );
 			// Uses MediaWiki's core rate limiter via User::pingLimiter()
 			// Configuration in LocalSettings.php:
 			//   $wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ]; // 30 saves per hour
 			//   $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ]; // stricter for new users
 			// Rate limit is checked AFTER validation to avoid wasting limit on invalid data
-			$rateLimiter = new RateLimiter();
 			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
 				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
 			}
@@ -197,6 +202,10 @@ class ApiLayersSave extends ApiBase {
 			if ( !$file || !$file->exists() ) {
 				$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
 			}
+
+			$imgWidth = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : 0;
+			$imgHeight = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : 0;
+			$this->enforceImageSizeLimit( $rateLimiter, $imgWidth, $imgHeight );
 
 			// Extract file metadata for database association
 			// SHA1: Ensures layers are associated with specific file version
@@ -274,6 +283,13 @@ class ApiLayersSave extends ApiBase {
 			// Generic message prevents attackers from learning about system internals
 			$this->dieWithError( 'layers-save-failed', 'savefailed' );
 		}
+	}
+
+	/**
+	 * Factory for RateLimiter to allow overrides in tests.
+	 */
+	protected function createRateLimiter(): RateLimiter {
+		return new RateLimiter();
 	}
 
 	/**
@@ -436,7 +452,7 @@ class ApiLayersSave extends ApiBase {
 	/**
 	 * Lazily resolve the Layers-specific logger.
 	 */
-	private function getLogger(): LoggerInterface {
+	protected function getLogger(): LoggerInterface {
 		if ( $this->logger === null ) {
 			$this->logger = MediaWikiServices::getInstance()->get( 'LayersLogger' );
 		}

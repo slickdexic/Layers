@@ -6,7 +6,7 @@
 **Review Type:** Deep Critical Analysis  
 **Previous Review:** November 17, 2025
 
-> **Update (Nov 18, 2025):** `ApiLayersInfo` now requests metadata-only revision lists via `includeData => false`, and the toolbar color picker finally ships with localized strings, dialog semantics, and a focus trap (`resources/ext.layers.editor/Toolbar.js`, lines 60-220). Write operations still reject Commons/ForeignAPI files because `ApiLayersSave` insists on `Title::exists()`, configured image-dimension/complexity caps are unused, the revision history cannot be paged beyond the first 200 rows, and the layer list continues to rebuild the DOM on every interaction, dropping focus and excluding keyboard reordering. Overall score inches up to 5.6/10, but remote-file saves, pagination, and accessible list management remain blocking issues for a production launch.
+> **Update (Nov 18, 2025):** Remote/Commons saves now work because `ApiLayersSave` only requires a valid `File:` title before delegating to `RepoGroup->findFile()`, and the toolbar color picker finally ships with localized strings, dialog semantics, and a focus trap (`resources/ext.layers.editor/Toolbar.js`, lines 60-220). Nevertheless, `layerssave` still ignores the configured image-dimension/complexity caps, the revision history cannot be paged beyond the first 200 rows, and the layer list continues to rebuild the DOM on every interaction, dropping focus and excluding keyboard reordering. Property inputs still lack bound labels and fallback confirmations auto-approve destructive actions, so accessibility remains a blocker. Overall score holds at 5.6/10 until pagination, data-size enforcement, and layer-panel accessibility are addressed.
 
 ## Current Assessment (2025-11-18)
 
@@ -25,11 +25,18 @@
 
 **Overall Score: 5.6/10 — No-regression progress on the read API and color picker, but remote saves, pagination, and accessibility remain unresolved.**
 
+### Latest Key Findings (Nov 18, 2025 PM)
+
+- **Missing / Broken Features:** The revision feed still lacks `offset`/`continue` controls so anything past 200 revisions is unreachable (`src/Api/ApiLayersInfo.php`, lines 24-135); the layer list has no keyboard reordering or virtualization (`resources/ext.layers.editor/LayerPanel.js`, lines 430-750); property inspectors still ship without programmatic labels because `addInput()` never binds `label`/`id` pairs (same file, ~760-840); and server-side image/complexity caps remain a no-op because `ApiLayersSave` never calls `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` (`src/Api/ApiLayersSave.php`, lines 120-220).
+- **Bugs / Defects:** `LayerPanel.prototype.simpleConfirm()` still auto-confirms destructive actions whenever `window.confirm` is unavailable (lines 1603-1615), the history API truncates results silently at 200 rows, and the legacy CLI harness (`tests/LayersTest.php`, lines 90-140) instantiates `LayersDatabase` with zero dependencies so the script fatals before running assertions.
+- **Code Quality:** `LayerPanel.js` keeps `/* eslint-disable */` at the very top, `renderLayerList()` destroys and recreates the DOM on every change, `CanvasManager.js` remains a 5.4k-line monolith that handles rendering plus event orchestration, and the state inspector relies on global mutable arrays instead of derived data or memoization.
+- **UI & Accessibility:** Each re-render drops focus/scroll, there is no keyboard path for layer reordering or grabbing, inspector controls lack `aria-describedby`, `.layers-editor` stays fixed-width without breakpoints (320 px sidebar on tablets), toasts don't announce via `aria-live`, and rate-limit or oversize payload errors surface as generic popups with no cooldown guidance. The newly localized color picker dialog is the lone component that now meets dialog semantics.
+
 ## Feature-Level Scores (2025-11-18)
 
 | Feature / Module | Functionality | Code Quality | Notes |
 |------------------|---------------|--------------|-------|
-| `ApiLayersSave` (PHP) | 6/10 | 5/10 | Requires `Title::exists()` before saving (lines 88-110) so Commons/ForeignAPI files can never be annotated locally, and it never consults `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` when persisting (`src/Api/ApiLayersSave.php`, lines 118-205; `src/Security/RateLimiter.php`, lines 135-205). |
+| `ApiLayersSave` (PHP) | 7/10 | 5/10 | Remote/Commons saves now work because the module only validates `File:` titles before calling `RepoGroup->findFile()`, but it still never consults `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` so `$wgLayersMaxImageDimensions` and complexity caps are unenforced (`src/Api/ApiLayersSave.php`, lines 120-220; `src/Security/RateLimiter.php`, lines 135-205). |
 | `layersinfo` revision feed | 7/10 | 6/10 | `includeData => false` prevents JSON leaks, but the module exposes only a `limit` parameter (no `offset`/`continue`), so more than 200 revisions are unreachable via API (`src/Api/ApiLayersInfo.php`, lines 42-150). |
 | LayerPanel list rendering | 6/10 | 4/10 | `renderLayerList()` wipes and rebuilds the entire DOM on every toggle (lines 418-435) and there is no keyboard-based reordering path—drag/drop listeners (lines 1537-1568) require a pointer device. |
 | LayerPanel renaming & properties | 5/10 | 4/10 | Layer names rely on a naked `contentEditable` span with no role or `aria-label` (lines 520-545, 689-719) and property labels are not associated with inputs because `addInput()` never assigns matching `for`/`id` attributes (lines 780-815). |
@@ -37,18 +44,19 @@
 
 ## Critical Findings (Nov 18, 2025)
 
-1. 🔴 **`layerssave` cannot annotate Commons or ForeignAPI files.** `ApiLayersSave` rejects any filename whose `Title` record does not already exist locally (lines 88-110), even though `RepoGroup->findFile()` would load remote assets later in the request. Wikis that rely on shared repositories therefore have a read/write split: viewing works, saving always returns `layers-invalid-filename`.
-2. 🟠 **Configured image-dimension and complexity caps are a no-op.** The service exposes `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` (src/Security/RateLimiter.php, lines 135-205), yet `ApiLayersSave` never calls them. `$wgLayersMaxImageDimensions`, `$wgLayersMaxImageSize`, and the complexity threshold cannot actually stop huge 12k × 12k canvases or path-heavy submissions.
-3. 🟠 **Revision history stops at 200 entries.** `ApiLayersInfo::getAllowedParams()` omits any pagination/offset control, so even though `LayersDatabase::getLayerSetsForImageWithOptions()` supports `OFFSET`, the API never exposes it. Attempting to audit older revisions results in silently truncated lists for busy files.
-4. 🟠 **LayerPanel continually rebuilds its DOM and excludes keyboard users.** `renderLayerList()` clears `this.layerList` with `removeChild` loops (lines 418-435), immediately dropping focus/scroll position, and reordering is drag-only (lines 1537-1568). Industry-standard accessibility (WCAG 2.1.1/2.4.3) requires persistent focus and keyboard options.
-5. 🟠 **Editable names and property forms fail WCAG 1.3.1.** Layer names use a bare `contentEditable` span (lines 520-545) without `role="textbox"` or `aria-label`, and the property form creates `<label>` elements that are never bound to inputs (lines 780-815), so assistive tech hears "edit text" with no context.
-6. 🟡 **Legacy CLI smoke tests still cannot run.** `tests/LayersTest.php` constructs `new LayersDatabase()` without the LoadBalancer, Config, Logger, or SchemaManager dependencies (lines 89-116), causing immediate fatal errors and giving teams a false sense of coverage.
+1. 🟠 **Configured image-dimension and complexity caps are still a no-op.** `ApiLayersSave` only calls `checkRateLimit()`; it never invokes `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` (src/Security/RateLimiter.php, lines 135-205), so `$wgLayersMaxImageDimensions`, `$wgLayersMaxImageSize`, and the complexity ceiling are unenforced.
+2. 🟠 **Revision history stops at 200 entries.** `ApiLayersInfo::getAllowedParams()` omits any pagination/offset control, so even though `LayersDatabase::getLayerSetsForImageWithOptions()` supports offsets, the API never exposes them and busy files silently truncate audits after 200 rows.
+3. 🟠 **LayerPanel continually rebuilds its DOM and excludes keyboard users.** `renderLayerList()` clears `this.layerList` with `removeChild` loops (lines 418-435), which drops focus/scroll position, and reordering stays drag-only (lines 1537-1568). WCAG 2.1.1/2.4.3 require persistent focus and keyboard paths.
+4. 🟠 **Editable names and property forms fail WCAG 1.3.1.** Layer names rely on bare `contentEditable` spans (lines 520-545) without semantic roles, and the property form creates `<label>` elements that never bind to inputs (lines 780-815), so assistive tech hears generic “edit text” with no context.
+5. 🟠 **Fallback confirmations auto-approve destructive actions.** `LayerPanel.prototype.simpleConfirm()` (lines 1603-1615) returns `true` whenever `window.confirm` is unavailable, so delete/lock operations cannot be canceled in kiosk/mobile shells.
+6. 🟡 **Legacy CLI smoke tests still cannot run.** `tests/LayersTest.php` constructs `new LayersDatabase()` without the LoadBalancer, Config, Logger, or SchemaManager dependencies (lines 89-140), causing immediate fatal errors and giving teams a false sense of coverage.
 
 ## Missing & Broken Features (Nov 18, 2025)
 
-- **Remote/Commons file authoring is unsupported.** Because of the `Title::exists()` guard, only files with a local description page can be annotated. Shared-repo workflows remain blocked despite the read-side supporting them.
+- **Server-side dimension/complexity caps are effectively disabled.** `ApiLayersSave` never calls `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()`, so `$wgLayersMaxImageDimensions`, `$wgLayersMaxImageSize`, and complexity thresholds cannot stop runaway submissions.
 - **Revision pagination is absent.** There is no API parameter to fetch revisions beyond the first 200 rows, so clients cannot build lazy-loaded history or moderation tools.
 - **Keyboard reordering and accessible confirmations are missing.** Drag-and-drop is the only ordering mechanism (LayerPanel.js, lines 1537-1568), and the fallback confirmation path (`simpleConfirm`, lines 1603-1615) auto-approves destructive actions whenever `window.confirm` is unavailable.
+- **Inspector controls ship without labeled inputs.** `addInput()` never binds label `for` attributes to inputs (lines 780-815) and `layer-name` spans lack any semantic role, so essential editing features remain inaccessible.
 - **LayerPanel still disables ESLint globally.** The `/* eslint-disable */` banner at the top of `LayerPanel.js` (line 1) keeps critical UI logic outside automated checks.
 
 ## UI / Accessibility Review (Nov 18, 2025)
@@ -58,6 +66,7 @@
 - Property controls render `<label>` text, but `addInput()` never binds `for`/`id` attributes (lines 780-815), leaving assistive tech unable to map labels to inputs.
 - Reordering is pointer-only (`setupDragAndDrop`, lines 1537-1568); there are no keyboard shortcuts, `aria-grabbed` states, or announcements for changes.
 - `simpleConfirm()` auto-approves whenever `window.confirm` is missing (lines 1603-1615), so destructive actions cannot be canceled in kiosk/mobile shells and no dialog semantics are provided.
+- `.layers-editor` fixes a 320 px sidebar and hides the host skin via `position: fixed`/`display: none` overrides (`resources/ext.layers.editor/editor-fixed.css`, lines 120-220) without any responsive breakpoints or collapsible states, leaving tablets with half the viewport consumed by chrome.
 - Positive note: the color picker now uses localized strings, `role="dialog"`, `aria-modal`, and a focus trap (`Toolbar.js`, lines 60-220), so earlier accessibility issues in that component are resolved.
 
 ## Testing & Tooling Gaps (Nov 18, 2025)
@@ -69,11 +78,11 @@
 
 ## Recommended Immediate Actions (Nov 18, 2025)
 
-1. **Allow remote file saves.** Replace the `Title::exists()` gate with `Title::makeTitleSafe()` + `RepoGroup->findFile()` checks so Commons/ForeignAPI files can be annotated.
-2. **Enforce configured caps.** Call `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` before persisting and surface `layers-image-too-large`-style errors to the client.
-3. **Add pagination to `layersinfo`.** Introduce `continue`/`offset` parameters and plumb them through `getLayerSetsForImageWithOptions()`.
-4. **Make the layer list keyboard-accessible.** Preserve focus/scroll when re-rendering, add arrow key reordering, and expose `aria-grabbed` states for screen readers.
-5. **Bind labels and edit fields.** Assign `id`/`for` pairs in `addInput()`, set `role="textbox"`/`aria-label` on `layer-name`, and sanitize contentEditable updates.
+1. **Enforce configured caps.** Wire `RateLimiter::isImageSizeAllowed()`/`isComplexityAllowed()` into `ApiLayersSave` and emit specific i18n errors when limits are exceeded.
+2. **Add pagination to `layersinfo`.** Introduce `continue`/`offset` parameters and plumb them through `getLayerSetsForImageWithOptions()` so busy files can be fully audited.
+3. **Make the layer list keyboard-accessible.** Preserve focus/scroll when re-rendering, add arrow key reordering, and expose `aria-grabbed` states plus live announcements.
+4. **Bind labels and edit fields.** Assign `id`/`for` pairs in `addInput()`, set `role="textbox"`/`aria-label` on `layer-name`, and sanitize contentEditable updates.
+5. **Replace the fallback confirm flow.** Use OOUI or Codex dialogs (or a custom modal) instead of `simpleConfirm()` auto-approvals so destructive actions are always confirmable.
 6. **Retire the CLI script or inject dependencies.** Rewrite `tests/LayersTest.php` as PHPUnit coverage with mocks so automated smoke tests actually run.
 
 
