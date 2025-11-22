@@ -404,6 +404,12 @@
 			const fillOpacity = typeof layer.fillOpacity === 'number' ? layer.fillOpacity : 1;
 			this.ctx.globalAlpha = baseOpacity * fillOpacity;
 			this.ctx.fill();
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 		// Stroke
 		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
@@ -448,6 +454,12 @@
 			const fillOpacity = typeof layer.fillOpacity === 'number' ? layer.fillOpacity : 1;
 			this.ctx.globalAlpha = baseOpacity * fillOpacity;
 			this.ctx.fill();
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 		// Stroke
 		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
@@ -496,6 +508,12 @@
 			this.ctx.fillStyle = layer.fill;
 			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
 			this.ctx.fill();
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
 			this.ctx.strokeStyle = layer.stroke;
@@ -770,6 +788,12 @@
 			this.ctx.fillStyle = layer.fill;
 			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
 			this.ctx.fill();
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
 			this.ctx.strokeStyle = layer.stroke;
@@ -818,6 +842,12 @@
 			this.ctx.fillStyle = layer.fill;
 			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
 			this.ctx.fill();
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
 			this.ctx.strokeStyle = layer.stroke;

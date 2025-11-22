@@ -3,6 +3,7 @@
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use Exception;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
 use MediaWiki\MediaWikiServices;
@@ -124,7 +125,10 @@ class WikitextHooks {
 						. $file->getName()
 					);
 				}
-				$db = new LayersDatabase();
+				$db = self::getLayersDatabaseService();
+				if ( !$db ) {
+					return true;
+				}
 				$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
 				if ( $latest && isset( $latest['data'] ) ) {
 					$layerData = (
@@ -359,12 +363,14 @@ class WikitextHooks {
 					$layersArray = $handlerParams['layerData'];
 				}
 				if ( $layersArray === null ) {
-					$db = new LayersDatabase();
-					$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
-					if ( $latest && isset( $latest['data'] ) ) {
-						$layersArray = isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] )
-							? $latest['data']['layers']
-							: [];
+					$db = self::getLayersDatabaseService();
+					if ( $db ) {
+						$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
+						if ( $latest && isset( $latest['data'] ) ) {
+							$layersArray = isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] )
+								? $latest['data']['layers']
+								: [];
+						}
 					}
 				}
 
@@ -555,12 +561,14 @@ class WikitextHooks {
 					$layersArray = $handlerParams['layerData'];
 				}
 				if ( $layersArray === null ) {
-					$db = new LayersDatabase();
-					$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
-					if ( $latest && isset( $latest['data'] ) ) {
-						$layersArray = isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] )
-							? $latest['data']['layers']
-							: [];
+					$db = self::getLayersDatabaseService();
+					if ( $db ) {
+						$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
+						if ( $latest && isset( $latest['data'] ) ) {
+							$layersArray = isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] )
+								? $latest['data']['layers']
+								: [];
+						}
 					}
 				}
 
@@ -721,7 +729,10 @@ class WikitextHooks {
 				$param = strtolower( trim( $param ) );
 
 				$layersArray = null;
-				$db = new LayersDatabase();
+				$db = self::getLayersDatabaseService();
+				if ( !$db ) {
+					return true;
+				}
 				// on/all => show latest set
 				if ( $param === 'on' || $param === 'all' ) {
 					$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
@@ -1062,7 +1073,10 @@ class WikitextHooks {
 			}
 
 			// Check for layer data
-			$db = new LayersDatabase();
+			$db = self::getLayersDatabaseService();
+			if ( !$db ) {
+				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
+			}
 			$layerSets = $db->getLayerSetsForImage( $file->getName(), $file->getSha1() );
 			if ( empty( $layerSets ) ) {
 				// Fall back to normal image display
@@ -1130,7 +1144,10 @@ class WikitextHooks {
 			}
 
 			// Get layer data
-			$db = new LayersDatabase();
+			$db = self::getLayersDatabaseService();
+			if ( !$db ) {
+				return null;
+			}
 			$layerSets = $db->getLayerSetsForImage( $file->getName(), $file->getSha1() );
 
 			if ( empty( $layerSets ) ) {
@@ -1332,13 +1349,38 @@ class WikitextHooks {
 			}
 		}
 
+		// Allow file pages (including action=editlayers) to always receive overlays
+		$contextIsFile = self::isFilePageContext();
+		$contextIsEdit = self::isEditLayersAction();
+		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+			$logger->info( 'Layers: context check - isFilePage=' . ( $contextIsFile ? 'yes' : 'no' ) . ', isEditLayers=' . ( $contextIsEdit ? 'yes' : 'no' ) );
+		}
+		if ( !$shouldFallback && $contextIsFile ) {
+			$shouldFallback = true;
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->info( 'Layers: enabling fallback because current page is File namespace' );
+			}
+		}
+		if ( !$shouldFallback && $contextIsEdit ) {
+			$shouldFallback = true;
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->info( 'Layers: enabling fallback because action=editlayers' );
+			}
+		}
+
 		// Strict gating: do not auto-enable overlays in debug mode without explicit layers intent.
 
 		if ( $shouldFallback ) {
 			$file = $thumbnail->getFile();
 			if ( $file ) {
 				try {
-					$db = new LayersDatabase();
+					$db = self::getLayersDatabaseService();
+					if ( !$db ) {
+						throw new Exception( 'LayersDatabase service unavailable' );
+					}
 					$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
 					if ( $latest && isset( $latest['data'] ) ) {
 						$layerData = isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] )
@@ -1699,7 +1741,10 @@ class WikitextHooks {
 	 * @param array &$params
 	 */
 	private static function addLatestLayersToImage( $file, array &$params ): void {
-		$db = new LayersDatabase();
+		$db = self::getLayersDatabaseService();
+		if ( !$db ) {
+			return;
+		}
 		$layerSet = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
 
 		if ( $layerSet ) {
@@ -1718,7 +1763,10 @@ class WikitextHooks {
 	 * @param array &$params
 	 */
 	private static function addSpecificLayersToImage( $file, string $layersParam, array &$params ): void {
-		$db = new LayersDatabase();
+		$db = self::getLayersDatabaseService();
+		if ( !$db ) {
+			return;
+		}
 
 		if ( strpos( $layersParam, 'id:' ) === 0 ) {
 			// Layer set by ID
@@ -1727,7 +1775,6 @@ class WikitextHooks {
 		} elseif ( strpos( $layersParam, 'name:' ) === 0 ) {
 			// Layer set by name
 			$layerSetName = substr( $layersParam, 5 );
-			$db = new LayersDatabase();
 			$layerSet = $db->getLayerSetByName( $file->getName(), $file->getSha1(), $layerSetName );
 		} else {
 			// Legacy format or other formats
@@ -1749,7 +1796,10 @@ class WikitextHooks {
 	 * @param array &$params
 	 */
 	private static function addSubsetLayersToImage( $file, string $shortIdsCsv, array &$params ): void {
-		$db = new LayersDatabase();
+		$db = self::getLayersDatabaseService();
+		if ( !$db ) {
+			return;
+		}
 		$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
 		if ( !$latest || !isset( $latest['data']['layers'] ) ) {
 			return;
@@ -1766,6 +1816,60 @@ class WikitextHooks {
 		if ( $subset ) {
 			$params['layerSetId'] = $latest['id'];
 			$params['layerData'] = $subset;
+		}
+	}
+
+	/**
+	 * Resolve the LayersDatabase service while logging failures for diagnostics.
+	 *
+	 * @return LayersDatabase|null
+	 */
+	private static function getLayersDatabaseService(): ?LayersDatabase {
+		try {
+			return MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
+		} catch ( \Throwable $e ) {
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func(
+					[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+					'Layers'
+				);
+				$logger->error(
+					'Layers: Unable to resolve LayersDatabase service',
+					[ 'exception' => $e ]
+				);
+			}
+			return null;
+		}
+	}
+
+	/**
+	 * Determine if the current request targets a File namespace page.
+	 *
+	 * @return bool
+	 */
+	private static function isFilePageContext(): bool {
+		try {
+			$context = RequestContext::getMain();
+			$title = $context->getTitle();
+			return $title && $title->inNamespace( NS_FILE );
+		} catch ( \Throwable $e ) {
+			return false;
+		}
+	}
+
+	/**
+	 * Detect whether the active action is the editlayers view.
+	 *
+	 * @return bool
+	 */
+	private static function isEditLayersAction(): bool {
+		try {
+			$context = RequestContext::getMain();
+			$request = $context ? $context->getRequest() : null;
+			$action = $request ? $request->getVal( 'action', '' ) : '';
+			return $action === 'editlayers';
+		} catch ( \Throwable $e ) {
+			return false;
 		}
 	}
 }

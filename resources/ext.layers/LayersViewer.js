@@ -408,6 +408,12 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 			this.withLocalAlpha( layer.fillOpacity, function () {
 				this.ctx.fillRect( x, y, width, height );
 			} );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {
@@ -432,6 +438,12 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 			this.withLocalAlpha( layer.fillOpacity, function () {
 				this.ctx.fill();
 			} );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {
@@ -541,12 +553,20 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
 
 		// Fill/stroke while the transform is active
+
 		if ( layer.fill && layer.fill !== 'transparent' ) {
 			this.ctx.fillStyle = layer.fill;
 			this.withLocalAlpha( layer.fillOpacity, function () {
 				this.ctx.fill();
 			} );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
+
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
 			var ellipseStroke = layer.strokeWidth || 1;
@@ -573,11 +593,6 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		this.ctx.save();
 		
 		this.ctx.beginPath();
-		var y = layer.y || 0;
-		var radius = layer.radius || 50;
-
-		this.ctx.save();
-		this.ctx.beginPath();
 
 		for ( var i = 0; i < sides; i++ ) {
 			var angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
@@ -598,6 +613,12 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 			this.withLocalAlpha( layer.fillOpacity, function () {
 				this.ctx.fill();
 			} );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {
@@ -627,12 +648,6 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		this.ctx.save();
 		
 		this.ctx.beginPath();
-		var y = layer.y || 0;
-		var outerRadius = layer.outerRadius || layer.radius || 50;
-		var innerRadius = layer.innerRadius || outerRadius * 0.5;
-
-		this.ctx.save();
-		this.ctx.beginPath();
 
 		for ( var i = 0; i < points * 2; i++ ) {
 			var angle = ( i * Math.PI ) / points - Math.PI / 2;
@@ -654,6 +669,12 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 			this.withLocalAlpha( layer.fillOpacity, function () {
 				this.ctx.fill();
 			} );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {

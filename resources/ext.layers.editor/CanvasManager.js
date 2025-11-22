@@ -5027,6 +5027,12 @@
 			this.withLocalAlpha( fOp, function () {
 				this.ctx.fillRect( x, y, w, h );
 			}.bind( this ) );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {
@@ -5052,6 +5058,12 @@
 			this.withLocalAlpha( fOp2, function () {
 				this.ctx.fill();
 			}.bind( this ) );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {
@@ -5198,12 +5210,19 @@
 		this.ctx.restore();
 
 		this.ctx.save();
+
 		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
 			var fOpE = ( typeof layer.fillOpacity === 'number' ) ? layer.fillOpacity : 1;
 			this.withLocalAlpha( fOpE, function () {
 				this.ctx.fill();
 			}.bind( this ) );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {
@@ -5256,6 +5275,12 @@
 			this.withLocalAlpha( fOpPg, function () {
 				this.ctx.fill();
 			}.bind( this ) );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {
@@ -5307,6 +5332,12 @@
 			this.withLocalAlpha( fOpS, function () {
 				this.ctx.fill();
 			}.bind( this ) );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		if ( layer.stroke ) {

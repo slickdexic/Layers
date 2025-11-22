@@ -271,6 +271,12 @@
 			this.withLocalAlpha( fillOpacity, () => {
 				this.ctx.fill();
 			} );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		// Stroke polygon if stroke is specified
@@ -334,6 +340,12 @@
 			this.withLocalAlpha( fillOpacity, () => {
 				this.ctx.fill();
 			} );
+
+			// Disable shadow for stroke to prevent it from rendering on top of the fill
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
 		// Stroke star if stroke is specified
