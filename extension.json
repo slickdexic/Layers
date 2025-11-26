@@ -196,6 +196,7 @@
 				"CanvasEvents.js",
 				"canvas/ZoomPanController.js",
 				"canvas/GridRulersController.js",
+				"canvas/TransformController.js",
 				"CanvasManager.js",
 				"LayerPanel.js",
 				"LayersValidator.js",

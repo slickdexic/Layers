@@ -1,145 +1,173 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 2025 (Named Layer Sets Feature)  
-**Status:** Active Development - Phase 1 in Progress  
-**Related:** See `codebase_review.md` for detailed analysis
-
----
-
-## 🆕 NEW FEATURE: Named Layer Sets
-
-> **Design Document:** `docs/NAMED_LAYER_SETS.md`  
-> **Implementation Plan:** `docs/IMPLEMENTATION_PLAN_NAMED_SETS.md`
-
-The Named Layer Sets feature restructures the layer save system to use named layer sets with version history instead of anonymous revisions.
-
-### Key Features
-- **Named Sets**: Up to 15 named annotation sets per image (e.g., "default", "anatomy-labels", "french")
-- **Version History**: Up to 25 revisions stored per named set
-- **Direct Linking**: `{{#layers:File.jpg|layers=anatomy-labels}}` to embed specific sets
-- **Migration Path**: Existing layers automatically become the "default" set
-
-### Implementation Phases
-| Phase | Description | Effort | Status |
-|-------|-------------|--------|--------|
-| 1. Database | Migration script, new methods | 2 days | ✅ Migration script created |
-| 2. API | Update layersinfo/layerssave | 1-2 days | ⬜ Not started |
-| 3. Frontend | Set selector, history panel | 2-3 days | ⬜ Not started |
-| 4. Parser | `layers=` parameter | 0.5 days | ⬜ Not started |
-| 5. Testing | Unit & integration tests | 1 day | ⬜ Not started |
-
-### Configuration (extension.json)
-```json
-{
-    "LayersMaxNamedSets": 15,
-    "LayersMaxRevisionsPerSet": 25,
-    "LayersDefaultSetName": "default"
-}
-```
+**Last Updated:** November 26, 2025  
+**Status:** Active Development  
+**Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
 
 ## Priority Legend
 
-- 🔴 **P0 - Critical:** Blocking production use, security issues
-- 🟠 **P1 - High:** Significant impact on maintainability or user experience
-- 🟡 **P2 - Medium:** Quality of life improvements
+- 🔴 **P0 - Critical:** Production blockers, security issues - must fix before any release
+- 🟠 **P1 - High:** Significant impact on maintainability or reliability
+- 🟡 **P2 - Medium:** Quality of life improvements, technical debt reduction
 - 🟢 **P3 - Low:** Nice to have, long-term improvements
 
 ---
 
-## Phase 1: Critical Fixes (Week 1-2)
+## Phase 0: Immediate Security & Cleanup (THIS WEEK)
 
-### 1.1 🔴 P0: Split CanvasManager.js Monolith
+### 0.1 🔴 P0: Remove Production Debug Logging from PHP
 
-**Current State:** 3,864 lines → **3,864 lines** (CanvasManager) + 334 lines (ZoomPanController) + 385 lines (GridRulersController)
-- New modules delegate to CanvasManager for backwards compatibility
-- Fallback code preserved in CanvasManager for graceful degradation
+**Problem:** `file_put_contents()` and `error_log()` calls in production code create security and performance risks.
+
+**Files to fix:**
+- `src/Api/ApiLayersSave.php` (lines 87, 101, 130, 328-357)
+- `src/Database/LayersDatabase.php` (lines 77, 83, 87)
+
+**Tasks:**
+- [x] Remove all `file_put_contents( $logFile, ... )` calls from `ApiLayersSave.php`
+- [x] Remove all `error_log( "LAYERS DEBUG..." )` calls from both files
+- [x] Replace with `$this->logger->debug()` or `wfDebugLog( 'Layers', ... )` guarded by config
+- [x] Delete the `layers.log` file if it exists
+- [x] Verify debug logging respects `$wgLayersDebug` config flag
+- [x] Test that saves still work after changes
+
+**Estimated Effort:** 2 hours  
+**Risk:** Low - straightforward removal
+**Status:** ✅ COMPLETE (November 26, 2025)
+
+---
+
+### 0.2 🔴 P0: Remove Console Logging from JavaScript
+
+**Problem:** 20+ `console.log()` statements expose internal details to users.
+
+**Files to fix:**
+- `resources/ext.layers.editor/LayersEditor.js` (lines 1453-1507, ~20 statements)
+- `resources/ext.layers.editor/UIManager.js` (line 484)
+
+**Tasks:**
+- [x] Remove or convert all `console.log()` to `mw.log()` with debug guard
+- [x] Ensure bootstrap debugging uses `this.debugLog()` pattern
+- [x] Search for any other `console.log|warn|error` in resources/**
+- [x] Run `npm test` to verify no regressions
+
+**Estimated Effort:** 1 hour  
+**Risk:** Low
+**Status:** ✅ COMPLETE (November 26, 2025)
+
+---
+
+### 0.3 🟠 P1: Clean Up Unused Dependencies
+
+**Problem:** `zustand` (5.0.8) is installed but appears unused.
+
+**Tasks:**
+- [x] Search codebase for any `zustand` or `store.js` usage
+- [x] If unused, remove from `package.json` and delete `store.js`
+- [x] If intended for future use, document in README or comment
+- [x] Run `npm install` to update lockfile
+
+**Estimated Effort:** 30 minutes  
+**Risk:** Low
+**Status:** ✅ COMPLETE (November 26, 2025)
+
+---
+
+## Phase 1: Critical Refactoring (Week 1-2)
+
+### 1.1 🔴 P0: Complete CanvasManager.js Extraction
+
+**Current State:** 3,877 lines → Partially extracted to `ZoomPanController.js` (334 lines), `GridRulersController.js` (385 lines), and `TransformController.js` (745 lines)
 
 **Target Structure:**
 ```
 resources/ext.layers.editor/
 ├── canvas/
-│   ├── README.md              # ✅ Created - documents planned architecture
-│   ├── ZoomPanController.js   # ✅ Extracted - 334 lines, zoom/pan/viewport
-│   ├── GridRulersController.js # ✅ Extracted - 385 lines, grid/rulers/guides
-│   ├── CanvasCore.js          # Init, sizing, background loading (~300 lines)
-│   ├── CanvasEventHandler.js  # Mouse/touch/keyboard events (~400 lines)
-│   ├── CanvasRenderer.js      # Drawing shapes (merge with existing) (~500 lines)
-│   ├── ResizeController.js    # Resize handles for all shapes (~600 lines)
-│   └── RotationController.js  # Rotation logic (~150 lines)
-├── CanvasManager.js           # Facade that composes above (~200 lines)
+│   ├── README.md              # ✅ Created - documents architecture
+│   ├── ZoomPanController.js   # ✅ Extracted - zoom/pan/viewport
+│   ├── GridRulersController.js # ✅ Extracted - grid/rulers/guides
+│   ├── TransformController.js  # ✅ Extracted - resize/rotation/drag
+│   ├── CanvasEventHandler.js  # ⬜ Extract - mouse/touch/keyboard events
+│   └── HitTestController.js   # ⬜ Extract - selection hit testing
+├── CanvasManager.js           # Reduced to ~800 lines as facade
 ```
 
 **Tasks:**
 - [x] Create `canvas/` directory structure
-- [x] Document planned module architecture in README.md
-- [x] Extract `ZoomPanController.js` (zoomIn, zoomOut, setZoom, setZoomDirect, smoothZoomTo, animateZoom, resetZoom, fitToWindow, zoomToFitLayers, zoomBy, updateCanvasTransform)
-- [x] Update CanvasManager to delegate to ZoomPanController
-- [x] Add ZoomPanController.js to extension.json ResourceModules
-- [x] Extract `GridRulersController.js` (toggleGrid, toggleRulers, toggleGuides, toggleSnapToGrid, toggleSnapToGuides, toggleSmartGuides, drawGrid, drawRulers, drawGuides, getGuideSnapDelta)
-- [x] Update CanvasManager to delegate to GridRulersController
-- [x] Add GridRulersController.js to extension.json ResourceModules
-- [x] ESLint auto-fix on new modules (var → const/let)
-- [ ] Extract `ResizeController.js` with per-shape handlers
-- [ ] Extract `RotationController.js`
-- [ ] Extract `CanvasEventHandler.js`
-- [ ] Refactor `CanvasManager.js` as facade
-- [ ] Update tests to cover new modules
-- [ ] Add browser integration tests
+- [x] Extract `ZoomPanController.js`
+- [x] Extract `GridRulersController.js`
+- [x] Extract `TransformController.js` (~745 lines)
+  - [x] Move `calculateRectangleResize()` and similar methods
+  - [x] Move resize handle hit-testing
+  - [x] Move rotation logic
+  - [x] Move drag logic with multi-selection support
+- [ ] Extract `CanvasEventHandler.js` (~400 lines)
+  - [ ] Move mouse event handlers
+  - [ ] Move touch event handlers
+  - [ ] Move keyboard handlers
+- [ ] Extract `HitTestController.js` (~200 lines)
+  - [ ] Move layer hit testing
+  - [ ] Move handle hit testing
+- [ ] Remove fallback code from CanvasManager once extraction complete
+- [x] Update extension.json ResourceModules
+- [ ] Add unit tests for each new controller
+- [x] Run full test suite to verify no regressions (184 tests pass)
 
-**Estimated Effort:** ~~5 days~~ 3 days remaining  
+**Estimated Effort:** 5 days  
 **Risk:** High - core functionality, needs extensive testing
-**Progress:** 40% complete
 
 ---
 
 ### 1.2 🔴 P0: Consolidate State Management
 
-**Current Problem:** State scattered across StateManager, LayerPanel.layers, CanvasManager.selectedLayerId, etc.
+**Problem:** State scattered across StateManager, LayerPanel, CanvasManager.
 
-**Solution:**
-1. `StateManager.js` becomes single source of truth
-2. All components subscribe to state changes
-3. Remove all local state copies
+**Solution:** Make `StateManager.js` the single source of truth.
 
 **Tasks:**
-- [ ] Audit all `this.layers =` and `this.selectedLayerId =` usage
-- [ ] Replace direct state with StateManager.get()/set()
-- [ ] Add subscription mechanism to StateManager
-- [ ] Update LayerPanel to use subscriptions
-- [ ] Update CanvasManager to use subscriptions
-- [ ] Remove `store.js` (Zustand) if unused, or migrate to it fully
-- [ ] Add state change logging for debugging
+- [ ] Audit all `this.layers =` usage (found in LayerPanel lines 20, 452, 550, 1749)
+- [ ] Audit all `this.selectedLayerId =` usage (found in LayerPanel line 773, CanvasManager lines 46, 2220, 2372, 2390, 2400, 2427, 2431)
+- [ ] Create StateManager subscriptions for LayerPanel
+- [ ] Create StateManager subscriptions for CanvasManager
+- [ ] Replace direct state mutations with StateManager.set()
+- [ ] Remove local state copies from LayerPanel and CanvasManager
+- [ ] Add state change debugging (when debug enabled)
+- [ ] Test multi-selection works correctly
+- [ ] Test layer panel updates when canvas selection changes
+- [ ] Test canvas updates when layer panel selection changes
 
 **Estimated Effort:** 3 days  
 **Risk:** Medium - affects data flow throughout app
 
 ---
 
-### 1.3 🔴 P0: Fix Test Infrastructure
+### 1.3 🟠 P1: Improve Test Infrastructure
 
-**Current Issues:**
-- ~~Jest tests ignored by ESLint~~ ✅ FIXED
-- PHPUnit tests only check existence
-- No integration tests
+**Current State:**
+- 184 Jest tests exist and pass
+- ESLint enabled for Jest tests ✅
+- PHPUnit tests exist for API and validation
+- No coverage metrics or thresholds
 
 **Tasks:**
-- [x] Remove `tests/jest/**` from eslintIgnore in package.json
-- [x] Remove `tests/` from `.eslintrc.json` ignorePatterns
-- [x] Add Jest env override with parserOptions.ecmaVersion 2020
-- [x] Auto-fix 118 ESLint issues (var -> const/let)
-- [x] Manually fix 23 remaining issues (unused vars, hasOwnProperty, escape chars)
-- [x] All 184 Jest tests passing
-- [ ] Add PHPUnit integration test for `layerssave` API
-- [ ] Add PHPUnit integration test for `layersinfo` API
-- [ ] Add validation edge case tests (XSS, size limits)
-- [ ] Add Jest tests for StateManager
-- [ ] Set up code coverage reporting
-- [ ] Add coverage thresholds (e.g., 60% minimum)
+- [ ] Add Jest coverage configuration to `jest.config.js`
+- [ ] Set minimum coverage threshold (start at 50%, increase over time)
+- [ ] Add coverage reporting to CI/CD (if applicable)
+- [ ] Add PHPUnit coverage configuration
+- [ ] Create `tests/phpunit/integration/` directory
+- [ ] Add integration test for full save/load cycle
+- [ ] Add integration test for API rate limiting
+- [ ] Add validation edge case tests:
+  - [ ] XSS attempt in text layer
+  - [ ] Max layer count exceeded
+  - [ ] Max payload size exceeded
+  - [ ] Invalid color values
+  - [ ] Duplicate layer IDs
 
-**Estimated Effort:** ~~4 days~~ 2 days remaining  
-**Risk:** Low - improves confidence without changing behavior
+**Estimated Effort:** 3 days  
+**Risk:** Low - improves confidence
 
 ---
 
@@ -147,228 +175,322 @@ resources/ext.layers.editor/
 
 ### 2.1 🟠 P1: Extract LayerPanel Components
 
+**Current State:** 1,875 lines with embedded dialogs and forms.
+
 **Target Structure:**
 ```
 resources/ext.layers.editor/
 ├── ui/
-│   ├── LayerListItem.js       # Single layer row component
-│   ├── PropertiesForm.js      # Properties panel
-│   ├── ColorPickerDialog.js   # Extracted color picker
-│   └── ConfirmDialog.js       # Confirmation dialog
-├── LayerPanel.js              # Composition of above (~400 lines)
+│   ├── ColorPickerDialog.js   # ~200 lines - color picker widget
+│   ├── PropertiesForm.js      # ~400 lines - property editor
+│   ├── LayerListItem.js       # ~150 lines - single layer row
+│   └── ConfirmDialog.js       # ~100 lines - confirmation modal
+├── LayerPanel.js              # Reduced to ~600 lines as composition
 ```
 
 **Tasks:**
-- [ ] Extract `ColorPickerDialog.js` (~200 lines)
+- [ ] Extract `ColorPickerDialog.js` from `createPropertiesForm()`
 - [ ] Extract `PropertiesForm.js` with section builders
-- [ ] Extract `LayerListItem.js` for layer rows
-- [ ] Extract `ConfirmDialog.js`
-- [ ] Refactor LayerPanel.js as composition
+- [ ] Extract `LayerListItem.js` for layer row rendering
+- [ ] Extract `ConfirmDialog.js` for delete confirmations
+- [ ] Refactor LayerPanel.js to compose these components
 - [ ] Add unit tests for each component
+- [ ] Verify accessibility features preserved (focus trap, ARIA)
 
-**Estimated Effort:** 3 days
-
----
-
-### 2.2 🟠 P1: Add TypeScript / JSDoc Types
-
-**Approach:** Start with JSDoc for gradual adoption
-
-**Tasks:**
-- [ ] Add JSDoc to all public APIs in LayersEditor.js
-- [ ] Add JSDoc to StateManager.js
-- [ ] Add JSDoc to all canvas/ modules
-- [ ] Create `types.d.ts` for layer object shape
-- [ ] Configure VS Code to use types
-- [ ] Consider full TypeScript migration roadmap
-
-**Estimated Effort:** 4 days
+**Estimated Effort:** 3 days  
+**Risk:** Medium - UI components with accessibility requirements
 
 ---
 
-### 2.3 🟠 P1: Consolidate Constants and Magic Numbers
+### 2.2 🟠 P1: Add JSDoc Types
 
-**Status:** ✅ Mostly Complete - `LayersConstants.js` already comprehensive
-
-**Findings:**
-- LayersConstants.js has: TOOLS, LAYER_TYPES, HANDLE_TYPES, DEFAULTS (layer props, colors, sizes), UI (grid, zoom, animation), UI_COLORS, BLEND_MODES, LINE_STYLES, ARROW_HEADS, TEXT_ALIGN, TEXT_BASELINE, CURSORS, EVENTS, KEY_CODES, KEYS, ERROR_MESSAGES, STATUS_MESSAGES, ACTION_MESSAGES, LIMITS, DATA, VALIDATION
-- CanvasManager.js still uses local copies (e.g., `this.minZoom = 0.1`) that could reference constants
-- Full migration requires refactoring CanvasManager - deferred to avoid introducing bugs
+**Approach:** Gradual adoption starting with public APIs.
 
 **Tasks:**
-- [x] Review LayersConstants.js - found comprehensive coverage
-- [ ] Refactor CanvasManager to import and use LayersConstants
-- [ ] Add validation that config values are within safe ranges
+- [ ] Add JSDoc to `LayersEditor.js` public methods
+- [ ] Add JSDoc to `StateManager.js` methods
+- [ ] Add JSDoc to all canvas/ controller methods
+- [ ] Create `types/layers.d.ts` for layer object shape
+- [ ] Configure VS Code `jsconfig.json` to use types
+- [ ] Add JSDoc to API response handlers
+- [ ] Document configuration object shapes
 
-**Estimated Effort:** ~~1 day~~ 0.5 days remaining
+**Example:**
+```javascript
+/**
+ * @typedef {Object} Layer
+ * @property {string} id - Unique layer identifier
+ * @property {'text'|'rectangle'|'circle'|...} type - Layer type
+ * @property {number} x - X position
+ * @property {number} y - Y position
+ * ...
+ */
+```
+
+**Estimated Effort:** 4 days  
+**Risk:** Low - documentation only
+
+---
+
+### 2.3 🟠 P1: Consolidate Constants
+
+**Problem:** Magic numbers scattered across files despite `LayersConstants.js` existing.
+
+**Tasks:**
+- [ ] Audit `CanvasManager.js` for hardcoded values:
+  - [ ] `this.minZoom = 0.1` → `LayersConstants.ZOOM.MIN`
+  - [ ] `this.maxZoom = 5.0` → `LayersConstants.ZOOM.MAX`
+  - [ ] `this.maxHistorySteps = 50` → `LayersConstants.LIMITS.MAX_HISTORY`
+  - [ ] `this.maxPoolSize = 5` → `LayersConstants.LIMITS.MAX_POOL_SIZE`
+  - [ ] `this.zoomAnimationDuration = 300` → `LayersConstants.UI.ANIMATION.ZOOM_DURATION`
+- [ ] Audit `LayerPanel.js` for hardcoded values
+- [ ] Audit `Toolbar.js` for hardcoded values
+- [ ] Add missing constants to `LayersConstants.js`
+- [ ] Update all usages to reference constants
+
+**Estimated Effort:** 1 day  
+**Risk:** Low
 
 ---
 
 ### 2.4 🟠 P1: Remove Code Duplication
 
-**Duplicated Areas:**
-1. Rendering logic (CanvasManager, CanvasRenderer, RenderingCore)
-2. Event handling (CanvasManager, CanvasEvents, EventHandler, EventManager)
-3. Selection management (SelectionManager, CanvasManager, LayerPanel)
+**Problem:** Similar logic exists in multiple files.
+
+**Duplication Map:**
+
+| Concern | Primary File | Duplicates | Action |
+|---------|--------------|------------|--------|
+| Rendering | `CanvasRenderer.js` | `CanvasManager.js` (delegators) | Remove pass-through methods |
+| Events | `CanvasEvents.js` | `EventHandler.js`, `EventManager.js` | Consolidate or document roles |
+| Selection | `SelectionManager.js` | `CanvasManager.js`, `LayerPanel.js` | Single source of truth |
 
 **Tasks:**
-- [ ] Audit all rendering code - consolidate into CanvasRenderer
-- [ ] Remove RenderingCore.js if redundant (or merge)
-- [ ] Consolidate event handling into CanvasEventHandler
-- [ ] Remove EventHandler.js if redundant
-- [ ] Make SelectionManager the single selection authority
+- [ ] Document the intended role of each event-related file
+- [ ] Remove or merge `EventHandler.js` if redundant
+- [ ] Remove pass-through methods from `CanvasManager.js`:
+  - [ ] `drawText()`, `drawRectangle()`, `drawCircle()`, etc.
+- [ ] Make `SelectionManager.js` the single selection authority
+- [ ] Update `LayerPanel.js` to use SelectionManager
+- [ ] Update `CanvasManager.js` to use SelectionManager
 
-**Estimated Effort:** 3 days
+**Estimated Effort:** 3 days  
+**Risk:** Medium
 
 ---
 
-## Phase 3: User Experience (Week 5-6)
+## Phase 3: User Experience & Quality (Week 5-6)
 
 ### 3.1 🟡 P2: Accessibility Improvements
 
-**Current Gaps:**
-- Keyboard navigation incomplete for layer reordering
-- Focus management during dialogs
-- Screen reader announcements for actions
+**Current State:**
+- Some ARIA roles present
+- Focus trap in color picker ✅
+- Keyboard shortcuts for layer reorder ✅
+- Many gaps remain
 
 **Tasks:**
-- [ ] Add full keyboard support for layer reorder (Arrow + Ctrl)
-- [ ] Ensure all buttons have aria-label
-- [ ] Add live regions for status updates
-- [ ] Test with screen reader (NVDA/VoiceOver)
 - [ ] Add skip links for keyboard users
-- [ ] Document keyboard shortcuts in help
+- [ ] Add `aria-live` regions for status updates (save, selection changes)
+- [ ] Complete keyboard navigation for all tools
+- [ ] Ensure all buttons have `aria-label` or visible text
+- [ ] Add high contrast mode support (respect system preference)
+- [ ] Test with NVDA/VoiceOver screen readers
+- [ ] Document keyboard shortcuts in help dialog
+- [ ] Add `role="application"` to canvas container
+- [ ] Provide text alternatives for color-only information
 
-**Estimated Effort:** 4 days
+**Estimated Effort:** 4 days  
+**Risk:** Medium - requires accessibility testing expertise
 
 ---
 
 ### 3.2 🟡 P2: Performance Optimization
 
-**Tasks:**
-- [ ] Implement dirty region tracking in CanvasRenderer
-- [ ] Add layer rendering cache (only redraw changed layers)
-- [ ] Debounce property panel updates during drag
-- [ ] Use requestAnimationFrame consistently
-- [ ] Profile with Chrome DevTools, document bottlenecks
+**Current State:**
+- `dirtyRegion` property defined but unused
+- Full canvas redraws on every change
+- No layer caching
 
-**Estimated Effort:** 3 days
+**Tasks:**
+- [ ] Implement dirty region tracking in `CanvasRenderer`
+- [ ] Only redraw layers that intersect dirty region
+- [ ] Add layer rendering cache (skip unchanged layers)
+- [ ] Debounce property panel updates during drag operations
+- [ ] Use `requestAnimationFrame` consistently
+- [ ] Profile with Chrome DevTools
+- [ ] Document performance benchmarks
+- [ ] Consider offscreen canvas for complex layers
+
+**Estimated Effort:** 3 days  
+**Risk:** Medium - rendering changes need visual testing
 
 ---
 
-### 3.3 🟡 P2: Improve Error Handling
+### 3.3 🟡 P2: Standardize Error Handling
+
+**Problem:** Inconsistent patterns across frontend code.
 
 **Tasks:**
-- [ ] Create ErrorHandler class for frontend
-- [ ] Standardize try-catch patterns
-- [ ] Add user-friendly error messages for all API failures
-- [ ] Add error boundaries for UI components
-- [ ] Add telemetry hook for error tracking (optional)
+- [ ] Create error handling utility in `ErrorHandler.js`:
+  - [ ] `ErrorHandler.showUserError(messageKey)` - user-facing
+  - [ ] `ErrorHandler.logError(error, context)` - debug logging
+  - [ ] `ErrorHandler.captureException(error)` - future telemetry hook
+- [ ] Replace all `console.error` with `ErrorHandler.logError`
+- [ ] Replace all raw `mw.notify` errors with `ErrorHandler.showUserError`
+- [ ] Add error boundaries around major components
+- [ ] Ensure all API failures show user-friendly messages
+- [ ] Document error handling patterns in README
 
-**Estimated Effort:** 2 days
+**Estimated Effort:** 2 days  
+**Risk:** Low
 
 ---
 
-## Phase 4: Long-Term Improvements (Month 2+)
+## Phase 4: Architecture Improvements (Month 2)
 
 ### 4.1 🟢 P3: ES Modules Migration
 
-**Tasks:**
-- [ ] Convert IIFE modules to ES modules
-- [ ] Update webpack config for ES modules
-- [ ] Enable tree-shaking
-- [ ] Update extension.json for proper loading order
+**Problem:** IIFE pattern prevents tree-shaking and explicit dependencies.
 
-**Estimated Effort:** 5 days
+**Current:**
+```javascript
+( function () {
+    'use strict';
+    function CanvasManager( config ) { ... }
+    window.CanvasManager = CanvasManager;
+}());
+```
+
+**Target:**
+```javascript
+import { StateManager } from './StateManager.js';
+import { CanvasRenderer } from './CanvasRenderer.js';
+
+export class CanvasManager {
+    constructor( config ) { ... }
+}
+```
+
+**Tasks:**
+- [ ] Update webpack config for ES modules
+- [ ] Convert `LayersConstants.js` first (no dependencies)
+- [ ] Convert utility files (`GeometryUtils.js`, `ErrorHandler.js`)
+- [ ] Convert managers (`StateManager.js`, `SelectionManager.js`)
+- [ ] Convert controllers (`ZoomPanController.js`, etc.)
+- [ ] Convert main files (`CanvasManager.js`, `LayersEditor.js`)
+- [ ] Update `extension.json` ResourceModules configuration
+- [ ] Enable tree-shaking in webpack
+- [ ] Verify MediaWiki ResourceLoader compatibility
+
+**Estimated Effort:** 5 days  
+**Risk:** High - affects entire frontend build
 
 ---
 
-### 4.2 🟢 P3: Full TypeScript Migration
+### 4.2 🟢 P3: TypeScript Migration
+
+**Approach:** Incremental migration after ES modules.
 
 **Tasks:**
 - [ ] Set up TypeScript build pipeline
-- [ ] Migrate StateManager.ts
-- [ ] Migrate LayersEditor.ts
-- [ ] Migrate canvas modules
+- [ ] Create `tsconfig.json` with strict settings
+- [ ] Start with `StateManager.ts` (well-defined interface)
+- [ ] Create shared types (`types/Layer.ts`, `types/Tool.ts`)
+- [ ] Migrate canvas controllers to TypeScript
 - [ ] Migrate UI components
-- [ ] Add strict type checking
+- [ ] Enable strict type checking
+- [ ] Update CI to type-check
 
-**Estimated Effort:** 2 weeks
-
----
-
-### 4.3 🟢 P3: Component Library
-
-**Consider:**
-- Extract reusable components (ColorPicker, ConfirmDialog, etc.)
-- Create storybook for component documentation
-- Enable component testing in isolation
+**Estimated Effort:** 2 weeks  
+**Risk:** High - requires build system changes
 
 ---
 
-## Completed Items ✅
+### 4.3 🟢 P3: Component Library Extraction
 
-### Implementation Session - November 25, 2025
+**Opportunity:** Reusable components could be extracted.
 
-- [x] **Test Infrastructure:** Enabled ESLint for Jest tests
-  - Removed `tests/` from `.eslintrc.json` ignorePatterns
-  - Added Jest env override with `parserOptions.ecmaVersion: 2020`
-  - Added `argsIgnorePattern: "^_"` for mock function params
-  - Auto-fixed 118 var->const/let issues
-  - Manually fixed 23 remaining issues (unused vars, hasOwnProperty, escape chars)
-  - All 184 Jest tests passing
+**Candidates:**
+- `ColorPickerDialog` - reusable color picker
+- `ConfirmDialog` - generic confirmation modal
+- `ResizablePanel` - panel with drag handles
+- `LayerListItem` - could be a generic sortable list item
 
-- [x] **Code Cleanup:** Removed 43 commented console.log statements from CanvasManager.js
-  - File reduced from 3,864 to 3,800 lines
-  - No regressions - all tests pass
-  - Note: 387 pre-existing ESLint errors (mostly no-var) remain in CanvasManager.js
+**Tasks:**
+- [ ] Evaluate if components should be a separate package
+- [ ] Consider Storybook for component documentation
+- [ ] Create component testing in isolation
+- [ ] Document component APIs
 
-- [x] **Version Check:** Verified version consistency
-  - extension.json: 0.8.1-dev ✓
-  - LayersSchemaManager.php: 0.8.1-dev ✓
-  - package.json: no version (private package) - correct
-
-- [x] **Module Structure:** Created canvas/ directory with README.md
-  - Documented planned module architecture
-  - Listed methods to extract for ZoomPanController
-  - Listed properties to extract for GridRulersController
-  - Provides roadmap for future refactoring
-
-### Previously Completed (as of Nov 22, 2025)
-- [x] Backend limits enforced in `ApiLayersSave.php`
-- [x] API pagination implemented
-- [x] Security logging working
-- [x] ESLint enabled on LayerPanel.js (per previous review)
-- [x] DOM thrashing improved in renderLayerList (incremental updates)
-- [x] Basic accessibility: labels with id/for, ARIA roles on editable names
-- [x] Keyboard support for layer reordering (Arrow keys)
-- [x] CanvasEvents.js extracted (events delegation exists)
+**Estimated Effort:** 1 week  
+**Risk:** Low - nice to have
 
 ---
 
-## Progress Tracking
+## Named Layer Sets Feature (In Progress)
 
-| Phase | Status | Started | Target | Actual |
-|-------|--------|---------|--------|--------|
-| 1.1 Split CanvasManager | � In Progress | Nov 25 | Week 1-2 | Directory created, README documented |
-| 1.2 State Management | 🔴 Not Started | - | Week 1-2 | - |
-| 1.3 Test Infrastructure | ✅ Partial | Nov 25 | Week 1-2 | ESLint fixed, tests passing |
-| 2.1 LayerPanel Components | ⬜ Not Started | - | Week 3-4 | - |
-| 2.2 TypeScript/JSDoc | ⬜ Not Started | - | Week 3-4 | - |
-| 2.3 Constants | ✅ Reviewed | Nov 25 | Week 3-4 | Constants comprehensive, migration pending |
-| 2.4 Remove Duplication | ⬜ Not Started | - | Week 3-4 | - |
-| 3.1 Accessibility | ⬜ Not Started | - | Week 5-6 | - |
-| 3.2 Performance | ⬜ Not Started | - | Week 5-6 | - |
-| 3.3 Error Handling | ⬜ Not Started | - | Week 5-6 | - |
+> **Design Document:** `docs/NAMED_LAYER_SETS.md`  
+> **Implementation Plan:** `docs/IMPLEMENTATION_PLAN_NAMED_SETS.md`
+
+The Named Layer Sets feature allows multiple named annotation sets per image with version history.
+
+### Key Features
+- **Named Sets**: Up to 15 named annotation sets per image (e.g., "default", "anatomy-labels")
+- **Version History**: Up to 25 revisions stored per named set
+- **Direct Linking**: `[[File:Example.jpg|layers=anatomy-labels]]`
+
+### Implementation Status
+| Phase | Description | Status |
+|-------|-------------|--------|
+| Database | Schema + migration | ✅ Complete |
+| API Backend | layersinfo/layerssave updates | ✅ Complete |
+| Frontend | Set selector UI | 🟡 In Progress |
+| Parser | Wikitext `layers=` parameter | ⬜ Not Started |
+| Testing | Integration tests | ⬜ Not Started |
+
+---
+
+## Progress Summary
+
+| Phase | Status | Priority Items Remaining |
+|-------|--------|-------------------------|
+| 0. Security Cleanup | ✅ 100% | All tasks completed |
+| 1. Critical Refactoring | 🟡 60% | CanvasEventHandler, HitTestController, State consolidation |
+| 2. Code Quality | ⬜ Not Started | LayerPanel components, JSDoc, Deduplication |
+| 3. User Experience | ⬜ Not Started | Accessibility, Performance, Error handling |
+| 4. Architecture | ⬜ Not Started | ES Modules, TypeScript |
+
+---
+
+## Quick Reference: High-Impact Tasks
+
+### Completed (November 26, 2025)
+1. ~~Remove `file_put_contents()` from `ApiLayersSave.php`~~ ✅
+2. ~~Remove `error_log()` debug statements from PHP~~ ✅
+3. ~~Remove `console.log()` from JavaScript~~ ✅
+4. ~~Remove unused `zustand` dependency~~ ✅
+5. ~~Extract `TransformController.js` (resize/rotation/drag)~~ ✅
+
+### Next Up (P0/P1 - Maintainability)
+6. Extract CanvasEventHandler.js (mouse/touch/keyboard events)
+7. Extract HitTestController.js (selection hit testing)
+8. Consolidate state to StateManager
+9. Add test coverage metrics
+
+### Next Month (P1/P2 - Quality)
+10. Extract LayerPanel components
+11. Add JSDoc types
+12. Improve accessibility
 
 ---
 
 ## How to Contribute
 
-1. Pick a task from Phase 1 (critical) or Phase 2 (high priority)
-2. Create a branch: `feature/improve-{task-name}`
+1. Pick a task from Phase 0 or Phase 1 (critical items first)
+2. Create a branch: `feature/improve-{task-name}` or `fix/{task-name}`
 3. Implement changes with tests
-4. Run `npm test` and `npm run test:php`
+4. Run `npm test` and `npm run test:php` before committing
 5. Submit PR with reference to this plan
 
 ---
@@ -378,4 +500,9 @@ resources/ext.layers.editor/
 - All refactoring should maintain backward compatibility
 - Each change should have corresponding tests
 - Document any breaking changes in CHANGELOG
-- Coordinate with reviewers before starting Phase 1 tasks
+- Phase 0 tasks are security-related and should be prioritized
+- Coordinate with maintainers before starting major refactoring tasks
+
+---
+
+*Last updated: November 26, 2025*

@@ -34,8 +34,5 @@
 		"vendor/**",
 		"dist/**",
 		".stylelintrc.json"
-	],
-	"dependencies": {
-		"zustand": "^5.0.8"
-	}
+	]
 }

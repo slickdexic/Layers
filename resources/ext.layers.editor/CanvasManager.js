@@ -153,8 +153,8 @@
 
 		if ( RendererClass ) {
 			this.renderer = new RendererClass( this.canvas, { editor: this.editor } );
-		} else if ( typeof console !== 'undefined' && console.error ) {
-			console.error( 'Layers: CanvasRenderer not found' );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: CanvasRenderer not found' );
 		}
 		// Initialize SelectionManager
 		var SelectionManagerClass = ( typeof LayersSelectionManager !== 'undefined' ) ? LayersSelectionManager :
@@ -163,8 +163,8 @@
 
 		if ( SelectionManagerClass ) {
 			this.selectionManager = new SelectionManagerClass( {}, this );
-		} else {
-			console.warn( 'Layers: SelectionManager not found, some features may be disabled' );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.warn( 'Layers: SelectionManager not found, some features may be disabled' );
 		}
 
 		// Initialize ZoomPanController for zoom/pan operations
@@ -173,8 +173,8 @@
 
 		if ( ZoomPanControllerClass ) {
 			this.zoomPanController = new ZoomPanControllerClass( this );
-		} else {
-			console.warn( 'Layers: ZoomPanController not found, zoom/pan may use fallback methods' );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.warn( 'Layers: ZoomPanController not found, zoom/pan may use fallback methods' );
 		}
 
 		// Initialize GridRulersController for grid/ruler/guide operations
@@ -183,8 +183,18 @@
 
 		if ( GridRulersControllerClass ) {
 			this.gridRulersController = new GridRulersControllerClass( this );
-		} else {
-			console.warn( 'Layers: GridRulersController not found, grid/rulers may use fallback methods' );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.warn( 'Layers: GridRulersController not found, grid/rulers may use fallback methods' );
+		}
+
+		// Initialize TransformController for resize/rotation/drag operations
+		var TransformControllerClass = ( typeof TransformController !== 'undefined' ) ? TransformController :
+			( ( typeof window !== 'undefined' && window.TransformController ) ? window.TransformController : undefined );
+
+		if ( TransformControllerClass ) {
+			this.transformController = new TransformControllerClass( this );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.warn( 'Layers: TransformController not found, transforms may use fallback methods' );
 		}
 
 		// Set up event handlers
@@ -431,7 +441,9 @@
 			this.events = new CanvasEvents( this );
 			return;
 		}
-		console.error( 'Layers: CanvasEvents module not found' );
+		if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: CanvasEvents module not found' );
+		}
 	};
 
 
@@ -462,29 +474,39 @@
 	};
 
 	CanvasManager.prototype.startResize = function ( handle ) {
+		if ( this.transformController ) {
+			this.transformController.startResize( handle, this.startPoint );
+			this.isResizing = this.transformController.isResizing;
+			this.resizeHandle = this.transformController.resizeHandle;
+			return;
+		}
+		// Fallback for when controller is not available
 		this.isResizing = true;
 		this.resizeHandle = handle;
-		this.dragStartPoint = this.startPoint; // Use the point from handleMouseDown
+		this.dragStartPoint = this.startPoint;
 
-		// Get rotation for proper cursor
 		var layer = this.editor.getLayerById( this.selectedLayerId );
 		var rotation = layer ? layer.rotation : 0;
 		this.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
 
-		// Store original layer state
 		if ( layer ) {
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
 	};
 
 	CanvasManager.prototype.startRotation = function ( point ) {
+		if ( this.transformController ) {
+			this.transformController.startRotation( point );
+			this.isRotating = this.transformController.isRotating;
+			return;
+		}
+		// Fallback for when controller is not available
 		this.isRotating = true;
 		this.canvas.style.cursor = 'grabbing';
 		if ( point ) {
 			this.dragStartPoint = point;
 		}
 
-		// Store original layer state
 		var layer = this.editor.getLayerById( this.selectedLayerId );
 		if ( layer ) {
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
@@ -492,6 +514,12 @@
 	};
 
 	CanvasManager.prototype.startDrag = function () {
+		if ( this.transformController ) {
+			this.transformController.startDrag( this.startPoint );
+			this.isDragging = this.transformController.isDragging;
+			return;
+		}
+		// Fallback for when controller is not available
 		this.isDragging = true;
 		this.canvas.style.cursor = 'move';
 
@@ -517,7 +545,10 @@
 	};
 
 	CanvasManager.prototype.getResizeCursor = function ( handleType, rotation ) {
-		// If no rotation, use the original cursor logic
+		if ( this.transformController ) {
+			return this.transformController.getResizeCursor( handleType, rotation );
+		}
+		// Fallback for when controller is not available
 		if ( !rotation || rotation === 0 ) {
 			switch ( handleType ) {
 				case 'nw':
@@ -565,6 +596,11 @@
 
 
 	CanvasManager.prototype.handleResize = function ( point, event ) {
+		if ( this.transformController && this.transformController.isResizing ) {
+			this.transformController.handleResize( point, event );
+			return;
+		}
+		// Fallback for when controller is not available
 		var layer = this.editor.getLayerById( this.selectedLayerId );
 
 		if ( !layer || !this.originalLayerState ) {
@@ -1065,6 +1101,11 @@
 	};
 
 	CanvasManager.prototype.handleRotation = function ( point, event ) {
+		if ( this.transformController && this.transformController.isRotating ) {
+			this.transformController.handleRotation( point, event );
+			return;
+		}
+		// Fallback for when controller is not available
 		var layer = this.editor.getLayerById( this.selectedLayerId );
 		if ( !layer ) {
 			return;
@@ -1103,6 +1144,12 @@
 	};
 
 	CanvasManager.prototype.handleDrag = function ( point ) {
+		if ( this.transformController && this.transformController.isDragging ) {
+			this.transformController.handleDrag( point );
+			this.showDragPreview = this.transformController.showDragPreview;
+			return;
+		}
+		// Fallback for when controller is not available
 		var deltaX = point.x - this.dragStartPoint.x;
 		var deltaY = point.y - this.dragStartPoint.y;
 
@@ -1438,6 +1485,13 @@
 
 
 	CanvasManager.prototype.finishResize = function () {
+		if ( this.transformController && this.transformController.isResizing ) {
+			this.transformController.finishResize();
+			this.isResizing = false;
+			this.resizeHandle = null;
+			return;
+		}
+		// Fallback for when controller is not available
 		this.isResizing = false;
 		this.resizeHandle = null;
 		this.originalLayerState = null;
@@ -1455,6 +1509,12 @@
 	// Duplicate setZoom removed; see the later definition that clamps, updates CSS size, and status
 
 	CanvasManager.prototype.finishRotation = function () {
+		if ( this.transformController && this.transformController.isRotating ) {
+			this.transformController.finishRotation();
+			this.isRotating = false;
+			return;
+		}
+		// Fallback for when controller is not available
 		this.isRotating = false;
 		this.originalLayerState = null;
 		this.dragStartPoint = null;
@@ -1467,6 +1527,13 @@
 	};
 
 	CanvasManager.prototype.finishDrag = function () {
+		if ( this.transformController && this.transformController.isDragging ) {
+			this.transformController.finishDrag();
+			this.isDragging = false;
+			this.showDragPreview = false;
+			return;
+		}
+		// Fallback for when controller is not available
 		this.isDragging = false;
 		this.showDragPreview = false;
 		this.originalLayerState = null;

@@ -480,13 +480,6 @@ class UIManager {
 		// Add to set selector and select it
 		this.addSetOption( newName, true );
 
-		// DEBUG: Log what's being created
-		console.log( '[UIManager] Created new set:', {
-			name: newName,
-			currentSetName: this.editor.stateManager?.get( 'currentSetName' ),
-			namedSetsCount: this.editor.stateManager?.get( 'namedSets' )?.length
-		} );
-
 		mw.notify(
 			this.getMessage( 'layers-new-set-created' ).replace( '$1', newName ),
 			{ type: 'success' }

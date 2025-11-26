@@ -180,29 +180,25 @@ class Hooks {
 					}
 				}
 
-				// If no URL param but page has layers in wikitext, signal 'all'
-				if ( !$layersParam && WikitextHooks::pageHasLayers() ) {
-					$layersParam = 'all';
-
-					// Debug logging
-					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-						$logger->info( 'Layers: Setting wgLayersParam=all due to page having layers in wikitext' );
-					}
-				} else {
-					// Debug logging for when pageHasLayers is false
-					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-						$logger = \call_user_func(
-							[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-							'Layers'
-						);
-						$logger->info(
-							'Layers: pageHasLayers() = ' .
-							( WikitextHooks::pageHasLayers() ? 'true' : 'false' ) .
-							', layersParam = ' .
-							( $layersParam ?: 'null' )
-						);
-					}
+				// NOTE: We no longer set wgLayersParam='all' just because some image
+				// on the page has layers. The pageHasLayers() flag indicates that SOME
+				// image on the page has layers= specified, but we should NOT apply layers
+				// to ALL images. Only images with explicit layers= should get layers.
+				// The client-side init.js will only apply layers to images that have
+				// data-layer-data or data-layers-intent attributes set by the server.
+				
+				// Debug logging
+				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+					$logger = \call_user_func(
+						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+						'Layers'
+					);
+					$logger->info(
+						'Layers: pageHasLayers() = ' .
+						( WikitextHooks::pageHasLayers() ? 'true' : 'false' ) .
+						', layersParam = ' .
+						( $layersParam ?: 'null' )
+					);
 				}
 
 				if ( $layersParam ) {

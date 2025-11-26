@@ -166,13 +166,15 @@ class APIManager {
 			// Use editor's error logging if available
 			if ( this.editor && this.editor.errorLog ) {
 				this.editor.errorLog( 'API Error:', logEntry );
-			} else {
-				// Fallback to console with sanitized data
-				console.error( '[APIManager] Error:', logEntry );
+			} else if ( typeof mw !== 'undefined' && mw.log ) {
+				// Fallback to mw.log with sanitized data
+				mw.log.error( '[APIManager] Error:', logEntry );
 			}
 		} catch ( logError ) {
 			// Prevent logging errors from breaking the application
-			console.error( '[APIManager] Failed to log error' );
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.error( '[APIManager] Failed to log error' );
+			}
 		}
 	}
 	
@@ -242,12 +244,14 @@ class APIManager {
 		try {
 			if ( mw.notify ) {
 				mw.notify( message, { type: type } );
-			} else {
+			} else if ( typeof mw !== 'undefined' && mw.log ) {
 				// Fallback for environments without mw.notify
-				console.error( 'User notification:', message );
+				mw.log.error( 'User notification:', message );
 			}
 		} catch ( notifyError ) {
-			console.error( 'Failed to show user notification:', message );
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.error( 'Failed to show user notification:', message );
+			}
 		}
 	}
 	
@@ -305,7 +309,8 @@ class APIManager {
 			this.api.get( {
 				action: 'layersinfo',
 				filename: this.editor.filename,
-				format: 'json'
+				format: 'json',
+				formatversion: 2
 			} ).then( ( data ) => {
 				this.editor.uiManager.hideSpinner();
 				this.processLayersData( data );
@@ -330,7 +335,9 @@ class APIManager {
 	processLayersData( data ) {
 		try {
 			if ( !data || !data.layersinfo ) {
-				console.warn( '[APIManager] No layersinfo in API response' );
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[APIManager] No layersinfo in API response' );
+				}
 				return;
 			}
 
@@ -381,13 +388,16 @@ class APIManager {
 				this.editor.layerPanel.updateLayers( layers );
 			}
 
-			console.log( '[APIManager] Processed layers data:', {
-				layersCount: layers.length,
-				currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
-				currentSetName: this.editor.stateManager.get( 'currentSetName' ),
-				allLayerSetsCount: ( layersInfo.all_layersets || [] ).length,
-				namedSetsCount: ( layersInfo.named_sets || [] ).length
-			} );
+			// Debug logging controlled by extension config
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+				mw.log( '[APIManager] Processed layers data:', {
+					layersCount: layers.length,
+					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
+					currentSetName: this.editor.stateManager.get( 'currentSetName' ),
+					allLayerSetsCount: ( layersInfo.all_layersets || [] ).length,
+					namedSetsCount: ( layersInfo.named_sets || [] ).length
+				} );
+			}
 
 		} catch ( error ) {
 			const standardizedError = this.handleError( error, 'load', { phase: 'processLayersData' } );
@@ -422,12 +432,18 @@ class APIManager {
 
 	normalizeBooleanProperties( layer ) {
 		const booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked' ];
+		
 		booleanProps.forEach( prop => {
-			if ( layer[ prop ] === '0' || layer[ prop ] === 'false' ) {
+			const val = layer[ prop ];
+			// Convert string/numeric representations to actual booleans
+			// Explicit false values: '0', 'false', numeric 0
+			if ( val === '0' || val === 'false' || val === 0 ) {
 				layer[ prop ] = false;
-			} else if ( layer[ prop ] === '' || layer[ prop ] === '1' || layer[ prop ] === 'true' ) {
+			// Explicit true values: '1', 'true', numeric 1, or empty string (legacy data)
+			} else if ( val === '' || val === '1' || val === 'true' || val === 1 ) {
 				layer[ prop ] = true;
 			}
+			// Note: actual boolean true/false and undefined are left as-is
 		} );
 	}
 
@@ -452,7 +468,8 @@ class APIManager {
 				action: 'layersinfo',
 				filename: this.editor.filename,
 				layersetid: revisionId,
-				format: 'json'
+				format: 'json',
+				formatversion: 2
 			} ).then( ( data ) => {
 				this.editor.uiManager.hideSpinner();
 				if ( data.layersinfo && data.layersinfo.layerset ) {
@@ -506,7 +523,8 @@ class APIManager {
 				action: 'layersinfo',
 				filename: this.editor.filename,
 				setname: setName,
-				format: 'json'
+				format: 'json',
+				formatversion: 2
 			} ).then( ( data ) => {
 				this.editor.uiManager.hideSpinner();
 
@@ -559,12 +577,15 @@ class APIManager {
 				this.editor.stateManager.set( 'hasUnsavedChanges', false );
 				this.editor.stateManager.set( 'isDirty', false );
 
-				console.log( '[APIManager] Loaded layer set by name:', {
-					setName: setName,
-					layersCount: layers.length,
-					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
-					revisionsCount: ( layersInfo.all_layersets || [] ).length
-				} );
+				// Debug logging controlled by extension config
+				if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+					mw.log( '[APIManager] Loaded layer set by name:', {
+						setName: setName,
+						layersCount: layers.length,
+						currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
+						revisionsCount: ( layersInfo.all_layersets || [] ).length
+					} );
+				}
 
 				resolve( {
 					layers: layers,
@@ -633,21 +654,24 @@ class APIManager {
 		// Get current set name from state, fallback to 'default'
 		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
 		
-		// DEBUG: Log what we're sending
-		console.log( '[APIManager] Building save payload:', {
-			filename: this.editor.filename,
-			setname: currentSetName,
-			layerCount: layers.length,
-			dataSize: layersJson.length,
-			dataSample: layersJson.substring( 0, 200 )
-		} );
+		// Debug logging controlled by extension config
+		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+			mw.log( '[APIManager] Building save payload:', {
+				filename: this.editor.filename,
+				setname: currentSetName,
+				layerCount: layers.length,
+				dataSize: layersJson.length,
+				dataSample: layersJson.substring( 0, 200 )
+			} );
+		}
 		
 		const payload = {
 			action: 'layerssave',
 			filename: this.editor.filename,
 			data: layersJson,
 			setname: currentSetName,
-			format: 'json'
+			format: 'json',
+			formatversion: 2
 		};
 
 		return payload;
@@ -655,20 +679,24 @@ class APIManager {
 
 	performSaveWithRetry( payload, attempt, resolve, reject ) {
 		this.api.postWithToken( 'csrf', payload ).then( ( data ) => {
-			// DEBUG: Log the actual response
-			console.log( '[APIManager] Save response received:', JSON.stringify( data ) );
+			// Debug logging controlled by extension config
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+				mw.log( '[APIManager] Save response received:', JSON.stringify( data ) );
+			}
 			
 			this.editor.uiManager.hideSpinner();
 			this.enableSaveButton();
 			this.handleSaveSuccess( data );
 			resolve( data );
 		} ).catch( ( code, result ) => {
-			// This is the correct signature for mw.Api().catch()
-			console.error( '[APIManager] Save error caught (RAW):', {
-				code: code,
-				result: result,
-				attempt: attempt
-			} );
+			// Log errors for debugging (controlled by extension config)
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+				mw.log.error( '[APIManager] Save error caught:', {
+					code: code,
+					result: result,
+					attempt: attempt
+				} );
+			}
 
 			const error = ( result && result.error ) || { code: code, info: ( result && result.exception ) || 'No details' };
 			const isRetryable = this.isRetryableError( error );
@@ -676,12 +704,16 @@ class APIManager {
 
 			if ( canRetry ) {
 				const delay = this.retryDelay * Math.pow( 2, attempt ); // Exponential backoff
-				console.log( `[APIManager] Retrying save after delay: ${delay}ms` );
+				if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+					mw.log( `[APIManager] Retrying save after delay: ${delay}ms` );
+				}
 				setTimeout( () => {
 					this.performSaveWithRetry( payload, attempt + 1, resolve, reject );
 				}, delay );
 			} else {
-				console.error( `[APIManager] Save failed after ${attempt + 1} attempts` );
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( `[APIManager] Save failed after ${attempt + 1} attempts` );
+				}
 				this.editor.uiManager.hideSpinner();
 				this.enableSaveButton();
 				this.handleSaveError( error );
@@ -708,16 +740,20 @@ class APIManager {
 	}
 
 	handleSaveSuccess( data ) {
-		// DEBUG: Log full save response
-		console.log( '[APIManager] handleSaveSuccess called with:', JSON.stringify( data ) );
-		console.log( '[APIManager] currentSetName at save success:', this.editor.stateManager.get( 'currentSetName' ) );
+		// Debug logging controlled by extension config
+		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+			mw.log( '[APIManager] handleSaveSuccess called with:', JSON.stringify( data ) );
+			mw.log( '[APIManager] currentSetName at save success:', this.editor.stateManager.get( 'currentSetName' ) );
+		}
 
 		if ( data.layerssave && data.layerssave.success ) {
 			this.editor.stateManager.markClean();
 			mw.notify( this.getMessage( 'layers-save-success' ), { type: 'success' } );
 			this.reloadRevisions();
 		} else {
-			console.error( '[APIManager] Save did not return success:', data );
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.error( '[APIManager] Save did not return success:', data );
+			}
 			this.handleSaveError( data );
 		}
 	}
@@ -726,7 +762,9 @@ class APIManager {
 		// Log the raw error object for maximum detail.
 		const errorCode = error.code || 'unknown';
 		const errorInfo = error.info || 'No additional information';
-		console.error( `[APIManager] Detailed Save Error. Code: ${errorCode}, Info: ${errorInfo}`, error );
+		if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( `[APIManager] Detailed Save Error. Code: ${errorCode}, Info: ${errorInfo}`, error );
+		}
 
 		// Use centralized error handling
 		return this.handleError( error, 'save', { rawError: error } );
@@ -735,27 +773,36 @@ class APIManager {
 	reloadRevisions() {
 		// Get the current set name to reload the correct set's data
 		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
-		console.log( '[APIManager] reloadRevisions for set:', currentSetName );
+		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+			mw.log( '[APIManager] reloadRevisions for set:', currentSetName );
+		}
 
 		this.api.get( {
 			action: 'layersinfo',
 			filename: this.editor.filename,
 			setname: currentSetName,
-			format: 'json'
+			format: 'json',
+			formatversion: 2
 		} ).then( ( data ) => {
-			console.log( '[APIManager] reloadRevisions response:', JSON.stringify( data ) );
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+				mw.log( '[APIManager] reloadRevisions response:', JSON.stringify( data ) );
+			}
 
 			if ( data.layersinfo ) {
 				// Update revision history for the current set (all_layersets contains revisions for this named set)
 				if ( Array.isArray( data.layersinfo.all_layersets ) ) {
-					console.log( '[APIManager] Setting allLayerSets:', data.layersinfo.all_layersets.length, 'revisions' );
+					if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+						mw.log( '[APIManager] Setting allLayerSets:', data.layersinfo.all_layersets.length, 'revisions' );
+					}
 					this.editor.stateManager.set( 'allLayerSets', data.layersinfo.all_layersets.slice() );
 					// Also update setRevisions for the revision selector
 					this.editor.stateManager.set( 'setRevisions', data.layersinfo.all_layersets.slice() );
 				}
 				// Update the named sets list (for the set selector dropdown)
 				if ( Array.isArray( data.layersinfo.named_sets ) ) {
-					console.log( '[APIManager] Setting namedSets:', data.layersinfo.named_sets.map( s => s.name ) );
+					if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+						mw.log( '[APIManager] Setting namedSets:', data.layersinfo.named_sets.map( s => s.name ) );
+					}
 					this.editor.stateManager.set( 'namedSets', data.layersinfo.named_sets.slice() );
 					// Rebuild set selector to show updated list
 					if ( this.editor.buildSetSelector ) {
@@ -764,10 +811,12 @@ class APIManager {
 				}
 				// Update current layer set ID from the returned layerset
 				if ( data.layersinfo.layerset && data.layersinfo.layerset.id ) {
-					console.log( '[APIManager] Setting currentLayerSetId:', data.layersinfo.layerset.id );
+					if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+						mw.log( '[APIManager] Setting currentLayerSetId:', data.layersinfo.layerset.id );
+					}
 					this.editor.stateManager.set( 'currentLayerSetId', data.layersinfo.layerset.id );
-				} else {
-					console.log( '[APIManager] No layerset returned from API (new set not found?)' );
+				} else if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+					mw.log( '[APIManager] No layerset returned from API (new set not found?)' );
 				}
 				this.editor.buildRevisionSelector();
 				if ( this.editor.uiManager.revNameInputEl ) {
@@ -775,7 +824,9 @@ class APIManager {
 				}
 			}
 		} ).catch( ( error ) => {
-			console.warn( '[APIManager] reloadRevisions error:', error );
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[APIManager] reloadRevisions error:', error );
+			}
 			// Ignore reload errors
 		} );
 	}

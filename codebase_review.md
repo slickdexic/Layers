@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Comprehensive Code Review
 
-**Review Date:** November 25, 2025  
+**Review Date:** November 26, 2025  
 **Version:** 0.8.1-dev  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5 Preview)  
 **Review Type:** Deep Critical Analysis
@@ -9,287 +9,306 @@
 
 ## Executive Summary
 
-The "Layers" extension is a complex MediaWiki extension for non-destructive image annotation. While the backend (PHP) demonstrates solid architecture with proper security measures, the frontend (JavaScript) suffers from significant technical debt, maintainability issues, and inconsistent patterns. The test coverage is inadequate, and the codebase shows signs of rapid development without sufficient refactoring.
+The "Layers" extension is an ambitious MediaWiki extension for non-destructive image annotation. While the backend (PHP) demonstrates solid architecture with proper security measures and dependency injection, the frontend (JavaScript) suffers from **significant technical debt**, **poor separation of concerns**, and **incomplete refactoring**. The codebase shows clear signs of rapid feature development without corresponding architectural improvements.
 
-**Verdict:** The extension is functional but requires substantial refactoring before it can be considered production-ready for enterprise deployments.
+**Verdict:** The extension is functional but requires **substantial refactoring** before it can be considered production-ready. The core issues are addressable, but require dedicated engineering effort.
 
-### Overall Assessment Scores (1-10 scale)
+**Detailed improvement tasks are documented in [`improvement_plan.md`](./improvement_plan.md).**
+
+---
+
+## Assessment Scores (1-10 scale)
 
 | Category | Score | Status | Notes |
 |----------|-------|--------|-------|
-| Architecture & Design | 5/10 | 🟠 | Backend: solid DI pattern. Frontend: monolithic, fragmented |
-| Code Quality | 4/10 | 🔴 | PHP: Good. JS: Inconsistent, massive files, code smell |
-| Security | 7/10 | 🟢 | Backend well-secured; some frontend concerns |
-| Performance | 5/10 | 🟠 | API pagination exists; frontend renders inefficiently |
-| Accessibility | 4/10 | 🔴 | Some ARIA present but incomplete, keyboard gaps |
-| Documentation | 6/10 | 🟡 | copilot-instructions.md is excellent; inline docs patchy |
-| Testing | 3/10 | 🔴 | PHP unit tests exist but limited; JS tests incomplete |
-| Error Handling | 6/10 | 🟡 | Backend good; frontend inconsistent |
-| Maintainability | 3/10 | 🔴 | CanvasManager (3,864 lines) is a red flag |
+| Architecture & Design | 5/10 | 🟠 Needs Work | Backend: solid DI. Frontend: monolithic, fragmented state |
+| Code Quality | 4/10 | 🔴 Poor | PHP: Good. JS: Massive files, duplicated logic, debug code in production |
+| Security | 6/10 | 🟡 Acceptable | Backend secured; **debug logging in production code is a concern** |
+| Performance | 5/10 | 🟠 Needs Work | Dirty-region optimization exists but unused; frontend inefficient |
+| Accessibility | 4/10 | 🔴 Poor | Some ARIA present but incomplete, keyboard navigation gaps |
+| Documentation | 6/10 | 🟡 Acceptable | copilot-instructions.md is excellent; inline docs inconsistent |
+| Testing | 4/10 | 🔴 Poor | 184 Jest tests + PHPUnit tests exist; coverage is unclear, gaps evident |
+| Error Handling | 5/10 | 🟠 Needs Work | Backend excellent; frontend inconsistent |
+| Maintainability | 3/10 | 🔴 Critical | CanvasManager (3,829 lines) is a blocker; state management fragmented |
 
-**Overall Score: 4.8/10** — Functional prototype, but needs significant engineering investment.
+**Overall Score: 4.7/10** — Functional prototype requiring significant engineering investment.
 
 ---
 
-## 🔴 Critical Issues (Blockers)
+## 🔴 Critical Issues (Production Blockers)
 
-### 1. Frontend Monolith: `CanvasManager.js` (3,864 lines)
+### 1. Debug Logging Left in Production Code
 
-**Location:** `resources/ext.layers.editor/CanvasManager.js`
+**Severity:** 🔴 Critical (Security & Performance)
 
-**Problem:** This single file handles:
-- Canvas initialization and sizing
-- Background image loading
-- Event handling (mouse, touch, keyboard)
-- All shape rendering (rectangles, circles, polygons, arrows, text, etc.)
-- Resize/rotate/drag operations for all layer types
-- Selection management
-- Zoom and pan
-- Grid and rulers
-- History/undo system
-- Canvas pooling
+**Problem:** Production PHP code contains `file_put_contents()` and `error_log()` calls that:
+- Write to a hardcoded `layers.log` file (security risk - information disclosure)
+- Use `error_log()` directly instead of MediaWiki's logging infrastructure
+- Are NOT controlled by the `LayersDebug` config flag
 
-**Impact:**
-- **Unmaintainable:** No engineer can safely modify this without extensive testing
-- **Duplicated logic:** Rendering code exists here AND in `CanvasRenderer.js`, `RenderingCore.js`
-- **Hard to test:** Tightly coupled responsibilities make unit testing nearly impossible
-- **Performance:** No dirty-region optimization actually used despite properties being defined
+**Evidence from `ApiLayersSave.php`:**
+```php
+// Line 87
+$logFile = __DIR__ . '/../../layers.log';
+file_put_contents( $logFile, "$timestamp ApiLayersSave::execute() CALLED\n", FILE_APPEND );
 
-**Evidence:**
-```javascript
-// Line 1: 3,864 lines in one file
-CanvasManager.prototype.calculateRectangleResize = function(...) // 150+ lines
-CanvasManager.prototype.calculateCircleResize = function(...) // Similar complexity for each shape
+// Line 130
+error_log( "LAYERS DEBUG ApiLayersSave: params[setname]=" . var_export( ... ) );
 ```
 
-**Fix:** Extract into modules: `CanvasRenderer.js`, `CanvasEventHandler.js`, `ResizeController.js`, `ZoomPanController.js`, `GridRulersController.js`, per-shape resize handlers.
+**Evidence from `LayersDatabase.php`:**
+```php
+// Lines 77, 83, 87
+error_log( "LAYERS DEBUG saveLayerSet: setName_param=" . var_export( $setName, true ) );
+```
+
+**Impact:**
+- **Security:** Log files may expose sensitive data (usernames, file paths, parameters)
+- **Performance:** Synchronous file writes on every API call
+- **Disk:** Log file grows unbounded without rotation
+- **Compliance:** May violate data retention policies
+
+**Fix Required:** Remove all `file_put_contents()` and direct `error_log()` calls. Use `$this->logger->debug()` with proper MediaWiki logger configuration.
 
 ---
 
-### 2. Inconsistent State Management
+### 2. Frontend Monolith: `CanvasManager.js` (3,829 lines)
 
-**Problem:** The codebase has multiple competing patterns:
-- `StateManager.js` exists with proper reactive state
-- `LayersEditor.js` defines `Object.defineProperty` bridge for `this.layers`
-- `CanvasManager.js` maintains its own selection state (`selectedLayerId`, `selectedLayerIds`)
-- `LayerPanel.js` maintains `this.layers` and `this.selectedLayerId` separately
-- Zustand (`store.js`) is a dependency but appears unused
+**Severity:** 🔴 Critical (Maintainability)
 
-**Evidence:**
+**Current State:** This single file handles:
+- Canvas initialization and sizing (~200 lines)
+- Background image loading (~100 lines)
+- All event handling (mouse, touch, keyboard) (~600 lines)
+- All shape rendering (delegated but still complex) (~400 lines)
+- Resize operations for ALL layer types (~800 lines)
+- Rotation handling (~200 lines)
+- Selection and hit-testing (~400 lines)
+- Zoom and pan (~300 lines)
+- Grid, rulers, and guides (~300 lines)
+- History/undo integration (~100 lines)
+- Canvas pooling (~50 lines)
+
+**Partial Refactoring Started:**
+- `ZoomPanController.js` and `GridRulersController.js` extracted (good!)
+- But `CanvasManager.js` still has fallback code for when controllers not found
+- Delegation pattern incomplete
+
+**Impact:**
+- **Unmaintainable:** No engineer can safely modify without extensive testing
+- **Untestable:** Too many responsibilities to unit test effectively
+- **Merge conflicts:** Any canvas-related change touches this file
+
+---
+
+### 3. Fragmented State Management
+
+**Severity:** 🔴 Critical (Data Integrity)
+
+**Problem:** The codebase has **four** competing state patterns:
+
+1. **`StateManager.js`** - Intended single source of truth (542 lines, well-designed with atomic operations)
+2. **`LayersEditor.js`** - Bridge property that routes to StateManager
+3. **`LayerPanel.js`** - Maintains `this.layers` and `this.selectedLayerId` **separately**
+4. **`CanvasManager.js`** - Has `this.selectedLayerId` and `this.selectedLayerIds[]`
+
+**Evidence from `LayerPanel.js`:**
 ```javascript
-// LayersEditor.js - defines property accessor
-Object.defineProperty(this, 'layers', {
-    get: function() { return this.stateManager.getLayers(); },
-    set: function(layers) { this.stateManager.set('layers', layers); }
-});
-
-// LayerPanel.js - maintains separate state
+// Line 20-21
 this.layers = [];
 this.selectedLayerId = null;
 
-// CanvasManager.js - yet another state copy
-this.selectedLayerId = null;
-this.selectedLayerIds = [];
+// Line 452
+this.layers = layers || [];
+
+// Line 773
+this.selectedLayerId = layerId;
 ```
 
-**Impact:** State synchronization bugs, data inconsistency, debugging nightmares.
+**Evidence from `CanvasManager.js`:**
+```javascript
+// Line 46
+this.selectedLayerId = null;
 
-**Fix:** Consolidate on `StateManager.js`, remove all local state copies, use proper subscriptions.
+// Line 2372
+this.selectedLayerId = layerId || null;
+```
 
----
+**Impact:**
+- **Data Inconsistency:** Selection state can differ between components
+- **Race Conditions:** Updates may not propagate correctly
+- **Debugging Nightmare:** Which component has the "real" state?
 
-### 3. Test Coverage Inadequate
-
-**PHPUnit Tests:**
-- `tests/phpunit/unit/` has some structure but coverage is unclear
-- `tests/LayersTest.php` is a smoke test that uses `MediaWikiServices::getInstance()->getService('LayersDatabase')` - this is good, but:
-  - Only tests existence of methods/classes, not actual functionality
-  - No integration tests for API endpoints
-  - No tests for validation edge cases
-
-**Jest Tests:**
-- 15 test files exist in `tests/jest/`
-- But `eslintIgnore` includes `"tests/jest/**"` - tests aren't even linted!
-- Tests use mocks but don't test actual rendering behavior
-
-**Missing Test Coverage:**
-- API endpoint integration tests
-- Validation boundary tests (max layers, max size, XSS attempts)
-- Canvas rendering regression tests
-- Event handler interaction tests
+**Unused Dependency:** `zustand` (5.0.8) is installed in `package.json` but appears unused in the codebase.
 
 ---
 
-### 4. Duplicated Code Across Files
+### 4. Console Logging in Production JavaScript
 
-**Evidence:**
+**Severity:** 🟠 High (Security & Polish)
 
-1. **Rendering Logic:**
-   - `CanvasManager.js` has `renderLayers()`, shape drawing
-   - `CanvasRenderer.js` also has rendering logic
-   - `RenderingCore.js` - more rendering code
+**Problem:** Multiple `console.log()` statements remain in production code:
 
-2. **Event Handling:**
-   - `CanvasManager.js` has `setupEventHandlers()`
-   - `CanvasEvents.js` has event handling
-   - `EventHandler.js` - more event code
-   - `EventManager.js` - yet more
+**Evidence from `LayersEditor.js` (lines 1453-1507):**
+```javascript
+console.log( 'LayersEditor: Auto-bootstrap starting...' );
+console.log( 'LayersEditor: Current URL:', window.location.href );
+console.log( 'LayersEditor: wgLayersDebug config:', debug );
+// ... 15+ more console.log statements
+```
 
-3. **Selection Logic:**
-   - `SelectionManager.js` exists
-   - `CanvasManager.js` has `hitTestSelectionHandles()`, selection state
-   - `LayerPanel.js` has selection management
+**Evidence from `UIManager.js` (line 484):**
+```javascript
+console.log( '[UIManager] Created new set:', { ... } );
+```
 
-**Impact:** Bugs fixed in one place may not be fixed in duplicates. Confusion about which module owns what.
+**Impact:**
+- Exposes internal workings to users
+- Clutters browser console
+- May expose URLs, config values, DOM structure
 
 ---
 
 ## 🟠 Serious Issues (High Priority)
 
-### 5. LayerPanel.js Complexity (1,200+ lines)
+### 5. Code Duplication Across Multiple Files
+
+**Problem:** Similar logic exists in multiple places:
+
+| Concern | Files Involved | Lines of Duplication |
+|---------|----------------|---------------------|
+| Rendering | `CanvasManager.js`, `CanvasRenderer.js` (1,355 lines) | ~400 lines overlap |
+| Events | `CanvasManager.js`, `CanvasEvents.js`, `EventHandler.js`, `EventManager.js` | ~300 lines overlap |
+| Selection | `CanvasManager.js`, `SelectionManager.js`, `LayerPanel.js` | ~200 lines overlap |
+
+**Evidence:** `CanvasManager.js` still has `drawText()`, `drawRectangle()`, etc. that just delegate:
+```javascript
+CanvasManager.prototype.drawText = function ( layer ) {
+    if ( this.renderer ) {
+        this.renderer.drawText( layer );
+    }
+};
+```
+This pattern is repeated for 10+ shape types without adding value.
+
+---
+
+### 6. Large Files Without Clear Boundaries
+
+| File | Lines | Problem |
+|------|-------|---------|
+| `CanvasManager.js` | 3,829 | Monolith - handles everything canvas-related |
+| `LayerPanel.js` | 1,875 | Contains inline color picker, property forms, layer list |
+| `Toolbar.js` | 1,674 | Contains all tool buttons and their handlers |
+| `LayersEditor.js` | 1,609 | Main orchestrator with bootstrap/debug code |
+| `CanvasRenderer.js` | 1,355 | All shape rendering logic |
+| `LayersValidator.js` | 1,001 | Validation rules and error messages |
+
+**Target:** No file should exceed 500-800 lines for maintainability.
+
+---
+
+### 7. IIFE Pattern Throughout (Outdated)
+
+**Current Pattern:**
+```javascript
+( function () {
+    'use strict';
+    function CanvasManager( config ) { ... }
+    // ...
+    window.CanvasManager = CanvasManager;
+}());
+```
 
 **Problems:**
-- Creates DOM programmatically without template system
-- Color picker dialog is 200+ lines embedded in `createPropertiesForm()`
-- No componentization - everything inline
-- Accessibility partially implemented but incomplete
+- No tree-shaking possible
+- Dependencies not explicit
+- Module loading order matters
+- Global namespace pollution via `window.*`
 
-**Evidence:**
-```javascript
-// 200+ lines just for the color picker
-var createColorPickerDialog = function() {
-    var buttonRect = colorButton.getBoundingClientRect();
-    // ... 200 more lines
-};
-```
+**Modern Alternative:** ES modules with explicit imports/exports.
 
 ---
 
-### 6. Missing TypeScript / JSDoc Types
+### 8. Incomplete Test Coverage
 
-**Problem:** No type safety anywhere in frontend code. 
+**Jest Tests (184 tests):**
+- 15 test files exist covering basic functionality
+- Tests use mocks but don't verify actual rendering
+- No integration tests for editor workflows
+- No visual regression tests
 
-**Evidence:**
-```javascript
-// No type info - what is config? What properties are required?
-function CanvasManager(config) {
-    this.config = config || {};
-    this.container = this.config.container;
-    // ...
-}
-```
+**PHPUnit Tests:**
+- `ApiLayersSaveTest.php`, `ApiLayersInfoTest.php` exist (good!)
+- `ServerSideLayerValidatorTest.php`, `ColorValidatorTest.php`, `TextSanitizerTest.php` exist (good!)
+- But no coverage metrics enforced
+- No integration tests for full save/load cycle
 
-**Impact:** Runtime errors that could be caught at build time, poor IDE support, documentation gaps.
-
----
-
-### 7. Inconsistent Error Handling in Frontend
-
-**Evidence:**
-```javascript
-// Some places use try-catch with logging
-try {
-    // code
-} catch (error) {
-    if (this.debug) { this.errorLog('Error:', error); }
-}
-
-// Other places silently swallow errors
-} catch (_err) {
-    // Ignore cleanup errors to avoid cascading failures
-}
-
-// Some use mw.notify for user feedback, some don't
-```
-
----
-
-### 8. Event Listener Cleanup Incomplete
-
-**Problem:** While `LayerPanel.js` has proper listener tracking, `CanvasManager.js` and others don't consistently clean up.
-
-**Evidence:**
-```javascript
-// LayerPanel.js - good pattern
-this.addDocumentListener(event, handler, options);
-this.removeDocumentListeners(); // cleanup exists
-
-// CanvasManager.js - events instance handles some, but...
-CanvasManager.prototype.setupEventHandlers = function() {
-    if (typeof CanvasEvents !== 'undefined') {
-        this.events = new CanvasEvents(this);
-        return;
-    }
-    // What happens if CanvasEvents not found? No fallback cleanup!
-};
-```
-
----
-
-### 9. Security: Client-Side Validation Alone is Insufficient
-
-**Good:** Server-side `ServerSideLayerValidator.php` has comprehensive validation.
-
-**Concern:** `LayersValidator.js` (client-side) duplicates some logic but:
-- Could be bypassed by direct API calls
-- Text sanitization in `sanitizeText()` may differ from server
-- No CSP headers configured
+**Missing Coverage:**
+- Canvas interaction tests (clicks, drags, resizes)
+- Cross-browser compatibility tests
+- Accessibility (keyboard navigation, screen reader) tests
+- Performance benchmarks
 
 ---
 
 ## 🟡 Moderate Issues (Medium Priority)
 
-### 10. Configuration Inconsistency
+### 9. Magic Numbers and Hardcoded Values
 
-**extension.json version:** `0.8.1-dev`
-**Multiple MD files reference:** `0.8.2-dev` or other versions
-
----
-
-### 11. Deprecated Patterns
-
-**Evidence:**
+**Evidence from `CanvasManager.js`:**
 ```javascript
-// Using IIFE pattern throughout - works but outdated
-(function() {
-    'use strict';
-    // ...
-    window.LayerPanel = LayerPanel;
-}());
-```
-
-Modern ES modules would be cleaner and enable tree-shaking.
-
----
-
-### 12. Magic Numbers Throughout
-
-**Evidence:**
-```javascript
-// CanvasManager.js
-this.maxPoolSize = 5;
+this.minZoom = 0.1;
+this.maxZoom = 5.0;
 this.maxHistorySteps = 50;
-var maxDelta = 1000; // "Reasonable maximum delta"
-
-// LayerPanel.js
-var maxLength = 100; // name length
-var minListHeight = 60;
-var minPropsHeight = 80;
+this.maxPoolSize = 5;
+this.zoomAnimationDuration = 300;
 ```
 
-These should be in `LayersConstants.js` or configurable.
+These should reference `LayersConstants.js` which already has:
+```javascript
+ZOOM: { MIN: 0.1, MAX: 10, DEFAULT: 1, STEP: 0.1 }
+```
 
 ---
 
-### 13. Commented Debug Code
+### 10. Inconsistent Error Handling
 
-**Evidence:** Multiple files have commented `console.log` statements:
-```javascript
-// console.log('Layers: Canvas found/created:', this.canvas);
-// console.log('Layers: Context:', this.ctx);
+**Backend (Good):**
+```php
+// All errors use i18n keys
+$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
 ```
 
-Should be removed or converted to proper debug logging.
+**Frontend (Inconsistent):**
+```javascript
+// Some places use mw.notify
+mw.notify( mw.message( 'layers-save-error' ).text(), { type: 'error' } );
+
+// Some places silently swallow errors
+} catch ( _err ) {
+    // Ignore cleanup errors
+}
+
+// Some places throw
+throw new Error( 'Atomic update requires a function' );
+```
+
+---
+
+### 11. Accessibility Gaps
+
+**Present:**
+- Some ARIA roles on buttons
+- Focus trap in color picker dialog
+- Keyboard shortcuts for layer reordering
+
+**Missing:**
+- Skip links for keyboard users
+- Live regions for status updates
+- Complete keyboard navigation for all tools
+- Screen reader testing documentation
+- High contrast mode support
 
 ---
 
@@ -297,59 +316,85 @@ Should be removed or converted to proper debug logging.
 
 ### What's Working Well
 
-1. **Backend Architecture:**
-   - Clean DI with `services.php`
-   - Proper use of MediaWiki services pattern
-   - `LayersDatabase.php` has retry logic, caching, proper transactions
-   - `ServerSideLayerValidator.php` has comprehensive property whitelist
+1. **Backend Architecture (PHP):**
+   - Clean dependency injection via `services.php`
+   - `LayersDatabase.php` has retry logic with exponential backoff
+   - `ServerSideLayerValidator.php` has comprehensive 40+ field whitelist
+   - Proper MediaWiki hook integration
 
-2. **Security:**
-   - CSRF token enforcement
+2. **Security Implementation:**
+   - CSRF token enforcement via `needsToken()`
    - Rate limiting via `RateLimiter.php`
-   - XSS prevention in text sanitization
+   - XSS prevention in `TextSanitizer.php`
    - Generic error messages to prevent info disclosure
+   - Named set limit prevents abuse
 
 3. **Documentation:**
-   - `.github/copilot-instructions.md` is excellent - comprehensive API contracts, security notes
-   - Clear i18n message patterns
+   - `.github/copilot-instructions.md` is **excellent** - comprehensive API contracts
+   - `docs/NAMED_LAYER_SETS.md` for new feature architecture
+   - i18n with 100+ properly defined message keys
 
-4. **Some Good Patterns:**
-   - `ModuleRegistry.js` for dependency injection
-   - `LayerPanel.js` listener tracking pattern
-   - Accessible color picker dialog (focus trap, ARIA)
+4. **Recent Improvements:**
+   - `ZoomPanController.js` and `GridRulersController.js` extracted
+   - `StateManager.js` has proper atomic operations
+   - Event listener cleanup in `LayerPanel.js`
+   - ESLint enabled on Jest tests
 
----
-
-## Recommendations
-
-See **`improvement_plan.md`** for detailed prioritized action items.
-
-### Quick Wins (1-2 days each)
-1. Remove commented debug code
-2. Consolidate magic numbers into constants
-3. Fix version inconsistencies
-4. Enable ESLint on test files
-
-### Medium Effort (1-2 weeks each)
-1. Extract `CanvasManager.js` into modules
-2. Consolidate state management
-3. Add integration tests for API endpoints
-
-### Major Refactoring (1+ month)
-1. Consider TypeScript migration
-2. Replace IIFE with ES modules
-3. Full accessibility audit and fixes
+5. **Configuration:**
+   - Comprehensive config options in `extension.json`
+   - Reasonable defaults for limits (100 layers, 2MB max, 15 sets)
 
 ---
 
-## Appendix: File Size Analysis
+## Recommendations Summary
 
-| File | Lines | Assessment |
-|------|-------|------------|
-| CanvasManager.js | 3,864 | 🔴 Critical - must split |
-| LayerPanel.js | 1,284 | 🟠 Large - consider splitting |
-| LayersEditor.js | 1,065 | 🟡 Acceptable |
-| Toolbar.js | 1,200+ | 🟠 Large - consider splitting |
-| ServerSideLayerValidator.php | 530 | 🟢 Good |
-| LayersDatabase.php | 370 | 🟢 Good |
-| ApiLayersSave.php | 310 | 🟢 Good |
+### Immediate (This Week)
+1. **CRITICAL:** Remove all `file_put_contents()` and debug `error_log()` from PHP
+2. **CRITICAL:** Remove `console.log()` statements from JS
+3. Clean up unused `zustand` dependency or migrate to it
+
+### Short-Term (2-4 Weeks)
+4. Complete `CanvasManager.js` extraction (see improvement_plan.md Phase 1.1)
+5. Consolidate state management to single StateManager
+6. Add code coverage metrics and thresholds
+
+### Medium-Term (1-2 Months)
+7. Migrate to ES modules
+8. Split large files (LayerPanel, Toolbar, CanvasRenderer)
+9. Add integration tests for full workflows
+
+### Long-Term (3+ Months)
+10. Consider TypeScript migration
+11. Full accessibility audit
+12. Performance optimization with dirty-region rendering
+
+---
+
+## File Size Analysis
+
+| File | Lines | Assessment | Priority to Split |
+|------|-------|------------|-------------------|
+| CanvasManager.js | 3,829 | 🔴 Critical | P0 - Blocking maintainability |
+| LayerPanel.js | 1,875 | 🟠 Large | P1 - After CanvasManager |
+| Toolbar.js | 1,674 | 🟠 Large | P2 |
+| LayersEditor.js | 1,609 | 🟡 Acceptable | P3 - Debug code removal only |
+| CanvasRenderer.js | 1,355 | 🟡 Acceptable | P3 |
+| LayersValidator.js | 1,001 | 🟢 Good | N/A |
+
+---
+
+## Conclusion
+
+The Layers extension has a **solid foundation** in its backend architecture and security model. However, the frontend codebase has accumulated significant technical debt that makes it difficult to maintain, test, and extend safely.
+
+**Priority order for improvement:**
+1. Remove production debug logging (security/compliance)
+2. Split CanvasManager.js (maintainability blocker)
+3. Consolidate state management (data integrity)
+4. Add test coverage metrics (quality gate)
+
+See **[`improvement_plan.md`](./improvement_plan.md)** for detailed task breakdown with effort estimates.
+
+---
+
+*Review performed by GitHub Copilot using Claude Opus 4.5 (Preview)*

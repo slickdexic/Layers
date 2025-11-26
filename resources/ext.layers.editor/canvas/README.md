@@ -77,7 +77,7 @@ window.ZoomPanController = ZoomPanController;
 - [x] Directory structure created
 - [x] ZoomPanController.js extracted
 - [x] GridRulersController.js extracted
-- [ ] TransformController.js extracted
+- [x] TransformController.js extracted (resize, rotation, drag)
 - [ ] DrawingController.js extracted
 - [ ] ClipboardController.js extracted
 - [ ] CanvasPool.js extracted

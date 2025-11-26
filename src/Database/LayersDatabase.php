@@ -73,19 +73,13 @@ class LayersDatabase {
 		$sha1 = $imgMetadata['sha1'] ?? '';
 		$normalizedImgName = $this->normalizeImageName( $imgName );
 
-		// DEBUG: Log incoming set name (use error_log to guarantee output)
-		error_log( "LAYERS DEBUG saveLayerSet: setName_param=" . var_export( $setName, true ) );
-		wfDebugLog( 'Layers', "saveLayerSet: imgName='$imgName', setName_param=" . var_export( $setName, true ) );
-
 		// Default to configured default set name
 		if ( $setName === null || $setName === '' ) {
 			$setName = $this->config->get( 'LayersDefaultSetName' );
-			error_log( "LAYERS DEBUG saveLayerSet: using default, setName='$setName'" );
-			wfDebugLog( 'Layers', "saveLayerSet: using default, now setName='$setName'" );
 		}
 
-		error_log( "LAYERS DEBUG saveLayerSet: final setName='$setName'" );
-		wfDebugLog( 'Layers', "saveLayerSet: final setName='$setName'" );
+		// Log via MediaWiki's debug log (respects $wgDebugLogGroups configuration)
+		wfDebugLog( 'Layers', "saveLayerSet: imgName='$imgName', setName='$setName'" );
 
 		if ( empty( $normalizedImgName ) || empty( $sha1 ) || $userId <= 0 ) {
 			$this->logError( 'Invalid parameters for saveLayerSet', [

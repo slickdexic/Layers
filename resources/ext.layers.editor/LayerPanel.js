@@ -817,16 +817,8 @@
 			self.editor.saveState( 'Delete Layer' );
 		};
 
-		if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
-			OO.ui.confirm( confirmMessage ).done( function ( userConfirmed ) {
-				if ( userConfirmed ) {
-					performDelete();
-				}
-			} );
-		} else {
-			// Use custom accessible dialog instead of window.confirm
-			this.createConfirmDialog( confirmMessage, performDelete );
-		}
+		// Always use custom dialog - OOUI dialogs have z-index issues with the fixed editor container
+		this.createConfirmDialog( confirmMessage, performDelete );
 	};
 
 	LayerPanel.prototype.editLayerName = function ( layerId, nameElement ) {

@@ -1448,128 +1448,70 @@
 		function tryBootstrap() {
 			try {
 				const debug = window.mw && mw.config && mw.config.get( 'wgLayersDebug' );
-				// Always log for now to debug the issue
-				if ( debug ) {
-					console.log( 'LayersEditor: Auto-bootstrap starting...' );
-					console.log( 'LayersEditor: Current URL:', window.location.href );
-					console.log( 'LayersEditor: wgLayersDebug config:', debug );
-				}
 
-				// Ensure MediaWiki is available
+				// Helper for debug logging via MediaWiki's logging system
+				const debugLog = function ( msg ) {
+					if ( debug && mw.log ) {
+						mw.log( '[LayersEditor] ' + msg );
+					}
+				};
+
 				// Check if MediaWiki is available
 				if ( !window.mw || !mw.config || !mw.config.get ) {
-					if ( debug ) {
-						console.log( 'LayersEditor: MediaWiki not ready, retrying in 100ms...' );
-					}
+					debugLog( 'MediaWiki not ready, retrying in 100ms...' );
 					setTimeout( tryBootstrap, 100 );
 					return;
 				}
 
 				// Try to get config from MediaWiki config vars
 				const init = mw.config.get( 'wgLayersEditorInit' );
-				if ( debug ) {
-					console.log( 'LayersEditor: wgLayersEditorInit config:', init );
-				}
+				debugLog( 'wgLayersEditorInit config: ' + ( init ? 'present' : 'not found' ) );
 
 				if ( !init ) {
-					if ( debug ) {
-						console.log( 'LayersEditor: No wgLayersEditorInit config found, not auto-bootstrapping' );
-					}
 					return;
 				}
 
-				if ( debug ) {
-					console.log( 'LayersEditor: wgLayersEditorInit config details:', {
-						hasFilename: !!( init && init.filename ),
-						hasImageUrl: !!( init && init.imageUrl ),
-						filename: init && init.filename,
-						imageUrl: init && init.imageUrl
-					} );
-				}
-
 				const container = document.getElementById( 'layers-editor-container' );
-				if ( debug ) {
-					console.log( 'LayersEditor: Container element:', container );
-					console.log( 'LayersEditor: Container element exists:', !!container );
-					if ( container ) {
-						console.log( 'LayersEditor: Container element in document:', document.body.contains( container ) );
-						console.log( 'LayersEditor: Container element HTML:', container.outerHTML );
-						console.log( 'LayersEditor: Container element position in DOM:', container.getBoundingClientRect() );
-					} else {
-						console.log( 'LayersEditor: Container element not found, checking all elements with similar IDs' );
-						const allDivs = document.querySelectorAll( 'div[id*="layer"]' );
-						console.log( 'LayersEditor: Found divs with "layer" in ID:', Array.from( allDivs ).map( el => el.id ) );
-					}
-				}
+				debugLog( 'Container element exists: ' + !!container );
 
-				// Try to fire the hook first (for backward compatibility)
-				if ( debug ) {
-					console.log( 'LayersEditor: About to check hook system state' );
-
-					// Check if hook system is available and has our hook registered
-					if ( typeof mw !== 'undefined' && mw.hook && mw.hook( 'layers.editor.init' ) ) {
-						const hookObj = mw.hook( 'layers.editor.init' );
-						console.log( 'LayersEditor: Hook object exists:', !!hookObj );
-						console.log( 'LayersEditor: Hook has fire method:', typeof hookObj.fire === 'function' );
-					}
-				}
-
+				// Fire the hook for initialization
 				mw.hook( 'layers.editor.init' ).fire( {
 					filename: init.filename,
 					imageUrl: init.imageUrl,
 					container: container || document.body
 				} );
 
-				if ( debug ) {
-					console.log( 'LayersEditor: Hook fired successfully with config:', {
-						filename: init.filename,
-						imageUrl: init.imageUrl,
-						container: container ? 'layers-editor-container' : 'document.body'
-					} );
-					// Check if hook has listeners after firing
-					const hookObjAfter = mw.hook( 'layers.editor.init' );
-					if ( hookObjAfter && typeof hookObjAfter.getListeners === 'function' ) {
-						const listeners = hookObjAfter.getListeners();
-						console.log( 'LayersEditor: Hook listeners after firing:', listeners ? listeners.length : 'unknown' );
-					}
-				}
+				debugLog( 'Hook fired for: ' + init.filename );
+
 				try {
 					// Check if editor already exists (created by hook listener)
 					if ( window.layersEditorInstance ) {
-						if ( debug ) {
-							console.log( 'LayersEditor: Editor already exists from hook listener, skipping direct creation' );
-						}
+						debugLog( 'Editor already exists from hook listener' );
 						return;
 					}
-					if ( debug ) {
-						console.log( 'LayersEditor: Attempting direct editor creation with config:', {
-							filename: init.filename,
-							imageUrl: init.imageUrl,
-							container: container ? 'layers-editor-container' : 'document.body'
-						} );
-					}
+
 					const editor = new LayersEditor( {
 						filename: init.filename,
 						imageUrl: init.imageUrl,
 						container: container || document.body
 					} );
-					if ( debug ) {
-						console.log( 'LayersEditor: Direct editor creation successful:', editor );
-					}
+					debugLog( 'Direct editor creation successful' );
+
 					document.title = '🎨 Layers Editor - ' + ( init.filename || 'Unknown File' );
 					if ( window.mw && window.mw.config.get( 'debug' ) ) {
 						window.layersEditorInstance = editor;
 					}
 				} catch ( directError ) {
-					console.error( 'LayersEditor: Direct editor creation failed:', sanitizeGlobalErrorMessage( directError ) );
-					// If direct creation fails, the hook-based approach should still work
-				}
-
-				if ( debug ) {
-					console.log( 'LayersEditor: Auto-bootstrap fired layers.editor.init hook' );
+					// Use mw.log.error instead of console.error
+					if ( mw.log && mw.log.error ) {
+						mw.log.error( '[LayersEditor] Direct editor creation failed:', sanitizeGlobalErrorMessage( directError ) );
+					}
 				}
 			} catch ( e ) {
-				console.error( 'LayersEditor: Auto-bootstrap error:', sanitizeGlobalErrorMessage( e ) );
+				// Use mw.log.error instead of console.error
+				if ( mw.log && mw.log.error ) {
+					mw.log.error( '[LayersEditor] Auto-bootstrap error:', sanitizeGlobalErrorMessage( e ) );
+				}
 			}
 		}
 

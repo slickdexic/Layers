@@ -1332,20 +1332,42 @@ class WikitextHooks {
 	// but don't have layer data yet
 		if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
 			$shouldFallback = false;
+			$file = $thumbnail->getFile();
+			$filename = $file ? $file->getName() : null;
 
-		// Check if layers flag indicates we should show layers (any value except off/none)
-		if ( $layersFlag !== null && $layersFlag !== 'off' && $layersFlag !== 'none' ) {
-			$shouldFallback = true;
+		// First, check the per-file queue from wikitext preprocessing
+		// This tells us if this specific image had layers= in its wikitext syntax
+		$storedSetName = null;
+		if ( $filename !== null ) {
+			$storedSetName = self::getFileSetName( $filename );
+			if ( $storedSetName !== null ) {
+				// Check if it's explicitly disabled
+				if ( $storedSetName === 'off' || $storedSetName === 'none' || $storedSetName === 'false' ) {
+					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+						$logger = \call_user_func(
+							[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+							'Layers'
+						);
+						$logger->info( "Layers: Layers explicitly disabled for this instance of $filename via wikitext" );
+					}
+					return true; // Skip this instance entirely
+				}
+				// This image had layers= in wikitext, so we should show layers
+				$shouldFallback = true;
+				$layersFlag = $storedSetName;
+				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+					$logger = \call_user_func(
+						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+						'Layers'
+					);
+					$logger->info( "Layers: Using stored set name from wikitext queue: $storedSetName for $filename" );
+				}
+			}
 		}
 
-		// FALLBACK: Check if pageHasLayers indicates layers should be shown but no flag detected
-		if ( !$shouldFallback && self::$pageHasLayers ) {
-			// If we detected layers=all in wikitext, enable fallback for all images
+		// Check if layers flag indicates we should show layers (any value except off/none)
+		if ( !$shouldFallback && $layersFlag !== null && $layersFlag !== 'off' && $layersFlag !== 'none' ) {
 			$shouldFallback = true;
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info( 'Layers: pageHasLayers=true, enabling fallback layer data fetch' );
-			}
 		}
 
 		// Also check link attributes for layers parameter as additional fallback
@@ -1380,7 +1402,7 @@ class WikitextHooks {
 		// Strict gating: do not auto-enable overlays in debug mode without explicit layers intent.
 
 		if ( $shouldFallback ) {
-			$file = $thumbnail->getFile();
+			// Note: $file and $filename were already set above when we checked the per-file queue
 			if ( $file ) {
 				try {
 					$db = self::getLayersDatabaseService();
@@ -1389,36 +1411,9 @@ class WikitextHooks {
 					}
 
 					$layerSet = null;
-					$filename = $file->getName();
-					
-					// Check stored set name from wikitext preprocessing queue
-					// This consumes the next entry in the queue for this file
-					$storedSetName = self::getFileSetName( $filename );
-					if ( $storedSetName !== null ) {
-						// Check if it's explicitly disabled
-						if ( $storedSetName === 'off' || $storedSetName === 'none' || $storedSetName === 'false' ) {
-							if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-								$logger = \call_user_func(
-									[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-									'Layers'
-								);
-								$logger->info( "Layers: Layers explicitly disabled for this instance of $filename" );
-							}
-							return true; // Skip this instance
-						}
-						
-						// Use the stored value (may override existing layersFlag)
-						$layersFlag = $storedSetName;
-						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-							$logger = \call_user_func(
-								[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-								'Layers'
-							);
-							$logger->info( "Layers: Using stored set name from wikitext queue: $storedSetName for $filename" );
-						}
-					}
 					
 					// Determine which layer set to fetch based on layersFlag
+					// (layersFlag may have been set from the wikitext queue above)
 					if ( $layersFlag === null || $layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === 'true' ) {
 						// 'on'/'all'/null => fetch the default set (latest revision)
 						$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1() );
@@ -1519,11 +1514,9 @@ class WikitextHooks {
 			if ( $layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === true ) {
 				$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
 				$attribs['data-layers-intent'] = 'on';
-			} elseif ( self::$pageHasLayers ) {
-				// If pageHasLayers=true (detected layers=all in wikitext), enable layers
-				$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
-				$attribs['data-layers-intent'] = 'on';
 			}
+			// NOTE: We no longer use $pageHasLayers as a fallback here.
+			// Only images with explicit layers= parameter should get the marker class.
 		}
 
 		return true;
