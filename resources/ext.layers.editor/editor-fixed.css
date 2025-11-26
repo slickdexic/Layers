@@ -1361,12 +1361,13 @@ body.layers-resize-cursor {
 	height: 100%;
 	background: rgba( 0, 0, 0, 0.5 );
 	z-index: 1000000;
-	display: flex;
-	align-items: center;
-	justify-content: center;
 }
 
 .layers-modal-dialog {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate( -50%, -50% );
 	background: #fff;
 	border-radius: 8px;
 	padding: 20px;
