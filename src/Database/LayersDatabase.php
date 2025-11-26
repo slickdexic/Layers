@@ -73,11 +73,37 @@ class LayersDatabase {
 		$sha1 = $imgMetadata['sha1'] ?? '';
 		$normalizedImgName = $this->normalizeImageName( $imgName );
 
+		// DEBUG: Log incoming set name (use error_log to guarantee output)
+		error_log( "LAYERS DEBUG saveLayerSet: setName_param=" . var_export( $setName, true ) );
+		wfDebugLog( 'Layers', "saveLayerSet: imgName='$imgName', setName_param=" . var_export( $setName, true ) );
+
+		// Default to configured default set name
+		if ( $setName === null || $setName === '' ) {
+			$setName = $this->config->get( 'LayersDefaultSetName' );
+			error_log( "LAYERS DEBUG saveLayerSet: using default, setName='$setName'" );
+			wfDebugLog( 'Layers', "saveLayerSet: using default, now setName='$setName'" );
+		}
+
+		error_log( "LAYERS DEBUG saveLayerSet: final setName='$setName'" );
+		wfDebugLog( 'Layers', "saveLayerSet: final setName='$setName'" );
+
 		if ( empty( $normalizedImgName ) || empty( $sha1 ) || $userId <= 0 ) {
 			$this->logError( 'Invalid parameters for saveLayerSet', [
 				'imgName' => $imgName, 'sha1' => $sha1, 'userId' => $userId
 			] );
 			return null;
+		}
+
+		// Check named set limit for new sets
+		if ( !$this->namedSetExists( $normalizedImgName, $sha1, $setName ) ) {
+			$maxSets = $this->config->get( 'LayersMaxNamedSets' );
+			$setCount = $this->countNamedSets( $normalizedImgName, $sha1 );
+			if ( $setCount >= $maxSets ) {
+				$this->logError( 'Named set limit reached', [
+					'imgName' => $imgName, 'count' => $setCount, 'max' => $maxSets
+				] );
+				throw new \OverflowException( 'layers-max-sets-reached' );
+			}
 		}
 
 		$maxRetries = 3;
@@ -88,7 +114,7 @@ class LayersDatabase {
 			}
 			$dbw->startAtomic( __METHOD__ );
 			try {
-				$revision = $this->getNextRevision( $normalizedImgName, $sha1, $dbw );
+				$revision = $this->getNextRevisionForSet( $normalizedImgName, $sha1, $setName, $dbw );
 				$timestamp = $dbw->timestamp();
 
 				$dataStructure = [
@@ -127,6 +153,11 @@ class LayersDatabase {
 				$dbw->endAtomic( __METHOD__ );
 
 				$this->clearCache( $normalizedImgName );
+
+				// Prune old revisions for this named set
+				$maxRevisions = $this->config->get( 'LayersMaxRevisionsPerSet' );
+				$this->pruneOldRevisions( $normalizedImgName, $sha1, $setName, $maxRevisions );
+
 				return $layerSetId;
 			} catch ( \Throwable $e ) {
 				$dbw->endAtomic( __METHOD__ );
@@ -197,18 +228,33 @@ class LayersDatabase {
 		return $result;
 	}
 
-	public function getLatestLayerSet( string $imgName, string $sha1 ) {
+	/**
+	 * Get the latest layer set for an image, optionally filtered by set name
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @param string|null $setName Optional set name to filter by (e.g., 'Paul', 'default')
+	 * @return array|false Layer set data or false if not found
+	 */
+	public function getLatestLayerSet( string $imgName, string $sha1, ?string $setName = null ) {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return false;
 		}
+		
+		$conditions = [
+			'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+			'ls_img_sha1' => $sha1
+		];
+		
+		// If a specific set name is requested, filter by it
+		if ( $setName !== null && $setName !== '' ) {
+			$conditions['ls_name'] = $setName;
+		}
+		
 		$row = $dbr->selectRow(
 			'layer_sets',
 			[ 'ls_id', 'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name' ],
-			[
-				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-				'ls_img_sha1' => $sha1
-			],
+			$conditions,
 			__METHOD__,
 			[ 'ORDER BY' => 'ls_revision DESC' ]
 		);
@@ -253,6 +299,280 @@ class LayersDatabase {
 			[ 'FOR UPDATE' ]
 		);
 		return (int)$maxRevision + 1;
+	}
+
+	/**
+	 * Get the next revision number for a specific named set
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @param string $setName Named set name
+	 * @param \Wikimedia\Rdbms\IDatabase $dbw Database connection
+	 * @return int Next revision number
+	 */
+	private function getNextRevisionForSet( string $imgName, string $sha1, string $setName, $dbw ): int {
+		$maxRevision = $dbw->selectField(
+			'layer_sets',
+			'MAX(ls_revision)',
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName
+			],
+			__METHOD__,
+			[ 'FOR UPDATE' ]
+		);
+		return (int)$maxRevision + 1;
+	}
+
+	/**
+	 * Check if a named set exists for an image
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @param string $setName Named set name
+	 * @return bool True if the named set exists
+	 */
+	public function namedSetExists( string $imgName, string $sha1, string $setName ): bool {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return false;
+		}
+
+		$count = $dbr->selectField(
+			'layer_sets',
+			'COUNT(*)',
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName
+			],
+			__METHOD__
+		);
+
+		return (int)$count > 0;
+	}
+
+	/**
+	 * Count the number of distinct named sets for an image
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @return int Number of distinct named sets
+	 */
+	public function countNamedSets( string $imgName, string $sha1 ): int {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return 0;
+		}
+
+		$count = $dbr->selectField(
+			'layer_sets',
+			'COUNT(DISTINCT ls_name)',
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1
+			],
+			__METHOD__
+		);
+
+		return (int)$count;
+	}
+
+	/**
+	 * Count revisions for a specific named set
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @param string $setName Named set name
+	 * @return int Number of revisions
+	 */
+	public function countSetRevisions( string $imgName, string $sha1, string $setName ): int {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return 0;
+		}
+
+		$count = $dbr->selectField(
+			'layer_sets',
+			'COUNT(*)',
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName
+			],
+			__METHOD__
+		);
+
+		return (int)$count;
+	}
+
+	/**
+	 * Get all named sets for an image with summary information
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @return array Array of named set summaries
+	 */
+	public function getNamedSetsForImage( string $imgName, string $sha1 ): array {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return [];
+		}
+
+		// Get distinct set names with their latest revision info
+		$result = $dbr->select(
+			'layer_sets',
+			[
+				'ls_name',
+				'revision_count' => 'COUNT(*)',
+				'latest_revision' => 'MAX(ls_revision)',
+				'latest_timestamp' => 'MAX(ls_timestamp)',
+			],
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1
+			],
+			__METHOD__,
+			[
+				'GROUP BY' => 'ls_name',
+				'ORDER BY' => 'MAX(ls_timestamp) DESC'
+			]
+		);
+
+		$namedSets = [];
+		foreach ( $result as $row ) {
+			// Get the user who made the latest revision
+			$latestRow = $dbr->selectRow(
+				'layer_sets',
+				[ 'ls_user_id' ],
+				[
+					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+					'ls_img_sha1' => $sha1,
+					'ls_name' => $row->ls_name,
+					'ls_revision' => (int)$row->latest_revision
+				],
+				__METHOD__
+			);
+
+			$namedSets[] = [
+				'name' => $row->ls_name ?? 'default',
+				'revision_count' => (int)$row->revision_count,
+				'latest_revision' => (int)$row->latest_revision,
+				'latest_timestamp' => $row->latest_timestamp,
+				'latest_user_id' => $latestRow ? (int)$latestRow->ls_user_id : 0
+			];
+		}
+
+		return $namedSets;
+	}
+
+	/**
+	 * Get revision history for a specific named set
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @param string $setName Named set name
+	 * @param int $limit Maximum number of revisions to return
+	 * @return array Array of revision summaries
+	 */
+	public function getSetRevisions( string $imgName, string $sha1, string $setName, int $limit = 50 ): array {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return [];
+		}
+
+		$limit = max( 1, min( $limit, 200 ) );
+
+		$result = $dbr->select(
+			'layer_sets',
+			[ 'ls_id', 'ls_revision', 'ls_timestamp', 'ls_user_id', 'ls_layer_count' ],
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName
+			],
+			__METHOD__,
+			[
+				'ORDER BY' => 'ls_revision DESC',
+				'LIMIT' => $limit
+			]
+		);
+
+		$revisions = [];
+		foreach ( $result as $row ) {
+			$revisions[] = [
+				'ls_id' => (int)$row->ls_id,
+				'ls_revision' => (int)$row->ls_revision,
+				'ls_timestamp' => $row->ls_timestamp,
+				'ls_user_id' => (int)$row->ls_user_id,
+				'ls_layer_count' => (int)$row->ls_layer_count
+			];
+		}
+
+		return $revisions;
+	}
+
+	/**
+	 * Prune old revisions for a named set, keeping only the most recent ones
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @param string $setName Named set name
+	 * @param int $keepCount Number of revisions to keep
+	 * @return int Number of revisions deleted
+	 */
+	public function pruneOldRevisions( string $imgName, string $sha1, string $setName, int $keepCount ): int {
+		$dbw = $this->getWriteDb();
+		if ( !$dbw ) {
+			return 0;
+		}
+
+		$keepCount = max( 1, $keepCount );
+
+		// Get IDs of revisions to keep (most recent N)
+		$keepIds = $dbw->selectFieldValues(
+			'layer_sets',
+			'ls_id',
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName
+			],
+			__METHOD__,
+			[
+				'ORDER BY' => 'ls_revision DESC',
+				'LIMIT' => $keepCount
+			]
+		);
+
+		if ( empty( $keepIds ) ) {
+			return 0;
+		}
+
+		// Delete all revisions for this set that are NOT in the keep list
+		$dbw->delete(
+			'layer_sets',
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName,
+				'ls_id NOT IN (' . $dbw->makeList( $keepIds ) . ')'
+			],
+			__METHOD__
+		);
+
+		$deleted = $dbw->affectedRows();
+		if ( $deleted > 0 ) {
+			$this->logger->info( 'Pruned old revisions', [
+				'imgName' => $imgName,
+				'setName' => $setName,
+				'deleted' => $deleted,
+				'kept' => count( $keepIds )
+			] );
+		}
+
+		return $deleted;
 	}
 
 	public function getLayerSetsForImageWithOptions( string $imgName, string $sha1, array $options = [] ): array {

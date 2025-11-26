@@ -61,7 +61,8 @@ describe('LayerPanel confirmation flows', () => {
 
     test('deleteLayer aborts when fallback confirmation rejects', () => {
         const panel = buildPanel();
-        jest.spyOn(panel, 'simpleConfirm').mockReturnValue(false);
+        // Mock createConfirmDialog to NOT call the callback (simulating cancel)
+        panel.createConfirmDialog = jest.fn();
 
         panel.deleteLayer('layer-1');
 
@@ -71,7 +72,8 @@ describe('LayerPanel confirmation flows', () => {
 
     test('deleteLayer proceeds when fallback confirmation accepts', () => {
         const panel = buildPanel();
-        jest.spyOn(panel, 'simpleConfirm').mockReturnValue(true);
+        // Mock createConfirmDialog to immediately call the callback (simulating confirm)
+        panel.createConfirmDialog = jest.fn((msg, callback) => callback());
 
         panel.deleteLayer('layer-1');
 

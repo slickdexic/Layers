@@ -16,8 +16,7 @@
 		"*.backup.js",
 		"resources/dist/",
 		"node_modules/",
-		"vendor/",
-		"tests/"
+		"vendor/"
 	],
 	"rules": {
 		"no-implicit-globals": "off",
@@ -58,6 +57,24 @@
 			"files": [ "webpack.config.js", "jest.config.js", "Gruntfile.js" ],
 			"env": {
 				"node": true
+			}
+		},
+		{
+			"files": [ "tests/jest/**/*.js" ],
+			"env": {
+				"jest": true,
+				"node": true
+			},
+			"parserOptions": {
+				"ecmaVersion": 2020
+			},
+			"globals": {
+				"mw": "readonly",
+				"$": "readonly",
+				"jQuery": "readonly"
+			},
+			"rules": {
+				"no-unused-vars": ["error", { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }]
 			}
 		}
 	]

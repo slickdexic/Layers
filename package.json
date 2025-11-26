@@ -33,7 +33,6 @@
 	"eslintIgnore": [
 		"vendor/**",
 		"dist/**",
-		"tests/jest/**",
 		".stylelintrc.json"
 	],
 	"dependencies": {

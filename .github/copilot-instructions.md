@@ -36,28 +36,50 @@ Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modu
 Base route: MediaWiki Action API. Client uses `new mw.Api()`.
 
 - layersinfo (read)
-  - Params: filename (string, required), layersetid (int, optional)
+  - Params: filename (string, required), layersetid (int, optional), setname (string, optional - NEW)
   - Success payload (keyed by module name `layersinfo`):
     - layerset: null or object { id, imgName, userId, timestamp, revision, name, data, baseWidth, baseHeight }
       - data: server-decoded JSON structure of a saved set: { revision, schema: 1, created, layers: Array<Layer> }
       - baseWidth/baseHeight are source image dimensions to help client scale overlay accurately
     - all_layersets: Array of revisions for the image (includes ls_id, ls_revision, ls_name, ls_user_id, ls_timestamp, and ls_user_name for convenience)
+    - named_sets: Array of named set summaries (NEW): [{ name, revision_count, latest_revision, latest_timestamp, latest_user_id, latest_user_name }]
   - Errors: 'layers-file-not-found', 'layers-layerset-not-found'
+  - When setname is provided, returns that specific named set's latest revision and its revision history
 
 - layerssave (write)
   - Rights: user must have 'editlayers'
   - Token: needs CSRF token (client calls `api.postWithToken('csrf', ...)`)
-  - Params: filename (string), data (stringified JSON, see data model), setname (optional short label), token (csrf)
+  - Params: filename (string), data (stringified JSON, see data model), setname (optional, defaults to 'default' - CHANGED), token (csrf)
   - Validation/limits (server-side; see also client validator):
     - Max payload bytes: `$wgLayersMaxBytes` (default 2MB)
     - Max layers per set: `$wgLayersMaxLayerCount` (default 100)
+    - Max named sets per image: `$wgLayersMaxNamedSets` (default 15) - NEW
+    - Max revisions per set: `$wgLayersMaxRevisionsPerSet` (default 25, older pruned) - NEW
     - Strict property whitelist and type/length/range checks; unknown props are dropped; extreme values are rejected
     - Colors are strictly validated/sanitized; text is stripped of HTML and dangerous protocols
     - Rate limiting enforced via MediaWiki limiter (see RateLimits below)
   - Success payload (keyed by module name `layerssave`): { success: 1, layersetid, result: 'Success' }
-  - Errors: 'layers-invalid-filename', 'layers-data-too-large', 'layers-json-parse-error', 'layers-invalid-data', 'layers-rate-limited', 'layers-file-not-found', 'layers-save-failed', 'dbschema-missing'
+  - Errors: 'layers-invalid-filename', 'layers-data-too-large', 'layers-json-parse-error', 'layers-invalid-data', 'layers-rate-limited', 'layers-file-not-found', 'layers-save-failed', 'dbschema-missing', 'layers-max-sets-reached' (NEW), 'layers-invalid-setname' (NEW)
 
 Contract note: The server persists a wrapped structure `{ revision, schema, created, layers }`. The client sends only the layers array as JSON string; the server performs validation/sanitization and constructs the full structure.
+
+### Named Layer Sets (NEW)
+
+The named layer sets feature allows multiple named annotation sets per image, each with version history:
+
+- **Named Set**: A logical grouping identified by a unique name (e.g., "default", "anatomy-labels")
+- **Revision**: Each save creates a new revision within the named set
+- **Limits**: Up to 15 named sets per image, 25 revisions per set (configurable)
+- **Default Behavior**: If setname not provided, defaults to 'default' set
+- **Migration**: Existing layer sets were migrated to ls_name='default'
+- **Wikitext Syntax**:
+  - `[[File:Example.jpg|layers=on]]` - Show default layer set
+  - `[[File:Example.jpg|layers=setname]]` - Show specific named set (e.g., `layers=anatomy`)
+  - `[[File:Example.jpg|layers=none]]` or `layers=off` - Explicitly disable layers
+  - If the named set doesn't exist, no layers are displayed (silent failure)
+- **File: pages**: Layers are NOT auto-displayed; explicit `layers=on` or `layers=setname` is required
+
+See `docs/NAMED_LAYER_SETS.md` for full architecture documentation.
 
 ## 3) Data model (Layer objects)
 
@@ -80,6 +102,9 @@ Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersDebug (LayersDebug): verbose logging to 'Layers' channel (default true)
 - $wgLayersMaxBytes (LayersMaxBytes): max JSON size per set (default 2MB)
 - $wgLayersMaxLayerCount (LayersMaxLayerCount): max layers per set (default 100)
+- $wgLayersMaxNamedSets (LayersMaxNamedSets): max named sets per image (default 15) - NEW
+- $wgLayersMaxRevisionsPerSet (LayersMaxRevisionsPerSet): max revisions kept per named set (default 25) - NEW
+- $wgLayersDefaultSetName (LayersDefaultSetName): default name for layer sets (default 'default') - NEW
 - $wgLayersDefaultFonts (LayersDefaultFonts): allowed fonts list used by the editor
 - $wgLayersMaxImageSize (LayersMaxImageSize): max image size for editing (px)
 - $wgLayersThumbnailCache (LayersThumbnailCache): cache composite thumbs

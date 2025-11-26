@@ -38,6 +38,7 @@ class ApiLayersInfo extends ApiBase {
 		$params = $this->extractRequestParams();
 		$filename = $params['filename'];
 		$layerSetId = $params['layersetid'] ?? null;
+		$setName = $params['setname'] ?? null;
 		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : 50;
 		$limit = max( 1, min( $limit, 200 ) );
 		$offset = isset( $params['offset'] ) ? (int)$params['offset'] : 0;
@@ -71,9 +72,10 @@ class ApiLayersInfo extends ApiBase {
 		$origHeight = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : null;
 
 		$db = $this->getLayersDatabase();
+		$fileSha1 = $file->getSha1();
 
 		if ( $layerSetId ) {
-			// Get specific layer set
+			// Get specific layer set by ID
 			$layerSet = $db->getLayerSet( $layerSetId );
 			if ( !$layerSet ) {
 				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
@@ -92,9 +94,9 @@ class ApiLayersInfo extends ApiBase {
 			$result = [
 				'layerset' => $layerSet
 			];
-		} else {
-			// Get latest layer set for this file
-			$layerSet = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
+		} elseif ( $setName ) {
+			// Get specific named set
+			$layerSet = $db->getLayerSetByName( $file->getName(), $fileSha1, $setName );
 
 			if ( !$layerSet ) {
 				$result = [
@@ -102,8 +104,59 @@ class ApiLayersInfo extends ApiBase {
 					'message' => $this->msg( 'layers-no-layers' )->text()
 				];
 			} else {
-				// Enrich with base dimensions to allow correct scaling by clients
-				if ( is_array( $layerSet ) ) {
+				// Normalize response format
+				$layerSet = [
+					'id' => $layerSet['id'],
+					'imgName' => $layerSet['imgName'],
+					'userId' => $layerSet['userId'],
+					'timestamp' => $layerSet['timestamp'],
+					'revision' => $layerSet['revision'],
+					'name' => $layerSet['setName'],
+					'data' => $layerSet['data'],
+					'baseWidth' => $origWidth,
+					'baseHeight' => $origHeight
+				];
+				$result = [
+					'layerset' => $layerSet
+				];
+			}
+
+			// Get revision history for this specific named set
+			$setRevisions = $db->getSetRevisions( $file->getName(), $fileSha1, $setName, $limit );
+			$setRevisions = $this->enrichWithUserNames( $setRevisions );
+			$result['set_revisions'] = $setRevisions;
+		} else {
+			// Get latest layer set for this file (default behavior)
+			// Try default set first, then fall back to any latest
+			$defaultSetName = $this->getConfig()->get( 'LayersDefaultSetName' );
+			$layerSet = $db->getLayerSetByName( $file->getName(), $fileSha1, $defaultSetName );
+
+			if ( !$layerSet ) {
+				// Fall back to latest of any set
+				$layerSet = $db->getLatestLayerSet( $file->getName(), $fileSha1 );
+			}
+
+			if ( !$layerSet ) {
+				$result = [
+					'layerset' => null,
+					'message' => $this->msg( 'layers-no-layers' )->text()
+				];
+			} else {
+				// Normalize response format for getLayerSetByName result
+				if ( isset( $layerSet['setName'] ) ) {
+					$layerSet = [
+						'id' => $layerSet['id'],
+						'imgName' => $layerSet['imgName'],
+						'userId' => $layerSet['userId'],
+						'timestamp' => $layerSet['timestamp'],
+						'revision' => $layerSet['revision'],
+						'name' => $layerSet['setName'],
+						'data' => $layerSet['data'],
+						'baseWidth' => $origWidth,
+						'baseHeight' => $origHeight
+					];
+				} else {
+					// Enrich with base dimensions
 					$layerSet['baseWidth'] = $origWidth;
 					$layerSet['baseHeight'] = $origHeight;
 				}
@@ -112,10 +165,11 @@ class ApiLayersInfo extends ApiBase {
 				];
 			}
 
+			// Get all revisions (backwards compatibility)
 			$fetchLimit = min( $limit + 1, 201 );
 			$allLayerSets = $db->getLayerSetsForImageWithOptions(
 				$file->getName(),
-				$file->getSha1(),
+				$fileSha1,
 				[
 					'sort' => 'ls_revision',
 					'direction' => 'DESC',
@@ -128,53 +182,9 @@ class ApiLayersInfo extends ApiBase {
 			if ( $hasMore ) {
 				$allLayerSets = array_slice( $allLayerSets, 0, $limit );
 			}
-			$hasMore = count( $allLayerSets ) > $limit;
-			if ( $hasMore ) {
-				$allLayerSets = array_slice( $allLayerSets, 0, $limit );
-			}
-			// Enrich with user names for display convenience - batch lookup to avoid N+1 queries
-			try {
-				// Collect all unique user IDs
-				$userIds = [];
-				foreach ( $allLayerSets as $row ) {
-					$userId = (int)( $row['ls_user_id'] ?? 0 );
-					if ( $userId > 0 ) {
-						$userIds[] = $userId;
-					}
-				}
-
-				// Batch load users
-				$users = [];
-				if ( !empty( $userIds ) ) {
-					$userIds = array_unique( $userIds );
-					// Batch load user names from database to avoid N+1 queries
-					$dbr = $this->getDB();
-					$userRows = $dbr->select(
-						'user',
-						[ 'user_id', 'user_name' ],
-						[ 'user_id' => $userIds ],
-						__METHOD__
-					);
-					foreach ( $userRows as $userRow ) {
-						$users[(int)$userRow->user_id] = $userRow->user_name;
-					}
-				}
-
-				// Apply user names to layer sets
-				foreach ( $allLayerSets as &$row ) {
-					$userId = (int)( $row['ls_user_id'] ?? 0 );
-					$row['ls_user_name'] = $users[$userId] ?? 'Anonymous';
-				}
-				unset( $row );
-			} catch ( \Throwable $e ) {
-				// If user lookup fails in some environments, proceed without names
-				// Log the error for debugging
-				if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-					$logger->warning( 'Failed to batch load user names for layer sets: ' . $e->getMessage() );
-				}
-			}
+			$allLayerSets = $this->enrichWithUserNames( $allLayerSets );
 			$result['all_layersets'] = $allLayerSets;
+
 			if ( $hasMore ) {
 				$nextOffset = $offset + $limit;
 				$continuation = [
@@ -186,7 +196,122 @@ class ApiLayersInfo extends ApiBase {
 			}
 		}
 
+		// Always include named_sets summary (except for specific layersetid lookup)
+		if ( !$layerSetId ) {
+			$namedSets = $db->getNamedSetsForImage( $file->getName(), $fileSha1 );
+			$namedSets = $this->enrichNamedSetsWithUserNames( $namedSets );
+			$result['named_sets'] = $namedSets;
+		}
+
 		$this->getResult()->addValue( null, $this->getModuleName(), $result );
+	}
+
+	/**
+	 * Enrich layer set rows with user names
+	 *
+	 * @param array $rows Array of layer set rows
+	 * @return array Enriched rows
+	 */
+	private function enrichWithUserNames( array $rows ): array {
+		if ( empty( $rows ) ) {
+			return $rows;
+		}
+
+		try {
+			// Collect all unique user IDs
+			$userIds = [];
+			foreach ( $rows as $row ) {
+				$userId = (int)( $row['ls_user_id'] ?? 0 );
+				if ( $userId > 0 ) {
+					$userIds[] = $userId;
+				}
+			}
+
+			// Batch load users
+			$users = [];
+			if ( !empty( $userIds ) ) {
+				$userIds = array_unique( $userIds );
+				$dbr = $this->getDB();
+				$userRows = $dbr->select(
+					'user',
+					[ 'user_id', 'user_name' ],
+					[ 'user_id' => $userIds ],
+					__METHOD__
+				);
+				foreach ( $userRows as $userRow ) {
+					$users[(int)$userRow->user_id] = $userRow->user_name;
+				}
+			}
+
+			// Apply user names to layer sets
+			foreach ( $rows as &$row ) {
+				$userId = (int)( $row['ls_user_id'] ?? 0 );
+				$row['ls_user_name'] = $users[$userId] ?? 'Anonymous';
+			}
+			unset( $row );
+		} catch ( \Throwable $e ) {
+			// If user lookup fails, proceed without names
+			if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->warning( 'Failed to batch load user names for layer sets: ' . $e->getMessage() );
+			}
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Enrich named sets summary with user names
+	 *
+	 * @param array $namedSets Array of named set summaries
+	 * @return array Enriched named sets
+	 */
+	private function enrichNamedSetsWithUserNames( array $namedSets ): array {
+		if ( empty( $namedSets ) ) {
+			return $namedSets;
+		}
+
+		try {
+			// Collect all unique user IDs
+			$userIds = [];
+			foreach ( $namedSets as $set ) {
+				$userId = (int)( $set['latest_user_id'] ?? 0 );
+				if ( $userId > 0 ) {
+					$userIds[] = $userId;
+				}
+			}
+
+			// Batch load users
+			$users = [];
+			if ( !empty( $userIds ) ) {
+				$userIds = array_unique( $userIds );
+				$dbr = $this->getDB();
+				$userRows = $dbr->select(
+					'user',
+					[ 'user_id', 'user_name' ],
+					[ 'user_id' => $userIds ],
+					__METHOD__
+				);
+				foreach ( $userRows as $userRow ) {
+					$users[(int)$userRow->user_id] = $userRow->user_name;
+				}
+			}
+
+			// Apply user names
+			foreach ( $namedSets as &$set ) {
+				$userId = (int)( $set['latest_user_id'] ?? 0 );
+				$set['latest_user_name'] = $users[$userId] ?? 'Anonymous';
+			}
+			unset( $set );
+		} catch ( \Throwable $e ) {
+			// If user lookup fails, proceed without names
+			if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->warning( 'Failed to batch load user names for named sets: ' . $e->getMessage() );
+			}
+		}
+
+		return $namedSets;
 	}
 
 	/**
@@ -202,6 +327,10 @@ class ApiLayersInfo extends ApiBase {
 			],
 			'layersetid' => [
 				ApiBase::PARAM_TYPE => 'integer',
+				ApiBase::PARAM_REQUIRED => false,
+			],
+			'setname' => [
+				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false,
 			],
 			'limit' => [

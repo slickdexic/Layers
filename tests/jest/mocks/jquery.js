@@ -4,7 +4,7 @@
 
 function jQuery( selector )
 {
-    var elements = [];
+    let elements = [];
 
     if ( typeof selector === 'string' ) {
         // Mock DOM selection
@@ -17,11 +17,11 @@ function jQuery( selector )
         elements = [ selector ];
     }
 
-    var jqObject = {
+    const jqObject = {
         length: elements.length,
 
         each: function ( callback ) {
-            for ( var i = 0; i < elements.length; i++ ) {
+            for ( let i = 0; i < elements.length; i++ ) {
                 callback.call(elements[ i ], i, elements[ i ]);
             }
             return jqObject;
@@ -31,7 +31,7 @@ function jQuery( selector )
             return jQuery(childSelector);
         },
 
-        append: function ( content ) {
+        append: function ( _content ) {
             return jqObject;
         },
 
@@ -39,11 +39,11 @@ function jQuery( selector )
             return jqObject;
         },
 
-        addClass: function ( className ) {
+        addClass: function ( _className ) {
             return jqObject;
         },
 
-        removeClass: function ( className ) {
+        removeClass: function ( _className ) {
             return jqObject;
         },
 
@@ -61,15 +61,15 @@ function jQuery( selector )
             return '';
         },
 
-        on: function ( event, handler ) {
+        on: function ( _event, _handler ) {
             return jqObject;
         },
 
-        off: function ( event, handler ) {
+        off: function ( _event, _handler ) {
             return jqObject;
         },
 
-        trigger: function ( event ) {
+        trigger: function ( _event ) {
             return jqObject;
         }
     };
@@ -78,10 +78,10 @@ function jQuery( selector )
 }
 
 jQuery.extend = function ( target ) {
-    for ( var i = 1; i < arguments.length; i++ ) {
-        var source = arguments[ i ];
-        for ( var key in source ) {
-            if ( source.hasOwnProperty(key) ) {
+    for ( let i = 1; i < arguments.length; i++ ) {
+        const source = arguments[ i ];
+        for ( const key in source ) {
+            if ( Object.prototype.hasOwnProperty.call(source, key) ) {
                 target[ key ] = source[ key ];
             }
         }

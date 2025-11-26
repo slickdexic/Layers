@@ -8,6 +8,11 @@ class UIManager {
 		this.container = null;
 		this.statusBar = null;
 		this.spinnerEl = null;
+		// Named Set selector elements
+		this.setSelectEl = null;
+		this.newSetInputEl = null;
+		this.newSetBtnEl = null;
+		// Revision selector elements
 		this.revSelectEl = null;
 		this.revLoadBtnEl = null;
 		this.revNameInputEl = null;
@@ -77,7 +82,17 @@ class UIManager {
 		this.zoomReadoutEl.textContent = '100%';
 		headerRight.appendChild( this.zoomReadoutEl );
 
-		// Revision selector
+		// Named Set selector (primary grouping)
+		const setWrap = this.createSetSelector();
+		headerRight.appendChild( setWrap );
+
+		// Separator
+		const separator = document.createElement( 'span' );
+		separator.className = 'layers-header-separator';
+		separator.setAttribute( 'aria-hidden', 'true' );
+		headerRight.appendChild( separator );
+
+		// Revision selector (within the selected set)
 		const revWrap = this.createRevisionSelector();
 		headerRight.appendChild( revWrap );
 
@@ -88,35 +103,78 @@ class UIManager {
 		return headerRight;
 	}
 
+	/**
+	 * Create the Named Set selector UI
+	 * Allows users to switch between different annotation sets (e.g., "default", "anatomy-labels")
+	 * @return {HTMLElement} The set selector wrapper element
+	 */
+	createSetSelector() {
+		const setWrap = document.createElement( 'div' );
+		setWrap.className = 'layers-set-wrap';
+		setWrap.setAttribute( 'role', 'group' );
+		setWrap.setAttribute( 'aria-label', this.getMessage( 'layers-set-selector-group' ) );
+
+		// Set label
+		const setLabel = document.createElement( 'label' );
+		setLabel.className = 'layers-set-label';
+		setLabel.textContent = this.getMessage( 'layers-set-label' ) + ':';
+		const setSelectId = 'layers-set-select-' + Math.random().toString( 36 ).slice( 2, 11 );
+		setLabel.setAttribute( 'for', setSelectId );
+		setWrap.appendChild( setLabel );
+
+		// Set dropdown
+		this.setSelectEl = document.createElement( 'select' );
+		this.setSelectEl.className = 'layers-set-select';
+		this.setSelectEl.id = setSelectId;
+		this.setSelectEl.setAttribute( 'aria-label', this.getMessage( 'layers-set-select-aria' ) );
+		setWrap.appendChild( this.setSelectEl );
+
+		// New set input (hidden by default, shown when "+ New" is selected)
+		this.newSetInputEl = document.createElement( 'input' );
+		this.newSetInputEl.type = 'text';
+		this.newSetInputEl.className = 'layers-new-set-input';
+		this.newSetInputEl.placeholder = this.getMessage( 'layers-new-set-placeholder' );
+		this.newSetInputEl.setAttribute( 'aria-label', this.getMessage( 'layers-new-set-aria' ) );
+		this.newSetInputEl.maxLength = 255;
+		this.newSetInputEl.style.display = 'none';
+		setWrap.appendChild( this.newSetInputEl );
+
+		// Create new set button (hidden by default)
+		this.newSetBtnEl = document.createElement( 'button' );
+		this.newSetBtnEl.type = 'button';
+		this.newSetBtnEl.className = 'layers-new-set-btn';
+		this.newSetBtnEl.textContent = this.getMessage( 'layers-new-set-create' );
+		this.newSetBtnEl.setAttribute( 'aria-label', this.getMessage( 'layers-new-set-create-aria' ) );
+		this.newSetBtnEl.style.display = 'none';
+		setWrap.appendChild( this.newSetBtnEl );
+
+		return setWrap;
+	}
+
 	createRevisionSelector() {
 		const revWrap = document.createElement( 'div' );
 		revWrap.className = 'layers-revision-wrap';
+		revWrap.setAttribute( 'role', 'group' );
+		revWrap.setAttribute( 'aria-label', this.getMessage( 'layers-revision-group' ) );
 
 		const revLabel = document.createElement( 'label' );
 		revLabel.className = 'layers-revision-label';
 		revLabel.textContent = this.getMessage( 'layers-revision-label' ) + ':';
+		const revSelectId = 'layers-revision-select-' + Math.random().toString( 36 ).slice( 2, 11 );
+		revLabel.setAttribute( 'for', revSelectId );
 		revWrap.appendChild( revLabel );
 
 		this.revSelectEl = document.createElement( 'select' );
 		this.revSelectEl.className = 'layers-revision-select';
-		this.revSelectEl.setAttribute( 'aria-label', 'Select revision to load' );
-		revLabel.setAttribute( 'for', 'layers-revision-select-' + Math.random().toString( 36 ).slice( 2, 11 ) );
-		this.revSelectEl.id = revLabel.getAttribute( 'for' );
+		this.revSelectEl.id = revSelectId;
+		this.revSelectEl.setAttribute( 'aria-label', this.getMessage( 'layers-revision-select-aria' ) );
 		revWrap.appendChild( this.revSelectEl );
-
-		this.revNameInputEl = document.createElement( 'input' );
-		this.revNameInputEl.type = 'text';
-		this.revNameInputEl.className = 'layers-revision-name';
-		this.revNameInputEl.placeholder = this.getMessage( 'layers-revision-name-placeholder' );
-		this.revNameInputEl.setAttribute( 'aria-label', 'Revision name for next save (optional)' );
-		this.revNameInputEl.maxLength = 255;
-		revWrap.appendChild( this.revNameInputEl );
 
 		this.revLoadBtnEl = document.createElement( 'button' );
 		this.revLoadBtnEl.type = 'button';
 		this.revLoadBtnEl.className = 'layers-revision-load';
 		this.revLoadBtnEl.textContent = this.getMessage( 'layers-revision-load' );
-		this.revLoadBtnEl.setAttribute( 'aria-label', 'Load selected revision' );
+		this.revLoadBtnEl.setAttribute( 'aria-label', this.getMessage( 'layers-revision-load-aria' ) );
 		revWrap.appendChild( this.revLoadBtnEl );
 
 		return revWrap;
@@ -252,6 +310,10 @@ class UIManager {
 	}
 
 	setupRevisionControls() {
+		// Set selector controls
+		this.setupSetSelectorControls();
+
+		// Revision load button
 		if ( this.revLoadBtnEl ) {
 			this.revLoadBtnEl.addEventListener( 'click', () => {
 				const val = this.revSelectEl ? parseInt( this.revSelectEl.value, 10 ) || 0 : 0;
@@ -261,14 +323,200 @@ class UIManager {
 			} );
 		}
 
+		// Revision selector change
 		if ( this.revSelectEl ) {
 			this.revSelectEl.addEventListener( 'change', () => {
 				const v = parseInt( this.revSelectEl.value, 10 ) || 0;
 				if ( this.revLoadBtnEl ) {
-					const isCurrent = ( this.editor.currentLayerSetId && v === this.editor.currentLayerSetId );
+					const currentId = this.editor.stateManager ?
+						this.editor.stateManager.get( 'currentLayerSetId' ) :
+						this.editor.currentLayerSetId;
+					const isCurrent = ( currentId && v === currentId );
 					this.revLoadBtnEl.disabled = !v || isCurrent;
 				}
 			} );
+		}
+	}
+
+	/**
+	 * Set up event handlers for the Named Set selector
+	 */
+	setupSetSelectorControls() {
+		if ( !this.setSelectEl ) {
+			return;
+		}
+
+		// Handle set selection change
+		this.setSelectEl.addEventListener( 'change', () => {
+			const selectedValue = this.setSelectEl.value;
+
+			if ( selectedValue === '__new__' ) {
+				// Show new set input
+				this.showNewSetInput( true );
+			} else {
+				// Hide new set input
+				this.showNewSetInput( false );
+
+				// Load selected set
+				if ( selectedValue && this.editor.loadLayerSetByName ) {
+					// Check for unsaved changes
+					const isDirty = this.editor.stateManager ?
+						this.editor.stateManager.get( 'isDirty' ) : false;
+
+					if ( isDirty ) {
+						const confirmed = window.confirm(
+							this.getMessage( 'layers-switch-set-unsaved-confirm' )
+						);
+						if ( !confirmed ) {
+							// Restore previous selection
+							const currentSet = this.editor.stateManager ?
+								this.editor.stateManager.get( 'currentSetName' ) : 'default';
+							this.setSelectEl.value = currentSet;
+							return;
+						}
+					}
+
+					this.editor.loadLayerSetByName( selectedValue );
+				}
+			}
+		} );
+
+		// Handle new set creation
+		if ( this.newSetBtnEl ) {
+			this.newSetBtnEl.addEventListener( 'click', () => {
+				this.createNewSet();
+			} );
+		}
+
+		// Handle Enter key in new set input
+		if ( this.newSetInputEl ) {
+			this.newSetInputEl.addEventListener( 'keydown', ( e ) => {
+				if ( e.key === 'Enter' ) {
+					e.preventDefault();
+					this.createNewSet();
+				} else if ( e.key === 'Escape' ) {
+					this.showNewSetInput( false );
+					// Restore previous selection
+					const currentSet = this.editor.stateManager ?
+						this.editor.stateManager.get( 'currentSetName' ) : 'default';
+					this.setSelectEl.value = currentSet;
+				}
+			} );
+		}
+	}
+
+	/**
+	 * Show or hide the new set input field
+	 * @param {boolean} show Whether to show the input
+	 */
+	showNewSetInput( show ) {
+		if ( this.newSetInputEl ) {
+			this.newSetInputEl.style.display = show ? 'inline-block' : 'none';
+			if ( show ) {
+				this.newSetInputEl.value = '';
+				this.newSetInputEl.focus();
+			}
+		}
+		if ( this.newSetBtnEl ) {
+			this.newSetBtnEl.style.display = show ? 'inline-block' : 'none';
+		}
+	}
+
+	/**
+	 * Create a new named set from the input field
+	 */
+	createNewSet() {
+		if ( !this.newSetInputEl ) {
+			return;
+		}
+
+		const newName = this.newSetInputEl.value.trim();
+
+		if ( !newName ) {
+			mw.notify( this.getMessage( 'layers-new-set-name-required' ), { type: 'warn' } );
+			this.newSetInputEl.focus();
+			return;
+		}
+
+		// Validate name (allow letters, numbers, underscores, dashes, spaces - matches server)
+		if ( !/^[\p{L}\p{N}_\-\s]+$/u.test( newName ) ) {
+			mw.notify( this.getMessage( 'layers-invalid-setname' ), { type: 'error' } );
+			this.newSetInputEl.focus();
+			return;
+		}
+
+		// Check if name already exists
+		const namedSets = this.editor.stateManager ?
+			this.editor.stateManager.get( 'namedSets' ) : [];
+		const exists = namedSets.some( set => set.name.toLowerCase() === newName.toLowerCase() );
+
+		if ( exists ) {
+			mw.notify( this.getMessage( 'layers-set-name-exists' ), { type: 'warn' } );
+			this.newSetInputEl.focus();
+			return;
+		}
+
+		// Hide input and set the new name as current
+		this.showNewSetInput( false );
+
+		// Update state to use new set name
+		if ( this.editor.stateManager ) {
+			this.editor.stateManager.set( 'currentSetName', newName );
+			this.editor.stateManager.set( 'currentLayerSetId', null ); // New set has no ID yet
+			this.editor.stateManager.set( 'setRevisions', [] ); // No revisions yet
+			this.editor.stateManager.set( 'isDirty', true );
+
+			// Add to namedSets array so it's tracked properly
+			const updatedSets = [ ...namedSets, {
+				name: newName,
+				revision_count: 0,
+				latest_revision: null,
+				latest_timestamp: null,
+				latest_user_name: mw.config.get( 'wgUserName' )
+			} ];
+			this.editor.stateManager.set( 'namedSets', updatedSets );
+		}
+
+		// Add to set selector and select it
+		this.addSetOption( newName, true );
+
+		// DEBUG: Log what's being created
+		console.log( '[UIManager] Created new set:', {
+			name: newName,
+			currentSetName: this.editor.stateManager?.get( 'currentSetName' ),
+			namedSetsCount: this.editor.stateManager?.get( 'namedSets' )?.length
+		} );
+
+		mw.notify(
+			this.getMessage( 'layers-new-set-created' ).replace( '$1', newName ),
+			{ type: 'success' }
+		);
+	}
+
+	/**
+	 * Add a new option to the set selector
+	 * @param {string} name Set name
+	 * @param {boolean} select Whether to select the new option
+	 */
+	addSetOption( name, select = false ) {
+		if ( !this.setSelectEl ) {
+			return;
+		}
+
+		const option = document.createElement( 'option' );
+		option.value = name;
+		option.textContent = name;
+
+		// Insert before the "+ New" option
+		const newOption = this.setSelectEl.querySelector( 'option[value="__new__"]' );
+		if ( newOption ) {
+			this.setSelectEl.insertBefore( option, newOption );
+		} else {
+			this.setSelectEl.appendChild( option );
+		}
+
+		if ( select ) {
+			this.setSelectEl.value = name;
 		}
 	}
 

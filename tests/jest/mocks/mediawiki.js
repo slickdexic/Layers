@@ -3,10 +3,10 @@
  */
 
 // Mock MediaWiki global object
-var mw = {
+const mw = {
     config: {
         get: function ( key, fallback ) {
-            var mockConfig = {
+            const mockConfig = {
                 'wgLayersEnable': true,
                 'wgCanonicalNamespace': 'File',
                 'wgTitle': 'Example.jpg',
@@ -17,7 +17,7 @@ var mw = {
     },
 
     message: function ( key ) {
-        var mockMessages = {
+        const mockMessages = {
             'layers-edit-layers': 'Edit Layers',
             'layers-save': 'Save',
             'layers-cancel': 'Cancel',
@@ -51,7 +51,7 @@ var mw = {
 
     Api: function () {
         return {
-            get: function ( params ) {
+            get: function ( _params ) {
                 return Promise.resolve({
                     query: {
                         layers: {
@@ -60,7 +60,7 @@ var mw = {
                     }
                 });
             },
-            post: function ( params ) {
+            post: function ( _params ) {
                 return Promise.resolve({
                     layers: {
                         result: 'success'
@@ -71,20 +71,20 @@ var mw = {
     },
 
     loader: {
-        using: function ( modules ) {
+        using: function ( _modules ) {
             return Promise.resolve();
         }
     },
 
-    hook: function ( name ) {
-        var callbacks = [];
+    hook: function ( _name ) {
+        const callbacks = [];
         return {
             add: function ( callback ) {
                 callbacks.push( callback );
                 return this;
             },
             fire: function () {
-                var args = Array.prototype.slice.call( arguments );
+                const args = Array.prototype.slice.call( arguments );
                 callbacks.forEach( function ( callback ) {
                     callback.apply( null, args );
                 } );

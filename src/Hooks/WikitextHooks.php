@@ -16,6 +16,13 @@ class WikitextHooks {
 	private static $pageHasLayers = false;
 
 	/**
+	 * Map of filename => set name detected from wikitext
+	 * e.g. ['ImageTest02.jpg' => 'Paul']
+	 * @var array
+	 */
+	private static $fileSetNames = [];
+
+	/**
 	 * Handle file parameter parsing in wikitext
 	 * Called when MediaWiki processes [[File:...]] syntax
 	 *
@@ -62,23 +69,11 @@ class WikitextHooks {
 					. ( $hasLinkAttribs ? 'yes' : 'no' )
 				);
 			}
-			// Peek layers intent from the file link href, e.g., ...?layers=all
+			// Extract layers parameter from file link href
 			$layersFlag = null;
 			if ( isset( $linkAttribs['href'] ) ) {
 				$href = (string)$linkAttribs['href'];
-					if (
-						strpos( $href, 'layers=all' ) !== false
-						|| strpos( $href, 'layers=on' ) !== false
-						|| strpos( $href, 'layer=all' ) !== false
-						|| strpos( $href, 'layer=on' ) !== false
-					) {
-						$layersFlag = 'all';
-					} elseif (
-						strpos( $href, 'layers=none' ) !== false
-						|| strpos( $href, 'layers=off' ) !== false
-					) {
-						$layersFlag = 'off';
-					}
+				$layersFlag = self::extractLayersParamFromHref( $href );
 				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 					$logger = \call_user_func(
 						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
@@ -315,12 +310,7 @@ class WikitextHooks {
 			}
 			if ( $layersFlag === null && isset( $frameParams['link-url'] ) ) {
 				$href = (string)$frameParams['link-url'];
-				if (
-					strpos( $href, 'layers=all' ) !== false || strpos( $href, 'layers=on' ) !== false
-					|| strpos( $href, 'layer=all' ) !== false || strpos( $href, 'layer=on' ) !== false
-				) {
-					$layersFlag = 'all';
-				}
+				$layersFlag = self::extractLayersParamFromHref( $href );
 			}
 			// Last resort: parse data-mw JSON for original args (when params were not preserved)
 			if (
@@ -337,10 +327,10 @@ class WikitextHooks {
 				return true;
 			}
 
+			// Enable layers if we have any valid layers parameter
 			if (
 				$file && (
-					$layersFlag === 'all'
-					|| $layersFlag === 'on'
+					$layersFlag !== null
 					|| isset( $handlerParams['layersjson'] )
 					|| isset( $handlerParams['layerData'] )
 				)
@@ -365,7 +355,15 @@ class WikitextHooks {
 				if ( $layersArray === null ) {
 					$db = self::getLayersDatabaseService();
 					if ( $db ) {
-						$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
+						// Check if a specific set name was requested for this file
+						$filename = $file->getName();
+						$setName = self::getFileSetName( $filename );
+						// If layersFlag looks like a set name (not 'on', 'all', etc.), use it
+						if ( $layersFlag !== null && $layersFlag !== 'on' && $layersFlag !== 'all' 
+							&& $layersFlag !== 'true' && $layersFlag !== 'off' && $layersFlag !== 'none' ) {
+							$setName = $layersFlag;
+						}
+						$latest = $db->getLatestLayerSet( $filename, $file->getSha1(), $setName );
 						if ( $latest && isset( $latest['data'] ) ) {
 							$layersArray = isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] )
 								? $latest['data']['layers']
@@ -733,8 +731,8 @@ class WikitextHooks {
 				if ( !$db ) {
 					return true;
 				}
-				// on/all => show latest set
-				if ( $param === 'on' || $param === 'all' ) {
+				// 'on' => show default set
+				if ( $param === 'on' ) {
 					$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
 					if ( $latest && isset( $latest['data'] ) ) {
 						$layersArray = (
@@ -779,6 +777,17 @@ class WikitextHooks {
 						}
 						$layersArray = $subset;
 					}
+				} else {
+					// Any other value (including 'all') => treat as named set lookup
+					$ls = $db->getLayerSetByName( $file->getName(), $file->getSha1(), $param );
+					if ( $ls && isset( $ls['data'] ) ) {
+						$layersArray = (
+							isset( $ls['data']['layers'] ) && is_array( $ls['data']['layers'] )
+						)
+							? $ls['data']['layers']
+							: $ls['data'];
+					}
+					// If named set doesn't exist, $layersArray remains null => no layers displayed
 				}
 
 				if ( $layersArray !== null ) {
@@ -1276,12 +1285,7 @@ class WikitextHooks {
 		}
 		if ( $layersFlag === null && isset( $linkAttribs['href'] ) ) {
 			$href = (string)$linkAttribs['href'];
-			if (
-				strpos( $href, 'layers=all' ) !== false || strpos( $href, 'layers=on' ) !== false
-				|| strpos( $href, 'layer=all' ) !== false || strpos( $href, 'layer=on' ) !== false
-			) {
-				$layersFlag = 'all';
-			}
+			$layersFlag = self::extractLayersParamFromHref( $href );
 		}
 
 		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
@@ -1306,18 +1310,13 @@ class WikitextHooks {
 		// Additional check: look for layers parameter in link attributes if not found in transform params
 		if ( $layersFlag === null && isset( $linkAttribs['href'] ) ) {
 			$href = (string)$linkAttribs['href'];
-			if (
-				strpos( $href, 'layers=all' ) !== false || strpos( $href, 'layers=on' ) !== false
-				|| strpos( $href, 'layer=all' ) !== false || strpos( $href, 'layer=on' ) !== false
-			) {
-				$layersFlag = 'all';
-				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-					$logger = \call_user_func(
-						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-						'Layers'
-					);
-					$logger->info( 'Layers: Found layers parameter in link href: ' . $href );
-				}
+			$layersFlag = self::extractLayersParamFromHref( $href );
+			if ( $layersFlag !== null && \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func(
+					[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+					'Layers'
+				);
+				$logger->info( 'Layers: Found layers parameter in link href: ' . $href );
 			}
 		}
 
@@ -1326,8 +1325,8 @@ class WikitextHooks {
 		if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
 			$shouldFallback = false;
 
-		// Check if layers flag indicates we should show layers
-		if ( $layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === true ) {
+		// Check if layers flag indicates we should show layers (any value except off/none)
+		if ( $layersFlag !== null && $layersFlag !== 'off' && $layersFlag !== 'none' ) {
 			$shouldFallback = true;
 		}
 
@@ -1344,8 +1343,10 @@ class WikitextHooks {
 		// Also check link attributes for layers parameter as additional fallback
 		if ( !$shouldFallback && isset( $linkAttribs['href'] ) ) {
 			$href = (string)$linkAttribs['href'];
-			if ( strpos( $href, 'layers=all' ) !== false || strpos( $href, 'layers=on' ) !== false ) {
+			$hrefParam = self::extractLayersParamFromHref( $href );
+			if ( $hrefParam !== null && $hrefParam !== 'off' && $hrefParam !== 'none' ) {
 				$shouldFallback = true;
+				$layersFlag = $hrefParam;
 			}
 		}
 
@@ -1356,13 +1357,10 @@ class WikitextHooks {
 			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 			$logger->info( 'Layers: context check - isFilePage=' . ( $contextIsFile ? 'yes' : 'no' ) . ', isEditLayers=' . ( $contextIsEdit ? 'yes' : 'no' ) );
 		}
-		if ( !$shouldFallback && $contextIsFile ) {
-			$shouldFallback = true;
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info( 'Layers: enabling fallback because current page is File namespace' );
-			}
-		}
+		// Note: File: pages no longer auto-enable layers. Users must explicitly use layers=on.
+		// if ( !$shouldFallback && $contextIsFile ) {
+		// 	$shouldFallback = true;
+		// }
 		if ( !$shouldFallback && $contextIsEdit ) {
 			$shouldFallback = true;
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
@@ -1381,10 +1379,35 @@ class WikitextHooks {
 					if ( !$db ) {
 						throw new Exception( 'LayersDatabase service unavailable' );
 					}
-					$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
-					if ( $latest && isset( $latest['data'] ) ) {
-						$layerData = isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] )
-							? $latest['data']['layers']
+
+					$layerSet = null;
+					$filename = $file->getName();
+					
+					// Check stored set name from wikitext preprocessing
+					$storedSetName = self::getFileSetName( $filename );
+					if ( $storedSetName !== null && $layersFlag === null ) {
+						$layersFlag = $storedSetName;
+						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+							$logger = \call_user_func(
+								[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+								'Layers'
+							);
+							$logger->info( "Layers: Using stored set name from wikitext: $storedSetName" );
+						}
+					}
+					
+					// Determine which layer set to fetch based on layersFlag
+					if ( $layersFlag === null || $layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === 'true' ) {
+						// 'on'/'all'/null => fetch the default set (latest revision)
+						$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1() );
+					} elseif ( $layersFlag !== 'off' && $layersFlag !== 'none' ) {
+						// Any other value => treat as named set
+						$layerSet = $db->getLayerSetByName( $filename, $file->getSha1(), $layersFlag );
+					}
+
+					if ( $layerSet && isset( $layerSet['data'] ) ) {
+						$layerData = isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] )
+							? $layerSet['data']['layers']
 							: [];
 						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 							$logger = \call_user_func(
@@ -1393,8 +1416,9 @@ class WikitextHooks {
 							);
 							$logger->info(
 								sprintf(
-									'Layers: DB fallback provided %d layers for thumbnail',
-									count( $layerData )
+									'Layers: DB fallback provided %d layers for thumbnail (set: %s)',
+									count( $layerData ),
+									$layersFlag ?? 'default'
 								)
 							);
 						}
@@ -1647,10 +1671,20 @@ class WikitextHooks {
 	}
 
 	/**
+	 * Get the stored set name for a specific file (if any)
+	 * @param string $filename The filename (without namespace prefix)
+	 * @return string|null The set name, or null if not specified
+	 */
+	public static function getFileSetName( string $filename ): ?string {
+		return self::$fileSetNames[$filename] ?? null;
+	}
+
+	/**
 	 * Reset the page layers flag (useful for testing)
 	 */
 	public static function resetPageLayersFlag(): void {
 		self::$pageHasLayers = false;
+		self::$fileSetNames = [];
 	}
 
 	/**
@@ -1676,32 +1710,33 @@ class WikitextHooks {
 				}
 			}
 
-			// Multiple patterns to catch different variations
-			// Fixed patterns to properly handle layers= appearing directly after first pipe
-			$patterns = [
-				'/\[\[File:[^|\]]*\|layers\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)/',
-				'/\[\[File:[^|\]]*\|layer\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)/',
-				'/\[\[File:[^|\]]*\|[^|\]]*layers\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)/',
-				'/\[\[File:[^|\]]*\|[^|\]]*layer\s*=\s*(all|on|true|id:\d+|name:[^|\]]+|[0-9a-fA-F,\s]+)/',
-				'/\[\[File:[^|\]]*\|.*layers\s*=\s*(all|on|true|id:\d+|name:[^|\]]+)/',
-				'/\[\[File:[^|\]]*\|.*layer\s*=\s*(all|on|true|id:\d+|name:[^|\]]+)/'
-			];
-
-			foreach ( $patterns as $pattern ) {
-				if ( preg_match( $pattern, $text, $matches ) ) {
+			// Extract [[File:filename.ext|...layers=value...]] patterns and store setname per file
+			// This pattern captures: filename, and layers/layer value (any string until | or ]])
+			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layers?\s*=\s*([^|\]]+)/i';
+			if ( preg_match_all( $fileLayersPattern, $text, $allMatches, PREG_SET_ORDER ) ) {
+				foreach ( $allMatches as $match ) {
+					$filename = trim( $match[1] );
+					$layersValue = trim( $match[2] );
+					
 					self::$pageHasLayers = true;
-
+					
+					// Store the set name for this file (unless it's a boolean-like value)
+					$normalized = strtolower( $layersValue );
+					if ( $normalized !== 'on' && $normalized !== 'off' && $normalized !== 'none' 
+						&& $normalized !== 'true' && $normalized !== 'false' && $normalized !== 'all' ) {
+						// This is a named set like "Paul"
+						self::$fileSetNames[$filename] = $layersValue;
+					}
+					
 					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 						$logger = \call_user_func(
-						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-						'Layers'
-					);
+							[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+							'Layers'
+						);
 						$logger->info(
-							'Layers: ParserBeforeInternalParse detected layers parameter: ' . $matches[0]
-							. ', setting pageHasLayers=true'
+							"Layers: ParserBeforeInternalParse detected layers=$layersValue for file=$filename"
 						);
 					}
-					break;
 				}
 			}
 
@@ -1745,7 +1780,12 @@ class WikitextHooks {
 		if ( !$db ) {
 			return;
 		}
-		$layerSet = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
+		
+		// Check if a specific set name was requested for this file in wikitext
+		$filename = $file->getName();
+		$setName = self::getFileSetName( $filename );
+		
+		$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1(), $setName );
 
 		if ( $layerSet ) {
 			$params['layerSetId'] = $layerSet['id'];
@@ -1871,5 +1911,32 @@ class WikitextHooks {
 		} catch ( \Throwable $e ) {
 			return false;
 		}
+	}
+
+	/**
+	 * Extract layers parameter value from URL/href string.
+	 * Returns the value of layers= or layer= parameter, or null if not found.
+	 * Returns 'off' for explicit none/off values.
+	 *
+	 * @param string $href URL or href string to parse
+	 * @return string|null The layers parameter value, 'off' for none/off, or null if not found
+	 */
+	private static function extractLayersParamFromHref( string $href ): ?string {
+		// Check for explicit off/none first
+		if (
+			strpos( $href, 'layers=none' ) !== false
+			|| strpos( $href, 'layers=off' ) !== false
+			|| strpos( $href, 'layer=none' ) !== false
+			|| strpos( $href, 'layer=off' ) !== false
+		) {
+			return 'off';
+		}
+
+		// Extract the actual value using regex
+		if ( preg_match( '/(?:[\?&#]|\|)layers?=([^\s"\'<>|&#]+)/i', $href, $m ) ) {
+			return strtolower( trim( urldecode( $m[1] ) ) );
+		}
+
+		return null;
 	}
 }

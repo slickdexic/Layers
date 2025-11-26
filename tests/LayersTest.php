@@ -7,23 +7,26 @@
  * Usage: php maintenance/runScript.php extensions/Layers/tests/LayersTest.php
  */
 
-use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
+use MediaWiki\Maintenance\Maintenance;
+use MediaWiki\MediaWikiServices;
 
-/**
- * @coversNothing
- */
-class LayersTest {
+require_once getenv( 'MW_INSTALL_PATH' ) !== false
+	? getenv( 'MW_INSTALL_PATH' ) . '/maintenance/Maintenance.php'
+	: __DIR__ . '/../../../maintenance/Maintenance.php';
+
+class LayersTest extends Maintenance {
 	/** @var int */
 	private $passed = 0;
 	/** @var int */
 	private $failed = 0;
 
-	private function output( $msg ) {
-		echo $msg . "\n";
+	public function __construct() {
+		parent::__construct();
+		$this->addDescription( 'Layers Extension Test Suite' );
 	}
 
-	public function run() {
+	public function execute() {
 		$this->output( "=== Layers Extension Test Suite ===\n" );
 
 		$this->testDatabaseTables();
@@ -35,24 +38,22 @@ class LayersTest {
 		$this->testThumbnailRenderer();
 
 		$this->output( "\n=== Test Results ===" );
-		$this->output( "Passed: {$this->passed}" );
-		$this->output( "Failed: {$this->failed}" );
+		$this->output( "Passed: {$this->passed}\n" );
+		$this->output( "Failed: {$this->failed}\n" );
 
 		if ( $this->failed === 0 ) {
-			$this->output( "✅ All tests passed! Extension appears to be working correctly." );
+			$this->output( "✅ All tests passed! Extension appears to be working correctly.\n" );
 		} else {
-			$this->output( "❌ Some tests failed. Check the output above for details." );
+			$this->output( "❌ Some tests failed. Check the output above for details.\n" );
 		}
-
-		return $this->failed === 0;
 	}
 
 	private function test( $name, $condition, $details = '' ) {
 		if ( $condition ) {
-			$this->output( "✅ $name" );
+			$this->output( "✅ $name\n" );
 			$this->passed++;
 		} else {
-			$this->output( "❌ $name" . ( $details ? " - $details" : '' ) );
+			$this->output( "❌ $name" . ( $details ? " - $details" : '' ) . "\n" );
 			$this->failed++;
 		}
 	}
@@ -61,13 +62,13 @@ class LayersTest {
 	 * @covers MediaWiki\\Extension\\Layers\\Database\\LayersDatabase
 	 */
 	private function testDatabaseTables() {
-		$this->output( "\n--- Database Tables ---" );
+		$this->output( "\n--- Database Tables ---\n" );
 
 		// Define constants for compatibility if not available
 		if ( !defined( 'DB_REPLICA' ) ) {
 			define( 'DB_REPLICA', -1 );
 		}
-		$dbr = wfGetDB( DB_REPLICA );
+		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
 
 		$this->test(
 			"layer_sets table exists",
@@ -89,10 +90,10 @@ class LayersTest {
 	 * @covers MediaWiki\\Extension\\Layers\\Database\\LayersDatabase
 	 */
 	private function testLayersDatabase() {
-		$this->output( "\n--- LayersDatabase Class ---" );
+		$this->output( "\n--- LayersDatabase Class ---\n" );
 
 		try {
-			$db = new LayersDatabase();
+			$db = MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
 			$this->test( "LayersDatabase instantiates", true );
 
 			// Test basic database operations
@@ -126,9 +127,9 @@ class LayersTest {
 	 * @covers Nothing
 	 */
 	private function testConfigurationValues() {
-		$this->output( "\n--- Configuration ---" );
+		$this->output( "\n--- Configuration ---\n" );
 
-		$config = MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+		$config = MediaWikiServices::getInstance()->getMainConfig();
 
 		$this->test(
 			"LayersEnable config exists",
@@ -157,7 +158,7 @@ class LayersTest {
 	 * @covers Nothing
 	 */
 	private function testUserPermissions() {
-		$this->output( "\n--- User Permissions ---" );
+		$this->output( "\n--- User Permissions ---\n" );
 
 		global $wgGroupPermissions;
 
@@ -183,9 +184,9 @@ class LayersTest {
 	 * @covers Nothing
 	 */
 	private function testResourceModules() {
-		$this->output( "\n--- Resource Modules ---" );
+		$this->output( "\n--- Resource Modules ---\n" );
 
-		$resourceLoader = MediaWiki\MediaWikiServices::getInstance()->getResourceLoader();
+		$resourceLoader = MediaWikiServices::getInstance()->getResourceLoader();
 
 		$this->test(
 			"ext.layers module exists",
@@ -214,7 +215,7 @@ class LayersTest {
 	 * @covers MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave
 	 */
 	private function testApiEndpoints() {
-		$this->output( "\n--- API Endpoints ---" );
+		$this->output( "\n--- API Endpoints ---\n" );
 
 		global $wgAPIModules;
 
@@ -244,7 +245,7 @@ class LayersTest {
 	 * @covers MediaWiki\\Extension\\Layers\\ThumbnailRenderer
 	 */
 	private function testThumbnailRenderer() {
-		$this->output( "\n--- Thumbnail Renderer ---" );
+		$this->output( "\n--- Thumbnail Renderer ---\n" );
 
 		$this->test(
 			"ThumbnailRenderer class exists",
@@ -264,7 +265,7 @@ class LayersTest {
 		}
 
 		// Test ImageMagick availability
-		$config = MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+		$config = MediaWikiServices::getInstance()->getMainConfig();
 		$useImageMagick = $config->get( 'UseImageMagick' );
 
 		$this->test(
@@ -284,13 +285,5 @@ class LayersTest {
 	}
 }
 
-// Run the test if called directly
-if ( defined( 'MEDIAWIKI' ) ) {
-	$test = new LayersTest();
-	$success = $test->run();
-	exit( $success ? 0 : 1 );
-} else {
-	echo "This script must be run from MediaWiki maintenance environment.\n";
-	echo "Usage: php maintenance/runScript.php extensions/Layers/tests/LayersTest.php\n";
-	exit( 1 );
-}
+$maintClass = LayersTest::class;
+require_once RUN_MAINTENANCE_IF_MAIN;

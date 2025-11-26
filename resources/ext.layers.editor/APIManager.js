@@ -339,6 +339,10 @@ class APIManager {
 			// Process the current layer set if it exists
 			if ( layersInfo.layerset ) {
 				this.extractLayerSetData( layersInfo.layerset );
+				// Extract set name from layerset if available
+				if ( layersInfo.layerset.name ) {
+					this.editor.stateManager.set( 'currentSetName', layersInfo.layerset.name );
+				}
 			} else {
 				// No layerset, set empty state
 				this.editor.stateManager.set( 'layers', [] );
@@ -350,8 +354,17 @@ class APIManager {
 			// Process all layer sets for the revision selector
 			if ( Array.isArray( layersInfo.all_layersets ) ) {
 				this.editor.stateManager.set( 'allLayerSets', layersInfo.all_layersets );
+				this.editor.stateManager.set( 'setRevisions', layersInfo.all_layersets );
 			} else {
 				this.editor.stateManager.set( 'allLayerSets', [] );
+				this.editor.stateManager.set( 'setRevisions', [] );
+			}
+
+			// Process named sets for the set selector
+			if ( Array.isArray( layersInfo.named_sets ) ) {
+				this.editor.stateManager.set( 'namedSets', layersInfo.named_sets );
+				// Build the set selector UI
+				this.editor.buildSetSelector();
 			}
 
 			// Build the revision selector UI
@@ -371,7 +384,9 @@ class APIManager {
 			console.log( '[APIManager] Processed layers data:', {
 				layersCount: layers.length,
 				currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
-				allLayerSetsCount: ( layersInfo.all_layersets || [] ).length
+				currentSetName: this.editor.stateManager.get( 'currentSetName' ),
+				allLayerSetsCount: ( layersInfo.all_layersets || [] ).length,
+				namedSetsCount: ( layersInfo.named_sets || [] ).length
 			} );
 
 		} catch ( error ) {
@@ -471,6 +486,104 @@ class APIManager {
 			} );
 		} );
 	}
+
+	/**
+	 * Load layers by set name
+	 * Fetches a specific named layer set and its revision history
+	 * @param {string} setName - The name of the set to load
+	 * @return {Promise} Resolves with the layer data
+	 */
+	loadLayersBySetName( setName ) {
+		return new Promise( ( resolve, reject ) => {
+			if ( !setName ) {
+				reject( new Error( 'No set name provided' ) );
+				return;
+			}
+
+			this.editor.uiManager.showSpinner( this.getMessage( 'layers-loading' ) );
+
+			this.api.get( {
+				action: 'layersinfo',
+				filename: this.editor.filename,
+				setname: setName,
+				format: 'json'
+			} ).then( ( data ) => {
+				this.editor.uiManager.hideSpinner();
+
+				if ( !data || !data.layersinfo ) {
+					reject( new Error( 'Invalid API response' ) );
+					return;
+				}
+
+				const layersInfo = data.layersinfo;
+
+				// Process the current layer set
+				if ( layersInfo.layerset ) {
+					this.extractLayerSetData( layersInfo.layerset );
+					// Store set-specific revisions for the revision selector
+					if ( Array.isArray( layersInfo.all_layersets ) ) {
+						this.editor.stateManager.set( 'setRevisions', layersInfo.all_layersets );
+						this.editor.stateManager.set( 'allLayerSets', layersInfo.all_layersets );
+					}
+				} else {
+					// Set doesn't exist yet or has no revisions - empty state
+					this.editor.stateManager.set( 'layers', [] );
+					this.editor.stateManager.set( 'currentLayerSetId', null );
+					this.editor.stateManager.set( 'setRevisions', [] );
+				}
+
+				// Update named sets list if provided
+				if ( Array.isArray( layersInfo.named_sets ) ) {
+					this.editor.stateManager.set( 'namedSets', layersInfo.named_sets );
+					this.editor.buildSetSelector();
+				}
+
+				// Update current set name in state
+				this.editor.stateManager.set( 'currentSetName', setName );
+
+				// Update the revision selector UI
+				this.editor.buildRevisionSelector();
+
+				// Render layers
+				const layers = this.editor.stateManager.get( 'layers' ) || [];
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.renderLayers( layers );
+				}
+
+				// Update layer panel
+				if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
+					this.editor.layerPanel.updateLayers( layers );
+				}
+
+				// Mark as clean (no unsaved changes)
+				this.editor.stateManager.set( 'hasUnsavedChanges', false );
+				this.editor.stateManager.set( 'isDirty', false );
+
+				console.log( '[APIManager] Loaded layer set by name:', {
+					setName: setName,
+					layersCount: layers.length,
+					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
+					revisionsCount: ( layersInfo.all_layersets || [] ).length
+				} );
+
+				resolve( {
+					layers: layers,
+					setName: setName,
+					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
+					revisions: this.editor.stateManager.get( 'setRevisions' ) || []
+				} );
+
+			} ).catch( ( code, result ) => {
+				this.editor.uiManager.hideSpinner();
+				const standardizedError = this.handleError(
+					{ error: { code: code, info: result && result.error && result.error.info } },
+					'load',
+					{ setName: setName }
+				);
+				reject( standardizedError );
+			} );
+		} );
+	}
 	saveLayers() {
 		return new Promise( ( resolve, reject ) => {
 			if ( !this.validateBeforeSave() ) {
@@ -517,9 +630,13 @@ class APIManager {
 		const layers = this.editor.stateManager.get( 'layers' ) || [];
 		const layersJson = JSON.stringify( layers );
 		
+		// Get current set name from state, fallback to 'default'
+		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+		
 		// DEBUG: Log what we're sending
 		console.log( '[APIManager] Building save payload:', {
 			filename: this.editor.filename,
+			setname: currentSetName,
 			layerCount: layers.length,
 			dataSize: layersJson.length,
 			dataSample: layersJson.substring( 0, 200 )
@@ -529,15 +646,9 @@ class APIManager {
 			action: 'layerssave',
 			filename: this.editor.filename,
 			data: layersJson,
+			setname: currentSetName,
 			format: 'json'
 		};
-
-		if ( this.editor.uiManager.revNameInputEl && this.editor.uiManager.revNameInputEl.value ) {
-			const setname = this.sanitizeInput( this.editor.uiManager.revNameInputEl.value.trim() );
-			if ( setname ) {
-				payload.setname = setname;
-			}
-		}
 
 		return payload;
 	}
@@ -597,11 +708,16 @@ class APIManager {
 	}
 
 	handleSaveSuccess( data ) {
+		// DEBUG: Log full save response
+		console.log( '[APIManager] handleSaveSuccess called with:', JSON.stringify( data ) );
+		console.log( '[APIManager] currentSetName at save success:', this.editor.stateManager.get( 'currentSetName' ) );
+
 		if ( data.layerssave && data.layerssave.success ) {
 			this.editor.stateManager.markClean();
 			mw.notify( this.getMessage( 'layers-save-success' ), { type: 'success' } );
 			this.reloadRevisions();
 		} else {
+			console.error( '[APIManager] Save did not return success:', data );
 			this.handleSaveError( data );
 		}
 	}
@@ -617,24 +733,49 @@ class APIManager {
 	}
 
 	reloadRevisions() {
+		// Get the current set name to reload the correct set's data
+		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+		console.log( '[APIManager] reloadRevisions for set:', currentSetName );
+
 		this.api.get( {
 			action: 'layersinfo',
 			filename: this.editor.filename,
+			setname: currentSetName,
 			format: 'json'
 		} ).then( ( data ) => {
+			console.log( '[APIManager] reloadRevisions response:', JSON.stringify( data ) );
+
 			if ( data.layersinfo ) {
+				// Update revision history for the current set (all_layersets contains revisions for this named set)
 				if ( Array.isArray( data.layersinfo.all_layersets ) ) {
+					console.log( '[APIManager] Setting allLayerSets:', data.layersinfo.all_layersets.length, 'revisions' );
 					this.editor.stateManager.set( 'allLayerSets', data.layersinfo.all_layersets.slice() );
+					// Also update setRevisions for the revision selector
+					this.editor.stateManager.set( 'setRevisions', data.layersinfo.all_layersets.slice() );
 				}
+				// Update the named sets list (for the set selector dropdown)
+				if ( Array.isArray( data.layersinfo.named_sets ) ) {
+					console.log( '[APIManager] Setting namedSets:', data.layersinfo.named_sets.map( s => s.name ) );
+					this.editor.stateManager.set( 'namedSets', data.layersinfo.named_sets.slice() );
+					// Rebuild set selector to show updated list
+					if ( this.editor.buildSetSelector ) {
+						this.editor.buildSetSelector();
+					}
+				}
+				// Update current layer set ID from the returned layerset
 				if ( data.layersinfo.layerset && data.layersinfo.layerset.id ) {
+					console.log( '[APIManager] Setting currentLayerSetId:', data.layersinfo.layerset.id );
 					this.editor.stateManager.set( 'currentLayerSetId', data.layersinfo.layerset.id );
+				} else {
+					console.log( '[APIManager] No layerset returned from API (new set not found?)' );
 				}
 				this.editor.buildRevisionSelector();
 				if ( this.editor.uiManager.revNameInputEl ) {
 					this.editor.uiManager.revNameInputEl.value = '';
 				}
 			}
-		} ).catch( () => {
+		} ).catch( ( error ) => {
+			console.warn( '[APIManager] reloadRevisions error:', error );
 			// Ignore reload errors
 		} );
 	}

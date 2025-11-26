@@ -304,13 +304,17 @@ class UIHooks {
 
 		// Pass editor init config via JS config vars for CSP-safe startup
 		$fileUrl = self::getPublicImageUrl( $file );
+		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
 		$out->addJsConfigVars( [
 			'wgLayersEditorInit' => [
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
 			],
 			'wgLayersCurrentImageUrl' => $fileUrl,
-			'wgLayersImageBaseUrl' => self::getImageBaseUrl()
+			'wgLayersImageBaseUrl' => self::getImageBaseUrl(),
+			'wgLayersMaxNamedSets' => $config->get( 'LayersMaxNamedSets' ),
+			'wgLayersMaxRevisionsPerSet' => $config->get( 'LayersMaxRevisionsPerSet' ),
+			'wgLayersDefaultSetName' => $config->get( 'LayersDefaultSetName' ),
 		] );
 
 		// Add basic HTML content to ensure page has content

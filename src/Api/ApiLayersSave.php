@@ -81,12 +81,25 @@ class ApiLayersSave extends ApiBase {
 	 * @throws \ApiUsageException When user lacks permission or data is invalid
 	 */
 	public function execute() {
+		// DEBUG: Write directly to layers.log file
+		$logFile = __DIR__ . '/../../layers.log';
+		$timestamp = date( 'Y-m-d H:i:s' );
+		file_put_contents( $logFile, "$timestamp ApiLayersSave::execute() CALLED\n", FILE_APPEND );
+
 		// Get authenticated user and request parameters
 		// MediaWiki guarantees $user is valid (anonymous or logged in)
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
 		$requestedFilename = $params['filename'];
-		
+
+		// DEBUG: Log all params immediately  
+		$debugInfo = json_encode( [
+			'filename' => $params['filename'] ?? 'NULL',
+			'setname' => $params['setname'] ?? 'NULL',
+			'data_length' => isset( $params['data'] ) ? strlen( $params['data'] ) : 'NULL'
+		] );
+		file_put_contents( $logFile, "$timestamp ApiLayersSave params: $debugInfo\n", FILE_APPEND );
+
 		// SECURITY: Verify user has editlayers permission
 		// This throws ApiUsageException if user lacks the right
 		// CSRF token is automatically checked by needsToken() return value
@@ -110,7 +123,12 @@ class ApiLayersSave extends ApiBase {
 			// Extract parameters from the API request
 			$fileName = $requestedFilename;
 			$data = $params['data'];
-			$setName = $this->sanitizeSetName( $params['setname'] ?? 'default' );
+			$rawSetName = $params['setname'] ?? 'default';
+			$setName = $this->sanitizeSetName( $rawSetName );
+
+			// DEBUG: Log set name processing (use error_log to guarantee output)
+			error_log( "LAYERS DEBUG ApiLayersSave: params[setname]=" . var_export( $params['setname'] ?? 'NOT SET', true ) . ", raw='$rawSetName', sanitized='$setName'" );
+			wfDebugLog( 'Layers', "ApiLayersSave: raw setname='$rawSetName', sanitized='$setName', filename='$fileName'" );
 
 			// VALIDATION: Ensure filename resolves to a valid File namespace title
 			// Title::newFromText normalizes and validates the format, but does not require
@@ -120,7 +138,7 @@ class ApiLayersSave extends ApiBase {
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
 				$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
 			}
-			
+
 			// Use DB key form for database operations
 			// This ensures consistency (spaces -> underscores) across save/load paths
 			$fileDbKey = $title->getDBkey();
@@ -250,6 +268,10 @@ class ApiLayersSave extends ApiBase {
 			}
 		} catch ( ApiUsageException $e ) {
 			throw $e;
+		} catch ( \OverflowException $e ) {
+			// Named set limit reached - return specific error for user feedback
+			// The exception message contains the i18n key
+			$this->dieWithError( $e->getMessage(), 'maxsetsreached' );
 		} catch ( \Throwable $e ) {
 			// GLOBAL EXCEPTION HANDLER: Catch any unexpected errors
 			// This catch block is the last line of defense for:
@@ -257,7 +279,7 @@ class ApiLayersSave extends ApiBase {
 			// - PHP errors (out of memory, type errors)
 			// - Service initialization failures
 			// - Any other unexpected conditions
-			
+
 			// SECURITY CRITICAL: Log full details server-side for debugging
 			// Uses MediaWiki's PSR-3 logger which:
 			// - Routes to configured log handlers (file, syslog, etc.)
@@ -299,21 +321,31 @@ class ApiLayersSave extends ApiBase {
 	 * @return string
 	 */
 	protected function sanitizeSetName( string $rawSetName ): string {
+		$logFile = __DIR__ . '/../../layers.log';
+		$timestamp = date( 'Y-m-d H:i:s' );
+		
 		$setName = trim( $rawSetName );
+		file_put_contents( $logFile, "$timestamp sanitizeSetName: after trim='$setName'\n", FILE_APPEND );
 
 		// Remove control chars and path separators to avoid traversal and logging issues
-		$setName = preg_replace( '/[\x00-\x1F\x7F\/\\]/u', '', $setName );
+		$setName = preg_replace( '/[\x00-\x1F\x7F\/\\\\]/u', '', $setName );
+		file_put_contents( $logFile, "$timestamp sanitizeSetName: after control chars='$setName'\n", FILE_APPEND );
 
 		// Allow any letter/number from any script plus underscore, dash, and spaces
 		$unicodeSafe = preg_replace( '/[^\p{L}\p{N}_\-\s]/u', '', $setName );
+		file_put_contents( $logFile, "$timestamp sanitizeSetName: unicodeSafe=" . var_export($unicodeSafe, true) . "\n", FILE_APPEND );
+		
 		if ( $unicodeSafe === null ) {
 			// Fallback for environments without unicode PCRE support
 			$unicodeSafe = preg_replace( '/[^a-zA-Z0-9_\-\s]/', '', $setName );
+			file_put_contents( $logFile, "$timestamp sanitizeSetName: fallback unicodeSafe='$unicodeSafe'\n", FILE_APPEND );
 		}
 		$setName = $unicodeSafe ?? '';
+		file_put_contents( $logFile, "$timestamp sanitizeSetName: after unicode='$setName'\n", FILE_APPEND );
 
 		// Collapse repeated whitespace
 		$setName = preg_replace( '/\s+/u', ' ', $setName );
+		file_put_contents( $logFile, "$timestamp sanitizeSetName: after whitespace='$setName'\n", FILE_APPEND );
 
 		// Enforce database column limit with multibyte-aware substring when possible
 		if ( function_exists( 'mb_substr' ) ) {
@@ -321,6 +353,8 @@ class ApiLayersSave extends ApiBase {
 		} else {
 			$setName = substr( $setName, 0, 255 );
 		}
+		
+		file_put_contents( $logFile, "$timestamp sanitizeSetName: final='$setName', returning=" . ($setName === '' ? 'default' : $setName) . "\n", FILE_APPEND );
 
 		return $setName === '' ? 'default' : $setName;
 	}

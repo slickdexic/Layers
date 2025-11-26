@@ -28,6 +28,7 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 		$method->setAccessible( true );
 		return $method;
 	}
+
 	/**
 	 * @covers ::generateLayeredThumbnail
 	 */

@@ -89,6 +89,9 @@
 		this.stateManager.set( 'baseHeight', null );
 		this.stateManager.set( 'allLayerSets', [] );
 		this.stateManager.set( 'currentLayerSetId', null );
+		// Named Layer Sets state
+		this.stateManager.set( 'namedSets', [] );
+		this.stateManager.set( 'currentSetName', 'default' );
 
 		// Initialize HistoryManager for undo/redo
 		this.historyManager = this.registry.get( 'HistoryManager' );
@@ -600,6 +603,265 @@
 	};
 
 	/**
+	 * Build and populate the named layer sets selector dropdown
+	 * @return {void}
+	 */
+	LayersEditor.prototype.buildSetSelector = function () {
+		try {
+			const namedSets = this.stateManager.get( 'namedSets' ) || [];
+			const currentSetName = this.stateManager.get( 'currentSetName' ) || 'default';
+			const selectEl = this.uiManager && this.uiManager.setSelectEl;
+
+			if ( !selectEl ) {
+				return;
+			}
+
+			// Clear existing options
+			selectEl.innerHTML = '';
+
+			if ( namedSets.length === 0 ) {
+				// No sets exist yet - show default placeholder
+				const option = document.createElement( 'option' );
+				option.value = 'default';
+				option.textContent = this.getMessage( 'layers-set-default', 'Default' );
+				option.selected = true;
+				selectEl.appendChild( option );
+			} else {
+				// Build options from named sets
+				namedSets.forEach( ( setInfo ) => {
+					const option = document.createElement( 'option' );
+					option.value = setInfo.name;
+
+					// Format: "SetName (X revisions)"
+					const revCount = setInfo.revision_count || 1;
+					const revLabel = revCount === 1 ?
+						this.getMessage( 'layers-set-revision-single', '1 revision' ) :
+						this.getMessage( 'layers-set-revision-plural', `${ revCount } revisions` )
+							.replace( '$1', revCount );
+
+					option.textContent = `${ setInfo.name } (${ revLabel })`;
+					option.selected = setInfo.name === currentSetName;
+					selectEl.appendChild( option );
+				} );
+			}
+
+			// Add "+ New" option at the end (if not at limit)
+			const maxSets = mw.config.get( 'wgLayersMaxNamedSets', 15 );
+			if ( namedSets.length < maxSets ) {
+				const newOption = document.createElement( 'option' );
+				newOption.value = '__new__';
+				newOption.textContent = this.getMessage( 'layers-set-new', '+ New' );
+				selectEl.appendChild( newOption );
+			}
+
+			// Update new set button state (disable if at limit)
+			this.updateNewSetButtonState();
+
+			this.debugLog( `Built set selector with ${ namedSets.length } sets, current: ${ currentSetName }` );
+		} catch ( error ) {
+			this.errorLog( 'Error building set selector:', error );
+		}
+	};
+
+	/**
+	 * Update the new set button's enabled/disabled state based on limits
+	 * @return {void}
+	 */
+	LayersEditor.prototype.updateNewSetButtonState = function () {
+		try {
+			const newSetBtn = this.uiManager && this.uiManager.setNewBtnEl;
+			if ( !newSetBtn ) {
+				return;
+			}
+
+			const namedSets = this.stateManager.get( 'namedSets' ) || [];
+			const maxSets = mw.config.get( 'wgLayersMaxNamedSets', 15 );
+			const atLimit = namedSets.length >= maxSets;
+
+			newSetBtn.disabled = atLimit;
+			newSetBtn.title = atLimit ?
+				this.getMessage( 'layers-set-limit-reached', `Maximum of ${ maxSets } sets reached` )
+					.replace( '$1', maxSets ) :
+				this.getMessage( 'layers-set-new-tooltip', 'Create a new layer set' );
+		} catch ( error ) {
+			this.errorLog( 'Error updating new set button state:', error );
+		}
+	};
+
+	/**
+	 * Load a layer set by its name
+	 * @param {string} setName - The name of the set to load
+	 * @return {Promise<void>}
+	 */
+	LayersEditor.prototype.loadLayerSetByName = async function ( setName ) {
+		try {
+			if ( !setName ) {
+				this.errorLog( 'loadLayerSetByName: No set name provided' );
+				return;
+			}
+
+			// Check for unsaved changes before switching
+			if ( this.hasUnsavedChanges() ) {
+				const confirmSwitch = confirm(
+					this.getMessage( 'layers-unsaved-changes-warning',
+						'You have unsaved changes. Switch sets without saving?' )
+				);
+				if ( !confirmSwitch ) {
+					// Revert selector to current set
+					this.buildSetSelector();
+					return;
+				}
+			}
+
+			this.debugLog( `Loading layer set: ${ setName }` );
+
+			// Update current set name in state
+			this.stateManager.set( 'currentSetName', setName );
+
+			// Load the set via API
+			await this.apiManager.loadLayersBySetName( setName );
+
+			// Notify user
+			mw.notify(
+				this.getMessage( 'layers-set-loaded', `Loaded layer set: ${ setName }` )
+					.replace( '$1', setName ),
+				{ type: 'info' }
+			);
+		} catch ( error ) {
+			this.errorLog( 'Error loading layer set by name:', error );
+			mw.notify(
+				this.getMessage( 'layers-set-load-error', 'Failed to load layer set' ),
+				{ type: 'error' }
+			);
+		}
+	};
+
+	/**
+	 * Create a new named layer set
+	 * @param {string} setName - The name for the new set
+	 * @return {Promise<boolean>} True if creation succeeded
+	 */
+	LayersEditor.prototype.createNewLayerSet = async function ( setName ) {
+		try {
+			if ( !setName || !setName.trim() ) {
+				mw.notify(
+					this.getMessage( 'layers-set-name-required', 'Please enter a name for the new set' ),
+					{ type: 'warn' }
+				);
+				return false;
+			}
+
+			const trimmedName = setName.trim();
+
+			// Validate name format (alphanumeric, hyphens, underscores)
+			if ( !/^[a-zA-Z0-9_-]+$/.test( trimmedName ) ) {
+				mw.notify(
+					this.getMessage( 'layers-set-name-invalid',
+						'Set name can only contain letters, numbers, hyphens, and underscores' ),
+					{ type: 'error' }
+				);
+				return false;
+			}
+
+			// Check for duplicate names
+			const namedSets = this.stateManager.get( 'namedSets' ) || [];
+			const exists = namedSets.some( ( s ) => s.name.toLowerCase() === trimmedName.toLowerCase() );
+			if ( exists ) {
+				mw.notify(
+					this.getMessage( 'layers-set-name-exists', 'A set with this name already exists' ),
+					{ type: 'error' }
+				);
+				return false;
+			}
+
+			// Check limit
+			const maxSets = mw.config.get( 'wgLayersMaxNamedSets', 15 );
+			if ( namedSets.length >= maxSets ) {
+				mw.notify(
+					this.getMessage( 'layers-set-limit-reached', `Maximum of ${ maxSets } sets reached` )
+						.replace( '$1', maxSets ),
+					{ type: 'error' }
+				);
+				return false;
+			}
+
+			this.debugLog( `Creating new layer set: ${ trimmedName }` );
+
+			// Clear current layers for fresh start
+			this.stateManager.set( 'layers', [] );
+			this.stateManager.set( 'currentSetName', trimmedName );
+			this.stateManager.set( 'currentLayerSetId', null );
+			this.stateManager.set( 'setRevisions', [] );
+
+			// Update canvas
+			if ( this.canvasManager ) {
+				this.canvasManager.clearLayers();
+				this.canvasManager.render();
+			}
+
+			// Update layer panel
+			if ( this.layerPanel ) {
+				this.layerPanel.updateLayerList( [] );
+			}
+
+			// Add to named sets list
+			namedSets.push( {
+				name: trimmedName,
+				revision_count: 0,
+				latest_revision: null,
+				latest_timestamp: null,
+				latest_user_name: mw.config.get( 'wgUserName' )
+			} );
+			this.stateManager.set( 'namedSets', namedSets );
+
+			// Rebuild selector
+			this.buildSetSelector();
+
+			// Mark as having unsaved changes
+			this.stateManager.set( 'hasUnsavedChanges', true );
+			this.updateSaveButtonState();
+
+			mw.notify(
+				this.getMessage( 'layers-set-created', `Created new set: ${ trimmedName }. Add layers and save.` )
+					.replace( '$1', trimmedName ),
+				{ type: 'info' }
+			);
+
+			return true;
+		} catch ( error ) {
+			this.errorLog( 'Error creating new layer set:', error );
+			mw.notify(
+				this.getMessage( 'layers-set-create-error', 'Failed to create layer set' ),
+				{ type: 'error' }
+			);
+			return false;
+		}
+	};
+
+	/**
+	 * Check if there are unsaved changes
+	 * @return {boolean}
+	 */
+	LayersEditor.prototype.hasUnsavedChanges = function () {
+		return this.stateManager.get( 'hasUnsavedChanges' ) || false;
+	};
+
+	/**
+	 * Update the save button state based on unsaved changes
+	 * @return {void}
+	 */
+	LayersEditor.prototype.updateSaveButtonState = function () {
+		try {
+			if ( this.toolbar && this.toolbar.saveBtnEl ) {
+				const hasChanges = this.hasUnsavedChanges();
+				this.toolbar.saveBtnEl.classList.toggle( 'has-changes', hasChanges );
+			}
+		} catch ( error ) {
+			this.errorLog( 'Error updating save button state:', error );
+		}
+	};
+
+	/**
 	 * Load a specific revision by ID
 	 * @param {number} revisionId - The revision ID to load
 	 * @return {void}
@@ -802,13 +1064,12 @@
 		this.uiManager.showSpinner( mw.message ? mw.message( 'layers-saving' ).text() : 'Saving...' );
 
 		// Use API manager to save (no parameters needed - APIManager reads from stateManager)
+		// Note: APIManager.handleSaveSuccess() handles markClean, reloadRevisions, and success notification
 		this.apiManager.saveLayers()
 			.then( ( result ) => {
-				this.uiManager.hideSpinner();
+				// APIManager already handles success notification and reload
+				// Just update the layer set ID here
 				this.stateManager.set( 'currentLayerSetId', result.layersetid );
-				this.stateManager.markClean();
-				this.reloadRevisions();
-				mw.notify( mw.message ? mw.message( 'layers-save-success' ).text() : 'Layers saved successfully', { type: 'success' } );
 			} )
 			.catch( ( error ) => {
 				this.uiManager.hideSpinner();
@@ -823,16 +1084,10 @@
 	 */
 	LayersEditor.prototype.reloadRevisions = function () {
 		try {
-			// Reload layers data to get updated revision list
-			this.apiManager.loadLayers().then( ( data ) => {
-				if ( data && data.allLayerSets ) {
-					this.stateManager.set( 'allLayerSets', data.allLayerSets );
-				}
-				// Rebuild the revision selector
-				this.buildRevisionSelector();
-			} ).catch( ( error ) => {
-				this.errorLog( 'Error reloading revisions:', error );
-			} );
+			// Delegate to APIManager which properly handles the current set name
+			if ( this.apiManager && this.apiManager.reloadRevisions ) {
+				this.apiManager.reloadRevisions();
+			}
 		} catch ( error ) {
 			this.errorLog( 'Error in reloadRevisions:', error );
 		}

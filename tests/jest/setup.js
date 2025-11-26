@@ -113,15 +113,15 @@ if ( typeof global.mw === 'undefined' ) {
                 return undefined;
             }
         },
-        hook: function ( name ) {
-            var callbacks = [];
+        hook: function ( _name ) {
+            const callbacks = [];
             return {
                 add: function ( callback ) {
                     callbacks.push( callback );
                     return this;
                 },
                 fire: function () {
-                    var args = Array.prototype.slice.call( arguments );
+                    const args = Array.prototype.slice.call( arguments );
                     callbacks.forEach( function ( callback ) {
                         callback.apply( null, args );
                     } );

@@ -42,6 +42,25 @@ class LayersSchemaManager {
 
 			// For now, we'll use a dedicated method.
 			$updater->addExtensionUpdate( [ 'MediaWiki\Extension\Layers\Database\LayersSchemaManager::runCheckConstraintsPatch' ] );
+
+			// Named layer sets migration: set default name for existing rows
+			$updater->addExtensionUpdate( [
+				'applyPatch',
+				"$base/patches/patch-named-sets-migration.sql",
+				true
+			] );
+
+			// Add indexes for named layer sets (uses addExtensionIndex to handle "if not exists")
+			$updater->addExtensionIndex(
+				'layer_sets',
+				'idx_layer_sets_named',
+				"$base/patches/patch-idx-layer-sets-named.sql"
+			);
+			$updater->addExtensionIndex(
+				'layer_sets',
+				'idx_layer_sets_setname_revision',
+				"$base/patches/patch-idx-layer-sets-setname-revision.sql"
+			);
 		}
 	}
 

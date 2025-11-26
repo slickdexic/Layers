@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * Layer Panel for Layers Editor
  * Manages the layer list, visibility, ordering, and layer properties
@@ -455,21 +454,112 @@
 	};
 
 	LayerPanel.prototype.renderLayerList = function () {
-		// Clear layer list safely without innerHTML
-		while ( this.layerList.firstChild ) {
-			this.layerList.removeChild( this.layerList.firstChild );
-		}
 		var self = this;
 		var layers = this.editor.stateManager ? this.editor.stateManager.get( 'layers' ) || [] : this.layers || [];
-		layers.forEach( function ( layer, index ) {
-			var layerItem = self.createLayerItem( layer, index );
-			self.layerList.appendChild( layerItem );
-		} );
+		var listContainer = this.layerList;
+
+		// Map existing DOM items by ID
+		var existingItems = {};
+		var domItems = listContainer.querySelectorAll( '.layer-item' );
+		for ( var i = 0; i < domItems.length; i++ ) {
+			existingItems[ domItems[ i ].dataset.layerId ] = domItems[ i ];
+		}
+
 		if ( layers.length === 0 ) {
+			// Handle empty state
+			while ( listContainer.firstChild ) {
+				listContainer.removeChild( listContainer.firstChild );
+			}
 			var empty = document.createElement( 'div' );
 			empty.className = 'layers-empty';
 			empty.textContent = this.msg( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
-			this.layerList.appendChild( empty );
+			listContainer.appendChild( empty );
+			return;
+		}
+
+		// Remove empty message if present
+		var emptyMsg = listContainer.querySelector( '.layers-empty' );
+		if ( emptyMsg ) {
+			listContainer.removeChild( emptyMsg );
+		}
+
+		// First pass: Remove items that are no longer in the layer list
+		var newLayerIds = layers.map( function ( l ) {
+			return String( l.id );
+		} );
+		for ( var id in existingItems ) {
+			if ( newLayerIds.indexOf( id ) === -1 ) {
+				listContainer.removeChild( existingItems[ id ] );
+			}
+		}
+
+		// Second pass: Create or update items and ensure order
+		var previousSibling = null;
+		layers.forEach( function ( layer, index ) {
+			var layerId = String( layer.id );
+			var item = existingItems[ layerId ];
+
+			if ( !item ) {
+				// Create new
+				item = self.createLayerItem( layer, index );
+				existingItems[ layerId ] = item; // Add to map
+			} else {
+				// Update existing
+				self.updateLayerItem( item, layer, index );
+			}
+
+			// Ensure position
+			if ( index === 0 ) {
+				if ( listContainer.firstChild !== item ) {
+					listContainer.insertBefore( item, listContainer.firstChild );
+				}
+			} else {
+				if ( previousSibling.nextSibling !== item ) {
+					listContainer.insertBefore( item, previousSibling.nextSibling );
+				}
+			}
+			previousSibling = item;
+		} );
+	};
+
+	LayerPanel.prototype.moveLayer = function ( layerId, direction ) {
+		var layers = this.editor.stateManager ? this.editor.stateManager.get( 'layers' ) || [] : this.layers || [];
+		var index = -1;
+		for ( var i = 0; i < layers.length; i++ ) {
+			if ( layers[ i ].id === layerId ) {
+				index = i;
+				break;
+			}
+		}
+		if ( index === -1 ) {
+			return;
+		}
+		var newIndex = index + direction;
+		if ( newIndex < 0 || newIndex >= layers.length ) {
+			return;
+		}
+
+		// Swap
+		var temp = layers[ index ];
+		layers[ index ] = layers[ newIndex ];
+		layers[ newIndex ] = temp;
+
+		if ( this.editor.stateManager ) {
+			this.editor.stateManager.set( 'layers', layers );
+		} else {
+			this.layers = layers;
+			this.editor.layers = layers;
+		}
+		if ( this.editor.canvasManager ) {
+			this.editor.canvasManager.redraw();
+		}
+		this.renderLayerList();
+		this.editor.saveState( 'Reorder Layers' );
+
+		// Restore focus
+		var newItem = this.layerList.querySelector( '.layer-item[data-layer-id="' + layerId + '"] .layer-grab-area' );
+		if ( newItem ) {
+			newItem.focus();
 		}
 	};
 
@@ -497,6 +587,17 @@
 		grabArea.style.alignItems = 'center';
 		grabArea.style.justifyContent = 'center';
 		grabArea.style.cursor = 'grab';
+		
+		// Keyboard reordering
+		var self = this;
+		grabArea.addEventListener( 'keydown', function ( e ) {
+			if ( e.key === 'ArrowUp' || e.key === 'ArrowDown' ) {
+				e.preventDefault();
+				var direction = e.key === 'ArrowUp' ? -1 : 1;
+				self.moveLayer( layer.id, direction );
+			}
+		} );
+
 		// Build grab icon via DOM to avoid innerHTML
 		var grabSvg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 		grabSvg.setAttribute( 'width', '24' );
@@ -532,6 +633,8 @@
 		name.className = 'layer-name';
 		name.textContent = layer.name || this.getDefaultLayerName( layer );
 		name.contentEditable = true;
+		name.setAttribute( 'role', 'textbox' );
+		name.setAttribute( 'aria-label', t( 'layers-layer-name', 'Layer Name' ) );
 
 		// Lock toggle
 		var lockBtn = document.createElement( 'button' );
@@ -559,6 +662,50 @@
 		item.appendChild( lockBtn );
 		item.appendChild( deleteBtn );
 		return item;
+	};
+
+	LayerPanel.prototype.updateLayerItem = function ( item, layer, index ) {
+		var t = this.msg.bind( this );
+		
+		// Update attributes
+		item.dataset.layerId = layer.id;
+		item.dataset.index = index;
+		
+		// Update selection state
+		if ( layer.id === this.selectedLayerId ) {
+			item.classList.add( 'selected' );
+		} else {
+			item.classList.remove( 'selected' );
+		}
+		
+		// Update visibility icon
+		var visibilityBtn = item.querySelector( '.layer-visibility' );
+		if ( visibilityBtn ) {
+			// Clear existing icon
+			while ( visibilityBtn.firstChild ) {
+				visibilityBtn.removeChild( visibilityBtn.firstChild );
+			}
+			visibilityBtn.appendChild( this.createEyeIcon( layer.visible !== false ) );
+		}
+		
+		// Update name (only if not currently being edited)
+		var nameEl = item.querySelector( '.layer-name' );
+		if ( nameEl && document.activeElement !== nameEl ) {
+			var newName = layer.name || this.getDefaultLayerName( layer );
+			if ( nameEl.textContent !== newName ) {
+				nameEl.textContent = newName;
+			}
+		}
+		
+		// Update lock icon
+		var lockBtn = item.querySelector( '.layer-lock' );
+		if ( lockBtn ) {
+			// Clear existing icon
+			while ( lockBtn.firstChild ) {
+				lockBtn.removeChild( lockBtn.firstChild );
+			}
+			lockBtn.appendChild( this.createLockIcon( !!layer.locked ) );
+		}
 	};
 
 	LayerPanel.prototype.getDefaultLayerName = function ( layer ) {
@@ -658,31 +805,27 @@
 		var self = this;
 		var t = this.msg.bind( this );
 		var confirmMessage = t( 'layers-delete-confirm', 'Are you sure you want to delete this layer?' );
+
+		var performDelete = function () {
+			self.editor.removeLayer( layerId );
+			self.renderLayerList();
+			self.updateCodePanel();
+			if ( self.selectedLayerId === layerId ) {
+				self.selectedLayerId = null;
+				self.updatePropertiesPanel( null );
+			}
+			self.editor.saveState( 'Delete Layer' );
+		};
+
 		if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
 			OO.ui.confirm( confirmMessage ).done( function ( userConfirmed ) {
 				if ( userConfirmed ) {
-					self.editor.removeLayer( layerId );
-					self.renderLayerList();
-					self.updateCodePanel();
-					if ( self.selectedLayerId === layerId ) {
-						self.selectedLayerId = null;
-						self.updatePropertiesPanel( null );
-					}
-					self.editor.saveState( 'Delete Layer' );
+					performDelete();
 				}
 			} );
 		} else {
-			// Fallback confirmation for environments without OO.ui
-			if ( this.simpleConfirm( confirmMessage ) ) {
-				this.editor.removeLayer( layerId );
-				this.renderLayerList();
-				this.updateCodePanel();
-				if ( this.selectedLayerId === layerId ) {
-					this.selectedLayerId = null;
-				}
-				this.updatePropertiesPanel( null );
-				this.editor.saveState( 'Delete Layer' );
-			}
+			// Use custom accessible dialog instead of window.confirm
+			this.createConfirmDialog( confirmMessage, performDelete );
 		}
 	};
 
@@ -781,9 +924,12 @@
 		var addInput = function ( opts ) {
 			var wrapper = document.createElement( 'div' );
 			wrapper.className = opts.type === 'checkbox' ? 'property-field property-field--checkbox' : 'property-field';
+			var inputId = 'layer-prop-' + ( opts.prop || Math.random().toString( 36 ).slice( 2 ) ) + '-' + layer.id;
 			var labelEl = document.createElement( 'label' );
 			labelEl.textContent = opts.label;
+			labelEl.setAttribute( 'for', inputId );
 			var input = document.createElement( 'input' );
+			input.id = inputId;
 			input.type = opts.type || 'text';
 			if ( opts.min !== undefined ) {
 				input.min = String( opts.min );
@@ -1015,9 +1161,12 @@
 		var addSelect = function ( opts ) {
 			var wrapper = document.createElement( 'div' );
 			wrapper.className = 'property-field';
+			var inputId = 'layer-prop-select-' + ( opts.label || Math.random().toString( 36 ).slice( 2 ) ).replace( /\s+/g, '-' ) + '-' + layer.id;
 			var labelEl = document.createElement( 'label' );
 			labelEl.textContent = opts.label;
+			labelEl.setAttribute( 'for', inputId );
 			var select = document.createElement( 'select' );
+			select.id = inputId;
 			( opts.options || [] ).forEach( function ( o ) {
 				var opt = document.createElement( 'option' );
 				opt.value = o.value;
@@ -1083,7 +1232,6 @@
 				colorButton.title = labelValue;
 				colorButton.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.previewTemplate, labelValue ) );
 			};
-			updateColorDisplay( opts.value );
 			var createColorPickerDialog = function () {
 				var buttonRect = colorButton.getBoundingClientRect();
 				var previouslyFocused = document.activeElement;
@@ -1329,8 +1477,11 @@
 
 		var addCheckbox = function ( opts ) {
 			var wrapper = document.createElement( 'div' ); wrapper.className = 'property-field property-field--checkbox';
+			var inputId = 'layer-prop-check-' + ( opts.label || Math.random().toString( 36 ).slice( 2 ) ).replace( /\s+/g, '-' ) + '-' + layer.id;
 			var labelEl = document.createElement( 'label' ); labelEl.textContent = opts.label;
+			labelEl.setAttribute( 'for', inputId );
 			var input = document.createElement( 'input' ); input.type = 'checkbox'; input.checked = !!opts.value;
+			input.id = inputId;
 			input.addEventListener( 'change', function () { opts.onChange( input.checked ); } );
 			wrapper.appendChild( labelEl );
 			wrapper.appendChild( input );
@@ -1340,9 +1491,12 @@
 
 		var addSliderInput = function ( opts ) {
 			var wrapper = document.createElement( 'div' ); wrapper.className = 'property-field property-field--compound';
+			var baseId = 'layer-prop-slider-' + ( opts.label || Math.random().toString( 36 ).slice( 2 ) ).replace( /\s+/g, '-' ) + '-' + layer.id;
 			var labelEl = document.createElement( 'label' ); labelEl.textContent = opts.label;
+			labelEl.setAttribute( 'for', baseId + '-num' );
 			var controls = document.createElement( 'div' ); controls.className = 'compact-controls';
 			var numberInput = document.createElement( 'input' );
+			numberInput.id = baseId + '-num';
 			numberInput.type = 'number';
 			numberInput.className = 'compact-number';
 			numberInput.min = String( opts.min || 0 );
@@ -1351,6 +1505,7 @@
 			numberInput.value = String( opts.value || 0 );
 			var rangeInput = document.createElement( 'input' );
 			rangeInput.type = 'range';
+			rangeInput.setAttribute( 'aria-label', opts.label + ' slider' );
 			rangeInput.className = 'compact-range';
 			rangeInput.min = String( opts.min || 0 );
 			rangeInput.max = String( opts.max || 100 );
@@ -1601,6 +1756,80 @@
 			this.renderLayerList();
 			this.editor.saveState( 'Reorder Layers' );
 		}
+	};
+
+	LayerPanel.prototype.createConfirmDialog = function ( message, onConfirm ) {
+		var t = this.msg.bind( this );
+		
+		var overlay = document.createElement( 'div' );
+		overlay.className = 'layers-modal-overlay';
+		overlay.setAttribute( 'role', 'presentation' );
+		
+		var dialog = document.createElement( 'div' );
+		dialog.className = 'layers-modal-dialog';
+		dialog.setAttribute( 'role', 'alertdialog' );
+		dialog.setAttribute( 'aria-modal', 'true' );
+		dialog.setAttribute( 'aria-label', t( 'layers-confirm-title', 'Confirmation' ) );
+		
+		var text = document.createElement( 'p' );
+		text.textContent = message;
+		dialog.appendChild( text );
+		
+		var buttons = document.createElement( 'div' );
+		buttons.className = 'layers-modal-buttons';
+		
+		var cancelBtn = document.createElement( 'button' );
+		cancelBtn.textContent = t( 'layers-cancel', 'Cancel' );
+		cancelBtn.className = 'layers-btn layers-btn-secondary';
+		
+		var confirmBtn = document.createElement( 'button' );
+		confirmBtn.textContent = t( 'layers-confirm', 'Confirm' );
+		confirmBtn.className = 'layers-btn layers-btn-primary';
+		
+		buttons.appendChild( cancelBtn );
+		buttons.appendChild( confirmBtn );
+		dialog.appendChild( buttons );
+		
+		document.body.appendChild( overlay );
+		document.body.appendChild( dialog );
+		
+		var cleanup = function () {
+			if ( overlay.parentNode ) {
+				overlay.parentNode.removeChild( overlay );
+			}
+			if ( dialog.parentNode ) {
+				dialog.parentNode.removeChild( dialog );
+			}
+			document.removeEventListener( 'keydown', handleKey );
+		};
+		
+		var handleKey = function ( e ) {
+			if ( e.key === 'Escape' ) {
+				cleanup();
+			} else if ( e.key === 'Tab' ) {
+				var focusable = dialog.querySelectorAll( 'button' );
+				if ( focusable.length ) {
+					var first = focusable[ 0 ];
+					var last = focusable[ focusable.length - 1 ];
+					if ( e.shiftKey && document.activeElement === first ) {
+						e.preventDefault();
+						last.focus();
+					} else if ( !e.shiftKey && document.activeElement === last ) {
+						e.preventDefault();
+						first.focus();
+					}
+				}
+			}
+		};
+		document.addEventListener( 'keydown', handleKey );
+		
+		cancelBtn.addEventListener( 'click', cleanup );
+		confirmBtn.addEventListener( 'click', function () {
+			cleanup();
+			onConfirm();
+		} );
+		
+		confirmBtn.focus();
 	};
 
 	/**

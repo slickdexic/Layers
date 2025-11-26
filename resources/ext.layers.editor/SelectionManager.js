@@ -924,7 +924,7 @@
 		}
 
 		// Path/polygon points
-		if ( Array.isArray( layer.points ) && layer.points.length ) {
+		if ( Array.isArray( layer.points ) && layer.points.length >= 3 ) {
 			var minPX = Infinity, minPY = Infinity, maxPX = -Infinity, maxPY = -Infinity;
 			for ( var i = 0; i < layer.points.length; i++ ) {
 				var p = layer.points[ i ];

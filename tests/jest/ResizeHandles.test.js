@@ -3,18 +3,33 @@
  */
 
 const CanvasManager = require('../../resources/ext.layers.editor/CanvasManager.js');
+const CanvasEvents = require('../../resources/ext.layers.editor/CanvasEvents.js');
+const CanvasRenderer = require('../../resources/ext.layers.editor/CanvasRenderer.js');
+const SelectionManager = require('../../resources/ext.layers.editor/SelectionManager.js');
 
 describe('Resize Handles', () => {
     let canvasManager;
     let mockEditor;
     let canvas;
+    let selectionManager;
 
     beforeEach(() => {
+        // Setup global CanvasEvents for CanvasManager to find
+        window.CanvasEvents = CanvasEvents;
+        window.CanvasRenderer = CanvasRenderer;
+        window.LayersSelectionManager = SelectionManager;
+
         // Create a canvas element
         canvas = document.createElement('canvas');
         canvas.width = 800;
         canvas.height = 600;
         document.body.appendChild(canvas);
+
+        // Mock setLineDash if missing (JSDOM/canvas issue)
+        const ctx = canvas.getContext('2d');
+        if (!ctx.setLineDash) {
+            ctx.setLineDash = jest.fn();
+        }
 
         // Create mock editor
         mockEditor = {
@@ -32,6 +47,15 @@ describe('Resize Handles', () => {
         canvasManager = new CanvasManager(mockEditor);
         canvasManager.canvas = canvas;
         canvasManager.ctx = canvas.getContext('2d');
+        
+        // Initialize SelectionManager
+        selectionManager = new SelectionManager(mockEditor, canvasManager);
+        canvasManager.selectionManager = selectionManager;
+
+        // Patch renderer context if needed
+        if (canvasManager.renderer && canvasManager.renderer.ctx && !canvasManager.renderer.ctx.setLineDash) {
+            canvasManager.renderer.ctx.setLineDash = jest.fn();
+        }
     });
 
     afterEach(() => {
@@ -63,7 +87,7 @@ describe('Resize Handles', () => {
             });
 
             // Draw selection handles (this sets up this.selectionHandles)
-            const bounds = { x: -100, y: -75, width: 200, height: 150 }; // Transformed bounds for drawing
+            const bounds = { x: 100, y: 100, width: 200, height: 150 }; // World bounds
             canvasManager.drawSelectionHandles(bounds, layer);
 
             // Test hit detection on northwest handle
@@ -89,17 +113,21 @@ describe('Resize Handles', () => {
             mockEditor.getLayerById.mockReturnValue(layer);
             canvasManager.selectedLayerId = 'test-layer';
 
-            // Mock getLayerBounds to return the expected bounds
-            canvasManager.getLayerBounds = jest.fn().mockReturnValue({
+            // World bounds (actual layer position)
+            const worldBounds = {
                 x: 100,
                 y: 100,
                 width: 200,
                 height: 150
-            });
+            };
+
+            // Mock getLayerBounds to return the expected bounds
+            canvasManager.getLayerBounds = jest.fn().mockReturnValue(worldBounds);
 
             // Draw selection handles
-            const bounds = { x: -100, y: -75, width: 200, height: 150 }; // Transformed bounds for drawing
-            canvasManager.drawSelectionHandles(bounds, layer);
+            const bounds = { x: -100, y: -75, width: 200, height: 150 }; // Local bounds for rotated layer
+            // Call renderer directly to pass isRotated=true with worldBounds
+            canvasManager.renderer.drawSelectionHandles(bounds, layer, true, worldBounds);
 
             // For a 45-degree rotation, the northwest corner should be at a different position
             // We're testing that the handles are properly calculated in world coordinates
@@ -153,7 +181,7 @@ describe('Resize Handles', () => {
             });
 
             // Draw selection handles
-            const bounds = { x: -100, y: -75, width: 200, height: 150 };
+            const bounds = { x: 100, y: 100, width: 200, height: 150 };
             canvasManager.drawSelectionHandles(bounds, layer);
 
             // Test hit detection at a point far from any handles
@@ -175,6 +203,7 @@ describe('Resize Handles', () => {
             };
 
             mockEditor.getLayerById.mockReturnValue(layer);
+            mockEditor.layers = [layer];
             canvasManager.selectedLayerId = 'test-layer';
             canvasManager.currentTool = 'pointer';
 
@@ -190,12 +219,18 @@ describe('Resize Handles', () => {
             canvasManager.getMousePoint = jest.fn().mockReturnValue({ x: 100, y: 100 });
 
             // Draw selection handles
-            const bounds = { x: -100, y: -75, width: 200, height: 150 };
+            const bounds = { x: 100, y: 100, width: 200, height: 150 };
             canvasManager.drawSelectionHandles(bounds, layer);
+
+            // Sync SelectionManager handles (since CanvasEvents now uses SelectionManager)
+            selectionManager.selectedLayerIds = ['test-layer'];
+            // Mock getLayerBoundsCompat for SelectionManager
+            selectionManager.getLayerBoundsCompat = jest.fn().mockReturnValue(bounds);
+            selectionManager.updateSelectionHandles();
 
             // Simulate mouse down on handle
             const mockEvent = { button: 0, clientX: 100, clientY: 100 };
-            canvasManager.handleMouseDown(mockEvent);
+            canvasManager.events.handleMouseDown(mockEvent);
 
             // Should have started resize
             expect(canvasManager.isResizing).toBe(true);
