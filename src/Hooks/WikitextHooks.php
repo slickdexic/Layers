@@ -16,11 +16,19 @@ class WikitextHooks {
 	private static $pageHasLayers = false;
 
 	/**
-	 * Map of filename => set name detected from wikitext
-	 * e.g. ['ImageTest02.jpg' => 'Paul']
-	 * @var array
+	 * Queue of set names per filename detected from wikitext (in order of appearance)
+	 * e.g. ['ImageTest02.jpg' => ['Paul', 'default', 'anatomy']]
+	 * This allows multiple instances of the same image with different layer sets
+	 * @var array<string, array<string>>
 	 */
 	private static $fileSetNames = [];
+
+	/**
+	 * Counter tracking how many times each file has been rendered
+	 * Used to match render calls to their corresponding set name in the queue
+	 * @var array<string, int>
+	 */
+	private static $fileRenderCount = [];
 
 	/**
 	 * Handle file parameter parsing in wikitext
@@ -1383,16 +1391,30 @@ class WikitextHooks {
 					$layerSet = null;
 					$filename = $file->getName();
 					
-					// Check stored set name from wikitext preprocessing
+					// Check stored set name from wikitext preprocessing queue
+					// This consumes the next entry in the queue for this file
 					$storedSetName = self::getFileSetName( $filename );
-					if ( $storedSetName !== null && $layersFlag === null ) {
+					if ( $storedSetName !== null ) {
+						// Check if it's explicitly disabled
+						if ( $storedSetName === 'off' || $storedSetName === 'none' || $storedSetName === 'false' ) {
+							if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+								$logger = \call_user_func(
+									[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+									'Layers'
+								);
+								$logger->info( "Layers: Layers explicitly disabled for this instance of $filename" );
+							}
+							return true; // Skip this instance
+						}
+						
+						// Use the stored value (may override existing layersFlag)
 						$layersFlag = $storedSetName;
 						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 							$logger = \call_user_func(
 								[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
 								'Layers'
 							);
-							$logger->info( "Layers: Using stored set name from wikitext: $storedSetName" );
+							$logger->info( "Layers: Using stored set name from wikitext queue: $storedSetName for $filename" );
 						}
 					}
 					
@@ -1671,12 +1693,30 @@ class WikitextHooks {
 	}
 
 	/**
-	 * Get the stored set name for a specific file (if any)
+	 * Get the stored set name for the next occurrence of a specific file
+	 * This consumes from the queue, so each call returns the next set name in order
 	 * @param string $filename The filename (without namespace prefix)
 	 * @return string|null The set name, or null if not specified
 	 */
 	public static function getFileSetName( string $filename ): ?string {
-		return self::$fileSetNames[$filename] ?? null;
+		if ( !isset( self::$fileSetNames[$filename] ) || empty( self::$fileSetNames[$filename] ) ) {
+			return null;
+		}
+		
+		// Initialize render count for this file if not set
+		if ( !isset( self::$fileRenderCount[$filename] ) ) {
+			self::$fileRenderCount[$filename] = 0;
+		}
+		
+		// Get the set name for the current occurrence
+		$index = self::$fileRenderCount[$filename];
+		$queue = self::$fileSetNames[$filename];
+		
+		// Increment the counter for next call
+		self::$fileRenderCount[$filename]++;
+		
+		// Return the set name at this index, or null if we've exhausted the queue
+		return $queue[$index] ?? null;
 	}
 
 	/**
@@ -1685,6 +1725,7 @@ class WikitextHooks {
 	public static function resetPageLayersFlag(): void {
 		self::$pageHasLayers = false;
 		self::$fileSetNames = [];
+		self::$fileRenderCount = [];
 	}
 
 	/**
@@ -1712,6 +1753,7 @@ class WikitextHooks {
 
 			// Extract [[File:filename.ext|...layers=value...]] patterns and store setname per file
 			// This pattern captures: filename, and layers/layer value (any string until | or ]])
+			// Multiple occurrences of the same file are stored in order in a queue
 			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layers?\s*=\s*([^|\]]+)/i';
 			if ( preg_match_all( $fileLayersPattern, $text, $allMatches, PREG_SET_ORDER ) ) {
 				foreach ( $allMatches as $match ) {
@@ -1720,12 +1762,21 @@ class WikitextHooks {
 					
 					self::$pageHasLayers = true;
 					
-					// Store the set name for this file (unless it's a boolean-like value)
+					// Initialize queue for this file if not exists
+					if ( !isset( self::$fileSetNames[$filename] ) ) {
+						self::$fileSetNames[$filename] = [];
+					}
+					
+					// Store the set name in the queue (in order of appearance)
+					// For boolean-like values, store null to indicate default behavior
 					$normalized = strtolower( $layersValue );
 					if ( $normalized !== 'on' && $normalized !== 'off' && $normalized !== 'none' 
 						&& $normalized !== 'true' && $normalized !== 'false' && $normalized !== 'all' ) {
 						// This is a named set like "Paul"
-						self::$fileSetNames[$filename] = $layersValue;
+						self::$fileSetNames[$filename][] = $layersValue;
+					} else {
+						// Store the boolean-like value so we maintain order
+						self::$fileSetNames[$filename][] = $normalized;
 					}
 					
 					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
@@ -1733,8 +1784,9 @@ class WikitextHooks {
 							[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
 							'Layers'
 						);
+						$queueLen = count( self::$fileSetNames[$filename] );
 						$logger->info(
-							"Layers: ParserBeforeInternalParse detected layers=$layersValue for file=$filename"
+							"Layers: ParserBeforeInternalParse detected layers=$layersValue for file=$filename (occurrence #$queueLen)"
 						);
 					}
 				}
@@ -1783,9 +1835,23 @@ class WikitextHooks {
 		
 		// Check if a specific set name was requested for this file in wikitext
 		$filename = $file->getName();
-		$setName = self::getFileSetName( $filename );
+		$setNameFromQueue = self::getFileSetName( $filename );
 		
-		$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1(), $setName );
+		// Determine which layer set to fetch
+		$layerSet = null;
+		if ( $setNameFromQueue === null 
+			|| $setNameFromQueue === 'on' 
+			|| $setNameFromQueue === 'all' 
+			|| $setNameFromQueue === 'true' ) {
+			// Default behavior - get the default/latest set
+			$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1() );
+		} elseif ( $setNameFromQueue === 'off' || $setNameFromQueue === 'none' || $setNameFromQueue === 'false' ) {
+			// Explicitly disabled - don't fetch any layer set
+			return;
+		} else {
+			// Named set
+			$layerSet = $db->getLayerSetByName( $filename, $file->getSha1(), $setNameFromQueue );
+		}
 
 		if ( $layerSet ) {
 			$params['layerSetId'] = $layerSet['id'];
