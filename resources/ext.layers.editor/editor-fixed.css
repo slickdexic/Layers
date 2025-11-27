@@ -1407,11 +1407,21 @@ body.layers-resize-cursor {
 	background: #e9ecef;
 }
 
+.layers-btn-danger {
+	background: #e74c3c;
+	border-color: #c0392b;
+	color: #fff;
+}
+
+.layers-btn-danger:hover {
+	background: #c0392b;
+}
+
 .layers-btn-primary {
-	background: #d63031;
+	background: #3498db;
 	color: #fff;
 }
 
 .layers-btn-primary:hover {
-	background: #c0392b;
+	background: #2980b9;
 }

@@ -1136,20 +1136,143 @@
 	 * @return {void}
 	 */
 	LayersEditor.prototype.cancel = function ( navigateBack ) {
+		const self = this;
+		// Save filename before any cleanup (it gets nulled in destroy())
+		const savedFilename = this.filename;
+
 		// Check for unsaved changes
 		const isDirty = this.stateManager.get( 'isDirty' );
 		if ( isDirty ) {
-			const confirmMsg = mw.message ? mw.message( 'layers-cancel-confirm' ).text() : 'You have unsaved changes. Are you sure you want to close?';
-			// eslint-disable-next-line no-alert
-			if ( !window.confirm( confirmMsg ) ) {
-				return;
+			// Use custom modal dialog instead of window.confirm for better UX
+			this.showCancelConfirmDialog( function () {
+				// User confirmed - close editor and navigate
+				// Mark clean and destroy event manager FIRST to prevent browser's beforeunload
+				if ( self.stateManager ) {
+					self.stateManager.set( 'isDirty', false );
+				}
+				if ( self.eventManager && typeof self.eventManager.destroy === 'function' ) {
+					self.eventManager.destroy();
+				}
+				self.uiManager.destroy();
+				if ( navigateBack ) {
+					self.navigateBackToFileWithName( savedFilename );
+				}
+			} );
+		} else {
+			// No unsaved changes - close immediately
+			this.uiManager.destroy();
+			if ( navigateBack ) {
+				this.navigateBackToFileWithName( savedFilename );
 			}
 		}
+	};
 
-		// Use UI manager to handle close
-		this.uiManager.destroy();
-		if ( navigateBack ) {
-			this.navigateBackToFile();
+	/**
+	 * Show a confirmation dialog for canceling with unsaved changes
+	 *
+	 * @param {Function} onConfirm - Callback when user confirms discarding changes
+	 * @private
+	 */
+	LayersEditor.prototype.showCancelConfirmDialog = function ( onConfirm ) {
+		const t = function ( key, fallback ) {
+			return mw.message ? mw.message( key ).text() : fallback;
+		};
+
+		const overlay = document.createElement( 'div' );
+		overlay.className = 'layers-modal-overlay';
+		overlay.setAttribute( 'role', 'presentation' );
+
+		const dialog = document.createElement( 'div' );
+		dialog.className = 'layers-modal-dialog';
+		dialog.setAttribute( 'role', 'alertdialog' );
+		dialog.setAttribute( 'aria-modal', 'true' );
+		dialog.setAttribute( 'aria-label', t( 'layers-confirm-title', 'Confirm' ) );
+
+		const text = document.createElement( 'p' );
+		text.textContent = t( 'layers-cancel-confirm', 'You have unsaved changes. Are you sure you want to close the editor? All changes will be lost.' );
+		dialog.appendChild( text );
+
+		const buttons = document.createElement( 'div' );
+		buttons.className = 'layers-modal-buttons';
+
+		const cancelBtn = document.createElement( 'button' );
+		cancelBtn.textContent = t( 'layers-cancel-continue', 'Continue Editing' );
+		cancelBtn.className = 'layers-btn layers-btn-primary';
+
+		const confirmBtn = document.createElement( 'button' );
+		confirmBtn.textContent = t( 'layers-cancel-discard', 'Discard Changes' );
+		confirmBtn.className = 'layers-btn layers-btn-secondary layers-btn-danger';
+
+		buttons.appendChild( cancelBtn );
+		buttons.appendChild( confirmBtn );
+		dialog.appendChild( buttons );
+
+		document.body.appendChild( overlay );
+		document.body.appendChild( dialog );
+
+		const cleanup = function () {
+			if ( overlay.parentNode ) {
+				overlay.parentNode.removeChild( overlay );
+			}
+			if ( dialog.parentNode ) {
+				dialog.parentNode.removeChild( dialog );
+			}
+			document.removeEventListener( 'keydown', handleKey );
+		};
+
+		const handleKey = function ( e ) {
+			if ( e.key === 'Escape' ) {
+				cleanup();
+			} else if ( e.key === 'Tab' ) {
+				const focusable = dialog.querySelectorAll( 'button' );
+				if ( focusable.length ) {
+					const first = focusable[ 0 ];
+					const last = focusable[ focusable.length - 1 ];
+					if ( e.shiftKey && document.activeElement === first ) {
+						e.preventDefault();
+						last.focus();
+					} else if ( !e.shiftKey && document.activeElement === last ) {
+						e.preventDefault();
+						first.focus();
+					}
+				}
+			}
+		};
+		document.addEventListener( 'keydown', handleKey );
+
+		cancelBtn.addEventListener( 'click', cleanup );
+		confirmBtn.addEventListener( 'click', function () {
+			cleanup();
+			onConfirm();
+		} );
+
+		// Focus the "Continue Editing" button (safer default)
+		cancelBtn.focus();
+	};
+
+	/**
+	 * Navigate back to the file page using a specific filename
+	 * This version takes a filename parameter to avoid issues with nulled properties
+	 *
+	 * @param {string} filename - The filename to navigate to
+	 * @private
+	 */
+	LayersEditor.prototype.navigateBackToFileWithName = function ( filename ) {
+		try {
+			if ( filename && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
+				const url = mw.util.getUrl( 'File:' + filename );
+				window.location.href = url;
+				return;
+			}
+			// Fallbacks
+			if ( window.history && window.history.length > 1 ) {
+				window.history.back();
+			} else {
+				window.location.reload();
+			}
+		} catch ( e ) {
+			// As a last resort, reload
+			window.location.reload();
 		}
 	};
 

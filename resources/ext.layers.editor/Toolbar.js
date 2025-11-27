@@ -1173,7 +1173,7 @@
 		} );
 
 		this.cancelButton.addEventListener( 'click', () => {
-			self.editor.cancel();
+			self.editor.cancel( true );
 		} );
 
 		// Import JSON

@@ -1776,7 +1776,7 @@
 		
 		var confirmBtn = document.createElement( 'button' );
 		confirmBtn.textContent = t( 'layers-confirm', 'Confirm' );
-		confirmBtn.className = 'layers-btn layers-btn-primary';
+		confirmBtn.className = 'layers-btn layers-btn-danger';
 		
 		buttons.appendChild( cancelBtn );
 		buttons.appendChild( confirmBtn );
