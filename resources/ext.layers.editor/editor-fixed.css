@@ -373,6 +373,43 @@ body.layers-editor-open .mw-body-content {
 	border-right: 1px solid #eee;
 }
 
+/* Style controls row - horizontal layout with labels */
+.style-controls-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.style-control-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+}
+
+.style-control-label {
+	font-size: 0.625em;
+	color: #666;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	white-space: nowrap;
+}
+
+.style-control-item .stroke-width-input {
+	width: 50px;
+	height: 32px;
+	text-align: center;
+	border: 1px solid #ced4da;
+	border-radius: 4px;
+	font-size: 0.8125em;
+}
+
+.style-control-item .stroke-width-input:focus {
+	outline: 0;
+	border-color: #80bdff;
+	box-shadow: 0 0 0 2px rgba( 0, 123, 255, 0.1 );
+}
+
 .toolbar-button {
 	background: #f8f9fa;
 	border: 1px solid #ddd;

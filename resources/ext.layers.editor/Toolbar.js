@@ -44,7 +44,7 @@
 
 	Toolbar.prototype.removeDocumentListeners = function () {
 		while ( this.documentListeners && this.documentListeners.length ) {
-			var listener = this.documentListeners.pop();
+			const listener = this.documentListeners.pop();
 			document.removeEventListener( listener.event, listener.handler, listener.options );
 		}
 	};
@@ -57,11 +57,14 @@
 
 	Toolbar.prototype.runDialogCleanups = function () {
 		while ( this.dialogCleanups && this.dialogCleanups.length ) {
-			var cleanup = this.dialogCleanups.pop();
+			const cleanup = this.dialogCleanups.pop();
 			try {
 				cleanup();
-			} catch ( _err ) {
-				// Ignore cleanup errors
+			} catch ( err ) {
+				// Log cleanup errors but don't propagate to avoid cascading failures
+				if ( window.layersErrorHandler ) {
+					window.layersErrorHandler.handleError( err, 'Toolbar.runDialogCleanups', 'canvas', { severity: 'low' } );
+				}
 			}
 		}
 	};
@@ -83,7 +86,7 @@
 	};
 
 	Toolbar.prototype.getColorPickerStrings = function () {
-		var t = this.msg.bind( this );
+		const t = this.msg.bind( this );
 		return {
 			title: t( 'layers-color-picker-title', 'Choose color' ),
 			standard: t( 'layers-color-picker-standard', 'Standard colors' ),
@@ -101,7 +104,7 @@
 
 	// Update the visual state of a color display button
 	Toolbar.prototype.updateColorButtonDisplay = function ( btn, color, transparentLabel, previewTemplate ) {
-		var labelValue = color;
+		let labelValue = color;
 		if ( !color || color === 'none' || color === 'transparent' ) {
 			btn.classList.add( 'is-transparent' );
 			btn.title = transparentLabel || 'Transparent';
@@ -113,7 +116,7 @@
 			btn.title = color;
 		}
 		if ( previewTemplate ) {
-			var previewText = previewTemplate.indexOf( '$1' ) !== -1 ?
+			const previewText = previewTemplate.indexOf( '$1' ) !== -1 ?
 				previewTemplate.replace( '$1', labelValue ) :
 				previewTemplate + ' ' + labelValue;
 			btn.setAttribute( 'aria-label', previewText );
@@ -677,14 +680,12 @@
 			{ id: 'pen', icon: '✏', title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P' },
 			{ id: 'rectangle', icon: '▢', title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R' },
 			{ id: 'circle', icon: '○', title: t( 'layers-tool-circle', 'Circle Tool' ), key: 'C' },
-			{ id: 'ellipse', icon: '○', title: t( 'layers-tool-ellipse', 'Ellipse Tool' ), key: 'E' },
+			{ id: 'ellipse', icon: '⬭', title: t( 'layers-tool-ellipse', 'Ellipse Tool' ), key: 'E' },
 			{ id: 'polygon', icon: '⬟', title: t( 'layers-tool-polygon', 'Polygon Tool' ), key: 'G' },
 			{ id: 'star', icon: '★', title: t( 'layers-tool-star', 'Star Tool' ), key: 'S' },
 			{ id: 'arrow', icon: '→', title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A' },
 			{ id: 'line', icon: '/', title: t( 'layers-tool-line', 'Line Tool' ), key: 'L' },
-			{ id: 'highlight', icon: '▒', title: t( 'layers-tool-highlight', 'Highlight Tool' ), key: 'H' },
-			{ id: 'blur', icon: '◼︎', title: t( 'layers-tool-blur', 'Blur/Redact Tool' ), key: 'B' },
-			{ id: 'marquee', icon: '⬚', title: t( 'layers-tool-marquee', 'Marquee Select' ), key: 'M' }
+			{ id: 'blur', icon: '◼︎', title: t( 'layers-tool-blur', 'Blur/Redact Tool' ), key: 'B' }
 		];
 
 		tools.forEach( ( tool ) => {
@@ -726,13 +727,16 @@
 		const t = this.msg.bind( this );
 		const colorPickerStrings = this.getColorPickerStrings();
 
-		// Color pickers (modern dialog-based)
-		const colorContainer = document.createElement( 'div' );
-		colorContainer.className = 'color-input-group';
+		// Horizontal style controls container
+		const styleControlsRow = document.createElement( 'div' );
+		styleControlsRow.className = 'style-controls-row';
 
-		// Stroke color button
-		const strokeColorWrapper = document.createElement( 'div' );
-		strokeColorWrapper.className = 'color-input-wrapper';
+		// Stroke color with label
+		const strokeColorItem = document.createElement( 'div' );
+		strokeColorItem.className = 'style-control-item';
+		const strokeLabel = document.createElement( 'span' );
+		strokeLabel.className = 'style-control-label';
+		strokeLabel.textContent = t( 'layers-prop-stroke-color', 'Stroke' );
 		const strokeBtn = document.createElement( 'button' );
 		strokeBtn.type = 'button';
 		strokeBtn.className = 'color-display-button stroke-color';
@@ -740,8 +744,9 @@
 		strokeBtn.setAttribute( 'aria-haspopup', 'dialog' );
 		strokeBtn.setAttribute( 'aria-expanded', 'false' );
 		self.updateColorButtonDisplay( strokeBtn, '#000000', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
-		strokeColorWrapper.appendChild( strokeBtn );
-		colorContainer.appendChild( strokeColorWrapper );
+		strokeColorItem.appendChild( strokeLabel );
+		strokeColorItem.appendChild( strokeBtn );
+		styleControlsRow.appendChild( strokeColorItem );
 		strokeBtn.addEventListener( 'click', () => {
 			self.openColorPickerDialog( strokeBtn, self.strokeColorNone ? 'none' : self.strokeColorValue, {
 				title: t( 'layers-prop-stroke-color', 'Stroke Color' ),
@@ -761,9 +766,12 @@
 			} );
 		} );
 
-		// Fill color button
-		const fillColorWrapper = document.createElement( 'div' );
-		fillColorWrapper.className = 'color-input-wrapper';
+		// Fill color with label
+		const fillColorItem = document.createElement( 'div' );
+		fillColorItem.className = 'style-control-item';
+		const fillLabel = document.createElement( 'span' );
+		fillLabel.className = 'style-control-label';
+		fillLabel.textContent = t( 'layers-prop-fill-color', 'Fill' );
 		const fillBtn = document.createElement( 'button' );
 		fillBtn.type = 'button';
 		fillBtn.className = 'color-display-button fill-color';
@@ -771,8 +779,9 @@
 		fillBtn.setAttribute( 'aria-haspopup', 'dialog' );
 		fillBtn.setAttribute( 'aria-expanded', 'false' );
 		self.updateColorButtonDisplay( fillBtn, '#ffffff', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
-		fillColorWrapper.appendChild( fillBtn );
-		colorContainer.appendChild( fillColorWrapper );
+		fillColorItem.appendChild( fillLabel );
+		fillColorItem.appendChild( fillBtn );
+		styleControlsRow.appendChild( fillColorItem );
 		fillBtn.addEventListener( 'click', () => {
 			self.openColorPickerDialog( fillBtn, self.fillColorNone ? 'none' : self.fillColorValue, {
 				title: t( 'layers-prop-fill-color', 'Fill Color' ),
@@ -792,16 +801,12 @@
 			} );
 		} );
 
-		styleGroup.appendChild( colorContainer );
-
-		// Stroke width with numeric input only
-		const strokeWidthContainer = document.createElement( 'div' );
-		strokeWidthContainer.className = 'stroke-width-container';
-
-		const strokeLabel = document.createElement( 'label' );
-		strokeLabel.textContent = t( 'layers-prop-stroke-width', 'Stroke' ) + ':';
-		strokeLabel.className = 'stroke-label';
-
+		// Stroke width with label
+		const strokeWidthItem = document.createElement( 'div' );
+		strokeWidthItem.className = 'style-control-item';
+		const widthLabel = document.createElement( 'span' );
+		widthLabel.className = 'style-control-label';
+		widthLabel.textContent = t( 'layers-prop-stroke-width', 'Width' );
 		const strokeWidth = document.createElement( 'input' );
 		strokeWidth.type = 'number';
 		strokeWidth.min = '0';
@@ -810,20 +815,21 @@
 		strokeWidth.value = '2';
 		strokeWidth.className = 'stroke-width-input';
 		strokeWidth.title = t( 'layers-prop-stroke-width', 'Stroke Width' ) + ': 2px';
-		strokeWidth.placeholder = '0-100px';
+		strokeWidth.placeholder = 'px';
+		strokeWidthItem.appendChild( widthLabel );
+		strokeWidthItem.appendChild( strokeWidth );
+		styleControlsRow.appendChild( strokeWidthItem );
 
-		strokeWidthContainer.appendChild( strokeLabel );
-		strokeWidthContainer.appendChild( strokeWidth );
-		styleGroup.appendChild( strokeWidthContainer );
+		styleGroup.appendChild( styleControlsRow );
 
-		// Font size (for text tool)
+		// Font size (for text tool) - hidden by default
 		const fontSizeContainer = document.createElement( 'div' );
-		fontSizeContainer.className = 'font-size-container';
+		fontSizeContainer.className = 'font-size-container style-control-item';
 		fontSizeContainer.style.display = 'none';
 
-		const fontLabel = document.createElement( 'label' );
-		fontLabel.textContent = t( 'layers-prop-font-size', 'Font Size' ) + ':';
-		fontLabel.className = 'font-label';
+		const fontLabel = document.createElement( 'span' );
+		fontLabel.className = 'style-control-label';
+		fontLabel.textContent = t( 'layers-prop-font-size', 'Size' );
 
 		const fontSize = document.createElement( 'input' );
 		fontSize.type = 'number';
@@ -1065,13 +1071,7 @@
 		const actions = [
 			{ id: 'undo', icon: '↶', title: t( 'layers-undo', 'Undo' ), key: 'Ctrl+Z' },
 			{ id: 'redo', icon: '↷', title: t( 'layers-redo', 'Redo' ), key: 'Ctrl+Y' },
-			{ id: 'delete', icon: '🗑', title: t( 'layers-delete-selected', 'Delete Selected' ), key: 'Delete' },
-			{ id: 'duplicate', icon: '⧉', title: t( 'layers-duplicate-selected', 'Duplicate Selected' ), key: 'Ctrl+D' },
-			{ id: 'grid', icon: '⊞', title: t( 'layers-toggle-grid', 'Toggle Grid' ), key: 'G' },
-			{ id: 'rulers', icon: '📏', title: t( 'layers-toggle-rulers', 'Toggle Rulers' ) },
-			{ id: 'guides', icon: '➕', title: t( 'layers-toggle-guides', 'Toggle Guides' ) },
-			{ id: 'snap-grid', icon: '🧲⊞', title: t( 'layers-toggle-snap-grid', 'Snap to Grid' ) },
-			{ id: 'snap-guides', icon: '🧲▭', title: t( 'layers-toggle-snap-guides', 'Snap to Guides' ) }
+			{ id: 'duplicate', icon: '⧉', title: t( 'layers-duplicate-selected', 'Duplicate Selected' ), key: 'Ctrl+D' }
 		];
 
 		actions.forEach( ( action ) => {
@@ -1087,8 +1087,8 @@
 		// Import button + hidden file input
 		const importButton = document.createElement( 'button' );
 		importButton.className = 'toolbar-button import-button';
-		importButton.textContent = t( 'layers-import', 'Import' );
-		importButton.title = t( 'layers-import', 'Import' );
+		importButton.textContent = t( 'layers-import-layers', 'Import Layers' );
+		importButton.title = t( 'layers-import-layers', 'Import Layers' );
 		actionGroup.appendChild( importButton );
 
 		const importInput = document.createElement( 'input' );
@@ -1100,8 +1100,8 @@
 		// Export button
 		const exportButton = document.createElement( 'button' );
 		exportButton.className = 'toolbar-button export-button';
-		exportButton.textContent = t( 'layers-export', 'Export' );
-		exportButton.title = t( 'layers-export', 'Export' );
+		exportButton.textContent = t( 'layers-export-layers', 'Export Layers' );
+		exportButton.title = t( 'layers-export-layers', 'Export Layers' );
 		actionGroup.appendChild( exportButton );
 
 		// Save and Cancel buttons

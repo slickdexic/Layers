@@ -331,13 +331,17 @@
 			}
 		}
 
-		// Undo/Redo
+		// Undo/Redo - route through editor's HistoryManager for single source of truth
 		if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key === 'z' ) {
-			this.canvasManager.undo();
+			if ( this.canvasManager.editor && typeof this.canvasManager.editor.undo === 'function' ) {
+				this.canvasManager.editor.undo();
+			}
 			handled = true;
 		} else if ( ( ( e.ctrlKey || e.metaKey ) && e.shiftKey && e.key === 'z' ) ||
 					( ( e.ctrlKey || e.metaKey ) && e.key === 'y' ) ) {
-			this.canvasManager.redo();
+			if ( this.canvasManager.editor && typeof this.canvasManager.editor.redo === 'function' ) {
+				this.canvasManager.editor.redo();
+			}
 			handled = true;
 		}
 

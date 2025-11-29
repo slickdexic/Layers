@@ -340,4 +340,9 @@
 	// Export to global scope for MediaWiki ResourceLoader
 	window.ZoomPanController = ZoomPanController;
 
+	// Export for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = ZoomPanController;
+	}
+
 }() );

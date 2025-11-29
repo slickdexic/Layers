@@ -382,4 +382,9 @@
 	// Export to global scope for MediaWiki ResourceLoader
 	window.GridRulersController = GridRulersController;
 
+	// Export for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = GridRulersController;
+	}
+
 }() );

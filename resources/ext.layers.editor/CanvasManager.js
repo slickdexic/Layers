@@ -43,8 +43,8 @@
 		this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 }; // For culling
 
 		// Selection and manipulation state
-		this.selectedLayerId = null;
-		this.selectedLayerIds = []; // Multi-selection support
+		// NOTE: selectedLayerId and selectedLayerIds are now managed via StateManager
+		// Use getSelectedLayerId() and getSelectedLayerIds() to access them
 		this.selectionHandles = [];
 		this.isResizing = false;
 		this.isRotating = false;
@@ -67,18 +67,22 @@
 		this.dragOffset = { x: 0, y: 0 };
 		this.showDragGhost = true;
 
-		// Initialize default style
+		// Initialize default style using constants
+		const defaults = ( typeof LayersConstants !== 'undefined' ) ? LayersConstants.DEFAULTS : null;
+		const uiConsts = ( typeof LayersConstants !== 'undefined' ) ? LayersConstants.UI : null;
+		const limits = ( typeof LayersConstants !== 'undefined' ) ? LayersConstants.LIMITS : null;
+
 		this.currentStyle = {
-			color: '#000000',
-			strokeWidth: 2,
-			fontSize: 16,
-			fontFamily: 'Arial, sans-serif'
+			color: ( defaults && defaults.COLORS ) ? defaults.COLORS.STROKE : '#000000',
+			strokeWidth: ( defaults && defaults.LAYER ) ? defaults.LAYER.STROKE_WIDTH : 2,
+			fontSize: ( defaults && defaults.LAYER ) ? defaults.LAYER.FONT_SIZE : 16,
+			fontFamily: ( defaults && defaults.LAYER ) ? defaults.LAYER.FONT_FAMILY : 'Arial, sans-serif'
 		};
 
 		// Zoom and pan functionality
 		this.zoom = 1.0;
-		this.minZoom = 0.1;
-		this.maxZoom = 5.0;
+		this.minZoom = uiConsts ? uiConsts.MIN_ZOOM : 0.1;
+		this.maxZoom = uiConsts ? uiConsts.MAX_ZOOM : 5.0;
 		this.panX = 0;
 		this.panY = 0;
 		this.isPanning = false;
@@ -87,14 +91,14 @@
 
 		// Smooth zoom animation properties
 		this.isAnimatingZoom = false;
-		this.zoomAnimationDuration = 300; // milliseconds
+		this.zoomAnimationDuration = uiConsts ? uiConsts.ANIMATION_DURATION : 300;
 		this.zoomAnimationStartTime = 0;
 		this.zoomAnimationStartZoom = 1.0;
 		this.zoomAnimationTargetZoom = 1.0;
 
 		// Grid settings
 		this.showGrid = false;
-		this.gridSize = 20;
+		this.gridSize = uiConsts ? uiConsts.GRID_SIZE : 20;
 		this.snapToGrid = false;
 
 		// Rulers & guides
@@ -102,24 +106,23 @@
 		this.showGuides = false;
 		this.snapToGuides = false;
 		this.smartGuides = false; // reserved for future smart alignment
-		this.rulerSize = 20;
+		this.rulerSize = uiConsts ? uiConsts.RULER_SIZE : 30;
 		this.horizontalGuides = []; // y positions in canvas coords
 		this.verticalGuides = []; // x positions in canvas coords
 		this.isDraggingGuide = false;
 		this.dragGuideOrientation = null; // 'h' | 'v'
 		this.dragGuidePos = 0;
 
-		// History/Undo system
-		this.history = [];
-		this.historyIndex = -1;
-		this.maxHistorySteps = 50;
+		// Note: History/Undo is managed by HistoryManager (single source of truth)
+		// These legacy properties are kept for backward compatibility but are no longer used
+		// this.history, this.historyIndex are accessed via this.editor.historyManager
 
 		// Clipboard for copy/paste
 		this.clipboard = [];
 
 		// Canvas pooling for temporary canvas operations to prevent memory leaks
 		this.canvasPool = [];
-		this.maxPoolSize = 5;
+		this.maxPoolSize = limits ? limits.MAX_CANVAS_POOL_SIZE : 5;
 
 		this.init();
 	}
@@ -147,7 +150,7 @@
 		this.ctx = this.canvas.getContext( '2d' );
 
 		// Initialize CanvasRenderer
-		var RendererClass = ( typeof CanvasRenderer !== 'undefined' ) ? CanvasRenderer :
+		const RendererClass = ( typeof CanvasRenderer !== 'undefined' ) ? CanvasRenderer :
 			( ( typeof window !== 'undefined' && window.CanvasRenderer ) ? window.CanvasRenderer :
 			( ( typeof mw !== 'undefined' && mw.CanvasRenderer ) ? mw.CanvasRenderer : undefined ) );
 
@@ -157,7 +160,7 @@
 			mw.log.error( 'Layers: CanvasRenderer not found' );
 		}
 		// Initialize SelectionManager
-		var SelectionManagerClass = ( typeof LayersSelectionManager !== 'undefined' ) ? LayersSelectionManager :
+		const SelectionManagerClass = ( typeof LayersSelectionManager !== 'undefined' ) ? LayersSelectionManager :
 			( ( typeof window !== 'undefined' && window.LayersSelectionManager ) ? window.LayersSelectionManager :
 			( ( typeof mw !== 'undefined' && mw.LayersSelectionManager ) ? mw.LayersSelectionManager : undefined ) );
 
@@ -168,7 +171,7 @@
 		}
 
 		// Initialize ZoomPanController for zoom/pan operations
-		var ZoomPanControllerClass = ( typeof ZoomPanController !== 'undefined' ) ? ZoomPanController :
+		const ZoomPanControllerClass = ( typeof ZoomPanController !== 'undefined' ) ? ZoomPanController :
 			( ( typeof window !== 'undefined' && window.ZoomPanController ) ? window.ZoomPanController : undefined );
 
 		if ( ZoomPanControllerClass ) {
@@ -178,7 +181,7 @@
 		}
 
 		// Initialize GridRulersController for grid/ruler/guide operations
-		var GridRulersControllerClass = ( typeof GridRulersController !== 'undefined' ) ? GridRulersController :
+		const GridRulersControllerClass = ( typeof GridRulersController !== 'undefined' ) ? GridRulersController :
 			( ( typeof window !== 'undefined' && window.GridRulersController ) ? window.GridRulersController : undefined );
 
 		if ( GridRulersControllerClass ) {
@@ -188,13 +191,43 @@
 		}
 
 		// Initialize TransformController for resize/rotation/drag operations
-		var TransformControllerClass = ( typeof TransformController !== 'undefined' ) ? TransformController :
+		const TransformControllerClass = ( typeof TransformController !== 'undefined' ) ? TransformController :
 			( ( typeof window !== 'undefined' && window.TransformController ) ? window.TransformController : undefined );
 
 		if ( TransformControllerClass ) {
 			this.transformController = new TransformControllerClass( this );
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
 			mw.log.warn( 'Layers: TransformController not found, transforms may use fallback methods' );
+		}
+
+		// Initialize HitTestController for hit testing operations
+		const HitTestControllerClass = ( typeof HitTestController !== 'undefined' ) ? HitTestController :
+			( ( typeof window !== 'undefined' && window.HitTestController ) ? window.HitTestController : undefined );
+
+		if ( HitTestControllerClass ) {
+			this.hitTestController = new HitTestControllerClass( this );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.warn( 'Layers: HitTestController not found, hit testing may use fallback methods' );
+		}
+
+		// Initialize DrawingController for shape drawing operations
+		const DrawingControllerClass = ( typeof DrawingController !== 'undefined' ) ? DrawingController :
+			( ( typeof window !== 'undefined' && window.DrawingController ) ? window.DrawingController : undefined );
+
+		if ( DrawingControllerClass ) {
+			this.drawingController = new DrawingControllerClass( this );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.warn( 'Layers: DrawingController not found, drawing may use fallback methods' );
+		}
+
+		// Initialize ClipboardController for copy/paste operations
+		const ClipboardControllerClass = ( typeof ClipboardController !== 'undefined' ) ? ClipboardController :
+			( ( typeof window !== 'undefined' && window.ClipboardController ) ? window.ClipboardController : undefined );
+
+		if ( ClipboardControllerClass ) {
+			this.clipboardController = new ClipboardControllerClass( this );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.warn( 'Layers: ClipboardController not found, clipboard may use fallback methods' );
 		}
 
 		// Set up event handlers
@@ -205,12 +238,61 @@
 		if ( this.editor && this.editor.filename ) {
 			this.loadBackgroundImage();
 		}
+
+		// Subscribe to StateManager for selection changes
+		this.subscribeToState();
+	};
+
+	/**
+	 * Get the selected layer IDs from StateManager (single source of truth)
+	 * @return {Array} Array of selected layer IDs
+	 */
+	CanvasManager.prototype.getSelectedLayerIds = function () {
+		if ( this.editor && this.editor.stateManager ) {
+			return this.editor.stateManager.get( 'selectedLayerIds' ) || [];
+		}
+		return [];
+	};
+
+	/**
+	 * Get the primary selected layer ID (last in selection array)
+	 * @return {string|null} The selected layer ID or null
+	 */
+	CanvasManager.prototype.getSelectedLayerId = function () {
+		const ids = this.getSelectedLayerIds();
+		return ids.length > 0 ? ids[ ids.length - 1 ] : null;
+	};
+
+	/**
+	 * Set the selected layer IDs via StateManager
+	 * @param {Array} ids Array of layer IDs to select
+	 */
+	CanvasManager.prototype.setSelectedLayerIds = function ( ids ) {
+		if ( this.editor && this.editor.stateManager ) {
+			this.editor.stateManager.set( 'selectedLayerIds', ids || [] );
+		}
+	};
+
+	/**
+	 * Subscribe to StateManager for reactive updates
+	 */
+	CanvasManager.prototype.subscribeToState = function () {
+		const self = this;
+		if ( !this.editor || !this.editor.stateManager ) {
+			return;
+		}
+
+		// Subscribe to selection changes to trigger re-render
+		this.editor.stateManager.subscribe( 'selectedLayerIds', function () {
+			self.selectionHandles = [];
+			self.renderLayers( self.editor.layers );
+		} );
 	};
 
 	CanvasManager.prototype.loadBackgroundImage = function () {
-		var filename = this.editor.filename;
-		var backgroundImageUrl = this.config.backgroundImageUrl;
-		var imageUrls = [];
+		const filename = this.editor.filename;
+		const backgroundImageUrl = this.config.backgroundImageUrl;
+		const imageUrls = [];
 
 		// Priority 1: Use the specific background image URL from config
 		if ( backgroundImageUrl ) {
@@ -218,10 +300,10 @@
 		}
 
 		// Priority 2: Try to find the current page image
-		var pageImages = document.querySelectorAll( '.mw-file-element img, .fullImageLink img, .filehistory img, img[src*="' + filename + '"]' );
+		const pageImages = document.querySelectorAll( '.mw-file-element img, .fullImageLink img, .filehistory img, img[src*="' + filename + '"]' );
 		if ( pageImages.length > 0 ) {
-			for ( var i = 0; i < pageImages.length; i++ ) {
-				var imgSrc = pageImages[ i ].src;
+			for ( let i = 0; i < pageImages.length; i++ ) {
+				const imgSrc = pageImages[ i ].src;
 				if ( imgSrc && imageUrls.indexOf( imgSrc ) === -1 ) {
 					imageUrls.push( imgSrc );
 				}
@@ -233,7 +315,7 @@
 			filename && typeof mw !== 'undefined' && mw && mw.config &&
 			mw.config.get( 'wgServer' ) && mw.config.get( 'wgScriptPath' )
 		) {
-			var mwUrls = [
+			const mwUrls = [
 				mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
 				'/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename ),
 
@@ -263,14 +345,14 @@
 	};
 
 	CanvasManager.prototype.tryLoadImage = function ( urls, index ) {
-		var self = this;
+		const self = this;
 
 		if ( index >= urls.length ) {
 			this.useTestImage();
 			return;
 		}
 
-		var currentUrl = urls[ index ];
+		const currentUrl = urls[ index ];
 		this.backgroundImage = new Image();
 		this.backgroundImage.crossOrigin = 'anonymous'; // Allow cross-origin images
 
@@ -306,10 +388,10 @@
 	};
 
 	CanvasManager.prototype.useTestImage = function () {
-		var self = this;
+		const self = this;
 		// Try SVG first
-		var svgData = this.createTestImage( this.editor.filename );
-		var svgDataUrl = 'data:image/svg+xml;base64,' + btoa( svgData );
+		const svgData = this.createTestImage( this.editor.filename );
+		const svgDataUrl = 'data:image/svg+xml;base64,' + btoa( svgData );
 
 		this.backgroundImage = new Image();
 		this.backgroundImage.crossOrigin = 'anonymous';
@@ -385,7 +467,7 @@
 
 	CanvasManager.prototype.resizeCanvas = function () {
 		// Get container dimensions
-		var container = this.canvas.parentNode;
+		const container = this.canvas.parentNode;
 		//  container.clientWidth, 'x', container.clientHeight );
 
 		// If no canvas size is set yet, use default
@@ -394,22 +476,22 @@
 			this.canvas.height = 600;
 		}
 
-		var canvasWidth = this.canvas.width;
-		var canvasHeight = this.canvas.height;
+		const canvasWidth = this.canvas.width;
+		const canvasHeight = this.canvas.height;
 		// Calculate available space in container (with padding)
-		var availableWidth = Math.max( container.clientWidth - 40, 400 );
-		var availableHeight = Math.max( container.clientHeight - 40, 300 );
+		const availableWidth = Math.max( container.clientWidth - 40, 400 );
+		const availableHeight = Math.max( container.clientHeight - 40, 300 );
 		// Calculate scale to fit the canvas in the container
-		var scaleX = availableWidth / canvasWidth;
-		var scaleY = availableHeight / canvasHeight;
-		var scale = Math.min( scaleX, scaleY );
+		const scaleX = availableWidth / canvasWidth;
+		const scaleY = availableHeight / canvasHeight;
+		let scale = Math.min( scaleX, scaleY );
 
 		// Ensure reasonable scale bounds (don't make it too tiny or huge)
 		scale = Math.max( 0.1, Math.min( scale, 3.0 ) );
 
 		// Calculate final display size
-		var displayWidth = Math.floor( canvasWidth * scale );
-		var displayHeight = Math.floor( canvasHeight * scale );
+		const displayWidth = Math.floor( canvasWidth * scale );
+		const displayHeight = Math.floor( canvasHeight * scale );
 
 		// Set CSS size for display
 		this.canvas.style.width = displayWidth + 'px';
@@ -449,7 +531,13 @@
 
 
 	CanvasManager.prototype.hitTestSelectionHandles = function ( point ) {
-		var handles = [];
+		// Delegate to HitTestController if available
+		if ( this.hitTestController ) {
+			return this.hitTestController.hitTestSelectionHandles( point );
+		}
+
+		// Fallback for when controller is not available
+		let handles = [];
 		if ( this.renderer && this.renderer.selectionHandles && this.renderer.selectionHandles.length > 0 ) {
 			handles = this.renderer.selectionHandles;
 		} else if ( this.selectionManager && this.selectionManager.selectionHandles && this.selectionManager.selectionHandles.length > 0 ) {
@@ -458,9 +546,9 @@
 			handles = this.selectionHandles;
 		}
 
-		for ( var i = 0; i < handles.length; i++ ) {
-			var handle = handles[ i ];
-			var rect = handle.rect || handle;
+		for ( let i = 0; i < handles.length; i++ ) {
+			const handle = handles[ i ];
+			const rect = handle.rect || handle;
 			if ( this.isPointInRect( point, rect ) ) {
 				return handle;
 			}
@@ -469,6 +557,11 @@
 	};
 
 	CanvasManager.prototype.isPointInRect = function ( point, rect ) {
+		// Delegate to HitTestController if available
+		if ( this.hitTestController ) {
+			return this.hitTestController.isPointInRect( point, rect );
+		}
+		// Fallback
 		return point.x >= rect.x && point.x <= rect.x + rect.width &&
 			point.y >= rect.y && point.y <= rect.y + rect.height;
 	};
@@ -485,8 +578,8 @@
 		this.resizeHandle = handle;
 		this.dragStartPoint = this.startPoint;
 
-		var layer = this.editor.getLayerById( this.selectedLayerId );
-		var rotation = layer ? layer.rotation : 0;
+		const layer = this.editor.getLayerById( this.getSelectedLayerId() );
+		const rotation = layer ? layer.rotation : 0;
 		this.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
 
 		if ( layer ) {
@@ -507,7 +600,7 @@
 			this.dragStartPoint = point;
 		}
 
-		var layer = this.editor.getLayerById( this.selectedLayerId );
+		const layer = this.editor.getLayerById( this.getSelectedLayerId() );
 		if ( layer ) {
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
@@ -524,12 +617,13 @@
 		this.canvas.style.cursor = 'move';
 
 		// Store original layer state(s)
-		if ( this.selectedLayerIds.length > 1 ) {
+		const selectedIds = this.getSelectedLayerIds();
+		if ( selectedIds.length > 1 ) {
 			// Multi-selection: store all selected layer states
 			this.originalMultiLayerStates = {};
-			for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
-				var layerId = this.selectedLayerIds[ i ];
-				var multiLayer = this.editor.getLayerById( layerId );
+			for ( let i = 0; i < selectedIds.length; i++ ) {
+				const layerId = selectedIds[ i ];
+				const multiLayer = this.editor.getLayerById( layerId );
 				if ( multiLayer ) {
 					this.originalMultiLayerStates[ layerId ] =
 						JSON.parse( JSON.stringify( multiLayer ) );
@@ -537,7 +631,7 @@
 			}
 		} else {
 			// Single selection: store single layer state
-			var singleLayer = this.editor.getLayerById( this.selectedLayerId );
+			const singleLayer = this.editor.getLayerById( this.getSelectedLayerId() );
 			if ( singleLayer ) {
 				this.originalLayerState = JSON.parse( JSON.stringify( singleLayer ) );
 			}
@@ -570,11 +664,11 @@
 
 		// For rotated objects, we need to calculate the effective cursor direction
 		// based on the handle type and rotation angle
-		var normalizedRotation = ( ( rotation % 360 ) + 360 ) % 360;
-		var cursorIndex = Math.round( normalizedRotation / 45 ) % 8;
+		const normalizedRotation = ( ( rotation % 360 ) + 360 ) % 360;
+		const cursorIndex = Math.round( normalizedRotation / 45 ) % 8;
 
 		// Map handle types to base cursor directions (0 = north)
-		var baseCursors = {
+		const baseCursors = {
 			n: 0,
 			ne: 1,
 			e: 2,
@@ -586,10 +680,10 @@
 		};
 
 		// Calculate the effective cursor direction
-		var effectiveDirection = ( baseCursors[ handleType ] + cursorIndex ) % 8;
+		const effectiveDirection = ( baseCursors[ handleType ] + cursorIndex ) % 8;
 
 		// Map back to cursor names
-		var cursors = [ 'n-resize', 'ne-resize', 'e-resize', 'ne-resize', 'n-resize', 'ne-resize', 'e-resize', 'nw-resize' ];
+		const cursors = [ 'n-resize', 'ne-resize', 'e-resize', 'ne-resize', 'n-resize', 'ne-resize', 'e-resize', 'nw-resize' ];
 		return cursors[ effectiveDirection ];
 	};
 
@@ -601,34 +695,34 @@
 			return;
 		}
 		// Fallback for when controller is not available
-		var layer = this.editor.getLayerById( this.selectedLayerId );
+		const layer = this.editor.getLayerById( this.getSelectedLayerId() );
 
 		if ( !layer || !this.originalLayerState ) {
 			return;
 		}
 
-		var deltaX = point.x - this.dragStartPoint.x;
-		var deltaY = point.y - this.dragStartPoint.y;
+		let deltaX = point.x - this.dragStartPoint.x;
+		let deltaY = point.y - this.dragStartPoint.y;
 
 		// If layer has rotation, transform the delta into the layer's local coordinate system
-		var rotation = layer.rotation || 0;
+		const rotation = layer.rotation || 0;
 		if ( rotation !== 0 ) {
-			var rotRad = -rotation * Math.PI / 180; // Negative to reverse the rotation
-			var cos = Math.cos( rotRad );
-			var sin = Math.sin( rotRad );
-			var rotatedDeltaX = deltaX * cos - deltaY * sin;
-			var rotatedDeltaY = deltaX * sin + deltaY * cos;
+			const rotRad = -rotation * Math.PI / 180; // Negative to reverse the rotation
+			const cos = Math.cos( rotRad );
+			const sin = Math.sin( rotRad );
+			const rotatedDeltaX = deltaX * cos - deltaY * sin;
+			const rotatedDeltaY = deltaX * sin + deltaY * cos;
 			deltaX = rotatedDeltaX;
 			deltaY = rotatedDeltaY;
 		}
 
 		// Limit delta values to prevent sudden jumps during rapid mouse movements
-		var maxDelta = 1000; // Reasonable maximum delta in pixels
+		const maxDelta = 1000; // Reasonable maximum delta in pixels
 		deltaX = Math.max( -maxDelta, Math.min( maxDelta, deltaX ) );
 		deltaY = Math.max( -maxDelta, Math.min( maxDelta, deltaY ) );
 
 		// Get modifier keys from the event
-		var modifiers = {
+		const modifiers = {
 			proportional: event && event.shiftKey, // Shift key for proportional scaling
 			fromCenter: event && event.altKey // Alt key for scaling from center
 		};
@@ -645,7 +739,7 @@
 		}
 
 		// Calculate new dimensions based on handle type
-		var updates = this.calculateResize(
+		const updates = this.calculateResize(
 			this.originalLayerState,
 			this.resizeHandle.type,
 			deltaX,
@@ -730,9 +824,9 @@
 	CanvasManager.prototype.calculateEllipseResize = function (
 		origLayerEllipse, handleEllipse, dXEllipse, dYEllipse
 	) {
-		var updates = {};
-		var origRX = origLayerEllipse.radiusX || 1;
-		var origRY = origLayerEllipse.radiusY || 1;
+		const updates = {};
+		const origRX = origLayerEllipse.radiusX || 1;
+		const origRY = origLayerEllipse.radiusY || 1;
 		if ( handleEllipse === 'e' || handleEllipse === 'w' ) {
 			updates.radiusX = Math.max(
 				5,
@@ -752,11 +846,11 @@
 	CanvasManager.prototype.calculatePolygonResize = function (
 		origLayerPoly, handlePoly, dXPoly, dYPoly
 	) {
-		var updates = {};
-		var origRadius = origLayerPoly.radius || 50;
+		const updates = {};
+		const origRadius = origLayerPoly.radius || 50;
 
 		// Calculate distance from center to determine new radius
-		var deltaDistance = 0;
+		let deltaDistance = 0;
 
 		switch ( handlePoly ) {
 			case 'e':
@@ -777,7 +871,7 @@
 		}
 
 		// Determine direction (growing or shrinking)
-		var growing = false;
+		let growing = false;
 		switch ( handlePoly ) {
 			case 'e':
 				growing = dXPoly > 0;
@@ -806,7 +900,7 @@
 		}
 
 		// Apply the change
-		var newRadius = growing ?
+		const newRadius = growing ?
 			origRadius + deltaDistance :
 			Math.max( 10, origRadius - deltaDistance );
 
@@ -818,7 +912,7 @@
 	CanvasManager.prototype.calculateLineResize = function (
 		origLayerLine, handleLine, dXLine, dYLine
 	) {
-		var updates = {};
+		const updates = {};
 		updates.x2 = ( origLayerLine.x2 || 0 ) + dXLine;
 		updates.y2 = ( origLayerLine.y2 || 0 ) + dYLine;
 		return updates;
@@ -831,10 +925,10 @@
 		if ( !origLayerPath.points ) {
 			return null;
 		}
-		var updates = { points: [] };
-		var scaleX = 1 + dXPath / 100;
-		var scaleY = 1 + dYPath / 100;
-		for ( var i = 0; i < origLayerPath.points.length; i++ ) {
+		const updates = { points: [] };
+		const scaleX = 1 + dXPath / 100;
+		const scaleY = 1 + dYPath / 100;
+		for ( let i = 0; i < origLayerPath.points.length; i++ ) {
 			updates.points.push( {
 				x: origLayerPath.points[ i ].x * scaleX,
 				y: origLayerPath.points[ i ].y * scaleY
@@ -857,16 +951,16 @@
 		originalLayer, handleType, deltaX, deltaY, modifiers
 	) {
 		modifiers = modifiers || {};
-		var updates = {};
-		var origX = originalLayer.x || 0;
-		var origY = originalLayer.y || 0;
-		var origW = originalLayer.width || 0;
-		var origH = originalLayer.height || 0;
+		const updates = {};
+		const origX = originalLayer.x || 0;
+		const origY = originalLayer.y || 0;
+		const origW = originalLayer.width || 0;
+		const origH = originalLayer.height || 0;
 
 		// Calculate aspect ratio for proportional scaling
-		var aspectRatio = origW / origH;
-		var centerX = origX + origW / 2;
-		var centerY = origY + origH / 2;
+		let aspectRatio = origW / origH;
+		const centerX = origX + origW / 2;
+		const centerY = origY + origH / 2;
 
 		if ( modifiers.proportional ) {
 			// Proportional scaling: maintain aspect ratio
@@ -876,8 +970,8 @@
 			}
 
 			// Use the dimension that changed the most to drive the scaling
-			var absDeltaX = Math.abs( deltaX );
-			var absDeltaY = Math.abs( deltaY );
+			const absDeltaX = Math.abs( deltaX );
+			const absDeltaY = Math.abs( deltaY );
 
 			if ( absDeltaX > absDeltaY ) {
 				// X dimension changed more - scale based on X
@@ -1001,13 +1095,13 @@
 	CanvasManager.prototype.calculateCircleResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
-		var updates = {};
-		var origRadius = originalLayer.radius || 50;
-		var origX = originalLayer.x || 0;
-		var origY = originalLayer.y || 0;
+		const updates = {};
+		const origRadius = originalLayer.radius || 50;
+		const origX = originalLayer.x || 0;
+		const origY = originalLayer.y || 0;
 
 		// Calculate new position based on handle and delta
-		var handleX, handleY;
+		let handleX, handleY;
 		switch ( handleType ) {
 			case 'e':
 				handleX = origX + origRadius + deltaX;
@@ -1046,7 +1140,7 @@
 		}
 
 		// Calculate new radius based on distance from center to new handle position
-		var newRadius = Math.sqrt(
+		const newRadius = Math.sqrt(
 			( handleX - origX ) * ( handleX - origX ) +
 			( handleY - origY ) * ( handleY - origY )
 		);
@@ -1058,15 +1152,15 @@
 	CanvasManager.prototype.calculateTextResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
-		var updates = {};
-		var originalFontSize = originalLayer.fontSize || 16;
+		const updates = {};
+		const originalFontSize = originalLayer.fontSize || 16;
 
 		// Calculate font size change based on diagonal movement
-		var diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
-		var fontSizeChange = diagonalDelta * 0.2; // Scale factor
+		const diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
+		const fontSizeChange = diagonalDelta * 0.2; // Scale factor
 
 		// Determine if we're growing or shrinking based on handle direction
-		var isGrowing = false;
+		let isGrowing = false;
 		switch ( handleType ) {
 			case 'se':
 			case 'e':
@@ -1086,7 +1180,7 @@
 				break;
 		}
 
-		var newFontSize = originalFontSize;
+		let newFontSize = originalFontSize;
 		if ( isGrowing ) {
 			newFontSize += fontSizeChange;
 		} else {
@@ -1106,32 +1200,32 @@
 			return;
 		}
 		// Fallback for when controller is not available
-		var layer = this.editor.getLayerById( this.selectedLayerId );
+		const layer = this.editor.getLayerById( this.getSelectedLayerId() );
 		if ( !layer ) {
 			return;
 		}
 
 		// Calculate angle from rotation center to mouse position
-		var bounds = this.getLayerBounds( layer );
+		const bounds = this.getLayerBounds( layer );
 		if ( !bounds ) {
 			return;
 		}
 
-		var centerX = bounds.centerX;
-		var centerY = bounds.centerY;
+		const centerX = bounds.centerX;
+		const centerY = bounds.centerY;
 
-		var startAngle = Math.atan2(
+		const startAngle = Math.atan2(
 			this.dragStartPoint.y - centerY,
 			this.dragStartPoint.x - centerX
 		);
-		var currentAngle = Math.atan2( point.y - centerY, point.x - centerX );
+		const currentAngle = Math.atan2( point.y - centerY, point.x - centerX );
 
-		var angleDelta = currentAngle - startAngle;
-		var degrees = angleDelta * ( 180 / Math.PI );
+		const angleDelta = currentAngle - startAngle;
+		let degrees = angleDelta * ( 180 / Math.PI );
 
 		// Apply snap-to-angle if Shift key is held (15-degree increments)
 		if ( event && event.shiftKey ) {
-			var snapAngle = 15;
+			const snapAngle = 15;
 			degrees = Math.round( degrees / snapAngle ) * snapAngle;
 		}
 
@@ -1150,37 +1244,38 @@
 			return;
 		}
 		// Fallback for when controller is not available
-		var deltaX = point.x - this.dragStartPoint.x;
-		var deltaY = point.y - this.dragStartPoint.y;
+		const deltaX = point.x - this.dragStartPoint.x;
+		const deltaY = point.y - this.dragStartPoint.y;
 
 		// Enable drag preview mode for visual feedback
 		this.showDragPreview = true;
 
 		// Support multi-selection dragging
-		var layersToMove = [];
-		if ( this.selectedLayerIds.length > 1 ) {
+		const layersToMove = [];
+		const selectedIds = this.getSelectedLayerIds();
+		if ( selectedIds.length > 1 ) {
 			// Multi-selection: move all selected layers
-			for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
-				var multiLayer = this.editor.getLayerById( this.selectedLayerIds[ i ] );
+			for ( let i = 0; i < selectedIds.length; i++ ) {
+				const multiLayer = this.editor.getLayerById( selectedIds[ i ] );
 				if ( multiLayer ) {
 					layersToMove.push( multiLayer );
 				}
 			}
 		} else {
 			// Single selection: move just the selected layer
-			var singleLayer = this.editor.getLayerById( this.selectedLayerId );
+			const singleLayer = this.editor.getLayerById( this.getSelectedLayerId() );
 			if ( singleLayer && this.originalLayerState ) {
 				layersToMove.push( singleLayer );
 			}
 		}
 
 		// Move all layers in the selection
-		for ( var j = 0; j < layersToMove.length; j++ ) {
-			var layerToMove = layersToMove[ j ];
-			var originalState = this.originalLayerState;
+		for ( let j = 0; j < layersToMove.length; j++ ) {
+			const layerToMove = layersToMove[ j ];
+			let originalState = this.originalLayerState;
 
 			// For multi-selection, we need to get individual original states
-			if ( this.selectedLayerIds.length > 1 && this.originalMultiLayerStates ) {
+			if ( selectedIds.length > 1 && this.originalMultiLayerStates ) {
 				originalState = this.originalMultiLayerStates[ layerToMove.id ];
 			}
 
@@ -1189,13 +1284,13 @@
 			}
 
 			// Apply snap-to-grid if enabled
-			var adjustedDeltaX = deltaX;
-			var adjustedDeltaY = deltaY;
+			let adjustedDeltaX = deltaX;
+			let adjustedDeltaY = deltaY;
 
 			if ( this.snapToGrid && this.gridSize > 0 ) {
-				var newX = ( originalState.x || 0 ) + deltaX;
-				var newY = ( originalState.y || 0 ) + deltaY;
-				var snappedPoint = this.snapPointToGrid( { x: newX, y: newY } );
+				const newX = ( originalState.x || 0 ) + deltaX;
+				const newY = ( originalState.y || 0 ) + deltaY;
+				const snappedPoint = this.snapPointToGrid( { x: newX, y: newY } );
 				adjustedDeltaX = snappedPoint.x - ( originalState.x || 0 );
 				adjustedDeltaY = snappedPoint.y - ( originalState.y || 0 );
 			}
@@ -1206,7 +1301,7 @@
 
 		// Re-render and emit live-transform event for the primary selected layer
 		this.renderLayers( this.editor.layers );
-		var active = this.editor.getLayerById( this.selectedLayerId );
+		const active = this.editor.getLayerById( this.getSelectedLayerId() );
 		if ( active ) {
 			this.emitTransforming( active );
 		}
@@ -1227,18 +1322,22 @@
 			return;
 		}
 		this.transformEventScheduled = true;
-		var self = this;
+		const self = this;
 		window.requestAnimationFrame( function () {
 			self.transformEventScheduled = false;
-			var target = ( self.editor && self.editor.container ) || self.container || document;
+			const target = ( self.editor && self.editor.container ) || self.container || document;
 			try {
-				var detail = {
+				const detail = {
 					id: self.lastTransformPayload.id,
 					layer: JSON.parse( JSON.stringify( self.lastTransformPayload ) )
 				};
-				var evt = new CustomEvent( 'layers:transforming', { detail: detail } );
+				const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
 				target.dispatchEvent( evt );
-			} catch ( _e ) { /* ignore */ }
+			} catch ( e ) {
+				if ( window.layersErrorHandler ) {
+					window.layersErrorHandler.handleError( e, 'CanvasManager.emitTransformEvent', 'canvas' );
+				}
+			}
 		} );
 	};
 
@@ -1291,26 +1390,27 @@
 		}
 
 		// Check for handle hover
-		if ( this.selectedLayerId ) {
-			var handleHit = this.hitTestSelectionHandles( point );
+		const currentSelectedId = this.getSelectedLayerId();
+		if ( currentSelectedId ) {
+			const handleHit = this.hitTestSelectionHandles( point );
 
 			if ( handleHit ) {
 				if ( handleHit.type === 'rotate' ) {
 					this.canvas.style.cursor = 'grab';
 					return;
 				}
-				var selectedLayer = this.editor.getLayerById( this.selectedLayerId );
-				var rotation = selectedLayer ? selectedLayer.rotation : 0;
+				const selectedLayer = this.editor.getLayerById( currentSelectedId );
+				const rotation = selectedLayer ? selectedLayer.rotation : 0;
 				this.canvas.style.cursor = this.getResizeCursor( handleHit.type, rotation );
 				return;
 			}
 		}
 
 		// Check for layer hover
-		var layerUnderMouse = this.getLayerAtPoint( point );
+		const layerUnderMouse = this.getLayerAtPoint( point );
 		if ( layerUnderMouse ) {
 			// If this is the selected layer, show move cursor
-			if ( this.selectedLayerId && layerUnderMouse.id === this.selectedLayerId ) {
+			if ( currentSelectedId && layerUnderMouse.id === currentSelectedId ) {
 				this.canvas.style.cursor = 'move';
 			} else {
 				this.canvas.style.cursor = 'pointer';
@@ -1321,10 +1421,14 @@
 	};
 
 	CanvasManager.prototype.getLayerAtPoint = function ( point ) {
-		// Find layer at click point in visual top-most-first order
-		// We draw from end->start, so index 0 is top-most and should be tested first
-		for ( var i = 0; i < this.editor.layers.length; i++ ) {
-			var layer = this.editor.layers[ i ];
+		// Delegate to HitTestController if available
+		if ( this.hitTestController ) {
+			return this.hitTestController.getLayerAtPoint( point );
+		}
+
+		// Fallback: Find layer at click point in visual top-most-first order
+		for ( let i = 0; i < this.editor.layers.length; i++ ) {
+			const layer = this.editor.layers[ i ];
 			if ( layer.visible === false || layer.locked === true ) {
 				continue;
 			}
@@ -1336,142 +1440,109 @@
 	};
 
 	CanvasManager.prototype.isPointInLayer = function ( point, layer ) {
+		// Delegate to HitTestController if available
+		if ( this.hitTestController ) {
+			return this.hitTestController.isPointInLayer( point, layer );
+		}
+
+		// Fallback implementation
 		if ( !layer ) {
 			return false;
 		}
 		switch ( layer.type ) {
-			case 'rectangle': {
-				var rMinX = Math.min( layer.x, layer.x + layer.width );
-				var rMinY = Math.min( layer.y, layer.y + layer.height );
-				var rW = Math.abs( layer.width );
-				var rH = Math.abs( layer.height );
+			case 'rectangle':
+			case 'blur': {
+				const rMinX = Math.min( layer.x, layer.x + layer.width );
+				const rMinY = Math.min( layer.y, layer.y + layer.height );
+				const rW = Math.abs( layer.width );
+				const rH = Math.abs( layer.height );
 				return point.x >= rMinX && point.x <= rMinX + rW &&
 					point.y >= rMinY && point.y <= rMinY + rH;
 			}
-			case 'blur': {
-				var bMinX = Math.min( layer.x, layer.x + layer.width );
-				var bMinY = Math.min( layer.y, layer.y + layer.height );
-				var bW = Math.abs( layer.width );
-				var bH = Math.abs( layer.height );
-				return point.x >= bMinX && point.x <= bMinX + bW &&
-					point.y >= bMinY && point.y <= bMinY + bH;
-			}
 			case 'circle': {
-				var dx = point.x - ( layer.x || 0 );
-				var dy = point.y - ( layer.y || 0 );
-				var r = layer.radius || 0;
+				const dx = point.x - ( layer.x || 0 );
+				const dy = point.y - ( layer.y || 0 );
+				const r = layer.radius || 0;
 				return ( dx * dx + dy * dy ) <= r * r;
 			}
 			case 'text': {
-				var bounds = this.getLayerBounds( layer );
+				const bounds = this.getLayerBounds( layer );
 				return bounds &&
 					point.x >= bounds.x && point.x <= bounds.x + bounds.width &&
 					point.y >= bounds.y && point.y <= bounds.y + bounds.height;
 			}
 			case 'line':
-			case 'arrow': {
+			case 'arrow':
 				return this.isPointNearLine( point, layer.x1, layer.y1, layer.x2, layer.y2,
 					Math.max( 6, ( layer.strokeWidth || 2 ) + 4 ) );
-			}
-			case 'path': {
-				if ( !layer.points || layer.points.length < 2 ) {
-					return false;
-				}
-				var tol = Math.max( 6, ( layer.strokeWidth || 2 ) + 4 );
-				for ( var i = 0; i < layer.points.length - 1; i++ ) {
-					if ( this.isPointNearLine( point,
-						layer.points[ i ].x, layer.points[ i ].y,
-						layer.points[ i + 1 ].x, layer.points[ i + 1 ].y,
-						tol ) ) {
-						return true;
-					}
-				}
-				return false;
-			}
 			case 'ellipse': {
-				var ex = layer.x || 0;
-				var ey = layer.y || 0;
-				var radX = Math.abs( layer.radiusX || 0 );
-				var radY = Math.abs( layer.radiusY || 0 );
+				const ex = layer.x || 0;
+				const ey = layer.y || 0;
+				const radX = Math.abs( layer.radiusX || 0 );
+				const radY = Math.abs( layer.radiusY || 0 );
 				if ( radX === 0 || radY === 0 ) {
 					return false;
 				}
-				var nx = ( point.x - ex ) / radX;
-				var ny = ( point.y - ey ) / radY;
+				const nx = ( point.x - ex ) / radX;
+				const ny = ( point.y - ey ) / radY;
 				return nx * nx + ny * ny <= 1;
 			}
-			case 'polygon':
-			case 'star': {
-				var polyX = layer.x || 0;
-				var polyY = layer.y || 0;
-				var polyRotation = ( layer.rotation || 0 ) * Math.PI / 180;
-				var polyPoints = [];
-				if ( layer.type === 'polygon' ) {
-					var polySides = layer.sides || 6;
-					var polyRadius = Math.abs( layer.radius || layer.outerRadius || 50 );
-					for ( var si = 0; si < polySides; si++ ) {
-						var angle = ( si * 2 * Math.PI ) / polySides - Math.PI / 2 + polyRotation;
-						polyPoints.push( {
-							x: polyX + polyRadius * Math.cos( angle ),
-							y: polyY + polyRadius * Math.sin( angle )
-						} );
-					}
-				} else {
-					var starPoints = ( typeof layer.points === 'number' ? layer.points : null ) || layer.starPoints || 5;
-					var outerRadius = Math.abs( layer.outerRadius || layer.radius || 50 );
-					var innerRadius = Math.abs( layer.innerRadius || outerRadius * 0.4 );
-					for ( var sti = 0; sti < starPoints * 2; sti++ ) {
-						var starAngle = ( sti * Math.PI ) / starPoints - Math.PI / 2 + polyRotation;
-						var starR = ( sti % 2 === 0 ) ? outerRadius : innerRadius;
-						polyPoints.push( {
-							x: polyX + starR * Math.cos( starAngle ),
-							y: polyY + starR * Math.sin( starAngle )
-						} );
-					}
-				}
-
-				return this.isPointInPolygon( point, polyPoints );
-			}
 			case 'highlight': {
-				var hx = Math.min( layer.x, layer.x + layer.width );
-				var hy = Math.min( layer.y, layer.y + ( layer.height || 20 ) );
-				var hw = Math.abs( layer.width );
-				var hh = Math.abs( layer.height || 20 );
+				const hx = Math.min( layer.x, layer.x + layer.width );
+				const hy = Math.min( layer.y, layer.y + ( layer.height || 20 ) );
+				const hw = Math.abs( layer.width );
+				const hh = Math.abs( layer.height || 20 );
 				return point.x >= hx && point.x <= hx + hw &&
 					point.y >= hy && point.y <= hy + hh;
 			}
+			default:
+				return false;
 		}
-		return false;
 	};
 
 	CanvasManager.prototype.isPointNearLine = function ( point, x1, y1, x2, y2, tolerance ) {
-		var dist = this.pointToSegmentDistance( point.x, point.y, x1, y1, x2, y2 );
+		// Delegate to HitTestController if available
+		if ( this.hitTestController ) {
+			return this.hitTestController.isPointNearLine( point, x1, y1, x2, y2, tolerance );
+		}
+		// Fallback
+		const dist = this.pointToSegmentDistance( point.x, point.y, x1, y1, x2, y2 );
 		return dist <= ( tolerance || 6 );
 	};
 
 	CanvasManager.prototype.pointToSegmentDistance = function ( px, py, x1, y1, x2, y2 ) {
-		var dx = x2 - x1;
-		var dy = y2 - y1;
+		// Delegate to HitTestController if available
+		if ( this.hitTestController ) {
+			return this.hitTestController.pointToSegmentDistance( px, py, x1, y1, x2, y2 );
+		}
+		// Fallback
+		const dx = x2 - x1;
+		const dy = y2 - y1;
 		if ( dx === 0 && dy === 0 ) {
 			return Math.sqrt( Math.pow( px - x1, 2 ) + Math.pow( py - y1, 2 ) );
 		}
-		var t = ( ( px - x1 ) * dx + ( py - y1 ) * dy ) / ( dx * dx + dy * dy );
+		let t = ( ( px - x1 ) * dx + ( py - y1 ) * dy ) / ( dx * dx + dy * dy );
 		t = Math.max( 0, Math.min( 1, t ) );
-		var projX = x1 + t * dx;
-		var projY = y1 + t * dy;
+		const projX = x1 + t * dx;
+		const projY = y1 + t * dy;
 		return Math.sqrt( Math.pow( px - projX, 2 ) + Math.pow( py - projY, 2 ) );
 	};
 
 	CanvasManager.prototype.isPointInPolygon = function ( point, polygonPoints ) {
-		var x = point.x;
-		var y = point.y;
-		var inside = false;
+		// Delegate to HitTestController if available
+		if ( this.hitTestController ) {
+			return this.hitTestController.isPointInPolygon( point, polygonPoints );
+		}
+		// Fallback
+		const x = point.x;
+		const y = point.y;
+		let inside = false;
 
-		for ( var i = 0, j = polygonPoints.length - 1; i < polygonPoints.length; j = i++ ) {
-			var xi = polygonPoints[ i ].x;
-			var yi = polygonPoints[ i ].y;
-			var xj = polygonPoints[ j ].x;
-			var yj = polygonPoints[ j ].y;
+		for ( let i = 0, j = polygonPoints.length - 1; i < polygonPoints.length; j = i++ ) {
+			const xi = polygonPoints[ i ].x;
+			const yi = polygonPoints[ i ].y;
+			const xj = polygonPoints[ j ].x;
+			const yj = polygonPoints[ j ].y;
 
 			if ( ( ( yi > y ) !== ( yj > y ) ) &&
 				( x < ( xj - xi ) * ( y - yi ) / ( yj - yi ) + xi ) ) {
@@ -1556,7 +1627,7 @@
 			this.zoomPanController.zoomIn();
 		} else {
 			// Fallback for when controller is not available
-			var targetZoom = this.zoom + 0.2;
+			const targetZoom = this.zoom + 0.2;
 			this.smoothZoomTo( targetZoom );
 			this.userHasSetZoom = true;
 		}
@@ -1567,7 +1638,7 @@
 			this.zoomPanController.zoomOut();
 		} else {
 			// Fallback for when controller is not available
-			var targetZoom = this.zoom - 0.2;
+			const targetZoom = this.zoom - 0.2;
 			this.smoothZoomTo( targetZoom );
 			this.userHasSetZoom = true;
 		}
@@ -1657,11 +1728,11 @@
 			if ( !this.isAnimatingZoom ) {
 				return;
 			}
-			var currentTime = performance.now();
-			var elapsed = currentTime - this.zoomAnimationStartTime;
-			var progress = Math.min( elapsed / this.zoomAnimationDuration, 1.0 );
-			var easedProgress = 1 - Math.pow( 1 - progress, 3 );
-			var currentZoom = this.zoomAnimationStartZoom +
+			const currentTime = performance.now();
+			const elapsed = currentTime - this.zoomAnimationStartTime;
+			const progress = Math.min( elapsed / this.zoomAnimationDuration, 1.0 );
+			const easedProgress = 1 - Math.pow( 1 - progress, 3 );
+			const currentZoom = this.zoomAnimationStartZoom +
 				( this.zoomAnimationTargetZoom - this.zoomAnimationStartZoom ) * easedProgress;
 			this.setZoomDirect( currentZoom );
 			if ( progress < 1.0 ) {
@@ -1698,12 +1769,12 @@
 			if ( !this.backgroundImage ) {
 				return;
 			}
-			var container = this.canvas.parentNode;
-			var containerWidth = container.clientWidth - 40;
-			var containerHeight = container.clientHeight - 40;
-			var scaleX = containerWidth / this.backgroundImage.width;
-			var scaleY = containerHeight / this.backgroundImage.height;
-			var targetZoom = Math.min( scaleX, scaleY );
+			const container = this.canvas.parentNode;
+			const containerWidth = container.clientWidth - 40;
+			const containerHeight = container.clientHeight - 40;
+			const scaleX = containerWidth / this.backgroundImage.width;
+			const scaleY = containerHeight / this.backgroundImage.height;
+			let targetZoom = Math.min( scaleX, scaleY );
 			targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
 			this.panX = 0;
 			this.panY = 0;
@@ -1727,15 +1798,15 @@
 				this.fitToWindow();
 				return;
 			}
-			var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-			var hasVisibleLayers = false;
-			for ( var i = 0; i < this.editor.layers.length; i++ ) {
-				var layer = this.editor.layers[ i ];
+			let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+			let hasVisibleLayers = false;
+			for ( let i = 0; i < this.editor.layers.length; i++ ) {
+				const layer = this.editor.layers[ i ];
 				if ( !layer.visible ) {
 					continue;
 				}
 				hasVisibleLayers = true;
-				var layerBounds = this.getLayerBounds( layer );
+				const layerBounds = this.getLayerBounds( layer );
 				if ( layerBounds ) {
 					minX = Math.min( minX, layerBounds.left );
 					minY = Math.min( minY, layerBounds.top );
@@ -1747,20 +1818,20 @@
 				this.fitToWindow();
 				return;
 			}
-			var padding = 50;
-			var contentWidth = ( maxX - minX ) + ( padding * 2 );
-			var contentHeight = ( maxY - minY ) + ( padding * 2 );
-			var container = this.canvas.parentNode;
-			var containerWidth = container.clientWidth - 40;
-			var containerHeight = container.clientHeight - 40;
-			var scaleX = containerWidth / contentWidth;
-			var scaleY = containerHeight / contentHeight;
-			var targetZoom = Math.min( scaleX, scaleY );
+			const padding = 50;
+			const contentWidth = ( maxX - minX ) + ( padding * 2 );
+			const contentHeight = ( maxY - minY ) + ( padding * 2 );
+			const container = this.canvas.parentNode;
+			const containerWidth = container.clientWidth - 40;
+			const containerHeight = container.clientHeight - 40;
+			const scaleX = containerWidth / contentWidth;
+			const scaleY = containerHeight / contentHeight;
+			let targetZoom = Math.min( scaleX, scaleY );
 			targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
-			var centerX = ( minX + maxX ) / 2;
-			var centerY = ( minY + maxY ) / 2;
-			var canvasCenterX = this.canvas.width / 2;
-			var canvasCenterY = this.canvas.height / 2;
+			const centerX = ( minX + maxX ) / 2;
+			const centerY = ( minY + maxY ) / 2;
+			const canvasCenterX = this.canvas.width / 2;
+			const canvasCenterY = this.canvas.height / 2;
 			this.panX = ( canvasCenterX - centerX ) * targetZoom;
 			this.panY = ( canvasCenterY - centerY ) * targetZoom;
 			this.userHasSetZoom = true;
@@ -1779,13 +1850,13 @@
 			return null;
 		}
 
-		var baseBounds = this._getRawLayerBounds( layer );
+		const baseBounds = this._getRawLayerBounds( layer );
 		if ( !baseBounds ) {
 			return null;
 		}
 
-		var rotation = layer.rotation || 0;
-		var aabb = this._computeAxisAlignedBounds( baseBounds, rotation );
+		const rotation = layer.rotation || 0;
+		const aabb = this._computeAxisAlignedBounds( baseBounds, rotation );
 
 		return {
 			x: baseBounds.x,
@@ -1803,10 +1874,10 @@
 	};
 
 	CanvasManager.prototype._getRawLayerBounds = function ( layer ) {
-		var rectX, rectY, safeWidth, safeHeight;
+		let rectX, rectY, safeWidth, safeHeight;
 		switch ( layer.type ) {
 			case 'text': {
-				var textMetrics = this.measureTextLayer( layer );
+				const textMetrics = this.measureTextLayer( layer );
 				if ( !textMetrics ) {
 					return null;
 				}
@@ -1840,7 +1911,7 @@
 				};
 			}
 			case 'circle': {
-				var radius = Math.abs( layer.radius || 0 );
+				const radius = Math.abs( layer.radius || 0 );
 				return {
 					x: ( layer.x || 0 ) - radius,
 					y: ( layer.y || 0 ) - radius,
@@ -1849,8 +1920,8 @@
 				};
 			}
 			case 'ellipse': {
-				var radiusX = Math.abs( layer.radiusX || layer.radius || 0 );
-				var radiusY = Math.abs( layer.radiusY || layer.radius || 0 );
+				const radiusX = Math.abs( layer.radiusX || layer.radius || 0 );
+				const radiusY = Math.abs( layer.radiusY || layer.radius || 0 );
 				return {
 					x: ( layer.x || 0 ) - radiusX,
 					y: ( layer.y || 0 ) - radiusY,
@@ -1860,10 +1931,10 @@
 			}
 			case 'line':
 			case 'arrow': {
-				var x1 = layer.x1 !== undefined ? layer.x1 : ( layer.x || 0 );
-				var y1 = layer.y1 !== undefined ? layer.y1 : ( layer.y || 0 );
-				var x2 = layer.x2 !== undefined ? layer.x2 : ( layer.x || 0 );
-				var y2 = layer.y2 !== undefined ? layer.y2 : ( layer.y || 0 );
+				const x1 = layer.x1 !== undefined ? layer.x1 : ( layer.x || 0 );
+				const y1 = layer.y1 !== undefined ? layer.y1 : ( layer.y || 0 );
+				const x2 = layer.x2 !== undefined ? layer.x2 : ( layer.x || 0 );
+				const y2 = layer.y2 !== undefined ? layer.y2 : ( layer.y || 0 );
 				return {
 					x: Math.min( x1, x2 ),
 					y: Math.min( y1, y2 ),
@@ -1875,12 +1946,12 @@
 			case 'star':
 			case 'path': {
 				if ( Array.isArray( layer.points ) && layer.points.length >= 3 ) {
-					var minX = layer.points[ 0 ].x;
-					var maxX = layer.points[ 0 ].x;
-					var minY = layer.points[ 0 ].y;
-					var maxY = layer.points[ 0 ].y;
-					for ( var i = 1; i < layer.points.length; i++ ) {
-						var pt = layer.points[ i ];
+					let minX = layer.points[ 0 ].x;
+					let maxX = layer.points[ 0 ].x;
+					let minY = layer.points[ 0 ].y;
+					let maxY = layer.points[ 0 ].y;
+					for ( let i = 1; i < layer.points.length; i++ ) {
+						const pt = layer.points[ i ];
 						minX = Math.min( minX, pt.x );
 						maxX = Math.max( maxX, pt.x );
 						minY = Math.min( minY, pt.y );
@@ -1893,11 +1964,11 @@
 						height: Math.max( maxY - minY, 1 )
 					};
 				}
-				var r = layer.radius;
+				let r = layer.radius;
 				if ( layer.type === 'star' && layer.outerRadius ) {
 					r = layer.outerRadius;
 				}
-				var radiusFallback = Math.abs( r || 50 );
+				const radiusFallback = Math.abs( r || 50 );
 				return {
 					x: ( layer.x || 0 ) - radiusFallback,
 					y: ( layer.y || 0 ) - radiusFallback,
@@ -1925,7 +1996,7 @@
 			return { left: 0, top: 0, right: 0, bottom: 0 };
 		}
 
-		var rotation = ( rotationDegrees || 0 ) * Math.PI / 180;
+		const rotation = ( rotationDegrees || 0 ) * Math.PI / 180;
 		if ( rotation === 0 ) {
 			return {
 				left: rect.x,
@@ -1935,28 +2006,28 @@
 			};
 		}
 
-		var centerX = rect.x + ( rect.width / 2 );
-		var centerY = rect.y + ( rect.height / 2 );
-		var corners = [
+		const centerX = rect.x + ( rect.width / 2 );
+		const centerY = rect.y + ( rect.height / 2 );
+		const corners = [
 			{ x: rect.x, y: rect.y },
 			{ x: rect.x + rect.width, y: rect.y },
 			{ x: rect.x + rect.width, y: rect.y + rect.height },
 			{ x: rect.x, y: rect.y + rect.height }
 		];
-		var cosR = Math.cos( rotation );
-		var sinR = Math.sin( rotation );
-		var rotated = corners.map( function ( point ) {
-			var dx = point.x - centerX;
-			var dy = point.y - centerY;
+		const cosR = Math.cos( rotation );
+		const sinR = Math.sin( rotation );
+		const rotated = corners.map( function ( point ) {
+			const dx = point.x - centerX;
+			const dy = point.y - centerY;
 			return {
 				x: centerX + dx * cosR - dy * sinR,
 				y: centerY + dx * sinR + dy * cosR
 			};
 		} );
-		var xs = rotated.map( function ( point ) {
+		const xs = rotated.map( function ( point ) {
 			return point.x;
 		} );
-		var ys = rotated.map( function ( point ) {
+		const ys = rotated.map( function ( point ) {
 			return point.y;
 		} );
 
@@ -1977,17 +2048,17 @@
 	 * @return {Object} Object with canvas and context properties
 	 */
 	CanvasManager.prototype.getTempCanvas = function ( width, height ) {
-		var tempCanvasObj = this.canvasPool.pop();
+		let tempCanvasObj = this.canvasPool.pop();
 		if ( tempCanvasObj ) {
 			// Reuse existing canvas from pool
 			tempCanvasObj.canvas.width = width || 100;
 			tempCanvasObj.canvas.height = height || 100;
 			// Clear the canvas
-			var canvas = tempCanvasObj.canvas;
+			const canvas = tempCanvasObj.canvas;
 			tempCanvasObj.context.clearRect( 0, 0, canvas.width, canvas.height );
 		} else {
 			// Create new canvas object
-			var tempCanvas = document.createElement( 'canvas' );
+			const tempCanvas = document.createElement( 'canvas' );
 			tempCanvas.width = width || 100;
 			tempCanvas.height = height || 100;
 			tempCanvasObj = {
@@ -2011,7 +2082,7 @@
 		// Only keep a limited number of canvases in the pool
 		if ( this.canvasPool.length < this.maxPoolSize ) {
 			// Clear the canvas before returning to pool
-			var canvas = tempCanvasObj.canvas;
+			const canvas = tempCanvasObj.canvas;
 			tempCanvasObj.context.clearRect( 0, 0, canvas.width, canvas.height );
 			// Reset context state
 			tempCanvasObj.context.setTransform( 1, 0, 0, 1, 0, 0 );
@@ -2035,14 +2106,14 @@
 		// Set up for potential drag operation
 		this.initialDragZoom = this.zoom;
 
-		var zoomFactor = event.shiftKey ? 0.8 : 1.25; // Zoom out if shift, zoom in otherwise
-		var newZoom = this.zoom * zoomFactor;
+		const zoomFactor = event.shiftKey ? 0.8 : 1.25; // Zoom out if shift, zoom in otherwise
+		let newZoom = this.zoom * zoomFactor;
 		newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
 
 		if ( newZoom !== this.zoom ) {
 			// Keep the clicked canvas point under the cursor stable
-			var screenX = this.panX + this.zoom * point.x;
-			var screenY = this.panY + this.zoom * point.y;
+			const screenX = this.panX + this.zoom * point.x;
+			const screenY = this.panY + this.zoom * point.y;
 			this.zoom = newZoom;
 			this.panX = screenX - this.zoom * point.x;
 			this.panY = screenY - this.zoom * point.y;
@@ -2061,20 +2132,20 @@
 			return;
 		}
 
-		var deltaY = this.dragStartPoint.y - point.y; // Negative = drag down = zoom out
-		var sensitivity = 0.01; // Zoom sensitivity
-		var zoomChange = 1 + ( deltaY * sensitivity );
+		const deltaY = this.dragStartPoint.y - point.y; // Negative = drag down = zoom out
+		const sensitivity = 0.01; // Zoom sensitivity
+		const zoomChange = 1 + ( deltaY * sensitivity );
 
-		var newZoom = this.initialDragZoom * zoomChange;
+		let newZoom = this.initialDragZoom * zoomChange;
 
 		// Clamp zoom level
 		newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
 
 		if ( newZoom !== this.zoom ) {
 			// Anchor zoom around drag start point
-			var anchor = this.dragStartPoint;
-			var screenX = this.panX + this.zoom * anchor.x;
-			var screenY = this.panY + this.zoom * anchor.y;
+			const anchor = this.dragStartPoint;
+			const screenX = this.panX + this.zoom * anchor.x;
+			const screenY = this.panY + this.zoom * anchor.y;
 			this.zoom = newZoom;
 			this.panX = screenX - this.zoom * anchor.x;
 			this.panY = screenY - this.zoom * anchor.y;
@@ -2094,12 +2165,12 @@
 			this.zoomPanController.zoomBy( delta, point );
 		} else {
 			// Fallback for when controller is not available
-			var target = Math.max( this.minZoom, Math.min( this.maxZoom, this.zoom + delta ) );
+			const target = Math.max( this.minZoom, Math.min( this.maxZoom, this.zoom + delta ) );
 			if ( target === this.zoom ) {
 				return;
 			}
-			var screenX = this.panX + this.zoom * point.x;
-			var screenY = this.panY + this.zoom * point.y;
+			const screenX = this.panX + this.zoom * point.x;
+			const screenY = this.panY + this.zoom * point.y;
 			this.zoom = target;
 			this.panX = screenX - this.zoom * point.x;
 			this.panY = screenY - this.zoom * point.y;
@@ -2108,47 +2179,23 @@
 		}
 	};
 
+	/**
+	 * Save current state to history for undo/redo
+	 * Delegates to HistoryManager for single source of truth
+	 *
+	 * @param {string} action Description of the action
+	 */
 	CanvasManager.prototype.saveState = function ( action ) {
-		// Avoid saving state during rapid operations
-		if ( this.savingState ) {
-			return;
+		// Delegate to HistoryManager via editor if available
+		if ( this.editor && this.editor.historyManager &&
+			typeof this.editor.historyManager.saveState === 'function' ) {
+			this.editor.historyManager.saveState( action );
+		} else if ( this.historyManager &&
+			typeof this.historyManager.saveState === 'function' ) {
+			// Direct historyManager reference fallback
+			this.historyManager.saveState( action );
 		}
-		this.savingState = true;
-
-		// Use a timeout to debounce rapid state saves
-		clearTimeout( this.saveStateTimeout );
-		this.saveStateTimeout = setTimeout( function () {
-			try {
-				// Deep clone the current layers state efficiently
-				var state = {
-					layers: this.deepCloneLayers( this.editor.layers || [] ),
-					action: action || 'action',
-					timestamp: Date.now()
-				};
-
-				// Remove any states after current index (if we're not at the end)
-				if ( this.historyIndex < this.history.length - 1 ) {
-					this.history.splice( this.historyIndex + 1 );
-				}
-
-				// Add new state
-				this.history.push( state );
-				this.historyIndex = this.history.length - 1;
-
-				// Limit history size to prevent memory issues
-				if ( this.history.length > this.maxHistorySteps ) {
-					// Remove oldest entries
-					var toRemove = this.history.length - this.maxHistorySteps;
-					this.history.splice( 0, toRemove );
-					this.historyIndex -= toRemove;
-				}
-
-				// Update toolbar undo/redo buttons
-				this.updateUndoRedoButtons();
-			} finally {
-				this.savingState = false;
-			}
-		}.bind( this ), 100 ); // 100ms debounce
+		// Note: debouncing is handled by HistoryManager
 	};
 
 	/**
@@ -2164,16 +2211,16 @@
 		} catch ( e ) {
 			// Fallback to manual cloning if JSON fails
 			return layers.map( function ( layer ) {
-				var clone = {};
-				for ( var key in layer ) {
+				const clone = {};
+				for ( const key in layer ) {
 					if ( Object.prototype.hasOwnProperty.call( layer, key ) ) {
-						var value = layer[ key ];
+						const value = layer[ key ];
 						if ( Array.isArray( value ) ) {
 							clone[ key ] = value.slice(); // Shallow copy arrays
 						} else if ( typeof value === 'object' && value !== null ) {
 							// Manual object copying for older JavaScript compatibility
 							clone[ key ] = {};
-							for ( var subKey in value ) {
+							for ( const subKey in value ) {
 								if ( Object.prototype.hasOwnProperty.call( value, subKey ) ) {
 									clone[ key ][ subKey ] = value[ subKey ];
 								}
@@ -2188,71 +2235,47 @@
 		}
 	};
 
+	/**
+	 * Update undo/redo button states
+	 * Delegates to HistoryManager for single source of truth
+	 */
 	CanvasManager.prototype.updateUndoRedoButtons = function () {
-		if ( this.editor && this.editor.toolbar ) {
-			var canUndo = this.historyIndex > 0;
-			var canRedo = this.historyIndex < this.history.length - 1;
-			this.editor.toolbar.updateUndoRedoState( canUndo, canRedo );
+		// Delegate to HistoryManager via editor if available
+		if ( this.editor && this.editor.historyManager &&
+			typeof this.editor.historyManager.updateUndoRedoButtons === 'function' ) {
+			this.editor.historyManager.updateUndoRedoButtons();
+		} else if ( this.historyManager &&
+			typeof this.historyManager.updateUndoRedoButtons === 'function' ) {
+			this.historyManager.updateUndoRedoButtons();
 		}
 	};
 
-	// Undo/Redo implementation
+	/**
+	 * Undo last action
+	 * Delegates to editor's HistoryManager for single source of truth
+	 *
+	 * @return {boolean} True if undo was performed
+	 */
 	CanvasManager.prototype.undo = function () {
-		if ( this.historyIndex <= 0 ) {
-			return false;
+		// Delegate to editor for single source of truth
+		if ( this.editor && typeof this.editor.undo === 'function' ) {
+			return this.editor.undo();
 		}
-
-		this.historyIndex--;
-		var state = this.history[ this.historyIndex ];
-
-		// Restore the layers state
-		this.editor.layers = JSON.parse( JSON.stringify( state.layers ) );
-
-		// Clear selection and redraw
-		this.deselectAll();
-		this.renderLayers( this.editor.layers );
-
-		// Update layer panel
-		if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
-			this.editor.layerPanel.updateLayers( this.editor.layers );
-		}
-
-		// Update buttons
-		this.updateUndoRedoButtons();
-
-		// Mark editor as dirty
-		this.editor.markDirty();
-
-		return true;
+		return false;
 	};
 
+	/**
+	 * Redo last undone action
+	 * Delegates to editor's HistoryManager for single source of truth
+	 *
+	 * @return {boolean} True if redo was performed
+	 */
 	CanvasManager.prototype.redo = function () {
-		if ( this.historyIndex >= this.history.length - 1 ) {
-			return false;
+		// Delegate to editor for single source of truth
+		if ( this.editor && typeof this.editor.redo === 'function' ) {
+			return this.editor.redo();
 		}
-
-		this.historyIndex++;
-		var state = this.history[ this.historyIndex ];
-
-		// Restore the layers state
-		this.editor.layers = JSON.parse( JSON.stringify( state.layers ) );
-
-		// Clear selection and redraw
-		this.deselectAll();
-		this.renderLayers( this.editor.layers );
-
-		// Update layer panel
-		if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
-			this.editor.layerPanel.updateLayers( this.editor.layers );
-		}
-
-		// Update buttons
-		this.updateUndoRedoButtons();
-
-		// Mark editor as dirty
-		this.editor.markDirty();
-
-		return true;
+		return false;
 	};
 
 	// Marquee selection methods
@@ -2277,14 +2300,14 @@
 			return;
 		}
 
-		var marqueeRect = this.getMarqueeRect();
-		var selectedLayers = this.getLayersInRect( marqueeRect );
+		const marqueeRect = this.getMarqueeRect();
+		const selectedLayers = this.getLayersInRect( marqueeRect );
 
 		if ( selectedLayers.length > 0 ) {
-			this.selectedLayerIds = selectedLayers.map( function ( layer ) {
+			const newSelectedIds = selectedLayers.map( function ( layer ) {
 				return layer.id;
 			} );
-			this.selectedLayerId = this.selectedLayerIds[ this.selectedLayerIds.length - 1 ];
+			this.setSelectedLayerIds( newSelectedIds );
 			this.drawMultiSelectionIndicators();
 		} else {
 			this.deselectAll();
@@ -2295,15 +2318,15 @@
 		this.drawMultiSelectionIndicators();
 
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-			this.editor.updateStatus( { selectionCount: ( this.selectedLayerIds || [] ).length } );
+			this.editor.updateStatus( { selection: this.getSelectedLayerIds().length } );
 		}
 	};
 
 	CanvasManager.prototype.getMarqueeRect = function () {
-		var x1 = Math.min( this.marqueeStart.x, this.marqueeEnd.x );
-		var y1 = Math.min( this.marqueeStart.y, this.marqueeEnd.y );
-		var x2 = Math.max( this.marqueeStart.x, this.marqueeEnd.x );
-		var y2 = Math.max( this.marqueeStart.y, this.marqueeEnd.y );
+		const x1 = Math.min( this.marqueeStart.x, this.marqueeEnd.x );
+		const y1 = Math.min( this.marqueeStart.y, this.marqueeEnd.y );
+		const x2 = Math.max( this.marqueeStart.x, this.marqueeEnd.x );
+		const y2 = Math.max( this.marqueeStart.y, this.marqueeEnd.y );
 
 		return {
 			x: x1,
@@ -2314,11 +2337,11 @@
 	};
 
 	CanvasManager.prototype.getLayersInRect = function ( rect ) {
-		var layersInRect = [];
-		var self = this;
+		const layersInRect = [];
+		const self = this;
 
 		this.editor.layers.forEach( function ( layer ) {
-			var layerBounds = self.getLayerBounds( layer );
+			const layerBounds = self.getLayerBounds( layer );
 			if ( layerBounds && self.rectsIntersect( rect, layerBounds ) ) {
 				layersInRect.push( layer );
 			}
@@ -2328,8 +2351,8 @@
 	};
 
 	CanvasManager.prototype.rectsIntersect = function ( rect1, rect2 ) {
-		var a = this._rectToAabb( rect1 );
-		var b = this._rectToAabb( rect2 );
+		const a = this._rectToAabb( rect1 );
+		const b = this._rectToAabb( rect2 );
 		return a.left < b.right && a.right > b.left &&
 			a.top < b.bottom && a.bottom > b.top;
 	};
@@ -2342,10 +2365,10 @@
 			typeof rect.top === 'number' && typeof rect.bottom === 'number' ) {
 			return rect;
 		}
-		var x = rect.x || 0;
-		var y = rect.y || 0;
-		var width = rect.width || 0;
-		var height = rect.height || 0;
+		const x = rect.x || 0;
+		const y = rect.y || 0;
+		const width = rect.width || 0;
+		const height = rect.height || 0;
 		return {
 			left: x,
 			top: y,
@@ -2372,12 +2395,12 @@
 
 	// Helper: run drawing with multiplied alpha (used for fill/stroke opacity)
 	CanvasManager.prototype.withLocalAlpha = function ( factor, fn ) {
-		var f = ( typeof factor === 'number' ) ? Math.max( 0, Math.min( 1, factor ) ) : 1;
+		const f = ( typeof factor === 'number' ) ? Math.max( 0, Math.min( 1, factor ) ) : 1;
 		if ( f === 1 ) {
 			fn();
 			return;
 		}
-		var prev = this.ctx.globalAlpha;
+		const prev = this.ctx.globalAlpha;
 		this.ctx.globalAlpha = ( prev || 1 ) * f;
 		try {
 			fn();
@@ -2436,12 +2459,12 @@
 
 	// Selection helpers
 	CanvasManager.prototype.selectLayer = function ( layerId, fromPanel ) {
-		this.selectedLayerId = layerId || null;
-		this.selectedLayerIds = this.selectedLayerId ? [ this.selectedLayerId ] : [];
+		// Update selection through StateManager (single source of truth)
+		this.setSelectedLayerIds( layerId ? [ layerId ] : [] );
 		this.selectionHandles = [];
 		this.renderLayers( this.editor.layers );
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-			this.editor.updateStatus( { selectionCount: this.selectedLayerIds.length } );
+			this.editor.updateStatus( { selection: this.getSelectedLayerIds().length } );
 		}
 
 		// Only sync with layer panel if this wasn't called from panel (prevent circular calls)
@@ -2451,31 +2474,29 @@
 	};
 
 	CanvasManager.prototype.selectAll = function () {
-		this.selectedLayerIds = ( this.editor.layers || [] )
+		const allIds = ( this.editor.layers || [] )
 			.filter( function ( layer ) { return layer.visible !== false; } )
 			.map( function ( layer ) { return layer.id; } );
-		this.selectedLayerId =
-			this.selectedLayerIds[ this.selectedLayerIds.length - 1 ] || null;
+		this.setSelectedLayerIds( allIds );
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-			this.editor.updateStatus( { selectionCount: this.selectedLayerIds.length } );
+			this.editor.updateStatus( { selection: this.getSelectedLayerIds().length } );
 		}
 	};
 
 	CanvasManager.prototype.deselectAll = function () {
-		this.selectedLayerId = null;
-		this.selectedLayerIds = [];
+		this.setSelectedLayerIds( [] );
 		this.selectionHandles = [];
 		this.rotationHandle = null;
 		this.renderLayers( this.editor.layers );
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-			this.editor.updateStatus( { selectionCount: 0, size: { width: 0, height: 0 } } );
+			this.editor.updateStatus( { selection: 0, size: { width: 0, height: 0 } } );
 		}
 	};
 
 	CanvasManager.prototype.handleLayerSelection = function ( point, isCtrlClick ) {
-		var hit = this.getLayerAtPoint( point );
+		const hit = this.getLayerAtPoint( point );
 		if ( !hit ) {
 			if ( !isCtrlClick ) {
 				this.deselectAll();
@@ -2483,47 +2504,64 @@
 			return null;
 		}
 
+		const currentIds = this.getSelectedLayerIds().slice(); // Copy current selection
+		let newIds;
+
 		if ( isCtrlClick ) {
 			// Toggle selection state
-			var idx = this.selectedLayerIds.indexOf( hit.id );
+			const idx = currentIds.indexOf( hit.id );
 			if ( idx === -1 ) {
-				this.selectedLayerIds.push( hit.id );
+				currentIds.push( hit.id );
 			} else {
-				this.selectedLayerIds.splice( idx, 1 );
+				currentIds.splice( idx, 1 );
 			}
-			this.selectedLayerId =
-				this.selectedLayerIds[ this.selectedLayerIds.length - 1 ] || null;
+			newIds = currentIds;
 		} else {
-			this.selectedLayerIds = [ hit.id ];
-			this.selectedLayerId = hit.id;
+			newIds = [ hit.id ];
 		}
+
+		// Update selection through StateManager
+		this.setSelectedLayerIds( newIds );
 
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
 
 		// Sync selection with layer panel
 		if ( this.editor && this.editor.layerPanel ) {
-			this.editor.layerPanel.selectLayer( this.selectedLayerId, true );
+			this.editor.layerPanel.selectLayer( this.getSelectedLayerId(), true );
+		}
+
+		// Update status bar with selection count
+		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
+			this.editor.updateStatus( { selection: this.getSelectedLayerIds().length } );
 		}
 
 		return hit;
 	};
 
 	CanvasManager.prototype.drawMultiSelectionIndicators = function () {
-		if ( !this.selectedLayerIds || this.selectedLayerIds.length <= 1 ) {
+		const selectedIds = this.getSelectedLayerIds();
+		if ( !selectedIds || selectedIds.length <= 1 ) {
 			return;
 		}
-		for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
-			this.drawSelectionIndicators( this.selectedLayerIds[ i ] );
+		for ( let i = 0; i < selectedIds.length; i++ ) {
+			this.drawSelectionIndicators( selectedIds[ i ] );
 		}
 	};
 
 	// Clipboard operations
 	CanvasManager.prototype.copySelected = function () {
-		var self = this;
+		// Delegate to ClipboardController if available
+		if ( this.clipboardController ) {
+			this.clipboardController.copySelected();
+			return;
+		}
+
+		// Fallback
+		const self = this;
 		this.clipboard = [];
-		( this.selectedLayerIds || [] ).forEach( function ( id ) {
-			var layer = self.editor.getLayerById( id );
+		this.getSelectedLayerIds().forEach( function ( id ) {
+			const layer = self.editor.getLayerById( id );
 			if ( layer ) {
 				self.clipboard.push( JSON.parse( JSON.stringify( layer ) ) );
 			}
@@ -2531,14 +2569,22 @@
 	};
 
 	CanvasManager.prototype.pasteFromClipboard = function () {
+		// Delegate to ClipboardController if available
+		if ( this.clipboardController ) {
+			this.clipboardController.paste();
+			return;
+		}
+
+		// Fallback
 		if ( !this.clipboard || this.clipboard.length === 0 ) {
 			return;
 		}
 
-		var self = this;
+		const self = this;
+		let lastPastedId = null;
 		this.editor.saveState();
 		this.clipboard.forEach( function ( layer ) {
-			var clone = JSON.parse( JSON.stringify( layer ) );
+			const clone = JSON.parse( JSON.stringify( layer ) );
 			// Offset pasted items slightly
 			if ( clone.x !== undefined ) {
 				clone.x = ( clone.x || 0 ) + 20;
@@ -2569,20 +2615,30 @@
 				( 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 ) );
 			// Insert pasted clone at top so it appears above others
 			self.editor.layers.unshift( clone );
-			self.selectedLayerId = clone.id;
+			lastPastedId = clone.id;
 		} );
 
-		this.selectedLayerIds = [ this.selectedLayerId ];
+		if ( lastPastedId ) {
+			this.setSelectedLayerIds( [ lastPastedId ] );
+		}
 		this.renderLayers( this.editor.layers );
 		this.editor.markDirty();
 	};
 
 	CanvasManager.prototype.cutSelected = function () {
-		if ( !this.selectedLayerIds || this.selectedLayerIds.length === 0 ) {
+		// Delegate to ClipboardController if available
+		if ( this.clipboardController ) {
+			this.clipboardController.cutSelected();
+			return;
+		}
+
+		// Fallback
+		const selectedIds = this.getSelectedLayerIds();
+		if ( !selectedIds || selectedIds.length === 0 ) {
 			return;
 		}
 		this.copySelected();
-		var ids = this.selectedLayerIds.slice();
+		const ids = selectedIds.slice();
 		this.editor.saveState();
 		this.editor.layers = this.editor.layers.filter( function ( layer ) {
 			return ids.indexOf( layer.id ) === -1;
@@ -2614,18 +2670,18 @@
 	 * @return {{x:number,y:number}}
 	 */
 	CanvasManager.prototype.getMousePointFromClient = function ( clientX, clientY ) {
-		var rect = this.canvas.getBoundingClientRect();
+		const rect = this.canvas.getBoundingClientRect();
 		// Position within the displayed (transformed) element
-		var relX = clientX - rect.left;
-		var relY = clientY - rect.top;
+		const relX = clientX - rect.left;
+		const relY = clientY - rect.top;
 		// Scale to logical canvas pixels
-		var scaleX = this.canvas.width / rect.width;
-		var scaleY = this.canvas.height / rect.height;
-		var canvasX = relX * scaleX;
-		var canvasY = relY * scaleY;
+		const scaleX = this.canvas.width / rect.width;
+		const scaleY = this.canvas.height / rect.height;
+		let canvasX = relX * scaleX;
+		let canvasY = relY * scaleY;
 
 		if ( this.snapToGrid && this.gridSize > 0 ) {
-			var gridSize = this.gridSize;
+			const gridSize = this.gridSize;
 			canvasX = Math.round( canvasX / gridSize ) * gridSize;
 			canvasY = Math.round( canvasY / gridSize ) * gridSize;
 		}
@@ -2635,9 +2691,9 @@
 
 	// Raw mapping without snapping, useful for ruler hit testing
 	CanvasManager.prototype.getRawClientPoint = function ( e ) {
-		var rect = this.canvas.getBoundingClientRect();
-		var clientX = e.clientX - rect.left;
-		var clientY = e.clientY - rect.top;
+		const rect = this.canvas.getBoundingClientRect();
+		const clientX = e.clientX - rect.left;
+		const clientY = e.clientY - rect.top;
 		return {
 			canvasX: ( clientX - ( this.panX || 0 ) ) / this.zoom,
 			canvasY: ( clientY - ( this.panY || 0 ) ) / this.zoom
@@ -2707,12 +2763,18 @@
 	};
 
 	CanvasManager.prototype.startDrawing = function ( point ) {
-		//  this.currentTool, 'at point:', point );
-
 		// Use current style options if available
-		var style = this.currentStyle || {};
+		const style = this.currentStyle || {};
 
-		// Reset any previous temp layer
+		// Delegate to DrawingController if available
+		if ( this.drawingController ) {
+			this.drawingController.startDrawing( point, this.currentTool, style );
+			// Sync tempLayer for backward compatibility
+			this.tempLayer = this.drawingController.getTempLayer();
+			return;
+		}
+
+		// Fallback: Reset any previous temp layer
 		this.tempLayer = null;
 
 		// Prepare for drawing based on current tool
@@ -2755,7 +2817,18 @@
 	};
 
 	CanvasManager.prototype.continueDrawing = function ( point ) {
-		// Continue drawing based on current tool
+		// Delegate to DrawingController if available
+		if ( this.drawingController ) {
+			this.drawingController.continueDrawing( point );
+			this.tempLayer = this.drawingController.getTempLayer();
+			if ( this.tempLayer ) {
+				this.renderLayers( this.editor.layers );
+				this.drawingController.drawPreview();
+			}
+			return;
+		}
+
+		// Fallback: Continue drawing based on current tool
 		if ( this.tempLayer ) {
 			this.renderLayers( this.editor.layers );
 			this.drawPreview( point );
@@ -2763,8 +2836,22 @@
 	};
 
 	CanvasManager.prototype.finishDrawing = function ( point ) {
-		// Finish drawing and create layer
-		var layerData = this.createLayerFromDrawing( point );
+		// Delegate to DrawingController if available
+		if ( this.drawingController ) {
+			const layerData = this.drawingController.finishDrawing( point, this.currentTool );
+			this.tempLayer = null;
+			if ( layerData ) {
+				this.editor.addLayer( layerData );
+				if ( typeof this.editor.setCurrentTool === 'function' ) {
+					this.editor.setCurrentTool( 'pointer' );
+				}
+			}
+			this.renderLayers( this.editor.layers );
+			return;
+		}
+
+		// Fallback: Finish drawing and create layer
+		let layerData = this.createLayerFromDrawing( point );
 		if ( layerData ) {
 			// Convert rectangle to blur layer when blur tool is active
 			if ( this.currentTool === 'blur' ) {
@@ -2794,11 +2881,11 @@
 		// Create a more sophisticated text input dialog
 
 		// Create modal for text input
-		var modal = this.createTextInputModal( point, style );
+		const modal = this.createTextInputModal( point, style );
 		document.body.appendChild( modal );
 
 		// Focus on text input
-		var textInput = modal.querySelector( '.text-input' );
+		const textInput = modal.querySelector( '.text-input' );
 		textInput.focus();
 
 		this.isDrawing = false;
@@ -2816,10 +2903,10 @@
 	};
 
 	CanvasManager.prototype.createTextInputModal = function ( point, style ) {
-		var self = this;
+		const self = this;
 
 		// Create modal overlay
-		var overlay = document.createElement( 'div' );
+		const overlay = document.createElement( 'div' );
 		overlay.className = 'text-input-overlay';
 		overlay.style.cssText =
 			'position: fixed;' +
@@ -2834,7 +2921,7 @@
 			'justify-content: center;';
 
 		// Create modal content
-		var modal = document.createElement( 'div' );
+		const modal = document.createElement( 'div' );
 		modal.className = 'text-input-modal';
 		modal.style.cssText =
 			'background: white;' +
@@ -2949,13 +3036,24 @@
 
 		overlay.appendChild( modal );
 
+		// Query DOM elements from the modal
+		const textInput = modal.querySelector( '.text-input' );
+		const fontFamilyInput = modal.querySelector( '.font-family-input' );
+		const fontSizeInput = modal.querySelector( '.font-size-input' );
+		const colorInput = modal.querySelector( '.color-input' );
+		const strokeWidthInput = modal.querySelector( '.stroke-width-input' );
+		const strokeColorInput = modal.querySelector( '.stroke-color-input' );
+		const alignButtons = modal.querySelectorAll( '.align-btn' );
+		const addBtn = modal.querySelector( '.add-btn' );
+		const cancelBtn = modal.querySelector( '.cancel-btn' );
+
 		// Set default font family if provided in style
 		if ( fontFamilyInput && style.fontFamily ) {
 			fontFamilyInput.value = style.fontFamily;
 		}
 
 		// Handle text alignment button clicks
-		var currentAlignment = 'left';
+		let currentAlignment = 'left';
 		alignButtons.forEach( function ( btn ) {
 			btn.addEventListener( 'click', function ( e ) {
 				e.preventDefault();
@@ -2972,9 +3070,9 @@
 		} );
 
 		function addText() {
-			var text = textInput.value.trim();
+			const text = textInput.value.trim();
 			if ( text ) {
-				var layerData = {
+				const layerData = {
 					type: 'text',
 					text: text,
 					x: point.x,
@@ -3026,7 +3124,7 @@
 
 	CanvasManager.prototype.startRectangleTool = function ( point, style ) {
 		// Store starting point for rectangle
-		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'rectangle',
@@ -3042,7 +3140,7 @@
 
 	CanvasManager.prototype.startCircleTool = function ( point, style ) {
 		// Store starting point for circle
-		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'circle',
@@ -3093,7 +3191,7 @@
 	};
 
 	CanvasManager.prototype.startEllipseTool = function ( point, style ) {
-		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'ellipse',
@@ -3108,7 +3206,7 @@
 	};
 
 	CanvasManager.prototype.startPolygonTool = function ( point, style ) {
-		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'polygon',
@@ -3123,7 +3221,7 @@
 	};
 
 	CanvasManager.prototype.startStarTool = function ( point, style ) {
-		var fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'star',
@@ -3145,14 +3243,15 @@
 		}
 
 		// Update temp layer geometry based on current mouse point
+		let dx, dy;
 		switch ( this.tempLayer.type ) {
 			case 'rectangle':
 				this.tempLayer.width = point.x - this.tempLayer.x;
 				this.tempLayer.height = point.y - this.tempLayer.y;
 				break;
 			case 'circle':
-				var dx = point.x - this.tempLayer.x;
-				var dy = point.y - this.tempLayer.y;
+				dx = point.x - this.tempLayer.x;
+				dy = point.y - this.tempLayer.y;
 				this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
 				break;
 			case 'ellipse':
@@ -3199,18 +3298,19 @@
 			return null;
 		}
 
-		var layer = this.tempLayer;
+		const layer = this.tempLayer;
 		this.tempLayer = null;
 
 		// Final adjustments based on tool type
+		let dx, dy;
 		switch ( layer.type ) {
 			case 'rectangle':
 				layer.width = point.x - layer.x;
 				layer.height = point.y - layer.y;
 				break;
 			case 'circle':
-				var dx = point.x - layer.x;
-				var dy = point.y - layer.y;
+				dx = point.x - layer.x;
+				dy = point.y - layer.y;
 				layer.radius = Math.sqrt( dx * dx + dy * dy );
 				break;
 			case 'ellipse':
@@ -3273,6 +3373,12 @@
 	};
 
 	CanvasManager.prototype.getToolCursor = function ( tool ) {
+		// Delegate to DrawingController if available
+		if ( this.drawingController ) {
+			return this.drawingController.getToolCursor( tool );
+		}
+
+		// Fallback
 		switch ( tool ) {
 			case 'blur': return 'crosshair';
 			case 'text': return 'text';
@@ -3297,11 +3403,11 @@
 	 */
 	CanvasManager.prototype.updateStyleOptions = function ( options ) {
 		this.currentStyle = this.currentStyle || {};
-		var prev = this.currentStyle;
-		var has = function ( v ) {
+		const prev = this.currentStyle;
+		const has = function ( v ) {
 			return v !== undefined && v !== null;
 		};
-		var next = {
+		const next = {
 			color: has( options.color ) ? options.color : prev.color,
 			fill: has( options.fill ) ? options.fill : prev.fill,
 			strokeWidth: has( options.strokeWidth ) ? options.strokeWidth : prev.strokeWidth,
@@ -3325,7 +3431,7 @@
 		this.currentStyle = next;
 
 		// Live-apply style updates to selected layer(s) where sensible
-		var applyToLayer = function ( layer ) {
+		const applyToLayer = function ( layer ) {
 			if ( !layer ) {
 				return;
 			}
@@ -3385,16 +3491,17 @@
 			}
 		};
 
-		if ( this.selectedLayerIds && this.selectedLayerIds.length ) {
-			for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
-				applyToLayer( this.editor.getLayerById( this.selectedLayerIds[ i ] ) );
+		const selectedIds = this.getSelectedLayerIds();
+		if ( selectedIds && selectedIds.length ) {
+			for ( let i = 0; i < selectedIds.length; i++ ) {
+				applyToLayer( this.editor.getLayerById( selectedIds[ i ] ) );
 			}
 			this.renderLayers( this.editor.layers );
 		}
 
 		// Reflect selection count in status bar
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-			this.editor.updateStatus( { selectionCount: ( this.selectedLayerIds || [] ).length } );
+			this.editor.updateStatus( { selection: selectedIds.length } );
 		}
 	};
 
@@ -3412,7 +3519,7 @@
 			// Fix: Do not pass zoom/pan to renderer to avoid double-transformation (CSS + Context)
 			this.renderer.setTransform( 1, 0, 0 );
 			this.renderer.setBackgroundImage( this.backgroundImage );
-			this.renderer.setSelection( this.selectedLayerIds );
+			this.renderer.setSelection( this.getSelectedLayerIds() );
 			this.renderer.setMarquee( this.isMarqueeSelecting, this.getMarqueeRect() );
 			this.renderer.setGuides( this.showGuides, this.horizontalGuides, this.verticalGuides );
 			
@@ -3430,7 +3537,7 @@
 			}
 
 			// Perform redraw
-			var layersToDraw = layers || ( ( this.editor && this.editor.layers ) ? this.editor.layers : [] );
+			const layersToDraw = layers || ( ( this.editor && this.editor.layers ) ? this.editor.layers : [] );
 			this.renderer.redraw( layersToDraw );
 
 		} catch ( error ) {
@@ -3483,12 +3590,12 @@
 		}
 
 		// Get layer bounds
-		var bounds = this.getLayerBounds( layer );
+		const bounds = this.getLayerBounds( layer );
 		if ( !bounds ) {
 			return true; // If we can't determine bounds, assume visible
 		}
 
-		var viewport = this.viewportBounds;
+		const viewport = this.viewportBounds;
 		return !( bounds.right < viewport.x ||
 				bounds.left > viewport.x + viewport.width ||
 				bounds.bottom < viewport.y ||
@@ -3614,14 +3721,14 @@
 		}
 		// Fallback for when controller is not available
 		tol = tol || 6;
-		var dx = 0;
-		var dy = 0;
+		let dx = 0;
+		let dy = 0;
 		if ( this.verticalGuides && this.verticalGuides.length ) {
-			var left = ( bounds.x || 0 ) + deltaX;
-			var right = left + ( bounds.width || 0 );
-			var centerX = left + ( bounds.width || 0 ) / 2;
-			for ( var i = 0; i < this.verticalGuides.length; i++ ) {
-				var gx = this.verticalGuides[ i ];
+			const left = ( bounds.x || 0 ) + deltaX;
+			const right = left + ( bounds.width || 0 );
+			const centerX = left + ( bounds.width || 0 ) / 2;
+			for ( let i = 0; i < this.verticalGuides.length; i++ ) {
+				const gx = this.verticalGuides[ i ];
 				if ( Math.abs( gx - left ) <= tol ) {
 					dx = gx - left;
 					break;
@@ -3637,11 +3744,11 @@
 			}
 		}
 		if ( this.horizontalGuides && this.horizontalGuides.length ) {
-			var top = ( bounds.y || 0 ) + deltaY;
-			var bottom = top + ( bounds.height || 0 );
-			var centerY = top + ( bounds.height || 0 ) / 2;
-			for ( var j = 0; j < this.horizontalGuides.length; j++ ) {
-				var gy = this.horizontalGuides[ j ];
+			const top = ( bounds.y || 0 ) + deltaY;
+			const bottom = top + ( bounds.height || 0 );
+			const centerY = top + ( bounds.height || 0 ) / 2;
+			for ( let j = 0; j < this.horizontalGuides.length; j++ ) {
+				const gy = this.horizontalGuides[ j ];
 				if ( Math.abs( gy - top ) <= tol ) {
 					dy = gy - top;
 					break;
@@ -3660,7 +3767,7 @@
 	};
 
 	CanvasManager.prototype.sanitizeTextContent = function ( text ) {
-		var safeText = text == null ? '' : String( text );
+		let safeText = text == null ? '' : String( text );
 		safeText = safeText.replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
 		safeText = safeText.replace( /<[^>]+>/g, '' );
 		return safeText;
@@ -3679,15 +3786,15 @@
 			return [ text || '' ];
 		}
 
-		var words = text.split( ' ' );
-		var lines = [];
-		var currentLine = '';
+		const words = text.split( ' ' );
+		const lines = [];
+		let currentLine = '';
 
-		for ( var i = 0; i < words.length; i++ ) {
-			var word = words[ i ];
-			var testLine = currentLine + ( currentLine ? ' ' : '' ) + word;
-			var metrics = ctx.measureText( testLine );
-			var testWidth = metrics.width;
+		for ( let i = 0; i < words.length; i++ ) {
+			const word = words[ i ];
+			const testLine = currentLine + ( currentLine ? ' ' : '' ) + word;
+			const metrics = ctx.measureText( testLine );
+			const testWidth = metrics.width;
 
 			if ( testWidth > maxWidth && currentLine !== '' ) {
 				// Current line is full, start a new line
@@ -3711,13 +3818,13 @@
 			return null;
 		}
 
-		var fontSize = layer.fontSize || 16;
-		var fontFamily = layer.fontFamily || 'Arial';
-		var sanitizedText = this.sanitizeTextContent( layer.text || '' );
-		var lineHeight = fontSize * 1.2;
-		var context = this.ctx;
-		var canvasWidth = this.canvas ? this.canvas.width : 0;
-		var maxLineWidth = layer.maxWidth || ( canvasWidth ? canvasWidth * 0.8 : fontSize * Math.max( sanitizedText.length, 1 ) );
+		const fontSize = layer.fontSize || 16;
+		const fontFamily = layer.fontFamily || 'Arial';
+		const sanitizedText = this.sanitizeTextContent( layer.text || '' );
+		const lineHeight = fontSize * 1.2;
+		const context = this.ctx;
+		const canvasWidth = this.canvas ? this.canvas.width : 0;
+		const maxLineWidth = layer.maxWidth || ( canvasWidth ? canvasWidth * 0.8 : fontSize * Math.max( sanitizedText.length, 1 ) );
 
 		if ( !context ) {
 			return {
@@ -3737,15 +3844,15 @@
 
 		context.save();
 		context.font = fontSize + 'px ' + fontFamily;
-		var lines = this.wrapText( sanitizedText, maxLineWidth, context );
+		let lines = this.wrapText( sanitizedText, maxLineWidth, context );
 		if ( !lines.length ) {
 			lines = [ '' ];
 		}
 
-		var totalTextWidth = 0;
-		var metricsForLongest = null;
-		for ( var i = 0; i < lines.length; i++ ) {
-			var lineMetrics = context.measureText( lines[ i ] || ' ' );
+		let totalTextWidth = 0;
+		let metricsForLongest = null;
+		for ( let i = 0; i < lines.length; i++ ) {
+			const lineMetrics = context.measureText( lines[ i ] || ' ' );
 			if ( lineMetrics.width > totalTextWidth ) {
 			
 				totalTextWidth = lineMetrics.width;
@@ -3753,24 +3860,24 @@
 			}
 		}
 		if ( totalTextWidth === 0 ) {
-			var fallbackMetrics = context.measureText( sanitizedText || ' ' );
+			const fallbackMetrics = context.measureText( sanitizedText || ' ' );
 			totalTextWidth = fallbackMetrics.width;
 			metricsForLongest = fallbackMetrics;
 		}
 
 		context.restore();
 
-		var ascent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxAscent === 'number' ?
+		const ascent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxAscent === 'number' ?
 			metricsForLongest.actualBoundingBoxAscent : fontSize * 0.8;
-		var descent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxDescent === 'number' ?
+		const descent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxDescent === 'number' ?
 			metricsForLongest.actualBoundingBoxDescent : fontSize * 0.2;
-		var totalHeight = ascent + descent;
+		let totalHeight = ascent + descent;
 		if ( lines.length > 1 ) {
 			totalHeight = ascent + descent + ( lines.length - 1 ) * lineHeight;
 		}
 
-		var textAlign = layer.textAlign || 'left';
-		var alignOffset = 0;
+		const textAlign = layer.textAlign || 'left';
+		let alignOffset = 0;
 		switch ( textAlign ) {
 			case 'center':
 				alignOffset = totalTextWidth / 2;
@@ -3783,8 +3890,8 @@
 				alignOffset = 0;
 		}
 
-		var originX = ( layer.x ||  0 ) - alignOffset;
-		var originY = ( layer.y || 0 ) - ascent;
+		const originX = ( layer.x ||  0 ) - alignOffset;
+		const originY = ( layer.y || 0 ) - ascent;
 
 		return {
 			lines: lines,

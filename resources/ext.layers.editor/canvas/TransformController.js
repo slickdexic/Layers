@@ -51,8 +51,8 @@
 		this.dragStartPoint = startPoint;
 
 		// Get rotation for proper cursor
-		var layer = this.manager.editor.getLayerById( this.manager.selectedLayerId );
-		var rotation = layer ? layer.rotation : 0;
+		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
+		const rotation = layer ? layer.rotation : 0;
 		this.manager.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
 
 		// Store original layer state
@@ -68,40 +68,40 @@
 	 * @param {Event} event Mouse event for modifier keys
 	 */
 	TransformController.prototype.handleResize = function ( point, event ) {
-		var layer = this.manager.editor.getLayerById( this.manager.selectedLayerId );
+		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 
 		if ( !layer || !this.originalLayerState ) {
 			return;
 		}
 
-		var deltaX = point.x - this.dragStartPoint.x;
-		var deltaY = point.y - this.dragStartPoint.y;
+		let deltaX = point.x - this.dragStartPoint.x;
+		let deltaY = point.y - this.dragStartPoint.y;
 
 		// If layer has rotation, transform the delta into the layer's local coordinate system
-		var rotation = layer.rotation || 0;
+		const rotation = layer.rotation || 0;
 		if ( rotation !== 0 ) {
-			var rotRad = -rotation * Math.PI / 180;
-			var cos = Math.cos( rotRad );
-			var sin = Math.sin( rotRad );
-			var rotatedDeltaX = deltaX * cos - deltaY * sin;
-			var rotatedDeltaY = deltaX * sin + deltaY * cos;
+			const rotRad = -rotation * Math.PI / 180;
+			const cos = Math.cos( rotRad );
+			const sin = Math.sin( rotRad );
+			const rotatedDeltaX = deltaX * cos - deltaY * sin;
+			const rotatedDeltaY = deltaX * sin + deltaY * cos;
 			deltaX = rotatedDeltaX;
 			deltaY = rotatedDeltaY;
 		}
 
 		// Limit delta values to prevent sudden jumps during rapid mouse movements
-		var maxDelta = 1000;
+		const maxDelta = 1000;
 		deltaX = Math.max( -maxDelta, Math.min( maxDelta, deltaX ) );
 		deltaY = Math.max( -maxDelta, Math.min( maxDelta, deltaY ) );
 
 		// Get modifier keys from the event
-		var modifiers = {
+		const modifiers = {
 			proportional: event && event.shiftKey,
 			fromCenter: event && event.altKey
 		};
 
 		// Calculate new dimensions based on handle type
-		var updates = this.calculateResize(
+		const updates = this.calculateResize(
 			this.originalLayerState,
 			this.resizeHandle.type,
 			deltaX,
@@ -173,11 +173,11 @@
 		}
 
 		// For rotated objects, calculate the effective cursor direction
-		var normalizedRotation = ( ( rotation % 360 ) + 360 ) % 360;
-		var cursorIndex = Math.round( normalizedRotation / 45 ) % 8;
+		const normalizedRotation = ( ( rotation % 360 ) + 360 ) % 360;
+		const cursorIndex = Math.round( normalizedRotation / 45 ) % 8;
 
 		// Map handle types to base cursor directions (0 = north)
-		var baseCursors = {
+		const baseCursors = {
 			n: 0,
 			ne: 1,
 			e: 2,
@@ -189,10 +189,10 @@
 		};
 
 		// Calculate the effective cursor direction
-		var effectiveDirection = ( baseCursors[ handleType ] + cursorIndex ) % 8;
+		const effectiveDirection = ( baseCursors[ handleType ] + cursorIndex ) % 8;
 
 		// Map back to cursor names
-		var cursors = [ 'n-resize', 'ne-resize', 'e-resize', 'ne-resize', 'n-resize', 'ne-resize', 'e-resize', 'nw-resize' ];
+		const cursors = [ 'n-resize', 'ne-resize', 'e-resize', 'ne-resize', 'n-resize', 'ne-resize', 'e-resize', 'nw-resize' ];
 		return cursors[ effectiveDirection ];
 	};
 
@@ -262,16 +262,16 @@
 		originalLayer, handleType, deltaX, deltaY, modifiers
 	) {
 		modifiers = modifiers || {};
-		var updates = {};
-		var origX = originalLayer.x || 0;
-		var origY = originalLayer.y || 0;
-		var origW = originalLayer.width || 0;
-		var origH = originalLayer.height || 0;
+		const updates = {};
+		const origX = originalLayer.x || 0;
+		const origY = originalLayer.y || 0;
+		const origW = originalLayer.width || 0;
+		const origH = originalLayer.height || 0;
 
 		// Calculate aspect ratio for proportional scaling
-		var aspectRatio = origW / origH;
-		var centerX = origX + origW / 2;
-		var centerY = origY + origH / 2;
+		let aspectRatio = origW / origH;
+		const centerX = origX + origW / 2;
+		const centerY = origY + origH / 2;
 
 		if ( modifiers.proportional ) {
 			// Proportional scaling: maintain aspect ratio
@@ -279,8 +279,8 @@
 				aspectRatio = 1.0;
 			}
 
-			var absDeltaX = Math.abs( deltaX );
-			var absDeltaY = Math.abs( deltaY );
+			const absDeltaX = Math.abs( deltaX );
+			const absDeltaY = Math.abs( deltaY );
 
 			if ( absDeltaX > absDeltaY ) {
 				deltaY = deltaY < 0 ? -absDeltaX / aspectRatio : absDeltaX / aspectRatio;
@@ -411,13 +411,13 @@
 	TransformController.prototype.calculateCircleResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
-		var updates = {};
-		var origRadius = originalLayer.radius || 50;
-		var origX = originalLayer.x || 0;
-		var origY = originalLayer.y || 0;
+		const updates = {};
+		const origRadius = originalLayer.radius || 50;
+		const origX = originalLayer.x || 0;
+		const origY = originalLayer.y || 0;
 
 		// Calculate new position based on handle and delta
-		var handleX, handleY;
+		let handleX, handleY;
 		switch ( handleType ) {
 			case 'e':
 				handleX = origX + origRadius + deltaX;
@@ -456,7 +456,7 @@
 		}
 
 		// Calculate new radius based on distance from center
-		var newRadius = Math.sqrt(
+		const newRadius = Math.sqrt(
 			( handleX - origX ) * ( handleX - origX ) +
 			( handleY - origY ) * ( handleY - origY )
 		);
@@ -477,9 +477,9 @@
 	TransformController.prototype.calculateEllipseResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
-		var updates = {};
-		var origRX = originalLayer.radiusX || 1;
-		var origRY = originalLayer.radiusY || 1;
+		const updates = {};
+		const origRX = originalLayer.radiusX || 1;
+		const origRY = originalLayer.radiusY || 1;
 
 		if ( handleType === 'e' || handleType === 'w' ) {
 			updates.radiusX = Math.max(
@@ -508,9 +508,9 @@
 	TransformController.prototype.calculatePolygonResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
-		var updates = {};
-		var origRadius = originalLayer.radius || 50;
-		var deltaDistance = 0;
+		const updates = {};
+		const origRadius = originalLayer.radius || 50;
+		let deltaDistance = 0;
 
 		switch ( handleType ) {
 			case 'e':
@@ -530,7 +530,7 @@
 		}
 
 		// Determine direction (growing or shrinking)
-		var growing = false;
+		let growing = false;
 		switch ( handleType ) {
 			case 'e':
 				growing = deltaX > 0;
@@ -558,7 +558,7 @@
 				break;
 		}
 
-		var newRadius = growing ?
+		const newRadius = growing ?
 			origRadius + deltaDistance :
 			Math.max( 10, origRadius - deltaDistance );
 
@@ -578,7 +578,7 @@
 	TransformController.prototype.calculateLineResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
-		var updates = {};
+		const updates = {};
 		updates.x2 = ( originalLayer.x2 || 0 ) + deltaX;
 		updates.y2 = ( originalLayer.y2 || 0 ) + deltaY;
 		return updates;
@@ -599,11 +599,11 @@
 		if ( !originalLayer.points ) {
 			return null;
 		}
-		var updates = { points: [] };
-		var scaleX = 1 + deltaX / 100;
-		var scaleY = 1 + deltaY / 100;
+		const updates = { points: [] };
+		const scaleX = 1 + deltaX / 100;
+		const scaleY = 1 + deltaY / 100;
 
-		for ( var i = 0; i < originalLayer.points.length; i++ ) {
+		for ( let i = 0; i < originalLayer.points.length; i++ ) {
 			updates.points.push( {
 				x: originalLayer.points[ i ].x * scaleX,
 				y: originalLayer.points[ i ].y * scaleY
@@ -624,15 +624,15 @@
 	TransformController.prototype.calculateTextResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
-		var updates = {};
-		var originalFontSize = originalLayer.fontSize || 16;
+		const updates = {};
+		const originalFontSize = originalLayer.fontSize || 16;
 
 		// Calculate font size change based on diagonal movement
-		var diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
-		var fontSizeChange = diagonalDelta * 0.2;
+		const diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
+		const fontSizeChange = diagonalDelta * 0.2;
 
 		// Determine if we're growing or shrinking based on handle direction
-		var isGrowing = false;
+		let isGrowing = false;
 		switch ( handleType ) {
 			case 'se':
 			case 'e':
@@ -652,7 +652,7 @@
 				break;
 		}
 
-		var newFontSize = originalFontSize;
+		let newFontSize = originalFontSize;
 		if ( isGrowing ) {
 			newFontSize += fontSizeChange;
 		} else {
@@ -681,7 +681,7 @@
 		}
 
 		// Store original layer state
-		var layer = this.manager.editor.getLayerById( this.manager.selectedLayerId );
+		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( layer ) {
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
@@ -694,32 +694,32 @@
 	 * @param {Event} event Mouse event for modifier keys
 	 */
 	TransformController.prototype.handleRotation = function ( point, event ) {
-		var layer = this.manager.editor.getLayerById( this.manager.selectedLayerId );
+		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( !layer ) {
 			return;
 		}
 
 		// Calculate angle from rotation center to mouse position
-		var bounds = this.manager.getLayerBounds( layer );
+		const bounds = this.manager.getLayerBounds( layer );
 		if ( !bounds ) {
 			return;
 		}
 
-		var centerX = bounds.centerX;
-		var centerY = bounds.centerY;
+		const centerX = bounds.centerX;
+		const centerY = bounds.centerY;
 
-		var startAngle = Math.atan2(
+		const startAngle = Math.atan2(
 			this.dragStartPoint.y - centerY,
 			this.dragStartPoint.x - centerX
 		);
-		var currentAngle = Math.atan2( point.y - centerY, point.x - centerX );
+		const currentAngle = Math.atan2( point.y - centerY, point.x - centerX );
 
-		var angleDelta = currentAngle - startAngle;
-		var degrees = angleDelta * ( 180 / Math.PI );
+		const angleDelta = currentAngle - startAngle;
+		let degrees = angleDelta * ( 180 / Math.PI );
 
 		// Apply snap-to-angle if Shift key is held (15-degree increments)
 		if ( event && event.shiftKey ) {
-			var snapAngle = 15;
+			const snapAngle = 15;
 			degrees = Math.round( degrees / snapAngle ) * snapAngle;
 		}
 
@@ -759,12 +759,13 @@
 		this.manager.canvas.style.cursor = 'move';
 
 		// Store original layer state(s)
-		if ( this.manager.selectedLayerIds.length > 1 ) {
+		const selectedIds = this.manager.getSelectedLayerIds();
+		if ( selectedIds.length > 1 ) {
 			// Multi-selection: store all selected layer states
 			this.originalMultiLayerStates = {};
-			for ( var i = 0; i < this.manager.selectedLayerIds.length; i++ ) {
-				var layerId = this.manager.selectedLayerIds[ i ];
-				var multiLayer = this.manager.editor.getLayerById( layerId );
+			for ( let i = 0; i < selectedIds.length; i++ ) {
+				const layerId = selectedIds[ i ];
+				const multiLayer = this.manager.editor.getLayerById( layerId );
 				if ( multiLayer ) {
 					this.originalMultiLayerStates[ layerId ] =
 						JSON.parse( JSON.stringify( multiLayer ) );
@@ -772,7 +773,7 @@
 			}
 		} else {
 			// Single selection: store single layer state
-			var singleLayer = this.manager.editor.getLayerById( this.manager.selectedLayerId );
+			const singleLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 			if ( singleLayer ) {
 				this.originalLayerState = JSON.parse( JSON.stringify( singleLayer ) );
 			}
@@ -785,35 +786,36 @@
 	 * @param {Object} point Current mouse point
 	 */
 	TransformController.prototype.handleDrag = function ( point ) {
-		var deltaX = point.x - this.dragStartPoint.x;
-		var deltaY = point.y - this.dragStartPoint.y;
+		const deltaX = point.x - this.dragStartPoint.x;
+		const deltaY = point.y - this.dragStartPoint.y;
 
 		// Enable drag preview mode for visual feedback
 		this.showDragPreview = true;
 
 		// Collect layers to move
-		var layersToMove = [];
-		if ( this.manager.selectedLayerIds.length > 1 ) {
-			for ( var i = 0; i < this.manager.selectedLayerIds.length; i++ ) {
-				var multiLayer = this.manager.editor.getLayerById( this.manager.selectedLayerIds[ i ] );
+		const layersToMove = [];
+		const dragSelectedIds = this.manager.getSelectedLayerIds();
+		if ( dragSelectedIds.length > 1 ) {
+			for ( let i = 0; i < dragSelectedIds.length; i++ ) {
+				const multiLayer = this.manager.editor.getLayerById( dragSelectedIds[ i ] );
 				if ( multiLayer ) {
 					layersToMove.push( multiLayer );
 				}
 			}
 		} else {
-			var singleLayer = this.manager.editor.getLayerById( this.manager.selectedLayerId );
+			const singleLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 			if ( singleLayer && this.originalLayerState ) {
 				layersToMove.push( singleLayer );
 			}
 		}
 
 		// Move all layers in the selection
-		for ( var j = 0; j < layersToMove.length; j++ ) {
-			var layerToMove = layersToMove[ j ];
-			var originalState = this.originalLayerState;
+		for ( let j = 0; j < layersToMove.length; j++ ) {
+			const layerToMove = layersToMove[ j ];
+			let originalState = this.originalLayerState;
 
 			// For multi-selection, get individual original states
-			if ( this.manager.selectedLayerIds.length > 1 && this.originalMultiLayerStates ) {
+			if ( dragSelectedIds.length > 1 && this.originalMultiLayerStates ) {
 				originalState = this.originalMultiLayerStates[ layerToMove.id ];
 			}
 
@@ -822,13 +824,13 @@
 			}
 
 			// Apply snap-to-grid if enabled
-			var adjustedDeltaX = deltaX;
-			var adjustedDeltaY = deltaY;
+			let adjustedDeltaX = deltaX;
+			let adjustedDeltaY = deltaY;
 
 			if ( this.manager.snapToGrid && this.manager.gridSize > 0 ) {
-				var newX = ( originalState.x || 0 ) + deltaX;
-				var newY = ( originalState.y || 0 ) + deltaY;
-				var snappedPoint = this.manager.snapPointToGrid( { x: newX, y: newY } );
+				const newX = ( originalState.x || 0 ) + deltaX;
+				const newY = ( originalState.y || 0 ) + deltaY;
+				const snappedPoint = this.manager.snapPointToGrid( { x: newX, y: newY } );
 				adjustedDeltaX = snappedPoint.x - ( originalState.x || 0 );
 				adjustedDeltaY = snappedPoint.y - ( originalState.y || 0 );
 			}
@@ -839,7 +841,7 @@
 
 		// Re-render and emit live-transform event
 		this.manager.renderLayers( this.manager.editor.layers );
-		var active = this.manager.editor.getLayerById( this.manager.selectedLayerId );
+		const active = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( active ) {
 			this.emitTransforming( active );
 		}
@@ -919,19 +921,23 @@
 			return;
 		}
 		this.transformEventScheduled = true;
-		var self = this;
+		const self = this;
 		window.requestAnimationFrame( function () {
 			self.transformEventScheduled = false;
-			var target = ( self.manager.editor && self.manager.editor.container ) ||
+			const target = ( self.manager.editor && self.manager.editor.container ) ||
 				self.manager.container || document;
 			try {
-				var detail = {
+				const detail = {
 					id: self.lastTransformPayload.id,
 					layer: JSON.parse( JSON.stringify( self.lastTransformPayload ) )
 				};
-				var evt = new CustomEvent( 'layers:transforming', { detail: detail } );
+				const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
 				target.dispatchEvent( evt );
-			} catch ( _e ) { /* ignore */ }
+			} catch ( e ) {
+				if ( window.layersErrorHandler ) {
+					window.layersErrorHandler.handleError( e, 'TransformController.emitTransformEvent', 'canvas' );
+				}
+			}
 		} );
 	};
 
@@ -961,5 +967,10 @@
 
 	// Export for use by CanvasManager
 	window.TransformController = TransformController;
+
+	// Export for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = TransformController;
+	}
 
 }() );

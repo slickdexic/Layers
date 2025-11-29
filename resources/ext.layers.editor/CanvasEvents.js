@@ -98,7 +98,7 @@
 		}
 
 		// Check for selection handle clicks first
-		if ( cm.currentTool === 'pointer' && cm.selectedLayerId ) {
+		if ( cm.currentTool === 'pointer' && cm.getSelectedLayerId && cm.getSelectedLayerId() ) {
 			const handleHit = cm.hitTestSelectionHandles( point );
 			if ( handleHit ) {
 				if ( handleHit.type === 'rotate' ) {
@@ -320,10 +320,13 @@
 					break;
 				case 'z':
 					e.preventDefault();
-					if ( e.shiftKey ) {
-						cm.redo();
-					} else {
-						cm.undo();
+					// Route through editor's HistoryManager for single source of truth
+					if ( cm.editor && typeof cm.editor.redo === 'function' ) {
+						if ( e.shiftKey ) {
+							cm.editor.redo();
+						} else {
+							cm.editor.undo();
+						}
 					}
 					break;
 				case '=':

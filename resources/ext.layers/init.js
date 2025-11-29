@@ -8,9 +8,8 @@ mw.layers = {
 	 * @param {...any} args Arguments to log.
 	 */
 	debugLog: function ( ...args ) {
-		if ( this.debug ) {
-			// eslint-disable-next-line no-console
-			console.log( '[Layers]', ...args );
+		if ( this.debug && mw && mw.log ) {
+			mw.log( '[Layers]', ...args );
 		}
 	},
 
@@ -19,9 +18,8 @@ mw.layers = {
 	 * @param {...any} args Arguments to log.
 	 */
 	debugWarn: function ( ...args ) {
-		if ( this.debug ) {
-			// eslint-disable-next-line no-console
-			console.warn( '[Layers]', ...args );
+		if ( this.debug && mw && mw.log ) {
+			mw.log.warn( '[Layers]', ...args );
 		}
 	},
 
@@ -740,8 +738,8 @@ mw.layers = {
 			const pageLayersVal = mw.layers.getPageLayersParam( debug );
 			const hasLayersParam = !!pageLayersVal;
 			if ( !hasLayersParam ) {
-				if ( debug ) {
-					console.info( '[Layers] Skipping file page fallback: no layers= in URL' );
+				if ( debug && mw.log ) {
+					mw.log( '[Layers] Skipping file page fallback: no layers= in URL' );
 				}
 				return;
 			}
@@ -818,22 +816,22 @@ mw.layers = {
 						imageElement: img,
 						layerData: payload
 					} );
-					if ( debug ) {
+					if ( debug && mw.log ) {
 						let count2 = 0;
 						if ( payload.layers && payload.layers.length ) {
 							count2 = payload.layers.length;
 						}
-						console.info( '[Layers] File page fallback initialized with', count2, 'layers' );
+						mw.log( '[Layers] File page fallback initialized with', count2, 'layers' );
 					}
 				} catch ( e2 ) {
-					if ( debug ) {
-						console.warn( '[Layers] File page fallback error:', e2 );
+					if ( debug && mw.log ) {
+						mw.log.warn( '[Layers] File page fallback error:', e2 );
 					}
 				}
 			} ).catch( () => { /* ignore */ } );
 		} catch ( e ) {
-			if ( debug ) {
-				console.warn( '[Layers] File page fallback outer error:', e );
+			if ( debug && mw.log ) {
+				mw.log.warn( '[Layers] File page fallback outer error:', e );
 			}
 		}
 	}

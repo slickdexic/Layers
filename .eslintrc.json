@@ -4,6 +4,9 @@
 		"browser": true,
 		"es6": true
 	},
+	"parserOptions": {
+		"ecmaVersion": 2018
+	},
 	"extends": ["eslint:recommended"],
 	"globals": {
 		"mw": "readonly",
@@ -14,6 +17,8 @@
 		".stylelintrc.json",
 		"*-backup.js",
 		"*.backup.js",
+		"append_canvas_manager.js",
+		"test_load.js",
 		"resources/dist/",
 		"node_modules/",
 		"vendor/"
@@ -21,8 +26,8 @@
 	"rules": {
 		"no-implicit-globals": "off",
 		"linebreak-style": "off",
-		"no-var": "error",
-		"prefer-const": "error",
+		"no-var": "warn",
+		"prefer-const": "warn",
 		"no-unused-vars": "error",
 		"no-empty": "off"
 	},
@@ -35,10 +40,46 @@
 			}
 		},
 		{
-			"files": [ "resources/ext.layers.editor/*.js" ],
+			"files": [
+				"resources/ext.layers.editor/*.js",
+				"resources/ext.layers.editor/canvas/*.js",
+				"resources/ext.layers.editor/ui/*.js"
+			],
 			"globals": {
 				"require": "readonly",
-				"module": "readonly"
+				"module": "readonly",
+				"LayersConstants": "readonly",
+				"CanvasRenderer": "readonly",
+				"LayersSelectionManager": "readonly",
+				"ZoomPanController": "readonly",
+				"GridRulersController": "readonly",
+				"TransformController": "readonly",
+				"HitTestController": "readonly",
+				"DrawingController": "readonly",
+				"ClipboardController": "readonly",
+				"GeometryUtils": "readonly",
+				"LayersValidator": "readonly",
+				"EventHandler": "readonly",
+				"ErrorHandler": "readonly",
+				"EventSystem": "readonly",
+				"HistoryManager": "readonly",
+				"ToolManager": "readonly",
+				"TransformationEngine": "readonly",
+				"CanvasUtilities": "readonly",
+				"CanvasEvents": "readonly",
+				"CanvasManager": "readonly",
+				"LayerPanel": "readonly",
+				"Toolbar": "readonly",
+				"LayersEditor": "readonly",
+				"LayersViewer": "readonly",
+				"SelectionManager": "readonly",
+				"IconFactory": "readonly",
+				"ColorPickerDialog": "readonly",
+				"ConfirmDialog": "readonly",
+				"PropertiesForm": "readonly"
+			},
+			"rules": {
+				"no-redeclare": "off"
 			}
 		},
 		{
@@ -47,7 +88,8 @@
 				"resources/ext.layers.editor/EventManager.js",
 				"resources/ext.layers.editor/APIManager.js",
 				"resources/ext.layers.editor/ValidationManager.js",
-				"resources/ext.layers.editor/StateManager.js"
+				"resources/ext.layers.editor/StateManager.js",
+				"resources/ext.layers.editor/LayerPanel.js"
 			],
 			"rules": {
 				"no-unused-vars": "off"

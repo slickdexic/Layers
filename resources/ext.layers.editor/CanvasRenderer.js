@@ -6,7 +6,7 @@
 ( function () {
 	'use strict';
 
-	var clampOpacity = function ( value ) {
+	const clampOpacity = function ( value ) {
 		if ( typeof value !== 'number' || Number.isNaN( value ) ) {
 			return 1;
 		}
@@ -136,9 +136,9 @@
 			
 			// Checker pattern
 			this.ctx.fillStyle = '#f0f0f0';
-			var checkerSize = 20;
-			for ( var x = 0; x < this.canvas.width; x += checkerSize * 2 ) {
-				for ( var y = 0; y < this.canvas.height; y += checkerSize * 2 ) {
+			const checkerSize = 20;
+			for ( let x = 0; x < this.canvas.width; x += checkerSize * 2 ) {
+				for ( let y = 0; y < this.canvas.height; y += checkerSize * 2 ) {
 					this.ctx.fillRect( x, y, checkerSize, checkerSize );
 					this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
 				}
@@ -168,8 +168,8 @@
 		// This means layers[length-1] is drawn first? No, loop goes backwards.
 		// If i=length-1 is drawn first, then it's at the bottom.
 		// So layers array is Top-to-Bottom.
-		for ( var i = layers.length - 1; i >= 0; i-- ) {
-			var layer = layers[ i ];
+		for ( let i = layers.length - 1; i >= 0; i-- ) {
+			const layer = layers[ i ];
 			if ( layer && layer.visible !== false ) {
 				this.drawLayerWithEffects( layer );
 			}
@@ -217,7 +217,7 @@
 	};
 
 	CanvasRenderer.prototype.drawGlow = function ( layer ) {
-		var prevAlpha = this.ctx.globalAlpha;
+		const prevAlpha = this.ctx.globalAlpha;
 		this.ctx.globalAlpha = ( prevAlpha || 1 ) * 0.3;
 		this.ctx.save();
 		this.ctx.strokeStyle = ( layer.stroke || '#000' );
@@ -296,10 +296,10 @@
 	// --- Shape Drawing Methods ---
 
 	CanvasRenderer.prototype.drawRectangle = function ( layer ) {
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var w = layer.width || 0;
-		var h = layer.height || 0;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const w = layer.width || 0;
+		const h = layer.height || 0;
 
 		if ( w <= 0 || h <= 0 ) {
 			return;
@@ -311,11 +311,11 @@
 		this.ctx.beginPath();
 		this.ctx.rect( x, y, w, h );
 
-		var baseOpacity = this.ctx.globalAlpha;
+		const baseOpacity = this.ctx.globalAlpha;
 
 		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
-			var fillOpacity = typeof layer.fillOpacity === 'number' ? layer.fillOpacity : 1;
+			const fillOpacity = typeof layer.fillOpacity === 'number' ? layer.fillOpacity : 1;
 			this.ctx.globalAlpha = baseOpacity * fillOpacity;
 			this.ctx.fill();
 			this.clearShadow(); // Prevent shadow on stroke
@@ -326,7 +326,7 @@
 			if ( layer.strokeWidth ) {
 				this.ctx.lineWidth = layer.strokeWidth;
 			}
-			var strokeOpacity = typeof layer.strokeOpacity === 'number' ? layer.strokeOpacity : 1;
+			const strokeOpacity = typeof layer.strokeOpacity === 'number' ? layer.strokeOpacity : 1;
 			this.ctx.globalAlpha = baseOpacity * strokeOpacity;
 			this.ctx.stroke();
 		}
@@ -335,9 +335,9 @@
 	};
 
 	CanvasRenderer.prototype.drawCircle = function ( layer ) {
-		var centerX = layer.x || 0;
-		var centerY = layer.y || 0;
-		var radius = layer.radius || ( layer.width ? layer.width / 2 : 50 );
+		const centerX = layer.x || 0;
+		const centerY = layer.y || 0;
+		const radius = layer.radius || ( layer.width ? layer.width / 2 : 50 );
 
 		if ( radius <= 0 ) {
 			return;
@@ -349,11 +349,11 @@
 		this.ctx.beginPath();
 		this.ctx.arc( centerX, centerY, radius, 0, 2 * Math.PI );
 
-		var baseOpacity = this.ctx.globalAlpha;
+		const baseOpacity = this.ctx.globalAlpha;
 
 		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
-			var fillOpacity = typeof layer.fillOpacity === 'number' ? layer.fillOpacity : 1;
+			const fillOpacity = typeof layer.fillOpacity === 'number' ? layer.fillOpacity : 1;
 			this.ctx.globalAlpha = baseOpacity * fillOpacity;
 			this.ctx.fill();
 			this.clearShadow();
@@ -364,7 +364,7 @@
 			if ( layer.strokeWidth ) {
 				this.ctx.lineWidth = layer.strokeWidth;
 			}
-			var strokeOpacity = typeof layer.strokeOpacity === 'number' ? layer.strokeOpacity : 1;
+			const strokeOpacity = typeof layer.strokeOpacity === 'number' ? layer.strokeOpacity : 1;
 			this.ctx.globalAlpha = baseOpacity * strokeOpacity;
 			this.ctx.stroke();
 		}
@@ -373,10 +373,22 @@
 	};
 
 	CanvasRenderer.prototype.drawEllipse = function ( layer ) {
-		var centerX = ( layer.x || 0 ) + ( layer.width || 0 ) / 2;
-		var centerY = ( layer.y || 0 ) + ( layer.height || 0 ) / 2;
-		var radiusX = ( layer.width || 0 ) / 2;
-		var radiusY = ( layer.height || 0 ) / 2;
+		// Support both radiusX/radiusY (preferred) and width/height formats
+		let radiusX, radiusY, centerX, centerY;
+
+		if ( typeof layer.radiusX === 'number' && typeof layer.radiusY === 'number' ) {
+			// DrawingController format: x,y is center, radiusX/radiusY are radii
+			radiusX = layer.radiusX;
+			radiusY = layer.radiusY;
+			centerX = layer.x || 0;
+			centerY = layer.y || 0;
+		} else {
+			// Legacy format: x,y is top-left corner, width/height are dimensions
+			radiusX = ( layer.width || 0 ) / 2;
+			radiusY = ( layer.height || 0 ) / 2;
+			centerX = ( layer.x || 0 ) + radiusX;
+			centerY = ( layer.y || 0 ) + radiusY;
+		}
 
 		if ( radiusX <= 0 || radiusY <= 0 ) {
 			return;
@@ -388,7 +400,7 @@
 		this.ctx.beginPath();
 		this.ctx.ellipse( centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI );
 
-		var baseOpacity = this.ctx.globalAlpha;
+		const baseOpacity = this.ctx.globalAlpha;
 
 		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
@@ -415,11 +427,11 @@
 
 		this.ctx.beginPath();
 		this.ctx.moveTo( layer.x1 || layer.x || 0, layer.y1 || layer.y || 0 );
-		var endX = layer.x2 || ( layer.x || 0 ) + ( layer.width || 0 );
-		var endY = layer.y2 || ( layer.y || 0 ) + ( layer.height || 0 );
+		const endX = layer.x2 || ( layer.x || 0 ) + ( layer.width || 0 );
+		const endY = layer.y2 || ( layer.y || 0 ) + ( layer.height || 0 );
 		this.ctx.lineTo( endX, endY );
 
-		var baseOpacity = this.ctx.globalAlpha;
+		const baseOpacity = this.ctx.globalAlpha;
 		this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
 		this.ctx.stroke();
 
@@ -432,18 +444,18 @@
 		this.ctx.fillStyle = layer.stroke || '#000000';
 		this.ctx.lineWidth = layer.strokeWidth || 2;
 
-		var x1 = layer.x1 || 0;
-		var y1 = layer.y1 || 0;
-		var x2 = layer.x2 || 0;
-		var y2 = layer.y2 || 0;
-		var arrowSize = layer.arrowSize || 10;
-		var arrowStyle = layer.arrowStyle || 'single';
+		const x1 = layer.x1 || 0;
+		const y1 = layer.y1 || 0;
+		const x2 = layer.x2 || 0;
+		const y2 = layer.y2 || 0;
+		const arrowSize = layer.arrowSize || 10;
+		const arrowStyle = layer.arrowStyle || 'single';
 
 		this.ctx.beginPath();
 		this.ctx.moveTo( x1, y1 );
 		this.ctx.lineTo( x2, y2 );
 
-		var strokeOpacity = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
+		const strokeOpacity = ( typeof layer.strokeOpacity === 'number' ) ? layer.strokeOpacity : 1;
 		this.withLocalAlpha( strokeOpacity, function () {
 			this.ctx.stroke();
 		}.bind( this ) );
@@ -459,8 +471,8 @@
 	};
 
 	CanvasRenderer.prototype.drawArrowHead = function ( tipX, tipY, baseX, baseY, size, opacity ) {
-		var angle = Math.atan2( tipY - baseY, tipX - baseX );
-		var arrowAngle = Math.PI / 6;
+		const angle = Math.atan2( tipY - baseY, tipX - baseX );
+		const arrowAngle = Math.PI / 6;
 
 		this.ctx.beginPath();
 		this.ctx.moveTo( tipX, tipY );
@@ -492,12 +504,12 @@
 		this.applyLayerStyle( layer );
 		this.ctx.beginPath();
 		this.ctx.moveTo( layer.points[ 0 ].x, layer.points[ 0 ].y );
-		for ( var i = 1; i < layer.points.length; i++ ) {
+		for ( let i = 1; i < layer.points.length; i++ ) {
 			this.ctx.lineTo( layer.points[ i ].x, layer.points[ i ].y );
 		}
 		this.ctx.closePath();
 
-		var baseOpacity = this.ctx.globalAlpha;
+		const baseOpacity = this.ctx.globalAlpha;
 		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
 			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
@@ -514,11 +526,11 @@
 	};
 
 	CanvasRenderer.prototype.drawRegularPolygon = function ( layer ) {
-		var sides = layer.sides || 6;
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var radius = layer.radius || 50;
-		var rotation = layer.rotation || 0;
+		const sides = layer.sides || 6;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const radius = layer.radius || 50;
+		// Note: rotation is handled by applyLayerStyle
 
 		this.ctx.save();
 		// applyLayerStyle handles rotation, but here we might want local rotation
@@ -528,10 +540,10 @@
 		this.applyLayerStyle( layer );
 
 		this.ctx.beginPath();
-		for ( var i = 0; i < sides; i++ ) {
-			var angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-			var px = x + radius * Math.cos( angle );
-			var py = y + radius * Math.sin( angle );
+		for ( let i = 0; i < sides; i++ ) {
+			const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
+			const px = x + radius * Math.cos( angle );
+			const py = y + radius * Math.sin( angle );
 			if ( i === 0 ) {
 				this.ctx.moveTo( px, py );
 			} else {
@@ -540,7 +552,7 @@
 		}
 		this.ctx.closePath();
 
-		var baseOpacity = this.ctx.globalAlpha;
+		const baseOpacity = this.ctx.globalAlpha;
 		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
 			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
@@ -557,21 +569,21 @@
 	};
 
 	CanvasRenderer.prototype.drawStar = function ( layer ) {
-		var points = layer.points || 5;
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var outerRadius = layer.outerRadius || layer.radius || 50;
-		var innerRadius = layer.innerRadius || outerRadius * 0.5;
+		const points = layer.points || 5;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const outerRadius = layer.outerRadius || layer.radius || 50;
+		const innerRadius = layer.innerRadius || outerRadius * 0.5;
 
 		this.ctx.save();
 		this.applyLayerStyle( layer );
 		this.ctx.beginPath();
 
-		for ( var i = 0; i < points * 2; i++ ) {
-			var angle = ( i * Math.PI ) / points - Math.PI / 2;
-			var r = i % 2 === 0 ? outerRadius : innerRadius;
-			var px = x + Math.cos( angle ) * r;
-			var py = y + Math.sin( angle ) * r;
+		for ( let i = 0; i < points * 2; i++ ) {
+			const angle = ( i * Math.PI ) / points - Math.PI / 2;
+			const r = i % 2 === 0 ? outerRadius : innerRadius;
+			const px = x + Math.cos( angle ) * r;
+			const py = y + Math.sin( angle ) * r;
 			if ( i === 0 ) {
 				this.ctx.moveTo( px, py );
 			} else {
@@ -580,7 +592,7 @@
 		}
 		this.ctx.closePath();
 
-		var baseOpacity = this.ctx.globalAlpha;
+		const baseOpacity = this.ctx.globalAlpha;
 		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
 			this.ctx.fillStyle = layer.fill;
 			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
@@ -607,12 +619,12 @@
 		this.ctx.lineCap = 'round';
 		this.ctx.lineJoin = 'round';
 
-		var baseOpacity = this.ctx.globalAlpha;
+		const baseOpacity = this.ctx.globalAlpha;
 		this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
 
 		this.ctx.beginPath();
 		this.ctx.moveTo( layer.points[ 0 ].x, layer.points[ 0 ].y );
-		for ( var i = 1; i < layer.points.length; i++ ) {
+		for ( let i = 1; i < layer.points.length; i++ ) {
 			this.ctx.lineTo( layer.points[ i ].x, layer.points[ i ].y );
 		}
 		this.ctx.stroke();
@@ -621,13 +633,13 @@
 	};
 
 	CanvasRenderer.prototype.drawHighlight = function ( layer ) {
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var width = layer.width || 100;
-		var height = layer.height || 20;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const width = layer.width || 100;
+		const height = layer.height || 20;
 
 		this.ctx.save();
-		var opacity = 0.3;
+		let opacity = 0.3;
 		if ( typeof layer.opacity === 'number' && !Number.isNaN( layer.opacity ) ) {
 			opacity = Math.max( 0, Math.min( 1, layer.opacity ) );
 		} else if ( typeof layer.fillOpacity === 'number' && !Number.isNaN( layer.fillOpacity ) ) {
@@ -640,10 +652,10 @@
 	};
 
 	CanvasRenderer.prototype.drawBlur = function ( layer ) {
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var w = layer.width || 0;
-		var h = layer.height || 0;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const w = layer.width || 0;
+		const h = layer.height || 0;
 
 		if ( w <= 0 || h <= 0 ) {
 			return;
@@ -654,8 +666,8 @@
 		this.ctx.rect( x, y, w, h );
 		this.ctx.clip();
 
-		var radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
-		var prevFilter = this.ctx.filter || 'none';
+		const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+		const prevFilter = this.ctx.filter || 'none';
 		this.ctx.filter = 'blur(' + radius + 'px)';
 
 		if ( this.backgroundImage && this.backgroundImage.complete ) {
@@ -671,23 +683,23 @@
 	CanvasRenderer.prototype.drawText = function ( layer ) {
 		this.ctx.save();
 
-		var metrics = this.measureTextLayer( layer );
+		const metrics = this.measureTextLayer( layer );
 		if ( !metrics ) {
 			this.ctx.restore();
 			return;
 		}
 
-		var drawX = metrics.originX;
-		var baselineStart = metrics.baselineY;
-		var centerX = metrics.originX + ( metrics.width / 2 );
-		var centerY = metrics.originY + ( metrics.height / 2 );
+		let drawX = metrics.originX;
+		let baselineStart = metrics.baselineY;
+		const centerX = metrics.originX + ( metrics.width / 2 );
+		const centerY = metrics.originY + ( metrics.height / 2 );
 
 		this.ctx.font = metrics.fontSize + 'px ' + metrics.fontFamily;
 		this.ctx.textAlign = 'left';
 		this.ctx.textBaseline = 'alphabetic';
 
 		if ( layer.rotation && layer.rotation !== 0 ) {
-			var rotationRadians = ( layer.rotation * Math.PI ) / 180;
+			const rotationRadians = ( layer.rotation * Math.PI ) / 180;
 			this.ctx.translate( centerX, centerY );
 			this.ctx.rotate( rotationRadians );
 			drawX = -( metrics.width / 2 );
@@ -701,14 +713,14 @@
 			this.ctx.shadowBlur = 4;
 		}
 
-		var baseAlpha = this.ctx.globalAlpha;
-		var fillColor = layer.fill || layer.color || '#000000';
-		var fillOpacity = clampOpacity( layer.fillOpacity );
-		var strokeOpacity = clampOpacity( layer.strokeOpacity );
+		const baseAlpha = this.ctx.globalAlpha;
+		const fillColor = layer.fill || layer.color || '#000000';
+		const fillOpacity = clampOpacity( layer.fillOpacity );
+		const strokeOpacity = clampOpacity( layer.strokeOpacity );
 
-		for ( var j = 0; j < metrics.lines.length; j++ ) {
-			var lineText = metrics.lines[ j ];
-			var lineY = baselineStart + ( j * metrics.lineHeight );
+		for ( let j = 0; j < metrics.lines.length; j++ ) {
+			const lineText = metrics.lines[ j ];
+			const lineY = baselineStart + ( j * metrics.lineHeight );
 
 			if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
 				this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
@@ -730,49 +742,49 @@
 			return null;
 		}
 
-		var fontSize = layer.fontSize || 16;
-		var fontFamily = layer.fontFamily || 'Arial';
-		var sanitizedText = this.sanitizeTextContent( layer.text || '' );
-		var lineHeight = fontSize * 1.2;
-		var context = this.ctx;
-		var canvasWidth = this.canvas ? this.canvas.width : 0;
-		var maxLineWidth = layer.maxWidth || ( canvasWidth ? canvasWidth * 0.8 : fontSize * Math.max( sanitizedText.length, 1 ) );
+		const fontSize = layer.fontSize || 16;
+		const fontFamily = layer.fontFamily || 'Arial';
+		const sanitizedText = this.sanitizeTextContent( layer.text || '' );
+		const lineHeight = fontSize * 1.2;
+		const context = this.ctx;
+		const canvasWidth = this.canvas ? this.canvas.width : 0;
+		const maxLineWidth = layer.maxWidth || ( canvasWidth ? canvasWidth * 0.8 : fontSize * Math.max( sanitizedText.length, 1 ) );
 
 		context.save();
 		context.font = fontSize + 'px ' + fontFamily;
-		var lines = this.wrapText( sanitizedText, maxLineWidth, context );
+		let lines = this.wrapText( sanitizedText, maxLineWidth, context );
 		if ( !lines.length ) {
 			lines = [ '' ];
 		}
 
-		var totalTextWidth = 0;
-		var metricsForLongest = null;
-		for ( var i = 0; i < lines.length; i++ ) {
-			var lineMetrics = context.measureText( lines[ i ] || ' ' );
+		let totalTextWidth = 0;
+		let metricsForLongest = null;
+		for ( let i = 0; i < lines.length; i++ ) {
+			const lineMetrics = context.measureText( lines[ i ] || ' ' );
 			if ( lineMetrics.width > totalTextWidth ) {
 				totalTextWidth = lineMetrics.width;
 				metricsForLongest = lineMetrics;
 			}
 		}
 		if ( totalTextWidth === 0 ) {
-			var fallbackMetrics = context.measureText( sanitizedText || ' ' );
+			const fallbackMetrics = context.measureText( sanitizedText || ' ' );
 			totalTextWidth = fallbackMetrics.width;
 			metricsForLongest = fallbackMetrics;
 		}
 
 		context.restore();
 
-		var ascent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxAscent === 'number' ?
+		const ascent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxAscent === 'number' ?
 			metricsForLongest.actualBoundingBoxAscent : fontSize * 0.8;
-		var descent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxDescent === 'number' ?
+		const descent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxDescent === 'number' ?
 			metricsForLongest.actualBoundingBoxDescent : fontSize * 0.2;
-		var totalHeight = ascent + descent;
+		let totalHeight = ascent + descent;
 		if ( lines.length > 1 ) {
 			totalHeight = ascent + descent + ( lines.length - 1 ) * lineHeight;
 		}
 
-		var textAlign = layer.textAlign || 'left';
-		var alignOffset = 0;
+		const textAlign = layer.textAlign || 'left';
+		let alignOffset = 0;
 		switch ( textAlign ) {
 			case 'center':
 				alignOffset = totalTextWidth / 2;
@@ -785,8 +797,8 @@
 				alignOffset = 0;
 		}
 
-		var originX = ( layer.x || 0 ) - alignOffset;
-		var originY = ( layer.y || 0 ) - ascent;
+		const originX = ( layer.x || 0 ) - alignOffset;
+		const originY = ( layer.y || 0 ) - ascent;
 
 		return {
 			lines: lines,
@@ -808,13 +820,13 @@
 		if ( !text || !maxWidth || maxWidth <= 0 ) {
 			return [ text || '' ];
 		}
-		var words = text.split( ' ' );
-		var lines = [];
-		var currentLine = '';
-		for ( var i = 0; i < words.length; i++ ) {
-			var word = words[ i ];
-			var testLine = currentLine + ( currentLine ? ' ' : '' ) + word;
-			var metrics = ctx.measureText( testLine );
+		const words = text.split( ' ' );
+		const lines = [];
+		let currentLine = '';
+		for ( let i = 0; i < words.length; i++ ) {
+			const word = words[ i ];
+			const testLine = currentLine + ( currentLine ? ' ' : '' ) + word;
+			const metrics = ctx.measureText( testLine );
 			if ( metrics.width > maxWidth && currentLine !== '' ) {
 				lines.push( currentLine );
 				currentLine = word;
@@ -829,7 +841,7 @@
 	};
 
 	CanvasRenderer.prototype.sanitizeTextContent = function ( text ) {
-		var safeText = text == null ? '' : String( text );
+		let safeText = text == null ? '' : String( text );
 		safeText = safeText.replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
 		safeText = safeText.replace( /<[^>]+>/g, '' );
 		return safeText;
@@ -842,7 +854,7 @@
 		if ( !this.selectedLayerIds || this.selectedLayerIds.length === 0 ) {
 			return;
 		}
-		for ( var i = 0; i < this.selectedLayerIds.length; i++ ) {
+		for ( let i = 0; i < this.selectedLayerIds.length; i++ ) {
 			this.drawSelectionIndicators( this.selectedLayerIds[ i ] );
 		}
 	};
@@ -854,22 +866,22 @@
 		if ( !this.editor ) {
 			return;
 		}
-		var layer = this.editor.getLayerById( layerId );
+		const layer = this.editor.getLayerById( layerId );
 		if ( !layer ) {
 			return;
 		}
 
 		this.ctx.save();
-		var bounds = this.getLayerBounds( layer );
+		const bounds = this.getLayerBounds( layer );
 		if ( !bounds ) {
 			this.ctx.restore();
 			return;
 		}
 
-		var rotation = layer.rotation || 0;
+		const rotation = layer.rotation || 0;
 		if ( rotation !== 0 ) {
-			var centerX = bounds.x + bounds.width / 2;
-			var centerY = bounds.y + bounds.height / 2;
+			const centerX = bounds.x + bounds.width / 2;
+			const centerY = bounds.y + bounds.height / 2;
 			this.ctx.translate( centerX, centerY );
 			this.ctx.rotate( rotation * Math.PI / 180 );
 			// When rotated, we draw handles around the unrotated bounds centered at 0,0
@@ -889,7 +901,7 @@
 			
 			// We need to pass the effective bounds for drawing handles.
 			// If we rotated the context, we draw at relative coordinates.
-			var localBounds = {
+			const localBounds = {
 				x: -bounds.width / 2,
 				y: -bounds.height / 2,
 				width: bounds.width,
@@ -915,11 +927,11 @@
 	 * @param {Object} worldBounds - World-space bounds for hit testing calculation
 	 */
 	CanvasRenderer.prototype.drawSelectionHandles = function ( bounds, layer, isRotated, worldBounds ) {
-		var handleSize = 12;
-		var handleColor = '#2196f3';
-		var handleBorderColor = '#ffffff';
+		const handleSize = 12;
+		const handleColor = '#2196f3';
+		const handleBorderColor = '#ffffff';
 
-		var handles = [
+		const handles = [
 			{ x: bounds.x, y: bounds.y, type: 'nw' },
 			{ x: bounds.x + bounds.width / 2, y: bounds.y, type: 'n' },
 			{ x: bounds.x + bounds.width, y: bounds.y, type: 'ne' },
@@ -935,27 +947,27 @@
 		this.ctx.lineWidth = 1;
 		this.ctx.setLineDash( [] );
 
-		for ( var i = 0; i < handles.length; i++ ) {
-			var h = handles[ i ];
+		for ( let i = 0; i < handles.length; i++ ) {
+			const h = handles[ i ];
 			this.ctx.fillRect( h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize );
 			this.ctx.strokeRect( h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize );
 
 			// Store handle for hit testing
 			// If isRotated, the coordinates h.x/h.y are in local rotated space.
 			// We need to transform them back to world space for hit testing.
-			var worldX = h.x;
-			var worldY = h.y;
+			let worldX = h.x;
+			let worldY = h.y;
 			
 			if ( isRotated && layer.rotation ) {
 				// We are currently in a rotated context centered at layer center.
 				// We need to transform (h.x, h.y) which are relative to center, back to world.
 				// Use worldBounds to get correct center for all layer types (including text)
-				var wb = worldBounds || bounds;
-				var centerX = wb.x + wb.width / 2;
-				var centerY = wb.y + wb.height / 2;
-				var rad = layer.rotation * Math.PI / 180;
-				var cos = Math.cos( rad );
-				var sin = Math.sin( rad );
+				const wb = worldBounds || bounds;
+				const centerX = wb.x + wb.width / 2;
+				const centerY = wb.y + wb.height / 2;
+				const rad = layer.rotation * Math.PI / 180;
+				const cos = Math.cos( rad );
+				const sin = Math.sin( rad );
 				
 				worldX = centerX + ( h.x * cos - h.y * sin );
 				worldY = centerY + ( h.x * sin + h.y * cos );
@@ -982,13 +994,13 @@
 	 * @param {Object} worldBounds - World-space bounds for hit testing calculation
 	 */
 	CanvasRenderer.prototype.drawRotationHandle = function ( bounds, layer, isRotated, worldBounds ) {
-		var handleSize = 12;
-		var handleColor = '#ff9800';
-		var handleBorderColor = '#ffffff';
-		var lineColor = '#2196f3';
+		const handleSize = 12;
+		const handleColor = '#ff9800';
+		const handleBorderColor = '#ffffff';
+		const lineColor = '#2196f3';
 
-		var rotationHandleX = bounds.x + bounds.width / 2;
-		var rotationHandleY = bounds.y - 20;
+		const rotationHandleX = bounds.x + bounds.width / 2;
+		const rotationHandleY = bounds.y - 20;
 
 		this.ctx.strokeStyle = lineColor;
 		this.ctx.lineWidth = 1;
@@ -1008,18 +1020,18 @@
 		// Add to selection handles for hit testing
 		// Rotation handle is circular, but we can use a rect for hit testing
 		
-		var worldX = rotationHandleX;
-		var worldY = rotationHandleY;
+		let worldX = rotationHandleX;
+		let worldY = rotationHandleY;
 
 		if ( isRotated && layer.rotation ) {
 			// Transform local coordinates back to world coordinates
 			// Use worldBounds to get correct center for all layer types (including text)
-			var wb = worldBounds || bounds;
-			var centerX = wb.x + wb.width / 2;
-			var centerY = wb.y + wb.height / 2;
-			var rad = layer.rotation * Math.PI / 180;
-			var cos = Math.cos( rad );
-			var sin = Math.sin( rad );
+			const wb = worldBounds || bounds;
+			const centerX = wb.x + wb.width / 2;
+			const centerY = wb.y + wb.height / 2;
+			const rad = layer.rotation * Math.PI / 180;
+			const cos = Math.cos( rad );
+			const sin = Math.sin( rad );
 			
 			// rotationHandleX/Y are relative to the rotated context origin (which is centerX, centerY)
 			// because bounds passed in are localBounds (centered at 0,0)
@@ -1042,7 +1054,7 @@
 		if ( !this.isMarqueeSelecting || !this.marqueeRect ) {
 			return;
 		}
-		var rect = this.marqueeRect;
+		const rect = this.marqueeRect;
 		this.ctx.save();
 		this.ctx.strokeStyle = '#007bff';
 		this.ctx.fillStyle = 'rgba(0, 123, 255, 0.1)';
@@ -1054,9 +1066,7 @@
 	};
 
 	CanvasRenderer.prototype.drawGrid = function () {
-		var size = this.gridSize || 20;
-		var w = this.canvas.width;
-		var h = this.canvas.height;
+		const size = this.gridSize || 20;
 
 		this.ctx.save();
 		this.ctx.strokeStyle = '#e9ecef';
@@ -1075,21 +1085,21 @@
 		// Original behavior: 0 to canvas.width. This is likely wrong if zoomed/panned.
 		// But let's keep it simple and maybe improve later.
 		// Actually, let's try to cover the visible area.
-		var left = -this.panX / this.zoom;
-		var top = -this.panY / this.zoom;
-		var right = ( this.canvas.width - this.panX ) / this.zoom;
-		var bottom = ( this.canvas.height - this.panY ) / this.zoom;
+		const left = -this.panX / this.zoom;
+		const top = -this.panY / this.zoom;
+		const right = ( this.canvas.width - this.panX ) / this.zoom;
+		const bottom = ( this.canvas.height - this.panY ) / this.zoom;
 
 		// Snap to grid
-		var startX = Math.floor( left / size ) * size;
-		var startY = Math.floor( top / size ) * size;
+		const startX = Math.floor( left / size ) * size;
+		const startY = Math.floor( top / size ) * size;
 
 		this.ctx.beginPath();
-		for ( var x = startX; x < right; x += size ) {
+		for ( let x = startX; x < right; x += size ) {
 			this.ctx.moveTo( x, top );
 			this.ctx.lineTo( x, bottom );
 		}
-		for ( var y = startY; y < bottom; y += size ) {
+		for ( let y = startY; y < bottom; y += size ) {
 			this.ctx.moveTo( left, y );
 			this.ctx.lineTo( right, y );
 		}
@@ -1103,9 +1113,9 @@
 		this.ctx.save();
 		this.ctx.setTransform( 1, 0, 0, 1, 0, 0 );
 
-		var size = this.rulerSize;
-		var w = this.canvas.width;
-		var h = this.canvas.height;
+		const size = this.rulerSize;
+		const w = this.canvas.width;
+		const h = this.canvas.height;
 
 		this.ctx.fillStyle = '#f3f3f3';
 		this.ctx.fillRect( 0, 0, w, size );
@@ -1135,20 +1145,20 @@
 
 		// Guides are in world coordinates
 		// We need to draw them across the visible area
-		var top = -this.panY / this.zoom;
-		var bottom = ( this.canvas.height - this.panY ) / this.zoom;
-		var left = -this.panX / this.zoom;
-		var right = ( this.canvas.width - this.panX ) / this.zoom;
+		const top = -this.panY / this.zoom;
+		const bottom = ( this.canvas.height - this.panY ) / this.zoom;
+		const left = -this.panX / this.zoom;
+		const right = ( this.canvas.width - this.panX ) / this.zoom;
 
-		for ( var i = 0; i < this.verticalGuides.length; i++ ) {
-			var gx = this.verticalGuides[ i ];
+		for ( let i = 0; i < this.verticalGuides.length; i++ ) {
+			const gx = this.verticalGuides[ i ];
 			this.ctx.beginPath();
 			this.ctx.moveTo( gx, top );
 			this.ctx.lineTo( gx, bottom );
 			this.ctx.stroke();
 		}
-		for ( var j = 0; j < this.horizontalGuides.length; j++ ) {
-			var gy = this.horizontalGuides[ j ];
+		for ( let j = 0; j < this.horizontalGuides.length; j++ ) {
+			const gy = this.horizontalGuides[ j ];
 			this.ctx.beginPath();
 			this.ctx.moveTo( left, gy );
 			this.ctx.lineTo( right, gy );
@@ -1170,10 +1180,10 @@
 		this.ctx.lineWidth = 1 / this.zoom;
 		this.ctx.setLineDash( [ 8 / this.zoom, 4 / this.zoom ] );
 
-		var top = -this.panY / this.zoom;
-		var bottom = ( this.canvas.height - this.panY ) / this.zoom;
-		var left = -this.panX / this.zoom;
-		var right = ( this.canvas.width - this.panX ) / this.zoom;
+		const top = -this.panY / this.zoom;
+		const bottom = ( this.canvas.height - this.panY ) / this.zoom;
+		const left = -this.panX / this.zoom;
+		const right = ( this.canvas.width - this.panX ) / this.zoom;
 
 		if ( this.dragGuide.orientation === 'h' ) {
 			this.ctx.beginPath();
@@ -1218,8 +1228,8 @@
 			this.ctx.globalCompositeOperation = layer.blendMode || layer.blend;
 		}
 		if ( layer.rotation ) {
-			var centerX = ( layer.x || 0 ) + ( layer.width || 0 ) / 2;
-			var centerY = ( layer.y || 0 ) + ( layer.height || 0 ) / 2;
+			const centerX = ( layer.x || 0 ) + ( layer.width || 0 ) / 2;
+			const centerY = ( layer.y || 0 ) + ( layer.height || 0 ) / 2;
 			this.ctx.translate( centerX, centerY );
 			this.ctx.rotate( layer.rotation * Math.PI / 180 );
 			this.ctx.translate( -centerX, -centerY );
@@ -1227,12 +1237,12 @@
 	};
 
 	CanvasRenderer.prototype.withLocalAlpha = function ( factor, fn ) {
-		var f = ( typeof factor === 'number' ) ? Math.max( 0, Math.min( 1, factor ) ) : 1;
+		const f = ( typeof factor === 'number' ) ? Math.max( 0, Math.min( 1, factor ) ) : 1;
 		if ( f === 1 ) {
 			fn();
 			return;
 		}
-		var prev = this.ctx.globalAlpha;
+		const prev = this.ctx.globalAlpha;
 		this.ctx.globalAlpha = ( prev || 1 ) * f;
 		try {
 			fn();
@@ -1255,7 +1265,7 @@
 		if ( !layer ) {
 			return null;
 		}
-		var baseBounds = this._getRawLayerBounds( layer );
+		const baseBounds = this._getRawLayerBounds( layer );
 		if ( !baseBounds ) {
 			return null;
 		}
@@ -1264,24 +1274,25 @@
 
 	CanvasRenderer.prototype._getRawLayerBounds = function ( layer ) {
 		// Simplified version of CanvasManager._getRawLayerBounds
+		let metrics, r, rx, ry, x1, y1, x2, y2;
 		switch ( layer.type ) {
 			case 'text':
-				var metrics = this.measureTextLayer( layer );
+				metrics = this.measureTextLayer( layer );
 				return metrics ? { x: metrics.originX, y: metrics.originY, width: metrics.width, height: metrics.height } : null;
 			case 'rectangle':
 			case 'highlight':
 			case 'blur':
 				return { x: layer.x || 0, y: layer.y || 0, width: layer.width || 0, height: layer.height || 0 };
 			case 'circle':
-				var r = layer.radius || 0;
+				r = layer.radius || 0;
 				return { x: ( layer.x || 0 ) - r, y: ( layer.y || 0 ) - r, width: r * 2, height: r * 2 };
 			case 'ellipse':
-				var rx = layer.radiusX || 0;
-				var ry = layer.radiusY || 0;
+				rx = layer.radiusX || 0;
+				ry = layer.radiusY || 0;
 				return { x: ( layer.x || 0 ) - rx, y: ( layer.y || 0 ) - ry, width: rx * 2, height: ry * 2 };
 			case 'line':
 			case 'arrow':
-				var x1 = layer.x1 || 0, y1 = layer.y1 || 0, x2 = layer.x2 || 0, y2 = layer.y2 || 0;
+				x1 = layer.x1 || 0; y1 = layer.y1 || 0; x2 = layer.x2 || 0; y2 = layer.y2 || 0;
 				return {
 					x: Math.min( x1, x2 ), y: Math.min( y1, y2 ),
 					width: Math.abs( x2 - x1 ), height: Math.abs( y2 - y1 )
@@ -1290,8 +1301,8 @@
 			case 'star':
 			case 'path':
 				if ( layer.points && layer.points.length >= 3 ) {
-					var minX = layer.points[ 0 ].x, maxX = minX, minY = layer.points[ 0 ].y, maxY = minY;
-					for ( var i = 1; i < layer.points.length; i++ ) {
+					let minX = layer.points[ 0 ].x, maxX = minX, minY = layer.points[ 0 ].y, maxY = minY;
+					for ( let i = 1; i < layer.points.length; i++ ) {
 						minX = Math.min( minX, layer.points[ i ].x );
 						maxX = Math.max( maxX, layer.points[ i ].x );
 						minY = Math.min( minY, layer.points[ i ].y );
@@ -1301,7 +1312,7 @@
 				}
 				// Fallback to radius for polygon/star if points are missing or insufficient
 				if ( layer.type === 'polygon' || layer.type === 'star' ) {
-					var r = layer.radius || ( layer.width ? layer.width / 2 : 50 );
+					r = layer.radius || ( layer.width ? layer.width / 2 : 50 );
 					if ( layer.type === 'star' && layer.outerRadius ) {
 						r = layer.outerRadius;
 					}
@@ -1319,10 +1330,10 @@
 		this.ctx.strokeStyle = '#cc0000';
 		this.ctx.lineWidth = 2;
 
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var width = layer.width || 50;
-		var height = layer.height || 50;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const width = layer.width || 50;
+		const height = layer.height || 50;
 
 		this.ctx.fillRect( x, y, width, height );
 		this.ctx.strokeRect( x, y, width, height );

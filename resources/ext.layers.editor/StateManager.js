@@ -51,6 +51,9 @@ class StateManager {
 		this.state.selectedLayerIds = [];
 		this.state.history = [];
 		this.state.historyIndex = -1;
+
+		// Save initial state to history for proper undo/redo
+		this.saveToHistory( 'initial' );
 	}
 
 	/**
@@ -248,58 +251,66 @@ class StateManager {
 	 * Layer management methods with atomic operations
 	 */
 	addLayer( layerData ) {
-		return this.atomic( ( state ) => {
-			const layer = Object.assign( {}, layerData, {
-				id: layerData.id || this.generateLayerId(),
-				visible: layerData.visible !== false,
-				locked: layerData.locked || false
-			} );
+		const layer = Object.assign( {}, layerData, {
+			id: layerData.id || this.generateLayerId(),
+			visible: layerData.visible !== false,
+			locked: layerData.locked || false
+		} );
 
+		this.atomic( ( state ) => {
 			const newLayers = [ layer, ...state.layers ]; // Add to top
-			this.saveToHistory( 'add-layer' );
-
 			return {
 				layers: newLayers,
 				isDirty: true
 			};
 		} );
+
+		// Save state AFTER modification for proper undo/redo
+		this.saveToHistory( 'add-layer' );
+
+		return layer;
 	}
 
 	removeLayer( layerId ) {
+		const existingLayer = this.state.layers.find( layer => layer.id === layerId );
+		if ( !existingLayer ) {
+			return; // Layer doesn't exist, nothing to remove
+		}
+
 		this.atomic( ( state ) => {
 			const newLayers = state.layers.filter( layer => layer.id !== layerId );
 			const newSelectedLayerIds = state.selectedLayerIds.filter( id => id !== layerId );
 			
-			if ( newLayers.length !== state.layers.length ) {
-				this.saveToHistory( 'remove-layer' );
-				return {
-					layers: newLayers,
-					selectedLayerIds: newSelectedLayerIds,
-					isDirty: true
-				};
-			}
-			
-			return {}; // No changes
+			return {
+				layers: newLayers,
+				selectedLayerIds: newSelectedLayerIds,
+				isDirty: true
+			};
 		} );
+
+		// Save state AFTER modification for proper undo/redo
+		this.saveToHistory( 'remove-layer' );
 	}
 
 	updateLayer( layerId, updates ) {
+		const existingLayer = this.state.layers.find( layer => layer.id === layerId );
+		if ( !existingLayer ) {
+			return; // Layer doesn't exist, nothing to update
+		}
+
 		this.atomic( ( state ) => {
 			const layerIndex = state.layers.findIndex( layer => layer.id === layerId );
-			if ( layerIndex > -1 ) {
-				const newLayers = [ ...state.layers ];
-				newLayers[ layerIndex ] = Object.assign( {}, newLayers[ layerIndex ], updates );
-				
-				this.saveToHistory( 'update-layer' );
-				
-				return {
-					layers: newLayers,
-					isDirty: true
-				};
-			}
+			const newLayers = [ ...state.layers ];
+			newLayers[ layerIndex ] = Object.assign( {}, newLayers[ layerIndex ], updates );
 			
-			return {}; // No changes
+			return {
+				layers: newLayers,
+				isDirty: true
+			};
 		} );
+
+		// Save state AFTER modification for proper undo/redo
+		this.saveToHistory( 'update-layer' );
 	}
 
 	getLayer( layerId ) {
@@ -311,26 +322,120 @@ class StateManager {
 	}
 
 	/**
-	 * Add a layer to the canvas (inserts at top of draw order)
-	 * @param {Object} layer - Layer object to add
+	 * Layer ordering methods
 	 */
-	addLayer( layer ) {
+	reorderLayer( layerId, targetId ) {
+		const layers = this.state.layers;
+		const draggedIndex = layers.findIndex( layer => layer.id === layerId );
+		const targetIndex = layers.findIndex( layer => layer.id === targetId );
+
+		if ( draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex ) {
+			return false;
+		}
+
 		this.atomic( ( state ) => {
-			// Insert at top so top of list = top of draw order
-			const newLayers = [ layer, ...state.layers ];
-			return { layers: newLayers };
+			const newLayers = [ ...state.layers ];
+			const [ draggedLayer ] = newLayers.splice( draggedIndex, 1 );
+			newLayers.splice( targetIndex, 0, draggedLayer );
+
+			return {
+				layers: newLayers,
+				isDirty: true
+			};
 		} );
+
+		this.saveToHistory( 'reorder-layer' );
+		return true;
 	}
 
-	/**
-	 * Remove a layer from the canvas
-	 * @param {string} layerId - ID of layer to remove
-	 */
-	removeLayer( layerId ) {
+	moveLayerUp( layerId ) {
+		const layers = this.state.layers;
+		const index = layers.findIndex( layer => layer.id === layerId );
+
+		if ( index <= 0 ) {
+			return false; // Already at top or not found
+		}
+
 		this.atomic( ( state ) => {
-			const newLayers = state.layers.filter( layer => layer.id !== layerId );
-			return { layers: newLayers };
+			const newLayers = [ ...state.layers ];
+			[ newLayers[ index - 1 ], newLayers[ index ] ] = [ newLayers[ index ], newLayers[ index - 1 ] ];
+
+			return {
+				layers: newLayers,
+				isDirty: true
+			};
 		} );
+
+		this.saveToHistory( 'move-layer-up' );
+		return true;
+	}
+
+	moveLayerDown( layerId ) {
+		const layers = this.state.layers;
+		const index = layers.findIndex( layer => layer.id === layerId );
+
+		if ( index === -1 || index >= layers.length - 1 ) {
+			return false; // At bottom or not found
+		}
+
+		this.atomic( ( state ) => {
+			const newLayers = [ ...state.layers ];
+			[ newLayers[ index ], newLayers[ index + 1 ] ] = [ newLayers[ index + 1 ], newLayers[ index ] ];
+
+			return {
+				layers: newLayers,
+				isDirty: true
+			};
+		} );
+
+		this.saveToHistory( 'move-layer-down' );
+		return true;
+	}
+
+	bringToFront( layerId ) {
+		const layers = this.state.layers;
+		const index = layers.findIndex( layer => layer.id === layerId );
+
+		if ( index === -1 || index === 0 ) {
+			return false; // Already at front or not found
+		}
+
+		this.atomic( ( state ) => {
+			const newLayers = [ ...state.layers ];
+			const [ layer ] = newLayers.splice( index, 1 );
+			newLayers.unshift( layer );
+
+			return {
+				layers: newLayers,
+				isDirty: true
+			};
+		} );
+
+		this.saveToHistory( 'bring-to-front' );
+		return true;
+	}
+
+	sendToBack( layerId ) {
+		const layers = this.state.layers;
+		const index = layers.findIndex( layer => layer.id === layerId );
+
+		if ( index === -1 || index === layers.length - 1 ) {
+			return false; // Already at back or not found
+		}
+
+		this.atomic( ( state ) => {
+			const newLayers = [ ...state.layers ];
+			const [ layer ] = newLayers.splice( index, 1 );
+			newLayers.push( layer );
+
+			return {
+				layers: newLayers,
+				isDirty: true
+			};
+		} );
+
+		this.saveToHistory( 'send-to-back' );
+		return true;
 	}
 
 	/**
@@ -540,4 +645,9 @@ class StateManager {
 if ( typeof window !== 'undefined' ) {
 	window.StateManager = StateManager;
 	window.stateManager = new StateManager();
+}
+
+// Export for CommonJS/Jest tests
+if ( typeof module !== 'undefined' && module.exports ) {
+	module.exports = StateManager;
 }

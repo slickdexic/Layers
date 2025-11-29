@@ -414,47 +414,55 @@ class LayersDatabase {
 			return [];
 		}
 
-		// Get distinct set names with their latest revision info
+		$imgNameLookup = $this->buildImageNameLookup( $imgName );
+
+		// Single query approach: get aggregates and latest user in one query
+		// using a self-join on the maximum revision per set name
+		// This eliminates the N+1 query pattern
 		$result = $dbr->select(
-			'layer_sets',
+			[ 'ls' => 'layer_sets', 'ls_latest' => 'layer_sets' ],
 			[
-				'ls_name',
-				'revision_count' => 'COUNT(*)',
-				'latest_revision' => 'MAX(ls_revision)',
-				'latest_timestamp' => 'MAX(ls_timestamp)',
+				'ls_name' => 'ls.ls_name',
+				'revision_count' => 'COUNT(DISTINCT ls.ls_revision)',
+				'latest_revision' => 'MAX(ls.ls_revision)',
+				'latest_timestamp' => 'MAX(ls.ls_timestamp)',
+				'latest_user_id' => 'ls_latest.ls_user_id',
 			],
 			[
-				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-				'ls_img_sha1' => $sha1
+				'ls.ls_img_name' => $imgNameLookup,
+				'ls.ls_img_sha1' => $sha1
 			],
 			__METHOD__,
 			[
-				'GROUP BY' => 'ls_name',
-				'ORDER BY' => 'MAX(ls_timestamp) DESC'
+				'GROUP BY' => [ 'ls.ls_name', 'ls_latest.ls_user_id' ],
+				'ORDER BY' => 'MAX(ls.ls_timestamp) DESC'
+			],
+			[
+				// Join to get user from the row with max revision
+				'ls_latest' => [
+					'INNER JOIN',
+					[
+						'ls_latest.ls_img_name = ls.ls_img_name',
+						'ls_latest.ls_img_sha1 = ls.ls_img_sha1',
+						'ls_latest.ls_name = ls.ls_name',
+						'ls_latest.ls_revision = (SELECT MAX(ls2.ls_revision) FROM ' .
+							$dbr->tableName( 'layer_sets' ) . ' ls2 WHERE ' .
+							'ls2.ls_img_name = ls.ls_img_name AND ' .
+							'ls2.ls_img_sha1 = ls.ls_img_sha1 AND ' .
+							'ls2.ls_name = ls.ls_name)'
+					]
+				]
 			]
 		);
 
 		$namedSets = [];
 		foreach ( $result as $row ) {
-			// Get the user who made the latest revision
-			$latestRow = $dbr->selectRow(
-				'layer_sets',
-				[ 'ls_user_id' ],
-				[
-					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-					'ls_img_sha1' => $sha1,
-					'ls_name' => $row->ls_name,
-					'ls_revision' => (int)$row->latest_revision
-				],
-				__METHOD__
-			);
-
 			$namedSets[] = [
 				'name' => $row->ls_name ?? 'default',
 				'revision_count' => (int)$row->revision_count,
 				'latest_revision' => (int)$row->latest_revision,
 				'latest_timestamp' => $row->latest_timestamp,
-				'latest_user_id' => $latestRow ? (int)$latestRow->ls_user_id : 0
+				'latest_user_id' => (int)$row->latest_user_id
 			];
 		}
 

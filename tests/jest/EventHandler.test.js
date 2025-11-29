@@ -15,7 +15,7 @@ describe('EventHandler', () => {
         mockCanvas.width = 800;
         mockCanvas.height = 600;
 
-        // Create mock CanvasManager
+        // Create mock CanvasManager with editor reference for undo/redo delegation
         mockCanvasManager = {
             canvas: mockCanvas,
             layers: [],
@@ -34,7 +34,12 @@ describe('EventHandler', () => {
             deleteSelectedLayers: jest.fn(),
             undo: jest.fn(),
             redo: jest.fn(),
-            isModified: false
+            isModified: false,
+            // Editor reference for undo/redo delegation (single source of truth)
+            editor: {
+                undo: jest.fn(),
+                redo: jest.fn()
+            }
         };
 
         // Create EventHandler instance
@@ -232,7 +237,8 @@ describe('EventHandler', () => {
             eventHandler.handleKeyDown(mockEvent);
 
             expect(mockEvent.preventDefault).toHaveBeenCalled();
-            expect(mockCanvasManager.undo).toHaveBeenCalled();
+            // Undo now routes through editor.undo() for single source of truth
+            expect(mockCanvasManager.editor.undo).toHaveBeenCalled();
         });
 
         test('should handle Ctrl+Shift+Z (redo)', () => {
@@ -246,7 +252,8 @@ describe('EventHandler', () => {
             eventHandler.handleKeyDown(mockEvent);
 
             expect(mockEvent.preventDefault).toHaveBeenCalled();
-            expect(mockCanvasManager.redo).toHaveBeenCalled();
+            // Redo now routes through editor.redo() for single source of truth
+            expect(mockCanvasManager.editor.redo).toHaveBeenCalled();
         });
 
         test('should handle Ctrl+Y (redo)', () => {
@@ -259,7 +266,8 @@ describe('EventHandler', () => {
             eventHandler.handleKeyDown(mockEvent);
 
             expect(mockEvent.preventDefault).toHaveBeenCalled();
-            expect(mockCanvasManager.redo).toHaveBeenCalled();
+            // Redo now routes through editor.redo() for single source of truth
+            expect(mockCanvasManager.editor.redo).toHaveBeenCalled();
         });
     });
 

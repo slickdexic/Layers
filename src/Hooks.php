@@ -101,7 +101,7 @@ class Hooks {
 			if ( class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
 				$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
 			} else {
-				// Fallback logger that uses error_log
+				// Fallback logger that uses wfDebugLog (safer than error_log)
 				$logger = new class {
 					/**
 					 * Log an informational message
@@ -110,7 +110,7 @@ class Hooks {
 					 * @return void
 					 */
 					public function info( $message, $context = [] ) {
-						error_log( "Layers INFO: $message" );
+						wfDebugLog( 'Layers', "INFO: $message" );
 					}
 
 					/**
@@ -120,9 +120,9 @@ class Hooks {
 					 * @return void
 					 */
 					public function error( $message, $context = [] ) {
-						error_log( "Layers ERROR: $message" );
+						wfDebugLog( 'Layers', "ERROR: $message" );
 						if ( isset( $context['exception'] ) ) {
-							error_log( "Exception: " . $context['exception'] );
+							wfDebugLog( 'Layers', "Exception: " . $context['exception'] );
 						}
 					}
 
@@ -133,7 +133,7 @@ class Hooks {
 					 * @return void
 					 */
 					public function warning( $message, $context = [] ) {
-						error_log( "Layers WARNING: $message" );
+						wfDebugLog( 'Layers', "WARNING: $message" );
 					}
 				};
 			}

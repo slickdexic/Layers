@@ -113,10 +113,13 @@
 	 * @return {Array} Deep copy of layers array
 	 */
 	HistoryManager.prototype.getLayersSnapshot = function () {
-		const layers =
-			( this.canvasManager && this.canvasManager.editor &&
-				this.canvasManager.editor.layers ) ||
-			( this.canvasManager && this.canvasManager.layers ) || [];
+		// Determine the editor reference - canvasManager might be the editor itself
+		const editor = ( this.canvasManager && this.canvasManager.editor ) ?
+			this.canvasManager.editor :
+			( this.canvasManager && this.canvasManager.stateManager ) ?
+				this.canvasManager : null;
+
+		const layers = editor ? editor.layers : ( this.canvasManager && this.canvasManager.layers ) || [];
 		return JSON.parse( JSON.stringify( layers ) );
 	};
 
@@ -180,43 +183,49 @@
 	HistoryManager.prototype.restoreState = function ( state ) {
 		// Restore layers to either editor.layers or canvasManager.layers
 		const restored = JSON.parse( JSON.stringify( state.layers ) );
-		if ( this.canvasManager && this.canvasManager.editor ) {
-			this.canvasManager.editor.layers = restored;
+
+		// Determine the editor reference - canvasManager might be the editor itself
+		// or it might have an editor property
+		const editor = ( this.canvasManager && this.canvasManager.editor ) ?
+			this.canvasManager.editor :
+			( this.canvasManager && this.canvasManager.stateManager ) ?
+				this.canvasManager : null;
+		const canvasMgr = editor ? editor.canvasManager : this.canvasManager;
+
+		// Restore layers
+		if ( editor ) {
+			editor.layers = restored;
 		} else if ( this.canvasManager ) {
 			this.canvasManager.layers = restored;
 		}
 
 		// Clear selections
-		if ( this.canvasManager && this.canvasManager.selectionManager ) {
-			this.canvasManager.selectionManager.clearSelection();
-		} else if ( this.canvasManager ) {
+		if ( canvasMgr && canvasMgr.selectionManager ) {
+			canvasMgr.selectionManager.clearSelection();
+		} else if ( canvasMgr ) {
 			// Fallback for legacy code
-			this.canvasManager.selectedLayerId = null;
-			this.canvasManager.selectedLayerIds = [];
+			canvasMgr.selectedLayerId = null;
+			canvasMgr.selectedLayerIds = [];
 		}
 
 		// Re-render
-		const currentLayers =
-			( this.canvasManager && this.canvasManager.editor &&
-				this.canvasManager.editor.layers ) ||
-			( this.canvasManager && this.canvasManager.layers ) || [];
-		if ( this.canvasManager && typeof this.canvasManager.renderLayers === 'function' ) {
-			this.canvasManager.renderLayers( currentLayers );
+		const currentLayers = editor ? editor.layers : ( this.canvasManager && this.canvasManager.layers ) || [];
+		if ( canvasMgr && typeof canvasMgr.renderLayers === 'function' ) {
+			canvasMgr.renderLayers( currentLayers );
 		}
-		if ( this.canvasManager && typeof this.canvasManager.redraw === 'function' ) {
-			this.canvasManager.redraw();
+		if ( canvasMgr && typeof canvasMgr.redraw === 'function' ) {
+			canvasMgr.redraw();
 		}
 
 		// Update layer panel
-		if ( this.canvasManager && this.canvasManager.editor &&
-			this.canvasManager.editor.layerPanel &&
-			typeof this.canvasManager.editor.layerPanel.updateLayers === 'function' ) {
-			this.canvasManager.editor.layerPanel.updateLayers( currentLayers );
+		if ( editor && editor.layerPanel &&
+			typeof editor.layerPanel.updateLayers === 'function' ) {
+			editor.layerPanel.updateLayers( currentLayers );
 		}
 
 		// Mark editor as dirty (when available)
-		if ( this.canvasManager && this.canvasManager.editor && typeof this.canvasManager.editor.markDirty === 'function' ) {
-			this.canvasManager.editor.markDirty();
+		if ( editor && typeof editor.markDirty === 'function' ) {
+			editor.markDirty();
 		}
 	};
 

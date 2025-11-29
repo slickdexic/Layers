@@ -120,6 +120,98 @@ Centralized state management with observer pattern:
 - State validation
 - Conflict resolution
 
+**Core API**:
+
+```javascript
+// Get state value
+const layers = stateManager.get('layers');
+const selectedIds = stateManager.get('selectedLayerIds');
+
+// Set state value (triggers subscribers)
+stateManager.set('selectedLayerIds', ['layer1', 'layer2']);
+
+// Subscribe to state changes
+const unsubscribe = stateManager.subscribe('layers', (newValue) => {
+    // React to layer changes
+});
+
+// Atomic operations (prevents race conditions)
+stateManager.atomic((state) => {
+    state.layers = newLayers;
+    state.selectedLayerIds = newSelection;
+});
+```
+
+**State Keys**:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `layers` | `Array<Layer>` | All layer objects in the document |
+| `selectedLayerIds` | `Array<string>` | IDs of currently selected layers |
+| `currentTool` | `string` | Active tool name |
+| `zoom` | `number` | Current zoom level |
+| `pan` | `{x, y}` | Current pan offset |
+
+### State Access Patterns
+
+**IMPORTANT**: Components should NOT store local copies of shared state. Instead, use getter methods that route through StateManager.
+
+**Deprecated Pattern** (do NOT use):
+
+```javascript
+// Bad: Direct state storage
+this.selectedLayerId = 'layer1';
+this.layers = [...layers];
+```
+
+**Current Pattern** (use this):
+
+```javascript
+// Good: Access through StateManager via getter methods
+CanvasManager.prototype.getSelectedLayerIds = function () {
+    if (this.editor && this.editor.stateManager) {
+        return this.editor.stateManager.get('selectedLayerIds') || [];
+    }
+    return [];
+};
+
+CanvasManager.prototype.getSelectedLayerId = function () {
+    const ids = this.getSelectedLayerIds();
+    return ids.length > 0 ? ids[ids.length - 1] : null;
+};
+
+CanvasManager.prototype.setSelectedLayerIds = function (ids) {
+    if (this.editor && this.editor.stateManager) {
+        this.editor.stateManager.set('selectedLayerIds', ids || []);
+    }
+};
+```
+
+**Reactive Updates via Subscriptions**:
+
+```javascript
+// Components subscribe to state changes for automatic updates
+LayerPanel.prototype.subscribeToState = function () {
+    if (!this.editor || !this.editor.stateManager) {
+        return;
+    }
+    
+    // Re-render when layers change
+    this.stateSubscriptions.push(
+        this.editor.stateManager.subscribe('layers', () => {
+            this.renderLayerList();
+        })
+    );
+    
+    // Update selection highlight when selection changes
+    this.stateSubscriptions.push(
+        this.editor.stateManager.subscribe('selectedLayerIds', () => {
+            this.highlightSelectedLayer();
+        })
+    );
+};
+```
+
 ### ErrorHandler
 
 **File**: `resources/ext.layers.editor/ErrorHandler.js`

@@ -51,13 +51,24 @@ describe('Rotation Handle Interaction', () => {
             left: 0, top: 0, width: 800, height: 600
         }));
 
-        // Setup Editor Mock
+        // Setup Editor Mock with StateManager
+        const mockStateManager = {
+            get: jest.fn((key) => {
+                if (key === 'selectedLayerIds') return ['layer1'];
+                if (key === 'layers') return mockEditor.layers;
+                return null;
+            }),
+            set: jest.fn(),
+            subscribe: jest.fn(() => jest.fn())
+        };
+        
         mockEditor = {
             // container: document.getElementById('layers-editor-container'), // Remove container to trigger back-compat
             canvas: mockCanvas,
             layers: [],
             getLayerById: jest.fn(),
             emit: jest.fn(),
+            stateManager: mockStateManager,
             config: {
                 maxImageDimensions: { width: 2000, height: 2000 }
             }
@@ -86,7 +97,6 @@ describe('Rotation Handle Interaction', () => {
         };
         mockEditor.layers = [layer];
         mockEditor.getLayerById.mockReturnValue(layer);
-        canvasManager.selectedLayerId = 'layer1';
         selectionManager.selectedLayerIds = ['layer1'];
     });
 

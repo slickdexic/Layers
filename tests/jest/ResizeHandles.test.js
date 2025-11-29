@@ -31,7 +31,21 @@ describe('Resize Handles', () => {
             ctx.setLineDash = jest.fn();
         }
 
-        // Create mock editor
+        // Create mock editor with StateManager
+        const mockStateManager = {
+            get: jest.fn((key) => {
+                if (key === 'selectedLayerIds') return mockEditor.selectedLayerIds || [];
+                if (key === 'layers') return mockEditor.layers;
+                return null;
+            }),
+            set: jest.fn((key, value) => {
+                if (key === 'selectedLayerIds') {
+                    mockEditor.selectedLayerIds = value;
+                }
+            }),
+            subscribe: jest.fn(() => jest.fn())
+        };
+
         mockEditor = {
             canvas: canvas,
             layers: [],
@@ -40,7 +54,8 @@ describe('Resize Handles', () => {
             getLayerById: jest.fn(),
             redraw: jest.fn(),
             saveState: jest.fn(),
-            selectLayer: jest.fn()
+            selectLayer: jest.fn(),
+            stateManager: mockStateManager
         };
 
         // Create CanvasManager instance
@@ -76,7 +91,13 @@ describe('Resize Handles', () => {
             };
 
             mockEditor.getLayerById.mockReturnValue(layer);
-            canvasManager.selectedLayerId = 'test-layer';
+            // Set selection via stateManager mock
+            mockEditor.selectedLayerIds = ['test-layer'];
+            mockEditor.stateManager.get.mockImplementation((key) => {
+                if (key === 'selectedLayerIds') return ['test-layer'];
+                if (key === 'layers') return mockEditor.layers;
+                return null;
+            });
 
             // Mock getLayerBounds to return the expected bounds
             canvasManager.getLayerBounds = jest.fn().mockReturnValue({
@@ -111,7 +132,13 @@ describe('Resize Handles', () => {
             };
 
             mockEditor.getLayerById.mockReturnValue(layer);
-            canvasManager.selectedLayerId = 'test-layer';
+            // Set selection via stateManager mock
+            mockEditor.selectedLayerIds = ['test-layer'];
+            mockEditor.stateManager.get.mockImplementation((key) => {
+                if (key === 'selectedLayerIds') return ['test-layer'];
+                if (key === 'layers') return mockEditor.layers;
+                return null;
+            });
 
             // World bounds (actual layer position)
             const worldBounds = {
@@ -170,7 +197,13 @@ describe('Resize Handles', () => {
             };
 
             mockEditor.getLayerById.mockReturnValue(layer);
-            canvasManager.selectedLayerId = 'test-layer';
+            // Set selection via stateManager mock
+            mockEditor.selectedLayerIds = ['test-layer'];
+            mockEditor.stateManager.get.mockImplementation((key) => {
+                if (key === 'selectedLayerIds') return ['test-layer'];
+                if (key === 'layers') return mockEditor.layers;
+                return null;
+            });
 
             // Mock getLayerBounds
             canvasManager.getLayerBounds = jest.fn().mockReturnValue({
@@ -204,7 +237,13 @@ describe('Resize Handles', () => {
 
             mockEditor.getLayerById.mockReturnValue(layer);
             mockEditor.layers = [layer];
-            canvasManager.selectedLayerId = 'test-layer';
+            // Set selection via stateManager mock
+            mockEditor.selectedLayerIds = ['test-layer'];
+            mockEditor.stateManager.get.mockImplementation((key) => {
+                if (key === 'selectedLayerIds') return ['test-layer'];
+                if (key === 'layers') return mockEditor.layers;
+                return null;
+            });
             canvasManager.currentTool = 'pointer';
 
             // Mock getLayerBounds

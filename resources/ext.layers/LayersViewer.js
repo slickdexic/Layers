@@ -60,7 +60,7 @@
 	};
 
 	LayersViewer.prototype.loadImageAndRender = function () {
-		var self = this;
+		const self = this;
 
 		// Wait for image to load if not already loaded
 		if ( this.imageElement.complete ) {
@@ -84,13 +84,18 @@
 					self.scheduleResize();
 				} );
 				this.resizeObserver.observe( this.imageElement );
-			} catch ( e ) { /* ignore */ }
+			} catch ( e ) {
+				// ResizeObserver may fail in some browsers - log for debugging
+				if ( window.mw && window.mw.log ) {
+					mw.log.warn( '[LayersViewer] ResizeObserver setup failed:', e.message );
+				}
+			}
 		}
 	};
 
 	// Coalesce multiple resize calls into a single frame
 	LayersViewer.prototype.scheduleResize = function () {
-		var self = this;
+		const self = this;
 		if ( this.rAFId ) {
 			return;
 		}
@@ -105,7 +110,12 @@
 		if ( this.resizeObserver && typeof this.resizeObserver.disconnect === 'function' ) {
 			try {
 				this.resizeObserver.disconnect();
-			} catch ( e ) {}
+			} catch ( e ) {
+				// Disconnect may fail if observer was already disconnected
+				if ( window.mw && window.mw.log ) {
+					mw.log.warn( '[LayersViewer] ResizeObserver disconnect failed:', e.message );
+				}
+			}
 		}
 		if ( this.boundWindowResize ) {
 			window.removeEventListener( 'resize', this.boundWindowResize );
@@ -129,8 +139,8 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		return;
 	}
 
-	var clampedAlpha = Math.max( 0, Math.min( 1, alpha ) );
-	var previousAlpha = this.ctx.globalAlpha;
+	const clampedAlpha = Math.max( 0, Math.min( 1, alpha ) );
+	const previousAlpha = this.ctx.globalAlpha;
 	this.ctx.globalAlpha = previousAlpha * clampedAlpha;
 	try {
 		drawFn.call( this );
@@ -141,8 +151,8 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 
 	LayersViewer.prototype.resizeCanvasAndRender = function () {
 		// Set canvas pixel size to MATCH the displayed image size for crisp alignment
-		var displayW = this.imageElement.offsetWidth;
-		var displayH = this.imageElement.offsetHeight;
+		let displayW = this.imageElement.offsetWidth;
+		let displayH = this.imageElement.offsetHeight;
 		if ( !displayW || !displayH ) {
 			// Fallback to natural dimensions when offsets are 0 (e.g., image hidden)
 			displayW = this.imageElement.naturalWidth || this.imageElement.width || 0;
@@ -170,8 +180,8 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		// Render layers from bottom to top so top-most (index 0 in editor) is drawn last.
 		// The editor maintains layers with index 0 as visually top-most and draws end->start;
 		// mirror that here by iterating from the array end to start.
-		var layers = Array.isArray( this.layerData.layers ) ? this.layerData.layers : [];
-		for ( var i = layers.length - 1; i >= 0; i-- ) {
+		const layers = Array.isArray( this.layerData.layers ) ? this.layerData.layers : [];
+		for ( let i = layers.length - 1; i >= 0; i-- ) {
 			this.renderLayer( layers[ i ] );
 		}
 	};
@@ -184,9 +194,9 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		}
 
 		// Compute scaling from saved coordinates to current canvas size
-		var sx = 1;
-		var sy = 1;
-		var scaleAvg = 1;
+		let sx = 1;
+		let sy = 1;
+		let scaleAvg = 1;
 		if ( this.baseWidth && this.baseHeight ) {
 			sx = ( this.canvas.width || 1 ) / this.baseWidth;
 			sy = ( this.canvas.height || 1 ) / this.baseHeight;
@@ -194,10 +204,10 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		}
 
 		// Create a shallow copy and scale known coords
-		var L = layer;
+		let L = layer;
 		if ( this.baseWidth && this.baseHeight ) {
 			L = {};
-			for ( var k in layer ) {
+			for ( const k in layer ) {
 				if ( Object.prototype.hasOwnProperty.call( layer, k ) ) {
 					L[ k ] = layer[ k ];
 				}
@@ -242,9 +252,9 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 				L.y2 = L.y2 * sy;
 			}
 			if ( Array.isArray( L.points ) ) {
-				var pts = [];
-				for ( var i = 0; i < L.points.length; i++ ) {
-					var p = L.points[ i ];
+				const pts = [];
+				for ( let i = 0; i < L.points.length; i++ ) {
+					const p = L.points[ i ];
 					pts.push( { x: p.x * sx, y: p.y * sy } );
 				}
 				L.points = pts;
@@ -262,13 +272,16 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 			try {
 				this.ctx.globalCompositeOperation = String( layer.blend );
 			} catch ( e ) {
-				// ignore unsupported blend modes
+				// Browser doesn't support this blend mode - log and continue with default
+				if ( window.mw && window.mw.log ) {
+					mw.log.warn( '[LayersViewer] Unsupported blend mode: ' + layer.blend );
+				}
 			}
 		}
 
 		// Apply shadow at OUTER context - critical for proper rendering
 		// Calculate shadow scale factors
-		var shadowScaleX = 1, shadowScaleY = 1, shadowScaleAvg = 1;
+		let shadowScaleX = 1, shadowScaleY = 1, shadowScaleAvg = 1;
 		if ( this.baseWidth && this.baseHeight ) {
 			shadowScaleX = ( this.canvas.width || 1 ) / this.baseWidth;
 			shadowScaleY = ( this.canvas.height || 1 ) / this.baseHeight;
@@ -277,8 +290,8 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 
 		// Apply shadow settings at outer context
 		// Check if shadow properties exist (handles case where shadow: "" but shadowColor is set)
-		var hasShadowData = layer.shadowColor || layer.shadowBlur || layer.shadowOffsetX || layer.shadowOffsetY;
-		var shadowExplicitlyEnabled = layer.shadow === true || layer.shadow === 'true' || layer.shadow === 1 || layer.shadow === '1';
+		const hasShadowData = layer.shadowColor || layer.shadowBlur || layer.shadowOffsetX || layer.shadowOffsetY;
+		const shadowExplicitlyEnabled = layer.shadow === true || layer.shadow === 'true' || layer.shadow === 1 || layer.shadow === '1';
 		
 		if ( shadowExplicitlyEnabled || hasShadowData ) {
 			// Apply shadow properties - works with flat format
@@ -334,34 +347,34 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 	LayersViewer.prototype.renderText = function ( layer ) {
 		this.ctx.save();
 		
-		var scaleAvg = 1;
+		let scaleAvg = 1;
 		if ( this.baseWidth && this.baseHeight ) {
-			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
-			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			const sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			const sy = ( this.canvas.height || 1 ) / this.baseHeight;
 			scaleAvg = ( sx + sy ) / 2;
 		}
-		var fontPx = layer.fontSize || 16;
+		let fontPx = layer.fontSize || 16;
 		fontPx = Math.max( 1, Math.round( fontPx * scaleAvg ) );
 		this.ctx.font = fontPx + 'px ' + ( layer.fontFamily || 'Arial' );
 		this.ctx.textAlign = layer.textAlign || 'left';
 		this.ctx.fillStyle = layer.fill || '#000000';
 
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var text = layer.text || '';
+		let x = layer.x || 0;
+		let y = layer.y || 0;
+		const text = layer.text || '';
 
 		// Calculate text dimensions for proper rotation centering
-		var textMetrics = this.ctx.measureText( text );
-		var textWidth = textMetrics.width;
-		var textHeight = fontPx;
+		const textMetrics = this.ctx.measureText( text );
+		const textWidth = textMetrics.width;
+		const textHeight = fontPx;
 
 		// Calculate text center for rotation
-		var centerX = x + ( textWidth / 2 );
-		var centerY = y - ( textHeight / 4 ); // Adjust for text baseline
+		const centerX = x + ( textWidth / 2 );
+		const centerY = y - ( textHeight / 4 ); // Adjust for text baseline
 
 		// Apply rotation if present
 		if ( layer.rotation && layer.rotation !== 0 ) {
-			var rotationRadians = ( layer.rotation * Math.PI ) / 180;
+			const rotationRadians = ( layer.rotation * Math.PI ) / 180;
 			this.ctx.translate( centerX, centerY );
 			this.ctx.rotate( rotationRadians );
 			// Adjust drawing position to account for center rotation
@@ -383,18 +396,18 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 	LayersViewer.prototype.renderRectangle = function ( layer ) {
 		this.ctx.save();
 
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var width = layer.width || 0;
-		var height = layer.height || 0;
-		var strokeW = layer.strokeWidth || 1;
+		let x = layer.x || 0;
+		let y = layer.y || 0;
+		const width = layer.width || 0;
+		const height = layer.height || 0;
+		let strokeW = layer.strokeWidth || 1;
 		if ( this.baseWidth && this.baseHeight ) {
-			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
-			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			const sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			const sy = ( this.canvas.height || 1 ) / this.baseHeight;
 			strokeW = strokeW * ( ( sx + sy ) / 2 );
 		}
 
-		var hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
 		if ( hasRotation ) {
 			// rotate around rectangle center
 			this.ctx.translate( x + width / 2, y + height / 2 );
@@ -448,10 +461,10 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			var sw = layer.strokeWidth || 1;
+			let sw = layer.strokeWidth || 1;
 			if ( this.baseWidth && this.baseHeight ) {
-				var sx2 = ( this.canvas.width || 1 ) / this.baseWidth;
-				var sy2 = ( this.canvas.height || 1 ) / this.baseHeight;
+				const sx2 = ( this.canvas.width || 1 ) / this.baseWidth;
+				const sy2 = ( this.canvas.height || 1 ) / this.baseHeight;
 				sw = sw * ( ( sx2 + sy2 ) / 2 );
 			}
 			this.ctx.lineWidth = sw;
@@ -467,10 +480,10 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		this.ctx.save();
 		
 		this.ctx.strokeStyle = layer.stroke || '#000000';
-		var sw = layer.strokeWidth || 1;
+		let sw = layer.strokeWidth || 1;
 		if ( this.baseWidth && this.baseHeight ) {
-			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
-			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			const sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			const sy = ( this.canvas.height || 1 ) / this.baseHeight;
 			sw = sw * ( ( sx + sy ) / 2 );
 		}
 		this.ctx.lineWidth = sw;
@@ -488,21 +501,21 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		
 		this.ctx.strokeStyle = layer.stroke || '#000000';
 		this.ctx.fillStyle = layer.stroke || '#000000';
-		var sw = layer.strokeWidth || 1;
-		var arrowSize = layer.arrowSize || 10;
+		let sw = layer.strokeWidth || 1;
+		let arrowSize = layer.arrowSize || 10;
 		if ( this.baseWidth && this.baseHeight ) {
-			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
-			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
-			var avg = ( sx + sy ) / 2;
+			const sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			const sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			const avg = ( sx + sy ) / 2;
 			sw = sw * avg;
 			arrowSize = arrowSize * avg;
 		}
 		this.ctx.lineWidth = sw;
 
-		var x1 = layer.x1 || 0;
-		var y1 = layer.y1 || 0;
-		var x2 = layer.x2 || 0;
-		var y2 = layer.y2 || 0;
+		const x1 = layer.x1 || 0;
+		const y1 = layer.y1 || 0;
+		const x2 = layer.x2 || 0;
+		const y2 = layer.y2 || 0;
 
 		// Draw line
 		this.ctx.beginPath();
@@ -511,8 +524,8 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		this.ctx.stroke();
 
 		// Draw arrow head
-		var angle = Math.atan2( y2 - y1, x2 - x1 );
-		var arrowAngle = Math.PI / 6;
+		const angle = Math.atan2( y2 - y1, x2 - x1 );
+		const arrowAngle = Math.PI / 6;
 
 		this.ctx.beginPath();
 		this.ctx.moveTo( x2, y2 );
@@ -541,10 +554,10 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 	LayersViewer.prototype.renderEllipse = function ( layer ) {
 		this.ctx.save();
 		
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var radiusX = layer.radiusX || layer.width / 2 || 0;
-		var radiusY = layer.radiusY || layer.height / 2 || 0;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const radiusX = layer.radiusX || layer.width / 2 || 0;
+		const radiusY = layer.radiusY || layer.height / 2 || 0;
 
 		// Build the ellipse path under a scaled transform
 		this.ctx.translate( x, y );
@@ -569,10 +582,10 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			var ellipseStroke = layer.strokeWidth || 1;
+			let ellipseStroke = layer.strokeWidth || 1;
 			if ( this.baseWidth && this.baseHeight ) {
-				var ellipseSx = ( this.canvas.width || 1 ) / this.baseWidth;
-				var ellipseSy = ( this.canvas.height || 1 ) / this.baseHeight;
+				const ellipseSx = ( this.canvas.width || 1 ) / this.baseWidth;
+				const ellipseSy = ( this.canvas.height || 1 ) / this.baseHeight;
 				ellipseStroke = ellipseStroke * ( ( ellipseSx + ellipseSy ) / 2 );
 			}
 			this.ctx.lineWidth = ellipseStroke;
@@ -585,19 +598,19 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 	};
 
 	LayersViewer.prototype.renderPolygon = function ( layer ) {
-		var sides = layer.sides || 6;
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var radius = layer.radius || 50;
+		const sides = layer.sides || 6;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const radius = layer.radius || 50;
 
 		this.ctx.save();
 		
 		this.ctx.beginPath();
 
-		for ( var i = 0; i < sides; i++ ) {
-			var angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-			var px = x + radius * Math.cos( angle );
-			var py = y + radius * Math.sin( angle );
+		for ( let i = 0; i < sides; i++ ) {
+			const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
+			const px = x + radius * Math.cos( angle );
+			const py = y + radius * Math.sin( angle );
 
 			if ( i === 0 ) {
 				this.ctx.moveTo( px, py );
@@ -623,10 +636,10 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			var polygonStroke = layer.strokeWidth || 1;
+			let polygonStroke = layer.strokeWidth || 1;
 			if ( this.baseWidth && this.baseHeight ) {
-				var polySx = ( this.canvas.width || 1 ) / this.baseWidth;
-				var polySy = ( this.canvas.height || 1 ) / this.baseHeight;
+				const polySx = ( this.canvas.width || 1 ) / this.baseWidth;
+				const polySy = ( this.canvas.height || 1 ) / this.baseHeight;
 				polygonStroke = polygonStroke * ( ( polySx + polySy ) / 2 );
 			}
 			this.ctx.lineWidth = polygonStroke;
@@ -639,21 +652,21 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 	};
 
 	LayersViewer.prototype.renderStar = function ( layer ) {
-		var points = layer.points || 5;
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var outerRadius = layer.outerRadius || layer.radius || 50;
-		var innerRadius = layer.innerRadius || outerRadius * 0.5;
+		const points = layer.points || 5;
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const outerRadius = layer.outerRadius || layer.radius || 50;
+		const innerRadius = layer.innerRadius || outerRadius * 0.5;
 
 		this.ctx.save();
 		
 		this.ctx.beginPath();
 
-		for ( var i = 0; i < points * 2; i++ ) {
-			var angle = ( i * Math.PI ) / points - Math.PI / 2;
-			var radius = i % 2 === 0 ? outerRadius : innerRadius;
-			var px = x + radius * Math.cos( angle );
-			var py = y + radius * Math.sin( angle );
+		for ( let i = 0; i < points * 2; i++ ) {
+			const angle = ( i * Math.PI ) / points - Math.PI / 2;
+			const radius = i % 2 === 0 ? outerRadius : innerRadius;
+			const px = x + radius * Math.cos( angle );
+			const py = y + radius * Math.sin( angle );
 
 			if ( i === 0 ) {
 				this.ctx.moveTo( px, py );
@@ -679,10 +692,10 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 
 		if ( layer.stroke ) {
 			this.ctx.strokeStyle = layer.stroke;
-			var starStroke = layer.strokeWidth || 1;
+			let starStroke = layer.strokeWidth || 1;
 			if ( this.baseWidth && this.baseHeight ) {
-				var starSx = ( this.canvas.width || 1 ) / this.baseWidth;
-				var starSy = ( this.canvas.height || 1 ) / this.baseHeight;
+				const starSx = ( this.canvas.width || 1 ) / this.baseWidth;
+				const starSy = ( this.canvas.height || 1 ) / this.baseHeight;
 				starStroke = starStroke * ( ( starSx + starSy ) / 2 );
 			}
 			this.ctx.lineWidth = starStroke;
@@ -709,7 +722,7 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		this.ctx.beginPath();
 		this.ctx.moveTo( layer.points[ 0 ].x, layer.points[ 0 ].y );
 
-		for ( var i = 1; i < layer.points.length; i++ ) {
+		for ( let i = 1; i < layer.points.length; i++ ) {
 			this.ctx.lineTo( layer.points[ i ].x, layer.points[ i ].y );
 		}
 

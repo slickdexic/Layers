@@ -23,16 +23,24 @@ describe('LayerPanel confirmation flows', () => {
 
     function buildPanel() {
         const panel = Object.create(LayerPanel.prototype);
+        // Mock StateManager for state access
+        const mockStateManager = {
+            get: jest.fn().mockImplementation((key) => {
+                if (key === 'selectedLayerIds') return ['layer-1'];
+                return null;
+            }),
+            set: jest.fn()
+        };
         panel.editor = {
             removeLayer: jest.fn(),
-            saveState: jest.fn()
+            saveState: jest.fn(),
+            stateManager: mockStateManager
         };
         panel.renderLayerList = jest.fn();
         panel.updateCodePanel = jest.fn();
         panel.updatePropertiesPanel = jest.fn();
         panel.msg = jest.fn().mockReturnValue('Delete?');
         panel.logWarn = jest.fn();
-        panel.selectedLayerId = 'layer-1';
         return panel;
     }
 
@@ -79,7 +87,8 @@ describe('LayerPanel confirmation flows', () => {
 
         expect(panel.editor.removeLayer).toHaveBeenCalledWith('layer-1');
         expect(panel.editor.saveState).toHaveBeenCalledWith('Delete Layer');
-        expect(panel.selectedLayerId).toBeNull();
+        // Selection should be cleared via StateManager
+        expect(panel.editor.stateManager.set).toHaveBeenCalledWith('selectedLayerIds', []);
         expect(panel.updatePropertiesPanel).toHaveBeenCalledWith(null);
     });
 });
