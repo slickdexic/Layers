@@ -194,6 +194,7 @@
 				"ModuleRegistry.js",
 				"CanvasUtilities.js",
 				"CanvasEvents.js",
+				"ImageLoader.js",
 				"canvas/ZoomPanController.js",
 				"canvas/GridRulersController.js",
 				"canvas/TransformController.js",

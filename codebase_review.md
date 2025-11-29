@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Comprehensive Code Review
 
-**Review Date:** November 27, 2025  
+**Review Date:** November 29, 2025  
 **Version:** 0.8.1-dev  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5 Preview)  
 **Review Type:** Deep Critical Analysis  
@@ -9,24 +9,27 @@
 
 ## Executive Summary
 
-The "Layers" extension is a MediaWiki extension for non-destructive image annotation. While the **backend has solid security foundations**, the **frontend suffers from critical architectural debt** that creates significant maintenance burden, testing difficulties, and scalability concerns.
+The "Layers" extension is a MediaWiki extension for non-destructive image annotation. While the **backend has solid security foundations**, the **frontend suffers from significant architectural debt** that creates maintenance burden, testing difficulties, and scalability concerns.
 
-**Overall Assessment: 4.5/10** — The extension functions but carries severe technical debt. The backend is reasonably production-ready; the frontend requires substantial refactoring before being maintainable at scale.
+**Overall Assessment: 5/10** — The extension functions and has made some progress on technical debt, but still carries significant issues. The backend is reasonably production-ready; the frontend requires continued refactoring for maintainability at scale.
 
 **Key Strengths:**
-- Backend security (CSRF, rate limiting, strict validation)
-- 1,178 passing tests with 53% coverage (inflated by utility classes)
-- Zero ESLint warnings
-- Good documentation in copilot-instructions.md
+- Backend security (CSRF, rate limiting, strict property whitelist validation)
+- 1,202 passing Jest tests with 53.4% statement coverage
+- Canvas controllers extracted with excellent coverage (97%+)
+- Zero ESLint errors
+- Comprehensive documentation in copilot-instructions.md
+- ErrorHandler is now properly integrated (6 call sites)
+- Integration tests added for save/load workflow
 
 **Critical Issues:**
-- **4,048-line CanvasManager.js god class** with only 22% coverage
+- **4,003-line CanvasManager.js god class** with only 22% coverage
 - **2,001-line WikitextHooks.php** with highly repetitive code
-- **IIFE pattern with 29+ window globals** blocking ES module adoption
-- **Performance infrastructure defined but 100% unused** (dirty regions, layer caching)
-- **Three separate undo/redo implementations** creating conflict potential
-- **20+ empty catch blocks** silently swallowing errors
-- **ErrorHandler exists but is never used** by editor modules
+- **IIFE pattern with 48 unique window.* exports** blocking ES module adoption
+- **Performance infrastructure defined but 100% unused** (dirtyRegion, layersCache never called)
+- **Dead code in LayersEditor** (undoStack/redoStack declared at line 379-380 but never used)
+- **4 remaining empty catch blocks** silently swallowing errors
+- **Documentation claims features that don't exist** (e.g., MODULAR_ARCHITECTURE.md claims `markDirtyRegion()` method)
 
 **Detailed improvement tasks are documented in [`improvement_plan.md`](./improvement_plan.md).**
 
@@ -36,27 +39,27 @@ The "Layers" extension is a MediaWiki extension for non-destructive image annota
 
 | Category | Score | Status | Notes |
 |----------|-------|--------|-------|
-| Architecture & Design | 3/10 | 🔴 Poor | God classes, IIFE globals, no ES modules, triplicate history systems |
-| Code Quality | 6/10 | 🟡 Fair | 0 ESLint warnings, but 20+ empty catch blocks |
-| Security | 8/10 | 🟢 Good | Defense-in-depth backend, but frontend TODOs unresolved |
-| Performance | 2/10 | 🔴 Poor | dirtyRegion/layersCache defined but **never used** |
+| Architecture & Design | 4/10 | 🔴 Poor | God classes, IIFE globals, no ES modules |
+| Code Quality | 6/10 | 🟡 Fair | 0 ESLint errors, but dead code and empty catches remain |
+| Security | 8/10 | 🟢 Good | Defense-in-depth backend, comprehensive validation |
+| Performance | 2/10 | 🔴 Poor | dirtyRegion/layersCache defined but **never implemented** |
 | Accessibility | 5/10 | 🟡 Fair | Documented but canvas fundamentally inaccessible |
-| Documentation | 7/10 | 🟢 Good | copilot-instructions.md is comprehensive |
+| Documentation | 6/10 | 🟡 Fair | Good guides but some docs claim non-existent features |
 | Testing | 5/10 | 🟡 Fair | Core modules severely undertested (14-22% coverage) |
-| Error Handling | 3/10 | 🔴 Poor | ErrorHandler unused; 20+ empty catch blocks |
-| Maintainability | 3/10 | 🔴 Poor | God classes, triplicate systems make changes high-risk |
+| Error Handling | 5/10 | 🟡 Fair | ErrorHandler now used, but 4 empty catches remain |
+| Maintainability | 4/10 | 🔴 Poor | God classes make changes high-risk |
 
 ---
 
 ## 🔴 Critical Issues (Production Blockers)
 
-### 1. CanvasManager.js: 4,048-Line God Class
+### 1. CanvasManager.js: 4,003-Line God Class
 
 **Severity:** 🔴 CRITICAL
 
 ```bash
 $ wc -l resources/ext.layers.editor/CanvasManager.js
-4048
+4003
 ```
 
 This single file handles **at least 15 distinct responsibilities**:
@@ -66,7 +69,6 @@ This single file handles **at least 15 distinct responsibilities**:
 - Selection state and manipulation
 - Zoom and pan functionality
 - Grid and ruler display
-- Undo/redo history (one of THREE implementations!)
 - Clipboard operations
 - Drawing mode state machine
 - Tool management delegation
@@ -75,6 +77,7 @@ This single file handles **at least 15 distinct responsibilities**:
 - Image loading
 - Coordinate transformation
 - Error logging
+- Undo/redo bridge methods
 
 **Test Coverage: Only 22.24%** — Testing this monolith is extremely difficult.
 
@@ -85,7 +88,7 @@ This single file handles **at least 15 distinct responsibilities**:
 - Coverage will never improve without splitting
 - Debugging is a nightmare
 
-**Six controllers were previously extracted** (ZoomPanController, GridRulersController, TransformController, HitTestController, DrawingController, ClipboardController) achieving **97-100% coverage**, proving the pattern works. Yet CanvasManager remains at 4,000+ lines with extensive fallback implementations that duplicate the controller logic.
+**Six controllers were previously extracted** (ZoomPanController, GridRulersController, TransformController, HitTestController, DrawingController, ClipboardController) achieving **97-100% coverage**, proving the extraction pattern works. Yet CanvasManager remains at 4,000+ lines with extensive fallback implementations that duplicate controller logic.
 
 ---
 
@@ -109,7 +112,7 @@ Each method repeats the same regex operations and class/attribute injection logi
 
 ---
 
-### 3. IIFE Pattern with 29+ Window Globals
+### 3. IIFE Pattern with 48 Unique Window.* Exports
 
 **Severity:** 🔴 CRITICAL (Architecture)
 
@@ -123,18 +126,9 @@ Every JavaScript file uses the 2015-era IIFE pattern:
 }());
 ```
 
-The `.eslintrc.json` declares **29+ global variables** as readonly:
-
-```json
-"globals": {
-    "CanvasRenderer": "readonly",
-    "LayersSelectionManager": "readonly",
-    "ZoomPanController": "readonly",
-    // ... 26 more
-}
-```
-
-**Actual `window.` assignments in codebase: 233+ occurrences**
+**Actual counts:**
+- Total `window.` references in JS files: **250**
+- Unique `window.X =` assignments: **48**
 
 **Problems:**
 - No explicit dependency management
@@ -154,15 +148,16 @@ The `.eslintrc.json` declares **29+ global variables** as readonly:
 CanvasManager.js lines 37-42 define performance optimization variables:
 
 ```javascript
-this.dirtyRegion = null;          // ❌ NEVER ASSIGNED OR READ
-this.animationFrameId = null;     // ❌ NEVER ASSIGNED OR READ
-this.layersCache = Object.create(null);  // ❌ NEVER ASSIGNED OR READ
+this.dirtyRegion = null;          // ❌ NEVER USED (grep: 1 occurrence - only declaration)
+this.animationFrameId = null;     // ❌ NEVER USED
+this.layersCache = Object.create(null);  // ❌ NEVER USED (grep: 1 occurrence - only declaration)
 this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 }; // ❌ NEVER USED
 ```
 
-**Grep verification:**
+**Verification:**
 - `dirtyRegion` appears **only once** (the declaration)
 - `layersCache` appears **only once** (the declaration)
+- `markDirtyRegion()` **does not exist** despite being documented in MODULAR_ARCHITECTURE.md
 
 Every canvas change triggers a **full redraw** via `performRedraw()`. For images with many layers or complex paths:
 - Laggy interactions during drawing
@@ -170,73 +165,44 @@ Every canvas change triggers a **full redraw** via `performRedraw()`. For images
 - Poor performance on mobile devices
 - No frame throttling
 
-The documentation (`MODULAR_ARCHITECTURE.md`) claims dirty region tracking exists — this is false.
+**Documentation Mismatch:** `docs/MODULAR_ARCHITECTURE.md` claims features like "Dirty Region Tracking" and `markDirtyRegion()` that simply don't exist in the codebase. This misleading documentation is a red flag.
 
 ---
 
-### 5. Three Separate Undo/Redo Implementations
+### 5. Dead Code: Unused Undo/Redo Stacks in LayersEditor
 
-**Severity:** 🔴 HIGH
+**Severity:** 🟡 HIGH
 
-| Location | Implementation |
-|----------|---------------|
-| `HistoryManager.js` | 524 lines - Primary implementation |
-| `LayersEditor.js:255-277` | `undo()` and `redo()` methods |
-| `CanvasManager.js:2268-2326` | Separate `undo()` and `redo()` implementations |
-
+LayersEditor.js lines 379-381:
 ```javascript
-// LayersEditor.js:255
-LayersEditor.prototype.undo = function () { ... }
-
-// CanvasManager.js:2268  
-CanvasManager.prototype.undo = function () { ... }
-
-// HistoryManager.js:131
-HistoryManager.prototype.undo = function () { ... }
+// Initialize undo/redo system
+this.undoStack = [];
+this.redoStack = [];
+this.maxUndoSteps = 50;
 ```
 
-**Problems:**
-- Unclear which implementation gets called when
-- State can become inconsistent between systems
-- History arrays may diverge
-- Testing is complicated by multiple paths
-- Memory usage is multiplied
+These arrays are **declared but never populated**. The actual undo/redo system uses HistoryManager correctly. This dead code:
+- Allocates memory for unused arrays
+- Confuses developers about which system to use
+- Creates maintenance overhead
+- Is cleaned up at destroy (lines 1398-1399) despite never being used
 
 ---
 
-### 6. Error Handling: ErrorHandler Exists but is Never Used
+### 6. Remaining Empty Catch Blocks
 
-**Severity:** 🔴 HIGH
+**Severity:** 🟡 HIGH
 
-`ErrorHandler.js` (556 lines) provides comprehensive error handling:
+After previous cleanup, 4 empty catch blocks remain:
 
-```javascript
-window.ErrorHandler = ErrorHandler;
-```
+| Location | Line | Context |
+|----------|------|---------|
+| CanvasRenderer.js | 187 | `} catch ( _e ) {}` |
+| LayersViewer.js | 127 | `} catch ( e ) {}` |
+| init.js | 31 | `} catch ( e ) {}` |
+| init.js | 768 | `} catch ( e ) {}` |
 
-However, searching the editor modules shows **zero usage**:
-
-| File | Uses ErrorHandler | Empty catch blocks |
-|------|-------------------|-------------------|
-| CanvasManager.js | ❌ No | 2 |
-| LayersEditor.js | ❌ No | 4 |
-| CanvasEvents.js | ❌ No | 0 |
-| LayerPanel.js | ❌ No | 3 |
-| TransformController.js | ❌ No | 1 |
-| LayersViewer.js | ❌ No | 4 |
-| ValidationManager.js | ❌ No | 1 |
-| Toolbar.js | ❌ No | 2 |
-| ColorPickerDialog.js | ❌ No | 2 |
-| PropertiesForm.js | ❌ No | 1 |
-
-**Total: 20+ empty catch blocks swallowing errors silently**
-
-Example patterns found:
-```javascript
-} catch ( _e ) { /* ignore */ }
-} catch ( _err ) {}
-} catch ( e ) {}
-```
+These silent failures mask bugs and make debugging difficult.
 
 ---
 
@@ -246,10 +212,10 @@ Example patterns found:
 
 | File | Lines | Coverage | Risk Assessment |
 |------|-------|----------|-----------------|
-| CanvasManager.js | 4,048 | 22.24% | 🔴 Critical - core functionality |
-| LayersEditor.js | 1,660 | 14.62% | 🔴 High - main orchestrator |
+| CanvasManager.js | 4,003 | 22.24% | 🔴 Critical - core functionality |
+| LayersEditor.js | 1,707 | 14.62% | 🔴 High - main orchestrator |
 | CanvasEvents.js | 547 | 19.15% | 🔴 High - user interactions |
-| Toolbar.js | 1,671 | ~30% | 🟡 Medium - UI |
+| Toolbar.js | 1,674 | ~30% | 🟡 Medium - UI |
 | LayerPanel.js | 1,091 | 50.21% | 🟡 Fair |
 
 Meanwhile, extracted canvas controllers have **97-100% coverage**, proving the god class structure is the problem.
@@ -258,19 +224,21 @@ Meanwhile, extracted canvas controllers have **97-100% coverage**, proving the g
 
 ---
 
-### 8. Security TODOs in Production Code
+### 8. Documentation Inaccuracies
 
 **Severity:** 🟡 HIGH
 
-```javascript
-// resources/ext.layers.editor/LayersEditor.js:1082
-// TODO: Implement more comprehensive keyboard navigation and screen reader support
+`docs/MODULAR_ARCHITECTURE.md` contains several claims about features that don't exist:
 
-// resources/ext.layers.editor/LayersEditor.js:1092
-// TODO: Ensure all user-generated content is sanitized before rendering in the DOM or canvas
-```
+| Claimed Feature | Reality |
+|-----------------|---------|
+| `markDirtyRegion()` method | Does not exist |
+| "Dirty Region Tracking" | Not implemented |
+| `renderLayersOptimized()` | Does not exist |
+| `needsFullRedraw()` | Does not exist |
+| "Selective layer rendering" | Not implemented |
 
-The sanitization TODO is particularly concerning. While backend validation exists via `ServerSideLayerValidator.php` and `TextSanitizer.php`, the frontend rendering path should also sanitize.
+This misleading documentation can waste developer time and create false confidence in the codebase.
 
 ---
 
@@ -308,17 +276,16 @@ However, components bypass it:
 | Component | Bypasses StateManager |
 |-----------|----------------------|
 | CanvasManager | Maintains own `selectedLayerIds`, `currentTool`, `zoom`, `pan` |
-| LayerPanel | Sometimes calls canvas directly |
-| HistoryManager | Has own layer snapshot array |
-| Toolbar | Direct canvas manipulation |
+| LayersEditor | Has unused local undoStack/redoStack |
+| Toolbar | Direct canvas manipulation in some cases |
 
 The migration is incomplete, leading to potential state inconsistencies.
 
 ---
 
-### 11. Magic Numbers with Silent Fallbacks
+### 11. Silent Constant Fallbacks
 
-Constants fail silently:
+Constants fail silently in multiple places:
 
 ```javascript
 // resources/ext.layers.editor/ui/PropertiesForm.js:604
@@ -329,11 +296,18 @@ const LIMITS = window.LayersConstants ? window.LayersConstants.LIMITS : {};
 
 If `LayersConstants` fails to load, code continues with empty objects instead of failing fast. This masks configuration issues.
 
+**Note:** A dependency validation function was added to LayersEditor but it logs warnings rather than blocking, so silent failures can still occur in edge cases.
+
 ---
 
-### 12. Canvas Accessibility is Fundamentally Limited
+### 12. PHP Code Style Warnings
 
-The `<canvas>` element is inherently inaccessible to screen readers. `docs/ACCESSIBILITY.md` documents this honestly but the layer panel could serve as an accessible alternative — this is not implemented.
+Running `npm run test:php` produces multiple warnings:
+- Comments formatting issues (SpaceBeforeSingleLineComment)
+- Line length warnings (Generic.Files.LineLength)
+- assertEmpty usage warnings (PHPUnit assertions)
+
+While not blocking, these indicate inconsistent code style.
 
 ---
 
@@ -365,25 +339,37 @@ The `<canvas>` element is inherently inaccessible to screen readers. `docs/ACCES
 
 ---
 
-### Test Suite (Good Numbers, Poor Distribution)
+### Test Suite Progress
 
-- **1,178 tests passing**
-- **53.4% statement coverage** (misleading — see distribution)
+- **1,202 tests passing** (up from 1,178)
+- **53.4% statement coverage**
 - Canvas controllers: 97-100% coverage
 - StateManager: 85% coverage
 - GeometryUtils: 96% coverage
 - ValidationManager: 99% coverage
+- **New integration tests added** for save/load workflow (24 tests)
 
-**But core modules are dangerously undertested.**
+**But core modules remain dangerously undertested.**
 
 ---
 
-### Documentation (Good)
+### Error Handling Improvements
 
-- `.github/copilot-instructions.md`: Comprehensive 500+ line guide
-- `docs/ACCESSIBILITY.md`: Honest about limitations
-- `docs/MODULAR_ARCHITECTURE.md`: Architecture overview (though claims don't match reality)
-- Inline JSDoc on ~40% of functions
+ErrorHandler is now properly integrated with 6 call sites:
+- LayerPanel.js (dialog cleanup, properties sync)
+- Toolbar.js (dialog cleanup)
+- TransformController.js (transform events)
+- CanvasManager.js (transform events)
+- APIManager.js (API errors)
+
+---
+
+### Documentation
+
+- `.github/copilot-instructions.md`: Comprehensive 500+ line contributor guide
+- `docs/ACCESSIBILITY.md`: Honest about canvas limitations
+- API contracts well-documented in copilot-instructions.md
+- Good inline JSDoc coverage on utility functions
 
 ---
 
@@ -392,41 +378,43 @@ The `<canvas>` element is inherently inaccessible to screen readers. `docs/ACCES
 | Metric | Value | Assessment |
 |--------|-------|------------|
 | JavaScript files (editor) | 36+ files | Fragmented |
-| Total JS lines (editor) | 19,920 | High complexity |
-| Largest JS file | 4,048 lines | 🔴 God class |
-| Second largest JS file | 1,671 lines | 🟡 Large |
+| Total JS lines (editor) | ~20,000 | High complexity |
+| Largest JS file | 4,003 lines | 🔴 God class |
+| Second largest JS file | 1,707 lines | 🟡 Large |
 | PHP source files | ~20 files | Reasonable |
 | Largest PHP file | 2,001 lines | 🔴 God class |
-| Jest tests | 1,178 | Good count |
-| Jest coverage | 53.4% | Misleading (inflated) |
+| Jest tests | 1,202 | Good count |
+| Jest statement coverage | 53.4% | Misleading (inflated) |
 | Core module coverage | 14-22% | 🔴 Dangerous |
-| ESLint warnings | 0 | ✅ Clean |
-| Window globals | 29+ declared, 233+ assignments | 🔴 Excessive |
-| Empty catch blocks | 20+ | 🔴 Error hiding |
-| Undo/redo implementations | 3 separate | 🔴 Duplicative |
+| ESLint errors | 0 | ✅ Clean |
+| Window.* exports | 48 unique | 🔴 Excessive |
+| Empty catch blocks | 4 remaining | 🟡 Needs attention |
+| Dead code | undoStack/redoStack, dirtyRegion, layersCache | 🟡 Cleanup needed |
 
 ---
 
 ## Conclusion
 
-The Layers extension demonstrates **adequate backend engineering** with defense-in-depth security, but the **frontend has accumulated severe technical debt** that will impede future development.
+The Layers extension has made progress since the last review:
+- ErrorHandler integration improved
+- Integration tests added
+- Undo/redo routing consolidated (though dead code remains)
+- Some empty catch blocks fixed
 
-**Critical observations:**
+However, **fundamental architectural issues remain unaddressed**:
 
-1. The 4,048-line `CanvasManager.js` is the single biggest risk — any change carries high regression probability
-2. Performance optimization infrastructure was planned but **never implemented**
-3. Three separate undo/redo systems create conflict potential
-4. 20+ empty catch blocks mean errors are silently swallowed
-5. The `ErrorHandler` class exists but is completely unused
-6. 29+ window globals make dependency management impossible
-7. Test coverage numbers are misleading — core modules have 14-22% coverage
+1. The **4,003-line CanvasManager.js** is still the single biggest risk — any change carries high regression probability
+2. **Performance optimization was planned but never implemented** — the infrastructure is dead code
+3. **48 window.* exports** make the codebase a maintenance nightmare
+4. **Documentation makes false claims** about features that don't exist
+5. **Core modules have 14-22% coverage** while the overall number looks acceptable
 
 **Before production deployment at scale:**
-1. Split CanvasManager.js (reduces risk, enables testing)
-2. Implement actual performance optimization (dirty regions)
-3. Consolidate undo/redo into single StateManager-based solution
-4. Replace empty catch blocks with ErrorHandler calls
-5. Address security TODOs
+1. Split CanvasManager.js into focused modules (reduces risk, enables testing)
+2. Either implement dirty region rendering OR remove the dead code
+3. Remove dead undo/redo stacks from LayersEditor
+4. Fix remaining 4 empty catch blocks
+5. Update MODULAR_ARCHITECTURE.md to reflect reality
 
 **For long-term health:**
 1. Migrate from IIFE to ES modules
@@ -434,8 +422,8 @@ The Layers extension demonstrates **adequate backend engineering** with defense-
 3. Consolidate event systems
 4. Complete StateManager migration
 
-The extension works today for simple use cases, but scaling or onboarding new contributors will be extremely difficult without addressing these structural issues.
+The extension works for simple use cases today, but scaling or onboarding new contributors will be extremely difficult without addressing these structural issues.
 
 ---
 
-*Review performed by GitHub Copilot using Claude Opus 4.5 (Preview) on November 27, 2025*
+*Review performed by GitHub Copilot using Claude Opus 4.5 (Preview) on November 29, 2025*

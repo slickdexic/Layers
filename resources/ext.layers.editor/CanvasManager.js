@@ -34,13 +34,9 @@
 		this.isDrawing = false;
 		this.startPoint = null;
 
-		// Performance optimization properties
-		this.dirtyRegion = null; // Track dirty regions to avoid full redraws
-		this.animationFrameId = null; // For requestAnimationFrame
+		// Note: Performance optimizations like dirty region tracking and layer caching
+		// can be added in RenderCoordinator.js when needed. See improvement_plan.md #0.2
 		this.redrawScheduled = false; // Prevent multiple redraws in same frame
-		// Use a plain object for cache to satisfy environments without ES2015 Map
-		this.layersCache = Object.create( null ); // Cache rendered layers
-		this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 }; // For culling
 
 		// Selection and manipulation state
 		// NOTE: selectedLayerId and selectedLayerIds are now managed via StateManager
@@ -289,149 +285,73 @@
 		} );
 	};
 
+	/**
+	 * Load background image using ImageLoader module
+	 * Delegates to ImageLoader for URL detection and loading with fallbacks
+	 */
 	CanvasManager.prototype.loadBackgroundImage = function () {
+		const self = this;
 		const filename = this.editor.filename;
 		const backgroundImageUrl = this.config.backgroundImageUrl;
-		const imageUrls = [];
 
-		// Priority 1: Use the specific background image URL from config
-		if ( backgroundImageUrl ) {
-			imageUrls.push( backgroundImageUrl );
-		}
+		// Get ImageLoader class
+		const ImageLoaderClass = ( typeof ImageLoader !== 'undefined' ) ? ImageLoader :
+			( ( typeof window !== 'undefined' && window.ImageLoader ) ? window.ImageLoader : null );
 
-		// Priority 2: Try to find the current page image
-		const pageImages = document.querySelectorAll( '.mw-file-element img, .fullImageLink img, .filehistory img, img[src*="' + filename + '"]' );
-		if ( pageImages.length > 0 ) {
-			for ( let i = 0; i < pageImages.length; i++ ) {
-				const imgSrc = pageImages[ i ].src;
-				if ( imgSrc && imageUrls.indexOf( imgSrc ) === -1 ) {
-					imageUrls.push( imgSrc );
-				}
-			}
-		}
-
-		// Priority 3: Try MediaWiki patterns if mw is available
-		if (
-			filename && typeof mw !== 'undefined' && mw && mw.config &&
-			mw.config.get( 'wgServer' ) && mw.config.get( 'wgScriptPath' )
-		) {
-			const mwUrls = [
-				mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
-				'/index.php?title=Special:Redirect/file/' + encodeURIComponent( filename ),
-
-				mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
-				'/index.php?title=File:' + encodeURIComponent( filename )
-			];
-
-			if ( mw.config.get( 'wgArticlePath' ) ) {
-				mwUrls.push(
-					mw.config.get( 'wgServer' ) + mw.config.get( 'wgArticlePath' ).replace( '$1', 'File:' + encodeURIComponent( filename ) )
-				);
-			}
-
-			mwUrls.forEach( function ( url ) {
-				if ( imageUrls.indexOf( url ) === -1 ) {
-					imageUrls.push( url );
+		if ( ImageLoaderClass ) {
+			// Use ImageLoader module
+			this.imageLoader = new ImageLoaderClass( {
+				filename: filename,
+				backgroundImageUrl: backgroundImageUrl,
+				onLoad: function ( image, info ) {
+					self.handleImageLoaded( image, info );
+				},
+				onError: function () {
+					self.handleImageLoadError();
 				}
 			} );
-		}
-
-		// If we have URLs to try, start loading
-		if ( imageUrls.length > 0 ) {
-			this.tryLoadImage( imageUrls, 0 );
+			this.imageLoader.load();
 		} else {
-			this.useTestImage();
+			// Fallback for environments without ImageLoader
+			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+				mw.log.warn( '[CanvasManager] ImageLoader not found, using fallback' );
+			}
+			this.loadBackgroundImageFallback();
 		}
 	};
 
-	CanvasManager.prototype.tryLoadImage = function ( urls, index ) {
-		const self = this;
+	/**
+	 * Handle successful image load from ImageLoader
+	 * @param {HTMLImageElement} image - The loaded image
+	 * @param {Object} info - Load info (width, height, source, etc.)
+	 */
+	CanvasManager.prototype.handleImageLoaded = function ( image, info ) {
+		this.backgroundImage = image;
 
-		if ( index >= urls.length ) {
-			this.useTestImage();
-			return;
+		// Pass image to renderer
+		if ( this.renderer ) {
+			this.renderer.setBackgroundImage( this.backgroundImage );
 		}
 
-		const currentUrl = urls[ index ];
-		this.backgroundImage = new Image();
-		this.backgroundImage.crossOrigin = 'anonymous'; // Allow cross-origin images
+		// Set canvas size to match the image
+		this.canvas.width = info.width || image.width || 800;
+		this.canvas.height = info.height || image.height || 600;
 
-		this.backgroundImage.onload = function () {
-			//  self.backgroundImage.width, 'x', self.backgroundImage.height );
+		// Resize canvas display to fit container
+		this.resizeCanvas();
 
-			// Pass image to renderer immediately
-			if ( self.renderer ) {
-				self.renderer.setBackgroundImage( self.backgroundImage );
-			}
-
-			// Set canvas size to match the image
-			self.canvas.width = self.backgroundImage.width;
-			self.canvas.height = self.backgroundImage.height;
-			//  self.canvas.width, 'x', self.canvas.height );
-
-			// Resize canvas display to fit container
-			self.resizeCanvas();
-
-			// Draw the image and any layers
-			self.redraw();
-			if ( self.editor.layers ) {
-				self.renderLayers( self.editor.layers );
-			}
-		};
-
-		this.backgroundImage.onerror = function () {
-			// Try next URL
-			self.tryLoadImage( urls, index + 1 );
-		};
-
-		this.backgroundImage.src = currentUrl;
+		// Draw the image and any layers
+		this.redraw();
+		if ( this.editor && this.editor.layers ) {
+			this.renderLayers( this.editor.layers );
+		}
 	};
 
-	CanvasManager.prototype.useTestImage = function () {
-		const self = this;
-		// Try SVG first
-		const svgData = this.createTestImage( this.editor.filename );
-		const svgDataUrl = 'data:image/svg+xml;base64,' + btoa( svgData );
-
-		this.backgroundImage = new Image();
-		this.backgroundImage.crossOrigin = 'anonymous';
-
-		this.backgroundImage.onload = function () {
-			//  self.backgroundImage.width, 'x', self.backgroundImage.height );
-
-			// Pass image to renderer immediately
-			if ( self.renderer ) {
-				self.renderer.setBackgroundImage( self.backgroundImage );
-			}
-
-			// Set canvas size to match the image (800x600 for the test image)
-			self.canvas.width = 800;
-			self.canvas.height = 600;
-			//  self.canvas.width, 'x', self.canvas.height );
-
-			self.resizeCanvas();
-			self.redraw();
-			if ( self.editor.layers ) {
-				self.renderLayers( self.editor.layers );
-			}
-		};
-
-		this.backgroundImage.onerror = function () {
-			self.createCanvasBackground();
-		};
-
-		this.backgroundImage.src = svgDataUrl;
-
-		// Also create canvas background immediately as backup
-		setTimeout( function () {
-			if ( !self.backgroundImage || !self.backgroundImage.complete ) {
-				self.createCanvasBackground();
-			}
-		}, 1000 );
-	};
-
-	CanvasManager.prototype.createCanvasBackground = function () {
-		// Create a simple background directly on canvas when even SVG fails
+	/**
+	 * Handle image load error from ImageLoader
+	 */
+	CanvasManager.prototype.handleImageLoadError = function () {
+		// Create a simple background directly on canvas when all load attempts fail
 		this.backgroundImage = null;
 		if ( this.renderer ) {
 			this.renderer.setBackgroundImage( null );
@@ -450,19 +370,82 @@
 		}
 	};
 
-	CanvasManager.prototype.createTestImage = function ( filename ) {
-		return '<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">' +
-			'<rect width="100%" height="100%" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>' +
-			'<text x="50%" y="45%" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#495057">' +
-			( filename || 'Sample Image' ).replace( /[<>&"]/g, function ( match ) {
-				return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ match ];
-			} ) + '</text>' +
-			'<text x="50%" y="55%" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">Sample Image for Layer Editing</text>' +
-			'<circle cx="200" cy="150" r="50" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
-			'<rect x="500" y="300" width="100" height="80" fill="none" stroke="#e9ecef" stroke-width="2"/>' +
-			'<line x1="100" y1="400" x2="300" y2="500" stroke="#e9ecef" stroke-width="2"/>' +
-			'<text x="50%" y="85%" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#adb5bd">Draw shapes and text using the tools above</text>' +
-			'</svg>';
+	/**
+	 * Fallback image loading for environments without ImageLoader module
+	 * @private
+	 */
+	CanvasManager.prototype.loadBackgroundImageFallback = function () {
+		const filename = this.editor.filename;
+		const backgroundImageUrl = this.config.backgroundImageUrl;
+
+		// Build URL list
+		const imageUrls = [];
+		if ( backgroundImageUrl ) {
+			imageUrls.push( backgroundImageUrl );
+		}
+
+		// Try page images
+		const pageImages = document.querySelectorAll(
+			'.mw-file-element img, .fullImageLink img, .filehistory img, img[src*="' + filename + '"]'
+		);
+		for ( let i = 0; i < pageImages.length; i++ ) {
+			const imgSrc = pageImages[ i ].src;
+			if ( imgSrc && imageUrls.indexOf( imgSrc ) === -1 ) {
+				imageUrls.push( imgSrc );
+			}
+		}
+
+		// Try MediaWiki URLs
+		if ( filename && typeof mw !== 'undefined' && mw.config ) {
+			const server = mw.config.get( 'wgServer' );
+			const scriptPath = mw.config.get( 'wgScriptPath' );
+			if ( server && scriptPath ) {
+				imageUrls.push(
+					server + scriptPath + '/index.php?title=Special:Redirect/file/' +
+					encodeURIComponent( filename )
+				);
+			}
+		}
+
+		// Try loading
+		if ( imageUrls.length > 0 ) {
+			this.tryLoadImageFallback( imageUrls, 0 );
+		}
+		// If no URLs found, just leave the canvas in its current state.
+		// This matches the original behavior where image loading was asynchronous
+		// and the canvas wasn't modified until an image actually loaded/failed.
+	};
+
+	/**
+	 * Fallback image loading with URL list
+	 * @param {string[]} urls - URLs to try
+	 * @param {number} index - Current index
+	 * @private
+	 */
+	CanvasManager.prototype.tryLoadImageFallback = function ( urls, index ) {
+		const self = this;
+
+		if ( index >= urls.length ) {
+			this.handleImageLoadError();
+			return;
+		}
+
+		const image = new Image();
+		image.crossOrigin = 'anonymous';
+
+		image.onload = function () {
+			self.handleImageLoaded( image, {
+				width: image.width,
+				height: image.height,
+				source: 'fallback'
+			} );
+		};
+
+		image.onerror = function () {
+			self.tryLoadImageFallback( urls, index + 1 );
+		};
+
+		image.src = urls[ index ];
 	};
 
 	CanvasManager.prototype.resizeCanvas = function () {

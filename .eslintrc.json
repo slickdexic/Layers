@@ -67,6 +67,7 @@
 				"TransformationEngine": "readonly",
 				"CanvasUtilities": "readonly",
 				"CanvasEvents": "readonly",
+				"ImageLoader": "readonly",
 				"CanvasManager": "readonly",
 				"LayerPanel": "readonly",
 				"Toolbar": "readonly",

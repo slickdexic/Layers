@@ -124,7 +124,10 @@
 		if ( this.rAFId ) {
 			try {
 				window.cancelAnimationFrame( this.rAFId );
-			} catch ( e ) {}
+			} catch ( cancelError ) {
+				// cancelAnimationFrame failed - likely invalid ID, safe to ignore
+				mw.log.warn( '[LayersViewer] cancelAnimationFrame failed:', cancelError.message );
+			}
 			this.rAFId = null;
 		}
 	};

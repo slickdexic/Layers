@@ -28,12 +28,16 @@ mw.layers = {
 		const self = this;
 		try {
 			this.debug = !!( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) );
-		} catch ( e ) {}
+		} catch ( configError ) {
+			// MediaWiki config not available - default to no debug
+			this.debug = false;
+		}
 
 		this.debugLog( 'init() starting' );
-		try {
-			this.debugLog( 'href:', String( window.location && window.location.href ) );
-		} catch ( eHref ) { /* ignore */ }
+		// Log current location for debugging (safely handle restricted contexts)
+		if ( this.debug && window.location ) {
+			this.debugLog( 'href:', String( window.location.href || '' ) );
+		}
 
 		// Initialize viewers for images annotated by server hooks
 		self.initializeLayerViewers();
@@ -765,7 +769,10 @@ mw.layers = {
 			}
 			try {
 				filename = decodeURIComponent( filename );
-			} catch ( e ) {}
+			} catch ( decodeError ) {
+				// URI decoding failed - use original filename (may have encoding issues)
+				mw.log.warn( '[Layers] Failed to decode filename URI:', decodeError.message );
+			}
 			filename = filename.replace( /_/g, ' ' );
 
 			const api = new mw.Api();

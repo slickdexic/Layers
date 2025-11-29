@@ -375,10 +375,7 @@
 		this.debugLog( '[LayersEditor] CanvasManager created:', this.canvasManager );
 		this.debugLog( '[LayersEditor] CanvasManager backgroundImageUrl:', this.imageUrl );
 
-		// Initialize undo/redo system
-		this.undoStack = [];
-		this.redoStack = [];
-		this.maxUndoSteps = 50;
+		// Note: Undo/redo is handled by HistoryManager via this.historyManager
 
 		// Load existing layers
 		this.apiManager.loadLayers().then( ( data ) => {
@@ -1395,8 +1392,6 @@
 		// Clear any cached references
 		this.layers = null;
 		this.clipboard = null;
-		this.undoStack = null;
-		this.redoStack = null;
 	};
 
 	/**
@@ -1528,6 +1523,16 @@
 		}
 	}
 
+	/**
+	 * Quick check if critical dependencies are available for editor initialization.
+	 * Used by both hook listener and auto-bootstrap to prevent premature instantiation.
+	 * @return {boolean} True if LayersConstants and CanvasManager are available
+	 */
+	function areEditorDependenciesReady() {
+		return typeof window.LayersConstants !== 'undefined' &&
+			typeof window.CanvasManager === 'function';
+	}
+
 	// Initialize editor when appropriate - ensure mw.hook is available
 	if ( typeof mw !== 'undefined' && mw.hook ) {
 		if ( mw && mw.log ) {
@@ -1535,6 +1540,18 @@
 		}
 
 		const hookListener = function ( config ) {
+			// Verify dependencies before creating editor
+			if ( !areEditorDependenciesReady() ) {
+				if ( mw && mw.log && mw.log.warn ) {
+					mw.log.warn( '[LayersEditor] Hook fired but dependencies not ready, deferring...' );
+				}
+				// Defer and retry
+				setTimeout( function () {
+					hookListener( config );
+				}, 100 );
+				return;
+			}
+
 			// Debug mode handled by debugLog method
 			document.title = '🎨 Layers Editor Initializing...';
 			try {
@@ -1601,6 +1618,10 @@
 
 	// Auto-bootstrap if server provided config via wgLayersEditorInit
 	( function autoBootstrap() {
+		// Maximum number of retry attempts for dependency loading
+		const MAX_DEPENDENCY_RETRIES = 20;
+		let dependencyRetries = 0;
+
 		function tryBootstrap() {
 			try {
 				const debug = window.mw && mw.config && mw.config.get( 'wgLayersDebug' );
@@ -1625,6 +1646,19 @@
 
 				if ( !init ) {
 					return;
+				}
+
+				// Check if dependencies are ready before proceeding
+				// Uses the shared areEditorDependenciesReady function defined above
+				if ( !areEditorDependenciesReady() ) {
+					dependencyRetries++;
+					if ( dependencyRetries < MAX_DEPENDENCY_RETRIES ) {
+						debugLog( 'Dependencies not ready (attempt ' + dependencyRetries + '/' + MAX_DEPENDENCY_RETRIES + '), retrying in 50ms...' );
+						setTimeout( tryBootstrap, 50 );
+						return;
+					}
+					// After max retries, continue anyway and let validateDependencies log the warning
+					debugLog( 'Max dependency retries reached, proceeding with available dependencies' );
 				}
 
 				const container = document.getElementById( 'layers-editor-container' );

@@ -44,16 +44,31 @@ This directory contains refactored modules extracted from `CanvasManager.js` as 
    - Paste offset handling
    - Multi-layer clipboard support
 
-### Phase 3: Utility Modules (Future)
+### Phase 3: Utility Modules (In Progress)
 
-7. **CanvasPool.js** - Canvas pooling for performance
+7. **ImageLoader.js** ✅ - Background image loading (280 lines) - NEW
+   - Located in `ext.layers.editor/ImageLoader.js` (not in this directory)
+   - URL detection from MediaWiki config and DOM
+   - Fallback URL chains for robustness
+   - SVG test image generation for offline/test environments
+   - Comprehensive test suite (30+ tests)
+
+### Phase 4: Future Enhancements
+
+8. **CanvasPool.js** - Canvas pooling for performance
    - getPooledCanvas, releasePooledCanvas
    - Pool size management
+   - Currently ~40 lines in CanvasManager (too small for separate file)
 
-8. **ViewportManager.js** - Viewport/culling management
+9. **ViewportManager.js** - Viewport/culling management
    - Viewport bounds calculation
    - Layer culling for rendering optimization
    - Dirty region tracking
+
+10. **TextInputModal.js** - Text input UI (planned)
+    - Currently ~220 lines in CanvasManager.createTextInputModal
+    - Should be moved to ui/ directory
+    - Pure DOM manipulation, no canvas logic
 
 ## Integration Pattern
 
@@ -85,6 +100,13 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 ```
 
+## Known Issues
+
+### Fallback Code Duplication
+CanvasManager still contains ~500 lines of fallback implementations that duplicate controller logic. These fallbacks were intended for environments where controllers don't load, but since extension.json guarantees loading order, they're likely unnecessary.
+
+**Recommended action:** Remove fallback implementations once controller loading is verified stable across all MediaWiki environments.
+
 ## Status
 
 - [x] Directory structure created
@@ -94,15 +116,18 @@ if (typeof module !== 'undefined' && module.exports) {
 - [x] HitTestController.js extracted (382 lines)
 - [x] DrawingController.js extracted (622 lines)
 - [x] ClipboardController.js extracted (212 lines)
+- [x] ImageLoader.js extracted (280 lines) - in parent directory
+- [ ] Remove fallback code from CanvasManager (~500 lines)
+- [ ] TextInputModal.js - move from CanvasManager (~220 lines)
 - [ ] CanvasPool.js - future enhancement
 - [ ] ViewportManager.js - future enhancement
 
-**Total extracted:** ~2,909 lines from CanvasManager.js into focused, maintainable controllers
+**Total extracted:** ~3,189 lines from CanvasManager.js into focused, maintainable modules
 
 ## Benefits Achieved
 
 1. **Separation of Concerns**: Each controller handles one responsibility
-2. **Testability**: Controllers can be unit tested independently
+2. **Testability**: Controllers can be unit tested independently (97-100% coverage)
 3. **Maintainability**: Smaller files are easier to understand and modify
 4. **Code Reuse**: Controllers can be used by other parts of the application
 5. **Backward Compatibility**: CanvasManager delegates to controllers but maintains same API
