@@ -315,14 +315,19 @@
 		Object.freeze( LayersConstants );
 	}
 
-	// Export the module
-	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = LayersConstants;
-	} else if ( typeof window !== 'undefined' ) {
+	// Export the module - ALWAYS set on window for browser compatibility
+	// ResourceLoader and other bundlers may define `module`, but we need window.* for
+	// cross-file dependencies within the same ResourceLoader module
+	if ( typeof window !== 'undefined' ) {
 		window.LayersConstants = LayersConstants;
 	}
 
-	// MediaWiki ResourceLoader support
+	// Also export via CommonJS if available (for Node.js/Jest testing)
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = LayersConstants;
+	}
+
+	// MediaWiki ResourceLoader support - also attach to mw namespace
 	if ( typeof mw !== 'undefined' && mw.loader ) {
 		mw.loader.using( [], () => {
 			mw.LayersConstants = LayersConstants;

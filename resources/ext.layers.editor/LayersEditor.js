@@ -1533,17 +1533,18 @@
 			typeof window.CanvasManager === 'function';
 	}
 
-	// Initialize editor when appropriate - ensure mw.hook is available
-	if ( typeof mw !== 'undefined' && mw.hook ) {
-		if ( mw && mw.log ) {
-			mw.log( '[LayersEditor] About to register hook listener' );
-		}
+	// Max retries for hook listener dependency checks
+	const MAX_HOOK_DEPENDENCY_RETRIES = 20;
+	let hookDependencyRetries = 0;
 
-		const hookListener = function ( config ) {
-			// Verify dependencies before creating editor
-			if ( !areEditorDependenciesReady() ) {
-				if ( mw && mw.log && mw.log.warn ) {
-					mw.log.warn( '[LayersEditor] Hook fired but dependencies not ready, deferring...' );
+	// Hook listener for editor initialization - defined outside if/else so fallback can use it
+	const hookListener = function ( config ) {
+		// Verify dependencies before creating editor
+		if ( !areEditorDependenciesReady() ) {
+			hookDependencyRetries++;
+			if ( hookDependencyRetries < MAX_HOOK_DEPENDENCY_RETRIES ) {
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+					mw.log.warn( '[LayersEditor] Hook fired but dependencies not ready (attempt ' + hookDependencyRetries + '/' + MAX_HOOK_DEPENDENCY_RETRIES + '), deferring...' );
 				}
 				// Defer and retry
 				setTimeout( function () {
@@ -1551,37 +1552,56 @@
 				}, 100 );
 				return;
 			}
-
-			// Debug mode handled by debugLog method
-			document.title = '🎨 Layers Editor Initializing...';
-			try {
-				const editor = new LayersEditor( config );
-				document.title = '🎨 Layers Editor - ' + ( config.filename || 'Unknown File' );
-				// Always set the global instance for duplicate prevention
-				window.layersEditorInstance = editor;
-				if ( window.mw && window.mw.config.get( 'debug' ) ) {
-					window.layersEditorInstance = editor;
-				}
-			} catch ( e ) {
-				// SECURITY FIX: Sanitize error message to prevent information disclosure
-				const sanitizedError = sanitizeGlobalErrorMessage( e );
-				// Use mw.log.error instead of console.error
-				if ( mw.log ) {
-					mw.log.error( '[LayersEditor] Error creating LayersEditor:', sanitizedError );
-				}
-				throw e;
+			// Max retries reached - proceed anyway and let validateDependencies handle it
+			if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+				mw.log.error( '[LayersEditor] Max dependency retries reached in hook listener, proceeding with available dependencies' );
 			}
-		};
+		}
 
+		// Debug mode handled by debugLog method
+		document.title = '🎨 Layers Editor Initializing...';
+		try {
+			const editor = new LayersEditor( config );
+			document.title = '🎨 Layers Editor - ' + ( config.filename || 'Unknown File' );
+			// Always set the global instance for duplicate prevention
+			window.layersEditorInstance = editor;
+			if ( typeof window.mw !== 'undefined' && window.mw.config && window.mw.config.get( 'debug' ) ) {
+				window.layersEditorInstance = editor;
+			}
+		} catch ( e ) {
+			// SECURITY FIX: Sanitize error message to prevent information disclosure
+			const sanitizedError = sanitizeGlobalErrorMessage( e );
+			// Use mw.log.error instead of console.error
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.error( '[LayersEditor] Error creating LayersEditor:', sanitizedError );
+			}
+			throw e;
+		}
+	};
+
+	// Initialize editor when appropriate - ensure mw.hook is available
+	if ( typeof mw !== 'undefined' && mw.hook ) {
+		if ( mw && mw.log ) {
+			mw.log( '[LayersEditor] About to register hook listener' );
+		}
 		mw.hook( 'layers.editor.init' ).add( hookListener );
 	} else {
 		// Fallback: try to add hook listener when mw becomes available
+		const MAX_MW_HOOK_RETRIES = 40; // 40 retries at 50ms = 2 seconds max
+		let mwHookRetries = 0;
 		const addHookListener = function () {
 			if ( typeof mw !== 'undefined' && mw.hook ) {
-				// ... existing fallback code ...
+				// mw.hook is available, register the listener
+				mw.hook( 'layers.editor.init' ).add( hookListener );
 			} else {
-				// Retry after a short delay
-				setTimeout( addHookListener, 50 );
+				mwHookRetries++;
+				if ( mwHookRetries < MAX_MW_HOOK_RETRIES ) {
+					// Retry after a short delay
+					setTimeout( addHookListener, 50 );
+				} else if ( typeof console !== 'undefined' && console.warn ) {
+					// Max retries reached - MediaWiki environment not available
+					console.warn( '[LayersEditor] MediaWiki hook system not available after ' + MAX_MW_HOOK_RETRIES + ' attempts' );
+				}
 			}
 		};
 		addHookListener();

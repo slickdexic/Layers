@@ -238,13 +238,14 @@
 		return radians * 180 / Math.PI;
 	};
 
-	// Export for different environments
-	if ( typeof module !== 'undefined' && module.exports ) {
-		// Node.js/CommonJS
-		module.exports = GeometryUtils;
-	} else if ( typeof window !== 'undefined' ) {
-		// Browser global
+	// Export for different environments - ALWAYS set on window for cross-file dependencies
+	if ( typeof window !== 'undefined' ) {
 		window.GeometryUtils = GeometryUtils;
+	}
+
+	// Also export via CommonJS if available (for Node.js/Jest testing)
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = GeometryUtils;
 	}
 
 	// MediaWiki ResourceLoader support

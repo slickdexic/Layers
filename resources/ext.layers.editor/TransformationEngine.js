@@ -624,11 +624,14 @@
 		this.lastPanPoint = null;
 	};
 
-	// Export the module
+	// Export the module - ALWAYS set on window for cross-file dependencies
+	if ( typeof window !== 'undefined' ) {
+		window.TransformationEngine = TransformationEngine;
+	}
+
+	// Also export via CommonJS if available (for Node.js/Jest testing)
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = TransformationEngine;
-	} else if ( typeof window !== 'undefined' ) {
-		window.TransformationEngine = TransformationEngine;
 	}
 
 	// MediaWiki ResourceLoader support

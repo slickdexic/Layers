@@ -30,7 +30,7 @@ This document provides a prioritized, actionable improvement plan for the Layers
 | Jest tests | 1,232 | 1,500+ | +268 |
 | Overall Coverage | 53.4% | 70% | +16.6% |
 | Core Module Coverage | 14-22% | 60% | +38-46% |
-| CanvasManager.js lines | 3,987 | <800 | -3,187 |
+| CanvasManager.js lines | 3,523 | <800 | -2,723 |
 | WikitextHooks.php lines | 2,001 | <400 | -1,601 |
 | ESLint errors | 0 | 0 | ✅ Met |
 | Window.* exports | 49 | <10 | -39 |
@@ -44,6 +44,8 @@ This document provides a prioritized, actionable improvement plan for the Layers
 - Removed dead undoStack/redoStack from LayersEditor
 - Rewrote MODULAR_ARCHITECTURE.md to reflect actual (not aspirational) state
 - Extracted ImageLoader.js module (~280 lines) with comprehensive tests
+- Removed 464 lines of fallback code from CanvasManager (3,987 → 3,523 lines)
+- Fixed LayersConstants dependency timing issue in LayersEditor.js
 - Test count increased from 1,202 to 1,232 (+30 tests)
 
 ---
@@ -53,16 +55,17 @@ This document provides a prioritized, actionable improvement plan for the Layers
 ### 0.1 Split CanvasManager.js God Class
 
 **Priority:** P0 - CRITICAL  
-**Status:** ⏳ In Progress (~16% complete)  
+**Status:** ⏳ In Progress (~25% complete)  
 **Effort:** 1 week (40 hours)  
 **Risk:** HIGH
 
-**Problem:** 3,987 lines with 143 methods violates every SOLID principle. Only 22.24% coverage.
+**Problem:** 3,523 lines (down from 3,987) with many methods violates SOLID principles. Only 22.24% coverage.
 
-**Impact:** High regression risk, impossible to test, blocks new contributors, debugging nightmare.
+**Impact:** High regression risk, harder to test, blocks new contributors, debugging nightmare.
 
 **Progress:**
 - ✅ ImageLoader.js extracted (~280 lines) - handles background image loading with fallbacks
+- ✅ Fallback code removed (-464 lines) - controllers are guaranteed to load in ResourceLoader
 
 **Proposed Extraction (Remaining):**
 
@@ -82,15 +85,14 @@ This document provides a prioritized, actionable improvement plan for the Layers
 - HitTestController.js (382 lines)
 - DrawingController.js (620 lines)
 - ClipboardController.js (222 lines)
-- ImageLoader.js (280 lines) - NEW
+- ImageLoader.js (280 lines)
 
 **Tasks:**
+- [x] Remove fallback implementations that duplicate controller logic (-464 lines)
 - [ ] Map all remaining methods to proposed modules
 - [ ] Extract CanvasCore.js with init(), resize(), setupContext()
 - [ ] Extract InteractionController.js with event handlers
-- [ ] Extract SelectionController.js with selection state
 - [ ] Extract RenderCoordinator.js with performRedraw()
-- [ ] Remove fallback implementations that duplicate controller logic
 - [ ] Update CanvasManager to compose extracted modules
 - [ ] Add tests for each extracted module (target 80% coverage)
 - [ ] Verify all existing tests still pass
@@ -567,6 +569,11 @@ These features have been requested but should be implemented **after P0-P1 fixes
   - Added `areEditorDependenciesReady()` function for pre-instantiation checks
   - Hook listener now defers if dependencies not ready
   - Auto-bootstrap retries up to 20 times (1 second total) waiting for dependencies
+- [x] Removed 464 lines of fallback code from CanvasManager (3,987 → 3,523)
+  - Simplified delegation to controllers (HitTestController, TransformController, ZoomPanController)
+  - Controllers guaranteed to load before CanvasManager via ResourceLoader module order
+  - Added minimal defensive guards for test environments where controllers may not be initialized
+  - Updated tests (ResizeHandles.test.js, RotationHandle.test.js) to load required controllers
 - [x] Test count: 1,202 → 1,232 (+30)
 
 ### Previously Completed

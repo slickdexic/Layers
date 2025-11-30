@@ -319,15 +319,16 @@
 		getRegistry: () => registry
 	};
 
-	// Export the registry in multiple ways for compatibility
-	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = { ModuleRegistry, registry, legacyRegistry };
-	}
-
+	// Export the registry - ALWAYS set on window first for cross-file dependencies
 	if ( typeof window !== 'undefined' ) {
 		window.LayersModuleRegistry = ModuleRegistry;
 		window.layersRegistry = registry;
 		window.layersModuleRegistry = legacyRegistry; // Legacy compatibility
+	}
+
+	// Also export via CommonJS if available (for Node.js/Jest testing)
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = { ModuleRegistry, registry, legacyRegistry };
 	}
 
 	if ( typeof mw !== 'undefined' ) {

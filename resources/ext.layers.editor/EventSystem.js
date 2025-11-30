@@ -682,11 +682,14 @@
 		this.callbacks = null;
 	};
 
-	// Export the module
+	// Export the module - ALWAYS set on window for cross-file dependencies
+	if ( typeof window !== 'undefined' ) {
+		window.EventSystem = EventSystem;
+	}
+
+	// Also export via CommonJS if available (for Node.js/Jest testing)
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = EventSystem;
-	} else if ( typeof window !== 'undefined' ) {
-		window.EventSystem = EventSystem;
 	}
 
 	// MediaWiki ResourceLoader support

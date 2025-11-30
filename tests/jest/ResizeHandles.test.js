@@ -6,6 +6,8 @@ const CanvasManager = require('../../resources/ext.layers.editor/CanvasManager.j
 const CanvasEvents = require('../../resources/ext.layers.editor/CanvasEvents.js');
 const CanvasRenderer = require('../../resources/ext.layers.editor/CanvasRenderer.js');
 const SelectionManager = require('../../resources/ext.layers.editor/SelectionManager.js');
+const HitTestController = require('../../resources/ext.layers.editor/canvas/HitTestController.js');
+const TransformController = require('../../resources/ext.layers.editor/canvas/TransformController.js');
 
 describe('Resize Handles', () => {
     let canvasManager;
@@ -18,6 +20,8 @@ describe('Resize Handles', () => {
         window.CanvasEvents = CanvasEvents;
         window.CanvasRenderer = CanvasRenderer;
         window.LayersSelectionManager = SelectionManager;
+        window.HitTestController = HitTestController;
+        window.TransformController = TransformController;
 
         // Create a canvas element
         canvas = document.createElement('canvas');

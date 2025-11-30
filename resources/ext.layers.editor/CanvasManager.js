@@ -514,37 +514,16 @@
 
 
 	CanvasManager.prototype.hitTestSelectionHandles = function ( point ) {
-		// Delegate to HitTestController if available
 		if ( this.hitTestController ) {
 			return this.hitTestController.hitTestSelectionHandles( point );
-		}
-
-		// Fallback for when controller is not available
-		let handles = [];
-		if ( this.renderer && this.renderer.selectionHandles && this.renderer.selectionHandles.length > 0 ) {
-			handles = this.renderer.selectionHandles;
-		} else if ( this.selectionManager && this.selectionManager.selectionHandles && this.selectionManager.selectionHandles.length > 0 ) {
-			handles = this.selectionManager.selectionHandles;
-		} else {
-			handles = this.selectionHandles;
-		}
-
-		for ( let i = 0; i < handles.length; i++ ) {
-			const handle = handles[ i ];
-			const rect = handle.rect || handle;
-			if ( this.isPointInRect( point, rect ) ) {
-				return handle;
-			}
 		}
 		return null;
 	};
 
 	CanvasManager.prototype.isPointInRect = function ( point, rect ) {
-		// Delegate to HitTestController if available
 		if ( this.hitTestController ) {
 			return this.hitTestController.isPointInRect( point, rect );
 		}
-		// Fallback
 		return point.x >= rect.x && point.x <= rect.x + rect.width &&
 			point.y >= rect.y && point.y <= rect.y + rect.height;
 	};
@@ -554,19 +533,6 @@
 			this.transformController.startResize( handle, this.startPoint );
 			this.isResizing = this.transformController.isResizing;
 			this.resizeHandle = this.transformController.resizeHandle;
-			return;
-		}
-		// Fallback for when controller is not available
-		this.isResizing = true;
-		this.resizeHandle = handle;
-		this.dragStartPoint = this.startPoint;
-
-		const layer = this.editor.getLayerById( this.getSelectedLayerId() );
-		const rotation = layer ? layer.rotation : 0;
-		this.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
-
-		if ( layer ) {
-			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
 	};
 
@@ -574,18 +540,6 @@
 		if ( this.transformController ) {
 			this.transformController.startRotation( point );
 			this.isRotating = this.transformController.isRotating;
-			return;
-		}
-		// Fallback for when controller is not available
-		this.isRotating = true;
-		this.canvas.style.cursor = 'grabbing';
-		if ( point ) {
-			this.dragStartPoint = point;
-		}
-
-		const layer = this.editor.getLayerById( this.getSelectedLayerId() );
-		if ( layer ) {
-			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
 	};
 
@@ -593,31 +547,6 @@
 		if ( this.transformController ) {
 			this.transformController.startDrag( this.startPoint );
 			this.isDragging = this.transformController.isDragging;
-			return;
-		}
-		// Fallback for when controller is not available
-		this.isDragging = true;
-		this.canvas.style.cursor = 'move';
-
-		// Store original layer state(s)
-		const selectedIds = this.getSelectedLayerIds();
-		if ( selectedIds.length > 1 ) {
-			// Multi-selection: store all selected layer states
-			this.originalMultiLayerStates = {};
-			for ( let i = 0; i < selectedIds.length; i++ ) {
-				const layerId = selectedIds[ i ];
-				const multiLayer = this.editor.getLayerById( layerId );
-				if ( multiLayer ) {
-					this.originalMultiLayerStates[ layerId ] =
-						JSON.parse( JSON.stringify( multiLayer ) );
-				}
-			}
-		} else {
-			// Single selection: store single layer state
-			const singleLayer = this.editor.getLayerById( this.getSelectedLayerId() );
-			if ( singleLayer ) {
-				this.originalLayerState = JSON.parse( JSON.stringify( singleLayer ) );
-			}
 		}
 	};
 
@@ -625,49 +554,7 @@
 		if ( this.transformController ) {
 			return this.transformController.getResizeCursor( handleType, rotation );
 		}
-		// Fallback for when controller is not available
-		if ( !rotation || rotation === 0 ) {
-			switch ( handleType ) {
-				case 'nw':
-				case 'se':
-					return 'nw-resize';
-				case 'ne':
-				case 'sw':
-					return 'ne-resize';
-				case 'n':
-				case 's':
-					return 'n-resize';
-				case 'e':
-				case 'w':
-					return 'e-resize';
-				default:
-					return 'default';
-			}
-		}
-
-		// For rotated objects, we need to calculate the effective cursor direction
-		// based on the handle type and rotation angle
-		const normalizedRotation = ( ( rotation % 360 ) + 360 ) % 360;
-		const cursorIndex = Math.round( normalizedRotation / 45 ) % 8;
-
-		// Map handle types to base cursor directions (0 = north)
-		const baseCursors = {
-			n: 0,
-			ne: 1,
-			e: 2,
-			se: 3,
-			s: 4,
-			sw: 5,
-			w: 6,
-			nw: 7
-		};
-
-		// Calculate the effective cursor direction
-		const effectiveDirection = ( baseCursors[ handleType ] + cursorIndex ) % 8;
-
-		// Map back to cursor names
-		const cursors = [ 'n-resize', 'ne-resize', 'e-resize', 'ne-resize', 'n-resize', 'ne-resize', 'e-resize', 'nw-resize' ];
-		return cursors[ effectiveDirection ];
+		return 'default';
 	};
 
 
@@ -675,80 +562,6 @@
 	CanvasManager.prototype.handleResize = function ( point, event ) {
 		if ( this.transformController && this.transformController.isResizing ) {
 			this.transformController.handleResize( point, event );
-			return;
-		}
-		// Fallback for when controller is not available
-		const layer = this.editor.getLayerById( this.getSelectedLayerId() );
-
-		if ( !layer || !this.originalLayerState ) {
-			return;
-		}
-
-		let deltaX = point.x - this.dragStartPoint.x;
-		let deltaY = point.y - this.dragStartPoint.y;
-
-		// If layer has rotation, transform the delta into the layer's local coordinate system
-		const rotation = layer.rotation || 0;
-		if ( rotation !== 0 ) {
-			const rotRad = -rotation * Math.PI / 180; // Negative to reverse the rotation
-			const cos = Math.cos( rotRad );
-			const sin = Math.sin( rotRad );
-			const rotatedDeltaX = deltaX * cos - deltaY * sin;
-			const rotatedDeltaY = deltaX * sin + deltaY * cos;
-			deltaX = rotatedDeltaX;
-			deltaY = rotatedDeltaY;
-		}
-
-		// Limit delta values to prevent sudden jumps during rapid mouse movements
-		const maxDelta = 1000; // Reasonable maximum delta in pixels
-		deltaX = Math.max( -maxDelta, Math.min( maxDelta, deltaX ) );
-		deltaY = Math.max( -maxDelta, Math.min( maxDelta, deltaY ) );
-
-		// Get modifier keys from the event
-		const modifiers = {
-			proportional: event && event.shiftKey, // Shift key for proportional scaling
-			fromCenter: event && event.altKey // Alt key for scaling from center
-		};
-
-		// Debug logging
-		if ( this.editor && this.editor.debug ) {
-			this.editor.debugLog( 'Resize:', {
-				handle: this.resizeHandle.type,
-				delta: { x: deltaX, y: deltaY },
-				layer: layer.type,
-				original: this.originalLayerState,
-				modifiers: modifiers
-			} );
-		}
-
-		// Calculate new dimensions based on handle type
-		const updates = this.calculateResize(
-			this.originalLayerState,
-			this.resizeHandle.type,
-			deltaX,
-			deltaY,
-			modifiers
-		);
-
-		// Apply updates to layer
-		if ( updates ) {
-			if ( this.editor && this.editor.debug ) {
-				this.editor.debugLog( 'Applying updates:', updates );
-			}
-			Object.keys( updates ).forEach( function ( key ) {
-				layer[ key ] = updates[ key ];
-			} );
-			if ( layer.type === 'star' && Object.prototype.hasOwnProperty.call( updates, 'radius' ) ) {
-				layer.radius = Math.max( 5, Math.abs( layer.radius || 0 ) );
-				layer.outerRadius = layer.radius;
-				layer.innerRadius = layer.radius * 0.5;
-			}
-
-			// Re-render and emit live-transform event
-			this.renderLayers( this.editor.layers );
-			this.emitTransforming( layer );
-		} else if ( this.editor && this.editor.debug ) {
-			this.editor.debugLog( 'No updates calculated for resize' );
 		}
 	};
 
@@ -1180,113 +993,13 @@
 	CanvasManager.prototype.handleRotation = function ( point, event ) {
 		if ( this.transformController && this.transformController.isRotating ) {
 			this.transformController.handleRotation( point, event );
-			return;
 		}
-		// Fallback for when controller is not available
-		const layer = this.editor.getLayerById( this.getSelectedLayerId() );
-		if ( !layer ) {
-			return;
-		}
-
-		// Calculate angle from rotation center to mouse position
-		const bounds = this.getLayerBounds( layer );
-		if ( !bounds ) {
-			return;
-		}
-
-		const centerX = bounds.centerX;
-		const centerY = bounds.centerY;
-
-		const startAngle = Math.atan2(
-			this.dragStartPoint.y - centerY,
-			this.dragStartPoint.x - centerX
-		);
-		const currentAngle = Math.atan2( point.y - centerY, point.x - centerX );
-
-		const angleDelta = currentAngle - startAngle;
-		let degrees = angleDelta * ( 180 / Math.PI );
-
-		// Apply snap-to-angle if Shift key is held (15-degree increments)
-		if ( event && event.shiftKey ) {
-			const snapAngle = 15;
-			degrees = Math.round( degrees / snapAngle ) * snapAngle;
-		}
-
-		// Store rotation (we'll implement actual rotation rendering later)
-		layer.rotation = ( this.originalLayerState.rotation || 0 ) + degrees;
-
-		// Re-render and emit live-transform event
-		this.renderLayers( this.editor.layers );
-		this.emitTransforming( layer );
 	};
 
 	CanvasManager.prototype.handleDrag = function ( point ) {
 		if ( this.transformController && this.transformController.isDragging ) {
 			this.transformController.handleDrag( point );
 			this.showDragPreview = this.transformController.showDragPreview;
-			return;
-		}
-		// Fallback for when controller is not available
-		const deltaX = point.x - this.dragStartPoint.x;
-		const deltaY = point.y - this.dragStartPoint.y;
-
-		// Enable drag preview mode for visual feedback
-		this.showDragPreview = true;
-
-		// Support multi-selection dragging
-		const layersToMove = [];
-		const selectedIds = this.getSelectedLayerIds();
-		if ( selectedIds.length > 1 ) {
-			// Multi-selection: move all selected layers
-			for ( let i = 0; i < selectedIds.length; i++ ) {
-				const multiLayer = this.editor.getLayerById( selectedIds[ i ] );
-				if ( multiLayer ) {
-					layersToMove.push( multiLayer );
-				}
-			}
-		} else {
-			// Single selection: move just the selected layer
-			const singleLayer = this.editor.getLayerById( this.getSelectedLayerId() );
-			if ( singleLayer && this.originalLayerState ) {
-				layersToMove.push( singleLayer );
-			}
-		}
-
-		// Move all layers in the selection
-		for ( let j = 0; j < layersToMove.length; j++ ) {
-			const layerToMove = layersToMove[ j ];
-			let originalState = this.originalLayerState;
-
-			// For multi-selection, we need to get individual original states
-			if ( selectedIds.length > 1 && this.originalMultiLayerStates ) {
-				originalState = this.originalMultiLayerStates[ layerToMove.id ];
-			}
-
-			if ( !originalState ) {
-				continue;
-			}
-
-			// Apply snap-to-grid if enabled
-			let adjustedDeltaX = deltaX;
-			let adjustedDeltaY = deltaY;
-
-			if ( this.snapToGrid && this.gridSize > 0 ) {
-				const newX = ( originalState.x || 0 ) + deltaX;
-				const newY = ( originalState.y || 0 ) + deltaY;
-				const snappedPoint = this.snapPointToGrid( { x: newX, y: newY } );
-				adjustedDeltaX = snappedPoint.x - ( originalState.x || 0 );
-				adjustedDeltaY = snappedPoint.y - ( originalState.y || 0 );
-			}
-
-			// Update layer position based on type
-			this.updateLayerPosition( layerToMove, originalState, adjustedDeltaX, adjustedDeltaY );
-		}
-
-		// Re-render and emit live-transform event for the primary selected layer
-		this.renderLayers( this.editor.layers );
-		const active = this.editor.getLayerById( this.getSelectedLayerId() );
-		if ( active ) {
-			this.emitTransforming( active );
 		}
 	};
 
@@ -1404,136 +1117,38 @@
 	};
 
 	CanvasManager.prototype.getLayerAtPoint = function ( point ) {
-		// Delegate to HitTestController if available
 		if ( this.hitTestController ) {
 			return this.hitTestController.getLayerAtPoint( point );
-		}
-
-		// Fallback: Find layer at click point in visual top-most-first order
-		for ( let i = 0; i < this.editor.layers.length; i++ ) {
-			const layer = this.editor.layers[ i ];
-			if ( layer.visible === false || layer.locked === true ) {
-				continue;
-			}
-			if ( this.isPointInLayer( point, layer ) ) {
-				return layer;
-			}
 		}
 		return null;
 	};
 
 	CanvasManager.prototype.isPointInLayer = function ( point, layer ) {
-		// Delegate to HitTestController if available
 		if ( this.hitTestController ) {
 			return this.hitTestController.isPointInLayer( point, layer );
 		}
-
-		// Fallback implementation
-		if ( !layer ) {
-			return false;
-		}
-		switch ( layer.type ) {
-			case 'rectangle':
-			case 'blur': {
-				const rMinX = Math.min( layer.x, layer.x + layer.width );
-				const rMinY = Math.min( layer.y, layer.y + layer.height );
-				const rW = Math.abs( layer.width );
-				const rH = Math.abs( layer.height );
-				return point.x >= rMinX && point.x <= rMinX + rW &&
-					point.y >= rMinY && point.y <= rMinY + rH;
-			}
-			case 'circle': {
-				const dx = point.x - ( layer.x || 0 );
-				const dy = point.y - ( layer.y || 0 );
-				const r = layer.radius || 0;
-				return ( dx * dx + dy * dy ) <= r * r;
-			}
-			case 'text': {
-				const bounds = this.getLayerBounds( layer );
-				return bounds &&
-					point.x >= bounds.x && point.x <= bounds.x + bounds.width &&
-					point.y >= bounds.y && point.y <= bounds.y + bounds.height;
-			}
-			case 'line':
-			case 'arrow':
-				return this.isPointNearLine( point, layer.x1, layer.y1, layer.x2, layer.y2,
-					Math.max( 6, ( layer.strokeWidth || 2 ) + 4 ) );
-			case 'ellipse': {
-				const ex = layer.x || 0;
-				const ey = layer.y || 0;
-				const radX = Math.abs( layer.radiusX || 0 );
-				const radY = Math.abs( layer.radiusY || 0 );
-				if ( radX === 0 || radY === 0 ) {
-					return false;
-				}
-				const nx = ( point.x - ex ) / radX;
-				const ny = ( point.y - ey ) / radY;
-				return nx * nx + ny * ny <= 1;
-			}
-			case 'highlight': {
-				const hx = Math.min( layer.x, layer.x + layer.width );
-				const hy = Math.min( layer.y, layer.y + ( layer.height || 20 ) );
-				const hw = Math.abs( layer.width );
-				const hh = Math.abs( layer.height || 20 );
-				return point.x >= hx && point.x <= hx + hw &&
-					point.y >= hy && point.y <= hy + hh;
-			}
-			default:
-				return false;
-		}
+		return false;
 	};
 
 	CanvasManager.prototype.isPointNearLine = function ( point, x1, y1, x2, y2, tolerance ) {
-		// Delegate to HitTestController if available
 		if ( this.hitTestController ) {
 			return this.hitTestController.isPointNearLine( point, x1, y1, x2, y2, tolerance );
 		}
-		// Fallback
-		const dist = this.pointToSegmentDistance( point.x, point.y, x1, y1, x2, y2 );
-		return dist <= ( tolerance || 6 );
+		return false;
 	};
 
 	CanvasManager.prototype.pointToSegmentDistance = function ( px, py, x1, y1, x2, y2 ) {
-		// Delegate to HitTestController if available
 		if ( this.hitTestController ) {
 			return this.hitTestController.pointToSegmentDistance( px, py, x1, y1, x2, y2 );
 		}
-		// Fallback
-		const dx = x2 - x1;
-		const dy = y2 - y1;
-		if ( dx === 0 && dy === 0 ) {
-			return Math.sqrt( Math.pow( px - x1, 2 ) + Math.pow( py - y1, 2 ) );
-		}
-		let t = ( ( px - x1 ) * dx + ( py - y1 ) * dy ) / ( dx * dx + dy * dy );
-		t = Math.max( 0, Math.min( 1, t ) );
-		const projX = x1 + t * dx;
-		const projY = y1 + t * dy;
-		return Math.sqrt( Math.pow( px - projX, 2 ) + Math.pow( py - projY, 2 ) );
+		return Infinity;
 	};
 
 	CanvasManager.prototype.isPointInPolygon = function ( point, polygonPoints ) {
-		// Delegate to HitTestController if available
 		if ( this.hitTestController ) {
 			return this.hitTestController.isPointInPolygon( point, polygonPoints );
 		}
-		// Fallback
-		const x = point.x;
-		const y = point.y;
-		let inside = false;
-
-		for ( let i = 0, j = polygonPoints.length - 1; i < polygonPoints.length; j = i++ ) {
-			const xi = polygonPoints[ i ].x;
-			const yi = polygonPoints[ i ].y;
-			const xj = polygonPoints[ j ].x;
-			const yj = polygonPoints[ j ].y;
-
-			if ( ( ( yi > y ) !== ( yj > y ) ) &&
-				( x < ( xj - xi ) * ( y - yi ) / ( yj - yi ) + xi ) ) {
-				inside = !inside;
-			}
-		}
-
-		return inside;
+		return false;
 	};
 
 
@@ -1543,19 +1158,7 @@
 			this.transformController.finishResize();
 			this.isResizing = false;
 			this.resizeHandle = null;
-			return;
 		}
-		// Fallback for when controller is not available
-		this.isResizing = false;
-		this.resizeHandle = null;
-		this.originalLayerState = null;
-		this.dragStartPoint = null;
-
-		// Reset cursor to appropriate tool cursor instead of hardcoded 'default'
-		this.canvas.style.cursor = this.getToolCursor( this.currentTool );
-
-		// Mark editor as dirty
-		this.editor.markDirty();
 	};
 
 
@@ -1566,18 +1169,7 @@
 		if ( this.transformController && this.transformController.isRotating ) {
 			this.transformController.finishRotation();
 			this.isRotating = false;
-			return;
 		}
-		// Fallback for when controller is not available
-		this.isRotating = false;
-		this.originalLayerState = null;
-		this.dragStartPoint = null;
-
-		// Reset cursor to appropriate tool cursor
-		this.canvas.style.cursor = this.getToolCursor( this.currentTool );
-
-		// Mark editor as dirty
-		this.editor.markDirty();
 	};
 
 	CanvasManager.prototype.finishDrag = function () {
@@ -1585,20 +1177,7 @@
 			this.transformController.finishDrag();
 			this.isDragging = false;
 			this.showDragPreview = false;
-			return;
 		}
-		// Fallback for when controller is not available
-		this.isDragging = false;
-		this.showDragPreview = false;
-		this.originalLayerState = null;
-		this.originalMultiLayerStates = null;
-		this.dragStartPoint = null;
-
-		// Reset cursor to appropriate tool cursor
-		this.canvas.style.cursor = this.getToolCursor( this.currentTool );
-
-		// Mark editor as dirty
-		this.editor.markDirty();
 	};
 
 
@@ -1608,22 +1187,12 @@
 	CanvasManager.prototype.zoomIn = function () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.zoomIn();
-		} else {
-			// Fallback for when controller is not available
-			const targetZoom = this.zoom + 0.2;
-			this.smoothZoomTo( targetZoom );
-			this.userHasSetZoom = true;
 		}
 	};
 
 	CanvasManager.prototype.zoomOut = function () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.zoomOut();
-		} else {
-			// Fallback for when controller is not available
-			const targetZoom = this.zoom - 0.2;
-			this.smoothZoomTo( targetZoom );
-			this.userHasSetZoom = true;
 		}
 	};
 
@@ -1631,13 +1200,8 @@
 		if ( this.zoomPanController ) {
 			this.zoomPanController.setZoom( newZoom );
 		} else {
-			// Fallback for when controller is not available
 			this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
-			this.userHasSetZoom = true;
 			this.updateCanvasTransform();
-			if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-				this.editor.updateStatus( { zoomPercent: this.zoom * 100 } );
-			}
 		}
 	};
 
@@ -1648,6 +1212,7 @@
 		if ( this.zoomPanController ) {
 			this.zoomPanController.updateCanvasTransform();
 		} else {
+			// Minimal fallback for tests
 			this.canvas.style.transform = 'translate(' + this.panX + 'px, ' +
 				this.panY + 'px) scale(' + this.zoom + ')';
 			this.canvas.style.transformOrigin = '0 0';
@@ -1657,21 +1222,6 @@
 	CanvasManager.prototype.resetZoom = function () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.resetZoom();
-		} else {
-			// Fallback for when controller is not available
-			this.panX = 0;
-			this.panY = 0;
-			this.userHasSetZoom = true;
-			this.smoothZoomTo( 1.0 );
-			if ( this.editor && this.editor.toolbar ) {
-				this.editor.toolbar.updateZoomDisplay( 100 );
-			}
-			if ( this.editor && typeof this.editor.updateZoomReadout === 'function' ) {
-				this.editor.updateZoomReadout( 100 );
-			}
-			if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-				this.editor.updateStatus( { zoomPercent: 100 } );
-			}
 		}
 	};
 
@@ -1684,19 +1234,6 @@
 	CanvasManager.prototype.smoothZoomTo = function ( targetZoom, duration ) {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.smoothZoomTo( targetZoom, duration );
-		} else {
-			// Fallback for when controller is not available
-			targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
-			duration = duration || this.zoomAnimationDuration;
-			if ( Math.abs( this.zoom - targetZoom ) < 0.01 ) {
-				return;
-			}
-			this.isAnimatingZoom = true;
-			this.zoomAnimationStartTime = performance.now();
-			this.zoomAnimationStartZoom = this.zoom;
-			this.zoomAnimationTargetZoom = targetZoom;
-			this.zoomAnimationDuration = duration;
-			this.animateZoom();
 		}
 	};
 

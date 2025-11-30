@@ -261,12 +261,13 @@
 		return cloned;
 	};
 
-	// Export module
-	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = CanvasUtilities;
-	}
+	// Export module - ALWAYS set on window first for cross-file dependencies
 	if ( typeof window !== 'undefined' ) {
 		window.CanvasUtilities = CanvasUtilities;
+	}
+	// Also export via CommonJS if available (for Node.js/Jest testing)
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = CanvasUtilities;
 	}
 
 	// MediaWiki ResourceLoader support

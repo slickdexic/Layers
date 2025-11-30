@@ -562,8 +562,16 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		const radiusX = layer.radiusX || layer.width / 2 || 0;
 		const radiusY = layer.radiusY || layer.height / 2 || 0;
 
-		// Build the ellipse path under a scaled transform
+		// Translate to center, apply rotation if present, then scale
 		this.ctx.translate( x, y );
+		
+		// Apply rotation around the ellipse's center
+		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+		if ( hasRotation ) {
+			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+		}
+
+		// Build the ellipse path under a scaled transform
 		this.ctx.beginPath();
 		this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
 		this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
@@ -607,6 +615,14 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		const radius = layer.radius || 50;
 
 		this.ctx.save();
+
+		// Apply rotation around the polygon's center (x, y)
+		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+		if ( hasRotation ) {
+			this.ctx.translate( x, y );
+			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			this.ctx.translate( -x, -y );
+		}
 		
 		this.ctx.beginPath();
 
@@ -662,6 +678,14 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		const innerRadius = layer.innerRadius || outerRadius * 0.5;
 
 		this.ctx.save();
+
+		// Apply rotation around the star's center (x, y)
+		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+		if ( hasRotation ) {
+			this.ctx.translate( x, y );
+			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			this.ctx.translate( -x, -y );
+		}
 		
 		this.ctx.beginPath();
 

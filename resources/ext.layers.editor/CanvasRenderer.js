@@ -534,14 +534,33 @@
 		const x = layer.x || 0;
 		const y = layer.y || 0;
 		const radius = layer.radius || 50;
-		// Note: rotation is handled by applyLayerStyle
 
 		this.ctx.save();
-		// applyLayerStyle handles rotation, but here we might want local rotation
-		// If applyLayerStyle is used, it rotates around center.
-		// Let's use manual rotation here if needed, or rely on applyLayerStyle.
-		// applyLayerStyle rotates the whole context.
-		this.applyLayerStyle( layer );
+		
+		// Apply basic styles (fill, stroke, opacity, blend) but NOT rotation
+		// since applyLayerStyle uses width/height for rotation center which doesn't work for polygons
+		if ( layer.fill ) {
+			this.ctx.fillStyle = layer.fill;
+		}
+		if ( layer.stroke ) {
+			this.ctx.strokeStyle = layer.stroke;
+		}
+		if ( layer.strokeWidth ) {
+			this.ctx.lineWidth = layer.strokeWidth;
+		}
+		if ( typeof layer.opacity === 'number' ) {
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		if ( layer.blendMode || layer.blend ) {
+			this.ctx.globalCompositeOperation = layer.blendMode || layer.blend;
+		}
+		
+		// Handle rotation around polygon center (x, y)
+		if ( layer.rotation ) {
+			this.ctx.translate( x, y );
+			this.ctx.rotate( layer.rotation * Math.PI / 180 );
+			this.ctx.translate( -x, -y );
+		}
 
 		this.ctx.beginPath();
 		for ( let i = 0; i < sides; i++ ) {
@@ -580,7 +599,32 @@
 		const innerRadius = layer.innerRadius || outerRadius * 0.5;
 
 		this.ctx.save();
-		this.applyLayerStyle( layer );
+		
+		// Apply basic styles (fill, stroke, opacity, blend) but NOT rotation
+		// since applyLayerStyle uses width/height for rotation center which doesn't work for stars
+		if ( layer.fill ) {
+			this.ctx.fillStyle = layer.fill;
+		}
+		if ( layer.stroke ) {
+			this.ctx.strokeStyle = layer.stroke;
+		}
+		if ( layer.strokeWidth ) {
+			this.ctx.lineWidth = layer.strokeWidth;
+		}
+		if ( typeof layer.opacity === 'number' ) {
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		if ( layer.blendMode || layer.blend ) {
+			this.ctx.globalCompositeOperation = layer.blendMode || layer.blend;
+		}
+		
+		// Handle rotation around star center (x, y)
+		if ( layer.rotation ) {
+			this.ctx.translate( x, y );
+			this.ctx.rotate( layer.rotation * Math.PI / 180 );
+			this.ctx.translate( -x, -y );
+		}
+
 		this.ctx.beginPath();
 
 		for ( let i = 0; i < points * 2; i++ ) {
@@ -1355,11 +1399,13 @@
 		this.ctx.restore();
 	};
 
-	// Export
+	// Export - ALWAYS set on window for cross-file dependencies
+	if ( typeof window !== 'undefined' ) {
+		window.CanvasRenderer = CanvasRenderer;
+	}
+	// Also export via CommonJS if available (for Node.js/Jest testing)
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = CanvasRenderer;
-	} else if ( typeof window !== 'undefined' ) {
-		window.CanvasRenderer = CanvasRenderer;
 	}
 	if ( typeof mw !== 'undefined' && mw.loader ) {
 		mw.loader.using( [], function () {
