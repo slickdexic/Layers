@@ -341,6 +341,9 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 			case 'path':
 				this.renderPath( L );
 				break;
+			case 'blur':
+				this.renderBlur( L );
+				break;
 		}
 
 		// Restore to pre-layer state
@@ -491,9 +494,23 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		}
 		this.ctx.lineWidth = sw;
 
+		const x1 = layer.x1 || 0;
+		const y1 = layer.y1 || 0;
+		const x2 = layer.x2 || 0;
+		const y2 = layer.y2 || 0;
+
+		// Apply rotation around line center if present
+		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
+			const centerX = ( x1 + x2 ) / 2;
+			const centerY = ( y1 + y2 ) / 2;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			this.ctx.translate( -centerX, -centerY );
+		}
+
 		this.ctx.beginPath();
-		this.ctx.moveTo( layer.x1 || 0, layer.y1 || 0 );
-		this.ctx.lineTo( layer.x2 || 0, layer.y2 || 0 );
+		this.ctx.moveTo( x1, y1 );
+		this.ctx.lineTo( x2, y2 );
 		this.ctx.stroke();
 
 		this.ctx.restore();
@@ -519,6 +536,15 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		const y1 = layer.y1 || 0;
 		const x2 = layer.x2 || 0;
 		const y2 = layer.y2 || 0;
+
+		// Apply rotation around arrow center if present
+		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
+			const centerX = ( x1 + x2 ) / 2;
+			const centerY = ( y1 + y2 ) / 2;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			this.ctx.translate( -centerX, -centerY );
+		}
 
 		// Draw line
 		this.ctx.beginPath();
@@ -549,8 +575,33 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 	LayersViewer.prototype.renderHighlight = function ( layer ) {
 		this.ctx.save();
 		
-		this.ctx.fillStyle = layer.fill || '#ffff0080';
-		this.ctx.fillRect( layer.x || 0, layer.y || 0, layer.width || 0, layer.height || 0 );
+		let x = layer.x || 0;
+		let y = layer.y || 0;
+		const width = layer.width || 0;
+		const height = layer.height || 0;
+
+		// Handle rotation around highlight center (like rectangle)
+		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+		if ( hasRotation ) {
+			this.ctx.translate( x + width / 2, y + height / 2 );
+			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			x = -width / 2;
+			y = -height / 2;
+		}
+
+		// Set fill color
+		this.ctx.fillStyle = layer.color || layer.fill || '#ffff00';
+
+		// Apply opacity - use opacity, fillOpacity, or default to 0.3 for highlights
+		let opacity = 0.3;
+		if ( typeof layer.opacity === 'number' && !Number.isNaN( layer.opacity ) ) {
+			opacity = Math.max( 0, Math.min( 1, layer.opacity ) );
+		} else if ( typeof layer.fillOpacity === 'number' && !Number.isNaN( layer.fillOpacity ) ) {
+			opacity = Math.max( 0, Math.min( 1, layer.fillOpacity ) );
+		}
+		this.ctx.globalAlpha = opacity;
+
+		this.ctx.fillRect( x, y, width, height );
 		this.ctx.restore();
 	};
 
@@ -754,6 +805,85 @@ LayersViewer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
 		}
 
 		this.ctx.stroke();
+		this.ctx.restore();
+	};
+
+	LayersViewer.prototype.renderBlur = function ( layer ) {
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const w = layer.width || 0;
+		const h = layer.height || 0;
+
+		if ( w <= 0 || h <= 0 ) {
+			return;
+		}
+
+		// Calculate scaled coordinates based on canvas/image ratio
+		let sx = 1;
+		let sy = 1;
+		if ( this.baseWidth && this.baseHeight ) {
+			sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			sy = ( this.canvas.height || 1 ) / this.baseHeight;
+		}
+
+		const scaledX = x * sx;
+		const scaledY = y * sy;
+		const scaledW = w * sx;
+		const scaledH = h * sy;
+
+		// Check if we can access the source image
+		if ( !this.imageElement || !this.imageElement.complete ) {
+			// Fallback: draw a semi-transparent gray overlay to indicate blur area
+			this.ctx.save();
+			this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+			this.ctx.fillRect( scaledX, scaledY, scaledW, scaledH );
+			this.ctx.restore();
+			return;
+		}
+
+		// Create temporary canvas for blur effect
+		const tempCanvas = document.createElement( 'canvas' );
+		tempCanvas.width = Math.max( 1, Math.ceil( scaledW ) );
+		tempCanvas.height = Math.max( 1, Math.ceil( scaledH ) );
+		const tempCtx = tempCanvas.getContext( '2d' );
+
+		if ( !tempCtx ) {
+			return;
+		}
+
+		// Calculate source coordinates in the original image
+		const imgW = this.imageElement.naturalWidth || this.imageElement.width;
+		const imgH = this.imageElement.naturalHeight || this.imageElement.height;
+		const imgScaleX = imgW / ( this.canvas.width || 1 );
+		const imgScaleY = imgH / ( this.canvas.height || 1 );
+
+		const srcX = scaledX * imgScaleX;
+		const srcY = scaledY * imgScaleY;
+		const srcW = scaledW * imgScaleX;
+		const srcH = scaledH * imgScaleY;
+
+		// Draw the portion of the image to the temp canvas
+		try {
+			tempCtx.drawImage(
+				this.imageElement,
+				srcX, srcY, srcW, srcH,
+				0, 0, tempCanvas.width, tempCanvas.height
+			);
+		} catch ( e ) {
+			// CORS or other error - fallback to gray overlay
+			this.ctx.save();
+			this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+			this.ctx.fillRect( scaledX, scaledY, scaledW, scaledH );
+			this.ctx.restore();
+			return;
+		}
+
+		// Apply blur filter and draw back to main canvas
+		const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+		this.ctx.save();
+		this.ctx.filter = 'blur(' + radius + 'px)';
+		this.ctx.drawImage( tempCanvas, scaledX, scaledY, scaledW, scaledH );
+		this.ctx.filter = 'none';
 		this.ctx.restore();
 	};
 

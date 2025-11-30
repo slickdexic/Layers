@@ -427,13 +427,39 @@
 
 	CanvasRenderer.prototype.drawLine = function ( layer ) {
 		this.ctx.save();
-		this.applyLayerStyle( layer );
+		
+		// Get line endpoints
+		const x1 = layer.x1 || layer.x || 0;
+		const y1 = layer.y1 || layer.y || 0;
+		const x2 = layer.x2 || ( layer.x || 0 ) + ( layer.width || 0 );
+		const y2 = layer.y2 || ( layer.y || 0 ) + ( layer.height || 0 );
+
+		// Apply styles (but NOT rotation from applyLayerStyle - we handle it specially)
+		if ( layer.stroke ) {
+			this.ctx.strokeStyle = layer.stroke;
+		}
+		if ( layer.strokeWidth ) {
+			this.ctx.lineWidth = layer.strokeWidth;
+		}
+		if ( typeof layer.opacity === 'number' ) {
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		if ( layer.blendMode || layer.blend ) {
+			this.ctx.globalCompositeOperation = layer.blendMode || layer.blend;
+		}
+
+		// Apply rotation around line center if present
+		if ( layer.rotation ) {
+			const centerX = ( x1 + x2 ) / 2;
+			const centerY = ( y1 + y2 ) / 2;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( layer.rotation * Math.PI / 180 );
+			this.ctx.translate( -centerX, -centerY );
+		}
 
 		this.ctx.beginPath();
-		this.ctx.moveTo( layer.x1 || layer.x || 0, layer.y1 || layer.y || 0 );
-		const endX = layer.x2 || ( layer.x || 0 ) + ( layer.width || 0 );
-		const endY = layer.y2 || ( layer.y || 0 ) + ( layer.height || 0 );
-		this.ctx.lineTo( endX, endY );
+		this.ctx.moveTo( x1, y1 );
+		this.ctx.lineTo( x2, y2 );
 
 		const baseOpacity = this.ctx.globalAlpha;
 		this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
@@ -454,6 +480,23 @@
 		const y2 = layer.y2 || 0;
 		const arrowSize = layer.arrowSize || 10;
 		const arrowStyle = layer.arrowStyle || 'single';
+
+		// Apply opacity and blend mode
+		if ( typeof layer.opacity === 'number' ) {
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		if ( layer.blendMode || layer.blend ) {
+			this.ctx.globalCompositeOperation = layer.blendMode || layer.blend;
+		}
+
+		// Apply rotation around arrow center if present
+		if ( layer.rotation ) {
+			const centerX = ( x1 + x2 ) / 2;
+			const centerY = ( y1 + y2 ) / 2;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( layer.rotation * Math.PI / 180 );
+			this.ctx.translate( -centerX, -centerY );
+		}
 
 		this.ctx.beginPath();
 		this.ctx.moveTo( x1, y1 );
@@ -920,6 +963,14 @@
 		}
 
 		this.ctx.save();
+
+		// Special handling for lines and arrows: use line-aligned selection box
+		if ( layer.type === 'line' || layer.type === 'arrow' ) {
+			this.drawLineSelectionIndicators( layer );
+			this.ctx.restore();
+			return;
+		}
+
 		const bounds = this.getLayerBounds( layer );
 		if ( !bounds ) {
 			this.ctx.restore();
@@ -1031,6 +1082,130 @@
 				rotation: layer.rotation || 0 // Store rotation if needed
 			} );
 		}
+	};
+
+	/**
+	 * Draw selection indicators for line/arrow layers with line-aligned bounding box
+	 *
+	 * @param {Object} layer - The line or arrow layer
+	 */
+	CanvasRenderer.prototype.drawLineSelectionIndicators = function ( layer ) {
+		const handleSize = 12;
+		const handleColor = '#2196f3';
+		const handleBorderColor = '#ffffff';
+		const rotationHandleColor = '#ff9800';
+
+		const x1 = layer.x1 || 0;
+		const y1 = layer.y1 || 0;
+		const x2 = layer.x2 || 0;
+		const y2 = layer.y2 || 0;
+
+		// Calculate line center (rotation pivot)
+		const centerX = ( x1 + x2 ) / 2;
+		const centerY = ( y1 + y2 ) / 2;
+
+		// Apply layer.rotation to get the visual endpoint positions
+		const rotationRad = ( layer.rotation || 0 ) * Math.PI / 180;
+		const cos = Math.cos( rotationRad );
+		const sin = Math.sin( rotationRad );
+
+		// Calculate rotated endpoints (what's actually drawn on screen)
+		const rx1 = centerX + ( x1 - centerX ) * cos - ( y1 - centerY ) * sin;
+		const ry1 = centerY + ( x1 - centerX ) * sin + ( y1 - centerY ) * cos;
+		const rx2 = centerX + ( x2 - centerX ) * cos - ( y2 - centerY ) * sin;
+		const ry2 = centerY + ( x2 - centerX ) * sin + ( y2 - centerY ) * cos;
+
+		// Calculate line properties from rotated endpoints
+		const dx = rx2 - rx1;
+		const dy = ry2 - ry1;
+		const length = Math.sqrt( dx * dx + dy * dy );
+		const visualAngle = Math.atan2( dy, dx ); // Angle of line as it appears on screen
+
+		// Selection box dimensions (thin box along the line)
+		const boxHeight = 16; // Thickness of selection area
+
+		// Transform context to line-aligned coordinate system
+		this.ctx.save();
+		this.ctx.translate( centerX, centerY );
+		this.ctx.rotate( visualAngle );
+
+		// Draw selection outline (dashed rectangle along the line)
+		this.ctx.strokeStyle = handleColor;
+		this.ctx.lineWidth = 1;
+		this.ctx.setLineDash( [ 5, 3 ] );
+		this.ctx.strokeRect( -length / 2, -boxHeight / 2, length, boxHeight );
+		this.ctx.setLineDash( [] );
+
+		// Draw handles at endpoints and center
+		this.ctx.fillStyle = handleColor;
+		this.ctx.strokeStyle = handleBorderColor;
+		this.ctx.lineWidth = 1;
+
+		// Local handle positions (in line-aligned coordinate system)
+		const localHandles = [
+			{ x: -length / 2, y: 0, type: 'w' },  // Start point (west in local coords)
+			{ x: length / 2, y: 0, type: 'e' },   // End point (east in local coords)
+			{ x: 0, y: -boxHeight / 2, type: 'n' }, // Top center (for perpendicular movement)
+			{ x: 0, y: boxHeight / 2, type: 's' }   // Bottom center
+		];
+
+		// Draw and register handles
+		const cosVis = Math.cos( visualAngle );
+		const sinVis = Math.sin( visualAngle );
+		
+		for ( let i = 0; i < localHandles.length; i++ ) {
+			const h = localHandles[ i ];
+			this.ctx.fillRect( h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize );
+			this.ctx.strokeRect( h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize );
+
+			// Transform local coords back to world coords for hit testing
+			const worldX = centerX + ( h.x * cosVis - h.y * sinVis );
+			const worldY = centerY + ( h.x * sinVis + h.y * cosVis );
+
+			this.selectionHandles.push( {
+				type: h.type,
+				x: worldX - handleSize / 2,
+				y: worldY - handleSize / 2,
+				width: handleSize,
+				height: handleSize,
+				layerId: layer.id,
+				rotation: visualAngle * 180 / Math.PI, // Store visual rotation in degrees
+				isLine: true // Flag for special line handling in resize
+			} );
+		}
+
+		// Draw rotation handle above the line (perpendicular)
+		const rotationHandleY = -boxHeight / 2 - 20;
+		this.ctx.strokeStyle = handleColor;
+		this.ctx.lineWidth = 1;
+		this.ctx.beginPath();
+		this.ctx.moveTo( 0, -boxHeight / 2 );
+		this.ctx.lineTo( 0, rotationHandleY );
+		this.ctx.stroke();
+
+		this.ctx.fillStyle = rotationHandleColor;
+		this.ctx.strokeStyle = handleBorderColor;
+		this.ctx.beginPath();
+		this.ctx.arc( 0, rotationHandleY, handleSize / 2, 0, 2 * Math.PI );
+		this.ctx.fill();
+		this.ctx.stroke();
+
+		// Register rotation handle (use visualAngle for consistency)
+		const rotWorldX = centerX + ( 0 * cosVis - rotationHandleY * sinVis );
+		const rotWorldY = centerY + ( 0 * sinVis + rotationHandleY * cosVis );
+
+		this.selectionHandles.push( {
+			type: 'rotate',
+			x: rotWorldX - handleSize / 2,
+			y: rotWorldY - handleSize / 2,
+			width: handleSize,
+			height: handleSize,
+			layerId: layer.id,
+			rotation: visualAngle * 180 / Math.PI,
+			isLine: true
+		} );
+
+		this.ctx.restore();
 	};
 
 	/**

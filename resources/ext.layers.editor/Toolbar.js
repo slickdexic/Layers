@@ -464,11 +464,6 @@
 					mw.message( 'layers-tool-line' ).text() : null;
 				return pick( t11, fallback );
 			}
-			case 'layers-tool-highlight': {
-				const t12 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-highlight' ).text() : null;
-				return pick( t12, fallback );
-			}
 			case 'layers-tool-blur': {
 				const t13 = ( window.mw && mw.message ) ?
 					mw.message( 'layers-tool-blur' ).text() : null;
@@ -1624,9 +1619,6 @@
 					break;
 				case 'l':
 					this.selectTool( 'line' );
-					break;
-				case 'h':
-					this.selectTool( 'highlight' );
 					break;
 				case 'g':
 					this.toggleGrid();

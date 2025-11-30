@@ -22,7 +22,6 @@
 			ARROW: 'arrow',
 			POLYGON: 'polygon',
 			STAR: 'star',
-			HIGHLIGHT: 'highlight',
 			PATH: 'path',
 			BLUR: 'blur'
 		},

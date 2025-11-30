@@ -123,7 +123,6 @@
 			case 'ellipse':
 			case 'line':
 			case 'arrow':
-			case 'highlight':
 				return 'crosshair';
 			case 'text':
 				return 'text';
@@ -180,9 +179,6 @@
 			case 'star':
 				this.startStarTool( point );
 				break;
-			case 'highlight':
-				this.startHighlightTool( point );
-				break;
 		}
 	};
 
@@ -220,9 +216,6 @@
 			case 'star':
 				this.updateStarTool( point );
 				break;
-			case 'highlight':
-				this.updateHighlightTool( point );
-				break;
 		}
 	};
 
@@ -248,7 +241,6 @@
 			case 'arrow':
 			case 'polygon':
 			case 'star':
-			case 'highlight':
 				this.finishShapeDrawing( point );
 				break;
 		}

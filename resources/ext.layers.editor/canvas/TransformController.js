@@ -568,19 +568,70 @@
 
 	/**
 	 * Calculate line/arrow resize adjustments
+	 * Handles both endpoint movement (w/e handles) and perpendicular offset (n/s handles)
 	 *
 	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged (unused for lines)
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @return {Object} Updates object with new x2/y2
+	 * @param {string} handleType Handle being dragged: 'w' = start point, 'e' = end point,
+	 *                           'n'/'s' = perpendicular offset (adjusts both endpoints)
+	 * @param {number} deltaX Delta X movement in world coordinates
+	 * @param {number} deltaY Delta Y movement in world coordinates
+	 * @return {Object} Updates object with new endpoint coordinates
 	 */
 	TransformController.prototype.calculateLineResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
 		const updates = {};
-		updates.x2 = ( originalLayer.x2 || 0 ) + deltaX;
-		updates.y2 = ( originalLayer.y2 || 0 ) + deltaY;
+		const x1 = originalLayer.x1 || 0;
+		const y1 = originalLayer.y1 || 0;
+		const x2 = originalLayer.x2 || 0;
+		const y2 = originalLayer.y2 || 0;
+
+		// Calculate line angle for transforms
+		const dx = x2 - x1;
+		const dy = y2 - y1;
+		const angle = Math.atan2( dy, dx );
+
+		// Add any user-applied rotation
+		const additionalRotation = ( originalLayer.rotation || 0 ) * Math.PI / 180;
+
+		switch ( handleType ) {
+			case 'w':
+				// Move start point (x1, y1)
+				updates.x1 = x1 + deltaX;
+				updates.y1 = y1 + deltaY;
+				break;
+			case 'e':
+				// Move end point (x2, y2)
+				updates.x2 = x2 + deltaX;
+				updates.y2 = y2 + deltaY;
+				break;
+			case 'n':
+			case 's': {
+				// Perpendicular movement - offset both points perpendicular to line
+				// Calculate perpendicular direction
+				const perpAngle = angle + Math.PI / 2 + additionalRotation;
+				// Project the delta onto the perpendicular direction
+				const cos = Math.cos( perpAngle );
+				const sin = Math.sin( perpAngle );
+				const perpDist = deltaX * cos + deltaY * sin;
+				const sign = handleType === 'n' ? 1 : -1;
+				const offset = perpDist * sign;
+				
+				// Apply perpendicular offset to both endpoints
+				const offsetX = Math.cos( perpAngle ) * offset;
+				const offsetY = Math.sin( perpAngle ) * offset;
+				updates.x1 = x1 + offsetX;
+				updates.y1 = y1 + offsetY;
+				updates.x2 = x2 + offsetX;
+				updates.y2 = y2 + offsetY;
+				break;
+			}
+			default:
+				// Fallback to original behavior (move end point)
+				updates.x2 = x2 + deltaX;
+				updates.y2 = y2 + deltaY;
+		}
+
 		return updates;
 	};
 

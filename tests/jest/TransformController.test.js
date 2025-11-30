@@ -504,16 +504,38 @@ describe( 'TransformController', () => {
 	describe( 'calculateLineResize', () => {
 		const originalLine = { type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 };
 
-		it( 'should update x2 and y2', () => {
+		it( 'should move end point with e handle', () => {
+			const result = controller.calculateLineResize( originalLine, 'e', 25, 30 );
+			expect( result.x2 ).toBe( 125 );
+			expect( result.y2 ).toBe( 130 );
+			expect( result.x1 ).toBeUndefined();
+			expect( result.y1 ).toBeUndefined();
+		} );
+
+		it( 'should move start point with w handle', () => {
+			const result = controller.calculateLineResize( originalLine, 'w', 15, 20 );
+			expect( result.x1 ).toBe( 15 );
+			expect( result.y1 ).toBe( 20 );
+			expect( result.x2 ).toBeUndefined();
+			expect( result.y2 ).toBeUndefined();
+		} );
+
+		it( 'should handle negative deltas for end point', () => {
+			const result = controller.calculateLineResize( originalLine, 'e', -20, -30 );
+			expect( result.x2 ).toBe( 80 );
+			expect( result.y2 ).toBe( 70 );
+		} );
+
+		it( 'should handle negative deltas for start point', () => {
+			const result = controller.calculateLineResize( originalLine, 'w', -10, -15 );
+			expect( result.x1 ).toBe( -10 );
+			expect( result.y1 ).toBe( -15 );
+		} );
+
+		it( 'should fallback to end point for unknown handle', () => {
 			const result = controller.calculateLineResize( originalLine, 'se', 25, 30 );
 			expect( result.x2 ).toBe( 125 );
 			expect( result.y2 ).toBe( 130 );
-		} );
-
-		it( 'should handle negative deltas', () => {
-			const result = controller.calculateLineResize( originalLine, 'se', -20, -30 );
-			expect( result.x2 ).toBe( 80 );
-			expect( result.y2 ).toBe( 70 );
 		} );
 	} );
 
