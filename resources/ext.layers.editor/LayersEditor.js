@@ -44,10 +44,6 @@
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
 				mw.log.warn( errorMsg );
 			}
-			// Log to console as well for easier debugging
-			if ( typeof console !== 'undefined' && console.warn ) {
-				console.warn( '[LayersEditor]', errorMsg );
-			}
 			return false;
 		}
 		return true;
@@ -1598,10 +1594,9 @@
 				if ( mwHookRetries < MAX_MW_HOOK_RETRIES ) {
 					// Retry after a short delay
 					setTimeout( addHookListener, 50 );
-				} else if ( typeof console !== 'undefined' && console.warn ) {
-					// Max retries reached - MediaWiki environment not available
-					console.warn( '[LayersEditor] MediaWiki hook system not available after ' + MAX_MW_HOOK_RETRIES + ' attempts' );
 				}
+				// Note: If max retries reached, MediaWiki environment is not available.
+				// This is expected in non-MediaWiki contexts (tests, standalone).
 			}
 		};
 		addHookListener();

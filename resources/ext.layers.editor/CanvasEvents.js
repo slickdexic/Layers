@@ -180,6 +180,10 @@
 			try {
 				cm.handleResize( point, e );
 			} catch ( error ) {
+				// Log resize errors for debugging - these can occur during rapid interactions
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+					mw.log.error( '[CanvasEvents] handleResize error:', error.message || error );
+				}
 			}
 			return;
 		}
