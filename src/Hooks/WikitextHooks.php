@@ -9,6 +9,7 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersHtmlInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
 use MediaWiki\MediaWikiServices;
+use Psr\Log\LoggerInterface;
 
 class WikitextHooks {
 
@@ -23,6 +24,43 @@ class WikitextHooks {
 	 * @var LayersParamExtractor|null
 	 */
 	private static ?LayersParamExtractor $paramExtractor = null;
+
+	/**
+	 * Cached logger instance
+	 * @var LoggerInterface|null
+	 */
+	private static ?LoggerInterface $logger = null;
+
+	/**
+	 * Get logger instance (lazy singleton via DI container)
+	 *
+	 * @return LoggerInterface|null
+	 */
+	private static function getLogger(): ?LoggerInterface {
+		if ( self::$logger === null ) {
+			try {
+				$services = MediaWikiServices::getInstance();
+				self::$logger = $services->get( 'LayersLogger' );
+			} catch ( \Throwable $e ) {
+				// Fallback if service is unavailable
+				return null;
+			}
+		}
+		return self::$logger;
+	}
+
+	/**
+	 * Log a debug message if logger is available
+	 *
+	 * @param string $message
+	 * @param array $context
+	 */
+	private static function log( string $message, array $context = [] ): void {
+		$logger = self::getLogger();
+		if ( $logger ) {
+			$logger->info( "Layers: $message", $context );
+		}
+	}
 
 	/**
 	 * Get HTML injector instance (lazy singleton)
@@ -119,13 +157,9 @@ class WikitextHooks {
 				self::injectLayersIntoAttributes( $attribs, $file, $setName, 'ImageBeforeProduceHTML' );
 			}
 		} catch ( \Throwable $e ) {
-			// Swallow errors to avoid breaking rendering; optionally log
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error(
-					'Layers: Error in ImageBeforeProduceHTML',
-					[ 'exception' => $e ]
-				);
+			$logger = self::getLogger();
+			if ( $logger ) {
+				$logger->error( 'Layers: ImageBeforeProduceHTML error', [ 'exception' => $e ] );
 			}
 		}
 
@@ -238,9 +272,9 @@ class WikitextHooks {
 				}
 			}
 		} catch ( \Throwable $e ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Error in MakeImageLink2', [ 'exception' => $e ] );
+			$logger = self::getLogger();
+			if ( $logger ) {
+				$logger->error( 'Layers: MakeImageLink2 error', [ 'exception' => $e ] );
 			}
 		}
 
@@ -315,9 +349,9 @@ class WikitextHooks {
 				}
 			}
 		} catch ( \Throwable $e ) {
-			if ( \class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\MediaWiki\Logger\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Error in LinkerMakeImageLink', [ 'exception' => $e ] );
+			$logger = self::getLogger();
+			if ( $logger ) {
+				$logger->error( 'Layers: LinkerMakeImageLink error', [ 'exception' => $e ] );
 			}
 		}
 
@@ -390,9 +424,9 @@ class WikitextHooks {
 				$res = $injector->injectIntentMarker( (string)$res );
 			}
 		} catch ( \Throwable $e ) {
-			if ( \class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\MediaWiki\Logger\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Error in LinkerMakeMediaLinkFile', [ 'exception' => $e ] );
+			$logger = self::getLogger();
+			if ( $logger ) {
+				$logger->error( 'Layers: LinkerMakeMediaLinkFile error', [ 'exception' => $e ] );
 			}
 		}
 		return true;
@@ -530,13 +564,7 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onGetLinkParamDefinitions( array &$params ): bool {
-		// Debug logging
-		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info(
-					'Layers: onGetLinkParamDefinitions called, registering layers parameter'
-				);
-		}
+		self::log( 'Registering link param definitions' );
 
 		$params['layers'] = [
 			'type' => 'string',
@@ -584,14 +612,7 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserGetImageLinkParams( array &$params ): bool {
-		// Debug logging
-		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-			$currentParams = implode( ',', $params );
-			$logger->info(
-				"Layers: onParserGetImageLinkParams called, current params: $currentParams"
-			);
-		}
+		self::log( 'Adding image link params' );
 
 		if ( !in_array( 'layers', $params, true ) ) {
 			$params[] = 'layers';
@@ -614,14 +635,7 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserGetImageLinkOptions( array &$options ): bool {
-		// Debug logging
-		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-			$currentOptions = implode( ',', $options );
-			$logger->info(
-				"Layers: onParserGetImageLinkOptions called, current options: $currentOptions"
-			);
-		}
+		self::log( 'Adding image link options' );
 
 		foreach ( [ 'layers', 'layer', 'layersjson', 'layersetid' ] as $opt ) {
 			if ( !in_array( $opt, $options, true ) ) {
@@ -726,8 +740,8 @@ class WikitextHooks {
 			// Fall back to normal image display
 			return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
 		} catch ( Exception $e ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+			$logger = self::getLogger();
+			if ( $logger ) {
 				$logger->error( 'Layers: renderLayeredFile error', [ 'exception' => $e ] );
 			}
 			return '<span class="error">Error rendering layered file</span>';
@@ -794,8 +808,8 @@ class WikitextHooks {
 				return $thumb->getUrl();
 			}
 		} catch ( Exception $e ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+			$logger = self::getLogger();
+			if ( $logger ) {
 				$logger->error( 'Layers: generateLayeredThumbnailUrl error', [ 'exception' => $e ] );
 			}
 		}
@@ -822,313 +836,207 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onThumbnailBeforeProduceHTML( $thumbnail, array &$attribs, array &$linkAttribs ): bool {
-		// Debug logging
-		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func(
-				[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-				'Layers'
-			);
-			$logger->info( 'Layers: ThumbnailBeforeProduceHTML hook called' );
+		$fileName = ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() )
+			? $thumbnail->getFile()->getName()
+			: 'unknown';
+		self::log( "ThumbnailBeforeProduceHTML for: $fileName" );
 
-			// Log what we received
-			$fileName = 'unknown';
-			if ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() ) {
-				$fileName = $thumbnail->getFile()->getName();
-			}
-			$logger->info( 'Layers: Processing thumbnail for file: ' . $fileName );
+		// Extract layer data and flag from transform params
+		[ $layerData, $layersFlag ] = self::extractLayerDataFromThumbnail( $thumbnail );
 
-			// Log current attributes
-			$hasLayerData = isset( $attribs['data-layer-data'] );
-			$hasLayerClass = isset( $attribs['class'] ) && strpos( $attribs['class'], 'layers-thumbnail' ) !== false;
-			$logger->info(
-				'Layers: Current attributes - has data-layer-data: '
-				. ( $hasLayerData ? 'yes' : 'no' )
-				. ', has layers-thumbnail class: '
-				. ( $hasLayerClass ? 'yes' : 'no' )
-			);
-		}
-
-		// Prefer layer data passed via transform params (when available), else fall back to latest set
-		$layerData = null;
-		$layersFlag = null;
-
-		// Some MediaWiki versions do not expose transform params on ThumbnailImage
-		if ( method_exists( $thumbnail, 'getParams' ) ) {
-			$params = $thumbnail->getParams();
-			if ( isset( $params['layersjson'] ) && is_string( $params['layersjson'] ) ) {
-				$decoded = json_decode( $params['layersjson'], true );
-				if ( is_array( $decoded ) ) {
-					$layerData = isset( $decoded['layers'] ) && is_array( $decoded['layers'] )
-						? $decoded['layers']
-						: $decoded;
-				}
-			}
-			if ( $layerData === null && isset( $params['layerData'] ) ) {
-				$layerData = $params['layerData'];
-				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-					$logger = \call_user_func(
-						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-						'Layers'
-					);
-					$logger->info( 'Layers: Found layer data in transform params' );
-				}
-			}
-			if ( array_key_exists( 'layers', $params ) ) {
-				$layersFlag = $params['layers'];
-			} elseif ( array_key_exists( 'layer', $params ) ) {
-				$layersFlag = $params['layer'];
-			}
-		}
-
-		// Normalize layers flag (also peek at link attribs href for layers flag)
-		if ( is_string( $layersFlag ) ) {
-			$layersFlag = strtolower( trim( $layersFlag ) );
-		}
+		// Try to get layers flag from link href if not in params
 		if ( $layersFlag === null && isset( $linkAttribs['href'] ) ) {
-			$href = (string)$linkAttribs['href'];
-			$layersFlag = self::extractLayersParamFromHref( $href );
+			$layersFlag = self::extractLayersParamFromHref( (string)$linkAttribs['href'] );
 		}
 
-		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-			$logger->info(
-				'Layers: layersFlag = '
-				. ( $layersFlag ?: 'null' )
-				. ', layerData present = '
-				. ( $layerData !== null ? 'yes' : 'no' )
-			);
-		}
+		self::log( "layersFlag=$layersFlag, hasData=" . ( $layerData !== null ? 'yes' : 'no' ) );
 
-		// Respect explicit off/none
+		// Respect explicit disable
 		if ( $layersFlag === 'off' || $layersFlag === 'none' || $layersFlag === false ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info( 'Layers: Layers explicitly disabled' );
-			}
+			self::log( 'Layers explicitly disabled' );
 			return true;
 		}
 
-		// Additional check: look for layers parameter in link attributes if not found in transform params
-		if ( $layersFlag === null && isset( $linkAttribs['href'] ) ) {
-			$href = (string)$linkAttribs['href'];
-			$layersFlag = self::extractLayersParamFromHref( $href );
-			if ( $layersFlag !== null && \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func(
-					[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-					'Layers'
-				);
-				$logger->info( 'Layers: Found layers parameter in link href: ' . $href );
-			}
-		}
-
-	// Fallback to DB when layers flag is explicitly on/all, or when we detect layers should be shown
-	// but don't have layer data yet
+		// Try to fetch from DB if no data yet
 		if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
-			$shouldFallback = false;
-			$file = $thumbnail->getFile();
-			$filename = $file ? $file->getName() : null;
+			$layerData = self::fetchLayerDataForThumbnail( $thumbnail, $layersFlag, $linkAttribs );
+		}
 
-		// First, check the per-file queue from wikitext preprocessing
-		// This tells us if this specific image had layers= in its wikitext syntax
-		$storedSetName = null;
-		if ( $filename !== null ) {
-			$storedSetName = self::getFileSetName( $filename );
-			if ( $storedSetName !== null ) {
-				// Check if it's explicitly disabled
-				if ( $storedSetName === 'off' || $storedSetName === 'none' || $storedSetName === 'false' ) {
-					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-						$logger = \call_user_func(
-							[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-							'Layers'
-						);
-						$logger->info(
-							"Layers: Layers explicitly disabled for this " .
-							"instance of $filename via wikitext"
-						);
-					}
-					// Skip this instance entirely
-					return true;
-				}
-				// This image had layers= in wikitext, so we should show layers
-				$shouldFallback = true;
-				$layersFlag = $storedSetName;
-				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-					$logger = \call_user_func(
-						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-						'Layers'
-					);
-					// Skip inline comment
-					$logger->info(
-						"Layers: Using stored set name from wikitext queue: " .
-						"$storedSetName for $filename"
-					);
-				}
+		// Inject layer data into attributes
+		self::injectThumbnailLayerData( $attribs, $layerData, $layersFlag, $thumbnail );
+
+		return true;
+	}
+
+	/**
+	 * Extract layer data and flag from thumbnail transform params.
+	 *
+	 * @param mixed $thumbnail
+	 * @return array [ ?array $layerData, ?string $layersFlag ]
+	 */
+	private static function extractLayerDataFromThumbnail( $thumbnail ): array {
+		$layerData = null;
+		$layersFlag = null;
+
+		if ( !method_exists( $thumbnail, 'getParams' ) ) {
+			return [ null, null ];
+		}
+
+		$params = $thumbnail->getParams();
+
+		// Check layersjson param (JSON string)
+		if ( isset( $params['layersjson'] ) && is_string( $params['layersjson'] ) ) {
+			$decoded = json_decode( $params['layersjson'], true );
+			if ( is_array( $decoded ) ) {
+				$layerData = isset( $decoded['layers'] ) && is_array( $decoded['layers'] )
+					? $decoded['layers']
+					: $decoded;
 			}
 		}
 
-		// Check if layers flag indicates we should show layers (any value except off/none)
-		if ( !$shouldFallback && $layersFlag !== null && $layersFlag !== 'off' && $layersFlag !== 'none' ) {
+		// Fallback to layerData param
+		if ( $layerData === null && isset( $params['layerData'] ) ) {
+			$layerData = $params['layerData'];
+			self::log( 'Found layer data in transform params' );
+		}
+
+		// Get layers flag
+		if ( array_key_exists( 'layers', $params ) ) {
+			$layersFlag = $params['layers'];
+		} elseif ( array_key_exists( 'layer', $params ) ) {
+			$layersFlag = $params['layer'];
+		}
+
+		// Normalize flag
+		if ( is_string( $layersFlag ) ) {
+			$layersFlag = strtolower( trim( $layersFlag ) );
+		}
+
+		return [ $layerData, $layersFlag ];
+	}
+
+	/**
+	 * Fetch layer data from database for a thumbnail.
+	 *
+	 * @param mixed $thumbnail
+	 * @param string|null &$layersFlag Modified if wikitext queue has set name
+	 * @param array $linkAttribs
+	 * @return array|null
+	 */
+	private static function fetchLayerDataForThumbnail( $thumbnail, ?string &$layersFlag, array $linkAttribs ): ?array {
+		$file = $thumbnail->getFile();
+		if ( !$file ) {
+			return null;
+		}
+
+		$filename = $file->getName();
+		$shouldFallback = false;
+
+		// Check wikitext preprocessing queue
+		$storedSetName = self::getFileSetName( $filename );
+		if ( $storedSetName !== null ) {
+			if ( in_array( $storedSetName, [ 'off', 'none', 'false' ], true ) ) {
+				self::log( "Layers disabled via wikitext for $filename" );
+				return null;
+			}
+			$shouldFallback = true;
+			$layersFlag = $storedSetName;
+			self::log( "Using wikitext set name: $storedSetName for $filename" );
+		}
+
+		// Check if flag indicates layers should show
+		if ( !$shouldFallback && $layersFlag !== null && !in_array( $layersFlag, [ 'off', 'none' ], true ) ) {
 			$shouldFallback = true;
 		}
 
-		// Also check link attributes for layers parameter as additional fallback
+		// Check href for layers param
 		if ( !$shouldFallback && isset( $linkAttribs['href'] ) ) {
-			$href = (string)$linkAttribs['href'];
-			$hrefParam = self::extractLayersParamFromHref( $href );
-			if ( $hrefParam !== null && $hrefParam !== 'off' && $hrefParam !== 'none' ) {
+			$hrefParam = self::extractLayersParamFromHref( (string)$linkAttribs['href'] );
+			if ( $hrefParam !== null && !in_array( $hrefParam, [ 'off', 'none' ], true ) ) {
 				$shouldFallback = true;
 				$layersFlag = $hrefParam;
 			}
 		}
 
-		// Allow file pages (including action=editlayers) to always receive overlays
-		$contextIsFile = self::isFilePageContext();
-		$contextIsEdit = self::isEditLayersAction();
-		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func(
-				[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-				'Layers'
-			);
-			$logger->info(
-				'Layers: context check - isFilePage=' . ( $contextIsFile ? 'yes' : 'no' ) .
-				', isEditLayers=' . ( $contextIsEdit ? 'yes' : 'no' )
-			);
-		}
-		// Note: File: pages no longer auto-enable layers. Users must explicitly use layers=on.
-		// if ( !$shouldFallback && $contextIsFile ) {
-		// 	$shouldFallback = true;
-		// }
-		if ( !$shouldFallback && $contextIsEdit ) {
+		// Enable for editlayers action
+		if ( !$shouldFallback && self::isEditLayersAction() ) {
 			$shouldFallback = true;
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info( 'Layers: enabling fallback because action=editlayers' );
+			self::log( 'Enabling fallback for action=editlayers' );
+		}
+
+		if ( !$shouldFallback ) {
+			return null;
+		}
+
+		// Fetch from database
+		try {
+			$db = self::getLayersDatabaseService();
+			if ( !$db ) {
+				throw new Exception( 'LayersDatabase service unavailable' );
+			}
+
+			$isDefaultSet = $layersFlag === null || in_array( $layersFlag, [ 'on', 'all', 'true' ], true );
+			$layerSet = $isDefaultSet
+				? $db->getLatestLayerSet( $filename, $file->getSha1() )
+				: $db->getLayerSetByName( $filename, $file->getSha1(), $layersFlag );
+
+			if ( $layerSet && isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] ) ) {
+				$layers = $layerSet['data']['layers'];
+				self::log( sprintf( 'DB fallback: %d layers (set: %s)', count( $layers ), $layersFlag ?? 'default' ) );
+				return $layers;
+			}
+		} catch ( \Throwable $e ) {
+			$logger = self::getLogger();
+			if ( $logger ) {
+				$logger->error( 'Layers: Error retrieving layer data', [ 'exception' => $e ] );
 			}
 		}
 
-		// Strict gating: do not auto-enable overlays in debug mode without explicit layers intent.
+		return null;
+	}
 
-		if ( $shouldFallback ) {
-			// Note: $file and $filename were already set above when we checked the per-file queue
-			if ( $file ) {
-				try {
-					$db = self::getLayersDatabaseService();
-					if ( !$db ) {
-						throw new Exception( 'LayersDatabase service unavailable' );
-					}
+	/**
+	 * Inject layer data into thumbnail attributes.
+	 *
+	 * @param array &$attribs
+	 * @param array|null $layerData
+	 * @param string|null $layersFlag
+	 * @param mixed $thumbnail
+	 */
+	private static function injectThumbnailLayerData(
+		array &$attribs,
+		?array $layerData,
+		?string $layersFlag,
+		$thumbnail
+	): void {
+		// Always add instance marker
+		$instanceId = 'layers-' . substr( md5( uniqid( (string)mt_rand(), true ) ), 0, 8 );
+		$attribs['data-layers-instance'] = $instanceId;
 
-					$layerSet = null;
-
-					// Determine which layer set to fetch based on layersFlag
-					// (layersFlag may have been set from the wikitext queue above)
-					$isDefaultSet = $layersFlag === null || $layersFlag === 'on' ||
-						$layersFlag === 'all' || $layersFlag === 'true';
-					if ( $isDefaultSet ) {
-						// 'on'/'all'/null => fetch the default set (latest revision)
-						$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1() );
-					} elseif ( $layersFlag !== 'off' && $layersFlag !== 'none' ) {
-						// Any other value => treat as named set
-						$layerSet = $db->getLayerSetByName( $filename, $file->getSha1(), $layersFlag );
-					}
-
-					if ( $layerSet && isset( $layerSet['data'] ) ) {
-						$layerData = isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] )
-							? $layerSet['data']['layers']
-							: [];
-						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-							$logger = \call_user_func(
-								[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-								'Layers'
-							);
-							$logger->info(
-								sprintf(
-									'Layers: DB fallback provided %d layers for thumbnail (set: %s)',
-									count( $layerData ),
-									$layersFlag ?? 'default'
-								)
-							);
-						}
-					}
-				} catch ( \Throwable $e ) {
-						if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-							$logger = \call_user_func(
-						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-						'Layers'
-					);
-							$logger->error(
-						'Layers: Error retrieving layer data from database',
-						[ 'exception' => $e ]
-					);
-						}
-						// Swallow to avoid breaking core rendering
-				}
-			}
-		}
-		}
-
-	// If transform params provided data, render regardless of missing flag (treat as on)
 		if ( $layerData !== null ) {
-			// Mark that page has layers for client configuration
 			self::$pageHasLayers = true;
 
-			// Include base dimensions to allow correct scaling in the viewer
-			$baseWidth = (
-				method_exists( $thumbnail, 'getFile' )
-				&& $thumbnail->getFile()
-				&& method_exists( $thumbnail->getFile(), 'getWidth' )
-			)
-				? (int)$thumbnail->getFile()->getWidth()
-				: null;
-			$baseHeight = (
-				method_exists( $thumbnail, 'getFile' )
-				&& $thumbnail->getFile()
-				&& method_exists( $thumbnail->getFile(), 'getHeight' )
-			)
-				? (int)$thumbnail->getFile()->getHeight()
-				: null;
+			// Get base dimensions for scaling
+			$file = method_exists( $thumbnail, 'getFile' ) ? $thumbnail->getFile() : null;
 			$payload = [ 'layers' => $layerData ];
-			if ( $baseWidth && $baseHeight ) {
-				$payload['baseWidth'] = $baseWidth;
-				$payload['baseHeight'] = $baseHeight;
+			if ( $file && method_exists( $file, 'getWidth' ) && method_exists( $file, 'getHeight' ) ) {
+				$payload['baseWidth'] = (int)$file->getWidth();
+				$payload['baseHeight'] = (int)$file->getHeight();
 			}
+
 			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
 			$attribs['data-layer-data'] = json_encode( $payload );
 
-			// Add unique instance marker to prevent cross-instance interference
-			$instanceId = 'layers-' . substr( md5( uniqid( mt_rand(), true ) ), 0, 8 );
-			$attribs['data-layers-instance'] = $instanceId;
-
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info(
-					'Layers: Added layer data attribute with '
-					. count( $layerData )
-					. ' layers, instance: '
-					. $instanceId
-				);
-			}
+			self::log( sprintf( 'Added %d layers, instance: %s', count( $layerData ), $instanceId ) );
 		} else {
-			// Add unique instance marker to prevent cross-instance interference
-			$instanceId = 'layers-' . substr( md5( uniqid( mt_rand(), true ) ), 0, 8 );
-			$attribs['data-layers-instance'] = $instanceId;
+			self::log( "No layer data, instance: $instanceId" );
 
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info(
-					'Layers: No layer data to add, instance: '
-					. $instanceId
-				);
-			}
-			// Mark intent if layers were explicitly requested so client can API-fetch
-			if ( $layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === true ) {
+			// Mark intent for client-side API fetch
+			if ( in_array( $layersFlag, [ 'on', 'all', true ], true ) ) {
 				$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
 				$attribs['data-layers-intent'] = 'on';
 			}
-			// NOTE: We no longer use $pageHasLayers as a fallback here.
-			// Only images with explicit layers= parameter should get the marker class.
 		}
-
-		return true;
 	}
 
 	/**
@@ -1141,149 +1049,117 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserMakeImageParams( $title, $file, array &$params, $parser ): bool {
-		// Debug logging for onParserMakeImageParams
-		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-			$fileName = $file ? $file->getName() : 'null';
-			$titleText = $title ? $title->getText() : 'null';
-			$paramsKeys = array_keys( $params );
-			$hasLayersParam = isset( $params['layers'] );
-			$hasLayerParam = isset( $params['layer'] );
-			$layersValue = $hasLayersParam ? $params['layers'] : 'none';
-			$layerValue = $hasLayerParam ? $params['layer'] : 'none';
+		$fileName = $file ? $file->getName() : 'null';
+		self::log( "ParserMakeImageParams for: $fileName" );
 
-			$logger->info(
-				"Debug logging for onParserMakeImageParams - fileName: $fileName, titleText: $titleText, "
-				. 'hasLayersParam: ' . ( $hasLayersParam ? 'yes' : 'no' )
-				. ", layersValue: $layersValue, hasLayerParam: " . ( $hasLayerParam ? 'yes' : 'no' )
-				. ", layerValue: $layerValue, paramsKeys: " . implode( ',', $paramsKeys )
-			);
-		}
-
-		// Normalize and interpret layers parameter (support alias 'layer')
+		// Normalize alias 'layer' to 'layers'
 		if ( !isset( $params['layers'] ) && isset( $params['layer'] ) ) {
 			$params['layers'] = $params['layer'];
 			unset( $params['layer'] );
 		}
+
 		if ( !isset( $params['layers'] ) ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info(
-					"Debug logging for onParserMakeImageParams - No layers parameter found, returning early"
-				);
-			}
 			return true;
 		}
 
-		// Ensure we have a File object; in some code paths it may be null here
-		if ( !$file ) {
-			try {
-				$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
-					? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-					: null;
-				$repoGroup = $services ? $services->getRepoGroup() : null;
-				if ( $repoGroup && $title ) {
-					$file = $repoGroup->findFile( $title );
-				}
-			} catch ( \Throwable $e ) {
-				// ignore; fallback behavior below
-			}
-		}
+		// Ensure we have a File object
+		$file = self::ensureFileObject( $file, $title );
 
-		$layersRaw = $params['layers'];
-		// Normalize boolean-like strings
-		if ( is_string( $layersRaw ) ) {
-			$trimmed = strtolower( trim( $layersRaw ) );
-			if ( $trimmed === 'true' ) {
-				$layersRaw = true;
-			} elseif ( $trimmed === 'false' ) {
-				$layersRaw = false;
-			} else {
-				$layersRaw = $trimmed;
-			}
-		}
+		// Normalize the layers parameter value
+		$layersRaw = self::normalizeLayersParam( $params['layers'] );
+
+		// Handle disabled layers
 		if ( $layersRaw === false || $layersRaw === 'none' || $layersRaw === 'off' ) {
-			// Explicitly disable layers
-			unset( $params['layerSetId'], $params['layerData'] );
-			unset( $params['layersjson'], $params['layersetid'] );
+			unset( $params['layerSetId'], $params['layerData'], $params['layersjson'], $params['layersetid'] );
 			return true;
 		}
 
-		// Accept 'all' as show latest set; accept 'on' for legacy
-		if ( $layersRaw === true || $layersRaw === 'on' || $layersRaw === 'all' ) {
-			// Mark that this page has layers enabled
-			self::$pageHasLayers = true;
+		// Mark page has layers
+		self::$pageHasLayers = true;
 
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info(
-					"Debug logging for onParserMakeImageParams - Processing layers='all' or 'on',"
-					. " layersRaw: $layersRaw, file exists: "
-					. ( $file ? 'yes' : 'no' )
-					. ', pageHasLayers set to true'
-				);
-			}
+		// Process based on parameter type
+		if ( $layersRaw === true || $layersRaw === 'on' || $layersRaw === 'all' ) {
+			// Show latest/default set
 			if ( $file ) {
 				self::addLatestLayersToImage( $file, $params );
 			}
-			$params['layers'] = 'on';
-			if ( isset( $params['layerData'] ) && is_array( $params['layerData'] ) ) {
-				$params['layersjson'] = json_encode( $params['layerData'], JSON_UNESCAPED_UNICODE );
+		} elseif (
+			is_string( $layersRaw ) &&
+			preg_match( '/^[0-9a-fA-F]{2,8}(\s*,\s*[0-9a-fA-F]{2,8})*$/', $layersRaw )
+		) {
+			// Comma-separated short IDs
+			if ( $file ) {
+				self::addSubsetLayersToImage( $file, $layersRaw, $params );
 			}
-			if ( isset( $params['layerSetId'] ) ) {
-				$params['layersetid'] = (string)$params['layerSetId'];
-			}
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$hasLayerData = isset( $params['layerData'] );
-				$hasLayerSetId = isset( $params['layerSetId'] );
-				$layersNormalized = $params['layers'];
-				$logger->info(
-					"Debug logging for onParserMakeImageParams - After processing layers='all': "
-					. "layersNormalized: $layersNormalized, hasLayerData: "
-					. ( $hasLayerData ? 'yes' : 'no' )
-					. ', hasLayerSetId: '
-					. ( $hasLayerSetId ? 'yes' : 'no' )
-				);
-			}
-			return true;
-		}
-
-		if ( is_string( $layersRaw ) ) {
-			// Comma-separated short IDs: 4bfa,77e5,0cf2
-			if ( preg_match( '/^[0-9a-fA-F]{2,8}(\s*,\s*[0-9a-fA-F]{2,8})*$/', $layersRaw ) ) {
-				// Mark that this page has layers enabled
-				self::$pageHasLayers = true;
-
-				if ( $file ) {
-					self::addSubsetLayersToImage( $file, $layersRaw, $params );
-				}
-				$params['layers'] = 'on';
-				if ( isset( $params['layerData'] ) && is_array( $params['layerData'] ) ) {
-					$params['layersjson'] = json_encode( $params['layerData'], JSON_UNESCAPED_UNICODE );
-				}
-				if ( isset( $params['layerSetId'] ) ) {
-					$params['layersetid'] = (string)$params['layerSetId'];
-				}
-				return true;
-			}
-			// Named or id: prefixes
-			// Mark that this page has layers enabled
-			self::$pageHasLayers = true;
-
+		} elseif ( is_string( $layersRaw ) ) {
+			// Named set or id: prefix
 			if ( $file ) {
 				self::addSpecificLayersToImage( $file, $layersRaw, $params );
 			}
-			$params['layers'] = 'on';
-			if ( isset( $params['layerData'] ) && is_array( $params['layerData'] ) ) {
-				$params['layersjson'] = json_encode( $params['layerData'], JSON_UNESCAPED_UNICODE );
-			}
-			if ( isset( $params['layerSetId'] ) ) {
-				$params['layersetid'] = (string)$params['layerSetId'];
-			}
 		}
 
+		// Finalize params
+		$params['layers'] = 'on';
+		if ( isset( $params['layerData'] ) && is_array( $params['layerData'] ) ) {
+			$params['layersjson'] = json_encode( $params['layerData'], JSON_UNESCAPED_UNICODE );
+		}
+		if ( isset( $params['layerSetId'] ) ) {
+			$params['layersetid'] = (string)$params['layerSetId'];
+		}
+
+		self::log( sprintf(
+			'Processed layers param: hasData=%s, hasSetId=%s',
+			isset( $params['layerData'] ) ? 'yes' : 'no',
+			isset( $params['layerSetId'] ) ? 'yes' : 'no'
+		) );
+
 		return true;
+	}
+
+	/**
+	 * Ensure we have a File object, attempting to find it if necessary.
+	 *
+	 * @param mixed $file Current file (may be null)
+	 * @param mixed $title Title to find file for
+	 * @return mixed File object or null
+	 */
+	private static function ensureFileObject( $file, $title ) {
+		if ( $file ) {
+			return $file;
+		}
+
+		try {
+			$services = MediaWikiServices::getInstance();
+			$repoGroup = $services->getRepoGroup();
+			if ( $repoGroup && $title ) {
+				return $repoGroup->findFile( $title );
+			}
+		} catch ( \Throwable $e ) {
+			// Ignore errors, return null
+		}
+
+		return null;
+	}
+
+	/**
+	 * Normalize the layers parameter value.
+	 *
+	 * @param mixed $value Raw parameter value
+	 * @return mixed Normalized value (bool, string, or original)
+	 */
+	private static function normalizeLayersParam( $value ) {
+		if ( !is_string( $value ) ) {
+			return $value;
+		}
+
+		$trimmed = strtolower( trim( $value ) );
+		if ( $trimmed === 'true' ) {
+			return true;
+		}
+		if ( $trimmed === 'false' ) {
+			return false;
+		}
+		return $trimmed;
 	}
 
 	/**
@@ -1342,20 +1218,9 @@ class WikitextHooks {
 	 */
 	public static function onParserBeforeInternalParse( $parser, &$text, $stripState ): bool {
 		try {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->info( 'Layers: ParserBeforeInternalParse called with text length: ' . strlen( $text ) );
-				// Debug: Show actual text content for debugging
-				if ( strlen( $text ) < 200 ) {
-					$logger->info( 'Layers: Text content: ' . $text );
-				} elseif ( strpos( $text, 'File:' ) !== false ) {
-					$logger->info( 'Layers: Text contains File: reference' );
-				}
-			}
+			self::log( 'ParserBeforeInternalParse: text length=' . strlen( $text ) );
 
 			// Extract [[File:filename.ext|...layers=value...]] patterns and store setname per file
-			// This pattern captures: filename, and layers/layer value (any string until | or ]])
-			// Multiple occurrences of the same file are stored in order in a queue
 			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layers?\s*=\s*([^|\]]+)/i';
 			if ( preg_match_all( $fileLayersPattern, $text, $allMatches, PREG_SET_ORDER ) ) {
 				foreach ( $allMatches as $match ) {
@@ -1370,55 +1235,24 @@ class WikitextHooks {
 					}
 
 					// Store the set name in the queue (in order of appearance)
-					// For boolean-like values, store null to indicate default behavior
 					$normalized = strtolower( $layersValue );
-					if ( $normalized !== 'on' && $normalized !== 'off' && $normalized !== 'none'
-						&& $normalized !== 'true' && $normalized !== 'false' && $normalized !== 'all' ) {
-						// This is a named set like "Paul"
-						self::$fileSetNames[$filename][] = $layersValue;
-					} else {
-						// Store the boolean-like value so we maintain order
-						self::$fileSetNames[$filename][] = $normalized;
-					}
+					$isBoolean = in_array( $normalized, [ 'on', 'off', 'none', 'true', 'false', 'all' ], true );
+					self::$fileSetNames[$filename][] = $isBoolean ? $normalized : $layersValue;
 
-					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-						$logger = \call_user_func(
-							[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-							'Layers'
-						);
-						$queueLen = count( self::$fileSetNames[$filename] );
-						$logger->info(
-							"Layers: ParserBeforeInternalParse detected layers=$layersValue " .
-							"for file=$filename (occurrence #$queueLen)"
-						);
-					}
+					$queueLen = count( self::$fileSetNames[$filename] );
+					self::log( "Detected layers=$layersValue for $filename (occurrence #$queueLen)" );
 				}
 			}
 
-			// Also check for any occurrence of layers= anywhere in the text as a fallback
-			if (
-				( strpos( $text, 'layers=' ) !== false || strpos( $text, 'layer=' ) !== false )
-			) {
-				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-					$logger = \call_user_func(
-						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-						'Layers'
-					);
-					$logger->info(
-						'Layers: Found layers= or layer= text in wikitext, '
-						. 'setting pageHasLayers=true as fallback'
-					);
-				}
+			// Fallback: check for any layers= text
+			if ( strpos( $text, 'layers=' ) !== false || strpos( $text, 'layer=' ) !== false ) {
 				self::$pageHasLayers = true;
+				self::log( 'Found layers= in wikitext, setting pageHasLayers=true' );
 			}
-
 		} catch ( \Throwable $e ) {
-			// Ignore errors in regex parsing
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error(
-					'Layers: Error in ParserBeforeInternalParse: ' . $e->getMessage()
-				);
+			$logger = self::getLogger();
+			if ( $logger ) {
+				$logger->error( 'Layers: ParserBeforeInternalParse error: ' . $e->getMessage() );
 			}
 		}
 
@@ -1664,15 +1498,9 @@ class WikitextHooks {
 		try {
 			return MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
 		} catch ( \Throwable $e ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func(
-					[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-					'Layers'
-				);
-				$logger->error(
-					'Layers: Unable to resolve LayersDatabase service',
-					[ 'exception' => $e ]
-				);
+			$logger = self::getLogger();
+			if ( $logger ) {
+				$logger->error( 'Layers: Unable to resolve LayersDatabase service', [ 'exception' => $e ] );
 			}
 			return null;
 		}

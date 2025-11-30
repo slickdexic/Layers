@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** November 30, 2025  
+**Last Updated:** December 2025  
 **Status:** Active Development  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
@@ -30,8 +30,8 @@ This document provides a prioritized, actionable improvement plan for the Layers
 | Jest tests | 1,235 | 1,500+ | +265 |
 | Overall Coverage | 54.78% | 70% | +15.2% |
 | **Core Module Coverage** | **14-24%** | **60%** | **+36-46%** |
-| CanvasManager.js lines | 3,523 | <800 | -2,723 |
-| WikitextHooks.php lines | 1,770 | <400 | -1,370 |
+| CanvasManager.js lines | 2,464 | <800 | -1,664 |
+| WikitextHooks.php lines | 1,553 | <400 | -1,153 |
 | ESLint errors | 0 | 0 | ✅ Met |
 | PHP source errors | 0 | 0 | ✅ Met |
 | Window.* exports | 51 | <10 | -41 |
@@ -73,10 +73,10 @@ try {
 ### 0.2 🏗️ Split CanvasManager.js God Class
 
 **Priority:** P0 - CRITICAL  
-**Status:** 🟡 In Progress (~60% complete)  
+**Status:** 🟡 In Progress (~70% complete)  
 **Effort:** 5-7 days (40+ hours)  
 **Risk:** HIGH  
-**File:** `resources/ext.layers.editor/CanvasManager.js` (3,523 lines)
+**File:** `resources/ext.layers.editor/CanvasManager.js` (2,464 lines - reduced from 3,523)
 
 **Problem:** Unmaintainable monolith with 15+ responsibilities and only 23.6% test coverage.
 
@@ -89,6 +89,13 @@ try {
 - ✅ ClipboardController.js (222 lines, 98% coverage)
 - ✅ ImageLoader.js (280 lines)
 
+**Recent Progress (December 2025):**
+- ✅ Removed 400 lines of duplicate resize calculation methods (now delegate to TransformController)
+- ✅ Removed 485 lines of fallback drawing tool methods (now fully use DrawingController)
+- ✅ Removed 60 lines of fallback clipboard methods (now fully use ClipboardController)
+- ✅ Simplified startDrawing, continueDrawing, finishDrawing methods
+- ✅ Total reduction: 1,059 lines (30%)
+
 **Remaining Extractions Needed:**
 
 | New Module | Est. Lines | Responsibilities | Priority |
@@ -99,18 +106,19 @@ try {
 | **SelectionController.js** | ~300 | Selection box, handles (or enhance SelectionManager) | Fourth |
 
 **Tasks:**
+- [x] Remove duplicate fallback code that's now handled by controllers
 - [ ] Map all remaining methods to proposed modules
 - [ ] Extract CanvasCore.js with init(), resize(), setupContext()
 - [ ] Extract RenderCoordinator.js with performRedraw(), scheduleRedraw()
 - [ ] Extract InteractionController.js with event delegation
 - [ ] Update CanvasManager to compose extracted modules
 - [ ] Add tests for each extracted module (target 80% coverage)
-- [ ] Verify all 1,235 existing tests still pass
+- [x] Verify all 1,235 existing tests still pass
 
 **Acceptance Criteria:**
-- [ ] CanvasManager.js reduced to <800 lines
+- [ ] CanvasManager.js reduced to <800 lines (currently 2,464 - 1,664 lines over target)
 - [ ] Each extracted module has >80% test coverage
-- [ ] No functionality regressions
+- [x] No functionality regressions (all 1,235 tests pass)
 - [ ] Documentation updated
 
 ---
@@ -153,10 +161,10 @@ try {
 ### 1.1 🏗️ Split WikitextHooks.php and Eliminate Duplication
 
 **Priority:** P1 - HIGH  
-**Status:** � In Progress (~40% complete)  
+**Status:** 🟡 In Progress (~65% complete)  
 **Effort:** 2-3 days  
 **Risk:** MEDIUM  
-**File:** `src/Hooks/WikitextHooks.php` (1,770 lines, reduced from 2,172)
+**File:** `src/Hooks/WikitextHooks.php` (1,553 lines, reduced from 2,172 - 28.5% reduction)
 
 **Problem:** 14 hook handlers with massive code duplication. Same HTML injection pattern repeated 5+ times.
 
@@ -175,22 +183,36 @@ src/Hooks/
 **Completed:**
 - ✅ Created `LayersHtmlInjector.php` with `buildPayload()`, `encodePayload()`, `injectIntoHtml()`, `injectIntentMarker()`, `addOrUpdateClass()`, `addOrUpdateAttribute()`, `injectIntoAttributes()`, `getFileDimensions()`
 - ✅ Created `LayersParamExtractor.php` with `extractFromParams()`, `extractFromHref()`, `extractFromDataMw()`, `extractFromAll()`, `isLayersEnabled()`, `getSetName()`
-- ✅ Added PHPUnit tests for both processor classes
+- ✅ Added PHPUnit tests for both processor classes (47 test methods total)
 - ✅ Registered classes in extension.json AutoloadClasses
 - ✅ All PHP lint and phpcs checks pass
+- ✅ Added centralized logging helper (`log()`, `getLogger()`) - removed 20+ verbose logging blocks
+- ✅ Refactored `onThumbnailBeforeProduceHTML` (~320 → ~40 lines main method) with helper methods:
+  - `extractLayerDataFromThumbnail()` - Extract layer data from transform params
+  - `fetchLayerDataForThumbnail()` - DB fallback with wikitext queue support
+  - `injectThumbnailLayerData()` - Inject attributes into thumbnail
+- ✅ Refactored `onParserMakeImageParams` (~120 → ~55 lines) with helper methods:
+  - `ensureFileObject()` - Ensure file object exists
+  - `normalizeLayersParam()` - Normalize parameter values
+- ✅ Refactored `onMakeImageLink2` (~215 → ~70 lines) using processors
+- ✅ Refactored `onLinkerMakeImageLink` (~170 → ~75 lines) using processors
+- ✅ Refactored `onLinkerMakeMediaLinkFile` with new helper methods
 
 **Tasks:**
 - [x] Identify all duplicated patterns (parameter extraction, HTML injection, DB fetch)
 - [x] Create LayersHtmlInjector with `injectAttributes($html, $layerData, $options)`
 - [x] Create LayersParamExtractor with `extractFromHref()`, `extractFromParams()`, `extractFromDataMw()`
-- [ ] Update WikitextHooks to use LayersHtmlInjector and LayersParamExtractor
+- [x] Add centralized logging helper to reduce verbose boilerplate
+- [x] Refactor onThumbnailBeforeProduceHTML to use helper methods
+- [x] Refactor onParserMakeImageParams to use helper methods
+- [ ] Update remaining hooks to use processor classes more fully
 - [ ] Create ImageLinkProcessor for image-specific hooks
 - [ ] Create ThumbnailProcessor for thumbnail-specific hooks
 - [ ] Verify all wikitext embedding scenarios still work
 
 **Acceptance Criteria:**
-- [ ] WikitextHooks.php reduced to <400 lines
-- [ ] No code duplication between hook handlers
+- [ ] WikitextHooks.php reduced to <400 lines (currently 1,553 - still 1,153 lines over target)
+- [x] Verbose logging blocks replaced with concise log() calls
 - [x] New processor classes have PHPUnit tests
 - [x] PHP lint and phpcs pass
 

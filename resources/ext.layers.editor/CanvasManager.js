@@ -565,431 +565,31 @@
 		}
 	};
 
-	CanvasManager.prototype.calculateResize = function (
-		originalLayer, handleType, deltaX, deltaY, modifiers
-	) {
-		modifiers = modifiers || {};
-
-		switch ( originalLayer.type ) {
-			case 'rectangle':
-			case 'blur':
-				return this.calculateRectangleResize(
-					originalLayer, handleType, deltaX, deltaY, modifiers
-				);
-			case 'circle':
-				return this.calculateCircleResize(
-					originalLayer, handleType, deltaX, deltaY, modifiers
-				);
-			case 'ellipse':
-				return this.calculateEllipseResize(
-					originalLayer, handleType, deltaX, deltaY, modifiers
-				);
-			case 'polygon':
-			case 'star':
-				return this.calculatePolygonResize(
-					originalLayer, handleType, deltaX, deltaY, modifiers
-				);
-			case 'line':
-			case 'arrow':
-				return this.calculateLineResize(
-					originalLayer, handleType, deltaX, deltaY, modifiers
-				);
-			case 'path':
-				return this.calculatePathResize(
-					originalLayer, handleType, deltaX, deltaY, modifiers
-				);
-			case 'text':
-				// Text can be resized by changing font size
-				return this.calculateTextResize(
-					originalLayer, handleType, deltaX, deltaY
-				);
-			default:
-				return null;
-		}
-	};
-
 	/**
-	 * Calculate ellipse resize adjustments for radiusX and radiusY
-	 *
-	 * @param {Object} origLayerEllipse Original layer ellipse properties
-	 * @param {string} handleEllipse Handle being dragged ('e', 'w', 'n', 's', etc.)
-	 * @param {number} dXEllipse Delta X movement
-	 * @param {number} dYEllipse Delta Y movement
-	 * @return {Object} Updates object with new radiusX/radiusY values
-	 */
-	CanvasManager.prototype.calculateEllipseResize = function (
-		origLayerEllipse, handleEllipse, dXEllipse, dYEllipse
-	) {
-		const updates = {};
-		const origRX = origLayerEllipse.radiusX || 1;
-		const origRY = origLayerEllipse.radiusY || 1;
-		if ( handleEllipse === 'e' || handleEllipse === 'w' ) {
-			updates.radiusX = Math.max(
-				5,
-				origRX + ( handleEllipse === 'e' ? dXEllipse : -dXEllipse )
-			);
-		}
-		if ( handleEllipse === 'n' || handleEllipse === 's' ) {
-			updates.radiusY = Math.max(
-				5,
-				origRY + ( handleEllipse === 's' ? dYEllipse : -dYEllipse )
-			);
-		}
-		return updates;
-	};
-
-	// Polygon/star resize: scale width/height (bounding box)
-	CanvasManager.prototype.calculatePolygonResize = function (
-		origLayerPoly, handlePoly, dXPoly, dYPoly
-	) {
-		const updates = {};
-		const origRadius = origLayerPoly.radius || 50;
-
-		// Calculate distance from center to determine new radius
-		let deltaDistance = 0;
-
-		switch ( handlePoly ) {
-			case 'e':
-			case 'w':
-				deltaDistance = Math.abs( dXPoly );
-				break;
-			case 'n':
-			case 's':
-				deltaDistance = Math.abs( dYPoly );
-				break;
-			case 'ne':
-			case 'nw':
-			case 'se':
-			case 'sw':
-				// For corner handles, use the larger delta
-				deltaDistance = Math.max( Math.abs( dXPoly ), Math.abs( dYPoly ) );
-				break;
-		}
-
-		// Determine direction (growing or shrinking)
-		let growing = false;
-		switch ( handlePoly ) {
-			case 'e':
-				growing = dXPoly > 0;
-				break;
-			case 'w':
-				growing = dXPoly < 0;
-				break;
-			case 'n':
-				growing = dYPoly < 0;
-				break;
-			case 's':
-				growing = dYPoly > 0;
-				break;
-			case 'ne':
-				growing = dXPoly > 0 || dYPoly < 0;
-				break;
-			case 'nw':
-				growing = dXPoly < 0 || dYPoly < 0;
-				break;
-			case 'se':
-				growing = dXPoly > 0 || dYPoly > 0;
-				break;
-			case 'sw':
-				growing = dXPoly < 0 || dYPoly > 0;
-				break;
-		}
-
-		// Apply the change
-		const newRadius = growing ?
-			origRadius + deltaDistance :
-			Math.max( 10, origRadius - deltaDistance );
-
-		updates.radius = newRadius;
-		return updates;
-	};
-
-	// Line/arrow resize: move x2/y2
-	CanvasManager.prototype.calculateLineResize = function (
-		origLayerLine, handleLine, dXLine, dYLine
-	) {
-		const updates = {};
-		updates.x2 = ( origLayerLine.x2 || 0 ) + dXLine;
-		updates.y2 = ( origLayerLine.y2 || 0 ) + dYLine;
-		return updates;
-	};
-
-	// Path resize: scale all points
-	CanvasManager.prototype.calculatePathResize = function (
-		origLayerPath, handlePath, dXPath, dYPath
-	) {
-		if ( !origLayerPath.points ) {
-			return null;
-		}
-		const updates = { points: [] };
-		const scaleX = 1 + dXPath / 100;
-		const scaleY = 1 + dYPath / 100;
-		for ( let i = 0; i < origLayerPath.points.length; i++ ) {
-			updates.points.push( {
-				x: origLayerPath.points[ i ].x * scaleX,
-				y: origLayerPath.points[ i ].y * scaleY
-			} );
-		}
-		return updates;
-	};
-
-	/**
-	 * Calculate rectangle resize adjustments
+	 * Calculate resize updates based on layer type
+	 * Delegates to TransformController for actual calculations
 	 *
 	 * @param {Object} originalLayer Original layer properties
 	 * @param {string} handleType Handle being dragged
 	 * @param {number} deltaX Delta X movement
 	 * @param {number} deltaY Delta Y movement
 	 * @param {Object} modifiers Modifier keys state
-	 * @return {Object} Updates object with new dimensions
+	 * @return {Object|null} Updates object with new dimensions
 	 */
-	CanvasManager.prototype.calculateRectangleResize = function (
+	CanvasManager.prototype.calculateResize = function (
 		originalLayer, handleType, deltaX, deltaY, modifiers
 	) {
-		modifiers = modifiers || {};
-		const updates = {};
-		const origX = originalLayer.x || 0;
-		const origY = originalLayer.y || 0;
-		const origW = originalLayer.width || 0;
-		const origH = originalLayer.height || 0;
-
-		// Calculate aspect ratio for proportional scaling
-		let aspectRatio = origW / origH;
-		const centerX = origX + origW / 2;
-		const centerY = origY + origH / 2;
-
-		if ( modifiers.proportional ) {
-			// Proportional scaling: maintain aspect ratio
-			// Prevent division by zero and extreme aspect ratios
-			if ( aspectRatio === 0 || !isFinite( aspectRatio ) ) {
-				aspectRatio = 1.0;
-			}
-
-			// Use the dimension that changed the most to drive the scaling
-			const absDeltaX = Math.abs( deltaX );
-			const absDeltaY = Math.abs( deltaY );
-
-			if ( absDeltaX > absDeltaY ) {
-				// X dimension changed more - scale based on X
-				deltaY = deltaY < 0 ? -absDeltaX / aspectRatio : absDeltaX / aspectRatio;
-			} else {
-				// Y dimension changed more - scale based on Y
-				deltaX = deltaX < 0 ? -absDeltaY * aspectRatio : absDeltaY * aspectRatio;
-			}
+		if ( this.transformController ) {
+			return this.transformController.calculateResize(
+				originalLayer, handleType, deltaX, deltaY, modifiers
+			);
 		}
-
-		switch ( handleType ) {
-			case 'nw':
-				if ( modifiers.fromCenter ) {
-					updates.x = centerX - ( origW - deltaX ) / 2;
-					updates.y = centerY - ( origH - deltaY ) / 2;
-					updates.width = origW - deltaX;
-					updates.height = origH - deltaY;
-				} else {
-					updates.x = origX + deltaX;
-					updates.y = origY + deltaY;
-					updates.width = origW - deltaX;
-					updates.height = origH - deltaY;
-				}
-				break;
-			case 'ne':
-				if ( modifiers.fromCenter ) {
-					updates.x = centerX - ( origW + deltaX ) / 2;
-					updates.y = centerY - ( origH - deltaY ) / 2;
-					updates.width = origW + deltaX;
-					updates.height = origH - deltaY;
-				} else {
-					updates.y = origY + deltaY;
-					updates.width = origW + deltaX;
-					updates.height = origH - deltaY;
-				}
-				break;
-			case 'sw':
-				if ( modifiers.fromCenter ) {
-					updates.x = centerX - ( origW - deltaX ) / 2;
-					updates.y = centerY - ( origH + deltaY ) / 2;
-					updates.width = origW - deltaX;
-					updates.height = origH + deltaY;
-				} else {
-					updates.x = origX + deltaX;
-					updates.width = origW - deltaX;
-					updates.height = origH + deltaY;
-				}
-				break;
-			case 'se':
-				if ( modifiers.fromCenter ) {
-					updates.x = centerX - ( origW + deltaX ) / 2;
-					updates.y = centerY - ( origH + deltaY ) / 2;
-					updates.width = origW + deltaX;
-					updates.height = origH + deltaY;
-				} else {
-					updates.width = origW + deltaX;
-					updates.height = origH + deltaY;
-				}
-				break;
-			case 'n':
-				if ( modifiers.fromCenter ) {
-					updates.y = centerY - ( origH - deltaY ) / 2;
-					updates.height = origH - deltaY;
-				} else {
-					updates.y = origY + deltaY;
-					updates.height = origH - deltaY;
-				}
-				break;
-			case 's':
-				if ( modifiers.fromCenter ) {
-					updates.y = centerY - ( origH + deltaY ) / 2;
-					updates.height = origH + deltaY;
-				} else {
-					updates.height = origH + deltaY;
-				}
-				break;
-			case 'w':
-				if ( modifiers.fromCenter ) {
-					updates.x = centerX - ( origW - deltaX ) / 2;
-					updates.width = origW - deltaX;
-				} else {
-					updates.x = origX + deltaX;
-					updates.width = origW - deltaX;
-				}
-				break;
-			case 'e':
-				if ( modifiers.fromCenter ) {
-					updates.x = centerX - ( origW + deltaX ) / 2;
-					updates.width = origW + deltaX;
-				} else {
-					updates.width = origW + deltaX;
-				}
-				break;
+		// TransformController not available - should never happen in production
+		if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: TransformController not available for calculateResize' );
 		}
-
-		// Apply minimum size constraints
-		if ( updates.width !== undefined ) {
-			updates.width = Math.max( 5, updates.width );
-		}
-		if ( updates.height !== undefined ) {
-			updates.height = Math.max( 5, updates.height );
-		}
-
-		// Prevent extreme coordinate values that could cause rendering issues
-		if ( updates.x !== undefined ) {
-			updates.x = Math.max( -10000, Math.min( 10000, updates.x ) );
-		}
-		if ( updates.y !== undefined ) {
-			updates.y = Math.max( -10000, Math.min( 10000, updates.y ) );
-		}
-		if ( updates.width !== undefined ) {
-			updates.width = Math.min( 10000, updates.width );
-		}
-		if ( updates.height !== undefined ) {
-			updates.height = Math.min( 10000, updates.height );
-		}
-
-		return updates;
+		return null;
 	};
-
-	CanvasManager.prototype.calculateCircleResize = function (
-		originalLayer, handleType, deltaX, deltaY
-	) {
-		const updates = {};
-		const origRadius = originalLayer.radius || 50;
-		const origX = originalLayer.x || 0;
-		const origY = originalLayer.y || 0;
-
-		// Calculate new position based on handle and delta
-		let handleX, handleY;
-		switch ( handleType ) {
-			case 'e':
-				handleX = origX + origRadius + deltaX;
-				handleY = origY;
-				break;
-			case 'w':
-				handleX = origX - origRadius + deltaX;
-				handleY = origY;
-				break;
-			case 'n':
-				handleX = origX;
-				handleY = origY - origRadius + deltaY;
-				break;
-			case 's':
-				handleX = origX;
-				handleY = origY + origRadius + deltaY;
-				break;
-			case 'ne':
-				handleX = origX + origRadius * Math.cos( Math.PI / 4 ) + deltaX;
-				handleY = origY - origRadius * Math.sin( Math.PI / 4 ) + deltaY;
-				break;
-			case 'nw':
-				handleX = origX - origRadius * Math.cos( Math.PI / 4 ) + deltaX;
-				handleY = origY - origRadius * Math.sin( Math.PI / 4 ) + deltaY;
-				break;
-			case 'se':
-				handleX = origX + origRadius * Math.cos( Math.PI / 4 ) + deltaX;
-				handleY = origY + origRadius * Math.sin( Math.PI / 4 ) + deltaY;
-				break;
-			case 'sw':
-				handleX = origX - origRadius * Math.cos( Math.PI / 4 ) + deltaX;
-				handleY = origY + origRadius * Math.sin( Math.PI / 4 ) + deltaY;
-				break;
-			default:
-				return null;
-		}
-
-		// Calculate new radius based on distance from center to new handle position
-		const newRadius = Math.sqrt(
-			( handleX - origX ) * ( handleX - origX ) +
-			( handleY - origY ) * ( handleY - origY )
-		);
-
-		updates.radius = Math.max( 5, newRadius );
-		return updates;
-	};
-
-	CanvasManager.prototype.calculateTextResize = function (
-		originalLayer, handleType, deltaX, deltaY
-	) {
-		const updates = {};
-		const originalFontSize = originalLayer.fontSize || 16;
-
-		// Calculate font size change based on diagonal movement
-		const diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
-		const fontSizeChange = diagonalDelta * 0.2; // Scale factor
-
-		// Determine if we're growing or shrinking based on handle direction
-		let isGrowing = false;
-		switch ( handleType ) {
-			case 'se':
-			case 'e':
-			case 's':
-				isGrowing = ( deltaX > 0 || deltaY > 0 );
-				break;
-			case 'nw':
-			case 'w':
-			case 'n':
-				isGrowing = ( deltaX < 0 || deltaY < 0 );
-				break;
-			case 'ne':
-				isGrowing = ( deltaX > 0 || deltaY < 0 );
-				break;
-			case 'sw':
-				isGrowing = ( deltaX < 0 || deltaY > 0 );
-				break;
-		}
-
-		let newFontSize = originalFontSize;
-		if ( isGrowing ) {
-			newFontSize += fontSizeChange;
-		} else {
-			newFontSize -= fontSizeChange;
-		}
-
-		// Clamp font size to reasonable bounds (minimum 6px for readability)
-		newFontSize = Math.max( 6, Math.min( 144, newFontSize ) );
-		updates.fontSize = Math.round( newFontSize );
-
-		return updates;
-	};
-
 	CanvasManager.prototype.handleRotation = function ( point, event ) {
 		if ( this.transformController && this.transformController.isRotating ) {
 			this.transformController.handleRotation( point, event );
@@ -2069,103 +1669,29 @@
 		}
 	};
 
-	// Clipboard operations
+	// Clipboard operations - delegated to ClipboardController
 	CanvasManager.prototype.copySelected = function () {
-		// Delegate to ClipboardController if available
 		if ( this.clipboardController ) {
 			this.clipboardController.copySelected();
-			return;
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: ClipboardController not available for copySelected' );
 		}
-
-		// Fallback
-		const self = this;
-		this.clipboard = [];
-		this.getSelectedLayerIds().forEach( function ( id ) {
-			const layer = self.editor.getLayerById( id );
-			if ( layer ) {
-				self.clipboard.push( JSON.parse( JSON.stringify( layer ) ) );
-			}
-		} );
 	};
 
 	CanvasManager.prototype.pasteFromClipboard = function () {
-		// Delegate to ClipboardController if available
 		if ( this.clipboardController ) {
 			this.clipboardController.paste();
-			return;
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: ClipboardController not available for pasteFromClipboard' );
 		}
-
-		// Fallback
-		if ( !this.clipboard || this.clipboard.length === 0 ) {
-			return;
-		}
-
-		const self = this;
-		let lastPastedId = null;
-		this.editor.saveState();
-		this.clipboard.forEach( function ( layer ) {
-			const clone = JSON.parse( JSON.stringify( layer ) );
-			// Offset pasted items slightly
-			if ( clone.x !== undefined ) {
-				clone.x = ( clone.x || 0 ) + 20;
-			}
-			if ( clone.y !== undefined ) {
-				clone.y = ( clone.y || 0 ) + 20;
-			}
-			if ( clone.x1 !== undefined ) {
-				clone.x1 = ( clone.x1 || 0 ) + 20;
-			}
-			if ( clone.y1 !== undefined ) {
-				clone.y1 = ( clone.y1 || 0 ) + 20;
-			}
-			if ( clone.x2 !== undefined ) {
-				clone.x2 = ( clone.x2 || 0 ) + 20;
-			}
-			if ( clone.y2 !== undefined ) {
-				clone.y2 = ( clone.y2 || 0 ) + 20;
-			}
-			if ( clone.points ) {
-				clone.points = clone.points.map( function ( p ) {
-					return { x: p.x + 20, y: p.y + 20 };
-				} );
-			}
-			// New id
-			clone.id = ( self.editor && self.editor.generateLayerId ) ?
-				self.editor.generateLayerId() :
-				( 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 ) );
-			// Insert pasted clone at top so it appears above others
-			self.editor.layers.unshift( clone );
-			lastPastedId = clone.id;
-		} );
-
-		if ( lastPastedId ) {
-			this.setSelectedLayerIds( [ lastPastedId ] );
-		}
-		this.renderLayers( this.editor.layers );
-		this.editor.markDirty();
 	};
 
 	CanvasManager.prototype.cutSelected = function () {
-		// Delegate to ClipboardController if available
 		if ( this.clipboardController ) {
 			this.clipboardController.cutSelected();
-			return;
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: ClipboardController not available for cutSelected' );
 		}
-
-		// Fallback
-		const selectedIds = this.getSelectedLayerIds();
-		if ( !selectedIds || selectedIds.length === 0 ) {
-			return;
-		}
-		this.copySelected();
-		const ids = selectedIds.slice();
-		this.editor.saveState();
-		this.editor.layers = this.editor.layers.filter( function ( layer ) {
-			return ids.indexOf( layer.id ) === -1;
-		} );
-		this.deselectAll();
-		this.renderLayers( this.editor.layers );
-		this.editor.markDirty();
 	};
 
 
@@ -2286,58 +1812,18 @@
 		// Use current style options if available
 		const style = this.currentStyle || {};
 
-		// Delegate to DrawingController if available
+		// Delegate to DrawingController
 		if ( this.drawingController ) {
 			this.drawingController.startDrawing( point, this.currentTool, style );
 			// Sync tempLayer for backward compatibility
 			this.tempLayer = this.drawingController.getTempLayer();
-			return;
-		}
-
-		// Fallback: Reset any previous temp layer
-		this.tempLayer = null;
-
-		// Prepare for drawing based on current tool
-		switch ( this.currentTool ) {
-			case 'blur':
-				this.startBlurTool( point, style );
-				break;
-			case 'text':
-				this.startTextTool( point, style );
-				break;
-			case 'pen':
-				this.startPenTool( point, style );
-				break;
-			case 'rectangle':
-				this.startRectangleTool( point, style );
-				break;
-			case 'circle':
-				this.startCircleTool( point, style );
-				break;
-			case 'ellipse':
-				this.startEllipseTool( point, style );
-				break;
-			case 'polygon':
-				this.startPolygonTool( point, style );
-				break;
-			case 'star':
-				this.startStarTool( point, style );
-				break;
-			case 'line':
-				this.startLineTool( point, style );
-				break;
-			case 'arrow':
-				this.startArrowTool( point, style );
-				break;
-			case 'highlight':
-				this.startHighlightTool( point, style );
-				break;
-			default:
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: DrawingController not available for startDrawing' );
 		}
 	};
 
 	CanvasManager.prototype.continueDrawing = function ( point ) {
-		// Delegate to DrawingController if available
+		// Delegate to DrawingController
 		if ( this.drawingController ) {
 			this.drawingController.continueDrawing( point );
 			this.tempLayer = this.drawingController.getTempLayer();
@@ -2345,18 +1831,11 @@
 				this.renderLayers( this.editor.layers );
 				this.drawingController.drawPreview();
 			}
-			return;
-		}
-
-		// Fallback: Continue drawing based on current tool
-		if ( this.tempLayer ) {
-			this.renderLayers( this.editor.layers );
-			this.drawPreview( point );
 		}
 	};
 
 	CanvasManager.prototype.finishDrawing = function ( point ) {
-		// Delegate to DrawingController if available
+		// Delegate to DrawingController
 		if ( this.drawingController ) {
 			const layerData = this.drawingController.finishDrawing( point, this.currentTool );
 			this.tempLayer = null;
@@ -2367,522 +1846,14 @@
 				}
 			}
 			this.renderLayers( this.editor.layers );
-			return;
-		}
-
-		// Fallback: Finish drawing and create layer
-		let layerData = this.createLayerFromDrawing( point );
-		if ( layerData ) {
-			// Convert rectangle to blur layer when blur tool is active
-			if ( this.currentTool === 'blur' ) {
-				if ( layerData.type === 'rectangle' ) {
-					layerData = {
-						type: 'blur',
-						x: layerData.x,
-						y: layerData.y,
-						width: layerData.width,
-						height: layerData.height,
-						blurRadius: 12
-					};
-				}
-			}
-			this.editor.addLayer( layerData );
-			if ( typeof this.editor.setCurrentTool === 'function' ) {
-				this.editor.setCurrentTool( 'pointer' );
-			}
-		}
-
-		// Clean up
-		this.tempLayer = null;
-		this.renderLayers( this.editor.layers );
-	};
-
-	CanvasManager.prototype.startTextTool = function ( point, style ) {
-		// Create a more sophisticated text input dialog
-
-		// Create modal for text input
-		const modal = this.createTextInputModal( point, style );
-		document.body.appendChild( modal );
-
-		// Focus on text input
-		const textInput = modal.querySelector( '.text-input' );
-		textInput.focus();
-
-		this.isDrawing = false;
-	};
-
-	CanvasManager.prototype.startPenTool = function ( point, style ) {
-		// Create a path for free-hand drawing
-		this.tempLayer = {
-			type: 'path',
-			points: [ point ],
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
-			fill: 'none'
-		};
-	};
-
-	CanvasManager.prototype.createTextInputModal = function ( point, style ) {
-		const self = this;
-
-		// Create modal overlay
-		const overlay = document.createElement( 'div' );
-		overlay.className = 'text-input-overlay';
-		overlay.style.cssText =
-			'position: fixed;' +
-			'top: 0;' +
-			'left: 0;' +
-			'width: 100%;' +
-			'height: 100%;' +
-			'background: rgba(0, 0, 0, 0.5);' +
-			'z-index: 1000000;' +
-			'display: flex;' +
-			'align-items: center;' +
-			'justify-content: center;';
-
-		// Create modal content
-		const modal = document.createElement( 'div' );
-		modal.className = 'text-input-modal';
-		modal.style.cssText =
-			'background: white;' +
-			'border-radius: 8px;' +
-			'padding: 20px;' +
-			'box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);' +
-			'min-width: 300px;';
-
-		modal.innerHTML =
-			'<h3 style="margin: 0 0 15px 0;">Add Text</h3>' +
-			'<textarea class="text-input" placeholder="Enter your text..." style="' +
-				'width: 100%; ' +
-				'height: 80px; ' +
-				'border: 1px solid #ddd; ' +
-				'border-radius: 4px; ' +
-				'padding: 8px;' +
-				'font-family: inherit;' +
-				'resize: vertical;' +
-			'"></textarea>' +
-			'<div style="margin: 15px 0;">' +
-				'<label style="display: block; margin-bottom: 5px;">Font Family:</label>' +
-				'<select class="font-family-input" style="' +
-					'width: 150px;' +
-					'padding: 4px 8px;' +
-					'border: 1px solid #ddd;' +
-					'border-radius: 4px;' +
-					'margin-bottom: 10px;' +
-				'">' +
-					'<option value="Arial, sans-serif">Arial</option>' +
-					'<option value="Georgia, serif">Georgia</option>' +
-					'<option value="Times New Roman, serif">Times New Roman</option>' +
-					'<option value="Verdana, sans-serif">Verdana</option>' +
-					'<option value="Helvetica, sans-serif">Helvetica</option>' +
-					'<option value="Courier New, monospace">Courier New</option>' +
-					'<option value="Impact, sans-serif">Impact</option>' +
-					'<option value="Comic Sans MS, cursive">Comic Sans MS</option>' +
-				'</select>' +
-				'<br>' +
-				'<label style="display: inline-block; margin-bottom: 5px; margin-right: 10px;">Font Size:</label>' +
-				'<input type="number" class="font-size-input" value="' + ( style.fontSize || 16 ) + '" min="8" max="72" style="' +
-					'width: 80px;' +
-					'padding: 4px 8px;' +
-					'border: 1px solid #ddd;' +
-					'border-radius: 4px;' +
-				'">' +
-				'<label style="display: inline-block; margin-left: 15px; margin-right: 5px;">Color:</label>' +
-				'<input type="color" class="color-input" value="' + ( style.color || '#000000' ) + '" style="' +
-					'width: 40px;' +
-					'height: 30px;' +
-					'border: 1px solid #ddd;' +
-					'border-radius: 4px;' +
-				'">' +
-				'<br><br>' +
-				'<label style="display: inline-block; margin-bottom: 5px; margin-right: 10px;">Stroke Width:</label>' +
-				'<input type="number" class="stroke-width-input" value="' + ( style.textStrokeWidth || 0 ) + '" min="0" max="10" step="0.5" style="' +
-					'width: 80px;' +
-					'padding: 4px 8px;' +
-					'border: 1px solid #ddd;' +
-					'border-radius: 4px;' +
-				'">' +
-				'<label style="display: inline-block; margin-left: 15px; margin-right: 5px;">Stroke Color:</label>' +
-				'<input type="color" class="stroke-color-input" value="' + ( style.textStrokeColor || '#000000' ) + '" style="' +
-					'width: 40px;' +
-					'height: 30px;' +
-					'border: 1px solid #ddd;' +
-					'border-radius: 4px;' +
-				'">' +
-				'<br><br>' +
-				'<label style="display: block; margin-bottom: 5px;">Text Alignment:</label>' +
-				'<div class="text-align-buttons" style="display: flex; gap: 5px; margin-bottom: 10px;">' +
-					'<button type="button" class="align-btn align-left active" data-align="left" style="' +
-						'padding: 6px 12px;' +
-						'border: 1px solid #ddd;' +
-						'background: #e9ecef;' +
-						'border-radius: 4px;' +
-						'cursor: pointer;' +
-					'">Left</button>' +
-					'<button type="button" class="align-btn align-center" data-align="center" style="' +
-						'padding: 6px 12px;' +
-						'border: 1px solid #ddd;' +
-						'background: #f8f9fa;' +
-						'border-radius: 4px;' +
-						'cursor: pointer;' +
-					'">Center</button>' +
-					'<button type="button" class="align-btn align-right" data-align="right" style="' +
-						'padding: 6px 12px;' +
-						'border: 1px solid #ddd;' +
-						'background: #f8f9fa;' +
-						'border-radius: 4px;' +
-						'cursor: pointer;' +
-					'">Right</button>' +
-				'</div>' +
-			'</div>' +
-			'<div style="text-align: right; margin-top: 20px;">' +
-				'<button class="cancel-btn" style="' +
-					'background: #f8f9fa;' +
-					'border: 1px solid #ddd;' +
-					'border-radius: 4px;' +
-					'padding: 8px 16px;' +
-					'margin-right: 10px;' +
-					'cursor: pointer;' +
-				'">Cancel</button>' +
-				'<button class="add-btn" style="' +
-					'background: #007bff;' +
-					'color: white;' +
-					'border: 1px solid #007bff;' +
-					'border-radius: 4px;' +
-					'padding: 8px 16px;' +
-					'cursor: pointer;' +
-				'">Add Text</button>' +
-			'</div>';
-
-		overlay.appendChild( modal );
-
-		// Query DOM elements from the modal
-		const textInput = modal.querySelector( '.text-input' );
-		const fontFamilyInput = modal.querySelector( '.font-family-input' );
-		const fontSizeInput = modal.querySelector( '.font-size-input' );
-		const colorInput = modal.querySelector( '.color-input' );
-		const strokeWidthInput = modal.querySelector( '.stroke-width-input' );
-		const strokeColorInput = modal.querySelector( '.stroke-color-input' );
-		const alignButtons = modal.querySelectorAll( '.align-btn' );
-		const addBtn = modal.querySelector( '.add-btn' );
-		const cancelBtn = modal.querySelector( '.cancel-btn' );
-
-		// Set default font family if provided in style
-		if ( fontFamilyInput && style.fontFamily ) {
-			fontFamilyInput.value = style.fontFamily;
-		}
-
-		// Handle text alignment button clicks
-		let currentAlignment = 'left';
-		alignButtons.forEach( function ( btn ) {
-			btn.addEventListener( 'click', function ( e ) {
-				e.preventDefault();
-
-				// Remove active state from all buttons
-				alignButtons.forEach( function ( b ) {
-					b.style.background = '#f8f9fa';
-				} );
-
-				// Set active state for clicked button
-				this.style.background = '#e9ecef';
-				currentAlignment = this.dataset.align;
-			} );
-		} );
-
-		function addText() {
-			const text = textInput.value.trim();
-			if ( text ) {
-				const layerData = {
-					type: 'text',
-					text: text,
-					x: point.x,
-					y: point.y,
-					fontSize: parseInt( fontSizeInput.value ) || 16,
-					fontFamily: fontFamilyInput.value || 'Arial, sans-serif',
-					textAlign: currentAlignment,
-					fill: colorInput.value,
-					textStrokeColor: strokeColorInput.value || '#000000',
-					textStrokeWidth: parseFloat( strokeWidthInput.value ) || 0,
-					textShadow: style.textShadow || false,
-					textShadowColor: style.textShadowColor || '#000000'
-				};
-				self.editor.addLayer( layerData );
-				if ( typeof self.editor.setCurrentTool === 'function' ) {
-					self.editor.setCurrentTool( 'pointer' );
-				}
-			}
-			document.body.removeChild( overlay );
-		}
-
-		function cancel() {
-			document.body.removeChild( overlay );
-		}
-
-		addBtn.addEventListener( 'click', addText );
-		cancelBtn.addEventListener( 'click', cancel );
-
-		// Allow Enter to add text (but not Shift+Enter for new lines)
-		textInput.addEventListener( 'keydown', function ( e ) {
-			if ( e.key === 'Enter' && !e.shiftKey ) {
-
-				e.preventDefault();
-				addText();
-			} else if ( e.key === 'Escape' ) {
-				cancel();
-			}
-		} );
-
-		// Click outside to cancel
-		overlay.addEventListener( 'click', function ( e ) {
-			if ( e.target === overlay ) {
-				cancel();
-			}
-		} );
-
-		return overlay;
-	};
-
-	CanvasManager.prototype.startRectangleTool = function ( point, style ) {
-		// Store starting point for rectangle
-		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
-			style.fill : 'transparent';
-		this.tempLayer = {
-			type: 'rectangle',
-			x: point.x,
-			y: point.y,
-			width: 0,
-			height: 0,
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
-			fill: fillColor
-		};
-	};
-
-	CanvasManager.prototype.startCircleTool = function ( point, style ) {
-		// Store starting point for circle
-		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
-			style.fill : 'transparent';
-		this.tempLayer = {
-			type: 'circle',
-			x: point.x,
-			y: point.y,
-			radius: 0,
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
-			fill: fillColor
-		};
-	};
-
-	CanvasManager.prototype.startLineTool = function ( point, style ) {
-		this.tempLayer = {
-			type: 'line',
-			x1: point.x,
-			y1: point.y,
-			x2: point.x,
-			y2: point.y,
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2
-		};
-	};
-
-	CanvasManager.prototype.startArrowTool = function ( point, style ) {
-		this.tempLayer = {
-			type: 'arrow',
-			x1: point.x,
-			y1: point.y,
-			x2: point.x,
-			y2: point.y,
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
-			arrowSize: 10,
-			arrowStyle: style.arrowStyle || 'single'
-		};
-	};
-
-	CanvasManager.prototype.startHighlightTool = function ( point, style ) {
-		this.tempLayer = {
-			type: 'highlight',
-			x: point.x,
-			y: point.y,
-			width: 0,
-			height: 20, // Default highlight height
-			fill: style.color ? style.color + '80' : '#ffff0080' // Add transparency
-		};
-	};
-
-	CanvasManager.prototype.startEllipseTool = function ( point, style ) {
-		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
-			style.fill : 'transparent';
-		this.tempLayer = {
-			type: 'ellipse',
-			x: point.x,
-			y: point.y,
-			radiusX: 0,
-			radiusY: 0,
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
-			fill: fillColor
-		};
-	};
-
-	CanvasManager.prototype.startPolygonTool = function ( point, style ) {
-		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
-			style.fill : 'transparent';
-		this.tempLayer = {
-			type: 'polygon',
-			x: point.x,
-			y: point.y,
-			radius: 0,
-			sides: 6, // Default hexagon
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
-			fill: fillColor
-		};
-	};
-
-	CanvasManager.prototype.startStarTool = function ( point, style ) {
-		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
-			style.fill : 'transparent';
-		this.tempLayer = {
-			type: 'star',
-			x: point.x,
-			y: point.y,
-			radius: 0,
-			outerRadius: 0,
-			innerRadius: 0,
-			points: 5, // Default 5-pointed star
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
-			fill: fillColor
-		};
-	};
-
-	CanvasManager.prototype.drawPreview = function ( point ) {
-		if ( !this.tempLayer ) {
-			return;
-		}
-
-		// Update temp layer geometry based on current mouse point
-		let dx, dy;
-		switch ( this.tempLayer.type ) {
-			case 'rectangle':
-				this.tempLayer.width = point.x - this.tempLayer.x;
-				this.tempLayer.height = point.y - this.tempLayer.y;
-				break;
-			case 'circle':
-				dx = point.x - this.tempLayer.x;
-				dy = point.y - this.tempLayer.y;
-				this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
-				break;
-			case 'ellipse':
-				this.tempLayer.radiusX = Math.abs( point.x - this.tempLayer.x );
-				this.tempLayer.radiusY = Math.abs( point.y - this.tempLayer.y );
-				break;
-			case 'polygon':
-				dx = point.x - this.tempLayer.x;
-				dy = point.y - this.tempLayer.y;
-				this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
-				break;
-			case 'star':
-				dx = point.x - this.tempLayer.x;
-				dy = point.y - this.tempLayer.y;
-				this.tempLayer.outerRadius = Math.sqrt( dx * dx + dy * dy );
-				this.tempLayer.radius = this.tempLayer.outerRadius;
-				this.tempLayer.innerRadius = this.tempLayer.outerRadius * 0.5;
-				break;
-			case 'line':
-				this.tempLayer.x2 = point.x;
-				this.tempLayer.y2 = point.y;
-				break;
-			case 'arrow':
-				this.tempLayer.x2 = point.x;
-				this.tempLayer.y2 = point.y;
-				break;
-			case 'highlight':
-				this.tempLayer.width = point.x - this.tempLayer.x;
-				break;
-			case 'path':
-				// Add point to path for pen tool
-				this.tempLayer.points.push( point );
-				break;
-		}
-
-		// Draw the temp layer using renderer
-		if ( this.renderer ) {
-			this.renderer.drawLayer( this.tempLayer );
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: DrawingController not available for finishDrawing' );
 		}
 	};
 
-	CanvasManager.prototype.createLayerFromDrawing = function ( point ) {
-		if ( !this.tempLayer ) {
-			return null;
-		}
-
-		const layer = this.tempLayer;
-		this.tempLayer = null;
-
-		// Final adjustments based on tool type
-		let dx, dy;
-		switch ( layer.type ) {
-			case 'rectangle':
-				layer.width = point.x - layer.x;
-				layer.height = point.y - layer.y;
-				break;
-			case 'circle':
-				dx = point.x - layer.x;
-				dy = point.y - layer.y;
-				layer.radius = Math.sqrt( dx * dx + dy * dy );
-				break;
-			case 'ellipse':
-				layer.radiusX = Math.abs( point.x - layer.x );
-				layer.radiusY = Math.abs( point.y - layer.y );
-				break;
-			case 'polygon':
-				dx = point.x - layer.x;
-				dy = point.y - layer.y;
-				layer.radius = Math.sqrt( dx * dx + dy * dy );
-				break;
-			case 'star':
-				dx = point.x - layer.x;
-				dy = point.y - layer.y;
-				layer.outerRadius = Math.sqrt( dx * dx + dy * dy );
-				layer.innerRadius = layer.outerRadius * 0.5;
-				layer.radius = layer.outerRadius;
-				break;
-			case 'line':
-				layer.x2 = point.x;
-				layer.y2 = point.y;
-				break;
-			case 'arrow':
-				layer.x2 = point.x;
-				layer.y2 = point.y;
-				break;
-			case 'highlight':
-				layer.width = point.x - layer.x;
-				break;
-			case 'path':
-				// Path is already complete
-				break;
-		}
-
-		// Don't create tiny shapes
-		if ( layer.type === 'rectangle' && ( Math.abs( layer.width ) < 5 || Math.abs( layer.height ) < 5 ) ) {
-			return null;
-		}
-		if ( layer.type === 'circle' && layer.radius < 5 ) {
-			return null;
-		}
-		if ( ( layer.type === 'line' || layer.type === 'arrow' ) &&
-			Math.sqrt( Math.pow( layer.x2 - layer.x1, 2 ) +
-				Math.pow( layer.y2 - layer.y1, 2 ) ) < 5 ) {
-			return null;
-		}
-		if ( layer.type === 'path' && layer.points.length < 2 ) {
-			return null;
-		}
-
-		return layer;
-	};
+	// Note: Drawing tool methods (startTextTool, startRectangleTool, etc.) were
+	// removed as they are now handled by DrawingController.js. The controller
+	// is always loaded before CanvasManager via extension.json module ordering.
 
 	CanvasManager.prototype.setTool = function ( tool ) {
 		this.currentTool = tool;
@@ -2893,27 +1864,11 @@
 	};
 
 	CanvasManager.prototype.getToolCursor = function ( tool ) {
-		// Delegate to DrawingController if available
+		// Delegate to DrawingController
 		if ( this.drawingController ) {
 			return this.drawingController.getToolCursor( tool );
 		}
-
-		// Fallback
-		switch ( tool ) {
-			case 'blur': return 'crosshair';
-			case 'text': return 'text';
-			case 'pen': return 'crosshair';
-			case 'rectangle':
-			case 'circle':
-			case 'ellipse':
-			case 'polygon':
-			case 'star':
-			case 'line':
-			case 'arrow':
-			case 'highlight':
-				return 'crosshair';
-			default: return 'default';
-		}
+		return 'default';
 	};
 
 	/**
@@ -3184,20 +2139,6 @@
 				}
 			}
 		}
-	};
-
-	CanvasManager.prototype.startBlurTool = function ( point, style ) {
-		// Use rectangle preview for blur region
-		this.tempLayer = {
-			type: 'rectangle',
-			x: point.x,
-			y: point.y,
-			width: 0,
-			height: 0,
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
-			fill: 'transparent'
-		};
 	};
 
 	CanvasManager.prototype.drawBlur = function ( layer ) {
