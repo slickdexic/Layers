@@ -7,15 +7,20 @@
  * @ingroup Extensions
  */
 
+use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Database\LayersSchemaManager;
+use MediaWiki\Extension\Layers\Logging\LayersLogger;
+use MediaWiki\MediaWikiServices;
+
 return [
-	'LayersLogger' => static function ( \MediaWiki\MediaWikiServices $services ): \MediaWiki\Extension\Layers\Logging\LayersLogger {
-		return new \MediaWiki\Extension\Layers\Logging\LayersLogger();
+	'LayersLogger' => static function ( MediaWikiServices $services ): LayersLogger {
+		return new LayersLogger();
 	},
-	'LayersSchemaManager' => static function ( \MediaWiki\MediaWikiServices $services ): \MediaWiki\Extension\Layers\Database\LayersSchemaManager {
-		return new \MediaWiki\Extension\Layers\Database\LayersSchemaManager();
+	'LayersSchemaManager' => static function ( MediaWikiServices $services ): LayersSchemaManager {
+		return new LayersSchemaManager();
 	},
-	'LayersDatabase' => static function ( \MediaWiki\MediaWikiServices $services ): \MediaWiki\Extension\Layers\Database\LayersDatabase {
-		return new \MediaWiki\Extension\Layers\Database\LayersDatabase(
+	'LayersDatabase' => static function ( MediaWikiServices $services ): LayersDatabase {
+		return new LayersDatabase(
 			$services->getDBLoadBalancer(),
 			$services->getMainConfig(),
 			$services->get( 'LayersLogger' ),

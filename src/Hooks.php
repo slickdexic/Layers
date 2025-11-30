@@ -186,7 +186,7 @@ class Hooks {
 				// to ALL images. Only images with explicit layers= should get layers.
 				// The client-side init.js will only apply layers to images that have
 				// data-layer-data or data-layers-intent attributes set by the server.
-				
+
 				// Debug logging
 				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 					$logger = \call_user_func(

@@ -55,7 +55,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'fillOpacity' => 'numeric',
 		'strokeOpacity' => 'numeric',
 		'blendMode' => 'string',
-		'blend' => 'string', // Alias for blendMode
+		// blend is alias for blendMode
+		'blend' => 'string',
 		'visible' => 'boolean',
 		'locked' => 'boolean',
 		'textStrokeColor' => 'string',
@@ -159,7 +160,10 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 		// Check layer count
 		if ( count( $layersData ) > $this->getMaxLayerCount() ) {
-			$result->addError( "Too many layers: " . count( $layersData ) . " (max: " . $this->getMaxLayerCount() . ")" );
+			$result->addError(
+				"Too many layers: " . count( $layersData ) .
+				" (max: " . $this->getMaxLayerCount() . ")"
+			);
 			return $result;
 		}
 
@@ -330,7 +334,10 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		}
 
 		// Colors
-		if ( in_array( $property, [ 'color', 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor' ], true ) ) {
+		$colorProps = [
+			'color', 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor'
+		];
+		if ( in_array( $property, $colorProps, true ) ) {
 			if ( !$this->colorValidator->isSafeColor( $value ) ) {
 				return [ 'valid' => false, 'error' => 'Unsafe color value' ];
 			}
@@ -479,7 +486,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				}
 				break;
 
-			case 'polygon': {
+			case 'polygon':
 				$hasPoints = $this->hasValidPointArray( $layer, 3 );
 				$hasParametricDefinition = $this->hasParametricPolygonDefinition( $layer );
 				if ( !$hasPoints && !$hasParametricDefinition ) {
@@ -489,7 +496,6 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 					];
 				}
 				break;
-			}
 
 			case 'star':
 				$starPoints = $layer['points'] ?? null;
@@ -501,7 +507,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				if ( $starPoints < self::MIN_STAR_POINTS || $starPoints > self::MAX_STAR_POINTS ) {
 					return [
 						'valid' => false,
-						'error' => 'Star layer point count must be between ' . self::MIN_STAR_POINTS . ' and ' . self::MAX_STAR_POINTS
+						'error' => 'Star layer point count must be between ' .
+							self::MIN_STAR_POINTS . ' and ' . self::MAX_STAR_POINTS
 					];
 				}
 
@@ -534,7 +541,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	 * Check for parametric polygon definitions (center + radius + sides).
 	 */
 	private function hasParametricPolygonDefinition( array $layer ): bool {
-		if ( !isset( $layer['x'], $layer['y'], $layer['radius'], $layer['sides'] ) ) {
+		if ( !isset( $layer['x'] ) || !isset( $layer['y'] ) ||
+			 !isset( $layer['radius'] ) || !isset( $layer['sides'] ) ) {
 			return false;
 		}
 

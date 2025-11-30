@@ -41,7 +41,9 @@ class LayersSchemaManager {
 			);
 
 			// For now, we'll use a dedicated method.
-			$updater->addExtensionUpdate( [ 'MediaWiki\Extension\Layers\Database\LayersSchemaManager::runCheckConstraintsPatch' ] );
+			$updater->addExtensionUpdate( [
+				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::runCheckConstraintsPatch'
+			] );
 
 			// Named layer sets migration: set default name for existing rows
 			$updater->addExtensionUpdate( [
@@ -193,7 +195,8 @@ class LayersSchemaManager {
 		}
 
 		$requirements = self::SCHEMA_REQUIREMENTS[$table];
-		$version = '0.7.0'; // Base version before optional columns
+		// Base version before optional columns
+		$version = '0.7.0';
 
 		// Check which optional columns exist to determine version
 		foreach ( $requirements['optional_columns'] as $column => $addedInVersion ) {

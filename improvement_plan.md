@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** November 29, 2025  
+**Last Updated:** December 2025  
 **Status:** Active Development  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
@@ -27,18 +27,30 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 | Metric | Current | Target | Gap |
 |--------|---------|--------|-----|
-| Jest tests | 1,232 | 1,500+ | +268 |
+| Jest tests | 1,235 | 1,500+ | +265 |
 | Overall Coverage | 53.4% | 70% | +16.6% |
 | Core Module Coverage | 14-22% | 60% | +38-46% |
 | CanvasManager.js lines | 3,523 | <800 | -2,723 |
-| WikitextHooks.php lines | 2,001 | <400 | -1,601 |
+| WikitextHooks.php lines | 2,019 | <400 | -1,619 |
 | ESLint errors | 0 | 0 | ✅ Met |
+| PHP source errors | 0 | 0 | ✅ Met |
 | Window.* exports | 49 | <10 | -39 |
 | Empty catch blocks | 0 | 0 | ✅ Met |
 | Dead code variables | 0 | 0 | ✅ Met |
 | Misleading docs | No | No | ✅ Met |
 
-**Recent Progress (Nov 29, 2025):**
+**Recent Progress (Dec 2025):**
+- Fixed all PHP code style errors in source files (services.php, src/)
+- Fixed line length and comment formatting warnings in PHP
+- Improved services.php with proper `use` statements
+- Test count increased from 1,232 to 1,235 (+3 tests for line/arrow rotation)
+- Fixed line/arrow rotation in editor and viewer
+- Fixed line-aligned selection box for lines/arrows
+- Removed highlight tool from UI (backward compatibility preserved)
+- Added blur layer support to viewer
+- Improved polygon, star, ellipse rotation in viewer
+
+**Previous Progress (Nov 29, 2025):**
 - Fixed 4 empty catch blocks (all now have comments or logging)
 - Removed 4 dead performance variables from CanvasManager
 - Removed dead undoStack/redoStack from LayersEditor
@@ -46,7 +58,6 @@ This document provides a prioritized, actionable improvement plan for the Layers
 - Extracted ImageLoader.js module (~280 lines) with comprehensive tests
 - Removed 464 lines of fallback code from CanvasManager (3,987 → 3,523 lines)
 - Fixed LayersConstants dependency timing issue in LayersEditor.js
-- Test count increased from 1,202 to 1,232 (+30 tests)
 
 ---
 
@@ -361,19 +372,22 @@ this.minZoom = uiConsts ? uiConsts.MIN_ZOOM : 0.1;
 ### 2.4 Fix PHP Code Style Warnings
 
 **Priority:** P2 - LOW  
-**Status:** ⏳ Not Started  
+**Status:** ✅ COMPLETE  
 **Effort:** 2 hours  
 **Risk:** LOW
 
-**Current Warnings:**
-- Comments formatting (SpaceBeforeSingleLineComment)
-- Line length exceeding 120 characters
-- assertEmpty usage in tests
+**Resolution (Dec 2025):**
+- Auto-fixed 20 whitespace issues using `npm run fix:php`
+- Fixed all 6 errors in source files (missing doc comments, case statement syntax, multi-arg isset)
+- Fixed all line length warnings in source files (services.php, ApiLayersSave.php, WikitextHooks.php, etc.)
+- Fixed all inline comment warnings in source files
+- All source files in `src/` and `services.php` now pass phpcs with zero errors/warnings
+- Test files still have some warnings but are not blocking
 
 **Tasks:**
-- [ ] Run `npm run fix:php`
-- [ ] Fix remaining warnings manually
-- [ ] Consider adding phpcs to CI with strict mode
+- [x] Run `npm run fix:php`
+- [x] Fix remaining warnings manually
+- [ ] Consider adding phpcs to CI with strict mode (optional)
 
 ---
 

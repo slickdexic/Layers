@@ -43,6 +43,11 @@ class LayersDatabase {
 		$this->schemaManager = $schemaManager;
 	}
 
+	/**
+	 * Get write database connection (lazy initialization)
+	 *
+	 * @return \Wikimedia\Rdbms\IDatabase|null Database connection
+	 */
 	private function getWriteDb() {
 		if ( !$this->dbw ) {
 			$this->dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
@@ -50,6 +55,11 @@ class LayersDatabase {
 		return $this->dbw;
 	}
 
+	/**
+	 * Get read database connection (lazy initialization)
+	 *
+	 * @return \Wikimedia\Rdbms\IDatabase|null Database connection
+	 */
 	private function getReadDb() {
 		if ( !$this->dbr ) {
 			$this->dbr = $this->loadBalancer->getConnection( DB_REPLICA );
@@ -104,7 +114,8 @@ class LayersDatabase {
 		for ( $retryCount = 0; $retryCount < $maxRetries; $retryCount++ ) {
 			// PERFORMANCE FIX: Add exponential backoff to prevent DB hammering
 			if ( $retryCount > 0 ) {
-				usleep( $retryCount * 100000 ); // 100ms, 200ms on retries
+				// 100ms, 200ms on retries
+				usleep( $retryCount * 100000 );
 			}
 			$dbw->startAtomic( __METHOD__ );
 			try {
@@ -168,6 +179,12 @@ class LayersDatabase {
 		return null;
 	}
 
+	/**
+	 * Get a layer set by its ID
+	 *
+	 * @param int $layerSetId Layer set ID
+	 * @return array|false Layer set data or false if not found
+	 */
 	public function getLayerSet( int $layerSetId ) {
 		if ( $layerSetId <= 0 ) {
 			return false;
@@ -234,17 +251,17 @@ class LayersDatabase {
 		if ( !$dbr ) {
 			return false;
 		}
-		
+
 		$conditions = [
 			'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 			'ls_img_sha1' => $sha1
 		];
-		
+
 		// If a specific set name is requested, filter by it
 		if ( $setName !== null && $setName !== '' ) {
 			$conditions['ls_name'] = $setName;
 		}
-		
+
 		$row = $dbr->selectRow(
 			'layer_sets',
 			[ 'ls_id', 'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name' ],
@@ -281,6 +298,14 @@ class LayersDatabase {
 		];
 	}
 
+	/**
+	 * Get the next global revision number for an image (legacy method)
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @param \Wikimedia\Rdbms\IDatabase $dbw Database connection
+	 * @return int Next revision number
+	 */
 	private function getNextRevision( string $imgName, string $sha1, $dbw ): int {
 		$maxRevision = $dbw->selectField(
 			'layer_sets',
@@ -700,6 +725,12 @@ class LayersDatabase {
 		];
 	}
 
+	/**
+	 * Add a value to the internal cache
+	 *
+	 * @param string $key Cache key
+	 * @param mixed $value Value to cache
+	 */
 	private function addToCache( string $key, $value ): void {
 		if ( count( $this->layerSetCache ) >= self::MAX_CACHE_SIZE ) {
 			array_shift( $this->layerSetCache );
@@ -707,10 +738,21 @@ class LayersDatabase {
 		$this->layerSetCache[$key] = $value;
 	}
 
+	/**
+	 * Log an error message
+	 *
+	 * @param string $message Error message
+	 * @param array $context Additional context
+	 */
 	private function logError( string $message, array $context = [] ): void {
 		$this->logger->error( $message, $context );
 	}
 
+	/**
+	 * Clear the internal cache
+	 *
+	 * @param string|null $pattern Optional pattern to match cache keys
+	 */
 	private function clearCache( ?string $pattern = null ): void {
 		if ( $pattern === null ) {
 			$this->layerSetCache = [];

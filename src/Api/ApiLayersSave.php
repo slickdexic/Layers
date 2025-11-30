@@ -114,7 +114,9 @@ class ApiLayersSave extends ApiBase {
 			$setName = $this->sanitizeSetName( $rawSetName );
 
 			// Log set name processing via MediaWiki's debug log (respects $wgDebugLogGroups)
-			wfDebugLog( 'Layers', "ApiLayersSave: raw setname='$rawSetName', sanitized='$setName', filename='$fileName'" );
+			$logMsg = "ApiLayersSave: raw setname='$rawSetName', sanitized='$setName', " .
+				"filename='$fileName'";
+			wfDebugLog( 'Layers', $logMsg );
 
 			// VALIDATION: Ensure filename resolves to a valid File namespace title
 			// Title::newFromText normalizes and validates the format, but does not require
@@ -276,7 +278,8 @@ class ApiLayersSave extends ApiBase {
 				'Layer save failed: {message}',
 				[
 					'message' => $e->getMessage(),
-					'exception' => $e, // Full stack trace for debugging
+					// Full stack trace for debugging
+					'exception' => $e,
 					'user_id' => $user->getId(),
 					'filename' => $fileName
 				]

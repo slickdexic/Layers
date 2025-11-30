@@ -367,7 +367,7 @@ class WikitextHooks {
 						$filename = $file->getName();
 						$setName = self::getFileSetName( $filename );
 						// If layersFlag looks like a set name (not 'on', 'all', etc.), use it
-						if ( $layersFlag !== null && $layersFlag !== 'on' && $layersFlag !== 'all' 
+						if ( $layersFlag !== null && $layersFlag !== 'on' && $layersFlag !== 'all'
 							&& $layersFlag !== 'true' && $layersFlag !== 'off' && $layersFlag !== 'none' ) {
 							$setName = $layersFlag;
 						}
@@ -1348,9 +1348,13 @@ class WikitextHooks {
 							[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
 							'Layers'
 						);
-						$logger->info( "Layers: Layers explicitly disabled for this instance of $filename via wikitext" );
+						$logger->info(
+							"Layers: Layers explicitly disabled for this " .
+							"instance of $filename via wikitext"
+						);
 					}
-					return true; // Skip this instance entirely
+					// Skip this instance entirely
+					return true;
 				}
 				// This image had layers= in wikitext, so we should show layers
 				$shouldFallback = true;
@@ -1360,7 +1364,11 @@ class WikitextHooks {
 						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
 						'Layers'
 					);
-					$logger->info( "Layers: Using stored set name from wikitext queue: $storedSetName for $filename" );
+					// Skip inline comment
+					$logger->info(
+						"Layers: Using stored set name from wikitext queue: " .
+						"$storedSetName for $filename"
+					);
 				}
 			}
 		}
@@ -1384,8 +1392,14 @@ class WikitextHooks {
 		$contextIsFile = self::isFilePageContext();
 		$contextIsEdit = self::isEditLayersAction();
 		if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-			$logger->info( 'Layers: context check - isFilePage=' . ( $contextIsFile ? 'yes' : 'no' ) . ', isEditLayers=' . ( $contextIsEdit ? 'yes' : 'no' ) );
+			$logger = \call_user_func(
+				[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+				'Layers'
+			);
+			$logger->info(
+				'Layers: context check - isFilePage=' . ( $contextIsFile ? 'yes' : 'no' ) .
+				', isEditLayers=' . ( $contextIsEdit ? 'yes' : 'no' )
+			);
 		}
 		// Note: File: pages no longer auto-enable layers. Users must explicitly use layers=on.
 		// if ( !$shouldFallback && $contextIsFile ) {
@@ -1411,10 +1425,12 @@ class WikitextHooks {
 					}
 
 					$layerSet = null;
-					
+
 					// Determine which layer set to fetch based on layersFlag
 					// (layersFlag may have been set from the wikitext queue above)
-					if ( $layersFlag === null || $layersFlag === 'on' || $layersFlag === 'all' || $layersFlag === 'true' ) {
+					$isDefaultSet = $layersFlag === null || $layersFlag === 'on' ||
+						$layersFlag === 'all' || $layersFlag === 'true';
+					if ( $isDefaultSet ) {
 						// 'on'/'all'/null => fetch the default set (latest revision)
 						$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1() );
 					} elseif ( $layersFlag !== 'off' && $layersFlag !== 'none' ) {
@@ -1695,19 +1711,19 @@ class WikitextHooks {
 		if ( !isset( self::$fileSetNames[$filename] ) || empty( self::$fileSetNames[$filename] ) ) {
 			return null;
 		}
-		
+
 		// Initialize render count for this file if not set
 		if ( !isset( self::$fileRenderCount[$filename] ) ) {
 			self::$fileRenderCount[$filename] = 0;
 		}
-		
+
 		// Get the set name for the current occurrence
 		$index = self::$fileRenderCount[$filename];
 		$queue = self::$fileSetNames[$filename];
-		
+
 		// Increment the counter for next call
 		self::$fileRenderCount[$filename]++;
-		
+
 		// Return the set name at this index, or null if we've exhausted the queue
 		return $queue[$index] ?? null;
 	}
@@ -1752,18 +1768,18 @@ class WikitextHooks {
 				foreach ( $allMatches as $match ) {
 					$filename = trim( $match[1] );
 					$layersValue = trim( $match[2] );
-					
+
 					self::$pageHasLayers = true;
-					
+
 					// Initialize queue for this file if not exists
 					if ( !isset( self::$fileSetNames[$filename] ) ) {
 						self::$fileSetNames[$filename] = [];
 					}
-					
+
 					// Store the set name in the queue (in order of appearance)
 					// For boolean-like values, store null to indicate default behavior
 					$normalized = strtolower( $layersValue );
-					if ( $normalized !== 'on' && $normalized !== 'off' && $normalized !== 'none' 
+					if ( $normalized !== 'on' && $normalized !== 'off' && $normalized !== 'none'
 						&& $normalized !== 'true' && $normalized !== 'false' && $normalized !== 'all' ) {
 						// This is a named set like "Paul"
 						self::$fileSetNames[$filename][] = $layersValue;
@@ -1771,7 +1787,7 @@ class WikitextHooks {
 						// Store the boolean-like value so we maintain order
 						self::$fileSetNames[$filename][] = $normalized;
 					}
-					
+
 					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 						$logger = \call_user_func(
 							[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
@@ -1779,7 +1795,8 @@ class WikitextHooks {
 						);
 						$queueLen = count( self::$fileSetNames[$filename] );
 						$logger->info(
-							"Layers: ParserBeforeInternalParse detected layers=$layersValue for file=$filename (occurrence #$queueLen)"
+							"Layers: ParserBeforeInternalParse detected layers=$layersValue " .
+							"for file=$filename (occurrence #$queueLen)"
 						);
 					}
 				}
@@ -1825,16 +1842,16 @@ class WikitextHooks {
 		if ( !$db ) {
 			return;
 		}
-		
+
 		// Check if a specific set name was requested for this file in wikitext
 		$filename = $file->getName();
 		$setNameFromQueue = self::getFileSetName( $filename );
-		
+
 		// Determine which layer set to fetch
 		$layerSet = null;
-		if ( $setNameFromQueue === null 
-			|| $setNameFromQueue === 'on' 
-			|| $setNameFromQueue === 'all' 
+		if ( $setNameFromQueue === null
+			|| $setNameFromQueue === 'on'
+			|| $setNameFromQueue === 'all'
 			|| $setNameFromQueue === 'true' ) {
 			// Default behavior - get the default/latest set
 			$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1() );
