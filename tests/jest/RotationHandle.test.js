@@ -3,6 +3,8 @@ const CanvasEvents = require('../../resources/ext.layers.editor/CanvasEvents.js'
 const SelectionManager = require('../../resources/ext.layers.editor/SelectionManager.js');
 const HitTestController = require('../../resources/ext.layers.editor/canvas/HitTestController.js');
 const TransformController = require('../../resources/ext.layers.editor/canvas/TransformController.js');
+const GeometryUtils = require('../../resources/ext.layers.editor/GeometryUtils.js');
+const TextUtils = require('../../resources/ext.layers.editor/TextUtils.js');
 
 // Mock dependencies
 jest.mock('../../resources/ext.layers.editor/CanvasRenderer.js', () => {
@@ -32,6 +34,8 @@ describe('Rotation Handle Interaction', () => {
         // Setup controllers on window for CanvasManager to find
         window.HitTestController = HitTestController;
         window.TransformController = TransformController;
+        window.GeometryUtils = GeometryUtils;
+        window.TextUtils = TextUtils;
         
         // Setup DOM
         document.body.innerHTML = '<div id="layers-editor-container"><canvas id="layers-canvas"></canvas></div>';

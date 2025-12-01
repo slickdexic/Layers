@@ -234,4 +234,145 @@ describe( 'GeometryUtils', () => {
 		} );
 	} );
 
+	describe( 'getLayerBoundsForType', () => {
+		it( 'should return null for null layer', () => {
+			expect( GeometryUtils.getLayerBoundsForType( null ) ).toBeNull();
+		} );
+
+		it( 'should return null for layer without type', () => {
+			expect( GeometryUtils.getLayerBoundsForType( { x: 10, y: 10 } ) ).toBeNull();
+		} );
+
+		it( 'should return null for text layer (requires canvas context)', () => {
+			expect( GeometryUtils.getLayerBoundsForType( { type: 'text', x: 10, y: 10 } ) ).toBeNull();
+		} );
+
+		it( 'should calculate bounds for rectangle', () => {
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+		} );
+
+		it( 'should handle negative width/height for rectangle', () => {
+			const layer = { type: 'rectangle', x: 100, y: 100, width: -50, height: -30 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 70 );
+			expect( bounds.width ).toBe( 50 );
+			expect( bounds.height ).toBe( 30 );
+		} );
+
+		it( 'should calculate bounds for circle', () => {
+			const layer = { type: 'circle', x: 100, y: 100, radius: 50 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 50, y: 50, width: 100, height: 100 } );
+		} );
+
+		it( 'should calculate bounds for ellipse', () => {
+			const layer = { type: 'ellipse', x: 100, y: 100, radiusX: 60, radiusY: 40 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 40, y: 60, width: 120, height: 80 } );
+		} );
+
+		it( 'should calculate bounds for line', () => {
+			const layer = { type: 'line', x1: 10, y1: 20, x2: 100, y2: 80 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 10 );
+			expect( bounds.y ).toBe( 20 );
+			expect( bounds.width ).toBe( 90 );
+			expect( bounds.height ).toBe( 60 );
+		} );
+
+		it( 'should calculate bounds for arrow', () => {
+			const layer = { type: 'arrow', x1: 50, y1: 50, x2: 150, y2: 100 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 50 );
+			expect( bounds.width ).toBe( 100 );
+			expect( bounds.height ).toBe( 50 );
+		} );
+
+		it( 'should calculate bounds for polygon with points', () => {
+			const layer = { type: 'polygon', points: [ { x: 10, y: 10 }, { x: 100, y: 20 }, { x: 50, y: 80 } ] };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 10 );
+			expect( bounds.y ).toBe( 10 );
+			expect( bounds.width ).toBe( 90 );
+			expect( bounds.height ).toBe( 70 );
+		} );
+
+		it( 'should use radius fallback for polygon without points', () => {
+			const layer = { type: 'polygon', x: 100, y: 100, radius: 30 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 70 );
+			expect( bounds.y ).toBe( 70 );
+			expect( bounds.width ).toBe( 60 );
+			expect( bounds.height ).toBe( 60 );
+		} );
+
+		it( 'should use outerRadius for star', () => {
+			const layer = { type: 'star', x: 100, y: 100, outerRadius: 40 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 60 );
+			expect( bounds.y ).toBe( 60 );
+			expect( bounds.width ).toBe( 80 );
+			expect( bounds.height ).toBe( 80 );
+		} );
+
+		it( 'should handle highlight layer like rectangle', () => {
+			const layer = { type: 'highlight', x: 10, y: 20, width: 100, height: 50 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+		} );
+
+		it( 'should handle blur layer like rectangle', () => {
+			const layer = { type: 'blur', x: 10, y: 20, width: 100, height: 50 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+		} );
+
+		it( 'should handle path with points', () => {
+			const layer = { type: 'path', points: [ { x: 0, y: 0 }, { x: 100, y: 50 }, { x: 50, y: 100 } ] };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 0 );
+			expect( bounds.y ).toBe( 0 );
+			expect( bounds.width ).toBe( 100 );
+			expect( bounds.height ).toBe( 100 );
+		} );
+
+		it( 'should return default bounds for unknown type', () => {
+			const layer = { type: 'unknown', x: 10, y: 20, width: 30, height: 40 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 30, height: 40 } );
+		} );
+	} );
+
+	describe( 'computeAxisAlignedBounds', () => {
+		it( 'should return zero bounds for null rect', () => {
+			expect( GeometryUtils.computeAxisAlignedBounds( null, 0 ) ).toEqual( { left: 0, top: 0, right: 0, bottom: 0 } );
+		} );
+
+		it( 'should return unchanged bounds for zero rotation', () => {
+			const rect = { x: 10, y: 20, width: 100, height: 50 };
+			const bounds = GeometryUtils.computeAxisAlignedBounds( rect, 0 );
+			expect( bounds ).toEqual( { left: 10, top: 20, right: 110, bottom: 70 } );
+		} );
+
+		it( 'should compute axis-aligned bounds for 45 degree rotation', () => {
+			const rect = { x: 0, y: 0, width: 100, height: 100 };
+			const bounds = GeometryUtils.computeAxisAlignedBounds( rect, 45 );
+			// For a 100x100 square rotated 45 degrees, the diagonal is ~141.4
+			expect( bounds.right - bounds.left ).toBeCloseTo( 141.4, 0 );
+			expect( bounds.bottom - bounds.top ).toBeCloseTo( 141.4, 0 );
+		} );
+
+		it( 'should compute axis-aligned bounds for 90 degree rotation', () => {
+			const rect = { x: 0, y: 0, width: 100, height: 50 };
+			const bounds = GeometryUtils.computeAxisAlignedBounds( rect, 90 );
+			// For a 100x50 rectangle rotated 90 degrees, it becomes 50x100
+			expect( bounds.right - bounds.left ).toBeCloseTo( 50, 0 );
+			expect( bounds.bottom - bounds.top ).toBeCloseTo( 100, 0 );
+		} );
+
+		it( 'should handle undefined rotation as zero', () => {
+			const rect = { x: 10, y: 20, width: 100, height: 50 };
+			const bounds = GeometryUtils.computeAxisAlignedBounds( rect, undefined );
+			expect( bounds ).toEqual( { left: 10, top: 20, right: 110, bottom: 70 } );
+		} );
+	} );
+
 } );

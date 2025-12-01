@@ -3,6 +3,8 @@
  */
 
 const CanvasRenderer = require('../../resources/ext.layers.editor/CanvasRenderer.js');
+const TextUtils = require('../../resources/ext.layers.editor/TextUtils.js');
+const GeometryUtils = require('../../resources/ext.layers.editor/GeometryUtils.js');
 
 describe('CanvasRenderer', () => {
     let canvas;
@@ -94,6 +96,8 @@ describe('CanvasRenderer', () => {
 
         // Set global for window export
         window.CanvasRenderer = CanvasRenderer;
+        window.TextUtils = TextUtils;
+        window.GeometryUtils = GeometryUtils;
     });
 
     afterEach(() => {
@@ -779,15 +783,15 @@ describe('CanvasRenderer', () => {
         });
     });
 
-    describe('measureTextLayer', () => {
+    describe('TextUtils.measureTextLayer', () => {
         test('should return null for null layer', () => {
-            expect(renderer.measureTextLayer(null)).toBeNull();
+            expect(TextUtils.measureTextLayer(null, ctx, 800)).toBeNull();
         });
 
         test('should return metrics object for valid text layer', () => {
             const layer = { text: 'Hello', fontSize: 16, fontFamily: 'Arial', x: 100, y: 100 };
 
-            const metrics = renderer.measureTextLayer(layer);
+            const metrics = TextUtils.measureTextLayer(layer, ctx, 800);
 
             expect(metrics).toBeDefined();
             expect(metrics.lines).toBeDefined();
@@ -800,7 +804,7 @@ describe('CanvasRenderer', () => {
         test('should use default font values if not specified', () => {
             const layer = { text: 'Hello', x: 100, y: 100 };
 
-            const metrics = renderer.measureTextLayer(layer);
+            const metrics = TextUtils.measureTextLayer(layer, ctx, 800);
 
             expect(metrics.fontSize).toBe(16);
             expect(metrics.fontFamily).toBe('Arial');
@@ -809,7 +813,7 @@ describe('CanvasRenderer', () => {
         test('should calculate alignment offset for center alignment', () => {
             const layer = { text: 'Hello', fontSize: 16, x: 100, y: 100, textAlign: 'center' };
 
-            const metrics = renderer.measureTextLayer(layer);
+            const metrics = TextUtils.measureTextLayer(layer, ctx, 800);
 
             expect(metrics.alignOffset).toBeGreaterThan(0);
         });
@@ -817,55 +821,55 @@ describe('CanvasRenderer', () => {
         test('should calculate alignment offset for right alignment', () => {
             const layer = { text: 'Hello', fontSize: 16, x: 100, y: 100, textAlign: 'right' };
 
-            const metrics = renderer.measureTextLayer(layer);
+            const metrics = TextUtils.measureTextLayer(layer, ctx, 800);
 
             expect(metrics.alignOffset).toBeGreaterThan(0);
         });
     });
 
-    describe('wrapText', () => {
+    describe('TextUtils.wrapText', () => {
         test('should return single line for short text', () => {
-            const lines = renderer.wrapText('Hello', 200, ctx);
+            const lines = TextUtils.wrapText('Hello', 200, ctx);
 
             expect(lines).toEqual(['Hello']);
         });
 
         test('should return empty text as single element array', () => {
-            const lines = renderer.wrapText('', 200, ctx);
+            const lines = TextUtils.wrapText('', 200, ctx);
 
             expect(lines).toEqual(['']);
         });
 
         test('should handle null text', () => {
-            const lines = renderer.wrapText(null, 200, ctx);
+            const lines = TextUtils.wrapText(null, 200, ctx);
 
             expect(lines).toEqual(['']);
         });
 
         test('should handle zero/negative maxWidth', () => {
-            const lines = renderer.wrapText('Hello', 0, ctx);
+            const lines = TextUtils.wrapText('Hello', 0, ctx);
 
             expect(lines).toEqual(['Hello']);
         });
     });
 
-    describe('sanitizeTextContent', () => {
+    describe('TextUtils.sanitizeTextContent', () => {
         test('should return empty string for null/undefined', () => {
-            expect(renderer.sanitizeTextContent(null)).toBe('');
-            expect(renderer.sanitizeTextContent(undefined)).toBe('');
+            expect(TextUtils.sanitizeTextContent(null)).toBe('');
+            expect(TextUtils.sanitizeTextContent(undefined)).toBe('');
         });
 
         test('should convert non-string to string', () => {
-            expect(renderer.sanitizeTextContent(123)).toBe('123');
+            expect(TextUtils.sanitizeTextContent(123)).toBe('123');
         });
 
         test('should remove HTML tags', () => {
-            expect(renderer.sanitizeTextContent('<b>bold</b>')).toBe('bold');
-            expect(renderer.sanitizeTextContent('<script>alert("xss")</script>')).toBe('alert("xss")');
+            expect(TextUtils.sanitizeTextContent('<b>bold</b>')).toBe('bold');
+            expect(TextUtils.sanitizeTextContent('<script>alert("xss")</script>')).toBe('alert("xss")');
         });
 
         test('should preserve normal text', () => {
-            expect(renderer.sanitizeTextContent('Hello World')).toBe('Hello World');
+            expect(TextUtils.sanitizeTextContent('Hello World')).toBe('Hello World');
         });
     });
 

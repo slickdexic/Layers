@@ -207,6 +207,7 @@
 				"ui/ColorPickerDialog.js",
 				"ui/ConfirmDialog.js",
 				"ui/PropertiesForm.js",
+				"TextUtils.js",
 				"CanvasManager.js",
 				"LayerPanel.js",
 				"LayersValidator.js",

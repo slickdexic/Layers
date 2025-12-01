@@ -27,10 +27,11 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 | Metric | Current | Target | Gap |
 |--------|---------|--------|-----|
-| Jest tests | 1,235 | 1,500+ | +265 |
+| Jest tests | 1,257 | 1,500+ | +243 |
 | Overall Coverage | 54.78% | 70% | +15.2% |
 | **Core Module Coverage** | **14-24%** | **60%** | **+36-46%** |
-| CanvasManager.js lines | 2,464 | <800 | -1,664 |
+| CanvasManager.js lines | 1,877 | <800 | -1,077 |
+| CanvasRenderer.js lines | 1,439 | <1,000 | -439 |
 | WikitextHooks.php lines | 1,553 | <400 | -1,153 |
 | ESLint errors | 0 | 0 | ✅ Met |
 | PHP source errors | 0 | 0 | ✅ Met |
@@ -73,10 +74,10 @@ try {
 ### 0.2 🏗️ Split CanvasManager.js God Class
 
 **Priority:** P0 - CRITICAL  
-**Status:** 🟡 In Progress (~70% complete)  
+**Status:** 🟡 In Progress (~80% complete)  
 **Effort:** 5-7 days (40+ hours)  
 **Risk:** HIGH  
-**File:** `resources/ext.layers.editor/CanvasManager.js` (2,464 lines - reduced from 3,523)
+**File:** `resources/ext.layers.editor/CanvasManager.js` (2,163 lines - reduced from 3,523)
 
 **Problem:** Unmaintainable monolith with 15+ responsibilities and only 23.6% test coverage.
 
@@ -88,13 +89,22 @@ try {
 - ✅ DrawingController.js (620 lines, 97% coverage)
 - ✅ ClipboardController.js (222 lines, 98% coverage)
 - ✅ ImageLoader.js (280 lines)
+- ✅ TextUtils.js (191 lines) - shared text measurement/sanitization utilities
 
 **Recent Progress (December 2025):**
 - ✅ Removed 400 lines of duplicate resize calculation methods (now delegate to TransformController)
 - ✅ Removed 485 lines of fallback drawing tool methods (now fully use DrawingController)
 - ✅ Removed 60 lines of fallback clipboard methods (now fully use ClipboardController)
 - ✅ Simplified startDrawing, continueDrawing, finishDrawing methods
-- ✅ Total reduction: 1,059 lines (30%)
+- ✅ Consolidated individual drawXxx methods to use renderer.drawLayer directly (~65 lines removed)
+- ✅ Removed fallback code from drawGrid, toggleGrid, drawRulers, drawGuides methods (~50 lines)
+- ✅ Removed fallback code from zoom methods: animateZoom, setZoomDirect, fitToWindow, zoomBy, setZoom, zoomToFitLayers (~100 lines)
+- ✅ Removed fallback code from toggle methods: toggleRulers, toggleGuidesVisibility, toggleSnapToGrid, etc. (~30 lines)
+- ✅ Refactored init() with findClass() helper for DRY controller initialization (~45 lines saved)
+- ✅ Extracted TextUtils.js (191 lines) - shared text measurement utilities, removed ~140 lines from CanvasManager + ~110 lines from CanvasRenderer
+- ✅ Enhanced GeometryUtils.js (+170 lines) - added getLayerBoundsForType and computeAxisAlignedBounds, reduced CanvasManager by ~145 lines, CanvasRenderer by ~43 lines
+- ✅ Added 21 new GeometryUtils tests for getLayerBoundsForType and computeAxisAlignedBounds
+- ✅ Total reduction: 1,646 lines from CanvasManager (47%), 153 lines from CanvasRenderer (10%)
 
 **Remaining Extractions Needed:**
 
@@ -107,18 +117,19 @@ try {
 
 **Tasks:**
 - [x] Remove duplicate fallback code that's now handled by controllers
+- [x] Extract shared TextUtils.js for text measurement/sanitization
 - [ ] Map all remaining methods to proposed modules
 - [ ] Extract CanvasCore.js with init(), resize(), setupContext()
 - [ ] Extract RenderCoordinator.js with performRedraw(), scheduleRedraw()
 - [ ] Extract InteractionController.js with event delegation
 - [ ] Update CanvasManager to compose extracted modules
 - [ ] Add tests for each extracted module (target 80% coverage)
-- [x] Verify all 1,235 existing tests still pass
+- [x] Verify all 1,236 existing tests still pass
 
 **Acceptance Criteria:**
-- [ ] CanvasManager.js reduced to <800 lines (currently 2,464 - 1,664 lines over target)
+- [ ] CanvasManager.js reduced to <800 lines (currently 1,877 - 1,077 lines over target)
 - [ ] Each extracted module has >80% test coverage
-- [x] No functionality regressions (all 1,235 tests pass)
+- [x] No functionality regressions (all 1,236 tests pass)
 - [ ] Documentation updated
 
 ---

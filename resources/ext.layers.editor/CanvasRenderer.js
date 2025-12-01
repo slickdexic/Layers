@@ -774,7 +774,8 @@
 	CanvasRenderer.prototype.drawText = function ( layer ) {
 		this.ctx.save();
 
-		const metrics = this.measureTextLayer( layer );
+		const canvasWidth = this.canvas ? this.canvas.width : 0;
+		const metrics = window.TextUtils.measureTextLayer( layer, this.ctx, canvasWidth );
 		if ( !metrics ) {
 			this.ctx.restore();
 			return;
@@ -826,116 +827,6 @@
 		}
 
 		this.ctx.restore();
-	};
-
-	CanvasRenderer.prototype.measureTextLayer = function ( layer ) {
-		if ( !layer ) {
-			return null;
-		}
-
-		const fontSize = layer.fontSize || 16;
-		const fontFamily = layer.fontFamily || 'Arial';
-		const sanitizedText = this.sanitizeTextContent( layer.text || '' );
-		const lineHeight = fontSize * 1.2;
-		const context = this.ctx;
-		const canvasWidth = this.canvas ? this.canvas.width : 0;
-		const maxLineWidth = layer.maxWidth || ( canvasWidth ? canvasWidth * 0.8 : fontSize * Math.max( sanitizedText.length, 1 ) );
-
-		context.save();
-		context.font = fontSize + 'px ' + fontFamily;
-		let lines = this.wrapText( sanitizedText, maxLineWidth, context );
-		if ( !lines.length ) {
-			lines = [ '' ];
-		}
-
-		let totalTextWidth = 0;
-		let metricsForLongest = null;
-		for ( let i = 0; i < lines.length; i++ ) {
-			const lineMetrics = context.measureText( lines[ i ] || ' ' );
-			if ( lineMetrics.width > totalTextWidth ) {
-				totalTextWidth = lineMetrics.width;
-				metricsForLongest = lineMetrics;
-			}
-		}
-		if ( totalTextWidth === 0 ) {
-			const fallbackMetrics = context.measureText( sanitizedText || ' ' );
-			totalTextWidth = fallbackMetrics.width;
-			metricsForLongest = fallbackMetrics;
-		}
-
-		context.restore();
-
-		const ascent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxAscent === 'number' ?
-			metricsForLongest.actualBoundingBoxAscent : fontSize * 0.8;
-		const descent = metricsForLongest && typeof metricsForLongest.actualBoundingBoxDescent === 'number' ?
-			metricsForLongest.actualBoundingBoxDescent : fontSize * 0.2;
-		let totalHeight = ascent + descent;
-		if ( lines.length > 1 ) {
-			totalHeight = ascent + descent + ( lines.length - 1 ) * lineHeight;
-		}
-
-		const textAlign = layer.textAlign || 'left';
-		let alignOffset = 0;
-		switch ( textAlign ) {
-			case 'center':
-				alignOffset = totalTextWidth / 2;
-				break;
-			case 'right':
-			case 'end':
-				alignOffset = totalTextWidth;
-				break;
-			default:
-				alignOffset = 0;
-		}
-
-		const originX = ( layer.x || 0 ) - alignOffset;
-		const originY = ( layer.y || 0 ) - ascent;
-
-		return {
-			lines: lines,
-			fontSize: fontSize,
-			fontFamily: fontFamily,
-			lineHeight: lineHeight,
-			width: totalTextWidth,
-			height: totalHeight,
-			originX: originX,
-			originY: originY,
-			ascent: ascent,
-			descent: descent,
-			baselineY: layer.y || 0,
-			alignOffset: alignOffset
-		};
-	};
-
-	CanvasRenderer.prototype.wrapText = function ( text, maxWidth, ctx ) {
-		if ( !text || !maxWidth || maxWidth <= 0 ) {
-			return [ text || '' ];
-		}
-		const words = text.split( ' ' );
-		const lines = [];
-		let currentLine = '';
-		for ( let i = 0; i < words.length; i++ ) {
-			const word = words[ i ];
-			const testLine = currentLine + ( currentLine ? ' ' : '' ) + word;
-			const metrics = ctx.measureText( testLine );
-			if ( metrics.width > maxWidth && currentLine !== '' ) {
-				lines.push( currentLine );
-				currentLine = word;
-			} else {
-				currentLine = testLine;
-			}
-		}
-		if ( currentLine ) {
-			lines.push( currentLine );
-		}
-		return lines.length > 0 ? lines : [ '' ];
-	};
-
-	CanvasRenderer.prototype.sanitizeTextContent = function ( text ) {
-		let safeText = text == null ? '' : String( text );
-		safeText = safeText.replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
-		safeText = safeText.replace( /<[^>]+>/g, '' );
-		return safeText;
 	};
 
 	// --- UI Rendering (Selection, Guides, etc.) ---
@@ -1482,9 +1373,7 @@
 	};
 
 	CanvasRenderer.prototype.getLayerBounds = function ( layer ) {
-		// Duplicate logic from CanvasManager to be self-contained or use editor?
-		// It's better to be self-contained if possible, but it depends on measureTextLayer.
-		// We have measureTextLayer here.
+		// Uses TextUtils/GeometryUtils for bounds calculation
 		if ( !layer ) {
 			return null;
 		}
@@ -1496,55 +1385,14 @@
 	};
 
 	CanvasRenderer.prototype._getRawLayerBounds = function ( layer ) {
-		// Simplified version of CanvasManager._getRawLayerBounds
-		let metrics, r, rx, ry, x1, y1, x2, y2;
-		switch ( layer.type ) {
-			case 'text':
-				metrics = this.measureTextLayer( layer );
-				return metrics ? { x: metrics.originX, y: metrics.originY, width: metrics.width, height: metrics.height } : null;
-			case 'rectangle':
-			case 'highlight':
-			case 'blur':
-				return { x: layer.x || 0, y: layer.y || 0, width: layer.width || 0, height: layer.height || 0 };
-			case 'circle':
-				r = layer.radius || 0;
-				return { x: ( layer.x || 0 ) - r, y: ( layer.y || 0 ) - r, width: r * 2, height: r * 2 };
-			case 'ellipse':
-				rx = layer.radiusX || 0;
-				ry = layer.radiusY || 0;
-				return { x: ( layer.x || 0 ) - rx, y: ( layer.y || 0 ) - ry, width: rx * 2, height: ry * 2 };
-			case 'line':
-			case 'arrow':
-				x1 = layer.x1 || 0; y1 = layer.y1 || 0; x2 = layer.x2 || 0; y2 = layer.y2 || 0;
-				return {
-					x: Math.min( x1, x2 ), y: Math.min( y1, y2 ),
-					width: Math.abs( x2 - x1 ), height: Math.abs( y2 - y1 )
-				};
-			case 'polygon':
-			case 'star':
-			case 'path':
-				if ( layer.points && layer.points.length >= 3 ) {
-					let minX = layer.points[ 0 ].x, maxX = minX, minY = layer.points[ 0 ].y, maxY = minY;
-					for ( let i = 1; i < layer.points.length; i++ ) {
-						minX = Math.min( minX, layer.points[ i ].x );
-						maxX = Math.max( maxX, layer.points[ i ].x );
-						minY = Math.min( minY, layer.points[ i ].y );
-						maxY = Math.max( maxY, layer.points[ i ].y );
-					}
-					return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-				}
-				// Fallback to radius for polygon/star if points are missing or insufficient
-				if ( layer.type === 'polygon' || layer.type === 'star' ) {
-					r = layer.radius || ( layer.width ? layer.width / 2 : 50 );
-					if ( layer.type === 'star' && layer.outerRadius ) {
-						r = layer.outerRadius;
-					}
-					return { x: ( layer.x || 0 ) - r, y: ( layer.y || 0 ) - r, width: r * 2, height: r * 2 };
-				}
-				return { x: layer.x || 0, y: layer.y || 0, width: 100, height: 100 };
-			default:
-				return { x: layer.x || 0, y: layer.y || 0, width: layer.width || 0, height: layer.height || 0 };
+		// Handle text layers specially - they need canvas context for measurement
+		if ( layer && layer.type === 'text' ) {
+			const canvasWidth = this.canvas ? this.canvas.width : 0;
+			const metrics = window.TextUtils.measureTextLayer( layer, this.ctx, canvasWidth );
+			return metrics ? { x: metrics.originX, y: metrics.originY, width: metrics.width, height: metrics.height } : null;
 		}
+		// Use GeometryUtils for all other layer types
+		return window.GeometryUtils.getLayerBoundsForType( layer );
 	};
 
 	CanvasRenderer.prototype.drawErrorPlaceholder = function ( layer ) {

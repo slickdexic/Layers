@@ -238,6 +238,156 @@
 		return radians * 180 / Math.PI;
 	};
 
+	/**
+	 * Get raw bounds for a layer based on its type (excludes text layers - use TextUtils for those)
+	 *
+	 * @param {Object} layer - The layer object
+	 * @return {{x:number,y:number,width:number,height:number}|null} Bounding box or null
+	 */
+	GeometryUtils.getLayerBoundsForType = function ( layer ) {
+		if ( !layer || !layer.type ) {
+			return null;
+		}
+
+		let rectX, rectY, safeWidth, safeHeight;
+		switch ( layer.type ) {
+			case 'text':
+				// Text bounds require canvas context - caller should handle this with TextUtils
+				return null;
+			case 'rectangle':
+			case 'highlight':
+			case 'blur': {
+				rectX = layer.x || 0;
+				rectY = layer.y || 0;
+				safeWidth = layer.width || 0;
+				safeHeight = layer.height || 0;
+				if ( safeWidth < 0 ) {
+					rectX += safeWidth;
+					safeWidth = Math.abs( safeWidth );
+				}
+				if ( safeHeight < 0 ) {
+					rectY += safeHeight;
+					safeHeight = Math.abs( safeHeight );
+				}
+				return { x: rectX, y: rectY, width: safeWidth, height: safeHeight };
+			}
+			case 'circle': {
+				const radius = Math.abs( layer.radius || 0 );
+				return {
+					x: ( layer.x || 0 ) - radius,
+					y: ( layer.y || 0 ) - radius,
+					width: radius * 2,
+					height: radius * 2
+				};
+			}
+			case 'ellipse': {
+				const radiusX = Math.abs( layer.radiusX || layer.radius || 0 );
+				const radiusY = Math.abs( layer.radiusY || layer.radius || 0 );
+				return {
+					x: ( layer.x || 0 ) - radiusX,
+					y: ( layer.y || 0 ) - radiusY,
+					width: radiusX * 2,
+					height: radiusY * 2
+				};
+			}
+			case 'line':
+			case 'arrow': {
+				const x1 = layer.x1 !== undefined ? layer.x1 : ( layer.x || 0 );
+				const y1 = layer.y1 !== undefined ? layer.y1 : ( layer.y || 0 );
+				const x2 = layer.x2 !== undefined ? layer.x2 : ( layer.x || 0 );
+				const y2 = layer.y2 !== undefined ? layer.y2 : ( layer.y || 0 );
+				return {
+					x: Math.min( x1, x2 ),
+					y: Math.min( y1, y2 ),
+					width: Math.max( Math.abs( x2 - x1 ), 1 ),
+					height: Math.max( Math.abs( y2 - y1 ), 1 )
+				};
+			}
+			case 'polygon':
+			case 'star':
+			case 'path': {
+				if ( Array.isArray( layer.points ) && layer.points.length >= 3 ) {
+					return GeometryUtils.getBoundingBox( layer.points );
+				}
+				// Fallback for polygon/star without points array
+				let r = layer.radius;
+				if ( layer.type === 'star' && layer.outerRadius ) {
+					r = layer.outerRadius;
+				}
+				const radiusFallback = Math.abs( r || 50 );
+				return {
+					x: ( layer.x || 0 ) - radiusFallback,
+					y: ( layer.y || 0 ) - radiusFallback,
+					width: radiusFallback * 2,
+					height: radiusFallback * 2
+				};
+			}
+			default: {
+				// Default fallback for unknown types
+				rectX = layer.x || 0;
+				rectY = layer.y || 0;
+				safeWidth = Math.abs( layer.width || 50 ) || 50;
+				safeHeight = Math.abs( layer.height || 50 ) || 50;
+				return { x: rectX, y: rectY, width: safeWidth, height: safeHeight };
+			}
+		}
+	};
+
+	/**
+	 * Compute axis-aligned bounding box for a rotated rectangle
+	 *
+	 * @param {{x:number,y:number,width:number,height:number}} rect - The rectangle
+	 * @param {number} rotationDegrees - Rotation in degrees
+	 * @return {{left:number,top:number,right:number,bottom:number}} Axis-aligned bounds
+	 */
+	GeometryUtils.computeAxisAlignedBounds = function ( rect, rotationDegrees ) {
+		if ( !rect ) {
+			return { left: 0, top: 0, right: 0, bottom: 0 };
+		}
+
+		const rotation = ( rotationDegrees || 0 ) * Math.PI / 180;
+		if ( rotation === 0 ) {
+			return {
+				left: rect.x,
+				top: rect.y,
+				right: rect.x + rect.width,
+				bottom: rect.y + rect.height
+			};
+		}
+
+		const centerX = rect.x + ( rect.width / 2 );
+		const centerY = rect.y + ( rect.height / 2 );
+		const corners = [
+			{ x: rect.x, y: rect.y },
+			{ x: rect.x + rect.width, y: rect.y },
+			{ x: rect.x + rect.width, y: rect.y + rect.height },
+			{ x: rect.x, y: rect.y + rect.height }
+		];
+		const cosR = Math.cos( rotation );
+		const sinR = Math.sin( rotation );
+		const rotated = corners.map( function ( point ) {
+			const dx = point.x - centerX;
+			const dy = point.y - centerY;
+			return {
+				x: centerX + dx * cosR - dy * sinR,
+				y: centerY + dx * sinR + dy * cosR
+			};
+		} );
+
+		let minX = rotated[ 0 ].x;
+		let maxX = rotated[ 0 ].x;
+		let minY = rotated[ 0 ].y;
+		let maxY = rotated[ 0 ].y;
+		for ( let i = 1; i < rotated.length; i++ ) {
+			minX = Math.min( minX, rotated[ i ].x );
+			maxX = Math.max( maxX, rotated[ i ].x );
+			minY = Math.min( minY, rotated[ i ].y );
+			maxY = Math.max( maxY, rotated[ i ].y );
+		}
+
+		return { left: minX, top: minY, right: maxX, bottom: maxY };
+	};
+
 	// Export for different environments - ALWAYS set on window for cross-file dependencies
 	if ( typeof window !== 'undefined' ) {
 		window.GeometryUtils = GeometryUtils;

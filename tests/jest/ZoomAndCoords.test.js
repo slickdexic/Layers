@@ -61,6 +61,22 @@ describe('CanvasManager zoom and coordinate mapping', () => {
         manager.panX = 0;
         manager.panY = 0;
         manager.zoom = 1;
+        
+        // Mock zoomPanController for delegation tests
+        manager.zoomPanController = {
+            zoomBy: jest.fn((delta, point) => {
+                // Implement the zoom logic for testing
+                const target = Math.max(manager.minZoom, Math.min(manager.maxZoom, manager.zoom + delta));
+                if (target === manager.zoom) return;
+                const screenX = manager.panX + manager.zoom * point.x;
+                const screenY = manager.panY + manager.zoom * point.y;
+                manager.zoom = target;
+                manager.panX = screenX - manager.zoom * point.x;
+                manager.panY = screenY - manager.zoom * point.y;
+            }),
+            updateCanvasTransform: jest.fn()
+        };
+        
         manager.updateCanvasTransform();
     });
 
@@ -86,6 +102,12 @@ describe('CanvasManager zoom and coordinate mapping', () => {
         const pt2 = manager.getMousePointFromClient(100 + 200, 50 + 150);
         expect(Math.round(pt2.x)).toBe(400);
         expect(Math.round(pt2.y)).toBe(300);
+    });
+
+    test('zoomBy delegates to zoomPanController', () => {
+        const anchor = { x: 400, y: 300 };
+        manager.zoomBy(+0.5, anchor);
+        expect(manager.zoomPanController.zoomBy).toHaveBeenCalledWith(+0.5, anchor);
     });
 
     test('zoomBy anchors zoom to the provided canvas point', () => {
