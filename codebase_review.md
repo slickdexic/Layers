@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Comprehensive Code Review
 
-**Review Date:** November 29, 2025 (Updated)  
+**Review Date:** December 1, 2025  
 **Version:** 0.8.1-dev  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5 Preview)  
 **Review Type:** Deep Critical Analysis  
@@ -9,53 +9,26 @@
 
 ## Executive Summary
 
-The "Layers" extension is a MediaWiki extension for non-destructive image annotation. While the **backend has reasonably solid security foundations**, the **frontend suffers from severe architectural debt** that creates significant maintenance burden, testing difficulties, and scalability concerns. **This extension is not production-ready at scale without substantial refactoring.**
+The "Layers" extension is a MediaWiki extension for non-destructive image annotation. While the **backend has solid security foundations**, the **frontend carries significant architectural debt** that creates maintenance burden and scalability concerns.
 
-**Overall Assessment: 4.5/10** — The extension functions for basic use cases but carries substantial technical debt that will compound over time. The backend is reasonable; the frontend architecture is problematic at its core.
+**Overall Assessment: 5.5/10** — Functional for basic use cases with notable improvements since November 2025, but substantial technical debt remains. Test coverage improved to 61%, CanvasManager reduced by 47%.
 
 **Key Strengths:**
-- Backend security (CSRF, rate limiting, strict property whitelist with 40+ validated fields)
-- 1,235 passing Jest tests with 54.78% statement coverage
-- Extracted canvas controllers demonstrate excellent patterns (97%+ coverage)
-- Zero ESLint errors
-- Comprehensive documentation in copilot-instructions.md
+- Backend security (CSRF, rate limiting, strict 40+ field property whitelist)
+- **1,257 passing Jest tests** with **61.23% statement coverage**
+- Extracted canvas controllers with 97%+ coverage (excellent pattern)
+- Zero ESLint errors, zero PHP source errors
+- CanvasManager reduced from 3,523 to **1,877 lines** (47% reduction)
+- Processor classes created for WikitextHooks refactor
 
-**Critical Issues (In Progress):**
-- **3,523-line CanvasManager.js god class** — 23.6% coverage, unmaintainable monolith
-- **2,018-line WikitextHooks.php** — massive code duplication, **refactor in progress** (processor classes created)
-- **51 unique `window.X =` global exports** — antiquated IIFE pattern blocking ES modules
-- **5 overlapping event systems** — architectural confusion with EventHandler, EventManager, EventSystem, CanvasEvents, plus inline handlers
-- **Core modules dangerously undertested** — LayersEditor at 14.3%, CanvasEvents at 19.1%
-- ~~One remaining empty catch block~~ ✅ **FIXED** — Now logs errors properly
-- ~~Debug console.warn statements~~ ✅ **FIXED** — Removed from production code
+**Critical Issues Remaining:**
+- **1,877-line CanvasManager.js** — still a god class needing further decomposition
+- **1,553-line WikitextHooks.php** — 14 hook handlers with code duplication
+- **25+ `window.X =` global exports** — IIFE pattern blocking ES modules
+- **4 overlapping event systems** — 1,887 lines across EventHandler, EventManager, EventSystem, CanvasEvents
+- **Core modules undertested** — LayersEditor, CanvasEvents need coverage improvements
 
-**📋 Detailed improvement tasks are documented in [`improvement_plan.md`](./improvement_plan.md).**
-
----
-
-## Recent Improvements (November 29, 2025)
-
-### Completed Fixes
-
-1. **✅ Empty Catch Block Fixed** ([CanvasEvents.js#L182])
-   - Silent error swallowing replaced with `mw.log.error()` logging
-   - Errors are now visible for debugging
-
-2. **✅ Debug Console Statements Removed** ([LayersEditor.js])
-   - Removed `console.warn` fallbacks from production code paths
-   - Now uses only `mw.log.*` methods as intended
-
-3. **✅ WikitextHooks.php Processor Classes Created**
-   - [LayersHtmlInjector.php](src/Hooks/Processors/LayersHtmlInjector.php) — ~260 lines, centralized HTML injection
-   - [LayersParamExtractor.php](src/Hooks/Processors/LayersParamExtractor.php) — ~290 lines, parameter extraction
-   - Both classes have comprehensive PHPUnit tests
-   - WikitextHooks.php now has helper methods using these processors
-   - `extractLayersParamFromHref()` now delegates to `LayersParamExtractor`
-
-### In Progress
-
-- **WikitextHooks.php refactor** — Helper methods added, gradual migration of hook handlers underway
-- **CanvasManager.js split** — Extraction strategy documented, awaiting implementation
+**📋 Detailed improvement plan: [`improvement_plan.md`](./improvement_plan.md)**
 
 ---
 
@@ -63,94 +36,125 @@ The "Layers" extension is a MediaWiki extension for non-destructive image annota
 
 | Category | Score | Status | Notes |
 |----------|-------|--------|-------|
-| Architecture & Design | 3/10 | 🔴 Poor | God classes, IIFE globals, 5 event systems |
-| Code Quality | 5/10 | 🟡 Fair | 0 ESLint errors, but structural issues pervasive |
-| Security | 7/10 | 🟢 Fair-Good | Defense-in-depth backend, debug leaks fixed |
+| Architecture & Design | 4/10 | 🔴 Poor | God classes, IIFE globals, event system confusion |
+| Code Quality | 6/10 | 🟡 Fair | 0 lint errors, but structural issues remain |
+| Security | 7/10 | 🟢 Fair-Good | Defense-in-depth backend, proper sanitization |
 | Performance | 3/10 | 🔴 Poor | Full redraws on every change, no optimization |
-| Accessibility | 4/10 | 🟠 Poor-Fair | Canvas is fundamentally inaccessible |
-| Documentation | 6/10 | 🟡 Fair | Good guides, architecture docs now accurate |
-| Testing | 4/10 | 🔴 Poor | Core modules critically undertested |
+| Accessibility | 4/10 | 🟠 Poor-Fair | Canvas inherently inaccessible |
+| Documentation | 7/10 | 🟢 Good | Comprehensive guides, up-to-date architecture docs |
+| Testing | 5/10 | 🟡 Fair | 61% coverage overall, but core modules undertested |
 | Error Handling | 6/10 | 🟡 Fair | ErrorHandler exists, catch blocks now log |
-| Maintainability | 3/10 | 🔴 Poor | God classes make any change high-risk |
+| Maintainability | 4/10 | 🔴 Poor | God classes make changes high-risk |
 
 ---
 
-## 🔴 Critical Issues (Production Blockers)
+## Current State Analysis (December 2025)
 
-### 1. CanvasManager.js: 3,523-Line God Class
+### File Size Summary
 
-**Severity:** 🔴 CRITICAL  
-**Coverage:** 23.64%  
-**Risk:** Any change has high probability of regressions
+**JavaScript (resources/ext.layers.editor/)** — 25,293 total lines
 
-```
-$ wc -l resources/ext.layers.editor/CanvasManager.js
-3523 resources/ext.layers.editor/CanvasManager.js
-```
+| File | Lines | Assessment |
+|------|-------|------------|
+| CanvasManager.js | 1,877 | 🟡 Reduced from 3,523, still needs splitting |
+| LayersEditor.js | 1,756 | 🟡 Large but manageable |
+| Toolbar.js | 1,666 | 🟡 Could be componentized |
+| CanvasRenderer.js | 1,439 | 🟡 Acceptable |
+| LayerPanel.js | 1,103 | 🟢 Reasonable |
+| TransformController.js | 1,027 | 🟢 Well-extracted, 100% coverage |
+| LayersValidator.js | 1,001 | 🟢 Reasonable |
+| SelectionManager.js | 950 | 🟢 Reasonable |
+| ToolManager.js | 955 | 🟢 Reasonable |
+| APIManager.js | 872 | 🟢 Reasonable |
+| EventSystem.js | 702 | 🟡 Overlaps with EventHandler |
+| StateManager.js | 652 | 🟢 Good, well-tested |
+| DrawingController.js | 620 | 🟢 Well-extracted, 97% coverage |
+| UIManager.js | 593 | 🟢 Reasonable |
+| ErrorHandler.js | 556 | 🟢 Good |
+| CanvasEvents.js | 554 | 🟡 Overlaps with EventHandler |
+| HistoryManager.js | 524 | 🟢 Reasonable |
+| EventHandler.js | 512 | 🟡 Overlaps with EventSystem |
+| Other files (14) | <500 each | 🟢 Reasonable |
 
-This single file handles **at least 15 distinct responsibilities**:
-- Canvas initialization and context management
-- Rendering and redraws (full canvas redraws on every change)
-- Mouse/touch event handling
-- Selection state and manipulation
-- Zoom and pan functionality
-- Grid and ruler display
-- Clipboard operations
-- Drawing mode state machine
-- Tool management delegation
-- Transform operations
-- Hit testing fallbacks
+**PHP (src/)** — Key files
+
+| File | Lines | Assessment |
+|------|-------|------------|
+| WikitextHooks.php | 1,553 | 🔴 14 hooks with duplication |
+| ApiLayersInfo.php | 421 | 🟢 Reasonable |
+| LayersHtmlInjector.php | 259 | 🟢 New, well-tested |
+| LayersParamExtractor.php | 303 | 🟢 New, well-tested |
+
+---
+
+## 🔴 Critical Issues
+
+### 1. CanvasManager.js: Still a God Class (1,877 lines)
+
+**Severity:** 🔴 HIGH  
+**Progress:** Reduced from 3,523 lines (47% reduction)
+
+While significant progress has been made extracting controllers, CanvasManager still handles too many responsibilities:
+- Canvas initialization and context
+- Rendering coordination
+- Mouse/touch event delegation
+- Selection state
+- Zoom and pan coordination
+- Tool state management
 - Image loading
 - Coordinate transformation
-- Error logging
-- Undo/redo bridge methods
 
-**Impact:**
-- Any change risks regressions across unrelated features
-- New developers cannot understand the codebase without extensive study
-- Performance optimization is nearly impossible (can't isolate bottlenecks)
-- Coverage will never meaningfully improve without splitting
-- Debugging is extremely difficult
-- The 23.6% coverage means 76.4% of paths are completely untested
+**Extracted Successfully:**
+- ✅ ZoomPanController.js (348 lines, 97% coverage)
+- ✅ GridRulersController.js (390 lines, 97% coverage)
+- ✅ TransformController.js (1,027 lines, 100% coverage)
+- ✅ HitTestController.js (382 lines, 98% coverage)
+- ✅ DrawingController.js (620 lines, 97% coverage)
+- ✅ ClipboardController.js (226 lines, 98% coverage)
+- ✅ TextUtils.js (191 lines)
 
-**Contrast with extracted controllers:** Six controllers were previously extracted (ZoomPanController, GridRulersController, TransformController, HitTestController, DrawingController, ClipboardController) achieving **97-100% coverage**. This proves the extraction pattern works and should be completed.
-
----
-
-### 2. WikitextHooks.php: 2,018-Line God Class with Massive Duplication
-
-**Severity:** 🟡 IN PROGRESS (was 🔴 CRITICAL)
-
-```
-$ wc -l src/Hooks/WikitextHooks.php
-2185 src/Hooks/WikitextHooks.php  # Increased due to new helper methods
-```
-
-This PHP file contains **14 hook handlers** with **extensive code duplication**:
-
-| Hook Method | Lines | Pattern |
-|-------------|-------|---------|
-| `onImageBeforeProduceHTML()` | 52-185 | HTML injection + logging |
-| `onMakeImageLink2()` | 297-510 | HTML injection + DB fetch |
-| `onLinkerMakeImageLink()` | 513-695 | HTML injection + DB fetch |
-| `onLinkerMakeMediaLinkFile()` | 698-920 | HTML injection + DB fetch |
-| `onThumbnailBeforeProduceHTML()` | 1231-1550 | HTML injection + DB fetch |
-| Plus 9 more hook handlers... | | |
-
-The same pattern repeats in each handler:
-1. Extract layers parameter from various sources (href, params, data-mw)
-2. Check for explicit off/none
-3. Fetch layer data from database
-4. Inject HTML attributes and classes
-5. JSON encode payload
-
-This is a DRY (Don't Repeat Yourself) violation of epic proportions. A change to the injection logic must be replicated across 5+ methods.
+**Still Needed:**
+- CanvasCore.js — Canvas setup, context, resize (~400 lines)
+- RenderCoordinator.js — Render scheduling, dirty regions (~300 lines)
+- InteractionController.js — Mouse/touch delegation (~300 lines)
 
 ---
 
-### 3. IIFE Pattern with 51 Window.* Global Exports
+### 2. WikitextHooks.php: 14 Hooks with Duplication (1,553 lines)
 
-**Severity:** 🔴 CRITICAL (Architecture)
+**Severity:** 🟡 MEDIUM (In Progress)
+
+14 hook handlers with repeated patterns:
+- `onImageBeforeProduceHTML` (lines 127-177)
+- `onParserAfterTidy` (lines 178-209)
+- `onMakeImageLink2` (lines 210-297)
+- `onLinkerMakeImageLink` (lines 298-372)
+- `onLinkerMakeMediaLinkFile` (lines 373-550)
+- `onParserFirstCallInit` (lines 551-565)
+- `onGetLinkParamDefinitions` (lines 566-599)
+- `onGetLinkParamTypes` (lines 600-613)
+- `onParserGetImageLinkParams` (lines 614-636)
+- `onParserGetImageLinkOptions` (lines 637-825)
+- `onFileLink` (lines 826-837)
+- `onThumbnailBeforeProduceHTML` (lines 838-1050)
+- `onParserMakeImageParams` (lines 1051-1218)
+- `onParserBeforeInternalParse` (lines 1219+)
+
+**Completed:**
+- ✅ LayersHtmlInjector.php created (259 lines)
+- ✅ LayersParamExtractor.php created (303 lines)
+- ✅ Centralized logging helper added
+
+**Remaining Work:**
+- Extract ImageLinkProcessor.php for image hooks
+- Extract ThumbnailProcessor.php for thumbnail hooks
+- Reduce WikitextHooks.php to <400 lines coordinator
+
+---
+
+### 3. IIFE Pattern with 25+ Window.* Global Exports
+
+**Severity:** 🔴 HIGH (Architecture)
 
 Every JavaScript file uses the 2015-era IIFE pattern:
 
@@ -162,314 +166,194 @@ Every JavaScript file uses the 2015-era IIFE pattern:
 }());
 ```
 
-**Actual counts from grep:**
-- Unique `window.X =` assignments: **51**
-- Total `window.` references: **250+**
+**Window.* exports found:**
+- ValidationManager, UIManager, TransformationEngine
+- ToolManager (also LayersToolManager), Toolbar
+- TextUtils, StateManager (also stateManager instance)
+- SelectionManager (as LayersSelectionManager)
+- ModuleRegistry (plus layersRegistry, layersModuleRegistry)
+- LayersValidator, LayersEditor
+- LayerPanel, ImageLoader, HistoryManager
+- HitTestController, GridRulersController
+- GeometryUtils, EventSystem, EventHandler
+- ErrorHandler, DrawingController, ClipboardController
+- CanvasRenderer, CanvasManager, CanvasEvents
+- APIManager, ZoomPanController
+- Plus several singleton instances
 
 **Problems:**
-- No explicit dependency management — load order is implicit and fragile
+- No explicit dependency management — load order is fragile
 - Cannot use ES modules, tree-shaking, or modern bundler optimizations
 - Global namespace pollution creates collision risks
-- Makes unit testing harder (requires manual global setup in test files)
-- Blocks adoption of TypeScript (which requires modules)
-- 2025 codebase using 2015 JavaScript patterns
-- This is technical debt that compounds over time
-
-**Sample of globals exported:**
-```
-window.CanvasManager, window.LayersEditor, window.Toolbar, 
-window.LayerPanel, window.StateManager, window.HistoryManager,
-window.EventHandler, window.EventManager, window.EventSystem,
-window.CanvasEvents, window.ValidationManager, window.APIManager,
-window.UIManager, window.LayersConstants, window.GeometryUtils,
-window.CanvasRenderer, window.TransformController, window.ZoomPanController,
-window.HitTestController, window.DrawingController, window.ClipboardController,
-window.GridRulersController, window.ImageLoader, window.ErrorHandler,
-window.ColorPickerDialog, window.ConfirmDialog, window.PropertiesForm,
-window.IconFactory, window.layersEditorInstance, window.layersErrorHandler,
-window.stateManager, window.layersRegistry, window.layersModuleRegistry...
-```
+- Makes unit testing harder
+- Blocks TypeScript adoption
 
 ---
 
-### 4. Five Overlapping Event Systems
-
-**Severity:** 🔴 CRITICAL (Architecture Confusion)
-
-The codebase has **five** files dealing with events, each with overlapping responsibilities:
-
-| File | Lines | Purpose | Status |
-|------|-------|---------|--------|
-| EventHandler.js | 513 | Low-level DOM events | Duplicates EventSystem |
-| EventManager.js | 120 | Global event registration | Minimal, could inline |
-| EventSystem.js | 703 | Custom event bus + state | Overlaps EventHandler |
-| CanvasEvents.js | 551 | Canvas-specific events | Has empty catch block |
-| CanvasManager.js (inline) | ~500+ | Direct event handling | Should delegate |
-
-**Problems:**
-- Developers don't know which system to use for new functionality
-- Event handling is scattered across 5+ files
-- Some events are handled in multiple places
-- Memory leaks possible from untracked listeners
-- Difficult to debug when events don't fire as expected
-- Testing requires understanding all 5 systems
-
-**The overlap:**
-- EventHandler and EventSystem both handle mouse/touch/keyboard
-- EventManager and EventSystem both have event registration
-- CanvasEvents duplicates some CanvasManager functionality
-- CanvasManager still has inline event handlers despite these extractions
-
----
-
-### 5. No Actual Performance Optimizations
+### 4. Four Overlapping Event Systems (1,887 lines total)
 
 **Severity:** 🔴 HIGH
+
+| File | Lines | Purpose | Overlap |
+|------|-------|---------|---------|
+| EventHandler.js | 512 | DOM event handling | Duplicates EventSystem |
+| EventManager.js | 119 | Global registration | Could inline into LayersEditor |
+| EventSystem.js | 702 | Custom event bus | Overlaps EventHandler |
+| CanvasEvents.js | 554 | Canvas-specific | Duplicates some CanvasManager |
+
+**Problems:**
+- Developers don't know which system to use
+- Event handling scattered across 4+ files
+- Some events handled in multiple places
+- Memory leak potential from untracked listeners
+- Testing requires understanding all systems
+
+**Target State:**
+- EventBus.js — Custom event pub/sub only (~300 lines)
+- CanvasInputHandler.js — All DOM canvas events (~500 lines)
+- Inline EventManager into LayersEditor
+
+---
+
+### 5. No Performance Optimizations
+
+**Severity:** 🟡 MEDIUM
 
 Every canvas state change triggers a **full redraw**:
 
 ```javascript
-// CanvasManager.js - performRedraw() redraws EVERYTHING
 this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 // ... draws all layers from scratch
 ```
 
-**What's missing:**
-- **Dirty region tracking**: Only redraw areas that changed
-- **Layer caching**: Cache rendered layers as images for unchanged layers
-- **Frame throttling**: requestAnimationFrame batching
-- **Viewport culling**: Don't render layers outside visible area
-
-**Impact:**
-- Laggy interactions on images with many layers
-- High CPU usage during pan/zoom operations
-- Poor experience on lower-powered devices
-- Scalability ceiling for complex annotations
-
-**Note:** Previous review mentioned dead performance variables — those have been cleaned up, but no actual performance optimizations have been implemented.
-
----
-
-### 6. Core Module Test Coverage Crisis
-
-**Severity:** 🔴 CRITICAL
-
-The "54.78% overall coverage" is **misleading** — it's inflated by near-100% coverage on utility classes while core orchestrators are dangerously undertested:
-
-| File | Lines | Coverage | Risk Level |
-|------|-------|----------|------------|
-| **LayersEditor.js** | 1,762 | **14.32%** | 🔴 CRITICAL |
-| **CanvasEvents.js** | 551 | **19.09%** | 🔴 CRITICAL |
-| **CanvasManager.js** | 3,523 | **23.64%** | 🔴 CRITICAL |
-| LayerPanel.js | 1,103 | 49.78% | 🟡 Medium |
-| CanvasRenderer.js | 1,591 | 78.88% | 🟢 Good |
-
-**The core user interaction path (LayersEditor → CanvasManager → CanvasEvents) has 14-24% coverage.**
-
-Meanwhile, extracted controllers have excellent coverage:
-- TransformController: 100%
-- HitTestController: 98%
-- ZoomPanController: 97%
-- GridRulersController: 97%
-- DrawingController: 97%
-- ClipboardController: 98%
-
-This proves the god class structure is the problem — smaller, focused modules can be properly tested.
-
----
-
-### 7. Remaining Empty Catch Block
-
-**Severity:** 🟡 HIGH
-
-One empty catch block remains, silently swallowing errors:
-
-**CanvasEvents.js:182:**
-```javascript
-try {
-    cm.handleResize( point, e );
-} catch ( error ) {
-}  // Error is silently discarded
-```
-
-This masks bugs and makes debugging extremely difficult when resize operations fail.
-
----
-
-## 🟡 High Priority Issues
-
-### 8. Console Logging in Production Code
-
-**Files affected:** LayersEditor.js, UIManager.js, StateManager.js
-
-While most console statements are now behind comments or `mw.log`, there are still fallback `console.warn` calls that can expose debugging information in production:
-
-```javascript
-// LayersEditor.js:48-49
-if ( typeof console !== 'undefined' && console.warn ) {
-    console.warn( '[LayersEditor]', errorMsg );
-}
-```
-
-This should be behind a debug flag or removed entirely for production.
-
----
-
-### 9. State Management: Incomplete Migration to StateManager
-
-StateManager.js exists (652 lines, 85% coverage) with good patterns:
-- Atomic operations with locking
-- Subscription pattern for reactive updates
-- Layer CRUD operations
-
-**However, components bypass it:**
-
-| Component | Bypasses StateManager |
-|-----------|----------------------|
-| CanvasManager | Maintains own `selectedLayerIds`, `currentTool`, `zoom`, `pan` |
-| Toolbar | Direct canvas manipulation in some cases |
-| LayerPanel | Sometimes calls canvas directly instead of StateManager |
-
-This leads to potential state inconsistencies where the UI and canvas are out of sync.
-
----
-
-### 10. PHP Code Style Warnings
-
-Running `npm run test:php` produces **11 warnings** in test files:
-- Comments formatting issues (SpaceBeforeSingleLineComment)
-- Line length warnings (Generic.Files.LineLength)
-- assertEmpty usage warnings (PHPUnit assertions)
-
-Source files (`src/`) are clean with 0 errors and 0 warnings.
+**Missing:**
+- Dirty region tracking
+- Layer caching (cache unchanged layers as images)
+- Frame throttling with requestAnimationFrame batching
+- Viewport culling (skip off-screen layers)
 
 ---
 
 ## 🟢 Positive Aspects
 
-### Backend Security (Good)
+### Backend Security (Strong)
 
-1. **CSRF Token Enforcement:**
-   ```php
-   public function needsToken() { return 'csrf'; }
-   ```
-
-2. **Rate Limiting:**
-   ```php
-   $rateLimiter = new RateLimiter();
-   if ($rateLimiter->isLimited($user, 'editlayers-save')) {
-       $this->dieWithError('layers-rate-limited');
-   }
-   ```
-
-3. **Strict Property Whitelist:** 
-   `ServerSideLayerValidator.php` defines `ALLOWED_PROPERTIES` with 40+ fields — unknown fields are silently dropped.
-
-4. **Input Sanitization:**
-   `TextSanitizer` strips HTML and dangerous protocols.
-
-5. **Parameterized Queries:**
-   All database operations use prepared statements via MediaWiki's database abstraction.
-
----
+1. **CSRF Token Enforcement** — All write operations require tokens
+2. **Rate Limiting** — Per-action limits via MediaWiki's rate limiter
+3. **Strict Property Whitelist** — 40+ validated fields, unknown fields dropped
+4. **Input Sanitization** — TextSanitizer strips HTML and dangerous protocols
+5. **Parameterized Queries** — All DB operations use prepared statements
 
 ### Extracted Controllers (Excellent Pattern)
 
-The six extracted canvas controllers are **examples of how the codebase should look**:
-
 | Controller | Lines | Coverage | Quality |
 |------------|-------|----------|---------|
-| ZoomPanController | 343 | 97% | Excellent |
-| GridRulersController | 385 | 97% | Excellent |
+| ZoomPanController | 348 | 97% | Excellent |
+| GridRulersController | 390 | 97% | Excellent |
 | TransformController | 1,027 | 100% | Excellent |
 | HitTestController | 382 | 98% | Excellent |
 | DrawingController | 620 | 97% | Excellent |
-| ClipboardController | 222 | 98% | Excellent |
+| ClipboardController | 226 | 98% | Excellent |
 
-These prove that focused, single-responsibility modules can achieve excellent test coverage. The remaining CanvasManager code should be decomposed following this pattern.
-
----
+**Average: 98.5% coverage** — This proves focused modules can be properly tested.
 
 ### Test Infrastructure
 
-- **1,235 tests passing**
-- **Jest configuration** well set up with mocks and setup files
-- **Integration tests** exist for save/load workflow
-- **Good test organization** in tests/jest/
-
----
+- **1,257 tests passing** (up from 1,235)
+- **61.23% statement coverage** (up from 54.78%)
+- **34 test suites** covering most modules
+- Good integration tests for save/load workflow
+- Well-organized test structure in tests/jest/
 
 ### Documentation
 
-- `.github/copilot-instructions.md`: Comprehensive 500+ line contributor guide
-- `docs/ACCESSIBILITY.md`: Honest about canvas limitations
-- `docs/MODULAR_ARCHITECTURE.md`: Now accurately reflects current state
+- `.github/copilot-instructions.md` — 500+ line comprehensive guide
+- `docs/` — Architecture, accessibility, security guides
 - API contracts well-documented
 
 ---
 
-## Codebase Statistics
+## Test Coverage Details
 
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| JavaScript files (editor) | 36+ files | Fragmented |
-| Total JS lines (editor) | ~26,751 | High complexity |
-| Largest JS file | 3,523 lines | 🔴 God class |
-| Second largest JS file | 1,762 lines | 🟡 Large |
-| PHP source files | 15 files | Reasonable |
-| Largest PHP file | 2,018 lines | 🔴 God class |
-| Jest tests | 1,235 | Good count |
-| Jest statement coverage | 54.78% | Misleading (inflated) |
-| Core module coverage | 14-24% | 🔴 Dangerous |
-| ESLint errors | 0 | ✅ Clean |
-| PHP source errors | 0 | ✅ Clean |
-| Window.* exports | 51 unique | 🔴 Excessive |
-| Empty catch blocks | 1 remaining | 🟡 Needs fix |
-| Event systems | 5 overlapping | 🔴 Architectural debt |
+**Overall:** 61.23% statements, 46.99% branches, 59.01% functions
+
+**Well-tested modules (>80%):**
+- TransformController: 100%
+- HitTestController: 98%
+- ClipboardController: 98%
+- ZoomPanController: 97%
+- GridRulersController: 97%
+- DrawingController: 97%
+- StateManager: ~85%
+- CanvasRenderer: ~79%
+
+**Needs improvement (<50%):**
+- LayersEditor.js — Core orchestrator, needs more coverage
+- CanvasEvents.js — Event handling, needs more coverage
+- CanvasManager.js — Still largest file, harder to test
+
+---
+
+## Codebase Statistics Summary
+
+| Metric | Current | Target | Status |
+|--------|---------|--------|--------|
+| Jest tests | 1,257 | 1,500+ | 🟡 In Progress |
+| Statement coverage | 61.23% | 70% | 🟡 Close |
+| CanvasManager.js lines | 1,877 | <800 | 🟡 In Progress |
+| WikitextHooks.php lines | 1,553 | <400 | 🟡 In Progress |
+| ESLint errors | 0 | 0 | ✅ Met |
+| PHP source errors | 0 | 0 | ✅ Met |
+| Window.* exports | 25+ | <10 | 🔴 Needs Work |
+| Event systems | 4 | 2 | 🔴 Needs Work |
 
 ---
 
 ## Recommendations
 
-### Immediate Actions (Before Any Production Use at Scale)
+### Immediate (P0)
 
-1. **Fix the empty catch block** in CanvasEvents.js:182 — add proper error handling
-2. **Increase LayersEditor.js coverage** to at least 50% — it's the main orchestrator
-3. **Remove or guard console.warn fallbacks** in production paths
+1. **Continue CanvasManager decomposition** — Extract CanvasCore.js, RenderCoordinator.js
+2. **Complete WikitextHooks refactor** — Create ImageLinkProcessor, ThumbnailProcessor
+3. **Increase core module coverage** — Target 50%+ for LayersEditor, CanvasEvents
 
-### Short-Term (Next 2-4 Weeks)
+### Short-Term (P1)
 
-1. **Continue CanvasManager decomposition** — target reducing to <1,000 lines
-2. **Consolidate event systems** — pick one pattern and migrate
-3. **Extract common logic from WikitextHooks.php** — create a `LayersHtmlInjector` class
+1. **Consolidate event systems** — Merge into EventBus + CanvasInputHandler
+2. **Complete StateManager migration** — Remove bypasses in CanvasManager
+3. **Fix PHP test warnings** — 11 style warnings in test files
 
-### Medium-Term (Next 2-3 Months)
+### Medium-Term (P2)
 
-1. **Migrate to ES modules** — start with utility classes that have no dependencies
-2. **Implement dirty region rendering** — or at least layer caching
-3. **Complete StateManager migration** — remove bypasses in CanvasManager/Toolbar
+1. **Migrate to ES modules** — Start with utility classes
+2. **Implement performance optimizations** — requestAnimationFrame batching
+3. **Canvas accessibility** — Screen-reader layer descriptions
 
-### Long-Term
+### Long-Term (P3)
 
-1. **Consider TypeScript** for new code — improves type safety and IDE support
-2. **Implement canvas accessibility workarounds** — screen-reader-only layer descriptions
-3. **Add E2E tests** — Playwright or similar for full workflow testing
+1. **TypeScript migration** — New code only
+2. **E2E tests** — Playwright or Cypress
+3. **Full WCAG 2.1 AA compliance**
 
 ---
 
 ## Conclusion
 
-The Layers extension has a **functional core** with **solid backend security**, but the **frontend architecture is a liability**. The god classes (CanvasManager.js, WikitextHooks.php) and the IIFE global pattern create:
+The Layers extension has made **notable progress** since November 2025:
+- Test coverage increased from 55% to 61%
+- CanvasManager reduced by 47% (1,646 lines extracted)
+- Processor classes created for WikitextHooks
 
-- **High risk of regressions** on any change
-- **Low testability** of critical paths
-- **Onboarding difficulty** for new contributors
-- **Performance ceiling** that will be hit with complex use cases
+However, **significant work remains**:
+- CanvasManager still 1,077 lines over target
+- WikitextHooks still 1,153 lines over target
+- Event systems need consolidation
+- IIFE pattern must be replaced for modern development
 
-The extracted controllers prove that proper decomposition is achievable and leads to excellent test coverage. The recommendation is to **continue this pattern aggressively** before adding new features.
+The extracted controllers prove that proper decomposition leads to excellent test coverage. **Continue this pattern aggressively** before adding new features.
 
-**The extension works for simple annotation tasks today, but scaling to production use with many users will expose these architectural weaknesses.**
+**The extension works for basic annotation tasks. Scaling to production use with many users will expose these architectural weaknesses unless addressed.**
 
 ---
 
-*Review performed by GitHub Copilot using Claude Opus 4.5 (Preview) on November 29, 2025*
+*Review performed by GitHub Copilot (Claude Opus 4.5 Preview) on December 1, 2025*

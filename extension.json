@@ -203,6 +203,7 @@
 				"canvas/HitTestController.js",
 				"canvas/DrawingController.js",
 				"canvas/ClipboardController.js",
+				"canvas/RenderCoordinator.js",
 				"ui/IconFactory.js",
 				"ui/ColorPickerDialog.js",
 				"ui/ConfirmDialog.js",

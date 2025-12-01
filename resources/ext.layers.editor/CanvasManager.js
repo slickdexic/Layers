@@ -210,6 +210,14 @@
 			}, 'warn' );
 		} );
 
+		// Initialize RenderCoordinator for optimized rendering
+		initController( 'RenderCoordinator', 'renderCoordinator', function ( C ) {
+			return new C( self, {
+				enableMetrics: self.config.enableRenderMetrics || false,
+				targetFps: self.config.targetFps || 60
+			} );
+		}, 'warn' );
+
 		// Set up event handlers
 		this.setupEventHandlers();
 
@@ -1735,7 +1743,13 @@
 	};
 
 	CanvasManager.prototype.redrawOptimized = function () {
-		// Optimize redraws using requestAnimationFrame
+		// Delegate to RenderCoordinator for optimized rendering with rAF batching
+		if ( this.renderCoordinator ) {
+			this.renderCoordinator.scheduleRedraw();
+			return;
+		}
+
+		// Fallback: Optimize redraws using requestAnimationFrame
 		if ( this.redrawScheduled ) {
 			return; // Already scheduled
 		}
@@ -1848,6 +1862,11 @@
 	};
 
 	CanvasManager.prototype.destroy = function () {
+		// Clean up RenderCoordinator
+		if ( this.renderCoordinator && typeof this.renderCoordinator.destroy === 'function' ) {
+			this.renderCoordinator.destroy();
+			this.renderCoordinator = null;
+		}
 		if ( this.events ) {
 			this.events.destroy();
 			this.events = null;

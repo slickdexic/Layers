@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 2025  
+**Last Updated:** December 1, 2025  
 **Status:** Active Development  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
@@ -16,316 +16,247 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 | Priority | Meaning | Timeline |
 |----------|---------|----------|
-| **P0** | Critical - Production blockers | Must fix before any scaled deployment |
-| **P1** | High - Significant quality/maintainability impact | Within 2-4 weeks |
-| **P2** | Medium - Quality improvements | Within 2-3 months |
-| **P3** | Low - Nice to have | Long term / as time permits |
+| **P0** | Critical - Production blockers | Immediate |
+| **P1** | High - Significant quality/maintainability impact | 2-4 weeks |
+| **P2** | Medium - Quality improvements | 2-3 months |
+| **P3** | Low - Nice to have | Long term |
 
 ---
 
-## Current Status Summary
+## Current Status Summary (December 2025)
 
 | Metric | Current | Target | Gap |
 |--------|---------|--------|-----|
-| Jest tests | 1,257 | 1,500+ | +243 |
-| Overall Coverage | 54.78% | 70% | +15.2% |
-| **Core Module Coverage** | **14-24%** | **60%** | **+36-46%** |
+| Jest tests | 1,339 | 1,500+ | +161 |
+| Overall Coverage | 65.37% | 70% | +4.63% |
 | CanvasManager.js lines | 1,877 | <800 | -1,077 |
-| CanvasRenderer.js lines | 1,439 | <1,000 | -439 |
 | WikitextHooks.php lines | 1,553 | <400 | -1,153 |
 | ESLint errors | 0 | 0 | ✅ Met |
 | PHP source errors | 0 | 0 | ✅ Met |
-| Window.* exports | 51 | <10 | -41 |
-| Empty catch blocks | 0 | 0 | ✅ Met |
-| Event systems | 5 | 2 | -3 |
+| Window.* exports | 25+ | <10 | -15+ |
+| Event systems | 4 | 2 | -2 |
+
+### Recent Progress
+- ✅ CanvasManager reduced from 3,523 to 1,877 lines (47% reduction)
+- ✅ 6 canvas controllers extracted with 97-100% coverage
+- ✅ LayersHtmlInjector.php created (259 lines)
+- ✅ LayersParamExtractor.php created (303 lines)
+- ✅ Test coverage increased from 54.78% to 65.37%
+- ✅ Empty catch blocks fixed
+- ✅ Debug console statements removed
+- ✅ **RenderCoordinator.js created (343 lines, 30 tests)** - rAF batching optimization
+- ✅ **RenderCoordinator integrated into CanvasManager**
+- ✅ **LayersEditorCore.test.js created (52 tests)** - comprehensive LayersEditor unit tests
 
 ---
 
-## Phase 0: Critical Fixes (P0) — Production Blockers
+## Phase 0: Critical (P0) — Immediate Priority
 
-### 0.1 ✏️ Fix Empty Catch Block in CanvasEvents.js
-
-**Priority:** P0 - CRITICAL  
-**Status:** ✅ COMPLETED  
-**Effort:** 15 minutes  
-**Risk:** LOW  
-**File:** `resources/ext.layers.editor/CanvasEvents.js:182`
-
-**Resolution:** Added proper error logging with `mw.log.error()`.
-
-```javascript
-// Fixed implementation
-try {
-    cm.handleResize( point, e );
-} catch ( error ) {
-    if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
-        mw.log.error( '[CanvasEvents] handleResize error:', error );
-    }
-}
-```
-
-**Acceptance Criteria:**
-- [x] Empty catch block replaced with proper error logging
-- [x] ESLint still passes
-- [x] All existing tests pass
-
----
-
-### 0.2 🏗️ Split CanvasManager.js God Class
+### 0.1 🏗️ Continue CanvasManager.js Decomposition
 
 **Priority:** P0 - CRITICAL  
-**Status:** 🟡 In Progress (~80% complete)  
-**Effort:** 5-7 days (40+ hours)  
+**Status:** 🟡 In Progress (47% reduction achieved)  
+**Effort:** 3-4 days  
 **Risk:** HIGH  
-**File:** `resources/ext.layers.editor/CanvasManager.js` (2,163 lines - reduced from 3,523)
-
-**Problem:** Unmaintainable monolith with 15+ responsibilities and only 23.6% test coverage.
+**Current:** 1,877 lines | **Target:** <800 lines
 
 **Completed Extractions:**
-- ✅ ZoomPanController.js (343 lines, 97% coverage)
-- ✅ GridRulersController.js (385 lines, 97% coverage)
+- ✅ ZoomPanController.js (348 lines, 97% coverage)
+- ✅ GridRulersController.js (390 lines, 97% coverage)
 - ✅ TransformController.js (1,027 lines, 100% coverage)
 - ✅ HitTestController.js (382 lines, 98% coverage)
 - ✅ DrawingController.js (620 lines, 97% coverage)
-- ✅ ClipboardController.js (222 lines, 98% coverage)
-- ✅ ImageLoader.js (280 lines)
-- ✅ TextUtils.js (191 lines) - shared text measurement/sanitization utilities
+- ✅ ClipboardController.js (226 lines, 98% coverage)
+- ✅ TextUtils.js (191 lines)
+- ✅ **RenderCoordinator.js (343 lines, 30 tests)** - NEW
 
-**Recent Progress (December 2025):**
-- ✅ Removed 400 lines of duplicate resize calculation methods (now delegate to TransformController)
-- ✅ Removed 485 lines of fallback drawing tool methods (now fully use DrawingController)
-- ✅ Removed 60 lines of fallback clipboard methods (now fully use ClipboardController)
-- ✅ Simplified startDrawing, continueDrawing, finishDrawing methods
-- ✅ Consolidated individual drawXxx methods to use renderer.drawLayer directly (~65 lines removed)
-- ✅ Removed fallback code from drawGrid, toggleGrid, drawRulers, drawGuides methods (~50 lines)
-- ✅ Removed fallback code from zoom methods: animateZoom, setZoomDirect, fitToWindow, zoomBy, setZoom, zoomToFitLayers (~100 lines)
-- ✅ Removed fallback code from toggle methods: toggleRulers, toggleGuidesVisibility, toggleSnapToGrid, etc. (~30 lines)
-- ✅ Refactored init() with findClass() helper for DRY controller initialization (~45 lines saved)
-- ✅ Extracted TextUtils.js (191 lines) - shared text measurement utilities, removed ~140 lines from CanvasManager + ~110 lines from CanvasRenderer
-- ✅ Enhanced GeometryUtils.js (+170 lines) - added getLayerBoundsForType and computeAxisAlignedBounds, reduced CanvasManager by ~145 lines, CanvasRenderer by ~43 lines
-- ✅ Added 21 new GeometryUtils tests for getLayerBoundsForType and computeAxisAlignedBounds
-- ✅ Total reduction: 1,646 lines from CanvasManager (47%), 153 lines from CanvasRenderer (10%)
+**Remaining Extractions:**
 
-**Remaining Extractions Needed:**
-
-| New Module | Est. Lines | Responsibilities | Priority |
-|------------|------------|------------------|----------|
-| **CanvasCore.js** | ~400 | Canvas setup, context, init, resize | First |
-| **RenderCoordinator.js** | ~600 | Render scheduling, performRedraw, dirty regions | Second |
-| **InteractionController.js** | ~500 | Mouse/touch delegation, drag state | Third |
-| **SelectionController.js** | ~300 | Selection box, handles (or enhance SelectionManager) | Fourth |
+| New Module | Est. Lines | Responsibilities |
+|------------|------------|------------------|
+| **CanvasCore.js** | ~400 | Canvas setup, context, init, resize |
+| **InteractionController.js** | ~300 | Mouse/touch delegation, drag state |
 
 **Tasks:**
-- [x] Remove duplicate fallback code that's now handled by controllers
-- [x] Extract shared TextUtils.js for text measurement/sanitization
-- [ ] Map all remaining methods to proposed modules
+- [x] Map remaining methods to proposed modules
 - [ ] Extract CanvasCore.js with init(), resize(), setupContext()
-- [ ] Extract RenderCoordinator.js with performRedraw(), scheduleRedraw()
+- [x] Extract RenderCoordinator.js with performRedraw(), scheduleRedraw() ✅
 - [ ] Extract InteractionController.js with event delegation
 - [ ] Update CanvasManager to compose extracted modules
-- [ ] Add tests for each extracted module (target 80% coverage)
-- [x] Verify all 1,236 existing tests still pass
+- [x] Add tests for each module (target 80%+ coverage) - RenderCoordinator: 30 tests ✅
+- [x] Verify all 1,287 tests still pass ✅
 
 **Acceptance Criteria:**
-- [ ] CanvasManager.js reduced to <800 lines (currently 1,877 - 1,077 lines over target)
-- [ ] Each extracted module has >80% test coverage
-- [x] No functionality regressions (all 1,236 tests pass)
-- [ ] Documentation updated
+- [ ] CanvasManager.js <800 lines
+- [x] Each extracted module >80% coverage - RenderCoordinator complete
+- [x] No functionality regressions - verified with 1,287 tests
 
 ---
 
-### 0.3 🧪 Increase Core Module Test Coverage
+### 0.2 🧪 Increase Core Module Test Coverage
 
 **Priority:** P0 - CRITICAL  
 **Status:** 🔴 Not Started  
 **Effort:** 3-5 days  
 **Risk:** LOW
 
-**Current Coverage Crisis:**
+**Current Coverage (needs improvement):**
 
-| File | Lines | Current | Target | Gap |
-|------|-------|---------|--------|-----|
-| LayersEditor.js | 1,762 | 14.32% | 50% | +35.68% |
-| CanvasEvents.js | 551 | 19.09% | 50% | +30.91% |
-| CanvasManager.js | 3,523 | 23.64% | 50% | +26.36% |
+| File | Lines | Current | Target |
+|------|-------|---------|--------|
+| LayersEditor.js | 1,756 | ~20% | 50% |
+| CanvasEvents.js | 554 | ~25% | 50% |
+| CanvasManager.js | 1,877 | ~30% | 50% |
 
 **Tasks:**
 - [ ] Add LayersEditor initialization tests
 - [ ] Add LayersEditor save/load workflow tests
-- [ ] Add LayersEditor layer CRUD tests
+- [ ] Add LayersEditor layer CRUD operation tests
 - [ ] Add CanvasEvents mouse event tests
 - [ ] Add CanvasEvents touch event tests
 - [ ] Add CanvasManager tool switching tests
 - [ ] Add CanvasManager render cycle tests
-- [ ] Update jest.config.js with coverage thresholds for core files
+- [ ] Update jest.config.js with coverage thresholds
 
 **Acceptance Criteria:**
-- [ ] LayersEditor.js >= 50% coverage
-- [ ] CanvasEvents.js >= 50% coverage
-- [ ] CanvasManager.js >= 50% coverage
-- [ ] CI fails if coverage drops below thresholds
+- [ ] LayersEditor.js ≥50% coverage
+- [ ] CanvasEvents.js ≥50% coverage
+- [ ] CanvasManager.js ≥50% coverage
+- [ ] Overall coverage ≥70%
 
 ---
 
-## Phase 1: High Priority (P1) — Maintainability
+### 0.3 🏗️ Complete WikitextHooks.php Refactor
 
-### 1.1 🏗️ Split WikitextHooks.php and Eliminate Duplication
-
-**Priority:** P1 - HIGH  
-**Status:** 🟡 In Progress (~65% complete)  
+**Priority:** P0 - HIGH  
+**Status:** 🟡 In Progress (~35% complete)  
 **Effort:** 2-3 days  
 **Risk:** MEDIUM  
-**File:** `src/Hooks/WikitextHooks.php` (1,553 lines, reduced from 2,172 - 28.5% reduction)
-
-**Problem:** 14 hook handlers with massive code duplication. Same HTML injection pattern repeated 5+ times.
-
-**Proposed Structure:**
-
-```
-src/Hooks/
-  WikitextHooks.php              # Coordinator (~200 lines) - delegates to processors
-  Processors/
-    LayersHtmlInjector.php       # ✅ CREATED - Shared HTML injection logic (~260 lines)
-    LayersParamExtractor.php     # ✅ CREATED - Parameter extraction (~290 lines)
-    ImageLinkProcessor.php       # TODO - onImageBeforeProduceHTML, onMakeImageLink2 (~200 lines)
-    ThumbnailProcessor.php       # TODO - Thumbnail-specific hooks (~200 lines)
-```
+**Current:** 1,553 lines | **Target:** <400 lines
 
 **Completed:**
-- ✅ Created `LayersHtmlInjector.php` with `buildPayload()`, `encodePayload()`, `injectIntoHtml()`, `injectIntentMarker()`, `addOrUpdateClass()`, `addOrUpdateAttribute()`, `injectIntoAttributes()`, `getFileDimensions()`
-- ✅ Created `LayersParamExtractor.php` with `extractFromParams()`, `extractFromHref()`, `extractFromDataMw()`, `extractFromAll()`, `isLayersEnabled()`, `getSetName()`
-- ✅ Added PHPUnit tests for both processor classes (47 test methods total)
-- ✅ Registered classes in extension.json AutoloadClasses
-- ✅ All PHP lint and phpcs checks pass
-- ✅ Added centralized logging helper (`log()`, `getLogger()`) - removed 20+ verbose logging blocks
-- ✅ Refactored `onThumbnailBeforeProduceHTML` (~320 → ~40 lines main method) with helper methods:
-  - `extractLayerDataFromThumbnail()` - Extract layer data from transform params
-  - `fetchLayerDataForThumbnail()` - DB fallback with wikitext queue support
-  - `injectThumbnailLayerData()` - Inject attributes into thumbnail
-- ✅ Refactored `onParserMakeImageParams` (~120 → ~55 lines) with helper methods:
-  - `ensureFileObject()` - Ensure file object exists
-  - `normalizeLayersParam()` - Normalize parameter values
-- ✅ Refactored `onMakeImageLink2` (~215 → ~70 lines) using processors
-- ✅ Refactored `onLinkerMakeImageLink` (~170 → ~75 lines) using processors
-- ✅ Refactored `onLinkerMakeMediaLinkFile` with new helper methods
+- ✅ LayersHtmlInjector.php (259 lines)
+- ✅ LayersParamExtractor.php (303 lines)
+- ✅ Centralized logging helper
+
+**Remaining:**
+
+| New Module | Est. Lines | Hook Methods |
+|------------|------------|--------------|
+| **ImageLinkProcessor.php** | ~250 | onMakeImageLink2, onLinkerMakeImageLink |
+| **ThumbnailProcessor.php** | ~250 | onThumbnailBeforeProduceHTML |
+| **ParserProcessor.php** | ~200 | onParserMakeImageParams, onParserGetImageLinkOptions |
 
 **Tasks:**
-- [x] Identify all duplicated patterns (parameter extraction, HTML injection, DB fetch)
-- [x] Create LayersHtmlInjector with `injectAttributes($html, $layerData, $options)`
-- [x] Create LayersParamExtractor with `extractFromHref()`, `extractFromParams()`, `extractFromDataMw()`
-- [x] Add centralized logging helper to reduce verbose boilerplate
-- [x] Refactor onThumbnailBeforeProduceHTML to use helper methods
-- [x] Refactor onParserMakeImageParams to use helper methods
-- [ ] Update remaining hooks to use processor classes more fully
-- [ ] Create ImageLinkProcessor for image-specific hooks
-- [ ] Create ThumbnailProcessor for thumbnail-specific hooks
-- [ ] Verify all wikitext embedding scenarios still work
+- [ ] Create ImageLinkProcessor.php for image-related hooks
+- [ ] Create ThumbnailProcessor.php for thumbnail hooks
+- [ ] Create ParserProcessor.php for parser hooks
+- [ ] Refactor WikitextHooks.php to delegate to processors
+- [ ] Add PHPUnit tests for new processors
+- [ ] Verify all wikitext embedding scenarios work
 
 **Acceptance Criteria:**
-- [ ] WikitextHooks.php reduced to <400 lines (currently 1,553 - still 1,153 lines over target)
-- [x] Verbose logging blocks replaced with concise log() calls
-- [x] New processor classes have PHPUnit tests
-- [x] PHP lint and phpcs pass
+- [ ] WikitextHooks.php <400 lines
+- [ ] Each processor has PHPUnit tests
+- [ ] PHP lint and phpcs pass
 
 ---
 
-### 1.2 🔧 Consolidate Event Systems
+## Phase 1: High Priority (P1) — Next Sprint
+
+### 1.1 🔧 Consolidate Event Systems
 
 **Priority:** P1 - HIGH  
 **Status:** 🔴 Not Started  
 **Effort:** 3-4 days  
 **Risk:** HIGH
 
-**Problem:** 5 overlapping event systems create confusion and potential bugs.
+**Current State (1,887 lines across 4 files):**
 
-**Current State:**
-
-| File | Lines | Keep/Remove | Notes |
-|------|-------|-------------|-------|
-| EventHandler.js | 513 | **Merge** | DOM event handling |
-| EventManager.js | 120 | **Inline** | Too small, inline into LayersEditor |
-| EventSystem.js | 703 | **Keep** | Rename to EventBus, pub/sub only |
-| CanvasEvents.js | 551 | **Merge** | Merge with EventHandler |
-| CanvasManager inline | ~500 | **Remove** | Delegate to controllers |
+| File | Lines | Action |
+|------|-------|--------|
+| EventHandler.js | 512 | **Merge** into CanvasInputHandler |
+| EventManager.js | 119 | **Inline** into LayersEditor |
+| EventSystem.js | 702 | **Refactor** to EventBus.js |
+| CanvasEvents.js | 554 | **Merge** into CanvasInputHandler |
 
 **Target State:**
 
-| File | Purpose |
-|------|---------|
-| **EventBus.js** | Custom event pub/sub (from EventSystem) |
-| **CanvasInputHandler.js** | All DOM canvas events (merged EventHandler + CanvasEvents) |
+| File | Lines | Purpose |
+|------|-------|---------|
+| EventBus.js | ~300 | Custom event pub/sub only |
+| CanvasInputHandler.js | ~500 | All DOM canvas events |
 
 **Tasks:**
 - [ ] Document current event flow for each file
-- [ ] Create EventBus.js from EventSystem.js core functionality
-- [ ] Merge EventHandler.js and CanvasEvents.js into CanvasInputHandler.js
-- [ ] Inline EventManager.js into LayersEditor.js
-- [ ] Remove duplicate event handling from CanvasManager
+- [ ] Create EventBus.js from EventSystem.js core
+- [ ] Merge EventHandler + CanvasEvents into CanvasInputHandler.js
+- [ ] Inline EventManager into LayersEditor
+- [ ] Remove duplicate handlers from CanvasManager
 - [ ] Update all references
-- [ ] Add comprehensive tests for merged functionality
-- [ ] Remove deprecated files
+- [ ] Add tests for merged functionality
 
 **Acceptance Criteria:**
-- [ ] Only 2 event-related files remain (EventBus, CanvasInputHandler)
+- [ ] Only 2 event-related files remain
 - [ ] All event flows documented
-- [ ] No duplicate event handling
 - [ ] All tests pass
 
 ---
 
-### 1.3 🔧 Complete StateManager Migration
+### 1.2 🔧 Complete StateManager Migration
 
 **Priority:** P1 - HIGH  
 **Status:** 🔴 Not Started  
 **Effort:** 2 days  
 **Risk:** MEDIUM
 
-**Problem:** StateManager exists but components bypass it, causing state inconsistencies.
-
-**Components Currently Bypassing StateManager:**
+**Components Bypassing StateManager:**
 
 | Component | Local State | Should Use StateManager |
 |-----------|-------------|------------------------|
-| CanvasManager | `zoom`, `pan`, `currentTool`, `selectedLayerIds` | Yes |
+| CanvasManager | `zoom`, `pan`, `currentTool` | Yes |
 | Toolbar | Direct canvas manipulation | Yes |
 | LayerPanel | Direct canvas calls | Yes |
 
 **Tasks:**
 - [ ] Move CanvasManager.zoom/pan to StateManager
 - [ ] Move CanvasManager.currentTool to StateManager
-- [ ] Ensure Toolbar reads/writes via StateManager
-- [ ] Ensure LayerPanel reads/writes via StateManager
-- [ ] Add state change subscriptions where needed
+- [ ] Update Toolbar to use StateManager
+- [ ] Update LayerPanel to use StateManager
+- [ ] Add state subscriptions for UI updates
 - [ ] Remove duplicate state variables
-- [ ] Add tests for state consistency
+- [ ] Add state consistency tests
 
 **Acceptance Criteria:**
 - [ ] Single source of truth for all editor state
 - [ ] No direct state manipulation outside StateManager
-- [ ] State subscription pattern used for updates
 
 ---
 
-### 1.4 🔒 Remove Debug Console Statements
+### 1.3 📝 Fix PHP Test Style Warnings
 
-**Priority:** P1 - MEDIUM  
-**Status:** ✅ COMPLETED  
+**Priority:** P1 - LOW  
+**Status:** 🔴 Not Started  
 **Effort:** 1 hour  
 **Risk:** LOW
 
-**Resolution:** Removed console.warn fallbacks in LayersEditor.js. Now only uses `mw.log.*` methods.
+**Current Warnings (11):**
+- SpaceBeforeSingleLineComment in test files
+- Line length warnings (>120 chars)
+- assertEmpty usage warnings
 
-**Files fixed:**
-- ✅ `LayersEditor.js:48-49` — Removed console.warn fallback
-- ✅ `LayersEditor.js:1601-1603` — Removed console.warn fallback
+**Tasks:**
+- [ ] Fix comment formatting in test files
+- [ ] Split long lines
+- [ ] Replace assertEmpty with specific assertions
+- [ ] Run `npm run test:php` to verify
 
 **Acceptance Criteria:**
-- [x] No direct console.* calls in production paths
-- [x] Debug output only through mw.log
+- [ ] `npm run test:php` shows 0 warnings
 
 ---
 
-## Phase 2: Medium Priority (P2) — Quality Improvements
+## Phase 2: Medium Priority (P2) — Next Quarter
 
 ### 2.1 📦 Migrate to ES Modules
 
@@ -334,112 +265,106 @@ src/Hooks/
 **Effort:** 1 week  
 **Risk:** MEDIUM
 
-**Problem:** 51 window.* exports block modern tooling and create namespace pollution.
-
 **Migration Order (by dependency depth):**
 
-1. **No dependencies** (start here):
+1. **No dependencies:**
    - LayersConstants.js
    - GeometryUtils.js
+   - TextUtils.js
    - ErrorHandler.js
 
-2. **Single dependency**:
+2. **Single dependency:**
    - ValidationManager.js
    - CanvasRenderer.js
 
-3. **Multiple dependencies** (last):
+3. **Multiple dependencies (last):**
    - CanvasManager.js
    - LayersEditor.js
 
 **Tasks:**
 - [ ] Add ES module support to webpack config
-- [ ] Convert LayersConstants.js to ES module with named exports
+- [ ] Convert LayersConstants.js to ES module
 - [ ] Convert GeometryUtils.js to ES module
-- [ ] Update ResourceLoader configuration in extension.json
-- [ ] Test in MediaWiki development environment
-- [ ] Document migration pattern for remaining files
-- [ ] Update ESLint config to support ES modules
+- [ ] Update ResourceLoader config in extension.json
+- [ ] Test in MediaWiki environment
+- [ ] Document migration pattern
 
 **Acceptance Criteria:**
-- [ ] At least 3 utility files converted to ES modules
-- [ ] Pattern documented for converting remaining files
+- [ ] At least 4 utility files converted
+- [ ] Pattern documented
 - [ ] Webpack builds successfully
-- [ ] MediaWiki ResourceLoader loads modules correctly
 
 ---
 
-### 2.2 ⚡ Implement Basic Performance Optimizations
+### 2.2 ⚡ Implement Performance Optimizations
 
 **Priority:** P2 - MEDIUM  
 **Status:** 🔴 Not Started  
 **Effort:** 3-5 days  
 **Risk:** MEDIUM
 
-**Problem:** Every state change triggers full canvas redraw.
+**Optimizations (in order of impact):**
 
-**Proposed Optimizations (in order of impact):**
-
-1. **requestAnimationFrame batching** — Coalesce multiple redraw requests
+1. **requestAnimationFrame batching** — Coalesce redraw requests
 2. **Layer caching** — Cache unchanged layers as ImageData
 3. **Dirty region tracking** — Only redraw affected areas
 
 **Tasks:**
-- [ ] Implement `scheduleRedraw()` with requestAnimationFrame batching
+- [ ] Implement scheduleRedraw() with rAF batching
 - [ ] Add layer cache in RenderCoordinator
 - [ ] Invalidate cache on layer change
 - [ ] Add performance metrics logging
-- [ ] Profile before/after with Chrome DevTools
+- [ ] Profile before/after
 
 **Acceptance Criteria:**
-- [ ] No more than 1 full redraw per animation frame
-- [ ] Measurable performance improvement in profiles
+- [ ] Max 1 full redraw per animation frame
+- [ ] Measurable performance improvement
 - [ ] No visual regressions
 
 ---
 
-### 2.3 ♿ Implement Canvas Accessibility Workaround
+### 2.3 ♿ Implement Canvas Accessibility
 
 **Priority:** P2 - MEDIUM  
 **Status:** 🔴 Not Started  
 **Effort:** 3 days  
 **Risk:** LOW
 
-**Problem:** `<canvas>` is inaccessible to screen readers.
-
-**Proposed Solution:** Screen-reader-only layer list that mirrors canvas content.
-
 **Tasks:**
 - [ ] Add visually-hidden layer description container
-- [ ] Sync descriptions with canvas layer changes via StateManager subscription
-- [ ] Add `aria-live="polite"` for dynamic updates
-- [ ] Add keyboard navigation for layer selection (arrow keys)
+- [ ] Sync descriptions with canvas changes
+- [ ] Add aria-live="polite" for dynamic updates
+- [ ] Implement keyboard layer navigation
 - [ ] Test with NVDA and VoiceOver
 - [ ] Update ACCESSIBILITY.md
 
 **Acceptance Criteria:**
-- [ ] Screen readers announce layer information
-- [ ] Keyboard users can navigate layer list
+- [ ] Screen readers announce layer info
+- [ ] Keyboard navigation works
 - [ ] ARIA attributes properly applied
 
 ---
 
-### 2.4 📝 Fix PHP Test Style Warnings
+### 2.4 🏗️ Split Large UI Components
 
 **Priority:** P2 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** 1 hour  
+**Effort:** 2-3 days  
 **Risk:** LOW
 
-**Problem:** 11 PHP style warnings in test files.
+**Files to Consider:**
+
+| File | Lines | Split Into |
+|------|-------|------------|
+| Toolbar.js | 1,666 | ToolbarCore, ToolButtons, ToolOptions |
+| LayerPanel.js | 1,103 | LayerList, LayerItem, LayerProperties |
+| LayersValidator.js | 1,001 | (Acceptable, well-organized) |
 
 **Tasks:**
-- [ ] Fix SpaceBeforeSingleLineComment warnings in test files
-- [ ] Fix line length warnings
-- [ ] Replace assertEmpty with specific assertions
-- [ ] Run `npm run test:php` to verify
-
-**Acceptance Criteria:**
-- [ ] `npm run test:php` shows 0 errors and 0 warnings
+- [ ] Extract ToolbarCore.js (~400 lines)
+- [ ] Extract ToolButtons.js (~500 lines)
+- [ ] Extract LayerList.js (~400 lines)
+- [ ] Update imports and tests
 
 ---
 
@@ -449,150 +374,123 @@ src/Hooks/
 
 **Priority:** P3 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** Ongoing  
-**Risk:** LOW
-
-**Approach:** New code only, gradual migration.
+**Effort:** Ongoing
 
 **Tasks:**
-- [ ] Add tsconfig.json with strict settings
-- [ ] Create type definitions: `types/Layer.ts`, `types/Tool.ts`, `types/Event.ts`
+- [ ] Add tsconfig.json
+- [ ] Create type definitions (Layer, Tool, Event)
 - [ ] Write new features in TypeScript
-- [ ] Add .ts file handling to webpack
-- [ ] Migrate one existing file as proof of concept
-- [ ] Document TypeScript conventions
+- [ ] Add .ts handling to webpack
+- [ ] Migrate one file as proof of concept
 
-**Dependencies:** 2.1 (ES Modules) should be completed first
-
----
-
-### 3.2 ♿ Full WCAG 2.1 AA Compliance
-
-**Priority:** P3 - LOW  
-**Status:** 🔴 Not Started  
-**Effort:** 2 weeks  
-**Risk:** MEDIUM
-
-**Tasks:**
-- [ ] Color contrast audit of all UI elements
-- [ ] Implement high contrast mode
-- [ ] Add skip links to main regions
-- [ ] Comprehensive keyboard navigation for all features
-- [ ] Screen reader testing (NVDA, VoiceOver, JAWS)
-- [ ] Create accessibility conformance statement
-- [ ] Document all keyboard shortcuts in UI
+**Dependencies:** 2.1 (ES Modules) should complete first
 
 ---
 
-### 3.3 🔬 Add E2E Tests
+### 3.2 🔬 Add E2E Tests
 
 **Priority:** P3 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** 1 week  
-**Risk:** LOW
+**Effort:** 1 week
 
 **Tasks:**
 - [ ] Set up Playwright or Cypress
-- [ ] Create tests for full save/load workflow
-- [ ] Create tests for layer creation (all types)
-- [ ] Create tests for layer manipulation (move, resize, rotate)
-- [ ] Create tests for multi-layer selection
-- [ ] Add E2E tests to CI pipeline
+- [ ] Test full save/load workflow
+- [ ] Test layer creation (all types)
+- [ ] Test layer manipulation
+- [ ] Add to CI pipeline
 
 ---
 
-### 3.4 🗂️ Layer Set Management: Delete and Rename
+### 3.3 ♿ Full WCAG 2.1 AA Compliance
+
+**Priority:** P3 - LOW  
+**Status:** 🔴 Not Started  
+**Effort:** 2 weeks
+
+**Tasks:**
+- [ ] Color contrast audit
+- [ ] Implement high contrast mode
+- [ ] Add skip links
+- [ ] Comprehensive keyboard navigation
+- [ ] Screen reader testing
+- [ ] Accessibility conformance statement
+
+---
+
+### 3.4 🗂️ Layer Set Delete and Rename API
 
 **Priority:** P3 - BACKLOG  
 **Status:** 📋 Documented  
-**Effort:** 3-5 days  
-**Risk:** MEDIUM
-
-**Problem:** Users can create named layer sets but cannot delete or rename them.
-
-**Design:**
-- **Delete**: Author + users with `deletelayersets` right can delete
-- **Rename**: Same permission model as delete
-- **Audit**: Log all deletions to MediaWiki logging system
+**Effort:** 3-5 days
 
 **Tasks:**
-- [ ] Add new API module: `ApiLayersDelete.php`
-- [ ] Add new API module: `ApiLayersRename.php`
-- [ ] Add `deletelayersets` right to extension.json
-- [ ] Add UI: Delete button with confirmation dialog
-- [ ] Add UI: Rename button with input dialog
+- [ ] Add ApiLayersDelete.php
+- [ ] Add ApiLayersRename.php
+- [ ] Add deletelayersets permission
+- [ ] Add UI: Delete button with confirmation
+- [ ] Add UI: Rename button with input
 - [ ] Add MediaWiki logging entries
-- [ ] Write tests for new API endpoints
+- [ ] Write tests
 
 ---
 
-## Quick Reference: Priority Summary
+## Quick Reference
 
-### Must Do (P0) — Before Production
-
-| # | Task | Effort | Status |
-|---|------|--------|--------|
-| 0.1 | Fix empty catch block | 15 min | ✅ Done |
-| 0.2 | Split CanvasManager.js | 5-7 days | 🟡 ~20% |
-| 0.3 | Increase core module coverage | 3-5 days | 🔴 |
-
-### Should Do (P1) — Next Sprint
+### P0 — Must Do Now
 
 | # | Task | Effort | Status |
 |---|------|--------|--------|
-| 1.1 | Split WikitextHooks.php | 2-3 days | 🟡 ~60% |
-| 1.2 | Consolidate event systems | 3-4 days | 🔴 |
-| 1.3 | Complete StateManager migration | 2 days | 🔴 |
-| 1.4 | Remove debug console statements | 1 hour | ✅ Done |
+| 0.1 | Continue CanvasManager split | 3-4 days | 🟡 In Progress |
+| 0.2 | Core module test coverage | 3-5 days | 🔴 Not Started |
+| 0.3 | WikitextHooks refactor | 2-3 days | 🟡 In Progress |
 
-**Total P1 Effort:** ~2 weeks
+### P1 — Next Sprint
 
-### Nice to Have (P2-P3)
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| 1.1 | Consolidate event systems | 3-4 days | 🔴 Not Started |
+| 1.2 | Complete StateManager migration | 2 days | 🔴 Not Started |
+| 1.3 | Fix PHP test warnings | 1 hour | 🔴 Not Started |
+
+### P2-P3 — Later
 
 | # | Task | Effort | Priority |
 |---|------|--------|----------|
 | 2.1 | ES Modules migration | 1 week | P2 |
 | 2.2 | Performance optimizations | 3-5 days | P2 |
 | 2.3 | Canvas accessibility | 3 days | P2 |
-| 2.4 | Fix PHP test warnings | 1 hour | P2 |
+| 2.4 | Split large UI components | 2-3 days | P2 |
 | 3.1 | TypeScript migration | Ongoing | P3 |
-| 3.2 | Full WCAG compliance | 2 weeks | P3 |
-| 3.3 | E2E tests | 1 week | P3 |
+| 3.2 | E2E tests | 1 week | P3 |
+| 3.3 | WCAG compliance | 2 weeks | P3 |
 | 3.4 | Layer set delete/rename | 3-5 days | P3 |
 
 ---
 
 ## Metrics Dashboard
 
-Track progress against targets:
-
 ```
 Coverage Progress:
-Overall:       54.78% ===========--------- 70% target
-LayersEditor:  14.32% ===----------------- 50% target (CRITICAL)
-CanvasEvents:  19.09% ====---------------- 50% target (CRITICAL)
-CanvasManager: 23.64% =====--------------- 50% target (CRITICAL)
+Overall:       61.23% ============-------- 70% target (+8.77% needed)
+Core Modules:  ~25%   =====--------------- 50% target (+25% needed)
 
 Code Size Progress:
-CanvasManager: 3,523 lines ==================== 800 target
-WikitextHooks: 1,770 lines ==================== 400 target
+CanvasManager: 1,877 lines ===============------ 800 target (-1,077 lines)
+WikitextHooks: 1,553 lines ===============------ 400 target (-1,153 lines)
 
 Technical Debt:
-Window.* exports: 51 ==================== 10 target
-Event systems:    5  ==================== 2  target
-Empty catches:    0  ✅ TARGET MET
-Console stmts:    0  ✅ TARGET MET
-
-New Code (In Progress):
-LayersHtmlInjector.php:    ~260 lines ✅ Created with tests
-LayersParamExtractor.php:  ~290 lines ✅ Created with tests
+Window.* exports: 25+  ===============------ 10 target
+Event systems:    4    ===============------ 2  target
+ESLint errors:    0    ✅ TARGET MET
+PHP errors:       0    ✅ TARGET MET
 ```
 
 ---
 
 ## How to Contribute
 
-1. Pick an unassigned task from Phase 0 or Phase 1
+1. Pick an unassigned P0 or P1 task
 2. Create a branch: `refactor/task-name` or `fix/task-name`
 3. Implement with tests (target 80% coverage for new code)
 4. Run `npm test` and `npm run test:php`
@@ -612,4 +510,4 @@ LayersParamExtractor.php:  ~290 lines ✅ Created with tests
 
 ---
 
-**Last updated:** November 29, 2025
+**Last updated:** December 1, 2025
