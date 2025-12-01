@@ -104,7 +104,7 @@ describe( 'TransformController', () => {
 
 		it( 'should set appropriate resize cursor', () => {
 			controller.startResize( { type: 'se' }, { x: 300, y: 250 } );
-			expect( mockCanvas.style.cursor ).toBe( 'nw-resize' );
+			expect( mockCanvas.style.cursor ).toBe( 'nwse-resize' );
 		} );
 
 		it( 'should handle missing layer gracefully', () => {
@@ -167,14 +167,16 @@ describe( 'TransformController', () => {
 
 	describe( 'getResizeCursor', () => {
 		it( 'should return correct cursor for unrotated handles', () => {
-			expect( controller.getResizeCursor( 'nw', 0 ) ).toBe( 'nw-resize' );
-			expect( controller.getResizeCursor( 'se', 0 ) ).toBe( 'nw-resize' );
-			expect( controller.getResizeCursor( 'ne', 0 ) ).toBe( 'ne-resize' );
-			expect( controller.getResizeCursor( 'sw', 0 ) ).toBe( 'ne-resize' );
-			expect( controller.getResizeCursor( 'n', 0 ) ).toBe( 'n-resize' );
-			expect( controller.getResizeCursor( 's', 0 ) ).toBe( 'n-resize' );
-			expect( controller.getResizeCursor( 'e', 0 ) ).toBe( 'e-resize' );
-			expect( controller.getResizeCursor( 'w', 0 ) ).toBe( 'e-resize' );
+			// Diagonal handles use nwse-resize or nesw-resize
+			expect( controller.getResizeCursor( 'nw', 0 ) ).toBe( 'nwse-resize' );
+			expect( controller.getResizeCursor( 'se', 0 ) ).toBe( 'nwse-resize' );
+			expect( controller.getResizeCursor( 'ne', 0 ) ).toBe( 'nesw-resize' );
+			expect( controller.getResizeCursor( 'sw', 0 ) ).toBe( 'nesw-resize' );
+			// Edge handles use ns-resize or ew-resize
+			expect( controller.getResizeCursor( 'n', 0 ) ).toBe( 'ns-resize' );
+			expect( controller.getResizeCursor( 's', 0 ) ).toBe( 'ns-resize' );
+			expect( controller.getResizeCursor( 'e', 0 ) ).toBe( 'ew-resize' );
+			expect( controller.getResizeCursor( 'w', 0 ) ).toBe( 'ew-resize' );
 		} );
 
 		it( 'should return default for unknown handle type', () => {
@@ -182,14 +184,19 @@ describe( 'TransformController', () => {
 		} );
 
 		it( 'should adjust cursor for rotated layers', () => {
-			// At 45 degree rotation, cursors should shift
-			const cursor = controller.getResizeCursor( 'n', 45 );
-			expect( cursor ).toMatch( /-resize$/ );
+			// At 45° rotation, n handle should become nesw-resize (diagonal)
+			expect( controller.getResizeCursor( 'n', 45 ) ).toBe( 'nesw-resize' );
+			// At 90° rotation, n handle should become ew-resize (horizontal)
+			expect( controller.getResizeCursor( 'n', 90 ) ).toBe( 'ew-resize' );
+			// At 45° rotation, e handle should become nwse-resize
+			expect( controller.getResizeCursor( 'e', 45 ) ).toBe( 'nwse-resize' );
 		} );
 
 		it( 'should handle negative rotations', () => {
-			const cursor = controller.getResizeCursor( 'n', -45 );
-			expect( cursor ).toMatch( /-resize$/ );
+			// -45° is same as 315°, so n handle becomes nwse-resize
+			expect( controller.getResizeCursor( 'n', -45 ) ).toBe( 'nwse-resize' );
+			// -90° is same as 270°, so n handle becomes ew-resize
+			expect( controller.getResizeCursor( 'n', -90 ) ).toBe( 'ew-resize' );
 		} );
 	} );
 

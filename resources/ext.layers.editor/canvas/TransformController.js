@@ -147,53 +147,63 @@
 	/**
 	 * Get the appropriate cursor for a resize handle
 	 *
+	 * The cursor should indicate the direction of resize movement, which is
+	 * perpendicular to the edge being dragged. For rotated shapes, we need to
+	 * rotate the cursor direction by the same amount as the shape.
+	 *
 	 * @param {string} handleType Handle type (n, s, e, w, ne, nw, se, sw)
 	 * @param {number} rotation Layer rotation in degrees
 	 * @return {string} CSS cursor value
 	 */
 	TransformController.prototype.getResizeCursor = function ( handleType, rotation ) {
-		// If no rotation, use the original cursor logic
-		if ( !rotation || rotation === 0 ) {
-			switch ( handleType ) {
-				case 'nw':
-				case 'se':
-					return 'nw-resize';
-				case 'ne':
-				case 'sw':
-					return 'ne-resize';
-				case 'n':
-				case 's':
-					return 'n-resize';
-				case 'e':
-				case 'w':
-					return 'e-resize';
-				default:
-					return 'default';
-			}
-		}
-
-		// For rotated objects, calculate the effective cursor direction
-		const normalizedRotation = ( ( rotation % 360 ) + 360 ) % 360;
-		const cursorIndex = Math.round( normalizedRotation / 45 ) % 8;
-
-		// Map handle types to base cursor directions (0 = north)
-		const baseCursors = {
-			n: 0,
-			ne: 1,
-			e: 2,
-			se: 3,
-			s: 4,
-			sw: 5,
-			w: 6,
-			nw: 7
+		// Base angles for each handle type (direction of resize in local space)
+		// 0° = up (north), 90° = right (east), etc.
+		const handleAngles = {
+			n: 0, // resize vertically (up/down)
+			ne: 45, // resize diagonally
+			e: 90, // resize horizontally (left/right)
+			se: 135,
+			s: 180,
+			sw: 225,
+			w: 270,
+			nw: 315
 		};
 
-		// Calculate the effective cursor direction
-		const effectiveDirection = ( baseCursors[ handleType ] + cursorIndex ) % 8;
+		// Get the base angle for this handle
+		const baseAngle = handleAngles[ handleType ];
+		if ( baseAngle === undefined ) {
+			return 'default';
+		}
 
-		// Map back to cursor names
-		const cursors = [ 'n-resize', 'ne-resize', 'e-resize', 'ne-resize', 'n-resize', 'ne-resize', 'e-resize', 'nw-resize' ];
-		return cursors[ effectiveDirection ];
+		// Add rotation to get the world-space cursor direction
+		const worldAngle = ( baseAngle + ( rotation || 0 ) ) % 360;
+
+		// Normalize to 0-360
+		const normalizedAngle = ( ( worldAngle % 360 ) + 360 ) % 360;
+
+		// CSS only has 4 resize cursors: n-resize, ne-resize, e-resize, nw-resize
+		// (plus their opposites which look the same: s=n, sw=ne, w=e, se=nw)
+		// Map the angle to the nearest cursor direction (8 sectors of 45° each)
+		// Sector centers: 0°=n, 45°=ne, 90°=e, 135°=se, 180°=s, 225°=sw, 270°=w, 315°=nw
+		const sector = Math.round( normalizedAngle / 45 ) % 8;
+
+		// Map sectors to CSS cursor values
+		// Sectors 0,4 (n,s) -> ns-resize
+		// Sectors 1,5 (ne,sw) -> nesw-resize
+		// Sectors 2,6 (e,w) -> ew-resize
+		// Sectors 3,7 (se,nw) -> nwse-resize
+		const cursorMap = [
+			'ns-resize', // 0: north (0°)
+			'nesw-resize', // 1: northeast (45°)
+			'ew-resize', // 2: east (90°)
+			'nwse-resize', // 3: southeast (135°)
+			'ns-resize', // 4: south (180°)
+			'nesw-resize', // 5: southwest (225°)
+			'ew-resize', // 6: west (270°)
+			'nwse-resize' // 7: northwest (315°)
+		];
+
+		return cursorMap[ sector ];
 	};
 
 	/**
@@ -251,10 +261,13 @@
 	/**
 	 * Calculate rectangle resize adjustments
 	 *
+	 * For rotated rectangles, this method ensures that the edge opposite to the
+	 * dragged handle stays fixed in world space, providing intuitive resize behavior.
+	 *
 	 * @param {Object} originalLayer Original layer properties
 	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
+	 * @param {number} deltaX Delta X movement (in local coords)
+	 * @param {number} deltaY Delta Y movement (in local coords)
 	 * @param {Object} modifiers Modifier keys state
 	 * @return {Object} Updates object with new dimensions
 	 */
@@ -267,6 +280,7 @@
 		const origY = originalLayer.y || 0;
 		const origW = originalLayer.width || 0;
 		const origH = originalLayer.height || 0;
+		const rotation = originalLayer.rotation || 0;
 
 		// Calculate aspect ratio for proportional scaling
 		let aspectRatio = origW / origH;
@@ -382,6 +396,12 @@
 			updates.height = Math.max( 5, updates.height );
 		}
 
+		// For rotated shapes, apply anchor point correction to keep opposite edge fixed in world space
+		// This only applies to edge handles (n, s, e, w) when not resizing from center
+		if ( rotation !== 0 && !modifiers.fromCenter ) {
+			this.applyRotatedResizeCorrection( updates, originalLayer, handleType );
+		}
+
 		// Prevent extreme coordinate values
 		if ( updates.x !== undefined ) {
 			updates.x = Math.max( -10000, Math.min( 10000, updates.x ) );
@@ -397,6 +417,123 @@
 		}
 
 		return updates;
+	};
+
+	/**
+	 * Apply correction to keep the opposite edge fixed in world space for rotated shapes.
+	 *
+	 * When resizing a rotated shape from an edge handle, the opposite edge should stay
+	 * fixed in world coordinates. Without correction, the center point moves, which
+	 * causes the opposite edge to shift because the rotation pivot changes.
+	 *
+	 * @param {Object} updates The updates object to modify
+	 * @param {Object} originalLayer Original layer properties
+	 * @param {string} handleType Handle being dragged (n, s, e, w, or corner)
+	 */
+	TransformController.prototype.applyRotatedResizeCorrection = function (
+		updates, originalLayer, handleType
+	) {
+		const rotation = originalLayer.rotation || 0;
+		if ( rotation === 0 ) {
+			return;
+		}
+
+		const origX = originalLayer.x || 0;
+		const origY = originalLayer.y || 0;
+		const origW = originalLayer.width || 0;
+		const origH = originalLayer.height || 0;
+
+		// Calculate original center
+		const origCenterX = origX + origW / 2;
+		const origCenterY = origY + origH / 2;
+
+		// Calculate new dimensions
+		const newX = updates.x !== undefined ? updates.x : origX;
+		const newY = updates.y !== undefined ? updates.y : origY;
+		const newW = updates.width !== undefined ? updates.width : origW;
+		const newH = updates.height !== undefined ? updates.height : origH;
+
+		// Calculate new center
+		const newCenterX = newX + newW / 2;
+		const newCenterY = newY + newH / 2;
+
+		// If centers are the same, no correction needed
+		if ( Math.abs( newCenterX - origCenterX ) < 0.001 &&
+			Math.abs( newCenterY - origCenterY ) < 0.001 ) {
+			return;
+		}
+
+		const rotRad = rotation * Math.PI / 180;
+		const cos = Math.cos( rotRad );
+		const sin = Math.sin( rotRad );
+
+		// Determine which edge should stay fixed based on handle type
+		// anchor is the local offset from center to the fixed edge center
+		let anchorLocalX = 0;
+		let anchorLocalY = 0;
+
+		switch ( handleType ) {
+			case 'n':
+				// North handle: south edge should stay fixed
+				anchorLocalY = origH / 2; // local offset to south edge
+				break;
+			case 's':
+				// South handle: north edge should stay fixed
+				anchorLocalY = -origH / 2; // local offset to north edge
+				break;
+			case 'e':
+				// East handle: west edge should stay fixed
+				anchorLocalX = -origW / 2; // local offset to west edge
+				break;
+			case 'w':
+				// West handle: east edge should stay fixed
+				anchorLocalX = origW / 2; // local offset to east edge
+				break;
+			default:
+				// Corner handles: don't apply this correction
+				return;
+		}
+
+		// Calculate the anchor point in world space (original)
+		// World = Center + Rotate(LocalOffset)
+		const origAnchorWorldX = origCenterX + anchorLocalX * cos - anchorLocalY * sin;
+		const origAnchorWorldY = origCenterY + anchorLocalX * sin + anchorLocalY * cos;
+
+		// Calculate the new local offset to the fixed edge
+		let newAnchorLocalX = 0;
+		let newAnchorLocalY = 0;
+
+		switch ( handleType ) {
+			case 'n':
+				newAnchorLocalY = newH / 2;
+				break;
+			case 's':
+				newAnchorLocalY = -newH / 2;
+				break;
+			case 'e':
+				newAnchorLocalX = -newW / 2;
+				break;
+			case 'w':
+				newAnchorLocalX = newW / 2;
+				break;
+		}
+
+		// If the new center were (newCenterX, newCenterY), where would the anchor be in world?
+		// We want this to equal origAnchorWorld, so we need to adjust the center.
+		// newAnchorWorld = newCenter + Rotate(newAnchorLocal)
+		// We want: origAnchorWorld = adjustedCenter + Rotate(newAnchorLocal)
+		// So: adjustedCenter = origAnchorWorld - Rotate(newAnchorLocal)
+
+		const adjustedCenterX = origAnchorWorldX - ( newAnchorLocalX * cos - newAnchorLocalY * sin );
+		const adjustedCenterY = origAnchorWorldY - ( newAnchorLocalX * sin + newAnchorLocalY * cos );
+
+		// From adjusted center, calculate new x, y
+		const adjustedX = adjustedCenterX - newW / 2;
+		const adjustedY = adjustedCenterY - newH / 2;
+
+		// Apply corrections
+		updates.x = adjustedX;
+		updates.y = adjustedY;
 	};
 
 	/**

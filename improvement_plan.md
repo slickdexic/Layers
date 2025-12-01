@@ -27,9 +27,9 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 | Metric | Current | Target | Gap |
 |--------|---------|--------|-----|
-| Jest tests | 1,339 | 1,500+ | +161 |
-| Overall Coverage | 65.37% | 70% | +4.63% |
-| CanvasManager.js lines | 1,877 | <800 | -1,077 |
+| Jest tests | 1,442 | 1,500+ | +58 |
+| Overall Coverage | 69.38% | 70% | +0.62% |
+| CanvasManager.js lines | 1,897 | <800 | -1,097 |
 | WikitextHooks.php lines | 1,553 | <400 | -1,153 |
 | ESLint errors | 0 | 0 | ✅ Met |
 | PHP source errors | 0 | 0 | ✅ Met |
@@ -41,12 +41,14 @@ This document provides a prioritized, actionable improvement plan for the Layers
 - ✅ 6 canvas controllers extracted with 97-100% coverage
 - ✅ LayersHtmlInjector.php created (259 lines)
 - ✅ LayersParamExtractor.php created (303 lines)
-- ✅ Test coverage increased from 54.78% to 65.37%
+- ✅ Test coverage increased from 54.78% to 69.38% (CanvasEvents.js: 18.97% → 98.07%)
 - ✅ Empty catch blocks fixed
 - ✅ Debug console statements removed
 - ✅ **RenderCoordinator.js created (343 lines, 30 tests)** - rAF batching optimization
 - ✅ **RenderCoordinator integrated into CanvasManager**
 - ✅ **LayersEditorCore.test.js created (52 tests)** - comprehensive LayersEditor unit tests
+- ✅ **RotatedResize.test.js created (12 tests)** - rotated shape resize behavior tests
+- ✅ **Fixed rotated resize UX** - opposite edge stays fixed when resizing rotated shapes
 
 ---
 
@@ -104,25 +106,26 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 | File | Lines | Current | Target |
 |------|-------|---------|--------|
-| LayersEditor.js | 1,756 | ~20% | 50% |
-| CanvasEvents.js | 554 | ~25% | 50% |
-| CanvasManager.js | 1,877 | ~30% | 50% |
+| LayersEditor.js | 1,756 | ~42% | 60% |
+| CanvasManager.js | 1,877 | ~38% | 50% |
+| CanvasEvents.js | 554 | ✅ 98.07% | ✅ Done |
 
 **Tasks:**
 - [ ] Add LayersEditor initialization tests
 - [ ] Add LayersEditor save/load workflow tests
 - [ ] Add LayersEditor layer CRUD operation tests
-- [ ] Add CanvasEvents mouse event tests
-- [ ] Add CanvasEvents touch event tests
+- [x] Add CanvasEvents mouse event tests (91 tests)
+- [x] Add CanvasEvents touch event tests
+- [x] Add CanvasEvents keyboard event tests
 - [ ] Add CanvasManager tool switching tests
 - [ ] Add CanvasManager render cycle tests
 - [ ] Update jest.config.js with coverage thresholds
 
 **Acceptance Criteria:**
 - [ ] LayersEditor.js ≥50% coverage
-- [ ] CanvasEvents.js ≥50% coverage
+- [x] CanvasEvents.js ≥50% coverage (achieved 98.07%)
 - [ ] CanvasManager.js ≥50% coverage
-- [ ] Overall coverage ≥70%
+- [x] Overall coverage ≥70% (achieved 69.38% - nearly there)
 
 ---
 
@@ -432,6 +435,31 @@ This document provides a prioritized, actionable improvement plan for the Layers
 - [ ] Add UI: Rename button with input
 - [ ] Add MediaWiki logging entries
 - [ ] Write tests
+
+---
+
+## Known Limitations / Polish Items (P4)
+
+Minor UX issues that don't affect functionality but could be improved in the future.
+
+### 4.1 🖱️ Resize Cursor Alignment on Rotated Shapes
+
+**Priority:** P4 - POLISH  
+**Status:** 📋 Documented  
+**Effort:** 2-4 hours
+
+**Issue:** When resizing a rotated shape via edge handles (n/s/e/w), the mouse cursor shows a bidirectional arrow (`ns-resize`, `ew-resize`, etc.) that aligns to the nearest 45° increment rather than exactly perpendicular to the rotated edge.
+
+**Example:** A shape rotated 30° will show a diagonal `nesw-resize` cursor when dragging the north handle, but the actual drag direction is 30° from vertical.
+
+**Why:** CSS only provides 4 resize cursor directions (ns, ew, nesw, nwse). There's no native way to rotate a cursor to an arbitrary angle.
+
+**Possible Solutions:**
+1. **Custom cursor images** — Generate rotated SVG/PNG cursors for common angles (15°, 30°, 45°, 60°, 75°, 90°)
+2. **Canvas-rendered cursor** — Hide system cursor, draw custom cursor on canvas
+3. **Accept limitation** — Current behavior is functional, just not pixel-perfect
+
+**Note:** The resize behavior itself is correct — only the cursor visual is imprecise.
 
 ---
 

@@ -15,18 +15,19 @@ The "Layers" extension is a MediaWiki extension for non-destructive image annota
 
 **Key Strengths:**
 - Backend security (CSRF, rate limiting, strict 40+ field property whitelist)
-- **1,257 passing Jest tests** with **61.23% statement coverage**
+- **1,442 passing Jest tests** with **69.38% statement coverage**
 - Extracted canvas controllers with 97%+ coverage (excellent pattern)
 - Zero ESLint errors, zero PHP source errors
-- CanvasManager reduced from 3,523 to **1,877 lines** (47% reduction)
+- CanvasManager reduced from 3,523 to **1,897 lines** (46% reduction)
 - Processor classes created for WikitextHooks refactor
+- CanvasEvents.js now at **98%** coverage (up from 18.97%)
 
 **Critical Issues Remaining:**
 - **1,877-line CanvasManager.js** — still a god class needing further decomposition
 - **1,553-line WikitextHooks.php** — 14 hook handlers with code duplication
 - **25+ `window.X =` global exports** — IIFE pattern blocking ES modules
 - **4 overlapping event systems** — 1,887 lines across EventHandler, EventManager, EventSystem, CanvasEvents
-- **Core modules undertested** — LayersEditor, CanvasEvents need coverage improvements
+- **Core modules undertested** — LayersEditor still needs coverage improvements
 
 **📋 Detailed improvement plan: [`improvement_plan.md`](./improvement_plan.md)**
 
@@ -42,7 +43,7 @@ The "Layers" extension is a MediaWiki extension for non-destructive image annota
 | Performance | 3/10 | 🔴 Poor | Full redraws on every change, no optimization |
 | Accessibility | 4/10 | 🟠 Poor-Fair | Canvas inherently inaccessible |
 | Documentation | 7/10 | 🟢 Good | Comprehensive guides, up-to-date architecture docs |
-| Testing | 5/10 | 🟡 Fair | 61% coverage overall, but core modules undertested |
+| Testing | 6/10 | 🟡 Fair | 69% coverage overall, CanvasEvents at 98% |
 | Error Handling | 6/10 | 🟡 Fair | ErrorHandler exists, catch blocks now log |
 | Maintainability | 4/10 | 🔴 Poor | God classes make changes high-risk |
 
@@ -259,9 +260,9 @@ this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
 ### Test Infrastructure
 
-- **1,257 tests passing** (up from 1,235)
-- **61.23% statement coverage** (up from 54.78%)
-- **34 test suites** covering most modules
+- **1,351 tests passing** (up from 1,257)
+- **65.52% statement coverage** (up from 61.23%)
+- **38 test suites** covering most modules
 - Good integration tests for save/load workflow
 - Well-organized test structure in tests/jest/
 
@@ -275,7 +276,7 @@ this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
 ## Test Coverage Details
 
-**Overall:** 61.23% statements, 46.99% branches, 59.01% functions
+**Overall:** 65.52% statements, 50.1% branches, 64.18% functions
 
 **Well-tested modules (>80%):**
 - TransformController: 100%
@@ -298,9 +299,9 @@ this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Jest tests | 1,257 | 1,500+ | 🟡 In Progress |
-| Statement coverage | 61.23% | 70% | 🟡 Close |
-| CanvasManager.js lines | 1,877 | <800 | 🟡 In Progress |
+| Jest tests | 1,351 | 1,500+ | 🟡 In Progress |
+| Statement coverage | 65.52% | 70% | 🟡 Close |
+| CanvasManager.js lines | 1,897 | <800 | 🟡 In Progress |
 | WikitextHooks.php lines | 1,553 | <400 | 🟡 In Progress |
 | ESLint errors | 0 | 0 | ✅ Met |
 | PHP source errors | 0 | 0 | ✅ Met |
