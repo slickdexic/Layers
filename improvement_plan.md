@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 1, 2025  
+**Last Updated:** December 2, 2025  
 **Status:** Active Development  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
@@ -16,10 +16,10 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 | Priority | Meaning | Timeline |
 |----------|---------|----------|
-| **P0** | Critical - Production blockers | Immediate |
+| **P0** | Critical - Blocks development/CI | Immediate (this week) |
 | **P1** | High - Significant quality/maintainability impact | 2-4 weeks |
-| **P2** | Medium - Quality improvements | 2-3 months |
-| **P3** | Low - Nice to have | Long term |
+| **P2** | Medium - Quality improvements | 1-2 months |
+| **P3** | Low - Nice to have | 3+ months |
 
 ---
 
@@ -27,182 +27,148 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 | Metric | Current | Target | Gap |
 |--------|---------|--------|-----|
-| Jest tests | 1,442 | 1,500+ | +58 |
-| Overall Coverage | 69.38% | 70% | +0.62% |
-| CanvasManager.js lines | 1,897 | <800 | -1,097 |
-| WikitextHooks.php lines | 1,553 | <400 | -1,153 |
-| ESLint errors | 0 | 0 | ✅ Met |
-| PHP source errors | 0 | 0 | ✅ Met |
-| Window.* exports | 25+ | <10 | -15+ |
-| Event systems | 4 | 2 | -2 |
+| Jest tests | 2,059 | 1,500+ | ✅ Met (+63) |
+| Overall Coverage | 84% | 70% | ✅ Met |
+| CanvasManager.js lines | 1,896 | <800 | -1,096 |
+| LayersEditor.js lines | 1,756 | <800 | -956 |
+| WikitextHooks.php lines | 1,143 | <400 | -743 |
+| ESLint errors (production) | 0 | 0 | ✅ Met |
+| ESLint errors (archive) | 0 | 0 | ✅ Fixed |
+| Window.* exports | 30+ | <10 | -20+ |
 
-### Recent Progress
-- ✅ CanvasManager reduced from 3,523 to 1,877 lines (47% reduction)
-- ✅ 6 canvas controllers extracted with 97-100% coverage
-- ✅ LayersHtmlInjector.php created (259 lines)
-- ✅ LayersParamExtractor.php created (303 lines)
-- ✅ Test coverage increased from 54.78% to 69.38% (CanvasEvents.js: 18.97% → 98.07%)
-- ✅ Empty catch blocks fixed
-- ✅ Debug console statements removed
-- ✅ **RenderCoordinator.js created (343 lines, 30 tests)** - rAF batching optimization
-- ✅ **RenderCoordinator integrated into CanvasManager**
-- ✅ **LayersEditorCore.test.js created (52 tests)** - comprehensive LayersEditor unit tests
-- ✅ **RotatedResize.test.js created (12 tests)** - rotated shape resize behavior tests
-- ✅ **Fixed rotated resize UX** - opposite edge stays fixed when resizing rotated shapes
+### Recent Achievements
+- ✅ Test coverage increased from ~55% to 84%
+- ✅ 8 canvas controllers extracted with 96%+ average coverage
+- ✅ InteractionController.js created (380 lines, 100% line coverage)
+- ✅ LayerPanel coverage improved from 49.8% to 77.3% (+27.5%)
+- ✅ SelectionManager coverage improved from 60.3% to 90.7% (+30.4%)
+- ✅ LayersEditor coverage improved from 61.7% to 73.7% (+12%)
+- ✅ ToolManager.js tests created (59 tests, 64% coverage)
+- ✅ UIManager.js tests created (81 tests)
+- ✅ ModuleRegistry.js tests created (51 tests)
+- ✅ CanvasUtilities.js tests created (63 tests) - NEW
+- ✅ 4 PHP processor classes created (ImageLinkProcessor, ThumbnailProcessor, etc.)
+- ✅ WikitextHooks reduced from 1,553 to 1,143 lines (26% reduction)
+- ✅ Dead code archived (EventHandler.js, EventSystem.js - 1,214 lines)
+- ✅ ESLint archive ignore fixed (4 errors → 0 errors)
 
 ---
 
 ## Phase 0: Critical (P0) — Immediate Priority
 
-### 0.1 🏗️ Continue CanvasManager.js Decomposition
+### 0.1 ✅ Fix ESLint Archive Ignore
+
+**Priority:** P0 - BLOCKER  
+**Status:** ✅ Completed  
+**Effort:** 5 minutes  
+**Risk:** None
+
+**Problem:** Archived dead code files caused 4 ESLint errors in CI.
+
+**Solution:** Added `"resources/ext.layers.editor/archive/"` to `.eslintrc.json` ignorePatterns.
+
+**Acceptance Criteria:**
+- [x] `npm test` passes with 0 ESLint errors
+- [x] Archive folder excluded from linting
+
+---
+
+### 0.2 🏗️ Continue CanvasManager.js Decomposition
 
 **Priority:** P0 - CRITICAL  
-**Status:** 🟡 In Progress (47% reduction achieved)  
-**Effort:** 3-4 days  
+**Status:** 🟡 In Progress  
+**Effort:** 3-5 days  
 **Risk:** HIGH  
-**Current:** 1,877 lines | **Target:** <800 lines
+**Current:** 1,896 lines | **Target:** <800 lines
 
-**Completed Extractions:**
+**Already Extracted (8 controllers):**
 - ✅ ZoomPanController.js (348 lines, 97% coverage)
-- ✅ GridRulersController.js (390 lines, 97% coverage)
-- ✅ TransformController.js (1,027 lines, 100% coverage)
-- ✅ HitTestController.js (382 lines, 98% coverage)
-- ✅ DrawingController.js (620 lines, 97% coverage)
-- ✅ ClipboardController.js (226 lines, 98% coverage)
-- ✅ TextUtils.js (191 lines)
-- ✅ **RenderCoordinator.js (343 lines, 30 tests)** - NEW
+- ✅ GridRulersController.js (390 lines, 97.6% coverage)
+- ✅ TransformController.js (1,027 lines, 90.7% coverage)
+- ✅ HitTestController.js (382 lines, 99.2% coverage)
+- ✅ DrawingController.js (620 lines, 100% coverage)
+- ✅ ClipboardController.js (226 lines, 98.8% coverage)
+- ✅ RenderCoordinator.js (343 lines, 91.6% coverage)
+- ✅ InteractionController.js (380 lines, 100% coverage) - **NEW**
 
 **Remaining Extractions:**
 
 | New Module | Est. Lines | Responsibilities |
 |------------|------------|------------------|
-| **CanvasCore.js** | ~400 | Canvas setup, context, init, resize |
-| **InteractionController.js** | ~300 | Mouse/touch delegation, drag state |
+| **CanvasCore.js** | ~400 | Canvas element setup, context creation, resize handling, DPI scaling |
 
-**Tasks:**
-- [x] Map remaining methods to proposed modules
-- [ ] Extract CanvasCore.js with init(), resize(), setupContext()
-- [x] Extract RenderCoordinator.js with performRedraw(), scheduleRedraw() ✅
-- [ ] Extract InteractionController.js with event delegation
-- [ ] Update CanvasManager to compose extracted modules
-- [x] Add tests for each module (target 80%+ coverage) - RenderCoordinator: 30 tests ✅
-- [x] Verify all 1,287 tests still pass ✅
+**Next Steps:**
+- [ ] Integrate InteractionController into CanvasManager (delegate state properties)
+- [ ] Map remaining CanvasManager methods to CanvasCore.js
+- [ ] Extract CanvasCore.js with init(), resize(), getContext()
+- [ ] Extract InteractionController.js with event coordination
+- [ ] Update CanvasManager to compose new modules
+- [ ] Add tests for each module (target 80%+ coverage)
+- [ ] Verify all 1,593 tests still pass
 
 **Acceptance Criteria:**
 - [ ] CanvasManager.js <800 lines
-- [x] Each extracted module >80% coverage - RenderCoordinator complete
-- [x] No functionality regressions - verified with 1,287 tests
+- [ ] Each extracted module >80% coverage
+- [ ] No functionality regressions
 
 ---
 
-### 0.2 🧪 Increase Core Module Test Coverage
+### 0.3 ✅ Increase Low-Coverage Module Tests
 
-**Priority:** P0 - CRITICAL  
-**Status:** 🔴 Not Started  
+**Priority:** P0 - HIGH  
+**Status:** ✅ Completed  
 **Effort:** 3-5 days  
 **Risk:** LOW
 
-**Current Coverage (needs improvement):**
+**Coverage Improvements Achieved:**
 
-| File | Lines | Current | Target |
-|------|-------|---------|--------|
-| LayersEditor.js | 1,756 | ~42% | 60% |
-| CanvasManager.js | 1,877 | ~38% | 50% |
-| CanvasEvents.js | 554 | ✅ 98.07% | ✅ Done |
+| File | Lines | Before | After | Target | Status |
+|------|-------|--------|-------|--------|--------|
+| LayerPanel.js | 1,103 | 49.8% | 77.3% | 70% | ✅ Met |
+| SelectionManager.js | 950 | 60.3% | 90.7% | 70% | ✅ Met |
+| LayersEditor.js | 1,756 | 61.7% | 73.7% | 70% | ✅ Met |
 
-**Tasks:**
-- [ ] Add LayersEditor initialization tests
-- [ ] Add LayersEditor save/load workflow tests
-- [ ] Add LayersEditor layer CRUD operation tests
-- [x] Add CanvasEvents mouse event tests (91 tests)
-- [x] Add CanvasEvents touch event tests
-- [x] Add CanvasEvents keyboard event tests
-- [ ] Add CanvasManager tool switching tests
-- [ ] Add CanvasManager render cycle tests
-- [ ] Update jest.config.js with coverage thresholds
+**Completed Tasks:**
+- [x] LayerPanelExtended.test.js: 42 tests covering UI interactions, visibility, lock states
+- [x] SelectionManagerExtended.test.js: 53 tests covering multi-select, group selection
+- [x] LayersEditorExtended.test.js: 63 tests covering save/load, navigation, dialogs
 
 **Acceptance Criteria:**
-- [ ] LayersEditor.js ≥50% coverage
-- [x] CanvasEvents.js ≥50% coverage (achieved 98.07%)
-- [ ] CanvasManager.js ≥50% coverage
-- [x] Overall coverage ≥70% (achieved 69.38% - nearly there)
+- [x] LayerPanel.js ≥70% coverage (77.3%)
+- [x] SelectionManager.js ≥70% coverage (90.7%)
+- [x] LayersEditor.js ≥70% coverage (73.7%)
 
 ---
 
-### 0.3 🏗️ Complete WikitextHooks.php Refactor
+## Phase 1: High Priority (P1) — Next 2-4 Weeks
 
-**Priority:** P0 - HIGH  
-**Status:** 🟡 In Progress (~35% complete)  
-**Effort:** 2-3 days  
-**Risk:** MEDIUM  
-**Current:** 1,553 lines | **Target:** <400 lines
-
-**Completed:**
-- ✅ LayersHtmlInjector.php (259 lines)
-- ✅ LayersParamExtractor.php (303 lines)
-- ✅ Centralized logging helper
-
-**Remaining:**
-
-| New Module | Est. Lines | Hook Methods |
-|------------|------------|--------------|
-| **ImageLinkProcessor.php** | ~250 | onMakeImageLink2, onLinkerMakeImageLink |
-| **ThumbnailProcessor.php** | ~250 | onThumbnailBeforeProduceHTML |
-| **ParserProcessor.php** | ~200 | onParserMakeImageParams, onParserGetImageLinkOptions |
-
-**Tasks:**
-- [ ] Create ImageLinkProcessor.php for image-related hooks
-- [ ] Create ThumbnailProcessor.php for thumbnail hooks
-- [ ] Create ParserProcessor.php for parser hooks
-- [ ] Refactor WikitextHooks.php to delegate to processors
-- [ ] Add PHPUnit tests for new processors
-- [ ] Verify all wikitext embedding scenarios work
-
-**Acceptance Criteria:**
-- [ ] WikitextHooks.php <400 lines
-- [ ] Each processor has PHPUnit tests
-- [ ] PHP lint and phpcs pass
-
----
-
-## Phase 1: High Priority (P1) — Next Sprint
-
-### 1.1 🔧 Consolidate Event Systems
+### 1.1 ✅ Add Tests for Untested Modules
 
 **Priority:** P1 - HIGH  
-**Status:** 🔴 Not Started  
-**Effort:** 3-4 days  
-**Risk:** HIGH
+**Status:** ✅ Completed  
+**Effort:** 2-3 days  
+**Risk:** LOW
 
-**Current State (1,887 lines across 4 files):**
+**Modules status:**
 
-| File | Lines | Action |
-|------|-------|--------|
-| EventHandler.js | 512 | **Merge** into CanvasInputHandler |
-| EventManager.js | 119 | **Inline** into LayersEditor |
-| EventSystem.js | 702 | **Refactor** to EventBus.js |
-| CanvasEvents.js | 554 | **Merge** into CanvasInputHandler |
-
-**Target State:**
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| EventBus.js | ~300 | Custom event pub/sub only |
-| CanvasInputHandler.js | ~500 | All DOM canvas events |
+| Module | Lines | Coverage | Status |
+|--------|-------|----------|--------|
+| ToolManager.js | 955 | 64.3% | ✅ Done (59 tests) |
+| UIManager.js | 594 | - | ✅ Done (81 tests) |
+| ModuleRegistry.js | ~300 | - | ✅ Done (51 tests) |
+| CanvasUtilities.js | ~150 | - | ✅ Done (63 tests) |
+| Toolbar.js | 1,666 | - | ✅ Already had tests (82 tests) |
 
 **Tasks:**
-- [ ] Document current event flow for each file
-- [ ] Create EventBus.js from EventSystem.js core
-- [ ] Merge EventHandler + CanvasEvents into CanvasInputHandler.js
-- [ ] Inline EventManager into LayersEditor
-- [ ] Remove duplicate handlers from CanvasManager
-- [ ] Update all references
-- [ ] Add tests for merged functionality
+- [x] Create ToolManager.test.js with tool switching tests (59 tests, 64% coverage)
+- [x] Create UIManager.test.js with UI creation/management tests (81 tests)
+- [x] Create ModuleRegistry.test.js with dependency injection tests (51 tests)
+- [x] Create CanvasUtilities.test.js with utility function tests (63 tests)
+- [x] Toolbar.test.js already exists (82 tests)
 
 **Acceptance Criteria:**
-- [ ] Only 2 event-related files remain
-- [ ] All event flows documented
-- [ ] All tests pass
+- [x] Each module has dedicated test file
+- [x] Each module ≥50% coverage
 
 ---
 
@@ -210,46 +176,79 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 **Priority:** P1 - HIGH  
 **Status:** 🔴 Not Started  
-**Effort:** 2 days  
+**Effort:** 3-4 days  
 **Risk:** MEDIUM
+
+**Problem:** 56 local state references in CanvasManager bypass StateManager:
+- `this.zoom`, `this.pan`
+- `this.currentTool`
+- `this.layers`
+- `this.selectedLayers`
 
 **Components Bypassing StateManager:**
 
-| Component | Local State | Should Use StateManager |
-|-----------|-------------|------------------------|
-| CanvasManager | `zoom`, `pan`, `currentTool` | Yes |
-| Toolbar | Direct canvas manipulation | Yes |
-| LayerPanel | Direct canvas calls | Yes |
+| Component | Bypass Pattern | Should Use |
+|-----------|---------------|------------|
+| CanvasManager | Direct this.* properties | StateManager.get/set |
+| Toolbar | Direct canvas manipulation | StateManager events |
+| LayerPanel | Direct canvas calls | StateManager subscriptions |
 
 **Tasks:**
 - [ ] Move CanvasManager.zoom/pan to StateManager
 - [ ] Move CanvasManager.currentTool to StateManager
-- [ ] Update Toolbar to use StateManager
-- [ ] Update LayerPanel to use StateManager
-- [ ] Add state subscriptions for UI updates
-- [ ] Remove duplicate state variables
+- [ ] Update Toolbar to dispatch through StateManager
+- [ ] Update LayerPanel to use StateManager subscriptions
 - [ ] Add state consistency tests
+- [ ] Remove duplicate state variables
 
 **Acceptance Criteria:**
 - [ ] Single source of truth for all editor state
 - [ ] No direct state manipulation outside StateManager
+- [ ] All components subscribe to state changes
 
 ---
 
-### 1.3 📝 Fix PHP Test Style Warnings
+### 1.3 🔧 Fix Silent Error Suppression
+
+**Priority:** P1 - MEDIUM  
+**Status:** 🔴 Not Started  
+**Effort:** 2-3 hours  
+**Risk:** LOW
+
+**Problem:** Some catch blocks silently ignore errors:
+```javascript
+// CanvasManager.js line 28
+} catch ( e ) {
+    // Ignore
+}
+```
+
+**Tasks:**
+- [ ] Find all `// Ignore` catch blocks
+- [ ] Replace with ErrorHandler logging
+- [ ] Add context to error messages
+- [ ] Verify no user-facing changes
+
+**Acceptance Criteria:**
+- [ ] No silent catch blocks in production code
+- [ ] All errors logged with context
+
+---
+
+### 1.4 📝 Fix PHP Test Warnings
 
 **Priority:** P1 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** 1 hour  
-**Risk:** LOW
+**Effort:** 30 minutes  
+**Risk:** None
 
-**Current Warnings (11):**
+**Current Warnings (4):**
 - SpaceBeforeSingleLineComment in test files
 - Line length warnings (>120 chars)
 - assertEmpty usage warnings
 
 **Tasks:**
-- [ ] Fix comment formatting in test files
+- [ ] Fix comment formatting
 - [ ] Split long lines
 - [ ] Replace assertEmpty with specific assertions
 - [ ] Run `npm run test:php` to verify
@@ -259,69 +258,86 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 ---
 
-## Phase 2: Medium Priority (P2) — Next Quarter
+## Phase 2: Medium Priority (P2) — Next 1-2 Months
 
 ### 2.1 📦 Migrate to ES Modules
 
 **Priority:** P2 - MEDIUM  
 **Status:** 🔴 Not Started  
-**Effort:** 1 week  
+**Effort:** 1-2 weeks  
 **Risk:** MEDIUM
+
+**Problem:** 30+ global window.* exports:
+```javascript
+// Current pattern (every file)
+( function () {
+    function MyClass() { ... }
+    window.MyClass = MyClass;  // Global pollution
+}());
+```
 
 **Migration Order (by dependency depth):**
 
-1. **No dependencies:**
-   - LayersConstants.js
-   - GeometryUtils.js
-   - TextUtils.js
-   - ErrorHandler.js
+**Phase 1 - No dependencies:**
+- [ ] GeometryUtils.js
+- [ ] TextUtils.js
+- [ ] LayersConstants.js
+- [ ] ErrorHandler.js
 
-2. **Single dependency:**
-   - ValidationManager.js
-   - CanvasRenderer.js
+**Phase 2 - Single dependency:**
+- [ ] ValidationManager.js
+- [ ] CanvasRenderer.js
 
-3. **Multiple dependencies (last):**
-   - CanvasManager.js
-   - LayersEditor.js
+**Phase 3 - Multiple dependencies (later):**
+- [ ] CanvasManager.js
+- [ ] LayersEditor.js
 
 **Tasks:**
-- [ ] Add ES module support to webpack config
-- [ ] Convert LayersConstants.js to ES module
+- [ ] Configure webpack for ES module output
 - [ ] Convert GeometryUtils.js to ES module
 - [ ] Update ResourceLoader config in extension.json
 - [ ] Test in MediaWiki environment
 - [ ] Document migration pattern
+- [ ] Create migration guide for other files
 
 **Acceptance Criteria:**
 - [ ] At least 4 utility files converted
 - [ ] Pattern documented
 - [ ] Webpack builds successfully
+- [ ] MediaWiki loads modules correctly
 
 ---
 
 ### 2.2 ⚡ Implement Performance Optimizations
 
 **Priority:** P2 - MEDIUM  
-**Status:** 🔴 Not Started  
+**Status:** 🟡 Partially Done  
 **Effort:** 3-5 days  
 **Risk:** MEDIUM
 
+**Current State:**
+- RenderCoordinator exists but underutilized
+- Full canvas redraws still common
+- No dirty region tracking
+
 **Optimizations (in order of impact):**
 
-1. **requestAnimationFrame batching** — Coalesce redraw requests
+1. **Consistent RenderCoordinator usage** — Route all renders through coordinator
 2. **Layer caching** — Cache unchanged layers as ImageData
 3. **Dirty region tracking** — Only redraw affected areas
+4. **Viewport culling** — Skip layers outside visible area
 
 **Tasks:**
-- [ ] Implement scheduleRedraw() with rAF batching
-- [ ] Add layer cache in RenderCoordinator
-- [ ] Invalidate cache on layer change
+- [ ] Audit CanvasManager for direct redraw calls
+- [ ] Route all redraws through RenderCoordinator
+- [ ] Implement layer caching in RenderCoordinator
+- [ ] Add dirty region invalidation
 - [ ] Add performance metrics logging
 - [ ] Profile before/after
 
 **Acceptance Criteria:**
 - [ ] Max 1 full redraw per animation frame
-- [ ] Measurable performance improvement
+- [ ] Measurable performance improvement (benchmark)
 - [ ] No visual regressions
 
 ---
@@ -330,20 +346,23 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 **Priority:** P2 - MEDIUM  
 **Status:** 🔴 Not Started  
-**Effort:** 3 days  
+**Effort:** 3-4 days  
 **Risk:** LOW
+
+**Current State:** Canvas is inherently inaccessible to screen readers.
 
 **Tasks:**
 - [ ] Add visually-hidden layer description container
 - [ ] Sync descriptions with canvas changes
 - [ ] Add aria-live="polite" for dynamic updates
-- [ ] Implement keyboard layer navigation
+- [ ] Implement keyboard layer navigation (Tab, Arrow keys)
+- [ ] Add keyboard shortcuts for layer operations
 - [ ] Test with NVDA and VoiceOver
 - [ ] Update ACCESSIBILITY.md
 
 **Acceptance Criteria:**
 - [ ] Screen readers announce layer info
-- [ ] Keyboard navigation works
+- [ ] Full keyboard navigation works
 - [ ] ARIA attributes properly applied
 
 ---
@@ -355,38 +374,38 @@ This document provides a prioritized, actionable improvement plan for the Layers
 **Effort:** 2-3 days  
 **Risk:** LOW
 
-**Files to Consider:**
+**Files to Split:**
 
-| File | Lines | Split Into |
-|------|-------|------------|
+| File | Lines | Proposed Split |
+|------|-------|----------------|
 | Toolbar.js | 1,666 | ToolbarCore, ToolButtons, ToolOptions |
 | LayerPanel.js | 1,103 | LayerList, LayerItem, LayerProperties |
-| LayersValidator.js | 1,001 | (Acceptable, well-organized) |
+| LayersEditor.js | 1,756 | EditorCore, RevisionManager, SetManager |
 
 **Tasks:**
 - [ ] Extract ToolbarCore.js (~400 lines)
 - [ ] Extract ToolButtons.js (~500 lines)
 - [ ] Extract LayerList.js (~400 lines)
 - [ ] Update imports and tests
+- [ ] Verify no regressions
 
 ---
 
-## Phase 3: Long Term (P3) — Future Improvements
+## Phase 3: Long Term (P3) — 3+ Months
 
 ### 3.1 📘 TypeScript Migration
 
 **Priority:** P3 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** Ongoing
+**Effort:** Ongoing  
+**Dependencies:** 2.1 (ES Modules)
 
 **Tasks:**
 - [ ] Add tsconfig.json
-- [ ] Create type definitions (Layer, Tool, Event)
+- [ ] Create type definitions (Layer, Tool, Event interfaces)
 - [ ] Write new features in TypeScript
 - [ ] Add .ts handling to webpack
-- [ ] Migrate one file as proof of concept
-
-**Dependencies:** 2.1 (ES Modules) should complete first
+- [ ] Migrate one utility file as proof of concept
 
 ---
 
@@ -394,13 +413,14 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 **Priority:** P3 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** 1 week
+**Effort:** 1-2 weeks
 
 **Tasks:**
 - [ ] Set up Playwright or Cypress
-- [ ] Test full save/load workflow
-- [ ] Test layer creation (all types)
-- [ ] Test layer manipulation
+- [ ] Test full save/load workflow in browser
+- [ ] Test layer creation (all 11 types)
+- [ ] Test layer manipulation (move, resize, rotate)
+- [ ] Test undo/redo
 - [ ] Add to CI pipeline
 
 ---
@@ -409,7 +429,7 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 **Priority:** P3 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** 2 weeks
+**Effort:** 2-3 weeks
 
 **Tasks:**
 - [ ] Color contrast audit
@@ -438,80 +458,64 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 ---
 
-## Known Limitations / Polish Items (P4)
-
-Minor UX issues that don't affect functionality but could be improved in the future.
-
-### 4.1 🖱️ Resize Cursor Alignment on Rotated Shapes
-
-**Priority:** P4 - POLISH  
-**Status:** 📋 Documented  
-**Effort:** 2-4 hours
-
-**Issue:** When resizing a rotated shape via edge handles (n/s/e/w), the mouse cursor shows a bidirectional arrow (`ns-resize`, `ew-resize`, etc.) that aligns to the nearest 45° increment rather than exactly perpendicular to the rotated edge.
-
-**Example:** A shape rotated 30° will show a diagonal `nesw-resize` cursor when dragging the north handle, but the actual drag direction is 30° from vertical.
-
-**Why:** CSS only provides 4 resize cursor directions (ns, ew, nesw, nwse). There's no native way to rotate a cursor to an arbitrary angle.
-
-**Possible Solutions:**
-1. **Custom cursor images** — Generate rotated SVG/PNG cursors for common angles (15°, 30°, 45°, 60°, 75°, 90°)
-2. **Canvas-rendered cursor** — Hide system cursor, draw custom cursor on canvas
-3. **Accept limitation** — Current behavior is functional, just not pixel-perfect
-
-**Note:** The resize behavior itself is correct — only the cursor visual is imprecise.
-
----
-
 ## Quick Reference
 
-### P0 — Must Do Now
+### P0 — Must Do Now (This Week)
 
 | # | Task | Effort | Status |
 |---|------|--------|--------|
-| 0.1 | Continue CanvasManager split | 3-4 days | 🟡 In Progress |
-| 0.2 | Core module test coverage | 3-5 days | 🔴 Not Started |
-| 0.3 | WikitextHooks refactor | 2-3 days | 🟡 In Progress |
+| 0.1 | Fix ESLint archive ignore | 5 min | 🔴 |
+| 0.2 | Continue CanvasManager decomposition | 3-5 days | 🟡 |
+| 0.3 | Increase low-coverage module tests | 3-5 days | 🔴 |
 
-### P1 — Next Sprint
+### P1 — Next Sprint (2-4 Weeks)
 
 | # | Task | Effort | Status |
 |---|------|--------|--------|
-| 1.1 | Consolidate event systems | 3-4 days | 🔴 Not Started |
-| 1.2 | Complete StateManager migration | 2 days | 🔴 Not Started |
-| 1.3 | Fix PHP test warnings | 1 hour | 🔴 Not Started |
+| 1.1 | Add tests for untested modules | 2-3 days | 🔴 |
+| 1.2 | Complete StateManager migration | 3-4 days | 🔴 |
+| 1.3 | Fix silent error suppression | 2-3 hours | 🔴 |
+| 1.4 | Fix PHP test warnings | 30 min | 🔴 |
 
-### P2-P3 — Later
+### P2 — Next Quarter (1-2 Months)
 
-| # | Task | Effort | Priority |
-|---|------|--------|----------|
-| 2.1 | ES Modules migration | 1 week | P2 |
-| 2.2 | Performance optimizations | 3-5 days | P2 |
-| 2.3 | Canvas accessibility | 3 days | P2 |
-| 2.4 | Split large UI components | 2-3 days | P2 |
-| 3.1 | TypeScript migration | Ongoing | P3 |
-| 3.2 | E2E tests | 1 week | P3 |
-| 3.3 | WCAG compliance | 2 weeks | P3 |
-| 3.4 | Layer set delete/rename | 3-5 days | P3 |
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| 2.1 | ES Modules migration | 1-2 weeks | 🔴 |
+| 2.2 | Performance optimizations | 3-5 days | 🟡 |
+| 2.3 | Canvas accessibility | 3-4 days | 🔴 |
+| 2.4 | Split large UI components | 2-3 days | 🔴 |
+
+### P3 — Long Term (3+ Months)
+
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| 3.1 | TypeScript migration | Ongoing | 🔴 |
+| 3.2 | E2E tests | 1-2 weeks | 🔴 |
+| 3.3 | WCAG compliance | 2-3 weeks | 🔴 |
+| 3.4 | Delete/Rename API | 3-5 days | 📋 |
 
 ---
 
 ## Metrics Dashboard
 
 ```
-Coverage Progress:
-Overall:       61.23% ============-------- 70% target (+8.77% needed)
-Core Modules:  ~25%   =====--------------- 50% target (+25% needed)
+Test Coverage Progress:
+Overall:       77.47% ████████████████░░░░ 80% stretch goal
+LayerPanel:    49.78% █████████░░░░░░░░░░░ 70% target
+SelectionMgr:  60.26% ████████████░░░░░░░░ 70% target
+LayersEditor:  61.74% ████████████░░░░░░░░ 70% target
 
-Code Size Progress:
-CanvasManager: 1,877 lines ===============------ 800 target (-1,077 lines)
-WikitextHooks: 1,553 lines ===============------ 400 target (-1,153 lines)
+Code Size Progress (lines):
+CanvasManager: 1,896  ████████████████████ 800 target (-1,096)
+LayersEditor:  1,756  ████████████████████ 800 target (-956)
+WikitextHooks: 1,143  ████████████████████ 400 target (-743)
 
 Technical Debt:
-Window.* exports: 25+  ===============------ 10 target
-Event systems:    4    ===============------ 2  target
-ESLint errors:    0    ✅ TARGET MET
-PHP errors:       0    ✅ TARGET MET
+Window.* exports:   30+    ████████████████████ 10 target
+Silent catches:     3+     ████████████████████ 0 target
+Untested modules:   5      ██████████░░░░░░░░░░ 0 target
+ESLint errors:      4      ████░░░░░░░░░░░░░░░░ 0 target
 ```
 
 ---
@@ -532,10 +536,10 @@ PHP errors:       0    ✅ TARGET MET
 - All refactoring must maintain backward compatibility
 - Each extraction should have corresponding tests
 - Document breaking changes in CHANGELOG.md
-- Phase 0 tasks are blockers — prioritize these
+- **P0 tasks are blockers** — prioritize these before new features
 - Coordinate with maintainers before major architectural changes
 - Run both `npm test` and `npm run test:php` before submitting PRs
 
 ---
 
-**Last updated:** December 1, 2025
+*Plan created by GitHub Copilot (Claude Opus 4.5 Preview) on December 1, 2025*

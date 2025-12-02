@@ -5,13 +5,27 @@ namespace MediaWiki\Extension\Layers\Hooks;
 use Exception;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Hooks\Processors\ImageLinkProcessor;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersHtmlInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
+use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
 class WikitextHooks {
+
+	/**
+	 * Singleton instance of ImageLinkProcessor
+	 * @var ImageLinkProcessor|null
+	 */
+	private static ?ImageLinkProcessor $imageLinkProcessor = null;
+
+	/**
+	 * Singleton instance of ThumbnailProcessor
+	 * @var ThumbnailProcessor|null
+	 */
+	private static ?ThumbnailProcessor $thumbnailProcessor = null;
 
 	/**
 	 * Singleton instance of LayersHtmlInjector
@@ -84,6 +98,35 @@ class WikitextHooks {
 			self::$paramExtractor = new LayersParamExtractor();
 		}
 		return self::$paramExtractor;
+	}
+
+	/**
+	 * Get image link processor instance (lazy singleton)
+	 *
+	 * @return ImageLinkProcessor
+	 */
+	private static function getImageLinkProcessor(): ImageLinkProcessor {
+		if ( self::$imageLinkProcessor === null ) {
+			self::$imageLinkProcessor = new ImageLinkProcessor(
+				self::getHtmlInjector(),
+				self::getParamExtractor()
+			);
+		}
+		return self::$imageLinkProcessor;
+	}
+
+	/**
+	 * Get thumbnail processor instance (lazy singleton)
+	 *
+	 * @return ThumbnailProcessor
+	 */
+	private static function getThumbnailProcessor(): ThumbnailProcessor {
+		if ( self::$thumbnailProcessor === null ) {
+			self::$thumbnailProcessor = new ThumbnailProcessor(
+				self::getParamExtractor()
+			);
+		}
+		return self::$thumbnailProcessor;
 	}
 
 	/**
@@ -217,73 +260,28 @@ class WikitextHooks {
 		&$res,
 		...$rest
 	): bool {
-		try {
-			$extractor = self::getParamExtractor();
-			$injector = self::getHtmlInjector();
+		$processor = self::getImageLinkProcessor();
+		$setNameFromQueue = $file ? self::getFileSetName( $file->getName() ) : null;
+		$result = $processor->processImageLink(
+			$file,
+			$handlerParams,
+			$frameParams,
+			$res,
+			$setNameFromQueue,
+			'MakeImageLink2'
+		);
 
-			// Extract layers flag from all available sources
-			$layersFlag = $extractor->extractFromAll(
-				$handlerParams,
-				$frameParams,
-				[],
-				is_string( $res ) ? $res : null
-			);
-
-			// Respect explicit off/none
-			if ( $extractor->isDisabled( $layersFlag ) ) {
-				return true;
-			}
-
-			// Check for direct JSON layer data in params
-			$layersArray = $extractor->extractLayersJson( $handlerParams );
-
-			// Enable layers if we have a valid parameter or direct JSON
-			if ( $file && ( $layersFlag !== null || $layersArray !== null ) ) {
-				// If no direct JSON, fetch from database
-				if ( $layersArray === null ) {
-					$setName = $extractor->getSetName( $layersFlag );
-					// Also check queue for set name (backward compat)
-					if ( $setName === null ) {
-						$setName = self::getFileSetName( $file->getName() );
-					}
-
-					$res = self::injectLayersIntoHtml(
-						(string)$res,
-						$file,
-						$setName,
-						'MakeImageLink2'
-					);
-				} else {
-					// Direct injection with provided layer data
-					$dimensions = $injector->getFileDimensions( $file );
-					$res = $injector->injectIntoHtml(
-						(string)$res,
-						$layersArray,
-						$dimensions['width'],
-						$dimensions['height'],
-						'MakeImageLink2-direct'
-					);
-					self::$pageHasLayers = true;
-				}
-
-				// If no layers were found but intent was explicit, add intent marker
-				if ( strpos( $res, 'data-layer-data=' ) === false && $layersFlag !== null ) {
-					$res = $injector->injectIntentMarker( (string)$res );
-				}
-			}
-		} catch ( \Throwable $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: MakeImageLink2 error', [ 'exception' => $e ] );
-			}
+		// Sync page-level flag
+		if ( $processor->pageHasLayers() ) {
+			self::$pageHasLayers = true;
 		}
 
-		return true;
+		return $result;
 	}
 
 	/**
 	 * LinkerMakeImageLink hook: MW 1.44 path for altering generated <img> HTML.
-	 * Mirrors onMakeImageLink2 so we work across core versions.
+	 * Delegates to ImageLinkProcessor for consistent handling.
 	 *
 	 * @param mixed $linker Linker object
 	 * @param mixed $title Title object
@@ -298,69 +296,27 @@ class WikitextHooks {
 	public static function onLinkerMakeImageLink(
 		$linker, $title, $file, $frameParams, $handlerParams, $time, &$res, ...$rest
 	): bool {
-		try {
-			$extractor = self::getParamExtractor();
-			$injector = self::getHtmlInjector();
+		$processor = self::getImageLinkProcessor();
+		$result = $processor->processImageLink(
+			$file,
+			$handlerParams,
+			$frameParams,
+			$res,
+			null,
+			'LinkerMakeImageLink'
+		);
 
-			// Extract layers flag from all available sources
-			$layersFlag = $extractor->extractFromAll(
-				$handlerParams,
-				$frameParams,
-				[],
-				is_string( $res ) ? $res : null
-			);
-
-			// Respect explicit off/none
-			if ( $extractor->isDisabled( $layersFlag ) ) {
-				return true;
-			}
-
-			// Check for direct JSON layer data in params
-			$layersArray = $extractor->extractLayersJson( $handlerParams );
-
-			// Enable layers if we have a valid parameter or direct JSON
-			if ( $file && ( $extractor->isDefaultEnabled( $layersFlag ) || $layersArray !== null ) ) {
-				// If no direct JSON, fetch from database
-				if ( $layersArray === null ) {
-					$setName = $extractor->getSetName( $layersFlag );
-
-					$res = self::injectLayersIntoHtml(
-						(string)$res,
-						$file,
-						$setName,
-						'LinkerMakeImageLink'
-					);
-				} else {
-					// Direct injection with provided layer data
-					$dimensions = $injector->getFileDimensions( $file );
-					$res = $injector->injectIntoHtml(
-						(string)$res,
-						$layersArray,
-						$dimensions['width'],
-						$dimensions['height'],
-						'LinkerMakeImageLink-direct'
-					);
-					self::$pageHasLayers = true;
-				}
-
-				// If no layers were found but intent was explicit, add intent marker
-				if ( strpos( $res, 'data-layer-data=' ) === false && $layersFlag !== null ) {
-					$res = $injector->injectIntentMarker( (string)$res );
-				}
-			}
-		} catch ( \Throwable $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: LinkerMakeImageLink error', [ 'exception' => $e ] );
-			}
+		// Sync page-level flag
+		if ( $processor->pageHasLayers() ) {
+			self::$pageHasLayers = true;
 		}
 
-		return true;
+		return $result;
 	}
 
 	/**
 	 * LinkerMakeMediaLinkFile hook: another path used by MW to render <img> HTML within links.
-	 * We mirror the same injection logic here.
+	 * Delegates to ImageLinkProcessor for consistent handling.
 	 *
 	 * @param mixed $title Title object
 	 * @param mixed $file File object
@@ -371,161 +327,15 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onLinkerMakeMediaLinkFile( $title, $file, &$res, &$attribs, $time, ...$rest ): bool {
-		try {
-			if ( !$file ) {
-				return true;
-			}
+		$processor = self::getImageLinkProcessor();
+		$result = $processor->processMediaLink( $file, $res, $attribs );
 
-			// Extract layers param from result HTML or attributes
-			$param = self::extractLayersParamFromMediaLink( (string)$res, $attribs );
-			if ( $param === null ) {
-				return true;
-			}
-
-			$extractor = self::getParamExtractor();
-			$injector = self::getHtmlInjector();
-
-			// Respect explicit off/none
-			if ( $extractor->isDisabled( $param ) ) {
-				return true;
-			}
-
-			// Resolve layer data based on the param value
-			$layersArray = self::resolveLayerSetFromParam( $file, $param );
-
-			if ( $layersArray !== null ) {
-				// Use injector for HTML modification
-				$dimensions = $injector->getFileDimensions( $file );
-				$res = $injector->injectIntoHtml(
-					(string)$res,
-					$layersArray,
-					$dimensions['width'],
-					$dimensions['height'],
-					'LinkerMakeMediaLinkFile'
-				);
-
-				// Also set attributes via reference array for core-generated markup paths
-				if ( is_array( $attribs ) ) {
-					$injector->injectIntoAttributes(
-						$attribs,
-						$layersArray,
-						$dimensions['width'],
-						$dimensions['height']
-					);
-				}
-
-				self::$pageHasLayers = true;
-			} else {
-				// No inline data, but explicit param detected: mark for client API fallback
-				if ( is_array( $attribs ) ) {
-					$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
-					$attribs['data-layers-intent'] = 'on';
-				}
-				$res = $injector->injectIntentMarker( (string)$res );
-			}
-		} catch ( \Throwable $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: LinkerMakeMediaLinkFile error', [ 'exception' => $e ] );
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * Extract layers parameter from media link HTML or attributes
-	 *
-	 * @param string $html The HTML string
-	 * @param array $attribs The attributes array
-	 * @return string|null The normalized param value, or null if not found
-	 */
-	private static function extractLayersParamFromMediaLink( string $html, array $attribs ): ?string {
-		$param = null;
-
-		// Try to extract layers=<...> from result HTML first
-		if ( preg_match( '/(?:[\?&#]|\|)layers=([^\s"\'<>|&#]+)/i', $html, $m ) ) {
-			$param = $m[1];
+		// Sync page-level flag
+		if ( $processor->pageHasLayers() ) {
+			self::$pageHasLayers = true;
 		}
 
-		// Try attributes next
-		if ( $param === null && is_array( $attribs ) ) {
-			foreach ( [ 'href', 'data-mw-href' ] as $k ) {
-				if (
-					isset( $attribs[$k] ) && preg_match(
-						'/(?:[\?&#]|\|)layers=([^\s"\'<>|&#]+)/i',
-						(string)$attribs[$k],
-						$mm
-					)
-				) {
-					$param = $mm[1];
-					break;
-				}
-			}
-		}
-
-		if ( $param === null ) {
-			return null;
-		}
-
-		return strtolower( trim( urldecode( $param ) ) );
-	}
-
-	/**
-	 * Resolve layer set data from a layers parameter value
-	 * Supports: 'on', 'all', 'id:123', 'name:setname', 'abc1,def2' (short IDs), or named set
-	 *
-	 * @param mixed $file The File object
-	 * @param string $param The normalized layers parameter value
-	 * @return array|null The layers array, or null if not found
-	 */
-	private static function resolveLayerSetFromParam( $file, string $param ): ?array {
-		$db = self::getLayersDatabaseService();
-		if ( !$db ) {
-			return null;
-		}
-
-		$filename = $file->getName();
-		$sha1 = $file->getSha1();
-
-		// 'on' or 'all' => show default set
-		if ( $param === 'on' || $param === 'all' ) {
-			$latest = $db->getLatestLayerSet( $filename, $sha1 );
-			return self::extractLayersFromSet( $latest );
-		}
-
-		// 'id:123' => specific set by ID
-		if ( preg_match( '/^id:(\d+)$/', $param, $idM ) ) {
-			$ls = $db->getLayerSet( (int)$idM[1] );
-			return self::extractLayersFromSet( $ls );
-		}
-
-		// 'name:setname' => specific named set
-		if ( preg_match( '/^name:(.+)$/', $param, $nm ) ) {
-			$ls = $db->getLayerSetByName( $filename, $sha1, $nm[1] );
-			return self::extractLayersFromSet( $ls );
-		}
-
-		// CSV of short IDs (e.g., 'abc1,def2') => subset from latest
-		if ( preg_match( '/^[0-9a-f]{2,8}(?:\s*,\s*[0-9a-f]{2,8})*$/i', $param ) ) {
-			$latest = $db->getLatestLayerSet( $filename, $sha1 );
-			if ( $latest && isset( $latest['data']['layers'] ) && is_array( $latest['data']['layers'] ) ) {
-				$wanted = array_map( 'trim', explode( ',', strtolower( $param ) ) );
-				$subset = [];
-				foreach ( (array)$latest['data']['layers'] as $layer ) {
-					$id = strtolower( (string)( $layer['id'] ?? '' ) );
-					$short = substr( $id, 0, 4 );
-					if ( in_array( $short, $wanted, true ) ) {
-						$subset[] = $layer;
-					}
-				}
-				return $subset;
-			}
-			return null;
-		}
-
-		// Any other value => treat as named set lookup
-		$ls = $db->getLayerSetByName( $filename, $sha1, $param );
-		return self::extractLayersFromSet( $ls );
+		return $result;
 	}
 
 	/**
@@ -836,207 +646,17 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onThumbnailBeforeProduceHTML( $thumbnail, array &$attribs, array &$linkAttribs ): bool {
-		$fileName = ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() )
-			? $thumbnail->getFile()->getName()
-			: 'unknown';
-		self::log( "ThumbnailBeforeProduceHTML for: $fileName" );
-
-		// Extract layer data and flag from transform params
-		[ $layerData, $layersFlag ] = self::extractLayerDataFromThumbnail( $thumbnail );
-
-		// Try to get layers flag from link href if not in params
-		if ( $layersFlag === null && isset( $linkAttribs['href'] ) ) {
-			$layersFlag = self::extractLayersParamFromHref( (string)$linkAttribs['href'] );
-		}
-
-		self::log( "layersFlag=$layersFlag, hasData=" . ( $layerData !== null ? 'yes' : 'no' ) );
-
-		// Respect explicit disable
-		if ( $layersFlag === 'off' || $layersFlag === 'none' || $layersFlag === false ) {
-			self::log( 'Layers explicitly disabled' );
-			return true;
-		}
-
-		// Try to fetch from DB if no data yet
-		if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
-			$layerData = self::fetchLayerDataForThumbnail( $thumbnail, $layersFlag, $linkAttribs );
-		}
-
-		// Inject layer data into attributes
-		self::injectThumbnailLayerData( $attribs, $layerData, $layersFlag, $thumbnail );
-
-		return true;
-	}
-
-	/**
-	 * Extract layer data and flag from thumbnail transform params.
-	 *
-	 * @param mixed $thumbnail
-	 * @return array [ ?array $layerData, ?string $layersFlag ]
-	 */
-	private static function extractLayerDataFromThumbnail( $thumbnail ): array {
-		$layerData = null;
-		$layersFlag = null;
-
-		if ( !method_exists( $thumbnail, 'getParams' ) ) {
-			return [ null, null ];
-		}
-
-		$params = $thumbnail->getParams();
-
-		// Check layersjson param (JSON string)
-		if ( isset( $params['layersjson'] ) && is_string( $params['layersjson'] ) ) {
-			$decoded = json_decode( $params['layersjson'], true );
-			if ( is_array( $decoded ) ) {
-				$layerData = isset( $decoded['layers'] ) && is_array( $decoded['layers'] )
-					? $decoded['layers']
-					: $decoded;
-			}
-		}
-
-		// Fallback to layerData param
-		if ( $layerData === null && isset( $params['layerData'] ) ) {
-			$layerData = $params['layerData'];
-			self::log( 'Found layer data in transform params' );
-		}
-
-		// Get layers flag
-		if ( array_key_exists( 'layers', $params ) ) {
-			$layersFlag = $params['layers'];
-		} elseif ( array_key_exists( 'layer', $params ) ) {
-			$layersFlag = $params['layer'];
-		}
-
-		// Normalize flag
-		if ( is_string( $layersFlag ) ) {
-			$layersFlag = strtolower( trim( $layersFlag ) );
-		}
-
-		return [ $layerData, $layersFlag ];
-	}
-
-	/**
-	 * Fetch layer data from database for a thumbnail.
-	 *
-	 * @param mixed $thumbnail
-	 * @param string|null &$layersFlag Modified if wikitext queue has set name
-	 * @param array $linkAttribs
-	 * @return array|null
-	 */
-	private static function fetchLayerDataForThumbnail( $thumbnail, ?string &$layersFlag, array $linkAttribs ): ?array {
-		$file = $thumbnail->getFile();
-		if ( !$file ) {
-			return null;
-		}
-
-		$filename = $file->getName();
-		$shouldFallback = false;
-
-		// Check wikitext preprocessing queue
-		$storedSetName = self::getFileSetName( $filename );
-		if ( $storedSetName !== null ) {
-			if ( in_array( $storedSetName, [ 'off', 'none', 'false' ], true ) ) {
-				self::log( "Layers disabled via wikitext for $filename" );
-				return null;
-			}
-			$shouldFallback = true;
-			$layersFlag = $storedSetName;
-			self::log( "Using wikitext set name: $storedSetName for $filename" );
-		}
-
-		// Check if flag indicates layers should show
-		if ( !$shouldFallback && $layersFlag !== null && !in_array( $layersFlag, [ 'off', 'none' ], true ) ) {
-			$shouldFallback = true;
-		}
-
-		// Check href for layers param
-		if ( !$shouldFallback && isset( $linkAttribs['href'] ) ) {
-			$hrefParam = self::extractLayersParamFromHref( (string)$linkAttribs['href'] );
-			if ( $hrefParam !== null && !in_array( $hrefParam, [ 'off', 'none' ], true ) ) {
-				$shouldFallback = true;
-				$layersFlag = $hrefParam;
-			}
-		}
-
-		// Enable for editlayers action
-		if ( !$shouldFallback && self::isEditLayersAction() ) {
-			$shouldFallback = true;
-			self::log( 'Enabling fallback for action=editlayers' );
-		}
-
-		if ( !$shouldFallback ) {
-			return null;
-		}
-
-		// Fetch from database
-		try {
-			$db = self::getLayersDatabaseService();
-			if ( !$db ) {
-				throw new Exception( 'LayersDatabase service unavailable' );
-			}
-
-			$isDefaultSet = $layersFlag === null || in_array( $layersFlag, [ 'on', 'all', 'true' ], true );
-			$layerSet = $isDefaultSet
-				? $db->getLatestLayerSet( $filename, $file->getSha1() )
-				: $db->getLayerSetByName( $filename, $file->getSha1(), $layersFlag );
-
-			if ( $layerSet && isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] ) ) {
-				$layers = $layerSet['data']['layers'];
-				self::log( sprintf( 'DB fallback: %d layers (set: %s)', count( $layers ), $layersFlag ?? 'default' ) );
-				return $layers;
-			}
-		} catch ( \Throwable $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: Error retrieving layer data', [ 'exception' => $e ] );
-			}
-		}
-
-		return null;
-	}
-
-	/**
-	 * Inject layer data into thumbnail attributes.
-	 *
-	 * @param array &$attribs
-	 * @param array|null $layerData
-	 * @param string|null $layersFlag
-	 * @param mixed $thumbnail
-	 */
-	private static function injectThumbnailLayerData(
-		array &$attribs,
-		?array $layerData,
-		?string $layersFlag,
-		$thumbnail
-	): void {
-		// Always add instance marker
-		$instanceId = 'layers-' . substr( md5( uniqid( (string)mt_rand(), true ) ), 0, 8 );
-		$attribs['data-layers-instance'] = $instanceId;
-
-		if ( $layerData !== null ) {
+		$processor = self::getThumbnailProcessor();
+		$result = $processor->processThumbnail(
+			$thumbnail,
+			$attribs,
+			$linkAttribs,
+			[ __CLASS__, 'getFileSetName' ]
+		);
+		if ( $processor->pageHasLayers() ) {
 			self::$pageHasLayers = true;
-
-			// Get base dimensions for scaling
-			$file = method_exists( $thumbnail, 'getFile' ) ? $thumbnail->getFile() : null;
-			$payload = [ 'layers' => $layerData ];
-			if ( $file && method_exists( $file, 'getWidth' ) && method_exists( $file, 'getHeight' ) ) {
-				$payload['baseWidth'] = (int)$file->getWidth();
-				$payload['baseHeight'] = (int)$file->getHeight();
-			}
-
-			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
-			$attribs['data-layer-data'] = json_encode( $payload );
-
-			self::log( sprintf( 'Added %d layers, instance: %s', count( $layerData ), $instanceId ) );
-		} else {
-			self::log( "No layer data, instance: $instanceId" );
-
-			// Mark intent for client-side API fetch
-			if ( in_array( $layersFlag, [ 'on', 'all', true ], true ) ) {
-				$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
-				$attribs['data-layers-intent'] = 'on';
-			}
 		}
+		return $result;
 	}
 
 	/**
@@ -1519,35 +1139,5 @@ class WikitextHooks {
 		} catch ( \Throwable $e ) {
 			return false;
 		}
-	}
-
-	/**
-	 * Detect whether the active action is the editlayers view.
-	 *
-	 * @return bool
-	 */
-	private static function isEditLayersAction(): bool {
-		try {
-			$context = RequestContext::getMain();
-			$request = $context ? $context->getRequest() : null;
-			$action = $request ? $request->getVal( 'action', '' ) : '';
-			return $action === 'editlayers';
-		} catch ( \Throwable $e ) {
-			return false;
-		}
-	}
-
-	/**
-	 * Extract layers parameter value from URL/href string.
-	 * Returns the value of layers= or layer= parameter, or null if not found.
-	 * Returns 'off' for explicit none/off values.
-	 *
-	 * @param string $href URL or href string to parse
-	 * @return string|null The layers parameter value, 'off' for none/off, or null if not found
-	 * @deprecated Use LayersParamExtractor::extractFromHref() directly for new code
-	 */
-	private static function extractLayersParamFromHref( string $href ): ?string {
-		// Delegate to the processor class for centralized extraction logic
-		return self::getParamExtractor()->extractFromHref( $href );
 	}
 }

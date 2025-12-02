@@ -1663,4 +1663,9 @@
 	// Export Toolbar to global scope
 	window.Toolbar = Toolbar;
 
+	// CommonJS export for testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = Toolbar;
+	}
+
 }() );

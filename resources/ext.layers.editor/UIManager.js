@@ -592,3 +592,8 @@ class UIManager {
 
 // Export UIManager to global scope
 window.UIManager = UIManager;
+
+// CommonJS export for testing
+if ( typeof module !== 'undefined' && module.exports ) {
+	module.exports = UIManager;
+}

@@ -1348,8 +1348,8 @@
 
 		// Clean up canvas manager and its event systems
 		if ( this.canvasManager ) {
-			if ( this.canvasManager.eventSystem && typeof this.canvasManager.eventSystem.destroy === 'function' ) {
-				this.canvasManager.eventSystem.destroy();
+			if ( this.canvasManager.events && typeof this.canvasManager.events.destroy === 'function' ) {
+				this.canvasManager.events.destroy();
 			}
 			if ( this.canvasManager.selectionSystem && typeof this.canvasManager.selectionSystem.destroy === 'function' ) {
 				this.canvasManager.selectionSystem.destroy();

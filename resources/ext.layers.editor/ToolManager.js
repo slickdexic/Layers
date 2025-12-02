@@ -952,4 +952,9 @@
 	window.LayersToolManager = ToolManager;
 	window.ToolManager = ToolManager;
 
+	// CommonJS export for testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = ToolManager;
+	}
+
 }() );

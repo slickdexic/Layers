@@ -56,7 +56,8 @@ module.exports = {
 	testPathIgnorePatterns: [
 		'/node_modules/',
 		'/vendor/',
-		'/tests/phpunit/'
+		'/tests/phpunit/',
+		'/archive/'
 	],
 
 	// Verbose output
