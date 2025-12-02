@@ -199,10 +199,12 @@ class LayerInjector {
 		}
 
 		// Get layer data from database
+		// Use getLatestLayerSet with optional setName filter (sha1 required for DB lookup)
+		$sha1 = $file->getSha1();
 		if ( $setName !== null && $setName !== 'default' && $setName !== 'on' && $setName !== 'all' ) {
-			$layerSet = $db->getLatestLayerSetByName( $file->getName(), $setName );
+			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1, $setName );
 		} else {
-			$layerSet = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
+			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1 );
 		}
 
 		if ( !$layerSet || !isset( $layerSet['data'] ) ) {

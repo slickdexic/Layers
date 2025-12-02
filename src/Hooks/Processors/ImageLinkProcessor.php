@@ -275,9 +275,10 @@ class ImageLinkProcessor {
 		$sha1 = $file->getSha1();
 
 		// Get the layer set from database
+		// Use getLatestLayerSet with optional setName filter
 		$layerSet = null;
 		if ( $setName !== null && $setName !== '' && $setName !== 'default' ) {
-			$layerSet = $db->getLatestLayerSetByName( $filename, $sha1, $setName );
+			$layerSet = $db->getLatestLayerSet( $filename, $sha1, $setName );
 		} else {
 			$layerSet = $db->getLatestLayerSet( $filename, $sha1 );
 		}
@@ -403,7 +404,7 @@ class ImageLinkProcessor {
 
 		// 'name:setname' => specific named set
 		if ( preg_match( '/^name:(.+)$/', $param, $nameM ) ) {
-			$ls = $db->getLatestLayerSetByName( $filename, $sha1, $nameM[1] );
+			$ls = $db->getLatestLayerSet( $filename, $sha1, $nameM[1] );
 			return $this->extractLayersFromSet( $ls );
 		}
 
@@ -433,7 +434,7 @@ class ImageLinkProcessor {
 		}
 
 		// Plain string => treat as named set
-		$ls = $db->getLatestLayerSetByName( $filename, $sha1, $param );
+		$ls = $db->getLatestLayerSet( $filename, $sha1, $param );
 		return $this->extractLayersFromSet( $ls );
 	}
 
