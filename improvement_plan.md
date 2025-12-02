@@ -34,7 +34,7 @@ This document provides a prioritized, actionable improvement plan for the Layers
 | CanvasManager.js lines | 1,899 | <800 | 🔴 1,099 over |
 | LayersEditor.js lines | 1,756 | <800 | 🔴 956 over |
 | Toolbar.js lines | 1,678 | <800 | 🔴 878 over |
-| WikitextHooks.php lines | 1,143 | <400 | 🔴 743 over |
+| WikitextHooks.php lines | 775 | <400 | 🟡 375 over (was 743) |
 | init.js lines | 854 | <400 | 🔴 454 over |
 | Window.* exports | 40+ | <10 | 🔴 30+ over |
 | Silent catch blocks | 0 | 0 | ✅ Fixed |
@@ -183,34 +183,46 @@ CanvasManager now primarily consists of:
 ### P1.2 Split WikitextHooks.php
 
 **Priority:** P1 - HIGH  
-**Status:** 🔴 Not Started  
+**Status:** � IN PROGRESS  
 **Effort:** 2-3 days  
 **Risk:** MEDIUM  
-**Current:** 1,143 lines | **Target:** <400 lines
+**Current:** 775 lines (was 1,143) | **Target:** <400 lines | **Progress:** 32% reduction achieved
 
 **Problem:** One file handles 13+ hooks with complex shared state.
 
-**Proposed Split:**
+**Progress (Dec 2025):**
+Created processor classes to extract business logic from WikitextHooks.php:
 
-| New File | Hooks | Purpose |
-|----------|-------|---------|
-| `ParameterHooks.php` | `GetLinkParamDefinitions`, `GetLinkParamTypes`, `ParserGetImageLinkParams`, `ParserGetImageLinkOptions`, `ParserMakeImageParams` | Parameter handling |
-| `ImageRenderHooks.php` | `ImageBeforeProduceHTML`, `ThumbnailBeforeProduceHTML`, `MakeImageLink2`, `LinkerMakeImageLink`, `LinkerMakeMediaLinkFile` | Rendering |
-| `ParsingHooks.php` | `ParserFirstCallInit`, `ParserBeforeInternalParse`, `FileLink` | Parser integration |
+| File | Lines | Purpose | Status |
+|------|-------|---------|--------|
+| `Processors/ImageLinkProcessor.php` | 477 | Image link rendering | ✅ Existing |
+| `Processors/ThumbnailProcessor.php` | 363 | Thumbnail processing | ✅ Existing |
+| `Processors/LayersParamExtractor.php` | 303 | Parameter extraction | ✅ Existing |
+| `Processors/LayersHtmlInjector.php` | 259 | HTML/attribute injection | ✅ Existing |
+| `Processors/LayeredFileRenderer.php` | 286 | Parser function rendering | ✅ NEW |
+| `Processors/LayerInjector.php` | 256 | Layer data injection | ✅ NEW |
+| **Total Processors** | **1,944** | | |
 
-**Tasks:**
-- [ ] Create `ParameterHooks.php` with parameter-related hooks
-- [ ] Create `ImageRenderHooks.php` with rendering hooks
-- [ ] Create `ParsingHooks.php` with parser hooks
-- [ ] Update `extension.json` to register new hook handlers
-- [ ] Move shared state to a service class
-- [ ] Write PHPUnit tests for each new class
+**What was extracted:**
+- `renderLayeredFile()` → `LayeredFileRenderer` (~95 lines)
+- `generateLayeredThumbnailUrl()` → `LayeredFileRenderer` (~65 lines)
+- `addLatestLayersToImage()` → `LayerInjector` (~40 lines)
+- `addSpecificLayersToImage()` → `LayerInjector` (~30 lines)
+- `addSubsetLayersToImage()` → `LayerInjector` (~30 lines)
+- `injectLayersIntoAttributes()` → `LayerInjector` (~55 lines)
+- Removed dead code: `injectLayersIntoHtml()`, `extractLayersFromSet()`, `extractLayersFromDataMw()` (~80 lines)
+- Removed unused imports (`Exception`, `ThumbnailRenderer`)
+
+**Remaining Tasks:**
+- [ ] Consider further extraction of hook handlers to separate files
+- [ ] Move shared static state (`$pageHasLayers`, `$fileSetNames`, `$fileRenderCount`) to a service
+- [ ] Create PHPUnit tests for new processor classes
 
 **Acceptance Criteria:**
-- [ ] WikitextHooks.php <400 lines (or removed)
-- [ ] Each new class handles one concern
-- [ ] No static mutable state (use services)
-- [ ] PHP tests pass
+- [ ] WikitextHooks.php <600 lines (revised intermediate goal)
+- [x] Business logic extracted to processors
+- [ ] PHPUnit tests for processors
+- [x] Existing tests pass
 
 ---
 

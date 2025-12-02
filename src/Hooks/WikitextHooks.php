@@ -2,14 +2,14 @@
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
-use Exception;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\Processors\ImageLinkProcessor;
+use MediaWiki\Extension\Layers\Hooks\Processors\LayeredFileRenderer;
+use MediaWiki\Extension\Layers\Hooks\Processors\LayerInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersHtmlInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
-use MediaWiki\Extension\Layers\ThumbnailRenderer;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -38,6 +38,18 @@ class WikitextHooks {
 	 * @var LayersParamExtractor|null
 	 */
 	private static ?LayersParamExtractor $paramExtractor = null;
+
+	/**
+	 * Singleton instance of LayeredFileRenderer
+	 * @var LayeredFileRenderer|null
+	 */
+	private static ?LayeredFileRenderer $layeredFileRenderer = null;
+
+	/**
+	 * Singleton instance of LayerInjector
+	 * @var LayerInjector|null
+	 */
+	private static ?LayerInjector $layerInjector = null;
 
 	/**
 	 * Cached logger instance
@@ -98,6 +110,34 @@ class WikitextHooks {
 			self::$paramExtractor = new LayersParamExtractor();
 		}
 		return self::$paramExtractor;
+	}
+
+	/**
+	 * Get layered file renderer instance (lazy singleton)
+	 *
+	 * @return LayeredFileRenderer
+	 */
+	private static function getLayeredFileRenderer(): LayeredFileRenderer {
+		if ( self::$layeredFileRenderer === null ) {
+			self::$layeredFileRenderer = new LayeredFileRenderer(
+				self::getLogger()
+			);
+		}
+		return self::$layeredFileRenderer;
+	}
+
+	/**
+	 * Get layer injector instance (lazy singleton)
+	 *
+	 * @return LayerInjector
+	 */
+	private static function getLayerInjector(): LayerInjector {
+		if ( self::$layerInjector === null ) {
+			self::$layerInjector = new LayerInjector(
+				self::getLogger()
+			);
+		}
+		return self::$layerInjector;
 	}
 
 	/**
@@ -195,9 +235,12 @@ class WikitextHooks {
 
 			// Inject only when explicitly requested
 			if ( $extractor->isDefaultEnabled( $layersFlag ) && $file ) {
-				// Use helper method for clean injection
+				// Use injector for clean injection
 				$setName = $extractor->getSetName( $layersFlag );
-				self::injectLayersIntoAttributes( $attribs, $file, $setName, 'ImageBeforeProduceHTML' );
+				$injector = self::getLayerInjector();
+				if ( $injector->injectIntoAttributes( $attribs, $file, $setName, 'ImageBeforeProduceHTML' ) ) {
+					self::$pageHasLayers = true;
+				}
 			}
 		} catch ( \Throwable $e ) {
 			$logger = self::getLogger();
@@ -222,18 +265,6 @@ class WikitextHooks {
 		// This hook can be used for post-processing if needed
 		// Currently, layer processing is handled at the file level
 		return true;
-	}
-
-	/**
-	 * Attempt to extract layers flag from data-mw JSON embedded in generated HTML.
-	 * Looks into originalArgs and options arrays for 'layers' or 'layer'.
-	 *
-	 * @param string $html
-	 * @return string|null 'all'|'on'|'off'|'none' or null if not found
-	 * @deprecated Use LayersParamExtractor::extractFromDataMw() directly for new code
-	 */
-	private static function extractLayersFromDataMw( string $html ): ?string {
-		return self::getParamExtractor()->extractFromDataMw( $html );
 	}
 
 	/**
@@ -339,22 +370,8 @@ class WikitextHooks {
 	}
 
 	/**
-	 * Extract layers array from a layer set result
-	 *
-	 * @param array|null $layerSet The layer set from database
-	 * @return array|null The layers array, or null
-	 */
-	private static function extractLayersFromSet( ?array $layerSet ): ?array {
-		if ( !$layerSet || !isset( $layerSet['data'] ) ) {
-			return null;
-		}
-		return ( isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] ) )
-			? $layerSet['data']['layers']
-			: null;
-	}
-
-	/**
 	 * Register parser functions and hooks
+	 *
 	 * @param mixed $parser The parser object
 	 * @return bool
 	 */
@@ -458,173 +475,14 @@ class WikitextHooks {
 	/**
 	 * Render a file with layers
 	 * Usage: {{#layeredfile:ImageTest02.jpg|500px|layers=on|caption}}
+	 *
 	 * @param mixed $parser The parser object
 	 * @param mixed $frame The frame object
 	 * @param array $args The arguments array
 	 * @return string
 	 */
 	public static function renderLayeredFile( $parser, $frame, $args ) {
-		try {
-			// Parse arguments - first is filename, rest are key=value or simple values
-			if ( empty( $args ) ) {
-				return '<span class="error">No filename specified</span>';
-			}
-
-			$filename = isset( $args[0] ) ? trim( $frame->expand( $args[0] ) ) : '';
-			$size = isset( $args[1] ) ? trim( $frame->expand( $args[1] ) ) : '';
-			$layersArg = isset( $args[2] ) ? trim( $frame->expand( $args[2] ) ) : '';
-			$caption = isset( $args[3] ) ? trim( $frame->expand( $args[3] ) ) : '';
-
-			if ( empty( $filename ) ) {
-				return '<span class="error">No filename specified</span>';
-			}
-
-			// Parse the layers parameter
-			// default to off
-			$layersParam = 'off';
-			if ( !empty( $layersArg ) && strpos( $layersArg, 'layers=' ) === 0 ) {
-				// Remove 'layers=' prefix
-				$layersParam = substr( $layersArg, 7 );
-			} elseif ( $layersArg === 'layers' || $layersArg === 'on' ) {
-				$layersParam = 'on';
-			}
-
-			// Get the file
-			$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
-				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-				: null;
-			$repoGroup = $services ? $services->getRepoGroup() : null;
-			$file = $repoGroup ? $repoGroup->findFile( $filename ) : null;
-
-			if ( !$file ) {
-				$fn = htmlspecialchars( $filename );
-				return '<span class="error">File not found: ' . $fn . '</span>';
-			}
-
-			// If layers are not requested, fall back to normal image display
-			if ( $layersParam === 'off' ) {
-				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
-			}
-
-			// Check for layer data
-			$db = self::getLayersDatabaseService();
-			if ( !$db ) {
-				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
-			}
-			$layerSets = $db->getLayerSetsForImage( $file->getName(), $file->getSha1() );
-			if ( empty( $layerSets ) ) {
-				// Fall back to normal image display
-				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
-			}
-
-			// Parse size parameter
-			// default width
-			$width = 300;
-			if ( preg_match( '/(\d+)px/', $size, $sizeMatch ) ) {
-				$width = intval( $sizeMatch[1] );
-			} elseif ( preg_match( '/x(\d+)px/', $size, $sizeMatch ) ) {
-				$width = intval( $sizeMatch[1] );
-			} elseif ( $size === 'thumb' ) {
-				// MediaWiki default thumb size
-				$width = 220;
-			}
-
-			// Generate layered thumbnail
-			$layeredSrc = self::generateLayeredThumbnailUrl( $filename, $width, $layersParam );
-
-			if ( $layeredSrc ) {
-				// Generate HTML for layered image
-				$alt = !empty( $caption ) ? htmlspecialchars( $caption ) : htmlspecialchars( $filename );
-				$title = !empty( $caption ) ? htmlspecialchars( $caption ) : '';
-
-				// Build basic file page URL; avoid hard dependency on Title for static analysis.
-				$href = '/wiki/File:' . rawurlencode( $filename );
-				return '<span class="mw-default-size" typeof="mw:File">' .
-				   '<a href="' . htmlspecialchars( $href ) . '" class="mw-file-description"' .
-				   ( $title ? ' title="' . $title . '"' : '' ) . '>' .
-				   '<img alt="' . $alt . '" src="' . htmlspecialchars( $layeredSrc ) . '" ' .
-				   'decoding="async" width="' . $width . '" class="mw-file-element" />' .
-				   '</a></span>';
-			}
-
-			// Fall back to normal image display
-			return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
-		} catch ( Exception $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: renderLayeredFile error', [ 'exception' => $e ] );
-			}
-			return '<span class="error">Error rendering layered file</span>';
-		}
-	}
-
-	/**
-	 * Generate URL for layered thumbnail
-	 * @param string $filename The filename to generate URL for
-	 * @param int $width The width for the thumbnail
-	 * @param string $layersParam The layers parameter
-	 * @return string|null
-	 */
-	private static function generateLayeredThumbnailUrl( $filename, $width, $layersParam ) {
-		try {
-			$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
-				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-				: null;
-			$repoGroup = $services ? $services->getRepoGroup() : null;
-			$file = $repoGroup ? $repoGroup->findFile( $filename ) : null;
-
-			if ( !$file ) {
-				return null;
-			}
-
-			// Get layer data
-			$db = self::getLayersDatabaseService();
-			if ( !$db ) {
-				return null;
-			}
-			$layerSets = $db->getLayerSetsForImage( $file->getName(), $file->getSha1() );
-
-			if ( empty( $layerSets ) ) {
-				return null;
-			}
-
-			// Find the right layer set
-			// Default to first
-			$selectedLayerSet = $layerSets[0];
-
-			if ( $layersParam !== 'on' ) {
-				foreach ( $layerSets as $layerSet ) {
-					if ( $layerSet['ls_name'] === $layersParam ) {
-						$selectedLayerSet = $layerSet;
-						break;
-					}
-				}
-			}
-
-			// Generate layered thumbnail
-			$params = [
-				'width' => intval( $width ),
-				'layers' => 'on',
-				'layerSetId' => $selectedLayerSet['ls_id'],
-				'layerData' => json_decode( $selectedLayerSet['ls_json_blob'], true )['layers']
-			];
-
-			$renderer = new ThumbnailRenderer();
-			$layeredPath = $renderer->generateLayeredThumbnail( $file, $params );
-
-			if ( $layeredPath ) {
-				// Build a LayeredThumbnail to resolve a proper web URL consistently
-				$thumb = new \MediaWiki\Extension\Layers\LayeredThumbnail( $file, $layeredPath, $params );
-				return $thumb->getUrl();
-			}
-		} catch ( Exception $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: generateLayeredThumbnailUrl error', [ 'exception' => $e ] );
-			}
-		}
-
-		return null;
+		return self::getLayeredFileRenderer()->render( $parser, $frame, $args );
 	}
 
 	/**
@@ -697,11 +555,15 @@ class WikitextHooks {
 		// Mark page has layers
 		self::$pageHasLayers = true;
 
+		// Get injector instance for layer data injection
+		$injector = self::getLayerInjector();
+
 		// Process based on parameter type
 		if ( $layersRaw === true || $layersRaw === 'on' || $layersRaw === 'all' ) {
 			// Show latest/default set
 			if ( $file ) {
-				self::addLatestLayersToImage( $file, $params );
+				$setName = self::getFileSetName( $file->getName() );
+				$injector->addLatestLayersToImage( $file, $params, $setName );
 			}
 		} elseif (
 			is_string( $layersRaw ) &&
@@ -709,12 +571,12 @@ class WikitextHooks {
 		) {
 			// Comma-separated short IDs
 			if ( $file ) {
-				self::addSubsetLayersToImage( $file, $layersRaw, $params );
+				$injector->addSubsetLayersToImage( $file, $layersRaw, $params );
 			}
 		} elseif ( is_string( $layersRaw ) ) {
 			// Named set or id: prefix
 			if ( $file ) {
-				self::addSpecificLayersToImage( $file, $layersRaw, $params );
+				$injector->addSpecificLayersToImage( $file, $layersRaw, $params );
 			}
 		}
 
@@ -877,236 +739,6 @@ class WikitextHooks {
 		}
 
 		return true;
-	}
-
-	/**
-	 * Add latest layer set to image parameters
-	 * @param mixed $file
-	 * @param array &$params
-	 */
-	private static function addLatestLayersToImage( $file, array &$params ): void {
-		$db = self::getLayersDatabaseService();
-		if ( !$db ) {
-			return;
-		}
-
-		// Check if a specific set name was requested for this file in wikitext
-		$filename = $file->getName();
-		$setNameFromQueue = self::getFileSetName( $filename );
-
-		// Determine which layer set to fetch
-		$layerSet = null;
-		if ( $setNameFromQueue === null
-			|| $setNameFromQueue === 'on'
-			|| $setNameFromQueue === 'all'
-			|| $setNameFromQueue === 'true' ) {
-			// Default behavior - get the default/latest set
-			$layerSet = $db->getLatestLayerSet( $filename, $file->getSha1() );
-		} elseif ( $setNameFromQueue === 'off' || $setNameFromQueue === 'none' || $setNameFromQueue === 'false' ) {
-			// Explicitly disabled - don't fetch any layer set
-			return;
-		} else {
-			// Named set
-			$layerSet = $db->getLayerSetByName( $filename, $file->getSha1(), $setNameFromQueue );
-		}
-
-		if ( $layerSet ) {
-			$params['layerSetId'] = $layerSet['id'];
-			// Pass only the layers array
-			$params['layerData'] = isset( $layerSet['data']['layers'] )
-				? $layerSet['data']['layers']
-				: $layerSet['data'];
-		}
-	}
-
-	/**
-	 * Add specific layer set to image parameters
-	 * @param mixed $file
-	 * @param string $layersParam
-	 * @param array &$params
-	 */
-	private static function addSpecificLayersToImage( $file, string $layersParam, array &$params ): void {
-		$db = self::getLayersDatabaseService();
-		if ( !$db ) {
-			return;
-		}
-
-		if ( strpos( $layersParam, 'id:' ) === 0 ) {
-			// Layer set by ID
-			$layerSetId = (int)substr( $layersParam, 3 );
-			$layerSet = $db->getLayerSet( $layerSetId );
-		} elseif ( strpos( $layersParam, 'name:' ) === 0 ) {
-			// Layer set by name
-			$layerSetName = substr( $layersParam, 5 );
-			$layerSet = $db->getLayerSetByName( $file->getName(), $file->getSha1(), $layerSetName );
-		} else {
-			// Legacy format or other formats
-			$layerSet = null;
-		}
-
-		if ( $layerSet ) {
-			$params['layerSetId'] = $layerSet['id'];
-			$params['layerData'] = isset( $layerSet['data']['layers'] )
-				? $layerSet['data']['layers']
-				: $layerSet['data'];
-		}
-	}
-
-	/**
-	 * Add subset of layers (by comma-separated short IDs) into params
-	 * @param mixed $file
-	 * @param string $shortIdsCsv
-	 * @param array &$params
-	 */
-	private static function addSubsetLayersToImage( $file, string $shortIdsCsv, array &$params ): void {
-		$db = self::getLayersDatabaseService();
-		if ( !$db ) {
-			return;
-		}
-		$latest = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
-		if ( !$latest || !isset( $latest['data']['layers'] ) ) {
-			return;
-		}
-		$wanted = array_map( 'trim', explode( ',', strtolower( $shortIdsCsv ) ) );
-		$subset = [];
-		foreach ( (array)$latest['data']['layers'] as $layer ) {
-			$id = strtolower( (string)( $layer['id'] ?? '' ) );
-			$short = substr( $id, 0, 4 );
-			if ( in_array( $short, $wanted, true ) ) {
-				$subset[] = $layer;
-			}
-		}
-		if ( $subset ) {
-			$params['layerSetId'] = $latest['id'];
-			$params['layerData'] = $subset;
-		}
-	}
-
-	/**
-	 * Helper: Inject layer data into image attributes using the processor classes.
-	 * This is the preferred method for attribute injection - eliminates duplication.
-	 *
-	 * @param array &$attribs Reference to image attributes array
-	 * @param mixed $file The File object
-	 * @param string|null $setName Optional named set (defaults to 'default')
-	 * @param string $context Description of calling context for logging
-	 * @return bool True if layers were injected, false otherwise
-	 */
-	private static function injectLayersIntoAttributes(
-		array &$attribs,
-		$file,
-		?string $setName = null,
-		string $context = 'unknown'
-	): bool {
-		if ( !$file ) {
-			return false;
-		}
-
-		$db = self::getLayersDatabaseService();
-		if ( !$db ) {
-			return false;
-		}
-
-		// Get layer data from database
-		if ( $setName !== null && $setName !== 'default' && $setName !== 'on' && $setName !== 'all' ) {
-			$layerSet = $db->getLatestLayerSetByName( $file->getName(), $setName );
-		} else {
-			$layerSet = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
-		}
-
-		if ( !$layerSet || !isset( $layerSet['data'] ) ) {
-			return false;
-		}
-
-		$layers = (
-			isset( $layerSet['data']['layers'] )
-			&& is_array( $layerSet['data']['layers'] )
-		)
-			? $layerSet['data']['layers']
-			: [];
-
-		if ( empty( $layers ) ) {
-			return false;
-		}
-
-		// Use the HTML injector to add attributes
-		$injector = self::getHtmlInjector();
-		$dimensions = $injector->getFileDimensions( $file );
-
-		$injector->injectIntoAttributes(
-			$attribs,
-			$layers,
-			$dimensions['width'],
-			$dimensions['height']
-		);
-
-		self::$pageHasLayers = true;
-
-		return true;
-	}
-
-	/**
-	 * Helper: Inject layer data into HTML string using the processor classes.
-	 * This is the preferred method for HTML injection - eliminates duplication.
-	 *
-	 * @param string $html The HTML to modify
-	 * @param mixed $file The File object
-	 * @param string|null $setName Optional named set (defaults to 'default')
-	 * @param string $context Description of calling context for logging
-	 * @return string Modified HTML with layer data, or original if no layers
-	 */
-	private static function injectLayersIntoHtml(
-		string $html,
-		$file,
-		?string $setName = null,
-		string $context = 'unknown'
-	): string {
-		if ( !$file ) {
-			return $html;
-		}
-
-		$db = self::getLayersDatabaseService();
-		if ( !$db ) {
-			return $html;
-		}
-
-		// Get layer data from database
-		if ( $setName !== null && $setName !== 'default' && $setName !== 'on' && $setName !== 'all' ) {
-			$layerSet = $db->getLatestLayerSetByName( $file->getName(), $setName );
-		} else {
-			$layerSet = $db->getLatestLayerSet( $file->getName(), $file->getSha1() );
-		}
-
-		if ( !$layerSet || !isset( $layerSet['data'] ) ) {
-			return $html;
-		}
-
-		$layers = (
-			isset( $layerSet['data']['layers'] )
-			&& is_array( $layerSet['data']['layers'] )
-		)
-			? $layerSet['data']['layers']
-			: [];
-
-		if ( empty( $layers ) ) {
-			return $html;
-		}
-
-		// Use the HTML injector
-		$injector = self::getHtmlInjector();
-		$dimensions = $injector->getFileDimensions( $file );
-
-		$result = $injector->injectIntoHtml(
-			$html,
-			$layers,
-			$dimensions['width'],
-			$dimensions['height'],
-			$context
-		);
-
-		self::$pageHasLayers = true;
-
-		return $result;
 	}
 
 	/**
