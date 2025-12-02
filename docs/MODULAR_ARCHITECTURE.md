@@ -1,6 +1,6 @@
 # MediaWiki Layers Extension - Modular Architecture Documentation
 
-**Last Updated:** November 29, 2025  
+**Last Updated:** December 2, 2025  
 **Status:** Partially Implemented - See [improvement_plan.md](../improvement_plan.md) for roadmap
 
 ## Overview
@@ -13,19 +13,21 @@ The Layers extension provides non-destructive image annotation for MediaWiki. Th
 
 ### What's Working Well ✅
 
-- **Canvas Controllers**: Six specialized controllers extracted with 97-100% test coverage
+- **Canvas Controllers**: Eight specialized controllers extracted with 91-100% test coverage
 - **StateManager**: Centralized state with subscription pattern (85% coverage)
 - **ValidationManager**: Comprehensive input validation (99% coverage)
 - **APIManager**: API communication with retry logic
-- **HistoryManager**: Undo/redo system
+- **HistoryManager**: Undo/redo system (73% coverage)
 - **Backend Security**: CSRF, rate limiting, strict property whitelist
+- **Test Infrastructure**: 2,059 tests with 84.5% overall coverage
 
 ### What Needs Improvement ⚠️
 
-- **CanvasManager.js**: 4,003 lines - needs decomposition (22% coverage)
-- **WikitextHooks.php**: 2,001 lines with code duplication
-- **Event Systems**: 5 overlapping event-related modules
-- **IIFE Globals**: 48 window.* exports - needs ES module migration
+- **CanvasManager.js**: 1,896 lines - needs further decomposition (76% coverage)
+- **LayersEditor.js**: 1,756 lines - mixed concerns (74% coverage)
+- **Toolbar.js**: 1,664 lines - should be componentized
+- **WikitextHooks.php**: 788 lines with 11+ hook handlers
+- **IIFE Globals**: 44 window.* exports - needs ES module migration
 
 ---
 
@@ -63,12 +65,12 @@ The Layers extension provides non-destructive image annotation for MediaWiki. Th
 
 | Component | File | Lines | Coverage | Status |
 |-----------|------|-------|----------|--------|
-| LayersEditor | `LayersEditor.js` | 1,707 | 14.6% | Main orchestrator - needs tests |
-| CanvasManager | `CanvasManager.js` | 4,003 | 22.2% | **God class - needs split** |
+| LayersEditor | `LayersEditor.js` | 1,756 | 74% | Main orchestrator |
+| CanvasManager | `CanvasManager.js` | 1,896 | 76% | Core canvas - needs split |
 | StateManager | `StateManager.js` | 652 | 85% | ✅ Working well |
-| HistoryManager | `HistoryManager.js` | 524 | ~80% | ✅ Undo/redo system |
-| ValidationManager | `ValidationManager.js` | 553 | 99% | ✅ Input validation |
-| APIManager | `APIManager.js` | 574 | ~70% | API communication |
+| HistoryManager | `HistoryManager.js` | 524 | 73% | ✅ Undo/redo system |
+| ValidationManager | `ValidationManager.js` | 241 | 99% | ✅ Input validation |
+| APIManager | `APIManager.js` | 873 | ~70% | API communication |
 | ErrorHandler | `ErrorHandler.js` | 556 | ~60% | Error management |
 
 ### Extracted Canvas Controllers (✅ Best Practice Examples)
@@ -77,12 +79,14 @@ These modules demonstrate the target architecture pattern:
 
 | Controller | File | Lines | Coverage | Responsibility |
 |------------|------|-------|----------|----------------|
-| ZoomPanController | `canvas/ZoomPanController.js` | 343 | 97% | Zoom and pan operations |
-| GridRulersController | `canvas/GridRulersController.js` | 385 | 97% | Grid and ruler display |
-| TransformController | `canvas/TransformController.js` | 965 | 100% | Layer transformations |
-| HitTestController | `canvas/HitTestController.js` | 382 | 98% | Click target detection |
-| DrawingController | `canvas/DrawingController.js` | 620 | 97% | Shape drawing operations |
-| ClipboardController | `canvas/ClipboardController.js` | 222 | 98% | Copy/paste operations |
+| ZoomPanController | `canvas/ZoomPanController.js` | 341 | 100% | Zoom and pan operations |
+| DrawingController | `canvas/DrawingController.js` | 614 | 100% | Shape drawing operations |
+| InteractionController | `canvas/InteractionController.js` | 487 | 100% | Mouse/touch event coordination |
+| HitTestController | `canvas/HitTestController.js` | 376 | 99% | Click target detection |
+| ClipboardController | `canvas/ClipboardController.js` | 220 | 99% | Copy/paste operations |
+| GridRulersController | `canvas/GridRulersController.js` | 383 | 98% | Grid and ruler display |
+| RenderCoordinator | `canvas/RenderCoordinator.js` | 387 | 92% | Render scheduling |
+| TransformController | `canvas/TransformController.js` | 1,157 | 91% | Layer transformations |
 
 ### Rendering Components
 
@@ -277,19 +281,20 @@ Migration to ES modules is tracked in improvement_plan.md #2.1.
 
 ## Testing
 
-### Current Coverage
+### Current Coverage (December 2025)
 
 | Category | Coverage | Notes |
 |----------|----------|-------|
-| Canvas Controllers | 97-100% | ✅ Best practice examples |
-| Utilities | 90%+ | GeometryUtils, ValidationManager |
-| Core Orchestrators | 14-22% | ⚠️ Needs improvement |
-| Overall | 53.4% | Inflated by utility coverage |
+| Canvas Controllers | 91-100% | ✅ Best practice examples |
+| Utilities | 92-99% | GeometryUtils, TextUtils, ValidationManager |
+| Core Managers | 73-85% | StateManager (85%), HistoryManager (73%) |
+| Core Orchestrators | 74-76% | CanvasManager (76%), LayersEditor (74%) |
+| **Overall** | **84.5%** | 2,059 tests across 47 suites |
 
 ### Running Tests
 
 ```bash
-# All tests
+# All tests (ESLint + Jest)
 npm test
 
 # Jest unit tests only
@@ -320,10 +325,10 @@ npm run test:php
 
 ### Code Quality
 
-- ESLint: Zero warnings required
+- ESLint: Zero errors required
 - JSDoc: Document all public methods
-- Coverage: Maintain/improve overall coverage
-- No empty catch blocks
+- Coverage: 80% threshold enforced (see jest.config.js)
+- No silent catch blocks - always log errors
 - No unused variables
 
 ---
@@ -332,22 +337,23 @@ npm run test:php
 
 See [improvement_plan.md](../improvement_plan.md) for the full roadmap.
 
-### P0 - Critical (Before Production)
+### P0 - Critical (This Week)
 
-1. Split CanvasManager.js into focused modules
-2. Remove or implement performance optimization code
-3. Fix remaining code quality issues
+1. ✅ Fix silent error suppression
+2. ✅ Update coverage thresholds to prevent regression
+3. ✅ Fix documentation accuracy
 
-### P1 - High Priority
+### P1 - High Priority (2-4 weeks)
 
-1. Split WikitextHooks.php
-2. Consolidate event systems
-3. Increase core module coverage to 50%+
+1. Continue CanvasManager.js decomposition (<800 lines target)
+2. Complete StateManager migration
+3. Increase ToolManager coverage (currently 64%)
 
-### P2 - Medium Priority
+### P2 - Medium Priority (1-2 months)
 
 1. Migrate to ES modules
-2. Canvas accessibility improvements
+2. Split Toolbar.js
+3. Canvas accessibility improvements
 
 ---
 
@@ -372,7 +378,7 @@ npm run build:dev
 
 - Follow `.eslintrc.json` configuration
 - Use JSDoc for documentation
-- Write tests for new functionality
+- Write tests for new functionality (80%+ coverage)
 - Update this documentation when architecture changes
 
 ---

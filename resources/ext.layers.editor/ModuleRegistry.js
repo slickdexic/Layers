@@ -281,7 +281,10 @@
 					try {
 						callback( data );
 					} catch ( error ) {
-						// Don't let event errors break the registry
+						// Log event handler errors but don't let them break the registry
+						if ( typeof mw !== 'undefined' && mw.log ) {
+							mw.log.error( '[ModuleRegistry] Event handler error for "' + event + '":', error.message );
+						}
 					}
 				}
 			}

@@ -155,6 +155,9 @@
 			case 'rectangle':
 				this.startRectangleTool( point );
 				break;
+			case 'highlight':
+				this.startHighlightTool( point );
+				break;
 			case 'circle':
 				this.startCircleTool( point );
 				break;
@@ -200,6 +203,9 @@
 			case 'rectangle':
 				this.updateRectangleTool( point );
 				break;
+			case 'highlight':
+				this.updateHighlightTool( point );
+				break;
 			case 'circle':
 				this.updateCircleTool( point );
 				break;
@@ -235,6 +241,7 @@
 				this.finishPenDrawing( point );
 				break;
 			case 'rectangle':
+			case 'highlight':
 			case 'circle':
 			case 'ellipse':
 			case 'line':
@@ -950,7 +957,6 @@
 
 	// Export ToolManager to global scope
 	window.LayersToolManager = ToolManager;
-	window.ToolManager = ToolManager;
 
 	// CommonJS export for testing
 	if ( typeof module !== 'undefined' && module.exports ) {

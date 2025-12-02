@@ -325,4 +325,273 @@ describe('HistoryManager', () => {
             expect(compressedLength).toBeLessThanOrEqual(initialLength);
         });
     });
+
+    describe('restoreState with editor', () => {
+        test('should restore state via editor.layers when editor exists', () => {
+            const mockEditor = {
+                layers: mockLayers,
+                canvasManager: {
+                    selectionManager: {
+                        clearSelection: jest.fn()
+                    },
+                    renderLayers: jest.fn(),
+                    redraw: jest.fn()
+                },
+                layerPanel: {
+                    updateLayers: jest.fn()
+                },
+                markDirty: jest.fn()
+            };
+            
+            const managerWithEditor = new HistoryManager({}, {
+                editor: mockEditor,
+                layers: mockLayers
+            });
+            
+            managerWithEditor.saveState('Initial');
+            mockEditor.layers[0].x = 999;
+            managerWithEditor.saveState('Changed');
+            
+            managerWithEditor.undo();
+            
+            expect(mockEditor.layers[0].x).toBe(10);
+            expect(mockEditor.canvasManager.selectionManager.clearSelection).toHaveBeenCalled();
+            expect(mockEditor.canvasManager.renderLayers).toHaveBeenCalled();
+            expect(mockEditor.layerPanel.updateLayers).toHaveBeenCalled();
+            expect(mockEditor.markDirty).toHaveBeenCalled();
+        });
+
+        test('should use legacy selection clear when selectionManager unavailable', () => {
+            const mockCanvasManagerLegacy = {
+                layers: mockLayers,
+                selectedLayerId: 'layer1',
+                selectedLayerIds: ['layer1'],
+                redraw: jest.fn()
+            };
+            
+            const managerLegacy = new HistoryManager({}, mockCanvasManagerLegacy);
+            managerLegacy.saveState('Initial');
+            managerLegacy.saveState('Changed');
+            managerLegacy.undo();
+            
+            expect(mockCanvasManagerLegacy.selectedLayerId).toBeNull();
+            expect(mockCanvasManagerLegacy.selectedLayerIds).toEqual([]);
+        });
+    });
+
+    describe('updateUndoRedoButtons', () => {
+        test('should update toolbar buttons when available', () => {
+            const undoBtn = document.createElement('button');
+            undoBtn.setAttribute('data-action', 'undo');
+            const redoBtn = document.createElement('button');
+            redoBtn.setAttribute('data-action', 'redo');
+            const container = document.createElement('div');
+            container.appendChild(undoBtn);
+            container.appendChild(redoBtn);
+            
+            const testLayers = [{ id: 'test', type: 'rectangle', x: 10, y: 20 }];
+            const mockWithToolbar = {
+                layers: testLayers,
+                editor: {
+                    layers: testLayers,
+                    toolbar: { container },
+                    updateStatus: jest.fn()
+                },
+                redraw: jest.fn()
+            };
+            
+            const managerWithToolbar = new HistoryManager({}, mockWithToolbar);
+            managerWithToolbar.saveState('First');
+            managerWithToolbar.saveState('Second');
+            
+            expect(undoBtn.disabled).toBe(false);
+            expect(redoBtn.disabled).toBe(true);
+            expect(undoBtn.title).toContain('First');
+            expect(mockWithToolbar.editor.updateStatus).toHaveBeenCalled();
+        });
+
+        test('should disable undo button when nothing to undo', () => {
+            const undoBtn = document.createElement('button');
+            undoBtn.setAttribute('data-action', 'undo');
+            const redoBtn = document.createElement('button');
+            redoBtn.setAttribute('data-action', 'redo');
+            const container = document.createElement('div');
+            container.appendChild(undoBtn);
+            container.appendChild(redoBtn);
+            
+            const testLayers = [{ id: 'test', type: 'rectangle', x: 10, y: 20 }];
+            const mockWithToolbar = {
+                layers: testLayers,
+                editor: {
+                    layers: testLayers,
+                    toolbar: { container },
+                    updateStatus: jest.fn()
+                },
+                redraw: jest.fn()
+            };
+            
+            const managerWithToolbar = new HistoryManager({}, mockWithToolbar);
+            managerWithToolbar.saveState('Only');
+            
+            expect(undoBtn.disabled).toBe(true);
+            expect(undoBtn.title).toBe('Nothing to undo');
+        });
+    });
+
+    describe('getHistoryEntries', () => {
+        test('should return recent history entries', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            historyManager.saveState('State 3');
+            
+            const entries = historyManager.getHistoryEntries(10);
+            
+            expect(entries).toHaveLength(3);
+            expect(entries[0].description).toBe('State 1');
+            expect(entries[2].isCurrent).toBe(true);
+            expect(entries[0].canRevertTo).toBe(true);
+        });
+
+        test('should limit returned entries', () => {
+            for (let i = 0; i < 10; i++) {
+                historyManager.saveState(`State ${i}`);
+            }
+            
+            const entries = historyManager.getHistoryEntries(3);
+            
+            expect(entries).toHaveLength(3);
+            expect(entries[0].description).toBe('State 7');
+        });
+
+        test('should use default limit of 10', () => {
+            for (let i = 0; i < 15; i++) {
+                historyManager.saveState(`State ${i}`);
+            }
+            
+            const entries = historyManager.getHistoryEntries();
+            
+            expect(entries).toHaveLength(10);
+        });
+    });
+
+    describe('revertTo', () => {
+        test('should revert to specific history entry', () => {
+            historyManager.saveState('State 1');
+            mockLayers[0].x = 50;
+            historyManager.saveState('State 2');
+            mockLayers[0].x = 100;
+            historyManager.saveState('State 3');
+            
+            const result = historyManager.revertTo(1);
+            
+            expect(result).toBe(true);
+            expect(historyManager.currentIndex).toBe(1);
+            expect(mockCanvasManager.layers[0].x).toBe(50);
+        });
+
+        test('should return false for invalid index', () => {
+            historyManager.saveState('State 1');
+            
+            expect(historyManager.revertTo(-1)).toBe(false);
+            expect(historyManager.revertTo(100)).toBe(false);
+        });
+
+        test('should return false when trying to revert to future state', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            historyManager.undo();
+            
+            // Can't revert to index 1 when currentIndex is 0
+            expect(historyManager.revertTo(1)).toBe(false);
+        });
+    });
+
+    describe('setMaxHistorySteps', () => {
+        test('should update max history steps', () => {
+            historyManager.setMaxHistorySteps(10);
+            
+            expect(historyManager.maxHistorySize).toBe(10);
+        });
+
+        test('should enforce minimum of 1', () => {
+            historyManager.setMaxHistorySteps(0);
+            
+            expect(historyManager.maxHistorySize).toBe(1);
+        });
+
+        test('should trim history when reducing max steps', () => {
+            for (let i = 0; i < 10; i++) {
+                historyManager.saveState(`State ${i}`);
+            }
+            
+            historyManager.setMaxHistorySteps(3);
+            
+            expect(historyManager.history).toHaveLength(3);
+            expect(historyManager.history[0].description).toBe('State 7');
+        });
+    });
+
+    describe('hasUnsavedChanges', () => {
+        test('should return true when layers exist but no history', () => {
+            expect(historyManager.hasUnsavedChanges()).toBe(true);
+        });
+
+        test('should return false when state matches last saved', () => {
+            historyManager.saveState('Initial');
+            
+            expect(historyManager.hasUnsavedChanges()).toBe(false);
+        });
+
+        test('should return true when state differs from last saved', () => {
+            historyManager.saveState('Initial');
+            mockLayers[0].x = 999;
+            
+            expect(historyManager.hasUnsavedChanges()).toBe(true);
+        });
+    });
+
+    describe('saveInitialState', () => {
+        test('should clear history and save initial state', () => {
+            historyManager.saveState('Old 1');
+            historyManager.saveState('Old 2');
+            
+            historyManager.saveInitialState();
+            
+            expect(historyManager.history).toHaveLength(1);
+            expect(historyManager.history[0].description).toBe('Initial state');
+            expect(historyManager.currentIndex).toBe(0);
+        });
+    });
+
+    describe('exportHistory', () => {
+        test('should export history for debugging', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            
+            const exported = historyManager.exportHistory();
+            
+            expect(exported.history).toHaveLength(2);
+            expect(exported.history[0].description).toBe('State 1');
+            expect(exported.history[0].layerCount).toBe(1);
+            expect(exported.historyIndex).toBe(1);
+            expect(exported.maxHistorySteps).toBe(50);
+            expect(exported.batchMode).toBe(false);
+        });
+    });
+
+    describe('getHistoryInfo', () => {
+        test('should return history information', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            
+            const info = historyManager.getHistoryInfo();
+            
+            expect(info.totalSteps).toBe(2);
+            expect(info.currentStep).toBe(2);
+            expect(info.canUndo).toBe(true);
+            expect(info.canRedo).toBe(false);
+            expect(info.maxSteps).toBe(50);
+            expect(info.batchMode).toBe(false);
+        });
+    });
 });

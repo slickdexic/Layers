@@ -823,4 +823,249 @@ describe( 'LayersEditor Extended', () => {
 			expect( () => editor.redo() ).not.toThrow();
 		} );
 	} );
+
+	describe( 'buildRevisionSelector with data', () => {
+		beforeEach( () => {
+			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
+			
+			// Create revision select element
+			const selectEl = document.createElement( 'select' );
+			editor.uiManager = {
+				...mockUIManager,
+				revSelectEl: selectEl,
+				revLoadBtnEl: document.createElement( 'button' )
+			};
+		} );
+
+		it( 'should populate revision options from allLayerSets', () => {
+			const layerSets = [
+				{ ls_id: 1, ls_timestamp: '20251202120000', ls_user_name: 'User1', ls_name: 'default' },
+				{ ls_id: 2, ls_timestamp: '20251202130000', ls_user_name: 'User2', ls_name: 'annotations' }
+			];
+			editor.stateManager.set( 'allLayerSets', layerSets );
+			editor.stateManager.set( 'currentLayerSetId', 1 );
+			
+			editor.buildRevisionSelector();
+			
+			const options = editor.uiManager.revSelectEl.querySelectorAll( 'option' );
+			// Should have default + 2 revision options
+			expect( options.length ).toBe( 3 );
+		} );
+
+		it( 'should mark current revision as selected', () => {
+			const layerSets = [
+				{ ls_id: 1, ls_timestamp: '20251202120000', ls_user_name: 'User1' },
+				{ ls_id: 2, ls_timestamp: '20251202130000', ls_user_name: 'User2' }
+			];
+			editor.stateManager.set( 'allLayerSets', layerSets );
+			editor.stateManager.set( 'currentLayerSetId', 2 );
+			
+			editor.buildRevisionSelector();
+			
+			// The selector marks the option by setting selected property
+			const options = editor.uiManager.revSelectEl.querySelectorAll( 'option' );
+			const selectedOptions = Array.from( options ).filter( opt => opt.selected );
+			expect( selectedOptions.length ).toBeGreaterThan( 0 );
+		} );
+
+		it( 'should handle empty allLayerSets', () => {
+			editor.stateManager.set( 'allLayerSets', [] );
+			
+			expect( () => editor.buildRevisionSelector() ).not.toThrow();
+			
+			const options = editor.uiManager.revSelectEl.querySelectorAll( 'option' );
+			expect( options.length ).toBe( 1 ); // Just the default option
+		} );
+	} );
+
+	describe( 'updateRevisionLoadButton', () => {
+		beforeEach( () => {
+			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
+			
+			const selectEl = document.createElement( 'select' );
+			const option1 = document.createElement( 'option' );
+			option1.value = '1';
+			selectEl.appendChild( option1 );
+			const option2 = document.createElement( 'option' );
+			option2.value = '2';
+			selectEl.appendChild( option2 );
+			
+			const loadBtn = document.createElement( 'button' );
+			
+			editor.uiManager = {
+				...mockUIManager,
+				revSelectEl: selectEl,
+				revLoadBtnEl: loadBtn
+			};
+		} );
+
+		it( 'should disable button when selected revision is current', () => {
+			editor.stateManager.set( 'currentLayerSetId', 1 );
+			editor.uiManager.revSelectEl.value = '1';
+			
+			editor.updateRevisionLoadButton();
+			
+			expect( editor.uiManager.revLoadBtnEl.disabled ).toBe( true );
+		} );
+
+		it( 'should enable button when different revision selected', () => {
+			editor.stateManager.set( 'currentLayerSetId', 1 );
+			editor.uiManager.revSelectEl.value = '2';
+			
+			editor.updateRevisionLoadButton();
+			
+			expect( editor.uiManager.revLoadBtnEl.disabled ).toBe( false );
+		} );
+
+		it( 'should disable button when no revision selected', () => {
+			editor.uiManager.revSelectEl.value = '';
+			
+			editor.updateRevisionLoadButton();
+			
+			expect( editor.uiManager.revLoadBtnEl.disabled ).toBe( true );
+		} );
+	} );
+
+	describe( 'trackWindowListener', () => {
+		beforeEach( () => {
+			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
+		} );
+
+		it( 'should track window event listeners', () => {
+			const handler = jest.fn();
+			const addSpy = jest.spyOn( window, 'addEventListener' );
+			
+			editor.trackWindowListener( 'resize', handler );
+			
+			expect( addSpy ).toHaveBeenCalledWith( 'resize', handler );
+			expect( editor.windowListeners ).toContainEqual( { event: 'resize', handler } );
+			
+			addSpy.mockRestore();
+		} );
+
+		it( 'should initialize windowListeners array if not present', () => {
+			editor.windowListeners = undefined;
+			const handler = jest.fn();
+			
+			editor.trackWindowListener( 'resize', handler );
+			
+			expect( Array.isArray( editor.windowListeners ) ).toBe( true );
+			expect( editor.windowListeners.length ).toBe( 1 );
+		} );
+	} );
+
+	describe( 'parseMWTimestamp', () => {
+		beforeEach( () => {
+			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
+		} );
+
+		it( 'should parse MediaWiki timestamp format', () => {
+			const date = editor.parseMWTimestamp( '20251202143000' );
+			
+			expect( date instanceof Date ).toBe( true );
+			expect( date.getFullYear() ).toBe( 2025 );
+			expect( date.getMonth() ).toBe( 11 ); // December (0-indexed)
+			expect( date.getDate() ).toBe( 2 );
+		} );
+
+		it( 'should handle invalid timestamp gracefully', () => {
+			const date = editor.parseMWTimestamp( 'invalid' );
+			
+			// Should return a valid Date object (possibly Invalid Date)
+			expect( date instanceof Date ).toBe( true );
+		} );
+
+		it( 'should handle null timestamp', () => {
+			const date = editor.parseMWTimestamp( null );
+			
+			expect( date instanceof Date ).toBe( true );
+		} );
+	} );
+
+	describe( 'normalizeLayers', () => {
+		beforeEach( () => {
+			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
+		} );
+
+		it( 'should set default visibility to true', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle' },
+				{ id: 'layer2', type: 'circle', visible: false }
+			];
+			
+			const normalized = editor.normalizeLayers( layers );
+			
+			expect( normalized[ 0 ].visible ).toBe( true );
+			expect( normalized[ 1 ].visible ).toBe( false );
+		} );
+
+		it( 'should handle empty array', () => {
+			const normalized = editor.normalizeLayers( [] );
+			expect( normalized ).toEqual( [] );
+		} );
+
+		it( 'should preserve existing layer properties', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle', x: 10, y: 20, stroke: '#ff0000' }
+			];
+			
+			const normalized = editor.normalizeLayers( layers );
+			
+			expect( normalized[ 0 ].x ).toBe( 10 );
+			expect( normalized[ 0 ].y ).toBe( 20 );
+			expect( normalized[ 0 ].stroke ).toBe( '#ff0000' );
+		} );
+	} );
+
+	describe( 'debugLog and errorLog', () => {
+		beforeEach( () => {
+			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
+		} );
+
+		it( 'should log via mw.log when debug mode is enabled', () => {
+			editor.debug = true;
+			const logSpy = jest.fn();
+			window.mw = { ...window.mw, log: logSpy };
+			
+			editor.debugLog( 'test message', { data: 123 } );
+			
+			expect( logSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should not log when debug mode is disabled', () => {
+			editor.debug = false;
+			const logSpy = jest.fn();
+			window.mw = { ...window.mw, log: logSpy };
+			
+			editor.debugLog( 'test message' );
+			
+			expect( logSpy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should always log errors via mw.log.error', () => {
+			const errorSpy = jest.fn();
+			window.mw = { ...window.mw, log: { error: errorSpy } };
+			
+			editor.errorLog( 'error message', new Error( 'test' ) );
+			
+			expect( errorSpy ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'markDirty and markClean', () => {
+		beforeEach( () => {
+			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
+		} );
+
+		it( 'should mark editor as dirty', () => {
+			editor.markDirty();
+			expect( editor.stateManager.get( 'isDirty' ) ).toBe( true );
+		} );
+
+		it( 'should mark editor as clean', () => {
+			editor.stateManager.set( 'isDirty', true );
+			editor.markClean();
+			expect( editor.stateManager.get( 'isDirty' ) ).toBe( false );
+		} );
+	} );
 } );

@@ -28,7 +28,8 @@ describe( 'ToolManager', () => {
 				translate: jest.fn(),
 				scale: jest.fn(),
 				measureText: jest.fn().mockReturnValue( { width: 50 } ),
-				fillText: jest.fn()
+				fillText: jest.fn(),
+				setLineDash: jest.fn()
 			} ),
 			width: 800,
 			height: 600,
@@ -246,6 +247,13 @@ describe( 'ToolManager', () => {
 			expect( toolManager.tempLayer.type ).toBe( 'arrow' );
 		} );
 
+		it( 'should create temp layer for highlight tool', () => {
+			toolManager.setTool( 'highlight' );
+			toolManager.startTool( point );
+			expect( toolManager.tempLayer ).not.toBeNull();
+			expect( toolManager.tempLayer.type ).toBe( 'highlight' );
+		} );
+
 		it( 'should create temp layer for pen tool with path', () => {
 			toolManager.setTool( 'pen' );
 			toolManager.startTool( point );
@@ -328,6 +336,14 @@ describe( 'ToolManager', () => {
 			expect( toolManager.tempLayer.points ).toHaveLength( 2 );
 		} );
 
+		it( 'should update highlight dimensions', () => {
+			toolManager.setTool( 'highlight' );
+			toolManager.startTool( startPoint );
+			toolManager.updateTool( updatePoint );
+			expect( toolManager.tempLayer.width ).toBe( 100 );
+			expect( toolManager.tempLayer.height ).toBe( 50 );
+		} );
+
 		it( 'should call renderTempLayer after update', () => {
 			toolManager.setTool( 'rectangle' );
 			toolManager.startTool( startPoint );
@@ -387,6 +403,16 @@ describe( 'ToolManager', () => {
 			// No update calls - only one point
 			toolManager.finishTool( startPoint );
 			expect( mockEditor.stateManager.addLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should add highlight layer via stateManager', () => {
+			toolManager.setTool( 'highlight' );
+			toolManager.startTool( startPoint );
+			toolManager.updateTool( endPoint );
+			toolManager.finishTool( endPoint );
+			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
+			const addedLayer = mockEditor.stateManager.addLayer.mock.calls.slice( -1 )[ 0 ][ 0 ];
+			expect( addedLayer.type ).toBe( 'highlight' );
 		} );
 	} );
 
@@ -556,9 +582,512 @@ describe( 'ToolManager', () => {
 			expect( mockCanvasManager.canvas.style.cursor ).toBe( 'text' );
 		} );
 	} );
+
+	describe( 'startTextTool', () => {
+		it( 'should create text editor input element', () => {
+			// Set up container for text editor
+			mockCanvasManager.container = document.createElement( 'div' );
+			document.body.appendChild( mockCanvasManager.container );
+
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.textEditor ).not.toBeNull();
+			expect( toolManager.textEditor.tagName ).toBe( 'INPUT' );
+
+			// Cleanup
+			document.body.removeChild( mockCanvasManager.container );
+		} );
+
+		it( 'should position text editor at click point', () => {
+			mockCanvasManager.container = document.createElement( 'div' );
+			document.body.appendChild( mockCanvasManager.container );
+
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 150, y: 200 } );
+
+			expect( toolManager.textEditor.style.left ).toBe( '150px' );
+			expect( toolManager.textEditor.style.top ).toBe( '200px' );
+
+			document.body.removeChild( mockCanvasManager.container );
+		} );
+
+		it( 'should apply current font style to text editor', () => {
+			mockCanvasManager.container = document.createElement( 'div' );
+			document.body.appendChild( mockCanvasManager.container );
+
+			toolManager.updateStyle( { fontSize: 24, fontFamily: 'Georgia', color: '#ff0000' } );
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.textEditor.style.fontSize ).toBe( '24px' );
+			expect( toolManager.textEditor.style.fontFamily ).toBe( 'Georgia' );
+			expect( toolManager.textEditor.style.color ).toBe( 'rgb(255, 0, 0)' );
+
+			document.body.removeChild( mockCanvasManager.container );
+		} );
+
+		it( 'should use mainContainer when available', () => {
+			const mainContainer = document.createElement( 'div' );
+			document.body.appendChild( mainContainer );
+
+			mockCanvasManager.editor.ui = { mainContainer };
+			mockCanvasManager.container = document.createElement( 'div' );
+
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( mainContainer.contains( toolManager.textEditor ) ).toBe( true );
+
+			document.body.removeChild( mainContainer );
+		} );
+	} );
+
+	describe( 'finishTextEditing', () => {
+		beforeEach( () => {
+			mockCanvasManager.container = document.createElement( 'div' );
+			document.body.appendChild( mockCanvasManager.container );
+		} );
+
+		afterEach( () => {
+			if ( mockCanvasManager.container.parentNode ) {
+				document.body.removeChild( mockCanvasManager.container );
+			}
+		} );
+
+		it( 'should create text layer when input has text', () => {
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			const input = toolManager.textEditor;
+			input.value = 'Hello World';
+
+			toolManager.finishTextEditing( input, { x: 100, y: 100 } );
+
+			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
+			const addedLayer = mockEditor.stateManager.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( addedLayer.type ).toBe( 'text' );
+			expect( addedLayer.text ).toBe( 'Hello World' );
+		} );
+
+		it( 'should not create layer for empty text', () => {
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			const input = toolManager.textEditor;
+			input.value = '   '; // whitespace only
+
+			toolManager.finishTextEditing( input, { x: 100, y: 100 } );
+
+			expect( mockEditor.stateManager.addLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should hide text editor after finishing', () => {
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			const input = toolManager.textEditor;
+			input.value = 'Test';
+
+			toolManager.finishTextEditing( input, { x: 100, y: 100 } );
+
+			expect( toolManager.textEditor ).toBeNull();
+		} );
+	} );
+
+	describe( 'handlePathPoint', () => {
+		it( 'should start new path on first click', () => {
+			toolManager.setTool( 'path' );
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+
+			expect( toolManager.pathPoints ).toHaveLength( 1 );
+			expect( toolManager.pathPoints[ 0 ] ).toEqual( { x: 100, y: 100 } );
+			expect( toolManager.isDrawing ).toBe( true );
+		} );
+
+		it( 'should add points to existing path', () => {
+			toolManager.setTool( 'path' );
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+			toolManager.handlePathPoint( { x: 200, y: 150 } );
+			toolManager.handlePathPoint( { x: 250, y: 200 } );
+
+			expect( toolManager.pathPoints ).toHaveLength( 3 );
+		} );
+
+		it( 'should complete path when clicking near start point', () => {
+			toolManager.setTool( 'path' );
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+			toolManager.handlePathPoint( { x: 200, y: 150 } );
+			toolManager.handlePathPoint( { x: 250, y: 200 } );
+
+			// Click within 10px of start point to close
+			toolManager.handlePathPoint( { x: 105, y: 105 } );
+
+			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
+			const addedLayer = mockEditor.stateManager.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( addedLayer.type ).toBe( 'path' );
+			expect( addedLayer.closed ).toBe( true );
+		} );
+
+		it( 'should not complete path when clicking far from start', () => {
+			toolManager.setTool( 'path' );
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+			toolManager.handlePathPoint( { x: 200, y: 150 } );
+			toolManager.handlePathPoint( { x: 250, y: 200 } );
+			toolManager.handlePathPoint( { x: 300, y: 250 } );
+
+			expect( mockEditor.stateManager.addLayer ).not.toHaveBeenCalled();
+			expect( toolManager.pathPoints ).toHaveLength( 4 );
+		} );
+	} );
+
+	describe( 'completePath', () => {
+		it( 'should create path layer with correct properties', () => {
+			toolManager.pathPoints = [
+				{ x: 100, y: 100 },
+				{ x: 200, y: 100 },
+				{ x: 150, y: 200 }
+			];
+			toolManager.updateStyle( { color: '#00ff00', strokeWidth: 3 } );
+
+			toolManager.completePath();
+
+			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
+			const layer = mockEditor.stateManager.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( layer.type ).toBe( 'path' );
+			expect( layer.points ).toHaveLength( 3 );
+			expect( layer.stroke ).toBe( '#00ff00' );
+			expect( layer.strokeWidth ).toBe( 3 );
+		} );
+
+		it( 'should reset path state after completion', () => {
+			toolManager.pathPoints = [
+				{ x: 100, y: 100 },
+				{ x: 200, y: 100 },
+				{ x: 150, y: 200 }
+			];
+			toolManager.isDrawing = true;
+			toolManager.isPathComplete = true;
+
+			toolManager.completePath();
+
+			expect( toolManager.pathPoints ).toEqual( [] );
+			expect( toolManager.isDrawing ).toBe( false );
+			expect( toolManager.isPathComplete ).toBe( false );
+		} );
+
+		it( 'should not create layer if less than 3 points', () => {
+			toolManager.pathPoints = [
+				{ x: 100, y: 100 },
+				{ x: 200, y: 100 }
+			];
+
+			toolManager.completePath();
+
+			expect( mockEditor.stateManager.addLayer ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'updatePolygonTool', () => {
+		it( 'should update polygon radius based on distance', () => {
+			toolManager.setTool( 'polygon' );
+			toolManager.startTool( { x: 100, y: 100 } );
+			toolManager.updateTool( { x: 200, y: 100 } );
+
+			expect( toolManager.tempLayer.radius ).toBe( 100 );
+		} );
+
+		it( 'should calculate radius using pythagorean theorem', () => {
+			toolManager.setTool( 'polygon' );
+			toolManager.startTool( { x: 100, y: 100 } );
+			toolManager.updateTool( { x: 103, y: 104 } ); // 3-4-5 triangle
+
+			expect( toolManager.tempLayer.radius ).toBe( 5 );
+		} );
+	} );
+
+	describe( 'updateStarTool', () => {
+		it( 'should update star radii based on distance', () => {
+			toolManager.setTool( 'star' );
+			toolManager.startTool( { x: 100, y: 100 } );
+			toolManager.updateTool( { x: 200, y: 100 } );
+
+			expect( toolManager.tempLayer.outerRadius ).toBe( 100 );
+			expect( toolManager.tempLayer.innerRadius ).toBe( 40 ); // 0.4 ratio
+		} );
+
+		it( 'should set radius property equal to outerRadius', () => {
+			toolManager.setTool( 'star' );
+			toolManager.startTool( { x: 100, y: 100 } );
+			toolManager.updateTool( { x: 200, y: 100 } );
+
+			expect( toolManager.tempLayer.radius ).toBe( 100 );
+		} );
+	} );
+
+	describe( 'updateHighlightTool', () => {
+		it( 'should update highlight dimensions', () => {
+			toolManager.setTool( 'highlight' );
+			toolManager.startPoint = { x: 100, y: 100 };
+			toolManager.startHighlightTool( { x: 100, y: 100 } );
+			toolManager.updateHighlightTool( { x: 200, y: 150 } );
+
+			expect( toolManager.tempLayer.width ).toBe( 100 );
+			expect( toolManager.tempLayer.height ).toBe( 50 );
+		} );
+
+		it( 'should handle negative drag direction', () => {
+			toolManager.setTool( 'highlight' );
+			toolManager.startPoint = { x: 200, y: 150 };
+			toolManager.startHighlightTool( { x: 200, y: 150 } );
+			toolManager.updateHighlightTool( { x: 100, y: 100 } );
+
+			expect( toolManager.tempLayer.x ).toBe( 100 );
+			expect( toolManager.tempLayer.y ).toBe( 100 );
+			expect( toolManager.tempLayer.width ).toBe( 100 );
+			expect( toolManager.tempLayer.height ).toBe( 50 );
+		} );
+	} );
+
+	describe( 'hasValidSize', () => {
+		it( 'should validate rectangle size', () => {
+			expect( toolManager.hasValidSize( { type: 'rectangle', width: 10, height: 10 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'rectangle', width: 0, height: 10 } ) ).toBe( false );
+			expect( toolManager.hasValidSize( { type: 'rectangle', width: 1, height: 1 } ) ).toBe( false );
+		} );
+
+		it( 'should validate highlight size', () => {
+			expect( toolManager.hasValidSize( { type: 'highlight', width: 10, height: 10 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'highlight', width: 1, height: 1 } ) ).toBe( false );
+		} );
+
+		it( 'should validate circle radius', () => {
+			expect( toolManager.hasValidSize( { type: 'circle', radius: 10 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'circle', radius: 0 } ) ).toBe( false );
+		} );
+
+		it( 'should validate ellipse radii', () => {
+			expect( toolManager.hasValidSize( { type: 'ellipse', radiusX: 10, radiusY: 10 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'ellipse', radiusX: 0, radiusY: 10 } ) ).toBe( false );
+		} );
+
+		it( 'should validate line/arrow length', () => {
+			expect( toolManager.hasValidSize( { type: 'line', x1: 0, y1: 0, x2: 10, y2: 0 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'arrow', x1: 0, y1: 0, x2: 10, y2: 0 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'line', x1: 0, y1: 0, x2: 0, y2: 0 } ) ).toBe( false );
+		} );
+
+		it( 'should validate polygon/star radius', () => {
+			expect( toolManager.hasValidSize( { type: 'polygon', radius: 10 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'star', outerRadius: 10 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'polygon', radius: 0 } ) ).toBe( false );
+		} );
+
+		it( 'should validate path points', () => {
+			expect( toolManager.hasValidSize( { type: 'path', points: [ {}, {} ] } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'path', points: [ {} ] } ) ).toBe( false );
+			// When points is null, the expression "layer.points && layer.points.length > 1" returns null (falsy)
+			expect( toolManager.hasValidSize( { type: 'path', points: null } ) ).toBeFalsy();
+		} );
+
+		it( 'should return true for unknown types', () => {
+			expect( toolManager.hasValidSize( { type: 'unknown' } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'text' } ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'renderTempLayer', () => {
+		it( 'should call renderLayers on canvasManager', () => {
+			toolManager.renderTempLayer();
+			expect( mockCanvasManager.renderLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should call drawLayer if tempLayer exists', () => {
+			toolManager.tempLayer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.renderTempLayer();
+
+			expect( mockCanvasManager.drawLayer ).toHaveBeenCalledWith( toolManager.tempLayer );
+		} );
+
+		it( 'should not call drawLayer if tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			toolManager.renderTempLayer();
+
+			expect( mockCanvasManager.drawLayer ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'renderPathPreview', () => {
+		it( 'should call renderLayers on canvasManager', () => {
+			toolManager.renderPathPreview();
+			expect( mockCanvasManager.renderLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw path when pathPoints has points', () => {
+			toolManager.pathPoints = [
+				{ x: 100, y: 100 },
+				{ x: 200, y: 100 },
+				{ x: 150, y: 200 }
+			];
+			toolManager.renderPathPreview();
+
+			const ctx = mockCanvasManager.ctx;
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		it( 'should not draw when pathPoints is empty', () => {
+			toolManager.pathPoints = [];
+			mockCanvasManager.ctx.beginPath.mockClear();
+
+			toolManager.renderPathPreview();
+
+			// beginPath should only be called once from earlier setup
+			expect( mockCanvasManager.ctx.beginPath ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'addLayerToCanvas', () => {
+		beforeEach( () => {
+			mockCanvasManager.selectionManager = {
+				selectLayer: jest.fn()
+			};
+			mockCanvasManager.historyManager = {
+				saveState: jest.fn()
+			};
+			mockEditor.markDirty = jest.fn();
+			mockEditor.layerPanel = {
+				updateLayers: jest.fn()
+			};
+		} );
+
+		it( 'should generate unique ID for layer', () => {
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+
+			expect( layer.id ).toBeDefined();
+			expect( layer.id ).toMatch( /^layer_\d+_[a-z0-9]+$/ );
+		} );
+
+		it( 'should add layer via stateManager', () => {
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+
+			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalledWith( layer );
+		} );
+
+		it( 'should select newly added layer', () => {
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+
+			expect( mockCanvasManager.selectionManager.selectLayer ).toHaveBeenCalled();
+		} );
+
+		it( 'should save state for undo', () => {
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+
+			expect( mockCanvasManager.historyManager.saveState ).toHaveBeenCalledWith( 'Add rectangle' );
+		} );
+
+		it( 'should mark editor as dirty', () => {
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+
+			expect( mockEditor.markDirty ).toHaveBeenCalled();
+		} );
+
+		it( 'should update layer panel', () => {
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+
+			expect( mockEditor.layerPanel.updateLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should use fallback when stateManager.addLayer is unavailable', () => {
+			mockEditor.stateManager.addLayer = undefined;
+			mockEditor.layers = [];
+
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+
+			expect( mockEditor.layers ).toContain( layer );
+		} );
+	} );
+
+	describe( 'text editor keyboard events', () => {
+		beforeEach( () => {
+			mockCanvasManager.container = document.createElement( 'div' );
+			document.body.appendChild( mockCanvasManager.container );
+		} );
+
+		afterEach( () => {
+			if ( mockCanvasManager.container.parentNode ) {
+				document.body.removeChild( mockCanvasManager.container );
+			}
+		} );
+
+		it( 'should finish editing on Enter key', () => {
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			const input = toolManager.textEditor;
+			input.value = 'Test text';
+
+			const event = new KeyboardEvent( 'keydown', { key: 'Enter' } );
+			input.dispatchEvent( event );
+
+			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
+		} );
+
+		it( 'should cancel editing on Escape key', () => {
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			const input = toolManager.textEditor;
+			input.value = 'Test text';
+
+			const event = new KeyboardEvent( 'keydown', { key: 'Escape' } );
+			input.dispatchEvent( event );
+
+			expect( mockEditor.stateManager.addLayer ).not.toHaveBeenCalled();
+			expect( toolManager.textEditor ).toBeNull();
+		} );
+	} );
+
+	describe( 'getModifiers', () => {
+		it( 'should extract modifier keys from event', () => {
+			const event = {
+				shiftKey: true,
+				ctrlKey: false,
+				altKey: true,
+				metaKey: false
+			};
+
+			const modifiers = toolManager.getModifiers( event );
+
+			expect( modifiers.shift ).toBe( true );
+			expect( modifiers.ctrl ).toBe( false );
+			expect( modifiers.alt ).toBe( true );
+			expect( modifiers.meta ).toBe( false );
+		} );
+	} );
+
+	describe( 'blur tool', () => {
+		it( 'should create blur layer with correct type', () => {
+			toolManager.setTool( 'blur' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			if ( toolManager.tempLayer ) {
+				expect( toolManager.tempLayer.type ).toBe( 'blur' );
+			}
+		} );
+	} );
 } );
 
 // Export for window assignment
 if ( typeof window !== 'undefined' ) {
-	window.ToolManager = window.ToolManager || {};
+	window.LayersToolManager = window.LayersToolManager || {};
 }

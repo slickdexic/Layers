@@ -192,7 +192,10 @@ class ApiLayersInfo extends ApiBase {
 					'continue' => $this->formatContinueParameter( $nextOffset )
 				];
 				$result['continuation'] = $continuation;
-				$this->setContinueEnumParameter( 'continue', $continuation['continue'] );
+				// Add continuation to result for client-side pagination
+				$this->getResult()->addValue( null, 'continue', [
+					'continue' => $continuation['continue']
+				] );
 			}
 		}
 

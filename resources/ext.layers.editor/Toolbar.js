@@ -270,6 +270,10 @@
 		try {
 			savedCustomColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
 		} catch ( err ) {
+			// localStorage parse failed - may be corrupted or unavailable
+			if ( window.mw && window.mw.log ) {
+				mw.log.warn( '[Toolbar] Failed to load custom colors:', err.message );
+			}
 			savedCustomColors = [];
 		}
 		const createCustomButtonClickHandler = function ( button ) {
@@ -341,7 +345,10 @@
 						localStorage.setItem( 'layers-custom-colors', JSON.stringify( customColors ) );
 					}
 				} catch ( err ) {
-					// Ignore storage failures
+					// localStorage unavailable or quota exceeded
+					if ( window.mw && window.mw.log ) {
+						mw.log.warn( '[Toolbar] Failed to save custom color:', err.message );
+					}
 				}
 			}
 			onApply( selectedColor );

@@ -24,16 +24,15 @@ module.exports = {
 		'!**/vendor/**'
 	],
 
-	// Coverage thresholds - set slightly above current baseline to prevent regression
-	// Current coverage (Jan 2025): ~48% statements, ~36% branches, ~48% functions, ~48% lines
-	// Updated after adding layer ordering methods and tests (25 new tests)
-	// Goal: Increase by 5% each sprint until reaching 60%+
+	// Coverage thresholds - protect against regression
+	// Current coverage (Dec 2025): 84.5% statements, 69% branches, 84% functions, 84.7% lines
+	// These thresholds ensure we don't regress from current quality levels
 	coverageThreshold: {
 		global: {
-			branches: 36,
-			functions: 48,
-			lines: 48,
-			statements: 48
+			branches: 65,
+			functions: 80,
+			lines: 80,
+			statements: 80
 		}
 	},
 

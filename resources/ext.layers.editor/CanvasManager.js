@@ -26,7 +26,10 @@
 				return globalRef[ name ];
 			}
 		} catch ( e ) {
-			// Ignore
+			// Global scope access failed - expected in some restricted environments
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[CanvasManager] findClass failed for "' + name + '":', e.message );
+			}
 		}
 		return undefined;
 		/* eslint-enable no-undef */
