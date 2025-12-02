@@ -24,15 +24,15 @@ The "Layers" extension is a MediaWiki extension for non-destructive image annota
 ### The Bad
 - **God classes**: 3 JavaScript files exceed 1,500 lines with severely mixed responsibilities
 - **Global pollution**: 40+ `window.*` exports using antiquated IIFE pattern
-- **Silent error suppression**: **12+ `catch { /* ignore */ }` blocks in init.js alone**
+- ~~**Silent error suppression**: 12+ `catch { /* ignore */ }` blocks in init.js~~ ✅ **FIXED (Dec 2025)**
 - **Fragmented state**: StateManager exists but is bypassed throughout the codebase
 
 ### The Ugly
 - CanvasManager.js is **1,899 lines** (target: <800) — still a god class after 8 extractions
 - WikitextHooks.php is **1,143 lines** handling 13+ hooks
-- init.js has **12 silent catch blocks** that make debugging impossible
+- init.js has ~~12 silent catch blocks~~ ✅ Fixed - proper logging now
 - No ES modules — blocks TypeScript, tree-shaking, and modern tooling
-- **No end-to-end tests** — only unit tests
+- **No end-to-end tests** — but has 2 comprehensive integration test suites
 
 **📋 Detailed improvement plan: [`improvement_plan.md`](./improvement_plan.md)**
 
@@ -48,8 +48,8 @@ The "Layers" extension is a MediaWiki extension for non-destructive image annota
 | Performance | 4/10 | 🔴 Poor | Full redraws, RenderCoordinator underutilized |
 | Accessibility | 3/10 | 🔴 Poor | Canvas inherently inaccessible |
 | Documentation | 5/10 | 🟡 Fair | Some docs are outdated or aspirational |
-| Testing | 8/10 | 🟢 Good | 91% coverage, 2,352 tests, but no E2E |
-| Error Handling | 3/10 | 🔴 Critical | 12+ silent catch blocks in init.js |
+| Testing | 8/10 | 🟢 Good | 91% coverage, 2,352 tests, 2 integration suites |
+| Error Handling | 7/10 | 🟢 Good | ~~12+ silent catch blocks~~ ✅ Fixed - now uses debugWarn() |
 | Maintainability | 3/10 | 🔴 Poor | God classes make changes high-risk |
 
 ---
