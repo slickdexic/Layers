@@ -215,16 +215,19 @@ The extension currently provides 14 drawing and selection tools:
 | Highlight Tool           | H         | ✅ Working |
 | Blur Tool                | B         | ✅ Working |
 | Marquee Select           | M         | ✅ Working |
+| Undo                     | Ctrl+Z    | ✅ Working |
+| Redo                     | Ctrl+Y / Ctrl+Shift+Z | ✅ Working |
+| Copy                     | Ctrl+C    | ✅ Working |
+| Paste                    | Ctrl+V    | ✅ Working |
+| Delete                   | Delete    | ✅ Working |
 
 ### Planned Shortcuts
 
 | Action                   | Planned Shortcut |
 | ------------------------ | ---------------- |
-| Undo / Redo              | Ctrl+Z / Ctrl+Y  |
-| Copy / Paste / Duplicate | Ctrl+C / Ctrl+V / Ctrl+D |
 | Zoom In / Out / Reset    | Ctrl+`+` / Ctrl+`-` / Ctrl+0 |
+| Duplicate                | Ctrl+D |
 | Pan Mode                 | Space + Drag     |
-| Delete Selected          | Delete           |
 
 ---
 
@@ -245,9 +248,9 @@ The extension currently provides 14 drawing and selection tools:
 - Security validation and rate limiting
 
 **Current Architecture Challenges:**
-- Large monolithic JavaScript files (CanvasManager.js: 5,462 lines)
-- Limited modularization
-- Basic state management
+- Large JavaScript orchestrator files (CanvasManager.js: ~1,900 lines)
+- IIFE module system (migration to ES modules planned)
+- Centralized state management pattern needs completion
 
 ### Development Roadmap
 

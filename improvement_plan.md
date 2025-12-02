@@ -10,7 +10,7 @@
 
 This document provides a prioritized, actionable improvement plan for the Layers MediaWiki extension. Tasks are organized by priority level with effort estimates, risk assessments, and clear acceptance criteria.
 
-**Current State:** The extension is functional but carries significant technical debt that impedes development and maintenance.
+**Current State:** The extension is functional but carries significant technical debt that impedes development and maintenance. The code review identified critical issues that should block feature development until resolved.
 
 ---
 
@@ -25,335 +25,112 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 ---
 
-## Current Status Summary
+## Current Metrics
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Jest tests | 2,312 | 1,500+ | ✅ Met |
-| Statement coverage | 90.9% | 80% | ✅ Met |
-| CanvasManager.js lines | 1,896 | <800 | 🔴 1,096 over |
+| Jest tests | 2,352 | 1,500+ | ✅ Met |
+| Statement coverage | 91% | 80% | ✅ Met |
+| CanvasManager.js lines | 1,899 | <800 | 🔴 1,099 over |
 | LayersEditor.js lines | 1,756 | <800 | 🔴 956 over |
-| Toolbar.js lines | 1,664 | <800 | 🔴 864 over |
-| WikitextHooks.php lines | 788 | <400 | 🟠 388 over |
-| Window.* exports | 43 | <10 | 🔴 33 over |
-| Silent catch blocks | ~6 | 0 | 🟡 Reduced |
-| ESLint errors | 0 | 0 | ✅ Met |
-| ToolManager coverage | 99% | 80% | ✅ Met |
-| HistoryManager coverage | 94% | 80% | ✅ Met |
-| CanvasManager coverage | 87% | 80% | ✅ Met |
-| LayerPanel coverage | 88% | 80% | ✅ Met |
-| CanvasRenderer coverage | 90.5% | 80% | ✅ Met |
+| Toolbar.js lines | 1,678 | <800 | 🔴 878 over |
+| WikitextHooks.php lines | 1,143 | <400 | 🔴 743 over |
+| init.js lines | 854 | <400 | 🔴 454 over |
+| Window.* exports | 40+ | <10 | 🔴 30+ over |
+| Silent catch blocks | 0 | 0 | ✅ Fixed |
+| E2E tests | 0 | 10+ | 🔴 Missing |
 
 ---
 
 ## Phase 0: Critical (P0) — This Week
 
-### 0.1 Fix Silent Error Suppression
+These tasks block feature development and quality improvements.
+
+### P0.1 Fix Silent Error Suppression in init.js
 
 **Priority:** P0 - CRITICAL  
-**Status:** ✅ Completed  
-**Effort:** 2-4 hours (actual: ~1 hour)  
-**Risk:** LOW
+**Status:** ✅ COMPLETE (Dec 2025)  
+**Effort:** 2-4 hours  
+**Risk:** LOW  
 
-**Problem:** Multiple catch blocks swallow errors silently, making debugging impossible.
+**Problem:** `resources/ext.layers/init.js` had **12 catch blocks** that silently swallowed errors.
 
-**Completed:**
-- ✅ CanvasManager.js - Line 28: Added `mw.log.warn()` for `findClass()` failures
-- ✅ Toolbar.js - Line 136, 157: Added logging for localStorage save/load errors
-- ✅ ModuleRegistry.js - `emit()` method: Added `mw.log.error()` for event handler errors
+**Solution Implemented:**
+- Replaced all 12 `/* ignore */` catch blocks with proper `debugWarn()` logging
+- Each catch now logs context-appropriate messages (e.g., URL parsing, namespace lookup, DOM traversal)
+- Editor files (StateManager.js, LayerPanel.js, Toolbar.js) already had proper error handling
 
-**Remaining (deferred to P1 - low impact):**
-- StateManager.js - localStorage parse errors (already has partial handling)
-- HistoryManager.js - storage failures
+**Files fixed:**
+- [x] `resources/ext.layers/init.js` — 12 silent catches → proper logging
 
 **Acceptance Criteria:**
-- [x] Critical silent catches fixed
-- [x] All errors now logged in debug mode
-- [x] Tests pass (2,126 tests)
+- [x] Zero `/* ignore */` comments in catch blocks
+- [x] All catches log to `debugWarn()` or ErrorHandler
+- [x] Debug mode surfaces all errors
+- [x] Tests still pass (verified: `npm test` passes)
 
 ---
 
-### 0.2 Update Jest Coverage Thresholds
+### P0.2 Document Actual vs Aspirational Features
 
 **Priority:** P0 - HIGH  
-**Status:** ✅ Completed  
-**Effort:** 15 minutes  
-**Risk:** None
+**Status:** ✅ COMPLETE (Dec 2025)  
+**Effort:** 2-3 hours  
+**Risk:** None  
 
-**Problem:** jest.config.js had 48% thresholds but actual coverage was 84.5%. This allowed major regressions.
+**Problem:** Some documentation described features that didn't exist or metrics that were wrong.
 
-**Change applied to jest.config.js:**
-```javascript
-// Before: branches: 36, functions: 48, lines: 48, statements: 48
-// After:  branches: 65, functions: 80, lines: 80, statements: 80
-```
-
-**Acceptance Criteria:**
-- [x] Thresholds set to protect current coverage level
-- [x] CI fails if coverage drops below 80%
-
----
-
-### 0.3 Fix Documentation Accuracy
-
-**Priority:** P0 - HIGH  
-**Status:** ✅ Completed  
-**Effort:** 1-2 hours (actual: 30 min)  
-**Risk:** None
-
-**Changes made to docs/MODULAR_ARCHITECTURE.md:**
-- Updated coverage 53% → 84.5%
-- Updated CanvasManager lines 4,003 → 1,896
-- Added table with all 8 extracted controllers
-- Updated December 2025 section with accurate stats
+**Files audited and updated:**
+- [x] `docs/MODULAR_ARCHITECTURE.md` — Already had accurate "Honest Assessment" section
+- [x] `README.md` — Fixed outdated CanvasManager line count (5,462 → ~1,900), moved Ctrl+Z/Y/C/V/Delete from "Planned" to "Implemented"
 
 **Acceptance Criteria:**
 - [x] All documented metrics match actual values
-- [x] Clear distinction between implemented and planned features
+- [x] Aspirational features clearly marked as "Planned" or "Future"
+- [x] No misleading claims about capabilities
+
+---
+
+### P0.3 Add Basic E2E Test
+
+**Priority:** P0 - HIGH  
+**Status:** 🔴 Not Started  
+**Effort:** 4-6 hours  
+**Risk:** MEDIUM  
+
+**Problem:** 91% unit test coverage but zero E2E tests. Unit tests can pass while the application is broken.
+
+**Minimal E2E test to add:**
+1. Open editor on a test image
+2. Create one layer (rectangle)
+3. Save the layer set
+4. Reload page
+5. Verify layer persists
+
+**Setup:**
+- [ ] Add Playwright or Cypress as dev dependency
+- [ ] Create test fixtures (test image, test wiki page)
+- [ ] Write smoke test for save/load workflow
+- [ ] Add to CI pipeline (or document manual process)
+
+**Acceptance Criteria:**
+- [ ] At least 1 E2E test covering save/load
+- [ ] Test can run locally
+- [ ] Documentation for running E2E tests
 
 ---
 
 ## Phase 1: High Priority (P1) — 2-4 Weeks
 
-### 1.3 Increase ToolManager Test Coverage
+### P1.1 Continue CanvasManager Decomposition
 
 **Priority:** P1 - HIGH  
-**Status:** ✅ Completed  
-**Effort:** 2 hours  
-**Risk:** LOW
-
-**Previous State:** 64% statement coverage, 57% branch coverage
-**New State:** 99% statement coverage, 80% branch coverage
-
-**Tests added (45 new tests):**
-- Text editor lifecycle: `showTextEditor`, `finishTextEditing`, keyboard events
-- Path tool: `handlePathPoint`, `completePath`, path closure detection
-- Shape tools: `updatePolygonTool`, `updateStarTool`, `updateHighlightTool`
-- Validation: `hasValidSize` for all 8 layer types
-- Rendering: `renderTempLayer`, `renderPathPreview`
-- Layer management: `addLayerToCanvas` with all edge cases
-- Utilities: `getModifiers` for keyboard event handling
-
-**Acceptance Criteria:**
-- [x] ToolManager.js coverage >= 80% (achieved 99%)
-- [x] All new tests pass
-- [x] Total test count: 2,104 (up from 2,059)
-
----
-
-### 1.4 Increase HistoryManager Test Coverage
-
-**Priority:** P1 - HIGH  
-**Status:** ✅ Completed  
-**Effort:** 1 hour  
-**Risk:** LOW
-
-**Previous State:** 73% statement coverage, 55% branch coverage
-**New State:** 94% statement coverage, 84% branch coverage
-
-**Tests added (19 new tests):**
-- `restoreState` with editor integration
-- `restoreState` legacy selection clearing
-- `updateUndoRedoButtons` toolbar button updates
-- `getHistoryEntries` with pagination
-- `revertTo` specific history entry
-- `setMaxHistorySteps` with history trimming
-- `hasUnsavedChanges` state comparison
-- `saveInitialState` initialization
-- `exportHistory` debugging export
-- `getHistoryInfo` information retrieval
-
-**Acceptance Criteria:**
-- [x] HistoryManager.js coverage >= 80% (achieved 94%)
-- [x] All new tests pass
-- [x] Total test count: 2,126 (up from 2,107)
-
----
-
-### 1.7 Increase LayersEditor Test Coverage
-
-**Priority:** P1 - MEDIUM  
-**Status:** ✅ Completed  
-**Effort:** 1 hour  
-**Risk:** LOW
-
-**Previous State:** 74% statement coverage, 55% branch coverage
-**New State:** 76% statement coverage, 58% branch coverage
-
-**Tests added (19 new tests):**
-- `buildRevisionSelector` - revision option population
-- `updateRevisionLoadButton` - button state management
-- `trackWindowListener` - event listener tracking
-- `parseMWTimestamp` - MediaWiki timestamp parsing
-- `normalizeLayers` - layer visibility defaults
-- `debugLog` and `errorLog` - logging utilities
-- `markDirty` and `markClean` - state management
-
-**Acceptance Criteria:**
-- [x] LayersEditor.js coverage improved (74% → 76%)
-- [x] All new tests pass
-- [x] Total test count: 2,145 (up from 2,126)
-
----
-
-### 1.8 Increase CanvasManager Test Coverage
-
-**Priority:** P1 - HIGH  
-**Status:** ✅ Completed  
-**Effort:** 1 hour  
-**Risk:** LOW
-
-**Previous State:** 76% statement coverage, 56% branch coverage
-**New State:** 87% statement coverage, 69% branch coverage
-
-**Tests added (76 new tests in CanvasManagerExtended.test.js):**
-- `loadBackgroundImageFallback` - URL building, deduplication, MediaWiki URLs
-- `tryLoadImageFallback` - Image loading, success/error callbacks, URL progression
-- `handleImageLoaded` - Background image setup, canvas sizing, renderer integration
-- `handleImageLoadError` - Error recovery, default canvas setup
-- `deepCloneLayers` - JSON cloning and manual fallback for circular references
-- `calculateResize` - TransformController delegation and error handling
-- `emitTransforming` - Transform event throttling and dispatch
-- `updateUndoRedoButtons` - HistoryManager delegation
-- `undo`/`redo` - Editor delegation
-- `saveState` - HistoryManager delegation
-- `isLayerInViewport` - Viewport culling logic
-- `redrawOptimized` - rAF and setTimeout fallback paths
-- `drawLayer` - Layer rendering with error recovery
-- Controller delegation methods (gridRulers, hitTest, transform)
-- `subscribeToState` - StateManager subscription
-- `setupEventHandlers` - CanvasEvents error handling
-
-**Acceptance Criteria:**
-- [x] CanvasManager.js coverage >= 80% (achieved 87%)
-- [x] All new tests pass
-- [x] Total test count: 2,221 (up from 2,145)
-
----
-
-### 1.9 Increase LayerPanel Test Coverage
-
-**Priority:** P1 - HIGH  
-**Status:** ✅ Completed  
-**Effort:** 1 hour  
-**Risk:** LOW
-
-**Previous State:** 77% statement coverage
-**New State:** 88% statement coverage, 71% branch coverage
-
-**Tests added (51 new tests in LayerPanelCoverage.test.js):**
-- `isDebugEnabled` - mw.config checking and debug flag handling
-- `logDebug`, `logWarn`, `logError` - Logging method coverage with mw availability checks
-- `editLayerName` - Input truncation, blur/Enter/Escape handling, name persistence
-- `reorderLayers` - Fallback logic when StateManager.reorderLayer unavailable
-- `createConfirmDialog` - Modal overlay/dialog creation, confirm/cancel/Escape handling
-- `simpleConfirm` - window.confirm fallback and unavailable handling
-- `renderCodeSnippet` - Wikitext generation for visible/hidden/partial layer states
-- `getDefaultLayerName` - Type-based naming for all layer types including text truncation
-- `syncPropertiesFromLayer` - Property panel synchronization, focus preservation, ellipse radius handling
-- Listener management - Document/target listener add/remove and invalid input handling
-- Dialog cleanup - Cleanup registration, execution, and error handling
-
-**Acceptance Criteria:**
-- [x] LayerPanel.js coverage >= 80% (achieved 88%)
-- [x] All new tests pass
-- [x] Total test count: 2,272 (up from 2,221)
-
----
-
-### 1.10 Increase CanvasRenderer Test Coverage
-
-**Priority:** P1 - HIGH  
-**Status:** ✅ Completed  
-**Effort:** 45 minutes  
-**Risk:** LOW
-
-**Previous State:** 77.73% statement coverage
-**New State:** 90.55% statement coverage, 73.88% branch coverage
-
-**Tests added (40 new tests in CanvasRendererCoverage.test.js):**
-- `blend mode handling` - valid blend mode application, blendMode property support
-- `supportsGlow` - supported/unsupported type checking
-- `drawGlow` - glow effect rendering, default stroke color, alpha preservation
-- `drawLayerShapeOnly` - rectangle, circle, ellipse shapes, unknown type handling
-- `glow rendering integration` - glow property triggering, unsupported type skipping
-- `shadow handling` - shadow application, default values, shadow clearing
-- `clearShadow` - shadow property reset
-- `drawLineSelectionIndicators` - line selection, rotation, handles, rotation handle
-- `drawSelectionIndicators` - editor checks, layer lookup, line/arrow selection, rotation
-- `opacity handling` - layer opacity, clamping, NaN handling
-- `ellipse rendering edge cases` - zero radius skipping, legacy format
-- `getLayerBounds edge cases` - null bounds, text bounds, line bounds
-- `transform state management` - save/restore context, error recovery
-- `redraw` - canvas clearing, transform application, visible layer rendering
-
-**Key mocks added:**
-- `TextUtils.measureTextLayer` - for text layer bounds calculation
-- `GeometryUtils.getLayerBoundsForType` - for geometric bounds calculation
-
-**Acceptance Criteria:**
-- [x] CanvasRenderer.js coverage >= 80% (achieved 90.55%)
-- [x] All new tests pass
-- [x] Total test count: 2,312 (up from 2,272)
-
----
-
-### 1.5 Fix Highlight Tool Bug
-
-**Priority:** P1 - HIGH  
-**Status:** ✅ Completed  
-**Effort:** 15 minutes  
-**Risk:** LOW
-
-**Problem:** The `highlight` tool had `startHighlightTool()` and `updateHighlightTool()` methods that were never called from the main tool handlers.
-
-**Root Cause:** Missing `case 'highlight':` in three switch statements:
-- `startTool()` - tool initialization
-- `updateTool()` - drag updates
-- `finishTool()` - shape completion
-
-**Fix Applied:**
-- Added `case 'highlight':` to `startTool()` calling `startHighlightTool()`
-- Added `case 'highlight':` to `updateTool()` calling `updateHighlightTool()`
-- Added `case 'highlight':` to `finishTool()` using `finishShapeDrawing()`
-- Added 3 integration tests verifying full highlight tool lifecycle
-
-**Acceptance Criteria:**
-- [x] Highlight tool now functions correctly
-- [x] Integration tests verify start/update/finish workflow
-- [x] All tests pass
-
----
-
-### 1.6 Remove Duplicate Global Export
-
-**Priority:** P1 - MEDIUM  
-**Status:** ✅ Completed  
-**Effort:** 10 minutes  
-**Risk:** LOW
-
-**Problem:** `window.ToolManager` was exported alongside `window.LayersToolManager`, causing namespace pollution.
-
-**Fix Applied:**
-- Removed `window.ToolManager = ToolManager;` from ToolManager.js
-- Updated test file to use `window.LayersToolManager`
-
-**Acceptance Criteria:**
-- [x] Only `window.LayersToolManager` exported
-- [x] Tests updated to use correct export
-- [x] All tests pass
-
----
-
-### 1.1 Continue CanvasManager Decomposition
-
-**Priority:** P1 - HIGH  
-**Status:** 🟡 Pending  
+**Status:** 🔴 Not Started  
 **Effort:** 3-5 days  
 **Risk:** MEDIUM  
-**Current:** 1,896 lines | **Target:** <800 lines
+**Current:** 1,899 lines | **Target:** <800 lines
 
-**Already Extracted (8 controllers, 97%+ avg coverage):**
+**Already Extracted (8 controllers, 91-100% coverage):**
 - ✅ ZoomPanController.js (341 lines, 100%)
 - ✅ DrawingController.js (614 lines, 100%)
 - ✅ InteractionController.js (487 lines, 100%)
@@ -363,113 +140,309 @@ This document provides a prioritized, actionable improvement plan for the Layers
 - ✅ RenderCoordinator.js (387 lines, 92%)
 - ✅ TransformController.js (1,157 lines, 91%)
 
-**Remaining Extraction:**
+**Remaining Extraction Candidates:**
 
-| New Module | Est. Lines | Responsibilities |
-|------------|------------|------------------|
-| **CanvasCore.js** | ~400 | Canvas element setup, context creation, resize handling, DPI scaling, image loading |
+| Module | Est. Lines | Responsibilities |
+|--------|------------|------------------|
+| **CanvasCore.js** | ~300 | Canvas element setup, context, DPI scaling |
+| **ImageLoadController.js** | ~200 | Background image loading, URL building |
+| **LayerController.js** | ~400 | Layer CRUD, ordering, lookup |
 
 **Tasks:**
-- [ ] Identify CanvasCore.js methods in CanvasManager
-- [ ] Create CanvasCore.js with extracted methods
-- [ ] Update CanvasManager to use CanvasCore
-- [ ] Write tests for CanvasCore (target 90%+ coverage)
-- [ ] Verify all 2,059 existing tests pass
+- [ ] Profile CanvasManager methods by responsibility
+- [ ] Extract CanvasCore.js (canvas setup, context)
+- [ ] Extract ImageLoadController.js (image loading)
+- [ ] Write tests for each new module (target 90%+)
+- [ ] Verify all existing tests pass
 
 **Acceptance Criteria:**
-- [ ] CanvasManager.js <800 lines
-- [ ] CanvasCore.js >90% coverage
+- [ ] CanvasManager.js <1,200 lines (intermediate goal)
+- [ ] Each extracted module >90% coverage
 - [ ] No functionality regressions
+- [ ] Clear interfaces between modules
 
 ---
 
-### 1.2 Complete StateManager Migration
+### P1.2 Split WikitextHooks.php
 
 **Priority:** P1 - HIGH  
 **Status:** 🔴 Not Started  
+**Effort:** 2-3 days  
+**Risk:** MEDIUM  
+**Current:** 1,143 lines | **Target:** <400 lines
+
+**Problem:** One file handles 13+ hooks with complex shared state.
+
+**Proposed Split:**
+
+| New File | Hooks | Purpose |
+|----------|-------|---------|
+| `ParameterHooks.php` | `GetLinkParamDefinitions`, `GetLinkParamTypes`, `ParserGetImageLinkParams`, `ParserGetImageLinkOptions`, `ParserMakeImageParams` | Parameter handling |
+| `ImageRenderHooks.php` | `ImageBeforeProduceHTML`, `ThumbnailBeforeProduceHTML`, `MakeImageLink2`, `LinkerMakeImageLink`, `LinkerMakeMediaLinkFile` | Rendering |
+| `ParsingHooks.php` | `ParserFirstCallInit`, `ParserBeforeInternalParse`, `FileLink` | Parser integration |
+
+**Tasks:**
+- [ ] Create `ParameterHooks.php` with parameter-related hooks
+- [ ] Create `ImageRenderHooks.php` with rendering hooks
+- [ ] Create `ParsingHooks.php` with parser hooks
+- [ ] Update `extension.json` to register new hook handlers
+- [ ] Move shared state to a service class
+- [ ] Write PHPUnit tests for each new class
+
+**Acceptance Criteria:**
+- [ ] WikitextHooks.php <400 lines (or removed)
+- [ ] Each new class handles one concern
+- [ ] No static mutable state (use services)
+- [ ] PHP tests pass
+
+---
+
+### P1.3 Refactor init.js
+
+**Priority:** P1 - MEDIUM  
+**Status:** 🔴 Not Started  
+**Effort:** 2-3 days  
+**Risk:** LOW  
+**Current:** 854 lines | **Target:** <400 lines
+
+**Problem:** init.js is large, has 12 silent catches, and mixes multiple concerns.
+
+**Proposed Split:**
+
+| New File | Lines | Purpose |
+|----------|-------|---------|
+| `viewer/LayersBootstrap.js` | ~150 | Main init, hook registration |
+| `viewer/UrlParser.js` | ~150 | URL parameter extraction |
+| `viewer/ViewerManager.js` | ~200 | Viewer initialization |
+| `viewer/ApiFallback.js` | ~150 | API data fetching |
+
+**Tasks:**
+- [ ] Create `viewer/` subdirectory
+- [ ] Extract URL parsing to `UrlParser.js`
+- [ ] Extract viewer init to `ViewerManager.js`
+- [ ] Extract API fallback to `ApiFallback.js`
+- [ ] Create `LayersBootstrap.js` as orchestrator
+- [ ] Update `extension.json` script list
+- [ ] Write tests for each module
+
+**Acceptance Criteria:**
+- [ ] No file >250 lines
+- [ ] Zero silent catch blocks
+- [ ] Tests for critical paths
+- [ ] Viewer still works in all scenarios
+
+---
+
+### P1.4 Complete StateManager Migration
+
+**Priority:** P1 - MEDIUM  
+**Status:** 🔴 Not Started  
 **Effort:** 3-4 days  
-**Risk:** MEDIUM
+**Risk:** MEDIUM  
 
-**Problem:** StateManager exists but is bypassed in 56+ places in CanvasManager alone.
+**Problem:** StateManager exists but is bypassed in 56+ places.
 
-**Local state that should use StateManager:**
+**CanvasManager local state to migrate:**
 ```javascript
-// CanvasManager - should migrate to StateManager
-this.zoom = 1;
-this.pan = { x: 0, y: 0 };
-this.currentTool = 'select';
+this.zoom = 1.0;           // → StateManager
+this.pan = { x: 0, y: 0 }; // → StateManager
+this.currentTool = 'pointer';
 this.layers = [];
 this.selectedLayers = [];
 this.gridEnabled = false;
-this.rulersEnabled = false;
-// ... 40+ more properties
+this.showRulers = false;
+// ... 40+ more
 ```
 
 **Migration Pattern:**
 ```javascript
-// Before (CanvasManager)
+// Before (direct state)
 this.zoom = 1;
 this.setZoom = function( z ) { this.zoom = z; this.render(); };
 
-// After (using StateManager)
-// CanvasManager delegates to StateManager
+// After (StateManager)
 get zoom() { return this.stateManager.get('zoom'); }
 setZoom( z ) { this.stateManager.set('zoom', z); }
 // StateManager triggers render via subscription
 ```
 
 **Tasks:**
-- [ ] Identify all local state in CanvasManager
+- [ ] Audit all local state in CanvasManager (document in spreadsheet)
 - [ ] Add state keys to StateManager
-- [ ] Create getters/setters that delegate to StateManager
+- [ ] Create delegating getters/setters
 - [ ] Update Toolbar to use StateManager events
 - [ ] Update LayerPanel to use StateManager subscriptions
 - [ ] Add state consistency tests
+- [ ] Verify subscriptions fire correctly
 
 **Acceptance Criteria:**
-- [ ] Single source of truth for all editor state
-- [ ] No direct state manipulation outside StateManager
+- [ ] Zero direct state manipulation outside StateManager
 - [ ] All components use StateManager subscriptions
+- [ ] No state desync bugs
+- [ ] Tests verify state consistency
 
 ---
 
-### 1.3 Increase ToolManager Test Coverage
+## Phase 2: Medium Priority (P2) — 1-2 Months
 
-**Priority:** P1 - MEDIUM  
+### P2.1 Begin ES Module Migration
+
+**Priority:** P2 - MEDIUM  
 **Status:** 🔴 Not Started  
-**Effort:** 1-2 days  
-**Risk:** LOW
+**Effort:** 1-2 weeks  
+**Risk:** MEDIUM  
 
-**Problem:** ToolManager is at 64% coverage but manages all drawing tools (high risk).
+**Problem:** 40+ `window.*` exports prevent modern tooling.
 
-**Current gaps (from coverage report):**
-- Lines 171-175, 214-218: Tool switching edge cases
-- Lines 391-396: Tool option handling
-- Lines 528-580: Event handling paths
-- Lines 613-617, 652-659: Tool cleanup
+**Migration Strategy — Start with utilities (no dependencies):**
+
+| Phase | Files | Risk |
+|-------|-------|------|
+| Phase 1 | `GeometryUtils.js`, `TextUtils.js`, `LayersConstants.js` | LOW |
+| Phase 2 | `ErrorHandler.js`, `ValidationManager.js` | LOW |
+| Phase 3 | `StateManager.js`, `HistoryManager.js` | MEDIUM |
+| Phase 4 | Core classes (future) | HIGH |
+
+**Pattern:**
+```javascript
+// Before (IIFE)
+( function () {
+    function GeometryUtils() { ... }
+    window.GeometryUtils = GeometryUtils;
+}());
+
+// After (ES Module + compat shim)
+export const GeometryUtils = { /* methods */ };
+
+// Backward compatibility
+if ( typeof window !== 'undefined' ) {
+    window.GeometryUtils = GeometryUtils;
+}
+```
 
 **Tasks:**
-- [ ] Add tests for tool switching edge cases
-- [ ] Add tests for tool option changes
-- [ ] Add tests for tool event handlers
-- [ ] Add tests for tool cleanup/destroy
+- [ ] Configure webpack for ES module output
+- [ ] Convert `GeometryUtils.js` (proof of concept)
+- [ ] Update ResourceLoader config
+- [ ] Test in MediaWiki environment
+- [ ] Document pattern for team
+- [ ] Convert remaining Phase 1 files
 
 **Acceptance Criteria:**
-- [ ] ToolManager coverage ≥80%
-- [ ] All tool types have dedicated tests
+- [ ] At least 3 files converted to ES modules
+- [ ] MediaWiki loads modules correctly
+- [ ] Existing tests pass
+- [ ] Pattern documented
 
 ---
 
-### 1.4 Extract PHP Shared Services
+### P2.2 Split Toolbar.js
 
-**Priority:** P1 - MEDIUM  
+**Priority:** P2 - MEDIUM  
+**Status:** 🔴 Not Started  
+**Effort:** 2-3 days  
+**Risk:** LOW  
+**Current:** 1,678 lines | **Target:** <500 lines
+
+**Proposed Split:**
+
+| New File | Est. Lines | Responsibilities |
+|----------|------------|------------------|
+| `ToolbarCore.js` | ~300 | Base toolbar, button management, layout |
+| `ToolButtons.js` | ~400 | Tool button creation, icons, tooltips |
+| `StyleControls.js` | ~400 | Color picker, stroke, fill, font |
+| `ViewControls.js` | ~200 | Zoom, grid, rulers toggles |
+
+**Tasks:**
+- [ ] Create `ToolbarCore.js` with base functionality
+- [ ] Extract tool buttons to `ToolButtons.js`
+- [ ] Extract style controls to `StyleControls.js`
+- [ ] Extract view controls to `ViewControls.js`
+- [ ] Update `Toolbar.js` to compose modules
+- [ ] Write tests for each new module
+
+**Acceptance Criteria:**
+- [ ] Toolbar.js <500 lines
+- [ ] Each extracted module >80% coverage
+- [ ] No UI regressions
+
+---
+
+### P2.3 Add Database Index for Named Sets
+
+**Priority:** P2 - LOW  
+**Status:** 🔴 Not Started  
+**Effort:** 30 minutes  
+**Risk:** LOW  
+
+**Problem:** Named set lookups by name lack index.
+
+**Add patch file:**
+```sql
+-- sql/patches/patch-add-name-index.sql
+ALTER TABLE /*_*/layer_sets 
+ADD INDEX ls_name_lookup (ls_img_name, ls_img_sha1, ls_name);
+```
+
+**Tasks:**
+- [ ] Create `sql/patches/patch-add-name-index.sql`
+- [ ] Update `LayersSchemaManager.php`
+- [ ] Test with `maintenance/update.php`
+- [ ] Verify query performance (EXPLAIN)
+
+**Acceptance Criteria:**
+- [ ] Index exists after update
+- [ ] Named set queries use index
+
+---
+
+### P2.4 Canvas Accessibility
+
+**Priority:** P2 - MEDIUM  
+**Status:** 🔴 Not Started  
+**Effort:** 3-4 days  
+**Risk:** LOW  
+
+**Problem:** Canvas is inherently inaccessible to screen readers.
+
+**Implementation:**
+```html
+<!-- Hidden container for screen readers -->
+<div class="layers-sr-only" role="region" aria-live="polite" aria-label="Layer annotations">
+    <ul id="layers-sr-list">
+        <li>Text layer: "Label 1" at position 100, 200</li>
+        <li>Arrow from 50, 50 to 150, 150</li>
+    </ul>
+</div>
+```
+
+**Tasks:**
+- [ ] Add visually-hidden layer description container
+- [ ] Sync descriptions with canvas changes
+- [ ] Add `aria-live="polite"` for dynamic updates
+- [ ] Implement keyboard layer navigation (Tab, Arrow keys)
+- [ ] Add keyboard shortcuts for layer operations
+- [ ] Test with NVDA and VoiceOver
+- [ ] Update `docs/ACCESSIBILITY.md`
+
+**Acceptance Criteria:**
+- [ ] Screen readers announce layer info
+- [ ] Keyboard navigation works
+- [ ] ARIA attributes properly applied
+
+---
+
+### P2.5 Extract PHP Shared Services
+
+**Priority:** P2 - LOW  
 **Status:** 🔴 Not Started  
 **Effort:** 1-2 days  
-**Risk:** LOW
+**Risk:** LOW  
 
 **Problem:** Logger and file resolution code duplicated across files.
 
-**Create FileResolver service:**
+**Create services:**
+
 ```php
 // src/Services/FileResolver.php
 class FileResolver {
@@ -480,10 +453,7 @@ class FileResolver {
             ->getRepoGroup()->findFile( $title );
     }
 }
-```
 
-**Create LoggerFactory:**
-```php
 // src/Logging/LoggerFactory.php  
 class LoggerFactory {
     public static function getLogger(): LoggerInterface {
@@ -499,282 +469,77 @@ class LoggerFactory {
 - ApiLayersInfo.php
 - Hooks.php
 
-**Tasks:**
-- [ ] Create FileResolver service
-- [ ] Create LoggerFactory
-- [ ] Update services.php to register
-- [ ] Refactor hook handlers to use services
-- [ ] Write unit tests
-
 **Acceptance Criteria:**
 - [ ] No duplicate file resolution code
 - [ ] No duplicate logger creation code
-- [ ] All tests pass
-
----
-
-## Phase 2: Medium Priority (P2) — 1-2 Months
-
-### 2.1 Migrate to ES Modules
-
-**Priority:** P2 - MEDIUM  
-**Status:** 🔴 Not Started  
-**Effort:** 1-2 weeks  
-**Risk:** MEDIUM
-
-**Problem:** 44 `window.*` exports prevent modern tooling.
-
-**Migration Strategy:**
-
-**Phase 1 — Utilities (no dependencies):**
-- [ ] GeometryUtils.js → ES module
-- [ ] TextUtils.js → ES module  
-- [ ] LayersConstants.js → ES module
-- [ ] ErrorHandler.js → ES module
-
-**Phase 2 — Core (single dependency):**
-- [ ] ValidationManager.js
-- [ ] CanvasRenderer.js
-
-**Phase 3 — Complex (later):**
-- [ ] CanvasManager.js
-- [ ] LayersEditor.js
-
-**Migration Pattern:**
-```javascript
-// Before
-( function () {
-    'use strict';
-    function GeometryUtils() { ... }
-    window.GeometryUtils = GeometryUtils;
-}());
-
-// After
-export const GeometryUtils = {
-    // ...methods
-};
-
-// For MediaWiki compatibility, also:
-if ( typeof window !== 'undefined' ) {
-    window.GeometryUtils = GeometryUtils;
-}
-```
-
-**Tasks:**
-- [ ] Configure webpack for ES module output
-- [ ] Convert GeometryUtils.js first (proof of concept)
-- [ ] Update ResourceLoader config
-- [ ] Test in MediaWiki environment
-- [ ] Document migration pattern
-- [ ] Convert remaining utility files
-
-**Acceptance Criteria:**
-- [ ] At least 4 files converted to ES modules
-- [ ] MediaWiki loads modules correctly
-- [ ] Webpack builds successfully
-- [ ] Pattern documented for future migrations
-
----
-
-### 2.2 Split Toolbar.js
-
-**Priority:** P2 - MEDIUM  
-**Status:** 🔴 Not Started  
-**Effort:** 2-3 days  
-**Risk:** LOW
-
-**Problem:** Toolbar.js is 1,664 lines with mixed responsibilities.
-
-**Proposed Split:**
-
-| New File | Est. Lines | Responsibilities |
-|----------|------------|------------------|
-| ToolbarCore.js | ~400 | Base toolbar, button management, layout |
-| ToolButtons.js | ~500 | Individual tool buttons, icons, tooltips |
-| StyleControls.js | ~400 | Color picker, stroke, fill, font controls |
-| ZoomControls.js | ~200 | Zoom in/out, reset, fit |
-| GridRulerControls.js | ~150 | Grid/ruler toggle buttons |
-
-**Tasks:**
-- [ ] Create ToolbarCore.js with base functionality
-- [ ] Extract tool buttons to ToolButtons.js
-- [ ] Extract style controls to StyleControls.js
-- [ ] Extract zoom controls to ZoomControls.js
-- [ ] Update Toolbar.js to compose modules
-- [ ] Write tests for each new module
-
-**Acceptance Criteria:**
-- [ ] Toolbar.js <500 lines
-- [ ] Each extracted module >80% coverage
-- [ ] No UI regressions
-
----
-
-### 2.3 Add Database Index for Named Sets
-
-**Priority:** P2 - LOW  
-**Status:** 🔴 Not Started  
-**Effort:** 30 minutes  
-**Risk:** LOW
-
-**Problem:** Named set lookups by name lack index.
-
-**Add to sql/patches/:**
-```sql
--- sql/patches/patch-add-name-index.sql
-ALTER TABLE /*_*/layer_sets 
-ADD INDEX ls_name_lookup (ls_img_name, ls_img_sha1, ls_name);
-```
-
-**Tasks:**
-- [ ] Create patch file
-- [ ] Update LayersSchemaManager
-- [ ] Test with `maintenance/update.php`
-- [ ] Verify query performance improvement
-
-**Acceptance Criteria:**
-- [ ] Index exists after update
-- [ ] Named set queries use index (EXPLAIN)
-
----
-
-### 2.4 Implement Canvas Accessibility
-
-**Priority:** P2 - MEDIUM  
-**Status:** 🔴 Not Started  
-**Effort:** 3-4 days  
-**Risk:** LOW
-
-**Problem:** Canvas is inherently inaccessible to screen readers.
-
-**Tasks:**
-- [ ] Add visually-hidden layer description container
-- [ ] Sync descriptions with canvas changes
-- [ ] Add `aria-live="polite"` for dynamic updates
-- [ ] Implement keyboard layer navigation (Tab, Arrow keys)
-- [ ] Add keyboard shortcuts for layer operations
-- [ ] Test with NVDA and VoiceOver
-- [ ] Update docs/ACCESSIBILITY.md
-
-**Implementation:**
-```html
-<!-- Hidden container for screen readers -->
-<div class="layers-sr-only" aria-live="polite">
-    <h2>Layer annotations</h2>
-    <ul id="layers-sr-list">
-        <li>Text layer: "Label 1" at position 100, 200</li>
-        <li>Arrow from 50, 50 to 150, 150</li>
-    </ul>
-</div>
-```
-
-**Acceptance Criteria:**
-- [ ] Screen readers announce layer info
-- [ ] Full keyboard navigation works
-- [ ] ARIA attributes properly applied
-
----
-
-### 2.5 Performance Optimizations
-
-**Priority:** P2 - MEDIUM  
-**Status:** 🟡 Partially Done  
-**Effort:** 3-5 days  
-**Risk:** MEDIUM
-
-**Problem:** Full canvas redraws still common, RenderCoordinator underutilized.
-
-**Optimizations:**
-
-1. **Consistent RenderCoordinator usage**
-   - Route all renders through coordinator
-   - Eliminate direct `ctx.clearRect()` calls
-
-2. **Layer caching**
-   - Cache unchanged layers as ImageData
-   - Only redraw changed layers
-
-3. **Dirty region tracking**
-   - Mark specific regions as needing redraw
-   - Only clear/redraw affected areas
-
-4. **Viewport culling**
-   - Skip rendering layers outside visible area
-
-**Tasks:**
-- [ ] Audit CanvasManager for direct redraw calls
-- [ ] Route all redraws through RenderCoordinator
-- [ ] Implement layer caching in RenderCoordinator
-- [ ] Add dirty region invalidation
-- [ ] Add performance metrics logging
-- [ ] Profile before/after
-
-**Acceptance Criteria:**
-- [ ] Max 1 full redraw per animation frame
-- [ ] Measurable FPS improvement
-- [ ] No visual regressions
+- [ ] Services registered in `services.php`
+- [ ] Tests pass
 
 ---
 
 ## Phase 3: Long Term (P3) — 3+ Months
 
-### 3.1 TypeScript Migration
+### P3.1 TypeScript Migration
 
 **Priority:** P3 - LOW  
 **Status:** 🔴 Not Started  
 **Effort:** Ongoing  
-**Dependencies:** 2.1 (ES Modules)
+**Dependencies:** P2.1 (ES Modules)
 
 **Tasks:**
-- [ ] Add tsconfig.json
-- [ ] Create type definitions (Layer, Tool, Event interfaces)
-- [ ] Configure webpack for .ts files
+- [ ] Add `tsconfig.json`
+- [ ] Create type definitions (`Layer`, `Tool`, `Event` interfaces)
+- [ ] Configure webpack for `.ts` files
 - [ ] Migrate one utility file as proof of concept
 - [ ] Write new features in TypeScript
 
 ---
 
-### 3.2 Add E2E Tests
+### P3.2 Full E2E Test Suite
 
 **Priority:** P3 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** 1-2 weeks
+**Effort:** 1-2 weeks  
+**Dependencies:** P0.3 (Basic E2E)
 
-**Tasks:**
-- [ ] Set up Playwright or Cypress
-- [ ] Test full save/load workflow in browser
-- [ ] Test layer creation (all 11 types)
-- [ ] Test layer manipulation (move, resize, rotate)
-- [ ] Test undo/redo
-- [ ] Add to CI pipeline
+**Tests to add:**
+- [ ] Layer creation (all 11 types)
+- [ ] Layer manipulation (move, resize, rotate)
+- [ ] Undo/redo workflow
+- [ ] Named layer sets
+- [ ] Revision history
+- [ ] Import/export
+- [ ] Multi-layer selection
+- [ ] Keyboard shortcuts
 
 ---
 
-### 3.3 Full WCAG 2.1 AA Compliance
+### P3.3 Full WCAG 2.1 AA Compliance
 
 **Priority:** P3 - LOW  
 **Status:** 🔴 Not Started  
-**Effort:** 2-3 weeks
+**Effort:** 2-3 weeks  
+**Dependencies:** P2.4 (Basic Accessibility)
 
 **Tasks:**
 - [ ] Color contrast audit
-- [ ] Implement high contrast mode
-- [ ] Add skip links
+- [ ] High contrast mode
+- [ ] Skip links
 - [ ] Comprehensive keyboard navigation
 - [ ] Screen reader testing
 - [ ] Accessibility conformance statement
 
 ---
 
-### 3.4 Layer Set Delete and Rename API
+### P3.4 Layer Set Delete and Rename API
 
 **Priority:** P3 - BACKLOG  
 **Status:** 📋 Documented  
-**Effort:** 3-5 days
+**Effort:** 3-5 days  
 
 **Tasks:**
-- [ ] Add ApiLayersDelete.php
-- [ ] Add ApiLayersRename.php  
+- [ ] Add `ApiLayersDelete.php`
+- [ ] Add `ApiLayersRename.php`
 - [ ] Add `deletelayersets` permission
 - [ ] Add UI: Delete button with confirmation
 - [ ] Add UI: Rename button with input
@@ -785,64 +550,61 @@ ADD INDEX ls_name_lookup (ls_img_name, ls_img_sha1, ls_name);
 
 ## Quick Reference
 
-### P0 — This Week
+### P0 — This Week (Critical)
 
-| # | Task | Effort | Risk |
-|---|------|--------|------|
-| 0.1 | Fix silent error suppression | 2-4 hours | LOW |
-| 0.2 | Update Jest thresholds | 15 minutes | None |
-| 0.3 | Fix documentation accuracy | 1-2 hours | None |
+| # | Task | Effort | Risk | Status |
+|---|------|--------|------|--------|
+| P0.1 | Fix 12+ silent catches in init.js | 2-4 hours | LOW | 🔴 |
+| P0.2 | Document actual vs aspirational features | 2-3 hours | None | 🔴 |
+| P0.3 | Add basic E2E test | 4-6 hours | MEDIUM | 🔴 |
 
-### P1 — 2-4 Weeks
+### P1 — 2-4 Weeks (High)
 
-| # | Task | Effort | Risk |
-|---|------|--------|------|
-| 1.1 | Continue CanvasManager decomposition | 3-5 days | MEDIUM |
-| 1.2 | Complete StateManager migration | 3-4 days | MEDIUM |
-| 1.3 | Increase ToolManager coverage | 1-2 days | LOW |
-| 1.4 | Extract PHP shared services | 1-2 days | LOW |
+| # | Task | Effort | Risk | Status |
+|---|------|--------|------|--------|
+| P1.1 | Continue CanvasManager decomposition | 3-5 days | MEDIUM | 🔴 |
+| P1.2 | Split WikitextHooks.php | 2-3 days | MEDIUM | 🔴 |
+| P1.3 | Refactor init.js | 2-3 days | LOW | 🔴 |
+| P1.4 | Complete StateManager migration | 3-4 days | MEDIUM | 🔴 |
 
-### P2 — 1-2 Months
+### P2 — 1-2 Months (Medium)
 
-| # | Task | Effort | Risk |
-|---|------|--------|------|
-| 2.1 | ES Modules migration | 1-2 weeks | MEDIUM |
-| 2.2 | Split Toolbar.js | 2-3 days | LOW |
-| 2.3 | Add database index | 30 minutes | LOW |
-| 2.4 | Canvas accessibility | 3-4 days | LOW |
-| 2.5 | Performance optimizations | 3-5 days | MEDIUM |
+| # | Task | Effort | Risk | Status |
+|---|------|--------|------|--------|
+| P2.1 | ES Modules migration | 1-2 weeks | MEDIUM | 🔴 |
+| P2.2 | Split Toolbar.js | 2-3 days | LOW | 🔴 |
+| P2.3 | Add database index | 30 minutes | LOW | 🔴 |
+| P2.4 | Canvas accessibility | 3-4 days | LOW | 🔴 |
+| P2.5 | Extract PHP shared services | 1-2 days | LOW | 🔴 |
 
-### P3 — 3+ Months
+### P3 — 3+ Months (Low)
 
-| # | Task | Effort | Risk |
-|---|------|--------|------|
-| 3.1 | TypeScript migration | Ongoing | LOW |
-| 3.2 | E2E tests | 1-2 weeks | LOW |
-| 3.3 | WCAG compliance | 2-3 weeks | LOW |
-| 3.4 | Delete/Rename API | 3-5 days | LOW |
+| # | Task | Effort | Risk | Status |
+|---|------|--------|------|--------|
+| P3.1 | TypeScript migration | Ongoing | LOW | 🔴 |
+| P3.2 | Full E2E test suite | 1-2 weeks | LOW | 🔴 |
+| P3.3 | WCAG compliance | 2-3 weeks | LOW | 🔴 |
+| P3.4 | Delete/Rename API | 3-5 days | LOW | 🔴 |
 
 ---
 
-## Progress Tracking
-
-### Visual Dashboard
+## Visual Dashboard
 
 ```
 Architecture Health:
-CanvasManager.js:  ████████████████████████░░░░░░ 1,896/800 lines (237%)
-LayersEditor.js:   ██████████████████████░░░░░░░░ 1,756/800 lines (219%)
-Toolbar.js:        █████████████████████░░░░░░░░░ 1,664/800 lines (208%)
-WikitextHooks.php: ██████████████████░░░░░░░░░░░░   788/400 lines (197%)
+CanvasManager.js:  ████████████████████████████░░ 1,899/800 lines (237%)
+LayersEditor.js:   ██████████████████████████░░░░ 1,756/800 lines (220%)
+Toolbar.js:        █████████████████████████░░░░░ 1,678/800 lines (210%)
+WikitextHooks.php: ████████████████████████████░░ 1,143/400 lines (286%)
+init.js:           █████████████████████░░░░░░░░░   854/400 lines (214%)
 
 Test Coverage:
-Overall:           █████████████████░░░ 84.5% (target: 80%) ✅
-CanvasManager:     ███████████████░░░░░ 76%   (target: 80%) 🟡
-ToolManager:       █████████████░░░░░░░ 64%   (target: 80%) 🔴
-LayersEditor:      ███████████████░░░░░ 74%   (target: 80%) 🟡
+Overall:           █████████████████████████░░░░░ 91%   (target: 80%) ✅
+E2E Tests:         ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%   (target: >0)  🔴
 
-Technical Debt:
-Window.* exports:  ████████████████████ 44    (target: <10) 🔴
-Silent catches:    █████░░░░░░░░░░░░░░░ 10+   (target: 0)   🔴
+Code Quality:
+Window.* exports:  █████████████████████████░░░░░ 40+   (target: <10) 🔴
+Silent catches:    ████░░░░░░░░░░░░░░░░░░░░░░░░░░ 12+   (target: 0)   🔴
 ```
 
 ---
@@ -850,17 +612,17 @@ Silent catches:    █████░░░░░░░░░░░░░░░ 
 ## How to Contribute
 
 1. Pick an unassigned task (start with P0)
-2. Create a branch: `refactor/task-0.1-silent-errors`
+2. Create a branch: `fix/P0.1-silent-errors`
 3. Implement with tests (target 80%+ coverage for new code)
 4. Run `npm test` and `npm run test:php`
-5. Submit PR referencing this plan (e.g., "Addresses improvement_plan.md #0.1")
+5. Submit PR referencing this plan (e.g., "Addresses improvement_plan.md P0.1")
 6. Update this document when complete
 
 ---
 
 ## Notes
 
-- **P0 tasks are blockers** — prioritize before feature work
+- **P0 tasks are blockers** — complete before any feature work
 - All refactoring must maintain backward compatibility
 - Each extraction should have corresponding tests
 - Document breaking changes in CHANGELOG.md

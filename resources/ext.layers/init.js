@@ -57,7 +57,9 @@ mw.layers = {
 					self.initializeApiFallbackForMissingData();
 				} );
 			}
-		} catch ( e ) { /* ignore */ }
+		} catch ( e ) {
+			this.debugWarn( 'Failed to register wikipage.content hook:', e.message );
+		}
 	},
 
 	/**
@@ -94,7 +96,10 @@ mw.layers = {
 							pageLayersVal = decodeURIComponent( mh[ 1 ] );
 						}
 					}
-				} catch ( eUrl ) { /* ignore */ }
+				} catch ( eUrl ) {
+					// URL parsing failed - fallback to regex matching below
+					this.debugWarn( 'URL parsing failed, using regex fallback:', eUrl.message );
+				}
 			}
 			if ( !pageLayersVal ) {
 				const mPage = loc.match( /[?&#;]layers=([^&#;]+)/i );
@@ -102,7 +107,9 @@ mw.layers = {
 					pageLayersVal = decodeURIComponent( mPage[ 1 ] );
 				}
 			}
-		} catch ( e ) { /* ignore */ }
+		} catch ( e ) {
+			this.debugWarn( 'Error retrieving page layers param:', e.message );
+		}
 		if ( pageLayersVal ) {
 			this.debugLog( 'page-level layers param detected:', pageLayersVal );
 		}
@@ -256,13 +263,16 @@ mw.layers = {
 							if ( rm && rm[ 1 ] ) {
 								return rm[ 1 ].trim().toLowerCase();
 							}
-						} catch ( e2b ) { /* ignore */ }
+						} catch ( e2b ) {
+							// Regex extraction also failed - no layers param in data-mw
+						}
 					}
 				}
 				node = node.parentNode;
 			}
 		} catch ( e ) {
-			// ignore
+			// DOM traversal error - element may have been removed
+			this.debugWarn( 'detectLayersFromDataMw traversal error:', e.message );
 		}
 		return null;
 	},
@@ -385,7 +395,10 @@ mw.layers = {
 					} else {
 						pageNsNum = -1;
 					}
-				} catch ( eNsNum ) { /* ignore */ }
+				} catch ( eNsNum ) {
+					// Namespace number not available - default to -1 (unknown)
+					pageNsNum = -1;
+				}
 
 				// Build candidate list (avoid duplicates)
 				const candidates = [];
@@ -436,7 +449,9 @@ mw.layers = {
 					if ( name ) {
 						fileNs = name;
 					}
-				} catch ( eNs ) { /* ignore */ }
+				} catch ( eNs ) {
+					// File namespace lookup failed - using default 'File'
+				}
 				const esc = function ( s ) {
 					return mw.layers.escRe( s );
 				};
@@ -467,7 +482,9 @@ mw.layers = {
 									filename = decodeURIComponent( mPath[ 1 ] ).replace( /_/g, ' ' );
 								}
 							}
-						} catch ( e ) { /* ignore */ }
+						} catch ( e ) {
+							// Filename extraction from href failed - will try other methods
+						}
 					}
 
 					// Some skins put the title in the anchor title attribute
@@ -480,7 +497,9 @@ mw.layers = {
 							if ( rePrefix.test( aTitle ) ) {
 								filename = aTitle.replace( rePrefix, '' ).replace( /_/g, ' ' );
 							}
-						} catch ( eT ) { /* ignore */ }
+						} catch ( eT ) {
+							// Title attribute parsing failed - will try data attributes
+						}
 					}
 
 					// Try common data attributes on the image or its parent containers
@@ -506,7 +525,9 @@ mw.layers = {
 							if ( mSrc && mSrc[ 1 ] ) {
 								filename = decodeURIComponent( mSrc[ 1 ] ).replace( /_/g, ' ' );
 							}
-						} catch ( eS ) { /* ignore */ }
+						} catch ( eS ) {
+							// Image src parsing failed - filename inference exhausted
+						}
 					}
 
 					return filename;
@@ -542,7 +563,9 @@ mw.layers = {
 									filename = null;
 								}
 							}
-						} catch ( e2 ) { /* ignore */ }
+						} catch ( e2 ) {
+							// wgPageName fallback failed
+						}
 					}
 					if ( !filename ) {
 						this.debugLog( 'API fallback skipped: no filename inferred for candidate' );
@@ -613,7 +636,9 @@ mw.layers = {
 										allowReason = 'non-File page with pageAllow + file title detected';
 									}
 								}
-							} catch ( eFileLink ) { /* ignore */ }
+							} catch ( eFileLink ) {
+								// File link detection regex/parsing failed - will check other criteria
+							}
 						}
 
 						// As a narrow fallback: on non-File pages with pageAllow,
@@ -719,7 +744,9 @@ mw.layers = {
 					} );
 				} );
 			} ); // end mw.loader.using('mediawiki.api')
-		} catch ( e ) { /* ignore */ }
+		} catch ( e ) {
+			this.debugWarn( 'API fallback initialization failed:', e.message );
+		}
 	},
 
 	/**
@@ -835,7 +862,12 @@ mw.layers = {
 						mw.log.warn( '[Layers] File page fallback error:', e2 );
 					}
 				}
-			} ).catch( () => { /* ignore */ } );
+			} ).catch( ( apiErr ) => {
+				// API request failed - no layer data available for this file
+				if ( debug && mw.log ) {
+					mw.log.warn( '[Layers] File page API request failed:', apiErr );
+				}
+			} );
 		} catch ( e ) {
 			if ( debug && mw.log ) {
 				mw.log.warn( '[Layers] File page fallback outer error:', e );
