@@ -156,6 +156,9 @@
 			"styles": [],
 			"scripts": [
 				"LayersViewer.js",
+				"viewer/UrlParser.js",
+				"viewer/ViewerManager.js",
+				"viewer/ApiFallback.js",
 				"init.js"
 			],
 			"messages": [
