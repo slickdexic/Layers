@@ -283,18 +283,20 @@
 	/**
 	 * Load background image using ImageLoader module
 	 * Delegates to ImageLoader for URL detection and loading with fallbacks
+	 * @note ImageLoader is guaranteed to load first via extension.json in production,
+	 *       but fallback is kept for test environments and backward compatibility.
 	 */
 	CanvasManager.prototype.loadBackgroundImage = function () {
 		const self = this;
 		const filename = this.editor.filename;
 		const backgroundImageUrl = this.config.backgroundImageUrl;
 
-		// Get ImageLoader class
+		// Get ImageLoader class - guaranteed to exist via extension.json in production
 		const ImageLoaderClass = ( typeof ImageLoader !== 'undefined' ) ? ImageLoader :
 			( ( typeof window !== 'undefined' && window.ImageLoader ) ? window.ImageLoader : null );
 
 		if ( ImageLoaderClass ) {
-			// Use ImageLoader module
+			// Use ImageLoader module (production path)
 			this.imageLoader = new ImageLoaderClass( {
 				filename: filename,
 				backgroundImageUrl: backgroundImageUrl,
@@ -307,9 +309,10 @@
 			} );
 			this.imageLoader.load();
 		} else {
-			// Fallback for environments without ImageLoader
+			// Fallback for test environments without ImageLoader
+			// @deprecated This path should not be reached in production
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-				mw.log.warn( '[CanvasManager] ImageLoader not found, using fallback' );
+				mw.log.warn( '[CanvasManager] ImageLoader not found, using deprecated fallback' );
 			}
 			this.loadBackgroundImageFallback();
 		}
@@ -366,7 +369,9 @@
 	};
 
 	/**
-	 * Fallback image loading for environments without ImageLoader module
+	 * @deprecated Fallback image loading - no longer used in production.
+	 * ImageLoader is guaranteed to be loaded via extension.json.
+	 * Kept for backward compatibility and test coverage.
 	 * @private
 	 */
 	CanvasManager.prototype.loadBackgroundImageFallback = function () {
@@ -412,7 +417,7 @@
 	};
 
 	/**
-	 * Fallback image loading with URL list
+	 * @deprecated Fallback image loading with URL list - no longer used in production.
 	 * @param {string[]} urls - URLs to try
 	 * @param {number} index - Current index
 	 * @private

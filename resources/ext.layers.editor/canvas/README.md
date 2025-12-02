@@ -112,17 +112,21 @@ CanvasManager still contains ~500 lines of fallback implementations that duplica
 - [x] Directory structure created
 - [x] ZoomPanController.js extracted (343 lines)
 - [x] GridRulersController.js extracted (385 lines)
-- [x] TransformController.js extracted (965 lines)
-- [x] HitTestController.js extracted (382 lines)
-- [x] DrawingController.js extracted (622 lines)
-- [x] ClipboardController.js extracted (212 lines)
+- [x] TransformController.js extracted (1,157 lines)
+- [x] HitTestController.js extracted (376 lines)
+- [x] DrawingController.js extracted (614 lines)
+- [x] ClipboardController.js extracted (220 lines)
+- [x] RenderCoordinator.js extracted (387 lines)
+- [x] InteractionController.js extracted (487 lines)
 - [x] ImageLoader.js extracted (280 lines) - in parent directory
-- [ ] Remove fallback code from CanvasManager (~500 lines)
-- [ ] TextInputModal.js - move from CanvasManager (~220 lines)
-- [ ] CanvasPool.js - future enhancement
+- [ ] Remove fallback code from CanvasManager (~80 lines) - low priority
+- [ ] Extract MarqueeSelectionController (~80 lines) - optional
+- [ ] CanvasPool.js - future enhancement (~50 lines, too small)
 - [ ] ViewportManager.js - future enhancement
 
-**Total extracted:** ~3,189 lines from CanvasManager.js into focused, maintainable modules
+**Total extracted:** ~4,249 lines into focused, maintainable modules
+**CanvasManager.js current size:** 1,899 lines (down from 5,462 lines)
+**Target:** <800 lines (need ~1,100 more lines extracted or removed)
 
 ## Benefits Achieved
 

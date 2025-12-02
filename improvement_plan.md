@@ -125,10 +125,10 @@ These integration tests cover the JavaScript layer comprehensively with 91% code
 ### P1.1 Continue CanvasManager Decomposition
 
 **Priority:** P1 - HIGH  
-**Status:** 🔴 Not Started  
+**Status:** � IN PROGRESS  
 **Effort:** 3-5 days  
 **Risk:** MEDIUM  
-**Current:** 1,899 lines | **Target:** <800 lines
+**Current:** 1,899 lines | **Target:** <800 lines | **Progress:** 63% size reduction achieved
 
 **Already Extracted (8 controllers, 91-100% coverage):**
 - ✅ ZoomPanController.js (341 lines, 100%)
@@ -139,27 +139,44 @@ These integration tests cover the JavaScript layer comprehensively with 91% code
 - ✅ GridRulersController.js (383 lines, 98%)
 - ✅ RenderCoordinator.js (387 lines, 92%)
 - ✅ TransformController.js (1,157 lines, 91%)
+- ✅ ImageLoader.js (280 lines) - in parent directory
 
-**Remaining Extraction Candidates:**
+**Total Extracted:** ~4,245 lines (was 5,462 lines → now 1,899 lines)
 
-| Module | Est. Lines | Responsibilities |
-|--------|------------|------------------|
-| **CanvasCore.js** | ~300 | Canvas element setup, context, DPI scaling |
-| **ImageLoadController.js** | ~200 | Background image loading, URL building |
-| **LayerController.js** | ~400 | Layer CRUD, ordering, lookup |
+**Analysis (Dec 2025):**
+CanvasManager now primarily consists of:
+1. **Constructor & state initialization** (~150 lines) - Sets up state for all subsystems
+2. **Controller delegation** (~400 lines) - 102 references forwarding to controllers
+3. **Image loading with fallback** (~80 lines) - Could be removed (ImageLoader guaranteed)
+4. **Remaining business logic** (~1,200 lines) - Drawing, rendering, selection, etc.
+
+**Why 800 lines is challenging:**
+- CanvasManager acts as a Facade for 8+ controllers
+- ~400 lines are pure delegation (necessary for backward compatibility)
+- Removing facade would require updating all callers across the codebase
+
+**Realistic Next Steps:**
+
+| Action | Est. Lines Saved | Risk |
+|--------|------------------|------|
+| Remove image loading fallback | ~80 | Low |
+| Extract MarqueeSelectionController | ~80 | Low |
+| Extract StyleController | ~100 | Medium |
+| Remove unused state initialization | ~50 | Low |
+| **Subtotal** | ~310 | |
+
+**Revised Target:** 1,600 lines (17% reduction from current)
 
 **Tasks:**
-- [ ] Profile CanvasManager methods by responsibility
-- [ ] Extract CanvasCore.js (canvas setup, context)
-- [ ] Extract ImageLoadController.js (image loading)
-- [ ] Write tests for each new module (target 90%+)
+- [ ] Remove fallback image loading code (ImageLoader guaranteed by extension.json)
+- [ ] Extract MarqueeSelectionController (startMarquee, updateMarquee, finishMarquee)
+- [ ] Audit state initialization for unused properties
 - [ ] Verify all existing tests pass
 
 **Acceptance Criteria:**
-- [ ] CanvasManager.js <1,200 lines (intermediate goal)
-- [ ] Each extracted module >90% coverage
+- [ ] CanvasManager.js <1,600 lines (revised intermediate goal)
 - [ ] No functionality regressions
-- [ ] Clear interfaces between modules
+- [ ] Tests maintain 90%+ coverage
 
 ---
 
