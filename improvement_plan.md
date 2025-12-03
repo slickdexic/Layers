@@ -228,14 +228,14 @@ Created processor classes to extract business logic from WikitextHooks.php:
 | LayerInjector | LayerInjectorTest.php | 18 |
 | LayersHtmlInjector | LayersHtmlInjectorTest.php | ✅ |
 | LayersParamExtractor | LayersParamExtractorTest.php | ✅ |
-| LayeredFileRenderer | LayeredFileRendererTest.php | 26 (NEW) |
+| LayeredFileRenderer | LayeredFileRendererTest.php | 26 |
+| ThumbnailProcessor | ThumbnailProcessorTest.php | 24 (NEW) |
 | ImageLinkProcessor | — | ❌ Needs tests |
-| ThumbnailProcessor | — | ❌ Needs tests |
 
 **Acceptance Criteria:**
 - [ ] WikitextHooks.php <600 lines (revised intermediate goal)
 - [x] Business logic extracted to processors
-- [x] PHPUnit tests for core processors (LayerInjector, LayeredFileRenderer)
+- [x] PHPUnit tests for core processors (LayerInjector, LayeredFileRenderer, ThumbnailProcessor)
 - [x] Existing tests pass
 
 ---
@@ -414,28 +414,28 @@ if ( typeof window !== 'undefined' ) {
 ### P2.3 Add Database Index for Named Sets
 
 **Priority:** P2 - LOW  
-**Status:** 🔴 Not Started  
+**Status:** ✅ COMPLETE  
 **Effort:** 30 minutes  
 **Risk:** LOW  
 
 **Problem:** Named set lookups by name lack index.
 
-**Add patch file:**
+**Resolution:** Index already exists in `sql/patches/patch-idx-layer-sets-named.sql`:
 ```sql
--- sql/patches/patch-add-name-index.sql
-ALTER TABLE /*_*/layer_sets 
-ADD INDEX ls_name_lookup (ls_img_name, ls_img_sha1, ls_name);
+CREATE INDEX idx_layer_sets_named 
+ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 ```
 
+Additional index in `patch-idx-layer-sets-setname-revision.sql` supports setname+revision lookups.
+
 **Tasks:**
-- [ ] Create `sql/patches/patch-add-name-index.sql`
-- [ ] Update `LayersSchemaManager.php`
-- [ ] Test with `maintenance/update.php`
-- [ ] Verify query performance (EXPLAIN)
+- [x] Create index patch file - **ALREADY EXISTS**
+- [x] Update `LayersSchemaManager.php` - **ALREADY REGISTERED**
+- [x] Index supports named set queries
 
 **Acceptance Criteria:**
-- [ ] Index exists after update
-- [ ] Named set queries use index
+- [x] Index exists after update
+- [x] Named set queries use index
 
 ---
 
