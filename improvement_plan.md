@@ -616,7 +616,7 @@ class LoggerFactory {
 |---|------|--------|------|--------|
 | P2.1 | ES Modules migration | 1-2 weeks | MEDIUM | 🔴 |
 | P2.2 | Split Toolbar.js | 2-3 days | LOW | 🔴 |
-| P2.3 | Add database index | 30 minutes | LOW | 🔴 |
+| P2.3 | Add database index | 30 minutes | LOW | ✅ |
 | P2.4 | Canvas accessibility | 3-4 days | LOW | 🔴 |
 | P2.5 | Extract PHP shared services | 1-2 days | LOW | 🔴 |
 
