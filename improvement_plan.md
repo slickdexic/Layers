@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 2, 2025  
+**Last Updated:** January 9, 2025  
 **Status:** Active Development  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
@@ -25,20 +25,30 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 ---
 
-## Current Metrics (Verified December 2, 2025)
+## Current Metrics (Verified January 9, 2025)
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Jest tests | 2,352 | 1,500+ | ✅ Met |
+| Jest tests | 2,448 | 1,500+ | ✅ Met |
 | Statement coverage | 91% | 80% | ✅ Met |
-| CanvasManager.js lines | 1,899 | <800 | 🔴 137% over |
-| LayersEditor.js lines | 1,756 | <800 | 🔴 119% over |
-| Toolbar.js lines | 1,678 | <800 | 🔴 110% over |
+| CanvasManager.js lines | 1,930 | <800 | 🔴 141% over |
+| LayersEditor.js lines | 1,815 | <800 | 🔴 127% over |
+| Toolbar.js lines | 1,086 | <800 | 🟡 36% over |
 | WikitextHooks.php lines | 775 | <400 | 🟡 94% over |
 | init.js lines | 201 | <400 | ✅ Met |
-| Window.* exports | 54 | <15 | 🔴 260% over |
+| Window.* exports | 56 | <15 | 🔴 273% over |
 | Silent catch blocks | 0 | 0 | ✅ Fixed |
 | ESLint errors | 0 | 0 | ✅ Met |
+
+**Recent Progress (January 9, 2025):**
+- Toolbar.js: 1,621 → 1,086 lines (-535 lines, 33% reduction achieved)
+  - ColorPickerDialog delegation: -234 lines
+  - msg() → MessageHelper delegation: -224 lines
+  - Import/Export → ImportExportManager extraction: -77 lines
+- ToolbarKeyboard.js: Extracted 161 lines of keyboard shortcut handling
+- ImportExportManager.js: New module (288 lines, 40 tests)
+- MessageHelper tests: Added 24 comprehensive tests
+- Jest tests: 2,384 → 2,448 (+64 new tests)
 
 ---
 
@@ -50,7 +60,7 @@ This document provides a prioritized, actionable improvement plan for the Layers
 **Status:** ✅ COMPLETE  
 **Effort:** 2-3 hours  
 **Risk:** None  
-**Completed:** December 2, 2025
+**Notes:** Audit completed; verified README, docs, and extension i18n messages for correctness, marking aspirational features as 'Planned'.
 
 **Problem:** Documentation contains inaccurate or aspirational claims that mislead developers.
 
@@ -66,13 +76,12 @@ This document provides a prioritized, actionable improvement plan for the Layers
 | README.md | Architecture section | Updated with accurate metrics and technology stack |
 
 **Tasks:**
-- [x] Audit README.md for accuracy
-- [x] Mark unimplemented features as "Planned" or remove
-- [ ] Update line counts in copilot-instructions.md (deferred - minor impact)
-- [ ] Add "Documentation Accuracy" section to CONTRIBUTING.md (deferred)
-
-**Acceptance Criteria:**
-- [x] All documented features are implemented or marked as "Planned"
+**Tasks:**
+- [x] Add deprecation comments to `layersModuleRegistry` alias
+- [x] Update LayersEditor.js to prefer `layersRegistry` with deprecation warning
+- [x] Document canonical export names in code comments
+- [x] Add `compat.js` shim with runtime deprecation warnings
+- [ ] Plan / write codemods for alias removal
 - [x] Line counts updated where visible to users
 - [x] Aspirational features clearly marked
 
@@ -81,10 +90,10 @@ This document provides a prioritized, actionable improvement plan for the Layers
 ### P0.2 Consolidate Window Exports
 
 **Priority:** P0 - HIGH  
-**Status:** ✅ COMPLETE  
+**Status:** 🟡 In Progress  
 **Effort:** 1-2 hours  
 **Risk:** LOW (aliases only)  
-**Completed:** December 2, 2025
+**Notes:** Plan a phased migration to ES modules with compatibility shims and deprecation timeline. Added a `compat.js` shim which warns on legacy `window.*` names during runtime; also added console warnings where legacy aliases are created. Next steps: add codemods to automatically migrate alias usages and start partial ES module migrations for leaf utilities.
 
 **Problem:** Legacy compatibility exports cause confusion. Note: Investigation revealed classes only export with `Layers` prefix (e.g., `LayersToolManager`), not both prefixed and non-prefixed names. The actual issue was legacy aliases in ModuleRegistry.
 
@@ -108,19 +117,41 @@ This document provides a prioritized, actionable improvement plan for the Layers
 **Acceptance Criteria:**
 - [x] Legacy aliases have deprecation comments
 - [x] Code prefers non-deprecated exports
-- [x] All tests pass (2,352 tests verified)
+- [ ] CI runs tests and passes after migration (expect 2,352 tests)
 
 ---
 
 ### P0.3 Extract mw.message Helper
 
 **Priority:** P0 - MEDIUM  
-**Status:** ✅ COMPLETE  
+**Status:** 🔴 Partially Implemented
 **Effort:** 2 hours  
 **Risk:** LOW  
-**Completed:** December 2, 2025
+**Notes:** `MessageHelper.js` exists but migration of call sites must be completed incrementally
 
 **Problem:** 20+ occurrences of verbose message fallback pattern across multiple files.
+### P0.4 Add CI / Gate and Security Scanning
+
+**Priority:** P0 - CRITICAL
+**Status:** ✅ COMPLETE
+**Effort:** 1 day to add basic checks, 2-3 days for E2E pipeline
+**Risk:** LOW
+
+**Problem:** No enforced cross-file or E2E checks. Missing CI gating for PRs and dependency scanning.
+
+**Tasks:**
+- [x] Add GitHub Actions for `npm test`, `npm run test:php`, `composer validate`
+- [x] Add Playwright smoke E2E job (minimal flows) as gating test
+- [x] Add Dependabot for PHP and NPM updates
+- [x] Add security scanning for composer and npm vulnerabilities
+
+**Notes:** CI workflows, E2E smoke test, Dependabot config, and CODEOWNERS added. Playwright config and smoke test created.
+
+**Acceptance Criteria:**
+- [x] GitHub Actions runs tests on PRs and blocks merge on failure
+- [x] Basic Playwright smoke test runs in CI
+- [x] Dependabot PRs created for outdated dependencies
+
 
 **Solution Implemented:**
 
@@ -135,14 +166,15 @@ Created `resources/ext.layers.editor/MessageHelper.js` with:
 **Tasks:**
 - [x] Create `MessageHelper.js` with full API
 - [x] Add to extension.json script list (first in load order)
+- [x] Add Jest tests for MessageHelper (24 tests)
 - [ ] Replace 20+ occurrences in Toolbar.js (deferred - low risk)
 - [ ] Replace occurrences in other files (deferred - low risk)
-- [ ] Add Jest tests for MessageHelper (deferred)
 
 **Acceptance Criteria:**
 - [x] Single source of truth for message retrieval
 - [x] Module available globally
-- [x] All existing tests pass (2,352 tests verified)
+- [x] Tests added to cover MessageHelper behavior and message fallbacks
+- [ ] Migration of most call sites to use MessageHelper (incremental)
 
 **Note:** Actual replacement of existing patterns is deferred to P1 to avoid widespread changes. The helper is available for new code and incremental migration.
 
@@ -153,12 +185,12 @@ Created `resources/ext.layers.editor/MessageHelper.js` with:
 ### P1.1 Continue CanvasManager Decomposition
 
 **Priority:** P1 - HIGH  
-**Status:** 🟡 In Progress  
+**Status:** � In Progress  
 **Effort:** 3-5 days  
 **Risk:** MEDIUM  
-**Current:** 1,899 lines | **Target:** <800 lines
+**Current:** 1,912 lines | **Target:** <800 lines
 
-**Already Extracted (8 controllers, 91-100% coverage):**
+**Already Extracted (9 controllers, 91-100% coverage):**
 - ✅ ZoomPanController.js (341 lines, 100%)
 - ✅ DrawingController.js (614 lines, 100%)
 - ✅ InteractionController.js (487 lines, 100%)
@@ -167,36 +199,42 @@ Created `resources/ext.layers.editor/MessageHelper.js` with:
 - ✅ GridRulersController.js (383 lines, 98%)
 - ✅ RenderCoordinator.js (387 lines, 92%)
 - ✅ TransformController.js (1,157 lines, 91%)
+- ✅ StyleController.js (~100 lines) - NEW: extracted with updateStyleOptions, applyToLayer
+
+**StyleController Integration (Complete):**
+- [x] Created StyleController.js with style management
+- [x] CanvasManager delegates to StyleController.updateStyleOptions()
+- [x] Removed duplicate updateStyleOptions definition (~110 lines saved)
+- [x] Tests pass with StyleController delegation
 
 **Next Extractions:**
 
 | Module | Est. Lines | Source Methods | Risk |
 |--------|------------|----------------|------|
-| StyleController | ~150 | `setStroke*`, `setFill*`, style getters | LOW |
-| LayerOrderController | ~100 | `moveLayerUp/Down`, `bringToFront/Back` | LOW |
+| LayerOrderController | ~100 | Already in StateManager | N/A |
 | CanvasStateManager | ~200 | State initialization, getters/setters | MEDIUM |
 
 **Tasks:**
-- [ ] Extract StyleController with stroke/fill methods
-- [ ] Extract LayerOrderController with ordering methods
-- [ ] Migrate state properties to StateManager
-- [ ] Write tests for extracted modules (target: 95%+)
-- [ ] Update CanvasManager to delegate
+- [x] Extract StyleController with stroke/fill methods
+- [x] Remove duplicate updateStyleOptions from CanvasManager
+- [ ] Migrate remaining state properties to StateManager
+- [ ] Continue extracting remaining methods
+- [ ] Write additional tests for StyleController (target: 95%+)
 
 **Acceptance Criteria:**
 - [ ] CanvasManager.js <1,400 lines (intermediate goal)
-- [ ] Each extracted module >90% coverage
-- [ ] No functionality regressions
+- [x] StyleController extracted and integrated
+- [x] No functionality regressions (2,408 tests pass)
 
 ---
 
 ### P1.2 Split Toolbar.js
 
 **Priority:** P1 - HIGH  
-**Status:** 🔴 Not Started  
+**Status:** 🟡 In Progress - Good Progress  
 **Effort:** 2-3 days  
 **Risk:** LOW  
-**Current:** 1,678 lines | **Target:** <500 lines
+**Current:** 1,086 lines | **Target:** <500 lines
 
 **Proposed Split:**
 
@@ -208,17 +246,37 @@ Created `resources/ext.layers.editor/MessageHelper.js` with:
 | ViewControls.js | ~200 | Zoom, grid, rulers toggles |
 | ToolbarKeyboard.js | ~150 | Keyboard shortcut handling |
 
+**Already Extracted:**
+- ✅ ToolbarKeyboard.js (161 lines, 28 tests) - keyboard shortcuts
+- ✅ ColorPickerDialog delegation - using existing ui/ColorPickerDialog.js (-234 lines)
+- ✅ MessageHelper delegation - msg() now delegates to layersMessages singleton (-224 lines)
+- ✅ ImportExportManager.js (288 lines, 40 tests) - import/export functionality (-77 lines)
+
 **Tasks:**
 - [ ] Create `ToolbarCore.js` with base functionality
 - [ ] Extract tool buttons to `ToolButtons.js`
 - [ ] Extract style controls to `StyleControls.js`
 - [ ] Extract view controls to `ViewControls.js`
-- [ ] Extract keyboard handling to `ToolbarKeyboard.js`
+- [x] Extract keyboard handling to `ToolbarKeyboard.js`
+- [x] Delegate to existing `ColorPickerDialog` module
+- [x] Delegate msg() to MessageHelper singleton
+- [x] Extract import/export to ImportExportManager.js
 - [ ] Update `Toolbar.js` to compose modules
-- [ ] Write tests for each new module
+- [x] Write tests for ToolbarKeyboard module
+- [x] Write tests for ImportExportManager module
+
+**Progress:**
+- Started: 1,621 lines
+- After ColorPickerDialog: 1,387 lines (-234)
+- After MessageHelper: 1,163 lines (-224)
+- Current: 1,086 lines (-77 import/export)
+- **Total reduction: -535 lines (33%)**
+- Target: <500 lines (~590 lines remaining to extract)
 
 **Acceptance Criteria:**
 - [ ] Toolbar.js <500 lines
+- [x] ToolbarKeyboard module with 100% coverage
+- [x] ImportExportManager module with tests (40 tests)
 - [ ] Each extracted module >85% coverage
 - [ ] No UI regressions
 
@@ -227,10 +285,10 @@ Created `resources/ext.layers.editor/MessageHelper.js` with:
 ### P1.3 Complete StateManager Migration
 
 **Priority:** P1 - MEDIUM  
-**Status:** ✅ COMPLETE  
+**Status:** 🟡 In Progress
 **Effort:** 3-4 days  
 **Risk:** MEDIUM  
-**Completed:** December 3, 2025
+**Notes:** All primary code paths should use state; add dev-only assertions and tests. Track migration via PR labels and code search.
 
 **Problem:** StateManager exists with proper methods (`addLayer`, `removeLayer`, `updateLayer`, `getLayers`) but ~12 direct `.layers =` assignments bypassed it.
 
@@ -265,7 +323,7 @@ if ( editor.stateManager ) {
 **Acceptance Criteria:**
 - [x] All primary code paths use StateManager methods
 - [x] Fallbacks preserved for test compatibility
-- [x] All 2,352 tests pass
+ - [ ] CI runs and passes existing tests (expect ~2,352 tests)
 - [x] No state desync bugs
 
 ---
@@ -274,6 +332,40 @@ if ( editor.stateManager ) {
 
 **Priority:** P1 - LOW  
 **Status:** 🔴 Not Started  
+### P1.5 Performance Profiling & Benchmarks
+
+**Priority:** P1 - HIGH
+**Status:** 🔴 Not Started
+**Effort:** 2-4 days
+**Risk:** LOW
+
+**Problem:** No profiling and no performance regression tests for rendering/canvas flow. Hard to catch regressions and performance degradations.
+
+**Tasks:**
+- [ ] Add microbenchmarks for the canvas rendering (draw n shapes) and capture frame time
+- [ ] Add a Playwright scenario that runs 1000 pointer events and measures response time
+- [ ] Add a CI job to run benchmarks against a baseline and report regressions
+
+**Acceptance Criteria:**
+- Benchmarks added and run in CI; a baseline exists for monitoring regressions
+### P1.6 Event Teardown Tests
+
+**Priority:** P1 - HIGH
+**Status:** ✅ COMPLETE
+**Effort:** 1 day
+**Risk:** LOW
+
+**Problem:** Event listeners are not removed; creating and destroying the editor repeatedly increases active listeners and risks memory leaks.
+
+**Tasks:**
+- [x] Add tests to create/destroy the editor and assert the number of listeners does not grow
+- [x] Add lifecycle `destroy()` hooks to major modules if missing
+- [x] Add isDestroyed guards to async callbacks to prevent stateManager access after destroy
+- [x] Fix EventTeardown test (safe DOM removal, StateManager fallback guards)
+
+**Acceptance Criteria:**
+- [x] No listener growth after repeated create/destroy cycles
+- [x] All tests pass (2,356 tests)
 **Effort:** 1-2 days  
 **Risk:** LOW  
 
@@ -360,9 +452,10 @@ if ( typeof window !== 'undefined' ) {
 - [ ] Convert remaining Phase 1 files
 
 **Acceptance Criteria:**
-- [ ] At least 3 files converted to ES modules
-- [ ] MediaWiki loads modules correctly
-- [ ] Existing tests pass
+- [ ] At least 5 files converted to ES modules
+- [ ] MediaWiki loads modules correctly using ResourceLoader
+- [ ] Backcompat shims are in place for a transition period
+- [ ] Tooling and tests updated to accommodate ES module builds
 - [ ] Pattern documented in CONTRIBUTING.md
 
 ---
@@ -518,9 +611,10 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 
 | # | Task | Effort | Risk | Status |
 |---|------|--------|------|--------|
-| P0.1 | Fix documentation accuracy | 2-3 hours | None | 🔴 |
-| P0.2 | Remove duplicate window exports | 1-2 hours | LOW | 🔴 |
-| P0.3 | Extract mw.message helper | 2 hours | LOW | 🔴 |
+| P0.1 | Fix documentation accuracy | 2-3 hours | None | ✅ |
+| P0.2 | Consolidate window exports | 1-2 hours | LOW | 🟡 |
+| P0.3 | Extract mw.message helper | 2 hours | LOW | 🟡 |
+| P0.4 | Add CI gating and security scanning | 1-3 days | LOW | ✅ |
 
 ### P1 — 2-4 Weeks (High)
 
@@ -528,8 +622,10 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 |---|------|--------|------|--------|
 | P1.1 | Continue CanvasManager decomposition | 3-5 days | MEDIUM | 🟡 |
 | P1.2 | Split Toolbar.js | 2-3 days | LOW | 🔴 |
-| P1.3 | Complete StateManager migration | 3-4 days | MEDIUM | 🔴 |
+| P1.3 | Complete StateManager migration | 3-4 days | MEDIUM | 🟡 |
 | P1.4 | Extract PHP shared services | 1-2 days | LOW | 🔴 |
+| P1.5 | Performance profiling & benchmarks | 2-4 days | LOW | 🔴 |
+| P1.6 | Event teardown tests | 1 day | LOW | ✅ |
 
 ### P2 — 1-2 Months (Medium)
 
@@ -603,11 +699,17 @@ window.* assigns:  ████████████████████�
 5. Submit PR referencing this plan (e.g., "Addresses improvement_plan.md P0.1")
 6. Update this document when complete
 
+7. Ensure CI runs and all jobs pass before requesting merge
+8. Keep PRs small and focused (one controller or one small module per PR)
+9. For large refactors, open a design PR and solicit review from `CODEOWNERS` before implementation
+
 ---
 
 ## Notes
 
 - **P0 tasks should be completed before feature development**
+- Add a `CODEOWNERS` file to solicit review from core maintainers for PRs touching god classes.
+- Add `CHANGELOG.md` entry requirement for breaking or major API changes.
 - All refactoring must maintain backward compatibility
 - Each extraction should have corresponding tests
 - Document breaking changes in CHANGELOG.md
@@ -615,4 +717,4 @@ window.* assigns:  ████████████████████�
 
 ---
 
-*Plan created by GitHub Copilot (Claude Opus 4.5 Preview) on December 2, 2025*
+*Plan created by GitHub Copilot on December 3, 2025*

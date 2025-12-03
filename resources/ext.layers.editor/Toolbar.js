@@ -1,6 +1,11 @@
 /**
  * Toolbar for Layers Editor
  * Manages drawing tools, color picker, and editor actions
+ *
+ * Delegates to:
+ * - ColorPickerDialog (ui/ColorPickerDialog.js) for color selection
+ * - ToolbarKeyboard for keyboard shortcuts
+ * - ImportExportManager for layer import/export
  */
 ( function () {
 	'use strict';
@@ -30,6 +35,10 @@
 		this.documentListeners = [];
 		this.dialogCleanups = [];
 		this.keyboardShortcutHandler = null;
+
+		// Initialize import/export manager
+		this.importExportManager = window.ImportExportManager ?
+			new window.ImportExportManager( { editor: this.editor } ) : null;
 
 		this.init();
 	}
@@ -85,6 +94,68 @@
 		this.selectTool( 'pointer' );
 	};
 
+	// Show a modal color picker dialog near an anchor button
+	// Uses ui/ColorPickerDialog module
+	Toolbar.prototype.openColorPickerDialog = function ( anchorButton, initialValue, options ) {
+		options = options || {};
+		const self = this;
+		const colorPickerStrings = this.getColorPickerStrings();
+
+		if ( !window.ColorPickerDialog ) {
+			// Fallback: ColorPickerDialog module not loaded
+			return;
+		}
+
+		const picker = new window.ColorPickerDialog( {
+			currentColor: ( initialValue === 'none' ) ? 'none' : ( initialValue || '#000000' ),
+			anchorElement: anchorButton,
+			strings: colorPickerStrings,
+			registerCleanup: function ( fn ) {
+				self.registerDialogCleanup( fn );
+			},
+			onApply: options.onApply || function () {},
+			onCancel: options.onCancel || function () {}
+		} );
+
+		picker.open();
+	};
+
+	// Update color button display - uses ColorPickerDialog static method
+	Toolbar.prototype.updateColorButtonDisplay = function ( btn, color, transparentLabel, previewTemplate ) {
+		if ( window.ColorPickerDialog && window.ColorPickerDialog.updateColorButton ) {
+			const strings = this.getColorPickerStrings();
+			if ( transparentLabel ) {
+				strings.transparent = transparentLabel;
+			}
+			if ( previewTemplate ) {
+				strings.previewTemplate = previewTemplate;
+			}
+			window.ColorPickerDialog.updateColorButton( btn, color, strings );
+		} else {
+			// Fallback implementation
+			let labelValue = color;
+			if ( !color || color === 'none' || color === 'transparent' ) {
+				btn.classList.add( 'is-transparent' );
+				btn.title = transparentLabel || 'Transparent';
+				btn.style.background = '';
+				labelValue = transparentLabel || 'Transparent';
+			} else {
+				btn.classList.remove( 'is-transparent' );
+				btn.style.background = color;
+				btn.title = color;
+			}
+			if ( previewTemplate ) {
+				const previewText = previewTemplate.indexOf( '$1' ) !== -1 ?
+					previewTemplate.replace( '$1', labelValue ) :
+					previewTemplate + ' ' + labelValue;
+				btn.setAttribute( 'aria-label', previewText );
+			} else if ( labelValue ) {
+				btn.setAttribute( 'aria-label', labelValue );
+			}
+		}
+	};
+
+	// Get color picker strings
 	Toolbar.prototype.getColorPickerStrings = function () {
 		const t = this.msg.bind( this );
 		return {
@@ -102,559 +173,36 @@
 		};
 	};
 
-	// Update the visual state of a color display button
-	Toolbar.prototype.updateColorButtonDisplay = function ( btn, color, transparentLabel, previewTemplate ) {
-		let labelValue = color;
-		if ( !color || color === 'none' || color === 'transparent' ) {
-			btn.classList.add( 'is-transparent' );
-			btn.title = transparentLabel || 'Transparent';
-			btn.style.background = '';
-			labelValue = transparentLabel || 'Transparent';
-		} else {
-			btn.classList.remove( 'is-transparent' );
-			btn.style.background = color;
-			btn.title = color;
-		}
-		if ( previewTemplate ) {
-			const previewText = previewTemplate.indexOf( '$1' ) !== -1 ?
-				previewTemplate.replace( '$1', labelValue ) :
-				previewTemplate + ' ' + labelValue;
-			btn.setAttribute( 'aria-label', previewText );
-		} else if ( labelValue ) {
-			btn.setAttribute( 'aria-label', labelValue );
-		}
-	};
-
-	// Show a modal color picker dialog near an anchor button
-	Toolbar.prototype.openColorPickerDialog = function ( anchorButton, initialValue, options ) {
-		options = options || {};
-		const toolbar = this;
-		const colorPickerStrings = this.getColorPickerStrings();
-		const onApply = options.onApply || function () {};
-		const transparentTitle = options.transparentTitle || colorPickerStrings.none;
-		const formatTemplate = function ( template, value ) {
-			if ( typeof template !== 'string' ) {
-				return value;
-			}
-			return template.indexOf( '$1' ) !== -1 ? template.replace( '$1', value ) : template + ' ' + value;
-		};
-		const buttonRect = anchorButton.getBoundingClientRect();
-		const previouslyFocused = document.activeElement;
-		const overlay = document.createElement( 'div' );
-		overlay.className = 'color-picker-overlay';
-		overlay.setAttribute( 'role', 'presentation' );
-		overlay.setAttribute( 'aria-hidden', 'true' );
-		const dialog = document.createElement( 'div' );
-		dialog.className = 'color-picker-dialog';
-		dialog.setAttribute( 'role', 'dialog' );
-		dialog.setAttribute( 'aria-modal', 'true' );
-		dialog.setAttribute( 'tabindex', '-1' );
-		let escapeHandler = null;
-		let focusTrapHandler = null;
-		const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-		const cleanup = function () {
-			if ( escapeHandler ) {
-				document.removeEventListener( 'keydown', escapeHandler );
-				escapeHandler = null;
-			}
-			if ( focusTrapHandler ) {
-				dialog.removeEventListener( 'keydown', focusTrapHandler );
-				focusTrapHandler = null;
-			}
-			if ( overlay && overlay.parentNode ) {
-				overlay.parentNode.removeChild( overlay );
-			}
-			if ( dialog && dialog.parentNode ) {
-				dialog.parentNode.removeChild( dialog );
-			}
-			anchorButton.setAttribute( 'aria-expanded', 'false' );
-			if ( previouslyFocused && typeof previouslyFocused.focus === 'function' ) {
-				previouslyFocused.focus();
-			}
-			if ( toolbar && Array.isArray( toolbar.dialogCleanups ) ) {
-				toolbar.dialogCleanups = toolbar.dialogCleanups.filter( function ( fn ) {
-					return fn !== cleanup;
-				} );
-			}
-		};
-		this.registerDialogCleanup( cleanup );
-		let dialogTop = buttonRect.bottom + 5;
-		let dialogLeft = buttonRect.left;
-		const maxTop = window.innerHeight - 420;
-		const maxLeft = window.innerWidth - 300;
-		if ( dialogTop > maxTop ) {
-			dialogTop = buttonRect.top - 420 - 5;
-		}
-		if ( dialogLeft > maxLeft ) {
-			dialogLeft = maxLeft;
-		}
-		if ( dialogLeft < 10 ) {
-			dialogLeft = 10;
-		}
-		if ( dialogTop < 10 ) {
-			dialogTop = 10;
-		}
-		dialog.style.top = Math.floor( dialogTop ) + 'px';
-		dialog.style.left = Math.floor( dialogLeft ) + 'px';
-		const dialogId = 'layers-color-picker-' + Math.random().toString( 36 ).slice( 2 );
-		const title = document.createElement( 'h3' );
-		title.className = 'color-picker-title';
-		title.id = dialogId + '-title';
-		title.textContent = options.title || colorPickerStrings.title;
-		dialog.setAttribute( 'aria-labelledby', title.id );
-		dialog.appendChild( title );
-		const paletteContainer = document.createElement( 'div' );
-		paletteContainer.className = 'color-picker-section';
-		const paletteTitle = document.createElement( 'div' );
-		paletteTitle.className = 'color-picker-section-title';
-		paletteTitle.id = dialogId + '-standard';
-		paletteTitle.textContent = colorPickerStrings.standard;
-		dialog.setAttribute( 'aria-describedby', paletteTitle.id );
-		paletteContainer.appendChild( paletteTitle );
-		const paletteGrid = document.createElement( 'div' );
-		paletteGrid.className = 'color-picker-grid';
-		const standardColors = [
-			'#000000', '#404040', '#808080', '#c0c0c0', '#ffffff', '#ff0000', '#ffff00', '#00ff00',
-			'#00ffff', '#0000ff', '#ff00ff', '#800000', '#808000', '#008000', '#008080', '#000080',
-			'#800080', '#ff4500', '#ffa500', '#ffff00', '#adff2f', '#00ff7f', '#00bfff', '#1e90ff',
-			'#9370db', '#ff69b4', '#ffdab9', '#f0e68c', '#e0ffff', '#ffe4e1', '#dcdcdc', '#a9a9a9'
-		];
-		let selectedColor = ( initialValue === 'none' ) ? 'none' : ( initialValue || '#000000' );
-		let selectedButton = null;
-		const updateSelection = function ( button ) {
-			if ( selectedButton ) {
-				selectedButton.classList.remove( 'selected' );
-			}
-			if ( button ) {
-				button.classList.add( 'selected' );
-				selectedButton = button;
-			}
-		};
-		const noneButton = document.createElement( 'button' );
-		noneButton.type = 'button';
-		noneButton.className = 'color-picker-none-btn';
-		noneButton.title = transparentTitle;
-		noneButton.setAttribute( 'aria-label', transparentTitle );
-		noneButton.addEventListener( 'click', function () {
-			selectedColor = 'none';
-			updateSelection( noneButton );
-		} );
-		paletteGrid.appendChild( noneButton );
-		standardColors.forEach( function ( color ) {
-			const colorBtn = document.createElement( 'button' );
-			colorBtn.type = 'button';
-			colorBtn.className = 'color-picker-swatch-btn';
-			colorBtn.style.backgroundColor = color;
-			colorBtn.title = color;
-			colorBtn.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.swatchTemplate, color ) );
-			colorBtn.addEventListener( 'click', function () {
-				selectedColor = color;
-				updateSelection( colorBtn );
-			} );
-			if ( color.toLowerCase() === String( selectedColor ).toLowerCase() ) {
-				updateSelection( colorBtn );
-			}
-			paletteGrid.appendChild( colorBtn );
-		} );
-		paletteContainer.appendChild( paletteGrid );
-		dialog.appendChild( paletteContainer );
-		const customContainer = document.createElement( 'div' );
-		customContainer.className = 'color-picker-section';
-		const customTitle = document.createElement( 'div' );
-		customTitle.className = 'color-picker-section-title';
-		customTitle.textContent = colorPickerStrings.saved;
-		customContainer.appendChild( customTitle );
-		const customGrid = document.createElement( 'div' );
-		customGrid.className = 'color-picker-grid';
-		let savedCustomColors = [];
-		try {
-			savedCustomColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
-		} catch ( err ) {
-			// localStorage parse failed - may be corrupted or unavailable
-			if ( window.mw && window.mw.log ) {
-				mw.log.warn( '[Toolbar] Failed to load custom colors:', err.message );
-			}
-			savedCustomColors = [];
-		}
-		const createCustomButtonClickHandler = function ( button ) {
-			return function () {
-				selectedColor = button.style.backgroundColor;
-				updateSelection( button );
-			};
-		};
-		for ( let i = 0; i < 16; i++ ) {
-			const customBtn = document.createElement( 'button' );
-			customBtn.type = 'button';
-			customBtn.className = 'color-picker-swatch-btn';
-			customBtn.dataset.slot = i;
-			if ( savedCustomColors[ i ] ) {
-				customBtn.style.backgroundColor = savedCustomColors[ i ];
-				customBtn.title = savedCustomColors[ i ];
-				customBtn.setAttribute( 'aria-label', formatTemplate( colorPickerStrings.swatchTemplate, savedCustomColors[ i ] ) );
-				customBtn.addEventListener( 'click', createCustomButtonClickHandler( customBtn ) );
-				if ( savedCustomColors[ i ].toLowerCase && savedCustomColors[ i ].toLowerCase() === String( selectedColor ).toLowerCase() ) {
-					updateSelection( customBtn );
-				}
-			} else {
-				customBtn.title = colorPickerStrings.emptySlot;
-				customBtn.setAttribute( 'aria-label', colorPickerStrings.emptySlot );
-			}
-			customGrid.appendChild( customBtn );
-		}
-		customContainer.appendChild( customGrid );
-		dialog.appendChild( customContainer );
-		const customSection = document.createElement( 'div' );
-		customSection.className = 'color-picker-section';
-		const customLabel = document.createElement( 'div' );
-		customLabel.className = 'color-picker-section-title';
-		customLabel.textContent = colorPickerStrings.customSection;
-		customSection.appendChild( customLabel );
-		const customInput = document.createElement( 'input' );
-		customInput.type = 'color';
-		customInput.className = 'color-picker-custom-input';
-		customInput.setAttribute( 'aria-label', colorPickerStrings.customSection );
-		customInput.addEventListener( 'change', function () {
-			selectedColor = customInput.value;
-			updateSelection( null );
-		} );
-		customSection.appendChild( customInput );
-		dialog.appendChild( customSection );
-		if ( selectedColor === 'none' ) {
-			updateSelection( noneButton );
-		}
-		const buttonContainer = document.createElement( 'div' );
-		buttonContainer.className = 'color-picker-actions';
-		const cancelBtn = document.createElement( 'button' );
-		cancelBtn.type = 'button';
-		cancelBtn.className = 'color-picker-btn color-picker-btn--secondary';
-		cancelBtn.textContent = colorPickerStrings.cancel;
-		cancelBtn.addEventListener( 'click', function () {
-			cleanup();
-		} );
-		const okBtn = document.createElement( 'button' );
-		okBtn.type = 'button';
-		okBtn.className = 'color-picker-btn color-picker-btn--primary';
-		okBtn.textContent = colorPickerStrings.apply;
-		okBtn.addEventListener( 'click', function () {
-			if ( selectedColor !== 'none' && selectedColor !== initialValue ) {
-				try {
-					let customColors = JSON.parse( localStorage.getItem( 'layers-custom-colors' ) || '[]' );
-					if ( customColors.indexOf( selectedColor ) === -1 ) {
-						customColors.unshift( selectedColor );
-						customColors = customColors.slice( 0, 16 );
-						localStorage.setItem( 'layers-custom-colors', JSON.stringify( customColors ) );
-					}
-				} catch ( err ) {
-					// localStorage unavailable or quota exceeded
-					if ( window.mw && window.mw.log ) {
-						mw.log.warn( '[Toolbar] Failed to save custom color:', err.message );
-					}
-				}
-			}
-			onApply( selectedColor );
-			cleanup();
-		} );
-		buttonContainer.appendChild( cancelBtn );
-		buttonContainer.appendChild( okBtn );
-		dialog.appendChild( buttonContainer );
-		overlay.addEventListener( 'click', function ( e ) {
-			if ( e.target === overlay ) {
-				cleanup();
-			}
-		} );
-		escapeHandler = function ( e ) {
-			if ( e.key === 'Escape' ) {
-				cleanup();
-			}
-		};
-		document.addEventListener( 'keydown', escapeHandler );
-		focusTrapHandler = function ( e ) {
-			if ( e.key !== 'Tab' ) {
-				return;
-			}
-			const focusable = dialog.querySelectorAll( focusableSelector );
-			if ( !focusable.length ) {
-				return;
-			}
-			const first = focusable[ 0 ];
-			const last = focusable[ focusable.length - 1 ];
-			if ( e.shiftKey && document.activeElement === first ) {
-				e.preventDefault();
-				last.focus();
-			} else if ( !e.shiftKey && document.activeElement === last ) {
-				e.preventDefault();
-				first.focus();
-			}
-		};
-		dialog.addEventListener( 'keydown', focusTrapHandler );
-		const focusInitial = function () {
-			const focusable = dialog.querySelectorAll( focusableSelector );
-			if ( focusable.length ) {
-				focusable[ 0 ].focus();
-			} else {
-				dialog.focus();
-			}
-		};
-		document.body.appendChild( overlay );
-		document.body.appendChild( dialog );
-		anchorButton.setAttribute( 'aria-expanded', 'true' );
-		focusInitial();
-	};
-
-	// Resolve i18n text safely, avoiding placeholder leakage
+	/**
+	 * Resolve i18n text safely, delegating to MessageHelper
+	 *
+	 * @param {string} key - Message key
+	 * @param {string} fallback - Fallback text if message not found
+	 * @return {string} Localized message or fallback
+	 */
 	Toolbar.prototype.msg = function ( key, fallback ) {
-		function pick( txt, fb ) {
-			if ( txt && txt.indexOf && !txt.includes( '⧼' ) ) {
-				return txt;
-			}
-			return fb;
+		// Delegate to MessageHelper singleton if available
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			return window.layersMessages.get( key, fallback );
 		}
-		switch ( key ) {
-			case 'layers-toolbar-title': {
-				const t0 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-toolbar-title' ).text() : null;
-				return pick( t0, fallback );
+
+		// Fallback: try mw.message directly
+		if ( window.mw && mw.message ) {
+			try {
+				const msg = mw.message( key );
+				if ( msg && typeof msg.text === 'function' ) {
+					const text = msg.text();
+					// Avoid returning placeholder markers
+					if ( text && !text.includes( '⧼' ) ) {
+						return text;
+					}
+				}
+			} catch ( e ) {
+				// Fall through to fallback
 			}
-			// Tools
-			case 'layers-tool-select': {
-				const t1 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-select' ).text() : null;
-				return pick( t1, fallback );
-			}
-			case 'layers-tool-zoom': {
-				const t2 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-zoom' ).text() : null;
-				return pick( t2, fallback );
-			}
-			case 'layers-tool-text': {
-				const t3 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-text' ).text() : null;
-				return pick( t3, fallback );
-			}
-			case 'layers-tool-pen': {
-				const t4 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-pen' ).text() : null;
-				return pick( t4, fallback );
-			}
-			case 'layers-tool-rectangle': {
-				const t5 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-rectangle' ).text() : null;
-				return pick( t5, fallback );
-			}
-			case 'layers-tool-circle': {
-				const t6 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-circle' ).text() : null;
-				return pick( t6, fallback );
-			}
-			case 'layers-tool-ellipse': {
-				const t7 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-ellipse' ).text() : null;
-				return pick( t7, fallback );
-			}
-			case 'layers-tool-polygon': {
-				const t8 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-polygon' ).text() : null;
-				return pick( t8, fallback );
-			}
-			case 'layers-tool-star': {
-				const t9 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-star' ).text() : null;
-				return pick( t9, fallback );
-			}
-			case 'layers-tool-arrow': {
-				const t10 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-arrow' ).text() : null;
-				return pick( t10, fallback );
-			}
-			case 'layers-tool-line': {
-				const t11 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-line' ).text() : null;
-				return pick( t11, fallback );
-			}
-			case 'layers-tool-blur': {
-				const t13 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-blur' ).text() : null;
-				return pick( t13, fallback );
-			}
-			case 'layers-tool-marquee': {
-				const t14 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-tool-marquee' ).text() : null;
-				return pick( t14, fallback );
-			}
-			// Properties/labels
-			case 'layers-prop-stroke-color': {
-				const p1 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-prop-stroke-color' ).text() : null;
-				return pick( p1, fallback );
-			}
-			case 'layers-prop-fill-color': {
-				const p2 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-prop-fill-color' ).text() : null;
-				return pick( p2, fallback );
-			}
-			case 'layers-prop-stroke-width': {
-				const p3 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-prop-stroke-width' ).text() : null;
-				return pick( p3, fallback );
-			}
-			case 'layers-prop-font-size': {
-				const p4 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-prop-font-size' ).text() : null;
-				return pick( p4, fallback );
-			}
-			case 'layers-effect-shadow': {
-				const p5 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-effect-shadow' ).text() : null;
-				return pick( p5, fallback );
-			}
-			case 'layers-effect-shadow-enable': {
-				const p6 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-effect-shadow-enable' ).text() : null;
-				return pick( p6, fallback );
-			}
-			case 'layers-effect-shadow-color': {
-				const p7 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-effect-shadow-color' ).text() : null;
-				return pick( p7, fallback );
-			}
-			case 'layers-arrow-single': {
-				const a1 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-arrow-single' ).text() : null;
-				return pick( a1, fallback );
-			}
-			case 'layers-arrow-double': {
-				const a2 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-arrow-double' ).text() : null;
-				return pick( a2, fallback );
-			}
-			case 'layers-arrow-none': {
-				const a3 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-arrow-none' ).text() : null;
-				return pick( a3, fallback );
-			}
-			// Zoom
-			case 'layers-zoom-out': {
-				const z1 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-zoom-out' ).text() : null;
-				return pick( z1, fallback );
-			}
-			case 'layers-zoom-reset': {
-				const z2 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-zoom-reset' ).text() : null;
-				return pick( z2, fallback );
-			}
-			case 'layers-zoom-in': {
-				const z3 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-zoom-in' ).text() : null;
-				return pick( z3, fallback );
-			}
-			case 'layers-zoom-fit': {
-				const z4 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-zoom-fit' ).text() : null;
-				return pick( z4, fallback );
-			}
-			// Actions
-			case 'layers-undo': {
-				const ac1 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-undo' ).text() : null;
-				return pick( ac1, fallback );
-			}
-			case 'layers-redo': {
-				const ac2 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-redo' ).text() : null;
-				return pick( ac2, fallback );
-			}
-			case 'layers-delete-selected': {
-				const ac3 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-delete-selected' ).text() : null;
-				return pick( ac3, fallback );
-			}
-			case 'layers-duplicate-selected': {
-				const ac4 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-duplicate-selected' ).text() : null;
-				return pick( ac4, fallback );
-			}
-			case 'layers-toggle-grid': {
-				const ac5 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-toggle-grid' ).text() : null;
-				return pick( ac5, fallback );
-			}
-			case 'layers-toggle-rulers': {
-				const ac6 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-toggle-rulers' ).text() : null;
-				return pick( ac6, fallback );
-			}
-			case 'layers-toggle-guides': {
-				const ac7 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-toggle-guides' ).text() : null;
-				return pick( ac7, fallback );
-			}
-			case 'layers-toggle-snap-grid': {
-				const ac8 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-toggle-snap-grid' ).text() : null;
-				return pick( ac8, fallback );
-			}
-			case 'layers-toggle-snap-guides': {
-				const ac9 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-toggle-snap-guides' ).text() : null;
-				return pick( ac9, fallback );
-			}
-			// Import/Export
-			case 'layers-import': {
-				const ie1 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-import' ).text() : null;
-				return pick( ie1, fallback );
-			}
-			case 'layers-export': {
-				const ie2 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-export' ).text() : null;
-				return pick( ie2, fallback );
-			}
-			case 'layers-import-unsaved-confirm': {
-				const ie3 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-import-unsaved-confirm' ).text() : null;
-				return pick( ie3, fallback );
-			}
-			case 'layers-import-success': {
-				const ie4 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-import-success' ).text() : null;
-				return pick( ie4, fallback );
-			}
-			case 'layers-import-error': {
-				const ie5 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-import-error' ).text() : null;
-				return pick( ie5, fallback );
-			}
-			// Save/Cancel
-			case 'layers-editor-save': {
-				const sc1 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-editor-save' ).text() : null;
-				return pick( sc1, fallback );
-			}
-			case 'layers-save-changes': {
-				const sc2 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-save-changes' ).text() : null;
-				return pick( sc2, fallback );
-			}
-			case 'layers-editor-cancel': {
-				const sc3 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-editor-cancel' ).text() : null;
-				return pick( sc3, fallback );
-			}
-			case 'layers-cancel-changes': {
-				const sc4 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-cancel-changes' ).text() : null;
-				return pick( sc4, fallback );
-			}
-			// Misc
-			case 'layers-transparent': {
-				const mi1 = ( window.mw && mw.message ) ?
-					mw.message( 'layers-transparent' ).text() : null;
-				return pick( mi1, fallback );
-			}
-			default:
-				return fallback;
 		}
+
+		return fallback || '';
 	};
 
 	Toolbar.prototype.createInterface = function () {
@@ -677,7 +225,6 @@
 
 		const tools = [
 			{ id: 'pointer', icon: '↖', title: t( 'layers-tool-select', 'Select Tool' ), key: 'V' },
-			{ id: 'zoom', icon: '🔍', title: t( 'layers-tool-zoom', 'Zoom Tool' ), key: 'Z' },
 			{ id: 'text', icon: 'T', title: t( 'layers-tool-text', 'Text Tool' ), key: 'T' },
 			{ id: 'pen', icon: '✏', title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P' },
 			{ id: 'rectangle', icon: '▢', title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R' },
@@ -1178,7 +725,7 @@
 			self.editor.cancel( true );
 		} );
 
-		// Import JSON
+		// Import JSON - delegate to ImportExportManager
 		this.importButton.addEventListener( 'click', () => {
 			self.importInput.click();
 		} );
@@ -1188,106 +735,24 @@
 			if ( !file ) {
 				return;
 			}
-			// Confirm overwrite if there are unsaved changes
-			if ( self.editor && self.editor.isDirty ) {
-				const msg = ( mw.message ? mw.message( 'layers-import-unsaved-confirm' ).text() : 'You have unsaved changes. Import anyway?' );
-				// eslint-disable-next-line no-alert
-				if ( !window.confirm( msg ) ) {
-					self.importInput.value = '';
-					return;
-				}
-			}
-			const reader = new FileReader();
-			reader.onload = function () {
-				try {
-					const text = String( reader.result || '' );
-					const parsed = JSON.parse( text );
-					let layers;
-					if ( Array.isArray( parsed ) ) {
-						layers = parsed;
-					} else if ( parsed && Array.isArray( parsed.layers ) ) {
-						layers = parsed.layers;
-					} else {
-						layers = [];
-					}
-					if ( !Array.isArray( layers ) ) {
-						throw new Error( 'Invalid JSON format' );
-					}
-					// Save state and replace layers via StateManager
-					if ( self.editor && typeof self.editor.saveState === 'function' ) {
-						self.editor.saveState( 'import' );
-					}
-					const importedLayers = layers.map( ( layer ) => {
-						const obj = layer || {};
-						if ( !obj.id ) {
-							obj.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
-						}
-						return obj;
+			if ( self.importExportManager ) {
+				self.importExportManager.importFromFile( file )
+					.catch( () => {
+						// Error already handled by ImportExportManager
+					} )
+					.finally( () => {
+						self.importInput.value = '';
 					} );
-					if ( self.editor.stateManager ) {
-						self.editor.stateManager.set( 'layers', importedLayers );
-					} else {
-						self.editor.layers = importedLayers;
-					}
-					if ( self.editor && self.editor.canvasManager && typeof self.editor.canvasManager.renderLayers === 'function' ) {
-						const layers = self.editor.stateManager ? self.editor.stateManager.get( 'layers' ) || [] : [];
-						self.editor.canvasManager.renderLayers( layers );
-					}
-					if ( self.editor && typeof self.editor.markDirty === 'function' ) {
-						self.editor.markDirty();
-					}
-					if ( window.mw && window.mw.notify ) {
-						mw.notify( ( mw.message ? mw.message( 'layers-import-success' ).text() : 'Import complete' ), { type: 'success' } );
-					}
-				} catch ( err ) {
-					if ( window.mw && window.mw.notify ) {
-						mw.notify( ( mw.message ? mw.message( 'layers-import-error' ).text() : 'Import failed' ), { type: 'error' } );
-					}
-				}
+			} else {
+				// Fallback: ImportExportManager not available
 				self.importInput.value = '';
-			};
-			reader.onerror = function () {
-				if ( window.mw && window.mw.notify ) {
-					mw.notify( ( mw.message ? mw.message( 'layers-import-error' ).text() : 'Import failed' ), { type: 'error' } );
-				}
-				self.importInput.value = '';
-			};
-			reader.readAsText( file );
+			}
 		} );
 
-		// Export JSON
+		// Export JSON - delegate to ImportExportManager
 		this.exportButton.addEventListener( 'click', () => {
-			try {
-				let data = [];
-				// Try to get layers from StateManager first, then fallback to bridge property
-				if ( self.editor && self.editor.stateManager && typeof self.editor.stateManager.getLayers === 'function' ) {
-					data = self.editor.stateManager.getLayers();
-				} else if ( self.editor && Array.isArray( self.editor.layers ) ) {
-					data = self.editor.layers;
-				}
-				const json = JSON.stringify( data, null, 2 );
-				const fname = ( self.editor && self.editor.filename ? self.editor.filename : 'layers' ) + '.layers.json';
-				const blob = new Blob( [ json ], { type: 'application/json' } );
-				// IE 11 and old Edge
-				if ( window.navigator && window.navigator.msSaveOrOpenBlob ) {
-					window.navigator.msSaveOrOpenBlob( blob, fname );
-					return;
-				}
-
-				const a = document.createElement( 'a' );
-				a.style.display = 'none';
-				a.download = fname;
-				// Use data URL for broad compatibility without relying on window.URL
-				a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent( json );
-				document.body.appendChild( a );
-				a.click();
-				setTimeout( () => {
-					document.body.removeChild( a );
-				}, 0 );
-			} catch ( e ) {
-				if ( window.mw && window.mw.notify ) {
-					mw.notify( ( mw.message ? mw.message( 'layers-export-error' ).text() : 'Export failed' ), { type: 'error' } );
-				}
+			if ( self.importExportManager ) {
+				self.importExportManager.exportToFile();
 			}
 		} );
 
@@ -1367,9 +832,10 @@
 			self.updateStyleOptions();
 		} );
 
-		// Keyboard shortcuts
+		// Keyboard shortcuts - delegate to ToolbarKeyboard module
+		this.keyboardHandler = new window.ToolbarKeyboard( this );
 		this.keyboardShortcutHandler = function ( e ) {
-			self.handleKeyboardShortcuts( e );
+			self.keyboardHandler.handleKeyboardShortcuts( e );
 		};
 		this.addDocumentListener( 'keydown', this.keyboardShortcutHandler );
 
@@ -1573,76 +1039,13 @@
 		}
 	};
 
+	/**
+	 * @deprecated Use ToolbarKeyboard.handleKeyboardShortcuts instead.
+	 * Kept for backward compatibility - delegates to ToolbarKeyboard module.
+	 */
 	Toolbar.prototype.handleKeyboardShortcuts = function ( e ) {
-		// Don't handle shortcuts when typing in input fields
-		if ( e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true' ) {
-			return;
-		}
-
-		const key = e.key.toLowerCase();
-		const ctrl = e.ctrlKey || e.metaKey;
-
-		if ( ctrl ) {
-			switch ( key ) {
-				case 'z':
-					e.preventDefault();
-					if ( e.shiftKey ) {
-						this.editor.redo();
-					} else {
-						this.editor.undo();
-					}
-					break;
-				case 'y':
-					e.preventDefault();
-					this.editor.redo();
-					break;
-				case 's':
-					e.preventDefault();
-					this.editor.save();
-					break;
-				case 'd':
-					e.preventDefault();
-					this.editor.duplicateSelected();
-					break;
-			}
-		} else {
-			// Tool shortcuts
-			switch ( key ) {
-				case 'v':
-					this.selectTool( 'pointer' );
-					break;
-				case 't':
-					this.selectTool( 'text' );
-					break;
-				case 'p':
-					this.selectTool( 'pen' );
-					break;
-				case 'r':
-					this.selectTool( 'rectangle' );
-					break;
-				case 'c':
-					this.selectTool( 'circle' );
-					break;
-				case 'b':
-					this.selectTool( 'blur' );
-					break;
-				case 'a':
-					this.selectTool( 'arrow' );
-					break;
-				case 'l':
-					this.selectTool( 'line' );
-					break;
-				case 'g':
-					this.toggleGrid();
-					break;
-				case 'delete':
-				case 'backspace':
-					this.editor.deleteSelected();
-					break;
-				case 'escape':
-					this.editor.cancel();
-					break;
-			}
+		if ( this.keyboardHandler ) {
+			this.keyboardHandler.handleKeyboardShortcuts( e );
 		}
 	};
 
