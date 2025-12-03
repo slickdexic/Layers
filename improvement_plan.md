@@ -229,13 +229,13 @@ Created processor classes to extract business logic from WikitextHooks.php:
 | LayersHtmlInjector | LayersHtmlInjectorTest.php | ✅ |
 | LayersParamExtractor | LayersParamExtractorTest.php | ✅ |
 | LayeredFileRenderer | LayeredFileRendererTest.php | 26 |
-| ThumbnailProcessor | ThumbnailProcessorTest.php | 24 (NEW) |
-| ImageLinkProcessor | — | ❌ Needs tests |
+| ThumbnailProcessor | ThumbnailProcessorTest.php | 24 |
+| ImageLinkProcessor | ImageLinkProcessorTest.php | 40 ✅ NEW |
 
 **Acceptance Criteria:**
 - [ ] WikitextHooks.php <600 lines (revised intermediate goal)
 - [x] Business logic extracted to processors
-- [x] PHPUnit tests for core processors (LayerInjector, LayeredFileRenderer, ThumbnailProcessor)
+- [x] PHPUnit tests for all core processors ✅ COMPLETE
 - [x] Existing tests pass
 
 ---
