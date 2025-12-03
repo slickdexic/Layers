@@ -16,8 +16,13 @@ use Psr\Log\NullLogger;
  */
 class LayerInjectorTest extends TestCase {
 
+	/** @var LayerInjector */
 	private LayerInjector $injector;
+
+	/** @var LayersDatabase|\PHPUnit\Framework\MockObject\MockObject */
 	private $mockDb;
+
+	/** @var LayersHtmlInjector|\PHPUnit\Framework\MockObject\MockObject */
 	private $mockHtmlInjector;
 
 	protected function setUp(): void {
@@ -38,9 +43,9 @@ class LayerInjectorTest extends TestCase {
 	 *
 	 * @param string $name File name
 	 * @param string $sha1 SHA1 hash
-	 * @return object Mock file
+	 * @return \stdClass Mock file
 	 */
-	private function createMockFile( string $name = 'Test.jpg', string $sha1 = 'abc123' ): object {
+	private function createMockFile( string $name = 'Test.jpg', string $sha1 = 'abc123' ): \stdClass {
 		$file = new \stdClass();
 		$file->name = $name;
 		$file->sha1 = $sha1;
@@ -386,7 +391,8 @@ class LayerInjectorTest extends TestCase {
 		$layerSet = [
 			'id' => 88,
 			'data' => [
-				'layers' => [] // Empty layers array
+				// Empty layers array
+				'layers' => []
 			]
 		];
 

@@ -143,6 +143,10 @@ These integration tests cover the JavaScript layer comprehensively with 91% code
 
 **Total Extracted:** ~4,245 lines (was 5,462 lines → now 1,899 lines)
 
+**Recent Progress (Dec 2025):**
+- ✅ Marquee selection delegated to SelectionManager (reduces code duplication)
+- ✅ Updated test mocks for SelectionManager and viewer modules
+
 **Analysis (Dec 2025):**
 CanvasManager now primarily consists of:
 1. **Constructor & state initialization** (~150 lines) - Sets up state for all subsystems
@@ -160,7 +164,7 @@ CanvasManager now primarily consists of:
 | Action | Est. Lines Saved | Risk |
 |--------|------------------|------|
 | Remove image loading fallback | ~80 | Low |
-| Extract MarqueeSelectionController | ~80 | Low |
+| ~~Extract MarqueeSelectionController~~ | ~~80~~ | ✅ Delegated to SelectionManager |
 | Extract StyleController | ~100 | Medium |
 | Remove unused state initialization | ~50 | Low |
 | **Subtotal** | ~310 | |
@@ -169,7 +173,7 @@ CanvasManager now primarily consists of:
 
 **Tasks:**
 - [ ] Remove fallback image loading code (ImageLoader guaranteed by extension.json)
-- [ ] Extract MarqueeSelectionController (startMarquee, updateMarquee, finishMarquee)
+- [x] Extract MarqueeSelectionController → Delegated to existing SelectionManager
 - [ ] Audit state initialization for unused properties
 - [ ] Verify all existing tests pass
 
