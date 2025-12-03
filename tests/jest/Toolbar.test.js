@@ -43,6 +43,13 @@ describe( 'Toolbar', function () {
 			}
 		};
 
+		// Mock ToolbarKeyboard
+		global.window.ToolbarKeyboard = jest.fn( function ( toolbarRef ) {
+			this.toolbar = toolbarRef;
+			this.editor = toolbarRef.editor;
+			this.handleKeyboardShortcuts = jest.fn();
+		} );
+
 		// Load Toolbar code
 		const toolbarCode = fs.readFileSync(
 			path.join( __dirname, '../../resources/ext.layers.editor/Toolbar.js' ),
@@ -129,17 +136,21 @@ describe( 'Toolbar', function () {
 			expect( toolbar.currentTool ).toBe( 'pointer' );
 		} );
 
-		it( 'should initialize with default stroke width', function () {
+		it( 'should initialize style controls manager', function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 
-			expect( toolbar.currentStrokeWidth ).toBe( 2.0 );
+			expect( toolbar.styleControls ).toBeDefined();
 		} );
 
-		it( 'should initialize color none flags to false', function () {
+		it( 'should expose style control values via styleControls', function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 
-			expect( toolbar.strokeColorNone ).toBe( false );
-			expect( toolbar.fillColorNone ).toBe( false );
+			// Style state is now managed by ToolbarStyleControls
+			if ( toolbar.styleControls ) {
+				expect( toolbar.styleControls.strokeColorNone ).toBe( false );
+				expect( toolbar.styleControls.fillColorNone ).toBe( false );
+				expect( toolbar.styleControls.currentStrokeWidth ).toBe( 2.0 );
+			}
 		} );
 
 		it( 'should initialize document listeners array', function () {

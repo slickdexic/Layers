@@ -219,6 +219,7 @@
 				"LayersValidator.js",
 				"ToolbarKeyboard.js",
 				"ImportExportManager.js",
+				"ToolbarStyleControls.js",
 				"Toolbar.js",
 				"LayersEditor.js"
 			],

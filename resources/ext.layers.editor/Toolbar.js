@@ -6,6 +6,7 @@
  * - ColorPickerDialog (ui/ColorPickerDialog.js) for color selection
  * - ToolbarKeyboard for keyboard shortcuts
  * - ImportExportManager for layer import/export
+ * - ToolbarStyleControls for style controls UI
  */
 ( function () {
 	'use strict';
@@ -23,15 +24,11 @@
 		this.container = this.config.container;
 		this.editor = this.config.editor;
 		this.currentTool = 'pointer';
-		this.currentStrokeWidth = 2.0;
-		this.strokeColorNone = false;
-		this.fillColorNone = false;
 
 		// Debug logging removed - use mw.config.get('wgLayersDebug') if needed
 
 		// Initialize validator for real-time input validation
 		this.validator = window.LayersValidator ? new window.LayersValidator() : null;
-		this.inputValidators = [];
 		this.documentListeners = [];
 		this.dialogCleanups = [];
 		this.keyboardShortcutHandler = null;
@@ -39,6 +36,9 @@
 		// Initialize import/export manager
 		this.importExportManager = window.ImportExportManager ?
 			new window.ImportExportManager( { editor: this.editor } ) : null;
+
+		// Initialize style controls manager
+		this.styleControls = null;
 
 		this.init();
 	}
@@ -84,6 +84,10 @@
 		this.keyboardShortcutHandler = null;
 		this.dialogCleanups = [];
 		this.documentListeners = [];
+		if ( this.styleControls ) {
+			this.styleControls.destroy();
+			this.styleControls = null;
+		}
 	};
 
 	Toolbar.prototype.init = function () {
@@ -270,294 +274,69 @@
 	};
 
 	Toolbar.prototype.createStyleGroup = function () {
-		const styleGroup = document.createElement( 'div' );
-		styleGroup.className = 'toolbar-group style-group';
 		const self = this;
-		const t = this.msg.bind( this );
-		const colorPickerStrings = this.getColorPickerStrings();
 
-		// Horizontal style controls container
-		const styleControlsRow = document.createElement( 'div' );
-		styleControlsRow.className = 'style-controls-row';
-
-		// Stroke color with label
-		const strokeColorItem = document.createElement( 'div' );
-		strokeColorItem.className = 'style-control-item';
-		const strokeLabel = document.createElement( 'span' );
-		strokeLabel.className = 'style-control-label';
-		strokeLabel.textContent = t( 'layers-prop-stroke-color', 'Stroke' );
-		const strokeBtn = document.createElement( 'button' );
-		strokeBtn.type = 'button';
-		strokeBtn.className = 'color-display-button stroke-color';
-		strokeBtn.setAttribute( 'aria-label', t( 'layers-prop-stroke-color', 'Stroke Color' ) );
-		strokeBtn.setAttribute( 'aria-haspopup', 'dialog' );
-		strokeBtn.setAttribute( 'aria-expanded', 'false' );
-		self.updateColorButtonDisplay( strokeBtn, '#000000', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
-		strokeColorItem.appendChild( strokeLabel );
-		strokeColorItem.appendChild( strokeBtn );
-		styleControlsRow.appendChild( strokeColorItem );
-		strokeBtn.addEventListener( 'click', () => {
-			self.openColorPickerDialog( strokeBtn, self.strokeColorNone ? 'none' : self.strokeColorValue, {
-				title: t( 'layers-prop-stroke-color', 'Stroke Color' ),
-				transparentTitle: t( 'layers-transparent', 'No Stroke (Transparent)' ),
-				previewTemplate: colorPickerStrings.previewTemplate,
-				onApply: function ( chosen ) {
-					if ( chosen === 'none' ) {
-						self.strokeColorNone = true;
-						self.updateColorButtonDisplay( self.strokeColorButton, 'none', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
-					} else {
-						self.strokeColorNone = false;
-						self.strokeColorValue = chosen;
-						self.updateColorButtonDisplay( self.strokeColorButton, chosen, colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
-					}
-					self.updateStyleOptions();
-				}
+		// Initialize style controls manager
+		if ( window.ToolbarStyleControls ) {
+			this.styleControls = new window.ToolbarStyleControls( {
+				toolbar: this,
+				msg: this.msg.bind( this )
 			} );
-		} );
 
-		// Fill color with label
-		const fillColorItem = document.createElement( 'div' );
-		fillColorItem.className = 'style-control-item';
-		const fillLabel = document.createElement( 'span' );
-		fillLabel.className = 'style-control-label';
-		fillLabel.textContent = t( 'layers-prop-fill-color', 'Fill' );
-		const fillBtn = document.createElement( 'button' );
-		fillBtn.type = 'button';
-		fillBtn.className = 'color-display-button fill-color';
-		fillBtn.setAttribute( 'aria-label', t( 'layers-prop-fill-color', 'Fill Color' ) );
-		fillBtn.setAttribute( 'aria-haspopup', 'dialog' );
-		fillBtn.setAttribute( 'aria-expanded', 'false' );
-		self.updateColorButtonDisplay( fillBtn, '#ffffff', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
-		fillColorItem.appendChild( fillLabel );
-		fillColorItem.appendChild( fillBtn );
-		styleControlsRow.appendChild( fillColorItem );
-		fillBtn.addEventListener( 'click', () => {
-			self.openColorPickerDialog( fillBtn, self.fillColorNone ? 'none' : self.fillColorValue, {
-				title: t( 'layers-prop-fill-color', 'Fill Color' ),
-				transparentTitle: t( 'layers-transparent', 'No Fill (Transparent)' ),
-				previewTemplate: colorPickerStrings.previewTemplate,
-				onApply: function ( chosen ) {
-					if ( chosen === 'none' ) {
-						self.fillColorNone = true;
-						self.updateColorButtonDisplay( self.fillColorButton, 'none', colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
-					} else {
-						self.fillColorNone = false;
-						self.fillColorValue = chosen;
-						self.updateColorButtonDisplay( self.fillColorButton, chosen, colorPickerStrings.transparent, colorPickerStrings.previewTemplate );
-					}
-					self.updateStyleOptions();
-				}
-			} );
-		} );
+			const styleGroup = this.styleControls.create();
+			this.container.appendChild( styleGroup );
 
-		// Stroke width with label
-		const strokeWidthItem = document.createElement( 'div' );
-		strokeWidthItem.className = 'style-control-item';
-		const widthLabel = document.createElement( 'span' );
-		widthLabel.className = 'style-control-label';
-		widthLabel.textContent = t( 'layers-prop-stroke-width', 'Width' );
-		const strokeWidth = document.createElement( 'input' );
-		strokeWidth.type = 'number';
-		strokeWidth.min = '0';
-		strokeWidth.max = '100';
-		strokeWidth.step = '1';
-		strokeWidth.value = '2';
-		strokeWidth.className = 'stroke-width-input';
-		strokeWidth.title = t( 'layers-prop-stroke-width', 'Stroke Width' ) + ': 2px';
-		strokeWidth.placeholder = 'px';
-		strokeWidthItem.appendChild( widthLabel );
-		strokeWidthItem.appendChild( strokeWidth );
-		styleControlsRow.appendChild( strokeWidthItem );
+			// Setup validation if validator available
+			if ( this.validator ) {
+				this.styleControls.setupValidation( this.validator );
+			}
 
-		styleGroup.appendChild( styleControlsRow );
-
-		// Font size (for text tool) - hidden by default
-		const fontSizeContainer = document.createElement( 'div' );
-		fontSizeContainer.className = 'font-size-container style-control-item';
-		fontSizeContainer.style.display = 'none';
-
-		const fontLabel = document.createElement( 'span' );
-		fontLabel.className = 'style-control-label';
-		fontLabel.textContent = t( 'layers-prop-font-size', 'Size' );
-
-		const fontSize = document.createElement( 'input' );
-		fontSize.type = 'number';
-		fontSize.min = '8';
-		fontSize.max = '72';
-		fontSize.value = '16';
-		fontSize.className = 'font-size';
-		fontSize.title = t( 'layers-prop-font-size', 'Font Size' );
-
-		fontSizeContainer.appendChild( fontLabel );
-		fontSizeContainer.appendChild( fontSize );
-		styleGroup.appendChild( fontSizeContainer );
-
-		// Text stroke options (for text tool)
-		const strokeContainer = document.createElement( 'div' );
-		strokeContainer.className = 'text-stroke-container';
-		strokeContainer.style.display = 'none';
-
-		const strokeColorLabel = document.createElement( 'label' );
-		strokeColorLabel.textContent = t( 'layers-prop-stroke-color', 'Stroke Color' ) + ':';
-		strokeColorLabel.className = 'stroke-color-label';
-
-		const strokeColor = document.createElement( 'input' );
-		strokeColor.type = 'color';
-		strokeColor.value = '#000000';
-		strokeColor.className = 'text-stroke-color';
-		strokeColor.title = t( 'layers-prop-stroke-color', 'Text Stroke Color' );
-
-		const strokeWidthInput = document.createElement( 'input' );
-		strokeWidthInput.type = 'range';
-		strokeWidthInput.min = '0';
-		strokeWidthInput.max = '10';
-		strokeWidthInput.value = '0';
-		strokeWidthInput.className = 'text-stroke-width';
-		strokeWidthInput.title = t( 'layers-prop-stroke-width', 'Text Stroke Width' );
-
-		const strokeWidthValue = document.createElement( 'span' );
-		strokeWidthValue.className = 'text-stroke-value';
-		strokeWidthValue.textContent = '0';
-
-		strokeContainer.appendChild( strokeColorLabel );
-		strokeContainer.appendChild( strokeColor );
-		strokeContainer.appendChild( strokeWidthInput );
-		strokeContainer.appendChild( strokeWidthValue );
-		styleGroup.appendChild( strokeContainer );
-
-		// Drop shadow options (for text tool)
-		const shadowContainer = document.createElement( 'div' );
-		shadowContainer.className = 'text-shadow-container';
-		shadowContainer.style.display = 'none';
-
-		const shadowLabel = document.createElement( 'label' );
-		shadowLabel.textContent = t( 'layers-effect-shadow', 'Shadow' ) + ':';
-		shadowLabel.className = 'shadow-label';
-
-		const shadowToggle = document.createElement( 'input' );
-		shadowToggle.type = 'checkbox';
-		shadowToggle.className = 'text-shadow-toggle';
-		shadowToggle.title = t( 'layers-effect-shadow-enable', 'Enable Drop Shadow' );
-
-		const shadowColor = document.createElement( 'input' );
-		shadowColor.type = 'color';
-		shadowColor.value = '#000000';
-		shadowColor.className = 'text-shadow-color';
-		shadowColor.title = t( 'layers-effect-shadow-color', 'Shadow Color' );
-		shadowColor.style.display = 'none';
-
-		shadowContainer.appendChild( shadowLabel );
-		shadowContainer.appendChild( shadowToggle );
-		shadowContainer.appendChild( shadowColor );
-		styleGroup.appendChild( shadowContainer );
-
-		// Arrow style options (for arrow tool)
-		const arrowContainer = document.createElement( 'div' );
-		arrowContainer.className = 'arrow-style-container';
-		arrowContainer.style.display = 'none';
-
-		const arrowLabel = document.createElement( 'label' );
-		arrowLabel.textContent = t( 'layers-tool-arrow', 'Arrow' ) + ':';
-		arrowLabel.className = 'arrow-label';
-
-		const arrowStyleSelect = document.createElement( 'select' );
-		arrowStyleSelect.className = 'arrow-style-select';
-		// Build options without using innerHTML for safety and lint compliance
-		const optSingle = document.createElement( 'option' );
-		optSingle.value = 'single';
-		optSingle.textContent = t( 'layers-arrow-single', 'Single →' );
-		const optDouble = document.createElement( 'option' );
-		optDouble.value = 'double';
-		optDouble.textContent = t( 'layers-arrow-double', 'Double ↔' );
-		const optNone = document.createElement( 'option' );
-		optNone.value = 'none';
-		optNone.textContent = t( 'layers-arrow-none', 'Line only' );
-		arrowStyleSelect.appendChild( optSingle );
-		arrowStyleSelect.appendChild( optDouble );
-		arrowStyleSelect.appendChild( optNone );
-
-		arrowContainer.appendChild( arrowLabel );
-		arrowContainer.appendChild( arrowStyleSelect );
-		styleGroup.appendChild( arrowContainer );
-
-		this.container.appendChild( styleGroup );
-
-		// Store references and initial state
-		this.strokeColorButton = strokeBtn;
-		this.fillColorButton = fillBtn;
-		this.strokeColorValue = '#000000';
-		this.fillColorValue = '#ffffff';
-		this.strokeWidth = strokeWidth;
-		this.fontSize = fontSize;
-		this.fontSizeContainer = fontSizeContainer;
-		this.strokeContainer = strokeContainer;
-		this.shadowContainer = shadowContainer;
-		this.arrowContainer = arrowContainer;
-		this.textStrokeColor = strokeColor;
-		this.textStrokeWidth = strokeWidthInput;
-		this.textStrokeValue = strokeWidthValue;
-		this.textShadowToggle = shadowToggle;
-		this.textShadowColor = shadowColor;
-		this.arrowStyleSelect = arrowStyleSelect;
-
-		// Set up state tracking for transparent colors
-		this.strokeColorNone = false;
-		this.fillColorNone = false;
-
-		// Add client-side validation to input fields
-		this.setupInputValidation();
+			// Store references for backward compatibility
+			this.strokeColorButton = this.styleControls.strokeColorButton;
+			this.fillColorButton = this.styleControls.fillColorButton;
+			this.strokeWidth = this.styleControls.strokeWidthInput;
+			this.fontSize = this.styleControls.fontSizeInput;
+			this.fontSizeContainer = this.styleControls.fontSizeContainer;
+			this.strokeContainer = this.styleControls.strokeContainer;
+			this.shadowContainer = this.styleControls.shadowContainer;
+			this.arrowContainer = this.styleControls.arrowContainer;
+			this.textStrokeColor = this.styleControls.textStrokeColor;
+			this.textStrokeWidth = this.styleControls.textStrokeWidth;
+			this.textStrokeValue = this.styleControls.textStrokeValue;
+			this.textShadowToggle = this.styleControls.textShadowToggle;
+			this.textShadowColor = this.styleControls.textShadowColor;
+			this.arrowStyleSelect = this.styleControls.arrowStyleSelect;
+		} else {
+			// Fallback: create minimal style group if module not loaded
+			const styleGroup = document.createElement( 'div' );
+			styleGroup.className = 'toolbar-group style-group';
+			styleGroup.textContent = self.msg( 'layers-prop-stroke-color', 'Style controls loading...' );
+			this.container.appendChild( styleGroup );
+		}
 	};
 
-	Toolbar.prototype.setupInputValidation = function () {
-		if ( !this.validator ) {
-			return; // Validator not available
+	/**
+	 * Handle style change notifications from ToolbarStyleControls
+	 *
+	 * @param {Object} styleOptions The new style options
+	 */
+	Toolbar.prototype.onStyleChange = function ( styleOptions ) {
+		if ( this.editor.canvasManager && typeof this.editor.canvasManager.updateStyleOptions === 'function' ) {
+			this.editor.canvasManager.updateStyleOptions( styleOptions );
 		}
-
-		// eslint-disable-next-line no-unused-vars
-		const self = this;
-
-		// Font size validation (1-200)
-		if ( this.fontSize ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.fontSize, 'number', {
-					min: 1,
-					max: 200
-				} )
-			);
-		}
-
-		// Stroke width validation (0-100 integer)
-		if ( this.strokeWidth ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.strokeWidth, 'number', {
-					min: 0,
-					max: 100
-				} )
-			);
-		}
-
-		// Text stroke width validation (0-10)
-		if ( this.textStrokeWidth ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.textStrokeWidth, 'number', {
-					min: 0,
-					max: 10
-				} )
-			);
-		}
-
-		// Color inputs for text stroke/shadow are still validated
-
-		if ( this.textStrokeColor ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.textStrokeColor, 'color' )
-			);
-		}
-
-		if ( this.textShadowColor ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.textShadowColor, 'color' )
-			);
+		if ( this.editor.toolManager && typeof this.editor.toolManager.updateStyle === 'function' ) {
+			this.editor.toolManager.updateStyle( {
+				color: styleOptions.color,
+				fill: styleOptions.fill,
+				strokeWidth: styleOptions.strokeWidth,
+				fontSize: styleOptions.fontSize,
+				arrowStyle: styleOptions.arrowStyle,
+				shadow: styleOptions.shadow,
+				shadowColor: styleOptions.shadowColor,
+				shadowBlur: styleOptions.shadowBlur,
+				shadowOffsetX: styleOptions.shadowOffsetX,
+				shadowOffsetY: styleOptions.shadowOffsetY
+			} );
 		}
 	};
 
@@ -756,81 +535,7 @@
 			}
 		} );
 
-		// Stroke and fill color pickers are wired in createStyleGroup()
-
-		// Stroke width input with improved validation (integer-only) and units consistency
-		this.strokeWidth.addEventListener( 'input', function () {
-			let val = parseInt( this.value, 10 );
-			const isValid = !isNaN( val ) && val >= 0 && val <= 100;
-
-			if ( isValid ) {
-				val = Math.round( val );
-				self.currentStrokeWidth = val;
-
-				// Update display with px unit for clarity
-				this.title = self.msg( 'layers-prop-stroke-width', 'Stroke Width' ) + ': ' + val + 'px';
-
-				// Remove error styling
-				this.classList.remove( 'validation-error' );
-
-				// Update canvas with new stroke width
-				self.updateStyleOptions();
-			} else {
-				// Apply error styling for invalid values
-				this.classList.add( 'validation-error' );
-
-				// Show validation message in title
-				if ( isNaN( val ) ) {
-					this.title = 'Please enter a valid number between 0 and 100';
-				} else if ( val < 0 ) {
-					this.title = 'Minimum stroke width: 0px';
-				} else if ( val > 100 ) {
-					this.title = 'Maximum stroke width: 100px';
-				}
-			}
-		} );
-
-		// Also handle blur event to reset invalid values
-		this.strokeWidth.addEventListener( 'blur', function () {
-			const val = parseInt( this.value, 10 );
-			if ( isNaN( val ) || val < 0 || val > 100 ) {
-				// Reset to last valid value or default
-				this.value = String( self.currentStrokeWidth );
-				this.classList.remove( 'validation-error' );
-				this.title = self.msg( 'layers-prop-stroke-width', 'Stroke Width' ) + ': ' +
-					self.currentStrokeWidth + 'px';
-			}
-		} );
-
-		// Font size
-		this.fontSize.addEventListener( 'change', () => {
-			self.updateStyleOptions();
-		} );
-
-		// Text stroke controls
-		this.textStrokeColor.addEventListener( 'change', () => {
-			self.updateStyleOptions();
-		} );
-
-		this.textStrokeWidth.addEventListener( 'input', function () {
-			self.textStrokeValue.textContent = this.value;
-			self.updateStyleOptions();
-		} );
-
-		// Text shadow controls
-		this.textShadowToggle.addEventListener( 'change', function () {
-			self.textShadowColor.style.display = this.checked ? 'inline-block' : 'none';
-			self.updateStyleOptions();
-		} );
-
-		this.textShadowColor.addEventListener( 'change', () => {
-			self.updateStyleOptions();
-		} );
-
-		// Arrow style controls
-		this.arrowStyleSelect.addEventListener( 'change', () => {
-			self.updateStyleOptions();
-		} );
+		// Style controls are handled by ToolbarStyleControls module
 
 		// Keyboard shortcuts - delegate to ToolbarKeyboard module
 		this.keyboardHandler = new window.ToolbarKeyboard( this );
@@ -882,63 +587,17 @@
 	};
 
 	Toolbar.prototype.updateToolOptions = function ( toolId ) {
-		// Show/hide tool-specific options
-		if ( toolId === 'text' ) {
-			this.fontSizeContainer.style.display = 'block';
-			this.strokeContainer.style.display = 'block';
-			this.shadowContainer.style.display = 'block';
-			this.arrowContainer.style.display = 'none';
-		} else if ( toolId === 'arrow' ) {
-			this.fontSizeContainer.style.display = 'none';
-			this.strokeContainer.style.display = 'none';
-			this.shadowContainer.style.display = 'none';
-			this.arrowContainer.style.display = 'block';
-		} else {
-			this.fontSizeContainer.style.display = 'none';
-			this.strokeContainer.style.display = 'none';
-			this.shadowContainer.style.display = 'none';
-			this.arrowContainer.style.display = 'none';
+		// Delegate to style controls module
+		if ( this.styleControls ) {
+			this.styleControls.updateForTool( toolId );
 		}
 	};
 
 	Toolbar.prototype.updateStyleOptions = function () {
-		// Update current style settings and notify editor
-		const styleOptions = {
-			color: this.strokeColorNone ? 'transparent' : this.strokeColorValue,
-			fill: this.fillColorNone ? 'transparent' : this.fillColorValue,
-			strokeWidth: this.currentStrokeWidth,
-			fontSize: parseInt( this.fontSize.value, 10 ),
-			textStrokeColor: this.textStrokeColor.value,
-			textStrokeWidth: parseInt( this.textStrokeWidth.value, 10 ),
-			textShadow: this.textShadowToggle.checked,
-			textShadowColor: this.textShadowColor.value,
-			arrowStyle: this.arrowStyleSelect.value,
-			// Shape shadow properties (using same controls as text shadow for now)
-			shadow: this.textShadowToggle.checked,
-			shadowColor: this.textShadowColor.value,
-			shadowBlur: 8,
-			shadowOffsetX: 2,
-			shadowOffsetY: 2
-		};
-
-		if ( this.editor.canvasManager && typeof this.editor.canvasManager.updateStyleOptions === 'function' ) {
-			this.editor.canvasManager.updateStyleOptions( styleOptions );
-		}
-		if ( this.editor.toolManager && typeof this.editor.toolManager.updateStyle === 'function' ) {
-			this.editor.toolManager.updateStyle( {
-				color: styleOptions.color,
-				fill: styleOptions.fill,
-				strokeWidth: styleOptions.strokeWidth,
-				fontSize: styleOptions.fontSize,
-				// Ensure new arrows use the chosen arrowStyle by default
-				arrowStyle: styleOptions.arrowStyle,
-				// Include shadow properties so they propagate to newly created layers
-				shadow: styleOptions.shadow,
-				shadowColor: styleOptions.shadowColor,
-				shadowBlur: styleOptions.shadowBlur,
-				shadowOffsetX: styleOptions.shadowOffsetX,
-				shadowOffsetY: styleOptions.shadowOffsetY
-			} );
+		// Delegate to style controls module and propagate to editor
+		if ( this.styleControls ) {
+			const styleOptions = this.styleControls.getStyleOptions();
+			this.onStyleChange( styleOptions );
 		}
 	};
 
