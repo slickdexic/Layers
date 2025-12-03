@@ -200,7 +200,11 @@ describe( 'CanvasManager', () => {
 		global.LayersSelectionManager = jest.fn( () => ( {
 			selectLayer: jest.fn(),
 			deselectAll: jest.fn(),
-			getSelectedLayerIds: jest.fn( () => [] )
+			getSelectedLayerIds: jest.fn( () => [] ),
+			startMarqueeSelection: jest.fn(),
+			updateMarqueeSelection: jest.fn(),
+			finishMarqueeSelection: jest.fn(),
+			getMarqueeRect: jest.fn( () => ( { x: 0, y: 0, width: 0, height: 0 } ) )
 		} ) );
 
 		global.RenderCoordinator = jest.fn( () => ( {

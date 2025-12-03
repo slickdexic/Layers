@@ -1147,19 +1147,24 @@
 		return false;
 	};
 
-	// Marquee selection methods
+	// Marquee selection methods - delegate to SelectionManager
 	CanvasManager.prototype.startMarqueeSelection = function ( point ) {
 		this.isMarqueeSelecting = true;
 		this.marqueeStart = { x: point.x, y: point.y };
 		this.marqueeEnd = { x: point.x, y: point.y };
+		if ( this.selectionManager ) {
+			this.selectionManager.startMarqueeSelection( point );
+		}
 	};
 
 	CanvasManager.prototype.updateMarqueeSelection = function ( point ) {
 		if ( !this.isMarqueeSelecting ) {
 			return;
 		}
-
 		this.marqueeEnd = { x: point.x, y: point.y };
+		if ( this.selectionManager ) {
+			this.selectionManager.updateMarqueeSelection( point );
+		}
 		this.renderLayers( this.editor.layers );
 		this.drawMarqueeBox();
 	};
@@ -1168,54 +1173,44 @@
 		if ( !this.isMarqueeSelecting ) {
 			return;
 		}
-
-		const marqueeRect = this.getMarqueeRect();
-		const selectedLayers = this.getLayersInRect( marqueeRect );
-
-		if ( selectedLayers.length > 0 ) {
-			const newSelectedIds = selectedLayers.map( function ( layer ) {
-				return layer.id;
-			} );
-			this.setSelectedLayerIds( newSelectedIds );
-			this.drawMultiSelectionIndicators();
-		} else {
-			this.deselectAll();
+		if ( this.selectionManager ) {
+			this.selectionManager.finishMarqueeSelection();
+			// Sync selection state back
+			const selectedIds = this.selectionManager.getSelectedLayerIds ?
+				this.selectionManager.getSelectedLayerIds() : [];
+			if ( selectedIds.length > 0 ) {
+				this.setSelectedLayerIds( selectedIds );
+				this.drawMultiSelectionIndicators();
+			} else {
+				this.deselectAll();
+			}
 		}
-
 		this.isMarqueeSelecting = false;
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
-
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { selection: this.getSelectedLayerIds().length } );
 		}
 	};
 
 	CanvasManager.prototype.getMarqueeRect = function () {
+		// Use local state for calculating rect - always kept in sync
 		const x1 = Math.min( this.marqueeStart.x, this.marqueeEnd.x );
 		const y1 = Math.min( this.marqueeStart.y, this.marqueeEnd.y );
 		const x2 = Math.max( this.marqueeStart.x, this.marqueeEnd.x );
 		const y2 = Math.max( this.marqueeStart.y, this.marqueeEnd.y );
-
-		return {
-			x: x1,
-			y: y1,
-			width: x2 - x1,
-			height: y2 - y1
-		};
+		return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
 	};
 
 	CanvasManager.prototype.getLayersInRect = function ( rect ) {
 		const layersInRect = [];
 		const self = this;
-
 		this.editor.layers.forEach( function ( layer ) {
 			const layerBounds = self.getLayerBounds( layer );
 			if ( layerBounds && self.rectsIntersect( rect, layerBounds ) ) {
 				layersInRect.push( layer );
 			}
 		} );
-
 		return layersInRect;
 	};
 
