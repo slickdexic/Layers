@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 9, 2025  
+**Last Updated:** December 3, 2025  
 **Status:** Active Development  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
@@ -25,30 +25,34 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 ---
 
-## Current Metrics (Verified January 9, 2025)
+## Current Metrics (Verified December 3, 2025)
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Jest tests | 2,448 | 1,500+ | ✅ Met |
+| Jest tests | 2,510 | 1,500+ | ✅ Met |
+| Test suites | 57 | 40+ | ✅ Met |
 | Statement coverage | 91% | 80% | ✅ Met |
 | CanvasManager.js lines | 1,930 | <800 | 🔴 141% over |
 | LayersEditor.js lines | 1,815 | <800 | 🔴 127% over |
-| Toolbar.js lines | 1,086 | <800 | 🟡 36% over |
+| Toolbar.js lines | 745 | <500 | 🟡 49% over |
 | WikitextHooks.php lines | 775 | <400 | 🟡 94% over |
 | init.js lines | 201 | <400 | ✅ Met |
 | Window.* exports | 56 | <15 | 🔴 273% over |
 | Silent catch blocks | 0 | 0 | ✅ Fixed |
 | ESLint errors | 0 | 0 | ✅ Met |
 
-**Recent Progress (January 9, 2025):**
-- Toolbar.js: 1,621 → 1,086 lines (-535 lines, 33% reduction achieved)
+**Recent Progress (December 3, 2025):**
+- Toolbar.js: 1,621 → 745 lines (-876 lines, 54% reduction achieved)
   - ColorPickerDialog delegation: -234 lines
   - msg() → MessageHelper delegation: -224 lines
   - Import/Export → ImportExportManager extraction: -77 lines
-- ToolbarKeyboard.js: Extracted 161 lines of keyboard shortcut handling
-- ImportExportManager.js: New module (288 lines, 40 tests)
-- MessageHelper tests: Added 24 comprehensive tests
-- Jest tests: 2,384 → 2,448 (+64 new tests)
+  - Style controls → ToolbarStyleControls extraction: -341 lines
+- New modules created:
+  - ToolbarKeyboard.js: 161 lines (keyboard shortcuts)
+  - ImportExportManager.js: 288 lines (40 tests)
+  - ToolbarStyleControls.js: 694 lines (62 tests)
+  - MessageHelper.test.js: 37 tests
+- Jest tests: 2,384 → 2,510 (+126 new tests)
 
 ---
 
