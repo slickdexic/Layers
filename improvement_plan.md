@@ -220,12 +220,22 @@ Created processor classes to extract business logic from WikitextHooks.php:
 **Remaining Tasks:**
 - [ ] Consider further extraction of hook handlers to separate files
 - [ ] Move shared static state (`$pageHasLayers`, `$fileSetNames`, `$fileRenderCount`) to a service
-- [ ] Create PHPUnit tests for new processor classes
+
+**PHPUnit Test Coverage (NEW - Dec 2025):**
+
+| Processor | Test File | Test Cases |
+|-----------|-----------|------------|
+| LayerInjector | LayerInjectorTest.php | 18 |
+| LayersHtmlInjector | LayersHtmlInjectorTest.php | ✅ |
+| LayersParamExtractor | LayersParamExtractorTest.php | ✅ |
+| LayeredFileRenderer | LayeredFileRendererTest.php | 26 (NEW) |
+| ImageLinkProcessor | — | ❌ Needs tests |
+| ThumbnailProcessor | — | ❌ Needs tests |
 
 **Acceptance Criteria:**
 - [ ] WikitextHooks.php <600 lines (revised intermediate goal)
 - [x] Business logic extracted to processors
-- [ ] PHPUnit tests for processors
+- [x] PHPUnit tests for core processors (LayerInjector, LayeredFileRenderer)
 - [x] Existing tests pass
 
 ---
@@ -595,7 +605,7 @@ class LoggerFactory {
 
 | # | Task | Effort | Risk | Status |
 |---|------|--------|------|--------|
-| P1.1 | Continue CanvasManager decomposition | 3-5 days | MEDIUM | � |
+| P1.1 | Continue CanvasManager decomposition | 3-5 days | MEDIUM | 🟡 |
 | P1.2 | Split WikitextHooks.php | 2-3 days | MEDIUM | 🟡 |
 | P1.3 | Refactor init.js | 2-3 days | LOW | ✅ |
 | P1.4 | Complete StateManager migration | 3-4 days | MEDIUM | 🔴 |
