@@ -1213,17 +1213,22 @@
 					if ( !Array.isArray( layers ) ) {
 						throw new Error( 'Invalid JSON format' );
 					}
-					// Save state and replace layers
+					// Save state and replace layers via StateManager
 					if ( self.editor && typeof self.editor.saveState === 'function' ) {
 						self.editor.saveState( 'import' );
 					}
-					self.editor.layers = layers.map( ( layer ) => {
+					const importedLayers = layers.map( ( layer ) => {
 						const obj = layer || {};
 						if ( !obj.id ) {
 							obj.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
 						}
 						return obj;
 					} );
+					if ( self.editor.stateManager ) {
+						self.editor.stateManager.set( 'layers', importedLayers );
+					} else {
+						self.editor.layers = importedLayers;
+					}
 					if ( self.editor && self.editor.canvasManager && typeof self.editor.canvasManager.renderLayers === 'function' ) {
 						const layers = self.editor.stateManager ? self.editor.stateManager.get( 'layers' ) || [] : [];
 						self.editor.canvasManager.renderLayers( layers );

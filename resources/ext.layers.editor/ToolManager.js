@@ -769,7 +769,7 @@
 		// Generate unique ID
 		layer.id = this.generateLayerId();
 
-		// Add to layers array via StateManager (fixes bug where unshift on getLayers() copy was lost)
+		// Add to layers array via StateManager
 		if ( this.canvasManager.editor.stateManager &&
 			typeof this.canvasManager.editor.stateManager.addLayer === 'function' ) {
 			this.canvasManager.editor.stateManager.addLayer( layer );
@@ -777,7 +777,11 @@
 			// Fallback: get layers, modify, and set back (triggers setter)
 			const layers = this.canvasManager.editor.layers || [];
 			layers.unshift( layer );
-			this.canvasManager.editor.layers = layers;
+			if ( this.canvasManager.editor.stateManager ) {
+				this.canvasManager.editor.stateManager.set( 'layers', layers );
+			} else {
+				this.canvasManager.editor.layers = layers;
+			}
 		}
 
 		// Select new layer

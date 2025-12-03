@@ -120,12 +120,18 @@
 		// Then delete the original layers
 		const ids = selectedIds.slice();
 		editor.saveState();
-		editor.layers = editor.layers.filter( ( layer ) => {
+		const remaining = editor.layers.filter( ( layer ) => {
 			return ids.indexOf( layer.id ) === -1;
 		} );
+		if ( editor.stateManager ) {
+			editor.stateManager.set( 'layers', remaining );
+		} else {
+			editor.layers = remaining;
+		}
 
 		cm.deselectAll();
-		cm.renderLayers( editor.layers );
+		const layers = editor.stateManager ? editor.stateManager.getLayers() : editor.layers;
+		cm.renderLayers( layers );
 		editor.markDirty();
 
 		return count;

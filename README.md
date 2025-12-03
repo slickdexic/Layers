@@ -165,33 +165,55 @@ The extension currently provides 14 drawing and selection tools:
 
 ## Wikitext Integration
 
-**Display all layers:**
+Layers are displayed using standard MediaWiki file syntax with the `layers=` parameter:
+
+**Show default layer set:**
 
 ```wikitext
-[[File:MyImage.jpg|500px|layers=all|Annotated image]]
+[[File:MyImage.jpg|500px|layers=on|Annotated image]]
 ```
 
-**Display specific layers by ID:**
+**Show a specific named layer set:**
 
 ```wikitext
-[[File:MyImage.jpg|500px|layers=01,04,07|Selected annotations only]]
+[[File:MyImage.jpg|500px|layers=anatomy|Anatomy annotations]]
 ```
 
-**Hide all layers (original image):**
+**Explicitly disable layers (original image only):**
 
 ```wikitext
 [[File:MyImage.jpg|500px|layers=none]]
 ```
 
+> **Note:** On File: pages, layers are NOT auto-displayed. You must explicitly use `layers=on` or `layers=setname` in wikitext to show annotations.
+
 ---
 
 ## Layer Management
 
-- Layer IDs: `01`–`FF` (255 possible layers per image)
-- Persistent IDs to ensure consistent embedding
-- Layers can be grouped and nested
-- Layer thumbnails auto-generated for quick recognition
-- Merge layers or duplicate with one click
+### Current Features
+
+- **Layer IDs**: UUID-based unique identifiers for reliable referencing
+- **Named Layer Sets**: Multiple named annotation sets per image (e.g., "default", "anatomy-labels")
+- **Version History**: Each named set maintains revision history (up to 25 revisions by default)
+- **Visibility Toggles**: Show/hide individual layers in the editor
+- **Layer Ordering**: Drag-and-drop reordering in layer panel
+- **Duplicate Layers**: Copy existing layers with offset positioning
+
+### Wikitext Display Options
+
+```wikitext
+[[File:Example.jpg|layers=on]]           <!-- Show default layer set -->
+[[File:Example.jpg|layers=anatomy]]      <!-- Show specific named set -->
+[[File:Example.jpg|layers=none]]         <!-- Explicitly disable layers -->
+```
+
+### Planned Features
+
+- Layer grouping and nesting
+- Layer thumbnails for quick visual recognition
+- Merge layers functionality
+- Export/import layer sets
 
 ---
 
@@ -237,37 +259,43 @@ The extension currently provides 14 drawing and selection tools:
 
 **Frontend (JavaScript):**
 - HTML5 Canvas-based editor with SVG-like layer objects
-- ES5-compatible JavaScript for MediaWiki compatibility
-- Tool-based interaction system
-- Basic layer management and rendering
+- IIFE module pattern with global exports (54 `window.*` exports)
+- Tool-based interaction system with ModuleRegistry for dependency management
+- StateManager for centralized state with property descriptors bridging legacy access
+- HistoryManager for undo/redo operations
 
 **Backend (PHP):**
-- MediaWiki extension integration
-- API endpoints for layer data persistence
-- Database storage with versioning support
-- Security validation and rate limiting
+- MediaWiki extension integration via hooks and service wiring
+- API endpoints: `ApiLayersInfo` (read) and `ApiLayersSave` (write with CSRF)
+- Database storage with named layer sets and revision history
+- Server-side validation with strict property whitelist (40+ allowed fields)
+- Rate limiting via MediaWiki's pingLimiter system
+
+**Test Coverage:**
+- Jest: 2,352 tests with ~91% coverage
+- PHPUnit: 17 test files covering API, database, and validation
 
 **Current Architecture Challenges:**
-- Large JavaScript orchestrator files (CanvasManager.js: ~1,900 lines)
-- IIFE module system (migration to ES modules planned)
-- Centralized state management pattern needs completion
+- Large JavaScript files: CanvasManager.js (~1,900 lines), LayersEditor.js (~1,750 lines), Toolbar.js (~1,680 lines)
+- 54 global `window.*` exports (IIFE pattern, no ES modules yet)
+- Some direct state access bypassing StateManager
 
 ### Development Roadmap
 
 **Phase 1 (Current):**
 - ✅ Basic canvas editor functionality
-- ✅ Essential drawing tools
-- ✅ Database persistence
+- ✅ Essential drawing tools (14 tools)
+- ✅ Database persistence with named sets
 - ✅ MediaWiki integration
+- ✅ Comprehensive test coverage
 
 **Phase 2 (Planned - Architecture Refactoring):**
-- Break down monolithic files into focused modules
-- Implement proper state management patterns
-- Add comprehensive testing coverage
-- Webpack build optimization
+- Break down god classes into focused modules (~500 lines each)
+- Consolidate global exports to single namespace
+- Complete StateManager migration (remove direct property access)
+- ES6 module migration with build pipeline
 
 **Phase 3 (Future - Advanced Features):**
-- Modern ES6+ JavaScript with build pipeline
 - Performance optimizations for large images
 - Real-time collaborative editing capabilities
 - Plugin API for custom tools

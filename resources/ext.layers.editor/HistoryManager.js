@@ -192,8 +192,10 @@
 				this.canvasManager : null;
 		const canvasMgr = editor ? editor.canvasManager : this.canvasManager;
 
-		// Restore layers
-		if ( editor ) {
+		// Restore layers via StateManager
+		if ( editor && editor.stateManager ) {
+			editor.stateManager.set( 'layers', restored );
+		} else if ( editor ) {
 			editor.layers = restored;
 		} else if ( this.canvasManager ) {
 			this.canvasManager.layers = restored;
@@ -312,7 +314,9 @@
 		// Revert to snapshot from start of batch if available
 		if ( this.batchStartSnapshot && this.canvasManager ) {
 			const snapshot = JSON.parse( JSON.stringify( this.batchStartSnapshot ) );
-			if ( this.canvasManager.editor ) {
+			if ( this.canvasManager.editor && this.canvasManager.editor.stateManager ) {
+				this.canvasManager.editor.stateManager.set( 'layers', snapshot );
+			} else if ( this.canvasManager.editor ) {
 				this.canvasManager.editor.layers = snapshot;
 			} else {
 				this.canvasManager.layers = snapshot;

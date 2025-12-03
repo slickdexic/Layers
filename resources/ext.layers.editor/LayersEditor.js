@@ -90,7 +90,15 @@
 		this.imageUrl = this.config.imageUrl;
 
 		// Initialize module registry if not available
-		this.registry = window.layersRegistry || window.layersModuleRegistry;
+		// Prefer layersRegistry; layersModuleRegistry is deprecated
+		this.registry = window.layersRegistry;
+		if ( !this.registry && window.layersModuleRegistry ) {
+			// Fallback to deprecated export with warning
+			if ( this.debug && typeof console !== 'undefined' ) {
+				console.warn( '[LayersEditor] window.layersModuleRegistry is deprecated. Use window.layersRegistry instead.' );
+			}
+			this.registry = window.layersModuleRegistry;
+		}
 		if ( !this.registry ) {
 			// Create a basic fallback registry
 			this.registry = {

@@ -181,6 +181,7 @@
 				"jquery"
 			],
 			"scripts": [
+				"MessageHelper.js",
 				"GeometryUtils.js",
 				"ErrorHandler.js",
 				"LayersConstants.js",

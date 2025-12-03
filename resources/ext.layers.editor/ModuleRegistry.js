@@ -308,6 +308,7 @@
 	const registry = new ModuleRegistry();
 
 	// Legacy compatibility - keep the old simple interface
+	// @deprecated Use window.layersRegistry instead. Will be removed in v1.0.
 	const legacyRegistry = {
 		register: ( name, factory, dependencies ) => registry.register( name, factory, dependencies ),
 		get: ( name ) => registry.get( name ),
@@ -323,10 +324,16 @@
 	};
 
 	// Export the registry - ALWAYS set on window first for cross-file dependencies
+	// Primary exports:
+	//   - window.LayersModuleRegistry (class)
+	//   - window.layersRegistry (singleton instance)
+	// Deprecated exports (for backward compatibility only):
+	//   - window.layersModuleRegistry - use window.layersRegistry instead
 	if ( typeof window !== 'undefined' ) {
 		window.LayersModuleRegistry = ModuleRegistry;
 		window.layersRegistry = registry;
-		window.layersModuleRegistry = legacyRegistry; // Legacy compatibility
+		// @deprecated - use window.layersRegistry instead
+		window.layersModuleRegistry = legacyRegistry;
 	}
 
 	// Also export via CommonJS if available (for Node.js/Jest testing)
@@ -337,7 +344,8 @@
 	if ( typeof mw !== 'undefined' ) {
 		mw.LayersModuleRegistry = ModuleRegistry;
 		mw.layersRegistry = registry;
-		mw.layersModuleRegistry = legacyRegistry; // Legacy compatibility
+		// @deprecated - use mw.layersRegistry instead
+		mw.layersModuleRegistry = legacyRegistry;
 	}
 
 	// Initialize core dependencies

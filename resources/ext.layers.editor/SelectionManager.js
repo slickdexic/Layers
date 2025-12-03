@@ -775,17 +775,28 @@
 			return;
 		}
 
-		const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
-			this.canvasManager.layers || [];
-
-		// Remove selected layers
-		const remaining = layers.filter( function ( layer ) {
-			return this.selectedLayerIds.indexOf( layer.id ) === -1;
-		}.bind( this ) );
-		if ( this.canvasManager.editor ) {
-			this.canvasManager.editor.layers = remaining;
+		// Remove selected layers via StateManager
+		const stateManager = this.canvasManager.editor && this.canvasManager.editor.stateManager;
+		if ( stateManager ) {
+			// Use atomic operation for batch removal
+			const idsToRemove = this.selectedLayerIds.slice();
+			idsToRemove.forEach( function ( id ) {
+				stateManager.removeLayer( id );
+			} );
 		} else {
-			this.canvasManager.layers = remaining;
+			// Legacy fallback for tests/environments without StateManager
+			const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
+				this.canvasManager.layers || [];
+			const remaining = layers.filter( function ( layer ) {
+				return this.selectedLayerIds.indexOf( layer.id ) === -1;
+			}.bind( this ) );
+			if ( this.canvasManager.editor && this.canvasManager.editor.stateManager ) {
+				this.canvasManager.editor.stateManager.set( 'layers', remaining );
+			} else if ( this.canvasManager.editor ) {
+				this.canvasManager.editor.layers = remaining;
+			} else {
+				this.canvasManager.layers = remaining;
+			}
 		}
 
 		// Clear selection
@@ -828,11 +839,22 @@
 			newSelection.push( clone.id );
 		}.bind( this ) );
 
-		// Add new layers
-		if ( this.canvasManager.editor ) {
-			this.canvasManager.editor.layers = this.canvasManager.editor.layers.concat( newLayers );
+		// Add new layers via StateManager
+		const stateManager = this.canvasManager.editor && this.canvasManager.editor.stateManager;
+		if ( stateManager ) {
+			newLayers.forEach( function ( layer ) {
+				stateManager.addLayer( layer );
+			} );
 		} else {
-			this.canvasManager.layers = ( this.canvasManager.layers || [] ).concat( newLayers );
+			// Legacy fallback for tests/environments without StateManager
+			if ( this.canvasManager.editor && this.canvasManager.editor.stateManager ) {
+				const currentLayers = this.canvasManager.editor.layers || [];
+				this.canvasManager.editor.stateManager.set( 'layers', currentLayers.concat( newLayers ) );
+			} else if ( this.canvasManager.editor ) {
+				this.canvasManager.editor.layers = ( this.canvasManager.editor.layers || [] ).concat( newLayers );
+			} else {
+				this.canvasManager.layers = ( this.canvasManager.layers || [] ).concat( newLayers );
+			}
 		}
 
 		// Select new layers
