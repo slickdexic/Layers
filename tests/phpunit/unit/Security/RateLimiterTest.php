@@ -51,7 +51,8 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 		$this->assertTrue( $limiter->isLayerCountAllowed( 50 ) );
 
 		// Test boundary conditions
-		$this->assertTrue( $limiter->isLayerCountAllowed( 100 ) ); // Assuming 100 is the limit
+		// Assuming 100 is the limit
+		$this->assertTrue( $limiter->isLayerCountAllowed( 100 ) );
 		$this->assertFalse( $limiter->isLayerCountAllowed( 101 ) );
 		$this->assertFalse( $limiter->isLayerCountAllowed( 1000 ) );
 
@@ -206,12 +207,16 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 		);
 
 		// Test boundary conditions (assuming 2MB limit = 2097152 bytes)
-		$this->assertTrue( $limiter->isDataSizeAllowed( 1000000 ) ); // 1MB
-		$this->assertTrue( $limiter->isDataSizeAllowed( 2097152 ) ); // 2MB exactly
-		$this->assertFalse( $limiter->isDataSizeAllowed( 2097153 ) ); // 2MB + 1 byte
+		// 1MB
+		$this->assertTrue( $limiter->isDataSizeAllowed( 1000000 ) );
+		// 2MB exactly
+		$this->assertTrue( $limiter->isDataSizeAllowed( 2097152 ) );
+		// 2MB + 1 byte
+		$this->assertFalse( $limiter->isDataSizeAllowed( 2097153 ) );
 
 		// Very large data should be rejected
-		$this->assertFalse( $limiter->isDataSizeAllowed( 10000000 ) ); // 10MB
+		// 10MB
+		$this->assertFalse( $limiter->isDataSizeAllowed( 10000000 ) );
 
 		// Edge cases
 		$this->assertTrue( $limiter->isDataSizeAllowed( 0 ) );

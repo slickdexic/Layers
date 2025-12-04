@@ -1,4 +1,6 @@
 <?php
+// phpcs:disable MediaWiki.Files.ClassMatchesFilename,MediaWiki.Files.OneClassPerFile,Generic.Files.OneObjectStructurePerFile
+// phpcs:disable MediaWiki.Commenting.FunctionComment.MissingDocumentationPublic -- Test harness
 
 namespace MediaWiki\Extension\Layers\Security;
 

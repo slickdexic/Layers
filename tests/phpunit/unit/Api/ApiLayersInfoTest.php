@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable MediaWiki.Files.OneClassPerFile,Generic.Files.OneObjectStructurePerFile -- Test harness class
 
 namespace MediaWiki\Extension\Layers\Tests\Api;
 
@@ -7,6 +8,9 @@ require_once __DIR__ . '/../../../../src/Api/Traits/LayersContinuationTrait.php'
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers \MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait
+ */
 class ApiLayersInfoTest extends TestCase {
 	public function testParseContinueParameterWithPrefix(): void {
 		$module = new LayersContinuationTraitHarness();

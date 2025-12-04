@@ -67,7 +67,7 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$result = $validator->validateLayers( [] );
 
 		$this->assertTrue( $result->isValid() );
-		$this->assertEmpty( $result->getData() );
+		$this->assertSame( [], $result->getData() );
 		$this->assertTrue( $result->hasWarnings() );
 	}
 
@@ -265,11 +265,13 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$layer = [
 			'type' => 'text',
 			'text' => 'Hello',
-			'opacity' => 1.5 // Invalid opacity > 1
+			// Invalid opacity > 1
+			'opacity' => 1.5
 		];
 
 		$result = $validator->validateLayer( $layer );
-		$this->assertTrue( $result->hasWarnings() ); // Should generate warning for invalid opacity
+		// Should generate warning for invalid opacity
+		$this->assertTrue( $result->hasWarnings() );
 	}
 
 	/**

@@ -108,10 +108,14 @@ class ColorValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertTrue( $validator->isValidHexColor( '#000' ) );
 
 		// Invalid hex colors
-		$this->assertFalse( $validator->isValidHexColor( 'ff0000' ) ); // No #
-		$this->assertFalse( $validator->isValidHexColor( '#ff00' ) ); // Wrong length
-		$this->assertFalse( $validator->isValidHexColor( '#gggggg' ) ); // Invalid characters
-		$this->assertFalse( $validator->isValidHexColor( '#ff00000' ) ); // Too long
+		// No #
+		$this->assertFalse( $validator->isValidHexColor( 'ff0000' ) );
+		// Wrong length
+		$this->assertFalse( $validator->isValidHexColor( '#ff00' ) );
+		// Invalid characters
+		$this->assertFalse( $validator->isValidHexColor( '#gggggg' ) );
+		// Too long
+		$this->assertFalse( $validator->isValidHexColor( '#ff00000' ) );
 	}
 
 	/**
@@ -127,10 +131,14 @@ class ColorValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertTrue( $validator->isValidRgbColor( 'rgba(128, 128, 128, 1)' ) );
 
 		// Invalid RGB colors
-		$this->assertFalse( $validator->isValidRgbColor( 'rgb(256, 0, 0)' ) ); // Out of range
-		$this->assertFalse( $validator->isValidRgbColor( 'rgb(-1, 0, 0)' ) ); // Negative
-		$this->assertFalse( $validator->isValidRgbColor( 'rgb(255, 0)' ) ); // Missing component
-		$this->assertFalse( $validator->isValidRgbColor( 'rgba(255, 0, 0, 2)' ) ); // Alpha out of range
+		// Out of range
+		$this->assertFalse( $validator->isValidRgbColor( 'rgb(256, 0, 0)' ) );
+		// Negative
+		$this->assertFalse( $validator->isValidRgbColor( 'rgb(-1, 0, 0)' ) );
+		// Missing component
+		$this->assertFalse( $validator->isValidRgbColor( 'rgb(255, 0)' ) );
+		// Alpha out of range
+		$this->assertFalse( $validator->isValidRgbColor( 'rgba(255, 0, 0, 2)' ) );
 	}
 
 	/**
@@ -145,9 +153,12 @@ class ColorValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertTrue( $validator->isValidHslColor( 'hsla(360, 100%, 50%, 0.5)' ) );
 
 		// Invalid HSL colors
-		$this->assertFalse( $validator->isValidHslColor( 'hsl(361, 100%, 50%)' ) ); // Hue out of range
-		$this->assertFalse( $validator->isValidHslColor( 'hsl(0, 101%, 50%)' ) ); // Saturation out of range
-		$this->assertFalse( $validator->isValidHslColor( 'hsl(0, 100%, 101%)' ) ); // Lightness out of range
+		// Hue out of range
+		$this->assertFalse( $validator->isValidHslColor( 'hsl(361, 100%, 50%)' ) );
+		// Saturation out of range
+		$this->assertFalse( $validator->isValidHslColor( 'hsl(0, 101%, 50%)' ) );
+		// Lightness out of range
+		$this->assertFalse( $validator->isValidHslColor( 'hsl(0, 100%, 101%)' ) );
 	}
 
 	/**

@@ -55,7 +55,15 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::execute
 	 */
 	public function testExecuteWithValidData() {
-		$api = $this->createMockApi( [ 'getUser', 'extractRequestParams', 'checkUserRightsAny', 'isSchemaInstalled', 'isValidFilename', 'getConfig', 'dieWithError' ] );
+		$api = $this->createMockApi( [
+			'getUser',
+			'extractRequestParams',
+			'checkUserRightsAny',
+			'isSchemaInstalled',
+			'isValidFilename',
+			'getConfig',
+			'dieWithError'
+		] );
 
 		$user = $this->createMock( \stdClass::class );
 		$user->method( 'getId' )->willReturn( 1 );
@@ -235,10 +243,14 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 		$this->assertTrue( $method->invoke( $api, 'File:Document.pdf' ) );
 
 		// Invalid filenames
-		$this->assertFalse( $method->invoke( $api, 'test.jpg' ) ); // Missing File: prefix
-		$this->assertFalse( $method->invoke( $api, '' ) ); // Empty
-		$this->assertFalse( $method->invoke( $api, 'File:' ) ); // No filename
-		$this->assertFalse( $method->invoke( $api, 'File:../../../etc/passwd' ) ); // Path traversal
+		// Missing File: prefix
+		$this->assertFalse( $method->invoke( $api, 'test.jpg' ) );
+		// Empty
+		$this->assertFalse( $method->invoke( $api, '' ) );
+		// No filename
+		$this->assertFalse( $method->invoke( $api, 'File:' ) );
+		// Path traversal
+		$this->assertFalse( $method->invoke( $api, 'File:../../../etc/passwd' ) );
 	}
 
 	/**
@@ -322,7 +334,8 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 			[
 				'id' => 'layer_complex',
 				'type' => 'path',
-				'points' => array_fill( 0, 2000, [ 'x' => 10, 'y' => 10 ] ) // Too many points
+				// Too many points
+				'points' => array_fill( 0, 2000, [ 'x' => 10, 'y' => 10 ] )
 			]
 		];
 

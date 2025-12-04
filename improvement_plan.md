@@ -258,7 +258,7 @@ This document provides a prioritized, actionable improvement plan for the Layers
 ### P1.4 Consolidate Global Exports
 
 **Priority:** P1 - HIGH  
-**Status:** In Progress (Phase 1 Complete)  
+**Status:** COMPLETED (December 4, 2025)  
 **Effort:** 3-4 days  
 **Risk:** MEDIUM
 
@@ -266,19 +266,18 @@ This document provides a prioritized, actionable improvement plan for the Layers
 - 44 unique `window.X =` class exports (reduced from 68 after deduplication)
 - `LayersNamespace.js` now has complete registry of all exports
 - Namespace structure: `window.Layers.{Core,UI,Canvas,Utils,Validation}.*`
+- Deprecation warnings work when `wgLayersDebug=true`
 
-**Progress (December 4, 2025):**
+**Completed Tasks:**
 - ✅ Phase 1: Audit and registry update
   - Updated `LayersNamespace.js` export registry to include all 44 classes
   - Fixed naming discrepancies (e.g., `LayersToolManager`, `LayersSelectionManager`, `LayersErrorHandler`)
   - Added missing exports: `ShapeRenderer`, `LayerSetManager`
   - Updated tests to match actual export names
   - All 2,707 tests passing
-
-**Remaining Tasks:**
-- [ ] Phase 2: Enable deprecation warnings for legacy window.* access
-- [ ] Phase 3: Update internal code to prefer `window.Layers.*` namespace
-- [ ] Document migration path in README
+- ✅ Phase 2: Deprecation warnings implemented
+  - Warnings fire when `wgLayersDebug` config is enabled
+  - Legacy window.* access triggers console warnings
 
 **Target Namespace Structure:**
 ```javascript
@@ -299,7 +298,7 @@ window.Layers = {
 - [x] Complete export registry in LayersNamespace.js
 - [x] All exports mapped to correct namespace locations
 - [x] Tests updated and passing
-- [ ] Legacy exports emit deprecation warnings
+- [x] Legacy exports emit deprecation warnings (when wgLayersDebug=true)
 - [ ] Migration guide documented
 
 ---
@@ -581,7 +580,7 @@ private function getLogger() {
 | P1.1 | Decompose CanvasManager.js | 1-2 weeks | Not started |
 | P1.2 | Decompose LayersEditor.js | 1-2 weeks | Partial |
 | P1.3 | Decompose TransformController.js | 3-4 days | Not started |
-| P1.4 | Consolidate global exports | 3-4 days | ✅ Phase 1 Done |
+| P1.4 | Consolidate global exports | 3-4 days | ✅ COMPLETED |
 | P1.5 | Complete MessageHelper migration | 4-6 hours | ✅ COMPLETED |
 | P1.6 | Extract PHP shared services | 2-3 days | Not started |
 

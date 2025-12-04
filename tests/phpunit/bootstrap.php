@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable MediaWiki.Files.ClassMatchesFilename -- Bootstrap stub class
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
