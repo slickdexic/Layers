@@ -776,6 +776,125 @@ Two issues:
 
 ---
 
+## Future Features (Roadmap)
+
+These are planned feature enhancements that will elevate the Layers extension to a more comprehensive image annotation and editing tool. They are documented here to maintain vision clarity while current refactoring work continues.
+
+### FEATURE-001: Base Image as Editable Layer
+
+**Priority:** P3  
+**Effort:** 1-2 weeks  
+**Status:** 📋 Planned
+
+**Description:**  
+Transform the background/source image into a proper bottom layer that can be:
+- Opacity-adjusted (0-100%)
+- Made completely invisible
+- Locked/unlocked like other layers
+- Shown in the layer panel with controls
+
+**Benefits:**
+- Enables "tracing" workflows where users draw over semi-transparent reference images
+- Allows layer-only exports without the original image
+- Consistent layer model throughout the application
+
+**Technical Considerations:**
+- Base image currently rendered directly in `CanvasManager.renderBackground()`
+- Need to introduce a special "background" layer type
+- Layer panel needs to show the base image layer (always at bottom, non-deletable)
+- Viewer and wikitext rendering need to respect base image opacity
+
+---
+
+### FEATURE-002: Image Import as Layer
+
+**Priority:** P3  
+**Effort:** 2-3 weeks  
+**Status:** 📋 Planned
+
+**Description:**  
+Allow users to import external images as new layers that can be:
+- Dragged/positioned anywhere on the canvas
+- Scaled (proportionally or freely)
+- Rotated
+- Adjusted for opacity
+- Layered above/below other content
+
+**Benefits:**
+- Enables composite image creation
+- Allows adding logos, icons, reference images
+- Supports complex annotation workflows
+
+**Technical Considerations:**
+- New layer type: `image` with properties: `src`, `x`, `y`, `width`, `height`, `rotation`, `opacity`
+- Image data storage options:
+  - Store as data URI in layer data (simple but increases payload size)
+  - Reference MediaWiki File: pages (cleaner but requires file existence checks)
+  - Hybrid: support both with preference for File: references
+- Resize handles should maintain aspect ratio by default (shift to unlock)
+- Security: validate image sources, prevent external URL injection
+- Server-side rendering for thumbnails will need ImageMagick compositing
+
+---
+
+### FEATURE-003: Paragraph Text Boxes with Styling
+
+**Priority:** P3  
+**Effort:** 2-3 weeks  
+**Status:** 📋 Planned
+
+**Description:**  
+Introduce a new "textbox" layer type distinct from current single-line text:
+- Container that holds paragraph text
+- Resizing the box reflows text (does NOT change font size)
+- Text wraps within the box boundaries
+- Multiple text bubble/box styles available
+
+**Text Bubble Styles:**
+- Plain rectangle (default)
+- Rounded rectangle
+- Speech bubble (with pointer)
+- Thought bubble (cloud shape)
+- Callout arrow
+- Custom border styles
+
+**Benefits:**
+- Proper text annotations for longer descriptions
+- Comic/manga-style speech bubbles
+- Professional callout annotations
+- Better text layout control
+
+**Technical Considerations:**
+- New layer type: `textbox` with properties:
+  - `text`: string (multiline)
+  - `x`, `y`, `width`, `height`: box dimensions
+  - `bubbleStyle`: 'rectangle' | 'rounded' | 'speech' | 'thought' | 'callout'
+  - `pointerDirection`: for speech/callout bubbles
+  - `padding`: inner spacing
+  - `fontSize`, `fontFamily`, `color`, `backgroundColor`
+- Text rendering: canvas `fillText` with manual word-wrapping
+- Resize behavior: only reflow text, never scale font
+- Edit mode: inline text editing within the box
+
+---
+
+### Future Feature Ideas (Backlog)
+
+Additional features to consider for future development:
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| Layer groups | Group multiple layers for collective operations | P3 |
+| Layer effects | Drop shadows, glows, filters per layer | P3 |
+| Measurement tool | Draw lines that show pixel/unit distances | P3 |
+| Annotation templates | Save/load common annotation patterns | P3 |
+| Collaborative editing | Real-time multi-user annotation | P4 |
+| Version comparison | Visual diff between layer set revisions | P3 |
+| Keyboard-only mode | Full accessibility without mouse | P2 |
+| Touch gestures | Pinch-to-zoom, two-finger pan on mobile | P3 |
+
+---
+
 ## Visual Dashboard
 
 ```
