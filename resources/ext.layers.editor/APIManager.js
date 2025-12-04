@@ -380,6 +380,11 @@ class APIManager {
 			// Render the layers
 			const layers = this.editor.stateManager.get( 'layers' ) || [];
 			if ( this.editor.canvasManager ) {
+				// Clear any existing selection when loading layers
+				// This ensures clean state on initial load and refresh
+				if ( this.editor.canvasManager.selectionManager ) {
+					this.editor.canvasManager.selectionManager.clearSelection();
+				}
 				this.editor.canvasManager.renderLayers( layers );
 			}
 
@@ -479,6 +484,13 @@ class APIManager {
 						this.editor.stateManager.set( 'allLayerSets', data.layersinfo.all_layersets );
 					}
 					this.editor.buildRevisionSelector();
+
+					// Clear any existing selection when loading a different revision
+					// This prevents stale selection state from persisting
+					if ( this.editor.canvasManager && this.editor.canvasManager.selectionManager ) {
+						this.editor.canvasManager.selectionManager.clearSelection();
+					}
+
 					this.editor.renderLayers();
 					this.editor.stateManager.set( 'isDirty', false );
 
@@ -565,6 +577,11 @@ class APIManager {
 				// Render layers
 				const layers = this.editor.stateManager.get( 'layers' ) || [];
 				if ( this.editor.canvasManager ) {
+					// Clear any existing selection when switching layer sets
+					// This prevents stale selection state from persisting
+					if ( this.editor.canvasManager.selectionManager ) {
+						this.editor.canvasManager.selectionManager.clearSelection();
+					}
 					this.editor.canvasManager.renderLayers( layers );
 				}
 

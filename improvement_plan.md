@@ -685,25 +685,21 @@ This is a feature gap documented in `docs/NAMED_LAYER_SETS.md` as future work.
 
 **Severity:** Low  
 **Component:** LayersEditor / StateManager  
-**Status:** 🔴 Open  
-**Reported:** December 3, 2025
+**Status:** ✅ Fixed  
+**Reported:** December 3, 2025  
+**Fixed:** December 3, 2025
 
 **Description:**  
 When selecting an object (without making any modifications), then switching layer-set or clicking Cancel/X, the editor incorrectly prompts with a "Save changes?" dialog even though no actual changes were made.
 
-**Expected Behavior:**  
-Selecting an object should not mark the editor as dirty. Only actual modifications (moving, resizing, property changes, etc.) should trigger the dirty state.
+**Root Cause:**  
+`TransformController.finishDrag()` unconditionally called `markDirty()` even when no actual drag movement occurred. Clicking on a layer triggers `startDrag()` then `finishDrag()`, marking dirty even for simple selection clicks.
 
-**Likely Location:**  
-- `resources/ext.layers.editor/LayersEditor.js` - `markDirty()` calls
-- `resources/ext.layers.editor/SelectionManager.js` - Selection change handling
-- `resources/ext.layers.editor/StateManager.js` - Dirty state tracking
+**Fix Applied:**  
+Modified `TransformController.finishDrag()` to only call `markDirty()` if actual movement occurred (detected via `showDragPreview` flag which is only set in `handleDrag()` when movement happens).
 
-**Reproduction Steps:**
-1. Open editor with existing layers
-2. Click on an object to select it (no modifications)
-3. Click Cancel or switch layer-set
-4. Observe: "Save changes?" dialog appears incorrectly
+**Files Changed:**
+- `resources/ext.layers.editor/canvas/TransformController.js`
 
 ---
 
@@ -711,25 +707,21 @@ Selecting an object should not mark the editor as dirty. Only actual modificatio
 
 **Severity:** Low  
 **Component:** LayersEditor / SelectionManager  
-**Status:** 🔴 Open  
-**Reported:** December 3, 2025
+**Status:** ✅ Fixed  
+**Reported:** December 3, 2025  
+**Fixed:** December 3, 2025
 
 **Description:**  
 When an object is selected in one layer-set, then switching to a different layer-set that happens to have an object with the same ID, the object remains visually selected. Selection state should be cleared when switching layer-sets.
 
-**Expected Behavior:**  
-When switching to a different layer-set, all selections should be cleared. The new layer-set should open with no objects selected.
+**Root Cause:**  
+API loading methods (`loadLayers`, `loadLayersBySetName`, `loadRevisionById`) rendered new layers without clearing the existing selection state.
 
-**Likely Location:**  
-- `resources/ext.layers.editor/LayersEditor.js` - Layer-set switch handling
-- `resources/ext.layers.editor/SelectionManager.js` - `deselectAll()` calls
-- `resources/ext.layers.editor/CanvasManager.js` - Selection state reset
+**Fix Applied:**  
+Added `selectionManager.clearSelection()` calls before rendering in all three API loading methods to ensure selection state is reset when loading any new layer data.
 
-**Reproduction Steps:**
-1. Open a layer-set and select an object
-2. Save the layer-set
-3. Switch to a different layer-set that has an object with the same ID
-4. Observe: The object appears selected in the new layer-set
+**Files Changed:**
+- `resources/ext.layers.editor/APIManager.js`
 
 ---
 

@@ -1114,6 +1114,9 @@
 	 * Finish the drag operation
 	 */
 	TransformController.prototype.finishDrag = function () {
+		// Only mark dirty if actual drag movement occurred (showDragPreview is set in handleDrag)
+		const hadMovement = this.showDragPreview;
+
 		this.isDragging = false;
 		this.showDragPreview = false;
 		this.originalLayerState = null;
@@ -1123,8 +1126,10 @@
 		// Reset cursor to appropriate tool cursor
 		this.manager.canvas.style.cursor = this.manager.getToolCursor( this.manager.currentTool );
 
-		// Mark editor as dirty
-		this.manager.editor.markDirty();
+		// Only mark editor as dirty if there was actual movement
+		if ( hadMovement ) {
+			this.manager.editor.markDirty();
+		}
 	};
 
 	// ==================== Utility Methods ====================

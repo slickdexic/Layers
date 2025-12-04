@@ -2,6 +2,7 @@
 	"name": "layers",
 	"private": true,
 	"scripts": {
+				"test:e2e": "npx playwright test --workers=1",
 		"test": "grunt test --force",
 		"test:js": "jest",
 		"test:watch": "jest --watch",
@@ -15,6 +16,7 @@
 		"watch": "webpack --mode=development --watch"
 	},
 	"devDependencies": {
+				"@playwright/test": "^1.40.0",
 		"@babel/core": "^7.26.0",
 		"@babel/preset-env": "^7.26.0",
 		"@testing-library/jest-dom": "^6.6.0",

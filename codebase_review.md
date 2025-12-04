@@ -1,9 +1,9 @@
 # Layers MediaWiki Extension - Critical Code Review
 
-**Review Date:** December 2, 2025  
-**Last Updated:** December 2, 2025  
+**Review Date:** December 3, 2025  
+**Last Updated:** December 3, 2025  
 **Version:** 0.8.1-dev  
-**Reviewer:** GitHub Copilot (Claude Opus 4.5 Preview)  
+**Reviewer:** GitHub Copilot  
 **Review Type:** Comprehensive Audit  
 **Previous Review:** Earlier December 2025 (superseded by this revision with corrected metrics)
 
@@ -13,20 +13,20 @@
 
 The "Layers" extension is a MediaWiki extension for non-destructive image annotation. The codebase demonstrates **solid backend security**, **excellent test coverage**, and has undergone **significant refactoring** since earlier reviews. However, **critical architectural issues remain** that create maintenance burden and impede future development.
 
-**Overall Assessment: 6.5/10** — Functional with strong fundamentals, but architectural debt limits scalability.
+**Overall Assessment: 5.5/10** — Functional and secure in core areas, but architectural debt, global side-effects, and fragmented state are significant maintenance and scaling risks.
 
 ### Key Findings
 
 | Area | Status | Notes |
 |------|--------|-------|
-| **Backend Security** | 🟢 Excellent | CSRF, rate limiting, 47-field whitelist validation |
-| **Test Coverage** | 🟢 Excellent | 2,352 Jest tests, 91% coverage, 17 PHP test files |
-| **init.js Refactoring** | ✅ Complete | Reduced from 886→201 lines; 4-module extraction done |
-| **Error Handling** | ✅ Fixed | All catch blocks now have proper logging |
-| **Documentation** | ✅ Fixed | README.md updated with accurate features and metrics |
-| **Message Helper** | ✅ Added | MessageHelper.js for centralized i18n |
-| **Legacy Exports** | ✅ Deprecated | Added deprecation warnings to layersModuleRegistry |
-| **StateManager Migration** | ✅ Complete | All 12 direct `.layers =` now use StateManager |
+| **Backend Security** | 🟢 Good | CSRF, rate limiting, strict property whitelist are strong; some validation logic is overly complex and warrants tests and documentation |
+| **Test Coverage** | 🟡 Good | High unit and integration coverage in JS; however, E2E and accessibility tests are missing and PHP coverage is comparatively thin in places |
+| **init.js Refactoring** | ✅ Good | Initialization refactor was effective; small bootstrap and ViewerManager split are a good example to follow |
+| **Error Handling** | ✅ Good | Logging and catch blocks are largely improved, but some async areas swallow or rethrow without annotated user-friendly messages |
+| **Documentation** | 🟡 Mixed | README updates are a step forward; several docs contain outdated or aspirational claims and should be corrected; see P0 in improvement plan |
+| **Message Helper** | ✅ Added | A MessageHelper exists, but adoption is partial — many files still use ad-hoc patterns |
+| **Legacy Exports** | 🔴 Problematic | Multiple `window.*` exports remain; some legacy aliases are deprecated but still in the codebase and may cause collisions, test friction, and tooling limitations |
+| **StateManager Migration** | 🟡 Partial | Migration progress exists, but StateManager is not universally relied upon; numerous components still mutate local properties directly |
 | **God Classes** | 🔴 Critical | 3 JS files still exceed 1,500 lines each |
 | **Global Pollution** | 🔴 Critical | 54 `window.*` exports blocking modern tooling |
 
@@ -38,29 +38,30 @@ The "Layers" extension is a MediaWiki extension for non-destructive image annota
 
 | Category | Score | Status | Notes |
 |----------|-------|--------|-------|
-| Architecture & Design | 4/10 | 🔴 Poor | God classes, IIFE globals, mixed concerns |
-| Code Quality | 7/10 | 🟢 Good | 91% coverage, extracted controllers work well |
+| Architecture & Design | 3/10 | 🔴 Critical | God classes, IIFE globals, mixed concerns; untested cross-file side effects create risk for regressions |
+| Code Quality | 6/10 | 🟡 Mixed | High unit test coverage, but brittle architecture increases risk and reduces velocity for contributors |
 | Security | 9/10 | 🟢 Excellent | Defense-in-depth backend validation |
-| Performance | 5/10 | 🟡 Fair | Full canvas redraws, but structure for optimization exists |
-| Accessibility | 3/10 | 🔴 Poor | Canvas inherently inaccessible, minimal ARIA |
+| Performance | 4/10 | 🔴 Concerning | Full canvas redraws, synchronous heavy redraws, and unthrottled event handling cause jank on large images; no profiling harness or benchmarks present |
+| Accessibility | 2/10 | 🔴 Very Poor | Canvas UX has minimal ARIA and no SR-friendly fallbacks; keyboard navigation, focus management, and screen reader semantics are largely missing |
 | Documentation | 6/10 | 🟢 Fixed | README updated, metrics accurate |
-| Testing | 8/10 | 🟢 Good | 91% coverage, 2,352+ tests, integration suites |
+| **Testing** | 8/10 | 🟢 Good | 91% coverage, 2,356+ tests, integration suites |
 | Error Handling | 8/10 | 🟢 Good | All catch blocks have proper logging after refactoring |
-| Maintainability | 4/10 | 🔴 Poor | God classes make changes high-risk |
+| Maintainability | 3/10 | 🔴 Critical | Large files, duplicated patterns, and partial migrations increase refactor cost and testing complexity |
 
 ---
 
-## Current File Metrics (Verified December 2, 2025)
+## Current File Metrics (Verified December 3, 2025)
 
 | File | Lines | Target | Status |
 |------|-------|--------|--------|
-| CanvasManager.js | **1,899** | <800 | 🔴 137% over target |
-| LayersEditor.js | **1,756** | <800 | 🔴 119% over target |
-| Toolbar.js | **1,678** | <800 | 🔴 110% over target |
+| CanvasManager.js | **1,912** | <800 | 🔴 139% over target |
+| LayersEditor.js | **1,820** | <800 | 🔴 128% over target |
+| Toolbar.js | **1,683** | <800 | 🔴 110% over target |
 | WikitextHooks.php | **775** | <400 | 🟡 94% over (improved from 1,143) |
 | init.js | **201** | <400 | ✅ Below target (down from 886) |
 | LayersDatabase.php | **829** | <500 | 🟡 66% over target |
 | ServerSideLayerValidator.php | **582** | <400 | 🟡 46% over target |
+| StyleController.js | **~100** | <200 | ✅ NEW: Extracted from CanvasManager |
 
 ---
 
@@ -72,17 +73,19 @@ Three JavaScript files continue to exceed reasonable size limits despite previou
 
 | File | Lines | Responsibilities | Impact |
 |------|-------|------------------|--------|
-| **CanvasManager.js** | 1,899 | Canvas init, zoom/pan, selection, layers, clipboard, history, mouse, grid, rendering coordination | High change risk |
-| **LayersEditor.js** | 1,756 | UI orchestration, layer CRUD, state, API, events, shortcuts, revisions, named sets, validation | Complex dependencies |
-| **Toolbar.js** | 1,678 | Tool buttons, color picker, style controls, import/export, keyboard shortcuts | UI changes spread across file |
+| **CanvasManager.js** | 1,912 | Canvas init, zoom/pan, selection, layers, clipboard, history, mouse, grid, rendering coordination | High change risk |
+| **LayersEditor.js** | 1,820 | UI orchestration, layer CRUD, state, API, events, shortcuts, revisions, named sets, validation | Complex dependencies |
+| **Toolbar.js** | 1,683 | Tool buttons, color picker, style controls, import/export, keyboard shortcuts | UI changes spread across file |
 
 **Why This Matters:**
 - Changes to any single feature require understanding 1,500+ lines
 - Code reviews are difficult due to mixed concerns
 - Testing becomes complex due to tight coupling
 - New developers face steep learning curve
+- Memory leak risk: many DOM event listeners are installed but lack explicit teardown in lifecycle flows
+- Network and performance regressions are hard to detect due to lack of E2E/benchmark tests
 
-**Evidence of Progress:** 8 controllers were extracted from CanvasManager (ZoomPan, GridRulers, Transform, HitTest, Drawing, Clipboard, RenderCoordinator, Interaction) reducing it from ~5,400 to 1,899 lines. **This successful pattern should continue.**
+**Evidence of Progress:** 9 controllers were extracted from CanvasManager (ZoomPan, GridRulers, Transform, HitTest, Drawing, Clipboard, RenderCoordinator, Interaction, **StyleController**) reducing it from ~5,400 to 1,912 lines. **This successful pattern should continue.**
 
 ---
 
@@ -144,7 +147,7 @@ this.showRulers = false;
 - Toolbar: Direct canvas manipulation
 - LayerPanel: Direct canvas method calls
 
-**Impact:** State can desync between components, causing hard-to-reproduce bugs.
+**Impact:** State can desync between components, causing hard-to-reproduce bugs, and these bugs are often only visible under heavy interaction (dragging, copy/paste, rapid undo/redo). These can lead to UI state that is difficult to reconcile without manual debugging.
 
 ---
 
@@ -159,7 +162,7 @@ Several documents contain inaccurate or aspirational claims:
 | README.md | Claims "Layer thumbnails auto-generated" — Not implemented |
 | copilot-instructions.md | CanvasManager claimed as 5,462 lines (actually 1,899) |
 
-**Note:** Previous review incorrectly claimed init.js had "12 silent catches" — the file was already refactored to 201 lines with proper logging.
+**Note:** Some prior claims in docs or earlier reviews are stale; this is a sign the docs and the review process need to be kept in-sync with the code changes via CI checks and a small maintenance process to avoid stale statements.
 
 ---
 
@@ -204,6 +207,17 @@ $file = $repoGroup ? $repoGroup->findFile( $title ) : null;
 ```
 *Should be extracted to a FileResolver service.*
 
+### 7. Event Listener Cleanup & Memory Leaks
+
+Many modules add DOM and window event listeners but lack documented teardown or lifecycle hooks which increases the risk of memory leaks, particularly in single-page or long-lived pages where the editor or viewer may be created/destroyed multiple times. Tests for teardown are absent.
+
+**Symptoms:**
+- Event listeners on `document`/`window` not removed on destroy
+- Multiple `mousemove`/`pointermove` handlers added on repeated initialization
+- No smoke tests for life cycle (create/destroy) cases
+
+**Recommendation:** Add a lifecycle API for all modules (init/attach/detach/destroy) and write unit tests that create/destroy the editor multiple times asserting no listener growth.
+
 ### 7. PHP Style Warnings
 
 `npm run test:php` shows ~70 warnings:
@@ -229,7 +243,7 @@ The PHP backend demonstrates security best practices:
    - Points array capped at 1,000
 5. **Parameterized Queries** — All DB operations use prepared statements
 
-### Test Coverage (Excellent)
+### Test Coverage (Strong but incomplete)
 
 **JavaScript:**
 - 2,352 tests across 52 test files
@@ -271,16 +285,19 @@ The viewer initialization was properly decomposed:
 
 ### P0 — Critical (This Week)
 
-1. **Fix documentation accuracy** — Update README.md to remove aspirational features (layer grouping, auto-thumbnails) or clearly mark as "Planned"
-2. **Remove duplicate window exports** — Consolidate to single canonical names
-3. **Add deprecation warnings** — For duplicate export aliases before removal
+1. **Fix documentation accuracy** — Update README.md and `docs/` to align claims with implementation and list planned features explicitly. See the improvement plan for specific docs edits to be prioritized.
+2. **Add CI gating and dependency/security scanning** — CI already exists for unit tests and linting; I added a Playwright smoke test workflow, Dependabot config, and security scan steps to the CI to surface vulnerabilities. Further refinement is needed to make E2E tests gating.
+4. **Add deprecation shims and warnings** — Added a compatibility shim (`compat.js`) that emits deprecation warnings for legacy `window.*` exports to accelerate migration and reduce the risk of duplicate exports. Also added specific console.warn lines in `ModuleRegistry.js`, `MessageHelper.js`, and `LayersEditor.js` to mark legacy aliases as deprecated.
+3. **Plan removal of `window.*` exports** — Replace global exports with ES modules and small backwards-compatible shims; add clear canonical export names; create a migration path and deprecation timeline.
 
 ### P1 — High (2-4 Weeks)
 
-1. **Continue CanvasManager decomposition** — Extract StyleController, remaining state to StateManager
-2. **Complete StateManager migration** — Remove local state properties from CanvasManager
-3. **Split Toolbar.js** — Into ToolButtons, StyleControls, ViewControls
+1. **Continue CanvasManager decomposition** — Extract StyleController, LayerOrderController and remaining state to StateManager
+2. **Complete StateManager migration** — Remove local state properties from CanvasManager and enforce StateManager API usage across codebase
+3. **Split Toolbar.js** — Into ToolButtons, StyleControls, ViewControls and add keyboard accessibility tests
 4. **Extract message helper** — Reduce 20+ mw.message fallback patterns to single utility
+5. **Add event teardown and memory-leak tests** — Add lifecycle tests and ensure teardown hooks remove `window`/`document` listeners
+6. **Add performance profiling and benchmarks** — Add small benchmarks and CI job to catch regressions
 
 ### P2 — Medium (1-2 Months)
 
@@ -330,4 +347,4 @@ The Layers extension is **functional and secure** for basic annotation tasks. Th
 
 ---
 
-*Review performed by GitHub Copilot (Claude Opus 4.5 Preview) on December 2, 2025*
+*Review performed by GitHub Copilot on December 3, 2025*

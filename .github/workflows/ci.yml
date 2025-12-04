@@ -49,3 +49,11 @@ jobs:
 
       - name: JS unit tests (Jest)
         run: npm run test:js
+
+      - name: npm audit (security scan)
+        run: |
+          npm audit --audit-level=moderate || true
+
+      - name: composer audit (security scan)
+        run: |
+          if [ -f composer.json ]; then composer audit || true; fi

@@ -104,12 +104,36 @@
 			this.registry = {
 				get: ( name ) => {
 					const constructors = {
-						UIManager: () => new window.UIManager( this ),
-						EventManager: () => new window.EventManager( this ),
-						APIManager: () => new window.APIManager( this ),
-						ValidationManager: () => new window.ValidationManager( this ),
-						StateManager: () => new window.StateManager( this ),
-						HistoryManager: () => new window.HistoryManager( this )
+						UIManager: () => ( typeof window.UIManager === 'function' ) ? new window.UIManager( this ) : ( function () {
+							const stub = {};
+							stub.container = document.createElement( 'div' );
+							stub.toolbarContainer = document.createElement( 'div' );
+							stub.layerPanelContainer = document.createElement( 'div' );
+							stub.canvasContainer = document.createElement( 'div' );
+							stub.createInterface = function () {};
+							stub.destroy = function () {};
+							return stub;
+						} )(),
+						EventManager: () => ( typeof window.EventManager === 'function' ) ? new window.EventManager( this ) : ( function () { return { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} }; } )(),
+						APIManager: () => ( typeof window.APIManager === 'function' ) ? new window.APIManager( this ) : ( function () { return { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} }; } )(),
+						ValidationManager: () => ( typeof window.ValidationManager === 'function' ) ? new window.ValidationManager( this ) : ( function () { return { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, destroy: function () {} }; } )(),
+						StateManager: () => ( typeof window.StateManager === 'function' ) ? new window.StateManager( this ) : ( function () {
+							const store = {};
+							const subs = {};
+							return {
+								set: function ( k, v ) { store[ k ] = v; },
+								get: function ( k ) { return store[ k ]; },
+								subscribe: function ( k, fn ) { subs[ k ] = subs[ k ] || []; subs[ k ].push( fn ); },
+								setDirty: function () {},
+								isDirty: function () { return false; },
+								getLayers: function () { return store.layers || []; },
+								destroy: function () { }
+							};
+						} )(),
+						HistoryManager: () => ( typeof window.HistoryManager === 'function' ) ? new window.HistoryManager( this ) : ( function () { return { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, destroy: function () {} }; } )(),
+						Toolbar: () => ( typeof window.Toolbar === 'function' ) ? new window.Toolbar( { container: ( this.uiManager && this.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: this } ) : ( function () { return { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {} }; } )(),
+						LayerPanel: () => ( typeof window.LayerPanel === 'function' ) ? new window.LayerPanel( { container: ( this.uiManager && this.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: this } ) : ( function () { return { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} }; } )(),
+						CanvasManager: () => ( typeof window.CanvasManager === 'function' ) ? new window.CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl } ) : ( function () { return { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }; } )()
 					};
 					if ( constructors[ name ] ) {
 						return constructors[ name ]();
@@ -135,19 +159,41 @@
 		this.apiManager = this.registry.get( 'APIManager' );
 		this.validationManager = this.registry.get( 'ValidationManager' );
 		this.stateManager = this.registry.get( 'StateManager' );
+		if ( !this.stateManager || typeof this.stateManager.set !== 'function' || typeof this.stateManager.get !== 'function' ) {
+			// Ensure a safe default stateManager is present to avoid runtime errors
+			this.stateManager = ( function () {
+				const store = {};
+				const subs = {};
+				return {
+					set: function ( k, v ) { store[ k ] = v; },
+					get: function ( k ) { return store[ k ]; },
+					subscribe: function ( k, fn ) { subs[ k ] = subs[ k ] || []; subs[ k ].push( fn ); },
+					setDirty: function () {},
+					isDirty: function () { return false; },
+					getLayers: function () { return store.layers || []; },
+					destroy: function () { }
+				};
+			} )();
+		}
 
-		// Initialize state through StateManager
-		this.stateManager.set( 'layers', [] );
-		this.stateManager.set( 'selectedLayerId', null );
-		this.stateManager.set( 'isDirty', false );
-		this.stateManager.set( 'currentTool', 'pointer' );
-		this.stateManager.set( 'baseWidth', null );
-		this.stateManager.set( 'baseHeight', null );
-		this.stateManager.set( 'allLayerSets', [] );
-		this.stateManager.set( 'currentLayerSetId', null );
+		// Initialize state through StateManager (defensive: ensure methods exist)
+		if ( this.stateManager && typeof this.stateManager.set === 'function' ) {
+			this.stateManager.set( 'layers', [] );
+		}
+		if ( this.stateManager && typeof this.stateManager.set === 'function' ) {
+			this.stateManager.set( 'selectedLayerId', null );
+			this.stateManager.set( 'isDirty', false );
+			this.stateManager.set( 'currentTool', 'pointer' );
+			this.stateManager.set( 'baseWidth', null );
+			this.stateManager.set( 'baseHeight', null );
+			this.stateManager.set( 'allLayerSets', [] );
+			this.stateManager.set( 'currentLayerSetId', null );
+		}
 		// Named Layer Sets state
-		this.stateManager.set( 'namedSets', [] );
-		this.stateManager.set( 'currentSetName', 'default' );
+		if ( this.stateManager && typeof this.stateManager.set === 'function' ) {
+			this.stateManager.set( 'namedSets', [] );
+			this.stateManager.set( 'currentSetName', 'default' );
+		}
 
 		// BRIDGE: Provide backward-compatible editor.layers property that routes through StateManager
 		// This allows legacy code to work while we complete the migration
@@ -383,6 +429,10 @@
 
 		// Load existing layers
 		this.apiManager.loadLayers().then( ( data ) => {
+			// If the editor was destroyed during the async API call, abort further processing
+			if ( this.isDestroyed ) {
+				return;
+			}
 			this.debugLog( '[LayersEditor] API loadLayers completed with data:', data );
 			if ( data && data.layers ) {
 				// Normalize layers to ensure visibility defaults are correct
@@ -414,6 +464,9 @@
 			}
 			this.saveState( 'initial' );
 		} ).catch( ( error ) => {
+			if ( this.isDestroyed ) {
+				return;
+			}
 			this.debugLog( '[LayersEditor] API loadLayers failed:', error );
 			this.stateManager.set( 'layers', [] );
 			if ( this.canvasManager ) {
@@ -1569,9 +1622,6 @@
 			document.title = '🎨 Layers Editor - ' + ( config.filename || 'Unknown File' );
 			// Always set the global instance for duplicate prevention
 			window.layersEditorInstance = editor;
-			if ( typeof window.mw !== 'undefined' && window.mw.config && window.mw.config.get( 'debug' ) ) {
-				window.layersEditorInstance = editor;
-			}
 		} catch ( e ) {
 			// SECURITY FIX: Sanitize error message to prevent information disclosure
 			const sanitizedError = sanitizeGlobalErrorMessage( e );

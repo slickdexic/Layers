@@ -1,0 +1,15 @@
+# Require review from core maintainers for certain areas
+# Format: <pattern> @owner1 @owner2
+
+# Root and config
+/.github/* @slickdexic
+/README.md @slickdexic
+
+# Critical directories
+/src/ @slickdexic
+/resources/ext.layers.editor/** @slickdexic
+/Resources/** @slickdexic
+
+# Tests and CI
+/tests/** @slickdexic
+/.github/** @slickdexic

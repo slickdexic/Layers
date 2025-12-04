@@ -198,6 +198,11 @@
 		}, 'warn' );
 
 		// Initialize controllers (all take 'this' as argument)
+		// StyleController should be loaded before other controllers that rely on style
+		initController( 'StyleController', 'styleController', function ( C ) {
+			return new C( self.editor );
+		}, 'warn' );
+		
 		const controllers = [
 			[ 'ZoomPanController', 'zoomPanController' ],
 			[ 'GridRulersController', 'gridRulersController' ],
@@ -232,6 +237,59 @@
 
 		// Subscribe to StateManager for selection changes
 		this.subscribeToState();
+	};
+
+	/**
+	 * Initialize the event handling layer for CanvasManager.
+	 * This will construct CanvasEvents controller if available, otherwise
+	 * install basic fallback handlers for test environments.
+	 */
+	CanvasManager.prototype.setupEventHandlers = function () {
+		const EventsClass = findClass( 'CanvasEvents' );
+		if ( EventsClass ) {
+			try {
+				this.events = new EventsClass( this );
+			} catch ( e ) {
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+					mw.log.error( '[CanvasManager] Failed to init CanvasEvents:', e && e.message );
+				}
+				this.events = null;
+			}
+			return;
+		}
+
+		// Fallback for minimal test environments: attach stripped-down event handlers
+		const self = this;
+		this.events = {
+			destroy: function () {
+				if ( self.canvas && self.__mousedownHandler ) {
+					try { self.canvas.removeEventListener( 'mousedown', self.__mousedownHandler ); } catch ( err ) {}
+				}
+				self.__mousedownHandler = null;
+				self.__mousemoveHandler = null;
+				self.__mouseupHandler = null;
+			}
+		};
+		if ( this.canvas && this.canvas.addEventListener ) {
+			this.__mousedownHandler = function ( e ) {
+				if ( typeof self.handleMouseDown === 'function' ) {
+					self.handleMouseDown( e );
+				}
+			};
+			this.__mousemoveHandler = function ( e ) {
+				if ( typeof self.handleMouseMove === 'function' ) {
+					self.handleMouseMove( e );
+				}
+			};
+			this.__mouseupHandler = function ( e ) {
+				if ( typeof self.handleMouseUp === 'function' ) {
+					self.handleMouseUp( e );
+				}
+			};
+			this.canvas.addEventListener( 'mousedown', this.__mousedownHandler );
+			this.canvas.addEventListener( 'mousemove', this.__mousemoveHandler );
+			this.canvas.addEventListener( 'mouseup', this.__mouseupHandler );
+		}
 	};
 
 	/**
@@ -309,6 +367,9 @@
 			} );
 			this.imageLoader.load();
 		} else {
+			if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+				mw.log.error( 'Layers: CanvasEvents module not found' );
+			}
 			// Fallback for test environments without ImageLoader
 			// @deprecated This path should not be reached in production
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
@@ -417,102 +478,131 @@
 	};
 
 	/**
+	 * Try to load images from a list of URLs sequentially.
+	 * @param {string[]} urls
+	 * @param {number} index
+	 */
+	CanvasManager.prototype.tryLoadImageFallback = function ( urls, index ) {
+		if ( !Array.isArray( urls ) || urls.length === 0 || index >= urls.length ) {
+			if ( typeof this.handleImageLoadError === 'function' ) {
+				this.handleImageLoadError();
+			}
+			return;
+		}
+
+		const url = urls[ index ];
+		try {
+			const img = new Image();
+			img.crossOrigin = 'anonymous';
+			const self = this;
+			img.onload = function () {
+				if ( typeof self.handleImageLoaded === 'function' ) {
+					self.handleImageLoaded( img, { width: img.width, height: img.height, source: 'fallback' } );
+				}
+			};
+			img.onerror = function () {
+				self.tryLoadImageFallback( urls, index + 1 );
+			};
+			img.src = url;
+		} catch ( e ) {
+			if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+				mw.log.error( 'Layers: tryLoadImageFallback error - ' + ( e && e.message ) );
+			}
+			if ( typeof this.handleImageLoadError === 'function' ) {
+				this.handleImageLoadError();
+			}
+		}
+	};
+
+	/**
 	 * @deprecated Fallback image loading with URL list - no longer used in production.
 	 * @param {string[]} urls - URLs to try
 	 * @param {number} index - Current index
 	 * @private
 	 */
-	CanvasManager.prototype.tryLoadImageFallback = function ( urls, index ) {
-		const self = this;
-
-		if ( index >= urls.length ) {
-			this.handleImageLoadError();
+	CanvasManager.prototype.updateStyleOptions = function ( options ) {
+		if ( this.styleController && typeof this.styleController.updateStyleOptions === 'function' ) {
+			const next = this.styleController.updateStyleOptions( options );
+			// Live-apply style updates to selected layers using styleController
+			const ids = this.getSelectedLayerIds();
+			if ( ids && ids.length && this.editor ) {
+				for ( let i = 0; i < ids.length; i++ ) {
+					const layer = this.editor.getLayerById( ids[ i ] );
+					if ( layer && typeof this.styleController.applyToLayer === 'function' ) {
+						this.styleController.applyToLayer( layer, next );
+					}
+				}
+				this.renderLayers( this.editor.layers );
+			}
 			return;
 		}
-
-		const image = new Image();
-		image.crossOrigin = 'anonymous';
-
-		image.onload = function () {
-			self.handleImageLoaded( image, {
-				width: image.width,
-				height: image.height,
-				source: 'fallback'
-			} );
+		// Fallback to legacy logic if styleController is not available
+		this.currentStyle = this.currentStyle || {};
+		const prev = this.currentStyle;
+		const has = function ( v ) { return v !== undefined && v !== null; };
+		const next = {
+			color: has( options.color ) ? options.color : prev.color,
+			fill: has( options.fill ) ? options.fill : prev.fill,
+			strokeWidth: has( options.strokeWidth ) ? options.strokeWidth : prev.strokeWidth,
+			fontSize: has( options.fontSize ) ? options.fontSize : prev.fontSize,
+			fontFamily: has( options.fontFamily ) ? options.fontFamily : prev.fontFamily || 'Arial, sans-serif',
+			textStrokeColor: has( options.textStrokeColor ) ? options.textStrokeColor : prev.textStrokeColor,
+			textStrokeWidth: has( options.textStrokeWidth ) ? options.textStrokeWidth : prev.textStrokeWidth,
+			textShadow: has( options.textShadow ) ? options.textShadow : prev.textShadow,
+			textShadowColor: has( options.textShadowColor ) ? options.textShadowColor : prev.textShadowColor,
+			arrowStyle: has( options.arrowStyle ) ? options.arrowStyle : prev.arrowStyle,
+			shadow: has( options.shadow ) ? options.shadow : prev.shadow,
+			shadowColor: has( options.shadowColor ) ? options.shadowColor : prev.shadowColor,
+			shadowBlur: has( options.shadowBlur ) ? options.shadowBlur : prev.shadowBlur,
+			shadowOffsetX: has( options.shadowOffsetX ) ? options.shadowOffsetX : prev.shadowOffsetX,
+			shadowOffsetY: has( options.shadowOffsetY ) ? options.shadowOffsetY : prev.shadowOffsetY
 		};
-
-		image.onerror = function () {
-			self.tryLoadImageFallback( urls, index + 1 );
+		this.currentStyle = next;
+		const applyToLayer = function ( layer ) {
+			if ( !layer ) return;
+			if ( next.color ) {
+				if ( layer.type === 'text' ) {
+					layer.fill = next.color;
+				} else if ( layer.type === 'highlight' ) {
+					layer.fill = next.color;
+				} else {
+					layer.stroke = next.color;
+				}
+			}
+			if ( next.fill ) {
+				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
+					layer.fill = next.fill;
+				}
+			}
+			if ( next.strokeWidth ) {
+				if ( layer.type !== 'text' ) {
+					layer.strokeWidth = next.strokeWidth;
+				}
+			}
+			if ( layer.type === 'text' ) {
+				layer.fontSize = next.fontSize || layer.fontSize || 16;
+				layer.fontFamily = next.fontFamily || layer.fontFamily;
+				if ( next.textStrokeColor ) layer.textStrokeColor = next.textStrokeColor;
+				if ( next.textStrokeWidth ) layer.textStrokeWidth = next.textStrokeWidth;
+			}
+			if ( next.shadow ) {
+				layer.shadow = next.shadow;
+				if ( next.shadowColor ) layer.shadowColor = next.shadowColor;
+				if ( next.shadowBlur ) layer.shadowBlur = next.shadowBlur;
+				if ( next.shadowOffsetX !== undefined ) layer.shadowOffsetX = next.shadowOffsetX;
+				if ( next.shadowOffsetY !== undefined ) layer.shadowOffsetY = next.shadowOffsetY;
+			}
 		};
-
-		image.src = urls[ index ];
-	};
-
-	CanvasManager.prototype.resizeCanvas = function () {
-		// Get container dimensions
-		const container = this.canvas.parentNode;
-		//  container.clientWidth, 'x', container.clientHeight );
-
-		// If no canvas size is set yet, use default
-		if ( this.canvas.width === 0 || this.canvas.height === 0 ) {
-			this.canvas.width = 800;
-			this.canvas.height = 600;
-		}
-
-		const canvasWidth = this.canvas.width;
-		const canvasHeight = this.canvas.height;
-		// Calculate available space in container (with padding)
-		const availableWidth = Math.max( container.clientWidth - 40, 400 );
-		const availableHeight = Math.max( container.clientHeight - 40, 300 );
-		// Calculate scale to fit the canvas in the container
-		const scaleX = availableWidth / canvasWidth;
-		const scaleY = availableHeight / canvasHeight;
-		let scale = Math.min( scaleX, scaleY );
-
-		// Ensure reasonable scale bounds (don't make it too tiny or huge)
-		scale = Math.max( 0.1, Math.min( scale, 3.0 ) );
-
-		// Calculate final display size
-		const displayWidth = Math.floor( canvasWidth * scale );
-		const displayHeight = Math.floor( canvasHeight * scale );
-
-		// Set CSS size for display
-		this.canvas.style.width = displayWidth + 'px';
-		this.canvas.style.height = displayHeight + 'px';
-		this.canvas.style.maxWidth = 'none';
-		this.canvas.style.maxHeight = 'none';
-		this.canvas.style.border = '1px solid #ddd';
-		this.canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-
-		// Set zoom and pan only if user hasn't manually set zoom
-		if ( !this.userHasSetZoom ) {
-			this.zoom = scale;
-			this.panX = 0;
-			this.panY = 0;
-		} else {
-			// User has manually set zoom - preserve it but update canvas size with current zoom
-			this.canvas.style.width = ( canvasWidth * this.zoom ) + 'px';
-			this.canvas.style.height = ( canvasHeight * this.zoom ) + 'px';
-		}
-		//     width: this.canvas.style.width,
-		//     height: this.canvas.style.height,
-		//     border: this.canvas.style.border,
-		//     boxShadow: this.canvas.style.boxShadow
-		// });
-	};
-
-	CanvasManager.prototype.setupEventHandlers = function () {
-		if ( typeof CanvasEvents !== 'undefined' ) {
-			this.events = new CanvasEvents( this );
-			return;
-		}
-		if ( typeof mw !== 'undefined' && mw.log ) {
-			mw.log.error( 'Layers: CanvasEvents module not found' );
+		// Use canvasManager's getSelectedLayerIds which queries stateManager
+		const ids = this.getSelectedLayerIds();
+		if ( ids && ids.length && this.editor ) {
+			for ( let i = 0; i < ids.length; i++ ) {
+				const layer = this.editor.getLayerById( ids[ i ] );
+				if ( layer ) applyToLayer( layer );
+			}
+			this.renderLayers( this.editor.layers );
 		}
 	};
-
-
-
 	CanvasManager.prototype.hitTestSelectionHandles = function ( point ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.hitTestSelectionHandles( point );
@@ -1440,6 +1530,71 @@
 		this.renderLayers( this.editor.layers );
 	};
 
+	/**
+	 * Set the base dimensions that layers were created against.
+	 * Used for scaling layers when the canvas size differs from the original.
+	 * @param {number} width - Original image width
+	 * @param {number} height - Original image height
+	 */
+	CanvasManager.prototype.setBaseDimensions = function ( width, height ) {
+		this.baseWidth = width || null;
+		this.baseHeight = height || null;
+		// Trigger resize to apply proper scaling
+		this.resizeCanvas();
+	};
+
+	/**
+	 * Resize canvas to match container size while maintaining aspect ratio.
+	 * Updates viewport bounds for layer culling.
+	 */
+	CanvasManager.prototype.resizeCanvas = function () {
+		const container = this.container || ( this.canvas && this.canvas.parentNode );
+		if ( !container || !this.canvas ) {
+			return;
+		}
+
+		// Get container dimensions (with padding accounted for)
+		const containerWidth = container.clientWidth || 800;
+		const containerHeight = container.clientHeight || 600;
+
+		// Get the canvas logical dimensions (image size)
+		const canvasWidth = this.canvas.width || 800;
+		const canvasHeight = this.canvas.height || 600;
+
+		// Calculate aspect-ratio-preserving CSS dimensions
+		// The canvas should fit within the container while preserving aspect ratio
+		const canvasAspect = canvasWidth / canvasHeight;
+		const containerAspect = containerWidth / containerHeight;
+
+		let cssWidth, cssHeight;
+		if ( canvasAspect > containerAspect ) {
+			// Canvas is wider than container - constrain by width
+			cssWidth = containerWidth;
+			cssHeight = containerWidth / canvasAspect;
+		} else {
+			// Canvas is taller than container - constrain by height
+			cssHeight = containerHeight;
+			cssWidth = containerHeight * canvasAspect;
+		}
+
+		// Apply CSS dimensions to maintain aspect ratio
+		this.canvas.style.width = Math.round( cssWidth ) + 'px';
+		this.canvas.style.height = Math.round( cssHeight ) + 'px';
+
+		if ( !this.userHasSetZoom ) {
+			// Reset logical zoom if user hasn't set zoom manually
+			this.zoom = 1.0;
+			if ( this.zoomPanController && typeof this.zoomPanController.updateCanvasTransform === 'function' ) {
+				this.zoomPanController.updateCanvasTransform();
+			}
+		}
+
+		// Update viewport bounds used for layer culling
+		this.viewportBounds = this.viewportBounds || { x: 0, y: 0, width: 0, height: 0 };
+		this.viewportBounds.width = this.canvas.width;
+		this.viewportBounds.height = this.canvas.height;
+	};
+
 	CanvasManager.prototype.getMousePoint = function ( e ) {
 		return this.getMousePointFromClient( e.clientX, e.clientY );
 	};
@@ -1594,114 +1749,8 @@
 		return 'default';
 	};
 
-	/**
-	 * Update current drawing style from toolbar and optionally apply to selection
-	 *
-	 * @param {Object} options
-	 */
-	CanvasManager.prototype.updateStyleOptions = function ( options ) {
-		this.currentStyle = this.currentStyle || {};
-		const prev = this.currentStyle;
-		const has = function ( v ) {
-			return v !== undefined && v !== null;
-		};
-		const next = {
-			color: has( options.color ) ? options.color : prev.color,
-			fill: has( options.fill ) ? options.fill : prev.fill,
-			strokeWidth: has( options.strokeWidth ) ? options.strokeWidth : prev.strokeWidth,
-			fontSize: has( options.fontSize ) ? options.fontSize : prev.fontSize,
-			fontFamily: prev.fontFamily || 'Arial, sans-serif',
-			textStrokeColor: has( options.textStrokeColor ) ?
-				options.textStrokeColor : prev.textStrokeColor,
-			textStrokeWidth: has( options.textStrokeWidth ) ?
-				options.textStrokeWidth : prev.textStrokeWidth,
-			textShadow: has( options.textShadow ) ? options.textShadow : prev.textShadow,
-			textShadowColor: has( options.textShadowColor ) ?
-				options.textShadowColor : prev.textShadowColor,
-			arrowStyle: has( options.arrowStyle ) ? options.arrowStyle : prev.arrowStyle,
-			// Add general shadow properties for all layer types
-			shadow: has( options.shadow ) ? options.shadow : prev.shadow,
-			shadowColor: has( options.shadowColor ) ? options.shadowColor : prev.shadowColor,
-			shadowBlur: has( options.shadowBlur ) ? options.shadowBlur : prev.shadowBlur,
-			shadowOffsetX: has( options.shadowOffsetX ) ? options.shadowOffsetX : prev.shadowOffsetX,
-			shadowOffsetY: has( options.shadowOffsetY ) ? options.shadowOffsetY : prev.shadowOffsetY
-		};
-		this.currentStyle = next;
-
-		// Live-apply style updates to selected layer(s) where sensible
-		const applyToLayer = function ( layer ) {
-			if ( !layer ) {
-				return;
-			}
-			// Stroke/fill for shapes and lines
-			if ( next.color ) {
-				if ( layer.type === 'text' ) {
-					layer.fill = next.color;
-				} else if ( layer.type === 'highlight' ) {
-					layer.fill = next.color;
-				} else {
-					layer.stroke = next.color;
-				}
-			}
-			if ( next.fill ) {
-				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
-					layer.fill = next.fill;
-				}
-			}
-			if ( next.strokeWidth !== undefined && next.strokeWidth !== null ) {
-				layer.strokeWidth = next.strokeWidth;
-			}
-			if ( layer.type === 'text' ) {
-				if ( next.fontSize !== undefined && next.fontSize !== null ) {
-					layer.fontSize = next.fontSize;
-				}
-				if ( next.textStrokeWidth !== undefined && next.textStrokeWidth !== null ) {
-					layer.textStrokeWidth = next.textStrokeWidth;
-				}
-				if ( next.textStrokeColor ) {
-					layer.textStrokeColor = next.textStrokeColor;
-				}
-				if ( next.textShadow !== undefined && next.textShadow !== null ) {
-					layer.textShadow = next.textShadow;
-				}
-				if ( next.textShadowColor ) {
-					layer.textShadowColor = next.textShadowColor;
-				}
-			}
-			if ( layer.type === 'arrow' && next.arrowStyle ) {
-				layer.arrowStyle = next.arrowStyle;
-			}
-			// Apply general shadow properties to all layer types
-			if ( next.shadow !== undefined && next.shadow !== null ) {
-				layer.shadow = next.shadow;
-			}
-			if ( next.shadowColor !== undefined && next.shadowColor !== null ) {
-				layer.shadowColor = next.shadowColor;
-			}
-			if ( next.shadowBlur !== undefined && next.shadowBlur !== null ) {
-				layer.shadowBlur = next.shadowBlur;
-			}
-			if ( next.shadowOffsetX !== undefined && next.shadowOffsetX !== null ) {
-				layer.shadowOffsetX = next.shadowOffsetX;
-			}
-			if ( next.shadowOffsetY !== undefined && next.shadowOffsetY !== null ) {
-				layer.shadowOffsetY = next.shadowOffsetY;
-			}
-		};
-
-		const selectedIds = this.getSelectedLayerIds();
-		if ( selectedIds && selectedIds.length ) {
-			for ( let i = 0; i < selectedIds.length; i++ ) {
-				applyToLayer( this.editor.getLayerById( selectedIds[ i ] ) );
-			}
-			this.renderLayers( this.editor.layers );
-		}
-
-		// Reflect selection count in status bar
-		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
-			this.editor.updateStatus( { selection: selectedIds.length } );
-		}
-	};
+	// NOTE: updateStyleOptions is defined earlier (around line 523) and delegates to StyleController.
+	// Duplicate definition removed to prevent redefinition and reduce file size.
 
 	CanvasManager.prototype.renderLayers = function ( layers ) {
 		this.redraw( layers );

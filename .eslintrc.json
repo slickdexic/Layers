@@ -73,6 +73,7 @@
 				"CanvasManager": "readonly",
 				"LayerPanel": "readonly",
 				"Toolbar": "readonly",
+				"ToolbarKeyboard": "readonly",
 				"LayersEditor": "readonly",
 				"LayersViewer": "readonly",
 				"SelectionManager": "readonly",
