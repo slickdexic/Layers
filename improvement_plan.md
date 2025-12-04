@@ -613,31 +613,25 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 
 Tracked bugs requiring investigation and fixes.
 
-### BUG-001: Rectangle resize corner drift
+### BUG-001: Rectangle resize corner drift (FIXED)
 
 **Severity:** Low  
-**Component:** TransformController / CanvasManager  
-**Status:** Open  
+**Component:** TransformController  
+**Status:** ✅ Fixed (December 3, 2025)  
 **Reported:** December 3, 2025
 
 **Description:**  
-When resizing a rectangle object by dragging one of the corner handles, the opposite corner (which should remain anchored) tends to drift slightly during the resize operation. Users expect the opposite corner to stay fixed in place.
+When resizing a **rotated** rectangle object by dragging one of the corner handles, the opposite corner (which should remain anchored) drifts during the resize operation.
 
-**Expected Behavior:**  
-Dragging a corner resize handle should scale the rectangle while keeping the diagonally opposite corner anchored at its original position.
+**Root Cause:**  
+The `applyRotatedResizeCorrection()` function in TransformController only applied position corrections for edge handles (n, s, e, w). Corner handles (nw, ne, sw, se) were explicitly skipped with `default: return;`, causing the opposite corner to drift on rotated shapes.
 
-**Actual Behavior:**  
-The opposite corner moves/drifts during resize, causing the rectangle to shift position in addition to changing size.
+**Fix Applied:**  
+Extended `applyRotatedResizeCorrection()` to handle corner handles. The fix calculates the world-space position of the opposite corner before and after resize, then applies a position correction to keep the opposite corner anchored.
 
-**Likely Location:**  
-- `resources/ext.layers.editor/canvas/TransformController.js` - resize handle logic
-- `resources/ext.layers.editor/CanvasManager.js` - transform calculations
-
-**Reproduction Steps:**
-1. Create a rectangle in the editor
-2. Select the rectangle
-3. Drag any corner resize handle
-4. Observe that the opposite corner shifts position
+**Files Changed:**  
+- `resources/ext.layers.editor/canvas/TransformController.js` - Added corner handle cases to both switch statements in `applyRotatedResizeCorrection()`
+- `tests/jest/RotatedResize.test.js` - Updated test to expect correction for corner handles
 
 ---
 

@@ -489,8 +489,27 @@
 				// West handle: east edge should stay fixed
 				anchorLocalX = origW / 2; // local offset to east edge
 				break;
+			case 'nw':
+				// NW handle: SE corner should stay fixed
+				anchorLocalX = origW / 2;
+				anchorLocalY = origH / 2;
+				break;
+			case 'ne':
+				// NE handle: SW corner should stay fixed
+				anchorLocalX = -origW / 2;
+				anchorLocalY = origH / 2;
+				break;
+			case 'sw':
+				// SW handle: NE corner should stay fixed
+				anchorLocalX = origW / 2;
+				anchorLocalY = -origH / 2;
+				break;
+			case 'se':
+				// SE handle: NW corner should stay fixed
+				anchorLocalX = -origW / 2;
+				anchorLocalY = -origH / 2;
+				break;
 			default:
-				// Corner handles: don't apply this correction
 				return;
 		}
 
@@ -499,7 +518,7 @@
 		const origAnchorWorldX = origCenterX + anchorLocalX * cos - anchorLocalY * sin;
 		const origAnchorWorldY = origCenterY + anchorLocalX * sin + anchorLocalY * cos;
 
-		// Calculate the new local offset to the fixed edge
+		// Calculate the new local offset to the fixed edge/corner
 		let newAnchorLocalX = 0;
 		let newAnchorLocalY = 0;
 
@@ -515,6 +534,22 @@
 				break;
 			case 'w':
 				newAnchorLocalX = newW / 2;
+				break;
+			case 'nw':
+				newAnchorLocalX = newW / 2;
+				newAnchorLocalY = newH / 2;
+				break;
+			case 'ne':
+				newAnchorLocalX = -newW / 2;
+				newAnchorLocalY = newH / 2;
+				break;
+			case 'sw':
+				newAnchorLocalX = newW / 2;
+				newAnchorLocalY = -newH / 2;
+				break;
+			case 'se':
+				newAnchorLocalX = -newW / 2;
+				newAnchorLocalY = -newH / 2;
 				break;
 		}
 

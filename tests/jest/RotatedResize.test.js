@@ -152,7 +152,7 @@ describe( 'Rotated Resize Behavior', () => {
 			expect( newWestEdge.y ).toBeCloseTo( origWestEdge.y, 1 );
 		} );
 
-		it( 'should not apply correction for corner handles', () => {
+		it( 'should apply correction for corner handles on rotated shapes', () => {
 			const layer = {
 				x: 100, y: 100, width: 200, height: 100, rotation: 45
 			};
@@ -162,12 +162,16 @@ describe( 'Rotated Resize Behavior', () => {
 			};
 			const origUpdates = { ...updates };
 
-			// Apply correction for corner handle
+			// Apply correction for corner handle (SE corner means NW corner should stay fixed)
 			controller.applyRotatedResizeCorrection( updates, layer, 'se' );
 
-			// Should not modify updates for corner handles
-			expect( updates.x ).toBe( origUpdates.x );
-			expect( updates.y ).toBe( origUpdates.y );
+			// Should modify x,y to keep opposite corner fixed in world space
+			// The correction compensates for the rotation
+			expect( updates.x ).not.toBe( origUpdates.x );
+			expect( updates.y ).not.toBe( origUpdates.y );
+			// Width and height should remain unchanged
+			expect( updates.width ).toBe( origUpdates.width );
+			expect( updates.height ).toBe( origUpdates.height );
 		} );
 
 		it( 'should not apply correction when rotation is 0', () => {
