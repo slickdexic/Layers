@@ -275,10 +275,10 @@ describe('Resize Handles', () => {
             const mockEvent = { button: 0, clientX: 100, clientY: 100 };
             canvasManager.events.handleMouseDown(mockEvent);
 
-            // Should have started resize
-            expect(canvasManager.isResizing).toBe(true);
-            expect(canvasManager.resizeHandle).toBeTruthy();
-            expect(canvasManager.resizeHandle.type).toBe('nw');
+            // Should have started resize (state is now on transformController)
+            expect(canvasManager.transformController.isResizing).toBe(true);
+            expect(canvasManager.transformController.resizeHandle).toBeTruthy();
+            expect(canvasManager.transformController.resizeHandle.type).toBe('nw');
         });
     });
 });

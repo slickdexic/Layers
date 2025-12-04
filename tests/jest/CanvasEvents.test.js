@@ -60,6 +60,24 @@ describe( 'CanvasEvents', () => {
 			lastTouchTime: 0,
 			resizeHandle: null,
 
+			// TransformController for resize/rotate/drag operations
+			transformController: {
+				isResizing: false,
+				isRotating: false,
+				isDragging: false,
+				resizeHandle: null,
+				dragStartPoint: null,
+				startResize: jest.fn(),
+				startRotation: jest.fn(),
+				startDrag: jest.fn(),
+				handleResize: jest.fn(),
+				handleRotation: jest.fn(),
+				handleDrag: jest.fn(),
+				finishResize: jest.fn(),
+				finishRotation: jest.fn(),
+				finishDrag: jest.fn()
+			},
+
 			// Methods
 			getMousePoint: jest.fn( ( e ) => ( { x: e.clientX, y: e.clientY } ) ),
 			getRawClientPoint: jest.fn( ( e ) => ( { canvasX: e.clientX, canvasY: e.clientY } ) ),
@@ -233,7 +251,7 @@ describe( 'CanvasEvents', () => {
 			canvasEvents.handleMouseDown( event );
 
 			expect( mockCanvasManager.hitTestSelectionHandles ).toHaveBeenCalled();
-			expect( mockCanvasManager.startResize ).toHaveBeenCalledWith( { type: 'se' } );
+			expect( mockCanvasManager.transformController.startResize ).toHaveBeenCalled();
 		} );
 
 		it( 'should start rotation when rotate handle hit', () => {
@@ -244,7 +262,7 @@ describe( 'CanvasEvents', () => {
 			const event = { clientX: 100, clientY: 200, button: 0 };
 			canvasEvents.handleMouseDown( event );
 
-			expect( mockCanvasManager.startRotation ).toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.startRotation ).toHaveBeenCalled();
 		} );
 
 		it( 'should handle zoom tool click', () => {
@@ -272,7 +290,7 @@ describe( 'CanvasEvents', () => {
 			canvasEvents.handleMouseDown( event );
 
 			expect( mockCanvasManager.handleLayerSelection ).toHaveBeenCalled();
-			expect( mockCanvasManager.startDrag ).toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.startDrag ).toHaveBeenCalled();
 		} );
 
 		it( 'should start marquee selection when no layer selected', () => {
@@ -344,34 +362,34 @@ describe( 'CanvasEvents', () => {
 		} );
 
 		it( 'should handle resize when resizing', () => {
-			mockCanvasManager.isResizing = true;
-			mockCanvasManager.resizeHandle = { type: 'se' };
-			mockCanvasManager.dragStartPoint = { x: 100, y: 100 };
+			mockCanvasManager.transformController.isResizing = true;
+			mockCanvasManager.transformController.resizeHandle = { type: 'se' };
+			mockCanvasManager.transformController.dragStartPoint = { x: 100, y: 100 };
 
 			const event = { clientX: 150, clientY: 150 };
 			canvasEvents.handleMouseMove( event );
 
-			expect( mockCanvasManager.handleResize ).toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.handleResize ).toHaveBeenCalled();
 		} );
 
 		it( 'should handle rotation when rotating', () => {
-			mockCanvasManager.isRotating = true;
-			mockCanvasManager.dragStartPoint = { x: 100, y: 100 };
+			mockCanvasManager.transformController.isRotating = true;
+			mockCanvasManager.transformController.dragStartPoint = { x: 100, y: 100 };
 
 			const event = { clientX: 150, clientY: 150 };
 			canvasEvents.handleMouseMove( event );
 
-			expect( mockCanvasManager.handleRotation ).toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.handleRotation ).toHaveBeenCalled();
 		} );
 
 		it( 'should handle drag when dragging', () => {
-			mockCanvasManager.isDragging = true;
-			mockCanvasManager.dragStartPoint = { x: 100, y: 100 };
+			mockCanvasManager.transformController.isDragging = true;
+			mockCanvasManager.transformController.dragStartPoint = { x: 100, y: 100 };
 
 			const event = { clientX: 150, clientY: 150 };
 			canvasEvents.handleMouseMove( event );
 
-			expect( mockCanvasManager.handleDrag ).toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.handleDrag ).toHaveBeenCalled();
 		} );
 
 		it( 'should update cursor when not in active state', () => {
@@ -432,27 +450,27 @@ describe( 'CanvasEvents', () => {
 		} );
 
 		it( 'should finish resize', () => {
-			mockCanvasManager.isResizing = true;
+			mockCanvasManager.transformController.isResizing = true;
 			const event = { clientX: 150, clientY: 150 };
 			canvasEvents.handleMouseUp( event );
 
-			expect( mockCanvasManager.finishResize ).toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.finishResize ).toHaveBeenCalled();
 		} );
 
 		it( 'should finish rotation', () => {
-			mockCanvasManager.isRotating = true;
+			mockCanvasManager.transformController.isRotating = true;
 			const event = { clientX: 150, clientY: 150 };
 			canvasEvents.handleMouseUp( event );
 
-			expect( mockCanvasManager.finishRotation ).toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.finishRotation ).toHaveBeenCalled();
 		} );
 
 		it( 'should finish drag', () => {
-			mockCanvasManager.isDragging = true;
+			mockCanvasManager.transformController.isDragging = true;
 			const event = { clientX: 150, clientY: 150 };
 			canvasEvents.handleMouseUp( event );
 
-			expect( mockCanvasManager.finishDrag ).toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.finishDrag ).toHaveBeenCalled();
 		} );
 
 		it( 'should finish drawing for non-pointer tools', () => {
@@ -511,7 +529,7 @@ describe( 'CanvasEvents', () => {
 		} );
 
 		it( 'should not zoom when resizing', () => {
-			mockCanvasManager.isResizing = true;
+			mockCanvasManager.transformController.isResizing = true;
 			const event = { deltaY: -100, preventDefault: jest.fn() };
 			canvasEvents.handleWheel( event );
 
@@ -519,7 +537,7 @@ describe( 'CanvasEvents', () => {
 		} );
 
 		it( 'should not zoom when rotating', () => {
-			mockCanvasManager.isRotating = true;
+			mockCanvasManager.transformController.isRotating = true;
 			const event = { deltaY: -100, preventDefault: jest.fn() };
 			canvasEvents.handleWheel( event );
 
@@ -527,7 +545,7 @@ describe( 'CanvasEvents', () => {
 		} );
 
 		it( 'should not zoom when dragging', () => {
-			mockCanvasManager.isDragging = true;
+			mockCanvasManager.transformController.isDragging = true;
 			const event = { deltaY: -100, preventDefault: jest.fn() };
 			canvasEvents.handleWheel( event );
 

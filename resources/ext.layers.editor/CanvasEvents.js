@@ -101,10 +101,15 @@
 		if ( cm.currentTool === 'pointer' && cm.getSelectedLayerId && cm.getSelectedLayerId() ) {
 			const handleHit = cm.hitTestSelectionHandles( point );
 			if ( handleHit ) {
+				const tc = cm.transformController;
 				if ( handleHit.type === 'rotate' ) {
-					cm.startRotation( point );
+					if ( tc ) {
+						tc.startRotation( point );
+					}
 				} else {
-					cm.startResize( handleHit );
+					if ( tc ) {
+						tc.startResize( handleHit, cm.startPoint || point );
+					}
 				}
 				return;
 			}
@@ -120,7 +125,9 @@
 			if ( cm.currentTool === 'pointer' ) {
 				selectedLayer = cm.handleLayerSelection( point, isCtrlClick );
 				if ( selectedLayer && !isCtrlClick ) {
-					cm.startDrag( point );
+					if ( cm.transformController ) {
+						cm.transformController.startDrag( cm.startPoint || point );
+					}
 				} else if ( !selectedLayer && !isCtrlClick ) {
 					cm.startMarqueeSelection( point );
 				}
@@ -176,9 +183,10 @@
 			return;
 		}
 
-		if ( cm.isResizing && cm.resizeHandle && cm.dragStartPoint ) {
+		const tc = cm.transformController;
+		if ( tc && tc.isResizing && tc.resizeHandle && tc.dragStartPoint ) {
 			try {
-				cm.handleResize( point, e );
+				tc.handleResize( point, e );
 			} catch ( error ) {
 				// Log resize errors for debugging - these can occur during rapid interactions
 				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
@@ -188,18 +196,19 @@
 			return;
 		}
 
-		if ( cm.isRotating && cm.dragStartPoint ) {
-			cm.handleRotation( point, e );
+		if ( tc && tc.isRotating && tc.dragStartPoint ) {
+			tc.handleRotation( point, e );
 			return;
 		}
 
-		if ( cm.isDragging && cm.dragStartPoint ) {
-			cm.handleDrag( point );
+		if ( tc && tc.isDragging && tc.dragStartPoint ) {
+			tc.handleDrag( point );
 			return;
 		}
 
 		// Always update cursor when not actively resizing/rotating/dragging
-		if ( !cm.isResizing && !cm.isRotating && !cm.isDragging ) {
+		const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging );
+		if ( !isTransforming ) {
 			cm.updateCursor( point );
 		}
 
@@ -247,18 +256,19 @@
 			return;
 		}
 
-		if ( cm.isResizing ) {
-			cm.finishResize();
+		const tc = cm.transformController;
+		if ( tc && tc.isResizing ) {
+			tc.finishResize();
 			return;
 		}
 
-		if ( cm.isRotating ) {
-			cm.finishRotation();
+		if ( tc && tc.isRotating ) {
+			tc.finishRotation();
 			return;
 		}
 
-		if ( cm.isDragging ) {
-			cm.finishDrag();
+		if ( tc && tc.isDragging ) {
+			tc.finishDrag();
 			return;
 		}
 
@@ -276,8 +286,10 @@
 
 	CanvasEvents.prototype.handleWheel = function ( e ) {
 		const cm = this.cm;
+		const tc = cm.transformController;
 		// Don't zoom when resizing, rotating, dragging or panning
-		if ( cm.isResizing || cm.isRotating || cm.isDragging || cm.isPanning ) {
+		const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging );
+		if ( isTransforming || cm.isPanning ) {
 			e.preventDefault();
 			return;
 		}

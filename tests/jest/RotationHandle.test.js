@@ -124,9 +124,9 @@ describe('Rotation Handle Interaction', () => {
         // Mock SelectionManager.selectionHandles
         selectionManager.selectionHandles = [rotateHandle];
 
-        // Spy on startRotation
-        const startRotationSpy = jest.spyOn(canvasManager, 'startRotation');
-        const startResizeSpy = jest.spyOn(canvasManager, 'startResize');
+        // Spy on transformController.startRotation (CanvasEvents now calls transformController directly)
+        const startRotationSpy = jest.spyOn(canvasManager.transformController, 'startRotation');
+        const startResizeSpy = jest.spyOn(canvasManager.transformController, 'startResize');
 
         // Simulate Mouse Down on the rotation handle
         const event = {
