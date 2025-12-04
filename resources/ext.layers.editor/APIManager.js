@@ -550,11 +550,13 @@ class APIManager {
 				// Process the current layer set
 				if ( layersInfo.layerset ) {
 					this.extractLayerSetData( layersInfo.layerset );
-					// Store set-specific revisions for the revision selector
-					if ( Array.isArray( layersInfo.all_layersets ) ) {
-						this.editor.stateManager.set( 'setRevisions', layersInfo.all_layersets );
-						this.editor.stateManager.set( 'allLayerSets', layersInfo.all_layersets );
-					}
+					// Use set_revisions (specific to this named set) if available,
+					// otherwise fall back to all_layersets for backwards compatibility
+					const revisions = Array.isArray( layersInfo.set_revisions )
+						? layersInfo.set_revisions
+						: ( Array.isArray( layersInfo.all_layersets ) ? layersInfo.all_layersets : [] );
+					this.editor.stateManager.set( 'setRevisions', revisions );
+					this.editor.stateManager.set( 'allLayerSets', revisions );
 				} else {
 					// Set doesn't exist yet or has no revisions - empty state
 					this.editor.stateManager.set( 'layers', [] );

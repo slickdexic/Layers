@@ -165,38 +165,33 @@ class ApiLayersInfo extends ApiBase {
 				];
 			}
 
-			// Get all revisions (backwards compatibility)
-			$fetchLimit = min( $limit + 1, 201 );
-			$allLayerSets = $db->getLayerSetsForImageWithOptions(
-				$file->getName(),
-				$fileSha1,
-				[
-					'sort' => 'ls_revision',
-					'direction' => 'DESC',
-					'limit' => $fetchLimit,
-					'offset' => $offset,
-					'includeData' => false
-				]
-			);
-			$hasMore = count( $allLayerSets ) > $limit;
-			if ( $hasMore ) {
-				$allLayerSets = array_slice( $allLayerSets, 0, $limit );
+			// Get all revisions for the CURRENT set only (not all sets)
+			// This ensures the revision selector shows only relevant history
+			$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;
+			if ( $currentSetName ) {
+				// Use set-specific revisions
+				$allLayerSets = $db->getSetRevisions( $file->getName(), $fileSha1, $currentSetName, $limit );
+			} else {
+				// Fallback for backwards compatibility - get all revisions
+				$fetchLimit = min( $limit + 1, 201 );
+				$allLayerSets = $db->getLayerSetsForImageWithOptions(
+					$file->getName(),
+					$fileSha1,
+					[
+						'sort' => 'ls_revision',
+						'direction' => 'DESC',
+						'limit' => $fetchLimit,
+						'offset' => $offset,
+						'includeData' => false
+					]
+				);
+				$hasMore = count( $allLayerSets ) > $limit;
+				if ( $hasMore ) {
+					$allLayerSets = array_slice( $allLayerSets, 0, $limit );
+				}
 			}
 			$allLayerSets = $this->enrichWithUserNames( $allLayerSets );
 			$result['all_layersets'] = $allLayerSets;
-
-			if ( $hasMore ) {
-				$nextOffset = $offset + $limit;
-				$continuation = [
-					'offset' => $nextOffset,
-					'continue' => $this->formatContinueParameter( $nextOffset )
-				];
-				$result['continuation'] = $continuation;
-				// Add continuation to result for client-side pagination
-				$this->getResult()->addValue( null, 'continue', [
-					'continue' => $continuation['continue']
-				] );
-			}
 		}
 
 		// Always include named_sets summary (except for specific layersetid lookup)

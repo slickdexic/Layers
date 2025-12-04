@@ -639,19 +639,25 @@ Extended `applyRotatedResizeCorrection()` to handle corner handles. The fix calc
 
 **Severity:** Medium  
 **Component:** LayersEditor / APIManager  
-**Status:** 🔴 Open  
-**Reported:** December 3, 2025
+**Status:** ✅ Fixed  
+**Reported:** December 3, 2025  
+**Fixed:** December 3, 2025
 
 **Description:**  
 The revision history panel displays revisions from ALL layer-sets for an image, rather than filtering to show only revisions belonging to the currently active layer-set.
 
-**Expected Behavior:**  
-When viewing/editing a specific named layer-set (e.g., "anatomy"), the revision history should only show revisions for that layer-set, not revisions from other sets like "default" or "labels".
+**Root Cause:**  
+Two issues:
+1. PHP API (`ApiLayersInfo.php`) was returning ALL revisions in `all_layersets` regardless of which set was loaded
+2. JS client wasn't using `set_revisions` (set-specific revisions) when available
 
-**Likely Location:**  
-- `resources/ext.layers.editor/APIManager.js` - API request parameters
-- `resources/ext.layers.editor/LayersEditor.js` - History panel population
-- `src/Api/ApiLayersInfo.php` - Server-side filtering by setname
+**Fix Applied:**  
+1. Updated `ApiLayersInfo.php` to filter `all_layersets` by current set name using `getSetRevisions()`
+2. Updated `APIManager.js` `loadLayersBySetName()` to prefer `set_revisions` over `all_layersets`
+
+**Files Changed:**
+- `src/Api/ApiLayersInfo.php`
+- `resources/ext.layers.editor/APIManager.js`
 
 ---
 
