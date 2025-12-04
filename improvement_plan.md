@@ -609,6 +609,38 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 
 ---
 
+## Known Bugs
+
+Tracked bugs requiring investigation and fixes.
+
+### BUG-001: Rectangle resize corner drift
+
+**Severity:** Low  
+**Component:** TransformController / CanvasManager  
+**Status:** Open  
+**Reported:** December 3, 2025
+
+**Description:**  
+When resizing a rectangle object by dragging one of the corner handles, the opposite corner (which should remain anchored) tends to drift slightly during the resize operation. Users expect the opposite corner to stay fixed in place.
+
+**Expected Behavior:**  
+Dragging a corner resize handle should scale the rectangle while keeping the diagonally opposite corner anchored at its original position.
+
+**Actual Behavior:**  
+The opposite corner moves/drifts during resize, causing the rectangle to shift position in addition to changing size.
+
+**Likely Location:**  
+- `resources/ext.layers.editor/canvas/TransformController.js` - resize handle logic
+- `resources/ext.layers.editor/CanvasManager.js` - transform calculations
+
+**Reproduction Steps:**
+1. Create a rectangle in the editor
+2. Select the rectangle
+3. Drag any corner resize handle
+4. Observe that the opposite corner shifts position
+
+---
+
 ## Quick Reference
 
 ### P0 — This Week (Critical)
