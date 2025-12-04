@@ -635,6 +635,104 @@ Extended `applyRotatedResizeCorrection()` to handle corner handles. The fix calc
 
 ---
 
+### BUG-002: Revision history shows all layer-sets
+
+**Severity:** Medium  
+**Component:** LayersEditor / APIManager  
+**Status:** 🔴 Open  
+**Reported:** December 3, 2025
+
+**Description:**  
+The revision history panel displays revisions from ALL layer-sets for an image, rather than filtering to show only revisions belonging to the currently active layer-set.
+
+**Expected Behavior:**  
+When viewing/editing a specific named layer-set (e.g., "anatomy"), the revision history should only show revisions for that layer-set, not revisions from other sets like "default" or "labels".
+
+**Likely Location:**  
+- `resources/ext.layers.editor/APIManager.js` - API request parameters
+- `resources/ext.layers.editor/LayersEditor.js` - History panel population
+- `src/Api/ApiLayersInfo.php` - Server-side filtering by setname
+
+---
+
+### BUG-003: No layer-set deletion or permissions management
+
+**Severity:** Medium  
+**Component:** API / LayersEditor  
+**Status:** 🔴 Open (Feature Gap)  
+**Reported:** December 3, 2025
+
+**Description:**  
+There is currently no way to:
+1. Delete an existing layer-set
+2. Manage permissions for layer-sets (owner controls, special permissions)
+
+**Expected Behavior:**  
+- Users should be able to delete layer-sets they own (or admins can delete any)
+- Layer-sets should support ownership and permission controls (who can edit, who can view)
+
+**Likely Location:**  
+- New API module needed: `ApiLayersDelete.php`
+- Permission checks in `ApiLayersSave.php`
+- UI controls in `LayersEditor.js` or new management panel
+
+**Notes:**  
+This is a feature gap documented in `docs/NAMED_LAYER_SETS.md` as future work.
+
+---
+
+### BUG-004: False dirty state on selection without modification
+
+**Severity:** Low  
+**Component:** LayersEditor / StateManager  
+**Status:** 🔴 Open  
+**Reported:** December 3, 2025
+
+**Description:**  
+When selecting an object (without making any modifications), then switching layer-set or clicking Cancel/X, the editor incorrectly prompts with a "Save changes?" dialog even though no actual changes were made.
+
+**Expected Behavior:**  
+Selecting an object should not mark the editor as dirty. Only actual modifications (moving, resizing, property changes, etc.) should trigger the dirty state.
+
+**Likely Location:**  
+- `resources/ext.layers.editor/LayersEditor.js` - `markDirty()` calls
+- `resources/ext.layers.editor/SelectionManager.js` - Selection change handling
+- `resources/ext.layers.editor/StateManager.js` - Dirty state tracking
+
+**Reproduction Steps:**
+1. Open editor with existing layers
+2. Click on an object to select it (no modifications)
+3. Click Cancel or switch layer-set
+4. Observe: "Save changes?" dialog appears incorrectly
+
+---
+
+### BUG-005: Selection persists across layer-set switches
+
+**Severity:** Low  
+**Component:** LayersEditor / SelectionManager  
+**Status:** 🔴 Open  
+**Reported:** December 3, 2025
+
+**Description:**  
+When an object is selected in one layer-set, then switching to a different layer-set that happens to have an object with the same ID, the object remains visually selected. Selection state should be cleared when switching layer-sets.
+
+**Expected Behavior:**  
+When switching to a different layer-set, all selections should be cleared. The new layer-set should open with no objects selected.
+
+**Likely Location:**  
+- `resources/ext.layers.editor/LayersEditor.js` - Layer-set switch handling
+- `resources/ext.layers.editor/SelectionManager.js` - `deselectAll()` calls
+- `resources/ext.layers.editor/CanvasManager.js` - Selection state reset
+
+**Reproduction Steps:**
+1. Open a layer-set and select an object
+2. Save the layer-set
+3. Switch to a different layer-set that has an object with the same ID
+4. Observe: The object appears selected in the new layer-set
+
+---
+
 ## Quick Reference
 
 ### P0 — This Week (Critical)
