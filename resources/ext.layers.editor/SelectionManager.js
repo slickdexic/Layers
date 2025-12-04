@@ -754,6 +754,14 @@
 			}
 		}
 
+		// Sync selection state to StateManager so UI components can read it
+		if ( this.canvasManager.editor && this.canvasManager.editor.stateManager ) {
+			this.canvasManager.editor.stateManager.set(
+				'selectedLayerIds',
+				this.selectedLayerIds.slice( 0 )
+			);
+		}
+
 		if ( this.canvasManager.editor && typeof this.canvasManager.editor.updateStatus === 'function' ) {
 			this.canvasManager.editor.updateStatus( {
 				selection: this.selectedLayerIds.length

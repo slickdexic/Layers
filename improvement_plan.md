@@ -715,13 +715,17 @@ Modified `TransformController.finishDrag()` to only call `markDirty()` if actual
 When an object is selected in one layer-set, then switching to a different layer-set that happens to have an object with the same ID, the object remains visually selected. Selection state should be cleared when switching layer-sets.
 
 **Root Cause:**  
-API loading methods (`loadLayers`, `loadLayersBySetName`, `loadRevisionById`) rendered new layers without clearing the existing selection state.
+Two issues:
+1. API loading methods didn't clear selection before rendering new layers
+2. `SelectionManager.notifySelectionChange()` didn't sync selection state to StateManager, so UI components (LayerPanel) reading from StateManager saw stale data
 
 **Fix Applied:**  
-Added `selectionManager.clearSelection()` calls before rendering in all three API loading methods to ensure selection state is reset when loading any new layer data.
+1. Added `selectionManager.clearSelection()` calls in all three API loading methods
+2. Added StateManager sync in `notifySelectionChange()` to keep `selectedLayerIds` in sync
 
 **Files Changed:**
 - `resources/ext.layers.editor/APIManager.js`
+- `resources/ext.layers.editor/SelectionManager.js`
 
 ---
 
