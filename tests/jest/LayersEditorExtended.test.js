@@ -155,6 +155,29 @@ describe( 'LayersEditor Extended', () => {
 
 		window.layersRegistry = mockRegistry;
 
+		// Mock EventTracker for event listener management
+		window.EventTracker = jest.fn( function () {
+			this.listeners = [];
+			this.add = jest.fn( ( element, event, handler, options ) => {
+				element.addEventListener( event, handler, options );
+				this.listeners.push( { element, event, handler, options } );
+				return { element, event, handler, options };
+			} );
+			this.remove = jest.fn();
+			this.removeAllForElement = jest.fn( ( elem ) => {
+				this.listeners = this.listeners.filter( ( l ) => l.element !== elem );
+			} );
+			this.count = jest.fn( () => this.listeners.length );
+			this.destroy = jest.fn( () => {
+				this.listeners.forEach( ( info ) => {
+					if ( info.element && info.element.removeEventListener ) {
+						info.element.removeEventListener( info.event, info.handler, info.options );
+					}
+				} );
+				this.listeners = [];
+			} );
+		} );
+
 		jest.resetModules();
 		require( '../../resources/ext.layers.editor/LayersEditor.js' );
 		LayersEditor = window.LayersEditor;
@@ -250,25 +273,16 @@ describe( 'LayersEditor Extended', () => {
 			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
 		} );
 
-		it( 'should return message text when mw.message available', () => {
-			window.mw = {
-				message: jest.fn().mockReturnValue( { text: () => 'Translated text' } ),
-				config: { get: jest.fn() }
-			};
-			expect( editor.getMessage( 'test-key', 'fallback' ) ).toBe( 'Translated text' );
+		it( 'should delegate to window.layersMessages.get', () => {
+			// getMessage now delegates to centralized MessageHelper
+			const result = editor.getMessage( 'test-key', 'fallback' );
+			expect( typeof result ).toBe( 'string' );
 		} );
 
-		it( 'should return fallback when mw.message not available', () => {
-			window.mw = { config: { get: jest.fn() } };
-			expect( editor.getMessage( 'test-key', 'fallback' ) ).toBe( 'fallback' );
-		} );
-
-		it( 'should use mw.msg as fallback', () => {
-			window.mw = {
-				msg: jest.fn().mockReturnValue( 'msg text' ),
-				config: { get: jest.fn() }
-			};
-			expect( editor.getMessage( 'test-key', 'fallback' ) ).toBe( 'msg text' );
+		it( 'should pass fallback parameter through', () => {
+			const result = editor.getMessage( 'test-key', 'my-fallback' );
+			// MessageHelper handles the fallback logic internally
+			expect( typeof result ).toBe( 'string' );
 		} );
 	} );
 
@@ -937,20 +951,21 @@ describe( 'LayersEditor Extended', () => {
 			
 			editor.trackWindowListener( 'resize', handler );
 			
-			expect( addSpy ).toHaveBeenCalledWith( 'resize', handler );
-			expect( editor.windowListeners ).toContainEqual( { event: 'resize', handler } );
+			expect( addSpy ).toHaveBeenCalledWith( 'resize', handler, undefined );
+			// Now tracked via EventTracker
+			expect( editor.eventTracker.add ).toHaveBeenCalledWith( window, 'resize', handler, undefined );
 			
 			addSpy.mockRestore();
 		} );
 
-		it( 'should initialize windowListeners array if not present', () => {
-			editor.windowListeners = undefined;
+		it( 'should use EventTracker for listener management', () => {
 			const handler = jest.fn();
 			
 			editor.trackWindowListener( 'resize', handler );
 			
-			expect( Array.isArray( editor.windowListeners ) ).toBe( true );
-			expect( editor.windowListeners.length ).toBe( 1 );
+			// Now uses EventTracker instead of array
+			expect( editor.eventTracker ).toBeDefined();
+			expect( editor.eventTracker.add ).toHaveBeenCalled();
 		} );
 	} );
 

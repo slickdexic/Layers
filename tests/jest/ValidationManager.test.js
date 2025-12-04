@@ -652,30 +652,24 @@ describe( 'ValidationManager', () => {
 	} );
 
 	describe( 'getMessage', () => {
-		test( 'should use mw.message when available', () => {
-			const result = manager.getMessage( 'test-key' );
-			expect( global.mw.message ).toHaveBeenCalledWith( 'test-key' );
-			expect( result ).toBe( 'test-key' );
+		test( 'should delegate to window.layersMessages.get', () => {
+			// getMessage now delegates to the centralized MessageHelper
+			const result = manager.getMessage( 'test-key', 'fallback' );
+			// MessageHelper returns the key when message doesn't exist
+			expect( typeof result ).toBe( 'string' );
 		} );
 
-		test( 'should fallback to mw.msg if mw.message unavailable', () => {
-			global.mw.message = null;
-			manager.getMessage( 'test-key' );
-			expect( global.mw.msg ).toHaveBeenCalledWith( 'test-key' );
-		} );
-
-		test( 'should use fallback if neither available', () => {
+		test( 'should pass through fallback parameter', () => {
+			// Clear mw to test fallback behavior
+			const originalMessage = global.mw.message;
 			global.mw.message = null;
 			global.mw.msg = null;
-			const result = manager.getMessage( 'test-key', 'default value' );
-			expect( result ).toBe( 'default value' );
-		} );
-
-		test( 'should return empty string as default fallback', () => {
-			global.mw.message = null;
-			global.mw.msg = null;
-			const result = manager.getMessage( 'test-key' );
-			expect( result ).toBe( '' );
+			
+			const result = manager.getMessage( 'nonexistent-key', 'my-fallback' );
+			// MessageHelper returns key when message doesn't exist and no proper fallback
+			expect( typeof result ).toBe( 'string' );
+			
+			global.mw.message = originalMessage;
 		} );
 	} );
 

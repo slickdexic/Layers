@@ -69,10 +69,8 @@
 		this.layerPanel = null;
 		this.toolbar = null;
 
-		// Event listener tracking for cleanup
-		this.domEventListeners = [];
-		this.windowListeners = [];
-		this.documentListeners = [];
+		// Initialize EventTracker for memory-safe event listener management
+		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
 		this.isDestroyed = false;
 
 		// Debug mode - check MediaWiki config first, then fallback to config
@@ -94,8 +92,8 @@
 		this.registry = window.layersRegistry;
 		if ( !this.registry && window.layersModuleRegistry ) {
 			// Fallback to deprecated export with warning
-			if ( this.debug && typeof console !== 'undefined' ) {
-				console.warn( '[LayersEditor] window.layersModuleRegistry is deprecated. Use window.layersRegistry instead.' );
+			if ( this.debug && typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+				mw.log.warn( '[LayersEditor] window.layersModuleRegistry is deprecated. Use window.layersRegistry instead.' );
 			}
 			this.registry = window.layersModuleRegistry;
 		}
@@ -425,6 +423,18 @@
 		this.debugLog( '[LayersEditor] CanvasManager created:', this.canvasManager );
 		this.debugLog( '[LayersEditor] CanvasManager backgroundImageUrl:', this.imageUrl );
 
+		// Initialize LayerSetManager for revision/set management
+		if ( typeof window.LayerSetManager === 'function' ) {
+			this.layerSetManager = new window.LayerSetManager( {
+				editor: this,
+				stateManager: this.stateManager,
+				apiManager: this.apiManager,
+				uiManager: this.uiManager,
+				debug: this.debug
+			} );
+			this.debugLog( '[LayersEditor] LayerSetManager created' );
+		}
+
 		// Note: Undo/redo is handled by HistoryManager via this.historyManager
 
 		// Load existing layers
@@ -642,9 +652,17 @@
 
 	/**
 	 * Build the revision selector dropdown
+	 * Delegates to LayerSetManager if available
 	 * @return {void}
 	 */
 	LayersEditor.prototype.buildRevisionSelector = function () {
+		// Delegate to LayerSetManager if available
+		if ( this.layerSetManager ) {
+			this.layerSetManager.buildRevisionSelector();
+			return;
+		}
+
+		// Fallback to direct implementation
 		try {
 			if ( this.uiManager && this.uiManager.revSelectEl ) {
 				const selectEl = this.uiManager.revSelectEl;
@@ -695,9 +713,17 @@
 
 	/**
 	 * Update the revision load button state
+	 * Delegates to LayerSetManager if available
 	 * @return {void}
 	 */
 	LayersEditor.prototype.updateRevisionLoadButton = function () {
+		// Delegate to LayerSetManager if available
+		if ( this.layerSetManager ) {
+			this.layerSetManager.updateRevisionLoadButton();
+			return;
+		}
+
+		// Fallback to direct implementation
 		try {
 			if ( this.uiManager && this.uiManager.revLoadBtnEl && this.uiManager.revSelectEl ) {
 				const selectedValue = this.uiManager.revSelectEl.value;
@@ -712,9 +738,17 @@
 
 	/**
 	 * Build and populate the named layer sets selector dropdown
+	 * Delegates to LayerSetManager if available
 	 * @return {void}
 	 */
 	LayersEditor.prototype.buildSetSelector = function () {
+		// Delegate to LayerSetManager if available
+		if ( this.layerSetManager ) {
+			this.layerSetManager.buildSetSelector();
+			return;
+		}
+
+		// Fallback to direct implementation
 		try {
 			const namedSets = this.stateManager.get( 'namedSets' ) || [];
 			const currentSetName = this.stateManager.get( 'currentSetName' ) || 'default';
@@ -773,9 +807,17 @@
 
 	/**
 	 * Update the new set button's enabled/disabled state based on limits
+	 * Delegates to LayerSetManager if available
 	 * @return {void}
 	 */
 	LayersEditor.prototype.updateNewSetButtonState = function () {
+		// Delegate to LayerSetManager if available
+		if ( this.layerSetManager ) {
+			this.layerSetManager.updateNewSetButtonState();
+			return;
+		}
+
+		// Fallback to direct implementation
 		try {
 			const newSetBtn = this.uiManager && this.uiManager.setNewBtnEl;
 			if ( !newSetBtn ) {
@@ -798,10 +840,17 @@
 
 	/**
 	 * Load a layer set by its name
+	 * Delegates to LayerSetManager if available
 	 * @param {string} setName - The name of the set to load
 	 * @return {Promise<void>}
 	 */
 	LayersEditor.prototype.loadLayerSetByName = async function ( setName ) {
+		// Delegate to LayerSetManager if available
+		if ( this.layerSetManager ) {
+			return this.layerSetManager.loadLayerSetByName( setName );
+		}
+
+		// Fallback to direct implementation
 		try {
 			if ( !setName ) {
 				this.errorLog( 'loadLayerSetByName: No set name provided' );
@@ -846,10 +895,17 @@
 
 	/**
 	 * Create a new named layer set
+	 * Delegates to LayerSetManager if available
 	 * @param {string} setName - The name for the new set
 	 * @return {Promise<boolean>} True if creation succeeded
 	 */
 	LayersEditor.prototype.createNewLayerSet = async function ( setName ) {
+		// Delegate to LayerSetManager if available
+		if ( this.layerSetManager ) {
+			return this.layerSetManager.createNewLayerSet( setName );
+		}
+
+		// Fallback to direct implementation
 		try {
 			if ( !setName || !setName.trim() ) {
 				mw.notify(
@@ -971,10 +1027,18 @@
 
 	/**
 	 * Load a specific revision by ID
+	 * Delegates to LayerSetManager if available
 	 * @param {number} revisionId - The revision ID to load
 	 * @return {void}
 	 */
 	LayersEditor.prototype.loadRevisionById = function ( revisionId ) {
+		// Delegate to LayerSetManager if available
+		if ( this.layerSetManager ) {
+			this.layerSetManager.loadRevisionById( revisionId );
+			return;
+		}
+
+		// Fallback to direct implementation
 		try {
 			this.apiManager.loadRevisionById( revisionId );
 		} catch ( error ) {
@@ -990,7 +1054,7 @@
 	 * @return {string} Localized message
 	 */
 	LayersEditor.prototype.getMessage = function ( key, fallback = '' ) {
-		return ( mw.message ? mw.message( key ).text() : ( mw.msg ? mw.msg( key ) : fallback ) );
+		return window.layersMessages.get( key, fallback );
 	};
 
 	LayersEditor.prototype.setCurrentTool = function ( tool, options ) {
@@ -1407,6 +1471,11 @@
 			}
 		}
 
+		// Clean up LayerSetManager
+		if ( this.layerSetManager && typeof this.layerSetManager.destroy === 'function' ) {
+			this.layerSetManager.destroy();
+		}
+
 		// Clean up canvas manager and its event systems
 		if ( this.canvasManager ) {
 			if ( this.canvasManager.events && typeof this.canvasManager.events.destroy === 'function' ) {
@@ -1441,6 +1510,7 @@
 		this.canvasManager = null;
 		this.toolbar = null;
 		this.layerPanel = null;
+		this.layerSetManager = null;
 		this.config = null;
 		this.filename = null;
 		this.containerElement = null;
@@ -1456,22 +1526,10 @@
 	 */
 	LayersEditor.prototype.cleanupGlobalEventListeners = function () {
 		// Note: Global error handlers are shared and shouldn't be removed per instance
-		// Only clean up instance-specific listeners
-		
-		// Remove any window listeners that were added for this specific instance
-		if ( this.windowListeners ) {
-			this.windowListeners.forEach( function( listenerInfo ) {
-				window.removeEventListener( listenerInfo.event, listenerInfo.handler );
-			} );
-			this.windowListeners = [];
-		}
-
-		// Remove any document listeners that were added for this specific instance
-		if ( this.documentListeners ) {
-			this.documentListeners.forEach( function( listenerInfo ) {
-				document.removeEventListener( listenerInfo.event, listenerInfo.handler );
-			} );
-			this.documentListeners = [];
+		// Only clean up instance-specific listeners tracked by EventTracker
+		if ( this.eventTracker ) {
+			this.eventTracker.removeAllForElement( window );
+			this.eventTracker.removeAllForElement( document );
 		}
 	};
 
@@ -1479,23 +1537,11 @@
 	 * Clean up DOM event listeners to prevent memory leaks
 	 */
 	LayersEditor.prototype.cleanupDOMEventListeners = function () {
-		// Clean up container element listeners
-		if ( this.containerElement ) {
-			// Remove all event listeners from container by cloning it
-			const newContainer = this.containerElement.cloneNode( true );
-			if ( this.containerElement.parentNode ) {
-				this.containerElement.parentNode.replaceChild( newContainer, this.containerElement );
-			}
-		}
-
-		// Clean up any other DOM elements with listeners
-		if ( this.domEventListeners ) {
-			this.domEventListeners.forEach( function( listenerInfo ) {
-				if ( listenerInfo.element && listenerInfo.element.removeEventListener ) {
-					listenerInfo.element.removeEventListener( listenerInfo.event, listenerInfo.handler );
-				}
-			} );
-			this.domEventListeners = [];
+		// Clean up all DOM element listeners tracked by EventTracker
+		if ( this.eventTracker ) {
+			this.eventTracker.destroy();
+			// Recreate tracker in case editor is reused
+			this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
 		}
 	};
 
@@ -1504,26 +1550,45 @@
 	 * @param {Element} element DOM element
 	 * @param {string} event Event name
 	 * @param {Function} handler Event handler
+	 * @param {Object} [options] Event listener options
 	 */
-	LayersEditor.prototype.trackEventListener = function ( element, event, handler ) {
-		if ( !this.domEventListeners ) {
-			this.domEventListeners = [];
+	LayersEditor.prototype.trackEventListener = function ( element, event, handler, options ) {
+		if ( this.eventTracker ) {
+			this.eventTracker.add( element, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			element.addEventListener( event, handler, options );
 		}
-		this.domEventListeners.push( { element: element, event: event, handler: handler } );
-		element.addEventListener( event, handler );
 	};
 
 	/**
 	 * Track window event listeners for proper cleanup
 	 * @param {string} event Event name
 	 * @param {Function} handler Event handler
+	 * @param {Object} [options] Event listener options
 	 */
-	LayersEditor.prototype.trackWindowListener = function ( event, handler ) {
-		if ( !this.windowListeners ) {
-			this.windowListeners = [];
+	LayersEditor.prototype.trackWindowListener = function ( event, handler, options ) {
+		if ( this.eventTracker ) {
+			this.eventTracker.add( window, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			window.addEventListener( event, handler, options );
 		}
-		this.windowListeners.push( { event: event, handler: handler } );
-		window.addEventListener( event, handler );
+	};
+
+	/**
+	 * Track document event listeners for proper cleanup
+	 * @param {string} event Event name
+	 * @param {Function} handler Event handler
+	 * @param {Object} [options] Event listener options
+	 */
+	LayersEditor.prototype.trackDocumentListener = function ( event, handler, options ) {
+		if ( this.eventTracker ) {
+			this.eventTracker.add( document, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			document.addEventListener( event, handler, options );
+		}
 	};
 
 	// Export LayersEditor to global scope

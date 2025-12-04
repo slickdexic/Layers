@@ -518,6 +518,22 @@
 		return totalSize;
 	};
 
+	/**
+	 * Clean up resources and clear state
+	 */
+	HistoryManager.prototype.destroy = function () {
+		// Clear history
+		this.clearHistory();
+		this.history = [];
+		this.batchChanges = [];
+		this.batchOperations = [];
+		this.batchStartSnapshot = null;
+
+		// Clear references
+		this.canvasManager = null;
+		this.config = null;
+	};
+
 	// Export HistoryManager to global scope
 	window.HistoryManager = HistoryManager;
 	// Also export via CommonJS when available (for Jest tests)

@@ -183,6 +183,7 @@
 			"scripts": [
 			"compat.js",
 				"MessageHelper.js",
+				"EventTracker.js",
 				"StyleController.js",
 				"GeometryUtils.js",
 				"ErrorHandler.js",
@@ -191,6 +192,7 @@
 				"HistoryManager.js",
 				"ToolManager.js",
 				"TransformationEngine.js",
+				"ShapeRenderer.js",
 				"CanvasRenderer.js",
 				"StateManager.js",
 				"UIManager.js",
@@ -221,7 +223,9 @@
 				"ImportExportManager.js",
 				"ToolbarStyleControls.js",
 				"Toolbar.js",
-				"LayersEditor.js"
+				"LayerSetManager.js",
+				"LayersEditor.js",
+				"LayersNamespace.js"
 			],
 			"styles": [
 				"editor-fixed.css"

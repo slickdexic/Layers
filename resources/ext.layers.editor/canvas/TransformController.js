@@ -1193,6 +1193,27 @@
 		};
 	};
 
+	/**
+	 * Clean up resources and state
+	 */
+	TransformController.prototype.destroy = function () {
+		// Cancel any pending transform events
+		this.transformEventScheduled = false;
+		this.lastTransformPayload = null;
+
+		// Clear transform state
+		this.isResizing = false;
+		this.isRotating = false;
+		this.isDragging = false;
+		this.resizeHandle = null;
+		this.dragStartPoint = null;
+		this.originalLayerState = null;
+		this.originalMultiLayerStates = null;
+
+		// Clear reference
+		this.manager = null;
+	};
+
 	// Export for use by CanvasManager
 	window.TransformController = TransformController;
 

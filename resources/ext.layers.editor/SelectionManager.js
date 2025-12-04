@@ -969,6 +969,24 @@
 		return null;
 	};
 
+	/**
+	 * Clean up resources and clear state
+	 */
+	SelectionManager.prototype.destroy = function () {
+		// Clear selection state
+		this.selectedLayerIds = [];
+		this.selectionHandles = [];
+		this.marqueeStart = null;
+		this.marqueeEnd = null;
+		this.dragStart = null;
+		this.originalLayerState = null;
+		this.lastSelectedId = null;
+
+		// Clear references
+		this.canvasManager = null;
+		this.config = null;
+	};
+
 	// Export SelectionManager to global scope
 	window.LayersSelectionManager = SelectionManager;
 

@@ -50,6 +50,25 @@ describe( 'Toolbar', function () {
 			this.handleKeyboardShortcuts = jest.fn();
 		} );
 
+		// Mock EventTracker for event listener management
+		global.window.EventTracker = jest.fn( function () {
+			this.listeners = [];
+			this.add = jest.fn( ( element, event, handler, options ) => {
+				element.addEventListener( event, handler, options );
+				this.listeners.push( { element, event, handler, options } );
+				return { element, event, handler, options };
+			} );
+			this.remove = jest.fn();
+			this.removeAllForElement = jest.fn();
+			this.count = jest.fn( () => this.listeners.length );
+			this.destroy = jest.fn( () => {
+				this.listeners.forEach( ( info ) => {
+					info.element.removeEventListener( info.event, info.handler, info.options );
+				} );
+				this.listeners = [];
+			} );
+		} );
+
 		// Load Toolbar code
 		const toolbarCode = fs.readFileSync(
 			path.join( __dirname, '../../resources/ext.layers.editor/Toolbar.js' ),
@@ -156,7 +175,8 @@ describe( 'Toolbar', function () {
 		it( 'should initialize document listeners array', function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 
-			expect( Array.isArray( toolbar.documentListeners ) ).toBe( true );
+			// Now uses EventTracker instead of array
+			expect( toolbar.eventTracker ).toBeDefined();
 		} );
 
 		it( 'should initialize dialog cleanups array', function () {
@@ -454,38 +474,37 @@ describe( 'Toolbar', function () {
 			const handler = jest.fn();
 			toolbar.addDocumentListener( 'keydown', handler );
 
-			expect( toolbar.documentListeners.length ).toBeGreaterThan( 0 );
+			// Now tracked via EventTracker
+			expect( toolbar.eventTracker.add ).toHaveBeenCalled();
 		} );
 
 		it( 'should not add listener with invalid handler', function () {
-			const initialLength = toolbar.documentListeners.length;
+			const initialCount = toolbar.eventTracker.add.mock.calls.length;
 			toolbar.addDocumentListener( 'click', null );
 
-			expect( toolbar.documentListeners.length ).toBe( initialLength );
+			expect( toolbar.eventTracker.add.mock.calls.length ).toBe( initialCount );
 		} );
 
 		it( 'should not add listener with missing event', function () {
-			const initialLength = toolbar.documentListeners.length;
+			const initialCount = toolbar.eventTracker.add.mock.calls.length;
 			toolbar.addDocumentListener( '', jest.fn() );
 
-			expect( toolbar.documentListeners.length ).toBe( initialLength );
+			expect( toolbar.eventTracker.add.mock.calls.length ).toBe( initialCount );
 		} );
 	} );
 
-	describe( 'removeDocumentListeners', function () {
+	describe( 'removeAllListeners', function () {
 		beforeEach( function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 		} );
 
-		it( 'should remove all tracked listeners', function () {
+		it( 'should remove all tracked listeners via EventTracker destroy', function () {
 			const handler = jest.fn();
-			const removeSpy = jest.spyOn( document, 'removeEventListener' );
 
 			toolbar.addDocumentListener( 'click', handler );
-			toolbar.removeDocumentListeners();
+			toolbar.removeAllListeners();
 
-			expect( removeSpy ).toHaveBeenCalled();
-			expect( toolbar.documentListeners.length ).toBe( 0 );
+			expect( toolbar.eventTracker.destroy ).toHaveBeenCalled();
 		} );
 	} );
 
@@ -557,7 +576,7 @@ describe( 'Toolbar', function () {
 
 		it( 'should remove document listeners', function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
-			const removeSpy = jest.spyOn( toolbar, 'removeDocumentListeners' );
+			const removeSpy = jest.spyOn( toolbar, 'removeAllListeners' );
 
 			toolbar.destroy();
 
@@ -580,7 +599,8 @@ describe( 'Toolbar', function () {
 			toolbar.destroy();
 
 			expect( toolbar.dialogCleanups.length ).toBe( 0 );
-			expect( toolbar.documentListeners.length ).toBe( 0 );
+			// eventTracker is now nulled instead of being an array
+			expect( toolbar.eventTracker ).toBeNull();
 		} );
 	} );
 

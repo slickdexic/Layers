@@ -20,7 +20,6 @@
 		"append_canvas_manager.js",
 		"test_load.js",
 		"resources/dist/",
-		"resources/ext.layers.editor/archive/",
 		"node_modules/",
 		"vendor/"
 	],
@@ -61,9 +60,7 @@
 				"InteractionController": "readonly",
 				"GeometryUtils": "readonly",
 				"LayersValidator": "readonly",
-				"EventHandler": "readonly",
 				"ErrorHandler": "readonly",
-				"EventSystem": "readonly",
 				"HistoryManager": "readonly",
 				"ToolManager": "readonly",
 				"TransformationEngine": "readonly",

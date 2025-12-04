@@ -617,6 +617,8 @@ class StateManager {
 
 	/**
 	 * Clean up state manager resources
+	/**
+	 * Destroy state manager and clean up resources
 	 */
 	destroy() {
 		// Cancel any pending lock timeout
@@ -644,7 +646,9 @@ class StateManager {
 
 if ( typeof window !== 'undefined' ) {
 	window.StateManager = StateManager;
-	window.stateManager = new StateManager();
+	// NOTE: Do NOT create a global singleton here.
+	// Each LayersEditor instance creates its own StateManager via the ModuleRegistry.
+	// Creating a singleton at load time causes bugs with multiple editors and memory leaks.
 }
 
 // Export for CommonJS/Jest tests

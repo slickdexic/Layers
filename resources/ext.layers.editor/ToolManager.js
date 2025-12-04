@@ -959,6 +959,32 @@
 		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	};
 
+	/**
+	 * Clean up resources and clear state
+	 */
+	ToolManager.prototype.destroy = function () {
+		// Finish any active drawing
+		this.finishCurrentDrawing();
+
+		// Hide and clean up text editor
+		this.hideTextEditor();
+		if ( this.textEditor && this.textEditor.parentNode ) {
+			this.textEditor.parentNode.removeChild( this.textEditor );
+		}
+		this.textEditor = null;
+		this.editingTextLayer = null;
+
+		// Clear state
+		this.pathPoints = [];
+		this.tempLayer = null;
+		this.startPoint = null;
+		this.currentStyle = null;
+
+		// Clear references
+		this.canvasManager = null;
+		this.config = null;
+	};
+
 	// Export ToolManager to global scope
 	window.LayersToolManager = ToolManager;
 

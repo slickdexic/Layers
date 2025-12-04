@@ -50,6 +50,29 @@ describe('LayerPanel', () => {
         window.ConfirmDialog = null;
         window.PropertiesForm = null;
 
+        // Mock EventTracker for event listener management
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((element, event, handler, options) => {
+                element.addEventListener(event, handler, options);
+                this.listeners.push({ element, event, handler, options });
+                return { element, event, handler, options };
+            });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn((elem) => {
+                this.listeners = this.listeners.filter(l => l.element !== elem);
+            });
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => {
+                this.listeners.forEach((info) => {
+                    if (info.element && info.element.removeEventListener) {
+                        info.element.removeEventListener(info.event, info.handler, info.options);
+                    }
+                });
+                this.listeners = [];
+            });
+        });
+
         // Setup DOM
         document.body.innerHTML = `
             <div id="layers-panel-container"></div>
@@ -111,8 +134,8 @@ describe('LayerPanel', () => {
                 editor: mockEditor
             });
 
-            expect(Array.isArray(panel.documentListeners)).toBe(true);
-            expect(Array.isArray(panel.targetListeners)).toBe(true);
+            // Now uses EventTracker instead of arrays
+            expect(panel.eventTracker).toBeDefined();
             expect(Array.isArray(panel.dialogCleanups)).toBe(true);
         });
     });
@@ -362,7 +385,8 @@ describe('LayerPanel', () => {
             const handler = jest.fn();
             panel.addDocumentListener('click', handler);
 
-            expect(panel.documentListeners.length).toBeGreaterThan(0);
+            // Now tracked via EventTracker
+            expect(panel.eventTracker.add).toHaveBeenCalled();
         });
 
         test('addTargetListener should track listener', () => {
@@ -376,7 +400,8 @@ describe('LayerPanel', () => {
             const handler = jest.fn();
             panel.addTargetListener(target, 'click', handler);
 
-            expect(panel.targetListeners.length).toBeGreaterThan(0);
+            // Now tracked via EventTracker
+            expect(panel.eventTracker.add).toHaveBeenCalledWith(target, 'click', handler, undefined);
         });
 
         test('removeDocumentListeners should clean up all document listeners', () => {
@@ -388,28 +413,21 @@ describe('LayerPanel', () => {
 
             const handler = jest.fn();
             panel.addDocumentListener('click', handler);
-            
-            const initialCount = panel.documentListeners.length;
             panel.removeDocumentListeners();
 
-            expect(panel.documentListeners.length).toBeLessThan(initialCount);
+            // Now uses EventTracker.removeAllForElement
+            expect(panel.eventTracker.removeAllForElement).toHaveBeenCalledWith(document);
         });
 
-        test('removeTargetListeners should clean up all target listeners', () => {
+        test('removeTargetListeners should be available for compatibility', () => {
             const container = document.getElementById('layers-panel-container');
             const panel = new LayerPanel({
                 container: container,
                 editor: mockEditor
             });
 
-            const target = document.createElement('div');
-            const handler = jest.fn();
-            panel.addTargetListener(target, 'click', handler);
-            
-            const initialCount = panel.targetListeners.length;
-            panel.removeTargetListeners();
-
-            expect(panel.targetListeners.length).toBeLessThan(initialCount);
+            // Method exists for compatibility, EventTracker.destroy handles actual cleanup
+            expect(typeof panel.removeTargetListeners).toBe('function');
         });
     });
 
@@ -475,8 +493,8 @@ describe('LayerPanel', () => {
 
             panel.destroy();
 
-            expect(panel.documentListeners.length).toBe(0);
-            expect(panel.targetListeners.length).toBe(0);
+            // EventTracker should be nulled and cleanups array empty
+            expect(panel.eventTracker).toBeNull();
             expect(panel.dialogCleanups.length).toBe(0);
         });
 

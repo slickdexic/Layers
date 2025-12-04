@@ -884,7 +884,20 @@ class APIManager {
 	}
 
 	getMessage( key, fallback = '' ) {
-		return ( mw.message ? mw.message( key ).text() : ( mw.msg ? mw.msg( key ) : fallback ) );
+		return window.layersMessages.get( key, fallback );
+	}
+
+	/**
+	 * Clean up resources and abort pending requests
+	 */
+	destroy() {
+		// Abort any pending API requests if possible
+		if ( this.api && typeof this.api.abort === 'function' ) {
+			this.api.abort();
+		}
+		this.api = null;
+		this.editor = null;
+		this.errorConfig = null;
 	}
 }
 

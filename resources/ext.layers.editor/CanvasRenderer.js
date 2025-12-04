@@ -55,22 +55,42 @@
 		this.canvasPool = [];
 		this.maxPoolSize = 5;
 
+		// Shape renderer (delegated shape drawing)
+		this.shapeRenderer = null;
+
 		this.init();
 	}
 
 	CanvasRenderer.prototype.init = function () {
 		this.ctx.imageSmoothingEnabled = true;
 		this.ctx.imageSmoothingQuality = 'high';
+
+		// Initialize ShapeRenderer for shape drawing delegation
+		if ( typeof window !== 'undefined' && window.ShapeRenderer ) {
+			this.shapeRenderer = new window.ShapeRenderer( this.ctx, {
+				zoom: this.zoom,
+				backgroundImage: this.backgroundImage,
+				canvas: this.canvas
+			} );
+		}
 	};
 
 	CanvasRenderer.prototype.setTransform = function ( zoom, panX, panY ) {
 		this.zoom = zoom;
 		this.panX = panX;
 		this.panY = panY;
+		// Sync zoom to ShapeRenderer
+		if ( this.shapeRenderer ) {
+			this.shapeRenderer.setZoom( zoom );
+		}
 	};
 
 	CanvasRenderer.prototype.setBackgroundImage = function ( img ) {
 		this.backgroundImage = img;
+		// Sync background to ShapeRenderer (for blur effects)
+		if ( this.shapeRenderer ) {
+			this.shapeRenderer.setBackgroundImage( img );
+		}
 	};
 
 	CanvasRenderer.prototype.setSelection = function ( selectedLayerIds ) {
@@ -259,6 +279,12 @@
 	};
 
 	CanvasRenderer.prototype.drawLayer = function ( layer ) {
+		// Delegate to ShapeRenderer if available
+		if ( this.shapeRenderer ) {
+			this.shapeRenderer.drawLayer( layer );
+			return;
+		}
+		// Fallback to local methods if ShapeRenderer not available
 		switch ( layer.type ) {
 			case 'text':
 				this.drawText( layer );
@@ -1420,6 +1446,46 @@
 		this.ctx.stroke();
 
 		this.ctx.restore();
+	};
+
+	/**
+	 * Clean up resources
+	 */
+	CanvasRenderer.prototype.destroy = function () {
+		// Clear canvas pool
+		if ( this.canvasPool && this.canvasPool.length > 0 ) {
+			this.canvasPool.forEach( function ( pooledCanvas ) {
+				pooledCanvas.width = 0;
+				pooledCanvas.height = 0;
+			} );
+			this.canvasPool = [];
+		}
+
+		// Clear canvas state stack
+		this.canvasStateStack = [];
+
+		// Clear selection state
+		this.selectedLayerIds = [];
+		this.selectionHandles = [];
+		this.rotationHandle = null;
+		this.marqueeRect = null;
+
+		// Clear guides
+		this.horizontalGuides = [];
+		this.verticalGuides = [];
+
+		// Destroy shape renderer
+		if ( this.shapeRenderer && typeof this.shapeRenderer.destroy === 'function' ) {
+			this.shapeRenderer.destroy();
+		}
+		this.shapeRenderer = null;
+
+		// Clear references
+		this.backgroundImage = null;
+		this.canvas = null;
+		this.ctx = null;
+		this.config = null;
+		this.editor = null;
 	};
 
 	// Export - ALWAYS set on window for cross-file dependencies

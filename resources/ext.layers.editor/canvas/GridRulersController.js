@@ -379,6 +379,23 @@
 		this.manager.renderLayers( this.manager.editor.layers );
 	};
 
+	/**
+	 * Clean up resources and state
+	 */
+	GridRulersController.prototype.destroy = function () {
+		// Clear guides
+		this.horizontalGuides = [];
+		this.verticalGuides = [];
+
+		// Clear drag state
+		this.isDraggingGuide = false;
+		this.dragGuideOrientation = null;
+		this.dragGuidePos = 0;
+
+		// Clear reference
+		this.manager = null;
+	};
+
 	// Export to global scope for MediaWiki ResourceLoader
 	window.GridRulersController = GridRulersController;
 

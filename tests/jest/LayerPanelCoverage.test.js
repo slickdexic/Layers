@@ -52,6 +52,29 @@ describe( 'LayerPanel Coverage Extension', () => {
 			handleError: jest.fn()
 		};
 
+		// Mock EventTracker for event listener management
+		window.EventTracker = jest.fn( function () {
+			this.listeners = [];
+			this.add = jest.fn( ( element, event, handler, options ) => {
+				element.addEventListener( event, handler, options );
+				this.listeners.push( { element, event, handler, options } );
+				return { element, event, handler, options };
+			} );
+			this.remove = jest.fn();
+			this.removeAllForElement = jest.fn( ( elem ) => {
+				this.listeners = this.listeners.filter( ( l ) => l.element !== elem );
+			} );
+			this.count = jest.fn( () => this.listeners.length );
+			this.destroy = jest.fn( () => {
+				this.listeners.forEach( ( info ) => {
+					if ( info.element && info.element.removeEventListener ) {
+						info.element.removeEventListener( info.event, info.handler, info.options );
+					}
+				} );
+				this.listeners = [];
+			} );
+		} );
+
 		// Setup DOM
 		document.body.innerHTML = `
 			<div id="layers-panel-container"></div>
@@ -724,46 +747,41 @@ describe( 'LayerPanel Coverage Extension', () => {
 
 		it( 'should add and remove document listeners', () => {
 			const handler = jest.fn();
-			const initialCount = layerPanel.documentListeners.length;
 			layerPanel.addDocumentListener( 'click', handler );
 
-			expect( layerPanel.documentListeners.length ).toBe( initialCount + 1 );
+			// Now tracked via EventTracker
+			expect( layerPanel.eventTracker.add ).toHaveBeenCalledWith( document, 'click', handler, undefined );
 
 			layerPanel.removeDocumentListeners();
 
-			expect( layerPanel.documentListeners.length ).toBe( 0 );
+			expect( layerPanel.eventTracker.removeAllForElement ).toHaveBeenCalledWith( document );
 		} );
 
 		it( 'should ignore invalid addDocumentListener calls', () => {
-			const initialCount = layerPanel.documentListeners.length;
+			const initialCount = layerPanel.eventTracker.add.mock.calls.length;
 			layerPanel.addDocumentListener( null, jest.fn() );
 			layerPanel.addDocumentListener( 'click', null );
 			layerPanel.addDocumentListener( 'click', 'not a function' );
 
-			expect( layerPanel.documentListeners.length ).toBe( initialCount );
+			expect( layerPanel.eventTracker.add.mock.calls.length ).toBe( initialCount );
 		} );
 
 		it( 'should add and remove target listeners', () => {
 			const target = document.createElement( 'div' );
 			const handler = jest.fn();
-			const initialCount = layerPanel.targetListeners.length;
 			layerPanel.addTargetListener( target, 'click', handler );
 
-			expect( layerPanel.targetListeners.length ).toBe( initialCount + 1 );
-
-			layerPanel.removeTargetListeners();
-
-			expect( layerPanel.targetListeners.length ).toBe( 0 );
+			// Now tracked via EventTracker
+			expect( layerPanel.eventTracker.add ).toHaveBeenCalledWith( target, 'click', handler, undefined );
 		} );
 
 		it( 'should ignore invalid addTargetListener calls', () => {
-			const target = document.createElement( 'div' );
-			const initialCount = layerPanel.targetListeners.length;
+			const initialCount = layerPanel.eventTracker.add.mock.calls.length;
 			layerPanel.addTargetListener( null, 'click', jest.fn() );
-			layerPanel.addTargetListener( target, 'click', null );
+			layerPanel.addTargetListener( document.createElement( 'div' ), 'click', null );
 			layerPanel.addTargetListener( {}, 'click', jest.fn() ); // no addEventListener
 
-			expect( layerPanel.targetListeners.length ).toBe( initialCount );
+			expect( layerPanel.eventTracker.add.mock.calls.length ).toBe( initialCount );
 		} );
 	} );
 

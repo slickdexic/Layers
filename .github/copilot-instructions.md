@@ -23,8 +23,9 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (5,462 lines - rendering/interactions), `ToolManager.js`, `RenderingCore.js`, `SelectionManager.js`, `HistoryManager.js`
+  - Core editor modules: `CanvasManager.js` (~1,950 lines - rendering/interactions), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
   - UI: `Toolbar.js`, `LayerPanel.js`, plus editor CSS (editor-fixed.css theme)
+  - Utilities: `EventTracker.js` (memory leak prevention via tracked event listeners)
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)

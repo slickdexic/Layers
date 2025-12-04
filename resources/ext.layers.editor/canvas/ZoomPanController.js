@@ -337,6 +337,18 @@
 		this.updateCanvasTransform();
 	};
 
+	/**
+	 * Clean up resources
+	 */
+	ZoomPanController.prototype.destroy = function () {
+		// Clear panning state
+		this.isPanning = false;
+		this.panStart = null;
+
+		// Clear reference
+		this.manager = null;
+	};
+
 	// Export to global scope for MediaWiki ResourceLoader
 	window.ZoomPanController = ZoomPanController;
 

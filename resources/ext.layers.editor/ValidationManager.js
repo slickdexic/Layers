@@ -233,7 +233,14 @@ class ValidationManager {
 	}
 
 	getMessage( key, fallback = '' ) {
-		return ( mw.message ? mw.message( key ).text() : ( mw.msg ? mw.msg( key ) : fallback ) );
+		return window.layersMessages.get( key, fallback );
+	}
+
+	/**
+	 * Clean up resources
+	 */
+	destroy() {
+		this.editor = null;
 	}
 }
 

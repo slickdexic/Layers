@@ -168,6 +168,29 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 		window.layersRegistry = mockRegistry;
 
+		// Mock EventTracker for event listener management
+		window.EventTracker = jest.fn( function () {
+			this.listeners = [];
+			this.add = jest.fn( ( element, event, handler, options ) => {
+				element.addEventListener( event, handler, options );
+				this.listeners.push( { element, event, handler, options } );
+				return { element, event, handler, options };
+			} );
+			this.remove = jest.fn();
+			this.removeAllForElement = jest.fn( ( elem ) => {
+				this.listeners = this.listeners.filter( ( l ) => l.element !== elem );
+			} );
+			this.count = jest.fn( () => this.listeners.length );
+			this.destroy = jest.fn( () => {
+				this.listeners.forEach( ( info ) => {
+					if ( info.element && info.element.removeEventListener ) {
+						info.element.removeEventListener( info.event, info.handler, info.options );
+					}
+				} );
+				this.listeners = [];
+			} );
+		} );
+
 		// Mock ErrorHandler
 		window.ErrorHandler = {
 			handleError: jest.fn()
@@ -480,8 +503,9 @@ describe( 'LayersEditor Coverage Extension', () => {
 			const handler = jest.fn();
 			editor.trackWindowListener( 'resize', handler );
 
-			expect( editor.windowListeners ).toContainEqual(
-				expect.objectContaining( { event: 'resize', handler } )
+			// Now tracked via EventTracker
+			expect( editor.eventTracker.add ).toHaveBeenCalledWith(
+				window, 'resize', handler, undefined
 			);
 		} );
 	} );

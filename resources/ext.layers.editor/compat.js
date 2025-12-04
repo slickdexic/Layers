@@ -4,6 +4,13 @@
 		return;
 	}
 
+	// Helper for safe MediaWiki logging
+	function logWarn( msg ) {
+		if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+			mw.log.warn( msg );
+		}
+	}
+
 	// Soft deprecation warnings for legacy global aliases
 	const found = [];
 	for ( const key in window ) {
@@ -13,18 +20,18 @@
 				const pascal = key.replace( /^layers/, 'Layers' );
 				const alt = key.replace( /^layers/, 'layers' );
 				if ( window[ pascal ] ) {
-					console.warn( '[Layers] Global ' + key + ' is deprecated; prefer ' + pascal + ' instead (migration helpers available).' );
+					logWarn( '[Layers] Global ' + key + ' is deprecated; prefer ' + pascal + ' instead (migration helpers available).' );
 					found.push( key );
 				} else if ( window[ alt ] && alt !== key ) {
-					console.warn( '[Layers] Global ' + key + ' is deprecated; prefer ' + alt + ' (canonical) instead.' );
+					logWarn( '[Layers] Global ' + key + ' is deprecated; prefer ' + alt + ' (canonical) instead.' );
 					found.push( key );
 				}
 			}
 		}
 	}
 
-	if ( found.length ) {
+	if ( found.length && typeof mw !== 'undefined' && mw.log ) {
 		// For now, log the total deprecations discovered
-		console.info( '[Layers] Found legacy global exports: ' + found.join( ', ' ) );
+		mw.log( '[Layers] Found legacy global exports: ' + found.join( ', ' ) );
 	}
 }());

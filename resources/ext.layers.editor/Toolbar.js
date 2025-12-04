@@ -29,8 +29,10 @@
 
 		// Initialize validator for real-time input validation
 		this.validator = window.LayersValidator ? new window.LayersValidator() : null;
-		this.documentListeners = [];
 		this.dialogCleanups = [];
+
+		// Initialize EventTracker for memory-safe event listener management
+		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
 		this.keyboardShortcutHandler = null;
 
 		// Initialize import/export manager
@@ -47,14 +49,36 @@
 		if ( !event || typeof handler !== 'function' ) {
 			return;
 		}
-		document.addEventListener( event, handler, options );
-		this.documentListeners.push( { event: event, handler: handler, options: options } );
+		if ( this.eventTracker ) {
+			this.eventTracker.add( document, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			document.addEventListener( event, handler, options );
+		}
 	};
 
-	Toolbar.prototype.removeDocumentListeners = function () {
-		while ( this.documentListeners && this.documentListeners.length ) {
-			const listener = this.documentListeners.pop();
-			document.removeEventListener( listener.event, listener.handler, listener.options );
+	/**
+	 * Add event listener to a specific element with automatic tracking
+	 * @param {Element} element Target element
+	 * @param {string} event Event type
+	 * @param {Function} handler Event handler
+	 * @param {Object} [options] Event listener options
+	 */
+	Toolbar.prototype.addListener = function ( element, event, handler, options ) {
+		if ( !element || !event || typeof handler !== 'function' ) {
+			return;
+		}
+		if ( this.eventTracker ) {
+			this.eventTracker.add( element, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			element.addEventListener( event, handler, options );
+		}
+	};
+
+	Toolbar.prototype.removeAllListeners = function () {
+		if ( this.eventTracker ) {
+			this.eventTracker.destroy();
 		}
 	};
 
@@ -80,10 +104,10 @@
 
 	Toolbar.prototype.destroy = function () {
 		this.runDialogCleanups();
-		this.removeDocumentListeners();
+		this.removeAllListeners();
 		this.keyboardShortcutHandler = null;
 		this.dialogCleanups = [];
-		this.documentListeners = [];
+		this.eventTracker = null;
 		if ( this.styleControls ) {
 			this.styleControls.destroy();
 			this.styleControls = null;
@@ -474,8 +498,8 @@
 	Toolbar.prototype.setupEventHandlers = function () {
 		const self = this;
 
-		// Tool selection
-		this.container.addEventListener( 'click', ( e ) => {
+		// Tool selection - tracked for cleanup
+		this.addListener( this.container, 'click', ( e ) => {
 			if ( e.target.classList.contains( 'tool-button' ) ) {
 				self.selectTool( e.target.dataset.tool );
 			} else if ( e.target.classList.contains( 'action-button' ) ) {
@@ -488,28 +512,28 @@
 		} );
 
 		// Also support keyboard navigation on tool buttons for accessibility
-		this.container.addEventListener( 'keydown', ( e ) => {
+		this.addListener( this.container, 'keydown', ( e ) => {
 			if ( e.target.classList && e.target.classList.contains( 'tool-button' ) && ( e.key === 'Enter' || e.key === ' ' ) ) {
 				e.preventDefault();
 				self.selectTool( e.target.dataset.tool );
 			}
 		} );
 
-		// Save/Cancel buttons
-		this.saveButton.addEventListener( 'click', () => {
+		// Save/Cancel buttons - tracked for cleanup
+		this.addListener( this.saveButton, 'click', () => {
 			self.editor.save();
 		} );
 
-		this.cancelButton.addEventListener( 'click', () => {
+		this.addListener( this.cancelButton, 'click', () => {
 			self.editor.cancel( true );
 		} );
 
 		// Import JSON - delegate to ImportExportManager
-		this.importButton.addEventListener( 'click', () => {
+		this.addListener( this.importButton, 'click', () => {
 			self.importInput.click();
 		} );
 
-		this.importInput.addEventListener( 'change', function () {
+		this.addListener( this.importInput, 'change', function () {
 			const file = this.files && this.files[ 0 ];
 			if ( !file ) {
 				return;
@@ -529,7 +553,7 @@
 		} );
 
 		// Export JSON - delegate to ImportExportManager
-		this.exportButton.addEventListener( 'click', () => {
+		this.addListener( this.exportButton, 'click', () => {
 			if ( self.importExportManager ) {
 				self.importExportManager.exportToFile();
 			}

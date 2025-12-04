@@ -514,7 +514,7 @@ class UIManager {
 	}
 
 	getMessage( key, fallback = '' ) {
-		return ( mw.message ? mw.message( key ).text() : ( mw.msg ? mw.msg( key ) : fallback ) );
+		return window.layersMessages.get( key, fallback );
 	}
 
 	showSpinner( message ) {

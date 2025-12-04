@@ -370,6 +370,13 @@
 		return inside;
 	};
 
+	/**
+	 * Clean up resources
+	 */
+	HitTestController.prototype.destroy = function () {
+		this.manager = null;
+	};
+
 	// ==================== Export ====================
 
 	if ( typeof window !== 'undefined' ) {

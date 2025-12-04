@@ -132,6 +132,103 @@ if ( typeof global.mw === 'undefined' ) {
     };
 }
 
+// Initialize MessageHelper singleton for tests
+// This mimics what happens in the browser when MessageHelper.js loads
+( function () {
+    function MessageHelper() {
+        this.cache = {};
+        this.cacheEnabled = true;
+    }
+
+    MessageHelper.prototype.get = function ( key, fallback ) {
+        if ( typeof key !== 'string' || !key ) {
+            return fallback || '';
+        }
+
+        // Check cache first
+        if ( this.cacheEnabled && Object.prototype.hasOwnProperty.call( this.cache, key ) ) {
+            return this.cache[ key ];
+        }
+
+        let result = fallback || '';
+
+        try {
+            // Try standard mw.message API first
+            if ( typeof mw !== 'undefined' && mw.message ) {
+                const msg = mw.message( key );
+                if ( msg && !msg.exists ) {
+                    result = fallback || key;
+                } else if ( msg && typeof msg.text === 'function' ) {
+                    result = msg.text();
+                }
+            } else if ( typeof mw !== 'undefined' && mw.msg ) {
+                result = mw.msg( key );
+            }
+        } catch ( e ) {
+            result = fallback || key;
+        }
+
+        if ( this.cacheEnabled ) {
+            this.cache[ key ] = result;
+        }
+
+        return result;
+    };
+
+    MessageHelper.prototype.getWithParams = function ( key ) {
+        const params = Array.prototype.slice.call( arguments, 1 );
+
+        try {
+            if ( typeof mw !== 'undefined' && mw.message ) {
+                const msg = mw.message.apply( mw, [ key ].concat( params ) );
+                if ( msg && typeof msg.text === 'function' ) {
+                    return msg.text();
+                }
+            }
+        } catch ( e ) {
+            // Fall through
+        }
+
+        let result = this.get( key, key );
+        for ( let i = 0; i < params.length; i++ ) {
+            result = result.replace( '$' + ( i + 1 ), String( params[ i ] ) );
+        }
+        return result;
+    };
+
+    MessageHelper.prototype.exists = function ( key ) {
+        try {
+            if ( typeof mw !== 'undefined' && mw.message ) {
+                const msg = mw.message( key );
+                return msg && msg.exists !== false;
+            }
+        } catch ( e ) {
+            // Assume doesn't exist on error
+        }
+        return false;
+    };
+
+    MessageHelper.prototype.clearCache = function () {
+        this.cache = {};
+    };
+
+    MessageHelper.prototype.setCacheEnabled = function ( enabled ) {
+        this.cacheEnabled = !!enabled;
+        if ( !enabled ) {
+            this.clearCache();
+        }
+    };
+
+    // Create singleton and export to window/global for tests
+    const messageHelper = new MessageHelper();
+    global.LayersMessageHelper = MessageHelper;
+    global.layersMessages = messageHelper;
+    if ( typeof window !== 'undefined' ) {
+        window.LayersMessageHelper = MessageHelper;
+        window.layersMessages = messageHelper;
+    }
+} )();
+
 global.createMockEditor = function () {
     return {
         canvas: document.createElement('canvas'),

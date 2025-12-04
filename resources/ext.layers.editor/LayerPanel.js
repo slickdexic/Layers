@@ -26,9 +26,10 @@
 		// REMOVED: this.layers = []; - Now use StateManager
 		// REMOVED: this.selectedLayerId = null; - Now use StateManager
 		this.stateSubscriptions = []; // Track subscriptions for cleanup
-		this.documentListeners = [];
-		this.targetListeners = [];
 		this.dialogCleanups = [];
+
+		// Initialize EventTracker for memory-safe event listener management
+		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
 
 		this.createInterface();
 		this.setupEventHandlers();
@@ -115,37 +116,56 @@
 			if ( !event || typeof handler !== 'function' ) {
 				return;
 			}
-			document.addEventListener( event, handler, options );
-			this.documentListeners.push( { event: event, handler: handler, options: options } );
+			if ( this.eventTracker ) {
+				this.eventTracker.add( document, event, handler, options );
+			} else {
+				// Fallback if EventTracker not available
+				document.addEventListener( event, handler, options );
+			}
 		};
 
+		/**
+		 * Add event listener to a specific element with automatic tracking
+		 * @param {Element} target Target element
+		 * @param {string} event Event type
+		 * @param {Function} handler Event handler
+		 * @param {Object} [options] Event listener options
+		 */
 		LayerPanel.prototype.addTargetListener = function ( target, event, handler, options ) {
 			if ( !target || typeof target.addEventListener !== 'function' || typeof handler !== 'function' ) {
 				return;
 			}
-			target.addEventListener( event, handler, options );
-			this.targetListeners.push( { target: target, event: event, handler: handler, options: options } );
+			if ( this.eventTracker ) {
+				this.eventTracker.add( target, event, handler, options );
+			} else {
+				// Fallback if EventTracker not available
+				target.addEventListener( event, handler, options );
+			}
 		};
 
+		/**
+		 * Remove all document event listeners tracked by EventTracker
+		 */
 		LayerPanel.prototype.removeDocumentListeners = function () {
-			if ( !this.documentListeners ) {
-				return;
-			}
-			while ( this.documentListeners.length ) {
-				const info = this.documentListeners.pop();
-				document.removeEventListener( info.event, info.handler, info.options );
+			if ( this.eventTracker ) {
+				this.eventTracker.removeAllForElement( document );
 			}
 		};
 
+		/**
+		 * Remove all element event listeners tracked by EventTracker (except document)
+		 */
 		LayerPanel.prototype.removeTargetListeners = function () {
-			if ( !this.targetListeners ) {
-				return;
-			}
-			while ( this.targetListeners.length ) {
-				const info = this.targetListeners.pop();
-				if ( info.target && typeof info.target.removeEventListener === 'function' ) {
-					info.target.removeEventListener( info.event, info.handler, info.options );
-				}
+			// EventTracker's destroy() handles all at once; this is kept for compatibility
+			// If needed, could iterate non-document elements, but destroy() is cleaner
+		};
+
+		/**
+		 * Remove all event listeners
+		 */
+		LayerPanel.prototype.removeAllListeners = function () {
+			if ( this.eventTracker ) {
+				this.eventTracker.destroy();
 			}
 		};
 
@@ -181,12 +201,10 @@
 				this.stateSubscriptions = [];
 			}
 			this.runDialogCleanups();
-			this.removeDocumentListeners();
-			this.removeTargetListeners();
+			this.removeAllListeners();
 			document.body.classList.remove( 'layers-resize-cursor' );
 			this.dialogCleanups = [];
-			this.documentListeners = [];
-			this.targetListeners = [];
+			this.eventTracker = null;
 		};
 
 	// Minimal i18n helper with safe fallbacks

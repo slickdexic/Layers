@@ -1914,22 +1914,54 @@
 	};
 
 	CanvasManager.prototype.destroy = function () {
-		// Clean up RenderCoordinator
-		if ( this.renderCoordinator && typeof this.renderCoordinator.destroy === 'function' ) {
-			this.renderCoordinator.destroy();
-			this.renderCoordinator = null;
+		// Clean up all controllers - order matters for dependencies
+		const controllersToDestroy = [
+			'renderCoordinator',
+			'events',
+			'renderer',
+			'zoomPanController',
+			'gridRulersController',
+			'transformController',
+			'hitTestController',
+			'drawingController',
+			'clipboardController',
+			'styleController'
+		];
+
+		controllersToDestroy.forEach( function ( name ) {
+			if ( this[ name ] ) {
+				if ( typeof this[ name ].destroy === 'function' ) {
+					try {
+						this[ name ].destroy();
+					} catch ( e ) {
+						if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+							mw.log.warn( '[CanvasManager] Error destroying ' + name + ':', e.message );
+						}
+					}
+				}
+				this[ name ] = null;
+			}
+		}, this );
+
+		// Clear canvas pool to prevent memory leaks
+		if ( this.canvasPool && this.canvasPool.length > 0 ) {
+			this.canvasPool.forEach( function ( pooledCanvas ) {
+				pooledCanvas.width = 0;
+				pooledCanvas.height = 0;
+			} );
+			this.canvasPool = [];
 		}
-		if ( this.events ) {
-			this.events.destroy();
-			this.events = null;
-		}
-		if ( this.renderer && typeof this.renderer.destroy === 'function' ) {
-			this.renderer.destroy();
-			this.renderer = null;
-		}
+
+		// Clear clipboard
+		this.clipboard = [];
+
+		// Clear references
 		this.canvas = null;
 		this.ctx = null;
+		this.container = null;
+		this.backgroundImage = null;
 		this.editor = null;
+		this.config = null;
 	};
 
 	// Export

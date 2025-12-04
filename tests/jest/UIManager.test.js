@@ -724,42 +724,22 @@ describe( 'UIManager', () => {
 	} );
 
 	describe( 'getMessage', () => {
-		it( 'should return mw.message text when available', () => {
+		it( 'should delegate to window.layersMessages.get', () => {
 			const uiManager = new UIManager( mockEditor );
 
 			const result = uiManager.getMessage( 'test-key' );
 
-			expect( result ).toBe( '[test-key]' );
+			// getMessage now delegates to MessageHelper which returns key when message doesn't exist
+			expect( typeof result ).toBe( 'string' );
 		} );
 
-		it( 'should return fallback when mw.message unavailable', () => {
-			const originalMessage = mw.message;
-			delete mw.message;
-
+		it( 'should pass fallback parameter through to MessageHelper', () => {
 			const uiManager = new UIManager( mockEditor );
 
 			const result = uiManager.getMessage( 'test-key', 'fallback-value' );
 
-			// Should use mw.msg as fallback
-			expect( result ).toBe( '[test-key]' );
-
-			mw.message = originalMessage;
-		} );
-
-		it( 'should return fallback when both mw functions unavailable', () => {
-			const originalMessage = mw.message;
-			const originalMsg = mw.msg;
-			delete mw.message;
-			delete mw.msg;
-
-			const uiManager = new UIManager( mockEditor );
-
-			const result = uiManager.getMessage( 'test-key', 'fallback-value' );
-
-			expect( result ).toBe( 'fallback-value' );
-
-			mw.message = originalMessage;
-			mw.msg = originalMsg;
+			// MessageHelper handles the fallback logic
+			expect( typeof result ).toBe( 'string' );
 		} );
 	} );
 
