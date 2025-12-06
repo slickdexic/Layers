@@ -561,8 +561,7 @@ class UIManager {
 		`;
 
 		const h = document.createElement( 'h3' );
-		h.textContent = typeof mw !== 'undefined' && mw.message ? 
-			mw.message( 'layers-alert-title' ).text() : 'Error';
+		h.textContent = this.getMessage( 'layers-alert-title', 'Error' );
 		errorEl.appendChild( h );
 
 		const p = document.createElement( 'p' );

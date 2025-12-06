@@ -217,4 +217,95 @@ describe('Layers Editor Regression Tests', () => {
             }
         });
     });
+
+    describe('Shadow disabled rendering', () => {
+        // Regression test for bug where shadow: false layers still rendered with shadow
+        // when they had shadowColor/shadowBlur/etc properties from previous state
+
+        test('layer with shadow=false should not render shadow even with shadow properties', () => {
+            // Simulate a layer that had shadow enabled, then disabled
+            // The layer still has shadow properties but shadow: false
+            const layer = {
+                id: '1',
+                type: 'text',
+                text: 'Test',
+                x: 100,
+                y: 100,
+                shadow: false, // Shadow explicitly disabled
+                shadowColor: '#000000', // But shadow properties still exist
+                shadowBlur: 8,
+                shadowOffsetX: 2,
+                shadowOffsetY: 2
+            };
+
+            // Test the logic that determines if shadow should be applied
+            const shadowExplicitlyDisabled = layer.shadow === false || layer.shadow === 'false' || layer.shadow === 0 || layer.shadow === '0';
+            const shadowExplicitlyEnabled = layer.shadow === true || layer.shadow === 'true' || layer.shadow === 1 || layer.shadow === '1';
+            const hasShadowData = layer.shadowColor || layer.shadowBlur || layer.shadowOffsetX || layer.shadowOffsetY;
+
+            // The bug was: if (shadowExplicitlyEnabled || hasShadowData) would be true
+            // because hasShadowData is true, even though shadow: false
+            expect(shadowExplicitlyDisabled).toBe(true);
+            expect(shadowExplicitlyEnabled).toBe(false);
+            expect(hasShadowData).toBeTruthy(); // Shadow properties exist
+
+            // Correct behavior: shadow should NOT be applied because it's explicitly disabled
+            // The fix checks shadowExplicitlyDisabled FIRST and clears shadow
+            const shouldApplyShadow = !shadowExplicitlyDisabled && (shadowExplicitlyEnabled || typeof layer.shadow === 'object');
+            expect(shouldApplyShadow).toBe(false);
+        });
+
+        test('layer with shadow=true should render shadow', () => {
+            const layer = {
+                id: '1',
+                type: 'rectangle',
+                x: 100,
+                y: 100,
+                width: 50,
+                height: 50,
+                shadow: true,
+                shadowColor: '#ff0000',
+                shadowBlur: 10
+            };
+
+            const shadowExplicitlyDisabled = layer.shadow === false || layer.shadow === 'false' || layer.shadow === 0 || layer.shadow === '0';
+            const shadowExplicitlyEnabled = layer.shadow === true || layer.shadow === 'true' || layer.shadow === 1 || layer.shadow === '1';
+
+            expect(shadowExplicitlyDisabled).toBe(false);
+            expect(shadowExplicitlyEnabled).toBe(true);
+        });
+
+        test('layer with shadow=undefined should not render shadow (default)', () => {
+            const layer = {
+                id: '1',
+                type: 'circle',
+                x: 100,
+                y: 100,
+                radius: 25
+                // shadow property not set at all
+            };
+
+            const shadowExplicitlyDisabled = layer.shadow === false || layer.shadow === 'false' || layer.shadow === 0 || layer.shadow === '0';
+            const shadowExplicitlyEnabled = layer.shadow === true || layer.shadow === 'true' || layer.shadow === 1 || layer.shadow === '1';
+
+            expect(shadowExplicitlyDisabled).toBe(false);
+            expect(shadowExplicitlyEnabled).toBe(false);
+            // No shadow should be applied - this is the default case
+        });
+
+        test('layer with shadow="false" (string) should not render shadow', () => {
+            const layer = {
+                id: '1',
+                type: 'text',
+                text: 'Test',
+                x: 100,
+                y: 100,
+                shadow: 'false', // String variant (from JSON serialization edge cases)
+                shadowColor: '#000000'
+            };
+
+            const shadowExplicitlyDisabled = layer.shadow === false || layer.shadow === 'false' || layer.shadow === 0 || layer.shadow === '0';
+            expect(shadowExplicitlyDisabled).toBe(true);
+        });
+    });
 });

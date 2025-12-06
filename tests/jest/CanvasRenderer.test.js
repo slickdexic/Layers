@@ -585,20 +585,59 @@ describe('CanvasRenderer', () => {
 
             renderer.drawArrow(layer);
 
-            expect(ctx.moveTo).toHaveBeenCalledWith(10, 20);
-            expect(ctx.lineTo).toHaveBeenCalledWith(100, 80);
+            // Arrow is now drawn as a closed polygon
+            expect(ctx.beginPath).toHaveBeenCalled();
+            expect(ctx.closePath).toHaveBeenCalled();
             expect(ctx.stroke).toHaveBeenCalled();
         });
 
         test('should draw arrow with double heads', () => {
-            const drawArrowHeadSpy = jest.spyOn(renderer, 'drawArrowHead');
+            const buildVerticesSpy = jest.spyOn(renderer, 'buildArrowVertices');
             const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', arrowStyle: 'double', arrowSize: 15 };
 
             renderer.drawArrow(layer);
 
-            // Should draw two arrow heads
-            expect(drawArrowHeadSpy).toHaveBeenCalledTimes(2);
-            drawArrowHeadSpy.mockRestore();
+            // Should call buildArrowVertices to construct the polygon
+            expect(buildVerticesSpy).toHaveBeenCalled();
+            expect(ctx.closePath).toHaveBeenCalled();
+            buildVerticesSpy.mockRestore();
+        });
+
+        test('should support fill on arrow shapes', () => {
+            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', fill: '#ff0000', arrowStyle: 'single' };
+
+            renderer.drawArrow(layer);
+
+            expect(ctx.fillStyle).toBe('#ff0000');
+            expect(ctx.fill).toHaveBeenCalled();
+        });
+
+        test('should support pointed head type', () => {
+            const buildVerticesSpy = jest.spyOn(renderer, 'buildArrowVertices');
+            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', arrowHeadType: 'pointed' };
+
+            renderer.drawArrow(layer);
+
+            expect(buildVerticesSpy).toHaveBeenCalledWith(
+                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+                'single', 'pointed', expect.anything(), expect.anything()
+            );
+            buildVerticesSpy.mockRestore();
+        });
+
+        test('should support chevron head type', () => {
+            const buildVerticesSpy = jest.spyOn(renderer, 'buildArrowVertices');
+            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', arrowHeadType: 'chevron' };
+
+            renderer.drawArrow(layer);
+
+            expect(buildVerticesSpy).toHaveBeenCalledWith(
+                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+                'single', 'chevron', expect.anything(), expect.anything()
+            );
+            buildVerticesSpy.mockRestore();
         });
     });
 
@@ -632,13 +671,15 @@ describe('CanvasRenderer', () => {
             drawRegularPolygonSpy.mockRestore();
         });
 
-        test('should skip drawing with insufficient points', () => {
-            ctx.moveTo.mockClear();
-            const layer = { points: [{ x: 0, y: 0 }], fill: '#ff0000' };
+        test('should fall back to regular polygon with insufficient points', () => {
+            const drawRegularPolygonSpy = jest.spyOn(renderer, 'drawRegularPolygon');
+            const layer = { x: 50, y: 50, points: [{ x: 0, y: 0 }], fill: '#ff0000' };
 
             renderer.drawPolygon(layer);
 
-            expect(ctx.moveTo).not.toHaveBeenCalled();
+            // Falls back to regular polygon when points array is insufficient
+            expect(drawRegularPolygonSpy).toHaveBeenCalledWith(layer);
+            drawRegularPolygonSpy.mockRestore();
         });
     });
 

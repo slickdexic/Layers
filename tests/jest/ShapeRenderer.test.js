@@ -341,14 +341,14 @@ describe( 'ShapeRenderer', () => {
 				x2: 100,
 				y2: 20,
 				stroke: '#000000',
-				arrowhead: 'arrow',
+				arrowStyle: 'single',
 				arrowSize: 10
 			} );
 
-			expect( ctx.moveTo ).toHaveBeenCalled();
-			expect( ctx.lineTo ).toHaveBeenCalled();
+			// Arrow is now drawn as a closed polygon
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
 			expect( ctx.stroke ).toHaveBeenCalled();
-			expect( ctx.fill ).toHaveBeenCalled(); // Arrowhead is filled
 		} );
 
 		test( 'should draw double arrow', () => {
@@ -357,77 +357,117 @@ describe( 'ShapeRenderer', () => {
 				y1: 20,
 				x2: 100,
 				y2: 20,
-				doubleArrow: true,
-				arrowhead: 'arrow',
+				stroke: '#000000',
+				arrowStyle: 'double',
 				arrowSize: 10
 			} );
 
-			// Should call fill twice (once for each arrowhead)
-			expect( ctx.fill ).toHaveBeenCalledTimes( 2 );
+			// Arrow with double heads is drawn as a closed polygon
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
 		} );
 
-		test( 'should apply dashed style', () => {
+		test( 'should support fill on arrow shapes', () => {
 			shapeRenderer.drawArrow( {
 				x1: 0,
 				y1: 0,
 				x2: 100,
 				y2: 0,
-				arrowStyle: 'dashed'
+				stroke: '#000000',
+				fill: '#ff0000',
+				arrowStyle: 'single'
 			} );
 
-			expect( ctx.setLineDash ).toHaveBeenCalledWith( [ 10, 5 ] );
+			expect( ctx.fillStyle ).toBe( '#ff0000' );
+			expect( ctx.fill ).toHaveBeenCalled();
 		} );
 
-		test( 'should apply dotted style', () => {
+		test( 'should support pointed head type', () => {
+			const buildVerticesSpy = jest.spyOn( shapeRenderer, 'buildArrowVertices' );
 			shapeRenderer.drawArrow( {
 				x1: 0,
 				y1: 0,
 				x2: 100,
 				y2: 0,
-				arrowStyle: 'dotted'
+				stroke: '#000000',
+				arrowHeadType: 'pointed'
 			} );
 
-			expect( ctx.setLineDash ).toHaveBeenCalledWith( [ 2, 4 ] );
+			expect( buildVerticesSpy ).toHaveBeenCalledWith(
+				expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+				expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+				'single', 'pointed', expect.anything(), expect.anything()
+			);
+			buildVerticesSpy.mockRestore();
 		} );
 
-		test( 'should skip arrowhead for none type', () => {
-			const fillCount = ctx.fill.mock.calls.length;
+		test( 'should support chevron head type', () => {
+			const buildVerticesSpy = jest.spyOn( shapeRenderer, 'buildArrowVertices' );
 			shapeRenderer.drawArrow( {
 				x1: 0,
 				y1: 0,
 				x2: 100,
 				y2: 0,
-				arrowhead: 'none'
+				stroke: '#000000',
+				arrowHeadType: 'chevron'
 			} );
 
-			// Fill should not be called for arrowhead
-			expect( ctx.fill.mock.calls.length ).toBe( fillCount );
+			expect( buildVerticesSpy ).toHaveBeenCalledWith(
+				expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+				expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+				'single', 'chevron', expect.anything(), expect.anything()
+			);
+			buildVerticesSpy.mockRestore();
+		} );
+
+		test( 'should draw arrow with no heads (line only)', () => {
+			shapeRenderer.drawArrow( {
+				x1: 0,
+				y1: 0,
+				x2: 100,
+				y2: 0,
+				stroke: '#000000',
+				arrowStyle: 'none'
+			} );
+
+			// Should still draw a closed polygon (rectangular shaft)
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
 		} );
 	} );
 
-	describe( 'drawArrowHead', () => {
-		test( 'should draw triangle arrowhead', () => {
-			shapeRenderer.drawArrowHead( 0, 0, 100, 0, 'triangle', 10 );
+	describe( 'buildArrowVertices', () => {
+		test( 'should build vertices for single arrow', () => {
+			const vertices = shapeRenderer.buildArrowVertices(
+				0, 0, 100, 0, 0, Math.PI / 2, 3, 15, 'single', 'pointed'
+			);
 
-			expect( ctx.translate ).toHaveBeenCalled();
-			expect( ctx.rotate ).toHaveBeenCalled();
-			expect( ctx.fill ).toHaveBeenCalled();
+			expect( Array.isArray( vertices ) ).toBe( true );
+			expect( vertices.length ).toBeGreaterThan( 0 );
+			vertices.forEach( v => {
+				expect( typeof v.x ).toBe( 'number' );
+				expect( typeof v.y ).toBe( 'number' );
+			} );
 		} );
 
-		test( 'should draw circle arrowhead', () => {
-			shapeRenderer.drawArrowHead( 0, 0, 100, 0, 'circle', 10 );
+		test( 'should build vertices for double arrow', () => {
+			const vertices = shapeRenderer.buildArrowVertices(
+				0, 0, 100, 0, 0, Math.PI / 2, 3, 15, 'double', 'pointed'
+			);
 
-			expect( ctx.arc ).toHaveBeenCalled();
-			expect( ctx.fill ).toHaveBeenCalled();
+			expect( Array.isArray( vertices ) ).toBe( true );
+			// Double arrow should have more vertices than single
+			expect( vertices.length ).toBeGreaterThan( 6 );
 		} );
 
-		test( 'should draw diamond arrowhead', () => {
-			shapeRenderer.drawArrowHead( 0, 0, 100, 0, 'diamond', 10 );
+		test( 'should build simple rectangle for none style', () => {
+			const vertices = shapeRenderer.buildArrowVertices(
+				0, 0, 100, 0, 0, Math.PI / 2, 3, 15, 'none', 'pointed'
+			);
 
-			expect( ctx.moveTo ).toHaveBeenCalled();
-			expect( ctx.lineTo ).toHaveBeenCalled();
-			expect( ctx.closePath ).toHaveBeenCalled();
-			expect( ctx.fill ).toHaveBeenCalled();
+			expect( vertices.length ).toBe( 4 ); // Simple rectangle
 		} );
 	} );
 
@@ -449,18 +489,31 @@ describe( 'ShapeRenderer', () => {
 			expect( ctx.closePath ).toHaveBeenCalled();
 		} );
 
-		test( 'should skip polygon with insufficient points', () => {
-			shapeRenderer.drawPolygon( {
+		test( 'should fall back to regular polygon with insufficient points', () => {
+			const drawRegularPolygonSpy = jest.spyOn( shapeRenderer, 'drawRegularPolygon' );
+			const layer = {
+				x: 50,
+				y: 50,
 				points: [ { x: 0, y: 0 } ],
 				fill: '#ff0000'
-			} );
+			};
 
-			expect( ctx.fill ).not.toHaveBeenCalled();
+			shapeRenderer.drawPolygon( layer );
+
+			// Falls back to regular polygon when points array is insufficient
+			expect( drawRegularPolygonSpy ).toHaveBeenCalledWith( layer );
+			drawRegularPolygonSpy.mockRestore();
 		} );
 
-		test( 'should skip polygon with no points', () => {
-			shapeRenderer.drawPolygon( { fill: '#ff0000' } );
-			expect( ctx.fill ).not.toHaveBeenCalled();
+		test( 'should fall back to regular polygon with no points', () => {
+			const drawRegularPolygonSpy = jest.spyOn( shapeRenderer, 'drawRegularPolygon' );
+			const layer = { x: 50, y: 50, fill: '#ff0000' };
+
+			shapeRenderer.drawPolygon( layer );
+
+			// Falls back to regular polygon when no points array
+			expect( drawRegularPolygonSpy ).toHaveBeenCalledWith( layer );
+			drawRegularPolygonSpy.mockRestore();
 		} );
 	} );
 

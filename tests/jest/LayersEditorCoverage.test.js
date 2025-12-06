@@ -518,7 +518,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 			} );
 
 			editor.markDirty();
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'isDirty', true );
+			expect( mockStateManager.setDirty ).toHaveBeenCalledWith( true );
 		} );
 
 		it( 'should mark editor as clean', () => {

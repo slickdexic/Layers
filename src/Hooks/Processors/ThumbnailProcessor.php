@@ -4,8 +4,8 @@ namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
-use Psr\Log\LoggerInterface;
 
 /**
  * Handles thumbnail-related layer injection logic.
@@ -14,16 +14,12 @@ use Psr\Log\LoggerInterface;
  * for the ThumbnailBeforeProduceHTML hook and related operations.
  */
 class ThumbnailProcessor {
+	use LoggerAwareTrait;
 
 	/**
 	 * @var LayersParamExtractor
 	 */
 	private LayersParamExtractor $paramExtractor;
-
-	/**
-	 * @var LoggerInterface|null
-	 */
-	private ?LoggerInterface $logger = null;
 
 	/**
 	 * Track if page has layers (propagated back to WikitextHooks)
@@ -36,36 +32,6 @@ class ThumbnailProcessor {
 	 */
 	public function __construct( LayersParamExtractor $paramExtractor ) {
 		$this->paramExtractor = $paramExtractor;
-	}
-
-	/**
-	 * Get logger instance
-	 *
-	 * @return LoggerInterface|null
-	 */
-	private function getLogger(): ?LoggerInterface {
-		if ( $this->logger === null ) {
-			try {
-				$services = MediaWikiServices::getInstance();
-				$this->logger = $services->get( 'LayersLogger' );
-			} catch ( \Throwable $e ) {
-				return null;
-			}
-		}
-		return $this->logger;
-	}
-
-	/**
-	 * Log a debug message if logger is available
-	 *
-	 * @param string $message
-	 * @param array $context
-	 */
-	private function log( string $message, array $context = [] ): void {
-		$logger = $this->getLogger();
-		if ( $logger ) {
-			$logger->info( "Layers: $message", $context );
-		}
 	}
 
 	/**

@@ -111,39 +111,39 @@ class APIManager {
 	
 	/**
 	 * Get user-friendly message for error
+	 * Delegates to centralized MessageHelper for consistent i18n handling.
 	 * @param {Object} normalizedError Normalized error object
 	 * @param {string} operation Operation that failed
 	 * @return {string} User-friendly error message
 	 */
 	getUserMessage( normalizedError, operation ) {
-		// Try to get specific message for error code
-		const messageKey = this.errorConfig.errorMap[ normalizedError.code ];
-		if ( messageKey && mw.message ) {
-			try {
-				return mw.message( messageKey ).text();
-			} catch ( msgError ) {
-				// Fall through to default handling
-			}
-		}
-		
-		// Try to get default message for operation
-		const defaultKey = this.errorConfig.defaults[ operation ];
-		if ( defaultKey && mw.message ) {
-			try {
-				return mw.message( defaultKey ).text();
-			} catch ( msgError ) {
-				// Fall through to hardcoded fallback
-			}
-		}
-		
 		// Hardcoded fallbacks
 		const fallbacks = {
 			load: 'Failed to load layer data',
 			save: 'Failed to save layer data',
 			generic: 'An error occurred'
 		};
+		const fallback = fallbacks[ operation ] || fallbacks.generic;
+
+		// Try to get specific message for error code via MessageHelper
+		const messageKey = this.errorConfig.errorMap[ normalizedError.code ];
+		if ( messageKey && window.layersMessages ) {
+			const msg = window.layersMessages.get( messageKey, '' );
+			if ( msg ) {
+				return msg;
+			}
+		}
 		
-		return fallbacks[ operation ] || fallbacks.generic;
+		// Try to get default message for operation via MessageHelper
+		const defaultKey = this.errorConfig.defaults[ operation ];
+		if ( defaultKey && window.layersMessages ) {
+			const msg = window.layersMessages.get( defaultKey, '' );
+			if ( msg ) {
+				return msg;
+			}
+		}
+		
+		return fallback;
 	}
 	
 	/**

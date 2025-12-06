@@ -499,7 +499,7 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 			expect( renderer.selectionHandles.length ).toBeGreaterThan( 0 );
 		} );
 
-		it( 'should handle rotation in line selection', () => {
+		it( 'should draw only endpoint handles for line (no rotation)', () => {
 			const layer = {
 				id: 'line1',
 				type: 'line',
@@ -512,8 +512,12 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 
 			renderer.drawLineSelectionIndicators( layer );
 
-			expect( ctx.translate ).toHaveBeenCalled();
-			expect( ctx.rotate ).toHaveBeenCalled();
+			// Lines/arrows only have 2 endpoint handles, no rotation
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+			const handleTypes = renderer.selectionHandles.map( ( h ) => h.type );
+			expect( handleTypes ).toContain( 'w' );
+			expect( handleTypes ).toContain( 'e' );
+			expect( handleTypes ).not.toContain( 'rotate' );
 		} );
 
 		it( 'should register handles for hit testing', () => {
@@ -540,7 +544,7 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 			} );
 		} );
 
-		it( 'should draw rotation handle for line', () => {
+		it( 'should only have w and e handles for line (no rotation handle)', () => {
 			const layer = {
 				id: 'line1',
 				type: 'line',
@@ -553,9 +557,10 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 
 			renderer.drawLineSelectionIndicators( layer );
 
-			// Should have a rotation handle
+			// Lines/arrows only have 2 endpoint handles (w for tail, e for head)
+			expect( renderer.selectionHandles.length ).toBe( 2 );
 			const rotateHandle = renderer.selectionHandles.find( ( h ) => h.type === 'rotate' );
-			expect( rotateHandle ).toBeDefined();
+			expect( rotateHandle ).toBeUndefined();
 		} );
 	} );
 

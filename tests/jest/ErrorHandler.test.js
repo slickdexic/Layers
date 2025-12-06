@@ -304,12 +304,15 @@ describe( 'ErrorHandler', function () {
 
 		it( 'should use fallback when mw.message not available', function () {
 			const originalMw = window.mw;
+			const originalLayersMessages = window.layersMessages;
 			window.mw = null;
+			window.layersMessages = null;
 
 			const errorInfo = { type: 'api' };
 			const result = errorHandler.getUserFriendlyMessage( errorInfo );
 
 			window.mw = originalMw;
+			window.layersMessages = originalLayersMessages;
 			expect( result ).toContain( 'save' );
 		} );
 	} );

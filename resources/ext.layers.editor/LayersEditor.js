@@ -625,10 +625,6 @@
 		return layers.find( ( layer ) => layer.id === layerId );
 	};
 
-	LayersEditor.prototype.markDirty = function () {
-		this.stateManager.set( 'isDirty', true );
-	};
-
 	/**
 	 * Parse MediaWiki binary(14) timestamp format (YYYYMMDDHHmmss) to Date
 	 * @param {string} mwTimestamp MediaWiki timestamp string
@@ -690,8 +686,10 @@
 					const date = this.parseMWTimestamp( timestamp );
 					let displayText = date.toLocaleString();
 					
-					// Use MediaWiki message system with parameter replacement
-					const byUserText = mw.message( 'layers-revision-by', userName ).text();
+					// Use MessageHelper for parameter substitution
+					const byUserText = window.layersMessages ?
+						window.layersMessages.getWithParams( 'layers-revision-by', userName ) :
+						'by ' + userName;
 					displayText += ' ' + byUserText;
 					
 					if ( name ) {
@@ -1212,12 +1210,18 @@
 
 		// Validate layers before saving using validation manager
 		if ( !this.validationManager.validateLayers( layers ) ) {
-			mw.notify( mw.message ? mw.message( 'layers-save-validation-error' ).text() : 'Layer validation failed', { type: 'error' } );
+			const validationMsg = window.layersMessages ?
+				window.layersMessages.get( 'layers-save-validation-error', 'Layer validation failed' ) :
+				'Layer validation failed';
+			mw.notify( validationMsg, { type: 'error' } );
 			return;
 		}
 
 		// Show saving spinner using UI manager
-		this.uiManager.showSpinner( mw.message ? mw.message( 'layers-saving' ).text() : 'Saving...' );
+		const savingMsg = window.layersMessages ?
+			window.layersMessages.get( 'layers-saving', 'Saving...' ) :
+			'Saving...';
+		this.uiManager.showSpinner( savingMsg );
 
 		// Use API manager to save (no parameters needed - APIManager reads from stateManager)
 		// Note: APIManager.handleSaveSuccess() handles markClean, reloadRevisions, and success notification
@@ -1229,7 +1233,10 @@
 			} )
 			.catch( ( error ) => {
 				this.uiManager.hideSpinner();
-				const errorMsg = error.info || ( mw.message ? mw.message( 'layers-save-error' ).text() : 'Failed to save layers' );
+				const defaultErrorMsg = window.layersMessages ?
+					window.layersMessages.get( 'layers-save-error', 'Failed to save layers' ) :
+					'Failed to save layers';
+				const errorMsg = error.info || defaultErrorMsg;
 				mw.notify( errorMsg, { type: 'error' } );
 			} );
 	};
@@ -1326,7 +1333,10 @@
 	 */
 	LayersEditor.prototype.showCancelConfirmDialog = function ( onConfirm ) {
 		const t = function ( key, fallback ) {
-			return mw.message ? mw.message( key ).text() : fallback;
+			if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+				return window.layersMessages.get( key, fallback );
+			}
+			return fallback;
 		};
 
 		const overlay = document.createElement( 'div' );

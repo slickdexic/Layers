@@ -714,93 +714,19 @@
 	 * @param key
 	 */
 	/**
-	 * Get internationalized message
+	 * Get internationalized message with parameter support
 	 *
-	 * @param {string} key - Message key. Valid validation keys include:
-	 *   'layers-validation-layer-invalid',
-	 *   'layers-validation-id-required',
-	 *   'layers-validation-type-required',
-	 *   'layers-validation-type-invalid',
-	 *   'layers-validation-id-type',
-	 *   'layers-validation-id-too-long',
-	 *   'layers-validation-id-invalid-chars',
-	 *   'layers-validation-coordinate-invalid',
-	 *   'layers-validation-coordinate-too-large',
-	 *   'layers-validation-fontsize-invalid',
-	 *   'layers-validation-fontsize-range',
-	 *   'layers-validation-strokewidth-invalid',
-	 *   'layers-validation-strokewidth-range',
-	 *   'layers-validation-opacity-invalid',
-	 *   'layers-validation-opacity-range',
-	 *   'layers-validation-sides-invalid',
-	 *   'layers-validation-sides-range',
-	 *   'layers-validation-blurradius-invalid',
-	 *   'layers-validation-blurradius-range',
-	 *   'layers-validation-text-type',
-	 *   'layers-validation-text-too-long'
-	 * @param {...*} args - Message parameters
+	 * Delegates to MessageHelper for consistent i18n handling.
+	 * Falls back to built-in English messages if MediaWiki i18n unavailable.
+	 *
+	 * @param {string} key - Message key (e.g., 'layers-validation-layer-invalid')
+	 * @param {...*} args - Message parameters for substitution ($1, $2, etc.)
 	 * @return {string} Localized message
 	 */
 	LayersValidator.prototype.getMessage = function ( key ) {
 		const args = Array.prototype.slice.call( arguments, 1 );
 
-		// Try MediaWiki message system
-		if ( window.mw && window.mw.message ) {
-			let msg;
-			// Create message object based on possible validation keys
-			if ( key === 'layers-validation-layer-invalid' ) {
-				msg = mw.message( 'layers-validation-layer-invalid' );
-			} else if ( key === 'layers-validation-id-required' ) {
-				msg = mw.message( 'layers-validation-id-required' );
-			} else if ( key === 'layers-validation-type-required' ) {
-				msg = mw.message( 'layers-validation-type-required' );
-			} else if ( key === 'layers-validation-type-invalid' ) {
-				msg = mw.message( 'layers-validation-type-invalid' );
-			} else if ( key === 'layers-validation-id-type' ) {
-				msg = mw.message( 'layers-validation-id-type' );
-			} else if ( key === 'layers-validation-id-too-long' ) {
-				msg = mw.message( 'layers-validation-id-too-long' );
-			} else if ( key === 'layers-validation-id-invalid-chars' ) {
-				msg = mw.message( 'layers-validation-id-invalid-chars' );
-			} else if ( key === 'layers-validation-coordinate-invalid' ) {
-				msg = mw.message( 'layers-validation-coordinate-invalid' );
-			} else if ( key === 'layers-validation-coordinate-too-large' ) {
-				msg = mw.message( 'layers-validation-coordinate-too-large' );
-			} else if ( key === 'layers-validation-fontsize-invalid' ) {
-				msg = mw.message( 'layers-validation-fontsize-invalid' );
-			} else if ( key === 'layers-validation-fontsize-range' ) {
-				msg = mw.message( 'layers-validation-fontsize-range' );
-			} else if ( key === 'layers-validation-strokewidth-invalid' ) {
-				msg = mw.message( 'layers-validation-strokewidth-invalid' );
-			} else if ( key === 'layers-validation-strokewidth-range' ) {
-				msg = mw.message( 'layers-validation-strokewidth-range' );
-			} else if ( key === 'layers-validation-opacity-invalid' ) {
-				msg = mw.message( 'layers-validation-opacity-invalid' );
-			} else if ( key === 'layers-validation-opacity-range' ) {
-				msg = mw.message( 'layers-validation-opacity-range' );
-			} else if ( key === 'layers-validation-sides-invalid' ) {
-				msg = mw.message( 'layers-validation-sides-invalid' );
-			} else if ( key === 'layers-validation-sides-range' ) {
-				msg = mw.message( 'layers-validation-sides-range' );
-			} else if ( key === 'layers-validation-blurradius-invalid' ) {
-				msg = mw.message( 'layers-validation-blurradius-invalid' );
-			} else if ( key === 'layers-validation-blurradius-range' ) {
-				msg = mw.message( 'layers-validation-blurradius-range' );
-			} else if ( key === 'layers-validation-text-type' ) {
-				msg = mw.message( 'layers-validation-text-type' );
-			} else if ( key === 'layers-validation-text-too-long' ) {
-				msg = mw.message( 'layers-validation-text-too-long' );
-			} else {
-				// Fallback for unknown message keys
-				msg = mw.message( key );
-			}
-			if ( args.length > 0 ) {
-				return msg.params( args ).text();
-			}
-			return msg.text();
-		}
-
-		// Fallback messages in English
+		// Fallback messages in English (used when i18n unavailable)
 		const fallbacks = {
 			'layers-validation-layer-invalid': 'Invalid layer object',
 			'layers-validation-id-required': 'Layer ID is required',
@@ -842,9 +768,33 @@
 			'layers-validation-duplicate-id': 'Duplicate layer ID: $1'
 		};
 
-		let message = fallbacks[ key ] || key;
+		const fallback = fallbacks[ key ] || key;
 
-		// Simple parameter substitution
+		// Use MessageHelper if available (handles mw.message delegation)
+		if ( window.layersMessages && typeof window.layersMessages.getWithParams === 'function' ) {
+			if ( args.length > 0 ) {
+				return window.layersMessages.getWithParams.apply( window.layersMessages, [ key ].concat( args ) ) || fallback;
+			}
+			return window.layersMessages.get( key, fallback );
+		}
+
+		// Direct mw.message fallback (when MessageHelper not loaded yet)
+		if ( window.mw && window.mw.message ) {
+			try {
+				const msg = mw.message( key );
+				if ( msg && typeof msg.text === 'function' ) {
+					if ( args.length > 0 ) {
+						return msg.params( args ).text();
+					}
+					return msg.text();
+				}
+			} catch ( e ) {
+				// Fall through to fallback substitution
+			}
+		}
+
+		// Manual parameter substitution for fallback messages
+		let message = fallback;
 		if ( args.length > 0 ) {
 			args.forEach( ( arg, index ) => {
 				message = message.replace( '$' + ( index + 1 ), String( arg ) );

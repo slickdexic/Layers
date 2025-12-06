@@ -15,28 +15,17 @@
 	const PropertiesForm = {};
 
 	/**
-	 * Helper to get translated message
+	 * Helper to get translated message - delegates to MessageHelper
 	 * @param {string} key - Message key
 	 * @param {string} fallback - Fallback text
 	 * @return {string}
 	 */
 	function msg( key, fallback ) {
-		let txt = null;
-		try {
-			if ( window.mw && typeof mw.message === 'function' ) {
-				txt = mw.message( key ).text();
-			}
-		} catch ( e ) {
-			// i18n lookup failed - use fallback silently but log for debugging
-			if ( window.mw && window.mw.log ) {
-				mw.log.warn( '[PropertiesForm] i18n lookup failed for key: ' + key );
-			}
+		// Delegate to MessageHelper singleton if available
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			return window.layersMessages.get( key, fallback );
 		}
-		// MediaWiki shows ⧼key⧽ for missing messages; treat as missing
-		if ( typeof txt === 'string' && txt.indexOf && txt.indexOf( '\u29fc' ) === -1 && txt.indexOf( '⧼' ) === -1 ) {
-			return txt;
-		}
-		return fallback;
+		return fallback || '';
 	}
 
 	/**
@@ -600,10 +589,13 @@
 		};
 
 		// Transform - Position should be integers (no decimals)
+		// Note: arrows and lines use x1/y1/x2/y2 instead of x/y
 		addSection( t( 'layers-section-transform', 'Transform' ), 'transform' );
-		addInput( { label: t( 'layers-prop-x', 'X' ), type: 'number', value: Math.round( layer.x || 0 ), step: 1, prop: 'x', onChange: function ( v ) { editor.updateLayer( layer.id, { x: Math.round( parseFloat( v ) ) } ); } } );
-		addInput( { label: t( 'layers-prop-y', 'Y' ), type: 'number', value: Math.round( layer.y || 0 ), step: 1, prop: 'y', onChange: function ( v ) { editor.updateLayer( layer.id, { y: Math.round( parseFloat( v ) ) } ); } } );
-		addInput( { label: t( 'layers-prop-rotation', 'Rotation' ), type: 'number', value: Math.round( layer.rotation || 0 ), step: 1, prop: 'rotation', onChange: function ( v ) { editor.updateLayer( layer.id, { rotation: Math.round( parseFloat( v ) ) } ); } } );
+		if ( layer.type !== 'arrow' && layer.type !== 'line' ) {
+			addInput( { label: t( 'layers-prop-x', 'X' ), type: 'number', value: Math.round( layer.x || 0 ), step: 1, prop: 'x', onChange: function ( v ) { editor.updateLayer( layer.id, { x: Math.round( parseFloat( v ) ) } ); } } );
+			addInput( { label: t( 'layers-prop-y', 'Y' ), type: 'number', value: Math.round( layer.y || 0 ), step: 1, prop: 'y', onChange: function ( v ) { editor.updateLayer( layer.id, { y: Math.round( parseFloat( v ) ) } ); } } );
+			addInput( { label: t( 'layers-prop-rotation', 'Rotation' ), type: 'number', value: Math.round( layer.rotation || 0 ), step: 1, prop: 'rotation', onChange: function ( v ) { editor.updateLayer( layer.id, { rotation: Math.round( parseFloat( v ) ) } ); } } );
+		}
 
 		// Size/geometry by type
 		const LAYER_TYPES = window.LayersConstants ? window.LayersConstants.LAYER_TYPES : {};
@@ -657,18 +649,21 @@
 				addInput( { label: t( 'layers-prop-inner-radius', 'Inner Radius' ), type: 'number', value: layer.innerRadius || ( ( layer.outerRadius || 50 ) * 0.5 ), step: 1, prop: 'innerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { innerRadius: parseFloat( v ) } ); } } );
 				break;
 			case ( LAYER_TYPES.LINE || 'line' ):
-				addInput( { label: 'x1', type: 'number', value: layer.x1 || 0, step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: parseFloat( v ) } ); } } );
-				addInput( { label: 'y1', type: 'number', value: layer.y1 || 0, step: 1, prop: 'y1', onChange: function ( v ) { editor.updateLayer( layer.id, { y1: parseFloat( v ) } ); } } );
-				addInput( { label: 'x2', type: 'number', value: layer.x2 || 0, step: 1, prop: 'x2', onChange: function ( v ) { editor.updateLayer( layer.id, { x2: parseFloat( v ) } ); } } );
-				addInput( { label: 'y2', type: 'number', value: layer.y2 || 0, step: 1, prop: 'y2', onChange: function ( v ) { editor.updateLayer( layer.id, { y2: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-start-x', 'Start X' ), type: 'number', value: layer.x1 || 0, step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-start-y', 'Start Y' ), type: 'number', value: layer.y1 || 0, step: 1, prop: 'y1', onChange: function ( v ) { editor.updateLayer( layer.id, { y1: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-end-x', 'End X' ), type: 'number', value: layer.x2 || 0, step: 1, prop: 'x2', onChange: function ( v ) { editor.updateLayer( layer.id, { x2: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-end-y', 'End Y' ), type: 'number', value: layer.y2 || 0, step: 1, prop: 'y2', onChange: function ( v ) { editor.updateLayer( layer.id, { y2: parseFloat( v ) } ); } } );
 				break;
 			case ( LAYER_TYPES.ARROW || 'arrow' ):
-				addInput( { label: 'x1', type: 'number', value: layer.x1 || 0, step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: parseFloat( v ) } ); } } );
-				addInput( { label: 'y1', type: 'number', value: layer.y1 || 0, step: 1, prop: 'y1', onChange: function ( v ) { editor.updateLayer( layer.id, { y1: parseFloat( v ) } ); } } );
-				addInput( { label: 'x2', type: 'number', value: layer.x2 || 0, step: 1, prop: 'x2', onChange: function ( v ) { editor.updateLayer( layer.id, { x2: parseFloat( v ) } ); } } );
-				addInput( { label: 'y2', type: 'number', value: layer.y2 || 0, step: 1, prop: 'y2', onChange: function ( v ) { editor.updateLayer( layer.id, { y2: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-arrow-size', 'Arrow Size' ), type: 'number', value: layer.arrowSize || 10, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { arrowSize: parseFloat( v ) } ); } } );
-				addSelect( { label: t( 'layers-prop-arrow-style', 'Arrow Style' ), value: layer.arrowStyle || 'single', options: [ { value: 'single', text: t( 'layers-arrow-single', 'Single' ) }, { value: 'double', text: t( 'layers-arrow-double', 'Double' ) }, { value: 'none', text: t( 'layers-arrow-none', 'Line only' ) } ], onChange: function ( v ) { editor.updateLayer( layer.id, { arrowStyle: v } ); } } );
+				addInput( { label: t( 'layers-prop-start-x', 'Start X' ), type: 'number', value: layer.x1 || 0, step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-start-y', 'Start Y' ), type: 'number', value: layer.y1 || 0, step: 1, prop: 'y1', onChange: function ( v ) { editor.updateLayer( layer.id, { y1: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-end-x', 'End X' ), type: 'number', value: layer.x2 || 0, step: 1, prop: 'x2', onChange: function ( v ) { editor.updateLayer( layer.id, { x2: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-end-y', 'End Y' ), type: 'number', value: layer.y2 || 0, step: 1, prop: 'y2', onChange: function ( v ) { editor.updateLayer( layer.id, { y2: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-arrow-size', 'Head Size' ), type: 'number', value: layer.arrowSize || 15, min: 5, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { arrowSize: parseFloat( v ) } ); } } );
+				addSliderInput( { label: t( 'layers-prop-head-scale', 'Head Scale' ), value: Math.round( ( layer.headScale || 1 ) * 100 ), min: 25, max: 300, step: 5, onChange: function ( v ) { editor.updateLayer( layer.id, { headScale: v / 100 } ); } } );
+				addInput( { label: t( 'layers-prop-tail-width', 'Tail Width' ), type: 'number', value: layer.tailWidth || 0, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { tailWidth: parseFloat( v ) } ); } } );
+				addSelect( { label: t( 'layers-prop-arrow-ends', 'Arrow Ends' ), value: layer.arrowStyle || 'single', options: [ { value: 'single', text: t( 'layers-arrow-single', 'Single' ) }, { value: 'double', text: t( 'layers-arrow-double', 'Double' ) }, { value: 'none', text: t( 'layers-arrow-none', 'Line only' ) } ], onChange: function ( v ) { editor.updateLayer( layer.id, { arrowStyle: v } ); } } );
+				addSelect( { label: t( 'layers-prop-head-type', 'Head Type' ), value: layer.arrowHeadType || 'pointed', options: [ { value: 'pointed', text: t( 'layers-head-pointed', 'Pointed' ) }, { value: 'chevron', text: t( 'layers-head-chevron', 'Chevron' ) }, { value: 'standard', text: t( 'layers-head-standard', 'Standard' ) } ], onChange: function ( v ) { editor.updateLayer( layer.id, { arrowHeadType: v } ); } } );
 				break;
 			case 'text':
 				addInput( { label: t( 'layers-prop-text', 'Text' ), type: 'text', value: layer.text || '', maxLength: 1000, onChange: function ( v ) { editor.updateLayer( layer.id, { text: v } ); } } );
@@ -694,8 +689,11 @@
 			addInput( { label: t( 'layers-prop-stroke-width', 'Stroke Width' ), type: 'number', value: layer.strokeWidth || 1, min: 0, max: 200, step: 1, onChange: function ( v ) { const val = Math.max( 0, Math.min( 200, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { strokeWidth: val } ); } } );
 		}
 		addSliderInput( { label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ), value: ( layer.strokeOpacity != null ) ? Math.round( layer.strokeOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { strokeOpacity: v / 100 } ); } } );
-		addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
-		addSliderInput( { label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ), value: ( layer.fillOpacity != null ) ? Math.round( layer.fillOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { fillOpacity: v / 100 } ); } } );
+		// Fill controls for shapes that use fill (lines are stroke-only)
+		if ( layer.type !== 'line' ) {
+			addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
+			addSliderInput( { label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ), value: ( layer.fillOpacity != null ) ? Math.round( layer.fillOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { fillOpacity: v / 100 } ); } } );
+		}
 
 		// Effects
 		addSection( t( 'layers-section-effects', 'Effects' ), 'effects' );

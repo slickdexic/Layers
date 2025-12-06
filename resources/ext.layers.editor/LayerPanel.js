@@ -207,24 +207,27 @@
 			this.eventTracker = null;
 		};
 
-	// Minimal i18n helper with safe fallbacks
+	/**
+	 * Get localized message with fallback
+	 * Delegates to centralized MessageHelper for consistent i18n handling.
+	 * @param {string} key Message key
+	 * @param {string} fallback Fallback text
+	 * @return {string}
+	 */
 	LayerPanel.prototype.msg = function ( key, fallback ) {
-		let txt = null;
-		try {
-			if ( window.mw && typeof mw.message === 'function' ) {
-				txt = mw.message( key ).text();
-			}
-		} catch ( e ) {
-			// i18n lookup failed - use fallback silently but log for debugging
-			if ( window.mw && window.mw.log ) {
-				mw.log.warn( '[LayerPanel] i18n lookup failed for key: ' + key );
+		// Try centralized MessageHelper first
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			return window.layersMessages.get( key, fallback );
+		}
+		// Fall back to direct mw.message if MessageHelper unavailable
+		if ( window.mw && window.mw.message ) {
+			try {
+				return mw.message( key ).text();
+			} catch ( e ) {
+				// Fall through to return fallback
 			}
 		}
-		// MediaWiki shows ⧼key⧽ for missing messages; treat as missing
-		if ( typeof txt === 'string' && txt.indexOf && txt.indexOf( '\u29fc' ) === -1 && txt.indexOf( '⧼' ) === -1 ) {
-			return txt;
-		}
-		return fallback;
+		return fallback || '';
 	};
 
 	// Helper function to set multiple attributes on an element

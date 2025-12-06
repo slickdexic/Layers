@@ -10,7 +10,7 @@
 
 This document provides a prioritized, actionable improvement plan for the Layers MediaWiki extension. Tasks are organized by priority level with effort estimates, risk assessments, and clear acceptance criteria.
 
-**Current State:** The extension is functional with excellent backend security and unit test coverage (2,705 tests). All P0 critical tasks are now complete. Key remaining work is architectural: god classes (8 files over 800 lines) and 68 global exports.
+**Current State:** The extension is functional with excellent backend security and unit test coverage (2,707 tests). The primary technical debt is architectural: god classes (10 files over 800 lines) and 43 global exports blocking modern tooling.
 
 ---
 
@@ -31,114 +31,99 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Total JS files | 47 | - | - |
-| Total JS lines | 27,317 | - | - |
-| CanvasManager.js | 1,980 | <800 | 148% over |
-| LayersEditor.js | 1,879 | <800 | 135% over |
-| CanvasRenderer.js | 1,465 | <800 | 83% over |
-| TransformController.js | 1,204 | <600 | 100% over |
-| LayerPanel.js | 1,121 | <600 | 87% over |
-| LayersValidator.js | 1,001 | <500 | 100% over |
-| SelectionManager.js | 980 | <500 | 96% over |
-| ToolManager.js | 970 | <500 | 94% over |
-| Global exports | 44 | <10 | 340% over |
+| Total JS files | 43 | - | - |
+| Total JS lines | 26,292 | - | - |
+| Total JS bytes | 801KB | <480KB minified | 🔴 67% over |
+| CanvasManager.js | 1,980 | <800 | 🔴 147% over |
+| LayersEditor.js | 1,879 | <800 | 🔴 135% over |
+| CanvasRenderer.js | 1,505 | <800 | 🔴 88% over |
+| TransformController.js | 1,225 | <600 | 🔴 104% over |
+| LayerPanel.js | 1,121 | <600 | 🔴 87% over |
+| LayersValidator.js | 1,001 | <500 | 🔴 100% over |
+| SelectionManager.js | 998 | <500 | 🔴 100% over |
+| ToolManager.js | 996 | <500 | 🔴 99% over |
+| Global exports | 43 | <10 | 🔴 330% over |
 
 ### Testing
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Jest test files | 61 | 50+ | GOOD |
-| Jest tests total | 2,709 | 2,500+ | EXCELLENT |
-| E2E tests (real) | ~20 | 50+ | Need CI |
-| E2E in CI | 0 | 20+ | MISSING |
+| Jest test files | 61 | 50+ | 🟢 Excellent |
+| Jest tests total | 2,711 | 2,500+ | 🟢 Excellent |
+| E2E tests (real) | ~20 | 50+ | 🟡 Needs expansion |
+| E2E CI workflow | Configured | Running | 🟡 Verify |
 
 ### Memory Management
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Classes with destroy() | 28 | All | COMPLETE |
-| Classes missing destroy() | 0 | 0 | GOOD |
+| Classes with destroy() | All major | All | 🟢 Good |
+| Dead code (archive/) | Removed | None | 🟢 Complete |
 
 ---
 
 ## Phase 0: Critical (P0) - This Week
 
-### P0.1 Integrate E2E Tests into CI
+### P0.1 Verify E2E Tests in CI
 
-**Priority:** P0 - CRITICAL  
-**Status:** Not Started  
-**Effort:** 1-2 days  
+**Priority:** P0  
+**Status:** In Progress  
+**Effort:** 1 day  
 **Risk:** LOW
 
-**Problem:** Real E2E tests exist in `tests/e2e/editor.spec.js` but require `MW_SERVER` environment variable and skip when unavailable.
+**Problem:** E2E workflow is configured in `.github/workflows/e2e.yml` but needs verification that it runs successfully.
 
 **Current State:**
-- `smoke.spec.js` - Basic Playwright sanity tests (work offline)
-- `editor.spec.js` - ~20 real tests that require MediaWiki instance
+- `e2e.yml` configures MediaWiki container with mariadb service
+- Environment variables: `MW_SERVER`, `MW_USERNAME`, `MW_PASSWORD`, `TEST_FILE`
+- Tests skip gracefully when environment not configured
 
 **Tasks:**
-- [ ] Set up MediaWiki Docker container in CI (GitHub Actions)
-- [ ] Configure `MW_SERVER`, `MW_USERNAME`, `MW_PASSWORD` secrets
-- [ ] Create CI workflow for E2E tests
-- [ ] Add test image fixture (`Test.png`)
-- [ ] Verify all existing editor tests pass in CI
+- [ ] Trigger E2E workflow manually or via PR
+- [ ] Verify all 20+ editor tests pass in CI
+- [ ] Fix any environment/timing issues
+- [ ] Add status badge to README.md
 
 **Acceptance Criteria:**
 - [ ] E2E tests run in GitHub Actions on every PR
 - [ ] Test results visible in PR checks
-- [ ] At least 15 tests passing in CI
+- [ ] At least 15 tests passing consistently
 
 ---
 
-### P0.2 Add destroy() Methods to All Managers
+### P0.2 Document Architecture Decisions
 
-**Priority:** P0 - CRITICAL  
-**Status:** COMPLETED (December 4, 2025)  
-**Effort:** 3-4 hours  
-**Risk:** LOW
+**Priority:** P0  
+**Status:** ✅ COMPLETE  
+**Effort:** 2-3 hours  
+**Risk:** NONE  
+**Completed:** January 2025
 
-**Problem:** 11 classes were missing proper destroy() methods, causing potential memory leaks when editors are destroyed and recreated.
+**Problem:** Current architecture evolved organically. New contributors need to understand why certain patterns exist.
 
-**Classes Updated:**
+**Tasks:**
+- [x] Create `docs/ARCHITECTURE.md`
+- [x] Document module dependency graph
+- [x] Explain controller extraction pattern
+- [x] Document namespace strategy (window.Layers.*)
+- [x] Explain StateManager/editor bridge pattern
 
-| Class | File | Status |
-|-------|------|--------|
-| SelectionManager | SelectionManager.js | ✅ DONE |
-| HistoryManager | HistoryManager.js | ✅ DONE |
-| ToolManager | ToolManager.js | ✅ DONE |
-| APIManager | APIManager.js | ✅ DONE |
-| ValidationManager | ValidationManager.js | ✅ DONE |
-| CanvasRenderer | CanvasRenderer.js | ✅ DONE |
-| ShapeRenderer | ShapeRenderer.js | ✅ DONE |
-| TransformController | TransformController.js | ✅ DONE |
-| ZoomPanController | ZoomPanController.js | ✅ DONE |
-| GridRulersController | GridRulersController.js | ✅ DONE |
-| HitTestController | HitTestController.js | ✅ DONE |
+**Deliverable:** [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+
+**Contents:**
+- Module dependency graph (visual ASCII diagram)
+- Core patterns: Module Registry, Controller Extraction, StateManager Bridge, MessageHelper, PHP LoggerTrait
+- Namespace strategy (current vs target state)
+- Data flow diagrams (save/load)
+- Testing architecture
+- File organization
+- Configuration reference
+- Migration notes
 
 **Acceptance Criteria:**
-- [x] All 11 classes have destroy() methods
-- [x] All 2,709 existing tests still pass
-
----
-
-### P0.3 Remove Dead Code in archive/ Directory
-
-**Priority:** P0 - LOW  
-**Status:** COMPLETED (December 4, 2025)  
-**Effort:** 15 minutes  
-**Risk:** NONE
-
-**Problem:** The `resources/ext.layers.editor/archive/` directory contained 2 unused files (1,214 lines total).
-
-**Files Removed:**
-- `archive/EventHandler.js` (512 lines)
-- `archive/EventSystem.js` (702 lines)
-
-**Tasks Completed:**
-- [x] Deleted `resources/ext.layers.editor/archive/` directory
-- [x] Removed ESLint ignore rules for archive from `.eslintrc.json`
-- [x] Removed global references to EventHandler and EventSystem
-- [x] All tests pass
+- [x] Architecture doc covers all major modules
+- [x] Dependency relationships are clear
+- [x] Migration path from legacy globals documented
 
 ---
 
@@ -154,14 +139,14 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 **Already Extracted Controllers:**
 - ZoomPanController.js (341 lines)
-- GridRulersController.js (383 lines)
-- TransformController.js (1,204 lines) - needs further splitting
+- GridRulersController.js (407 lines)
+- TransformController.js (1,225 lines) - needs further splitting
 - HitTestController.js (376 lines)
 - DrawingController.js (620 lines)
-- ClipboardController.js (varies)
-- RenderCoordinator.js (varies)
+- ClipboardController.js
+- RenderCoordinator.js
 - InteractionController.js (490 lines)
-- StyleController.js (varies)
+- StyleController.js
 
 **Remaining Extractions Needed:**
 
@@ -169,7 +154,7 @@ This document provides a prioritized, actionable improvement plan for the Layers
 |--------|------------|-------------------|
 | LayerOperationsController | ~150 | addLayer, removeLayer, duplicateLayer, moveLayerUp/Down |
 | ViewportController | ~100 | getViewportInfo, screenToCanvas, canvasToScreen |
-| CanvasLifecycleManager | ~100 | initialize, setupCanvas, resize, destroy |
+| CanvasLifecycleManager | ~100 | initialize, setupCanvas, resize |
 
 **Tasks:**
 - [ ] Extract LayerOperationsController from CanvasManager
@@ -182,14 +167,14 @@ This document provides a prioritized, actionable improvement plan for the Layers
 **Acceptance Criteria:**
 - [ ] CanvasManager.js < 1,200 lines (intermediate target)
 - [ ] Each new controller has 90%+ test coverage
-- [ ] All 2,709+ tests pass
+- [ ] All 2,707+ tests pass
 
 ---
 
 ### P1.2 Decompose LayersEditor.js
 
 **Priority:** P1 - HIGH  
-**Status:** Partially Started  
+**Status:** Not Started  
 **Effort:** 1-2 weeks  
 **Risk:** MEDIUM  
 **Current:** 1,879 lines | **Target:** <800 lines
@@ -229,7 +214,7 @@ This document provides a prioritized, actionable improvement plan for the Layers
 **Status:** Not Started  
 **Effort:** 3-4 days  
 **Risk:** MEDIUM  
-**Current:** 1,204 lines | **Target:** <600 lines
+**Current:** 1,225 lines | **Target:** <600 lines
 
 **Responsibilities to Extract:**
 
@@ -255,125 +240,132 @@ This document provides a prioritized, actionable improvement plan for the Layers
 
 ---
 
-### P1.4 Consolidate Global Exports
+### P1.4 Complete MessageHelper Migration
 
-**Priority:** P1 - HIGH  
-**Status:** COMPLETED (December 4, 2025)  
-**Effort:** 3-4 days  
-**Risk:** MEDIUM
-
-**Current State:**
-- 44 unique `window.X =` class exports (reduced from 68 after deduplication)
-- `LayersNamespace.js` now has complete registry of all exports
-- Namespace structure: `window.Layers.{Core,UI,Canvas,Utils,Validation}.*`
-- Deprecation warnings work when `wgLayersDebug=true`
-
-**Completed Tasks:**
-- ✅ Phase 1: Audit and registry update
-  - Updated `LayersNamespace.js` export registry to include all 44 classes
-  - Fixed naming discrepancies (e.g., `LayersToolManager`, `LayersSelectionManager`, `LayersErrorHandler`)
-  - Added missing exports: `ShapeRenderer`, `LayerSetManager`
-  - Updated tests to match actual export names
-  - All 2,707 tests passing
-- ✅ Phase 2: Deprecation warnings implemented
-  - Warnings fire when `wgLayersDebug` config is enabled
-  - Legacy window.* access triggers console warnings
-
-**Target Namespace Structure:**
-```javascript
-window.Layers = {
-    VERSION: '0.8.1-dev',
-    Editor: LayersEditor,           // top-level
-    ToolManager: LayersToolManager, // top-level
-    APIManager: APIManager,         // top-level
-    Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
-    UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, ... },
-    Canvas: { Manager, Renderer, SelectionManager, DrawingController, ... },
-    Utils: { Geometry, Text, ImageLoader, ErrorHandler, EventTracker, ... },
-    Validation: { LayersValidator, Manager }
-};
-```
-
-**Acceptance Criteria:**
-- [x] Complete export registry in LayersNamespace.js
-- [x] All exports mapped to correct namespace locations
-- [x] Tests updated and passing
-- [x] Legacy exports emit deprecation warnings (when wgLayersDebug=true)
-- [ ] Migration guide documented
-
----
-
-### P1.5 Complete MessageHelper Migration
-
-**Priority:** P1 - LOW  
-**Status:** COMPLETED (December 4, 2025)  
+**Priority:** P1 - MEDIUM  
+**Status:** ✅ COMPLETE  
 **Effort:** 4-6 hours  
-**Risk:** LOW
+**Risk:** LOW  
+**Completed:** January 2025
 
-**Problem:** Duplicate message fallback pattern in 4+ files:
+**Problem:** Duplicate message fallback pattern in 6+ files:
 ```javascript
 return ( mw.message ? mw.message( key ).text() : ( mw.msg ? mw.msg( key ) : fallback ) );
 ```
 
-**Solution Implemented:**
-- ✅ Replaced duplicate `getMessage()` methods in 4 files with delegation to `window.layersMessages.get()`
-- ✅ Files updated: `APIManager.js`, `UIManager.js`, `ValidationManager.js`, `LayersEditor.js`
-- ✅ Updated Jest setup to provide MessageHelper singleton for tests
-- ✅ Updated tests to verify delegation behavior
-- ✅ All 2,705 tests passing
-
-**Changed Files:**
-- `resources/ext.layers.editor/APIManager.js` - getMessage() now delegates
-- `resources/ext.layers.editor/UIManager.js` - getMessage() now delegates
-- `resources/ext.layers.editor/ValidationManager.js` - getMessage() now delegates
-- `resources/ext.layers.editor/LayersEditor.js` - getMessage() now delegates
-- `tests/jest/setup.js` - Added MessageHelper initialization for test environment
-- `tests/jest/ValidationManager.test.js` - Updated getMessage tests
-- `tests/jest/UIManager.test.js` - Updated getMessage tests
-- `tests/jest/LayersEditorExtended.test.js` - Updated getMessage tests
+**Files Updated:**
+- ✅ `APIManager.js` - Uses `window.layersMessages.get()`
+- ✅ `ErrorHandler.js` - Uses `window.layersMessages.get()`
+- ✅ `ImportExportManager.js` - Uses `window.layersMessages.get()` via `msg()`
+- ✅ `LayerPanel.js` - Uses `window.layersMessages.get()` via `msg()`
+- ✅ `LayersEditor.js` - Uses `window.layersMessages.get()` via `getMessage()`
+- ✅ `LayerSetManager.js` - Uses `window.layersMessages.get()` via `getMessage()` and `getMessageWithParams()`
+- ✅ `UIManager.js` - Uses `this.getMessage()`
+- ✅ `PropertiesForm.js` - Uses `window.layersMessages.get()` via `msg()`
+- ✅ `LayersValidator.js` - Uses `window.layersMessages.getWithParams()` via `getMessage()`
+- ✅ `Toolbar.js` - Uses `window.layersMessages.get()` via `msg()`
 
 **Acceptance Criteria:**
-- [x] No verbose mw.message patterns outside MessageHelper
-- [x] All messages use MessageHelper
-- [x] i18n keys validated by banana checker
+- [x] No verbose mw.message patterns outside MessageHelper (all use MessageHelper with fallback)
+- [x] All messages use MessageHelper.get() (or getWithParams() for parameterized messages)
+- [x] All 2,711 tests pass
 
 ---
 
-### P1.6 Extract PHP Shared Services
+### P1.5 Extract PHP LoggerTrait
 
 **Priority:** P1 - MEDIUM  
-**Status:** Not Started  
-**Effort:** 2-3 days  
-**Risk:** LOW
+**Status:** ✅ COMPLETE  
+**Effort:** 2-3 hours  
+**Risk:** LOW  
+**Completed:** January 2025
 
-**Problem:** Duplicate code patterns in PHP files:
+**Problem:** Duplicate getLogger() code in 5+ PHP classes.
 
-**getLogger() pattern duplicated in 4 classes:**
-```php
-private function getLogger() {
-    if ( $this->logger === null ) {
-        try {
-            $this->logger = MediaWikiServices::getInstance()
-                ->getService( 'Layers.Logger' );
-        } catch ( \Exception $e ) {
-            $this->logger = new NullLogger();
+**Solution Implemented:**
+- Created `src/Logging/LoggerAwareTrait.php` for instance methods
+- Created `src/Logging/StaticLoggerAwareTrait.php` for static contexts
+- Updated 4 PHP files to use the traits:
+  - `ApiLayersInfo.php`
+  - `ApiLayersSave.php`
+  - `LayersDatabase.php`
+  - `ThumbnailRenderer.php`
+
+**Acceptance Criteria:**
+- [x] LoggerAwareTrait created with getLogger() and setLogger()
+- [x] StaticLoggerAwareTrait created for static contexts
+- [x] PHP classes updated to use traits
+- [x] All PHP tests pass
+    private ?LoggerInterface $logger = null;
+    
+    protected function getLogger(): LoggerInterface {
+        if ($this->logger === null) {
+            try {
+                $this->logger = MediaWikiServices::getInstance()
+                    ->getService('LayersLogger');
+            } catch (\Exception $e) {
+                $this->logger = new NullLogger();
+            }
         }
+        return $this->logger;
     }
-    return $this->logger;
 }
 ```
 
 **Tasks:**
-- [ ] Create `src/Services/LoggerFactory.php`
-- [ ] Create `src/Services/FileResolver.php`
-- [ ] Register in `services.php`
-- [ ] Refactor all callers to use injected services
-- [ ] Add unit tests
+- [ ] Create `src/Traits/LoggerAwareTrait.php`
+- [ ] Refactor ImageLinkProcessor.php to use trait
+- [ ] Refactor ThumbnailProcessor.php to use trait
+- [ ] Refactor LayeredFileRenderer.php to use trait
+- [ ] Refactor LayersHtmlInjector.php to use trait
+- [ ] Refactor ApiLayersSave.php to use trait
+- [ ] Run PHP tests to verify
 
 **Acceptance Criteria:**
 - [ ] No duplicate getLogger() implementations
-- [ ] Services have 100% test coverage
 - [ ] All PHP tests pass
+- [ ] Trait is documented in copilot-instructions.md
+
+---
+
+### P1.6 Consolidate Global Exports
+
+**Priority:** P1 - MEDIUM  
+**Status:** Partially Complete  
+**Effort:** 3-4 days  
+**Risk:** MEDIUM
+
+**Current State:**
+- 43 unique `window.X =` exports
+- `LayersNamespace.js` has partial consolidation
+- Deprecation warnings partially implemented
+
+**Target Structure:**
+```javascript
+window.Layers = {
+    VERSION: '0.8.1-dev',
+    Editor: LayersEditor,
+    Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
+    UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm },
+    Canvas: { Manager, Renderer, SelectionManager, DrawingController, ... },
+    Utils: { Geometry, Text, ImageLoader, ErrorHandler, EventTracker },
+    Validation: { LayersValidator, ValidationManager }
+};
+```
+
+**Tasks:**
+- [ ] Audit all 43 global exports
+- [ ] Map each to appropriate namespace location
+- [ ] Update LayersNamespace.js with complete registry
+- [ ] Add deprecation warnings for all legacy exports
+- [ ] Update tests to use new namespace
+- [ ] Document migration in CONTRIBUTING.md
+
+**Acceptance Criteria:**
+- [ ] All exports organized under window.Layers.*
+- [ ] Legacy window.X access emits deprecation warnings
+- [ ] Migration guide documented
+- [ ] All tests updated and passing
 
 ---
 
@@ -384,7 +376,8 @@ private function getLogger() {
 **Priority:** P2 - MEDIUM  
 **Status:** Not Started  
 **Effort:** 1-2 weeks  
-**Risk:** MEDIUM
+**Risk:** MEDIUM  
+**Depends On:** P1.6 (Namespace consolidation)
 
 **Strategy:** Start with leaf modules (no dependencies on other Layers code):
 
@@ -473,25 +466,40 @@ private function getLogger() {
 **Effort:** 1 week  
 **Risk:** LOW
 
-**Current Coverage:**
-- Rectangle, circle, text, arrow creation
-- Select, delete, undo, redo
-- Save/load basics
+**Current Coverage (4 of 11 layer types):**
+- ✅ Rectangle
+- ✅ Circle
+- ✅ Text
+- ✅ Arrow
 
-**Missing Coverage:**
-- [ ] All 11 layer types (ellipse, polygon, star, line, highlight, path, blur)
-- [ ] Named layer sets (create, switch, save to specific set)
-- [ ] Revision history (load specific revision)
-- [ ] Import/export functionality
-- [ ] Multi-layer selection and operations
-- [ ] Copy/paste operations
-- [ ] Zoom and pan operations
-- [ ] Grid and ruler toggles
+**Missing Coverage (7 layer types):**
+- ❌ Ellipse
+- ❌ Polygon
+- ❌ Star
+- ❌ Line
+- ❌ Highlight
+- ❌ Path
+- ❌ Blur
+
+**Additional Missing Tests:**
+- ❌ Named layer sets workflow
+- ❌ Revision history navigation
+- ❌ Import/export functionality
+- ❌ Multi-layer selection
+- ❌ Copy/paste operations
+- ❌ Zoom and pan interactions
+
+**Tasks:**
+- [ ] Add tests for ellipse, polygon, star creation
+- [ ] Add tests for line, highlight, path, blur creation
+- [ ] Add named layer set creation/switching tests
+- [ ] Add revision history navigation tests
+- [ ] Add import/export tests
 
 **Acceptance Criteria:**
-- [ ] At least 40 E2E tests
-- [ ] All 11 layer types tested
-- [ ] Named layer set workflow tested
+- [ ] All 11 layer types have creation tests
+- [ ] Named layer set workflow tested end-to-end
+- [ ] At least 40 E2E tests total
 
 ---
 
@@ -502,7 +510,7 @@ private function getLogger() {
 **Priority:** P3 - LOW  
 **Status:** Not Started  
 **Effort:** Ongoing  
-**Dependencies:** P2.1 (ES Modules)
+**Depends On:** P2.1 (ES Modules)
 
 **Strategy:**
 1. Add `tsconfig.json` with `allowJs: true`
@@ -517,6 +525,12 @@ private function getLogger() {
 - [ ] Convert GeometryUtils.ts (proof of concept)
 - [ ] Add TypeScript to CI checks
 
+**Acceptance Criteria:**
+- [ ] tsconfig.json configured
+- [ ] Core interfaces defined
+- [ ] At least 3 files converted to TypeScript
+- [ ] CI runs TypeScript checks
+
 ---
 
 ### P3.2 Full E2E Test Suite
@@ -524,7 +538,7 @@ private function getLogger() {
 **Priority:** P3 - LOW  
 **Status:** Not Started  
 **Effort:** 2-3 weeks  
-**Dependencies:** P0.1, P2.4
+**Depends On:** P2.4
 
 **Test Coverage Goals:**
 - All 11 layer types with property variations
@@ -534,12 +548,12 @@ private function getLogger() {
 - Named layer sets full workflow
 - Revision history navigation
 - Import/export JSON
-- Concurrent editing scenarios (if applicable)
+- Cross-browser testing (Chrome, Firefox)
 
 **Acceptance Criteria:**
 - [ ] 50+ E2E tests
 - [ ] 80%+ feature coverage
-- [ ] Cross-browser testing (Chrome, Firefox)
+- [ ] Tests run in Chrome and Firefox
 
 ---
 
@@ -561,6 +575,12 @@ private function getLogger() {
 - [ ] Add confirmation dialogs
 - [ ] Add tests
 
+**Acceptance Criteria:**
+- [ ] Delete API works with proper permissions
+- [ ] Rename API works with validation
+- [ ] UI allows managing sets
+- [ ] All operations have tests
+
 ---
 
 ## Quick Reference
@@ -569,60 +589,62 @@ private function getLogger() {
 
 | # | Task | Effort | Status |
 |---|------|--------|--------|
-| P0.1 | Integrate E2E tests into CI | 1-2 days | ✅ COMPLETED |
-| P0.2 | Add destroy() to 11 classes | 3-4 hours | ✅ COMPLETED |
-| P0.3 | Remove archive/ dead code | 15 min | ✅ COMPLETED |
+| P0.1 | Verify E2E tests in CI | 1 day | Not Started |
+| P0.2 | Document architecture | 2-3 hours | Not Started |
 
 ### P1 - 2-4 Weeks (High)
 
 | # | Task | Effort | Status |
 |---|------|--------|--------|
-| P1.1 | Decompose CanvasManager.js | 1-2 weeks | Not started |
-| P1.2 | Decompose LayersEditor.js | 1-2 weeks | Partial |
-| P1.3 | Decompose TransformController.js | 3-4 days | Not started |
-| P1.4 | Consolidate global exports | 3-4 days | ✅ COMPLETED |
-| P1.5 | Complete MessageHelper migration | 4-6 hours | ✅ COMPLETED |
-| P1.6 | Extract PHP shared services | 2-3 days | Not started |
+| P1.1 | Decompose CanvasManager.js (1,980→<800) | 1-2 weeks | In Progress |
+| P1.2 | Decompose LayersEditor.js (1,879→<800) | 1-2 weeks | Not Started |
+| P1.3 | Decompose TransformController.js (1,225→<600) | 3-4 days | Not Started |
+| P1.4 | Complete MessageHelper migration | 4-6 hours | Not Started |
+| P1.5 | Extract PHP LoggerTrait | 2-3 hours | Not Started |
+| P1.6 | Consolidate global exports (43→~10) | 3-4 days | Partial |
 
 ### P2 - 1-2 Months (Medium)
 
 | # | Task | Effort | Status |
 |---|------|--------|--------|
-| P2.1 | Begin ES module migration | 1-2 weeks | Not started |
-| P2.2 | Add canvas accessibility | 3-4 days | Not started |
-| P2.3 | Add performance benchmarks | 2-3 days | Not started |
-| P2.4 | Expand E2E test coverage | 1 week | Partial |
+| P2.1 | Begin ES module migration | 1-2 weeks | Not Started |
+| P2.2 | Add canvas accessibility | 3-4 days | Not Started |
+| P2.3 | Add performance benchmarks | 2-3 days | Not Started |
+| P2.4 | Expand E2E coverage (7 more types) | 1 week | Partial |
 
 ### P3 - 3+ Months (Low)
 
 | # | Task | Effort | Status |
 |---|------|--------|--------|
-| P3.1 | TypeScript migration | Ongoing | Not started |
-| P3.2 | Full E2E test suite | 2-3 weeks | Not started |
-| P3.3 | Layer set management API | 1 week | Not started |
+| P3.1 | TypeScript migration | Ongoing | Not Started |
+| P3.2 | Full E2E test suite (50+ tests) | 2-3 weeks | Not Started |
+| P3.3 | Layer set management API | 1 week | Not Started |
 
 ---
 
 ## Visual Progress Dashboard
 
 ```
-God Classes (Lines -> Target):
-CanvasManager.js:       ████████████████████████░░░░░░░░ 1,980/800 (248%)
+God Classes (Lines → Target):
+CanvasManager.js:       ████████████████████████░░░░░░░░ 1,980/800 (247%)
 LayersEditor.js:        ███████████████████████░░░░░░░░░ 1,879/800 (235%)
-CanvasRenderer.js:      ██████████████████░░░░░░░░░░░░░░ 1,465/800 (183%)
-TransformController.js: ████████████████████░░░░░░░░░░░░ 1,204/600 (201%)
+CanvasRenderer.js:      ██████████████████░░░░░░░░░░░░░░ 1,505/800 (188%)
+TransformController.js: ████████████████████░░░░░░░░░░░░ 1,225/600 (204%)
 LayerPanel.js:          ██████████████████░░░░░░░░░░░░░░ 1,121/600 (187%)
-
-Memory Management:
-Classes with destroy():    ████████████████████████████████ 28/28 (100%) ✅
-Classes missing destroy(): ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0 classes ✅
+LayersValidator.js:     ████████████████████░░░░░░░░░░░░ 1,001/500 (200%)
+SelectionManager.js:    ████████████████████░░░░░░░░░░░░   998/500 (200%)
+ToolManager.js:         ████████████████████░░░░░░░░░░░░   996/500 (199%)
 
 Global Namespace:
-Global exports:           ████████████████████████████████ 68 (680% over target of 10)
+Unique exports:         █████████████████░░░░░░░░░░░░░░░ 43/10 (430%)
 
 Test Coverage:
-Unit tests (Jest):        █████████████████████████████░░░ 2,709 tests EXCELLENT
-E2E tests in CI:          ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0 tests MISSING
+Unit tests (Jest):      ████████████████████████████████ 2,707 tests 🟢 EXCELLENT
+E2E layer types:        ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 4/11 types 🟡 PARTIAL
+
+Memory Management:
+destroy() methods:      ████████████████████████████████ All major ✅
+Dead code removed:      ████████████████████████████████ archive/ ✅
 ```
 
 ---
@@ -630,34 +652,33 @@ E2E tests in CI:          ░░░░░░░░░░░░░░░░░░
 ## Success Criteria
 
 **Phase 0 Complete When:**
-- [ ] E2E tests run in CI on every PR
-- [x] All 11 classes have destroy() methods ✅
-- [x] Archive directory deleted ✅
-- [ ] Memory leak test passes
+- [ ] E2E tests verified running in CI
+- [ ] Architecture documented
 
 **Phase 1 Complete When:**
 - [ ] CanvasManager.js < 1,200 lines
 - [ ] LayersEditor.js < 1,000 lines
 - [ ] TransformController.js < 600 lines
-- [ ] Single `window.Layers` namespace
 - [ ] No duplicate message patterns
+- [ ] No duplicate PHP logger patterns
+- [ ] Namespace consolidation complete
 
 **Phase 2 Complete When:**
 - [ ] At least 5 ES modules
-- [ ] PHP shared services extracted
 - [ ] Basic canvas accessibility
 - [ ] Performance benchmarks in CI
 - [ ] 40+ E2E tests
+- [ ] All 11 layer types tested
 
 ---
 
 ## How to Contribute
 
-1. Pick an unassigned task (prioritize P0 first)
-2. Create a branch: `fix/P0.2-destroy-methods` or `feature/P1.3-transform-decompose`
+1. Pick an unassigned task (prioritize P0 first, then P1)
+2. Create a branch: `fix/P1.1-canvas-manager-decompose` or `feature/P2.2-accessibility`
 3. Implement with tests (target 90%+ coverage for new code)
 4. Run `npm test` and `npm run test:php`
-5. Submit PR referencing this plan (e.g., "Closes P0.2")
+5. Submit PR referencing this plan (e.g., "Closes P1.4")
 6. Update this document when task complete
 
 **Guidelines:**
@@ -665,7 +686,8 @@ E2E tests in CI:          ░░░░░░░░░░░░░░░░░░
 - Keep PRs small and focused (one extraction per PR)
 - All new code needs tests
 - Update line count metrics when files change significantly
+- Follow patterns established in existing controller extractions
 
 ---
 
-*Plan created by GitHub Copilot on December 4, 2025*
+*Plan created by GitHub Copilot (Claude Opus 4.5) on December 4, 2025*

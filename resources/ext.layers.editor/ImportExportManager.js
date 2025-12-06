@@ -21,7 +21,8 @@
 	}
 
 	/**
-	 * Get a localized message
+	 * Get a localized message with fallback
+	 * Delegates to centralized MessageHelper for consistent i18n handling.
 	 *
 	 * @private
 	 * @param {string} key Message key
@@ -29,17 +30,16 @@
 	 * @return {string} The localized message or fallback
 	 */
 	ImportExportManager.prototype.msg = function ( key, fallback ) {
+		// Try centralized MessageHelper first
 		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
 			return window.layersMessages.get( key, fallback );
 		}
-		if ( window.mw && mw.message ) {
+		// Fall back to direct mw.message if MessageHelper unavailable
+		if ( window.mw && window.mw.message ) {
 			try {
-				const msg = mw.message( key );
-				if ( msg && typeof msg.text === 'function' ) {
-					return msg.text();
-				}
+				return mw.message( key ).text();
 			} catch ( e ) {
-				// Fall through
+				// Fall through to return fallback
 			}
 		}
 		return fallback || '';

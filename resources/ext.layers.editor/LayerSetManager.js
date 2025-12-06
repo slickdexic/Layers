@@ -54,19 +54,57 @@
 
 	/**
 	 * Get localized message
+	 * Delegates to centralized MessageHelper for consistent i18n handling.
 	 * @param {string} key Message key
 	 * @param {string} [fallback=''] Fallback text
 	 * @return {string}
 	 */
 	LayerSetManager.prototype.getMessage = function ( key, fallback ) {
-		fallback = fallback || '';
-		if ( typeof mw !== 'undefined' && mw.message ) {
-			return mw.message( key ).text();
+		// Try centralized MessageHelper first
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			return window.layersMessages.get( key, fallback || '' );
 		}
-		if ( typeof mw !== 'undefined' && mw.msg ) {
-			return mw.msg( key );
+		// Fall back to direct mw.message if MessageHelper unavailable
+		if ( window.mw && window.mw.message ) {
+			try {
+				return mw.message( key ).text();
+			} catch ( e ) {
+				// Fall through to return fallback
+			}
 		}
-		return fallback;
+		return fallback || '';
+	};
+
+	/**
+	 * Get localized message with parameter substitution
+	 * Delegates to centralized MessageHelper for consistent i18n handling.
+	 * @param {string} key Message key
+	 * @param {Array} params Parameters to substitute
+	 * @param {string} [fallback=''] Fallback text (can use $1, $2 placeholders)
+	 * @return {string}
+	 */
+	LayerSetManager.prototype.getMessageWithParams = function ( key, params, fallback ) {
+		// Try centralized MessageHelper first
+		if ( window.layersMessages && typeof window.layersMessages.getWithParams === 'function' ) {
+			return window.layersMessages.getWithParams( key, params, fallback || '' );
+		}
+		// Fall back to direct mw.message with params if MessageHelper unavailable
+		if ( window.mw && window.mw.message ) {
+			try {
+				const args = [ key ].concat( params || [] );
+				return mw.message.apply( null, args ).text();
+			} catch ( e ) {
+				// Fall through to manual substitution
+			}
+		}
+		// Manual substitution fallback
+		let result = fallback || '';
+		if ( params && params.length > 0 ) {
+			params.forEach( function ( param, index ) {
+				result = result.replace( '$' + ( index + 1 ), String( param ) );
+			} );
+		}
+		return result;
 	};
 
 	/**
@@ -126,13 +164,9 @@
 				const date = self.parseMWTimestamp( timestamp );
 				let displayText = date.toLocaleString();
 
-				// Use MediaWiki message system with parameter replacement
-				if ( typeof mw !== 'undefined' && mw.message ) {
-					const byUserText = mw.message( 'layers-revision-by', userName ).text();
-					displayText += ' ' + byUserText;
-				} else {
-					displayText += ' by ' + userName;
-				}
+				// Use MessageHelper for parameterized message
+				const byUserText = self.getMessageWithParams( 'layers-revision-by', [ userName ], 'by $1' );
+				displayText += ' ' + byUserText;
 
 				if ( name ) {
 					displayText += ' (' + name + ')';

@@ -340,9 +340,12 @@
 				fallbackMessage = 'An unexpected error occurred. Please refresh if issues persist.';
 		}
 
-		// Use MediaWiki message if available
-		if ( window.mw && window.mw.message && mw.message( msgKey ).exists() ) {
-			return mw.message( msgKey ).text();
+		// Use centralized MessageHelper for consistent i18n handling
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			const msg = window.layersMessages.get( msgKey, '' );
+			if ( msg ) {
+				return msg;
+			}
 		}
 
 		return fallbackMessage;

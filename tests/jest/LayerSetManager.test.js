@@ -629,10 +629,16 @@ describe( 'LayerSetManager', () => {
 
 	describe( 'getMessage', () => {
 		it( 'should use mw.message when available', () => {
+			// Clear layersMessages to test mw.message fallback path
+			const originalLayersMessages = global.layersMessages;
+			delete global.layersMessages;
+
 			const result = layerSetManager.getMessage( 'test-key', 'fallback' );
 
 			expect( mw.message ).toHaveBeenCalledWith( 'test-key' );
 			expect( result ).toBe( 'test-key' );
+
+			global.layersMessages = originalLayersMessages;
 		} );
 
 		it( 'should return fallback when mw not available', () => {

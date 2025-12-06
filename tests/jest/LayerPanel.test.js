@@ -253,6 +253,10 @@ describe('LayerPanel', () => {
                 editor: mockEditor
             });
 
+            // Clear layersMessages to test mw.message fallback path
+            const originalLayersMessages = window.layersMessages;
+            delete window.layersMessages;
+
             // Mock mw.message
             window.mw.message = jest.fn().mockReturnValue({
                 text: jest.fn().mockReturnValue('Translated Message')
@@ -261,6 +265,8 @@ describe('LayerPanel', () => {
             const result = panel.msg('test-key', 'Fallback');
 
             expect(result).toBe('Translated Message');
+
+            window.layersMessages = originalLayersMessages;
         });
 
         test('should return fallback when mw.message not available', () => {

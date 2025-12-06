@@ -10,10 +10,11 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayerInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersHtmlInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
+use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
-use Psr\Log\LoggerInterface;
 
 class WikitextHooks {
+	use StaticLoggerAwareTrait;
 
 	/**
 	 * Singleton instance of ImageLinkProcessor
@@ -50,43 +51,6 @@ class WikitextHooks {
 	 * @var LayerInjector|null
 	 */
 	private static ?LayerInjector $layerInjector = null;
-
-	/**
-	 * Cached logger instance
-	 * @var LoggerInterface|null
-	 */
-	private static ?LoggerInterface $logger = null;
-
-	/**
-	 * Get logger instance (lazy singleton via DI container)
-	 *
-	 * @return LoggerInterface|null
-	 */
-	private static function getLogger(): ?LoggerInterface {
-		if ( self::$logger === null ) {
-			try {
-				$services = MediaWikiServices::getInstance();
-				self::$logger = $services->get( 'LayersLogger' );
-			} catch ( \Throwable $e ) {
-				// Fallback if service is unavailable
-				return null;
-			}
-		}
-		return self::$logger;
-	}
-
-	/**
-	 * Log a debug message if logger is available
-	 *
-	 * @param string $message
-	 * @param array $context
-	 */
-	private static function log( string $message, array $context = [] ): void {
-		$logger = self::getLogger();
-		if ( $logger ) {
-			$logger->info( "Layers: $message", $context );
-		}
-	}
 
 	/**
 	 * Get HTML injector instance (lazy singleton)
@@ -243,10 +207,7 @@ class WikitextHooks {
 				}
 			}
 		} catch ( \Throwable $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: ImageBeforeProduceHTML error', [ 'exception' => $e ] );
-			}
+			self::logError( 'ImageBeforeProduceHTML error', [ 'exception' => $e ] );
 		}
 
 		return true;
@@ -732,10 +693,7 @@ class WikitextHooks {
 				self::log( 'Found layers= in wikitext, setting pageHasLayers=true' );
 			}
 		} catch ( \Throwable $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: ParserBeforeInternalParse error: ' . $e->getMessage() );
-			}
+			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
 		}
 
 		return true;
@@ -750,10 +708,7 @@ class WikitextHooks {
 		try {
 			return MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
 		} catch ( \Throwable $e ) {
-			$logger = self::getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: Unable to resolve LayersDatabase service', [ 'exception' => $e ] );
-			}
+			self::logError( 'Unable to resolve LayersDatabase service', [ 'exception' => $e ] );
 			return null;
 		}
 	}

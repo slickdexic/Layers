@@ -12,8 +12,8 @@
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
-use Psr\Log\LoggerInterface;
 
 /**
  * Processes image links to inject layer data attributes.
@@ -27,15 +27,13 @@ use Psr\Log\LoggerInterface;
  * - LinkerMakeMediaLinkFile (media link path)
  */
 class ImageLinkProcessor {
+	use LoggerAwareTrait;
 
 	/** @var LayersHtmlInjector */
 	private LayersHtmlInjector $htmlInjector;
 
 	/** @var LayersParamExtractor */
 	private LayersParamExtractor $paramExtractor;
-
-	/** @var LoggerInterface|null */
-	private ?LoggerInterface $logger = null;
 
 	/** @var LayersDatabase|null */
 	private ?LayersDatabase $database = null;
@@ -59,23 +57,6 @@ class ImageLinkProcessor {
 	}
 
 	/**
-	 * Get logger instance (lazy initialization)
-	 *
-	 * @return LoggerInterface|null
-	 */
-	private function getLogger(): ?LoggerInterface {
-		if ( $this->logger === null ) {
-			try {
-				$services = MediaWikiServices::getInstance();
-				$this->logger = $services->get( 'LayersLogger' );
-			} catch ( \Throwable $e ) {
-				return null;
-			}
-		}
-		return $this->logger;
-	}
-
-	/**
 	 * Get database service instance (lazy initialization)
 	 *
 	 * @return LayersDatabase|null
@@ -86,10 +67,7 @@ class ImageLinkProcessor {
 				$services = MediaWikiServices::getInstance();
 				$this->database = $services->get( 'LayersDatabase' );
 			} catch ( \Throwable $e ) {
-				$logger = $this->getLogger();
-				if ( $logger ) {
-					$logger->warning( 'Layers: Database service unavailable', [ 'exception' => $e ] );
-				}
+				$this->logWarning( 'Database service unavailable', [ 'exception' => $e ] );
 				return null;
 			}
 		}
@@ -173,10 +151,7 @@ class ImageLinkProcessor {
 				}
 			}
 		} catch ( \Throwable $e ) {
-			$logger = $this->getLogger();
-			if ( $logger ) {
-				$logger->error( "Layers: $context error", [ 'exception' => $e ] );
-			}
+			$this->logError( "$context error", [ 'exception' => $e ] );
 		}
 
 		return true;
@@ -242,10 +217,7 @@ class ImageLinkProcessor {
 				$res = $this->htmlInjector->injectIntentMarker( $res );
 			}
 		} catch ( \Throwable $e ) {
-			$logger = $this->getLogger();
-			if ( $logger ) {
-				$logger->error( 'Layers: LinkerMakeMediaLinkFile error', [ 'exception' => $e ] );
-			}
+			$this->logError( 'LinkerMakeMediaLinkFile error', [ 'exception' => $e ] );
 		}
 
 		return true;

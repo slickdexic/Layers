@@ -72,7 +72,10 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'glow' => 'boolean',
 		'arrowhead' => 'string',
 		'arrowStyle' => 'string',
+		'arrowHeadType' => 'string',
 		'arrowSize' => 'numeric',
+		'headScale' => 'numeric',
+		'tailWidth' => 'numeric',
 		'blurRadius' => 'numeric',
 		'points' => 'array',
 		'sides' => 'numeric',
@@ -90,7 +93,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			'exclusion'
 		],
 		'arrowhead' => [ 'none', 'arrow', 'circle', 'diamond', 'triangle' ],
-		'arrowStyle' => [ 'solid', 'dashed', 'dotted' ]
+		'arrowStyle' => [ 'single', 'double', 'none' ],
+		'arrowHeadType' => [ 'pointed', 'chevron', 'standard' ]
 	];
 
 	/** @var array Numeric constraints */
@@ -107,6 +111,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'radiusX' => [ 'min' => 0, 'max' => 5000 ],
 		'radiusY' => [ 'min' => 0, 'max' => 5000 ],
 		'arrowSize' => [ 'min' => 1, 'max' => 100 ],
+		'headScale' => [ 'min' => 0.1, 'max' => 5 ],
+		'tailWidth' => [ 'min' => 0, 'max' => 100 ],
 		'blurRadius' => [ 'min' => 0, 'max' => 100 ]
 	];
 
@@ -323,7 +329,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
-		if ( in_array( $property, [ 'blendMode', 'arrowhead', 'arrowStyle' ], true ) ) {
+		if ( in_array( $property, [ 'blendMode', 'arrowhead', 'arrowStyle', 'arrowHeadType' ], true ) ) {
 			// Constrained values
 			if ( isset( self::VALUE_CONSTRAINTS[$property] ) ) {
 				if ( !in_array( $value, self::VALUE_CONSTRAINTS[$property], true ) ) {

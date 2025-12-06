@@ -11,7 +11,7 @@
 
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
-use Psr\Log\LoggerInterface;
+use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 
 /**
  * Handles injection of layer data into HTML elements.
@@ -23,24 +23,7 @@ use Psr\Log\LoggerInterface;
  * - Logging layer injection events
  */
 class LayersHtmlInjector {
-
-	/** @var LoggerInterface|null */
-	private ?LoggerInterface $logger = null;
-
-	/**
-	 * Get logger instance (lazy initialization)
-	 *
-	 * @return LoggerInterface|null
-	 */
-	private function getLogger(): ?LoggerInterface {
-		if ( $this->logger === null && class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$this->logger = call_user_func(
-				[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-				'Layers'
-			);
-		}
-		return $this->logger;
-	}
+	use LoggerAwareTrait;
 
 	/**
 	 * Build the payload array for layer data injection

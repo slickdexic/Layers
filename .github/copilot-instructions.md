@@ -9,6 +9,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Backend (PHP, `src/`)
   - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.44)
   - Service wiring: `services.php` registers 3 services: LayersLogger, LayersSchemaManager, LayersDatabase (uses DI pattern)
+  - Logging: `src/Logging/` provides `LoggerAwareTrait` (for objects with getLogger/setLogger), `StaticLoggerAwareTrait` (for static contexts), and `LayersLogger` (factory via service container)
   - API modules (`src/Api/`)
     - `ApiLayersInfo`: read-only fetch of layer data and revision list for a file
     - `ApiLayersSave`: write endpoint to save a new layer set revision (requires CSRF token + rights)
@@ -23,12 +24,22 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,950 lines - rendering/interactions), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
+  - Core editor modules: `CanvasManager.js` (~1,900 lines - facade coordinating controllers), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
+  - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns (~4,200 lines total):
+    - `ZoomPanController.js` (343 lines) - zoom, pan, fit-to-window, coordinate transforms
+    - `GridRulersController.js` (385 lines) - grid/ruler rendering, snap-to-grid/guides
+    - `TransformController.js` (965 lines) - resize, rotation, multi-layer transforms
+    - `HitTestController.js` (382 lines) - selection handle and layer hit testing
+    - `DrawingController.js` (622 lines) - shape/tool creation and drawing preview
+    - `ClipboardController.js` (212 lines) - copy/cut/paste operations
+    - `RenderCoordinator.js` (387 lines) - render scheduling and dirty region tracking
+    - `InteractionController.js` (487 lines) - mouse/touch event handling coordination
   - UI: `Toolbar.js`, `LayerPanel.js`, plus editor CSS (editor-fixed.css theme)
-  - Utilities: `EventTracker.js` (memory leak prevention via tracked event listeners)
+  - Utilities: `EventTracker.js` (memory leak prevention via tracked event listeners), `ImageLoader.js` (background image loading with fallback chains)
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
+  - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.
 
