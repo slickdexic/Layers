@@ -148,11 +148,19 @@
 		]
 	},
 	"ResourceModules": {
+		"ext.layers.shared": {
+			"localBasePath": "resources/ext.layers.shared",
+			"remoteExtPath": "Layers/resources/ext.layers.shared",
+			"targets": [ "desktop", "mobile" ],
+			"scripts": [
+				"LayerRenderer.js"
+			]
+		},
 		"ext.layers": {
 			"localBasePath": "resources/ext.layers",
 			"remoteExtPath": "Layers/resources/ext.layers",
 			"targets": [ "desktop", "mobile" ],
-			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util" ],
+			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util", "ext.layers.shared" ],
 			"styles": [],
 			"scripts": [
 				"LayersViewer.js",
@@ -178,7 +186,8 @@
 				"oojs-ui-core",
 				"mediawiki.util",
 				"mediawiki.api",
-				"jquery"
+				"jquery",
+				"ext.layers.shared"
 			],
 			"scripts": [
 			"compat.js",
@@ -225,6 +234,9 @@
 				"Toolbar.js",
 				"LayerSetManager.js",
 				"LayersEditor.js",
+				"editor/RevisionManager.js",
+				"editor/DialogManager.js",
+				"editor/EditorBootstrap.js",
 				"LayersNamespace.js"
 			],
 			"styles": [

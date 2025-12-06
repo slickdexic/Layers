@@ -1,0 +1,421 @@
+/**
+ * DialogManager - Handles modal dialogs for the Layers Editor
+ *
+ * Extracted from LayersEditor.js for better separation of concerns.
+ * Manages confirmation dialogs, prompts, and future dialog types.
+ *
+ * @class DialogManager
+ */
+( function () {
+	'use strict';
+
+	/**
+	 * DialogManager handles all modal dialog operations
+	 *
+	 * @param {Object} config Configuration object
+	 * @param {Object} config.editor Reference to the LayersEditor instance
+	 */
+	class DialogManager {
+		constructor( config ) {
+			this.editor = config.editor;
+			this.activeDialogs = [];
+		}
+
+		/**
+		 * Get a localized message
+		 * @param {string} key Message key
+		 * @param {string} fallback Fallback text
+		 * @return {string} Localized message
+		 */
+		getMessage( key, fallback = '' ) {
+			if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+				return window.layersMessages.get( key, fallback );
+			}
+			return fallback;
+		}
+
+		/**
+		 * Create a modal overlay element
+		 * @return {HTMLElement} The overlay element
+		 * @private
+		 */
+		createOverlay() {
+			const overlay = document.createElement( 'div' );
+			overlay.className = 'layers-modal-overlay';
+			overlay.setAttribute( 'role', 'presentation' );
+			return overlay;
+		}
+
+		/**
+		 * Create a modal dialog element
+		 * @param {string} ariaLabel ARIA label for the dialog
+		 * @return {HTMLElement} The dialog element
+		 * @private
+		 */
+		createDialog( ariaLabel ) {
+			const dialog = document.createElement( 'div' );
+			dialog.className = 'layers-modal-dialog';
+			dialog.setAttribute( 'role', 'alertdialog' );
+			dialog.setAttribute( 'aria-modal', 'true' );
+			dialog.setAttribute( 'aria-label', ariaLabel );
+			return dialog;
+		}
+
+		/**
+		 * Create a button element
+		 * @param {string} text Button text
+		 * @param {string} className CSS class names
+		 * @return {HTMLButtonElement} The button element
+		 * @private
+		 */
+		createButton( text, className ) {
+			const button = document.createElement( 'button' );
+			button.textContent = text;
+			button.className = className;
+			return button;
+		}
+
+		/**
+		 * Set up keyboard handling for a dialog
+		 * @param {HTMLElement} dialog The dialog element
+		 * @param {Function} onEscape Callback when Escape is pressed
+		 * @return {Function} The keydown handler (for cleanup)
+		 * @private
+		 */
+		setupKeyboardHandler( dialog, onEscape ) {
+			const handleKey = ( e ) => {
+				if ( e.key === 'Escape' ) {
+					onEscape();
+				} else if ( e.key === 'Tab' ) {
+					const focusable = dialog.querySelectorAll( 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])' );
+					if ( focusable.length ) {
+						const first = focusable[ 0 ];
+						const last = focusable[ focusable.length - 1 ];
+						if ( e.shiftKey && document.activeElement === first ) {
+							e.preventDefault();
+							last.focus();
+						} else if ( !e.shiftKey && document.activeElement === last ) {
+							e.preventDefault();
+							first.focus();
+						}
+					}
+				}
+			};
+			document.addEventListener( 'keydown', handleKey );
+			return handleKey;
+		}
+
+		/**
+		 * Show a confirmation dialog for canceling with unsaved changes
+		 *
+		 * @param {Function} onConfirm Callback when user confirms discarding changes
+		 * @return {void}
+		 */
+		showCancelConfirmDialog( onConfirm ) {
+			const overlay = this.createOverlay();
+			const dialog = this.createDialog( this.getMessage( 'layers-confirm-title', 'Confirm' ) );
+
+			const text = document.createElement( 'p' );
+			text.textContent = this.getMessage(
+				'layers-cancel-confirm',
+				'You have unsaved changes. Are you sure you want to close the editor? All changes will be lost.'
+			);
+			dialog.appendChild( text );
+
+			const buttons = document.createElement( 'div' );
+			buttons.className = 'layers-modal-buttons';
+
+			const cancelBtn = this.createButton(
+				this.getMessage( 'layers-cancel-continue', 'Continue Editing' ),
+				'layers-btn layers-btn-primary'
+			);
+
+			const confirmBtn = this.createButton(
+				this.getMessage( 'layers-cancel-discard', 'Discard Changes' ),
+				'layers-btn layers-btn-secondary layers-btn-danger'
+			);
+
+			buttons.appendChild( cancelBtn );
+			buttons.appendChild( confirmBtn );
+			dialog.appendChild( buttons );
+
+			document.body.appendChild( overlay );
+			document.body.appendChild( dialog );
+
+			// Track active dialog
+			this.activeDialogs.push( { overlay, dialog } );
+
+			const cleanup = () => {
+				if ( overlay.parentNode ) {
+					overlay.parentNode.removeChild( overlay );
+				}
+				if ( dialog.parentNode ) {
+					dialog.parentNode.removeChild( dialog );
+				}
+				document.removeEventListener( 'keydown', handleKey );
+				// Remove from active dialogs
+				const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
+				if ( index !== -1 ) {
+					this.activeDialogs.splice( index, 1 );
+				}
+			};
+
+			const handleKey = this.setupKeyboardHandler( dialog, cleanup );
+
+			cancelBtn.addEventListener( 'click', cleanup );
+			confirmBtn.addEventListener( 'click', () => {
+				cleanup();
+				onConfirm();
+			} );
+
+			// Focus the "Continue Editing" button (safer default)
+			cancelBtn.focus();
+		}
+
+		/**
+		 * Show a prompt dialog for text input
+		 *
+		 * @param {Object} options Dialog options
+		 * @param {string} options.title Dialog title
+		 * @param {string} options.message Prompt message
+		 * @param {string} options.placeholder Input placeholder
+		 * @param {string} options.defaultValue Default input value
+		 * @param {Function} options.onConfirm Callback with input value
+		 * @param {Function} options.onCancel Callback when cancelled
+		 * @return {void}
+		 */
+		showPromptDialog( options ) {
+			const overlay = this.createOverlay();
+			const dialog = this.createDialog( options.title || 'Input' );
+
+			// Title
+			if ( options.title ) {
+				const title = document.createElement( 'h3' );
+				title.className = 'layers-modal-title';
+				title.textContent = options.title;
+				dialog.appendChild( title );
+			}
+
+			// Message
+			if ( options.message ) {
+				const message = document.createElement( 'p' );
+				message.textContent = options.message;
+				dialog.appendChild( message );
+			}
+
+			// Input
+			const input = document.createElement( 'input' );
+			input.type = 'text';
+			input.className = 'layers-modal-input';
+			input.placeholder = options.placeholder || '';
+			input.value = options.defaultValue || '';
+			dialog.appendChild( input );
+
+			// Buttons
+			const buttons = document.createElement( 'div' );
+			buttons.className = 'layers-modal-buttons';
+
+			const cancelBtn = this.createButton(
+				this.getMessage( 'layers-cancel', 'Cancel' ),
+				'layers-btn layers-btn-secondary'
+			);
+
+			const confirmBtn = this.createButton(
+				this.getMessage( 'layers-ok', 'OK' ),
+				'layers-btn layers-btn-primary'
+			);
+
+			buttons.appendChild( cancelBtn );
+			buttons.appendChild( confirmBtn );
+			dialog.appendChild( buttons );
+
+			document.body.appendChild( overlay );
+			document.body.appendChild( dialog );
+
+			// Track active dialog
+			this.activeDialogs.push( { overlay, dialog } );
+
+			const cleanup = () => {
+				if ( overlay.parentNode ) {
+					overlay.parentNode.removeChild( overlay );
+				}
+				if ( dialog.parentNode ) {
+					dialog.parentNode.removeChild( dialog );
+				}
+				document.removeEventListener( 'keydown', handleKey );
+				const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
+				if ( index !== -1 ) {
+					this.activeDialogs.splice( index, 1 );
+				}
+			};
+
+			const handleKey = ( e ) => {
+				if ( e.key === 'Escape' ) {
+					cleanup();
+					if ( options.onCancel ) {
+						options.onCancel();
+					}
+				} else if ( e.key === 'Enter' ) {
+					cleanup();
+					if ( options.onConfirm ) {
+						options.onConfirm( input.value );
+					}
+				} else if ( e.key === 'Tab' ) {
+					const focusable = dialog.querySelectorAll( 'button, input' );
+					if ( focusable.length ) {
+						const first = focusable[ 0 ];
+						const last = focusable[ focusable.length - 1 ];
+						if ( e.shiftKey && document.activeElement === first ) {
+							e.preventDefault();
+							last.focus();
+						} else if ( !e.shiftKey && document.activeElement === last ) {
+							e.preventDefault();
+							first.focus();
+						}
+					}
+				}
+			};
+			document.addEventListener( 'keydown', handleKey );
+
+			cancelBtn.addEventListener( 'click', () => {
+				cleanup();
+				if ( options.onCancel ) {
+					options.onCancel();
+				}
+			} );
+
+			confirmBtn.addEventListener( 'click', () => {
+				cleanup();
+				if ( options.onConfirm ) {
+					options.onConfirm( input.value );
+				}
+			} );
+
+			// Focus the input
+			input.focus();
+			input.select();
+		}
+
+		/**
+		 * Show keyboard shortcuts help dialog
+		 * @return {void}
+		 */
+		showKeyboardShortcutsDialog() {
+			const overlay = this.createOverlay();
+			const dialog = this.createDialog( this.getMessage( 'layers-shortcuts-title', 'Keyboard Shortcuts' ) );
+			dialog.classList.add( 'layers-shortcuts-dialog' );
+
+			// Title
+			const title = document.createElement( 'h3' );
+			title.className = 'layers-modal-title';
+			title.textContent = this.getMessage( 'layers-shortcuts-title', 'Keyboard Shortcuts' );
+			dialog.appendChild( title );
+
+			// Shortcuts list
+			const shortcuts = [
+				{ key: 'Ctrl+Z', action: this.getMessage( 'layers-shortcut-undo', 'Undo' ) },
+				{ key: 'Ctrl+Y', action: this.getMessage( 'layers-shortcut-redo', 'Redo' ) },
+				{ key: 'Ctrl+S', action: this.getMessage( 'layers-shortcut-save', 'Save' ) },
+				{ key: 'Delete', action: this.getMessage( 'layers-shortcut-delete', 'Delete selected' ) },
+				{ key: 'Ctrl+D', action: this.getMessage( 'layers-shortcut-duplicate', 'Duplicate selected' ) },
+				{ key: 'Ctrl+A', action: this.getMessage( 'layers-shortcut-select-all', 'Select all' ) },
+				{ key: 'Escape', action: this.getMessage( 'layers-shortcut-deselect', 'Deselect / Cancel' ) },
+				{ key: 'V', action: this.getMessage( 'layers-shortcut-pointer', 'Pointer tool' ) },
+				{ key: 'T', action: this.getMessage( 'layers-shortcut-text', 'Text tool' ) },
+				{ key: 'R', action: this.getMessage( 'layers-shortcut-rectangle', 'Rectangle tool' ) },
+				{ key: 'E', action: this.getMessage( 'layers-shortcut-ellipse', 'Ellipse tool' ) },
+				{ key: 'A', action: this.getMessage( 'layers-shortcut-arrow', 'Arrow tool' ) },
+				{ key: '+/-', action: this.getMessage( 'layers-shortcut-zoom', 'Zoom in/out' ) },
+				{ key: '0', action: this.getMessage( 'layers-shortcut-fit', 'Fit to window' ) }
+			];
+
+			const list = document.createElement( 'dl' );
+			list.className = 'layers-shortcuts-list';
+
+			shortcuts.forEach( ( shortcut ) => {
+				const dt = document.createElement( 'dt' );
+				const kbd = document.createElement( 'kbd' );
+				kbd.textContent = shortcut.key;
+				dt.appendChild( kbd );
+
+				const dd = document.createElement( 'dd' );
+				dd.textContent = shortcut.action;
+
+				list.appendChild( dt );
+				list.appendChild( dd );
+			} );
+
+			dialog.appendChild( list );
+
+			// Close button
+			const buttons = document.createElement( 'div' );
+			buttons.className = 'layers-modal-buttons';
+
+			const closeBtn = this.createButton(
+				this.getMessage( 'layers-close', 'Close' ),
+				'layers-btn layers-btn-primary'
+			);
+
+			buttons.appendChild( closeBtn );
+			dialog.appendChild( buttons );
+
+			document.body.appendChild( overlay );
+			document.body.appendChild( dialog );
+
+			// Track active dialog
+			this.activeDialogs.push( { overlay, dialog } );
+
+			const cleanup = () => {
+				if ( overlay.parentNode ) {
+					overlay.parentNode.removeChild( overlay );
+				}
+				if ( dialog.parentNode ) {
+					dialog.parentNode.removeChild( dialog );
+				}
+				document.removeEventListener( 'keydown', handleKey );
+				const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
+				if ( index !== -1 ) {
+					this.activeDialogs.splice( index, 1 );
+				}
+			};
+
+			const handleKey = this.setupKeyboardHandler( dialog, cleanup );
+
+			closeBtn.addEventListener( 'click', cleanup );
+			overlay.addEventListener( 'click', cleanup );
+
+			// Focus close button
+			closeBtn.focus();
+		}
+
+		/**
+		 * Close all active dialogs
+		 * @return {void}
+		 */
+		closeAllDialogs() {
+			// Clone array since we modify it during iteration
+			const dialogs = [ ...this.activeDialogs ];
+			dialogs.forEach( ( { overlay, dialog } ) => {
+				if ( overlay.parentNode ) {
+					overlay.parentNode.removeChild( overlay );
+				}
+				if ( dialog.parentNode ) {
+					dialog.parentNode.removeChild( dialog );
+				}
+			} );
+			this.activeDialogs = [];
+		}
+
+		/**
+		 * Clean up resources
+		 */
+		destroy() {
+			this.closeAllDialogs();
+			this.editor = null;
+		}
+	}
+
+	// Export to global scope
+	window.DialogManager = DialogManager;
+
+}() );

@@ -197,6 +197,83 @@ describe( 'LayersEditor Coverage Extension', () => {
 		};
 		window.layersErrorHandler = window.ErrorHandler;
 
+		// Mock RevisionManager - Uses getters to dynamically access editor's managers
+		window.RevisionManager = jest.fn().mockImplementation( function ( config ) {
+			this.editor = config.editor;
+
+			Object.defineProperty( this, 'stateManager', {
+				get: function () { return this.editor.stateManager; }
+			} );
+			Object.defineProperty( this, 'uiManager', {
+				get: function () { return this.editor.uiManager; }
+			} );
+			Object.defineProperty( this, 'apiManager', {
+				get: function () { return this.editor.apiManager; }
+			} );
+
+			this.parseMWTimestamp = jest.fn( () => new Date() );
+			this.getMessage = jest.fn( ( key, fallback ) => fallback || key );
+			this.buildRevisionSelector = jest.fn();
+			this.updateRevisionLoadButton = jest.fn();
+			this.buildSetSelector = jest.fn();
+			this.updateNewSetButtonState = jest.fn();
+			this.loadLayerSetByName = jest.fn().mockResolvedValue();
+			this.createNewLayerSet = jest.fn().mockResolvedValue( true );
+			this.loadRevisionById = jest.fn().mockResolvedValue();
+		} );
+
+		// Mock DialogManager
+		window.DialogManager = jest.fn().mockImplementation( function ( config ) {
+			this.editor = config.editor;
+			this.activeDialogs = [];
+			this.showCancelConfirmDialog = jest.fn();
+			this.showPromptDialog = jest.fn();
+			this.showKeyboardShortcutsDialog = jest.fn();
+			this.closeAllDialogs = jest.fn( () => { this.activeDialogs = []; } );
+		} );
+
+		// Mock EditorBootstrap - This actually validates dependencies and logs warnings
+		window.EditorBootstrap = {
+			validateDependencies: jest.fn( () => {
+				const missing = [];
+				const requiredClasses = [
+					'UIManager', 'EventManager', 'APIManager', 'ValidationManager',
+					'StateManager', 'HistoryManager', 'CanvasManager', 'Toolbar', 'LayerPanel'
+				];
+				const requiredConstantGroups = [ 'TOOLS', 'LAYER_TYPES', 'DEFAULTS', 'UI', 'LIMITS' ];
+
+				// Check required global classes
+				requiredClasses.forEach( ( name ) => {
+					if ( typeof window[ name ] !== 'function' ) {
+						missing.push( name );
+					}
+				} );
+
+				// Check LayersConstants
+				if ( typeof window.LayersConstants === 'undefined' ) {
+					missing.push( 'LayersConstants' );
+				} else {
+					requiredConstantGroups.forEach( ( group ) => {
+						if ( !window.LayersConstants[ group ] ) {
+							missing.push( 'LayersConstants.' + group );
+						}
+					} );
+				}
+
+				if ( missing.length > 0 ) {
+					const errorMsg = 'Layers Editor: Missing dependencies: ' + missing.join( ', ' );
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( errorMsg );
+					}
+					return false;
+				}
+				return true;
+			} ),
+			areEditorDependenciesReady: jest.fn( () => true ),
+			sanitizeGlobalErrorMessage: jest.fn( ( msg ) => msg ),
+			registerHook: jest.fn()
+		};
+
 		// Reset modules and load LayersEditor fresh
 		jest.resetModules();
 		require( '../../resources/ext.layers.editor/LayersEditor.js' );

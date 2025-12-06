@@ -155,6 +155,241 @@ describe( 'LayersEditor Extended', () => {
 
 		window.layersRegistry = mockRegistry;
 
+		// Mock RevisionManager
+		// Note: Uses getters to dynamically access editor's managers so test can modify them
+		window.RevisionManager = jest.fn().mockImplementation( function ( config ) {
+			this.editor = config.editor;
+
+			// Use getters to access current state of editor's managers (they can change during tests)
+			Object.defineProperty( this, 'stateManager', {
+				get: function () {
+					return this.editor.stateManager;
+				}
+			} );
+			Object.defineProperty( this, 'uiManager', {
+				get: function () {
+					return this.editor.uiManager;
+				}
+			} );
+			Object.defineProperty( this, 'apiManager', {
+				get: function () {
+					return this.editor.apiManager;
+				}
+			} );
+
+			this.parseMWTimestamp = jest.fn( ( mwTimestamp ) => {
+				if ( !mwTimestamp || typeof mwTimestamp !== 'string' ) {
+					return new Date();
+				}
+				const year = parseInt( mwTimestamp.substring( 0, 4 ), 10 );
+				const month = parseInt( mwTimestamp.substring( 4, 6 ), 10 ) - 1;
+				const day = parseInt( mwTimestamp.substring( 6, 8 ), 10 );
+				const hour = parseInt( mwTimestamp.substring( 8, 10 ), 10 );
+				const minute = parseInt( mwTimestamp.substring( 10, 12 ), 10 );
+				const second = parseInt( mwTimestamp.substring( 12, 14 ), 10 );
+				return new Date( year, month, day, hour, minute, second );
+			} );
+
+			this.getMessage = jest.fn( ( key, fallback ) => {
+				if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+					return window.layersMessages.get( key, fallback );
+				}
+				return fallback || key;
+			} );
+
+			this.buildRevisionSelector = jest.fn( () => {
+				const uiMgr = this.uiManager;
+				const stateMgr = this.stateManager;
+				if ( !uiMgr || !uiMgr.revSelectEl ) {
+					return;
+				}
+				const selectEl = uiMgr.revSelectEl;
+				const allLayerSets = stateMgr.get( 'allLayerSets' ) || stateMgr.get( 'allLayersets' ) || [];
+				const currentLayerSetId = stateMgr.get( 'currentLayerSetId' );
+
+				selectEl.innerHTML = '';
+
+				const defaultOption = document.createElement( 'option' );
+				defaultOption.value = '';
+				defaultOption.textContent = this.getMessage( 'layers-revision-latest', 'Latest' );
+				selectEl.appendChild( defaultOption );
+
+				allLayerSets.forEach( ( layerSet ) => {
+					const option = document.createElement( 'option' );
+					option.value = layerSet.ls_id || layerSet.id;
+					const timestamp = layerSet.ls_timestamp || layerSet.timestamp;
+					const date = this.parseMWTimestamp( timestamp );
+					option.textContent = `Rev ${layerSet.ls_revision || layerSet.revision || ''} - ${date.toLocaleString()}`;
+					if ( String( option.value ) === String( currentLayerSetId ) ) {
+						option.selected = true;
+					}
+					selectEl.appendChild( option );
+				} );
+			} );
+
+			this.updateRevisionLoadButton = jest.fn( () => {
+				const uiMgr = this.uiManager;
+				const stateMgr = this.stateManager;
+				if ( !uiMgr || !uiMgr.revLoadBtnEl ) {
+					return;
+				}
+				const revSelectEl = uiMgr.revSelectEl;
+				const currentLayerSetId = stateMgr.get( 'currentLayerSetId' );
+				const selectedValue = revSelectEl ? revSelectEl.value : '';
+				const shouldDisable = !selectedValue || String( selectedValue ) === String( currentLayerSetId );
+				uiMgr.revLoadBtnEl.disabled = shouldDisable;
+			} );
+
+			this.buildSetSelector = jest.fn( () => {
+				const uiMgr = this.uiManager;
+				const stateMgr = this.stateManager;
+				if ( !uiMgr || !uiMgr.setSelectEl ) {
+					return;
+				}
+				const selectEl = uiMgr.setSelectEl;
+				const namedSets = stateMgr.get( 'namedSets' ) || [];
+				const currentSetName = stateMgr.get( 'currentSetName' ) || 'default';
+
+				selectEl.innerHTML = '';
+
+				if ( namedSets.length === 0 ) {
+					const defaultOption = document.createElement( 'option' );
+					defaultOption.value = 'default';
+					defaultOption.textContent = 'default';
+					selectEl.appendChild( defaultOption );
+				}
+
+				namedSets.forEach( ( set ) => {
+					const option = document.createElement( 'option' );
+					option.value = set.name;
+					option.textContent = set.name;
+					if ( set.name === currentSetName ) {
+						option.selected = true;
+					}
+					selectEl.appendChild( option );
+				} );
+
+				const maxSets = ( window.mw && window.mw.config && window.mw.config.get( 'wgLayersMaxNamedSets' ) ) || 15;
+				if ( namedSets.length < maxSets ) {
+					const newOption = document.createElement( 'option' );
+					newOption.value = '__new__';
+					newOption.textContent = this.getMessage( 'layers-editor-new-set', '+ New' );
+					selectEl.appendChild( newOption );
+				}
+			} );
+
+			this.updateNewSetButtonState = jest.fn( () => {
+				const uiMgr = this.uiManager;
+				const stateMgr = this.stateManager;
+				if ( !uiMgr || !uiMgr.newSetBtnEl ) {
+					return;
+				}
+				const namedSets = stateMgr.get( 'namedSets' ) || [];
+				const maxSets = ( window.mw && window.mw.config && window.mw.config.get( 'wgLayersMaxNamedSets' ) ) || 15;
+				uiMgr.newSetBtnEl.disabled = namedSets.length >= maxSets;
+			} );
+
+			this.loadLayerSetByName = jest.fn( async ( setName ) => {
+				const apiMgr = this.apiManager;
+				const stateMgr = this.stateManager;
+				if ( !setName || setName.trim() === '' ) {
+					return;
+				}
+				if ( apiMgr && apiMgr.loadLayersBySetName ) {
+					try {
+						await apiMgr.loadLayersBySetName( setName );
+						stateMgr.set( 'currentSetName', setName );
+						if ( window.mw && window.mw.notify ) {
+							window.mw.notify( this.getMessage( 'layers-load-success', 'Loaded' ), { type: 'info' } );
+						}
+					} catch ( error ) {
+						if ( window.mw && window.mw.notify ) {
+							window.mw.notify( this.getMessage( 'layers-load-error', 'Error loading set' ), { type: 'error' } );
+						}
+					}
+				}
+			} );
+
+			this.createNewLayerSet = jest.fn( async ( setName ) => {
+				const stateMgr = this.stateManager;
+				if ( !setName || setName.trim() === '' ) {
+					if ( window.mw && window.mw.notify ) {
+						window.mw.notify( this.getMessage( 'layers-error-empty-name', 'Name cannot be empty' ), { type: 'error' } );
+					}
+					return false;
+				}
+				if ( setName === 'default' ) {
+					if ( window.mw && window.mw.notify ) {
+						window.mw.notify( this.getMessage( 'layers-error-reserved-name', 'Reserved name' ), { type: 'error' } );
+					}
+					return false;
+				}
+				if ( !/^[a-zA-Z0-9_-]+$/.test( setName ) ) {
+					if ( window.mw && window.mw.notify ) {
+						window.mw.notify( this.getMessage( 'layers-error-invalid-chars', 'Invalid characters' ), { type: 'error' } );
+					}
+					return false;
+				}
+
+				// Check for duplicate names
+				const namedSets = stateMgr.get( 'namedSets' ) || [];
+				if ( namedSets.some( ( s ) => s.name === setName ) ) {
+					if ( window.mw && window.mw.notify ) {
+						window.mw.notify( this.getMessage( 'layers-error-duplicate-name', 'Name already exists' ), { type: 'error' } );
+					}
+					return false;
+				}
+
+				// Check limit
+				const maxSets = ( window.mw && window.mw.config && window.mw.config.get( 'wgLayersMaxNamedSets' ) ) || 15;
+				if ( namedSets.length >= maxSets ) {
+					if ( window.mw && window.mw.notify ) {
+						window.mw.notify( this.getMessage( 'layers-error-max-sets', 'Maximum sets reached' ), { type: 'error' } );
+					}
+					return false;
+				}
+
+				stateMgr.set( 'currentSetName', setName );
+				stateMgr.set( 'layers', [] );
+				namedSets.push( { name: setName } );
+				stateMgr.set( 'namedSets', namedSets );
+				return true;
+			} );
+
+			this.loadRevisionById = jest.fn( async ( revisionId ) => {
+				const apiMgr = this.apiManager;
+				if ( apiMgr && apiMgr.loadRevisionById ) {
+					try {
+						await apiMgr.loadRevisionById( revisionId );
+					} catch ( error ) {
+						if ( window.mw && window.mw.notify ) {
+							window.mw.notify( this.getMessage( 'layers-load-error', 'Error' ), { type: 'error' } );
+						}
+					}
+				}
+			} );
+		} );
+
+		// Mock DialogManager
+		window.DialogManager = jest.fn().mockImplementation( function ( config ) {
+			this.editor = config.editor;
+			this.activeDialogs = [];
+			this.showCancelConfirmDialog = jest.fn();
+			this.showPromptDialog = jest.fn();
+			this.showKeyboardShortcutsDialog = jest.fn();
+			this.closeAllDialogs = jest.fn( () => {
+				this.activeDialogs = [];
+			} );
+		} );
+
+		// Mock EditorBootstrap
+		window.EditorBootstrap = {
+			validateDependencies: jest.fn( () => true ),
+			areEditorDependenciesReady: jest.fn( () => true ),
+			sanitizeGlobalErrorMessage: jest.fn( ( msg ) => msg ),
+			registerHook: jest.fn()
+		};
+
 		// Mock EventTracker for event listener management
 		window.EventTracker = jest.fn( function () {
 			this.listeners = [];
