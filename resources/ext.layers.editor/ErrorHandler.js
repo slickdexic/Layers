@@ -289,6 +289,11 @@
 		content.appendChild( closeBtn );
 		notification.appendChild( content );
 
+		// Announce error for screen readers
+		if ( window.layersAnnouncer ) {
+			window.layersAnnouncer.announceError( userMessage );
+		}
+
 		// Add close functionality
 		closeBtn.addEventListener( 'click', () => {
 			notification.remove();

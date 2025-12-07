@@ -605,6 +605,7 @@
 			case ( LAYER_TYPES.RECTANGLE || 'rectangle' ):
 				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || 0 ), step: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: Math.round( layer.height || 0 ), step: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-corner-radius', 'Corner Radius' ), type: 'number', value: Math.round( layer.cornerRadius || 0 ), min: 0, max: 200, step: 1, prop: 'cornerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { cornerRadius: Math.max( 0, Math.round( parseFloat( v ) ) || 0 ) } ); } } );
 				break;
 			case ( LAYER_TYPES.CIRCLE || 'circle' ):
 				addInput( { label: t( 'layers-prop-radius', 'Radius' ), type: 'number', value: Math.round( layer.radius || DEFAULTS.RADIUS || 50 ), step: 1, prop: 'radius', onChange: function ( v ) { editor.updateLayer( layer.id, { radius: Math.round( parseFloat( v ) ) } ); } } );

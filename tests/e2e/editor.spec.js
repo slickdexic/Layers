@@ -117,6 +117,86 @@ describeEditor( 'Layers Editor', () => {
 			const newCount = await editorPage.getLayerCount();
 			expect( newCount ).toBe( initialCount + 1 );
 		} );
+
+		test( 'can create ellipse layer', async () => {
+			const initialCount = await editorPage.getLayerCount();
+			
+			await editorPage.selectTool( 'ellipse' );
+			await editorPage.drawOnCanvas( 100, 100, 250, 180 );
+			
+			const newCount = await editorPage.getLayerCount();
+			expect( newCount ).toBe( initialCount + 1 );
+		} );
+
+		test( 'can create line layer', async () => {
+			const initialCount = await editorPage.getLayerCount();
+			
+			await editorPage.selectTool( 'line' );
+			await editorPage.drawOnCanvas( 50, 50, 250, 250 );
+			
+			const newCount = await editorPage.getLayerCount();
+			expect( newCount ).toBe( initialCount + 1 );
+		} );
+
+		test( 'can create polygon layer', async () => {
+			const initialCount = await editorPage.getLayerCount();
+			
+			await editorPage.selectTool( 'polygon' );
+			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
+			
+			const newCount = await editorPage.getLayerCount();
+			expect( newCount ).toBe( initialCount + 1 );
+		} );
+
+		test( 'can create star layer', async () => {
+			const initialCount = await editorPage.getLayerCount();
+			
+			await editorPage.selectTool( 'star' );
+			await editorPage.drawOnCanvas( 150, 150, 250, 250 );
+			
+			const newCount = await editorPage.getLayerCount();
+			expect( newCount ).toBe( initialCount + 1 );
+		} );
+
+		test( 'can create highlight layer', async () => {
+			const initialCount = await editorPage.getLayerCount();
+			
+			await editorPage.selectTool( 'highlight' );
+			await editorPage.drawOnCanvas( 100, 100, 300, 150 );
+			
+			const newCount = await editorPage.getLayerCount();
+			expect( newCount ).toBe( initialCount + 1 );
+		} );
+
+		test( 'can create path layer with pen tool', async ( { page } ) => {
+			const initialCount = await editorPage.getLayerCount();
+			
+			await editorPage.selectTool( 'path' );
+			
+			// Draw a path with multiple clicks
+			await editorPage.clickCanvas( 50, 50 );
+			await editorPage.clickCanvas( 100, 80 );
+			await editorPage.clickCanvas( 150, 50 );
+			await editorPage.clickCanvas( 200, 100 );
+			
+			// Double-click to finish path
+			const canvas = await page.$( editorPage.selectors.canvas );
+			const box = await canvas.boundingBox();
+			await page.mouse.dblclick( box.x + 200, box.y + 100 );
+			
+			const newCount = await editorPage.getLayerCount();
+			expect( newCount ).toBe( initialCount + 1 );
+		} );
+
+		test( 'can create blur layer', async () => {
+			const initialCount = await editorPage.getLayerCount();
+			
+			await editorPage.selectTool( 'blur' );
+			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
+			
+			const newCount = await editorPage.getLayerCount();
+			expect( newCount ).toBe( initialCount + 1 );
+		} );
 	} );
 
 	describeEditor( 'Layer Manipulation', () => {

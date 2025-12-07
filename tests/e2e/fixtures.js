@@ -62,12 +62,20 @@ class LayersEditorPage {
 			saveButton: '.layers-save-btn, [data-action="save"]',
 			cancelButton: '.layers-cancel-btn, [data-action="cancel"]',
 			
-			// Tools
+			// Tools - all 11 layer types
 			pointerTool: '[data-tool="pointer"], .tool-pointer',
+			selectTool: '[data-tool="select"], .tool-select',
 			textTool: '[data-tool="text"], .tool-text',
 			rectangleTool: '[data-tool="rectangle"], .tool-rectangle',
 			circleTool: '[data-tool="circle"], .tool-circle',
+			ellipseTool: '[data-tool="ellipse"], .tool-ellipse',
 			arrowTool: '[data-tool="arrow"], .tool-arrow',
+			lineTool: '[data-tool="line"], .tool-line',
+			polygonTool: '[data-tool="polygon"], .tool-polygon',
+			starTool: '[data-tool="star"], .tool-star',
+			highlightTool: '[data-tool="highlight"], .tool-highlight',
+			pathTool: '[data-tool="path"], .tool-path, [data-tool="pen"], .tool-pen',
+			blurTool: '[data-tool="blur"], .tool-blur',
 			
 			// Layer panel items
 			layerItem: '.layer-item',

@@ -68,6 +68,7 @@
 	"layers-prop-stroke-color": "Stroke Color",
 	"layers-prop-fill-color": "Fill Color",
 	"layers-prop-radius": "Radius",
+	"layers-prop-corner-radius": "Corner Radius",
 	"layers-prop-stroke-width": "Stroke Width",
 	"layers-prop-opacity": "Layer Opacity",
 	"layers-prop-blend": "Blend",
@@ -102,6 +103,9 @@
 	"layers-color-picker-color-preview": "Current color: $1",
 
 	"layers-grab-area": "Drag to move/select",
+	"layers-keyboard-nav-hint": "Use arrow keys to navigate, Enter to select",
+	"layers-layer-toggle-visibility-key": "V to toggle visibility",
+	"layers-layer-toggle-lock-key": "L to toggle lock",
 
 	"layers-section-transform": "Transform",
 	"layers-section-appearance": "Appearance",
@@ -132,6 +136,10 @@
 	"layers-toggle-snap-guides": "Snap to Guides",
 	"layers-save-changes": "Save Changes",
 	"layers-cancel-changes": "Cancel Changes",
+	"layers-keyboard-shortcuts": "Keyboard Shortcuts",
+	"layers-keyboard-shortcuts-tooltip": "Show keyboard shortcuts (Shift+?)",
+	"layers-shortcuts-dialog-title": "Keyboard Shortcuts",
+	"layers-shortcuts-dialog-close": "Close",
 
 	"layers-blend-normal": "Normal",
 	"layers-blend-multiply": "Multiply",
@@ -256,6 +264,8 @@
 	"layers-confirm-title": "Confirm Action",
 	"layers-confirm-yes": "Yes",
 	"layers-confirm-no": "No",
+	"layers-confirm": "Confirm",
+	"layers-cancel": "Cancel",
 	"layers-alert-title": "Notice",
 	"layers-alert-ok": "OK",
 	"layers-progress-title": "Processing",

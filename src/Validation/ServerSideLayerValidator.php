@@ -69,6 +69,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'shadowOffsetX' => 'numeric',
 		'shadowOffsetY' => 'numeric',
 		'shadowSpread' => 'numeric',
+		'cornerRadius' => 'numeric',
 		'glow' => 'boolean',
 		'arrowhead' => 'string',
 		'arrowStyle' => 'string',

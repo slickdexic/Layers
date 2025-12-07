@@ -225,8 +225,8 @@ describe( 'LayersNamespace', () => {
 			expect( global.window.Layers.Canvas.GridRulersController ).toBe( global.window.GridRulersController );
 		} );
 
-		it( 'should export ShapeRenderer to Canvas', () => {
-			expect( global.window.Layers.Canvas.ShapeRenderer ).toBe( global.window.ShapeRenderer );
+		it( 'should export LayerRenderer to Canvas', () => {
+			expect( global.window.Layers.Canvas.LayerRenderer ).toBe( global.window.LayerRenderer );
 		} );
 	} );
 

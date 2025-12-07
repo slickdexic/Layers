@@ -79,10 +79,38 @@
 		) {
 			this.selectedLayerIds.push( layerId );
 			this.lastSelectedId = layerId;
+
+			// Announce selection for screen readers
+			if ( window.layersAnnouncer && layer ) {
+				const layerName = layer.name || this.getDefaultLayerName( layer );
+				window.layersAnnouncer.announceLayerSelection( layerName );
+			}
 		}
 
 		this.updateSelectionHandles();
 		this.notifySelectionChange();
+	};
+
+	/**
+	 * Get default name for a layer (for accessibility announcements)
+	 *
+	 * @param {Object} layer Layer object
+	 * @return {string} Default layer name
+	 */
+	SelectionManager.prototype.getDefaultLayerName = function ( layer ) {
+		if ( !layer || !layer.type ) {
+			return 'Layer';
+		}
+		// Use i18n messages if available
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			const msgKey = 'layers-type-' + layer.type;
+			const msg = window.layersMessages.get( msgKey, '' );
+			if ( msg ) {
+				return msg;
+			}
+		}
+		// Fallback to capitalized type
+		return layer.type.charAt( 0 ).toUpperCase() + layer.type.slice( 1 );
 	};
 
 	/**

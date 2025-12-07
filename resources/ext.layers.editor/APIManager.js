@@ -767,7 +767,12 @@ class APIManager {
 
 		if ( data.layerssave && data.layerssave.success ) {
 			this.editor.stateManager.markClean();
-			mw.notify( this.getMessage( 'layers-save-success' ), { type: 'success' } );
+			const successMsg = this.getMessage( 'layers-save-success' );
+			mw.notify( successMsg, { type: 'success' } );
+			// Announce for screen readers
+			if ( window.layersAnnouncer ) {
+				window.layersAnnouncer.announceSuccess( successMsg );
+			}
 			this.reloadRevisions();
 		} else {
 			if ( typeof mw !== 'undefined' && mw.log ) {

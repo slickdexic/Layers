@@ -73,6 +73,13 @@
 	 * @param {string} key - The lowercase key
 	 */
 	ToolbarKeyboard.prototype.handleToolShortcuts = function ( e, key ) {
+		// Handle Shift+? for keyboard shortcuts help
+		if ( e.shiftKey && key === '?' ) {
+			e.preventDefault();
+			this.showKeyboardShortcutsHelp();
+			return;
+		}
+
 		switch ( key ) {
 			case 'v':
 				this.toolbar.selectTool( 'pointer' );
@@ -143,8 +150,21 @@
 			{ key: 'Ctrl+D', description: 'Duplicate', category: 'edit' },
 			// Other
 			{ key: 'Delete/Backspace', description: 'Delete Selected', category: 'edit' },
-			{ key: 'Escape', description: 'Cancel Operation', category: 'general' }
+			{ key: 'Escape', description: 'Cancel Operation', category: 'general' },
+			{ key: 'Shift+?', description: 'Show Keyboard Shortcuts', category: 'general' }
 		];
+	};
+
+	/**
+	 * Show the keyboard shortcuts help dialog
+	 * Delegates to DialogManager if available, falls back to editor method
+	 */
+	ToolbarKeyboard.prototype.showKeyboardShortcutsHelp = function () {
+		if ( this.editor.dialogManager && typeof this.editor.dialogManager.showKeyboardShortcutsDialog === 'function' ) {
+			this.editor.dialogManager.showKeyboardShortcutsDialog();
+		} else if ( typeof this.editor.showKeyboardShortcutsDialog === 'function' ) {
+			this.editor.showKeyboardShortcutsDialog();
+		}
 	};
 
 	// Export to window namespace

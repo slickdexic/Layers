@@ -665,6 +665,15 @@
 	};
 
 	/**
+	 * Show the keyboard shortcuts help dialog
+	 */
+	LayersEditor.prototype.showKeyboardShortcutsDialog = function () {
+		if ( this.dialogManager ) {
+			this.dialogManager.showKeyboardShortcutsDialog();
+		}
+	};
+
+	/**
 	 * Check if there are unsaved changes
 	 * @return {boolean}
 	 */

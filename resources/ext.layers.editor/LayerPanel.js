@@ -404,6 +404,10 @@
 			this.addTargetListener( this.layerList, 'click', function ( e ) {
 				self.handleLayerListClick( e );
 			} );
+			// Keyboard navigation for accessibility
+			this.addTargetListener( this.layerList, 'keydown', function ( e ) {
+				self.handleLayerListKeydown( e );
+			} );
 		}
 		// Drag and drop reordering
 		this.setupDragAndDrop();
@@ -550,17 +554,22 @@
 		item.dataset.layerId = layer.id;
 		item.dataset.index = index;
 		item.draggable = true;
+		// ARIA attributes for listbox option
+		item.setAttribute( 'role', 'option' );
+		item.setAttribute( 'aria-selected', layer.id === this.getSelectedLayerId() ? 'true' : 'false' );
+		const layerName = layer.name || this.getDefaultLayerName( layer );
+		item.setAttribute( 'aria-label', layerName );
 		if ( layer.id === this.getSelectedLayerId() ) {
 			item.classList.add( 'selected' );
 		}
 
-		// Grab area
+		// Grab area - now also serves as the focusable element for keyboard navigation
 		const grabArea = document.createElement( 'div' );
 		grabArea.className = 'layer-grab-area';
-		grabArea.title = t( 'layers-grab-area', 'Drag to move/select' );
+		grabArea.title = t( 'layers-grab-area', 'Drag to move/select' ) + ' (' + t( 'layers-keyboard-nav-hint', 'Use arrow keys to navigate, Enter to select' ) + ')';
 		grabArea.setAttribute( 'tabindex', '0' );
 		grabArea.setAttribute( 'role', 'button' );
-		grabArea.setAttribute( 'aria-label', t( 'layers-grab-area', 'Drag to move/select' ) );
+		grabArea.setAttribute( 'aria-label', layerName + ' - ' + t( 'layers-grab-area', 'Drag to move/select' ) );
 		grabArea.style.width = '36px';
 		grabArea.style.height = '36px';
 		grabArea.style.display = 'flex';
@@ -652,11 +661,23 @@
 		item.dataset.layerId = layer.id;
 		item.dataset.index = index;
 		
+		// Update ARIA attributes
+		const isSelected = layer.id === this.getSelectedLayerId();
+		item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
+		const layerName = layer.name || this.getDefaultLayerName( layer );
+		item.setAttribute( 'aria-label', layerName );
+		
 		// Update selection state
-		if ( layer.id === this.getSelectedLayerId() ) {
+		if ( isSelected ) {
 			item.classList.add( 'selected' );
 		} else {
 			item.classList.remove( 'selected' );
+		}
+		
+		// Update grab area aria-label
+		const grabArea = item.querySelector( '.layer-grab-area' );
+		if ( grabArea ) {
+			grabArea.setAttribute( 'aria-label', layerName + ' - ' + _t( 'layers-grab-area', 'Drag to move/select' ) );
 		}
 		
 		// Update visibility icon
@@ -748,6 +769,119 @@
 			this.editLayerName( layerId, nameEl );
 		} else {
 			this.selectLayer( layerId );
+		}
+	};
+
+	/**
+	 * Handle keyboard navigation in the layer list
+	 * @param {KeyboardEvent} e Keyboard event
+	 */
+	LayerPanel.prototype.handleLayerListKeydown = function ( e ) {
+		const target = e.target;
+		const layerItem = target.closest( '.layer-item' );
+
+		// Only handle navigation keys when focused on a layer item
+		if ( !layerItem ) {
+			return;
+		}
+
+		const layers = this.getLayers();
+		if ( layers.length === 0 ) {
+			return;
+		}
+
+		const layerId = layerItem.dataset.layerId;
+		let currentIndex = -1;
+		for ( let i = 0; i < layers.length; i++ ) {
+			if ( String( layers[ i ].id ) === String( layerId ) ) {
+				currentIndex = i;
+				break;
+			}
+		}
+
+		switch ( e.key ) {
+			case 'ArrowUp':
+				e.preventDefault();
+				if ( currentIndex > 0 ) {
+					this.focusLayerAtIndex( currentIndex - 1 );
+				}
+				break;
+
+			case 'ArrowDown':
+				e.preventDefault();
+				if ( currentIndex < layers.length - 1 ) {
+					this.focusLayerAtIndex( currentIndex + 1 );
+				}
+				break;
+
+			case 'Home':
+				e.preventDefault();
+				this.focusLayerAtIndex( 0 );
+				break;
+
+			case 'End':
+				e.preventDefault();
+				this.focusLayerAtIndex( layers.length - 1 );
+				break;
+
+			case 'Enter':
+			case ' ':
+				// Don't intercept if focused on a button or editable element
+				if ( target.tagName === 'BUTTON' || target.contentEditable === 'true' ) {
+					return;
+				}
+				e.preventDefault();
+				this.selectLayer( layerId );
+				break;
+
+			case 'Delete':
+			case 'Backspace':
+				// Only handle if not focused on an editable element
+				if ( target.contentEditable === 'true' ) {
+					return;
+				}
+				e.preventDefault();
+				this.deleteLayer( layerId );
+				break;
+
+			case 'v':
+			case 'V':
+				// Toggle visibility with V key
+				if ( !e.ctrlKey && !e.metaKey && target.contentEditable !== 'true' ) {
+					e.preventDefault();
+					this.toggleLayerVisibility( layerId );
+				}
+				break;
+
+			case 'l':
+			case 'L':
+				// Toggle lock with L key
+				if ( !e.ctrlKey && !e.metaKey && target.contentEditable !== 'true' ) {
+					e.preventDefault();
+					this.toggleLayerLock( layerId );
+				}
+				break;
+		}
+	};
+
+	/**
+	 * Focus a layer item by index
+	 * @param {number} index Layer index to focus
+	 */
+	LayerPanel.prototype.focusLayerAtIndex = function ( index ) {
+		const layers = this.getLayers();
+		if ( index < 0 || index >= layers.length ) {
+			return;
+		}
+
+		const layerId = layers[ index ].id;
+		const layerItem = this.layerList.querySelector( '.layer-item[data-layer-id="' + layerId + '"]' );
+		if ( layerItem ) {
+			// Focus the grab area (which is the focusable element within the layer item)
+			const grabArea = layerItem.querySelector( '.layer-grab-area' );
+			if ( grabArea ) {
+				grabArea.focus();
+			}
 		}
 	};
 

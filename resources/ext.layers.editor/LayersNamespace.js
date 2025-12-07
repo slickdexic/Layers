@@ -145,7 +145,7 @@
 		CanvasEvents: { ns: 'Canvas', name: 'Events' },
 		CanvasUtilities: { ns: 'Canvas', name: 'Utilities' },
 		LayersSelectionManager: { ns: 'Canvas', name: 'SelectionManager' },
-		ShapeRenderer: { ns: 'Canvas', name: 'ShapeRenderer' },
+		LayerRenderer: { ns: 'Canvas', name: 'LayerRenderer' },
 
 		// Canvas controllers
 		DrawingController: { ns: 'Canvas', name: 'DrawingController' },

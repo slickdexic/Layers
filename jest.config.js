@@ -59,6 +59,33 @@ module.exports = {
 		'/archive/'
 	],
 
+	// Project-specific configurations
+	// Performance tests run sequentially to get reliable timing
+	projects: [
+		{
+			displayName: 'unit',
+			testMatch: [
+				'<rootDir>/tests/jest/**/*.test.js',
+				'!<rootDir>/tests/jest/performance/**',
+				'!<rootDir>/tests/jest/archive/**'
+			],
+			testPathIgnorePatterns: [
+				'/node_modules/',
+				'/vendor/',
+				'/archive/'
+			],
+			testEnvironment: 'jsdom',
+			setupFilesAfterEnv: [ '<rootDir>/tests/jest/setup.js' ]
+		},
+		{
+			displayName: 'performance',
+			testMatch: [ '<rootDir>/tests/jest/performance/**/*.test.js' ],
+			testEnvironment: 'node',
+			// Run performance tests sequentially for reliable measurements
+			maxWorkers: 1
+		}
+	],
+
 	// Verbose output
 	verbose: true,
 

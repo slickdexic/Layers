@@ -7,6 +7,7 @@
 		"test:js": "jest",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
+		"test:benchmark": "jest tests/jest/performance --verbose",
 		"test:php": "php vendor/bin/parallel-lint . --exclude vendor --exclude node_modules && php vendor/bin/phpcs -sp --cache --runtime-set ignore_warnings_on_exit 1 && php vendor/bin/minus-x check .",
 		"test:phpunit": "php vendor/bin/phpunit --configuration phpunit.xml",
 		"test:phpunit-coverage": "php vendor/bin/phpunit --configuration phpunit.xml --coverage-html coverage-html",

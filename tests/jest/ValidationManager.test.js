@@ -179,6 +179,51 @@ describe( 'ValidationManager', () => {
 			expect( result.own ).toBeDefined();
 			expect( result.inherited ).toBeUndefined();
 		} );
+
+		test( 'should preserve array type for points array (path layers)', () => {
+			const input = {
+				type: 'path',
+				points: [
+					{ x: 10, y: 20 },
+					{ x: 30, y: 40 },
+					{ x: 50, y: 60 }
+				],
+				stroke: '#000000'
+			};
+			const result = manager.sanitizeLayerData( input );
+			// points must remain an array, not become an object with numeric keys
+			expect( Array.isArray( result.points ) ).toBe( true );
+			expect( result.points ).toHaveLength( 3 );
+			expect( result.points[ 0 ] ).toEqual( { x: 10, y: 20 } );
+			expect( result.points[ 1 ] ).toEqual( { x: 30, y: 40 } );
+			expect( result.points[ 2 ] ).toEqual( { x: 50, y: 60 } );
+		} );
+
+		test( 'should preserve arrays with primitive values', () => {
+			const input = {
+				tags: [ 'a', 'b', 'c' ],
+				numbers: [ 1, 2, 3 ]
+			};
+			const result = manager.sanitizeLayerData( input );
+			expect( Array.isArray( result.tags ) ).toBe( true );
+			expect( Array.isArray( result.numbers ) ).toBe( true );
+			expect( result.tags ).toEqual( [ 'a', 'b', 'c' ] );
+			expect( result.numbers ).toEqual( [ 1, 2, 3 ] );
+		} );
+
+		test( 'should handle nested arrays of objects', () => {
+			const input = {
+				data: [
+					{ name: 'test1', items: [ { x: 1 }, { x: 2 } ] },
+					{ name: 'test2', items: [ { x: 3 } ] }
+				]
+			};
+			const result = manager.sanitizeLayerData( input );
+			expect( Array.isArray( result.data ) ).toBe( true );
+			expect( Array.isArray( result.data[ 0 ].items ) ).toBe( true );
+			expect( result.data[ 0 ].items ).toHaveLength( 2 );
+			expect( result.data[ 1 ].items[ 0 ] ).toEqual( { x: 3 } );
+		} );
 	} );
 
 	describe( 'validateLayer', () => {

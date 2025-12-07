@@ -1,6 +1,6 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 2025  
+**Last Updated:** December 2025  
 **Version:** 0.8.1-dev
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
@@ -18,6 +18,18 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
+## Recent Architecture Changes
+
+### December 2025: Accessibility & Editor Modularization
+
+- **AccessibilityAnnouncer.js** - ARIA live regions for screen reader support
+- **EditorBootstrap.js** - Extracted initialization, hooks, cleanup from LayersEditor
+- **RevisionManager.js** - Extracted revision and named layer set management
+- **DialogManager.js** - Extracted modal dialogs with ARIA accessibility
+- **LayersEditor.js** reduced from 1,889 → 1,203 lines (-36%)
+
+---
+
 ## Module Dependency Graph
 
 ```
@@ -29,22 +41,32 @@ The architecture follows strict separation of concerns: PHP handles storage and 
           │                                │
           ▼                                ▼
 ┌─────────────────────┐     ┌──────────────────────────────────────────────────┐
-│   LayersViewer.js   │     │              MODULE REGISTRY                      │
-│   (article pages)   │     │  UIManager, EventManager, APIManager,            │
-└─────────────────────┘     │  ValidationManager, StateManager, HistoryManager │
+│   LayersViewer.js   │     │              EDITOR BOOTSTRAP                     │
+│   (article pages)   │     │  EditorBootstrap (init, hooks, cleanup)          │
+│   LayerRenderer.js  │     │  RevisionManager (revisions, named sets)         │
+│   (shared)          │     │  DialogManager (modals, ARIA)                    │
+└─────────────────────┘     │  AccessibilityAnnouncer (screen reader support)  │
                             └───────────────────────┬──────────────────────────┘
                                                     │
                             ┌───────────────────────┼───────────────────────────┐
                             │                       │                           │
                             ▼                       ▼                           ▼
-                   ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────┐
-                   │  CanvasManager  │    │    Toolbar      │    │    LayerPanel       │
-                   │   (facade)      │    │                 │    │                     │
-                   └────────┬────────┘    └─────────────────┘    └─────────────────────┘
-                            │
-        ┌───────────────────┼───────────────────────────────┐
-        │                   │                               │
-        ▼                   ▼                               ▼
+┌──────────────────────────────────┐    ┌─────────────────┐    ┌─────────────────────┐
+│        MODULE REGISTRY           │    │    Toolbar      │    │    LayerPanel       │
+│  UIManager, EventManager,        │    │ ToolbarKeyboard │    │ (keyboard nav)      │
+│  APIManager, ValidationManager,  │    │                 │    │ (ARIA listbox)      │
+│  StateManager, HistoryManager    │    └─────────────────┘    └─────────────────────┘
+└───────────────────────┬──────────┘
+                        │
+                        ▼
+               ┌─────────────────┐
+               │  CanvasManager  │
+               │   (facade)      │
+               └────────┬────────┘
+                        │
+        ┌───────────────┼───────────────────────────────┐
+        │               │                               │
+        ▼               ▼                               ▼
 ┌───────────────┐  ┌────────────────────┐   ┌──────────────────────────────────┐
 │CanvasRenderer │  │ SelectionManager   │   │        CONTROLLERS               │
 │               │  │                    │   │  ZoomPanController               │
@@ -118,7 +140,68 @@ ZoomPanController.prototype.zoomIn = function() {
 | RenderCoordinator | Render scheduling | ~390 |
 | StyleController | Style options | ~100 |
 
-### 3. StateManager / Editor Bridge Pattern
+### 3. Editor Module Extraction Pattern
+
+`LayersEditor.js` uses a similar extraction pattern, delegating to specialized managers:
+
+**Pattern:**
+```javascript
+// LayersEditor delegates to managers
+LayersEditor.prototype.showRevisionDialog = function() {
+    if (this.revisionManager) {
+        return this.revisionManager.showRevisionDialog();
+    }
+};
+
+// Manager handles the implementation
+RevisionManager.prototype.showRevisionDialog = function() {
+    // Complex dialog logic here
+};
+```
+
+**Modules extracted from LayersEditor:**
+| Module | Responsibility | Lines |
+|--------|----------------|-------|
+| EditorBootstrap | Initialization, hooks, cleanup, global error handling | ~400 |
+| RevisionManager | Revision history, named layer sets, revision dialog | ~470 |
+| DialogManager | Modal dialogs, confirmation dialogs, keyboard shortcuts help | ~420 |
+
+**Integration:**
+- EditorBootstrap handles initialization via `initHooks()`, `initGlobalErrorHandler()`, `initializeEditorUI()`
+- RevisionManager manages revision dropdown, named set selection, history navigation
+- DialogManager provides accessible modals with ARIA attributes and keyboard support
+
+### 4. Accessibility Pattern
+
+The `AccessibilityAnnouncer` provides centralized ARIA live region announcements:
+
+```javascript
+// Global announcer instance
+const announcer = window.layersAnnouncer;
+
+// Polite announcements (won't interrupt)
+announcer.announce('Layer selected: Rectangle 1');
+
+// Assertive announcements (immediate)
+announcer.announceError('Failed to save: network error');
+
+// Specialized methods
+announcer.announceTool('rectangle');        // "Rectangle tool selected"
+announcer.announceSuccess('layers-saved');  // "Layers saved successfully"
+announcer.announceLayerSelection(layer, index, count);
+```
+
+**Where announcements are triggered:**
+- `ToolManager.setTool()` → tool change announcements
+- `SelectionManager.selectLayer()` → selection announcements
+- `APIManager.saveLayers()` → save success announcements
+- `ErrorHandler.createUserNotification()` → error announcements
+
+**ARIA live regions:**
+- `aria-live="polite"` - For non-urgent status updates
+- `aria-live="assertive"` - For errors and important alerts
+
+### 5. StateManager / Editor Bridge Pattern
 
 The `StateManager` provides a centralized state container with pub/sub notifications:
 
@@ -141,7 +224,7 @@ This pattern enables:
 - Easy debugging (can log all state changes)
 - Undo/redo implementation via HistoryManager
 
-### 4. MessageHelper Pattern (i18n)
+### 6. MessageHelper Pattern (i18n)
 
 All user-facing strings use MediaWiki's i18n system via a centralized `MessageHelper`:
 
@@ -164,7 +247,7 @@ getMessage(key, fallback) {
 - Easier to mock in tests
 - Future-proof for ES module migration
 
-### 5. PHP LoggerAwareTrait Pattern
+### 7. PHP LoggerAwareTrait Pattern
 
 PHP classes use traits for consistent logging:
 
@@ -340,13 +423,29 @@ extensions/Layers/
 │   ├── ext.layers/          # Viewer (article pages)
 │   │   ├── init.js
 │   │   └── LayersViewer.js
+│   ├── ext.layers.shared/   # Shared modules
+│   │   └── LayerRenderer.js # Unified rendering engine
 │   └── ext.layers.editor/   # Editor
-│       ├── LayersEditor.js  # Main orchestrator
-│       ├── CanvasManager.js # Canvas facade
+│       ├── LayersEditor.js  # Main orchestrator (1,203 lines)
+│       ├── CanvasManager.js # Canvas facade (1,899 lines)
+│       ├── AccessibilityAnnouncer.js  # ARIA live regions
+│       ├── editor/          # Extracted editor modules
+│       │   ├── EditorBootstrap.js   # Init, hooks, cleanup
+│       │   ├── RevisionManager.js   # Revision management
+│       │   └── DialogManager.js     # Modal dialogs
 │       ├── canvas/          # Extracted controllers
+│       │   ├── ZoomPanController.js
+│       │   ├── GridRulersController.js
+│       │   ├── TransformController.js
+│       │   ├── HitTestController.js
+│       │   ├── DrawingController.js
+│       │   ├── ClipboardController.js
+│       │   ├── InteractionController.js
+│       │   ├── RenderCoordinator.js
+│       │   └── StyleController.js
 │       └── *.js             # Other modules
 ├── tests/
-│   ├── jest/                # Unit tests
+│   ├── jest/                # Unit tests (2,736 tests)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests
 └── docs/                    # Documentation
@@ -381,6 +480,55 @@ $wgRateLimits['editlayers-save']['newbie'] = [5, 3600];
 
 ---
 
+## Accessibility Architecture
+
+The editor implements WCAG 2.1 AA compliance through several mechanisms:
+
+### Keyboard Navigation
+
+**Toolbar:**
+- Tab to navigate between toolbar groups
+- Arrow keys within groups
+- Enter/Space to activate tools
+- Escape to deselect
+- Shift+? to show keyboard shortcuts help
+
+**Layer Panel:**
+- Arrow Up/Down to navigate layers
+- Home/End to jump to first/last
+- Enter/Space to select
+- V to toggle visibility
+- L to toggle lock
+- Delete to remove layer
+
+**Canvas:**
+- Arrow keys for precise positioning
+- Shift+Arrow for larger moves
+- Ctrl+C/V/X for clipboard
+- Ctrl+Z/Y for undo/redo
+
+### ARIA Support
+
+**Live Regions:**
+The `AccessibilityAnnouncer` creates two live regions:
+- `aria-live="polite"` - For status updates that can wait
+- `aria-live="assertive"` - For errors that need immediate attention
+
+**Widget Roles:**
+- Layer list: `role="listbox"` with `role="option"` items
+- Layer items: `aria-selected`, `aria-label` with layer info
+- Dialogs: `role="dialog"`, `aria-labelledby`, `aria-modal="true"`
+- Tools: Buttons with `aria-label` descriptions
+
+### Focus Management
+
+- Focus trapped within modal dialogs
+- Focus restored to trigger element on dialog close
+- Visible focus indicators (`:focus-visible` styling)
+- Logical tab order maintained
+
+---
+
 ## Migration Notes
 
 ### From Legacy Globals
@@ -409,6 +557,7 @@ const canvas = new window.Layers.Canvas.Manager(options);
 
 ## Related Documentation
 
+- [ACCESSIBILITY.md](./ACCESSIBILITY.md) - Full accessibility documentation
 - [NAMED_LAYER_SETS.md](./NAMED_LAYER_SETS.md) - Named sets architecture
 - [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) - Getting started
 - [CSP_GUIDE.md](./CSP_GUIDE.md) - Content Security Policy

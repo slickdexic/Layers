@@ -264,19 +264,21 @@
 			return;
 		}
 
-		// Modern browsers - use data URL for broad compatibility
+		// Modern browsers - use Blob URL (safer than data: URL)
+		const url = URL.createObjectURL( blob );
 		const a = document.createElement( 'a' );
 		a.style.display = 'none';
 		a.download = filename;
-		a.href = 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent( content );
+		a.href = url;
 
 		document.body.appendChild( a );
 		a.click();
 
-		// Clean up
+		// Clean up: remove element and revoke Blob URL
 		setTimeout( function () {
 			document.body.removeChild( a );
-		}, 0 );
+			URL.revokeObjectURL( url );
+		}, 100 );
 	};
 
 	/**

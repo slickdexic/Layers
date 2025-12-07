@@ -15,11 +15,19 @@ class ValidationManager {
 			return layerData;
 		}
 
+		// Handle arrays separately to preserve array type
+		if ( Array.isArray( layerData ) ) {
+			return layerData.map( item => this.sanitizeLayerData( item ) );
+		}
+
 		const sanitized = {};
 		for ( const key in layerData ) {
 			if ( Object.prototype.hasOwnProperty.call( layerData, key ) ) {
 				if ( typeof layerData[ key ] === 'string' ) {
 					sanitized[ key ] = this.sanitizeString( layerData[ key ] );
+				} else if ( Array.isArray( layerData[ key ] ) ) {
+					// Preserve array type (important for points array in path layers)
+					sanitized[ key ] = layerData[ key ].map( item => this.sanitizeLayerData( item ) );
 				} else if ( typeof layerData[ key ] === 'object' && layerData[ key ] !== null ) {
 					sanitized[ key ] = this.sanitizeLayerData( layerData[ key ] );
 				} else {

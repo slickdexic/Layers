@@ -1,12 +1,28 @@
 # Layers Extension Developer Onboarding & Architecture Overview
 
+**Last Updated:** December 2025
+
 ## Introduction
 This document provides an overview of the Layers extension architecture and onboarding steps for new developers.
 
 ## Architecture
 - **Backend (PHP):** Handles MediaWiki integration, API endpoints, and database logic. Entry point: `extension.json`.
-- **Frontend (JS):** Single-page app for editing images. Entry: `resources/ext.layers.editor/LayersEditor.js`.
+- **Frontend (JS):** Canvas-based editor for image annotations. Entry: `resources/ext.layers.editor/LayersEditor.js`.
 - **Database:** SQL schema in `sql/`, logic in `src/Database/LayersDatabase.php`.
+
+### Key Modules
+
+| Module | Purpose | Lines |
+|--------|---------|-------|
+| `LayersEditor.js` | Main orchestrator | ~1,200 |
+| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~1,900 |
+| `LayerRenderer.js` | Shared rendering engine | ~1,200 |
+| `EditorBootstrap.js` | Initialization, hooks, cleanup | ~400 |
+| `RevisionManager.js` | Revision and named set management | ~470 |
+| `DialogManager.js` | Modal dialogs with ARIA | ~420 |
+| `AccessibilityAnnouncer.js` | Screen reader support | ~200 |
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full module dependency graph.
 
 ## Getting Started
 1. Clone the repo and install dependencies:
@@ -14,7 +30,7 @@ This document provides an overview of the Layers extension architecture and onbo
    - `npm install`
 2. Set up MediaWiki and enable the extension in `LocalSettings.php`.
 3. Run DB migrations: `php maintenance/update.php` from MediaWiki root.
-4. For JS dev: `npm test` for linting, use Grunt for builds.
+4. For JS dev: `npm test` for linting, `npm run test:js` for Jest unit tests.
 5. For PHP dev: `composer test` for code style.
 
 
@@ -29,15 +45,30 @@ This document provides an overview of the Layers extension architecture and onbo
 
 ## Key Conventions
 
-- All user-facing strings must be internationalized.
-- State is managed in the frontend and saved as a JSON blob.
-- See `copilot-instructions.md` for more details.
+- **i18n:** All user-facing strings must use `mw.message()` or `window.layersMessages.get()`.
+- **State:** Managed in the frontend StateManager and saved as JSON via the API.
+- **Accessibility:** Use ARIA attributes, support keyboard navigation, announce changes via `window.layersAnnouncer`.
+- **ES6:** New code should use ES6 classes (see existing utilities as examples).
+- **Testing:** Add Jest tests for new modules (target 90%+ coverage).
+
+## Accessibility
+
+The editor supports keyboard navigation and screen readers:
+
+- **Keyboard shortcuts:** Press `Shift+?` to see all shortcuts
+- **Layer panel:** Arrow keys, Home/End, Enter to select, V/L for visibility/lock
+- **ARIA live regions:** Tool changes, selections, saves, and errors are announced
+
+See [ACCESSIBILITY.md](./ACCESSIBILITY.md) for full accessibility documentation.
 
 
 ## Useful Links
 
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Technical architecture details
+- [ACCESSIBILITY.md](./ACCESSIBILITY.md) - Accessibility guide
+- [NAMED_LAYER_SETS.md](./NAMED_LAYER_SETS.md) - Named sets feature
 - [MediaWiki Extension Manual](https://www.mediawiki.org/wiki/Manual:Developing_extensions)
-- [Layers Extension Guide](../guide.md)
+- [copilot-instructions.md](../.github/copilot-instructions.md) - Contributor guide
 
 ---
 

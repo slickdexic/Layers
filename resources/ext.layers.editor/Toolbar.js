@@ -456,6 +456,20 @@
 		exportButton.title = t( 'layers-export-layers', 'Export Layers' );
 		actionGroup.appendChild( exportButton );
 
+		// Separator before save/help
+		const separator2 = document.createElement( 'div' );
+		separator2.className = 'toolbar-separator';
+		actionGroup.appendChild( separator2 );
+
+		// Help button for keyboard shortcuts
+		const helpButton = document.createElement( 'button' );
+		helpButton.className = 'toolbar-button help-button';
+		helpButton.textContent = '?';
+		helpButton.title = t( 'layers-keyboard-shortcuts', 'Keyboard Shortcuts' ) + ' (Shift+?)';
+		helpButton.setAttribute( 'aria-label', t( 'layers-keyboard-shortcuts', 'Keyboard Shortcuts' ) );
+		helpButton.dataset.action = 'show-shortcuts';
+		actionGroup.appendChild( helpButton );
+
 		// Save and Cancel buttons
 		const saveButton = document.createElement( 'button' );
 		saveButton.className = 'toolbar-button save-button primary';
@@ -640,6 +654,9 @@
 				break;
 			case 'duplicate':
 				this.editor.duplicateSelected();
+				break;
+			case 'show-shortcuts':
+				this.editor.showKeyboardShortcutsDialog();
 				break;
 			case 'grid':
 				this.toggleGrid();

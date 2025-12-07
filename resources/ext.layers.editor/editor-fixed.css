@@ -1462,3 +1462,66 @@ body.layers-resize-cursor {
 .layers-btn-primary:hover {
 	background: #2980b9;
 }
+
+/* ==========================================================================
+   Keyboard Shortcuts Dialog
+   ========================================================================== */
+
+.layers-shortcuts-dialog {
+	max-width: 500px;
+	width: 90%;
+}
+
+.layers-shortcuts-dialog .layers-modal-title {
+	margin: 0 0 16px 0;
+	font-size: 1.25em;
+	font-weight: 600;
+	color: #202122;
+	border-bottom: 1px solid #eaecf0;
+	padding-bottom: 12px;
+}
+
+.layers-shortcuts-list {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 8px 16px;
+	margin: 0 0 20px 0;
+	padding: 0;
+	max-height: 400px;
+	overflow-y: auto;
+}
+
+.layers-shortcuts-list dt {
+	margin: 0;
+	padding: 4px 0;
+}
+
+.layers-shortcuts-list dd {
+	margin: 0;
+	padding: 4px 0;
+	color: #54595d;
+}
+
+.layers-shortcuts-list kbd {
+	display: inline-block;
+	padding: 3px 8px;
+	font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', monospace;
+	font-size: 0.85em;
+	line-height: 1.4;
+	color: #24292f;
+	background-color: #f6f8fa;
+	border: 1px solid #d0d7de;
+	border-radius: 6px;
+	box-shadow: inset 0 -1px 0 #d0d7de;
+}
+
+/* Help button in toolbar */
+.toolbar-button.help-button {
+	font-weight: bold;
+	font-size: 1.1em;
+	min-width: 32px;
+}
+
+.toolbar-button.help-button:hover {
+	background: #e9ecef;
+}

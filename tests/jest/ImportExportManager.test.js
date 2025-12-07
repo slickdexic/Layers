@@ -308,6 +308,8 @@ describe( 'ImportExportManager', () => {
 	describe( 'triggerDownload', () => {
 		let originalCreateElement;
 		let mockAnchor;
+		let mockCreateObjectURL;
+		let mockRevokeObjectURL;
 
 		beforeEach( () => {
 			mockAnchor = {
@@ -323,6 +325,12 @@ describe( 'ImportExportManager', () => {
 			} );
 			jest.spyOn( document.body, 'appendChild' ).mockImplementation( () => {} );
 			jest.spyOn( document.body, 'removeChild' ).mockImplementation( () => {} );
+
+			// Mock URL.createObjectURL and revokeObjectURL
+			mockCreateObjectURL = jest.fn().mockReturnValue( 'blob:http://localhost/test-blob' );
+			mockRevokeObjectURL = jest.fn();
+			global.URL.createObjectURL = mockCreateObjectURL;
+			global.URL.revokeObjectURL = mockRevokeObjectURL;
 		} );
 
 		afterEach( () => {
@@ -331,13 +339,14 @@ describe( 'ImportExportManager', () => {
 			document.body.removeChild.mockRestore();
 		} );
 
-		it( 'should create anchor element with correct attributes', () => {
+		it( 'should create anchor element with blob URL (not data URL)', () => {
 			const manager = new ImportExportManager( { editor: mockEditor } );
 
 			manager.triggerDownload( '{"test": true}', 'test.json', 'application/json' );
 
 			expect( mockAnchor.download ).toBe( 'test.json' );
-			expect( mockAnchor.href ).toContain( 'data:application/json' );
+			expect( mockAnchor.href ).toBe( 'blob:http://localhost/test-blob' );
+			expect( mockCreateObjectURL ).toHaveBeenCalled();
 			expect( mockAnchor.click ).toHaveBeenCalled();
 		} );
 
@@ -358,6 +367,7 @@ describe( 'ImportExportManager', () => {
 	describe( 'exportToFile', () => {
 		let originalCreateElement;
 		let mockAnchor;
+		let mockCreateObjectURL;
 
 		beforeEach( () => {
 			mockAnchor = {
@@ -372,6 +382,11 @@ describe( 'ImportExportManager', () => {
 			} );
 			jest.spyOn( document.body, 'appendChild' ).mockImplementation( () => {} );
 			jest.spyOn( document.body, 'removeChild' ).mockImplementation( () => {} );
+
+			// Mock URL.createObjectURL for blob URL
+			mockCreateObjectURL = jest.fn().mockReturnValue( 'blob:http://localhost/test-blob' );
+			global.URL.createObjectURL = mockCreateObjectURL;
+			global.URL.revokeObjectURL = jest.fn();
 		} );
 
 		afterEach( () => {
@@ -388,7 +403,9 @@ describe( 'ImportExportManager', () => {
 			const result = manager.exportToFile();
 
 			expect( result ).toBe( true );
-			expect( mockAnchor.href ).toContain( encodeURIComponent( '  ' ) ); // Indentation in pretty print
+			// Verify blob was created and URL.createObjectURL was called
+			expect( mockCreateObjectURL ).toHaveBeenCalled();
+			expect( mockAnchor.href ).toBe( 'blob:http://localhost/test-blob' );
 		} );
 
 		it( 'should use custom filename when provided', () => {

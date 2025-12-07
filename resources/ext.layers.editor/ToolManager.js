@@ -70,6 +70,31 @@
 
 		// Tool-specific initialization
 		this.initializeTool( toolName );
+
+		// Announce tool change for screen readers
+		if ( window.layersAnnouncer ) {
+			const toolDisplayName = this.getToolDisplayName( toolName );
+			window.layersAnnouncer.announceTool( toolDisplayName );
+		}
+	};
+
+	/**
+	 * Get display name for a tool (for accessibility announcements)
+	 *
+	 * @param {string} toolName Tool name
+	 * @return {string} Human-readable tool name
+	 */
+	ToolManager.prototype.getToolDisplayName = function ( toolName ) {
+		// Use i18n messages if available
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			const msgKey = 'layers-tool-' + toolName;
+			const msg = window.layersMessages.get( msgKey, '' );
+			if ( msg ) {
+				return msg;
+			}
+		}
+		// Fallback to capitalized tool name
+		return toolName.charAt( 0 ).toUpperCase() + toolName.slice( 1 );
 	};
 
 	/**

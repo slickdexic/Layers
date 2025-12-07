@@ -1,8 +1,31 @@
 # Accessibility Guide
 
+**Last Updated:** December 2025
+
 This document describes the accessibility features of the Layers extension and provides guidance for contributors to maintain and improve accessibility compliance.
 
 ## Current Accessibility Features
+
+### ARIA Live Regions (NEW)
+
+The `AccessibilityAnnouncer` module provides centralized screen reader announcements:
+
+```javascript
+// Available via global singleton
+window.layersAnnouncer.announce('Status message');
+window.layersAnnouncer.announceError('Error message');
+window.layersAnnouncer.announceSuccess('layers-saved');
+window.layersAnnouncer.announceTool('rectangle');
+window.layersAnnouncer.announceLayerSelection(layer, index, count);
+```
+
+**Integration Points:**
+| Module | Announcement Type |
+|--------|-------------------|
+| ToolManager | Tool selection changes |
+| SelectionManager | Layer selection changes |
+| APIManager | Save success |
+| ErrorHandler | All errors |
 
 ### ARIA Attributes
 
@@ -20,6 +43,9 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 | Spinner/loading | `aria-live="polite"` | Announces loading state changes |
 | Icons (decorative) | `aria-hidden="true"` | Hides decorative SVG icons |
 | Range sliders | `aria-label` | Describes slider purpose |
+| Layer list | `role="listbox"` | Identifies list as selection widget |
+| Layer items | `role="option"`, `aria-selected` | Marks selectable list items |
+| Modal dialogs | `role="dialog"`, `aria-labelledby` | Identifies accessible dialogs |
 
 ### Keyboard Navigation
 
@@ -39,6 +65,20 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 | `G` | Toggle grid |
 | `Delete` / `Backspace` | Delete selected layer(s) |
 | `Escape` | Cancel current operation / deselect |
+| `Shift + ?` | Show keyboard shortcuts help dialog (NEW) |
+
+#### Layer Panel Navigation (NEW)
+
+| Shortcut | Action |
+|----------|--------|
+| `Arrow Up` | Move focus to previous layer |
+| `Arrow Down` | Move focus to next layer |
+| `Home` | Jump to first layer |
+| `End` | Jump to last layer |
+| `Enter` / `Space` | Select the focused layer |
+| `V` | Toggle visibility of focused layer |
+| `L` | Toggle lock of focused layer |
+| `Delete` / `Backspace` | Delete focused layer |
 
 #### With Ctrl/Cmd Modifier
 
@@ -105,9 +145,9 @@ The extension uses MediaWiki's internationalization system (`mw.message()`) for 
 
 ### Medium Priority
 
-5. **Visual-Only Feedback**
-   - Some operations only provide visual feedback (e.g., layer selection highlighting)
-   - **Recommendation**: Add `aria-live` announcements for state changes
+5. ~~**Visual-Only Feedback**~~ ✅ RESOLVED (December 2025)
+   - ~~Some operations only provide visual feedback~~
+   - **Resolution**: Added `AccessibilityAnnouncer` with ARIA live regions for tool changes, layer selection, save success, and errors
 
 6. **Mouse-Dependent Interactions**
    - Drawing tools require mouse/touch interaction
@@ -213,7 +253,8 @@ Document messages in `i18n/qqq.json`:
 | 2.4.1 Bypass Blocks | A | ❌ Fail | No skip links |
 | 2.4.4 Link Purpose | A | ✅ Pass | Links have descriptive text |
 | 2.4.7 Focus Visible | AA | ✅ Pass | Focus indicators present |
-| 4.1.2 Name, Role, Value | A | ⚠️ Partial | Most elements labeled |
+| 4.1.2 Name, Role, Value | A | ✅ Pass | Layer list and dialogs fully labeled |
+| 4.1.3 Status Messages | AA | ✅ Pass | ARIA live regions for announcements |
 
 Legend: ✅ Pass | ⚠️ Partial | ❌ Fail | ❓ Unknown
 

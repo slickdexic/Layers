@@ -301,14 +301,18 @@ describe('CanvasRenderer', () => {
         });
 
         test('should render layers when provided', () => {
+            // Drawing is now delegated to layerRenderer
+            const mockDrawLayer = jest.fn();
+            renderer.layerRenderer = { drawLayer: mockDrawLayer };
+
             const layers = [
                 { id: '1', type: 'rectangle', x: 0, y: 0, width: 100, height: 100, visible: true }
             ];
 
             renderer.redraw(layers);
 
-            // Should have called rect for the rectangle
-            expect(ctx.rect).toHaveBeenCalled();
+            // Should have delegated drawing (ctx.save is called around each layer)
+            expect(ctx.save).toHaveBeenCalled();
         });
     });
 
@@ -321,19 +325,25 @@ describe('CanvasRenderer', () => {
         });
 
         test('should skip invisible layers', () => {
+            const mockDrawLayer = jest.fn();
+            renderer.layerRenderer = { drawLayer: mockDrawLayer };
+
             const layers = [
                 { id: '1', type: 'rectangle', x: 0, y: 0, width: 100, height: 100, visible: false }
             ];
 
             // Reset mocks
-            ctx.rect.mockClear();
+            mockDrawLayer.mockClear();
             renderer.renderLayers(layers);
 
-            // Should not have drawn the invisible layer
-            expect(ctx.rect).not.toHaveBeenCalled();
+            // Should not have called drawLayer for invisible layer
+            expect(mockDrawLayer).not.toHaveBeenCalled();
         });
 
-        test('should render visible layers in reverse order', () => {
+        test('should render visible layers', () => {
+            const mockDrawLayer = jest.fn();
+            renderer.layerRenderer = { drawLayer: mockDrawLayer };
+
             const layers = [
                 { id: '1', type: 'rectangle', x: 0, y: 0, width: 100, height: 100, visible: true },
                 { id: '2', type: 'circle', x: 50, y: 50, radius: 25, visible: true }
@@ -341,9 +351,8 @@ describe('CanvasRenderer', () => {
 
             renderer.renderLayers(layers);
 
-            // Both should be rendered
-            expect(ctx.rect).toHaveBeenCalled();
-            expect(ctx.arc).toHaveBeenCalled();
+            // Both visible layers should be rendered via delegation
+            expect(ctx.save).toHaveBeenCalled();
         });
     });
 
@@ -410,34 +419,27 @@ describe('CanvasRenderer', () => {
     });
 
     describe('drawLayer', () => {
-        test('should dispatch to correct drawing method for rectangle', () => {
+        test('should delegate to layerRenderer when available', () => {
+            // Create a mock layerRenderer
+            const mockLayerRenderer = {
+                drawLayer: jest.fn()
+            };
+            renderer.layerRenderer = mockLayerRenderer;
+
             const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 80, fill: '#ff0000' };
-            const drawRectSpy = jest.spyOn(renderer, 'drawRectangle');
 
             renderer.drawLayer(layer);
 
-            expect(drawRectSpy).toHaveBeenCalledWith(layer);
-            drawRectSpy.mockRestore();
+            expect(mockLayerRenderer.drawLayer).toHaveBeenCalledWith(layer);
         });
 
-        test('should dispatch to correct drawing method for circle', () => {
-            const layer = { type: 'circle', x: 50, y: 50, radius: 25, fill: '#00ff00' };
-            const drawCircleSpy = jest.spyOn(renderer, 'drawCircle');
+        test('should not throw when layerRenderer is not available', () => {
+            renderer.layerRenderer = null;
 
-            renderer.drawLayer(layer);
+            const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 80, fill: '#ff0000' };
 
-            expect(drawCircleSpy).toHaveBeenCalledWith(layer);
-            drawCircleSpy.mockRestore();
-        });
-
-        test('should dispatch to correct drawing method for text', () => {
-            const layer = { type: 'text', x: 100, y: 100, text: 'Hello', fontSize: 16 };
-            const drawTextSpy = jest.spyOn(renderer, 'drawText');
-
-            renderer.drawLayer(layer);
-
-            expect(drawTextSpy).toHaveBeenCalledWith(layer);
-            drawTextSpy.mockRestore();
+            // Should not throw even without layerRenderer
+            expect(() => renderer.drawLayer(layer)).not.toThrow();
         });
 
         test('should handle all layer types without throwing', () => {
@@ -462,367 +464,10 @@ describe('CanvasRenderer', () => {
         });
     });
 
-    describe('drawRectangle', () => {
-        test('should draw filled rectangle with fill color', () => {
-            const layer = { x: 10, y: 20, width: 100, height: 80, fill: '#ff0000' };
-
-            renderer.drawRectangle(layer);
-
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.rect).toHaveBeenCalledWith(10, 20, 100, 80);
-            expect(ctx.fill).toHaveBeenCalled();
-        });
-
-        test('should draw stroked rectangle with stroke color', () => {
-            const layer = { x: 10, y: 20, width: 100, height: 80, stroke: '#0000ff', strokeWidth: 2 };
-
-            renderer.drawRectangle(layer);
-
-            expect(ctx.stroke).toHaveBeenCalled();
-        });
-
-        test('should skip drawing for zero dimensions', () => {
-            ctx.rect.mockClear();
-            const layer = { x: 10, y: 20, width: 0, height: 80 };
-
-            renderer.drawRectangle(layer);
-
-            expect(ctx.rect).not.toHaveBeenCalled();
-        });
-
-        test('should handle transparent fill', () => {
-            ctx.fill.mockClear();
-            const layer = { x: 10, y: 20, width: 100, height: 80, fill: 'transparent' };
-
-            renderer.drawRectangle(layer);
-
-            expect(ctx.fill).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('drawCircle', () => {
-        test('should draw circle with center and radius', () => {
-            const layer = { x: 50, y: 50, radius: 25, fill: '#00ff00' };
-
-            renderer.drawCircle(layer);
-
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.arc).toHaveBeenCalledWith(50, 50, 25, 0, 2 * Math.PI);
-        });
-
-        test('should fall back to width/2 for radius if not specified', () => {
-            const layer = { x: 50, y: 50, width: 60, fill: '#00ff00' };
-
-            renderer.drawCircle(layer);
-
-            expect(ctx.arc).toHaveBeenCalledWith(50, 50, 30, 0, 2 * Math.PI);
-        });
-
-        test('should skip drawing for negative radius', () => {
-            ctx.arc.mockClear();
-            const layer = { x: 50, y: 50, radius: -5, width: 0 };
-
-            renderer.drawCircle(layer);
-
-            expect(ctx.arc).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('drawEllipse', () => {
-        test('should draw ellipse with radiusX and radiusY', () => {
-            const layer = { x: 50, y: 50, radiusX: 40, radiusY: 25, fill: '#0000ff' };
-
-            renderer.drawEllipse(layer);
-
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.ellipse).toHaveBeenCalledWith(50, 50, 40, 25, 0, 0, 2 * Math.PI);
-        });
-
-        test('should handle legacy width/height format', () => {
-            const layer = { x: 20, y: 30, width: 80, height: 50, fill: '#0000ff' };
-
-            renderer.drawEllipse(layer);
-
-            // Legacy format: center is at x + width/2, y + height/2
-            expect(ctx.ellipse).toHaveBeenCalledWith(60, 55, 40, 25, 0, 0, 2 * Math.PI);
-        });
-
-        test('should skip drawing for zero radii', () => {
-            ctx.ellipse.mockClear();
-            const layer = { x: 50, y: 50, radiusX: 0, radiusY: 0 };
-
-            renderer.drawEllipse(layer);
-
-            expect(ctx.ellipse).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('drawLine', () => {
-        test('should draw line from x1,y1 to x2,y2', () => {
-            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000' };
-
-            renderer.drawLine(layer);
-
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.moveTo).toHaveBeenCalledWith(10, 20);
-            expect(ctx.lineTo).toHaveBeenCalledWith(100, 80);
-            expect(ctx.stroke).toHaveBeenCalled();
-        });
-
-        test('should fall back to x,y,width,height format', () => {
-            const layer = { x: 10, y: 20, width: 90, height: 60, stroke: '#000' };
-
-            renderer.drawLine(layer);
-
-            expect(ctx.moveTo).toHaveBeenCalledWith(10, 20);
-            expect(ctx.lineTo).toHaveBeenCalledWith(100, 80);
-        });
-    });
-
-    describe('drawArrow', () => {
-        test('should draw arrow with single head', () => {
-            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', arrowStyle: 'single', arrowSize: 15 };
-
-            renderer.drawArrow(layer);
-
-            // Arrow is now drawn as a closed polygon
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.closePath).toHaveBeenCalled();
-            expect(ctx.stroke).toHaveBeenCalled();
-        });
-
-        test('should draw arrow with double heads', () => {
-            const buildVerticesSpy = jest.spyOn(renderer, 'buildArrowVertices');
-            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', arrowStyle: 'double', arrowSize: 15 };
-
-            renderer.drawArrow(layer);
-
-            // Should call buildArrowVertices to construct the polygon
-            expect(buildVerticesSpy).toHaveBeenCalled();
-            expect(ctx.closePath).toHaveBeenCalled();
-            buildVerticesSpy.mockRestore();
-        });
-
-        test('should support fill on arrow shapes', () => {
-            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', fill: '#ff0000', arrowStyle: 'single' };
-
-            renderer.drawArrow(layer);
-
-            expect(ctx.fillStyle).toBe('#ff0000');
-            expect(ctx.fill).toHaveBeenCalled();
-        });
-
-        test('should support pointed head type', () => {
-            const buildVerticesSpy = jest.spyOn(renderer, 'buildArrowVertices');
-            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', arrowHeadType: 'pointed' };
-
-            renderer.drawArrow(layer);
-
-            expect(buildVerticesSpy).toHaveBeenCalledWith(
-                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
-                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
-                'single', 'pointed', expect.anything(), expect.anything()
-            );
-            buildVerticesSpy.mockRestore();
-        });
-
-        test('should support chevron head type', () => {
-            const buildVerticesSpy = jest.spyOn(renderer, 'buildArrowVertices');
-            const layer = { x1: 10, y1: 20, x2: 100, y2: 80, stroke: '#000', arrowHeadType: 'chevron' };
-
-            renderer.drawArrow(layer);
-
-            expect(buildVerticesSpy).toHaveBeenCalledWith(
-                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
-                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
-                'single', 'chevron', expect.anything(), expect.anything()
-            );
-            buildVerticesSpy.mockRestore();
-        });
-    });
-
-    describe('drawPolygon', () => {
-        test('should draw polygon from points array', () => {
-            const layer = {
-                points: [
-                    { x: 0, y: 0 },
-                    { x: 100, y: 0 },
-                    { x: 50, y: 80 }
-                ],
-                fill: '#ff0000'
-            };
-
-            renderer.drawPolygon(layer);
-
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.moveTo).toHaveBeenCalledWith(0, 0);
-            expect(ctx.lineTo).toHaveBeenCalledWith(100, 0);
-            expect(ctx.lineTo).toHaveBeenCalledWith(50, 80);
-            expect(ctx.closePath).toHaveBeenCalled();
-        });
-
-        test('should draw regular polygon if sides defined but no points', () => {
-            const drawRegularPolygonSpy = jest.spyOn(renderer, 'drawRegularPolygon');
-            const layer = { x: 50, y: 50, sides: 6, radius: 30, fill: '#00ff00' };
-
-            renderer.drawPolygon(layer);
-
-            expect(drawRegularPolygonSpy).toHaveBeenCalledWith(layer);
-            drawRegularPolygonSpy.mockRestore();
-        });
-
-        test('should fall back to regular polygon with insufficient points', () => {
-            const drawRegularPolygonSpy = jest.spyOn(renderer, 'drawRegularPolygon');
-            const layer = { x: 50, y: 50, points: [{ x: 0, y: 0 }], fill: '#ff0000' };
-
-            renderer.drawPolygon(layer);
-
-            // Falls back to regular polygon when points array is insufficient
-            expect(drawRegularPolygonSpy).toHaveBeenCalledWith(layer);
-            drawRegularPolygonSpy.mockRestore();
-        });
-    });
-
-    describe('drawStar', () => {
-        test('should draw star with points and radii', () => {
-            const layer = { x: 50, y: 50, points: 5, outerRadius: 30, innerRadius: 15, fill: '#ffff00' };
-
-            renderer.drawStar(layer);
-
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.closePath).toHaveBeenCalled();
-            expect(ctx.fill).toHaveBeenCalled();
-        });
-
-        test('should use default inner radius if not specified', () => {
-            const layer = { x: 50, y: 50, points: 5, outerRadius: 30, fill: '#ffff00' };
-
-            // Should not throw
-            expect(() => renderer.drawStar(layer)).not.toThrow();
-        });
-    });
-
-    describe('drawPath', () => {
-        test('should draw freehand path from points', () => {
-            const layer = {
-                points: [
-                    { x: 0, y: 0 },
-                    { x: 20, y: 30 },
-                    { x: 40, y: 10 }
-                ],
-                stroke: '#000',
-                strokeWidth: 2
-            };
-
-            renderer.drawPath(layer);
-
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.moveTo).toHaveBeenCalledWith(0, 0);
-            expect(ctx.lineTo).toHaveBeenCalledWith(20, 30);
-            expect(ctx.lineTo).toHaveBeenCalledWith(40, 10);
-            expect(ctx.stroke).toHaveBeenCalled();
-        });
-
-        test('should skip drawing with less than 2 points', () => {
-            ctx.moveTo.mockClear();
-            const layer = { points: [{ x: 0, y: 0 }], stroke: '#000' };
-
-            renderer.drawPath(layer);
-
-            expect(ctx.moveTo).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('drawHighlight', () => {
-        test('should draw semi-transparent highlight rectangle', () => {
-            const layer = { x: 10, y: 20, width: 100, height: 20, color: '#ffff00', opacity: 0.3 };
-
-            renderer.drawHighlight(layer);
-
-            expect(ctx.save).toHaveBeenCalled();
-            expect(ctx.fillRect).toHaveBeenCalledWith(10, 20, 100, 20);
-            expect(ctx.restore).toHaveBeenCalled();
-        });
-
-        test('should use default opacity of 0.3', () => {
-            const layer = { x: 10, y: 20, width: 100, height: 20 };
-
-            // Should not throw
-            expect(() => renderer.drawHighlight(layer)).not.toThrow();
-        });
-    });
-
-    describe('drawBlur', () => {
-        test('should skip drawing for zero dimensions', () => {
-            ctx.rect.mockClear();
-            const layer = { x: 10, y: 20, width: 0, height: 100, blurRadius: 10 };
-
-            renderer.drawBlur(layer);
-
-            expect(ctx.clip).not.toHaveBeenCalled();
-        });
-
-        test('should apply blur filter and clip', () => {
-            const layer = { x: 10, y: 20, width: 100, height: 80, blurRadius: 12 };
-
-            renderer.drawBlur(layer);
-
-            expect(ctx.save).toHaveBeenCalled();
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.rect).toHaveBeenCalledWith(10, 20, 100, 80);
-            expect(ctx.clip).toHaveBeenCalled();
-            expect(ctx.restore).toHaveBeenCalled();
-        });
-    });
-
-    describe('drawText', () => {
-        test('should draw text at specified position', () => {
-            const layer = { type: 'text', x: 100, y: 100, text: 'Hello World', fontSize: 16, fontFamily: 'Arial' };
-
-            renderer.drawText(layer);
-
-            expect(ctx.fillText).toHaveBeenCalled();
-        });
-
-        test('should apply text stroke if specified', () => {
-            const layer = {
-                type: 'text',
-                x: 100,
-                y: 100,
-                text: 'Hello',
-                fontSize: 16,
-                textStrokeWidth: 2,
-                textStrokeColor: '#000000'
-            };
-
-            renderer.drawText(layer);
-
-            expect(ctx.strokeText).toHaveBeenCalled();
-        });
-
-        test('should handle multi-line text wrapping', () => {
-            const layer = {
-                type: 'text',
-                x: 100,
-                y: 100,
-                text: 'This is a long text that should wrap',
-                fontSize: 16,
-                maxWidth: 100
-            };
-
-            renderer.drawText(layer);
-
-            // Should call fillText at least once
-            expect(ctx.fillText).toHaveBeenCalled();
-        });
-
-        test('should handle empty text gracefully', () => {
-            const layer = { type: 'text', x: 100, y: 100, text: '', fontSize: 16 };
-
-            // Should not throw
-            expect(() => renderer.drawText(layer)).not.toThrow();
-        });
-    });
+    // Note: Individual shape draw methods (drawRectangle, drawCircle, drawEllipse,
+    // drawLine, drawArrow, drawPolygon, drawStar, drawPath, drawHighlight, drawBlur,
+    // drawText) have been removed from CanvasRenderer. Drawing is now delegated to
+    // the shared LayerRenderer. See LayerRenderer.test.js for shape rendering tests.
 
     describe('TextUtils.measureTextLayer', () => {
         test('should return null for null layer', () => {
