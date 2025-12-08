@@ -644,7 +644,13 @@ class StateManager {
 	}
 }
 
+// Export to window.Layers namespace (preferred)
 if ( typeof window !== 'undefined' ) {
+	window.Layers = window.Layers || {};
+	window.Layers.Core = window.Layers.Core || {};
+	window.Layers.Core.StateManager = StateManager;
+
+	// Backward compatibility - direct window export
 	window.StateManager = StateManager;
 	// NOTE: Do NOT create a global singleton here.
 	// Each LayersEditor instance creates its own StateManager via the ModuleRegistry.

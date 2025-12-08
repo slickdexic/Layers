@@ -47,8 +47,8 @@
 			"value": true
 		},
 		"LayersDebug": {
-			"description": "Enable verbose debug logging to the 'Layers' log channel",
-			"value": true
+			"description": "Enable verbose debug logging to the 'Layers' log channel. Set to true in LocalSettings.php for development.",
+			"value": false
 		},
 		"LayersMaxBytes": {
 			"description": "Maximum JSON size per layer set in bytes",

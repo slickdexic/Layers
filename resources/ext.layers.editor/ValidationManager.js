@@ -252,5 +252,12 @@ class ValidationManager {
 	}
 }
 
-// Export ValidationManager to global scope
-window.ValidationManager = ValidationManager;
+// Export to window.Layers namespace (preferred)
+if ( typeof window !== 'undefined' ) {
+	window.Layers = window.Layers || {};
+	window.Layers.Validation = window.Layers.Validation || {};
+	window.Layers.Validation.Manager = ValidationManager;
+
+	// Backward compatibility - direct window export
+	window.ValidationManager = ValidationManager;
+}

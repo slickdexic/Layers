@@ -116,5 +116,12 @@ class EventManager {
 	}
 }
 
-// Export EventManager to global scope
-window.EventManager = EventManager;
+// Export to window.Layers namespace (preferred)
+if ( typeof window !== 'undefined' ) {
+	window.Layers = window.Layers || {};
+	window.Layers.Core = window.Layers.Core || {};
+	window.Layers.Core.EventManager = EventManager;
+
+	// Backward compatibility - direct window export
+	window.EventManager = EventManager;
+}

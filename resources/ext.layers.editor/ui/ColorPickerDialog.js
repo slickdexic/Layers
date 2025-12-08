@@ -140,7 +140,6 @@
 	 * @return {HTMLButtonElement} The button element
 	 */
 	ColorPickerDialog.prototype.createSwatchButton = function ( color, ariaLabel, isNone ) {
-		const self = this;
 		const btn = document.createElement( 'button' );
 		btn.type = 'button';
 		btn.className = isNone ? 'color-picker-none-btn' : 'color-picker-swatch-btn';
@@ -151,9 +150,9 @@
 			btn.style.backgroundColor = color;
 		}
 
-		btn.addEventListener( 'click', function () {
-			self.selectedColor = isNone ? 'none' : color;
-			self.updateSelection( btn );
+		btn.addEventListener( 'click', () => {
+			this.selectedColor = isNone ? 'none' : color;
+			this.updateSelection( btn );
 		} );
 
 		return btn;
@@ -216,7 +215,6 @@
 	 * @return {Object} Object with overlay and dialog elements
 	 */
 	ColorPickerDialog.prototype.createDialogDOM = function () {
-		const self = this;
 		const strings = this.strings;
 
 		// Overlay
@@ -268,10 +266,10 @@
 		standardGrid.appendChild( noneBtn );
 
 		// Standard color buttons
-		STANDARD_COLORS.forEach( function ( color ) {
-			const btn = self.createSwatchButton(
+		STANDARD_COLORS.forEach( ( color ) => {
+			const btn = this.createSwatchButton(
 				color,
-				self.formatTemplate( strings.swatchTemplate, color ),
+				this.formatTemplate( strings.swatchTemplate, color ),
 				false
 			);
 			standardGrid.appendChild( btn );
@@ -303,10 +301,10 @@
 				customBtn.style.backgroundColor = savedColors[ i ];
 				customBtn.title = savedColors[ i ];
 				customBtn.setAttribute( 'aria-label', this.formatTemplate( strings.swatchTemplate, savedColors[ i ] ) );
-				( function ( btn, color ) {
-					btn.addEventListener( 'click', function () {
-						self.selectedColor = color;
-						self.updateSelection( btn );
+				( ( btn, color ) => {
+					btn.addEventListener( 'click', () => {
+						this.selectedColor = color;
+						this.updateSelection( btn );
 					} );
 				} )( customBtn, savedColors[ i ] );
 			} else {
@@ -334,8 +332,8 @@
 		customInput.type = 'color';
 		customInput.className = 'color-picker-custom-input';
 		customInput.setAttribute( 'aria-label', strings.customSection );
-		customInput.addEventListener( 'change', function () {
-			self.selectedColor = customInput.value;
+		customInput.addEventListener( 'change', () => {
+			this.selectedColor = customInput.value;
 		} );
 		inputSection.appendChild( customInput );
 		dialog.appendChild( inputSection );
@@ -348,22 +346,22 @@
 		cancelBtn.type = 'button';
 		cancelBtn.className = 'color-picker-btn color-picker-btn--secondary';
 		cancelBtn.textContent = strings.cancel;
-		cancelBtn.addEventListener( 'click', function () {
-			self.close();
-			self.onCancel();
+		cancelBtn.addEventListener( 'click', () => {
+			this.close();
+			this.onCancel();
 		} );
 
 		const okBtn = document.createElement( 'button' );
 		okBtn.type = 'button';
 		okBtn.className = 'color-picker-btn color-picker-btn--primary';
 		okBtn.textContent = strings.apply;
-		okBtn.addEventListener( 'click', function () {
+		okBtn.addEventListener( 'click', () => {
 			// Save custom color if it's new
-			if ( self.selectedColor !== 'none' && self.selectedColor !== self.currentColor ) {
-				self.saveCustomColor( self.selectedColor );
+			if ( this.selectedColor !== 'none' && this.selectedColor !== this.currentColor ) {
+				this.saveCustomColor( this.selectedColor );
 			}
-			self.close();
-			self.onApply( self.selectedColor );
+			this.close();
+			this.onApply( this.selectedColor );
 		} );
 
 		buttonContainer.appendChild( cancelBtn );
@@ -371,10 +369,10 @@
 		dialog.appendChild( buttonContainer );
 
 		// Close on overlay click
-		overlay.addEventListener( 'click', function ( e ) {
+		overlay.addEventListener( 'click', ( e ) => {
 			if ( e.target === overlay ) {
-				self.close();
-				self.onCancel();
+				this.close();
+				this.onCancel();
 			}
 		} );
 
@@ -385,25 +383,24 @@
 	 * Set up keyboard event handlers
 	 */
 	ColorPickerDialog.prototype.setupKeyboardHandlers = function () {
-		const self = this;
 		const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 		// Escape to close
-		this.escapeHandler = function ( e ) {
+		this.escapeHandler = ( e ) => {
 			if ( e.key === 'Escape' ) {
-				self.close();
-				self.onCancel();
+				this.close();
+				this.onCancel();
 			}
 		};
 		document.addEventListener( 'keydown', this.escapeHandler );
 
 		// Focus trap
-		this.focusTrapHandler = function ( e ) {
+		this.focusTrapHandler = ( e ) => {
 			if ( e.key !== 'Tab' ) {
 				return;
 			}
 
-			const focusable = self.dialog.querySelectorAll( focusableSelector );
+			const focusable = this.dialog.querySelectorAll( focusableSelector );
 			if ( !focusable.length ) {
 				return;
 			}
@@ -549,8 +546,15 @@
 		button.setAttribute( 'aria-label', ariaLabel );
 	};
 
-	// Export
-	window.ColorPickerDialog = ColorPickerDialog;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.ColorPickerDialog = ColorPickerDialog;
+
+		// Backward compatibility - direct window export
+		window.ColorPickerDialog = ColorPickerDialog;
+	}
 
 	// Node.js/CommonJS export for testing
 	if ( typeof module !== 'undefined' && module.exports ) {

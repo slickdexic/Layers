@@ -8,7 +8,8 @@
 			"args": ["test"],
 			"isBackground": false,
 			"group": "build",
-			"problemMatcher": ["$eslint-stylish"]
+			"problemMatcher": ["$eslint-stylish"],
+			"close": true
 		},
 		{
 			"label": "npm test:php (Layers)",
@@ -16,7 +17,8 @@
 			"command": "npm",
 			"args": ["run", "test:php"],
 			"isBackground": false,
-			"group": "build"
+			"group": "build",
+			"close": true
 		},
 		{
 			"label": "npm fix:php (Layers)",
@@ -24,7 +26,8 @@
 			"command": "npm",
 			"args": ["run", "fix:php"],
 			"isBackground": false,
-			"group": "build"
+			"group": "build",
+			"close": true
 		}
 	]
 }

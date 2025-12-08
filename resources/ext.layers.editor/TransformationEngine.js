@@ -624,21 +624,19 @@
 		this.lastPanPoint = null;
 	};
 
-	// Export the module - ALWAYS set on window for cross-file dependencies
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.TransformationEngine = TransformationEngine;
+
+		// Backward compatibility - direct window export
 		window.TransformationEngine = TransformationEngine;
 	}
 
 	// Also export via CommonJS if available (for Node.js/Jest testing)
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = TransformationEngine;
-	}
-
-	// MediaWiki ResourceLoader support
-	if ( typeof mw !== 'undefined' && mw.loader ) {
-		mw.loader.using( [], () => {
-			mw.TransformationEngine = TransformationEngine;
-		} );
 	}
 
 }() );

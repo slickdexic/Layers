@@ -9,6 +9,7 @@
 
 	/**
 	 * Default dialog strings (fallbacks if i18n not available)
+	 *
 	 * @constant {Object}
 	 */
 	const DEFAULT_STRINGS = {
@@ -18,38 +19,43 @@
 	};
 
 	/**
-	 * Creates a new ConfirmDialog instance
+	 * ConfirmDialog - A reusable modal confirmation dialog
 	 *
-	 * @class ConfirmDialog
-	 * @param {Object} config - Configuration options
-	 * @param {string} config.message - The confirmation message to display
-	 * @param {Function} config.onConfirm - Callback when confirmed
-	 * @param {Function} [config.onCancel] - Callback when cancelled
-	 * @param {Object} [config.strings] - i18n strings (see DEFAULT_STRINGS for keys)
-	 * @param {string} [config.confirmClass] - CSS class for confirm button (default: 'layers-btn-danger')
-	 * @param {Function} [config.registerCleanup] - Function to register cleanup callback
+	 * @class
 	 */
-	function ConfirmDialog( config ) {
-		this.config = config || {};
-		this.message = config.message || '';
-		this.onConfirm = config.onConfirm || function () {};
-		this.onCancel = config.onCancel || function () {};
-		this.strings = Object.assign( {}, DEFAULT_STRINGS, config.strings || {} );
-		this.confirmClass = config.confirmClass || 'layers-btn-danger';
-		this.registerCleanup = config.registerCleanup || function () {};
+	class ConfirmDialog {
+		/**
+		 * Creates a new ConfirmDialog instance
+		 *
+		 * @param {Object} config - Configuration options
+		 * @param {string} config.message - The confirmation message to display
+		 * @param {Function} config.onConfirm - Callback when confirmed
+		 * @param {Function} [config.onCancel] - Callback when cancelled
+		 * @param {Object} [config.strings] - i18n strings (see DEFAULT_STRINGS for keys)
+		 * @param {string} [config.confirmClass] - CSS class for confirm button (default: 'layers-btn-danger')
+		 * @param {Function} [config.registerCleanup] - Function to register cleanup callback
+		 */
+		constructor( config ) {
+			this.config = config || {};
+			this.message = config.message || '';
+			this.onConfirm = config.onConfirm || function () {};
+			this.onCancel = config.onCancel || function () {};
+			this.strings = Object.assign( {}, DEFAULT_STRINGS, config.strings || {} );
+			this.confirmClass = config.confirmClass || 'layers-btn-danger';
+			this.registerCleanup = config.registerCleanup || function () {};
 
-		this.overlay = null;
-		this.dialog = null;
-		this.keydownHandler = null;
-		this.previouslyFocused = null;
-	}
+			this.overlay = null;
+			this.dialog = null;
+			this.keydownHandler = null;
+			this.previouslyFocused = null;
+		}
 
-	/**
-	 * Create the dialog DOM structure
-	 * @return {Object} Object with overlay and dialog elements
-	 */
-	ConfirmDialog.prototype.createDialogDOM = function () {
-		const self = this;
+		/**
+		 * Create the dialog DOM structure
+		 *
+		 * @return {Object} Object with overlay and dialog elements
+		 */
+		createDialogDOM() {
 		const strings = this.strings;
 
 		// Overlay
@@ -78,9 +84,9 @@
 		cancelBtn.textContent = strings.cancel;
 		cancelBtn.className = 'layers-btn layers-btn-secondary';
 		cancelBtn.type = 'button';
-		cancelBtn.addEventListener( 'click', function () {
-			self.close();
-			self.onCancel();
+		cancelBtn.addEventListener( 'click', () => {
+			this.close();
+			this.onCancel();
 		} );
 
 		// Confirm button
@@ -88,9 +94,9 @@
 		confirmBtn.textContent = strings.confirm;
 		confirmBtn.className = 'layers-btn ' + this.confirmClass;
 		confirmBtn.type = 'button';
-		confirmBtn.addEventListener( 'click', function () {
-			self.close();
-			self.onConfirm();
+		confirmBtn.addEventListener( 'click', () => {
+			this.close();
+			this.onConfirm();
 		} );
 
 		buttons.appendChild( cancelBtn );
@@ -98,21 +104,19 @@
 		dialog.appendChild( buttons );
 
 		return { overlay: overlay, dialog: dialog, confirmBtn: confirmBtn };
-	};
+	}
 
 	/**
 	 * Set up keyboard event handlers
 	 */
-	ConfirmDialog.prototype.setupKeyboardHandlers = function () {
-		const self = this;
-
-		this.keydownHandler = function ( e ) {
+	setupKeyboardHandlers() {
+		this.keydownHandler = ( e ) => {
 			if ( e.key === 'Escape' ) {
-				self.close();
-				self.onCancel();
+				this.close();
+				this.onCancel();
 			} else if ( e.key === 'Tab' ) {
 				// Focus trap within dialog
-				const focusable = self.dialog.querySelectorAll( 'button' );
+				const focusable = this.dialog.querySelectorAll( 'button' );
 				if ( focusable.length ) {
 					const first = focusable[ 0 ];
 					const last = focusable[ focusable.length - 1 ];
@@ -129,12 +133,12 @@
 		};
 
 		document.addEventListener( 'keydown', this.keydownHandler );
-	};
+	}
 
 	/**
 	 * Open the confirmation dialog
 	 */
-	ConfirmDialog.prototype.open = function () {
+	open() {
 		this.previouslyFocused = document.activeElement;
 
 		const dom = this.createDialogDOM();
@@ -151,12 +155,12 @@
 
 		// Focus the confirm button
 		dom.confirmBtn.focus();
-	};
+	}
 
 	/**
 	 * Close the confirmation dialog
 	 */
-	ConfirmDialog.prototype.close = function () {
+	close() {
 		// Remove event listener
 		if ( this.keydownHandler ) {
 			document.removeEventListener( 'keydown', this.keydownHandler );
@@ -178,15 +182,16 @@
 
 		this.overlay = null;
 		this.dialog = null;
-	};
+	}
 
 	/**
 	 * Static helper for simple browser confirm fallback
+	 *
 	 * @param {string} message - The confirmation message
 	 * @param {Function} [logger] - Optional logging function for unavailable dialog
 	 * @return {boolean} User's choice
 	 */
-	ConfirmDialog.simpleConfirm = function ( message, logger ) {
+	static simpleConfirm( message, logger ) {
 		if ( typeof window !== 'undefined' && typeof window.confirm === 'function' ) {
 			return window.confirm( message );
 		}
@@ -194,21 +199,30 @@
 			logger( 'Confirmation dialog unavailable; auto-confirming action', message );
 		}
 		return true;
-	};
+	}
 
 	/**
 	 * Static factory to show a confirmation dialog
+	 *
 	 * @param {Object} config - Configuration (same as constructor)
 	 * @return {ConfirmDialog} The dialog instance
 	 */
-	ConfirmDialog.show = function ( config ) {
+	static show( config ) {
 		const dialog = new ConfirmDialog( config );
 		dialog.open();
 		return dialog;
-	};
+	}
+}
 
-	// Export
-	window.ConfirmDialog = ConfirmDialog;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.ConfirmDialog = ConfirmDialog;
+
+		// Backward compatibility - direct window export
+		window.ConfirmDialog = ConfirmDialog;
+	}
 
 	// Node.js/CommonJS export for testing
 	if ( typeof module !== 'undefined' && module.exports ) {

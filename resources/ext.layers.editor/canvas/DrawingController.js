@@ -610,8 +610,15 @@
 		this.canvasManager = null;
 	};
 
-	// Export for MediaWiki ResourceLoader
-	window.DrawingController = DrawingController;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.DrawingController = DrawingController;
+
+		// Backward compatibility - direct window export
+		window.DrawingController = DrawingController;
+	}
 
 	// Export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {

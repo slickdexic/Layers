@@ -207,9 +207,16 @@
 	// Create singleton instance
 	const announcer = new AccessibilityAnnouncer();
 
-	// Export to global scope
-	window.layersAnnouncer = announcer;
-	window.AccessibilityAnnouncer = AccessibilityAnnouncer;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.AccessibilityAnnouncer = AccessibilityAnnouncer;
+
+		// Backward compatibility - direct window exports
+		window.layersAnnouncer = announcer;
+		window.AccessibilityAnnouncer = AccessibilityAnnouncer;
+	}
 
 	// Export via CommonJS for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {

@@ -40,8 +40,6 @@ mw.layers = {
 	 * Sets up debug mode, creates module instances, and binds refresh handlers.
 	 */
 	init: function () {
-		const self = this;
-
 		// Initialize debug mode
 		try {
 			this.debug = !!(
@@ -72,21 +70,22 @@ mw.layers = {
 		} );
 
 		// Initialize viewers for images annotated by server hooks
-		self.viewerManager.initializeLayerViewers();
+		this.viewerManager.initializeLayerViewers();
 
 		// File page fallback if nothing found via attributes
-		self.viewerManager.initializeFilePageFallback();
+		this.viewerManager.initializeFilePageFallback();
 
 		// API fallback for images marked layered but lacking inline data
-		self.apiFallback.initialize();
+		this.apiFallback.initialize();
 
 		// Re-scan when page content changes
+		// Using arrow function to preserve 'this' context
 		try {
 			if ( mw && mw.hook && typeof mw.hook === 'function' ) {
 				mw.hook( 'wikipage.content' ).add( () => {
-					self.viewerManager.initializeLayerViewers();
-					self.viewerManager.initializeFilePageFallback();
-					self.apiFallback.initialize();
+					this.viewerManager.initializeLayerViewers();
+					this.viewerManager.initializeFilePageFallback();
+					this.apiFallback.initialize();
 				} );
 			}
 		} catch ( e ) {

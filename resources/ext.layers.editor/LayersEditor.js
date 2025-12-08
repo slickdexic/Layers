@@ -99,19 +99,18 @@
 	 * @private
 	 */
 	LayersEditor.prototype.createFallbackRegistry = function () {
-		const self = this;
 		return {
 			get: ( name ) => {
 				const constructors = {
-					UIManager: () => ( typeof window.UIManager === 'function' ) ? new window.UIManager( self ) : self.createStubUIManager(),
-					EventManager: () => ( typeof window.EventManager === 'function' ) ? new window.EventManager( self ) : { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} },
-					APIManager: () => ( typeof window.APIManager === 'function' ) ? new window.APIManager( self ) : { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} },
-					ValidationManager: () => ( typeof window.ValidationManager === 'function' ) ? new window.ValidationManager( self ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
-					StateManager: () => ( typeof window.StateManager === 'function' ) ? new window.StateManager( self ) : self.createStubStateManager(),
-					HistoryManager: () => ( typeof window.HistoryManager === 'function' ) ? new window.HistoryManager( self ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
-					Toolbar: () => ( typeof window.Toolbar === 'function' ) ? new window.Toolbar( { container: ( self.uiManager && self.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {} },
-					LayerPanel: () => ( typeof window.LayerPanel === 'function' ) ? new window.LayerPanel( { container: ( self.uiManager && self.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
-					CanvasManager: () => ( typeof window.CanvasManager === 'function' ) ? new window.CanvasManager( { container: ( self.uiManager && self.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: self, backgroundImageUrl: self.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
+					UIManager: () => ( typeof window.UIManager === 'function' ) ? new window.UIManager( this ) : this.createStubUIManager(),
+					EventManager: () => ( typeof window.EventManager === 'function' ) ? new window.EventManager( this ) : { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} },
+					APIManager: () => ( typeof window.APIManager === 'function' ) ? new window.APIManager( this ) : { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} },
+					ValidationManager: () => ( typeof window.ValidationManager === 'function' ) ? new window.ValidationManager( this ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
+					StateManager: () => ( typeof window.StateManager === 'function' ) ? new window.StateManager( this ) : this.createStubStateManager(),
+					HistoryManager: () => ( typeof window.HistoryManager === 'function' ) ? new window.HistoryManager( this ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
+					Toolbar: () => ( typeof window.Toolbar === 'function' ) ? new window.Toolbar( { container: ( this.uiManager && this.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {} },
+					LayerPanel: () => ( typeof window.LayerPanel === 'function' ) ? new window.LayerPanel( { container: ( this.uiManager && this.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
+					CanvasManager: () => ( typeof window.CanvasManager === 'function' ) ? new window.CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
 				};
 				if ( constructors[ name ] ) {
 					return constructors[ name ]();
@@ -936,37 +935,36 @@
 	 * @param {boolean} navigateBack Whether to navigate back
 	 */
 	LayersEditor.prototype.cancel = function ( navigateBack ) {
-		const self = this;
 		const savedFilename = this.filename;
 		const isDirty = this.stateManager.get( 'isDirty' );
 
 		if ( isDirty ) {
 			// Use DialogManager if available
 			if ( this.dialogManager ) {
-				this.dialogManager.showCancelConfirmDialog( function () {
-					if ( self.stateManager ) {
-						self.stateManager.set( 'isDirty', false );
+				this.dialogManager.showCancelConfirmDialog( () => {
+					if ( this.stateManager ) {
+						this.stateManager.set( 'isDirty', false );
 					}
-					if ( self.eventManager && typeof self.eventManager.destroy === 'function' ) {
-						self.eventManager.destroy();
+					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
+						this.eventManager.destroy();
 					}
-					self.uiManager.destroy();
+					this.uiManager.destroy();
 					if ( navigateBack ) {
-						self.navigateBackToFileWithName( savedFilename );
+						this.navigateBackToFileWithName( savedFilename );
 					}
 				} );
 			} else {
 				// Fallback to showCancelConfirmDialog method
-				this.showCancelConfirmDialog( function () {
-					if ( self.stateManager ) {
-						self.stateManager.set( 'isDirty', false );
+				this.showCancelConfirmDialog( () => {
+					if ( this.stateManager ) {
+						this.stateManager.set( 'isDirty', false );
 					}
-					if ( self.eventManager && typeof self.eventManager.destroy === 'function' ) {
-						self.eventManager.destroy();
+					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
+						this.eventManager.destroy();
 					}
-					self.uiManager.destroy();
+					this.uiManager.destroy();
 					if ( navigateBack ) {
-						self.navigateBackToFileWithName( savedFilename );
+						this.navigateBackToFileWithName( savedFilename );
 					}
 				} );
 			}
@@ -1206,7 +1204,14 @@
 		}
 	};
 
-	// Export LayersEditor to global scope
-	window.LayersEditor = LayersEditor;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.Editor = LayersEditor;
+
+		// Backward compatibility - direct window export
+		window.LayersEditor = LayersEditor;
+	}
 
 }() );

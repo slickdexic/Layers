@@ -388,14 +388,27 @@
 		autoBootstrap();
 	}
 
-	// Export functions for use by LayersEditor
-	window.EditorBootstrap = {
-		validateDependencies,
-		areEditorDependenciesReady,
-		sanitizeGlobalErrorMessage,
-		cleanupGlobalEditorInstance,
-		init
-	};
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.EditorBootstrap = {
+			validateDependencies,
+			areEditorDependenciesReady,
+			sanitizeGlobalErrorMessage,
+			cleanupGlobalEditorInstance,
+			init
+		};
+
+		// Backward compatibility - direct window export
+		window.EditorBootstrap = {
+			validateDependencies,
+			areEditorDependenciesReady,
+			sanitizeGlobalErrorMessage,
+			cleanupGlobalEditorInstance,
+			init
+		};
+	}
 
 	// Auto-initialize
 	init();

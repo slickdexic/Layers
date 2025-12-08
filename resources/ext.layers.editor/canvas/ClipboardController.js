@@ -23,20 +23,27 @@
 	const PASTE_OFFSET = 20;
 
 	/**
-	 * @constructor
-	 * @param {Object} canvasManager - Reference to the parent CanvasManager
-	 */
-	function ClipboardController( canvasManager ) {
-		this.canvasManager = canvasManager;
-		this.clipboard = [];
-	}
-
-	/**
-	 * Copy selected layers to the clipboard
+	 * ClipboardController - Handles copy/paste/cut operations
 	 *
-	 * @return {number} Number of layers copied
+	 * @class
 	 */
-	ClipboardController.prototype.copySelected = function () {
+	class ClipboardController {
+		/**
+		 * Create a new ClipboardController instance
+		 *
+		 * @param {Object} canvasManager - Reference to the parent CanvasManager
+		 */
+		constructor( canvasManager ) {
+			this.canvasManager = canvasManager;
+			this.clipboard = [];
+		}
+
+		/**
+		 * Copy selected layers to the clipboard
+		 *
+		 * @return {number} Number of layers copied
+		 */
+		copySelected() {
 		const cm = this.canvasManager;
 		const editor = cm.editor;
 		const selectedIds = cm.getSelectedLayerIds ? cm.getSelectedLayerIds() : ( cm.selectedLayerIds || [] );
@@ -52,14 +59,14 @@
 		} );
 
 		return this.clipboard.length;
-	};
+	}
 
 	/**
 	 * Paste layers from the clipboard
 	 *
 	 * @return {Array} Array of pasted layer IDs
 	 */
-	ClipboardController.prototype.paste = function () {
+	paste() {
 		if ( !this.clipboard || this.clipboard.length === 0 ) {
 			return [];
 		}
@@ -98,14 +105,14 @@
 		editor.markDirty();
 
 		return pastedIds;
-	};
+	}
 
 	/**
 	 * Cut selected layers (copy then delete)
 	 *
 	 * @return {number} Number of layers cut
 	 */
-	ClipboardController.prototype.cutSelected = function () {
+	cutSelected() {
 		const cm = this.canvasManager;
 		const editor = cm.editor;
 		const selectedIds = cm.getSelectedLayerIds ? cm.getSelectedLayerIds() : ( cm.selectedLayerIds || [] );
@@ -135,32 +142,32 @@
 		editor.markDirty();
 
 		return count;
-	};
+	}
 
 	/**
 	 * Check if clipboard has content
 	 *
 	 * @return {boolean} True if clipboard has layers
 	 */
-	ClipboardController.prototype.hasContent = function () {
+	hasContent() {
 		return this.clipboard && this.clipboard.length > 0;
-	};
+	}
 
 	/**
 	 * Get the number of items in the clipboard
 	 *
 	 * @return {number} Number of layers in clipboard
 	 */
-	ClipboardController.prototype.getCount = function () {
+	getCount() {
 		return this.clipboard ? this.clipboard.length : 0;
-	};
+	}
 
 	/**
 	 * Clear the clipboard
 	 */
-	ClipboardController.prototype.clear = function () {
+	clear() {
 		this.clipboard = [];
-	};
+	}
 
 	/**
 	 * Apply paste offset to a layer's position properties
@@ -168,7 +175,7 @@
 	 * @private
 	 * @param {Object} layer - Layer to offset
 	 */
-	ClipboardController.prototype.applyPasteOffset = function ( layer ) {
+	applyPasteOffset( layer ) {
 		// Offset standard position properties
 		if ( layer.x !== undefined ) {
 			layer.x = ( layer.x || 0 ) + PASTE_OFFSET;
@@ -197,7 +204,7 @@
 				return { x: p.x + PASTE_OFFSET, y: p.y + PASTE_OFFSET };
 			} );
 		}
-	};
+	}
 
 	/**
 	 * Generate a unique layer ID
@@ -206,24 +213,32 @@
 	 * @param {Object} editor - Editor instance
 	 * @return {string} Unique layer ID
 	 */
-	ClipboardController.prototype.generateLayerId = function ( editor ) {
+	generateLayerId( editor ) {
 		if ( editor && typeof editor.generateLayerId === 'function' ) {
 			return editor.generateLayerId();
 		}
 		// Fallback ID generation
 		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
-	};
+	}
 
 	/**
 	 * Clean up resources
 	 */
-	ClipboardController.prototype.destroy = function () {
+	destroy() {
 		this.clipboard = [];
 		this.canvasManager = null;
-	};
+	}
+}
 
-	// Export for MediaWiki ResourceLoader
-	window.ClipboardController = ClipboardController;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.ClipboardController = ClipboardController;
+
+		// Backward compatibility - direct window export
+		window.ClipboardController = ClipboardController;
+	}
 
 	// Export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {

@@ -446,6 +446,9 @@
 	LayerRenderer.prototype.drawRectangle = function ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		// BUG FIX (2025-12-08): Use separate shadowScale for shadow operations
+		// When viewer passes scaled=true, scale={1,1,1} for geometry but shadow needs actual scale
+		const shadowScale = opts.shadowScale || scale;
 
 		let x = layer.x || 0;
 		let y = layer.y || 0;
@@ -474,7 +477,7 @@
 		}
 
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, scale );
+		const spread = this.getShadowSpread( layer, shadowScale );
 
 		// Use rounded rect if cornerRadius > 0, otherwise use regular rect
 		const useRoundedRect = cornerRadius > 0 && this.ctx.roundRect;
@@ -490,7 +493,7 @@
 			// Draw fill shadow (expanded filled shape) at fill opacity
 			if ( hasFill ) {
 				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				this.drawSpreadShadow( layer, scale, spread, () => {
+				this.drawSpreadShadow( layer, shadowScale, spread, () => {
 					const expandedX = x - spread;
 					const expandedY = y - spread;
 					const expandedW = width + spread * 2;
@@ -515,7 +518,7 @@
 			if ( hasStroke ) {
 				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 				const expandedStrokeWidth = strokeW + spread * 2;
-				this.drawSpreadShadowStroke( layer, scale, expandedStrokeWidth, () => {
+				this.drawSpreadShadowStroke( layer, shadowScale, expandedStrokeWidth, () => {
 					if ( useRoundedRect || cornerRadius > 0 ) {
 						if ( this.ctx.roundRect ) {
 							this.ctx.beginPath();
@@ -531,7 +534,7 @@
 			}
 		} else if ( this.hasShadowEnabled( layer ) ) {
 			// No spread, apply shadow normally to the actual shape
-			this.applyShadow( layer, scale );
+			this.applyShadow( layer, shadowScale );
 		}
 
 		// Draw actual shape
@@ -611,6 +614,7 @@
 	LayerRenderer.prototype.drawCircle = function ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		const shadowScale = opts.shadowScale || scale;
 
 		const cx = layer.x || 0;
 		const cy = layer.y || 0;
@@ -624,7 +628,7 @@
 		this.ctx.save();
 
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, scale );
+		const spread = this.getShadowSpread( layer, shadowScale );
 
 		// Shadow handling with spread - draw separate shadows for fill and stroke
 		if ( spread > 0 && this.hasShadowEnabled( layer ) ) {
@@ -634,7 +638,7 @@
 			// Draw fill shadow at fill opacity
 			if ( hasFill ) {
 				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				this.drawSpreadShadow( layer, scale, spread, () => {
+				this.drawSpreadShadow( layer, shadowScale, spread, () => {
 					this.ctx.beginPath();
 					this.ctx.arc( cx, cy, radius + spread, 0, 2 * Math.PI );
 				}, fillShadowOpacity );
@@ -644,13 +648,13 @@
 			if ( hasStroke ) {
 				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 				const expandedStrokeWidth = strokeW + spread * 2;
-				this.drawSpreadShadowStroke( layer, scale, expandedStrokeWidth, () => {
+				this.drawSpreadShadowStroke( layer, shadowScale, expandedStrokeWidth, () => {
 					this.ctx.beginPath();
 					this.ctx.arc( cx, cy, radius, 0, 2 * Math.PI );
 				}, strokeShadowOpacity );
 			}
 		} else if ( this.hasShadowEnabled( layer ) ) {
-			this.applyShadow( layer, scale );
+			this.applyShadow( layer, shadowScale );
 		}
 
 		// Draw actual circle
@@ -688,6 +692,7 @@
 	LayerRenderer.prototype.drawEllipse = function ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		const shadowScale = opts.shadowScale || scale;
 
 		const x = layer.x || 0;
 		const y = layer.y || 0;
@@ -702,7 +707,7 @@
 		this.ctx.save();
 
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, scale );
+		const spread = this.getShadowSpread( layer, shadowScale );
 
 		// Handle rotation
 		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
@@ -716,7 +721,7 @@
 			// Draw fill shadow at fill opacity
 			if ( hasFill ) {
 				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				this.drawSpreadShadow( layer, scale, spread, () => {
+				this.drawSpreadShadow( layer, shadowScale, spread, () => {
 					this.ctx.beginPath();
 					if ( this.ctx.ellipse ) {
 						this.ctx.ellipse( x, y, radiusX + spread, radiusY + spread, rotationRad, 0, 2 * Math.PI );
@@ -737,7 +742,7 @@
 			if ( hasStroke ) {
 				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 				const expandedStrokeWidth = strokeW + spread * 2;
-				this.drawSpreadShadowStroke( layer, scale, expandedStrokeWidth, () => {
+				this.drawSpreadShadowStroke( layer, shadowScale, expandedStrokeWidth, () => {
 					this.ctx.beginPath();
 					if ( this.ctx.ellipse ) {
 						this.ctx.ellipse( x, y, radiusX, radiusY, rotationRad, 0, 2 * Math.PI );
@@ -754,7 +759,7 @@
 				}, strokeShadowOpacity );
 			}
 		} else if ( this.hasShadowEnabled( layer ) ) {
-			this.applyShadow( layer, scale );
+			this.applyShadow( layer, shadowScale );
 		}
 
 		// Draw actual ellipse
@@ -797,6 +802,7 @@
 	LayerRenderer.prototype.drawLine = function ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		const shadowScale = opts.shadowScale || scale;
 
 		const x1 = layer.x1 || 0;
 		const y1 = layer.y1 || 0;
@@ -811,7 +817,7 @@
 		this.ctx.save();
 
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, scale );
+		const spread = this.getShadowSpread( layer, shadowScale );
 
 		// Handle rotation
 		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
@@ -828,13 +834,13 @@
 			const expandedWidth = strokeW + spread * 2;
 			const shadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 
-			this.drawSpreadShadowStroke( layer, scale, expandedWidth, () => {
+			this.drawSpreadShadowStroke( layer, shadowScale, expandedWidth, () => {
 				this.ctx.beginPath();
 				this.ctx.moveTo( x1, y1 );
 				this.ctx.lineTo( x2, y2 );
 			}, shadowOpacity );
 		} else if ( this.hasShadowEnabled( layer ) ) {
-			this.applyShadow( layer, scale );
+			this.applyShadow( layer, shadowScale );
 		}
 
 		// Draw actual line
@@ -1127,6 +1133,7 @@
 	LayerRenderer.prototype.drawArrow = function ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		const shadowScale = opts.shadowScale || scale;
 
 		const x1 = layer.x1 || 0;
 		const y1 = layer.y1 || 0;
@@ -1150,7 +1157,7 @@
 		this.ctx.save();
 
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, scale );
+		const spread = this.getShadowSpread( layer, shadowScale );
 
 		// Handle rotation
 		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
@@ -1180,7 +1187,7 @@
 					expandedArrowSize, arrowStyle, headType, headScale, tailWidth + spread
 				);
 
-				this.drawSpreadShadow( layer, scale, spread, () => {
+				this.drawSpreadShadow( layer, shadowScale, spread, () => {
 					this.ctx.beginPath();
 					if ( expandedVertices.length > 0 ) {
 						this.ctx.moveTo( expandedVertices[ 0 ].x, expandedVertices[ 0 ].y );
@@ -1201,7 +1208,7 @@
 					arrowSize, arrowStyle, headType, headScale, tailWidth
 				);
 
-				this.drawSpreadShadowStroke( layer, scale, expandedStrokeWidth, () => {
+				this.drawSpreadShadowStroke( layer, shadowScale, expandedStrokeWidth, () => {
 					this.ctx.beginPath();
 					if ( originalVertices.length > 0 ) {
 						this.ctx.moveTo( originalVertices[ 0 ].x, originalVertices[ 0 ].y );
@@ -1213,7 +1220,7 @@
 				}, strokeShadowOpacity );
 			}
 		} else if ( this.hasShadowEnabled( layer ) ) {
-			this.applyShadow( layer, scale );
+			this.applyShadow( layer, shadowScale );
 		}
 
 		// Draw actual arrow
@@ -1263,6 +1270,7 @@
 	LayerRenderer.prototype.drawPolygon = function ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		const shadowScale = opts.shadowScale || scale;
 
 		const sides = layer.sides || 6;
 		const x = layer.x || 0;
@@ -1277,7 +1285,7 @@
 		this.ctx.save();
 
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, scale );
+		const spread = this.getShadowSpread( layer, shadowScale );
 
 		// Handle rotation around polygon center
 		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
@@ -1294,7 +1302,7 @@
 			// Draw fill shadow at fill opacity
 			if ( hasFill ) {
 				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				this.drawSpreadShadow( layer, scale, spread, () => {
+				this.drawSpreadShadow( layer, shadowScale, spread, () => {
 					this.ctx.beginPath();
 					for ( let i = 0; i < sides; i++ ) {
 						const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
@@ -1314,7 +1322,7 @@
 			if ( hasStroke ) {
 				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 				const expandedStrokeWidth = strokeW + spread * 2;
-				this.drawSpreadShadowStroke( layer, scale, expandedStrokeWidth, () => {
+				this.drawSpreadShadowStroke( layer, shadowScale, expandedStrokeWidth, () => {
 					this.ctx.beginPath();
 					for ( let i = 0; i < sides; i++ ) {
 						const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
@@ -1330,7 +1338,7 @@
 				}, strokeShadowOpacity );
 			}
 		} else if ( this.hasShadowEnabled( layer ) ) {
-			this.applyShadow( layer, scale );
+			this.applyShadow( layer, shadowScale );
 		}
 
 		// Draw actual polygon
@@ -1377,6 +1385,7 @@
 	LayerRenderer.prototype.drawStar = function ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		const shadowScale = opts.shadowScale || scale;
 
 		const points = layer.points || 5;
 		const x = layer.x || 0;
@@ -1392,7 +1401,7 @@
 		this.ctx.save();
 
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, scale );
+		const spread = this.getShadowSpread( layer, shadowScale );
 
 		// Handle rotation around star center
 		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
@@ -1409,7 +1418,7 @@
 			// Draw fill shadow at fill opacity
 			if ( hasFill ) {
 				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				this.drawSpreadShadow( layer, scale, spread, () => {
+				this.drawSpreadShadow( layer, shadowScale, spread, () => {
 					this.ctx.beginPath();
 					for ( let i = 0; i < points * 2; i++ ) {
 						const angle = ( i * Math.PI ) / points - Math.PI / 2;
@@ -1430,7 +1439,7 @@
 			if ( hasStroke ) {
 				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 				const expandedStrokeWidth = strokeW + spread * 2;
-				this.drawSpreadShadowStroke( layer, scale, expandedStrokeWidth, () => {
+				this.drawSpreadShadowStroke( layer, shadowScale, expandedStrokeWidth, () => {
 					this.ctx.beginPath();
 					for ( let i = 0; i < points * 2; i++ ) {
 						const angle = ( i * Math.PI ) / points - Math.PI / 2;
@@ -1447,7 +1456,7 @@
 				}, strokeShadowOpacity );
 			}
 		} else if ( this.hasShadowEnabled( layer ) ) {
-			this.applyShadow( layer, scale );
+			this.applyShadow( layer, shadowScale );
 		}
 
 		// Draw actual star
@@ -1499,6 +1508,7 @@
 
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		const shadowScale = opts.shadowScale || scale;
 
 		let strokeW = layer.strokeWidth || 2;
 		if ( !opts.scaled ) {
@@ -1508,14 +1518,14 @@
 		this.ctx.save();
 
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, scale );
+		const spread = this.getShadowSpread( layer, shadowScale );
 
 		// If shadow spread > 0, draw thicker shadow path using offscreen canvas
 		if ( spread > 0 && this.hasShadowEnabled( layer ) ) {
 			const expandedWidth = strokeW + spread * 2;
 			const shadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 
-			this.drawSpreadShadowStroke( layer, scale, expandedWidth, () => {
+			this.drawSpreadShadowStroke( layer, shadowScale, expandedWidth, () => {
 				this.ctx.beginPath();
 				this.ctx.moveTo( layer.points[ 0 ].x, layer.points[ 0 ].y );
 				for ( let i = 1; i < layer.points.length; i++ ) {
@@ -1523,7 +1533,7 @@
 				}
 			}, shadowOpacity );
 		} else if ( this.hasShadowEnabled( layer ) ) {
-			this.applyShadow( layer, scale );
+			this.applyShadow( layer, shadowScale );
 		}
 
 		// Draw actual path

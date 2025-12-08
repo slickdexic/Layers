@@ -67,19 +67,18 @@
 	 * @return {Promise<Array>} Resolves with imported layers or rejects on error
 	 */
 	ImportExportManager.prototype.importFromFile = function ( file, options ) {
-		const self = this;
 		options = options || {};
 		const confirmOverwrite = options.confirmOverwrite !== false;
 
-		return new Promise( function ( resolve, reject ) {
+		return new Promise( ( resolve, reject ) => {
 			if ( !file ) {
 				reject( new Error( 'No file provided' ) );
 				return;
 			}
 
 			// Confirm overwrite if there are unsaved changes
-			if ( confirmOverwrite && self.editor && self.editor.isDirty ) {
-				const msg = self.msg( 'layers-import-unsaved-confirm', 'You have unsaved changes. Import anyway?' );
+			if ( confirmOverwrite && this.editor && this.editor.isDirty ) {
+				const msg = this.msg( 'layers-import-unsaved-confirm', 'You have unsaved changes. Import anyway?' );
 				// eslint-disable-next-line no-alert
 				if ( !window.confirm( msg ) ) {
 					reject( new Error( 'Import cancelled by user' ) );
@@ -89,28 +88,28 @@
 
 			const reader = new FileReader();
 
-			reader.onload = function () {
+			reader.onload = () => {
 				try {
 					const text = String( reader.result || '' );
-					const layers = self.parseLayersJSON( text );
-					self.applyImportedLayers( layers );
-					self.notify(
-						self.msg( 'layers-import-success', 'Import complete' ),
+					const layers = this.parseLayersJSON( text );
+					this.applyImportedLayers( layers );
+					this.notify(
+						this.msg( 'layers-import-success', 'Import complete' ),
 						'success'
 					);
 					resolve( layers );
 				} catch ( err ) {
-					self.notify(
-						self.msg( 'layers-import-error', 'Import failed' ),
+					this.notify(
+						this.msg( 'layers-import-error', 'Import failed' ),
 						'error'
 					);
 					reject( err );
 				}
 			};
 
-			reader.onerror = function () {
-				self.notify(
-					self.msg( 'layers-import-error', 'Import failed' ),
+			reader.onerror = () => {
+				this.notify(
+					this.msg( 'layers-import-error', 'Import failed' ),
 					'error'
 				);
 				reject( new Error( 'File read error' ) );
@@ -200,7 +199,6 @@
 	 * @return {boolean} True if export was initiated successfully
 	 */
 	ImportExportManager.prototype.exportToFile = function ( options ) {
-		const self = this;
 		options = options || {};
 
 		try {
@@ -220,8 +218,8 @@
 			this.triggerDownload( json, filename, 'application/json' );
 			return true;
 		} catch ( e ) {
-			self.notify(
-				self.msg( 'layers-export-error', 'Export failed' ),
+			this.notify(
+				this.msg( 'layers-export-error', 'Export failed' ),
 				'error'
 			);
 			return false;
@@ -291,7 +289,6 @@
 	 * @return {Object} Object with { button, input } elements
 	 */
 	ImportExportManager.prototype.createImportButton = function ( options ) {
-		const self = this;
 		options = options || {};
 
 		const button = document.createElement( 'button' );
@@ -305,28 +302,28 @@
 		input.accept = '.json,application/json';
 		input.style.display = 'none';
 
-		button.addEventListener( 'click', function () {
+		button.addEventListener( 'click', () => {
 			input.click();
 		} );
 
-		input.addEventListener( 'change', function () {
-			const file = this.files && this.files[ 0 ];
+		input.addEventListener( 'change', () => {
+			const file = input.files && input.files[ 0 ];
 			if ( !file ) {
 				return;
 			}
 
-			self.importFromFile( file )
-				.then( function ( layers ) {
+			this.importFromFile( file )
+				.then( ( layers ) => {
 					if ( options.onSuccess ) {
 						options.onSuccess( layers );
 					}
 				} )
-				.catch( function ( err ) {
+				.catch( ( err ) => {
 					if ( options.onError ) {
 						options.onError( err );
 					}
 				} )
-				.finally( function () {
+				.finally( () => {
 					// Reset input so same file can be selected again
 					input.value = '';
 				} );
@@ -345,7 +342,6 @@
 	 * @return {HTMLButtonElement} The export button element
 	 */
 	ImportExportManager.prototype.createExportButton = function ( options ) {
-		const self = this;
 		options = options || {};
 
 		const button = document.createElement( 'button' );
@@ -354,8 +350,8 @@
 		button.title = button.textContent;
 		button.type = 'button';
 
-		button.addEventListener( 'click', function () {
-			const success = self.exportToFile();
+		button.addEventListener( 'click', () => {
+			const success = this.exportToFile();
 			if ( success && options.onSuccess ) {
 				options.onSuccess();
 			} else if ( !success && options.onError ) {
@@ -366,8 +362,15 @@
 		return button;
 	};
 
-	// Export to global scope
-	window.ImportExportManager = ImportExportManager;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.ImportExportManager = ImportExportManager;
+
+		// Backward compatibility - direct window export
+		window.ImportExportManager = ImportExportManager;
+	}
 
 	// CommonJS export for testing
 	if ( typeof module !== 'undefined' && module.exports ) {

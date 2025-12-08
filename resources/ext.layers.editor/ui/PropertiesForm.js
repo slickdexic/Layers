@@ -742,8 +742,15 @@
 		return form;
 	};
 
-	// Export PropertiesForm
-	window.PropertiesForm = PropertiesForm;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.PropertiesForm = PropertiesForm;
+
+		// Backward compatibility - direct window export
+		window.PropertiesForm = PropertiesForm;
+	}
 
 	// Node.js/Jest compatibility
 	if ( typeof module !== 'undefined' && module.exports ) {

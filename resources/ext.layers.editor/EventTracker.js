@@ -209,12 +209,17 @@
 		}
 	}
 
-	// Export for browser
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.EventTracker = EventTracker;
+
+		// Backward compatibility - direct window export
 		window.EventTracker = EventTracker;
 	}
 
-	// Export for CommonJS/Jest tests
+	// CommonJS export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = EventTracker;
 	}

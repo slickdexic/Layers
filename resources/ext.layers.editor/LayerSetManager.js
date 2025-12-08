@@ -152,8 +152,7 @@
 			selectEl.appendChild( defaultOption );
 
 			// Add revision options
-			const self = this;
-			allLayerSets.forEach( function ( layerSet ) {
+			allLayerSets.forEach( ( layerSet ) => {
 				const option = document.createElement( 'option' );
 				option.value = layerSet.ls_id || layerSet.id;
 				const timestamp = layerSet.ls_timestamp || layerSet.timestamp;
@@ -161,11 +160,11 @@
 				const name = layerSet.ls_name || layerSet.name || '';
 
 				// Parse MediaWiki binary(14) timestamp format
-				const date = self.parseMWTimestamp( timestamp );
+				const date = this.parseMWTimestamp( timestamp );
 				let displayText = date.toLocaleString();
 
 				// Use MessageHelper for parameterized message
-				const byUserText = self.getMessageWithParams( 'layers-revision-by', [ userName ], 'by $1' );
+				const byUserText = this.getMessageWithParams( 'layers-revision-by', [ userName ], 'by $1' );
 				displayText += ' ' + byUserText;
 
 				if ( name ) {
@@ -231,8 +230,7 @@
 				selectEl.appendChild( option );
 			} else {
 				// Build options from named sets
-				const self = this;
-				namedSets.forEach( function ( setInfo ) {
+				namedSets.forEach( ( setInfo ) => {
 					const option = document.createElement( 'option' );
 					option.value = setInfo.name;
 
@@ -240,9 +238,9 @@
 					const revCount = setInfo.revision_count || 1;
 					let revLabel;
 					if ( revCount === 1 ) {
-						revLabel = self.getMessage( 'layers-set-revision-single', '1 revision' );
+						revLabel = this.getMessage( 'layers-set-revision-single', '1 revision' );
 					} else {
-						revLabel = self.getMessage( 'layers-set-revision-plural', revCount + ' revisions' )
+						revLabel = this.getMessage( 'layers-set-revision-plural', revCount + ' revisions' )
 							.replace( '$1', revCount );
 					}
 
@@ -554,8 +552,15 @@
 		this.config = null;
 	};
 
-	// Export to window for MediaWiki ResourceLoader
-	window.LayerSetManager = LayerSetManager;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.LayerSetManager = LayerSetManager;
+
+		// Backward compatibility - direct window export
+		window.LayerSetManager = LayerSetManager;
+	}
 
 	// CommonJS export for testing
 	if ( typeof module !== 'undefined' && module.exports ) {

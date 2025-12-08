@@ -553,12 +553,19 @@
 		}
 	};
 
-	// Export ErrorHandler
-	window.LayersErrorHandler = ErrorHandler;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.ErrorHandler = ErrorHandler;
 
-	// Create global instance
-	if ( !window.layersErrorHandler ) {
-		window.layersErrorHandler = new ErrorHandler();
+		// Backward compatibility - direct window exports
+		window.LayersErrorHandler = ErrorHandler;
+
+		// Create global instance
+		if ( !window.layersErrorHandler ) {
+			window.layersErrorHandler = new ErrorHandler();
+		}
 	}
 
 }());

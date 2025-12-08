@@ -152,7 +152,13 @@
 	const messageHelper = new MessageHelper();
 
 	// Export to window namespace
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.MessageHelper = MessageHelper;
+
+		// Backward compatibility - direct window exports
 		window.LayersMessageHelper = MessageHelper;
 		window.layersMessages = messageHelper;
 	}
@@ -160,12 +166,6 @@
 	// Export via CommonJS for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = { MessageHelper, messageHelper };
-	}
-
-	// Export to MediaWiki namespace
-	if ( typeof mw !== 'undefined' ) {
-		mw.LayersMessageHelper = MessageHelper;
-		mw.layersMessages = messageHelper;
 	}
 
 } )();

@@ -415,7 +415,14 @@
 		}
 	}
 
-	// Export to global scope
-	window.DialogManager = DialogManager;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.DialogManager = DialogManager;
+
+		// Backward compatibility - direct window export
+		window.DialogManager = DialogManager;
+	}
 
 }() );

@@ -317,20 +317,18 @@
 	// Export the module - ALWAYS set on window for browser compatibility
 	// ResourceLoader and other bundlers may define `module`, but we need window.* for
 	// cross-file dependencies within the same ResourceLoader module
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Constants = LayersConstants;
+
+		// Backward compatibility - direct window export
 		window.LayersConstants = LayersConstants;
 	}
 
 	// Also export via CommonJS if available (for Node.js/Jest testing)
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = LayersConstants;
-	}
-
-	// MediaWiki ResourceLoader support - also attach to mw namespace
-	if ( typeof mw !== 'undefined' && mw.loader ) {
-		mw.loader.using( [], () => {
-			mw.LayersConstants = LayersConstants;
-		} );
 	}
 
 }() );

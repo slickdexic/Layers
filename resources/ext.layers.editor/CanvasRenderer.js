@@ -842,18 +842,19 @@
 		this.editor = null;
 	};
 
-	// Export - ALWAYS set on window for cross-file dependencies
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.Renderer = CanvasRenderer;
+
+		// Backward compatibility - direct window export
 		window.CanvasRenderer = CanvasRenderer;
 	}
-	// Also export via CommonJS if available (for Node.js/Jest testing)
+
+	// Export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = CanvasRenderer;
-	}
-	if ( typeof mw !== 'undefined' && mw.loader ) {
-		mw.loader.using( [], function () {
-			mw.CanvasRenderer = CanvasRenderer;
-		} );
 	}
 
 }() );

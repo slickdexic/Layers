@@ -100,7 +100,6 @@
 	 * @return {HTMLElement} The row container
 	 */
 	ToolbarStyleControls.prototype.createMainStyleRow = function () {
-		const self = this;
 		const row = document.createElement( 'div' );
 		row.className = 'style-controls-row';
 
@@ -109,12 +108,12 @@
 			type: 'stroke',
 			label: this.msg( 'layers-prop-stroke-color', 'Stroke' ),
 			initialColor: this.strokeColorValue,
-			onColorChange: function ( color, isNone ) {
-				self.strokeColorNone = isNone;
+			onColorChange: ( color, isNone ) => {
+				this.strokeColorNone = isNone;
 				if ( !isNone ) {
-					self.strokeColorValue = color;
+					this.strokeColorValue = color;
 				}
-				self.notifyStyleChange();
+				this.notifyStyleChange();
 			}
 		} );
 		this.strokeColorButton = strokeItem.button;
@@ -125,12 +124,12 @@
 			type: 'fill',
 			label: this.msg( 'layers-prop-fill-color', 'Fill' ),
 			initialColor: this.fillColorValue,
-			onColorChange: function ( color, isNone ) {
-				self.fillColorNone = isNone;
+			onColorChange: ( color, isNone ) => {
+				this.fillColorNone = isNone;
 				if ( !isNone ) {
-					self.fillColorValue = color;
+					this.fillColorValue = color;
 				}
-				self.notifyStyleChange();
+				this.notifyStyleChange();
 			}
 		} );
 		this.fillColorButton = fillItem.button;
@@ -155,8 +154,6 @@
 	 * @return {Object} Object with container and button elements
 	 */
 	ToolbarStyleControls.prototype.createColorControl = function ( options ) {
-		const self = this;
-
 		const container = document.createElement( 'div' );
 		container.className = 'style-control-item';
 
@@ -175,15 +172,15 @@
 		container.appendChild( button );
 
 		// Click handler - opens color picker dialog
-		button.addEventListener( 'click', function () {
-			const isNone = options.type === 'stroke' ? self.strokeColorNone : self.fillColorNone;
-			const currentValue = options.type === 'stroke' ? self.strokeColorValue : self.fillColorValue;
+		button.addEventListener( 'click', () => {
+			const isNone = options.type === 'stroke' ? this.strokeColorNone : this.fillColorNone;
+			const currentValue = options.type === 'stroke' ? this.strokeColorValue : this.fillColorValue;
 
-			self.openColorPicker( button, isNone ? 'none' : currentValue, {
-				onApply: function ( chosen ) {
+			this.openColorPicker( button, isNone ? 'none' : currentValue, {
+				onApply: ( chosen ) => {
 					const none = chosen === 'none';
 					options.onColorChange( chosen, none );
-					self.updateColorButtonDisplay( button, none ? 'none' : chosen );
+					this.updateColorButtonDisplay( button, none ? 'none' : chosen );
 				}
 			} );
 		} );
@@ -197,7 +194,6 @@
 	 * @return {Object} Object with container and input elements
 	 */
 	ToolbarStyleControls.prototype.createStrokeWidthControl = function () {
-		const self = this;
 		const container = document.createElement( 'div' );
 		container.className = 'style-control-item';
 
@@ -218,12 +214,12 @@
 		container.appendChild( input );
 
 		// Input validation and change handling
-		input.addEventListener( 'input', function () {
-			self.handleStrokeWidthInput( this );
+		input.addEventListener( 'input', () => {
+			this.handleStrokeWidthInput( input );
 		} );
 
-		input.addEventListener( 'blur', function () {
-			self.handleStrokeWidthBlur( this );
+		input.addEventListener( 'blur', () => {
+			this.handleStrokeWidthBlur( input );
 		} );
 
 		return { container: container, input: input };
@@ -276,7 +272,6 @@
 	 * @return {HTMLElement} The font size container
 	 */
 	ToolbarStyleControls.prototype.createFontSizeControl = function () {
-		const self = this;
 		const container = document.createElement( 'div' );
 		container.className = 'font-size-container style-control-item';
 		container.style.display = 'none';
@@ -297,8 +292,8 @@
 
 		this.fontSizeInput = input;
 
-		input.addEventListener( 'change', function () {
-			self.notifyStyleChange();
+		input.addEventListener( 'change', () => {
+			this.notifyStyleChange();
 		} );
 
 		return container;
@@ -310,7 +305,6 @@
 	 * @return {HTMLElement} The text stroke container
 	 */
 	ToolbarStyleControls.prototype.createTextStrokeControl = function () {
-		const self = this;
 		const container = document.createElement( 'div' );
 		container.className = 'text-stroke-container';
 		container.style.display = 'none';
@@ -345,13 +339,13 @@
 		this.textStrokeValue = widthValue;
 
 		// Event handlers
-		colorInput.addEventListener( 'change', function () {
-			self.notifyStyleChange();
+		colorInput.addEventListener( 'change', () => {
+			this.notifyStyleChange();
 		} );
 
-		widthInput.addEventListener( 'input', function () {
-			widthValue.textContent = this.value;
-			self.notifyStyleChange();
+		widthInput.addEventListener( 'input', () => {
+			widthValue.textContent = widthInput.value;
+			this.notifyStyleChange();
 		} );
 
 		return container;
@@ -363,7 +357,6 @@
 	 * @return {HTMLElement} The shadow container
 	 */
 	ToolbarStyleControls.prototype.createShadowControl = function () {
-		const self = this;
 		const container = document.createElement( 'div' );
 		container.className = 'text-shadow-container';
 		container.style.display = 'none';
@@ -390,13 +383,13 @@
 		this.textShadowColor = colorInput;
 
 		// Event handlers
-		toggle.addEventListener( 'change', function () {
-			colorInput.style.display = this.checked ? 'inline-block' : 'none';
-			self.notifyStyleChange();
+		toggle.addEventListener( 'change', () => {
+			colorInput.style.display = toggle.checked ? 'inline-block' : 'none';
+			this.notifyStyleChange();
 		} );
 
-		colorInput.addEventListener( 'change', function () {
-			self.notifyStyleChange();
+		colorInput.addEventListener( 'change', () => {
+			this.notifyStyleChange();
 		} );
 
 		return container;
@@ -408,7 +401,6 @@
 	 * @return {HTMLElement} The arrow style container
 	 */
 	ToolbarStyleControls.prototype.createArrowStyleControl = function () {
-		const self = this;
 		const container = document.createElement( 'div' );
 		container.className = 'arrow-style-container';
 		container.style.display = 'none';
@@ -439,8 +431,8 @@
 		container.appendChild( select );
 		this.arrowStyleSelect = select;
 
-		select.addEventListener( 'change', function () {
-			self.notifyStyleChange();
+		select.addEventListener( 'change', () => {
+			this.notifyStyleChange();
 		} );
 
 		return container;
@@ -475,7 +467,6 @@
 	 * @param {Object} options Options including onApply callback
 	 */
 	ToolbarStyleControls.prototype.openColorPicker = function ( anchorButton, initialValue, options ) {
-		const self = this;
 		options = options || {};
 
 		if ( !window.ColorPickerDialog ) {
@@ -486,9 +477,9 @@
 			currentColor: initialValue === 'none' ? 'none' : ( initialValue || '#000000' ),
 			anchorElement: anchorButton,
 			strings: this.getColorPickerStrings(),
-			registerCleanup: function ( fn ) {
-				if ( self.toolbar && typeof self.toolbar.registerDialogCleanup === 'function' ) {
-					self.toolbar.registerDialogCleanup( fn );
+			registerCleanup: ( fn ) => {
+				if ( this.toolbar && typeof this.toolbar.registerDialogCleanup === 'function' ) {
+					this.toolbar.registerDialogCleanup( fn );
 				}
 			},
 			onApply: options.onApply || function () {},
@@ -683,8 +674,15 @@
 		this.fontSizeInput = null;
 	};
 
-	// Export to global scope
-	window.ToolbarStyleControls = ToolbarStyleControls;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.ToolbarStyleControls = ToolbarStyleControls;
+
+		// Backward compatibility - direct window export
+		window.ToolbarStyleControls = ToolbarStyleControls;
+	}
 
 	// CommonJS export for testing
 	if ( typeof module !== 'undefined' && module.exports ) {

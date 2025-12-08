@@ -183,8 +183,6 @@
 	 * @return {string|null} Normalized layers value or null
 	 */
 	UrlParser.prototype.detectLayersFromDataMw = function ( el ) {
-		const self = this;
-
 		const searchValue = function ( dmwRoot ) {
 			let foundLocal = null;
 
@@ -243,7 +241,7 @@
 				}
 				if ( raw ) {
 					try {
-						const decoded = self.decodeHtmlEntities( raw );
+						const decoded = this.decodeHtmlEntities( raw );
 						const dmw = JSON.parse( decoded );
 						if ( dmw && typeof dmw === 'object' ) {
 							const found = searchValue( dmw );
@@ -285,7 +283,6 @@
 	 * @return {string|null} Inferred filename or null
 	 */
 	UrlParser.prototype.inferFilename = function ( imgEl, fileNamespace ) {
-		const self = this;
 		let filename = null;
 		const a = imgEl.closest( 'a' );
 
@@ -296,7 +293,7 @@
 				const decodedHref = href;
 				// Query param title=<FileNs>:
 				const reTitle = new RegExp(
-					'[?&]title=' + self.escapeRegExp( fileNamespace ) + ':([^&#]+)',
+					'[?&]title=' + this.escapeRegExp( fileNamespace ) + ':([^&#]+)',
 					'i'
 				);
 				const mTitle = decodedHref.match( reTitle );
@@ -306,7 +303,7 @@
 					// Path-style: /wiki/<FileNs>:...
 					const rePath = new RegExp(
 						'\\/(?:wiki\\/|index\\.php\\/)?' +
-							self.escapeRegExp( fileNamespace ) + ':([^?#]+)',
+							this.escapeRegExp( fileNamespace ) + ':([^?#]+)',
 						'i'
 					);
 					const mPath = decodedHref.match( rePath );
@@ -331,7 +328,7 @@
 						nsName = name;
 					}
 				}
-				const rePrefix = new RegExp( '^' + self.escapeRegExp( nsName ) + ':', 'i' );
+				const rePrefix = new RegExp( '^' + this.escapeRegExp( nsName ) + ':', 'i' );
 				if ( rePrefix.test( aTitle ) ) {
 					filename = aTitle.replace( rePrefix, '' ).replace( /_/g, ' ' );
 				}
@@ -427,10 +424,8 @@
 			return false;
 		}
 
-		const self = this;
-
 		try {
-			const filePrefixEsc = self.escapeRegExp( fileNs ) + ':';
+			const filePrefixEsc = this.escapeRegExp( fileNs ) + ':';
 			const reTitleFile = new RegExp( '[?&]title=' + filePrefixEsc, 'i' );
 			const rePathFile = new RegExp(
 				'\\/(?:wiki\\/|index\\.php\\/)?' + filePrefixEsc, 'i'
@@ -470,7 +465,14 @@
 		return false;
 	};
 
-	// Export
-	window.LayersUrlParser = UrlParser;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Viewer = window.Layers.Viewer || {};
+		window.Layers.Viewer.UrlParser = UrlParser;
+
+		// Backward compatibility - direct window export
+		window.LayersUrlParser = UrlParser;
+	}
 
 }() );

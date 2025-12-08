@@ -853,17 +853,16 @@
 		input.style.background = 'white';
 		input.style.zIndex = '1001'; // Higher z-index
 
-		const self = this;
 		input.addEventListener( 'keydown', ( e ) => {
 			if ( e.key === 'Enter' ) {
-				self.finishTextEditing( input, point );
+				this.finishTextEditing( input, point );
 			} else if ( e.key === 'Escape' ) {
-				self.hideTextEditor();
+				this.hideTextEditor();
 			}
 		} );
 
 		input.addEventListener( 'blur', () => {
-			self.finishTextEditing( input, point );
+			this.finishTextEditing( input, point );
 		} );
 
 		// Append to the main editor container for correct stacking context
@@ -1010,10 +1009,17 @@
 		this.config = null;
 	};
 
-	// Export ToolManager to global scope
-	window.LayersToolManager = ToolManager;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.ToolManager = ToolManager;
 
-	// CommonJS export for testing
+		// Backward compatibility - direct window export
+		window.LayersToolManager = ToolManager;
+	}
+
+	// Export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = ToolManager;
 	}

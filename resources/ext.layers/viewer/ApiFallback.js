@@ -109,7 +109,6 @@
 	 * @return {Object} Result with allow boolean and reason string
 	 */
 	ApiFallback.prototype.checkImageAllowed = function ( img, pageAllow, pageNsNum, fileNs ) {
-		const self = this;
 		let allow = false;
 		let allowReason = '';
 
@@ -130,7 +129,7 @@
 			const m = href.match( /[?&#]layers=([^&#]+)/i );
 			if ( m && m[ 1 ] ) {
 				const val = decodeURIComponent( m[ 1 ] ).toLowerCase();
-				allow = self.urlParser.isAllowedLayersValue( val );
+				allow = this.urlParser.isAllowedLayersValue( val );
 				if ( allow ) {
 					return { allow: true, reason: 'per-image layers parameter: ' + val };
 				}
@@ -138,7 +137,7 @@
 
 			// On non-File pages with pageAllow, check if this links to a File: page
 			if ( pageAllow && pageNsNum !== 6 ) {
-				if ( self.urlParser.isFileLinkAnchor( anchor, fileNs ) ) {
+				if ( this.urlParser.isFileLinkAnchor( anchor, fileNs ) ) {
 					return { allow: true, reason: 'non-File page with pageAllow + file link detected' };
 				}
 			}
@@ -163,10 +162,10 @@
 		}
 
 		// Check data-mw for layers intent
-		const mwLayers = self.urlParser.detectLayersFromDataMw( img );
+		const mwLayers = this.urlParser.detectLayersFromDataMw( img );
 		if ( mwLayers ) {
 			const v = String( mwLayers ).toLowerCase();
-			allow = self.urlParser.isAllowedLayersValue( v );
+			allow = this.urlParser.isAllowedLayersValue( v );
 			if ( allow ) {
 				return { allow: true, reason: 'data-mw layers parameter: ' + v };
 			}
@@ -178,7 +177,7 @@
 			if ( intent === 'none' || intent === 'off' ) {
 				return { allow: false, reason: 'explicit no-layers intent: ' + intent };
 			}
-			if ( self.urlParser.isAllowedLayersValue( intent ) || intent === 'on' ) {
+			if ( this.urlParser.isAllowedLayersValue( intent ) || intent === 'on' ) {
 				return { allow: true, reason: 'server-marked intent: ' + intent };
 			}
 		}
@@ -228,8 +227,6 @@
 	 * @param {string} fileNs File namespace name
 	 */
 	ApiFallback.prototype.processCandidate = function ( img, api, pageAllow, pageNsNum, fileNs ) {
-		const self = this;
-
 		if ( img.layersViewer ) {
 			return;
 		}
@@ -238,28 +235,28 @@
 		if ( img.hasAttribute( 'data-layers-intent' ) ) {
 			const intentEarly = ( img.getAttribute( 'data-layers-intent' ) || '' ).toLowerCase();
 			if ( intentEarly === 'none' || intentEarly === 'off' ) {
-				self.debugLog( 'Skipping image with explicit no-layers intent:', intentEarly );
+				this.debugLog( 'Skipping image with explicit no-layers intent:', intentEarly );
 				return;
 			}
 		}
 
 		// Infer filename
-		const filename = self.inferFilenameWithFallback( img, fileNs );
+		const filename = this.inferFilenameWithFallback( img, fileNs );
 		if ( !filename ) {
-			self.debugLog( 'API fallback skipped: no filename inferred for candidate' );
-			self.debugLog( 'Candidate image:', img );
+			this.debugLog( 'API fallback skipped: no filename inferred for candidate' );
+			this.debugLog( 'Candidate image:', img );
 			return;
 		}
 
 		// Check if image is allowed
-		const check = self.checkImageAllowed( img, pageAllow, pageNsNum, fileNs );
+		const check = this.checkImageAllowed( img, pageAllow, pageNsNum, fileNs );
 		if ( !check.allow ) {
-			self.debugLog( 'API fallback skipped: not allowed -', check.reason );
-			self.debugLog( 'filename=' + filename + ', pageAllow=' + pageAllow + ', pageNsNum=' + pageNsNum );
+			this.debugLog( 'API fallback skipped: not allowed -', check.reason );
+			this.debugLog( 'filename=' + filename + ', pageAllow=' + pageAllow + ', pageNsNum=' + pageNsNum );
 			return;
 		}
 
-		self.debugLog( 'API fallback proceeding for filename:', filename, ', reason:', check.reason );
+		this.debugLog( 'API fallback proceeding for filename:', filename, ', reason:', check.reason );
 
 		// Fetch layer data via API
 		api.get( {
@@ -293,10 +290,10 @@
 					baseHeight: ls.baseHeight || img.naturalHeight || img.height || null
 				};
 
-				self.viewerManager.initializeViewer( img, payload );
-				self.debugLog( 'API fallback initialized viewer for', filename );
+				this.viewerManager.initializeViewer( img, payload );
+				this.debugLog( 'API fallback initialized viewer for', filename );
 			} catch ( e2 ) {
-				self.debugWarn( 'API fallback processing error:', e2 );
+				this.debugWarn( 'API fallback processing error:', e2 );
 			}
 		} );
 	};
@@ -307,8 +304,6 @@
 	 * This handles cases where server-side attribute injection was bypassed.
 	 */
 	ApiFallback.prototype.initialize = function () {
-		const self = this;
-
 		try {
 			if ( typeof mw === 'undefined' || !mw.loader ||
 				typeof mw.loader.using !== 'function' ) {
@@ -319,20 +314,20 @@
 			mw.loader.using( 'mediawiki.api' ).then( () => {
 				// Detect page-level layers intent
 				let pageAllow = false;
-				const pageLayersVal = self.urlParser.getPageLayersParam();
+				const pageLayersVal = this.urlParser.getPageLayersParam();
 				if ( pageLayersVal ) {
-					pageAllow = self.urlParser.isAllowedLayersValue(
+					pageAllow = this.urlParser.isAllowedLayersValue(
 						String( pageLayersVal ).toLowerCase()
 					);
 				}
 
-				const pageNsNum = self.urlParser.getNamespaceNumber();
-				const fileNs = self.urlParser.getFileNamespace();
+				const pageNsNum = this.urlParser.getNamespaceNumber();
+				const fileNs = this.urlParser.getFileNamespace();
 
 				// Build candidate list
-				const candidates = self.buildCandidateList( pageAllow );
+				const candidates = this.buildCandidateList( pageAllow );
 
-				self.debugLog( 'API fallback: pageAllow=', pageAllow,
+				this.debugLog( 'API fallback: pageAllow=', pageAllow,
 					'ns=', pageNsNum, 'candidates=', candidates.length );
 
 				if ( !candidates.length ) {
@@ -343,7 +338,7 @@
 
 				// Process each candidate
 				candidates.forEach( ( img ) => {
-					self.processCandidate( img, api, pageAllow, pageNsNum, fileNs );
+					this.processCandidate( img, api, pageAllow, pageNsNum, fileNs );
 				} );
 			} );
 		} catch ( e ) {
@@ -351,7 +346,14 @@
 		}
 	};
 
-	// Export
-	window.LayersApiFallback = ApiFallback;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Viewer = window.Layers.Viewer || {};
+		window.Layers.Viewer.ApiFallback = ApiFallback;
+
+		// Backward compatibility - direct window export
+		window.LayersApiFallback = ApiFallback;
+	}
 
 }() );

@@ -380,16 +380,19 @@
 	};
 
 	// Export
-	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = RenderCoordinator;
-	}
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.RenderCoordinator = RenderCoordinator;
+
+		// Backward compatibility - direct window export
 		window.RenderCoordinator = RenderCoordinator;
 	}
-	if ( typeof mw !== 'undefined' && mw.loader ) {
-		mw.loader.using( [], function () {
-			mw.RenderCoordinator = RenderCoordinator;
-		} );
+
+	// Export for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = RenderCoordinator;
 	}
 
 }() );

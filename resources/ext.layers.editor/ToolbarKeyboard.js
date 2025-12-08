@@ -10,18 +10,24 @@
 	 * ToolbarKeyboard - Manages keyboard shortcuts for the toolbar
 	 *
 	 * @class
-	 * @param {Object} toolbar - Reference to the parent Toolbar instance
 	 */
-	function ToolbarKeyboard( toolbar ) {
-		this.toolbar = toolbar;
-		this.editor = toolbar.editor;
-	}
+	class ToolbarKeyboard {
+		/**
+		 * Create a new ToolbarKeyboard instance
+		 *
+		 * @param {Object} toolbar - Reference to the parent Toolbar instance
+		 */
+		constructor( toolbar ) {
+			this.toolbar = toolbar;
+			this.editor = toolbar.editor;
+		}
 
-	/**
-	 * Handle keyboard shortcuts
-	 * @param {KeyboardEvent} e - The keyboard event
-	 */
-	ToolbarKeyboard.prototype.handleKeyboardShortcuts = function ( e ) {
+		/**
+		 * Handle keyboard shortcuts
+		 *
+		 * @param {KeyboardEvent} e - The keyboard event
+		 */
+		handleKeyboardShortcuts( e ) {
 		// Don't handle shortcuts when typing in input fields
 		if ( e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true' ) {
 			return;
@@ -35,14 +41,15 @@
 		} else {
 			this.handleToolShortcuts( e, key );
 		}
-	};
+	}
 
 	/**
 	 * Handle Ctrl/Cmd shortcuts
+	 *
 	 * @param {KeyboardEvent} e - The keyboard event
 	 * @param {string} key - The lowercase key
 	 */
-	ToolbarKeyboard.prototype.handleCtrlShortcuts = function ( e, key ) {
+	handleCtrlShortcuts( e, key ) {
 		switch ( key ) {
 			case 'z':
 				e.preventDefault();
@@ -65,14 +72,15 @@
 				this.editor.duplicateSelected();
 				break;
 		}
-	};
+	}
 
 	/**
 	 * Handle tool selection shortcuts (no modifier)
+	 *
 	 * @param {KeyboardEvent} e - The keyboard event
 	 * @param {string} key - The lowercase key
 	 */
-	ToolbarKeyboard.prototype.handleToolShortcuts = function ( e, key ) {
+	handleToolShortcuts( e, key ) {
 		// Handle Shift+? for keyboard shortcuts help
 		if ( e.shiftKey && key === '?' ) {
 			e.preventDefault();
@@ -122,13 +130,14 @@
 				this.editor.cancel();
 				break;
 		}
-	};
+	}
 
 	/**
 	 * Get keyboard shortcuts configuration for documentation/help
+	 *
 	 * @return {Array<Object>} Array of shortcut definitions
 	 */
-	ToolbarKeyboard.prototype.getShortcutsConfig = function () {
+	getShortcutsConfig() {
 		return [
 			// Tool shortcuts
 			{ key: 'V', description: 'Select Tool', category: 'tools' },
@@ -153,22 +162,28 @@
 			{ key: 'Escape', description: 'Cancel Operation', category: 'general' },
 			{ key: 'Shift+?', description: 'Show Keyboard Shortcuts', category: 'general' }
 		];
-	};
+	}
 
 	/**
 	 * Show the keyboard shortcuts help dialog
 	 * Delegates to DialogManager if available, falls back to editor method
 	 */
-	ToolbarKeyboard.prototype.showKeyboardShortcutsHelp = function () {
+	showKeyboardShortcutsHelp() {
 		if ( this.editor.dialogManager && typeof this.editor.dialogManager.showKeyboardShortcutsDialog === 'function' ) {
 			this.editor.dialogManager.showKeyboardShortcutsDialog();
 		} else if ( typeof this.editor.showKeyboardShortcutsDialog === 'function' ) {
 			this.editor.showKeyboardShortcutsDialog();
 		}
-	};
+	}
+}
 
-	// Export to window namespace
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.ToolbarKeyboard = ToolbarKeyboard;
+
+		// Backward compatibility - direct window export
 		window.ToolbarKeyboard = ToolbarKeyboard;
 	}
 

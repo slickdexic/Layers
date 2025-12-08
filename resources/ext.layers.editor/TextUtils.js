@@ -179,15 +179,19 @@
 		}
 	}
 
-	// Export for different environments
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.Text = TextUtils;
+
+		// Backward compatibility - direct window export
 		window.TextUtils = TextUtils;
 	}
+
+	// CommonJS export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = TextUtils;
-	}
-	if ( typeof mw !== 'undefined' && mw.loader ) {
-		mw.TextUtils = TextUtils;
 	}
 
 }() );

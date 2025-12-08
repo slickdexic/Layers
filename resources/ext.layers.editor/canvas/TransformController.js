@@ -1149,15 +1149,14 @@
 			return;
 		}
 		this.transformEventScheduled = true;
-		const self = this;
-		window.requestAnimationFrame( function () {
-			self.transformEventScheduled = false;
-			const target = ( self.manager.editor && self.manager.editor.container ) ||
-				self.manager.container || document;
+		window.requestAnimationFrame( () => {
+			this.transformEventScheduled = false;
+			const target = ( this.manager.editor && this.manager.editor.container ) ||
+				this.manager.container || document;
 			try {
 				const detail = {
-					id: self.lastTransformPayload.id,
-					layer: JSON.parse( JSON.stringify( self.lastTransformPayload ) )
+					id: this.lastTransformPayload.id,
+					layer: JSON.parse( JSON.stringify( this.lastTransformPayload ) )
 				};
 				const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
 				target.dispatchEvent( evt );
@@ -1214,8 +1213,15 @@
 		this.manager = null;
 	};
 
-	// Export for use by CanvasManager
-	window.TransformController = TransformController;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.TransformController = TransformController;
+
+		// Backward compatibility - direct window export
+		window.TransformController = TransformController;
+	}
 
 	// Export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {

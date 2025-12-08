@@ -480,11 +480,19 @@
 	// Export
 	// =========================================================================
 
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.InteractionController = InteractionController;
+
+		// Backward compatibility - direct window export
+		window.InteractionController = InteractionController;
+	}
+
+	// Export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = InteractionController;
-	}
-	if ( typeof window !== 'undefined' ) {
-		window.InteractionController = InteractionController;
 	}
 
 }() );

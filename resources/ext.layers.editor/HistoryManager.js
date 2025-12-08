@@ -534,9 +534,17 @@
 		this.config = null;
 	};
 
-	// Export HistoryManager to global scope
-	window.HistoryManager = HistoryManager;
-	// Also export via CommonJS when available (for Jest tests)
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.HistoryManager = HistoryManager;
+
+		// Backward compatibility - direct window export
+		window.HistoryManager = HistoryManager;
+	}
+
+	// Export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = HistoryManager;
 	}

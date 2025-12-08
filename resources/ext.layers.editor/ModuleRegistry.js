@@ -327,9 +327,13 @@
 	// Primary exports:
 	//   - window.LayersModuleRegistry (class)
 	//   - window.layersRegistry (singleton instance)
-	// Deprecated exports (for backward compatibility only):
-	//   - window.layersModuleRegistry - use window.layersRegistry instead
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.ModuleRegistry = ModuleRegistry;
+
+		// Backward compatibility - direct window exports
 		window.LayersModuleRegistry = ModuleRegistry;
 		window.layersRegistry = registry;
 		// @deprecated - use window.layersRegistry instead
@@ -339,13 +343,6 @@
 	// Also export via CommonJS if available (for Node.js/Jest testing)
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = { ModuleRegistry, registry, legacyRegistry };
-	}
-
-	if ( typeof mw !== 'undefined' ) {
-		mw.LayersModuleRegistry = ModuleRegistry;
-		mw.layersRegistry = registry;
-		// @deprecated - use mw.layersRegistry instead
-		mw.layersModuleRegistry = legacyRegistry;
 	}
 
 	// Initialize core dependencies

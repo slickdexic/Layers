@@ -465,7 +465,14 @@
 		}
 	}
 
-	// Export to global scope
-	window.RevisionManager = RevisionManager;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.RevisionManager = RevisionManager;
+
+		// Backward compatibility - direct window export
+		window.RevisionManager = RevisionManager;
+	}
 
 }() );

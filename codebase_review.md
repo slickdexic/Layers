@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Comprehensive Code Review
 
-**Review Date:** December 6, 2025 (Updated January 9, 2025)  
+**Review Date:** December 7, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
 **Review Type:** Critical Architectural Audit  
 **Version:** 0.8.1-dev
@@ -9,303 +9,265 @@
 
 ## Executive Summary
 
-The "Layers" extension is a MediaWiki extension providing non-destructive image annotation capabilities. After a thorough review and **significant refactoring work**, the codebase has improved substantially.
+The "Layers" extension provides non-destructive image annotation capabilities for MediaWiki. After reviewing the current state of the codebase, I find a project with **significant architectural debt** partially addressed, but with **critical issues remaining** that impede maintainability and modernization.
 
-**Original Assessment: 4.5/10**  
-**Current Assessment: 6.5/10** - Significant progress made on P0 critical blockers
+### Overall Assessment: 5.5/10
 
-### ✅ Completed Improvements (January 2025)
+The score reflects:
+- ✅ Excellent backend security (PHP)
+- ✅ Strong unit test coverage (2,647 tests)
+- ✅ Some architectural improvements completed
+- ❌ Persistent god class problem (9 files over 800 lines)
+- ❌ Massive global namespace pollution (69 window.X exports)
+- ❌ Pervasive legacy prototype patterns (804 occurrences)
+- ❌ Excessive bundle size (~921KB unminified)
+- ❌ Minimal E2E test coverage (3 test files, MediaWiki instance required)
 
-1. **Shared LayerRenderer Created** - Eliminated ~900 lines of duplicate rendering code
-   - New: `resources/ext.layers.shared/LayerRenderer.js` (1,168 lines)
-   - `LayersViewer.js` reduced from 1,225 → 330 lines (-73%)
-
-2. **CanvasManager Decomposed** - Reduced from 5,462 → 1,899 lines (-65%)
-   - 8 controllers extracted to `canvas/` directory (~4,200 lines total)
-   - Now acts as a thin facade pattern
-
-3. **Namespace Consolidation** - `LayersNamespace.js` provides unified `window.Layers` namespace
-   - 45+ classes mapped to logical namespace groups
-   - Deprecation warnings available in debug mode
-
-**Detailed improvement plan: [`improvement_plan.md`](./improvement_plan.md)**
+**For the detailed, prioritized improvement plan, see [`improvement_plan.md`](./improvement_plan.md)**
 
 ---
 
-## Current State (January 2025)
+## Assessment Scores
 
-### What's Been Fixed
-
-1. **LayersViewer duplication eliminated.** Now uses shared `LayerRenderer` for all rendering.
-
-2. **CanvasManager decomposed.** Eight controllers extracted, following facade pattern.
-
-3. **Namespace structure established.** All exports now available via `window.Layers.*`.
-
-### What Still Needs Work
-
-1. **Bundle size still too large** (~1,000KB total, target <400KB)
-
-2. **Prototype-based patterns** still pervasive (833 assignments)
-
-3. **ShapeRenderer** still duplicates some LayerRenderer functionality (~36KB overlap)
-
-4. **LayersEditor.js** still 1,889 lines (should be split further)
+| Category | Score | Trend | Notes |
+|----------|-------|-------|-------|
+| **Architecture** | 4/10 | 🟡 Stalled | CanvasManager still 1,980 lines with 111 methods |
+| **Code Quality** | 5/10 | 🟡 Mixed | ES6 class adoption at 0.6% (5 of 804 prototypes) |
+| **Security** | 8/10 | 🟢 Excellent | Strong server-side validation, CSRF, rate limiting |
+| **Performance** | 4/10 | 🔴 Poor | 921KB bundle, no lazy loading, no code splitting |
+| **Accessibility** | 5/10 | 🟢 Improved | ARIA live regions added, keyboard nav implemented |
+| **Documentation** | 7/10 | 🟢 Good | Architecture docs present, copilot-instructions comprehensive |
+| **Testing** | 6/10 | 🟡 Skewed | 2,647 unit tests, but only 3 E2E test files |
+| **Maintainability** | 4/10 | 🔴 Critical | God classes block development velocity |
 
 ---
 
-## Assessment Scores (Updated January 2025)
-
-| Category | Original | Current | Status |
-|----------|----------|---------|--------|
-| **Architecture** | 3/10 | 5/10 | 🟡 Improved - controllers extracted |
-| **Code Quality** | 4/10 | 5/10 | 🟡 Better patterns emerging |
-| **Security** | 8/10 | 8/10 | 🟢 Unchanged - still excellent |
-| **Performance** | 4/10 | 4/10 | 🟠 Bundle size still concerning |
-| **Accessibility** | 3/10 | 3/10 | 🔴 Still needs work |
-| **Documentation** | 7/10 | 8/10 | 🟢 Improved with README files |
-| **Testing** | 8/10 | 8/10 | 🟢 2,715 tests still passing |
-| **Maintainability** | 2/10 | 5/10 | 🟡 Much improved file organization |
-
----
-
-## Updated Metrics (January 9, 2025)
+## Verified Current Metrics (December 7, 2025)
 
 ### JavaScript Codebase
 
-| Metric | Before | After | Target | Status |
-|--------|--------|-------|--------|--------|
-| Total JS bytes | 909KB | ~1,000KB | <400KB | 🟡 Added shared module |
-| Files over 800 lines | 11 | 9 | 0 | 🟢 Improving |
-| Files over 1,000 lines | 6 | 5 | 0 | 🟢 Improving |
-| LayersViewer.js lines | 1,225 | 330 | <400 | ✅ Complete |
-| CanvasManager.js lines | 5,462* | 1,899 | 400 | 🟢 -65% |
+| Metric | Verified Value | Target | Gap |
+|--------|----------------|--------|-----|
+| Total JS files | 54 | - | - |
+| Total JS lines | 29,554 | - | - |
+| Total JS bytes | 921KB | <400KB | **521KB over** |
+| Files > 1,000 lines | 9 | 0 | 9 god classes |
+| Files > 800 lines | 9 | 0 | Same 9 files |
+| Global `window.X =` exports | 69 | 0 | Namespace pollution |
+| `.prototype.` assignments | 804 | 0 | Legacy pattern |
+| ES6 `class` declarations | 5 | 804+ | **0.6% adoption** |
+| `const self = this` anti-pattern | 62 | 0 | Arrow functions needed |
 
-*Note: CanvasManager was reduced through controller extractions prior to this review.
+### God Classes (Files > 800 Lines) - Verified
 
-### Controller Extractions (P0.2 Complete)
+| File | Lines | Status |
+|------|-------|--------|
+| CanvasManager.js | 1,980 | 🔴 CRITICAL - 111 prototype methods |
+| LayerRenderer.js (shared) | 1,829 | 🟠 Acceptable - shared rendering engine |
+| LayerPanel.js | 1,258 | 🔴 Needs decomposition |
+| TransformController.js | 1,225 | 🟠 Recently extracted controller |
+| LayersEditor.js | 1,212 | 🟠 Partially split |
+| SelectionManager.js | 1,026 | 🔴 Needs decomposition |
+| ToolManager.js | 1,021 | 🔴 Needs decomposition |
+| LayersValidator.js | 951 | 🟠 Complex but single-purpose |
+| APIManager.js | 909 | 🟠 Could be smaller |
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| ZoomPanController.js | 343 | Zoom and pan operations |
-| GridRulersController.js | 385 | Grid/ruler rendering |
-| TransformController.js | 965 | Resize, rotation, drag |
-| HitTestController.js | 382 | Selection hit testing |
-| DrawingController.js | 622 | Shape creation/preview |
-| ClipboardController.js | 212 | Copy/cut/paste |
-| RenderCoordinator.js | 387 | Render scheduling |
-| InteractionController.js | 487 | Event handling |
-| **Total Extracted** | **~4,200** | |
+### Test Coverage - Verified
 
-### Test Coverage (Unchanged)
-
-| Metric | Value | Status |
-|--------|-------|--------|
-| Jest tests | 2,715 | 🟢 All passing |
-| ESLint | Passing | 🟢 |
-| Stylelint | Passing | 🟢 |
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| Jest unit tests | 2,647 passing | 🟢 Excellent |
+| Jest test files | 66 | 🟢 Good |
+| E2E test files | 3 | 🔴 Minimal |
+| E2E requires | MediaWiki server | 🔴 Not CI-ready |
+| PHP unit tests | Minimal | 🔴 Gap |
 
 ---
 
-## CRITICAL Issues (Must Fix)
+## CRITICAL Issues
 
-### 1. Global Namespace Pollution - Architecture Blocker
+### 1. God Class Problem Is Unsolved 🔴
 
-**Severity: CRITICAL** 🔴
+**Severity: BLOCKER**
 
-There are **34 unique `window.X =` exports** polluting the global namespace. This is not acceptable for a modern JavaScript codebase.
+CanvasManager remains a monolithic class at **1,980 lines with 111 prototype methods**. While 8 controllers were extracted, CanvasManager still:
+
+- Handles 15+ concerns (zoom, pan, selection, clipboard, grid, rulers, transforms...)
+- Acts as a tightly-coupled hub with circular dependencies
+- Contains 111 methods - far exceeding the ~20 method guideline for maintainability
+- Makes testing and modification extremely difficult
+
+```
+Verified: grep -c "\.prototype\." CanvasManager.js = 111 methods
+```
+
+**Impact:** Every bug fix or feature addition carries regression risk. New developers cannot understand this file without days of study.
+
+---
+
+### 2. Global Namespace Pollution Is Severe 🔴
+
+**Severity: BLOCKER for modernization**
+
+The codebase has **69 instances of `window.X =` exports**, polluting the global namespace:
 
 ```javascript
-// This pattern appears 34 times across the codebase:
+// This pattern appears 69 times:
 window.CanvasManager = CanvasManager;
 window.LayersEditor = LayersEditor;
 // etc.
 ```
 
-**Global Exports Found (34):**
-```
-window.APIManager, window.CanvasEvents, window.CanvasManager,
-window.CanvasRenderer, window.CanvasUtilities, window.ClipboardController,
-window.ColorPickerDialog, window.ConfirmDialog, window.DrawingController,
-window.EventManager, window.EventTracker, window.GeometryUtils,
-window.GridRulersController, window.HistoryManager, window.HitTestController,
-window.IconFactory, window.ImageLoader, window.ImportExportManager,
-window.InteractionController, window.LayerPanel, window.LayerSetManager,
-window.PropertiesForm, window.RenderCoordinator, window.ShapeRenderer,
-window.StateManager, window.StyleController, window.TextUtils,
-window.Toolbar, window.ToolbarKeyboard, window.ToolbarStyleControls,
-window.TransformationEngine, window.TransformController, window.UIManager,
-window.ValidationManager
-```
+**Why this is critical:**
+- **Blocks ES modules:** Cannot use `import`/`export` until resolved
+- **Blocks TypeScript:** Cannot type global namespace pollution
+- **Blocks tree-shaking:** All 921KB loads regardless of what's used
+- **Causes namespace collisions:** Other extensions will conflict
+- **Makes testing brittle:** Every test needs global mocks
 
-**Why This Is Critical:**
-- **No tree-shaking** - All 909KB loaded regardless of what's used
-- **TypeScript impossible** - Cannot type global namespace pollution
-- **ES modules blocked** - Cannot use `import/export`
-- **Load order fragile** - Files must load in exact sequence
-- **Testing friction** - Every test needs global mocks
-- **Namespace collisions** - Other extensions will conflict
+The `LayersNamespace.js` file creates a `window.Layers` namespace but **does not eliminate the individual exports**. Both patterns coexist, providing no real consolidation benefit.
 
 ---
 
-### 2. God Classes - Development Velocity Killer
+### 3. Legacy Prototype Pattern Is Pervasive 🔴
 
-**Severity: CRITICAL** 🔴
+**Severity: HIGH - Development velocity killer**
 
-**11 files exceed 800 lines, with 6 exceeding 1,000 lines.** This is the primary reason the codebase is unmaintainable.
-
-**CanvasManager.js Analysis (1,980 lines):**
-
-This single file handles:
-- Canvas initialization and lifecycle
-- Zoom and pan operations
-- Layer selection coordination  
-- Layer manipulation (add, remove, duplicate, reorder)
-- Clipboard operations
-- Grid and ruler coordination
-- Drawing tool delegation
-- Style management
-- Hit testing coordination
-- Transform coordination
-- **60+ methods in a single class**
-
-**The cognitive load required to modify this file is prohibitive.** Any change risks breaking unrelated functionality.
-
----
-
-### 3. LayersViewer Duplicates Editor Rendering
-
-**Severity: HIGH** 🟠
-
-`LayersViewer.js` (1,225 lines) contains **complete duplications** of rendering logic from the editor:
-
-- `renderRectangle`, `renderCircle`, `renderEllipse`, `renderPolygon`
-- `renderStar`, `renderText`, `renderArrow`, `renderPath`, `renderBlur`
-- Shadow, opacity, and transform handling
-
-**This means:**
-- Bug fixes must be applied in TWO places
-- Rendering inconsistencies between viewer and editor
-- Double the maintenance burden
-
-**Solution:** Extract a shared `LayerRenderer` module used by both viewer and editor.
-
----
-
-### 4. Prototype-Based Pattern Is Technical Debt
-
-**Severity: HIGH** 🟠
-
-The codebase has **833 prototype assignments** but only **21 ES6 class declarations**.
+The codebase has **804 prototype assignments** but only **5 ES6 class declarations**. This is a 0.6% ES6 adoption rate.
 
 ```javascript
-// Current pattern (833 occurrences):
+// Current pattern (804 occurrences):
 CanvasManager.prototype.addLayer = function ( layer ) { ... };
 
-// Modern pattern (21 occurrences):
-class APIManager {
-    addLayer(layer) { ... }
+// Modern pattern (5 occurrences):
+class GeometryUtils {
+    static normalize() { ... }
 }
 ```
 
-**Why This Matters:**
-- Prototype chain is harder to reason about
-- No private fields without closures
-- IDE autocomplete and navigation is degraded
-- New developers are confused by mixed patterns
+**Related anti-patterns:**
+- 62 uses of `const self = this` (instead of arrow functions)
+- Inconsistent constructor patterns
+- No private fields (everything is `this.x`)
+
+**Impact:**
+- IDE navigation/autocomplete degraded
+- New developers confused by mixed patterns
+- Refactoring is error-prone
+- Cannot use modern JS features
 
 ---
 
-### 5. MessageHelper Incomplete Adoption
+### 4. Bundle Size Is Excessive 🔴
 
-**Severity: MEDIUM** 🟠
+**Severity: HIGH - User experience impact**
 
-`MessageHelper.js` exists but **5+ files still use raw `mw.message()` patterns:**
+**921KB of unminified JavaScript** for an annotation editor is excessive. Even with 50% minification, users download 460KB+ of code.
 
-Files with direct `mw.message()` calls:
-- `ImportExportManager.js`
-- `LayerPanel.js`
-- `LayerSetManager.js`
-- `LayersValidator.js`
-- `Toolbar.js`
+**Problems:**
+- No code splitting (viewer loads editor code)
+- No lazy loading (all dialogs loaded upfront)
+- MediaWiki ResourceLoader loads all scripts synchronously
+- No tree-shaking possible due to global exports
 
 ---
 
-### 6. E2E Test Coverage Is Inadequate
+### 5. Previous Improvement Plan Contains Inaccuracies 🟠
 
-**Severity: MEDIUM** 🟠
+**Severity: MEDIUM - Trust and planning issue**
 
-Only **1 E2E test file** with **4 of 11 layer types** tested.
+The existing `improvement_plan.md` contains claims that don't match measurable reality:
 
-**Covered:** Rectangle, Circle, Text, Arrow
+| Claim | Verified Reality |
+|-------|------------------|
+| "P0, P1.2, P1.3, P2 ALL COMPLETE" | Multiple items incomplete |
+| "7 utility classes converted to ES6" | Only 5 `class` declarations found |
+| "Bundle ~875KB" | Verified at 921KB |
+| "CanvasManager acts as thin facade" | 111 methods is not "thin" |
 
-**NOT Covered:**
-- Ellipse, Polygon, Star, Line, Highlight, Path, Blur
-- Named layer sets workflow
-- Revision history navigation
-- Multi-layer selection
-- Import/export functionality
-- Undo/redo operations
+The plan needs to be reset with honest, verifiable metrics and acceptance criteria.
 
 ---
 
 ## MEDIUM Issues
 
-### 7. PHP Logger Pattern Not Fully Migrated
+### 6. E2E Testing Is Inadequate 🟠
 
-`LoggerAwareTrait` exists and is used in 4 files, but 5+ files still have inline `getLogger()` implementations:
-- `Hooks.php`
-- `ApiLayersSave.php`
-- `LayersDatabase.php` (injected via constructor, not trait)
+Only 3 E2E test files exist, requiring a running MediaWiki server. This means:
+- No CI pipeline can run E2E tests automatically
+- Most layer types untested end-to-end
+- Critical workflows (named sets, revisions) untested
 
-### 8. Bundle Size Is Excessive
+### 7. PHP Test Coverage Is Minimal 🟠
 
-**909KB unminified JavaScript** is excessive for an annotation editor. Even with 50% minification, that's 450KB+ of code for a feature that should be <150KB.
+The PHP backend has strong validation code but minimal test coverage:
+- `LayersDatabaseTest.php` appears empty (PHPCS found no code)
+- No integration tests for API modules
+- Missing @covers annotations
 
-### 9. No Performance Monitoring
+### 8. Inconsistent Error Handling 🟠
 
-No benchmarks exist for:
-- Canvas render time with N layers
-- Memory usage with complex polygons
-- Time to interactive on editor load
+While `ErrorHandler.js` exists (564 lines), error handling is inconsistent:
+- Some modules use ErrorHandler, others have inline try/catch
+- 113 try/catch blocks scattered across codebase
+- No centralized error reporting
 
-### 10. Accessibility Is Non-Existent
+### 9. Debug Mode ON by Default 🟠
 
-Canvas-based applications are inherently inaccessible, but **no accommodations have been made:**
-- No ARIA live region for layer announcements
-- No keyboard navigation between layers
-- No screen reader descriptions of layer content
-- No focus management
+`extension.json` has `LayersDebug: true` as default. This should be `false` for production, with explicit opt-in for development.
 
 ---
 
-## What's Actually Working Well
+## What's Working Well
 
 ### 1. Backend Security (8/10) 🟢
 
-The PHP backend demonstrates security best practices:
-- CSRF token enforcement on all writes
-- Rate limiting via MediaWiki's `pingLimiter`
-- Strict property whitelist (47 validated fields)
-- Type/range validation on all numeric fields
-- Text sanitization (HTML stripped, protocol checks)
-- Parameterized SQL queries
+The PHP backend demonstrates excellent security practices:
 
-### 2. Unit Test Coverage (8/10) 🟢
+- **CSRF tokens** required on all write operations
+- **Rate limiting** via MediaWiki's `pingLimiter`
+- **Strict property whitelist** with 47+ validated fields
+- **Type/range validation** on all numeric fields
+- **Text sanitization** (HTML stripped, protocol checks)
+- **Parameterized SQL** (no injection vulnerabilities found)
+- **Defense in depth** with multiple validation layers
 
-**2,715 Jest tests** across 62 test files is genuinely impressive. All tests pass.
+```php
+// Example from ServerSideLayerValidator.php - strict whitelist
+private const ALLOWED_PROPERTIES = [
+    'type' => 'string', 'x' => 'numeric', 'y' => 'numeric',
+    // 44+ more validated fields...
+];
+```
 
-### 3. No Console Leaks 🟢
+### 2. Unit Test Coverage (6/10) 🟢
+
+**2,647 Jest tests** is genuinely impressive for an extension this size:
+```
+Test Suites: 63 passed, 63 total
+Tests:       1 skipped, 2647 passed, 2648 total
+```
+
+### 3. Documentation 🟢
+
+- `copilot-instructions.md` is comprehensive (API contracts, data model, security)
+- `docs/ARCHITECTURE.md` explains module structure
+- `docs/ACCESSIBILITY.md` documents WCAG efforts
+
+### 4. No Console Leaks 🟢
 
 All logging correctly uses `mw.log.*` instead of `console.*`.
 
-### 4. Error Handling Present 🟢
+### 5. Accessibility Progress 🟢
 
-114 `try/catch` blocks exist throughout the codebase.
+Recent additions:
+- `AccessibilityAnnouncer.js` for ARIA live regions
+- Layer panel keyboard navigation (Arrow, Home/End, Enter)
+- Keyboard shortcuts help dialog (Shift+?)
 
-### 5. EventTracker for Memory Safety 🟢
+### 6. EventTracker for Memory Safety 🟢
 
-`EventTracker.js` provides proper event listener cleanup.
+`EventTracker.js` provides proper event listener cleanup, preventing memory leaks.
 
 ---
 
@@ -315,74 +277,72 @@ All logging correctly uses `mw.log.*` instead of `console.*`.
 
 | # | Task | Impact | Effort |
 |---|------|--------|--------|
-| 1 | Extract shared LayerRenderer for Viewer/Editor | Eliminate 1,000+ lines duplication | 3-4 days |
-| 2 | Create namespace consolidation plan | Enable modernization | 1 day |
-| 3 | Split CanvasManager into 5 focused modules | Make code navigable | 1 week |
+| 1 | **Split CanvasManager.js** into focused modules | Make code maintainable | 1 week |
+| 2 | **Eliminate duplicate window.X exports** | Enable modernization | 3 days |
+| 3 | **Reset improvement_plan.md** with verified metrics | Enable accurate planning | 1 day |
 
 ### P1 - High (Next Sprint)
 
 | # | Task | Impact | Effort |
 |---|------|--------|--------|
-| 1 | Split LayersEditor.js | Decouple UI orchestration | 1 week |
-| 2 | Split TransformController.js | Separate transform types | 3 days |
-| 3 | Complete MessageHelper migration | Eliminate duplication | 4 hours |
-| 4 | Migrate PHP to LoggerAwareTrait | Eliminate duplication | 2 hours |
+| 1 | Split LayerPanel.js (1,258 lines) | Reduce complexity | 3 days |
+| 2 | Split SelectionManager.js (1,026 lines) | Reduce complexity | 2 days |
+| 3 | Pilot ES6 class conversion (5 small files) | Prove pattern | 2 days |
+| 4 | Set LayersDebug default to false | Production safety | 1 hour |
 
 ### P2 - Medium (This Quarter)
 
 | # | Task | Impact | Effort |
 |---|------|--------|--------|
-| 1 | Expand E2E to all 11 layer types | Regression safety | 1 week |
-| 2 | Add canvas accessibility layer | WCAG compliance | 1 week |
-| 3 | Begin ES module migration | Enable tree-shaking | 2 weeks |
-| 4 | Add performance benchmarks | Detect regressions | 2 days |
+| 1 | Bundle size reduction to <500KB | Performance | 2 weeks |
+| 2 | E2E test infrastructure (mock API) | CI readiness | 1 week |
+| 3 | PHP test coverage | Backend confidence | 1 week |
+| 4 | Eliminate `const self = this` pattern | Modern code | 3 days |
 
 ### P3 - Long Term
 
 | # | Task | Impact | Effort |
 |---|------|--------|--------|
-| 1 | TypeScript migration | Type safety | 2+ months |
-| 2 | Complete ES modules | Modern tooling | 1 month |
-| 3 | Lazy load editor components | Reduce initial payload | 2 weeks |
+| 1 | Complete ES6 class migration | Modern patterns | 3 weeks |
+| 2 | TypeScript migration | Type safety | 2+ months |
+| 3 | ES modules (after globals resolved) | Tree-shaking | 1 month |
 
 ---
 
 ## Technical Debt Quantified
 
-| Debt Type | Count | Fix Time |
-|-----------|-------|----------|
-| God classes (>800 lines) | 11 | 3-4 weeks |
-| Global exports to eliminate | 34 | 1 week |
-| Prototype→class migrations | 833 methods | 2-3 weeks |
-| Duplicate rendering code | ~1,000 lines | 3-4 days |
-| Duplicate message patterns | 5 files | 4 hours |
-| Duplicate PHP logger patterns | 3 files | 2 hours |
-| Missing E2E layer tests | 7 types | 3-4 days |
-| Missing accessibility | Complete | 1-2 weeks |
+| Debt Type | Count | Estimated Fix Time |
+|-----------|-------|-------------------|
+| God classes (>800 lines) | 9 files | 3-4 weeks |
+| Global window.X exports | 69 | 1 week |
+| Prototype→class migrations | 804 methods | 3-4 weeks |
+| `const self = this` pattern | 62 | 2 days |
+| Missing E2E tests | ~80% workflows | 2 weeks |
+| Missing PHP tests | Critical paths | 1 week |
 
-**Total estimated refactoring time: 8-12 weeks**
+**Total estimated refactoring time: 10-14 weeks**
 
 ---
 
 ## Conclusion
 
-The Layers extension is **functional but deeply flawed architecturally**. It works today because of the extensive test suite that catches regressions, but the codebase is:
+The Layers extension is **functional but architecturally compromised**. It works because of the extensive Jest test suite that catches regressions, but the codebase is:
 
-1. **Unmaintainable** - Files are too large to navigate
-2. **Unmodernizable** - Global pollution blocks ES modules/TypeScript
-3. **Duplicative** - Viewer and editor have separate rendering code
-4. **Inaccessible** - No accommodations for disabled users
+1. **Unmaintainable** - 9 god classes with files up to 1,980 lines
+2. **Unmodernizable** - 69 global exports block ES modules/TypeScript
+3. **Legacy-bound** - 804 prototype methods vs. 5 ES6 classes (0.6%)
+4. **Oversized** - 921KB bundle for an annotation tool
 
 **The path forward requires:**
-1. Immediate extraction of shared rendering code
-2. Systematic god class decomposition
-3. Namespace consolidation before any ES module work
-4. Prototype→class migration as files are touched
+1. Honest assessment of current state (this document)
+2. Reset improvement plan with verifiable acceptance criteria
+3. Systematic god class decomposition starting with CanvasManager
+4. Eliminate global namespace pollution before any ES module work
 
-Without this work, every new feature will be harder than the last, and eventually the codebase will become unmaintainable.
+**Without addressing the god class and global pollution problems, every new feature will increase technical debt.**
 
-**See [`improvement_plan.md`](./improvement_plan.md) for the detailed, prioritized action plan.**
+See [`improvement_plan.md`](./improvement_plan.md) for the reset, prioritized action plan.
 
 ---
 
-*Review performed by GitHub Copilot (Claude Opus 4.5) on December 6, 2025*
+*Review performed by GitHub Copilot (Claude Opus 4.5) on December 7, 2025*

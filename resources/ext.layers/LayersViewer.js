@@ -76,28 +76,26 @@
 	};
 
 	LayersViewer.prototype.loadImageAndRender = function () {
-		const self = this;
-
 		// Wait for image to load if not already loaded
 		if ( this.imageElement.complete ) {
 			this.resizeCanvasAndRender();
 		} else {
-			this.imageElement.addEventListener( 'load', function () {
-				self.resizeCanvasAndRender();
+			this.imageElement.addEventListener( 'load', () => {
+				this.resizeCanvasAndRender();
 			} );
 		}
 
 		// Re-render on window resize to keep overlay aligned
-		this.boundWindowResize = function () {
-			self.scheduleResize();
+		this.boundWindowResize = () => {
+			this.scheduleResize();
 		};
 		window.addEventListener( 'resize', this.boundWindowResize );
 
 		// Re-render when the image element's box size changes (responsive layout, thumb swaps)
 		if ( typeof window.ResizeObserver === 'function' ) {
 			try {
-				this.resizeObserver = new window.ResizeObserver( function () {
-					self.scheduleResize();
+				this.resizeObserver = new window.ResizeObserver( () => {
+					this.scheduleResize();
 				} );
 				this.resizeObserver.observe( this.imageElement );
 			} catch ( e ) {
@@ -109,13 +107,12 @@
 	};
 
 	LayersViewer.prototype.scheduleResize = function () {
-		const self = this;
 		if ( this.rAFId ) {
 			return;
 		}
-		this.rAFId = window.requestAnimationFrame( function () {
-			self.rAFId = null;
-			self.resizeCanvasAndRender();
+		this.rAFId = window.requestAnimationFrame( () => {
+			this.rAFId = null;
+			this.resizeCanvasAndRender();
 		} );
 	};
 
@@ -226,13 +223,17 @@
 			}
 		}
 
-		// Apply shadow at outer context level using the renderer helper
-		const scale = { sx: sx, sy: sy, avg: scaleAvg };
-		this.renderer.applyShadow( layer, scale );
+		// Prepare shadow scale for the renderer
+		// BUG FIX (2025-12-08): Pass shadowScale in options instead of calling applyShadow here
+		// Previously, applyShadow was called here with correct scale, but then shape methods
+		// in LayerRenderer called applyShadow again with scale=1, overwriting the correct values.
+		// Now we pass shadowScale through options so shape methods use the correct scale.
+		const shadowScale = { sx: sx, sy: sy, avg: scaleAvg };
 
 		// Delegate rendering to the shared LayerRenderer
 		// Using scaled=true since we pre-scaled the coordinates
-		this.renderer.drawLayer( L, { scaled: true, imageElement: this.imageElement } );
+		// shadowScale tells shape methods to use this scale for shadow offsets (not 1:1)
+		this.renderer.drawLayer( L, { scaled: true, imageElement: this.imageElement, shadowScale: shadowScale } );
 
 		// Restore to pre-layer state
 		this.ctx.restore();

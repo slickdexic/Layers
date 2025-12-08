@@ -906,5 +906,12 @@ class APIManager {
 	}
 }
 
-// Export APIManager to global scope
-window.APIManager = APIManager;
+// Export to window.Layers namespace (preferred)
+if ( typeof window !== 'undefined' ) {
+	window.Layers = window.Layers || {};
+	window.Layers.Core = window.Layers.Core || {};
+	window.Layers.Core.APIManager = APIManager;
+
+	// Backward compatibility - direct window export
+	window.APIManager = APIManager;
+}

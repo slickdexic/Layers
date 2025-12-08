@@ -154,8 +154,6 @@
 	}
 
 	CanvasManager.prototype.init = function () {
-		const self = this;
-
 		// Support headless/test scenarios: if container is missing, either
 		// use a provided canvas in config or create a detached canvas.
 		if ( !this.container ) {
@@ -178,29 +176,29 @@
 		this.ctx = this.canvas.getContext( '2d' );
 
 		// Helper to initialize a controller
-		function initController( name, propName, createFn, logLevel ) {
+		const initController = ( name, propName, createFn, logLevel ) => {
 			const ControllerClass = findClass( name );
 			if ( ControllerClass ) {
-				self[ propName ] = createFn( ControllerClass );
+				this[ propName ] = createFn( ControllerClass );
 			} else if ( typeof mw !== 'undefined' && mw.log && mw.log[ logLevel ] ) {
 				mw.log[ logLevel ]( 'Layers: ' + name + ' not found' );
 			}
-		}
+		};
 
 		// Initialize renderer (required)
-		initController( 'CanvasRenderer', 'renderer', function ( C ) {
-			return new C( self.canvas, { editor: self.editor } );
+		initController( 'CanvasRenderer', 'renderer', ( C ) => {
+			return new C( this.canvas, { editor: this.editor } );
 		}, 'error' );
 
 		// Initialize selection manager
-		initController( 'LayersSelectionManager', 'selectionManager', function ( C ) {
-			return new C( {}, self );
+		initController( 'LayersSelectionManager', 'selectionManager', ( C ) => {
+			return new C( {}, this );
 		}, 'warn' );
 
 		// Initialize controllers (all take 'this' as argument)
 		// StyleController should be loaded before other controllers that rely on style
-		initController( 'StyleController', 'styleController', function ( C ) {
-			return new C( self.editor );
+		initController( 'StyleController', 'styleController', ( C ) => {
+			return new C( this.editor );
 		}, 'warn' );
 		
 		const controllers = [
@@ -212,17 +210,17 @@
 			[ 'ClipboardController', 'clipboardController' ]
 		];
 
-		controllers.forEach( function ( entry ) {
-			initController( entry[ 0 ], entry[ 1 ], function ( C ) {
-				return new C( self );
+		controllers.forEach( ( entry ) => {
+			initController( entry[ 0 ], entry[ 1 ], ( C ) => {
+				return new C( this );
 			}, 'warn' );
 		} );
 
 		// Initialize RenderCoordinator for optimized rendering
-		initController( 'RenderCoordinator', 'renderCoordinator', function ( C ) {
-			return new C( self, {
-				enableMetrics: self.config.enableRenderMetrics || false,
-				targetFps: self.config.targetFps || 60
+		initController( 'RenderCoordinator', 'renderCoordinator', ( C ) => {
+			return new C( this, {
+				enableMetrics: this.config.enableRenderMetrics || false,
+				targetFps: this.config.targetFps || 60
 			} );
 		}, 'warn' );
 
@@ -259,31 +257,30 @@
 		}
 
 		// Fallback for minimal test environments: attach stripped-down event handlers
-		const self = this;
 		this.events = {
-			destroy: function () {
-				if ( self.canvas && self.__mousedownHandler ) {
-					try { self.canvas.removeEventListener( 'mousedown', self.__mousedownHandler ); } catch ( err ) {}
+			destroy: () => {
+				if ( this.canvas && this.__mousedownHandler ) {
+					try { this.canvas.removeEventListener( 'mousedown', this.__mousedownHandler ); } catch ( err ) {}
 				}
-				self.__mousedownHandler = null;
-				self.__mousemoveHandler = null;
-				self.__mouseupHandler = null;
+				this.__mousedownHandler = null;
+				this.__mousemoveHandler = null;
+				this.__mouseupHandler = null;
 			}
 		};
 		if ( this.canvas && this.canvas.addEventListener ) {
-			this.__mousedownHandler = function ( e ) {
-				if ( typeof self.handleMouseDown === 'function' ) {
-					self.handleMouseDown( e );
+			this.__mousedownHandler = ( e ) => {
+				if ( typeof this.handleMouseDown === 'function' ) {
+					this.handleMouseDown( e );
 				}
 			};
-			this.__mousemoveHandler = function ( e ) {
-				if ( typeof self.handleMouseMove === 'function' ) {
-					self.handleMouseMove( e );
+			this.__mousemoveHandler = ( e ) => {
+				if ( typeof this.handleMouseMove === 'function' ) {
+					this.handleMouseMove( e );
 				}
 			};
-			this.__mouseupHandler = function ( e ) {
-				if ( typeof self.handleMouseUp === 'function' ) {
-					self.handleMouseUp( e );
+			this.__mouseupHandler = ( e ) => {
+				if ( typeof this.handleMouseUp === 'function' ) {
+					this.handleMouseUp( e );
 				}
 			};
 			this.canvas.addEventListener( 'mousedown', this.__mousedownHandler );
@@ -326,15 +323,14 @@
 	 * Subscribe to StateManager for reactive updates
 	 */
 	CanvasManager.prototype.subscribeToState = function () {
-		const self = this;
 		if ( !this.editor || !this.editor.stateManager ) {
 			return;
 		}
 
 		// Subscribe to selection changes to trigger re-render
-		this.editor.stateManager.subscribe( 'selectedLayerIds', function () {
-			self.selectionHandles = [];
-			self.renderLayers( self.editor.layers );
+		this.editor.stateManager.subscribe( 'selectedLayerIds', () => {
+			this.selectionHandles = [];
+			this.renderLayers( this.editor.layers );
 		} );
 	};
 
@@ -345,7 +341,6 @@
 	 *       but fallback is kept for test environments and backward compatibility.
 	 */
 	CanvasManager.prototype.loadBackgroundImage = function () {
-		const self = this;
 		const filename = this.editor.filename;
 		const backgroundImageUrl = this.config.backgroundImageUrl;
 
@@ -358,11 +353,11 @@
 			this.imageLoader = new ImageLoaderClass( {
 				filename: filename,
 				backgroundImageUrl: backgroundImageUrl,
-				onLoad: function ( image, info ) {
-					self.handleImageLoaded( image, info );
+				onLoad: ( image, info ) => {
+					this.handleImageLoaded( image, info );
 				},
-				onError: function () {
-					self.handleImageLoadError();
+				onError: () => {
+					this.handleImageLoadError();
 				}
 			} );
 			this.imageLoader.load();
@@ -494,14 +489,13 @@
 		try {
 			const img = new Image();
 			img.crossOrigin = 'anonymous';
-			const self = this;
-			img.onload = function () {
-				if ( typeof self.handleImageLoaded === 'function' ) {
-					self.handleImageLoaded( img, { width: img.width, height: img.height, source: 'fallback' } );
+			img.onload = () => {
+				if ( typeof this.handleImageLoaded === 'function' ) {
+					this.handleImageLoaded( img, { width: img.width, height: img.height, source: 'fallback' } );
 				}
 			};
-			img.onerror = function () {
-				self.tryLoadImageFallback( urls, index + 1 );
+			img.onerror = () => {
+				this.tryLoadImageFallback( urls, index + 1 );
 			};
 			img.src = url;
 		} catch ( e ) {
@@ -708,14 +702,13 @@
 			return;
 		}
 		this.transformEventScheduled = true;
-		const self = this;
-		window.requestAnimationFrame( function () {
-			self.transformEventScheduled = false;
-			const target = ( self.editor && self.editor.container ) || self.container || document;
+		window.requestAnimationFrame( () => {
+			this.transformEventScheduled = false;
+			const target = ( this.editor && this.editor.container ) || this.container || document;
 			try {
 				const detail = {
-					id: self.lastTransformPayload.id,
-					layer: JSON.parse( JSON.stringify( self.lastTransformPayload ) )
+					id: this.lastTransformPayload.id,
+					layer: JSON.parse( JSON.stringify( this.lastTransformPayload ) )
 				};
 				const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
 				target.dispatchEvent( evt );
@@ -1294,10 +1287,9 @@
 
 	CanvasManager.prototype.getLayersInRect = function ( rect ) {
 		const layersInRect = [];
-		const self = this;
-		this.editor.layers.forEach( function ( layer ) {
-			const layerBounds = self.getLayerBounds( layer );
-			if ( layerBounds && self.rectsIntersect( rect, layerBounds ) ) {
+		this.editor.layers.forEach( ( layer ) => {
+			const layerBounds = this.getLayerBounds( layer );
+			if ( layerBounds && this.rectsIntersect( rect, layerBounds ) ) {
 				layersInRect.push( layer );
 			}
 		} );
@@ -1964,17 +1956,19 @@
 		this.config = null;
 	};
 
-	// Export
-	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = CanvasManager;
-	}
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.Manager = CanvasManager;
+
+		// Backward compatibility - direct window export
 		window.CanvasManager = CanvasManager;
 	}
-	if ( typeof mw !== 'undefined' && mw.loader ) {
-		mw.loader.using( [], function () {
-			mw.CanvasManager = CanvasManager;
-		} );
+
+	// Export for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = CanvasManager;
 	}
 
 }() );

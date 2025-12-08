@@ -113,8 +113,6 @@
 	 * 2. a[data-layer-data] > img - images inside links with layer data
 	 */
 	ViewerManager.prototype.initializeLayerViewers = function () {
-		const self = this;
-
 		// Primary: attributes directly on <img>
 		const images = Array.prototype.slice.call(
 			document.querySelectorAll( 'img[data-layer-data]' )
@@ -147,7 +145,7 @@
 					img.setAttribute( 'class', ( cls + ' layers-thumbnail' ).trim() );
 				}
 				images.push( img );
-				self.debugLog( 'Moved data-layer-data from <a> to <img>' );
+				this.debugLog( 'Moved data-layer-data from <a> to <img>' );
 			}
 		} );
 
@@ -163,16 +161,16 @@
 				}
 				let layerData = null;
 				try {
-					layerData = JSON.parse( self.urlParser.decodeHtmlEntities( raw ) );
+					layerData = JSON.parse( this.urlParser.decodeHtmlEntities( raw ) );
 				} catch ( eParse ) {
 					layerData = null;
 				}
 				if ( !layerData ) {
 					return;
 				}
-				self.initializeViewer( img, layerData );
+				this.initializeViewer( img, layerData );
 			} catch ( e ) {
-				self.debugWarn( 'Error processing image:', e );
+				this.debugWarn( 'Error processing image:', e );
 			}
 		} );
 	};
@@ -184,8 +182,6 @@
 	 * @return {Promise|undefined} API promise or undefined if not applicable
 	 */
 	ViewerManager.prototype.initializeFilePageFallback = function () {
-		const self = this;
-
 		try {
 			if ( typeof mw === 'undefined' ) {
 				return;
@@ -264,20 +260,27 @@
 						baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null
 					};
 
-					self.initializeViewer( img, payload );
-					self.debugLog( 'File page fallback initialized with', layersArr.length, 'layers' );
+					this.initializeViewer( img, payload );
+					this.debugLog( 'File page fallback initialized with', layersArr.length, 'layers' );
 				} catch ( e2 ) {
-					self.debugWarn( 'File page fallback error:', e2 );
+					this.debugWarn( 'File page fallback error:', e2 );
 				}
 			} ).catch( ( apiErr ) => {
-				self.debugWarn( 'File page API request failed:', apiErr );
+				this.debugWarn( 'File page API request failed:', apiErr );
 			} );
 		} catch ( e ) {
 			this.debugWarn( 'File page fallback outer error:', e );
 		}
 	};
 
-	// Export
-	window.LayersViewerManager = ViewerManager;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Viewer = window.Layers.Viewer || {};
+		window.Layers.Viewer.Manager = ViewerManager;
+
+		// Backward compatibility - direct window export
+		window.LayersViewerManager = ViewerManager;
+	}
 
 }() );

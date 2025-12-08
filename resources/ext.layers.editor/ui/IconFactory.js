@@ -394,8 +394,15 @@
 		return svg;
 	};
 
-	// Export
-	window.IconFactory = IconFactory;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.IconFactory = IconFactory;
+
+		// Backward compatibility - direct window export
+		window.IconFactory = IconFactory;
+	}
 
 	// Node.js/CommonJS export for testing
 	if ( typeof module !== 'undefined' && module.exports ) {

@@ -256,21 +256,19 @@
 		}
 	}
 
-	// Export module - ALWAYS set on window first for cross-file dependencies
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.Utilities = CanvasUtilities;
+
+		// Backward compatibility - direct window export
 		window.CanvasUtilities = CanvasUtilities;
 	}
 
-	// Also export via CommonJS if available (for Node.js/Jest testing)
+	// CommonJS export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = CanvasUtilities;
-	}
-
-	// MediaWiki ResourceLoader support
-	if ( typeof mw !== 'undefined' && mw.loader ) {
-		mw.loader.using( [], function () {
-			mw.CanvasUtilities = CanvasUtilities;
-		} );
 	}
 
 }() );

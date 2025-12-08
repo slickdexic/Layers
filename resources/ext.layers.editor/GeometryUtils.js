@@ -387,19 +387,19 @@
 		}
 	}
 
-	// Export for different environments - ALWAYS set on window for cross-file dependencies
+	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.Geometry = GeometryUtils;
+
+		// Backward compatibility - direct window export
 		window.GeometryUtils = GeometryUtils;
 	}
 
-	// Also export via CommonJS if available (for Node.js/Jest testing)
+	// CommonJS export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = GeometryUtils;
-	}
-
-	// MediaWiki ResourceLoader support
-	if ( typeof mw !== 'undefined' && mw.loader ) {
-		mw.GeometryUtils = GeometryUtils;
 	}
 
 }() );

@@ -589,10 +589,17 @@ class UIManager {
 	}
 }
 
-// Export UIManager to global scope
-window.UIManager = UIManager;
+// Export to window.Layers namespace (preferred)
+if ( typeof window !== 'undefined' ) {
+	window.Layers = window.Layers || {};
+	window.Layers.UI = window.Layers.UI || {};
+	window.Layers.UI.Manager = UIManager;
 
-// CommonJS export for testing
+	// Backward compatibility - direct window export
+	window.UIManager = UIManager;
+}
+
+// Export for Node.js/Jest testing
 if ( typeof module !== 'undefined' && module.exports ) {
 	module.exports = UIManager;
 }

@@ -66,19 +66,18 @@
 		 * Tries multiple sources in priority order
 		 */
 		load() {
-			const self = this;
-			if ( self.isLoading ) {
+			if ( this.isLoading ) {
 				safeLogWarn( '[ImageLoader] Load already in progress' );
 				return;
 			}
 
-			self.isLoading = true;
-			const urls = self.buildUrlList();
+			this.isLoading = true;
+			const urls = this.buildUrlList();
 
 			if ( urls.length > 0 ) {
-				self.tryLoadImage( urls, 0 );
+				this.tryLoadImage( urls, 0 );
 			} else {
-				self.loadTestImage();
+				this.loadTestImage();
 			}
 		}
 
@@ -145,49 +144,47 @@
 		 * @param {number} index - Current index in the array
 		 */
 		tryLoadImage( urls, index ) {
-			const self = this;
 			if ( index >= urls.length ) {
 				// All URLs failed, try test image
-				self.loadTestImage();
+				this.loadTestImage();
 				return;
 			}
 
 			const currentUrl = urls[ index ];
-			self.image = new Image();
-			self.image.crossOrigin = 'anonymous';
+			this.image = new Image();
+			this.image.crossOrigin = 'anonymous';
 
-			self.image.onload = function () {
-				self.isLoading = false;
-				self.onLoad( self.image, {
-					width: self.image.width,
-					height: self.image.height,
+			this.image.onload = () => {
+				this.isLoading = false;
+				this.onLoad( this.image, {
+					width: this.image.width,
+					height: this.image.height,
 					source: 'url',
 					url: currentUrl
 				} );
 			};
 
-			self.image.onerror = function () {
+			this.image.onerror = () => {
 				// Try next URL
-				self.tryLoadImage( urls, index + 1 );
+				this.tryLoadImage( urls, index + 1 );
 			};
 
-			self.image.src = currentUrl;
+			this.image.src = currentUrl;
 		}
 
 		/**
 		 * Load a test/placeholder image when actual image unavailable
 		 */
 		loadTestImage() {
-			const self = this;
-			const svgData = self.createTestImageSvg( self.filename );
+			const svgData = this.createTestImageSvg( this.filename );
 			const svgDataUrl = 'data:image/svg+xml;base64,' + btoa( svgData );
 
-			self.image = new Image();
-			self.image.crossOrigin = 'anonymous';
+			this.image = new Image();
+			this.image.crossOrigin = 'anonymous';
 
-			self.image.onload = function () {
-				self.isLoading = false;
-				self.onLoad( self.image, {
+			this.image.onload = () => {
+				this.isLoading = false;
+				this.onLoad( this.image, {
 					width: PLACEHOLDER_SIZE.width,
 					height: PLACEHOLDER_SIZE.height,
 					source: 'test',
@@ -195,20 +192,20 @@
 				} );
 			};
 
-			self.image.onerror = function () {
-				self.isLoading = false;
+			this.image.onerror = () => {
+				this.isLoading = false;
 				// Even SVG failed - call error handler
 				safeLogWarn( '[ImageLoader] All image loading attempts failed' );
-				self.onError( new Error( 'Failed to load any image' ) );
+				this.onError( new Error( 'Failed to load any image' ) );
 			};
 
-			self.image.src = svgDataUrl;
+			this.image.src = svgDataUrl;
 
 			// Set a timeout fallback
-			setTimeout( function () {
-				if ( self.isLoading ) {
-					self.isLoading = false;
-					self.onError( new Error( 'Image load timeout' ) );
+			setTimeout( () => {
+				if ( this.isLoading ) {
+					this.isLoading = false;
+					this.onError( new Error( 'Image load timeout' ) );
 				}
 			}, LOAD_TIMEOUT );
 		}
@@ -281,7 +278,19 @@
 		}
 	}
 
-	// Export to window for MediaWiki ResourceLoader
-	window.ImageLoader = ImageLoader;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.ImageLoader = ImageLoader;
+
+		// Backward compatibility - direct window export
+		window.ImageLoader = ImageLoader;
+	}
+
+	// CommonJS export for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = ImageLoader;
+	}
 
 }() );

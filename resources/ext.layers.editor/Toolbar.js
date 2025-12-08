@@ -126,7 +126,6 @@
 	// Uses ui/ColorPickerDialog module
 	Toolbar.prototype.openColorPickerDialog = function ( anchorButton, initialValue, options ) {
 		options = options || {};
-		const self = this;
 		const colorPickerStrings = this.getColorPickerStrings();
 
 		if ( !window.ColorPickerDialog ) {
@@ -138,8 +137,8 @@
 			currentColor: ( initialValue === 'none' ) ? 'none' : ( initialValue || '#000000' ),
 			anchorElement: anchorButton,
 			strings: colorPickerStrings,
-			registerCleanup: function ( fn ) {
-				self.registerDialogCleanup( fn );
+			registerCleanup: ( fn ) => {
+				this.registerDialogCleanup( fn );
 			},
 			onApply: options.onApply || function () {},
 			onCancel: options.onCancel || function () {}
@@ -298,8 +297,6 @@
 	};
 
 	Toolbar.prototype.createStyleGroup = function () {
-		const self = this;
-
 		// Initialize style controls manager
 		if ( window.ToolbarStyleControls ) {
 			this.styleControls = new window.ToolbarStyleControls( {
@@ -334,7 +331,7 @@
 			// Fallback: create minimal style group if module not loaded
 			const styleGroup = document.createElement( 'div' );
 			styleGroup.className = 'toolbar-group style-group';
-			styleGroup.textContent = self.msg( 'layers-prop-stroke-color', 'Style controls loading...' );
+			styleGroup.textContent = this.msg( 'layers-prop-stroke-color', 'Style controls loading...' );
 			this.container.appendChild( styleGroup );
 		}
 	};
@@ -510,18 +507,16 @@
 	};
 
 	Toolbar.prototype.setupEventHandlers = function () {
-		const self = this;
-
 		// Tool selection - tracked for cleanup
 		this.addListener( this.container, 'click', ( e ) => {
 			if ( e.target.classList.contains( 'tool-button' ) ) {
-				self.selectTool( e.target.dataset.tool );
+				this.selectTool( e.target.dataset.tool );
 			} else if ( e.target.classList.contains( 'action-button' ) ) {
-				self.executeAction( e.target.dataset.action );
+				this.executeAction( e.target.dataset.action );
 			} else if ( e.target.dataset.action && e.target.dataset.action.indexOf( 'zoom' ) === 0 ) {
-				self.executeZoomAction( e.target.dataset.action );
+				this.executeZoomAction( e.target.dataset.action );
 			} else if ( e.target.dataset.action === 'fit-window' ) {
-				self.executeZoomAction( e.target.dataset.action );
+				this.executeZoomAction( e.target.dataset.action );
 			}
 		} );
 
@@ -529,47 +524,47 @@
 		this.addListener( this.container, 'keydown', ( e ) => {
 			if ( e.target.classList && e.target.classList.contains( 'tool-button' ) && ( e.key === 'Enter' || e.key === ' ' ) ) {
 				e.preventDefault();
-				self.selectTool( e.target.dataset.tool );
+				this.selectTool( e.target.dataset.tool );
 			}
 		} );
 
 		// Save/Cancel buttons - tracked for cleanup
 		this.addListener( this.saveButton, 'click', () => {
-			self.editor.save();
+			this.editor.save();
 		} );
 
 		this.addListener( this.cancelButton, 'click', () => {
-			self.editor.cancel( true );
+			this.editor.cancel( true );
 		} );
 
 		// Import JSON - delegate to ImportExportManager
 		this.addListener( this.importButton, 'click', () => {
-			self.importInput.click();
+			this.importInput.click();
 		} );
 
-		this.addListener( this.importInput, 'change', function () {
-			const file = this.files && this.files[ 0 ];
+		this.addListener( this.importInput, 'change', () => {
+			const file = this.importInput.files && this.importInput.files[ 0 ];
 			if ( !file ) {
 				return;
 			}
-			if ( self.importExportManager ) {
-				self.importExportManager.importFromFile( file )
+			if ( this.importExportManager ) {
+				this.importExportManager.importFromFile( file )
 					.catch( () => {
 						// Error already handled by ImportExportManager
 					} )
 					.finally( () => {
-						self.importInput.value = '';
+						this.importInput.value = '';
 					} );
 			} else {
 				// Fallback: ImportExportManager not available
-				self.importInput.value = '';
+				this.importInput.value = '';
 			}
 		} );
 
 		// Export JSON - delegate to ImportExportManager
 		this.addListener( this.exportButton, 'click', () => {
-			if ( self.importExportManager ) {
-				self.importExportManager.exportToFile();
+			if ( this.importExportManager ) {
+				this.importExportManager.exportToFile();
 			}
 		} );
 
@@ -577,8 +572,8 @@
 
 		// Keyboard shortcuts - delegate to ToolbarKeyboard module
 		this.keyboardHandler = new window.ToolbarKeyboard( this );
-		this.keyboardShortcutHandler = function ( e ) {
-			self.keyboardHandler.handleKeyboardShortcuts( e );
+		this.keyboardShortcutHandler = ( e ) => {
+			this.keyboardHandler.handleKeyboardShortcuts( e );
 		};
 		this.addDocumentListener( 'keydown', this.keyboardShortcutHandler );
 
@@ -775,10 +770,17 @@
 		}
 	};
 
-	// Export Toolbar to global scope
-	window.Toolbar = Toolbar;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.Toolbar = Toolbar;
 
-	// CommonJS export for testing
+		// Backward compatibility - direct window export
+		window.Toolbar = Toolbar;
+	}
+
+	// Export for Node.js/Jest testing
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = Toolbar;
 	}
