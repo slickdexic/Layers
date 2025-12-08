@@ -428,11 +428,11 @@ class ImageLinkProcessor {
 
 		// Parse JSON if string
 		if ( is_string( $data ) ) {
-			$decoded = json_decode( $data, true );
-			if ( json_last_error() !== JSON_ERROR_NONE ) {
+			try {
+				$data = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+			} catch ( \JsonException $e ) {
 				return null;
 			}
-			$data = $decoded;
 		}
 
 		// Extract layers array

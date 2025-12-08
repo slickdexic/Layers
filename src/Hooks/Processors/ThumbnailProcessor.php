@@ -121,11 +121,15 @@ class ThumbnailProcessor {
 
 		// Check layersjson param (JSON string)
 		if ( isset( $params['layersjson'] ) && is_string( $params['layersjson'] ) ) {
-			$decoded = json_decode( $params['layersjson'], true );
-			if ( is_array( $decoded ) ) {
-				$layerData = isset( $decoded['layers'] ) && is_array( $decoded['layers'] )
-					? $decoded['layers']
-					: $decoded;
+			try {
+				$decoded = json_decode( $params['layersjson'], true, 512, JSON_THROW_ON_ERROR );
+				if ( is_array( $decoded ) ) {
+					$layerData = isset( $decoded['layers'] ) && is_array( $decoded['layers'] )
+						? $decoded['layers']
+						: $decoded;
+				}
+			} catch ( \JsonException $e ) {
+				// Invalid JSON, continue to fallback
 			}
 		}
 

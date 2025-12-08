@@ -181,7 +181,7 @@
 	LayersEditor.prototype.initializeState = function () {
 		if ( this.stateManager && typeof this.stateManager.set === 'function' ) {
 			this.stateManager.set( 'layers', [] );
-			this.stateManager.set( 'selectedLayerId', null );
+			this.stateManager.set( 'selectedLayerIds', [] );
 			this.stateManager.set( 'isDirty', false );
 			this.stateManager.set( 'currentTool', 'pointer' );
 			this.stateManager.set( 'baseWidth', null );
@@ -736,10 +736,12 @@
 	 */
 	LayersEditor.prototype.selectLayer = function ( layerId ) {
 		try {
-			this.stateManager.set( 'selectedLayerId', layerId );
-
+			// Delegate to CanvasManager which manages selection via StateManager
 			if ( this.canvasManager ) {
 				this.canvasManager.selectLayer( layerId );
+			} else if ( this.stateManager ) {
+				// Fallback: set directly in StateManager using plural form
+				this.stateManager.set( 'selectedLayerIds', layerId ? [ layerId ] : [] );
 			}
 			if ( this.layerPanel ) {
 				this.layerPanel.selectLayer( layerId );
@@ -756,10 +758,14 @@
 	 * Delete the selected layer
 	 */
 	LayersEditor.prototype.deleteSelected = function () {
-		const selectedLayerId = this.stateManager.get( 'selectedLayerId' );
-		if ( selectedLayerId ) {
-			this.removeLayer( selectedLayerId );
-			this.stateManager.set( 'selectedLayerId', null );
+		const selectedIds = this.getSelectedLayerIds();
+		if ( selectedIds.length > 0 ) {
+			// Delete all selected layers
+			selectedIds.forEach( id => this.removeLayer( id ) );
+			// Clear selection through CanvasManager (updates StateManager)
+			if ( this.canvasManager ) {
+				this.canvasManager.deselectAll();
+			}
 		}
 	};
 
@@ -767,9 +773,11 @@
 	 * Duplicate the selected layer
 	 */
 	LayersEditor.prototype.duplicateSelected = function () {
-		const selectedLayerId = this.stateManager.get( 'selectedLayerId' );
-		if ( selectedLayerId ) {
-			const layer = this.getLayerById( selectedLayerId );
+		const selectedIds = this.getSelectedLayerIds();
+		if ( selectedIds.length > 0 ) {
+			// Duplicate the first selected layer (primary selection)
+			const layerId = selectedIds[ selectedIds.length - 1 ]; // Last = primary
+			const layer = this.getLayerById( layerId );
 			if ( layer ) {
 				const duplicate = JSON.parse( JSON.stringify( layer ) );
 				duplicate.x = ( duplicate.x || 0 ) + 20;
@@ -788,9 +796,9 @@
 			if ( this.toolbar ) {
 				const canUndo = this.historyManager ? this.historyManager.canUndo() : false;
 				const canRedo = this.historyManager ? this.historyManager.canRedo() : false;
-				const selectedLayerId = this.stateManager.get( 'selectedLayerId' );
+				const hasSelection = this.getSelectedLayerIds().length > 0;
 				this.toolbar.updateUndoRedoState( canUndo, canRedo );
-				this.toolbar.updateDeleteState( !!selectedLayerId );
+				this.toolbar.updateDeleteState( hasSelection );
 			}
 		} catch ( error ) {
 			if ( this.debug ) {
@@ -831,11 +839,17 @@
 	 * @return {string[]} Array of selected layer IDs
 	 */
 	LayersEditor.prototype.getSelectedLayerIds = function () {
-		if ( this.canvasManager && Array.isArray( this.canvasManager.selectedLayerIds ) ) {
-			return this.canvasManager.selectedLayerIds.slice();
+		// Delegate to CanvasManager if available (preferred path)
+		if ( this.canvasManager && typeof this.canvasManager.getSelectedLayerIds === 'function' ) {
+			// Return a copy to prevent accidental mutation
+			return this.canvasManager.getSelectedLayerIds().slice();
 		}
-		const selectedLayerId = this.stateManager.get( 'selectedLayerId' );
-		return selectedLayerId ? [ selectedLayerId ] : [];
+		// Fallback to StateManager directly (uses plural key 'selectedLayerIds')
+		if ( this.stateManager ) {
+			const ids = this.stateManager.get( 'selectedLayerIds' );
+			return ids ? ids.slice() : [];
+		}
+		return [];
 	};
 
 	/**

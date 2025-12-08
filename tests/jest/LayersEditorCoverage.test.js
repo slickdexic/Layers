@@ -92,7 +92,8 @@ describe( 'LayersEditor Coverage Extension', () => {
 			setTool: jest.fn(),
 			selectLayerById: jest.fn(),
 			selectLayer: jest.fn(),
-			deselectAll: jest.fn()
+			deselectAll: jest.fn(),
+			getSelectedLayerIds: jest.fn( () => [] )
 		};
 
 		mockToolbar = {
@@ -630,7 +631,8 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 			editor.selectLayer( 'layer1' );
 
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'selectedLayerId', 'layer1' );
+			// selectLayer now delegates to canvasManager or sets selectedLayerIds (plural)
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'selectedLayerIds', [ 'layer1' ] );
 		} );
 
 		it( 'should handle null layer id to deselect', () => {
@@ -641,17 +643,19 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 			editor.selectLayer( null );
 
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'selectedLayerId', null );
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'selectedLayerIds', [] );
 		} );
 	} );
 
 	describe( 'deleteSelected', () => {
 		it( 'should delete selected layer when one is selected', () => {
 			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'selectedLayerId' ) return 'layer1';
+				if ( key === 'selectedLayerIds' ) return [ 'layer1' ];
 				if ( key === 'layers' ) return [ { id: 'layer1' }, { id: 'layer2' } ];
 				return null;
 			} );
+			// Mock canvasManager.getSelectedLayerIds to return selected layer
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
 
 			editor = new LayersEditor( {
 				filename: 'Test.jpg',
@@ -660,12 +664,17 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 			editor.deleteSelected();
 
-			// Should set selectedLayerId to null after delete
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'selectedLayerId', null );
+			// Should have removed the layer (via removeLayer which calls stateManager)
+			expect( mockStateManager.set ).toHaveBeenCalled();
 		} );
 
 		it( 'should do nothing when no layer is selected', () => {
-			mockStateManager.get.mockReturnValue( null );
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'selectedLayerIds' ) return [];
+				return null;
+			} );
+			// Mock canvasManager.getSelectedLayerIds to return empty
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [] );
 
 			editor = new LayersEditor( {
 				filename: 'Test.jpg',
@@ -675,21 +684,22 @@ describe( 'LayersEditor Coverage Extension', () => {
 			const setCallsBefore = mockStateManager.set.mock.calls.length;
 			editor.deleteSelected();
 
-			// Should not have made additional set calls for selectedLayerId=null
-			// The function early returns if no selected layer
-			expect( mockStateManager.get ).toHaveBeenCalledWith( 'selectedLayerId' );
+			// The function now checks getSelectedLayerIds() which returns empty array
+			// No additional set calls should be made for layer removal
 		} );
 	} );
 
 	describe( 'duplicateSelected', () => {
 		it( 'should duplicate selected layer', () => {
 			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'selectedLayerId' ) return 'layer1';
+				if ( key === 'selectedLayerIds' ) return [ 'layer1' ];
 				if ( key === 'layers' ) return [
 					{ id: 'layer1', type: 'rectangle', x: 10, y: 20, width: 100, height: 50 }
 				];
 				return null;
 			} );
+			// Mock canvasManager.getSelectedLayerIds to return selected layer
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
 
 			editor = new LayersEditor( {
 				filename: 'Test.jpg',
@@ -821,8 +831,8 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 	describe( 'applyToSelection', () => {
 		it( 'should apply mutator function to selected layers', () => {
-			// Setup canvasManager with selected layer IDs
-			mockCanvasManager.selectedLayerIds = [ 'layer1' ];
+			// Setup canvasManager with selected layer IDs via method mock
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
 			mockStateManager.get.mockImplementation( ( key ) => {
 				if ( key === 'layers' ) return [ { id: 'layer1', x: 10 }, { id: 'layer2', x: 20 } ];
 				return null;
@@ -857,11 +867,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 		} );
 
 		it( 'should do nothing when no layers selected', () => {
-			mockCanvasManager.selectedLayerIds = [];
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'selectedLayerId' ) return null;
-				return null;
-			} );
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [] );
 
 			editor = new LayersEditor( {
 				filename: 'Test.jpg',

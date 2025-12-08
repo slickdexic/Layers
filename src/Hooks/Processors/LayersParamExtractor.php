@@ -99,7 +99,7 @@ class LayersParamExtractor {
 		$raw = html_entity_decode( $matches[2], ENT_QUOTES, 'UTF-8' );
 
 		try {
-			$dmw = json_decode( $raw, true );
+			$dmw = json_decode( $raw, true, 512, JSON_THROW_ON_ERROR );
 			if ( !is_array( $dmw ) ) {
 				return null;
 			}
@@ -187,13 +187,17 @@ class LayersParamExtractor {
 	 */
 	public function extractLayersJson( array $handlerParams ): ?array {
 		if ( isset( $handlerParams['layersjson'] ) && is_string( $handlerParams['layersjson'] ) ) {
-			$decoded = json_decode( $handlerParams['layersjson'], true );
-			if ( is_array( $decoded ) ) {
-				// Handle both direct arrays and wrapped {layers: [...]} format
-				if ( isset( $decoded['layers'] ) && is_array( $decoded['layers'] ) ) {
-					return $decoded['layers'];
+			try {
+				$decoded = json_decode( $handlerParams['layersjson'], true, 512, JSON_THROW_ON_ERROR );
+				if ( is_array( $decoded ) ) {
+					// Handle both direct arrays and wrapped {layers: [...]} format
+					if ( isset( $decoded['layers'] ) && is_array( $decoded['layers'] ) ) {
+						return $decoded['layers'];
+					}
+					return $decoded;
 				}
-				return $decoded;
+			} catch ( \JsonException $e ) {
+				// Invalid JSON, continue to fallback
 			}
 		}
 

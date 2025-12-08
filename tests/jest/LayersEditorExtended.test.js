@@ -555,28 +555,35 @@ describe( 'LayersEditor Extended', () => {
 			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
 		} );
 
-		it( 'should return selectedLayerIds from canvasManager', () => {
-			editor.canvasManager = { selectedLayerIds: [ 'layer1', 'layer2' ] };
+		it( 'should delegate to canvasManager.getSelectedLayerIds when available', () => {
+			editor.canvasManager = {
+				getSelectedLayerIds: jest.fn().mockReturnValue( [ 'layer1', 'layer2' ] )
+			};
 			const ids = editor.getSelectedLayerIds();
 			expect( ids ).toEqual( [ 'layer1', 'layer2' ] );
+			expect( editor.canvasManager.getSelectedLayerIds ).toHaveBeenCalled();
 		} );
 
 		it( 'should return copy, not reference', () => {
-			editor.canvasManager = { selectedLayerIds: [ 'layer1' ] };
+			const original = [ 'layer1' ];
+			editor.canvasManager = {
+				getSelectedLayerIds: jest.fn().mockReturnValue( original )
+			};
 			const ids = editor.getSelectedLayerIds();
 			ids.push( 'layer2' );
-			expect( editor.canvasManager.selectedLayerIds ).toEqual( [ 'layer1' ] );
+			// Original array should not be modified (canvasManager returns a copy)
+			expect( original ).toEqual( [ 'layer1' ] );
 		} );
 
-		it( 'should fallback to single selectedLayerId', () => {
+		it( 'should fallback to stateManager selectedLayerIds when canvasManager unavailable', () => {
 			editor.canvasManager = null;
-			editor.stateManager.set( 'selectedLayerId', 'single_layer' );
+			editor.stateManager.set( 'selectedLayerIds', [ 'single_layer' ] );
 			expect( editor.getSelectedLayerIds() ).toEqual( [ 'single_layer' ] );
 		} );
 
 		it( 'should return empty array when no selection', () => {
 			editor.canvasManager = null;
-			editor.stateManager.set( 'selectedLayerId', null );
+			editor.stateManager.set( 'selectedLayerIds', [] );
 			expect( editor.getSelectedLayerIds() ).toEqual( [] );
 		} );
 	} );
@@ -585,7 +592,8 @@ describe( 'LayersEditor Extended', () => {
 		beforeEach( () => {
 			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
 			editor.canvasManager = mockCanvasManager;
-			mockCanvasManager.selectedLayerIds = [];
+			// Setup mock to return empty array by default
+			mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [] );
 		} );
 
 		it( 'should apply mutator to selected layers', () => {
@@ -594,7 +602,7 @@ describe( 'LayersEditor Extended', () => {
 				{ id: 'layer1', type: 'rectangle', x: 10 },
 				{ id: 'layer2', type: 'circle', x: 20 }
 			] );
-			mockCanvasManager.selectedLayerIds = [ 'layer1' ];
+			mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [ 'layer1' ] );
 
 			editor.applyToSelection( ( layer ) => {
 				layer.x = 100;
@@ -610,7 +618,7 @@ describe( 'LayersEditor Extended', () => {
 				{ id: 'layer1', type: 'rectangle', x: 10 },
 				{ id: 'layer2', type: 'circle', x: 20 }
 			] );
-			mockCanvasManager.selectedLayerIds = [ 'layer1' ];
+			mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [ 'layer1' ] );
 
 			editor.applyToSelection( ( layer ) => {
 				layer.x = 100;
@@ -623,7 +631,7 @@ describe( 'LayersEditor Extended', () => {
 
 		it( 'should save state before applying', () => {
 			editor.stateManager.set( 'layers', [ { id: 'layer1', type: 'rectangle', x: 10 } ] );
-			mockCanvasManager.selectedLayerIds = [ 'layer1' ];
+			mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [ 'layer1' ] );
 			const saveStateSpy = jest.spyOn( editor, 'saveState' );
 			editor.applyToSelection( ( layer ) => {
 				layer.x = 100;
@@ -633,7 +641,7 @@ describe( 'LayersEditor Extended', () => {
 
 		it( 'should render after applying', () => {
 			editor.stateManager.set( 'layers', [ { id: 'layer1', type: 'rectangle', x: 10 } ] );
-			mockCanvasManager.selectedLayerIds = [ 'layer1' ];
+			mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [ 'layer1' ] );
 			editor.applyToSelection( ( layer ) => {
 				layer.x = 100;
 			} );
@@ -645,7 +653,7 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		it( 'should do nothing if no layers selected', () => {
-			mockCanvasManager.selectedLayerIds = [];
+			mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [] );
 			const saveStateSpy = jest.spyOn( editor, 'saveState' );
 			editor.applyToSelection( ( layer ) => {
 				layer.x = 100;
@@ -659,6 +667,9 @@ describe( 'LayersEditor Extended', () => {
 			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
 			editor.toolbar = mockToolbar;
 			editor.historyManager = new HistoryManager();
+			editor.canvasManager = mockCanvasManager;
+			// Default to no selection
+			mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [] );
 		} );
 
 		it( 'should update toolbar undo/redo state', () => {
@@ -669,7 +680,7 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		it( 'should update toolbar delete state based on selection', () => {
-			editor.stateManager.set( 'selectedLayerId', 'layer1' );
+			mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [ 'layer1' ] );
 			editor.updateUIState();
 			expect( mockToolbar.updateDeleteState ).toHaveBeenCalledWith( true );
 		} );

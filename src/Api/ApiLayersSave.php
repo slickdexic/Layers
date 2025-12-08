@@ -148,8 +148,10 @@ class ApiLayersSave extends ApiBase {
 			// PARSE: Decode JSON structure from client
 			// Client sends array of layer objects: [{id, type, x, y, ...}, ...]
 			// json_decode with associative=true converts to PHP array
-			$layersData = json_decode( $data, true );
-			if ( $layersData === null ) {
+			// Using JSON_THROW_ON_ERROR for explicit error handling
+			try {
+				$layersData = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+			} catch ( \JsonException $e ) {
 				// JSON parsing failed - invalid syntax, encoding issues, or malformed data
 				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
 			}

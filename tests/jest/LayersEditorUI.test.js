@@ -89,6 +89,8 @@ describe('LayersEditor UI Methods', () => {
             setBaseDimensions: jest.fn(),
             clearLayers: jest.fn(),
             render: jest.fn(),
+            getSelectedLayerIds: jest.fn().mockReturnValue([]),
+            setSelectedLayerIds: jest.fn(),
             events: { destroy: jest.fn() }
         };
 
@@ -1123,8 +1125,8 @@ describe('LayersEditor Layer Operations', () => {
         it('should apply mutator to selected layers', () => {
             const layer1Id = editor.layers[0].id;
             const layer2Id = editor.layers[1].id;
-            // Set selection on canvasManager (the actual source of selected IDs)
-            editor.canvasManager.selectedLayerIds = [layer1Id, layer2Id];
+            // Set selection on canvasManager via method mock
+            editor.canvasManager.getSelectedLayerIds = jest.fn().mockReturnValue([layer1Id, layer2Id]);
 
             editor.applyToSelection((layer) => {
                 layer.fill = '#ff0000';
@@ -1135,7 +1137,7 @@ describe('LayersEditor Layer Operations', () => {
         });
 
         it('should handle empty selection', () => {
-            editor.canvasManager.selectedLayerIds = [];
+            editor.canvasManager.getSelectedLayerIds = jest.fn().mockReturnValue([]);
 
             expect(() => {
                 editor.applyToSelection((layer) => {
@@ -1152,23 +1154,23 @@ describe('LayersEditor Layer Operations', () => {
         });
 
         it('should return empty array when nothing selected', () => {
-            // getSelectedLayerIds uses canvasManager.selectedLayerIds or stateManager.get('selectedLayerId')
-            editor.canvasManager.selectedLayerIds = [];
-            editor.stateManager.set('selectedLayerId', null);
+            // getSelectedLayerIds uses canvasManager.getSelectedLayerIds() or stateManager.get('selectedLayerIds')
+            editor.stateManager.set('selectedLayerIds', []);
             expect(editor.getSelectedLayerIds()).toEqual([]);
         });
 
         it('should return selected layer IDs from canvasManager', () => {
             const layerId = editor.layers[0].id;
-            editor.canvasManager.selectedLayerIds = [layerId];
+            // Set selection via stateManager (which is what canvasManager.getSelectedLayerIds reads from)
+            editor.stateManager.set('selectedLayerIds', [layerId]);
 
             expect(editor.getSelectedLayerIds()).toContain(layerId);
         });
 
-        it('should fallback to single selectedLayerId from stateManager', () => {
+        it('should fallback to stateManager selectedLayerIds when canvasManager unavailable', () => {
             const layerId = editor.layers[0].id;
-            editor.canvasManager.selectedLayerIds = null; // Force fallback
-            editor.stateManager.set('selectedLayerId', layerId);
+            editor.canvasManager = null; // Force fallback to stateManager
+            editor.stateManager.set('selectedLayerIds', [layerId]);
 
             expect(editor.getSelectedLayerIds()).toEqual([layerId]);
         });

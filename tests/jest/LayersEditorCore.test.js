@@ -66,7 +66,25 @@ describe( 'LayersEditor Core', () => {
 			selectLayerById: jest.fn(),
 			selectLayer: jest.fn(),
 			deselectAll: jest.fn(),
-			setBaseDimensions: jest.fn()
+			setBaseDimensions: jest.fn(),
+			getSelectedLayerIds: jest.fn( () => [] )
+		};
+
+		// Store reference for tests to set up mock implementations
+		mockCanvasManager._setupEditor = function ( editor ) {
+			this.editor = editor;
+			// Update mock implementations to use editor
+			this.selectLayer = jest.fn( ( layerId ) => {
+				if ( editor && editor.stateManager ) {
+					editor.stateManager.set( 'selectedLayerIds', layerId ? [ layerId ] : [] );
+				}
+			} );
+			this.getSelectedLayerIds = jest.fn( () => {
+				if ( editor && editor.stateManager ) {
+					return editor.stateManager.get( 'selectedLayerIds' ) || [];
+				}
+				return [];
+			} );
 		};
 		mockToolbar = {
 			destroy: jest.fn(),
@@ -432,14 +450,19 @@ describe( 'LayersEditor Core', () => {
 		beforeEach( () => {
 			editor = new LayersEditor( { filename: 'Test.jpg' } );
 			editor.addLayer( { type: 'rectangle', name: 'layer1' } );
+			// Setup mock canvasManager with editor reference for selection tests
+			if ( editor.canvasManager && editor.canvasManager._setupEditor ) {
+				editor.canvasManager._setupEditor( editor );
+			}
 		} );
 
-		it( 'should update selectedLayerId in state', () => {
+		it( 'should update selectedLayerIds in state', () => {
 			const layerId = editor.layers[ 0 ].id;
 			editor.selectLayer( layerId );
 
-			const selectedId = editor.stateManager.get( 'selectedLayerId' );
-			expect( selectedId ).toBe( layerId );
+			// selectLayer now sets selectedLayerIds (plural array)
+			const selectedIds = editor.stateManager.get( 'selectedLayerIds' );
+			expect( selectedIds ).toContain( layerId );
 		} );
 	} );
 
@@ -485,6 +508,10 @@ describe( 'LayersEditor Core', () => {
 		beforeEach( () => {
 			editor = new LayersEditor( { filename: 'Test.jpg' } );
 			editor.addLayer( { type: 'rectangle' } );
+			// Setup mock canvasManager with editor reference for selection operations
+			if ( editor.canvasManager && editor.canvasManager._setupEditor ) {
+				editor.canvasManager._setupEditor( editor );
+			}
 		} );
 
 		it( 'should delete selected layer', () => {
@@ -508,6 +535,10 @@ describe( 'LayersEditor Core', () => {
 		beforeEach( () => {
 			editor = new LayersEditor( { filename: 'Test.jpg' } );
 			editor.addLayer( { type: 'rectangle', x: 100, y: 100, width: 50, height: 50 } );
+			// Setup mock canvasManager with editor reference for selection operations
+			if ( editor.canvasManager && editor.canvasManager._setupEditor ) {
+				editor.canvasManager._setupEditor( editor );
+			}
 		} );
 
 		it( 'should duplicate selected layer', () => {

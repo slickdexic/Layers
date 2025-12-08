@@ -16,24 +16,61 @@
 	/**
 	 * HistoryManager class
 	 *
-	 * @param {Object} config Configuration object
-	 * @param {CanvasManager} canvasManager Reference to the canvas manager
+	 * @param {Object} config Configuration object or editor/canvasManager reference
+	 * @param {CanvasManager} canvasManager Reference to the canvas manager (optional)
 	 * @class
 	 */
 	function HistoryManager( config, canvasManager ) {
-		// Backward-compat: allow constructor to be called with a single
-		// canvasManager arg. Accept objects that look like a CanvasManager
-		// (canvas or layers present).
-		if (
-			config && !canvasManager &&
-			( config.canvas || config.layers || ( config.editor && config.editor.layers ) )
-		) {
-			canvasManager = config;
-			config = {};
-		}
+		// Normalize arguments - support multiple calling conventions:
+		// 1. new HistoryManager(editor) - editor passed as first arg
+		// 2. new HistoryManager(config, canvasManager) - traditional
+		// 3. new HistoryManager(canvasManager) - canvasManager as first arg
+		// 4. new HistoryManager(objectWithLayers) - object with layers array
 
-		this.config = config || {};
-		this.canvasManager = canvasManager;
+		// Detect if first arg is an editor (has stateManager, toolbar, etc.)
+		const isEditor = config && (
+			config.stateManager ||
+			config.toolbar ||
+			( typeof config.getLayers === 'function' )
+		);
+
+		// Detect if first arg is a canvasManager (has canvas, ctx, editor, etc.)
+		const isCanvasManager = config && !isEditor && (
+			config.canvas ||
+			config.ctx ||
+			( config.editor && config.editor.layers )
+		);
+
+		// Detect if first arg is an object with layers (legacy/test usage)
+		const hasLayers = config && !isEditor && !isCanvasManager &&
+			Array.isArray( config.layers );
+
+		if ( isEditor ) {
+			// Editor passed directly - store reference
+			this.editor = config;
+			this.canvasManager = config.canvasManager || null;
+			this.config = {};
+		} else if ( isCanvasManager ) {
+			// CanvasManager passed as first arg
+			this.canvasManager = config;
+			this.editor = config.editor || null;
+			this.config = {};
+		} else if ( hasLayers ) {
+			// Object with layers (legacy/test pattern) - treat as canvasManager-like
+			this.canvasManager = config;
+			this.editor = config.editor || null;
+			this.config = {};
+		} else if ( canvasManager ) {
+			// Traditional (config, canvasManager) signature
+			this.config = config || {};
+			this.canvasManager = canvasManager;
+			this.editor = canvasManager.editor || null;
+		} else {
+			// Plain config object
+			this.config = config || {};
+			this.canvasManager = null;
+			this.editor = null;
+		}
 
 		// History state
 		this.history = [];
@@ -61,6 +98,47 @@
 		this.batchOperations = this.batchChanges;
 		this.batchStartSnapshot = null;
 	}
+
+	/**
+	 * Get the editor reference (handles both direct and via canvasManager)
+	 * @private
+	 * @return {Object|null} Editor reference
+	 */
+	HistoryManager.prototype.getEditor = function () {
+		if ( this.editor ) {
+			return this.editor;
+		}
+		if ( this.canvasManager && this.canvasManager.editor ) {
+			return this.canvasManager.editor;
+		}
+		// Check if canvasManager has stateManager (meaning it IS the editor)
+		if ( this.canvasManager && this.canvasManager.stateManager ) {
+			return this.canvasManager;
+		}
+		return null;
+	};
+
+	/**
+	 * Get the canvas manager reference
+	 * @private
+	 * @return {Object|null} CanvasManager reference
+	 */
+	HistoryManager.prototype.getCanvasManager = function () {
+		// First, check if editor has canvasManager
+		const editor = this.getEditor();
+		if ( editor && editor.canvasManager ) {
+			return editor.canvasManager;
+		}
+		// Then check direct canvasManager reference
+		if ( this.canvasManager && this.canvasManager.canvas ) {
+			return this.canvasManager;
+		}
+		// Fallback to stored canvasManager (may be a mock or simplified object)
+		if ( this.canvasManager ) {
+			return this.canvasManager;
+		}
+		return null;
+	};
 
 	/**
 	 * Save current state to history
@@ -113,12 +191,7 @@
 	 * @return {Array} Deep copy of layers array
 	 */
 	HistoryManager.prototype.getLayersSnapshot = function () {
-		// Determine the editor reference - canvasManager might be the editor itself
-		const editor = ( this.canvasManager && this.canvasManager.editor ) ?
-			this.canvasManager.editor :
-			( this.canvasManager && this.canvasManager.stateManager ) ?
-				this.canvasManager : null;
-
+		const editor = this.getEditor();
 		const layers = editor ? editor.layers : ( this.canvasManager && this.canvasManager.layers ) || [];
 		return JSON.parse( JSON.stringify( layers ) );
 	};
@@ -184,13 +257,8 @@
 		// Restore layers to either editor.layers or canvasManager.layers
 		const restored = JSON.parse( JSON.stringify( state.layers ) );
 
-		// Determine the editor reference - canvasManager might be the editor itself
-		// or it might have an editor property
-		const editor = ( this.canvasManager && this.canvasManager.editor ) ?
-			this.canvasManager.editor :
-			( this.canvasManager && this.canvasManager.stateManager ) ?
-				this.canvasManager : null;
-		const canvasMgr = editor ? editor.canvasManager : this.canvasManager;
+		const editor = this.getEditor();
+		const canvasMgr = this.getCanvasManager();
 
 		// Restore layers via StateManager
 		if ( editor && editor.stateManager ) {
@@ -237,35 +305,39 @@
 	HistoryManager.prototype.updateUndoRedoButtons = function () {
 		const canUndo = this.canUndo();
 		const canRedo = this.canRedo();
+		const editor = this.getEditor();
 
 		// Update toolbar buttons if available
-		if ( this.canvasManager && this.canvasManager.editor &&
-			this.canvasManager.editor.toolbar ) {
+		if ( editor && editor.toolbar && editor.toolbar.container ) {
 			// Try both old and new selector patterns for compatibility
-			const undoBtn = this.canvasManager.editor.toolbar.container.querySelector( '[data-action="undo"]' ) ||
-				this.canvasManager.editor.toolbar.container.querySelector( '.undo-btn' );
-			const redoBtn = this.canvasManager.editor.toolbar.container.querySelector( '[data-action="redo"]' ) ||
-				this.canvasManager.editor.toolbar.container.querySelector( '.redo-btn' );
+			const undoBtn = editor.toolbar.container.querySelector( '[data-action="undo"]' ) ||
+				editor.toolbar.container.querySelector( '.undo-btn' );
+			const redoBtn = editor.toolbar.container.querySelector( '[data-action="redo"]' ) ||
+				editor.toolbar.container.querySelector( '.redo-btn' );
 
 			if ( undoBtn ) {
 				undoBtn.disabled = !canUndo;
-				undoBtn.title = canUndo ?
+				undoBtn.title = canUndo && this.historyIndex > 0 && this.history[ this.historyIndex - 1 ] ?
 					'Undo: ' + this.history[ this.historyIndex - 1 ].description :
 					'Nothing to undo';
 			}
 
 			if ( redoBtn ) {
 				redoBtn.disabled = !canRedo;
-				redoBtn.title = canRedo ?
+				redoBtn.title = canRedo && this.history[ this.historyIndex + 1 ] ?
 					'Redo: ' + this.history[ this.historyIndex + 1 ].description :
 					'Nothing to redo';
 			}
 		}
 
+		// Also try the toolbar.updateUndoRedoState method if available
+		if ( editor && editor.toolbar && typeof editor.toolbar.updateUndoRedoState === 'function' ) {
+			editor.toolbar.updateUndoRedoState( canUndo, canRedo );
+		}
+
 		// Update status
-		if ( this.canvasManager && this.canvasManager.editor &&
-			typeof this.canvasManager.editor.updateStatus === 'function' ) {
-			this.canvasManager.editor.updateStatus( {
+		if ( editor && typeof editor.updateStatus === 'function' ) {
+			editor.updateStatus( {
 				canUndo: canUndo,
 				canRedo: canRedo,
 				historyPosition: this.historyIndex + 1,
@@ -312,23 +384,25 @@
 	 */
 	HistoryManager.prototype.cancelBatch = function () {
 		// Revert to snapshot from start of batch if available
-		if ( this.batchStartSnapshot && this.canvasManager ) {
+		if ( this.batchStartSnapshot ) {
 			const snapshot = JSON.parse( JSON.stringify( this.batchStartSnapshot ) );
-			if ( this.canvasManager.editor && this.canvasManager.editor.stateManager ) {
-				this.canvasManager.editor.stateManager.set( 'layers', snapshot );
-			} else if ( this.canvasManager.editor ) {
-				this.canvasManager.editor.layers = snapshot;
-			} else {
+			const editor = this.getEditor();
+			const canvasMgr = this.getCanvasManager();
+
+			if ( editor && editor.stateManager ) {
+				editor.stateManager.set( 'layers', snapshot );
+			} else if ( editor ) {
+				editor.layers = snapshot;
+			} else if ( this.canvasManager ) {
 				this.canvasManager.layers = snapshot;
 			}
-			const layers =
-				( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
-				this.canvasManager.layers || [];
-			if ( typeof this.canvasManager.renderLayers === 'function' ) {
-				this.canvasManager.renderLayers( layers );
+
+			const layers = editor ? editor.layers : ( this.canvasManager && this.canvasManager.layers ) || [];
+			if ( canvasMgr && typeof canvasMgr.renderLayers === 'function' ) {
+				canvasMgr.renderLayers( layers );
 			}
-			if ( typeof this.canvasManager.redraw === 'function' ) {
-				this.canvasManager.redraw();
+			if ( canvasMgr && typeof canvasMgr.redraw === 'function' ) {
+				canvasMgr.redraw();
 			}
 		}
 		this.batchMode = false;
@@ -459,11 +533,10 @@
 	 * @return {boolean} True if state has changed
 	 */
 	HistoryManager.prototype.hasUnsavedChanges = function () {
+		const editor = this.getEditor();
+
 		if ( this.history.length === 0 ) {
-			const initialLayers =
-				( this.canvasManager && this.canvasManager.editor &&
-					this.canvasManager.editor.layers ) ||
-				( this.canvasManager && this.canvasManager.layers ) || [];
+			const initialLayers = editor ? editor.layers : ( this.canvasManager && this.canvasManager.layers ) || [];
 			return initialLayers.length > 0;
 		}
 

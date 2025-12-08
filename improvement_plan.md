@@ -1,270 +1,307 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 2025  
-**Status:** IN PROGRESS - P0.2, P0.3, P1.3, P1.4, P1.5 COMPLETE  
+**Last Updated:** December 8, 2025  
+**Status:** RESET - Honest baseline established  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
 
 ## Overview
 
-This document provides a prioritized, actionable improvement plan for the Layers MediaWiki extension. This plan was reset on Dec 7, 2025 to reflect accurately verified metrics.
+This document provides a prioritized, actionable improvement plan for the Layers MediaWiki extension. It was reset on December 8, 2025 to reflect accurately verified metrics after critical review found previous claims did not match measurable reality.
 
-### Progress Summary
+### Key Insight
 
-| Metric | Start | Current | Target |
-|--------|-------|---------|--------|
-| Self-reference anti-pattern | 62 | **0** ✅ | 0 |
-| LayersDebug default | true | **false** ✅ | false |
-| Files modernized | 0 | **25** | 54 |
-| ES6 classes | 16 | **23** ✅ | 23+ |
-| Namespace exports | 0 | **52** ✅ | 54 |
-
-**Files completed (const self = this → arrow functions):** 
-- ImageLoader.js (3 patterns → 0)
-- LayerPanel.js (8 patterns → 0)
-- ToolbarStyleControls.js (8 patterns → 0)
-- CanvasManager.js (7 patterns → 0)
-- LayersValidator.js (5 patterns → 0)
-- ImportExportManager.js (4 patterns → 0)
-- init.js (1 pattern → 0)
-- ConfirmDialog.js (2 patterns → 0)
-- Toolbar.js (3 patterns → 0)
-- ColorPickerDialog.js (3 patterns → 0)
-- LayersViewer.js (2 patterns → 0)
-- ViewerManager.js (2 patterns → 0)
-- ApiFallback.js (3 patterns → 0)
-- UrlParser.js (3 patterns → 0)
-- TransformController.js (1 pattern → 0)
-- LayersEditor.js (2 patterns → 0)
-- LayerSetManager.js (2 patterns → 0)
-- ToolManager.js (1 pattern → 0)
-
-**Files converted to ES6 class syntax (P1.5):**
-- SelectionManager.js (1,033 lines, 40 methods → ES6 class)
-- LayerPanel.js (1,252 lines, 46 methods → ES6 class)
+The codebase has **functional coverage** (2,647 tests) but **structural problems** that make it unmaintainable. The priority is reducing complexity and fixing safety issues, not adding features.
 
 ---
 
-## Verified Baseline Metrics (December 7, 2025)
+## Verified Baseline Metrics (December 8, 2025)
 
-All metrics verified via terminal commands on this date.
+### JavaScript
 
-### JavaScript Codebase
-
-```bash
-# Total files and lines
-find resources -name "*.js" -type f ! -path "*/dist/*" ! -name "*backup*" | wc -l
-# Result: 54 files
-
-find resources -name "*.js" -type f ! -path "*/dist/*" ! -name "*backup*" | xargs cat | wc -c
-# Result: 921,154 bytes (~921KB)
-
-find resources -name "*.js" -type f ! -path "*/dist/*" ! -name "*backup*" -exec wc -l {} + | tail -1
-# Result: 29,554 lines
-
-# God classes (>800 lines)
-find resources -name "*.js" -type f ! -path "*/dist/*" ! -name "*backup*" -exec wc -l {} + | awk '$1 > 800'
-# Result: 9 files
-```
-
-| Metric | Verified Value | Target | Command |
-|--------|----------------|--------|---------|
-| Total JS files | 54 | - | `find ... \| wc -l` |
-| Total JS bytes | 921KB | <400KB | `cat ... \| wc -c` |
-| Total JS lines | 29,554 | - | `wc -l` |
-| Files > 800 lines | 9 | 0 | `awk '$1 > 800'` |
-| Global exports | 69 | 0 | `grep "window\.[A-Z].*="` |
-| Prototype methods | 804 | 0 | `grep "\.prototype\."` |
-| ES6 classes | 16 | 804+ | `grep "class .* {"` |
-| Self-reference anti-pattern | 34 (was 62) | 0 | `grep "const self = this"` |
-
-### God Classes Detail
-
-| File | Lines | Methods | Priority |
-|------|-------|---------|----------|
-| CanvasManager.js | 1,980 | 111 | P0 - CRITICAL |
-| LayerRenderer.js | 1,829 | ~60 | P2 - Shared, acceptable |
-| LayerPanel.js | 1,258 | 93 | P1 |
-| TransformController.js | 1,225 | ~40 | P2 - Recently extracted |
-| LayersEditor.js | 1,212 | ~50 | P1 |
-| SelectionManager.js | 1,026 | ~35 | P1 |
-| ToolManager.js | 1,021 | ~40 | P1 |
-| LayersValidator.js | 951 | ~30 | P2 - Focused purpose |
-| APIManager.js | 909 | ~25 | P2 |
+| Metric | Current | Target | Gap |
+|--------|---------|--------|-----|
+| Total bundle size | 932KB | <400KB | 532KB over |
+| Files >1,000 lines | 9 | 0 | 9 god classes |
+| Files >500 lines | 18 | 5 | 13 need splitting |
+| Global window.X exports | 130 | 0 | 130 to remove |
+| Prototype methods | 646 | 0 | ES6 migration needed |
+| ES6 classes | 4 | 646+ | 0.6% adoption |
+| addEventListener imbalance | 71 | 0 | Memory leak risk |
+| JSON clone anti-pattern | 21 | 0 | Use structuredClone |
 
 ### Tests
 
-```bash
-npm run test:js 2>&1 | grep "Tests:"
-# Result: Tests: 1 skipped, 2647 passed, 2648 total
+| Metric | Current | Target | Gap |
+|--------|---------|--------|-----|
+| Jest tests | 2,647 | - | ✅ Good |
+| Statement coverage | 89.66% | 95% | 5.34% gap |
+| Branch coverage | 75.06% | 90% | 14.94% gap |
+| LayersValidator.js tests | 0 | Dedicated file | 🔴 Critical |
+| LayersDatabaseTest.php | Empty | Full coverage | 🔴 Critical |
+| E2E test files | 2 | 10+ | 🔴 Minimal |
 
-find tests/e2e -name "*.js" | wc -l
-# Result: 3 files
-```
+### PHP
+
+| Metric | Current | Target | Gap |
+|--------|---------|--------|-----|
+| json_decode without error handling | 6 | 0 | 6 to fix |
+| CSP unsafe-eval/unsafe-inline | Yes | Investigate | Security risk |
 
 ---
 
 ## Priority Legend
 
-| Priority | Meaning | Timeline | Criteria |
-|----------|---------|----------|----------|
-| **P0** | Critical blocker | This week | Blocks all other work |
-| **P1** | High impact | 2-4 weeks | Significantly improves maintainability |
-| **P2** | Medium impact | 1-2 months | Important but not blocking |
-| **P3** | Nice to have | 3+ months | Long-term improvement |
+| Priority | Timeline | Definition |
+|----------|----------|------------|
+| **P0** | Immediate | Blocks development or causes runtime issues |
+| **P1** | 2-4 weeks | Significantly impacts maintainability |
+| **P2** | 1-2 months | Important improvements |
+| **P3** | 3+ months | Long-term modernization |
 
 ---
 
 ## Phase 0: Critical Blockers (P0)
 
-### P0.1 Split CanvasManager.js
+### P0.1 Fix Memory Leaks (Event Listeners)
 
-**Status:** ❌ NOT DONE  
-**Priority:** CRITICAL BLOCKER  
+**Status:** ❌ NOT STARTED  
+**Priority:** CRITICAL  
 **Effort:** 1 week  
-**Risk:** HIGH - Many dependencies
+**Risk:** HIGH - Runtime issues in long sessions
 
 **Problem:**
-CanvasManager.js at 1,980 lines with 111 methods is unmaintainable. Any modification carries regression risk.
+The codebase has ~100 `addEventListener` calls but only ~29 `removeEventListener` calls. This 71-event imbalance causes memory leaks in long editor sessions.
 
-**Current State:**
-- 111 prototype methods
-- Handles 15+ concerns
-- Circular dependencies with most modules
+**Solution:**
+1. Audit all files for addEventListener without cleanup
+2. Use existing `EventTracker.js` consistently
+3. Add cleanup in destroy/dispose methods
 
-**Target State:**
-- CanvasManager.js < 500 lines
-- Acts as true facade (delegates, doesn't implement)
-- Each extracted module < 300 lines
-
-**Proposed Extractions:**
-
-| New Module | Responsibility | Est. Lines |
-|------------|---------------|------------|
-| LayerOperations.js | Add, remove, duplicate, reorder layers | ~200 |
-| ViewportManager.js | Viewport calculations, coordinate transforms | ~200 |
-| StyleManager.js | Current style state, style application | ~150 |
-| CanvasInitializer.js | Setup, canvas element creation | ~150 |
+**Files to audit (highest risk):**
+- `ui/PropertiesForm.js` - Form inputs with no cleanup
+- `UIManager.js` - UI listeners without removal
+- `ToolbarStyleControls.js` - Multiple listeners
+- `CanvasManager.js` - Canvas event handlers
 
 **Acceptance Criteria:**
-- [ ] CanvasManager.js < 500 lines (verify: `wc -l CanvasManager.js`)
-- [ ] No new methods, only delegation calls
-- [ ] All 2,647 Jest tests pass
-- [ ] No new ESLint errors
+- [ ] All addEventListener calls have matching removeEventListener
+- [ ] EventTracker used for all long-lived listeners
+- [ ] No memory growth in 1-hour editor session (Chrome DevTools)
+- [ ] All 2,647 tests still pass
 
 ---
 
-### P0.2 Eliminate Duplicate Global Exports
+### P0.2 Add LayersValidator.js Test Coverage
 
-**Status:** ✅ COMPLETE  
-**Priority:** CRITICAL BLOCKER  
+**Status:** ❌ NOT STARTED  
+**Priority:** CRITICAL  
 **Effort:** 3 days  
-**Risk:** MEDIUM - Load order dependencies  
-**Completed:** December 7, 2025
+**Risk:** HIGH - Security-critical code untested
 
 **Problem:**
-69 `window.X =` exports pollute global namespace and block ES module migration.
+LayersValidator.js (953 lines) is the client-side validation layer and has **no dedicated test file**. Validation bugs can lead to security issues or data corruption.
 
-**Solution Applied:**
-- Converted 52 files to use `window.Layers.*` namespace pattern
-- Maintained backward compatibility with `window.X =` aliases
-- Organized into logical sub-namespaces:
-  - `window.Layers.Core` - Editor, managers (StateManager, HistoryManager, etc.)
-  - `window.Layers.Canvas` - Canvas controllers and utilities
-  - `window.Layers.UI` - Toolbar, panels, dialogs
-  - `window.Layers.Utils` - Utilities (GeometryUtils, TextUtils, EventTracker)
-  - `window.Layers.Validation` - Validators
-  - `window.Layers.Viewer` - Viewer components
+**Solution:**
+Create `tests/jest/LayersValidator.test.js` covering:
+- All layer types validation
+- Coordinate bounds checking
+- Text/color sanitization
+- Points array validation
+- Edge cases (null, undefined, extreme values)
 
-**Pattern Applied:**
-```javascript
-// Export to window.Layers namespace (preferred)
-if ( typeof window !== 'undefined' ) {
-    window.Layers = window.Layers || {};
-    window.Layers.Category = window.Layers.Category || {};
-    window.Layers.Category.ClassName = ClassName;
-    
-    // Backward compatibility - direct window export
-    window.ClassName = ClassName;
+**Acceptance Criteria:**
+- [ ] `tests/jest/LayersValidator.test.js` exists with 200+ tests
+- [ ] 95%+ coverage on LayersValidator.js
+- [ ] All validation rules have positive and negative tests
+- [ ] Tests mirror ServerSideLayerValidator coverage
+
+---
+
+### P0.3 Fill LayersDatabaseTest.php
+
+**Status:** ❌ NOT STARTED  
+**Priority:** CRITICAL  
+**Effort:** 2 days  
+**Risk:** MEDIUM - Database operations untested
+
+**Problem:**
+`tests/phpunit/unit/Database/LayersDatabaseTest.php` is **completely empty**. The database layer is critical for data persistence.
+
+**Solution:**
+Add tests for:
+- CRUD operations (create, read, update, delete layer sets)
+- JSON validation and sanitization
+- Named set limits enforcement
+- Revision pruning logic
+- Error handling paths
+
+**Acceptance Criteria:**
+- [ ] LayersDatabaseTest.php has 50+ test methods
+- [ ] All public methods have @covers annotations
+- [ ] Edge cases tested (max limits, invalid data)
+
+---
+
+### P0.4 Fix PHP json_decode Error Handling
+
+**Status:** ✅ COMPLETED (December 8, 2025)  
+**Priority:** HIGH  
+**Effort:** 2 hours  
+**Risk:** LOW
+
+**Problem:**
+6 of 10 `json_decode()` calls don't use `JSON_THROW_ON_ERROR`, causing silent failures.
+
+**Files fixed:**
+1. ✅ `src/Hooks/Processors/ThumbnailProcessor.php:124`
+2. ✅ `src/Hooks/Processors/LayersParamExtractor.php:102`
+3. ✅ `src/Hooks/Processors/LayersParamExtractor.php:190`
+4. ✅ `src/Hooks/Processors/ImageLinkProcessor.php:431`
+5. ✅ `src/Api/ApiLayersSave.php:151`
+
+**Pattern:**
+```php
+// Before (silent failure)
+$data = json_decode( $json, true );
+
+// After (proper error handling)
+try {
+    $data = json_decode( $json, true, 512, JSON_THROW_ON_ERROR );
+} catch ( \JsonException $e ) {
+    // Handle error appropriately
 }
 ```
 
-**Results:**
-- ✅ 52 files converted to namespace pattern
-- ✅ All 2,647 Jest tests still pass
-- ✅ ESLint, Stylelint, Banana all clean
-- ✅ Backward compatibility maintained for existing consumers
+**Acceptance Criteria:**
+- [ ] All json_decode calls use JSON_THROW_ON_ERROR
+- [ ] Appropriate error handling for each case
+- [ ] PHPUnit tests pass
+
+---
+
+## Phase 1: High Priority (P1)
+
+### P1.1 Split CanvasManager.js
+
+**Status:** ❌ NOT STARTED  
+**Priority:** HIGH  
+**Effort:** 1-2 weeks  
+**Risk:** HIGH - Many dependencies
+
+**Problem:**
+CanvasManager.js at 1,974 lines with 100+ methods is unmaintainable. It handles 15+ distinct concerns despite previous controller extractions.
+
+**Current architecture:**
+```
+CanvasManager (1,974 lines)
+├── Still handles: initialization, style, viewport, layer ops, events...
+└── Delegates to controllers: zoom, grid, transform, hit test, drawing...
+```
+
+**Target architecture:**
+```
+CanvasManager (<400 lines) - True facade
+├── LayerOperationsManager - Add, remove, duplicate, reorder
+├── ViewportManager - Coordinate transforms, bounds
+├── StyleStateManager - Current style, style application
+├── CanvasSetupManager - Initialization, canvas creation
+└── [Existing controllers]
+```
+
+**Extraction plan:**
+
+| New Module | Methods to Extract | Est. Lines |
+|------------|-------------------|------------|
+| LayerOperationsManager.js | addLayer, removeLayer, duplicateLayer, reorderLayer, getLayerById, getLayers | ~200 |
+| ViewportManager.js | getCanvasPoint, getViewportBounds, isPointInCanvas | ~150 |
+| StyleStateManager.js | getCurrentStyle, setStyle, applyStyleToLayer | ~150 |
+| CanvasSetupManager.js | init, createCanvas, setupContext | ~100 |
 
 **Acceptance Criteria:**
-- [ ] `grep -c "window\.[A-Z][A-Za-z]* =" resources` returns 0
+- [ ] CanvasManager.js < 400 lines
+- [ ] Only delegation calls, no business logic
+- [ ] Each new module < 300 lines
+- [ ] All 2,647 Jest tests pass
+- [ ] No ESLint errors
+
+---
+
+### P1.2 Eliminate Duplicate Global Exports
+
+**Status:** ❌ NOT STARTED  
+**Priority:** HIGH  
+**Effort:** 3-5 days  
+**Risk:** MEDIUM - Load order dependencies
+
+**Problem:**
+Every file exports to both `window.Layers.*` AND `window.ClassName`. This provides no benefit and maintains 130 global exports.
+
+**Current pattern (every file):**
+```javascript
+window.Layers.Core.CanvasManager = CanvasManager;
+window.CanvasManager = CanvasManager;  // Duplicate!
+```
+
+**Target pattern:**
+```javascript
+window.Layers.Core.CanvasManager = CanvasManager;
+// No direct window.X export
+```
+
+**Migration steps:**
+1. Audit all internal usages of `window.ClassName`
+2. Update to use `window.Layers.Category.ClassName`
+3. Remove direct window exports (keep only for true public API)
+4. Update tests to use namespace
+
+**Acceptance Criteria:**
+- [ ] `grep -c "^window\.[A-Z][A-Za-z]* =" resources` returns <10 (public API only)
 - [ ] All code uses `window.Layers.*` namespace
 - [ ] All tests pass
 - [ ] Extension loads correctly in MediaWiki
 
 ---
 
-### P0.3 Set LayersDebug Default to False
+### P1.3 Split LayerPanel.js
 
-**Status:** ✅ COMPLETE  
+**Status:** ❌ NOT STARTED  
 **Priority:** HIGH  
-**Effort:** 1 hour  
-**Risk:** LOW
+**Effort:** 4-5 days
 
-**Problem:**
-Debug mode is ON by default in production builds.
+**Problem:** 1,464 lines handling UI, state, events, and rendering.
 
-**Change Required:**
-```json
-// extension.json
-"LayersDebug": {
-    "description": "Enable verbose debug logging",
-    "value": false  // Changed from true
-}
-```
-
-**Acceptance Criteria:**
-- [x] `extension.json` has `"value": false` for LayersDebug
-- [x] Wiki logs are not flooded without explicit opt-in
-
----
-
-## Phase 1: High Priority (P1)
-
-### P1.1 Split LayerPanel.js
-
-**Status:** ❌ NOT DONE  
-**Priority:** HIGH  
-**Effort:** 3 days  
-
-**Problem:** 1,258 lines with 93 methods handling UI, state, and events.
-
-**Target:** < 600 lines main file with extracted modules.
-
-**Proposed Extractions:**
+**Extraction plan:**
 
 | New Module | Responsibility |
 |------------|---------------|
-| LayerListRenderer.js | Render layer list DOM |
-| LayerItemInteractions.js | Click, drag, context menu handlers |
-| LayerPropertiesEditor.js | Properties panel rendering |
+| LayerListRenderer.js | DOM creation for layer list |
+| LayerItemEvents.js | Click, drag, context menu handlers |
+| LayerPropertiesPanel.js | Properties panel rendering |
 
 **Acceptance Criteria:**
 - [ ] LayerPanel.js < 600 lines
+- [ ] Each extracted module < 400 lines
 - [ ] All tests pass
-- [ ] Layer panel functionality unchanged
 
 ---
 
-### P1.2 Split SelectionManager.js
+### P1.4 Split SelectionManager.js
 
-**Status:** ❌ NOT DONE  
+**Status:** ❌ NOT STARTED  
 **Priority:** HIGH  
-**Effort:** 2 days  
+**Effort:** 3 days
 
 **Problem:** 1,026 lines mixing selection state with selection UI.
 
-**Target:** < 500 lines with extracted modules.
+**Extraction plan:**
+
+| New Module | Responsibility |
+|------------|---------------|
+| SelectionState.js | Selection data management |
+| SelectionRenderer.js | Handle rendering, bounds display |
+| MultiSelectManager.js | Multi-layer selection logic |
 
 **Acceptance Criteria:**
 - [ ] SelectionManager.js < 500 lines
@@ -273,121 +310,47 @@ Debug mode is ON by default in production builds.
 
 ---
 
-### P1.3 ES6 Class Pilot (5 Files)
+### P1.5 ES6 Class Pilot (10 Files)
 
-**Status:** ✅ COMPLETE (exceeded target)  
+**Status:** ❌ NOT STARTED  
 **Priority:** HIGH  
-**Effort:** 2 days  
+**Effort:** 3-4 days
 
-**Problem:** Only 5 of 804 (0.6%) methods use ES6 classes.
+**Problem:** Only 4 of 50+ files use ES6 classes (0.6% adoption).
 
-**Result:** Converted 6 files to ES6 class syntax, bringing total to 21 ES6 classes.
+**Pilot candidates (mid-size, fewer dependencies):**
+1. TextUtils.js (~100 lines)
+2. IconFactory.js (~200 lines)
+3. ImageLoader.js (~150 lines)
+4. MessageHelper.js (~100 lines)
+5. CanvasUtilities.js (~200 lines)
+6. CanvasEvents.js (~150 lines)
+7. StyleController.js (~200 lines)
+8. LayersConstants.js (convert to module object)
+9. ModuleRegistry.js (~200 lines)
+10. HistoryManager.js (~400 lines)
 
-**Pilot Files Converted:**
-1. ToolbarKeyboard.js (5 methods)
-2. ConfirmDialog.js (6 methods + 2 static)
-3. ClipboardController.js (9 methods)
-4. ZoomPanController.js (16 methods)
-5. HitTestController.js (15 methods)
-
-**Previously Existing ES6 Classes:**
-- MessageHelper.js, EventTracker.js, ImageLoader.js
-- CanvasUtilities.js, AccessibilityAnnouncer.js, and others
-
-**Acceptance Criteria:**
-- [x] 5+ files converted to ES6 class syntax
-- [x] `grep "^[[:space:]]*class " resources | wc -l` returns ≥ 10 (actual: **21**)
-- [x] All tests pass
-- [x] Pattern documented in CONTRIBUTING.md (existing)
-
----
-
-### P1.4 Eliminate `const self = this` Anti-Pattern
-
-**Status:** ✅ COMPLETE  
-**Priority:** MEDIUM  
-**Effort:** 2 days  
-
-**Problem:** 62 occurrences of `const self = this` instead of arrow functions.
-
-**Pattern:**
+**Conversion pattern:**
 ```javascript
 // Before
-CanvasManager.prototype.setup = function() {
-    const self = this;
-    element.addEventListener('click', function() {
-        self.handleClick();
-    });
-};
-
-// After
-CanvasManager.prototype.setup = function() {
-    element.addEventListener('click', () => {
-        this.handleClick();
-    });
-};
-```
-
-**Files Updated (18 total):**
-- ImageLoader.js, LayerPanel.js, ToolbarStyleControls.js, CanvasManager.js
-- LayersValidator.js, ImportExportManager.js, init.js, ConfirmDialog.js
-- Toolbar.js, ColorPickerDialog.js, LayersViewer.js, ViewerManager.js
-- ApiFallback.js, UrlParser.js, TransformController.js, LayersEditor.js
-- LayerSetManager.js, ToolManager.js
-
-**Acceptance Criteria:**
-- [x] `grep "const self = this" resources | wc -l` returns 0
-- [x] All tests pass
-
----
-
-### P1.5 ES6 Class Conversion for Large Files
-
-**Status:** ✅ COMPLETE  
-**Priority:** HIGH  
-**Effort:** 1 day  
-
-**Problem:** Large files still using prototype-based patterns are harder to maintain.
-
-**Approach:** Convert prototype-based files to ES6 class syntax without splitting them (lower risk than file splitting).
-
-**Files Converted:**
-1. SelectionManager.js (1,033 lines, 40 methods → ES6 class)
-2. LayerPanel.js (1,252 lines, 46 methods → ES6 class)
-
-**Pattern Applied:**
-```javascript
-// Before (prototype-based)
-function SelectionManager( editor ) {
+function HistoryManager( editor ) {
     this.editor = editor;
 }
-SelectionManager.prototype.selectLayer = function ( layerId ) {
-    // ...
-};
+HistoryManager.prototype.undo = function () { ... };
 
-// After (ES6 class)
-class SelectionManager {
+// After
+class HistoryManager {
     constructor( editor ) {
         this.editor = editor;
     }
-    selectLayer( layerId ) {
-        // ...
-    }
+    undo() { ... }
 }
 ```
 
-**Benefits:**
-- Cleaner syntax with fewer lines of boilerplate
-- Better IDE support for method navigation
-- Arrow functions used throughout for callbacks
-- Rest parameters (...args) instead of `Array.prototype.slice.call(arguments)`
-- Preparation for future TypeScript migration
-
 **Acceptance Criteria:**
-- [x] SelectionManager.js converted to ES6 class
-- [x] LayerPanel.js converted to ES6 class
-- [x] All 2,647 Jest tests pass
-- [x] No ESLint errors
+- [ ] 10 files converted to ES6 class syntax
+- [ ] All tests pass
+- [ ] Pattern documented for remaining files
 
 ---
 
@@ -397,18 +360,20 @@ class SelectionManager {
 
 **Status:** ❌ NOT STARTED  
 **Priority:** MEDIUM  
-**Effort:** 2 weeks  
+**Effort:** 2-3 weeks  
 
-**Current:** 921KB unminified  
+**Current:** 932KB unminified  
 **Target:** <500KB unminified
 
 **Strategies:**
-1. Remove dead code (identify with coverage reports)
-2. Lazy load dialogs (ColorPicker, Properties, Import/Export)
+1. Lazy load ColorPickerDialog (~600 lines)
+2. Lazy load ImportExportManager (~400 lines)
 3. Separate viewer bundle from editor bundle
+4. Remove dead code (analyze coverage reports)
+5. Replace JSON.parse(JSON.stringify()) with structuredClone
 
 **Acceptance Criteria:**
-- [ ] `cat resources/**/*.js | wc -c` returns <512,000
+- [ ] Bundle < 500KB
 - [ ] Viewer loads without editor code
 - [ ] All functionality preserved
 
@@ -418,49 +383,101 @@ class SelectionManager {
 
 **Status:** ❌ NOT STARTED  
 **Priority:** MEDIUM  
-**Effort:** 1 week  
+**Effort:** 1-2 weeks
 
-**Problem:** E2E tests require live MediaWiki server, cannot run in CI.
+**Problem:** Only 2 E2E test files, require live MediaWiki server.
 
-**Solution:** Mock API layer for E2E tests.
+**Solution:**
+1. Create mock API layer for E2E tests
+2. Add Playwright tests for critical workflows
+3. Enable E2E tests in CI pipeline
+
+**Workflows to test:**
+- Create new layer set
+- Add each layer type (11 types)
+- Save and load layer set
+- Named sets management
+- Revision history navigation
+- Keyboard shortcuts
 
 **Acceptance Criteria:**
-- [ ] E2E tests runnable without MediaWiki server
-- [ ] CI pipeline includes E2E tests
-- [ ] All 11 layer types tested
+- [ ] Mock API enables offline E2E testing
+- [ ] 10+ E2E test files covering critical paths
+- [ ] E2E tests run in CI
 
 ---
 
-### P2.3 PHP Test Coverage
+### P2.3 Replace JSON Clone Pattern
 
 **Status:** ❌ NOT STARTED  
 **Priority:** MEDIUM  
-**Effort:** 1 week  
+**Effort:** 4 hours
 
-**Problem:** Minimal PHP test coverage for critical paths.
+**Problem:** 21 instances of inefficient `JSON.parse(JSON.stringify())` cloning.
 
-**Files Needing Tests:**
-- ApiLayersSave.php
-- ApiLayersInfo.php
-- LayersDatabase.php
-- ServerSideLayerValidator.php
+**Solution:**
+```javascript
+// Create utility
+function deepClone( obj ) {
+    if ( typeof structuredClone === 'function' ) {
+        return structuredClone( obj );
+    }
+    return JSON.parse( JSON.stringify( obj ) );
+}
+```
+
+**Files to update:**
+- StateManager.js (3 instances)
+- SelectionManager.js (2 instances)
+- LayersEditor.js (1 instance)
+- HistoryManager.js (3 instances)
+- CanvasManager.js (2 instances)
+- TransformController.js (5 instances)
+- InteractionController.js (3 instances)
+- ClipboardController.js (2 instances)
 
 **Acceptance Criteria:**
-- [ ] Each API module has unit tests
-- [ ] Validation edge cases tested
-- [ ] Database operations tested with mocks
+- [ ] deepClone utility created
+- [ ] All JSON clone patterns replaced
+- [ ] Tests pass
 
 ---
 
-### P2.4 TransformController.js Decomposition
+### P2.4 Investigate CSP Restrictions
 
 **Status:** ❌ NOT STARTED  
-**Priority:** LOW  
-**Effort:** 3 days  
+**Priority:** MEDIUM  
+**Effort:** 1 week (investigation)
 
-**Problem:** 1,225 lines handling resize, rotation, and drag.
+**Problem:** CSP allows `unsafe-eval` and `unsafe-inline`, weakening XSS protection.
 
-**Target:** Separate resize, rotation, and drag into focused modules.
+**Investigation:**
+1. Identify what requires unsafe-eval (OOUI? MediaWiki core?)
+2. Identify inline script sources
+3. Determine if nonce-based CSP is feasible
+4. Document findings and recommendations
+
+**Acceptance Criteria:**
+- [ ] Document listing all unsafe-eval/unsafe-inline dependencies
+- [ ] Recommendation: tighten or document why not possible
+
+---
+
+### P2.5 Split ToolManager.js
+
+**Status:** ❌ NOT STARTED  
+**Priority:** MEDIUM  
+**Effort:** 3 days
+
+**Problem:** 1,027 lines handling all tool logic.
+
+**Extraction plan:**
+
+| New Module | Responsibility |
+|------------|---------------|
+| ToolRegistry.js | Tool registration, lookup |
+| ToolStateManager.js | Active tool, tool switching |
+| ToolInputHandler.js | Mouse/keyboard input routing |
 
 ---
 
@@ -468,45 +485,59 @@ class SelectionManager {
 
 ### P3.1 Complete ES6 Class Migration
 
-**Target:** All 804 prototype methods converted to ES6 classes.
+**Target:** All 646 prototype methods converted to ES6 classes  
+**Effort:** 3-4 weeks  
+**Prerequisite:** P1.5 pilot successful
 
 ### P3.2 TypeScript Migration
 
-**Target:** Type safety across codebase, starting with new code.
+**Target:** Type safety across codebase  
+**Effort:** 2-3 months  
+**Prerequisites:** ES6 migration complete, globals eliminated
 
 ### P3.3 ES Modules
 
-**Prerequisite:** P0.2 (global exports eliminated)  
-**Target:** Full `import`/`export` syntax, tree-shaking enabled.
+**Target:** Full import/export syntax, tree-shaking  
+**Effort:** 1 month  
+**Prerequisites:** Globals eliminated, ResourceLoader ES module support
+
+### P3.4 Validation Rule Generation
+
+**Target:** Generate client validation from server rules  
+**Effort:** 2 weeks  
+**Benefit:** Eliminates dual maintenance of validation logic
 
 ---
 
 ## Progress Tracking
 
-### Completion Checklist
-
-Use terminal commands to verify completion:
+### Verification Commands
 
 ```bash
-# P0.1 - CanvasManager split
-wc -l resources/ext.layers.editor/CanvasManager.js
-# Must be < 500
+# God classes remaining
+find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} + | awk '$1 > 1000' | wc -l
+# Target: 0
 
-# P0.2 - Global exports eliminated
-grep -c "window\.[A-Z][A-Za-z]* =" resources/**/*.js
-# Must be 0
+# Global exports remaining
+grep -r "^window\.[A-Z][A-Za-z]* =" resources --include="*.js" | wc -l
+# Target: <10
 
-# P1.3 - ES6 classes
-grep -c "^class " resources/**/*.js
-# Must be ≥ 10
+# Prototype methods remaining
+grep -r "\.prototype\." resources --include="*.js" | wc -l
+# Target: 0
 
-# P1.4 - Self-reference eliminated
-grep -c "const self = this" resources/**/*.js
-# Must be 0
+# ES6 classes
+grep -r "^class \|^[[:space:]]*class " resources --include="*.js" | wc -l
+# Target: 50+
 
-# P2.1 - Bundle size
-find resources -name "*.js" ! -path "*/dist/*" -exec cat {} + | wc -c
-# Must be < 512000
+# Bundle size
+find resources -name "*.js" -type f ! -path "*/dist/*" -exec cat {} + | wc -c
+# Target: <512000
+
+# Memory leak risk (addEventListener imbalance)
+echo "Add: $(grep -r "addEventListener" resources --include="*.js" | wc -l)"
+echo "Remove: $(grep -r "removeEventListener" resources --include="*.js" | wc -l)"
+# Target: Add ≈ Remove
 ```
 
 ---
@@ -515,68 +546,74 @@ find resources -name "*.js" ! -path "*/dist/*" -exec cat {} + | wc -c
 
 ```
 Phase 0 (Critical):
-P0.1 Split CanvasManager:         ░░░░░░░░░░░░░░░░░░░░ 0%
-P0.2 Eliminate Global Exports:    ░░░░░░░░░░░░░░░░░░░░ 0%
-P0.3 Debug Default False:         ████████████████████ 100% ✅
+P0.1 Fix Memory Leaks:            ░░░░░░░░░░░░░░░░░░░░ 0%
+P0.2 LayersValidator Tests:       ░░░░░░░░░░░░░░░░░░░░ 0%
+P0.3 LayersDatabaseTest.php:      ░░░░░░░░░░░░░░░░░░░░ 0%
+P0.4 json_decode Error Handling:  ████████████████████ 100% ✅
 
 Phase 1 (High):
-P1.1 Split LayerPanel:            ░░░░░░░░░░░░░░░░░░░░ 0%
-P1.2 Split SelectionManager:      ░░░░░░░░░░░░░░░░░░░░ 0%
-P1.3 ES6 Class Pilot:             ████████████████████ 100% ✅ (21 classes)
-P1.4 Eliminate self = this:       ████████████████████ 100% ✅
-P1.5 ES6 Class Large Files:       ████████████████████ 100% ✅ (2 files, 86 methods)
+P1.1 Split CanvasManager:         ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.2 Eliminate Global Exports:    ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.3 Split LayerPanel:            ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.4 Split SelectionManager:      ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.5 ES6 Class Pilot:             ░░░░░░░░░░░░░░░░░░░░ 0%
 
 Phase 2 (Medium):
 P2.1 Bundle Size Reduction:       ░░░░░░░░░░░░░░░░░░░░ 0%
 P2.2 E2E Test Infrastructure:     ░░░░░░░░░░░░░░░░░░░░ 0%
-P2.3 PHP Test Coverage:           ░░░░░░░░░░░░░░░░░░░░ 0%
-P2.4 TransformController Split:   ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.3 Replace JSON Clone:          ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.4 CSP Investigation:           ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.5 Split ToolManager:           ░░░░░░░░░░░░░░░░░░░░ 0%
 
-File Size Goals:
-CanvasManager:    ████████████████████ 1,980 → target 500
-LayerPanel:       █████████████░░░░░░░ 1,252 (now ES6 class ✅)
-SelectionManager: ██████████░░░░░░░░░░ 1,033 (now ES6 class ✅)
-ToolManager:      ██████████░░░░░░░░░░ 1,021 → target 500
+Phase 3 (Long-term):
+P3.1 Complete ES6 Migration:      ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.2 TypeScript Migration:        ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.3 ES Modules:                  ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.4 Validation Generation:       ░░░░░░░░░░░░░░░░░░░░ 0%
 ```
-
----
-
-## What Has Been Accomplished (Verified)
-
-Despite the reset, some genuine progress exists:
-
-1. **Controller Extractions** - 8 controllers in `canvas/` directory (~4,200 lines)
-   - ZoomPanController, GridRulersController, TransformController, etc.
-   
-2. **Shared LayerRenderer** - `LayerRenderer.js` (1,829 lines) for viewer/editor consistency
-
-3. **Namespace Structure** - `window.Layers.*` namespace established (though not exclusively used)
-
-4. **Accessibility** - ARIA live regions, keyboard navigation added
-
-5. **Editor Module Extractions** - EditorBootstrap, RevisionManager, DialogManager
-
-6. **Test Suite** - 2,647 Jest tests passing
 
 ---
 
 ## Success Metrics
 
 ### Phase 0 Complete When:
-- [ ] CanvasManager.js < 500 lines
-- [ ] Global `window.X =` exports = 0
-- [x] LayersDebug default = false ✅
+- [ ] No memory leaks in 1-hour session
+- [ ] LayersValidator.js has dedicated tests (95%+ coverage)
+- [ ] LayersDatabaseTest.php has 50+ tests
+- [x] All json_decode use JSON_THROW_ON_ERROR ✅ (December 8, 2025)
 
 ### Phase 1 Complete When:
-- [ ] No file > 800 lines (except LayerRenderer)
-- [x] ES6 class count ≥ 10 ✅ (actual: **21**)
-- [x] `const self = this` count = 0 ✅
+- [ ] No file > 600 lines (except LayerRenderer)
+- [ ] Global window.X exports < 10
+- [ ] ES6 classes ≥ 15 files
+- [ ] All tests pass
 
 ### Phase 2 Complete When:
 - [ ] Bundle size < 500KB
-- [ ] E2E tests run in CI
-- [ ] PHP test coverage > 50%
+- [ ] 10+ E2E test files
+- [ ] No JSON.parse(JSON.stringify()) for cloning
+- [ ] CSP documented/improved
+
+### Project "Healthy" When:
+- [ ] No god classes (>1,000 lines)
+- [ ] Bundle < 400KB
+- [ ] 90%+ branch coverage
+- [ ] ES6 classes throughout
+- [ ] TypeScript types for core modules
 
 ---
 
-*Plan reset by GitHub Copilot (Claude Opus 4.5) on December 7, 2025*
+## Estimated Timeline
+
+| Phase | Duration | Dependencies |
+|-------|----------|--------------|
+| Phase 0 | 2 weeks | None |
+| Phase 1 | 4-6 weeks | Phase 0 complete |
+| Phase 2 | 4-6 weeks | Parallel with Phase 1 |
+| Phase 3 | 2-3 months | Phases 1-2 complete |
+
+**Total: 4-5 months for healthy codebase state**
+
+---
+
+*Plan reset by GitHub Copilot (Claude Opus 4.5) on December 8, 2025*

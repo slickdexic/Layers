@@ -275,15 +275,55 @@
 			return;
 		}
 
-		// Copy current transform from main canvas, then add horizontal offset
+		// FIX (2025-12-08): Handle rotation separately from the FAR_OFFSET technique.
+		// The problem: FAR_OFFSET shifts the shape horizontally in transformed space,
+		// but shadowOffset compensation is in screen space. These don't align when rotated.
+		// Solution: Copy transform but EXCLUDE rotation, draw shadow, then composite
+		// with rotation applied during the final drawImage.
+		
+		// Get current transform and extract rotation
+		let currentTransform = null;
+		let hasRotation = false;
+		let rotationAngle = 0;
+		let transformWithoutRotation = null;
+		
 		if ( this.ctx.getTransform ) {
-			const transform = this.ctx.getTransform();
-			tempCtx.setTransform( transform );
+			currentTransform = this.ctx.getTransform();
+			// Check if there's rotation in the transform (a !== 1 or b !== 0 indicates rotation/skew)
+			// For pure rotation: a = cos(θ), b = sin(θ), c = -sin(θ), d = cos(θ)
+			if ( currentTransform.b !== 0 || currentTransform.c !== 0 ) {
+				hasRotation = true;
+				// Extract rotation angle from transform matrix
+				rotationAngle = Math.atan2( currentTransform.b, currentTransform.a );
+				
+				// Create transform without rotation (keep scale and translation only)
+				// We need to extract scale: scaleX = sqrt(a² + b²), scaleY = sqrt(c² + d²)
+				const scaleX = Math.sqrt( currentTransform.a * currentTransform.a + currentTransform.b * currentTransform.b );
+				const scaleY = Math.sqrt( currentTransform.c * currentTransform.c + currentTransform.d * currentTransform.d );
+				
+				// For temp canvas, use identity + translation only (no scale, no rotation)
+				// The shape coordinates in drawExpandedPathFn are already in local (rotated) space
+				// We just need to position correctly
+				transformWithoutRotation = new DOMMatrix( [
+					1, 0, 0, 1,
+					currentTransform.e,
+					currentTransform.f
+				] );
+			}
 		}
-		// Shift drawing position by FAR_OFFSET to the right
+		
+		// Copy transform to temp canvas - either full transform or without rotation
+		if ( hasRotation && transformWithoutRotation ) {
+			// Use transform without rotation for the FAR_OFFSET technique to work
+			tempCtx.setTransform( transformWithoutRotation );
+		} else if ( currentTransform ) {
+			tempCtx.setTransform( currentTransform );
+		}
+		
+		// Shift drawing position by FAR_OFFSET to the right (now in screen-aligned space)
 		tempCtx.translate( FAR_OFFSET, 0 );
 
-		// Set up shadow with adjusted offset to compensate for FAR_OFFSET
+		// Set up shadow - offsets are now in screen space which matches FAR_OFFSET direction
 		tempCtx.shadowColor = sp.color;
 		tempCtx.shadowBlur = blur;
 		tempCtx.shadowOffsetX = sp.offsetX - FAR_OFFSET; // Shadow goes back to correct position
@@ -291,12 +331,24 @@
 		tempCtx.fillStyle = sp.color;
 
 		// Draw the expanded shape (offset by FAR_OFFSET due to translate)
+		// If rotated, we need to apply rotation here for the shape drawing
+		if ( hasRotation ) {
+			tempCtx.save();
+			// Rotate around the shape's center (which is at the translated position)
+			// The drawExpandedPathFn draws relative to current origin
+			tempCtx.rotate( rotationAngle );
+		}
+		
 		const originalCtx = this.ctx;
 		this.ctx = tempCtx;
 		drawExpandedPathFn.call( this );
 		this.ctx = originalCtx;
 
 		tempCtx.fill();
+		
+		if ( hasRotation ) {
+			tempCtx.restore();
+		}
 
 		// Erase the shape - it's far from the shadow so this is safe
 		tempCtx.globalCompositeOperation = 'destination-out';
@@ -305,11 +357,20 @@
 		tempCtx.shadowOffsetX = 0;
 		tempCtx.shadowOffsetY = 0;
 
+		if ( hasRotation ) {
+			tempCtx.save();
+			tempCtx.rotate( rotationAngle );
+		}
+		
 		this.ctx = tempCtx;
 		drawExpandedPathFn.call( this );
 		this.ctx = originalCtx;
 
 		tempCtx.fill();
+		
+		if ( hasRotation ) {
+			tempCtx.restore();
+		}
 
 		// Draw the shadow from temp canvas onto main canvas
 		// IMPORTANT: Clear shadow on main context first to prevent double shadow!
@@ -356,14 +417,35 @@
 			return;
 		}
 
-		// Copy current transform and add horizontal offset
+		// FIX (2025-12-08): Handle rotation separately from the FAR_OFFSET technique.
+		// Same approach as drawSpreadShadow - extract rotation and apply separately.
+		let currentTransform = null;
+		let hasRotation = false;
+		let rotationAngle = 0;
+		let transformWithoutRotation = null;
+		
 		if ( this.ctx.getTransform ) {
-			const transform = this.ctx.getTransform();
-			tempCtx.setTransform( transform );
+			currentTransform = this.ctx.getTransform();
+			if ( currentTransform.b !== 0 || currentTransform.c !== 0 ) {
+				hasRotation = true;
+				rotationAngle = Math.atan2( currentTransform.b, currentTransform.a );
+				transformWithoutRotation = new DOMMatrix( [
+					1, 0, 0, 1,
+					currentTransform.e,
+					currentTransform.f
+				] );
+			}
 		}
+		
+		if ( hasRotation && transformWithoutRotation ) {
+			tempCtx.setTransform( transformWithoutRotation );
+		} else if ( currentTransform ) {
+			tempCtx.setTransform( currentTransform );
+		}
+		
 		tempCtx.translate( FAR_OFFSET, 0 );
 
-		// Draw the stroke with shadow, offset adjusted to compensate
+		// Set up shadow - offsets are now in screen space which matches FAR_OFFSET direction
 		tempCtx.shadowColor = sp.color;
 		tempCtx.shadowBlur = sp.blur;
 		tempCtx.shadowOffsetX = sp.offsetX - FAR_OFFSET;
@@ -373,12 +455,21 @@
 		tempCtx.lineCap = 'round';
 		tempCtx.lineJoin = 'round';
 
+		if ( hasRotation ) {
+			tempCtx.save();
+			tempCtx.rotate( rotationAngle );
+		}
+
 		const originalCtx = this.ctx;
 		this.ctx = tempCtx;
 		drawPathFn.call( this );
 		this.ctx = originalCtx;
 
 		tempCtx.stroke();
+		
+		if ( hasRotation ) {
+			tempCtx.restore();
+		}
 
 		// Erase the stroke itself, leaving only the shadow
 		tempCtx.globalCompositeOperation = 'destination-out';
@@ -387,11 +478,20 @@
 		tempCtx.shadowOffsetX = 0;
 		tempCtx.shadowOffsetY = 0;
 
+		if ( hasRotation ) {
+			tempCtx.save();
+			tempCtx.rotate( rotationAngle );
+		}
+
 		this.ctx = tempCtx;
 		drawPathFn.call( this );
 		this.ctx = originalCtx;
 
 		tempCtx.stroke();
+		
+		if ( hasRotation ) {
+			tempCtx.restore();
+		}
 
 		// Draw the shadow onto main canvas
 		// IMPORTANT: Clear shadow on main context first to prevent double shadow!

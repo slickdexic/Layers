@@ -1725,6 +1725,141 @@
 	// removed as they are now handled by DrawingController.js. The controller
 	// is always loaded before CanvasManager via extension.json module ordering.
 
+	/**
+	 * Create text input modal for text layer creation
+	 * Called by DrawingController when text tool is used
+	 *
+	 * @param {Object} point - Position to show input {x, y}
+	 * @param {Object} style - Current style options
+	 * @return {HTMLElement} The modal container element
+	 */
+	CanvasManager.prototype.createTextInputModal = function ( point, style ) {
+		const self = this;
+
+		// Remove any existing text editor
+		this.hideTextInputModal();
+
+		// Create modal container
+		const modal = document.createElement( 'div' );
+		modal.className = 'layers-text-modal';
+		modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;' +
+			'background:rgba(0,0,0,0.3);z-index:1000002;display:flex;' +
+			'align-items:center;justify-content:center;';
+
+		// Create input container
+		const container = document.createElement( 'div' );
+		container.style.cssText = 'background:white;padding:20px;border-radius:8px;' +
+			'box-shadow:0 4px 20px rgba(0,0,0,0.3);min-width:300px;';
+
+		// Create label
+		const label = document.createElement( 'label' );
+		label.textContent = 'Enter text:';
+		label.style.cssText = 'display:block;margin-bottom:8px;font-weight:bold;';
+
+		// Create text input
+		const input = document.createElement( 'input' );
+		input.type = 'text';
+		input.className = 'text-input';
+		input.style.cssText = 'width:100%;padding:8px;font-size:' +
+			( style.fontSize || 16 ) + 'px;font-family:' +
+			( style.fontFamily || 'Arial' ) + ';border:1px solid #ccc;' +
+			'border-radius:4px;box-sizing:border-box;';
+		input.placeholder = 'Type your text here...';
+
+		// Create button container
+		const buttons = document.createElement( 'div' );
+		buttons.style.cssText = 'margin-top:12px;text-align:right;';
+
+		// Cancel button
+		const cancelBtn = document.createElement( 'button' );
+		cancelBtn.textContent = 'Cancel';
+		cancelBtn.style.cssText = 'padding:8px 16px;margin-right:8px;cursor:pointer;';
+		cancelBtn.addEventListener( 'click', function () {
+			self.hideTextInputModal();
+		} );
+
+		// OK button
+		const okBtn = document.createElement( 'button' );
+		okBtn.textContent = 'OK';
+		okBtn.style.cssText = 'padding:8px 16px;cursor:pointer;background:#4CAF50;' +
+			'color:white;border:none;border-radius:4px;';
+		okBtn.addEventListener( 'click', function () {
+			self.finishTextInput( input, point, style );
+		} );
+
+		// Handle Enter key
+		input.addEventListener( 'keydown', function ( e ) {
+			if ( e.key === 'Enter' ) {
+				e.preventDefault();
+				self.finishTextInput( input, point, style );
+			} else if ( e.key === 'Escape' ) {
+				e.preventDefault();
+				self.hideTextInputModal();
+			}
+		} );
+
+		// Handle click outside to cancel
+		modal.addEventListener( 'click', function ( e ) {
+			if ( e.target === modal ) {
+				self.hideTextInputModal();
+			}
+		} );
+
+		// Assemble the modal
+		buttons.appendChild( cancelBtn );
+		buttons.appendChild( okBtn );
+		container.appendChild( label );
+		container.appendChild( input );
+		container.appendChild( buttons );
+		modal.appendChild( container );
+
+		// Store reference for cleanup
+		this.textInputModal = modal;
+
+		return modal;
+	};
+
+	/**
+	 * Finish text input and create text layer
+	 *
+	 * @param {HTMLInputElement} input - The text input element
+	 * @param {Object} point - Position for the text layer
+	 * @param {Object} style - Style options
+	 */
+	CanvasManager.prototype.finishTextInput = function ( input, point, style ) {
+		const text = input.value.trim();
+		if ( text && this.editor ) {
+			const layer = {
+				type: 'text',
+				x: point.x,
+				y: point.y,
+				text: text,
+				fontSize: style.fontSize || 16,
+				fontFamily: style.fontFamily || 'Arial',
+				color: style.color || '#000000'
+			};
+			this.editor.addLayer( layer );
+
+			// Switch back to pointer tool
+			if ( typeof this.editor.setCurrentTool === 'function' ) {
+				this.editor.setCurrentTool( 'pointer' );
+			}
+
+			this.renderLayers( this.editor.layers );
+		}
+		this.hideTextInputModal();
+	};
+
+	/**
+	 * Hide and remove text input modal
+	 */
+	CanvasManager.prototype.hideTextInputModal = function () {
+		if ( this.textInputModal ) {
+			this.textInputModal.remove();
+			this.textInputModal = null;
+		}
+	};
+
 	CanvasManager.prototype.setTool = function ( tool ) {
 		this.currentTool = tool;
 		this.canvas.style.cursor = this.getToolCursor( tool );
