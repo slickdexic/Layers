@@ -497,8 +497,12 @@
 	 */
 	ToolManager.prototype.updateEllipseTool = function ( point ) {
 		if ( this.tempLayer && this.startPoint ) {
-			this.tempLayer.radiusX = Math.abs( point.x - this.startPoint.x );
-			this.tempLayer.radiusY = Math.abs( point.y - this.startPoint.y );
+			// Ellipse center should be midpoint between start and current point
+			// radiusX/radiusY are half the width/height
+			this.tempLayer.radiusX = Math.abs( point.x - this.startPoint.x ) / 2;
+			this.tempLayer.radiusY = Math.abs( point.y - this.startPoint.y ) / 2;
+			this.tempLayer.x = ( this.startPoint.x + point.x ) / 2;
+			this.tempLayer.y = ( this.startPoint.y + point.y ) / 2;
 			this.renderTempLayer();
 		}
 	};

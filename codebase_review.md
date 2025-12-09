@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Comprehensive Code Review
 
-**Review Date:** December 8, 2025  
+**Review Date:** December 8, 2025 (Revised)  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
 **Review Type:** Critical Architectural and Security Audit  
 **Version:** 0.8.1-dev
@@ -11,22 +11,27 @@
 
 The "Layers" extension provides non-destructive image annotation capabilities for MediaWiki. This review reveals a project with **significant technical debt** that, despite partial cleanup efforts, still suffers from fundamental architectural problems that impede maintainability, modernization, and long-term viability.
 
-### Overall Assessment: 5/10
+### Overall Assessment: 5.5/10
 
 **Strengths:**
 - ✅ Strong server-side security (PHP validation, CSRF, rate limiting)
-- ✅ Comprehensive Jest test suite (2,647 tests, ~90% statement coverage)
+- ✅ Comprehensive Jest test suite (2,647 tests passing, ~90% statement coverage)
 - ✅ Good documentation (architecture docs, copilot-instructions)
 - ✅ Proper logging patterns (uses `mw.log.*` instead of `console.*`)
+- ✅ All `json_decode` calls now use `JSON_THROW_ON_ERROR`
+- ✅ ES6 class adoption improved (23 classes, up from 4)
+- ✅ `const self = this` anti-pattern nearly eliminated (only 1 remaining)
 
 **Critical Weaknesses:**
-- ❌ **God class problem remains unsolved** - CanvasManager.js at 1,974 lines with 100+ methods
-- ❌ **Massive bundle size** - ~932KB of JavaScript for an annotation tool
-- ❌ **130 global `window.X` exports** - severe namespace pollution
-- ❌ **646 prototype methods** vs only 4 ES6 classes (0.6% modernization)
-- ❌ **Memory leak risks** - 71 `addEventListener` calls with only 29 `removeEventListener`
+- ❌ **God class problem remains unsolved** - CanvasManager.js at 2,109 lines with 112+ methods
+- ❌ **Massive bundle size** - ~943KB of JavaScript for an annotation tool
+- ❌ **103 global `window.X` exports** - severe namespace pollution
+- ❌ **671 prototype methods** vs only 23 ES6 classes (3.4% modernization)
+- ❌ **Memory leak risks** - 104 `addEventListener` calls with only 29 `removeEventListener`
 - ❌ **CSP security weakness** - `unsafe-eval` and `unsafe-inline` enabled
-- ❌ **Missing critical tests** - LayersValidator.js (953 lines) has no dedicated test file
+- ❌ **Missing critical tests** - LayersValidator.js (954 lines) has no dedicated test file
+- ❌ **LayersDatabaseTest.php is empty** - 0 lines of database layer tests
+- ❌ **ESLint failing** - 2 unused variable errors in LayerRenderer.js
 
 **For the detailed, prioritized improvement plan, see [`improvement_plan.md`](./improvement_plan.md)**
 
@@ -39,49 +44,68 @@ The "Layers" extension provides non-destructive image annotation capabilities fo
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | Total JS files | 54 | - | - |
-| Total JS lines | 30,017 | - | - |
-| Total JS bytes | **932KB** | <400KB | 🔴 **133% over target** |
-| Files > 500 lines | **18** | 0 | 🔴 Critical |
-| Files > 1,000 lines | **9** | 0 | 🔴 God classes |
-| Global `window.X =` exports | **130** | 0 | 🔴 Namespace pollution |
-| Prototype methods | **646** | 0 | 🔴 Legacy pattern |
-| ES6 `class` declarations | **4** | 646+ | 🔴 **0.6% modernization** |
-| `const self = this` | **0** | 0 | 🟢 Fixed |
+| Total JS lines | 30,339 | - | - |
+| Total JS bytes | **943KB** | <400KB | 🔴 **136% over target** |
+| Files > 500 lines | **23** | 5 | 🔴 Critical |
+| Files > 1,000 lines | **8** | 0 | 🔴 God classes |
+| Global `window.X =` exports | **103** | 0 | 🔴 Namespace pollution |
+| Prototype methods | **671** | 0 | 🔴 Legacy pattern |
+| ES6 `class` declarations | **23** | 671+ | 🟠 **3.4% modernization** |
+| `const self = this` | **1** | 0 | 🟢 Nearly fixed |
 | `console.log/error` in prod | **0** | 0 | 🟢 Clean |
 | `JSON.parse(JSON.stringify())` | **21** | 0 | 🟠 Inefficient cloning |
+| ESLint errors | **2** | 0 | 🔴 Broken build |
 
 ### God Classes (Files > 1,000 Lines)
 
 | File | Lines | Methods | Severity |
 |------|-------|---------|----------|
-| CanvasManager.js | **1,974** | ~100+ | 🔴 CRITICAL |
-| LayerRenderer.js | **1,839** | ~60 | 🟠 Shared engine, tolerable |
+| CanvasManager.js | **2,109** | ~112 | 🔴 CRITICAL |
+| LayerRenderer.js | **1,939** | ~60 | 🟠 Shared engine, tolerable |
 | LayerPanel.js | **1,464** | ~90+ | 🔴 Needs decomposition |
 | TransformController.js | **1,231** | ~40 | 🟠 Recently extracted |
-| LayersEditor.js | **1,217** | ~50 | 🟠 Entry point, complex |
+| LayersEditor.js | **1,231** | ~50 | 🟠 Entry point, complex |
 | ToolManager.js | **1,027** | ~40 | 🔴 Needs decomposition |
 | SelectionManager.js | **1,026** | ~35 | 🔴 Needs decomposition |
-| LayersValidator.js | **953** | ~30 | 🟠 Single purpose, but **NO TESTS** |
-| APIManager.js | **916** | ~25 | 🟠 Could be smaller |
+| LayersValidator.js | **954** | ~30 | 🟠 Single purpose, but **NO TESTS** |
+
+### Large Files (500-1000 Lines) - 15 files
+
+| File | Lines | Notes |
+|------|-------|-------|
+| APIManager.js | 916 | Complex but well-structured |
+| CanvasRenderer.js | 860 | Rendering engine core |
+| Toolbar.js | 788 | UI complexity |
+| PropertiesForm.js | 759 | Form handling |
+| ToolbarStyleControls.js | 692 | Style UI |
+| StateManager.js | 662 | State management |
+| TransformationEngine.js | 642 | Transform logic |
+| DrawingController.js | 627 | Drawing tools |
+| HistoryManager.js | 625 | Undo/redo |
+| UIManager.js | 604 | UI coordination |
+| CanvasEvents.js | 573 | Event handling |
+| ErrorHandler.js | 571 | Error management |
+| LayerSetManager.js | 570 | Layer sets |
+| ColorPickerDialog.js | 563 | Color picker UI |
+| InteractionController.js | 498 | Input handling |
 
 ### Memory Leak Risk Indicators
 
 | Pattern | Add Count | Remove Count | **Imbalance** |
 |---------|-----------|--------------|---------------|
-| addEventListener | 100+ | 29 | **71 potential leaks** |
-| setTimeout/setInterval | 19 | 3 | **16 potential leaks** |
-| requestAnimationFrame | 12 | 4 | 8 potential issues |
+| addEventListener | 104 | 29 | **75 potential leaks** |
+| setTimeout/setInterval | ~20 | ~5 | **~15 potential leaks** |
+| requestAnimationFrame | ~12 | ~4 | ~8 potential issues |
 
-**Issue:** The severe imbalance in event listener management suggests memory leaks, especially in long-running editor sessions.
+**Issue:** The severe imbalance in event listener management suggests memory leaks in long-running editor sessions.
 
 ### PHP Codebase
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total PHP files | 29 | - |
-| Total PHP lines | 8,450 | - |
-| try/catch blocks | 54/56 | 🟢 Good error handling |
-| `JSON_THROW_ON_ERROR` usage | 4 of 10 `json_decode` calls | 🟠 Inconsistent |
+| Total PHP lines | 8,460 | - |
+| `json_decode` with error handling | **10 of 10** | 🟢 All fixed |
 | Direct SQL injection risk | 0 | 🟢 Uses MediaWiki DB abstraction |
 
 ### Test Coverage
@@ -94,18 +118,19 @@ The "Layers" extension provides non-destructive image annotation capabilities fo
 | Function coverage | 85.92% | 🟢 Good |
 | E2E test files | **2** | 🔴 Minimal |
 | PHPUnit test files | 17 | 🟢 Decent |
-| **LayersDatabaseTest.php** | **EMPTY** | 🔴 Critical gap |
+| **LayersDatabaseTest.php** | **EMPTY (0 lines)** | 🔴 Critical gap |
 | **LayersValidator.js dedicated tests** | **NONE** | 🔴 Critical gap |
+| Jest test files | 63 | 🟢 Good |
 
 ---
 
 ## Critical Issues (Must Fix)
 
-### 1. 🔴 God Class: CanvasManager.js (1,974 lines)
+### 1. 🔴 God Class: CanvasManager.js (2,109 lines)
 
 **Severity:** BLOCKER
 
-CanvasManager is a textbook "God Object" anti-pattern with approximately 100+ methods handling 15+ distinct concerns:
+CanvasManager is a textbook "God Object" anti-pattern with **112 prototype methods** handling 15+ distinct concerns:
 
 - Canvas initialization and setup
 - Coordinate transformations
@@ -119,6 +144,8 @@ CanvasManager is a textbook "God Object" anti-pattern with approximately 100+ me
 - Event handling
 - Rendering coordination
 - History integration
+- Text input modal management
+- Marquee selection
 - And more...
 
 **Impact:**
@@ -127,36 +154,55 @@ CanvasManager is a textbook "God Object" anti-pattern with approximately 100+ me
 - Testing is extremely difficult due to tight coupling
 - Cannot be properly typed for TypeScript migration
 
-**Root Cause:** Previous extraction of 8 controllers (4,200 lines) did NOT make CanvasManager a "thin facade" - it still contains massive amounts of implementation logic.
+**Root Cause:** Previous extraction of 8 controllers did NOT make CanvasManager a "thin facade" - it still contains massive amounts of implementation logic (2,109 lines, up from claimed 1,974).
 
 ---
 
-### 2. 🔴 Memory Leak Risk (71 Unmatched Event Listeners)
+### 2. 🔴 ESLint Build Failure
 
 **Severity:** HIGH
 
-Analysis shows ~100 `addEventListener` calls but only ~29 `removeEventListener` calls across the codebase. This is a **71-event imbalance** that likely causes memory leaks in long-running editor sessions.
+The project currently fails ESLint with 2 errors:
+
+```
+LayerRenderer.js
+  301:11  error  'scaleX' is assigned a value but never used  no-unused-vars
+  302:11  error  'scaleY' is assigned a value but never used  no-unused-vars
+```
+
+**Impact:** CI/CD pipelines fail, preventing clean builds and merges.
+
+**Fix:** Either use these variables or remove them.
+
+---
+
+### 3. 🔴 Memory Leak Risk (75 Unmatched Event Listeners)
+
+**Severity:** HIGH
+
+Analysis shows 104 `addEventListener` calls but only 29 `removeEventListener` calls across the codebase. This is a **75-event imbalance** that causes memory leaks in long editor sessions.
 
 **Affected Areas:**
-- PropertiesForm.js - Multiple form inputs with listeners, no cleanup
-- UIManager.js - UI event listeners without removal
-- ToolbarStyleControls.js - Many listeners, unclear cleanup
+- `PropertiesForm.js` - Form inputs with listeners, no cleanup
+- `UIManager.js` - UI event listeners without removal
+- `ToolbarStyleControls.js` - Many listeners, unclear cleanup
+- `CanvasManager.js` - Canvas event handlers
 
 **Note:** `EventTracker.js` exists for proper cleanup, but it is **not consistently used** across all modules.
 
 ---
 
-### 3. 🔴 Global Namespace Pollution (130 Exports)
+### 4. 🔴 Global Namespace Pollution (103 Exports)
 
 **Severity:** BLOCKER for modernization
 
-The codebase exports **130 classes/functions directly to `window.*`**:
+The codebase exports **103 classes/functions directly to `window.*`**:
 
 ```javascript
-// This pattern appears 130 times across the codebase:
+// This pattern appears 103 times across the codebase:
 window.CanvasManager = CanvasManager;
 window.LayersEditor = LayersEditor;
-// ... 128 more
+// ... 101 more
 ```
 
 While `LayersNamespace.js` creates a `window.Layers.*` namespace, **both patterns coexist**. Every file does both:
@@ -169,22 +215,22 @@ window.CanvasManager = CanvasManager;  // Still pollutes global
 **Impact:**
 - **Blocks ES modules** - Cannot use `import`/`export` until resolved
 - **Blocks TypeScript** - Cannot properly type global pollution
-- **Blocks tree-shaking** - All 932KB loads regardless of what's used
+- **Blocks tree-shaking** - All 943KB loads regardless of what's used
 - **Namespace collision risk** - Other extensions may conflict
 
 ---
 
-### 4. 🔴 Legacy Prototype Pattern (646 Methods)
+### 5. 🔴 Legacy Prototype Pattern (671 Methods)
 
 **Severity:** HIGH
 
-The codebase has **646 prototype-based methods** but only **4 ES6 class declarations** (APIManager, EventManager, StateManager, UIManager). This is a **0.6% ES6 adoption rate**.
+The codebase has **671 prototype-based methods** but only **23 ES6 class declarations**. This is a **3.4% ES6 adoption rate**.
 
 ```javascript
-// Current legacy pattern (646 occurrences):
+// Current legacy pattern (671 occurrences):
 CanvasManager.prototype.addLayer = function ( layer ) { ... };
 
-// Modern pattern (only 4 classes):
+// Modern pattern (only 23 classes):
 class APIManager {
     addLayer( layer ) { ... }
 }
@@ -196,16 +242,19 @@ class APIManager {
 - Cannot use private fields, getters/setters, static methods naturally
 - Future TypeScript migration will be painful
 
+**Progress:** ES6 classes increased from 4 to 23, but this is still only 3.4% of the codebase.
+
 ---
 
-### 5. 🔴 CSP Security Weakness
+### 6. 🔴 CSP Security Weakness
 
 **Severity:** MEDIUM-HIGH
 
-The Content Security Policy in Hooks.php (line 66) allows dangerous directives:
+The Content Security Policy in [Hooks.php](src/Hooks.php#L66) allows dangerous directives:
 
 ```php
 $policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
+$policy[] = "style-src 'self' 'unsafe-inline'";
 ```
 
 - `unsafe-eval` allows `eval()` and `Function()` - enables code injection attacks
@@ -215,14 +264,14 @@ $policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
 
 ---
 
-### 6. 🔴 Critical Testing Gaps
+### 7. 🔴 Critical Testing Gaps
 
 **Severity:** HIGH
 
 | Gap | Impact |
 |-----|--------|
-| **LayersValidator.js** (953 lines) has **no dedicated test file** | Validation logic is critical for security; untested code here is high-risk |
-| **LayersDatabaseTest.php** is **empty** | Database operations entirely untested |
+| **LayersValidator.js** (954 lines) has **no dedicated test file** | Validation logic is critical for security; untested code here is high-risk |
+| **LayersDatabaseTest.php** is **completely empty (0 lines)** | Database operations entirely untested |
 | Only **2 E2E test files** | Most user workflows untested end-to-end |
 | Only **75% branch coverage** | 1,497 code branches never executed in tests |
 
@@ -230,9 +279,9 @@ $policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
 
 ## Medium Issues
 
-### 7. 🟠 Excessive Bundle Size (932KB)
+### 8. 🟠 Excessive Bundle Size (943KB)
 
-The JavaScript bundle is **932KB unminified** (~465KB minified). For comparison:
+The JavaScript bundle is **943KB unminified** (~470KB minified). For comparison:
 - Draw.io editor: ~400KB minified
 - Figma web app: Code-split, lazy-loaded
 - Excalidraw: ~280KB minified
@@ -240,12 +289,12 @@ The JavaScript bundle is **932KB unminified** (~465KB minified). For comparison:
 **Causes:**
 - No code splitting (viewer loads editor code)
 - No lazy loading of dialogs
-- 18 files over 500 lines (lots of redundant code)
+- 23 files over 500 lines (lots of redundant code)
 - All globals loaded regardless of usage
 
 ---
 
-### 8. 🟠 Inefficient Deep Cloning
+### 9. 🟠 Inefficient Deep Cloning
 
 **21 instances** of `JSON.parse(JSON.stringify(obj))` for deep cloning:
 
@@ -258,33 +307,13 @@ Should use `structuredClone()` (modern browsers) or a utility function with prop
 
 ---
 
-### 9. 🟠 Inconsistent Error Handling in PHP
-
-6 of 10 `json_decode()` calls **do not use `JSON_THROW_ON_ERROR`**:
-
-```php
-// Safe - errors are thrown
-$data = json_decode( $json, true, 512, JSON_THROW_ON_ERROR );
-
-// Unsafe - errors return null silently
-$data = json_decode( $json, true );  // Found in 6 places
-```
-
-**Affected files:**
-- ThumbnailProcessor.php (line 124)
-- LayersParamExtractor.php (lines 102, 190)
-- ImageLinkProcessor.php (line 431)
-- ApiLayersSave.php (line 151)
-
----
-
 ### 10. 🟠 Dual Validation Systems
 
 The codebase has **two separate validation systems** that must be kept in sync:
 
 | System | File | Lines |
 |--------|------|-------|
-| Client-side | LayersValidator.js | 953 |
+| Client-side | LayersValidator.js | 954 |
 | Server-side | ServerSideLayerValidator.php | 730 |
 
 This creates maintenance burden - any validation rule change must be made in both places. Consider generating client validation from server rules.
@@ -304,6 +333,7 @@ The PHP backend demonstrates excellent security practices:
 - **Text sanitization** (HTML stripped, protocol checks)
 - **Parameterized SQL** (no injection vulnerabilities)
 - **Defense in depth** with multiple validation layers
+- **All json_decode uses JSON_THROW_ON_ERROR** (verified)
 
 ### ✅ Test Coverage (Quality Issues Aside)
 
@@ -311,19 +341,20 @@ The PHP backend demonstrates excellent security practices:
 - 89.66% statement coverage
 - 85.92% function coverage
 - All tests passing
+- 63 test files
 
 ### ✅ Documentation
 
 - `copilot-instructions.md` is comprehensive
 - `docs/ARCHITECTURE.md` explains module structure
 - `docs/ACCESSIBILITY.md` documents WCAG efforts
+- 14 archived analysis documents showing project history
 
 ### ✅ Code Hygiene
 
 - No `console.log` statements in production code
-- `const self = this` anti-pattern eliminated (was 62, now 0)
+- `const self = this` nearly eliminated (only 1 remaining in CanvasManager.js line 1737)
 - All logging uses proper `mw.log.*` (205 calls)
-- ESLint passes with 0 errors
 
 ### ✅ Accessibility Efforts
 
@@ -337,16 +368,17 @@ The PHP backend demonstrates excellent security practices:
 
 | Debt Type | Count | Est. Fix Time |
 |-----------|-------|---------------|
-| God classes (>1,000 lines) | 9 files | 4-6 weeks |
-| Files >500 lines needing split | 18 files | 2-3 weeks |
-| Global window.X elimination | 130 exports | 1 week |
-| Prototype→class migration | 646 methods | 3-4 weeks |
-| Memory leak fixes | ~71 listeners | 1 week |
+| God classes (>1,000 lines) | 8 files | 4-6 weeks |
+| Files >500 lines needing split | 23 files | 3-4 weeks |
+| Global window.X elimination | 103 exports | 1 week |
+| Prototype→class migration | 671 methods | 3-4 weeks |
+| Memory leak fixes | ~75 listeners | 1 week |
 | Missing test coverage | Critical paths | 2 weeks |
-| JSON_THROW_ON_ERROR | 6 files | 2 hours |
+| ESLint errors | 2 | 30 minutes |
 | Efficient deep clone | 21 sites | 4 hours |
+| Last `const self = this` | 1 | 30 minutes |
 
-**Total estimated refactoring: 12-16 weeks**
+**Total estimated refactoring: 14-18 weeks**
 
 ---
 
@@ -354,17 +386,18 @@ The PHP backend demonstrates excellent security practices:
 
 ### P0 - Critical (Block Development)
 
-1. **Split CanvasManager.js** - It must become a true facade <500 lines
-2. **Fix memory leaks** - Use EventTracker consistently everywhere
-3. **Add LayersValidator.js tests** - Critical validation code untested
-4. **Fill LayersDatabaseTest.php** - Database code untested
+1. **Fix ESLint errors** - Broken build is unacceptable
+2. **Split CanvasManager.js** - It must become a true facade <500 lines
+3. **Fix memory leaks** - Use EventTracker consistently everywhere
+4. **Add LayersValidator.js tests** - Critical validation code untested
+5. **Fill LayersDatabaseTest.php** - Database code untested
 
 ### P1 - High (Next 2-4 Weeks)
 
 1. Split LayerPanel.js, SelectionManager.js, ToolManager.js
 2. Eliminate duplicate global exports (use only `window.Layers.*`)
-3. Pilot ES6 class conversion on 10 mid-size files
-4. Fix PHP `json_decode` without error handling
+3. Continue ES6 class conversion (target: 50+ files)
+4. Remove last `const self = this` in CanvasManager.js
 
 ### P2 - Medium (1-2 Months)
 
@@ -386,16 +419,47 @@ The PHP backend demonstrates excellent security practices:
 
 The Layers extension is **functional but architecturally compromised**. The extensive test suite masks underlying structural problems that make the codebase:
 
-1. **Hard to maintain** - 9 god classes, 18 files over 500 lines
-2. **Hard to modernize** - 130 global exports, 646 prototype methods
-3. **Memory-unsafe** - 71 unmatched event listeners
-4. **Oversized** - 932KB for an annotation tool
+1. **Hard to maintain** - 8 god classes, 23 files over 500 lines
+2. **Hard to modernize** - 103 global exports, 671 prototype methods
+3. **Memory-unsafe** - 75 unmatched event listeners
+4. **Oversized** - 943KB for an annotation tool
+5. **Build-broken** - ESLint currently failing
 
-The path forward requires **honest assessment** (this document) and **systematic refactoring** starting with CanvasManager decomposition and memory leak fixes.
+The path forward requires **honest assessment** (this document) and **systematic refactoring** starting with ESLint fixes, CanvasManager decomposition, and memory leak fixes.
 
 **Without addressing the god class and memory leak problems, every new feature will increase technical debt and regression risk.**
 
 See [`improvement_plan.md`](./improvement_plan.md) for the prioritized action plan.
+
+---
+
+## Verification Commands
+
+Run these to verify current metrics:
+
+```bash
+# Bundle size (bytes)
+find resources -name "*.js" -type f ! -path "*/dist/*" -exec cat {} + | wc -c
+
+# God classes (>1000 lines)
+find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} + | awk '$1 > 1000'
+
+# Global exports
+grep -rE "^\s*window\.[A-Z][A-Za-z0-9]+ = " resources --include="*.js" | wc -l
+
+# Prototype methods
+grep -r "\.prototype\." resources --include="*.js" | wc -l
+
+# ES6 classes
+grep -rE "^class |^[[:space:]]*class " resources --include="*.js" | wc -l
+
+# Event listener imbalance
+echo "Add: $(grep -r "addEventListener" resources --include="*.js" | wc -l)"
+echo "Remove: $(grep -r "removeEventListener" resources --include="*.js" | wc -l)"
+
+# Lint check
+npm test
+```
 
 ---
 

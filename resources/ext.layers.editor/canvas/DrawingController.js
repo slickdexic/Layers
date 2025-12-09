@@ -42,6 +42,7 @@
 		// Reset any previous temp layer
 		this.tempLayer = null;
 		this.isDrawing = true;
+		this.startPoint = { x: point.x, y: point.y }; // Store start point for tools that need it
 
 		// Prepare for drawing based on current tool
 		switch ( tool ) {
@@ -404,8 +405,12 @@
 				this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
 				break;
 			case 'ellipse':
-				this.tempLayer.radiusX = Math.abs( point.x - this.tempLayer.x );
-				this.tempLayer.radiusY = Math.abs( point.y - this.tempLayer.y );
+				// Ellipse center should be midpoint between start and current point
+				// radiusX/radiusY are half the width/height
+				this.tempLayer.radiusX = Math.abs( point.x - this.startPoint.x ) / 2;
+				this.tempLayer.radiusY = Math.abs( point.y - this.startPoint.y ) / 2;
+				this.tempLayer.x = ( this.startPoint.x + point.x ) / 2;
+				this.tempLayer.y = ( this.startPoint.y + point.y ) / 2;
 				break;
 			case 'polygon':
 				dx = point.x - this.tempLayer.x;

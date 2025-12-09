@@ -91,6 +91,9 @@
 		this.arrowContainer = this.createArrowStyleControl();
 		styleGroup.appendChild( this.arrowContainer );
 
+		// Notify toolbar of initial style settings to sync with ToolManager
+		this.notifyStyleChange();
+
 		return styleGroup;
 	};
 

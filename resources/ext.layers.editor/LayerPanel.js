@@ -1081,6 +1081,12 @@
 		 * @param {HTMLElement} nameElement Name element to edit
 		 */
 		editLayerName( layerId, nameElement ) {
+			// Prevent adding duplicate listeners
+			if ( nameElement._hasEditListeners ) {
+				return;
+			}
+			nameElement._hasEditListeners = true;
+
 			const originalName = nameElement.textContent;
 			const maxLength = 100;
 			nameElement.addEventListener( 'input', () => {

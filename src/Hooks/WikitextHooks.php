@@ -663,27 +663,76 @@ class WikitextHooks {
 		try {
 			self::log( 'ParserBeforeInternalParse: text length=' . strlen( $text ) );
 
-			// Extract [[File:filename.ext|...layers=value...]] patterns and store setname per file
+			// First, find ALL File: usages to establish the complete render order
+			// This captures [[File:name.ext...]] patterns (with or without layers=)
+			$allFilesPattern = '/\[\[File:([^|\]]+)(?:\|[^\]]*?)?\]\]/i';
+			$allFileMatches = [];
+			if ( preg_match_all( $allFilesPattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE ) ) {
+				foreach ( $matches as $match ) {
+					$filename = trim( $match[1][0] );
+					// Use full match offset ($match[0][1]) not filename offset ($match[1][1])
+					// This ensures consistent offset comparison with layersMap
+					$offset = $match[0][1];
+					$allFileMatches[] = [ 'filename' => $filename, 'offset' => $offset ];
+				}
+			}
+
+			// Sort by offset to maintain document order
+			usort( $allFileMatches, static function ( $a, $b ) {
+				return $a['offset'] - $b['offset'];
+			} );
+
+			// Now extract layers= values with their offsets
 			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layers?\s*=\s*([^|\]]+)/i';
-			if ( preg_match_all( $fileLayersPattern, $text, $allMatches, PREG_SET_ORDER ) ) {
+			// filename => [offset => value, ...]
+			$layersMap = [];
+			if ( preg_match_all( $fileLayersPattern, $text, $allMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE ) ) {
 				foreach ( $allMatches as $match ) {
-					$filename = trim( $match[1] );
-					$layersValue = trim( $match[2] );
+					$filename = trim( $match[1][0] );
+					$offset = $match[0][1];
+					$layersValue = trim( $match[2][0] );
 
-					self::$pageHasLayers = true;
-
-					// Initialize queue for this file if not exists
-					if ( !isset( self::$fileSetNames[$filename] ) ) {
-						self::$fileSetNames[$filename] = [];
+					if ( !isset( $layersMap[$filename] ) ) {
+						$layersMap[$filename] = [];
 					}
+					$layersMap[$filename][$offset] = $layersValue;
+				}
+			}
 
-					// Store the set name in the queue (in order of appearance)
+			// Build queues with correct positions (null for files without layers= at that position)
+			foreach ( $allFileMatches as $fileMatch ) {
+				$filename = $fileMatch['filename'];
+				$offset = $fileMatch['offset'];
+
+				// Initialize queue for this file if not exists
+				if ( !isset( self::$fileSetNames[$filename] ) ) {
+					self::$fileSetNames[$filename] = [];
+				}
+
+				// Check if this occurrence has a layers= value
+				$layersValue = null;
+				if ( isset( $layersMap[$filename] ) ) {
+					// Find the layers value that matches this occurrence's offset exactly
+					// Since both patterns use $match[0][1] (full match offset), they should be identical
+					if ( isset( $layersMap[$filename][$offset] ) ) {
+						$layersValue = $layersMap[$filename][$offset];
+						// Remove this entry so it's not matched again
+						unset( $layersMap[$filename][$offset] );
+					}
+				}
+
+				if ( $layersValue !== null ) {
+					self::$pageHasLayers = true;
 					$normalized = strtolower( $layersValue );
 					$isBoolean = in_array( $normalized, [ 'on', 'off', 'none', 'true', 'false', 'all' ], true );
 					self::$fileSetNames[$filename][] = $isBoolean ? $normalized : $layersValue;
-
 					$queueLen = count( self::$fileSetNames[$filename] );
 					self::log( "Detected layers=$layersValue for $filename (occurrence #$queueLen)" );
+				} else {
+					// Add null placeholder to keep queue aligned with render order
+					self::$fileSetNames[$filename][] = null;
+					$queueLen = count( self::$fileSetNames[$filename] );
+					self::log( "No layers param for $filename (occurrence #$queueLen, placeholder added)" );
 				}
 			}
 

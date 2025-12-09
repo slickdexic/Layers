@@ -296,11 +296,6 @@
 				// Extract rotation angle from transform matrix
 				rotationAngle = Math.atan2( currentTransform.b, currentTransform.a );
 				
-				// Create transform without rotation (keep scale and translation only)
-				// We need to extract scale: scaleX = sqrt(a² + b²), scaleY = sqrt(c² + d²)
-				const scaleX = Math.sqrt( currentTransform.a * currentTransform.a + currentTransform.b * currentTransform.b );
-				const scaleY = Math.sqrt( currentTransform.c * currentTransform.c + currentTransform.d * currentTransform.d );
-				
 				// For temp canvas, use identity + translation only (no scale, no rotation)
 				// The shape coordinates in drawExpandedPathFn are already in local (rotated) space
 				// We just need to position correctly
@@ -868,26 +863,50 @@
 			this.clearShadow();
 		}
 
-		this.ctx.translate( x, y );
-		if ( hasRotation ) {
-			this.ctx.rotate( rotationRad );
-		}
+		// Use native ellipse() if available (doesn't have stroke width scaling issues)
+		if ( this.ctx.ellipse ) {
+			this.ctx.beginPath();
+			this.ctx.ellipse( x, y, radiusX, radiusY, rotationRad, 0, 2 * Math.PI );
 
-		this.ctx.beginPath();
-		this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
-		this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
+			if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
+				this.ctx.fillStyle = layer.fill;
+				this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
+				this.ctx.fill();
+			}
 
-		if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
-			this.ctx.fill();
-		}
+			if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
+				this.ctx.strokeStyle = layer.stroke;
+				this.ctx.lineWidth = strokeW;
+				this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
+				this.ctx.stroke();
+			}
+		} else {
+			// Fallback: use scale transform (requires lineWidth compensation)
+			this.ctx.translate( x, y );
+			if ( hasRotation ) {
+				this.ctx.rotate( rotationRad );
+			}
 
-		if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = strokeW;
-			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
-			this.ctx.stroke();
+			// Calculate average scale to compensate lineWidth
+			const avgRadius = ( radiusX + radiusY ) / 2;
+
+			this.ctx.beginPath();
+			this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
+			this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
+
+			if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
+				this.ctx.fillStyle = layer.fill;
+				this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
+				this.ctx.fill();
+			}
+
+			if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
+				this.ctx.strokeStyle = layer.stroke;
+				// Compensate lineWidth for the scale transform
+				this.ctx.lineWidth = strokeW / Math.max( avgRadius, 0.0001 );
+				this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
+				this.ctx.stroke();
+			}
 		}
 
 		this.ctx.restore();

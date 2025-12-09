@@ -102,7 +102,8 @@
 			color: ( defaults && defaults.COLORS ) ? defaults.COLORS.STROKE : '#000000',
 			strokeWidth: ( defaults && defaults.LAYER ) ? defaults.LAYER.STROKE_WIDTH : 2,
 			fontSize: ( defaults && defaults.LAYER ) ? defaults.LAYER.FONT_SIZE : 16,
-			fontFamily: ( defaults && defaults.LAYER ) ? defaults.LAYER.FONT_FAMILY : 'Arial, sans-serif'
+			fontFamily: ( defaults && defaults.LAYER ) ? defaults.LAYER.FONT_FAMILY : 'Arial, sans-serif',
+			fill: ( defaults && defaults.COLORS ) ? defaults.COLORS.FILL : 'transparent'
 		};
 
 		// Zoom and pan functionality
@@ -259,8 +260,16 @@
 		// Fallback for minimal test environments: attach stripped-down event handlers
 		this.events = {
 			destroy: () => {
-				if ( this.canvas && this.__mousedownHandler ) {
-					try { this.canvas.removeEventListener( 'mousedown', this.__mousedownHandler ); } catch ( err ) {}
+				if ( this.canvas ) {
+					if ( this.__mousedownHandler ) {
+						try { this.canvas.removeEventListener( 'mousedown', this.__mousedownHandler ); } catch ( err ) {}
+					}
+					if ( this.__mousemoveHandler ) {
+						try { this.canvas.removeEventListener( 'mousemove', this.__mousemoveHandler ); } catch ( err ) {}
+					}
+					if ( this.__mouseupHandler ) {
+						try { this.canvas.removeEventListener( 'mouseup', this.__mouseupHandler ); } catch ( err ) {}
+					}
 				}
 				this.__mousedownHandler = null;
 				this.__mousemoveHandler = null;
@@ -1734,8 +1743,6 @@
 	 * @return {HTMLElement} The modal container element
 	 */
 	CanvasManager.prototype.createTextInputModal = function ( point, style ) {
-		const self = this;
-
 		// Remove any existing text editor
 		this.hideTextInputModal();
 
@@ -1774,8 +1781,8 @@
 		const cancelBtn = document.createElement( 'button' );
 		cancelBtn.textContent = 'Cancel';
 		cancelBtn.style.cssText = 'padding:8px 16px;margin-right:8px;cursor:pointer;';
-		cancelBtn.addEventListener( 'click', function () {
-			self.hideTextInputModal();
+		cancelBtn.addEventListener( 'click', () => {
+			this.hideTextInputModal();
 		} );
 
 		// OK button
@@ -1783,25 +1790,25 @@
 		okBtn.textContent = 'OK';
 		okBtn.style.cssText = 'padding:8px 16px;cursor:pointer;background:#4CAF50;' +
 			'color:white;border:none;border-radius:4px;';
-		okBtn.addEventListener( 'click', function () {
-			self.finishTextInput( input, point, style );
+		okBtn.addEventListener( 'click', () => {
+			this.finishTextInput( input, point, style );
 		} );
 
 		// Handle Enter key
-		input.addEventListener( 'keydown', function ( e ) {
+		input.addEventListener( 'keydown', ( e ) => {
 			if ( e.key === 'Enter' ) {
 				e.preventDefault();
-				self.finishTextInput( input, point, style );
+				this.finishTextInput( input, point, style );
 			} else if ( e.key === 'Escape' ) {
 				e.preventDefault();
-				self.hideTextInputModal();
+				this.hideTextInputModal();
 			}
 		} );
 
 		// Handle click outside to cancel
-		modal.addEventListener( 'click', function ( e ) {
+		modal.addEventListener( 'click', ( e ) => {
 			if ( e.target === modal ) {
-				self.hideTextInputModal();
+				this.hideTextInputModal();
 			}
 		} );
 

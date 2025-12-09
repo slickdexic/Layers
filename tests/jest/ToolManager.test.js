@@ -316,9 +316,11 @@ describe( 'ToolManager', () => {
 			toolManager.setTool( 'ellipse' );
 			toolManager.startTool( startPoint );
 			toolManager.updateTool( updatePoint );
-			// Ellipse uses full distance as radii
-			expect( toolManager.tempLayer.radiusX ).toBe( 100 ); // |200 - 100|
-			expect( toolManager.tempLayer.radiusY ).toBe( 50 );  // |150 - 100|
+			// Ellipse uses half distance as radii, with center at midpoint
+			expect( toolManager.tempLayer.radiusX ).toBe( 50 ); // |200 - 100| / 2
+			expect( toolManager.tempLayer.radiusY ).toBe( 25 );  // |150 - 100| / 2
+			expect( toolManager.tempLayer.x ).toBe( 150 ); // midpoint x
+			expect( toolManager.tempLayer.y ).toBe( 125 ); // midpoint y
 		} );
 
 		it( 'should update line endpoint', () => {

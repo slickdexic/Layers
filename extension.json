@@ -153,6 +153,7 @@
 			"remoteExtPath": "Layers/resources/ext.layers.shared",
 			"targets": [ "desktop", "mobile" ],
 			"scripts": [
+				"DeepClone.js",
 				"LayerRenderer.js"
 			]
 		},

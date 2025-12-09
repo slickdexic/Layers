@@ -174,8 +174,13 @@ describe( 'DrawingController', () => {
 			controller.startDrawing( startPoint, 'ellipse', style );
 			controller.continueDrawing( { x: 160, y: 140 } );
 
-			expect( controller.tempLayer.radiusX ).toBe( 60 );
-			expect( controller.tempLayer.radiusY ).toBe( 40 );
+			// Ellipse center should be midpoint, radii are half the drag distance
+			// Start: 100,100 -> End: 160,140
+			// Center: (130, 120), radiusX: 30, radiusY: 20
+			expect( controller.tempLayer.radiusX ).toBe( 30 );
+			expect( controller.tempLayer.radiusY ).toBe( 20 );
+			expect( controller.tempLayer.x ).toBe( 130 );
+			expect( controller.tempLayer.y ).toBe( 120 );
 		} );
 
 		it( 'should update polygon preview', () => {
