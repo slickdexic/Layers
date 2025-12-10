@@ -1133,6 +1133,196 @@ describe( 'LayerRenderer', () => {
 
 			expect( ctx.stroke ).toHaveBeenCalled();
 		} );
+
+		// Tests for bug fixes (December 2025)
+		test( 'drawRectangle renders stroke shadow with spread=0', () => {
+			// Bug fix: stroke shadow was invisible when spread=0
+			renderer.drawRectangle( {
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				fill: '#ffffff',
+				stroke: '#000000',
+				strokeWidth: 3,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 0, // spread=0 was causing stroke shadow to be invisible
+				shadowOffsetX: 4,
+				shadowOffsetY: 4
+			} );
+
+			// Should draw both fill and stroke with shadow
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'drawCircle renders stroke shadow with spread=0', () => {
+			renderer.drawCircle( {
+				x: 100,
+				y: 100,
+				radius: 50,
+				fill: '#ffffff',
+				stroke: '#ff0000',
+				strokeWidth: 5,
+				shadow: true,
+				shadowBlur: 10,
+				shadowSpread: 0,
+				shadowOffsetX: 3,
+				shadowOffsetY: 3
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'drawEllipse renders stroke shadow with spread=0', () => {
+			renderer.drawEllipse( {
+				x: 100,
+				y: 100,
+				radiusX: 60,
+				radiusY: 40,
+				fill: '#ffffff',
+				stroke: '#0000ff',
+				strokeWidth: 4,
+				shadow: true,
+				shadowBlur: 6,
+				shadowSpread: 0,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'drawRectangle with stroke-only shadow (no fill)', () => {
+			renderer.drawRectangle( {
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				fill: 'transparent',
+				stroke: '#000000',
+				strokeWidth: 3,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 0
+			} );
+
+			// Should still draw stroke with shadow even without fill
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'drawRectangle with combined shadow settings', () => {
+			renderer.drawRectangle( {
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				fill: '#ff6600',
+				stroke: '#333333',
+				strokeWidth: 2,
+				shadow: true,
+				shadowColor: 'rgba(0,0,0,0.5)',
+				shadowBlur: 12,
+				shadowSpread: 5,
+				shadowOffsetX: 6,
+				shadowOffsetY: 6
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+	} );
+
+	// ========================================================================
+	// Text Shadow Tests (Bug fix December 2025)
+	// ========================================================================
+
+	describe( 'text shadow rendering', () => {
+		test( 'drawText renders shadow with spread=0', () => {
+			renderer.drawText( {
+				x: 50,
+				y: 50,
+				text: 'Test',
+				fontSize: 24,
+				color: '#000000',
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 0,
+				shadowColor: 'rgba(0,0,0,0.5)'
+			} );
+
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'drawText renders shadow with positive spread', () => {
+			// Bug fix: text shadow spread had no effect
+			renderer.drawText( {
+				x: 50,
+				y: 50,
+				text: 'Shadow Spread Test',
+				fontSize: 32,
+				color: '#ffffff',
+				shadow: true,
+				shadowBlur: 4,
+				shadowSpread: 10, // This should now create a spread effect
+				shadowColor: '#000000',
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			} );
+
+			// Text should be rendered (spread creates multiple shadow layers)
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'drawText handles large shadow spread', () => {
+			renderer.drawText( {
+				x: 100,
+				y: 100,
+				text: 'Large Spread',
+				fontSize: 20,
+				color: '#000000',
+				shadow: true,
+				shadowBlur: 2,
+				shadowSpread: 20,
+				shadowColor: 'rgba(255,0,0,0.6)'
+			} );
+
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'drawText without shadow still renders correctly', () => {
+			renderer.drawText( {
+				x: 50,
+				y: 50,
+				text: 'No Shadow',
+				fontSize: 16,
+				color: '#333333',
+				shadow: false
+			} );
+
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'drawText with shadow disabled explicitly', () => {
+			renderer.drawText( {
+				x: 50,
+				y: 50,
+				text: 'Disabled Shadow',
+				fontSize: 16,
+				color: '#333333',
+				shadow: false,
+				shadowSpread: 10 // Should be ignored when shadow=false
+			} );
+
+			expect( ctx.fillText ).toHaveBeenCalled();
+			// Shadow should not be applied
+			expect( ctx.shadowBlur ).toBe( 0 );
+		} );
 	} );
 
 	// ========================================================================
