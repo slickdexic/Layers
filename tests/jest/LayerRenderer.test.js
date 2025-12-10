@@ -547,6 +547,53 @@ describe( 'LayerRenderer', () => {
 			expect( ctx.translate ).toHaveBeenCalledWith( 50, 0 );
 			expect( ctx.rotate ).toHaveBeenCalledWith( Math.PI / 2 );
 		} );
+
+		test( 'draws line with shadow spread', () => {
+			renderer.drawLine( {
+				x1: 10,
+				y1: 20,
+				x2: 200,
+				y2: 80,
+				stroke: '#ff0000',
+				strokeWidth: 4,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 6
+			} );
+
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws line with shadow spread=0', () => {
+			renderer.drawLine( {
+				x1: 10,
+				y1: 20,
+				x2: 200,
+				y2: 80,
+				stroke: '#ff0000',
+				strokeWidth: 4,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 0
+			} );
+
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws line with opacity', () => {
+			renderer.drawLine( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				stroke: '#0000ff',
+				strokeWidth: 3,
+				opacity: 0.5,
+				strokeOpacity: 0.8
+			} );
+
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
 	} );
 
 	// ========================================================================
@@ -597,6 +644,56 @@ describe( 'LayerRenderer', () => {
 
 			expect( ctx.strokeStyle ).toBe( '#000000' );
 		} );
+
+		test( 'draws path with shadow spread', () => {
+			renderer.drawPath( {
+				points: [
+					{ x: 10, y: 10 },
+					{ x: 50, y: 30 },
+					{ x: 100, y: 20 },
+					{ x: 150, y: 50 }
+				],
+				stroke: '#ff0000',
+				strokeWidth: 4,
+				shadow: true,
+				shadowBlur: 6,
+				shadowSpread: 5
+			} );
+
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws path with shadow spread=0', () => {
+			renderer.drawPath( {
+				points: [
+					{ x: 10, y: 10 },
+					{ x: 50, y: 30 },
+					{ x: 100, y: 20 }
+				],
+				stroke: '#0000ff',
+				strokeWidth: 3,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 0
+			} );
+
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws path with opacity settings', () => {
+			renderer.drawPath( {
+				points: [
+					{ x: 10, y: 10 },
+					{ x: 50, y: 30 }
+				],
+				stroke: '#00ff00',
+				strokeWidth: 2,
+				opacity: 0.7,
+				strokeOpacity: 0.9
+			} );
+
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
 	} );
 
 	// ========================================================================
@@ -604,13 +701,12 @@ describe( 'LayerRenderer', () => {
 	// ========================================================================
 
 	describe( 'drawPolygon', () => {
-		test( 'draws polygon through points', () => {
+		test( 'draws regular polygon with sides and radius', () => {
 			renderer.drawPolygon( {
-				points: [
-					{ x: 50, y: 0 },
-					{ x: 100, y: 100 },
-					{ x: 0, y: 100 }
-				],
+				x: 100,
+				y: 100,
+				sides: 6,
+				radius: 50,
 				fill: '#ff0000'
 			} );
 
@@ -621,31 +717,117 @@ describe( 'LayerRenderer', () => {
 			expect( ctx.fill ).toHaveBeenCalled();
 		} );
 
-		test( 'returns early for insufficient points', () => {
+		test( 'draws triangle (3 sides)', () => {
 			renderer.drawPolygon( {
-				points: [
-					{ x: 50, y: 0 },
-					{ x: 100, y: 100 }
-				]
+				x: 100,
+				y: 100,
+				sides: 3,
+				radius: 50,
+				fill: '#ff0000'
 			} );
 
-			expect( ctx.fill ).not.toHaveBeenCalled();
+			expect( ctx.fill ).toHaveBeenCalled();
 		} );
 
-		test( 'handles stroke and fill', () => {
+		test( 'draws pentagon (5 sides)', () => {
 			renderer.drawPolygon( {
-				points: [
-					{ x: 50, y: 0 },
-					{ x: 100, y: 100 },
-					{ x: 0, y: 100 }
-				],
+				x: 100,
+				y: 100,
+				sides: 5,
+				radius: 50,
+				fill: '#00ff00'
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws polygon with rotation', () => {
+			renderer.drawPolygon( {
+				x: 100,
+				y: 100,
+				sides: 6,
+				radius: 50,
 				fill: '#ff0000',
-				stroke: '#0000ff',
-				strokeWidth: 2
+				rotation: 30
+			} );
+
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws polygon with shadow spread', () => {
+			renderer.drawPolygon( {
+				x: 100,
+				y: 100,
+				sides: 6,
+				radius: 50,
+				fill: '#ff0000',
+				stroke: '#000000',
+				shadow: true,
+				shadowBlur: 5,
+				shadowSpread: 8
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws polygon with shadow spread=0', () => {
+			renderer.drawPolygon( {
+				x: 100,
+				y: 100,
+				sides: 6,
+				radius: 50,
+				fill: '#ff0000',
+				stroke: '#000000',
+				strokeWidth: 3,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 0
 			} );
 
 			expect( ctx.fill ).toHaveBeenCalled();
 			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws polygon with stroke only', () => {
+			renderer.drawPolygon( {
+				x: 100,
+				y: 100,
+				sides: 8,
+				radius: 60,
+				fill: 'transparent',
+				stroke: '#0000ff',
+				strokeWidth: 2
+			} );
+
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'handles stroke and fill with opacity', () => {
+			renderer.drawPolygon( {
+				x: 100,
+				y: 100,
+				sides: 6,
+				radius: 50,
+				fill: '#ff0000',
+				stroke: '#0000ff',
+				strokeWidth: 2,
+				opacity: 0.8,
+				fillOpacity: 0.5,
+				strokeOpacity: 0.7
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'uses default values when not specified', () => {
+			renderer.drawPolygon( {} );
+
+			// Should use defaults: sides=6, radius=50
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
 		} );
 	} );
 
@@ -679,6 +861,117 @@ describe( 'LayerRenderer', () => {
 			} );
 
 			// Should use defaults: outerRadius=50, innerRadius=25, points=5
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws star with different point counts', () => {
+			renderer.drawStar( {
+				x: 100,
+				y: 100,
+				outerRadius: 60,
+				innerRadius: 30,
+				points: 8,
+				fill: '#ff0000'
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws star with rotation', () => {
+			renderer.drawStar( {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				fill: '#ffff00',
+				rotation: 36
+			} );
+
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws star with shadow spread', () => {
+			renderer.drawStar( {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				fill: '#ffff00',
+				stroke: '#000000',
+				shadow: true,
+				shadowBlur: 6,
+				shadowSpread: 5
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws star with shadow spread=0 and stroke', () => {
+			renderer.drawStar( {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				fill: '#ffff00',
+				stroke: '#cc0000',
+				strokeWidth: 2,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 0
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws star with stroke only', () => {
+			renderer.drawStar( {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 6,
+				fill: 'transparent',
+				stroke: '#0000ff',
+				strokeWidth: 3
+			} );
+
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws star with opacity', () => {
+			renderer.drawStar( {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				fill: '#ffff00',
+				stroke: '#000000',
+				opacity: 0.7,
+				fillOpacity: 0.8,
+				strokeOpacity: 0.6
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws 3-pointed star', () => {
+			renderer.drawStar( {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 20,
+				points: 3,
+				fill: '#00ff00'
+			} );
+
 			expect( ctx.fill ).toHaveBeenCalled();
 		} );
 	} );
@@ -928,6 +1221,148 @@ describe( 'LayerRenderer', () => {
 			// Should complete without error
 			expect( ctx.save ).toHaveBeenCalled();
 			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'draws arrow with rotation', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				rotation: 45
+			} );
+
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws arrow with stroke and shadow', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				stroke: '#000000',
+				strokeWidth: 2,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 0
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'draws arrow with shadow spread', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				stroke: '#000000',
+				shadow: true,
+				shadowBlur: 5,
+				shadowSpread: 10
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws arrow with none style (line only)', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				arrowStyle: 'none'
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws arrow with standard head type', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				arrowHeadType: 'standard'
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws arrow with pointed head type', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				arrowHeadType: 'pointed'
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws arrow with custom head scale', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				headScale: 1.5
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws arrow with tail width', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				tailWidth: 10
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws double arrow with chevron head', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				arrowStyle: 'double',
+				arrowHeadType: 'chevron'
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'draws double arrow with standard head', () => {
+			renderer.drawArrow( {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				fill: '#ff0000',
+				arrowStyle: 'double',
+				arrowHeadType: 'standard'
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
 		} );
 	} );
 
