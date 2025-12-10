@@ -193,9 +193,8 @@
 					listener( property, newValue, oldValue );
 				} catch ( err ) {
 					// Log but don't propagate listener errors
-					if ( typeof console !== 'undefined' && console.error ) {
-						// eslint-disable-next-line no-console
-						console.error( '[ToolStyles] Listener error:', err );
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+						mw.log.error( '[ToolStyles] Listener error:', err );
 					}
 				}
 			} );
