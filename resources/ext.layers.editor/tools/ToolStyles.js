@@ -391,6 +391,16 @@
 				layer.fill = this.currentStyle.fill;
 			}
 
+			// Apply position if requested (e.g., for pasting at cursor)
+			if ( opts.includePosition ) {
+				if ( this.currentStyle.x !== undefined ) {
+					layer.x = this.currentStyle.x;
+				}
+				if ( this.currentStyle.y !== undefined ) {
+					layer.y = this.currentStyle.y;
+				}
+			}
+
 			// Apply shadow properties
 			layer.shadow = this.currentStyle.shadow;
 			layer.shadowColor = this.currentStyle.shadowColor;

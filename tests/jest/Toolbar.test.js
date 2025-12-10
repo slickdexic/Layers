@@ -109,7 +109,10 @@ describe( 'Toolbar', function () {
 			undo: jest.fn(),
 			redo: jest.fn(),
 			deleteSelected: jest.fn(),
-			duplicateSelected: jest.fn()
+			duplicateSelected: jest.fn(),
+			showKeyboardShortcutsDialog: jest.fn(),
+			save: jest.fn(),
+			cancel: jest.fn()
 		};
 
 		// Mock LayersValidator with all required methods
@@ -353,6 +356,84 @@ describe( 'Toolbar', function () {
 
 			// Will return key since mw.message returns key when not found
 			expect( result ).toBeTruthy();
+		} );
+
+		it( 'should use layersMessages when available', function () {
+			const oldLayersMessages = window.layersMessages;
+			window.layersMessages = {
+				get: jest.fn().mockReturnValue( 'Message from helper' )
+			};
+
+			const result = toolbar.msg( 'test-key', 'fallback' );
+
+			expect( window.layersMessages.get ).toHaveBeenCalledWith( 'test-key', 'fallback' );
+			expect( result ).toBe( 'Message from helper' );
+
+			window.layersMessages = oldLayersMessages;
+		} );
+
+		it( 'should fall back to mw.message when layersMessages unavailable', function () {
+			const oldLayersMessages = window.layersMessages;
+			delete window.layersMessages;
+
+			mw.message.mockReturnValueOnce( {
+				text: function () {
+					return 'Message from mw';
+				}
+			} );
+
+			const result = toolbar.msg( 'test-key', 'fallback' );
+
+			expect( mw.message ).toHaveBeenCalledWith( 'test-key' );
+			expect( result ).toBe( 'Message from mw' );
+
+			window.layersMessages = oldLayersMessages;
+		} );
+
+		it( 'should return fallback when mw.message returns placeholder', function () {
+			const oldLayersMessages = window.layersMessages;
+			delete window.layersMessages;
+
+			mw.message.mockReturnValueOnce( {
+				text: function () {
+					return '⧼test-key⧽';
+				}
+			} );
+
+			const result = toolbar.msg( 'test-key', 'My Fallback' );
+
+			expect( result ).toBe( 'My Fallback' );
+
+			window.layersMessages = oldLayersMessages;
+		} );
+
+		it( 'should return fallback when mw.message throws', function () {
+			const oldLayersMessages = window.layersMessages;
+			delete window.layersMessages;
+
+			mw.message.mockImplementationOnce( function () {
+				throw new Error( 'Message error' );
+			} );
+
+			const result = toolbar.msg( 'test-key', 'Error Fallback' );
+
+			expect( result ).toBe( 'Error Fallback' );
+
+			window.layersMessages = oldLayersMessages;
+		} );
+
+		it( 'should return empty string when no fallback provided and message unavailable', function () {
+			const oldLayersMessages = window.layersMessages;
+			const oldMw = window.mw;
+			delete window.layersMessages;
+			delete window.mw;
+
+			const result = toolbar.msg( 'test-key' );
+
+			expect( result ).toBe( '' );
+
+			window.layersMessages = oldLayersMessages;
+			window.mw = oldMw;
 		} );
 	} );
 
@@ -739,6 +820,65 @@ describe( 'Toolbar', function () {
 		} );
 	} );
 
+	describe( 'updateColorButtonDisplay fallback path', function () {
+		let button;
+		let savedColorPickerDialog;
+
+		beforeEach( function () {
+			savedColorPickerDialog = window.ColorPickerDialog;
+			delete window.ColorPickerDialog;
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+			button = document.createElement( 'button' );
+		} );
+
+		afterEach( function () {
+			window.ColorPickerDialog = savedColorPickerDialog;
+		} );
+
+		it( 'should use fallback to set background color', function () {
+			toolbar.updateColorButtonDisplay( button, '#ff0000', 'Transparent' );
+
+			expect( button.style.background ).toBe( 'rgb(255, 0, 0)' );
+		} );
+
+		it( 'should use fallback for transparent class', function () {
+			toolbar.updateColorButtonDisplay( button, 'none', 'Transparent' );
+
+			expect( button.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( button.title ).toBe( 'Transparent' );
+		} );
+
+		it( 'should use fallback with empty color string', function () {
+			toolbar.updateColorButtonDisplay( button, '', 'Transparent' );
+
+			expect( button.classList.contains( 'is-transparent' ) ).toBe( true );
+		} );
+
+		it( 'should use fallback aria-label without $1 template', function () {
+			toolbar.updateColorButtonDisplay( button, '#00ff00', 'Transparent', 'Color preview' );
+
+			expect( button.getAttribute( 'aria-label' ) ).toBe( 'Color preview #00ff00' );
+		} );
+
+		it( 'should use fallback aria-label with $1 template', function () {
+			toolbar.updateColorButtonDisplay( button, '#0000ff', 'Transparent', 'Selected: $1' );
+
+			expect( button.getAttribute( 'aria-label' ) ).toBe( 'Selected: #0000ff' );
+		} );
+
+		it( 'should set aria-label without previewTemplate', function () {
+			toolbar.updateColorButtonDisplay( button, '#123456' );
+
+			expect( button.getAttribute( 'aria-label' ) ).toBe( '#123456' );
+		} );
+
+		it( 'should use default Transparent text without transparentLabel', function () {
+			toolbar.updateColorButtonDisplay( button, 'none' );
+
+			expect( button.title ).toBe( 'Transparent' );
+		} );
+	} );
+
 	describe( 'addListener', function () {
 		beforeEach( function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
@@ -981,6 +1121,503 @@ describe( 'Toolbar', function () {
 			expect( typeof Toolbar.prototype.selectTool ).toBe( 'function' );
 			expect( typeof Toolbar.prototype.executeAction ).toBe( 'function' );
 			expect( typeof Toolbar.prototype.destroy ).toBe( 'function' );
+		} );
+	} );
+
+	describe( 'EventTracker fallback paths', function () {
+		let savedEventTracker;
+
+		beforeEach( function () {
+			savedEventTracker = window.EventTracker;
+		} );
+
+		afterEach( function () {
+			window.EventTracker = savedEventTracker;
+		} );
+
+		it( 'should use direct addEventListener when EventTracker unavailable for document', function () {
+			delete window.EventTracker;
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+
+			const addSpy = jest.spyOn( document, 'addEventListener' );
+			const handler = jest.fn();
+
+			// Force eventTracker to null to trigger fallback
+			toolbar.eventTracker = null;
+			toolbar.addDocumentListener( 'keydown', handler );
+
+			expect( addSpy ).toHaveBeenCalledWith( 'keydown', handler, undefined );
+		} );
+
+		it( 'should use direct addEventListener when EventTracker unavailable for element', function () {
+			delete window.EventTracker;
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+
+			const element = document.createElement( 'button' );
+			const addSpy = jest.spyOn( element, 'addEventListener' );
+			const handler = jest.fn();
+
+			// Force eventTracker to null to trigger fallback
+			toolbar.eventTracker = null;
+			toolbar.addListener( element, 'click', handler );
+
+			expect( addSpy ).toHaveBeenCalledWith( 'click', handler, undefined );
+		} );
+	} );
+
+	describe( 'runDialogCleanups error handling', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should call layersErrorHandler on cleanup error when available', function () {
+			const mockErrorHandler = { handleError: jest.fn() };
+			window.layersErrorHandler = mockErrorHandler;
+
+			toolbar.registerDialogCleanup( function () {
+				throw new Error( 'Cleanup failed' );
+			} );
+
+			toolbar.runDialogCleanups();
+
+			expect( mockErrorHandler.handleError ).toHaveBeenCalledWith(
+				expect.any( Error ),
+				'Toolbar.runDialogCleanups',
+				'canvas',
+				{ severity: 'low' }
+			);
+
+			delete window.layersErrorHandler;
+		} );
+
+		it( 'should handle cleanup error when layersErrorHandler not available', function () {
+			delete window.layersErrorHandler;
+
+			toolbar.registerDialogCleanup( function () {
+				throw new Error( 'Cleanup failed' );
+			} );
+
+			// Should not throw
+			expect( function () {
+				toolbar.runDialogCleanups();
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'ToolbarStyleControls fallback', function () {
+		let savedStyleControls;
+
+		beforeEach( function () {
+			savedStyleControls = window.ToolbarStyleControls;
+		} );
+
+		afterEach( function () {
+			window.ToolbarStyleControls = savedStyleControls;
+		} );
+
+		it( 'should create minimal style group when ToolbarStyleControls unavailable', function () {
+			delete window.ToolbarStyleControls;
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+
+			const styleGroup = container.querySelector( '.style-group' );
+			expect( styleGroup ).not.toBeNull();
+			// Contains fallback text (or message key if not translated)
+			expect( styleGroup.textContent.length ).toBeGreaterThan( 0 );
+		} );
+	} );
+
+	describe( 'setupEventHandlers advanced scenarios', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should handle zoom actions via container click on zoom buttons', function () {
+			// Create a zoom button with zoom- prefix action
+			const zoomBtn = document.createElement( 'button' );
+			zoomBtn.dataset.action = 'zoom-in';
+			container.appendChild( zoomBtn );
+
+			// Simulate click via direct container click handler
+			const clickEvent = new MouseEvent( 'click', { bubbles: true } );
+			Object.defineProperty( clickEvent, 'target', { value: zoomBtn } );
+			container.dispatchEvent( clickEvent );
+
+			expect( mockEditor.canvasManager.zoomIn ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle fit-window action via container click', function () {
+			const fitBtn = document.createElement( 'button' );
+			fitBtn.dataset.action = 'fit-window';
+			container.appendChild( fitBtn );
+
+			const clickEvent = new MouseEvent( 'click', { bubbles: true } );
+			Object.defineProperty( clickEvent, 'target', { value: fitBtn } );
+			container.dispatchEvent( clickEvent );
+
+			expect( mockEditor.canvasManager.fitToWindow ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle keyboard navigation on tool buttons with Enter key', function () {
+			const toolBtn = document.createElement( 'button' );
+			toolBtn.className = 'tool-button';
+			toolBtn.dataset.tool = 'rectangle';
+			container.appendChild( toolBtn );
+
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'Enter', bubbles: true } );
+			Object.defineProperty( keyEvent, 'target', { value: toolBtn } );
+			const preventSpy = jest.spyOn( keyEvent, 'preventDefault' );
+			container.dispatchEvent( keyEvent );
+
+			expect( preventSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle keyboard navigation on tool buttons with Space key', function () {
+			const toolBtn = document.createElement( 'button' );
+			toolBtn.className = 'tool-button';
+			toolBtn.dataset.tool = 'circle';
+			container.appendChild( toolBtn );
+
+			const keyEvent = new KeyboardEvent( 'keydown', { key: ' ', bubbles: true } );
+			Object.defineProperty( keyEvent, 'target', { value: toolBtn } );
+			container.dispatchEvent( keyEvent );
+
+			expect( mockEditor.setCurrentTool ).toHaveBeenCalledWith( 'circle', { skipToolbarSync: true } );
+		} );
+
+		it( 'should trigger import input click when import button clicked', function () {
+			toolbar.importInput = document.createElement( 'input' );
+			toolbar.importInput.type = 'file';
+			const clickSpy = jest.spyOn( toolbar.importInput, 'click' );
+
+			toolbar.importButton.click();
+
+			expect( clickSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should call importExportManager.exportToFile on export button click', function () {
+			toolbar.importExportManager = { exportToFile: jest.fn() };
+
+			toolbar.exportButton.click();
+
+			expect( toolbar.importExportManager.exportToFile ).toHaveBeenCalled();
+		} );
+
+		it( 'should not throw when export clicked without importExportManager', function () {
+			toolbar.importExportManager = null;
+
+			expect( function () {
+				toolbar.exportButton.click();
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'import file change handler', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should do nothing when files property is empty', function () {
+			toolbar.importExportManager = { importFromFile: jest.fn() };
+
+			// Create change event - importInput.files will be null/empty by default
+			toolbar.importInput.dispatchEvent( new Event( 'change' ) );
+
+			expect( toolbar.importExportManager.importFromFile ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should call importFromFile when file is selected', function () {
+			const mockFile = new File( [ '[]' ], 'test.json', { type: 'application/json' } );
+			Object.defineProperty( toolbar.importInput, 'files', {
+				value: [ mockFile ],
+				writable: true
+			} );
+			toolbar.importExportManager = {
+				importFromFile: jest.fn().mockResolvedValue()
+			};
+
+			toolbar.importInput.dispatchEvent( new Event( 'change' ) );
+
+			expect( toolbar.importExportManager.importFromFile ).toHaveBeenCalledWith( mockFile );
+		} );
+
+		it( 'should reset input value after successful import', async function () {
+			const mockFile = new File( [ '[]' ], 'test.json', { type: 'application/json' } );
+			Object.defineProperty( toolbar.importInput, 'files', {
+				value: [ mockFile ],
+				writable: true
+			} );
+			toolbar.importExportManager = {
+				importFromFile: jest.fn().mockResolvedValue()
+			};
+
+			toolbar.importInput.dispatchEvent( new Event( 'change' ) );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			// Input value is reset to empty string
+			expect( toolbar.importInput.value ).toBe( '' );
+		} );
+
+		it( 'should reset input value even after failed import', async function () {
+			const mockFile = new File( [ '[]' ], 'test.json', { type: 'application/json' } );
+			Object.defineProperty( toolbar.importInput, 'files', {
+				value: [ mockFile ],
+				writable: true
+			} );
+			toolbar.importExportManager = {
+				importFromFile: jest.fn().mockRejectedValue( new Error( 'Import failed' ) )
+			};
+
+			toolbar.importInput.dispatchEvent( new Event( 'change' ) );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			// Input value is reset to empty string
+			expect( toolbar.importInput.value ).toBe( '' );
+		} );
+
+		it( 'should reset input when importExportManager not available', function () {
+			const mockFile = new File( [ '[]' ], 'test.json', { type: 'application/json' } );
+			Object.defineProperty( toolbar.importInput, 'files', {
+				value: [ mockFile ],
+				writable: true
+			} );
+			toolbar.importExportManager = null;
+
+			toolbar.importInput.dispatchEvent( new Event( 'change' ) );
+
+			// Input value should be reset even without manager
+			expect( toolbar.importInput.value ).toBe( '' );
+		} );
+	} );
+
+	describe( 'executeAction additional cases', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should call editor.showKeyboardShortcutsDialog for show-shortcuts action', function () {
+			toolbar.executeAction( 'show-shortcuts' );
+
+			expect( mockEditor.showKeyboardShortcutsDialog ).toHaveBeenCalled();
+		} );
+
+		it( 'should toggle rulers via canvasManager', function () {
+			const rulersBtn = document.createElement( 'button' );
+			rulersBtn.dataset.action = 'rulers';
+			rulersBtn.setAttribute( 'aria-pressed', 'false' );
+			container.appendChild( rulersBtn );
+
+			toolbar.executeAction( 'rulers' );
+
+			expect( mockEditor.canvasManager.toggleRulers ).toHaveBeenCalled();
+			expect( rulersBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		it( 'should toggle guides via canvasManager', function () {
+			const guidesBtn = document.createElement( 'button' );
+			guidesBtn.dataset.action = 'guides';
+			guidesBtn.setAttribute( 'aria-pressed', 'false' );
+			container.appendChild( guidesBtn );
+
+			toolbar.executeAction( 'guides' );
+
+			expect( mockEditor.canvasManager.toggleGuidesVisibility ).toHaveBeenCalled();
+			expect( guidesBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		it( 'should toggle snap-grid via canvasManager', function () {
+			const snapGridBtn = document.createElement( 'button' );
+			snapGridBtn.dataset.action = 'snap-grid';
+			snapGridBtn.setAttribute( 'aria-pressed', 'false' );
+			container.appendChild( snapGridBtn );
+
+			toolbar.executeAction( 'snap-grid' );
+
+			expect( mockEditor.canvasManager.toggleSnapToGrid ).toHaveBeenCalled();
+			expect( snapGridBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		it( 'should toggle snap-guides via canvasManager', function () {
+			const snapGuidesBtn = document.createElement( 'button' );
+			snapGuidesBtn.dataset.action = 'snap-guides';
+			snapGuidesBtn.setAttribute( 'aria-pressed', 'false' );
+			container.appendChild( snapGuidesBtn );
+
+			toolbar.executeAction( 'snap-guides' );
+
+			expect( mockEditor.canvasManager.toggleSnapToGuides ).toHaveBeenCalled();
+			expect( snapGuidesBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		it( 'should handle rulers action when canvasManager not available', function () {
+			toolbar.editor.canvasManager = null;
+
+			expect( function () {
+				toolbar.executeAction( 'rulers' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle guides action when canvasManager not available', function () {
+			toolbar.editor.canvasManager = null;
+
+			expect( function () {
+				toolbar.executeAction( 'guides' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle snap-grid action when canvasManager not available', function () {
+			toolbar.editor.canvasManager = null;
+
+			expect( function () {
+				toolbar.executeAction( 'snap-grid' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle snap-guides action when canvasManager not available', function () {
+			toolbar.editor.canvasManager = null;
+
+			expect( function () {
+				toolbar.executeAction( 'snap-guides' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateToolOptions', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should call styleControls.updateForTool when available', function () {
+			toolbar.styleControls = { updateForTool: jest.fn(), destroy: jest.fn() };
+
+			toolbar.updateToolOptions( 'text' );
+
+			expect( toolbar.styleControls.updateForTool ).toHaveBeenCalledWith( 'text' );
+		} );
+
+		it( 'should not throw when styleControls not available', function () {
+			toolbar.styleControls = null;
+
+			expect( function () {
+				toolbar.updateToolOptions( 'rectangle' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateStyleOptions', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should get style options and propagate to editor', function () {
+			const mockStyles = { color: '#ff0000', strokeWidth: 3 };
+			toolbar.styleControls = { getStyleOptions: jest.fn().mockReturnValue( mockStyles ), destroy: jest.fn() };
+			const onStyleChangeSpy = jest.spyOn( toolbar, 'onStyleChange' );
+
+			toolbar.updateStyleOptions();
+
+			expect( toolbar.styleControls.getStyleOptions ).toHaveBeenCalled();
+			expect( onStyleChangeSpy ).toHaveBeenCalledWith( mockStyles );
+		} );
+
+		it( 'should not throw when styleControls not available', function () {
+			toolbar.styleControls = null;
+
+			expect( function () {
+				toolbar.updateStyleOptions();
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'handleKeyboardShortcuts deprecated wrapper', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should delegate to keyboardHandler when available', function () {
+			toolbar.keyboardHandler = { handleKeyboardShortcuts: jest.fn() };
+			const mockEvent = new KeyboardEvent( 'keydown', { key: 'z', ctrlKey: true } );
+
+			toolbar.handleKeyboardShortcuts( mockEvent );
+
+			expect( toolbar.keyboardHandler.handleKeyboardShortcuts ).toHaveBeenCalledWith( mockEvent );
+		} );
+
+		it( 'should not throw when keyboardHandler not available', function () {
+			toolbar.keyboardHandler = null;
+
+			expect( function () {
+				toolbar.handleKeyboardShortcuts( new KeyboardEvent( 'keydown' ) );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'createActionButton toggle buttons', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should set aria-pressed for grid toggle action', function () {
+			const button = toolbar.createActionButton( { id: 'grid', icon: '⊞', title: 'Toggle Grid' } );
+
+			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
+		} );
+
+		it( 'should set aria-pressed for rulers toggle action', function () {
+			const button = toolbar.createActionButton( { id: 'rulers', icon: 'R', title: 'Toggle Rulers' } );
+
+			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
+		} );
+
+		it( 'should set aria-pressed for guides toggle action', function () {
+			const button = toolbar.createActionButton( { id: 'guides', icon: 'G', title: 'Toggle Guides' } );
+
+			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
+		} );
+
+		it( 'should set aria-pressed for snap-grid toggle action', function () {
+			const button = toolbar.createActionButton( { id: 'snap-grid', icon: 'SG', title: 'Snap to Grid' } );
+
+			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
+		} );
+
+		it( 'should set aria-pressed for snap-guides toggle action', function () {
+			const button = toolbar.createActionButton( { id: 'snap-guides', icon: 'SH', title: 'Snap to Guides' } );
+
+			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
+		} );
+
+		it( 'should not set aria-pressed for non-toggle actions', function () {
+			const button = toolbar.createActionButton( { id: 'delete', icon: 'X', title: 'Delete' } );
+
+			expect( button.hasAttribute( 'aria-pressed' ) ).toBe( false );
+		} );
+
+		it( 'should include keyboard shortcut in title when provided', function () {
+			const button = toolbar.createActionButton( { id: 'undo', icon: '↶', title: 'Undo', key: 'Ctrl+Z' } );
+
+			expect( button.title ).toBe( 'Undo (Ctrl+Z)' );
+		} );
+
+		it( 'should not add shortcut to title when key not provided', function () {
+			const button = toolbar.createActionButton( { id: 'custom', icon: '★', title: 'Custom Action' } );
+
+			expect( button.title ).toBe( 'Custom Action' );
+		} );
+	} );
+
+	describe( 'createToolButton with validation', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should create tool button with correct attributes', function () {
+			const button = toolbar.createToolButton( { id: 'path', icon: '✎', title: 'Path Tool', key: 'P' } );
+
+			expect( button.classList.contains( 'tool-button' ) ).toBe( true );
+			expect( button.dataset.tool ).toBe( 'path' );
+			expect( button.textContent ).toBe( '✎' );
+			expect( button.title ).toBe( 'Path Tool (P)' );
+			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
 		} );
 	} );
 } );

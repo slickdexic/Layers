@@ -16,9 +16,6 @@
 
 'use strict';
 
-const fs = require( 'fs' );
-const path = require( 'path' );
-
 describe( 'Integration: Save/Load Workflow', () => {
 	let APIManager;
 	let apiManager;
@@ -111,15 +108,9 @@ describe( 'Integration: Save/Load Workflow', () => {
 			showValidationErrors() {}
 		};
 
-		// Load APIManager code
-		const apiManagerCode = fs.readFileSync(
-			path.join( __dirname, '../../../resources/ext.layers.editor/APIManager.js' ),
-			'utf8'
-		);
-		// eslint-disable-next-line no-eval
-		eval( apiManagerCode );
-
-		APIManager = window.APIManager;
+		// Load APIManager code via require for proper Jest coverage instrumentation
+		const loaded = require( '../../../resources/ext.layers.editor/APIManager.js' );
+		APIManager = loaded.APIManager;
 	} );
 
 	beforeEach( () => {

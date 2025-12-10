@@ -34,6 +34,9 @@
 			this.callbacks = this.config.callbacks || {};
 			this.addTargetListener = this.config.addTargetListener || null;
 
+			// Track whether we used external listener registration (for proper cleanup)
+			this.usesExternalTracker = !!this.addTargetListener;
+
 			// Bind methods
 			this.handleClick = this.handleClick.bind( this );
 			this.handleKeydown = this.handleKeydown.bind( this );
@@ -370,10 +373,17 @@
 		 * Destroy the event handler and clean up
 		 */
 		destroy() {
+			// Remove event listeners if we registered them directly (not via external tracker)
+			if ( !this.usesExternalTracker && this.layerList ) {
+				this.layerList.removeEventListener( 'click', this.handleClick );
+				this.layerList.removeEventListener( 'keydown', this.handleKeydown );
+			}
 			// Note: If addTargetListener was used, the EventTracker should handle cleanup
-			// If not, we can't remove listeners without stored references
+
 			this.layerList = null;
 			this.callbacks = {};
+			this.handleClick = null;
+			this.handleKeydown = null;
 		}
 	}
 

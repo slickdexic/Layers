@@ -4,23 +4,18 @@
  */
 'use strict';
 
-const fs = require( 'fs' );
-const path = require( 'path' );
-
 describe( 'MessageHelper', function () {
 	let MessageHelper;
 	let messageHelper;
 
 	beforeAll( function () {
-		// Load MessageHelper code
-		const helperCode = fs.readFileSync(
-			path.join( __dirname, '../../resources/ext.layers.editor/MessageHelper.js' ),
-			'utf8'
-		);
-		// eslint-disable-next-line no-eval
-		eval( helperCode );
+		// Load MessageHelper code via require for proper Jest coverage instrumentation
+		const loaded = require( '../../resources/ext.layers.editor/MessageHelper.js' );
+		MessageHelper = loaded.MessageHelper;
 
-		MessageHelper = window.LayersMessageHelper;
+		// Also set up window exports for tests that check exports
+		window.LayersMessageHelper = MessageHelper;
+		window.layersMessages = loaded.messageHelper;
 	} );
 
 	beforeEach( function () {

@@ -416,4 +416,473 @@ describe( 'APIManager', function () {
 			expect( instance ).toBeInstanceOf( APIManager );
 		} );
 	} );
+
+	describe( 'loadLayers', function () {
+		it( 'should show spinner while loading', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: null
+				}
+			} );
+
+			await apiManager.loadLayers();
+
+			expect( mockEditor.uiManager.showSpinner ).toHaveBeenCalled();
+			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
+		} );
+
+		it( 'should call API with correct parameters', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: { layerset: null }
+			} );
+
+			await apiManager.loadLayers();
+
+			expect( apiManager.api.get ).toHaveBeenCalledWith( expect.objectContaining( {
+				action: 'layersinfo',
+				filename: 'Test_Image.jpg',
+				format: 'json',
+				formatversion: 2
+			} ) );
+		} );
+
+		it( 'should resolve with layers data', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						id: 123,
+						data: { layers: [ { id: 'test-layer', type: 'rectangle' } ] },
+						baseWidth: 1920,
+						baseHeight: 1080
+					},
+					all_layersets: []
+				}
+			} );
+
+			const result = await apiManager.loadLayers();
+
+			expect( result ).toHaveProperty( 'layers' );
+			expect( result ).toHaveProperty( 'baseWidth' );
+			expect( result ).toHaveProperty( 'baseHeight' );
+		} );
+
+		it( 'should reject on API error', async function () {
+			apiManager.api.get = jest.fn().mockRejectedValue( [ 'filenotfound', { error: { code: 'filenotfound' } } ] );
+
+			await expect( apiManager.loadLayers() ).rejects.toBeDefined();
+			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'processLayersData', function () {
+		it( 'should handle empty API response', function () {
+			apiManager.processLayersData( null );
+
+			// Should not throw, just return
+			expect( mockEditor.stateManager.set ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing layersinfo', function () {
+			apiManager.processLayersData( {} );
+
+			expect( mockEditor.stateManager.set ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should set empty layers when no layerset', function () {
+			apiManager.processLayersData( {
+				layersinfo: {
+					layerset: null,
+					all_layersets: []
+				}
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', [] );
+		} );
+
+		it( 'should process layerset with data', function () {
+			mockEditor.canvasManager.selectionManager = {
+				clearSelection: jest.fn()
+			};
+
+			apiManager.processLayersData( {
+				layersinfo: {
+					layerset: {
+						id: 1,
+						name: 'default',
+						data: { layers: [ { id: 'layer1', type: 'circle' } ] },
+						baseWidth: 800,
+						baseHeight: 600
+					},
+					all_layersets: [ { ls_id: 1, ls_revision: 1 } ]
+				}
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'default' );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'allLayerSets', expect.any( Array ) );
+			expect( mockEditor.buildRevisionSelector ).toHaveBeenCalled();
+		} );
+
+		it( 'should process named_sets and build set selector', function () {
+			apiManager.processLayersData( {
+				layersinfo: {
+					layerset: null,
+					all_layersets: [],
+					named_sets: [
+						{ name: 'default', revision_count: 1 },
+						{ name: 'annotations', revision_count: 2 }
+					]
+				}
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'namedSets', expect.any( Array ) );
+			expect( mockEditor.buildSetSelector ).toHaveBeenCalled();
+		} );
+
+		it( 'should clear selection when canvas manager present', function () {
+			mockEditor.canvasManager.selectionManager = {
+				clearSelection: jest.fn()
+			};
+
+			apiManager.processLayersData( {
+				layersinfo: {
+					layerset: {
+						id: 1,
+						data: { layers: [] }
+					},
+					all_layersets: []
+				}
+			} );
+
+			expect( mockEditor.canvasManager.selectionManager.clearSelection ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'extractLayerSetData', function () {
+		it( 'should set base dimensions', function () {
+			mockEditor.canvasManager.setBaseDimensions = jest.fn();
+
+			apiManager.extractLayerSetData( {
+				id: 1,
+				baseWidth: 1920,
+				baseHeight: 1080,
+				data: { layers: [] }
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseWidth', 1920 );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseHeight', 1080 );
+			expect( mockEditor.canvasManager.setBaseDimensions ).toHaveBeenCalledWith( 1920, 1080 );
+		} );
+
+		it( 'should process layers and set them', function () {
+			apiManager.extractLayerSetData( {
+				id: 123,
+				data: {
+					layers: [
+						{ id: 'layer1', type: 'rectangle', visible: true },
+						{ id: 'layer2', type: 'circle', visible: false }
+					]
+				}
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', expect.any( Array ) );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentLayerSetId', 123 );
+		} );
+	} );
+
+	describe( 'processRawLayers', function () {
+		it( 'should add id to layers without id', function () {
+			const result = apiManager.processRawLayers( [
+				{ type: 'rectangle' },
+				{ type: 'circle' }
+			] );
+
+			expect( result[ 0 ].id ).toBeTruthy();
+			expect( result[ 1 ].id ).toBeTruthy();
+		} );
+
+		it( 'should preserve existing ids', function () {
+			const result = apiManager.processRawLayers( [
+				{ id: 'existing-id', type: 'rectangle' }
+			] );
+
+			expect( result[ 0 ].id ).toBe( 'existing-id' );
+		} );
+	} );
+
+	describe( 'normalizeBooleanProperties', function () {
+		it( 'should convert string "false" to boolean false', function () {
+			const layer = { visible: 'false', locked: 'false' };
+
+			apiManager.normalizeBooleanProperties( layer );
+
+			expect( layer.visible ).toBe( false );
+			expect( layer.locked ).toBe( false );
+		} );
+
+		it( 'should convert string "true" to boolean true', function () {
+			const layer = { visible: 'true', locked: 'true' };
+
+			apiManager.normalizeBooleanProperties( layer );
+
+			expect( layer.visible ).toBe( true );
+			expect( layer.locked ).toBe( true );
+		} );
+
+		it( 'should convert numeric 0 to boolean false', function () {
+			const layer = { visible: 0, shadow: 0 };
+
+			apiManager.normalizeBooleanProperties( layer );
+
+			expect( layer.visible ).toBe( false );
+			expect( layer.shadow ).toBe( false );
+		} );
+
+		it( 'should convert numeric 1 to boolean true', function () {
+			const layer = { visible: 1, glow: 1 };
+
+			apiManager.normalizeBooleanProperties( layer );
+
+			expect( layer.visible ).toBe( true );
+			expect( layer.glow ).toBe( true );
+		} );
+
+		it( 'should convert string "0" to boolean false', function () {
+			const layer = { visible: '0' };
+
+			apiManager.normalizeBooleanProperties( layer );
+
+			expect( layer.visible ).toBe( false );
+		} );
+
+		it( 'should convert string "1" to boolean true', function () {
+			const layer = { visible: '1' };
+
+			apiManager.normalizeBooleanProperties( layer );
+
+			expect( layer.visible ).toBe( true );
+		} );
+
+		it( 'should convert empty string to boolean true (legacy data)', function () {
+			const layer = { textShadow: '' };
+
+			apiManager.normalizeBooleanProperties( layer );
+
+			expect( layer.textShadow ).toBe( true );
+		} );
+	} );
+
+	describe( 'generateLayerId', function () {
+		it( 'should generate unique ids', function () {
+			const id1 = apiManager.generateLayerId();
+			const id2 = apiManager.generateLayerId();
+
+			expect( id1 ).not.toBe( id2 );
+		} );
+
+		it( 'should start with layer_ prefix', function () {
+			const id = apiManager.generateLayerId();
+
+			expect( id ).toMatch( /^layer_/ );
+		} );
+	} );
+
+	describe( 'loadRevisionById', function () {
+		it( 'should call API with layersetid', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						id: 456,
+						data: { layers: [] }
+					},
+					all_layersets: []
+				}
+			} );
+			mockEditor.renderLayers = jest.fn();
+			mockEditor.canvasManager.selectionManager = {
+				clearSelection: jest.fn()
+			};
+
+			await apiManager.loadRevisionById( 456 );
+
+			expect( apiManager.api.get ).toHaveBeenCalledWith( expect.objectContaining( {
+				layersetid: 456
+			} ) );
+		} );
+
+		it( 'should reject when revision not found', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: { layerset: null }
+			} );
+
+			await expect( apiManager.loadRevisionById( 999 ) ).rejects.toThrow( 'Revision not found' );
+		} );
+
+		it( 'should show success notification on load', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: { id: 1, data: { layers: [] } },
+					all_layersets: []
+				}
+			} );
+			mockEditor.renderLayers = jest.fn();
+
+			await apiManager.loadRevisionById( 1 );
+
+			expect( mw.notify ).toHaveBeenCalledWith( expect.any( String ), { type: 'success' } );
+		} );
+	} );
+
+	describe( 'reloadRevisions', function () {
+		it( 'should call API with current set name', function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					all_layersets: [ { ls_id: 1 }, { ls_id: 2 } ],
+					named_sets: [ { name: 'default' } ]
+				}
+			} );
+
+			apiManager.reloadRevisions();
+
+			expect( apiManager.api.get ).toHaveBeenCalledWith( expect.objectContaining( {
+				setname: 'default'
+			} ) );
+		} );
+
+		it( 'should update allLayerSets on success', async function () {
+			const mockRevisions = [ { ls_id: 1 }, { ls_id: 2 } ];
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					all_layersets: mockRevisions
+				}
+			} );
+
+			apiManager.reloadRevisions();
+
+			// Wait for promise to resolve
+			await new Promise( resolve => setTimeout( resolve, 10 ) );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'allLayerSets', mockRevisions );
+		} );
+
+		it( 'should handle API error gracefully', function () {
+			apiManager.api.get = jest.fn().mockRejectedValue( new Error( 'Network error' ) );
+
+			// Should not throw
+			expect( () => apiManager.reloadRevisions() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'checkSizeLimit', function () {
+		it( 'should return true for data under limit', function () {
+			mw.config.get = jest.fn( function ( key ) {
+				if ( key === 'wgLayersMaxBytes' ) {
+					return 1000;
+				}
+				return null;
+			} );
+
+			const result = apiManager.checkSizeLimit( 'small data' );
+
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should return false for data over limit', function () {
+			mw.config.get = jest.fn( function ( key ) {
+				if ( key === 'wgLayersMaxBytes' ) {
+					return 10;
+				}
+				return null;
+			} );
+
+			const result = apiManager.checkSizeLimit( 'This is longer than 10 bytes' );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should use default 2MB limit when config not set', function () {
+			mw.config.get = jest.fn( function () {
+				return null;
+			} );
+
+			const smallData = 'x'.repeat( 100 );
+			const result = apiManager.checkSizeLimit( smallData );
+
+			expect( result ).toBe( true );
+		} );
+	} );
+
+	describe( 'sanitizeInput', function () {
+		it( 'should return empty string for non-string input', function () {
+			expect( apiManager.sanitizeInput( null ) ).toBe( '' );
+			expect( apiManager.sanitizeInput( undefined ) ).toBe( '' );
+			expect( apiManager.sanitizeInput( 123 ) ).toBe( '' );
+			expect( apiManager.sanitizeInput( {} ) ).toBe( '' );
+		} );
+
+		it( 'should remove angle brackets', function () {
+			const result = apiManager.sanitizeInput( '<script>alert("xss")</script>' );
+
+			expect( result ).not.toContain( '<' );
+			expect( result ).not.toContain( '>' );
+		} );
+
+		it( 'should remove javascript: protocol', function () {
+			const result = apiManager.sanitizeInput( 'javascript:alert(1)' );
+
+			expect( result ).not.toContain( 'javascript:' );
+		} );
+
+		it( 'should remove event handlers', function () {
+			const result = apiManager.sanitizeInput( 'onclick= alert(1)' );
+
+			expect( result ).not.toMatch( /on\w+\s*=/ );
+		} );
+
+		it( 'should trim whitespace', function () {
+			const result = apiManager.sanitizeInput( '  hello world  ' );
+
+			expect( result ).toBe( 'hello world' );
+		} );
+	} );
+
+	describe( 'handleSaveError', function () {
+		it( 'should log detailed error information', function () {
+			apiManager.handleSaveError( { code: 'savefailed', info: 'Database error' } );
+
+			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should return standardized error', function () {
+			const result = apiManager.handleSaveError( { code: 'test-code' } );
+
+			expect( result ).toHaveProperty( 'code' );
+			expect( result ).toHaveProperty( 'operation', 'save' );
+		} );
+	} );
+
+	describe( 'handleLoadError', function () {
+		it( 'should return standardized error for load operation', function () {
+			const result = apiManager.handleLoadError( 'network-error', { error: { info: 'Connection lost' } } );
+
+			expect( result ).toHaveProperty( 'operation', 'load' );
+		} );
+	} );
+
+	describe( 'destroy', function () {
+		it( 'should clean up references', function () {
+			apiManager.destroy();
+
+			expect( apiManager.api ).toBeNull();
+			expect( apiManager.editor ).toBeNull();
+			expect( apiManager.errorConfig ).toBeNull();
+		} );
+
+		it( 'should call abort if available', function () {
+			apiManager.api.abort = jest.fn();
+
+			apiManager.destroy();
+
+			expect( apiManager.api ).toBeNull(); // Was set to null after abort
+		} );
+	} );
 } );

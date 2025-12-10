@@ -545,6 +545,501 @@ describe( 'ErrorHandler', function () {
 		} );
 	} );
 
+	describe( 'processError', function () {
+		it( 'should process Error objects correctly', function () {
+			const error = new Error( 'Test error message' );
+			error.stack = 'Error: Test\n    at test.js:10';
+
+			const result = errorHandler.processError( error, 'TestContext', 'api', { extra: 'data' } );
+
+			expect( result.message ).toBe( 'Test error message' );
+			expect( result.stack ).toContain( 'Error: Test' );
+			expect( result.context ).toBe( 'TestContext' );
+			expect( result.type ).toBe( 'api' );
+			expect( result.metadata.extra ).toBe( 'data' );
+			expect( result.severity ).toBe( 'high' );
+		} );
+
+		it( 'should process string errors', function () {
+			const result = errorHandler.processError( 'String error', 'Context', 'canvas' );
+
+			expect( result.message ).toBe( 'String error' );
+			expect( result.stack ).toBe( '' );
+		} );
+
+		it( 'should handle non-Error non-string values', function () {
+			const result = errorHandler.processError( { invalid: 'object' }, 'Context', 'test' );
+
+			expect( result.message ).toBe( 'Unknown error occurred' );
+		} );
+
+		it( 'should handle null error', function () {
+			const result = errorHandler.processError( null, 'Context', 'test' );
+
+			expect( result.message ).toBe( 'Unknown error occurred' );
+		} );
+
+		it( 'should use defaults for missing parameters', function () {
+			const result = errorHandler.processError( 'Error' );
+
+			expect( result.context ).toBe( 'Unknown' );
+			expect( result.type ).toBe( 'general' );
+			expect( result.metadata ).toEqual( {} );
+		} );
+
+		it( 'should include timestamp, userAgent, and url', function () {
+			const result = errorHandler.processError( 'Error', 'Context', 'test' );
+
+			expect( result.timestamp ).toBeTruthy();
+			expect( result.userAgent ).toBeTruthy();
+			expect( result.url ).toBeTruthy();
+			expect( result.id ).toMatch( /^err_/ );
+		} );
+	} );
+
+	describe( 'logError', function () {
+		it( 'should log to console based on severity', function () {
+			const errorInfo = {
+				context: 'Test',
+				message: 'Error message',
+				severity: 'critical'
+			};
+
+			errorHandler.logError( errorInfo );
+
+			expect( console.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should log warnings for medium severity', function () {
+			const errorInfo = {
+				context: 'Test',
+				message: 'Warning message',
+				severity: 'medium'
+			};
+
+			errorHandler.logError( errorInfo );
+
+			expect( console.warn ).toHaveBeenCalled();
+		} );
+
+		it( 'should log to mw.log if available', function () {
+			const errorInfo = {
+				context: 'Test',
+				message: 'Test message',
+				severity: 'high'
+			};
+
+			errorHandler.logError( errorInfo );
+
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				expect.stringContaining( 'Test' )
+			);
+		} );
+
+		it( 'should log in debug mode', function () {
+			errorHandler.setDebugMode( true );
+			const errorInfo = {
+				context: 'Debug',
+				message: 'Debug message',
+				severity: 'low'
+			};
+
+			errorHandler.logError( errorInfo );
+
+			expect( console.log ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'handleError', function () {
+		it( 'should process and queue the error', function () {
+			errorHandler.handleError( new Error( 'Test' ), 'Context', 'api' );
+
+			expect( errorHandler.errorQueue.length ).toBe( 1 );
+			expect( errorHandler.errorQueue[ 0 ].message ).toBe( 'Test' );
+		} );
+
+		it( 'should call logError', function () {
+			const logSpy = jest.spyOn( errorHandler, 'logError' );
+
+			errorHandler.handleError( 'Error', 'Context', 'test' );
+
+			expect( logSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should call showUserNotification for high severity', function () {
+			const notifySpy = jest.spyOn( errorHandler, 'showUserNotification' );
+
+			errorHandler.handleError( 'Error', 'Context', 'api' );
+
+			expect( notifySpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should attempt recovery', function () {
+			const recoverySpy = jest.spyOn( errorHandler, 'attemptRecovery' );
+
+			errorHandler.handleError( 'Error', 'Context', 'load' );
+
+			expect( recoverySpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should report critical errors', function () {
+			const reportSpy = jest.spyOn( errorHandler, 'reportError' );
+
+			errorHandler.handleError( 'Security breach', 'Context', 'security' );
+
+			expect( reportSpy ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'showUserNotification', function () {
+		it( 'should create notification for high severity', function () {
+			const createSpy = jest.spyOn( errorHandler, 'createUserNotification' );
+
+			errorHandler.showUserNotification( { severity: 'high', type: 'api' } );
+
+			expect( createSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should create notification for critical severity', function () {
+			const createSpy = jest.spyOn( errorHandler, 'createUserNotification' );
+
+			errorHandler.showUserNotification( { severity: 'critical', type: 'security' } );
+
+			expect( createSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should not create notification for medium severity', function () {
+			const createSpy = jest.spyOn( errorHandler, 'createUserNotification' );
+
+			errorHandler.showUserNotification( { severity: 'medium' } );
+
+			expect( createSpy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not create notification for low severity', function () {
+			const createSpy = jest.spyOn( errorHandler, 'createUserNotification' );
+
+			errorHandler.showUserNotification( { severity: 'low' } );
+
+			expect( createSpy ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'createUserNotification', function () {
+		it( 'should create notification element with correct class', function () {
+			const errorInfo = {
+				severity: 'high',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			const notification = errorHandler.notificationContainer.querySelector( '.layers-error-notification' );
+			expect( notification ).not.toBeNull();
+			expect( notification.classList.contains( 'layers-error-high' ) ).toBe( true );
+		} );
+
+		it( 'should create notification with error message', function () {
+			const errorInfo = {
+				severity: 'critical',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			const message = errorHandler.notificationContainer.querySelector( '.error-message' );
+			expect( message ).not.toBeNull();
+			expect( message.textContent ).toBeTruthy();
+		} );
+
+		it( 'should include close button', function () {
+			const errorInfo = {
+				severity: 'high',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			const closeBtn = errorHandler.notificationContainer.querySelector( '.error-close' );
+			expect( closeBtn ).not.toBeNull();
+		} );
+
+		it( 'should remove notification when close button clicked', function () {
+			const errorInfo = {
+				severity: 'high',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			const closeBtn = errorHandler.notificationContainer.querySelector( '.error-close' );
+			const notification = errorHandler.notificationContainer.querySelector( '.layers-error-notification' );
+
+			closeBtn.click();
+
+			expect( errorHandler.notificationContainer.contains( notification ) ).toBe( false );
+		} );
+
+		it( 'should auto-remove non-critical notifications after timeout', function () {
+			jest.useFakeTimers();
+
+			const errorInfo = {
+				severity: 'high',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			const notification = errorHandler.notificationContainer.querySelector( '.layers-error-notification' );
+			expect( notification ).not.toBeNull();
+
+			jest.advanceTimersByTime( 9000 );
+
+			expect( errorHandler.notificationContainer.contains( notification ) ).toBe( false );
+
+			jest.useRealTimers();
+		} );
+
+		it( 'should not auto-remove critical notifications', function () {
+			jest.useFakeTimers();
+
+			const errorInfo = {
+				severity: 'critical',
+				type: 'security',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			const notification = errorHandler.notificationContainer.querySelector( '.layers-error-notification' );
+
+			jest.advanceTimersByTime( 10000 );
+
+			expect( errorHandler.notificationContainer.contains( notification ) ).toBe( true );
+
+			jest.useRealTimers();
+		} );
+
+		it( 'should include timestamp in notification', function () {
+			const errorInfo = {
+				severity: 'high',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			const timeEl = errorHandler.notificationContainer.querySelector( '.error-time' );
+			expect( timeEl ).not.toBeNull();
+			expect( timeEl.textContent ).toBeTruthy();
+		} );
+
+		it( 'should include error icon', function () {
+			const errorInfo = {
+				severity: 'high',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			const icon = errorHandler.notificationContainer.querySelector( '.error-icon' );
+			expect( icon ).not.toBeNull();
+			expect( icon.textContent ).toBe( '⚠' );
+		} );
+	} );
+
+	describe( 'getRecoveryStrategy', function () {
+		it( 'should return retry strategy for load errors', function () {
+			const strategy = errorHandler.getRecoveryStrategy( { type: 'load' } );
+
+			expect( strategy ).not.toBeNull();
+			expect( strategy.action ).toBe( 'retry' );
+			expect( strategy.delay ).toBe( 2000 );
+			expect( strategy.maxAttempts ).toBe( 2 );
+		} );
+
+		it( 'should return retry strategy for save errors', function () {
+			const strategy = errorHandler.getRecoveryStrategy( { type: 'save' } );
+
+			expect( strategy ).not.toBeNull();
+			expect( strategy.action ).toBe( 'retry' );
+			expect( strategy.delay ).toBe( 3000 );
+		} );
+
+		it( 'should return refresh strategy for canvas errors', function () {
+			const strategy = errorHandler.getRecoveryStrategy( { type: 'canvas' } );
+
+			expect( strategy ).not.toBeNull();
+			expect( strategy.action ).toBe( 'refresh' );
+		} );
+
+		it( 'should return notify strategy for validation errors', function () {
+			const strategy = errorHandler.getRecoveryStrategy( { type: 'validation' } );
+
+			expect( strategy ).not.toBeNull();
+			expect( strategy.action ).toBe( 'notify' );
+		} );
+
+		it( 'should return null for unknown error types', function () {
+			const strategy = errorHandler.getRecoveryStrategy( { type: 'unknown' } );
+
+			expect( strategy ).toBeNull();
+		} );
+	} );
+
+	describe( 'executeRecoveryStrategy', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should show notification and retry for retry action', function () {
+			const notifySpy = jest.spyOn( errorHandler, 'showRecoveryNotification' );
+			const retrySpy = jest.spyOn( errorHandler, 'retryOperation' );
+
+			const strategy = { action: 'retry', delay: 1000, message: 'Retrying...' };
+			const errorInfo = { type: 'load', message: 'Load failed' };
+
+			errorHandler.executeRecoveryStrategy( strategy, errorInfo );
+
+			expect( notifySpy ).toHaveBeenCalledWith( 'Retrying...' );
+
+			jest.advanceTimersByTime( 1500 );
+
+			expect( retrySpy ).toHaveBeenCalledWith( errorInfo );
+		} );
+
+		it( 'should show notification for notify action', function () {
+			const notifySpy = jest.spyOn( errorHandler, 'showRecoveryNotification' );
+
+			const strategy = { action: 'notify', message: 'Check input' };
+			const errorInfo = { type: 'validation' };
+
+			errorHandler.executeRecoveryStrategy( strategy, errorInfo );
+
+			expect( notifySpy ).toHaveBeenCalledWith( 'Check input' );
+		} );
+
+		it( 'should schedule reload for refresh action', function () {
+			const notifySpy = jest.spyOn( errorHandler, 'showRecoveryNotification' );
+			// Note: window.location.reload cannot be mocked in JSDOM
+			// Just verify the notification is shown and timeout is set
+
+			const strategy = { action: 'refresh', message: 'Refreshing...' };
+			const errorInfo = { type: 'canvas' };
+
+			errorHandler.executeRecoveryStrategy( strategy, errorInfo );
+
+			expect( notifySpy ).toHaveBeenCalledWith( 'Refreshing...' );
+
+			// The setTimeout for reload was scheduled - advance past it
+			// (reload won't actually happen in test environment)
+			jest.advanceTimersByTime( 2500 );
+		} );
+	} );
+
+	describe( 'attemptRecovery', function () {
+		it( 'should execute recovery strategy when available', function () {
+			const executeSpy = jest.spyOn( errorHandler, 'executeRecoveryStrategy' );
+
+			errorHandler.attemptRecovery( { type: 'load' } );
+
+			expect( executeSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should not execute when no strategy available', function () {
+			const executeSpy = jest.spyOn( errorHandler, 'executeRecoveryStrategy' );
+
+			errorHandler.attemptRecovery( { type: 'unknown-type' } );
+
+			expect( executeSpy ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'showRecoveryNotification', function () {
+		it( 'should call mw.notify when available', function () {
+			errorHandler.showRecoveryNotification( 'Recovery message' );
+
+			expect( mw.notify ).toHaveBeenCalledWith( 'Recovery message', {
+				type: 'info',
+				autoHide: true
+			} );
+		} );
+
+		it( 'should handle missing mw.notify gracefully', function () {
+			const originalNotify = mw.notify;
+			mw.notify = undefined;
+
+			expect( () => {
+				errorHandler.showRecoveryNotification( 'Test' );
+			} ).not.toThrow();
+
+			mw.notify = originalNotify;
+		} );
+	} );
+
+	describe( 'retryOperation', function () {
+		it( 'should log retry attempt', function () {
+			const logSpy = jest.spyOn( errorHandler, 'logError' );
+
+			errorHandler.retryOperation( { message: 'Original error', severity: 'high' } );
+
+			expect( logSpy ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					message: expect.stringContaining( 'Recovery: Retrying operation' ),
+					severity: 'low'
+				} )
+			);
+		} );
+	} );
+
+	describe( 'global error handlers', function () {
+		it( 'should handle unhandled promise rejections', function () {
+			const handleSpy = jest.spyOn( errorHandler, 'handleError' );
+
+			// Create a new instance to get fresh listeners
+			const newHandler = new ErrorHandler();
+
+			// Simulate unhandled rejection
+			const event = new Event( 'unhandledrejection' );
+			event.reason = new Error( 'Promise rejected' );
+			window.dispatchEvent( event );
+
+			expect( handleSpy ).toHaveBeenCalled();
+
+			newHandler.destroy();
+		} );
+
+		it( 'should handle script errors', function () {
+			const handleSpy = jest.spyOn( errorHandler, 'handleError' );
+
+			// Create a new instance
+			const newHandler = new ErrorHandler();
+
+			// Simulate error event
+			const event = new ErrorEvent( 'error', {
+				error: new Error( 'Script error' ),
+				filename: 'test.js',
+				lineno: 10,
+				colno: 5
+			} );
+			window.dispatchEvent( event );
+
+			expect( handleSpy ).toHaveBeenCalled();
+
+			newHandler.destroy();
+		} );
+	} );
+
 	describe( 'ErrorHandler module exports', function () {
 		it( 'should expose LayersErrorHandler on window', function () {
 			expect( window.LayersErrorHandler ).toBeDefined();

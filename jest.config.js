@@ -19,6 +19,8 @@ module.exports = {
 	collectCoverageFrom: [
 		'resources/ext.layers.editor/*.js',
 		'resources/ext.layers.editor/canvas/*.js',
+		'resources/ext.layers.shared/*.js',
+		'resources/ext.layers.shared/renderers/*.js',
 		'!resources/ext.layers.editor/*.min.js',
 		'!**/node_modules/**',
 		'!**/vendor/**'

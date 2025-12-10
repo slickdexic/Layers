@@ -729,8 +729,8 @@
 			grabArea.style.justifyContent = 'center';
 			grabArea.style.cursor = 'grab';
 			
-			// Keyboard reordering
-			grabArea.addEventListener( 'keydown', ( e ) => {
+			// Keyboard reordering - use EventTracker for proper cleanup
+			this.addTargetListener( grabArea, 'keydown', ( e ) => {
 				if ( e.key === 'ArrowUp' || e.key === 'ArrowDown' ) {
 					e.preventDefault();
 					const direction = e.key === 'ArrowUp' ? -1 : 1;
@@ -1155,7 +1155,9 @@
 
 			const originalName = nameElement.textContent;
 			const maxLength = 100;
-			nameElement.addEventListener( 'input', () => {
+
+			// Use EventTracker-aware addTargetListener for proper cleanup
+			this.addTargetListener( nameElement, 'input', () => {
 				const currentText = nameElement.textContent;
 				if ( currentText.length > maxLength ) {
 					nameElement.textContent = currentText.slice( 0, maxLength );
@@ -1167,14 +1169,14 @@
 					sel.addRange( range );
 				}
 			} );
-			nameElement.addEventListener( 'blur', () => {
+			this.addTargetListener( nameElement, 'blur', () => {
 				const newName = nameElement.textContent.trim();
 				if ( newName && newName !== originalName ) {
 					this.editor.updateLayer( layerId, { name: newName } );
 					this.editor.saveState( 'Rename Layer' );
 				}
 			} );
-			nameElement.addEventListener( 'keydown', ( e ) => {
+			this.addTargetListener( nameElement, 'keydown', ( e ) => {
 				if ( e.key === 'Enter' ) {
 					nameElement.blur();
 				} else if ( e.key === 'Escape' ) {

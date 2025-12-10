@@ -22,6 +22,9 @@
 			return fallback || key;
 		};
 
+		// Initialize EventTracker for memory-safe event listener management
+		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+
 		// Style state
 		this.strokeColorValue = '#000000';
 		this.fillColorValue = '#ffffff';
@@ -49,6 +52,26 @@
 		// Input validators
 		this.inputValidators = [];
 	}
+
+	/**
+	 * Add event listener to an element with automatic tracking
+	 *
+	 * @param {Element} element Target element
+	 * @param {string} event Event type
+	 * @param {Function} handler Event handler
+	 * @param {Object} [options] Event listener options
+	 */
+	ToolbarStyleControls.prototype.addListener = function ( element, event, handler, options ) {
+		if ( !element || !event || typeof handler !== 'function' ) {
+			return;
+		}
+		if ( this.eventTracker ) {
+			this.eventTracker.add( element, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			element.addEventListener( event, handler, options );
+		}
+	};
 
 	/**
 	 * Get localized message
@@ -174,8 +197,8 @@
 		this.updateColorButtonDisplay( button, options.initialColor );
 		container.appendChild( button );
 
-		// Click handler - opens color picker dialog
-		button.addEventListener( 'click', () => {
+		// Click handler - opens color picker dialog (tracked for cleanup)
+		this.addListener( button, 'click', () => {
 			const isNone = options.type === 'stroke' ? this.strokeColorNone : this.fillColorNone;
 			const currentValue = options.type === 'stroke' ? this.strokeColorValue : this.fillColorValue;
 
@@ -216,12 +239,12 @@
 		input.placeholder = 'px';
 		container.appendChild( input );
 
-		// Input validation and change handling
-		input.addEventListener( 'input', () => {
+		// Input validation and change handling (tracked for cleanup)
+		this.addListener( input, 'input', () => {
 			this.handleStrokeWidthInput( input );
 		} );
 
-		input.addEventListener( 'blur', () => {
+		this.addListener( input, 'blur', () => {
 			this.handleStrokeWidthBlur( input );
 		} );
 
@@ -295,7 +318,7 @@
 
 		this.fontSizeInput = input;
 
-		input.addEventListener( 'change', () => {
+		this.addListener( input, 'change', () => {
 			this.notifyStyleChange();
 		} );
 
@@ -341,12 +364,12 @@
 		container.appendChild( widthValue );
 		this.textStrokeValue = widthValue;
 
-		// Event handlers
-		colorInput.addEventListener( 'change', () => {
+		// Event handlers (tracked for cleanup)
+		this.addListener( colorInput, 'change', () => {
 			this.notifyStyleChange();
 		} );
 
-		widthInput.addEventListener( 'input', () => {
+		this.addListener( widthInput, 'input', () => {
 			widthValue.textContent = widthInput.value;
 			this.notifyStyleChange();
 		} );
@@ -385,13 +408,13 @@
 		container.appendChild( colorInput );
 		this.textShadowColor = colorInput;
 
-		// Event handlers
-		toggle.addEventListener( 'change', () => {
+		// Event handlers (tracked for cleanup)
+		this.addListener( toggle, 'change', () => {
 			colorInput.style.display = toggle.checked ? 'inline-block' : 'none';
 			this.notifyStyleChange();
 		} );
 
-		colorInput.addEventListener( 'change', () => {
+		this.addListener( colorInput, 'change', () => {
 			this.notifyStyleChange();
 		} );
 
@@ -434,7 +457,7 @@
 		container.appendChild( select );
 		this.arrowStyleSelect = select;
 
-		select.addEventListener( 'change', () => {
+		this.addListener( select, 'change', () => {
 			this.notifyStyleChange();
 		} );
 
@@ -669,12 +692,31 @@
 	 * Destroy and cleanup
 	 */
 	ToolbarStyleControls.prototype.destroy = function () {
+		// Clean up all event listeners via EventTracker
+		if ( this.eventTracker ) {
+			this.eventTracker.destroy();
+			this.eventTracker = null;
+		}
+
+		// Clear input validators
 		this.inputValidators = [];
+
+		// Clear DOM references
 		this.container = null;
 		this.strokeColorButton = null;
 		this.fillColorButton = null;
 		this.strokeWidthInput = null;
 		this.fontSizeInput = null;
+		this.fontSizeContainer = null;
+		this.strokeContainer = null;
+		this.shadowContainer = null;
+		this.arrowContainer = null;
+		this.textStrokeColor = null;
+		this.textStrokeWidth = null;
+		this.textStrokeValue = null;
+		this.textShadowToggle = null;
+		this.textShadowColor = null;
+		this.arrowStyleSelect = null;
 	};
 
 	// Export to window.Layers namespace (preferred)
