@@ -313,7 +313,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			->with(
 				'layer_sets',
 				$this->anything(),
-				$this->callback( function ( $conditions ) {
+				$this->callback( static function ( $conditions ) {
 					return isset( $conditions['ls_name'] ) && $conditions['ls_name'] === 'custom-set';
 				} ),
 				$this->anything(),
@@ -392,7 +392,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$db = $this->createLayersDatabase();
 		$count = $db->countNamedSets( 'New.jpg', 'sha1' );
 
-		$this->assertEquals( 0, $count );
+		$this->assertSame( 0, $count );
 	}
 
 	// =========================================================================
@@ -608,7 +608,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$layerSets = $db->getLayerSetsForImage( 'Test.jpg', 'sha1' );
 
 		$this->assertCount( 3, $layerSets );
-		$this->assertEquals( 1, $layerSets[0]['ls_id'] );
+		$this->assertSame( 1, $layerSets[0]['ls_id'] );
 	}
 
 	/**
@@ -825,7 +825,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			->method( 'info' )
 			->with(
 				'Layer sets deleted for image',
-				$this->callback( function ( $context ) {
+				$this->callback( static function ( $context ) {
 					return $context['imgName'] === 'Delete.jpg';
 				} )
 			);
@@ -871,7 +871,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			->method( 'info' )
 			->with(
 				'Pruned old revisions',
-				$this->callback( function ( $context ) {
+				$this->callback( static function ( $context ) {
 					return $context['deleted'] === 5 && $context['kept'] === 5;
 				} )
 			);
@@ -897,7 +897,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$db = $this->createLayersDatabase();
 		$deleted = $db->pruneOldRevisions( 'Test.jpg', 'sha1', 'default', 10 );
 
-		$this->assertEquals( 0, $deleted );
+		$this->assertSame( 0, $deleted );
 	}
 
 	/**
@@ -909,7 +909,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$db = $this->createLayersDatabase();
 		$deleted = $db->pruneOldRevisions( 'Empty.jpg', 'sha1', 'default', 5 );
 
-		$this->assertEquals( 0, $deleted );
+		$this->assertSame( 0, $deleted );
 	}
 
 	/**
@@ -925,7 +925,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$db = $this->createLayersDatabase();
 		$deleted = $db->pruneOldRevisions( 'Test.jpg', 'sha1', 'default', 0 );
 
-		$this->assertEquals( 0, $deleted );
+		$this->assertSame( 0, $deleted );
 	}
 
 	// =========================================================================
@@ -946,7 +946,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 				$this->anything(),
 				$this->anything(),
 				$this->anything(),
-				$this->callback( function ( $options ) {
+				$this->callback( static function ( $options ) {
 					// Invalid sort column should default to ls_timestamp
 					return strpos( $options['ORDER BY'], 'ls_timestamp' ) !== false;
 				} )
@@ -977,7 +977,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 				$this->anything(),
 				$this->anything(),
 				$this->anything(),
-				$this->callback( function ( $options ) {
+				$this->callback( static function ( $options ) {
 					// Direction should be normalized to ASC (not the injection attempt)
 					return strpos( $options['ORDER BY'], 'ASC' ) !== false;
 				} )
@@ -1005,7 +1005,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			->with(
 				'layer_sets',
 				$this->anything(),
-				$this->callback( function ( $conditions ) {
+				$this->callback( static function ( $conditions ) {
 					// Should include both underscore and space variants
 					$lookup = $conditions['ls_img_name'];
 					return is_array( $lookup ) &&
@@ -1032,7 +1032,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			->with(
 				'layer_sets',
 				$this->anything(),
-				$this->callback( function ( $conditions ) {
+				$this->callback( static function ( $conditions ) {
 					$lookup = $conditions['ls_img_name'];
 					return is_array( $lookup ) &&
 						in_array( 'Test_Image.jpg', $lookup ) &&

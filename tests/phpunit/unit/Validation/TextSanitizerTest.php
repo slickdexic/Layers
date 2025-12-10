@@ -70,9 +70,15 @@ class TextSanitizerTest extends \MediaWikiUnitTestCase {
 		$sanitizer = $this->createSanitizer();
 
 		// Dangerous protocols should be removed
-		$this->assertStringNotContainsString( 'javascript:', $sanitizer->sanitizeText( 'javascript:alert(1)' ) );
+		$this->assertStringNotContainsString(
+			'javascript:',
+			$sanitizer->sanitizeText( 'javascript:alert(1)' )
+		);
 		$this->assertStringNotContainsString( 'vbscript:', $sanitizer->sanitizeText( 'vbscript:msgbox(1)' ) );
-		$this->assertStringNotContainsString( 'data:', $sanitizer->sanitizeText( 'data:text/html,<script>alert(1)</script>' ) );
+		$this->assertStringNotContainsString(
+			'data:',
+			$sanitizer->sanitizeText( 'data:text/html,<script>alert(1)</script>' )
+		);
 	}
 
 	/**
