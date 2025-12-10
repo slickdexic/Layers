@@ -1,0 +1,416 @@
+/**
+ * EditorBootstrap - Handles Layers Editor initialization and lifecycle
+ *
+ * Extracted from LayersEditor.js for better separation of concerns.
+ * Manages dependency validation, hook registration, auto-bootstrap,
+ * global error handling, and cleanup on page navigation.
+ *
+ * @module EditorBootstrap
+ */
+( function () {
+	'use strict';
+
+	/**
+	 * Required global classes for editor initialization
+	 * @type {string[]}
+	 */
+	const REQUIRED_CLASSES = [
+		'UIManager', 'EventManager', 'APIManager', 'ValidationManager',
+		'StateManager', 'HistoryManager', 'CanvasManager', 'Toolbar', 'LayerPanel'
+	];
+
+	/**
+	 * Required constant groups in LayersConstants
+	 * @type {string[]}
+	 */
+	const REQUIRED_CONSTANT_GROUPS = [ 'TOOLS', 'LAYER_TYPES', 'DEFAULTS', 'UI', 'LIMITS' ];
+
+	/**
+	 * Maximum retry attempts for dependency loading
+	 * @type {number}
+	 */
+	const MAX_DEPENDENCY_RETRIES = 20;
+
+	/**
+	 * Maximum retry attempts for mw.hook availability
+	 * @type {number}
+	 */
+	const MAX_MW_HOOK_RETRIES = 40;
+
+	/**
+	 * Validate that required dependencies are loaded before editor initialization.
+	 * Logs warning if a critical dependency is missing but allows initialization to continue.
+	 *
+	 * @return {boolean} True if all dependencies are present, false otherwise
+	 */
+	function validateDependencies() {
+		const missing = [];
+
+		// Check required global classes
+		REQUIRED_CLASSES.forEach( ( name ) => {
+			if ( typeof window[ name ] !== 'function' ) {
+				missing.push( name );
+			}
+		} );
+
+		// Check LayersConstants (critical for configuration)
+		if ( typeof window.LayersConstants === 'undefined' ) {
+			missing.push( 'LayersConstants' );
+		} else {
+			// Validate critical constant groups exist
+			REQUIRED_CONSTANT_GROUPS.forEach( ( group ) => {
+				if ( !window.LayersConstants[ group ] ) {
+					missing.push( 'LayersConstants.' + group );
+				}
+			} );
+		}
+
+		if ( missing.length > 0 ) {
+			const errorMsg = 'Layers Editor: Missing dependencies: ' + missing.join( ', ' ) +
+				'. Some features may not work correctly. Check ResourceLoader module order in extension.json.';
+			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+				mw.log.warn( errorMsg );
+			}
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Quick check if critical dependencies are available for editor initialization.
+	 * @return {boolean} True if LayersConstants and CanvasManager are available
+	 */
+	function areEditorDependenciesReady() {
+		return typeof window.LayersConstants !== 'undefined' &&
+			typeof window.CanvasManager === 'function';
+	}
+
+	/**
+	 * Global error message sanitizer for preventing information disclosure
+	 * @param {Error|string|*} error Error object or message to sanitize
+	 * @return {string} Sanitized error message
+	 */
+	function sanitizeGlobalErrorMessage( error ) {
+		let message = 'An error occurred';
+
+		try {
+			if ( error && typeof error.message === 'string' ) {
+				message = error.message;
+			} else if ( typeof error === 'string' ) {
+				message = error;
+			} else if ( error && error.toString ) {
+				message = error.toString();
+			}
+
+			// Apply sanitization
+			if ( typeof message !== 'string' ) {
+				return 'Non-string error encountered';
+			}
+
+			// Remove any token-like patterns (base64, hex, etc.)
+			message = message.replace( /[a-zA-Z0-9+/=]{20,}/g, '[TOKEN]' );
+			message = message.replace( /[a-fA-F0-9]{16,}/g, '[HEX]' );
+
+			// Remove file paths completely
+			message = message.replace( /[A-Za-z]:[\\/][\w\s\\.-]*/g, '[PATH]' );
+			message = message.replace( /\/[\w\s.-]+/g, '[PATH]' );
+
+			// Remove URLs and connection strings
+			message = message.replace( /https?:\/\/[^\s'"<>&]*/gi, '[URL]' );
+			message = message.replace( /\w+:\/\/[^\s'"<>&]*/gi, '[CONNECTION]' );
+
+			// Remove IP addresses and ports
+			message = message.replace( /\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[IP]' );
+
+			// Remove email addresses
+			message = message.replace( /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]' );
+
+			// Limit length to prevent log flooding
+			if ( message.length > 200 ) {
+				message = message.slice( 0, 200 ) + '[TRUNCATED]';
+			}
+
+			return message;
+		} catch ( sanitizeError ) {
+			return 'Error sanitization failed';
+		}
+	}
+
+	/**
+	 * Create the editor hook listener
+	 * @return {Function} Hook listener function
+	 */
+	function createHookListener() {
+		let hookDependencyRetries = 0;
+
+		const hookListener = function ( config ) {
+			// Verify dependencies before creating editor
+			if ( !areEditorDependenciesReady() ) {
+				hookDependencyRetries++;
+				if ( hookDependencyRetries < MAX_DEPENDENCY_RETRIES ) {
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[EditorBootstrap] Hook fired but dependencies not ready (attempt ' +
+							hookDependencyRetries + '/' + MAX_DEPENDENCY_RETRIES + '), deferring...' );
+					}
+					// Defer and retry
+					setTimeout( function () {
+						hookListener( config );
+					}, 100 );
+					return;
+				}
+				// Max retries reached - proceed anyway and let validateDependencies handle it
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+					mw.log.error( '[EditorBootstrap] Max dependency retries reached, proceeding with available dependencies' );
+				}
+			}
+
+			document.title = '🎨 Layers Editor Initializing...';
+			try {
+				// Check for LayersEditor class
+				if ( typeof window.LayersEditor !== 'function' ) {
+					throw new Error( 'LayersEditor class not available' );
+				}
+
+				const editor = new window.LayersEditor( config );
+				document.title = '🎨 Layers Editor - ' + ( config.filename || 'Unknown File' );
+				// Always set the global instance for duplicate prevention
+				window.layersEditorInstance = editor;
+			} catch ( e ) {
+				const sanitizedError = sanitizeGlobalErrorMessage( e );
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[EditorBootstrap] Error creating LayersEditor:', sanitizedError );
+				}
+				throw e;
+			}
+		};
+
+		return hookListener;
+	}
+
+	/**
+	 * Register the editor initialization hook
+	 */
+	function registerHook() {
+		const hookListener = createHookListener();
+
+		if ( typeof mw !== 'undefined' && mw.hook ) {
+			if ( mw && mw.log ) {
+				mw.log( '[EditorBootstrap] Registering hook listener' );
+			}
+			mw.hook( 'layers.editor.init' ).add( hookListener );
+		} else {
+			// Fallback: try to add hook listener when mw becomes available
+			let mwHookRetries = 0;
+			const addHookListener = function () {
+				if ( typeof mw !== 'undefined' && mw.hook ) {
+					mw.hook( 'layers.editor.init' ).add( hookListener );
+				} else {
+					mwHookRetries++;
+					if ( mwHookRetries < MAX_MW_HOOK_RETRIES ) {
+						setTimeout( addHookListener, 50 );
+					}
+				}
+			};
+			addHookListener();
+		}
+
+		// Store reference for auto-bootstrap
+		window._layersHookListener = hookListener;
+	}
+
+	/**
+	 * Set up global error handlers for unhandled promise rejections
+	 */
+	function setupGlobalErrorHandlers() {
+		if ( typeof window !== 'undefined' && window.addEventListener ) {
+			window.addEventListener( 'unhandledrejection', ( event ) => {
+				const error = event.reason;
+				if ( error && typeof error.message === 'string' &&
+					error.message.includes( 'message channel closed' ) ) {
+					// This is likely a browser extension or third-party script issue
+					if ( mw && mw.log ) {
+						mw.log.warn( '[Layers] Suppressed message channel error (likely browser extension):', error );
+					}
+					event.preventDefault();
+				} else if ( mw && mw.log ) {
+					mw.log.error( '[Layers] Unhandled promise rejection:', error );
+				}
+			} );
+
+			window.addEventListener( 'error', ( event ) => {
+				if ( event.error && typeof event.error.message === 'string' &&
+					event.error.message.includes( 'message channel closed' ) ) {
+					if ( mw && mw.log ) {
+						mw.log.warn( '[Layers] Suppressed message channel error (likely browser extension):', event.error );
+					}
+					event.preventDefault();
+				}
+			} );
+		}
+	}
+
+	/**
+	 * Clean up global editor instance
+	 */
+	function cleanupGlobalEditorInstance() {
+		if ( window.layersEditorInstance && typeof window.layersEditorInstance.destroy === 'function' ) {
+			window.layersEditorInstance.destroy();
+			window.layersEditorInstance = null;
+		}
+	}
+
+	/**
+	 * Set up cleanup handlers for page navigation
+	 */
+	function setupCleanupHandlers() {
+		if ( typeof window !== 'undefined' ) {
+			window.addEventListener( 'beforeunload', cleanupGlobalEditorInstance );
+
+			// MediaWiki page navigation cleanup
+			if ( typeof mw !== 'undefined' && mw.hook ) {
+				mw.hook( 'wikipage.content' ).add( function () {
+					// Only cleanup if we're not on a layers editor page
+					const isEditLayersPage = mw.config.get( 'wgAction' ) === 'editlayers';
+					if ( !isEditLayersPage ) {
+						cleanupGlobalEditorInstance();
+					}
+				} );
+			}
+		}
+	}
+
+	/**
+	 * Auto-bootstrap if server provided config via wgLayersEditorInit
+	 */
+	function autoBootstrap() {
+		let dependencyRetries = 0;
+
+		function tryBootstrap() {
+			try {
+				const debug = window.mw && mw.config && mw.config.get( 'wgLayersDebug' );
+
+				const debugLog = function ( msg ) {
+					if ( debug && mw.log ) {
+						mw.log( '[EditorBootstrap] ' + msg );
+					}
+				};
+
+				// Check if MediaWiki is available
+				if ( !window.mw || !mw.config || !mw.config.get ) {
+					debugLog( 'MediaWiki not ready, retrying in 100ms...' );
+					setTimeout( tryBootstrap, 100 );
+					return;
+				}
+
+				// Try to get config from MediaWiki config vars
+				const init = mw.config.get( 'wgLayersEditorInit' );
+				debugLog( 'wgLayersEditorInit config: ' + ( init ? 'present' : 'not found' ) );
+
+				if ( !init ) {
+					return;
+				}
+
+				// Check if dependencies are ready before proceeding
+				if ( !areEditorDependenciesReady() ) {
+					dependencyRetries++;
+					if ( dependencyRetries < MAX_DEPENDENCY_RETRIES ) {
+						debugLog( 'Dependencies not ready (attempt ' + dependencyRetries + '/' +
+							MAX_DEPENDENCY_RETRIES + '), retrying in 50ms...' );
+						setTimeout( tryBootstrap, 50 );
+						return;
+					}
+					debugLog( 'Max dependency retries reached, proceeding with available dependencies' );
+				}
+
+				const container = document.getElementById( 'layers-editor-container' );
+				debugLog( 'Container element exists: ' + !!container );
+
+				// Fire the hook for initialization
+				mw.hook( 'layers.editor.init' ).fire( {
+					filename: init.filename,
+					imageUrl: init.imageUrl,
+					container: container || document.body
+				} );
+
+				debugLog( 'Hook fired for: ' + init.filename );
+
+				try {
+					// Check if editor already exists (created by hook listener)
+					if ( window.layersEditorInstance ) {
+						debugLog( 'Editor already exists from hook listener' );
+						return;
+					}
+
+					if ( typeof window.LayersEditor !== 'function' ) {
+						debugLog( 'LayersEditor class not available for direct creation' );
+						return;
+					}
+
+					const editor = new window.LayersEditor( {
+						filename: init.filename,
+						imageUrl: init.imageUrl,
+						container: container || document.body
+					} );
+					debugLog( 'Direct editor creation successful' );
+
+					document.title = '🎨 Layers Editor - ' + ( init.filename || 'Unknown File' );
+					if ( window.mw && window.mw.config.get( 'debug' ) ) {
+						window.layersEditorInstance = editor;
+					}
+				} catch ( directError ) {
+					if ( mw.log && mw.log.error ) {
+						mw.log.error( '[EditorBootstrap] Direct editor creation failed:',
+							sanitizeGlobalErrorMessage( directError ) );
+					}
+				}
+			} catch ( e ) {
+				if ( mw.log && mw.log.error ) {
+					mw.log.error( '[EditorBootstrap] Auto-bootstrap error:', sanitizeGlobalErrorMessage( e ) );
+				}
+			}
+		}
+
+		// Try bootstrapping immediately, or when DOM is ready
+		if ( document.readyState === 'loading' ) {
+			document.addEventListener( 'DOMContentLoaded', tryBootstrap );
+		} else {
+			tryBootstrap();
+		}
+	}
+
+	/**
+	 * Initialize the editor bootstrap system
+	 */
+	function init() {
+		registerHook();
+		setupGlobalErrorHandlers();
+		setupCleanupHandlers();
+		autoBootstrap();
+	}
+
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.EditorBootstrap = {
+			validateDependencies,
+			areEditorDependenciesReady,
+			sanitizeGlobalErrorMessage,
+			cleanupGlobalEditorInstance,
+			init
+		};
+
+		// Backward compatibility - direct window export
+		window.EditorBootstrap = {
+			validateDependencies,
+			areEditorDependenciesReady,
+			sanitizeGlobalErrorMessage,
+			cleanupGlobalEditorInstance,
+			init
+		};
+	}
+
+	// Auto-initialize
+	init();
+
+}() );

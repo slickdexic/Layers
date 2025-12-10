@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Rate limiting and performance protection
  *
@@ -8,37 +9,46 @@
 
 namespace MediaWiki\Extension\Layers\Security;
 
+use Config;
 use MediaWiki\MediaWikiServices;
 use User;
 
 class RateLimiter {
-
-	/** @var \Config */
+	/** @var Config|null */
 	private $config;
 
-	public function __construct() {
-		$this->config = MediaWikiServices::getInstance()->getMainConfig();
+	public function __construct( ?Config $config = null ) {
+		$this->config = $config;
+	}
+
+	private function getConfig(): Config {
+		if ( $this->config ) {
+			return $this->config;
+		}
+		if ( class_exists( MediaWikiServices::class ) ) {
+			$this->config = MediaWikiServices::getInstance()->getMainConfig();
+			return $this->config;
+		}
+		return new \HashConfig( [] );
 	}
 
 	/**
 	 * Check if user is within rate limits for layer operations
+	 * Implements separate rate limits for privileged users to prevent resource exhaustion
+	 * attacks from compromised admin accounts
 	 *
 	 * @param User $user
 	 * @param string $action Type of action: 'save', 'render', 'create'
 	 * @return bool True if allowed, false if rate limited
 	 */
 	public function checkRateLimit( User $user, string $action ): bool {
-		// Skip rate limiting for privileged users
-		if ( $user->isAllowed( 'managelayerlibrary' ) ) {
-			return true;
-		}
-
 		// Get rate limits from config with proper fallback
-		$rateLimits = $this->config->get( 'RateLimits' ) ?? [];
+		$config = $this->getConfig();
+		$rateLimits = $config->get( 'RateLimits' ) ?? [];
 
 		$limitKey = "editlayers-{$action}";
 
-		// Default limits if not configured
+		// Default limits if not configured - includes privileged user limits
 		$defaultLimits = [
 			'editlayers-save' => [
 				// 30 saves per hour for users
@@ -47,6 +57,10 @@ class RateLimiter {
 				'newbie' => [ 5, 3600 ],
 				// 50 saves per hour for autoconfirmed
 				'autoconfirmed' => [ 50, 3600 ],
+				// Higher but limited rate for privileged users (prevents abuse)
+				'sysop' => [ 100, 3600 ],
+				// Separate limit for library managers
+				'managelayerlibrary' => [ 200, 3600 ],
 			],
 			'editlayers-render' => [
 				// 100 renders per hour
@@ -55,6 +69,9 @@ class RateLimiter {
 				'newbie' => [ 20, 3600 ],
 				// 200 renders per hour for autoconfirmed
 				'autoconfirmed' => [ 200, 3600 ],
+				// Higher but limited rate for privileged users
+				'sysop' => [ 500, 3600 ],
+				'managelayerlibrary' => [ 1000, 3600 ],
 			],
 			'editlayers-create' => [
 				// 10 new layer sets per hour
@@ -63,6 +80,9 @@ class RateLimiter {
 				'newbie' => [ 2, 3600 ],
 				// 20 new layer sets per hour for autoconfirmed
 				'autoconfirmed' => [ 20, 3600 ],
+				// Higher but limited rate for privileged users
+				'sysop' => [ 50, 3600 ],
+				'managelayerlibrary' => [ 100, 3600 ],
 			],
 		];
 
@@ -70,12 +90,39 @@ class RateLimiter {
 		$limits = $rateLimits[$limitKey] ?? $defaultLimits[$limitKey] ?? null;
 
 		if ( !$limits ) {
-			// No limits configured
+			// No limits configured - allow but log this condition
+			$this->logRateLimitEvent( $user, $action, 'no_limits_configured' );
 			return true;
 		}
 
 		// Check against MediaWiki's rate limiting system
-		return !$user->pingLimiter( $limitKey );
+		// This will automatically handle different user groups and their limits
+		$isLimited = $user->pingLimiter( $limitKey );
+
+		if ( $isLimited ) {
+			$this->logRateLimitEvent( $user, $action, 'rate_limited' );
+		}
+
+		return !$isLimited;
+	}
+
+	/**
+	 * Log rate limiting events for security monitoring
+	 *
+	 * @param User $user The user being rate limited
+	 * @param string $action The action being performed
+	 * @param string $result The result (rate_limited, no_limits_configured, etc.)
+	 */
+	private function logRateLimitEvent( User $user, string $action, string $result ): void {
+		// Use MediaWiki logging if available
+		if ( function_exists( 'wfLogWarning' ) ) {
+			wfLogWarning( sprintf(
+				'Layers rate limit: user=%d action=%s result=%s',
+				$user->getId(),
+				$action,
+				$result
+			) );
+		}
 	}
 
 	/**
@@ -86,9 +133,38 @@ class RateLimiter {
 	 * @return bool
 	 */
 	public function isImageSizeAllowed( int $width, int $height ): bool {
-		$maxDimensions = $this->config->get( 'LayersMaxImageDimensions' );
+		$config = $this->getConfig();
+		$maxDimensions = $config->get( 'LayersMaxImageDimensions' );
 
-		return $width <= $maxDimensions && $height <= $maxDimensions;
+		// Support both scalar (single max edge) and array [maxW, maxH] or ['width'=>, 'height'=>]
+		if ( is_array( $maxDimensions ) ) {
+			$maxW = null;
+			$maxH = null;
+			if ( isset( $maxDimensions['width'] ) || isset( $maxDimensions['height'] ) ) {
+				$w = $maxDimensions['width'] ?? ( $maxDimensions['height'] ?? 0 );
+				$h = $maxDimensions['height'] ?? ( $maxDimensions['width'] ?? 0 );
+				$maxW = (int)$w;
+				$maxH = (int)$h;
+			} else {
+				$maxW = (int)( $maxDimensions[0] ?? 0 );
+				$maxH = (int)( $maxDimensions[1] ?? $maxW );
+			}
+			if ( $maxW <= 0 || $maxH <= 0 ) {
+				// no effective limit configured
+				return true;
+			}
+			return ( $width <= $maxW && $height <= $maxH );
+		}
+
+		// Fallback to single edge limit, prefer LayersMaxImageDimensions, else LayersMaxImageSize
+		$maxEdge = (int)$maxDimensions;
+		if ( $maxEdge <= 0 ) {
+			$maxEdge = (int)( $config->get( 'LayersMaxImageSize' ) ?? 0 );
+		}
+		if ( $maxEdge <= 0 ) {
+			return true;
+		}
+		return ( $width <= $maxEdge && $height <= $maxEdge );
 	}
 
 	/**
@@ -98,8 +174,13 @@ class RateLimiter {
 	 * @return bool
 	 */
 	public function isLayerCountAllowed( int $layerCount ): bool {
-		// Prevent abuse with too many layers
-		return $layerCount <= 50;
+		// Use configured limit with a safe default
+		$config = $this->getConfig();
+		$maxLayers = (int)( $config->get( 'LayersMaxLayerCount' ) ?? 100 );
+		if ( $maxLayers <= 0 ) {
+			$maxLayers = 100;
+		}
+		return $layerCount <= $maxLayers;
 	}
 
 	/**

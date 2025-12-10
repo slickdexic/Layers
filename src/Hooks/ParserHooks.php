@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Wikitext parser hooks for image parameter handling
  *
@@ -9,7 +10,6 @@
 namespace MediaWiki\Extension\Layers\Hooks;
 
 class ParserHooks {
-
 	/**
 	 * Simple parser hook that just logs what it receives
 	 * @param Title $title The title object

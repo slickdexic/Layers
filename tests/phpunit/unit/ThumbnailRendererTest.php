@@ -9,6 +9,26 @@ use MediaWiki\Extension\Layers\ThumbnailRenderer;
  */
 class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 
+	private function newRenderer(): ThumbnailRenderer {
+		$config = new \HashConfig( [
+			'UploadDirectory' => sys_get_temp_dir(),
+			'UseImageMagick' => false,
+			'ImageMagickConvertCommand' => '/usr/bin/convert',
+			'LayersImageMagickTimeout' => 30,
+			'MaxShellMemory' => 0,
+			'MaxShellTime' => 0,
+			'MaxShellFileSize' => 0
+		] );
+		$logger = $this->createMock( \Psr\Log\LoggerInterface::class );
+		return new ThumbnailRenderer( $config, $logger );
+	}
+
+	private function getPrivateMethod( string $methodName ): \ReflectionMethod {
+		$method = new \ReflectionMethod( ThumbnailRenderer::class, $methodName );
+		$method->setAccessible( true );
+		return $method;
+	}
+
 	/**
 	 * @covers ::generateLayeredThumbnail
 	 */
@@ -17,20 +37,18 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 		$fileMock->method( 'getName' )->willReturn( 'test.jpg' );
 		$fileMock->method( 'getSha1' )->willReturn( 'abc123' );
 
-		$renderer = new ThumbnailRenderer();
+		$renderer = $this->newRenderer();
 		$result = $renderer->generateLayeredThumbnail( $fileMock, [] );
 
-		$this->assertFalse( $result, 'Should return false when no layers parameter' );
+		$this->assertNull( $result, 'Should return null when no layer data provided' );
 	}
 
 	/**
-	 * @covers ::buildTextCommand
+	 * @covers ::buildTextArguments
 	 */
-	public function testBuildTextCommandSecurity() {
-		$renderer = new ThumbnailRenderer();
-		$reflection = new \ReflectionClass( $renderer );
-		$method = $reflection->getMethod( 'buildTextCommand' );
-		$method->setAccessible( true );
+	public function testBuildTextArgumentsSecurity() {
+		$renderer = $this->newRenderer();
+		$method = $this->getPrivateMethod( 'buildTextArguments' );
 
 		$maliciousLayer = [
 			'x' => 10,
@@ -40,21 +58,20 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 			'fill' => '#000000'
 		];
 
-		$result = $method->invoke( $renderer, $maliciousLayer );
+		$result = $method->invoke( $renderer, $maliciousLayer, 1.0, 1.0 );
 
-		// Ensure dangerous characters are escaped
-		$this->assertStringNotContainsString( '; rm -rf', $result );
-		$this->assertStringContainsString( 'Hello', $result );
+		$this->assertIsArray( $result );
+		$this->assertContains( '-annotate', $result );
+		$this->assertContains( '+10+20', $result );
+		$this->assertContains( 'Hello"; rm -rf /; echo "pwned', $result );
 	}
 
 	/**
-	 * @covers ::buildRectangleCommand
+	 * @covers ::buildRectangleArguments
 	 */
 	public function testBuildRectangleCommandValidation() {
-		$renderer = new ThumbnailRenderer();
-		$reflection = new \ReflectionClass( $renderer );
-		$method = $reflection->getMethod( 'buildRectangleCommand' );
-		$method->setAccessible( true );
+		$renderer = $this->newRenderer();
+		$method = $this->getPrivateMethod( 'buildRectangleArguments' );
 
 		$layer = [
 			'x' => 10,
@@ -66,23 +83,23 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 			'fill' => 'none'
 		];
 
-		$result = $method->invoke( $renderer, $layer );
+		$result = $method->invoke( $renderer, $layer, 1.0, 1.0 );
 
-		$this->assertStringContainsString( 'rectangle 10,20 110,70', $result );
-		$this->assertStringContainsString( '-stroke \'#ff0000\'', $result );
-		$this->assertStringContainsString( '-strokewidth 2', $result );
+		$this->assertIsArray( $result );
+		$drawIndex = array_search( '-draw', $result );
+		$this->assertNotFalse( $drawIndex );
+		$this->assertSame( 'rectangle 10,20 110,70', $result[$drawIndex + 1] );
+		$this->assertContains( '#ff0000', $result );
 	}
 
 	/**
 	 * Test that extremely large coordinates are handled safely
 	 *
-	 * @covers ::buildTextCommand
+	 * @covers ::buildTextArguments
 	 */
 	public function testCoordinateBounds() {
-		$renderer = new ThumbnailRenderer();
-		$reflection = new \ReflectionClass( $renderer );
-		$method = $reflection->getMethod( 'buildTextCommand' );
-		$method->setAccessible( true );
+		$renderer = $this->newRenderer();
+		$method = $this->getPrivateMethod( 'buildTextArguments' );
 
 		$extremeLayer = [
 			'x' => 999999999,
@@ -91,10 +108,9 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 			'fontSize' => 14
 		];
 
-		$result = $method->invoke( $renderer, $extremeLayer );
+		$result = $method->invoke( $renderer, $extremeLayer, 1.0, 1.0 );
 
-		// Should handle extreme coordinates without crashing
-		$this->assertIsString( $result );
-		$this->assertStringContainsString( 'Test', $result );
+		$this->assertIsArray( $result );
+		$this->assertContains( 'Test', $result );
 	}
 }

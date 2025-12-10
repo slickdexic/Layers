@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "**" ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies (Composer)
+        run: |
+          if [ -f composer.json ]; then composer install --no-interaction --no-progress; fi
+
+      - name: Install dependencies (npm)
+        run: npm ci
+
+      - name: Lint/i18n (grunt)
+        run: npm test
+
+      - name: PHP checks
+        run: npm run test:php
+
+      - name: JS unit tests (Jest)
+        run: npm run test:js
+
+      - name: npm audit (security scan)
+        run: |
+          npm audit --audit-level=moderate || true
+
+      - name: composer audit (security scan)
+        run: |
+          if [ -f composer.json ]; then composer audit || true; fi

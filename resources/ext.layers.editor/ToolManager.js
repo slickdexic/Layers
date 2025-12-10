@@ -5,6 +5,19 @@
 ( function () {
 	'use strict';
 
+	// Import extracted modules (available as globals from ResourceLoader)
+	const ToolRegistry = window.ToolRegistry;
+	const ToolStyles = window.ToolStyles;
+	const ShapeFactory = window.ShapeFactory;
+
+	/**
+	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
+	 *
+	 * @typedef {Object} CanvasManager
+	 * @property {HTMLCanvasElement} canvas
+	 * @property {CanvasRenderingContext2D} ctx
+	 */
+
 	/**
 	 * ToolManager class
 	 *
@@ -22,14 +35,8 @@
 		this.startPoint = null;
 		this.tempLayer = null;
 
-		// Tool settings
-		this.currentStyle = {
-			color: '#000000',
-			strokeWidth: 2,
-			fontSize: 16,
-			fontFamily: 'Arial, sans-serif',
-			fill: 'transparent'
-		};
+		// Initialize extracted modules
+		this._initializeModules();
 
 		// Path drawing state
 		this.pathPoints = [];
@@ -39,6 +46,48 @@
 		this.textEditor = null;
 		this.editingTextLayer = null;
 	}
+
+	/**
+	 * Initialize extracted modules if available
+	 */
+	ToolManager.prototype._initializeModules = function () {
+		// Use ToolStyles if available
+		if ( ToolStyles ) {
+			this.styleManager = new ToolStyles();
+			// Keep currentStyle as reference for backward compatibility
+			this.currentStyle = this.styleManager.currentStyle;
+		} else {
+			// Fallback: inline style management
+			this.styleManager = null;
+			this.currentStyle = {
+				color: '#000000',
+				strokeWidth: 2,
+				fontSize: 16,
+				fontFamily: 'Arial, sans-serif',
+				fill: 'transparent',
+				arrowStyle: 'single',
+				shadow: false,
+				shadowColor: '#000000',
+				shadowBlur: 8,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			};
+		}
+
+		// Use ShapeFactory if available
+		if ( ShapeFactory ) {
+			this.shapeFactory = new ShapeFactory( { styleManager: this.styleManager } );
+		} else {
+			this.shapeFactory = null;
+		}
+
+		// Use ToolRegistry singleton if available
+		if ( ToolRegistry && window.Layers && window.Layers.Tools && window.Layers.Tools.registry ) {
+			this.toolRegistry = window.Layers.Tools.registry;
+		} else {
+			this.toolRegistry = null;
+		}
+	};
 
 	/**
 	 * Set current tool
@@ -54,6 +103,36 @@
 
 		// Tool-specific initialization
 		this.initializeTool( toolName );
+
+		// Announce tool change for screen readers
+		if ( window.layersAnnouncer ) {
+			const toolDisplayName = this.getToolDisplayName( toolName );
+			window.layersAnnouncer.announceTool( toolDisplayName );
+		}
+	};
+
+	/**
+	 * Get display name for a tool (for accessibility announcements)
+	 *
+	 * @param {string} toolName Tool name
+	 * @return {string} Human-readable tool name
+	 */
+	ToolManager.prototype.getToolDisplayName = function ( toolName ) {
+		// Delegate to ToolRegistry if available
+		if ( this.toolRegistry && typeof this.toolRegistry.getDisplayName === 'function' ) {
+			return this.toolRegistry.getDisplayName( toolName );
+		}
+
+		// Fallback: Use i18n messages if available
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			const msgKey = 'layers-tool-' + toolName;
+			const msg = window.layersMessages.get( msgKey, '' );
+			if ( msg ) {
+				return msg;
+			}
+		}
+		// Fallback to capitalized tool name
+		return toolName.charAt( 0 ).toUpperCase() + toolName.slice( 1 );
 	};
 
 	/**
@@ -86,7 +165,7 @@
 	 * Update cursor based on current tool
 	 */
 	ToolManager.prototype.updateCursor = function () {
-		var cursor = this.getToolCursor( this.currentTool );
+		const cursor = this.getToolCursor( this.currentTool );
 		this.canvasManager.canvas.style.cursor = cursor;
 	};
 
@@ -97,6 +176,12 @@
 	 * @return {string} CSS cursor value
 	 */
 	ToolManager.prototype.getToolCursor = function ( toolName ) {
+		// Delegate to ToolRegistry if available
+		if ( this.toolRegistry && typeof this.toolRegistry.getCursor === 'function' ) {
+			return this.toolRegistry.getCursor( toolName );
+		}
+
+		// Fallback implementation
 		switch ( toolName ) {
 			case 'pointer':
 				return 'default';
@@ -123,21 +208,24 @@
 	 * Handle tool start (mouse down)
 	 *
 	 * @param {Object} point Starting point
-	 * @param {Object} event Original event
 	 */
-	ToolManager.prototype.startTool = function ( point, event ) {
+	ToolManager.prototype.startTool = function ( point ) {
 		this.isDrawing = true;
 		this.startPoint = point;
 
+		// eslint-disable-next-line no-console
+
+
 		switch ( this.currentTool ) {
-			case 'pointer':
-				this.startSelection( point, event );
-				break;
+			// Pointer tool is handled by CanvasManager directly
 			case 'pen':
 				this.startPenDrawing( point );
 				break;
 			case 'rectangle':
 				this.startRectangleTool( point );
+				break;
+			case 'highlight':
+				this.startHighlightTool( point );
 				break;
 			case 'circle':
 				this.startCircleTool( point );
@@ -170,22 +258,22 @@
 	 * Handle tool update (mouse move)
 	 *
 	 * @param {Object} point Current point
-	 * @param {Object} event Original event
 	 */
-	ToolManager.prototype.updateTool = function ( point, event ) {
+	ToolManager.prototype.updateTool = function ( point ) {
 		if ( !this.isDrawing ) {
 			return;
 		}
 
 		switch ( this.currentTool ) {
-			case 'pointer':
-				this.updateSelection( point, event );
-				break;
+			// Pointer tool is handled by CanvasManager directly
 			case 'pen':
 				this.updatePenDrawing( point );
 				break;
 			case 'rectangle':
 				this.updateRectangleTool( point );
+				break;
+			case 'highlight':
+				this.updateHighlightTool( point );
 				break;
 			case 'circle':
 				this.updateCircleTool( point );
@@ -210,21 +298,19 @@
 	 * Handle tool finish (mouse up)
 	 *
 	 * @param {Object} point End point
-	 * @param {Object} event Original event
 	 */
-	ToolManager.prototype.finishTool = function ( point, event ) {
+	ToolManager.prototype.finishTool = function ( point ) {
 		if ( !this.isDrawing ) {
 			return;
 		}
 
 		switch ( this.currentTool ) {
-			case 'pointer':
-				this.finishSelection( point, event );
-				break;
+			// Pointer tool is handled by CanvasManager directly
 			case 'pen':
 				this.finishPenDrawing( point );
 				break;
 			case 'rectangle':
+			case 'highlight':
 			case 'circle':
 			case 'ellipse':
 			case 'line':
@@ -239,79 +325,16 @@
 		this.startPoint = null;
 	};
 
-	/**
-	 * Start selection with pointer tool
-	 *
-	 * @param {Object} point Starting point
-	 * @param {Object} event Original event
+	/*
+	 * The following selection-related methods are now obsolete, as the logic
+	 * has been moved to CanvasManager for better integration with hit-testing
+	 * and state management. They are kept here for reference but are no longer called.
 	 */
-	ToolManager.prototype.startSelection = function ( point, event ) {
-		// Delegate to selection manager if available
-		if ( this.canvasManager.selectionManager ) {
-			// Check for handle hits first
-			var handle = this.canvasManager.selectionManager.hitTestSelectionHandles( point );
-			if ( handle ) {
-				if ( handle.type === 'rotate' ) {
-					this.canvasManager.selectionManager.startRotation( point );
-				} else {
-					this.canvasManager.selectionManager.startResize( handle, point );
-				}
-				return;
-			}
-
-			// Check for layer hits
-			var hitLayer = this.hitTestLayers( point );
-			if ( hitLayer ) {
-				var addToSelection = event.ctrlKey || event.metaKey;
-				this.canvasManager.selectionManager.selectLayer( hitLayer.id, addToSelection );
-				this.canvasManager.selectionManager.startDrag( point );
-			} else {
-				// Start marquee selection
-				this.canvasManager.selectionManager.startMarqueeSelection( point );
-			}
-		}
-	};
-
-	/**
-	 * Update selection with pointer tool
-	 *
-	 * @param {Object} point Current point
-	 * @param {Object} event Original event
-	 */
-	ToolManager.prototype.updateSelection = function ( point, event ) {
-		if ( this.canvasManager.selectionManager ) {
-			if ( this.canvasManager.selectionManager.isResizing ) {
-				this.canvasManager.selectionManager.updateResize( point, this.getModifiers( event ) );
-			} else if ( this.canvasManager.selectionManager.isRotating ) {
-				this.canvasManager.selectionManager.updateRotation( point );
-			} else if ( this.canvasManager.selectionManager.isDragging ) {
-				this.canvasManager.selectionManager.updateDrag( point );
-			} else if ( this.canvasManager.selectionManager.isMarqueeSelecting ) {
-				this.canvasManager.selectionManager.updateMarqueeSelection( point );
-			}
-		}
-	};
-
-	/**
-	 * Finish selection with pointer tool
-	 *
-	 * @param {Object} point End point (unused)
-	 * @param {Object} event Original event (unused)
-	 */
-	// eslint-disable-next-line no-unused-vars
-	ToolManager.prototype.finishSelection = function ( point, event ) {
-		if ( this.canvasManager.selectionManager ) {
-			if ( this.canvasManager.selectionManager.isResizing ) {
-				this.canvasManager.selectionManager.finishResize();
-			} else if ( this.canvasManager.selectionManager.isRotating ) {
-				this.canvasManager.selectionManager.finishRotation();
-			} else if ( this.canvasManager.selectionManager.isDragging ) {
-				this.canvasManager.selectionManager.finishDrag();
-			} else if ( this.canvasManager.selectionManager.isMarqueeSelecting ) {
-				this.canvasManager.selectionManager.finishMarqueeSelection();
-			}
-		}
-	};
+	/*
+	ToolManager.prototype.startSelection = function ( point, event ) { ... };
+	ToolManager.prototype.updateSelection = function ( point, event ) { ... };
+	ToolManager.prototype.finishSelection = function ( point, event ) { ... };
+	*/
 
 	/**
 	 * Start pen drawing
@@ -319,12 +342,25 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startPenDrawing = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createPath === 'function' ) {
+			this.tempLayer = this.shapeFactory.createPath( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'path',
 			points: [ { x: point.x, y: point.y } ],
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
-			fill: 'none'
+			fill: 'none',
+			// Apply shadow properties from currentStyle
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
 		};
 	};
 
@@ -359,6 +395,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startRectangleTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createRectangle === 'function' ) {
+			this.tempLayer = this.shapeFactory.createRectangle( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'rectangle',
 			x: point.x,
@@ -367,7 +410,55 @@
 			height: 0,
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
-			fill: this.currentStyle.fill
+			fill: this.currentStyle.fill,
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+		};
+	};
+
+	/**
+	 * Start highlight tool
+	 *
+	 * @param {Object} point Starting point
+	 */
+	ToolManager.prototype.startHighlightTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createHighlight === 'function' ) {
+			this.tempLayer = this.shapeFactory.createHighlight( point );
+			return;
+		}
+
+		// Fallback implementation
+		let color = this.currentStyle.fill;
+		if ( !color || color === 'transparent' || color === 'none' ) {
+			color = this.currentStyle.color || '#ffff00';
+		}
+
+		let opacity = this.currentStyle.fillOpacity;
+		if ( typeof opacity !== 'number' || Number.isNaN( opacity ) ) {
+			opacity = 0.3;
+		} else {
+			opacity = Math.max( 0, Math.min( 1, opacity ) );
+		}
+
+		this.tempLayer = {
+			type: 'highlight',
+			x: point.x,
+			y: point.y,
+			width: 0,
+			height: 0,
+			color: color,
+			opacity: opacity,
+			fill: color,
+			fillOpacity: opacity,
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
 		};
 	};
 
@@ -387,11 +478,33 @@
 	};
 
 	/**
+	 * Update highlight tool
+	 *
+	 * @param {Object} point Current point
+	 */
+	ToolManager.prototype.updateHighlightTool = function ( point ) {
+		if ( this.tempLayer && this.startPoint ) {
+			this.tempLayer.x = Math.min( this.startPoint.x, point.x );
+			this.tempLayer.y = Math.min( this.startPoint.y, point.y );
+			this.tempLayer.width = Math.abs( point.x - this.startPoint.x );
+			this.tempLayer.height = Math.abs( point.y - this.startPoint.y );
+			this.renderTempLayer();
+		}
+	};
+
+	/**
 	 * Start circle tool
 	 *
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startCircleTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createCircle === 'function' ) {
+			this.tempLayer = this.shapeFactory.createCircle( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'circle',
 			x: point.x,
@@ -399,7 +512,12 @@
 			radius: 0,
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
-			fill: this.currentStyle.fill
+			fill: this.currentStyle.fill,
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
 		};
 	};
 
@@ -410,8 +528,8 @@
 	 */
 	ToolManager.prototype.updateCircleTool = function ( point ) {
 		if ( this.tempLayer && this.startPoint ) {
-			var dx = point.x - this.startPoint.x;
-			var dy = point.y - this.startPoint.y;
+			const dx = point.x - this.startPoint.x;
+			const dy = point.y - this.startPoint.y;
 			this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
 			this.renderTempLayer();
 		}
@@ -423,6 +541,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startEllipseTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createEllipse === 'function' ) {
+			this.tempLayer = this.shapeFactory.createEllipse( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'ellipse',
 			x: point.x,
@@ -431,7 +556,12 @@
 			radiusY: 0,
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
-			fill: this.currentStyle.fill
+			fill: this.currentStyle.fill,
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
 		};
 	};
 
@@ -442,8 +572,12 @@
 	 */
 	ToolManager.prototype.updateEllipseTool = function ( point ) {
 		if ( this.tempLayer && this.startPoint ) {
-			this.tempLayer.radiusX = Math.abs( point.x - this.startPoint.x );
-			this.tempLayer.radiusY = Math.abs( point.y - this.startPoint.y );
+			// Ellipse center should be midpoint between start and current point
+			// radiusX/radiusY are half the width/height
+			this.tempLayer.radiusX = Math.abs( point.x - this.startPoint.x ) / 2;
+			this.tempLayer.radiusY = Math.abs( point.y - this.startPoint.y ) / 2;
+			this.tempLayer.x = ( this.startPoint.x + point.x ) / 2;
+			this.tempLayer.y = ( this.startPoint.y + point.y ) / 2;
 			this.renderTempLayer();
 		}
 	};
@@ -454,6 +588,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startLineTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createLine === 'function' ) {
+			this.tempLayer = this.shapeFactory.createLine( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: this.currentTool, // 'line' or 'arrow'
 			x1: point.x,
@@ -461,7 +602,12 @@
 			x2: point.x,
 			y2: point.y,
 			stroke: this.currentStyle.color,
-			strokeWidth: this.currentStyle.strokeWidth
+			strokeWidth: this.currentStyle.strokeWidth,
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
 		};
 	};
 
@@ -471,8 +617,16 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startArrowTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createArrow === 'function' ) {
+			this.tempLayer = this.shapeFactory.createArrow( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.startLineTool( point );
 		this.tempLayer.type = 'arrow';
+		this.tempLayer.arrowStyle = this.currentStyle.arrowStyle || 'single';
 	};
 
 	/**
@@ -514,8 +668,8 @@
 
 		// Check for path completion (double-click or close to start)
 		if ( this.pathPoints.length > 2 ) {
-			var firstPoint = this.pathPoints[ 0 ];
-			var distance = Math.sqrt(
+			const firstPoint = this.pathPoints[ 0 ];
+			const distance = Math.sqrt(
 				Math.pow( point.x - firstPoint.x, 2 ) +
 				Math.pow( point.y - firstPoint.y, 2 )
 			);
@@ -533,7 +687,7 @@
 	 */
 	ToolManager.prototype.completePath = function () {
 		if ( this.pathPoints.length > 2 ) {
-			var layer = {
+			const layer = {
 				type: 'path',
 				points: this.pathPoints.slice(),
 				stroke: this.currentStyle.color,
@@ -555,6 +709,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startPolygonTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createPolygon === 'function' ) {
+			this.tempLayer = this.shapeFactory.createPolygon( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'polygon',
 			x: point.x,
@@ -563,7 +724,12 @@
 			sides: 6,
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
-			fill: this.currentStyle.fill
+			fill: this.currentStyle.fill,
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
 		};
 	};
 
@@ -574,8 +740,8 @@
 	 */
 	ToolManager.prototype.updatePolygonTool = function ( point ) {
 		if ( this.tempLayer && this.startPoint ) {
-			var dx = point.x - this.startPoint.x;
-			var dy = point.y - this.startPoint.y;
+			const dx = point.x - this.startPoint.x;
+			const dy = point.y - this.startPoint.y;
 			this.tempLayer.radius = Math.sqrt( dx * dx + dy * dy );
 			this.renderTempLayer();
 		}
@@ -587,6 +753,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startStarTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createStar === 'function' ) {
+			this.tempLayer = this.shapeFactory.createStar( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'star',
 			x: point.x,
@@ -596,7 +769,12 @@
 			points: 5,
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
-			fill: this.currentStyle.fill
+			fill: this.currentStyle.fill,
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
 		};
 	};
 
@@ -607,10 +785,11 @@
 	 */
 	ToolManager.prototype.updateStarTool = function ( point ) {
 		if ( this.tempLayer && this.startPoint ) {
-			var dx = point.x - this.startPoint.x;
-			var dy = point.y - this.startPoint.y;
-			var radius = Math.sqrt( dx * dx + dy * dy );
+			const dx = point.x - this.startPoint.x;
+			const dy = point.y - this.startPoint.y;
+			const radius = Math.sqrt( dx * dx + dy * dy );
 			this.tempLayer.outerRadius = radius;
+			this.tempLayer.radius = radius;
 			this.tempLayer.innerRadius = radius * 0.4;
 			this.renderTempLayer();
 		}
@@ -639,18 +818,27 @@
 	 * @return {boolean} True if layer has valid size
 	 */
 	ToolManager.prototype.hasValidSize = function ( layer ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.hasValidSize === 'function' ) {
+			return this.shapeFactory.hasValidSize( layer );
+		}
+
+		// Fallback implementation
 		switch ( layer.type ) {
 			case 'rectangle':
+				return layer.width > 1 && layer.height > 1;
+			case 'highlight':
 				return layer.width > 1 && layer.height > 1;
 			case 'circle':
 				return layer.radius > 1;
 			case 'ellipse':
 				return layer.radiusX > 1 && layer.radiusY > 1;
 			case 'line':
-			case 'arrow':
-				var dx = layer.x2 - layer.x1;
-				var dy = layer.y2 - layer.y1;
+			case 'arrow': {
+				const dx = layer.x2 - layer.x1;
+				const dy = layer.y2 - layer.y1;
 				return Math.sqrt( dx * dx + dy * dy ) > 1;
+			}
 			case 'polygon':
 			case 'star':
 				return layer.radius > 1 || layer.outerRadius > 1;
@@ -665,17 +853,10 @@
 	 * Render temporary layer
 	 */
 	ToolManager.prototype.renderTempLayer = function () {
-		if ( this.canvasManager.renderEngine ) {
-			this.canvasManager.renderEngine.render( this.canvasManager.editor.layers );
-			if ( this.tempLayer ) {
-				this.canvasManager.renderEngine.drawLayer( this.tempLayer );
-			}
-		} else {
-			// Fallback to canvas manager
-			this.canvasManager.renderLayers( this.canvasManager.editor.layers );
-			if ( this.tempLayer ) {
-				this.canvasManager.drawLayer( this.tempLayer );
-			}
+		// Use canvas manager directly (RenderEngine removed as redundant)
+		this.canvasManager.renderLayers( this.canvasManager.editor.layers );
+		if ( this.tempLayer ) {
+			this.canvasManager.drawLayer( this.tempLayer );
 		}
 	};
 
@@ -683,15 +864,12 @@
 	 * Render path preview
 	 */
 	ToolManager.prototype.renderPathPreview = function () {
-		if ( this.canvasManager.renderEngine ) {
-			this.canvasManager.renderEngine.render( this.canvasManager.editor.layers );
-		} else {
-			this.canvasManager.renderLayers( this.canvasManager.editor.layers );
-		}
+		// Use canvas manager directly (RenderEngine removed as redundant)
+		this.canvasManager.renderLayers( this.canvasManager.editor.layers );
 
 		// Draw path preview
 		if ( this.pathPoints.length > 0 ) {
-			var ctx = this.canvasManager.ctx;
+			const ctx = this.canvasManager.ctx;
 			ctx.save();
 			ctx.strokeStyle = this.currentStyle.color;
 			ctx.lineWidth = this.currentStyle.strokeWidth;
@@ -699,14 +877,14 @@
 
 			ctx.beginPath();
 			ctx.moveTo( this.pathPoints[ 0 ].x, this.pathPoints[ 0 ].y );
-			for ( var i = 1; i < this.pathPoints.length; i++ ) {
+			for ( let i = 1; i < this.pathPoints.length; i++ ) {
 				ctx.lineTo( this.pathPoints[ i ].x, this.pathPoints[ i ].y );
 			}
 			ctx.stroke();
 
 			// Draw points
 			ctx.fillStyle = this.currentStyle.color;
-			this.pathPoints.forEach( function ( point ) {
+			this.pathPoints.forEach( ( point ) => {
 				ctx.beginPath();
 				ctx.arc( point.x, point.y, 3, 0, 2 * Math.PI );
 				ctx.fill();
@@ -725,8 +903,20 @@
 		// Generate unique ID
 		layer.id = this.generateLayerId();
 
-		// Add to layers array
-		this.canvasManager.editor.layers.push( layer );
+		// Add to layers array via StateManager
+		if ( this.canvasManager.editor.stateManager &&
+			typeof this.canvasManager.editor.stateManager.addLayer === 'function' ) {
+			this.canvasManager.editor.stateManager.addLayer( layer );
+		} else {
+			// Fallback: get layers, modify, and set back (triggers setter)
+			const layers = this.canvasManager.editor.layers || [];
+			layers.unshift( layer );
+			if ( this.canvasManager.editor.stateManager ) {
+				this.canvasManager.editor.stateManager.set( 'layers', layers );
+			} else {
+				this.canvasManager.editor.layers = layers;
+			}
+		}
 
 		// Select new layer
 		if ( this.canvasManager.selectionManager ) {
@@ -740,11 +930,14 @@
 
 		// Mark dirty and update
 		this.canvasManager.editor.markDirty();
-		this.canvasManager.renderLayers( this.canvasManager.editor.layers );
+		const currentLayers = this.canvasManager.editor.stateManager ? 
+			this.canvasManager.editor.stateManager.getLayers() : 
+			this.canvasManager.editor.layers;
+		this.canvasManager.renderLayers( currentLayers );
 
 		// Update layer panel
 		if ( this.canvasManager.editor.layerPanel ) {
-			this.canvasManager.editor.layerPanel.updateLayers( this.canvasManager.editor.layers );
+			this.canvasManager.editor.layerPanel.updateLayers( currentLayers );
 		}
 	};
 
@@ -756,7 +949,7 @@
 	ToolManager.prototype.showTextEditor = function ( point ) {
 		this.hideTextEditor();
 
-		var input = document.createElement( 'input' );
+		const input = document.createElement( 'input' );
 		input.type = 'text';
 		input.className = 'layers-text-editor';
 		input.style.position = 'absolute';
@@ -767,22 +960,26 @@
 		input.style.color = this.currentStyle.color;
 		input.style.border = '1px solid #ccc';
 		input.style.background = 'white';
-		input.style.zIndex = '1000';
+		input.style.zIndex = '1001'; // Higher z-index
 
-		var self = this;
-		input.addEventListener( 'keydown', function ( e ) {
+		input.addEventListener( 'keydown', ( e ) => {
 			if ( e.key === 'Enter' ) {
-				self.finishTextEditing( input, point );
+				this.finishTextEditing( input, point );
 			} else if ( e.key === 'Escape' ) {
-				self.hideTextEditor();
+				this.hideTextEditor();
 			}
 		} );
 
-		input.addEventListener( 'blur', function () {
-			self.finishTextEditing( input, point );
+		input.addEventListener( 'blur', () => {
+			this.finishTextEditing( input, point );
 		} );
 
-		this.canvasManager.container.appendChild( input );
+		// Append to the main editor container for correct stacking context
+		if ( this.canvasManager.editor && this.canvasManager.editor.ui && this.canvasManager.editor.ui.mainContainer ) {
+			this.canvasManager.editor.ui.mainContainer.appendChild( input );
+		} else {
+			this.canvasManager.container.appendChild( input );
+		}
 		this.textEditor = input;
 		input.focus();
 	};
@@ -804,9 +1001,9 @@
 	 * @param {Object} point Position point
 	 */
 	ToolManager.prototype.finishTextEditing = function ( input, point ) {
-		var text = input.value.trim();
+		const text = input.value.trim();
 		if ( text ) {
-			var layer = {
+			const layer = {
 				type: 'text',
 				x: point.x,
 				y: point.y,
@@ -820,41 +1017,14 @@
 		this.hideTextEditor();
 	};
 
-	/**
-	 * Hit test layers at point
-	 *
-	 * @param {Object} point Point to test
-	 * @return {Object|null} Hit layer or null
+	/*
+	 * The following hit-testing methods are now obsolete, as the logic
+	 * has been moved to CanvasManager for better accuracy and centralization.
 	 */
-	ToolManager.prototype.hitTestLayers = function ( point ) {
-		var layers = this.canvasManager.editor.layers || [];
-
-		// Test in reverse order (top to bottom)
-		for ( var i = layers.length - 1; i >= 0; i-- ) {
-			var layer = layers[ i ];
-			if ( layer.visible !== false && this.pointInLayer( point, layer ) ) {
-				return layer;
-			}
-		}
-
-		return null;
-	};
-
-	/**
-	 * Check if point is in layer
-	 *
-	 * @param {Object} point Point to test
-	 * @param {Object} layer Layer to test
-	 * @return {boolean} True if point is in layer
-	 */
-	ToolManager.prototype.pointInLayer = function ( point, layer ) {
-		var bounds = this.canvasManager.getLayerBounds( layer );
-		return bounds &&
-			point.x >= bounds.x &&
-			point.x <= bounds.x + bounds.width &&
-			point.y >= bounds.y &&
-			point.y <= bounds.y + bounds.height;
-	};
+	/*
+	ToolManager.prototype.hitTestLayers = function ( point ) { ... };
+	ToolManager.prototype.pointInLayer = function ( point, layer ) { ... };
+	*/
 
 	/**
 	 * Get modifier keys from event
@@ -889,8 +1059,16 @@
 	 * @param {Object} style Style object
 	 */
 	ToolManager.prototype.updateStyle = function ( style ) {
-		// Use manual property assignment instead of Object.assign for IE11 compatibility
-		for ( var prop in style ) {
+		// Delegate to ToolStyles if available
+		if ( this.toolStyles && typeof this.toolStyles.update === 'function' ) {
+			this.toolStyles.update( style );
+			// Keep currentStyle in sync for fallback code
+			this.currentStyle = this.toolStyles.get();
+			return;
+		}
+
+		// Fallback: Use manual property assignment for IE11 compatibility
+		for ( const prop in style ) {
 			if ( Object.prototype.hasOwnProperty.call( style, prop ) ) {
 				this.currentStyle[ prop ] = style[ prop ];
 			}
@@ -903,9 +1081,14 @@
 	 * @return {Object} Current style object
 	 */
 	ToolManager.prototype.getStyle = function () {
-		// Create shallow copy manually for IE11 compatibility
-		var copy = {};
-		for ( var prop in this.currentStyle ) {
+		// Delegate to ToolStyles if available
+		if ( this.toolStyles && typeof this.toolStyles.get === 'function' ) {
+			return this.toolStyles.get();
+		}
+
+		// Fallback: Create shallow copy manually for IE11 compatibility
+		const copy = {};
+		for ( const prop in this.currentStyle ) {
 			if ( Object.prototype.hasOwnProperty.call( this.currentStyle, prop ) ) {
 				copy[ prop ] = this.currentStyle[ prop ];
 			}
@@ -922,7 +1105,50 @@
 		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	};
 
-	// Export ToolManager to global scope
-	window.LayersToolManager = ToolManager;
+	/**
+	 * Clean up resources and clear state
+	 */
+	ToolManager.prototype.destroy = function () {
+		// Finish any active drawing
+		this.finishCurrentDrawing();
+
+		// Hide and clean up text editor
+		this.hideTextEditor();
+		if ( this.textEditor && this.textEditor.parentNode ) {
+			this.textEditor.parentNode.removeChild( this.textEditor );
+		}
+		this.textEditor = null;
+		this.editingTextLayer = null;
+
+		// Clear state
+		this.pathPoints = [];
+		this.tempLayer = null;
+		this.startPoint = null;
+		this.currentStyle = null;
+
+		// Clear module references
+		this.toolRegistry = null;
+		this.toolStyles = null;
+		this.shapeFactory = null;
+
+		// Clear references
+		this.canvasManager = null;
+		this.config = null;
+	};
+
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.ToolManager = ToolManager;
+
+		// Backward compatibility - direct window export
+		window.LayersToolManager = ToolManager;
+	}
+
+	// Export for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = ToolManager;
+	}
 
 }() );

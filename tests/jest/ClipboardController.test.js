@@ -1,0 +1,392 @@
+/**
+ * @jest-environment jsdom
+ */
+
+const ClipboardController = require('../../resources/ext.layers.editor/canvas/ClipboardController.js');
+
+describe('ClipboardController', () => {
+    let clipboardController;
+    let mockCanvasManager;
+    let mockEditor;
+    let mockLayers;
+
+    beforeEach(() => {
+        // Create mock layers
+        mockLayers = [
+            {
+                id: 'layer1',
+                type: 'rectangle',
+                x: 100,
+                y: 100,
+                width: 200,
+                height: 150,
+                fillColor: '#ff0000',
+                visible: true,
+                locked: false
+            },
+            {
+                id: 'layer2',
+                type: 'circle',
+                x: 400,
+                y: 200,
+                radius: 50,
+                fillColor: '#00ff00',
+                visible: true,
+                locked: false
+            },
+            {
+                id: 'layer3',
+                type: 'line',
+                x1: 50,
+                y1: 300,
+                x2: 250,
+                y2: 350,
+                strokeWidth: 2,
+                visible: true,
+                locked: false
+            },
+            {
+                id: 'layer4',
+                type: 'path',
+                points: [
+                    { x: 100, y: 400 },
+                    { x: 150, y: 420 },
+                    { x: 200, y: 410 }
+                ],
+                strokeWidth: 3,
+                visible: true,
+                locked: false
+            }
+        ];
+
+        // Create mock editor
+        mockEditor = {
+            layers: mockLayers,
+            getLayerById: jest.fn((id) => {
+                return mockLayers.find(l => l.id === id);
+            }),
+            generateLayerId: jest.fn(() => {
+                return 'generated_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
+            }),
+            saveState: jest.fn(),
+            markDirty: jest.fn()
+        };
+
+        // Create mock CanvasManager
+        mockCanvasManager = {
+            editor: mockEditor,
+            selectedLayerId: null,
+            selectedLayerIds: [],
+            renderLayers: jest.fn(),
+            deselectAll: jest.fn()
+        };
+
+        // Create ClipboardController instance
+        clipboardController = new ClipboardController(mockCanvasManager);
+    });
+
+    describe('initialization', () => {
+        test('should create ClipboardController with correct properties', () => {
+            expect(clipboardController.canvasManager).toBe(mockCanvasManager);
+            expect(clipboardController.clipboard).toEqual([]);
+        });
+    });
+
+    describe('copySelected', () => {
+        test('should copy single selected layer', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+
+            const count = clipboardController.copySelected();
+
+            expect(count).toBe(1);
+            expect(clipboardController.clipboard.length).toBe(1);
+            expect(clipboardController.clipboard[0].id).toBe('layer1');
+            expect(clipboardController.clipboard[0].type).toBe('rectangle');
+        });
+
+        test('should copy multiple selected layers', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1', 'layer2'];
+
+            const count = clipboardController.copySelected();
+
+            expect(count).toBe(2);
+            expect(clipboardController.clipboard.length).toBe(2);
+        });
+
+        test('should deep clone layers', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+
+            clipboardController.copySelected();
+
+            // Modify original layer
+            mockLayers[0].fillColor = '#0000ff';
+
+            // Clipboard should still have original value
+            expect(clipboardController.clipboard[0].fillColor).toBe('#ff0000');
+        });
+
+        test('should return 0 when no layers selected', () => {
+            mockCanvasManager.selectedLayerIds = [];
+
+            const count = clipboardController.copySelected();
+
+            expect(count).toBe(0);
+            expect(clipboardController.clipboard.length).toBe(0);
+        });
+
+        test('should skip non-existent layer ids', () => {
+            mockCanvasManager.selectedLayerIds = ['nonexistent', 'layer1'];
+
+            const count = clipboardController.copySelected();
+
+            expect(count).toBe(1);
+        });
+
+        test('should clear previous clipboard contents', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            mockCanvasManager.selectedLayerIds = ['layer2'];
+            clipboardController.copySelected();
+
+            expect(clipboardController.clipboard.length).toBe(1);
+            expect(clipboardController.clipboard[0].id).toBe('layer2');
+        });
+    });
+
+    describe('paste', () => {
+        test('should paste layer from clipboard', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            const pastedIds = clipboardController.paste();
+
+            expect(pastedIds.length).toBe(1);
+            expect(mockEditor.layers.length).toBe(5); // Original 4 + 1 pasted
+            expect(mockEditor.saveState).toHaveBeenCalled();
+            expect(mockEditor.markDirty).toHaveBeenCalled();
+            expect(mockCanvasManager.renderLayers).toHaveBeenCalled();
+        });
+
+        test('should apply paste offset to position', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            clipboardController.paste();
+
+            // First layer (pasted) should have offset applied
+            expect(mockEditor.layers[0].x).toBe(120); // 100 + 20 offset
+            expect(mockEditor.layers[0].y).toBe(120); // 100 + 20 offset
+        });
+
+        test('should apply paste offset to line endpoints', () => {
+            mockCanvasManager.selectedLayerIds = ['layer3'];
+            clipboardController.copySelected();
+
+            clipboardController.paste();
+
+            const pastedLine = mockEditor.layers[0];
+            expect(pastedLine.x1).toBe(70);  // 50 + 20
+            expect(pastedLine.y1).toBe(320); // 300 + 20
+            expect(pastedLine.x2).toBe(270); // 250 + 20
+            expect(pastedLine.y2).toBe(370); // 350 + 20
+        });
+
+        test('should apply paste offset to path points', () => {
+            mockCanvasManager.selectedLayerIds = ['layer4'];
+            clipboardController.copySelected();
+
+            clipboardController.paste();
+
+            const pastedPath = mockEditor.layers[0];
+            expect(pastedPath.points[0].x).toBe(120); // 100 + 20
+            expect(pastedPath.points[0].y).toBe(420); // 400 + 20
+            expect(pastedPath.points[1].x).toBe(170); // 150 + 20
+        });
+
+        test('should generate new unique ID for pasted layers', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            clipboardController.paste();
+
+            expect(mockEditor.layers[0].id).not.toBe('layer1');
+            expect(mockEditor.generateLayerId).toHaveBeenCalled();
+        });
+
+        test('should select pasted layers', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1', 'layer2'];
+            clipboardController.copySelected();
+
+            const pastedIds = clipboardController.paste();
+
+            expect(mockCanvasManager.selectedLayerIds).toEqual(pastedIds);
+        });
+
+        test('should insert pasted layers at top of layer stack', () => {
+            mockCanvasManager.selectedLayerIds = ['layer2'];
+            clipboardController.copySelected();
+
+            clipboardController.paste();
+
+            expect(mockEditor.layers[0].type).toBe('circle');
+        });
+
+        test('should return empty array when clipboard is empty', () => {
+            const pastedIds = clipboardController.paste();
+
+            expect(pastedIds).toEqual([]);
+            expect(mockEditor.saveState).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('cutSelected', () => {
+        test('should copy and delete selected layer', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+
+            const count = clipboardController.cutSelected();
+
+            expect(count).toBe(1);
+            expect(clipboardController.clipboard.length).toBe(1);
+            expect(mockEditor.layers.length).toBe(3); // 4 - 1 deleted
+            expect(mockEditor.layers.find(l => l.id === 'layer1')).toBeUndefined();
+        });
+
+        test('should cut multiple selected layers', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1', 'layer2'];
+
+            const count = clipboardController.cutSelected();
+
+            expect(count).toBe(2);
+            expect(mockEditor.layers.length).toBe(2);
+        });
+
+        test('should call deselectAll after cut', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+
+            clipboardController.cutSelected();
+
+            expect(mockCanvasManager.deselectAll).toHaveBeenCalled();
+        });
+
+        test('should return 0 when no layers selected', () => {
+            mockCanvasManager.selectedLayerIds = [];
+
+            const count = clipboardController.cutSelected();
+
+            expect(count).toBe(0);
+        });
+
+        test('should save state and mark dirty', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+
+            clipboardController.cutSelected();
+
+            expect(mockEditor.saveState).toHaveBeenCalled();
+            expect(mockEditor.markDirty).toHaveBeenCalled();
+        });
+    });
+
+    describe('hasContent', () => {
+        test('should return false when clipboard is empty', () => {
+            expect(clipboardController.hasContent()).toBe(false);
+        });
+
+        test('should return true when clipboard has layers', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            expect(clipboardController.hasContent()).toBe(true);
+        });
+    });
+
+    describe('getCount', () => {
+        test('should return 0 for empty clipboard', () => {
+            expect(clipboardController.getCount()).toBe(0);
+        });
+
+        test('should return correct count', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1', 'layer2'];
+            clipboardController.copySelected();
+
+            expect(clipboardController.getCount()).toBe(2);
+        });
+    });
+
+    describe('clear', () => {
+        test('should clear clipboard contents', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            clipboardController.clear();
+
+            expect(clipboardController.clipboard).toEqual([]);
+            expect(clipboardController.hasContent()).toBe(false);
+        });
+    });
+
+    describe('applyPasteOffset', () => {
+        test('should handle undefined position values', () => {
+            const layer = {
+                type: 'rectangle'
+                // no x, y defined
+            };
+
+            clipboardController.applyPasteOffset(layer);
+
+            // Should not throw
+            expect(layer.x).toBeUndefined();
+            expect(layer.y).toBeUndefined();
+        });
+
+        test('should handle null values gracefully', () => {
+            const layer = {
+                type: 'rectangle',
+                x: null,
+                y: null
+            };
+
+            clipboardController.applyPasteOffset(layer);
+
+            expect(layer.x).toBe(20); // null becomes 0, + 20
+            expect(layer.y).toBe(20);
+        });
+    });
+
+    describe('generateLayerId', () => {
+        test('should use editor generateLayerId when available', () => {
+            mockEditor.generateLayerId.mockReturnValue('custom_id');
+
+            const id = clipboardController.generateLayerId(mockEditor);
+
+            expect(id).toBe('custom_id');
+            expect(mockEditor.generateLayerId).toHaveBeenCalled();
+        });
+
+        test('should fallback to internal ID generation when editor unavailable', () => {
+            const id = clipboardController.generateLayerId(null);
+
+            expect(id).toMatch(/^layer_\d+_[a-z0-9]+$/);
+        });
+
+        test('should fallback when editor has no generateLayerId', () => {
+            const editorWithoutMethod = { layers: [] };
+
+            const id = clipboardController.generateLayerId(editorWithoutMethod);
+
+            expect(id).toMatch(/^layer_\d+_[a-z0-9]+$/);
+        });
+    });
+
+    describe('destroy', () => {
+        test('should clean up resources', () => {
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            clipboardController.destroy();
+
+            expect(clipboardController.clipboard).toEqual([]);
+            expect(clipboardController.canvasManager).toBeNull();
+        });
+    });
+});

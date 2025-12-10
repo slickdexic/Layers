@@ -1,6 +1,8 @@
 # Layers – MediaWiki Extension
 
-*A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today’s most popular image editors.*
+*A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
+
+> **🔒 Security Update (November 10, 2025):** Critical security vulnerabilities have been fixed in this version. See [SECURITY_FIXES_2025-11-10.md](SECURITY_FIXES_2025-11-10.md) for details. Users running older versions should upgrade immediately.
 
 ---
 
@@ -8,7 +10,7 @@
 
 Layers is a **full-featured, non-destructive annotation editor** for images on a MediaWiki installation. It enables users to add captions, callouts, highlights, shapes, and freehand drawings **without altering the original image**.
 
-All edits are stored as **SVG vector graphics** for infinite scalability, precise positioning, and small file sizes. The system fully integrates into MediaWiki’s file pages and parser, allowing per-layer display control through wikitext parameters.
+All edits are stored as a validated JSON structure server-side and rendered client-side for precise positioning and small payloads. The system fully integrates into MediaWiki’s file pages and parser, allowing per-layer display control through wikitext parameters.
 
 **Primary Goals:**
 
@@ -21,166 +23,282 @@ All edits are stored as **SVG vector graphics** for infinite scalability, precis
 
 ## UI & UX Design
 
-### Editor Layout
+### Current Editor Layout
 
-The editor follows a **three-panel industry-standard design**:
+The editor currently provides a functional single-panel design:
 
-- **Left Sidebar – Layer Management**
+- **Canvas Area – Main Editing Interface**
+  - HTML5 canvas with drawing capabilities
+  - Zoom and pan functionality
+  - Tool-based interaction system
+  - Real-time layer rendering
 
-  - Collapsible list of all layers (with thumbnails)
-  - Drag-and-drop reordering
-  - Eye icon for visibility toggle
-  - Lock icon to prevent edits
-  - Right-click context menu (rename, duplicate, merge down, delete)
+- **Toolbar – Tool Selection**
+  - 14 drawing and selection tools
+  - Color picker and stroke width controls
+  - Font selection for text tool
+  - Keyboard shortcut support
 
-- **Center Canvas – Editing Area**
+- **Layer Management**
+  - Basic layer list functionality
+  - Layer visibility toggles
+  - Layer selection and manipulation
 
-  - Infinite canvas with zoom and pan
-  - Responsive scaling with grid and snap-to-grid
-  - Semi-transparent checkerboard background for transparency awareness
-  - Rulers along top and left edges with draggable guides
+### Development Roadmap for UI
 
-- **Right Sidebar – Properties & Styles**
+**Phase 1 (Current) - Basic Editor:**
+- ✅ Single-panel canvas interface
+- ✅ Essential drawing tools
+- ✅ Basic layer management
 
-  - Context-sensitive panel:
-    - **Object Properties Tab** (position, size, rotation)
-    - **Style Tab** (fill, stroke, shadow, blend modes)
-    - **Text Tab** (font, size, spacing, alignment)
-    - **Effects Tab** (glow, shadow, outline)
+**Phase 2 (Planned) - Enhanced Layout:**
+- Three-panel industry-standard design
+- Dedicated layer panel with thumbnails
+- Properties panel for detailed object editing
+- Enhanced toolbar with grouped tools
 
-- **Top Toolbar – Tools & Actions**
-
-  - Tool icons with hover tooltips and shortcut keys
-  - Color pickers with saved swatches
-  - Undo/redo, copy/paste, save/cancel buttons
-  - Zoom controls, fit-to-screen, and 100% view
-
-- **Bottom Bar – Status & Context**
-
-  - Current zoom level
-  - Mouse coordinates in image space
-  - Selected object count and dimensions
+**Phase 3 (Future) - Advanced Features:**
+- Collapsible panels and workspace customization
+- Grid and ruler system
+- Smart guides and snapping
+- Advanced layer operations (grouping, effects)
 
 ---
 
 ## Drawing Tools
 
-| Tool          | Purpose                                                      | Key Features                                             |
-| ------------- | ------------------------------------------------------------ | -------------------------------------------------------- |
-| Pointer       | Select and manipulate objects                                | Multi-select, bounding box handles, rotate, resize, snap |
-| Text          | Add multi-line captions/labels                               | Rich text, live font preview, stroke/fill, drop shadow   |
-| Pen/Brush     | Freehand drawing                                             | Pressure sensitivity, smoothing, custom brushes          |
-| Shape Tools   | Rectangle, Rounded Rectangle, Circle, Ellipse, Polygon, Star | Adjustable radii, gradient fills, strokes, shadows       |
-| Arrow         | Annotation arrows                                            | Configurable heads, line style, curve or straight        |
-| Line          | Straight connectors                                          | Dashed/dotted patterns, arrow ends                       |
-| Highlighter   | Semi-transparent emphasis                                    | Blend modes for overlay effects                          |
-| Image Import  | Add overlay images                                           | Scaling, opacity, blend modes                            |
-| Callout Tool  | Speech & thought bubbles                                     | Adjustable tails, styles, fill/stroke options            |
-| Blur/Pixelate | Sensitive info obfuscation                                   | Adjustable radius or pixel size                          |
-| Marquee       | Area selection                                               | Intersect/contain modes, transform multiple objects      |
+The extension currently provides 14 drawing and selection tools:
+
+| Tool          | Status | Purpose                                                      | Key Features                                             |
+| ------------- | ------ | ------------------------------------------------------------ | -------------------------------------------------------- |
+| Pointer       | ✅ Working | Select and manipulate objects                                | Multi-select, bounding box handles, resize, move        |
+| Zoom          | ✅ Working | Zoom and pan the canvas                                      | Mouse wheel zoom, pan with drag                         |
+| Text          | ✅ Working | Add text labels                                              | Font selection, size, color                             |
+| Pen           | ✅ Working | Freehand drawing                                             | Smooth paths, adjustable stroke                         |
+| Rectangle     | ✅ Working | Draw rectangles                                              | Adjustable stroke and fill                              |
+| Circle        | ✅ Working | Draw circles                                                 | Radius-based drawing                                     |
+| Ellipse       | ✅ Working | Draw ellipses                                                | Independent X/Y radius control                          |
+| Polygon       | ✅ Working | Draw polygons                                                | Configurable number of sides                            |
+| Star          | ✅ Working | Draw star shapes                                             | Configurable points and radii                           |
+| Arrow         | ✅ Working | Annotation arrows                                            | Configurable arrowheads and line styles                 |
+| Line          | ✅ Working | Straight lines                                               | Stroke width and color options                          |
+| Highlight     | ✅ Working | Semi-transparent highlighting                                | Overlay highlighting with transparency                   |
+| Blur          | ✅ Working | Blur/redact areas                                            | Privacy protection tool                                  |
+| Marquee       | ✅ Working | Area selection                                               | Multi-object selection                                   |
+
+### Current Tool Capabilities
+
+**Implemented Drawing Features:**
+- Basic shape drawing (rectangle, circle, ellipse, polygon, star)
+- Freehand drawing with pen tool
+- Text annotation with font options
+- Arrow and line drawing
+- Area highlighting and blurring
+- Object selection and manipulation
+
+**Style Options Currently Available:**
+- Stroke color and width
+- Fill colors and transparency
+- Font family and size selection
+- Basic transparency controls
+
+### Planned Tool Enhancements
+
+**Future Development:**
+- Advanced text formatting (rich text, alignment options)
+- Gradient fills and advanced patterns
+- Custom brush options for pen tool
+- More complex shape tools
+- Layer effects (shadow, glow, etc.)
+- Import/export capabilities
 
 ---
 
 ## Styling & Effects
 
+### Current Styling Options
+
+**Basic Stroke Options:**
+- Solid color strokes
+- Adjustable stroke width
+- Color picker interface
+
 **Fill Options:**
+- Solid color fills
+- Transparency controls
+- Basic color selection
 
-- Solid color
-- Linear/radial gradients
-- Image pattern fill (SVG pattern or uploaded swatch)
+**Text Styling:**
+- Font family selection
+- Font size controls
+- Text color options
 
-**Stroke Options:**
+**Basic Effects:**
+- Layer transparency/opacity
+- Highlight tool with transparency
+- Blur tool for privacy
 
-- Solid, dashed, dotted, dash-dot
-- Custom dash arrays
-- Stroke alignment: inside, center, outside
+### Planned Styling Enhancements
 
-**Text Typography:**
+**Advanced Fill Options:**
+- Linear and radial gradients
+- Pattern fills
+- Image pattern integration
 
-- Fonts: Full system & Google Fonts support
-- Font size, weight, style, letter spacing, line height
-- Horizontal & vertical alignment
-- Text outline and shadow
+**Enhanced Stroke Options:**
+- Dashed and dotted line styles
+- Custom dash patterns
+- Stroke alignment options
 
-**Effects:**
+**Advanced Text Features:**
+- Rich text formatting
+- Text shadows and outlines
+- Advanced alignment options
 
-- Drop shadow (color, offset, blur, spread)
-- Outer glow / inner glow
-- Opacity (per-object & per-layer)
-- Blend modes (normal, multiply, screen, overlay, etc.)
+**Layer Effects:**
+- Drop shadows with customizable offset/blur
+- Glow effects (inner and outer)
+- Blend modes (multiply, overlay, screen)
+- Layer-level opacity controls
 
 ---
 
 ## Wikitext Integration
 
-**Display all layers:**
+Layers are displayed using standard MediaWiki file syntax with the `layers=` parameter:
+
+**Show default layer set:**
 
 ```wikitext
-[[File:MyImage.jpg|500px|layers=all|Annotated image]]
+[[File:MyImage.jpg|500px|layers=on|Annotated image]]
 ```
 
-**Display specific layers by ID:**
+**Show a specific named layer set:**
 
 ```wikitext
-[[File:MyImage.jpg|500px|layers=01,04,07|Selected annotations only]]
+[[File:MyImage.jpg|500px|layers=anatomy|Anatomy annotations]]
 ```
 
-**Hide all layers (original image):**
+**Explicitly disable layers (original image only):**
 
 ```wikitext
 [[File:MyImage.jpg|500px|layers=none]]
 ```
 
+> **Note:** On File: pages, layers are NOT auto-displayed. You must explicitly use `layers=on` or `layers=setname` in wikitext to show annotations.
+
 ---
 
 ## Layer Management
 
-- Layer IDs: `01`–`FF` (255 possible layers per image)
-- Persistent IDs to ensure consistent embedding
-- Layers can be grouped and nested
-- Layer thumbnails auto-generated for quick recognition
-- Merge layers or duplicate with one click
+### Current Features
+
+- **Layer IDs**: UUID-based unique identifiers for reliable referencing
+- **Named Layer Sets**: Multiple named annotation sets per image (e.g., "default", "anatomy-labels")
+- **Version History**: Each named set maintains revision history (up to 25 revisions by default)
+- **Visibility Toggles**: Show/hide individual layers in the editor
+- **Layer Ordering**: Drag-and-drop reordering in layer panel
+- **Duplicate Layers**: Copy existing layers with offset positioning
+
+### Wikitext Display Options
+
+```wikitext
+[[File:Example.jpg|layers=on]]           <!-- Show default layer set -->
+[[File:Example.jpg|layers=anatomy]]      <!-- Show specific named set -->
+[[File:Example.jpg|layers=none]]         <!-- Explicitly disable layers -->
+```
+
+### Planned Features
+
+- Layer grouping and nesting
+- Layer thumbnails for quick visual recognition
+- Merge layers functionality
+- Export/import layer sets
 
 ---
 
 ## Keyboard Shortcuts
 
-| Action                   | Shortcut                     |
-| ------------------------ | ---------------------------- |
-| Select Tool              | V                            |
-| Text Tool                | T                            |
-| Rectangle Tool           | R                            |
-| Ellipse Tool             | E                            |
-| Arrow Tool               | A                            |
-| Line Tool                | L                            |
-| Pen Tool                 | P                            |
-| Highlighter Tool         | H                            |
-| Undo / Redo              | Ctrl+Z / Ctrl+Y              |
-| Copy / Paste / Duplicate | Ctrl+C / Ctrl+V / Ctrl+D     |
+### Currently Implemented Shortcuts
+
+| Action                   | Shortcut  | Status |
+| ------------------------ | --------- | ------ |
+| Select Tool              | V         | ✅ Working |
+| Zoom Tool                | Z         | ✅ Working |
+| Text Tool                | T         | ✅ Working |
+| Pen Tool                 | P         | ✅ Working |
+| Rectangle Tool           | R         | ✅ Working |
+| Circle Tool              | C         | ✅ Working |
+| Ellipse Tool             | E         | ✅ Working |
+| Polygon Tool             | G         | ✅ Working |
+| Star Tool                | S         | ✅ Working |
+| Arrow Tool               | A         | ✅ Working |
+| Line Tool                | L         | ✅ Working |
+| Highlight Tool           | H         | ✅ Working |
+| Blur Tool                | B         | ✅ Working |
+| Marquee Select           | M         | ✅ Working |
+| Undo                     | Ctrl+Z    | ✅ Working |
+| Redo                     | Ctrl+Y / Ctrl+Shift+Z | ✅ Working |
+| Copy                     | Ctrl+C    | ✅ Working |
+| Paste                    | Ctrl+V    | ✅ Working |
+| Delete                   | Delete    | ✅ Working |
+
+### Planned Shortcuts
+
+| Action                   | Planned Shortcut |
+| ------------------------ | ---------------- |
 | Zoom In / Out / Reset    | Ctrl+`+` / Ctrl+`-` / Ctrl+0 |
-| Pan                      | Space + Drag                 |
+| Duplicate                | Ctrl+D |
+| Pan Mode                 | Space + Drag     |
 
 ---
 
 ## Technical Architecture
 
-**Frontend:**
+### Current Implementation
 
-- Modern ES6+ JavaScript with Webpack build
-- HTML5 Canvas + SVG rendering
-- Modular tool components with isolated state
+**Frontend (JavaScript):**
+- HTML5 Canvas-based editor with SVG-like layer objects
+- IIFE module pattern with global exports (54 `window.*` exports)
+- Tool-based interaction system with ModuleRegistry for dependency management
+- StateManager for centralized state with property descriptors bridging legacy access
+- HistoryManager for undo/redo operations
 
-**Backend:**
+**Backend (PHP):**
+- MediaWiki extension integration via hooks and service wiring
+- API endpoints: `ApiLayersInfo` (read) and `ApiLayersSave` (write with CSRF)
+- Database storage with named layer sets and revision history
+- Server-side validation with strict property whitelist (40+ allowed fields)
+- Rate limiting via MediaWiki's pingLimiter system
 
-- PHP for MediaWiki integration
-- API endpoints for load/save layer JSON
-- Secure database layer storage with versioning
+**Test Coverage:**
+- Jest: 2,352 tests with ~91% coverage
+- PHPUnit: 17 test files covering API, database, and validation
 
-**Performance Considerations:**
+**Current Architecture Challenges:**
+- Large JavaScript files: CanvasManager.js (~1,900 lines), LayersEditor.js (~1,750 lines), Toolbar.js (~1,680 lines)
+- 54 global `window.*` exports (IIFE pattern, no ES modules yet)
+- Some direct state access bypassing StateManager
 
-- Incremental save to reduce data load
-- Object diffing for minimal network payload
-- Lazy-loading large image resources
+### Development Roadmap
+
+**Phase 1 (Current):**
+- ✅ Basic canvas editor functionality
+- ✅ Essential drawing tools (14 tools)
+- ✅ Database persistence with named sets
+- ✅ MediaWiki integration
+- ✅ Comprehensive test coverage
+
+**Phase 2 (Planned - Architecture Refactoring):**
+- Break down god classes into focused modules (~500 lines each)
+- Consolidate global exports to single namespace
+- Complete StateManager migration (remove direct property access)
+- ES6 module migration with build pipeline
+
+**Phase 3 (Future - Advanced Features):**
+- Performance optimizations for large images
+- Real-time collaborative editing capabilities
+- Plugin API for custom tools
 
 ---
 
@@ -217,6 +335,39 @@ Run database updates:
 php maintenance/update.php
 ```
 
+### Configuration (LocalSettings.php) examples
+
+Add or adjust these optional settings to tune performance and limits. Values shown are safe defaults; increase carefully on large wikis.
+
+```php
+// Master switch
+$wgLayersEnable = true;
+
+// Debug logging (to MediaWiki 'Layers' channel)
+$wgLayersDebug = true;
+
+// Server-side validation limits
+$wgLayersMaxBytes = 2 * 1024 * 1024; // 2 MB per layer set JSON
+$wgLayersMaxLayerCount = 100;        // Max layers per set
+
+// Image processing limits
+$wgLayersMaxImageSize = 4096;        // Max px for editing
+$wgLayersMaxImageDimensions = [ 8192, 8192 ];
+$wgLayersImageMagickTimeout = 20;    // Seconds
+
+// Caching
+$wgLayersThumbnailCache = true;
+
+// Permissions (defaults enable edit for logged-in users)
+$wgGroupPermissions['user']['editlayers'] = true;
+$wgGroupPermissions['autoconfirmed']['createlayers'] = true;
+$wgGroupPermissions['sysop']['managelayerlibrary'] = true;
+
+// Rate limits (examples; tune for your wiki size)
+$wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];
+$wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
+```
+
 ---
 
 ## Security Features
@@ -227,6 +378,10 @@ php maintenance/update.php
 - Rate limiting on save operations
 - File validation for supported types
 
+## Security: Content Security Policy (CSP)
+
+See docs/CSP_GUIDE.md for recommended CSP settings and common pitfalls when running Layers under a strict CSP.
+
 ---
 
 ## Development Status
@@ -236,6 +391,7 @@ php maintenance/update.php
 The Layers MediaWiki extension is actively developed and functional with the following status:
 
 #### ✅ Completed Features
+
 - **Core Architecture**: Full separation between PHP backend and JavaScript frontend
 - **Database Integration**: Complete schema with layers storage and retrieval
 - **API Endpoints**: Working `ApiLayersInfo` and `ApiLayersSave` endpoints
@@ -247,6 +403,7 @@ The Layers MediaWiki extension is actively developed and functional with the fol
 - **Magic Word Conflict Fixed**: Resolved parser initialization errors causing crashes
 
 #### 📋 Code Quality Status
+
 - **JavaScript**: 18 minor line-length warnings (ESLint compliant)
 - **CSS**: Fully compliant with MediaWiki style guidelines
 - **PHP**: 21 documentation errors, 50+ style warnings (mostly minor)
@@ -254,6 +411,7 @@ The Layers MediaWiki extension is actively developed and functional with the fol
 - **Linting**: All major violations resolved
 
 #### 🔧 Known Issues
+
 - Some PHP methods missing complete documentation
 - Test methods need `@covers` tags for coverage analysis
 - Minor line length violations in various files
@@ -261,34 +419,42 @@ The Layers MediaWiki extension is actively developed and functional with the fol
 - Parser functions ({{#layeredfile}}) temporarily disabled (use layers= parameter instead)
 
 #### 🚀 Installation Ready
+
 - Extension can be installed and activated
 - Database tables created successfully
 - Basic functionality operational
 - Compatible with MediaWiki 1.44+
 
 #### 🔄 Next Steps
+
 1. Complete PHP documentation for all methods
 2. Add comprehensive unit test coverage
 3. Implement advanced drawing tools
 4. Add layer export/import functionality
 5. Enhance mobile responsiveness
 
-Use `test-installation.php` to verify your installation is working correctly.
+To verify basic setup, use MediaWiki's maintenance update and open a File page to load the editor. A dedicated test script is not included; use the static checks below.
 
 ---
 
 ## Troubleshooting
 
 - Quick guide: docs/layers-all-troubleshooting.md — end‑to‑end checks when images don’t show layers with layers=all.
-- General tips: TROUBLESHOOTING.md and STEP-BY-STEP-TROUBLESHOOTING.html.
+- General tips: see docs/layers-all-troubleshooting.md.
 
 ### Developer quick checks
 
 After installing PHP and Node dev dependencies, you can run the basic static checks:
 
 ```bash
-composer test
+npm run test:php
 npm test
+```
+
+On Windows, some users have a Python package named "composer" on PATH that hijacks the `composer` command. If you hit errors running `composer test`, run the PHP checks via npm instead:
+
+```bash
+npm run test:php   # runs php-parallel-lint, phpcs, minus-x
 ```
 
 To run the smoke test in a MediaWiki maintenance environment:

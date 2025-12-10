@@ -1,0 +1,478 @@
+/**
+ * Tests for ShapeFactory module
+ *
+ * @jest-environment jsdom
+ */
+
+'use strict';
+
+const ShapeFactory = require( '../../../resources/ext.layers.editor/tools/ShapeFactory.js' );
+
+describe( 'ShapeFactory', () => {
+	let factory;
+	let mockStyleManager;
+
+	beforeEach( () => {
+		// Mock style manager that implements the get() method
+		mockStyleManager = {
+			get: jest.fn( () => ( {
+				color: '#ff0000',
+				fill: '#00ff00',
+				strokeWidth: 3,
+				shadow: false,
+				shadowColor: '#000000',
+				shadowBlur: 8,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2,
+				arrowStyle: 'single',
+				fontSize: 16,
+				fontFamily: 'Arial'
+			} ) )
+		};
+		factory = new ShapeFactory( { styleManager: mockStyleManager } );
+	} );
+
+	describe( 'constructor', () => {
+		it( 'should store style manager reference', () => {
+			expect( factory.styleManager ).toBe( mockStyleManager );
+		} );
+
+		it( 'should work without style manager', () => {
+			const factoryNoStyle = new ShapeFactory();
+			expect( factoryNoStyle.styleManager ).toBeNull();
+		} );
+	} );
+
+	describe( 'getCurrentStyle', () => {
+		it( 'should get style from style manager', () => {
+			const style = factory.getCurrentStyle();
+			expect( mockStyleManager.get ).toHaveBeenCalled();
+			expect( style.color ).toBe( '#ff0000' );
+		} );
+
+		it( 'should return defaults when no style manager', () => {
+			const factoryNoStyle = new ShapeFactory();
+			const style = factoryNoStyle.getCurrentStyle();
+			expect( style.color ).toBe( '#000000' );
+			expect( style.strokeWidth ).toBe( 2 );
+		} );
+	} );
+
+	describe( 'createRectangle', () => {
+		it( 'should create rectangle layer with correct properties', () => {
+			const point = { x: 100, y: 200 };
+			const layer = factory.createRectangle( point );
+
+			expect( layer.type ).toBe( 'rectangle' );
+			expect( layer.x ).toBe( 100 );
+			expect( layer.y ).toBe( 200 );
+			expect( layer.width ).toBe( 0 );
+			expect( layer.height ).toBe( 0 );
+		} );
+
+		it( 'should apply current style', () => {
+			const layer = factory.createRectangle( { x: 0, y: 0 } );
+
+			expect( layer.stroke ).toBe( '#ff0000' );
+			expect( layer.fill ).toBe( '#00ff00' );
+			expect( layer.strokeWidth ).toBe( 3 );
+		} );
+
+		it( 'should apply shadow properties', () => {
+			mockStyleManager.get.mockReturnValue( {
+				color: '#ff0000',
+				fill: '#00ff00',
+				strokeWidth: 3,
+				shadow: true,
+				shadowColor: '#333333',
+				shadowBlur: 10
+			} );
+			const layer = factory.createRectangle( { x: 0, y: 0 } );
+
+			expect( layer.shadow ).toBe( true );
+			expect( layer.shadowColor ).toBe( '#333333' );
+		} );
+	} );
+
+	describe( 'createHighlight', () => {
+		it( 'should create highlight layer with correct properties', () => {
+			const point = { x: 50, y: 75 };
+			const layer = factory.createHighlight( point );
+
+			expect( layer.type ).toBe( 'highlight' );
+			expect( layer.x ).toBe( 50 );
+			expect( layer.y ).toBe( 75 );
+		} );
+
+		it( 'should have fill and opacity properties', () => {
+			const layer = factory.createHighlight( { x: 0, y: 0 } );
+			expect( layer.fill ).toBeDefined();
+			expect( layer.opacity ).toBeDefined();
+		} );
+	} );
+
+	describe( 'createCircle', () => {
+		it( 'should create circle layer with correct properties', () => {
+			const point = { x: 150, y: 250 };
+			const layer = factory.createCircle( point );
+
+			expect( layer.type ).toBe( 'circle' );
+			expect( layer.x ).toBe( 150 );
+			expect( layer.y ).toBe( 250 );
+			expect( layer.radius ).toBe( 0 );
+		} );
+
+		it( 'should apply stroke and fill', () => {
+			const layer = factory.createCircle( { x: 0, y: 0 } );
+
+			expect( layer.stroke ).toBe( '#ff0000' );
+			expect( layer.fill ).toBe( '#00ff00' );
+		} );
+	} );
+
+	describe( 'createEllipse', () => {
+		it( 'should create ellipse layer with correct properties', () => {
+			const point = { x: 200, y: 300 };
+			const layer = factory.createEllipse( point );
+
+			expect( layer.type ).toBe( 'ellipse' );
+			expect( layer.x ).toBe( 200 );
+			expect( layer.y ).toBe( 300 );
+			expect( layer.radiusX ).toBe( 0 );
+			expect( layer.radiusY ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'createLine', () => {
+		it( 'should create line layer with correct properties', () => {
+			const point = { x: 10, y: 20 };
+			const layer = factory.createLine( point );
+
+			expect( layer.type ).toBe( 'line' );
+			expect( layer.x1 ).toBe( 10 );
+			expect( layer.y1 ).toBe( 20 );
+			expect( layer.x2 ).toBe( 10 );
+			expect( layer.y2 ).toBe( 20 );
+		} );
+
+		it( 'should not have fill property', () => {
+			const layer = factory.createLine( { x: 0, y: 0 } );
+			expect( layer.fill ).toBeUndefined();
+		} );
+	} );
+
+	describe( 'createArrow', () => {
+		it( 'should create arrow layer with correct properties', () => {
+			const point = { x: 30, y: 40 };
+			const layer = factory.createArrow( point );
+
+			expect( layer.type ).toBe( 'arrow' );
+			expect( layer.x1 ).toBe( 30 );
+			expect( layer.y1 ).toBe( 40 );
+		} );
+
+		it( 'should include arrowStyle', () => {
+			const layer = factory.createArrow( { x: 0, y: 0 } );
+			expect( layer.arrowStyle ).toBe( 'single' );
+		} );
+	} );
+
+	describe( 'createPolygon', () => {
+		it( 'should create polygon layer with correct properties', () => {
+			const point = { x: 100, y: 100 };
+			const layer = factory.createPolygon( point );
+
+			expect( layer.type ).toBe( 'polygon' );
+			expect( layer.x ).toBe( 100 );
+			expect( layer.y ).toBe( 100 );
+			expect( layer.radius ).toBe( 0 );
+			expect( layer.sides ).toBe( 6 );
+		} );
+
+		it( 'should accept custom sides', () => {
+			const layer = factory.createPolygon( { x: 0, y: 0 }, 8 );
+			expect( layer.sides ).toBe( 8 );
+		} );
+	} );
+
+	describe( 'createStar', () => {
+		it( 'should create star layer with correct properties', () => {
+			const point = { x: 150, y: 150 };
+			const layer = factory.createStar( point );
+
+			expect( layer.type ).toBe( 'star' );
+			expect( layer.x ).toBe( 150 );
+			expect( layer.y ).toBe( 150 );
+			expect( layer.outerRadius ).toBe( 0 );
+			expect( layer.innerRadius ).toBe( 0 );
+			expect( layer.points ).toBe( 5 );
+		} );
+
+		it( 'should accept custom points', () => {
+			const layer = factory.createStar( { x: 0, y: 0 }, 7 );
+			expect( layer.points ).toBe( 7 );
+		} );
+	} );
+
+	describe( 'createPath', () => {
+		it( 'should create path layer with initial point', () => {
+			const point = { x: 50, y: 60 };
+			const layer = factory.createPath( point );
+
+			expect( layer.type ).toBe( 'path' );
+			expect( layer.points ).toHaveLength( 1 );
+			expect( layer.points[ 0 ].x ).toBe( 50 );
+		} );
+
+		it( 'should have fill set to none', () => {
+			const layer = factory.createPath( { x: 0, y: 0 } );
+			expect( layer.fill ).toBe( 'none' );
+		} );
+	} );
+
+	describe( 'createText', () => {
+		it( 'should create text layer with correct properties', () => {
+			const point = { x: 80, y: 90 };
+			const layer = factory.createText( point, 'Hello World' );
+
+			expect( layer.type ).toBe( 'text' );
+			expect( layer.x ).toBe( 80 );
+			expect( layer.y ).toBe( 90 );
+			expect( layer.text ).toBe( 'Hello World' );
+		} );
+
+		it( 'should apply font properties', () => {
+			const layer = factory.createText( { x: 0, y: 0 }, 'Test' );
+
+			expect( layer.fontFamily ).toBe( 'Arial' );
+			expect( layer.fontSize ).toBe( 16 );
+		} );
+
+		it( 'should apply color', () => {
+			const layer = factory.createText( { x: 0, y: 0 }, 'Test' );
+			expect( layer.color ).toBe( '#ff0000' );
+		} );
+	} );
+
+	describe( 'create', () => {
+		it( 'should create layer by type', () => {
+			const layer = factory.create( 'rectangle', { x: 10, y: 20 } );
+			expect( layer.type ).toBe( 'rectangle' );
+		} );
+
+		it( 'should return null for unknown type', () => {
+			const layer = factory.create( 'unknown', { x: 0, y: 0 } );
+			expect( layer ).toBeNull();
+		} );
+
+		it( 'should pass options to creation method', () => {
+			const layer = factory.create( 'text', { x: 0, y: 0 }, { text: 'Custom' } );
+			expect( layer.text ).toBe( 'Custom' );
+		} );
+	} );
+
+	describe( 'updateRectangle', () => {
+		it( 'should update rectangle dimensions', () => {
+			const layer = factory.createRectangle( { x: 10, y: 20 } );
+			factory.updateRectangle( layer, { x: 10, y: 20 }, { x: 110, y: 70 } );
+
+			expect( layer.width ).toBe( 100 );
+			expect( layer.height ).toBe( 50 );
+		} );
+
+		it( 'should handle negative dimensions (drawing from bottom-right)', () => {
+			const layer = factory.createRectangle( { x: 100, y: 100 } );
+			factory.updateRectangle( layer, { x: 100, y: 100 }, { x: 50, y: 50 } );
+
+			expect( layer.x ).toBe( 50 );
+			expect( layer.y ).toBe( 50 );
+			expect( layer.width ).toBe( 50 );
+			expect( layer.height ).toBe( 50 );
+		} );
+	} );
+
+	describe( 'updateCircle', () => {
+		it( 'should update circle radius based on distance', () => {
+			const layer = factory.createCircle( { x: 100, y: 100 } );
+			factory.updateCircle( layer, { x: 100, y: 100 }, { x: 150, y: 100 } );
+
+			expect( layer.radius ).toBe( 50 );
+		} );
+
+		it( 'should calculate diagonal distance', () => {
+			const layer = factory.createCircle( { x: 0, y: 0 } );
+			factory.updateCircle( layer, { x: 0, y: 0 }, { x: 30, y: 40 } );
+
+			expect( layer.radius ).toBe( 50 ); // 3-4-5 triangle
+		} );
+	} );
+
+	describe( 'updateEllipse', () => {
+		it( 'should update ellipse radii and center', () => {
+			const layer = factory.createEllipse( { x: 100, y: 100 } );
+			factory.updateEllipse( layer, { x: 100, y: 100 }, { x: 200, y: 150 } );
+
+			// With this implementation, center moves to midpoint
+			expect( layer.radiusX ).toBe( 50 ); // half of 100
+			expect( layer.radiusY ).toBe( 25 ); // half of 50
+		} );
+	} );
+
+	describe( 'updateLine', () => {
+		it( 'should update line endpoint', () => {
+			const layer = factory.createLine( { x: 0, y: 0 } );
+			factory.updateLine( layer, { x: 100, y: 200 } );
+
+			expect( layer.x2 ).toBe( 100 );
+			expect( layer.y2 ).toBe( 200 );
+		} );
+	} );
+
+	describe( 'updatePolygon', () => {
+		it( 'should update polygon radius', () => {
+			const layer = factory.createPolygon( { x: 100, y: 100 } );
+			factory.updatePolygon( layer, { x: 100, y: 100 }, { x: 200, y: 100 } );
+
+			expect( layer.radius ).toBe( 100 );
+		} );
+	} );
+
+	describe( 'updateStar', () => {
+		it( 'should update star radii', () => {
+			const layer = factory.createStar( { x: 100, y: 100 } );
+			factory.updateStar( layer, { x: 100, y: 100 }, { x: 200, y: 100 } );
+
+			expect( layer.outerRadius ).toBe( 100 );
+			expect( layer.radius ).toBe( 100 );
+			expect( layer.innerRadius ).toBe( 40 ); // 100 * 0.4
+		} );
+	} );
+
+	describe( 'hasValidSize', () => {
+		it( 'should return false for rectangle with zero dimensions', () => {
+			const layer = { type: 'rectangle', width: 0, height: 0 };
+			expect( factory.hasValidSize( layer ) ).toBe( false );
+		} );
+
+		it( 'should return true for rectangle with valid dimensions', () => {
+			const layer = { type: 'rectangle', width: 50, height: 30 };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+
+		it( 'should return false for rectangle with dimensions <= 1', () => {
+			const layer = { type: 'rectangle', width: 1, height: 1 };
+			expect( factory.hasValidSize( layer ) ).toBe( false );
+		} );
+
+		it( 'should return false for circle with zero radius', () => {
+			const layer = { type: 'circle', radius: 0 };
+			expect( factory.hasValidSize( layer ) ).toBe( false );
+		} );
+
+		it( 'should return true for circle with valid radius', () => {
+			const layer = { type: 'circle', radius: 25 };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+
+		it( 'should return false for ellipse with zero radii', () => {
+			const layer = { type: 'ellipse', radiusX: 0, radiusY: 0 };
+			expect( factory.hasValidSize( layer ) ).toBe( false );
+		} );
+
+		it( 'should return true for ellipse with valid radii', () => {
+			const layer = { type: 'ellipse', radiusX: 30, radiusY: 20 };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+
+		it( 'should return false for line with zero length', () => {
+			const layer = { type: 'line', x1: 10, y1: 20, x2: 10, y2: 20 };
+			expect( factory.hasValidSize( layer ) ).toBe( false );
+		} );
+
+		it( 'should return true for line with valid length', () => {
+			const layer = { type: 'line', x1: 0, y1: 0, x2: 100, y2: 0 };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+
+		it( 'should return false for arrow with zero length', () => {
+			const layer = { type: 'arrow', x1: 50, y1: 50, x2: 50, y2: 50 };
+			expect( factory.hasValidSize( layer ) ).toBe( false );
+		} );
+
+		it( 'should return true for polygon with valid radius', () => {
+			const layer = { type: 'polygon', radius: 50 };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+
+		it( 'should return true for star with valid outerRadius', () => {
+			const layer = { type: 'star', outerRadius: 60 };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+
+		it( 'should return false for path with single point', () => {
+			const layer = { type: 'path', points: [ { x: 0, y: 0 } ] };
+			expect( factory.hasValidSize( layer ) ).toBe( false );
+		} );
+
+		it( 'should return true for path with multiple points', () => {
+			const layer = { type: 'path', points: [ { x: 0, y: 0 }, { x: 10, y: 10 } ] };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+
+		it( 'should return true for highlight with valid dimensions', () => {
+			const layer = { type: 'highlight', width: 100, height: 30 };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+
+		it( 'should return true for unknown types', () => {
+			const layer = { type: 'unknown' };
+			expect( factory.hasValidSize( layer ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'generateId', () => {
+		it( 'should generate unique IDs', () => {
+			const id1 = factory.generateId();
+			const id2 = factory.generateId();
+			expect( id1 ).not.toBe( id2 );
+		} );
+
+		it( 'should generate string IDs starting with layer_', () => {
+			const id = factory.generateId();
+			expect( typeof id ).toBe( 'string' );
+			expect( id.startsWith( 'layer_' ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'createWithId', () => {
+		it( 'should create layer with generated ID', () => {
+			const layer = factory.createWithId( 'rectangle', { x: 10, y: 20 } );
+			expect( layer.id ).toBeDefined();
+			expect( layer.id.startsWith( 'layer_' ) ).toBe( true );
+		} );
+
+		it( 'should return null for unknown type', () => {
+			const layer = factory.createWithId( 'unknown', { x: 0, y: 0 } );
+			expect( layer ).toBeNull();
+		} );
+	} );
+
+	describe( 'setStyleManager', () => {
+		it( 'should update style manager reference', () => {
+			const newManager = { get: jest.fn( () => ( { color: '#0000ff' } ) ) };
+			factory.setStyleManager( newManager );
+			expect( factory.styleManager ).toBe( newManager );
+		} );
+	} );
+
+	describe( 'module exports', () => {
+		it( 'should export ShapeFactory class', () => {
+			expect( typeof ShapeFactory ).toBe( 'function' );
+		} );
+
+		it( 'should allow creating new instances', () => {
+			const instance = new ShapeFactory();
+			expect( instance ).toBeInstanceOf( ShapeFactory );
+		} );
+	} );
+} );

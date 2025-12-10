@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Hooks for the Layers extension
  * Simplified version for compatibility with various MediaWiki versions
@@ -9,7 +10,7 @@
 namespace MediaWiki\Extension\Layers;
 
 use Exception;
-use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Hooks\WikitextHooks;
 
 // Avoid direct hard dependency on MediaWiki classes for static analysis
 
@@ -19,7 +20,6 @@ if ( !defined( 'NS_FILE' ) ) {
 }
 
 class Hooks {
-
 	/**
 	 * BeforePageDisplay hook handler
 	 *
@@ -29,6 +29,9 @@ class Hooks {
 	 */
 	public static function onBeforePageDisplay( $out, $skin ) {
 		try {
+			// Reset the page layers flag for each new page request
+			WikitextHooks::resetPageLayersFlag();
+
 			// Always add viewer resources so layered thumbnails on any page can render
 			// This is critical for layers to display properly
 			$out->addModules( 'ext.layers' );
@@ -57,13 +60,15 @@ class Hooks {
 						$policy = [];
 						$policy[] = "default-src 'self'";
 						$policy[] = "img-src 'self' data: blob:";
-						$policy[] = "style-src 'self' 'unsafe-inline'"; // allow inline styles used by MW/OOUI
-						$policy[] = "script-src 'self' 'unsafe-eval'"; // ResourceLoader may require eval in debug
+						// Allow inline styles used by MW/OOUI
+						$policy[] = "style-src 'self' 'unsafe-inline'";
+						// MediaWiki core generates inline scripts
+						$policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
 						$policy[] = "connect-src 'self'";
 						$policy[] = "font-src 'self' data:";
 						$policy[] = "object-src 'none'";
 						$policy[] = "base-uri 'self'";
-						$policy[] = "frame-ancestors 'self'";
+						// Note: frame-ancestors directive is ignored when delivered via meta element
 						$header = 'Content-Security-Policy: ' . implode( '; ', $policy );
 						if ( method_exists( $out, 'addExtraHeader' ) ) {
 							$out->addExtraHeader( $header );
@@ -96,7 +101,7 @@ class Hooks {
 			if ( class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
 				$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
 			} else {
-				// Fallback logger that uses error_log
+				// Fallback logger that uses wfDebugLog (safer than error_log)
 				$logger = new class {
 					/**
 					 * Log an informational message
@@ -105,7 +110,7 @@ class Hooks {
 					 * @return void
 					 */
 					public function info( $message, $context = [] ) {
-						error_log( "Layers INFO: $message" );
+						wfDebugLog( 'Layers', "INFO: $message" );
 					}
 
 					/**
@@ -115,9 +120,9 @@ class Hooks {
 					 * @return void
 					 */
 					public function error( $message, $context = [] ) {
-						error_log( "Layers ERROR: $message" );
+						wfDebugLog( 'Layers', "ERROR: $message" );
 						if ( isset( $context['exception'] ) ) {
-							error_log( "Exception: " . $context['exception'] );
+							wfDebugLog( 'Layers', "Exception: " . $context['exception'] );
 						}
 					}
 
@@ -128,7 +133,7 @@ class Hooks {
 					 * @return void
 					 */
 					public function warning( $message, $context = [] ) {
-						error_log( "Layers WARNING: $message" );
+						wfDebugLog( 'Layers', "WARNING: $message" );
 					}
 				};
 			}
@@ -155,6 +160,58 @@ class Hooks {
 			} catch ( \Throwable $e2 ) {
 				$vars['wgLayersDebug'] = false;
 				$vars['wgLayersMaxBytes'] = 0;
+			}
+			// Provide the raw page-level layers query param to the client, if present
+			try {
+				$layersParam = null;
+
+				// First check URL parameters
+				if ( method_exists( $out, 'getRequest' ) ) {
+					$req = $out->getRequest();
+					if ( $req ) {
+						$val = $req->getVal( 'layers', null );
+						if ( $val === null ) {
+							// Some setups might have different capitalization
+							$val = $req->getVal( 'Layers', null );
+						}
+						if ( $val !== null && $val !== '' ) {
+							$layersParam = $val;
+						}
+					}
+				}
+
+				// NOTE: We no longer set wgLayersParam='all' just because some image
+				// on the page has layers. The pageHasLayers() flag indicates that SOME
+				// image on the page has layers= specified, but we should NOT apply layers
+				// to ALL images. Only images with explicit layers= should get layers.
+				// The client-side init.js will only apply layers to images that have
+				// data-layer-data or data-layers-intent attributes set by the server.
+
+				// Debug logging
+				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+					$logger = \call_user_func(
+						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
+						'Layers'
+					);
+					$logger->info(
+						'Layers: pageHasLayers() = ' .
+						( WikitextHooks::pageHasLayers() ? 'true' : 'false' ) .
+						', layersParam = ' .
+						( $layersParam ?: 'null' )
+					);
+				}
+
+				if ( $layersParam ) {
+					$vars['wgLayersParam'] = $layersParam;
+
+					// Debug logging
+					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+						$logger->info( "Layers: Setting client config wgLayersParam=$layersParam" );
+					}
+				}
+			} catch ( \Throwable $e3 ) {
+				// ignore
 			}
 			// Also proactively register the viewer module to be safe
 			if ( method_exists( $out, 'addModules' ) ) {
@@ -183,7 +240,7 @@ class Hooks {
 		}
 
 		try {
-			$db = new LayersDatabase();
+			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
 			$db->deleteLayerSetsForImage( $file->getName(), $file->getSha1() );
 		} catch ( Exception $e ) {
 			// Log error but don't break deletion
@@ -225,7 +282,8 @@ class Hooks {
 		$monolithic = $dir . '/sql/layers_tables.sql';
 
 		// Prefer per-table files to avoid re-running a monolithic schema multiple times
-		if ( is_dir( $tablesDir )
+		if (
+			is_dir( $tablesDir )
 			&& file_exists( $tablesDir . '/layer_sets.sql' )
 			&& file_exists( $tablesDir . '/layer_assets.sql' )
 			&& file_exists( $tablesDir . '/layer_set_usage.sql' )
@@ -244,11 +302,37 @@ class Hooks {
 		$patchDir = $dir . '/sql/patches';
 		$patchSize = $patchDir . '/patch-layer_sets-add-ls_size.sql';
 		$patchCount = $patchDir . '/patch-layer_sets-add-ls_layer_count.sql';
+		$patchConstraints = $patchDir . '/patch-add-check-constraints.sql';
+		$patchDataCleanup = $patchDir . '/patch-data-cleanup.sql';
+		$patchLayerAssetsSize = $patchDir . '/patch-layer_assets-add-la_size.sql';
+		$patchLayerAssetsSizeConstraints = $patchDir . '/patch-layer_assets-add-la_size-constraints.sql';
+
 		if ( file_exists( $patchSize ) ) {
 			$updater->addExtensionField( 'layer_sets', 'ls_size', $patchSize );
 		}
 		if ( file_exists( $patchCount ) ) {
 			$updater->addExtensionField( 'layer_sets', 'ls_layer_count', $patchCount );
+		}
+
+		// Add missing columns to layer_assets table
+		if ( file_exists( $patchLayerAssetsSize ) ) {
+			$updater->addExtensionField( 'layer_assets', 'la_size', $patchLayerAssetsSize );
+		}
+
+		// Add check constraints for data integrity after base tables are created
+		if ( file_exists( $patchConstraints ) ) {
+			$updater->addExtensionUpdate( [ 'applyPatch', $patchConstraints, true ] );
+		}
+
+		// Add foreign key constraints for existing installations without them
+		$patchForeignKeys = $patchDir . '/patch-add-foreign-key-constraints.sql';
+		if ( file_exists( $patchForeignKeys ) ) {
+			$updater->addExtensionUpdate( [ 'applyPatch', $patchForeignKeys, true ] );
+		}
+
+		// Add constraints for la_size column after it's been added
+		if ( file_exists( $patchLayerAssetsSizeConstraints ) ) {
+			$updater->addExtensionUpdate( [ 'applyPatch', $patchLayerAssetsSizeConstraints, true ] );
 		}
 	}
 
@@ -282,7 +366,7 @@ class Hooks {
 				return '';
 			}
 
-			$db = new LayersDatabase();
+			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
 			$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), $fileObj->getSha1() );
 
 			$names = [];
@@ -293,7 +377,6 @@ class Hooks {
 			}
 
 			return implode( ', ', $names );
-
 		} catch ( Exception $e ) {
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
@@ -340,7 +423,6 @@ class Hooks {
 			$linkText = 'Edit Layers';
 
 			return "[$editUrl $linkText]";
-
 		} catch ( Exception $e ) {
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );

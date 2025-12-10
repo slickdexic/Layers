@@ -8,9 +8,9 @@ use MediaWiki\Extension\Layers\Hooks;
  * @coversDefaultClass \MediaWiki\Extension\Layers\Hooks
  */
 class HooksTest extends \MediaWikiUnitTestCase {
-
 	/**
 	 * @covers ::onBeforePageDisplay
+	 * @covers \MediaWiki\Extension\Layers\Hooks::onBeforePageDisplay
 	 */
 	public function testOnBeforePageDisplayWithFileNamespace() {
 		$config = new \HashConfig( [
@@ -43,17 +43,18 @@ class HooksTest extends \MediaWikiUnitTestCase {
 
 		$outputPageMock->expects( $this->exactly( 2 ) )
 			->method( 'addModules' )
-			->withConsecutive( [ 'ext.layers.editor' ], [ 'ext.layers' ] );
+			->withConsecutive( [ 'ext.layers' ], [ 'ext.layers.editor' ] );
 
 		$skinMock = $this->getMockBuilder( \Skin::class )
 			->disableOriginalConstructor()
 			->getMock();
 
-		( new Hooks )->onBeforePageDisplay( $outputPageMock, $skinMock );
+		( new Hooks() )->onBeforePageDisplay( $outputPageMock, $skinMock );
 	}
 
 	/**
 	 * @covers ::onBeforePageDisplay
+	 * @covers \MediaWiki\Extension\Layers\Hooks::onBeforePageDisplay
 	 */
 	public function testOnBeforePageDisplayDisabled() {
 		$config = new \HashConfig( [
@@ -64,14 +65,14 @@ class HooksTest extends \MediaWikiUnitTestCase {
 			->getMock();
 		$outputPageMock->method( 'getConfig' )
 			->willReturn( $config );
-		$outputPageMock->expects( $this->never() )
-			->method( 'addModules' );
+		$outputPageMock->expects( $this->once() )
+			->method( 'addModules' )
+			->with( 'ext.layers' );
 
 		$skinMock = $this->getMockBuilder( \Skin::class )
 			->disableOriginalConstructor()
 			->getMock();
 
-		( new Hooks )->onBeforePageDisplay( $outputPageMock, $skinMock );
+		( new Hooks() )->onBeforePageDisplay( $outputPageMock, $skinMock );
 	}
-
 }

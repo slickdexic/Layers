@@ -1,1417 +1,1557 @@
 /**
  * Layer Panel for Layers Editor
- * Manages the layer list, visibility, and layer properties
+ * Manages the layer list, visibility, ordering, and layer properties
  */
 ( function () {
 	'use strict';
 
-	function layersMsgDefault( k, d ) {
-		return d;
-	}
+	// Import UI components (available as globals from ResourceLoader)
+	const IconFactory = window.IconFactory;
+	const ColorPickerDialog = window.ColorPickerDialog;
+	const ConfirmDialog = window.ConfirmDialog;
+	const PropertiesForm = window.PropertiesForm;
+	const LayerDragDrop = window.LayerDragDrop;
+	const LayerListRenderer = window.LayerListRenderer;
+	const LayerItemEvents = window.LayerItemEvents;
 
 	/**
 	 * LayerPanel class
-	 *
-	 * @class
-	 * @param {Object} config Configuration object
-	 * @param {HTMLElement} config.container The container element for the panel
-	 * @param {window.LayersEditor} config.editor A reference to the main editor instance
+	 * Manages the layer list, visibility, ordering, and layer properties
 	 */
-	function LayerPanel( config ) {
-		this.config = config || {};
-		this.container = this.config.container;
-		this.editor = this.config.editor;
-		this.inspectorContainer = this.config.inspectorContainer || null;
-		this.layers = [];
-		this.selectedLayerId = null;
+	class LayerPanel {
+		/**
+		 * Create a LayerPanel instance
+		 *
+		 * @param {Object} config Configuration object
+		 * @param {HTMLElement} config.container The container element for the panel
+		 * @param {window.LayersEditor} config.editor A reference to the main editor instance
+		 * @param {HTMLElement} [config.inspectorContainer] Optional inspector container
+		 */
+		constructor( config ) {
+			this.config = config || {};
+			this.container = this.config.container;
+			this.editor = this.config.editor;
+			this.inspectorContainer = this.config.inspectorContainer || null;
+			// REMOVED: this.layers = []; - Now use StateManager
+			// REMOVED: this.selectedLayerId = null; - Now use StateManager
+			this.stateSubscriptions = []; // Track subscriptions for cleanup
+			this.dialogCleanups = [];
 
-		this.init();
+			// Initialize EventTracker for memory-safe event listener management
+			this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+
+			this.createInterface();
+			this.setupEventHandlers();
+			this.subscribeToState();
+		}
+
+		/**
+		 * Get layers from StateManager (single source of truth)
+		 *
+		 * @return {Array} Current layers array
+		 */
+		getLayers() {
+			if ( this.editor && this.editor.stateManager ) {
+				return this.editor.stateManager.get( 'layers' ) || [];
+			}
+			return [];
+		}
+
+		/**
+		 * Get selected layer ID from StateManager
+		 *
+		 * @return {string|null} Currently selected layer ID
+		 */
+		getSelectedLayerId() {
+			if ( this.editor && this.editor.stateManager ) {
+				const selectedIds = this.editor.stateManager.get( 'selectedLayerIds' ) || [];
+				return selectedIds.length > 0 ? selectedIds[ selectedIds.length - 1 ] : null;
+			}
+			return null;
+		}
+
+		/**
+		 * Subscribe to StateManager changes for reactive updates
+		 */
+		subscribeToState() {
+			if ( !this.editor || !this.editor.stateManager ) {
+				return;
+			}
+
+			// Subscribe to layers changes
+			const unsubLayers = this.editor.stateManager.subscribe( 'layers', () => {
+				this.renderLayerList();
+				this.updateCodePanel();
+			} );
+			this.stateSubscriptions.push( unsubLayers );
+
+			// Subscribe to selection changes
+			const unsubSelection = this.editor.stateManager.subscribe( 'selectedLayerIds', ( newIds ) => {
+				const selectedId = newIds && newIds.length > 0 ? newIds[ newIds.length - 1 ] : null;
+				this.renderLayerList();
+				this.updatePropertiesPanel( selectedId );
+			} );
+			this.stateSubscriptions.push( unsubSelection );
+		}
+
+		/**
+		 * Check if debug mode is enabled
+		 *
+		 * @return {boolean} True if debug mode is enabled
+		 */
+		isDebugEnabled() {
+			return !!( window.mw && window.mw.config && window.mw.config.get( 'wgLayersDebug' ) );
+		}
+
+		/**
+		 * Log debug message
+		 *
+		 * @param {...*} args Arguments to log
+		 */
+		logDebug( ...args ) {
+			if ( this.isDebugEnabled() && window.mw && window.mw.log ) {
+				window.mw.log( '[LayerPanel]', ...args );
+			}
+		}
+
+		/**
+		 * Log warning message
+		 *
+		 * @param {...*} args Arguments to log
+		 */
+		logWarn( ...args ) {
+			if ( window.mw && window.mw.log && typeof window.mw.log.warn === 'function' ) {
+				window.mw.log.warn( '[LayerPanel]', ...args );
+			}
+		}
+
+		/**
+		 * Log error message
+		 *
+		 * @param {...*} args Arguments to log
+		 */
+		logError( ...args ) {
+			if ( window.mw && window.mw.log && typeof window.mw.log.error === 'function' ) {
+				window.mw.log.error( '[LayerPanel]', ...args );
+			}
+		}
+
+		/**
+		 * Add document event listener with automatic tracking
+		 *
+		 * @param {string} event Event type
+		 * @param {Function} handler Event handler
+		 * @param {Object} [options] Event listener options
+		 */
+		addDocumentListener( event, handler, options ) {
+			if ( !event || typeof handler !== 'function' ) {
+				return;
+			}
+			if ( this.eventTracker ) {
+				this.eventTracker.add( document, event, handler, options );
+			} else {
+				// Fallback if EventTracker not available
+				document.addEventListener( event, handler, options );
+			}
+		}
+
+		/**
+		 * Add event listener to a specific element with automatic tracking
+		 *
+		 * @param {Element} target Target element
+		 * @param {string} event Event type
+		 * @param {Function} handler Event handler
+		 * @param {Object} [options] Event listener options
+		 */
+		addTargetListener( target, event, handler, options ) {
+			if ( !target || typeof target.addEventListener !== 'function' || typeof handler !== 'function' ) {
+				return;
+			}
+			if ( this.eventTracker ) {
+				this.eventTracker.add( target, event, handler, options );
+			} else {
+				// Fallback if EventTracker not available
+				target.addEventListener( event, handler, options );
+			}
+		}
+
+		/**
+		 * Remove all document event listeners tracked by EventTracker
+		 */
+		removeDocumentListeners() {
+			if ( this.eventTracker ) {
+				this.eventTracker.removeAllForElement( document );
+			}
+		}
+
+		/**
+		 * Remove all element event listeners tracked by EventTracker (except document)
+		 */
+		removeTargetListeners() {
+			// EventTracker's destroy() handles all at once; this is kept for compatibility
+			// If needed, could iterate non-document elements, but destroy() is cleaner
+		}
+
+		/**
+		 * Remove all event listeners
+		 */
+		removeAllListeners() {
+			if ( this.eventTracker ) {
+				this.eventTracker.destroy();
+			}
+		}
+
+		/**
+		 * Register a cleanup function for dialog cleanup
+		 *
+		 * @param {Function} cleanupFn Cleanup function to register
+		 */
+		registerDialogCleanup( cleanupFn ) {
+			if ( typeof cleanupFn === 'function' ) {
+				this.dialogCleanups.push( cleanupFn );
+			}
+		}
+
+		/**
+		 * Run all dialog cleanup functions
+		 */
+		runDialogCleanups() {
+			while ( this.dialogCleanups && this.dialogCleanups.length ) {
+				const cleanup = this.dialogCleanups.pop();
+				try {
+					cleanup();
+				} catch ( err ) {
+					// Log cleanup errors but don't propagate to avoid cascading failures
+					if ( window.layersErrorHandler ) {
+						window.layersErrorHandler.handleError( err, 'LayerPanel.runDialogCleanups', 'canvas', { severity: 'low' } );
+					}
+				}
+			}
+			this.dialogCleanups = [];
+		}
+
+		/**
+		 * Clean up resources and destroy the panel
+		 */
+		destroy() {
+			// Unsubscribe from state changes
+			if ( this.stateSubscriptions && this.stateSubscriptions.length > 0 ) {
+				this.stateSubscriptions.forEach( ( unsubscribe ) => {
+					if ( typeof unsubscribe === 'function' ) {
+						unsubscribe();
+					}
+				} );
+				this.stateSubscriptions = [];
+			}
+			// Clean up LayerItemEvents controller
+			if ( this.itemEventsController && typeof this.itemEventsController.destroy === 'function' ) {
+				this.itemEventsController.destroy();
+				this.itemEventsController = null;
+			}
+			this.runDialogCleanups();
+			this.removeAllListeners();
+			document.body.classList.remove( 'layers-resize-cursor' );
+			this.dialogCleanups = [];
+			this.eventTracker = null;
+		}
+
+		/**
+		 * Get localized message with fallback
+		 * Delegates to centralized MessageHelper for consistent i18n handling.
+		 *
+		 * @param {string} key Message key
+		 * @param {string} fallback Fallback text
+		 * @return {string}
+		 */
+		msg( key, fallback ) {
+			// Try centralized MessageHelper first
+			if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+				return window.layersMessages.get( key, fallback );
+			}
+			// Fall back to direct mw.message if MessageHelper unavailable
+			if ( window.mw && window.mw.message ) {
+				try {
+					return mw.message( key ).text();
+				} catch ( e ) {
+					// Fall through to return fallback
+				}
+			}
+			return fallback || '';
+		}
+
+		/**
+		 * Helper function to set multiple attributes on an element
+		 *
+		 * @param {Element} element Target element
+		 * @param {Object} attributes Attributes to set
+		 */
+		setAttributes( element, attributes ) {
+			for ( const key in attributes ) {
+				if ( Object.prototype.hasOwnProperty.call( attributes, key ) ) {
+					element.setAttribute( key, attributes[ key ] );
+				}
+			}
+		}
+
+		/**
+		 * Create SVG element - delegate to IconFactory
+		 *
+		 * @param {string} tag SVG tag name
+		 * @param {Object} attributes Attributes to set
+		 * @return {Element|null} SVG element or null
+		 */
+		createSVGElement( tag, attributes ) {
+			return IconFactory ? IconFactory.createSVGElement( tag, attributes ) : null;
+		}
+
+		/**
+		 * Create eye icon for visibility toggle
+		 *
+		 * @param {boolean} visible Whether the layer is visible
+		 * @return {Element} Eye icon element
+		 */
+		createEyeIcon( visible ) {
+			return IconFactory ? IconFactory.createEyeIcon( visible ) : document.createElement( 'span' );
+		}
+
+		/**
+		 * Create lock icon for lock toggle
+		 *
+		 * @param {boolean} locked Whether the layer is locked
+		 * @return {Element} Lock icon element
+		 */
+		createLockIcon( locked ) {
+			return IconFactory ? IconFactory.createLockIcon( locked ) : document.createElement( 'span' );
+		}
+
+		/**
+		 * Create delete icon
+		 *
+		 * @return {Element} Delete icon element
+		 */
+		createDeleteIcon() {
+			return IconFactory ? IconFactory.createDeleteIcon() : document.createElement( 'span' );
+		}
+
+		/**
+		 * No-op kept for backward compatibility
+		 */
+		updateCodePanel() {}
+
+		/**
+		 * Create the panel interface
+		 */
+		createInterface() {
+			// Clear container safely without innerHTML
+			while ( this.container.firstChild ) {
+				this.container.removeChild( this.container.firstChild );
+			}
+			this.container.setAttribute( 'role', 'region' );
+			this.container.setAttribute( 'aria-label', this.msg( 'layers-panel-title', 'Layers' ) );
+
+			// Header
+			const header = document.createElement( 'div' );
+			header.className = 'layers-panel-header';
+			const title = document.createElement( 'h3' );
+			title.className = 'layers-panel-title';
+			title.textContent = this.msg( 'layers-panel-title', 'Layers' );
+			header.appendChild( title );
+			const subtitle = document.createElement( 'div' );
+			subtitle.className = 'layers-panel-subtitle';
+			subtitle.textContent = this.msg( 'layers-panel-subtitle', 'Drag to reorder • Click name to rename' );
+			header.appendChild( subtitle );
+			this.container.appendChild( header );
+
+			// Inner flex container to prevent underlap and allow resizing
+			const sidebarInner = document.createElement( 'div' );
+			sidebarInner.className = 'layers-panel-inner layers-flex-layout';
+
+			// Layer list
+			this.layerList = document.createElement( 'div' );
+			this.layerList.className = 'layers-list';
+			this.layerList.setAttribute( 'role', 'listbox' );
+			this.layerList.setAttribute( 'aria-label', this.msg( 'layers-panel-title', 'Layers' ) );
+			const emptyState = document.createElement( 'div' );
+			emptyState.className = 'layers-empty';
+			emptyState.textContent = this.msg( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
+			this.layerList.appendChild( emptyState );
+
+			// Divider (resizer)
+			const divider = document.createElement( 'div' );
+			divider.className = 'layers-panel-divider';
+			divider.setAttribute( 'tabindex', '0' );
+			divider.setAttribute( 'role', 'separator' );
+			divider.setAttribute( 'aria-orientation', 'horizontal' );
+			divider.title = this.msg( 'layers-panel-divider', 'Drag to resize panels' );
+
+			// Properties panel
+			this.propertiesPanel = document.createElement( 'div' );
+			this.propertiesPanel.className = 'layers-properties';
+			this.propertiesPanel.setAttribute( 'role', 'region' );
+			this.propertiesPanel.setAttribute( 'aria-label', this.msg( 'layers-properties-title', 'Properties' ) );
+			// Build properties panel header/content without innerHTML
+			while ( this.propertiesPanel.firstChild ) {
+				this.propertiesPanel.removeChild( this.propertiesPanel.firstChild );
+			}
+			const propsHeader = document.createElement( 'h4' );
+			propsHeader.textContent = this.msg( 'layers-properties-title', 'Properties' );
+			const propsContent = document.createElement( 'div' );
+			propsContent.className = 'properties-content';
+			this.propertiesPanel.appendChild( propsHeader );
+			this.propertiesPanel.appendChild( propsContent );
+
+			sidebarInner.appendChild( this.layerList );
+			sidebarInner.appendChild( divider );
+			sidebarInner.appendChild( this.propertiesPanel );
+			this.container.appendChild( sidebarInner );
+
+
+			// Resizable divider logic
+			let isDragging = false;
+			const minListHeight = 60;
+			const minPropsHeight = 80;
+			this.addTargetListener( divider, 'mousedown', () => {
+				isDragging = true;
+				document.body.classList.add( 'layers-resize-cursor' );
+			} );
+			const handleMouseMove = ( e ) => {
+				if ( !isDragging ) {
+					return;
+				}
+				const rect = sidebarInner.getBoundingClientRect();
+				const offset = e.clientY - rect.top;
+				const totalHeight = sidebarInner.offsetHeight;
+				const dividerHeight = divider.offsetHeight;
+				const maxListHeight = totalHeight - dividerHeight - minPropsHeight;
+				const newListHeight = Math.max( minListHeight, Math.min( offset, maxListHeight ) );
+				const newPropsHeight = totalHeight - newListHeight - dividerHeight;
+				if ( this.layerList && this.layerList.classList ) {
+					this.layerList.classList.add( 'layers-fixed-height' );
+					this.layerList.style.height = newListHeight + 'px';
+				}
+				if ( this.propertiesPanel && this.propertiesPanel.classList ) {
+					this.propertiesPanel.classList.add( 'layers-fixed-height' );
+					this.propertiesPanel.style.height = newPropsHeight + 'px';
+				}
+			};
+			this.addDocumentListener( 'mousemove', handleMouseMove );
+			const handleMouseUp = () => {
+				if ( isDragging ) {
+					isDragging = false;
+					document.body.classList.remove( 'layers-resize-cursor' );
+				}
+			};
+			this.addDocumentListener( 'mouseup', handleMouseUp );
+
+			// Touch support
+			this.addTargetListener( divider, 'touchstart', () => {
+				isDragging = true;
+				document.body.classList.add( 'layers-resize-cursor' );
+			} );
+			const handleTouchMove = ( e ) => {
+				if ( !isDragging ) {
+					return;
+				}
+				const rect = sidebarInner.getBoundingClientRect();
+				const offset = e.touches[ 0 ].clientY - rect.top;
+				const totalHeight = sidebarInner.offsetHeight;
+				const dividerHeight = divider.offsetHeight;
+				const maxListHeight = totalHeight - dividerHeight - minPropsHeight;
+				const newListHeight = Math.max( minListHeight, Math.min( offset, maxListHeight ) );
+				const newPropsHeight = totalHeight - newListHeight - dividerHeight;
+				if ( this.layerList && this.layerList.classList ) {
+					this.layerList.classList.add( 'layers-fixed-height' );
+					this.layerList.style.height = newListHeight + 'px';
+				}
+				if ( this.propertiesPanel && this.propertiesPanel.classList ) {
+					this.propertiesPanel.classList.add( 'layers-fixed-height' );
+					this.propertiesPanel.style.height = newPropsHeight + 'px';
+				}
+			};
+			this.addDocumentListener( 'touchmove', handleTouchMove, { passive: false } );
+			const handleTouchEnd = () => {
+				if ( isDragging ) {
+					isDragging = false;
+					document.body.classList.remove( 'layers-resize-cursor' );
+				}
+			};
+			this.addDocumentListener( 'touchend', handleTouchEnd );
+		}
+
+		/**
+		 * Set up event handlers for the panel
+		 */
+		setupEventHandlers() {
+			// Use extracted LayerItemEvents if available
+			if ( LayerItemEvents && this.layerList ) {
+				this.itemEventsController = new LayerItemEvents( {
+					layerList: this.layerList,
+					getLayers: this.getLayers.bind( this ),
+					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
+					callbacks: {
+						onSelect: ( layerId ) => this.selectLayer( layerId ),
+						onToggleVisibility: ( layerId ) => this.toggleLayerVisibility( layerId ),
+						onToggleLock: ( layerId ) => this.toggleLayerLock( layerId ),
+						onDelete: ( layerId ) => this.deleteLayer( layerId ),
+						onEditName: ( layerId, nameEl ) => this.editLayerName( layerId, nameEl )
+					},
+					addTargetListener: this.addTargetListener.bind( this )
+				} );
+			} else {
+				// Fallback: Clicks in the list
+				if ( this.layerList ) {
+					this.addTargetListener( this.layerList, 'click', ( e ) => {
+						this.handleLayerListClick( e );
+					} );
+					// Keyboard navigation for accessibility
+					this.addTargetListener( this.layerList, 'keydown', ( e ) => {
+						this.handleLayerListKeydown( e );
+					} );
+				}
+			}
+
+			// Drag and drop reordering
+			this.setupDragAndDrop();
+			// Live transform sync from CanvasManager during manipulation
+			try {
+				const target = ( this.editor && this.editor.container ) || document;
+				this.addTargetListener( target, 'layers:transforming', ( e ) => {
+					const detail = e && e.detail || {};
+					if ( !detail || !detail.id ) {
+						return;
+					}
+					if ( String( detail.id ) !== String( this.getSelectedLayerId() ) ) {
+						return;
+					}
+					this.syncPropertiesFromLayer( detail.layer || detail );
+				} );
+			} catch ( err ) {
+				if ( window.layersErrorHandler ) {
+					window.layersErrorHandler.handleError( err, 'LayerPanel.setupPropertiesSync', 'canvas' );
+				}
+			}
+		}
+
+		/**
+		 * Update layers (triggers re-render via StateManager)
+		 *
+		 * @param {Array} layers New layers array
+		 */
+		updateLayers( layers ) {
+			// State is managed by StateManager - just trigger a re-render
+			// The actual layers array is stored in editor.stateManager
+			if ( layers && this.editor && this.editor.stateManager ) {
+				this.editor.stateManager.set( 'layers', layers );
+			}
+			// renderLayerList will be called by the state subscription
+		}
+
+		/**
+		 * Render the layer list
+		 */
+		renderLayerList() {
+			// Use extracted LayerListRenderer if available
+			if ( this.layerListRenderer ) {
+				this.layerListRenderer.render();
+				return;
+			}
+
+			// Initialize renderer if LayerListRenderer is available
+			if ( LayerListRenderer && !this.layerListRenderer ) {
+				this.layerListRenderer = new LayerListRenderer( {
+					layerList: this.layerList,
+					msg: this.msg.bind( this ),
+					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
+					getLayers: this.getLayers.bind( this ),
+					onMoveLayer: this.moveLayer.bind( this )
+				} );
+				this.layerListRenderer.render();
+				return;
+			}
+
+			// Fallback: inline implementation
+			const layers = this.getLayers();
+			const listContainer = this.layerList;
+
+			// Map existing DOM items by ID
+			const existingItems = {};
+			const domItems = listContainer.querySelectorAll( '.layer-item' );
+			for ( let i = 0; i < domItems.length; i++ ) {
+				existingItems[ domItems[ i ].dataset.layerId ] = domItems[ i ];
+			}
+
+			if ( layers.length === 0 ) {
+				// Handle empty state
+				while ( listContainer.firstChild ) {
+					listContainer.removeChild( listContainer.firstChild );
+				}
+				const empty = document.createElement( 'div' );
+				empty.className = 'layers-empty';
+				empty.textContent = this.msg( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
+				listContainer.appendChild( empty );
+				return;
+			}
+
+			// Remove empty message if present
+			const emptyMsg = listContainer.querySelector( '.layers-empty' );
+			if ( emptyMsg ) {
+				listContainer.removeChild( emptyMsg );
+			}
+
+			// First pass: Remove items that are no longer in the layer list
+			const newLayerIds = layers.map( ( l ) => String( l.id ) );
+			for ( const id in existingItems ) {
+				if ( newLayerIds.indexOf( id ) === -1 ) {
+					listContainer.removeChild( existingItems[ id ] );
+				}
+			}
+
+			// Second pass: Create or update items and ensure order
+			let previousSibling = null;
+			layers.forEach( ( layer, index ) => {
+				const layerId = String( layer.id );
+				let item = existingItems[ layerId ];
+
+				if ( !item ) {
+					// Create new
+					item = this.createLayerItem( layer, index );
+					existingItems[ layerId ] = item; // Add to map
+				} else {
+					// Update existing
+					this.updateLayerItem( item, layer, index );
+				}
+
+				// Ensure position
+				if ( index === 0 ) {
+					if ( listContainer.firstChild !== item ) {
+						listContainer.insertBefore( item, listContainer.firstChild );
+					}
+				} else {
+					if ( previousSibling.nextSibling !== item ) {
+						listContainer.insertBefore( item, previousSibling.nextSibling );
+					}
+				}
+				previousSibling = item;
+			} );
+		}
+
+		/**
+		 * Move a layer up or down in the list
+		 *
+		 * @param {string} layerId Layer ID to move
+		 * @param {number} direction Direction to move (-1 for up, 1 for down)
+		 */
+		moveLayer( layerId, direction ) {
+			// Delegate to LayerDragDrop controller if available
+			if ( this.dragDropController && typeof this.dragDropController.moveLayer === 'function' ) {
+				this.dragDropController.moveLayer( layerId, direction, ( id ) => {
+					// Restore focus callback
+					const newItem = this.layerList.querySelector( '.layer-item[data-layer-id="' + id + '"] .layer-grab-area' );
+					if ( newItem ) {
+						newItem.focus();
+					}
+				} );
+				return;
+			}
+
+			// Fallback: inline implementation
+			const layers = this.getLayers().slice(); // Make a copy to modify
+			let index = -1;
+			for ( let i = 0; i < layers.length; i++ ) {
+				if ( layers[ i ].id === layerId ) {
+					index = i;
+					break;
+				}
+			}
+			if ( index === -1 ) {
+				return;
+			}
+			const newIndex = index + direction;
+			if ( newIndex < 0 || newIndex >= layers.length ) {
+				return;
+			}
+
+			// Swap
+			const temp = layers[ index ];
+			layers[ index ] = layers[ newIndex ];
+			layers[ newIndex ] = temp;
+
+			if ( this.editor.stateManager ) {
+				this.editor.stateManager.set( 'layers', layers );
+			}
+			if ( this.editor.canvasManager ) {
+				this.editor.canvasManager.redraw();
+			}
+			this.renderLayerList();
+			this.editor.saveState( 'Reorder Layers' );
+
+			// Restore focus
+			const newItem = this.layerList.querySelector( '.layer-item[data-layer-id="' + layerId + '"] .layer-grab-area' );
+			if ( newItem ) {
+				newItem.focus();
+			}
+		}
+
+		/**
+		 * Create a layer item DOM element
+		 *
+		 * @param {Object} layer Layer object
+		 * @param {number} index Layer index
+		 * @return {HTMLElement} Layer item element
+		 */
+		createLayerItem( layer, index ) {
+			const t = this.msg.bind( this );
+			const item = document.createElement( 'div' );
+			item.className = 'layer-item';
+			item.dataset.layerId = layer.id;
+			item.dataset.index = index;
+			item.draggable = true;
+			// ARIA attributes for listbox option
+			item.setAttribute( 'role', 'option' );
+			item.setAttribute( 'aria-selected', layer.id === this.getSelectedLayerId() ? 'true' : 'false' );
+			const layerName = layer.name || this.getDefaultLayerName( layer );
+			item.setAttribute( 'aria-label', layerName );
+			if ( layer.id === this.getSelectedLayerId() ) {
+				item.classList.add( 'selected' );
+			}
+
+			// Grab area - now also serves as the focusable element for keyboard navigation
+			const grabArea = document.createElement( 'div' );
+			grabArea.className = 'layer-grab-area';
+			grabArea.title = t( 'layers-grab-area', 'Drag to move/select' ) + ' (' + t( 'layers-keyboard-nav-hint', 'Use arrow keys to navigate, Enter to select' ) + ')';
+			grabArea.setAttribute( 'tabindex', '0' );
+			grabArea.setAttribute( 'role', 'button' );
+			grabArea.setAttribute( 'aria-label', layerName + ' - ' + t( 'layers-grab-area', 'Drag to move/select' ) );
+			grabArea.style.width = '36px';
+			grabArea.style.height = '36px';
+			grabArea.style.display = 'flex';
+			grabArea.style.alignItems = 'center';
+			grabArea.style.justifyContent = 'center';
+			grabArea.style.cursor = 'grab';
+			
+			// Keyboard reordering - use EventTracker for proper cleanup
+			this.addTargetListener( grabArea, 'keydown', ( e ) => {
+				if ( e.key === 'ArrowUp' || e.key === 'ArrowDown' ) {
+					e.preventDefault();
+					const direction = e.key === 'ArrowUp' ? -1 : 1;
+					this.moveLayer( layer.id, direction );
+				}
+			} );
+
+			// Build grab icon via DOM to avoid innerHTML
+			const grabSvg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+			grabSvg.setAttribute( 'width', '24' );
+			grabSvg.setAttribute( 'height', '24' );
+			grabSvg.setAttribute( 'viewBox', '0 0 24 24' );
+			grabSvg.setAttribute( 'aria-hidden', 'true' );
+			const mkCircle = ( cx, cy ) => {
+				const c = document.createElementNS( 'http://www.w3.org/2000/svg', 'circle' );
+				c.setAttribute( 'cx', String( cx ) );
+				c.setAttribute( 'cy', String( cy ) );
+				c.setAttribute( 'r', '2.5' );
+				c.setAttribute( 'fill', '#bbb' );
+				return c;
+			};
+			grabSvg.appendChild( mkCircle( 7, 7 ) );
+			grabSvg.appendChild( mkCircle( 17, 7 ) );
+			grabSvg.appendChild( mkCircle( 7, 17 ) );
+			grabSvg.appendChild( mkCircle( 17, 17 ) );
+			grabArea.appendChild( grabSvg );
+
+			// Visibility toggle
+			const visibilityBtn = document.createElement( 'button' );
+			visibilityBtn.className = 'layer-visibility';
+			visibilityBtn.appendChild( this.createEyeIcon( layer.visible !== false ) );
+			visibilityBtn.title = t( 'layers-toggle-visibility', 'Toggle visibility' );
+			visibilityBtn.type = 'button';
+			visibilityBtn.setAttribute( 'aria-label', t( 'layers-toggle-visibility', 'Toggle visibility' ) );
+			visibilityBtn.style.width = '36px';
+			visibilityBtn.style.height = '36px';
+
+			// Name (editable)
+			const name = document.createElement( 'span' );
+			name.className = 'layer-name';
+			name.textContent = layer.name || this.getDefaultLayerName( layer );
+			name.contentEditable = true;
+			name.setAttribute( 'role', 'textbox' );
+			name.setAttribute( 'aria-label', t( 'layers-layer-name', 'Layer Name' ) );
+
+			// Lock toggle
+			const lockBtn = document.createElement( 'button' );
+			lockBtn.className = 'layer-lock';
+			lockBtn.appendChild( this.createLockIcon( !!layer.locked ) );
+			lockBtn.title = t( 'layers-toggle-lock', 'Toggle lock' );
+			lockBtn.type = 'button';
+			lockBtn.setAttribute( 'aria-label', t( 'layers-toggle-lock', 'Toggle lock' ) );
+			lockBtn.style.width = '36px';
+			lockBtn.style.height = '36px';
+
+			// Delete button
+			const deleteBtn = document.createElement( 'button' );
+			deleteBtn.className = 'layer-delete';
+			deleteBtn.appendChild( this.createDeleteIcon() );
+			deleteBtn.title = t( 'layers-delete-layer-button', 'Delete layer' );
+			deleteBtn.type = 'button';
+			deleteBtn.setAttribute( 'aria-label', t( 'layers-delete-layer-button', 'Delete layer' ) );
+			deleteBtn.style.width = '36px';
+			deleteBtn.style.height = '36px';
+
+			item.appendChild( grabArea );
+			item.appendChild( visibilityBtn );
+			item.appendChild( name );
+			item.appendChild( lockBtn );
+			item.appendChild( deleteBtn );
+			return item;
+		}
+
+		/**
+		 * Update an existing layer item DOM element
+		 *
+		 * @param {HTMLElement} item Layer item element
+		 * @param {Object} layer Layer object
+		 * @param {number} index Layer index
+		 */
+		updateLayerItem( item, layer, index ) {
+			// eslint-disable-next-line no-unused-vars
+			const _t = this.msg.bind( this );
+			
+			// Update attributes
+			item.dataset.layerId = layer.id;
+			item.dataset.index = index;
+			
+			// Update ARIA attributes
+			const isSelected = layer.id === this.getSelectedLayerId();
+			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
+			const layerName = layer.name || this.getDefaultLayerName( layer );
+			item.setAttribute( 'aria-label', layerName );
+			
+			// Update selection state
+			if ( isSelected ) {
+				item.classList.add( 'selected' );
+			} else {
+				item.classList.remove( 'selected' );
+			}
+			
+			// Update grab area aria-label
+			const grabArea = item.querySelector( '.layer-grab-area' );
+			if ( grabArea ) {
+				grabArea.setAttribute( 'aria-label', layerName + ' - ' + _t( 'layers-grab-area', 'Drag to move/select' ) );
+			}
+			
+			// Update visibility icon
+			const visibilityBtn = item.querySelector( '.layer-visibility' );
+			if ( visibilityBtn ) {
+				// Clear existing icon
+				while ( visibilityBtn.firstChild ) {
+					visibilityBtn.removeChild( visibilityBtn.firstChild );
+				}
+				visibilityBtn.appendChild( this.createEyeIcon( layer.visible !== false ) );
+			}
+			
+			// Update name (only if not currently being edited)
+			const nameEl = item.querySelector( '.layer-name' );
+			if ( nameEl && document.activeElement !== nameEl ) {
+				const newName = layer.name || this.getDefaultLayerName( layer );
+				if ( nameEl.textContent !== newName ) {
+					nameEl.textContent = newName;
+				}
+			}
+			
+			// Update lock icon
+			const lockBtn = item.querySelector( '.layer-lock' );
+			if ( lockBtn ) {
+				// Clear existing icon
+				while ( lockBtn.firstChild ) {
+					lockBtn.removeChild( lockBtn.firstChild );
+				}
+				lockBtn.appendChild( this.createLockIcon( !!layer.locked ) );
+			}
+		}
+
+		/**
+		 * Get the default name for a layer based on its type
+		 *
+		 * @param {Object} layer Layer object
+		 * @return {string} Default layer name
+		 */
+		getDefaultLayerName( layer ) {
+			const t = this.msg.bind( this );
+			const LAYER_TYPES = window.LayersConstants ? window.LayersConstants.LAYER_TYPES : {};
+			switch ( layer.type ) {
+				case ( LAYER_TYPES.TEXT || 'text' ): {
+					const prefix = t( 'layers-default-text-prefix', 'Text: ' );
+					const emptyText = t( 'layers-default-empty', 'Empty' );
+					return prefix + ( ( layer.text || emptyText ).slice( 0, 20 ) );
+				}
+				case ( LAYER_TYPES.RECTANGLE || 'rectangle' ):
+					return t( 'layers-type-rectangle', 'Rectangle' );
+				case ( LAYER_TYPES.BLUR || 'blur' ):
+					return t( 'layers-type-blur', 'Blur/Redaction' );
+				case ( LAYER_TYPES.CIRCLE || 'circle' ):
+					return t( 'layers-type-circle', 'Circle' );
+				case ( LAYER_TYPES.ELLIPSE || 'ellipse' ):
+					return t( 'layers-type-ellipse', 'Ellipse' );
+				case ( LAYER_TYPES.POLYGON || 'polygon' ):
+					return t( 'layers-type-polygon', 'Polygon' );
+				case ( LAYER_TYPES.STAR || 'star' ):
+					return t( 'layers-type-star', 'Star' );
+				case ( LAYER_TYPES.ARROW || 'arrow' ):
+					return t( 'layers-type-arrow', 'Arrow' );
+				case ( LAYER_TYPES.LINE || 'line' ):
+					return t( 'layers-type-line', 'Line' );
+				case ( LAYER_TYPES.PATH || 'path' ):
+					return t( 'layers-type-path', 'Drawing' );
+				case ( LAYER_TYPES.HIGHLIGHT || 'highlight' ):
+					return t( 'layers-type-highlight', 'Highlight' );
+				default:
+					return t( 'layers-type-layer', 'Layer' );
+			}
+		}
+
+		/**
+		 * Handle click events in the layer list
+		 *
+		 * @param {Event} e Click event
+		 */
+		handleLayerListClick( e ) {
+			const target = e.target;
+			const layerItem = target.closest( '.layer-item' );
+			if ( !layerItem ) {
+				return;
+			}
+			const layerId = layerItem.dataset.layerId;
+			const layer = this.editor.getLayerById( layerId );
+			if ( !layer ) {
+				return;
+			}
+			const visibilityBtn = target.closest( '.layer-visibility' );
+			const lockBtn = target.closest( '.layer-lock' );
+			const deleteBtn = target.closest( '.layer-delete' );
+			const nameEl = target.closest( '.layer-name' );
+			if ( visibilityBtn ) {
+				this.toggleLayerVisibility( layerId );
+			} else if ( lockBtn ) {
+				this.toggleLayerLock( layerId );
+			} else if ( deleteBtn ) {
+				this.deleteLayer( layerId );
+			} else if ( nameEl ) {
+				this.editLayerName( layerId, nameEl );
+			} else {
+				this.selectLayer( layerId );
+			}
+		}
+
+		/**
+		 * Handle keyboard navigation in the layer list
+		 *
+		 * @param {KeyboardEvent} e Keyboard event
+		 */
+		handleLayerListKeydown( e ) {
+			const target = e.target;
+			const layerItem = target.closest( '.layer-item' );
+
+			// Only handle navigation keys when focused on a layer item
+			if ( !layerItem ) {
+				return;
+			}
+
+			const layers = this.getLayers();
+			if ( layers.length === 0 ) {
+				return;
+			}
+
+			const layerId = layerItem.dataset.layerId;
+			let currentIndex = -1;
+			for ( let i = 0; i < layers.length; i++ ) {
+				if ( String( layers[ i ].id ) === String( layerId ) ) {
+					currentIndex = i;
+					break;
+				}
+			}
+
+			switch ( e.key ) {
+				case 'ArrowUp':
+					e.preventDefault();
+					if ( currentIndex > 0 ) {
+						this.focusLayerAtIndex( currentIndex - 1 );
+					}
+					break;
+
+				case 'ArrowDown':
+					e.preventDefault();
+					if ( currentIndex < layers.length - 1 ) {
+						this.focusLayerAtIndex( currentIndex + 1 );
+					}
+					break;
+
+				case 'Home':
+					e.preventDefault();
+					this.focusLayerAtIndex( 0 );
+					break;
+
+				case 'End':
+					e.preventDefault();
+					this.focusLayerAtIndex( layers.length - 1 );
+					break;
+
+				case 'Enter':
+				case ' ':
+					// Don't intercept if focused on a button or editable element
+					if ( target.tagName === 'BUTTON' || target.contentEditable === 'true' ) {
+						return;
+					}
+					e.preventDefault();
+					this.selectLayer( layerId );
+					break;
+
+				case 'Delete':
+				case 'Backspace':
+					// Only handle if not focused on an editable element
+					if ( target.contentEditable === 'true' ) {
+						return;
+					}
+					e.preventDefault();
+					this.deleteLayer( layerId );
+					break;
+
+				case 'v':
+				case 'V':
+					// Toggle visibility with V key
+					if ( !e.ctrlKey && !e.metaKey && target.contentEditable !== 'true' ) {
+						e.preventDefault();
+						this.toggleLayerVisibility( layerId );
+					}
+					break;
+
+				case 'l':
+				case 'L':
+					// Toggle lock with L key
+					if ( !e.ctrlKey && !e.metaKey && target.contentEditable !== 'true' ) {
+						e.preventDefault();
+						this.toggleLayerLock( layerId );
+					}
+					break;
+			}
+		}
+
+		/**
+		 * Focus a layer item by index
+		 *
+		 * @param {number} index Layer index to focus
+		 */
+		focusLayerAtIndex( index ) {
+			// Delegate to LayerItemEvents controller if available
+			if ( this.itemEventsController && typeof this.itemEventsController.focusLayerAtIndex === 'function' ) {
+				this.itemEventsController.focusLayerAtIndex( index );
+				return;
+			}
+
+			// Fallback implementation
+			const layers = this.getLayers();
+			if ( index < 0 || index >= layers.length ) {
+				return;
+			}
+
+			const layerId = layers[ index ].id;
+			const layerItem = this.layerList.querySelector( '.layer-item[data-layer-id="' + layerId + '"]' );
+			if ( layerItem ) {
+				// Focus the grab area (which is the focusable element within the layer item)
+				const grabArea = layerItem.querySelector( '.layer-grab-area' );
+				if ( grabArea ) {
+					grabArea.focus();
+				}
+			}
+		}
+
+		/**
+		 * Select a layer by ID
+		 *
+		 * @param {string} layerId Layer ID to select
+		 * @param {boolean} [fromCanvas] Whether the selection originated from canvas
+		 */
+		selectLayer( layerId, fromCanvas ) {
+			// Update selection through StateManager (single source of truth)
+			if ( this.editor && this.editor.stateManager ) {
+				this.editor.stateManager.set( 'selectedLayerIds', layerId ? [ layerId ] : [] );
+			}
+			// Note: renderLayerList and updatePropertiesPanel are called by state subscription
+			if ( !fromCanvas && this.editor.canvasManager ) {
+				this.editor.canvasManager.selectLayer( layerId, true );
+			}
+		}
+
+		/**
+		 * Toggle layer visibility
+		 *
+		 * @param {string} layerId Layer ID to toggle
+		 */
+		toggleLayerVisibility( layerId ) {
+			const layer = this.editor.getLayerById( layerId );
+			if ( layer ) {
+				layer.visible = !( layer.visible !== false );
+				if ( this.editor.canvasManager ) {
+					const layers = this.editor.stateManager ? this.editor.stateManager.get( 'layers' ) || [] : [];
+					this.editor.canvasManager.renderLayers( layers );
+				}
+				this.renderLayerList();
+				this.updateCodePanel();
+				this.editor.saveState( layer.visible ? 'Show Layer' : 'Hide Layer' );
+			}
+		}
+
+		/**
+		 * Toggle layer lock
+		 *
+		 * @param {string} layerId Layer ID to toggle
+		 */
+		toggleLayerLock( layerId ) {
+			const layer = this.editor.getLayerById( layerId );
+			if ( layer ) {
+				layer.locked = !layer.locked;
+				this.renderLayerList();
+				this.editor.saveState( layer.locked ? 'Lock Layer' : 'Unlock Layer' );
+			}
+		}
+
+		/**
+		 * Delete a layer
+		 *
+		 * @param {string} layerId Layer ID to delete
+		 */
+		deleteLayer( layerId ) {
+			const t = this.msg.bind( this );
+			const confirmMessage = t( 'layers-delete-confirm', 'Are you sure you want to delete this layer?' );
+
+			const performDelete = () => {
+				this.editor.removeLayer( layerId );
+				this.renderLayerList();
+				this.updateCodePanel();
+				if ( this.getSelectedLayerId() === layerId ) {
+					// Clear selection through StateManager
+					if ( this.editor && this.editor.stateManager ) {
+						this.editor.stateManager.set( 'selectedLayerIds', [] );
+					}
+					this.updatePropertiesPanel( null );
+				}
+				this.editor.saveState( 'Delete Layer' );
+			};
+
+			// Always use custom dialog - OOUI dialogs have z-index issues with the fixed editor container
+			this.createConfirmDialog( confirmMessage, performDelete );
+		}
+
+		/**
+		 * Edit a layer's name
+		 *
+		 * @param {string} layerId Layer ID to edit
+		 * @param {HTMLElement} nameElement Name element to edit
+		 */
+		editLayerName( layerId, nameElement ) {
+			// Prevent adding duplicate listeners
+			if ( nameElement._hasEditListeners ) {
+				return;
+			}
+			nameElement._hasEditListeners = true;
+
+			const originalName = nameElement.textContent;
+			const maxLength = 100;
+
+			// Use EventTracker-aware addTargetListener for proper cleanup
+			this.addTargetListener( nameElement, 'input', () => {
+				const currentText = nameElement.textContent;
+				if ( currentText.length > maxLength ) {
+					nameElement.textContent = currentText.slice( 0, maxLength );
+					const range = document.createRange();
+					const sel = window.getSelection();
+					range.selectNodeContents( nameElement );
+					range.collapse( false );
+					sel.removeAllRanges();
+					sel.addRange( range );
+				}
+			} );
+			this.addTargetListener( nameElement, 'blur', () => {
+				const newName = nameElement.textContent.trim();
+				if ( newName && newName !== originalName ) {
+					this.editor.updateLayer( layerId, { name: newName } );
+					this.editor.saveState( 'Rename Layer' );
+				}
+			} );
+			this.addTargetListener( nameElement, 'keydown', ( e ) => {
+				if ( e.key === 'Enter' ) {
+					nameElement.blur();
+				} else if ( e.key === 'Escape' ) {
+					nameElement.textContent = originalName;
+					nameElement.blur();
+				}
+			} );
+		}
+
+		/**
+		 * Update the properties panel for a selected layer
+		 *
+		 * @param {string|null} layerId Layer ID to show properties for
+		 */
+		updatePropertiesPanel( layerId ) {
+			const contentDiv = this.propertiesPanel.querySelector( '.properties-content' );
+			const t = this.msg.bind( this );
+			if ( !layerId ) {
+				while ( contentDiv.firstChild ) {
+					contentDiv.removeChild( contentDiv.firstChild );
+				}
+				const p1 = document.createElement( 'p' );
+				p1.textContent = t( 'layers-no-layer-selected', 'No layer selected' );
+				contentDiv.appendChild( p1 );
+				return;
+			}
+			const layer = this.editor.getLayerById( layerId );
+			if ( !layer ) {
+				while ( contentDiv.firstChild ) {
+					contentDiv.removeChild( contentDiv.firstChild );
+				}
+				const p2 = document.createElement( 'p' );
+				p2.textContent = t( 'layers-layer-not-found', 'Layer not found' );
+				contentDiv.appendChild( p2 );
+				return;
+			}
+			const form = this.createPropertiesForm( layer );
+			while ( contentDiv.firstChild ) {
+				contentDiv.removeChild( contentDiv.firstChild );
+			}
+			contentDiv.appendChild( form );
+		}
+
+		/**
+		 * Create a properties form for a layer
+		 *
+		 * @param {Object} layer Layer object
+		 * @return {HTMLElement} Properties form element
+		 */
+		createPropertiesForm( layer ) {
+			// Use extracted PropertiesForm component if available
+			if ( PropertiesForm && typeof PropertiesForm.create === 'function' ) {
+				return PropertiesForm.create( layer, this.editor, ( cleanup ) => {
+					this.registerDialogCleanup( cleanup );
+				} );
+			}
+
+			// Fallback: create basic form with minimal fields
+			const form = document.createElement( 'form' );
+			form.className = 'layer-properties-form';
+			const p = document.createElement( 'p' );
+			p.textContent = this.msg( 'layers-properties-unavailable', 'Properties form unavailable' );
+			form.appendChild( p );
+			return form;
+		}
+
+		/**
+		 * Live sync selected layer's transform props into current form inputs
+		 *
+		 * @param {Object} layer Layer object with transform properties
+		 */
+		syncPropertiesFromLayer( layer ) {
+			if ( !layer || !this.propertiesPanel ) {
+				return;
+			}
+			const root = this.propertiesPanel.querySelector( '.layer-properties-form' ) || this.propertiesPanel;
+			const inputs = root.querySelectorAll( 'input[data-prop]' );
+			const formatOne = ( n, decimalsAttr ) => {
+				if ( typeof n !== 'number' || isNaN( n ) ) {
+					return '';
+				}
+				if ( String( decimalsAttr ) === '1' ) {
+					const r = Math.round( n * 10 ) / 10;
+					const isInt = Math.abs( r - Math.round( r ) ) < 1e-9;
+					return isInt ? String( Math.round( r ) ) : r.toFixed( 1 );
+				}
+				return String( n );
+			};
+			inputs.forEach( ( input ) => {
+				const prop = input.getAttribute( 'data-prop' );
+				if ( !prop ) {
+					return;
+				}
+				if ( document.activeElement === input ) {
+					return;
+				}
+				let val;
+				if ( prop === 'width' && ( layer.type === 'ellipse' ) ) {
+					val = ( layer.width != null ) ? layer.width : ( ( layer.radiusX || 0 ) * 2 );
+				} else if ( prop === 'height' && ( layer.type === 'ellipse' ) ) {
+					val = ( layer.height != null ) ? layer.height : ( ( layer.radiusY || 0 ) * 2 );
+				} else {
+					val = layer[ prop ];
+				}
+				if ( typeof val === 'number' ) {
+					const formatted = formatOne( val, input.getAttribute( 'data-decimals' ) );
+					if ( input.value !== formatted ) {
+						input.value = formatted;
+					}
+				}
+			} );
+		}
+
+		/**
+		 * Set up drag and drop for layer reordering
+		 */
+		setupDragAndDrop() {
+			if ( !this.layerList ) {
+				return;
+			}
+
+			// Use extracted LayerDragDrop component if available
+			if ( LayerDragDrop ) {
+				this.dragDropController = new LayerDragDrop( {
+					layerList: this.layerList,
+					editor: this.editor,
+					renderLayerList: this.renderLayerList.bind( this ),
+					addTargetListener: this.addTargetListener.bind( this )
+				} );
+				return;
+			}
+
+			// Fallback: inline implementation
+			this.addTargetListener( this.layerList, 'dragstart', ( e ) => {
+				const li = e.target.closest( '.layer-item' );
+				if ( li ) {
+					e.dataTransfer.setData( 'text/plain', li.dataset.layerId );
+					li.classList.add( 'dragging' );
+				}
+			} );
+			this.addTargetListener( this.layerList, 'dragend', ( e ) => {
+				const li = e.target.closest( '.layer-item' );
+				if ( li ) {
+					li.classList.remove( 'dragging' );
+				}
+			} );
+			this.addTargetListener( this.layerList, 'dragover', ( e ) => {
+				e.preventDefault();
+			} );
+			this.addTargetListener( this.layerList, 'drop', ( e ) => {
+				e.preventDefault();
+				const draggedId = e.dataTransfer.getData( 'text/plain' );
+				const targetItem = e.target.closest( '.layer-item' );
+				if ( targetItem && draggedId && draggedId !== targetItem.dataset.layerId ) {
+					this.reorderLayers( draggedId, targetItem.dataset.layerId );
+				}
+			} );
+		}
+
+		/**
+		 * Reorder layers by moving dragged layer to target position
+		 *
+		 * @param {string} draggedId Dragged layer ID
+		 * @param {string} targetId Target layer ID
+		 */
+		reorderLayers( draggedId, targetId ) {
+			// Delegate to LayerDragDrop controller if available
+			if ( this.dragDropController && typeof this.dragDropController.reorderLayers === 'function' ) {
+				this.dragDropController.reorderLayers( draggedId, targetId );
+				return;
+			}
+
+			// Fallback: Use StateManager's reorderLayer method if available
+			if ( this.editor.stateManager && this.editor.stateManager.reorderLayer ) {
+				const result = this.editor.stateManager.reorderLayer( draggedId, targetId );
+				if ( result ) {
+					if ( this.editor.canvasManager ) {
+						this.editor.canvasManager.redraw();
+					}
+					this.renderLayerList();
+				}
+				return;
+			}
+
+			// Legacy fallback (when StateManager doesn't have reorderLayer)
+			const layers = this.getLayers().slice(); // Make a copy to modify
+			let draggedIndex = -1;
+			let targetIndex = -1;
+			let i;
+			for ( i = 0; i < layers.length; i++ ) {
+				if ( layers[ i ].id === draggedId ) {
+					draggedIndex = i;
+					break;
+				}
+			}
+			for ( i = 0; i < layers.length; i++ ) {
+				if ( layers[ i ].id === targetId ) {
+					targetIndex = i;
+					break;
+				}
+			}
+			if ( draggedIndex !== -1 && targetIndex !== -1 ) {
+				const draggedLayer = layers.splice( draggedIndex, 1 )[ 0 ];
+				layers.splice( targetIndex, 0, draggedLayer );
+				if ( this.editor.stateManager ) {
+					this.editor.stateManager.set( 'layers', layers );
+				}
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.redraw();
+				}
+				this.renderLayerList();
+				this.editor.saveState( 'Reorder Layers' );
+			}
+		}
+
+		/**
+		 * Create and display a confirmation dialog
+		 *
+		 * @param {string} message Confirmation message
+		 * @param {Function} onConfirm Callback when confirmed
+		 */
+		createConfirmDialog( message, onConfirm ) {
+			const t = this.msg.bind( this );
+
+			// Use extracted ConfirmDialog component if available
+			if ( ConfirmDialog ) {
+				ConfirmDialog.show( {
+					message: message,
+					onConfirm: onConfirm,
+					strings: {
+						title: t( 'layers-confirm-title', 'Confirmation' ),
+						cancel: t( 'layers-cancel', 'Cancel' ),
+						confirm: t( 'layers-confirm', 'Confirm' )
+					},
+					registerCleanup: ( cleanup ) => {
+						this.registerDialogCleanup( cleanup );
+					}
+				} );
+				return;
+			}
+
+			// Fallback: inline dialog implementation
+			const overlay = document.createElement( 'div' );
+			overlay.className = 'layers-modal-overlay';
+			overlay.setAttribute( 'role', 'presentation' );
+
+			const dialog = document.createElement( 'div' );
+			dialog.className = 'layers-modal-dialog';
+			dialog.setAttribute( 'role', 'alertdialog' );
+			dialog.setAttribute( 'aria-modal', 'true' );
+			dialog.setAttribute( 'aria-label', t( 'layers-confirm-title', 'Confirmation' ) );
+
+			const text = document.createElement( 'p' );
+			text.textContent = message;
+			dialog.appendChild( text );
+
+			const buttons = document.createElement( 'div' );
+			buttons.className = 'layers-modal-buttons';
+
+			const cancelBtn = document.createElement( 'button' );
+			cancelBtn.textContent = t( 'layers-cancel', 'Cancel' );
+			cancelBtn.className = 'layers-btn layers-btn-secondary';
+
+			const confirmBtn = document.createElement( 'button' );
+			confirmBtn.textContent = t( 'layers-confirm', 'Confirm' );
+			confirmBtn.className = 'layers-btn layers-btn-danger';
+
+			buttons.appendChild( cancelBtn );
+			buttons.appendChild( confirmBtn );
+			dialog.appendChild( buttons );
+
+			document.body.appendChild( overlay );
+			document.body.appendChild( dialog );
+
+			const cleanup = () => {
+				if ( overlay.parentNode ) {
+					overlay.parentNode.removeChild( overlay );
+				}
+				if ( dialog.parentNode ) {
+					dialog.parentNode.removeChild( dialog );
+				}
+				document.removeEventListener( 'keydown', handleKey );
+			};
+
+			const handleKey = ( e ) => {
+				if ( e.key === 'Escape' ) {
+					cleanup();
+				} else if ( e.key === 'Tab' ) {
+					const focusable = dialog.querySelectorAll( 'button' );
+					if ( focusable.length ) {
+						const first = focusable[ 0 ];
+						const last = focusable[ focusable.length - 1 ];
+						if ( e.shiftKey && document.activeElement === first ) {
+							e.preventDefault();
+							last.focus();
+						} else if ( !e.shiftKey && document.activeElement === last ) {
+							e.preventDefault();
+							first.focus();
+						}
+					}
+				}
+			};
+			document.addEventListener( 'keydown', handleKey );
+
+			cancelBtn.addEventListener( 'click', cleanup );
+			confirmBtn.addEventListener( 'click', () => {
+				cleanup();
+				onConfirm();
+			} );
+
+			confirmBtn.focus();
+		}
+
+		/**
+		 * Simple confirmation dialog fallback
+		 *
+		 * @param {string} message The confirmation message
+		 * @return {boolean} User's choice
+		 */
+		simpleConfirm( message ) {
+			// Use extracted ConfirmDialog static method if available
+			if ( ConfirmDialog && typeof ConfirmDialog.simpleConfirm === 'function' ) {
+				return ConfirmDialog.simpleConfirm( message, this.logWarn.bind( this ) );
+			}
+			// Fallback
+			if ( typeof window !== 'undefined' && typeof window.confirm === 'function' ) {
+				return window.confirm( message );
+			}
+			if ( typeof this.logWarn === 'function' ) {
+				this.logWarn( 'Confirmation dialog unavailable; auto-confirming action', message );
+			}
+			return true;
+		}
+
+		/**
+		 * Pure renderer for Wikitext code so LayersEditor can embed it in the footer
+		 *
+		 * @param {Array} [layers] Layer array (defaults to current layers)
+		 * @return {string} HTML string for the code snippet
+		 */
+		renderCodeSnippet( layers ) {
+			const t = this.msg.bind( this );
+			const list = Array.isArray( layers ) ? layers : this.getLayers();
+			const visibleLayers = list.filter( ( layer ) => layer.visible !== false );
+			const filename = this.editor && this.editor.filename ? this.editor.filename : 'YourImage.jpg';
+			let codeHtml = '';
+			if ( visibleLayers.length === 0 ) {
+				codeHtml = '<p><strong>' + t( 'layers-code-none', 'No layers visible.' ) + '</strong> ' +
+					t( 'layers-code-enable', 'Enable layers to see the code.' ) + '</p>';
+			} else if ( visibleLayers.length === list.length ) {
+				codeHtml = '<p><strong>' + t( 'layers-code-all-visible', 'All layers visible:' ) + '</strong></p>' +
+					'<code class="layers-code">[[File:' + filename + '|500px|layers=all|' +
+					t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
+					'<button class="copy-btn" data-code="layers=all">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
+			} else {
+				const layerIds = visibleLayers.map( ( layer ) =>
+					layer.id || ( 'layer_' + Math.random().toString( 36 ).slice( 2, 6 ) )
+				);
+				const layersParam = layerIds.join( ',' );
+				codeHtml = '<p><strong>' + t( 'layers-code-selected-visible', 'Selected layers visible:' ) + '</strong></p>' +
+					'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|' +
+					t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
+					'<button class="copy-btn" data-code="layers=' + layersParam + '">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
+			}
+			return codeHtml;
+		}
 	}
 
-	LayerPanel.prototype.init = function () {
-		this.createInterface();
-		this.setupEventHandlers();
-	};
-
-	// Resolve i18n text with a whitelist of known keys to avoid dynamic mw.message usage
-	LayerPanel.prototype.msg = function ( key, fallback ) {
-		function pick( txt, fb ) {
-			if ( txt && txt.indexOf && txt.indexOf( '⧼' ) === -1 ) {
-				return txt;
-			}
-			return fb;
-		}
-		switch ( key ) {
-			case 'layers-panel-title':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-panel-title' ).text() : null, fallback );
-			case 'layers-panel-subtitle':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-panel-subtitle' ).text() : null, fallback );
-			case 'layers-empty':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-empty' ).text() : null, fallback );
-			case 'layers-properties-title':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-properties-title' ).text() : null, fallback );
-			case 'layers-code-title':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-title' ).text() : null, fallback );
-			case 'layers-delete-confirm':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-delete-confirm' ).text() : null, fallback );
-			case 'layers-no-layer-selected':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-no-layer-selected' ).text() : null, fallback );
-			case 'layers-layer-not-found':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-layer-not-found' ).text() : null, fallback );
-			case 'layers-section-transform':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-section-transform' ).text() : null, fallback );
-			case 'layers-prop-x':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-x' ).text() : null, fallback );
-			case 'layers-prop-y':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-y' ).text() : null, fallback );
-			case 'layers-prop-rotation':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-rotation' ).text() : null, fallback );
-			case 'layers-prop-width':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-width' ).text() : null, fallback );
-			case 'layers-prop-height':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-height' ).text() : null, fallback );
-			case 'layers-prop-radius':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-radius' ).text() : null, fallback );
-			case 'layers-prop-sides':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-sides' ).text() : null, fallback );
-			case 'layers-prop-points':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-points' ).text() : null, fallback );
-			case 'layers-prop-outer-radius':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-outer-radius' ).text() : null, fallback );
-			case 'layers-prop-inner-radius':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-inner-radius' ).text() : null, fallback );
-			case 'layers-prop-text':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-text' ).text() : null, fallback );
-			case 'layers-prop-font-size':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-font-size' ).text() : null, fallback );
-			case 'layers-prop-arrow-size':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-arrow-size' ).text() : null, fallback );
-			case 'layers-prop-arrow-style':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-arrow-style' ).text() : null, fallback );
-			case 'layers-arrow-single':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-arrow-single' ).text() : null, fallback );
-			case 'layers-arrow-double':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-arrow-double' ).text() : null, fallback );
-			case 'layers-arrow-none':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-arrow-none' ).text() : null, fallback );
-			case 'layers-section-appearance':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-section-appearance' ).text() : null, fallback );
-			case 'layers-prop-stroke-color':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-stroke-color' ).text() : null, fallback );
-			case 'layers-prop-stroke-width':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-stroke-width' ).text() : null, fallback );
-			case 'layers-prop-stroke-opacity':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-stroke-opacity' ).text() : null, fallback );
-			case 'layers-prop-fill-color':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-fill-color' ).text() : null, fallback );
-			case 'layers-prop-fill-opacity':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-fill-opacity' ).text() : null, fallback );
-			case 'layers-section-effects':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-section-effects' ).text() : null, fallback );
-			case 'layers-prop-opacity':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-opacity' ).text() : null, fallback );
-			case 'layers-prop-blend':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-prop-blend' ).text() : null, fallback );
-			case 'layers-blend-normal':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-normal' ).text() : null, fallback );
-			case 'layers-blend-multiply':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-multiply' ).text() : null, fallback );
-			case 'layers-blend-screen':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-screen' ).text() : null, fallback );
-			case 'layers-blend-overlay':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-overlay' ).text() : null, fallback );
-			case 'layers-blend-soft-light':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-soft-light' ).text() : null, fallback );
-			case 'layers-blend-hard-light':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-hard-light' ).text() : null, fallback );
-			case 'layers-blend-color-dodge':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-color-dodge' ).text() : null, fallback );
-			case 'layers-blend-color-burn':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-color-burn' ).text() : null, fallback );
-			case 'layers-blend-darken':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-darken' ).text() : null, fallback );
-			case 'layers-blend-lighten':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-lighten' ).text() : null, fallback );
-			case 'layers-blend-difference':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-difference' ).text() : null, fallback );
-			case 'layers-blend-exclusion':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-blend-exclusion' ).text() : null, fallback );
-			case 'layers-effect-shadow':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow' ).text() : null, fallback );
-			case 'layers-effect-shadow-color':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-color' ).text() : null, fallback );
-			case 'layers-effect-shadow-blur':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-blur' ).text() : null, fallback );
-			case 'layers-effect-shadow-spread':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-spread' ).text() : null, fallback );
-			case 'layers-effect-shadow-offset-x':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-offset-x' ).text() : null, fallback );
-			case 'layers-effect-shadow-offset-y':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-effect-shadow-offset-y' ).text() : null, fallback );
-			case 'layers-code-none':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-none' ).text() : null, fallback );
-			case 'layers-code-enable':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-enable' ).text() : null, fallback );
-			case 'layers-code-all-visible':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-all-visible' ).text() : null, fallback );
-			case 'layers-code-caption':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-caption' ).text() : null, fallback );
-			case 'layers-code-copy':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-copy' ).text() : null, fallback );
-			case 'layers-code-selected-visible':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-selected-visible' ).text() : null, fallback );
-			case 'layers-code-copied':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-copied' ).text() : null, fallback );
-			case 'layers-code-copy-failed':
-				return pick( ( window.mw && mw.message ) ? mw.message( 'layers-code-copy-failed' ).text() : null, fallback );
-			default:
-				return fallback;
-		}
-	};
-
-	LayerPanel.prototype.createInterface = function () {
-		this.container.innerHTML = '';
-		this.container.setAttribute( 'role', 'region' );
-		var t = this.msg ? this.msg.bind( this ) : function ( k, d ) { return d; };
-		this.container.setAttribute( 'aria-label', t( 'layers-panel-title', 'Layers' ) );
-
-		var t = this.msg.bind( this );
-
-		// Create header
-		var header = document.createElement( 'div' );
-		header.className = 'layers-panel-header';
-		var title = document.createElement( 'h3' );
-		title.textContent = t( 'layers-panel-title', 'Layers' );
-		header.appendChild( title );
-		var subtitle = document.createElement( 'div' );
-		subtitle.className = 'layers-panel-subtitle';
-		subtitle.textContent = t( 'layers-panel-subtitle', 'Drag to reorder • Click name to rename' );
-		header.appendChild( subtitle );
-		this.container.appendChild( header );
-
-		// Create sidebar inner container for resizable layout
-		var sidebarInner = document.createElement( 'div' );
-		sidebarInner.className = 'layers-panel-inner';
-		sidebarInner.style.display = 'flex';
-		sidebarInner.style.flexDirection = 'column';
-		sidebarInner.style.height = '100%';
-
-		// Create layer list container
-		this.layerList = document.createElement( 'div' );
-		this.layerList.className = 'layers-list';
-		this.layerList.setAttribute( 'role', 'listbox' );
-		this.layerList.setAttribute( 'aria-label', t( 'layers-panel-title', 'Layers' ) );
-		var emptyState = document.createElement( 'div' );
-		emptyState.className = 'layers-empty';
-		emptyState.textContent = t( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
-		this.layerList.appendChild( emptyState );
-
-		// Divider
-		var divider = document.createElement( 'div' );
-		divider.className = 'layers-panel-divider';
-		divider.setAttribute( 'tabindex', '0' );
-		divider.setAttribute( 'role', 'separator' );
-		divider.setAttribute( 'aria-orientation', 'horizontal' );
-		divider.title = t( 'layers-panel-divider', 'Drag to resize panels' );
-
-		// Create properties and code panels
-		this.propertiesPanel = document.createElement( 'div' );
-		this.propertiesPanel.className = 'layers-properties';
-		this.propertiesPanel.setAttribute( 'role', 'region' );
-		this.propertiesPanel.setAttribute( 'aria-label', t( 'layers-properties-title', 'Properties' ) );
-		this.propertiesPanel.innerHTML = '<h4>' + t( 'layers-properties-title', 'Properties' ) + '</h4><div class="properties-content"></div>';
-
-		this.codePanel = document.createElement( 'div' );
-		this.codePanel.className = 'layers-code-panel';
-		this.codePanel.setAttribute( 'role', 'region' );
-		this.codePanel.setAttribute( 'aria-label', t( 'layers-code-title', 'Wikitext Code' ) );
-		this.codePanel.innerHTML = '<h4>' + t( 'layers-code-title', 'Wikitext Code' ) + '</h4><div class="code-content"></div>';
-
-		// Compose sidebar
-		sidebarInner.appendChild( this.layerList );
-		sidebarInner.appendChild( divider );
-		sidebarInner.appendChild( this.propertiesPanel );
-		this.container.appendChild( header );
-		this.container.appendChild( sidebarInner );
-		this.container.appendChild( this.codePanel );
-		this.updateCodePanel();
-
-		// Resizable divider logic
-		var isDragging = false;
-		var minListHeight = 60;
-		var minPropsHeight = 80;
-		divider.addEventListener( 'mousedown', function () {
-			isDragging = true;
-			document.body.style.cursor = 'row-resize';
-			document.body.style.userSelect = 'none';
-		} );
-		document.addEventListener( 'mousemove', function ( e ) {
-			if ( !isDragging ) {
-				return;
-			}
-			var rect = sidebarInner.getBoundingClientRect();
-			var offset = e.clientY - rect.top;
-			var totalHeight = sidebarInner.offsetHeight;
-			var newListHeight = offset;
-			var newPropsHeight = totalHeight - offset - divider.offsetHeight;
-			if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
-				return;
-			}
-			// Set heights
-			sidebarInner.childNodes[ 0 ].style.flex = 'none';
-			sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
-			sidebarInner.childNodes[ 2 ].style.flex = 'none';
-			sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
-		} );
-		document.addEventListener( 'mouseup', function () {
-			if ( isDragging ) {
-				isDragging = false;
-				document.body.style.cursor = '';
-				document.body.style.userSelect = '';
-			}
-		} );
-		// Touch support
-		divider.addEventListener( 'touchstart', function () {
-			isDragging = true;
-			document.body.style.cursor = 'row-resize';
-			document.body.style.userSelect = 'none';
-		} );
-		document.addEventListener( 'touchmove', function ( e ) {
-			if ( !isDragging ) {
-				return;
-			}
-			var rect = sidebarInner.getBoundingClientRect();
-			var offset = e.touches[ 0 ].clientY - rect.top;
-			var totalHeight = sidebarInner.offsetHeight;
-			var newListHeight = offset;
-			var newPropsHeight = totalHeight - offset - divider.offsetHeight;
-			if ( newListHeight < minListHeight || newPropsHeight < minPropsHeight ) {
-				return;
-			}
-			sidebarInner.childNodes[ 0 ].style.flex = 'none';
-			sidebarInner.childNodes[ 0 ].style.height = newListHeight + 'px';
-			sidebarInner.childNodes[ 2 ].style.flex = 'none';
-			sidebarInner.childNodes[ 2 ].style.height = newPropsHeight + 'px';
-		}, { passive: false } );
-		document.addEventListener( 'touchend', function () {
-			if ( isDragging ) {
-				isDragging = false;
-				document.body.style.cursor = '';
-				document.body.style.userSelect = '';
-			}
-		} );
-	};
-
-	LayerPanel.prototype.setupEventHandlers = function () {
-		var self = this;
-
-		// Layer list interactions
-		this.layerList.addEventListener( 'click', function ( e ) {
-			self.handleLayerListClick( e );
-		} );
-
-		// Drag and drop for reordering
-		this.setupDragAndDrop();
-	};
-
-	LayerPanel.prototype.updateLayers = function ( layers ) {
-		this.layers = layers || [];
-		this.renderLayerList();
-		this.updateCodePanel();
-	};
-
-	LayerPanel.prototype.renderLayerList = function () {
-		this.layerList.innerHTML = '';
-		var t = this.msg.bind( this );
-
-		this.layers.forEach( function ( layer, index ) {
-			var layerItem = this.createLayerItem( layer, index );
-			this.layerList.appendChild( layerItem );
-		}.bind( this ) );
-
-		if ( this.layers.length === 0 ) {
-			var empty = document.createElement( 'div' );
-			empty.className = 'layers-empty';
-			empty.textContent = t( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
-			this.layerList.appendChild( empty );
-		}
-	};
-
-	LayerPanel.prototype.createLayerItem = function ( layer, index ) {
-		var item = document.createElement( 'div' );
-		item.className = 'layer-item';
-		item.dataset.layerId = layer.id;
-		item.dataset.index = index;
-		var t = this.msg.bind( this );
-
-		if ( layer.id === this.selectedLayerId ) {
-			item.classList.add( 'selected' );
-		}
-
-		// Add a wide grab area for layer selection/move, larger and accessible
-		var grabArea = document.createElement( 'div' );
-		grabArea.className = 'layer-grab-area';
-		grabArea.title = t( 'layers-grab-area', 'Drag to move/select' );
-		grabArea.setAttribute( 'tabindex', '0' );
-		grabArea.setAttribute( 'role', 'button' );
-		grabArea.setAttribute( 'aria-label', t( 'layers-grab-area', 'Drag to move/select' ) );
-		grabArea.style.width = '36px';
-		grabArea.style.height = '36px';
-		grabArea.style.display = 'flex';
-		grabArea.style.alignItems = 'center';
-		grabArea.style.justifyContent = 'center';
-		grabArea.style.cursor = 'grab';
-		grabArea.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2.5" fill="#bbb"/><circle cx="17" cy="7" r="2.5" fill="#bbb"/><circle cx="7" cy="17" r="2.5" fill="#bbb"/><circle cx="17" cy="17" r="2.5" fill="#bbb"/></svg>';
-
-		// Visibility toggle (SVG eye icon, larger, accessible)
-		var visibilityBtn = document.createElement( 'button' );
-		visibilityBtn.className = 'layer-visibility';
-		visibilityBtn.innerHTML = layer.visible !== false ? '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="7" fill="none" stroke="#666" stroke-width="2.5"/><circle cx="12" cy="12" r="3.5" fill="#666"/></svg>' : '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="7" fill="none" stroke="#aaa" stroke-width="2.5"/><line x1="5" y1="21" x2="21" y2="5" stroke="#c00" stroke-width="2.5"/></svg>';
-		visibilityBtn.title = t( 'layers-toggle-visibility', 'Toggle visibility' );
-		visibilityBtn.type = 'button';
-		visibilityBtn.setAttribute( 'aria-label', t( 'layers-toggle-visibility', 'Toggle visibility' ) );
-		visibilityBtn.style.width = '36px';
-		visibilityBtn.style.height = '36px';
-
-		// Layer name
-		var name = document.createElement( 'span' );
-		name.className = 'layer-name';
-		name.textContent = layer.name || this.getDefaultLayerName( layer );
-		name.contentEditable = true;
-
-		// Lock toggle (SVG padlock, larger, accessible)
-		var lockBtn = document.createElement( 'button' );
-		lockBtn.className = 'layer-lock';
-		lockBtn.innerHTML = layer.locked ? '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="8" rx="3" fill="#eee" stroke="#666" stroke-width="2"/><rect x="10" y="16" width="4" height="3" rx="1.5" fill="#bbb"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#666" stroke-width="2"/></svg>' : '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="8" rx="3" fill="#fff" stroke="#aaa" stroke-width="2"/><rect x="10" y="16" width="4" height="3" rx="1.5" fill="#ccc"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#aaa" stroke-width="2"/></svg>';
-		lockBtn.title = t( 'layers-toggle-lock', 'Toggle lock' );
-		lockBtn.type = 'button';
-		lockBtn.setAttribute( 'aria-label', t( 'layers-toggle-lock', 'Toggle lock' ) );
-		lockBtn.style.width = '36px';
-		lockBtn.style.height = '36px';
-
-		// Delete button (SVG trash can, larger, accessible)
-		var deleteBtn = document.createElement( 'button' );
-		deleteBtn.className = 'layer-delete';
-		deleteBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="8" rx="2.5" fill="#fff" stroke="#c00" stroke-width="2"/><rect x="10" y="5" width="4" height="3" rx="1.5" fill="#c00"/><line x1="9" y1="13" x2="15" y2="19" stroke="#c00" stroke-width="1.8"/><line x1="15" y1="13" x2="9" y2="19" stroke="#c00" stroke-width="1.8"/></svg>';
-		deleteBtn.title = t( 'layers-delete-layer-button', 'Delete layer' );
-		deleteBtn.type = 'button';
-		deleteBtn.setAttribute( 'aria-label', t( 'layers-delete-layer-button', 'Delete layer' ) );
-		deleteBtn.style.width = '36px';
-		deleteBtn.style.height = '36px';
-
-		item.appendChild( grabArea );
-		item.appendChild( visibilityBtn );
-		item.appendChild( name );
-		item.appendChild( lockBtn );
-		item.appendChild( deleteBtn );
-
-		return item;
-	};
-
-	LayerPanel.prototype.getDefaultLayerName = function ( layer ) {
-		var t;
-		if ( this.msg && this.msg.bind ) {
-			t = this.msg.bind( this );
-		} else {
-			t = layersMsgDefault;
-		}
-		switch ( layer.type ) {
-			case 'text': {
-				var prefix = ( window.mw ? t( 'layers-default-text-prefix', 'Text: ' ) : 'Text: ' );
-				var emptyText = ( window.mw ? t( 'layers-default-empty', 'Empty' ) : 'Empty' );
-				return prefix + ( ( layer.text || emptyText ).slice( 0, 20 ) );
-			}
-			case 'rectangle':
-				return ( window.mw ? t( 'layers-type-rectangle', 'Rectangle' ) : 'Rectangle' );
-			case 'blur':
-				return ( window.mw ? t( 'layers-type-blur', 'Blur/Redaction' ) : 'Blur/Redaction' );
-			case 'circle':
-				return ( window.mw ? t( 'layers-type-circle', 'Circle' ) : 'Circle' );
-			case 'ellipse':
-				return ( window.mw ? t( 'layers-type-ellipse', 'Ellipse' ) : 'Ellipse' );
-			case 'polygon':
-				return ( window.mw ? t( 'layers-type-polygon', 'Polygon' ) : 'Polygon' );
-			case 'star':
-				return ( window.mw ? t( 'layers-type-star', 'Star' ) : 'Star' );
-			case 'arrow':
-				return ( window.mw ? t( 'layers-type-arrow', 'Arrow' ) : 'Arrow' );
-			case 'line':
-				return ( window.mw ? t( 'layers-type-line', 'Line' ) : 'Line' );
-			case 'path':
-				return ( window.mw ? t( 'layers-type-path', 'Drawing' ) : 'Drawing' );
-			case 'highlight':
-				return ( window.mw ? t( 'layers-type-highlight', 'Highlight' ) : 'Highlight' );
-			default:
-				return ( window.mw ? t( 'layers-type-layer', 'Layer' ) : 'Layer' );
-		}
-	};
-
-	LayerPanel.prototype.handleLayerListClick = function ( e ) {
-		var target = e.target;
-		var layerItem = target.closest( '.layer-item' );
-
-		if ( !layerItem ) {
-			return;
-		}
-
-		var layerId = layerItem.dataset.layerId;
-		var layer = this.editor.getLayerById( layerId );
-
-		if ( !layer ) {
-			return;
-		}
-
-		if ( target.classList.contains( 'layer-visibility' ) ) {
-			this.toggleLayerVisibility( layerId );
-		} else if ( target.classList.contains( 'layer-lock' ) ) {
-			this.toggleLayerLock( layerId );
-		} else if ( target.classList.contains( 'layer-delete' ) ) {
-			this.deleteLayer( layerId );
-		} else if ( target.classList.contains( 'layer-name' ) ) {
-			this.editLayerName( layerId, target );
-		} else {
-			this.selectLayer( layerId );
-		}
-	};
-
-	LayerPanel.prototype.selectLayer = function ( layerId ) {
-		this.selectedLayerId = layerId;
-		this.renderLayerList();
-		this.updatePropertiesPanel( layerId );
-
-		// Notify editor of selection
-		if ( this.editor.canvasManager ) {
-			this.editor.canvasManager.selectLayer( layerId );
-		}
-	};
-
-	LayerPanel.prototype.toggleLayerVisibility = function ( layerId ) {
-		var layer = this.editor.getLayerById( layerId );
-		if ( layer ) {
-			layer.visible = !( layer.visible !== false );
-			this.editor.renderLayers();
-			this.renderLayerList();
-			this.updateCodePanel(); // Update the code when visibility changes
-		}
-	};
-
-	LayerPanel.prototype.toggleLayerLock = function ( layerId ) {
-		var layer = this.editor.getLayerById( layerId );
-		if ( layer ) {
-			layer.locked = !layer.locked;
-			this.renderLayerList();
-		}
-	};
-
-	LayerPanel.prototype.deleteLayer = function ( layerId ) {
-		// Use MediaWiki's OO.ui.confirm when available, fallback to confirm
-		var t = this.msg.bind( this );
-		var confirmMessage = ( window.mw ? t( 'layers-delete-confirm', 'Are you sure you want to delete this layer?' ) : 'Are you sure you want to delete this layer?' );
-		if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
-			OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
-				if ( confirmed ) {
-					this.editor.removeLayer( layerId );
-					if ( this.selectedLayerId === layerId ) {
-						this.selectedLayerId = null;
-						this.updatePropertiesPanel( null );
-					}
-				}
-			}.bind( this ) );
-		} else {
-			// Use MediaWiki's OO.ui.confirm if available, otherwise fall back to browser confirm
-			var confirmResult = false;
-			if ( window.OO && OO.ui && OO.ui.confirm ) {
-				// Note: OO.ui.confirm is async, but we'll use sync confirm for simplicity here
-				// In a real implementation, this should be refactored to handle async confirmation
-				confirmResult = confirm( confirmMessage ); // eslint-disable-line no-alert
-			} else {
-				confirmResult = confirm( confirmMessage ); // eslint-disable-line no-alert
-			}
-			if ( confirmResult ) {
-				this.editor.removeLayer( layerId );
-				if ( this.selectedLayerId === layerId ) {
-					this.selectedLayerId = null;
-				}
-				this.updatePropertiesPanel( null );
-			}
-		}
-	};
-
-	LayerPanel.prototype.editLayerName = function ( layerId, nameElement ) {
-		var self = this;
-		var originalName = nameElement.textContent;
-
-		nameElement.addEventListener( 'blur', function () {
-			var newName = nameElement.textContent.trim();
-			if ( newName && newName !== originalName ) {
-				self.editor.updateLayer( layerId, { name: newName } );
-			}
-		} );
-
-		nameElement.addEventListener( 'keydown', function ( e ) {
-			if ( e.key === 'Enter' ) {
-				nameElement.blur();
-			} else if ( e.key === 'Escape' ) {
-				nameElement.textContent = originalName;
-				nameElement.blur();
-			}
-		} );
-	};
-
-	LayerPanel.prototype.updatePropertiesPanel = function ( layerId ) {
-		var contentDiv = this.propertiesPanel.querySelector( '.properties-content' );
-
-		var t = this.msg.bind( this );
-		if ( !layerId ) {
-			contentDiv.innerHTML = '<p>' + t( 'layers-no-layer-selected', 'No layer selected' ) + '</p>';
-			return;
-		}
-
-		var layer = this.editor.getLayerById( layerId );
-		if ( !layer ) {
-			contentDiv.innerHTML = '<p>' + t( 'layers-layer-not-found', 'Layer not found' ) + '</p>';
-			return;
-		}
-
-		// Create properties form based on layer type
-		var form = this.createPropertiesForm( layer );
-		contentDiv.innerHTML = '';
-		contentDiv.appendChild( form );
-	};
-
-	LayerPanel.prototype.createPropertiesForm = function ( layer ) {
-		var form = document.createElement( 'form' );
-		form.className = 'layer-properties-form';
-		var t = this.msg.bind( this );
-
-		// Helpers
-		var self = this;
-		var addSection = function ( title ) {
-			var h = document.createElement( 'h5' );
-			h.textContent = title;
-			form.appendChild( h );
-		};
-		var addInput = function ( opts ) {
-			var wrapper = document.createElement( 'div' );
-			wrapper.className = 'property-field';
-			var labelEl = document.createElement( 'label' );
-			labelEl.textContent = opts.label;
-			var input = document.createElement( 'input' );
-			input.type = opts.type || 'text';
-			if ( opts.min !== undefined ) {
-				input.min = String( opts.min );
-			}
-			if ( opts.max !== undefined ) {
-				input.max = String( opts.max );
-			}
-			if ( opts.step !== undefined ) {
-				input.step = String( opts.step );
-			}
-			if ( opts.decimals === 1 && input.type === 'number' && input.step === '' ) {
-				input.step = '0.1';
-			}
-			input.value = ( opts.value !== undefined && opts.value !== null ) ? opts.value : '';
-			input.addEventListener( 'change', function () {
-				opts.onChange( input.value );
-			} );
-			if ( opts.decimals === 1 && input.type === 'number' ) {
-				input.addEventListener( 'blur', function () {
-					var n = parseFloat( input.value );
-					if ( !isNaN( n ) ) {
-						input.value = n.toFixed( 1 );
-					}
-				} );
-			}
-			wrapper.appendChild( labelEl );
-			wrapper.appendChild( input );
-			form.appendChild( wrapper );
-			return input;
-		};
-		var addSelect = function ( opts ) {
-			var wrapper = document.createElement( 'div' );
-			wrapper.className = 'property-field';
-			var labelEl = document.createElement( 'label' );
-			labelEl.textContent = opts.label;
-			var select = document.createElement( 'select' );
-			( opts.options || [] ).forEach( function ( o ) {
-				var opt = document.createElement( 'option' );
-				opt.value = o.value;
-				opt.textContent = o.text;
-				if ( o.value === opts.value ) {
-					opt.selected = true;
-				}
-				select.appendChild( opt );
-			} );
-			select.addEventListener( 'change', function () {
-				opts.onChange( select.value );
-			} );
-			wrapper.appendChild( labelEl );
-			wrapper.appendChild( select );
-			form.appendChild( wrapper );
-			return select;
-		};
-		var addCheckbox = function ( opts ) {
-			var wrapper = document.createElement( 'div' );
-			wrapper.className = 'property-field';
-			var labelEl = document.createElement( 'label' );
-			labelEl.textContent = opts.label;
-			var input = document.createElement( 'input' );
-			input.type = 'checkbox';
-			input.checked = !!opts.value;
-			input.addEventListener( 'change', function () {
-				opts.onChange( input.checked );
-			} );
-			wrapper.appendChild( labelEl );
-			wrapper.appendChild( input );
-			form.appendChild( wrapper );
-			return input;
-		};
-
-		// Transform
-		addSection( t( 'layers-section-transform', 'Transform' ) );
-		addInput( {
-			label: t( 'layers-prop-x', 'X' ),
-			type: 'number',
-			value: layer.x || 0,
-			step: 1,
-			decimals: 1,
-			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { x: parseFloat( v ) } );
-			}
-		} );
-		addInput( {
-			label: t( 'layers-prop-y', 'Y' ),
-			type: 'number',
-			value: layer.y || 0,
-			step: 1,
-			decimals: 1,
-			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { y: parseFloat( v ) } );
-			}
-		} );
-		addInput( {
-			label: t( 'layers-prop-rotation', 'Rotation' ),
-			type: 'number',
-			value: layer.rotation || 0,
-			step: 1,
-			decimals: 1,
-			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { rotation: parseFloat( v ) } );
-			}
-		} );
-
-		// Size/geometry per type
-		switch ( layer.type ) {
-			case 'rectangle':
-				addInput( {
-					label: t( 'layers-prop-width', 'Width' ),
-					type: 'number',
-					value: layer.width || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { width: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-height', 'Height' ),
-					type: 'number',
-					value: layer.height || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { height: parseFloat( v ) } );
-					}
-				} );
-				break;
-			case 'circle':
-				addInput( {
-					label: t( 'layers-prop-radius', 'Radius' ),
-					type: 'number',
-					value: layer.radius || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { radius: parseFloat( v ) } );
-					}
-				} );
-				break;
-			case 'ellipse':
-				addInput( {
-					label: t( 'layers-prop-width', 'Width' ),
-					type: 'number',
-					value: layer.width || ( ( layer.radiusX || 0 ) * 2 ),
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						var valX = parseFloat( v );
-						self.editor.updateLayer( layer.id, { width: valX, radiusX: valX / 2 } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-height', 'Height' ),
-					type: 'number',
-					value: layer.height || ( ( layer.radiusY || 0 ) * 2 ),
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						var valY = parseFloat( v );
-						self.editor.updateLayer( layer.id, { height: valY, radiusY: valY / 2 } );
-					}
-				} );
-				break;
-			case 'polygon':
-				addInput( {
-					label: t( 'layers-prop-sides', 'Sides' ),
-					type: 'number',
-					value: layer.sides || 6,
-					min: 3,
-					step: 1,
-					onChange: function ( v ) {
-						var sidesVal = Math.max( 3, parseInt( v, 10 ) || 6 );
-						self.editor.updateLayer( layer.id, { sides: sidesVal } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-radius', 'Radius' ),
-					type: 'number',
-					value: layer.radius || 50,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { radius: parseFloat( v ) } );
-					}
-				} );
-				break;
-			case 'star':
-				addInput( {
-					label: t( 'layers-prop-points', 'Points' ),
-					type: 'number',
-					value: layer.points || 5,
-					min: 3,
-					step: 1,
-					onChange: function ( v ) {
-						var ptsVal = Math.max( 3, parseInt( v, 10 ) || 5 );
-						self.editor.updateLayer( layer.id, { points: ptsVal } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-outer-radius', 'Outer Radius' ),
-					type: 'number',
-					value: layer.outerRadius || layer.radius || 50,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { outerRadius: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-inner-radius', 'Inner Radius' ),
-					type: 'number',
-					value: layer.innerRadius || ( ( layer.outerRadius || 50 ) * 0.5 ),
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { innerRadius: parseFloat( v ) } );
-					}
-				} );
-				break;
-			case 'line':
-				addInput( {
-					label: 'x1',
-					type: 'number',
-					value: layer.x1 || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { x1: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: 'y1',
-					type: 'number',
-					value: layer.y1 || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { y1: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: 'x2',
-					type: 'number',
-					value: layer.x2 || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { x2: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: 'y2',
-					type: 'number',
-					value: layer.y2 || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { y2: parseFloat( v ) } );
-					}
-				} );
-				break;
-			case 'arrow':
-				addInput( {
-					label: 'x1',
-					type: 'number',
-					value: layer.x1 || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { x1: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: 'y1',
-					type: 'number',
-					value: layer.y1 || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { y1: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: 'x2',
-					type: 'number',
-					value: layer.x2 || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { x2: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: 'y2',
-					type: 'number',
-					value: layer.y2 || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { y2: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-arrow-size', 'Arrow Size' ),
-					type: 'number',
-					value: layer.arrowSize || 10,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { arrowSize: parseFloat( v ) } );
-					}
-				} );
-				addSelect( {
-					label: t( 'layers-prop-arrow-style', 'Arrow Style' ),
-					value: layer.arrowStyle || 'single',
-					options: [
-						{ value: 'single', text: t( 'layers-arrow-single', 'Single' ) },
-						{ value: 'double', text: t( 'layers-arrow-double', 'Double' ) },
-						{ value: 'none', text: t( 'layers-arrow-none', 'Line only' ) }
-					],
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { arrowStyle: v } );
-					}
-				} );
-				break;
-			case 'text':
-				addInput( {
-					label: t( 'layers-prop-text', 'Text' ),
-					type: 'text',
-					value: layer.text || '',
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { text: v } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-font-size', 'Font Size' ),
-					type: 'number',
-					value: layer.fontSize || 16,
-					min: 1,
-					step: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { fontSize: parseInt( v, 10 ) } );
-					}
-				} );
-				// Text stroke width
-				addInput( {
-					label: t( 'layers-prop-stroke-width', 'Text Stroke Width' ),
-					type: 'number',
-					value: layer.textStrokeWidth || 0,
-					min: 0,
-					max: 10,
-					step: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { textStrokeWidth: parseInt( v, 10 ) } );
-					}
-				} );
-				// Text stroke color (only show if stroke width > 0)
-				if ( ( layer.textStrokeWidth || 0 ) > 0 ) {
-					var textStrokeColorRow = document.createElement( 'div' );
-					textStrokeColorRow.className = 'property-field';
-					var textStrokeLabel = document.createElement( 'label' );
-					textStrokeLabel.textContent = t( 'layers-prop-stroke-color', 'Text Stroke Color' );
-					var textStrokeInput = document.createElement( 'input' );
-					textStrokeInput.type = 'color';
-					textStrokeInput.value = layer.textStrokeColor || '#000000';
-					textStrokeInput.addEventListener( 'change', function () {
-						self.editor.updateLayer( layer.id, { textStrokeColor: textStrokeInput.value } );
-					} );
-					textStrokeColorRow.appendChild( textStrokeLabel );
-					textStrokeColorRow.appendChild( textStrokeInput );
-					form.appendChild( textStrokeColorRow );
-				}
-				break;
-			case 'highlight':
-				addInput( {
-					label: t( 'layers-prop-width', 'Width' ),
-					type: 'number',
-					value: layer.width || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { width: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-height', 'Height' ),
-					type: 'number',
-					value: layer.height || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { height: parseFloat( v ) } );
-					}
-				} );
-				break;
-			case 'blur':
-				addInput( {
-					label: t( 'layers-prop-width', 'Width' ),
-					type: 'number',
-					value: layer.width || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { width: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-height', 'Height' ),
-					type: 'number',
-					value: layer.height || 0,
-					step: 1,
-					decimals: 1,
-					onChange: function ( v ) {
-						self.editor.updateLayer( layer.id, { height: parseFloat( v ) } );
-					}
-				} );
-				addInput( {
-					label: t( 'layers-prop-blur-radius', 'Blur Radius' ),
-					type: 'number',
-					value: layer.blurRadius || 12,
-					min: 1,
-					max: 64,
-					step: 1,
-					onChange: function ( v ) {
-						var br = Math.max( 1, Math.min( 64, parseInt( v, 10 ) || 12 ) );
-						self.editor.updateLayer( layer.id, { blurRadius: br } );
-					}
-				} );
-				break;
-		}
-
-		// Appearance
-		addSection( t( 'layers-section-appearance', 'Appearance' ) );
-		// Stroke and fill color selectors, side by side, with clear labels
-		var colorRow = document.createElement( 'div' );
-		colorRow.className = 'property-field property-field--compound';
-		var strokeLabel = document.createElement( 'label' );
-		strokeLabel.textContent = t( 'layers-prop-stroke-color', 'Stroke Color' );
-		strokeLabel.setAttribute( 'for', 'stroke-color-input' );
-		var strokeInput = document.createElement( 'input' );
-		strokeInput.type = 'color';
-		strokeInput.id = 'stroke-color-input';
-		strokeInput.value = layer.stroke || '#000000';
-		strokeInput.setAttribute( 'aria-label', t( 'layers-prop-stroke-color', 'Stroke Color' ) );
-		strokeInput.addEventListener( 'change', function () {
-			self.editor.updateLayer( layer.id, { stroke: strokeInput.value } );
-		} );
-		var fillLabel = document.createElement( 'label' );
-		fillLabel.textContent = t( 'layers-prop-fill-color', 'Fill Color' );
-		fillLabel.setAttribute( 'for', 'fill-color-input' );
-		var fillInput = document.createElement( 'input' );
-		fillInput.type = 'color';
-		fillInput.id = 'fill-color-input';
-		fillInput.value = layer.fill || '#ffffff';
-		fillInput.setAttribute( 'aria-label', t( 'layers-prop-fill-color', 'Fill Color' ) );
-		fillInput.addEventListener( 'change', function () {
-			self.editor.updateLayer( layer.id, { fill: fillInput.value } );
-		} );
-		colorRow.appendChild( strokeLabel );
-		colorRow.appendChild( strokeInput );
-		colorRow.appendChild( fillLabel );
-		colorRow.appendChild( fillInput );
-		form.appendChild( colorRow );
-		// Stroke width (no slider, up to 200)
-		addInput( {
-			label: t( 'layers-prop-stroke-width', 'Stroke Width' ),
-			type: 'number',
-			value: layer.strokeWidth || 1,
-			min: 0,
-			max: 200,
-			step: 1,
-			onChange: function ( v ) {
-				var val = Math.max( 0, Math.min( 200, parseFloat( v ) ) );
-				self.editor.updateLayer( layer.id, { strokeWidth: val } );
-			}
-		} );
-		// Stroke opacity (number only, 0-100)
-		addInput( {
-			label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ),
-			type: 'number',
-			value: ( layer.strokeOpacity !== null && layer.strokeOpacity !== undefined ) ?
-				Math.round( layer.strokeOpacity * 100 ) :
-				100,
-			min: 0,
-			max: 100,
-			step: 1,
-			onChange: function ( v ) {
-				var so = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 100 ) );
-				self.editor.updateLayer( layer.id, { strokeOpacity: so / 100 } );
-			}
-		} );
-		// Fill opacity (number only, 0-100)
-		addInput( {
-			label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ),
-			type: 'number',
-			value: ( layer.fillOpacity !== null && layer.fillOpacity !== undefined ) ?
-				Math.round( layer.fillOpacity * 100 ) :
-				100,
-			min: 0,
-			max: 100,
-			step: 1,
-			onChange: function ( v ) {
-				var fo = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 100 ) );
-				self.editor.updateLayer( layer.id, { fillOpacity: fo / 100 } );
-			}
-		} );
-
-		// Effects (layer-level)
-		addSection( t( 'layers-section-effects', 'Effects' ) );
-		var layerOpacityValue = (
-			layer.opacity !== null &&
-			layer.opacity !== undefined
-		) ? layer.opacity : 1;
-		layerOpacityValue = Math.round( layerOpacityValue * 100 );
-		// Layer opacity: number (0–100) only, no slider
-		addInput( {
-			label: t( 'layers-prop-opacity', 'Layer Opacity' ),
-			type: 'number',
-			value: layerOpacityValue,
-			min: 0,
-			max: 100,
-			step: 1,
-			onChange: function ( v ) {
-				var val = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 0 ) );
-				self.editor.updateLayer( layer.id, { opacity: val / 100 } );
-			}
-		} );
-		addSelect( { label: t( 'layers-prop-blend', 'Blend' ), value: layer.blend || 'normal', options: [
-			{ value: 'normal', text: t( 'layers-blend-normal', 'Normal' ) },
-			{ value: 'multiply', text: t( 'layers-blend-multiply', 'Multiply' ) },
-			{ value: 'screen', text: t( 'layers-blend-screen', 'Screen' ) },
-			{ value: 'overlay', text: t( 'layers-blend-overlay', 'Overlay' ) },
-			{ value: 'soft-light', text: t( 'layers-blend-soft-light', 'Soft Light' ) },
-			{ value: 'hard-light', text: t( 'layers-blend-hard-light', 'Hard Light' ) },
-			{ value: 'color-dodge', text: t( 'layers-blend-color-dodge', 'Color Dodge' ) },
-			{ value: 'color-burn', text: t( 'layers-blend-color-burn', 'Color Burn' ) },
-			{ value: 'darken', text: t( 'layers-blend-darken', 'Darken' ) },
-			{ value: 'lighten', text: t( 'layers-blend-lighten', 'Lighten' ) },
-			{ value: 'difference', text: t( 'layers-blend-difference', 'Difference' ) },
-			{ value: 'exclusion', text: t( 'layers-blend-exclusion', 'Exclusion' ) }
-		], onChange: function ( v ) { self.editor.updateLayer( layer.id, { blend: v } ); } } );
-
-		addCheckbox( {
-			label: t( 'layers-effect-shadow', 'Drop Shadow' ),
-			value: !!layer.shadow,
-			onChange: function ( checked ) {
-				var updates = { shadow: !!checked };
-				// Set default shadow properties if enabling shadow and they don't exist
-				if ( checked ) {
-					if ( !layer.shadowColor ) {
-						updates.shadowColor = '#000000';
-					}
-					if ( typeof layer.shadowBlur === 'undefined' ) {
-						updates.shadowBlur = 8;
-					}
-					if ( typeof layer.shadowOffsetX === 'undefined' ) {
-						updates.shadowOffsetX = 2;
-					}
-					if ( typeof layer.shadowOffsetY === 'undefined' ) {
-						updates.shadowOffsetY = 2;
-					}
-				}
-				self.editor.updateLayer( layer.id, updates );
-			}
-		} );
-		addInput( {
-			label: t( 'layers-effect-shadow-color', 'Shadow Color' ),
-			type: 'color',
-			value: layer.shadowColor || '#000000',
-			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { shadowColor: v } );
-			}
-		} );
-		addInput( {
-			label: t( 'layers-effect-shadow-blur', 'Shadow Size' ),
-			type: 'number',
-			value: layer.shadowBlur || 8,
-			min: 0,
-			max: 64,
-			step: 1,
-			onChange: function ( v ) {
-				var s = Math.max( 0, Math.min( 64, parseInt( v, 10 ) || 0 ) );
-				self.editor.updateLayer( layer.id, { shadowBlur: s } );
-			}
-		} );
-		addInput( {
-			label: t( 'layers-effect-shadow-spread', 'Shadow Spread' ),
-			type: 'number',
-			value: layer.shadowSpread || 0,
-			min: 0,
-			max: 64,
-			step: 1,
-			onChange: function ( v ) {
-				var sp = Math.max( 0, parseInt( v, 10 ) || 0 );
-				self.editor.updateLayer( layer.id, { shadowSpread: sp } );
-			}
-		} );
-		addInput( {
-			label: t( 'layers-effect-shadow-offset-x', 'Shadow Offset X' ),
-			type: 'number',
-			value: layer.shadowOffsetX || 2,
-			step: 1,
-			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { shadowOffsetX: parseFloat( v ) } );
-			}
-		} );
-		addInput( {
-			label: t( 'layers-effect-shadow-offset-y', 'Shadow Offset Y' ),
-			type: 'number',
-			value: layer.shadowOffsetY || 2,
-			step: 1,
-			onChange: function ( v ) {
-				self.editor.updateLayer( layer.id, { shadowOffsetY: parseFloat( v ) } );
-			}
-		} );
-
-		return form;
-	};
-
-	LayerPanel.prototype.addPropertyField = function ( form, label, type, value, onChange ) {
-		var wrapper = document.createElement( 'div' );
-		wrapper.className = 'property-field';
-
-		var labelEl = document.createElement( 'label' );
-		labelEl.textContent = label;
-
-		var input = document.createElement( 'input' );
-		input.type = type;
-		input.value = value;
-		input.addEventListener( 'change', function () {
-			onChange( input.value );
-		} );
-
-		wrapper.appendChild( labelEl );
-		wrapper.appendChild( input );
-		form.appendChild( wrapper );
-	};
-
-	LayerPanel.prototype.addTextProperties = function () {
-		// Back-compat helper; new system builds fields in createPropertiesForm
-	};
-
-	LayerPanel.prototype.addRectangleProperties = function () {};
-
-	LayerPanel.prototype.addCircleProperties = function () {};
-
-	LayerPanel.prototype.addBlurProperties = function () {};
-
-	LayerPanel.prototype.setupDragAndDrop = function () {
-		var self = this;
-
-		// Enable drag and drop for layer reordering
-		this.layerList.addEventListener( 'dragstart', function ( e ) {
-			if ( e.target.classList.contains( 'layer-item' ) ) {
-				e.dataTransfer.setData( 'text/plain', e.target.dataset.layerId );
-				e.target.classList.add( 'dragging' );
-			}
-		} );
-
-		this.layerList.addEventListener( 'dragend', function ( e ) {
-			e.target.classList.remove( 'dragging' );
-		} );
-
-		this.layerList.addEventListener( 'dragover', function ( e ) {
-			e.preventDefault();
-		} );
-
-		this.layerList.addEventListener( 'drop', function ( e ) {
-			e.preventDefault();
-			var draggedId = e.dataTransfer.getData( 'text/plain' );
-			var targetItem = e.target.closest( '.layer-item' );
-
-			if ( targetItem && draggedId !== targetItem.dataset.layerId ) {
-				self.reorderLayers( draggedId, targetItem.dataset.layerId );
-			}
-		} );
-
-		// Make layer items draggable
-		this.layerList.addEventListener( 'mousedown', function ( e ) {
-			var layerItem = e.target.closest( '.layer-item' );
-			if ( layerItem ) {
-				layerItem.draggable = true;
-			}
-		} );
-	};
-
-	LayerPanel.prototype.reorderLayers = function ( draggedId, targetId ) {
-		var draggedIndex = -1;
-		for ( var i = 0; i < this.layers.length; i++ ) {
-			if ( this.layers[ i ].id === draggedId ) {
-				draggedIndex = i;
-				break;
-			}
-		}
-
-		var targetIndex = -1;
-		for ( var j = 0; j < this.layers.length; j++ ) {
-			if ( this.layers[ j ].id === targetId ) {
-				targetIndex = j;
-				break;
-			}
-		}
-
-		if ( draggedIndex !== -1 && targetIndex !== -1 ) {
-			// Move layer
-			var draggedLayer = this.layers.splice( draggedIndex, 1 )[ 0 ];
-			this.layers.splice( targetIndex, 0, draggedLayer );
-
-			// Update editor
-			this.editor.layers = this.layers;
-			this.editor.renderLayers();
-			this.renderLayerList();
-		}
-	};
-
-	LayerPanel.prototype.updateCodePanel = function () {
-		if ( !this.codePanel ) {
-			return;
-		}
-
-		var content = this.codePanel.querySelector( '.code-content' );
-		if ( !content ) {
-			return;
-		}
-
-		var t = this.msg.bind( this );
-
-		// Get visible layers
-		var visibleLayers = this.layers.filter( function ( layer ) {
-			return layer.visible !== false;
-		} );
-
-		var filename = this.editor && this.editor.filename ? this.editor.filename : 'YourImage.jpg';
-		var codeHtml = '';
-
-		if ( visibleLayers.length === 0 ) {
-			codeHtml = '<p><strong>' + t( 'layers-code-none', 'No layers visible.' ) + '</strong> ' + t( 'layers-code-enable', 'Enable layers to see the code.' ) + '</p>';
-		} else if ( visibleLayers.length === this.layers.length ) {
-			// All layers visible
-			codeHtml = '<p><strong>' + t( 'layers-code-all-visible', 'All layers visible:' ) + '</strong></p>' +
-				'<code class="layers-code">[[File:' + filename + '|500px|layers=all|' + t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
-				'<button class="copy-btn" data-code="layers=all">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
-		} else {
-			// Specific layers visible
-			var layerIds = visibleLayers.map( function ( layer ) {
-				return layer.id ? layer.id.slice( 0, 4 ) : 'unknown';
-			} );
-			var layersParam = layerIds.join( ',' );
-
-			codeHtml = '<p><strong>' + t( 'layers-code-selected-visible', 'Selected layers visible:' ) + '</strong></p>' +
-				'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|' + t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
-				'<button class="copy-btn" data-code="layers=' + layersParam + '">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
-		}
-
-		content.innerHTML = codeHtml;
-
-		// Add click handlers for copy buttons
-		var copyBtns = content.querySelectorAll( '.copy-btn' );
-		copyBtns.forEach( function ( btn ) {
-			btn.addEventListener( 'click', function () {
-				var code = btn.getAttribute( 'data-code' );
-
-				var onSuccess = function () {
-					btn.textContent = t( 'layers-code-copied', 'Copied!' );
-					setTimeout( function () {
-						btn.textContent = t( 'layers-code-copy', 'Copy' );
-					}, 2000 );
-				};
-				var onFailure = function () {
-					btn.textContent = t( 'layers-code-copy-failed', 'Copy failed' );
-					setTimeout( function () {
-						btn.textContent = t( 'layers-code-copy', 'Copy' );
-					}, 2000 );
-				};
-
-				if ( navigator.clipboard && navigator.clipboard.writeText ) {
-					navigator.clipboard.writeText( code ).then( onSuccess ).catch( function () {
-						// Fallback to execCommand
-						var ta = document.createElement( 'textarea' );
-						ta.value = code;
-						document.body.appendChild( ta );
-						ta.select();
-						try {
-							if ( document.execCommand( 'copy' ) ) {
-								onSuccess();
-							} else {
-								onFailure();
-							}
-						} catch ( e ) {
-							onFailure();
-						}
-						document.body.removeChild( ta );
-					} );
-				} else {
-					// Fallback method for older browsers
-					var textArea = document.createElement( 'textarea' );
-					textArea.value = code;
-					document.body.appendChild( textArea );
-					textArea.select();
-					try {
-						if ( document.execCommand( 'copy' ) ) {
-							onSuccess();
-						} else {
-							onFailure();
-						}
-					} catch ( err ) {
-						onFailure();
-					}
-					document.body.removeChild( textArea );
-				}
-			} );
-		} );
-	};
-
-	// Export LayerPanel to global scope
-	window.LayerPanel = LayerPanel;
-
-}() );
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.LayerPanel = LayerPanel;
+
+		// Backward compatibility - direct window export
+		window.LayerPanel = LayerPanel;
+	}
+}());

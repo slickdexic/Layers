@@ -1,4 +1,5 @@
 <?php
+
 /**
  * UI Integration hooks for the Layers extension
  * Handles file page tabs and UI enhancements
@@ -13,11 +14,10 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 // Define constants if not already defined (for static analysis/local tools)
 if ( !\defined( 'NS_FILE' ) ) {
-\define( 'NS_FILE', 6 );
+	\define( 'NS_FILE', 6 );
 }
 
 class UIHooks {
-
 	/**
 	 * Add "Edit Layers" tab to file pages
 	 * @param mixed $sktemplate SkinTemplate or Skin
@@ -25,8 +25,8 @@ class UIHooks {
 	 */
 	public static function onSkinTemplateNavigation( $sktemplate, array &$links ): void {
 	// Debug flag comes from config; request param can only narrow when config already enabled
-	$dbg = false;
-	$req = null;
+		$dbg = false;
+		$req = null;
 		try {
 			$cfg = ( is_object( $sktemplate ) && method_exists( $sktemplate, 'getConfig' ) )
 				? $sktemplate->getConfig()
@@ -62,7 +62,8 @@ class UIHooks {
 		} catch ( \Throwable $e ) {
 		}
 		$log = static function ( $msg ) use ( $dbg ) {
-			if ( !$dbg ) { return;
+			if ( !$dbg ) {
+				return;
 			}
 			try {
 				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
@@ -303,10 +304,21 @@ class UIHooks {
 
 		// Pass editor init config via JS config vars for CSP-safe startup
 		$fileUrl = self::getPublicImageUrl( $file );
-		$out->addJsConfigVars( 'wgLayersEditorInit', [
-			'filename' => $file->getName(),
-			'imageUrl' => $fileUrl,
+		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+		$out->addJsConfigVars( [
+			'wgLayersEditorInit' => [
+				'filename' => $file->getName(),
+				'imageUrl' => $fileUrl,
+			],
+			'wgLayersCurrentImageUrl' => $fileUrl,
+			'wgLayersImageBaseUrl' => self::getImageBaseUrl(),
+			'wgLayersMaxNamedSets' => $config->get( 'LayersMaxNamedSets' ),
+			'wgLayersMaxRevisionsPerSet' => $config->get( 'LayersMaxRevisionsPerSet' ),
+			'wgLayersDefaultSetName' => $config->get( 'LayersDefaultSetName' ),
 		] );
+
+		// Add basic HTML content to ensure page has content
+		$out->addHTML( '<div id="layers-editor-container"></div>' );
 	}
 
 	/**
@@ -342,6 +354,15 @@ class UIHooks {
 
 		// Last resort: return description URL
 		return method_exists( $file, 'getUrl' ) ? (string)$file->getUrl() : '';
+	}
+
+	/**
+	 * Get the base URL for image access
+	 * @return string
+	 */
+	private static function getImageBaseUrl(): string {
+		global $wgUploadPath;
+		return $wgUploadPath . '/';
 	}
 
 	/**

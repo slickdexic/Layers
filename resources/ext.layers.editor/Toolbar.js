@@ -1,6 +1,12 @@
 /**
  * Toolbar for Layers Editor
  * Manages drawing tools, color picker, and editor actions
+ *
+ * Delegates to:
+ * - ColorPickerDialog (ui/ColorPickerDialog.js) for color selection
+ * - ToolbarKeyboard for keyboard shortcuts
+ * - ImportExportManager for layer import/export
+ * - ToolbarStyleControls for style controls UI
  */
 ( function () {
 	'use strict';
@@ -18,15 +24,95 @@
 		this.container = this.config.container;
 		this.editor = this.config.editor;
 		this.currentTool = 'pointer';
-		this.currentColor = '#000000';
-		this.currentStrokeWidth = 2;
+
+		// Debug logging removed - use mw.config.get('wgLayersDebug') if needed
 
 		// Initialize validator for real-time input validation
 		this.validator = window.LayersValidator ? new window.LayersValidator() : null;
-		this.inputValidators = [];
+		this.dialogCleanups = [];
+
+		// Initialize EventTracker for memory-safe event listener management
+		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+		this.keyboardShortcutHandler = null;
+
+		// Initialize import/export manager
+		this.importExportManager = window.ImportExportManager ?
+			new window.ImportExportManager( { editor: this.editor } ) : null;
+
+		// Initialize style controls manager
+		this.styleControls = null;
 
 		this.init();
 	}
+
+	Toolbar.prototype.addDocumentListener = function ( event, handler, options ) {
+		if ( !event || typeof handler !== 'function' ) {
+			return;
+		}
+		if ( this.eventTracker ) {
+			this.eventTracker.add( document, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			document.addEventListener( event, handler, options );
+		}
+	};
+
+	/**
+	 * Add event listener to a specific element with automatic tracking
+	 * @param {Element} element Target element
+	 * @param {string} event Event type
+	 * @param {Function} handler Event handler
+	 * @param {Object} [options] Event listener options
+	 */
+	Toolbar.prototype.addListener = function ( element, event, handler, options ) {
+		if ( !element || !event || typeof handler !== 'function' ) {
+			return;
+		}
+		if ( this.eventTracker ) {
+			this.eventTracker.add( element, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			element.addEventListener( event, handler, options );
+		}
+	};
+
+	Toolbar.prototype.removeAllListeners = function () {
+		if ( this.eventTracker ) {
+			this.eventTracker.destroy();
+		}
+	};
+
+	Toolbar.prototype.registerDialogCleanup = function ( cleanupFn ) {
+		if ( typeof cleanupFn === 'function' ) {
+			this.dialogCleanups.push( cleanupFn );
+		}
+	};
+
+	Toolbar.prototype.runDialogCleanups = function () {
+		while ( this.dialogCleanups && this.dialogCleanups.length ) {
+			const cleanup = this.dialogCleanups.pop();
+			try {
+				cleanup();
+			} catch ( err ) {
+				// Log cleanup errors but don't propagate to avoid cascading failures
+				if ( window.layersErrorHandler ) {
+					window.layersErrorHandler.handleError( err, 'Toolbar.runDialogCleanups', 'canvas', { severity: 'low' } );
+				}
+			}
+		}
+	};
+
+	Toolbar.prototype.destroy = function () {
+		this.runDialogCleanups();
+		this.removeAllListeners();
+		this.keyboardShortcutHandler = null;
+		this.dialogCleanups = [];
+		this.eventTracker = null;
+		if ( this.styleControls ) {
+			this.styleControls.destroy();
+			this.styleControls = null;
+		}
+	};
 
 	Toolbar.prototype.init = function () {
 		this.createInterface();
@@ -36,11 +122,121 @@
 		this.selectTool( 'pointer' );
 	};
 
+	// Show a modal color picker dialog near an anchor button
+	// Uses ui/ColorPickerDialog module
+	Toolbar.prototype.openColorPickerDialog = function ( anchorButton, initialValue, options ) {
+		options = options || {};
+		const colorPickerStrings = this.getColorPickerStrings();
+
+		if ( !window.ColorPickerDialog ) {
+			// Fallback: ColorPickerDialog module not loaded
+			return;
+		}
+
+		const picker = new window.ColorPickerDialog( {
+			currentColor: ( initialValue === 'none' ) ? 'none' : ( initialValue || '#000000' ),
+			anchorElement: anchorButton,
+			strings: colorPickerStrings,
+			registerCleanup: ( fn ) => {
+				this.registerDialogCleanup( fn );
+			},
+			onApply: options.onApply || function () {},
+			onCancel: options.onCancel || function () {}
+		} );
+
+		picker.open();
+	};
+
+	// Update color button display - uses ColorPickerDialog static method
+	Toolbar.prototype.updateColorButtonDisplay = function ( btn, color, transparentLabel, previewTemplate ) {
+		if ( window.ColorPickerDialog && window.ColorPickerDialog.updateColorButton ) {
+			const strings = this.getColorPickerStrings();
+			if ( transparentLabel ) {
+				strings.transparent = transparentLabel;
+			}
+			if ( previewTemplate ) {
+				strings.previewTemplate = previewTemplate;
+			}
+			window.ColorPickerDialog.updateColorButton( btn, color, strings );
+		} else {
+			// Fallback implementation
+			let labelValue = color;
+			if ( !color || color === 'none' || color === 'transparent' ) {
+				btn.classList.add( 'is-transparent' );
+				btn.title = transparentLabel || 'Transparent';
+				btn.style.background = '';
+				labelValue = transparentLabel || 'Transparent';
+			} else {
+				btn.classList.remove( 'is-transparent' );
+				btn.style.background = color;
+				btn.title = color;
+			}
+			if ( previewTemplate ) {
+				const previewText = previewTemplate.indexOf( '$1' ) !== -1 ?
+					previewTemplate.replace( '$1', labelValue ) :
+					previewTemplate + ' ' + labelValue;
+				btn.setAttribute( 'aria-label', previewText );
+			} else if ( labelValue ) {
+				btn.setAttribute( 'aria-label', labelValue );
+			}
+		}
+	};
+
+	// Get color picker strings
+	Toolbar.prototype.getColorPickerStrings = function () {
+		const t = this.msg.bind( this );
+		return {
+			title: t( 'layers-color-picker-title', 'Choose color' ),
+			standard: t( 'layers-color-picker-standard', 'Standard colors' ),
+			saved: t( 'layers-color-picker-saved', 'Saved colors' ),
+			customSection: t( 'layers-color-picker-custom-section', 'Custom color' ),
+			none: t( 'layers-color-picker-none', 'No fill (transparent)' ),
+			emptySlot: t( 'layers-color-picker-empty-slot', 'Empty slot - colors will be saved here automatically' ),
+			cancel: t( 'layers-color-picker-cancel', 'Cancel' ),
+			apply: t( 'layers-color-picker-apply', 'Apply' ),
+			transparent: t( 'layers-color-picker-transparent', 'Transparent' ),
+			swatchTemplate: t( 'layers-color-picker-color-swatch', 'Set color to $1' ),
+			previewTemplate: t( 'layers-color-picker-color-preview', 'Current color: $1' )
+		};
+	};
+
+	/**
+	 * Resolve i18n text safely, delegating to MessageHelper
+	 *
+	 * @param {string} key - Message key
+	 * @param {string} fallback - Fallback text if message not found
+	 * @return {string} Localized message or fallback
+	 */
+	Toolbar.prototype.msg = function ( key, fallback ) {
+		// Delegate to MessageHelper singleton if available
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			return window.layersMessages.get( key, fallback );
+		}
+
+		// Fallback: try mw.message directly
+		if ( window.mw && mw.message ) {
+			try {
+				const msg = mw.message( key );
+				if ( msg && typeof msg.text === 'function' ) {
+					const text = msg.text();
+					// Avoid returning placeholder markers
+					if ( text && !text.includes( '⧼' ) ) {
+						return text;
+					}
+				}
+			} catch ( e ) {
+				// Fall through to fallback
+			}
+		}
+
+		return fallback || '';
+	};
+
 	Toolbar.prototype.createInterface = function () {
 		this.container.innerHTML = '';
 		this.container.className = 'layers-toolbar';
 		this.container.setAttribute( 'role', 'toolbar' );
-		this.container.setAttribute( 'aria-label', ( mw.message ? mw.message( 'layers-toolbar-title' ).text() : 'Toolbar' ) );
+		this.container.setAttribute( 'aria-label', this.msg( 'layers-toolbar-title', 'Toolbar' ) );
 
 		// Create tool groups
 		this.createToolGroup();
@@ -50,298 +246,159 @@
 	};
 
 	Toolbar.prototype.createToolGroup = function () {
-		var toolGroup = document.createElement( 'div' );
+		const toolGroup = document.createElement( 'div' );
 		toolGroup.className = 'toolbar-group tools-group';
+		const t = this.msg.bind( this );
 
-		var tools = [
-			{ id: 'pointer', icon: '↖', title: ( mw.message ? mw.message( 'layers-tool-select' ).text() : 'Select Tool' ), key: 'V' },
-			{ id: 'text', icon: 'T', title: ( mw.message ? mw.message( 'layers-tool-text' ).text() : 'Text Tool' ), key: 'T' },
-			{ id: 'pen', icon: '✏', title: ( mw.message ? mw.message( 'layers-tool-pen' ).text() : 'Pen Tool' ), key: 'P' },
-			{ id: 'rectangle', icon: '▢', title: ( mw.message ? mw.message( 'layers-tool-rectangle' ).text() : 'Rectangle Tool' ), key: 'R' },
-			{ id: 'circle', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-circle' ).text() : 'Circle Tool' ), key: 'C' },
-			{ id: 'ellipse', icon: '○', title: ( mw.message ? mw.message( 'layers-tool-ellipse' ).text() : 'Ellipse Tool' ), key: 'E' },
-			{ id: 'polygon', icon: '⬟', title: ( mw.message ? mw.message( 'layers-tool-polygon' ).text() : 'Polygon Tool' ), key: 'G' },
-			{ id: 'star', icon: '★', title: ( mw.message ? mw.message( 'layers-tool-star' ).text() : 'Star Tool' ), key: 'S' },
-			{ id: 'arrow', icon: '→', title: ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow Tool' ), key: 'A' },
-			{ id: 'line', icon: '/', title: ( mw.message ? mw.message( 'layers-tool-line' ).text() : 'Line Tool' ), key: 'L' },
-			{ id: 'highlight', icon: '▒', title: ( mw.message ? mw.message( 'layers-tool-highlight' ).text() : 'Highlight Tool' ), key: 'H' },
-			{ id: 'blur', icon: '◼︎', title: ( mw.message ? mw.message( 'layers-tool-blur' ).text() : 'Blur/Redact Tool' ), key: 'B' },
-			{ id: 'marquee', icon: '⬚', title: ( mw.message ? mw.message( 'layers-tool-marquee' ).text() : 'Marquee Select' ), key: 'M' }
+		const tools = [
+			{ id: 'pointer', icon: '↖', title: t( 'layers-tool-select', 'Select Tool' ), key: 'V' },
+			{ id: 'text', icon: 'T', title: t( 'layers-tool-text', 'Text Tool' ), key: 'T' },
+			{ id: 'pen', icon: '✏', title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P' },
+			{ id: 'rectangle', icon: '▢', title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R' },
+			{ id: 'circle', icon: '○', title: t( 'layers-tool-circle', 'Circle Tool' ), key: 'C' },
+			{ id: 'ellipse', icon: '⬭', title: t( 'layers-tool-ellipse', 'Ellipse Tool' ), key: 'E' },
+			{ id: 'polygon', icon: '⬟', title: t( 'layers-tool-polygon', 'Polygon Tool' ), key: 'G' },
+			{ id: 'star', icon: '★', title: t( 'layers-tool-star', 'Star Tool' ), key: 'S' },
+			{ id: 'arrow', icon: '→', title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A' },
+			{ id: 'line', icon: '/', title: t( 'layers-tool-line', 'Line Tool' ), key: 'L' },
+			{ id: 'blur', icon: '◼︎', title: t( 'layers-tool-blur', 'Blur/Redact Tool' ), key: 'B' }
 		];
 
-		tools.forEach( function ( tool ) {
-			var button = this.createToolButton( tool );
+		tools.forEach( ( tool ) => {
+			const button = this.createToolButton( tool );
 			toolGroup.appendChild( button );
-		}.bind( this ) );
+		} );
 
 		this.container.appendChild( toolGroup );
 	};
 
 	Toolbar.prototype.createToolButton = function ( tool ) {
-		var button = document.createElement( 'button' );
+		const button = document.createElement( 'button' );
 		button.className = 'toolbar-button tool-button';
 		button.dataset.tool = tool.id;
-		button.innerHTML = tool.icon;
+		// Use textContent for icon glyphs to avoid HTML parsing
+		button.textContent = tool.icon;
 		button.title = tool.title + ( tool.key ? ' (' + tool.key + ')' : '' );
+		// Expose keyboard shortcut to assistive tech
+		if ( tool.key ) {
+			button.setAttribute( 'aria-keyshortcuts', tool.key );
+		}
 		button.setAttribute( 'aria-label', tool.title );
 		button.type = 'button';
 
 		if ( tool.id === this.currentTool ) {
 			button.classList.add( 'active' );
+			button.setAttribute( 'aria-pressed', 'true' );
+		} else {
+			button.setAttribute( 'aria-pressed', 'false' );
 		}
 
 		return button;
 	};
 
 	Toolbar.prototype.createStyleGroup = function () {
-		var styleGroup = document.createElement( 'div' );
-		styleGroup.className = 'toolbar-group style-group';
+		// Initialize style controls manager
+		if ( window.ToolbarStyleControls ) {
+			this.styleControls = new window.ToolbarStyleControls( {
+				toolbar: this,
+				msg: this.msg.bind( this )
+			} );
 
-		// Color picker
-		var colorPicker = document.createElement( 'input' );
-		colorPicker.type = 'color';
-		colorPicker.className = 'color-picker';
-		colorPicker.value = this.currentColor;
-		colorPicker.title = ( mw.message ? mw.message( 'layers-prop-color' ).text() : 'Color' );
-		styleGroup.appendChild( colorPicker );
+			const styleGroup = this.styleControls.create();
+			this.container.appendChild( styleGroup );
 
-		// Stroke width
-		var strokeWidthContainer = document.createElement( 'div' );
-		strokeWidthContainer.className = 'stroke-width-container';
+			// Setup validation if validator available
+			if ( this.validator ) {
+				this.styleControls.setupValidation( this.validator );
+			}
 
-		var strokeLabel = document.createElement( 'label' );
-		strokeLabel.textContent = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' ) + ':';
-		strokeLabel.className = 'stroke-label';
-
-		var strokeWidth = document.createElement( 'input' );
-		strokeWidth.type = 'range';
-		strokeWidth.min = '1';
-		strokeWidth.max = '20';
-		strokeWidth.value = this.currentStrokeWidth;
-		strokeWidth.className = 'stroke-width';
-		strokeWidth.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Stroke Width' );
-
-		var strokeValue = document.createElement( 'span' );
-		strokeValue.className = 'stroke-value';
-		strokeValue.textContent = this.currentStrokeWidth;
-
-		strokeWidthContainer.appendChild( strokeLabel );
-		strokeWidthContainer.appendChild( strokeWidth );
-		strokeWidthContainer.appendChild( strokeValue );
-		styleGroup.appendChild( strokeWidthContainer );
-
-		// Font size (for text tool)
-		var fontSizeContainer = document.createElement( 'div' );
-		fontSizeContainer.className = 'font-size-container';
-		fontSizeContainer.style.display = 'none';
-
-		var fontLabel = document.createElement( 'label' );
-		fontLabel.textContent = ( mw.message ? mw.message( 'layers-prop-font-size' ).text() : 'Font Size' ) + ':';
-		fontLabel.className = 'font-label';
-
-		var fontSize = document.createElement( 'input' );
-		fontSize.type = 'number';
-		fontSize.min = '8';
-		fontSize.max = '72';
-		fontSize.value = '16';
-		fontSize.className = 'font-size';
-		fontSize.title = ( mw.message ? mw.message( 'layers-prop-font-size' ).text() : 'Font Size' );
-
-		fontSizeContainer.appendChild( fontLabel );
-		fontSizeContainer.appendChild( fontSize );
-		styleGroup.appendChild( fontSizeContainer );
-
-		// Text stroke options (for text tool)
-		var strokeContainer = document.createElement( 'div' );
-		strokeContainer.className = 'text-stroke-container';
-		strokeContainer.style.display = 'none';
-
-		var strokeColorLabel = document.createElement( 'label' );
-		strokeColorLabel.textContent = ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Stroke Color' ) + ':';
-		strokeColorLabel.className = 'stroke-color-label';
-
-		var strokeColor = document.createElement( 'input' );
-		strokeColor.type = 'color';
-		strokeColor.value = '#000000';
-		strokeColor.className = 'text-stroke-color';
-		strokeColor.title = ( mw.message ? mw.message( 'layers-prop-stroke-color' ).text() : 'Text Stroke Color' );
-
-		var strokeWidthInput = document.createElement( 'input' );
-		strokeWidthInput.type = 'range';
-		strokeWidthInput.min = '0';
-		strokeWidthInput.max = '10';
-		strokeWidthInput.value = '0';
-		strokeWidthInput.className = 'text-stroke-width';
-		strokeWidthInput.title = ( mw.message ? mw.message( 'layers-prop-stroke-width' ).text() : 'Text Stroke Width' );
-
-		var strokeWidthValue = document.createElement( 'span' );
-		strokeWidthValue.className = 'text-stroke-value';
-		strokeWidthValue.textContent = '0';
-
-		strokeContainer.appendChild( strokeColorLabel );
-		strokeContainer.appendChild( strokeColor );
-		strokeContainer.appendChild( strokeWidthInput );
-		strokeContainer.appendChild( strokeWidthValue );
-		styleGroup.appendChild( strokeContainer );
-
-		// Drop shadow options (for text tool)
-		var shadowContainer = document.createElement( 'div' );
-		shadowContainer.className = 'text-shadow-container';
-		shadowContainer.style.display = 'none';
-
-		var shadowLabel = document.createElement( 'label' );
-		shadowLabel.textContent = ( mw.message ? mw.message( 'layers-effect-shadow' ).text() : 'Shadow' ) + ':';
-		shadowLabel.className = 'shadow-label';
-
-		var shadowToggle = document.createElement( 'input' );
-		shadowToggle.type = 'checkbox';
-		shadowToggle.className = 'text-shadow-toggle';
-		shadowToggle.title = ( mw.message ? mw.message( 'layers-effect-shadow-enable' ).text() : 'Enable Drop Shadow' );
-
-		var shadowColor = document.createElement( 'input' );
-		shadowColor.type = 'color';
-		shadowColor.value = '#000000';
-		shadowColor.className = 'text-shadow-color';
-		shadowColor.title = ( mw.message ? mw.message( 'layers-effect-shadow-color' ).text() : 'Shadow Color' );
-		shadowColor.style.display = 'none';
-
-		shadowContainer.appendChild( shadowLabel );
-		shadowContainer.appendChild( shadowToggle );
-		shadowContainer.appendChild( shadowColor );
-		styleGroup.appendChild( shadowContainer );
-
-		// Arrow style options (for arrow tool)
-		var arrowContainer = document.createElement( 'div' );
-		arrowContainer.className = 'arrow-style-container';
-		arrowContainer.style.display = 'none';
-
-		var arrowLabel = document.createElement( 'label' );
-		arrowLabel.textContent = ( mw.message ? mw.message( 'layers-tool-arrow' ).text() : 'Arrow' ) + ':';
-		arrowLabel.className = 'arrow-label';
-
-		var arrowStyleSelect = document.createElement( 'select' );
-		arrowStyleSelect.className = 'arrow-style-select';
-		arrowStyleSelect.innerHTML =
-			'<option value="single">' + ( mw.message ? mw.message( 'layers-arrow-single' ).text() : 'Single →' ) + '</option>' +
-			'<option value="double">' + ( mw.message ? mw.message( 'layers-arrow-double' ).text() : 'Double ↔' ) + '</option>' +
-			'<option value="none">' + ( mw.message ? mw.message( 'layers-arrow-none' ).text() : 'Line only' ) + '</option>';
-
-		arrowContainer.appendChild( arrowLabel );
-		arrowContainer.appendChild( arrowStyleSelect );
-		styleGroup.appendChild( arrowContainer );
-
-		this.container.appendChild( styleGroup );
-
-		// Store references
-		this.colorPicker = colorPicker;
-		this.strokeWidth = strokeWidth;
-		this.strokeValue = strokeValue;
-		this.fontSize = fontSize;
-		this.fontSizeContainer = fontSizeContainer;
-		this.strokeContainer = strokeContainer;
-		this.shadowContainer = shadowContainer;
-		this.arrowContainer = arrowContainer;
-		this.textStrokeColor = strokeColor;
-		this.textStrokeWidth = strokeWidthInput;
-		this.textStrokeValue = strokeWidthValue;
-		this.textShadowToggle = shadowToggle;
-		this.textShadowColor = shadowColor;
-		this.arrowStyleSelect = arrowStyleSelect;
-
-		// Add client-side validation to input fields
-		this.setupInputValidation();
+			// Store references for backward compatibility
+			this.strokeColorButton = this.styleControls.strokeColorButton;
+			this.fillColorButton = this.styleControls.fillColorButton;
+			this.strokeWidth = this.styleControls.strokeWidthInput;
+			this.fontSize = this.styleControls.fontSizeInput;
+			this.fontSizeContainer = this.styleControls.fontSizeContainer;
+			this.strokeContainer = this.styleControls.strokeContainer;
+			this.shadowContainer = this.styleControls.shadowContainer;
+			this.arrowContainer = this.styleControls.arrowContainer;
+			this.textStrokeColor = this.styleControls.textStrokeColor;
+			this.textStrokeWidth = this.styleControls.textStrokeWidth;
+			this.textStrokeValue = this.styleControls.textStrokeValue;
+			this.textShadowToggle = this.styleControls.textShadowToggle;
+			this.textShadowColor = this.styleControls.textShadowColor;
+			this.arrowStyleSelect = this.styleControls.arrowStyleSelect;
+		} else {
+			// Fallback: create minimal style group if module not loaded
+			const styleGroup = document.createElement( 'div' );
+			styleGroup.className = 'toolbar-group style-group';
+			styleGroup.textContent = this.msg( 'layers-prop-stroke-color', 'Style controls loading...' );
+			this.container.appendChild( styleGroup );
+		}
 	};
 
-	Toolbar.prototype.setupInputValidation = function () {
-		if ( !this.validator ) {
-			return; // Validator not available
+	/**
+	 * Handle style change notifications from ToolbarStyleControls
+	 *
+	 * @param {Object} styleOptions The new style options
+	 */
+	Toolbar.prototype.onStyleChange = function ( styleOptions ) {
+		if ( this.editor.canvasManager && typeof this.editor.canvasManager.updateStyleOptions === 'function' ) {
+			this.editor.canvasManager.updateStyleOptions( styleOptions );
 		}
-
-		// eslint-disable-next-line no-unused-vars
-		var self = this;
-
-		// Font size validation (1-200)
-		if ( this.fontSize ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.fontSize, 'number', {
-					min: 1,
-					max: 200
-				} )
-			);
-		}
-
-		// Stroke width validation (0-50)
-		if ( this.strokeWidth ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.strokeWidth, 'number', {
-					min: 0,
-					max: 50
-				} )
-			);
-		}
-
-		// Text stroke width validation (0-10)
-		if ( this.textStrokeWidth ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.textStrokeWidth, 'number', {
-					min: 0,
-					max: 10
-				} )
-			);
-		}
-
-		// Color validation
-		if ( this.colorPicker ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.colorPicker, 'color' )
-			);
-		}
-
-		if ( this.textStrokeColor ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.textStrokeColor, 'color' )
-			);
-		}
-
-		if ( this.textShadowColor ) {
-			this.inputValidators.push(
-				this.validator.createInputValidator( this.textShadowColor, 'color' )
-			);
+		if ( this.editor.toolManager && typeof this.editor.toolManager.updateStyle === 'function' ) {
+			this.editor.toolManager.updateStyle( {
+				color: styleOptions.color,
+				fill: styleOptions.fill,
+				strokeWidth: styleOptions.strokeWidth,
+				fontSize: styleOptions.fontSize,
+				arrowStyle: styleOptions.arrowStyle,
+				shadow: styleOptions.shadow,
+				shadowColor: styleOptions.shadowColor,
+				shadowBlur: styleOptions.shadowBlur,
+				shadowOffsetX: styleOptions.shadowOffsetX,
+				shadowOffsetY: styleOptions.shadowOffsetY
+			} );
 		}
 	};
 
 	// Effects group removed; moved to LayerPanel Properties
 
 	Toolbar.prototype.createZoomGroup = function () {
-		var zoomGroup = document.createElement( 'div' );
+		const zoomGroup = document.createElement( 'div' );
 		zoomGroup.className = 'toolbar-group zoom-group';
+		const t2 = this.msg.bind( this );
 
 		// Zoom out button
-		var zoomOutBtn = document.createElement( 'button' );
+		const zoomOutBtn = document.createElement( 'button' );
 		zoomOutBtn.className = 'toolbar-button zoom-button';
-		zoomOutBtn.innerHTML = '−';
-		zoomOutBtn.title = ( mw.message ? mw.message( 'layers-zoom-out' ).text() : 'Zoom Out' ) + ' (Ctrl+-)';
+		// U+2212 Minus Sign
+		zoomOutBtn.textContent = '−';
+		zoomOutBtn.title = t2( 'layers-zoom-out', 'Zoom Out' ) + ' (Ctrl+-)';
 		zoomOutBtn.dataset.action = 'zoom-out';
 
 		// Zoom display/reset
-		var zoomDisplay = document.createElement( 'button' );
+		const zoomDisplay = document.createElement( 'button' );
 		zoomDisplay.className = 'toolbar-button zoom-display';
 		zoomDisplay.textContent = '100%';
-		zoomDisplay.title = ( mw.message ? mw.message( 'layers-zoom-reset' ).text() : 'Reset Zoom' ) + ' (Ctrl+0)';
+		zoomDisplay.title = t2( 'layers-zoom-reset', 'Reset Zoom' ) + ' (Ctrl+0)';
 		zoomDisplay.dataset.action = 'zoom-reset';
+		// Announce zoom changes for screen readers
+		zoomDisplay.setAttribute( 'aria-live', 'polite' );
+		zoomDisplay.setAttribute( 'aria-label', t2( 'layers-status-zoom', 'Zoom' ) + ': 100%' );
 
 		// Zoom in button
-		var zoomInBtn = document.createElement( 'button' );
+		const zoomInBtn = document.createElement( 'button' );
 		zoomInBtn.className = 'toolbar-button zoom-button';
-		zoomInBtn.innerHTML = '+';
-		zoomInBtn.title = ( mw.message ? mw.message( 'layers-zoom-in' ).text() : 'Zoom In' ) + ' (Ctrl++)';
+		zoomInBtn.textContent = '+';
+		zoomInBtn.title = t2( 'layers-zoom-in', 'Zoom In' ) + ' (Ctrl++)';
 		zoomInBtn.dataset.action = 'zoom-in';
 
 		// Fit to window button
-		var fitBtn = document.createElement( 'button' );
+		const fitBtn = document.createElement( 'button' );
 		fitBtn.className = 'toolbar-button fit-button';
-		fitBtn.innerHTML = '⌂';
-		fitBtn.title = ( mw.message ? mw.message( 'layers-zoom-fit' ).text() : 'Fit to Window' );
+		// U+2302 House
+		fitBtn.textContent = '⌂';
+		fitBtn.title = t2( 'layers-zoom-fit', 'Fit to Window' );
 		fitBtn.dataset.action = 'fit-window';
 
 		zoomGroup.appendChild( zoomOutBtn );
@@ -356,62 +413,71 @@
 	};
 
 	Toolbar.prototype.createActionGroup = function () {
-		var actionGroup = document.createElement( 'div' );
+		const actionGroup = document.createElement( 'div' );
 		actionGroup.className = 'toolbar-group action-group';
+		const t = this.msg.bind( this );
 
-		var actions = [
-			{ id: 'undo', icon: '↶', title: ( mw.message ? mw.message( 'layers-undo' ).text() : 'Undo' ), key: 'Ctrl+Z' },
-			{ id: 'redo', icon: '↷', title: ( mw.message ? mw.message( 'layers-redo' ).text() : 'Redo' ), key: 'Ctrl+Y' },
-			{ id: 'delete', icon: '🗑', title: ( mw.message ? mw.message( 'layers-delete-selected' ).text() : 'Delete Selected' ), key: 'Delete' },
-			{ id: 'duplicate', icon: '⧉', title: ( mw.message ? mw.message( 'layers-duplicate-selected' ).text() : 'Duplicate Selected' ), key: 'Ctrl+D' },
-			{ id: 'grid', icon: '⊞', title: ( mw.message ? mw.message( 'layers-toggle-grid' ).text() : 'Toggle Grid' ), key: 'G' },
-			{ id: 'rulers', icon: '📏', title: ( mw.message ? mw.message( 'layers-toggle-rulers' ).text() : 'Toggle Rulers' ) },
-			{ id: 'guides', icon: '➕', title: ( mw.message ? mw.message( 'layers-toggle-guides' ).text() : 'Toggle Guides' ) },
-			{ id: 'snap-grid', icon: '🧲⊞', title: ( mw.message ? mw.message( 'layers-toggle-snap-grid' ).text() : 'Snap to Grid' ) },
-			{ id: 'snap-guides', icon: '🧲▭', title: ( mw.message ? mw.message( 'layers-toggle-snap-guides' ).text() : 'Snap to Guides' ) }
+		const actions = [
+			{ id: 'undo', icon: '↶', title: t( 'layers-undo', 'Undo' ), key: 'Ctrl+Z' },
+			{ id: 'redo', icon: '↷', title: t( 'layers-redo', 'Redo' ), key: 'Ctrl+Y' },
+			{ id: 'duplicate', icon: '⧉', title: t( 'layers-duplicate-selected', 'Duplicate Selected' ), key: 'Ctrl+D' }
 		];
 
-		actions.forEach( function ( action ) {
-			var button = this.createActionButton( action );
+		actions.forEach( ( action ) => {
+			const button = this.createActionButton( action );
 			actionGroup.appendChild( button );
-		}.bind( this ) );
+		} );
 
 		// Separator
-		var separator = document.createElement( 'div' );
+		const separator = document.createElement( 'div' );
 		separator.className = 'toolbar-separator';
 		actionGroup.appendChild( separator );
 
 		// Import button + hidden file input
-		var importButton = document.createElement( 'button' );
+		const importButton = document.createElement( 'button' );
 		importButton.className = 'toolbar-button import-button';
-		importButton.textContent = ( mw.message ? mw.message( 'layers-import' ).text() : 'Import JSON' );
-		importButton.title = ( mw.message ? mw.message( 'layers-import' ).text() : 'Import JSON' );
+		importButton.textContent = t( 'layers-import-layers', 'Import Layers' );
+		importButton.title = t( 'layers-import-layers', 'Import Layers' );
 		actionGroup.appendChild( importButton );
 
-		var importInput = document.createElement( 'input' );
+		const importInput = document.createElement( 'input' );
 		importInput.type = 'file';
 		importInput.accept = '.json,application/json';
 		importInput.style.display = 'none';
 		actionGroup.appendChild( importInput );
 
 		// Export button
-		var exportButton = document.createElement( 'button' );
+		const exportButton = document.createElement( 'button' );
 		exportButton.className = 'toolbar-button export-button';
-		exportButton.textContent = ( mw.message ? mw.message( 'layers-export' ).text() : 'Export JSON' );
-		exportButton.title = ( mw.message ? mw.message( 'layers-export' ).text() : 'Export JSON' );
+		exportButton.textContent = t( 'layers-export-layers', 'Export Layers' );
+		exportButton.title = t( 'layers-export-layers', 'Export Layers' );
 		actionGroup.appendChild( exportButton );
 
+		// Separator before save/help
+		const separator2 = document.createElement( 'div' );
+		separator2.className = 'toolbar-separator';
+		actionGroup.appendChild( separator2 );
+
+		// Help button for keyboard shortcuts
+		const helpButton = document.createElement( 'button' );
+		helpButton.className = 'toolbar-button help-button';
+		helpButton.textContent = '?';
+		helpButton.title = t( 'layers-keyboard-shortcuts', 'Keyboard Shortcuts' ) + ' (Shift+?)';
+		helpButton.setAttribute( 'aria-label', t( 'layers-keyboard-shortcuts', 'Keyboard Shortcuts' ) );
+		helpButton.dataset.action = 'show-shortcuts';
+		actionGroup.appendChild( helpButton );
+
 		// Save and Cancel buttons
-		var saveButton = document.createElement( 'button' );
+		const saveButton = document.createElement( 'button' );
 		saveButton.className = 'toolbar-button save-button primary';
-		saveButton.textContent = ( mw.message ? mw.message( 'layers-editor-save' ).text() : ( mw.msg ? mw.msg( 'layers-editor-save' ) : 'Save' ) );
-		saveButton.title = ( mw.message ? mw.message( 'layers-save-changes' ).text() : 'Save Changes' ) + ' (Ctrl+S)';
+		saveButton.textContent = t( 'layers-editor-save', 'Save' );
+		saveButton.title = t( 'layers-save-changes', 'Save Changes' ) + ' (Ctrl+S)';
 		actionGroup.appendChild( saveButton );
 
-		var cancelButton = document.createElement( 'button' );
+		const cancelButton = document.createElement( 'button' );
 		cancelButton.className = 'toolbar-button cancel-button';
-		cancelButton.textContent = ( mw.message ? mw.message( 'layers-editor-cancel' ).text() : ( mw.msg ? mw.msg( 'layers-editor-cancel' ) : 'Cancel' ) );
-		cancelButton.title = ( mw.message ? mw.message( 'layers-cancel-changes' ).text() : 'Cancel Changes' ) + ' (Escape)';
+		cancelButton.textContent = t( 'layers-editor-cancel', 'Cancel' );
+		cancelButton.title = t( 'layers-cancel-changes', 'Cancel Changes' ) + ' (Escape)';
 		actionGroup.appendChild( cancelButton );
 
 		this.container.appendChild( actionGroup );
@@ -425,212 +491,106 @@
 	};
 
 	Toolbar.prototype.createActionButton = function ( action ) {
-		var button = document.createElement( 'button' );
+		const button = document.createElement( 'button' );
 		button.className = 'toolbar-button action-button';
 		button.dataset.action = action.id;
-		button.innerHTML = action.icon;
+		// Icon may be a Unicode glyph; use textContent for safety
+		button.textContent = action.icon;
 		button.title = action.title + ( action.key ? ' (' + action.key + ')' : '' );
+
+		// Mark common toggle actions as toggle buttons
+		if ( [ 'grid', 'rulers', 'guides', 'snap-grid', 'snap-guides' ].includes( action.id ) ) {
+			button.setAttribute( 'aria-pressed', 'false' );
+		}
 
 		return button;
 	};
 
 	Toolbar.prototype.setupEventHandlers = function () {
-		var self = this;
-
-		// Tool selection
-		this.container.addEventListener( 'click', function ( e ) {
+		// Tool selection - tracked for cleanup
+		this.addListener( this.container, 'click', ( e ) => {
 			if ( e.target.classList.contains( 'tool-button' ) ) {
-				self.selectTool( e.target.dataset.tool );
+				this.selectTool( e.target.dataset.tool );
 			} else if ( e.target.classList.contains( 'action-button' ) ) {
-				self.executeAction( e.target.dataset.action );
+				this.executeAction( e.target.dataset.action );
 			} else if ( e.target.dataset.action && e.target.dataset.action.indexOf( 'zoom' ) === 0 ) {
-				self.executeZoomAction( e.target.dataset.action );
+				this.executeZoomAction( e.target.dataset.action );
 			} else if ( e.target.dataset.action === 'fit-window' ) {
-				self.executeZoomAction( e.target.dataset.action );
+				this.executeZoomAction( e.target.dataset.action );
 			}
 		} );
 
 		// Also support keyboard navigation on tool buttons for accessibility
-		this.container.addEventListener( 'keydown', function ( e ) {
+		this.addListener( this.container, 'keydown', ( e ) => {
 			if ( e.target.classList && e.target.classList.contains( 'tool-button' ) && ( e.key === 'Enter' || e.key === ' ' ) ) {
 				e.preventDefault();
-				self.selectTool( e.target.dataset.tool );
+				this.selectTool( e.target.dataset.tool );
 			}
 		} );
 
-		// Save/Cancel buttons
-		this.saveButton.addEventListener( 'click', function () {
-			self.editor.save();
+		// Save/Cancel buttons - tracked for cleanup
+		this.addListener( this.saveButton, 'click', () => {
+			this.editor.save();
 		} );
 
-		this.cancelButton.addEventListener( 'click', function () {
-			self.editor.cancel();
+		this.addListener( this.cancelButton, 'click', () => {
+			this.editor.cancel( true );
 		} );
 
-		// Import JSON
-		this.importButton.addEventListener( 'click', function () {
-			self.importInput.click();
+		// Import JSON - delegate to ImportExportManager
+		this.addListener( this.importButton, 'click', () => {
+			this.importInput.click();
 		} );
 
-		this.importInput.addEventListener( 'change', function () {
-			var file = this.files && this.files[ 0 ];
+		this.addListener( this.importInput, 'change', () => {
+			const file = this.importInput.files && this.importInput.files[ 0 ];
 			if ( !file ) {
 				return;
 			}
-			// Confirm overwrite if there are unsaved changes
-			if ( self.editor && self.editor.isDirty ) {
-				var msg = ( mw.message ? mw.message( 'layers-import-unsaved-confirm' ).text() : 'You have unsaved changes. Import anyway?' );
-				// eslint-disable-next-line no-alert
-				if ( !window.confirm( msg ) ) {
-					self.importInput.value = '';
-					return;
-				}
-			}
-			var reader = new FileReader();
-			reader.onload = function () {
-				try {
-					var text = String( reader.result || '' );
-					var parsed = JSON.parse( text );
-					var layers;
-					if ( Array.isArray( parsed ) ) {
-						layers = parsed;
-					} else if ( parsed && Array.isArray( parsed.layers ) ) {
-						layers = parsed.layers;
-					} else {
-						layers = [];
-					}
-					if ( !Array.isArray( layers ) ) {
-						throw new Error( 'Invalid JSON format' );
-					}
-					// Save state and replace layers
-					if ( self.editor && typeof self.editor.saveState === 'function' ) {
-						self.editor.saveState( 'import' );
-					}
-					self.editor.layers = layers.map( function ( layer ) {
-						var obj = layer || {};
-						if ( !obj.id ) {
-							obj.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
-						}
-						return obj;
+			if ( this.importExportManager ) {
+				this.importExportManager.importFromFile( file )
+					.catch( () => {
+						// Error already handled by ImportExportManager
+					} )
+					.finally( () => {
+						this.importInput.value = '';
 					} );
-					if ( self.editor && typeof self.editor.renderLayers === 'function' ) {
-						self.editor.renderLayers();
-					}
-					if ( self.editor && typeof self.editor.markDirty === 'function' ) {
-						self.editor.markDirty();
-					}
-					if ( window.mw && window.mw.notify ) {
-						mw.notify( ( mw.message ? mw.message( 'layers-import-success' ).text() : 'Import complete' ), { type: 'success' } );
-					}
-				} catch ( err ) {
-					if ( window.mw && window.mw.notify ) {
-						mw.notify( ( mw.message ? mw.message( 'layers-import-error' ).text() : 'Import failed' ), { type: 'error' } );
-					}
-				}
-				self.importInput.value = '';
-			};
-			reader.onerror = function () {
-				if ( window.mw && window.mw.notify ) {
-					mw.notify( ( mw.message ? mw.message( 'layers-import-error' ).text() : 'Import failed' ), { type: 'error' } );
-				}
-				self.importInput.value = '';
-			};
-			reader.readAsText( file );
-		} );
-
-		// Export JSON
-		this.exportButton.addEventListener( 'click', function () {
-			try {
-				var data = [];
-				if ( self.editor && Array.isArray( self.editor.layers ) ) {
-					data = self.editor.layers;
-				}
-				var json = JSON.stringify( data, null, 2 );
-				var fname = ( self.editor && self.editor.filename ? self.editor.filename : 'layers' ) + '.layers.json';
-				var blob = new Blob( [ json ], { type: 'application/json' } );
-				// IE 11 and old Edge
-				if ( window.navigator && window.navigator.msSaveOrOpenBlob ) {
-					window.navigator.msSaveOrOpenBlob( blob, fname );
-					return;
-				}
-
-				var a = document.createElement( 'a' );
-				a.style.display = 'none';
-				a.download = fname;
-				// Use data URL for broad compatibility without relying on window.URL
-				a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent( json );
-				document.body.appendChild( a );
-				a.click();
-				setTimeout( function () {
-					document.body.removeChild( a );
-				}, 0 );
-			} catch ( e ) {
-				if ( window.mw && window.mw.notify ) {
-					mw.notify( 'Export failed', { type: 'error' } );
-				}
+			} else {
+				// Fallback: ImportExportManager not available
+				this.importInput.value = '';
 			}
 		} );
 
-		// Color picker
-		this.colorPicker.addEventListener( 'change', function () {
-			self.currentColor = this.value;
-			self.updateStyleOptions();
+		// Export JSON - delegate to ImportExportManager
+		this.addListener( this.exportButton, 'click', () => {
+			if ( this.importExportManager ) {
+				this.importExportManager.exportToFile();
+			}
 		} );
 
-		// Stroke width
-		this.strokeWidth.addEventListener( 'input', function () {
-			self.currentStrokeWidth = parseInt( this.value );
-			self.strokeValue.textContent = self.currentStrokeWidth;
-			self.updateStyleOptions();
-		} );
+		// Style controls are handled by ToolbarStyleControls module
 
-		// Font size
-		this.fontSize.addEventListener( 'change', function () {
-			self.updateStyleOptions();
-		} );
-
-		// Text stroke controls
-		this.textStrokeColor.addEventListener( 'change', function () {
-			self.updateStyleOptions();
-		} );
-
-		this.textStrokeWidth.addEventListener( 'input', function () {
-			self.textStrokeValue.textContent = this.value;
-			self.updateStyleOptions();
-		} );
-
-		// Text shadow controls
-		this.textShadowToggle.addEventListener( 'change', function () {
-			self.textShadowColor.style.display = this.checked ? 'inline-block' : 'none';
-			self.updateStyleOptions();
-		} );
-
-		this.textShadowColor.addEventListener( 'change', function () {
-			self.updateStyleOptions();
-		} );
-
-		// Arrow style controls
-		this.arrowStyleSelect.addEventListener( 'change', function () {
-			self.updateStyleOptions();
-		} );
-
-		// Keyboard shortcuts
-		document.addEventListener( 'keydown', function ( e ) {
-			self.handleKeyboardShortcuts( e );
-		} );
+		// Keyboard shortcuts - delegate to ToolbarKeyboard module
+		this.keyboardHandler = new window.ToolbarKeyboard( this );
+		this.keyboardShortcutHandler = ( e ) => {
+			this.keyboardHandler.handleKeyboardShortcuts( e );
+		};
+		this.addDocumentListener( 'keydown', this.keyboardShortcutHandler );
 
 		// Layer-level effects removed: opacity, blend, toggles are in Properties panel
 	};
 
 	Toolbar.prototype.selectTool = function ( toolId ) {
 		// Update UI
-		Array.prototype.forEach.call( this.container.querySelectorAll( '.tool-button' ), function ( button ) {
+		Array.prototype.forEach.call( this.container.querySelectorAll( '.tool-button' ), ( button ) => {
 			button.classList.remove( 'active' );
+			button.setAttribute( 'aria-pressed', 'false' );
 		} );
 
-		var selectedButton = this.container.querySelector( '[data-tool="' + toolId + '"]' );
+		const selectedButton = this.container.querySelector( '[data-tool="' + toolId + '"]' );
 		if ( selectedButton ) {
 			selectedButton.classList.add( 'active' );
+			selectedButton.setAttribute( 'aria-pressed', 'true' );
 		}
 
 		this.currentTool = toolId;
@@ -639,54 +599,42 @@
 		this.updateToolOptions( toolId );
 
 		// Notify editor
-		this.editor.setCurrentTool( toolId );
+		this.editor.setCurrentTool( toolId, { skipToolbarSync: true } );
 
 		// Ensure focus remains on selected tool for keyboard users
-		var focusedBtn = this.container.querySelector( '[data-tool="' + toolId + '"]' );
+		const focusedBtn = this.container.querySelector( '[data-tool="' + toolId + '"]' );
 		if ( focusedBtn ) {
 			focusedBtn.focus();
 		}
 	};
 
+	/**
+	 * Set the active tool programmatically (called by LayersEditor)
+	 * @param {string} toolId - The tool identifier to activate
+	 */
+	Toolbar.prototype.setActiveTool = function ( toolId ) {
+		if ( this.currentTool === toolId ) {
+			return;
+		}
+		this.selectTool( toolId );
+	};
+
 	Toolbar.prototype.updateToolOptions = function ( toolId ) {
-		// Show/hide tool-specific options
-		if ( toolId === 'text' ) {
-			this.fontSizeContainer.style.display = 'block';
-			this.strokeContainer.style.display = 'block';
-			this.shadowContainer.style.display = 'block';
-			this.arrowContainer.style.display = 'none';
-		} else if ( toolId === 'arrow' ) {
-			this.fontSizeContainer.style.display = 'none';
-			this.strokeContainer.style.display = 'none';
-			this.shadowContainer.style.display = 'none';
-			this.arrowContainer.style.display = 'block';
-		} else {
-			this.fontSizeContainer.style.display = 'none';
-			this.strokeContainer.style.display = 'none';
-			this.shadowContainer.style.display = 'none';
-			this.arrowContainer.style.display = 'none';
+		// Delegate to style controls module
+		if ( this.styleControls ) {
+			this.styleControls.updateForTool( toolId );
 		}
 	};
 
 	Toolbar.prototype.updateStyleOptions = function () {
-		// Update current style settings and notify editor
-		var styleOptions = {
-			color: this.currentColor,
-			strokeWidth: this.currentStrokeWidth,
-			fontSize: parseInt( this.fontSize.value ),
-			textStrokeColor: this.textStrokeColor.value,
-			textStrokeWidth: parseInt( this.textStrokeWidth.value ),
-			textShadow: this.textShadowToggle.checked,
-			textShadowColor: this.textShadowColor.value,
-			arrowStyle: this.arrowStyleSelect.value
-		};
-
-		if ( this.editor.canvasManager ) {
-			this.editor.canvasManager.updateStyleOptions( styleOptions );
+		// Delegate to style controls module and propagate to editor
+		if ( this.styleControls ) {
+			const styleOptions = this.styleControls.getStyleOptions();
+			this.onStyleChange( styleOptions );
 		}
-
-		// console.log( 'Layers: Style options updated:', styleOptions );
 	};
+
+	// Removed legacy none buttons; transparent selection is integrated in the color dialog
 
 	Toolbar.prototype.executeAction = function ( actionId ) {
 		switch ( actionId ) {
@@ -701,6 +649,9 @@
 				break;
 			case 'duplicate':
 				this.editor.duplicateSelected();
+				break;
+			case 'show-shortcuts':
+				this.editor.showKeyboardShortcutsDialog();
 				break;
 			case 'grid':
 				this.toggleGrid();
@@ -733,9 +684,13 @@
 	};
 
 	Toolbar.prototype.toggleButtonState = function ( id ) {
-		var btn = this.container.querySelector( '[data-action="' + id + '"]' );
+		const btn = this.container.querySelector( '[data-action="' + id + '"]' );
 		if ( btn ) {
 			btn.classList.toggle( 'active' );
+			if ( btn.hasAttribute( 'aria-pressed' ) ) {
+				const pressed = btn.getAttribute( 'aria-pressed' ) === 'true';
+				btn.setAttribute( 'aria-pressed', pressed ? 'false' : 'true' );
+			}
 		}
 	};
 
@@ -745,7 +700,7 @@
 		}
 
 		// Update button state
-		var gridButton = this.container.querySelector( '[data-action="grid"]' );
+		const gridButton = this.container.querySelector( '[data-action="grid"]' );
 		if ( gridButton ) {
 			gridButton.classList.toggle( 'active' );
 		}
@@ -775,88 +730,23 @@
 	Toolbar.prototype.updateZoomDisplay = function ( zoomPercent ) {
 		if ( this.zoomDisplay ) {
 			this.zoomDisplay.textContent = zoomPercent + '%';
+			this.zoomDisplay.setAttribute( 'aria-label', this.msg( 'layers-status-zoom', 'Zoom' ) + ': ' + zoomPercent + '%' );
 		}
 	};
 
+	/**
+	 * @deprecated Use ToolbarKeyboard.handleKeyboardShortcuts instead.
+	 * Kept for backward compatibility - delegates to ToolbarKeyboard module.
+	 */
 	Toolbar.prototype.handleKeyboardShortcuts = function ( e ) {
-		// Don't handle shortcuts when typing in input fields
-		if ( e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true' ) {
-			return;
-		}
-
-		var key = e.key.toLowerCase();
-		var ctrl = e.ctrlKey || e.metaKey;
-
-		if ( ctrl ) {
-			switch ( key ) {
-				case 'z':
-					e.preventDefault();
-					if ( e.shiftKey ) {
-						this.editor.redo();
-					} else {
-						this.editor.undo();
-					}
-					break;
-				case 'y':
-					e.preventDefault();
-					this.editor.redo();
-					break;
-				case 's':
-					e.preventDefault();
-					this.editor.save();
-					break;
-				case 'd':
-					e.preventDefault();
-					this.editor.duplicateSelected();
-					break;
-			}
-		} else {
-			// Tool shortcuts
-			switch ( key ) {
-				case 'v':
-					this.selectTool( 'pointer' );
-					break;
-				case 't':
-					this.selectTool( 'text' );
-					break;
-				case 'p':
-					this.selectTool( 'pen' );
-					break;
-				case 'r':
-					this.selectTool( 'rectangle' );
-					break;
-				case 'c':
-					this.selectTool( 'circle' );
-					break;
-				case 'b':
-					this.selectTool( 'blur' );
-					break;
-				case 'a':
-					this.selectTool( 'arrow' );
-					break;
-				case 'l':
-					this.selectTool( 'line' );
-					break;
-				case 'h':
-					this.selectTool( 'highlight' );
-					break;
-				case 'g':
-					this.toggleGrid();
-					break;
-				case 'delete':
-				case 'backspace':
-					this.editor.deleteSelected();
-					break;
-				case 'escape':
-					this.editor.cancel();
-					break;
-			}
+		if ( this.keyboardHandler ) {
+			this.keyboardHandler.handleKeyboardShortcuts( e );
 		}
 	};
 
 	Toolbar.prototype.updateUndoRedoState = function ( canUndo, canRedo ) {
-		var undoButton = this.container.querySelector( '[data-action="undo"]' );
-		var redoButton = this.container.querySelector( '[data-action="redo"]' );
+		const undoButton = this.container.querySelector( '[data-action="undo"]' );
+		const redoButton = this.container.querySelector( '[data-action="redo"]' );
 
 		if ( undoButton ) {
 			undoButton.disabled = !canUndo;
@@ -868,8 +758,8 @@
 	};
 
 	Toolbar.prototype.updateDeleteState = function ( hasSelection ) {
-		var deleteButton = this.container.querySelector( '[data-action="delete"]' );
-		var duplicateButton = this.container.querySelector( '[data-action="duplicate"]' );
+		const deleteButton = this.container.querySelector( '[data-action="delete"]' );
+		const duplicateButton = this.container.querySelector( '[data-action="duplicate"]' );
 
 		if ( deleteButton ) {
 			deleteButton.disabled = !hasSelection;
@@ -880,7 +770,19 @@
 		}
 	};
 
-	// Export Toolbar to global scope
-	window.Toolbar = Toolbar;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.UI.Toolbar = Toolbar;
+
+		// Backward compatibility - direct window export
+		window.Toolbar = Toolbar;
+	}
+
+	// Export for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = Toolbar;
+	}
 
 }() );

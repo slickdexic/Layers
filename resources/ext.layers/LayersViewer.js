@@ -1,9 +1,17 @@
 /**
  * Layers Viewer - Displays images with layers in articles
  * Lightweight viewer for non-editing contexts
+ *
+ * This module uses the shared LayerRenderer for consistent rendering
+ * with the editor.
+ *
+ * @module LayersViewer
  */
 ( function () {
 	'use strict';
+
+	// Get the shared LayerRenderer from the Layers namespace
+	const LayerRenderer = ( window.Layers && window.Layers.LayerRenderer ) || window.LayerRenderer;
 
 	/**
 	 * LayersViewer class
@@ -23,9 +31,10 @@
 		this.baseHeight = ( this.layerData && this.layerData.baseHeight ) || null;
 		this.canvas = null;
 		this.ctx = null;
-		this.resizeObserver = null; // ResizeObserver instance
-		this.rAFId = null; // throttle reflows
-		this.boundWindowResize = null; // handler reference
+		this.renderer = null; // Shared LayerRenderer instance
+		this.resizeObserver = null;
+		this.rAFId = null;
+		this.boundWindowResize = null;
 
 		this.init();
 	}
@@ -51,6 +60,13 @@
 
 		this.ctx = this.canvas.getContext( '2d' );
 
+		// Initialize shared LayerRenderer
+		this.renderer = new LayerRenderer( this.ctx, {
+			canvas: this.canvas,
+			baseWidth: this.baseWidth,
+			baseHeight: this.baseHeight
+		} );
+
 		// Make container relative positioned
 		if ( getComputedStyle( this.container ).position === 'static' ) {
 			this.container.style.position = 'relative';
@@ -60,52 +76,55 @@
 	};
 
 	LayersViewer.prototype.loadImageAndRender = function () {
-		var self = this;
-
 		// Wait for image to load if not already loaded
 		if ( this.imageElement.complete ) {
 			this.resizeCanvasAndRender();
 		} else {
-			this.imageElement.addEventListener( 'load', function () {
-				self.resizeCanvasAndRender();
+			this.imageElement.addEventListener( 'load', () => {
+				this.resizeCanvasAndRender();
 			} );
 		}
 
 		// Re-render on window resize to keep overlay aligned
-		this.boundWindowResize = function () {
-			self.scheduleResize();
+		this.boundWindowResize = () => {
+			this.scheduleResize();
 		};
 		window.addEventListener( 'resize', this.boundWindowResize );
 
 		// Re-render when the image element's box size changes (responsive layout, thumb swaps)
 		if ( typeof window.ResizeObserver === 'function' ) {
 			try {
-				this.resizeObserver = new window.ResizeObserver( function () {
-					self.scheduleResize();
+				this.resizeObserver = new window.ResizeObserver( () => {
+					this.scheduleResize();
 				} );
 				this.resizeObserver.observe( this.imageElement );
-			} catch ( e ) { /* ignore */ }
+			} catch ( e ) {
+				if ( window.mw && window.mw.log ) {
+					mw.log.warn( '[LayersViewer] ResizeObserver setup failed:', e.message );
+				}
+			}
 		}
 	};
 
-	// Coalesce multiple resize calls into a single frame
 	LayersViewer.prototype.scheduleResize = function () {
-		var self = this;
 		if ( this.rAFId ) {
 			return;
 		}
-		this.rAFId = window.requestAnimationFrame( function () {
-			self.rAFId = null;
-			self.resizeCanvasAndRender();
+		this.rAFId = window.requestAnimationFrame( () => {
+			this.rAFId = null;
+			this.resizeCanvasAndRender();
 		} );
 	};
 
-	// Cleanup observers and listeners if the element is removed
 	LayersViewer.prototype.destroy = function () {
 		if ( this.resizeObserver && typeof this.resizeObserver.disconnect === 'function' ) {
 			try {
 				this.resizeObserver.disconnect();
-			} catch ( e ) {}
+			} catch ( e ) {
+				if ( window.mw && window.mw.log ) {
+					mw.log.warn( '[LayersViewer] ResizeObserver disconnect failed:', e.message );
+				}
+			}
 		}
 		if ( this.boundWindowResize ) {
 			window.removeEventListener( 'resize', this.boundWindowResize );
@@ -114,15 +133,21 @@
 		if ( this.rAFId ) {
 			try {
 				window.cancelAnimationFrame( this.rAFId );
-			} catch ( e ) {}
+			} catch ( cancelError ) {
+				mw.log.warn( '[LayersViewer] cancelAnimationFrame failed:', cancelError.message );
+			}
 			this.rAFId = null;
+		}
+		if ( this.renderer ) {
+			this.renderer.destroy();
+			this.renderer = null;
 		}
 	};
 
 	LayersViewer.prototype.resizeCanvasAndRender = function () {
 		// Set canvas pixel size to MATCH the displayed image size for crisp alignment
-		var displayW = this.imageElement.offsetWidth;
-		var displayH = this.imageElement.offsetHeight;
+		let displayW = this.imageElement.offsetWidth;
+		let displayH = this.imageElement.offsetHeight;
 		if ( !displayW || !displayH ) {
 			// Fallback to natural dimensions when offsets are 0 (e.g., image hidden)
 			displayW = this.imageElement.naturalWidth || this.imageElement.width || 0;
@@ -136,6 +161,13 @@
 		this.canvas.style.width = displayW + 'px';
 		this.canvas.style.height = displayH + 'px';
 
+		// Update renderer with current canvas reference
+		if ( this.renderer ) {
+			this.renderer.setCanvas( this.canvas );
+			this.renderer.setBaseDimensions( this.baseWidth, this.baseHeight );
+			this.renderer.setBackgroundImage( this.imageElement );
+		}
+
 		this.renderLayers();
 	};
 
@@ -147,471 +179,153 @@
 		// Clear canvas
 		this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
-		// Render each layer
-		this.layerData.layers.forEach( function ( layer ) {
-			this.renderLayer( layer );
-		}.bind( this ) );
+		// Render layers from bottom to top so top-most (index 0 in editor) is drawn last.
+		const layers = Array.isArray( this.layerData.layers ) ? this.layerData.layers : [];
+		for ( let i = layers.length - 1; i >= 0; i-- ) {
+			this.renderLayer( layers[ i ] );
+		}
 	};
 
 	LayersViewer.prototype.renderLayer = function ( layer ) {
 		// Skip invisible layers
-		if ( layer.visible === false ) {
+		if ( layer.visible === false || layer.visible === 'false' || layer.visible === '0' || layer.visible === 0 ) {
 			return;
 		}
 
 		// Compute scaling from saved coordinates to current canvas size
-		var sx = 1;
-		var sy = 1;
+		let sx = 1;
+		let sy = 1;
+		let scaleAvg = 1;
 		if ( this.baseWidth && this.baseHeight ) {
 			sx = ( this.canvas.width || 1 ) / this.baseWidth;
 			sy = ( this.canvas.height || 1 ) / this.baseHeight;
+			scaleAvg = ( sx + sy ) / 2;
 		}
 
-		// Create a shallow copy and scale known coords
-		var L = layer;
+		// Create a shallow copy and scale known coords for viewer
+		let L = layer;
 		if ( this.baseWidth && this.baseHeight ) {
-			L = {};
-			for ( var k in layer ) {
-				if ( Object.prototype.hasOwnProperty.call( layer, k ) ) {
-					L[ k ] = layer[ k ];
-				}
-			}
-			if ( typeof L.x === 'number' ) {
-				L.x = L.x * sx;
-			}
-			if ( typeof L.y === 'number' ) {
-				L.y = L.y * sy;
-			}
-			if ( typeof L.width === 'number' ) {
-				L.width = L.width * sx;
-			}
-			if ( typeof L.height === 'number' ) {
-				L.height = L.height * sy;
-			}
-			if ( typeof L.radius === 'number' ) {
-				L.radius = L.radius * ( ( sx + sy ) / 2 );
-			}
-			if ( typeof L.radiusX === 'number' ) {
-				L.radiusX = L.radiusX * sx;
-			}
-			if ( typeof L.radiusY === 'number' ) {
-				L.radiusY = L.radiusY * sy;
-			}
-			if ( typeof L.x1 === 'number' ) {
-				L.x1 = L.x1 * sx;
-			}
-			if ( typeof L.y1 === 'number' ) {
-				L.y1 = L.y1 * sy;
-			}
-			if ( typeof L.x2 === 'number' ) {
-				L.x2 = L.x2 * sx;
-			}
-			if ( typeof L.y2 === 'number' ) {
-				L.y2 = L.y2 * sy;
-			}
-			if ( Array.isArray( L.points ) ) {
-				var pts = [];
-				for ( var i = 0; i < L.points.length; i++ ) {
-					var p = L.points[ i ];
-					pts.push( { x: p.x * sx, y: p.y * sy } );
-				}
-				L.points = pts;
-			}
+			L = this.scaleLayerCoordinates( layer, sx, sy, scaleAvg );
 		}
 
-		// Apply per-layer effects (opacity, blend, shadow) around the draw
+		// Apply per-layer effects (opacity, blend, shadow) at the context level
 		this.ctx.save();
 		if ( typeof layer.opacity === 'number' ) {
-			// Clamp to [0,1]
 			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
 		}
 		if ( layer.blend ) {
 			try {
 				this.ctx.globalCompositeOperation = String( layer.blend );
 			} catch ( e ) {
-				// ignore unsupported blend modes
+				if ( window.mw && window.mw.log ) {
+					mw.log.warn( '[LayersViewer] Unsupported blend mode: ' + layer.blend );
+				}
 			}
 		}
 
-		// Apply shadow effects - support both flat and nested shadow formats
-		if ( layer.shadow ) {
-			// New flat format from editor (shadow: true, shadowColor: '#000', etc.)
-			if ( typeof layer.shadow === 'boolean' && layer.shadow ) {
-				this.ctx.shadowColor = layer.shadowColor || '#000000';
-				this.ctx.shadowBlur = layer.shadowBlur || 0;
-				this.ctx.shadowOffsetX = layer.shadowOffsetX || 0;
-				this.ctx.shadowOffsetY = layer.shadowOffsetY || 0;
-			}
-			// Legacy nested format (shadow: {color: '#000', blur: 5, etc.})
-			else if ( typeof layer.shadow === 'object' && layer.shadow ) {
-				this.ctx.shadowColor = layer.shadow.color || '#000000';
-				this.ctx.shadowBlur = layer.shadow.blur || 0;
-				this.ctx.shadowOffsetX = layer.shadow.offsetX || 0;
-				this.ctx.shadowOffsetY = layer.shadow.offsetY || 0;
-			}
-		}
+		// Prepare shadow scale for the renderer
+		// BUG FIX (2025-12-08): Pass shadowScale in options instead of calling applyShadow here
+		// Previously, applyShadow was called here with correct scale, but then shape methods
+		// in LayerRenderer called applyShadow again with scale=1, overwriting the correct values.
+		// Now we pass shadowScale through options so shape methods use the correct scale.
+		const shadowScale = { sx: sx, sy: sy, avg: scaleAvg };
 
-		switch ( L.type ) {
-			case 'text':
-				this.renderText( L );
-				break;
-			case 'rectangle':
-				this.renderRectangle( L );
-				break;
-			case 'circle':
-				this.renderCircle( L );
-				break;
-			case 'ellipse':
-				this.renderEllipse( L );
-				break;
-			case 'polygon':
-				this.renderPolygon( L );
-				break;
-			case 'star':
-				this.renderStar( L );
-				break;
-			case 'line':
-				this.renderLine( L );
-				break;
-			case 'arrow':
-				this.renderArrow( L );
-				break;
-			case 'highlight':
-				this.renderHighlight( L );
-				break;
-			case 'path':
-				this.renderPath( L );
-				break;
-		}
+		// Delegate rendering to the shared LayerRenderer
+		// Using scaled=true since we pre-scaled the coordinates
+		// shadowScale tells shape methods to use this scale for shadow offsets (not 1:1)
+		this.renderer.drawLayer( L, { scaled: true, imageElement: this.imageElement, shadowScale: shadowScale } );
 
-		// Restore to pre-layer state (clears shadow effects too)
+		// Restore to pre-layer state
 		this.ctx.restore();
 	};
 
-	LayersViewer.prototype.renderText = function ( layer ) {
-		this.ctx.save();
-		var scaleAvg = 1;
-		if ( this.baseWidth && this.baseHeight ) {
-			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
-			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
-			scaleAvg = ( sx + sy ) / 2;
-		}
-		var fontPx = layer.fontSize || 16;
-		fontPx = Math.max( 1, Math.round( fontPx * scaleAvg ) );
-		this.ctx.font = fontPx + 'px ' + ( layer.fontFamily || 'Arial' );
-		this.ctx.textAlign = layer.textAlign || 'left';
-		this.ctx.fillStyle = layer.fill || '#000000';
-
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var text = layer.text || '';
-
-		// Calculate text dimensions for proper rotation centering
-		var textMetrics = this.ctx.measureText( text );
-		var textWidth = textMetrics.width;
-		var textHeight = fontPx;
-
-		// Calculate text center for rotation
-		var centerX = x + ( textWidth / 2 );
-		var centerY = y - ( textHeight / 4 ); // Adjust for text baseline
-
-		// Apply rotation if present
-		if ( layer.rotation && layer.rotation !== 0 ) {
-			var rotationRadians = ( layer.rotation * Math.PI ) / 180;
-			this.ctx.translate( centerX, centerY );
-			this.ctx.rotate( rotationRadians );
-			// Adjust drawing position to account for center rotation
-			x = -( textWidth / 2 );
-			y = textHeight / 4;
-		}
-
-		// Draw text stroke if enabled
-		if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
-			this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
-			this.ctx.lineWidth = layer.textStrokeWidth * scaleAvg;
-			this.ctx.strokeText( text, x, y );
-		}
-
-		this.ctx.fillText( text, x, y );
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderRectangle = function ( layer ) {
-		this.ctx.save();
-
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var width = layer.width || 0;
-		var height = layer.height || 0;
-		var strokeW = layer.strokeWidth || 1;
-		if ( this.baseWidth && this.baseHeight ) {
-			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
-			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
-			strokeW = strokeW * ( ( sx + sy ) / 2 );
-		}
-
-		var hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
-		if ( hasRotation ) {
-			// rotate around rectangle center
-			this.ctx.translate( x + width / 2, y + height / 2 );
-			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
-			x = -width / 2;
-			y = -height / 2;
-		}
-
-		if ( layer.fill && layer.fill !== 'transparent' ) {
-			this.ctx.fillStyle = layer.fill;
-			// Apply fill opacity if specified
-			if ( typeof layer.fillOpacity === 'number' ) {
-				var savedAlpha = this.ctx.globalAlpha;
-				this.ctx.globalAlpha = savedAlpha * layer.fillOpacity;
-				this.ctx.fillRect( x, y, width, height );
-				this.ctx.globalAlpha = savedAlpha;
-			} else {
-				this.ctx.fillRect( x, y, width, height );
+	/**
+	 * Scale layer coordinates for display at current canvas size
+	 *
+	 * @private
+	 * @param {Object} layer - Original layer data
+	 * @param {number} sx - X scale factor
+	 * @param {number} sy - Y scale factor
+	 * @param {number} scaleAvg - Average scale factor
+	 * @return {Object} Scaled layer copy
+	 */
+	LayersViewer.prototype.scaleLayerCoordinates = function ( layer, sx, sy, scaleAvg ) {
+		const L = {};
+		for ( const k in layer ) {
+			if ( Object.prototype.hasOwnProperty.call( layer, k ) ) {
+				L[ k ] = layer[ k ];
 			}
 		}
-
-		if ( layer.stroke ) {
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = strokeW;
-			// Apply stroke opacity if specified
-			if ( typeof layer.strokeOpacity === 'number' ) {
-				var savedAlpha2 = this.ctx.globalAlpha;
-				this.ctx.globalAlpha = savedAlpha2 * layer.strokeOpacity;
-				this.ctx.strokeRect( x, y, width, height );
-				this.ctx.globalAlpha = savedAlpha2;
-			} else {
-				this.ctx.strokeRect( x, y, width, height );
+		if ( typeof L.x === 'number' ) {
+			L.x = L.x * sx;
+		}
+		if ( typeof L.y === 'number' ) {
+			L.y = L.y * sy;
+		}
+		if ( typeof L.width === 'number' ) {
+			L.width = L.width * sx;
+		}
+		if ( typeof L.height === 'number' ) {
+			L.height = L.height * sy;
+		}
+		if ( typeof L.radius === 'number' ) {
+			L.radius = L.radius * scaleAvg;
+		}
+		if ( typeof L.outerRadius === 'number' ) {
+			L.outerRadius = L.outerRadius * scaleAvg;
+		}
+		if ( typeof L.innerRadius === 'number' ) {
+			L.innerRadius = L.innerRadius * scaleAvg;
+		}
+		if ( typeof L.radiusX === 'number' ) {
+			L.radiusX = L.radiusX * sx;
+		}
+		if ( typeof L.radiusY === 'number' ) {
+			L.radiusY = L.radiusY * sy;
+		}
+		if ( typeof L.x1 === 'number' ) {
+			L.x1 = L.x1 * sx;
+		}
+		if ( typeof L.y1 === 'number' ) {
+			L.y1 = L.y1 * sy;
+		}
+		if ( typeof L.x2 === 'number' ) {
+			L.x2 = L.x2 * sx;
+		}
+		if ( typeof L.y2 === 'number' ) {
+			L.y2 = L.y2 * sy;
+		}
+		if ( typeof L.fontSize === 'number' ) {
+			L.fontSize = L.fontSize * scaleAvg;
+		}
+		if ( typeof L.strokeWidth === 'number' ) {
+			L.strokeWidth = L.strokeWidth * scaleAvg;
+		}
+		if ( typeof L.arrowSize === 'number' ) {
+			L.arrowSize = L.arrowSize * scaleAvg;
+		}
+		if ( typeof L.tailWidth === 'number' ) {
+			L.tailWidth = L.tailWidth * scaleAvg;
+		}
+		if ( typeof L.textStrokeWidth === 'number' ) {
+			L.textStrokeWidth = L.textStrokeWidth * scaleAvg;
+		}
+		if ( Array.isArray( L.points ) ) {
+			const pts = [];
+			for ( let i = 0; i < L.points.length; i++ ) {
+				const p = L.points[ i ];
+				pts.push( { x: p.x * sx, y: p.y * sy } );
 			}
+			L.points = pts;
 		}
-
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderCircle = function ( layer ) {
-		this.ctx.save();
-		this.ctx.beginPath();
-		this.ctx.arc( layer.x || 0, layer.y || 0, layer.radius || 0, 0, 2 * Math.PI );
-
-		if ( layer.fill && layer.fill !== 'transparent' ) {
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
-		}
-
-		if ( layer.stroke ) {
-			this.ctx.strokeStyle = layer.stroke;
-			var sw = layer.strokeWidth || 1;
-			if ( this.baseWidth && this.baseHeight ) {
-				var sx2 = ( this.canvas.width || 1 ) / this.baseWidth;
-				var sy2 = ( this.canvas.height || 1 ) / this.baseHeight;
-				sw = sw * ( ( sx2 + sy2 ) / 2 );
-			}
-			this.ctx.lineWidth = sw;
-			this.ctx.stroke();
-		}
-
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderLine = function ( layer ) {
-		this.ctx.save();
-		this.ctx.strokeStyle = layer.stroke || '#000000';
-		var sw = layer.strokeWidth || 1;
-		if ( this.baseWidth && this.baseHeight ) {
-			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
-			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
-			sw = sw * ( ( sx + sy ) / 2 );
-		}
-		this.ctx.lineWidth = sw;
-
-		this.ctx.beginPath();
-		this.ctx.moveTo( layer.x1 || 0, layer.y1 || 0 );
-		this.ctx.lineTo( layer.x2 || 0, layer.y2 || 0 );
-		this.ctx.stroke();
-
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderArrow = function ( layer ) {
-		this.ctx.save();
-		this.ctx.strokeStyle = layer.stroke || '#000000';
-		this.ctx.fillStyle = layer.stroke || '#000000';
-		var sw = layer.strokeWidth || 1;
-		var arrowSize = layer.arrowSize || 10;
-		if ( this.baseWidth && this.baseHeight ) {
-			var sx = ( this.canvas.width || 1 ) / this.baseWidth;
-			var sy = ( this.canvas.height || 1 ) / this.baseHeight;
-			var avg = ( sx + sy ) / 2;
-			sw = sw * avg;
-			arrowSize = arrowSize * avg;
-		}
-		this.ctx.lineWidth = sw;
-
-		var x1 = layer.x1 || 0;
-		var y1 = layer.y1 || 0;
-		var x2 = layer.x2 || 0;
-		var y2 = layer.y2 || 0;
-
-		// Draw line
-		this.ctx.beginPath();
-		this.ctx.moveTo( x1, y1 );
-		this.ctx.lineTo( x2, y2 );
-		this.ctx.stroke();
-
-		// Draw arrow head
-		var angle = Math.atan2( y2 - y1, x2 - x1 );
-		var arrowAngle = Math.PI / 6;
-
-		this.ctx.beginPath();
-		this.ctx.moveTo( x2, y2 );
-		this.ctx.lineTo(
-			x2 - arrowSize * Math.cos( angle - arrowAngle ),
-			y2 - arrowSize * Math.sin( angle - arrowAngle )
-		);
-		this.ctx.moveTo( x2, y2 );
-		this.ctx.lineTo(
-			x2 - arrowSize * Math.cos( angle + arrowAngle ),
-			y2 - arrowSize * Math.sin( angle + arrowAngle )
-		);
-		this.ctx.stroke();
-
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderHighlight = function ( layer ) {
-		this.ctx.save();
-		this.ctx.fillStyle = layer.fill || '#ffff0080';
-		this.ctx.fillRect( layer.x || 0, layer.y || 0, layer.width || 0, layer.height || 0 );
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderEllipse = function ( layer ) {
-		this.ctx.save();
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var radiusX = layer.radiusX || layer.width / 2 || 0;
-		var radiusY = layer.radiusY || layer.height / 2 || 0;
-
-		// Build the ellipse path under a scaled transform
-		this.ctx.translate( x, y );
-		this.ctx.beginPath();
-		this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
-		this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
-
-		// Fill/stroke while the transform is active
-		if ( layer.fill && layer.fill !== 'transparent' ) {
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
-		}
-		if ( layer.stroke ) {
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = layer.strokeWidth || 1;
-			this.ctx.stroke();
-		}
-
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderPolygon = function ( layer ) {
-		var sides = layer.sides || 6;
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var radius = layer.radius || 50;
-
-		this.ctx.save();
-		this.ctx.beginPath();
-
-		for ( var i = 0; i < sides; i++ ) {
-			var angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-			var px = x + radius * Math.cos( angle );
-			var py = y + radius * Math.sin( angle );
-
-			if ( i === 0 ) {
-				this.ctx.moveTo( px, py );
-			} else {
-				this.ctx.lineTo( px, py );
-			}
-		}
-
-		this.ctx.closePath();
-
-		if ( layer.fill && layer.fill !== 'transparent' ) {
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
-		}
-
-		if ( layer.stroke ) {
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = layer.strokeWidth || 1;
-			this.ctx.stroke();
-		}
-
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderStar = function ( layer ) {
-		var points = layer.points || 5;
-		var x = layer.x || 0;
-		var y = layer.y || 0;
-		var outerRadius = layer.outerRadius || layer.radius || 50;
-		var innerRadius = layer.innerRadius || outerRadius * 0.5;
-
-		this.ctx.save();
-		this.ctx.beginPath();
-
-		for ( var i = 0; i < points * 2; i++ ) {
-			var angle = ( i * Math.PI ) / points - Math.PI / 2;
-			var radius = i % 2 === 0 ? outerRadius : innerRadius;
-			var px = x + radius * Math.cos( angle );
-			var py = y + radius * Math.sin( angle );
-
-			if ( i === 0 ) {
-				this.ctx.moveTo( px, py );
-			} else {
-				this.ctx.lineTo( px, py );
-			}
-		}
-
-		this.ctx.closePath();
-
-		if ( layer.fill && layer.fill !== 'transparent' ) {
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.fill();
-		}
-
-		if ( layer.stroke ) {
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = layer.strokeWidth || 1;
-			this.ctx.stroke();
-		}
-
-		this.ctx.restore();
-	};
-
-	LayersViewer.prototype.renderPath = function ( layer ) {
-		if ( !layer.points || layer.points.length < 2 ) {
-			return;
-		}
-
-		this.ctx.save();
-		this.ctx.strokeStyle = layer.stroke || '#000000';
-		this.ctx.lineWidth = layer.strokeWidth || 2;
-		this.ctx.lineCap = 'round';
-		this.ctx.lineJoin = 'round';
-
-		this.ctx.beginPath();
-		this.ctx.moveTo( layer.points[ 0 ].x, layer.points[ 0 ].y );
-
-		for ( var i = 1; i < layer.points.length; i++ ) {
-			this.ctx.lineTo( layer.points[ i ].x, layer.points[ i ].y );
-		}
-
-		this.ctx.stroke();
-		this.ctx.restore();
+		return L;
 	};
 
 	// Export for manual initialization; bootstrap handled in ext.layers/init.js
 	window.LayersViewer = LayersViewer;
+
+	// Also add to Layers namespace
+	window.Layers = window.Layers || {};
+	window.Layers.Viewer = LayersViewer;
 
 }() );

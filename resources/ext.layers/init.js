@@ -1,270 +1,198 @@
-// mw.layers bootstrap
-// Initializes viewers for annotated images and refreshes on content changes
+/**
+ * MediaWiki Layers extension - viewer bootstrap.
+ *
+ * Initializes viewers for annotated images and refreshes on content changes.
+ * This is a thin orchestration layer that delegates to extracted modules:
+ * - UrlParser: URL and parameter parsing utilities
+ * - ViewerManager: Viewer initialization and management
+ * - ApiFallback: API fallback for missing server-side data
+ *
+ * @module ext.layers/init
+ */
 mw.layers = {
-	/** Initialize lightweight viewers and bind refresh on content changes */
+	debug: false,
+
+	/**
+	 * Log a debug message if debug mode is enabled.
+	 *
+	 * @param {...any} args Arguments to log.
+	 */
+	debugLog: function ( ...args ) {
+		if ( this.debug && mw && mw.log ) {
+			mw.log( '[Layers]', ...args );
+		}
+	},
+
+	/**
+	 * Log a warning message if debug mode is enabled.
+	 *
+	 * @param {...any} args Arguments to log.
+	 */
+	debugWarn: function ( ...args ) {
+		if ( this.debug && mw && mw.log ) {
+			mw.log.warn( '[Layers]', ...args );
+		}
+	},
+
+	/**
+	 * Initialize the layers system.
+	 *
+	 * Sets up debug mode, creates module instances, and binds refresh handlers.
+	 */
 	init: function () {
-		var self = this;
-		var debug = false;
+		// Initialize debug mode
 		try {
-			debug = !!( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) );
-		} catch ( e ) {}
+			this.debug = !!(
+				typeof mw !== 'undefined' &&
+				mw.config &&
+				mw.config.get( 'wgLayersDebug' )
+			);
+		} catch ( configError ) {
+			this.debug = false;
+		}
+
+		this.debugLog( 'init() starting' );
+		if ( this.debug && window.location ) {
+			this.debugLog( 'href:', String( window.location.href || '' ) );
+		}
+
+		// Create module instances with shared debug setting
+		const options = { debug: this.debug };
+		this.urlParser = new window.LayersUrlParser( options );
+		this.viewerManager = new window.LayersViewerManager( {
+			debug: this.debug,
+			urlParser: this.urlParser
+		} );
+		this.apiFallback = new window.LayersApiFallback( {
+			debug: this.debug,
+			urlParser: this.urlParser,
+			viewerManager: this.viewerManager
+		} );
 
 		// Initialize viewers for images annotated by server hooks
-		self.initializeLayerViewers( debug );
+		this.viewerManager.initializeLayerViewers();
 
 		// File page fallback if nothing found via attributes
-		self.initializeFilePageFallback( debug );
+		this.viewerManager.initializeFilePageFallback();
 
-		// Re-scan when the page content changes (guard if mw.hook is unavailable)
+		// API fallback for images marked layered but lacking inline data
+		this.apiFallback.initialize();
+
+		// Re-scan when page content changes
+		// Using arrow function to preserve 'this' context
 		try {
 			if ( mw && mw.hook && typeof mw.hook === 'function' ) {
-				mw.hook( 'wikipage.content' ).add( function () {
-					self.initializeLayerViewers( debug );
-					self.initializeFilePageFallback( debug );
+				mw.hook( 'wikipage.content' ).add( () => {
+					this.viewerManager.initializeLayerViewers();
+					this.viewerManager.initializeFilePageFallback();
+					this.apiFallback.initialize();
 				} );
 			}
-		} catch ( e ) { /* ignore */ }
+		} catch ( e ) {
+			this.debugWarn( 'Failed to register wikipage.content hook:', e.message );
+		}
+	},
+
+	// Delegate utility methods to urlParser for backwards compatibility
+	// These are used by other code that may call mw.layers.* directly
+
+	/**
+	 * Get the page-level layers parameter value.
+	 *
+	 * @return {string|null} Parameter value or null
+	 */
+	getPageLayersParam: function () {
+		if ( this.urlParser ) {
+			return this.urlParser.getPageLayersParam();
+		}
+		return null;
 	},
 
 	/**
-	 * Decode common HTML entities that may appear in data attributes
+	 * Decode HTML entities in a string.
 	 *
-	 * @param {string} s
-	 * @return {string}
+	 * @param {string} s String to decode
+	 * @return {string} Decoded string
 	 */
 	decodeHtmlEntities: function ( s ) {
-		if ( !s || typeof s !== 'string' ) {
-			return s;
+		if ( this.urlParser ) {
+			return this.urlParser.decodeHtmlEntities( s );
 		}
-		// Quick replacements for most-common entities in our payload
-		return s
-			.replace( /&amp;quot;/g, '"' )
-			.replace( /&quot;/g, '"' )
-			.replace( /&#34;/g, '"' )
-			.replace( /&#x22;/gi, '"' );
+		return s;
 	},
 
 	/**
-	 * Find all images with server-provided layer data and overlay a canvas viewer.
+	 * Check if a layers value indicates enabling.
 	 *
-	 * @param {boolean} debug Enable debug logging
+	 * @param {string} v Value to check
+	 * @return {boolean} True if value enables layers
 	 */
-	initializeLayerViewers: function ( debug ) {
-		var self = this;
-		// Primary: attributes directly on <img>
-		var images = Array.prototype.slice.call( document.querySelectorAll( 'img[data-layer-data]' ) );
-		// Ensure the marker class exists for any img we found
-		images.forEach( function ( img ) {
-			var cls = img.getAttribute( 'class' ) || '';
-			if ( cls.indexOf( 'layers-thumbnail' ) === -1 ) {
-				img.setAttribute( 'class', ( cls + ' layers-thumbnail' ).trim() );
-			}
-		} );
-		if ( debug ) {
-			// eslint-disable-next-line no-console
-			console.debug( '[Layers] Found', images.length, 'candidate <img> elements with data-layer-data' );
+	isAllowedLayersValue: function ( v ) {
+		if ( this.urlParser ) {
+			return this.urlParser.isAllowedLayersValue( v );
 		}
-
-		// Fallback: attributes on wrapping <a>, move them to img for viewer
-		var anchors = Array.prototype.slice.call( document.querySelectorAll( 'a[data-layer-data] > img' ) );
-		anchors.forEach( function ( img ) {
-			if ( img.hasAttribute( 'data-layer-data' ) ) {
-				return;
-			}
-			var a = img.parentNode && img.parentNode.nodeType === 1 ? img.parentNode : null;
-			if ( a && a.hasAttribute( 'data-layer-data' ) ) {
-				img.setAttribute( 'data-layer-data', a.getAttribute( 'data-layer-data' ) );
-				var cls = img.getAttribute( 'class' ) || '';
-				if ( cls.indexOf( 'layers-thumbnail' ) === -1 ) {
-					img.setAttribute( 'class', ( cls + ' layers-thumbnail' ).trim() );
-				}
-				images.push( img );
-				if ( debug ) {
-					// eslint-disable-next-line no-console
-					console.debug( '[Layers] Moved data-layer-data from <a> to <img>' );
-				}
-			}
-		} );
-
-		images.forEach( function ( img ) {
-			if ( img.layersViewer ) {
-				return; // Already initialized
-			}
-			try {
-				var json = img.getAttribute( 'data-layer-data' );
-				if ( !json ) {
-					return;
-				}
-				var layerData;
-				try {
-					layerData = JSON.parse( json );
-				} catch ( eParse ) {
-					// Attribute JSON can be entity-escaped by upstream HTML.
-					// Decode entities and parse again.
-					var unescaped = self.decodeHtmlEntities( json );
-					if ( debug ) {
-						// eslint-disable-next-line no-console
-						console.debug( '[Layers] JSON parse failed, retrying after entity decode', eParse );
-					}
-					layerData = JSON.parse( unescaped );
-				}
-				if ( !layerData || !layerData.layers ) {
-					if ( debug ) {
-						// eslint-disable-next-line no-console
-						console.debug( '[Layers] No usable layerData on element', img );
-					}
-					return;
-				}
-				// Ensure the overlay container is the image's immediate parent
-				var container = img.parentNode || img;
-				// If the parent isn't an element capable of positioning, wrap the image
-				var style = window.getComputedStyle( container );
-				if ( !style || style.position === 'static' ) {
-					var wrapper = document.createElement( 'span' );
-					wrapper.style.position = 'relative';
-					wrapper.style.display = 'inline-block';
-					container.insertBefore( wrapper, img );
-					wrapper.appendChild( img );
-					container = wrapper;
-				}
-
-				// Instantiate viewer overlaying the image
-				img.layersViewer = new window.LayersViewer( {
-					container: container,
-					imageElement: img,
-					layerData: layerData
-				} );
-				if ( debug ) {
-					var count = ( layerData.layers && layerData.layers.length ) || 0;
-					// eslint-disable-next-line no-console
-					console.debug( '[Layers] Viewer initialized with', count, 'layers. baseWidth=', layerData.baseWidth, 'baseHeight=', layerData.baseHeight );
-				}
-			} catch ( e ) {
-				// swallow to avoid breaking page rendering
-				if ( debug ) {
-					// eslint-disable-next-line no-console
-					console.warn( '[Layers] Viewer init error:', e );
-				}
-			}
-		} );
+		return false;
 	},
 
 	/**
-	 * On File pages, initialize the main image by fetching layer data via API
-	 * if server-side attributes are missing.
+	 * Escape a string for use in RegExp.
 	 *
-	 * @param {boolean} debug Enable debug logging
+	 * @param {string} s String to escape
+	 * @return {string} Escaped string
 	 */
-	initializeFilePageFallback: function ( debug ) {
-		try {
-			if ( typeof mw === 'undefined' ) {
-				return;
-			}
-			var ns = mw.config.get( 'wgNamespaceNumber' );
-			if ( ns !== 6 ) {
-				return; // NS_FILE only
-			}
+	escRe: function ( s ) {
+		if ( this.urlParser ) {
+			return this.urlParser.escapeRegExp( s );
+		}
+		return s.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
+	},
 
-			// Find the main file image on the file description page
-			var selector = '#file img, .fullMedia a > img, .mw-filepage-content img';
-			var img = document.querySelector( selector );
-			if ( !img || img.layersViewer ) {
-				return;
-			}
-			if ( img.getAttribute( 'data-layer-data' ) ) {
-				return;
-			}
+	/**
+	 * Detect layers intent from data-mw attribute.
+	 *
+	 * @param {HTMLElement} el Element to check
+	 * @return {string|null} Layers value or null
+	 */
+	detectLayersFromDataMw: function ( el ) {
+		if ( this.urlParser ) {
+			return this.urlParser.detectLayersFromDataMw( el );
+		}
+		return null;
+	},
 
-			var pageName = mw.config.get( 'wgPageName' ) || '';
-			var canonNs = mw.config.get( 'wgCanonicalNamespace' ) || 'File';
-			var prefix = canonNs + ':';
-			var filename;
-			if ( pageName.indexOf( prefix ) === 0 ) {
-				filename = pageName.slice( prefix.length );
-			} else {
-				filename = pageName;
-			}
-			try {
-				filename = decodeURIComponent( filename );
-			} catch ( e ) {
-				// ignore
-			}
-			filename = filename.replace( /_/g, ' ' );
+	// Direct method delegates for backwards compatibility
 
-			var api = new mw.Api();
-			api.get( {
-				action: 'layersinfo',
-				format: 'json',
-				filename: filename
-			} ).done( function ( data ) {
-				try {
-					if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
-						return;
-					}
-					var layerset = data.layersinfo.layerset;
-					var payload = null;
-					if ( layerset && layerset.data && ( layerset.data.layers || layerset.data ) ) {
-						var layersArr;
-						var arrTag = Object.prototype.toString.call( layerset.data.layers );
-						if ( layerset.data.layers && arrTag === '[object Array]' ) {
-							layersArr = layerset.data.layers;
-						} else {
-							layersArr = layerset.data;
-						}
-						if ( layersArr && layersArr.length ) {
-							payload = {
-								layers: layersArr,
-								baseWidth: img.naturalWidth || img.width || null,
-								baseHeight: img.naturalHeight || img.height || null
-							};
-						}
-					}
-					if ( !payload ) {
-						return;
-					}
+	/**
+	 * Initialize layer viewers.
+	 */
+	initializeLayerViewers: function () {
+		if ( this.viewerManager ) {
+			this.viewerManager.initializeLayerViewers();
+		}
+	},
 
-					// Ensure container is positioned
-					var container = img.parentNode || img;
-					var style = window.getComputedStyle( container );
-					if ( !style || style.position === 'static' ) {
-						var wrapper = document.createElement( 'span' );
-						wrapper.style.position = 'relative';
-						wrapper.style.display = 'inline-block';
-						container.insertBefore( wrapper, img );
-						wrapper.appendChild( img );
-						container = wrapper;
-					}
+	/**
+	 * Initialize API fallback.
+	 */
+	initializeApiFallbackForMissingData: function () {
+		if ( this.apiFallback ) {
+			this.apiFallback.initialize();
+		}
+	},
 
-					img.layersViewer = new window.LayersViewer( {
-						container: container,
-						imageElement: img,
-						layerData: payload
-					} );
-					if ( debug ) {
-						var count2 = ( payload.layers && payload.layers.length ) || 0;
-						// eslint-disable-next-line no-console
-						console.debug( '[Layers] File page fallback initialized with', count2, 'layers' );
-					}
-				} catch ( e2 ) {
-					// ignore
-					if ( debug ) {
-						// eslint-disable-next-line no-console
-						console.warn( '[Layers] File page fallback error:', e2 );
-					}
-				}
-			} ).fail( function () { /* ignore */ } );
-		} catch ( e ) {
-			// ignore
-			if ( debug ) {
-				// eslint-disable-next-line no-console
-				console.warn( '[Layers] File page fallback outer error:', e );
-			}
+	/**
+	 * Initialize file page fallback.
+	 */
+	initializeFilePageFallback: function () {
+		if ( this.viewerManager ) {
+			this.viewerManager.initializeFilePageFallback();
 		}
 	}
 };
 
+// Initialize on DOM ready
 if ( document.readyState === 'loading' ) {
-	document.addEventListener( 'DOMContentLoaded', function () {
+	document.addEventListener( 'DOMContentLoaded', () => {
 		mw.layers.init();
 	} );
 } else {

@@ -1,0 +1,174 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  # Smoke tests run without MediaWiki - quick sanity check
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright smoke tests
+        run: npx playwright test tests/e2e/smoke.spec.js --workers=1
+        env:
+          CI: true
+
+      - name: Upload Playwright results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-results
+          path: playwright-report/
+          retention-days: 7
+
+  # Full E2E tests with MediaWiki container
+  editor:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: mediawiki
+          MYSQL_USER: mediawiki
+          MYSQL_PASSWORD: mediawiki
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, intl, mysqli, pdo_mysql, gd, xml
+          tools: composer
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache MediaWiki
+        id: cache-mediawiki
+        uses: actions/cache@v4
+        with:
+          path: ~/mediawiki
+          key: mediawiki-1.43-${{ hashFiles('.github/workflows/e2e.yml') }}
+
+      - name: Download MediaWiki
+        if: steps.cache-mediawiki.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/mediawiki
+          cd ~/mediawiki
+          wget -q https://releases.wikimedia.org/mediawiki/1.43/mediawiki-1.43.0.tar.gz
+          tar -xzf mediawiki-1.43.0.tar.gz --strip-components=1
+          rm mediawiki-1.43.0.tar.gz
+
+      - name: Install MediaWiki
+        run: |
+          cd ~/mediawiki
+          php maintenance/install.php \
+            --dbtype=mysql \
+            --dbserver=127.0.0.1 \
+            --dbname=mediawiki \
+            --dbuser=mediawiki \
+            --dbpass=mediawiki \
+            --pass=admin123 \
+            --scriptpath="" \
+            "Layers Test Wiki" \
+            "Admin"
+
+      - name: Install Layers extension
+        run: |
+          mkdir -p ~/mediawiki/extensions/Layers
+          cp -r . ~/mediawiki/extensions/Layers/
+          echo "wfLoadExtension( 'Layers' );" >> ~/mediawiki/LocalSettings.php
+          echo "\$wgGroupPermissions['user']['editlayers'] = true;" >> ~/mediawiki/LocalSettings.php
+          echo "\$wgGroupPermissions['user']['createlayers'] = true;" >> ~/mediawiki/LocalSettings.php
+
+      - name: Run MediaWiki database update
+        run: |
+          cd ~/mediawiki
+          php maintenance/update.php --quick
+
+      - name: Upload test image
+        run: |
+          cd ~/mediawiki
+          # Create a simple test image
+          php -r "
+            \$img = imagecreatetruecolor(800, 600);
+            \$bg = imagecolorallocate(\$img, 200, 200, 200);
+            imagefill(\$img, 0, 0, \$bg);
+            imagepng(\$img, 'test_image.png');
+          "
+          # Import test image via maintenance script
+          php maintenance/importImages.php --comment="Test image for E2E tests" --user=Admin . 2>/dev/null || true
+
+      - name: Start MediaWiki server
+        run: |
+          cd ~/mediawiki
+          php -S 0.0.0.0:8080 &
+          sleep 5
+          # Verify server is running
+          curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ | grep -q "200\|302" || exit 1
+        env:
+          MW_SERVER: http://localhost:8080
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Editor E2E tests
+        run: npx playwright test tests/e2e/editor.spec.js --workers=1 --timeout=60000
+        env:
+          CI: true
+          MW_SERVER: http://localhost:8080
+          MW_USERNAME: Admin
+          MW_PASSWORD: admin123
+          TEST_FILE: Test_image.png
+
+      - name: Upload Playwright results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-editor-results
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots
+          path: test-results/
+          retention-days: 7
+

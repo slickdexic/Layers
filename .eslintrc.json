@@ -1,13 +1,124 @@
 {
 	"root": true,
-	"extends": [
-		"wikimedia/client-es5",
-		"wikimedia/jquery",
-		"wikimedia/mediawiki"
+	"env": {
+		"browser": true,
+		"es6": true
+	},
+	"parserOptions": {
+		"ecmaVersion": 2018
+	},
+	"extends": ["eslint:recommended"],
+	"globals": {
+		"mw": "readonly",
+		"$": "readonly",
+		"jQuery": "readonly"
+	},
+	"ignorePatterns": [
+		".stylelintrc.json",
+		"*-backup.js",
+		"*.backup.js",
+		"append_canvas_manager.js",
+		"test_load.js",
+		"resources/dist/",
+		"node_modules/",
+		"vendor/"
 	],
 	"rules": {
 		"no-implicit-globals": "off",
-		"es-x/no-array-prototype-fill": "off",
-		"es-x/no-string-prototype-repeat": "off"
-	}
+		"linebreak-style": "off",
+		"no-var": "warn",
+		"prefer-const": "warn",
+		"no-unused-vars": "error",
+		"no-empty": "off"
+	},
+	"overrides": [
+		{
+			"files": [ "resources/ext.layers/init.js" ],
+			"rules": {
+				"indent": "off",
+				"no-console": "off"
+			}
+		},
+		{
+			"files": [
+				"resources/ext.layers.editor/*.js",
+				"resources/ext.layers.editor/canvas/*.js",
+				"resources/ext.layers.editor/ui/*.js"
+			],
+			"globals": {
+				"require": "readonly",
+				"module": "readonly",
+				"LayersConstants": "readonly",
+				"CanvasRenderer": "readonly",
+				"LayersSelectionManager": "readonly",
+				"ZoomPanController": "readonly",
+				"GridRulersController": "readonly",
+				"TransformController": "readonly",
+				"HitTestController": "readonly",
+				"DrawingController": "readonly",
+				"ClipboardController": "readonly",
+				"InteractionController": "readonly",
+				"GeometryUtils": "readonly",
+				"LayersValidator": "readonly",
+				"ErrorHandler": "readonly",
+				"HistoryManager": "readonly",
+				"ToolManager": "readonly",
+				"TransformationEngine": "readonly",
+				"CanvasUtilities": "readonly",
+				"CanvasEvents": "readonly",
+				"ImageLoader": "readonly",
+				"CanvasManager": "readonly",
+				"LayerPanel": "readonly",
+				"Toolbar": "readonly",
+				"ToolbarKeyboard": "readonly",
+				"LayersEditor": "readonly",
+				"LayersViewer": "readonly",
+				"SelectionManager": "readonly",
+				"IconFactory": "readonly",
+				"ColorPickerDialog": "readonly",
+				"ConfirmDialog": "readonly",
+				"PropertiesForm": "readonly"
+			},
+			"rules": {
+				"no-redeclare": "off"
+			}
+		},
+		{
+			"files": [
+				"resources/ext.layers.editor/UIManager.js",
+				"resources/ext.layers.editor/EventManager.js",
+				"resources/ext.layers.editor/APIManager.js",
+				"resources/ext.layers.editor/ValidationManager.js",
+				"resources/ext.layers.editor/StateManager.js",
+				"resources/ext.layers.editor/LayerPanel.js"
+			],
+			"rules": {
+				"no-unused-vars": "off"
+			}
+		},
+		{
+			"files": [ "webpack.config.js", "jest.config.js", "Gruntfile.js" ],
+			"env": {
+				"node": true
+			}
+		},
+		{
+			"files": [ "tests/jest/**/*.js" ],
+			"env": {
+				"jest": true,
+				"node": true
+			},
+			"parserOptions": {
+				"ecmaVersion": 2020
+			},
+			"globals": {
+				"mw": "readonly",
+				"$": "readonly",
+				"jQuery": "readonly"
+			},
+			"rules": {
+				"no-unused-vars": ["error", { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }]
+			}
+		}
+	]
 }

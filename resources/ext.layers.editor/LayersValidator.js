@@ -10,6 +10,7 @@
 	 * Provides validation methods and user feedback for layer data
 	 */
 	function LayersValidator() {
+		const limits = ( window.LayersConstants && window.LayersConstants.LIMITS ) || {};
 		this.validationRules = {
 			// Layer type whitelist (must match server-side validation)
 			validTypes: [
@@ -29,16 +30,21 @@
 			idPattern: /^[a-zA-Z0-9_-]+$/,
 
 			// Numeric field limits
-			maxFontSize: 200,
+			// FIX 2025-11-14: Increased from 200 to 1000 to match server validation
+			maxFontSize: 1000,
 			minFontSize: 1,
 			maxStrokeWidth: 50,
 			minStrokeWidth: 0,
 			maxOpacity: 1,
 			minOpacity: 0,
-			maxSides: 20,
-			minSides: 3,
+			maxSides: limits.MAX_POLYGON_SIDES || 20,
+			minSides: limits.MIN_POLYGON_SIDES || 3,
 			maxBlurRadius: 100,
 			minBlurRadius: 1,
+
+			// Star point limits
+			minStarPoints: limits.MIN_STAR_POINTS || 3,
+			maxStarPoints: limits.MAX_STAR_POINTS || 20,
 
 			// Font family validation
 			fontFamilyPattern: /^[a-zA-Z0-9\s,-]+$/,
@@ -69,7 +75,7 @@
 	 * @return {Object} Validation result with isValid flag and errors array
 	 */
 	LayersValidator.prototype.validateLayer = function ( layer ) {
-		var result = {
+		const result = {
 			isValid: true,
 			errors: [],
 			warnings: []
@@ -114,8 +120,8 @@
 	/**
 	 * Validate required fields
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer Layer data object
+	 * @param {Object} result Validation result object
 	 */
 	LayersValidator.prototype.validateRequired = function ( layer, result ) {
 		if ( !layer.id ) {
@@ -132,11 +138,11 @@
 	/**
 	 * Validate layer type
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer Layer data object
+	 * @param {Object} result Validation result object
 	 */
 	LayersValidator.prototype.validateLayerType = function ( layer, result ) {
-		if ( layer.type && this.validationRules.validTypes.indexOf( layer.type ) === -1 ) {
+		if ( layer.type && !this.validationRules.validTypes.includes( layer.type ) ) {
 			result.isValid = false;
 			result.errors.push( this.getMessage( 'layers-validation-type-invalid', layer.type ) );
 		}
@@ -145,8 +151,8 @@
 	/**
 	 * Validate layer ID
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateLayerId = function ( layer, result ) {
 		if ( layer.id ) {
@@ -170,23 +176,22 @@
 	/**
 	 * Validate coordinate fields
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateCoordinates = function ( layer, result ) {
-		var coordinateFields = [ 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'radius', 'radiusX', 'radiusY' ];
-		var self = this;
+		const coordinateFields = [ 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'radius', 'radiusX', 'radiusY' ];
 
-		coordinateFields.forEach( function ( field ) {
+		coordinateFields.forEach( ( field ) => {
 			if ( layer[ field ] !== undefined ) {
-				if ( !self.isValidNumber( layer[ field ] ) ) {
+				if ( !this.isValidNumber( layer[ field ] ) ) {
 					result.isValid = false;
-					result.errors.push( self.getMessage( 'layers-validation-coordinate-invalid', field ) );
+					result.errors.push( this.getMessage( 'layers-validation-coordinate-invalid', field ) );
 				} else {
-					var value = parseFloat( layer[ field ] );
-					if ( Math.abs( value ) > self.validationRules.maxCoordinate ) {
+					const value = parseFloat( layer[ field ] );
+					if ( Math.abs( value ) > this.validationRules.maxCoordinate ) {
 						result.isValid = false;
-						result.errors.push( self.getMessage( 'layers-validation-coordinate-too-large', field, self.validationRules.maxCoordinate ) );
+						result.errors.push( this.getMessage( 'layers-validation-coordinate-too-large', field, this.validationRules.maxCoordinate ) );
 					}
 				}
 			}
@@ -196,8 +201,8 @@
 	/**
 	 * Validate numeric properties with specific ranges
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateNumericProperties = function ( layer, result ) {
 		// Font size validation
@@ -206,11 +211,17 @@
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-fontsize-invalid' ) );
 			} else {
-				var fontSize = parseFloat( layer.fontSize );
-				if ( fontSize < this.validationRules.minFontSize || fontSize > this.validationRules.maxFontSize ) {
+				const fontSize = parseFloat( layer.fontSize );
+				if ( fontSize < this.validationRules.minFontSize ||
+					fontSize > this.validationRules.maxFontSize ) {
 					result.isValid = false;
-					result.errors.push( this.getMessage( 'layers-validation-fontsize-range',
-						this.validationRules.minFontSize, this.validationRules.maxFontSize ) );
+					result.errors.push(
+						this.getMessage(
+							'layers-validation-fontsize-range',
+							this.validationRules.minFontSize,
+							this.validationRules.maxFontSize
+						)
+					);
 				}
 			}
 		}
@@ -221,11 +232,19 @@
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-strokewidth-invalid' ) );
 			} else {
-				var strokeWidth = parseFloat( layer.strokeWidth );
-				if ( strokeWidth < this.validationRules.minStrokeWidth || strokeWidth > this.validationRules.maxStrokeWidth ) {
+				const strokeWidth = parseFloat( layer.strokeWidth );
+				if (
+					strokeWidth < this.validationRules.minStrokeWidth ||
+					strokeWidth > this.validationRules.maxStrokeWidth
+				) {
 					result.isValid = false;
-					result.errors.push( this.getMessage( 'layers-validation-strokewidth-range',
-						this.validationRules.minStrokeWidth, this.validationRules.maxStrokeWidth ) );
+					result.errors.push(
+						this.getMessage(
+							'layers-validation-strokewidth-range',
+							this.validationRules.minStrokeWidth,
+							this.validationRules.maxStrokeWidth
+						)
+					);
 				}
 			}
 		}
@@ -236,8 +255,11 @@
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-opacity-invalid' ) );
 			} else {
-				var opacity = parseFloat( layer.opacity );
-				if ( opacity < this.validationRules.minOpacity || opacity > this.validationRules.maxOpacity ) {
+				const opacity = parseFloat( layer.opacity );
+				if (
+					opacity < this.validationRules.minOpacity ||
+					opacity > this.validationRules.maxOpacity
+				) {
 					result.isValid = false;
 					result.errors.push( this.getMessage( 'layers-validation-opacity-range',
 						this.validationRules.minOpacity, this.validationRules.maxOpacity ) );
@@ -248,16 +270,24 @@
 		// Sides validation for polygons
 		if ( layer.sides !== undefined ) {
 			// Use parseFloat and modulo instead of Number.isInteger for IE11 compatibility
-			var sidesNum = parseFloat( layer.sides );
+			const sidesNum = parseFloat( layer.sides );
 			if ( !this.isValidNumber( layer.sides ) || ( sidesNum % 1 !== 0 ) ) {
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-sides-invalid' ) );
 			} else {
-				var sides = parseInt( layer.sides );
-				if ( sides < this.validationRules.minSides || sides > this.validationRules.maxSides ) {
+				const sides = parseInt( layer.sides );
+				if (
+					sides < this.validationRules.minSides ||
+					sides > this.validationRules.maxSides
+				) {
 					result.isValid = false;
-					result.errors.push( this.getMessage( 'layers-validation-sides-range',
-						this.validationRules.minSides, this.validationRules.maxSides ) );
+					result.errors.push(
+						this.getMessage(
+							'layers-validation-sides-range',
+							this.validationRules.minSides,
+							this.validationRules.maxSides
+						)
+					);
 				}
 			}
 		}
@@ -268,11 +298,19 @@
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-blurradius-invalid' ) );
 			} else {
-				var blurRadius = parseFloat( layer.blurRadius );
-				if ( blurRadius < this.validationRules.minBlurRadius || blurRadius > this.validationRules.maxBlurRadius ) {
+				const blurRadius = parseFloat( layer.blurRadius );
+				if (
+					blurRadius < this.validationRules.minBlurRadius ||
+					blurRadius > this.validationRules.maxBlurRadius
+				) {
 					result.isValid = false;
-					result.errors.push( this.getMessage( 'layers-validation-blurradius-range',
-						this.validationRules.minBlurRadius, this.validationRules.maxBlurRadius ) );
+					result.errors.push(
+						this.getMessage(
+							'layers-validation-blurradius-range',
+							this.validationRules.minBlurRadius,
+							this.validationRules.maxBlurRadius
+						)
+					);
 				}
 			}
 		}
@@ -283,7 +321,7 @@
 				result.isValid = false;
 				result.errors.push( 'Shadow blur must be a number' );
 			} else {
-				var shadowBlur = parseFloat( layer.shadowBlur );
+				const shadowBlur = parseFloat( layer.shadowBlur );
 				if ( shadowBlur < 0 || shadowBlur > 100 ) {
 					result.isValid = false;
 					result.errors.push( 'Shadow blur must be between 0 and 100' );
@@ -297,7 +335,7 @@
 				result.isValid = false;
 				result.errors.push( 'Shadow offset X must be a number' );
 			} else {
-				var shadowOffsetX = parseFloat( layer.shadowOffsetX );
+				const shadowOffsetX = parseFloat( layer.shadowOffsetX );
 				if ( shadowOffsetX < -100 || shadowOffsetX > 100 ) {
 					result.isValid = false;
 					result.errors.push( 'Shadow offset X must be between -100 and 100' );
@@ -310,7 +348,7 @@
 				result.isValid = false;
 				result.errors.push( 'Shadow offset Y must be a number' );
 			} else {
-				var shadowOffsetY = parseFloat( layer.shadowOffsetY );
+				const shadowOffsetY = parseFloat( layer.shadowOffsetY );
 				if ( shadowOffsetY < -100 || shadowOffsetY > 100 ) {
 					result.isValid = false;
 					result.errors.push( 'Shadow offset Y must be between -100 and 100' );
@@ -324,7 +362,7 @@
 				result.isValid = false;
 				result.errors.push( 'Shadow spread must be a number' );
 			} else {
-				var shadowSpread = parseFloat( layer.shadowSpread );
+				const shadowSpread = parseFloat( layer.shadowSpread );
 				if ( shadowSpread < 0 || shadowSpread > 50 ) {
 					result.isValid = false;
 					result.errors.push( 'Shadow spread must be between 0 and 50' );
@@ -338,7 +376,7 @@
 				result.isValid = false;
 				result.errors.push( 'Arrow size must be a number' );
 			} else {
-				var arrowSize = parseFloat( layer.arrowSize );
+				const arrowSize = parseFloat( layer.arrowSize );
 				if ( arrowSize < 1 || arrowSize > 100 ) {
 					result.isValid = false;
 					result.errors.push( 'Arrow size must be between 1 and 100' );
@@ -350,8 +388,8 @@
 	/**
 	 * Validate text content
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateTextContent = function ( layer, result ) {
 		if ( layer.type === 'text' && layer.text !== undefined ) {
@@ -392,7 +430,7 @@
 
 		// Text alignment validation
 		if ( layer.textAlign !== undefined ) {
-			if ( this.validationRules.validTextAlignments.indexOf( layer.textAlign ) === -1 ) {
+			if ( !this.validationRules.validTextAlignments.includes( layer.textAlign ) ) {
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-textalign-invalid' ) );
 			}
@@ -402,18 +440,17 @@
 	/**
 	 * Validate color values
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateColors = function ( layer, result ) {
-		var colorFields = [ 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor' ];
-		var self = this;
+		const colorFields = [ 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor' ];
 
-		colorFields.forEach( function ( field ) {
+		colorFields.forEach( ( field ) => {
 			if ( layer[ field ] !== undefined ) {
-				if ( !self.isValidColor( layer[ field ] ) ) {
+				if ( !this.isValidColor( layer[ field ] ) ) {
 					result.isValid = false;
-					result.errors.push( self.getMessage( 'layers-validation-color-invalid', field ) );
+					result.errors.push( this.getMessage( 'layers-validation-color-invalid', field ) );
 				}
 			}
 		} );
@@ -422,54 +459,89 @@
 	/**
 	 * Validate points array for path layers
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validatePoints = function ( layer, result ) {
-		if ( layer.points !== undefined ) {
-			if ( !Array.isArray( layer.points ) ) {
+		if ( layer.type === 'star' ) {
+			this.validateStarPointCount( layer, result );
+			return;
+		}
+
+		if ( layer.points === undefined ) {
+			return;
+		}
+
+		if ( !Array.isArray( layer.points ) ) {
+			// Only path (and future freehand types) require coordinate arrays.
+			if ( layer.type === 'path' ) {
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-points-array' ) );
-				return;
 			}
+			return;
+		}
 
-			if ( layer.points.length > this.validationRules.maxPoints ) {
+		if ( layer.points.length > this.validationRules.maxPoints ) {
+			result.isValid = false;
+			result.errors.push( this.getMessage( 'layers-validation-points-too-many', this.validationRules.maxPoints ) );
+			return;
+		}
+
+		layer.points.forEach( ( point, index ) => {
+			if ( !point || typeof point !== 'object' ) {
 				result.isValid = false;
-				result.errors.push( this.getMessage( 'layers-validation-points-too-many', this.validationRules.maxPoints ) );
-				return;
-			}
-
-			var self = this;
-			layer.points.forEach( function ( point, index ) {
-				if ( !point || typeof point !== 'object' ) {
+				result.errors.push( this.getMessage( 'layers-validation-point-invalid', index ) );
+			} else {
+				if ( !this.isValidNumber( point.x ) || !this.isValidNumber( point.y ) ) {
 					result.isValid = false;
-					result.errors.push( self.getMessage( 'layers-validation-point-invalid', index ) );
+					result.errors.push( this.getMessage( 'layers-validation-point-coordinates', index ) );
 				} else {
-					if ( !self.isValidNumber( point.x ) || !self.isValidNumber( point.y ) ) {
+					if ( Math.abs( point.x ) > this.validationRules.maxCoordinate ||
+						Math.abs( point.y ) > this.validationRules.maxCoordinate ) {
 						result.isValid = false;
-						result.errors.push( self.getMessage( 'layers-validation-point-coordinates', index ) );
-					} else {
-						if ( Math.abs( point.x ) > self.validationRules.maxCoordinate ||
-							Math.abs( point.y ) > self.validationRules.maxCoordinate ) {
-							result.isValid = false;
-							result.errors.push( self.getMessage( 'layers-validation-point-too-large', index ) );
-						}
+						result.errors.push( this.getMessage( 'layers-validation-point-too-large', index ) );
 					}
 				}
-			} );
+			}
+		} );
+	};
+
+	LayersValidator.prototype.validateStarPointCount = function ( layer, result ) {
+		if ( layer.points === undefined ) {
+			return;
+		}
+
+		if ( !this.isValidNumber( layer.points ) ) {
+			result.isValid = false;
+			result.errors.push( this.getMessage( 'layers-validation-star-points-invalid' ) );
+			return;
+		}
+
+		const value = parseFloat( layer.points );
+		if ( value % 1 !== 0 ) {
+			result.isValid = false;
+			result.errors.push( this.getMessage( 'layers-validation-star-points-invalid' ) );
+			return;
+		}
+
+		const min = this.validationRules.minStarPoints;
+		const max = this.validationRules.maxStarPoints;
+		if ( value < min || value > max ) {
+			result.isValid = false;
+			result.errors.push( this.getMessage( 'layers-validation-star-points-range', min, max ) );
 		}
 	};
 
 	/**
 	 * Validate type-specific properties
 	 *
-	 * @param layer
-	 * @param result
+	 * @param {Object} layer
+	 * @param {Object} result
 	 */
 	LayersValidator.prototype.validateTypeSpecificProperties = function ( layer, result ) {
 		// Arrow style validation
 		if ( layer.type === 'arrow' && layer.arrowStyle !== undefined ) {
-			if ( this.validationRules.validArrowStyles.indexOf( layer.arrowStyle ) === -1 ) {
+			if ( !this.validationRules.validArrowStyles.includes( layer.arrowStyle ) ) {
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-arrowstyle-invalid' ) );
 			}
@@ -477,8 +549,8 @@
 
 		// Blend mode validation
 		if ( layer.blendMode !== undefined || layer.blend !== undefined ) {
-			var blendValue = layer.blendMode || layer.blend;
-			if ( this.validationRules.validBlendModes.indexOf( blendValue ) === -1 ) {
+			const blendValue = layer.blendMode || layer.blend;
+			if ( !this.validationRules.validBlendModes.includes( blendValue ) ) {
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-blendmode-invalid' ) );
 			}
@@ -488,11 +560,12 @@
 	/**
 	 * Validate a complete layers array (multiple layers)
 	 *
-	 * @param layers
-	 * @param maxLayers
+	 * @param {Array} layers
+	 * @param {number} maxLayers
+	 * @return {Object} Validation result with isValid and errors properties
 	 */
 	LayersValidator.prototype.validateLayers = function ( layers, maxLayers ) {
-		var result = {
+		const result = {
 			isValid: true,
 			errors: [],
 			warnings: [],
@@ -513,25 +586,24 @@
 		}
 
 		// Validate each layer
-		var self = this;
-		var layerIds = [];
-		layers.forEach( function ( layer, index ) {
-			var layerResult = self.validateLayer( layer );
+		const layerIds = [];
+		layers.forEach( ( layer, index ) => {
+			const layerResult = this.validateLayer( layer );
 			result.layerResults.push( layerResult );
 
 			if ( !layerResult.isValid ) {
 				result.isValid = false;
 				// Add layer index to error messages
-				layerResult.errors.forEach( function ( error ) {
-					result.errors.push( self.getMessage( 'layers-validation-layer-error', index + 1, error ) );
+				layerResult.errors.forEach( ( error ) => {
+					result.errors.push( this.getMessage( 'layers-validation-layer-error', index + 1, error ) );
 				} );
 			}
 
 			// Check for duplicate IDs
 			if ( layer.id ) {
-				if ( layerIds.indexOf( layer.id ) !== -1 ) {
+				if ( layerIds.includes( layer.id ) ) {
 					result.isValid = false;
-					result.errors.push( self.getMessage( 'layers-validation-duplicate-id', layer.id ) );
+					result.errors.push( this.getMessage( 'layers-validation-duplicate-id', layer.id ) );
 				} else {
 					layerIds.push( layer.id );
 				}
@@ -544,7 +616,8 @@
 	/**
 	 * Helper function to check if a value is a valid number
 	 *
-	 * @param value
+	 * @param {*} value
+	 * @return {boolean} True if value is a valid number
 	 */
 	LayersValidator.prototype.isValidNumber = function ( value ) {
 		return typeof value === 'number' && !isNaN( value ) && isFinite( value );
@@ -553,7 +626,8 @@
 	/**
 	 * Helper function to validate color values
 	 *
-	 * @param color
+	 * @param {string} color
+	 * @return {boolean} True if color is valid
 	 */
 	LayersValidator.prototype.isValidColor = function ( color ) {
 		if ( typeof color !== 'string' ) {
@@ -572,10 +646,13 @@
 
 		// Allow rgb/rgba with strict validation
 		if ( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/.test( color ) ) {
-			var matches = color.match( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
+			const matches = color.match( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
 			// Validate RGB values are in 0-255 range
-			for ( var i = 1; i <= 3; i++ ) {
-				if ( matches[ i ] && ( parseInt( matches[ i ] ) < 0 || parseInt( matches[ i ] ) > 255 ) ) {
+			for ( let i = 1; i <= 3; i++ ) {
+				if (
+					matches[ i ] &&
+					( parseInt( matches[ i ] ) < 0 || parseInt( matches[ i ] ) > 255 )
+				) {
 					return false;
 				}
 			}
@@ -584,34 +661,44 @@
 
 		// Allow HSL/HSLA with strict validation
 		if ( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/.test( color ) ) {
-			var hslMatches = color.match( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
+			const hslMatches = color.match( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
 			// Validate HSL values
-			if ( hslMatches[ 1 ] && ( parseInt( hslMatches[ 1 ] ) < 0 || parseInt( hslMatches[ 1 ] ) > 360 ) ) {
+			if (
+				hslMatches[ 1 ] &&
+				( parseInt( hslMatches[ 1 ] ) < 0 || parseInt( hslMatches[ 1 ] ) > 360 )
+			) {
 				return false;
 			}
-			if ( hslMatches[ 2 ] && ( parseInt( hslMatches[ 2 ] ) < 0 || parseInt( hslMatches[ 2 ] ) > 100 ) ) {
+			if (
+				hslMatches[ 2 ] &&
+				( parseInt( hslMatches[ 2 ] ) < 0 || parseInt( hslMatches[ 2 ] ) > 100 )
+			) {
 				return false;
 			}
-			if ( hslMatches[ 3 ] && ( parseInt( hslMatches[ 3 ] ) < 0 || parseInt( hslMatches[ 3 ] ) > 100 ) ) {
+			if (
+				hslMatches[ 3 ] &&
+				( parseInt( hslMatches[ 3 ] ) < 0 || parseInt( hslMatches[ 3 ] ) > 100 )
+			) {
 				return false;
 			}
 			return true;
 		}
 
 		// Strict whitelist of named colors
-		var safeColors = [
+		const safeColors = [
 			'transparent', 'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange',
 			'purple', 'pink', 'gray', 'grey', 'brown', 'cyan', 'magenta', 'lime',
 			'navy', 'maroon', 'olive', 'teal', 'silver', 'aqua', 'fuchsia'
 		];
 
-		return safeColors.indexOf( color.toLowerCase() ) !== -1;
+		return safeColors.includes( color.toLowerCase() );
 	};
 
 	/**
 	 * Check for potential script injection in text content
 	 *
-	 * @param text
+	 * @param {string} text
+	 * @return {boolean} True if text contains potential script injection
 	 */
 	LayersValidator.prototype.containsScriptInjection = function ( text ) {
 		return /<script|javascript:|data:|vbscript:|on\w+\s*=/i.test( text );
@@ -622,20 +709,21 @@
 	 *
 	 * @param key
 	 */
+	/**
+	 * Get internationalized message with parameter support
+	 *
+	 * Delegates to MessageHelper for consistent i18n handling.
+	 * Falls back to built-in English messages if MediaWiki i18n unavailable.
+	 *
+	 * @param {string} key - Message key (e.g., 'layers-validation-layer-invalid')
+	 * @param {...*} args - Message parameters for substitution ($1, $2, etc.)
+	 * @return {string} Localized message
+	 */
 	LayersValidator.prototype.getMessage = function ( key ) {
-		var args = Array.prototype.slice.call( arguments, 1 );
+		const args = Array.prototype.slice.call( arguments, 1 );
 
-		// Try MediaWiki message system
-		if ( window.mw && window.mw.message ) {
-			var msg = mw.message( key );
-			if ( args.length > 0 ) {
-				return msg.params( args ).text();
-			}
-			return msg.text();
-		}
-
-		// Fallback messages in English
-		var fallbacks = {
+		// Fallback messages in English (used when i18n unavailable)
+		const fallbacks = {
 			'layers-validation-layer-invalid': 'Invalid layer object',
 			'layers-validation-id-required': 'Layer ID is required',
 			'layers-validation-type-required': 'Layer type is required',
@@ -676,11 +764,35 @@
 			'layers-validation-duplicate-id': 'Duplicate layer ID: $1'
 		};
 
-		var message = fallbacks[ key ] || key;
+		const fallback = fallbacks[ key ] || key;
 
-		// Simple parameter substitution
+		// Use MessageHelper if available (handles mw.message delegation)
+		if ( window.layersMessages && typeof window.layersMessages.getWithParams === 'function' ) {
+			if ( args.length > 0 ) {
+				return window.layersMessages.getWithParams.apply( window.layersMessages, [ key ].concat( args ) ) || fallback;
+			}
+			return window.layersMessages.get( key, fallback );
+		}
+
+		// Direct mw.message fallback (when MessageHelper not loaded yet)
+		if ( window.mw && window.mw.message ) {
+			try {
+				const msg = mw.message( key );
+				if ( msg && typeof msg.text === 'function' ) {
+					if ( args.length > 0 ) {
+						return msg.params( args ).text();
+					}
+					return msg.text();
+				}
+			} catch ( e ) {
+				// Fall through to fallback substitution
+			}
+		}
+
+		// Manual parameter substitution for fallback messages
+		let message = fallback;
 		if ( args.length > 0 ) {
-			args.forEach( function ( arg, index ) {
+			args.forEach( ( arg, index ) => {
 				message = message.replace( '$' + ( index + 1 ), String( arg ) );
 			} );
 		}
@@ -691,8 +803,8 @@
 	/**
 	 * Show validation errors to the user
 	 *
-	 * @param errors Array of error messages
-	 * @param context Context information (unused)
+	 * @param {Array<string>} errors Array of error messages
+	 * @param {Object} [context] Context information (unused)
 	 */
 	// eslint-disable-next-line no-unused-vars
 	LayersValidator.prototype.showValidationErrors = function ( errors, context ) {
@@ -700,7 +812,7 @@
 			return;
 		}
 
-		var message = 'Validation errors:\n' + errors.join( '\n' );
+		const message = 'Validation errors:\n' + errors.join( '\n' );
 
 		// Use MediaWiki notification if available
 		if ( window.mw && window.mw.notify ) {
@@ -709,25 +821,23 @@
 			// Use MediaWiki logging as fallback
 			mw.log.error( 'Layers validation errors:', errors );
 		} else {
-			// Last resort: log to console instead of alert
-			// eslint-disable-next-line no-console
-			console.error( 'Layers validation errors:', errors );
+			// Console logging disabled - rely on MediaWiki logging only
 		}
 	};
 
 	/**
 	 * Create input validation helper for real-time validation
 	 *
-	 * @param input
-	 * @param validationType
-	 * @param options
+	 * @param {*} input
+	 * @param {string} validationType
+	 * @param {Object} options
+	 * @return {Object} Input validator with enable and disable methods
 	 */
 	LayersValidator.prototype.createInputValidator = function ( input, validationType, options ) {
 		options = options || {};
-		var self = this;
-		var errorElement = null;
+		let errorElement = null;
 
-		function showError( message ) {
+		const showError = ( message ) => {
 			// Remove existing error
 			hideError();
 
@@ -735,7 +845,10 @@
 			errorElement = document.createElement( 'div' );
 			errorElement.className = 'layers-validation-error';
 			errorElement.textContent = message;
-			errorElement.style.cssText = 'color: #d63638; font-size: 12px; margin-top: 2px;';
+			// Apply minimal inline styles safely without cssText
+			errorElement.style.color = '#d63638';
+			errorElement.style.fontSize = '12px';
+			errorElement.style.marginTop = '2px';
 
 			// Insert after input
 			if ( input.parentNode ) {
@@ -744,28 +857,28 @@
 
 			// Add error styling to input
 			input.style.borderColor = '#d63638';
-		}
+		};
 
-		function hideError() {
+		const hideError = () => {
 			if ( errorElement && errorElement.parentNode ) {
 				errorElement.parentNode.removeChild( errorElement );
 				errorElement = null;
 			}
 			input.style.borderColor = '';
-		}
+		};
 
-		function validate() {
-			var value = input.value;
-			var isValid = true;
-			var errorMessage = '';
+		const validate = () => {
+			const value = input.value;
+			let isValid = true;
+			let errorMessage = '';
 
 			switch ( validationType ) {
 				case 'number':
-					if ( value && !self.isValidNumber( parseFloat( value ) ) ) {
+					if ( value && !this.isValidNumber( parseFloat( value ) ) ) {
 						isValid = false;
 						errorMessage = 'Must be a valid number';
 					} else if ( value ) {
-						var num = parseFloat( value );
+						const num = parseFloat( value );
 						if ( options.min !== undefined && num < options.min ) {
 							isValid = false;
 							errorMessage = 'Minimum value: ' + options.min;
@@ -778,18 +891,21 @@
 					break;
 
 				case 'color':
-					if ( value && !self.isValidColor( value ) ) {
+					if ( value && !this.isValidColor( value ) ) {
 						isValid = false;
 						errorMessage = 'Invalid color format';
 					}
 					break;
 
 				case 'text':
-					if ( value && value.length > ( options.maxLength || self.validationRules.maxTextLength ) ) {
+					if (
+						value &&
+						value.length > ( options.maxLength || this.validationRules.maxTextLength )
+					) {
 						isValid = false;
-						errorMessage = 'Text too long (max: ' + ( options.maxLength || self.validationRules.maxTextLength ) + ')';
+						errorMessage = 'Text too long (max: ' + ( options.maxLength || this.validationRules.maxTextLength ) + ')';
 					}
-					if ( value && self.containsScriptInjection( value ) ) {
+					if ( value && this.containsScriptInjection( value ) ) {
 						isValid = false;
 						errorMessage = 'Text contains unsafe content';
 					}
@@ -803,7 +919,7 @@
 			}
 
 			return isValid;
-		}
+		};
 
 		// Add event listeners
 		input.addEventListener( 'input', validate );
@@ -816,7 +932,7 @@
 
 		return {
 			validate: validate,
-			destroy: function () {
+			destroy: () => {
 				hideError();
 				input.removeEventListener( 'input', validate );
 				input.removeEventListener( 'blur', validate );
@@ -824,7 +940,14 @@
 		};
 	};
 
-	// Export LayersValidator to global scope
-	window.LayersValidator = LayersValidator;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Validation = window.Layers.Validation || {};
+		window.Layers.Validation.LayersValidator = LayersValidator;
+
+		// Backward compatibility - direct window export
+		window.LayersValidator = LayersValidator;
+	}
 
 }() );

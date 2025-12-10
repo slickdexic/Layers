@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Custom file transformation for layered images
  * Integrates with MediaWiki's transform pipeline
@@ -13,7 +14,6 @@ use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 
 class LayersFileTransform {
-
 	/**
 	 * Transform hook for layered images
 	 * Called by MediaWiki's file transform system
@@ -44,7 +44,6 @@ class LayersFileTransform {
 			$thumb = new LayeredThumbnail( $file, $path, $params );
 			// We handled it
 			return false;
-
 		} catch ( Exception $e ) {
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );

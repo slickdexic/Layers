@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Error handling and logging for Layers extension
  *
@@ -11,13 +12,79 @@ namespace MediaWiki\Extension\Layers\Logging;
 use MediaWiki\Logger\LoggerFactory;
 use Psr\Log\LoggerInterface;
 
-class LayersLogger {
-
+class LayersLogger implements LoggerInterface {
 	private LoggerInterface $logger;
 
 	public function __construct() {
 		$this->logger = LoggerFactory::getInstance( 'Layers' );
 	}
+
+	// PSR-3 LoggerInterface implementation - delegate to internal logger
+
+	/**
+	 * @inheritDoc
+	 */
+	public function emergency( $message, array $context = [] ): void {
+		$this->logger->emergency( $message, $context );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function alert( $message, array $context = [] ): void {
+		$this->logger->alert( $message, $context );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function critical( $message, array $context = [] ): void {
+		$this->logger->critical( $message, $context );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function error( $message, array $context = [] ): void {
+		$this->logger->error( $message, $context );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function warning( $message, array $context = [] ): void {
+		$this->logger->warning( $message, $context );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function notice( $message, array $context = [] ): void {
+		$this->logger->notice( $message, $context );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function info( $message, array $context = [] ): void {
+		$this->logger->info( $message, $context );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function debug( $message, array $context = [] ): void {
+		$this->logger->debug( $message, $context );
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function log( $level, $message, array $context = [] ): void {
+		$this->logger->log( $level, $message, $context );
+	}
+
+	// Custom logging methods for Layers extension
 
 	/**
 	 * Log security-related events

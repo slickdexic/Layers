@@ -1,1334 +1,1231 @@
 /**
- * Main Layers Editor Controller
- * Manages the overall editing interface and coordinates between components
+ * Main Layers Editor - manages the overall editing interface and coordinates between components
+ *
+ * This is the orchestrator class that coordinates UI managers, canvas, toolbar, and layer panel.
+ * Extracted modules handle specific concerns:
+ * - EditorBootstrap: Initialization, hook handling, global error handlers
+ * - RevisionManager: Revision and named layer set management
+ * - DialogManager: Modal dialogs
  */
 ( function () {
 	'use strict';
 
 	/**
-	 * LayersEditor main class
+	 * Main Layers Editor class for MediaWiki Layers extension
 	 *
-	 * @class
-	 * @param {Object} config Configuration object
-	 * @param {string} config.filename The name of the file being edited.
-	 * @param {string} config.imageUrl The direct URL to the image being edited.
+	 * @class LayersEditor
+	 * @param {Object} config - Configuration object
+	 * @param {string} config.filename - Name of the file being edited
+	 * @param {string} config.imageUrl - URL of the base image
+	 * @param {HTMLElement} config.container - Container element for the editor
 	 */
 	function LayersEditor( config ) {
+		// Validate dependencies using EditorBootstrap
+		if ( window.EditorBootstrap && window.EditorBootstrap.validateDependencies ) {
+			window.EditorBootstrap.validateDependencies();
+		}
+
 		this.config = config || {};
 		this.filename = this.config.filename;
-		this.containerElement = this.config.container; // Optional legacy container
+		this.containerElement = this.config.container;
 		this.canvasManager = null;
 		this.layerPanel = null;
 		this.toolbar = null;
-		this.layers = [];
-		this.allLayerSets = [];
-		this.currentLayerSetId = null;
-		this.currentTool = 'pointer';
-		this.isDirty = false;
-		// Debug mode - only enable console logging when explicitly set
-		this.debug = this.config.debug || false;
+
+		// Initialize EventTracker for memory-safe event listener management
+		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+		this.isDestroyed = false;
+
+		// Debug mode - check MediaWiki config first, then fallback to config
+		this.debug = mw.config.get( 'wgLayersDebug' ) || this.config.debug || false;
+
+		this.debugLog( '[LayersEditor] Constructor called with config:', this.config );
+
+		// Set image URL from config
+		this.imageUrl = this.config.imageUrl;
+
+		// Initialize module registry
+		this.initializeRegistry();
+
+		// Initialize managers through registry
+		this.initializeManagers();
+
+		// Initialize state through StateManager
+		this.initializeState();
+
+		// BRIDGE: Provide backward-compatible editor.layers property
+		this.defineLegacyLayersProperty();
+
+		// Initialize HistoryManager (must be after layers property is defined)
+		this.historyManager = this.registry.get( 'HistoryManager' );
+
+		// Initialize extracted managers
+		this.initializeExtractedManagers();
 
 		this.init();
 	}
 
 	/**
-	 * Debug logging utility that only logs when debug mode is enabled
-	 *
+	 * Initialize the module registry
+	 * @private
+	 */
+	LayersEditor.prototype.initializeRegistry = function () {
+		// Prefer layersRegistry; layersModuleRegistry is deprecated
+		this.registry = window.layersRegistry;
+		if ( !this.registry && window.layersModuleRegistry ) {
+			if ( this.debug && typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+				mw.log.warn( '[LayersEditor] window.layersModuleRegistry is deprecated. Use window.layersRegistry instead.' );
+			}
+			this.registry = window.layersModuleRegistry;
+		}
+		if ( !this.registry ) {
+			this.registry = this.createFallbackRegistry();
+		}
+
+		// Register manager factories with context
+		if ( this.registry.register ) {
+			this.registry.register( 'UIManager', () => new window.UIManager( this ), [] );
+			this.registry.register( 'EventManager', () => new window.EventManager( this ), [] );
+			this.registry.register( 'APIManager', () => new window.APIManager( this ), [] );
+			this.registry.register( 'ValidationManager', () => new window.ValidationManager( this ), [] );
+			this.registry.register( 'StateManager', () => new window.StateManager( this ), [] );
+			this.registry.register( 'HistoryManager', () => new window.HistoryManager( this ), [] );
+		}
+	};
+
+	/**
+	 * Create a fallback registry when none is available
+	 * @return {Object} Fallback registry
+	 * @private
+	 */
+	LayersEditor.prototype.createFallbackRegistry = function () {
+		return {
+			get: ( name ) => {
+				const constructors = {
+					UIManager: () => ( typeof window.UIManager === 'function' ) ? new window.UIManager( this ) : this.createStubUIManager(),
+					EventManager: () => ( typeof window.EventManager === 'function' ) ? new window.EventManager( this ) : { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} },
+					APIManager: () => ( typeof window.APIManager === 'function' ) ? new window.APIManager( this ) : { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} },
+					ValidationManager: () => ( typeof window.ValidationManager === 'function' ) ? new window.ValidationManager( this ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
+					StateManager: () => ( typeof window.StateManager === 'function' ) ? new window.StateManager( this ) : this.createStubStateManager(),
+					HistoryManager: () => ( typeof window.HistoryManager === 'function' ) ? new window.HistoryManager( this ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
+					Toolbar: () => ( typeof window.Toolbar === 'function' ) ? new window.Toolbar( { container: ( this.uiManager && this.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {} },
+					LayerPanel: () => ( typeof window.LayerPanel === 'function' ) ? new window.LayerPanel( { container: ( this.uiManager && this.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
+					CanvasManager: () => ( typeof window.CanvasManager === 'function' ) ? new window.CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
+				};
+				if ( constructors[ name ] ) {
+					return constructors[ name ]();
+				}
+				throw new Error( `Module ${name} not found` );
+			}
+		};
+	};
+
+	/**
+	 * Create a stub UI manager
+	 * @return {Object} Stub UI manager
+	 * @private
+	 */
+	LayersEditor.prototype.createStubUIManager = function () {
+		const stub = {};
+		stub.container = document.createElement( 'div' );
+		stub.toolbarContainer = document.createElement( 'div' );
+		stub.layerPanelContainer = document.createElement( 'div' );
+		stub.canvasContainer = document.createElement( 'div' );
+		stub.createInterface = function () {};
+		stub.destroy = function () {};
+		stub.showSpinner = function () {};
+		stub.hideSpinner = function () {};
+		stub.showBrowserCompatibilityWarning = function () {};
+		return stub;
+	};
+
+	/**
+	 * Create a stub state manager
+	 * @return {Object} Stub state manager
+	 * @private
+	 */
+	LayersEditor.prototype.createStubStateManager = function () {
+		const store = {};
+		return {
+			set: function ( k, v ) { store[ k ] = v; },
+			get: function ( k ) { return store[ k ]; },
+			subscribe: function () {},
+			setDirty: function () {},
+			isDirty: function () { return false; },
+			getLayers: function () { return store.layers || []; },
+			destroy: function () {}
+		};
+	};
+
+	/**
+	 * Initialize managers through registry
+	 * @private
+	 */
+	LayersEditor.prototype.initializeManagers = function () {
+		this.uiManager = this.registry.get( 'UIManager' );
+		this.eventManager = this.registry.get( 'EventManager' );
+		this.apiManager = this.registry.get( 'APIManager' );
+		this.validationManager = this.registry.get( 'ValidationManager' );
+		this.stateManager = this.registry.get( 'StateManager' );
+
+		// Ensure state manager is valid
+		if ( !this.stateManager || typeof this.stateManager.set !== 'function' ) {
+			this.stateManager = this.createStubStateManager();
+		}
+	};
+
+	/**
+	 * Initialize state through StateManager
+	 * @private
+	 */
+	LayersEditor.prototype.initializeState = function () {
+		if ( this.stateManager && typeof this.stateManager.set === 'function' ) {
+			this.stateManager.set( 'layers', [] );
+			this.stateManager.set( 'selectedLayerIds', [] );
+			this.stateManager.set( 'isDirty', false );
+			this.stateManager.set( 'currentTool', 'pointer' );
+			this.stateManager.set( 'baseWidth', null );
+			this.stateManager.set( 'baseHeight', null );
+			this.stateManager.set( 'allLayerSets', [] );
+			this.stateManager.set( 'currentLayerSetId', null );
+			// Named Layer Sets state
+			this.stateManager.set( 'namedSets', [] );
+			this.stateManager.set( 'currentSetName', 'default' );
+		}
+	};
+
+	/**
+	 * Define legacy layers property for backward compatibility
+	 * @private
+	 */
+	LayersEditor.prototype.defineLegacyLayersProperty = function () {
+		Object.defineProperty( this, 'layers', {
+			get: function () {
+				return this.stateManager.getLayers();
+			}.bind( this ),
+			set: function ( layers ) {
+				if ( Array.isArray( layers ) ) {
+					this.stateManager.set( 'layers', layers );
+				}
+			}.bind( this ),
+			enumerable: true,
+			configurable: true
+		} );
+	};
+
+	/**
+	 * Initialize extracted managers (RevisionManager, DialogManager)
+	 * @private
+	 */
+	LayersEditor.prototype.initializeExtractedManagers = function () {
+		// Initialize RevisionManager
+		if ( typeof window.RevisionManager === 'function' ) {
+			this.revisionManager = new window.RevisionManager( { editor: this } );
+		}
+
+		// Initialize DialogManager
+		if ( typeof window.DialogManager === 'function' ) {
+			this.dialogManager = new window.DialogManager( { editor: this } );
+		}
+	};
+
+	/**
+	 * Debug logging utility
 	 * @param {...*} args Arguments to log
 	 */
 	LayersEditor.prototype.debugLog = function () {
-		if ( this.debug && window.console && console.log ) {
-			// eslint-disable-next-line no-console
-			console.log.apply( console, arguments );
+		if ( this.debug && mw.log ) {
+			const sanitizedArgs = Array.prototype.slice.call( arguments )
+				.map( ( arg ) => this.sanitizeLogMessage( arg ) );
+			mw.log.apply( mw, sanitizedArgs );
 		}
 	};
 
 	/**
 	 * Error logging utility
-	 *
 	 * @param {...*} args Arguments to log
 	 */
 	LayersEditor.prototype.errorLog = function () {
-		if ( window.console && console.error ) {
-			// eslint-disable-next-line no-console
-			console.error.apply( console, arguments );
+		const sanitizedArgs = Array.prototype.slice.call( arguments )
+			.map( ( arg ) => this.sanitizeLogMessage( arg ) );
+		if ( mw.log ) {
+			mw.log.error.apply( mw.log, sanitizedArgs );
 		}
 	};
 
+	/**
+	 * Sanitize log messages to prevent sensitive information disclosure
+	 * @param {*} message The message to sanitize
+	 * @return {*} Sanitized message
+	 */
+	LayersEditor.prototype.sanitizeLogMessage = function ( message ) {
+		if ( typeof message !== 'string' ) {
+			if ( typeof message === 'object' && message !== null ) {
+				const safeKeys = [ 'type', 'action', 'status', 'tool', 'layer', 'count', 'x', 'y', 'width', 'height' ];
+				const obj = {};
+				for ( const key in message ) {
+					if ( Object.prototype.hasOwnProperty.call( message, key ) ) {
+						obj[ key ] = safeKeys.includes( key ) ? message[ key ] : '[FILTERED]';
+					}
+				}
+				return obj;
+			}
+			return message;
+		}
+
+		let result = String( message );
+		result = result.replace( /[a-zA-Z0-9+/=]{20,}/g, '[TOKEN]' );
+		result = result.replace( /[a-fA-F0-9]{16,}/g, '[HEX]' );
+		result = result.replace( /[A-Za-z]:[\\/][\w\s\\.-]*/g, '[PATH]' );
+		result = result.replace( /\/[\w\s.-]+/g, '[PATH]' );
+		result = result.replace( /https?:\/\/[^\s'"<>&]*/gi, '[URL]' );
+		result = result.replace( /\w+:\/\/[^\s'"<>&]*/gi, '[CONNECTION]' );
+		result = result.replace( /\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[IP]' );
+		result = result.replace( /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]' );
+
+		if ( result.length > 200 ) {
+			result = result.slice( 0, 200 ) + '[TRUNCATED]';
+		}
+
+		return result;
+	};
+
+	/**
+	 * Render layers on canvas (bridge method)
+	 * @param {Array} layers Optional array of layers to render
+	 */
+	LayersEditor.prototype.renderLayers = function ( layers ) {
+		if ( this.canvasManager && typeof this.canvasManager.renderLayers === 'function' ) {
+			this.canvasManager.renderLayers( layers || this.stateManager.getLayers() );
+		}
+	};
+
+	/**
+	 * Check if editor has unsaved changes
+	 * @return {boolean} True if there are unsaved changes
+	 */
+	LayersEditor.prototype.isDirty = function () {
+		return this.stateManager.isDirty();
+	};
+
+	/**
+	 * Mark editor as having unsaved changes
+	 */
+	LayersEditor.prototype.markDirty = function () {
+		this.stateManager.setDirty( true );
+	};
+
+	/**
+	 * Mark editor as clean (no unsaved changes)
+	 */
+	LayersEditor.prototype.markClean = function () {
+		this.stateManager.setDirty( false );
+	};
+
+	/**
+	 * Undo last action
+	 * @return {boolean} True if undo was successful
+	 */
+	LayersEditor.prototype.undo = function () {
+		if ( this.historyManager && typeof this.historyManager.undo === 'function' ) {
+			return this.historyManager.undo();
+		}
+		return false;
+	};
+
+	/**
+	 * Redo last undone action
+	 * @return {boolean} True if redo was successful
+	 */
+	LayersEditor.prototype.redo = function () {
+		if ( this.historyManager && typeof this.historyManager.redo === 'function' ) {
+			return this.historyManager.redo();
+		}
+		return false;
+	};
+
+	/**
+	 * Initialize the editor
+	 */
 	LayersEditor.prototype.init = function () {
-		// Add immediate visual feedback
 		document.title = '🔄 Layers Editor Loading...';
+		this.debugLog( '[LayersEditor] init() method called' );
 
 		// Check browser compatibility first
-		if ( !this.checkBrowserCompatibility() ) {
-			this.showBrowserCompatibilityWarning();
+		if ( !this.validationManager.checkBrowserCompatibility() ) {
+			this.uiManager.showBrowserCompatibilityWarning();
 			return;
 		}
 
 		// Create the main editor interface
-		this.createInterface();
+		this.uiManager.createInterface();
+		this.debugLog( '[LayersEditor] UI Manager created interface' );
 
-		// Initialize undo/redo system
-		this.undoStack = [];
-		this.redoStack = [];
-		this.maxUndoSteps = 50;
+		// Register and initialize UI components
+		this.initializeUIComponents();
 
-		// Wait for all dependencies to be available, then initialize components
-		this.waitForDependencies();
-	};
-
-	/**
-	 * Check if the browser supports required features
-	 *
-	 * @return {boolean} True if browser is compatible
-	 */
-	LayersEditor.prototype.checkBrowserCompatibility = function () {
-		// Check for essential APIs
-		var requiredFeatures = [
-			'HTMLCanvasElement' in window,
-			'JSON' in window,
-			'addEventListener' in document,
-			'querySelector' in document,
-			'FileReader' in window,
-			'Blob' in window
-		];
-
-		// Check for Canvas 2D context support
-		if ( window.HTMLCanvasElement ) {
-			try {
-				var testCanvas = document.createElement( 'canvas' );
-				var ctx = testCanvas.getContext( '2d' );
-				requiredFeatures.push( !!ctx );
-			} catch ( e ) {
-				requiredFeatures.push( false );
-			}
-		}
-
-		// Check if all required features are available
-		return requiredFeatures.every( function ( feature ) {
-			return feature === true;
-		} );
-	};
-
-	/**
-	 * Show browser compatibility warning
-	 */
-	LayersEditor.prototype.showBrowserCompatibilityWarning = function () {
-		var message = mw.message ?
-			mw.message( 'layers-browser-compatibility' ).text() :
-			'Your browser may not support all layer features';
-
-		if ( window.mw && window.mw.notify ) {
-			mw.notify( message, { type: 'warn', autoHide: false } );
-		} else {
-			// Fallback notification for very old browsers
-			// eslint-disable-next-line no-alert
-			alert( message );
-		}
-
-		// Try to show a basic interface anyway
-		this.createBasicInterface();
-	};
-
-	/**
-	 * Create a basic interface for unsupported browsers
-	 */
-	LayersEditor.prototype.createBasicInterface = function () {
-		this.container = document.createElement( 'div' );
-		this.container.className = 'layers-editor layers-editor-basic';
-
-		var wrap = document.createElement( 'div' );
-		wrap.className = 'layers-unsupported';
-
-		var h3 = document.createElement( 'h3' );
-		h3.textContent = 'Browser Not Fully Supported';
-		wrap.appendChild( h3 );
-
-		var p1 = document.createElement( 'p' );
-		p1.textContent = 'The Layers editor requires a modern browser with Canvas support.';
-		wrap.appendChild( p1 );
-
-		var p2 = document.createElement( 'p' );
-		p2.textContent = 'Please consider upgrading your browser for the full experience.';
-		wrap.appendChild( p2 );
-
-		var closeBtn = document.createElement( 'button' );
-		closeBtn.type = 'button';
-		closeBtn.textContent = 'Close';
-		closeBtn.addEventListener( 'click', function () {
-			if ( wrap && wrap.parentNode ) {
-				wrap.parentNode.style.display = 'none';
-			}
-		} );
-		wrap.appendChild( closeBtn );
-
-		this.container.appendChild( wrap );
-		document.body.appendChild( this.container );
-	};
-
-	LayersEditor.prototype.waitForDependencies = function () {
-		var self = this;
-		var maxAttempts = 50; // Wait up to 5 seconds
-		var attempt = 0;
-
-		function checkDependencies() {
-			attempt++;
-
-			// Log what we have available for debugging
-			if ( window.mw && window.mw.log ) {
-				mw.log( 'Layers: Dependency check attempt ' + attempt );
-				mw.log( 'Layers: CanvasManager available:', !!window.CanvasManager );
-				mw.log( 'Layers: LayerPanel available:', !!window.LayerPanel );
-				mw.log( 'Layers: Toolbar available:', !!window.Toolbar );
-			}
-
-			if ( window.CanvasManager && window.LayerPanel && window.Toolbar ) {
-				// Use MediaWiki logging if available
-				if ( window.mw && window.mw.log ) {
-					mw.log( 'Layers: All dependencies loaded, initializing components' );
-				}
-				self.initializeComponents();
-			} else if ( attempt < maxAttempts ) {
-				setTimeout( checkDependencies, 100 );
-			} else {
-				var missing = [];
-				if ( !window.CanvasManager ) {
-					missing.push( 'CanvasManager' );
-				}
-				if ( !window.LayerPanel ) {
-					missing.push( 'LayerPanel' );
-				}
-				if ( !window.Toolbar ) {
-					missing.push( 'Toolbar' );
-				}
-				if ( window.mw && window.mw.log ) {
-					mw.log.error( 'Layers: Missing dependencies after 5 seconds: ' + missing.join( ', ' ) );
-				}
-				// Do not initialize if core dependencies failed to load
-				self.showError( ( mw.message ? mw.message( 'layers-error-init' ).text() : 'Failed to initialize Layers editor' ) + ' (' + missing.join( ', ' ) + ')' );
-			}
-		}
-
-		checkDependencies();
-	};
-
-	LayersEditor.prototype.initializeComponents = function () {
-		// Initialize components
-		try {
-			if ( window.mw && window.mw.log ) {
-				mw.log( 'Layers: Initializing components...' );
-				mw.log( 'Layers: Canvas container:', this.$canvasContainer.get( 0 ) );
-				mw.log( 'Layers: Layer panel container:', this.$layerPanel.get( 0 ) );
-				mw.log( 'Layers: Toolbar container:', this.$toolbar.get( 0 ) );
-			}
-
-			// Check for required dependencies
-			if ( !window.CanvasManager ) {
-				throw new Error( 'CanvasManager not available' );
-			}
-			if ( !window.LayerPanel ) {
-				throw new Error( 'LayerPanel not available' );
-			}
-			if ( !window.Toolbar ) {
-				throw new Error( 'Toolbar not available' );
-			}
-
-			// Get the parent image URL
-			var parentImageUrl = this.getParentImageUrl();
-			if ( window.mw && window.mw.log ) {
-				mw.log( 'Layers: Parent image URL:', parentImageUrl );
-			}
-
-			this.canvasManager = new window.CanvasManager( {
-				container: this.$canvasContainer.get( 0 ),
+		// Initialize LayerSetManager if available
+		if ( typeof window.LayerSetManager === 'function' ) {
+			this.layerSetManager = new window.LayerSetManager( {
 				editor: this,
-				backgroundImageUrl: parentImageUrl
+				stateManager: this.stateManager,
+				apiManager: this.apiManager,
+				uiManager: this.uiManager,
+				debug: this.debug
 			} );
-
-			this.layerPanel = new window.LayerPanel( {
-				container: this.$layerPanel.get( 0 ),
-				editor: this,
-				inspectorContainer: this.inspectorContainer
-			} );
-
-			this.toolbar = new window.Toolbar( {
-				container: this.$toolbar.get( 0 ),
-				editor: this
-			} );
-
-			if ( window.mw && window.mw.log ) {
-				mw.log( 'Layers: Editor components initialized successfully' );
-				mw.log( 'Layers: CanvasManager:', this.canvasManager );
-				mw.log( 'Layers: LayerPanel:', this.layerPanel );
-				mw.log( 'Layers: Toolbar:', this.toolbar );
-			}
-		} catch ( error ) {
-			if ( window.mw && window.mw.log ) {
-				mw.log.error( 'Layers: Error initializing editor components:', error );
-			}
-			this.showError( 'Failed to initialize editor: ' + error.message );
-			return;
 		}
 
-		// Load existing layers if any
-		this.loadLayers();
+		// Load existing layers
+		this.loadInitialLayers();
 
 		// Set up event handlers
-		this.setupEventHandlers();
+		this.eventManager.setupGlobalHandlers();
+		this.setupCloseButton();
 
-		// Seed status bar with initial values
-		if ( typeof this.updateStatus === 'function' ) {
-			this.updateStatus( {
-				tool: this.currentTool || 'pointer',
-				zoomPercent: 100,
-				pos: { x: 0, y: 0 },
-				selectionCount: 0
-			} );
+		document.title = '🎨 Layers Editor - ' + ( this.filename || 'Unknown File' );
+	};
+
+	/**
+	 * Initialize UI components (toolbar, layer panel, canvas)
+	 * @private
+	 */
+	LayersEditor.prototype.initializeUIComponents = function () {
+		// Register UI component factories
+		if ( this.registry.register ) {
+			this.registry.register( 'Toolbar', () => new window.Toolbar( {
+				container: this.uiManager.toolbarContainer,
+				editor: this
+			} ), [] );
+			this.registry.register( 'LayerPanel', () => new window.LayerPanel( {
+				container: this.uiManager.layerPanelContainer,
+				editor: this
+			} ), [] );
+			this.registry.register( 'CanvasManager', () => new window.CanvasManager( {
+				container: this.uiManager.canvasContainer,
+				editor: this,
+				backgroundImageUrl: this.imageUrl
+			} ), [] );
 		}
 
-		if ( window.mw && window.mw.log ) {
-			mw.log( 'Layers: Editor fully initialized for file:', this.filename );
-		}
+		// Initialize components
+		this.toolbar = this.registry.get( 'Toolbar' );
+		this.layerPanel = this.registry.get( 'LayerPanel' );
+		this.canvasManager = this.registry.get( 'CanvasManager' );
+
+		this.debugLog( '[LayersEditor] UI components initialized' );
 	};
 
-	LayersEditor.prototype.createInterface = function () {
-		// Always create a full-screen overlay container at body level
-		this.container = document.createElement( 'div' );
-		this.container.className = 'layers-editor';
-		this.container.setAttribute( 'role', 'application' );
-		this.container.setAttribute( 'aria-label', 'Layers Image Editor' );
-		document.body.appendChild( this.container );
-
-		// Add body class to hide skin chrome while editor is open
-		document.body.classList.add( 'layers-editor-open' );
-
-		// Header
-		var header = document.createElement( 'div' );
-		header.className = 'layers-header';
-		header.setAttribute( 'role', 'banner' );
-		var title = document.createElement( 'div' );
-		title.className = 'layers-header-title';
-		title.setAttribute( 'role', 'heading' );
-		title.setAttribute( 'aria-level', '1' );
-		title.textContent = ( mw.message ? mw.message( 'layers-editor-title' ).text() : ( mw.msg ? mw.msg( 'layers-editor-title' ) : 'Layers Editor' ) ) +
-			( this.filename ? ' — ' + this.filename : '' );
-		header.appendChild( title );
-		var headerRight = document.createElement( 'div' );
-		headerRight.className = 'layers-header-right';
-		// Zoom readout mirrors toolbar
-		var zoomReadout = document.createElement( 'span' );
-		zoomReadout.className = 'layers-zoom-readout';
-		zoomReadout.setAttribute( 'aria-label', 'Current zoom level' );
-		zoomReadout.textContent = '100%';
-		headerRight.appendChild( zoomReadout );
-
-		// Revision selector container
-		var revWrap = document.createElement( 'div' );
-		revWrap.className = 'layers-revision-wrap';
-		var revLabel = document.createElement( 'label' );
-		revLabel.className = 'layers-revision-label';
-		revLabel.textContent = ( mw.message ? mw.message( 'layers-revision-label' ).text() : 'Revision' ) + ':';
-		revWrap.appendChild( revLabel );
-		var revSelect = document.createElement( 'select' );
-		revSelect.className = 'layers-revision-select';
-		revSelect.setAttribute( 'aria-label', 'Select revision to load' );
-		revLabel.setAttribute( 'for', 'layers-revision-select-' + Math.random().toString( 36 ).slice( 2, 11 ) );
-		revSelect.id = revLabel.getAttribute( 'for' );
-		revWrap.appendChild( revSelect );
-
-		// Optional revision name input used on next save
-		var revName = document.createElement( 'input' );
-		revName.type = 'text';
-		revName.className = 'layers-revision-name';
-		revName.placeholder = ( mw.message ? mw.message( 'layers-revision-name-placeholder' ).text() : 'Revision name (optional)' );
-		revName.setAttribute( 'aria-label', 'Revision name for next save (optional)' );
-		revName.maxLength = 255;
-		revWrap.appendChild( revName );
-		var revLoadBtn = document.createElement( 'button' );
-		revLoadBtn.type = 'button';
-		revLoadBtn.className = 'layers-revision-load';
-		revLoadBtn.textContent = ( mw.message ? mw.message( 'layers-revision-load' ).text() : 'Load' );
-		revLoadBtn.setAttribute( 'aria-label', 'Load selected revision' );
-		revWrap.appendChild( revLoadBtn );
-		headerRight.appendChild( revWrap );
-
-		// Close button (returns to File: page)
-		var closeBtn = document.createElement( 'button' );
-		closeBtn.className = 'layers-header-close';
-		closeBtn.type = 'button';
-		closeBtn.setAttribute( 'aria-label', ( mw.message ? mw.message( 'layers-editor-close' ).text() : 'Close' ) );
-		closeBtn.title = ( mw.message ? mw.message( 'layers-editor-close' ).text() : 'Close' );
-		closeBtn.innerHTML = '&times;';
-		headerRight.appendChild( closeBtn );
-		header.appendChild( headerRight );
-		this.container.appendChild( header );
-
-		// Create toolbar
-		this.toolbarContainer = document.createElement( 'div' );
-		this.toolbarContainer.className = 'layers-toolbar';
-		this.container.appendChild( this.toolbarContainer );
-
-		// Create main content area (column layout)
-		this.content = document.createElement( 'div' );
-		this.content.className = 'layers-content';
-		this.container.appendChild( this.content );
-
-		// Main row holds sidebar and canvas
-		var mainRow = document.createElement( 'div' );
-		mainRow.className = 'layers-main';
-		this.content.appendChild( mainRow );
-
-		// Create layer panel (sidebar)
-		this.layerPanelContainer = document.createElement( 'div' );
-		this.layerPanelContainer.className = 'layers-panel';
-		mainRow.appendChild( this.layerPanelContainer );
-
-		// Create canvas container (stage)
-		this.canvasContainer = document.createElement( 'div' );
-		this.canvasContainer.className = 'layers-canvas-container';
-		mainRow.appendChild( this.canvasContainer );
-
-		// No separate bottom inspector; properties are shown under the Layers panel
-
-		// Status bar at the very bottom
-		this.statusBar = document.createElement( 'div' );
-		this.statusBar.className = 'layers-statusbar';
-		this.statusBar.innerHTML = '' +
-			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-tool' ).text() : 'Tool' ) + ':</span> <span class="status-value" data-status="tool">pointer</span></span>' +
-			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-zoom' ).text() : 'Zoom' ) + ':</span> <span class="status-value" data-status="zoom">100%</span></span>' +
-			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-pos' ).text() : 'Pos' ) + ':</span> <span class="status-value" data-status="pos">0,0</span></span>' +
-			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-size' ).text() : 'Size' ) + ':</span> <span class="status-value" data-status="size">-</span></span>' +
-			'<span class="status-item"><span class="status-label">' + ( mw.message ? mw.message( 'layers-status-selection' ).text() : 'Selection' ) + ':</span> <span class="status-value" data-status="selection">0</span></span>';
-		this.container.appendChild( this.statusBar );
-
-		// Create jQuery-style references for compatibility
-		this.$canvasContainer = $( this.canvasContainer );
-		this.$layerPanel = $( this.layerPanelContainer );
-		this.$toolbar = $( this.toolbarContainer );
-
-		// Bridge toolbar zoom display to header readout
-		var self = this;
-		Object.defineProperty( this, 'zoomReadoutEl', { value: zoomReadout } );
-		// Toolbar will update zoom; also update from CanvasManager hook
-		this.updateZoomReadout = function ( percent ) {
-			self.zoomReadoutEl.textContent = percent + '%';
-		};
-
-		// Wire revision selector
-		Object.defineProperty( this, 'revSelectEl', { value: revSelect } );
-		Object.defineProperty( this, 'revLoadBtnEl', { value: revLoadBtn } );
-		Object.defineProperty( this, 'revNameInputEl', { value: revName } );
-		revLoadBtn.addEventListener( 'click', function () {
-			var val = 0;
-			if ( self.revSelectEl && self.revSelectEl.value ) {
-				val = parseInt( self.revSelectEl.value, 10 );
-			}
-			if ( val ) {
-				self.loadRevisionById( val );
-			}
-		} );
-
-		// Disable Load button if currently selected revision is already loaded
-		revSelect.addEventListener( 'change', function () {
-			var v = parseInt( this.value, 10 ) || 0;
-			if ( self.revLoadBtnEl ) {
-				var isCurrent = ( self.currentLayerSetId && v === self.currentLayerSetId );
-				self.revLoadBtnEl.disabled = !v || isCurrent;
-			}
-		} );
-
-		// Expose simple status update helpers used by CanvasManager
-		this.updateStatus = function ( fields ) {
-			if ( !fields ) {
+	/**
+	 * Load initial layers from API
+	 * @private
+	 */
+	LayersEditor.prototype.loadInitialLayers = function () {
+		this.apiManager.loadLayers().then( ( data ) => {
+			if ( this.isDestroyed ) {
 				return;
 			}
-			var root = self.statusBar;
-			if ( !root ) {
-				return;
-			}
-			if ( fields.tool !== null && fields.tool !== undefined ) {
-				var elTool = root.querySelector( '[data-status="tool"]' );
-				if ( elTool ) {
-					elTool.textContent = String( fields.tool );
-				}
-			}
-			if ( fields.zoomPercent !== null && fields.zoomPercent !== undefined ) {
-				var elZoom = root.querySelector( '[data-status="zoom"]' );
-				if ( elZoom ) {
-					elZoom.textContent = Math.round( fields.zoomPercent ) + '%';
-				}
-			}
-			if ( fields.pos !== null && fields.pos !== undefined &&
-				typeof fields.pos.x === 'number' && typeof fields.pos.y === 'number' ) {
-				var elPos = root.querySelector( '[data-status="pos"]' );
-				if ( elPos ) {
-					elPos.textContent = Math.round( fields.pos.x ) + ',' + Math.round( fields.pos.y );
-				}
-			}
-			if ( fields.size !== null && fields.size !== undefined &&
-				typeof fields.size.width === 'number' && typeof fields.size.height === 'number' ) {
-				var elSize = root.querySelector( '[data-status="size"]' );
-				if ( elSize ) {
-					elSize.textContent = Math.round( fields.size.width ) + '×' + Math.round( fields.size.height );
-				}
-			}
-			if ( fields.selectionCount !== null && fields.selectionCount !== undefined ) {
-				var elSel = root.querySelector( '[data-status="selection"]' );
-				if ( elSel ) {
-					elSel.textContent = String( fields.selectionCount );
-				}
-			}
-		};
 
-		// Wire close button
-		closeBtn.addEventListener( 'click', function () {
-			// navigateBack=true
-			self.cancel( true );
-		} );
-	};
+			this.debugLog( '[LayersEditor] API loadLayers completed' );
 
-	LayersEditor.prototype.setupEventHandlers = function () {
-		var self = this;
-
-		// Bind and store handlers so we can remove them on destroy
-		this.onResizeHandler = function () {
-			self.handleResize();
-		};
-		this.onBeforeUnloadHandler = function ( e ) {
-			if ( self.isDirty ) {
-				e.preventDefault();
-				e.returnValue = '';
-			}
-		};
-
-		// Handle window resize
-		window.addEventListener( 'resize', this.onResizeHandler );
-
-		// Handle unsaved changes warning
-		window.addEventListener( 'beforeunload', this.onBeforeUnloadHandler );
-	};
-
-	LayersEditor.prototype.loadLayers = function () {
-		var self = this;
-
-		console.log( 'Layers: loadLayers called for filename:', this.filename );
-
-		// Show loading spinner
-		self.showSpinner( mw.message ? mw.message( 'layers-loading' ).text() : 'Loading...' );
-
-		// Load existing layers from API
-		var api = new mw.Api();
-		console.log( 'Layers: Making API call to layersinfo for filename:', this.filename );
-		api.get( {
-			action: 'layersinfo',
-			filename: this.filename,
-			format: 'json'
-		} ).done( function ( data ) {
-			console.log( 'Layers: API call successful, received data:', data );
-			self.hideSpinner();
-
-			// Debug: Log raw API response (only in debug mode)
-			if ( self.debug ) {
-				self.debugLog( 'Raw layersinfo API response:', data );
-				if ( data.layersinfo && data.layersinfo.layerset ) {
-					self.debugLog( 'Raw layerset data:', data.layersinfo.layerset );
-					if ( data.layersinfo.layerset.data && data.layersinfo.layerset.data.layers ) {
-						self.debugLog( 'Raw layers array:', data.layersinfo.layerset.data.layers );
-						// Show each raw layer in detail
-						data.layersinfo.layerset.data.layers.forEach( function ( layer, index ) {
-							self.debugLog( 'Raw Layer ' + index + ':', JSON.stringify( layer, null, 2 ) );
-						} );
-					}
-				}
-			}
-
-			if ( data.layersinfo && data.layersinfo.layerset ) {
-				console.log( 'Layers: Found layerset data, processing layers...' );
-				console.log( 'Layers: Raw layerset data:', data.layersinfo.layerset );
-				
-				var rawLayers = data.layersinfo.layerset.data.layers || [];
-				console.log( 'Layers: Raw layers array length:', rawLayers.length );
-				console.log( 'Layers: Raw layers array:', rawLayers );
-				
-				self.layers = rawLayers
-					.map( function ( layer ) {
-						// Ensure every layer has an id
-						if ( !layer.id ) {
-							layer.id = 'layer_' + Date.now() + '_' +
-								Math.random().toString( 36 ).slice( 2, 9 );
-						}
-
-						// Fix boolean properties that may have been converted to empty strings
-						var booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked' ];
-						booleanProps.forEach( function ( prop ) {
-							if ( layer[ prop ] === '0' || layer[ prop ] === 'false' ) {
-								layer[ prop ] = false;
-							} else if ( layer[ prop ] === '' || layer[ prop ] === '1' || layer[ prop ] === 'true' ) {
-								// Treat empty string as true since it indicates the property was set
-								// This handles the MediaWiki boolean serialization issue
-								layer[ prop ] = true;
-							}
-							// Leave actual booleans unchanged
-						} );
-
-						return layer;
-					} );
-				self.currentLayerSetId = data.layersinfo.layerset.id || null;
-				
-				console.log( 'Layers: Processed layers count:', self.layers.length );
-				console.log( 'Layers: Processed layers array:', self.layers );
-
-				// Debug: Log loaded layers and their shadow properties
-				self.debugLog( 'Loaded layers count:', self.layers.length );
-				self.layers.forEach( function ( layer, index ) {
-					self.debugLog( 'Loaded Layer ' + index + ':', layer );
-					// Show shadow properties specifically
-					self.debugLog( '  Shadow after normalization:', {
-						shadow: layer.shadow,
-						shadowType: typeof layer.shadow,
-						shadowColor: layer.shadowColor,
-						shadowBlur: layer.shadowBlur,
-						shadowOffsetX: layer.shadowOffsetX,
-						shadowOffsetY: layer.shadowOffsetY
-					} );
-				} );
+			if ( data && data.layers ) {
+				const normalizedLayers = this.normalizeLayers( data.layers );
+				this.stateManager.set( 'layers', normalizedLayers );
 			} else {
-				console.log( 'Layers: No layerset data found in API response' );
-				self.layers = [];
+				this.stateManager.set( 'layers', [] );
 			}
 
-			console.log( 'Layers: Final layers array length before renderLayers:', self.layers.length );
-
-			// Populate revision list if provided
-			if ( data.layersinfo && Array.isArray( data.layersinfo.all_layersets ) ) {
-				self.allLayerSets = data.layersinfo.all_layersets.slice();
-				self.buildRevisionSelector();
+			if ( data && data.baseWidth ) {
+				this.stateManager.set( 'baseWidth', data.baseWidth );
+				if ( this.canvasManager && this.canvasManager.setBaseDimensions ) {
+					this.canvasManager.setBaseDimensions( data.baseWidth, data.baseHeight );
+				}
 			}
-			self.renderLayers();
-
-			// Save initial state for undo system
-			self.saveState( 'initial' );
-		} ).fail( function ( code, result ) {
-			console.log( 'Layers: API call failed with code:', code, 'result:', result );
-			self.hideSpinner();
-			self.layers = [];
-			self.renderLayers();
-			self.saveState( 'initial' );
-			var errorMsg = ( mw.message ? mw.message( 'layers-load-error' ).text() : 'Failed to load layers' );
-			if ( result && result.error && result.error.info ) {
-				errorMsg = result.error.info;
+			if ( data && data.baseHeight ) {
+				this.stateManager.set( 'baseHeight', data.baseHeight );
 			}
-			mw.notify( errorMsg, { type: 'error' } );
-		} );
-	};
-
-	// Show/hide spinner for long operations
-	LayersEditor.prototype.showSpinner = function ( message ) {
-		if ( this.spinnerEl ) {
-			this.spinnerEl.remove();
-		}
-		this.spinnerEl = document.createElement( 'div' );
-		this.spinnerEl.className = 'layers-spinner';
-		this.spinnerEl.setAttribute( 'role', 'status' );
-		this.spinnerEl.setAttribute( 'aria-live', 'polite' );
-		var spinnerIcon = document.createElement( 'span' );
-		spinnerIcon.className = 'spinner';
-		var textNode = document.createElement( 'span' );
-		textNode.className = 'spinner-text';
-		textNode.textContent = ' ' + ( message || '' );
-		this.spinnerEl.appendChild( spinnerIcon );
-		this.spinnerEl.appendChild( textNode );
-		this.container.appendChild( this.spinnerEl );
-	};
-
-	LayersEditor.prototype.hideSpinner = function () {
-		if ( this.spinnerEl ) {
-			this.spinnerEl.remove();
-			this.spinnerEl = null;
-		}
-	};
-
-	LayersEditor.prototype.buildRevisionSelector = function () {
-		var select = this.revSelectEl;
-		if ( !select ) {
-			return;
-		}
-		select.innerHTML = '';
-		// Latest option
-		var optLatest = document.createElement( 'option' );
-		optLatest.value = String( this.currentLayerSetId || 0 );
-		optLatest.textContent = ( mw.message ? mw.message( 'layers-revision-latest' ).text() : 'Latest' );
-		select.appendChild( optLatest );
-		// Other revisions
-		var self = this;
-		// Sort by numeric revision desc, then timestamp desc for stability
-		var sorted = this.allLayerSets.slice().sort( function ( a, b ) {
-			var ra = parseInt( a.ls_revision, 10 ) || 0;
-			var rb = parseInt( b.ls_revision, 10 ) || 0;
-			if ( rb !== ra ) {
-				return rb - ra;
+			if ( data && data.allLayerSets ) {
+				this.stateManager.set( 'allLayerSets', data.allLayerSets );
 			}
-			var ta = a.ls_timestamp || '';
-			var tb = b.ls_timestamp || '';
-			return tb.localeCompare( ta );
-		} );
-		sorted.forEach( function ( row ) {
-			var rid = parseInt( row.ls_id, 10 );
-			var rev = parseInt( row.ls_revision, 10 );
-			var whenRaw = row.ls_timestamp || '';
-			var when = self.formatTimestamp( whenRaw );
-			var name = row.ls_name || '';
-			var uname = row.ls_user_name || ( row.ls_user_id ? ( 'User ' + row.ls_user_id ) : '' );
-			var byTxt = ( mw.message ? mw.message( 'layers-revision-by', uname ).text() : ( uname ? ( 'by ' + uname ) : '' ) );
-			var isCurrentRev = ( self.currentLayerSetId && rid === self.currentLayerSetId );
-			var currentSuffix = isCurrentRev ? (
-				mw.message ? mw.message( 'layers-revision-current-suffix' ).text() : ' (current)'
-			) : '';
-			var label = '#' + rev +
-				( name ? ( ' — ' + name ) : '' ) +
-				( when ? ( ' — ' + when ) : '' ) +
-				( byTxt ? ( ' — ' + byTxt ) : '' ) +
-				currentSuffix;
-			var opt = document.createElement( 'option' );
-			opt.value = String( rid );
-			opt.textContent = label;
-			select.appendChild( opt );
-		} );
+			if ( data && data.currentLayerSetId ) {
+				this.stateManager.set( 'currentLayerSetId', data.currentLayerSetId );
+			}
 
-		// Ensure Load button state reflects selection
-		if ( this.revLoadBtnEl ) {
-			var latestIsCurrent = (
-				this.currentLayerSetId && String( this.currentLayerSetId ) === optLatest.value
-			);
-			this.revLoadBtnEl.disabled = !!latestIsCurrent;
-		}
-	};
-
-	// Convert MediaWiki DB timestamp (YYYYMMDDHHMMSS) or ISO to a short local string
-	LayersEditor.prototype.formatTimestamp = function ( ts ) {
-		if ( !ts || typeof ts !== 'string' ) {
-			return '';
-		}
-		var d;
-		if ( /^\d{14}$/.test( ts ) ) {
-			// YYYYMMDDHHMMSS
-			var y = parseInt( ts.slice( 0, 4 ), 10 );
-			var m = parseInt( ts.slice( 4, 6 ), 10 ) - 1;
-			var day = parseInt( ts.slice( 6, 8 ), 10 );
-			var hh = parseInt( ts.slice( 8, 10 ), 10 );
-			var mm = parseInt( ts.slice( 10, 12 ), 10 );
-			var ss = parseInt( ts.slice( 12, 14 ), 10 );
-			d = new Date( Date.UTC( y, m, day, hh, mm, ss ) );
-		} else {
-			// Try native parse
-			d = new Date( ts );
-		}
-		if ( isNaN( d.getTime() ) ) {
-			return ts;
-		}
-		try {
-			return d.toLocaleString();
-		} catch ( e ) {
-			return ts;
-		}
-	};
-
-	LayersEditor.prototype.loadRevisionById = function ( layerSetId ) {
-		// Prevent redundant load
-		if ( this.currentLayerSetId && layerSetId === this.currentLayerSetId ) {
-			mw.notify( ( mw.message ? mw.message( 'layers-revision-already-current' ).text() : 'That revision is already loaded' ), { type: 'info' } );
-			return;
-		}
-		// Confirm if there are unsaved changes
-		if ( this.isDirty ) {
-			var confirmMsg = ( mw.message ? mw.message( 'layers-load-revision-unsaved-confirm' ).text() : 'You have unsaved changes. Load revision anyway?' );
-			// eslint-disable-next-line no-alert
-			if ( !window.confirm( confirmMsg ) ) {
+			const layers = this.stateManager.get( 'layers' ) || [];
+			if ( this.canvasManager ) {
+				this.canvasManager.renderLayers( layers );
+			}
+			this.saveState( 'initial' );
+		} ).catch( ( error ) => {
+			if ( this.isDestroyed ) {
 				return;
 			}
-		}
-		var found = null;
-		for ( var i = 0; i < this.allLayerSets.length; i++ ) {
-			if ( parseInt( this.allLayerSets[ i ].ls_id, 10 ) === layerSetId ) {
-				found = this.allLayerSets[ i ];
-				break;
+			this.debugLog( '[LayersEditor] API loadLayers failed:', error );
+			this.stateManager.set( 'layers', [] );
+			if ( this.canvasManager ) {
+				this.canvasManager.renderLayers( [] );
 			}
-		}
-		if ( !found ) {
-			mw.notify( ( mw.message ? mw.message( 'layers-revision-not-found' ).text() : 'Revision not found' ), { type: 'warn' } );
-			return;
-		}
-		try {
-			var blob = typeof found.ls_json_blob === 'string' ? JSON.parse( found.ls_json_blob ) : ( found.ls_json_blob || {} );
-			var layers = Array.isArray( blob.layers ) ? blob.layers : [];
-			// Save state and replace
-			this.saveState( 'load-revision' );
-			this.layers = layers.map( function ( layer ) {
-				if ( !layer.id ) {
-					layer.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
-				}
-				return layer;
-			} );
-			this.currentLayerSetId = layerSetId;
-			this.renderLayers();
-			this.markDirty();
-			mw.notify( ( mw.message ? mw.message( 'layers-revision-loaded' ).text() : 'Revision loaded' ), { type: 'info' } );
-		} catch ( e ) {
-			mw.notify( ( mw.message ? mw.message( 'layers-revision-load-error' ).text() : 'Failed to load revision' ), { type: 'error' } );
-		}
-	};
-
-	LayersEditor.prototype.reloadRevisions = function () {
-		var self = this;
-		var api = new mw.Api();
-		api.get( {
-			action: 'layersinfo',
-			filename: this.filename,
-			format: 'json'
-		} ).done( function ( data ) {
-			if ( data.layersinfo ) {
-				if ( Array.isArray( data.layersinfo.all_layersets ) ) {
-					self.allLayerSets = data.layersinfo.all_layersets.slice();
-				}
-				if ( data.layersinfo.layerset && data.layersinfo.layerset.id ) {
-					self.currentLayerSetId = data.layersinfo.layerset.id;
-				}
-				self.buildRevisionSelector();
-				if ( self.revNameInputEl ) {
-					self.revNameInputEl.value = '';
-				}
-			}
+			this.saveState( 'initial' );
 		} );
 	};
 
-	LayersEditor.prototype.renderLayers = function () {
-		// Render layers on canvas
-		if ( this.canvasManager ) {
-			this.canvasManager.renderLayers( this.layers );
+	/**
+	 * Set up close button handler
+	 * @private
+	 */
+	LayersEditor.prototype.setupCloseButton = function () {
+		const closeBtn = this.uiManager.container.querySelector( '.layers-header-close' );
+		if ( closeBtn ) {
+			const closeHandler = () => {
+				this.cancel( true );
+			};
+			this.trackEventListener( closeBtn, 'click', closeHandler );
 		}
-
-		// Update layer panel
-		if ( this.layerPanel ) {
-			this.layerPanel.updateLayers( this.layers );
-		}
-
-		// Update UI state
-		this.updateUIState();
 	};
 
+	/**
+	 * Add a new layer to the editor
+	 * @param {Object} layerData - Layer data object
+	 */
 	LayersEditor.prototype.addLayer = function ( layerData ) {
-		// Save current state for undo
 		this.saveState();
+		layerData = this.validationManager.sanitizeLayerData( layerData );
+		layerData.id = this.apiManager.generateLayerId();
+		layerData.visible = layerData.visible !== false;
 
-		// Add new layer
-		layerData.id = this.generateLayerId();
-		layerData.visible = layerData.visible !== false; // Default to visible
+		const layers = this.stateManager.get( 'layers' ) || [];
+		layers.unshift( layerData );
+		this.stateManager.set( 'layers', layers );
 
-		this.layers.push( layerData );
-		this.renderLayers();
+		if ( this.canvasManager ) {
+			this.canvasManager.renderLayers( layers );
+		}
 		this.markDirty();
-
-		// Select the newly created layer
 		this.selectLayer( layerData.id );
-
-		// console.log( 'Added layer:', layerData );
 	};
 
+	/**
+	 * Update an existing layer with new data
+	 * @param {string} layerId - ID of the layer to update
+	 * @param {Object} changes - Changes to apply to the layer
+	 */
 	LayersEditor.prototype.updateLayer = function ( layerId, changes ) {
-		// Save current state for undo
-		this.saveState();
+		try {
+			this.saveState();
 
-		// Update existing layer
-		var layer = this.getLayerById( layerId );
-		if ( layer ) {
-			$.extend( layer, changes );
-			this.renderLayers();
-			this.markDirty();
+			if ( Object.prototype.hasOwnProperty.call( changes, 'outerRadius' ) &&
+				!Object.prototype.hasOwnProperty.call( changes, 'radius' ) ) {
+				changes.radius = changes.outerRadius;
+			}
+
+			changes = this.validationManager.sanitizeLayerData( changes );
+
+			const layers = this.stateManager.get( 'layers' ) || [];
+			const layer = layers.find( ( l ) => l.id === layerId );
+			if ( layer ) {
+				Object.assign( layer, changes );
+				this.stateManager.set( 'layers', layers );
+
+				if ( this.canvasManager ) {
+					this.canvasManager.redraw();
+				}
+				this.markDirty();
+			}
+		} catch ( error ) {
+			if ( this.debug ) {
+				this.errorLog( 'Error in updateLayer:', error );
+			}
+			if ( window.mw && window.mw.notify ) {
+				mw.notify( 'Error updating layer', { type: 'error' } );
+			}
 		}
 	};
 
+	/**
+	 * Remove a layer from the editor
+	 * @param {string} layerId - ID of the layer to remove
+	 */
 	LayersEditor.prototype.removeLayer = function ( layerId ) {
-		// Save current state for undo
 		this.saveState();
 
-		// Remove layer
-		this.layers = this.layers.filter( function ( layer ) {
-			return layer.id !== layerId;
-		} );
-		this.renderLayers();
-		this.markDirty();
+		const layers = this.stateManager.get( 'layers' ) || [];
+		const updatedLayers = layers.filter( ( layer ) => layer.id !== layerId );
+		this.stateManager.set( 'layers', updatedLayers );
 
-		// Update UI state
+		if ( this.canvasManager ) {
+			this.canvasManager.redraw();
+		}
+		this.markDirty();
 		this.updateUIState();
 	};
 
+	/**
+	 * Get a layer by its ID
+	 * @param {string} layerId - ID of the layer
+	 * @return {Object|undefined} The layer object or undefined
+	 */
 	LayersEditor.prototype.getLayerById = function ( layerId ) {
-		return this.layers.find( function ( layer ) {
-			return layer.id === layerId;
-		} );
+		const layers = this.stateManager.get( 'layers' ) || [];
+		return layers.find( ( layer ) => layer.id === layerId );
 	};
 
-	LayersEditor.prototype.generateLayerId = function () {
-		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
+	// ============================================
+	// Revision Management - Delegate to RevisionManager
+	// ============================================
+
+	/**
+	 * Parse MediaWiki binary(14) timestamp format
+	 * @param {string} mwTimestamp MediaWiki timestamp string
+	 * @return {Date} Parsed date object
+	 */
+	LayersEditor.prototype.parseMWTimestamp = function ( mwTimestamp ) {
+		if ( this.revisionManager ) {
+			return this.revisionManager.parseMWTimestamp( mwTimestamp );
+		}
+		// Fallback
+		if ( !mwTimestamp || typeof mwTimestamp !== 'string' ) {
+			return new Date();
+		}
+		const year = parseInt( mwTimestamp.substring( 0, 4 ), 10 );
+		const month = parseInt( mwTimestamp.substring( 4, 6 ), 10 ) - 1;
+		const day = parseInt( mwTimestamp.substring( 6, 8 ), 10 );
+		const hour = parseInt( mwTimestamp.substring( 8, 10 ), 10 );
+		const minute = parseInt( mwTimestamp.substring( 10, 12 ), 10 );
+		const second = parseInt( mwTimestamp.substring( 12, 14 ), 10 );
+		return new Date( year, month, day, hour, minute, second );
 	};
 
-	LayersEditor.prototype.setCurrentTool = function ( tool ) {
-		this.currentTool = tool;
+	/**
+	 * Build the revision selector dropdown
+	 */
+	LayersEditor.prototype.buildRevisionSelector = function () {
+		if ( this.revisionManager ) {
+			this.revisionManager.buildRevisionSelector();
+		}
+	};
+
+	/**
+	 * Update the revision load button state
+	 */
+	LayersEditor.prototype.updateRevisionLoadButton = function () {
+		if ( this.revisionManager ) {
+			this.revisionManager.updateRevisionLoadButton();
+		}
+	};
+
+	/**
+	 * Build and populate the named layer sets selector
+	 */
+	LayersEditor.prototype.buildSetSelector = function () {
+		if ( this.revisionManager ) {
+			this.revisionManager.buildSetSelector();
+		}
+	};
+
+	/**
+	 * Update the new set button state
+	 */
+	LayersEditor.prototype.updateNewSetButtonState = function () {
+		if ( this.revisionManager ) {
+			this.revisionManager.updateNewSetButtonState();
+		}
+	};
+
+	/**
+	 * Load a layer set by name
+	 * @param {string} setName The name of the set to load
+	 * @return {Promise<void>}
+	 */
+	LayersEditor.prototype.loadLayerSetByName = async function ( setName ) {
+		if ( this.revisionManager ) {
+			return this.revisionManager.loadLayerSetByName( setName );
+		}
+	};
+
+	/**
+	 * Create a new named layer set
+	 * @param {string} setName The name for the new set
+	 * @return {Promise<boolean>}
+	 */
+	LayersEditor.prototype.createNewLayerSet = async function ( setName ) {
+		if ( this.revisionManager ) {
+			return this.revisionManager.createNewLayerSet( setName );
+		}
+		return false;
+	};
+
+	/**
+	 * Load a specific revision by ID
+	 * @param {number} revisionId The revision ID to load
+	 */
+	LayersEditor.prototype.loadRevisionById = function ( revisionId ) {
+		if ( this.revisionManager ) {
+			this.revisionManager.loadRevisionById( revisionId );
+		}
+	};
+
+	/**
+	 * Show the keyboard shortcuts help dialog
+	 */
+	LayersEditor.prototype.showKeyboardShortcutsDialog = function () {
+		if ( this.dialogManager ) {
+			this.dialogManager.showKeyboardShortcutsDialog();
+		}
+	};
+
+	/**
+	 * Check if there are unsaved changes
+	 * @return {boolean}
+	 */
+	LayersEditor.prototype.hasUnsavedChanges = function () {
+		return this.stateManager.get( 'hasUnsavedChanges' ) || false;
+	};
+
+	/**
+	 * Update the save button state
+	 */
+	LayersEditor.prototype.updateSaveButtonState = function () {
+		try {
+			if ( this.toolbar && this.toolbar.saveBtnEl ) {
+				const hasChanges = this.hasUnsavedChanges();
+				this.toolbar.saveBtnEl.classList.toggle( 'has-changes', hasChanges );
+			}
+		} catch ( error ) {
+			this.errorLog( 'Error updating save button state:', error );
+		}
+	};
+
+	/**
+	 * Get a localized message
+	 * @param {string} key Message key
+	 * @param {string} fallback Fallback text
+	 * @return {string} Localized message
+	 */
+	LayersEditor.prototype.getMessage = function ( key, fallback = '' ) {
+		return window.layersMessages.get( key, fallback );
+	};
+
+	/**
+	 * Set the current tool
+	 * @param {string} tool Tool name
+	 * @param {Object} options Options
+	 */
+	LayersEditor.prototype.setCurrentTool = function ( tool, options ) {
+		const opts = options || {};
+		this.stateManager.set( 'currentTool', tool );
 		if ( this.canvasManager ) {
 			this.canvasManager.setTool( tool );
 		}
+		if ( this.toolbar && !opts.skipToolbarSync ) {
+			this.toolbar.setActiveTool( tool );
+		}
 	};
 
-	// Undo/Redo System
+	/**
+	 * Save state for undo/redo
+	 * @param {string} action Action description
+	 */
 	LayersEditor.prototype.saveState = function ( action ) {
-		// Delegate to canvas manager's history system
-		if ( this.canvasManager ) {
-			this.canvasManager.saveState( action );
+		if ( this.historyManager ) {
+			this.historyManager.saveState( action );
 		}
 	};
 
-	LayersEditor.prototype.undo = function () {
-		// Delegate to canvas manager's undo system
-		if ( this.canvasManager ) {
-			return this.canvasManager.undo();
-		}
-		return false;
-	};
-
-	LayersEditor.prototype.redo = function () {
-		// Delegate to canvas manager's redo system
-		if ( this.canvasManager ) {
-			return this.canvasManager.redo();
-		}
-		return false;
-	};
-
-	// Selection Management
+	/**
+	 * Select a layer by ID
+	 * @param {string} layerId Layer ID to select
+	 */
 	LayersEditor.prototype.selectLayer = function ( layerId ) {
-		this.selectedLayerId = layerId;
-
-		// Update canvas selection
-		if ( this.canvasManager ) {
-			this.canvasManager.selectLayer( layerId );
+		try {
+			// Delegate to CanvasManager which manages selection via StateManager
+			if ( this.canvasManager ) {
+				this.canvasManager.selectLayer( layerId );
+			} else if ( this.stateManager ) {
+				// Fallback: set directly in StateManager using plural form
+				this.stateManager.set( 'selectedLayerIds', layerId ? [ layerId ] : [] );
+			}
+			if ( this.layerPanel ) {
+				this.layerPanel.selectLayer( layerId );
+			}
+			this.updateUIState();
+		} catch ( error ) {
+			if ( this.debug ) {
+				this.errorLog( 'Error in selectLayer:', error );
+			}
 		}
-
-		// Update layer panel selection
-		if ( this.layerPanel ) {
-			this.layerPanel.selectLayer( layerId );
-		}
-
-		this.updateUIState();
-
-		// console.log( 'Selected layer:', layerId );
 	};
 
+	/**
+	 * Delete the selected layer
+	 */
 	LayersEditor.prototype.deleteSelected = function () {
-		if ( this.selectedLayerId ) {
-			this.removeLayer( this.selectedLayerId );
-			this.selectedLayerId = null;
+		const selectedIds = this.getSelectedLayerIds();
+		if ( selectedIds.length > 0 ) {
+			// Delete all selected layers
+			selectedIds.forEach( id => this.removeLayer( id ) );
+			// Clear selection through CanvasManager (updates StateManager)
+			if ( this.canvasManager ) {
+				this.canvasManager.deselectAll();
+			}
 		}
 	};
 
+	/**
+	 * Duplicate the selected layer
+	 */
 	LayersEditor.prototype.duplicateSelected = function () {
-		if ( this.selectedLayerId ) {
-			var layer = this.getLayerById( this.selectedLayerId );
+		const selectedIds = this.getSelectedLayerIds();
+		if ( selectedIds.length > 0 ) {
+			// Duplicate the first selected layer (primary selection)
+			const layerId = selectedIds[ selectedIds.length - 1 ]; // Last = primary
+			const layer = this.getLayerById( layerId );
 			if ( layer ) {
-				var duplicate = JSON.parse( JSON.stringify( layer ) );
-				duplicate.x = ( duplicate.x || 0 ) + 10;
-				duplicate.y = ( duplicate.y || 0 ) + 10;
-				delete duplicate.id; // Will be regenerated
+				const duplicate = JSON.parse( JSON.stringify( layer ) );
+				duplicate.x = ( duplicate.x || 0 ) + 20;
+				duplicate.y = ( duplicate.y || 0 ) + 20;
+				delete duplicate.id;
 				this.addLayer( duplicate );
 			}
 		}
 	};
 
+	/**
+	 * Update UI state (toolbar buttons, etc.)
+	 */
 	LayersEditor.prototype.updateUIState = function () {
-		// Update toolbar state
-		if ( this.toolbar ) {
-			var canUndo = this.canvasManager ? this.canvasManager.historyIndex > 0 : false;
-			var canRedo = this.canvasManager ? (
-				this.canvasManager.historyIndex <
-				this.canvasManager.history.length - 1
-			) : false;
-			this.toolbar.updateUndoRedoState( canUndo, canRedo );
-			this.toolbar.updateDeleteState( !!this.selectedLayerId );
+		try {
+			if ( this.toolbar ) {
+				const canUndo = this.historyManager ? this.historyManager.canUndo() : false;
+				const canRedo = this.historyManager ? this.historyManager.canRedo() : false;
+				const hasSelection = this.getSelectedLayerIds().length > 0;
+				this.toolbar.updateUndoRedoState( canUndo, canRedo );
+				this.toolbar.updateDeleteState( hasSelection );
+			}
+		} catch ( error ) {
+			if ( this.debug ) {
+				this.errorLog( 'Error in updateUIState:', error );
+			}
 		}
 	};
 
-	// Apply a mutator function to all selected layers; saves state and marks dirty
+	/**
+	 * Apply a mutator function to all selected layers
+	 * @param {Function} mutator Function to apply to each layer
+	 */
 	LayersEditor.prototype.applyToSelection = function ( mutator ) {
 		if ( typeof mutator !== 'function' ) {
 			return;
 		}
-		var ids = this.getSelectedLayerIds();
+		const ids = this.getSelectedLayerIds();
 		if ( !ids.length ) {
 			return;
 		}
 		this.saveState();
-		for ( var i = 0; i < ids.length; i++ ) {
-			var layer = this.getLayerById( ids[ i ] );
+		const layers = this.stateManager.get( 'layers' ) || [];
+		for ( let i = 0; i < ids.length; i++ ) {
+			const layer = layers.find( ( l ) => l.id === ids[ i ] );
 			if ( layer ) {
 				mutator( layer );
 			}
 		}
-		this.renderLayers();
+		this.stateManager.set( 'layers', layers );
+		if ( this.canvasManager ) {
+			this.canvasManager.renderLayers( layers );
+		}
 		this.markDirty();
 	};
 
-	// Return selected layer ids from CanvasManager or fallback to single selection
+	/**
+	 * Get selected layer IDs
+	 * @return {string[]} Array of selected layer IDs
+	 */
 	LayersEditor.prototype.getSelectedLayerIds = function () {
-		if ( this.canvasManager && Array.isArray( this.canvasManager.selectedLayerIds ) ) {
-			return this.canvasManager.selectedLayerIds.slice();
+		// Delegate to CanvasManager if available (preferred path)
+		if ( this.canvasManager && typeof this.canvasManager.getSelectedLayerIds === 'function' ) {
+			// Return a copy to prevent accidental mutation
+			return this.canvasManager.getSelectedLayerIds().slice();
 		}
-		return this.selectedLayerId ? [ this.selectedLayerId ] : [];
+		// Fallback to StateManager directly (uses plural key 'selectedLayerIds')
+		if ( this.stateManager ) {
+			const ids = this.stateManager.get( 'selectedLayerIds' );
+			return ids ? ids.slice() : [];
+		}
+		return [];
 	};
 
-	LayersEditor.prototype.cancel = function ( navigateBack ) {
-		if ( this.isDirty ) {
-			var confirmMessage = ( mw.message ? mw.message( 'layers-unsaved-cancel-confirm' ).text() : 'You have unsaved changes. Are you sure you want to cancel?' );
-			// Use OOUI confirm dialog if available, otherwise fallback to browser confirm
-			if ( window.OO && window.OO.ui && window.OO.ui.confirm ) {
-				window.OO.ui.confirm( confirmMessage ).done( function ( confirmed ) {
-					if ( confirmed ) {
-						this.destroy();
-						this.navigateBackToFile();
-					}
-				}.bind( this ) );
-			} else {
-				// eslint-disable-next-line no-alert
-				if ( window.confirm( confirmMessage ) ) {
-					this.destroy();
-					this.navigateBackToFile();
-				}
-			}
-		} else {
-			this.destroy();
-			if ( navigateBack ) {
-				this.navigateBackToFile();
-			}
-		}
-	};
-
+	/**
+	 * Navigate back to file page
+	 */
 	LayersEditor.prototype.navigateBackToFile = function () {
+		this.navigateBackToFileWithName( this.filename );
+	};
+
+	/**
+	 * Navigate back to file page with specific filename
+	 * @param {string} filename The filename to navigate to
+	 * @private
+	 */
+	LayersEditor.prototype.navigateBackToFileWithName = function ( filename ) {
 		try {
-			if ( this.filename && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
-				var url = mw.util.getUrl( 'File:' + this.filename );
+			if ( filename && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
+				const url = mw.util.getUrl( 'File:' + filename );
 				window.location.href = url;
 				return;
 			}
-			// Fallbacks
 			if ( window.history && window.history.length > 1 ) {
 				window.history.back();
 			} else {
 				window.location.reload();
 			}
 		} catch ( e ) {
-			// As a last resort, reload
 			window.location.reload();
 		}
 	};
 
+	/**
+	 * Save the current layers to the server
+	 */
 	LayersEditor.prototype.save = function () {
-		var self = this;
+		const layers = this.stateManager.get( 'layers' ) || [];
 
-		// Client-side validation before saving
-		if ( window.LayersValidator ) {
-			var validator = new window.LayersValidator();
-			// Use default max layers
-			var validationResult = validator.validateLayers( this.layers, 100 );
-
-			if ( !validationResult.isValid ) {
-				// Show validation errors to user
-				validator.showValidationErrors( validationResult.errors, 'save' );
-				return; // Don't proceed with save
-			}
-
-			// Show warnings if any (but still allow save)
-			if ( validationResult.warnings && validationResult.warnings.length > 0 ) {
-				if ( window.mw && window.mw.notify ) {
-					var warningMsg = 'Warnings: ' + validationResult.warnings.join( '; ' );
-					mw.notify( warningMsg, { type: 'warn' } );
-				}
-			}
-		}
-
-		// Show saving spinner
-		self.showSpinner( mw.message ? mw.message( 'layers-saving' ).text() : 'Saving...' );
-
-		// Disable save button briefly
-		if ( this.toolbar && this.toolbar.saveButton ) {
-			this.toolbar.saveButton.disabled = true;
-			setTimeout( function () {
-				self.toolbar.saveButton.disabled = false;
-			}, 2000 );
-		}
-
-		// Save layers to API with client-side size check
-		var api = new mw.Api();
-		var layersJson = JSON.stringify( this.layers );
-		var serverMax = ( mw.config && mw.config.get ) ? ( mw.config.get( 'wgLayersMaxBytes' ) || 0 ) : 0;
-		if ( serverMax && layersJson.length > serverMax ) {
-			self.hideSpinner();
-			mw.notify( ( mw.message ? mw.message( 'layers-data-too-large' ).text() : 'Layer data is too large to save.' ), { type: 'error' } );
+		if ( !this.validationManager.validateLayers( layers ) ) {
+			const validationMsg = window.layersMessages ?
+				window.layersMessages.get( 'layers-save-validation-error', 'Layer validation failed' ) :
+				'Layer validation failed';
+			mw.notify( validationMsg, { type: 'error' } );
 			return;
 		}
-		var payload = {
-			action: 'layerssave',
-			filename: this.filename,
-			data: layersJson,
-			format: 'json'
-		};
-		if ( this.revNameInputEl && this.revNameInputEl.value ) {
-			var setname = this.revNameInputEl.value.trim();
-			if ( setname ) {
-				payload.setname = setname;
+
+		const savingMsg = window.layersMessages ?
+			window.layersMessages.get( 'layers-saving', 'Saving...' ) :
+			'Saving...';
+		this.uiManager.showSpinner( savingMsg );
+
+		this.apiManager.saveLayers()
+			.then( ( result ) => {
+				this.stateManager.set( 'currentLayerSetId', result.layersetid );
+			} )
+			.catch( ( error ) => {
+				this.uiManager.hideSpinner();
+				const defaultErrorMsg = window.layersMessages ?
+					window.layersMessages.get( 'layers-save-error', 'Failed to save layers' ) :
+					'Failed to save layers';
+				const errorMsg = error.info || defaultErrorMsg;
+				mw.notify( errorMsg, { type: 'error' } );
+			} );
+	};
+
+	/**
+	 * Reload the revision selector after saving
+	 */
+	LayersEditor.prototype.reloadRevisions = function () {
+		try {
+			if ( this.apiManager && this.apiManager.reloadRevisions ) {
+				this.apiManager.reloadRevisions();
 			}
+		} catch ( error ) {
+			this.errorLog( 'Error in reloadRevisions:', error );
 		}
-		this.debugLog( 'Layers save payload:', payload );
-		// Debug: Show detailed layer data
-		this.debugLog( 'Layer count:', this.layers.length );
-		this.layers.forEach( function ( layer, index ) {
-			self.debugLog( 'Layer ' + index + ':', layer );
-			if ( layer.shadow ) {
-				self.debugLog( '  Shadow properties:', {
-					shadow: layer.shadow,
-					shadowColor: layer.shadowColor,
-					shadowBlur: layer.shadowBlur,
-					shadowOffsetX: layer.shadowOffsetX,
-					shadowOffsetY: layer.shadowOffsetY,
-					shadowSpread: layer.shadowSpread
-				} );
+	};
+
+	/**
+	 * Normalize layer visibility on load
+	 * @param {Array} layers Array of layer objects
+	 * @return {Array} Normalized layers
+	 */
+	LayersEditor.prototype.normalizeLayers = function ( layers ) {
+		if ( !layers || !Array.isArray( layers ) ) {
+			return layers;
+		}
+		return layers.map( function ( layer ) {
+			if ( layer.visible === undefined ) {
+				layer.visible = true;
 			}
+			return layer;
 		} );
-		api.postWithToken( 'csrf', payload ).done( function ( data ) {
-			self.hideSpinner();
+	};
 
-			// Debug: Log the actual API response
-			self.debugLog( 'Layers save API response:', data );
+	/**
+	 * Cancel editing and return to the file page
+	 * @param {boolean} navigateBack Whether to navigate back
+	 */
+	LayersEditor.prototype.cancel = function ( navigateBack ) {
+		const savedFilename = this.filename;
+		const isDirty = this.stateManager.get( 'isDirty' );
 
-			if ( data.layerssave && data.layerssave.success ) {
-				self.markClean();
-				mw.notify( ( mw.message ? mw.message( 'layers-save-success' ).text() : ( mw.msg ? mw.msg( 'layers-save-success' ) : 'Saved' ) ), { type: 'success' } );
-				self.reloadRevisions();
+		if ( isDirty ) {
+			// Use DialogManager if available
+			if ( this.dialogManager ) {
+				this.dialogManager.showCancelConfirmDialog( () => {
+					if ( this.stateManager ) {
+						this.stateManager.set( 'isDirty', false );
+					}
+					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
+						this.eventManager.destroy();
+					}
+					this.uiManager.destroy();
+					if ( navigateBack ) {
+						this.navigateBackToFileWithName( savedFilename );
+					}
+				} );
 			} else {
-				var errorMsg = ( data.error && data.error.info ) ||
-						( data.layerssave && data.layerssave.error ) ||
-						( mw.message ? mw.message( 'layers-save-error' ).text() : 'Error saving layers' );
-
-				// Debug: Show what we're looking for vs what we got
-				self.debugLog( 'Save failed. Expected data.layerssave.success, got:' );
-				self.debugLog( 'data.layerssave:', data.layerssave );
-				self.debugLog( 'data.error:', data.error );
-
-				mw.notify( 'Save failed: ' + errorMsg, { type: 'error' } );
-				// Always show a modal with error details
-				self.showError( 'Save failed: ' + errorMsg );
-				// Log full API response for debugging
-				self.errorLog( 'Layers save API error:', data );
-			}
-		} ).fail( function ( code, result ) {
-			self.hideSpinner();
-			var errorMsg = ( mw.message ? mw.message( 'layers-save-error' ).text() : 'Error saving layers' );
-			if ( result && result.error && result.error.info ) {
-				errorMsg = result.error.info;
-			}
-			mw.notify( 'API Error: ' + errorMsg, { type: 'error' } );
-			// Always show a modal with error details
-			self.showError( 'API Error: ' + errorMsg );
-			// Log full API error for debugging
-			self.errorLog( 'Layers save API failure:', code, result );
-		} );
-	};
-	// Accessibility: Add ARIA roles and keyboard navigation stubs
-	// TODO: Implement more comprehensive keyboard navigation and screen reader support
-
-	// Security: Input sanitization before rendering user content
-	// TODO: Ensure all user-generated content is sanitized before rendering in the DOM or canvas
-
-	// Analytics: Stub for usage tracking
-	// TODO: Add analytics hooks for editor usage (e.g., save, load, tool usage)
-
-	// Testing: Stub for unit/E2E tests
-	// TODO: Add unit and integration tests for LayersEditor and CanvasManager
-
-	LayersEditor.prototype.markDirty = function () {
-		this.isDirty = true;
-		// Update UI to show unsaved changes
-	};
-
-	LayersEditor.prototype.markClean = function () {
-		this.isDirty = false;
-		// Update UI to show saved state
-	};
-
-	LayersEditor.prototype.getParentImageUrl = function () {
-		// Priority 1: Use imageUrl from config (passed by MediaWiki)
-		if ( this.config.imageUrl ) {
-			// console.log('Layers: Using imageUrl from config:', this.config.imageUrl);
-			return this.config.imageUrl;
-		}
-
-		// Priority 2: Try to construct URL using MediaWiki file path
-		if ( this.filename ) {
-			// Method 1: Construct URL using MediaWiki file path
-			var imageUrl = mw.config.get( 'wgServer' ) + mw.config.get( 'wgScriptPath' ) +
-				'/index.php?title=Special:Redirect/file/' + encodeURIComponent( this.filename );
-			// console.log('Layers: Using MediaWiki file URL:', imageUrl);
-			return imageUrl;
-		}
-
-		// Priority 3: Look for current page image
-		var pageImage = document.querySelector( '.mw-file-element img, .fullImageLink img, .filehistory img' );
-		if ( pageImage ) {
-			var pageImageUrl = pageImage.getAttribute( 'src' );
-			// console.log('Layers: Using page image URL:', pageImageUrl);
-			return pageImageUrl;
-		}
-
-		// Priority 4: Use a default fallback
-		// console.log('Layers: No parent image found, using fallback');
-		return null;
-	};
-
-	LayersEditor.prototype.showError = function ( message ) {
-		// Create error display in the editor with safe textContent
-		var errorEl = document.createElement( 'div' );
-		errorEl.className = 'layers-error';
-		errorEl.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #d63638; border-radius: 8px; z-index: 10001; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
-
-		var h = document.createElement( 'h3' );
-		h.textContent = 'Error';
-		errorEl.appendChild( h );
-
-		var p = document.createElement( 'p' );
-		p.textContent = String( message || '' );
-		errorEl.appendChild( p );
-
-		this.container.appendChild( errorEl );
-
-		// Auto-hide after 10 seconds
-		setTimeout( function () {
-			errorEl.style.opacity = '0';
-			setTimeout( function () {
-				if ( errorEl.parentNode ) {
-					errorEl.parentNode.removeChild( errorEl );
-				}
-			}, 500 ); // Allow fade out transition
-		}, 10000 );
-	};
-
-	LayersEditor.prototype.handleResize = function () {
-		// console.log( 'Layers: Handling window resize...' );
-		if ( this.canvasManager ) {
-			this.canvasManager.handleResize();
-		}
-
-		// Also trigger a canvas resize to ensure proper sizing
-		if ( this.canvasManager && this.canvasManager.resizeCanvas ) {
-			var self = this;
-			setTimeout( function () {
-				self.canvasManager.resizeCanvas();
-			}, 100 ); // Small delay to let CSS settle
-		}
-	};
-
-	LayersEditor.prototype.destroy = function () {
-		// Cleanup
-		if ( this.onResizeHandler ) {
-			window.removeEventListener( 'resize', this.onResizeHandler );
-			this.onResizeHandler = null;
-		}
-		if ( this.onBeforeUnloadHandler ) {
-			window.removeEventListener( 'beforeunload', this.onBeforeUnloadHandler );
-			this.onBeforeUnloadHandler = null;
-		}
-		if ( this.container && this.container.parentNode ) {
-			this.container.parentNode.removeChild( this.container );
-		}
-
-		// Remove body class when editor closes
-		document.body.classList.remove( 'layers-editor-open' );
-	};
-
-	// Export LayersEditor to global scope
-	window.LayersEditor = LayersEditor;
-
-	// Initialize editor when appropriate
-	mw.hook( 'layers.editor.init' ).add( function ( config ) {
-		document.title = '🎨 Layers Editor Initializing...';
-		var editor = new LayersEditor( config );
-		document.title = '🎨 Layers Editor - ' + ( config.filename || 'Unknown File' );
-		if ( window.mw && window.mw.config.get( 'debug' ) ) {
-			window.layersEditorInstance = editor;
-		}
-	} );
-
-	// Auto-bootstrap if server provided config via wgLayersEditorInit
-	( function autoBootstrap() {
-		function tryBootstrap() {
-			try {
-				// Add debug logging (only if explicitly enabled)
-				var debug = ( window.location && window.location.search && window.location.search.indexOf( 'layers_debug=1' ) > -1 ) ||
-					( window.mw && mw.config && mw.config.get( 'wgLayersDebug' ) );
-
-				if ( debug && window.console && console.log ) {
-					// eslint-disable-next-line no-console
-					console.log( 'Layers: Auto-bootstrap starting...' );
-				}
-
-				// Ensure MediaWiki is available
-				if ( !window.mw || !mw.config || !mw.config.get ) {
-					if ( debug && window.console && console.log ) {
-						// eslint-disable-next-line no-console
-						console.log( 'Layers: MediaWiki not ready, retrying in 100ms...' );
+				// Fallback to showCancelConfirmDialog method
+				this.showCancelConfirmDialog( () => {
+					if ( this.stateManager ) {
+						this.stateManager.set( 'isDirty', false );
 					}
-					setTimeout( tryBootstrap, 100 );
-					return;
-				}
-
-				var init = mw.config.get( 'wgLayersEditorInit' );
-				if ( debug && window.console && console.log ) {
-					// eslint-disable-next-line no-console
-					console.log( 'Layers: wgLayersEditorInit config:', init );
-				}
-
-				if ( !init ) {
-					if ( debug && window.console && console.log ) {
-						// eslint-disable-next-line no-console
-						console.log( 'Layers: No wgLayersEditorInit config found, not auto-bootstrapping' );
+					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
+						this.eventManager.destroy();
 					}
-					return;
-				}
-				var container = document.getElementById( 'layers-editor-container' );
-				if ( debug && window.console && console.log ) {
-					// eslint-disable-next-line no-console
-					console.log( 'Layers: Container element:', container );
-				}
-
-				mw.hook( 'layers.editor.init' ).fire( {
-					filename: init.filename,
-					imageUrl: init.imageUrl,
-					container: container || document.body
+					this.uiManager.destroy();
+					if ( navigateBack ) {
+						this.navigateBackToFileWithName( savedFilename );
+					}
 				} );
+			}
+		} else {
+			this.uiManager.destroy();
+			if ( navigateBack ) {
+				this.navigateBackToFileWithName( savedFilename );
+			}
+		}
+	};
 
-				if ( debug && window.console && console.log ) {
-					// eslint-disable-next-line no-console
-					console.log( 'Layers: Auto-bootstrap fired layers.editor.init hook' );
+	/**
+	 * Show cancel confirmation dialog (fallback when DialogManager not available)
+	 * @param {Function} onConfirm Callback when user confirms
+	 * @private
+	 */
+	LayersEditor.prototype.showCancelConfirmDialog = function ( onConfirm ) {
+		const t = function ( key, fallback ) {
+			if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+				return window.layersMessages.get( key, fallback );
+			}
+			return fallback;
+		};
+
+		const overlay = document.createElement( 'div' );
+		overlay.className = 'layers-modal-overlay';
+		overlay.setAttribute( 'role', 'presentation' );
+
+		const dialog = document.createElement( 'div' );
+		dialog.className = 'layers-modal-dialog';
+		dialog.setAttribute( 'role', 'alertdialog' );
+		dialog.setAttribute( 'aria-modal', 'true' );
+		dialog.setAttribute( 'aria-label', t( 'layers-confirm-title', 'Confirm' ) );
+
+		const text = document.createElement( 'p' );
+		text.textContent = t( 'layers-cancel-confirm', 'You have unsaved changes. Are you sure you want to close the editor? All changes will be lost.' );
+		dialog.appendChild( text );
+
+		const buttons = document.createElement( 'div' );
+		buttons.className = 'layers-modal-buttons';
+
+		const cancelBtn = document.createElement( 'button' );
+		cancelBtn.textContent = t( 'layers-cancel-continue', 'Continue Editing' );
+		cancelBtn.className = 'layers-btn layers-btn-primary';
+
+		const confirmBtn = document.createElement( 'button' );
+		confirmBtn.textContent = t( 'layers-cancel-discard', 'Discard Changes' );
+		confirmBtn.className = 'layers-btn layers-btn-secondary layers-btn-danger';
+
+		buttons.appendChild( cancelBtn );
+		buttons.appendChild( confirmBtn );
+		dialog.appendChild( buttons );
+
+		document.body.appendChild( overlay );
+		document.body.appendChild( dialog );
+
+		const cleanup = function () {
+			if ( overlay.parentNode ) {
+				overlay.parentNode.removeChild( overlay );
+			}
+			if ( dialog.parentNode ) {
+				dialog.parentNode.removeChild( dialog );
+			}
+			document.removeEventListener( 'keydown', handleKey );
+		};
+
+		const handleKey = function ( e ) {
+			if ( e.key === 'Escape' ) {
+				cleanup();
+			} else if ( e.key === 'Tab' ) {
+				const focusable = dialog.querySelectorAll( 'button' );
+				if ( focusable.length ) {
+					const first = focusable[ 0 ];
+					const last = focusable[ focusable.length - 1 ];
+					if ( e.shiftKey && document.activeElement === first ) {
+						e.preventDefault();
+						last.focus();
+					} else if ( !e.shiftKey && document.activeElement === last ) {
+						e.preventDefault();
+						first.focus();
+					}
 				}
-			} catch ( e ) {
-				if ( window.console && console.error ) {
-					// eslint-disable-next-line no-console
-					console.error( 'Layers: Auto-bootstrap error:', e );
-				}
+			}
+		};
+		document.addEventListener( 'keydown', handleKey );
+
+		cancelBtn.addEventListener( 'click', cleanup );
+		confirmBtn.addEventListener( 'click', function () {
+			cleanup();
+			onConfirm();
+		} );
+
+		cancelBtn.focus();
+	};
+
+	/**
+	 * Handle keyboard shortcuts
+	 * @param {KeyboardEvent} e Keyboard event
+	 * @private
+	 */
+	LayersEditor.prototype.handleKeyDown = function ( e ) {
+		this.eventManager.handleKeyDown( e );
+	};
+
+	/**
+	 * Destroy the editor and clean up resources
+	 */
+	LayersEditor.prototype.destroy = function () {
+		if ( this.isDestroyed ) {
+			return;
+		}
+		this.isDestroyed = true;
+
+		// Clean up event listeners
+		this.cleanupGlobalEventListeners();
+
+		// Clean up managers
+		const managers = [
+			'uiManager', 'eventManager', 'apiManager', 'validationManager',
+			'stateManager', 'historyManager', 'layerSetManager',
+			'revisionManager', 'dialogManager'
+		];
+
+		managers.forEach( ( name ) => {
+			if ( this[ name ] && typeof this[ name ].destroy === 'function' ) {
+				this[ name ].destroy();
+			}
+		} );
+
+		// Clean up canvas manager
+		if ( this.canvasManager ) {
+			if ( this.canvasManager.events && typeof this.canvasManager.events.destroy === 'function' ) {
+				this.canvasManager.events.destroy();
+			}
+			if ( this.canvasManager.selectionSystem && typeof this.canvasManager.selectionSystem.destroy === 'function' ) {
+				this.canvasManager.selectionSystem.destroy();
+			}
+			if ( typeof this.canvasManager.destroy === 'function' ) {
+				this.canvasManager.destroy();
 			}
 		}
 
-		// Try bootstrapping immediately, or when DOM is ready
-		if ( document.readyState === 'loading' ) {
-			document.addEventListener( 'DOMContentLoaded', tryBootstrap );
-		} else {
-			tryBootstrap();
+		// Clean up toolbar and layer panel
+		if ( this.toolbar && typeof this.toolbar.destroy === 'function' ) {
+			this.toolbar.destroy();
 		}
-	}() );
+		if ( this.layerPanel && typeof this.layerPanel.destroy === 'function' ) {
+			this.layerPanel.destroy();
+		}
+
+		// Clean up DOM event listeners
+		this.cleanupDOMEventListeners();
+
+		// Clear all object references
+		this.uiManager = null;
+		this.eventManager = null;
+		this.apiManager = null;
+		this.validationManager = null;
+		this.stateManager = null;
+		this.historyManager = null;
+		this.canvasManager = null;
+		this.toolbar = null;
+		this.layerPanel = null;
+		this.layerSetManager = null;
+		this.revisionManager = null;
+		this.dialogManager = null;
+		this.config = null;
+		this.filename = null;
+		this.containerElement = null;
+		this.imageUrl = null;
+		this.layers = null;
+		this.clipboard = null;
+	};
+
+	/**
+	 * Clean up global event listeners
+	 * @private
+	 */
+	LayersEditor.prototype.cleanupGlobalEventListeners = function () {
+		if ( this.eventTracker ) {
+			this.eventTracker.removeAllForElement( window );
+			this.eventTracker.removeAllForElement( document );
+		}
+	};
+
+	/**
+	 * Clean up DOM event listeners
+	 * @private
+	 */
+	LayersEditor.prototype.cleanupDOMEventListeners = function () {
+		if ( this.eventTracker ) {
+			this.eventTracker.destroy();
+			this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+		}
+	};
+
+	/**
+	 * Track event listeners for cleanup
+	 * @param {Element} element DOM element
+	 * @param {string} event Event name
+	 * @param {Function} handler Event handler
+	 * @param {Object} options Event listener options
+	 */
+	LayersEditor.prototype.trackEventListener = function ( element, event, handler, options ) {
+		if ( this.eventTracker ) {
+			this.eventTracker.add( element, event, handler, options );
+		} else {
+			element.addEventListener( event, handler, options );
+		}
+	};
+
+	/**
+	 * Track window event listeners
+	 * @param {string} event Event name
+	 * @param {Function} handler Event handler
+	 * @param {Object} options Event listener options
+	 */
+	LayersEditor.prototype.trackWindowListener = function ( event, handler, options ) {
+		if ( this.eventTracker ) {
+			this.eventTracker.add( window, event, handler, options );
+		} else {
+			window.addEventListener( event, handler, options );
+		}
+	};
+
+	/**
+	 * Track document event listeners
+	 * @param {string} event Event name
+	 * @param {Function} handler Event handler
+	 * @param {Object} options Event listener options
+	 */
+	LayersEditor.prototype.trackDocumentListener = function ( event, handler, options ) {
+		if ( this.eventTracker ) {
+			this.eventTracker.add( document, event, handler, options );
+		} else {
+			document.addEventListener( event, handler, options );
+		}
+	};
+
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.Editor = LayersEditor;
+
+		// Backward compatibility - direct window export
+		window.LayersEditor = LayersEditor;
+	}
 
 }() );
