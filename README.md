@@ -259,10 +259,11 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Frontend (JavaScript):**
 - HTML5 Canvas-based editor with SVG-like layer objects
-- IIFE module pattern with global exports (54 `window.*` exports)
+- Hybrid module pattern: ES6 classes + IIFE wrappers with namespaced exports
 - Tool-based interaction system with ModuleRegistry for dependency management
 - StateManager for centralized state with property descriptors bridging legacy access
 - HistoryManager for undo/redo operations
+- **Viewer/Editor code splitting**: Viewer ~4K lines, Editor ~31K lines (separate modules)
 
 **Backend (PHP):**
 - MediaWiki extension integration via hooks and service wiring
@@ -271,14 +272,15 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 - Server-side validation with strict property whitelist (40+ allowed fields)
 - Rate limiting via MediaWiki's pingLimiter system
 
-**Test Coverage:**
-- Jest: 2,352 tests with ~91% coverage
+**Test Coverage (December 2025):**
+- Jest: 3,877 tests with 89.65% statement coverage
 - PHPUnit: 17 test files covering API, database, and validation
+- LayerRenderer.js: 89% coverage with 146 dedicated tests
 
-**Current Architecture Challenges:**
-- Large JavaScript files: CanvasManager.js (~1,900 lines), LayersEditor.js (~1,750 lines), Toolbar.js (~1,680 lines)
-- 54 global `window.*` exports (IIFE pattern, no ES modules yet)
-- Some direct state access bypassing StateManager
+**Architecture Notes:**
+- 17 files use ES6 classes, 19 still use prototype pattern (migration in progress)
+- Memory management verified clean (EventTracker pattern throughout)
+- Controllers extracted from CanvasManager (9 specialized controllers with 85%+ coverage)
 
 ### Development Roadmap
 
@@ -386,52 +388,45 @@ See docs/CSP_GUIDE.md for recommended CSP settings and common pitfalls when runn
 
 ## Development Status
 
-### Current Status (Updated August 2025)
+### Current Status (Updated December 2025)
 
-The Layers MediaWiki extension is actively developed and functional with the following status:
+The Layers MediaWiki extension is actively developed and production-ready with the following status:
 
 #### ✅ Completed Features
 
 - **Core Architecture**: Full separation between PHP backend and JavaScript frontend
-- **Database Integration**: Complete schema with layers storage and retrieval
+- **Database Integration**: Complete schema with named layer sets and revision history
 - **API Endpoints**: Working `ApiLayersInfo` and `ApiLayersSave` endpoints
 - **MediaWiki Integration**: Hooks for UI, parser functions, and file handling
 - **File Link Parameters**: Support for `layers=` parameter in standard file syntax
-- **Basic Editor UI**: Canvas-based drawing interface with toolbar
-- **Permissions System**: MediaWiki permissions integration
-- **Installation Support**: Extension manifest and database schema
-- **Magic Word Conflict Fixed**: Resolved parser initialization errors causing crashes
+- **Full Editor UI**: Canvas-based drawing interface with 14 tools
+- **Permissions System**: MediaWiki permissions integration with rate limiting
+- **Named Layer Sets**: Multiple annotation sets per image (e.g., "default", "anatomy")
+- **Version History**: Revision tracking per layer set (configurable, default 25)
+- **Comprehensive Tests**: 3,877+ Jest tests, 89.65% coverage
 
 #### 📋 Code Quality Status
 
-- **JavaScript**: 18 minor line-length warnings (ESLint compliant)
-- **CSS**: Fully compliant with MediaWiki style guidelines
-- **PHP**: 21 documentation errors, 50+ style warnings (mostly minor)
-- **Tests**: Basic PHPUnit test framework in place
-- **Linting**: All major violations resolved
+- **JavaScript**: Fully ESLint compliant (no-var, prefer-const enforced)
+- **CSS**: Fully compliant with MediaWiki style guidelines (Stylelint)
+- **PHP**: All lint/style checks passing (phpcs, parallel-lint)
+- **Tests**: Comprehensive Jest + PHPUnit coverage
+- **Memory Management**: Verified clean (EventTracker pattern throughout)
 
-#### 🔧 Known Issues
+#### 🚀 Production Ready
 
-- Some PHP methods missing complete documentation
-- Test methods need `@covers` tags for coverage analysis
-- Minor line length violations in various files
-- Debug/test files have class naming inconsistencies
-- Parser functions ({{#layeredfile}}) temporarily disabled (use layers= parameter instead)
+- Extension installs cleanly on MediaWiki 1.44+
+- Database tables created via `maintenance/update.php`
+- All 14 drawing tools functional
+- Named layer sets and revision history working
+- Viewer/Editor code properly split for performance
 
-#### 🚀 Installation Ready
+#### 🔄 Ongoing Development
 
-- Extension can be installed and activated
-- Database tables created successfully
-- Basic functionality operational
-- Compatible with MediaWiki 1.44+
-
-#### 🔄 Next Steps
-
-1. Complete PHP documentation for all methods
-2. Add comprehensive unit test coverage
-3. Implement advanced drawing tools
-4. Add layer export/import functionality
-5. Enhance mobile responsiveness
+See [improvement_plan.md](improvement_plan.md) for detailed roadmap:
+1. ES6 class migration (17/36 files complete)
+2. Global export consolidation to namespaced pattern
+3. Large file refactoring (CanvasManager, LayerPanel)
 
 To verify basic setup, use MediaWiki's maintenance update and open a File page to load the editor. A dedicated test script is not included; use the static checks below.
 
