@@ -157,27 +157,27 @@ ext.layers.editor  → **53 files** (only needed for editing)
 
 ---
 
-### P1.2 🟠 Increase LayerRenderer.js Test Coverage (60% → 80%)
+### P1.2 � Increase LayerRenderer.js Test Coverage (60% → 80%)
 
-**Status:** NOT STARTED  
+**Status:** IN PROGRESS (66% achieved, December 10, 2025)  
 **Effort:** 1 week  
-**Current:** 60.03%  
+**Current:** 66% statements, 68% branches, 82% functions  
 **Target:** 80%
 
-**Problem:**
-LayerRenderer.js is 2,288 lines with 60% test coverage. It's the core rendering engine - changes carry high regression risk.
+**Progress:**
+Added 12 new tests for shadow rendering (December 10, 2025):
+- Rectangle/circle/ellipse stroke shadow with spread=0 (bug fix coverage)
+- Text shadow with spread effect (bug fix coverage)
+- Stroke-only shadows (no fill)
+- Combined shadow settings
+- Edge cases (disabled, large spread)
 
-**Uncovered Areas:**
-- Spread shadow rendering paths
-- Text rendering edge cases
+**Remaining Uncovered Areas:**
+- Polygon/star drawing edge cases
+- Path rendering with complex curves
 - Blur effect handling
+- Arrow rendering variations
 - Various error paths
-
-**Action Items:**
-- [ ] Review coverage report for specific gaps
-- [ ] Add tests for uncovered draw methods
-- [ ] Add tests for edge cases (negative dimensions, etc.)
-- [ ] Target 80% coverage minimum
 
 ---
 
@@ -396,7 +396,7 @@ P0.3 Memory Leak Audit:       ████████████████�
 
 Phase 1 (High Impact):
 P1.1 Code Splitting:          ░░░░░░░░░░░░░░░░░░░░ 0%
-P1.2 LayerRenderer Coverage:  ████████████░░░░░░░░ 60%
+P1.2 LayerRenderer Coverage:  █████████████░░░░░░░ 66% (was 60%)
 P1.3 Global Export Cleanup:   ░░░░░░░░░░░░░░░░░░░░ 0%
 
 Phase 2 (Refactoring):
