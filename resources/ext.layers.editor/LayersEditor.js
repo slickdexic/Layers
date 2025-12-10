@@ -10,6 +10,20 @@
 ( function () {
 	'use strict';
 
+	// Module resolution helpers - prefer namespaced, fallback to global
+	const getClass = ( namespacePath, globalName ) => {
+		const parts = namespacePath.split( '.' );
+		let obj = window.Layers;
+		for ( const part of parts ) {
+			obj = obj && obj[ part ];
+		}
+		return obj || window[ globalName ];
+	};
+
+	// Resolve commonly used classes
+	const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
+	const EditorBootstrap = window.Layers && window.Layers.Core && window.Layers.Core.EditorBootstrap || window.EditorBootstrap;
+
 	/**
 	 * Main Layers Editor class for MediaWiki Layers extension
 	 *
@@ -21,8 +35,8 @@
 	 */
 	function LayersEditor( config ) {
 		// Validate dependencies using EditorBootstrap
-		if ( window.EditorBootstrap && window.EditorBootstrap.validateDependencies ) {
-			window.EditorBootstrap.validateDependencies();
+		if ( EditorBootstrap && EditorBootstrap.validateDependencies ) {
+			EditorBootstrap.validateDependencies();
 		}
 
 		this.config = config || {};
@@ -33,7 +47,7 @@
 		this.toolbar = null;
 
 		// Initialize EventTracker for memory-safe event listener management
-		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+		this.eventTracker = EventTracker ? new EventTracker() : null;
 		this.isDestroyed = false;
 
 		// Debug mode - check MediaWiki config first, then fallback to config
@@ -70,6 +84,14 @@
 	 * @private
 	 */
 	LayersEditor.prototype.initializeRegistry = function () {
+		// Resolve manager classes (prefer namespaced)
+		const UIManager = getClass( 'UI.Manager', 'UIManager' );
+		const EventManager = getClass( 'Core.EventManager', 'EventManager' );
+		const APIManager = getClass( 'Core.APIManager', 'APIManager' );
+		const ValidationManager = getClass( 'Validation.Manager', 'ValidationManager' );
+		const StateManager = getClass( 'Core.StateManager', 'StateManager' );
+		const HistoryManager = getClass( 'Core.HistoryManager', 'HistoryManager' );
+
 		// Prefer layersRegistry; layersModuleRegistry is deprecated
 		this.registry = window.layersRegistry;
 		if ( !this.registry && window.layersModuleRegistry ) {
@@ -84,12 +106,12 @@
 
 		// Register manager factories with context
 		if ( this.registry.register ) {
-			this.registry.register( 'UIManager', () => new window.UIManager( this ), [] );
-			this.registry.register( 'EventManager', () => new window.EventManager( this ), [] );
-			this.registry.register( 'APIManager', () => new window.APIManager( this ), [] );
-			this.registry.register( 'ValidationManager', () => new window.ValidationManager( this ), [] );
-			this.registry.register( 'StateManager', () => new window.StateManager( this ), [] );
-			this.registry.register( 'HistoryManager', () => new window.HistoryManager( this ), [] );
+			this.registry.register( 'UIManager', () => new UIManager( this ), [] );
+			this.registry.register( 'EventManager', () => new EventManager( this ), [] );
+			this.registry.register( 'APIManager', () => new APIManager( this ), [] );
+			this.registry.register( 'ValidationManager', () => new ValidationManager( this ), [] );
+			this.registry.register( 'StateManager', () => new StateManager( this ), [] );
+			this.registry.register( 'HistoryManager', () => new HistoryManager( this ), [] );
 		}
 	};
 
@@ -99,18 +121,30 @@
 	 * @private
 	 */
 	LayersEditor.prototype.createFallbackRegistry = function () {
+		// Resolve classes using namespace-first approach
+		const UIManager = getClass( 'UI.Manager', 'UIManager' );
+		const EventManager = getClass( 'Core.EventManager', 'EventManager' );
+		const APIManager = getClass( 'Core.APIManager', 'APIManager' );
+		const ValidationManager = getClass( 'Validation.Manager', 'ValidationManager' );
+		const StateManager = getClass( 'Core.StateManager', 'StateManager' );
+		const HistoryManager = getClass( 'Core.HistoryManager', 'HistoryManager' );
+		const Toolbar = getClass( 'UI.Toolbar', 'Toolbar' );
+		const LayerPanel = getClass( 'UI.LayerPanel', 'LayerPanel' );
+		const CanvasManager = getClass( 'Canvas.Manager', 'CanvasManager' );
+		const self = this;
+
 		return {
 			get: ( name ) => {
 				const constructors = {
-					UIManager: () => ( typeof window.UIManager === 'function' ) ? new window.UIManager( this ) : this.createStubUIManager(),
-					EventManager: () => ( typeof window.EventManager === 'function' ) ? new window.EventManager( this ) : { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} },
-					APIManager: () => ( typeof window.APIManager === 'function' ) ? new window.APIManager( this ) : { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} },
-					ValidationManager: () => ( typeof window.ValidationManager === 'function' ) ? new window.ValidationManager( this ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
-					StateManager: () => ( typeof window.StateManager === 'function' ) ? new window.StateManager( this ) : this.createStubStateManager(),
-					HistoryManager: () => ( typeof window.HistoryManager === 'function' ) ? new window.HistoryManager( this ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
-					Toolbar: () => ( typeof window.Toolbar === 'function' ) ? new window.Toolbar( { container: ( this.uiManager && this.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {} },
-					LayerPanel: () => ( typeof window.LayerPanel === 'function' ) ? new window.LayerPanel( { container: ( this.uiManager && this.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
-					CanvasManager: () => ( typeof window.CanvasManager === 'function' ) ? new window.CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
+					UIManager: () => ( typeof UIManager === 'function' ) ? new UIManager( self ) : self.createStubUIManager(),
+					EventManager: () => ( typeof EventManager === 'function' ) ? new EventManager( self ) : { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} },
+					APIManager: () => ( typeof APIManager === 'function' ) ? new APIManager( self ) : { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} },
+					ValidationManager: () => ( typeof ValidationManager === 'function' ) ? new ValidationManager( self ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
+					StateManager: () => ( typeof StateManager === 'function' ) ? new StateManager( self ) : self.createStubStateManager(),
+					HistoryManager: () => ( typeof HistoryManager === 'function' ) ? new HistoryManager( self ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
+					Toolbar: () => ( typeof Toolbar === 'function' ) ? new Toolbar( { container: ( self.uiManager && self.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {} },
+					LayerPanel: () => ( typeof LayerPanel === 'function' ) ? new LayerPanel( { container: ( self.uiManager && self.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
+					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( self.uiManager && self.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: self, backgroundImageUrl: self.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
 				};
 				if ( constructors[ name ] ) {
 					return constructors[ name ]();
