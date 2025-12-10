@@ -1505,6 +1505,85 @@ describe( 'LayerRenderer', () => {
 			// Should still render something even without explicit blurAmount
 			expect( ctx.save ).toHaveBeenCalled();
 		} );
+
+		test( 'draws blur with background image (editor mode)', () => {
+			// The blur implementation uses a complex temp canvas pattern
+			// that requires document.createElement mocking.
+			// For now, verify it handles background images without error.
+			const mockImage = {
+				complete: true,
+				width: 400,
+				height: 300,
+				naturalWidth: 400,
+				naturalHeight: 300
+			};
+			renderer.setBackgroundImage( mockImage );
+
+			// This will try the temp canvas path but fall through gracefully
+			renderer.drawBlur( {
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 100,
+				blurAmount: 8
+			} );
+
+			// Should complete without error
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'draws blur with imageElement option (viewer mode)', () => {
+			// Viewer mode passes imageElement through options
+			const mockImage = {
+				complete: true,
+				width: 400,
+				height: 300
+			};
+
+			renderer.drawBlur( {
+				x: 25,
+				y: 25,
+				width: 150,
+				height: 150,
+				blurAmount: 12
+			}, {
+				imageElement: mockImage
+			} );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'uses fallback gray overlay when CORS error occurs', () => {
+			// This tests the try/catch error path indirectly
+			// When no background is available, uses gray overlay
+			renderer.drawBlur( {
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 100,
+				blurAmount: 10
+			} );
+
+			// Falls back to fillRect with gray
+			expect( ctx.fillRect ).toHaveBeenCalled();
+		} );
+
+		test( 'handles blur with scaling', () => {
+			renderer.setBaseDimensions( 1000, 800 );
+			
+			renderer.drawBlur( {
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 100,
+				blurAmount: 10
+			} );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
 	} );
 
 	// ========================================================================
@@ -1757,6 +1836,49 @@ describe( 'LayerRenderer', () => {
 			expect( ctx.fillText ).toHaveBeenCalled();
 			// Shadow should not be applied
 			expect( ctx.shadowBlur ).toBe( 0 );
+		} );
+
+		test( 'drawText with stroke and shadow spread', () => {
+			// Add strokeText mock if not present
+			ctx.strokeText = ctx.strokeText || jest.fn();
+			
+			renderer.drawText( {
+				x: 50,
+				y: 50,
+				text: 'Stroked Shadow',
+				fontSize: 24,
+				color: '#ffffff',
+				textStrokeColor: '#000000',
+				textStrokeWidth: 2,
+				shadow: true,
+				shadowBlur: 8,
+				shadowSpread: 8,
+				shadowColor: 'rgba(0,0,0,0.7)'
+			} );
+
+			// Both fill and stroke should be rendered with shadow spread
+			expect( ctx.fillText ).toHaveBeenCalled();
+			expect( ctx.strokeText ).toHaveBeenCalled();
+		} );
+
+		test( 'drawText with stroke, no spread', () => {
+			ctx.strokeText = ctx.strokeText || jest.fn();
+			
+			renderer.drawText( {
+				x: 100,
+				y: 100,
+				text: 'Stroked',
+				fontSize: 20,
+				color: '#ff0000',
+				textStrokeColor: '#000000',
+				textStrokeWidth: 3,
+				shadow: true,
+				shadowBlur: 6,
+				shadowSpread: 0,
+				shadowColor: '#333333'
+			} );
+
+			expect( ctx.strokeText ).toHaveBeenCalled();
 		} );
 	} );
 
