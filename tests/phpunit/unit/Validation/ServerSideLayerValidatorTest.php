@@ -328,4 +328,72 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $result->isValid() );
 		$this->assertStringContainsString( 'Polygon layer must', $result->getErrors()[0] );
 	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateLayerEllipseWithRadii() {
+		$validator = $this->createValidator();
+
+		// Ellipse defined with radiusX/radiusY (client-side format)
+		$layer = [
+			'type' => 'ellipse',
+			'x' => 100,
+			'y' => 100,
+			'radiusX' => 50,
+			'radiusY' => 30,
+			'stroke' => '#ff0000',
+			'fill' => '#00ff00'
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'Ellipse with radiusX/radiusY should validate' );
+		$data = $result->getData();
+		$this->assertEquals( 'ellipse', $data['type'] );
+		$this->assertEquals( 50, $data['radiusX'] );
+		$this->assertEquals( 30, $data['radiusY'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateLayerEllipseWithWidthHeight() {
+		$validator = $this->createValidator();
+
+		// Ellipse defined with width/height (legacy format)
+		$layer = [
+			'type' => 'ellipse',
+			'x' => 100,
+			'y' => 100,
+			'width' => 100,
+			'height' => 60,
+			'stroke' => '#ff0000'
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'Ellipse with width/height should validate' );
+		$data = $result->getData();
+		$this->assertEquals( 'ellipse', $data['type'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateLayerEllipseMissingDimensions() {
+		$validator = $this->createValidator();
+
+		// Ellipse without any dimensions should fail
+		$layer = [
+			'type' => 'ellipse',
+			'x' => 100,
+			'y' => 100
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertFalse( $result->isValid() );
+		$this->assertStringContainsString( 'ellipse layer must have', $result->getErrors()[0] );
+	}
 }

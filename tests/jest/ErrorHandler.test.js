@@ -4,9 +4,6 @@
  */
 'use strict';
 
-const fs = require( 'fs' );
-const path = require( 'path' );
-
 describe( 'ErrorHandler', function () {
 	let ErrorHandler;
 	let errorHandler;
@@ -50,15 +47,9 @@ describe( 'ErrorHandler', function () {
 			error: jest.fn()
 		};
 
-		// Load ErrorHandler code
-		const errorHandlerCode = fs.readFileSync(
-			path.join( __dirname, '../../resources/ext.layers.editor/ErrorHandler.js' ),
-			'utf8'
-		);
-		// eslint-disable-next-line no-eval
-		eval( errorHandlerCode );
-
-		ErrorHandler = window.LayersErrorHandler;
+		// Load ErrorHandler using require for proper coverage tracking
+		const { ErrorHandler: LoadedErrorHandler } = require( '../../resources/ext.layers.editor/ErrorHandler.js' );
+		ErrorHandler = LoadedErrorHandler;
 	} );
 
 	beforeEach( function () {

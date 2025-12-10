@@ -10,6 +10,9 @@
 	const ColorPickerDialog = window.ColorPickerDialog;
 	const ConfirmDialog = window.ConfirmDialog;
 	const PropertiesForm = window.PropertiesForm;
+	const LayerDragDrop = window.LayerDragDrop;
+	const LayerListRenderer = window.LayerListRenderer;
+	const LayerItemEvents = window.LayerItemEvents;
 
 	/**
 	 * LayerPanel class
@@ -239,6 +242,11 @@
 					}
 				} );
 				this.stateSubscriptions = [];
+			}
+			// Clean up LayerItemEvents controller
+			if ( this.itemEventsController && typeof this.itemEventsController.destroy === 'function' ) {
+				this.itemEventsController.destroy();
+				this.itemEventsController = null;
 			}
 			this.runDialogCleanups();
 			this.removeAllListeners();
@@ -474,16 +482,34 @@
 		 * Set up event handlers for the panel
 		 */
 		setupEventHandlers() {
-			// Clicks in the list
-			if ( this.layerList ) {
-				this.addTargetListener( this.layerList, 'click', ( e ) => {
-					this.handleLayerListClick( e );
+			// Use extracted LayerItemEvents if available
+			if ( LayerItemEvents && this.layerList ) {
+				this.itemEventsController = new LayerItemEvents( {
+					layerList: this.layerList,
+					getLayers: this.getLayers.bind( this ),
+					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
+					callbacks: {
+						onSelect: ( layerId ) => this.selectLayer( layerId ),
+						onToggleVisibility: ( layerId ) => this.toggleLayerVisibility( layerId ),
+						onToggleLock: ( layerId ) => this.toggleLayerLock( layerId ),
+						onDelete: ( layerId ) => this.deleteLayer( layerId ),
+						onEditName: ( layerId, nameEl ) => this.editLayerName( layerId, nameEl )
+					},
+					addTargetListener: this.addTargetListener.bind( this )
 				} );
-				// Keyboard navigation for accessibility
-				this.addTargetListener( this.layerList, 'keydown', ( e ) => {
-					this.handleLayerListKeydown( e );
-				} );
+			} else {
+				// Fallback: Clicks in the list
+				if ( this.layerList ) {
+					this.addTargetListener( this.layerList, 'click', ( e ) => {
+						this.handleLayerListClick( e );
+					} );
+					// Keyboard navigation for accessibility
+					this.addTargetListener( this.layerList, 'keydown', ( e ) => {
+						this.handleLayerListKeydown( e );
+					} );
+				}
 			}
+
 			// Drag and drop reordering
 			this.setupDragAndDrop();
 			// Live transform sync from CanvasManager during manipulation
@@ -524,6 +550,26 @@
 		 * Render the layer list
 		 */
 		renderLayerList() {
+			// Use extracted LayerListRenderer if available
+			if ( this.layerListRenderer ) {
+				this.layerListRenderer.render();
+				return;
+			}
+
+			// Initialize renderer if LayerListRenderer is available
+			if ( LayerListRenderer && !this.layerListRenderer ) {
+				this.layerListRenderer = new LayerListRenderer( {
+					layerList: this.layerList,
+					msg: this.msg.bind( this ),
+					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
+					getLayers: this.getLayers.bind( this ),
+					onMoveLayer: this.moveLayer.bind( this )
+				} );
+				this.layerListRenderer.render();
+				return;
+			}
+
+			// Fallback: inline implementation
 			const layers = this.getLayers();
 			const listContainer = this.layerList;
 
@@ -596,6 +642,19 @@
 		 * @param {number} direction Direction to move (-1 for up, 1 for down)
 		 */
 		moveLayer( layerId, direction ) {
+			// Delegate to LayerDragDrop controller if available
+			if ( this.dragDropController && typeof this.dragDropController.moveLayer === 'function' ) {
+				this.dragDropController.moveLayer( layerId, direction, ( id ) => {
+					// Restore focus callback
+					const newItem = this.layerList.querySelector( '.layer-item[data-layer-id="' + id + '"] .layer-grab-area' );
+					if ( newItem ) {
+						newItem.focus();
+					}
+				} );
+				return;
+			}
+
+			// Fallback: inline implementation
 			const layers = this.getLayers().slice(); // Make a copy to modify
 			let index = -1;
 			for ( let i = 0; i < layers.length; i++ ) {
@@ -981,6 +1040,13 @@
 		 * @param {number} index Layer index to focus
 		 */
 		focusLayerAtIndex( index ) {
+			// Delegate to LayerItemEvents controller if available
+			if ( this.itemEventsController && typeof this.itemEventsController.focusLayerAtIndex === 'function' ) {
+				this.itemEventsController.focusLayerAtIndex( index );
+				return;
+			}
+
+			// Fallback implementation
 			const layers = this.getLayers();
 			if ( index < 0 || index >= layers.length ) {
 				return;
@@ -1229,6 +1295,19 @@
 			if ( !this.layerList ) {
 				return;
 			}
+
+			// Use extracted LayerDragDrop component if available
+			if ( LayerDragDrop ) {
+				this.dragDropController = new LayerDragDrop( {
+					layerList: this.layerList,
+					editor: this.editor,
+					renderLayerList: this.renderLayerList.bind( this ),
+					addTargetListener: this.addTargetListener.bind( this )
+				} );
+				return;
+			}
+
+			// Fallback: inline implementation
 			this.addTargetListener( this.layerList, 'dragstart', ( e ) => {
 				const li = e.target.closest( '.layer-item' );
 				if ( li ) {
@@ -1262,7 +1341,13 @@
 		 * @param {string} targetId Target layer ID
 		 */
 		reorderLayers( draggedId, targetId ) {
-			// Use StateManager's reorderLayer method if available
+			// Delegate to LayerDragDrop controller if available
+			if ( this.dragDropController && typeof this.dragDropController.reorderLayers === 'function' ) {
+				this.dragDropController.reorderLayers( draggedId, targetId );
+				return;
+			}
+
+			// Fallback: Use StateManager's reorderLayer method if available
 			if ( this.editor.stateManager && this.editor.stateManager.reorderLayer ) {
 				const result = this.editor.stateManager.reorderLayer( draggedId, targetId );
 				if ( result ) {
@@ -1274,7 +1359,7 @@
 				return;
 			}
 
-			// Fallback for legacy support (when StateManager doesn't have reorderLayer)
+			// Legacy fallback (when StateManager doesn't have reorderLayer)
 			const layers = this.getLayers().slice(); // Make a copy to modify
 			let draggedIndex = -1;
 			let targetIndex = -1;

@@ -5,6 +5,14 @@
 ( function () {
 	'use strict';
 
+	// Import extracted modules if available
+	const SelectionState = window.SelectionState ||
+		( window.Layers && window.Layers.Selection && window.Layers.Selection.SelectionState );
+	const MarqueeSelection = window.MarqueeSelection ||
+		( window.Layers && window.Layers.Selection && window.Layers.Selection.MarqueeSelection );
+	const SelectionHandles = window.SelectionHandles ||
+		( window.Layers && window.Layers.Selection && window.Layers.Selection.SelectionHandles );
+
 	/**
 	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
 	 *
@@ -34,7 +42,10 @@
 			this.config = config || {};
 			this.canvasManager = canvasManager;
 
-			// Selection state
+			// Initialize extracted modules if available
+			this._initializeModules();
+
+			// Selection state (kept for backward compatibility when module not loaded)
 			this.selectedLayerIds = [];
 			this.selectionHandles = [];
 			this.isResizing = false;
@@ -44,7 +55,7 @@
 			this.dragStartPoint = null;
 			this.originalLayerState = null;
 
-			// Marquee selection
+			// Marquee selection (kept for backward compatibility)
 			this.isMarqueeSelecting = false;
 			this.marqueeStart = null;
 			this.marqueeEnd = null;
@@ -57,12 +68,90 @@
 		}
 
 		/**
+		 * Initialize extracted modules
+		 */
+		_initializeModules() {
+			const self = this;
+
+			// Initialize SelectionState if available
+			if ( SelectionState ) {
+				this._selectionState = new SelectionState( {
+					getLayersArray: () => self._getLayersArray(),
+					onSelectionChange: ( ids ) => self._handleSelectionChange( ids )
+				} );
+			}
+
+			// Initialize MarqueeSelection if available
+			if ( MarqueeSelection ) {
+				this._marqueeSelection = new MarqueeSelection( {
+					getLayersArray: () => self._getLayersArray(),
+					getLayerBounds: ( layer ) => self.getLayerBoundsCompat( layer ),
+					onSelectionUpdate: ( ids ) => {
+						self.selectedLayerIds = ids;
+						self.notifySelectionChange();
+					}
+				} );
+			}
+
+			// Initialize SelectionHandles if available
+			if ( SelectionHandles ) {
+				this._selectionHandles = new SelectionHandles( {
+					handleSize: 8,
+					rotationHandleOffset: 20
+				} );
+			}
+		}
+
+		/**
+		 * Get layers array from canvas manager
+		 *
+		 * @return {Array} Layers array
+		 */
+		_getLayersArray() {
+			return ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
+				this.canvasManager.layers || [];
+		}
+
+		/**
+		 * Handle selection change from SelectionState module
+		 *
+		 * @param {Array} ids Selected layer IDs
+		 */
+		_handleSelectionChange( ids ) {
+			this.selectedLayerIds = ids;
+			if ( this._selectionState ) {
+				this.lastSelectedId = this._selectionState.getLastSelectedId();
+			}
+			this.updateSelectionHandles();
+			this.notifySelectionChange();
+		}
+
+		/**
 		 * Select a layer by ID
 		 *
 		 * @param {string|null} layerId Layer ID to select, or null to clear
 		 * @param {boolean} addToSelection Whether to add to existing selection
 		 */
 		selectLayer( layerId, addToSelection ) {
+			// Delegate to SelectionState module if available
+			if ( this._selectionState ) {
+				this._selectionState.selectLayer( layerId, addToSelection );
+				// Sync state from module
+				this.selectedLayerIds = this._selectionState.getSelectedIds();
+				this.lastSelectedId = this._selectionState.getLastSelectedId();
+
+				// Announce selection for screen readers
+				const layer = this.getLayerById( layerId );
+				if ( window.layersAnnouncer && layer ) {
+					const layerName = layer.name || this.getDefaultLayerName( layer );
+					window.layersAnnouncer.announceLayerSelection( layerName );
+				}
+
+				this.updateSelectionHandles();
+				return;
+			}
+
+			// Fallback: inline implementation
 			if ( !addToSelection ) {
 				this.clearSelection();
 			}
@@ -123,6 +212,16 @@
 		 * @param {string} layerId Layer ID to deselect
 		 */
 		deselectLayer( layerId ) {
+			// Delegate to SelectionState module if available
+			if ( this._selectionState ) {
+				this._selectionState.deselectLayer( layerId );
+				this.selectedLayerIds = this._selectionState.getSelectedIds();
+				this.lastSelectedId = this._selectionState.getLastSelectedId();
+				this.updateSelectionHandles();
+				return;
+			}
+
+			// Fallback: inline implementation
 			const index = this.selectedLayerIds.indexOf( layerId );
 			if ( index !== -1 ) {
 				this.selectedLayerIds.splice( index, 1 );
@@ -141,6 +240,17 @@
 		 * Clear all selections
 		 */
 		clearSelection() {
+			// Delegate to SelectionState module if available
+			if ( this._selectionState ) {
+				this._selectionState.clearSelection( false ); // Don't notify, we'll do it
+				this.selectedLayerIds = [];
+				this.selectionHandles = [];
+				this.lastSelectedId = null;
+				this.notifySelectionChange();
+				return;
+			}
+
+			// Fallback: inline implementation
 			this.selectedLayerIds = [];
 			this.selectionHandles = [];
 			this.lastSelectedId = null;
@@ -151,6 +261,16 @@
 		 * Select all layers
 		 */
 		selectAll() {
+			// Delegate to SelectionState module if available
+			if ( this._selectionState ) {
+				this._selectionState.selectAll();
+				this.selectedLayerIds = this._selectionState.getSelectedIds();
+				this.lastSelectedId = this._selectionState.getLastSelectedId();
+				this.updateSelectionHandles();
+				return;
+			}
+
+			// Fallback: inline implementation
 			const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
 				this.canvasManager.layers || [];
 			this.selectedLayerIds = layers.map( ( layer ) => layer.id );
@@ -170,6 +290,10 @@
 		 * @return {boolean} True if selected
 		 */
 		isSelected( layerId ) {
+			// Delegate to SelectionState module if available
+			if ( this._selectionState ) {
+				return this._selectionState.isSelected( layerId );
+			}
 			return this.selectedLayerIds.indexOf( layerId ) !== -1;
 		}
 
@@ -179,6 +303,10 @@
 		 * @return {number} Number of selected layers
 		 */
 		getSelectionCount() {
+			// Delegate to SelectionState module if available
+			if ( this._selectionState ) {
+				return this._selectionState.getSelectionCount();
+			}
 			return this.selectedLayerIds.length;
 		}
 
@@ -188,6 +316,10 @@
 		 * @return {Array} Array of selected layer objects
 		 */
 		getSelectedLayers() {
+			// Delegate to SelectionState module if available
+			if ( this._selectionState ) {
+				return this._selectionState.getSelectedLayers();
+			}
 			const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
 				this.canvasManager.layers || [];
 			return layers.filter( ( layer ) => this.isSelected( layer.id ) );
@@ -200,8 +332,19 @@
 		 * @param {number} [y] y coordinate when using numeric args
 		 */
 		startMarqueeSelection( xOrPoint, y ) {
-			this.isMarqueeSelecting = true;
 			const pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
+
+			// Delegate to MarqueeSelection module if available
+			if ( this._marqueeSelection ) {
+				this._marqueeSelection.start( pt );
+				this.isMarqueeSelecting = true;
+				this.marqueeStart = { x: pt.x, y: pt.y };
+				this.marqueeEnd = { x: pt.x, y: pt.y };
+				return;
+			}
+
+			// Fallback: inline implementation
+			this.isMarqueeSelecting = true;
 			this.marqueeStart = { x: pt.x, y: pt.y };
 			this.marqueeEnd = { x: pt.x, y: pt.y };
 		}
@@ -218,6 +361,19 @@
 			}
 
 			const pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
+
+			// Delegate to MarqueeSelection module if available
+			if ( this._marqueeSelection ) {
+				const selectedIds = this._marqueeSelection.update( pt );
+				this.marqueeEnd = { x: pt.x, y: pt.y };
+				this.selectedLayerIds = selectedIds;
+				if ( this.canvasManager && typeof this.canvasManager.redraw === 'function' ) {
+					this.canvasManager.redraw();
+				}
+				return;
+			}
+
+			// Fallback: inline implementation
 			this.marqueeEnd = { x: pt.x, y: pt.y };
 
 			// Find layers within marquee
@@ -245,6 +401,17 @@
 		 * Finish marquee selection
 		 */
 		finishMarqueeSelection() {
+			// Delegate to MarqueeSelection module if available
+			if ( this._marqueeSelection ) {
+				this._marqueeSelection.finish();
+				this.isMarqueeSelecting = false;
+				this.updateSelectionHandles();
+				this.marqueeStart = null;
+				this.marqueeEnd = null;
+				return;
+			}
+
+			// Fallback: inline implementation
 			this.isMarqueeSelecting = false;
 			this.updateSelectionHandles();
 			this.marqueeStart = null;
@@ -257,6 +424,12 @@
 		 * @return {Object} Rectangle object
 		 */
 		getMarqueeRect() {
+			// Delegate to MarqueeSelection module if available
+			if ( this._marqueeSelection ) {
+				return this._marqueeSelection.getRect();
+			}
+
+			// Fallback: inline implementation
 			if ( !this.marqueeStart || !this.marqueeEnd ) {
 				return { x: 0, y: 0, width: 0, height: 0 };
 			}
@@ -291,6 +464,30 @@
 		 * Update selection handles
 		 */
 		updateSelectionHandles() {
+			// Delegate to SelectionHandles module if available
+			if ( this._selectionHandles ) {
+				if ( this.selectedLayerIds.length === 1 ) {
+					const layer = this.getLayerById( this.selectedLayerIds[ 0 ] );
+					if ( layer ) {
+						const bounds = this.getLayerBoundsCompat( layer );
+						this._selectionHandles.createSingleSelectionHandles( bounds );
+						this.selectionHandles = this._selectionHandles.getHandles();
+					} else {
+						this._selectionHandles.clear();
+						this.selectionHandles = [];
+					}
+				} else if ( this.selectedLayerIds.length > 1 ) {
+					const bounds = this.getMultiSelectionBounds();
+					this._selectionHandles.createMultiSelectionHandles( bounds );
+					this.selectionHandles = this._selectionHandles.getHandles();
+				} else {
+					this._selectionHandles.clear();
+					this.selectionHandles = [];
+				}
+				return;
+			}
+
+			// Fallback: inline implementation
 			this.selectionHandles = [];
 
 			if ( this.selectedLayerIds.length === 1 ) {
@@ -311,6 +508,15 @@
 		 * @param {Object} layer Layer object
 		 */
 		createSingleSelectionHandles( layer ) {
+			// Delegate to SelectionHandles module if available
+			if ( this._selectionHandles ) {
+				const bounds = this.getLayerBoundsCompat( layer );
+				this._selectionHandles.createSingleSelectionHandles( bounds );
+				this.selectionHandles = this._selectionHandles.getHandles();
+				return;
+			}
+
+			// Fallback: inline implementation
 			const bounds = this.getLayerBoundsCompat( layer );
 			if ( !bounds ) {
 				return;
@@ -355,6 +561,15 @@
 		 * Create selection handles for multiple layers
 		 */
 		createMultiSelectionHandles() {
+			// Delegate to SelectionHandles module if available
+			if ( this._selectionHandles ) {
+				const bounds = this.getMultiSelectionBounds();
+				this._selectionHandles.createMultiSelectionHandles( bounds );
+				this.selectionHandles = this._selectionHandles.getHandles();
+				return;
+			}
+
+			// Fallback: inline implementation
 			const bounds = this.getMultiSelectionBounds();
 			if ( !bounds ) {
 				return;
@@ -427,6 +642,12 @@
 		 * @return {Object|null} Handle object or null
 		 */
 		hitTestSelectionHandles( point ) {
+			// Delegate to SelectionHandles module if available
+			if ( this._selectionHandles ) {
+				return this._selectionHandles.hitTest( point );
+			}
+
+			// Fallback: inline implementation
 			for ( let i = 0; i < this.selectionHandles.length; i++ ) {
 				const handle = this.selectionHandles[ i ];
 				if ( this.pointInRect( point, handle.rect ) ) {
@@ -993,6 +1214,20 @@
 		 * Clean up resources and clear state
 		 */
 		destroy() {
+			// Destroy extracted modules
+			if ( this._selectionState ) {
+				this._selectionState.destroy();
+				this._selectionState = null;
+			}
+			if ( this._marqueeSelection ) {
+				this._marqueeSelection.destroy();
+				this._marqueeSelection = null;
+			}
+			if ( this._selectionHandles ) {
+				this._selectionHandles.destroy();
+				this._selectionHandles = null;
+			}
+
 			// Clear selection state
 			this.selectedLayerIds = [];
 			this.selectionHandles = [];

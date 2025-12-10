@@ -5,6 +5,11 @@
 ( function () {
 	'use strict';
 
+	// Import extracted modules (available as globals from ResourceLoader)
+	const ToolRegistry = window.ToolRegistry;
+	const ToolStyles = window.ToolStyles;
+	const ShapeFactory = window.ShapeFactory;
+
 	/**
 	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
 	 *
@@ -30,22 +35,8 @@
 		this.startPoint = null;
 		this.tempLayer = null;
 
-		// Tool settings
-		this.currentStyle = {
-			color: '#000000',
-			strokeWidth: 2,
-			fontSize: 16,
-			fontFamily: 'Arial, sans-serif',
-			fill: 'transparent',
-			// Default arrow style for new arrows
-			arrowStyle: 'single',
-			// Initialize shadow properties with defaults (can be updated via updateStyle)
-			shadow: false,
-			shadowColor: '#000000',
-			shadowBlur: 8,
-			shadowOffsetX: 2,
-			shadowOffsetY: 2
-		};
+		// Initialize extracted modules
+		this._initializeModules();
 
 		// Path drawing state
 		this.pathPoints = [];
@@ -55,6 +46,48 @@
 		this.textEditor = null;
 		this.editingTextLayer = null;
 	}
+
+	/**
+	 * Initialize extracted modules if available
+	 */
+	ToolManager.prototype._initializeModules = function () {
+		// Use ToolStyles if available
+		if ( ToolStyles ) {
+			this.styleManager = new ToolStyles();
+			// Keep currentStyle as reference for backward compatibility
+			this.currentStyle = this.styleManager.currentStyle;
+		} else {
+			// Fallback: inline style management
+			this.styleManager = null;
+			this.currentStyle = {
+				color: '#000000',
+				strokeWidth: 2,
+				fontSize: 16,
+				fontFamily: 'Arial, sans-serif',
+				fill: 'transparent',
+				arrowStyle: 'single',
+				shadow: false,
+				shadowColor: '#000000',
+				shadowBlur: 8,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			};
+		}
+
+		// Use ShapeFactory if available
+		if ( ShapeFactory ) {
+			this.shapeFactory = new ShapeFactory( { styleManager: this.styleManager } );
+		} else {
+			this.shapeFactory = null;
+		}
+
+		// Use ToolRegistry singleton if available
+		if ( ToolRegistry && window.Layers && window.Layers.Tools && window.Layers.Tools.registry ) {
+			this.toolRegistry = window.Layers.Tools.registry;
+		} else {
+			this.toolRegistry = null;
+		}
+	};
 
 	/**
 	 * Set current tool
@@ -85,7 +118,12 @@
 	 * @return {string} Human-readable tool name
 	 */
 	ToolManager.prototype.getToolDisplayName = function ( toolName ) {
-		// Use i18n messages if available
+		// Delegate to ToolRegistry if available
+		if ( this.toolRegistry && typeof this.toolRegistry.getDisplayName === 'function' ) {
+			return this.toolRegistry.getDisplayName( toolName );
+		}
+
+		// Fallback: Use i18n messages if available
 		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
 			const msgKey = 'layers-tool-' + toolName;
 			const msg = window.layersMessages.get( msgKey, '' );
@@ -138,6 +176,12 @@
 	 * @return {string} CSS cursor value
 	 */
 	ToolManager.prototype.getToolCursor = function ( toolName ) {
+		// Delegate to ToolRegistry if available
+		if ( this.toolRegistry && typeof this.toolRegistry.getCursor === 'function' ) {
+			return this.toolRegistry.getCursor( toolName );
+		}
+
+		// Fallback implementation
 		switch ( toolName ) {
 			case 'pointer':
 				return 'default';
@@ -298,6 +342,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startPenDrawing = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createPath === 'function' ) {
+			this.tempLayer = this.shapeFactory.createPath( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'path',
 			points: [ { x: point.x, y: point.y } ],
@@ -344,6 +395,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startRectangleTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createRectangle === 'function' ) {
+			this.tempLayer = this.shapeFactory.createRectangle( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'rectangle',
 			x: point.x,
@@ -353,7 +411,6 @@
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
 			fill: this.currentStyle.fill,
-			// Apply shadow properties from currentStyle
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
 			shadowBlur: this.currentStyle.shadowBlur || 8,
@@ -368,6 +425,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startHighlightTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createHighlight === 'function' ) {
+			this.tempLayer = this.shapeFactory.createHighlight( point );
+			return;
+		}
+
+		// Fallback implementation
 		let color = this.currentStyle.fill;
 		if ( !color || color === 'transparent' || color === 'none' ) {
 			color = this.currentStyle.color || '#ffff00';
@@ -390,7 +454,6 @@
 			opacity: opacity,
 			fill: color,
 			fillOpacity: opacity,
-			// Apply shadow properties from currentStyle
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
 			shadowBlur: this.currentStyle.shadowBlur || 8,
@@ -435,6 +498,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startCircleTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createCircle === 'function' ) {
+			this.tempLayer = this.shapeFactory.createCircle( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'circle',
 			x: point.x,
@@ -443,7 +513,6 @@
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
 			fill: this.currentStyle.fill,
-			// Apply shadow properties from currentStyle
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
 			shadowBlur: this.currentStyle.shadowBlur || 8,
@@ -472,6 +541,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startEllipseTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createEllipse === 'function' ) {
+			this.tempLayer = this.shapeFactory.createEllipse( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'ellipse',
 			x: point.x,
@@ -481,7 +557,6 @@
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
 			fill: this.currentStyle.fill,
-			// Apply shadow properties from currentStyle
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
 			shadowBlur: this.currentStyle.shadowBlur || 8,
@@ -513,6 +588,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startLineTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createLine === 'function' ) {
+			this.tempLayer = this.shapeFactory.createLine( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: this.currentTool, // 'line' or 'arrow'
 			x1: point.x,
@@ -521,7 +603,6 @@
 			y2: point.y,
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
-			// Apply shadow properties from currentStyle
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
 			shadowBlur: this.currentStyle.shadowBlur || 8,
@@ -536,9 +617,15 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startArrowTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createArrow === 'function' ) {
+			this.tempLayer = this.shapeFactory.createArrow( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.startLineTool( point );
 		this.tempLayer.type = 'arrow';
-		// Apply default arrow-specific properties from currentStyle
 		this.tempLayer.arrowStyle = this.currentStyle.arrowStyle || 'single';
 	};
 
@@ -622,6 +709,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startPolygonTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createPolygon === 'function' ) {
+			this.tempLayer = this.shapeFactory.createPolygon( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'polygon',
 			x: point.x,
@@ -631,7 +725,6 @@
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
 			fill: this.currentStyle.fill,
-			// Apply shadow properties from currentStyle
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
 			shadowBlur: this.currentStyle.shadowBlur || 8,
@@ -660,6 +753,13 @@
 	 * @param {Object} point Starting point
 	 */
 	ToolManager.prototype.startStarTool = function ( point ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.createStar === 'function' ) {
+			this.tempLayer = this.shapeFactory.createStar( point );
+			return;
+		}
+
+		// Fallback implementation
 		this.tempLayer = {
 			type: 'star',
 			x: point.x,
@@ -670,7 +770,6 @@
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
 			fill: this.currentStyle.fill,
-			// Apply shadow properties from currentStyle
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
 			shadowBlur: this.currentStyle.shadowBlur || 8,
@@ -719,6 +818,12 @@
 	 * @return {boolean} True if layer has valid size
 	 */
 	ToolManager.prototype.hasValidSize = function ( layer ) {
+		// Delegate to ShapeFactory if available
+		if ( this.shapeFactory && typeof this.shapeFactory.hasValidSize === 'function' ) {
+			return this.shapeFactory.hasValidSize( layer );
+		}
+
+		// Fallback implementation
 		switch ( layer.type ) {
 			case 'rectangle':
 				return layer.width > 1 && layer.height > 1;
@@ -954,7 +1059,15 @@
 	 * @param {Object} style Style object
 	 */
 	ToolManager.prototype.updateStyle = function ( style ) {
-		// Use manual property assignment instead of Object.assign for IE11 compatibility
+		// Delegate to ToolStyles if available
+		if ( this.toolStyles && typeof this.toolStyles.update === 'function' ) {
+			this.toolStyles.update( style );
+			// Keep currentStyle in sync for fallback code
+			this.currentStyle = this.toolStyles.get();
+			return;
+		}
+
+		// Fallback: Use manual property assignment for IE11 compatibility
 		for ( const prop in style ) {
 			if ( Object.prototype.hasOwnProperty.call( style, prop ) ) {
 				this.currentStyle[ prop ] = style[ prop ];
@@ -968,7 +1081,12 @@
 	 * @return {Object} Current style object
 	 */
 	ToolManager.prototype.getStyle = function () {
-		// Create shallow copy manually for IE11 compatibility
+		// Delegate to ToolStyles if available
+		if ( this.toolStyles && typeof this.toolStyles.get === 'function' ) {
+			return this.toolStyles.get();
+		}
+
+		// Fallback: Create shallow copy manually for IE11 compatibility
 		const copy = {};
 		for ( const prop in this.currentStyle ) {
 			if ( Object.prototype.hasOwnProperty.call( this.currentStyle, prop ) ) {
@@ -1007,6 +1125,11 @@
 		this.tempLayer = null;
 		this.startPoint = null;
 		this.currentStyle = null;
+
+		// Clear module references
+		this.toolRegistry = null;
+		this.toolStyles = null;
+		this.shapeFactory = null;
 
 		// Clear references
 		this.canvasManager = null;

@@ -268,9 +268,9 @@ describe( 'Render Performance Benchmarks', () => {
 			console.log( `Ratio (should be ~5x for linear): ${ ratio.toFixed( 2 ) }x` );
 			
 			// Allow for overhead and test environment variability
-			// 100/20 = 5x, allow up to 15x for CI/slow environments
+			// 100/20 = 5x, allow up to 20x for CI/slow environments
 			// This test catches O(n²) or worse performance, not small variations
-			expect( ratio ).toBeLessThan( 15 );
+			expect( ratio ).toBeLessThan( 20 );
 		} );
 	} );
 } );

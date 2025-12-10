@@ -4,9 +4,6 @@
  */
 'use strict';
 
-const fs = require( 'fs' );
-const path = require( 'path' );
-
 describe( 'APIManager', function () {
 	let APIManager;
 	let apiManager;
@@ -59,15 +56,9 @@ describe( 'APIManager', function () {
 			} )
 		};
 
-		// Load APIManager code
-		const apiManagerCode = fs.readFileSync(
-			path.join( __dirname, '../../resources/ext.layers.editor/APIManager.js' ),
-			'utf8'
-		);
-		// eslint-disable-next-line no-eval
-		eval( apiManagerCode );
-
-		APIManager = window.APIManager;
+		// Load APIManager code using require for proper coverage tracking
+		const { APIManager: LoadedAPIManager } = require( '../../resources/ext.layers.editor/APIManager.js' );
+		APIManager = LoadedAPIManager;
 	} );
 
 	beforeEach( function () {

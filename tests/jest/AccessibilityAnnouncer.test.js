@@ -4,10 +4,15 @@
 
 /**
  * Tests for AccessibilityAnnouncer
+ * Tests the actual implementation from the module
  */
 
+// Import the actual module
+require( '../../resources/ext.layers.editor/AccessibilityAnnouncer.js' );
+
 describe( 'AccessibilityAnnouncer', () => {
-	let AccessibilityAnnouncer;
+	// Use the actual class from the module
+	const AccessibilityAnnouncer = window.AccessibilityAnnouncer;
 	let announcer;
 
 	beforeEach( () => {
@@ -17,8 +22,8 @@ describe( 'AccessibilityAnnouncer', () => {
 		// Mock setTimeout to execute immediately
 		jest.useFakeTimers();
 
-		// Define the AccessibilityAnnouncer class for testing
-		AccessibilityAnnouncer = class {
+		// Test fixture - inline class is kept for reference but we use window.AccessibilityAnnouncer
+		const _ReferenceClass = class {
 			constructor() {
 				this.politeRegion = null;
 				this.assertiveRegion = null;
@@ -127,6 +132,7 @@ describe( 'AccessibilityAnnouncer', () => {
 			}
 		};
 
+		// Use the actual AccessibilityAnnouncer from the module
 		announcer = new AccessibilityAnnouncer();
 	} );
 
@@ -144,6 +150,7 @@ describe( 'AccessibilityAnnouncer', () => {
 
 		it( 'should initialize on first announcement', () => {
 			announcer.announce( 'Test message' );
+			jest.runAllTimers();
 			expect( announcer.initialized ).toBe( true );
 		} );
 
@@ -173,21 +180,25 @@ describe( 'AccessibilityAnnouncer', () => {
 
 		it( 'should announce message in polite region by default', () => {
 			announcer.announce( 'Hello world' );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( 'Hello world' );
 		} );
 
 		it( 'should announce message in assertive region when specified', () => {
 			announcer.announce( 'Urgent message', 'assertive' );
+			jest.runAllTimers();
 			expect( announcer.assertiveRegion.textContent ).toBe( 'Urgent message' );
 		} );
 
 		it( 'should not announce empty messages', () => {
 			announcer.announce( '' );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( '' );
 		} );
 
 		it( 'should not announce null messages', () => {
 			announcer.announce( null );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( '' );
 		} );
 	} );
@@ -199,6 +210,7 @@ describe( 'AccessibilityAnnouncer', () => {
 
 		it( 'should announce error in assertive region', () => {
 			announcer.announceError( 'Something went wrong' );
+			jest.runAllTimers();
 			expect( announcer.assertiveRegion.textContent ).toBe( 'Something went wrong' );
 		} );
 	} );
@@ -210,6 +222,7 @@ describe( 'AccessibilityAnnouncer', () => {
 
 		it( 'should announce success in polite region', () => {
 			announcer.announceSuccess( 'Saved successfully' );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( 'Saved successfully' );
 		} );
 	} );
@@ -221,11 +234,13 @@ describe( 'AccessibilityAnnouncer', () => {
 
 		it( 'should announce tool selection', () => {
 			announcer.announceTool( 'Rectangle' );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( 'Rectangle tool selected' );
 		} );
 
 		it( 'should not announce empty tool name', () => {
 			announcer.announceTool( '' );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( '' );
 		} );
 	} );
@@ -237,6 +252,7 @@ describe( 'AccessibilityAnnouncer', () => {
 
 		it( 'should announce layer selection', () => {
 			announcer.announceLayerSelection( 'My Rectangle' );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( 'My Rectangle selected' );
 		} );
 	} );
@@ -248,11 +264,13 @@ describe( 'AccessibilityAnnouncer', () => {
 
 		it( 'should announce action with layer name', () => {
 			announcer.announceLayerAction( 'deleted', 'Rectangle' );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( 'Rectangle deleted' );
 		} );
 
 		it( 'should announce action without layer name', () => {
 			announcer.announceLayerAction( 'Layer created' );
+			jest.runAllTimers();
 			expect( announcer.politeRegion.textContent ).toBe( 'Layer created' );
 		} );
 	} );
@@ -265,6 +283,7 @@ describe( 'AccessibilityAnnouncer', () => {
 		it( 'should clear all announcements', () => {
 			announcer.announce( 'Test message' );
 			announcer.announceError( 'Error message' );
+			jest.runAllTimers();
 			announcer.clear();
 			expect( announcer.politeRegion.textContent ).toBe( '' );
 			expect( announcer.assertiveRegion.textContent ).toBe( '' );

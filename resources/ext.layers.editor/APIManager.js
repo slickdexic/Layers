@@ -915,3 +915,8 @@ if ( typeof window !== 'undefined' ) {
 	// Backward compatibility - direct window export
 	window.APIManager = APIManager;
 }
+
+// Export via CommonJS for Node.js/Jest testing
+if ( typeof module !== 'undefined' && module.exports ) {
+	module.exports = { APIManager };
+}

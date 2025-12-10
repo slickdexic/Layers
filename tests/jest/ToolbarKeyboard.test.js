@@ -4,29 +4,12 @@
  */
 'use strict';
 
-const fs = require( 'fs' );
-const path = require( 'path' );
+const { ToolbarKeyboard } = require( '../../resources/ext.layers.editor/ToolbarKeyboard.js' );
 
 describe( 'ToolbarKeyboard', function () {
-	let ToolbarKeyboard;
 	let keyboardHandler;
 	let mockToolbar;
 	let mockEditor;
-
-	beforeAll( function () {
-		// Set up JSDOM globals
-		global.document = window.document;
-
-		// Load ToolbarKeyboard code
-		const keyboardCode = fs.readFileSync(
-			path.join( __dirname, '../../resources/ext.layers.editor/ToolbarKeyboard.js' ),
-			'utf8'
-		);
-		// eslint-disable-next-line no-eval
-		eval( keyboardCode );
-
-		ToolbarKeyboard = window.ToolbarKeyboard;
-	} );
 
 	beforeEach( function () {
 		// Create mock editor

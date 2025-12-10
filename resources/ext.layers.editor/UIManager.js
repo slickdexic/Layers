@@ -17,6 +17,28 @@ class UIManager {
 		this.revLoadBtnEl = null;
 		this.revNameInputEl = null;
 		this.zoomReadoutEl = null;
+
+		// Initialize EventTracker for memory-safe event listener management
+		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+	}
+
+	/**
+	 * Add event listener with memory-safe tracking
+	 * @param {EventTarget} element - Element to attach listener to
+	 * @param {string} event - Event type
+	 * @param {Function} handler - Event handler
+	 * @param {Object|boolean} [options] - Event listener options
+	 */
+	addListener( element, event, handler, options ) {
+		if ( !element || typeof element.addEventListener !== 'function' ) {
+			return;
+		}
+		if ( this.eventTracker ) {
+			this.eventTracker.add( element, event, handler, options );
+		} else {
+			// Fallback if EventTracker not available
+			element.addEventListener( event, handler, options );
+		}
 	}
 
 	/**
@@ -315,7 +337,7 @@ class UIManager {
 
 		// Revision load button
 		if ( this.revLoadBtnEl ) {
-			this.revLoadBtnEl.addEventListener( 'click', () => {
+			this.addListener( this.revLoadBtnEl, 'click', () => {
 				const val = this.revSelectEl ? parseInt( this.revSelectEl.value, 10 ) || 0 : 0;
 				if ( val ) {
 					this.editor.loadRevisionById( val );
@@ -325,7 +347,7 @@ class UIManager {
 
 		// Revision selector change
 		if ( this.revSelectEl ) {
-			this.revSelectEl.addEventListener( 'change', () => {
+			this.addListener( this.revSelectEl, 'change', () => {
 				const v = parseInt( this.revSelectEl.value, 10 ) || 0;
 				if ( this.revLoadBtnEl ) {
 					const currentId = this.editor.stateManager ?
@@ -347,7 +369,7 @@ class UIManager {
 		}
 
 		// Handle set selection change
-		this.setSelectEl.addEventListener( 'change', () => {
+		this.addListener( this.setSelectEl, 'change', () => {
 			const selectedValue = this.setSelectEl.value;
 
 			if ( selectedValue === '__new__' ) {
@@ -383,14 +405,14 @@ class UIManager {
 
 		// Handle new set creation
 		if ( this.newSetBtnEl ) {
-			this.newSetBtnEl.addEventListener( 'click', () => {
+			this.addListener( this.newSetBtnEl, 'click', () => {
 				this.createNewSet();
 			} );
 		}
 
 		// Handle Enter key in new set input
 		if ( this.newSetInputEl ) {
-			this.newSetInputEl.addEventListener( 'keydown', ( e ) => {
+			this.addListener( this.newSetInputEl, 'keydown', ( e ) => {
 				if ( e.key === 'Enter' ) {
 					e.preventDefault();
 					this.createNewSet();
@@ -581,11 +603,27 @@ class UIManager {
 	}
 
 	destroy() {
+		// Clean up all tracked event listeners
+		if ( this.eventTracker ) {
+			this.eventTracker.destroy();
+			this.eventTracker = null;
+		}
+
 		if ( this.container && this.container.parentNode ) {
 			this.container.parentNode.removeChild( this.container );
 		}
 		this.hideSpinner();
 		document.body.classList.remove( 'layers-editor-open' );
+
+		// Clear element references
+		this.container = null;
+		this.statusBar = null;
+		this.setSelectEl = null;
+		this.newSetInputEl = null;
+		this.newSetBtnEl = null;
+		this.revSelectEl = null;
+		this.revLoadBtnEl = null;
+		this.zoomReadoutEl = null;
 	}
 }
 

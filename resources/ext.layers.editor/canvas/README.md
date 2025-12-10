@@ -119,14 +119,28 @@ CanvasManager still contains ~500 lines of fallback implementations that duplica
 - [x] RenderCoordinator.js extracted (387 lines)
 - [x] InteractionController.js extracted (487 lines)
 - [x] ImageLoader.js extracted (280 lines) - in parent directory
-- [ ] Remove fallback code from CanvasManager (~80 lines) - low priority
-- [ ] Extract MarqueeSelectionController (~80 lines) - optional
+- [x] TextInputController.js extracted (187 lines) - modal text input handling
+- [ ] Remove fallback code from CanvasManager (~80 lines) - low priority, has test coverage
+- [ ] MarqueeSelectionController (~80 lines) - optional, already delegates to SelectionManager
 - [ ] CanvasPool.js - future enhancement (~50 lines, too small)
 - [ ] ViewportManager.js - future enhancement
 
-**Total extracted:** ~4,249 lines into focused, maintainable modules
-**CanvasManager.js current size:** 1,899 lines (down from 5,462 lines)
-**Target:** <800 lines (need ~1,100 more lines extracted or removed)
+**Total extracted:** ~4,436 lines into focused, maintainable modules
+**CanvasManager.js current size:** 2,025 lines (down from 5,462 lines)
+**Target:** <800 lines (significant refactoring needed)
+
+**Analysis (2025-01-15):** Many CanvasManager methods are now thin delegation calls (3-5 lines each).
+The remaining bulk comes from:
+- Constructor state initialization (~90 lines)
+- JSDoc comments (~200 lines)
+- Fallback code for tests (~100 lines)
+- Coordinate transform methods (~50 lines)
+- Layer bounds calculations (~70 lines)
+
+Further reduction requires either:
+1. Moving more state to controllers (breaking change)
+2. Consolidating delegation calls into a single passthrough mechanism
+3. Accepting current size as acceptable for a facade class
 
 ## Benefits Achieved
 

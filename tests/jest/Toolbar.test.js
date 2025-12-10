@@ -4,9 +4,6 @@
  */
 'use strict';
 
-const fs = require( 'fs' );
-const path = require( 'path' );
-
 describe( 'Toolbar', function () {
 	let Toolbar;
 	let toolbar;
@@ -69,15 +66,8 @@ describe( 'Toolbar', function () {
 			} );
 		} );
 
-		// Load Toolbar code
-		const toolbarCode = fs.readFileSync(
-			path.join( __dirname, '../../resources/ext.layers.editor/Toolbar.js' ),
-			'utf8'
-		);
-		// eslint-disable-next-line no-eval
-		eval( toolbarCode );
-
-		Toolbar = window.Toolbar;
+		// Load Toolbar code using require for proper coverage tracking
+		Toolbar = require( '../../resources/ext.layers.editor/Toolbar.js' );
 	} );
 
 	beforeEach( function () {
@@ -746,6 +736,235 @@ describe( 'Toolbar', function () {
 			toolbar.updateColorButtonDisplay( button, '#ff0000', 'Transparent', 'Color: $1' );
 
 			expect( button.getAttribute( 'aria-label' ) ).toBe( 'Color: #ff0000' );
+		} );
+	} );
+
+	describe( 'addListener', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should add event listener to element', function () {
+			const element = document.createElement( 'button' );
+			const handler = jest.fn();
+
+			toolbar.addListener( element, 'click', handler );
+
+			expect( toolbar.eventTracker.add ).toHaveBeenCalled();
+		} );
+
+		it( 'should not add listener without element', function () {
+			const initialCount = toolbar.eventTracker.add.mock.calls.length;
+			toolbar.addListener( null, 'click', jest.fn() );
+
+			expect( toolbar.eventTracker.add.mock.calls.length ).toBe( initialCount );
+		} );
+
+		it( 'should not add listener without event', function () {
+			const initialCount = toolbar.eventTracker.add.mock.calls.length;
+			toolbar.addListener( document.createElement( 'button' ), '', jest.fn() );
+
+			expect( toolbar.eventTracker.add.mock.calls.length ).toBe( initialCount );
+		} );
+
+		it( 'should not add listener without handler', function () {
+			const initialCount = toolbar.eventTracker.add.mock.calls.length;
+			toolbar.addListener( document.createElement( 'button' ), 'click', null );
+
+			expect( toolbar.eventTracker.add.mock.calls.length ).toBe( initialCount );
+		} );
+
+		it( 'should work with options', function () {
+			const element = document.createElement( 'button' );
+			const handler = jest.fn();
+			const options = { capture: true };
+
+			toolbar.addListener( element, 'click', handler, options );
+
+			expect( toolbar.eventTracker.add ).toHaveBeenCalledWith(
+				element, 'click', handler, options
+			);
+		} );
+	} );
+
+	describe( 'openColorPickerDialog', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should do nothing when ColorPickerDialog not available', function () {
+			delete window.ColorPickerDialog;
+
+			expect( function () {
+				toolbar.openColorPickerDialog( document.createElement( 'button' ), '#ff0000' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should create ColorPickerDialog when available', function () {
+			const mockPicker = { open: jest.fn() };
+			window.ColorPickerDialog = jest.fn( function () {
+				return mockPicker;
+			} );
+			const anchor = document.createElement( 'button' );
+
+			toolbar.openColorPickerDialog( anchor, '#ff0000' );
+
+			expect( window.ColorPickerDialog ).toHaveBeenCalled();
+			expect( mockPicker.open ).toHaveBeenCalled();
+		} );
+
+		it( 'should pass initial value of none correctly', function () {
+			const mockPicker = { open: jest.fn() };
+			window.ColorPickerDialog = jest.fn( function ( config ) {
+				expect( config.currentColor ).toBe( 'none' );
+				return mockPicker;
+			} );
+
+			toolbar.openColorPickerDialog( document.createElement( 'button' ), 'none' );
+
+			expect( window.ColorPickerDialog ).toHaveBeenCalled();
+		} );
+
+		it( 'should register cleanup function', function () {
+			const mockPicker = { open: jest.fn() };
+			window.ColorPickerDialog = jest.fn( function ( config ) {
+				// Simulate registering cleanup
+				config.registerCleanup( jest.fn() );
+				return mockPicker;
+			} );
+
+			const cleanupCount = toolbar.dialogCleanups.length;
+			toolbar.openColorPickerDialog( document.createElement( 'button' ), '#ff0000' );
+
+			expect( toolbar.dialogCleanups.length ).toBe( cleanupCount + 1 );
+		} );
+
+		it( 'should call onApply callback', function () {
+			const mockPicker = { open: jest.fn() };
+			let applyCb;
+			window.ColorPickerDialog = jest.fn( function ( config ) {
+				applyCb = config.onApply;
+				return mockPicker;
+			} );
+
+			const onApply = jest.fn();
+			toolbar.openColorPickerDialog( document.createElement( 'button' ), '#ff0000', { onApply } );
+
+			applyCb( '#00ff00' );
+			expect( onApply ).toHaveBeenCalledWith( '#00ff00' );
+		} );
+
+		it( 'should use default empty onApply if not provided', function () {
+			const mockPicker = { open: jest.fn() };
+			let applyCb;
+			window.ColorPickerDialog = jest.fn( function ( config ) {
+				applyCb = config.onApply;
+				return mockPicker;
+			} );
+
+			toolbar.openColorPickerDialog( document.createElement( 'button' ), '#ff0000' );
+
+			expect( function () {
+				applyCb( '#00ff00' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'onStyleChange', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should call canvasManager.updateStyleOptions', function () {
+			const styleOptions = { color: '#ff0000', strokeWidth: 3 };
+
+			toolbar.onStyleChange( styleOptions );
+
+			expect( mockEditor.canvasManager.updateStyleOptions ).toHaveBeenCalledWith( styleOptions );
+		} );
+
+		it( 'should call toolManager.updateStyle', function () {
+			const styleOptions = { color: '#ff0000', strokeWidth: 3 };
+
+			toolbar.onStyleChange( styleOptions );
+
+			expect( mockEditor.toolManager.updateStyle ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'toggleGrid', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should toggle grid via canvasManager', function () {
+			toolbar.toggleGrid();
+
+			expect( mockEditor.canvasManager.toggleGrid ).toHaveBeenCalled();
+		} );
+
+		it( 'should update button state', function () {
+			// Create a grid button
+			const gridBtn = document.createElement( 'button' );
+			gridBtn.dataset.action = 'grid';
+			gridBtn.setAttribute( 'aria-pressed', 'false' );
+			container.appendChild( gridBtn );
+
+			toolbar.toggleGrid();
+
+			expect( gridBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'zoom actions via executeZoomAction', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should call canvasManager.zoomIn for zoom-in action', function () {
+			toolbar.executeZoomAction( 'zoom-in' );
+
+			expect( mockEditor.canvasManager.zoomIn ).toHaveBeenCalled();
+		} );
+
+		it( 'should call canvasManager.zoomOut for zoom-out action', function () {
+			toolbar.executeZoomAction( 'zoom-out' );
+
+			expect( mockEditor.canvasManager.zoomOut ).toHaveBeenCalled();
+		} );
+
+		it( 'should call canvasManager.resetZoom for zoom-reset action', function () {
+			toolbar.executeZoomAction( 'zoom-reset' );
+
+			expect( mockEditor.canvasManager.resetZoom ).toHaveBeenCalled();
+		} );
+
+		it( 'should call canvasManager.fitToWindow for fit-window action', function () {
+			toolbar.executeZoomAction( 'fit-window' );
+
+			expect( mockEditor.canvasManager.fitToWindow ).toHaveBeenCalled();
+		} );
+
+		it( 'should do nothing when canvasManager not available', function () {
+			toolbar.editor.canvasManager = null;
+
+			expect( function () {
+				toolbar.executeZoomAction( 'zoom-in' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'zoom percentage display', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should update zoom percentage display', function () {
+			const zoomDisplay = container.querySelector( '.zoom-level' );
+			if ( zoomDisplay ) {
+				toolbar.updateZoomDisplay( 150 );
+				expect( zoomDisplay.textContent ).toContain( '150' );
+			}
 		} );
 	} );
 

@@ -473,9 +473,20 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				break;
 
 			case 'rectangle':
-			case 'ellipse':
 				if ( !isset( $layer['width'] ) || !isset( $layer['height'] ) ) {
 					return [ 'valid' => false, 'error' => "$type layer must have width and height" ];
+				}
+				break;
+
+			case 'ellipse':
+				// Ellipse can be defined with width/height OR radiusX/radiusY
+				$hasWidthHeight = isset( $layer['width'] ) && isset( $layer['height'] );
+				$hasRadii = isset( $layer['radiusX'] ) && isset( $layer['radiusY'] );
+				if ( !$hasWidthHeight && !$hasRadii ) {
+					return [
+						'valid' => false,
+						'error' => 'ellipse layer must have width and height, or radiusX and radiusY'
+					];
 				}
 				break;
 

@@ -74,6 +74,38 @@ The following issues have been **fixed** and are now working:
 
 ## Remaining Known Issues
 
+### 🔴 Stroke Shadow Renders Over Fill (spread = 0)
+
+**Status:** ❌ NOT FIXED - Critical rendering bug  
+**Severity:** High - User-visible  
+**Reported:** December 9, 2025
+
+**Problem:**
+When a shape has both stroke and fill with shadows enabled (spread = 0), the stroke shadow renders ON TOP OF the fill instead of behind it. This causes visible shadow artifacts inside shapes with opaque fill.
+
+**Expected Behavior:**
+- Shadow should appear **behind** the entire shape (stroke + fill)
+- Fill at 100% opacity should completely obscure any shadow beneath it
+- Shadow should only be visible around the outer edges of the shape
+
+**Actual Behavior:**
+- Shadow from the stroke is rendering **on top of** the fill
+- Even with 100% fill opacity, shadow is visible inside the shape
+- Creates incorrect visual effect
+
+**Root Cause:**
+In `LayerRenderer.js`, when `stroke()` is called after `fill()` with shadow enabled, the stroke's shadow renders after (on top of) the already-drawn fill.
+
+**Location:** `resources/ext.layers.shared/LayerRenderer.js` - `drawRectangle`, `drawCircle`, `drawEllipse`, `drawPolygon`, `drawStar` methods.
+
+**Workaround:** Use `shadowSpread > 0` - the spread shadow path handles fill/stroke separately.
+
+**Fix:** Documented in `docs/archive/BUG_SHADOW_FILL_OVERLAP_2025-12-09.md` but **never applied**. The fix uses `destination-over` composite mode to draw stroke shadow behind the fill.
+
+See [improvement_plan.md](../improvement_plan.md) P0.1 for fix details.
+
+---
+
 ### ~~Shadow Offset Not Rotating with Shape (Spread > 0 Only)~~ - FIXED
 
 **Status:** ✅ Fixed (December 8, 2025)
