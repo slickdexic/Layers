@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** December 10, 2025  
-**Status:** Active Planning  
+**Status:** Active Development  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
@@ -15,10 +15,11 @@ This document provides a prioritized, actionable improvement plan for the Layers
 | Area | Status | Notes |
 |------|--------|-------|
 | **Functionality** | ✅ Working | Extension is usable in production |
-| **Test Suite** | ✅ Strong | 3,853 tests, 85.58% coverage |
+| **Test Suite** | ✅ Strong | 3,853+ tests, 85%+ coverage |
+| **LayerRenderer Coverage** | ✅ Excellent | 89% statements (146 tests) |
 | **Bundle Size** | 🔴 Critical | 1.06MB - needs code splitting |
 | **Architecture** | 🟠 Debt | 700 prototype methods, 8 god classes |
-| **Memory Management** | 🟠 Risk | 61 unmatched event listeners |
+| **Memory Management** | ✅ Verified | Clean - EventTracker pattern used |
 
 ---
 
@@ -157,27 +158,27 @@ ext.layers.editor  → **53 files** (only needed for editing)
 
 ---
 
-### P1.2 � Increase LayerRenderer.js Test Coverage (60% → 80%)
+### P1.2 ✅ Increase LayerRenderer.js Test Coverage (60% → 80%)
 
-**Status:** IN PROGRESS (66% achieved, December 10, 2025)  
+**Status:** ✅ COMPLETE (89% achieved, December 10, 2025)  
 **Effort:** 1 week  
-**Current:** 66% statements, 68% branches, 82% functions  
-**Target:** 80%
+**Final:** 89% statements, 81% branches, 96% functions  
+**Tests:** 146 total tests
 
-**Progress:**
-Added 12 new tests for shadow rendering (December 10, 2025):
-- Rectangle/circle/ellipse stroke shadow with spread=0 (bug fix coverage)
-- Text shadow with spread effect (bug fix coverage)
-- Stroke-only shadows (no fill)
-- Combined shadow settings
-- Edge cases (disabled, large spread)
+**Accomplishments:**
+- Started at 62% coverage
+- Added comprehensive tests for all shape types:
+  - Shadow rendering (rectangle, circle, ellipse, line, path, polygon, star, arrow)
+  - Shadow spread=0 edge cases (bug fix coverage)
+  - Rotation, opacity, stroke variants
+  - Text shadow with spread effect
+  - Text stroke + shadow combinations
+  - Arrow head types (pointed, chevron, standard, double)
+  - Blur with/without background images
+- Fixed polygon tests to use correct API (sides/radius vs points array)
 
-**Remaining Uncovered Areas:**
-- Polygon/star drawing edge cases
-- Path rendering with complex curves
-- Blur effect handling
-- Arrow rendering variations
-- Various error paths
+**Remaining Uncovered (~11%):**
+- drawBlur internal temp canvas paths (require DOM mocking)
 
 ---
 
