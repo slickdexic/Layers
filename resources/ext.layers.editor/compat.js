@@ -11,27 +11,56 @@
 		}
 	}
 
-	// Soft deprecation warnings for legacy global aliases
-	const found = [];
-	for ( const key in window ) {
-		if ( Object.prototype.hasOwnProperty.call( window, key ) ) {
-			if ( key.indexOf( 'layers' ) === 0 && key.charAt(6) === key.charAt(6).toLowerCase() ) {
-				// e.g., 'layersModuleRegistry' (camelCased) -> prefer 'LayersModuleRegistry' or 'layersRegistry' canonical name
-				const pascal = key.replace( /^layers/, 'Layers' );
-				const alt = key.replace( /^layers/, 'layers' );
-				if ( window[ pascal ] ) {
-					logWarn( '[Layers] Global ' + key + ' is deprecated; prefer ' + pascal + ' instead (migration helpers available).' );
-					found.push( key );
-				} else if ( window[ alt ] && alt !== key ) {
-					logWarn( '[Layers] Global ' + key + ' is deprecated; prefer ' + alt + ' (canonical) instead.' );
-					found.push( key );
-				}
+	// Map of deprecated global exports to their namespaced replacements
+	// These globals will be removed in a future major version
+	const deprecatedGlobals = {
+		// Utils
+		EventTracker: 'window.Layers.Utils.EventTracker',
+		DeepClone: 'window.Layers.Utils.DeepClone',
+		GeometryUtils: 'window.Layers.Utils.Geometry',
+		TextUtils: 'window.Layers.Utils.Text',
+		ImageLoader: 'window.Layers.Utils.ImageLoader',
+		// Core
+		StyleController: 'window.Layers.Core.StyleController',
+		HistoryManager: 'window.Layers.Core.HistoryManager',
+		StateManager: 'window.Layers.Core.StateManager',
+		EventManager: 'window.Layers.Core.EventManager',
+		ModuleRegistry: 'window.Layers.Core.ModuleRegistry',
+		// Canvas
+		CanvasManager: 'window.Layers.Canvas.Manager',
+		CanvasRenderer: 'window.Layers.Canvas.Renderer',
+		CanvasUtilities: 'window.Layers.Canvas.Utilities',
+		SelectionManager: 'window.Layers.Canvas.SelectionManager',
+		TransformationEngine: 'window.Layers.Canvas.TransformationEngine',
+		// UI
+		Toolbar: 'window.Layers.UI.Toolbar',
+		LayerPanel: 'window.Layers.UI.LayerPanel',
+		UIManager: 'window.Layers.UI.Manager',
+		// Validation
+		LayersValidator: 'window.Layers.Validation.Validator',
+		ValidationManager: 'window.Layers.Validation.Manager',
+		ErrorHandler: 'window.Layers.Validation.ErrorHandler'
+	};
+
+	// Only emit deprecation warnings in debug mode to avoid console spam in production
+	// Developers can enable by setting localStorage.layersDebug = 'true'
+	const debugEnabled = typeof localStorage !== 'undefined' &&
+		localStorage.getItem( 'layersDebug' ) === 'true';
+
+	if ( debugEnabled ) {
+		const found = [];
+		for ( const oldName in deprecatedGlobals ) {
+			if ( Object.prototype.hasOwnProperty.call( window, oldName ) ) {
+				found.push( oldName + ' -> ' + deprecatedGlobals[ oldName ] );
 			}
 		}
-	}
 
-	if ( found.length && typeof mw !== 'undefined' && mw.log ) {
-		// For now, log the total deprecations discovered
-		mw.log( '[Layers] Found legacy global exports: ' + found.join( ', ' ) );
+		if ( found.length ) {
+			logWarn( '[Layers] Deprecated global exports detected. These will be removed in v1.0:' );
+			found.forEach( function ( item ) {
+				logWarn( '  ' + item );
+			} );
+			logWarn( '[Layers] To disable this warning, use localStorage.removeItem("layersDebug")' );
+		}
 	}
 }());
