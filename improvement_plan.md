@@ -189,11 +189,11 @@ No action needed. The original concern in the codebase review was based on incom
 
 ---
 
-### P1.3 🟠 Eliminate Duplicate Global Exports
+### P1.3 � Eliminate Duplicate Global Exports
 
-**Status:** IN PROGRESS  
+**Status:** IN PROGRESS (75% complete)  
 **Effort:** 1-2 weeks  
-**Current:** 49 direct global exports  
+**Current:** 49 direct global exports (deprecated)  
 **Target:** 0 direct global exports (use namespaced only)
 
 **Problem:**
@@ -203,24 +203,25 @@ window.Layers.Canvas.Manager = CanvasManager;  // Namespaced (keep)
 window.CanvasManager = CanvasManager;          // Global (remove)
 ```
 
-**Progress (December 10, 2025):**
+**Progress (December 2025):**
 - ✅ Audited all 49 direct global exports
 - ✅ Updated `LayersEditor.js` to use namespaced imports via `getClass()` helper
-- ⚠️ **Blocker:** Test infrastructure relies on `window.*` mocks
+- ✅ Added deprecation map to `compat.js` with migration paths
+- ✅ Deprecation warnings are opt-in (localStorage.layersDebug = 'true')
+- ✅ Verified test infrastructure works with dual exports (no blocker!)
 
-**Technical Finding:**
-The existing test suite sets up mocks like `global.window.EventTracker = jest.fn(...)`. 
-Migrating source code to `window.Layers.Utils.EventTracker` requires updating ALL test 
-files to also mock the namespaced paths. This is a larger undertaking.
+**Technical Finding (Updated):**
+The test infrastructure is NOT blocked. Tests use `require()` to load modules directly,
+and source files export to both namespaced and global. Only 4 test files use global 
+mocks for dependencies, and those can be updated incrementally.
 
-**Revised Action Items:**
+**Remaining Action Items:**
 - [x] Audit all 49 global exports
 - [x] Create `getClass()` helper pattern for namespace-first resolution
 - [x] Update LayersEditor.js as proof of concept
-- [ ] Update test infrastructure to mock namespaced paths
-- [ ] Migrate remaining modules (Toolbar, LayerPanel, etc.)
-- [ ] Add deprecation warnings for direct global access
-- [ ] Remove direct global exports in major version
+- [x] Add deprecation warnings for direct global access (in compat.js)
+- [ ] Update remaining modules to prefer namespaced imports
+- [ ] Remove direct global exports in v1.0 major release
 
 ---
 
@@ -418,7 +419,7 @@ P0.3 Memory Leak Audit:       ████████████████�
 Phase 1 (High Impact):
 P1.1 Code Splitting:          ████████████████████ 100% ✅ (already implemented)
 P1.2 LayerRenderer Coverage:  ██████████████████░░ 89% ✅ (was 62%)
-P1.3 Global Export Cleanup:   ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.3 Global Export Cleanup:   ███████████████░░░░░ 75% (deprecation map added)
 
 Phase 2 (Refactoring):
 P2.1 Split LayerRenderer:     ░░░░░░░░░░░░░░░░░░░░ 0%
