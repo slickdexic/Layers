@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** January 2025  
+**Last Updated:** December 10, 2025  
 **Version:** 0.8.1-dev
 
 This document lists known functionality issues and their current status.
@@ -74,35 +74,37 @@ The following issues have been **fixed** and are now working:
 
 ## Remaining Known Issues
 
-### 🔴 Stroke Shadow Renders Over Fill (spread = 0)
+### ~~Rectangle/Shape Stroke Shadow Not Visible (spread = 0)~~ - FIXED
 
-**Status:** ❌ NOT FIXED - Critical rendering bug  
-**Severity:** High - User-visible  
-**Reported:** December 9, 2025
+**Status:** ✅ Fixed (December 10, 2025)
 
-**Problem:**
-When a shape has both stroke and fill with shadows enabled (spread = 0), the stroke shadow renders ON TOP OF the fill instead of behind it. This causes visible shadow artifacts inside shapes with opaque fill.
-
-**Expected Behavior:**
-- Shadow should appear **behind** the entire shape (stroke + fill)
-- Fill at 100% opacity should completely obscure any shadow beneath it
-- Shadow should only be visible around the outer edges of the shape
-
-**Actual Behavior:**
-- Shadow from the stroke is rendering **on top of** the fill
-- Even with 100% fill opacity, shadow is visible inside the shape
-- Creates incorrect visual effect
+**Original Problem:**
+On rectangle (and other shapes), when shadow is enabled with `spread = 0`, the stroke did NOT produce a visible shadow. Increasing spread to any non-zero value made the stroke shadow appear.
 
 **Root Cause:**
-In `LayerRenderer.js`, when `stroke()` is called after `fill()` with shadow enabled, the stroke's shadow renders after (on top of) the already-drawn fill.
+When `spread === 0`, the code path used native canvas shadow with `destination-over` composite mode for stroke shadows. This approach didn't work because the stroke shadow was drawn BEHIND the fill shadow, making it invisible.
 
-**Location:** `resources/ext.layers.shared/LayerRenderer.js` - `drawRectangle`, `drawCircle`, `drawEllipse`, `drawPolygon`, `drawStar` methods.
+**Fix Applied:**
+Changed shadow rendering to always use the offscreen canvas technique (`drawSpreadShadow` and `drawSpreadShadowStroke`) for all shapes, regardless of spread value. This ensures consistent shadow rendering for both fill and stroke.
 
-**Workaround:** Use `shadowSpread > 0` - the spread shadow path handles fill/stroke separately.
+**Files Changed:** `resources/ext.layers.shared/LayerRenderer.js` - `drawRectangle`, `drawCircle`, `drawEllipse` methods updated to use offscreen canvas for all shadow rendering.
 
-**Fix:** Documented in `docs/archive/BUG_SHADOW_FILL_OVERLAP_2025-12-09.md` but **never applied**. The fix uses `destination-over` composite mode to draw stroke shadow behind the fill.
+---
 
-See [improvement_plan.md](../improvement_plan.md) P0.1 for fix details.
+### ~~Text Shadow Spread Has No Effect~~ - FIXED
+
+**Status:** ✅ Fixed (December 10, 2025)
+
+**Original Problem:**
+On text layers, the "Shadow Spread" property had no effect. The shadow appeared correctly when shadow was enabled, but increasing spread did not increase the shadow size.
+
+**Root Cause:**
+The `drawText()` method only called `applyShadow()` which sets canvas shadow properties but doesn't support spread. Spread shadow requires drawing multiple shadow layers.
+
+**Fix Applied:**
+Implemented spread shadow support for text by drawing multiple shadow layers in a circular pattern around the text. Each layer is drawn at low opacity (0.1), and the number of layers increases with spread value, creating a larger shadow effect.
+
+**Location:** `resources/ext.layers.shared/LayerRenderer.js` - `drawText` method
 
 ---
 
@@ -138,4 +140,4 @@ If you encounter issues:
 ---
 
 *Document created: December 8, 2025*  
-*Last updated: January 2025*
+*Last updated: December 10, 2025*

@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Comprehensive Code Review
 
-**Review Date:** December 9, 2025 (Updated January 16, 2025)  
+**Review Date:** December 10, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
 **Review Type:** Critical Architectural and Quality Audit  
 **Version:** 0.8.1-dev
@@ -9,228 +9,144 @@
 
 ## Executive Summary
 
-The "Layers" extension provides non-destructive image annotation capabilities for MediaWiki. After significant improvements in December 2024 - January 2025, the codebase is now **functional and well-tested** with resolved critical issues.
+The "Layers" extension provides non-destructive image annotation capabilities for MediaWiki. After extensive development, the codebase is **functional with strong test coverage**, but suffers from significant **architectural debt** that will increasingly impede future development.
 
-### Overall Assessment: 7.5/10 (Up from 6/10)
+### Overall Assessment: 6.5/10
 
-The extension is production-ready with strong test coverage and improved maintainability. Recent work addressed memory leaks, coverage gaps, and documentation.
-
-**Strengths:**
-- ✅ Strong server-side security (PHP validation, CSRF, rate limiting)
-- ✅ Large Jest test suite (3,854 tests passing)
-- ✅ High code coverage (85.58% statements, 74.10% branches)
-- ✅ Memory leaks fixed with EventTracker pattern
-- ✅ Good documentation (architecture docs, copilot-instructions)
-- ✅ Proper logging patterns (uses `mw.log.*` instead of `console.*`)
-- ✅ Controller extraction pattern shows good refactoring direction
-- ✅ ESLint passing with 0 errors
-- ✅ LayerRenderer now has 60% coverage with 101 tests
-- ✅ SelectionManager now has 80% coverage with 90 tests
-- ✅ Toolbar now has 91.6% coverage with 113 tests
-
-**Remaining Concerns:**
-- 🟠 **God class remnants** - LayerRenderer.js (2,288 lines), CanvasManager.js (2,027 lines)
-- 🟠 **Large bundle size** - **1.05MB** of JavaScript (34,877 lines)
-- 🟠 **123 global `window.X` exports** - namespace pollution (low-priority cleanup)
-- 🟠 **680 prototype methods** vs only 32 ES6 classes (4.7% modernization - cosmetic)
+The extension works and has impressive test numbers, but the underlying architecture is showing its age. The codebase is a hybrid of patterns - partly modernized with good intentions (ES6 classes in some areas, extracted controllers, EventTracker for memory management) but still fundamentally built on legacy patterns (700 prototype methods, 127 global exports, 2,000+ line god classes).
 
 **For the detailed, prioritized improvement plan, see [`improvement_plan.md`](./improvement_plan.md)**
 
 ---
 
-## Verified Metrics (January 16, 2025)
+## Critical Assessment
+
+### What's Actually Good ✅
+
+| Area | Score | Notes |
+|------|-------|-------|
+| **Test Coverage Numbers** | 9/10 | 85.58% statements, 3,853 tests passing - genuinely impressive |
+| **PHP Backend Security** | 9/10 | Excellent: CSRF, rate limiting, strict validation, parameterized queries |
+| **Documentation** | 8/10 | Comprehensive copilot-instructions.md, architecture docs, bug archives |
+| **Controller Extraction** | 7/10 | 9 controllers extracted from CanvasManager with 85%+ coverage each |
+| **Memory Leak Prevention** | 7/10 | EventTracker pattern exists and is increasingly adopted |
+
+### What's Actually Problematic ❌
+
+| Area | Score | Notes |
+|------|-------|-------|
+| **Bundle Size** | 4/10 | **1.06MB** of JavaScript for an annotation tool - unacceptable |
+| **Code Modernization** | 3/10 | 700 prototype methods vs 32 ES6 classes (4.6% modern) |
+| **Global Namespace** | 3/10 | 127 `window.X` exports polluting global scope |
+| **God Classes** | 4/10 | 8 files over 1,000 lines, largest 2,288 lines |
+| **Event Listener Balance** | 5/10 | 94 addEventListener vs 33 removeEventListener - 61 potential leaks |
+| **Abandoned Refactoring** | 3/10 | BaseShapeRenderer exists but has 0% coverage, not actually used |
+
+---
+
+## Verified Metrics (December 10, 2025)
 
 ### JavaScript Codebase
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total JS files | ~60 | - | - |
-| Total JS lines | **34,877** | - | - |
-| Total JS bytes | **~1.05MB** | <400KB | 🟠 Large but acceptable |
-| Files > 1,000 lines | **8** | 0 | 🟠 Acceptable |
-| Files > 500 lines | **18** | 5 | 🟠 Needs future work |
-| Global `window.X =` exports | **123** | 0 | 🟡 Low priority |
-| Prototype methods | **680** | 0 | 🟡 Legacy but working |
-| ES6 `class` declarations | **32** | 680+ | 🟡 Cosmetic issue |
-| `console.log/error` in prod | **0** | 0 | 🟢 Clean |
-| ESLint errors | **0** | 0 | 🟢 Passing |
+| Total JS files | **67** | - | - |
+| Total JS lines | **35,387** | - | Large |
+| Total JS bytes | **1,088,888** (~1.06MB) | <400KB | 🔴 **Critical** |
+| Files > 1,000 lines | **8** | 0 | 🔴 God classes |
+| Files > 500 lines | **18** | 5 | 🟠 Needs splitting |
+| Global `window.X =` exports | **127** | 0 | 🔴 Namespace pollution |
+| Prototype methods | **700** | 0 | 🔴 Legacy code |
+| ES6 `class` declarations | **32** | 700+ | 🔴 4.6% modernized |
+| `console.error` in prod | **2** | 0 | 🟠 Minor (in ToolStyles.js) |
+| ESLint errors | **0** | 0 | ✅ Clean |
 
-### Test Coverage (January 16, 2025)
+### Test Coverage (Verified December 10, 2025)
 
 | Category | Value | Target | Status |
 |----------|-------|--------|--------|
-| Jest tests passing | **3,854** | - | 🟢 Excellent |
-| Jest test suites | **80** | - | 🟢 Good |
-| Statement coverage | **85.58%** | 80% | 🟢 Met |
-| Branch coverage | **74.10%** | 65% | 🟢 Met |
-| Line coverage | **85.73%** | 80% | 🟢 Met |
-| Function coverage | **85.54%** | 80% | 🟢 Met |
+| Jest tests passing | **3,853** | - | ✅ Excellent |
+| Jest test suites | **80** | - | ✅ Good |
+| Statement coverage | **85.58%** | 80% | ✅ Met |
+| Branch coverage | **74.10%** | 65% | ✅ Met |
+| Line coverage | **85.73%** | 80% | ✅ Met |
+| Function coverage | **85.54%** | 80% | ✅ Met |
 
-### Key Module Coverage (Post-Fixes)
+### God Classes (Files Over 1,000 Lines)
 
-| Module | Before | After | Tests Added |
-|--------|--------|-------|-------------|
-| APIManager.js | 26.96% | **84.83%** | 42+ |
-| MessageHelper.js | 0% | **97.95%** | Fixed eval() |
-| ErrorHandler.js | 57.5% | **99.5%** | 42 |
-| LayerRenderer.js | 0% | **60.03%** | 101 |
-| SelectionManager.js | 68.01% | **80.16%** | 67 |
-| Toolbar.js | 80.91% | **91.60%** | 53 |
+| File | Lines | Concern Level |
+|------|-------|---------------|
+| LayerRenderer.js | **2,288** | 🔴 Monolithic renderer |
+| CanvasManager.js | **2,027** | 🔴 Still too large despite extractions |
+| LayerPanel.js | **1,557** | 🟠 Complex but acceptable |
+| SelectionManager.js | **1,261** | 🟠 Core functionality |
+| LayersEditor.js | **1,231** | 🟠 Entry point - acceptable |
+| TransformController.js | **1,231** | 🟠 Complex transforms |
+| ToolManager.js | **1,154** | 🟠 Could be split |
+| LayersValidator.js | **953** | 🟢 Validation logic |
 
 ### Memory Leak Risk Indicators
 
-| Pattern | Add Count | Remove Count | **Status** |
-|---------|-----------|--------------|------------|
-| addEventListener | **106** | 31 | ✅ **Fixed** - EventTracker now used consistently |
-
-**Status:** Memory leak vulnerabilities were fixed in December 2025:
-- `LayerPanel.js` - Converted to EventTracker pattern
-- `ToolbarStyleControls.js` - Added EventTracker with full cleanup
-- `LayerItemEvents.js` - Fixed destroy() to properly remove listeners
-- `Toolbar.js` - Already using EventTracker
-
-### God Classes (Files > 1,000 Lines)
-
-| File | Lines | Concern |
-|------|-------|---------|
-| LayerRenderer.js | **2,288** | 🟠 Well-tested now (60% coverage) |
-| CanvasManager.js | **2,027** | 🟠 Delegating to controllers |
-| LayerPanel.js | **1,555** | 🟠 Complex UI component |
-| SelectionManager.js | **1,261** | 🟢 80% coverage achieved |
-| LayersEditor.js | **1,231** | 🟢 Entry point - acceptable |
-| TransformController.js | **1,231** | 🟢 Complex transforms - acceptable |
-| ToolManager.js | **1,154** | 🟡 85% coverage |
-| LayersValidator.js | **953** | 🟢 89% coverage |
-| **compat.js** | **0%** | 🟡 | 35 lines - deprecation warnings only |
-| **ErrorHandler.js** | **99.5%** | 🟢 | Fully tested |
-| **SelectionManager.js** | **68.01%** | 🟠 | Core selection logic |
+| Pattern | Count | Status |
+|---------|-------|--------|
+| addEventListener | **94** | 🟠 |
+| removeEventListener | **33** | 🟠 |
+| **Gap (potential leaks)** | **61** | 🔴 Needs audit |
 
 ---
 
-## Critical Issues (Must Fix)
+## Critical Issues Analysis
 
-### 1. 🔴 APIManager Critically Undertested (26.96% Coverage)
+### 1. 🔴 Massive Bundle Size (1.06MB)
 
-**Severity:** CRITICAL - Core functionality at risk
+**Severity:** CRITICAL  
+**Impact:** Page load performance, mobile users, SEO
 
-`APIManager.js` (921 lines) handles ALL API communication with the MediaWiki backend but has only **27% test coverage**. This is the communication layer for saving layers, loading revisions, and managing named sets.
+The extension loads **1.06MB of JavaScript** regardless of whether the user is viewing or editing. For comparison:
+- React (minified): ~40KB
+- Vue 3 (minified): ~34KB
+- This extension: **1,060KB** (unminified)
 
-**Untested Code Sections (from coverage report):**
-- Lines 105-106, 146, 169-176, 206, 222-232, 247-253, 267, **306-646** (massive gap), 662-663, 670-749, 757-867, 900-905
+**Root Causes:**
+1. No code splitting between viewer and editor
+2. No lazy loading of dialogs/features
+3. 67 files all loaded synchronously
+4. No tree-shaking possible due to global exports
 
-The **306-646 range** (340 lines) is completely untested - this likely contains error handling, retry logic, and edge cases.
-
-**Risk:** Changes to API communication could break silently without tests to catch regressions.
-
----
-
-### 2. 🔴 False Test Coverage Metrics
-
-**Severity:** HIGH - Misleading quality signals
-
-At least 2 test files use `eval()` to load modules:
-- `tests/jest/MessageHelper.test.js` (line 21)
-- `tests/jest/integration/SaveLoadWorkflow.test.js` (line 120)
-
-When code is loaded via `eval()`, Jest's coverage instrumentation cannot track it. The tests **run and pass**, but coverage reports show **0%** for these modules.
-
-**Example:** MessageHelper.js has 24 passing tests but shows 0% coverage because:
-```javascript
-// This pattern bypasses instrumentation:
-const helperCode = fs.readFileSync( path.join( __dirname, '../../resources/ext.layers.editor/MessageHelper.js' ), 'utf8' );
-eval( helperCode );  // ❌ Not instrumented
-```
-
-**Fix:** Use Jest's module loading system or proper imports instead of `eval()`.
+**Impact:** Users viewing an article with layers wait for the full editor to download even though they'll never use it.
 
 ---
 
-### 3. 🔴 God Class: LayerRenderer.js (2,288 lines)
+### 2. 🔴 God Classes Remain Problematic
 
-**Severity:** HIGH - Maintainability blocker
+Despite extracting 9 controllers from CanvasManager, several massive files remain:
 
-LayerRenderer.js is the largest file in the codebase and handles ALL rendering for ALL shape types. Any change to rendering carries high regression risk.
+**LayerRenderer.js (2,288 lines)** is particularly concerning - it handles ALL shape rendering (rectangle, circle, ellipse, polygon, star, arrow, line, path, highlight, blur, text) in a single file with only 60% test coverage.
 
-**Concerns:**
-- Contains ~15 different `draw*` methods (rectangle, circle, ellipse, polygon, star, arrow, line, path, highlight, blur, text, etc.)
-- Shadow rendering logic duplicated across multiple shape methods
-- No dedicated unit tests for the renderer itself
-- Complex state management during rendering
-
-**Recommendation:** Extract shape-specific renderers (RectangleRenderer, CircleRenderer, etc.) with a unified interface.
+**CanvasManager.js (2,027 lines)** - Even after extracting 9 controllers, this file is still too large and acts as both facade and god class.
 
 ---
 
-### 4. 🔴 CanvasManager Still a God Class (2,027 lines)
+### 3. 🔴 Abandoned Refactoring: BaseShapeRenderer
 
-**Severity:** HIGH - Despite 9 extracted controllers
+The codebase shows evidence of an **incomplete refactoring attempt**:
 
-Despite extracting 9 controllers to the `canvas/` directory, CanvasManager.js remains at **2,027 lines** with **100+ methods**. It should be a thin facade (<500 lines) delegating to controllers.
+- `resources/ext.layers.shared/renderers/BaseShapeRenderer.js` exists (338 lines)
+- `resources/ext.layers.shared/renderers/HighlightRenderer.js` exists
+- But BaseShapeRenderer has **0% test coverage**
+- **Neither file is registered in `extension.json`** ResourceModules
+- LayerRenderer.js still contains all the rendering logic
 
-**Current Controllers (already extracted):**
-- ZoomPanController.js (97.27% coverage) ✅
-- GridRulersController.js (94.38% coverage) ✅
-- TransformController.js (85.95% coverage) ✅
-- HitTestController.js (98.36% coverage) ✅
-- DrawingController.js (100% coverage) ✅
-- ClipboardController.js (97.53% coverage) ✅
-- RenderCoordinator.js (93% coverage) ✅
-- InteractionController.js (100% coverage) ✅
-- TextInputController.js (86.3% coverage) ✅
-
-**Still in CanvasManager:** Background image loading, style state, layer bounds, canvas pooling, modal management.
+**Assessment:** Someone started extracting renderers, created the infrastructure, but never completed or integrated the work. This is technical debt that adds confusion without providing value.
 
 ---
 
-### 5. 🔴 Global Namespace Pollution (123 Exports)
+### 4. 🔴 Legacy Codebase (700 Prototype Methods)
 
-**Severity:** HIGH - Blocks modernization
-
-Every module exports to `window.*` directly:
-```javascript
-// Every file does this:
-window.Layers.Canvas.Manager = CanvasManager;  // Namespace (good)
-window.CanvasManager = CanvasManager;          // Still pollutes global (bad)
-```
-
-**Impact:**
-- Blocks ES modules adoption
-- Blocks tree-shaking (entire 1.05MB loads regardless of usage)
-- Potential conflicts with other extensions
-- Makes dependency tracking impossible
-
----
-
-### 6. 🔴 Memory Leak Risks (75 Unmatched Event Listeners)
-
-**Severity:** HIGH - Runtime stability
-
-Analysis shows **106 `addEventListener` calls but only 31 `removeEventListener`** calls.
-
-**High-risk files:**
-| File | addEventListener | removeEventListener | Leak Risk |
-|------|------------------|---------------------|-----------|
-| LayerPanel.js | 10 | 1 | **+9** |
-| ToolbarStyleControls.js | 9 | 0 | **+9** |
-| Toolbar.js | 6 | 1 | **+5** |
-| PropertiesForm.js | 3 | 0 | **+3** |
-
-**Note:** EventTracker.js exists and is used in some modules correctly, but adoption is inconsistent.
-
----
-
-### 7. 🟠 Legacy Codebase (680 Prototype Methods vs 32 ES6 Classes)
-
-**Severity:** MEDIUM-HIGH - Technical debt
-
-The codebase is only **4.7% modernized** to ES6 classes. The mixed paradigm creates:
-- Inconsistent code style
-- Degraded IDE support (autocomplete, navigation)
-- Harder onboarding for new contributors
-- More difficult TypeScript migration path
+The codebase uses pre-ES6 patterns almost exclusively:
 
 ```javascript
-// Legacy pattern (680 occurrences):
+// Current pattern (700 occurrences):
 CanvasManager.prototype.addLayer = function ( layer ) { ... };
 
 // Modern pattern (only 32 classes):
@@ -239,173 +155,193 @@ class APIManager {
 }
 ```
 
----
-
-## Medium Issues
-
-### 8. 🟠 Dual Validation Systems
-
-The codebase has **two separate validation systems**:
-
-| System | File | Lines |
-|--------|------|-------|
-| Client-side | LayersValidator.js | 953 |
-| Server-side | ServerSideLayerValidator.php | 600 |
-
-Any validation rule change must be made in **both places**, creating maintenance burden and risk of drift.
-
-### 9. 🟠 Inconsistent Error Handling
-
-Some modules swallow errors instead of propagating to ErrorHandler:
-```javascript
-try {
-    tc.handleResize( point, e );
-} catch ( error ) {
-    mw.log.error( '[CanvasEvents] handleResize error:', error.message );
-    // Error swallowed - not propagated to ErrorHandler
-}
-```
-
-### 10. 🟠 No Canvas Pooling for Shadow Rendering
-
-In `LayerRenderer.js`, `drawSpreadShadow()` creates new temporary canvases on every call without pooling:
-```javascript
-const tempCanvas = document.createElement( 'canvas' );  // GC pressure
-```
+**Impact:**
+- Worse IDE support (autocomplete, navigation, refactoring)
+- No `super()` for inheritance
+- Harder to understand for modern JS developers
+- Blocks TypeScript migration
+- Makes code reviews harder
 
 ---
 
-## What's Working Well
+### 5. 🔴 Global Namespace Pollution (127 Exports)
 
-### ✅ Server-Side Security (9/10)
+Every module exports to both `window.Layers.*` AND directly to `window.*`:
 
-The PHP backend demonstrates excellent security practices:
-- **CSRF tokens** required on all write operations
-- **Rate limiting** via MediaWiki's `pingLimiter`
-- **Strict property whitelist** with 45+ validated fields
-- **Type/range validation** on all numeric fields
-- **Text sanitization** (HTML stripped, protocol checks)
-- **Parameterized SQL** (no injection vulnerabilities)
-- **Retry logic** with exponential backoff for DB conflicts
+```javascript
+// Every file does both:
+window.Layers.Canvas.Manager = CanvasManager;  // Good
+window.CanvasManager = CanvasManager;          // Also pollutes global
+```
 
-### ✅ Recent Bug Fixes (Shadow Rendering)
+**Impact:**
+- Potential conflicts with other extensions/libraries
+- Blocks ES modules adoption
+- Blocks tree-shaking/dead code elimination
+- Makes dependency graph impossible to track
 
-The stroke shadow rendering bug documented in `docs/archive/BUG_SHADOW_FILL_OVERLAP_2025-12-09.md` has been **properly fixed**. The `destination-over` composite operation is now correctly used in all shape methods (20+ occurrences verified).
+---
 
-### ✅ Controller Extraction Pattern
+### 6. 🟠 Memory Leak Risk (61 Unmatched Listeners)
 
-The extraction of controllers from CanvasManager shows good refactoring direction. All 9 extracted controllers have **85%+ test coverage**.
+Analysis shows **94 `addEventListener` calls but only 33 `removeEventListener`** calls, leaving 61 potential memory leaks.
 
-### ✅ Documentation Quality
+**EventTracker pattern exists but isn't universally adopted:**
+- ✅ Toolbar.js - uses EventTracker
+- ✅ LayerItemEvents.js - has proper destroy()
+- ❌ PropertiesForm.js - 3 adds, 0 removes
+- ❌ Various UI components - inconsistent cleanup
 
-- `copilot-instructions.md` is comprehensive and accurate
-- `docs/ARCHITECTURE.md` explains module structure
-- `docs/ACCESSIBILITY.md` documents WCAG efforts
-- API contracts well documented
-- Archive of bug fixes with detailed analysis
+---
 
-### ✅ PHP Backend Structure
+### 7. 🟠 Known Unfixed Bug
 
-The PHP codebase is well-organized:
-- No files over 829 lines (LayersDatabase.php)
-- Proper service wiring with DI
-- Logging traits for consistent logging
-- Clear separation between hooks, API, validation
+From `docs/KNOWN_ISSUES.md`:
+
+> **Stroke Shadow Renders Over Fill (spread = 0)**  
+> Status: ❌ NOT FIXED - Critical rendering bug  
+> When a shape has both stroke and fill with shadows enabled (spread = 0), the stroke shadow renders ON TOP OF the fill instead of behind it.
+
+The fix is documented in `docs/archive/BUG_SHADOW_FILL_OVERLAP_2025-12-09.md` but was **never applied** to LayerRenderer.js.
+
+---
+
+## PHP Backend Assessment
+
+The PHP backend is **well-architected** and demonstrates professional practices:
+
+### Positive Findings ✅
+
+| File | Lines | Quality |
+|------|-------|---------|
+| LayersDatabase.php | 829 | Clean DI, retry logic, caching |
+| WikitextHooks.php | 779 | Complex but well-organized |
+| ServerSideLayerValidator.php | 600 | Strict 45+ field whitelist |
+| ApiLayersSave.php | 475 | Excellent security documentation |
+
+**Security Excellence:**
+- CSRF token required on all writes
+- Rate limiting via MediaWiki's pingLimiter
+- Strict property whitelist (drops unknown fields)
+- Parameterized SQL (no injection possible)
+- Generic error messages (no info disclosure)
+- Retry logic with exponential backoff
+
+**No files over 830 lines** - PHP side has avoided the god class problem.
+
+---
+
+## Test Suite Assessment
+
+### Genuine Strengths
+
+- **3,853 passing tests** across 80 test suites
+- **85.58% statement coverage** (genuinely high)
+- **Most controllers at 85%+ coverage**
+- Tests are well-organized in dedicated directories
+
+### Coverage Concerns
+
+| Module | Coverage | Status |
+|--------|----------|--------|
+| BaseShapeRenderer.js | **0%** | 🔴 Not tested (abandoned code) |
+| compat.js | **0%** | 🟡 Intentional (deprecation shim) |
+| LayerRenderer.js | **60.03%** | 🟠 Core renderer undertested |
+| CanvasManager.js | **83.38%** | 🟠 God class, some gaps |
 
 ---
 
 ## Technical Debt Summary
 
-| Debt Type | Count | Est. Fix Time |
-|-----------|-------|---------------|
-| Test coverage false positives | 2+ modules | 2-3 days |
-| APIManager coverage gap | 73% gap | 3-5 days |
-| God classes (>1,000 lines) | 8 files | 4-6 weeks |
-| Files >500 lines needing split | 18 files | 3-4 weeks |
-| Global window.X elimination | 123 exports | 1-2 weeks |
-| Prototype→class migration | 680 methods | 3-4 weeks |
-| Memory leak fixes | ~75 listeners | 1 week |
-| Bundle size reduction | 650KB over | 2-3 weeks |
+| Debt Type | Severity | Effort to Fix |
+|-----------|----------|---------------|
+| Bundle size (code splitting) | 🔴 Critical | 2-3 weeks |
+| LayerRenderer god class | 🔴 High | 3-4 weeks |
+| Global namespace cleanup | 🔴 High | 1-2 weeks |
+| Memory leak audit | 🟠 Medium | 1 week |
+| ES6 class migration | 🟠 Medium | 4-6 weeks |
+| Shadow bug fix | 🟠 Medium | 2-3 days |
+| Complete renderer extraction | 🟠 Medium | 2 weeks |
 
-**Total estimated refactoring: 16-20 weeks**
+**Total estimated effort: 14-18 weeks**
 
 ---
 
-## Recommendations Priority
+## Recommendations
 
-### P0 - Critical (This Sprint)
+### Immediate (This Sprint)
 
-1. **Fix APIManager.js coverage** - 27% on core API is unacceptable
-2. **Fix test eval() pattern** - Coverage metrics are misleading
-3. **Audit memory leaks** - EventTracker must be used consistently
+1. **Fix the shadow rendering bug** - documented fix exists, needs application
+2. **Remove or complete BaseShapeRenderer** - abandoned code adds confusion
+3. **Audit high-risk memory leak files** - PropertiesForm.js, UIManager.js
 
-### P1 - High (Next 2-4 Weeks)
+### Short-term (1-2 Months)
 
-1. **ErrorHandler.js coverage** (57% → 75%+)
-2. **Split LayerRenderer.js** - Extract shape-specific renderers
-3. **Continue CanvasManager extraction** - Target <1,000 lines
+1. **Implement viewer/editor code splitting** - biggest impact on user experience
+2. **Start ES6 class migration** - begin with well-tested utility files
+3. **Eliminate duplicate global exports** - keep only `window.Layers.*`
 
-### P2 - Medium (1-2 Months)
+### Medium-term (3-6 Months)
 
-1. **Bundle size reduction** to <500KB via code splitting
-2. **Eliminate duplicate global exports** - Keep only `window.Layers.*`
-3. **ES6 class conversion pilot** for 10 files
+1. **Split LayerRenderer.js** - extract shape-specific renderers (or complete the abandoned attempt)
+2. **Complete ES6 migration** - block-by-block conversion
+3. **Add TypeScript definitions** - preparation for full TS migration
 
-### P3 - Long Term
+### Long-term (6+ Months)
 
-1. **Complete ES6 class migration**
-2. **TypeScript migration** (after ES6 complete)
-3. **ES modules with tree-shaking**
-4. **Unified validation (generate client from server)**
+1. **Full TypeScript migration**
+2. **ES modules with tree-shaking**
+3. **Unified validation system** (generate client from server rules)
 
 ---
 
 ## Conclusion
 
-The Layers extension is **functional but architecturally compromised**. The immediate priorities are:
+The Layers extension is **functional but architecturally compromised**. The impressive test numbers mask fundamental issues:
 
-1. **Fix the misleading test coverage** - eval() pattern must be replaced
-2. **Test the APIManager properly** - 27% on core communication is dangerous
-3. **Address memory leaks** - Long sessions will have issues
+1. **The bundle is 3x larger than it should be** for the functionality provided
+2. **Legacy patterns (prototype, globals) dominate** despite some modernization efforts
+3. **Abandoned refactoring (BaseShapeRenderer)** adds to confusion
+4. **Known bugs remain unfixed** despite documented solutions
 
-The recent shadow rendering bug fix shows the team can make targeted improvements. The path forward requires **systematic refactoring** rather than feature additions.
+The team has done excellent work on:
+- Security (PHP backend is exemplary)
+- Test coverage (genuinely strong numbers)
+- Documentation (comprehensive and accurate)
 
-See [`improvement_plan.md`](./improvement_plan.md) for the detailed, prioritized action plan.
+But the JavaScript architecture needs significant investment to be maintainable long-term. The current state suggests **rapid feature development** at the cost of **sustainable architecture**.
+
+**Priority recommendation:** Focus on bundle size reduction through code splitting. This provides immediate user benefit and forces the architectural cleanup needed for long-term health.
 
 ---
 
 ## Verification Commands
 
-Run these to verify current metrics:
-
 ```bash
-# Test coverage (should pass thresholds)
+# Test coverage
 npm run test:js -- --coverage
 
-# Lint check
-npm test
-
 # God classes (>1000 lines)
-find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} + | sort -rn | head -15
+find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | sort -rn | head -15
 
-# Global exports
+# Global exports count
 grep -rE "window\.[A-Z][A-Za-z0-9]+ = " resources --include="*.js" | wc -l
 
-# Prototype methods vs ES6 classes
-grep -r "\.prototype\." resources --include="*.js" | wc -l
-grep -rE "^class |^[[:space:]]*class " resources --include="*.js" | wc -l
+# Prototype vs class ratio
+echo "Prototypes: $(grep -r "\.prototype\." resources --include="*.js" | wc -l)"
+echo "Classes: $(grep -rE "^class |^[[:space:]]*class " resources --include="*.js" | wc -l)"
 
-# Event listener imbalance
+# Event listener balance
 echo "Add: $(grep -r "addEventListener" resources --include="*.js" | wc -l)"
 echo "Remove: $(grep -r "removeEventListener" resources --include="*.js" | wc -l)"
 
 # Bundle size
 find resources -name "*.js" -type f ! -path "*/dist/*" -exec cat {} + | wc -c
 
-# Files using eval() in tests
-grep -r "eval(" tests/jest --include="*.js" | grep -v "eslint"
+# Check abandoned renderers
+grep -r "BaseShapeRenderer\|HighlightRenderer" extension.json
 ```
 
 ---
 
-*Review performed by GitHub Copilot (Claude Opus 4.5) on December 9, 2025*
+*Review performed by GitHub Copilot (Claude Opus 4.5) on December 10, 2025*
