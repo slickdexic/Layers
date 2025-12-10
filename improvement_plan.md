@@ -184,10 +184,10 @@ ext.layers.editor  → **53 files** (only needed for editing)
 
 ### P1.3 🟠 Eliminate Duplicate Global Exports
 
-**Status:** NOT STARTED  
+**Status:** IN PROGRESS  
 **Effort:** 1-2 weeks  
-**Current:** 127 exports  
-**Target:** <10 exports
+**Current:** 49 direct global exports  
+**Target:** 0 direct global exports (use namespaced only)
 
 **Problem:**
 Every module exports twice:
@@ -196,11 +196,24 @@ window.Layers.Canvas.Manager = CanvasManager;  // Namespaced (keep)
 window.CanvasManager = CanvasManager;          // Global (remove)
 ```
 
-**Action Items:**
-- [ ] Audit all 127 global exports
-- [ ] Update internal code to use `window.Layers.*`
+**Progress (December 10, 2025):**
+- ✅ Audited all 49 direct global exports
+- ✅ Updated `LayersEditor.js` to use namespaced imports via `getClass()` helper
+- ⚠️ **Blocker:** Test infrastructure relies on `window.*` mocks
+
+**Technical Finding:**
+The existing test suite sets up mocks like `global.window.EventTracker = jest.fn(...)`. 
+Migrating source code to `window.Layers.Utils.EventTracker` requires updating ALL test 
+files to also mock the namespaced paths. This is a larger undertaking.
+
+**Revised Action Items:**
+- [x] Audit all 49 global exports
+- [x] Create `getClass()` helper pattern for namespace-first resolution
+- [x] Update LayersEditor.js as proof of concept
+- [ ] Update test infrastructure to mock namespaced paths
+- [ ] Migrate remaining modules (Toolbar, LayerPanel, etc.)
 - [ ] Add deprecation warnings for direct global access
-- [ ] Remove direct global exports
+- [ ] Remove direct global exports in major version
 
 ---
 
