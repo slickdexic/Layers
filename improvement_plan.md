@@ -1,407 +1,347 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 11, 2025  
-**Status:** Active Development  
+**Last Updated:** December 10, 2025  
+**Status:** Active  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
 
 ## Overview
 
-This document provides a prioritized, actionable improvement plan for the Layers MediaWiki extension based on the comprehensive code review performed December 10, 2025.
+This document provides a **prioritized, actionable improvement plan** based on the critical code review performed December 10, 2025.
 
-### Current State Summary
+### Current State
 
-| Area | Status | Notes |
-|------|--------|-------|
-| **Functionality** | ✅ Working | Extension is usable in production |
-| **Test Suite** | ✅ Strong | 3,877+ tests, 89.65% coverage |
-| **LayerRenderer Coverage** | ✅ Excellent | 89% statements (146 tests) |
-| **Bundle Size** | ✅ Correct | Viewer ~4K lines, Editor ~31K lines (properly split) |
-| **Architecture** | 🟠 Debt | 700 prototype methods, 8 god classes |
-| **Memory Management** | ✅ Verified | Clean - EventTracker pattern used |
-
----
-
-## Priority Legend
-
-| Priority | Timeline | Definition |
-|----------|----------|------------|
-| **P0** | Immediate (< 1 week) | Blocking issues, known bugs |
-| **P1** | Short-term (1-4 weeks) | High-impact improvements |
-| **P2** | Medium-term (1-2 months) | Important refactoring |
-| **P3** | Long-term (3+ months) | Modernization efforts |
+| Area | Status | Details |
+|------|--------|---------|
+| **Functionality** | ✅ Working | Extension works in production |
+| **Test Suite** | ✅ Strong | 3,877 tests, 89.6% coverage |
+| **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
+| **Code Splitting** | ✅ Done | Viewer ~4K lines, Editor ~31K lines |
+| **JavaScript Architecture** | � Improving | ShadowRenderer extracted, ES6 classes growing |
+| **Namespace** | 🔴 Polluted | 54 direct window.X exports |
 
 ---
 
-## Phase 0: Immediate Fixes (P0)
+## Priority Definitions
 
-### P0.1 ✅ Fix Shadow Rendering Bug
-
-**Status:** ✅ COMPLETE (December 10, 2025)  
-**Effort:** 2-3 days  
-**Impact:** User-visible rendering bug
-
-**Problem (FIXED):**
-Two bugs were fixed:
-1. When a shape has both stroke and fill with shadows enabled (spread = 0), the stroke shadow was invisible
-2. Text shadow spread had no effect
-
-**Solution Applied:**
-Changed all shape rendering to always use offscreen canvas technique for shadows, eliminating compositing issues. Text now uses circular pattern with multiple low-opacity layers for spread effect.
-
-**Files Changed:**
-- `resources/ext.layers.shared/LayerRenderer.js` - drawRectangle, drawCircle, drawEllipse, drawText
-
-**Acceptance Criteria:**
-- [x] All shapes with stroke+fill+shadow render shadow correctly
-- [x] Text shadow spread works
-- [x] No impact on shapes without shadows
+| Priority | Timeline | Criteria |
+|----------|----------|----------|
+| **P0** | This week | Blocking issues, trivial fixes, quick wins |
+| **P1** | 1-4 weeks | High-impact improvements |
+| **P2** | 1-3 months | Important refactoring |
+| **P3** | 3-6 months | Modernization efforts |
 
 ---
 
-### P0.2 ✅ Clean Up Abandoned BaseShapeRenderer
+## Phase 0: Quick Wins (P0)
 
-**Status:** ✅ COMPLETE (December 10, 2025)  
-**Effort:** 1 day  
-**Impact:** Code clarity, accurate test coverage metrics
+### P0.1 Remove Dead PHP Code
 
-**Problem (FIXED):**
-`resources/ext.layers.shared/renderers/` contained abandoned refactoring code:
-- `BaseShapeRenderer.js` (338 lines, **0% coverage**)
-- `HighlightRenderer.js`
+**Status:** ✅ COMPLETED (Dec 11, 2025)  
+**Effort:** 1 hour  
+**File:** `src/Database/LayersDatabase.php`
 
-These files were NOT registered in `extension.json` and were never used.
+~~**Problem:**
+The `getNextRevision()` method (lines 309-324) is never called. It's been superseded by `getNextRevisionForSet()`.~~
 
-**Resolution:**
-Deleted the entire `renderers/` directory and associated test files:
-- `resources/ext.layers.shared/renderers/` (removed)
-- `tests/jest/renderers/` (removed)
-- `coverage/lcov-report/ext.layers.shared/renderers/` (removed)
-
-**Action Items:**
-- [x] Verified files were truly unused (grep for imports)
-- [x] Deleted directory (chosen option)
-- [x] Removed associated tests and coverage reports
+**Resolution:** Dead method removed.
 
 ---
 
-### P0.3 � Audit Remaining Memory Leak Risks
+### P0.2 Add Logging to Empty Catch Blocks
 
-**Status:** ✅ REVIEWED (December 10, 2025)  
-**Effort:** 3-5 days (originally estimated)  
-**Impact:** Runtime stability in long sessions
+**Status:** ✅ COMPLETED (Dec 11, 2025)  
+**Effort:** 30 minutes  
+**File:** `resources/ext.layers.editor/CanvasManager.js`
 
-**Audit Results:**
+~~**Problem:**
+Three empty catch blocks silently swallow errors.~~
 
-The initial grep analysis suggested 94 `addEventListener` calls vs 33 `removeEventListener` calls, indicating 61 potential leaks. However, detailed code review reveals **the codebase is well-designed**:
+**Resolution:** Added `mw.log.warn()` to all catch blocks.
 
-**Properly Managed (using EventTracker pattern):**
-- `UIManager.js` - Uses EventTracker, has destroy() method
-- `LayersEditor.js` - Uses EventTracker, has destroy() method  
-- `CanvasEvents.js` - Has explicit destroy() method with all removes
+---
 
-**Properly Managed (cleanup callbacks in dialogs):**
-- `DialogManager.js` - Each dialog has cleanup function that removes listeners
-- `ColorPickerDialog.js` - close() method removes all listeners
-- `ConfirmDialog.js` - close() method removes listeners
+### P0.3 Extract Duplicated `getClass()` Helper
 
-**Safe by Design (DOM removal triggers GC):**
-- `PropertiesForm.js` - Listeners on form elements that are removed from DOM
-- `TextInputController.js` - Modal removed from DOM on close
-- `ImportExportManager.js` - FileReader callbacks are one-time
+**Status:** ✅ COMPLETED (Dec 11, 2025)  
+**Effort:** 2-3 hours  
+**Impact:** Stops code duplication
 
-**Intentionally Persistent (page lifecycle):**
-- `EditorBootstrap.js` - Global error handlers and beforeunload (expected to persist)
-- `init.js` - DOMContentLoaded (fires once)
-- `LayersNamespace.js` - DOMContentLoaded (fires once)
-- `AccessibilityAnnouncer.js` - DOMContentLoaded with `{once: true}`
+~~**Problem:**
+The `getClass()` helper is duplicated in 4 files.~~
 
-**Recommendation:** No immediate action needed. The memory management architecture is sound.
+**Resolution:** Created `NamespaceHelper.js` with shared implementation. Updated all 4 files.
 
-**Future Enhancement (P3+):**
-Consider adding an automated lint rule or test to verify all addEventListener calls have matching removeEventListener or use EventTracker.
+---
+
+### P0.4 Remove Empty Skipped Test
+
+**Status:** ✅ COMPLETED (Dec 11, 2025)  
+**Effort:** 5 minutes  
+**File:** `tests/jest/CanvasRenderer.test.js`
+
+~~**Problem:**
+Empty skipped test.~~
+
+**Resolution:** Test removed.
 
 ---
 
 ## Phase 1: High-Impact Improvements (P1)
 
-### P1.1 � Viewer/Editor Code Splitting - ALREADY IMPLEMENTED
-
-**Status:** ✅ ALREADY DONE  
-**Updated:** December 2025
-
-**Finding:**
-Upon detailed analysis, code splitting is **already implemented correctly**:
-
-**Current Architecture (verified Dec 2025):**
-```
-ext.layers.shared  → DeepClone.js, LayerRenderer.js (~2,300 lines)
-ext.layers         → LayersViewer.js, viewer/*, init.js (~1,650 lines)
-ext.layers.editor  → 53 files (~31,000 lines)
-```
-
-**Module Dependencies:**
-- `ext.layers` depends on `ext.layers.shared` (viewer-only)
-- `ext.layers.editor` depends on `ext.layers.shared` (editor-only)
-- Editor does NOT load viewer code (separate modules)
-
-**Loading Behavior:**
-- **Article pages with layers:** Only `ext.layers.shared` + `ext.layers` (~4,000 lines)
-- **File pages (logged-in):** Both viewer + editor modules loaded (intentional for UX)
-- **Editor mode (action=editlayers):** Only editor modules loaded
-
-**Verification:**
-```bash
-# Viewer only: ~4,000 lines
-wc -l resources/ext.layers.shared/*.js resources/ext.layers/*.js resources/ext.layers/viewer/*.js
-
-# Editor only: ~33,000 lines
-find resources/ext.layers.editor -name "*.js" -exec cat {} + | wc -l
-```
-
-**Conclusion:**
-No action needed. The original concern in the codebase review was based on incomplete analysis. The architecture is sound.
-
----
-
-### P1.2 ✅ Increase LayerRenderer.js Test Coverage (60% → 80%)
-
-**Status:** ✅ COMPLETE (89% achieved, December 10, 2025)  
-**Effort:** 1 week  
-**Final:** 89% statements, 81% branches, 96% functions  
-**Tests:** 146 total tests
-
-**Accomplishments:**
-- Started at 62% coverage
-- Added comprehensive tests for all shape types:
-  - Shadow rendering (rectangle, circle, ellipse, line, path, polygon, star, arrow)
-  - Shadow spread=0 edge cases (bug fix coverage)
-  - Rotation, opacity, stroke variants
-  - Text shadow with spread effect
-  - Text stroke + shadow combinations
-  - Arrow head types (pointed, chevron, standard, double)
-  - Blur with/without background images
-- Fixed polygon tests to use correct API (sides/radius vs points array)
-
-**Remaining Uncovered (~11%):**
-- drawBlur internal temp canvas paths (require DOM mocking)
-
----
-
-### P1.3 � Eliminate Duplicate Global Exports
-
-**Status:** IN PROGRESS (75% complete)  
-**Effort:** 1-2 weeks  
-**Current:** 49 direct global exports (deprecated)  
-**Target:** 0 direct global exports (use namespaced only)
-
-**Problem:**
-Every module exports twice:
-```javascript
-window.Layers.Canvas.Manager = CanvasManager;  // Namespaced (keep)
-window.CanvasManager = CanvasManager;          // Global (remove)
-```
-
-**Progress (December 2025):**
-- ✅ Audited all 49 direct global exports
-- ✅ Updated `LayersEditor.js` to use namespaced imports via `getClass()` helper
-- ✅ Added deprecation map to `compat.js` with migration paths
-- ✅ Deprecation warnings are opt-in (localStorage.layersDebug = 'true')
-- ✅ Verified test infrastructure works with dual exports (no blocker!)
-
-**Technical Finding (Updated):**
-The test infrastructure is NOT blocked. Tests use `require()` to load modules directly,
-and source files export to both namespaced and global. Only 4 test files use global 
-mocks for dependencies, and those can be updated incrementally.
-
-**Remaining Action Items:**
-- [x] Audit all 49 global exports
-- [x] Create `getClass()` helper pattern for namespace-first resolution
-- [x] Update LayersEditor.js as proof of concept
-- [x] Add deprecation warnings for direct global access (in compat.js)
-- [ ] Update remaining modules to prefer namespaced imports
-- [ ] Remove direct global exports in v1.0 major release
-
----
-
-## Phase 2: Medium-Term Refactoring (P2)
-
-### P2.1 Split LayerRenderer.js (2,288 lines → multiple files)
+### P1.1 Eliminate Direct Global Exports
 
 **Status:** NOT STARTED  
-**Effort:** 3-4 weeks
+**Effort:** 2-3 weeks  
+**Impact:** Enables future ES modules, prevents conflicts
 
 **Problem:**
-Single file handles ALL shape rendering. Any change affects everything.
-
-**Proposed Structure:**
-```
-ext.layers.shared/
-├── LayerRenderer.js          # Facade (~300 lines)
-├── rendering/
-│   ├── RenderContext.js
-│   ├── RectangleRenderer.js
-│   ├── CircleRenderer.js
-│   ├── EllipseRenderer.js
-│   ├── PolygonRenderer.js
-│   ├── StarRenderer.js
-│   ├── ArrowRenderer.js
-│   ├── LineRenderer.js
-│   ├── PathRenderer.js
-│   ├── TextRenderer.js
-│   ├── HighlightRenderer.js
-│   └── BlurRenderer.js
-└── effects/
-    ├── ShadowEffect.js
-    └── GlowEffect.js
+54 files export to both `window.Layers.X` AND `window.X`:
+```javascript
+window.Layers.Canvas.Manager = CanvasManager;  // Good
+window.CanvasManager = CanvasManager;          // Bad - remove
 ```
 
-**Note:** This supersedes the abandoned `renderers/` approach.
+**Action Plan:**
 
-**Acceptance Criteria:**
-- [ ] No file > 500 lines in rendering/
-- [ ] Each renderer has >80% test coverage
-- [ ] All existing tests pass
-- [ ] Visual regression tests pass
+1. **Week 1: Audit and prepare**
+   - Create deprecation warnings for direct global access
+   - Update `compat.js` with console warnings
+   - Document all 54 direct exports
+
+2. **Week 2: Update consumers**
+   - Search for all `window.CanvasManager` etc. usage
+   - Replace with `window.Layers.Canvas.Manager` or `getClass()`
+   - Update test mocks to use namespaced imports
+
+3. **Week 3: Remove direct exports**
+   - Remove `window.X = X;` lines from all 54 files
+   - Keep only `window.Layers.*` exports
+   - Run full test suite
+
+**Success Criteria:**
+- [ ] 0 direct `window.X` exports (currently 54)
+- [ ] All tests pass
+- [ ] No runtime errors in browser
 
 ---
 
-### P2.2 Continue CanvasManager Controller Extraction
+### P1.2 Add Integration Tests
 
-**Status:** 45% COMPLETE (9/~15 controllers)  
-**Effort:** 2-3 weeks
+**Status:** NOT STARTED  
+**Effort:** 2 weeks  
+**Impact:** Catch multi-component bugs
 
-**Already Extracted (9 controllers with 85%+ coverage):**
-- ZoomPanController.js (97% coverage)
-- GridRulersController.js (94% coverage)
-- TransformController.js (86% coverage)
-- HitTestController.js (98% coverage)
-- DrawingController.js (100% coverage)
-- ClipboardController.js (98% coverage)
-- RenderCoordinator.js (93% coverage)
-- InteractionController.js (100% coverage)
-- TextInputController.js (86% coverage)
+**Problem:**
+Only 2 integration tests exist vs 70+ unit tests. No coverage for:
+- CanvasManager ↔ Controller interactions
+- StateManager ↔ HistoryManager synchronization
+- Error propagation across modules
 
-**Still in CanvasManager (~1,000 lines to extract):**
-- Background image loading (~150 lines)
-- Layer operations (add/remove/reorder, ~200 lines)
-- Style state management (~100 lines)
-- Bounds calculations (~100 lines)
+**Action Plan:**
 
-**Target:** CanvasManager <500 lines (facade only)
+1. Create `tests/jest/integration/` directory
+2. Add tests for:
+   - Layer creation flow (ToolManager → CanvasManager → StateManager)
+   - Undo/redo flow (HistoryManager ↔ StateManager)
+   - Selection flow (HitTestController → SelectionManager)
+   - Save flow (StateManager → APIManager → validation)
+
+**Target:** 10+ integration tests covering critical paths
 
 ---
 
-### P2.3 ES6 Class Migration Pilot (10 files)
+### P1.3 Standardize PHP Logging
 
-**Status:** 4.6% COMPLETE (32/700 methods)  
-**Effort:** 2 weeks
+**Status:** ✅ COMPLETED (Dec 11, 2025)  
+**Effort:** 1 day  
+**Impact:** Debugging consistency
 
-**Pilot Candidates (well-tested, smaller files):**
+~~**Problem:**
+Three logging patterns mixed.~~
 
-| File | Lines | Coverage | Priority |
-|------|-------|----------|----------|
-| EventTracker.js | 224 | 96% | High |
-| StyleController.js | 184 | 100% | High |
-| EventManager.js | 126 | 100% | High |
-| TextUtils.js | 194 | 89% | Medium |
-| ImageLoader.js | 293 | 91% | Medium |
-| GeometryUtils.js | ~200 | ~90% | Medium |
-| DeepClone.js | ~100 | ~95% | Low |
-| AccessibilityAnnouncer.js | ~150 | 94% | Low |
-| ModuleRegistry.js | 360 | 94% | Medium |
-| HistoryManager.js | 625 | 90% | High |
+**Resolution:** All `wfDebugLog('Layers', ...)` calls replaced with injected logger. Anonymous fallback removed from Hooks.php.
+
+---
+
+## Phase 2: Major Refactoring (P2)
+
+### P2.1 Begin ES6 Class Migration
+
+**Status:** NOT STARTED  
+**Effort:** 6-8 weeks  
+**Impact:** Modern code, TypeScript readiness
+
+**Problem:**
+622 prototype methods vs 34 ES6 classes (5% modern).
+
+**Migration Order (by test coverage, lowest risk first):**
+
+| Phase | Files | Coverage | Weeks |
+|-------|-------|----------|-------|
+| 1 | StyleController, EventManager, EventTracker | 96-100% | 1 |
+| 2 | TextUtils, ImageLoader, GeometryUtils | 89-91% | 1 |
+| 3 | ModuleRegistry, AccessibilityAnnouncer | 94% | 1 |
+| 4 | CanvasUtilities, DeepClone | ~90% | 1 |
+| 5 | HistoryManager, ValidationManager | 90-97% | 2 |
+| 6 | SelectionManager, ToolManager | 85-90% | 2 |
 
 **Conversion Pattern:**
 ```javascript
 // Before:
-function TextUtils() { ... }
-TextUtils.prototype.method = function() { ... };
+function TextUtils() { this.maxLength = 1000; }
+TextUtils.prototype.truncate = function( text ) { ... };
 window.TextUtils = TextUtils;
 
 // After:
 class TextUtils {
-    constructor() { ... }
-    method() { ... }
+    constructor() {
+        this.maxLength = 1000;
+    }
+    truncate( text ) { ... }
 }
 window.Layers.Utils.Text = TextUtils;
 ```
 
-**Acceptance Criteria:**
-- [ ] 10 files converted to ES6 classes
-- [ ] All tests still pass
-- [ ] No functionality regression
+**Rules:**
+- [ ] Convert one file at a time
+- [ ] Run full test suite after each conversion
+- [ ] No functionality changes during conversion
+- [ ] Update JSDoc to use `@class` and `@method`
 
 ---
 
-## Phase 3: Long-Term (P3)
+### P2.2 Split LayerRenderer.js (2,195 lines)
 
-### P3.1 Complete ES6 Class Migration
+**Status:** 🟡 IN PROGRESS (ShadowRenderer extracted - Dec 11, 2025)  
+**Effort:** 4 weeks  
+**Impact:** Maintainability, isolated testing
 
-**Timeline:** 4-6 weeks after pilot  
-**Target:** All 700 prototype methods converted
+**Progress:**
+- ✅ ShadowRenderer.js extracted (~500 lines of shadow logic)
+- ✅ LayerRenderer.js reduced to ~1,850 lines
+- ⬜ Shape renderers still to extract
 
-**Prerequisites:**
-- P2.3 pilot successful
-- Pattern established and documented
+**Proposed Structure:**
+```
+ext.layers.shared/
+├── LayerRenderer.js           # Facade, 300 lines max
+├── ShadowRenderer.js          # ✅ DONE - Shadow effects
+└── renderers/
+    ├── BaseRenderer.js        # Shared utilities
+    ├── RectangleRenderer.js
+    ├── CircleRenderer.js
+    ├── EllipseRenderer.js
+    ├── PolygonRenderer.js
+    ├── StarRenderer.js
+    ├── ArrowRenderer.js
+    ├── LineRenderer.js
+    ├── PathRenderer.js
+    ├── TextRenderer.js
+    ├── HighlightRenderer.js
+    └── BlurRenderer.js
+```
+
+**Migration Strategy:**
+1. ✅ Create ShadowRenderer with delegation pattern
+2. Extract one shape renderer at a time
+3. Maintain 100% test compatibility
+4. Target: No renderer file > 300 lines
 
 ---
 
-### P3.2 TypeScript Migration
+### P2.3 Continue CanvasManager Extraction
 
-**Timeline:** 2-3 months after ES6 complete  
-**Prerequisites:**
-- ES6 migration complete
-- Global exports eliminated
-- Module boundaries clear
+**Status:** ~45% COMPLETE (9 controllers extracted)  
+**Effort:** 3-4 weeks  
+**Target:** CanvasManager < 500 lines
+
+**Already Extracted:**
+- ZoomPanController (97% coverage)
+- GridRulersController (94% coverage)
+- TransformController (86% coverage)
+- HitTestController (98% coverage)
+- DrawingController (100% coverage)
+- ClipboardController (98% coverage)
+- RenderCoordinator (93% coverage)
+- InteractionController (100% coverage)
+- TextInputController (86% coverage)
+
+**Still in CanvasManager (~1,000 lines to extract):**
+- Background image loading (~150 lines)
+- Layer operations (add/remove/reorder) (~200 lines)
+- Style state management (~100 lines)
+- Bounds calculations (~100 lines)
+
+---
+
+## Phase 3: Modernization (P3)
+
+### P3.1 Complete ES6 Migration
+
+**Timeline:** After P2.1 proves pattern  
+**Effort:** 4-6 weeks  
+**Target:** 0 prototype methods
+
+Convert remaining files:
+- CanvasManager.js (2,061 lines)
+- LayerPanel.js (1,576 lines)
+- LayersEditor.js (1,265 lines)
+- All UI components
+- All controller files
+
+---
+
+### P3.2 Add TypeScript Definitions
+
+**Timeline:** After P3.1 complete  
+**Effort:** 2-3 weeks  
+
+Create `.d.ts` files for:
+- All exported classes
+- API contracts
+- Layer data structures
+
+Benefits:
+- IDE autocomplete without full TS migration
+- Type checking in consuming code
+- Documentation generation
+
+---
+
+### P3.3 TypeScript Migration
+
+**Timeline:** 6+ months  
+**Prerequisites:** ES6 complete, globals eliminated
 
 **Approach:**
-1. Add .d.ts files for existing code
+1. Add `tsconfig.json` with `allowJs: true`
 2. Convert files incrementally (`.js` → `.ts`)
-3. Start with utilities, end with UI components
+3. Start with utilities, end with UI
+4. Maintain 100% test coverage during migration
 
 ---
 
-### P3.3 ES Modules with Tree-Shaking
+### P3.4 Unified Client/Server Validation
 
-**Timeline:** After TypeScript  
-**Prerequisites:**
-- Globals eliminated
-- Module boundaries defined
-
-**Benefits:**
-- Automatic dead code elimination
-- Better bundle analysis
-- Modern import/export syntax
-
----
-
-### P3.4 Unified Validation System
-
-**Timeline:** 3+ months  
+**Timeline:** 6+ months  
 **Effort:** 2-3 weeks
 
 **Problem:**
-Dual validation systems (client + server) must stay in sync manually.
+Dual validation systems must stay in sync manually.
 
 **Solution:**
 Generate client validation from server rules:
 ```php
 // Server defines rules
-$rules = [
-    'opacity' => ['type' => 'float', 'min' => 0, 'max' => 1],
-    // ...
-];
-
-// Export to JSON for client
-file_put_contents('validation-rules.json', json_encode($rules));
+$rules = ServerSideLayerValidator::ALLOWED_PROPERTIES;
+// Export to JSON for build process
 ```
 
 ```javascript
-// Client loads generated rules
-const rules = require('./validation-rules.json');
-// Generate validation functions from rules
+// Client consumes generated rules
+import rules from './generated/validation-rules.json';
 ```
 
 ---
@@ -411,50 +351,27 @@ const rules = require('./validation-rules.json');
 ### Visual Progress
 
 ```
-Phase 0 (Immediate):
-P0.1 Shadow Bug Fix:          ████████████████████ 100% ✅
-P0.2 Cleanup BaseShapeRenderer: ████████████████████ 100% ✅
-P0.3 Memory Leak Audit:       ████████████████████ 100% ✅ (verified clean)
+Phase 0 (Quick Wins):
+P0.1 Remove Dead PHP Code:    ████████████████████ 100% ✓
+P0.2 Empty Catch Blocks:      ████████████████████ 100% ✓
+P0.3 Extract getClass():      ████████████████████ 100% ✓
+P0.4 Remove Skipped Test:     ████████████████████ 100% ✓
 
 Phase 1 (High Impact):
-P1.1 Code Splitting:          ████████████████████ 100% ✅ (already implemented)
-P1.2 LayerRenderer Coverage:  ██████████████████░░ 89% ✅ (was 62%)
-P1.3 Global Export Cleanup:   ███████████████░░░░░ 75% (deprecation map added)
+P1.1 Global Export Cleanup:   ░░░░░░░░░░░░░░░░░░░░ 0% (54 exports)
+P1.2 Integration Tests:       ░░░░░░░░░░░░░░░░░░░░ 0% (0/10 tests)
+P1.3 PHP Logging:             ████████████████████ 100% ✓
 
 Phase 2 (Refactoring):
-P2.1 Split LayerRenderer:     ░░░░░░░░░░░░░░░░░░░░ 0%
-P2.2 CanvasManager Extraction: █████████░░░░░░░░░░░ 45%
-P2.3 ES6 Class Pilot:         █░░░░░░░░░░░░░░░░░░░ 5%
+P2.1 ES6 Class Migration:     ██░░░░░░░░░░░░░░░░░░ 10% (ErrorHandler converted)
+P2.2 Split LayerRenderer:     ███░░░░░░░░░░░░░░░░░ 15% (ShadowRenderer extracted)
+P2.3 CanvasManager Extraction: █████████░░░░░░░░░░░ 45% (9/~15 controllers)
 
-Phase 3 (Long-term):
+Phase 3 (Modernization):
 P3.1 Complete ES6 Migration:  █░░░░░░░░░░░░░░░░░░░ 5%
-P3.2 TypeScript Migration:    ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.3 ES Modules:              ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.2 TypeScript Definitions:  ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.3 TypeScript Migration:    ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.4 Unified Validation:      ░░░░░░░░░░░░░░░░░░░░ 0%
-```
-
-### Verification Commands
-
-```bash
-# Full test suite with coverage
-npm run test:js -- --coverage
-
-# Event listener balance
-echo "Add: $(grep -r "addEventListener" resources --include="*.js" | wc -l)"
-echo "Remove: $(grep -r "removeEventListener" resources --include="*.js" | wc -l)"
-
-# File sizes (god classes)
-find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | sort -rn | head -10
-
-# Global exports
-grep -rE "window\.[A-Z][A-Za-z0-9]+ = " resources --include="*.js" | wc -l
-
-# Bundle size
-find resources -name "*.js" -type f ! -path "*/dist/*" -exec cat {} + | wc -c
-
-# Prototype vs class count
-echo "Prototypes: $(grep -r "\.prototype\." resources --include="*.js" | wc -l)"
-echo "Classes: $(grep -rE "^class |^[[:space:]]*class " resources --include="*.js" | wc -l)"
 ```
 
 ---
@@ -462,62 +379,83 @@ echo "Classes: $(grep -rE "^class |^[[:space:]]*class " resources --include="*.j
 ## Success Metrics
 
 ### Phase 0 Complete When:
-- [x] Shadow rendering bug fixed
-- [x] BaseShapeRenderer either deleted or integrated (deleted)
-- [x] All high-risk files have EventTracker or destroy() (verified - already implemented)
+- [x] Dead `getNextRevision()` method removed ✓
+- [x] 0 empty catch blocks ✓
+- [x] `getClass()` in single shared file ✓
+- [x] 0 skipped tests ✓
 
 ### Phase 1 Complete When:
-- [x] Viewer/Editor code splitting (already implemented - viewer ~4KB, editor ~31KB)
-- [x] LayerRenderer.js coverage ≥80% (achieved 89%)
-- [ ] Global window.X exports <10
+- [ ] Direct `window.X` exports = 0 (currently 54)
+- [ ] Integration tests ≥ 10
+- [x] All PHP logging uses injected logger ✓
 
 ### Phase 2 Complete When:
-- [ ] No file >1,000 lines (except entry points)
-- [ ] CanvasManager <500 lines
-- [ ] 10+ files converted to ES6 classes
+- [ ] ES6 classes ≥ 50% of methods
+- [ ] LayerRenderer.js split into ≤ 300-line files (15% - ShadowRenderer done)
+- [ ] CanvasManager < 500 lines
 
 ### Project "Healthy" When:
-- [x] All coverage thresholds met (89.65% statements)
-- [ ] No god classes (>1,000 lines except entry points)
-- [x] Bundle <400KB for viewer (actual: ~4KB source, <100KB minified)
+- [ ] 0 files > 1,000 lines (except entry points)
 - [ ] ES6 classes throughout
-- [x] All tests pass consistently (3,877 tests)
-- [x] No memory leaks in long sessions (verified)
+- [ ] 0 direct global exports
+- [ ] 0 prototype methods
+- [ ] TypeScript definitions complete
 
 ---
 
 ## Estimated Timeline
 
-| Phase | Duration | Dependencies |
-|-------|----------|--------------|
-| Phase 0 | 1-2 weeks | None - start immediately |
-| Phase 1 | 4-6 weeks | Phase 0 complete |
-| Phase 2 | 4-6 weeks | Parallel with late Phase 1 |
-| Phase 3 | 2-3 months | Phases 1-2 complete |
+| Phase | Duration | Start After |
+|-------|----------|-------------|
+| Phase 0 | 1 week | Immediately |
+| Phase 1 | 4 weeks | Phase 0 |
+| Phase 2 | 8-12 weeks | Phase 1 |
+| Phase 3 | 12+ weeks | Phase 2 |
 
-**Total: 5-6 months for healthy codebase state**
+**Total to "Healthy" state: 6-8 months**
 
 ---
 
-## Risk Assessment
+## Risk Mitigation
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| LayerRenderer split causes visual regressions | Medium | High | Visual regression testing |
-| Memory leak fixes break functionality | Low | Medium | Test each fix individually |
-| ES6 conversion introduces bugs | Low | Medium | Convert well-tested files first |
-| Bundle splitting breaks loading | Medium | High | Feature flag rollout |
-| Test coverage drops during refactoring | Medium | Medium | No merge without coverage check |
+| ES6 conversion introduces bugs | Medium | Medium | Convert high-coverage files first |
+| Global removal breaks runtime | Medium | High | Add deprecation warnings first |
+| LayerRenderer split causes regressions | Medium | High | Visual regression tests |
+| Test coverage drops during refactoring | Medium | Medium | CI gate on coverage |
 
 ---
 
-## Quick Wins (Can Do Today)
+## Quick Start: What to Do Today
 
-1. **Run full coverage report** - `npm run test:js -- --coverage`
-2. **Audit abandoned renderers** - `grep -r "BaseShapeRenderer" extension.json`
-3. **Count event listener imbalance** - Commands above
-4. **Document current state** - Screenshot coverage report
-5. **Apply shadow bug fix** - Fix is already documented
+1. **Delete dead PHP code** (P0.1) - 5 minutes
+2. **Add catch block logging** (P0.2) - 15 minutes
+3. **Delete empty skipped test** (P0.4) - 2 minutes
+4. **Create GitHub issue for P1.1** - tracking
+5. **Run `npm run test:js -- --coverage`** - verify baseline
+
+---
+
+## Verification Commands
+
+```bash
+# Run all tests
+npm run test:js -- --coverage
+
+# Check for remaining direct global exports
+grep -rE "window\.[A-Z][a-zA-Z]+ =" resources --include="*.js" | grep -v "window\.Layers" | wc -l
+
+# Count prototype vs class methods
+echo "Prototypes: $(grep -r "\.prototype\." resources --include="*.js" | wc -l)"
+echo "Classes: $(grep -rE "^class |^[[:space:]]*class " resources --include="*.js" | wc -l)"
+
+# Find god classes
+find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | sort -rn | head -10
+
+# Check for empty catch blocks
+grep -rE "catch.*\{\s*\}" resources --include="*.js"
+```
 
 ---
 

@@ -5,8 +5,25 @@
 ( function () {
 	'use strict';
 
+	// Use shared namespace helper (loaded via utils/NamespaceHelper.js)
+	const getClass = ( typeof window !== 'undefined' && window.Layers && window.Layers.Utils && window.Layers.Utils.getClass ) ||
+		( typeof window !== 'undefined' && window.layersGetClass ) ||
+		function ( namespacePath, globalName ) {
+			// Minimal fallback for test environments
+			if ( typeof window !== 'undefined' && window[ globalName ] ) {
+				return window[ globalName ];
+			}
+			/* eslint-disable-next-line no-undef */
+			if ( typeof global !== 'undefined' && global[ globalName ] ) {
+				/* eslint-disable-next-line no-undef */
+				return global[ globalName ];
+			}
+			return null;
+		};
+
 	/**
 	 * Helper to find a class in different environments (global, window, mw)
+	 * @deprecated Use getClass() instead for namespace-first resolution
 	 * @param {string} name - Class name to find
 	 * @return {Function|undefined} The class or undefined
 	 */
@@ -263,13 +280,25 @@
 			destroy: () => {
 				if ( this.canvas ) {
 					if ( this.__mousedownHandler ) {
-						try { this.canvas.removeEventListener( 'mousedown', this.__mousedownHandler ); } catch ( err ) {}
+						try {
+							this.canvas.removeEventListener( 'mousedown', this.__mousedownHandler );
+						} catch ( err ) {
+							mw.log.warn( '[CanvasManager] Failed to remove mousedown listener:', err );
+						}
 					}
 					if ( this.__mousemoveHandler ) {
-						try { this.canvas.removeEventListener( 'mousemove', this.__mousemoveHandler ); } catch ( err ) {}
+						try {
+							this.canvas.removeEventListener( 'mousemove', this.__mousemoveHandler );
+						} catch ( err ) {
+							mw.log.warn( '[CanvasManager] Failed to remove mousemove listener:', err );
+						}
 					}
 					if ( this.__mouseupHandler ) {
-						try { this.canvas.removeEventListener( 'mouseup', this.__mouseupHandler ); } catch ( err ) {}
+						try {
+							this.canvas.removeEventListener( 'mouseup', this.__mouseupHandler );
+						} catch ( err ) {
+							mw.log.warn( '[CanvasManager] Failed to remove mouseup listener:', err );
+						}
 					}
 				}
 				this.__mousedownHandler = null;
@@ -354,9 +383,8 @@
 		const filename = this.editor.filename;
 		const backgroundImageUrl = this.config.backgroundImageUrl;
 
-		// Get ImageLoader class - guaranteed to exist via extension.json in production
-		const ImageLoaderClass = ( typeof ImageLoader !== 'undefined' ) ? ImageLoader :
-			( ( typeof window !== 'undefined' && window.ImageLoader ) ? window.ImageLoader : null );
+		// Get ImageLoader class - prefer namespace, fallback to global
+		const ImageLoaderClass = getClass( 'Utils.ImageLoader', 'ImageLoader' );
 
 		if ( ImageLoaderClass ) {
 			// Use ImageLoader module (production path)
@@ -723,8 +751,9 @@
 				const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
 				target.dispatchEvent( evt );
 			} catch ( e ) {
-				if ( window.layersErrorHandler ) {
-					window.layersErrorHandler.handleError( e, 'CanvasManager.emitTransformEvent', 'canvas' );
+				const ErrorHandler = getClass( 'Core.ErrorHandler', 'layersErrorHandler' );
+				if ( ErrorHandler && ErrorHandler.handleError ) {
+					ErrorHandler.handleError( e, 'CanvasManager.emitTransformEvent', 'canvas' );
 				}
 			}
 		} );
@@ -995,7 +1024,8 @@
 		// Handle text layers specially - they need canvas context for measurement
 		if ( layer && layer.type === 'text' ) {
 			const canvasWidth = this.canvas ? this.canvas.width : 0;
-			const textMetrics = window.TextUtils.measureTextLayer( layer, this.ctx, canvasWidth );
+			const TextUtils = getClass( 'Utils.Text', 'TextUtils' );
+			const textMetrics = TextUtils ? TextUtils.measureTextLayer( layer, this.ctx, canvasWidth ) : null;
 			if ( !textMetrics ) {
 				return null;
 			}
@@ -1007,11 +1037,13 @@
 			};
 		}
 		// Use GeometryUtils for all other layer types
-		return window.GeometryUtils.getLayerBoundsForType( layer );
+		const GeometryUtils = getClass( 'Utils.Geometry', 'GeometryUtils' );
+		return GeometryUtils ? GeometryUtils.getLayerBoundsForType( layer ) : null;
 	};
 
 	CanvasManager.prototype._computeAxisAlignedBounds = function ( rect, rotationDegrees ) {
-		return window.GeometryUtils.computeAxisAlignedBounds( rect, rotationDegrees );
+		const GeometryUtils = getClass( 'Utils.Geometry', 'GeometryUtils' );
+		return GeometryUtils ? GeometryUtils.computeAxisAlignedBounds( rect, rotationDegrees ) : null;
 	};
 
 	/**

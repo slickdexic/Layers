@@ -11,6 +11,14 @@
 ( function () {
 	'use strict';
 
+	// Use shared namespace helper (loaded via utils/NamespaceHelper.js)
+	const getClass = ( window.Layers && window.Layers.Utils && window.Layers.Utils.getClass ) ||
+		window.layersGetClass ||
+		function ( namespacePath, globalName ) {
+			// Minimal fallback
+			return window[ globalName ] || null;
+		};
+
 	/**
 	 * Toolbar class
 	 *
@@ -27,17 +35,22 @@
 
 		// Debug logging removed - use mw.config.get('wgLayersDebug') if needed
 
+		// Get dependencies at construction time (lazy resolution for testability)
+		const LayersValidator = getClass( 'Validation.Validator', 'LayersValidator' );
+		const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
+		const ImportExportManager = getClass( 'Core.ImportExportManager', 'ImportExportManager' );
+
 		// Initialize validator for real-time input validation
-		this.validator = window.LayersValidator ? new window.LayersValidator() : null;
+		this.validator = LayersValidator ? new LayersValidator() : null;
 		this.dialogCleanups = [];
 
 		// Initialize EventTracker for memory-safe event listener management
-		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+		this.eventTracker = EventTracker ? new EventTracker() : null;
 		this.keyboardShortcutHandler = null;
 
 		// Initialize import/export manager
-		this.importExportManager = window.ImportExportManager ?
-			new window.ImportExportManager( { editor: this.editor } ) : null;
+		this.importExportManager = ImportExportManager ?
+			new ImportExportManager( { editor: this.editor } ) : null;
 
 		// Initialize style controls manager
 		this.styleControls = null;
@@ -128,12 +141,13 @@
 		options = options || {};
 		const colorPickerStrings = this.getColorPickerStrings();
 
-		if ( !window.ColorPickerDialog ) {
+		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
+		if ( !ColorPickerDialog ) {
 			// Fallback: ColorPickerDialog module not loaded
 			return;
 		}
 
-		const picker = new window.ColorPickerDialog( {
+		const picker = new ColorPickerDialog( {
 			currentColor: ( initialValue === 'none' ) ? 'none' : ( initialValue || '#000000' ),
 			anchorElement: anchorButton,
 			strings: colorPickerStrings,
@@ -149,7 +163,8 @@
 
 	// Update color button display - uses ColorPickerDialog static method
 	Toolbar.prototype.updateColorButtonDisplay = function ( btn, color, transparentLabel, previewTemplate ) {
-		if ( window.ColorPickerDialog && window.ColorPickerDialog.updateColorButton ) {
+		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
+		if ( ColorPickerDialog && ColorPickerDialog.updateColorButton ) {
 			const strings = this.getColorPickerStrings();
 			if ( transparentLabel ) {
 				strings.transparent = transparentLabel;
@@ -157,7 +172,7 @@
 			if ( previewTemplate ) {
 				strings.previewTemplate = previewTemplate;
 			}
-			window.ColorPickerDialog.updateColorButton( btn, color, strings );
+			ColorPickerDialog.updateColorButton( btn, color, strings );
 		} else {
 			// Fallback implementation
 			let labelValue = color;
@@ -298,8 +313,9 @@
 
 	Toolbar.prototype.createStyleGroup = function () {
 		// Initialize style controls manager
-		if ( window.ToolbarStyleControls ) {
-			this.styleControls = new window.ToolbarStyleControls( {
+		const ToolbarStyleControls = getClass( 'UI.ToolbarStyleControls', 'ToolbarStyleControls' );
+		if ( ToolbarStyleControls ) {
+			this.styleControls = new ToolbarStyleControls( {
 				toolbar: this,
 				msg: this.msg.bind( this )
 			} );
@@ -571,7 +587,8 @@
 		// Style controls are handled by ToolbarStyleControls module
 
 		// Keyboard shortcuts - delegate to ToolbarKeyboard module
-		this.keyboardHandler = new window.ToolbarKeyboard( this );
+		const ToolbarKeyboard = getClass( 'UI.ToolbarKeyboard', 'ToolbarKeyboard' );
+		this.keyboardHandler = new ToolbarKeyboard( this );
 		this.keyboardShortcutHandler = ( e ) => {
 			this.keyboardHandler.handleKeyboardShortcuts( e );
 		};

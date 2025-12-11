@@ -154,6 +154,7 @@
 			"targets": [ "desktop", "mobile" ],
 			"scripts": [
 				"DeepClone.js",
+				"ShadowRenderer.js",
 				"LayerRenderer.js"
 			]
 		},
@@ -192,6 +193,7 @@
 			],
 			"scripts": [
 			"compat.js",
+				"utils/NamespaceHelper.js",
 				"MessageHelper.js",
 				"AccessibilityAnnouncer.js",
 				"EventTracker.js",

@@ -10,15 +10,13 @@
 ( function () {
 	'use strict';
 
-	// Module resolution helpers - prefer namespaced, fallback to global
-	const getClass = ( namespacePath, globalName ) => {
-		const parts = namespacePath.split( '.' );
-		let obj = window.Layers;
-		for ( const part of parts ) {
-			obj = obj && obj[ part ];
-		}
-		return obj || window[ globalName ];
-	};
+	// Use shared namespace helper (loaded via utils/NamespaceHelper.js)
+	const getClass = ( window.Layers && window.Layers.Utils && window.Layers.Utils.getClass ) ||
+		window.layersGetClass ||
+		function ( namespacePath, globalName ) {
+			// Minimal fallback
+			return window[ globalName ] || null;
+		};
 
 	// Resolve commonly used classes
 	const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );

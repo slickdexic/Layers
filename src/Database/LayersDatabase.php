@@ -88,8 +88,11 @@ class LayersDatabase {
 			$setName = $this->config->get( 'LayersDefaultSetName' );
 		}
 
-		// Log via MediaWiki's debug log (respects $wgDebugLogGroups configuration)
-		wfDebugLog( 'Layers', "saveLayerSet: imgName='$imgName', setName='$setName'" );
+		// Log via injected logger (respects MediaWiki logging configuration)
+		$this->logger->debug( 'saveLayerSet: imgName={imgName}, setName={setName}', [
+			'imgName' => $imgName,
+			'setName' => $setName
+		] );
 
 		if ( empty( $normalizedImgName ) || empty( $sha1 ) || $userId <= 0 ) {
 			$this->logError( 'Invalid parameters for saveLayerSet', [
@@ -296,28 +299,6 @@ class LayersDatabase {
 			'name' => $row->ls_name,
 			'data' => $jsonData
 		];
-	}
-
-	/**
-	 * Get the next global revision number for an image (legacy method)
-	 *
-	 * @param string $imgName Image name
-	 * @param string $sha1 Image SHA1 hash
-	 * @param \Wikimedia\Rdbms\IDatabase $dbw Database connection
-	 * @return int Next revision number
-	 */
-	private function getNextRevision( string $imgName, string $sha1, $dbw ): int {
-		$maxRevision = $dbw->selectField(
-			'layer_sets',
-			'MAX(ls_revision)',
-			[
-				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-				'ls_img_sha1' => $sha1
-			],
-			__METHOD__,
-			[ 'FOR UPDATE' ]
-		);
-		return (int)$maxRevision + 1;
 	}
 
 	/**

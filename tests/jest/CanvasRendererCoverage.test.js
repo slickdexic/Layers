@@ -698,9 +698,6 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 	// Note: drawEllipse and other shape draw methods have been removed from CanvasRenderer.
 	// Drawing is now delegated to the shared LayerRenderer. 
 	// See LayerRenderer.test.js for shape rendering tests.
-	describe( 'ellipse rendering edge cases - SKIPPED', () => {
-		it.skip( 'draw methods moved to LayerRenderer', () => {} );
-	} );
 
 	describe( 'getLayerBounds edge cases', () => {
 		it( 'should return null for layer without bounds', () => {

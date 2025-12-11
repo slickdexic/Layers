@@ -5,17 +5,24 @@
 			"label": "npm test (Layers)",
 			"type": "shell",
 			"command": "npm",
-			"args": ["test"],
+			"args": [
+				"test"
+			],
 			"isBackground": false,
 			"group": "build",
-			"problemMatcher": ["$eslint-stylish"],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
 			"close": true
 		},
 		{
 			"label": "npm test:php (Layers)",
 			"type": "shell",
 			"command": "npm",
-			"args": ["run", "test:php"],
+			"args": [
+				"run",
+				"test:php"
+			],
 			"isBackground": false,
 			"group": "build",
 			"close": true
@@ -24,10 +31,37 @@
 			"label": "npm fix:php (Layers)",
 			"type": "shell",
 			"command": "npm",
-			"args": ["run", "fix:php"],
+			"args": [
+				"run",
+				"fix:php"
+			],
 			"isBackground": false,
 			"group": "build",
 			"close": true
+		},
+		{
+			"label": "Run Jest Tests",
+			"type": "shell",
+			"command": "npm run test:js",
+			"group": "test"
+		},
+		{
+			"label": "Run HistoryManager Tests",
+			"type": "shell",
+			"command": "npm run test:js -- --testPathPattern=HistoryManager",
+			"group": "test"
+		},
+		{
+			"label": "Run HistoryManager Tests v2",
+			"type": "shell",
+			"command": "npm run test:js -- HistoryManager",
+			"group": "test"
+		},
+		{
+			"label": "Run All Jest Tests",
+			"type": "shell",
+			"command": "npm run test:js",
+			"group": "test"
 		}
 	]
 }

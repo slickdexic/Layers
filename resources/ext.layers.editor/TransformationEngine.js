@@ -9,70 +9,73 @@
 	/**
 	 * TransformationEngine - Manages canvas transformations and viewport
 	 *
-	 * @param {HTMLCanvasElement} canvas - Canvas element to transform
-	 * @param {Object} config - Configuration options
 	 * @class
 	 */
-	function TransformationEngine( canvas, config ) {
-		this.canvas = canvas;
-		this.config = config || {};
+	class TransformationEngine {
+		/**
+		 * @param {HTMLCanvasElement} canvas - Canvas element to transform
+		 * @param {Object} config - Configuration options
+		 */
+		constructor( canvas, config ) {
+			this.canvas = canvas;
+			this.config = config || {};
 
-		// Editor reference for status updates
-		this.editor = this.config.editor || null;
+			// Editor reference for status updates
+			this.editor = this.config.editor || null;
 
-		// Zoom and pan state
-		this.zoom = 1.0;
-		this.minZoom = 0.1;
-		this.maxZoom = 5.0;
-		this.panX = 0;
-		this.panY = 0;
-		this.isPanning = false;
-		this.lastPanPoint = null;
-		this.userHasSetZoom = false;
+			// Zoom and pan state
+			this.zoom = 1.0;
+			this.minZoom = 0.1;
+			this.maxZoom = 5.0;
+			this.panX = 0;
+			this.panY = 0;
+			this.isPanning = false;
+			this.lastPanPoint = null;
+			this.userHasSetZoom = false;
 
-		// Smooth zoom animation properties
-		this.isAnimatingZoom = false;
-		this.zoomAnimationDuration = 300; // milliseconds
-		this.zoomAnimationStartTime = 0;
-		this.zoomAnimationStartZoom = 1.0;
-		this.zoomAnimationTargetZoom = 1.0;
+			// Smooth zoom animation properties
+			this.isAnimatingZoom = false;
+			this.zoomAnimationDuration = 300; // milliseconds
+			this.zoomAnimationStartTime = 0;
+			this.zoomAnimationStartZoom = 1.0;
+			this.zoomAnimationTargetZoom = 1.0;
 
-		// Viewport bounds for culling
-		this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 };
+			// Viewport bounds for culling
+			this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 };
 
-		// Grid snapping
-		this.snapToGrid = false;
-		this.gridSize = 10;
+			// Grid snapping
+			this.snapToGrid = false;
+			this.gridSize = 10;
 
-		this.init();
-	}
-
-	/**
-	 * Initialize the transformation engine
-	 */
-	TransformationEngine.prototype.init = function () {
-		// Update zoom limits from config if provided
-		if ( this.config.minZoom !== undefined ) {
-			this.minZoom = this.config.minZoom;
-		}
-		if ( this.config.maxZoom !== undefined ) {
-			this.maxZoom = this.config.maxZoom;
-		}
-		if ( this.config.gridSize !== undefined ) {
-			this.gridSize = this.config.gridSize;
+			this.init();
 		}
 
-		// Initialize transformation
-		this.updateCanvasTransform();
-		this.updateViewportBounds();
-	};
+		/**
+		 * Initialize the transformation engine
+		 */
+		init() {
+			// Update zoom limits from config if provided
+			if ( this.config.minZoom !== undefined ) {
+				this.minZoom = this.config.minZoom;
+			}
+			if ( this.config.maxZoom !== undefined ) {
+				this.maxZoom = this.config.maxZoom;
+			}
+			if ( this.config.gridSize !== undefined ) {
+				this.gridSize = this.config.gridSize;
+			}
+
+			// Initialize transformation
+			this.updateCanvasTransform();
+			this.updateViewportBounds();
+		}
 
 	/**
 	 * Set zoom level with clamping and status update
 	 *
 	 * @param {number} newZoom - New zoom level
 	 */
-	TransformationEngine.prototype.setZoom = function ( newZoom ) {
+	setZoom( newZoom ) {
 		this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
 		this.userHasSetZoom = true;
 
@@ -83,14 +86,14 @@
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { zoomPercent: this.zoom * 100 } );
 		}
-	};
+	}
 
 	/**
 	 * Set zoom directly without triggering user zoom flag (for animations)
 	 *
 	 * @param {number} newZoom - New zoom level
 	 */
-	TransformationEngine.prototype.setZoomDirect = function ( newZoom ) {
+	setZoomDirect( newZoom ) {
 		this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
 		this.updateCanvasTransform();
 		this.updateViewportBounds();
@@ -98,39 +101,39 @@
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { zoomPercent: this.zoom * 100 } );
 		}
-	};
+	}
 
 	/**
 	 * Get current zoom level
 	 *
 	 * @return {number} Current zoom level
 	 */
-	TransformationEngine.prototype.getZoom = function () {
+	getZoom() {
 		return this.zoom;
-	};
+	}
 
 	/**
 	 * Zoom in by increment
 	 */
-	TransformationEngine.prototype.zoomIn = function () {
+	zoomIn() {
 		const targetZoom = this.zoom + 0.2;
 		this.smoothZoomTo( targetZoom );
 		this.userHasSetZoom = true;
-	};
+	}
 
 	/**
 	 * Zoom out by increment
 	 */
-	TransformationEngine.prototype.zoomOut = function () {
+	zoomOut() {
 		const targetZoom = this.zoom - 0.2;
 		this.smoothZoomTo( targetZoom );
 		this.userHasSetZoom = true;
-	};
+	}
 
 	/**
 	 * Reset zoom and pan to defaults
 	 */
-	TransformationEngine.prototype.resetZoom = function () {
+	resetZoom() {
 		this.panX = 0;
 		this.panY = 0;
 		this.userHasSetZoom = true;
@@ -147,7 +150,7 @@
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { zoomPercent: 100 } );
 		}
-	};
+	}
 
 	/**
 	 * Zoom by delta amount at anchor point
@@ -155,7 +158,7 @@
 	 * @param {number} delta - Zoom delta amount
 	 * @param {Object} anchor - Anchor point {x, y}
 	 */
-	TransformationEngine.prototype.zoomBy = function ( delta, anchor ) {
+	zoomBy( delta, anchor ) {
 		const currentZoom = this.zoom;
 		let newZoom = currentZoom + delta;
 		newZoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
@@ -181,7 +184,7 @@
 
 		this.setZoom( newZoom );
 		this.userHasSetZoom = true;
-	};
+	}
 
 	/**
 	 * Pan by pixel amounts (for keyboard navigation)
@@ -189,21 +192,21 @@
 	 * @param {number} deltaX - X pan amount in pixels
 	 * @param {number} deltaY - Y pan amount in pixels
 	 */
-	TransformationEngine.prototype.panByPixels = function ( deltaX, deltaY ) {
+	panByPixels( deltaX, deltaY ) {
 		this.panX += deltaX;
 		this.panY += deltaY;
 		this.updateCanvasTransform();
 		this.updateViewportBounds();
-	};
+	}
 
 	/**
 	 * Get current pan position
 	 *
 	 * @return {Object} Pan position {x, y}
 	 */
-	TransformationEngine.prototype.getPan = function () {
+	getPan() {
 		return { x: this.panX, y: this.panY };
-	};
+	}
 
 	/**
 	 * Set pan position directly
@@ -211,12 +214,12 @@
 	 * @param {number} newPanX - New X pan position
 	 * @param {number} newPanY - New Y pan position
 	 */
-	TransformationEngine.prototype.setPan = function ( newPanX, newPanY ) {
+	setPan( newPanX, newPanY ) {
 		this.panX = newPanX;
 		this.panY = newPanY;
 		this.updateCanvasTransform();
 		this.updateViewportBounds();
-	};
+	}
 
 	/**
 	 * Start panning operation
@@ -224,10 +227,10 @@
 	 * @param {number} startX - Starting X coordinate
 	 * @param {number} startY - Starting Y coordinate
 	 */
-	TransformationEngine.prototype.startPan = function ( startX, startY ) {
+	startPan( startX, startY ) {
 		this.isPanning = true;
 		this.lastPanPoint = { x: startX, y: startY };
-	};
+	}
 
 	/**
 	 * Update pan position during drag
@@ -235,7 +238,7 @@
 	 * @param {number} currentX - Current X coordinate
 	 * @param {number} currentY - Current Y coordinate
 	 */
-	TransformationEngine.prototype.updatePan = function ( currentX, currentY ) {
+	updatePan( currentX, currentY ) {
 		if ( !this.isPanning || !this.lastPanPoint ) {
 			return;
 		}
@@ -249,24 +252,24 @@
 		this.lastPanPoint = { x: currentX, y: currentY };
 		this.updateCanvasTransform();
 		this.updateViewportBounds();
-	};
+	}
 
 	/**
 	 * Stop panning operation
 	 */
-	TransformationEngine.prototype.stopPan = function () {
+	stopPan() {
 		this.isPanning = false;
 		this.lastPanPoint = null;
-	};
+	}
 
 	/**
 	 * Check if currently panning
 	 *
 	 * @return {boolean} True if panning
 	 */
-	TransformationEngine.prototype.isPanningActive = function () {
+	isPanningActive() {
 		return this.isPanning;
-	};
+	}
 
 	/**
 	 * Smoothly animate zoom to target level
@@ -274,7 +277,7 @@
 	 * @param {number} targetZoom - Target zoom level
 	 * @param {number} duration - Animation duration in milliseconds (optional)
 	 */
-	TransformationEngine.prototype.smoothZoomTo = function ( targetZoom, duration ) {
+	smoothZoomTo( targetZoom, duration ) {
 		targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
 		duration = duration || this.zoomAnimationDuration;
 
@@ -290,12 +293,12 @@
 		this.zoomAnimationDuration = duration;
 
 		this.animateZoom();
-	};
+	}
 
 	/**
 	 * Animation frame function for smooth zooming
 	 */
-	TransformationEngine.prototype.animateZoom = function () {
+	animateZoom() {
 		if ( !this.isAnimatingZoom ) {
 			return;
 		}
@@ -321,22 +324,22 @@
 			this.isAnimatingZoom = false;
 			this.setZoomDirect( this.zoomAnimationTargetZoom );
 		}
-	};
+	}
 
 	/**
 	 * Update the canvas CSS transform from current pan/zoom state
 	 * DEPRECATED: Using canvas context transforms only to avoid coordinate confusion
 	 */
-	TransformationEngine.prototype.updateCanvasTransform = function () {
+	updateCanvasTransform() {
 		// Removed CSS transform setting to use canvas context transforms only
 		// Transform properties are synced to CanvasManager for context-based rendering
 		this.updateViewportBounds();
-	};
+	}
 
 	/**
 	 * Update viewport bounds for culling calculations
 	 */
-	TransformationEngine.prototype.updateViewportBounds = function () {
+	updateViewportBounds() {
 		if ( !this.canvas ) {
 			return;
 		}
@@ -353,23 +356,23 @@
 			width: container.clientWidth / this.zoom,
 			height: container.clientHeight / this.zoom
 		};
-	};
+	}
 
 	/**
 	 * Get current viewport bounds
 	 *
 	 * @return {Object} Viewport bounds {x, y, width, height}
 	 */
-	TransformationEngine.prototype.getViewportBounds = function () {
+	getViewportBounds() {
 		return this.viewportBounds;
-	};
+	}
 
 	/**
 	 * Fit canvas to window dimensions
 	 *
 	 * @param {Object} backgroundImage - Background image for size reference
 	 */
-	TransformationEngine.prototype.fitToWindow = function ( backgroundImage ) {
+	fitToWindow( backgroundImage ) {
 		if ( !backgroundImage || !this.canvas ) {
 			return;
 		}
@@ -401,7 +404,7 @@
 		if ( this.editor && this.editor.toolbar ) {
 			this.editor.toolbar.updateZoomDisplay( Math.round( targetZoom * 100 ) );
 		}
-	};
+	}
 
 	/**
 	 * Zoom to fit specified bounds
@@ -409,7 +412,7 @@
 	 * @param {Object} bounds - Bounds to fit {left, top, right, bottom}
 	 * @param {number} padding - Padding around content (optional)
 	 */
-	TransformationEngine.prototype.zoomToFitBounds = function ( bounds, padding ) {
+	zoomToFitBounds( bounds, padding ) {
 		if ( !bounds || !this.canvas ) {
 			return;
 		}
@@ -448,7 +451,7 @@
 		if ( this.editor && this.editor.toolbar ) {
 			this.editor.toolbar.updateZoomDisplay( Math.round( targetZoom * 100 ) );
 		}
-	};
+	}
 
 	/**
 	 * Convert client coordinates to canvas coordinates
@@ -457,7 +460,7 @@
 	 * @param {number} clientY - Client Y coordinate
 	 * @return {Object} Canvas coordinates {x, y}
 	 */
-	TransformationEngine.prototype.clientToCanvas = function ( clientX, clientY ) {
+	clientToCanvas( clientX, clientY ) {
 		// Return coordinates in the editor's world/canvas coordinate space (matching the
 		// coordinate space used by layer.x/layer.y and by CanvasManager rendering).
 		if ( !this.canvas ) {
@@ -489,7 +492,7 @@
 		}
 
 		return { x: worldX, y: worldY };
-	};
+	}
 
 	/**
 	 * Convert canvas coordinates to client coordinates
@@ -498,7 +501,7 @@
 	 * @param {number} canvasY - Canvas Y coordinate
 	 * @return {Object} Client coordinates {x, y}
 	 */
-	TransformationEngine.prototype.canvasToClient = function ( canvasX, canvasY ) {
+	canvasToClient( canvasX, canvasY ) {
 		if ( !this.canvas ) {
 			return { x: 0, y: 0 };
 		}
@@ -511,7 +514,7 @@
 		const clientY = rect.top + ( canvasY * scaleY );
 
 		return { x: clientX, y: clientY };
-	};
+	}
 
 	/**
 	 * Get raw coordinates without snapping (for precise operations)
@@ -519,7 +522,7 @@
 	 * @param {MouseEvent} event - Mouse event
 	 * @return {Object} Raw canvas coordinates {canvasX, canvasY}
 	 */
-	TransformationEngine.prototype.getRawCoordinates = function ( event ) {
+	getRawCoordinates( event ) {
 		if ( !this.canvas ) {
 			return { canvasX: 0, canvasY: 0 };
 		}
@@ -532,36 +535,36 @@
 			canvasX: ( clientX - ( this.panX || 0 ) ) / this.zoom,
 			canvasY: ( clientY - ( this.panY || 0 ) ) / this.zoom
 		};
-	};
+	}
 
 	/**
 	 * Enable or disable grid snapping
 	 *
 	 * @param {boolean} enabled - Whether to enable grid snapping
 	 */
-	TransformationEngine.prototype.setSnapToGrid = function ( enabled ) {
+	setSnapToGrid( enabled ) {
 		this.snapToGrid = !!enabled;
-	};
+	}
 
 	/**
 	 * Set grid size for snapping
 	 *
 	 * @param {number} size - Grid size in pixels
 	 */
-	TransformationEngine.prototype.setGridSize = function ( size ) {
+	setGridSize( size ) {
 		if ( typeof size === 'number' && size > 0 ) {
 			this.gridSize = size;
 		}
-	};
+	}
 
 	/**
 	 * Check if animation is currently running
 	 *
 	 * @return {boolean} True if animating
 	 */
-	TransformationEngine.prototype.isAnimating = function () {
+	isAnimating() {
 		return this.isAnimatingZoom;
-	};
+	}
 
 	/**
 	 * Set zoom limits
@@ -569,7 +572,7 @@
 	 * @param {number} min - Minimum zoom level
 	 * @param {number} max - Maximum zoom level
 	 */
-	TransformationEngine.prototype.setZoomLimits = function ( min, max ) {
+	setZoomLimits( min, max ) {
 		if ( typeof min === 'number' && min > 0 ) {
 			this.minZoom = min;
 		}
@@ -581,23 +584,23 @@
 		if ( this.zoom < this.minZoom || this.zoom > this.maxZoom ) {
 			this.setZoom( Math.max( this.minZoom, Math.min( this.maxZoom, this.zoom ) ) );
 		}
-	};
+	}
 
 	/**
 	 * Get current zoom limits
 	 *
 	 * @return {Object} Zoom limits {min, max}
 	 */
-	TransformationEngine.prototype.getZoomLimits = function () {
+	getZoomLimits() {
 		return { min: this.minZoom, max: this.maxZoom };
-	};
+	}
 
 	/**
 	 * Update configuration options
 	 *
 	 * @param {Object} newConfig - New configuration options
 	 */
-	TransformationEngine.prototype.updateConfig = function ( newConfig ) {
+	updateConfig( newConfig ) {
 		if ( newConfig ) {
 			Object.keys( newConfig ).forEach( ( key ) => {
 				this.config[ key ] = newConfig[ key ];
@@ -611,18 +614,19 @@
 			// Re-initialize with new config
 			this.init();
 		}
-	};
+	}
 
 	/**
 	 * Clean up resources
 	 */
-	TransformationEngine.prototype.destroy = function () {
+	destroy() {
 		this.canvas = null;
 		this.editor = null;
 		this.config = null;
 		this.isAnimatingZoom = false;
 		this.lastPanPoint = null;
-	};
+	}
+	}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {

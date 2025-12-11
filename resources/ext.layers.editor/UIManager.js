@@ -2,6 +2,18 @@
  * UI Manager for Layers Editor
  * Handles all UI creation and management
  */
+
+// Use shared namespace helper (loaded via utils/NamespaceHelper.js)
+const getClass = ( typeof window !== 'undefined' && window.Layers && window.Layers.Utils && window.Layers.Utils.getClass ) ||
+	( typeof window !== 'undefined' && window.layersGetClass ) ||
+	function ( namespacePath, globalName ) {
+		// Minimal fallback for environments where NamespaceHelper hasn't loaded
+		if ( typeof window !== 'undefined' && window[ globalName ] ) {
+			return window[ globalName ];
+		}
+		return null;
+	};
+
 class UIManager {
 	constructor( editor ) {
 		this.editor = editor;
@@ -19,7 +31,8 @@ class UIManager {
 		this.zoomReadoutEl = null;
 
 		// Initialize EventTracker for memory-safe event listener management
-		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+		const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
+		this.eventTracker = EventTracker ? new EventTracker() : null;
 	}
 
 	/**
@@ -536,7 +549,8 @@ class UIManager {
 	}
 
 	getMessage( key, fallback = '' ) {
-		return window.layersMessages.get( key, fallback );
+		const messages = getClass( 'Core.Messages', 'layersMessages' );
+		return messages ? messages.get( key, fallback ) : fallback;
 	}
 
 	showSpinner( message ) {

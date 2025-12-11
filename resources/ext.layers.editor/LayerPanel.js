@@ -5,14 +5,22 @@
 ( function () {
 	'use strict';
 
-	// Import UI components (available as globals from ResourceLoader)
-	const IconFactory = window.IconFactory;
-	const ColorPickerDialog = window.ColorPickerDialog;
-	const ConfirmDialog = window.ConfirmDialog;
-	const PropertiesForm = window.PropertiesForm;
-	const LayerDragDrop = window.LayerDragDrop;
-	const LayerListRenderer = window.LayerListRenderer;
-	const LayerItemEvents = window.LayerItemEvents;
+	/**
+	 * Helper to get a class from namespace or global fallback (lazy evaluation)
+	 * Prefers window.Layers.* namespace, falls back to window.* for compatibility
+	 *
+	 * @param {string} namespacePath - Path under window.Layers (e.g., 'Utils.EventTracker')
+	 * @param {string} globalName - Global fallback name (e.g., 'EventTracker')
+	 * @return {Function|Object|null} The class/object or null if not found
+	 */
+	function getClass( namespacePath, globalName ) {
+		const parts = namespacePath.split( '.' );
+		let obj = window.Layers;
+		for ( const part of parts ) {
+			obj = obj && obj[ part ];
+		}
+		return obj || window[ globalName ] || null;
+	}
 
 	/**
 	 * LayerPanel class
@@ -38,7 +46,8 @@
 			this.dialogCleanups = [];
 
 			// Initialize EventTracker for memory-safe event listener management
-			this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+			const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
+			this.eventTracker = EventTracker ? new EventTracker() : null;
 
 			this.createInterface();
 			this.setupEventHandlers();
@@ -301,6 +310,7 @@
 		 * @return {Element|null} SVG element or null
 		 */
 		createSVGElement( tag, attributes ) {
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			return IconFactory ? IconFactory.createSVGElement( tag, attributes ) : null;
 		}
 
@@ -311,6 +321,7 @@
 		 * @return {Element} Eye icon element
 		 */
 		createEyeIcon( visible ) {
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			return IconFactory ? IconFactory.createEyeIcon( visible ) : document.createElement( 'span' );
 		}
 
@@ -321,6 +332,7 @@
 		 * @return {Element} Lock icon element
 		 */
 		createLockIcon( locked ) {
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			return IconFactory ? IconFactory.createLockIcon( locked ) : document.createElement( 'span' );
 		}
 
@@ -330,6 +342,7 @@
 		 * @return {Element} Delete icon element
 		 */
 		createDeleteIcon() {
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			return IconFactory ? IconFactory.createDeleteIcon() : document.createElement( 'span' );
 		}
 
@@ -483,6 +496,7 @@
 		 */
 		setupEventHandlers() {
 			// Use extracted LayerItemEvents if available
+			const LayerItemEvents = getClass( 'UI.LayerItemEvents', 'LayerItemEvents' );
 			if ( LayerItemEvents && this.layerList ) {
 				this.itemEventsController = new LayerItemEvents( {
 					layerList: this.layerList,
@@ -557,6 +571,7 @@
 			}
 
 			// Initialize renderer if LayerListRenderer is available
+			const LayerListRenderer = getClass( 'UI.LayerListRenderer', 'LayerListRenderer' );
 			if ( LayerListRenderer && !this.layerListRenderer ) {
 				this.layerListRenderer = new LayerListRenderer( {
 					layerList: this.layerList,
@@ -1228,6 +1243,7 @@
 		 */
 		createPropertiesForm( layer ) {
 			// Use extracted PropertiesForm component if available
+			const PropertiesForm = getClass( 'UI.PropertiesForm', 'PropertiesForm' );
 			if ( PropertiesForm && typeof PropertiesForm.create === 'function' ) {
 				return PropertiesForm.create( layer, this.editor, ( cleanup ) => {
 					this.registerDialogCleanup( cleanup );
@@ -1299,6 +1315,7 @@
 			}
 
 			// Use extracted LayerDragDrop component if available
+			const LayerDragDrop = getClass( 'UI.LayerDragDrop', 'LayerDragDrop' );
 			if ( LayerDragDrop ) {
 				this.dragDropController = new LayerDragDrop( {
 					layerList: this.layerList,
@@ -1402,6 +1419,7 @@
 			const t = this.msg.bind( this );
 
 			// Use extracted ConfirmDialog component if available
+			const ConfirmDialog = getClass( 'UI.ConfirmDialog', 'ConfirmDialog' );
 			if ( ConfirmDialog ) {
 				ConfirmDialog.show( {
 					message: message,
@@ -1498,6 +1516,7 @@
 		 */
 		simpleConfirm( message ) {
 			// Use extracted ConfirmDialog static method if available
+			const ConfirmDialog = getClass( 'UI.ConfirmDialog', 'ConfirmDialog' );
 			if ( ConfirmDialog && typeof ConfirmDialog.simpleConfirm === 'function' ) {
 				return ConfirmDialog.simpleConfirm( message, this.logWarn.bind( this ) );
 			}
