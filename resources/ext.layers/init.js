@@ -9,27 +9,29 @@
  *
  * @module ext.layers/init
  */
+( function () {
+	'use strict';
 
-// Helper to resolve classes from namespace with global fallback
-const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
-	if ( window.Layers ) {
-		const parts = namespacePath.split( '.' );
-		let obj = window.Layers;
-		for ( const part of parts ) {
-			if ( obj && obj[ part ] ) {
-				obj = obj[ part ];
-			} else {
-				break;
+	// Helper to resolve classes from namespace with global fallback
+	const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
+		if ( window.Layers ) {
+			const parts = namespacePath.split( '.' );
+			let obj = window.Layers;
+			for ( const part of parts ) {
+				if ( obj && obj[ part ] ) {
+					obj = obj[ part ];
+				} else {
+					break;
+				}
+			}
+			if ( typeof obj === 'function' ) {
+				return obj;
 			}
 		}
-		if ( typeof obj === 'function' ) {
-			return obj;
-		}
-	}
-	return window[ globalName ];
-};
+		return window[ globalName ];
+	};
 
-mw.layers = {
+	mw.layers = {
 	debug: false,
 
 	/**
@@ -215,10 +217,12 @@ mw.layers = {
 };
 
 // Initialize on DOM ready
-if ( document.readyState === 'loading' ) {
-	document.addEventListener( 'DOMContentLoaded', () => {
+	if ( document.readyState === 'loading' ) {
+		document.addEventListener( 'DOMContentLoaded', () => {
+			mw.layers.init();
+		} );
+	} else {
 		mw.layers.init();
-	} );
-} else {
-	mw.layers.init();
-}
+	}
+
+}() );

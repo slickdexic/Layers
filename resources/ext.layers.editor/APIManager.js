@@ -2,27 +2,29 @@
  * API Manager for Layers Editor
  * Handles all API communications with the backend
  */
+( function () {
+	'use strict';
 
-// Helper to resolve classes from namespace with global fallback
-const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
-	if ( window.Layers ) {
-		const parts = namespacePath.split( '.' );
-		let obj = window.Layers;
-		for ( const part of parts ) {
-			if ( obj && obj[ part ] ) {
-				obj = obj[ part ];
-			} else {
-				break;
+	// Helper to resolve classes from namespace with global fallback
+	const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
+		if ( window.Layers ) {
+			const parts = namespacePath.split( '.' );
+			let obj = window.Layers;
+			for ( const part of parts ) {
+				if ( obj && obj[ part ] ) {
+					obj = obj[ part ];
+				} else {
+					break;
+				}
+			}
+			if ( typeof obj === 'function' ) {
+				return obj;
 			}
 		}
-		if ( typeof obj === 'function' ) {
-			return obj;
-		}
-	}
-	return window[ globalName ];
-};
+		return window[ globalName ];
+	};
 
-class APIManager {
+	class APIManager {
 	constructor( editor ) {
 		this.editor = editor;
 		this.api = new mw.Api();
@@ -927,17 +929,19 @@ class APIManager {
 	}
 }
 
-// Export to window.Layers namespace (preferred)
-if ( typeof window !== 'undefined' ) {
-	window.Layers = window.Layers || {};
-	window.Layers.Core = window.Layers.Core || {};
-	window.Layers.Core.APIManager = APIManager;
+	// Export to window.Layers namespace (preferred)
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Core = window.Layers.Core || {};
+		window.Layers.Core.APIManager = APIManager;
 
-	// Backward compatibility - direct window export
-	window.APIManager = APIManager;
-}
+		// Backward compatibility - direct window export
+		window.APIManager = APIManager;
+	}
 
-// Export via CommonJS for Node.js/Jest testing
-if ( typeof module !== 'undefined' && module.exports ) {
-	module.exports = { APIManager };
-}
+	// Export via CommonJS for Node.js/Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = { APIManager };
+	}
+
+}() );
