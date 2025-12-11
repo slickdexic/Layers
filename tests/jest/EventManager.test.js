@@ -4,7 +4,7 @@
 
 const { EventManager } = ( () => {
 	require( '../../resources/ext.layers.editor/EventManager.js' );
-	return { EventManager: window.EventManager };
+	return { EventManager: window.Layers.Core.EventManager };
 } )();
 
 describe( 'EventManager', () => {
@@ -365,10 +365,6 @@ describe( 'EventManager', () => {
 	describe( 'module exports', () => {
 		it( 'should export EventManager to window.Layers.Core', () => {
 			expect( window.Layers.Core.EventManager ).toBe( EventManager );
-		} );
-
-		it( 'should export EventManager to window for backward compatibility', () => {
-			expect( window.EventManager ).toBe( EventManager );
 		} );
 	} );
 } );

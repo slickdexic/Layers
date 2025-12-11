@@ -31,7 +31,7 @@ describe('Event Listener Teardown', () => {
 
 	test('LayersEditor create/destroy does not grow window listeners', () => {
 		require( path + 'LayersEditor.js' );
-		const Editor = window.LayersEditor;
+		const Editor = window.Layers.Core.Editor;
 		// Baseline count
 		const baseline = count();
 

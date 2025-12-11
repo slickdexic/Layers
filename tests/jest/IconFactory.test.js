@@ -23,7 +23,7 @@ describe( 'IconFactory', () => {
 	let IconFactory;
 
 	beforeEach( () => {
-		IconFactory = window.IconFactory;
+		IconFactory = window.Layers.UI.IconFactory;
 	} );
 
 	describe( 'createSVGElement', () => {

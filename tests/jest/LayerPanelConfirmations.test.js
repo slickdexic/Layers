@@ -8,7 +8,7 @@ describe('LayerPanel confirmation flows', () => {
 
     beforeAll(() => {
         require('../../resources/ext.layers.editor/LayerPanel.js');
-        LayerPanel = window.LayerPanel;
+        LayerPanel = window.Layers.UI.LayerPanel;
     });
 
     beforeEach(() => {

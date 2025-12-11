@@ -46,7 +46,7 @@ describe( 'LayersValidator', () => {
 
 		// Load LayersValidator
 		require( '../../resources/ext.layers.editor/LayersValidator.js' );
-		LayersValidator = window.LayersValidator;
+		LayersValidator = window.Layers.Validation.LayersValidator;
 		validator = new LayersValidator();
 	} );
 

@@ -201,10 +201,6 @@ describe('StyleController', () => {
 	});
 
 	describe('module exports', () => {
-		test('should export to window namespace', () => {
-			expect(window.StyleController).toBeDefined();
-		});
-
 		test('should export to Layers.Core namespace', () => {
 			expect(window.Layers.Core.StyleController).toBeDefined();
 		});

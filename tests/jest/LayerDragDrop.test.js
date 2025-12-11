@@ -16,7 +16,7 @@ const mockWindow = {
 };
 
 // eslint-disable-next-line no-new-func
-const initModule = new Function( 'window', 'module', sourceCode + '\nreturn window.LayerDragDrop;' );
+const initModule = new Function( 'window', 'module', sourceCode + '\nreturn window.Layers.UI.LayerDragDrop;' );
 const LayerDragDrop = initModule( mockWindow, { exports: {} } );
 
 describe( 'LayerDragDrop', () => {
