@@ -76,6 +76,8 @@
 	"layers-prop-rotation": "Rotation",
 	"layers-prop-sides": "Sides",
 	"layers-prop-points": "Points",
+	"layers-prop-outer-radius": "Outer Radius",
+	"layers-prop-inner-radius": "Inner Radius",
 	"layers-prop-arrow-ends": "Arrow Ends",
 	"layers-prop-head-type": "Head Type",
 	"layers-head-pointed": "Pointed",

@@ -526,7 +526,6 @@
 	 * @param {Object} layerData - Layer data object
 	 */
 	LayersEditor.prototype.addLayer = function ( layerData ) {
-		this.saveState();
 		layerData = this.validationManager.sanitizeLayerData( layerData );
 		layerData.id = this.apiManager.generateLayerId();
 		layerData.visible = layerData.visible !== false;
@@ -540,6 +539,7 @@
 		}
 		this.markDirty();
 		this.selectLayer( layerData.id );
+		this.saveState( 'Add layer' );
 	};
 
 	/**
@@ -549,8 +549,6 @@
 	 */
 	LayersEditor.prototype.updateLayer = function ( layerId, changes ) {
 		try {
-			this.saveState();
-
 			if ( Object.prototype.hasOwnProperty.call( changes, 'outerRadius' ) &&
 				!Object.prototype.hasOwnProperty.call( changes, 'radius' ) ) {
 				changes.radius = changes.outerRadius;
@@ -568,6 +566,7 @@
 					this.canvasManager.redraw();
 				}
 				this.markDirty();
+				this.saveState( 'Update layer' );
 			}
 		} catch ( error ) {
 			if ( this.debug ) {
@@ -584,8 +583,6 @@
 	 * @param {string} layerId - ID of the layer to remove
 	 */
 	LayersEditor.prototype.removeLayer = function ( layerId ) {
-		this.saveState();
-
 		const layers = this.stateManager.get( 'layers' ) || [];
 		const updatedLayers = layers.filter( ( layer ) => layer.id !== layerId );
 		this.stateManager.set( 'layers', updatedLayers );
@@ -595,6 +592,7 @@
 		}
 		this.markDirty();
 		this.updateUIState();
+		this.saveState( 'Remove layer' );
 	};
 
 	/**
@@ -858,7 +856,6 @@
 		if ( !ids.length ) {
 			return;
 		}
-		this.saveState();
 		const layers = this.stateManager.get( 'layers' ) || [];
 		for ( let i = 0; i < ids.length; i++ ) {
 			const layer = layers.find( ( l ) => l.id === ids[ i ] );
@@ -871,6 +868,7 @@
 			this.canvasManager.renderLayers( layers );
 		}
 		this.markDirty();
+		this.saveState( 'Update selection' );
 	};
 
 	/**

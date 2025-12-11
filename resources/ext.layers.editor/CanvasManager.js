@@ -555,6 +555,8 @@
 	CanvasManager.prototype.updateStyleOptions = function ( options ) {
 		if ( this.styleController && typeof this.styleController.updateStyleOptions === 'function' ) {
 			const next = this.styleController.updateStyleOptions( options );
+			// IMPORTANT: Also sync to this.currentStyle so new drawings use updated styles
+			this.currentStyle = next;
 			// Live-apply style updates to selected layers using styleController
 			const ids = this.getSelectedLayerIds();
 			if ( ids && ids.length && this.editor ) {
@@ -1552,6 +1554,16 @@
 			this.clipboardController.cutSelected();
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
 			mw.log.error( 'Layers: ClipboardController not available for cutSelected' );
+		}
+	};
+
+	CanvasManager.prototype.deleteSelected = function () {
+		if ( this.selectionManager ) {
+			this.selectionManager.deleteSelected();
+		} else if ( this.editor && typeof this.editor.deleteSelected === 'function' ) {
+			this.editor.deleteSelected();
+		} else if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( 'Layers: No handler available for deleteSelected' );
 		}
 	};
 

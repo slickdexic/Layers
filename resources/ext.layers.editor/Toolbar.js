@@ -247,6 +247,86 @@
 		return fallback || '';
 	};
 
+	/**
+	 * Get SVG icons for toolbar tools
+	 * Icons follow industry standards (Figma, Adobe, etc.)
+	 *
+	 * @return {Object} Object containing SVG icon strings for each tool
+	 */
+	Toolbar.prototype.getToolIcons = function () {
+		const size = 24;
+		const stroke = 'currentColor';
+		const fill = 'none';
+		const strokeWidth = 2;
+
+		return {
+			// Select/Pointer tool - Mouse cursor arrow (industry standard)
+			pointer: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+				<path d="M13 13l6 6"/>
+			</svg>`,
+
+			// Text tool - Bold T character
+			text: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<polyline points="4 7 4 4 20 4 20 7"/>
+				<line x1="9" y1="20" x2="15" y2="20"/>
+				<line x1="12" y1="4" x2="12" y2="20"/>
+			</svg>`,
+
+			// Pen tool - Pen nib (Bezier curve tool standard)
+			pen: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M12 19l7-7 3 3-7 7-3-3z"/>
+				<path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+				<path d="M2 2l7.586 7.586"/>
+				<circle cx="11" cy="11" r="2"/>
+			</svg>`,
+
+			// Rectangle tool - Rectangle shape
+			rectangle: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+			</svg>`,
+
+			// Circle tool - Perfect circle
+			circle: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="12" cy="12" r="9"/>
+			</svg>`,
+
+			// Ellipse tool - Oval/ellipse shape
+			ellipse: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<ellipse cx="12" cy="12" rx="10" ry="6"/>
+			</svg>`,
+
+			// Polygon tool - Pentagon shape
+			polygon: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<polygon points="12 2 22 9 18.5 21 5.5 21 2 9 12 2"/>
+			</svg>`,
+
+			// Star tool - 5-pointed star
+			star: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+			</svg>`,
+
+			// Arrow tool - Annotation arrow (distinct from pointer)
+			arrow: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<line x1="5" y1="19" x2="19" y2="5"/>
+				<polyline points="12 5 19 5 19 12"/>
+			</svg>`,
+
+			// Line tool - Diagonal line
+			line: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<line x1="5" y1="19" x2="19" y2="5"/>
+			</svg>`,
+
+			// Blur/Redact tool - Pixelated/mosaic pattern
+			blur: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="3" y="3" width="7" height="7"/>
+				<rect x="14" y="3" width="7" height="7"/>
+				<rect x="14" y="14" width="7" height="7"/>
+				<rect x="3" y="14" width="7" height="7"/>
+			</svg>`
+		};
+	};
+
 	Toolbar.prototype.createInterface = function () {
 		this.container.innerHTML = '';
 		this.container.className = 'layers-toolbar';
@@ -265,18 +345,20 @@
 		toolGroup.className = 'toolbar-group tools-group';
 		const t = this.msg.bind( this );
 
+		// SVG icons following industry standards (Figma, Adobe, etc.)
+		const icons = this.getToolIcons();
 		const tools = [
-			{ id: 'pointer', icon: '↖', title: t( 'layers-tool-select', 'Select Tool' ), key: 'V' },
-			{ id: 'text', icon: 'T', title: t( 'layers-tool-text', 'Text Tool' ), key: 'T' },
-			{ id: 'pen', icon: '✏', title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P' },
-			{ id: 'rectangle', icon: '▢', title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R' },
-			{ id: 'circle', icon: '○', title: t( 'layers-tool-circle', 'Circle Tool' ), key: 'C' },
-			{ id: 'ellipse', icon: '⬭', title: t( 'layers-tool-ellipse', 'Ellipse Tool' ), key: 'E' },
-			{ id: 'polygon', icon: '⬟', title: t( 'layers-tool-polygon', 'Polygon Tool' ), key: 'G' },
-			{ id: 'star', icon: '★', title: t( 'layers-tool-star', 'Star Tool' ), key: 'S' },
-			{ id: 'arrow', icon: '→', title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A' },
-			{ id: 'line', icon: '/', title: t( 'layers-tool-line', 'Line Tool' ), key: 'L' },
-			{ id: 'blur', icon: '◼︎', title: t( 'layers-tool-blur', 'Blur/Redact Tool' ), key: 'B' }
+			{ id: 'pointer', icon: icons.pointer, title: t( 'layers-tool-select', 'Select Tool' ), key: 'V', isSvg: true },
+			{ id: 'text', icon: icons.text, title: t( 'layers-tool-text', 'Text Tool' ), key: 'T', isSvg: true },
+			{ id: 'pen', icon: icons.pen, title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P', isSvg: true },
+			{ id: 'rectangle', icon: icons.rectangle, title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R', isSvg: true },
+			{ id: 'circle', icon: icons.circle, title: t( 'layers-tool-circle', 'Circle Tool' ), key: 'C', isSvg: true },
+			{ id: 'ellipse', icon: icons.ellipse, title: t( 'layers-tool-ellipse', 'Ellipse Tool' ), key: 'E', isSvg: true },
+			{ id: 'polygon', icon: icons.polygon, title: t( 'layers-tool-polygon', 'Polygon Tool' ), key: 'G', isSvg: true },
+			{ id: 'star', icon: icons.star, title: t( 'layers-tool-star', 'Star Tool' ), key: 'S', isSvg: true },
+			{ id: 'arrow', icon: icons.arrow, title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A', isSvg: true },
+			{ id: 'line', icon: icons.line, title: t( 'layers-tool-line', 'Line Tool' ), key: 'L', isSvg: true },
+			{ id: 'blur', icon: icons.blur, title: t( 'layers-tool-blur', 'Blur/Redact Tool' ), key: 'B', isSvg: true }
 		];
 
 		tools.forEach( ( tool ) => {
@@ -291,8 +373,12 @@
 		const button = document.createElement( 'button' );
 		button.className = 'toolbar-button tool-button';
 		button.dataset.tool = tool.id;
-		// Use textContent for icon glyphs to avoid HTML parsing
-		button.textContent = tool.icon;
+		// Use innerHTML for SVG icons, textContent for text glyphs
+		if ( tool.isSvg ) {
+			button.innerHTML = tool.icon;
+		} else {
+			button.textContent = tool.icon;
+		}
 		button.title = tool.title + ( tool.key ? ' (' + tool.key + ')' : '' );
 		// Expose keyboard shortcut to assistive tech
 		if ( tool.key ) {

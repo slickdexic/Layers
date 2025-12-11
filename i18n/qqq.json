@@ -76,6 +76,8 @@
 	"layers-prop-rotation": "Property label for rotation angle in degrees",
 	"layers-prop-sides": "Property label for number of sides for polygon shapes",
 	"layers-prop-points": "Property label for number of points for star shapes",
+	"layers-prop-outer-radius": "Property label for outer radius of star shapes",
+	"layers-prop-inner-radius": "Property label for inner radius of star shapes (distance from center to inner points)",
 	"layers-prop-arrow-ends": "Property label for arrow ends style (single, double, or none)",
 	"layers-prop-head-type": "Property label for arrow head shape type",
 	"layers-head-pointed": "Arrow head type option with sharp pointed barbs",

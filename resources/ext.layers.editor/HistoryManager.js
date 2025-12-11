@@ -31,10 +31,12 @@
 			// 4. new HistoryManager(objectWithLayers) - object with layers array
 
 			// Detect if first arg is an editor (has stateManager, toolbar, etc.)
+			// Also check for filename + containerElement which are set early in LayersEditor
 			const isEditor = config && (
 				config.stateManager ||
 				config.toolbar ||
-				( typeof config.getLayers === 'function' )
+				( typeof config.getLayers === 'function' ) ||
+				( config.filename && config.containerElement )
 			);
 
 			// Detect if first arg is a canvasManager (has canvas, ctx, editor, etc.)
@@ -165,8 +167,9 @@
 			}
 
 			// Add new state
+			const snapshot = this.getLayersSnapshot();
 			const state = {
-				layers: this.getLayersSnapshot(),
+				layers: snapshot,
 				description: description || 'Edit',
 				timestamp: Date.now()
 			};
@@ -191,8 +194,15 @@
 		 */
 		getLayersSnapshot() {
 			const editor = this.getEditor();
-			const layers = editor ? editor.layers : ( this.canvasManager && this.canvasManager.layers ) || [];
-			return JSON.parse( JSON.stringify( layers ) );
+			let layers = [];
+			if ( editor && editor.stateManager && typeof editor.stateManager.getLayers === 'function' ) {
+				layers = editor.stateManager.getLayers();
+			} else if ( editor && editor.layers ) {
+				layers = editor.layers;
+			} else if ( this.canvasManager && this.canvasManager.layers ) {
+				layers = this.canvasManager.layers;
+			}
+			return JSON.parse( JSON.stringify( layers || [] ) );
 		}
 
 		/**

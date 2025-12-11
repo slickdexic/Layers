@@ -611,8 +611,8 @@
 				addInput( { label: t( 'layers-prop-radius', 'Radius' ), type: 'number', value: Math.round( layer.radius || DEFAULTS.RADIUS || 50 ), step: 1, prop: 'radius', onChange: function ( v ) { editor.updateLayer( layer.id, { radius: Math.round( parseFloat( v ) ) } ); } } );
 				break;
 			case ( LAYER_TYPES.ELLIPSE || 'ellipse' ):
-				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: layer.width || ( ( layer.radiusX || 0 ) * 2 ), step: 1, prop: 'width', onChange: function ( v ) { const valX = parseFloat( v ); editor.updateLayer( layer.id, { width: valX, radiusX: valX / 2 } ); } } );
-				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: layer.height || ( ( layer.radiusY || 0 ) * 2 ), step: 1, prop: 'height', onChange: function ( v ) { const valY = parseFloat( v ); editor.updateLayer( layer.id, { height: valY, radiusY: valY / 2 } ); } } );
+				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || ( ( layer.radiusX || 0 ) * 2 ) ), step: 1, prop: 'width', onChange: function ( v ) { const valX = Math.round( parseFloat( v ) ); editor.updateLayer( layer.id, { width: valX, radiusX: valX / 2 } ); } } );
+				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: Math.round( layer.height || ( ( layer.radiusY || 0 ) * 2 ) ), step: 1, prop: 'height', onChange: function ( v ) { const valY = Math.round( parseFloat( v ) ); editor.updateLayer( layer.id, { height: valY, radiusY: valY / 2 } ); } } );
 				break;
 			case ( LAYER_TYPES.POLYGON || 'polygon' ):
 				addInput( {
@@ -629,7 +629,7 @@
 						editor.updateLayer( layer.id, { sides: sidesVal } );
 					}
 				} );
-				addInput( { label: t( 'layers-prop-radius', 'Radius' ), type: 'number', value: layer.radius || DEFAULTS.RADIUS || 50, step: 1, prop: 'radius', onChange: function ( v ) { editor.updateLayer( layer.id, { radius: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-radius', 'Radius' ), type: 'number', value: Math.round( layer.radius || DEFAULTS.RADIUS || 50 ), step: 1, prop: 'radius', onChange: function ( v ) { editor.updateLayer( layer.id, { radius: Math.round( parseFloat( v ) ) } ); } } );
 				break;
 			case ( LAYER_TYPES.STAR || 'star' ):
 				addInput( {
@@ -646,8 +646,8 @@
 						editor.updateLayer( layer.id, { points: ptsVal } );
 					}
 				} );
-				addInput( { label: t( 'layers-prop-outer-radius', 'Outer Radius' ), type: 'number', value: layer.outerRadius || layer.radius || 50, step: 1, prop: 'outerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { outerRadius: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-inner-radius', 'Inner Radius' ), type: 'number', value: layer.innerRadius || ( ( layer.outerRadius || 50 ) * 0.5 ), step: 1, prop: 'innerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { innerRadius: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-outer-radius', 'Outer Radius' ), type: 'number', value: Math.round( layer.outerRadius || layer.radius || 50 ), step: 1, prop: 'outerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { outerRadius: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-inner-radius', 'Inner Radius' ), type: 'number', value: Math.round( layer.innerRadius || ( ( layer.outerRadius || 50 ) * 0.5 ) ), step: 1, prop: 'innerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { innerRadius: Math.round( parseFloat( v ) ) } ); } } );
 				break;
 			case ( LAYER_TYPES.LINE || 'line' ):
 				addInput( { label: t( 'layers-prop-start-x', 'Start X' ), type: 'number', value: layer.x1 || 0, step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: parseFloat( v ) } ); } } );

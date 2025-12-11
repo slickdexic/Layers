@@ -413,16 +413,23 @@ body.layers-editor-open .mw-body-content {
 .toolbar-button {
 	background: #f8f9fa;
 	border: 1px solid #ddd;
-	border-radius: 4px;
-	padding: 10px 14px;
+	border-radius: 6px;
+	padding: 8px;
 	cursor: pointer;
 	font-size: 1em;
 	transition: all 0.2s;
-	min-width: 40px;
-	height: 40px;
+	min-width: 44px;
+	height: 44px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+/* SVG icons in toolbar buttons */
+.toolbar-button svg {
+	width: 22px;
+	height: 22px;
+	flex-shrink: 0;
 }
 
 .toolbar-button:hover {
@@ -430,10 +437,18 @@ body.layers-editor-open .mw-body-content {
 	border-color: #bbb;
 }
 
+.toolbar-button:hover svg {
+	stroke: #333;
+}
+
 .toolbar-button.active {
 	background: #007cba;
 	color: #fff;
 	border-color: #005a87;
+}
+
+.toolbar-button.active svg {
+	stroke: #fff;
 }
 
 .toolbar-button:disabled,

@@ -1539,6 +1539,34 @@
 
 		this.ctx.save();
 
+		// Handle rotation: calculate bounding box center and rotate around it
+		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+		let centerX = 0;
+		let centerY = 0;
+
+		if ( hasRotation ) {
+			// Calculate bounding box of all points
+			let minX = layer.points[ 0 ].x;
+			let minY = layer.points[ 0 ].y;
+			let maxX = minX;
+			let maxY = minY;
+
+			for ( let i = 1; i < layer.points.length; i++ ) {
+				const pt = layer.points[ i ];
+				minX = Math.min( minX, pt.x );
+				minY = Math.min( minY, pt.y );
+				maxX = Math.max( maxX, pt.x );
+				maxY = Math.max( maxY, pt.y );
+			}
+
+			centerX = ( minX + maxX ) / 2;
+			centerY = ( minY + maxY ) / 2;
+
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			this.ctx.translate( -centerX, -centerY );
+		}
+
 		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
 		const spread = this.getShadowSpread( layer, shadowScale );
 

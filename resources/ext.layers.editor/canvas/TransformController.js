@@ -140,8 +140,13 @@
 		// Reset cursor to appropriate tool cursor
 		this.manager.canvas.style.cursor = this.manager.getToolCursor( this.manager.currentTool );
 
-		// Mark editor as dirty
+		// Mark editor as dirty and save state
 		this.manager.editor.markDirty();
+		if ( this.manager.editor && typeof this.manager.editor.saveState === 'function' ) {
+			this.manager.editor.saveState( 'Resize layer' );
+		} else if ( this.manager && typeof this.manager.saveState === 'function' ) {
+			this.manager.saveState( 'Resize layer' );
+		}
 	};
 
 	/**
@@ -808,10 +813,13 @@
 	};
 
 	/**
-	 * Calculate path resize adjustments (scales all points)
+	 * Calculate path resize adjustments (scales all points from anchor)
+	 *
+	 * The anchor point is on the opposite side of the dragged handle, so
+	 * that edge stays fixed while the other side moves with the mouse.
 	 *
 	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged (unused)
+	 * @param {string} handleType Handle being dragged
 	 * @param {number} deltaX Delta X movement
 	 * @param {number} deltaY Delta Y movement
 	 * @return {Object|null} Updates object with scaled points
@@ -819,19 +827,101 @@
 	TransformController.prototype.calculatePathResize = function (
 		originalLayer, handleType, deltaX, deltaY
 	) {
-		if ( !originalLayer.points ) {
+		if ( !originalLayer.points || originalLayer.points.length === 0 ) {
 			return null;
 		}
-		const updates = { points: [] };
-		const scaleX = 1 + deltaX / 100;
-		const scaleY = 1 + deltaY / 100;
 
+		// Calculate bounding box of original points
+		let minX = originalLayer.points[ 0 ].x;
+		let minY = originalLayer.points[ 0 ].y;
+		let maxX = minX;
+		let maxY = minY;
+
+		for ( let i = 1; i < originalLayer.points.length; i++ ) {
+			const pt = originalLayer.points[ i ];
+			minX = Math.min( minX, pt.x );
+			minY = Math.min( minY, pt.y );
+			maxX = Math.max( maxX, pt.x );
+			maxY = Math.max( maxY, pt.y );
+		}
+
+		const width = maxX - minX;
+		const height = maxY - minY;
+
+		// Avoid division by zero
+		if ( width < 1 && height < 1 ) {
+			return null;
+		}
+
+		// Determine anchor point and scale factors based on handle type
+		// The anchor is on the opposite side of the handle being dragged
+		let anchorX, anchorY;
+		let newWidth = width;
+		let newHeight = height;
+
+		switch ( handleType ) {
+			case 'nw':
+				anchorX = maxX;
+				anchorY = maxY;
+				newWidth = Math.max( 5, width - deltaX );
+				newHeight = Math.max( 5, height - deltaY );
+				break;
+			case 'ne':
+				anchorX = minX;
+				anchorY = maxY;
+				newWidth = Math.max( 5, width + deltaX );
+				newHeight = Math.max( 5, height - deltaY );
+				break;
+			case 'sw':
+				anchorX = maxX;
+				anchorY = minY;
+				newWidth = Math.max( 5, width - deltaX );
+				newHeight = Math.max( 5, height + deltaY );
+				break;
+			case 'se':
+				anchorX = minX;
+				anchorY = minY;
+				newWidth = Math.max( 5, width + deltaX );
+				newHeight = Math.max( 5, height + deltaY );
+				break;
+			case 'n':
+				anchorX = minX + width / 2;
+				anchorY = maxY;
+				newHeight = Math.max( 5, height - deltaY );
+				break;
+			case 's':
+				anchorX = minX + width / 2;
+				anchorY = minY;
+				newHeight = Math.max( 5, height + deltaY );
+				break;
+			case 'w':
+				anchorX = maxX;
+				anchorY = minY + height / 2;
+				newWidth = Math.max( 5, width - deltaX );
+				break;
+			case 'e':
+				anchorX = minX;
+				anchorY = minY + height / 2;
+				newWidth = Math.max( 5, width + deltaX );
+				break;
+			default:
+				return null;
+		}
+
+		// Calculate scale factors
+		const scaleX = width > 0 ? newWidth / width : 1;
+		const scaleY = height > 0 ? newHeight / height : 1;
+
+		// Transform all points: scale relative to anchor point
+		const updates = { points: [] };
 		for ( let i = 0; i < originalLayer.points.length; i++ ) {
+			const pt = originalLayer.points[ i ];
 			updates.points.push( {
-				x: originalLayer.points[ i ].x * scaleX,
-				y: originalLayer.points[ i ].y * scaleY
+				x: anchorX + ( pt.x - anchorX ) * scaleX,
+				y: anchorY + ( pt.y - anchorY ) * scaleY
 			} );
 		}
+
 		return updates;
 	};
 
@@ -882,8 +972,8 @@
 			newFontSize -= fontSizeChange;
 		}
 
-		// Clamp font size to reasonable bounds
-		newFontSize = Math.max( 6, Math.min( 144, newFontSize ) );
+		// Clamp font size to reasonable bounds (6-500)
+		newFontSize = Math.max( 6, Math.min( 500, newFontSize ) );
 		updates.fontSize = Math.round( newFontSize );
 
 		return updates;
@@ -965,8 +1055,13 @@
 		// Reset cursor to appropriate tool cursor
 		this.manager.canvas.style.cursor = this.manager.getToolCursor( this.manager.currentTool );
 
-		// Mark editor as dirty
+		// Mark editor as dirty and save state
 		this.manager.editor.markDirty();
+		if ( this.manager.editor && typeof this.manager.editor.saveState === 'function' ) {
+			this.manager.editor.saveState( 'Rotate layer' );
+		} else if ( this.manager && typeof this.manager.saveState === 'function' ) {
+			this.manager.saveState( 'Rotate layer' );
+		}
 	};
 
 	// ==================== Drag Operations ====================
@@ -1126,9 +1221,15 @@
 		// Reset cursor to appropriate tool cursor
 		this.manager.canvas.style.cursor = this.manager.getToolCursor( this.manager.currentTool );
 
-		// Only mark editor as dirty if there was actual movement
+		// Only mark editor as dirty and save state if there was actual movement
 		if ( hadMovement ) {
 			this.manager.editor.markDirty();
+			// Save state for undo/redo
+			if ( this.manager.editor && typeof this.manager.editor.saveState === 'function' ) {
+				this.manager.editor.saveState( 'Move layer' );
+			} else if ( this.manager && typeof this.manager.saveState === 'function' ) {
+				this.manager.saveState( 'Move layer' );
+			}
 		}
 	};
 

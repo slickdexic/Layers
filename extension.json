@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "0.8.1-dev",
+	"version": "0.8.2",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -396,6 +396,10 @@
 				"layers-prop-head-scale",
 				"layers-prop-tail-width",
 				"layers-prop-arrow-size",
+				"layers-prop-sides",
+				"layers-prop-points",
+				"layers-prop-outer-radius",
+				"layers-prop-inner-radius",
 				"layers-prop-stroke-opacity",
 				"layers-prop-fill-opacity",
 				"layers-section-transform",

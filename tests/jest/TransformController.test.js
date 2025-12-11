@@ -593,9 +593,9 @@ describe( 'TransformController', () => {
 			expect( result.fontSize ).toBeGreaterThanOrEqual( 6 );
 		} );
 
-		it( 'should clamp font size to maximum 144', () => {
+		it( 'should clamp font size to maximum 500', () => {
 			const result = controller.calculateTextResize( originalText, 'se', 5000, 5000 );
-			expect( result.fontSize ).toBeLessThanOrEqual( 144 );
+			expect( result.fontSize ).toBeLessThanOrEqual( 500 );
 		} );
 
 		it( 'should handle different handle types', () => {
