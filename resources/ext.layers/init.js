@@ -9,6 +9,26 @@
  *
  * @module ext.layers/init
  */
+
+// Helper to resolve classes from namespace with global fallback
+const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
+	if ( window.Layers ) {
+		const parts = namespacePath.split( '.' );
+		let obj = window.Layers;
+		for ( const part of parts ) {
+			if ( obj && obj[ part ] ) {
+				obj = obj[ part ];
+			} else {
+				break;
+			}
+		}
+		if ( typeof obj === 'function' ) {
+			return obj;
+		}
+	}
+	return window[ globalName ];
+};
+
 mw.layers = {
 	debug: false,
 
@@ -58,12 +78,16 @@ mw.layers = {
 
 		// Create module instances with shared debug setting
 		const options = { debug: this.debug };
-		this.urlParser = new window.LayersUrlParser( options );
-		this.viewerManager = new window.LayersViewerManager( {
+		const LayersUrlParser = getClass( 'Utils.UrlParser', 'LayersUrlParser' );
+		const LayersViewerManager = getClass( 'Viewer.Manager', 'LayersViewerManager' );
+		const LayersApiFallback = getClass( 'Viewer.ApiFallback', 'LayersApiFallback' );
+
+		this.urlParser = new LayersUrlParser( options );
+		this.viewerManager = new LayersViewerManager( {
 			debug: this.debug,
 			urlParser: this.urlParser
 		} );
-		this.apiFallback = new window.LayersApiFallback( {
+		this.apiFallback = new LayersApiFallback( {
 			debug: this.debug,
 			urlParser: this.urlParser,
 			viewerManager: this.viewerManager

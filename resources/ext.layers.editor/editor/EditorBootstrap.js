@@ -10,6 +10,13 @@
 ( function () {
 	'use strict';
 
+	// Use shared namespace helper
+	const getClass = ( window.Layers && window.Layers.Utils && window.Layers.Utils.getClass ) ||
+		window.layersGetClass ||
+		function ( namespacePath, globalName ) {
+			return window[ globalName ] || null;
+		};
+
 	/**
 	 * Required global classes for editor initialization
 	 * @type {string[]}
@@ -166,12 +173,13 @@
 
 			document.title = '🎨 Layers Editor Initializing...';
 			try {
-				// Check for LayersEditor class
-				if ( typeof window.LayersEditor !== 'function' ) {
+				// Check for LayersEditor class via namespace
+				const LayersEditor = getClass( 'Editor', 'LayersEditor' );
+				if ( typeof LayersEditor !== 'function' ) {
 					throw new Error( 'LayersEditor class not available' );
 				}
 
-				const editor = new window.LayersEditor( config );
+				const editor = new LayersEditor( config );
 				document.title = '🎨 Layers Editor - ' + ( config.filename || 'Unknown File' );
 				// Always set the global instance for duplicate prevention
 				window.layersEditorInstance = editor;
@@ -341,12 +349,13 @@
 						return;
 					}
 
-					if ( typeof window.LayersEditor !== 'function' ) {
+					const LayersEditor = getClass( 'Editor', 'LayersEditor' );
+					if ( typeof LayersEditor !== 'function' ) {
 						debugLog( 'LayersEditor class not available for direct creation' );
 						return;
 					}
 
-					const editor = new window.LayersEditor( {
+					const editor = new LayersEditor( {
 						filename: init.filename,
 						imageUrl: init.imageUrl,
 						container: container || document.body

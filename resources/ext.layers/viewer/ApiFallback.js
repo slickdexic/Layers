@@ -9,6 +9,25 @@
 ( function () {
 	'use strict';
 
+	// Helper to resolve classes from namespace with global fallback
+	const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
+		if ( window.Layers ) {
+			const parts = namespacePath.split( '.' );
+			let obj = window.Layers;
+			for ( const part of parts ) {
+				if ( obj && obj[ part ] ) {
+					obj = obj[ part ];
+				} else {
+					break;
+				}
+			}
+			if ( typeof obj === 'function' ) {
+				return obj;
+			}
+		}
+		return window[ globalName ];
+	};
+
 	/**
 	 * @class ApiFallback
 	 * @constructor
@@ -19,10 +38,12 @@
 	 */
 	function ApiFallback( options ) {
 		this.debug = options && options.debug;
+		const LayersUrlParser = getClass( 'Utils.UrlParser', 'LayersUrlParser' );
+		const LayersViewerManager = getClass( 'Viewer.Manager', 'LayersViewerManager' );
 		this.urlParser = ( options && options.urlParser ) ||
-			new window.LayersUrlParser( { debug: this.debug } );
+			new LayersUrlParser( { debug: this.debug } );
 		this.viewerManager = ( options && options.viewerManager ) ||
-			new window.LayersViewerManager( {
+			new LayersViewerManager( {
 				debug: this.debug,
 				urlParser: this.urlParser
 			} );

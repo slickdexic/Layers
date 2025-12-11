@@ -88,8 +88,10 @@
 		window.Layers.Utils.deepCloneArray = deepCloneArray;
 		window.Layers.Utils.deepCloneLayer = deepCloneLayer;
 
-		// Direct window export for easy access
+		// Backward compatibility - direct window exports
 		window.deepClone = deepClone;
+		window.deepCloneArray = deepCloneArray;
+		window.deepCloneLayer = deepCloneLayer;
 	}
 
 	// CommonJS export for Node.js/Jest testing

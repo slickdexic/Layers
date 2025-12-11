@@ -420,9 +420,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.DialogManager = DialogManager;
-
-		// Backward compatibility - direct window export
-		window.DialogManager = DialogManager;
 	}
 
 }() );

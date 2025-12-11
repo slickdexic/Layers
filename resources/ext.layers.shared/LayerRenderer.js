@@ -1906,7 +1906,7 @@
 		window.Layers = window.Layers || {};
 		window.Layers.LayerRenderer = LayerRenderer;
 
-		// Legacy global export with deprecation (temporary)
+		// Backward compatibility - direct window export
 		window.LayerRenderer = LayerRenderer;
 	}
 

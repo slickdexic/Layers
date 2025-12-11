@@ -158,8 +158,10 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.MessageHelper = MessageHelper;
 
-		// Backward compatibility - direct window exports
-		window.LayersMessageHelper = MessageHelper;
+		// Backward compatibility - direct window export
+		window.MessageHelper = MessageHelper;
+
+		// Global singleton instance (intentional - widely used)
 		window.layersMessages = messageHelper;
 	}
 

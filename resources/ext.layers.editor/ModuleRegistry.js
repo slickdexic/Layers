@@ -335,6 +335,8 @@
 
 		// Backward compatibility - direct window exports
 		window.LayersModuleRegistry = ModuleRegistry;
+
+		// Global singleton instances (intentional - needed for cross-file coordination)
 		window.layersRegistry = registry;
 		// @deprecated - use window.layersRegistry instead
 		window.layersModuleRegistry = legacyRegistry;

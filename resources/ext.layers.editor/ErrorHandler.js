@@ -564,10 +564,10 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.ErrorHandler = ErrorHandler;
 
-		// Backward compatibility - direct window exports
+		// Backward compatibility - direct window export
 		window.LayersErrorHandler = ErrorHandler;
 
-		// Create global instance
+		// Global singleton instance (intentional - for error handling)
 		if ( !window.layersErrorHandler ) {
 			window.layersErrorHandler = new ErrorHandler();
 		}

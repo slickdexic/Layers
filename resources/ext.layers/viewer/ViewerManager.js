@@ -8,6 +8,25 @@
 ( function () {
 	'use strict';
 
+	// Helper to resolve classes from namespace with global fallback
+	const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
+		if ( window.Layers ) {
+			const parts = namespacePath.split( '.' );
+			let obj = window.Layers;
+			for ( const part of parts ) {
+				if ( obj && obj[ part ] ) {
+					obj = obj[ part ];
+				} else {
+					break;
+				}
+			}
+			if ( typeof obj === 'function' ) {
+				return obj;
+			}
+		}
+		return window[ globalName ];
+	};
+
 	/**
 	 * @class ViewerManager
 	 * @constructor
@@ -17,7 +36,8 @@
 	 */
 	function ViewerManager( options ) {
 		this.debug = options && options.debug;
-		this.urlParser = ( options && options.urlParser ) || new window.LayersUrlParser( { debug: this.debug } );
+		const LayersUrlParser = getClass( 'Utils.UrlParser', 'LayersUrlParser' );
+		this.urlParser = ( options && options.urlParser ) || new LayersUrlParser( { debug: this.debug } );
 	}
 
 	/**
@@ -85,8 +105,9 @@
 			}
 
 			const container = this.ensurePositionedContainer( img );
+			const LayersViewer = getClass( 'Viewer.LayersViewer', 'LayersViewer' );
 
-			img.layersViewer = new window.LayersViewer( {
+			img.layersViewer = new LayersViewer( {
 				container: container,
 				imageElement: img,
 				layerData: data

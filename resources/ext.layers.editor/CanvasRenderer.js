@@ -6,6 +6,13 @@
 ( function () {
 	'use strict';
 
+	// Use shared namespace helper
+	const getClass = ( window.Layers && window.Layers.Utils && window.Layers.Utils.getClass ) ||
+		window.layersGetClass ||
+		function ( namespacePath, globalName ) {
+			return window[ globalName ] || null;
+		};
+
 	/**
 	 * CanvasRenderer - Manages all canvas rendering operations
 	 *
@@ -60,8 +67,9 @@
 
 		// Initialize LayerRenderer for shape drawing delegation
 		// Uses shared LayerRenderer (ext.layers.shared) for consistency with viewer
-		if ( typeof window !== 'undefined' && window.LayerRenderer ) {
-			this.layerRenderer = new window.LayerRenderer( this.ctx, {
+		const LayerRenderer = getClass( 'Canvas.LayerRenderer', 'LayerRenderer' );
+		if ( LayerRenderer ) {
+			this.layerRenderer = new LayerRenderer( this.ctx, {
 				zoom: this.zoom,
 				backgroundImage: this.backgroundImage,
 				canvas: this.canvas

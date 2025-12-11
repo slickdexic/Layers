@@ -251,13 +251,15 @@
 	 */
 	LayersEditor.prototype.initializeExtractedManagers = function () {
 		// Initialize RevisionManager
-		if ( typeof window.RevisionManager === 'function' ) {
-			this.revisionManager = new window.RevisionManager( { editor: this } );
+		const RevisionManager = getClass( 'Core.RevisionManager', 'RevisionManager' );
+		if ( typeof RevisionManager === 'function' ) {
+			this.revisionManager = new RevisionManager( { editor: this } );
 		}
 
 		// Initialize DialogManager
-		if ( typeof window.DialogManager === 'function' ) {
-			this.dialogManager = new window.DialogManager( { editor: this } );
+		const DialogManager = getClass( 'UI.DialogManager', 'DialogManager' );
+		if ( typeof DialogManager === 'function' ) {
+			this.dialogManager = new DialogManager( { editor: this } );
 		}
 	};
 
@@ -397,8 +399,9 @@
 		this.initializeUIComponents();
 
 		// Initialize LayerSetManager if available
-		if ( typeof window.LayerSetManager === 'function' ) {
-			this.layerSetManager = new window.LayerSetManager( {
+		const LayerSetManagerClass = getClass( 'LayerSetManager', 'LayerSetManager' );
+		if ( typeof LayerSetManagerClass === 'function' ) {
+			this.layerSetManager = new LayerSetManagerClass( {
 				editor: this,
 				stateManager: this.stateManager,
 				apiManager: this.apiManager,
@@ -422,17 +425,21 @@
 	 * @private
 	 */
 	LayersEditor.prototype.initializeUIComponents = function () {
-		// Register UI component factories
+		// Register UI component factories using namespaced classes
+		const ToolbarClass = getClass( 'UI.Toolbar', 'Toolbar' );
+		const LayerPanelClass = getClass( 'UI.LayerPanel', 'LayerPanel' );
+		const CanvasManagerClass = getClass( 'Canvas.Manager', 'CanvasManager' );
+
 		if ( this.registry.register ) {
-			this.registry.register( 'Toolbar', () => new window.Toolbar( {
+			this.registry.register( 'Toolbar', () => new ToolbarClass( {
 				container: this.uiManager.toolbarContainer,
 				editor: this
 			} ), [] );
-			this.registry.register( 'LayerPanel', () => new window.LayerPanel( {
+			this.registry.register( 'LayerPanel', () => new LayerPanelClass( {
 				container: this.uiManager.layerPanelContainer,
 				editor: this
 			} ), [] );
-			this.registry.register( 'CanvasManager', () => new window.CanvasManager( {
+			this.registry.register( 'CanvasManager', () => new CanvasManagerClass( {
 				container: this.uiManager.canvasContainer,
 				editor: this,
 				backgroundImageUrl: this.imageUrl
@@ -1203,7 +1210,7 @@
 	LayersEditor.prototype.cleanupDOMEventListeners = function () {
 		if ( this.eventTracker ) {
 			this.eventTracker.destroy();
-			this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+			this.eventTracker = EventTracker ? new EventTracker() : null;
 		}
 	};
 

@@ -7,6 +7,25 @@
 ( function () {
 	'use strict';
 
+	// Helper to resolve classes from namespace with global fallback
+	const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
+		if ( window.Layers ) {
+			const parts = namespacePath.split( '.' );
+			let obj = window.Layers;
+			for ( const part of parts ) {
+				if ( obj && obj[ part ] ) {
+					obj = obj[ part ];
+				} else {
+					break;
+				}
+			}
+			if ( typeof obj === 'function' ) {
+				return obj;
+			}
+		}
+		return window[ globalName ];
+	};
+
 	/**
 	 * ToolbarStyleControls class
 	 *
@@ -23,7 +42,8 @@
 		};
 
 		// Initialize EventTracker for memory-safe event listener management
-		this.eventTracker = window.EventTracker ? new window.EventTracker() : null;
+		const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
+		this.eventTracker = EventTracker ? new EventTracker() : null;
 
 		// Style state
 		this.strokeColorValue = '#000000';
@@ -495,11 +515,12 @@
 	ToolbarStyleControls.prototype.openColorPicker = function ( anchorButton, initialValue, options ) {
 		options = options || {};
 
-		if ( !window.ColorPickerDialog ) {
+		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
+		if ( !ColorPickerDialog ) {
 			return;
 		}
 
-		const picker = new window.ColorPickerDialog( {
+		const picker = new ColorPickerDialog( {
 			currentColor: initialValue === 'none' ? 'none' : ( initialValue || '#000000' ),
 			anchorElement: anchorButton,
 			strings: this.getColorPickerStrings(),
@@ -523,9 +544,10 @@
 	 */
 	ToolbarStyleControls.prototype.updateColorButtonDisplay = function ( btn, color ) {
 		const strings = this.getColorPickerStrings();
+		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
 
-		if ( window.ColorPickerDialog && window.ColorPickerDialog.updateColorButton ) {
-			window.ColorPickerDialog.updateColorButton( btn, color, strings );
+		if ( ColorPickerDialog && ColorPickerDialog.updateColorButton ) {
+			ColorPickerDialog.updateColorButton( btn, color, strings );
 		} else {
 			// Fallback
 			let labelValue = color;

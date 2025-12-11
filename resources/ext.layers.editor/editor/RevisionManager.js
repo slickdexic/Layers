@@ -470,9 +470,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.RevisionManager = RevisionManager;
-
-		// Backward compatibility - direct window export
-		window.RevisionManager = RevisionManager;
 	}
 
 }() );

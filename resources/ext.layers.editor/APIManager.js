@@ -2,6 +2,26 @@
  * API Manager for Layers Editor
  * Handles all API communications with the backend
  */
+
+// Helper to resolve classes from namespace with global fallback
+const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
+	if ( window.Layers ) {
+		const parts = namespacePath.split( '.' );
+		let obj = window.Layers;
+		for ( const part of parts ) {
+			if ( obj && obj[ part ] ) {
+				obj = obj[ part ];
+			} else {
+				break;
+			}
+		}
+		if ( typeof obj === 'function' ) {
+			return obj;
+		}
+	}
+	return window[ globalName ];
+};
+
 class APIManager {
 	constructor( editor ) {
 		this.editor = editor;
@@ -649,8 +669,9 @@ class APIManager {
 
 	validateBeforeSave() {
 		const layers = this.editor.stateManager.get( 'layers' ) || [];
-		if ( window.LayersValidator ) {
-			const validator = new window.LayersValidator();
+		const LayersValidator = getClass( 'Validation.LayersValidator', 'LayersValidator' );
+		if ( LayersValidator ) {
+			const validator = new LayersValidator();
 			const validationResult = validator.validateLayers( layers, 100 );
 
 			if ( !validationResult.isValid ) {

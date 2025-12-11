@@ -261,9 +261,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.Utilities = CanvasUtilities;
-
-		// Backward compatibility - direct window export
-		window.CanvasUtilities = CanvasUtilities;
 	}
 
 	// CommonJS export for Node.js/Jest testing
