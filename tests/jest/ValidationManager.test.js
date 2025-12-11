@@ -50,7 +50,7 @@ describe( 'ValidationManager', () => {
 
 		// Load the ValidationManager
 		require( '../../resources/ext.layers.editor/ValidationManager.js' );
-		ValidationManager = global.window.ValidationManager;
+		ValidationManager = global.window.Layers.Validation.Manager;
 		manager = new ValidationManager( mockEditor );
 	} );
 

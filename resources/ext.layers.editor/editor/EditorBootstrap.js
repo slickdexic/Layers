@@ -174,7 +174,7 @@
 			document.title = '🎨 Layers Editor Initializing...';
 			try {
 				// Check for LayersEditor class via namespace
-				const LayersEditor = getClass( 'Editor', 'LayersEditor' );
+				const LayersEditor = getClass( 'Core.Editor', 'LayersEditor' );
 				if ( typeof LayersEditor !== 'function' ) {
 					throw new Error( 'LayersEditor class not available' );
 				}
@@ -349,7 +349,7 @@
 						return;
 					}
 
-					const LayersEditor = getClass( 'Editor', 'LayersEditor' );
+					const LayersEditor = getClass( 'Core.Editor', 'LayersEditor' );
 					if ( typeof LayersEditor !== 'function' ) {
 						debugLog( 'LayersEditor class not available for direct creation' );
 						return;

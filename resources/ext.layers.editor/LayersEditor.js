@@ -399,7 +399,7 @@
 		this.initializeUIComponents();
 
 		// Initialize LayerSetManager if available
-		const LayerSetManagerClass = getClass( 'LayerSetManager', 'LayerSetManager' );
+		const LayerSetManagerClass = getClass( 'Core.LayerSetManager', 'LayerSetManager' );
 		if ( typeof LayerSetManagerClass === 'function' ) {
 			this.layerSetManager = new LayerSetManagerClass( {
 				editor: this,
