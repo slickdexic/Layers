@@ -158,7 +158,8 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.MessageHelper = MessageHelper;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Utils.MessageHelper instead
+		// This will be removed in a future version
 		window.MessageHelper = MessageHelper;
 
 		// Global singleton instance (intentional - widely used)

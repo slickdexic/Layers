@@ -935,7 +935,8 @@
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.APIManager = APIManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Core.APIManager instead
+		// This will be removed in a future version
 		window.APIManager = APIManager;
 	}
 

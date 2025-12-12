@@ -1249,7 +1249,8 @@
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.SelectionManager = SelectionManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Core.SelectionManager instead
+		// This will be removed in a future version
 		window.LayersSelectionManager = SelectionManager;
 	}
 

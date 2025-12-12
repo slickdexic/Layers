@@ -236,7 +236,8 @@
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.ClipboardController = ClipboardController;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Canvas.ClipboardController instead
+		// This will be removed in a future version
 		window.ClipboardController = ClipboardController;
 	}
 

@@ -183,7 +183,8 @@
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.ToolbarKeyboard = ToolbarKeyboard;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.UI.ToolbarKeyboard instead
+		// This will be removed in a future version
 		window.ToolbarKeyboard = ToolbarKeyboard;
 	}
 

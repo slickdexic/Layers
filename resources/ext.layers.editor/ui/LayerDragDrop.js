@@ -240,7 +240,8 @@
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.LayerDragDrop = LayerDragDrop;
 
-		// Backward compatibility - direct window export
+			// DEPRECATED: Direct window export - use window.Layers.UI.LayerDragDrop instead
+			// This will be removed in a future version
 		window.LayerDragDrop = LayerDragDrop;
 	}
 

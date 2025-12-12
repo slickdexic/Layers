@@ -369,7 +369,8 @@
 		window.Layers.Tools.ToolRegistry = ToolRegistry;
 		window.Layers.Tools.registry = registry;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Tools.ToolRegistry instead
+		// This will be removed in a future version
 		window.ToolRegistry = ToolRegistry;
 	}
 

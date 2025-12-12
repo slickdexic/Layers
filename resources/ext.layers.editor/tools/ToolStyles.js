@@ -497,7 +497,8 @@
 		window.Layers.Tools = window.Layers.Tools || {};
 		window.Layers.Tools.ToolStyles = ToolStyles;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Tools.ToolStyles instead
+		// This will be removed in a future version
 		window.ToolStyles = ToolStyles;
 	}
 

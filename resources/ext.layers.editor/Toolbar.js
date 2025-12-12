@@ -946,7 +946,8 @@
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.Toolbar = Toolbar;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.UI.Toolbar instead
+		// This will be removed in a future version
 		window.Toolbar = Toolbar;
 	}
 

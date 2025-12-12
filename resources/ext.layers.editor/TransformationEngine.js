@@ -634,7 +634,8 @@
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.TransformationEngine = TransformationEngine;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Canvas.TransformationEngine instead
+		// This will be removed in a future version
 		window.TransformationEngine = TransformationEngine;
 	}
 

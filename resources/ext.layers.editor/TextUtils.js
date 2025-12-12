@@ -185,7 +185,8 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.Text = TextUtils;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Utils.Text instead
+		// This will be removed in a future version
 		window.TextUtils = TextUtils;
 	}
 

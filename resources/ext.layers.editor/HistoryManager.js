@@ -625,7 +625,8 @@
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.HistoryManager = HistoryManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Core.HistoryManager instead
+		// This will be removed in a future version
 		window.HistoryManager = HistoryManager;
 	}
 

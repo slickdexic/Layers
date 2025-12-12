@@ -417,7 +417,8 @@
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.IconFactory = IconFactory;
 
-		// Backward compatibility - direct window export
+			// DEPRECATED: Direct window export - use window.Layers.UI.IconFactory instead
+			// This will be removed in a future version
 		window.IconFactory = IconFactory;
 	}
 

@@ -258,6 +258,7 @@ if ( typeof window !== 'undefined' ) {
 	window.Layers.Validation = window.Layers.Validation || {};
 	window.Layers.Validation.Manager = ValidationManager;
 
-	// Backward compatibility - direct window export
+	// DEPRECATED: Direct window export - use window.Layers.Validation.Manager instead
+	// This will be removed in a future version
 	window.ValidationManager = ValidationManager;
 }

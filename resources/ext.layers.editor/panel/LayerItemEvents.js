@@ -393,7 +393,8 @@
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.LayerItemEvents = LayerItemEvents;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.UI.LayerItemEvents instead
+		// This will be removed in a future version
 		window.LayerItemEvents = LayerItemEvents;
 	}
 

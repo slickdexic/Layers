@@ -1142,7 +1142,8 @@
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.ToolManager = ToolManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Core.ToolManager instead
+		// This will be removed in a future version
 		window.LayersToolManager = ToolManager;
 	}
 

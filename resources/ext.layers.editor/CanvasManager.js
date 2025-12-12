@@ -2059,7 +2059,8 @@
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.Manager = CanvasManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Canvas.Manager instead
+		// This will be removed in a future version
 		window.CanvasManager = CanvasManager;
 	}
 

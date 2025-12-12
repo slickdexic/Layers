@@ -213,7 +213,8 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.AccessibilityAnnouncer = AccessibilityAnnouncer;
 
-		// Backward compatibility - direct window exports
+		// DEPRECATED: Direct window exports - use window.Layers.Utils.AccessibilityAnnouncer instead
+		// This will be removed in a future version
 		window.layersAnnouncer = announcer;
 		window.AccessibilityAnnouncer = AccessibilityAnnouncer;
 	}

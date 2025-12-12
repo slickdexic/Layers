@@ -333,7 +333,8 @@
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.ModuleRegistry = ModuleRegistry;
 
-		// Backward compatibility - direct window exports
+		// DEPRECATED: Direct window exports - use window.Layers.Core.ModuleRegistry instead
+		// This will be removed in a future version
 		window.LayersModuleRegistry = ModuleRegistry;
 
 		// Global singleton instances (intentional - needed for cross-file coordination)

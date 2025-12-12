@@ -322,7 +322,8 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Constants = LayersConstants;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Constants instead
+		// This will be removed in a future version
 		window.LayersConstants = LayersConstants;
 	}
 

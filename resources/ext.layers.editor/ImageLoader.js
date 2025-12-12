@@ -284,7 +284,8 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.ImageLoader = ImageLoader;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Utils.ImageLoader instead
+		// This will be removed in a future version
 		window.ImageLoader = ImageLoader;
 	}
 

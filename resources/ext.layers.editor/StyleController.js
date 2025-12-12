@@ -175,7 +175,8 @@
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.StyleController = StyleController;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Core.StyleController instead
+		// This will be removed in a future version
 		window.StyleController = StyleController;
 	}
 

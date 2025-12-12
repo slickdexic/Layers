@@ -1566,7 +1566,8 @@
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.LayerPanel = LayerPanel;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.UI.LayerPanel instead
+		// This will be removed in a future version
 		window.LayerPanel = LayerPanel;
 	}
 }());

@@ -383,7 +383,8 @@
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.ImportExportManager = ImportExportManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Core.ImportExportManager instead
+		// This will be removed in a future version
 		window.ImportExportManager = ImportExportManager;
 	}
 

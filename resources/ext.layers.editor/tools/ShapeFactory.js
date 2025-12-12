@@ -510,7 +510,8 @@
 		window.Layers.Tools = window.Layers.Tools || {};
 		window.Layers.Tools.ShapeFactory = ShapeFactory;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Tools.ShapeFactory instead
+		// This will be removed in a future version
 		window.ShapeFactory = ShapeFactory;
 	}
 

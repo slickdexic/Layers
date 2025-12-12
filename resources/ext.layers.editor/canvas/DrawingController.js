@@ -621,7 +621,8 @@
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.DrawingController = DrawingController;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Canvas.DrawingController instead
+		// This will be removed in a future version
 		window.DrawingController = DrawingController;
 	}
 

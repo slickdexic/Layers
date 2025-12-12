@@ -391,7 +391,8 @@
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.HitTestController = HitTestController;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Canvas.HitTestController instead
+		// This will be removed in a future version
 		window.HitTestController = HitTestController;
 	}
 

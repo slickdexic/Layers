@@ -122,6 +122,7 @@ if ( typeof window !== 'undefined' ) {
 	window.Layers.Core = window.Layers.Core || {};
 	window.Layers.Core.EventManager = EventManager;
 
-	// Backward compatibility - direct window export
+	// DEPRECATED: Direct window export - use window.Layers.Core.EventManager instead
+	// This will be removed in a future version
 	window.EventManager = EventManager;
 }

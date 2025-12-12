@@ -215,7 +215,8 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.EventTracker = EventTracker;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Utils.EventTracker instead
+		// This will be removed in a future version
 		window.EventTracker = EventTracker;
 	}
 

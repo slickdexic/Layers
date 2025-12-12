@@ -1934,7 +1934,8 @@
 		window.Layers = window.Layers || {};
 		window.Layers.LayerRenderer = LayerRenderer;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.LayerRenderer instead
+		// This will be removed in a future version
 		window.LayerRenderer = LayerRenderer;
 	}
 

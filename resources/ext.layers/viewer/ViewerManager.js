@@ -300,7 +300,8 @@
 		window.Layers.Viewer = window.Layers.Viewer || {};
 		window.Layers.Viewer.Manager = ViewerManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Viewer.Manager instead
+		// This will be removed in a future version
 		window.LayersViewerManager = ViewerManager;
 	}
 

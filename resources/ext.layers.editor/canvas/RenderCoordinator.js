@@ -386,7 +386,8 @@
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.RenderCoordinator = RenderCoordinator;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Canvas.RenderCoordinator instead
+		// This will be removed in a future version
 		window.RenderCoordinator = RenderCoordinator;
 	}
 

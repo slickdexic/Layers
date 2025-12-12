@@ -552,7 +552,8 @@
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.ColorPickerDialog = ColorPickerDialog;
 
-		// Backward compatibility - direct window export
+			// DEPRECATED: Direct window export - use window.Layers.UI.ColorPickerDialog instead
+			// This will be removed in a future version
 		window.ColorPickerDialog = ColorPickerDialog;
 	}
 

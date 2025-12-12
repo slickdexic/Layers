@@ -1320,7 +1320,8 @@
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.TransformController = TransformController;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Canvas.TransformController instead
+		// This will be removed in a future version
 		window.TransformController = TransformController;
 	}
 

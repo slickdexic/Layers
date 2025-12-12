@@ -393,7 +393,8 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.Geometry = GeometryUtils;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Utils.Geometry instead
+		// This will be removed in a future version
 		window.GeometryUtils = GeometryUtils;
 	}
 

@@ -649,7 +649,8 @@
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.Manager = UIManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.UI.Manager instead
+		// This will be removed in a future version
 		window.UIManager = UIManager;
 	}
 

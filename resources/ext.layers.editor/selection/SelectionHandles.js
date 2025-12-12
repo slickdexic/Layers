@@ -332,7 +332,8 @@
 		window.Layers.Selection = window.Layers.Selection || {};
 		window.Layers.Selection.SelectionHandles = SelectionHandles;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Selection.SelectionHandles instead
+		// This will be removed in a future version
 		window.SelectionHandles = SelectionHandles;
 	}
 

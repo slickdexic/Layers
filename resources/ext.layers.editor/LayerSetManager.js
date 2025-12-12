@@ -558,7 +558,8 @@
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.LayerSetManager = LayerSetManager;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Core.LayerSetManager instead
+		// This will be removed in a future version
 		window.LayerSetManager = LayerSetManager;
 	}
 
