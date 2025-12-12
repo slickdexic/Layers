@@ -16,11 +16,15 @@
 	'use strict';
 
 	/**
-	 * InteractionController constructor
+	 * InteractionController class
+	 */
+class InteractionController {
+	/**
+	 * Creates a new InteractionController instance
 	 *
 	 * @param {Object} canvasManager Reference to the parent CanvasManager
 	 */
-	function InteractionController( canvasManager ) {
+	constructor( canvasManager ) {
 		this.canvasManager = canvasManager;
 
 		// Drag/manipulation state
@@ -61,25 +65,26 @@
 
 	/**
 	 * Check if any manipulation is in progress
+	 *
 	 * @return {boolean}
 	 */
-	InteractionController.prototype.isManipulating = function () {
+	isManipulating() {
 		return this.isDragging || this.isResizing || this.isRotating;
-	};
+	}
 
 	/**
 	 * Check if any interaction is active
 	 * @return {boolean}
 	 */
-	InteractionController.prototype.isInteracting = function () {
+	isInteracting () {
 		return this.isManipulating() || this.isPanning || this.isMarqueeSelecting;
-	};
+	}
 
 	/**
 	 * Get the current interaction mode
 	 * @return {string} One of: 'none', 'dragging', 'resizing', 'rotating', 'panning', 'marquee'
 	 */
-	InteractionController.prototype.getMode = function () {
+	getMode () {
 		if ( this.isDragging ) {
 			return 'dragging';
 		}
@@ -96,7 +101,7 @@
 			return 'marquee';
 		}
 		return 'none';
-	};
+	}
 
 	// =========================================================================
 	// Drag Operations
@@ -107,20 +112,20 @@
 	 * @param {Object} point Starting point {x, y}
 	 * @param {Object} originalState Original layer state to preserve
 	 */
-	InteractionController.prototype.startDrag = function ( point, originalState ) {
+	startDrag ( point, originalState ) {
 		this.isDragging = true;
 		this.startPoint = { x: point.x, y: point.y };
 		this.dragStartPoint = { x: point.x, y: point.y };
 		this.originalLayerState = originalState ? JSON.parse( JSON.stringify( originalState ) ) : null;
 		this.showDragPreview = true;
-	};
+	}
 
 	/**
 	 * Update drag position
 	 * @param {Object} point Current point {x, y}
 	 * @return {Object} Delta from start {deltaX, deltaY}
 	 */
-	InteractionController.prototype.updateDrag = function ( point ) {
+	updateDrag ( point ) {
 		if ( !this.isDragging || !this.dragStartPoint ) {
 			return { deltaX: 0, deltaY: 0 };
 		}
@@ -128,13 +133,13 @@
 			deltaX: point.x - this.dragStartPoint.x,
 			deltaY: point.y - this.dragStartPoint.y
 		};
-	};
+	}
 
 	/**
 	 * Finish drag operation
 	 * @return {Object|null} The original layer state for undo purposes
 	 */
-	InteractionController.prototype.finishDrag = function () {
+	finishDrag () {
 		const originalState = this.originalLayerState;
 		this.isDragging = false;
 		this.showDragPreview = false;
@@ -142,7 +147,7 @@
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
 		return originalState;
-	};
+	}
 
 	// =========================================================================
 	// Resize Operations
@@ -154,20 +159,20 @@
 	 * @param {Object} point Starting point {x, y}
 	 * @param {Object} originalState Original layer state
 	 */
-	InteractionController.prototype.startResize = function ( handle, point, originalState ) {
+	startResize ( handle, point, originalState ) {
 		this.isResizing = true;
 		this.resizeHandle = handle;
 		this.startPoint = { x: point.x, y: point.y };
 		this.dragStartPoint = { x: point.x, y: point.y };
 		this.originalLayerState = originalState ? JSON.parse( JSON.stringify( originalState ) ) : null;
-	};
+	}
 
 	/**
 	 * Update resize delta
 	 * @param {Object} point Current point {x, y}
 	 * @return {Object} Delta and handle info
 	 */
-	InteractionController.prototype.updateResize = function ( point ) {
+	updateResize ( point ) {
 		if ( !this.isResizing || !this.dragStartPoint ) {
 			return { deltaX: 0, deltaY: 0, handle: null };
 		}
@@ -176,13 +181,13 @@
 			deltaY: point.y - this.dragStartPoint.y,
 			handle: this.resizeHandle
 		};
-	};
+	}
 
 	/**
 	 * Finish resize operation
 	 * @return {Object|null} The original layer state for undo
 	 */
-	InteractionController.prototype.finishResize = function () {
+	finishResize () {
 		const originalState = this.originalLayerState;
 		this.isResizing = false;
 		this.resizeHandle = null;
@@ -190,7 +195,7 @@
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
 		return originalState;
-	};
+	}
 
 	// =========================================================================
 	// Rotation Operations
@@ -201,12 +206,12 @@
 	 * @param {Object} point Starting point {x, y}
 	 * @param {Object} originalState Original layer state
 	 */
-	InteractionController.prototype.startRotation = function ( point, originalState ) {
+	startRotation ( point, originalState ) {
 		this.isRotating = true;
 		this.startPoint = { x: point.x, y: point.y };
 		this.dragStartPoint = { x: point.x, y: point.y };
 		this.originalLayerState = originalState ? JSON.parse( JSON.stringify( originalState ) ) : null;
-	};
+	}
 
 	/**
 	 * Calculate rotation angle from start point
@@ -214,7 +219,7 @@
 	 * @param {Object} center Center of rotation {x, y}
 	 * @return {number} Angle in degrees
 	 */
-	InteractionController.prototype.calculateRotationAngle = function ( point, center ) {
+	calculateRotationAngle ( point, center ) {
 		if ( !this.startPoint || !center ) {
 			return 0;
 		}
@@ -230,20 +235,20 @@
 
 		// Convert to degrees
 		return ( currentAngle - startAngle ) * ( 180 / Math.PI );
-	};
+	}
 
 	/**
 	 * Finish rotation operation
 	 * @return {Object|null} The original layer state for undo
 	 */
-	InteractionController.prototype.finishRotation = function () {
+	finishRotation () {
 		const originalState = this.originalLayerState;
 		this.isRotating = false;
 		this.startPoint = null;
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
 		return originalState;
-	};
+	}
 
 	// =========================================================================
 	// Pan Operations
@@ -253,17 +258,17 @@
 	 * Start panning
 	 * @param {Object} point Starting client point {x, y}
 	 */
-	InteractionController.prototype.startPan = function ( point ) {
+	startPan ( point ) {
 		this.isPanning = true;
 		this.lastPanPoint = { x: point.x, y: point.y };
-	};
+	}
 
 	/**
 	 * Update pan position
 	 * @param {Object} point Current client point {x, y}
 	 * @return {Object} Pan delta {deltaX, deltaY}
 	 */
-	InteractionController.prototype.updatePan = function ( point ) {
+	updatePan ( point ) {
 		if ( !this.isPanning || !this.lastPanPoint ) {
 			return { deltaX: 0, deltaY: 0 };
 		}
@@ -275,15 +280,15 @@
 
 		this.lastPanPoint = { x: point.x, y: point.y };
 		return delta;
-	};
+	}
 
 	/**
 	 * Finish panning
 	 */
-	InteractionController.prototype.finishPan = function () {
+	finishPan () {
 		this.isPanning = false;
 		this.lastPanPoint = null;
-	};
+	}
 
 	// =========================================================================
 	// Marquee Selection
@@ -293,28 +298,28 @@
 	 * Start marquee selection
 	 * @param {Object} point Starting point {x, y}
 	 */
-	InteractionController.prototype.startMarquee = function ( point ) {
+	startMarquee ( point ) {
 		this.isMarqueeSelecting = true;
 		this.marqueeStart = { x: point.x, y: point.y };
 		this.marqueeEnd = { x: point.x, y: point.y };
-	};
+	}
 
 	/**
 	 * Update marquee end point
 	 * @param {Object} point Current point {x, y}
 	 */
-	InteractionController.prototype.updateMarquee = function ( point ) {
+	updateMarquee ( point ) {
 		if ( !this.isMarqueeSelecting ) {
 			return;
 		}
 		this.marqueeEnd = { x: point.x, y: point.y };
-	};
+	}
 
 	/**
 	 * Get the marquee rectangle (normalized)
 	 * @return {Object} Rectangle {x, y, width, height}
 	 */
-	InteractionController.prototype.getMarqueeRect = function () {
+	getMarqueeRect () {
 		const x1 = Math.min( this.marqueeStart.x, this.marqueeEnd.x );
 		const y1 = Math.min( this.marqueeStart.y, this.marqueeEnd.y );
 		const x2 = Math.max( this.marqueeStart.x, this.marqueeEnd.x );
@@ -326,19 +331,19 @@
 			width: x2 - x1,
 			height: y2 - y1
 		};
-	};
+	}
 
 	/**
 	 * Finish marquee selection
 	 * @return {Object} The final marquee rectangle
 	 */
-	InteractionController.prototype.finishMarquee = function () {
+	finishMarquee () {
 		const rect = this.getMarqueeRect();
 		this.isMarqueeSelecting = false;
 		this.marqueeStart = { x: 0, y: 0 };
 		this.marqueeEnd = { x: 0, y: 0 };
 		return rect;
-	};
+	}
 
 	// =========================================================================
 	// Touch Handling
@@ -348,10 +353,10 @@
 	 * Record a touch point for gesture detection
 	 * @param {Object} point Touch point {x, y}
 	 */
-	InteractionController.prototype.recordTouch = function ( point ) {
+	recordTouch ( point ) {
 		this.lastTouchPoint = { x: point.x, y: point.y };
 		this.lastTouchTime = Date.now();
-	};
+	}
 
 	/**
 	 * Check if this is a double-tap
@@ -360,7 +365,7 @@
 	 * @param {number} maxDistance Maximum distance between taps (px)
 	 * @return {boolean}
 	 */
-	InteractionController.prototype.isDoubleTap = function ( point, maxDelay, maxDistance ) {
+	isDoubleTap ( point, maxDelay, maxDistance ) {
 		maxDelay = maxDelay || 300;
 		maxDistance = maxDistance || 30;
 
@@ -379,15 +384,15 @@
 		);
 
 		return distance <= maxDistance;
-	};
+	}
 
 	/**
 	 * Clear touch state
 	 */
-	InteractionController.prototype.clearTouch = function () {
+	clearTouch () {
 		this.lastTouchPoint = null;
 		this.lastTouchTime = 0;
-	};
+	}
 
 	// =========================================================================
 	// Guide Dragging
@@ -398,28 +403,28 @@
 	 * @param {string} orientation 'h' for horizontal, 'v' for vertical
 	 * @param {number} position Initial position
 	 */
-	InteractionController.prototype.startGuideDrag = function ( orientation, position ) {
+	startGuideDrag ( orientation, position ) {
 		this.isDraggingGuide = true;
 		this.dragGuideOrientation = orientation;
 		this.dragGuidePos = position;
-	};
+	}
 
 	/**
 	 * Update guide position
 	 * @param {number} position New position
 	 */
-	InteractionController.prototype.updateGuideDrag = function ( position ) {
+	updateGuideDrag ( position ) {
 		if ( !this.isDraggingGuide ) {
 			return;
 		}
 		this.dragGuidePos = position;
-	};
+	}
 
 	/**
 	 * Finish guide dragging
 	 * @return {Object|null} Guide info {orientation, position} or null
 	 */
-	InteractionController.prototype.finishGuideDrag = function () {
+	finishGuideDrag () {
 		if ( !this.isDraggingGuide ) {
 			return null;
 		}
@@ -434,7 +439,7 @@
 		this.dragGuidePos = 0;
 
 		return result;
-	};
+	}
 
 	// =========================================================================
 	// Reset
@@ -443,7 +448,7 @@
 	/**
 	 * Reset all interaction state
 	 */
-	InteractionController.prototype.reset = function () {
+	reset () {
 		this.isDragging = false;
 		this.isResizing = false;
 		this.isRotating = false;
@@ -466,15 +471,16 @@
 
 		this.dragGuideOrientation = null;
 		this.dragGuidePos = 0;
-	};
+	}
 
 	/**
 	 * Clean up resources
 	 */
-	InteractionController.prototype.destroy = function () {
+	destroy() {
 		this.reset();
 		this.canvasManager = null;
-	};
+	}
+}
 
 	// =========================================================================
 	// Export
