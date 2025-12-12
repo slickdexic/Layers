@@ -29,14 +29,18 @@
 	};
 
 	/**
-	 * @class ApiFallback
-	 * @constructor
+	 * ApiFallback class
+	 */
+class ApiFallback {
+	/**
+	 * Creates a new ApiFallback instance
+	 *
 	 * @param {Object} [options] Configuration options
 	 * @param {boolean} [options.debug=false] Enable debug logging
 	 * @param {LayersUrlParser} [options.urlParser] URL parser instance
 	 * @param {LayersViewerManager} [options.viewerManager] Viewer manager instance
 	 */
-	function ApiFallback( options ) {
+	constructor( options ) {
 		this.debug = options && options.debug;
 		const LayersUrlParser = getClass( 'Utils.UrlParser', 'LayersUrlParser' );
 		const LayersViewerManager = getClass( 'Viewer.Manager', 'LayersViewerManager' );
@@ -55,11 +59,11 @@
 	 * @private
 	 * @param {...any} args Arguments to log
 	 */
-	ApiFallback.prototype.debugLog = function ( ...args ) {
+	debugLog( ...args ) {
 		if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 			mw.log( '[Layers:ApiFallback]', ...args );
 		}
-	};
+	}
 
 	/**
 	 * Log a warning message if debug mode is enabled.
@@ -67,11 +71,11 @@
 	 * @private
 	 * @param {...any} args Arguments to log
 	 */
-	ApiFallback.prototype.debugWarn = function ( ...args ) {
+	debugWarn ( ...args ) {
 		if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 			mw.log.warn( '[Layers:ApiFallback]', ...args );
 		}
-	};
+	}
 
 	/**
 	 * Build list of candidate images that might need API fallback.
@@ -80,7 +84,7 @@
 	 * @param {boolean} pageAllow Whether page-level layers param allows loading
 	 * @return {HTMLImageElement[]} Array of candidate images
 	 */
-	ApiFallback.prototype.buildCandidateList = function ( pageAllow ) {
+	buildCandidateList ( pageAllow ) {
 		const candidates = [];
 
 		const addAll = function ( selector ) {
@@ -117,7 +121,7 @@
 		}
 
 		return candidates;
-	};
+	}
 
 	/**
 	 * Determine if an image should be allowed to load layers.
@@ -129,7 +133,7 @@
 	 * @param {string} fileNs File namespace name
 	 * @return {Object} Result with allow boolean and reason string
 	 */
-	ApiFallback.prototype.checkImageAllowed = function ( img, pageAllow, pageNsNum, fileNs ) {
+	checkImageAllowed ( img, pageAllow, pageNsNum, fileNs ) {
 		let allow = false;
 		let allowReason = '';
 
@@ -204,7 +208,7 @@
 		}
 
 		return { allow: false, reason: allowReason || 'no matching criteria' };
-	};
+	}
 
 	/**
 	 * Infer filename from image, with fallback to wgPageName on File pages.
@@ -214,7 +218,7 @@
 	 * @param {string} fileNs File namespace name
 	 * @return {string|null} Filename or null
 	 */
-	ApiFallback.prototype.inferFilenameWithFallback = function ( img, fileNs ) {
+	inferFilenameWithFallback ( img, fileNs ) {
 		let filename = this.urlParser.inferFilename( img, fileNs );
 
 		// Fallback to wgPageName on File pages
@@ -235,7 +239,7 @@
 		}
 
 		return filename;
-	};
+	}
 
 	/**
 	 * Process a single candidate image for API fallback.
@@ -247,7 +251,7 @@
 	 * @param {number} pageNsNum Current page namespace number
 	 * @param {string} fileNs File namespace name
 	 */
-	ApiFallback.prototype.processCandidate = function ( img, api, pageAllow, pageNsNum, fileNs ) {
+	processCandidate ( img, api, pageAllow, pageNsNum, fileNs ) {
 		if ( img.layersViewer ) {
 			return;
 		}
@@ -317,14 +321,14 @@
 				this.debugWarn( 'API fallback processing error:', e2 );
 			}
 		} );
-	};
+	}
 
 	/**
 	 * Initialize API fallback for images missing data-layer-data.
 	 *
 	 * This handles cases where server-side attribute injection was bypassed.
 	 */
-	ApiFallback.prototype.initialize = function () {
+	initialize () {
 		try {
 			if ( typeof mw === 'undefined' || !mw.loader ||
 				typeof mw.loader.using !== 'function' ) {
@@ -365,7 +369,8 @@
 		} catch ( e ) {
 			this.debugWarn( 'API fallback initialization failed:', e.message );
 		}
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
