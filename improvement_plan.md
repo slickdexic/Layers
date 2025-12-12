@@ -18,7 +18,7 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | **Test Suite** | ✅ Strong | 3,913 tests, 88.4% coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer ~3.2K lines, Editor ~31.6K lines |
-| **JavaScript Architecture** | 🟡 Improving | 40 ES6 classes, ShadowRenderer extracted |
+| **JavaScript Architecture** | 🟡 Improving | 42 ES6 classes, ShadowRenderer extracted |
 | **Namespace** | 🟡 In Progress | 57 direct window.X exports marked DEPRECATED |
 
 ---
@@ -176,11 +176,11 @@ Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration t
 
 ### P2.1 Continue ES6 Class Migration
 
-**Status:** ~10% COMPLETE (40 classes of ~604 prototype patterns)  
+**Status:** ~12% COMPLETE (42 classes of ~604 prototype patterns)  
 **Effort:** 6-8 weeks  
 **Impact:** Modern code, TypeScript readiness
 
-**Already Using ES6 Classes (40 total):**
+**Already Using ES6 Classes (42 total):**
 - AccessibilityAnnouncer, APIManager, CanvasUtilities
 - ClipboardController, DialogManager, ErrorHandler
 - EventManager, EventTracker, GeometryUtils
@@ -194,17 +194,19 @@ Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration t
 - **LayerSetManager** ✅ (Dec 14, 2025)
 - **CanvasEvents** ✅ (Dec 14, 2025)
 - **CanvasRenderer** ✅ (Dec 14, 2025)
+- **Toolbar** ✅ (Dec 14, 2025)
+- **ToolbarStyleControls** ✅ (Dec 14, 2025)
 - and more...
 
-**Still Using Prototype Pattern (13 constructor functions):**
+**Still Using Prototype Pattern (11 constructor functions):**
 - CanvasManager.js (2,071 lines) - HIGH PRIORITY
 - ~~CanvasRenderer.js (939 lines)~~ ✅ CONVERTED
 - ~~CanvasEvents.js (573 lines)~~ ✅ CONVERTED
 - LayersEditor.js (1,268 lines) - HIGH PRIORITY
 - ~~LayersValidator.js (953 lines)~~ ✅ CONVERTED
 - ~~LayerSetManager.js (570 lines)~~ ✅ CONVERTED
-- Toolbar.js (955 lines)
-- ToolbarStyleControls.js (759 lines)
+- ~~Toolbar.js (955 lines)~~ ✅ CONVERTED
+- ~~ToolbarStyleControls.js (759 lines)~~ ✅ CONVERTED
 - SelectionManager.js (1,261 lines)
 - ToolManager.js (currently unknown)
 - TransformController.js (1,332 lines)
@@ -216,8 +218,8 @@ Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration t
 |-------|-------|----------|-------|--------|
 | 1 | LayersValidator, LayerSetManager | High | 1 | ✅ DONE |
 | 2 | CanvasEvents, CanvasRenderer | High | 1 | ✅ DONE |
-| 3 | Toolbar, ToolbarStyleControls | Medium | 1 | 🔜 NEXT |
-| 4 | SelectionManager | High | 1 | |
+| 3 | Toolbar, ToolbarStyleControls | Medium | 1 | ✅ DONE |
+| 4 | SelectionManager | High | 1 | 🔜 NEXT |
 | 5 | CanvasManager | High | 2 | |
 | 6 | LayersEditor | High | 1 | |
 
