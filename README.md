@@ -23,7 +23,7 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 
 ## Features
 
-### Drawing Tools (14 Available)
+### Drawing Tools (12 Available)
 
 | Tool          | Purpose                                      | Key Features                                    |
 | ------------- | -------------------------------------------- | ----------------------------------------------- |
@@ -38,9 +38,7 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 | Star          | Draw star shapes                             | Configurable points and radii                   |
 | Arrow         | Annotation arrows                            | Configurable arrowheads and line styles         |
 | Line          | Straight lines                               | Stroke width and color options                  |
-| Highlight     | Semi-transparent highlighting                | Overlay highlighting with transparency          |
 | Blur          | Blur/redact areas                            | Privacy protection tool                         |
-| Marquee       | Area selection                               | Multi-object selection                          |
 
 ### Layer Management
 
