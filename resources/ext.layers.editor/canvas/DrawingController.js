@@ -17,10 +17,15 @@
 	'use strict';
 
 	/**
-	 * @constructor
+	 * DrawingController class
+	 */
+class DrawingController {
+	/**
+	 * Creates a new DrawingController instance
+	 *
 	 * @param {Object} canvasManager - Reference to the parent CanvasManager
 	 */
-	function DrawingController( canvasManager ) {
+	constructor( canvasManager ) {
 		this.canvasManager = canvasManager;
 		this.tempLayer = null;
 		this.isDrawing = false;
@@ -38,7 +43,7 @@
 	 * @param {string} tool - Current tool name
 	 * @param {Object} style - Current style options
 	 */
-	DrawingController.prototype.startDrawing = function ( point, tool, style ) {
+	startDrawing( point, tool, style ) {
 		// Reset any previous temp layer
 		this.tempLayer = null;
 		this.isDrawing = true;
@@ -83,18 +88,18 @@
 				// Unknown tool - do nothing
 				break;
 		}
-	};
+	}
 
 	/**
 	 * Continue drawing operation as mouse moves
 	 *
 	 * @param {Object} point - Current mouse position {x, y}
 	 */
-	DrawingController.prototype.continueDrawing = function ( point ) {
+	continueDrawing ( point ) {
 		if ( this.tempLayer ) {
 			this.updatePreview( point );
 		}
-	};
+	}
 
 	/**
 	 * Finish drawing operation and create layer
@@ -103,7 +108,7 @@
 	 * @param {string} currentTool - Current tool name
 	 * @return {Object|null} Layer data if valid, null otherwise
 	 */
-	DrawingController.prototype.finishDrawing = function ( point, currentTool ) {
+	finishDrawing ( point, currentTool ) {
 		this.isDrawing = false;
 
 		// Finish drawing and create layer
@@ -129,34 +134,34 @@
 		this.tempLayer = null;
 
 		return layerData;
-	};
+	}
 
 	/**
 	 * Get the current temporary layer being drawn
 	 *
 	 * @return {Object|null} Temporary layer or null
 	 */
-	DrawingController.prototype.getTempLayer = function () {
+	getTempLayer () {
 		return this.tempLayer;
-	};
+	}
 
 	/**
 	 * Check if currently drawing
 	 *
 	 * @return {boolean} True if drawing in progress
 	 */
-	DrawingController.prototype.getIsDrawing = function () {
+	getIsDrawing () {
 		return this.isDrawing;
-	};
+	}
 
 	/**
 	 * Set drawing state
 	 *
 	 * @param {boolean} value - New drawing state
 	 */
-	DrawingController.prototype.setIsDrawing = function ( value ) {
+	setIsDrawing ( value ) {
 		this.isDrawing = value;
-	};
+	}
 
 	// ========== Tool-specific start methods ==========
 
@@ -166,7 +171,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startBlurTool = function ( point, style ) {
+	startBlurTool ( point, style ) {
 		this.tempLayer = {
 			type: 'rectangle',
 			x: point.x,
@@ -177,7 +182,7 @@
 			strokeWidth: style.strokeWidth || 2,
 			fill: 'transparent'
 		};
-	};
+	}
 
 	/**
 	 * Start text tool - creates text input modal
@@ -185,7 +190,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startTextTool = function ( point, style ) {
+	startTextTool ( point, style ) {
 		// Text tool delegates to the canvas manager's modal creation
 		// as it requires DOM manipulation outside the drawing scope
 		this.isDrawing = false;
@@ -200,7 +205,7 @@
 				textInput.focus();
 			}
 		}
-	};
+	}
 
 	/**
 	 * Start pen tool - creates a path for free-hand drawing
@@ -208,7 +213,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startPenTool = function ( point, style ) {
+	startPenTool ( point, style ) {
 		this.tempLayer = {
 			type: 'path',
 			points: [ point ],
@@ -216,7 +221,7 @@
 			strokeWidth: style.strokeWidth || 2,
 			fill: 'none'
 		};
-	};
+	}
 
 	/**
 	 * Start rectangle tool
@@ -224,7 +229,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startRectangleTool = function ( point, style ) {
+	startRectangleTool ( point, style ) {
 		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
@@ -237,7 +242,7 @@
 			strokeWidth: style.strokeWidth || 2,
 			fill: fillColor
 		};
-	};
+	}
 
 	/**
 	 * Start circle tool
@@ -245,7 +250,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startCircleTool = function ( point, style ) {
+	startCircleTool ( point, style ) {
 		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
@@ -257,7 +262,7 @@
 			strokeWidth: style.strokeWidth || 2,
 			fill: fillColor
 		};
-	};
+	}
 
 	/**
 	 * Start ellipse tool
@@ -265,7 +270,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startEllipseTool = function ( point, style ) {
+	startEllipseTool ( point, style ) {
 		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
@@ -278,7 +283,7 @@
 			strokeWidth: style.strokeWidth || 2,
 			fill: fillColor
 		};
-	};
+	}
 
 	/**
 	 * Start polygon tool
@@ -286,7 +291,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startPolygonTool = function ( point, style ) {
+	startPolygonTool ( point, style ) {
 		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
@@ -299,7 +304,7 @@
 			strokeWidth: style.strokeWidth || 2,
 			fill: fillColor
 		};
-	};
+	}
 
 	/**
 	 * Start star tool
@@ -307,7 +312,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startStarTool = function ( point, style ) {
+	startStarTool ( point, style ) {
 		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
 			style.fill : 'transparent';
 		this.tempLayer = {
@@ -322,7 +327,7 @@
 			strokeWidth: style.strokeWidth || 2,
 			fill: fillColor
 		};
-	};
+	}
 
 	/**
 	 * Start line tool
@@ -330,7 +335,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startLineTool = function ( point, style ) {
+	startLineTool ( point, style ) {
 		this.tempLayer = {
 			type: 'line',
 			x1: point.x,
@@ -340,7 +345,7 @@
 			stroke: style.color || '#000000',
 			strokeWidth: style.strokeWidth || 2
 		};
-	};
+	}
 
 	/**
 	 * Start arrow tool
@@ -348,7 +353,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startArrowTool = function ( point, style ) {
+	startArrowTool ( point, style ) {
 		this.tempLayer = {
 			type: 'arrow',
 			x1: point.x,
@@ -360,7 +365,7 @@
 			arrowSize: 10,
 			arrowStyle: style.arrowStyle || 'single'
 		};
-	};
+	}
 
 	/**
 	 * Start highlight tool
@@ -368,7 +373,7 @@
 	 * @param {Object} point - Starting point
 	 * @param {Object} style - Style options
 	 */
-	DrawingController.prototype.startHighlightTool = function ( point, style ) {
+	startHighlightTool ( point, style ) {
 		this.tempLayer = {
 			type: 'highlight',
 			x: point.x,
@@ -377,7 +382,7 @@
 			height: 20, // Default highlight height
 			fill: style.color ? style.color + '80' : '#ffff0080' // Add transparency
 		};
-	};
+	}
 
 	// ========== Preview and creation methods ==========
 
@@ -386,7 +391,7 @@
 	 *
 	 * @param {Object} point - Current mouse position
 	 */
-	DrawingController.prototype.updatePreview = function ( point ) {
+	updatePreview ( point ) {
 		if ( !this.tempLayer ) {
 			return;
 		}
@@ -440,12 +445,12 @@
 				this.tempLayer.points.push( point );
 				break;
 		}
-	};
+	}
 
 	/**
 	 * Draw the preview of the current temp layer
 	 */
-	DrawingController.prototype.drawPreview = function () {
+	drawPreview () {
 		if ( !this.tempLayer ) {
 			return;
 		}
@@ -454,7 +459,7 @@
 		if ( this.canvasManager && this.canvasManager.renderer ) {
 			this.canvasManager.renderer.drawLayer( this.tempLayer );
 		}
-	};
+	}
 
 	/**
 	 * Create final layer data from the drawing operation
@@ -462,7 +467,7 @@
 	 * @param {Object} point - Final mouse position
 	 * @return {Object|null} Layer data or null if invalid
 	 */
-	DrawingController.prototype.createLayerFromDrawing = function ( point ) {
+	createLayerFromDrawing ( point ) {
 		if ( !this.tempLayer ) {
 			return null;
 		}
@@ -521,7 +526,7 @@
 		}
 
 		return layer;
-	};
+	}
 
 	/**
 	 * Check if a shape meets minimum size requirements
@@ -529,7 +534,7 @@
 	 * @param {Object} layer - Layer data to validate
 	 * @return {boolean} True if shape is valid size
 	 */
-	DrawingController.prototype.isValidShape = function ( layer ) {
+	isValidShape ( layer ) {
 		switch ( layer.type ) {
 			case 'rectangle':
 			case 'highlight':
@@ -562,7 +567,7 @@
 			default:
 				return true;
 		}
-	};
+	}
 
 	// ========== Cursor management ==========
 
@@ -572,7 +577,7 @@
 	 * @param {string} tool - Tool name
 	 * @return {string} CSS cursor value
 	 */
-	DrawingController.prototype.getToolCursor = function ( tool ) {
+	getToolCursor ( tool ) {
 		switch ( tool ) {
 			case 'blur':
 			case 'pen':
@@ -590,7 +595,7 @@
 			default:
 				return 'default';
 		}
-	};
+	}
 
 	/**
 	 * Check if a tool is a drawing tool
@@ -598,22 +603,23 @@
 	 * @param {string} tool - Tool name
 	 * @return {boolean} True if tool creates shapes
 	 */
-	DrawingController.prototype.isDrawingTool = function ( tool ) {
+	isDrawingTool ( tool ) {
 		const drawingTools = [
 			'blur', 'text', 'pen', 'rectangle', 'circle',
 			'ellipse', 'polygon', 'star', 'line', 'arrow', 'highlight'
 		];
 		return drawingTools.indexOf( tool ) !== -1;
-	};
+	}
 
 	/**
 	 * Clean up resources
 	 */
-	DrawingController.prototype.destroy = function () {
+	destroy() {
 		this.tempLayer = null;
 		this.isDrawing = false;
 		this.canvasManager = null;
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
