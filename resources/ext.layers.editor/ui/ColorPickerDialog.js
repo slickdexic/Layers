@@ -9,6 +9,7 @@
 
 	/**
 	 * Default color picker strings (fallbacks if i18n not available)
+	 *
 	 * @constant {Object}
 	 */
 	const DEFAULT_STRINGS = {
@@ -27,6 +28,7 @@
 
 	/**
 	 * Standard color palette
+	 *
 	 * @constant {string[]}
 	 */
 	const STANDARD_COLORS = [
@@ -40,20 +42,27 @@
 
 	/**
 	 * LocalStorage key for saved custom colors
+	 *
 	 * @constant {string}
 	 */
 	const STORAGE_KEY = 'layers-custom-colors';
 
 	/**
 	 * Maximum number of custom color slots
+	 *
 	 * @constant {number}
 	 */
 	const MAX_CUSTOM_COLORS = 16;
 
 	/**
-	 * Creates a new ColorPickerDialog instance
+	 * ColorPickerDialog class
 	 *
 	 * @class ColorPickerDialog
+	 */
+class ColorPickerDialog {
+	/**
+	 * Creates a new ColorPickerDialog instance
+	 *
 	 * @param {Object} config - Configuration options
 	 * @param {string} [config.currentColor] - The currently selected color
 	 * @param {Function} config.onApply - Callback when color is applied: function(color)
@@ -62,7 +71,7 @@
 	 * @param {HTMLElement} [config.anchorElement] - Element to position dialog near
 	 * @param {Function} [config.registerCleanup] - Function to register cleanup callback
 	 */
-	function ColorPickerDialog( config ) {
+	constructor( config ) {
 		this.config = config || {};
 		this.currentColor = config.currentColor || '#000000';
 		this.selectedColor = this.currentColor;
@@ -82,22 +91,24 @@
 
 	/**
 	 * Format a template string with a value
+	 *
 	 * @param {string} template - Template with $1 placeholder
 	 * @param {string} value - Value to substitute
 	 * @return {string} Formatted string
 	 */
-	ColorPickerDialog.prototype.formatTemplate = function ( template, value ) {
+	formatTemplate( template, value ) {
 		if ( typeof template !== 'string' ) {
 			return value;
 		}
 		return template.indexOf( '$1' ) !== -1 ? template.replace( '$1', value ) : template + ' ' + value;
-	};
+	}
 
 	/**
 	 * Get saved custom colors from localStorage
+	 *
 	 * @return {string[]} Array of color hex values
 	 */
-	ColorPickerDialog.prototype.getSavedColors = function () {
+	getSavedColors() {
 		try {
 			return JSON.parse( localStorage.getItem( STORAGE_KEY ) || '[]' );
 		} catch ( e ) {
@@ -107,13 +118,13 @@
 			}
 			return [];
 		}
-	};
+	}
 
 	/**
 	 * Save a custom color to localStorage
 	 * @param {string} color - Color hex value to save
 	 */
-	ColorPickerDialog.prototype.saveCustomColor = function ( color ) {
+	saveCustomColor ( color ) {
 		if ( !color || color === 'none' ) {
 			return;
 		}
@@ -130,7 +141,7 @@
 				mw.log.warn( '[ColorPickerDialog] Failed to save custom color:', e.message );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Create a swatch button element
@@ -139,7 +150,7 @@
 	 * @param {boolean} isNone - Whether this is the "no color" button
 	 * @return {HTMLButtonElement} The button element
 	 */
-	ColorPickerDialog.prototype.createSwatchButton = function ( color, ariaLabel, isNone ) {
+	createSwatchButton ( color, ariaLabel, isNone ) {
 		const btn = document.createElement( 'button' );
 		btn.type = 'button';
 		btn.className = isNone ? 'color-picker-none-btn' : 'color-picker-swatch-btn';
@@ -156,13 +167,13 @@
 		} );
 
 		return btn;
-	};
+	}
 
 	/**
 	 * Update the selected button state
 	 * @param {HTMLButtonElement} button - Button to select
 	 */
-	ColorPickerDialog.prototype.updateSelection = function ( button ) {
+	updateSelection ( button ) {
 		if ( this.selectedButton ) {
 			this.selectedButton.classList.remove( 'selected' );
 		}
@@ -170,13 +181,13 @@
 			button.classList.add( 'selected' );
 			this.selectedButton = button;
 		}
-	};
+	}
 
 	/**
 	 * Calculate dialog position based on anchor element
 	 * @return {Object} Position with top and left properties
 	 */
-	ColorPickerDialog.prototype.calculatePosition = function () {
+	calculatePosition () {
 		const defaultPos = { top: 100, left: 100 };
 
 		if ( !this.anchorElement ) {
@@ -208,13 +219,13 @@
 		}
 
 		return { top: Math.floor( top ), left: Math.floor( left ) };
-	};
+	}
 
 	/**
 	 * Create the dialog DOM structure
 	 * @return {Object} Object with overlay and dialog elements
 	 */
-	ColorPickerDialog.prototype.createDialogDOM = function () {
+	createDialogDOM () {
 		const strings = this.strings;
 
 		// Overlay
@@ -377,12 +388,12 @@
 		} );
 
 		return { overlay: overlay, dialog: dialog };
-	};
+	}
 
 	/**
 	 * Set up keyboard event handlers
 	 */
-	ColorPickerDialog.prototype.setupKeyboardHandlers = function () {
+	setupKeyboardHandlers () {
 		const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 		// Escape to close
@@ -417,12 +428,12 @@
 			}
 		};
 		this.dialog.addEventListener( 'keydown', this.focusTrapHandler );
-	};
+	}
 
 	/**
 	 * Open the color picker dialog
 	 */
-	ColorPickerDialog.prototype.open = function () {
+	open () {
 		this.previouslyFocused = document.activeElement;
 
 		const dom = this.createDialogDOM();
@@ -449,12 +460,12 @@
 		} else {
 			this.dialog.focus();
 		}
-	};
+	}
 
 	/**
 	 * Close the color picker dialog
 	 */
-	ColorPickerDialog.prototype.close = function () {
+	close () {
 		// Remove event listeners
 		if ( this.escapeHandler ) {
 			document.removeEventListener( 'keydown', this.escapeHandler );
@@ -486,17 +497,18 @@
 
 		this.overlay = null;
 		this.dialog = null;
-	};
+	}
 
 	/**
 	 * Static helper to create a color display button
+	 *
 	 * @param {Object} config - Configuration
 	 * @param {string} config.color - Current color value
 	 * @param {Object} config.strings - i18n strings
 	 * @param {Function} config.onClick - Click handler
 	 * @return {HTMLButtonElement} Color display button
 	 */
-	ColorPickerDialog.createColorButton = function ( config ) {
+	static createColorButton( config ) {
 		const strings = config.strings || DEFAULT_STRINGS;
 		const color = config.color;
 		const onClick = config.onClick || function () {};
@@ -518,15 +530,16 @@
 		button.addEventListener( 'click', onClick );
 
 		return button;
-	};
+	}
 
 	/**
 	 * Static helper to update a color display button's appearance
+	 *
 	 * @param {HTMLButtonElement} button - The button to update
 	 * @param {string} color - New color value
 	 * @param {Object} [strings] - i18n strings
 	 */
-	ColorPickerDialog.updateColorButton = function ( button, color, strings ) {
+	static updateColorButton( button, color, strings ) {
 		strings = strings || DEFAULT_STRINGS;
 		let labelValue = color;
 
@@ -544,7 +557,8 @@
 			template.replace( '$1', labelValue ) :
 			template + ' ' + labelValue;
 		button.setAttribute( 'aria-label', ariaLabel );
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
