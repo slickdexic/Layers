@@ -13,6 +13,24 @@
 			return window[ globalName ] || null;
 		};
 
+	// Lazy-resolved utilities (resolved on first use)
+	let _TextUtils = null;
+	let _GeometryUtils = null;
+
+	function getTextUtils() {
+		if ( !_TextUtils ) {
+			_TextUtils = getClass( 'Utils.Text', 'TextUtils' );
+		}
+		return _TextUtils;
+	}
+
+	function getGeometryUtils() {
+		if ( !_GeometryUtils ) {
+			_GeometryUtils = getClass( 'Utils.Geometry', 'GeometryUtils' );
+		}
+		return _GeometryUtils;
+	}
+
 	/**
 	 * CanvasRenderer - Manages all canvas rendering operations
 	 *
@@ -847,11 +865,13 @@
 		// Handle text layers specially - they need canvas context for measurement
 		if ( layer && layer.type === 'text' ) {
 			const canvasWidth = this.canvas ? this.canvas.width : 0;
-			const metrics = window.TextUtils.measureTextLayer( layer, this.ctx, canvasWidth );
+			const TextUtils = getTextUtils();
+			const metrics = TextUtils ? TextUtils.measureTextLayer( layer, this.ctx, canvasWidth ) : null;
 			return metrics ? { x: metrics.originX, y: metrics.originY, width: metrics.width, height: metrics.height } : null;
 		}
 		// Use GeometryUtils for all other layer types
-		return window.GeometryUtils.getLayerBoundsForType( layer );
+		const GeometryUtils = getGeometryUtils();
+		return GeometryUtils ? GeometryUtils.getLayerBoundsForType( layer ) : null;
 	};
 
 	CanvasRenderer.prototype.drawErrorPlaceholder = function ( layer ) {
@@ -927,7 +947,8 @@
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.Renderer = CanvasRenderer;
 
-		// Backward compatibility - direct window export
+		// DEPRECATED: Direct window export - use window.Layers.Canvas.Renderer instead
+		// This will be removed in a future version
 		window.CanvasRenderer = CanvasRenderer;
 	}
 

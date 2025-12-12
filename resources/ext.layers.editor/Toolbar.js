@@ -672,6 +672,7 @@
 			// Use closest() to handle clicks on child elements (like SVG icons inside buttons)
 			const toolButton = e.target.closest( '.tool-button' );
 			const actionButton = e.target.closest( '.action-button' );
+			const helpButton = e.target.closest( '.help-button' );
 			const zoomButton = e.target.closest( '[data-action^="zoom"]' );
 			const fitButton = e.target.closest( '[data-action="fit-window"]' );
 
@@ -679,6 +680,8 @@
 				this.selectTool( toolButton.dataset.tool );
 			} else if ( actionButton ) {
 				this.executeAction( actionButton.dataset.action );
+			} else if ( helpButton ) {
+				this.executeAction( helpButton.dataset.action );
 			} else if ( zoomButton ) {
 				this.executeZoomAction( zoomButton.dataset.action );
 			} else if ( fitButton ) {

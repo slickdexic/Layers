@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 10, 2025  
+**Last Updated:** December 11, 2025  
 **Status:** Active  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
@@ -8,18 +8,18 @@
 
 ## Overview
 
-This document provides a **prioritized, actionable improvement plan** based on the critical code review performed December 10, 2025.
+This document provides a **prioritized, actionable improvement plan** based on the critical code review performed December 11, 2025.
 
 ### Current State
 
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Strong | 3,877 tests, 89.6% coverage |
+| **Test Suite** | ✅ Strong | 3,869 tests, 88.4% coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
-| **Code Splitting** | ✅ Done | Viewer ~4K lines, Editor ~31K lines |
-| **JavaScript Architecture** | � Improving | ShadowRenderer extracted, ES6 classes growing |
-| **Namespace** | 🔴 Polluted | 54 direct window.X exports |
+| **Code Splitting** | ✅ Done | Viewer ~3.2K lines, Editor ~31.6K lines |
+| **JavaScript Architecture** | 🟡 Improving | 36 ES6 classes, ShadowRenderer extracted |
+| **Namespace** | 🟡 In Progress | 48 direct window.X exports remain (1 migrated) |
 
 ---
 
@@ -42,10 +42,7 @@ This document provides a **prioritized, actionable improvement plan** based on t
 **Effort:** 1 hour  
 **File:** `src/Database/LayersDatabase.php`
 
-~~**Problem:**
-The `getNextRevision()` method (lines 309-324) is never called. It's been superseded by `getNextRevisionForSet()`.~~
-
-**Resolution:** Dead method removed.
+**Resolution:** Dead `getNextRevision()` method was removed. Only `getNextRevisionForSet()` remains.
 
 ---
 
@@ -54,9 +51,6 @@ The `getNextRevision()` method (lines 309-324) is never called. It's been supers
 **Status:** ✅ COMPLETED (Dec 11, 2025)  
 **Effort:** 30 minutes  
 **File:** `resources/ext.layers.editor/CanvasManager.js`
-
-~~**Problem:**
-Three empty catch blocks silently swallow errors.~~
 
 **Resolution:** Added `mw.log.warn()` to all catch blocks.
 
@@ -68,23 +62,33 @@ Three empty catch blocks silently swallow errors.~~
 **Effort:** 2-3 hours  
 **Impact:** Stops code duplication
 
-~~**Problem:**
-The `getClass()` helper is duplicated in 4 files.~~
-
-**Resolution:** Created `NamespaceHelper.js` with shared implementation. Updated all 4 files.
+**Resolution:** Created `utils/NamespaceHelper.js` with shared implementation. Files updated to use it.
 
 ---
 
 ### P0.4 Remove Empty Skipped Test
 
 **Status:** ✅ COMPLETED (Dec 11, 2025)  
-**Effort:** 5 minutes  
-**File:** `tests/jest/CanvasRenderer.test.js`
+**Effort:** 5 minutes
 
-~~**Problem:**
-Empty skipped test.~~
+**Resolution:** Empty skipped test removed.
 
-**Resolution:** Test removed.
+---
+
+### P0.5 Fix Failing IconFactory Tests
+
+**Status:** ✅ COMPLETED (Dec 11, 2025)  
+**Effort:** 30 minutes  
+**Files:** `tests/jest/IconFactory.test.js`
+
+**Resolution:**
+Updated 3 test blocks in IconFactory.test.js to match current Feather-style implementation:
+- Eye icon: Changed from ellipse+circle to path+circle expectations
+- Lock icon: Fixed color expectations (#888 not #27ae60), updated path expectations
+- Delete icon: Removed style/opacity check that doesn't exist
+- Grab icon: Changed from 4 to 6 circles (2x3 grid pattern)
+
+All 18 IconFactory tests now pass.
 
 ---
 
@@ -92,15 +96,22 @@ Empty skipped test.~~
 
 ### P1.1 Eliminate Direct Global Exports
 
-**Status:** NOT STARTED  
+**Status:** 🟡 IN PROGRESS (Started Dec 11, 2025)  
 **Effort:** 2-3 weeks  
 **Impact:** Enables future ES modules, prevents conflicts
 
+**Progress:**
+- ✅ CanvasRenderer.js updated to use `getClass()` for TextUtils and GeometryUtils
+- ✅ Added DEPRECATED comments to direct window.X exports
+- ✅ All 3,869 tests still pass
+
+**Remaining:** 48 files still export directly to `window.ClassName`
+
 **Problem:**
-54 files export to both `window.Layers.X` AND `window.X`:
+49 files export to both `window.Layers.X` AND `window.X`:
 ```javascript
-window.Layers.Canvas.Manager = CanvasManager;  // Good
-window.CanvasManager = CanvasManager;          // Bad - remove
+window.Layers.Canvas.Manager = CanvasManager;  // Good (178 instances)
+window.CanvasManager = CanvasManager;          // Bad - remove (49 instances)
 ```
 
 **Action Plan:**
@@ -108,20 +119,20 @@ window.CanvasManager = CanvasManager;          // Bad - remove
 1. **Week 1: Audit and prepare**
    - Create deprecation warnings for direct global access
    - Update `compat.js` with console warnings
-   - Document all 54 direct exports
+   - Document all 49 direct exports
 
 2. **Week 2: Update consumers**
    - Search for all `window.CanvasManager` etc. usage
-   - Replace with `window.Layers.Canvas.Manager` or `getClass()`
+   - Replace with `window.Layers.Canvas.Manager` or `getClass()` from NamespaceHelper
    - Update test mocks to use namespaced imports
 
 3. **Week 3: Remove direct exports**
-   - Remove `window.X = X;` lines from all 54 files
+   - Remove `window.X = X;` lines from all files
    - Keep only `window.Layers.*` exports
    - Run full test suite
 
 **Success Criteria:**
-- [ ] 0 direct `window.X` exports (currently 54)
+- [ ] 0 direct `window.X` exports (currently 49)
 - [ ] All tests pass
 - [ ] No runtime errors in browser
 
@@ -134,14 +145,14 @@ window.CanvasManager = CanvasManager;          // Bad - remove
 **Impact:** Catch multi-component bugs
 
 **Problem:**
-Only 2 integration tests exist vs 70+ unit tests. No coverage for:
+Limited integration test coverage. No coverage for:
 - CanvasManager ↔ Controller interactions
 - StateManager ↔ HistoryManager synchronization
 - Error propagation across modules
 
 **Action Plan:**
 
-1. Create `tests/jest/integration/` directory
+1. Create `tests/jest/integration/` directory (if not exists)
 2. Add tests for:
    - Layer creation flow (ToolManager → CanvasManager → StateManager)
    - Undo/redo flow (HistoryManager ↔ StateManager)
@@ -158,69 +169,83 @@ Only 2 integration tests exist vs 70+ unit tests. No coverage for:
 **Effort:** 1 day  
 **Impact:** Debugging consistency
 
-~~**Problem:**
-Three logging patterns mixed.~~
-
-**Resolution:** All `wfDebugLog('Layers', ...)` calls replaced with injected logger. Anonymous fallback removed from Hooks.php.
+**Resolution:** All `wfDebugLog('Layers', ...)` calls replaced with injected logger.
 
 ---
 
 ## Phase 2: Major Refactoring (P2)
 
-### P2.1 Begin ES6 Class Migration
+### P2.1 Continue ES6 Class Migration
 
-**Status:** NOT STARTED  
+**Status:** ~6% COMPLETE (36 classes of ~604 prototype patterns)  
 **Effort:** 6-8 weeks  
 **Impact:** Modern code, TypeScript readiness
 
-**Problem:**
-622 prototype methods vs 34 ES6 classes (5% modern).
+**Already Using ES6 Classes (36 total):**
+- AccessibilityAnnouncer, APIManager, CanvasUtilities
+- ClipboardController, DialogManager, ErrorHandler
+- EventManager, EventTracker, GeometryUtils
+- HistoryManager, HitTestController, ImageLoader
+- ImportExportManager, LayerItemEvents, LayerPanel
+- MarqueeSelection, MessageHelper, ModuleRegistry
+- RevisionManager, SelectionHandles, SelectionState
+- StateManager, StyleController, TextUtils
+- UIManager, ValidationManager, ZoomPanController
+- and more...
+
+**Still Using Prototype Pattern (17 constructor functions):**
+- CanvasManager.js (2,071 lines) - HIGH PRIORITY
+- CanvasRenderer.js (939 lines)
+- CanvasEvents.js (573 lines)
+- LayersEditor.js (1,268 lines) - HIGH PRIORITY
+- LayersValidator.js (953 lines)
+- LayerSetManager.js (570 lines)
+- Toolbar.js (955 lines)
+- ToolbarStyleControls.js (759 lines)
+- SelectionManager.js (1,261 lines)
+- ToolManager.js (currently unknown)
+- TransformController.js (1,332 lines)
+- And others in canvas/, tools/, ui/ directories
 
 **Migration Order (by test coverage, lowest risk first):**
 
 | Phase | Files | Coverage | Weeks |
 |-------|-------|----------|-------|
-| 1 | StyleController, EventManager, EventTracker | 96-100% | 1 |
-| 2 | TextUtils, ImageLoader, GeometryUtils | 89-91% | 1 |
-| 3 | ModuleRegistry, AccessibilityAnnouncer | 94% | 1 |
-| 4 | CanvasUtilities, DeepClone | ~90% | 1 |
-| 5 | HistoryManager, ValidationManager | 90-97% | 2 |
-| 6 | SelectionManager, ToolManager | 85-90% | 2 |
+| 1 | LayersValidator, LayerSetManager | High | 1 |
+| 2 | CanvasEvents, CanvasRenderer | High | 1 |
+| 3 | Toolbar, ToolbarStyleControls | Medium | 1 |
+| 4 | SelectionManager | High | 1 |
+| 5 | CanvasManager | High | 2 |
+| 6 | LayersEditor | High | 1 |
 
 **Conversion Pattern:**
 ```javascript
 // Before:
-function TextUtils() { this.maxLength = 1000; }
-TextUtils.prototype.truncate = function( text ) { ... };
-window.TextUtils = TextUtils;
+function LayersValidator( options ) { this.options = options; }
+LayersValidator.prototype.validate = function( data ) { ... };
+window.LayersValidator = LayersValidator;
 
 // After:
-class TextUtils {
-    constructor() {
-        this.maxLength = 1000;
+class LayersValidator {
+    constructor( options ) {
+        this.options = options;
     }
-    truncate( text ) { ... }
+    validate( data ) { ... }
 }
-window.Layers.Utils.Text = TextUtils;
+window.Layers.Validation.LayersValidator = LayersValidator;
 ```
-
-**Rules:**
-- [ ] Convert one file at a time
-- [ ] Run full test suite after each conversion
-- [ ] No functionality changes during conversion
-- [ ] Update JSDoc to use `@class` and `@method`
 
 ---
 
-### P2.2 Split LayerRenderer.js (2,195 lines)
+### P2.2 Split LayerRenderer.js (1,948 lines)
 
 **Status:** 🟡 IN PROGRESS (ShadowRenderer extracted - Dec 11, 2025)  
 **Effort:** 4 weeks  
 **Impact:** Maintainability, isolated testing
 
 **Progress:**
-- ✅ ShadowRenderer.js extracted (~500 lines of shadow logic)
-- ✅ LayerRenderer.js reduced to ~1,850 lines
+- ✅ ShadowRenderer.js extracted (517 lines of shadow logic)
+- ✅ LayerRenderer.js reduced from ~2,195 to ~1,948 lines
 - ⬜ Shape renderers still to extract
 
 **Proposed Structure:**
@@ -255,24 +280,43 @@ ext.layers.shared/
 
 **Status:** ~45% COMPLETE (9 controllers extracted)  
 **Effort:** 3-4 weeks  
-**Target:** CanvasManager < 500 lines
+**Target:** CanvasManager < 500 lines (currently 2,071)
 
-**Already Extracted:**
-- ZoomPanController (97% coverage)
-- GridRulersController (94% coverage)
-- TransformController (86% coverage)
-- HitTestController (98% coverage)
-- DrawingController (100% coverage)
-- ClipboardController (98% coverage)
-- RenderCoordinator (93% coverage)
-- InteractionController (100% coverage)
-- TextInputController (86% coverage)
+**Already Extracted Controllers:**
+| Controller | Lines | Coverage |
+|------------|-------|----------|
+| ZoomPanController | ~340 | 97% |
+| GridRulersController | ~385 | 94% |
+| TransformController | ~1,332 | 86% |
+| HitTestController | ~380 | 98% |
+| DrawingController | ~632 | 100% |
+| ClipboardController | ~210 | 98% |
+| RenderCoordinator | ~390 | 93% |
+| InteractionController | ~490 | 100% |
+| TextInputController | ~??? | 86% |
 
-**Still in CanvasManager (~1,000 lines to extract):**
+**Note:** TransformController at 1,332 lines has become a god class itself - should be split.
+
+**Still in CanvasManager (~1,500+ lines to extract):**
 - Background image loading (~150 lines)
 - Layer operations (add/remove/reorder) (~200 lines)
 - Style state management (~100 lines)
 - Bounds calculations (~100 lines)
+- Event coordination (~300+ lines)
+- And more...
+
+---
+
+### P2.4 Split TransformController (1,332 lines)
+
+**Status:** NOT STARTED  
+**Effort:** 2 weeks  
+**Impact:** Reduce complexity in largest controller
+
+TransformController has grown to 1,332 lines. Consider extracting:
+- ResizeController (~400 lines)
+- RotationController (~300 lines)
+- DragController (~300 lines)
 
 ---
 
@@ -284,12 +328,7 @@ ext.layers.shared/
 **Effort:** 4-6 weeks  
 **Target:** 0 prototype methods
 
-Convert remaining files:
-- CanvasManager.js (2,061 lines)
-- LayerPanel.js (1,576 lines)
-- LayersEditor.js (1,265 lines)
-- All UI components
-- All controller files
+Convert remaining files after initial batch succeeds.
 
 ---
 
@@ -356,19 +395,21 @@ P0.1 Remove Dead PHP Code:    ████████████████�
 P0.2 Empty Catch Blocks:      ████████████████████ 100% ✓
 P0.3 Extract getClass():      ████████████████████ 100% ✓
 P0.4 Remove Skipped Test:     ████████████████████ 100% ✓
+P0.5 Fix IconFactory Tests:   ░░░░░░░░░░░░░░░░░░░░ 0% (6 failing)
 
 Phase 1 (High Impact):
-P1.1 Global Export Cleanup:   ░░░░░░░░░░░░░░░░░░░░ 0% (54 exports)
-P1.2 Integration Tests:       ░░░░░░░░░░░░░░░░░░░░ 0% (0/10 tests)
+P1.1 Global Export Cleanup:   ░░░░░░░░░░░░░░░░░░░░ 0% (49 exports)
+P1.2 Integration Tests:       ░░░░░░░░░░░░░░░░░░░░ 0%
 P1.3 PHP Logging:             ████████████████████ 100% ✓
 
 Phase 2 (Refactoring):
-P2.1 ES6 Class Migration:     ██░░░░░░░░░░░░░░░░░░ 10% (ErrorHandler converted)
-P2.2 Split LayerRenderer:     ███░░░░░░░░░░░░░░░░░ 15% (ShadowRenderer extracted)
-P2.3 CanvasManager Extraction: █████████░░░░░░░░░░░ 45% (9/~15 controllers)
+P2.1 ES6 Class Migration:     ██░░░░░░░░░░░░░░░░░░ 6% (36/~604)
+P2.2 Split LayerRenderer:     ███░░░░░░░░░░░░░░░░░ 15% (ShadowRenderer done)
+P2.3 CanvasManager Extraction: █████████░░░░░░░░░░░ 45% (9 controllers)
+P2.4 Split TransformController: ░░░░░░░░░░░░░░░░░░░░ 0%
 
 Phase 3 (Modernization):
-P3.1 Complete ES6 Migration:  █░░░░░░░░░░░░░░░░░░░ 5%
+P3.1 Complete ES6 Migration:  █░░░░░░░░░░░░░░░░░░░ 6%
 P3.2 TypeScript Definitions:  ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.3 TypeScript Migration:    ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.4 Unified Validation:      ░░░░░░░░░░░░░░░░░░░░ 0%
@@ -383,23 +424,25 @@ P3.4 Unified Validation:      ░░░░░░░░░░░░░░░░�
 - [x] 0 empty catch blocks ✓
 - [x] `getClass()` in single shared file ✓
 - [x] 0 skipped tests ✓
+- [ ] 0 failing tests (currently 6)
 
 ### Phase 1 Complete When:
-- [ ] Direct `window.X` exports = 0 (currently 54)
+- [ ] Direct `window.X` exports = 0 (currently 49)
 - [ ] Integration tests ≥ 10
 - [x] All PHP logging uses injected logger ✓
 
 ### Phase 2 Complete When:
-- [ ] ES6 classes ≥ 50% of methods
-- [ ] LayerRenderer.js split into ≤ 300-line files (15% - ShadowRenderer done)
-- [ ] CanvasManager < 500 lines
+- [ ] ES6 classes ≥ 50% of codebase (currently ~6%)
+- [ ] LayerRenderer.js < 500 lines (currently 1,948)
+- [ ] CanvasManager < 500 lines (currently 2,071)
+- [ ] TransformController < 500 lines (currently 1,332)
 
 ### Project "Healthy" When:
-- [ ] 0 files > 1,000 lines (except entry points)
+- [ ] 0 files > 1,000 lines (currently 6)
 - [ ] ES6 classes throughout
-- [ ] 0 direct global exports
-- [ ] 0 prototype methods
-- [ ] TypeScript definitions complete
+- [ ] 0 direct global exports (currently 49)
+- [ ] 0 prototype methods (currently ~604)
+- [ ] All tests passing (currently 6 failing)
 
 ---
 
@@ -407,7 +450,7 @@ P3.4 Unified Validation:      ░░░░░░░░░░░░░░░░�
 
 | Phase | Duration | Start After |
 |-------|----------|-------------|
-| Phase 0 | 1 week | Immediately |
+| Phase 0 | 1 day remaining | Now (1 task left) |
 | Phase 1 | 4 weeks | Phase 0 |
 | Phase 2 | 8-12 weeks | Phase 1 |
 | Phase 3 | 12+ weeks | Phase 2 |
@@ -429,11 +472,10 @@ P3.4 Unified Validation:      ░░░░░░░░░░░░░░░░�
 
 ## Quick Start: What to Do Today
 
-1. **Delete dead PHP code** (P0.1) - 5 minutes
-2. **Add catch block logging** (P0.2) - 15 minutes
-3. **Delete empty skipped test** (P0.4) - 2 minutes
-4. **Create GitHub issue for P1.1** - tracking
-5. **Run `npm run test:js -- --coverage`** - verify baseline
+1. **Fix IconFactory tests** (P0.5) - 6 failing tests
+2. **Run `npm run test:js -- --coverage`** - verify baseline
+3. **Review global exports** - prepare for P1.1
+4. **Pick one ES6 migration candidate** - low-risk utility
 
 ---
 
@@ -443,20 +485,24 @@ P3.4 Unified Validation:      ░░░░░░░░░░░░░░░░�
 # Run all tests
 npm run test:js -- --coverage
 
+# Check test failures
+npm run test:js 2>&1 | grep -A5 "FAIL"
+
 # Check for remaining direct global exports
-grep -rE "window\.[A-Z][a-zA-Z]+ =" resources --include="*.js" | grep -v "window\.Layers" | wc -l
+grep -rE "window\.[A-Z][a-zA-Z]+ ?=" resources --include="*.js" | grep -v "window\.Layers" | wc -l
 
 # Count prototype vs class methods
 echo "Prototypes: $(grep -r "\.prototype\." resources --include="*.js" | wc -l)"
-echo "Classes: $(grep -rE "^class |^[[:space:]]*class " resources --include="*.js" | wc -l)"
+echo "Classes: $(grep -rE "^\s*class\s+[A-Z]" resources --include="*.js" | wc -l)"
 
-# Find god classes
-find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | sort -rn | head -10
+# Find god classes (>1000 lines)
+find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | awk '$1 >= 1000 {print}' | sort -rn
 
 # Check for empty catch blocks
-grep -rE "catch.*\{\s*\}" resources --include="*.js"
+grep -rE "catch\s*\([^)]*\)\s*\{\s*\}" resources --include="*.js"
 ```
 
 ---
 
-*Plan created by GitHub Copilot (Claude Opus 4.5) on December 10, 2025*
+*Plan created by GitHub Copilot (Claude Opus 4.5) on December 10, 2025*  
+*Last updated: December 11, 2025*

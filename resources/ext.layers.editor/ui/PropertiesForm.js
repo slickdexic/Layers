@@ -650,16 +650,16 @@
 				addInput( { label: t( 'layers-prop-inner-radius', 'Inner Radius' ), type: 'number', value: Math.round( layer.innerRadius || ( ( layer.outerRadius || 50 ) * 0.5 ) ), step: 1, prop: 'innerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { innerRadius: Math.round( parseFloat( v ) ) } ); } } );
 				break;
 			case ( LAYER_TYPES.LINE || 'line' ):
-				addInput( { label: t( 'layers-prop-start-x', 'Start X' ), type: 'number', value: layer.x1 || 0, step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-start-y', 'Start Y' ), type: 'number', value: layer.y1 || 0, step: 1, prop: 'y1', onChange: function ( v ) { editor.updateLayer( layer.id, { y1: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-end-x', 'End X' ), type: 'number', value: layer.x2 || 0, step: 1, prop: 'x2', onChange: function ( v ) { editor.updateLayer( layer.id, { x2: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-end-y', 'End Y' ), type: 'number', value: layer.y2 || 0, step: 1, prop: 'y2', onChange: function ( v ) { editor.updateLayer( layer.id, { y2: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-start-x', 'Start X' ), type: 'number', value: Math.round( layer.x1 || 0 ), step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-start-y', 'Start Y' ), type: 'number', value: Math.round( layer.y1 || 0 ), step: 1, prop: 'y1', onChange: function ( v ) { editor.updateLayer( layer.id, { y1: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-end-x', 'End X' ), type: 'number', value: Math.round( layer.x2 || 0 ), step: 1, prop: 'x2', onChange: function ( v ) { editor.updateLayer( layer.id, { x2: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-end-y', 'End Y' ), type: 'number', value: Math.round( layer.y2 || 0 ), step: 1, prop: 'y2', onChange: function ( v ) { editor.updateLayer( layer.id, { y2: Math.round( parseFloat( v ) ) } ); } } );
 				break;
 			case ( LAYER_TYPES.ARROW || 'arrow' ):
-				addInput( { label: t( 'layers-prop-start-x', 'Start X' ), type: 'number', value: layer.x1 || 0, step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-start-y', 'Start Y' ), type: 'number', value: layer.y1 || 0, step: 1, prop: 'y1', onChange: function ( v ) { editor.updateLayer( layer.id, { y1: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-end-x', 'End X' ), type: 'number', value: layer.x2 || 0, step: 1, prop: 'x2', onChange: function ( v ) { editor.updateLayer( layer.id, { x2: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-end-y', 'End Y' ), type: 'number', value: layer.y2 || 0, step: 1, prop: 'y2', onChange: function ( v ) { editor.updateLayer( layer.id, { y2: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-start-x', 'Start X' ), type: 'number', value: Math.round( layer.x1 || 0 ), step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-start-y', 'Start Y' ), type: 'number', value: Math.round( layer.y1 || 0 ), step: 1, prop: 'y1', onChange: function ( v ) { editor.updateLayer( layer.id, { y1: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-end-x', 'End X' ), type: 'number', value: Math.round( layer.x2 || 0 ), step: 1, prop: 'x2', onChange: function ( v ) { editor.updateLayer( layer.id, { x2: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-end-y', 'End Y' ), type: 'number', value: Math.round( layer.y2 || 0 ), step: 1, prop: 'y2', onChange: function ( v ) { editor.updateLayer( layer.id, { y2: Math.round( parseFloat( v ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-arrow-size', 'Head Size' ), type: 'number', value: layer.arrowSize || 15, min: 5, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { arrowSize: parseFloat( v ) } ); } } );
 				addSliderInput( { label: t( 'layers-prop-head-scale', 'Head Scale' ), value: Math.round( ( layer.headScale || 1 ) * 100 ), min: 25, max: 300, step: 5, onChange: function ( v ) { editor.updateLayer( layer.id, { headScale: v / 100 } ); } } );
 				addInput( { label: t( 'layers-prop-tail-width', 'Tail Width' ), type: 'number', value: layer.tailWidth || 0, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { tailWidth: parseFloat( v ) } ); } } );
@@ -677,8 +677,8 @@
 				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: layer.height || 0, step: 1, decimals: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: parseFloat( v ) } ); } } );
 				break;
 			case 'blur':
-				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: layer.width || 0, step: 1, decimals: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: layer.height || 0, step: 1, decimals: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: parseFloat( v ) } ); } } );
+				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || 0 ), step: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: Math.round( layer.height || 0 ), step: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: Math.round( parseFloat( v ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-blur-radius', 'Blur Radius' ), type: 'number', value: layer.blurRadius || 12, min: 1, max: 64, step: 1, onChange: function ( v ) { const br = Math.max( 1, Math.min( 64, parseInt( v, 10 ) || 12 ) ); editor.updateLayer( layer.id, { blurRadius: br } ); } } );
 				break;
 		}

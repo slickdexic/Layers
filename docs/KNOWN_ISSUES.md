@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** December 10, 2025  
-**Version:** 0.8.1-dev
+**Last Updated:** December 11, 2025  
+**Version:** 0.8.4
 
 This document lists known functionality issues and their current status.
 

@@ -142,6 +142,9 @@
 	"layers-keyboard-shortcuts-tooltip": "Show keyboard shortcuts (Shift+?)",
 	"layers-shortcuts-dialog-title": "Keyboard Shortcuts",
 	"layers-shortcuts-dialog-close": "Close",
+	"layers-shortcut-select-all": "Select All",
+	"layers-shortcut-deselect": "Deselect / Cancel",
+	"layers-shortcut-zoom": "Zoom In/Out",
 
 	"layers-blend-normal": "Normal",
 	"layers-blend-multiply": "Multiply",

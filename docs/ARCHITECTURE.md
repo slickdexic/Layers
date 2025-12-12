@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** December 2025  
-**Version:** 0.8.1-dev
+**Version:** 0.8.4
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -18,6 +18,21 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
+## Codebase Statistics (December 2025)
+
+| Metric | Value |
+|--------|-------|
+| Total JS files | 67 |
+| Viewer + Shared modules | ~3,226 lines |
+| Editor module | ~31,585 lines |
+| ES6 classes | 36 |
+| Prototype patterns | ~604 |
+| Test coverage | 88.4% statements |
+| Jest tests | 3,863+ |
+| PHPUnit test files | 15 |
+
+---
+
 ## Recent Architecture Changes
 
 ### December 2025: Accessibility & Editor Modularization
@@ -26,7 +41,8 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - **EditorBootstrap.js** - Extracted initialization, hooks, cleanup from LayersEditor
 - **RevisionManager.js** - Extracted revision and named layer set management
 - **DialogManager.js** - Extracted modal dialogs with ARIA accessibility
-- **LayersEditor.js** reduced from 1,889 → 1,203 lines (-36%)
+- **ShadowRenderer.js** - Extracted shadow rendering from LayerRenderer
+- **NamespaceHelper.js** - Centralized getClass() utility
 
 ---
 

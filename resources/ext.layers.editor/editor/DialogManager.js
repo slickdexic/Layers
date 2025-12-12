@@ -302,31 +302,31 @@
 		 */
 		showKeyboardShortcutsDialog() {
 			const overlay = this.createOverlay();
-			const dialog = this.createDialog( this.getMessage( 'layers-shortcuts-title', 'Keyboard Shortcuts' ) );
+			const dialog = this.createDialog( this.getMessage( 'layers-shortcuts-dialog-title', 'Keyboard Shortcuts' ) );
 			dialog.classList.add( 'layers-shortcuts-dialog' );
 
 			// Title
 			const title = document.createElement( 'h3' );
 			title.className = 'layers-modal-title';
-			title.textContent = this.getMessage( 'layers-shortcuts-title', 'Keyboard Shortcuts' );
+			title.textContent = this.getMessage( 'layers-shortcuts-dialog-title', 'Keyboard Shortcuts' );
 			dialog.appendChild( title );
 
 			// Shortcuts list
 			const shortcuts = [
-				{ key: 'Ctrl+Z', action: this.getMessage( 'layers-shortcut-undo', 'Undo' ) },
-				{ key: 'Ctrl+Y', action: this.getMessage( 'layers-shortcut-redo', 'Redo' ) },
-				{ key: 'Ctrl+S', action: this.getMessage( 'layers-shortcut-save', 'Save' ) },
-				{ key: 'Delete', action: this.getMessage( 'layers-shortcut-delete', 'Delete selected' ) },
-				{ key: 'Ctrl+D', action: this.getMessage( 'layers-shortcut-duplicate', 'Duplicate selected' ) },
-				{ key: 'Ctrl+A', action: this.getMessage( 'layers-shortcut-select-all', 'Select all' ) },
+				{ key: 'Ctrl+Z', action: this.getMessage( 'layers-undo', 'Undo' ) },
+				{ key: 'Ctrl+Y', action: this.getMessage( 'layers-redo', 'Redo' ) },
+				{ key: 'Ctrl+S', action: this.getMessage( 'layers-editor-save', 'Save' ) },
+				{ key: 'Delete', action: this.getMessage( 'layers-delete-selected', 'Delete Selected' ) },
+				{ key: 'Ctrl+D', action: this.getMessage( 'layers-duplicate-selected', 'Duplicate Selected' ) },
+				{ key: 'Ctrl+A', action: this.getMessage( 'layers-shortcut-select-all', 'Select All' ) },
 				{ key: 'Escape', action: this.getMessage( 'layers-shortcut-deselect', 'Deselect / Cancel' ) },
-				{ key: 'V', action: this.getMessage( 'layers-shortcut-pointer', 'Pointer tool' ) },
-				{ key: 'T', action: this.getMessage( 'layers-shortcut-text', 'Text tool' ) },
-				{ key: 'R', action: this.getMessage( 'layers-shortcut-rectangle', 'Rectangle tool' ) },
-				{ key: 'E', action: this.getMessage( 'layers-shortcut-ellipse', 'Ellipse tool' ) },
-				{ key: 'A', action: this.getMessage( 'layers-shortcut-arrow', 'Arrow tool' ) },
-				{ key: '+/-', action: this.getMessage( 'layers-shortcut-zoom', 'Zoom in/out' ) },
-				{ key: '0', action: this.getMessage( 'layers-shortcut-fit', 'Fit to window' ) }
+				{ key: 'V', action: this.getMessage( 'layers-tool-select', 'Select Tool' ) },
+				{ key: 'T', action: this.getMessage( 'layers-tool-text', 'Text' ) },
+				{ key: 'R', action: this.getMessage( 'layers-tool-rectangle', 'Rectangle' ) },
+				{ key: 'E', action: this.getMessage( 'layers-tool-ellipse', 'Ellipse' ) },
+				{ key: 'A', action: this.getMessage( 'layers-tool-arrow', 'Arrow' ) },
+				{ key: '+/-', action: this.getMessage( 'layers-shortcut-zoom', 'Zoom In/Out' ) },
+				{ key: '0', action: this.getMessage( 'layers-zoom-fit', 'Fit to Window' ) }
 			];
 
 			const list = document.createElement( 'dl' );
@@ -352,7 +352,7 @@
 			buttons.className = 'layers-modal-buttons';
 
 			const closeBtn = this.createButton(
-				this.getMessage( 'layers-close', 'Close' ),
+				this.getMessage( 'layers-shortcuts-dialog-close', 'Close' ),
 				'layers-btn layers-btn-primary'
 			);
 
@@ -420,6 +420,9 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.DialogManager = DialogManager;
+
+		// DEPRECATED: Direct window export - use window.Layers.UI.DialogManager instead
+		window.DialogManager = DialogManager;
 	}
 
 }() );

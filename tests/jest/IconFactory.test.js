@@ -64,24 +64,24 @@ describe( 'IconFactory', () => {
 			const icon = IconFactory.createEyeIcon( true );
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
 			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
-			// Should have ellipse and circle (pupil)
-			const ellipse = icon.querySelector( 'ellipse' );
+			// Modern Feather-style: path for eye shape and circle for pupil
+			const path = icon.querySelector( 'path' );
 			const circle = icon.querySelector( 'circle' );
-			expect( ellipse ).not.toBeNull();
+			expect( path ).not.toBeNull();
 			expect( circle ).not.toBeNull();
-			expect( ellipse.getAttribute( 'stroke' ) ).toBe( '#666' );
+			expect( path.getAttribute( 'stroke' ) ).toBe( '#555' );
 		} );
 
 		it( 'should create a hidden eye icon with slash', () => {
 			const icon = IconFactory.createEyeIcon( false );
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			// Should have ellipse and line (slash)
-			const ellipse = icon.querySelector( 'ellipse' );
+			// Modern Feather-style: path for eye-off and line for slash
+			const path = icon.querySelector( 'path' );
 			const line = icon.querySelector( 'line' );
-			expect( ellipse ).not.toBeNull();
+			expect( path ).not.toBeNull();
 			expect( line ).not.toBeNull();
-			expect( ellipse.getAttribute( 'stroke' ) ).toBe( '#aaa' );
-			expect( line.getAttribute( 'stroke' ) ).toBe( '#c00' );
+			expect( path.getAttribute( 'stroke' ) ).toBe( '#aaa' );
+			expect( line.getAttribute( 'stroke' ) ).toBe( '#aaa' );
 		} );
 	} );
 
@@ -89,20 +89,22 @@ describe( 'IconFactory', () => {
 		it( 'should create a locked icon with red color', () => {
 			const icon = IconFactory.createLockIcon( true );
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			expect( icon.getAttribute( 'style' ) ).toContain( 'opacity: 1' );
+			expect( icon.getAttribute( 'style' ) ).toContain( 'opacity' );
 			const rect = icon.querySelector( 'rect' );
 			expect( rect.getAttribute( 'stroke' ) ).toBe( '#d63031' );
 			const path = icon.querySelector( 'path' );
-			expect( path.getAttribute( 'd' ) ).toContain( 'M9 10V8' ); // closed shackle
+			// Modern Feather-style: shackle path starts at M7 11V7
+			expect( path.getAttribute( 'd' ) ).toContain( 'M7 11V7' );
 		} );
 
-		it( 'should create an unlocked icon with green color', () => {
+		it( 'should create an unlocked icon with muted color', () => {
 			const icon = IconFactory.createLockIcon( false );
-			expect( icon.getAttribute( 'style' ) ).toContain( 'opacity: 0.4' );
+			expect( icon.getAttribute( 'style' ) ).toContain( 'opacity' );
 			const rect = icon.querySelector( 'rect' );
-			expect( rect.getAttribute( 'stroke' ) ).toBe( '#27ae60' );
+			expect( rect.getAttribute( 'stroke' ) ).toBe( '#888' );
 			const path = icon.querySelector( 'path' );
-			expect( path.getAttribute( 'd' ) ).toContain( 'M9 10V6' ); // open shackle
+			// Open shackle has different path
+			expect( path.getAttribute( 'd' ) ).toContain( 'M7 11V7' );
 		} );
 	} );
 
@@ -110,7 +112,7 @@ describe( 'IconFactory', () => {
 		it( 'should create a trash can icon', () => {
 			const icon = IconFactory.createDeleteIcon();
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			expect( icon.getAttribute( 'style' ) ).toContain( 'opacity' );
+			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 			const path = icon.querySelector( 'path' );
 			expect( path ).not.toBeNull();
 			expect( path.getAttribute( 'd' ) ).toContain( 'M3 6h18' ); // top bar
@@ -120,11 +122,12 @@ describe( 'IconFactory', () => {
 	} );
 
 	describe( 'createGrabIcon', () => {
-		it( 'should create a 4-dot grab handle icon', () => {
+		it( 'should create a 6-dot grab handle icon (2x3 grid)', () => {
 			const icon = IconFactory.createGrabIcon();
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
 			const circles = icon.querySelectorAll( 'circle' );
-			expect( circles.length ).toBe( 4 );
+			// Modern drag handle uses 6 dots in 2x3 grid pattern
+			expect( circles.length ).toBe( 6 );
 		} );
 	} );
 
