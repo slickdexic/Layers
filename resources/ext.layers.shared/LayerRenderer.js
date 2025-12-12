@@ -39,9 +39,12 @@
 	};
 
 	/**
-	 * LayerRenderer - Renders individual layer shapes on a canvas
+	 * LayerRenderer class - Renders individual layer shapes on a canvas
+	 */
+class LayerRenderer {
+	/**
+	 * Creates a new LayerRenderer instance
 	 *
-	 * @class
 	 * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
 	 * @param {Object} [config] - Configuration options
 	 * @param {number} [config.zoom=1] - Current zoom level (for editor)
@@ -50,7 +53,7 @@
 	 * @param {number} [config.baseWidth] - Original image width for scaling (viewer mode)
 	 * @param {number} [config.baseHeight] - Original image height for scaling (viewer mode)
 	 */
-	function LayerRenderer( ctx, config ) {
+	constructor( ctx, config ) {
 		this.ctx = ctx;
 		this.config = config || {};
 		this.zoom = this.config.zoom || 1;
@@ -76,30 +79,30 @@
 	 *
 	 * @param {number} zoom - New zoom level
 	 */
-	LayerRenderer.prototype.setZoom = function ( zoom ) {
+	setZoom( zoom ) {
 		this.zoom = zoom;
-	};
+	}
 
 	/**
 	 * Set the background image (used for blur effects)
 	 *
 	 * @param {HTMLImageElement} img - Background image
 	 */
-	LayerRenderer.prototype.setBackgroundImage = function ( img ) {
+	setBackgroundImage ( img ) {
 		this.backgroundImage = img;
-	};
+	}
 
 	/**
 	 * Set the canvas reference
 	 *
 	 * @param {HTMLCanvasElement} canvas - Canvas element
 	 */
-	LayerRenderer.prototype.setCanvas = function ( canvas ) {
+	setCanvas ( canvas ) {
 		this.canvas = canvas;
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.setCanvas( canvas );
 		}
-	};
+	}
 
 	/**
 	 * Set base dimensions for scaling (viewer mode)
@@ -107,10 +110,10 @@
 	 * @param {number} width - Original image width
 	 * @param {number} height - Original image height
 	 */
-	LayerRenderer.prototype.setBaseDimensions = function ( width, height ) {
+	setBaseDimensions ( width, height ) {
 		this.baseWidth = width;
 		this.baseHeight = height;
-	};
+	}
 
 	/**
 	 * Get current scale factors for viewer mode
@@ -118,14 +121,14 @@
 	 * @private
 	 * @return {Object} Scale factors {sx, sy, avg}
 	 */
-	LayerRenderer.prototype.getScaleFactors = function () {
+	getScaleFactors () {
 		if ( !this.baseWidth || !this.baseHeight || !this.canvas ) {
 			return { sx: 1, sy: 1, avg: 1 };
 		}
 		const sx = ( this.canvas.width || 1 ) / this.baseWidth;
 		const sy = ( this.canvas.height || 1 ) / this.baseHeight;
 		return { sx: sx, sy: sy, avg: ( sx + sy ) / 2 };
-	};
+	}
 
 	// ========================================================================
 	// Shadow Delegation Methods
@@ -135,7 +138,7 @@
 	/**
 	 * Clear shadow settings from context
 	 */
-	LayerRenderer.prototype.clearShadow = function () {
+	clearShadow () {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.clearShadow();
 		} else {
@@ -144,7 +147,7 @@
 			this.ctx.shadowOffsetX = 0;
 			this.ctx.shadowOffsetY = 0;
 		}
-	};
+	}
 
 	/**
 	 * Apply shadow settings to context (blur and offset only, not spread)
@@ -152,7 +155,7 @@
 	 * @param {Object} layer - Layer with shadow properties
 	 * @param {Object} scale - Scale factors from getScaleFactors()
 	 */
-	LayerRenderer.prototype.applyShadow = function ( layer, scale ) {
+	applyShadow ( layer, scale ) {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.applyShadow( layer, scale );
 		} else {
@@ -185,7 +188,7 @@
 				this.ctx.shadowOffsetY = ( typeof layer.shadow.offsetY === 'number' ? layer.shadow.offsetY : 2 ) * scaleY;
 			}
 		}
-	};
+	}
 
 	/**
 	 * Get shadow spread value from layer
@@ -194,7 +197,7 @@
 	 * @param {Object} scale - Scale factors
 	 * @return {number} Spread value in pixels (scaled)
 	 */
-	LayerRenderer.prototype.getShadowSpread = function ( layer, scale ) {
+	getShadowSpread ( layer, scale ) {
 		if ( this.shadowRenderer ) {
 			return this.shadowRenderer.getShadowSpread( layer, scale );
 		}
@@ -211,7 +214,7 @@
 			return layer.shadow.spread * scaleAvg;
 		}
 		return 0;
-	};
+	}
 
 	/**
 	 * Check if shadow is enabled on a layer
@@ -219,7 +222,7 @@
 	 * @param {Object} layer - Layer to check
 	 * @return {boolean} True if shadow is enabled
 	 */
-	LayerRenderer.prototype.hasShadowEnabled = function ( layer ) {
+	hasShadowEnabled ( layer ) {
 		if ( this.shadowRenderer ) {
 			return this.shadowRenderer.hasShadowEnabled( layer );
 		}
@@ -228,7 +231,7 @@
 			layer.shadow === 1 ||
 			layer.shadow === '1' ||
 			( typeof layer.shadow === 'object' && layer.shadow );
-	};
+	}
 
 	/**
 	 * Get shadow parameters for offscreen rendering technique
@@ -237,7 +240,7 @@
 	 * @param {Object} scale - Scale factors
 	 * @return {Object} Shadow parameters {offsetX, offsetY, blur, color, offscreenOffset}
 	 */
-	LayerRenderer.prototype.getShadowParams = function ( layer, scale ) {
+	getShadowParams ( layer, scale ) {
 		if ( this.shadowRenderer ) {
 			return this.shadowRenderer.getShadowParams( layer, scale );
 		}
@@ -252,7 +255,7 @@
 			color: layer.shadowColor || 'rgba(0,0,0,0.4)',
 			offscreenOffset: 10000
 		};
-	};
+	}
 
 	/**
 	 * Draw a spread shadow using offscreen canvas technique.
@@ -264,7 +267,7 @@
 	 * @param {Function} drawExpandedPathFn - Function that creates the expanded path
 	 * @param {number} [opacity=1] - Opacity to apply to the shadow (0-1)
 	 */
-	LayerRenderer.prototype.drawSpreadShadow = function ( layer, scale, spread, drawExpandedPathFn, opacity ) {
+	drawSpreadShadow ( layer, scale, spread, drawExpandedPathFn, opacity ) {
 		if ( this.shadowRenderer ) {
 			// ShadowRenderer needs the current context
 			this.shadowRenderer.setContext( this.ctx );
@@ -273,7 +276,7 @@
 			// Fallback: just apply basic shadow
 			this.applyShadow( layer, scale );
 		}
-	};
+	}
 
 	/**
 	 * Draw a spread shadow for stroked shapes using offscreen canvas.
@@ -285,7 +288,7 @@
 	 * @param {Function} drawPathFn - Function that creates the path
 	 * @param {number} [opacity=1] - Opacity to apply to the shadow (0-1)
 	 */
-	LayerRenderer.prototype.drawSpreadShadowStroke = function ( layer, scale, strokeWidth, drawPathFn, opacity ) {
+	drawSpreadShadowStroke ( layer, scale, strokeWidth, drawPathFn, opacity ) {
 		if ( this.shadowRenderer ) {
 			// ShadowRenderer needs the current context
 			this.shadowRenderer.setContext( this.ctx );
@@ -294,7 +297,7 @@
 			// Fallback: just apply basic shadow
 			this.applyShadow( layer, scale );
 		}
-	};
+	}
 
 	/**
 	 * Execute a function with a temporary globalAlpha multiplier
@@ -302,7 +305,7 @@
 	 * @param {number|undefined} alpha - Opacity multiplier (0-1)
 	 * @param {Function} drawFn - Drawing function to execute
 	 */
-	LayerRenderer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
+	withLocalAlpha ( alpha, drawFn ) {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.withLocalAlpha( alpha, drawFn );
 		} else {
@@ -323,7 +326,7 @@
 				this.ctx.globalAlpha = previousAlpha;
 			}
 		}
-	};
+	}
 
 	// ========================================================================
 	// Shape Drawing Methods
@@ -336,7 +339,7 @@
 	 * @param {Object} [options] - Rendering options
 	 * @param {boolean} [options.scaled=false] - Whether layer coords are pre-scaled
 	 */
-	LayerRenderer.prototype.drawRectangle = function ( layer, options ) {
+	drawRectangle ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 		// BUG FIX (2025-12-08): Use separate shadowScale for shadow operations
@@ -490,7 +493,7 @@
 		}
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a rounded rectangle path (fallback for browsers without roundRect)
@@ -502,7 +505,7 @@
 	 * @param {number} radius - Corner radius
 	 * @param {CanvasRenderingContext2D} [context] - Optional context (defaults to this.ctx)
 	 */
-	LayerRenderer.prototype.drawRoundedRectPath = function ( x, y, width, height, radius, context ) {
+	drawRoundedRectPath ( x, y, width, height, radius, context ) {
 		const ctx = context || this.ctx;
 		ctx.beginPath();
 		ctx.moveTo( x + radius, y );
@@ -515,7 +518,7 @@
 		ctx.lineTo( x, y + radius );
 		ctx.arcTo( x, y, x + radius, y, radius );
 		ctx.closePath();
-	};
+	}
 
 	/**
 	 * Draw a circle shape
@@ -523,7 +526,7 @@
 	 * @param {Object} layer - Layer with circle properties (x, y center, radius)
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawCircle = function ( layer, options ) {
+	drawCircle ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 		const shadowScale = opts.shadowScale || scale;
@@ -598,7 +601,7 @@
 		}
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw an ellipse shape
@@ -606,7 +609,7 @@
 	 * @param {Object} layer - Layer with ellipse properties
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawEllipse = function ( layer, options ) {
+	drawEllipse ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 		const shadowScale = opts.shadowScale || scale;
@@ -743,7 +746,7 @@
 		}
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a line
@@ -751,7 +754,7 @@
 	 * @param {Object} layer - Layer with line properties (x1, y1, x2, y2)
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawLine = function ( layer, options ) {
+	drawLine ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 		const shadowScale = opts.shadowScale || scale;
@@ -812,7 +815,7 @@
 		this.ctx.stroke();
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Build the vertices for an arrow polygon
@@ -832,7 +835,7 @@
 	 * @param {number} tailWidth - Extra width at tail end
 	 * @return {Array} Array of {x, y} vertex objects
 	 */
-	LayerRenderer.prototype.buildArrowVertices = function (
+	buildArrowVertices (
 		x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth
 	) {
 		const vertices = [];
@@ -1074,7 +1077,7 @@
 		}
 
 		return vertices;
-	};
+	}
 
 	/**
 	 * Draw an arrow as a closed polygon
@@ -1082,7 +1085,7 @@
 	 * @param {Object} layer - Layer with arrow properties
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawArrow = function ( layer, options ) {
+	drawArrow ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 		const shadowScale = opts.shadowScale || scale;
@@ -1262,7 +1265,7 @@
 		}
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a regular polygon (e.g., hexagon, pentagon)
@@ -1270,7 +1273,7 @@
 	 * @param {Object} layer - Layer with sides, x, y, radius
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawPolygon = function ( layer, options ) {
+	drawPolygon ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 		const shadowScale = opts.shadowScale || scale;
@@ -1387,7 +1390,7 @@
 		}
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a star shape
@@ -1395,7 +1398,7 @@
 	 * @param {Object} layer - Layer with points (count), x, y, outerRadius, innerRadius
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawStar = function ( layer, options ) {
+	drawStar ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 		const shadowScale = opts.shadowScale || scale;
@@ -1515,7 +1518,7 @@
 		}
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a freehand path
@@ -1523,7 +1526,7 @@
 	 * @param {Object} layer - Layer with points array
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawPath = function ( layer, options ) {
+	drawPath ( layer, options ) {
 		if ( !layer.points || !Array.isArray( layer.points ) || layer.points.length < 2 ) {
 			return;
 		}
@@ -1606,7 +1609,7 @@
 		this.ctx.stroke();
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a highlight overlay
@@ -1614,7 +1617,7 @@
 	 * @param {Object} layer - Layer with highlight properties
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawHighlight = function ( layer ) {
+	drawHighlight ( layer ) {
 		let x = layer.x || 0;
 		let y = layer.y || 0;
 		const width = layer.width || 100;
@@ -1644,7 +1647,7 @@
 		this.ctx.fillRect( x, y, width, height );
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a blur effect region
@@ -1653,7 +1656,7 @@
 	 * @param {Object} [options] - Rendering options
 	 * @param {HTMLImageElement} [options.imageElement] - Image for blur source (viewer mode)
 	 */
-	LayerRenderer.prototype.drawBlur = function ( layer, options ) {
+	drawBlur ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 
@@ -1734,7 +1737,7 @@
 		}
 
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a text layer
@@ -1742,7 +1745,7 @@
 	 * @param {Object} layer - Layer with text properties
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawText = function ( layer, options ) {
+	drawText ( layer, options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
 		// BUG FIX (2025-12-09): Use shadowScale for shadow operations, like other shape methods
@@ -1858,7 +1861,7 @@
 		this.ctx.fillText( text, x, y );
 
 		this.ctx.restore();
-	};
+	}
 
 	// ========================================================================
 	// Dispatcher
@@ -1870,7 +1873,7 @@
 	 * @param {Object} layer - Layer to draw
 	 * @param {Object} [options] - Rendering options
 	 */
-	LayerRenderer.prototype.drawLayer = function ( layer, options ) {
+	drawLayer ( layer, options ) {
 		switch ( layer.type ) {
 			case 'text':
 				this.drawText( layer, options );
@@ -1907,7 +1910,7 @@
 				this.drawBlur( layer, options );
 				break;
 		}
-	};
+	}
 
 	// ========================================================================
 	// Cleanup
@@ -1916,14 +1919,15 @@
 	/**
 	 * Clean up resources
 	 */
-	LayerRenderer.prototype.destroy = function () {
+	destroy() {
 		this.ctx = null;
 		this.config = null;
 		this.backgroundImage = null;
 		this.canvas = null;
 		this.baseWidth = null;
 		this.baseHeight = null;
-	};
+	}
+}
 
 	// ========================================================================
 	// Exports
