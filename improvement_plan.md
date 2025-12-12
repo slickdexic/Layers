@@ -18,7 +18,7 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | **Test Suite** | ✅ Strong | 3,913 tests, 88.4% coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer ~3.2K lines, Editor ~31.6K lines |
-| **JavaScript Architecture** | 🟡 Improving | 36 ES6 classes, ShadowRenderer extracted |
+| **JavaScript Architecture** | 🟡 Improving | 40 ES6 classes, ShadowRenderer extracted |
 | **Namespace** | 🟡 In Progress | 57 direct window.X exports marked DEPRECATED |
 
 ---
@@ -176,11 +176,11 @@ Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration t
 
 ### P2.1 Continue ES6 Class Migration
 
-**Status:** ~7% COMPLETE (38 classes of ~604 prototype patterns)  
+**Status:** ~10% COMPLETE (40 classes of ~604 prototype patterns)  
 **Effort:** 6-8 weeks  
 **Impact:** Modern code, TypeScript readiness
 
-**Already Using ES6 Classes (38 total):**
+**Already Using ES6 Classes (40 total):**
 - AccessibilityAnnouncer, APIManager, CanvasUtilities
 - ClipboardController, DialogManager, ErrorHandler
 - EventManager, EventTracker, GeometryUtils
@@ -192,12 +192,14 @@ Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration t
 - UIManager, ValidationManager, ZoomPanController
 - **LayersValidator** ✅ (Dec 14, 2025)
 - **LayerSetManager** ✅ (Dec 14, 2025)
+- **CanvasEvents** ✅ (Dec 14, 2025)
+- **CanvasRenderer** ✅ (Dec 14, 2025)
 - and more...
 
-**Still Using Prototype Pattern (15 constructor functions):**
+**Still Using Prototype Pattern (13 constructor functions):**
 - CanvasManager.js (2,071 lines) - HIGH PRIORITY
-- CanvasRenderer.js (939 lines)
-- CanvasEvents.js (573 lines)
+- ~~CanvasRenderer.js (939 lines)~~ ✅ CONVERTED
+- ~~CanvasEvents.js (573 lines)~~ ✅ CONVERTED
 - LayersEditor.js (1,268 lines) - HIGH PRIORITY
 - ~~LayersValidator.js (953 lines)~~ ✅ CONVERTED
 - ~~LayerSetManager.js (570 lines)~~ ✅ CONVERTED
@@ -210,14 +212,14 @@ Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration t
 
 **Migration Order (by test coverage, lowest risk first):**
 
-| Phase | Files | Coverage | Weeks |
-|-------|-------|----------|-------|
-| 1 | LayersValidator, LayerSetManager | High | 1 |
-| 2 | CanvasEvents, CanvasRenderer | High | 1 |
-| 3 | Toolbar, ToolbarStyleControls | Medium | 1 |
-| 4 | SelectionManager | High | 1 |
-| 5 | CanvasManager | High | 2 |
-| 6 | LayersEditor | High | 1 |
+| Phase | Files | Coverage | Weeks | Status |
+|-------|-------|----------|-------|--------|
+| 1 | LayersValidator, LayerSetManager | High | 1 | ✅ DONE |
+| 2 | CanvasEvents, CanvasRenderer | High | 1 | ✅ DONE |
+| 3 | Toolbar, ToolbarStyleControls | Medium | 1 | 🔜 NEXT |
+| 4 | SelectionManager | High | 1 | |
+| 5 | CanvasManager | High | 2 | |
+| 6 | LayersEditor | High | 1 | |
 
 **Conversion Pattern:**
 ```javascript
