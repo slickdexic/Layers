@@ -23,6 +23,7 @@
 
 	/**
 	 * Helper to find a class in different environments (global, window, mw)
+	 *
 	 * @deprecated Use getClass() instead for namespace-first resolution
 	 * @param {string} name - Class name to find
 	 * @return {Function|undefined} The class or undefined
@@ -54,12 +55,14 @@
 
 	/**
 	 * CanvasManager class
-	 *
-	 * @param {Object} config
-	 * @class
-	 *
 	 */
-	function CanvasManager( config ) {
+class CanvasManager {
+	/**
+	 * Creates a new CanvasManager instance
+	 *
+	 * @param {Object} config Configuration options
+	 */
+	constructor( config ) {
 		// Back-compat: allow new CanvasManager(editorLike)
 		if (
 			config && !config.container &&
@@ -171,7 +174,7 @@
 		this.init();
 	}
 
-	CanvasManager.prototype.init = function () {
+	init () {
 		// Support headless/test scenarios: if container is missing, either
 		// use a provided canvas in config or create a detached canvas.
 		if ( !this.container ) {
@@ -254,14 +257,14 @@
 
 		// Subscribe to StateManager for selection changes
 		this.subscribeToState();
-	};
+	}
 
 	/**
 	 * Initialize the event handling layer for CanvasManager.
 	 * This will construct CanvasEvents controller if available, otherwise
 	 * install basic fallback handlers for test environments.
 	 */
-	CanvasManager.prototype.setupEventHandlers = function () {
+	setupEventHandlers () {
 		const EventsClass = findClass( 'CanvasEvents' );
 		if ( EventsClass ) {
 			try {
@@ -326,42 +329,42 @@
 			this.canvas.addEventListener( 'mousemove', this.__mousemoveHandler );
 			this.canvas.addEventListener( 'mouseup', this.__mouseupHandler );
 		}
-	};
+	}
 
 	/**
 	 * Get the selected layer IDs from StateManager (single source of truth)
 	 * @return {Array} Array of selected layer IDs
 	 */
-	CanvasManager.prototype.getSelectedLayerIds = function () {
+	getSelectedLayerIds () {
 		if ( this.editor && this.editor.stateManager ) {
 			return this.editor.stateManager.get( 'selectedLayerIds' ) || [];
 		}
 		return [];
-	};
+	}
 
 	/**
 	 * Get the primary selected layer ID (last in selection array)
 	 * @return {string|null} The selected layer ID or null
 	 */
-	CanvasManager.prototype.getSelectedLayerId = function () {
+	getSelectedLayerId () {
 		const ids = this.getSelectedLayerIds();
 		return ids.length > 0 ? ids[ ids.length - 1 ] : null;
-	};
+	}
 
 	/**
 	 * Set the selected layer IDs via StateManager
 	 * @param {Array} ids Array of layer IDs to select
 	 */
-	CanvasManager.prototype.setSelectedLayerIds = function ( ids ) {
+	setSelectedLayerIds ( ids ) {
 		if ( this.editor && this.editor.stateManager ) {
 			this.editor.stateManager.set( 'selectedLayerIds', ids || [] );
 		}
-	};
+	}
 
 	/**
 	 * Subscribe to StateManager for reactive updates
 	 */
-	CanvasManager.prototype.subscribeToState = function () {
+	subscribeToState () {
 		if ( !this.editor || !this.editor.stateManager ) {
 			return;
 		}
@@ -371,7 +374,7 @@
 			this.selectionHandles = [];
 			this.renderLayers( this.editor.layers );
 		} );
-	};
+	}
 
 	/**
 	 * Load background image using ImageLoader module
@@ -379,7 +382,7 @@
 	 * @note ImageLoader is guaranteed to load first via extension.json in production,
 	 *       but fallback is kept for test environments and backward compatibility.
 	 */
-	CanvasManager.prototype.loadBackgroundImage = function () {
+	loadBackgroundImage () {
 		const filename = this.editor.filename;
 		const backgroundImageUrl = this.config.backgroundImageUrl;
 
@@ -410,14 +413,14 @@
 			}
 			this.loadBackgroundImageFallback();
 		}
-	};
+	}
 
 	/**
 	 * Handle successful image load from ImageLoader
 	 * @param {HTMLImageElement} image - The loaded image
 	 * @param {Object} info - Load info (width, height, source, etc.)
 	 */
-	CanvasManager.prototype.handleImageLoaded = function ( image, info ) {
+	handleImageLoaded ( image, info ) {
 		this.backgroundImage = image;
 
 		// Pass image to renderer
@@ -437,12 +440,12 @@
 		if ( this.editor && this.editor.layers ) {
 			this.renderLayers( this.editor.layers );
 		}
-	};
+	}
 
 	/**
 	 * Handle image load error from ImageLoader
 	 */
-	CanvasManager.prototype.handleImageLoadError = function () {
+	handleImageLoadError () {
 		// Create a simple background directly on canvas when all load attempts fail
 		this.backgroundImage = null;
 		if ( this.renderer ) {
@@ -460,7 +463,7 @@
 		if ( this.editor && this.editor.layers ) {
 			this.renderLayers( this.editor.layers );
 		}
-	};
+	}
 
 	/**
 	 * @deprecated Fallback image loading - no longer used in production.
@@ -468,7 +471,7 @@
 	 * Kept for backward compatibility and test coverage.
 	 * @private
 	 */
-	CanvasManager.prototype.loadBackgroundImageFallback = function () {
+	loadBackgroundImageFallback () {
 		const filename = this.editor.filename;
 		const backgroundImageUrl = this.config.backgroundImageUrl;
 
@@ -508,14 +511,14 @@
 		// If no URLs found, just leave the canvas in its current state.
 		// This matches the original behavior where image loading was asynchronous
 		// and the canvas wasn't modified until an image actually loaded/failed.
-	};
+	}
 
 	/**
 	 * Try to load images from a list of URLs sequentially.
 	 * @param {string[]} urls
 	 * @param {number} index
 	 */
-	CanvasManager.prototype.tryLoadImageFallback = function ( urls, index ) {
+	tryLoadImageFallback ( urls, index ) {
 		if ( !Array.isArray( urls ) || urls.length === 0 || index >= urls.length ) {
 			if ( typeof this.handleImageLoadError === 'function' ) {
 				this.handleImageLoadError();
@@ -544,7 +547,7 @@
 				this.handleImageLoadError();
 			}
 		}
-	};
+	}
 
 	/**
 	 * Update current style options and apply to selected layers.
@@ -552,7 +555,7 @@
 	 *
 	 * @param {Object} options - Style options to update
 	 */
-	CanvasManager.prototype.updateStyleOptions = function ( options ) {
+	updateStyleOptions ( options ) {
 		if ( this.styleController && typeof this.styleController.updateStyleOptions === 'function' ) {
 			const next = this.styleController.updateStyleOptions( options );
 			// IMPORTANT: Also sync to this.currentStyle so new drawings use updated styles
@@ -636,58 +639,58 @@
 			}
 			this.renderLayers( this.editor.layers );
 		}
-	};
-	CanvasManager.prototype.hitTestSelectionHandles = function ( point ) {
+	}
+	hitTestSelectionHandles ( point ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.hitTestSelectionHandles( point );
 		}
 		return null;
-	};
+	}
 
-	CanvasManager.prototype.isPointInRect = function ( point, rect ) {
+	isPointInRect ( point, rect ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.isPointInRect( point, rect );
 		}
 		return point.x >= rect.x && point.x <= rect.x + rect.width &&
 			point.y >= rect.y && point.y <= rect.y + rect.height;
-	};
+	}
 
-	CanvasManager.prototype.startResize = function ( handle ) {
+	startResize ( handle ) {
 		if ( this.transformController ) {
 			this.transformController.startResize( handle, this.startPoint );
 			this.isResizing = this.transformController.isResizing;
 			this.resizeHandle = this.transformController.resizeHandle;
 		}
-	};
+	}
 
-	CanvasManager.prototype.startRotation = function ( point ) {
+	startRotation ( point ) {
 		if ( this.transformController ) {
 			this.transformController.startRotation( point );
 			this.isRotating = this.transformController.isRotating;
 		}
-	};
+	}
 
-	CanvasManager.prototype.startDrag = function () {
+	startDrag () {
 		if ( this.transformController ) {
 			this.transformController.startDrag( this.startPoint );
 			this.isDragging = this.transformController.isDragging;
 		}
-	};
+	}
 
-	CanvasManager.prototype.getResizeCursor = function ( handleType, rotation ) {
+	getResizeCursor ( handleType, rotation ) {
 		if ( this.transformController ) {
 			return this.transformController.getResizeCursor( handleType, rotation );
 		}
 		return 'default';
-	};
+	}
 
 
 
-	CanvasManager.prototype.handleResize = function ( point, event ) {
+	handleResize ( point, event ) {
 		if ( this.transformController && this.transformController.isResizing ) {
 			this.transformController.handleResize( point, event );
 		}
-	};
+	}
 
 	/**
 	 * Calculate resize updates based on layer type
@@ -700,7 +703,7 @@
 	 * @param {Object} modifiers Modifier keys state
 	 * @return {Object|null} Updates object with new dimensions
 	 */
-	CanvasManager.prototype.calculateResize = function (
+	calculateResize (
 		originalLayer, handleType, deltaX, deltaY, modifiers
 	) {
 		if ( this.transformController ) {
@@ -713,19 +716,19 @@
 			mw.log.error( 'Layers: TransformController not available for calculateResize' );
 		}
 		return null;
-	};
-	CanvasManager.prototype.handleRotation = function ( point, event ) {
+	}
+	handleRotation ( point, event ) {
 		if ( this.transformController && this.transformController.isRotating ) {
 			this.transformController.handleRotation( point, event );
 		}
-	};
+	}
 
-	CanvasManager.prototype.handleDrag = function ( point ) {
+	handleDrag ( point ) {
 		if ( this.transformController && this.transformController.isDragging ) {
 			this.transformController.handleDrag( point );
 			this.showDragPreview = this.transformController.showDragPreview;
 		}
-	};
+	}
 
 	/**
 	 * Emit a throttled custom event with current transform values
@@ -733,7 +736,7 @@
 	 *
 	 * @param {Object} layer The layer object to serialize and emit
 	 */
-	CanvasManager.prototype.emitTransforming = function ( layer ) {
+	emitTransforming ( layer ) {
 		if ( !layer ) {
 			return;
 		}
@@ -759,7 +762,7 @@
 				}
 			}
 		} );
-	};
+	}
 
 	/**
 	 * Update layer position during drag operation
@@ -769,7 +772,7 @@
 	 * @param {number} deltaX X offset
 	 * @param {number} deltaY Y offset
 	 */
-	CanvasManager.prototype.updateLayerPosition = function (
+	updateLayerPosition (
 		layer, originalState, deltaX, deltaY
 	) {
 		switch ( layer.type ) {
@@ -801,9 +804,9 @@
 				}
 				break;
 		}
-	};
+	}
 
-	CanvasManager.prototype.updateCursor = function ( point ) {
+	updateCursor ( point ) {
 		if ( this.currentTool !== 'pointer' ) {
 			this.canvas.style.cursor = this.getToolCursor( this.currentTool );
 			return;
@@ -838,108 +841,108 @@
 		} else {
 			this.canvas.style.cursor = 'crosshair';
 		}
-	};
+	}
 
-	CanvasManager.prototype.getLayerAtPoint = function ( point ) {
+	getLayerAtPoint ( point ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.getLayerAtPoint( point );
 		}
 		return null;
-	};
+	}
 
-	CanvasManager.prototype.isPointInLayer = function ( point, layer ) {
+	isPointInLayer ( point, layer ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.isPointInLayer( point, layer );
 		}
 		return false;
-	};
+	}
 
-	CanvasManager.prototype.isPointNearLine = function ( point, x1, y1, x2, y2, tolerance ) {
+	isPointNearLine ( point, x1, y1, x2, y2, tolerance ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.isPointNearLine( point, x1, y1, x2, y2, tolerance );
 		}
 		return false;
-	};
+	}
 
-	CanvasManager.prototype.pointToSegmentDistance = function ( px, py, x1, y1, x2, y2 ) {
+	pointToSegmentDistance ( px, py, x1, y1, x2, y2 ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.pointToSegmentDistance( px, py, x1, y1, x2, y2 );
 		}
 		return Infinity;
-	};
+	}
 
-	CanvasManager.prototype.isPointInPolygon = function ( point, polygonPoints ) {
+	isPointInPolygon ( point, polygonPoints ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.isPointInPolygon( point, polygonPoints );
 		}
 		return false;
-	};
+	}
 
 
 
-	CanvasManager.prototype.finishResize = function () {
+	finishResize () {
 		if ( this.transformController && this.transformController.isResizing ) {
 			this.transformController.finishResize();
 			this.isResizing = false;
 			this.resizeHandle = null;
 		}
-	};
+	}
 
 
 
 	// Duplicate setZoom removed; see the later definition that clamps, updates CSS size, and status
 
-	CanvasManager.prototype.finishRotation = function () {
+	finishRotation () {
 		if ( this.transformController && this.transformController.isRotating ) {
 			this.transformController.finishRotation();
 			this.isRotating = false;
 		}
-	};
+	}
 
-	CanvasManager.prototype.finishDrag = function () {
+	finishDrag () {
 		if ( this.transformController && this.transformController.isDragging ) {
 			this.transformController.finishDrag();
 			this.isDragging = false;
 			this.showDragPreview = false;
 		}
-	};
+	}
 
 
 
 
 
-	CanvasManager.prototype.zoomIn = function () {
+	zoomIn () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.zoomIn();
 		}
-	};
+	}
 
-	CanvasManager.prototype.zoomOut = function () {
+	zoomOut () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.zoomOut();
 		}
-	};
+	}
 
-	CanvasManager.prototype.setZoom = function ( newZoom ) {
+	setZoom ( newZoom ) {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.setZoom( newZoom );
 		}
-	};
+	}
 
 	/**
 	 * Update the canvas CSS transform from current pan/zoom state.
 	 */
-	CanvasManager.prototype.updateCanvasTransform = function () {
+	updateCanvasTransform () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.updateCanvasTransform();
 		}
-	};
+	}
 
-	CanvasManager.prototype.resetZoom = function () {
+	resetZoom () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.resetZoom();
 		}
-	};
+	}
 
 	/**
 	 * Smoothly animate zoom to a target level
@@ -947,46 +950,46 @@
 	 * @param {number} targetZoom Target zoom level
 	 * @param {number} duration Animation duration in milliseconds (optional)
 	 */
-	CanvasManager.prototype.smoothZoomTo = function ( targetZoom, duration ) {
+	smoothZoomTo ( targetZoom, duration ) {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.smoothZoomTo( targetZoom, duration );
 		}
-	};
+	}
 
 	/**
 	 * Animation frame function for smooth zooming
 	 */
-	CanvasManager.prototype.animateZoom = function () {
+	animateZoom () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.animateZoom();
 		}
-	};
+	}
 
 	/**
 	 * Set zoom directly without triggering user zoom flag (for animations)
 	 *
 	 * @param {number} newZoom New zoom level
 	 */
-	CanvasManager.prototype.setZoomDirect = function ( newZoom ) {
+	setZoomDirect ( newZoom ) {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.setZoomDirect( newZoom );
 		}
-	};
+	}
 
-	CanvasManager.prototype.fitToWindow = function () {
+	fitToWindow () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.fitToWindow();
 		}
-	};
+	}
 
 	/**
 	 * Zoom to fit all layers in the viewport
 	 */
-	CanvasManager.prototype.zoomToFitLayers = function () {
+	zoomToFitLayers () {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.zoomToFitLayers();
 		}
-	};
+	}
 
 	/**
 	 * Get bounding box of a layer
@@ -994,7 +997,7 @@
 	 * @param {Object} layer Layer object
 	 * @return {Object|null} Bounding box including raw and axis-aligned data
 	 */
-	CanvasManager.prototype.getLayerBounds = function ( layer ) {
+	getLayerBounds ( layer ) {
 		if ( !layer ) {
 			return null;
 		}
@@ -1020,9 +1023,9 @@
 			right: aabb.right,
 			bottom: aabb.bottom
 		};
-	};
+	}
 
-	CanvasManager.prototype._getRawLayerBounds = function ( layer ) {
+	_getRawLayerBounds ( layer ) {
 		// Handle text layers specially - they need canvas context for measurement
 		if ( layer && layer.type === 'text' ) {
 			const canvasWidth = this.canvas ? this.canvas.width : 0;
@@ -1041,12 +1044,12 @@
 		// Use GeometryUtils for all other layer types
 		const GeometryUtils = getClass( 'Utils.Geometry', 'GeometryUtils' );
 		return GeometryUtils ? GeometryUtils.getLayerBoundsForType( layer ) : null;
-	};
+	}
 
-	CanvasManager.prototype._computeAxisAlignedBounds = function ( rect, rotationDegrees ) {
+	_computeAxisAlignedBounds ( rect, rotationDegrees ) {
 		const GeometryUtils = getClass( 'Utils.Geometry', 'GeometryUtils' );
 		return GeometryUtils ? GeometryUtils.computeAxisAlignedBounds( rect, rotationDegrees ) : null;
-	};
+	}
 
 	/**
 	 * Get a temporary canvas from the pool or create a new one
@@ -1056,7 +1059,7 @@
 	 * @param {number} height Canvas height
 	 * @return {Object} Object with canvas and context properties
 	 */
-	CanvasManager.prototype.getTempCanvas = function ( width, height ) {
+	getTempCanvas ( width, height ) {
 		let tempCanvasObj = this.canvasPool.pop();
 		if ( tempCanvasObj ) {
 			// Reuse existing canvas from pool
@@ -1076,14 +1079,14 @@
 			};
 		}
 		return tempCanvasObj;
-	};
+	}
 
 	/**
 	 * Return a temporary canvas to the pool for reuse
 	 *
 	 * @param {Object} tempCanvasObj Object with canvas and context properties
 	 */
-	CanvasManager.prototype.returnTempCanvas = function ( tempCanvasObj ) {
+	returnTempCanvas ( tempCanvasObj ) {
 		if ( !tempCanvasObj || !tempCanvasObj.canvas || !tempCanvasObj.context ) {
 			return;
 		}
@@ -1103,7 +1106,7 @@
 			tempCanvasObj.canvas = null;
 			tempCanvasObj.context = null;
 		}
-	};
+	}
 
 	/**
 	 * Handle zoom tool click - zoom in at point, or zoom out with shift
@@ -1111,7 +1114,7 @@
 	 * @param {Object} point Mouse point in canvas coordinates
 	 * @param {MouseEvent} event Mouse event with modifier keys
 	 */
-	CanvasManager.prototype.handleZoomClick = function ( point, event ) {
+	handleZoomClick ( point, event ) {
 		// Set up for potential drag operation
 		this.initialDragZoom = this.zoom;
 
@@ -1129,14 +1132,14 @@
 			this.userHasSetZoom = true;
 			this.updateCanvasTransform();
 		}
-	};
+	}
 
 	/**
 	 * Handle zoom tool drag - drag up/down to zoom in/out dynamically
 	 *
 	 * @param {Object} point Current mouse point
 	 */
-	CanvasManager.prototype.handleZoomDrag = function ( point ) {
+	handleZoomDrag ( point ) {
 		if ( !this.dragStartPoint ) {
 			return;
 		}
@@ -1161,7 +1164,7 @@
 			this.userHasSetZoom = true;
 			this.updateCanvasTransform();
 		}
-	};
+	}
 
 	/**
 	 * Public zoom helper used by external handlers (wheel/pinch)
@@ -1169,11 +1172,11 @@
 	 * @param {number} delta Positive to zoom in, negative to zoom out (in zoom units)
 	 * @param {{x:number,y:number}} point Canvas coordinate under the cursor to anchor zoom around
 	 */
-	CanvasManager.prototype.zoomBy = function ( delta, point ) {
+	zoomBy ( delta, point ) {
 		if ( this.zoomPanController ) {
 			this.zoomPanController.zoomBy( delta, point );
 		}
-	};
+	}
 
 	/**
 	 * Save current state to history for undo/redo
@@ -1181,7 +1184,7 @@
 	 *
 	 * @param {string} action Description of the action
 	 */
-	CanvasManager.prototype.saveState = function ( action ) {
+	saveState ( action ) {
 		// Delegate to HistoryManager via editor if available
 		if ( this.editor && this.editor.historyManager &&
 			typeof this.editor.historyManager.saveState === 'function' ) {
@@ -1192,7 +1195,7 @@
 			this.historyManager.saveState( action );
 		}
 		// Note: debouncing is handled by HistoryManager
-	};
+	}
 
 	/**
 	 * Efficient deep clone for layers data
@@ -1200,7 +1203,7 @@
 	 * @param {Array} layers
 	 * @return {Array}
 	 */
-	CanvasManager.prototype.deepCloneLayers = function ( layers ) {
+	deepCloneLayers ( layers ) {
 		// Use JSON parse/stringify for deep cloning but with optimization
 		try {
 			return JSON.parse( JSON.stringify( layers ) );
@@ -1229,13 +1232,13 @@
 				return clone;
 			} );
 		}
-	};
+	}
 
 	/**
 	 * Update undo/redo button states
 	 * Delegates to HistoryManager for single source of truth
 	 */
-	CanvasManager.prototype.updateUndoRedoButtons = function () {
+	updateUndoRedoButtons () {
 		// Delegate to HistoryManager via editor if available
 		if ( this.editor && this.editor.historyManager &&
 			typeof this.editor.historyManager.updateUndoRedoButtons === 'function' ) {
@@ -1244,7 +1247,7 @@
 			typeof this.historyManager.updateUndoRedoButtons === 'function' ) {
 			this.historyManager.updateUndoRedoButtons();
 		}
-	};
+	}
 
 	/**
 	 * Undo last action
@@ -1252,13 +1255,13 @@
 	 *
 	 * @return {boolean} True if undo was performed
 	 */
-	CanvasManager.prototype.undo = function () {
+	undo () {
 		// Delegate to editor for single source of truth
 		if ( this.editor && typeof this.editor.undo === 'function' ) {
 			return this.editor.undo();
 		}
 		return false;
-	};
+	}
 
 	/**
 	 * Redo last undone action
@@ -1266,25 +1269,25 @@
 	 *
 	 * @return {boolean} True if redo was performed
 	 */
-	CanvasManager.prototype.redo = function () {
+	redo () {
 		// Delegate to editor for single source of truth
 		if ( this.editor && typeof this.editor.redo === 'function' ) {
 			return this.editor.redo();
 		}
 		return false;
-	};
+	}
 
 	// Marquee selection methods - delegate to SelectionManager
-	CanvasManager.prototype.startMarqueeSelection = function ( point ) {
+	startMarqueeSelection ( point ) {
 		this.isMarqueeSelecting = true;
 		this.marqueeStart = { x: point.x, y: point.y };
 		this.marqueeEnd = { x: point.x, y: point.y };
 		if ( this.selectionManager ) {
 			this.selectionManager.startMarqueeSelection( point );
 		}
-	};
+	}
 
-	CanvasManager.prototype.updateMarqueeSelection = function ( point ) {
+	updateMarqueeSelection ( point ) {
 		if ( !this.isMarqueeSelecting ) {
 			return;
 		}
@@ -1294,9 +1297,9 @@
 		}
 		this.renderLayers( this.editor.layers );
 		this.drawMarqueeBox();
-	};
+	}
 
-	CanvasManager.prototype.finishMarqueeSelection = function () {
+	finishMarqueeSelection () {
 		if ( !this.isMarqueeSelecting ) {
 			return;
 		}
@@ -1318,18 +1321,18 @@
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { selection: this.getSelectedLayerIds().length } );
 		}
-	};
+	}
 
-	CanvasManager.prototype.getMarqueeRect = function () {
+	getMarqueeRect () {
 		// Use local state for calculating rect - always kept in sync
 		const x1 = Math.min( this.marqueeStart.x, this.marqueeEnd.x );
 		const y1 = Math.min( this.marqueeStart.y, this.marqueeEnd.y );
 		const x2 = Math.max( this.marqueeStart.x, this.marqueeEnd.x );
 		const y2 = Math.max( this.marqueeStart.y, this.marqueeEnd.y );
 		return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
-	};
+	}
 
-	CanvasManager.prototype.getLayersInRect = function ( rect ) {
+	getLayersInRect ( rect ) {
 		const layersInRect = [];
 		this.editor.layers.forEach( ( layer ) => {
 			const layerBounds = this.getLayerBounds( layer );
@@ -1338,16 +1341,16 @@
 			}
 		} );
 		return layersInRect;
-	};
+	}
 
-	CanvasManager.prototype.rectsIntersect = function ( rect1, rect2 ) {
+	rectsIntersect ( rect1, rect2 ) {
 		const a = this._rectToAabb( rect1 );
 		const b = this._rectToAabb( rect2 );
 		return a.left < b.right && a.right > b.left &&
 			a.top < b.bottom && a.bottom > b.top;
-	};
+	}
 
-	CanvasManager.prototype._rectToAabb = function ( rect ) {
+	_rectToAabb ( rect ) {
 		if ( !rect ) {
 			return { left: 0, top: 0, right: 0, bottom: 0 };
 		}
@@ -1365,26 +1368,26 @@
 			right: x + width,
 			bottom: y + height
 		};
-	};
+	}
 
 	// Apply opacity, blend mode, and simple effects per layer scope
-	CanvasManager.prototype.applyLayerEffects = function ( layer, drawCallback ) {
+	applyLayerEffects ( layer, drawCallback ) {
 		// Deprecated: Logic moved to renderer
 		if ( typeof drawCallback === 'function' ) {
 			drawCallback();
 		}
-	};
+	}
 
 	// Wrapper: draw a single layer with effects, without creating closures in hot loops
-	CanvasManager.prototype.drawLayerWithEffects = function ( layer ) {
+	drawLayerWithEffects ( layer ) {
 		// Delegated to renderer
 		if ( this.renderer ) {
 			this.renderer.drawLayerWithEffects( layer );
 		}
-	};
+	}
 
 	// Helper: run drawing with multiplied alpha (used for fill/stroke opacity)
-	CanvasManager.prototype.withLocalAlpha = function ( factor, fn ) {
+	withLocalAlpha ( factor, fn ) {
 		const f = ( typeof factor === 'number' ) ? Math.max( 0, Math.min( 1, factor ) ) : 1;
 		if ( f === 1 ) {
 			fn();
@@ -1397,51 +1400,51 @@
 		} finally {
 			this.ctx.globalAlpha = prev;
 		}
-	};
+	}
 
-	CanvasManager.prototype.drawMarqueeBox = function () {
+	drawMarqueeBox () {
 		// Delegated to renderer
 		if ( this.renderer ) {
 			this.renderer.drawMarqueeBox();
 		}
-	};
+	}
 
-	CanvasManager.prototype.drawSelectionIndicators = function ( layerId ) {
+	drawSelectionIndicators ( layerId ) {
 		// Delegated to renderer
 		if ( this.renderer ) {
 			this.renderer.drawSelectionIndicators( layerId );
 		}
-	};
+	}
 
 
-	CanvasManager.prototype.drawSelectionHandles = function ( bounds, layer ) {
+	drawSelectionHandles ( bounds, layer ) {
 		// Delegated to renderer
 		if ( this.renderer ) {
 			this.renderer.drawSelectionHandles( bounds, layer );
 		}
-	};
+	}
 
-	CanvasManager.prototype.drawRotationHandle = function ( bounds, layer ) {
+	drawRotationHandle ( bounds, layer ) {
 		if ( this.renderer ) {
 			this.renderer.drawRotationHandle( bounds, layer );
 		}
-	};
+	}
 
 	// Draw background grid if enabled
-	CanvasManager.prototype.drawGrid = function () {
+	drawGrid () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.drawGrid();
 		}
-	};
+	}
 
-	CanvasManager.prototype.toggleGrid = function () {
+	toggleGrid () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.toggleGrid();
 		}
-	};
+	}
 
 	// Selection helpers
-	CanvasManager.prototype.selectLayer = function ( layerId, fromPanel ) {
+	selectLayer ( layerId, fromPanel ) {
 		// Update selection through StateManager (single source of truth)
 		this.setSelectedLayerIds( layerId ? [ layerId ] : [] );
 		this.selectionHandles = [];
@@ -1454,9 +1457,9 @@
 		if ( !fromPanel && this.editor && this.editor.layerPanel ) {
 			this.editor.layerPanel.selectLayer( layerId, true );
 		}
-	};
+	}
 
-	CanvasManager.prototype.selectAll = function () {
+	selectAll () {
 		const allIds = ( this.editor.layers || [] )
 			.filter( function ( layer ) { return layer.visible !== false; } )
 			.map( function ( layer ) { return layer.id; } );
@@ -1466,9 +1469,9 @@
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { selection: this.getSelectedLayerIds().length } );
 		}
-	};
+	}
 
-	CanvasManager.prototype.deselectAll = function () {
+	deselectAll () {
 		this.setSelectedLayerIds( [] );
 		this.selectionHandles = [];
 		this.rotationHandle = null;
@@ -1476,9 +1479,9 @@
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { selection: 0, size: { width: 0, height: 0 } } );
 		}
-	};
+	}
 
-	CanvasManager.prototype.handleLayerSelection = function ( point, isCtrlClick ) {
+	handleLayerSelection ( point, isCtrlClick ) {
 		const hit = this.getLayerAtPoint( point );
 		if ( !hit ) {
 			if ( !isCtrlClick ) {
@@ -1520,9 +1523,9 @@
 		}
 
 		return hit;
-	};
+	}
 
-	CanvasManager.prototype.drawMultiSelectionIndicators = function () {
+	drawMultiSelectionIndicators () {
 		const selectedIds = this.getSelectedLayerIds();
 		if ( !selectedIds || selectedIds.length <= 1 ) {
 			return;
@@ -1530,34 +1533,34 @@
 		for ( let i = 0; i < selectedIds.length; i++ ) {
 			this.drawSelectionIndicators( selectedIds[ i ] );
 		}
-	};
+	}
 
 	// Clipboard operations - delegated to ClipboardController
-	CanvasManager.prototype.copySelected = function () {
+	copySelected () {
 		if ( this.clipboardController ) {
 			this.clipboardController.copySelected();
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
 			mw.log.error( 'Layers: ClipboardController not available for copySelected' );
 		}
-	};
+	}
 
-	CanvasManager.prototype.pasteFromClipboard = function () {
+	pasteFromClipboard () {
 		if ( this.clipboardController ) {
 			this.clipboardController.paste();
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
 			mw.log.error( 'Layers: ClipboardController not available for pasteFromClipboard' );
 		}
-	};
+	}
 
-	CanvasManager.prototype.cutSelected = function () {
+	cutSelected () {
 		if ( this.clipboardController ) {
 			this.clipboardController.cutSelected();
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
 			mw.log.error( 'Layers: ClipboardController not available for cutSelected' );
 		}
-	};
+	}
 
-	CanvasManager.prototype.deleteSelected = function () {
+	deleteSelected () {
 		if ( this.selectionManager ) {
 			this.selectionManager.deleteSelected();
 		} else if ( this.editor && typeof this.editor.deleteSelected === 'function' ) {
@@ -1565,16 +1568,16 @@
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
 			mw.log.error( 'Layers: No handler available for deleteSelected' );
 		}
-	};
+	}
 
 
 
 	// External resize hook used by editor
-	CanvasManager.prototype.handleCanvasResize = function () {
+	handleCanvasResize () {
 		this.resizeCanvas();
 		this.updateCanvasTransform();
 		this.renderLayers( this.editor.layers );
-	};
+	}
 
 	/**
 	 * Set the base dimensions that layers were created against.
@@ -1582,18 +1585,18 @@
 	 * @param {number} width - Original image width
 	 * @param {number} height - Original image height
 	 */
-	CanvasManager.prototype.setBaseDimensions = function ( width, height ) {
+	setBaseDimensions ( width, height ) {
 		this.baseWidth = width || null;
 		this.baseHeight = height || null;
 		// Trigger resize to apply proper scaling
 		this.resizeCanvas();
-	};
+	}
 
 	/**
 	 * Resize canvas to match container size while maintaining aspect ratio.
 	 * Updates viewport bounds for layer culling.
 	 */
-	CanvasManager.prototype.resizeCanvas = function () {
+	resizeCanvas () {
 		const container = this.container || ( this.canvas && this.canvas.parentNode );
 		if ( !container || !this.canvas ) {
 			return;
@@ -1639,11 +1642,11 @@
 		this.viewportBounds = this.viewportBounds || { x: 0, y: 0, width: 0, height: 0 };
 		this.viewportBounds.width = this.canvas.width;
 		this.viewportBounds.height = this.canvas.height;
-	};
+	}
 
-	CanvasManager.prototype.getMousePoint = function ( e ) {
+	getMousePoint ( e ) {
 		return this.getMousePointFromClient( e.clientX, e.clientY );
-	};
+	}
 
 	/**
 	 * Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.
@@ -1653,7 +1656,7 @@
 	 * @param {number} clientY
 	 * @return {{x:number,y:number}}
 	 */
-	CanvasManager.prototype.getMousePointFromClient = function ( clientX, clientY ) {
+	getMousePointFromClient ( clientX, clientY ) {
 		const rect = this.canvas.getBoundingClientRect();
 		// Position within the displayed (transformed) element
 		const relX = clientX - rect.left;
@@ -1671,10 +1674,10 @@
 		}
 
 		return { x: canvasX, y: canvasY };
-	};
+	}
 
 	// Raw mapping without snapping, useful for ruler hit testing
-	CanvasManager.prototype.getRawClientPoint = function ( e ) {
+	getRawClientPoint ( e ) {
 		const rect = this.canvas.getBoundingClientRect();
 		const clientX = e.clientX - rect.left;
 		const clientY = e.clientY - rect.top;
@@ -1682,57 +1685,57 @@
 			canvasX: ( clientX - ( this.panX || 0 ) ) / this.zoom,
 			canvasY: ( clientY - ( this.panY || 0 ) ) / this.zoom
 		};
-	};
+	}
 
-	CanvasManager.prototype.addHorizontalGuide = function ( y ) {
+	addHorizontalGuide ( y ) {
 		if ( typeof y !== 'number' ) {
 			return;
 		}
 		if ( this.horizontalGuides.indexOf( y ) === -1 ) {
 			this.horizontalGuides.push( y );
 		}
-	};
+	}
 
-	CanvasManager.prototype.addVerticalGuide = function ( x ) {
+	addVerticalGuide ( x ) {
 		if ( typeof x !== 'number' ) {
 			return;
 		}
 		if ( this.verticalGuides.indexOf( x ) === -1 ) {
 			this.verticalGuides.push( x );
 		}
-	};
+	}
 
-	CanvasManager.prototype.toggleRulers = function () {
+	toggleRulers () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.toggleRulers();
 		}
-	};
+	}
 
-	CanvasManager.prototype.toggleGuidesVisibility = function () {
+	toggleGuidesVisibility () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.toggleGuidesVisibility();
 		}
-	};
+	}
 
-	CanvasManager.prototype.toggleSnapToGrid = function () {
+	toggleSnapToGrid () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.toggleSnapToGrid();
 		}
-	};
+	}
 
-	CanvasManager.prototype.toggleSnapToGuides = function () {
+	toggleSnapToGuides () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.toggleSnapToGuides();
 		}
-	};
+	}
 
-	CanvasManager.prototype.toggleSmartGuides = function () {
+	toggleSmartGuides () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.toggleSmartGuides();
 		}
-	};
+	}
 
-	CanvasManager.prototype.startDrawing = function ( point ) {
+	startDrawing ( point ) {
 		// Use current style options if available
 		const style = this.currentStyle || {};
 
@@ -1744,9 +1747,9 @@
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
 			mw.log.error( 'Layers: DrawingController not available for startDrawing' );
 		}
-	};
+	}
 
-	CanvasManager.prototype.continueDrawing = function ( point ) {
+	continueDrawing ( point ) {
 		// Delegate to DrawingController
 		if ( this.drawingController ) {
 			this.drawingController.continueDrawing( point );
@@ -1756,9 +1759,9 @@
 				this.drawingController.drawPreview();
 			}
 		}
-	};
+	}
 
-	CanvasManager.prototype.finishDrawing = function ( point ) {
+	finishDrawing ( point ) {
 		// Delegate to DrawingController
 		if ( this.drawingController ) {
 			const layerData = this.drawingController.finishDrawing( point, this.currentTool );
@@ -1773,7 +1776,7 @@
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
 			mw.log.error( 'Layers: DrawingController not available for finishDrawing' );
 		}
-	};
+	}
 
 	// Note: Drawing tool methods (startTextTool, startRectangleTool, etc.) were
 	// removed as they are now handled by DrawingController.js. The controller
@@ -1788,13 +1791,13 @@
 	 * @param {Object} style - Current style options
 	 * @return {HTMLElement} The modal container element
 	 */
-	CanvasManager.prototype.createTextInputModal = function ( point, style ) {
+	createTextInputModal ( point, style ) {
 		if ( this.textInputController ) {
 			return this.textInputController.createTextInputModal( point, style );
 		}
 		// Fallback: no modal support without controller
 		return null;
-	};
+	}
 
 	/**
 	 * Finish text input and create text layer
@@ -1804,48 +1807,48 @@
 	 * @param {Object} point - Position for the text layer
 	 * @param {Object} style - Style options
 	 */
-	CanvasManager.prototype.finishTextInput = function ( input, point, style ) {
+	finishTextInput ( input, point, style ) {
 		if ( this.textInputController ) {
 			this.textInputController.finishTextInput( input, point, style );
 		}
-	};
+	}
 
 	/**
 	 * Hide and remove text input modal
 	 * Delegates to TextInputController
 	 */
-	CanvasManager.prototype.hideTextInputModal = function () {
+	hideTextInputModal () {
 		if ( this.textInputController ) {
 			this.textInputController.hideTextInputModal();
 		}
 		// Also clear local reference for backward compat
 		this.textInputModal = null;
-	};
+	}
 
-	CanvasManager.prototype.setTool = function ( tool ) {
+	setTool ( tool ) {
 		this.currentTool = tool;
 		this.canvas.style.cursor = this.getToolCursor( tool );
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { tool: tool } );
 		}
-	};
+	}
 
-	CanvasManager.prototype.getToolCursor = function ( tool ) {
+	getToolCursor ( tool ) {
 		// Delegate to DrawingController
 		if ( this.drawingController ) {
 			return this.drawingController.getToolCursor( tool );
 		}
 		return 'default';
-	};
+	}
 
 	// NOTE: updateStyleOptions is defined earlier (around line 523) and delegates to StyleController.
 	// Duplicate definition removed to prevent redefinition and reduce file size.
 
-	CanvasManager.prototype.renderLayers = function ( layers ) {
+	renderLayers ( layers ) {
 		this.redraw( layers );
-	};
+	}
 
-	CanvasManager.prototype.redraw = function ( layers ) {
+	redraw ( layers ) {
 		if ( !this.renderer ) {
 			return;
 		}
@@ -1881,9 +1884,9 @@
 				this.editor.errorLog( 'Canvas redraw failed:', error );
 			}
 		}
-	};
+	}
 
-	CanvasManager.prototype.redrawOptimized = function () {
+	redrawOptimized () {
 		// Delegate to RenderCoordinator for optimized rendering with rAF batching
 		if ( this.renderCoordinator ) {
 			this.renderCoordinator.scheduleRedraw();
@@ -1909,17 +1912,17 @@
 				this.redrawScheduled = false;
 			}.bind( this ), 16 ); // ~60fps
 		}
-	};
+	}
 
-	CanvasManager.prototype.updateViewportBounds = function () {
+	updateViewportBounds () {
 		// Update viewport bounds for layer culling
 		this.viewportBounds.x = 0;
 		this.viewportBounds.y = 0;
 		this.viewportBounds.width = this.canvas.width;
 		this.viewportBounds.height = this.canvas.height;
-	};
+	}
 
-	CanvasManager.prototype.isLayerInViewport = function ( layer ) {
+	isLayerInViewport ( layer ) {
 		// Basic layer culling - check if layer intersects with viewport
 		if ( !layer ) {
 			return false;
@@ -1942,10 +1945,10 @@
 				bounds.left > viewport.x + viewport.width ||
 				bounds.bottom < viewport.y ||
 				bounds.top > viewport.y + viewport.height );
-	};
+	}
 
 
-	CanvasManager.prototype.drawLayer = function ( layer ) {
+	drawLayer ( layer ) {
 		// Skip invisible layers
 		if ( layer.visible === false ) {
 			return;
@@ -1974,35 +1977,35 @@
 				}
 			}
 		}
-	};
+	}
 
 	// Draw rulers (top and left bars with ticks)
-	CanvasManager.prototype.drawRulers = function () {
+	drawRulers () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.drawRulers();
 		}
-	};
+	}
 
-	CanvasManager.prototype.drawGuides = function () {
+	drawGuides () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.drawGuides();
 		}
-	};
+	}
 
-	CanvasManager.prototype.drawGuidePreview = function () {
+	drawGuidePreview () {
 		if ( this.gridRulersController ) {
 			this.gridRulersController.drawGuidePreview();
 		}
-	};
+	}
 
-	CanvasManager.prototype.getGuideSnapDelta = function ( bounds, deltaX, deltaY, tol ) {
+	getGuideSnapDelta ( bounds, deltaX, deltaY, tol ) {
 		if ( this.gridRulersController ) {
 			return this.gridRulersController.getGuideSnapDelta( bounds, deltaX, deltaY, tol );
 		}
 		return { dx: 0, dy: 0 };
-	};
+	}
 
-	CanvasManager.prototype.destroy = function () {
+	destroy () {
 		// Clean up all controllers - order matters for dependencies
 		const controllersToDestroy = [
 			'renderCoordinator',
@@ -2051,7 +2054,8 @@
 		this.backgroundImage = null;
 		this.editor = null;
 		this.config = null;
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
