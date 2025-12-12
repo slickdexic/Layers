@@ -19,7 +19,12 @@ describe( 'ImportExportManager', () => {
 			isDirty: false,
 			layers: [],
 			stateManager: {
-				get: jest.fn( () => [] ),
+				get: jest.fn( ( key ) => {
+					if ( key === 'currentSetName' ) {
+						return 'default';
+					}
+					return [];
+				} ),
 				set: jest.fn(),
 				getLayers: jest.fn( () => [] )
 			},
@@ -413,7 +418,7 @@ describe( 'ImportExportManager', () => {
 
 			manager.exportToFile( { filename: 'custom-name' } );
 
-			expect( mockAnchor.download ).toBe( 'custom-name.layers.json' );
+			expect( mockAnchor.download ).toBe( 'custom-name-layers-default.json' );
 		} );
 
 		it( 'should use editor filename by default', () => {
@@ -421,7 +426,7 @@ describe( 'ImportExportManager', () => {
 
 			manager.exportToFile();
 
-			expect( mockAnchor.download ).toBe( 'test-image.jpg.layers.json' );
+			expect( mockAnchor.download ).toBe( 'test-image.jpg-layers-default.json' );
 		} );
 
 		it( 'should return false and notify on error', () => {

@@ -193,9 +193,80 @@
 		for ( let i = layers.length - 1; i >= 0; i-- ) {
 			const layer = layers[ i ];
 			if ( layer && layer.visible !== false ) {
-				this.drawLayerWithEffects( layer );
+				// Special handling for blur layers - blur everything rendered so far
+				if ( layer.type === 'blur' ) {
+					this.drawBlurEffect( layer );
+				} else {
+					this.drawLayerWithEffects( layer );
+				}
 			}
 		}
+	};
+
+	/**
+	 * Draw a blur effect that blurs everything below it (background + layers)
+	 *
+	 * @param {Object} layer - Blur layer with x, y, width, height, blurRadius
+	 */
+	CanvasRenderer.prototype.drawBlurEffect = function ( layer ) {
+		const x = layer.x || 0;
+		const y = layer.y || 0;
+		const w = layer.width || 0;
+		const h = layer.height || 0;
+
+		if ( w <= 0 || h <= 0 ) {
+			return;
+		}
+
+		const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+
+		this.ctx.save();
+
+		// Apply layer opacity and blend mode
+		if ( typeof layer.opacity === 'number' ) {
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		if ( layer.blend ) {
+			try {
+				this.ctx.globalCompositeOperation = String( layer.blend );
+			} catch ( e ) {
+				this.ctx.globalCompositeOperation = 'source-over';
+			}
+		}
+
+		try {
+			// Create a temp canvas to capture what's been drawn so far
+			const tempCanvas = document.createElement( 'canvas' );
+			tempCanvas.width = Math.max( 1, Math.ceil( w ) );
+			tempCanvas.height = Math.max( 1, Math.ceil( h ) );
+			const tempCtx = tempCanvas.getContext( '2d' );
+
+			if ( tempCtx ) {
+				// Copy the region from the main canvas to temp canvas
+				// We need to account for the current transform (zoom/pan)
+				tempCtx.drawImage(
+					this.canvas,
+					x * this.zoom + this.panX,
+					y * this.zoom + this.panY,
+					w * this.zoom,
+					h * this.zoom,
+					0, 0,
+					tempCanvas.width,
+					tempCanvas.height
+				);
+
+				// Apply blur filter and draw back
+				this.ctx.filter = 'blur(' + radius + 'px)';
+				this.ctx.drawImage( tempCanvas, x, y, w, h );
+				this.ctx.filter = 'none';
+			}
+		} catch ( e ) {
+			// Fallback: gray overlay
+			this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+			this.ctx.fillRect( x, y, w, h );
+		}
+
+		this.ctx.restore();
 	};
 
 	CanvasRenderer.prototype.drawLayerWithEffects = function ( layer ) {

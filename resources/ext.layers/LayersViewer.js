@@ -182,8 +182,102 @@
 		// Render layers from bottom to top so top-most (index 0 in editor) is drawn last.
 		const layers = Array.isArray( this.layerData.layers ) ? this.layerData.layers : [];
 		for ( let i = layers.length - 1; i >= 0; i-- ) {
-			this.renderLayer( layers[ i ] );
+			const layer = layers[ i ];
+			// Special handling for blur layers - blur everything rendered so far
+			if ( layer.type === 'blur' ) {
+				this.renderBlurLayer( layer );
+			} else {
+				this.renderLayer( layer );
+			}
 		}
+	};
+
+	/**
+	 * Render a blur layer that blurs everything drawn below it
+	 *
+	 * @param {Object} layer - Blur layer with x, y, width, height, blurRadius
+	 */
+	LayersViewer.prototype.renderBlurLayer = function ( layer ) {
+		// Skip invisible layers
+		if ( layer.visible === false || layer.visible === 'false' || layer.visible === '0' || layer.visible === 0 ) {
+			return;
+		}
+
+		// Compute scaling from saved coordinates to current canvas size
+		let sx = 1;
+		let sy = 1;
+		if ( this.baseWidth && this.baseHeight ) {
+			sx = ( this.canvas.width || 1 ) / this.baseWidth;
+			sy = ( this.canvas.height || 1 ) / this.baseHeight;
+		}
+
+		// Scale blur region coordinates
+		const x = ( layer.x || 0 ) * sx;
+		const y = ( layer.y || 0 ) * sy;
+		const w = ( layer.width || 0 ) * sx;
+		const h = ( layer.height || 0 ) * sy;
+
+		if ( w <= 0 || h <= 0 ) {
+			return;
+		}
+
+		const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+
+		this.ctx.save();
+
+		// Apply layer opacity and blend mode
+		if ( typeof layer.opacity === 'number' ) {
+			this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+		}
+		if ( layer.blend ) {
+			try {
+				this.ctx.globalCompositeOperation = String( layer.blend );
+			} catch ( e ) {
+				this.ctx.globalCompositeOperation = 'source-over';
+			}
+		}
+
+		try {
+			// Create a temp canvas to capture the composite (image + layers drawn so far)
+			const tempCanvas = document.createElement( 'canvas' );
+			tempCanvas.width = Math.max( 1, Math.ceil( w ) );
+			tempCanvas.height = Math.max( 1, Math.ceil( h ) );
+			const tempCtx = tempCanvas.getContext( '2d' );
+
+			if ( tempCtx ) {
+				// First draw the background image region
+				if ( this.imageElement && this.imageElement.complete ) {
+					const imgW = this.imageElement.naturalWidth || this.imageElement.width;
+					const imgH = this.imageElement.naturalHeight || this.imageElement.height;
+					const imgScaleX = imgW / this.canvas.width;
+					const imgScaleY = imgH / this.canvas.height;
+
+					tempCtx.drawImage(
+						this.imageElement,
+						x * imgScaleX, y * imgScaleY, w * imgScaleX, h * imgScaleY,
+						0, 0, tempCanvas.width, tempCanvas.height
+					);
+				}
+
+				// Then overlay what's been drawn on our canvas (layers below this blur)
+				tempCtx.drawImage(
+					this.canvas,
+					x, y, w, h,
+					0, 0, tempCanvas.width, tempCanvas.height
+				);
+
+				// Apply blur filter and draw back
+				this.ctx.filter = 'blur(' + radius + 'px)';
+				this.ctx.drawImage( tempCanvas, x, y, w, h );
+				this.ctx.filter = 'none';
+			}
+		} catch ( e ) {
+			// Fallback: gray overlay
+			this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+			this.ctx.fillRect( x, y, w, h );
+		}
+
+		this.ctx.restore();
 	};
 
 	LayersViewer.prototype.renderLayer = function ( layer ) {

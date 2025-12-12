@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "0.8.2",
+	"version": "0.8.3",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -272,6 +272,7 @@
 				"layers-tool-star",
 				"layers-tool-line",
 				"layers-tool-highlight",
+				"layers-tool-blur",
 				"layers-transparent",
 				"layers-tool-marquee",
 				"layers-saving",

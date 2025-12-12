@@ -48,49 +48,66 @@
 
 	/**
 	 * Create an eye icon for visibility toggle
+	 * Modern minimal design inspired by Feather icons
 	 * @param {boolean} visible - Whether the layer is visible
 	 * @return {SVGSVGElement} Eye icon SVG
 	 */
 	IconFactory.createEyeIcon = function ( visible ) {
 		const svg = IconFactory.createSVGElement( 'svg', {
-			width: '24',
-			height: '24',
+			width: '18',
+			height: '18',
 			viewBox: '0 0 24 24',
+			fill: 'none',
 			'aria-hidden': 'true'
 		} );
 
-		// Eye outline (ellipse)
-		const ellipse = IconFactory.createSVGElement( 'ellipse', {
-			cx: '12',
-			cy: '12',
-			rx: '9',
-			ry: '7',
-			fill: 'none',
-			'stroke-width': '2.5',
-			stroke: visible ? '#666' : '#aaa'
-		} );
-		svg.appendChild( ellipse );
+		const strokeColor = visible ? '#555' : '#aaa';
 
 		if ( visible ) {
-			// Pupil when visible
+			// Eye path - visible state
+			const eyePath = IconFactory.createSVGElement( 'path', {
+				d: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z',
+				stroke: strokeColor,
+				'stroke-width': '2',
+				'stroke-linecap': 'round',
+				'stroke-linejoin': 'round',
+				fill: 'none'
+			} );
+			svg.appendChild( eyePath );
+
+			// Pupil circle
 			const pupil = IconFactory.createSVGElement( 'circle', {
 				cx: '12',
 				cy: '12',
-				r: '3.5',
-				fill: '#666'
+				r: '3',
+				stroke: strokeColor,
+				'stroke-width': '2',
+				fill: 'none'
 			} );
 			svg.appendChild( pupil );
 		} else {
-			// Slash when hidden
-			const slash = IconFactory.createSVGElement( 'line', {
-				x1: '5',
-				y1: '21',
-				x2: '21',
-				y2: '5',
-				stroke: '#c00',
-				'stroke-width': '2.5'
+			// Eye-off path - hidden state
+			const eyeOffPath = IconFactory.createSVGElement( 'path', {
+				d: 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24',
+				stroke: strokeColor,
+				'stroke-width': '2',
+				'stroke-linecap': 'round',
+				'stroke-linejoin': 'round',
+				fill: 'none'
 			} );
-			svg.appendChild( slash );
+			svg.appendChild( eyeOffPath );
+
+			// Diagonal strike-through line
+			const line = IconFactory.createSVGElement( 'line', {
+				x1: '1',
+				y1: '1',
+				x2: '23',
+				y2: '23',
+				stroke: strokeColor,
+				'stroke-width': '2',
+				'stroke-linecap': 'round'
+			} );
+			svg.appendChild( line );
 		}
 
 		return svg;
@@ -98,80 +115,77 @@
 
 	/**
 	 * Create a lock icon for lock toggle
+	 * Modern minimal design inspired by Feather icons
 	 * @param {boolean} locked - Whether the layer is locked
 	 * @return {SVGSVGElement} Lock icon SVG
 	 */
 	IconFactory.createLockIcon = function ( locked ) {
-		const color = locked ? '#d63031' : '#27ae60';
+		const strokeColor = locked ? '#d63031' : '#888';
+		const opacity = locked ? '1' : '0.5';
 
 		const svg = IconFactory.createSVGElement( 'svg', {
-			width: '20',
-			height: '20',
+			width: '16',
+			height: '16',
 			viewBox: '0 0 24 24',
+			fill: 'none',
 			'aria-hidden': 'true',
-			style: 'opacity: ' + ( locked ? '1' : '0.4' )
+			style: 'opacity: ' + opacity
 		} );
 
-		// Lock body
+		// Lock body rectangle
 		const rect = IconFactory.createSVGElement( 'rect', {
-			x: '6',
-			y: '10',
-			width: '12',
-			height: '10',
-			rx: '1',
-			ry: '1',
-			fill: 'none',
-			stroke: color,
-			'stroke-width': '2'
+			x: '3',
+			y: '11',
+			width: '18',
+			height: '11',
+			rx: '2',
+			ry: '2',
+			stroke: strokeColor,
+			'stroke-width': '2',
+			fill: 'none'
 		} );
 		svg.appendChild( rect );
 
-		// Lock shackle (closed when locked, open when unlocked)
-		const path = IconFactory.createSVGElement( 'path', {
-			fill: 'none',
-			stroke: color,
+		// Lock shackle
+		const shackle = IconFactory.createSVGElement( 'path', {
+			d: locked ? 'M7 11V7a5 5 0 0 1 10 0v4' : 'M7 11V7a5 5 0 0 1 9.9-1',
+			stroke: strokeColor,
 			'stroke-width': '2',
-			d: locked ? 'M9 10V8a3 3 0 0 1 6 0v2' : 'M9 10V6a3 3 0 0 1 6 0'
+			'stroke-linecap': 'round',
+			'stroke-linejoin': 'round',
+			fill: 'none'
 		} );
-		svg.appendChild( path );
-
-		// Keyhole dot
-		const dot = IconFactory.createSVGElement( 'circle', {
-			cx: '12',
-			cy: '15',
-			r: '1.5',
-			fill: color
-		} );
-		svg.appendChild( dot );
+		svg.appendChild( shackle );
 
 		return svg;
 	};
 
 	/**
 	 * Create a delete/trash icon
+	 * Modern minimal design inspired by Feather icons
 	 * @return {SVGSVGElement} Delete icon SVG
 	 */
 	IconFactory.createDeleteIcon = function () {
 		const svg = IconFactory.createSVGElement( 'svg', {
-			width: '20',
-			height: '20',
+			width: '16',
+			height: '16',
 			viewBox: '0 0 24 24',
-			'aria-hidden': 'true',
-			style: 'opacity: 0.6'
+			fill: 'none',
+			'aria-hidden': 'true'
 		} );
 
-		// Trash can outline
+		// Trash can body and lid
 		const path = IconFactory.createSVGElement( 'path', {
-			d: 'M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6',
-			fill: 'none',
+			d: 'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
 			stroke: '#888',
 			'stroke-width': '2',
 			'stroke-linecap': 'round',
-			'stroke-linejoin': 'round'
+			'stroke-linejoin': 'round',
+			fill: 'none'
 		} );
 		svg.appendChild( path );
 
-		// Left trash line
+		// Vertical lines inside
 		const line1 = IconFactory.createSVGElement( 'line', {
 			x1: '10',
 			y1: '11',
@@ -183,7 +197,6 @@
 		} );
 		svg.appendChild( line1 );
 
-		// Right trash line
 		const line2 = IconFactory.createSVGElement( 'line', {
 			x1: '14',
 			y1: '11',
@@ -200,29 +213,33 @@
 
 	/**
 	 * Create a grab/drag handle icon
+	 * Modern 6-dot grip pattern (2 columns x 3 rows)
 	 * @return {SVGSVGElement} Grab handle icon SVG
 	 */
 	IconFactory.createGrabIcon = function () {
 		const svg = IconFactory.createSVGElement( 'svg', {
-			width: '24',
-			height: '24',
-			viewBox: '0 0 24 24',
+			width: '12',
+			height: '18',
+			viewBox: '0 0 12 18',
+			fill: 'none',
 			'aria-hidden': 'true'
 		} );
 
-		// Four dots in a 2x2 grid
+		// Six dots in a 2x3 grid pattern (common drag handle design)
 		const positions = [
-			{ cx: 7, cy: 7 },
-			{ cx: 17, cy: 7 },
-			{ cx: 7, cy: 17 },
-			{ cx: 17, cy: 17 }
+			{ cx: 3, cy: 4 },
+			{ cx: 9, cy: 4 },
+			{ cx: 3, cy: 9 },
+			{ cx: 9, cy: 9 },
+			{ cx: 3, cy: 14 },
+			{ cx: 9, cy: 14 }
 		];
 
 		positions.forEach( function ( pos ) {
 			const circle = IconFactory.createSVGElement( 'circle', {
 				cx: String( pos.cx ),
 				cy: String( pos.cy ),
-				r: '2.5',
+				r: '1.5',
 				fill: '#bbb'
 			} );
 			svg.appendChild( circle );

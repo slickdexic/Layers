@@ -340,6 +340,60 @@
 		this.createActionGroup();
 	};
 
+	/**
+	 * Get SVG icons for zoom and action buttons
+	 * @return {Object} Object containing SVG icon strings
+	 */
+	Toolbar.prototype.getActionIcons = function () {
+		const size = 24;
+		const stroke = 'currentColor';
+		const fill = 'none';
+		const strokeWidth = 2;
+
+		return {
+			// Undo - Curved arrow pointing left/back
+			undo: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<polyline points="1 4 1 10 7 10"/>
+				<path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+			</svg>`,
+
+			// Redo - Curved arrow pointing right/forward
+			redo: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<polyline points="23 4 23 10 17 10"/>
+				<path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/>
+			</svg>`,
+
+			// Duplicate - Two overlapping squares
+			duplicate: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+				<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+			</svg>`,
+
+			// Zoom in - Magnifying glass with plus
+			zoomIn: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="11" cy="11" r="8"/>
+				<line x1="21" y1="21" x2="16.65" y2="16.65"/>
+				<line x1="11" y1="8" x2="11" y2="14"/>
+				<line x1="8" y1="11" x2="14" y2="11"/>
+			</svg>`,
+
+			// Zoom out - Magnifying glass with minus
+			zoomOut: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="11" cy="11" r="8"/>
+				<line x1="21" y1="21" x2="16.65" y2="16.65"/>
+				<line x1="8" y1="11" x2="14" y2="11"/>
+			</svg>`,
+
+			// Fit to window - Expand arrows
+			fitWindow: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<polyline points="15 3 21 3 21 9"/>
+				<polyline points="9 21 3 21 3 15"/>
+				<line x1="21" y1="3" x2="14" y2="10"/>
+				<line x1="3" y1="21" x2="10" y2="14"/>
+			</svg>`
+		};
+	};
+
 	Toolbar.prototype.createToolGroup = function () {
 		const toolGroup = document.createElement( 'div' );
 		toolGroup.className = 'toolbar-group tools-group';
@@ -469,12 +523,12 @@
 		const zoomGroup = document.createElement( 'div' );
 		zoomGroup.className = 'toolbar-group zoom-group';
 		const t2 = this.msg.bind( this );
+		const icons = this.getActionIcons();
 
 		// Zoom out button
 		const zoomOutBtn = document.createElement( 'button' );
 		zoomOutBtn.className = 'toolbar-button zoom-button';
-		// U+2212 Minus Sign
-		zoomOutBtn.textContent = '−';
+		zoomOutBtn.innerHTML = icons.zoomOut;
 		zoomOutBtn.title = t2( 'layers-zoom-out', 'Zoom Out' ) + ' (Ctrl+-)';
 		zoomOutBtn.dataset.action = 'zoom-out';
 
@@ -491,15 +545,14 @@
 		// Zoom in button
 		const zoomInBtn = document.createElement( 'button' );
 		zoomInBtn.className = 'toolbar-button zoom-button';
-		zoomInBtn.textContent = '+';
+		zoomInBtn.innerHTML = icons.zoomIn;
 		zoomInBtn.title = t2( 'layers-zoom-in', 'Zoom In' ) + ' (Ctrl++)';
 		zoomInBtn.dataset.action = 'zoom-in';
 
 		// Fit to window button
 		const fitBtn = document.createElement( 'button' );
 		fitBtn.className = 'toolbar-button fit-button';
-		// U+2302 House
-		fitBtn.textContent = '⌂';
+		fitBtn.innerHTML = icons.fitWindow;
 		fitBtn.title = t2( 'layers-zoom-fit', 'Fit to Window' );
 		fitBtn.dataset.action = 'fit-window';
 
@@ -518,11 +571,12 @@
 		const actionGroup = document.createElement( 'div' );
 		actionGroup.className = 'toolbar-group action-group';
 		const t = this.msg.bind( this );
+		const icons = this.getActionIcons();
 
 		const actions = [
-			{ id: 'undo', icon: '↶', title: t( 'layers-undo', 'Undo' ), key: 'Ctrl+Z' },
-			{ id: 'redo', icon: '↷', title: t( 'layers-redo', 'Redo' ), key: 'Ctrl+Y' },
-			{ id: 'duplicate', icon: '⧉', title: t( 'layers-duplicate-selected', 'Duplicate Selected' ), key: 'Ctrl+D' }
+			{ id: 'undo', icon: icons.undo, title: t( 'layers-undo', 'Undo' ), key: 'Ctrl+Z', isSvg: true },
+			{ id: 'redo', icon: icons.redo, title: t( 'layers-redo', 'Redo' ), key: 'Ctrl+Y', isSvg: true },
+			{ id: 'duplicate', icon: icons.duplicate, title: t( 'layers-duplicate-selected', 'Duplicate Selected' ), key: 'Ctrl+D', isSvg: true }
 		];
 
 		actions.forEach( ( action ) => {
@@ -596,8 +650,12 @@
 		const button = document.createElement( 'button' );
 		button.className = 'toolbar-button action-button';
 		button.dataset.action = action.id;
-		// Icon may be a Unicode glyph; use textContent for safety
-		button.textContent = action.icon;
+		// Use innerHTML for SVG icons, textContent for text
+		if ( action.isSvg ) {
+			button.innerHTML = action.icon;
+		} else {
+			button.textContent = action.icon;
+		}
 		button.title = action.title + ( action.key ? ' (' + action.key + ')' : '' );
 
 		// Mark common toggle actions as toggle buttons
@@ -611,14 +669,20 @@
 	Toolbar.prototype.setupEventHandlers = function () {
 		// Tool selection - tracked for cleanup
 		this.addListener( this.container, 'click', ( e ) => {
-			if ( e.target.classList.contains( 'tool-button' ) ) {
-				this.selectTool( e.target.dataset.tool );
-			} else if ( e.target.classList.contains( 'action-button' ) ) {
-				this.executeAction( e.target.dataset.action );
-			} else if ( e.target.dataset.action && e.target.dataset.action.indexOf( 'zoom' ) === 0 ) {
-				this.executeZoomAction( e.target.dataset.action );
-			} else if ( e.target.dataset.action === 'fit-window' ) {
-				this.executeZoomAction( e.target.dataset.action );
+			// Use closest() to handle clicks on child elements (like SVG icons inside buttons)
+			const toolButton = e.target.closest( '.tool-button' );
+			const actionButton = e.target.closest( '.action-button' );
+			const zoomButton = e.target.closest( '[data-action^="zoom"]' );
+			const fitButton = e.target.closest( '[data-action="fit-window"]' );
+
+			if ( toolButton ) {
+				this.selectTool( toolButton.dataset.tool );
+			} else if ( actionButton ) {
+				this.executeAction( actionButton.dataset.action );
+			} else if ( zoomButton ) {
+				this.executeZoomAction( zoomButton.dataset.action );
+			} else if ( fitButton ) {
+				this.executeZoomAction( fitButton.dataset.action );
 			}
 		} );
 

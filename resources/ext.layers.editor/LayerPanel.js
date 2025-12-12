@@ -421,33 +421,36 @@
 
 			// Resizable divider logic
 			let isDragging = false;
+			let startMouseY = 0;
+			let startListHeight = 0;
 			const minListHeight = 60;
 			const minPropsHeight = 80;
-			this.addTargetListener( divider, 'mousedown', () => {
+
+			this.addTargetListener( divider, 'mousedown', ( e ) => {
 				isDragging = true;
+				startMouseY = e.clientY;
+				// Measure BEFORE adding class (to get current constrained height)
+				startListHeight = this.layerList.getBoundingClientRect().height;
+				// Now switch to fixed mode and immediately set the height to lock it in
+				this.layerList.classList.add( 'layers-fixed-height' );
+				this.layerList.style.height = startListHeight + 'px';
 				document.body.classList.add( 'layers-resize-cursor' );
+				e.preventDefault();
 			} );
+
 			const handleMouseMove = ( e ) => {
 				if ( !isDragging ) {
 					return;
 				}
-				const rect = sidebarInner.getBoundingClientRect();
-				const offset = e.clientY - rect.top;
+				const delta = e.clientY - startMouseY;
 				const totalHeight = sidebarInner.offsetHeight;
 				const dividerHeight = divider.offsetHeight;
 				const maxListHeight = totalHeight - dividerHeight - minPropsHeight;
-				const newListHeight = Math.max( minListHeight, Math.min( offset, maxListHeight ) );
-				const newPropsHeight = totalHeight - newListHeight - dividerHeight;
-				if ( this.layerList && this.layerList.classList ) {
-					this.layerList.classList.add( 'layers-fixed-height' );
-					this.layerList.style.height = newListHeight + 'px';
-				}
-				if ( this.propertiesPanel && this.propertiesPanel.classList ) {
-					this.propertiesPanel.classList.add( 'layers-fixed-height' );
-					this.propertiesPanel.style.height = newPropsHeight + 'px';
-				}
+				const newListHeight = Math.max( minListHeight, Math.min( startListHeight + delta, maxListHeight ) );
+				this.layerList.style.height = newListHeight + 'px';
 			};
 			this.addDocumentListener( 'mousemove', handleMouseMove );
+
 			const handleMouseUp = () => {
 				if ( isDragging ) {
 					isDragging = false;
@@ -457,31 +460,30 @@
 			this.addDocumentListener( 'mouseup', handleMouseUp );
 
 			// Touch support
-			this.addTargetListener( divider, 'touchstart', () => {
+			this.addTargetListener( divider, 'touchstart', ( e ) => {
 				isDragging = true;
+				startMouseY = e.touches[ 0 ].clientY;
+				// Measure BEFORE adding class
+				startListHeight = this.layerList.getBoundingClientRect().height;
+				this.layerList.classList.add( 'layers-fixed-height' );
+				this.layerList.style.height = startListHeight + 'px';
 				document.body.classList.add( 'layers-resize-cursor' );
+				e.preventDefault();
 			} );
+
 			const handleTouchMove = ( e ) => {
 				if ( !isDragging ) {
 					return;
 				}
-				const rect = sidebarInner.getBoundingClientRect();
-				const offset = e.touches[ 0 ].clientY - rect.top;
+				const delta = e.touches[ 0 ].clientY - startMouseY;
 				const totalHeight = sidebarInner.offsetHeight;
 				const dividerHeight = divider.offsetHeight;
 				const maxListHeight = totalHeight - dividerHeight - minPropsHeight;
-				const newListHeight = Math.max( minListHeight, Math.min( offset, maxListHeight ) );
-				const newPropsHeight = totalHeight - newListHeight - dividerHeight;
-				if ( this.layerList && this.layerList.classList ) {
-					this.layerList.classList.add( 'layers-fixed-height' );
-					this.layerList.style.height = newListHeight + 'px';
-				}
-				if ( this.propertiesPanel && this.propertiesPanel.classList ) {
-					this.propertiesPanel.classList.add( 'layers-fixed-height' );
-					this.propertiesPanel.style.height = newPropsHeight + 'px';
-				}
+				const newListHeight = Math.max( minListHeight, Math.min( startListHeight + delta, maxListHeight ) );
+				this.layerList.style.height = newListHeight + 'px';
 			};
 			this.addDocumentListener( 'touchmove', handleTouchMove, { passive: false } );
+
 			const handleTouchEnd = () => {
 				if ( isDragging ) {
 					isDragging = false;
@@ -780,8 +782,6 @@
 			visibilityBtn.title = t( 'layers-toggle-visibility', 'Toggle visibility' );
 			visibilityBtn.type = 'button';
 			visibilityBtn.setAttribute( 'aria-label', t( 'layers-toggle-visibility', 'Toggle visibility' ) );
-			visibilityBtn.style.width = '36px';
-			visibilityBtn.style.height = '36px';
 
 			// Name (editable)
 			const name = document.createElement( 'span' );
@@ -798,8 +798,6 @@
 			lockBtn.title = t( 'layers-toggle-lock', 'Toggle lock' );
 			lockBtn.type = 'button';
 			lockBtn.setAttribute( 'aria-label', t( 'layers-toggle-lock', 'Toggle lock' ) );
-			lockBtn.style.width = '36px';
-			lockBtn.style.height = '36px';
 
 			// Delete button
 			const deleteBtn = document.createElement( 'button' );
@@ -808,8 +806,6 @@
 			deleteBtn.title = t( 'layers-delete-layer-button', 'Delete layer' );
 			deleteBtn.type = 'button';
 			deleteBtn.setAttribute( 'aria-label', t( 'layers-delete-layer-button', 'Delete layer' ) );
-			deleteBtn.style.width = '36px';
-			deleteBtn.style.height = '36px';
 
 			item.appendChild( grabArea );
 			item.appendChild( visibilityBtn );

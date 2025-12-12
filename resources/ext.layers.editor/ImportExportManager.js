@@ -212,13 +212,21 @@
 				const pretty = options.pretty !== false;
 				const json = JSON.stringify( layers, null, pretty ? 2 : 0 );
 
-				// Generate filename
+				// Generate filename: [imagename]-layers-[setname].json
 				let baseName = options.filename;
 				if ( !baseName && this.editor ) {
 					baseName = this.editor.filename || 'layers';
 				}
 				baseName = baseName || 'layers';
-				const filename = baseName + '.layers.json';
+
+				// Get the current layer set name
+				let setName = 'default';
+				if ( this.editor && this.editor.stateManager ) {
+					setName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+				}
+
+				// Format: imagename-layers-setname.json
+				const filename = baseName + '-layers-' + setName + '.json';
 
 				// Create and trigger download
 				this.triggerDownload( json, filename, 'application/json' );
