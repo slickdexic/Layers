@@ -10,12 +10,16 @@
 	'use strict';
 
 	/**
-	 * @class UrlParser
-	 * @constructor
+	 * UrlParser class
+	 */
+class UrlParser {
+	/**
+	 * Creates a new UrlParser instance
+	 *
 	 * @param {Object} [options] Configuration options
 	 * @param {boolean} [options.debug=false] Enable debug logging
 	 */
-	function UrlParser( options ) {
+	constructor( options ) {
 		this.debug = options && options.debug;
 	}
 
@@ -25,11 +29,11 @@
 	 * @private
 	 * @param {...any} args Arguments to log
 	 */
-	UrlParser.prototype.debugLog = function ( ...args ) {
+	debugLog( ...args ) {
 		if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 			mw.log( '[Layers:UrlParser]', ...args );
 		}
-	};
+	}
 
 	/**
 	 * Log a warning message if debug mode is enabled.
@@ -37,11 +41,11 @@
 	 * @private
 	 * @param {...any} args Arguments to log
 	 */
-	UrlParser.prototype.debugWarn = function ( ...args ) {
+	debugWarn ( ...args ) {
 		if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 			mw.log.warn( '[Layers:UrlParser]', ...args );
 		}
-	};
+	}
 
 	/**
 	 * Escape a string for safe use within RegExp source.
@@ -49,9 +53,9 @@
 	 * @param {string} s String to escape
 	 * @return {string} Escaped string
 	 */
-	UrlParser.prototype.escapeRegExp = function ( s ) {
+	escapeRegExp ( s ) {
 		return s.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
-	};
+	}
 
 	/**
 	 * Decode common HTML entities that may appear in data attributes.
@@ -59,7 +63,7 @@
 	 * @param {string} s String to decode
 	 * @return {string} Decoded string
 	 */
-	UrlParser.prototype.decodeHtmlEntities = function ( s ) {
+	decodeHtmlEntities ( s ) {
 		if ( !s || typeof s !== 'string' ) {
 			return s;
 		}
@@ -69,7 +73,7 @@
 		out = out.replace( /&#34;/g, '"' );
 		out = out.replace( /&#x22;/gi, '"' );
 		return out;
-	};
+	}
 
 	/**
 	 * Determine whether a layers value denotes explicit enabling.
@@ -77,7 +81,7 @@
 	 * @param {string} v Value to check
 	 * @return {boolean} True if value indicates layers should be enabled
 	 */
-	UrlParser.prototype.isAllowedLayersValue = function ( v ) {
+	isAllowedLayersValue ( v ) {
 		if ( !v ) {
 			return false;
 		}
@@ -104,7 +108,7 @@
 			return true;
 		}
 		return false;
-	};
+	}
 
 	/**
 	 * Get the page-level layers parameter value if present.
@@ -118,7 +122,7 @@
 	 *
 	 * @return {string|null} Raw parameter value or null
 	 */
-	UrlParser.prototype.getPageLayersParam = function () {
+	getPageLayersParam () {
 		let pageLayersVal = null;
 
 		try {
@@ -173,7 +177,7 @@
 			this.debugLog( 'page-level layers param detected:', pageLayersVal );
 		}
 		return pageLayersVal;
-	};
+	}
 
 	/**
 	 * Inspect nearest ancestor with data-mw JSON to detect a layers intent
@@ -182,7 +186,7 @@
 	 * @param {HTMLElement} el An element within the output of a File node
 	 * @return {string|null} Normalized layers value or null
 	 */
-	UrlParser.prototype.detectLayersFromDataMw = function ( el ) {
+	detectLayersFromDataMw ( el ) {
 		const searchValue = function ( dmwRoot ) {
 			let foundLocal = null;
 
@@ -267,7 +271,7 @@
 			this.debugWarn( 'detectLayersFromDataMw traversal error:', e.message );
 		}
 		return null;
-	};
+	}
 
 	/**
 	 * Infer filename from an image element using various methods.
@@ -282,7 +286,7 @@
 	 * @param {string} fileNamespace Localized File namespace name
 	 * @return {string|null} Inferred filename or null
 	 */
-	UrlParser.prototype.inferFilename = function ( imgEl, fileNamespace ) {
+	inferFilename ( imgEl, fileNamespace ) {
 		let filename = null;
 		const a = imgEl.closest( 'a' );
 
@@ -368,14 +372,14 @@
 		}
 
 		return filename;
-	};
+	}
 
 	/**
 	 * Get the localized File namespace name.
 	 *
 	 * @return {string} File namespace name (defaults to 'File')
 	 */
-	UrlParser.prototype.getFileNamespace = function () {
+	getFileNamespace () {
 		let fileNs = 'File';
 		try {
 			if ( typeof mw !== 'undefined' && mw.config && mw.config.get ) {
@@ -389,14 +393,14 @@
 			// File namespace lookup failed
 		}
 		return fileNs;
-	};
+	}
 
 	/**
 	 * Get the current page namespace number.
 	 *
 	 * @return {number} Namespace number (-1 if unknown)
 	 */
-	UrlParser.prototype.getNamespaceNumber = function () {
+	getNamespaceNumber () {
 		try {
 			if ( typeof mw !== 'undefined' && mw.config && mw.config.get ) {
 				return mw.config.get( 'wgNamespaceNumber' );
@@ -405,7 +409,7 @@
 			// Namespace number not available
 		}
 		return -1;
-	};
+	}
 
 	/**
 	 * Check if an anchor element links to a File: page.
@@ -414,7 +418,7 @@
 	 * @param {string} fileNs File namespace name
 	 * @return {boolean} True if links to File: page
 	 */
-	UrlParser.prototype.isFileLinkAnchor = function ( anchor, fileNs ) {
+	isFileLinkAnchor ( anchor, fileNs ) {
 		if ( !anchor || !anchor.getAttribute ) {
 			return false;
 		}
@@ -463,7 +467,8 @@
 		}
 
 		return false;
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
