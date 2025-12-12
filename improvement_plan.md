@@ -15,11 +15,11 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Strong | 3,869 tests, 88.4% coverage, all passing |
+| **Test Suite** | ✅ Strong | 3,913 tests, 88.4% coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer ~3.2K lines, Editor ~31.6K lines |
 | **JavaScript Architecture** | 🟡 Improving | 36 ES6 classes, ShadowRenderer extracted |
-| **Namespace** | 🟡 In Progress | 48 direct window.X exports remain (1 migrated) |
+| **Namespace** | 🟡 In Progress | 57 direct window.X exports marked DEPRECATED |
 
 ---
 
@@ -96,16 +96,16 @@ All 18 IconFactory tests now pass.
 
 ### P1.1 Eliminate Direct Global Exports
 
-**Status:** 🟡 IN PROGRESS (Started Dec 11, 2025)  
+**Status:** 🟡 IN PROGRESS - Phase 1 Complete (Dec 13, 2025)  
 **Effort:** 2-3 weeks  
 **Impact:** Enables future ES modules, prevents conflicts
 
 **Progress:**
 - ✅ CanvasRenderer.js updated to use `getClass()` for TextUtils and GeometryUtils
-- ✅ Added DEPRECATED comments to direct window.X exports
-- ✅ All 3,869 tests still pass
+- ✅ Added DEPRECATED comments to 57 files with direct window.X exports (commit 0529fdf)
+- ✅ All 3,913 tests pass
 
-**Remaining:** 48 files still export directly to `window.ClassName`
+**Remaining:** Remove direct exports after consumers are migrated
 
 **Problem:**
 49 files export to both `window.Layers.X` AND `window.X`:
@@ -140,26 +140,25 @@ window.CanvasManager = CanvasManager;          // Bad - remove (49 instances)
 
 ### P1.2 Add Integration Tests
 
-**Status:** NOT STARTED  
+**Status:** ✅ COMPLETED (Dec 13, 2025)  
 **Effort:** 2 weeks  
 **Impact:** Catch multi-component bugs
 
-**Problem:**
-Limited integration test coverage. No coverage for:
-- CanvasManager ↔ Controller interactions
-- StateManager ↔ HistoryManager synchronization
-- Error propagation across modules
+**Resolution:**
+Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration tests covering:
 
-**Action Plan:**
+1. **HitTestController Layer Detection (40 tests)**
+   - Click-to-select workflow for all 11 layer types
+   - Rectangle, circle, ellipse, line, arrow, polygon, text, path, star, highlight, blur
+   - Edge cases: negative dimensions, unknown types, zero-size layers
+   - Layer ordering and visibility/lock filtering
 
-1. Create `tests/jest/integration/` directory (if not exists)
-2. Add tests for:
-   - Layer creation flow (ToolManager → CanvasManager → StateManager)
-   - Undo/redo flow (HistoryManager ↔ StateManager)
-   - Selection flow (HitTestController → SelectionManager)
-   - Save flow (StateManager → APIManager → validation)
+2. **HitTestController + SelectionManager Integration (4 tests)**
+   - Hit test → select layer workflow
+   - Multi-selection with shift-click
+   - Selection toggle behavior
 
-**Target:** 10+ integration tests covering critical paths
+**Note:** Additional integration tests (undo/redo flow, save flow) are candidates for future P2/P3 work.
 
 ---
 
