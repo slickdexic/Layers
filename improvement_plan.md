@@ -176,11 +176,11 @@ Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration t
 
 ### P2.1 Continue ES6 Class Migration
 
-**Status:** ~6% COMPLETE (36 classes of ~604 prototype patterns)  
+**Status:** ~7% COMPLETE (38 classes of ~604 prototype patterns)  
 **Effort:** 6-8 weeks  
 **Impact:** Modern code, TypeScript readiness
 
-**Already Using ES6 Classes (36 total):**
+**Already Using ES6 Classes (38 total):**
 - AccessibilityAnnouncer, APIManager, CanvasUtilities
 - ClipboardController, DialogManager, ErrorHandler
 - EventManager, EventTracker, GeometryUtils
@@ -190,15 +190,17 @@ Created `tests/jest/integration/SelectionWorkflow.test.js` with 44 integration t
 - RevisionManager, SelectionHandles, SelectionState
 - StateManager, StyleController, TextUtils
 - UIManager, ValidationManager, ZoomPanController
+- **LayersValidator** ✅ (Dec 14, 2025)
+- **LayerSetManager** ✅ (Dec 14, 2025)
 - and more...
 
-**Still Using Prototype Pattern (17 constructor functions):**
+**Still Using Prototype Pattern (15 constructor functions):**
 - CanvasManager.js (2,071 lines) - HIGH PRIORITY
 - CanvasRenderer.js (939 lines)
 - CanvasEvents.js (573 lines)
 - LayersEditor.js (1,268 lines) - HIGH PRIORITY
-- LayersValidator.js (953 lines)
-- LayerSetManager.js (570 lines)
+- ~~LayersValidator.js (953 lines)~~ ✅ CONVERTED
+- ~~LayerSetManager.js (570 lines)~~ ✅ CONVERTED
 - Toolbar.js (955 lines)
 - ToolbarStyleControls.js (759 lines)
 - SelectionManager.js (1,261 lines)
@@ -402,7 +404,7 @@ P1.2 Integration Tests:       ░░░░░░░░░░░░░░░░�
 P1.3 PHP Logging:             ████████████████████ 100% ✓
 
 Phase 2 (Refactoring):
-P2.1 ES6 Class Migration:     ██░░░░░░░░░░░░░░░░░░ 6% (36/~604)
+P2.1 ES6 Class Migration:     ███░░░░░░░░░░░░░░░░░ 7% (38/~604)
 P2.2 Split LayerRenderer:     ███░░░░░░░░░░░░░░░░░ 15% (ShadowRenderer done)
 P2.3 CanvasManager Extraction: █████████░░░░░░░░░░░ 45% (9 controllers)
 P2.4 Split TransformController: ░░░░░░░░░░░░░░░░░░░░ 0%
