@@ -14,11 +14,14 @@
 
 	/**
 	 * TransformController class
+	 */
+class TransformController {
+	/**
+	 * Creates a new TransformController instance
 	 *
-	 * @class
 	 * @param {Object} canvasManager Reference to parent CanvasManager
 	 */
-	function TransformController( canvasManager ) {
+	constructor( canvasManager ) {
 		this.manager = canvasManager;
 
 		// Transform state
@@ -45,7 +48,7 @@
 	 * @param {Object} handle The resize handle being dragged
 	 * @param {Object} startPoint The starting mouse point
 	 */
-	TransformController.prototype.startResize = function ( handle, startPoint ) {
+	startResize( handle, startPoint ) {
 		this.isResizing = true;
 		this.resizeHandle = handle;
 		this.dragStartPoint = startPoint;
@@ -59,7 +62,7 @@
 		if ( layer ) {
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
-	};
+	}
 
 	/**
 	 * Handle resize during mouse move
@@ -67,7 +70,7 @@
 	 * @param {Object} point Current mouse point
 	 * @param {Event} event Mouse event for modifier keys
 	 */
-	TransformController.prototype.handleResize = function ( point, event ) {
+	handleResize ( point, event ) {
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 
 		if ( !layer || !this.originalLayerState ) {
@@ -126,12 +129,12 @@
 			this.manager.renderLayers( this.manager.editor.layers );
 			this.emitTransforming( layer );
 		}
-	};
+	}
 
 	/**
 	 * Finish the resize operation
 	 */
-	TransformController.prototype.finishResize = function () {
+	finishResize () {
 		this.isResizing = false;
 		this.resizeHandle = null;
 		this.originalLayerState = null;
@@ -147,7 +150,7 @@
 		} else if ( this.manager && typeof this.manager.saveState === 'function' ) {
 			this.manager.saveState( 'Resize layer' );
 		}
-	};
+	}
 
 	/**
 	 * Get the appropriate cursor for a resize handle
@@ -160,7 +163,7 @@
 	 * @param {number} rotation Layer rotation in degrees
 	 * @return {string} CSS cursor value
 	 */
-	TransformController.prototype.getResizeCursor = function ( handleType, rotation ) {
+	getResizeCursor ( handleType, rotation ) {
 		// Base angles for each handle type (direction of resize in local space)
 		// 0° = up (north), 90° = right (east), etc.
 		const handleAngles = {
@@ -209,7 +212,7 @@
 		];
 
 		return cursorMap[ sector ];
-	};
+	}
 
 	/**
 	 * Calculate resize updates based on layer type
@@ -221,7 +224,7 @@
 	 * @param {Object} modifiers Modifier keys state
 	 * @return {Object|null} Updates object with new dimensions
 	 */
-	TransformController.prototype.calculateResize = function (
+	calculateResize (
 		originalLayer, handleType, deltaX, deltaY, modifiers
 	) {
 		modifiers = modifiers || {};
@@ -261,7 +264,7 @@
 			default:
 				return null;
 		}
-	};
+	}
 
 	/**
 	 * Calculate rectangle resize adjustments
@@ -276,7 +279,7 @@
 	 * @param {Object} modifiers Modifier keys state
 	 * @return {Object} Updates object with new dimensions
 	 */
-	TransformController.prototype.calculateRectangleResize = function (
+	calculateRectangleResize (
 		originalLayer, handleType, deltaX, deltaY, modifiers
 	) {
 		modifiers = modifiers || {};
@@ -422,7 +425,7 @@
 		}
 
 		return updates;
-	};
+	}
 
 	/**
 	 * Apply correction to keep the opposite edge fixed in world space for rotated shapes.
@@ -435,7 +438,7 @@
 	 * @param {Object} originalLayer Original layer properties
 	 * @param {string} handleType Handle being dragged (n, s, e, w, or corner)
 	 */
-	TransformController.prototype.applyRotatedResizeCorrection = function (
+	applyRotatedResizeCorrection (
 		updates, originalLayer, handleType
 	) {
 		const rotation = originalLayer.rotation || 0;
@@ -574,7 +577,7 @@
 		// Apply corrections
 		updates.x = adjustedX;
 		updates.y = adjustedY;
-	};
+	}
 
 	/**
 	 * Calculate circle resize adjustments
@@ -585,7 +588,7 @@
 	 * @param {number} deltaY Delta Y movement
 	 * @return {Object} Updates object with new radius
 	 */
-	TransformController.prototype.calculateCircleResize = function (
+	calculateCircleResize (
 		originalLayer, handleType, deltaX, deltaY
 	) {
 		const updates = {};
@@ -640,7 +643,7 @@
 
 		updates.radius = Math.max( 5, newRadius );
 		return updates;
-	};
+	}
 
 	/**
 	 * Calculate ellipse resize adjustments
@@ -651,7 +654,7 @@
 	 * @param {number} deltaY Delta Y movement
 	 * @return {Object} Updates object with new radiusX/radiusY
 	 */
-	TransformController.prototype.calculateEllipseResize = function (
+	calculateEllipseResize (
 		originalLayer, handleType, deltaX, deltaY
 	) {
 		const updates = {};
@@ -671,7 +674,7 @@
 			);
 		}
 		return updates;
-	};
+	}
 
 	/**
 	 * Calculate polygon/star resize adjustments
@@ -682,7 +685,7 @@
 	 * @param {number} deltaY Delta Y movement
 	 * @return {Object} Updates object with new radius
 	 */
-	TransformController.prototype.calculatePolygonResize = function (
+	calculatePolygonResize (
 		originalLayer, handleType, deltaX, deltaY
 	) {
 		const updates = {};
@@ -741,7 +744,7 @@
 
 		updates.radius = newRadius;
 		return updates;
-	};
+	}
 
 	/**
 	 * Calculate line/arrow resize adjustments
@@ -754,7 +757,7 @@
 	 * @param {number} deltaY Delta Y movement in world coordinates
 	 * @return {Object} Updates object with new endpoint coordinates
 	 */
-	TransformController.prototype.calculateLineResize = function (
+	calculateLineResize (
 		originalLayer, handleType, deltaX, deltaY
 	) {
 		const updates = {};
@@ -810,7 +813,7 @@
 		}
 
 		return updates;
-	};
+	}
 
 	/**
 	 * Calculate path resize adjustments (scales all points from anchor)
@@ -824,7 +827,7 @@
 	 * @param {number} deltaY Delta Y movement
 	 * @return {Object|null} Updates object with scaled points
 	 */
-	TransformController.prototype.calculatePathResize = function (
+	calculatePathResize (
 		originalLayer, handleType, deltaX, deltaY
 	) {
 		if ( !originalLayer.points || originalLayer.points.length === 0 ) {
@@ -923,7 +926,7 @@
 		}
 
 		return updates;
-	};
+	}
 
 	/**
 	 * Calculate text resize adjustments (changes font size)
@@ -934,7 +937,7 @@
 	 * @param {number} deltaY Delta Y movement
 	 * @return {Object} Updates object with new fontSize
 	 */
-	TransformController.prototype.calculateTextResize = function (
+	calculateTextResize (
 		originalLayer, handleType, deltaX, deltaY
 	) {
 		const updates = {};
@@ -977,7 +980,7 @@
 		updates.fontSize = Math.round( newFontSize );
 
 		return updates;
-	};
+	}
 
 	// ==================== Rotation Operations ====================
 
@@ -986,7 +989,7 @@
 	 *
 	 * @param {Object} point Starting mouse point
 	 */
-	TransformController.prototype.startRotation = function ( point ) {
+	startRotation ( point ) {
 		this.isRotating = true;
 		this.manager.canvas.style.cursor = 'grabbing';
 		if ( point ) {
@@ -998,7 +1001,7 @@
 		if ( layer ) {
 			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
 		}
-	};
+	}
 
 	/**
 	 * Handle rotation during mouse move
@@ -1006,7 +1009,7 @@
 	 * @param {Object} point Current mouse point
 	 * @param {Event} event Mouse event for modifier keys
 	 */
-	TransformController.prototype.handleRotation = function ( point, event ) {
+	handleRotation ( point, event ) {
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( !layer ) {
 			return;
@@ -1042,12 +1045,12 @@
 		// Re-render and emit live-transform event
 		this.manager.renderLayers( this.manager.editor.layers );
 		this.emitTransforming( layer );
-	};
+	}
 
 	/**
 	 * Finish the rotation operation
 	 */
-	TransformController.prototype.finishRotation = function () {
+	finishRotation () {
 		this.isRotating = false;
 		this.originalLayerState = null;
 		this.dragStartPoint = null;
@@ -1062,7 +1065,7 @@
 		} else if ( this.manager && typeof this.manager.saveState === 'function' ) {
 			this.manager.saveState( 'Rotate layer' );
 		}
-	};
+	}
 
 	// ==================== Drag Operations ====================
 
@@ -1071,7 +1074,7 @@
 	 *
 	 * @param {Object} startPoint Starting mouse point
 	 */
-	TransformController.prototype.startDrag = function ( startPoint ) {
+	startDrag ( startPoint ) {
 		this.isDragging = true;
 		this.dragStartPoint = startPoint;
 		this.manager.canvas.style.cursor = 'move';
@@ -1096,14 +1099,14 @@
 				this.originalLayerState = JSON.parse( JSON.stringify( singleLayer ) );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Handle drag during mouse move
 	 *
 	 * @param {Object} point Current mouse point
 	 */
-	TransformController.prototype.handleDrag = function ( point ) {
+	handleDrag ( point ) {
 		const deltaX = point.x - this.dragStartPoint.x;
 		const deltaY = point.y - this.dragStartPoint.y;
 
@@ -1163,7 +1166,7 @@
 		if ( active ) {
 			this.emitTransforming( active );
 		}
-	};
+	}
 
 	/**
 	 * Update layer position during drag operation
@@ -1173,7 +1176,7 @@
 	 * @param {number} deltaX X offset
 	 * @param {number} deltaY Y offset
 	 */
-	TransformController.prototype.updateLayerPosition = function (
+	updateLayerPosition (
 		layer, originalState, deltaX, deltaY
 	) {
 		switch ( layer.type ) {
@@ -1203,12 +1206,12 @@
 				}
 				break;
 		}
-	};
+	}
 
 	/**
 	 * Finish the drag operation
 	 */
-	TransformController.prototype.finishDrag = function () {
+	finishDrag () {
 		// Only mark dirty if actual drag movement occurred (showDragPreview is set in handleDrag)
 		const hadMovement = this.showDragPreview;
 
@@ -1231,7 +1234,7 @@
 				this.manager.saveState( 'Move layer' );
 			}
 		}
-	};
+	}
 
 	// ==================== Utility Methods ====================
 
@@ -1241,7 +1244,7 @@
 	 *
 	 * @param {Object} layer The layer object to serialize and emit
 	 */
-	TransformController.prototype.emitTransforming = function ( layer ) {
+	emitTransforming ( layer ) {
 		if ( !layer ) {
 			return;
 		}
@@ -1267,23 +1270,23 @@
 				}
 			}
 		} );
-	};
+	}
 
 	/**
 	 * Check if any transform operation is active
 	 *
 	 * @return {boolean} True if resizing, rotating, or dragging
 	 */
-	TransformController.prototype.isTransforming = function () {
+	isTransforming () {
 		return this.isResizing || this.isRotating || this.isDragging;
-	};
+	}
 
 	/**
 	 * Get the current transform state
 	 *
 	 * @return {Object} Current transform state
 	 */
-	TransformController.prototype.getState = function () {
+	getState () {
 		return {
 			isResizing: this.isResizing,
 			isRotating: this.isRotating,
@@ -1291,12 +1294,12 @@
 			resizeHandle: this.resizeHandle,
 			showDragPreview: this.showDragPreview
 		};
-	};
+	}
 
 	/**
 	 * Clean up resources and state
 	 */
-	TransformController.prototype.destroy = function () {
+	destroy() {
 		// Cancel any pending transform events
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;
@@ -1312,7 +1315,8 @@
 
 		// Clear reference
 		this.manager = null;
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
