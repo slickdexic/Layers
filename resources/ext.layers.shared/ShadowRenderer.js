@@ -30,14 +30,17 @@
 	}
 
 	/**
-	 * ShadowRenderer - Handles shadow rendering for layer shapes
+	 * ShadowRenderer class - Handles shadow rendering for layer shapes
+	 */
+class ShadowRenderer {
+	/**
+	 * Creates a new ShadowRenderer instance
 	 *
-	 * @class
 	 * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
 	 * @param {Object} [config] - Configuration options
 	 * @param {HTMLCanvasElement} [config.canvas] - Canvas element reference
 	 */
-	function ShadowRenderer( ctx, config ) {
+	constructor( ctx, config ) {
 		this.ctx = ctx;
 		this.config = config || {};
 		this.canvas = this.config.canvas || null;
@@ -52,18 +55,18 @@
 	 *
 	 * @param {HTMLCanvasElement} canvas - Canvas element
 	 */
-	ShadowRenderer.prototype.setCanvas = function ( canvas ) {
+	setCanvas( canvas ) {
 		this.canvas = canvas;
-	};
+	}
 
 	/**
 	 * Update the context reference
 	 *
 	 * @param {CanvasRenderingContext2D} ctx - New context
 	 */
-	ShadowRenderer.prototype.setContext = function ( ctx ) {
+	setContext ( ctx ) {
 		this.ctx = ctx;
-	};
+	}
 
 	// ========================================================================
 	// Shadow State Management
@@ -72,12 +75,12 @@
 	/**
 	 * Clear shadow settings from context
 	 */
-	ShadowRenderer.prototype.clearShadow = function () {
+	clearShadow () {
 		this.ctx.shadowColor = 'transparent';
 		this.ctx.shadowBlur = 0;
 		this.ctx.shadowOffsetX = 0;
 		this.ctx.shadowOffsetY = 0;
-	};
+	}
 
 	/**
 	 * Apply shadow settings to context (blur and offset only, not spread)
@@ -85,7 +88,7 @@
 	 * @param {Object} layer - Layer with shadow properties
 	 * @param {Object} scale - Scale factors {sx, sy, avg}
 	 */
-	ShadowRenderer.prototype.applyShadow = function ( layer, scale ) {
+	applyShadow ( layer, scale ) {
 		const scaleX = scale.sx || 1;
 		const scaleY = scale.sy || 1;
 		const scaleAvg = scale.avg || 1;
@@ -117,7 +120,7 @@
 			this.ctx.shadowOffsetY = ( typeof layer.shadow.offsetY === 'number' ? layer.shadow.offsetY : 2 ) * scaleY;
 		}
 		// If shadow is undefined/null, no shadow is applied (canvas defaults)
-	};
+	}
 
 	// ========================================================================
 	// Shadow Property Helpers
@@ -129,13 +132,13 @@
 	 * @param {Object} layer - Layer to check
 	 * @return {boolean} True if shadow is enabled
 	 */
-	ShadowRenderer.prototype.hasShadowEnabled = function ( layer ) {
+	hasShadowEnabled ( layer ) {
 		return layer.shadow === true ||
 			layer.shadow === 'true' ||
 			layer.shadow === 1 ||
 			layer.shadow === '1' ||
 			( typeof layer.shadow === 'object' && layer.shadow );
-	};
+	}
 
 	/**
 	 * Get shadow spread value from layer
@@ -144,7 +147,7 @@
 	 * @param {Object} scale - Scale factors
 	 * @return {number} Spread value in pixels (scaled)
 	 */
-	ShadowRenderer.prototype.getShadowSpread = function ( layer, scale ) {
+	getShadowSpread ( layer, scale ) {
 		const scaleAvg = scale.avg || 1;
 
 		// Check if shadow is enabled
@@ -164,7 +167,7 @@
 		}
 
 		return 0;
-	};
+	}
 
 	/**
 	 * Get shadow parameters for offscreen rendering technique
@@ -173,7 +176,7 @@
 	 * @param {Object} scale - Scale factors
 	 * @return {Object} Shadow parameters {offsetX, offsetY, blur, color, offscreenOffset}
 	 */
-	ShadowRenderer.prototype.getShadowParams = function ( layer, scale ) {
+	getShadowParams ( layer, scale ) {
 		const scaleX = scale.sx || 1;
 		const scaleY = scale.sy || 1;
 		const scaleAvg = scale.avg || 1;
@@ -185,7 +188,7 @@
 			color: layer.shadowColor || 'rgba(0,0,0,0.4)',
 			offscreenOffset: 10000
 		};
-	};
+	}
 
 	// ========================================================================
 	// Offscreen Shadow Rendering (Spread Support)
@@ -209,7 +212,7 @@
 	 * @param {Function} drawExpandedPathFn - Function(ctx) that creates the expanded path on the provided context
 	 * @param {number} [opacity=1] - Opacity to apply to the shadow (0-1)
 	 */
-	ShadowRenderer.prototype.drawSpreadShadow = function ( layer, scale, spread, drawExpandedPathFn, opacity ) {
+	drawSpreadShadow ( layer, scale, spread, drawExpandedPathFn, opacity ) {
 		const sp = this.getShadowParams( layer, scale );
 		const blur = sp.blur;
 		const shadowOpacity = typeof opacity === 'number' ? Math.max( 0, Math.min( 1, opacity ) ) : 1;
@@ -332,7 +335,7 @@
 		this.ctx.globalAlpha = shadowOpacity;
 		this.ctx.drawImage( tempCanvas, 0, 0 );
 		this.ctx.restore();
-	};
+	}
 
 	/**
 	 * Draw a spread shadow for stroked shapes (lines, paths) using offscreen canvas.
@@ -346,7 +349,7 @@
 	 * @param {Function} drawPathFn - Function(ctx) that creates the path on the provided context
 	 * @param {number} [opacity=1] - Opacity to apply to the shadow (0-1)
 	 */
-	ShadowRenderer.prototype.drawSpreadShadowStroke = function ( layer, scale, strokeWidth, drawPathFn, opacity ) {
+	drawSpreadShadowStroke ( layer, scale, strokeWidth, drawPathFn, opacity ) {
 		const sp = this.getShadowParams( layer, scale );
 		const shadowOpacity = typeof opacity === 'number' ? Math.max( 0, Math.min( 1, opacity ) ) : 1;
 
@@ -450,7 +453,7 @@
 		this.ctx.globalAlpha = shadowOpacity;
 		this.ctx.drawImage( tempCanvas, 0, 0 );
 		this.ctx.restore();
-	};
+	}
 
 	// ========================================================================
 	// Utility Methods
@@ -462,7 +465,7 @@
 	 * @param {number|undefined} alpha - Opacity multiplier (0-1)
 	 * @param {Function} drawFn - Drawing function to execute
 	 */
-	ShadowRenderer.prototype.withLocalAlpha = function ( alpha, drawFn ) {
+	withLocalAlpha ( alpha, drawFn ) {
 		if ( typeof drawFn !== 'function' ) {
 			return;
 		}
@@ -479,7 +482,7 @@
 		} finally {
 			this.ctx.globalAlpha = previousAlpha;
 		}
-	};
+	}
 
 	// ========================================================================
 	// Cleanup
@@ -488,11 +491,12 @@
 	/**
 	 * Clean up resources
 	 */
-	ShadowRenderer.prototype.destroy = function () {
+	destroy() {
 		this.ctx = null;
 		this.config = null;
 		this.canvas = null;
-	};
+	}
+}
 
 	// ========================================================================
 	// Exports
