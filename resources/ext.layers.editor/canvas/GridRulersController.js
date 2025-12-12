@@ -11,11 +11,14 @@
 
 	/**
 	 * GridRulersController class
+	 */
+class GridRulersController {
+	/**
+	 * Creates a new GridRulersController instance
 	 *
-	 * @class
 	 * @param {Object} canvasManager Reference to parent CanvasManager
 	 */
-	function GridRulersController( canvasManager ) {
+	constructor( canvasManager ) {
 		this.manager = canvasManager;
 
 		// Grid settings (sync with manager for backwards compatibility)
@@ -39,132 +42,132 @@
 	 *
 	 * @return {boolean} Whether grid is visible
 	 */
-	GridRulersController.prototype.isGridVisible = function () {
+	isGridVisible() {
 		return this.manager.showGrid;
-	};
+	}
 
 	/**
 	 * Get current rulers visibility
 	 *
 	 * @return {boolean} Whether rulers are visible
 	 */
-	GridRulersController.prototype.areRulersVisible = function () {
+	areRulersVisible () {
 		return this.manager.showRulers;
-	};
+	}
 
 	/**
 	 * Get current guides visibility
 	 *
 	 * @return {boolean} Whether guides are visible
 	 */
-	GridRulersController.prototype.areGuidesVisible = function () {
+	areGuidesVisible () {
 		return this.manager.showGuides;
-	};
+	}
 
 	/**
 	 * Toggle grid visibility
 	 */
-	GridRulersController.prototype.toggleGrid = function () {
+	toggleGrid () {
 		this.manager.showGrid = !this.manager.showGrid;
 		this.manager.redraw();
 		this.manager.renderLayers( this.manager.editor.layers );
-	};
+	}
 
 	/**
 	 * Toggle rulers visibility
 	 */
-	GridRulersController.prototype.toggleRulers = function () {
+	toggleRulers () {
 		this.manager.showRulers = !this.manager.showRulers;
 		this.manager.redraw();
 		this.manager.renderLayers( this.manager.editor.layers );
-	};
+	}
 
 	/**
 	 * Toggle guides visibility
 	 */
-	GridRulersController.prototype.toggleGuidesVisibility = function () {
+	toggleGuidesVisibility () {
 		this.manager.showGuides = !this.manager.showGuides;
 		this.manager.redraw();
 		this.manager.renderLayers( this.manager.editor.layers );
-	};
+	}
 
 	/**
 	 * Toggle snap to grid
 	 */
-	GridRulersController.prototype.toggleSnapToGrid = function () {
+	toggleSnapToGrid () {
 		this.manager.snapToGrid = !this.manager.snapToGrid;
-	};
+	}
 
 	/**
 	 * Toggle snap to guides
 	 */
-	GridRulersController.prototype.toggleSnapToGuides = function () {
+	toggleSnapToGuides () {
 		this.manager.snapToGuides = !this.manager.snapToGuides;
-	};
+	}
 
 	/**
 	 * Toggle smart guides
 	 */
-	GridRulersController.prototype.toggleSmartGuides = function () {
+	toggleSmartGuides () {
 		this.manager.smartGuides = !this.manager.smartGuides;
-	};
+	}
 
 	/**
 	 * Set grid size
 	 *
 	 * @param {number} size Grid cell size in pixels
 	 */
-	GridRulersController.prototype.setGridSize = function ( size ) {
+	setGridSize ( size ) {
 		this.gridSize = size;
 		this.manager.gridSize = size;
 		if ( this.manager.showGrid ) {
 			this.manager.redraw();
 			this.manager.renderLayers( this.manager.editor.layers );
 		}
-	};
+	}
 
 	/**
 	 * Draw grid (delegates to renderer)
 	 */
-	GridRulersController.prototype.drawGrid = function () {
+	drawGrid () {
 		if ( this.manager.renderer ) {
 			this.manager.renderer.drawGrid();
 		}
-	};
+	}
 
 	/**
 	 * Draw rulers (delegates to renderer)
 	 */
-	GridRulersController.prototype.drawRulers = function () {
+	drawRulers () {
 		if ( this.manager.renderer ) {
 			this.manager.renderer.drawRulers();
 		}
-	};
+	}
 
 	/**
 	 * Draw guides (delegates to renderer)
 	 */
-	GridRulersController.prototype.drawGuides = function () {
+	drawGuides () {
 		if ( this.manager.renderer ) {
 			this.manager.renderer.drawGuides();
 		}
-	};
+	}
 
 	/**
 	 * Draw guide preview during drag (delegates to renderer)
 	 */
-	GridRulersController.prototype.drawGuidePreview = function () {
+	drawGuidePreview () {
 		if ( this.manager.renderer ) {
 			this.manager.renderer.drawGuidePreview();
 		}
-	};
+	}
 
 	/**
 	 * Add a horizontal guide at the specified y position
 	 *
 	 * @param {number} y Y position in canvas coordinates
 	 */
-	GridRulersController.prototype.addHorizontalGuide = function ( y ) {
+	addHorizontalGuide ( y ) {
 		if ( this.horizontalGuides.indexOf( y ) === -1 ) {
 			this.horizontalGuides.push( y );
 			this.manager.horizontalGuides = this.horizontalGuides;
@@ -173,14 +176,14 @@
 				this.manager.renderLayers( this.manager.editor.layers );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Add a vertical guide at the specified x position
 	 *
 	 * @param {number} x X position in canvas coordinates
 	 */
-	GridRulersController.prototype.addVerticalGuide = function ( x ) {
+	addVerticalGuide ( x ) {
 		if ( this.verticalGuides.indexOf( x ) === -1 ) {
 			this.verticalGuides.push( x );
 			this.manager.verticalGuides = this.verticalGuides;
@@ -189,14 +192,14 @@
 				this.manager.renderLayers( this.manager.editor.layers );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Remove a horizontal guide
 	 *
 	 * @param {number} y Y position of guide to remove
 	 */
-	GridRulersController.prototype.removeHorizontalGuide = function ( y ) {
+	removeHorizontalGuide ( y ) {
 		const idx = this.horizontalGuides.indexOf( y );
 		if ( idx !== -1 ) {
 			this.horizontalGuides.splice( idx, 1 );
@@ -206,14 +209,14 @@
 				this.manager.renderLayers( this.manager.editor.layers );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Remove a vertical guide
 	 *
 	 * @param {number} x X position of guide to remove
 	 */
-	GridRulersController.prototype.removeVerticalGuide = function ( x ) {
+	removeVerticalGuide ( x ) {
 		const idx = this.verticalGuides.indexOf( x );
 		if ( idx !== -1 ) {
 			this.verticalGuides.splice( idx, 1 );
@@ -223,12 +226,12 @@
 				this.manager.renderLayers( this.manager.editor.layers );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Clear all guides
 	 */
-	GridRulersController.prototype.clearAllGuides = function () {
+	clearAllGuides () {
 		this.horizontalGuides = [];
 		this.verticalGuides = [];
 		this.manager.horizontalGuides = [];
@@ -237,7 +240,7 @@
 			this.manager.redraw();
 			this.manager.renderLayers( this.manager.editor.layers );
 		}
-	};
+	}
 
 	/**
 	 * Snap a point to the grid if snapping is enabled
@@ -246,7 +249,7 @@
 	 * @param {number} y Y coordinate
 	 * @return {{x: number, y: number}} Snapped coordinates
 	 */
-	GridRulersController.prototype.snapPointToGrid = function ( x, y ) {
+	snapPointToGrid ( x, y ) {
 		if ( !this.manager.snapToGrid ) {
 			return { x: x, y: y };
 		}
@@ -255,7 +258,7 @@
 			x: Math.round( x / gridSize ) * gridSize,
 			y: Math.round( y / gridSize ) * gridSize
 		};
-	};
+	}
 
 	/**
 	 * Calculate snap delta to guides for a given bounds
@@ -266,7 +269,7 @@
 	 * @param {number} [tol=6] Snap tolerance in pixels
 	 * @return {{dx: number, dy: number}} Additional delta to snap to guides
 	 */
-	GridRulersController.prototype.getGuideSnapDelta = function ( bounds, deltaX, deltaY, tol ) {
+	getGuideSnapDelta ( bounds, deltaX, deltaY, tol ) {
 		tol = tol || 6;
 		let dx = 0;
 		let dy = 0;
@@ -318,7 +321,7 @@
 		}
 
 		return { dx: dx, dy: dy };
-	};
+	}
 
 	/**
 	 * Start dragging a guide from a ruler
@@ -326,32 +329,32 @@
 	 * @param {string} orientation 'h' for horizontal, 'v' for vertical
 	 * @param {number} pos Initial position
 	 */
-	GridRulersController.prototype.startGuideDrag = function ( orientation, pos ) {
+	startGuideDrag ( orientation, pos ) {
 		this.isDraggingGuide = true;
 		this.dragGuideOrientation = orientation;
 		this.dragGuidePos = pos;
 		this.manager.isDraggingGuide = true;
 		this.manager.dragGuideOrientation = orientation;
 		this.manager.dragGuidePos = pos;
-	};
+	}
 
 	/**
 	 * Update guide position during drag
 	 *
 	 * @param {number} pos New position
 	 */
-	GridRulersController.prototype.updateGuideDrag = function ( pos ) {
+	updateGuideDrag ( pos ) {
 		this.dragGuidePos = pos;
 		this.manager.dragGuidePos = pos;
 		this.drawGuidePreview();
-	};
+	}
 
 	/**
 	 * Finish dragging a guide
 	 *
 	 * @param {number} pos Final position
 	 */
-	GridRulersController.prototype.finishGuideDrag = function ( pos ) {
+	finishGuideDrag ( pos ) {
 		if ( this.dragGuideOrientation === 'h' ) {
 			this.addHorizontalGuide( pos );
 		} else if ( this.dragGuideOrientation === 'v' ) {
@@ -363,12 +366,12 @@
 		this.manager.isDraggingGuide = false;
 		this.manager.dragGuideOrientation = null;
 		this.manager.dragGuidePos = 0;
-	};
+	}
 
 	/**
 	 * Cancel guide drag operation
 	 */
-	GridRulersController.prototype.cancelGuideDrag = function () {
+	cancelGuideDrag () {
 		this.isDraggingGuide = false;
 		this.dragGuideOrientation = null;
 		this.dragGuidePos = 0;
@@ -377,12 +380,12 @@
 		this.manager.dragGuidePos = 0;
 		this.manager.redraw();
 		this.manager.renderLayers( this.manager.editor.layers );
-	};
+	}
 
 	/**
 	 * Clean up resources and state
 	 */
-	GridRulersController.prototype.destroy = function () {
+	destroy () {
 		// Clear guides
 		this.horizontalGuides = [];
 		this.verticalGuides = [];
@@ -394,7 +397,8 @@
 
 		// Clear reference
 		this.manager = null;
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
