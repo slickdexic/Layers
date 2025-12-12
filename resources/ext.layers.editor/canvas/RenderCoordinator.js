@@ -14,14 +14,17 @@
 
 	/**
 	 * RenderCoordinator class
+	 */
+class RenderCoordinator {
+	/**
+	 * Creates a new RenderCoordinator instance
 	 *
 	 * @param {CanvasManager} canvasManager - Reference to the canvas manager
 	 * @param {Object} [options] - Configuration options
 	 * @param {boolean} [options.enableMetrics=false] - Enable performance metrics collection
 	 * @param {number} [options.targetFps=60] - Target frames per second
-	 * @class
 	 */
-	function RenderCoordinator( canvasManager, options ) {
+	constructor( canvasManager, options ) {
 		this.canvasManager = canvasManager;
 		this.options = options || {};
 
@@ -60,7 +63,7 @@
 	 * @param {Object} [options.region] - Dirty region {x, y, width, height} for partial redraw
 	 * @return {RenderCoordinator} Returns this for chaining
 	 */
-	RenderCoordinator.prototype.scheduleRedraw = function ( options ) {
+	scheduleRedraw( options ) {
 		if ( this.isDestroyed ) {
 			return this;
 		}
@@ -97,13 +100,13 @@
 		}
 
 		return this;
-	};
+	}
 
 	/**
 	 * Internal render frame callback
 	 * @private
 	 */
-	RenderCoordinator.prototype._renderFrame = function ( timestamp ) {
+	_renderFrame ( timestamp ) {
 		if ( this.isDestroyed ) {
 			return;
 		}
@@ -120,13 +123,13 @@
 
 		// Perform the actual redraw
 		this._performRedraw();
-	};
+	}
 
 	/**
 	 * Perform the actual redraw operation
 	 * @private
 	 */
-	RenderCoordinator.prototype._performRedraw = function () {
+	_performRedraw () {
 		const startTime = this.enableMetrics ? performance.now() : 0;
 
 		try {
@@ -160,14 +163,14 @@
 				this._recordRenderTime( renderTime );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Run an array of callbacks
 	 * @param {Array<Function>} callbacks
 	 * @private
 	 */
-	RenderCoordinator.prototype._runCallbacks = function ( callbacks ) {
+	_runCallbacks ( callbacks ) {
 		for ( let i = 0; i < callbacks.length; i++ ) {
 			try {
 				callbacks[ i ]();
@@ -175,21 +178,21 @@
 				this._logError( 'Render callback error:', error );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Handle render errors
 	 * @param {Error} error
 	 * @private
 	 */
-	RenderCoordinator.prototype._handleRenderError = function ( error ) {
+	_handleRenderError ( error ) {
 		this._logError( 'Render error:', error );
 
 		// Notify error handler if available
 		if ( typeof window !== 'undefined' && window.layersErrorHandler ) {
 			window.layersErrorHandler.handleError( error, 'RenderCoordinator._performRedraw', 'canvas' );
 		}
-	};
+	}
 
 	/**
 	 * Log an error using appropriate logging system
@@ -197,86 +200,86 @@
 	 * @param {Error} error
 	 * @private
 	 */
-	RenderCoordinator.prototype._logError = function ( message, error ) {
+	_logError ( message, error ) {
 		if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
 			mw.log.error( '[RenderCoordinator]', message, error );
 		}
-	};
+	}
 
 	/**
 	 * Record frame time for metrics
 	 * @param {number} frameTime
 	 * @private
 	 */
-	RenderCoordinator.prototype._recordFrameTime = function ( frameTime ) {
+	_recordFrameTime ( frameTime ) {
 		this.frameTimes.push( frameTime );
 		if ( this.frameTimes.length > this.maxFrameTimesSample ) {
 			this.frameTimes.shift();
 		}
 		this.frameCount++;
-	};
+	}
 
 	/**
 	 * Record render time for metrics
 	 * @param {number} renderTime
 	 * @private
 	 */
-	RenderCoordinator.prototype._recordRenderTime = function ( renderTime ) {
+	_recordRenderTime ( renderTime ) {
 		// Could be extended to track render time separately from frame time
 		if ( renderTime > this.targetFrameTime ) {
 			this._logError( 'Slow render detected:', new Error( renderTime + 'ms exceeds target ' + this.targetFrameTime + 'ms' ) );
 		}
-	};
+	}
 
 	/**
 	 * Add a pre-render callback
 	 * @param {Function} callback
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.addPreRenderCallback = function ( callback ) {
+	addPreRenderCallback ( callback ) {
 		if ( typeof callback === 'function' ) {
 			this.preRenderCallbacks.push( callback );
 		}
 		return this;
-	};
+	}
 
 	/**
 	 * Add a post-render callback
 	 * @param {Function} callback
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.addPostRenderCallback = function ( callback ) {
+	addPostRenderCallback ( callback ) {
 		if ( typeof callback === 'function' ) {
 			this.postRenderCallbacks.push( callback );
 		}
 		return this;
-	};
+	}
 
 	/**
 	 * Remove a pre-render callback
 	 * @param {Function} callback
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.removePreRenderCallback = function ( callback ) {
+	removePreRenderCallback ( callback ) {
 		const index = this.preRenderCallbacks.indexOf( callback );
 		if ( index !== -1 ) {
 			this.preRenderCallbacks.splice( index, 1 );
 		}
 		return this;
-	};
+	}
 
 	/**
 	 * Remove a post-render callback
 	 * @param {Function} callback
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.removePostRenderCallback = function ( callback ) {
+	removePostRenderCallback ( callback ) {
 		const index = this.postRenderCallbacks.indexOf( callback );
 		if ( index !== -1 ) {
 			this.postRenderCallbacks.splice( index, 1 );
 		}
 		return this;
-	};
+	}
 
 	/**
 	 * Mark a region as dirty (needs redraw)
@@ -286,25 +289,25 @@
 	 * @param {number} height
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.markDirty = function ( x, y, width, height ) {
+	markDirty ( x, y, width, height ) {
 		this.dirtyRegions.push( { x: x, y: y, width: width, height: height } );
 		return this.scheduleRedraw();
-	};
+	}
 
 	/**
 	 * Mark entire canvas as needing full redraw
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.markFullRedraw = function () {
+	markFullRedraw () {
 		this.fullRedrawRequired = true;
 		return this.scheduleRedraw();
-	};
+	}
 
 	/**
 	 * Cancel any pending redraw
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.cancelPendingRedraw = function () {
+	cancelPendingRedraw () {
 		if ( this.animationFrameId !== null ) {
 			if ( typeof window !== 'undefined' && window.cancelAnimationFrame ) {
 				window.cancelAnimationFrame( this.animationFrameId );
@@ -313,13 +316,13 @@
 		}
 		this.pendingRedraw = false;
 		return this;
-	};
+	}
 
 	/**
 	 * Get performance metrics
 	 * @return {Object} Metrics object with fps, avgFrameTime, frameCount
 	 */
-	RenderCoordinator.prototype.getMetrics = function () {
+	getMetrics () {
 		if ( !this.enableMetrics || this.frameTimes.length === 0 ) {
 			return {
 				fps: 0,
@@ -341,35 +344,35 @@
 			frameCount: this.frameCount,
 			enabled: this.enableMetrics
 		};
-	};
+	}
 
 	/**
 	 * Reset metrics
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.resetMetrics = function () {
+	resetMetrics () {
 		this.frameTimes = [];
 		this.frameCount = 0;
 		return this;
-	};
+	}
 
 	/**
 	 * Enable or disable metrics collection
 	 * @param {boolean} enabled
 	 * @return {RenderCoordinator}
 	 */
-	RenderCoordinator.prototype.setMetricsEnabled = function ( enabled ) {
+	setMetricsEnabled ( enabled ) {
 		this.enableMetrics = !!enabled;
 		if ( !this.enableMetrics ) {
 			this.resetMetrics();
 		}
 		return this;
-	};
+	}
 
 	/**
 	 * Clean up resources
 	 */
-	RenderCoordinator.prototype.destroy = function () {
+	destroy() {
 		this.isDestroyed = true;
 		this.cancelPendingRedraw();
 		this.preRenderCallbacks = [];
@@ -377,7 +380,8 @@
 		this.dirtyRegions = [];
 		this.frameTimes = [];
 		this.canvasManager = null;
-	};
+	}
+}
 
 	// Export
 	// Export to window.Layers namespace (preferred)
