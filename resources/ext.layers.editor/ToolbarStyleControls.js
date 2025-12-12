@@ -30,11 +30,14 @@
 	 * ToolbarStyleControls class
 	 *
 	 * @class
+	 */
+class ToolbarStyleControls {
+	/**
 	 * @param {Object} config Configuration object
 	 * @param {Object} config.toolbar Reference to parent Toolbar instance
 	 * @param {Function} config.msg Message lookup function for i18n
 	 */
-	function ToolbarStyleControls( config ) {
+	constructor( config ) {
 		this.config = config || {};
 		this.toolbar = this.config.toolbar;
 		this.msgFn = this.config.msg || function ( key, fallback ) {
@@ -81,7 +84,7 @@
 	 * @param {Function} handler Event handler
 	 * @param {Object} [options] Event listener options
 	 */
-	ToolbarStyleControls.prototype.addListener = function ( element, event, handler, options ) {
+	addListener( element, event, handler, options ) {
 		if ( !element || !event || typeof handler !== 'function' ) {
 			return;
 		}
@@ -91,7 +94,7 @@
 			// Fallback if EventTracker not available
 			element.addEventListener( event, handler, options );
 		}
-	};
+	}
 
 	/**
 	 * Get localized message
@@ -100,16 +103,16 @@
 	 * @param {string} fallback Fallback text
 	 * @return {string} Localized message
 	 */
-	ToolbarStyleControls.prototype.msg = function ( key, fallback ) {
+	msg( key, fallback ) {
 		return this.msgFn( key, fallback );
-	};
+	}
 
 	/**
 	 * Create the style controls group
 	 *
 	 * @return {HTMLElement} The style group container element
 	 */
-	ToolbarStyleControls.prototype.create = function () {
+	create() {
 		const styleGroup = document.createElement( 'div' );
 		styleGroup.className = 'toolbar-group style-group';
 		this.container = styleGroup;
@@ -138,14 +141,14 @@
 		this.notifyStyleChange();
 
 		return styleGroup;
-	};
+	}
 
 	/**
 	 * Create the main style controls row (stroke color, fill color, stroke width)
 	 *
 	 * @return {HTMLElement} The row container
 	 */
-	ToolbarStyleControls.prototype.createMainStyleRow = function () {
+	createMainStyleRow() {
 		const row = document.createElement( 'div' );
 		row.className = 'style-controls-row';
 
@@ -187,7 +190,7 @@
 		row.appendChild( widthItem.container );
 
 		return row;
-	};
+	}
 
 	/**
 	 * Create a color control item (stroke or fill)
@@ -199,7 +202,7 @@
 	 * @param {Function} options.onColorChange Callback when color changes
 	 * @return {Object} Object with container and button elements
 	 */
-	ToolbarStyleControls.prototype.createColorControl = function ( options ) {
+	createColorControl( options ) {
 		const container = document.createElement( 'div' );
 		container.className = 'style-control-item';
 
@@ -232,14 +235,14 @@
 		} );
 
 		return { container: container, button: button };
-	};
+	}
 
 	/**
 	 * Create the stroke width control
 	 *
 	 * @return {Object} Object with container and input elements
 	 */
-	ToolbarStyleControls.prototype.createStrokeWidthControl = function () {
+	createStrokeWidthControl() {
 		const container = document.createElement( 'div' );
 		container.className = 'style-control-item';
 
@@ -269,14 +272,14 @@
 		} );
 
 		return { container: container, input: input };
-	};
+	}
 
 	/**
 	 * Handle stroke width input changes
 	 *
 	 * @param {HTMLInputElement} input The input element
 	 */
-	ToolbarStyleControls.prototype.handleStrokeWidthInput = function ( input ) {
+	handleStrokeWidthInput( input ) {
 		let val = parseInt( input.value, 10 );
 		const isValid = !isNaN( val ) && val >= 0 && val <= 100;
 
@@ -296,28 +299,28 @@
 				input.title = 'Maximum stroke width: 100px';
 			}
 		}
-	};
+	}
 
 	/**
 	 * Handle stroke width blur event (reset invalid values)
 	 *
 	 * @param {HTMLInputElement} input The input element
 	 */
-	ToolbarStyleControls.prototype.handleStrokeWidthBlur = function ( input ) {
+	handleStrokeWidthBlur( input ) {
 		const val = parseInt( input.value, 10 );
 		if ( isNaN( val ) || val < 0 || val > 100 ) {
 			input.value = String( this.currentStrokeWidth );
 			input.classList.remove( 'validation-error' );
 			input.title = this.msg( 'layers-prop-stroke-width', 'Stroke Width' ) + ': ' + this.currentStrokeWidth + 'px';
 		}
-	};
+	}
 
 	/**
 	 * Create the font size control (for text tool)
 	 *
 	 * @return {HTMLElement} The font size container
 	 */
-	ToolbarStyleControls.prototype.createFontSizeControl = function () {
+	createFontSizeControl() {
 		const container = document.createElement( 'div' );
 		container.className = 'font-size-container style-control-item';
 		container.style.display = 'none';
@@ -343,14 +346,14 @@
 		} );
 
 		return container;
-	};
+	}
 
 	/**
 	 * Create the text stroke control
 	 *
 	 * @return {HTMLElement} The text stroke container
 	 */
-	ToolbarStyleControls.prototype.createTextStrokeControl = function () {
+	createTextStrokeControl() {
 		const container = document.createElement( 'div' );
 		container.className = 'text-stroke-container';
 		container.style.display = 'none';
@@ -395,14 +398,14 @@
 		} );
 
 		return container;
-	};
+	}
 
 	/**
 	 * Create the shadow control
 	 *
 	 * @return {HTMLElement} The shadow container
 	 */
-	ToolbarStyleControls.prototype.createShadowControl = function () {
+	createShadowControl() {
 		const container = document.createElement( 'div' );
 		container.className = 'text-shadow-container';
 		container.style.display = 'none';
@@ -439,14 +442,14 @@
 		} );
 
 		return container;
-	};
+	}
 
 	/**
 	 * Create the arrow style control
 	 *
 	 * @return {HTMLElement} The arrow style container
 	 */
-	ToolbarStyleControls.prototype.createArrowStyleControl = function () {
+	createArrowStyleControl() {
 		const container = document.createElement( 'div' );
 		container.className = 'arrow-style-container';
 		container.style.display = 'none';
@@ -482,14 +485,14 @@
 		} );
 
 		return container;
-	};
+	}
 
 	/**
 	 * Get color picker strings for i18n
 	 *
 	 * @return {Object} Color picker string map
 	 */
-	ToolbarStyleControls.prototype.getColorPickerStrings = function () {
+	getColorPickerStrings() {
 		return {
 			title: this.msg( 'layers-color-picker-title', 'Choose color' ),
 			standard: this.msg( 'layers-color-picker-standard', 'Standard colors' ),
@@ -503,7 +506,7 @@
 			swatchTemplate: this.msg( 'layers-color-picker-color-swatch', 'Set color to $1' ),
 			previewTemplate: this.msg( 'layers-color-picker-color-preview', 'Current color: $1' )
 		};
-	};
+	}
 
 	/**
 	 * Open the color picker dialog
@@ -512,7 +515,7 @@
 	 * @param {string} initialValue Current color value
 	 * @param {Object} options Options including onApply callback
 	 */
-	ToolbarStyleControls.prototype.openColorPicker = function ( anchorButton, initialValue, options ) {
+	openColorPicker( anchorButton, initialValue, options ) {
 		options = options || {};
 
 		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
@@ -534,7 +537,7 @@
 		} );
 
 		picker.open();
-	};
+	}
 
 	/**
 	 * Update a color button's display
@@ -542,7 +545,7 @@
 	 * @param {HTMLElement} btn The button element
 	 * @param {string} color The color value or 'none'
 	 */
-	ToolbarStyleControls.prototype.updateColorButtonDisplay = function ( btn, color ) {
+	updateColorButtonDisplay( btn, color ) {
 		const strings = this.getColorPickerStrings();
 		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
 
@@ -563,23 +566,23 @@
 			}
 			btn.setAttribute( 'aria-label', strings.previewTemplate.replace( '$1', labelValue ) );
 		}
-	};
+	}
 
 	/**
 	 * Notify toolbar of style changes
 	 */
-	ToolbarStyleControls.prototype.notifyStyleChange = function () {
+	notifyStyleChange() {
 		if ( this.toolbar && typeof this.toolbar.onStyleChange === 'function' ) {
 			this.toolbar.onStyleChange( this.getStyleOptions() );
 		}
-	};
+	}
 
 	/**
 	 * Get current style options
 	 *
 	 * @return {Object} Style options object
 	 */
-	ToolbarStyleControls.prototype.getStyleOptions = function () {
+	getStyleOptions() {
 		return {
 			color: this.strokeColorNone ? 'transparent' : this.strokeColorValue,
 			fill: this.fillColorNone ? 'transparent' : this.fillColorValue,
@@ -596,14 +599,14 @@
 			shadowOffsetX: 2,
 			shadowOffsetY: 2
 		};
-	};
+	}
 
 	/**
 	 * Update visibility of tool-specific options
 	 *
 	 * @param {string} toolId The currently selected tool
 	 */
-	ToolbarStyleControls.prototype.updateForTool = function ( toolId ) {
+	updateForTool( toolId ) {
 		if ( toolId === 'text' ) {
 			this.fontSizeContainer.style.display = 'block';
 			this.strokeContainer.style.display = 'block';
@@ -620,14 +623,14 @@
 			this.shadowContainer.style.display = 'none';
 			this.arrowContainer.style.display = 'none';
 		}
-	};
+	}
 
 	/**
 	 * Set stroke color programmatically
 	 *
 	 * @param {string} color Color value or 'none'
 	 */
-	ToolbarStyleControls.prototype.setStrokeColor = function ( color ) {
+	setStrokeColor( color ) {
 		if ( color === 'none' || color === 'transparent' ) {
 			this.strokeColorNone = true;
 		} else {
@@ -637,14 +640,14 @@
 		if ( this.strokeColorButton ) {
 			this.updateColorButtonDisplay( this.strokeColorButton, this.strokeColorNone ? 'none' : this.strokeColorValue );
 		}
-	};
+	}
 
 	/**
 	 * Set fill color programmatically
 	 *
 	 * @param {string} color Color value or 'none'
 	 */
-	ToolbarStyleControls.prototype.setFillColor = function ( color ) {
+	setFillColor( color ) {
 		if ( color === 'none' || color === 'transparent' ) {
 			this.fillColorNone = true;
 		} else {
@@ -654,27 +657,27 @@
 		if ( this.fillColorButton ) {
 			this.updateColorButtonDisplay( this.fillColorButton, this.fillColorNone ? 'none' : this.fillColorValue );
 		}
-	};
+	}
 
 	/**
 	 * Set stroke width programmatically
 	 *
 	 * @param {number} width Stroke width in pixels
 	 */
-	ToolbarStyleControls.prototype.setStrokeWidth = function ( width ) {
+	setStrokeWidth( width ) {
 		this.currentStrokeWidth = Math.max( 0, Math.min( 100, Math.round( width ) ) );
 		if ( this.strokeWidthInput ) {
 			this.strokeWidthInput.value = String( this.currentStrokeWidth );
 			this.strokeWidthInput.title = this.msg( 'layers-prop-stroke-width', 'Stroke Width' ) + ': ' + this.currentStrokeWidth + 'px';
 		}
-	};
+	}
 
 	/**
 	 * Setup input validation (integrates with LayersValidator)
 	 *
 	 * @param {Object} validator LayersValidator instance
 	 */
-	ToolbarStyleControls.prototype.setupValidation = function ( validator ) {
+	setupValidation( validator ) {
 		if ( !validator ) {
 			return;
 		}
@@ -708,12 +711,12 @@
 				validator.createInputValidator( this.textShadowColor, 'color' )
 			);
 		}
-	};
+	}
 
 	/**
 	 * Destroy and cleanup
 	 */
-	ToolbarStyleControls.prototype.destroy = function () {
+	destroy() {
 		// Clean up all event listeners via EventTracker
 		if ( this.eventTracker ) {
 			this.eventTracker.destroy();
@@ -739,7 +742,8 @@
 		this.textShadowToggle = null;
 		this.textShadowColor = null;
 		this.arrowStyleSelect = null;
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
