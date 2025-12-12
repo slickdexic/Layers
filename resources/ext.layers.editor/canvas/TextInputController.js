@@ -1,6 +1,7 @@
 /**
  * TextInputController - Handles modal text input for creating text layers
  * Extracted from CanvasManager.js as part of P1.1 modularization
+ *
  * @module ext.layers.editor.canvas.TextInputController
  */
 ( function () {
@@ -9,11 +10,14 @@
 	/**
 	 * TextInputController class
 	 * Manages modal text input UI for creating text layers
+	 */
+class TextInputController {
+	/**
+	 * Creates a new TextInputController instance
 	 *
-	 * @class
 	 * @param {CanvasManager} canvasManager - Reference to the parent canvas manager
 	 */
-	function TextInputController( canvasManager ) {
+	constructor( canvasManager ) {
 		this.canvasManager = canvasManager;
 		this.textInputModal = null;
 	}
@@ -28,7 +32,7 @@
 	 * @param {string} [style.color='#000000'] - Text color
 	 * @return {HTMLElement} The modal element
 	 */
-	TextInputController.prototype.createTextInputModal = function ( point, style ) {
+	createTextInputModal( point, style ) {
 		// Remove any existing text editor
 		this.hideTextInputModal();
 
@@ -110,7 +114,7 @@
 		this.textInputModal = modal;
 
 		return modal;
-	};
+	}
 
 	/**
 	 * Finish text input and create text layer
@@ -119,7 +123,7 @@
 	 * @param {Object} point - Position for the text layer
 	 * @param {Object} style - Style options
 	 */
-	TextInputController.prototype.finishTextInput = function ( input, point, style ) {
+	finishTextInput ( input, point, style ) {
 		const text = input.value.trim();
 		const editor = this.canvasManager.editor;
 
@@ -143,12 +147,12 @@
 			this.canvasManager.renderLayers( editor.layers );
 		}
 		this.hideTextInputModal();
-	};
+	}
 
 	/**
 	 * Hide and remove text input modal
 	 */
-	TextInputController.prototype.hideTextInputModal = function () {
+	hideTextInputModal () {
 		if ( this.textInputModal ) {
 			this.textInputModal.remove();
 			this.textInputModal = null;
@@ -157,23 +161,24 @@
 		if ( this.canvasManager ) {
 			this.canvasManager.textInputModal = null;
 		}
-	};
+	}
 
 	/**
 	 * Check if text input modal is currently visible
 	 * @return {boolean} True if modal is visible
 	 */
-	TextInputController.prototype.isModalVisible = function () {
+	isModalVisible () {
 		return this.textInputModal !== null;
-	};
+	}
 
 	/**
 	 * Clean up resources
 	 */
-	TextInputController.prototype.destroy = function () {
+	destroy() {
 		this.hideTextInputModal();
 		this.canvasManager = null;
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
