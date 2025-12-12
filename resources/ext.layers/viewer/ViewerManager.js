@@ -28,13 +28,17 @@
 	};
 
 	/**
-	 * @class ViewerManager
-	 * @constructor
+	 * ViewerManager class
+	 */
+class ViewerManager {
+	/**
+	 * Creates a new ViewerManager instance
+	 *
 	 * @param {Object} [options] Configuration options
 	 * @param {boolean} [options.debug=false] Enable debug logging
 	 * @param {LayersUrlParser} [options.urlParser] URL parser instance
 	 */
-	function ViewerManager( options ) {
+	constructor( options ) {
 		this.debug = options && options.debug;
 		const LayersUrlParser = getClass( 'Utils.UrlParser', 'LayersUrlParser' );
 		this.urlParser = ( options && options.urlParser ) || new LayersUrlParser( { debug: this.debug } );
@@ -46,11 +50,11 @@
 	 * @private
 	 * @param {...any} args Arguments to log
 	 */
-	ViewerManager.prototype.debugLog = function ( ...args ) {
+	debugLog( ...args ) {
 		if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 			mw.log( '[Layers:ViewerManager]', ...args );
 		}
-	};
+	}
 
 	/**
 	 * Log a warning message if debug mode is enabled.
@@ -58,11 +62,11 @@
 	 * @private
 	 * @param {...any} args Arguments to log
 	 */
-	ViewerManager.prototype.debugWarn = function ( ...args ) {
+	debugWarn ( ...args ) {
 		if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 			mw.log.warn( '[Layers:ViewerManager]', ...args );
 		}
-	};
+	}
 
 	/**
 	 * Ensure an element has a positioned container for the viewer overlay.
@@ -71,7 +75,7 @@
 	 * @param {HTMLImageElement} img Image element
 	 * @return {HTMLElement} Positioned container
 	 */
-	ViewerManager.prototype.ensurePositionedContainer = function ( img ) {
+	ensurePositionedContainer ( img ) {
 		let container = img.parentNode || img;
 		const style = window.getComputedStyle( container );
 		if ( !style || style.position === 'static' ) {
@@ -83,7 +87,7 @@
 			container = wrapper;
 		}
 		return container;
-	};
+	}
 
 	/**
 	 * Initialize a viewer for an image element with layer data.
@@ -92,7 +96,7 @@
 	 * @param {Object|Array} layerData Layer data (object with layers array or array directly)
 	 * @return {boolean} True if viewer was initialized
 	 */
-	ViewerManager.prototype.initializeViewer = function ( img, layerData ) {
+	initializeViewer ( img, layerData ) {
 		if ( img.layersViewer ) {
 			return false;
 		}
@@ -124,7 +128,7 @@
 			this.debugWarn( 'Viewer init error:', e );
 			return false;
 		}
-	};
+	}
 
 	/**
 	 * Find all images with server-provided layer data and initialize viewers.
@@ -133,7 +137,7 @@
 	 * 1. img[data-layer-data] - images with direct layer data
 	 * 2. a[data-layer-data] > img - images inside links with layer data
 	 */
-	ViewerManager.prototype.initializeLayerViewers = function () {
+	initializeLayerViewers () {
 		// Primary: attributes directly on <img>
 		const images = Array.prototype.slice.call(
 			document.querySelectorAll( 'img[data-layer-data]' )
@@ -194,7 +198,7 @@
 				this.debugWarn( 'Error processing image:', e );
 			}
 		} );
-	};
+	}
 
 	/**
 	 * On File pages, initialize the main image by fetching layer data via API
@@ -202,7 +206,7 @@
 	 *
 	 * @return {Promise|undefined} API promise or undefined if not applicable
 	 */
-	ViewerManager.prototype.initializeFilePageFallback = function () {
+	initializeFilePageFallback () {
 		try {
 			if ( typeof mw === 'undefined' ) {
 				return;
@@ -292,7 +296,8 @@
 		} catch ( e ) {
 			this.debugWarn( 'File page fallback outer error:', e );
 		}
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
