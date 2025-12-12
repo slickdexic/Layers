@@ -23,15 +23,18 @@
 	const EditorBootstrap = window.Layers && window.Layers.Core && window.Layers.Core.EditorBootstrap || window.EditorBootstrap;
 
 	/**
-	 * Main Layers Editor class for MediaWiki Layers extension
+	 * LayersEditor class - Main editor for MediaWiki Layers extension
+	 */
+class LayersEditor {
+	/**
+	 * Creates a new LayersEditor instance
 	 *
-	 * @class LayersEditor
 	 * @param {Object} config - Configuration object
 	 * @param {string} config.filename - Name of the file being edited
 	 * @param {string} config.imageUrl - URL of the base image
 	 * @param {HTMLElement} config.container - Container element for the editor
 	 */
-	function LayersEditor( config ) {
+	constructor( config ) {
 		// Validate dependencies using EditorBootstrap
 		if ( EditorBootstrap && EditorBootstrap.validateDependencies ) {
 			EditorBootstrap.validateDependencies();
@@ -79,9 +82,10 @@
 
 	/**
 	 * Initialize the module registry
+	 *
 	 * @private
 	 */
-	LayersEditor.prototype.initializeRegistry = function () {
+	initializeRegistry() {
 		// Resolve manager classes (prefer namespaced)
 		const UIManager = getClass( 'UI.Manager', 'UIManager' );
 		const EventManager = getClass( 'Core.EventManager', 'EventManager' );
@@ -111,14 +115,14 @@
 			this.registry.register( 'StateManager', () => new StateManager( this ), [] );
 			this.registry.register( 'HistoryManager', () => new HistoryManager( this ), [] );
 		}
-	};
+	}
 
 	/**
 	 * Create a fallback registry when none is available
 	 * @return {Object} Fallback registry
 	 * @private
 	 */
-	LayersEditor.prototype.createFallbackRegistry = function () {
+	createFallbackRegistry () {
 		// Resolve classes using namespace-first approach
 		const UIManager = getClass( 'UI.Manager', 'UIManager' );
 		const EventManager = getClass( 'Core.EventManager', 'EventManager' );
@@ -150,14 +154,14 @@
 				throw new Error( `Module ${name} not found` );
 			}
 		};
-	};
+	}
 
 	/**
 	 * Create a stub UI manager
 	 * @return {Object} Stub UI manager
 	 * @private
 	 */
-	LayersEditor.prototype.createStubUIManager = function () {
+	createStubUIManager () {
 		const stub = {};
 		stub.container = document.createElement( 'div' );
 		stub.toolbarContainer = document.createElement( 'div' );
@@ -169,14 +173,14 @@
 		stub.hideSpinner = function () {};
 		stub.showBrowserCompatibilityWarning = function () {};
 		return stub;
-	};
+	}
 
 	/**
 	 * Create a stub state manager
 	 * @return {Object} Stub state manager
 	 * @private
 	 */
-	LayersEditor.prototype.createStubStateManager = function () {
+	createStubStateManager () {
 		const store = {};
 		return {
 			set: function ( k, v ) { store[ k ] = v; },
@@ -187,13 +191,13 @@
 			getLayers: function () { return store.layers || []; },
 			destroy: function () {}
 		};
-	};
+	}
 
 	/**
 	 * Initialize managers through registry
 	 * @private
 	 */
-	LayersEditor.prototype.initializeManagers = function () {
+	initializeManagers () {
 		this.uiManager = this.registry.get( 'UIManager' );
 		this.eventManager = this.registry.get( 'EventManager' );
 		this.apiManager = this.registry.get( 'APIManager' );
@@ -204,13 +208,13 @@
 		if ( !this.stateManager || typeof this.stateManager.set !== 'function' ) {
 			this.stateManager = this.createStubStateManager();
 		}
-	};
+	}
 
 	/**
 	 * Initialize state through StateManager
 	 * @private
 	 */
-	LayersEditor.prototype.initializeState = function () {
+	initializeState () {
 		if ( this.stateManager && typeof this.stateManager.set === 'function' ) {
 			this.stateManager.set( 'layers', [] );
 			this.stateManager.set( 'selectedLayerIds', [] );
@@ -224,13 +228,13 @@
 			this.stateManager.set( 'namedSets', [] );
 			this.stateManager.set( 'currentSetName', 'default' );
 		}
-	};
+	}
 
 	/**
 	 * Define legacy layers property for backward compatibility
 	 * @private
 	 */
-	LayersEditor.prototype.defineLegacyLayersProperty = function () {
+	defineLegacyLayersProperty () {
 		Object.defineProperty( this, 'layers', {
 			get: function () {
 				return this.stateManager.getLayers();
@@ -243,13 +247,13 @@
 			enumerable: true,
 			configurable: true
 		} );
-	};
+	}
 
 	/**
 	 * Initialize extracted managers (RevisionManager, DialogManager)
 	 * @private
 	 */
-	LayersEditor.prototype.initializeExtractedManagers = function () {
+	initializeExtractedManagers () {
 		// Initialize RevisionManager
 		const RevisionManager = getClass( 'Core.RevisionManager', 'RevisionManager' );
 		if ( typeof RevisionManager === 'function' ) {
@@ -261,38 +265,38 @@
 		if ( typeof DialogManager === 'function' ) {
 			this.dialogManager = new DialogManager( { editor: this } );
 		}
-	};
+	}
 
 	/**
 	 * Debug logging utility
 	 * @param {...*} args Arguments to log
 	 */
-	LayersEditor.prototype.debugLog = function () {
+	debugLog () {
 		if ( this.debug && mw.log ) {
 			const sanitizedArgs = Array.prototype.slice.call( arguments )
 				.map( ( arg ) => this.sanitizeLogMessage( arg ) );
 			mw.log.apply( mw, sanitizedArgs );
 		}
-	};
+	}
 
 	/**
 	 * Error logging utility
 	 * @param {...*} args Arguments to log
 	 */
-	LayersEditor.prototype.errorLog = function () {
+	errorLog () {
 		const sanitizedArgs = Array.prototype.slice.call( arguments )
 			.map( ( arg ) => this.sanitizeLogMessage( arg ) );
 		if ( mw.log ) {
 			mw.log.error.apply( mw.log, sanitizedArgs );
 		}
-	};
+	}
 
 	/**
 	 * Sanitize log messages to prevent sensitive information disclosure
 	 * @param {*} message The message to sanitize
 	 * @return {*} Sanitized message
 	 */
-	LayersEditor.prototype.sanitizeLogMessage = function ( message ) {
+	sanitizeLogMessage ( message ) {
 		if ( typeof message !== 'string' ) {
 			if ( typeof message === 'object' && message !== null ) {
 				const safeKeys = [ 'type', 'action', 'status', 'tool', 'layer', 'count', 'x', 'y', 'width', 'height' ];
@@ -322,66 +326,66 @@
 		}
 
 		return result;
-	};
+	}
 
 	/**
 	 * Render layers on canvas (bridge method)
 	 * @param {Array} layers Optional array of layers to render
 	 */
-	LayersEditor.prototype.renderLayers = function ( layers ) {
+	renderLayers ( layers ) {
 		if ( this.canvasManager && typeof this.canvasManager.renderLayers === 'function' ) {
 			this.canvasManager.renderLayers( layers || this.stateManager.getLayers() );
 		}
-	};
+	}
 
 	/**
 	 * Check if editor has unsaved changes
 	 * @return {boolean} True if there are unsaved changes
 	 */
-	LayersEditor.prototype.isDirty = function () {
+	isDirty () {
 		return this.stateManager.isDirty();
-	};
+	}
 
 	/**
 	 * Mark editor as having unsaved changes
 	 */
-	LayersEditor.prototype.markDirty = function () {
+	markDirty () {
 		this.stateManager.setDirty( true );
-	};
+	}
 
 	/**
 	 * Mark editor as clean (no unsaved changes)
 	 */
-	LayersEditor.prototype.markClean = function () {
+	markClean () {
 		this.stateManager.setDirty( false );
-	};
+	}
 
 	/**
 	 * Undo last action
 	 * @return {boolean} True if undo was successful
 	 */
-	LayersEditor.prototype.undo = function () {
+	undo () {
 		if ( this.historyManager && typeof this.historyManager.undo === 'function' ) {
 			return this.historyManager.undo();
 		}
 		return false;
-	};
+	}
 
 	/**
 	 * Redo last undone action
 	 * @return {boolean} True if redo was successful
 	 */
-	LayersEditor.prototype.redo = function () {
+	redo () {
 		if ( this.historyManager && typeof this.historyManager.redo === 'function' ) {
 			return this.historyManager.redo();
 		}
 		return false;
-	};
+	}
 
 	/**
 	 * Initialize the editor
 	 */
-	LayersEditor.prototype.init = function () {
+	init () {
 		document.title = '🔄 Layers Editor Loading...';
 		this.debugLog( '[LayersEditor] init() method called' );
 
@@ -418,13 +422,13 @@
 		this.setupCloseButton();
 
 		document.title = '🎨 Layers Editor - ' + ( this.filename || 'Unknown File' );
-	};
+	}
 
 	/**
 	 * Initialize UI components (toolbar, layer panel, canvas)
 	 * @private
 	 */
-	LayersEditor.prototype.initializeUIComponents = function () {
+	initializeUIComponents () {
 		// Register UI component factories using namespaced classes
 		const ToolbarClass = getClass( 'UI.Toolbar', 'Toolbar' );
 		const LayerPanelClass = getClass( 'UI.LayerPanel', 'LayerPanel' );
@@ -452,13 +456,13 @@
 		this.canvasManager = this.registry.get( 'CanvasManager' );
 
 		this.debugLog( '[LayersEditor] UI components initialized' );
-	};
+	}
 
 	/**
 	 * Load initial layers from API
 	 * @private
 	 */
-	LayersEditor.prototype.loadInitialLayers = function () {
+	loadInitialLayers () {
 		this.apiManager.loadLayers().then( ( data ) => {
 			if ( this.isDestroyed ) {
 				return;
@@ -505,13 +509,13 @@
 			}
 			this.saveState( 'initial' );
 		} );
-	};
+	}
 
 	/**
 	 * Set up close button handler
 	 * @private
 	 */
-	LayersEditor.prototype.setupCloseButton = function () {
+	setupCloseButton () {
 		const closeBtn = this.uiManager.container.querySelector( '.layers-header-close' );
 		if ( closeBtn ) {
 			const closeHandler = () => {
@@ -519,13 +523,13 @@
 			};
 			this.trackEventListener( closeBtn, 'click', closeHandler );
 		}
-	};
+	}
 
 	/**
 	 * Add a new layer to the editor
 	 * @param {Object} layerData - Layer data object
 	 */
-	LayersEditor.prototype.addLayer = function ( layerData ) {
+	addLayer ( layerData ) {
 		layerData = this.validationManager.sanitizeLayerData( layerData );
 		layerData.id = this.apiManager.generateLayerId();
 		layerData.visible = layerData.visible !== false;
@@ -540,14 +544,14 @@
 		this.markDirty();
 		this.selectLayer( layerData.id );
 		this.saveState( 'Add layer' );
-	};
+	}
 
 	/**
 	 * Update an existing layer with new data
 	 * @param {string} layerId - ID of the layer to update
 	 * @param {Object} changes - Changes to apply to the layer
 	 */
-	LayersEditor.prototype.updateLayer = function ( layerId, changes ) {
+	updateLayer ( layerId, changes ) {
 		try {
 			if ( Object.prototype.hasOwnProperty.call( changes, 'outerRadius' ) &&
 				!Object.prototype.hasOwnProperty.call( changes, 'radius' ) ) {
@@ -576,13 +580,13 @@
 				mw.notify( 'Error updating layer', { type: 'error' } );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Remove a layer from the editor
 	 * @param {string} layerId - ID of the layer to remove
 	 */
-	LayersEditor.prototype.removeLayer = function ( layerId ) {
+	removeLayer ( layerId ) {
 		const layers = this.stateManager.get( 'layers' ) || [];
 		const updatedLayers = layers.filter( ( layer ) => layer.id !== layerId );
 		this.stateManager.set( 'layers', updatedLayers );
@@ -593,17 +597,17 @@
 		this.markDirty();
 		this.updateUIState();
 		this.saveState( 'Remove layer' );
-	};
+	}
 
 	/**
 	 * Get a layer by its ID
 	 * @param {string} layerId - ID of the layer
 	 * @return {Object|undefined} The layer object or undefined
 	 */
-	LayersEditor.prototype.getLayerById = function ( layerId ) {
+	getLayerById ( layerId ) {
 		const layers = this.stateManager.get( 'layers' ) || [];
 		return layers.find( ( layer ) => layer.id === layerId );
-	};
+	}
 
 	// ============================================
 	// Revision Management - Delegate to RevisionManager
@@ -614,7 +618,7 @@
 	 * @param {string} mwTimestamp MediaWiki timestamp string
 	 * @return {Date} Parsed date object
 	 */
-	LayersEditor.prototype.parseMWTimestamp = function ( mwTimestamp ) {
+	parseMWTimestamp ( mwTimestamp ) {
 		if ( this.revisionManager ) {
 			return this.revisionManager.parseMWTimestamp( mwTimestamp );
 		}
@@ -629,98 +633,101 @@
 		const minute = parseInt( mwTimestamp.substring( 10, 12 ), 10 );
 		const second = parseInt( mwTimestamp.substring( 12, 14 ), 10 );
 		return new Date( year, month, day, hour, minute, second );
-	};
+	}
 
 	/**
 	 * Build the revision selector dropdown
 	 */
-	LayersEditor.prototype.buildRevisionSelector = function () {
+	buildRevisionSelector () {
 		if ( this.revisionManager ) {
 			this.revisionManager.buildRevisionSelector();
 		}
-	};
+	}
 
 	/**
 	 * Update the revision load button state
 	 */
-	LayersEditor.prototype.updateRevisionLoadButton = function () {
+	updateRevisionLoadButton () {
 		if ( this.revisionManager ) {
 			this.revisionManager.updateRevisionLoadButton();
 		}
-	};
+	}
 
 	/**
 	 * Build and populate the named layer sets selector
 	 */
-	LayersEditor.prototype.buildSetSelector = function () {
+	buildSetSelector () {
 		if ( this.revisionManager ) {
 			this.revisionManager.buildSetSelector();
 		}
-	};
+	}
 
 	/**
 	 * Update the new set button state
 	 */
-	LayersEditor.prototype.updateNewSetButtonState = function () {
+	updateNewSetButtonState () {
 		if ( this.revisionManager ) {
 			this.revisionManager.updateNewSetButtonState();
 		}
-	};
+	}
 
 	/**
 	 * Load a layer set by name
+	 *
 	 * @param {string} setName The name of the set to load
 	 * @return {Promise<void>}
 	 */
-	LayersEditor.prototype.loadLayerSetByName = async function ( setName ) {
+	async loadLayerSetByName( setName ) {
 		if ( this.revisionManager ) {
 			return this.revisionManager.loadLayerSetByName( setName );
 		}
-	};
+	}
 
 	/**
 	 * Create a new named layer set
+	 *
 	 * @param {string} setName The name for the new set
 	 * @return {Promise<boolean>}
 	 */
-	LayersEditor.prototype.createNewLayerSet = async function ( setName ) {
+	async createNewLayerSet( setName ) {
 		if ( this.revisionManager ) {
 			return this.revisionManager.createNewLayerSet( setName );
 		}
 		return false;
-	};
+	}
 
 	/**
 	 * Load a specific revision by ID
+	 *
 	 * @param {number} revisionId The revision ID to load
 	 */
-	LayersEditor.prototype.loadRevisionById = function ( revisionId ) {
+	loadRevisionById( revisionId ) {
 		if ( this.revisionManager ) {
 			this.revisionManager.loadRevisionById( revisionId );
 		}
-	};
+	}
 
 	/**
 	 * Show the keyboard shortcuts help dialog
 	 */
-	LayersEditor.prototype.showKeyboardShortcutsDialog = function () {
+	showKeyboardShortcutsDialog() {
 		if ( this.dialogManager ) {
 			this.dialogManager.showKeyboardShortcutsDialog();
 		}
-	};
+	}
 
 	/**
 	 * Check if there are unsaved changes
 	 * @return {boolean}
 	 */
-	LayersEditor.prototype.hasUnsavedChanges = function () {
+	hasUnsavedChanges () {
 		return this.stateManager.get( 'hasUnsavedChanges' ) || false;
-	};
+	}
 
 	/**
 	 * Update the save button state
 	 */
-	LayersEditor.prototype.updateSaveButtonState = function () {
+	updateSaveButtonState () {
 		try {
 			if ( this.toolbar && this.toolbar.saveBtnEl ) {
 				const hasChanges = this.hasUnsavedChanges();
@@ -729,7 +736,7 @@
 		} catch ( error ) {
 			this.errorLog( 'Error updating save button state:', error );
 		}
-	};
+	}
 
 	/**
 	 * Get a localized message
@@ -737,16 +744,16 @@
 	 * @param {string} fallback Fallback text
 	 * @return {string} Localized message
 	 */
-	LayersEditor.prototype.getMessage = function ( key, fallback = '' ) {
+	getMessage ( key, fallback = '' ) {
 		return window.layersMessages.get( key, fallback );
-	};
+	}
 
 	/**
 	 * Set the current tool
 	 * @param {string} tool Tool name
 	 * @param {Object} options Options
 	 */
-	LayersEditor.prototype.setCurrentTool = function ( tool, options ) {
+	setCurrentTool ( tool, options ) {
 		const opts = options || {};
 		this.stateManager.set( 'currentTool', tool );
 		if ( this.canvasManager ) {
@@ -755,23 +762,23 @@
 		if ( this.toolbar && !opts.skipToolbarSync ) {
 			this.toolbar.setActiveTool( tool );
 		}
-	};
+	}
 
 	/**
 	 * Save state for undo/redo
 	 * @param {string} action Action description
 	 */
-	LayersEditor.prototype.saveState = function ( action ) {
+	saveState ( action ) {
 		if ( this.historyManager ) {
 			this.historyManager.saveState( action );
 		}
-	};
+	}
 
 	/**
 	 * Select a layer by ID
 	 * @param {string} layerId Layer ID to select
 	 */
-	LayersEditor.prototype.selectLayer = function ( layerId ) {
+	selectLayer ( layerId ) {
 		try {
 			// Delegate to CanvasManager which manages selection via StateManager
 			if ( this.canvasManager ) {
@@ -789,12 +796,12 @@
 				this.errorLog( 'Error in selectLayer:', error );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Delete the selected layer
 	 */
-	LayersEditor.prototype.deleteSelected = function () {
+	deleteSelected () {
 		const selectedIds = this.getSelectedLayerIds();
 		if ( selectedIds.length > 0 ) {
 			// Delete all selected layers
@@ -804,12 +811,12 @@
 				this.canvasManager.deselectAll();
 			}
 		}
-	};
+	}
 
 	/**
 	 * Duplicate the selected layer
 	 */
-	LayersEditor.prototype.duplicateSelected = function () {
+	duplicateSelected () {
 		const selectedIds = this.getSelectedLayerIds();
 		if ( selectedIds.length > 0 ) {
 			// Duplicate the first selected layer (primary selection)
@@ -823,12 +830,12 @@
 				this.addLayer( duplicate );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Update UI state (toolbar buttons, etc.)
 	 */
-	LayersEditor.prototype.updateUIState = function () {
+	updateUIState () {
 		try {
 			if ( this.toolbar ) {
 				const canUndo = this.historyManager ? this.historyManager.canUndo() : false;
@@ -842,13 +849,13 @@
 				this.errorLog( 'Error in updateUIState:', error );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Apply a mutator function to all selected layers
 	 * @param {Function} mutator Function to apply to each layer
 	 */
-	LayersEditor.prototype.applyToSelection = function ( mutator ) {
+	applyToSelection ( mutator ) {
 		if ( typeof mutator !== 'function' ) {
 			return;
 		}
@@ -869,13 +876,13 @@
 		}
 		this.markDirty();
 		this.saveState( 'Update selection' );
-	};
+	}
 
 	/**
 	 * Get selected layer IDs
 	 * @return {string[]} Array of selected layer IDs
 	 */
-	LayersEditor.prototype.getSelectedLayerIds = function () {
+	getSelectedLayerIds () {
 		// Delegate to CanvasManager if available (preferred path)
 		if ( this.canvasManager && typeof this.canvasManager.getSelectedLayerIds === 'function' ) {
 			// Return a copy to prevent accidental mutation
@@ -887,21 +894,21 @@
 			return ids ? ids.slice() : [];
 		}
 		return [];
-	};
+	}
 
 	/**
 	 * Navigate back to file page
 	 */
-	LayersEditor.prototype.navigateBackToFile = function () {
+	navigateBackToFile () {
 		this.navigateBackToFileWithName( this.filename );
-	};
+	}
 
 	/**
 	 * Navigate back to file page with specific filename
 	 * @param {string} filename The filename to navigate to
 	 * @private
 	 */
-	LayersEditor.prototype.navigateBackToFileWithName = function ( filename ) {
+	navigateBackToFileWithName ( filename ) {
 		try {
 			if ( filename && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
 				const url = mw.util.getUrl( 'File:' + filename );
@@ -916,12 +923,12 @@
 		} catch ( e ) {
 			window.location.reload();
 		}
-	};
+	}
 
 	/**
 	 * Save the current layers to the server
 	 */
-	LayersEditor.prototype.save = function () {
+	save () {
 		const layers = this.stateManager.get( 'layers' ) || [];
 
 		if ( !this.validationManager.validateLayers( layers ) ) {
@@ -949,12 +956,12 @@
 				const errorMsg = error.info || defaultErrorMsg;
 				mw.notify( errorMsg, { type: 'error' } );
 			} );
-	};
+	}
 
 	/**
 	 * Reload the revision selector after saving
 	 */
-	LayersEditor.prototype.reloadRevisions = function () {
+	reloadRevisions () {
 		try {
 			if ( this.apiManager && this.apiManager.reloadRevisions ) {
 				this.apiManager.reloadRevisions();
@@ -962,14 +969,14 @@
 		} catch ( error ) {
 			this.errorLog( 'Error in reloadRevisions:', error );
 		}
-	};
+	}
 
 	/**
 	 * Normalize layer visibility on load
 	 * @param {Array} layers Array of layer objects
 	 * @return {Array} Normalized layers
 	 */
-	LayersEditor.prototype.normalizeLayers = function ( layers ) {
+	normalizeLayers ( layers ) {
 		if ( !layers || !Array.isArray( layers ) ) {
 			return layers;
 		}
@@ -979,13 +986,13 @@
 			}
 			return layer;
 		} );
-	};
+	}
 
 	/**
 	 * Cancel editing and return to the file page
 	 * @param {boolean} navigateBack Whether to navigate back
 	 */
-	LayersEditor.prototype.cancel = function ( navigateBack ) {
+	cancel ( navigateBack ) {
 		const savedFilename = this.filename;
 		const isDirty = this.stateManager.get( 'isDirty' );
 
@@ -1025,14 +1032,14 @@
 				this.navigateBackToFileWithName( savedFilename );
 			}
 		}
-	};
+	}
 
 	/**
 	 * Show cancel confirmation dialog (fallback when DialogManager not available)
 	 * @param {Function} onConfirm Callback when user confirms
 	 * @private
 	 */
-	LayersEditor.prototype.showCancelConfirmDialog = function ( onConfirm ) {
+	showCancelConfirmDialog ( onConfirm ) {
 		const t = function ( key, fallback ) {
 			if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
 				return window.layersMessages.get( key, fallback );
@@ -1109,21 +1116,21 @@
 		} );
 
 		cancelBtn.focus();
-	};
+	}
 
 	/**
 	 * Handle keyboard shortcuts
 	 * @param {KeyboardEvent} e Keyboard event
 	 * @private
 	 */
-	LayersEditor.prototype.handleKeyDown = function ( e ) {
+	handleKeyDown ( e ) {
 		this.eventManager.handleKeyDown( e );
-	};
+	}
 
 	/**
 	 * Destroy the editor and clean up resources
 	 */
-	LayersEditor.prototype.destroy = function () {
+	destroy () {
 		if ( this.isDestroyed ) {
 			return;
 		}
@@ -1188,29 +1195,29 @@
 		this.imageUrl = null;
 		this.layers = null;
 		this.clipboard = null;
-	};
+	}
 
 	/**
 	 * Clean up global event listeners
 	 * @private
 	 */
-	LayersEditor.prototype.cleanupGlobalEventListeners = function () {
+	cleanupGlobalEventListeners () {
 		if ( this.eventTracker ) {
 			this.eventTracker.removeAllForElement( window );
 			this.eventTracker.removeAllForElement( document );
 		}
-	};
+	}
 
 	/**
 	 * Clean up DOM event listeners
 	 * @private
 	 */
-	LayersEditor.prototype.cleanupDOMEventListeners = function () {
+	cleanupDOMEventListeners () {
 		if ( this.eventTracker ) {
 			this.eventTracker.destroy();
 			this.eventTracker = EventTracker ? new EventTracker() : null;
 		}
-	};
+	}
 
 	/**
 	 * Track event listeners for cleanup
@@ -1219,13 +1226,13 @@
 	 * @param {Function} handler Event handler
 	 * @param {Object} options Event listener options
 	 */
-	LayersEditor.prototype.trackEventListener = function ( element, event, handler, options ) {
+	trackEventListener ( element, event, handler, options ) {
 		if ( this.eventTracker ) {
 			this.eventTracker.add( element, event, handler, options );
 		} else {
 			element.addEventListener( event, handler, options );
 		}
-	};
+	}
 
 	/**
 	 * Track window event listeners
@@ -1233,27 +1240,29 @@
 	 * @param {Function} handler Event handler
 	 * @param {Object} options Event listener options
 	 */
-	LayersEditor.prototype.trackWindowListener = function ( event, handler, options ) {
+	trackWindowListener ( event, handler, options ) {
 		if ( this.eventTracker ) {
 			this.eventTracker.add( window, event, handler, options );
 		} else {
 			window.addEventListener( event, handler, options );
 		}
-	};
+	}
 
 	/**
 	 * Track document event listeners
+	 *
 	 * @param {string} event Event name
 	 * @param {Function} handler Event handler
 	 * @param {Object} options Event listener options
 	 */
-	LayersEditor.prototype.trackDocumentListener = function ( event, handler, options ) {
+	trackDocumentListener( event, handler, options ) {
 		if ( this.eventTracker ) {
 			this.eventTracker.add( document, event, handler, options );
 		} else {
 			document.addEventListener( event, handler, options );
 		}
-	};
+	}
+}
 
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
