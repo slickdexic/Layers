@@ -156,6 +156,7 @@
 				"DeepClone.js",
 				"ShadowRenderer.js",
 				"ArrowRenderer.js",
+				"TextRenderer.js",
 				"LayerRenderer.js"
 			]
 		},

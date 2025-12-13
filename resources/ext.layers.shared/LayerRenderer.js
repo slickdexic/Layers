@@ -28,6 +28,11 @@
 		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './ArrowRenderer.js' ) : null );
 
+	// Get TextRenderer - it should be loaded before this module
+	const TextRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.TextRenderer ) ||
+		// eslint-disable-next-line no-undef
+		( typeof require !== 'undefined' ? require( './TextRenderer.js' ) : null );
+
 	/**
 	 * Clamp a value to a valid opacity range [0, 1]
 	 * Uses ShadowRenderer's implementation if available, otherwise local fallback
@@ -79,6 +84,13 @@ class LayerRenderer {
 			this.arrowRenderer = new ArrowRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
 		} else {
 			this.arrowRenderer = null;
+		}
+
+		// Create TextRenderer instance for text shape operations
+		if ( TextRenderer ) {
+			this.textRenderer = new TextRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
+		} else {
+			this.textRenderer = null;
 		}
 	}
 
@@ -1355,126 +1367,23 @@ class LayerRenderer {
 
 	/**
 	 * Draw a text layer
+	 * Delegates to TextRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with text properties
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawText ( layer, options ) {
-		const opts = options || {};
-		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		// BUG FIX (2025-12-09): Use shadowScale for shadow operations, like other shape methods
-		const shadowScale = opts.shadowScale || scale;
-
-		this.ctx.save();
-
-		let fontSize = layer.fontSize || 16;
-		if ( !opts.scaled ) {
-			fontSize = Math.max( 1, Math.round( fontSize * scale.avg ) );
+		if ( this.textRenderer ) {
+			const opts = options || {};
+			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+			const shadowScale = opts.shadowScale || scale;
+			this.textRenderer.setContext( this.ctx );
+			this.textRenderer.draw( layer, {
+				scale: scale,
+				shadowScale: shadowScale,
+				scaled: opts.scaled
+			} );
 		}
-
-		const fontFamily = layer.fontFamily || 'Arial';
-		const text = layer.text || '';
-		let x = layer.x || 0;
-		let y = layer.y || 0;
-
-		this.ctx.font = fontSize + 'px ' + fontFamily;
-		this.ctx.textAlign = layer.textAlign || 'left';
-		this.ctx.fillStyle = layer.fill || layer.color || '#000000';
-
-		// Calculate text metrics for rotation centering
-		const textMetrics = this.ctx.measureText( text );
-		const textWidth = textMetrics.width;
-		const textHeight = fontSize;
-
-		// Calculate text center for rotation
-		const centerX = x + ( textWidth / 2 );
-		const centerY = y - ( textHeight / 4 );
-
-		// Apply rotation if present
-		if ( layer.rotation && layer.rotation !== 0 ) {
-			const rotationRadians = ( layer.rotation * Math.PI ) / 180;
-			this.ctx.translate( centerX, centerY );
-			this.ctx.rotate( rotationRadians );
-			x = -( textWidth / 2 );
-			y = textHeight / 4;
-		}
-
-		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, shadowScale );
-
-		// FIX (2025-12-10): Implement spread shadow support for text
-		// Use offscreen canvas technique for consistent shadow rendering
-		if ( this.hasShadowEnabled( layer ) ) {
-			// For text, we need a custom shadow implementation since text rendering is special
-			// We'll draw the text multiple times at offset positions to simulate spread
-			const sp = this.getShadowParams( layer, shadowScale );
-			
-			if ( spread > 0 ) {
-				// Draw spread shadow by rendering expanded shadow
-				this.ctx.save();
-				this.ctx.globalAlpha = baseOpacity;
-				
-				// For spread, draw multiple shadow layers in a circle pattern
-				const steps = Math.max( 8, Math.ceil( spread * 2 ) );
-				for ( let i = 0; i < steps; i++ ) {
-					const angle = ( i / steps ) * Math.PI * 2;
-					const offsetX = Math.cos( angle ) * spread;
-					const offsetY = Math.sin( angle ) * spread;
-					
-					this.ctx.shadowColor = sp.color;
-					this.ctx.shadowBlur = sp.blur;
-					this.ctx.shadowOffsetX = sp.offsetX + offsetX;
-					this.ctx.shadowOffsetY = sp.offsetY + offsetY;
-					
-					// Draw stroke shadow if text has stroke
-					if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
-						let strokeW = layer.textStrokeWidth;
-						if ( !opts.scaled ) {
-							strokeW = strokeW * scale.avg;
-						}
-						this.ctx.strokeStyle = sp.color;
-						this.ctx.lineWidth = strokeW;
-						this.ctx.globalAlpha = 0.1 * baseOpacity; // Low opacity per step
-						this.ctx.strokeText( text, x, y );
-					}
-					
-					// Draw fill shadow
-					this.ctx.fillStyle = sp.color;
-					this.ctx.globalAlpha = 0.1 * baseOpacity; // Low opacity per step
-					this.ctx.fillText( text, x, y );
-				}
-				
-				this.ctx.restore();
-				this.clearShadow();
-			} else {
-				// No spread - use standard canvas shadow
-				this.applyShadow( layer, shadowScale );
-			}
-		}
-
-		// Draw text stroke if enabled
-		if ( layer.textStrokeWidth && layer.textStrokeWidth > 0 ) {
-			let strokeW = layer.textStrokeWidth;
-			if ( !opts.scaled ) {
-				strokeW = strokeW * scale.avg;
-			}
-			this.ctx.strokeStyle = layer.textStrokeColor || '#000000';
-			this.ctx.lineWidth = strokeW;
-			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
-			this.ctx.strokeText( text, x, y );
-		}
-
-		// Clear shadow before drawing actual text (shadow already rendered)
-		if ( this.hasShadowEnabled( layer ) && spread > 0 ) {
-			this.clearShadow();
-		}
-
-		// Draw fill
-		this.ctx.fillStyle = layer.fill || layer.color || '#000000';
-		this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
-		this.ctx.fillText( text, x, y );
-
-		this.ctx.restore();
 	}
 
 	// ========================================================================
