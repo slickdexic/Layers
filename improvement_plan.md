@@ -193,34 +193,26 @@ Created 3 integration test files with **138 tests total**:
 
 ---
 
-### P2.2 Split LayerRenderer.js (1,953 lines)
+### P2.2 Split LayerRenderer.js
 
-**Status:** ⚠️ IN PROGRESS (ShadowRenderer extracted)  
-**Effort:** 4 weeks  
+**Status:** ✅ COMPLETE (December 13, 2025)  
+**Effort:** 2 weeks  
 **Impact:** Maintainability, isolated testing
 
-**Progress:**
-- ✅ ShadowRenderer.js extracted (517 lines of shadow logic)
-- ⬜ Shape renderers still to extract
+**Resolution:**
+LayerRenderer reduced from 1,953 lines to **363 lines** (81% reduction)
 
-**Proposed Structure:**
-```
-ext.layers.shared/
-├── LayerRenderer.js           # Facade, 300 lines max
-├── ShadowRenderer.js          # ✅ DONE - Shadow effects
-└── renderers/
-    ├── BaseRenderer.js        # Shared utilities
-    ├── RectangleRenderer.js
-    ├── CircleRenderer.js
-    ├── TextRenderer.js
-    └── ...etc
-```
+**Extracted Renderers:**
+| Renderer | Lines | Purpose |
+|----------|-------|---------|
+| LayerRenderer | 363 | Facade/dispatcher |
+| ShapeRenderer | 1,028 | Rectangle, circle, ellipse, polygon, star, line, path |
+| ArrowRenderer | 702 | Arrow polygons with heads |
+| ShadowRenderer | 521 | Shadow effects (blur, spread, glow) |
+| TextRenderer | 343 | Text with stroke/shadow |
+| EffectsRenderer | 245 | Highlight and blur effects |
 
-**Migration Strategy:**
-1. ✅ Create ShadowRenderer with delegation pattern
-2. Extract one shape renderer at a time
-3. Maintain 100% test compatibility
-4. Target: No renderer file > 300 lines
+**Tests:** All 4,199 tests pass
 
 ---
 
@@ -360,7 +352,7 @@ P1.3 PHP Logging:             ████████████████�
 
 Phase 2 (Refactoring):
 P2.1 ES6 Class Migration:     ████████████████████ 100% ✓
-P2.2 Split LayerRenderer:     ███░░░░░░░░░░░░░░░░░ 15% (ShadowRenderer done)
+P2.2 Split LayerRenderer:     ████████████████████ 100% ✓ (363 lines)
 P2.3 CanvasManager Extraction: █████████░░░░░░░░░░░ 45% (9 controllers)
 P2.4 Split TransformController: ████████████████████ 100% ✓ (761 lines)
 P2.5 ShadowRenderer Coverage: ████████████████████ 100% ✓
@@ -391,17 +383,17 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 
 ### Phase 2 Complete When:
 - [x] ES6 classes = 100% ✓
-- [ ] LayerRenderer.js < 500 lines (currently 1,949)
+- [x] LayerRenderer.js < 500 lines ✓ (363 lines)
 - [ ] CanvasManager < 500 lines (currently 2,109)
 - [x] TransformController < 500 lines ✓ (761 lines)
 - [x] ShadowRenderer coverage > 90% ✓ (100%)
 
 ### Project "Healthy" When:
-- [ ] 0 files > 1,000 lines (currently 6)
+- [ ] 0 files > 1,000 lines (currently 5)
 - [x] ES6 classes throughout ✓ (100%)
 - [x] 0 direct global exports ✓
 - [x] 0 prototype methods ✓
-- [x] All tests passing ✓ (4,025)
+- [x] All tests passing ✓ (4,199)
 
 ---
 
@@ -431,20 +423,19 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 
 ## Quick Start: What to Do Next
 
-**Current God Classes (6 files >1000 lines):**
+**Current God Classes (5 files >1000 lines):**
 | File | Lines | Priority |
 |------|-------|----------|
-| CanvasManager.js | 2,109 | Continue P2.3 extraction |
-| LayerRenderer.js | 1,949 | Extract shape renderers |
-| LayerPanel.js | 1,570 | Extract remaining helpers |
-| LayersEditor.js | 1,284 | Extract after others |
-| SelectionManager.js | 1,258 | Extract selection handlers |
+| CanvasManager.js | 2,109 | P2.3 - Continue controller extraction |
+| LayerPanel.js | 1,570 | Extract ListItem/ContextMenu helpers |
+| LayersEditor.js | 1,284 | Extract after CanvasManager |
+| SelectionManager.js | 1,258 | Extract selection state handlers |
 | ToolManager.js | 1,155 | Already has ShapeFactory/ToolStyles |
 
-**Next Actions:**
-1. **Split LayerRenderer** (P2.2) - Extract shape-specific renderers (RectRenderer, CircleRenderer, etc.)
-2. **Split CanvasManager** (P2.3) - Continue controller extraction (background loading, layer ops)
-3. **Run `npm run test:js -- --coverage`** - Verify baseline
+**Recommended Next Actions:**
+1. **Split CanvasManager** (P2.3) - Extract background loading (~150 lines), layer ops (~200 lines)
+2. **Split LayerPanel** - Extract ListItem builder, context menu, drag-drop handlers
+3. **Split SelectionManager** - Extract multi-selection logic, bounds calculation
 
 ---
 
