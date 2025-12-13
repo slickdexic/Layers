@@ -169,75 +169,28 @@ class LayerRenderer {
 	}
 
 	// ========================================================================
-	// Shadow Delegation Methods
-	// These methods delegate to ShadowRenderer
+	// Shadow Delegation Methods (delegates to ShadowRenderer)
 	// ========================================================================
 
-	/**
-	 * Clear shadow settings from context
-	 */
-	clearShadow() {
-		if ( this.shadowRenderer ) {
-			this.shadowRenderer.clearShadow();
-		}
-	}
+	/** Clear shadow settings from context */
+	clearShadow() { this.shadowRenderer?.clearShadow(); }
 
-	/**
-	 * Apply shadow settings to context (blur and offset only, not spread)
-	 *
-	 * @param {Object} layer - Layer with shadow properties
-	 * @param {Object} scale - Scale factors from getScaleFactors()
-	 */
-	applyShadow( layer, scale ) {
-		if ( this.shadowRenderer ) {
-			this.shadowRenderer.applyShadow( layer, scale );
-		}
-	}
+	/** Apply shadow settings to context (blur and offset only, not spread) */
+	applyShadow( layer, scale ) { this.shadowRenderer?.applyShadow( layer, scale ); }
 
-	/**
-	 * Get shadow spread value from layer
-	 *
-	 * @param {Object} layer - Layer with shadow properties
-	 * @param {Object} scale - Scale factors
-	 * @return {number} Spread value in pixels (scaled)
-	 */
-	getShadowSpread( layer, scale ) {
-		return this.shadowRenderer ? this.shadowRenderer.getShadowSpread( layer, scale ) : 0;
-	}
+	/** Get shadow spread value from layer */
+	getShadowSpread( layer, scale ) { return this.shadowRenderer?.getShadowSpread( layer, scale ) ?? 0; }
 
-	/**
-	 * Check if shadow is enabled on a layer
-	 *
-	 * @param {Object} layer - Layer to check
-	 * @return {boolean} True if shadow is enabled
-	 */
-	hasShadowEnabled( layer ) {
-		return this.shadowRenderer ? this.shadowRenderer.hasShadowEnabled( layer ) : false;
-	}
+	/** Check if shadow is enabled on a layer */
+	hasShadowEnabled( layer ) { return this.shadowRenderer?.hasShadowEnabled( layer ) ?? false; }
 
-	/**
-	 * Get shadow parameters for offscreen rendering technique
-	 *
-	 * @param {Object} layer - Layer with shadow properties
-	 * @param {Object} scale - Scale factors
-	 * @return {Object} Shadow parameters {offsetX, offsetY, blur, color, offscreenOffset}
-	 */
+	/** Get shadow parameters for offscreen rendering technique */
 	getShadowParams( layer, scale ) {
-		return this.shadowRenderer ?
-			this.shadowRenderer.getShadowParams( layer, scale ) :
+		return this.shadowRenderer?.getShadowParams( layer, scale ) ??
 			{ offsetX: 0, offsetY: 0, blur: 0, color: 'transparent', offscreenOffset: 0 };
 	}
 
-	/**
-	 * Draw a spread shadow using offscreen canvas technique.
-	 * Delegates to ShadowRenderer for the complex offscreen canvas logic.
-	 *
-	 * @param {Object} layer - Layer with shadow properties
-	 * @param {Object} scale - Scale factors
-	 * @param {number} spread - Spread amount in pixels (already scaled)
-	 * @param {Function} drawExpandedPathFn - Function that creates the expanded path
-	 * @param {number} [opacity=1] - Opacity to apply to the shadow (0-1)
-	 */
+	/** Draw a spread shadow using offscreen canvas technique */
 	drawSpreadShadow( layer, scale, spread, drawExpandedPathFn, opacity ) {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.setContext( this.ctx );
@@ -245,16 +198,7 @@ class LayerRenderer {
 		}
 	}
 
-	/**
-	 * Draw a spread shadow for stroked shapes using offscreen canvas.
-	 * Delegates to ShadowRenderer for the complex offscreen canvas logic.
-	 *
-	 * @param {Object} layer - Layer with shadow properties
-	 * @param {Object} scale - Scale factors
-	 * @param {number} strokeWidth - The expanded stroke width to use
-	 * @param {Function} drawPathFn - Function that creates the path
-	 * @param {number} [opacity=1] - Opacity to apply to the shadow (0-1)
-	 */
+	/** Draw a spread shadow for stroked shapes using offscreen canvas */
 	drawSpreadShadowStroke( layer, scale, strokeWidth, drawPathFn, opacity ) {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.setContext( this.ctx );
@@ -262,272 +206,75 @@ class LayerRenderer {
 		}
 	}
 
-	/**
-	 * Execute a function with a temporary globalAlpha multiplier
-	 *
-	 * @param {number|undefined} alpha - Opacity multiplier (0-1)
-	 * @param {Function} drawFn - Drawing function to execute
-	 */
+	/** Execute a function with a temporary globalAlpha multiplier */
 	withLocalAlpha( alpha, drawFn ) {
-		if ( this.shadowRenderer ) {
-			this.shadowRenderer.withLocalAlpha( alpha, drawFn );
-		} else if ( typeof drawFn === 'function' ) {
-			drawFn.call( this );
-		}
+		this.shadowRenderer ? this.shadowRenderer.withLocalAlpha( alpha, drawFn ) : drawFn?.call( this );
 	}
 
 	// ========================================================================
-	// Shape Drawing Methods
+	// Shape Drawing Methods (delegates to specialized renderers)
 	// ========================================================================
 
-	/**
-	 * Draw a rectangle shape
-	 * Delegates to ShapeRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with rectangle properties
-	 * @param {Object} [options] - Rendering options
-	 * @param {boolean} [options.scaled=false] - Whether layer coords are pre-scaled
-	 */
-	drawRectangle ( layer, options ) {
-		if ( this.shapeRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.shapeRenderer.setContext( this.ctx );
-			this.shapeRenderer.drawRectangle( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Helper to prepare options for renderer delegation */
+	_prepareRenderOptions( options ) {
+		const opts = options || {};
+		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+		return { scale, shadowScale: opts.shadowScale || scale, scaled: opts.scaled };
 	}
 
-	/**
-	 * Draw a circle shape
-	 * Delegates to ShapeRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with circle properties (x, y center, radius)
-	 * @param {Object} [options] - Rendering options
-	 */
-	drawCircle ( layer, options ) {
-		if ( this.shapeRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.shapeRenderer.setContext( this.ctx );
-			this.shapeRenderer.drawCircle( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Draw a rectangle shape */
+	drawRectangle( layer, options ) {
+		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawRectangle( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/**
-	 * Draw an ellipse shape
-	 * Delegates to ShapeRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with ellipse properties
-	 * @param {Object} [options] - Rendering options
-	 */
-	drawEllipse ( layer, options ) {
-		if ( this.shapeRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.shapeRenderer.setContext( this.ctx );
-			this.shapeRenderer.drawEllipse( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Draw a circle shape */
+	drawCircle( layer, options ) {
+		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawCircle( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/**
-	 * Draw a line
-	 * Delegates to ShapeRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with line properties (x1, y1, x2, y2)
-	 * @param {Object} [options] - Rendering options
-	 */
-	drawLine ( layer, options ) {
-		if ( this.shapeRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.shapeRenderer.setContext( this.ctx );
-			this.shapeRenderer.drawLine( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Draw an ellipse shape */
+	drawEllipse( layer, options ) {
+		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawEllipse( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/**
-	 * Build the vertices for an arrow polygon
-	 * Delegates to ArrowRenderer for the actual vertex calculation.
-	 *
-	 * @private
-	 * @param {number} x1 - Start X
-	 * @param {number} y1 - Start Y
-	 * @param {number} x2 - End X (tip direction)
-	 * @param {number} y2 - End Y
-	 * @param {number} angle - Angle of arrow direction
-	 * @param {number} perpAngle - Perpendicular angle
-	 * @param {number} halfShaft - Half of shaft width
-	 * @param {number} arrowSize - Size of arrowhead
-	 * @param {string} arrowStyle - 'single', 'double', or 'none'
-	 * @param {string} headType - 'pointed', 'chevron', or 'standard'
-	 * @param {number} headScale - Scale factor for arrow head size
-	 * @param {number} tailWidth - Extra width at tail end
-	 * @return {Array} Array of {x, y} vertex objects
-	 */
-	buildArrowVertices (
-		x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth
-	) {
-		if ( this.arrowRenderer ) {
-			return this.arrowRenderer.buildArrowVertices(
-				x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth
-			);
-		}
-		// Fallback: return empty array if ArrowRenderer not available
-		return [];
+	/** Draw a line shape */
+	drawLine( layer, options ) {
+		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawLine( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/**
-	 * Draw an arrow as a closed polygon
-	 * Delegates to ArrowRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with arrow properties
-	 * @param {Object} [options] - Rendering options
-	 */
-	drawArrow ( layer, options ) {
-		if ( this.arrowRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.arrowRenderer.setContext( this.ctx );
-			this.arrowRenderer.draw( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Draw an arrow as a closed polygon */
+	drawArrow( layer, options ) {
+		if ( this.arrowRenderer ) { this.arrowRenderer.setContext( this.ctx ); this.arrowRenderer.draw( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/**
-	 * Draw a regular polygon (e.g., hexagon, pentagon)
-	 * Delegates to ShapeRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with sides, x, y, radius
-	 * @param {Object} [options] - Rendering options
-	 */
-	drawPolygon ( layer, options ) {
-		if ( this.shapeRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.shapeRenderer.setContext( this.ctx );
-			this.shapeRenderer.drawPolygon( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Draw a polygon shape */
+	drawPolygon( layer, options ) {
+		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawPolygon( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/**
-	 * Draw a star shape
-	 * Delegates to ShapeRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with points (count), x, y, outerRadius, innerRadius
-	 * @param {Object} [options] - Rendering options
-	 */
-	drawStar ( layer, options ) {
-		if ( this.shapeRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.shapeRenderer.setContext( this.ctx );
-			this.shapeRenderer.drawStar( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Draw a star shape */
+	drawStar( layer, options ) {
+		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawStar( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/**
-	 * Draw a freehand path
-	 * Delegates to ShapeRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with points array
-	 * @param {Object} [options] - Rendering options
-	 */
-	drawPath ( layer, options ) {
-		if ( this.shapeRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.shapeRenderer.setContext( this.ctx );
-			this.shapeRenderer.drawPath( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Draw a freehand path */
+	drawPath( layer, options ) {
+		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawPath( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/**
-	 * Draw a highlight overlay
-	 * Delegates to EffectsRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with highlight properties
-	 * @param {Object} [options] - Rendering options
-	 */
+	/** Draw a highlight overlay */
 	drawHighlight( layer, options ) {
-		if ( this.effectsRenderer ) {
-			this.effectsRenderer.setContext( this.ctx );
-			this.effectsRenderer.drawHighlight( layer, options );
-		}
+		if ( this.effectsRenderer ) { this.effectsRenderer.setContext( this.ctx ); this.effectsRenderer.drawHighlight( layer, options ); }
 	}
 
-	/**
-	 * Draw a blur effect region
-	 * Delegates to EffectsRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with blur properties
-	 * @param {Object} [options] - Rendering options
-	 * @param {HTMLImageElement} [options.imageElement] - Image for blur source (viewer mode)
-	 */
+	/** Draw a blur effect region */
 	drawBlur( layer, options ) {
-		if ( this.effectsRenderer ) {
-			this.effectsRenderer.setContext( this.ctx );
-			this.effectsRenderer.drawBlur( layer, options );
-		}
+		if ( this.effectsRenderer ) { this.effectsRenderer.setContext( this.ctx ); this.effectsRenderer.drawBlur( layer, options ); }
 	}
 
-	/**
-	 * Draw a text layer
-	 * Delegates to TextRenderer for the actual drawing.
-	 *
-	 * @param {Object} layer - Layer with text properties
-	 * @param {Object} [options] - Rendering options
-	 */
-	drawText ( layer, options ) {
-		if ( this.textRenderer ) {
-			const opts = options || {};
-			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-			const shadowScale = opts.shadowScale || scale;
-			this.textRenderer.setContext( this.ctx );
-			this.textRenderer.draw( layer, {
-				scale: scale,
-				shadowScale: shadowScale,
-				scaled: opts.scaled
-			} );
-		}
+	/** Draw a text layer */
+	drawText( layer, options ) {
+		if ( this.textRenderer ) { this.textRenderer.setContext( this.ctx ); this.textRenderer.draw( layer, this._prepareRenderOptions( options ) ); }
 	}
 
 	// ========================================================================
