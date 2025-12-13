@@ -25,7 +25,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
   - Core editor modules: `CanvasManager.js` (~2,076 lines - facade coordinating controllers), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
-  - Shared modules: `LayerRenderer.js` (~1,953 lines), `ShadowRenderer.js` (~517 lines)
+  - Shared modules: `LayerRenderer.js` (~921 lines), `ShadowRenderer.js` (~517 lines), `ArrowRenderer.js` (~399 lines), `TextRenderer.js` (~104 lines), `ShapeRenderer.js` (~858 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~340 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `GridRulersController.js` (~385 lines) - grid/ruler rendering, snap-to-grid/guides
