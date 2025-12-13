@@ -658,4 +658,148 @@ describe( 'ShapeRenderer', () => {
 			} ).not.toThrow();
 		} );
 	} );
+
+	describe( 'drawLine', () => {
+		it( 'should draw a basic line', () => {
+			const layer = {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				stroke: '#ff0000',
+				strokeWidth: 2,
+				strokeOpacity: 1
+			};
+
+			shapeRenderer.drawLine( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalledWith( 10, 20 );
+			expect( ctx.lineTo ).toHaveBeenCalledWith( 100, 80 );
+			expect( ctx.strokeStyle ).toBe( '#ff0000' );
+			expect( ctx.stroke ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle rotation', () => {
+			const layer = {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				rotation: 45,
+				stroke: '#ff0000'
+			};
+
+			shapeRenderer.drawLine( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle default values', () => {
+			const layer = {};
+
+			expect( () => {
+				shapeRenderer.drawLine( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+			} ).not.toThrow();
+
+			expect( ctx.moveTo ).toHaveBeenCalledWith( 0, 0 );
+			expect( ctx.lineTo ).toHaveBeenCalledWith( 0, 0 );
+		} );
+
+		it( 'should set line cap to round', () => {
+			const layer = {
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				stroke: '#ff0000'
+			};
+
+			shapeRenderer.drawLine( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( ctx.lineCap ).toBe( 'round' );
+		} );
+	} );
+
+	describe( 'drawPath', () => {
+		it( 'should draw a path with multiple points', () => {
+			const layer = {
+				points: [
+					{ x: 10, y: 20 },
+					{ x: 50, y: 30 },
+					{ x: 80, y: 70 },
+					{ x: 100, y: 50 }
+				],
+				stroke: '#00ff00',
+				strokeWidth: 3,
+				strokeOpacity: 1
+			};
+
+			shapeRenderer.drawPath( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalledWith( 10, 20 );
+			expect( ctx.lineTo ).toHaveBeenCalledTimes( 3 );
+			expect( ctx.strokeStyle ).toBe( '#00ff00' );
+			expect( ctx.stroke ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip if less than 2 points', () => {
+			const layer = {
+				points: [ { x: 10, y: 20 } ],
+				stroke: '#00ff00'
+			};
+
+			shapeRenderer.drawPath( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( ctx.beginPath ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should skip if no points array', () => {
+			const layer = {
+				stroke: '#00ff00'
+			};
+
+			shapeRenderer.drawPath( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( ctx.beginPath ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle rotation', () => {
+			const layer = {
+				points: [
+					{ x: 10, y: 20 },
+					{ x: 50, y: 30 },
+					{ x: 80, y: 70 }
+				],
+				rotation: 45,
+				stroke: '#00ff00'
+			};
+
+			shapeRenderer.drawPath( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'should set line join to round', () => {
+			const layer = {
+				points: [
+					{ x: 10, y: 20 },
+					{ x: 50, y: 30 }
+				],
+				stroke: '#00ff00'
+			};
+
+			shapeRenderer.drawPath( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( ctx.lineJoin ).toBe( 'round' );
+			expect( ctx.lineCap ).toBe( 'round' );
+		} );
+	} );
 } );

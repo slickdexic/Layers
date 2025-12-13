@@ -89,6 +89,19 @@
 		}
 
 		/**
+		 * Apply shadow settings to context
+		 *
+		 * @param {Object} layer - Layer with shadow properties
+		 * @param {Object} scale - Scale factors
+		 */
+		applyShadow( layer, scale ) {
+			if ( this.shadowRenderer ) {
+				this.shadowRenderer.applyShadow( layer, scale );
+			}
+			// No fallback - shadows require ShadowRenderer for full support
+		}
+
+		/**
 		 * Check if shadow is enabled on a layer
 		 *
 		 * @param {Object} layer - Layer to check
@@ -824,6 +837,163 @@
 				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
 				this.ctx.stroke();
 			}
+
+			this.ctx.restore();
+		}
+
+		/**
+		 * Draw a line shape
+		 *
+		 * @param {Object} layer - Layer with line properties (x1, y1, x2, y2)
+		 * @param {Object} [options] - Rendering options
+		 */
+		drawLine( layer, options ) {
+			const opts = options || {};
+			const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
+			const shadowScale = opts.shadowScale || scale;
+
+			const x1 = layer.x1 || 0;
+			const y1 = layer.y1 || 0;
+			const x2 = layer.x2 || 0;
+			const y2 = layer.y2 || 0;
+			let strokeW = layer.strokeWidth || 1;
+
+			if ( !opts.scaled ) {
+				strokeW = strokeW * scale.avg;
+			}
+
+			this.ctx.save();
+
+			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
+			const spread = this.getShadowSpread( layer, shadowScale );
+
+			// Handle rotation
+			if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
+				const centerX = ( x1 + x2 ) / 2;
+				const centerY = ( y1 + y2 ) / 2;
+				this.ctx.translate( centerX, centerY );
+				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+				this.ctx.translate( -centerX, -centerY );
+			}
+
+			// Shadow handling with spread - for lines, spread means a thicker shadow stroke
+			if ( spread > 0 && this.hasShadowEnabled( layer ) ) {
+				const expandedWidth = strokeW + spread * 2;
+				const shadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
+
+				this.drawSpreadShadowStroke( layer, shadowScale, expandedWidth, ( ctx ) => {
+					ctx.beginPath();
+					ctx.moveTo( x1, y1 );
+					ctx.lineTo( x2, y2 );
+				}, shadowOpacity );
+			} else if ( this.hasShadowEnabled( layer ) ) {
+				this.applyShadow( layer, shadowScale );
+			}
+
+			// Draw actual line
+			if ( spread > 0 ) {
+				this.clearShadow();
+			}
+
+			this.ctx.strokeStyle = layer.stroke || '#000000';
+			this.ctx.lineWidth = strokeW;
+			this.ctx.lineCap = 'round';
+			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
+
+			this.ctx.beginPath();
+			this.ctx.moveTo( x1, y1 );
+			this.ctx.lineTo( x2, y2 );
+			this.ctx.stroke();
+
+			this.ctx.restore();
+		}
+
+		/**
+		 * Draw a freehand path
+		 *
+		 * @param {Object} layer - Layer with points array
+		 * @param {Object} [options] - Rendering options
+		 */
+		drawPath( layer, options ) {
+			if ( !layer.points || !Array.isArray( layer.points ) || layer.points.length < 2 ) {
+				return;
+			}
+
+			const opts = options || {};
+			const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
+			const shadowScale = opts.shadowScale || scale;
+
+			let strokeW = layer.strokeWidth || 2;
+			if ( !opts.scaled ) {
+				strokeW = strokeW * scale.avg;
+			}
+
+			this.ctx.save();
+
+			// Handle rotation: calculate bounding box center and rotate around it
+			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+			let centerX = 0;
+			let centerY = 0;
+
+			if ( hasRotation ) {
+				// Calculate bounding box of all points
+				let minX = layer.points[ 0 ].x;
+				let minY = layer.points[ 0 ].y;
+				let maxX = minX;
+				let maxY = minY;
+
+				for ( let i = 1; i < layer.points.length; i++ ) {
+					const pt = layer.points[ i ];
+					minX = Math.min( minX, pt.x );
+					minY = Math.min( minY, pt.y );
+					maxX = Math.max( maxX, pt.x );
+					maxY = Math.max( maxY, pt.y );
+				}
+
+				centerX = ( minX + maxX ) / 2;
+				centerY = ( minY + maxY ) / 2;
+
+				this.ctx.translate( centerX, centerY );
+				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+				this.ctx.translate( -centerX, -centerY );
+			}
+
+			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
+			const spread = this.getShadowSpread( layer, shadowScale );
+
+			// Shadow handling with spread
+			if ( spread > 0 && this.hasShadowEnabled( layer ) ) {
+				const expandedWidth = strokeW + spread * 2;
+				const shadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
+
+				this.drawSpreadShadowStroke( layer, shadowScale, expandedWidth, ( ctx ) => {
+					ctx.beginPath();
+					ctx.moveTo( layer.points[ 0 ].x, layer.points[ 0 ].y );
+					for ( let i = 1; i < layer.points.length; i++ ) {
+						ctx.lineTo( layer.points[ i ].x, layer.points[ i ].y );
+					}
+				}, shadowOpacity );
+			} else if ( this.hasShadowEnabled( layer ) ) {
+				this.applyShadow( layer, shadowScale );
+			}
+
+			// Draw actual path
+			if ( spread > 0 ) {
+				this.clearShadow();
+			}
+
+			this.ctx.strokeStyle = layer.stroke || '#000000';
+			this.ctx.lineWidth = strokeW;
+			this.ctx.lineCap = 'round';
+			this.ctx.lineJoin = 'round';
+			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
+
+			this.ctx.beginPath();
+			this.ctx.moveTo( layer.points[ 0 ].x, layer.points[ 0 ].y );
+			for ( let i = 1; i < layer.points.length; i++ ) {
+				this.ctx.lineTo( layer.points[ i ].x, layer.points[ i ].y );
+			}
+			this.ctx.stroke();
 
 			this.ctx.restore();
 		}
