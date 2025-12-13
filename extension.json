@@ -155,6 +155,7 @@
 			"scripts": [
 				"DeepClone.js",
 				"ShadowRenderer.js",
+				"ArrowRenderer.js",
 				"LayerRenderer.js"
 			]
 		},

@@ -23,6 +23,11 @@
 		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './ShadowRenderer.js' ) : null );
 
+	// Get ArrowRenderer - it should be loaded before this module
+	const ArrowRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ArrowRenderer ) ||
+		// eslint-disable-next-line no-undef
+		( typeof require !== 'undefined' ? require( './ArrowRenderer.js' ) : null );
+
 	/**
 	 * Clamp a value to a valid opacity range [0, 1]
 	 * Uses ShadowRenderer's implementation if available, otherwise local fallback
@@ -67,6 +72,13 @@ class LayerRenderer {
 			this.shadowRenderer = new ShadowRenderer( ctx, { canvas: this.canvas } );
 		} else {
 			this.shadowRenderer = null;
+		}
+
+		// Create ArrowRenderer instance for arrow shape operations
+		if ( ArrowRenderer ) {
+			this.arrowRenderer = new ArrowRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
+		} else {
+			this.arrowRenderer = null;
 		}
 	}
 
@@ -819,6 +831,7 @@ class LayerRenderer {
 
 	/**
 	 * Build the vertices for an arrow polygon
+	 * Delegates to ArrowRenderer for the actual vertex calculation.
 	 *
 	 * @private
 	 * @param {number} x1 - Start X
@@ -838,433 +851,34 @@ class LayerRenderer {
 	buildArrowVertices (
 		x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth
 	) {
-		const vertices = [];
-		const cos = Math.cos( angle );
-		const sin = Math.sin( angle );
-		const perpCos = Math.cos( perpAngle );
-		const perpSin = Math.sin( perpAngle );
-
-		const effectiveHeadScale = headScale || 1.0;
-		const barbAngle = Math.PI / 6;
-		const barbLength = arrowSize * 1.56 * effectiveHeadScale;
-		const barbWidth = arrowSize * 0.8;
-		const chevronDepth = arrowSize * 0.52 * effectiveHeadScale;
-		const tailExtra = ( tailWidth || 0 ) / 2;
-
-		if ( arrowStyle === 'none' ) {
-			vertices.push( { x: x1 + perpCos * ( halfShaft + tailExtra ), y: y1 + perpSin * ( halfShaft + tailExtra ) } );
-			vertices.push( { x: x2 + perpCos * halfShaft, y: y2 + perpSin * halfShaft } );
-			vertices.push( { x: x2 - perpCos * halfShaft, y: y2 - perpSin * halfShaft } );
-			vertices.push( { x: x1 - perpCos * ( halfShaft + tailExtra ), y: y1 - perpSin * ( halfShaft + tailExtra ) } );
-			return vertices;
+		if ( this.arrowRenderer ) {
+			return this.arrowRenderer.buildArrowVertices(
+				x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth
+			);
 		}
-
-		const headDepth = arrowSize * 1.3 * effectiveHeadScale;
-		const headBaseX = x2 - cos * headDepth;
-		const headBaseY = y2 - sin * headDepth;
-
-		const leftBarbAngle = angle - barbAngle;
-		const leftBarbCos = Math.cos( leftBarbAngle );
-		const leftBarbSin = Math.sin( leftBarbAngle );
-
-		const rightBarbAngle = angle + barbAngle;
-		const rightBarbCos = Math.cos( rightBarbAngle );
-		const rightBarbSin = Math.sin( rightBarbAngle );
-
-		const barbThickness = halfShaft * 1.5;
-
-		if ( arrowStyle === 'single' ) {
-			vertices.push( { x: x1 + perpCos * ( halfShaft + tailExtra ), y: y1 + perpSin * ( halfShaft + tailExtra ) } );
-
-			if ( headType === 'standard' ) {
-				const leftOuterX = x2 - barbLength * leftBarbCos;
-				const leftOuterY = y2 - barbLength * leftBarbSin;
-				const leftInnerX = leftOuterX + barbThickness * leftBarbSin;
-				const leftInnerY = leftOuterY - barbThickness * leftBarbCos;
-				const leftDx = leftInnerX - headBaseX;
-				const leftDy = leftInnerY - headBaseY;
-				const leftCurrentDist = leftDx * perpCos + leftDy * perpSin;
-				const leftDeltaPerStep = leftBarbCos * perpCos + leftBarbSin * perpSin;
-				const leftT = ( halfShaft - leftCurrentDist ) / leftDeltaPerStep;
-				const leftShaftX = leftInnerX + leftT * leftBarbCos;
-				const leftShaftY = leftInnerY + leftT * leftBarbSin;
-				vertices.push( { x: leftShaftX, y: leftShaftY } );
-				vertices.push( { x: leftInnerX, y: leftInnerY } );
-				vertices.push( { x: leftOuterX, y: leftOuterY } );
-			} else if ( headType === 'chevron' ) {
-				vertices.push( { x: headBaseX + perpCos * halfShaft, y: headBaseY + perpSin * halfShaft } );
-				vertices.push( {
-					x: headBaseX - cos * chevronDepth + perpCos * barbWidth,
-					y: headBaseY - sin * chevronDepth + perpSin * barbWidth
-				} );
-			} else {
-				vertices.push( { x: headBaseX + perpCos * halfShaft, y: headBaseY + perpSin * halfShaft } );
-				const leftBarbX = x2 - barbLength * leftBarbCos;
-				const leftBarbY = y2 - barbLength * leftBarbSin;
-				vertices.push( { x: leftBarbX, y: leftBarbY } );
-			}
-
-			vertices.push( { x: x2, y: y2 } );
-
-			if ( headType === 'standard' ) {
-				const rightOuterX = x2 - barbLength * rightBarbCos;
-				const rightOuterY = y2 - barbLength * rightBarbSin;
-				const rightInnerX = rightOuterX - barbThickness * rightBarbSin;
-				const rightInnerY = rightOuterY + barbThickness * rightBarbCos;
-				const rightDx = rightInnerX - headBaseX;
-				const rightDy = rightInnerY - headBaseY;
-				const rightCurrentDist = rightDx * perpCos + rightDy * perpSin;
-				const rightDeltaPerStep = rightBarbCos * perpCos + rightBarbSin * perpSin;
-				const rightT = ( -halfShaft - rightCurrentDist ) / rightDeltaPerStep;
-				const rightShaftX = rightInnerX + rightT * rightBarbCos;
-				const rightShaftY = rightInnerY + rightT * rightBarbSin;
-				vertices.push( { x: rightOuterX, y: rightOuterY } );
-				vertices.push( { x: rightInnerX, y: rightInnerY } );
-				vertices.push( { x: rightShaftX, y: rightShaftY } );
-			} else if ( headType === 'chevron' ) {
-				vertices.push( {
-					x: headBaseX - cos * chevronDepth - perpCos * barbWidth,
-					y: headBaseY - sin * chevronDepth - perpSin * barbWidth
-				} );
-				vertices.push( { x: headBaseX - perpCos * halfShaft, y: headBaseY - perpSin * halfShaft } );
-			} else {
-				const rightBarbX = x2 - barbLength * rightBarbCos;
-				const rightBarbY = y2 - barbLength * rightBarbSin;
-				vertices.push( { x: rightBarbX, y: rightBarbY } );
-				vertices.push( { x: headBaseX - perpCos * halfShaft, y: headBaseY - perpSin * halfShaft } );
-			}
-
-			vertices.push( { x: x1 - perpCos * ( halfShaft + tailExtra ), y: y1 - perpSin * ( halfShaft + tailExtra ) } );
-
-		} else if ( arrowStyle === 'double' ) {
-			// Double-headed arrow - build both ends
-			const tailBaseX = x1 + cos * headDepth;
-			const tailBaseY = y1 + sin * headDepth;
-
-			const tailLeftAngle = angle + Math.PI - barbAngle;
-			const tailLeftCos = Math.cos( tailLeftAngle );
-			const tailLeftSin = Math.sin( tailLeftAngle );
-
-			const tailRightAngle = angle + Math.PI + barbAngle;
-			const tailRightCos = Math.cos( tailRightAngle );
-			const tailRightSin = Math.sin( tailRightAngle );
-
-			// Tail head (left side)
-			if ( headType === 'standard' ) {
-				const tailLeftOuterX = x1 + barbLength * tailLeftCos;
-				const tailLeftOuterY = y1 + barbLength * tailLeftSin;
-				const tailLeftInnerX = tailLeftOuterX + barbThickness * tailLeftSin;
-				const tailLeftInnerY = tailLeftOuterY - barbThickness * tailLeftCos;
-				const tailLeftDx = tailLeftInnerX - tailBaseX;
-				const tailLeftDy = tailLeftInnerY - tailBaseY;
-				const tailLeftCurrentDist = tailLeftDx * perpCos + tailLeftDy * perpSin;
-				const tailLeftDeltaPerStep = tailLeftCos * perpCos + tailLeftSin * perpSin;
-				const tailLeftT = ( halfShaft - tailLeftCurrentDist ) / tailLeftDeltaPerStep;
-				const tailLeftShaftX = tailLeftInnerX + tailLeftT * tailLeftCos;
-				const tailLeftShaftY = tailLeftInnerY + tailLeftT * tailLeftSin;
-				vertices.push( { x: tailLeftShaftX, y: tailLeftShaftY } );
-				vertices.push( { x: tailLeftInnerX, y: tailLeftInnerY } );
-				vertices.push( { x: tailLeftOuterX, y: tailLeftOuterY } );
-			} else if ( headType === 'chevron' ) {
-				vertices.push( {
-					x: tailBaseX + cos * chevronDepth + perpCos * barbWidth,
-					y: tailBaseY + sin * chevronDepth + perpSin * barbWidth
-				} );
-			} else {
-				const tailLeftBarbX = x1 + barbLength * tailLeftCos;
-				const tailLeftBarbY = y1 + barbLength * tailLeftSin;
-				vertices.push( { x: tailLeftBarbX, y: tailLeftBarbY } );
-			}
-
-			vertices.push( { x: x1, y: y1 } );
-
-			// Tail head (right side)
-			if ( headType === 'standard' ) {
-				const tailRightOuterX = x1 + barbLength * tailRightCos;
-				const tailRightOuterY = y1 + barbLength * tailRightSin;
-				const tailRightInnerX = tailRightOuterX - barbThickness * tailRightSin;
-				const tailRightInnerY = tailRightOuterY + barbThickness * tailRightCos;
-				const tailRightDx = tailRightInnerX - tailBaseX;
-				const tailRightDy = tailRightInnerY - tailBaseY;
-				const tailRightCurrentDist = tailRightDx * perpCos + tailRightDy * perpSin;
-				const tailRightDeltaPerStep = tailRightCos * perpCos + tailRightSin * perpSin;
-				const tailRightT = ( -halfShaft - tailRightCurrentDist ) / tailRightDeltaPerStep;
-				const tailRightShaftX = tailRightInnerX + tailRightT * tailRightCos;
-				const tailRightShaftY = tailRightInnerY + tailRightT * tailRightSin;
-				vertices.push( { x: tailRightOuterX, y: tailRightOuterY } );
-				vertices.push( { x: tailRightInnerX, y: tailRightInnerY } );
-				vertices.push( { x: tailRightShaftX, y: tailRightShaftY } );
-			} else if ( headType === 'chevron' ) {
-				vertices.push( {
-					x: tailBaseX + cos * chevronDepth - perpCos * barbWidth,
-					y: tailBaseY + sin * chevronDepth - perpSin * barbWidth
-				} );
-				vertices.push( { x: tailBaseX - perpCos * halfShaft, y: tailBaseY - perpSin * halfShaft } );
-			} else {
-				const tailRightBarbX = x1 + barbLength * tailRightCos;
-				const tailRightBarbY = y1 + barbLength * tailRightSin;
-				vertices.push( { x: tailRightBarbX, y: tailRightBarbY } );
-				vertices.push( { x: tailBaseX - perpCos * halfShaft, y: tailBaseY - perpSin * halfShaft } );
-			}
-
-			// Shaft to head
-			if ( headType !== 'standard' ) {
-				vertices.push( { x: headBaseX - perpCos * halfShaft, y: headBaseY - perpSin * halfShaft } );
-			}
-
-			// Front head (right side)
-			if ( headType === 'standard' ) {
-				const rightOuterX = x2 - barbLength * rightBarbCos;
-				const rightOuterY = y2 - barbLength * rightBarbSin;
-				const rightInnerX = rightOuterX - barbThickness * rightBarbSin;
-				const rightInnerY = rightOuterY + barbThickness * rightBarbCos;
-				const rightDx = rightInnerX - headBaseX;
-				const rightDy = rightInnerY - headBaseY;
-				const rightCurrentDist = rightDx * perpCos + rightDy * perpSin;
-				const rightDeltaPerStep = rightBarbCos * perpCos + rightBarbSin * perpSin;
-				const rightT = ( -halfShaft - rightCurrentDist ) / rightDeltaPerStep;
-				const rightShaftX = rightInnerX + rightT * rightBarbCos;
-				const rightShaftY = rightInnerY + rightT * rightBarbSin;
-				vertices.push( { x: rightShaftX, y: rightShaftY } );
-				vertices.push( { x: rightInnerX, y: rightInnerY } );
-				vertices.push( { x: rightOuterX, y: rightOuterY } );
-			} else if ( headType === 'chevron' ) {
-				vertices.push( {
-					x: headBaseX - cos * chevronDepth - perpCos * barbWidth,
-					y: headBaseY - sin * chevronDepth - perpSin * barbWidth
-				} );
-			} else {
-				const rightBarbX = x2 - barbLength * rightBarbCos;
-				const rightBarbY = y2 - barbLength * rightBarbSin;
-				vertices.push( { x: rightBarbX, y: rightBarbY } );
-			}
-
-			vertices.push( { x: x2, y: y2 } );
-
-			// Front head (left side)
-			if ( headType === 'standard' ) {
-				const leftOuterX = x2 - barbLength * leftBarbCos;
-				const leftOuterY = y2 - barbLength * leftBarbSin;
-				const leftInnerX = leftOuterX + barbThickness * leftBarbSin;
-				const leftInnerY = leftOuterY - barbThickness * leftBarbCos;
-				const leftDx = leftInnerX - headBaseX;
-				const leftDy = leftInnerY - headBaseY;
-				const leftCurrentDist = leftDx * perpCos + leftDy * perpSin;
-				const leftDeltaPerStep = leftBarbCos * perpCos + leftBarbSin * perpSin;
-				const leftT = ( halfShaft - leftCurrentDist ) / leftDeltaPerStep;
-				const leftShaftX = leftInnerX + leftT * leftBarbCos;
-				const leftShaftY = leftInnerY + leftT * leftBarbSin;
-				vertices.push( { x: leftOuterX, y: leftOuterY } );
-				vertices.push( { x: leftInnerX, y: leftInnerY } );
-				vertices.push( { x: leftShaftX, y: leftShaftY } );
-			} else if ( headType === 'chevron' ) {
-				vertices.push( {
-					x: headBaseX - cos * chevronDepth + perpCos * barbWidth,
-					y: headBaseY - sin * chevronDepth + perpSin * barbWidth
-				} );
-				vertices.push( { x: headBaseX + perpCos * halfShaft, y: headBaseY + perpSin * halfShaft } );
-			} else {
-				const leftBarbX = x2 - barbLength * leftBarbCos;
-				const leftBarbY = y2 - barbLength * leftBarbSin;
-				vertices.push( { x: leftBarbX, y: leftBarbY } );
-				vertices.push( { x: headBaseX + perpCos * halfShaft, y: headBaseY + perpSin * halfShaft } );
-			}
-
-			// Back to tail
-			if ( headType !== 'standard' ) {
-				vertices.push( { x: tailBaseX + perpCos * halfShaft, y: tailBaseY + perpSin * halfShaft } );
-			}
-		}
-
-		return vertices;
+		// Fallback: return empty array if ArrowRenderer not available
+		return [];
 	}
 
 	/**
 	 * Draw an arrow as a closed polygon
+	 * Delegates to ArrowRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with arrow properties
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawArrow ( layer, options ) {
-		const opts = options || {};
-		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		const shadowScale = opts.shadowScale || scale;
-
-		const x1 = layer.x1 || 0;
-		const y1 = layer.y1 || 0;
-		const x2 = layer.x2 || 0;
-		const y2 = layer.y2 || 0;
-		let arrowSize = layer.arrowSize || 15;
-		let tailWidth = typeof layer.tailWidth === 'number' ? layer.tailWidth : 0;
-		let strokeWidth = layer.strokeWidth || 2;
-
-		if ( !opts.scaled ) {
-			arrowSize = arrowSize * scale.avg;
-			tailWidth = tailWidth * scale.avg;
-			strokeWidth = strokeWidth * scale.avg;
+		if ( this.arrowRenderer ) {
+			const opts = options || {};
+			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+			const shadowScale = opts.shadowScale || scale;
+			this.arrowRenderer.setContext( this.ctx );
+			this.arrowRenderer.draw( layer, {
+				scale: scale,
+				shadowScale: shadowScale,
+				scaled: opts.scaled
+			} );
 		}
-
-		const arrowStyle = layer.arrowStyle || 'single';
-		const headType = layer.arrowHeadType || 'pointed';
-		const headScale = typeof layer.headScale === 'number' ? layer.headScale : 1.0;
-		const shaftWidth = Math.max( arrowSize * 0.4, strokeWidth * 1.5, 4 );
-
-		this.ctx.save();
-
-		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, shadowScale );
-
-		// Handle rotation
-		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
-			const centerX = ( x1 + x2 ) / 2;
-			const centerY = ( y1 + y2 ) / 2;
-			this.ctx.translate( centerX, centerY );
-			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
-			this.ctx.translate( -centerX, -centerY );
-		}
-
-		const angle = Math.atan2( y2 - y1, x2 - x1 );
-		const perpAngle = angle + Math.PI / 2;
-
-		// Shadow handling with spread - draw separate shadows for fill and stroke
-		if ( spread > 0 && this.hasShadowEnabled( layer ) ) {
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
-			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
-
-			// Draw fill shadow at fill opacity
-			if ( hasFill ) {
-				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				const expandedShaftWidth = shaftWidth + spread * 2;
-				const expandedArrowSize = arrowSize + spread;
-				const expandedVertices = this.buildArrowVertices(
-					x1, y1, x2, y2,
-					angle, perpAngle, expandedShaftWidth / 2,
-					expandedArrowSize, arrowStyle, headType, headScale, tailWidth + spread
-				);
-
-				this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
-					ctx.beginPath();
-					if ( expandedVertices.length > 0 ) {
-						ctx.moveTo( expandedVertices[ 0 ].x, expandedVertices[ 0 ].y );
-						for ( let i = 1; i < expandedVertices.length; i++ ) {
-							ctx.lineTo( expandedVertices[ i ].x, expandedVertices[ i ].y );
-						}
-						ctx.closePath();
-					}
-				}, fillShadowOpacity );
-			}
-
-			// Draw stroke shadow at stroke opacity
-			if ( hasStroke ) {
-				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
-				const expandedStrokeWidth = strokeWidth + spread * 2;
-				const originalVertices = this.buildArrowVertices(
-					x1, y1, x2, y2, angle, perpAngle, shaftWidth / 2,
-					arrowSize, arrowStyle, headType, headScale, tailWidth
-				);
-
-				this.drawSpreadShadowStroke( layer, shadowScale, expandedStrokeWidth, ( ctx ) => {
-					ctx.beginPath();
-					if ( originalVertices.length > 0 ) {
-						ctx.moveTo( originalVertices[ 0 ].x, originalVertices[ 0 ].y );
-						for ( let i = 1; i < originalVertices.length; i++ ) {
-							ctx.lineTo( originalVertices[ i ].x, originalVertices[ i ].y );
-						}
-						ctx.closePath();
-					}
-				}, strokeShadowOpacity );
-			}
-		} else if ( this.hasShadowEnabled( layer ) ) {
-			this.applyShadow( layer, shadowScale );
-		}
-
-		// Draw actual arrow
-		// FIX (2025-12-09): Fill and stroke each get shadows based on their own opacity.
-		// Stroke shadow is drawn BEHIND the fill using destination-over composite mode.
-		if ( spread > 0 ) {
-			this.clearShadow();
-		}
-
-		const vertices = this.buildArrowVertices(
-			x1, y1, x2, y2, angle, perpAngle, shaftWidth / 2,
-			arrowSize, arrowStyle, headType, headScale, tailWidth
-		);
-
-		// Helper to draw the arrow path
-		const drawArrowPath = () => {
-			this.ctx.beginPath();
-			if ( vertices.length > 0 ) {
-				this.ctx.moveTo( vertices[ 0 ].x, vertices[ 0 ].y );
-				for ( let i = 1; i < vertices.length; i++ ) {
-					this.ctx.lineTo( vertices[ i ].x, vertices[ i ].y );
-				}
-				this.ctx.closePath();
-			}
-		};
-
-		const fillOpacity = clampOpacity( layer.fillOpacity );
-		const strokeOpacity = clampOpacity( layer.strokeOpacity );
-		const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
-		const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
-		const shadowEnabled = this.hasShadowEnabled( layer ) && spread === 0;
-
-		// Draw fill (with shadow if enabled and spread === 0)
-		if ( hasFill ) {
-			// FIX (2025-12-09): Explicitly apply shadow right before fill to ensure it's active
-			if ( shadowEnabled ) {
-				this.applyShadow( layer, shadowScale );
-			}
-			drawArrowPath();
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.globalAlpha = baseOpacity * fillOpacity;
-			this.ctx.fill();
-		}
-
-		// Clear shadow before stroke only if there was a visible fill
-		if ( hasFill ) {
-			this.clearShadow();
-		}
-
-		// Draw stroke
-		if ( hasStroke ) {
-			if ( !hasFill && shadowEnabled ) {
-				// No fill to go behind, draw stroke with shadow directly
-				this.applyShadow( layer, shadowScale );
-				drawArrowPath();
-				this.ctx.strokeStyle = layer.stroke;
-				this.ctx.lineWidth = strokeWidth;
-				this.ctx.lineJoin = 'miter';
-				this.ctx.miterLimit = 10;
-				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-				this.ctx.stroke();
-			} else {
-				// Draw stroke without shadow first
-				drawArrowPath();
-				this.ctx.strokeStyle = layer.stroke;
-				this.ctx.lineWidth = strokeWidth;
-				this.ctx.lineJoin = 'miter';
-				this.ctx.miterLimit = 10;
-				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-				this.ctx.stroke();
-
-				// Then draw stroke shadow BEHIND using destination-over
-				if ( shadowEnabled ) {
-					this.ctx.save();
-					this.ctx.globalCompositeOperation = 'destination-over';
-					this.applyShadow( layer, shadowScale );
-					drawArrowPath();
-					this.ctx.strokeStyle = layer.stroke;
-					this.ctx.lineWidth = strokeWidth;
-					this.ctx.lineJoin = 'miter';
-					this.ctx.miterLimit = 10;
-					this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-					this.ctx.stroke();
-					this.ctx.restore();
-				}
-			}
-		}
-
-		this.ctx.restore();
 	}
 
 	/**
