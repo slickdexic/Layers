@@ -360,10 +360,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.ZoomPanController = ZoomPanController;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.ZoomPanController instead
-		// This will be removed in a future version
-		window.ZoomPanController = ZoomPanController;
 	}
 
 	// Export for Node.js/Jest testing

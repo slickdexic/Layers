@@ -565,10 +565,6 @@ class ColorPickerDialog {
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.ColorPickerDialog = ColorPickerDialog;
-
-			// DEPRECATED: Direct window export - use window.Layers.UI.ColorPickerDialog instead
-			// This will be removed in a future version
-		window.ColorPickerDialog = ColorPickerDialog;
 	}
 
 	// Node.js/CommonJS export for testing

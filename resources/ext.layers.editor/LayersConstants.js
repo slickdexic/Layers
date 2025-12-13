@@ -321,10 +321,6 @@
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};
 		window.Layers.Constants = LayersConstants;
-
-		// DEPRECATED: Direct window export - use window.Layers.Constants instead
-		// This will be removed in a future version
-		window.LayersConstants = LayersConstants;
 	}
 
 	// Also export via CommonJS if available (for Node.js/Jest testing)

@@ -14,7 +14,17 @@
 	const getClass = ( window.Layers && window.Layers.Utils && window.Layers.Utils.getClass ) ||
 		window.layersGetClass ||
 		function ( namespacePath, globalName ) {
-			// Minimal fallback
+			// Minimal fallback - check namespace first, then global
+			if ( namespacePath && typeof window !== 'undefined' && window.Layers ) {
+				const parts = namespacePath.split( '.' );
+				let obj = window.Layers;
+				for ( const part of parts ) {
+					obj = obj && obj[ part ];
+				}
+				if ( obj ) {
+					return obj;
+				}
+			}
 			return window[ globalName ] || null;
 		};
 
@@ -1269,10 +1279,6 @@ class LayersEditor {
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.Editor = LayersEditor;
-
-		// DEPRECATED: Direct window export - use window.Layers.Core.Editor instead
-		// This will be removed in a future version
-		window.LayersEditor = LayersEditor;
 	}
 
 }() );

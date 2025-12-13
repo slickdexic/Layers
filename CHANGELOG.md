@@ -2,6 +2,21 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [0.8.5] - 2025-12-12
+
+### ES6 Migration Complete
+- **100% ES6 class migration** - All 58 modules now use ES6 syntax
+- Converted LayersViewer.js from prototype pattern to ES6 class
+- 0 prototype patterns remaining in codebase
+
+### Test Coverage Improvements
+- Added 78 new tests for ShadowRenderer (72.72% → 100% coverage)
+- Added 38 new tests for LayersViewer class
+- All 4,029 Jest tests passing
+- 82 test suites, 88% statement coverage
+
+---
+
 ## [0.8.4] - 2025-12-11
 
 ### Bug Fixes
@@ -30,8 +45,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Updated improvement_plan.md with current progress
 
 ### Tests
-- All 3,869 Jest tests passing
-- 88.4% statement coverage maintained
+- All 3,913 Jest tests passing
+- 87.84% statement coverage maintained
 
 ## [0.8.3] - 2025-12-10
 

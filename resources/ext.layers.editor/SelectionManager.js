@@ -1248,10 +1248,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.SelectionManager = SelectionManager;
-
-		// DEPRECATED: Direct window export - use window.Layers.Core.SelectionManager instead
-		// This will be removed in a future version
-		window.LayersSelectionManager = SelectionManager;
 	}
 
 	// Export for Node.js/Jest testing

@@ -509,10 +509,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Tools = window.Layers.Tools || {};
 		window.Layers.Tools.ShapeFactory = ShapeFactory;
-
-		// DEPRECATED: Direct window export - use window.Layers.Tools.ShapeFactory instead
-		// This will be removed in a future version
-		window.ShapeFactory = ShapeFactory;
 	}
 
 	// CommonJS export for testing

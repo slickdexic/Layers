@@ -46,13 +46,15 @@ describe( 'LayerPanel Extended', () => {
 	let container;
 
 	beforeEach( () => {
-		// Setup window globals
+		// Setup window globals with namespaced structure
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
 		window.StateManager = StateManager;
 		window.HistoryManager = HistoryManager;
-		window.IconFactory = mockIconFactory;
-		window.ColorPickerDialog = null;
-		window.ConfirmDialog = null;
-		window.PropertiesForm = null;
+		window.Layers.UI.IconFactory = mockIconFactory;
+		window.Layers.UI.ColorPickerDialog = null;
+		window.Layers.UI.ConfirmDialog = null;
+		window.Layers.UI.PropertiesForm = null;
 
 		// Setup DOM
 		document.body.innerHTML = `
@@ -89,7 +91,7 @@ describe( 'LayerPanel Extended', () => {
 		jest.clearAllMocks();
 
 		require( '../../resources/ext.layers.editor/LayerPanel.js' );
-		LayerPanel = window.LayerPanel;
+		LayerPanel = window.Layers.UI.LayerPanel;
 	} );
 
 	afterEach( () => {
@@ -364,12 +366,12 @@ describe( 'LayerPanel Extended', () => {
 			const mockConfirmDialog = {
 				show: jest.fn()
 			};
-			window.ConfirmDialog = mockConfirmDialog;
+			window.Layers.UI.ConfirmDialog = mockConfirmDialog;
 
 			// Reload LayerPanel with ConfirmDialog available
 			jest.resetModules();
 			require( '../../resources/ext.layers.editor/LayerPanel.js' );
-			const LP = window.LayerPanel;
+			const LP = window.Layers.UI.LayerPanel;
 
 			const panel = new LP( {
 				container: container,
@@ -402,11 +404,11 @@ describe( 'LayerPanel Extended', () => {
 			const mockConfirmDialog = {
 				simpleConfirm: jest.fn().mockReturnValue( false )
 			};
-			window.ConfirmDialog = mockConfirmDialog;
+			window.Layers.UI.ConfirmDialog = mockConfirmDialog;
 
 			jest.resetModules();
 			require( '../../resources/ext.layers.editor/LayerPanel.js' );
-			const LP = window.LayerPanel;
+			const LP = window.Layers.UI.LayerPanel;
 
 			const panel = new LP( {
 				container: container,
@@ -857,12 +859,14 @@ describe( 'LayerPanel touch support', () => {
 	let container;
 
 	beforeEach( () => {
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
 		window.StateManager = StateManager;
 		window.HistoryManager = HistoryManager;
-		window.IconFactory = mockIconFactory;
-		window.ColorPickerDialog = null;
-		window.ConfirmDialog = null;
-		window.PropertiesForm = null;
+		window.Layers.UI.IconFactory = mockIconFactory;
+		window.Layers.UI.ColorPickerDialog = null;
+		window.Layers.UI.ConfirmDialog = null;
+		window.Layers.UI.PropertiesForm = null;
 
 		document.body.innerHTML = '<div id="layers-panel-container"></div>';
 		container = document.getElementById( 'layers-panel-container' );
@@ -886,7 +890,7 @@ describe( 'LayerPanel touch support', () => {
 
 		jest.resetModules();
 		require( '../../resources/ext.layers.editor/LayerPanel.js' );
-		LayerPanel = window.LayerPanel;
+		LayerPanel = window.Layers.UI.LayerPanel;
 	} );
 
 	afterEach( () => {

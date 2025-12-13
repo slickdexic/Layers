@@ -392,10 +392,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.LayerItemEvents = LayerItemEvents;
-
-		// DEPRECATED: Direct window export - use window.Layers.UI.LayerItemEvents instead
-		// This will be removed in a future version
-		window.LayerItemEvents = LayerItemEvents;
 	}
 
 	// CommonJS export for testing

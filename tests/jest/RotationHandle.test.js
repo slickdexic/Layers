@@ -1,3 +1,10 @@
+// Setup namespace and load NamespaceHelper BEFORE requiring other modules
+window.Layers = window.Layers || {};
+window.Layers.Utils = window.Layers.Utils || {};
+window.Layers.Canvas = window.Layers.Canvas || {};
+window.Layers.Selection = window.Layers.Selection || {};
+require('../../resources/ext.layers.editor/utils/NamespaceHelper.js');
+
 const CanvasManager = require('../../resources/ext.layers.editor/CanvasManager.js');
 const CanvasEvents = require('../../resources/ext.layers.editor/CanvasEvents.js');
 const SelectionManager = require('../../resources/ext.layers.editor/SelectionManager.js');
@@ -31,11 +38,14 @@ describe('Rotation Handle Interaction', () => {
         // Restore console
         global.console = require('console');
 
-        // Setup controllers on window for CanvasManager to find
-        window.HitTestController = HitTestController;
-        window.TransformController = TransformController;
-        window.GeometryUtils = GeometryUtils;
-        window.TextUtils = TextUtils;
+        // Setup controllers on window.Layers namespace for CanvasManager to find
+        window.Layers = window.Layers || {};
+        window.Layers.Canvas = window.Layers.Canvas || {};
+        window.Layers.Utils = window.Layers.Utils || {};
+        window.Layers.Canvas.HitTestController = HitTestController;
+        window.Layers.Canvas.TransformController = TransformController;
+        window.Layers.Utils.Geometry = GeometryUtils;
+        window.Layers.Utils.Text = TextUtils;
         
         // Setup DOM
         document.body.innerHTML = '<div id="layers-editor-container"><canvas id="layers-canvas"></canvas></div>';

@@ -1023,9 +1023,11 @@ describe( 'CanvasManager Extended Coverage', () => {
 
 	describe( 'setupEventHandlers', () => {
 		it( 'should log error when CanvasEvents not found', () => {
-			// Remove CanvasEvents from global
-			const originalCanvasEvents = window.CanvasEvents;
-			delete window.CanvasEvents;
+			// Remove CanvasEvents from namespace
+			const originalCanvasEvents = window.Layers && window.Layers.Canvas && window.Layers.Canvas.Events;
+			if ( window.Layers && window.Layers.Canvas ) {
+				delete window.Layers.Canvas.Events;
+			}
 
 			window.mw = {
 				log: {
@@ -1045,7 +1047,9 @@ describe( 'CanvasManager Extended Coverage', () => {
 			);
 
 			newManager.destroy();
-			window.CanvasEvents = originalCanvasEvents;
+			if ( window.Layers && window.Layers.Canvas ) {
+				window.Layers.Canvas.Events = originalCanvasEvents;
+			}
 			delete window.mw;
 		} );
 	} );

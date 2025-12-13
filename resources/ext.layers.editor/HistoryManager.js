@@ -624,10 +624,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.HistoryManager = HistoryManager;
-
-		// DEPRECATED: Direct window export - use window.Layers.Core.HistoryManager instead
-		// This will be removed in a future version
-		window.HistoryManager = HistoryManager;
 	}
 
 	// Export for Node.js/Jest testing

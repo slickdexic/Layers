@@ -296,10 +296,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Selection = window.Layers.Selection || {};
 		window.Layers.Selection.SelectionState = SelectionState;
-
-		// DEPRECATED: Direct window export - use window.Layers.Selection.SelectionState instead
-		// This will be removed in a future version
-		window.SelectionState = SelectionState;
 	}
 
 	// Export for Node.js/Jest testing

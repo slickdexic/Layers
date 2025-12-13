@@ -11,7 +11,7 @@ describe( 'ImportExportManager', () => {
 	let mockEditor;
 
 	beforeEach( () => {
-		ImportExportManager = window.ImportExportManager;
+		ImportExportManager = window.Layers.Core.ImportExportManager;
 
 		// Mock editor
 		mockEditor = {
@@ -521,9 +521,9 @@ describe( 'ImportExportManager', () => {
 	} );
 
 	describe( 'module exports', () => {
-		it( 'should export ImportExportManager to window', () => {
-			expect( window.ImportExportManager ).toBeDefined();
-			expect( typeof window.ImportExportManager ).toBe( 'function' );
+		it( 'should export ImportExportManager to window.Layers namespace', () => {
+			expect( window.Layers.Core.ImportExportManager ).toBeDefined();
+			expect( typeof window.Layers.Core.ImportExportManager ).toBe( 'function' );
 		} );
 
 		it( 'should export for CommonJS', () => {

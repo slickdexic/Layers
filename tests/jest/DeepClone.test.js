@@ -267,9 +267,5 @@ describe( 'DeepClone', () => {
 			expect( window.Layers.Utils.deepCloneArray ).toBeDefined();
 			expect( window.Layers.Utils.deepCloneLayer ).toBeDefined();
 		} );
-
-		it( 'should export to window for easy access', () => {
-			expect( window.deepClone ).toBeDefined();
-		} );
 	} );
 } );

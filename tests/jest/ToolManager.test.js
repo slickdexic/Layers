@@ -1088,8 +1088,3 @@ describe( 'ToolManager', () => {
 		} );
 	} );
 } );
-
-// Export for window assignment
-if ( typeof window !== 'undefined' ) {
-	window.LayersToolManager = window.LayersToolManager || {};
-}

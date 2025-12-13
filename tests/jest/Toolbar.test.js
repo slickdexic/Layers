@@ -14,6 +14,12 @@ describe( 'Toolbar', function () {
 		// Set up JSDOM globals
 		global.document = window.document;
 
+		// Set up Layers namespace and load NamespaceHelper BEFORE Toolbar
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.UI = window.Layers.UI || {};
+		require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
 		// Mock mw (MediaWiki) global
 		global.mw = {
 			config: {
@@ -116,7 +122,9 @@ describe( 'Toolbar', function () {
 		};
 
 		// Mock LayersValidator with all required methods
-		window.LayersValidator = function () {
+		window.Layers = window.Layers || {};
+		window.Layers.Validation = window.Layers.Validation || {};
+		window.Layers.Validation.LayersValidator = function () {
 			return {
 				validateInput: jest.fn( function () {
 					return { valid: true };
@@ -825,14 +833,17 @@ describe( 'Toolbar', function () {
 		let savedColorPickerDialog;
 
 		beforeEach( function () {
-			savedColorPickerDialog = window.ColorPickerDialog;
-			delete window.ColorPickerDialog;
+			// Save and remove namespaced ColorPickerDialog
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			savedColorPickerDialog = window.Layers.UI.ColorPickerDialog;
+			delete window.Layers.UI.ColorPickerDialog;
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 			button = document.createElement( 'button' );
 		} );
 
 		afterEach( function () {
-			window.ColorPickerDialog = savedColorPickerDialog;
+			window.Layers.UI.ColorPickerDialog = savedColorPickerDialog;
 		} );
 
 		it( 'should use fallback to set background color', function () {
@@ -929,11 +940,14 @@ describe( 'Toolbar', function () {
 
 	describe( 'openColorPickerDialog', function () {
 		beforeEach( function () {
+			// Ensure namespace structure exists
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 		} );
 
 		it( 'should do nothing when ColorPickerDialog not available', function () {
-			delete window.ColorPickerDialog;
+			delete window.Layers.UI.ColorPickerDialog;
 
 			expect( function () {
 				toolbar.openColorPickerDialog( document.createElement( 'button' ), '#ff0000' );
@@ -942,32 +956,32 @@ describe( 'Toolbar', function () {
 
 		it( 'should create ColorPickerDialog when available', function () {
 			const mockPicker = { open: jest.fn() };
-			window.ColorPickerDialog = jest.fn( function () {
+			window.Layers.UI.ColorPickerDialog = jest.fn( function () {
 				return mockPicker;
 			} );
 			const anchor = document.createElement( 'button' );
 
 			toolbar.openColorPickerDialog( anchor, '#ff0000' );
 
-			expect( window.ColorPickerDialog ).toHaveBeenCalled();
+			expect( window.Layers.UI.ColorPickerDialog ).toHaveBeenCalled();
 			expect( mockPicker.open ).toHaveBeenCalled();
 		} );
 
 		it( 'should pass initial value of none correctly', function () {
 			const mockPicker = { open: jest.fn() };
-			window.ColorPickerDialog = jest.fn( function ( config ) {
+			window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
 				expect( config.currentColor ).toBe( 'none' );
 				return mockPicker;
 			} );
 
 			toolbar.openColorPickerDialog( document.createElement( 'button' ), 'none' );
 
-			expect( window.ColorPickerDialog ).toHaveBeenCalled();
+			expect( window.Layers.UI.ColorPickerDialog ).toHaveBeenCalled();
 		} );
 
 		it( 'should register cleanup function', function () {
 			const mockPicker = { open: jest.fn() };
-			window.ColorPickerDialog = jest.fn( function ( config ) {
+			window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
 				// Simulate registering cleanup
 				config.registerCleanup( jest.fn() );
 				return mockPicker;
@@ -982,7 +996,7 @@ describe( 'Toolbar', function () {
 		it( 'should call onApply callback', function () {
 			const mockPicker = { open: jest.fn() };
 			let applyCb;
-			window.ColorPickerDialog = jest.fn( function ( config ) {
+			window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
 				applyCb = config.onApply;
 				return mockPicker;
 			} );
@@ -997,7 +1011,7 @@ describe( 'Toolbar', function () {
 		it( 'should use default empty onApply if not provided', function () {
 			const mockPicker = { open: jest.fn() };
 			let applyCb;
-			window.ColorPickerDialog = jest.fn( function ( config ) {
+			window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
 				applyCb = config.onApply;
 				return mockPicker;
 			} );
@@ -1109,12 +1123,12 @@ describe( 'Toolbar', function () {
 	} );
 
 	describe( 'Toolbar module exports', function () {
-		it( 'should expose Toolbar on window', function () {
-			expect( window.Toolbar ).toBeDefined();
+		it( 'should expose Toolbar on window.Layers.UI namespace', function () {
+			expect( window.Layers.UI.Toolbar ).toBeDefined();
 		} );
 
 		it( 'should be a constructor function', function () {
-			expect( typeof window.Toolbar ).toBe( 'function' );
+			expect( typeof window.Layers.UI.Toolbar ).toBe( 'function' );
 		} );
 
 		it( 'should have prototype methods', function () {

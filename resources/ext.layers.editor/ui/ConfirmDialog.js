@@ -219,10 +219,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.ConfirmDialog = ConfirmDialog;
-
-			// DEPRECATED: Direct window export - use window.Layers.UI.ConfirmDialog instead
-			// This will be removed in a future version
-		window.ConfirmDialog = ConfirmDialog;
 	}
 
 	// Node.js/CommonJS export for testing

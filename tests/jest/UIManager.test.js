@@ -49,11 +49,13 @@ describe( 'UIManager', () => {
 		global.jQuery = global.$;
 
 		// Reset window object
-		delete global.window.UIManager;
+		if ( global.window.Layers && global.window.Layers.UI ) {
+			delete global.window.Layers.UI.Manager;
+		}
 
 		// Load UIManager
 		require( '../../resources/ext.layers.editor/UIManager.js' );
-		UIManager = global.window.UIManager;
+		UIManager = global.window.Layers.UI.Manager;
 	} );
 
 	beforeEach( () => {

@@ -2,6 +2,12 @@
  * @jest-environment jsdom
  */
 
+// Setup namespace and load NamespaceHelper BEFORE requiring other modules
+window.Layers = window.Layers || {};
+window.Layers.Utils = window.Layers.Utils || {};
+window.Layers.Canvas = window.Layers.Canvas || {};
+require('../../resources/ext.layers.editor/utils/NamespaceHelper.js');
+
 const CanvasRenderer = require('../../resources/ext.layers.editor/CanvasRenderer.js');
 const TextUtils = require('../../resources/ext.layers.editor/TextUtils.js');
 const GeometryUtils = require('../../resources/ext.layers.editor/GeometryUtils.js');
@@ -94,10 +100,13 @@ describe('CanvasRenderer', () => {
         // Create renderer - it will now use our mocked context
         renderer = new CanvasRenderer(canvas, { editor: mockEditor });
 
-        // Set global for window export
-        window.CanvasRenderer = CanvasRenderer;
-        window.TextUtils = TextUtils;
-        window.GeometryUtils = GeometryUtils;
+        // Set global for window.Layers namespace export
+        window.Layers = window.Layers || {};
+        window.Layers.Canvas = window.Layers.Canvas || {};
+        window.Layers.Utils = window.Layers.Utils || {};
+        window.Layers.Canvas.Renderer = CanvasRenderer;
+        window.Layers.Utils.Text = TextUtils;
+        window.Layers.Utils.Geometry = GeometryUtils;
     });
 
     afterEach(() => {
@@ -112,8 +121,8 @@ describe('CanvasRenderer', () => {
             expect(typeof CanvasRenderer).toBe('function');
         });
 
-        test('should be available on window', () => {
-            expect(window.CanvasRenderer).toBe(CanvasRenderer);
+        test('should be available on window.Layers.Canvas namespace', () => {
+            expect(window.Layers.Canvas.Renderer).toBe(CanvasRenderer);
         });
     });
 

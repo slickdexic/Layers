@@ -283,10 +283,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.ImageLoader = ImageLoader;
-
-		// DEPRECATED: Direct window export - use window.Layers.Utils.ImageLoader instead
-		// This will be removed in a future version
-		window.ImageLoader = ImageLoader;
 	}
 
 	// CommonJS export for Node.js/Jest testing

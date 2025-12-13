@@ -14,10 +14,14 @@ This document provides an overview of the Layers extension architecture and onbo
 
 | Module | Purpose | Lines |
 |--------|---------|-------|
-| `LayersEditor.js` | Main orchestrator | ~1,268 |
-| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,071 |
-| `LayerRenderer.js` | Shared rendering engine | ~1,948 |
+| `LayersEditor.js` | Main orchestrator | ~1,278 |
+| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,076 |
+| `LayerRenderer.js` | Shared rendering engine | ~1,953 |
 | `ShadowRenderer.js` | Shadow effect rendering | ~517 |
+| `LayerPanel.js` | Layer list UI component | ~1,573 |
+| `TransformController.js` | Resize, rotate, drag operations | ~1,337 |
+| `SelectionManager.js` | Selection state management | ~1,262 |
+| `ToolManager.js` | Tool state and switching | ~1,159 |
 | `EditorBootstrap.js` | Initialization, hooks, cleanup | ~400 |
 | `RevisionManager.js` | Revision and named set management | ~470 |
 | `DialogManager.js` | Modal dialogs with ARIA | ~420 |

@@ -184,10 +184,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.Text = TextUtils;
-
-		// DEPRECATED: Direct window export - use window.Layers.Utils.Text instead
-		// This will be removed in a future version
-		window.TextUtils = TextUtils;
 	}
 
 	// CommonJS export for Node.js/Jest testing

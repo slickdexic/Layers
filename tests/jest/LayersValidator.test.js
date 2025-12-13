@@ -81,10 +81,10 @@ describe( 'LayersValidator', () => {
 		} );
 
 		it( 'should use default limits when LayersConstants not available', () => {
-			delete global.window.LayersConstants;
+			delete global.window.Layers.Constants;
 			jest.resetModules();
 			require( '../../resources/ext.layers.editor/LayersValidator.js' );
-			const freshValidator = new window.LayersValidator();
+			const freshValidator = new window.Layers.Validation.LayersValidator();
 
 			expect( freshValidator.validationRules.maxSides ).toBe( 20 );
 			expect( freshValidator.validationRules.minSides ).toBe( 3 );
@@ -1412,10 +1412,6 @@ describe( 'LayersValidator', () => {
 	describe( 'Exports', () => {
 		it( 'should export to window.Layers.Validation namespace', () => {
 			expect( window.Layers.Validation.LayersValidator ).toBe( LayersValidator );
-		} );
-
-		it( 'should export to window for backward compatibility', () => {
-			expect( window.LayersValidator ).toBe( LayersValidator );
 		} );
 	} );
 

@@ -18,7 +18,8 @@
 		 * @constructor
 		 */
 		constructor() {
-			const limits = ( window.LayersConstants && window.LayersConstants.LIMITS ) || {};
+			const LayersConstants = ( window.Layers && window.Layers.Constants ) || {};
+			const limits = LayersConstants.LIMITS || {};
 			this.validationRules = {
 				// Layer type whitelist (must match server-side validation)
 				validTypes: [
@@ -952,10 +953,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Validation = window.Layers.Validation || {};
 		window.Layers.Validation.LayersValidator = LayersValidator;
-
-		// DEPRECATED: Direct window export - use window.Layers.Validation.LayersValidator instead
-		// This will be removed in a future version
-		window.LayersValidator = LayersValidator;
 	}
 
 }() );

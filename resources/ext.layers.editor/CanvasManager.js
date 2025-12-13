@@ -21,15 +21,52 @@
 			return null;
 		};
 
+	// Mapping from class names to namespace paths for findClass()
+	// Paths are relative to window.Layers (e.g., 'Canvas.Renderer' → window.Layers.Canvas.Renderer)
+	const CLASS_NAMESPACE_MAP = {
+		CanvasRenderer: 'Canvas.Renderer',
+		CanvasEvents: 'Canvas.Events',
+		LayersSelectionManager: 'Core.SelectionManager',
+		StyleController: 'Core.StyleController',
+		ZoomPanController: 'Canvas.ZoomPanController',
+		GridRulersController: 'Canvas.GridRulersController',
+		TransformController: 'Canvas.TransformController',
+		HitTestController: 'Canvas.HitTestController',
+		DrawingController: 'Canvas.DrawingController',
+		ClipboardController: 'Canvas.ClipboardController',
+		TextInputController: 'Canvas.TextInputController',
+		RenderCoordinator: 'Canvas.RenderCoordinator',
+		InteractionController: 'Canvas.InteractionController',
+		ValidationManager: 'Validation.Manager',
+		LayerRenderer: 'LayerRenderer',
+		LayerPanel: 'UI.LayerPanel'
+	};
+
 	/**
-	 * Helper to find a class in different environments (global, window, mw)
+	 * Helper to find a class in different environments.
+	 * Checks namespace paths first (via CLASS_NAMESPACE_MAP), then falls back
+	 * to direct window/global lookup for backwards compatibility.
 	 *
-	 * @deprecated Use getClass() instead for namespace-first resolution
 	 * @param {string} name - Class name to find
 	 * @return {Function|undefined} The class or undefined
 	 */
 	function findClass( name ) {
 		/* eslint-disable no-undef */
+		// First, try namespace-aware lookup using the mapping
+		const namespacePath = CLASS_NAMESPACE_MAP[ name ];
+		if ( namespacePath && typeof window !== 'undefined' && window.Layers ) {
+			// Traverse the namespace path dynamically (not cached at module load)
+			const parts = namespacePath.split( '.' );
+			let obj = window.Layers;
+			for ( const part of parts ) {
+				obj = obj && obj[ part ];
+			}
+			if ( obj ) {
+				return obj;
+			}
+		}
+
+		// Fallback: direct window lookup (deprecated pattern)
 		if ( typeof window !== 'undefined' && window[ name ] ) {
 			return window[ name ];
 		}
@@ -756,7 +793,7 @@ class CanvasManager {
 				const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
 				target.dispatchEvent( evt );
 			} catch ( e ) {
-				const ErrorHandler = getClass( 'Core.ErrorHandler', 'layersErrorHandler' );
+				const ErrorHandler = getClass( 'Utils.ErrorHandler', 'layersErrorHandler' );
 				if ( ErrorHandler && ErrorHandler.handleError ) {
 					ErrorHandler.handleError( e, 'CanvasManager.emitTransformEvent', 'canvas' );
 				}
@@ -2062,10 +2099,6 @@ class CanvasManager {
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.Manager = CanvasManager;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.Manager instead
-		// This will be removed in a future version
-		window.CanvasManager = CanvasManager;
 	}
 
 	// Export for Node.js/Jest testing

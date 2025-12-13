@@ -252,13 +252,9 @@ class ValidationManager {
 	}
 }
 
-// Export to window.Layers namespace (preferred)
+// Export to window.Layers namespace
 if ( typeof window !== 'undefined' ) {
 	window.Layers = window.Layers || {};
 	window.Layers.Validation = window.Layers.Validation || {};
 	window.Layers.Validation.Manager = ValidationManager;
-
-	// DEPRECATED: Direct window export - use window.Layers.Validation.Manager instead
-	// This will be removed in a future version
-	window.ValidationManager = ValidationManager;
 }

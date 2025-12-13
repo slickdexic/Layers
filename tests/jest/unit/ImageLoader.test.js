@@ -34,7 +34,7 @@ describe( 'ImageLoader', () => {
 		jest.isolateModules( () => {
 			require( '../../../resources/ext.layers.editor/ImageLoader.js' );
 		} );
-		ImageLoader = window.ImageLoader;
+		ImageLoader = window.Layers.Utils.ImageLoader;
 	} );
 
 	afterEach( () => {
@@ -356,13 +356,13 @@ describe( 'ImageLoader', () => {
 	} );
 
 	describe( 'window export', () => {
-		it( 'should export ImageLoader to window', () => {
-			expect( window.ImageLoader ).toBe( ImageLoader );
+		it( 'should export ImageLoader to window.Layers.Utils namespace', () => {
+			expect( window.Layers.Utils.ImageLoader ).toBe( ImageLoader );
 		} );
 
 		it( 'should be a constructor function', () => {
-			expect( typeof window.ImageLoader ).toBe( 'function' );
-			expect( new window.ImageLoader( {} ) ).toBeInstanceOf( ImageLoader );
+			expect( typeof window.Layers.Utils.ImageLoader ).toBe( 'function' );
+			expect( new window.Layers.Utils.ImageLoader( {} ) ).toBeInstanceOf( ImageLoader );
 		} );
 	} );
 } );

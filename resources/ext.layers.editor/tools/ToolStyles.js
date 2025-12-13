@@ -496,10 +496,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Tools = window.Layers.Tools || {};
 		window.Layers.Tools.ToolStyles = ToolStyles;
-
-		// DEPRECATED: Direct window export - use window.Layers.Tools.ToolStyles instead
-		// This will be removed in a future version
-		window.ToolStyles = ToolStyles;
 	}
 
 	// CommonJS export for testing

@@ -4,25 +4,29 @@
 
 describe('Smoke: editor/viewer modules', () => {
 	beforeEach( () => {
-		// Mock viewer modules needed by init.js
+		// Mock viewer modules needed by init.js using namespaced paths
 		global.window = global.window || {};
-		global.window.LayersUrlParser = jest.fn( function () {
+		global.window.Layers = global.window.Layers || {};
+		global.window.Layers.Viewer = global.window.Layers.Viewer || {};
+		global.window.Layers.Viewer.UrlParser = jest.fn( function () {
 			this.getPageLayersParam = jest.fn();
 			this.detectLayersFromDataMw = jest.fn();
 		} );
-		global.window.LayersViewerManager = jest.fn( function () {
+		global.window.Layers.Viewer.Manager = jest.fn( function () {
 			this.initializeLayerViewers = jest.fn();
 			this.initializeFilePageFallback = jest.fn();
 		} );
-		global.window.LayersApiFallback = jest.fn( function () {
+		global.window.Layers.Viewer.ApiFallback = jest.fn( function () {
 			this.initialize = jest.fn();
 		} );
 	} );
 
 	afterEach( () => {
-		delete global.window.LayersUrlParser;
-		delete global.window.LayersViewerManager;
-		delete global.window.LayersApiFallback;
+		if ( global.window.Layers && global.window.Layers.Viewer ) {
+			delete global.window.Layers.Viewer.UrlParser;
+			delete global.window.Layers.Viewer.Manager;
+			delete global.window.Layers.Viewer.ApiFallback;
+		}
 	} );
 
 	it('can require LayersEditor module (if present)', () => {

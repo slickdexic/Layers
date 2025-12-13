@@ -331,10 +331,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Selection = window.Layers.Selection || {};
 		window.Layers.Selection.SelectionHandles = SelectionHandles;
-
-		// DEPRECATED: Direct window export - use window.Layers.Selection.SelectionHandles instead
-		// This will be removed in a future version
-		window.SelectionHandles = SelectionHandles;
 	}
 
 	// Export for Node.js/Jest testing

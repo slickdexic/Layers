@@ -174,10 +174,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.StyleController = StyleController;
-
-		// DEPRECATED: Direct window export - use window.Layers.Core.StyleController instead
-		// This will be removed in a future version
-		window.StyleController = StyleController;
 	}
 
 	// Export for Node.js/Jest testing

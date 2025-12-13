@@ -312,10 +312,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Selection = window.Layers.Selection || {};
 		window.Layers.Selection.MarqueeSelection = MarqueeSelection;
-
-		// DEPRECATED: Direct window export - use window.Layers.Selection.MarqueeSelection instead
-		// This will be removed in a future version
-		window.MarqueeSelection = MarqueeSelection;
 	}
 
 	// Export for Node.js/Jest testing

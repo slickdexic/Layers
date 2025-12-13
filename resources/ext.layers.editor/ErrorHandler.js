@@ -564,10 +564,6 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.ErrorHandler = ErrorHandler;
 
-		// DEPRECATED: Direct window export - use window.Layers.Utils.ErrorHandler instead
-		// This will be removed in a future version
-		window.LayersErrorHandler = ErrorHandler;
-
 		// Global singleton instance (intentional - for error handling)
 		if ( !window.layersErrorHandler ) {
 			window.layersErrorHandler = new ErrorHandler();

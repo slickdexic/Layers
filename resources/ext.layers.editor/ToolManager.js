@@ -1145,10 +1145,6 @@ class ToolManager {
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.ToolManager = ToolManager;
-
-		// DEPRECATED: Direct window export - use window.Layers.Core.ToolManager instead
-		// This will be removed in a future version
-		window.LayersToolManager = ToolManager;
 	}
 
 	// Export for Node.js/Jest testing

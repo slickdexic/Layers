@@ -385,15 +385,11 @@
 
 	// ==================== Export ====================
 
-	// Export to window.Layers namespace (preferred)
+	// Export to window.Layers namespace
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.HitTestController = HitTestController;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.HitTestController instead
-		// This will be removed in a future version
-		window.HitTestController = HitTestController;
 	}
 
 	// Export for Node.js/Jest testing

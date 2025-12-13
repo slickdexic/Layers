@@ -402,12 +402,12 @@ describe( 'APIManager', function () {
 	} );
 
 	describe( 'APIManager module exports', function () {
-		it( 'should expose APIManager on window', function () {
-			expect( window.APIManager ).toBeDefined();
+		it( 'should expose APIManager on window.Layers namespace', function () {
+			expect( window.Layers.Core.APIManager ).toBeDefined();
 		} );
 
 		it( 'should be a constructor function', function () {
-			expect( typeof window.APIManager ).toBe( 'function' );
+			expect( typeof window.Layers.Core.APIManager ).toBe( 'function' );
 		} );
 
 		it( 'should create instance with new', function () {

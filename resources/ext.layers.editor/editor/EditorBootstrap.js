@@ -18,13 +18,20 @@
 		};
 
 	/**
-	 * Required global classes for editor initialization
-	 * @type {string[]}
+	 * Required classes for editor initialization, mapped to their namespace paths
+	 * @type {Object.<string, string>}
 	 */
-	const REQUIRED_CLASSES = [
-		'UIManager', 'EventManager', 'APIManager', 'ValidationManager',
-		'StateManager', 'HistoryManager', 'CanvasManager', 'Toolbar', 'LayerPanel'
-	];
+	const REQUIRED_CLASSES = {
+		UIManager: 'UI.Manager',
+		EventManager: 'Core.EventManager',
+		APIManager: 'Core.APIManager',
+		ValidationManager: 'Validation.Manager',
+		StateManager: 'Core.StateManager',
+		HistoryManager: 'Core.HistoryManager',
+		CanvasManager: 'Canvas.Manager',
+		Toolbar: 'UI.Toolbar',
+		LayerPanel: 'UI.LayerPanel'
+	};
 
 	/**
 	 * Required constant groups in LayersConstants
@@ -53,20 +60,22 @@
 	function validateDependencies() {
 		const missing = [];
 
-		// Check required global classes
-		REQUIRED_CLASSES.forEach( ( name ) => {
-			if ( typeof window[ name ] !== 'function' ) {
+		// Check required classes via namespace paths
+		Object.entries( REQUIRED_CLASSES ).forEach( ( [ name, path ] ) => {
+			const cls = getClass( path, name );
+			if ( typeof cls !== 'function' ) {
 				missing.push( name );
 			}
 		} );
 
-		// Check LayersConstants (critical for configuration)
-		if ( typeof window.LayersConstants === 'undefined' ) {
+		// Check LayersConstants (critical for configuration) via namespace
+		const LayersConstants = window.Layers && window.Layers.Constants;
+		if ( !LayersConstants ) {
 			missing.push( 'LayersConstants' );
 		} else {
 			// Validate critical constant groups exist
 			REQUIRED_CONSTANT_GROUPS.forEach( ( group ) => {
-				if ( !window.LayersConstants[ group ] ) {
+				if ( !LayersConstants[ group ] ) {
 					missing.push( 'LayersConstants.' + group );
 				}
 			} );
@@ -88,8 +97,9 @@
 	 * @return {boolean} True if LayersConstants and CanvasManager are available
 	 */
 	function areEditorDependenciesReady() {
-		return typeof window.LayersConstants !== 'undefined' &&
-			typeof window.CanvasManager === 'function';
+		return window.Layers && window.Layers.Constants &&
+			window.Layers.Canvas &&
+			typeof window.Layers.Canvas.Manager === 'function';
 	}
 
 	/**
@@ -402,16 +412,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.EditorBootstrap = {
-			validateDependencies,
-			areEditorDependenciesReady,
-			sanitizeGlobalErrorMessage,
-			cleanupGlobalEditorInstance,
-			init
-		};
-
-		// DEPRECATED: Direct window export - use window.Layers.Core.EditorBootstrap instead
-		// This will be removed in a future version
-		window.EditorBootstrap = {
 			validateDependencies,
 			areEditorDependenciesReady,
 			sanitizeGlobalErrorMessage,

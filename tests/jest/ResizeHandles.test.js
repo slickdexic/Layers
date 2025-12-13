@@ -16,12 +16,15 @@ describe('Resize Handles', () => {
     let selectionManager;
 
     beforeEach(() => {
-        // Setup global CanvasEvents for CanvasManager to find
-        window.CanvasEvents = CanvasEvents;
-        window.CanvasRenderer = CanvasRenderer;
-        window.LayersSelectionManager = SelectionManager;
-        window.HitTestController = HitTestController;
-        window.TransformController = TransformController;
+        // Setup global namespaced exports for CanvasManager to find
+        window.Layers = window.Layers || {};
+        window.Layers.Canvas = window.Layers.Canvas || {};
+        window.Layers.Core = window.Layers.Core || {};
+        window.Layers.Canvas.Events = CanvasEvents;
+        window.Layers.Canvas.Renderer = CanvasRenderer;
+        window.Layers.Canvas.HitTestController = HitTestController;
+        window.Layers.Canvas.TransformController = TransformController;
+        window.Layers.Core.SelectionManager = SelectionManager;
 
         // Create a canvas element
         canvas = document.createElement('canvas');

@@ -1041,12 +1041,12 @@ describe( 'ErrorHandler', function () {
 	} );
 
 	describe( 'ErrorHandler module exports', function () {
-		it( 'should expose LayersErrorHandler on window', function () {
-			expect( window.LayersErrorHandler ).toBeDefined();
+		it( 'should expose ErrorHandler on window.Layers.Utils', function () {
+			expect( window.Layers.Utils.ErrorHandler ).toBeDefined();
 		} );
 
 		it( 'should be a constructor function', function () {
-			expect( typeof window.LayersErrorHandler ).toBe( 'function' );
+			expect( typeof window.Layers.Utils.ErrorHandler ).toBe( 'function' );
 		} );
 
 		it( 'should create instance with new', function () {

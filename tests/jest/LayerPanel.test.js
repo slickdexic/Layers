@@ -42,13 +42,15 @@ describe('LayerPanel', () => {
     let mockStateManager;
 
     beforeEach(() => {
-        // Setup window globals
+        // Setup window globals with namespaced structure
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
         window.StateManager = StateManager;
         window.HistoryManager = HistoryManager;
-        window.IconFactory = mockIconFactory;
-        window.ColorPickerDialog = null;
-        window.ConfirmDialog = null;
-        window.PropertiesForm = null;
+        window.Layers.UI.IconFactory = mockIconFactory;
+        window.Layers.UI.ColorPickerDialog = null;
+        window.Layers.UI.ConfirmDialog = null;
+        window.Layers.UI.PropertiesForm = null;
 
         // Mock EventTracker for event listener management
         window.EventTracker = jest.fn(function () {
@@ -98,7 +100,7 @@ describe('LayerPanel', () => {
         jest.clearAllMocks();
 
         require('../../resources/ext.layers.editor/LayerPanel.js');
-        LayerPanel = window.LayerPanel;
+        LayerPanel = window.Layers.UI.LayerPanel;
     });
 
     afterEach(() => {
@@ -361,12 +363,12 @@ describe('LayerPanel', () => {
         });
 
         test('createEyeIcon should return span when IconFactory not available', () => {
-            window.IconFactory = null;
+            window.Layers.UI.IconFactory = null;
             
             // Reload LayerPanel without IconFactory
             jest.resetModules();
             require('../../resources/ext.layers.editor/LayerPanel.js');
-            const LP = window.LayerPanel;
+            const LP = window.Layers.UI.LayerPanel;
 
             const container = document.getElementById('layers-panel-container');
             const panel = new LP({
@@ -665,27 +667,29 @@ describe('LayerPanel', () => {
 describe('LayerPanel module exports', () => {
     beforeEach(() => {
         jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
         window.StateManager = StateManager;
         window.HistoryManager = HistoryManager;
-        window.IconFactory = mockIconFactory;
+        window.Layers.UI.IconFactory = mockIconFactory;
     });
 
-    test('should expose LayerPanel on window', () => {
+    test('should expose LayerPanel on window.Layers.UI namespace', () => {
         require('../../resources/ext.layers.editor/LayerPanel.js');
-        expect(window.LayerPanel).toBeDefined();
-        expect(typeof window.LayerPanel).toBe('function');
+        expect(window.Layers.UI.LayerPanel).toBeDefined();
+        expect(typeof window.Layers.UI.LayerPanel).toBe('function');
     });
 
     test('should have prototype methods', () => {
         require('../../resources/ext.layers.editor/LayerPanel.js');
 
-        expect(typeof window.LayerPanel.prototype.getLayers).toBe('function');
-        expect(typeof window.LayerPanel.prototype.getSelectedLayerId).toBe('function');
-        expect(typeof window.LayerPanel.prototype.subscribeToState).toBe('function');
-        expect(typeof window.LayerPanel.prototype.createInterface).toBe('function');
-        expect(typeof window.LayerPanel.prototype.renderLayerList).toBe('function');
-        expect(typeof window.LayerPanel.prototype.updateLayers).toBe('function');
-        expect(typeof window.LayerPanel.prototype.destroy).toBe('function');
+        expect(typeof window.Layers.UI.LayerPanel.prototype.getLayers).toBe('function');
+        expect(typeof window.Layers.UI.LayerPanel.prototype.getSelectedLayerId).toBe('function');
+        expect(typeof window.Layers.UI.LayerPanel.prototype.subscribeToState).toBe('function');
+        expect(typeof window.Layers.UI.LayerPanel.prototype.createInterface).toBe('function');
+        expect(typeof window.Layers.UI.LayerPanel.prototype.renderLayerList).toBe('function');
+        expect(typeof window.Layers.UI.LayerPanel.prototype.updateLayers).toBe('function');
+        expect(typeof window.Layers.UI.LayerPanel.prototype.destroy).toBe('function');
     });
 
     test('should create panel with proper structure', () => {
@@ -698,7 +702,7 @@ describe('LayerPanel module exports', () => {
         mockSM.set('layers', []);
         mockSM.set('selectedLayerIds', []);
         
-        const _panel = new window.LayerPanel({
+        const _panel = new window.Layers.UI.LayerPanel({
             container: container,
             editor: { stateManager: mockSM, container: document.body }
         });

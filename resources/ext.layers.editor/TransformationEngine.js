@@ -633,10 +633,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.TransformationEngine = TransformationEngine;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.TransformationEngine instead
-		// This will be removed in a future version
-		window.TransformationEngine = TransformationEngine;
 	}
 
 	// Also export via CommonJS if available (for Node.js/Jest testing)

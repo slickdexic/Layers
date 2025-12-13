@@ -213,10 +213,8 @@
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.AccessibilityAnnouncer = AccessibilityAnnouncer;
 
-		// DEPRECATED: Direct window exports - use window.Layers.Utils.AccessibilityAnnouncer instead
-		// This will be removed in a future version
+		// Global singleton instance (intentional - widely used)
 		window.layersAnnouncer = announcer;
-		window.AccessibilityAnnouncer = AccessibilityAnnouncer;
 	}
 
 	// Export via CommonJS for Node.js/Jest testing

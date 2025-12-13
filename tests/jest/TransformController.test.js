@@ -5,6 +5,13 @@
  */
 
 const TransformController = require( '../../resources/ext.layers.editor/canvas/TransformController.js' );
+const ResizeCalculator = require( '../../resources/ext.layers.editor/canvas/ResizeCalculator.js' );
+
+// Set up ResizeCalculator in global namespace for TransformController to find
+global.window = global.window || {};
+global.window.Layers = global.window.Layers || {};
+global.window.Layers.Canvas = global.window.Layers.Canvas || {};
+global.window.Layers.Canvas.ResizeCalculator = ResizeCalculator;
 
 describe( 'TransformController', () => {
 	let controller;

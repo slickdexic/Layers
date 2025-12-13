@@ -185,10 +185,6 @@ class TextInputController {
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.TextInputController = TextInputController;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.TextInputController instead
-		// This will be removed in a future version
-		window.TextInputController = TextInputController;
 	}
 
 	// Node.js export for testing

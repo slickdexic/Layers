@@ -475,10 +475,6 @@ class UrlParser {
 		window.Layers = window.Layers || {};
 		window.Layers.Viewer = window.Layers.Viewer || {};
 		window.Layers.Viewer.UrlParser = UrlParser;
-
-		// DEPRECATED: Direct window export - use window.Layers.Viewer.UrlParser instead
-		// This will be removed in a future version
-		window.LayersUrlParser = UrlParser;
 	}
 
 }() );

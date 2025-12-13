@@ -239,10 +239,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.LayerDragDrop = LayerDragDrop;
-
-			// DEPRECATED: Direct window export - use window.Layers.UI.LayerDragDrop instead
-			// This will be removed in a future version
-		window.LayerDragDrop = LayerDragDrop;
 	}
 
 	// CommonJS export for testing

@@ -182,10 +182,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.ToolbarKeyboard = ToolbarKeyboard;
-
-		// DEPRECATED: Direct window export - use window.Layers.UI.ToolbarKeyboard instead
-		// This will be removed in a future version
-		window.ToolbarKeyboard = ToolbarKeyboard;
 	}
 
 	// Export via CommonJS for Node.js/Jest testing

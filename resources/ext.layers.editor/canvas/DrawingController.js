@@ -626,10 +626,6 @@ class DrawingController {
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.DrawingController = DrawingController;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.DrawingController instead
-		// This will be removed in a future version
-		window.DrawingController = DrawingController;
 	}
 
 	// Export for Node.js/Jest testing

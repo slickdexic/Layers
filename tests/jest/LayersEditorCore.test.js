@@ -142,17 +142,21 @@ describe( 'LayersEditor Core', () => {
 			} )
 		};
 
-		// Setup window globals with mock constructors
+		// Setup window globals with mock constructors using namespaced exports
+		window.Layers = window.Layers || {};
+		window.Layers.Validation = window.Layers.Validation || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.StateManager = StateManager;
 		window.HistoryManager = HistoryManager;
 		window.UIManager = jest.fn().mockImplementation( () => mockUIManager );
 		window.EventManager = jest.fn().mockImplementation( () => mockEventManager );
 		window.APIManager = jest.fn().mockImplementation( () => mockAPIManager );
-		window.ValidationManager = jest.fn().mockImplementation( () => mockValidationManager );
-		window.CanvasManager = jest.fn().mockImplementation( () => mockCanvasManager );
+		window.Layers.Validation.Manager = jest.fn().mockImplementation( () => mockValidationManager );
+		window.Layers.Canvas.Manager = jest.fn().mockImplementation( () => mockCanvasManager );
 		window.Toolbar = jest.fn().mockImplementation( () => mockToolbar );
-		window.LayerPanel = jest.fn().mockImplementation( () => mockLayerPanel );
-		window.LayersConstants = {
+		window.Layers.UI.LayerPanel = jest.fn().mockImplementation( () => mockLayerPanel );
+		window.Layers.Constants = {
 			TOOLS: { POINTER: 'pointer', TEXT: 'text' },
 			LAYER_TYPES: { RECTANGLE: 'rectangle', CIRCLE: 'circle' },
 			DEFAULTS: {
@@ -192,7 +196,7 @@ describe( 'LayersEditor Core', () => {
 		// Reset module cache and load LayersEditor
 		jest.resetModules();
 		require( '../../resources/ext.layers.editor/LayersEditor.js' );
-		LayersEditor = window.LayersEditor;
+		LayersEditor = window.Layers.Core.Editor;
 	} );
 
 	afterEach( () => {
@@ -741,11 +745,11 @@ describe( 'LayersEditor validation', () => {
 		window.UIManager = jest.fn().mockReturnValue( mockUIManager );
 		window.EventManager = jest.fn().mockReturnValue( mockEventManager );
 		window.APIManager = jest.fn().mockReturnValue( mockAPIManager );
-		window.ValidationManager = jest.fn().mockReturnValue( mockValidationManager );
+		window.Layers.Validation.Manager = jest.fn().mockReturnValue( mockValidationManager );
 		window.CanvasManager = jest.fn().mockReturnValue( mockCanvasManager );
 		window.Toolbar = jest.fn().mockReturnValue( mockToolbar );
-		window.LayerPanel = jest.fn().mockReturnValue( mockLayerPanel );
-		window.LayersConstants = {
+		window.Layers.UI.LayerPanel = jest.fn().mockReturnValue( mockLayerPanel );
+		window.Layers.Constants = {
 			TOOLS: {},
 			LAYER_TYPES: {},
 			DEFAULTS: { COLORS: {}, LAYER: {} },
@@ -757,7 +761,7 @@ describe( 'LayersEditor validation', () => {
 
 		jest.resetModules();
 		require( '../../resources/ext.layers.editor/LayersEditor.js' );
-		LayersEditor = window.LayersEditor;
+		LayersEditor = window.Layers.Core.Editor;
 	} );
 
 	afterEach( () => {

@@ -23,7 +23,7 @@ describe( 'ColorPickerDialog', () => {
 	let ColorPickerDialog;
 
 	beforeEach( () => {
-		ColorPickerDialog = window.ColorPickerDialog;
+		ColorPickerDialog = window.Layers && window.Layers.UI && window.Layers.UI.ColorPickerDialog;
 		// Clear document body and localStorage before each test
 		document.body.innerHTML = '';
 		localStorageMock.store = {};

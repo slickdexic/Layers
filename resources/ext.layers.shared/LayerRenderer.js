@@ -1937,10 +1937,6 @@ class LayerRenderer {
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};
 		window.Layers.LayerRenderer = LayerRenderer;
-
-		// DEPRECATED: Direct window export - use window.Layers.LayerRenderer instead
-		// This will be removed in a future version
-		window.LayerRenderer = LayerRenderer;
 	}
 
 	// CommonJS for testing

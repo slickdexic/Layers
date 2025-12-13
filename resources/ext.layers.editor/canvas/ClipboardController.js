@@ -235,10 +235,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.ClipboardController = ClipboardController;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.ClipboardController instead
-		// This will be removed in a future version
-		window.ClipboardController = ClipboardController;
 	}
 
 	// Export for Node.js/Jest testing

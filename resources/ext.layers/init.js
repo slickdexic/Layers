@@ -80,7 +80,7 @@
 
 		// Create module instances with shared debug setting
 		const options = { debug: this.debug };
-		const LayersUrlParser = getClass( 'Utils.UrlParser', 'LayersUrlParser' );
+		const LayersUrlParser = getClass( 'Viewer.UrlParser', 'LayersUrlParser' );
 		const LayersViewerManager = getClass( 'Viewer.Manager', 'LayersViewerManager' );
 		const LayersApiFallback = getClass( 'Viewer.ApiFallback', 'LayersApiFallback' );
 

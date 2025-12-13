@@ -121,8 +121,4 @@ if ( typeof window !== 'undefined' ) {
 	window.Layers = window.Layers || {};
 	window.Layers.Core = window.Layers.Core || {};
 	window.Layers.Core.EventManager = EventManager;
-
-	// DEPRECATED: Direct window export - use window.Layers.Core.EventManager instead
-	// This will be removed in a future version
-	window.EventManager = EventManager;
 }

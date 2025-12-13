@@ -147,19 +147,24 @@ describe( 'LayersEditor Coverage Extension', () => {
 		window.mw.log.warn = jest.fn();
 		window.mw.log.error = jest.fn();
 
-		// Mock required classes
+		// Mock required classes with namespaced exports
+		window.Layers = window.Layers || {};
+		window.Layers.Validation = window.Layers.Validation || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Core = window.Layers.Core || {};
 		window.StateManager = jest.fn( () => mockStateManager );
 		window.HistoryManager = jest.fn( () => mockHistoryManager );
 		window.UIManager = jest.fn( () => mockUIManager );
 		window.EventManager = jest.fn( () => mockEventManager );
 		window.APIManager = jest.fn( () => mockAPIManager );
-		window.ValidationManager = jest.fn( () => mockValidationManager );
-		window.CanvasManager = jest.fn( () => mockCanvasManager );
+		window.Layers.Validation.Manager = jest.fn( () => mockValidationManager );
+		window.Layers.Canvas.Manager = jest.fn( () => mockCanvasManager );
 		window.Toolbar = jest.fn( () => mockToolbar );
-		window.LayerPanel = jest.fn( () => mockLayerPanel );
+		window.Layers.UI.LayerPanel = jest.fn( () => mockLayerPanel );
 
 		// Mock LayersConstants
-		window.LayersConstants = {
+		window.Layers.Constants = {
 			TOOLS: { POINTER: 'pointer' },
 			LAYER_TYPES: { RECTANGLE: 'rectangle' },
 			DEFAULTS: { STROKE_WIDTH: 2 },
@@ -224,7 +229,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 		} );
 
 		// Mock DialogManager
-		window.DialogManager = jest.fn().mockImplementation( function ( config ) {
+		window.Layers.UI.DialogManager = jest.fn().mockImplementation( function ( config ) {
 			this.editor = config.editor;
 			this.activeDialogs = [];
 			this.showCancelConfirmDialog = jest.fn();
@@ -234,7 +239,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 		} );
 
 		// Mock EditorBootstrap - This actually validates dependencies and logs warnings
-		window.EditorBootstrap = {
+		window.Layers.Core.EditorBootstrap = {
 			validateDependencies: jest.fn( () => {
 				const missing = [];
 				const requiredClasses = [
@@ -251,12 +256,12 @@ describe( 'LayersEditor Coverage Extension', () => {
 				} );
 
 				// Check LayersConstants
-				if ( typeof window.LayersConstants === 'undefined' ) {
-					missing.push( 'LayersConstants' );
+				if ( typeof window.Layers.Constants === 'undefined' ) {
+					missing.push( 'Layers.Constants' );
 				} else {
 					requiredConstantGroups.forEach( ( group ) => {
-						if ( !window.LayersConstants[ group ] ) {
-							missing.push( 'LayersConstants.' + group );
+						if ( !window.Layers.Constants[ group ] ) {
+							missing.push( 'Layers.Constants.' + group );
 						}
 					} );
 				}
@@ -278,7 +283,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 		// Reset modules and load LayersEditor fresh
 		jest.resetModules();
 		require( '../../resources/ext.layers.editor/LayersEditor.js' );
-		LayersEditor = window.LayersEditor;
+		LayersEditor = window.Layers.Core.Editor;
 	} );
 
 	afterEach( () => {
@@ -298,15 +303,26 @@ describe( 'LayersEditor Coverage Extension', () => {
 		delete window.UIManager;
 		delete window.EventManager;
 		delete window.APIManager;
-		delete window.ValidationManager;
-		delete window.CanvasManager;
+		if ( window.Layers && window.Layers.Validation ) {
+			delete window.Layers.Validation.Manager;
+		}
+		if ( window.Layers && window.Layers.Canvas ) {
+			delete window.Layers.Canvas.Manager;
+		}
 		delete window.Toolbar;
-		delete window.LayerPanel;
-		delete window.LayersConstants;
+		if ( window.Layers && window.Layers.UI ) {
+			delete window.Layers.UI.LayerPanel;
+			delete window.Layers.UI.DialogManager;
+		}
+		if ( window.Layers ) {
+			delete window.Layers.Constants;
+		}
 		delete window.layersRegistry;
 		delete window.ErrorHandler;
 		delete window.layersErrorHandler;
-		delete window.LayersEditor;
+		if ( window.Layers && window.Layers.Core ) {
+			delete window.Layers.Core.Editor;
+		}
 	} );
 
 	describe( 'validateDependencies', () => {
@@ -321,8 +337,8 @@ describe( 'LayersEditor Coverage Extension', () => {
 		} );
 
 		it( 'should warn when LayersConstants is missing', () => {
-			const originalConstants = window.LayersConstants;
-			delete window.LayersConstants;
+			const originalConstants = window.Layers.Constants;
+			delete window.Layers.Constants;
 
 			// Should still create editor but warn
 			editor = new LayersEditor( {
@@ -332,12 +348,12 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 			expect( window.mw.log.warn ).toHaveBeenCalled();
 
-			window.LayersConstants = originalConstants;
+			window.Layers.Constants = originalConstants;
 		} );
 
 		it( 'should warn when required constant groups missing', () => {
-			const originalConstants = window.LayersConstants;
-			window.LayersConstants = { TOOLS: {} }; // Missing other groups
+			const originalConstants = window.Layers.Constants;
+			window.Layers.Constants = { TOOLS: {} }; // Missing other groups
 
 			editor = new LayersEditor( {
 				filename: 'Test.jpg',
@@ -346,7 +362,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 			expect( window.mw.log.warn ).toHaveBeenCalled();
 
-			window.LayersConstants = originalConstants;
+			window.Layers.Constants = originalConstants;
 		} );
 	} );
 
@@ -382,7 +398,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 			jest.resetModules();
 			require( '../../resources/ext.layers.editor/LayersEditor.js' );
-			LayersEditor = window.LayersEditor;
+			LayersEditor = window.Layers.Core.Editor;
 
 			editor = new LayersEditor( {
 				filename: 'Test.jpg',
@@ -910,8 +926,8 @@ describe( 'LayersEditor Coverage Extension', () => {
 	describe( 'areEditorDependenciesReady', () => {
 		it( 'should check for LayersConstants', () => {
 			// This is tested through the module behavior
-			expect( window.LayersConstants ).toBeDefined();
-			expect( window.CanvasManager ).toBeDefined();
+			expect( window.Layers.Constants ).toBeDefined();
+			expect( window.Layers.Canvas.Manager ).toBeDefined();
 		} );
 	} );
 

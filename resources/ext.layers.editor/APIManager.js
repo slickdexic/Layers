@@ -934,10 +934,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.APIManager = APIManager;
-
-		// DEPRECATED: Direct window export - use window.Layers.Core.APIManager instead
-		// This will be removed in a future version
-		window.APIManager = APIManager;
 	}
 
 	// Export via CommonJS for Node.js/Jest testing

@@ -491,10 +491,6 @@ class InteractionController {
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.InteractionController = InteractionController;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.InteractionController instead
-		// This will be removed in a future version
-		window.InteractionController = InteractionController;
 	}
 
 	// Export for Node.js/Jest testing

@@ -956,10 +956,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.Toolbar = Toolbar;
-
-		// DEPRECATED: Direct window export - use window.Layers.UI.Toolbar instead
-		// This will be removed in a future version
-		window.Toolbar = Toolbar;
 	}
 
 	// Export for Node.js/Jest testing

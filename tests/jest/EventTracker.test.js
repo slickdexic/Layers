@@ -232,8 +232,8 @@ describe( 'EventTracker', () => {
 	} );
 
 	describe( 'exports', () => {
-		it( 'should export to window', () => {
-			expect( window.EventTracker ).toBe( EventTracker );
+		it( 'should export to window.Layers namespace', () => {
+			expect( window.Layers.Utils.EventTracker ).toBe( EventTracker );
 		} );
 
 		it( 'should be available as CommonJS module', () => {

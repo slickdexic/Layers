@@ -26,7 +26,7 @@ describe('LayersEditor utility methods', () => {
         // Reset module cache and reload LayersEditor
         jest.resetModules();
         require('../../resources/ext.layers.editor/LayersEditor.js');
-        LayersEditor = window.LayersEditor;
+        LayersEditor = window.Layers.Core.Editor;
     });
 
     describe('sanitizeLogMessage', () => {
@@ -275,24 +275,25 @@ describe('LayersEditor module exports', () => {
         window.HistoryManager = HistoryManager;
     });
 
-    test('should expose LayersEditor on window', () => {
+    test('should expose LayersEditor on window.Layers.Core.Editor', () => {
         require('../../resources/ext.layers.editor/LayersEditor.js');
-        expect(window.LayersEditor).toBeDefined();
-        expect(typeof window.LayersEditor).toBe('function');
+        expect(window.Layers.Core.Editor).toBeDefined();
+        expect(typeof window.Layers.Core.Editor).toBe('function');
     });
 
     test('should have prototype methods', () => {
         require('../../resources/ext.layers.editor/LayersEditor.js');
+        const LayersEditor = window.Layers.Core.Editor;
         
-        expect(typeof window.LayersEditor.prototype.init).toBe('function');
-        expect(typeof window.LayersEditor.prototype.addLayer).toBe('function');
-        expect(typeof window.LayersEditor.prototype.updateLayer).toBe('function');
-        expect(typeof window.LayersEditor.prototype.removeLayer).toBe('function');
-        expect(typeof window.LayersEditor.prototype.getLayerById).toBe('function');
-        expect(typeof window.LayersEditor.prototype.selectLayer).toBe('function');
-        expect(typeof window.LayersEditor.prototype.destroy).toBe('function');
-        expect(typeof window.LayersEditor.prototype.sanitizeLogMessage).toBe('function');
-        expect(typeof window.LayersEditor.prototype.normalizeLayers).toBe('function');
-        expect(typeof window.LayersEditor.prototype.parseMWTimestamp).toBe('function');
+        expect(typeof LayersEditor.prototype.init).toBe('function');
+        expect(typeof LayersEditor.prototype.addLayer).toBe('function');
+        expect(typeof LayersEditor.prototype.updateLayer).toBe('function');
+        expect(typeof LayersEditor.prototype.removeLayer).toBe('function');
+        expect(typeof LayersEditor.prototype.getLayerById).toBe('function');
+        expect(typeof LayersEditor.prototype.selectLayer).toBe('function');
+        expect(typeof LayersEditor.prototype.destroy).toBe('function');
+        expect(typeof LayersEditor.prototype.sanitizeLogMessage).toBe('function');
+        expect(typeof LayersEditor.prototype.normalizeLayers).toBe('function');
+        expect(typeof LayersEditor.prototype.parseMWTimestamp).toBe('function');
     });
 });

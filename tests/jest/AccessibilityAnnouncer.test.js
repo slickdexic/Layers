@@ -11,8 +11,8 @@
 require( '../../resources/ext.layers.editor/AccessibilityAnnouncer.js' );
 
 describe( 'AccessibilityAnnouncer', () => {
-	// Use the actual class from the module
-	const AccessibilityAnnouncer = window.AccessibilityAnnouncer;
+	// Use the namespaced export
+	const AccessibilityAnnouncer = window.Layers.Utils.AccessibilityAnnouncer;
 	let announcer;
 
 	beforeEach( () => {

@@ -420,9 +420,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.DialogManager = DialogManager;
-
-		// DEPRECATED: Direct window export - use window.Layers.UI.DialogManager instead
-		window.DialogManager = DialogManager;
 	}
 
 }() );

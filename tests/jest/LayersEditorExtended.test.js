@@ -132,17 +132,22 @@ describe( 'LayersEditor Extended', () => {
 			} )
 		};
 
-		// Setup window globals
+		// Setup window globals using namespaced exports
+		window.Layers = window.Layers || {};
+		window.Layers.Validation = window.Layers.Validation || {};
+		window.Layers.UI = window.Layers.UI || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Core = window.Layers.Core || {};
 		window.StateManager = StateManager;
 		window.HistoryManager = HistoryManager;
 		window.UIManager = jest.fn().mockImplementation( () => mockUIManager );
 		window.EventManager = jest.fn().mockImplementation( () => mockEventManager );
 		window.APIManager = jest.fn().mockImplementation( () => mockAPIManager );
-		window.ValidationManager = jest.fn().mockImplementation( () => mockValidationManager );
-		window.CanvasManager = jest.fn().mockImplementation( () => mockCanvasManager );
+		window.Layers.Validation.Manager = jest.fn().mockImplementation( () => mockValidationManager );
+		window.Layers.Canvas.Manager = jest.fn().mockImplementation( () => mockCanvasManager );
 		window.Toolbar = jest.fn().mockImplementation( () => mockToolbar );
-		window.LayerPanel = jest.fn().mockImplementation( () => mockLayerPanel );
-		window.LayersConstants = {
+		window.Layers.UI.LayerPanel = jest.fn().mockImplementation( () => mockLayerPanel );
+		window.Layers.Constants = {
 			TOOLS: { POINTER: 'pointer', TEXT: 'text' },
 			LAYER_TYPES: { RECTANGLE: 'rectangle', CIRCLE: 'circle' },
 			DEFAULTS: {
@@ -371,7 +376,7 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		// Mock DialogManager
-		window.DialogManager = jest.fn().mockImplementation( function ( config ) {
+		window.Layers.UI.DialogManager = jest.fn().mockImplementation( function ( config ) {
 			this.editor = config.editor;
 			this.activeDialogs = [];
 			this.showCancelConfirmDialog = jest.fn();
@@ -383,7 +388,7 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		// Mock EditorBootstrap
-		window.EditorBootstrap = {
+		window.Layers.Core.EditorBootstrap = {
 			validateDependencies: jest.fn( () => true ),
 			areEditorDependenciesReady: jest.fn( () => true ),
 			sanitizeGlobalErrorMessage: jest.fn( ( msg ) => msg ),
@@ -415,7 +420,7 @@ describe( 'LayersEditor Extended', () => {
 
 		jest.resetModules();
 		require( '../../resources/ext.layers.editor/LayersEditor.js' );
-		LayersEditor = window.LayersEditor;
+		LayersEditor = window.Layers.Core.Editor;
 	} );
 
 	afterEach( () => {

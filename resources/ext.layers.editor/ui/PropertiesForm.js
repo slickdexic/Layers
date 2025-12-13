@@ -5,8 +5,9 @@
 ( function () {
 	'use strict';
 
-	// Import UI components (available as globals from ResourceLoader)
-	const ColorPickerDialog = window.ColorPickerDialog;
+	// Import UI components (available from Layers namespace or legacy global)
+	const ColorPickerDialog = ( window.Layers && window.Layers.UI && window.Layers.UI.ColorPickerDialog ) ||
+		window.ColorPickerDialog;
 
 	/**
 	 * PropertiesForm - Factory for creating layer property editing forms
@@ -598,9 +599,10 @@
 		}
 
 		// Size/geometry by type
-		const LAYER_TYPES = window.LayersConstants ? window.LayersConstants.LAYER_TYPES : {};
-		const DEFAULTS = window.LayersConstants ? window.LayersConstants.DEFAULTS : {};
-		const LIMITS = window.LayersConstants ? window.LayersConstants.LIMITS : {};
+		const LayersConstants = ( window.Layers && window.Layers.Constants ) || {};
+		const LAYER_TYPES = LayersConstants.LAYER_TYPES || {};
+		const DEFAULTS = LayersConstants.DEFAULTS || {};
+		const LIMITS = LayersConstants.LIMITS || {};
 		switch ( layer.type ) {
 			case ( LAYER_TYPES.RECTANGLE || 'rectangle' ):
 				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || 0 ), step: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } ); } } );
@@ -747,10 +749,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.PropertiesForm = PropertiesForm;
-
-		// DEPRECATED: Direct window export - use window.Layers.UI.PropertiesForm instead
-		// This will be removed in a future version
-		window.PropertiesForm = PropertiesForm;
 	}
 
 	// Node.js/Jest compatibility

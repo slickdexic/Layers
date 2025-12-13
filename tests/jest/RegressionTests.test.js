@@ -13,8 +13,12 @@ describe('Layers Editor Regression Tests', () => {
 
     // Mock modules to avoid full initialization
     function mockModules() {
+        // Ensure Layers namespace exists
+        window.Layers = window.Layers || {};
+        window.Layers.Canvas = window.Layers.Canvas || {};
+
         // Mock CanvasRenderer
-        window.CanvasRenderer = jest.fn().mockImplementation(function(canvas, _config) {
+        window.Layers.Canvas.Renderer = jest.fn().mockImplementation(function(canvas, _config) {
             this.canvas = canvas;
             this.ctx = canvas.getContext('2d');
             this.redraw = jest.fn();
@@ -35,7 +39,7 @@ describe('Layers Editor Regression Tests', () => {
         });
 
         // Mock CanvasEvents
-        window.CanvasEvents = jest.fn().mockImplementation(function(manager) {
+        window.Layers.Canvas.Events = jest.fn().mockImplementation(function(manager) {
             this.manager = manager;
             this.handleKeyDown = jest.fn();
             this.destroy = jest.fn();
@@ -81,8 +85,9 @@ describe('Layers Editor Regression Tests', () => {
             layerPanel: { selectLayer: jest.fn(), updateLayers: jest.fn() }
         };
 
-        // Create CanvasManager
-        manager = new window.CanvasManager({ container, editor: mockEditor });
+        // Create CanvasManager from namespace
+        const CanvasManager = window.Layers.Canvas.Manager;
+        manager = new CanvasManager({ container, editor: mockEditor });
     });
 
     afterEach(() => {
@@ -193,7 +198,8 @@ describe('Layers Editor Regression Tests', () => {
             };
 
             try {
-                manager = new window.CanvasManager({
+                const CanvasManager = window.Layers.Canvas.Manager;
+                manager = new CanvasManager({
                     container,
                     editor: mockEditor,
                     backgroundImageUrl: 'https://example.test/test.png'

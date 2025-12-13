@@ -48,10 +48,11 @@ describe('CanvasManager zoom and coordinate mapping', () => {
             toJSON: () => {}
         }));
 
-        // Load CanvasManager from source (attached to window at end of file)
+        // Load CanvasManager from source (attached to window.Layers.Canvas.Manager)
         require('../../resources/ext.layers.editor/CanvasManager.js');
         const Editor = makeEditor();
-        manager = new window.CanvasManager({ container, editor: Editor });
+        const CanvasManager = window.Layers.Canvas.Manager;
+        manager = new CanvasManager({ container, editor: Editor });
 
         // Use a simple background with known size and bypass image loading
         manager.backgroundImage = { width: 800, height: 600, complete: true };

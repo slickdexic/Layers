@@ -2,7 +2,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Production-ready. Version 0.8.4. Requires MediaWiki 1.44+.
+> **Status:** Beta. Version 0.8.4. Requires MediaWiki 1.44+.
 
 ---
 
@@ -103,12 +103,12 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Architecture:**
 - **Backend (PHP):** MediaWiki extension integration, API endpoints (`layersinfo`, `layerssave`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 67 JS files (~35K lines total)
-- **Code Splitting:** Viewer module (~3.2K lines) loads separately from Editor (~31.6K lines)
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 67 JS files (~36K lines total)
+- **Code Splitting:** Viewer module (653 lines) + Shared module (2,583 lines) loads separately from Editor (~32K lines)
 
 **Test Coverage (December 2025):**
-- Jest: 3,863+ tests, 88.4% statement coverage
-- PHPUnit: 15 test files covering API, database, validation
+- Jest: 4,029 tests, 88% statement coverage (82 test suites)
+- PHPUnit: 17 test files covering API, database, validation
 
 **Requirements:**
 - MediaWiki 1.44.0 or later

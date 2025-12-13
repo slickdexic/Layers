@@ -8,6 +8,12 @@
  * drawLayerShapeOnly, line selection indicators, shadow methods
  */
 
+// Setup namespace and load NamespaceHelper BEFORE requiring other modules
+window.Layers = window.Layers || {};
+window.Layers.Utils = window.Layers.Utils || {};
+window.Layers.Canvas = window.Layers.Canvas || {};
+require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
 const CanvasRenderer = require( '../../resources/ext.layers.editor/CanvasRenderer.js' );
 
 describe( 'CanvasRenderer Coverage Extension', () => {
@@ -101,7 +107,7 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 		};
 
 		// Mock TextUtils for text layer bounds
-		window.TextUtils = {
+		window.Layers.Utils.Text = {
 			measureTextLayer: jest.fn( ( layer ) => {
 				if ( layer && layer.type === 'text' ) {
 					return {
@@ -118,7 +124,9 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 		};
 
 		// Mock GeometryUtils for layer bounds
-		window.GeometryUtils = {
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.Geometry = {
 			getLayerBoundsForType: jest.fn( ( layer ) => {
 				if ( !layer ) {
 					return null;
@@ -148,8 +156,10 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 		document.body.innerHTML = '';
 		jest.clearAllMocks();
 		delete window.mw;
-		delete window.TextUtils;
-		delete window.GeometryUtils;
+		if ( window.Layers && window.Layers.Utils ) {
+			delete window.Layers.Utils.Text;
+			delete window.Layers.Utils.Geometry;
+		}
 	} );
 
 	describe( 'blend mode handling', () => {

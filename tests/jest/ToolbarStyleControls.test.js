@@ -8,11 +8,17 @@
 const mockColorPickerOpen = jest.fn();
 const mockUpdateColorButton = jest.fn();
 
-window.ColorPickerDialog = jest.fn( function ( config ) {
+// Setup namespace structure and load NamespaceHelper BEFORE requiring ToolbarStyleControls
+window.Layers = window.Layers || {};
+window.Layers.Utils = window.Layers.Utils || {};
+window.Layers.UI = window.Layers.UI || {};
+require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
+window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
 	this.config = config;
 	this.open = mockColorPickerOpen;
 } );
-window.ColorPickerDialog.updateColorButton = mockUpdateColorButton;
+window.Layers.UI.ColorPickerDialog.updateColorButton = mockUpdateColorButton;
 
 const ToolbarStyleControls = require( '../../resources/ext.layers.editor/ToolbarStyleControls.js' );
 
@@ -282,8 +288,8 @@ describe( 'ToolbarStyleControls', () => {
 
 			styleControls.openColorPicker( button, '#ff0000', { onApply } );
 
-			expect( window.ColorPickerDialog ).toHaveBeenCalled();
-			const config = window.ColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			expect( window.Layers.UI.ColorPickerDialog ).toHaveBeenCalled();
+			const config = window.Layers.UI.ColorPickerDialog.mock.calls[ 0 ][ 0 ];
 			expect( config.currentColor ).toBe( '#ff0000' );
 			expect( config.anchorElement ).toBe( button );
 		} );
@@ -292,7 +298,7 @@ describe( 'ToolbarStyleControls', () => {
 			const button = document.createElement( 'button' );
 			styleControls.openColorPicker( button, 'none', {} );
 
-			const config = window.ColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			const config = window.Layers.UI.ColorPickerDialog.mock.calls[ 0 ][ 0 ];
 			expect( config.currentColor ).toBe( 'none' );
 		} );
 
@@ -304,14 +310,14 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 
 		it( 'should not throw if ColorPickerDialog not available', () => {
-			const originalDialog = window.ColorPickerDialog;
-			window.ColorPickerDialog = undefined;
+			const originalDialog = window.Layers.UI.ColorPickerDialog;
+			window.Layers.UI.ColorPickerDialog = undefined;
 
 			expect( () => {
 				styleControls.openColorPicker( document.createElement( 'button' ), '#000', {} );
 			} ).not.toThrow();
 
-			window.ColorPickerDialog = originalDialog;
+			window.Layers.UI.ColorPickerDialog = originalDialog;
 		} );
 	} );
 
@@ -328,8 +334,8 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 
 		it( 'should use fallback when ColorPickerDialog not available', () => {
-			const originalUpdateFn = window.ColorPickerDialog.updateColorButton;
-			window.ColorPickerDialog.updateColorButton = undefined;
+			const originalUpdateFn = window.Layers.UI.ColorPickerDialog.updateColorButton;
+			window.Layers.UI.ColorPickerDialog.updateColorButton = undefined;
 
 			const button = document.createElement( 'button' );
 			styleControls.updateColorButtonDisplay( button, '#ff0000' );
@@ -337,19 +343,19 @@ describe( 'ToolbarStyleControls', () => {
 			expect( button.style.background ).toBe( 'rgb(255, 0, 0)' );
 			expect( button.classList.contains( 'is-transparent' ) ).toBe( false );
 
-			window.ColorPickerDialog.updateColorButton = originalUpdateFn;
+			window.Layers.UI.ColorPickerDialog.updateColorButton = originalUpdateFn;
 		} );
 
 		it( 'should handle transparent color in fallback', () => {
-			const originalUpdateFn = window.ColorPickerDialog.updateColorButton;
-			window.ColorPickerDialog.updateColorButton = undefined;
+			const originalUpdateFn = window.Layers.UI.ColorPickerDialog.updateColorButton;
+			window.Layers.UI.ColorPickerDialog.updateColorButton = undefined;
 
 			const button = document.createElement( 'button' );
 			styleControls.updateColorButtonDisplay( button, 'none' );
 
 			expect( button.classList.contains( 'is-transparent' ) ).toBe( true );
 
-			window.ColorPickerDialog.updateColorButton = originalUpdateFn;
+			window.Layers.UI.ColorPickerDialog.updateColorButton = originalUpdateFn;
 		} );
 	} );
 
@@ -595,8 +601,8 @@ describe( 'ToolbarStyleControls', () => {
 	} );
 
 	describe( 'module exports', () => {
-		it( 'should export to window', () => {
-			expect( window.ToolbarStyleControls ).toBe( ToolbarStyleControls );
+		it( 'should export to window.Layers.UI namespace', () => {
+			expect( window.Layers.UI.ToolbarStyleControls ).toBe( ToolbarStyleControls );
 		} );
 
 		it( 'should be a constructor function', () => {

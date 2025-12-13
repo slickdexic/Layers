@@ -214,10 +214,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.EventTracker = EventTracker;
-
-		// DEPRECATED: Direct window export - use window.Layers.Utils.EventTracker instead
-		// This will be removed in a future version
-		window.EventTracker = EventTracker;
 	}
 
 	// CommonJS export for Node.js/Jest testing

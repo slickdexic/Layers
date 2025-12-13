@@ -405,10 +405,6 @@ class GridRulersController {
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.GridRulersController = GridRulersController;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.GridRulersController instead
-		// This will be removed in a future version
-		window.GridRulersController = GridRulersController;
 	}
 
 	// Export for Node.js/Jest testing

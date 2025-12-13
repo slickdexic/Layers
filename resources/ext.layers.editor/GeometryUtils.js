@@ -392,10 +392,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.Geometry = GeometryUtils;
-
-		// DEPRECATED: Direct window export - use window.Layers.Utils.Geometry instead
-		// This will be removed in a future version
-		window.GeometryUtils = GeometryUtils;
 	}
 
 	// CommonJS export for Node.js/Jest testing

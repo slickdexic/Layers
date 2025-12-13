@@ -887,7 +887,8 @@
 		 */
 		getDefaultLayerName( layer ) {
 			const t = this.msg.bind( this );
-			const LAYER_TYPES = window.LayersConstants ? window.LayersConstants.LAYER_TYPES : {};
+			const LayersConstants = ( window.Layers && window.Layers.Constants ) || {};
+			const LAYER_TYPES = LayersConstants.LAYER_TYPES || {};
 			switch ( layer.type ) {
 				case ( LAYER_TYPES.TEXT || 'text' ): {
 					const prefix = t( 'layers-default-text-prefix', 'Text: ' );
@@ -1560,14 +1561,10 @@
 		}
 	}
 
-	// Export to window.Layers namespace (preferred)
+	// Export to window.Layers namespace
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.LayerPanel = LayerPanel;
-
-		// DEPRECATED: Direct window export - use window.Layers.UI.LayerPanel instead
-		// This will be removed in a future version
-		window.LayerPanel = LayerPanel;
 	}
 }());

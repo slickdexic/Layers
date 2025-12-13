@@ -12,7 +12,9 @@ describe( 'ModuleRegistry', () => {
 
 	beforeEach( () => {
 		// Reset global state
-		delete global.window.LayersModuleRegistry;
+		if ( global.window.Layers && global.window.Layers.Core ) {
+			delete global.window.Layers.Core.ModuleRegistry;
+		}
 		delete global.window.layersRegistry;
 		delete global.window.layersModuleRegistry;
 
@@ -437,8 +439,8 @@ describe( 'ModuleRegistry', () => {
 	} );
 
 	describe( 'module exports', () => {
-		it( 'should export ModuleRegistry class on window', () => {
-			expect( global.window.LayersModuleRegistry ).toBe( ModuleRegistry );
+		it( 'should export ModuleRegistry class on window.Layers.Core', () => {
+			expect( global.window.Layers.Core.ModuleRegistry ).toBe( ModuleRegistry );
 		} );
 
 		it( 'should export registry instance on window', () => {

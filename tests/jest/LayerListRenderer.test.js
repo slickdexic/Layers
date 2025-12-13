@@ -10,26 +10,33 @@ const sourceFile = path.join( __dirname, '../../resources/ext.layers.editor/ui/L
 const sourceCode = fs.readFileSync( sourceFile, 'utf8' );
 
 // Execute in a controlled environment
+const mockIconFactory = {
+	createEyeIcon: jest.fn( ( visible ) => {
+		const span = document.createElement( 'span' );
+		span.className = visible ? 'eye-open' : 'eye-closed';
+		return span;
+	} ),
+	createLockIcon: jest.fn( ( locked ) => {
+		const span = document.createElement( 'span' );
+		span.className = locked ? 'locked' : 'unlocked';
+		return span;
+	} ),
+	createDeleteIcon: jest.fn( () => {
+		const span = document.createElement( 'span' );
+		span.className = 'delete-icon';
+		return span;
+	} )
+};
+
 const mockWindow = {
-	Layers: { UI: {} },
-	LayerListRenderer: null,
-	IconFactory: {
-		createEyeIcon: jest.fn( ( visible ) => {
-			const span = document.createElement( 'span' );
-			span.className = visible ? 'eye-open' : 'eye-closed';
-			return span;
-		} ),
-		createLockIcon: jest.fn( ( locked ) => {
-			const span = document.createElement( 'span' );
-			span.className = locked ? 'locked' : 'unlocked';
-			return span;
-		} ),
-		createDeleteIcon: jest.fn( () => {
-			const span = document.createElement( 'span' );
-			span.className = 'delete-icon';
-			return span;
-		} )
+	Layers: {
+		UI: {
+			IconFactory: mockIconFactory
+		}
 	},
+	LayerListRenderer: null,
+	// Legacy fallback for backwards compatibility
+	IconFactory: mockIconFactory,
 	LayersConstants: {
 		LAYER_TYPES: {
 			TEXT: 'text',
@@ -48,7 +55,7 @@ const mockWindow = {
 };
 
 // eslint-disable-next-line no-new-func
-const initModule = new Function( 'window', 'document', 'module', sourceCode + '\nreturn window.LayerListRenderer;' );
+const initModule = new Function( 'window', 'document', 'module', sourceCode + '\nreturn window.Layers.UI.LayerListRenderer;' );
 const LayerListRenderer = initModule( mockWindow, document, { exports: {} } );
 
 describe( 'LayerListRenderer', () => {

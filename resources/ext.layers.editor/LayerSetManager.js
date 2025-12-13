@@ -562,10 +562,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Core = window.Layers.Core || {};
 		window.Layers.Core.LayerSetManager = LayerSetManager;
-
-		// DEPRECATED: Direct window export - use window.Layers.Core.LayerSetManager instead
-		// This will be removed in a future version
-		window.LayerSetManager = LayerSetManager;
 	}
 
 	// CommonJS export for testing

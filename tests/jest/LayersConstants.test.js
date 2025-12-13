@@ -10,15 +10,11 @@
 require( '../../resources/ext.layers.editor/LayersConstants.js' );
 
 describe( 'LayersConstants', () => {
-	const LayersConstants = window.LayersConstants;
+	const LayersConstants = window.Layers.Constants;
 
 	describe( 'module exports', () => {
 		it( 'should export LayersConstants to window.Layers.Constants', () => {
 			expect( window.Layers.Constants ).toBe( LayersConstants );
-		} );
-
-		it( 'should export LayersConstants to window for backward compatibility', () => {
-			expect( window.LayersConstants ).toBeDefined();
 		} );
 	} );
 

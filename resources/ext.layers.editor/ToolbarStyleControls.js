@@ -750,10 +750,6 @@ class ToolbarStyleControls {
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.ToolbarStyleControls = ToolbarStyleControls;
-
-		// DEPRECATED: Direct window export - use window.Layers.UI.ToolbarStyleControls instead
-		// This will be removed in a future version
-		window.ToolbarStyleControls = ToolbarStyleControls;
 	}
 
 	// CommonJS export for testing

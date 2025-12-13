@@ -87,12 +87,6 @@
 		window.Layers.Utils.deepClone = deepClone;
 		window.Layers.Utils.deepCloneArray = deepCloneArray;
 		window.Layers.Utils.deepCloneLayer = deepCloneLayer;
-
-		// DEPRECATED: Direct window exports - use window.Layers.Utils.* instead
-		// These will be removed in a future version
-		window.deepClone = deepClone;
-		window.deepCloneArray = deepCloneArray;
-		window.deepCloneLayer = deepCloneLayer;
 	}
 
 	// CommonJS export for Node.js/Jest testing

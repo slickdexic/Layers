@@ -23,13 +23,14 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Metric | Value |
 |--------|-------|
 | Total JS files | 67 |
-| Viewer + Shared modules | ~3,226 lines |
-| Editor module | ~31,585 lines |
-| ES6 classes | 36 |
-| Prototype patterns | ~604 |
-| Test coverage | 88.4% statements |
-| Jest tests | 3,863+ |
-| PHPUnit test files | 15 |
+| Viewer module | 653 lines |
+| Shared module | 2,583 lines |
+| Editor module | ~31,769 lines |
+| ES6 classes | 57 |
+| Prototype patterns | 10 (1 file: LayersViewer.js) |
+| Test coverage | 87.84% statements |
+| Jest tests | 3,913 |
+| PHPUnit test files | 17 |
 
 ---
 

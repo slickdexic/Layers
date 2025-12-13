@@ -42,12 +42,14 @@ describe( 'LayerPanel Coverage Extension', () => {
 	let layerPanel;
 
 	beforeEach( () => {
-		// Setup window globals
+		// Setup window globals with namespaced structure
+		window.Layers = window.Layers || {};
+		window.Layers.UI = window.Layers.UI || {};
 		window.StateManager = StateManager;
-		window.IconFactory = mockIconFactory;
-		window.ColorPickerDialog = null;
-		window.ConfirmDialog = null;
-		window.PropertiesForm = null;
+		window.Layers.UI.IconFactory = mockIconFactory;
+		window.Layers.UI.ColorPickerDialog = null;
+		window.Layers.UI.ConfirmDialog = null;
+		window.Layers.UI.PropertiesForm = null;
 		window.layersErrorHandler = {
 			handleError: jest.fn()
 		};
@@ -114,7 +116,7 @@ describe( 'LayerPanel Coverage Extension', () => {
 		jest.clearAllMocks();
 
 		require( '../../resources/ext.layers.editor/LayerPanel.js' );
-		LayerPanel = window.LayerPanel;
+		LayerPanel = window.Layers.UI.LayerPanel;
 	} );
 
 	afterEach( () => {

@@ -90,7 +90,7 @@
 
 			// Initialize LayerRenderer for shape drawing delegation
 			// Uses shared LayerRenderer (ext.layers.shared) for consistency with viewer
-			const LayerRenderer = getClass( 'Canvas.LayerRenderer', 'LayerRenderer' );
+			const LayerRenderer = getClass( 'LayerRenderer', 'LayerRenderer' );
 			if ( LayerRenderer ) {
 				this.layerRenderer = new LayerRenderer( this.ctx, {
 					zoom: this.zoom,
@@ -947,15 +947,11 @@
 		}
 	}
 
-	// Export to window.Layers namespace (preferred)
+	// Export to window.Layers namespace
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.Renderer = CanvasRenderer;
-
-		// DEPRECATED: Direct window export - use window.Layers.Canvas.Renderer instead
-		// This will be removed in a future version
-		window.CanvasRenderer = CanvasRenderer;
 	}
 
 	// Export for Node.js/Jest testing

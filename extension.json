@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "0.8.4",
+	"version": "0.8.5",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -223,6 +223,7 @@
 				"ImageLoader.js",
 				"canvas/ZoomPanController.js",
 				"canvas/GridRulersController.js",
+				"canvas/ResizeCalculator.js",
 				"canvas/TransformController.js",
 				"canvas/HitTestController.js",
 				"canvas/DrawingController.js",

@@ -10,7 +10,7 @@ describe( 'ConfirmDialog', () => {
 	let ConfirmDialog;
 
 	beforeEach( () => {
-		ConfirmDialog = window.ConfirmDialog;
+		ConfirmDialog = window.Layers && window.Layers.UI && window.Layers.UI.ConfirmDialog;
 		// Clear document body before each test
 		document.body.innerHTML = '';
 	} );

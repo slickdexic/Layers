@@ -7,8 +7,9 @@
 ( function () {
 	'use strict';
 
-	// Import dependencies (available as globals from ResourceLoader)
-	const IconFactory = window.IconFactory;
+	// Import dependencies (available from Layers namespace or legacy global)
+	const IconFactory = ( window.Layers && window.Layers.UI && window.Layers.UI.IconFactory ) ||
+		window.IconFactory;
 
 	/**
 	 * LayerListRenderer class
@@ -349,7 +350,8 @@
 		 */
 		getDefaultLayerName( layer ) {
 			const t = this.msg;
-			const LAYER_TYPES = window.LayersConstants ? window.LayersConstants.LAYER_TYPES : {};
+			const LayersConstants = ( window.Layers && window.Layers.Constants ) || {};
+			const LAYER_TYPES = LayersConstants.LAYER_TYPES || {};
 
 			switch ( layer.type ) {
 				case ( LAYER_TYPES.TEXT || 'text' ): {
@@ -420,10 +422,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.LayerListRenderer = LayerListRenderer;
-
-			// DEPRECATED: Direct window export - use window.Layers.UI.LayerListRenderer instead
-			// This will be removed in a future version
-		window.LayerListRenderer = LayerListRenderer;
 	}
 
 	// CommonJS export for testing

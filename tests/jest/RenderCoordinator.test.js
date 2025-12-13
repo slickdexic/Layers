@@ -36,7 +36,7 @@ describe( 'RenderCoordinator', () => {
 	let coordinator;
 
 	beforeEach( () => {
-		RenderCoordinator = window.RenderCoordinator;
+		RenderCoordinator = window.Layers.Canvas.RenderCoordinator;
 		rafCallbacks = [];
 		rafId = 0;
 		mockTime = 0;

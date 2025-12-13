@@ -368,10 +368,6 @@
 		window.Layers.Tools = window.Layers.Tools || {};
 		window.Layers.Tools.ToolRegistry = ToolRegistry;
 		window.Layers.Tools.registry = registry;
-
-		// DEPRECATED: Direct window export - use window.Layers.Tools.ToolRegistry instead
-		// This will be removed in a future version
-		window.ToolRegistry = ToolRegistry;
 	}
 
 	// CommonJS export for testing
