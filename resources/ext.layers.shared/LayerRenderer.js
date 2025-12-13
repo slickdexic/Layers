@@ -33,6 +33,11 @@
 		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './TextRenderer.js' ) : null );
 
+	// Get ShapeRenderer - it should be loaded before this module
+	const ShapeRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ShapeRenderer ) ||
+		// eslint-disable-next-line no-undef
+		( typeof require !== 'undefined' ? require( './ShapeRenderer.js' ) : null );
+
 	/**
 	 * Clamp a value to a valid opacity range [0, 1]
 	 * Uses ShadowRenderer's implementation if available, otherwise local fallback
@@ -91,6 +96,13 @@ class LayerRenderer {
 			this.textRenderer = new TextRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
 		} else {
 			this.textRenderer = null;
+		}
+
+		// Create ShapeRenderer instance for basic shape operations
+		if ( ShapeRenderer ) {
+			this.shapeRenderer = new ShapeRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
+		} else {
+			this.shapeRenderer = null;
 		}
 	}
 
@@ -358,418 +370,66 @@ class LayerRenderer {
 
 	/**
 	 * Draw a rectangle shape
+	 * Delegates to ShapeRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with rectangle properties
 	 * @param {Object} [options] - Rendering options
 	 * @param {boolean} [options.scaled=false] - Whether layer coords are pre-scaled
 	 */
 	drawRectangle ( layer, options ) {
-		const opts = options || {};
-		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		// BUG FIX (2025-12-08): Use separate shadowScale for shadow operations
-		// When viewer passes scaled=true, scale={1,1,1} for geometry but shadow needs actual scale
-		const shadowScale = opts.shadowScale || scale;
-
-		let x = layer.x || 0;
-		let y = layer.y || 0;
-		const width = layer.width || 0;
-		const height = layer.height || 0;
-		let strokeW = layer.strokeWidth || 1;
-		let cornerRadius = layer.cornerRadius || 0;
-
-		if ( !opts.scaled ) {
-			strokeW = strokeW * scale.avg;
-			cornerRadius = cornerRadius * scale.avg;
+		if ( this.shapeRenderer ) {
+			const opts = options || {};
+			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+			const shadowScale = opts.shadowScale || scale;
+			this.shapeRenderer.setContext( this.ctx );
+			this.shapeRenderer.drawRectangle( layer, {
+				scale: scale,
+				shadowScale: shadowScale,
+				scaled: opts.scaled
+			} );
 		}
-
-		// Clamp corner radius to half of the smaller dimension
-		const maxRadius = Math.min( Math.abs( width ), Math.abs( height ) ) / 2;
-		cornerRadius = Math.min( cornerRadius, maxRadius );
-
-		this.ctx.save();
-
-		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
-		if ( hasRotation ) {
-			this.ctx.translate( x + width / 2, y + height / 2 );
-			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
-			x = -width / 2;
-			y = -height / 2;
-		}
-
-		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, shadowScale );
-
-		// Use rounded rect if cornerRadius > 0, otherwise use regular rect
-		const useRoundedRect = cornerRadius > 0 && this.ctx.roundRect;
-
-		// Shadow handling: use offscreen canvas technique for shadows
-		// This ensures stroke shadows are visible even with fill present
-		// For spread > 0: shadows are expanded by spread amount
-		// For spread === 0: use same technique but without expansion for consistent results
-		if ( this.hasShadowEnabled( layer ) ) {
-			const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
-			const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
-
-			// Draw fill shadow (expanded filled shape if spread > 0) at fill opacity
-			if ( hasFillForShadow ) {
-				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				if ( spread > 0 ) {
-					this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
-						const expandedX = x - spread;
-						const expandedY = y - spread;
-						const expandedW = width + spread * 2;
-						const expandedH = height + spread * 2;
-						const expandedRadius = Math.min( cornerRadius + spread, Math.min( Math.abs( expandedW ), Math.abs( expandedH ) ) / 2 );
-
-						if ( useRoundedRect || cornerRadius > 0 ) {
-							if ( ctx.roundRect ) {
-								ctx.beginPath();
-								ctx.roundRect( expandedX, expandedY, expandedW, expandedH, expandedRadius );
-							} else {
-								this.drawRoundedRectPath( expandedX, expandedY, expandedW, expandedH, expandedRadius, ctx );
-							}
-						} else {
-							ctx.beginPath();
-							ctx.rect( expandedX, expandedY, expandedW, expandedH );
-						}
-					}, fillShadowOpacity );
-				} else {
-					// spread === 0: use offscreen technique with no expansion
-					this.drawSpreadShadow( layer, shadowScale, 0, ( ctx ) => {
-						if ( useRoundedRect || cornerRadius > 0 ) {
-							if ( ctx.roundRect ) {
-								ctx.beginPath();
-								ctx.roundRect( x, y, width, height, cornerRadius );
-							} else {
-								this.drawRoundedRectPath( x, y, width, height, cornerRadius, ctx );
-							}
-						} else {
-							ctx.beginPath();
-							ctx.rect( x, y, width, height );
-						}
-					}, fillShadowOpacity );
-				}
-			}
-
-			// Draw stroke shadow (as a thick stroke if spread > 0, or regular stroke) at stroke opacity
-			// FIX (2025-12-10): Always use offscreen technique for stroke shadow when fill is present
-			// This ensures stroke shadow is visible (destination-over approach didn't work)
-			if ( hasStrokeForShadow ) {
-				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
-				const effectiveStrokeWidth = spread > 0 ? strokeW + spread * 2 : strokeW;
-				this.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( ctx ) => {
-					if ( useRoundedRect || cornerRadius > 0 ) {
-						if ( ctx.roundRect ) {
-							ctx.beginPath();
-							ctx.roundRect( x, y, width, height, cornerRadius );
-						} else {
-							this.drawRoundedRectPath( x, y, width, height, cornerRadius, ctx );
-						}
-					} else {
-						ctx.beginPath();
-						ctx.rect( x, y, width, height );
-					}
-				}, strokeShadowOpacity );
-			}
-		}
-
-		// Draw actual shape (shadows already handled via offscreen canvas above)
-		// FIX (2025-12-10): Shadows are now always drawn using offscreen canvas technique
-		// so we don't need native canvas shadow or destination-over compositing here
-
-		// Clear any shadow state from context
-		this.clearShadow();
-
-		// Helper to draw the rectangle path
-		const drawRectPath = () => {
-			if ( useRoundedRect ) {
-				this.ctx.beginPath();
-				this.ctx.roundRect( x, y, width, height, cornerRadius );
-			} else if ( cornerRadius > 0 ) {
-				this.drawRoundedRectPath( x, y, width, height, cornerRadius );
-			} else {
-				this.ctx.beginPath();
-				this.ctx.rect( x, y, width, height );
-			}
-		};
-
-		const fillOpacity = clampOpacity( layer.fillOpacity );
-		const strokeOpacity = clampOpacity( layer.strokeOpacity );
-		// Only consider fill "visible" if it has color AND non-zero opacity
-		const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
-		const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
-
-		// Draw fill
-		if ( hasFill ) {
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.globalAlpha = baseOpacity * fillOpacity;
-			drawRectPath();
-			this.ctx.fill();
-		}
-
-		// Draw stroke
-		if ( hasStroke ) {
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = strokeW;
-			this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-			drawRectPath();
-			this.ctx.stroke();
-		}
-
-		this.ctx.restore();
-	}
-
-	/**
-	 * Draw a rounded rectangle path (fallback for browsers without roundRect)
-	 *
-	 * @param {number} x - X position
-	 * @param {number} y - Y position
-	 * @param {number} width - Width
-	 * @param {number} height - Height
-	 * @param {number} radius - Corner radius
-	 * @param {CanvasRenderingContext2D} [context] - Optional context (defaults to this.ctx)
-	 */
-	drawRoundedRectPath ( x, y, width, height, radius, context ) {
-		const ctx = context || this.ctx;
-		ctx.beginPath();
-		ctx.moveTo( x + radius, y );
-		ctx.lineTo( x + width - radius, y );
-		ctx.arcTo( x + width, y, x + width, y + radius, radius );
-		ctx.lineTo( x + width, y + height - radius );
-		ctx.arcTo( x + width, y + height, x + width - radius, y + height, radius );
-		ctx.lineTo( x + radius, y + height );
-		ctx.arcTo( x, y + height, x, y + height - radius, radius );
-		ctx.lineTo( x, y + radius );
-		ctx.arcTo( x, y, x + radius, y, radius );
-		ctx.closePath();
 	}
 
 	/**
 	 * Draw a circle shape
+	 * Delegates to ShapeRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with circle properties (x, y center, radius)
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawCircle ( layer, options ) {
-		const opts = options || {};
-		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		const shadowScale = opts.shadowScale || scale;
-
-		const cx = layer.x || 0;
-		const cy = layer.y || 0;
-		const radius = layer.radius || 0;
-		let strokeW = layer.strokeWidth || 1;
-
-		if ( !opts.scaled ) {
-			strokeW = strokeW * scale.avg;
+		if ( this.shapeRenderer ) {
+			const opts = options || {};
+			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+			const shadowScale = opts.shadowScale || scale;
+			this.shapeRenderer.setContext( this.ctx );
+			this.shapeRenderer.drawCircle( layer, {
+				scale: scale,
+				shadowScale: shadowScale,
+				scaled: opts.scaled
+			} );
 		}
-
-		this.ctx.save();
-
-		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, shadowScale );
-
-		// Shadow handling: use offscreen canvas technique for shadows
-		// FIX (2025-12-10): Always use offscreen technique for consistent results
-		if ( this.hasShadowEnabled( layer ) ) {
-			const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
-			const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
-
-			// Draw fill shadow at fill opacity
-			if ( hasFillForShadow ) {
-				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				const effectiveRadius = spread > 0 ? radius + spread : radius;
-				this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
-					ctx.beginPath();
-					ctx.arc( cx, cy, effectiveRadius, 0, 2 * Math.PI );
-				}, fillShadowOpacity );
-			}
-
-			// Draw stroke shadow at stroke opacity
-			if ( hasStrokeForShadow ) {
-				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
-				const effectiveStrokeWidth = spread > 0 ? strokeW + spread * 2 : strokeW;
-				this.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( ctx ) => {
-					ctx.beginPath();
-					ctx.arc( cx, cy, radius, 0, 2 * Math.PI );
-				}, strokeShadowOpacity );
-			}
-		}
-
-		// Draw actual circle (shadows already handled via offscreen canvas above)
-		// FIX (2025-12-10): Shadows are now always drawn using offscreen canvas technique
-		this.clearShadow();
-
-		const fillOpacity = clampOpacity( layer.fillOpacity );
-		const strokeOpacity = clampOpacity( layer.strokeOpacity );
-		const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
-		const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
-
-		// Draw fill
-		if ( hasFill ) {
-			this.ctx.beginPath();
-			this.ctx.arc( cx, cy, radius, 0, 2 * Math.PI );
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.globalAlpha = baseOpacity * fillOpacity;
-			this.ctx.fill();
-		}
-
-		// Draw stroke
-		if ( hasStroke ) {
-			this.ctx.beginPath();
-			this.ctx.arc( cx, cy, radius, 0, 2 * Math.PI );
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = strokeW;
-			this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-			this.ctx.stroke();
-		}
-
-		this.ctx.restore();
 	}
 
 	/**
 	 * Draw an ellipse shape
+	 * Delegates to ShapeRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with ellipse properties
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawEllipse ( layer, options ) {
-		const opts = options || {};
-		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		const shadowScale = opts.shadowScale || scale;
-
-		const x = layer.x || 0;
-		const y = layer.y || 0;
-		const radiusX = layer.radiusX || ( layer.width || 0 ) / 2;
-		const radiusY = layer.radiusY || ( layer.height || 0 ) / 2;
-		let strokeW = layer.strokeWidth || 1;
-
-		if ( !opts.scaled ) {
-			strokeW = strokeW * scale.avg;
+		if ( this.shapeRenderer ) {
+			const opts = options || {};
+			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+			const shadowScale = opts.shadowScale || scale;
+			this.shapeRenderer.setContext( this.ctx );
+			this.shapeRenderer.drawEllipse( layer, {
+				scale: scale,
+				shadowScale: shadowScale,
+				scaled: opts.scaled
+			} );
 		}
-
-		this.ctx.save();
-
-		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, shadowScale );
-
-		// Handle rotation
-		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
-		const rotationRad = hasRotation ? ( layer.rotation * Math.PI ) / 180 : 0;
-
-		// Shadow handling: use offscreen canvas technique for shadows
-		// FIX (2025-12-10): Always use offscreen technique for consistent results
-		if ( this.hasShadowEnabled( layer ) ) {
-			const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
-			const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
-
-			// Draw fill shadow at fill opacity
-			if ( hasFillForShadow ) {
-				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				const effectiveRadiusX = spread > 0 ? radiusX + spread : radiusX;
-				const effectiveRadiusY = spread > 0 ? radiusY + spread : radiusY;
-				this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
-					ctx.beginPath();
-					if ( ctx.ellipse ) {
-						ctx.ellipse( x, y, effectiveRadiusX, effectiveRadiusY, rotationRad, 0, 2 * Math.PI );
-					} else {
-						ctx.save();
-						ctx.translate( x, y );
-						if ( hasRotation ) {
-							ctx.rotate( rotationRad );
-						}
-						ctx.scale( Math.max( effectiveRadiusX, 0.0001 ), Math.max( effectiveRadiusY, 0.0001 ) );
-						ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
-						ctx.restore();
-					}
-				}, fillShadowOpacity );
-			}
-
-			// Draw stroke shadow at stroke opacity
-			if ( hasStrokeForShadow ) {
-				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
-				const effectiveStrokeWidth = spread > 0 ? strokeW + spread * 2 : strokeW;
-				this.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( ctx ) => {
-					ctx.beginPath();
-					if ( ctx.ellipse ) {
-						ctx.ellipse( x, y, radiusX, radiusY, rotationRad, 0, 2 * Math.PI );
-					} else {
-						ctx.save();
-						ctx.translate( x, y );
-						if ( hasRotation ) {
-							ctx.rotate( rotationRad );
-						}
-						ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
-						ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
-						ctx.restore();
-					}
-				}, strokeShadowOpacity );
-			}
-		}
-
-		// Draw actual ellipse (shadows already handled via offscreen canvas above)
-		// FIX (2025-12-10): Shadows are now always drawn using offscreen canvas technique
-		this.clearShadow();
-
-		const fillOpacity = clampOpacity( layer.fillOpacity );
-		const strokeOpacity = clampOpacity( layer.strokeOpacity );
-		const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
-		const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
-
-		// Use native ellipse() if available
-		if ( this.ctx.ellipse ) {
-			// Draw fill
-			if ( hasFill ) {
-				this.ctx.beginPath();
-				this.ctx.ellipse( x, y, radiusX, radiusY, rotationRad, 0, 2 * Math.PI );
-				this.ctx.fillStyle = layer.fill;
-				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				this.ctx.fill();
-			}
-
-			// Draw stroke
-			if ( hasStroke ) {
-				this.ctx.beginPath();
-				this.ctx.ellipse( x, y, radiusX, radiusY, rotationRad, 0, 2 * Math.PI );
-				this.ctx.strokeStyle = layer.stroke;
-				this.ctx.lineWidth = strokeW;
-				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-				this.ctx.stroke();
-			}
-		} else {
-			// Fallback: use scale transform
-			this.ctx.translate( x, y );
-			if ( hasRotation ) {
-				this.ctx.rotate( rotationRad );
-			}
-
-			// Draw fill
-			if ( hasFill ) {
-				this.ctx.beginPath();
-				this.ctx.save();
-				this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
-				this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
-				this.ctx.restore();
-				this.ctx.fillStyle = layer.fill;
-				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				this.ctx.fill();
-			}
-
-			// Draw stroke
-			if ( hasStroke ) {
-				this.ctx.beginPath();
-				this.ctx.save();
-				this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
-				this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
-				this.ctx.restore();
-				this.ctx.strokeStyle = layer.stroke;
-				this.ctx.lineWidth = strokeW;
-				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-				this.ctx.stroke();
-			}
-		}
-
-		this.ctx.restore();
 	}
 
 	/**
@@ -895,255 +555,44 @@ class LayerRenderer {
 
 	/**
 	 * Draw a regular polygon (e.g., hexagon, pentagon)
+	 * Delegates to ShapeRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with sides, x, y, radius
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawPolygon ( layer, options ) {
-		const opts = options || {};
-		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		const shadowScale = opts.shadowScale || scale;
-
-		const sides = layer.sides || 6;
-		const x = layer.x || 0;
-		const y = layer.y || 0;
-		const radius = layer.radius || 50;
-		let strokeW = layer.strokeWidth || 1;
-
-		if ( !opts.scaled ) {
-			strokeW = strokeW * scale.avg;
+		if ( this.shapeRenderer ) {
+			const opts = options || {};
+			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+			const shadowScale = opts.shadowScale || scale;
+			this.shapeRenderer.setContext( this.ctx );
+			this.shapeRenderer.drawPolygon( layer, {
+				scale: scale,
+				shadowScale: shadowScale,
+				scaled: opts.scaled
+			} );
 		}
-
-		this.ctx.save();
-
-		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, shadowScale );
-
-		// Handle rotation around polygon center
-		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
-			this.ctx.translate( x, y );
-			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
-			this.ctx.translate( -x, -y );
-		}
-
-		// Shadow handling: always use offscreen canvas technique for consistent results
-		// FIX (2025-12-11): Use offscreen technique for ALL shadows, not just spread > 0
-		if ( this.hasShadowEnabled( layer ) ) {
-			const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
-			const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
-
-			// Draw fill shadow at fill opacity
-			if ( hasFillForShadow ) {
-				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				const effectiveRadius = spread > 0 ? radius + spread : radius;
-				this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
-					ctx.beginPath();
-					for ( let i = 0; i < sides; i++ ) {
-						const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-						const px = x + effectiveRadius * Math.cos( angle );
-						const py = y + effectiveRadius * Math.sin( angle );
-						if ( i === 0 ) {
-							ctx.moveTo( px, py );
-						} else {
-							ctx.lineTo( px, py );
-						}
-					}
-					ctx.closePath();
-				}, fillShadowOpacity );
-			}
-
-			// Draw stroke shadow at stroke opacity
-			if ( hasStrokeForShadow ) {
-				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
-				const effectiveStrokeWidth = spread > 0 ? strokeW + spread * 2 : strokeW;
-				this.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( ctx ) => {
-					ctx.beginPath();
-					for ( let i = 0; i < sides; i++ ) {
-						const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-						const px = x + radius * Math.cos( angle );
-						const py = y + radius * Math.sin( angle );
-						if ( i === 0 ) {
-							ctx.moveTo( px, py );
-						} else {
-							ctx.lineTo( px, py );
-						}
-					}
-					ctx.closePath();
-				}, strokeShadowOpacity );
-			}
-		}
-
-		// Draw actual polygon (shadows already handled via offscreen canvas above)
-		// FIX (2025-12-11): Always use offscreen technique, so just clear shadow state
-		this.clearShadow();
-
-		// Helper to draw the polygon path
-		const drawPolygonPath = () => {
-			this.ctx.beginPath();
-			for ( let i = 0; i < sides; i++ ) {
-				const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-				const px = x + radius * Math.cos( angle );
-				const py = y + radius * Math.sin( angle );
-				if ( i === 0 ) {
-					this.ctx.moveTo( px, py );
-				} else {
-					this.ctx.lineTo( px, py );
-				}
-			}
-			this.ctx.closePath();
-		};
-
-		const fillOpacity = clampOpacity( layer.fillOpacity );
-		const strokeOpacity = clampOpacity( layer.strokeOpacity );
-		const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
-		const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
-
-		// Draw fill
-		if ( hasFill ) {
-			drawPolygonPath();
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.globalAlpha = baseOpacity * fillOpacity;
-			this.ctx.fill();
-		}
-
-		// Draw stroke
-		if ( hasStroke ) {
-			drawPolygonPath();
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = strokeW;
-			this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-			this.ctx.stroke();
-		}
-
-		this.ctx.restore();
 	}
 
 	/**
 	 * Draw a star shape
+	 * Delegates to ShapeRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with points (count), x, y, outerRadius, innerRadius
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawStar ( layer, options ) {
-		const opts = options || {};
-		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		const shadowScale = opts.shadowScale || scale;
-
-		const points = layer.points || 5;
-		const x = layer.x || 0;
-		const y = layer.y || 0;
-		const outerRadius = layer.outerRadius || layer.radius || 50;
-		const innerRadius = layer.innerRadius || outerRadius * 0.5;
-		let strokeW = layer.strokeWidth || 1;
-
-		if ( !opts.scaled ) {
-			strokeW = strokeW * scale.avg;
+		if ( this.shapeRenderer ) {
+			const opts = options || {};
+			const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
+			const shadowScale = opts.shadowScale || scale;
+			this.shapeRenderer.setContext( this.ctx );
+			this.shapeRenderer.drawStar( layer, {
+				scale: scale,
+				shadowScale: shadowScale,
+				scaled: opts.scaled
+			} );
 		}
-
-		this.ctx.save();
-
-		const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-		const spread = this.getShadowSpread( layer, shadowScale );
-
-		// Handle rotation around star center
-		if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
-			this.ctx.translate( x, y );
-			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
-			this.ctx.translate( -x, -y );
-		}
-
-		// Shadow handling: always use offscreen canvas technique for consistent results
-		// FIX (2025-12-11): Use offscreen technique for ALL shadows, not just spread > 0
-		if ( this.hasShadowEnabled( layer ) ) {
-			const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
-			const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
-
-			// Draw fill shadow at fill opacity
-			if ( hasFillForShadow ) {
-				const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
-				this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
-					ctx.beginPath();
-					for ( let i = 0; i < points * 2; i++ ) {
-						const angle = ( i * Math.PI ) / points - Math.PI / 2;
-						const r = i % 2 === 0 ? outerRadius + spread : innerRadius + spread;
-						const px = x + r * Math.cos( angle );
-						const py = y + r * Math.sin( angle );
-						if ( i === 0 ) {
-							ctx.moveTo( px, py );
-						} else {
-							ctx.lineTo( px, py );
-						}
-					}
-					ctx.closePath();
-				}, fillShadowOpacity );
-			}
-
-			// Draw stroke shadow at stroke opacity
-			if ( hasStrokeForShadow ) {
-				const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
-				const effectiveStrokeWidth = spread > 0 ? strokeW + spread * 2 : strokeW;
-				this.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( ctx ) => {
-					ctx.beginPath();
-					for ( let i = 0; i < points * 2; i++ ) {
-						const angle = ( i * Math.PI ) / points - Math.PI / 2;
-						const r = i % 2 === 0 ? outerRadius : innerRadius;
-						const px = x + r * Math.cos( angle );
-						const py = y + r * Math.sin( angle );
-						if ( i === 0 ) {
-							ctx.moveTo( px, py );
-						} else {
-							ctx.lineTo( px, py );
-						}
-					}
-					ctx.closePath();
-				}, strokeShadowOpacity );
-			}
-		}
-
-		// Draw actual star (shadows already handled via offscreen canvas above)
-		// FIX (2025-12-11): Always use offscreen technique, so just clear shadow state
-		this.clearShadow();
-
-		// Helper to draw the star path
-		const drawStarPath = () => {
-			this.ctx.beginPath();
-			for ( let i = 0; i < points * 2; i++ ) {
-				const angle = ( i * Math.PI ) / points - Math.PI / 2;
-				const r = i % 2 === 0 ? outerRadius : innerRadius;
-				const px = x + r * Math.cos( angle );
-				const py = y + r * Math.sin( angle );
-				if ( i === 0 ) {
-					this.ctx.moveTo( px, py );
-				} else {
-					this.ctx.lineTo( px, py );
-				}
-			}
-			this.ctx.closePath();
-		};
-
-		const fillOpacity = clampOpacity( layer.fillOpacity );
-		const strokeOpacity = clampOpacity( layer.strokeOpacity );
-		const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
-		const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
-
-		// Draw fill
-		if ( hasFill ) {
-			drawStarPath();
-			this.ctx.fillStyle = layer.fill;
-			this.ctx.globalAlpha = baseOpacity * fillOpacity;
-			this.ctx.fill();
-		}
-
-		// Draw stroke
-		if ( hasStroke ) {
-			drawStarPath();
-			this.ctx.strokeStyle = layer.stroke;
-			this.ctx.lineWidth = strokeW;
-			this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-			this.ctx.stroke();
-		}
-
-		this.ctx.restore();
 	}
 
 	/**

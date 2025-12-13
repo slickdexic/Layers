@@ -157,6 +157,7 @@
 				"ShadowRenderer.js",
 				"ArrowRenderer.js",
 				"TextRenderer.js",
+				"ShapeRenderer.js",
 				"LayerRenderer.js"
 			]
 		},
