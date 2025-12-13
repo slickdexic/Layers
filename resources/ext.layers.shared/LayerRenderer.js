@@ -38,6 +38,11 @@
 		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './ShapeRenderer.js' ) : null );
 
+	// Get EffectsRenderer - it should be loaded before this module
+	const EffectsRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.EffectsRenderer ) ||
+		// eslint-disable-next-line no-undef
+		( typeof require !== 'undefined' ? require( './EffectsRenderer.js' ) : null );
+
 	/**
 	 * LayerRenderer class - Renders individual layer shapes on a canvas
 	 */
@@ -88,6 +93,18 @@ class LayerRenderer {
 			this.shapeRenderer = new ShapeRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
 		} else {
 			this.shapeRenderer = null;
+		}
+
+		// Create EffectsRenderer instance for highlight/blur operations
+		if ( EffectsRenderer ) {
+			this.effectsRenderer = new EffectsRenderer( ctx, {
+				canvas: this.canvas,
+				backgroundImage: this.backgroundImage,
+				baseWidth: this.baseWidth,
+				baseHeight: this.baseHeight
+			} );
+		} else {
+			this.effectsRenderer = null;
 		}
 	}
 
@@ -555,130 +572,31 @@ class LayerRenderer {
 
 	/**
 	 * Draw a highlight overlay
+	 * Delegates to EffectsRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with highlight properties
 	 * @param {Object} [options] - Rendering options
 	 */
-	drawHighlight ( layer ) {
-		let x = layer.x || 0;
-		let y = layer.y || 0;
-		const width = layer.width || 100;
-		const height = layer.height || 20;
-
-		this.ctx.save();
-
-		// Handle rotation
-		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
-		if ( hasRotation ) {
-			this.ctx.translate( x + width / 2, y + height / 2 );
-			this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
-			x = -width / 2;
-			y = -height / 2;
+	drawHighlight( layer, options ) {
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.setContext( this.ctx );
+			this.effectsRenderer.drawHighlight( layer, options );
 		}
-
-		// Highlights default to 0.3 opacity
-		let opacity = 0.3;
-		if ( typeof layer.opacity === 'number' && !Number.isNaN( layer.opacity ) ) {
-			opacity = Math.max( 0, Math.min( 1, layer.opacity ) );
-		} else if ( typeof layer.fillOpacity === 'number' && !Number.isNaN( layer.fillOpacity ) ) {
-			opacity = Math.max( 0, Math.min( 1, layer.fillOpacity ) );
-		}
-
-		this.ctx.globalAlpha = opacity;
-		this.ctx.fillStyle = layer.color || layer.fill || '#ffff00';
-		this.ctx.fillRect( x, y, width, height );
-
-		this.ctx.restore();
 	}
 
 	/**
 	 * Draw a blur effect region
+	 * Delegates to EffectsRenderer for the actual drawing.
 	 *
 	 * @param {Object} layer - Layer with blur properties
 	 * @param {Object} [options] - Rendering options
 	 * @param {HTMLImageElement} [options.imageElement] - Image for blur source (viewer mode)
 	 */
-	drawBlur ( layer, options ) {
-		const opts = options || {};
-		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-
-		let x = layer.x || 0;
-		let y = layer.y || 0;
-		let w = layer.width || 0;
-		let h = layer.height || 0;
-
-		if ( w <= 0 || h <= 0 ) {
-			return;
+	drawBlur( layer, options ) {
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.setContext( this.ctx );
+			this.effectsRenderer.drawBlur( layer, options );
 		}
-
-		// For viewer mode, coordinates need scaling
-		if ( !opts.scaled && this.baseWidth && this.baseHeight ) {
-			x = x * scale.sx;
-			y = y * scale.sy;
-			w = w * scale.sx;
-			h = h * scale.sy;
-		}
-
-		const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
-		const imgSource = opts.imageElement || this.backgroundImage;
-
-		this.ctx.save();
-
-		// If we have an image source, do proper blur
-		if ( imgSource && imgSource.complete ) {
-			// Create temp canvas for blur effect
-			const tempCanvas = document.createElement( 'canvas' );
-			tempCanvas.width = Math.max( 1, Math.ceil( w ) );
-			tempCanvas.height = Math.max( 1, Math.ceil( h ) );
-			const tempCtx = tempCanvas.getContext( '2d' );
-
-			if ( tempCtx ) {
-				// Calculate source coordinates
-				const imgW = imgSource.naturalWidth || imgSource.width;
-				const imgH = imgSource.naturalHeight || imgSource.height;
-				const canvasW = this.canvas ? this.canvas.width : w;
-				const canvasH = this.canvas ? this.canvas.height : h;
-				const imgScaleX = imgW / canvasW;
-				const imgScaleY = imgH / canvasH;
-
-				const srcX = x * imgScaleX;
-				const srcY = y * imgScaleY;
-				const srcW = w * imgScaleX;
-				const srcH = h * imgScaleY;
-
-				try {
-					tempCtx.drawImage(
-						imgSource,
-						srcX, srcY, srcW, srcH,
-						0, 0, tempCanvas.width, tempCanvas.height
-					);
-
-					this.ctx.filter = 'blur(' + radius + 'px)';
-					this.ctx.drawImage( tempCanvas, x, y, w, h );
-					this.ctx.filter = 'none';
-				} catch ( e ) {
-					// CORS or other error - fall back to gray overlay
-					this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-					this.ctx.fillRect( x, y, w, h );
-				}
-			}
-		} else if ( this.backgroundImage && this.backgroundImage.complete ) {
-			// Editor mode - blur the background directly
-			this.ctx.beginPath();
-			this.ctx.rect( x, y, w, h );
-			this.ctx.clip();
-
-			const prevFilter = this.ctx.filter || 'none';
-			this.ctx.filter = 'blur(' + radius + 'px)';
-			this.ctx.drawImage( this.backgroundImage, 0, 0 );
-			this.ctx.filter = prevFilter;
-		} else {
-			// Fallback: gray overlay
-			this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-			this.ctx.fillRect( x, y, w, h );
-		}
-
-		this.ctx.restore();
 	}
 
 	/**

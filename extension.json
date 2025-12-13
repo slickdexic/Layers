@@ -158,6 +158,7 @@
 				"ArrowRenderer.js",
 				"TextRenderer.js",
 				"ShapeRenderer.js",
+				"EffectsRenderer.js",
 				"LayerRenderer.js"
 			]
 		},
