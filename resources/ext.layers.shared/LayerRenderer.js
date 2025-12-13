@@ -170,20 +170,15 @@ class LayerRenderer {
 
 	// ========================================================================
 	// Shadow Delegation Methods
-	// These methods delegate to ShadowRenderer when available, with fallbacks
+	// These methods delegate to ShadowRenderer
 	// ========================================================================
 
 	/**
 	 * Clear shadow settings from context
 	 */
-	clearShadow () {
+	clearShadow() {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.clearShadow();
-		} else {
-			this.ctx.shadowColor = 'transparent';
-			this.ctx.shadowBlur = 0;
-			this.ctx.shadowOffsetX = 0;
-			this.ctx.shadowOffsetY = 0;
 		}
 	}
 
@@ -193,38 +188,9 @@ class LayerRenderer {
 	 * @param {Object} layer - Layer with shadow properties
 	 * @param {Object} scale - Scale factors from getScaleFactors()
 	 */
-	applyShadow ( layer, scale ) {
+	applyShadow( layer, scale ) {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.applyShadow( layer, scale );
-		} else {
-			// Fallback implementation
-			const scaleX = scale.sx || 1;
-			const scaleY = scale.sy || 1;
-			const scaleAvg = scale.avg || 1;
-
-			const shadowExplicitlyDisabled = layer.shadow === false ||
-				layer.shadow === 'false' ||
-				layer.shadow === 0 ||
-				layer.shadow === '0';
-
-			const shadowExplicitlyEnabled = layer.shadow === true ||
-				layer.shadow === 'true' ||
-				layer.shadow === 1 ||
-				layer.shadow === '1';
-
-			if ( shadowExplicitlyDisabled ) {
-				this.clearShadow();
-			} else if ( shadowExplicitlyEnabled ) {
-				this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
-				this.ctx.shadowBlur = ( typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8 ) * scaleAvg;
-				this.ctx.shadowOffsetX = ( typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2 ) * scaleX;
-				this.ctx.shadowOffsetY = ( typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2 ) * scaleY;
-			} else if ( typeof layer.shadow === 'object' && layer.shadow ) {
-				this.ctx.shadowColor = layer.shadow.color || 'rgba(0,0,0,0.4)';
-				this.ctx.shadowBlur = ( typeof layer.shadow.blur === 'number' ? layer.shadow.blur : 8 ) * scaleAvg;
-				this.ctx.shadowOffsetX = ( typeof layer.shadow.offsetX === 'number' ? layer.shadow.offsetX : 2 ) * scaleX;
-				this.ctx.shadowOffsetY = ( typeof layer.shadow.offsetY === 'number' ? layer.shadow.offsetY : 2 ) * scaleY;
-			}
 		}
 	}
 
@@ -235,23 +201,8 @@ class LayerRenderer {
 	 * @param {Object} scale - Scale factors
 	 * @return {number} Spread value in pixels (scaled)
 	 */
-	getShadowSpread ( layer, scale ) {
-		if ( this.shadowRenderer ) {
-			return this.shadowRenderer.getShadowSpread( layer, scale );
-		}
-		// Fallback
-		const scaleAvg = scale.avg || 1;
-		if ( !this.hasShadowEnabled( layer ) ) {
-			return 0;
-		}
-		if ( typeof layer.shadowSpread === 'number' && layer.shadowSpread > 0 ) {
-			return layer.shadowSpread * scaleAvg;
-		}
-		if ( typeof layer.shadow === 'object' && layer.shadow &&
-			typeof layer.shadow.spread === 'number' && layer.shadow.spread > 0 ) {
-			return layer.shadow.spread * scaleAvg;
-		}
-		return 0;
+	getShadowSpread( layer, scale ) {
+		return this.shadowRenderer ? this.shadowRenderer.getShadowSpread( layer, scale ) : 0;
 	}
 
 	/**
@@ -260,15 +211,8 @@ class LayerRenderer {
 	 * @param {Object} layer - Layer to check
 	 * @return {boolean} True if shadow is enabled
 	 */
-	hasShadowEnabled ( layer ) {
-		if ( this.shadowRenderer ) {
-			return this.shadowRenderer.hasShadowEnabled( layer );
-		}
-		return layer.shadow === true ||
-			layer.shadow === 'true' ||
-			layer.shadow === 1 ||
-			layer.shadow === '1' ||
-			( typeof layer.shadow === 'object' && layer.shadow );
+	hasShadowEnabled( layer ) {
+		return this.shadowRenderer ? this.shadowRenderer.hasShadowEnabled( layer ) : false;
 	}
 
 	/**
@@ -278,21 +222,10 @@ class LayerRenderer {
 	 * @param {Object} scale - Scale factors
 	 * @return {Object} Shadow parameters {offsetX, offsetY, blur, color, offscreenOffset}
 	 */
-	getShadowParams ( layer, scale ) {
-		if ( this.shadowRenderer ) {
-			return this.shadowRenderer.getShadowParams( layer, scale );
-		}
-		// Fallback
-		const scaleX = scale.sx || 1;
-		const scaleY = scale.sy || 1;
-		const scaleAvg = scale.avg || 1;
-		return {
-			offsetX: ( typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2 ) * scaleX,
-			offsetY: ( typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2 ) * scaleY,
-			blur: ( typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8 ) * scaleAvg,
-			color: layer.shadowColor || 'rgba(0,0,0,0.4)',
-			offscreenOffset: 10000
-		};
+	getShadowParams( layer, scale ) {
+		return this.shadowRenderer ?
+			this.shadowRenderer.getShadowParams( layer, scale ) :
+			{ offsetX: 0, offsetY: 0, blur: 0, color: 'transparent', offscreenOffset: 0 };
 	}
 
 	/**
@@ -305,14 +238,10 @@ class LayerRenderer {
 	 * @param {Function} drawExpandedPathFn - Function that creates the expanded path
 	 * @param {number} [opacity=1] - Opacity to apply to the shadow (0-1)
 	 */
-	drawSpreadShadow ( layer, scale, spread, drawExpandedPathFn, opacity ) {
+	drawSpreadShadow( layer, scale, spread, drawExpandedPathFn, opacity ) {
 		if ( this.shadowRenderer ) {
-			// ShadowRenderer needs the current context
 			this.shadowRenderer.setContext( this.ctx );
 			this.shadowRenderer.drawSpreadShadow( layer, scale, spread, drawExpandedPathFn, opacity );
-		} else {
-			// Fallback: just apply basic shadow
-			this.applyShadow( layer, scale );
 		}
 	}
 
@@ -326,14 +255,10 @@ class LayerRenderer {
 	 * @param {Function} drawPathFn - Function that creates the path
 	 * @param {number} [opacity=1] - Opacity to apply to the shadow (0-1)
 	 */
-	drawSpreadShadowStroke ( layer, scale, strokeWidth, drawPathFn, opacity ) {
+	drawSpreadShadowStroke( layer, scale, strokeWidth, drawPathFn, opacity ) {
 		if ( this.shadowRenderer ) {
-			// ShadowRenderer needs the current context
 			this.shadowRenderer.setContext( this.ctx );
 			this.shadowRenderer.drawSpreadShadowStroke( layer, scale, strokeWidth, drawPathFn, opacity );
-		} else {
-			// Fallback: just apply basic shadow
-			this.applyShadow( layer, scale );
 		}
 	}
 
@@ -343,26 +268,11 @@ class LayerRenderer {
 	 * @param {number|undefined} alpha - Opacity multiplier (0-1)
 	 * @param {Function} drawFn - Drawing function to execute
 	 */
-	withLocalAlpha ( alpha, drawFn ) {
+	withLocalAlpha( alpha, drawFn ) {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.withLocalAlpha( alpha, drawFn );
-		} else {
-			// Fallback
-			if ( typeof drawFn !== 'function' ) {
-				return;
-			}
-			if ( typeof alpha !== 'number' ) {
-				drawFn.call( this );
-				return;
-			}
-			const clampedAlpha = Math.max( 0, Math.min( 1, alpha ) );
-			const previousAlpha = this.ctx.globalAlpha;
-			this.ctx.globalAlpha = previousAlpha * clampedAlpha;
-			try {
-				drawFn.call( this );
-			} finally {
-				this.ctx.globalAlpha = previousAlpha;
-			}
+		} else if ( typeof drawFn === 'function' ) {
+			drawFn.call( this );
 		}
 	}
 
