@@ -45,9 +45,12 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Added 4 new fallback tests for DeepClone (81% → 100% coverage)
 - Added 9 new tests for ToolManager destroy/getToolDisplayName (84% → 90% coverage)
 - Added 38 new tests for TextUtils (88% → 99% statements, 63% → 91% branches)
+- Added 9 new tests for TextInputController event handlers (86% → 100% coverage)
+- Added 9 new tests for LayerRenderer shadow methods (87% → 96% coverage)
+- Added 9 new tests for ShapeRenderer shadow integration (65% → 80% coverage)
 - Removed 17 tests for dead code
-- All **4,443 Jest tests passing**
-- 91 test suites, 90% statement coverage
+- All **4,470 Jest tests passing**
+- 91 test suites, 91% statement coverage, 79% branch coverage
 
 ### Documentation
 - Updated all documentation with accurate metrics

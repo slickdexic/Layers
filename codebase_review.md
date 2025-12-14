@@ -12,7 +12,7 @@ The "Layers" extension provides non-destructive image annotation capabilities fo
 
 ### Overall Assessment: 7.5/10
 
-The extension is **functional and usable** with good test coverage (89%), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete** - all prototype patterns have been eliminated.
+The extension is **functional and usable** with good test coverage (91%), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete** - all prototype patterns have been eliminated.
 
 **Honest evaluation:**
 - The core functionality works well
@@ -28,7 +28,7 @@ The extension is **functional and usable** with good test coverage (89%), solid 
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **Test Coverage** | 9/10 | 89% line coverage, 4,376 tests all passing |
+| **Test Coverage** | 9/10 | 91% statement coverage, 4,470 tests all passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
 | **PHP Architecture** | 8/10 | Clean DI, service wiring, no god classes (largest 810 lines) |
 | **Documentation** | 7/10 | Good copilot-instructions.md, some docs need updates |
@@ -40,7 +40,7 @@ The extension is **functional and usable** with good test coverage (89%), solid 
 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
-3. **Tests catch regressions** - 4,376 tests all passing
+3. **Tests catch regressions** - 4,470 tests all passing
 4. **Viewer is lightweight** - reading articles loads only 682 lines (viewer) + 3,888 lines (shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
 6. **ES6 100% complete** - All 66 classes use ES6 syntax, 0 prototype patterns remain
