@@ -84,9 +84,9 @@ The extension is **functional and usable** with good test coverage (89%), solid 
 
 | Category | Value | Target | Status |
 |----------|-------|--------|--------|
-| Jest tests passing | **4,400** | - | ✅ All passing |
+| Jest tests passing | **4,443** | - | ✅ All passing |
 | Jest tests failing | **0** | 0 | ✅ All fixed |
-| Jest test suites | **90** | - | ✅ Good |
+| Jest test suites | **91** | - | ✅ Good |
 | Statement coverage | **90%** | 80% | ✅ Exceeded |
 | Branch coverage | **78%** | 65% | ✅ Exceeded |
 | Line coverage | **90%** | 80% | ✅ Exceeded |

@@ -44,9 +44,10 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Added 38 new tests for LayersViewer class
 - Added 4 new fallback tests for DeepClone (81% → 100% coverage)
 - Added 9 new tests for ToolManager destroy/getToolDisplayName (84% → 90% coverage)
+- Added 38 new tests for TextUtils (88% → 99% statements, 63% → 91% branches)
 - Removed 17 tests for dead code
-- All **4,405 Jest tests passing**
-- 90 test suites, 90% statement coverage
+- All **4,443 Jest tests passing**
+- 91 test suites, 90% statement coverage
 
 ### Documentation
 - Updated all documentation with accurate metrics
