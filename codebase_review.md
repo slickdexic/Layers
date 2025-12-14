@@ -1,8 +1,8 @@
 # Layers MediaWiki Extension - Critical Code Review
 
-**Review Date:** December 13, 2025  
+**Review Date:** December 14, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 0.8.5
+**Version:** 0.8.6
 
 ---
 
@@ -28,7 +28,7 @@ The extension is **functional and usable** with good test coverage (91%), solid 
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **Test Coverage** | 9/10 | 91% statement coverage, 4,470 tests all passing |
+| **Test Coverage** | 9/10 | 91.22% statement coverage, 4,617 tests all passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
 | **PHP Architecture** | 8/10 | Clean DI, service wiring, no god classes (largest 810 lines) |
 | **Documentation** | 7/10 | Good copilot-instructions.md, some docs need updates |
@@ -40,7 +40,7 @@ The extension is **functional and usable** with good test coverage (91%), solid 
 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
-3. **Tests catch regressions** - 4,470 tests all passing
+3. **Tests catch regressions** - 4,617 tests all passing
 4. **Viewer is lightweight** - reading articles loads only 682 lines (viewer) + 3,888 lines (shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
 6. **ES6 100% complete** - All 66 classes use ES6 syntax, 0 prototype patterns remain
@@ -84,13 +84,13 @@ The extension is **functional and usable** with good test coverage (91%), solid 
 
 | Category | Value | Target | Status |
 |----------|-------|--------|--------|
-| Jest tests passing | **4,443** | - | ✅ All passing |
+| Jest tests passing | **4,617** | - | ✅ All passing |
 | Jest tests failing | **0** | 0 | ✅ All fixed |
-| Jest test suites | **91** | - | ✅ Good |
-| Statement coverage | **90%** | 80% | ✅ Exceeded |
-| Branch coverage | **78%** | 65% | ✅ Exceeded |
-| Line coverage | **90%** | 80% | ✅ Exceeded |
-| Function coverage | **88%** | 80% | ✅ Exceeded |
+| Jest test suites | **92** | - | ✅ Good |
+| Statement coverage | **91.22%** | 80% | ✅ Exceeded |
+| Branch coverage | **79.18%** | 65% | ✅ Exceeded |
+| Line coverage | **91.38%** | 80% | ✅ Exceeded |
+| Function coverage | **89.16%** | 80% | ✅ Exceeded |
 | Integration test files | **3** | 3+ | ✅ Complete |
 | Integration tests | **138** | 50+ | ✅ Exceeded |
 
@@ -199,8 +199,8 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 
 ### Strengths ✅
 
-- **4,376 tests passing** - substantial coverage
-- **89% statement coverage** - genuinely high
+- **4,617 tests passing** - substantial coverage
+- **91.22% statement coverage** - genuinely high
 - **Well-organized** - dedicated directories for each component
 - **Controllers well-tested** - 85%+ coverage on extracted controllers
 - **Integration tests** - 138 tests across 3 workflow files:
@@ -215,7 +215,7 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 | Issue | Severity |
 |-------|----------|
 | No E2E test CI pipeline | ⚠️ Playwright tests exist but not in CI |
-| ResizeCalculator coverage low | ⚠️ 74.59% statements |
+| CanvasManager coverage | ⚠️ 78% statements, 61% branches |
 
 ---
 
@@ -227,7 +227,7 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 | Global export cleanup | ✅ Complete | - | 0 remaining (was 50) |
 | Event listener audit | ⚠️ Medium | 1 week | - |
 | ES6 migration | ✅ Complete | - | 100% done |
-| ResizeCalculator coverage | ⚠️ Low | 1 day | 74.59% → target 90% |
+| ResizeCalculator coverage | ✅ Complete | - | 93% coverage |
 
 **Total estimated effort: 4-6 weeks remaining**
 
@@ -237,9 +237,9 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 
 ### Immediate (This Week)
 
-1. **Improve ResizeCalculator coverage** - Currently 74.59%
-2. **Update documentation versions** - Ensure 0.8.5 is consistent
-3. **Start ToolManager splitting** - Reduce from 1,155 lines
+1. **Improve CanvasManager coverage** - Currently 78% statements, 61% branches
+2. **Start ToolManager splitting** - Reduce from 1,155 lines
+3. **Set up E2E tests in CI** - Playwright tests exist but aren't automated
 
 ### Short-term (1-2 Months)
 
@@ -304,19 +304,19 @@ The Layers extension is a **mature product with excellent test coverage** and **
 
 **Key achievements:**
 - ES6 migration 100% complete (66 classes, 0 prototype methods)
-- 4,376 tests all passing (up from 4,029)
+- 4,617 tests all passing (up from 4,029)
 - 138 integration tests
 - Global exports: 0 remaining (complete migration from 50)
 - God classes reduced from 7 to 5
-- Test coverage increased to 89%
+- Test coverage increased to 91.22% statements, 79.18% branches
 
 **Remaining challenges:**
 - 5 god classes over 1,000 lines
 - Event listener cleanup needed
-- ResizeCalculator coverage needs improvement
+- CanvasManager coverage (78%) could be improved
 
 **Priority recommendation:** Improve ResizeCalculator test coverage, then focus on splitting god classes. The test suite enables safe refactoring.
 
 ---
 
-*Review performed by GitHub Copilot (Claude Opus 4.5) on December 13, 2025*
+*Review performed by GitHub Copilot (Claude Opus 4.5) on December 14, 2025*

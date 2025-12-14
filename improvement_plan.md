@@ -1,7 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 13, 2025  
+**Last Updated:** December 14, 2025  
 **Status:** Active  
+**Version:** 0.8.6  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
@@ -15,7 +16,7 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Strong | 4,387 tests, 89% coverage, all passing |
+| **Test Suite** | ✅ Strong | 4,617 tests, 91.22% coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer+Shared ~4,570 lines, Editor ~31,881 lines |
 | **ES6 Migration** | ✅ Complete | 66 ES6 classes, 0 prototype methods |
@@ -294,6 +295,45 @@ Extracted `ResizeCalculator.js` (806 lines) with all shape-specific resize calcu
 
 ---
 
+### P2.9 Improve StateManager Coverage
+
+**Status:** ✅ COMPLETE (December 14, 2025)  
+**Effort:** 3 hours  
+**Impact:** Coverage improved from 68% to 98%
+
+**Result:**
+- Added 101 new tests in `StateManager.test.js`
+- Statement coverage: 98.03%
+- Function coverage: 100%
+- Branch coverage: 85.29%
+- Tests cover: constructor, get/set, update, atomic operations, locking, subscribe, layer operations, selection, history, export/import, destroy
+
+---
+
+### P2.10 Improve APIManager Coverage
+
+**Status:** ✅ COMPLETE (December 14, 2025)  
+**Effort:** 2 hours  
+**Impact:** Coverage improved from 84% to 87%
+
+**Result:**
+- Added 19 new tests for save/load workflows
+- Tests cover: loadLayersBySetName, buildSavePayload, performSaveWithRetry, handleSaveSuccess, enable/disableSaveButton
+
+---
+
+### P2.11 Improve LayersNamespace Coverage
+
+**Status:** ✅ COMPLETE (December 14, 2025)  
+**Effort:** 1 hour  
+**Impact:** Coverage improved from 27% to 78%
+
+**Result:**
+- Added 27 new tests for namespace registration
+- Tests cover: getExportRegistry, registerExport, initializeNamespace, exportRegistry structure
+
+---
+
 ### P2.8 Improve LayerPanel Coverage
 
 **Status:** ✅ COMPLETE (December 13, 2025)  
@@ -393,6 +433,9 @@ P2.4 Split TransformController: ████████████████
 P2.5 ShadowRenderer Coverage: ████████████████████ 100% ✓
 P2.6 ResizeCalculator Coverage: ██████████████████░░ 93% ✓ (76 tests)
 P2.8 LayerPanel Coverage:     █████████████████░░░ 87% ✓ (28 tests)
+P2.9 StateManager Coverage:   ████████████████████ 98% ✓ (101 tests)
+P2.10 APIManager Coverage:    █████████████████░░░ 87% ✓ (19 tests)
+P2.11 LayersNamespace Coverage: ███████████████░░░░░ 78% ✓ (27 tests)
 
 Phase 3 (Modernization):
 P3.1 Complete ES6 Migration:  ████████████████████ 100% ✓
@@ -431,7 +474,9 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 - [x] ES6 classes throughout ✓ (100%)
 - [x] 0 direct global exports ✓
 - [x] 0 prototype methods ✓
-- [x] All tests passing ✓ (4,376)
+- [x] All tests passing ✓ (4,617)
+- [x] >90% statement coverage ✓ (91.22%)
+- [x] >75% branch coverage ✓ (79.18%)
 
 ---
 
@@ -480,12 +525,25 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 
 ---
 
-## Recent Coverage Improvements (Dec 13, 2025)
+## Recent Coverage Improvements
+
+### December 14, 2025 (v0.8.6)
+
+| Module | Before | After | Tests Added |
+|--------|--------|-------|-------------|
+| StateManager.js | 68% | 98% | +101 tests |
+| APIManager.js | 84% | 87% | +19 tests |
+| LayersNamespace.js | 27% | 78% | +27 tests |
+
+### December 13, 2025 (v0.8.5)
 
 | Module | Before | After | Tests Added |
 |--------|--------|-------|-------------|
 | DeepClone.js | 81% | 100% | +4 fallback tests |
 | ToolManager.js | 84% | 90% | +9 destroy/getToolDisplayName tests |
+| ShadowRenderer.js | 72% | 100% | +78 tests |
+| ResizeCalculator.js | 75% | 93% | +76 tests |
+| TextUtils.js | 88% | 99% | +38 tests |
 
 ---
 
@@ -514,4 +572,4 @@ find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | awk '
 ---
 
 *Plan created by GitHub Copilot (Claude Opus 4.5) on December 10, 2025*  
-*Last updated: December 13, 2025*
+*Last updated: December 14, 2025 (v0.8.6)*
