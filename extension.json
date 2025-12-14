@@ -154,6 +154,7 @@
 			"targets": [ "desktop", "mobile" ],
 			"scripts": [
 				"DeepClone.js",
+				"BoundsCalculator.js",
 				"PolygonGeometry.js",
 				"ShadowRenderer.js",
 				"ArrowRenderer.js",

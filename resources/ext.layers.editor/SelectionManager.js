@@ -12,6 +12,7 @@
 		( window.Layers && window.Layers.Selection && window.Layers.Selection.MarqueeSelection );
 	const SelectionHandles = window.SelectionHandles ||
 		( window.Layers && window.Layers.Selection && window.Layers.Selection.SelectionHandles );
+	const BoundsCalculator = window.Layers && window.Layers.Utils && window.Layers.Utils.BoundsCalculator;
 
 	/**
 	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
@@ -1152,10 +1153,17 @@
 		 * @return {Object|null} Bounds {x,y,width,height} or null
 		 */
 		getLayerBoundsCompat( layer ) {
+			// Prefer CanvasManager.getLayerBounds if available
 			if ( this.canvasManager && typeof this.canvasManager.getLayerBounds === 'function' ) {
 				return this.canvasManager.getLayerBounds( layer );
 			}
 
+			// Use BoundsCalculator utility if available
+			if ( BoundsCalculator ) {
+				return BoundsCalculator.getLayerBounds( layer );
+			}
+
+			// Fallback: inline implementation for when BoundsCalculator not loaded
 			if ( !layer ) {
 				return null;
 			}
