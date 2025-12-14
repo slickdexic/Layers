@@ -86,6 +86,7 @@ describe( 'APIManager', function () {
 					return null;
 				} ),
 				set: jest.fn(),
+				markClean: jest.fn(),
 				subscribe: jest.fn( function () {
 					return jest.fn();
 				} )
@@ -865,6 +866,234 @@ describe( 'APIManager', function () {
 			const result = apiManager.handleLoadError( 'network-error', { error: { info: 'Connection lost' } } );
 
 			expect( result ).toHaveProperty( 'operation', 'load' );
+		} );
+	} );
+
+	describe( 'loadLayersBySetName', function () {
+		it( 'should reject when no set name provided', async function () {
+			await expect( apiManager.loadLayersBySetName( '' ) ).rejects.toThrow( 'No set name provided' );
+			await expect( apiManager.loadLayersBySetName( null ) ).rejects.toThrow( 'No set name provided' );
+		} );
+
+		it( 'should show spinner when loading', function () {
+			apiManager.api.get = jest.fn().mockReturnValue( new Promise( () => {} ) );
+
+			apiManager.loadLayersBySetName( 'test-set' );
+
+			expect( mockEditor.uiManager.showSpinner ).toHaveBeenCalled();
+		} );
+
+		it( 'should reject on invalid API response', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {} );
+
+			await expect( apiManager.loadLayersBySetName( 'test-set' ) )
+				.rejects.toThrow( 'Invalid API response' );
+		} );
+
+		it( 'should process layerset data on success', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [ { id: 'layer1', type: 'rectangle' } ] },
+						baseWidth: 800,
+						baseHeight: 600
+					},
+					set_revisions: [ { ls_id: 1 } ],
+					named_sets: [ { name: 'default' } ]
+				}
+			} );
+
+			mockEditor.canvasManager.selectionManager = { clearSelection: jest.fn() };
+
+			await apiManager.loadLayersBySetName( 'default' );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'default' );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'hasUnsavedChanges', false );
+		} );
+
+		it( 'should handle missing layerset gracefully', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {}
+			} );
+
+			await apiManager.loadLayersBySetName( 'new-set' );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', [] );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentLayerSetId', null );
+		} );
+
+		it( 'should clear selection when switching layer sets', async function () {
+			const mockClearSelection = jest.fn();
+			mockEditor.canvasManager.selectionManager = { clearSelection: mockClearSelection };
+			
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [] },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			await apiManager.loadLayersBySetName( 'test-set' );
+
+			expect( mockClearSelection ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'buildSavePayload', function () {
+		it( 'should build correct payload structure', function () {
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				if ( key === 'layers' ) {
+					return [ { id: 'layer1', type: 'rectangle' } ];
+				}
+				if ( key === 'currentSetName' ) {
+					return 'my-set';
+				}
+				return null;
+			} );
+
+			const payload = apiManager.buildSavePayload();
+
+			expect( payload.action ).toBe( 'layerssave' );
+			expect( payload.filename ).toBe( 'Test_Image.jpg' );
+			expect( payload.setname ).toBe( 'my-set' );
+			expect( payload.format ).toBe( 'json' );
+			expect( payload.data ).toBe( '[{"id":"layer1","type":"rectangle"}]' );
+		} );
+
+		it( 'should default to empty array if no layers', function () {
+			mockEditor.stateManager.get = jest.fn( function () {
+				return null;
+			} );
+
+			const payload = apiManager.buildSavePayload();
+
+			expect( payload.data ).toBe( '[]' );
+		} );
+
+		it( 'should default to "default" set name if not specified', function () {
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				if ( key === 'layers' ) {
+					return [];
+				}
+				return null;
+			} );
+
+			const payload = apiManager.buildSavePayload();
+
+			expect( payload.setname ).toBe( 'default' );
+		} );
+	} );
+
+	describe( 'performSaveWithRetry', function () {
+		it( 'should call API with csrf token', async function () {
+			const mockResolve = jest.fn();
+			const mockReject = jest.fn();
+			const payload = { action: 'layerssave', data: '[]' };
+
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layerssave: { success: 1 }
+			} );
+			apiManager.handleSaveSuccess = jest.fn();
+			apiManager.enableSaveButton = jest.fn();
+
+			await apiManager.performSaveWithRetry( payload, 0, mockResolve, mockReject );
+
+			expect( apiManager.api.postWithToken ).toHaveBeenCalledWith( 'csrf', payload );
+			expect( mockResolve ).toHaveBeenCalled();
+		} );
+
+		it( 'should hide spinner on success', async function () {
+			const mockResolve = jest.fn();
+			const mockReject = jest.fn();
+			const payload = { action: 'layerssave', data: '[]' };
+
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layerssave: { success: 1 }
+			} );
+			apiManager.handleSaveSuccess = jest.fn();
+			apiManager.enableSaveButton = jest.fn();
+
+			await apiManager.performSaveWithRetry( payload, 0, mockResolve, mockReject );
+
+			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
+		} );
+
+		it( 'should call handleSaveSuccess on success', async function () {
+			const mockResolve = jest.fn();
+			const mockReject = jest.fn();
+			const payload = { action: 'layerssave', data: '[]' };
+			const response = { layerssave: { success: 1 } };
+
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( response );
+			apiManager.handleSaveSuccess = jest.fn();
+			apiManager.enableSaveButton = jest.fn();
+
+			await apiManager.performSaveWithRetry( payload, 0, mockResolve, mockReject );
+
+			expect( apiManager.handleSaveSuccess ).toHaveBeenCalledWith( response );
+		} );
+	} );
+
+	describe( 'handleSaveSuccess', function () {
+		beforeEach( function () {
+			mockEditor.toolbar = { saveButton: { disabled: false } };
+			mockEditor.buildRevisionSelector = jest.fn();
+			mockEditor.buildSetSelector = jest.fn();
+		} );
+
+		it( 'should show success notification', function () {
+			apiManager.handleSaveSuccess( { layerssave: { success: 1 } } );
+
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should mark state as clean', function () {
+			apiManager.handleSaveSuccess( { layerssave: { success: 1 } } );
+
+			expect( mockEditor.stateManager.markClean ).toHaveBeenCalled();
+		} );
+
+		it( 'should reload revisions on success', function () {
+			apiManager.reloadRevisions = jest.fn();
+			apiManager.handleSaveSuccess( { layerssave: { success: 1 } } );
+
+			expect( apiManager.reloadRevisions ).toHaveBeenCalled();
+		} );
+
+		it( 'should call handleSaveError when not successful', function () {
+			apiManager.handleSaveError = jest.fn();
+			apiManager.handleSaveSuccess( { layerssave: { success: 0 } } );
+
+			expect( apiManager.handleSaveError ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'disableSaveButton / enableSaveButton', function () {
+		beforeEach( function () {
+			mockEditor.toolbar = { saveButton: { disabled: false } };
+		} );
+
+		it( 'should disable save button', function () {
+			apiManager.disableSaveButton();
+
+			expect( mockEditor.toolbar.saveButton.disabled ).toBe( true );
+		} );
+
+		it( 'should enable save button', function () {
+			mockEditor.toolbar.saveButton.disabled = true;
+			apiManager.enableSaveButton();
+
+			expect( mockEditor.toolbar.saveButton.disabled ).toBe( false );
+		} );
+
+		it( 'should handle missing toolbar gracefully', function () {
+			mockEditor.toolbar = null;
+
+			expect( () => apiManager.disableSaveButton() ).not.toThrow();
+			expect( () => apiManager.enableSaveButton() ).not.toThrow();
 		} );
 	} );
 
