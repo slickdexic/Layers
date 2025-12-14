@@ -399,11 +399,11 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 - [x] ShadowRenderer coverage > 90% ✓ (100%)
 
 ### Project "Healthy" When:
-- [ ] 0 files > 1,000 lines (currently 5)
+- [ ] 0 files > 1,000 lines (currently 6)
 - [x] ES6 classes throughout ✓ (100%)
 - [x] 0 direct global exports ✓
 - [x] 0 prototype methods ✓
-- [x] All tests passing ✓ (4,199)
+- [x] All tests passing ✓ (4,300)
 
 ---
 
@@ -439,14 +439,14 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 | CanvasManager.js | 1,975 | P2.3 - Compaction complete, ~50% extracted |
 | LayerPanel.js | 1,430 | P2.5 - LayerItemFactory extracted ✓ |
 | LayersEditor.js | 1,284 | Extract revision/dialog management |
-| SelectionManager.js | 1,258 | Extract selection state handlers |
+| SelectionManager.js | 1,266 | P2.7 - BoundsCalculator extracted ✓ |
 | ToolManager.js | 1,155 | Already has ShapeFactory/ToolStyles |
-| ShapeRenderer.js | 1,028 | Extract polygon/star geometry |
+| ShapeRenderer.js | 1,050 | P2.6 - PolygonGeometry extracted ✓ |
 
 **Recommended Next Actions:**
-1. **Split ShapeRenderer** (P2.6) - Extract polygon/star geometry calculations
-2. **Split SelectionManager** (P2.7) - Extract multi-selection logic, bounds calculation
-3. **Split ToolManager** (P2.8) - Extract tool configuration, keyboard shortcuts
+1. **Split ToolManager** (P2.8) - Extract text editor controller
+2. **Split LayersEditor** (P2.9) - Extract cancel dialog fallback to DialogManager
+3. **Compact SelectionManager** - Remove fallback code after production validation
 
 ---
 
