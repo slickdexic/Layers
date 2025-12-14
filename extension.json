@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "0.8.6",
+	"version": "0.8.7",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -21,6 +21,7 @@
 	"AutoloadClasses": {
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave": "src/Api/ApiLayersSave.php",
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo": "src/Api/ApiLayersInfo.php",
+		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersDelete": "src/Api/ApiLayersDelete.php",
 		"MediaWiki\\Extension\\Layers\\Hooks": "src/Hooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks": "src/Hooks/WikitextHooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\UIHooks": "src/Hooks/UIHooks.php",
@@ -64,7 +65,7 @@
 		},
 		"LayersMaxRevisionsPerSet": {
 			"description": "Maximum revisions to keep per named layer set (older ones are pruned)",
-			"value": 25
+			"value": 50
 		},
 		"LayersDefaultSetName": {
 			"description": "Default name for layer sets when none is specified",
@@ -140,7 +141,9 @@
 	},
 	"APIModules": {
 		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
-		"layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo"
+		"layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo",
+		"layersdelete": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersDelete",
+		"layersrename": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersRename"
 	},
 	"MessagesDirs": {
 		"Layers": [
@@ -485,6 +488,30 @@
 
 				"layers-validation-layer-invalid",
 				"layers-validation-id-required",
+				"layers-delete-set",
+				"layers-delete-set-tooltip",
+				"layers-delete-set-confirm",
+				"layers-delete-set-success",
+				"layers-delete-failed",
+				"layers-delete-permission-denied",
+				"layers-delete-default-set",
+				"layers-clear-default-set-confirm",
+				"layers-default-set-cleared",
+				"layers-no-layers-to-clear",
+				"layers-rename-set",
+				"layers-rename-set-tooltip",
+				"layers-rename-set-prompt",
+				"layers-rename-set-success",
+				"layers-rename-failed",
+				"layers-rename-permission-denied",
+				"layers-cannot-rename-default",
+				"layers-cannot-rename-to-default",
+				"layers-setname-exists",
+				"layers-invalid-setname",
+				"layers-export-image",
+				"layers-export-image-tooltip",
+				"layers-export-success",
+				"layers-export-failed",
 				"layers-validation-type-required",
 				"layers-validation-type-invalid",
 				"layers-validation-id-type",

@@ -29,9 +29,27 @@ class EditLayersAction extends \Action {
 			$user = $this->getUser();
 			$title = $this->getTitle();
 
-			if ( !$user->isAllowed( 'editlayers' ) ) {
-				$out->showErrorPage( 'permissionserrorstext-withaction', 'layers-editor-title' );
-				return;
+			// Check permission using Authority (modern MW 1.36+) or PermissionManager
+			$hasPermission = false;
+			$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
+				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+				: null;
+
+			if ( $services && method_exists( $services, 'getPermissionManager' ) ) {
+				// Use PermissionManager (MW 1.33+)
+				$permManager = $services->getPermissionManager();
+				$hasPermission = $permManager->userHasRight( $user, 'editlayers' );
+			} elseif ( method_exists( $this, 'getAuthority' ) ) {
+				// Use Authority interface (MW 1.36+)
+				$authority = $this->getAuthority();
+				$hasPermission = $authority->isAllowed( 'editlayers' );
+			} elseif ( method_exists( $user, 'isAllowed' ) ) {
+				// Legacy fallback
+				$hasPermission = $user->isAllowed( 'editlayers' );
+			}
+
+			if ( !$hasPermission ) {
+				throw new \PermissionsError( 'editlayers' );
 			}
 
 			if ( !$title || !$title->inNamespace( NS_FILE ) ) {

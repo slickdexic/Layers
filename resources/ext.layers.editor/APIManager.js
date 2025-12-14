@@ -878,6 +878,374 @@
 		} );
 	}
 
+	/**
+	 * Delete a named layer set.
+	 * Only the original creator or an admin can delete a set.
+	 *
+	 * @param {string} setName - Name of the layer set to delete
+	 * @return {Promise} Resolves with result or rejects with error
+	 */
+	deleteLayerSet( setName ) {
+		return new Promise( ( resolve, reject ) => {
+			if ( !setName ) {
+				reject( new Error( 'Set name is required' ) );
+				return;
+			}
+
+			// Get filename from editor config (not stateManager)
+			const filename = this.editor.filename ||
+				( this.editor.config && this.editor.config.filename ) ||
+				( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) &&
+					mw.config.get( 'wgLayersEditorInit' ).filename );
+			if ( !filename ) {
+				reject( new Error( 'No filename available' ) );
+				return;
+			}
+
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+				mw.log( '[APIManager] deleteLayerSet:', setName, 'for file:', filename );
+			}
+
+			this.editor.uiManager.showSpinner();
+
+			this.api.postWithToken( 'csrf', {
+				action: 'layersdelete',
+				filename: filename,
+				setname: setName
+			} ).then( ( data ) => {
+				this.editor.uiManager.hideSpinner();
+
+				// Check for API error in response
+				if ( data.error ) {
+					const errorCode = data.error.code || 'unknown';
+					const errorInfo = data.error.info || 'Unknown error';
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.error( '[APIManager] deleteLayerSet API error:', errorCode, errorInfo );
+					}
+
+					if ( errorCode === 'permissiondenied' ) {
+						const msg = this.getMessage(
+							'layers-delete-permission-denied',
+							'You do not have permission to delete this layer set'
+						);
+						mw.notify( msg, { type: 'error' } );
+						reject( new Error( msg ) );
+						return;
+					}
+
+					const msg = this.getMessage( 'layers-delete-failed', 'Failed to delete layer set' );
+					mw.notify( msg + ': ' + errorInfo, { type: 'error' } );
+					reject( new Error( errorInfo ) );
+					return;
+				}
+
+				if ( data.layersdelete && data.layersdelete.success ) {
+					const msg = this.getMessage(
+						'layers-delete-set-success',
+						`Layer set "${setName}" deleted`
+					).replace( '$1', setName ).replace( '$2', data.layersdelete.revisionsDeleted || 0 );
+
+					mw.notify( msg, { type: 'success' } );
+
+					// Reload to switch to another set or show empty state
+					this.loadLayers().then( () => {
+						resolve( data.layersdelete );
+					} ).catch( () => {
+						// Even if reload fails, the delete succeeded
+						resolve( data.layersdelete );
+					} );
+				} else {
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.error( '[APIManager] deleteLayerSet unexpected response:', data );
+					}
+					const errorMsg = this.getMessage( 'layers-delete-failed', 'Failed to delete layer set' );
+					mw.notify( errorMsg, { type: 'error' } );
+					reject( new Error( errorMsg ) );
+				}
+			} ).catch( ( code, data ) => {
+				this.editor.uiManager.hideSpinner();
+
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[APIManager] deleteLayerSet error:', code, data );
+				}
+
+				// Check for permission denied
+				if ( code === 'permissiondenied' ) {
+					const msg = this.getMessage(
+						'layers-delete-permission-denied',
+						'You do not have permission to delete this layer set'
+					);
+					mw.notify( msg, { type: 'error' } );
+					reject( new Error( msg ) );
+					return;
+				}
+
+				// Handle other API errors
+				const errorInfo = ( data && data.error && data.error.info ) || code || 'Unknown error';
+				const errorMsg = this.getMessage( 'layers-delete-failed', 'Failed to delete layer set' );
+				mw.notify( errorMsg + ': ' + errorInfo, { type: 'error' } );
+				reject( new Error( errorInfo ) );
+			} );
+		} );
+	}
+
+	/**
+	 * Rename a named layer set.
+	 * Only the original creator or an admin can rename a set.
+	 *
+	 * @param {string} oldName - Current name of the layer set
+	 * @param {string} newName - New name for the layer set
+	 * @return {Promise} Resolves with result or rejects with error
+	 */
+	renameLayerSet( oldName, newName ) {
+		return new Promise( ( resolve, reject ) => {
+			if ( !oldName || !newName ) {
+				reject( new Error( 'Both old and new names are required' ) );
+				return;
+			}
+
+			if ( oldName === newName ) {
+				reject( new Error( 'New name must be different from old name' ) );
+				return;
+			}
+
+			// Validate new name format (alphanumeric, hyphens, underscores, 1-50 chars)
+			if ( !/^[a-zA-Z0-9_-]{1,50}$/.test( newName ) ) {
+				const msg = this.getMessage(
+					'layers-invalid-setname',
+					'Invalid set name. Use only letters, numbers, hyphens, and underscores (1-50 characters).'
+				);
+				mw.notify( msg, { type: 'error' } );
+				reject( new Error( msg ) );
+				return;
+			}
+
+			// Get filename from editor config
+			const filename = this.editor.filename ||
+				( this.editor.config && this.editor.config.filename ) ||
+				( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) &&
+					mw.config.get( 'wgLayersEditorInit' ).filename );
+			if ( !filename ) {
+				reject( new Error( 'No filename available' ) );
+				return;
+			}
+
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+				mw.log( '[APIManager] renameLayerSet:', oldName, '->', newName, 'for file:', filename );
+			}
+
+			this.editor.uiManager.showSpinner();
+
+			this.api.postWithToken( 'csrf', {
+				action: 'layersrename',
+				filename: filename,
+				oldname: oldName,
+				newname: newName
+			} ).then( ( data ) => {
+				this.editor.uiManager.hideSpinner();
+
+				// Check for API error in response
+				if ( data.error ) {
+					const errorCode = data.error.code || 'unknown';
+					const errorInfo = data.error.info || 'Unknown error';
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.error( '[APIManager] renameLayerSet API error:', errorCode, errorInfo );
+					}
+
+					if ( errorCode === 'permissiondenied' ) {
+						const msg = this.getMessage(
+							'layers-rename-permission-denied',
+							'You do not have permission to rename this layer set'
+						);
+						mw.notify( msg, { type: 'error' } );
+						reject( new Error( msg ) );
+						return;
+					}
+
+					if ( errorCode === 'setnameexists' ) {
+						const msg = this.getMessage(
+							'layers-setname-exists',
+							'A layer set with that name already exists'
+						);
+						mw.notify( msg, { type: 'error' } );
+						reject( new Error( msg ) );
+						return;
+					}
+
+					const msg = this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' );
+					mw.notify( msg + ': ' + errorInfo, { type: 'error' } );
+					reject( new Error( errorInfo ) );
+					return;
+				}
+
+				if ( data.layersrename && data.layersrename.success ) {
+					const msg = this.getMessage(
+						'layers-rename-set-success',
+						`Layer set renamed to "${newName}"`
+					).replace( '$1', oldName ).replace( '$2', newName );
+
+					mw.notify( msg, { type: 'success' } );
+
+					// Update current set name in state
+					if ( this.editor.stateManager ) {
+						this.editor.stateManager.set( 'currentSetName', newName );
+					}
+
+					// Reload to refresh set list
+					this.loadLayers().then( () => {
+						resolve( data.layersrename );
+					} ).catch( () => {
+						// Even if reload fails, the rename succeeded
+						resolve( data.layersrename );
+					} );
+				} else {
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.error( '[APIManager] renameLayerSet unexpected response:', data );
+					}
+					const errorMsg = this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' );
+					mw.notify( errorMsg, { type: 'error' } );
+					reject( new Error( errorMsg ) );
+				}
+			} ).catch( ( code, data ) => {
+				this.editor.uiManager.hideSpinner();
+
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[APIManager] renameLayerSet error:', code, data );
+				}
+
+				// Check for permission denied
+				if ( code === 'permissiondenied' ) {
+					const msg = this.getMessage(
+						'layers-rename-permission-denied',
+						'You do not have permission to rename this layer set'
+					);
+					mw.notify( msg, { type: 'error' } );
+					reject( new Error( msg ) );
+					return;
+				}
+
+				// Handle other API errors
+				const errorInfo = ( data && data.error && data.error.info ) || code || 'Unknown error';
+				const errorMsg = this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' );
+				mw.notify( errorMsg + ': ' + errorInfo, { type: 'error' } );
+				reject( new Error( errorInfo ) );
+			} );
+		} );
+	}
+
+	/**
+	 * Export the current canvas as an image.
+	 * Composites the background image with all visible layers.
+	 *
+	 * @param {Object} options - Export options
+	 * @param {boolean} options.includeBackground - Include background image (default: true)
+	 * @param {number} options.scale - Scale factor (default: 1)
+	 * @param {string} options.format - Image format: 'png' or 'jpeg' (default: 'png')
+	 * @param {number} options.quality - JPEG quality 0-1 (default: 0.92)
+	 * @return {Promise<Blob>} Resolves with image blob
+	 */
+	exportAsImage( options = {} ) {
+		return new Promise( ( resolve, reject ) => {
+			const includeBackground = options.includeBackground !== false;
+			const scale = options.scale || 1;
+			const format = options.format || 'png';
+			const quality = options.quality || 0.92;
+
+			try {
+				const canvasManager = this.editor.canvasManager;
+				if ( !canvasManager ) {
+					reject( new Error( 'Canvas manager not available' ) );
+					return;
+				}
+
+				// Create an offscreen canvas for export
+				const baseWidth = this.editor.stateManager.get( 'baseWidth' ) || canvasManager.canvas.width;
+				const baseHeight = this.editor.stateManager.get( 'baseHeight' ) || canvasManager.canvas.height;
+				const exportWidth = Math.round( baseWidth * scale );
+				const exportHeight = Math.round( baseHeight * scale );
+
+				const exportCanvas = document.createElement( 'canvas' );
+				exportCanvas.width = exportWidth;
+				exportCanvas.height = exportHeight;
+				const ctx = exportCanvas.getContext( '2d' );
+
+				// Draw background if requested and available
+				if ( includeBackground && canvasManager.backgroundImage ) {
+					ctx.drawImage( canvasManager.backgroundImage, 0, 0, exportWidth, exportHeight );
+				} else {
+					// White background as fallback
+					ctx.fillStyle = '#ffffff';
+					ctx.fillRect( 0, 0, exportWidth, exportHeight );
+				}
+
+				// Draw all visible layers
+				const layers = this.editor.stateManager.get( 'layers' ) || [];
+				const visibleLayers = layers.filter( ( layer ) => layer.visible !== false );
+
+				// Use the canvas renderer to draw layers
+				if ( canvasManager.renderer && typeof canvasManager.renderer.renderLayersToContext === 'function' ) {
+					canvasManager.renderer.renderLayersToContext( ctx, visibleLayers, scale );
+				} else {
+					// Fallback: draw the current canvas content
+					ctx.drawImage( canvasManager.canvas, 0, 0, exportWidth, exportHeight );
+				}
+
+				// Convert to blob
+				const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+				exportCanvas.toBlob( ( blob ) => {
+					if ( blob ) {
+						resolve( blob );
+					} else {
+						reject( new Error( 'Failed to create image blob' ) );
+					}
+				}, mimeType, quality );
+
+			} catch ( error ) {
+				reject( error );
+			}
+		} );
+	}
+
+	/**
+	 * Export and download the current canvas as an image file.
+	 *
+	 * @param {Object} options - Export options (see exportAsImage)
+	 * @param {string} options.filename - Custom filename (optional)
+	 */
+	downloadAsImage( options = {} ) {
+		const filename = this.editor.stateManager.get( 'filename' ) || 'layers-export';
+		const baseName = filename.replace( /\.[^/.]+$/, '' ); // Remove extension
+		const format = options.format || 'png';
+		const ext = format === 'jpeg' ? '.jpg' : '.png';
+		const downloadName = options.filename || `${ baseName }-annotated${ ext }`;
+
+		this.editor.uiManager.showSpinner();
+
+		this.exportAsImage( options ).then( ( blob ) => {
+			this.editor.uiManager.hideSpinner();
+
+			// Create download link
+			const url = URL.createObjectURL( blob );
+			const a = document.createElement( 'a' );
+			a.href = url;
+			a.download = downloadName;
+			document.body.appendChild( a );
+			a.click();
+			document.body.removeChild( a );
+			URL.revokeObjectURL( url );
+
+			const msg = this.getMessage( 'layers-export-success', 'Image exported successfully' );
+			mw.notify( msg, { type: 'success' } );
+		} ).catch( ( error ) => {
+			this.editor.uiManager.hideSpinner();
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.error( '[APIManager] Export failed:', error );
+			}
+			const msg = this.getMessage( 'layers-export-failed', 'Failed to export image' );
+			mw.notify( msg, { type: 'error' } );
+		} );
+	}
+
 	checkSizeLimit( data ) {
 		const maxBytes = mw.config.get( 'wgLayersMaxBytes' ) || 2097152; // 2MB default
 		return data.length <= maxBytes;

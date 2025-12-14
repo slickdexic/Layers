@@ -239,6 +239,49 @@
 	background: rgba( 0, 0, 0, 0.3 );
 }
 
+/* Set action buttons (rename, delete) */
+.layers-set-action-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	margin-left: 4px;
+	border: 1px solid rgba( 255, 255, 255, 0.3 );
+	border-radius: 4px;
+	background: rgba( 0, 0, 0, 0.2 );
+	color: rgba( 255, 255, 255, 0.8 );
+	cursor: pointer;
+	transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.layers-set-action-btn:hover {
+	background: rgba( 0, 0, 0, 0.4 );
+	color: #fff;
+	border-color: rgba( 255, 255, 255, 0.5 );
+}
+
+.layers-set-action-btn:focus {
+	outline: 2px solid rgba( 255, 255, 255, 0.5 );
+	outline-offset: 1px;
+}
+
+.layers-set-action-btn svg {
+	width: 14px;
+	height: 14px;
+	stroke: currentcolor;
+	fill: none;
+}
+
+.layers-set-rename-btn:hover {
+	background: rgba( 33, 150, 243, 0.4 );
+}
+
+.layers-set-delete-btn:hover {
+	background: rgba( 198, 40, 40, 0.4 );
+}
+
 /**
  * Layers Editor CSS Styles
  * Essential styling for the layers editing interface

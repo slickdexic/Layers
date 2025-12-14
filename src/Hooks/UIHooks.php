@@ -115,8 +115,29 @@ class UIHooks {
 			}
 		}
 
-		if ( $user && method_exists( $user, 'isAllowed' ) && !$user->isAllowed( 'editlayers' ) ) {
-			$log( 'Skip: user missing editlayers permission - user groups: ' . implode( ',', $user->getGroups() ) );
+		// Check editlayers permission using PermissionManager for consistency
+		$hasEditLayersPermission = false;
+		try {
+			$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
+				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
+				: null;
+			if ( $services && method_exists( $services, 'getPermissionManager' ) ) {
+				$permManager = $services->getPermissionManager();
+				$hasEditLayersPermission = $permManager->userHasRight( $user, 'editlayers' );
+			} elseif ( $user && method_exists( $user, 'isAllowed' ) ) {
+				$hasEditLayersPermission = $user->isAllowed( 'editlayers' );
+			}
+		} catch ( \Throwable $e ) {
+			// If permission check fails, default to false
+			$hasEditLayersPermission = false;
+		}
+
+		if ( !$hasEditLayersPermission ) {
+			$userGroups = [];
+			if ( $user && method_exists( $user, 'getEffectiveGroups' ) ) {
+				$userGroups = $user->getEffectiveGroups();
+			}
+			$log( 'Skip: user missing editlayers permission - user groups: ' . implode( ',', $userGroups ) );
 			if ( !$dbg ) {
 				return;
 			}
@@ -180,18 +201,31 @@ class UIHooks {
 			$links['actions'] = [];
 		}
 
-	// Insert the edit layers tab after the edit tab when present; otherwise prepend
+	// Insert the edit layers tab after the edit tab, or after view/read if no edit tab
 		$newViews = [];
 		$inserted = false;
 		foreach ( $links['views'] as $key => $tab ) {
 			$newViews[$key] = $tab;
+			// Insert after edit/ve-edit tabs
 			if ( $key === 'edit' || $key === 've-edit' ) {
 				$newViews['editlayers'] = $editLayersTab;
 				$inserted = true;
 			}
 		}
 		if ( !$inserted ) {
-			$newViews = [ 'editlayers' => $editLayersTab ] + $newViews;
+			// No edit tab found - insert after view/read tab, or append at end
+			$newViews = [];
+			foreach ( $links['views'] as $key => $tab ) {
+				$newViews[$key] = $tab;
+				if ( $key === 'view' || $key === 'read' ) {
+					$newViews['editlayers'] = $editLayersTab;
+					$inserted = true;
+				}
+			}
+			// If still not inserted (no view tab either), append at end
+			if ( !$inserted ) {
+				$newViews['editlayers'] = $editLayersTab;
+			}
 		}
 		$links['views'] = $newViews;
 

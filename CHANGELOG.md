@@ -2,6 +2,35 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [0.8.7] - 2025-12-14
+
+### New Features
+- **Delete Layer Sets**: Added ability to delete named layer sets (owner/admin only)
+- **Rename Layer Sets**: Added ability to rename named layer sets (owner/admin only)
+- **Export as Image**: Added "Export as Image" button to download annotated images
+- **Improved UI Icons**: Replaced emoji icons with proper SVG icons for better accessibility
+
+### API Changes
+- Added `layersdelete` API endpoint for deleting layer sets
+- Added `layersrename` API endpoint for renaming layer sets
+- Increased revision limit from 25 to 50 per layer set
+- Enhanced permission checks using PermissionManager service
+
+### Bug Fixes
+- Fixed MediaWiki 1.44+ compatibility issues (getGroups → getEffectiveGroups)
+- Fixed permission error handling (throws PermissionsError)
+- Fixed tab ordering in file pages (Edit Layers now appears after Read/View)
+- Fixed filename retrieval in API calls
+- Fixed default set clearing to save immediately instead of requiring manual save
+
+### Technical Improvements
+- Added `renameNamedSet()` and `getNamedSetOwner()` methods to LayersDatabase
+- Enhanced UIManager with rename/delete/clear functionality
+- Added comprehensive i18n messages for all new features
+- Updated documentation with new API contracts
+
+---
+
 ## [0.8.6] - 2025-12-14
 
 ### Test Coverage & Stability

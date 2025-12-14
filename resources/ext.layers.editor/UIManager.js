@@ -185,6 +185,24 @@
 		this.newSetBtnEl.style.display = 'none';
 		setWrap.appendChild( this.newSetBtnEl );
 
+		// Rename set button - allows renaming the current set (only for owner/admin)
+		this.setRenameBtnEl = document.createElement( 'button' );
+		this.setRenameBtnEl.type = 'button';
+		this.setRenameBtnEl.className = 'layers-set-action-btn layers-set-rename-btn';
+		this.setRenameBtnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
+		this.setRenameBtnEl.title = this.getMessage( 'layers-rename-set-tooltip', 'Rename this layer set' );
+		this.setRenameBtnEl.setAttribute( 'aria-label', this.getMessage( 'layers-rename-set', 'Rename set' ) );
+		setWrap.appendChild( this.setRenameBtnEl );
+
+		// Delete set button - allows deleting the current set (only for owner/admin)
+		this.setDeleteBtnEl = document.createElement( 'button' );
+		this.setDeleteBtnEl.type = 'button';
+		this.setDeleteBtnEl.className = 'layers-set-action-btn layers-set-delete-btn';
+		this.setDeleteBtnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+		this.setDeleteBtnEl.title = this.getMessage( 'layers-delete-set-tooltip', 'Delete this layer set' );
+		this.setDeleteBtnEl.setAttribute( 'aria-label', this.getMessage( 'layers-delete-set', 'Delete set' ) );
+		setWrap.appendChild( this.setDeleteBtnEl );
+
 		return setWrap;
 	}
 
@@ -425,6 +443,20 @@
 			} );
 		}
 
+		// Handle set deletion
+		if ( this.setDeleteBtnEl ) {
+			this.addListener( this.setDeleteBtnEl, 'click', () => {
+				this.deleteCurrentSet();
+			} );
+		}
+
+		// Handle set renaming
+		if ( this.setRenameBtnEl ) {
+			this.addListener( this.setRenameBtnEl, 'click', () => {
+				this.renameCurrentSet();
+			} );
+		}
+
 		// Handle Enter key in new set input
 		if ( this.newSetInputEl ) {
 			this.addListener( this.newSetInputEl, 'keydown', ( e ) => {
@@ -521,6 +553,181 @@
 			this.getMessage( 'layers-new-set-created' ).replace( '$1', newName ),
 			{ type: 'success' }
 		);
+	}
+
+	/**
+	 * Delete the current layer set with confirmation
+	 * Only the original creator or an admin can delete a set
+	 */
+	deleteCurrentSet() {
+		const currentSet = this.editor.stateManager ?
+			this.editor.stateManager.get( 'currentSetName' ) : 'default';
+
+		if ( !currentSet ) {
+			return;
+		}
+
+		// For the default set, offer to clear all layers instead of deleting
+		if ( currentSet === 'default' ) {
+			const layers = this.editor.stateManager ?
+				this.editor.stateManager.get( 'layers' ) : [];
+			if ( !layers || layers.length === 0 ) {
+				mw.notify( this.getMessage( 'layers-no-layers-to-clear', 'No layers to clear' ), { type: 'info' } );
+				return;
+			}
+
+			// Confirm clearing all layers from default set
+			const clearMsg = this.getMessage(
+				'layers-clear-default-set-confirm',
+				'Clear all layers from the default set? This will remove all annotations.'
+			);
+			// eslint-disable-next-line no-alert
+			if ( !window.confirm( clearMsg ) ) {
+				return;
+			}
+
+			// Clear all layers and save immediately
+			if ( this.editor.stateManager ) {
+				this.editor.stateManager.set( 'layers', [] );
+			}
+			if ( this.editor.canvasManager ) {
+				this.editor.canvasManager.renderLayers( [] );
+			}
+			if ( this.editor.layerPanel ) {
+				this.editor.layerPanel.renderLayerList();
+			}
+			if ( this.editor.selectionManager ) {
+				this.editor.selectionManager.clearSelection();
+			}
+
+			// Save the empty layer set immediately via API
+			if ( this.editor.apiManager && typeof this.editor.apiManager.saveLayers === 'function' ) {
+				this.editor.apiManager.saveLayers( [], 'default' ).then( () => {
+					if ( this.editor.stateManager ) {
+						this.editor.stateManager.set( 'isDirty', false );
+					}
+					mw.notify(
+						this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
+						{ type: 'success' }
+					);
+				} ).catch( ( error ) => {
+					if ( mw.log && mw.log.error ) {
+						mw.log.error( '[UIManager] Failed to save cleared layers:', error );
+					}
+					mw.notify( this.getMessage( 'layers-save-failed', 'Failed to save changes' ), { type: 'error' } );
+				} );
+			} else {
+				mw.notify(
+					this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
+					{ type: 'success' }
+				);
+			}
+			return;
+		}
+
+		// Get revision count for confirmation message
+		const namedSets = this.editor.stateManager ?
+			this.editor.stateManager.get( 'namedSets' ) : [];
+		const setInfo = namedSets.find( set => set.name === currentSet );
+		const revisionCount = setInfo ? ( setInfo.revision_count || 1 ) : 1;
+
+		// Build confirmation message with set name and revision count
+		const confirmMsg = this.getMessage( 'layers-delete-set-confirm' )
+			.replace( '$1', currentSet )
+			.replace( '$2', revisionCount );
+
+		// eslint-disable-next-line no-alert
+		if ( !window.confirm( confirmMsg ) ) {
+			return;
+		}
+
+		// Call API to delete the set
+		if ( this.editor.apiManager && typeof this.editor.apiManager.deleteLayerSet === 'function' ) {
+			this.editor.apiManager.deleteLayerSet( currentSet ).then( () => {
+				// The APIManager reloads layers after delete, so we just update the selector
+				if ( this.editor.buildSetSelector ) {
+					this.editor.buildSetSelector();
+				} else if ( this.editor.revisionManager ) {
+					this.editor.revisionManager.buildSetSelector();
+				}
+			} ).catch( ( error ) => {
+				// Error notification is handled by APIManager
+				if ( mw.log && mw.log.error ) {
+					mw.log.error( '[UIManager] deleteCurrentSet error:', error );
+				}
+			} );
+		} else {
+			mw.notify( this.getMessage( 'layers-delete-failed' ), { type: 'error' } );
+		}
+	}
+
+	/**
+	 * Rename the current layer set
+	 * Uses a prompt dialog to get the new name, then calls API to rename
+	 */
+	renameCurrentSet() {
+		const currentSet = this.editor.stateManager ?
+			this.editor.stateManager.get( 'currentSetName' ) : 'default';
+
+		// For default set, don't allow rename
+		if ( currentSet === 'default' ) {
+			mw.notify(
+				this.getMessage( 'layers-cannot-rename-default', 'The default layer set cannot be renamed' ),
+				{ type: 'warn' }
+			);
+			return;
+		}
+
+		// Prompt for new name
+		const promptMsg = this.getMessage(
+			'layers-rename-set-prompt',
+			'Enter new name for layer set:'
+		);
+		// eslint-disable-next-line no-alert
+		const newName = window.prompt( promptMsg, currentSet );
+
+		// User cancelled or empty input
+		if ( !newName || newName.trim() === '' ) {
+			return;
+		}
+
+		const trimmedName = newName.trim();
+
+		// No change
+		if ( trimmedName === currentSet ) {
+			return;
+		}
+
+		// Validate name format
+		if ( !/^[a-zA-Z0-9_-]{1,50}$/.test( trimmedName ) ) {
+			mw.notify(
+				this.getMessage(
+					'layers-invalid-setname',
+					'Invalid set name. Use only letters, numbers, hyphens, and underscores (1-50 characters).'
+				),
+				{ type: 'error' }
+			);
+			return;
+		}
+
+		// Call API to rename the set
+		if ( this.editor.apiManager && typeof this.editor.apiManager.renameLayerSet === 'function' ) {
+			this.editor.apiManager.renameLayerSet( currentSet, trimmedName ).then( () => {
+				// The APIManager reloads layers after rename, so we just update the selector
+				if ( this.editor.buildSetSelector ) {
+					this.editor.buildSetSelector();
+				} else if ( this.editor.revisionManager ) {
+					this.editor.revisionManager.buildSetSelector();
+				}
+			} ).catch( ( error ) => {
+				// Error notification is handled by APIManager
+				if ( mw.log && mw.log.error ) {
+					mw.log.error( '[UIManager] renameCurrentSet error:', error );
+				}
+			} );
+		} else {
+			mw.notify( this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' ), { type: 'error' } );
+		}
 	}
 
 	/**

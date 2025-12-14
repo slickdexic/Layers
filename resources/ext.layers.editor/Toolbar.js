@@ -616,6 +616,14 @@
 		exportButton.title = t( 'layers-export-layers', 'Export Layers' );
 		actionGroup.appendChild( exportButton );
 
+		// Export as Image button (saves annotated image as PNG)
+		const exportImageButton = document.createElement( 'button' );
+		exportImageButton.className = 'toolbar-button export-image-button';
+		exportImageButton.textContent = t( 'layers-export-image', 'Export as Image' );
+		exportImageButton.title = t( 'layers-export-image-tooltip', 'Download the image with annotations' );
+		exportImageButton.setAttribute( 'aria-label', t( 'layers-export-image', 'Export as Image' ) );
+		actionGroup.appendChild( exportImageButton );
+
 		// Separator before save/help
 		const separator2 = document.createElement( 'div' );
 		separator2.className = 'toolbar-separator';
@@ -651,6 +659,7 @@
 		this.importButton = importButton;
 		this.importInput = importInput;
 		this.exportButton = exportButton;
+		this.exportImageButton = exportImageButton;
 	}
 
 	createActionButton( action ) {
@@ -741,6 +750,14 @@
 		this.addListener( this.exportButton, 'click', () => {
 			if ( this.importExportManager ) {
 				this.importExportManager.exportToFile();
+			}
+		} );
+
+		// Export as Image - render and download annotated image
+		this.addListener( this.exportImageButton, 'click', () => {
+			if ( this.editor && this.editor.apiManager &&
+				typeof this.editor.apiManager.downloadAsImage === 'function' ) {
+				this.editor.apiManager.downloadAsImage( { format: 'png' } );
 			}
 		} );
 

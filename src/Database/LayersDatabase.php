@@ -657,6 +657,166 @@ class LayersDatabase {
 		}
 	}
 
+	/**
+	 * Delete a named layer set (all revisions) for an image.
+	 *
+	 * @param string $imgName The image name
+	 * @param string $sha1 The SHA1 hash of the image
+	 * @param string $setName The name of the layer set to delete
+	 * @return int Number of rows deleted, or -1 on error
+	 */
+	public function deleteNamedSet( string $imgName, string $sha1, string $setName ): int {
+		try {
+			$dbw = $this->getWriteDb();
+			if ( !$dbw ) {
+				return -1;
+			}
+
+			$normalizedImgName = $this->normalizeImageName( $imgName );
+			if ( empty( $normalizedImgName ) || empty( $sha1 ) || empty( $setName ) ) {
+				$this->logError( 'Invalid parameters for deleteNamedSet', [
+					'imgName' => $imgName, 'sha1' => $sha1, 'setName' => $setName
+				] );
+				return -1;
+			}
+
+			$dbw->delete(
+				'layer_sets',
+				[
+					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+					'ls_img_sha1' => $sha1,
+					'ls_name' => $setName
+				],
+				__METHOD__
+			);
+
+			$rowsDeleted = $dbw->affectedRows();
+
+			$this->logger->info( 'Named layer set deleted', [
+				'imgName' => $imgName,
+				'sha1' => $sha1,
+				'setName' => $setName,
+				'rowsDeleted' => $rowsDeleted
+			] );
+
+			// Invalidate cache
+			$this->layerSetCache = [];
+
+			return $rowsDeleted;
+		} catch ( \Throwable $e ) {
+			$this->logger->warning( 'Failed to delete named layer set: {message}', [
+				'message' => $e->getMessage(),
+				'setName' => $setName
+			] );
+			return -1;
+		}
+	}
+
+	/**
+	 * Get the owner (creator) user ID of a named layer set.
+	 * Returns the user ID of the first revision in the set.
+	 *
+	 * @param string $imgName The image name
+	 * @param string $sha1 The SHA1 hash of the image
+	 * @param string $setName The name of the layer set
+	 * @return int|null User ID of the owner, or null if not found
+	 */
+	public function getNamedSetOwner( string $imgName, string $sha1, string $setName ): ?int {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return null;
+		}
+
+		// Get the first revision (oldest) to find the original creator
+		$row = $dbr->selectRow(
+			'layer_sets',
+			[ 'ls_user_id' ],
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName
+			],
+			__METHOD__,
+			[ 'ORDER BY' => 'ls_revision ASC', 'LIMIT' => 1 ]
+		);
+
+		return $row ? (int)$row->ls_user_id : null;
+	}
+
+	/**
+	 * Rename a named layer set (all revisions) for an image.
+	 *
+	 * @param string $imgName The image name
+	 * @param string $sha1 The SHA1 hash of the image
+	 * @param string $oldName The current name of the layer set
+	 * @param string $newName The new name for the layer set
+	 * @return bool True on success, false on failure
+	 */
+	public function renameNamedSet( string $imgName, string $sha1, string $oldName, string $newName ): bool {
+		try {
+			$dbw = $this->getWriteDb();
+			if ( !$dbw ) {
+				return false;
+			}
+
+			$normalizedImgName = $this->normalizeImageName( $imgName );
+			if ( empty( $normalizedImgName ) || empty( $sha1 ) || empty( $oldName ) || empty( $newName ) ) {
+				$this->logError( 'Invalid parameters for renameNamedSet', [
+					'imgName' => $imgName, 'sha1' => $sha1, 'oldName' => $oldName, 'newName' => $newName
+				] );
+				return false;
+			}
+
+			// Check if target name already exists
+			if ( $this->namedSetExists( $imgName, $sha1, $newName ) ) {
+				$this->logError( 'Cannot rename: target name already exists', [
+					'newName' => $newName
+				] );
+				return false;
+			}
+
+			$dbw->update(
+				'layer_sets',
+				[ 'ls_name' => $newName ],
+				[
+					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+					'ls_img_sha1' => $sha1,
+					'ls_name' => $oldName
+				],
+				__METHOD__
+			);
+
+			$rowsUpdated = $dbw->affectedRows();
+
+			if ( $rowsUpdated === 0 ) {
+				$this->logError( 'No rows updated during rename', [
+					'oldName' => $oldName, 'newName' => $newName
+				] );
+				return false;
+			}
+
+			$this->logger->info( 'Named layer set renamed', [
+				'imgName' => $imgName,
+				'sha1' => $sha1,
+				'oldName' => $oldName,
+				'newName' => $newName,
+				'rowsUpdated' => $rowsUpdated
+			] );
+
+			// Invalidate cache
+			$this->layerSetCache = [];
+
+			return true;
+		} catch ( \Throwable $e ) {
+			$this->logger->warning( 'Failed to rename named layer set: {message}', [
+				'message' => $e->getMessage(),
+				'oldName' => $oldName,
+				'newName' => $newName
+			] );
+			return false;
+		}
+	}
+
 	public function getLayerSetByName( string $imgName, string $sha1, string $setName ): ?array {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {

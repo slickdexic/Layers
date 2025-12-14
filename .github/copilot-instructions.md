@@ -13,6 +13,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - API modules (`src/Api/`)
     - `ApiLayersInfo`: read-only fetch of layer data and revision list for a file
     - `ApiLayersSave`: write endpoint to save a new layer set revision (requires CSRF token + rights)
+    - `ApiLayersDelete`: delete endpoint to remove an entire named layer set (requires CSRF token, owner or admin)
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
     - Uses LoadBalancer for DB connections (lazy init pattern with getWriteDb/getReadDb)
     - Implements retry logic with exponential backoff (3 retries, 100ms base delay) for transaction conflicts
@@ -74,7 +75,7 @@ Base route: MediaWiki Action API. Client uses `new mw.Api()`.
     - Max payload bytes: `$wgLayersMaxBytes` (default 2MB)
     - Max layers per set: `$wgLayersMaxLayerCount` (default 100)
     - Max named sets per image: `$wgLayersMaxNamedSets` (default 15) - NEW
-    - Max revisions per set: `$wgLayersMaxRevisionsPerSet` (default 25, older pruned) - NEW
+    - Max revisions per set: `$wgLayersMaxRevisionsPerSet` (default 50, older pruned)
     - Strict property whitelist and type/length/range checks; unknown props are dropped; extreme values are rejected
     - Colors are strictly validated/sanitized; text is stripped of HTML and dangerous protocols
     - Rate limiting enforced via MediaWiki limiter (see RateLimits below)
@@ -83,13 +84,22 @@ Base route: MediaWiki Action API. Client uses `new mw.Api()`.
 
 Contract note: The server persists a wrapped structure `{ revision, schema, created, layers }`. The client sends only the layers array as JSON string; the server performs validation/sanitization and constructs the full structure.
 
-### Named Layer Sets (NEW)
+- layersdelete (write)
+  - Rights: user must have 'editlayers' AND be either the set owner (creator of first revision) or have 'delete' right (admin)
+  - Token: needs CSRF token
+  - Params: filename (string, required), setname (string, required), token (csrf)
+  - Success payload (keyed by module name `layersdelete`): { success: 1, revisionsDeleted: N }
+  - Errors: 'layers-file-not-found', 'layers-layerset-not-found', 'permissiondenied', 'layers-delete-failed'
+  - Deletes ALL revisions of the named set permanently - this action cannot be undone
+  - The 'default' set can be deleted from the API but the UI prevents this
+
+### Named Layer Sets
 
 The named layer sets feature allows multiple named annotation sets per image, each with version history:
 
 - **Named Set**: A logical grouping identified by a unique name (e.g., "default", "anatomy-labels")
 - **Revision**: Each save creates a new revision within the named set
-- **Limits**: Up to 15 named sets per image, 25 revisions per set (configurable)
+- **Limits**: Up to 15 named sets per image, 50 revisions per set (configurable)
 - **Default Behavior**: If setname not provided, defaults to 'default' set
 - **Migration**: Existing layer sets were migrated to ls_name='default'
 - **Wikitext Syntax**:
@@ -219,5 +229,14 @@ Database
 - POST action=layerssave (CSRF)
   - Params: filename, data='[ {...layer...} ]', setname?, token
   - Returns: { layerssave: { success: 1, layersetid } }
+- POST action=layersdelete (CSRF)
+  - Params: filename, setname, token
+  - Returns: { layersdelete: { success: 1, revisionsDeleted: N } }
+  - Permission: owner (first revision creator) or admin ('delete' right)
+- POST action=layersrename (CSRF)
+  - Params: filename, oldname, newname, token
+  - Returns: { layersrename: { success: 1, oldname, newname } }
+  - Permission: owner (first revision creator) or admin ('delete' right)
+  - Validates: new name format (alphanumeric, hyphens, underscores, 1-50 chars), no conflicts, cannot rename to 'default'
 
 Keep this doc aligned with code. When you change public behavior (API, schema, messages), update this file and add tests where feasible.
