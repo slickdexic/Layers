@@ -28,6 +28,12 @@ const mockButton = {
 	addEventListener: jest.fn()
 };
 
+const mockOkButton = {
+	textContent: '',
+	style: { cssText: '' },
+	addEventListener: jest.fn()
+};
+
 const mockContainer = {
 	style: { cssText: '' },
 	appendChild: jest.fn()
@@ -49,7 +55,7 @@ const originalCreateElement = document.createElement;
 // Setup mocks
 beforeEach( () => {
 	let elementIndex = 0;
-	const elements = [ mockModal, mockContainer, mockLabel, mockInput, mockButtonsDiv, mockButton, mockButton ];
+	const elements = [ mockModal, mockContainer, mockLabel, mockInput, mockButtonsDiv, mockButton, mockOkButton ];
 
 	document.createElement = jest.fn( () => {
 		const el = elements[ elementIndex++ ] || mockModal;
@@ -271,6 +277,173 @@ describe( 'TextInputController', () => {
 			expect( () => {
 				controller.finishTextInput( input, { x: 0, y: 0 }, {} );
 			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'event handler callbacks', () => {
+		it( 'should register click handler on cancel button', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+
+			controller.createTextInputModal( mockPoint, mockStyle );
+
+			// The cancel button (first button created) should have addEventListener called
+			expect( mockButton.addEventListener ).toHaveBeenCalledWith(
+				'click',
+				expect.any( Function )
+			);
+		} );
+
+		it( 'should register keydown handler on input', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+
+			controller.createTextInputModal( mockPoint, mockStyle );
+
+			// Input should have keydown handler
+			expect( mockInput.addEventListener ).toHaveBeenCalledWith(
+				'keydown',
+				expect.any( Function )
+			);
+		} );
+
+		it( 'should register click handler on modal for outside clicks', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+
+			controller.createTextInputModal( mockPoint, mockStyle );
+
+			// Modal should have click handler for clicking outside
+			expect( mockModal.addEventListener ).toHaveBeenCalledWith(
+				'click',
+				expect.any( Function )
+			);
+		} );
+
+		it( 'should hide modal when cancel button click handler is invoked', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+			const hideSpy = jest.spyOn( controller, 'hideTextInputModal' );
+
+			controller.createTextInputModal( mockPoint, mockStyle );
+
+			// Find the cancel button click handler (mockButton is the cancel button)
+			const cancelClickHandler = mockButton.addEventListener.mock.calls.find(
+				( call ) => call[ 0 ] === 'click'
+			);
+
+			if ( cancelClickHandler ) {
+				cancelClickHandler[ 1 ](); // Invoke the handler
+				expect( hideSpy ).toHaveBeenCalled();
+			}
+		} );
+
+		it( 'should call finishTextInput when OK button click handler is invoked', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+			const finishSpy = jest.spyOn( controller, 'finishTextInput' );
+
+			controller.createTextInputModal( mockPoint, mockStyle );
+
+			// Find the OK button click handler (mockOkButton is the second button)
+			const okClickHandler = mockOkButton.addEventListener.mock.calls.find(
+				( call ) => call[ 0 ] === 'click'
+			);
+
+			if ( okClickHandler ) {
+				okClickHandler[ 1 ](); // Invoke the handler
+				expect( finishSpy ).toHaveBeenCalled();
+			}
+		} );
+
+		it( 'should call finishTextInput when Enter key handler is invoked', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+			const finishSpy = jest.spyOn( controller, 'finishTextInput' );
+
+			controller.createTextInputModal( mockPoint, mockStyle );
+
+			// Find the keydown handler on input
+			const keydownHandler = mockInput.addEventListener.mock.calls.find(
+				( call ) => call[ 0 ] === 'keydown'
+			);
+
+			if ( keydownHandler ) {
+				const mockEvent = {
+					key: 'Enter',
+					preventDefault: jest.fn()
+				};
+				keydownHandler[ 1 ]( mockEvent ); // Invoke the handler
+				expect( mockEvent.preventDefault ).toHaveBeenCalled();
+				expect( finishSpy ).toHaveBeenCalled();
+			}
+		} );
+
+		it( 'should hide modal when Escape key handler is invoked', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+			const hideSpy = jest.spyOn( controller, 'hideTextInputModal' );
+
+			controller.createTextInputModal( mockPoint, mockStyle );
+
+			// Find the keydown handler on input
+			const keydownHandler = mockInput.addEventListener.mock.calls.find(
+				( call ) => call[ 0 ] === 'keydown'
+			);
+
+			if ( keydownHandler ) {
+				const mockEvent = {
+					key: 'Escape',
+					preventDefault: jest.fn()
+				};
+				keydownHandler[ 1 ]( mockEvent ); // Invoke the handler
+				expect( mockEvent.preventDefault ).toHaveBeenCalled();
+				expect( hideSpy ).toHaveBeenCalled();
+			}
+		} );
+
+		it( 'should hide modal when clicking outside container', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+			const hideSpy = jest.spyOn( controller, 'hideTextInputModal' );
+
+			const modal = controller.createTextInputModal( mockPoint, mockStyle );
+
+			// Find the click handler on modal
+			const clickHandler = mockModal.addEventListener.mock.calls.find(
+				( call ) => call[ 0 ] === 'click'
+			);
+
+			if ( clickHandler ) {
+				// Clicking on modal itself (outside container) should hide
+				const mockEvent = { target: mockModal };
+				clickHandler[ 1 ]( mockEvent );
+				expect( hideSpy ).toHaveBeenCalled();
+			}
+		} );
+
+		it( 'should not hide modal when clicking inside container', () => {
+			const mockPoint = { x: 100, y: 100 };
+			const mockStyle = { fontSize: 16 };
+
+			controller.createTextInputModal( mockPoint, mockStyle );
+
+			// Create spy AFTER modal creation to avoid counting setup calls
+			const hideSpy = jest.spyOn( controller, 'hideTextInputModal' );
+
+			// Find the click handler on modal
+			const clickHandler = mockModal.addEventListener.mock.calls.find(
+				( call ) => call[ 0 ] === 'click'
+			);
+
+			if ( clickHandler ) {
+				// Clicking on something other than modal (e.g. the container) should NOT hide
+				const notTheModal = { isNotModal: true };
+				const mockEvent = { target: notTheModal };
+				clickHandler[ 1 ]( mockEvent );
+				// hideSpy should NOT be called because target !== modal
+				expect( hideSpy ).not.toHaveBeenCalled();
+			}
 		} );
 	} );
 } );
