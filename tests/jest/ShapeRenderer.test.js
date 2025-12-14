@@ -556,8 +556,16 @@ describe( 'ShapeRenderer', () => {
 				applyShadow: jest.fn(),
 				hasShadowEnabled: jest.fn().mockReturnValue( true ),
 				getShadowSpread: jest.fn().mockReturnValue( 0 ),
-				drawSpreadShadow: jest.fn(),
-				drawSpreadShadowStroke: jest.fn()
+				getShadowParams: jest.fn().mockReturnValue( { offsetX: 3, offsetY: 3, blur: 10, color: 'black', offscreenOffset: 15 } ),
+				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, opacity ) => {
+					// Actually call the draw function to exercise the code paths
+					drawFn( ctx );
+				} ),
+				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, opacity ) => {
+					drawFn( ctx );
+				} ),
+				withLocalAlpha: jest.fn( ( alpha, drawFn ) => drawFn() ),
+				setContext: jest.fn()
 			};
 			shapeRenderer.setShadowRenderer( mockShadowRenderer );
 		} );
@@ -576,6 +584,168 @@ describe( 'ShapeRenderer', () => {
 			shapeRenderer.drawCircle( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1 } } );
 
 			expect( mockShadowRenderer.hasShadowEnabled ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw rectangle with fill shadow', () => {
+			const layer = {
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 80,
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			shapeRenderer.drawRectangle( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1, sx: 1, sy: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw rectangle with stroke shadow', () => {
+			const layer = {
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 80,
+				stroke: '#0000ff',
+				strokeWidth: 3,
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			shapeRenderer.drawRectangle( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1, sx: 1, sy: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadowStroke ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw rectangle with spread shadow', () => {
+			mockShadowRenderer.getShadowSpread.mockReturnValue( 5 );
+			const layer = {
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 80,
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10,
+				shadowSpread: 5
+			};
+
+			shapeRenderer.drawRectangle( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1, sx: 1, sy: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw circle with fill shadow', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			shapeRenderer.drawCircle( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw ellipse with shadow', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				radiusX: 80,
+				radiusY: 50,
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			shapeRenderer.drawEllipse( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw polygon with shadow', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			shapeRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw star with shadow', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			shapeRenderer.drawStar( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw rounded rectangle with shadow', () => {
+			// Mock roundRect support
+			ctx.roundRect = jest.fn();
+			const layer = {
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 80,
+				cornerRadius: 10,
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			shapeRenderer.drawRectangle( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1, sx: 1, sy: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw rectangle with both fill and stroke shadows', () => {
+			const layer = {
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 80,
+				fill: '#ff0000',
+				stroke: '#0000ff',
+				strokeWidth: 3,
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			shapeRenderer.drawRectangle( layer, { scale: { sx: 1, sy: 1, avg: 1 }, shadowScale: { avg: 1, sx: 1, sy: 1 } } );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+			expect( mockShadowRenderer.drawSpreadShadowStroke ).toHaveBeenCalled();
 		} );
 	} );
 
