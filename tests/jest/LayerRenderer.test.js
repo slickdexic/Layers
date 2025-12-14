@@ -211,6 +211,91 @@ describe( 'LayerRenderer', () => {
 			const layer = { shadow: true, shadowSpread: 5 };
 			expect( renderer.getShadowSpread( layer, { sx: 1, sy: 1, avg: 1 } ) ).toBe( 5 );
 		} );
+
+		test( 'getShadowParams returns default params when no shadowRenderer', () => {
+			const rendererWithoutShadow = new LayerRenderer( ctx, { useShadowRenderer: false } );
+			rendererWithoutShadow.shadowRenderer = null;
+			const params = rendererWithoutShadow.getShadowParams( { shadow: true }, { sx: 1, sy: 1, avg: 1 } );
+			expect( params ).toEqual( {
+				offsetX: 0,
+				offsetY: 0,
+				blur: 0,
+				color: 'transparent',
+				offscreenOffset: 0
+			} );
+		} );
+
+		test( 'getShadowParams returns params from shadowRenderer when available', () => {
+			const mockParams = { offsetX: 5, offsetY: 5, blur: 10, color: 'black', offscreenOffset: 15 };
+			renderer.shadowRenderer = { getShadowParams: jest.fn().mockReturnValue( mockParams ) };
+			const params = renderer.getShadowParams( { shadow: true }, { sx: 1, sy: 1, avg: 1 } );
+			expect( params ).toEqual( mockParams );
+		} );
+
+		test( 'drawSpreadShadow delegates to shadowRenderer when available', () => {
+			const mockDrawSpreadShadow = jest.fn();
+			const mockSetContext = jest.fn();
+			renderer.shadowRenderer = {
+				setContext: mockSetContext,
+				drawSpreadShadow: mockDrawSpreadShadow
+			};
+			const layer = { shadow: true };
+			const drawFn = jest.fn();
+			renderer.drawSpreadShadow( layer, { sx: 1, sy: 1, avg: 1 }, 5, drawFn, 0.8 );
+			expect( mockSetContext ).toHaveBeenCalledWith( ctx );
+			expect( mockDrawSpreadShadow ).toHaveBeenCalledWith( layer, { sx: 1, sy: 1, avg: 1 }, 5, drawFn, 0.8 );
+		} );
+
+		test( 'drawSpreadShadow does nothing when no shadowRenderer', () => {
+			renderer.shadowRenderer = null;
+			expect( () => {
+				renderer.drawSpreadShadow( { shadow: true }, { sx: 1, sy: 1, avg: 1 }, 5, jest.fn(), 0.8 );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawSpreadShadowStroke delegates to shadowRenderer when available', () => {
+			const mockDrawSpreadShadowStroke = jest.fn();
+			const mockSetContext = jest.fn();
+			renderer.shadowRenderer = {
+				setContext: mockSetContext,
+				drawSpreadShadowStroke: mockDrawSpreadShadowStroke
+			};
+			const layer = { shadow: true, strokeWidth: 2 };
+			const drawFn = jest.fn();
+			renderer.drawSpreadShadowStroke( layer, { sx: 1, sy: 1, avg: 1 }, 2, drawFn, 0.9 );
+			expect( mockSetContext ).toHaveBeenCalledWith( ctx );
+			expect( mockDrawSpreadShadowStroke ).toHaveBeenCalledWith( layer, { sx: 1, sy: 1, avg: 1 }, 2, drawFn, 0.9 );
+		} );
+
+		test( 'drawSpreadShadowStroke does nothing when no shadowRenderer', () => {
+			renderer.shadowRenderer = null;
+			expect( () => {
+				renderer.drawSpreadShadowStroke( { shadow: true }, { sx: 1, sy: 1, avg: 1 }, 2, jest.fn(), 0.9 );
+			} ).not.toThrow();
+		} );
+
+		test( 'withLocalAlpha calls drawFn via shadowRenderer when available', () => {
+			const mockWithLocalAlpha = jest.fn( ( alpha, fn ) => fn() );
+			renderer.shadowRenderer = { withLocalAlpha: mockWithLocalAlpha };
+			const drawFn = jest.fn();
+			renderer.withLocalAlpha( 0.5, drawFn );
+			expect( mockWithLocalAlpha ).toHaveBeenCalledWith( 0.5, drawFn );
+			expect( drawFn ).toHaveBeenCalled();
+		} );
+
+		test( 'withLocalAlpha calls drawFn directly when no shadowRenderer', () => {
+			renderer.shadowRenderer = null;
+			const drawFn = jest.fn();
+			renderer.withLocalAlpha( 0.5, drawFn );
+			expect( drawFn ).toHaveBeenCalled();
+		} );
+
+		test( 'withLocalAlpha handles null drawFn gracefully', () => {
+			renderer.shadowRenderer = null;
+			expect( () => {
+				renderer.withLocalAlpha( 0.5, null );
+			} ).not.toThrow();
+		} );
 	} );
 
 	// ========================================================================
