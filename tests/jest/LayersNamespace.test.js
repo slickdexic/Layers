@@ -303,5 +303,229 @@ describe( 'LayersNamespace', () => {
 		it( 'should export getExportRegistry function', () => {
 			expect( typeof LayersNamespace.getExportRegistry ).toBe( 'function' );
 		} );
+
+		it( 'should export registerExport function', () => {
+			expect( typeof LayersNamespace.registerExport ).toBe( 'function' );
+		} );
+
+		it( 'should export exportRegistry object', () => {
+			expect( LayersNamespace.exportRegistry ).toBeDefined();
+			expect( typeof LayersNamespace.exportRegistry ).toBe( 'object' );
+		} );
 	} );
+
+	describe( 'getExportRegistry', () => {
+		it( 'should return the export registry object', () => {
+			const registry = LayersNamespace.getExportRegistry();
+			expect( registry ).toBeDefined();
+			expect( typeof registry ).toBe( 'object' );
+		} );
+
+		it( 'should contain StateManager mapping', () => {
+			const registry = LayersNamespace.getExportRegistry();
+			expect( registry.StateManager ).toEqual( { ns: 'Core', name: 'StateManager' } );
+		} );
+
+		it( 'should contain LayersEditor mapping with null namespace', () => {
+			const registry = LayersNamespace.getExportRegistry();
+			expect( registry.LayersEditor ).toEqual( { ns: null, name: 'Editor' } );
+		} );
+
+		it( 'should contain all Core mappings', () => {
+			const registry = LayersNamespace.getExportRegistry();
+			expect( registry.StateManager ).toBeDefined();
+			expect( registry.HistoryManager ).toBeDefined();
+			expect( registry.EventManager ).toBeDefined();
+			expect( registry.LayersModuleRegistry ).toBeDefined();
+		} );
+
+		it( 'should contain all UI mappings', () => {
+			const registry = LayersNamespace.getExportRegistry();
+			expect( registry.UIManager ).toBeDefined();
+			expect( registry.Toolbar ).toBeDefined();
+			expect( registry.LayerPanel ).toBeDefined();
+		} );
+
+		it( 'should contain all Canvas mappings', () => {
+			const registry = LayersNamespace.getExportRegistry();
+			expect( registry.CanvasManager ).toBeDefined();
+			expect( registry.CanvasRenderer ).toBeDefined();
+			expect( registry.LayersSelectionManager ).toBeDefined();
+		} );
+
+		it( 'should contain all Utils mappings', () => {
+			const registry = LayersNamespace.getExportRegistry();
+			expect( registry.GeometryUtils ).toBeDefined();
+			expect( registry.TextUtils ).toBeDefined();
+			expect( registry.ImageLoader ).toBeDefined();
+		} );
+
+		it( 'should contain Validation mappings', () => {
+			const registry = LayersNamespace.getExportRegistry();
+			expect( registry.LayersValidator ).toBeDefined();
+			expect( registry.ValidationManager ).toBeDefined();
+		} );
+	} );
+
+	describe( 'registerExport', () => {
+		beforeEach( () => {
+			// Reset the namespace for clean testing
+			global.window.Layers = {
+				Core: {},
+				UI: {},
+				Canvas: {},
+				Utils: {},
+				Validation: {}
+			};
+		} );
+
+		it( 'should register class to correct namespace location', () => {
+			class TestStateManager {}
+			global.window.StateManager = TestStateManager;
+			LayersNamespace.registerExport( 'StateManager', TestStateManager );
+
+			expect( global.window.Layers.Core.StateManager ).toBe( TestStateManager );
+		} );
+
+		it( 'should register top-level export when ns is null', () => {
+			class TestEditor {}
+			global.window.LayersEditor = TestEditor;
+			LayersNamespace.registerExport( 'LayersEditor', TestEditor );
+
+			expect( global.window.Layers.Editor ).toBe( TestEditor );
+		} );
+
+		it( 'should handle unknown export names gracefully', () => {
+			class UnknownClass {}
+			// Should not throw
+			expect( () => {
+				LayersNamespace.registerExport( 'UnknownClassName', UnknownClass );
+			} ).not.toThrow();
+		} );
+
+		it( 'should register UI component correctly', () => {
+			class TestToolbar {}
+			global.window.Toolbar = TestToolbar;
+			LayersNamespace.registerExport( 'Toolbar', TestToolbar );
+
+			expect( global.window.Layers.UI.Toolbar ).toBe( TestToolbar );
+		} );
+
+		it( 'should register Canvas component correctly', () => {
+			class TestCanvasManager {}
+			global.window.CanvasManager = TestCanvasManager;
+			LayersNamespace.registerExport( 'CanvasManager', TestCanvasManager );
+
+			expect( global.window.Layers.Canvas.Manager ).toBe( TestCanvasManager );
+		} );
+
+		it( 'should register Utils component correctly', () => {
+			class TestImageLoader {}
+			global.window.ImageLoader = TestImageLoader;
+			LayersNamespace.registerExport( 'ImageLoader', TestImageLoader );
+
+			expect( global.window.Layers.Utils.ImageLoader ).toBe( TestImageLoader );
+		} );
+
+		it( 'should register Validation component correctly', () => {
+			class TestValidator {}
+			global.window.LayersValidator = TestValidator;
+			LayersNamespace.registerExport( 'LayersValidator', TestValidator );
+
+			expect( global.window.Layers.Validation.LayersValidator ).toBe( TestValidator );
+		} );
+	} );
+
+	describe( 'initializeNamespace', () => {
+		beforeEach( () => {
+			// Reset namespace fully
+			delete global.window.Layers;
+			global.window.Layers = {
+				Core: {},
+				UI: {},
+				Canvas: {},
+				Utils: {},
+				Validation: {}
+			};
+		} );
+
+		it( 'should set initialized flag after calling', () => {
+			LayersNamespace.initializeNamespace();
+			expect( global.window.Layers.initialized ).toBe( true );
+		} );
+
+		it( 'should set VERSION after initializing', () => {
+			LayersNamespace.initializeNamespace();
+			expect( global.window.Layers.VERSION ).toBeDefined();
+		} );
+
+		it( 'should not re-initialize if already initialized', () => {
+			global.window.Layers.initialized = true;
+			const originalVersion = global.window.Layers.VERSION;
+
+			LayersNamespace.initializeNamespace();
+
+			// VERSION should remain unchanged (was set before, won't be overwritten)
+			expect( global.window.Layers.VERSION ).toBe( originalVersion );
+		} );
+
+		it( 'should register existing window.StateManager', () => {
+			class MockStateManager {}
+			global.window.StateManager = MockStateManager;
+
+			LayersNamespace.initializeNamespace();
+
+			expect( global.window.Layers.Core.StateManager ).toBe( MockStateManager );
+		} );
+
+		it( 'should register singleton layersRegistry', () => {
+			global.window.layersRegistry = { test: true };
+
+			LayersNamespace.initializeNamespace();
+
+			expect( global.window.Layers.registry ).toEqual( { test: true } );
+		} );
+
+		it( 'should register singleton layersErrorHandler', () => {
+			global.window.layersErrorHandler = { handleError: jest.fn() };
+
+			LayersNamespace.initializeNamespace();
+
+			expect( global.window.Layers.errorHandler ).toBe( global.window.layersErrorHandler );
+		} );
+
+		it( 'should register singleton layersMessages', () => {
+			global.window.layersMessages = { get: jest.fn() };
+
+			LayersNamespace.initializeNamespace();
+
+			expect( global.window.Layers.messages ).toBe( global.window.layersMessages );
+		} );
+	} );
+
+	describe( 'exportRegistry structure', () => {
+		it( 'should have correct structure for Core components', () => {
+			const registry = LayersNamespace.exportRegistry;
+			expect( registry.StateManager.ns ).toBe( 'Core' );
+			expect( registry.HistoryManager.ns ).toBe( 'Core' );
+			expect( registry.EventManager.ns ).toBe( 'Core' );
+		} );
+
+		it( 'should have correct structure for top-level exports', () => {
+			const registry = LayersNamespace.exportRegistry;
+			expect( registry.LayersEditor.ns ).toBeNull();
+			expect( registry.LayersToolManager.ns ).toBeNull();
+			expect( registry.APIManager.ns ).toBeNull();
+		} );
+
+		it( 'should have name mappings that differ from old names', () => {
+			const registry = LayersNamespace.exportRegistry;
+			// UIManager -> UI.Manager
+			expect( registry.UIManager.name ).toBe( 'Manager' );
+			// CanvasManager -> Canvas.Manager  
+			expect( registry.CanvasManager.name ).toBe( 'Manager' );
+			// GeometryUtils -> Utils.Geometry
+			expect( registry.GeometryUtils.name ).toBe( 'Geometry' );
+		} );
+} );
 } );
