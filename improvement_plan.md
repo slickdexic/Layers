@@ -218,28 +218,38 @@ LayerRenderer reduced from 1,953 lines to **363 lines** (81% reduction)
 
 ### P2.3 Continue CanvasManager Extraction
 
-**Status:** ~45% COMPLETE (9 controllers extracted)  
+**Status:** ~50% COMPLETE  
 **Effort:** 3-4 weeks  
-**Target:** CanvasManager < 500 lines (currently 2,076)
+**Target:** CanvasManager < 1,500 lines (currently 1,975, was 2,109)
 
 **Already Extracted Controllers:**
 | Controller | Lines | Coverage |
 |------------|-------|----------|
 | ZoomPanController | ~340 | 97% |
 | GridRulersController | ~385 | 94% |
-| TransformController | ~1,337 | 80% |
+| TransformController | ~761 | 80% |
 | HitTestController | ~380 | 98% |
 | DrawingController | ~632 | 100% |
 | ClipboardController | ~210 | 98% |
 | RenderCoordinator | ~390 | 92% |
 | InteractionController | ~490 | 100% |
 | StyleController | ~100 | 100% |
+| TextInputController | ~120 | 95% |
+| ResizeCalculator | ~806 | 80% |
 
-**Still in CanvasManager (~1,500+ lines to extract):**
-- Background image loading (~150 lines)
-- Layer operations (add/remove/reorder) (~200 lines)
-- Bounds calculations (~100 lines)
-- Event coordination (~300+ lines)
+**Progress (Dec 13, 2025):**
+- Compacted 44 delegation methods to single-line format
+- Reduced from 2,109 to 1,975 lines (134 lines, 6.4% reduction)
+
+**Remaining in CanvasManager (~1,500 lines):**
+- Constructor/init (~200 lines) - Core, cannot extract
+- Event coordination (~200 lines) - Orchestration logic
+- Selection coordination (~150 lines) - Ties to SelectionManager
+- Render coordination (~150 lines) - Ties to RenderCoordinator
+- Utility methods (~100 lines) - Various helpers
+
+**Note:** Getting below 500 lines would require fundamental architectural changes.
+Current target revised to <1,500 lines.
 
 ---
 
@@ -423,19 +433,19 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 
 ## Quick Start: What to Do Next
 
-**Current God Classes (5 files >1000 lines):**
+**Current God Classes (5 files >1000 lines) - Updated Dec 13, 2025:**
 | File | Lines | Priority |
 |------|-------|----------|
-| CanvasManager.js | 2,109 | P2.3 - Continue controller extraction |
+| CanvasManager.js | 1,975 | P2.3 - Compaction complete, ~50% extracted |
 | LayerPanel.js | 1,570 | Extract ListItem/ContextMenu helpers |
 | LayersEditor.js | 1,284 | Extract after CanvasManager |
 | SelectionManager.js | 1,258 | Extract selection state handlers |
 | ToolManager.js | 1,155 | Already has ShapeFactory/ToolStyles |
 
 **Recommended Next Actions:**
-1. **Split CanvasManager** (P2.3) - Extract background loading (~150 lines), layer ops (~200 lines)
-2. **Split LayerPanel** - Extract ListItem builder, context menu, drag-drop handlers
-3. **Split SelectionManager** - Extract multi-selection logic, bounds calculation
+1. **Split LayerPanel** (P2.4) - Extract ListItem builder (~180 lines), context menu (~150 lines), drag-drop handlers (~120 lines)
+2. **Split SelectionManager** (P2.5) - Extract multi-selection logic, bounds calculation
+3. **Split ToolManager** (P2.6) - Extract tool configuration, keyboard shortcuts
 
 ---
 
