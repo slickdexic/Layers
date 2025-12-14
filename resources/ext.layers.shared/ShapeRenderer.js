@@ -22,6 +22,16 @@
 	'use strict';
 
 	/**
+	 * Get PolygonGeometry class from namespace
+	 *
+	 * @return {Function|null} PolygonGeometry class or null
+	 */
+	function getPolygonGeometry() {
+		return ( window.Layers && window.Layers.Utils && window.Layers.Utils.PolygonGeometry ) ||
+			window.PolygonGeometry || null;
+	}
+
+	/**
 	 * Clamp a value to a valid opacity range [0, 1]
 	 *
 	 * @private
@@ -670,20 +680,26 @@
 			// Clear shadow state
 			this.clearShadow();
 
-			// Helper to draw the polygon path
+			// Helper to draw the polygon path - use PolygonGeometry if available
+			const PolygonGeometry = getPolygonGeometry();
 			const drawPolygonPath = () => {
-				this.ctx.beginPath();
-				for ( let i = 0; i < sides; i++ ) {
-					const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-					const px = x + radius * Math.cos( angle );
-					const py = y + radius * Math.sin( angle );
-					if ( i === 0 ) {
-						this.ctx.moveTo( px, py );
-					} else {
-						this.ctx.lineTo( px, py );
+				if ( PolygonGeometry ) {
+					PolygonGeometry.drawPolygonPath( this.ctx, x, y, radius, sides );
+				} else {
+					// Fallback inline implementation
+					this.ctx.beginPath();
+					for ( let i = 0; i < sides; i++ ) {
+						const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
+						const px = x + radius * Math.cos( angle );
+						const py = y + radius * Math.sin( angle );
+						if ( i === 0 ) {
+							this.ctx.moveTo( px, py );
+						} else {
+							this.ctx.lineTo( px, py );
+						}
 					}
+					this.ctx.closePath();
 				}
-				this.ctx.closePath();
 			};
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
@@ -799,21 +815,27 @@
 			// Clear shadow state
 			this.clearShadow();
 
-			// Helper to draw the star path
+			// Helper to draw the star path - use PolygonGeometry if available
+			const PolygonGeometry = getPolygonGeometry();
 			const drawStarPath = () => {
-				this.ctx.beginPath();
-				for ( let i = 0; i < points * 2; i++ ) {
-					const angle = ( i * Math.PI ) / points - Math.PI / 2;
-					const r = i % 2 === 0 ? outerRadius : innerRadius;
-					const px = x + r * Math.cos( angle );
-					const py = y + r * Math.sin( angle );
-					if ( i === 0 ) {
-						this.ctx.moveTo( px, py );
-					} else {
-						this.ctx.lineTo( px, py );
+				if ( PolygonGeometry ) {
+					PolygonGeometry.drawStarPath( this.ctx, x, y, outerRadius, innerRadius, points );
+				} else {
+					// Fallback inline implementation
+					this.ctx.beginPath();
+					for ( let i = 0; i < points * 2; i++ ) {
+						const angle = ( i * Math.PI ) / points - Math.PI / 2;
+						const r = i % 2 === 0 ? outerRadius : innerRadius;
+						const px = x + r * Math.cos( angle );
+						const py = y + r * Math.sin( angle );
+						if ( i === 0 ) {
+							this.ctx.moveTo( px, py );
+						} else {
+							this.ctx.lineTo( px, py );
+						}
 					}
+					this.ctx.closePath();
 				}
-				this.ctx.closePath();
 			};
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
