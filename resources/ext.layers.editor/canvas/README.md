@@ -120,19 +120,21 @@ CanvasManager still contains ~500 lines of fallback implementations that duplica
 - [x] InteractionController.js extracted (487 lines)
 - [x] ImageLoader.js extracted (280 lines) - in parent directory
 - [x] TextInputController.js extracted (187 lines) - modal text input handling
+- [x] Dead code removed (deepCloneLayers, undo/redo, updateUndoRedoButtons) - 80 lines
 - [ ] Remove fallback code from CanvasManager (~80 lines) - low priority, has test coverage
 - [ ] MarqueeSelectionController (~80 lines) - optional, already delegates to SelectionManager
 - [ ] CanvasPool.js - future enhancement (~50 lines, too small)
 - [ ] ViewportManager.js - future enhancement
 
-**Total extracted:** ~4,436 lines into focused, maintainable modules
-**CanvasManager.js current size:** 2,025 lines (down from 5,462 lines)
-**Target:** <800 lines (significant refactoring needed)
+**Total extracted:** ~4,516 lines into focused, maintainable modules
+**CanvasManager.js current size:** 1,895 lines (down from 5,462 lines)
+**Actual code (excluding JSDoc/blank):** ~1,518 lines
+**Target:** <1,500 lines (nearly achieved!)
 
-**Analysis (2025-01-15):** Many CanvasManager methods are now thin delegation calls (3-5 lines each).
+**Analysis (2025-12-13):** CanvasManager is now near target at ~1,518 lines of actual code.
 The remaining bulk comes from:
 - Constructor state initialization (~90 lines)
-- JSDoc comments (~200 lines)
+- JSDoc comments (~377 lines)
 - Fallback code for tests (~100 lines)
 - Coordinate transform methods (~50 lines)
 - Layer bounds calculations (~70 lines)

@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** December 2025  
-**Version:** 0.8.4
+**Version:** 0.8.5
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -22,27 +22,30 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 67 |
-| Viewer module | 653 lines |
-| Shared module | 2,583 lines |
-| Editor module | ~31,769 lines |
-| ES6 classes | 57 |
-| Prototype patterns | 10 (1 file: LayersViewer.js) |
-| Test coverage | 87.84% statements |
-| Jest tests | 3,913 |
+| Total JS files | 75 |
+| Viewer module | 682 lines |
+| Shared module | 3,888 lines |
+| Editor module | ~31,881 lines |
+| ES6 classes | 66 |
+| Prototype patterns | 0 (100% ES6) |
+| Test coverage | 89% statements |
+| Jest tests | 4,300 |
 | PHPUnit test files | 17 |
 
 ---
 
 ## Recent Architecture Changes
 
-### December 2025: Accessibility & Editor Modularization
+### December 2025: Modularization & ES6 Completion
 
+- **100% ES6 Migration** - All 66 classes now use ES6 syntax, 0 prototype patterns
+- **LayerRenderer Split** - Extracted 5 specialized renderers (ShapeRenderer, ArrowRenderer, ShadowRenderer, TextRenderer, EffectsRenderer)
+- **TransformController Split** - Extracted ResizeCalculator (806 lines)
+- **Namespace Migration** - Reduced direct window exports from 50 to 2
 - **AccessibilityAnnouncer.js** - ARIA live regions for screen reader support
 - **EditorBootstrap.js** - Extracted initialization, hooks, cleanup from LayersEditor
 - **RevisionManager.js** - Extracted revision and named layer set management
 - **DialogManager.js** - Extracted modal dialogs with ARIA accessibility
-- **ShadowRenderer.js** - Extracted shadow rendering from LayerRenderer
 - **NamespaceHelper.js** - Centralized getClass() utility
 
 ---
@@ -149,13 +152,14 @@ ZoomPanController.prototype.zoomIn = function() {
 |------------|----------------|-------|
 | ZoomPanController | Zoom, pan, fit-to-window | ~340 |
 | GridRulersController | Grid, rulers, snap-to-grid | ~385 |
-| TransformController | Resize, rotate, drag | ~1225 |
+| TransformController | Resize, rotate, drag | ~761 |
 | HitTestController | Click detection, selection | ~380 |
-| DrawingController | Shape creation | ~620 |
+| DrawingController | Shape creation | ~635 |
 | ClipboardController | Copy, cut, paste | ~210 |
 | InteractionController | Mouse/touch events | ~490 |
 | RenderCoordinator | Render scheduling | ~390 |
 | StyleController | Style options | ~100 |
+| ResizeCalculator | Shape resize calculations | ~806 |
 
 ### 3. Editor Module Extraction Pattern
 
@@ -288,39 +292,32 @@ public static function someStaticMethod() {
 
 ## Namespace Strategy
 
-### Current State (Legacy)
+### Current State (Complete)
 
-All JavaScript modules export to `window`:
+All JavaScript modules export to organized namespaces:
 
 ```javascript
-window.LayersEditor = LayersEditor;
-window.CanvasManager = CanvasManager;
-window.ZoomPanController = ZoomPanController;
-// ... 43 total exports
+// Namespaced exports (215 instances):
+window.Layers.Canvas.Manager = CanvasManager;
+window.Layers.Utils.PolygonGeometry = PolygonGeometry;
+window.Layers.ShadowRenderer = ShadowRenderer;
+window.Layers.UI.LayerItemFactory = LayerItemFactory;
+
+// 0 legacy direct exports remain
 ```
 
-### Target State (Migration In Progress)
-
-Moving toward organized namespaces:
+### Namespace Structure
 
 ```javascript
 window.Layers = {
-    VERSION: '0.8.1-dev',
+    VERSION: '0.8.5',
     Editor: LayersEditor,
     Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
-    UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm },
+    UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm, LayerItemFactory },
     Canvas: { Manager, Renderer, SelectionManager, DrawingController, ... },
-    Utils: { Geometry, Text, ImageLoader, ErrorHandler, EventTracker },
+    Utils: { Geometry, Text, ImageLoader, ErrorHandler, EventTracker, PolygonGeometry },
     Validation: { LayersValidator, ValidationManager }
 };
-
-// Legacy compatibility with deprecation warnings
-Object.defineProperty(window, 'LayersEditor', {
-    get() {
-        console.warn('window.LayersEditor is deprecated. Use window.Layers.Editor');
-        return Layers.Editor;
-    }
-});
 ```
 
 ---
@@ -401,16 +398,19 @@ tests/jest/
 ├── CanvasManager.test.js       # Core canvas tests
 ├── ZoomPanController.test.js   # Controller-specific
 ├── SelectionManager.test.js    # Selection logic
-├── integration/                # Multi-module tests
-│   └── SaveLoadWorkflow.test.js
+├── integration/                # Multi-module tests (138 tests)
+│   ├── SelectionWorkflow.test.js (44 tests)
+│   ├── LayerWorkflow.test.js (70 tests)
+│   └── SaveLoadWorkflow.test.js (24 tests)
 └── RegressionTests.test.js     # Bug fix validation
 ```
 
 **Key patterns:**
-- Each controller has its own test file
+- Each controller has its own test file (87 test files total)
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
+- 4,300 tests, 89% coverage
 
 ### E2E Tests (Playwright)
 
@@ -440,20 +440,28 @@ extensions/Layers/
 │   ├── ext.layers/          # Viewer (article pages)
 │   │   ├── init.js
 │   │   └── LayersViewer.js
-│   ├── ext.layers.shared/   # Shared modules
-│   │   └── LayerRenderer.js # Unified rendering engine
-│   └── ext.layers.editor/   # Editor
-│       ├── LayersEditor.js  # Main orchestrator (1,203 lines)
-│       ├── CanvasManager.js # Canvas facade (1,899 lines)
+│   ├── ext.layers.shared/   # Shared modules (3,888 lines)
+│   │   ├── LayerRenderer.js     # Facade/dispatcher (371 lines)
+│   │   ├── ShapeRenderer.js     # Shape rendering (1,050 lines)
+│   │   ├── ArrowRenderer.js     # Arrow rendering (702 lines)
+│   │   ├── ShadowRenderer.js    # Shadow effects (521 lines)
+│   │   ├── TextRenderer.js      # Text rendering (343 lines)
+│   │   ├── EffectsRenderer.js   # Highlight/blur (245 lines)
+│   │   ├── BoundsCalculator.js  # Layer bounds (340 lines)
+│   │   └── PolygonGeometry.js   # Polygon math (213 lines)
+│   └── ext.layers.editor/   # Editor (~31,881 lines)
+│       ├── LayersEditor.js  # Main orchestrator (1,284 lines)
+│       ├── CanvasManager.js # Canvas facade (1,975 lines)
 │       ├── AccessibilityAnnouncer.js  # ARIA live regions
 │       ├── editor/          # Extracted editor modules
 │       │   ├── EditorBootstrap.js   # Init, hooks, cleanup
 │       │   ├── RevisionManager.js   # Revision management
 │       │   └── DialogManager.js     # Modal dialogs
-│       ├── canvas/          # Extracted controllers
+│       ├── canvas/          # Extracted controllers (11 files)
 │       │   ├── ZoomPanController.js
 │       │   ├── GridRulersController.js
 │       │   ├── TransformController.js
+│       │   ├── ResizeCalculator.js
 │       │   ├── HitTestController.js
 │       │   ├── DrawingController.js
 │       │   ├── ClipboardController.js
@@ -462,9 +470,9 @@ extensions/Layers/
 │       │   └── StyleController.js
 │       └── *.js             # Other modules
 ├── tests/
-│   ├── jest/                # Unit tests (2,736 tests)
+│   ├── jest/                # Unit tests (4,300 tests, 87 files)
 │   ├── e2e/                 # End-to-end tests
-│   └── phpunit/             # PHP tests
+│   └── phpunit/             # PHP tests (17 files)
 └── docs/                    # Documentation
 ```
 

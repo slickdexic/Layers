@@ -291,7 +291,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.UI = window.Layers.UI || {};
 		window.Layers.UI.LayerItemFactory = LayerItemFactory;
-		window.LayerItemFactory = LayerItemFactory;
 	}
 
 	// CommonJS export for testing

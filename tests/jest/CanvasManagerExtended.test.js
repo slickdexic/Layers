@@ -465,91 +465,7 @@ describe( 'CanvasManager Extended Coverage', () => {
 		} );
 	} );
 
-	describe( 'deepCloneLayers', () => {
-		it( 'should deep clone simple layers', () => {
-			const layers = [
-				{ id: '1', type: 'rectangle', x: 10, y: 20 },
-				{ id: '2', type: 'circle', x: 30, y: 40 }
-			];
-			const cloned = canvasManager.deepCloneLayers( layers );
-
-			expect( cloned ).not.toBe( layers );
-			expect( cloned ).toEqual( layers );
-			expect( cloned[ 0 ] ).not.toBe( layers[ 0 ] );
-		} );
-
-		it( 'should deep clone layers with nested objects', () => {
-			const layers = [
-				{ id: '1', type: 'path', points: [ { x: 0, y: 0 }, { x: 10, y: 10 } ] }
-			];
-			const cloned = canvasManager.deepCloneLayers( layers );
-
-			expect( cloned[ 0 ].points ).not.toBe( layers[ 0 ].points );
-			expect( cloned[ 0 ].points ).toEqual( layers[ 0 ].points );
-		} );
-
-		it( 'should handle fallback cloning when JSON fails', () => {
-			// Create an object that JSON.stringify will fail on (circular reference)
-			const layers = [
-				{ id: '1', type: 'rectangle', x: 10, y: 20 }
-			];
-
-			// Add circular reference
-			layers[ 0 ].self = layers[ 0 ];
-
-			// Mock JSON.stringify to throw
-			const originalStringify = JSON.stringify;
-			JSON.stringify = jest.fn( () => {
-				throw new Error( 'Circular reference' );
-			} );
-
-			const cloned = canvasManager.deepCloneLayers( layers );
-
-			expect( cloned ).toBeDefined();
-			expect( cloned.length ).toBe( 1 );
-			expect( cloned[ 0 ].id ).toBe( '1' );
-			expect( cloned[ 0 ].type ).toBe( 'rectangle' );
-
-			JSON.stringify = originalStringify;
-		} );
-
-		it( 'should clone nested objects in fallback mode', () => {
-			const layers = [
-				{ id: '1', style: { color: 'red', stroke: 'blue' } }
-			];
-
-			const originalStringify = JSON.stringify;
-			JSON.stringify = jest.fn( () => {
-				throw new Error( 'Fail' );
-			} );
-
-			const cloned = canvasManager.deepCloneLayers( layers );
-
-			expect( cloned[ 0 ].style ).toBeDefined();
-			expect( cloned[ 0 ].style.color ).toBe( 'red' );
-
-			JSON.stringify = originalStringify;
-		} );
-
-		it( 'should clone arrays in fallback mode', () => {
-			const layers = [
-				{ id: '1', points: [ 1, 2, 3 ] }
-			];
-
-			const originalStringify = JSON.stringify;
-			JSON.stringify = jest.fn( () => {
-				throw new Error( 'Fail' );
-			} );
-
-			const cloned = canvasManager.deepCloneLayers( layers );
-
-			expect( Array.isArray( cloned[ 0 ].points ) ).toBe( true );
-			expect( cloned[ 0 ].points ).toEqual( [ 1, 2, 3 ] );
-			expect( cloned[ 0 ].points ).not.toBe( layers[ 0 ].points );
-
-			JSON.stringify = originalStringify;
-		} );
-	} );
+	// Note: deepCloneLayers tests removed - method was dead code (never called in production)
 
 	describe( 'calculateResize without TransformController', () => {
 		it( 'should return null and log error when TransformController unavailable', () => {
@@ -625,56 +541,7 @@ describe( 'CanvasManager Extended Coverage', () => {
 		} );
 	} );
 
-	describe( 'updateUndoRedoButtons', () => {
-		it( 'should delegate to editor historyManager', () => {
-			canvasManager.updateUndoRedoButtons();
-			expect( mockEditor.historyManager.updateUndoRedoButtons ).toHaveBeenCalled();
-		} );
-
-		it( 'should use direct historyManager as fallback', () => {
-			canvasManager.editor = null;
-			canvasManager.historyManager = {
-				updateUndoRedoButtons: jest.fn()
-			};
-
-			canvasManager.updateUndoRedoButtons();
-
-			expect( canvasManager.historyManager.updateUndoRedoButtons ).toHaveBeenCalled();
-		} );
-
-		it( 'should handle missing historyManager gracefully', () => {
-			canvasManager.editor = {};
-			canvasManager.historyManager = null;
-
-			expect( () => canvasManager.updateUndoRedoButtons() ).not.toThrow();
-		} );
-	} );
-
-	describe( 'undo and redo delegation', () => {
-		it( 'should delegate undo to editor', () => {
-			const result = canvasManager.undo();
-			expect( mockEditor.undo ).toHaveBeenCalled();
-			expect( result ).toBe( true );
-		} );
-
-		it( 'should return false when editor unavailable', () => {
-			canvasManager.editor = null;
-			const result = canvasManager.undo();
-			expect( result ).toBe( false );
-		} );
-
-		it( 'should delegate redo to editor', () => {
-			const result = canvasManager.redo();
-			expect( mockEditor.redo ).toHaveBeenCalled();
-			expect( result ).toBe( true );
-		} );
-
-		it( 'should return false for redo when editor unavailable', () => {
-			canvasManager.editor = null;
-			const result = canvasManager.redo();
-			expect( result ).toBe( false );
-		} );
-	} );
+	// Note: updateUndoRedoButtons and undo/redo tests removed - methods were dead code (never called externally)
 
 	describe( 'saveState delegation', () => {
 		it( 'should delegate to editor historyManager', () => {

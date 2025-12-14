@@ -268,4 +268,131 @@ describe( 'DeepClone', () => {
 			expect( window.Layers.Utils.deepCloneLayer ).toBeDefined();
 		} );
 	} );
+
+	describe( 'fallback behaviors', () => {
+		it( 'should fall back to JSON when structuredClone throws', () => {
+			// Save original
+			const originalStructuredClone = global.structuredClone;
+
+			// Mock structuredClone to throw
+			global.structuredClone = jest.fn( () => {
+				throw new Error( 'DataCloneError' );
+			} );
+
+			// Reload module to pick up mock
+			jest.resetModules();
+			global.window = { Layers: {} };
+			const freshModule = require( '../../resources/ext.layers.shared/DeepClone.js' );
+
+			const original = { a: 1, b: { c: 2 } };
+			const cloned = freshModule.deepClone( original );
+
+			// Should succeed via JSON fallback
+			expect( cloned ).toEqual( original );
+			expect( cloned ).not.toBe( original );
+			expect( global.structuredClone ).toHaveBeenCalled();
+
+			// Restore
+			global.structuredClone = originalStructuredClone;
+		} );
+
+		it( 'should return original object when both methods fail', () => {
+			// Save originals
+			const originalStructuredClone = global.structuredClone;
+			const originalStringify = JSON.stringify;
+
+			// Mock structuredClone to throw
+			global.structuredClone = jest.fn( () => {
+				throw new Error( 'DataCloneError' );
+			} );
+
+			// Mock JSON.stringify to throw
+			JSON.stringify = jest.fn( () => {
+				throw new Error( 'Converting circular structure' );
+			} );
+
+			// Setup mw.log.warn mock
+			global.mw = {
+				log: {
+					warn: jest.fn()
+				}
+			};
+
+			// Reload module
+			jest.resetModules();
+			global.window = { Layers: {} };
+			const freshModule = require( '../../resources/ext.layers.shared/DeepClone.js' );
+
+			const original = { self: null };
+			const cloned = freshModule.deepClone( original );
+
+			// Should return original object as last resort
+			expect( cloned ).toBe( original );
+			expect( global.mw.log.warn ).toHaveBeenCalledWith(
+				'[DeepClone] Failed to clone object:',
+				'Converting circular structure'
+			);
+
+			// Restore
+			global.structuredClone = originalStructuredClone;
+			JSON.stringify = originalStringify;
+			delete global.mw;
+		} );
+
+		it( 'should handle failure without mw.log available', () => {
+			// Save originals
+			const originalStructuredClone = global.structuredClone;
+			const originalStringify = JSON.stringify;
+
+			// Mock structuredClone to throw
+			global.structuredClone = jest.fn( () => {
+				throw new Error( 'DataCloneError' );
+			} );
+
+			// Mock JSON.stringify to throw
+			JSON.stringify = jest.fn( () => {
+				throw new Error( 'Cannot serialize' );
+			} );
+
+			// Ensure mw is not defined
+			delete global.mw;
+
+			// Reload module
+			jest.resetModules();
+			global.window = { Layers: {} };
+			const freshModule = require( '../../resources/ext.layers.shared/DeepClone.js' );
+
+			const original = { data: 'test' };
+			const cloned = freshModule.deepClone( original );
+
+			// Should return original object silently
+			expect( cloned ).toBe( original );
+
+			// Restore
+			global.structuredClone = originalStructuredClone;
+			JSON.stringify = originalStringify;
+		} );
+
+		it( 'should use JSON fallback when structuredClone is not available', () => {
+			// Save and remove structuredClone
+			const originalStructuredClone = global.structuredClone;
+			delete global.structuredClone;
+
+			// Reload module
+			jest.resetModules();
+			global.window = { Layers: {} };
+			const freshModule = require( '../../resources/ext.layers.shared/DeepClone.js' );
+
+			const original = { nested: { value: 42 } };
+			const cloned = freshModule.deepClone( original );
+
+			// Should work via JSON fallback
+			expect( cloned ).toEqual( original );
+			expect( cloned ).not.toBe( original );
+			expect( cloned.nested ).not.toBe( original.nested );
+
+			// Restore
+			global.structuredClone = originalStructuredClone;
+		} );
+	} );
 } );

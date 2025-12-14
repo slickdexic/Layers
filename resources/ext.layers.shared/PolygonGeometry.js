@@ -201,7 +201,6 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Utils = window.Layers.Utils || {};
 		window.Layers.Utils.PolygonGeometry = PolygonGeometry;
-		window.PolygonGeometry = PolygonGeometry;
 	}
 
 	// CommonJS export for testing

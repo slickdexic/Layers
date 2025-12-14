@@ -54,7 +54,6 @@ describe( 'LayerPanel Coverage Extension', () => {
 		// Load LayerItemFactory for layer item creation
 		const LayerItemFactory = require( '../../resources/ext.layers.editor/ui/LayerItemFactory.js' );
 		window.Layers.UI.LayerItemFactory = LayerItemFactory;
-		window.LayerItemFactory = LayerItemFactory;
 
 		window.layersErrorHandler = {
 			handleError: jest.fn()

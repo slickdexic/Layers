@@ -545,47 +545,9 @@ describe( 'CanvasManager', () => {
 		} );
 	} );
 
-	describe( 'deep clone layers', () => {
-		it( 'should deep clone layers array', () => {
-			const layers = [
-				{ id: '1', type: 'rectangle', x: 100, y: 100, width: 50, height: 50 },
-				{ id: '2', type: 'circle', x: 200, y: 200, radius: 25 }
-			];
-			const cloned = canvasManager.deepCloneLayers( layers );
-			expect( cloned ).toEqual( layers );
-			expect( cloned ).not.toBe( layers );
-			expect( cloned[ 0 ] ).not.toBe( layers[ 0 ] );
-		} );
+	// Note: deepCloneLayers, undo/redo delegation tests removed - methods were dead code
 
-		it( 'should handle layers with nested objects', () => {
-			const layers = [
-				{ id: '1', type: 'polygon', points: [ { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 100 } ] }
-			];
-			const cloned = canvasManager.deepCloneLayers( layers );
-			expect( cloned[ 0 ].points ).toEqual( layers[ 0 ].points );
-			expect( cloned[ 0 ].points ).not.toBe( layers[ 0 ].points );
-		} );
-	} );
-
-	describe( 'undo/redo delegation', () => {
-		it( 'should delegate undo to editor', () => {
-			const result = canvasManager.undo();
-			expect( mockEditor.undo ).toHaveBeenCalled();
-			expect( result ).toBe( true );
-		} );
-
-		it( 'should delegate redo to editor', () => {
-			const result = canvasManager.redo();
-			expect( mockEditor.redo ).toHaveBeenCalled();
-			expect( result ).toBe( true );
-		} );
-
-		it( 'should return false when editor not available', () => {
-			canvasManager.editor = null;
-			expect( canvasManager.undo() ).toBe( false );
-			expect( canvasManager.redo() ).toBe( false );
-		} );
-
+	describe( 'saveState delegation', () => {
 		it( 'should delegate saveState to historyManager', () => {
 			canvasManager.saveState( 'test action' );
 			expect( mockEditor.historyManager.saveState ).toHaveBeenCalledWith( 'test action' );

@@ -57,14 +57,28 @@ class Hooks {
 					// Add a strict Content Security Policy to reduce XSS risk in the editor UI
 					// Note: MediaWiki may already send a site-wide CSP. Here we add a page-level header conservatively.
 					try {
+						// Get wgServer to allow cross-origin access when accessing via different hostname
+						$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+						$wgServer = $config->get( 'Server' );
+						// Extract origin from wgServer (handles protocol-relative URLs)
+						$serverOrigin = '';
+						if ( $wgServer ) {
+							// If protocol-relative, use current protocol
+							if ( strpos( $wgServer, '//' ) === 0 ) {
+								$serverOrigin = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? 'https:' : 'http:' ) . $wgServer;
+							} else {
+								$serverOrigin = $wgServer;
+							}
+						}
+
 						$policy = [];
-						$policy[] = "default-src 'self'";
-						$policy[] = "img-src 'self' data: blob:";
+						$policy[] = "default-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
+						$policy[] = "img-src 'self' data: blob:" . ( $serverOrigin ? " $serverOrigin" : '' );
 						// Allow inline styles used by MW/OOUI
 						$policy[] = "style-src 'self' 'unsafe-inline'";
 						// MediaWiki core generates inline scripts
 						$policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
-						$policy[] = "connect-src 'self'";
+						$policy[] = "connect-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
 						$policy[] = "font-src 'self' data:";
 						$policy[] = "object-src 'none'";
 						$policy[] = "base-uri 'self'";

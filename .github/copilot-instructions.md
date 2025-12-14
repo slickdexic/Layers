@@ -24,14 +24,15 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~2,076 lines - facade coordinating controllers), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
-  - Shared modules: `LayerRenderer.js` (~363 lines), `ShadowRenderer.js` (~517 lines), `ArrowRenderer.js` (~702 lines), `TextRenderer.js` (~343 lines), `ShapeRenderer.js` (~1,028 lines), `EffectsRenderer.js` (~245 lines)
+  - Core editor modules: `CanvasManager.js` (~1,975 lines - facade coordinating controllers), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
+  - Shared modules: `LayerRenderer.js` (~371 lines), `ShadowRenderer.js` (~521 lines), `ArrowRenderer.js` (~702 lines), `TextRenderer.js` (~343 lines), `ShapeRenderer.js` (~1,050 lines), `EffectsRenderer.js` (~245 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~340 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `GridRulersController.js` (~385 lines) - grid/ruler rendering, snap-to-grid/guides
-    - `TransformController.js` (~1,337 lines) - resize, rotation, multi-layer transforms
+    - `TransformController.js` (~761 lines) - resize, rotation, multi-layer transforms
+    - `ResizeCalculator.js` (~806 lines) - shape-specific resize calculations
     - `HitTestController.js` (~380 lines) - selection handle and layer hit testing
-    - `DrawingController.js` (~632 lines) - shape/tool creation and drawing preview
+    - `DrawingController.js` (~635 lines) - shape/tool creation and drawing preview
     - `ClipboardController.js` (~210 lines) - copy/cut/paste operations
     - `RenderCoordinator.js` (~390 lines) - render scheduling and dirty region tracking
     - `InteractionController.js` (~490 lines) - mouse/touch event handling coordination
@@ -45,7 +46,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
-  - ES6 classes: All 58 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
+  - ES6 classes: All 66 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.

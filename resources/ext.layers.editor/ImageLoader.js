@@ -89,13 +89,14 @@
 		buildUrlList() {
 			const imageUrls = [];
 			const filename = this.filename;
+			const currentOrigin = window.location.origin;
 
 			// Priority 1: Use the specific background image URL from config
 			if ( this.backgroundImageUrl ) {
 				imageUrls.push( this.backgroundImageUrl );
 			}
 
-			// Priority 2: Try to find the current page image
+			// Priority 2: Try to find the current page image (same-origin, most reliable)
 			const pageImages = document.querySelectorAll(
 				'.mw-file-element img, .fullImageLink img, .filehistory img, img[src*="' + filename + '"]'
 			);
@@ -106,30 +107,47 @@
 				}
 			}
 
-			// Priority 3: Try MediaWiki patterns if mw is available
-			if ( filename && typeof mw !== 'undefined' && mw && mw.config ) {
-				const server = mw.config.get( 'wgServer' );
-				const scriptPath = mw.config.get( 'wgScriptPath' );
-				const articlePath = mw.config.get( 'wgArticlePath' );
+			// Priority 3: Try MediaWiki patterns using CURRENT ORIGIN first (avoids CORS)
+			// This handles the case where wgServer differs from the access URL
+			if ( filename ) {
+				const encodedFilename = encodeURIComponent( filename );
 
-				if ( server && scriptPath ) {
-					const encodedFilename = encodeURIComponent( filename );
+				// Try current origin paths first (same-origin, no CORS issues)
+				const scriptPath = ( typeof mw !== 'undefined' && mw.config ) ?
+					mw.config.get( 'wgScriptPath' ) : '';
 
-					// Special:Redirect/file endpoint
+				if ( scriptPath ) {
+					// Special:Redirect/file endpoint using current origin
 					imageUrls.push(
-						server + scriptPath + '/index.php?title=Special:Redirect/file/' + encodedFilename
+						currentOrigin + scriptPath + '/index.php?title=Special:Redirect/file/' + encodedFilename
 					);
+				}
 
-					// Direct File: page
-					imageUrls.push(
-						server + scriptPath + '/index.php?title=File:' + encodedFilename
-					);
+				// Priority 4: Try wgServer-based URLs as fallback (may require CORS)
+				if ( typeof mw !== 'undefined' && mw && mw.config ) {
+					const server = mw.config.get( 'wgServer' );
+					const articlePath = mw.config.get( 'wgArticlePath' );
 
-					// Article path format
-					if ( articlePath ) {
-						imageUrls.push(
-							server + articlePath.replace( '$1', 'File:' + encodedFilename )
-						);
+					// Only add wgServer URLs if they differ from current origin
+					if ( server && server !== currentOrigin ) {
+						if ( scriptPath ) {
+							// Special:Redirect/file endpoint
+							imageUrls.push(
+								server + scriptPath + '/index.php?title=Special:Redirect/file/' + encodedFilename
+							);
+
+							// Direct File: page
+							imageUrls.push(
+								server + scriptPath + '/index.php?title=File:' + encodedFilename
+							);
+						}
+
+						// Article path format
+						if ( articlePath ) {
+							imageUrls.push(
+								server + articlePath.replace( '$1', 'File:' + encodedFilename )
+							);
+						}
 					}
 				}
 			}
@@ -138,12 +156,29 @@
 		}
 
 		/**
+		 * Check if a URL is same-origin
+		 *
+		 * @param {string} url - URL to check
+		 * @return {boolean} True if same-origin
+		 */
+		isSameOrigin( url ) {
+			try {
+				const urlObj = new URL( url, window.location.origin );
+				return urlObj.origin === window.location.origin;
+			} catch ( e ) {
+				// Relative URLs are same-origin
+				return !url.startsWith( 'http://' ) && !url.startsWith( 'https://' ) && !url.startsWith( '//' );
+			}
+		}
+
+		/**
 		 * Try to load an image from a list of URLs
 		 *
 		 * @param {string[]} urls - Array of URLs to try
 		 * @param {number} index - Current index in the array
+		 * @param {boolean} [withCors=false] - Whether to retry with crossOrigin after failure
 		 */
-		tryLoadImage( urls, index ) {
+		tryLoadImage( urls, index, withCors = false ) {
 			if ( index >= urls.length ) {
 				// All URLs failed, try test image
 				this.loadTestImage();
@@ -151,8 +186,14 @@
 			}
 
 			const currentUrl = urls[ index ];
+			const isSameOrigin = this.isSameOrigin( currentUrl );
 			this.image = new Image();
-			this.image.crossOrigin = 'anonymous';
+
+			// Only set crossOrigin for cross-origin URLs, and only if explicitly requested
+			// Setting crossOrigin on same-origin requests is unnecessary and can cause issues
+			if ( !isSameOrigin && withCors ) {
+				this.image.crossOrigin = 'anonymous';
+			}
 
 			this.image.onload = () => {
 				this.isLoading = false;
@@ -160,13 +201,20 @@
 					width: this.image.width,
 					height: this.image.height,
 					source: 'url',
-					url: currentUrl
+					url: currentUrl,
+					isCrossOrigin: !isSameOrigin
 				} );
 			};
 
 			this.image.onerror = () => {
-				// Try next URL
-				this.tryLoadImage( urls, index + 1 );
+				// If cross-origin failed without CORS, try with CORS
+				// (in case server does support CORS but we need to request it)
+				if ( !isSameOrigin && !withCors ) {
+					this.tryLoadImage( urls, index, true );
+				} else {
+					// Try next URL
+					this.tryLoadImage( urls, index + 1, false );
+				}
 			};
 
 			this.image.src = currentUrl;

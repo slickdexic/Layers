@@ -1087,4 +1087,123 @@ describe( 'ToolManager', () => {
 			}
 		} );
 	} );
+
+	describe( 'getToolDisplayName', () => {
+		it( 'should use toolRegistry if available', () => {
+			toolManager.toolRegistry = {
+				getDisplayName: jest.fn().mockReturnValue( 'Custom Rectangle' )
+			};
+
+			const result = toolManager.getToolDisplayName( 'rectangle' );
+
+			expect( toolManager.toolRegistry.getDisplayName ).toHaveBeenCalledWith( 'rectangle' );
+			expect( result ).toBe( 'Custom Rectangle' );
+		} );
+
+		it( 'should fall back to layersMessages if toolRegistry not available', () => {
+			toolManager.toolRegistry = null;
+			window.layersMessages = {
+				get: jest.fn().mockReturnValue( 'Rectangle Tool' )
+			};
+
+			const result = toolManager.getToolDisplayName( 'rectangle' );
+
+			expect( window.layersMessages.get ).toHaveBeenCalledWith( 'layers-tool-rectangle', '' );
+			expect( result ).toBe( 'Rectangle Tool' );
+
+			delete window.layersMessages;
+		} );
+
+		it( 'should fall back to capitalized name if message is empty', () => {
+			toolManager.toolRegistry = null;
+			window.layersMessages = {
+				get: jest.fn().mockReturnValue( '' )
+			};
+
+			const result = toolManager.getToolDisplayName( 'rectangle' );
+
+			expect( result ).toBe( 'Rectangle' );
+
+			delete window.layersMessages;
+		} );
+
+		it( 'should fall back to capitalized name if no i18n system', () => {
+			toolManager.toolRegistry = null;
+			delete window.layersMessages;
+
+			const result = toolManager.getToolDisplayName( 'pointer' );
+
+			expect( result ).toBe( 'Pointer' );
+		} );
+
+		it( 'should handle toolRegistry without getDisplayName method', () => {
+			toolManager.toolRegistry = {};
+
+			const result = toolManager.getToolDisplayName( 'circle' );
+
+			expect( result ).toBe( 'Circle' );
+		} );
+	} );
+
+	describe( 'destroy', () => {
+		it( 'should clean up all resources', () => {
+			// Set up some state
+			toolManager.tempLayer = { type: 'rectangle' };
+			toolManager.pathPoints = [ { x: 1, y: 1 } ];
+			toolManager.startPoint = { x: 0, y: 0 };
+			toolManager.currentStyle = { fill: '#000' };
+			toolManager.toolRegistry = { tools: [] };
+			toolManager.toolStyles = { rectangle: {} };
+			toolManager.shapeFactory = { create: jest.fn() };
+
+			// Call destroy
+			toolManager.destroy();
+
+			// Verify cleanup
+			expect( toolManager.tempLayer ).toBeNull();
+			expect( toolManager.pathPoints ).toEqual( [] );
+			expect( toolManager.startPoint ).toBeNull();
+			expect( toolManager.currentStyle ).toBeNull();
+			expect( toolManager.toolRegistry ).toBeNull();
+			expect( toolManager.toolStyles ).toBeNull();
+			expect( toolManager.shapeFactory ).toBeNull();
+			expect( toolManager.canvasManager ).toBeNull();
+			expect( toolManager.config ).toBeNull();
+		} );
+
+		it( 'should remove text editor from DOM if present', () => {
+			// Create mock text editor
+			const mockTextEditor = document.createElement( 'textarea' );
+			const mockParent = document.createElement( 'div' );
+			mockParent.appendChild( mockTextEditor );
+
+			toolManager.textEditor = mockTextEditor;
+			toolManager.editingTextLayer = { id: 'text1' };
+
+			// Call destroy
+			toolManager.destroy();
+
+			// Verify text editor cleanup
+			expect( toolManager.textEditor ).toBeNull();
+			expect( toolManager.editingTextLayer ).toBeNull();
+			expect( mockParent.contains( mockTextEditor ) ).toBe( false );
+		} );
+
+		it( 'should handle missing text editor gracefully', () => {
+			toolManager.textEditor = null;
+			toolManager.editingTextLayer = null;
+
+			// Should not throw
+			expect( () => toolManager.destroy() ).not.toThrow();
+		} );
+
+		it( 'should finish active drawing before cleanup', () => {
+			toolManager.finishCurrentDrawing = jest.fn();
+			toolManager.isDrawing = true;
+
+			toolManager.destroy();
+
+			expect( toolManager.finishCurrentDrawing ).toHaveBeenCalled();
+		} );
+	} );
 } );

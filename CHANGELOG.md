@@ -2,18 +2,56 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [0.8.5] - 2025-12-12
+## [0.8.5] - 2025-12-13
 
 ### ES6 Migration Complete
-- **100% ES6 class migration** - All 58 modules now use ES6 syntax
+- **100% ES6 class migration** - All 66 modules now use ES6 syntax
 - Converted LayersViewer.js from prototype pattern to ES6 class
 - 0 prototype patterns remaining in codebase
 
-### Test Coverage Improvements
+### Architecture Improvements
+- **LayerRenderer split** - Reduced from 1,953 to 371 lines (81% reduction)
+- Extracted ShapeRenderer.js (1,050 lines) for shape rendering
+- Extracted ArrowRenderer.js (702 lines) for arrow rendering  
+- Extracted TextRenderer.js (343 lines) for text rendering
+- Extracted EffectsRenderer.js (245 lines) for highlight/blur effects
+- **TransformController split** - Extracted ResizeCalculator.js (806 lines)
+- Reduced CanvasManager from 2,109 to 1,975 lines
+
+### Namespace Migration Complete
+- **0 deprecated global exports** (down from 50)
+- Removed last 2 legacy exports: LayerItemFactory and PolygonGeometry
+- 215 namespaced exports using window.Layers.* pattern
+- All modules now export exclusively to window.Layers.* namespace
+
+### Dead Code Removal
+- Removed unused `deepCloneLayers()` method from CanvasManager (30 lines)
+- Removed unused `undo()`, `redo()`, `updateUndoRedoButtons()` delegation methods (50 lines)
+- CanvasManager reduced from 1,975 to 1,895 lines (4% reduction)
+
+### Bug Fixes
+- **Fixed CORS/CSP issues when accessing wiki from different hostname**
+  - ImageLoader now prioritizes same-origin URLs using `window.location.origin`
+  - Added `isSameOrigin()` method for smart origin detection
+  - Implements CORS retry logic: first tries without crossOrigin, retries with CORS if needed
+  - CSP header now dynamically includes `$wgServer` for cross-origin image loading
+  - Fixes "No Access-Control-Allow-Origin header" errors when `$wgServer` differs from access URL
+
+### Test Coverage
 - Added 78 new tests for ShadowRenderer (72.72% → 100% coverage)
+- Added 76 new tests for ResizeCalculator (75% → 93% coverage)
+- Added 28 new tests for LayerPanel keyboard navigation (77% → 87% coverage)
 - Added 38 new tests for LayersViewer class
-- All 4,029 Jest tests passing
-- 82 test suites, 88% statement coverage
+- Added 4 new fallback tests for DeepClone (81% → 100% coverage)
+- Added 9 new tests for ToolManager destroy/getToolDisplayName (84% → 90% coverage)
+- Removed 17 tests for dead code
+- All **4,405 Jest tests passing**
+- 90 test suites, 90% statement coverage
+
+### Documentation
+- Updated all documentation with accurate metrics
+- Corrected codebase_review.md with verified counts
+- Updated improvement_plan.md with current progress
 
 ---
 

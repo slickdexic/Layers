@@ -105,14 +105,10 @@ describe( 'ImageLoader', () => {
 			const loader = new ImageLoader( { filename: 'Test.png' } );
 			const urls = loader.buildUrlList();
 
+			// Uses current origin first for same-origin requests (avoids CORS)
+			const currentOrigin = window.location.origin;
 			expect( urls ).toContain(
-				'https://wiki.example.com/w/index.php?title=Special:Redirect/file/Test.png'
-			);
-			expect( urls ).toContain(
-				'https://wiki.example.com/w/index.php?title=File:Test.png'
-			);
-			expect( urls ).toContain(
-				'https://wiki.example.com/wiki/File:Test.png'
+				currentOrigin + '/w/index.php?title=Special:Redirect/file/Test.png'
 			);
 		} );
 
@@ -223,11 +219,24 @@ describe( 'ImageLoader', () => {
 	} );
 
 	describe( 'tryLoadImage', () => {
-		it( 'should create Image with crossOrigin', () => {
+		it( 'should create Image without crossOrigin for initial cross-origin attempt', () => {
 			const loader = new ImageLoader( {} );
 			const urls = [ 'https://example.com/image.png' ];
 
-			loader.tryLoadImage( urls, 0 );
+			// First attempt without CORS
+			loader.tryLoadImage( urls, 0, false );
+
+			expect( loader.image ).toBeInstanceOf( Image );
+			// crossOrigin should be null/undefined for first attempt
+			expect( loader.image.crossOrigin ).toBeFalsy();
+		} );
+
+		it( 'should set crossOrigin for cross-origin retry', () => {
+			const loader = new ImageLoader( {} );
+			const urls = [ 'https://example.com/image.png' ];
+
+			// Retry with CORS
+			loader.tryLoadImage( urls, 0, true );
 
 			expect( loader.image ).toBeInstanceOf( Image );
 			expect( loader.image.crossOrigin ).toBe( 'anonymous' );
@@ -254,17 +263,20 @@ describe( 'ImageLoader', () => {
 			expect( loader.isLoading ).toBe( false );
 		} );
 
-		it( 'should try next URL on error', () => {
+		it( 'should retry with CORS on cross-origin error then try next URL', () => {
 			const loader = new ImageLoader( {} );
-			const urls = [ 'invalid://url', 'https://example.com/image.png' ];
+			const urls = [ 'https://cross-origin.com/image.png', 'https://example.com/other.png' ];
 
 			const spy = jest.spyOn( loader, 'tryLoadImage' );
-			loader.tryLoadImage( urls, 0 );
+			loader.tryLoadImage( urls, 0, false );
 
-			// Simulate error
+			// First error triggers CORS retry on same URL
 			loader.image.onerror();
+			expect( spy ).toHaveBeenCalledWith( urls, 0, true );
 
-			expect( spy ).toHaveBeenCalledWith( urls, 1 );
+			// Second error (with CORS) triggers next URL
+			loader.image.onerror();
+			expect( spy ).toHaveBeenCalledWith( urls, 1, false );
 		} );
 
 		it( 'should fall back to test image when all URLs fail', () => {
@@ -352,6 +364,35 @@ describe( 'ImageLoader', () => {
 			expect( loader.onLoad ).toBeNull();
 			expect( loader.onError ).toBeNull();
 			expect( loader.isLoading ).toBe( false );
+		} );
+	} );
+
+	describe( 'isSameOrigin', () => {
+		it( 'should return true for same-origin URLs', () => {
+			const loader = new ImageLoader( {} );
+			const currentOrigin = window.location.origin;
+
+			expect( loader.isSameOrigin( currentOrigin + '/images/test.png' ) ).toBe( true );
+		} );
+
+		it( 'should return false for cross-origin URLs', () => {
+			const loader = new ImageLoader( {} );
+
+			expect( loader.isSameOrigin( 'https://other-domain.com/images/test.png' ) ).toBe( false );
+		} );
+
+		it( 'should return true for relative URLs', () => {
+			const loader = new ImageLoader( {} );
+
+			expect( loader.isSameOrigin( '/images/test.png' ) ).toBe( true );
+			expect( loader.isSameOrigin( 'images/test.png' ) ).toBe( true );
+		} );
+
+		it( 'should handle protocol-relative URLs', () => {
+			const loader = new ImageLoader( {} );
+
+			// Protocol-relative URLs to different domains are cross-origin
+			expect( loader.isSameOrigin( '//other-domain.com/images/test.png' ) ).toBe( false );
 		} );
 	} );
 

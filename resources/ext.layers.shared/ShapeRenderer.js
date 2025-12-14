@@ -27,8 +27,7 @@
 	 * @return {Function|null} PolygonGeometry class or null
 	 */
 	function getPolygonGeometry() {
-		return ( window.Layers && window.Layers.Utils && window.Layers.Utils.PolygonGeometry ) ||
-			window.PolygonGeometry || null;
+		return ( window.Layers && window.Layers.Utils && window.Layers.Utils.PolygonGeometry ) || null;
 	}
 
 	/**
