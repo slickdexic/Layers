@@ -48,9 +48,10 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Added 9 new tests for TextInputController event handlers (86% → 100% coverage)
 - Added 9 new tests for LayerRenderer shadow methods (87% → 96% coverage)
 - Added 9 new tests for ShapeRenderer shadow integration (65% → 80% coverage)
+- Added 101 new tests for StateManager (68% → 98% statements, 57% → 84% branches)
 - Removed 17 tests for dead code
-- All **4,470 Jest tests passing**
-- 91 test suites, 91% statement coverage, 79% branch coverage
+- All **4,571 Jest tests passing**
+- 92 test suites, 91% statement coverage, 79% branch coverage
 
 ### Documentation
 - Updated all documentation with accurate metrics
