@@ -2,6 +2,18 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [0.8.6] - 2025-12-14
+
+### Test Coverage & Stability
+- Added 101 new tests for StateManager (68% → 98% coverage)
+- Added 19 new tests for APIManager save/load workflows (84% → 87% coverage)
+- Added 27 new tests for LayersNamespace registration (27% → 78% coverage)
+- **4,617 Jest tests passing** across 92 test suites
+- **91.22% statement coverage**, 79.18% branch coverage
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
 ## [0.8.5] - 2025-12-13
 
 ### ES6 Migration Complete
