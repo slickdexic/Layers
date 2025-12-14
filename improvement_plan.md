@@ -433,19 +433,20 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 
 ## Quick Start: What to Do Next
 
-**Current God Classes (5 files >1000 lines) - Updated Dec 13, 2025:**
+**Current God Classes (6 files >1000 lines) - Updated Dec 13, 2025:**
 | File | Lines | Priority |
 |------|-------|----------|
 | CanvasManager.js | 1,975 | P2.3 - Compaction complete, ~50% extracted |
-| LayerPanel.js | 1,570 | Extract ListItem/ContextMenu helpers |
-| LayersEditor.js | 1,284 | Extract after CanvasManager |
+| LayerPanel.js | 1,430 | P2.5 - LayerItemFactory extracted ✓ |
+| LayersEditor.js | 1,284 | Extract revision/dialog management |
 | SelectionManager.js | 1,258 | Extract selection state handlers |
 | ToolManager.js | 1,155 | Already has ShapeFactory/ToolStyles |
+| ShapeRenderer.js | 1,028 | Extract polygon/star geometry |
 
 **Recommended Next Actions:**
-1. **Split LayerPanel** (P2.4) - Extract ListItem builder (~180 lines), context menu (~150 lines), drag-drop handlers (~120 lines)
-2. **Split SelectionManager** (P2.5) - Extract multi-selection logic, bounds calculation
-3. **Split ToolManager** (P2.6) - Extract tool configuration, keyboard shortcuts
+1. **Split ShapeRenderer** (P2.6) - Extract polygon/star geometry calculations
+2. **Split SelectionManager** (P2.7) - Extract multi-selection logic, bounds calculation
+3. **Split ToolManager** (P2.8) - Extract tool configuration, keyboard shortcuts
 
 ---
 
