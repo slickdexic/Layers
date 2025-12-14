@@ -56,6 +56,11 @@ describe( 'LayerPanel Extended', () => {
 		window.Layers.UI.ConfirmDialog = null;
 		window.Layers.UI.PropertiesForm = null;
 
+		// Load LayerItemFactory for layer item creation
+		const LayerItemFactory = require( '../../resources/ext.layers.editor/ui/LayerItemFactory.js' );
+		window.Layers.UI.LayerItemFactory = LayerItemFactory;
+		window.LayerItemFactory = LayerItemFactory;
+
 		// Setup DOM
 		document.body.innerHTML = `
 			<div id="layers-panel-container"></div>
@@ -867,6 +872,11 @@ describe( 'LayerPanel touch support', () => {
 		window.Layers.UI.ColorPickerDialog = null;
 		window.Layers.UI.ConfirmDialog = null;
 		window.Layers.UI.PropertiesForm = null;
+
+		// Load LayerItemFactory for layer item creation
+		const LayerItemFactory = require( '../../resources/ext.layers.editor/ui/LayerItemFactory.js' );
+		window.Layers.UI.LayerItemFactory = LayerItemFactory;
+		window.LayerItemFactory = LayerItemFactory;
 
 		document.body.innerHTML = '<div id="layers-panel-container"></div>';
 		container = document.getElementById( 'layers-panel-container' );

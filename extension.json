@@ -236,6 +236,7 @@
 				"canvas/InteractionController.js",
 				"canvas/TextInputController.js",
 				"ui/IconFactory.js",
+				"ui/LayerItemFactory.js",
 				"ui/ColorPickerDialog.js",
 				"ui/ConfirmDialog.js",
 				"ui/PropertiesForm.js",
