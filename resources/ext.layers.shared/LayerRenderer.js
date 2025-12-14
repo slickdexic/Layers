@@ -173,20 +173,24 @@ class LayerRenderer {
 	// ========================================================================
 
 	/** Clear shadow settings from context */
-	clearShadow() { this.shadowRenderer?.clearShadow(); }
+	clearShadow() { if ( this.shadowRenderer ) { this.shadowRenderer.clearShadow(); } }
 
 	/** Apply shadow settings to context (blur and offset only, not spread) */
-	applyShadow( layer, scale ) { this.shadowRenderer?.applyShadow( layer, scale ); }
+	applyShadow( layer, scale ) { if ( this.shadowRenderer ) { this.shadowRenderer.applyShadow( layer, scale ); } }
 
 	/** Get shadow spread value from layer */
-	getShadowSpread( layer, scale ) { return this.shadowRenderer?.getShadowSpread( layer, scale ) ?? 0; }
+	getShadowSpread( layer, scale ) {
+		return this.shadowRenderer ? this.shadowRenderer.getShadowSpread( layer, scale ) : 0;
+	}
 
 	/** Check if shadow is enabled on a layer */
-	hasShadowEnabled( layer ) { return this.shadowRenderer?.hasShadowEnabled( layer ) ?? false; }
+	hasShadowEnabled( layer ) {
+		return this.shadowRenderer ? this.shadowRenderer.hasShadowEnabled( layer ) : false;
+	}
 
 	/** Get shadow parameters for offscreen rendering technique */
 	getShadowParams( layer, scale ) {
-		return this.shadowRenderer?.getShadowParams( layer, scale ) ??
+		return this.shadowRenderer ? this.shadowRenderer.getShadowParams( layer, scale ) :
 			{ offsetX: 0, offsetY: 0, blur: 0, color: 'transparent', offscreenOffset: 0 };
 	}
 
@@ -208,7 +212,11 @@ class LayerRenderer {
 
 	/** Execute a function with a temporary globalAlpha multiplier */
 	withLocalAlpha( alpha, drawFn ) {
-		this.shadowRenderer ? this.shadowRenderer.withLocalAlpha( alpha, drawFn ) : drawFn?.call( this );
+		if ( this.shadowRenderer ) {
+			this.shadowRenderer.withLocalAlpha( alpha, drawFn );
+		} else if ( typeof drawFn === 'function' ) {
+			drawFn.call( this );
+		}
 	}
 
 	// ========================================================================

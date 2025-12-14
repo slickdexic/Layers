@@ -880,42 +880,22 @@ class CanvasManager {
 		}
 	}
 
+	// HitTest delegation methods
 	getLayerAtPoint ( point ) {
-		if ( this.hitTestController ) {
-			return this.hitTestController.getLayerAtPoint( point );
-		}
-		return null;
+		return this.hitTestController ? this.hitTestController.getLayerAtPoint( point ) : null;
 	}
-
 	isPointInLayer ( point, layer ) {
-		if ( this.hitTestController ) {
-			return this.hitTestController.isPointInLayer( point, layer );
-		}
-		return false;
+		return this.hitTestController ? this.hitTestController.isPointInLayer( point, layer ) : false;
 	}
-
 	isPointNearLine ( point, x1, y1, x2, y2, tolerance ) {
-		if ( this.hitTestController ) {
-			return this.hitTestController.isPointNearLine( point, x1, y1, x2, y2, tolerance );
-		}
-		return false;
+		return this.hitTestController ? this.hitTestController.isPointNearLine( point, x1, y1, x2, y2, tolerance ) : false;
 	}
-
 	pointToSegmentDistance ( px, py, x1, y1, x2, y2 ) {
-		if ( this.hitTestController ) {
-			return this.hitTestController.pointToSegmentDistance( px, py, x1, y1, x2, y2 );
-		}
-		return Infinity;
+		return this.hitTestController ? this.hitTestController.pointToSegmentDistance( px, py, x1, y1, x2, y2 ) : Infinity;
 	}
-
 	isPointInPolygon ( point, polygonPoints ) {
-		if ( this.hitTestController ) {
-			return this.hitTestController.isPointInPolygon( point, polygonPoints );
-		}
-		return false;
+		return this.hitTestController ? this.hitTestController.isPointInPolygon( point, polygonPoints ) : false;
 	}
-
-
 
 	finishResize () {
 		if ( this.transformController && this.transformController.isResizing ) {
@@ -1415,13 +1395,12 @@ class CanvasManager {
 		}
 	}
 
-	// Wrapper: draw a single layer with effects, without creating closures in hot loops
-	drawLayerWithEffects ( layer ) {
-		// Delegated to renderer
-		if ( this.renderer ) {
-			this.renderer.drawLayerWithEffects( layer );
-		}
-	}
+	// Renderer delegation methods
+	drawLayerWithEffects ( layer ) { if ( this.renderer ) { this.renderer.drawLayerWithEffects( layer ); } }
+	drawMarqueeBox () { if ( this.renderer ) { this.renderer.drawMarqueeBox(); } }
+	drawSelectionIndicators ( layerId ) { if ( this.renderer ) { this.renderer.drawSelectionIndicators( layerId ); } }
+	drawSelectionHandles ( bounds, layer ) { if ( this.renderer ) { this.renderer.drawSelectionHandles( bounds, layer ); } }
+	drawRotationHandle ( bounds, layer ) { if ( this.renderer ) { this.renderer.drawRotationHandle( bounds, layer ); } }
 
 	// Helper: run drawing with multiplied alpha (used for fill/stroke opacity)
 	withLocalAlpha ( factor, fn ) {
@@ -1439,46 +1418,9 @@ class CanvasManager {
 		}
 	}
 
-	drawMarqueeBox () {
-		// Delegated to renderer
-		if ( this.renderer ) {
-			this.renderer.drawMarqueeBox();
-		}
-	}
-
-	drawSelectionIndicators ( layerId ) {
-		// Delegated to renderer
-		if ( this.renderer ) {
-			this.renderer.drawSelectionIndicators( layerId );
-		}
-	}
-
-
-	drawSelectionHandles ( bounds, layer ) {
-		// Delegated to renderer
-		if ( this.renderer ) {
-			this.renderer.drawSelectionHandles( bounds, layer );
-		}
-	}
-
-	drawRotationHandle ( bounds, layer ) {
-		if ( this.renderer ) {
-			this.renderer.drawRotationHandle( bounds, layer );
-		}
-	}
-
 	// Draw background grid if enabled
-	drawGrid () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.drawGrid();
-		}
-	}
-
-	toggleGrid () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.toggleGrid();
-		}
-	}
+	drawGrid () { if ( this.gridRulersController ) { this.gridRulersController.drawGrid(); } }
+	toggleGrid () { if ( this.gridRulersController ) { this.gridRulersController.toggleGrid(); } }
 
 	// Selection helpers
 	selectLayer ( layerId, fromPanel ) {
@@ -1742,35 +1684,11 @@ class CanvasManager {
 		}
 	}
 
-	toggleRulers () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.toggleRulers();
-		}
-	}
-
-	toggleGuidesVisibility () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.toggleGuidesVisibility();
-		}
-	}
-
-	toggleSnapToGrid () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.toggleSnapToGrid();
-		}
-	}
-
-	toggleSnapToGuides () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.toggleSnapToGuides();
-		}
-	}
-
-	toggleSmartGuides () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.toggleSmartGuides();
-		}
-	}
+	toggleRulers () { if ( this.gridRulersController ) { this.gridRulersController.toggleRulers(); } }
+	toggleGuidesVisibility () { if ( this.gridRulersController ) { this.gridRulersController.toggleGuidesVisibility(); } }
+	toggleSnapToGrid () { if ( this.gridRulersController ) { this.gridRulersController.toggleSnapToGrid(); } }
+	toggleSnapToGuides () { if ( this.gridRulersController ) { this.gridRulersController.toggleSnapToGuides(); } }
+	toggleSmartGuides () { if ( this.gridRulersController ) { this.gridRulersController.toggleSmartGuides(); } }
 
 	startDrawing ( point ) {
 		// Use current style options if available
@@ -1815,50 +1733,15 @@ class CanvasManager {
 		}
 	}
 
-	// Note: Drawing tool methods (startTextTool, startRectangleTool, etc.) were
-	// removed as they are now handled by DrawingController.js. The controller
-	// is always loaded before CanvasManager via extension.json module ordering.
-
-	/**
-	 * Create text input modal for text layer creation
-	 * Called by DrawingController when text tool is used
-	 * Delegates to TextInputController
-	 *
-	 * @param {Object} point - Position to show input {x, y}
-	 * @param {Object} style - Current style options
-	 * @return {HTMLElement} The modal container element
-	 */
+	// Text input controller delegation
 	createTextInputModal ( point, style ) {
-		if ( this.textInputController ) {
-			return this.textInputController.createTextInputModal( point, style );
-		}
-		// Fallback: no modal support without controller
-		return null;
+		return this.textInputController ? this.textInputController.createTextInputModal( point, style ) : null;
 	}
-
-	/**
-	 * Finish text input and create text layer
-	 * Delegates to TextInputController
-	 *
-	 * @param {HTMLInputElement} input - The text input element
-	 * @param {Object} point - Position for the text layer
-	 * @param {Object} style - Style options
-	 */
 	finishTextInput ( input, point, style ) {
-		if ( this.textInputController ) {
-			this.textInputController.finishTextInput( input, point, style );
-		}
+		if ( this.textInputController ) { this.textInputController.finishTextInput( input, point, style ); }
 	}
-
-	/**
-	 * Hide and remove text input modal
-	 * Delegates to TextInputController
-	 */
 	hideTextInputModal () {
-		if ( this.textInputController ) {
-			this.textInputController.hideTextInputModal();
-		}
-		// Also clear local reference for backward compat
+		if ( this.textInputController ) { this.textInputController.hideTextInputModal(); }
 		this.textInputModal = null;
 	}
 
@@ -2017,29 +1900,12 @@ class CanvasManager {
 	}
 
 	// Draw rulers (top and left bars with ticks)
-	drawRulers () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.drawRulers();
-		}
-	}
-
-	drawGuides () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.drawGuides();
-		}
-	}
-
-	drawGuidePreview () {
-		if ( this.gridRulersController ) {
-			this.gridRulersController.drawGuidePreview();
-		}
-	}
+	drawRulers () { if ( this.gridRulersController ) { this.gridRulersController.drawRulers(); } }
+	drawGuides () { if ( this.gridRulersController ) { this.gridRulersController.drawGuides(); } }
+	drawGuidePreview () { if ( this.gridRulersController ) { this.gridRulersController.drawGuidePreview(); } }
 
 	getGuideSnapDelta ( bounds, deltaX, deltaY, tol ) {
-		if ( this.gridRulersController ) {
-			return this.gridRulersController.getGuideSnapDelta( bounds, deltaX, deltaY, tol );
-		}
-		return { dx: 0, dy: 0 };
+		return this.gridRulersController ? this.gridRulersController.getGuideSnapDelta( bounds, deltaX, deltaY, tol ) : { dx: 0, dy: 0 };
 	}
 
 	destroy () {
