@@ -1,5 +1,7 @@
 # Layers – MediaWiki Extension
 
+[![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
+
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
 > **Status:** Beta. Version 0.8.5. Requires MediaWiki 1.44+.
