@@ -77,7 +77,7 @@ jobs:
 
       - name: Cache MediaWiki
         id: cache-mediawiki
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/mediawiki
           key: mediawiki-1.43-${{ hashFiles('.github/workflows/e2e.yml') }}
