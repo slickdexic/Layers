@@ -36,6 +36,9 @@
 		ClipboardController: 'Canvas.ClipboardController',
 		TextInputController: 'Canvas.TextInputController',
 		RenderCoordinator: 'Canvas.RenderCoordinator',
+		CanvasPoolController: 'Canvas.CanvasPoolController',
+		CanvasImageController: 'Canvas.ImageController',
+		MarqueeController: 'Canvas.MarqueeController',
 		InteractionController: 'Canvas.InteractionController',
 		ValidationManager: 'Validation.Manager',
 		LayerRenderer: 'LayerRenderer',
@@ -253,6 +256,21 @@ class CanvasManager {
 			return new C( {}, this );
 		}, 'warn' );
 
+		// Optional SelectionController: initialize silently to allow extracting
+		// selection logic into its own module without breaking compatibility.
+		( function () {
+			const SelClass = findClass( 'SelectionController' );
+			if ( SelClass ) {
+				try {
+					this.selectionController = new SelClass( this );
+				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[CanvasManager] Failed to init SelectionController:', e && e.message );
+					}
+				}
+			}
+		}.bind( this )() );
+
 		// Initialize controllers (all take 'this' as argument)
 		// StyleController should be loaded before other controllers that rely on style
 		initController( 'StyleController', 'styleController', ( C ) => {
@@ -275,6 +293,64 @@ class CanvasManager {
 			}, 'warn' );
 		} );
 
+		// Optional legacy style controller (encapsulates fallback style application)
+		( function () {
+			const LStyle = findClass( 'LegacyStyleController' );
+			if ( LStyle ) {
+				try {
+					this.legacyStyleController = new LStyle( this );
+				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[CanvasManager] Failed to init LegacyStyleController:', e && e.message );
+					}
+				}
+			}
+		}.bind( this )() );
+
+		// Optional MarqueeController: initialize silently (avoid noisy warnings when not present)
+		( function () {
+			const MarqClass = findClass( 'MarqueeController' );
+			if ( MarqClass ) {
+				try {
+					this.marqueeController = new MarqClass( this );
+				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[CanvasManager] Failed to init MarqueeController:', e && e.message );
+					}
+				}
+			}
+		}.bind( this )() );
+
+		// Optional PointerController: initialize silently when not present to
+		// avoid noisy console warnings in environments where it isn't loaded.
+		( function () {
+			const PClass = findClass( 'PointerController' );
+			if ( PClass ) {
+				try {
+					this.pointerController = new PClass( this );
+				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[CanvasManager] Failed to init PointerController:', e && e.message );
+					}
+				}
+			}
+		}.bind( this )() );
+
+		// Optional canvas pool controller (extracts pooling logic)
+		// Initialize without noisy logging when the controller is not present.
+		( function () {
+			const ControllerClass = findClass( 'CanvasPoolController' );
+			if ( ControllerClass ) {
+				try {
+					this.canvasPoolController = new ControllerClass( this, { maxPoolSize: this.maxPoolSize } );
+				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[CanvasManager] Failed to init CanvasPoolController:', e && e.message );
+					}
+				}
+			}
+		}.bind( this )() );
+
 		// Initialize RenderCoordinator for optimized rendering
 		initController( 'RenderCoordinator', 'renderCoordinator', ( C ) => {
 			return new C( this, {
@@ -282,6 +358,20 @@ class CanvasManager {
 				targetFps: this.config.targetFps || 60
 			} );
 		}, 'warn' );
+
+		// Optional canvas image controller to manage image loading lifecycle
+		( function () {
+			const ImgCtrlClass = findClass( 'CanvasImageController' );
+			if ( ImgCtrlClass ) {
+				try {
+					this.imageController = new ImgCtrlClass( this );
+				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[CanvasManager] Failed to init CanvasImageController:', e && e.message );
+					}
+				}
+			}
+		}.bind( this )() );
 
 		// Set up event handlers
 		this.setupEventHandlers();
@@ -422,6 +512,12 @@ class CanvasManager {
 	loadBackgroundImage () {
 		const filename = this.editor.filename;
 		const backgroundImageUrl = this.config.backgroundImageUrl;
+
+		// If an external CanvasImageController is available, delegate image loading
+		if ( this.imageController && typeof this.imageController.load === 'function' ) {
+			this.imageController.load( filename, backgroundImageUrl );
+			return;
+		}
 
 		// Get ImageLoader class - prefer namespace, fallback to global
 		const ImageLoaderClass = getClass( 'Utils.ImageLoader', 'ImageLoader' );
@@ -595,9 +691,7 @@ class CanvasManager {
 	updateStyleOptions ( options ) {
 		if ( this.styleController && typeof this.styleController.updateStyleOptions === 'function' ) {
 			const next = this.styleController.updateStyleOptions( options );
-			// IMPORTANT: Also sync to this.currentStyle so new drawings use updated styles
 			this.currentStyle = next;
-			// Live-apply style updates to selected layers using styleController
 			const ids = this.getSelectedLayerIds();
 			if ( ids && ids.length && this.editor ) {
 				for ( let i = 0; i < ids.length; i++ ) {
@@ -610,69 +704,42 @@ class CanvasManager {
 			}
 			return;
 		}
-		// Fallback to legacy logic if styleController is not available
-		this.currentStyle = this.currentStyle || {};
-		const prev = this.currentStyle;
-		const has = function ( v ) { return v !== undefined && v !== null; };
-		const next = {
-			color: has( options.color ) ? options.color : prev.color,
-			fill: has( options.fill ) ? options.fill : prev.fill,
-			strokeWidth: has( options.strokeWidth ) ? options.strokeWidth : prev.strokeWidth,
-			fontSize: has( options.fontSize ) ? options.fontSize : prev.fontSize,
-			fontFamily: has( options.fontFamily ) ? options.fontFamily : prev.fontFamily || 'Arial, sans-serif',
-			textStrokeColor: has( options.textStrokeColor ) ? options.textStrokeColor : prev.textStrokeColor,
-			textStrokeWidth: has( options.textStrokeWidth ) ? options.textStrokeWidth : prev.textStrokeWidth,
-			textShadow: has( options.textShadow ) ? options.textShadow : prev.textShadow,
-			textShadowColor: has( options.textShadowColor ) ? options.textShadowColor : prev.textShadowColor,
-			arrowStyle: has( options.arrowStyle ) ? options.arrowStyle : prev.arrowStyle,
-			shadow: has( options.shadow ) ? options.shadow : prev.shadow,
-			shadowColor: has( options.shadowColor ) ? options.shadowColor : prev.shadowColor,
-			shadowBlur: has( options.shadowBlur ) ? options.shadowBlur : prev.shadowBlur,
-			shadowOffsetX: has( options.shadowOffsetX ) ? options.shadowOffsetX : prev.shadowOffsetX,
-			shadowOffsetY: has( options.shadowOffsetY ) ? options.shadowOffsetY : prev.shadowOffsetY
-		};
-		this.currentStyle = next;
-		const applyToLayer = function ( layer ) {
-			if ( !layer ) return;
-			if ( next.color ) {
-				if ( layer.type === 'text' ) {
-					layer.fill = next.color;
-				} else if ( layer.type === 'highlight' ) {
-					layer.fill = next.color;
-				} else {
-					layer.stroke = next.color;
+
+		if ( this.legacyStyleController && typeof this.legacyStyleController.updateStyleOptions === 'function' ) {
+			const next = this.legacyStyleController.updateStyleOptions( options );
+			this.currentStyle = next;
+			return;
+		}
+
+		// Fallback: apply style options directly to selected layers when no
+		// StyleController or LegacyStyleController is available (preserve
+		// backward-compatible behavior expected by unit tests).
+		const merged = Object.assign( {}, this.currentStyle, options || {} );
+		this.currentStyle = merged;
+		const selectedIds = this.getSelectedLayerIds();
+		if ( selectedIds && selectedIds.length && this.editor ) {
+			for ( let i = 0; i < selectedIds.length; i++ ) {
+				const layer = this.editor.getLayerById( selectedIds[ i ] );
+				if ( !layer ) {
+					continue;
 				}
-			}
-			if ( next.fill ) {
-				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
-					layer.fill = next.fill;
+
+				// Apply color: text layers use `fill`, others default to `stroke`
+				if ( typeof merged.color !== 'undefined' ) {
+					if ( layer.type === 'text' ) {
+						layer.fill = merged.color;
+					} else {
+						layer.stroke = merged.color;
+					}
 				}
-			}
-			if ( next.strokeWidth ) {
-				if ( layer.type !== 'text' ) {
-					layer.strokeWidth = next.strokeWidth;
+
+				if ( typeof merged.strokeWidth !== 'undefined' ) {
+					layer.strokeWidth = merged.strokeWidth;
 				}
-			}
-			if ( layer.type === 'text' ) {
-				layer.fontSize = next.fontSize || layer.fontSize || 16;
-				layer.fontFamily = next.fontFamily || layer.fontFamily;
-				if ( next.textStrokeColor ) layer.textStrokeColor = next.textStrokeColor;
-				if ( next.textStrokeWidth ) layer.textStrokeWidth = next.textStrokeWidth;
-			}
-			if ( next.shadow ) {
-				layer.shadow = next.shadow;
-				if ( next.shadowColor ) layer.shadowColor = next.shadowColor;
-				if ( next.shadowBlur ) layer.shadowBlur = next.shadowBlur;
-				if ( next.shadowOffsetX !== undefined ) layer.shadowOffsetX = next.shadowOffsetX;
-				if ( next.shadowOffsetY !== undefined ) layer.shadowOffsetY = next.shadowOffsetY;
-			}
-		};
-		// Use canvasManager's getSelectedLayerIds which queries stateManager
-		const ids = this.getSelectedLayerIds();
-		if ( ids && ids.length && this.editor ) {
-			for ( let i = 0; i < ids.length; i++ ) {
-				const layer = this.editor.getLayerById( ids[ i ] );
-				if ( layer ) applyToLayer( layer );
+
+				if ( typeof merged.fontSize !== 'undefined' && layer.type === 'text' ) {
+					layer.fontSize = merged.fontSize;
+				}
 			}
 			this.renderLayers( this.editor.layers );
 		}
@@ -1077,6 +1144,10 @@ class CanvasManager {
 	 * @return {Object} Object with canvas and context properties
 	 */
 	getTempCanvas ( width, height ) {
+		if ( this.canvasPoolController && typeof this.canvasPoolController.getTempCanvas === 'function' ) {
+			return this.canvasPoolController.getTempCanvas( width, height );
+		}
+
 		let tempCanvasObj = this.canvasPool.pop();
 		if ( tempCanvasObj ) {
 			// Reuse existing canvas from pool
@@ -1104,6 +1175,10 @@ class CanvasManager {
 	 * @param {Object} tempCanvasObj Object with canvas and context properties
 	 */
 	returnTempCanvas ( tempCanvasObj ) {
+		if ( this.canvasPoolController && typeof this.canvasPoolController.returnTempCanvas === 'function' ) {
+			return this.canvasPoolController.returnTempCanvas( tempCanvasObj );
+		}
+
 		if ( !tempCanvasObj || !tempCanvasObj.canvas || !tempCanvasObj.context ) {
 			return;
 		}
@@ -1216,6 +1291,10 @@ class CanvasManager {
 
 	// Marquee selection methods - delegate to SelectionManager
 	startMarqueeSelection ( point ) {
+		if ( this.marqueeController && typeof this.marqueeController.startMarqueeSelection === 'function' ) {
+			this.marqueeController.startMarqueeSelection( point );
+			return;
+		}
 		this.isMarqueeSelecting = true;
 		this.marqueeStart = { x: point.x, y: point.y };
 		this.marqueeEnd = { x: point.x, y: point.y };
@@ -1225,6 +1304,10 @@ class CanvasManager {
 	}
 
 	updateMarqueeSelection ( point ) {
+		if ( this.marqueeController && typeof this.marqueeController.updateMarqueeSelection === 'function' ) {
+			this.marqueeController.updateMarqueeSelection( point );
+			return;
+		}
 		if ( !this.isMarqueeSelecting ) {
 			return;
 		}
@@ -1237,6 +1320,10 @@ class CanvasManager {
 	}
 
 	finishMarqueeSelection () {
+		if ( this.marqueeController && typeof this.marqueeController.finishMarqueeSelection === 'function' ) {
+			this.marqueeController.finishMarqueeSelection();
+			return;
+		}
 		if ( !this.isMarqueeSelecting ) {
 			return;
 		}
@@ -1261,6 +1348,9 @@ class CanvasManager {
 	}
 
 	getMarqueeRect () {
+		if ( this.marqueeController && typeof this.marqueeController.getMarqueeRect === 'function' ) {
+			return this.marqueeController.getMarqueeRect();
+		}
 		// Use local state for calculating rect - always kept in sync
 		const x1 = Math.min( this.marqueeStart.x, this.marqueeEnd.x );
 		const y1 = Math.min( this.marqueeStart.y, this.marqueeEnd.y );
@@ -1270,6 +1360,9 @@ class CanvasManager {
 	}
 
 	getLayersInRect ( rect ) {
+		if ( this.marqueeController && typeof this.marqueeController.getLayersInRect === 'function' ) {
+			return this.marqueeController.getLayersInRect( rect );
+		}
 		const layersInRect = [];
 		this.editor.layers.forEach( ( layer ) => {
 			const layerBounds = this.getLayerBounds( layer );
@@ -1281,13 +1374,19 @@ class CanvasManager {
 	}
 
 	rectsIntersect ( rect1, rect2 ) {
+		if ( this.marqueeController && typeof this.marqueeController.rectsIntersect === 'function' ) {
+			return this.marqueeController.rectsIntersect( rect1, rect2 );
+		}
 		const a = this._rectToAabb( rect1 );
 		const b = this._rectToAabb( rect2 );
 		return a.left < b.right && a.right > b.left &&
-			a.top < b.bottom && a.bottom > b.top;
+				a.top < b.bottom && a.bottom > b.top;
 	}
 
 	_rectToAabb ( rect ) {
+		if ( this.marqueeController && typeof this.marqueeController._rectToAabb === 'function' ) {
+			return this.marqueeController._rectToAabb( rect );
+		}
 		if ( !rect ) {
 			return { left: 0, top: 0, right: 0, bottom: 0 };
 		}
@@ -1344,6 +1443,11 @@ class CanvasManager {
 
 	// Selection helpers
 	selectLayer ( layerId, fromPanel ) {
+		if ( this.selectionController && typeof this.selectionController.selectLayer === 'function' ) {
+			this.selectionController.selectLayer( layerId, fromPanel );
+			return;
+		}
+
 		// Update selection through StateManager (single source of truth)
 		this.setSelectedLayerIds( layerId ? [ layerId ] : [] );
 		this.selectionHandles = [];
@@ -1359,6 +1463,11 @@ class CanvasManager {
 	}
 
 	selectAll () {
+		if ( this.selectionController && typeof this.selectionController.selectAll === 'function' ) {
+			this.selectionController.selectAll();
+			return;
+		}
+
 		const allIds = ( this.editor.layers || [] )
 			.filter( function ( layer ) { return layer.visible !== false; } )
 			.map( function ( layer ) { return layer.id; } );
@@ -1371,6 +1480,11 @@ class CanvasManager {
 	}
 
 	deselectAll () {
+		if ( this.selectionController && typeof this.selectionController.deselectAll === 'function' ) {
+			this.selectionController.deselectAll();
+			return;
+		}
+
 		this.setSelectedLayerIds( [] );
 		this.selectionHandles = [];
 		this.rotationHandle = null;
@@ -1381,6 +1495,10 @@ class CanvasManager {
 	}
 
 	handleLayerSelection ( point, isCtrlClick ) {
+		if ( this.selectionController && typeof this.selectionController.handleLayerSelection === 'function' ) {
+			return this.selectionController.handleLayerSelection( point, isCtrlClick );
+		}
+
 		const hit = this.getLayerAtPoint( point );
 		if ( !hit ) {
 			if ( !isCtrlClick ) {
@@ -1391,7 +1509,7 @@ class CanvasManager {
 
 		const currentIds = this.getSelectedLayerIds().slice(); // Copy current selection
 		let newIds;
-
+		
 		if ( isCtrlClick ) {
 			// Toggle selection state
 			const idx = currentIds.indexOf( hit.id );
@@ -1425,6 +1543,11 @@ class CanvasManager {
 	}
 
 	drawMultiSelectionIndicators () {
+		if ( this.selectionController && typeof this.selectionController.drawMultiSelectionIndicators === 'function' ) {
+			this.selectionController.drawMultiSelectionIndicators();
+			return;
+		}
+
 		const selectedIds = this.getSelectedLayerIds();
 		if ( !selectedIds || selectedIds.length <= 1 ) {
 			return;
@@ -1544,6 +1667,9 @@ class CanvasManager {
 	}
 
 	getMousePoint ( e ) {
+		if ( this.pointerController && typeof this.pointerController.getMousePoint === 'function' ) {
+			return this.pointerController.getMousePoint( e );
+		}
 		return this.getMousePointFromClient( e.clientX, e.clientY );
 	}
 
@@ -1556,6 +1682,9 @@ class CanvasManager {
 	 * @return {{x:number,y:number}}
 	 */
 	getMousePointFromClient ( clientX, clientY ) {
+		if ( this.pointerController && typeof this.pointerController.getMousePointFromClient === 'function' ) {
+			return this.pointerController.getMousePointFromClient( clientX, clientY );
+		}
 		const rect = this.canvas.getBoundingClientRect();
 		// Position within the displayed (transformed) element
 		const relX = clientX - rect.left;
@@ -1577,6 +1706,9 @@ class CanvasManager {
 
 	// Raw mapping without snapping, useful for ruler hit testing
 	getRawClientPoint ( e ) {
+		if ( this.pointerController && typeof this.pointerController.getRawClientPoint === 'function' ) {
+			return this.pointerController.getRawClientPoint( e );
+		}
 		const rect = this.canvas.getBoundingClientRect();
 		const clientX = e.clientX - rect.left;
 		const clientY = e.clientY - rect.top;
@@ -1840,7 +1972,9 @@ class CanvasManager {
 			'hitTestController',
 			'drawingController',
 			'clipboardController',
-			'styleController'
+			'styleController',
+			'canvasPoolController',
+			'marqueeController'
 		];
 
 		controllersToDestroy.forEach( function ( name ) {

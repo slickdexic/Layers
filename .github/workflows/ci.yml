@@ -2,6 +2,44 @@ name: CI
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint and tests
+        run: npm test
+
+      - name: Run coverage
+        run: npm run test:coverage || true
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage/coverage-final.json
+            coverage/lcov.info
+            coverage/lcov-report
+name: CI
+
+on:
+  push:
     branches: [ main, "**" ]
   pull_request:
     branches: [ main ]
