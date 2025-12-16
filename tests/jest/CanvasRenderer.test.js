@@ -847,14 +847,14 @@ describe('CanvasRenderer', () => {
     });
 
     describe('drawBackgroundImage', () => {
-        test('should draw placeholder when no background image', () => {
+        test('should draw checker pattern when no background image', () => {
             renderer.backgroundImage = null;
 
             renderer.drawBackgroundImage();
 
-            // Should have drawn placeholder pattern and text
+            // Should have drawn checker pattern (fill white + gray squares)
             expect(ctx.fillRect).toHaveBeenCalled();
-            expect(ctx.fillText).toHaveBeenCalled();
+            // No longer draws "No image loaded" text - just checker pattern
         });
 
         test('should draw image when available', () => {
@@ -864,6 +864,27 @@ describe('CanvasRenderer', () => {
             renderer.drawBackgroundImage();
 
             expect(ctx.drawImage).toHaveBeenCalledWith(img, 0, 0);
+        });
+
+        test('should draw checker pattern underneath when opacity < 1', () => {
+            const img = { complete: true };
+            renderer.backgroundImage = img;
+            // Mock the state manager to return low opacity
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn((key) => {
+                        if (key === 'backgroundOpacity') return 0.5;
+                        if (key === 'backgroundVisible') return true;
+                        return undefined;
+                    })
+                }
+            };
+
+            renderer.drawBackgroundImage();
+
+            // Should have drawn checker pattern and image
+            expect(ctx.fillRect).toHaveBeenCalled();
+            expect(ctx.drawImage).toHaveBeenCalled();
         });
     });
 });

@@ -191,7 +191,8 @@ describe( 'LayerPanel Extended', () => {
 
 			panel.renderLayerList();
 
-			const items = panel.layerList.querySelectorAll( '.layer-item' );
+			// Exclude background layer item from count
+			const items = panel.layerList.querySelectorAll( '.layer-item:not(.background-layer-item)' );
 			expect( items.length ).toBe( 2 );
 		} );
 
