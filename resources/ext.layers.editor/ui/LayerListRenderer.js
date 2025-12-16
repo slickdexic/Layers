@@ -45,9 +45,9 @@
 				return;
 			}
 
-			// Map existing DOM items by ID
+			// Map existing DOM items by ID (exclude background layer item)
 			const existingItems = {};
-			const domItems = listContainer.querySelectorAll( '.layer-item' );
+			const domItems = listContainer.querySelectorAll( '.layer-item:not(.background-layer-item)' );
 			for ( let i = 0; i < domItems.length; i++ ) {
 				existingItems[ domItems[ i ].dataset.layerId ] = domItems[ i ];
 			}

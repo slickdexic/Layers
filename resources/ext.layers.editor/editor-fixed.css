@@ -1133,6 +1133,90 @@ body.layers-editor-open .mw-body-content {
 	box-shadow: 0 0 0 1px rgba( 33, 150, 243, 0.2 );
 }
 
+/* Background Layer Item - special styling to distinguish from regular layers */
+.background-layer-item {
+	background: linear-gradient( 135deg, #f5f5f5 25%, #e8e8e8 25%, #e8e8e8 50%, #f5f5f5 50%, #f5f5f5 75%, #e8e8e8 75% );
+	background-size: 8px 8px;
+	border: 1px dashed #bbb;
+	margin-top: 8px;
+	cursor: default;
+}
+
+.background-layer-item:hover {
+	background: linear-gradient( 135deg, #f0f0f0 25%, #e0e0e0 25%, #e0e0e0 50%, #f0f0f0 50%, #f0f0f0 75%, #e0e0e0 75% );
+	background-size: 8px 8px;
+	border-color: #999;
+}
+
+.background-layer-item .background-name {
+	flex: 0 1 auto;
+	font-style: italic;
+	color: #666;
+	cursor: default;
+}
+
+.background-layer-item .background-name:hover {
+	background: transparent;
+}
+
+.background-opacity-container {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.background-opacity-slider {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 60px;
+	height: 4px;
+	background: #ddd;
+	border-radius: 2px;
+	outline: 0;
+	cursor: pointer;
+}
+
+.background-opacity-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 14px;
+	height: 14px;
+	background: #2196f3;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.background-opacity-slider::-moz-range-thumb {
+	width: 14px;
+	height: 14px;
+	background: #2196f3;
+	border: 0;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.background-opacity-slider:hover::-webkit-slider-thumb,
+.background-opacity-slider:focus::-webkit-slider-thumb {
+	background: #1976d2;
+}
+
+.background-opacity-slider:focus {
+	outline: 2px solid rgba( 33, 150, 243, 0.4 );
+	outline-offset: 2px;
+}
+
+.background-opacity-label {
+	font-size: 0.6875em;
+	color: #666;
+	min-width: 32px;
+	text-align: right;
+}
+
+.background-lock {
+	opacity: 0.5;
+}
+
 .layer-name {
 	flex: 1;
 	font-size: 0.85em;

@@ -133,6 +133,34 @@
 			this.verticalGuides = vGuides || [];
 		}
 
+		/**
+		 * Get background visibility state from editor
+		 *
+		 * @return {boolean} True if background should be visible
+		 */
+		getBackgroundVisible() {
+			if ( this.editor && this.editor.stateManager ) {
+				const visible = this.editor.stateManager.get( 'backgroundVisible' );
+				return visible !== false; // Default to true
+			}
+			return true;
+		}
+
+		/**
+		 * Get background opacity state from editor
+		 *
+		 * @return {number} Opacity value 0-1
+		 */
+		getBackgroundOpacity() {
+			if ( this.editor && this.editor.stateManager ) {
+				const opacity = this.editor.stateManager.get( 'backgroundOpacity' );
+				if ( typeof opacity === 'number' && !Number.isNaN( opacity ) ) {
+					return Math.max( 0, Math.min( 1, opacity ) );
+				}
+			}
+			return 1.0;
+		}
+
 		clear() {
 			this.ctx.save();
 			this.ctx.setTransform( 1, 0, 0, 1, 0, 0 );
@@ -144,7 +172,14 @@
 			this.clear();
 			this.applyTransformations();
 
-			if ( this.backgroundImage && this.backgroundImage.complete ) {
+			// Check background visibility from state
+			const bgVisible = this.getBackgroundVisible();
+			if ( bgVisible && this.backgroundImage && this.backgroundImage.complete ) {
+				this.drawBackgroundImage();
+			} else if ( !bgVisible ) {
+				// Draw checker pattern when background is hidden
+				this.drawCheckerPattern();
+			} else if ( this.backgroundImage && this.backgroundImage.complete ) {
 				this.drawBackgroundImage();
 			}
 
@@ -174,30 +209,46 @@
 
 		drawBackgroundImage() {
 			if ( !this.backgroundImage ) {
-				// Draw placeholder
-				this.ctx.save();
-				this.ctx.fillStyle = '#ffffff';
-				this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
-
-				// Checker pattern
-				this.ctx.fillStyle = '#f0f0f0';
-				const checkerSize = 20;
-				for ( let x = 0; x < this.canvas.width; x += checkerSize * 2 ) {
-					for ( let y = 0; y < this.canvas.height; y += checkerSize * 2 ) {
-						this.ctx.fillRect( x, y, checkerSize, checkerSize );
-						this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
-					}
-				}
-
-				this.ctx.fillStyle = '#666666';
-				this.ctx.font = '24px Arial';
-				this.ctx.textAlign = 'center';
-				this.ctx.textBaseline = 'middle';
-				this.ctx.fillText( 'No image loaded', this.canvas.width / 2, this.canvas.height / 2 );
-				this.ctx.restore();
+				this.drawCheckerPattern();
 				return;
 			}
+
+			const opacity = this.getBackgroundOpacity();
+			this.ctx.save();
+			if ( opacity < 1 ) {
+				// Draw checker pattern underneath for transparency visualization
+				this.ctx.globalAlpha = 1;
+				this.drawCheckerPatternToContext();
+				this.ctx.globalAlpha = opacity;
+			}
 			this.ctx.drawImage( this.backgroundImage, 0, 0 );
+			this.ctx.restore();
+		}
+
+		/**
+		 * Draw checker pattern for transparency visualization
+		 */
+		drawCheckerPattern() {
+			this.ctx.save();
+			this.drawCheckerPatternToContext();
+			this.ctx.restore();
+		}
+
+		/**
+		 * Draw checker pattern directly to context (without save/restore)
+		 */
+		drawCheckerPatternToContext() {
+			this.ctx.fillStyle = '#ffffff';
+			this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+
+			this.ctx.fillStyle = '#e8e8e8';
+			const checkerSize = 20;
+			for ( let x = 0; x < this.canvas.width; x += checkerSize * 2 ) {
+				for ( let y = 0; y < this.canvas.height; y += checkerSize * 2 ) {
+					this.ctx.fillRect( x, y, checkerSize, checkerSize );
+					this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
+				}
+			}
 		}
 
 		renderLayers( layers ) {

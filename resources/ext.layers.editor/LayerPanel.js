@@ -587,6 +587,8 @@
 			// Use extracted LayerListRenderer if available
 			if ( this.layerListRenderer ) {
 				this.layerListRenderer.render();
+				// Always render background layer item at the bottom
+				this.renderBackgroundLayerItem();
 				return;
 			}
 
@@ -601,6 +603,8 @@
 					onMoveLayer: this.moveLayer.bind( this )
 				} );
 				this.layerListRenderer.render();
+				// Always render background layer item at the bottom
+				this.renderBackgroundLayerItem();
 				return;
 			}
 
@@ -608,15 +612,16 @@
 			const layers = this.getLayers();
 			const listContainer = this.layerList;
 
-			// Map existing DOM items by ID
+			// Map existing DOM items by ID (exclude background layer item)
 			const existingItems = {};
-			const domItems = listContainer.querySelectorAll( '.layer-item' );
+			const domItems = listContainer.querySelectorAll( '.layer-item:not(.background-layer-item)' );
 			for ( let i = 0; i < domItems.length; i++ ) {
 				existingItems[ domItems[ i ].dataset.layerId ] = domItems[ i ];
 			}
 
 			if ( layers.length === 0 ) {
-				// Handle empty state
+				// Handle empty state - preserve background layer item
+				const bgItem = listContainer.querySelector( '.background-layer-item' );
 				while ( listContainer.firstChild ) {
 					listContainer.removeChild( listContainer.firstChild );
 				}
@@ -624,6 +629,12 @@
 				empty.className = 'layers-empty';
 				empty.textContent = this.msg( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
 				listContainer.appendChild( empty );
+				// Re-add background layer item if it existed, or create it
+				if ( bgItem ) {
+					listContainer.appendChild( bgItem );
+				} else {
+					this.renderBackgroundLayerItem();
+				}
 				return;
 			}
 
@@ -668,6 +679,227 @@
 				}
 				previousSibling = item;
 			} );
+
+			// Ensure background layer item is rendered at the bottom
+			this.renderBackgroundLayerItem();
+		}
+
+		/**
+		 * Render or update the background layer item at the bottom of the layer list.
+		 * The background layer cannot be moved, deleted, or unlocked - it just
+		 * provides controls for background visibility and opacity.
+		 */
+		renderBackgroundLayerItem() {
+			const listContainer = this.layerList;
+			let bgItem = listContainer.querySelector( '.background-layer-item' );
+
+			if ( !bgItem ) {
+				bgItem = this.createBackgroundLayerItem();
+				listContainer.appendChild( bgItem );
+			} else {
+				this.updateBackgroundLayerItem( bgItem );
+			}
+		}
+
+		/**
+		 * Create the background layer item DOM element
+		 *
+		 * @return {HTMLElement} Background layer item element
+		 */
+		createBackgroundLayerItem() {
+			const t = this.msg.bind( this );
+			const item = document.createElement( 'div' );
+			item.className = 'layer-item background-layer-item';
+			item.dataset.layerId = '__background__';
+
+			// ARIA attributes
+			item.setAttribute( 'role', 'option' );
+			item.setAttribute( 'aria-selected', 'false' );
+			item.setAttribute( 'aria-label', t( 'layers-background-layer', 'Background Image' ) );
+
+			// Background icon (image icon)
+			const iconArea = document.createElement( 'div' );
+			iconArea.className = 'layer-background-icon';
+			iconArea.style.cssText = 'width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;';
+			const iconSvg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+			iconSvg.setAttribute( 'width', '20' );
+			iconSvg.setAttribute( 'height', '20' );
+			iconSvg.setAttribute( 'viewBox', '0 0 24 24' );
+			iconSvg.setAttribute( 'fill', 'none' );
+			iconSvg.setAttribute( 'stroke', '#666' );
+			iconSvg.setAttribute( 'stroke-width', '2' );
+			iconSvg.setAttribute( 'aria-hidden', 'true' );
+			// Image icon path (landscape with mountains)
+			const path = document.createElementNS( 'http://www.w3.org/2000/svg', 'path' );
+			path.setAttribute( 'd', 'M3 5h18v14H3V5zm0 14l5-6 3 4 4-5 6 7' );
+			path.setAttribute( 'stroke-linecap', 'round' );
+			path.setAttribute( 'stroke-linejoin', 'round' );
+			iconSvg.appendChild( path );
+			// Sun circle
+			const circle = document.createElementNS( 'http://www.w3.org/2000/svg', 'circle' );
+			circle.setAttribute( 'cx', '16' );
+			circle.setAttribute( 'cy', '9' );
+			circle.setAttribute( 'r', '2' );
+			iconSvg.appendChild( circle );
+			iconArea.appendChild( iconSvg );
+
+			// Visibility toggle
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
+			const visibilityBtn = document.createElement( 'button' );
+			visibilityBtn.className = 'layer-visibility background-visibility';
+			visibilityBtn.type = 'button';
+			const bgVisible = this.getBackgroundVisible();
+			if ( IconFactory ) {
+				visibilityBtn.appendChild( IconFactory.createEyeIcon( bgVisible ) );
+			}
+			visibilityBtn.title = t( 'layers-toggle-visibility', 'Toggle visibility' );
+			visibilityBtn.setAttribute( 'aria-label', t( 'layers-background-visibility', 'Toggle background visibility' ) );
+			visibilityBtn.setAttribute( 'aria-pressed', bgVisible ? 'true' : 'false' );
+
+			this.addTargetListener( visibilityBtn, 'click', ( e ) => {
+				e.stopPropagation();
+				this.toggleBackgroundVisibility();
+			} );
+
+			// Name label
+			const name = document.createElement( 'span' );
+			name.className = 'layer-name background-name';
+			name.textContent = t( 'layers-background-layer', 'Background Image' );
+			// Not editable for background
+			name.contentEditable = false;
+			name.style.cursor = 'default';
+
+			// Opacity slider container
+			const opacityContainer = document.createElement( 'div' );
+			opacityContainer.className = 'background-opacity-container';
+			opacityContainer.style.cssText = 'display: flex; align-items: center; gap: 4px; margin-left: auto;';
+
+			const opacityLabel = document.createElement( 'span' );
+			opacityLabel.className = 'background-opacity-label';
+			opacityLabel.style.cssText = 'font-size: 11px; color: #666; min-width: 32px; text-align: right;';
+			const currentOpacity = this.getBackgroundOpacity();
+			opacityLabel.textContent = Math.round( currentOpacity * 100 ) + '%';
+
+			const opacitySlider = document.createElement( 'input' );
+			opacitySlider.type = 'range';
+			opacitySlider.className = 'background-opacity-slider';
+			opacitySlider.min = '0';
+			opacitySlider.max = '100';
+			opacitySlider.value = String( Math.round( currentOpacity * 100 ) );
+			opacitySlider.title = t( 'layers-background-opacity', 'Background Opacity' );
+			opacitySlider.setAttribute( 'aria-label', t( 'layers-background-opacity', 'Background Opacity' ) );
+			opacitySlider.style.cssText = 'width: 60px; cursor: pointer;';
+
+			this.addTargetListener( opacitySlider, 'input', ( e ) => {
+				const value = parseInt( e.target.value, 10 ) / 100;
+				opacityLabel.textContent = Math.round( value * 100 ) + '%';
+				this.setBackgroundOpacity( value );
+			} );
+
+			opacityContainer.appendChild( opacitySlider );
+			opacityContainer.appendChild( opacityLabel );
+
+			// Lock icon (always locked, not interactive)
+			const lockIcon = document.createElement( 'div' );
+			lockIcon.className = 'layer-lock background-lock';
+			lockIcon.style.cssText = 'width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; opacity: 0.5;';
+			lockIcon.title = t( 'layers-background-locked', 'Background is always locked' );
+			if ( IconFactory ) {
+				lockIcon.appendChild( IconFactory.createLockIcon( true ) );
+			}
+
+			item.appendChild( iconArea );
+			item.appendChild( visibilityBtn );
+			item.appendChild( name );
+			item.appendChild( opacityContainer );
+			item.appendChild( lockIcon );
+
+			return item;
+		}
+
+		/**
+		 * Update the background layer item to reflect current state
+		 *
+		 * @param {HTMLElement} item The background layer item element
+		 */
+		updateBackgroundLayerItem( item ) {
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
+			const bgVisible = this.getBackgroundVisible();
+			const bgOpacity = this.getBackgroundOpacity();
+
+			// Update visibility icon
+			const visibilityBtn = item.querySelector( '.background-visibility' );
+			if ( visibilityBtn && IconFactory ) {
+				while ( visibilityBtn.firstChild ) {
+					visibilityBtn.removeChild( visibilityBtn.firstChild );
+				}
+				visibilityBtn.appendChild( IconFactory.createEyeIcon( bgVisible ) );
+				visibilityBtn.setAttribute( 'aria-pressed', bgVisible ? 'true' : 'false' );
+			}
+
+			// Update opacity slider and label
+			const opacitySlider = item.querySelector( '.background-opacity-slider' );
+			const opacityLabel = item.querySelector( '.background-opacity-label' );
+			if ( opacitySlider && document.activeElement !== opacitySlider ) {
+				opacitySlider.value = String( Math.round( bgOpacity * 100 ) );
+			}
+			if ( opacityLabel ) {
+				opacityLabel.textContent = Math.round( bgOpacity * 100 ) + '%';
+			}
+		}
+
+		/**
+		 * Get whether the background is visible
+		 *
+		 * @return {boolean} True if background is visible
+		 */
+		getBackgroundVisible() {
+			if ( this.editor.stateManager ) {
+				const visible = this.editor.stateManager.get( 'backgroundVisible' );
+				return visible !== false;
+			}
+			return true;
+		}
+
+		/**
+		 * Get the background opacity value
+		 *
+		 * @return {number} Opacity value between 0 and 1
+		 */
+		getBackgroundOpacity() {
+			if ( this.editor.stateManager ) {
+				const opacity = this.editor.stateManager.get( 'backgroundOpacity' );
+				return typeof opacity === 'number' ? opacity : 1.0;
+			}
+			return 1.0;
+		}
+
+		/**
+		 * Toggle background visibility
+		 */
+		toggleBackgroundVisibility() {
+			if ( this.editor.stateManager ) {
+				const current = this.getBackgroundVisible();
+				this.editor.stateManager.set( 'backgroundVisible', !current );
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.redraw();
+				}
+				this.renderBackgroundLayerItem();
+			}
+		}
+
+		/**
+		 * Set background opacity
+		 *
+		 * @param {number} opacity Opacity value between 0 and 1
+		 */
+		setBackgroundOpacity( opacity ) {
+			if ( this.editor.stateManager ) {
+				this.editor.stateManager.set( 'backgroundOpacity', Math.max( 0, Math.min( 1, opacity ) ) );
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.redraw();
+				}
+			}
 		}
 
 		/**

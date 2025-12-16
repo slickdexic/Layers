@@ -28,6 +28,10 @@ class StateManager {
 			snapToGrid: false,
 			snapToGuides: false,
 
+			// Background image state
+			backgroundVisible: true,
+			backgroundOpacity: 1.0,
+
 			// History state
 			history: [],
 			historyIndex: -1,
