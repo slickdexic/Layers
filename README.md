@@ -2,7 +2,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Beta. Version 0.8.7. Requires MediaWiki 1.44+.
+> **Status:** Beta. Version 0.8.8. Requires MediaWiki 1.44+.
 
 ---
 
@@ -43,8 +43,10 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 ### Layer Management
 
 - **Named Layer Sets**: Multiple annotation sets per image (e.g., "default", "anatomy-labels")
-- **Version History**: Each named set maintains revision history (up to 25 revisions by default)
+- **Version History**: Each named set maintains revision history (up to 50 revisions by default)
+- **Per-Set Background Settings**: Background visibility and opacity saved independently per layer set
 - **Layer Operations**: Visibility toggles, lock/unlock, reorder via drag-and-drop, duplicate
+- **Export as Image**: Download annotated images as PNG with optional background
 - **UUID-based IDs**: Reliable layer referencing
 
 ### Style Options
@@ -89,6 +91,7 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 | Line Tool                | L                     |
 | Blur Tool                | B                     |
 | Marquee Select           | M                     |
+| Toggle Background        | Shift+B               |
 | Undo                     | Ctrl+Z                |
 | Redo                     | Ctrl+Y / Ctrl+Shift+Z |
 | Copy                     | Ctrl+C                |
@@ -106,7 +109,7 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 - **Code Splitting:** Viewer module (682 lines) + Shared module (3,886 lines) loads separately from Editor (~32.5K lines)
 
 **Test Coverage (December 2025):**
-- Jest: 4,624 tests, 89% statement coverage, 77% branch coverage (92 test suites)
+- Jest: 4,591 tests, 91% statement coverage, 79% branch coverage (92 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 
 **Requirements:**
