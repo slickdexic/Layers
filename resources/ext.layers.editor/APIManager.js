@@ -1150,7 +1150,7 @@
 	 * Composites the background image with all visible layers.
 	 *
 	 * @param {Object} options - Export options
-	 * @param {boolean} options.includeBackground - Include background image (default: true)
+	 * @param {boolean} options.includeBackground - Include background image (default: respects current visibility)
 	 * @param {number} options.scale - Scale factor (default: 1)
 	 * @param {string} options.format - Image format: 'png' or 'jpeg' (default: 'png')
 	 * @param {number} options.quality - JPEG quality 0-1 (default: 0.92)
@@ -1158,7 +1158,12 @@
 	 */
 	exportAsImage( options = {} ) {
 		return new Promise( ( resolve, reject ) => {
-			const includeBackground = options.includeBackground !== false;
+			// Respect current background visibility unless explicitly overridden
+			const backgroundVisible = this.editor.stateManager.get( 'backgroundVisible' );
+			const backgroundOpacity = this.editor.stateManager.get( 'backgroundOpacity' );
+			const includeBackground = options.includeBackground !== undefined ?
+				options.includeBackground :
+				( backgroundVisible !== false && backgroundOpacity > 0 );
 			const scale = options.scale || 1;
 			const format = options.format || 'png';
 			const quality = options.quality || 0.92;
@@ -1182,13 +1187,21 @@
 				const ctx = exportCanvas.getContext( '2d' );
 
 				// Draw background if requested and available
+				// For PNG exports with hidden background, leave transparent (don't fill)
 				if ( includeBackground && canvasManager.backgroundImage ) {
+					// Apply background opacity if less than 1
+					const opacity = backgroundOpacity !== undefined ? backgroundOpacity : 1;
+					if ( opacity < 1 ) {
+						ctx.globalAlpha = opacity;
+					}
 					ctx.drawImage( canvasManager.backgroundImage, 0, 0, exportWidth, exportHeight );
-				} else {
-					// White background as fallback
+					ctx.globalAlpha = 1;
+				} else if ( format === 'jpeg' ) {
+					// JPEG doesn't support transparency, use white background
 					ctx.fillStyle = '#ffffff';
 					ctx.fillRect( 0, 0, exportWidth, exportHeight );
 				}
+				// For PNG with no background: leave transparent (no fill)
 
 				// Draw all visible layers
 				const layers = this.editor.stateManager.get( 'layers' ) || [];
@@ -1225,11 +1238,17 @@
 	 * @param {string} options.filename - Custom filename (optional)
 	 */
 	downloadAsImage( options = {} ) {
-		const filename = this.editor.stateManager.get( 'filename' ) || 'layers-export';
-		const baseName = filename.replace( /\.[^/.]+$/, '' ); // Remove extension
+		const filename = this.editor.stateManager.get( 'filename' ) || 'image';
+		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+		// Remove File: prefix and extension from filename
+		const baseName = filename
+			.replace( /^File:/i, '' )
+			.replace( /\.[^/.]+$/, '' );
 		const format = options.format || 'png';
 		const ext = format === 'jpeg' ? '.jpg' : '.png';
-		const downloadName = options.filename || `${ baseName }-annotated${ ext }`;
+		// Format: ImageName-LayerSetName.ext (omit -default for default set)
+		const setNamePart = currentSetName === 'default' ? '' : `-${ currentSetName }`;
+		const downloadName = options.filename || `${ baseName }${ setNamePart }${ ext }`;
 
 		this.editor.uiManager.showSpinner();
 
