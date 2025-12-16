@@ -326,7 +326,7 @@ class LayerInjectorTest extends TestCase {
 			'id' => 77,
 			'data' => [
 				'layers' => [
-					[ 'id' => 'injected', 'type' => 'highlight' ]
+					[ 'id' => 'injected', 'type' => 'rectangle' ]
 				]
 			]
 		];

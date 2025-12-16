@@ -153,7 +153,6 @@ All layer types with shadow support:
 - Line/Arrow
 - Text
 - Path
-- Highlight
 
 ### NOT Affected
 - Editor view (uses different rendering path)

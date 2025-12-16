@@ -244,8 +244,7 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 			'line' => 2,
 			'polygon' => 3,
 			'path' => 5,
-			'blur' => 4,
-			'highlight' => 2
+			'blur' => 4
 		];
 
 		foreach ( $layerTypes as $type => $expectedScore ) {

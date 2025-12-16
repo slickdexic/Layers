@@ -24,7 +24,7 @@
 				// Layer type whitelist (must match server-side validation)
 				validTypes: [
 					'text', 'arrow', 'rectangle', 'circle', 'ellipse',
-					'polygon', 'star', 'line', 'highlight', 'path', 'blur'
+					'polygon', 'star', 'line', 'path', 'blur'
 				],
 
 				// Coordinate limits

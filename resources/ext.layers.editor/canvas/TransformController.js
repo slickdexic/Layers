@@ -626,7 +626,6 @@ class TransformController {
 				layer.y2 = ( originalState.y2 || 0 ) + deltaY;
 				break;
 			case 'path':
-			case 'highlight':
 				if ( originalState.points && originalState.points.length > 0 ) {
 					layer.points = originalState.points.map( function ( pt ) {
 						return { x: pt.x + deltaX, y: pt.y + deltaY };

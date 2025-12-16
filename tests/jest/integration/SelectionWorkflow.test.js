@@ -478,31 +478,6 @@ describe( 'Integration: HitTestController Layer Detection', () => {
 		} );
 	} );
 
-	describe( 'Highlight Hit Testing', () => {
-		beforeEach( () => {
-			mockEditor.layers = [ {
-				id: 'highlight',
-				type: 'highlight',
-				x: 100,
-				y: 100,
-				width: 200,
-				height: 30,
-				visible: true,
-				locked: false
-			} ];
-		} );
-
-		test( 'should detect point inside highlight', () => {
-			const hit = hitTestController.getLayerAtPoint( { x: 150, y: 115 } );
-			expect( hit.id ).toBe( 'highlight' );
-		} );
-
-		test( 'should not detect point outside highlight', () => {
-			const hit = hitTestController.getLayerAtPoint( { x: 400, y: 400 } );
-			expect( hit ).toBeNull();
-		} );
-	} );
-
 	describe( 'Blur Hit Testing', () => {
 		beforeEach( () => {
 			mockEditor.layers = [ {

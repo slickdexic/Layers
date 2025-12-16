@@ -48,7 +48,6 @@ describe( 'LayersConstants', () => {
 			expect( LayersConstants.LAYER_TYPES.ARROW ).toBe( 'arrow' );
 			expect( LayersConstants.LAYER_TYPES.POLYGON ).toBe( 'polygon' );
 			expect( LayersConstants.LAYER_TYPES.STAR ).toBe( 'star' );
-			expect( LayersConstants.LAYER_TYPES.HIGHLIGHT ).toBe( 'highlight' );
 			expect( LayersConstants.LAYER_TYPES.PATH ).toBe( 'path' );
 			expect( LayersConstants.LAYER_TYPES.BLUR ).toBe( 'blur' );
 		} );
@@ -93,7 +92,6 @@ describe( 'LayersConstants', () => {
 			expect( LayersConstants.DEFAULTS.COLORS.STROKE ).toBe( '#000000' );
 			expect( LayersConstants.DEFAULTS.COLORS.FILL ).toBe( '#ffffff' );
 			expect( LayersConstants.DEFAULTS.COLORS.TEXT ).toBe( '#000000' );
-			expect( LayersConstants.DEFAULTS.COLORS.HIGHLIGHT ).toBe( '#ffff00' );
 			expect( LayersConstants.DEFAULTS.COLORS.SHADOW ).toBe( '#000000' );
 		} );
 

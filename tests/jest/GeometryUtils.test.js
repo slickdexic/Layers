@@ -316,8 +316,8 @@ describe( 'GeometryUtils', () => {
 			expect( bounds.height ).toBe( 80 );
 		} );
 
-		it( 'should handle highlight layer like rectangle', () => {
-			const layer = { type: 'highlight', x: 10, y: 20, width: 100, height: 50 };
+		it( 'should handle rectangle layer with bounds', () => {
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
 			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
 		} );
 

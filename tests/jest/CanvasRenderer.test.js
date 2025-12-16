@@ -421,7 +421,6 @@ describe('CanvasRenderer', () => {
 
         test('should return false for unsupported types', () => {
             expect(renderer.supportsGlow('text')).toBe(false);
-            expect(renderer.supportsGlow('highlight')).toBe(false);
             expect(renderer.supportsGlow('blur')).toBe(false);
             expect(renderer.supportsGlow('unknown')).toBe(false);
         });
@@ -462,7 +461,6 @@ describe('CanvasRenderer', () => {
                 { type: 'star', x: 50, y: 50, points: 5, outerRadius: 30 },
                 { type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 },
                 { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 },
-                { type: 'highlight', x: 0, y: 0, width: 100, height: 20 },
                 { type: 'path', points: [{ x: 0, y: 0 }, { x: 50, y: 50 }] },
                 { type: 'blur', x: 0, y: 0, width: 100, height: 100 }
             ];
@@ -474,7 +472,7 @@ describe('CanvasRenderer', () => {
     });
 
     // Note: Individual shape draw methods (drawRectangle, drawCircle, drawEllipse,
-    // drawLine, drawArrow, drawPolygon, drawStar, drawPath, drawHighlight, drawBlur,
+    // drawLine, drawArrow, drawPolygon, drawStar, drawPath, drawBlur,
     // drawText) have been removed from CanvasRenderer. Drawing is now delegated to
     // the shared LayerRenderer. See LayerRenderer.test.js for shape rendering tests.
 

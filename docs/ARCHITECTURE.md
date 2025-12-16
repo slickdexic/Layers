@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 2025  
-**Version:** 0.8.5
+**Last Updated:** December 16, 2025  
+**Version:** 0.8.7
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -24,12 +24,12 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 |--------|-------|
 | Total JS files | 75 |
 | Viewer module | 682 lines |
-| Shared module | 3,888 lines |
-| Editor module | ~31,881 lines |
+| Shared module | 3,886 lines |
+| Editor module | ~32,465 lines |
 | ES6 classes | 66 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | 89% statements |
-| Jest tests | 4,300 |
+| Test coverage | 89% statements, 77% branches |
+| Jest tests | 4,624 |
 | PHPUnit test files | 17 |
 
 ---
@@ -41,12 +41,13 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - **100% ES6 Migration** - All 66 classes now use ES6 syntax, 0 prototype patterns
 - **LayerRenderer Split** - Extracted 5 specialized renderers (ShapeRenderer, ArrowRenderer, ShadowRenderer, TextRenderer, EffectsRenderer)
 - **TransformController Split** - Extracted ResizeCalculator (806 lines)
-- **Namespace Migration** - Reduced direct window exports from 50 to 2
+- **Namespace Migration** - Reduced direct window exports from 50 to 0
 - **AccessibilityAnnouncer.js** - ARIA live regions for screen reader support
 - **EditorBootstrap.js** - Extracted initialization, hooks, cleanup from LayersEditor
 - **RevisionManager.js** - Extracted revision and named layer set management
 - **DialogManager.js** - Extracted modal dialogs with ARIA accessibility
 - **NamespaceHelper.js** - Centralized getClass() utility
+- **API Endpoints** - 4 endpoints: layersinfo, layerssave, layersdelete, layersrename
 
 ---
 
@@ -446,7 +447,7 @@ extensions/Layers/
 │   │   ├── ArrowRenderer.js     # Arrow rendering (702 lines)
 │   │   ├── ShadowRenderer.js    # Shadow effects (521 lines)
 │   │   ├── TextRenderer.js      # Text rendering (343 lines)
-│   │   ├── EffectsRenderer.js   # Highlight/blur (245 lines)
+│   │   ├── EffectsRenderer.js   # Blur effects (245 lines)
 │   │   ├── BoundsCalculator.js  # Layer bounds (340 lines)
 │   │   └── PolygonGeometry.js   # Polygon math (213 lines)
 │   └── ext.layers.editor/   # Editor (~31,881 lines)

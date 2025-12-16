@@ -130,12 +130,6 @@ describe('StyleController', () => {
 			expect(layer.fill).toBe('#aabbcc');
 		});
 
-		test('applies color to highlight as fill', () => {
-			const layer = { type: 'highlight' };
-			sc.applyToLayer(layer, { color: '#dddddd' });
-			expect(layer.fill).toBe('#dddddd');
-		});
-
 		test('applies color to shapes as stroke', () => {
 			const layer = { type: 'circle' };
 			sc.applyToLayer(layer, { color: '#eeeeee' });

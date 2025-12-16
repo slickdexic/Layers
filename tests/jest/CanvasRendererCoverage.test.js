@@ -220,7 +220,7 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 
 		it( 'should return false for unsupported types', () => {
 			expect( renderer.supportsGlow( 'text' ) ).toBe( false );
-			expect( renderer.supportsGlow( 'highlight' ) ).toBe( false );
+			expect( renderer.supportsGlow( 'blur' ) ).toBe( false );
 			expect( renderer.supportsGlow( 'blur' ) ).toBe( false );
 			expect( renderer.supportsGlow( 'unknown' ) ).toBe( false );
 		} );

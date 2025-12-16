@@ -203,13 +203,7 @@ class RateLimiter {
 					$complexity += 1;
 					break;
 				case 'arrow':
-					// More complex to render
-					$complexity += 3;
-					break;
-				case 'highlight':
-					$complexity += 1;
-					break;
-				default:
+
 					// Unknown types are more expensive
 					$complexity += 2;
 			}

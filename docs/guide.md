@@ -336,31 +336,6 @@ The likely approach is group elements in JSON and composition on render.
 
 **Constraints:** Arrow length can be very short but then arrowhead might overlap the tail. If the line is shorter than the arrowhead length, the head shapes might render beyond the start. Possibly enforce a minimum length relative to head size or just allow and let it look as it will. Head size has min and max (5px to 50px typical). Arrow shaft thickness should probably be smaller than head size for aesthetics; no hard rule but if a user makes a very thick line and small head, it might look odd (not technically prevented though). The UI might ensure the arrowhead color = line color (or provide separate color options, but typically unified). If separate arrow color is needed, it’s an extra parameter (not mentioned, so assume one color). Double-headed arrows use same style both ends (no independent settings per end). Also, dashed/dotted arrows: the arrowhead is still solid shape; the line portion can be dashed, but usually arrowheads are not dashed (makes no sense). Implementation will likely just draw the line dashes and then draw an arrowhead polygon.
 
-### Highlighter Tool
-
-**Purpose:** Create a highlight overlay on the image – typically a translucent colored rectangle to call attention to an area, similar to using a highlighter pen on text. Often used with a semi-transparent yellow or other bright color to *highlight* part of an image without obscuring it.
-
-**Interaction:** Select the Highlighter tool (no standard letter, maybe **H**). Use it similar to the rectangle tool: click at one corner of the area to highlight, drag to the opposite corner, release to create a rectangle. By default it will appear as a semi-transparent yellow box. This could be used, for example, to highlight a paragraph in a screenshot or a region of interest in a photo.
-
-**Customization Options:** Highlighter is essentially a specialized rectangle with preset styling, but the user can adjust:
-
-* **Fill Color:** Typically a bright color (yellow default), with the expectation it’s semi-transparent. The user can choose other colors (some might use semi-transparent green or red to highlight).
-* **Fill Opacity:** The transparency level of the highlight. Likely default around 30% (0.3), and allowed range maybe 10% (very faint) up to 80% (very strong but still see-through).
-* **Blend Mode:** Often highlights are effective with **Multiply** blend mode (so that the color intensifies the underlying image rather than just overlaying grey). The tool might automatically use a multiply blend by default. Other modes like Screen, Overlay, Soft-Light might also be available to achieve different highlight effects (e.g. different background types might need different blending). The user can choose blend mode if they want (e.g. normal vs multiply).
-* **Stroke:** Usually highlights have no border, but the tool might allow an outline if needed. Stroke color default could match fill or be none. Stroke width default 0. If drawn, it could emphasize the highlighted area border.
-* No complex effects by default (no shadow on a highlight because it’s supposed to look like a marker swipe).
-* The shape is always rectangular in the current concept. (Optionally one could imagine a freeform highlight marker, but that would be covered by a freehand tool possibly; here it's specifically mentioned as rectangle).
-
-**SVG Output Model:** A highlighter shape would be an SVG `<rect>` with a semi-transparent fill. The difference from a normal rectangle is conceptual (and default styling). It might also have a blend mode applied. In pure SVG, blend modes can be done with the `mix-blend-mode` property if the output format allows it, or by adjusting opacity if using multiply (multiply at 30% is not identical to normal at 30%, but an approximation might be done by color choice). On canvas, multiply blend can be achieved by setting a globalCompositeOperation while drawing that shape. The extension likely handles highlighting by using a multiply compositing during render, which is easier on canvas. For server-side (ImageMagick), they'd multiply the pixel values.
-
-**Constraints:** The highlight's main constraint is it should remain see-through. For usability, the UI might restrict fillOpacity to a certain range (10–80%) and maybe pop a warning if user sets 100% (which defeats the purpose of "highlight" by completely covering image). But it might not strictly enforce it. Also, highlight typically no sharp outline; if user adds stroke, that’s their choice. The default color palette might include common highlight colors (yellow, green, pink) for quick selection. Because highlights are rectangles, if the user wanted to highlight a non-rectangular region, they'd have to use multiple shapes or another tool. This tool is straightforward by design.
-
-### Callout Tool
-
-**Purpose:** The Callout tool creates a connected annotation consisting of a text label with an arrow or pointer, commonly used to call out a specific feature with a descriptive label. This is akin to a speech bubble or a labeled pointer box.
-
-**Interaction:** Select the Callout tool. Creating a callout might be a two-step or combined process:
-
 1. **Placement:** The user first clicks the point that they want to point *to* (the tip of the callout pointer). For example, click near an object in the image that you want to label.
 2. **Drag:** After the initial click, dragging the mouse will stretch out an arrow leader line from that point and simultaneously define the position of the text box. One approach: as you drag, a text box is attached to the cursor and a line connects the initial click point to this text box. Release to place the text box.
 3. Immediately, a text insertion cursor appears inside the text box so the user can type the label. The text entry and styling works like the Text tool.
@@ -423,14 +398,14 @@ If exporting to an SVG for any reason, one could create an SVG `<image>` tag ref
 So in summary, think of blur tool not as a separate SVG shape but an operation: however, to maintain consistency, perhaps it is represented as a shape (rectangle) with a property "effect: blur(X)". They might even treat it like a special kind of shape that when rendered, instead of a colored fill, it draws a blurred image patch.
 
 **Constraints:** The blur region must be within the image bounds ideally, as blurring nothing outside image has no effect (if user draws partly outside, only the intersection with image matters). The system likely clips the blur to the image area automatically. Blur radius is capped for performance (extremely large blurs are expensive). Perhaps 0–20px range is enforced in UI. Also, multiple overlapping blur regions will each blur the original image beneath them (not sequentially double-blurring – effectively each layer sees original image as base, unless stacking blur on top of blur if user does that intentionally).
-One caveat: if a user blurs something, then draws a highlight on top of it, the highlight will overlay on the blurred content, which is fine. If they draw two blur regions overlapping, the area of overlap might be blurred twice if rendered sequentially (could result in extra blurry in overlap). To avoid complexity, maybe advise to use one blur per region or be aware double stacking intensifies blur. But it's an edge case.
+One caveat: if a user blurs something, then draws a shape on top of it, the shape will overlay on the blurred content, which is fine. If they draw two blur regions overlapping, the area of overlap might be blurred twice if rendered sequentially (could result in extra blurry in overlap). To avoid complexity, maybe advise to use one blur per region or be aware double stacking intensifies blur. But it's an edge case.
 
 From a user perspective, the blur tool is straightforward: draw, area gets blurred. It's an important non-destructive alternative to manually editing the image to redact info.
 
 ---
 
 These tools collectively provide a comprehensive toolkit for annotation:
-**Summary of Tools:** Pointer (select/move), Marquee (select area), Text (labels), Rectangle/Ellipse (basic shapes), Polygon/Star (custom shapes), Line (simple lines), Arrow (pointing arrows), Highlight (translucent emphasis), Callout (labels with pointers), Blur (redaction). This covers most annotation needs found in professional editors, all while storing each element as an independent, editable layer.
+**Summary of Tools:** Pointer (select/move), Marquee (select area), Text (labels), Rectangle/Ellipse (basic shapes), Polygon/Star (custom shapes), Line (simple lines), Arrow (pointing arrows), Callout (labels with pointers), Blur (redaction). This covers most annotation needs found in professional editors, all while storing each element as an independent, editable layer.
 
 ## Styling and Effects
 

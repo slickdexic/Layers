@@ -36,7 +36,6 @@
 			ARROW: 'arrow',
 			POLYGON: 'polygon',
 			STAR: 'star',
-			HIGHLIGHT: 'highlight',
 			PATH: 'path',
 			BLUR: 'blur'
 		},
@@ -71,7 +70,6 @@
 				STROKE: '#000000',
 				FILL: '#ffffff',
 				TEXT: '#000000',
-				HIGHLIGHT: '#ffff00',
 				SHADOW: '#000000'
 			},
 			SIZES: {

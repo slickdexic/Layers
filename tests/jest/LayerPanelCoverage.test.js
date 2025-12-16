@@ -618,7 +618,7 @@ describe( 'LayerPanel Coverage Extension', () => {
 		it( 'should handle all standard types', () => {
 			const types = [
 				'rectangle', 'circle', 'ellipse', 'polygon',
-				'star', 'arrow', 'line', 'path', 'highlight', 'blur'
+				'star', 'arrow', 'line', 'path', 'blur'
 			];
 
 			types.forEach( ( type ) => {

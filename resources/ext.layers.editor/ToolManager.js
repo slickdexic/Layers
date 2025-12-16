@@ -227,9 +227,6 @@ class ToolManager {
 			case 'rectangle':
 				this.startRectangleTool( point );
 				break;
-			case 'highlight':
-				this.startHighlightTool( point );
-				break;
 			case 'circle':
 				this.startCircleTool( point );
 				break;
@@ -254,6 +251,9 @@ class ToolManager {
 			case 'star':
 				this.startStarTool( point );
 				break;
+			case 'blur':
+				this.startBlurTool( point );
+				break;
 		}
 	}
 
@@ -275,9 +275,6 @@ class ToolManager {
 			case 'rectangle':
 				this.updateRectangleTool( point );
 				break;
-			case 'highlight':
-				this.updateHighlightTool( point );
-				break;
 			case 'circle':
 				this.updateCircleTool( point );
 				break;
@@ -293,6 +290,9 @@ class ToolManager {
 				break;
 			case 'star':
 				this.updateStarTool( point );
+				break;
+			case 'blur':
+				this.updateBlurTool( point );
 				break;
 		}
 	}
@@ -313,13 +313,13 @@ class ToolManager {
 				this.finishPenDrawing( point );
 				break;
 			case 'rectangle':
-			case 'highlight':
 			case 'circle':
 			case 'ellipse':
 			case 'line':
 			case 'arrow':
 			case 'polygon':
 			case 'star':
+			case 'blur':
 				this.finishShapeDrawing( point );
 				break;
 		}
@@ -423,69 +423,11 @@ class ToolManager {
 	}
 
 	/**
-	 * Start highlight tool
-	 *
-	 * @param {Object} point Starting point
-	 */
-	startHighlightTool( point ) {
-		// Delegate to ShapeFactory if available
-		if( this.shapeFactory && typeof this.shapeFactory.createHighlight === 'function' ) {
-			this.tempLayer = this.shapeFactory.createHighlight( point );
-			return;
-		}
-
-		// Fallback implementation
-		let color = this.currentStyle.fill;
-		if( !color || color === 'transparent' || color === 'none' ) {
-			color = this.currentStyle.color || '#ffff00';
-		}
-
-		let opacity = this.currentStyle.fillOpacity;
-		if( typeof opacity !== 'number' || Number.isNaN( opacity ) ) {
-			opacity = 0.3;
-		} else {
-			opacity = Math.max( 0, Math.min( 1, opacity ) );
-		}
-
-		this.tempLayer = {
-			type: 'highlight',
-			x: point.x,
-			y: point.y,
-			width: 0,
-			height: 0,
-			color: color,
-			opacity: opacity,
-			fill: color,
-			fillOpacity: opacity,
-			shadow: this.currentStyle.shadow || false,
-			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
-		};
-	}
-
-	/**
 	 * Update rectangle tool
 	 *
 	 * @param {Object} point Current point
 	 */
 	updateRectangleTool( point ) {
-		if( this.tempLayer && this.startPoint ) {
-			this.tempLayer.x = Math.min( this.startPoint.x, point.x );
-			this.tempLayer.y = Math.min( this.startPoint.y, point.y );
-			this.tempLayer.width = Math.abs( point.x - this.startPoint.x );
-			this.tempLayer.height = Math.abs( point.y - this.startPoint.y );
-			this.renderTempLayer();
-		}
-	}
-
-	/**
-	 * Update highlight tool
-	 *
-	 * @param {Object} point Current point
-	 */
-	updateHighlightTool( point ) {
 		if( this.tempLayer && this.startPoint ) {
 			this.tempLayer.x = Math.min( this.startPoint.x, point.x );
 			this.tempLayer.y = Math.min( this.startPoint.y, point.y );
@@ -799,6 +741,44 @@ class ToolManager {
 	}
 
 	/**
+	 * Start blur tool
+	 *
+	 * @param {Object} point Starting point
+	 */
+	startBlurTool( point ) {
+		// Delegate to ShapeFactory if available
+		if( this.shapeFactory && typeof this.shapeFactory.createBlur === 'function' ) {
+			this.tempLayer = this.shapeFactory.createBlur( point );
+			return;
+		}
+
+		// Fallback implementation
+		this.tempLayer = {
+			type: 'blur',
+			x: point.x,
+			y: point.y,
+			width: 0,
+			height: 0,
+			blurRadius: this.currentStyle.blurRadius || 10
+		};
+	}
+
+	/**
+	 * Update blur tool
+	 *
+	 * @param {Object} point Current point
+	 */
+	updateBlurTool( point ) {
+		if( this.tempLayer && this.startPoint ) {
+			this.tempLayer.x = Math.min( this.startPoint.x, point.x );
+			this.tempLayer.y = Math.min( this.startPoint.y, point.y );
+			this.tempLayer.width = Math.abs( point.x - this.startPoint.x );
+			this.tempLayer.height = Math.abs( point.y - this.startPoint.y );
+			this.renderTempLayer();
+		}
+	}
+
+	/**
 	 * Finish shape drawing
 	 *
 	 * @param {Object} point End point(unused)
@@ -829,8 +809,7 @@ class ToolManager {
 		// Fallback implementation
 		switch( layer.type ) {
 			case 'rectangle':
-				return layer.width > 1 && layer.height > 1;
-			case 'highlight':
+			case 'blur':
 				return layer.width > 1 && layer.height > 1;
 			case 'circle':
 				return layer.radius > 1;

@@ -66,10 +66,10 @@ describe( 'ResizeCalculator', () => {
 			expect( result ).not.toBeNull();
 		} );
 
-		it( 'should return null for highlight type (not supported)', () => {
-			const layer = { type: 'highlight', points: [ { x: 0, y: 0 }, { x: 100, y: 100 } ] };
+		it( 'should return null for unknown type (not supported)', () => {
+			const layer = { type: 'unknown', points: [ { x: 0, y: 0 }, { x: 100, y: 100 } ] };
 			const result = ResizeCalculator.calculateResize( layer, 'se', 10, 10, {} );
-			// Highlight is not handled in switch statement, returns null
+			// Unknown type is not handled in switch statement, returns null
 			expect( result ).toBeNull();
 		} );
 

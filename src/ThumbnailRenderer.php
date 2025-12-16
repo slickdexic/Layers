@@ -233,8 +233,6 @@ class ThumbnailRenderer {
 				return $this->buildArrowArguments( $layer, $scaleX, $scaleY );
 			case 'line':
 				return $this->buildLineArguments( $layer, $scaleX, $scaleY );
-			case 'highlight':
-				return $this->buildHighlightArguments( $layer, $scaleX, $scaleY );
 			default:
 				return [];
 		}
@@ -500,16 +498,6 @@ class ThumbnailRenderer {
 			'-strokewidth', (string)$strokeWidth,
 			'-draw', 'line ' . (int)$x1 . ',' . (int)$y1 . ' ' . (int)$x2 . ',' . (int)$y2
 		];
-	}
-
-	private function buildHighlightArguments( array $layer, float $scaleX, float $scaleY ): array {
-		$layer['fill'] = $layer['fill'] ?? '#ffff0080';
-		$layer['stroke'] = 'none';
-		// Respect layer opacity if set
-		if ( isset( $layer['opacity'] ) ) {
-			$layer['fill'] = $this->withOpacity( (string)$layer['fill'], (float)$layer['opacity'] );
-		}
-		return $this->buildRectangleArguments( $layer, $scaleX, $scaleY );
 	}
 
 	/**

@@ -775,7 +775,7 @@ describe( 'TransformController', () => {
 			expect( layer.y2 ).toBe( 130 );
 		} );
 
-		it( 'should update path/highlight points', () => {
+		it( 'should update path points', () => {
 			const layer = {
 				type: 'path',
 				points: [ { x: 0, y: 0 }, { x: 50, y: 50 } ]
@@ -822,21 +822,6 @@ describe( 'TransformController', () => {
 			expect( layer.y1 ).toBe( 20 );
 			expect( layer.x2 ).toBe( 65 );
 			expect( layer.y2 ).toBe( 70 );
-		} );
-
-		it( 'should update highlight like path', () => {
-			const layer = {
-				type: 'highlight',
-				points: [ { x: 5, y: 5 }, { x: 25, y: 25 } ]
-			};
-			const original = {
-				points: [ { x: 5, y: 5 }, { x: 25, y: 25 } ]
-			};
-
-			controller.updateLayerPosition( layer, original, 10, 10 );
-
-			expect( layer.points[ 0 ] ).toEqual( { x: 15, y: 15 } );
-			expect( layer.points[ 1 ] ).toEqual( { x: 35, y: 35 } );
 		} );
 	} );
 

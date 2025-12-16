@@ -24,7 +24,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	/** @var array Supported layer types */
 	private const SUPPORTED_LAYER_TYPES = [
 		'text', 'arrow', 'rectangle', 'circle', 'ellipse',
-		'polygon', 'star', 'line', 'highlight', 'path', 'blur'
+		'polygon', 'star', 'line', 'path', 'blur'
 	];
 
 	/** @var array Allowed properties and their types */

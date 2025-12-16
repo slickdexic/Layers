@@ -72,7 +72,7 @@ class ValidationManager {
 		if ( !layer.type || typeof layer.type !== 'string' ) {
 			errors.push( this.getMessage( 'layers-validation-type-required' ) );
 		} else {
-			const validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'highlight', 'path', 'blur' ];
+			const validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'path', 'blur' ];
 			if ( !validTypes.includes( layer.type ) ) {
 				errors.push( this.getMessage( 'layers-validation-type-invalid' ) );
 			}

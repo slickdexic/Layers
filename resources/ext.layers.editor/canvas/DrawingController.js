@@ -81,9 +81,6 @@ class DrawingController {
 			case 'arrow':
 				this.startArrowTool( point, style );
 				break;
-			case 'highlight':
-				this.startHighlightTool( point, style );
-				break;
 			default:
 				// Unknown tool - do nothing
 				break;
@@ -105,30 +102,15 @@ class DrawingController {
 	 * Finish drawing operation and create layer
 	 *
 	 * @param {Object} point - Final mouse position {x, y}
-	 * @param {string} currentTool - Current tool name
+	 * @param {string} currentTool - Current tool name (unused but kept for API compatibility)
 	 * @return {Object|null} Layer data if valid, null otherwise
 	 */
+	// eslint-disable-next-line no-unused-vars
 	finishDrawing ( point, currentTool ) {
 		this.isDrawing = false;
 
 		// Finish drawing and create layer
-		let layerData = this.createLayerFromDrawing( point );
-
-		if ( layerData ) {
-			// Convert rectangle to blur layer when blur tool is active
-			if ( currentTool === 'blur' ) {
-				if ( layerData.type === 'rectangle' ) {
-					layerData = {
-						type: 'blur',
-						x: layerData.x,
-						y: layerData.y,
-						width: layerData.width,
-						height: layerData.height,
-						blurRadius: 12
-					};
-				}
-			}
-		}
+		const layerData = this.createLayerFromDrawing( point );
 
 		// Clean up
 		this.tempLayer = null;
@@ -173,13 +155,14 @@ class DrawingController {
 	 */
 	startBlurTool ( point, style ) {
 		this.tempLayer = {
-			type: 'rectangle',
+			type: 'blur',
 			x: point.x,
 			y: point.y,
 			width: 0,
 			height: 0,
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 2,
+			blurRadius: style.blurRadius || 10,
+			stroke: 'transparent',
+			strokeWidth: 0,
 			fill: 'transparent'
 		};
 	}
@@ -367,23 +350,6 @@ class DrawingController {
 		};
 	}
 
-	/**
-	 * Start highlight tool
-	 *
-	 * @param {Object} point - Starting point
-	 * @param {Object} style - Style options
-	 */
-	startHighlightTool ( point, style ) {
-		this.tempLayer = {
-			type: 'highlight',
-			x: point.x,
-			y: point.y,
-			width: 0,
-			height: 20, // Default highlight height
-			fill: style.color ? style.color + '80' : '#ffff0080' // Add transparency
-		};
-	}
-
 	// ========== Preview and creation methods ==========
 
 	/**
@@ -437,9 +403,6 @@ class DrawingController {
 				this.tempLayer.x2 = point.x;
 				this.tempLayer.y2 = point.y;
 				break;
-			case 'highlight':
-				this.tempLayer.width = point.x - this.tempLayer.x;
-				break;
 			case 'path':
 				// Add point to path for pen tool
 				this.tempLayer.points.push( point );
@@ -480,6 +443,7 @@ class DrawingController {
 		// Final adjustments based on tool type
 		switch ( layer.type ) {
 			case 'rectangle':
+			case 'blur':
 				layer.width = point.x - layer.x;
 				layer.height = point.y - layer.y;
 				break;
@@ -512,9 +476,6 @@ class DrawingController {
 				layer.x2 = point.x;
 				layer.y2 = point.y;
 				break;
-			case 'highlight':
-				layer.width = point.x - layer.x;
-				break;
 			case 'path':
 				// Path is already complete
 				break;
@@ -537,7 +498,7 @@ class DrawingController {
 	isValidShape ( layer ) {
 		switch ( layer.type ) {
 			case 'rectangle':
-			case 'highlight':
+			case 'blur':
 				return Math.abs( layer.width ) >= this.MIN_SHAPE_SIZE &&
 					Math.abs( layer.height ) >= this.MIN_SHAPE_SIZE;
 
@@ -588,7 +549,6 @@ class DrawingController {
 			case 'star':
 			case 'line':
 			case 'arrow':
-			case 'highlight':
 				return 'crosshair';
 			case 'text':
 				return 'text';
@@ -606,7 +566,7 @@ class DrawingController {
 	isDrawingTool ( tool ) {
 		const drawingTools = [
 			'blur', 'text', 'pen', 'rectangle', 'circle',
-			'ellipse', 'polygon', 'star', 'line', 'arrow', 'highlight'
+			'ellipse', 'polygon', 'star', 'line', 'arrow'
 		];
 		return drawingTools.indexOf( tool ) !== -1;
 	}

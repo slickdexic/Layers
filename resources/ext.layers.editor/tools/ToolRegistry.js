@@ -131,12 +131,6 @@
 				createsLayer: true
 			} );
 
-			this.register( 'highlight', {
-				cursor: 'crosshair',
-				category: 'annotation',
-				createsLayer: true
-			} );
-
 			this.register( 'blur', {
 				cursor: 'crosshair',
 				category: 'annotation',

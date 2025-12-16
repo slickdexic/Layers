@@ -61,7 +61,6 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 | `B` | Select blur tool |
 | `A` | Select arrow tool |
 | `L` | Select line tool |
-| `H` | Select highlight tool |
 | `G` | Toggle grid |
 | `Delete` / `Backspace` | Delete selected layer(s) |
 | `Escape` | Cancel current operation / deselect |

@@ -108,8 +108,6 @@
 					return t( 'layers-type-line', 'Line' );
 				case ( LAYER_TYPES.PATH || 'path' ):
 					return t( 'layers-type-path', 'Drawing' );
-				case ( LAYER_TYPES.HIGHLIGHT || 'highlight' ):
-					return t( 'layers-type-highlight', 'Highlight' );
 				default:
 					return t( 'layers-type-layer', 'Layer' );
 			}

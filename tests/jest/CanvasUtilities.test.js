@@ -262,7 +262,7 @@ describe( 'CanvasUtilities', () => {
 			expect( CanvasUtilities.getToolCursor( 'star' ) ).toBe( 'crosshair' );
 			expect( CanvasUtilities.getToolCursor( 'line' ) ).toBe( 'crosshair' );
 			expect( CanvasUtilities.getToolCursor( 'arrow' ) ).toBe( 'crosshair' );
-			expect( CanvasUtilities.getToolCursor( 'highlight' ) ).toBe( 'crosshair' );
+			expect( CanvasUtilities.getToolCursor( 'blur' ) ).toBe( 'crosshair' );
 			expect( CanvasUtilities.getToolCursor( 'path' ) ).toBe( 'crosshair' );
 		} );
 

@@ -111,17 +111,17 @@ describe('HitTestController', () => {
                 locked: false
             },
             {
-                id: 'highlight1',
-                type: 'highlight',
+                id: 'blur1',
+                type: 'blur',
                 x: 300,
                 y: 500,
                 width: 200,
-                height: 25,
+                height: 100,
                 visible: true,
                 locked: false
             },
             {
-                id: 'blur1',
+                id: 'blur2',
                 type: 'blur',
                 x: 550,
                 y: 500,
@@ -447,35 +447,23 @@ describe('HitTestController', () => {
         });
     });
 
-    describe('isPointInLayer - highlight', () => {
-        test('should detect point inside highlight', () => {
-            const layer = mockLayers[9]; // highlight1
-            const point = { x: 400, y: 510 };
+    describe('isPointInLayer - blur', () => {
+        test('should detect point inside blur region', () => {
+            const layer = mockLayers[9]; // blur1
+            const point = { x: 400, y: 550 };
             expect(hitTestController.isPointInLayer(point, layer)).toBe(true);
         });
 
-        test('should detect point outside highlight', () => {
+        test('should detect point outside blur region', () => {
             const layer = mockLayers[9];
-            const point = { x: 600, y: 510 };
+            const point = { x: 600, y: 650 };
             expect(hitTestController.isPointInLayer(point, layer)).toBe(false);
-        });
-
-        test('should use default height for highlight without height', () => {
-            const layer = {
-                type: 'highlight',
-                x: 100,
-                y: 100,
-                width: 200
-                // no height - should default to 20
-            };
-            const point = { x: 150, y: 115 };
-            expect(hitTestController.isPointInHighlight(point, layer)).toBe(true);
         });
     });
 
-    describe('isPointInLayer - blur', () => {
-        test('should detect point inside blur region', () => {
-            const layer = mockLayers[10]; // blur1
+    describe('isPointInLayer - blur2', () => {
+        test('should detect point inside blur2 region', () => {
+            const layer = mockLayers[10]; // blur2
             const point = { x: 600, y: 550 };
             expect(hitTestController.isPointInLayer(point, layer)).toBe(true);
         });

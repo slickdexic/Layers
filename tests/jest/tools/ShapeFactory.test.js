@@ -94,23 +94,6 @@ describe( 'ShapeFactory', () => {
 		} );
 	} );
 
-	describe( 'createHighlight', () => {
-		it( 'should create highlight layer with correct properties', () => {
-			const point = { x: 50, y: 75 };
-			const layer = factory.createHighlight( point );
-
-			expect( layer.type ).toBe( 'highlight' );
-			expect( layer.x ).toBe( 50 );
-			expect( layer.y ).toBe( 75 );
-		} );
-
-		it( 'should have fill and opacity properties', () => {
-			const layer = factory.createHighlight( { x: 0, y: 0 } );
-			expect( layer.fill ).toBeDefined();
-			expect( layer.opacity ).toBeDefined();
-		} );
-	} );
-
 	describe( 'createCircle', () => {
 		it( 'should create circle layer with correct properties', () => {
 			const point = { x: 150, y: 250 };
@@ -416,11 +399,6 @@ describe( 'ShapeFactory', () => {
 
 		it( 'should return true for path with multiple points', () => {
 			const layer = { type: 'path', points: [ { x: 0, y: 0 }, { x: 10, y: 10 } ] };
-			expect( factory.hasValidSize( layer ) ).toBe( true );
-		} );
-
-		it( 'should return true for highlight with valid dimensions', () => {
-			const layer = { type: 'highlight', width: 100, height: 30 };
 			expect( factory.hasValidSize( layer ) ).toBe( true );
 		} );
 

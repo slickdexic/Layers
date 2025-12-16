@@ -1,5 +1,5 @@
 /**
- * EffectsRenderer - Handles special effect layers (highlight, blur)
+ * EffectsRenderer - Handles special effect layers (blur)
  *
  * This module provides rendering for effect-type layers that apply
  * visual modifications to image regions rather than drawing shapes.
@@ -13,7 +13,7 @@
 	'use strict';
 
 	/**
-	 * EffectsRenderer class - Renders highlight and blur effect layers
+	 * EffectsRenderer class - Renders blur effect layers
 	 */
 	class EffectsRenderer {
 		/**
@@ -76,55 +76,6 @@
 			const sx = this.canvas.width / this.baseWidth;
 			const sy = this.canvas.height / this.baseHeight;
 			return { sx: sx, sy: sy, avg: ( sx + sy ) / 2 };
-		}
-
-		/**
-		 * Draw a highlight overlay
-		 *
-		 * Highlights are semi-transparent colored rectangles used to
-		 * draw attention to specific regions of an image.
-		 *
-		 * @param {Object} layer - Layer with highlight properties
-		 * @param {number} [layer.x=0] - X position
-		 * @param {number} [layer.y=0] - Y position
-		 * @param {number} [layer.width=100] - Width
-		 * @param {number} [layer.height=20] - Height
-		 * @param {number} [layer.rotation=0] - Rotation in degrees
-		 * @param {number} [layer.opacity=0.3] - Opacity (0-1)
-		 * @param {number} [layer.fillOpacity] - Alternative opacity property
-		 * @param {string} [layer.color='#ffff00'] - Fill color
-		 * @param {string} [layer.fill] - Alternative color property
-		 */
-		drawHighlight( layer ) {
-			let x = layer.x || 0;
-			let y = layer.y || 0;
-			const width = layer.width || 100;
-			const height = layer.height || 20;
-
-			this.ctx.save();
-
-			// Handle rotation
-			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
-			if ( hasRotation ) {
-				this.ctx.translate( x + width / 2, y + height / 2 );
-				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
-				x = -width / 2;
-				y = -height / 2;
-			}
-
-			// Highlights default to 0.3 opacity
-			let opacity = 0.3;
-			if ( typeof layer.opacity === 'number' && !Number.isNaN( layer.opacity ) ) {
-				opacity = Math.max( 0, Math.min( 1, layer.opacity ) );
-			} else if ( typeof layer.fillOpacity === 'number' && !Number.isNaN( layer.fillOpacity ) ) {
-				opacity = Math.max( 0, Math.min( 1, layer.fillOpacity ) );
-			}
-
-			this.ctx.globalAlpha = opacity;
-			this.ctx.fillStyle = layer.color || layer.fill || '#ffff00';
-			this.ctx.fillRect( x, y, width, height );
-
-			this.ctx.restore();
 		}
 
 		/**

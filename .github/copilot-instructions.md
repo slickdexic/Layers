@@ -14,6 +14,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ApiLayersInfo`: read-only fetch of layer data and revision list for a file
     - `ApiLayersSave`: write endpoint to save a new layer set revision (requires CSRF token + rights)
     - `ApiLayersDelete`: delete endpoint to remove an entire named layer set (requires CSRF token, owner or admin)
+    - `ApiLayersRename`: rename endpoint to rename a named layer set (requires CSRF token, owner or admin)
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
     - Uses LoadBalancer for DB connections (lazy init pattern with getWriteDb/getReadDb)
     - Implements retry logic with exponential backoff (3 retries, 100ms base delay) for transaction conflicts
@@ -25,7 +26,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,975 lines - facade coordinating controllers), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
+  - Core editor modules: `CanvasManager.js` (~1,895 lines - facade coordinating controllers), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
   - Shared modules: `LayerRenderer.js` (~371 lines), `ShadowRenderer.js` (~521 lines), `ArrowRenderer.js` (~702 lines), `TextRenderer.js` (~343 lines), `ShapeRenderer.js` (~1,050 lines), `EffectsRenderer.js` (~245 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~340 lines) - zoom, pan, fit-to-window, coordinate transforms
@@ -114,7 +115,7 @@ See `docs/NAMED_LAYER_SETS.md` for full architecture documentation.
 ## 3) Data model (Layer objects)
 
 Layer objects are a sanitized subset of the client model. Common fields (whitelist on server):
-- id (string), type (enum: text, arrow, rectangle, circle, ellipse, polygon, star, line, highlight, path, blur)
+- id (string), type (enum: text, arrow, rectangle, circle, ellipse, polygon, star, line, path, blur)
 - Geometry: x, y, width, height, radius, radiusX, radiusY, x1, y1, x2, y2, rotation (numbers in safe ranges)
 - Style: stroke, fill, color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blendMode or blend (mapped), fontFamily, fontSize
 - Arrow/line: arrowhead (none|arrow|circle|diamond|triangle), arrowStyle (solid|dashed|dotted), arrowSize

@@ -158,10 +158,10 @@ describeEditor( 'Layers Editor', () => {
 			expect( newCount ).toBe( initialCount + 1 );
 		} );
 
-		test( 'can create highlight layer', async () => {
+		test( 'can create blur layer', async () => {
 			const initialCount = await editorPage.getLayerCount();
 			
-			await editorPage.selectTool( 'highlight' );
+			await editorPage.selectTool( 'blur' );
 			await editorPage.drawOnCanvas( 100, 100, 300, 150 );
 			
 			const newCount = await editorPage.getLayerCount();

@@ -73,7 +73,6 @@ class LayersEditorPage {
 			lineTool: '[data-tool="line"], .tool-line',
 			polygonTool: '[data-tool="polygon"], .tool-polygon',
 			starTool: '[data-tool="star"], .tool-star',
-			highlightTool: '[data-tool="highlight"], .tool-highlight',
 			pathTool: '[data-tool="path"], .tool-path, [data-tool="pen"], .tool-pen',
 			blurTool: '[data-tool="blur"], .tool-blur',
 			

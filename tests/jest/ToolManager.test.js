@@ -247,11 +247,11 @@ describe( 'ToolManager', () => {
 			expect( toolManager.tempLayer.type ).toBe( 'arrow' );
 		} );
 
-		it( 'should create temp layer for highlight tool', () => {
-			toolManager.setTool( 'highlight' );
+		it( 'should create temp layer for blur tool', () => {
+			toolManager.setTool( 'blur' );
 			toolManager.startTool( point );
 			expect( toolManager.tempLayer ).not.toBeNull();
-			expect( toolManager.tempLayer.type ).toBe( 'highlight' );
+			expect( toolManager.tempLayer.type ).toBe( 'blur' );
 		} );
 
 		it( 'should create temp layer for pen tool with path', () => {
@@ -338,8 +338,8 @@ describe( 'ToolManager', () => {
 			expect( toolManager.tempLayer.points ).toHaveLength( 2 );
 		} );
 
-		it( 'should update highlight dimensions', () => {
-			toolManager.setTool( 'highlight' );
+		it( 'should update blur dimensions', () => {
+			toolManager.setTool( 'blur' );
 			toolManager.startTool( startPoint );
 			toolManager.updateTool( updatePoint );
 			expect( toolManager.tempLayer.width ).toBe( 100 );
@@ -407,14 +407,14 @@ describe( 'ToolManager', () => {
 			expect( mockEditor.stateManager.addLayer ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should add highlight layer via stateManager', () => {
-			toolManager.setTool( 'highlight' );
+		it( 'should add blur layer via stateManager', () => {
+			toolManager.setTool( 'blur' );
 			toolManager.startTool( startPoint );
 			toolManager.updateTool( endPoint );
 			toolManager.finishTool( endPoint );
 			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
 			const addedLayer = mockEditor.stateManager.addLayer.mock.calls.slice( -1 )[ 0 ][ 0 ];
-			expect( addedLayer.type ).toBe( 'highlight' );
+			expect( addedLayer.type ).toBe( 'blur' );
 		} );
 	} );
 
@@ -510,28 +510,6 @@ describe( 'ToolManager', () => {
 			const timestamp = parseInt( id.split( '_' )[ 1 ], 10 );
 			expect( timestamp ).toBeGreaterThanOrEqual( before );
 			expect( timestamp ).toBeLessThanOrEqual( after );
-		} );
-	} );
-
-	describe( 'highlight tool', () => {
-		it( 'should create highlight with default color if fill is transparent', () => {
-			toolManager.currentStyle.fill = 'transparent';
-			toolManager.setTool( 'highlight' );
-			// Need to check startHighlightTool behavior
-			const point = { x: 100, y: 100 };
-			if ( typeof toolManager.startHighlightTool === 'function' ) {
-				toolManager.startHighlightTool( point );
-				expect( toolManager.tempLayer.type ).toBe( 'highlight' );
-				expect( toolManager.tempLayer.fill ).toBeDefined();
-			}
-		} );
-
-		it( 'should apply fill opacity for highlight', () => {
-			toolManager.updateStyle( { fill: '#ffff00', fillOpacity: 0.5 } );
-			if ( typeof toolManager.startHighlightTool === 'function' ) {
-				toolManager.startHighlightTool( { x: 100, y: 100 } );
-				expect( toolManager.tempLayer.fillOpacity ).toBe( 0.5 );
-			}
 		} );
 	} );
 
@@ -827,30 +805,6 @@ describe( 'ToolManager', () => {
 		} );
 	} );
 
-	describe( 'updateHighlightTool', () => {
-		it( 'should update highlight dimensions', () => {
-			toolManager.setTool( 'highlight' );
-			toolManager.startPoint = { x: 100, y: 100 };
-			toolManager.startHighlightTool( { x: 100, y: 100 } );
-			toolManager.updateHighlightTool( { x: 200, y: 150 } );
-
-			expect( toolManager.tempLayer.width ).toBe( 100 );
-			expect( toolManager.tempLayer.height ).toBe( 50 );
-		} );
-
-		it( 'should handle negative drag direction', () => {
-			toolManager.setTool( 'highlight' );
-			toolManager.startPoint = { x: 200, y: 150 };
-			toolManager.startHighlightTool( { x: 200, y: 150 } );
-			toolManager.updateHighlightTool( { x: 100, y: 100 } );
-
-			expect( toolManager.tempLayer.x ).toBe( 100 );
-			expect( toolManager.tempLayer.y ).toBe( 100 );
-			expect( toolManager.tempLayer.width ).toBe( 100 );
-			expect( toolManager.tempLayer.height ).toBe( 50 );
-		} );
-	} );
-
 	describe( 'hasValidSize', () => {
 		it( 'should validate rectangle size', () => {
 			expect( toolManager.hasValidSize( { type: 'rectangle', width: 10, height: 10 } ) ).toBe( true );
@@ -858,9 +812,9 @@ describe( 'ToolManager', () => {
 			expect( toolManager.hasValidSize( { type: 'rectangle', width: 1, height: 1 } ) ).toBe( false );
 		} );
 
-		it( 'should validate highlight size', () => {
-			expect( toolManager.hasValidSize( { type: 'highlight', width: 10, height: 10 } ) ).toBe( true );
-			expect( toolManager.hasValidSize( { type: 'highlight', width: 1, height: 1 } ) ).toBe( false );
+		it( 'should validate blur size', () => {
+			expect( toolManager.hasValidSize( { type: 'blur', width: 10, height: 10 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'blur', width: 1, height: 1 } ) ).toBe( false );
 		} );
 
 		it( 'should validate circle radius', () => {

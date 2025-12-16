@@ -55,7 +55,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Extracted ShapeRenderer.js (1,050 lines) for shape rendering
 - Extracted ArrowRenderer.js (702 lines) for arrow rendering  
 - Extracted TextRenderer.js (343 lines) for text rendering
-- Extracted EffectsRenderer.js (245 lines) for highlight/blur effects
+- Extracted EffectsRenderer.js (245 lines) for blur effects
 - **TransformController split** - Extracted ResizeCalculator.js (806 lines)
 - Reduced CanvasManager from 2,109 to 1,975 lines
 

@@ -37,7 +37,7 @@
 		}
 
 		/**
-		 * Calculate bounds for rectangular layers (rectangle, highlight, blur, etc.)
+		 * Calculate bounds for rectangular layers (rectangle, blur, etc.)
 		 *
 		 * @param {Object} layer - Layer with x, y, width, height properties
 		 * @return {Object|null} Bounds or null if not rectangular

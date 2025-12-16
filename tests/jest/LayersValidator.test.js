@@ -70,10 +70,10 @@ describe( 'LayersValidator', () => {
 			expect( validator.validationRules.validTypes ).toContain( 'text' );
 		} );
 
-		it( 'should have all 11 layer types in whitelist', () => {
+		it( 'should have all 10 layer types in whitelist', () => {
 			const expectedTypes = [
 				'text', 'arrow', 'rectangle', 'circle', 'ellipse',
-				'polygon', 'star', 'line', 'highlight', 'path', 'blur'
+				'polygon', 'star', 'line', 'path', 'blur'
 			];
 			expectedTypes.forEach( type => {
 				expect( validator.validationRules.validTypes ).toContain( type );
@@ -147,7 +147,7 @@ describe( 'LayersValidator', () => {
 	describe( 'validateLayerType', () => {
 		const validTypes = [
 			'text', 'arrow', 'rectangle', 'circle', 'ellipse',
-			'polygon', 'star', 'line', 'highlight', 'path', 'blur'
+			'polygon', 'star', 'line', 'path', 'blur'
 		];
 
 		validTypes.forEach( type => {

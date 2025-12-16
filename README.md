@@ -87,7 +87,6 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 | Star Tool                | S                     |
 | Arrow Tool               | A                     |
 | Line Tool                | L                     |
-| Highlight Tool           | H                     |
 | Blur Tool                | B                     |
 | Marquee Select           | M                     |
 | Undo                     | Ctrl+Z                |
@@ -102,12 +101,12 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 ## Technical Details
 
 **Architecture:**
-- **Backend (PHP):** MediaWiki extension integration, API endpoints (`layersinfo`, `layerssave`, `layersdelete`), database persistence
+- **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
 - **Frontend (JavaScript):** HTML5 Canvas-based editor with 75 JS files (~38K lines total)
-- **Code Splitting:** Viewer module (682 lines) + Shared module (3,886 lines) loads separately from Editor (~32.4K lines)
+- **Code Splitting:** Viewer module (682 lines) + Shared module (3,886 lines) loads separately from Editor (~32.5K lines)
 
-**Test Coverage (January 2025):**
-- Jest: 4,617 tests, 89% statement coverage (92 test suites)
+**Test Coverage (December 2025):**
+- Jest: 4,624 tests, 89% statement coverage, 77% branch coverage (92 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 
 **Requirements:**
@@ -154,7 +153,7 @@ $wgLayersDebug = true;
 $wgLayersMaxBytes = 2 * 1024 * 1024; // 2 MB per layer set JSON
 $wgLayersMaxLayerCount = 100;        // Max layers per set
 $wgLayersMaxNamedSets = 15;          // Max named sets per image
-$wgLayersMaxRevisionsPerSet = 25;    // Max revisions per set
+$wgLayersMaxRevisionsPerSet = 50;    // Max revisions per set
 
 // Image processing limits
 $wgLayersMaxImageSize = 4096;        // Max px for editing

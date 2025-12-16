@@ -299,69 +299,6 @@ describe( 'LayerRenderer', () => {
 	} );
 
 	// ========================================================================
-	// drawHighlight Tests
-	// ========================================================================
-
-	describe( 'drawHighlight', () => {
-		test( 'draws highlight with default values', () => {
-			renderer.drawHighlight( {} );
-
-			expect( ctx.save ).toHaveBeenCalled();
-			expect( ctx.fillRect ).toHaveBeenCalledWith( 0, 0, 100, 20 );
-			expect( ctx.globalAlpha ).toBe( 0.3 );
-			expect( ctx.fillStyle ).toBe( '#ffff00' );
-			expect( ctx.restore ).toHaveBeenCalled();
-		} );
-
-		test( 'draws highlight at specified position', () => {
-			renderer.drawHighlight( {
-				x: 50,
-				y: 100,
-				width: 200,
-				height: 40
-			} );
-
-			expect( ctx.fillRect ).toHaveBeenCalledWith( 50, 100, 200, 40 );
-		} );
-
-		test( 'uses custom color', () => {
-			renderer.drawHighlight( { color: '#ff0000' } );
-			expect( ctx.fillStyle ).toBe( '#ff0000' );
-		} );
-
-		test( 'uses fill when color not specified', () => {
-			renderer.drawHighlight( { fill: '#00ff00' } );
-			expect( ctx.fillStyle ).toBe( '#00ff00' );
-		} );
-
-		test( 'uses custom opacity', () => {
-			renderer.drawHighlight( { opacity: 0.7 } );
-			expect( ctx.globalAlpha ).toBe( 0.7 );
-		} );
-
-		test( 'clamps opacity to valid range', () => {
-			renderer.drawHighlight( { opacity: 1.5 } );
-			expect( ctx.globalAlpha ).toBe( 1 );
-
-			renderer.drawHighlight( { opacity: -0.5 } );
-			expect( ctx.globalAlpha ).toBe( 0 );
-		} );
-
-		test( 'handles rotation', () => {
-			renderer.drawHighlight( {
-				x: 100,
-				y: 50,
-				width: 200,
-				height: 40,
-				rotation: 45
-			} );
-
-			expect( ctx.translate ).toHaveBeenCalled();
-			expect( ctx.rotate ).toHaveBeenCalledWith( ( 45 * Math.PI ) / 180 );
-		} );
-	} );
-
-	// ========================================================================
 	// drawRectangle Tests
 	// ========================================================================
 
@@ -1120,15 +1057,6 @@ describe( 'LayerRenderer', () => {
 			expect( spy ).toHaveBeenCalledWith( layer, undefined );
 		} );
 
-		test( 'dispatches to drawHighlight for highlight type', () => {
-			const spy = jest.spyOn( renderer, 'drawHighlight' );
-			const layer = { type: 'highlight', x: 10, y: 20, width: 100, height: 20 };
-
-			renderer.drawLayer( layer );
-
-			expect( spy ).toHaveBeenCalledWith( layer, undefined );
-		} );
-
 		test( 'dispatches to drawPath for path type', () => {
 			const spy = jest.spyOn( renderer, 'drawPath' );
 			const layer = { type: 'path', points: [ { x: 0, y: 0 }, { x: 10, y: 10 } ] };
@@ -1232,7 +1160,6 @@ describe( 'LayerRenderer', () => {
 			expect( typeof LayerRenderer.prototype.drawPolygon ).toBe( 'function' );
 			expect( typeof LayerRenderer.prototype.drawStar ).toBe( 'function' );
 			expect( typeof LayerRenderer.prototype.drawText ).toBe( 'function' );
-			expect( typeof LayerRenderer.prototype.drawHighlight ).toBe( 'function' );
 			expect( typeof LayerRenderer.prototype.drawBlur ).toBe( 'function' );
 			expect( typeof LayerRenderer.prototype.drawLayer ).toBe( 'function' );
 		} );

@@ -637,8 +637,6 @@ class CanvasManager {
 			if ( next.color ) {
 				if ( layer.type === 'text' ) {
 					layer.fill = next.color;
-				} else if ( layer.type === 'highlight' ) {
-					layer.fill = next.color;
 				} else {
 					layer.stroke = next.color;
 				}

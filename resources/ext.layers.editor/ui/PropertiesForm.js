@@ -674,10 +674,6 @@
 				addInput( { label: t( 'layers-prop-stroke-width', 'Text Stroke Width' ), type: 'number', value: layer.textStrokeWidth || 0, min: 0, max: 200, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { textStrokeWidth: parseInt( v, 10 ) } ); } } );
 				addColorPicker( { label: t( 'layers-prop-stroke-color', 'Text Stroke Color' ), value: layer.textStrokeColor || '#000000', property: 'textStrokeColor', onChange: function ( newColor ) { editor.updateLayer( layer.id, { textStrokeColor: newColor } ); } } );
 				break;
-			case 'highlight':
-				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: layer.width || 0, step: 1, decimals: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: parseFloat( v ) } ); } } );
-				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: layer.height || 0, step: 1, decimals: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: parseFloat( v ) } ); } } );
-				break;
 			case 'blur':
 				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || 0 ), step: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: Math.round( layer.height || 0 ), step: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: Math.round( parseFloat( v ) ) } ); } } );

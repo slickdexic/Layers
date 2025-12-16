@@ -139,9 +139,6 @@
 				case 'star':
 					return this.isPointInPolygonOrStar( point, layer );
 
-				case 'highlight':
-					return this.isPointInHighlight( point, layer );
-
 				default:
 					return false;
 			}
@@ -286,23 +283,6 @@
 			return this.isPointInPolygon( point, polyPoints );
 		}
 
-		/**
-		 * Test if point is in a highlight layer
-		 *
-		 * @param {Object} point Point with x, y
-		 * @param {Object} layer Highlight layer
-		 * @return {boolean} True if hit
-		 */
-		isPointInHighlight( point, layer ) {
-			const hx = Math.min( layer.x, layer.x + layer.width );
-			const hy = Math.min( layer.y, layer.y + ( layer.height || 20 ) );
-			const hw = Math.abs( layer.width );
-			const hh = Math.abs( layer.height || 20 );
-			return point.x >= hx && point.x <= hx + hw &&
-				point.y >= hy && point.y <= hy + hh;
-		}
-
-		// ==================== Geometry Utilities ====================
 
 		/**
 		 * Test if a point is near a line segment

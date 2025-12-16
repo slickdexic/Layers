@@ -104,43 +104,6 @@
 		}
 
 		/**
-		 * Create a highlight layer
-		 *
-		 * @param {Object} point Starting point
-		 * @return {Object} Highlight layer object
-		 */
-		createHighlight( point ) {
-			const style = this.getCurrentStyle();
-
-			// Determine color - prefer fill, fallback to stroke color or yellow
-			let color = style.fill;
-			if ( !color || color === 'transparent' || color === 'none' ) {
-				color = style.color || '#ffff00';
-			}
-
-			// Determine opacity
-			let opacity = style.fillOpacity;
-			if ( typeof opacity !== 'number' || Number.isNaN( opacity ) ) {
-				opacity = 0.3;
-			} else {
-				opacity = Math.max( 0, Math.min( 1, opacity ) );
-			}
-
-			const layer = {
-				type: 'highlight',
-				x: point.x,
-				y: point.y,
-				width: 0,
-				height: 0,
-				color: color,
-				opacity: opacity,
-				fill: color,
-				fillOpacity: opacity
-			};
-			return this.applyShadow( layer, style );
-		}
-
-		/**
 		 * Create a circle layer
 		 *
 		 * @param {Object} point Center point
@@ -325,8 +288,6 @@
 					return this.createPath( point );
 				case 'rectangle':
 					return this.createRectangle( point );
-				case 'highlight':
-					return this.createHighlight( point );
 				case 'circle':
 					return this.createCircle( point );
 				case 'ellipse':
@@ -444,7 +405,6 @@
 
 			switch ( layer.type ) {
 				case 'rectangle':
-				case 'highlight':
 				case 'blur':
 					return layer.width > min && layer.height > min;
 				case 'circle':

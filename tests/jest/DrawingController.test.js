@@ -57,7 +57,7 @@ describe( 'DrawingController', () => {
 
 			expect( controller.isDrawing ).toBe( true );
 			expect( controller.tempLayer ).not.toBeNull();
-			expect( controller.tempLayer.type ).toBe( 'rectangle' );
+			expect( controller.tempLayer.type ).toBe( 'blur' );
 		} );
 
 		it( 'should start drawing for rectangle tool', () => {
@@ -115,11 +115,11 @@ describe( 'DrawingController', () => {
 			expect( controller.tempLayer.arrowSize ).toBe( 10 );
 		} );
 
-		it( 'should start drawing for highlight tool', () => {
-			controller.startDrawing( startPoint, 'highlight', defaultStyle );
+		it( 'should start drawing for blur tool', () => {
+			controller.startDrawing( startPoint, 'blur', defaultStyle );
 
-			expect( controller.tempLayer.type ).toBe( 'highlight' );
-			expect( controller.tempLayer.height ).toBe( 20 );
+			expect( controller.tempLayer.type ).toBe( 'blur' );
+			expect( controller.tempLayer.blurRadius ).toBeDefined();
 		} );
 
 		it( 'should start drawing for pen tool', () => {
@@ -214,11 +214,11 @@ describe( 'DrawingController', () => {
 			expect( controller.tempLayer.y2 ).toBe( 150 );
 		} );
 
-		it( 'should update highlight preview', () => {
-			controller.startDrawing( startPoint, 'highlight', style );
+		it( 'should update blur preview', () => {
+			controller.startDrawing( startPoint, 'blur', style );
 			controller.continueDrawing( { x: 300, y: 120 } );
 
-			expect( controller.tempLayer.width ).toBe( 200 );
+			expect( controller.tempLayer.type ).toBe( 'blur' );
 		} );
 
 		it( 'should add points to path for pen tool', () => {
@@ -253,14 +253,14 @@ describe( 'DrawingController', () => {
 			expect( controller.isDrawing ).toBe( false );
 		} );
 
-		it( 'should convert rectangle to blur for blur tool', () => {
+		it( 'should create blur layer with correct type', () => {
 			controller.startDrawing( startPoint, 'blur', style );
 			controller.continueDrawing( { x: 200, y: 200 } );
 
 			const result = controller.finishDrawing( { x: 200, y: 200 }, 'blur' );
 
 			expect( result.type ).toBe( 'blur' );
-			expect( result.blurRadius ).toBe( 12 );
+			expect( result.blurRadius ).toBe( 10 );
 		} );
 
 		it( 'should create circle layer', () => {
@@ -320,12 +320,12 @@ describe( 'DrawingController', () => {
 			expect( result.x2 ).toBe( 200 );
 		} );
 
-		it( 'should create highlight layer', () => {
-			controller.startDrawing( startPoint, 'highlight', style );
+		it( 'should create blur layer', () => {
+			controller.startDrawing( startPoint, 'blur', style );
 
-			const result = controller.finishDrawing( { x: 250, y: 120 }, 'highlight' );
+			const result = controller.finishDrawing( { x: 250, y: 120 }, 'blur' );
 
-			expect( result.type ).toBe( 'highlight' );
+			expect( result.type ).toBe( 'blur' );
 			expect( result.width ).toBe( 150 );
 		} );
 
@@ -399,18 +399,18 @@ describe( 'DrawingController', () => {
 		const style = { color: '#00ff00', strokeWidth: 4, fill: '#0000ff' };
 
 		describe( 'startBlurTool', () => {
-			it( 'should create rectangle with transparent fill', () => {
-				controller.startBlurTool( point, style );
-
-				expect( controller.tempLayer.type ).toBe( 'rectangle' );
-				expect( controller.tempLayer.fill ).toBe( 'transparent' );
-			} );
-
-			it( 'should use default color if not provided', () => {
+			it( 'should create blur with default radius', () => {
 				controller.startBlurTool( point, {} );
 
-				expect( controller.tempLayer.stroke ).toBe( '#000000' );
-				expect( controller.tempLayer.strokeWidth ).toBe( 2 );
+				expect( controller.tempLayer.type ).toBe( 'blur' );
+				expect( controller.tempLayer.blurRadius ).toBeDefined();
+			} );
+
+			it( 'should use transparent stroke and fill', () => {
+				controller.startBlurTool( point, {} );
+
+				expect( controller.tempLayer.stroke ).toBe( 'transparent' );
+				expect( controller.tempLayer.fill ).toBe( 'transparent' );
 			} );
 		} );
 
@@ -526,19 +526,12 @@ describe( 'DrawingController', () => {
 			} );
 		} );
 
-		describe( 'startHighlightTool', () => {
-			it( 'should create highlight with transparency', () => {
-				controller.startHighlightTool( point, { color: '#ffff00' } );
+		describe( 'startBlurTool', () => {
+			it( 'should create blur with default radius', () => {
+				controller.startBlurTool( point, {} );
 
-				expect( controller.tempLayer.type ).toBe( 'highlight' );
-				expect( controller.tempLayer.fill ).toBe( '#ffff0080' );
-				expect( controller.tempLayer.height ).toBe( 20 );
-			} );
-
-			it( 'should use default yellow if no color', () => {
-				controller.startHighlightTool( point, {} );
-
-				expect( controller.tempLayer.fill ).toBe( '#ffff0080' );
+				expect( controller.tempLayer.type ).toBe( 'blur' );
+				expect( controller.tempLayer.blurRadius ).toBeDefined();
 			} );
 		} );
 	} );
@@ -719,15 +712,15 @@ describe( 'DrawingController', () => {
 			} ) ).toBeFalsy();
 		} );
 
-		it( 'should validate highlight size', () => {
+		it( 'should validate blur size', () => {
 			expect( controller.isValidShape( {
-				type: 'highlight',
+				type: 'blur',
 				width: 50,
 				height: 20
 			} ) ).toBe( true );
 
 			expect( controller.isValidShape( {
-				type: 'highlight',
+				type: 'blur',
 				width: 2,
 				height: 20
 			} ) ).toBe( false );
@@ -744,7 +737,7 @@ describe( 'DrawingController', () => {
 		it( 'should return crosshair for drawing tools', () => {
 			const crosshairTools = [
 				'blur', 'pen', 'rectangle', 'circle', 'ellipse',
-				'polygon', 'star', 'line', 'arrow', 'highlight'
+				'polygon', 'star', 'line', 'arrow'
 			];
 
 			for ( const tool of crosshairTools ) {
@@ -766,7 +759,7 @@ describe( 'DrawingController', () => {
 		it( 'should return true for all drawing tools', () => {
 			const drawingTools = [
 				'blur', 'text', 'pen', 'rectangle', 'circle',
-				'ellipse', 'polygon', 'star', 'line', 'arrow', 'highlight'
+				'ellipse', 'polygon', 'star', 'line', 'arrow'
 			];
 
 			for ( const tool of drawingTools ) {

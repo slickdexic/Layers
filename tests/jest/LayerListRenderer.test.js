@@ -48,7 +48,6 @@ const mockWindow = {
 			ARROW: 'arrow',
 			LINE: 'line',
 			PATH: 'path',
-			HIGHLIGHT: 'highlight',
 			BLUR: 'blur'
 		}
 	}
@@ -427,7 +426,6 @@ describe( 'LayerListRenderer', () => {
 				arrow: 'Arrow',
 				line: 'Line',
 				path: 'Drawing',
-				highlight: 'Highlight',
 				blur: 'Blur/Redaction'
 			};
 

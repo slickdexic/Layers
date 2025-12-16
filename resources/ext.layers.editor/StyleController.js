@@ -119,7 +119,7 @@
 
 			// Apply color based on layer type
 			if ( next.color ) {
-				if ( layer.type === 'text' || layer.type === 'highlight' ) {
+				if ( layer.type === 'text' ) {
 					layer.fill = next.color;
 				} else {
 					layer.stroke = next.color;

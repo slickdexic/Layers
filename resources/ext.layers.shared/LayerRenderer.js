@@ -95,7 +95,7 @@ class LayerRenderer {
 			this.shapeRenderer = null;
 		}
 
-		// Create EffectsRenderer instance for highlight/blur operations
+		// Create EffectsRenderer instance for blur operations
 		if ( EffectsRenderer ) {
 			this.effectsRenderer = new EffectsRenderer( ctx, {
 				canvas: this.canvas,
@@ -270,11 +270,6 @@ class LayerRenderer {
 		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawPath( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/** Draw a highlight overlay */
-	drawHighlight( layer, options ) {
-		if ( this.effectsRenderer ) { this.effectsRenderer.setContext( this.ctx ); this.effectsRenderer.drawHighlight( layer, options ); }
-	}
-
 	/** Draw a blur effect region */
 	drawBlur( layer, options ) {
 		if ( this.effectsRenderer ) { this.effectsRenderer.setContext( this.ctx ); this.effectsRenderer.drawBlur( layer, options ); }
@@ -321,9 +316,6 @@ class LayerRenderer {
 				break;
 			case 'arrow':
 				this.drawArrow( layer, options );
-				break;
-			case 'highlight':
-				this.drawHighlight( layer, options );
 				break;
 			case 'path':
 				this.drawPath( layer, options );
