@@ -248,6 +248,20 @@ class CanvasManager {
 			}
 		};
 
+		// Helper to initialize optional controllers with uniform error handling.
+		const initOptionalController = ( name, propName, factory ) => {
+			const ControllerClass = findClass( name );
+			if ( ControllerClass ) {
+				try {
+					this[ propName ] = typeof factory === 'function' ? factory( ControllerClass ) : new ControllerClass( this );
+				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[CanvasManager] Failed to init ' + name + ':', e && e.message );
+					}
+				}
+			}
+		};
+
 		// Initialize renderer (required)
 		initController( 'CanvasRenderer', 'renderer', ( C ) => {
 			return new C( this.canvas, { editor: this.editor } );
@@ -258,20 +272,8 @@ class CanvasManager {
 			return new C( {}, this );
 		}, 'warn' );
 
-		// Optional SelectionController: initialize silently to allow extracting
-		// selection logic into its own module without breaking compatibility.
-		( function () {
-			const SelClass = findClass( 'SelectionController' );
-			if ( SelClass ) {
-				try {
-					this.selectionController = new SelClass( this );
-				} catch ( e ) {
-					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-						mw.log.warn( '[CanvasManager] Failed to init SelectionController:', e && e.message );
-					}
-				}
-			}
-		}.bind( this )() );
+		// Optional SelectionController
+		initOptionalController( 'SelectionController', 'selectionController' );
 
 		// Initialize controllers (all take 'this' as argument)
 		// StyleController should be loaded before other controllers that rely on style
@@ -309,49 +311,14 @@ class CanvasManager {
 			}
 		}.bind( this )() );
 
-		// Optional MarqueeController: initialize silently (avoid noisy warnings when not present)
-		( function () {
-			const MarqClass = findClass( 'MarqueeController' );
-			if ( MarqClass ) {
-				try {
-					this.marqueeController = new MarqClass( this );
-				} catch ( e ) {
-					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-						mw.log.warn( '[CanvasManager] Failed to init MarqueeController:', e && e.message );
-					}
-				}
-			}
-		}.bind( this )() );
+		// Optional MarqueeController
+		initOptionalController( 'MarqueeController', 'marqueeController' );
 
-		// Optional PointerController: initialize silently when not present to
-		// avoid noisy console warnings in environments where it isn't loaded.
-		( function () {
-			const PClass = findClass( 'PointerController' );
-			if ( PClass ) {
-				try {
-					this.pointerController = new PClass( this );
-				} catch ( e ) {
-					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-						mw.log.warn( '[CanvasManager] Failed to init PointerController:', e && e.message );
-					}
-				}
-			}
-		}.bind( this )() );
+		// Optional PointerController
+		initOptionalController( 'PointerController', 'pointerController' );
 
-		// Optional canvas pool controller (extracts pooling logic)
-		// Initialize without noisy logging when the controller is not present.
-		( function () {
-			const ControllerClass = findClass( 'CanvasPoolController' );
-			if ( ControllerClass ) {
-				try {
-					this.canvasPoolController = new ControllerClass( this, { maxPoolSize: this.maxPoolSize } );
-				} catch ( e ) {
-					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-						mw.log.warn( '[CanvasManager] Failed to init CanvasPoolController:', e && e.message );
-					}
-				}
-			}
-		}.bind( this )() );
+		// Optional canvas pool controller (needs custom factory)
+		initOptionalController( 'CanvasPoolController', 'canvasPoolController', ( C ) => new C( this, { maxPoolSize: this.maxPoolSize } ) );
 
 		// Initialize RenderCoordinator for optimized rendering
 		initController( 'RenderCoordinator', 'renderCoordinator', ( C ) => {
@@ -361,19 +328,8 @@ class CanvasManager {
 			} );
 		}, 'warn' );
 
-		// Optional canvas image controller to manage image loading lifecycle
-		( function () {
-			const ImgCtrlClass = findClass( 'CanvasImageController' );
-			if ( ImgCtrlClass ) {
-				try {
-					this.imageController = new ImgCtrlClass( this );
-				} catch ( e ) {
-					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-						mw.log.warn( '[CanvasManager] Failed to init CanvasImageController:', e && e.message );
-					}
-				}
-			}
-		}.bind( this )() );
+		// Optional canvas image controller
+		initOptionalController( 'CanvasImageController', 'imageController' );
 
 		// Set up event handlers
 		this.setupEventHandlers();
