@@ -820,9 +820,19 @@
 		/**
 		 * Update the background layer item to reflect current state
 		 *
-		 * @param {HTMLElement} item The background layer item element
+		 * @param {HTMLElement} [item] The background layer item element (optional - will be found if not provided)
 		 */
 		updateBackgroundLayerItem( item ) {
+			// If no item provided, find it
+			if ( !item && this.layerList ) {
+				item = this.layerList.querySelector( '.background-layer-item' );
+			}
+
+			// If still no item, nothing to update
+			if ( !item ) {
+				return;
+			}
+
 			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			const bgVisible = this.getBackgroundVisible();
 			const bgOpacity = this.getBackgroundOpacity();
