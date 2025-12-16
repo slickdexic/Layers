@@ -205,12 +205,13 @@ describe( 'Integration: Save/Load Workflow', () => {
 				formatversion: 2
 			} ) );
 
-			// Verify data payload contains stringified layers
+			// Verify data payload contains stringified layers in new format
 			const callArgs = mockApi.postWithToken.mock.calls[ 0 ][ 1 ];
 			expect( callArgs.data ).toBeDefined();
 			const parsedData = JSON.parse( callArgs.data );
-			expect( parsedData ).toHaveLength( 3 );
-			expect( parsedData[ 0 ].id ).toBe( 'layer_1' );
+			// New format: { layers: [...], backgroundVisible, backgroundOpacity }
+			expect( parsedData.layers ).toHaveLength( 3 );
+			expect( parsedData.layers[ 0 ].id ).toBe( 'layer_1' );
 		} );
 
 		test( 'should show spinner during save operation', async () => {
@@ -522,8 +523,8 @@ describe( 'Integration: Save/Load Workflow', () => {
 			// Capture what was sent
 			const savedData = JSON.parse( mockApi.postWithToken.mock.calls[ 0 ][ 1 ].data );
 
-			// Verify all properties are preserved
-			expect( savedData[ 0 ] ).toEqual( originalLayer );
+			// Verify all properties are preserved (new format wraps in layers array)
+			expect( savedData.layers[ 0 ] ).toEqual( originalLayer );
 		} );
 
 		test( 'should handle special characters in text layers', async () => {
@@ -552,7 +553,7 @@ describe( 'Integration: Save/Load Workflow', () => {
 			await apiManager.saveLayers();
 
 			const savedData = JSON.parse( mockApi.postWithToken.mock.calls[ 0 ][ 1 ].data );
-			expect( savedData[ 0 ].text ).toBe( textLayer.text );
+			expect( savedData.layers[ 0 ].text ).toBe( textLayer.text );
 		} );
 
 		test( 'should handle polygon with many points', async () => {
@@ -587,7 +588,7 @@ describe( 'Integration: Save/Load Workflow', () => {
 			await apiManager.saveLayers();
 
 			const savedData = JSON.parse( mockApi.postWithToken.mock.calls[ 0 ][ 1 ].data );
-			expect( savedData[ 0 ].points ).toHaveLength( 100 );
+			expect( savedData.layers[ 0 ].points ).toHaveLength( 100 );
 		} );
 	} );
 

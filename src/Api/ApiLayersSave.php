@@ -155,10 +155,31 @@ class ApiLayersSave extends ApiBase {
 			// json_decode with associative=true converts to PHP array
 			// Using JSON_THROW_ON_ERROR for explicit error handling
 			try {
-				$layersData = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+				$rawData = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
 				// JSON parsing failed - invalid syntax, encoding issues, or malformed data
 				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
+			}
+
+			// HANDLE BOTH OLD AND NEW DATA FORMATS
+			// Old format: array of layers [{id, type, ...}, ...]
+			// New format: {layers: [...], backgroundVisible: bool, backgroundOpacity: float}
+			$layersData = [];
+			$backgroundSettings = [];
+
+			if ( isset( $rawData['layers'] ) && is_array( $rawData['layers'] ) ) {
+				// New format with settings
+				$layersData = $rawData['layers'];
+				// Extract and validate background settings
+				$backgroundSettings = [
+					'backgroundVisible' => isset( $rawData['backgroundVisible'] )
+						? (bool)$rawData['backgroundVisible'] : true,
+					'backgroundOpacity' => isset( $rawData['backgroundOpacity'] )
+						? max( 0.0, min( 1.0, (float)$rawData['backgroundOpacity'] ) ) : 1.0
+				];
+			} elseif ( is_array( $rawData ) && !isset( $rawData['layers'] ) ) {
+				// Old format: raw layers array (for backwards compatibility)
+				$layersData = $rawData;
 			}
 
 			// VALIDATION PIPELINE: Comprehensive security-focused validation
@@ -233,7 +254,7 @@ class ApiLayersSave extends ApiBase {
 			// LayersDatabase::saveLayerSet() performs:
 			// - Automatic revision number incrementing (per-image counter)
 			// - Transaction with retry logic (3 attempts with exponential backoff)
-			// - Wraps data in structure: {revision, schema: 1, created, layers: [...]}
+			// - Wraps data in structure: {revision, schema: 1, created, layers: [...], backgroundVisible, backgroundOpacity}
 			// - Calculates and stores size for monitoring/limits
 			// Returns: new layer set ID (ls_id) or null on failure
 			$layerSetId = $db->saveLayerSet(
@@ -241,7 +262,8 @@ class ApiLayersSave extends ApiBase {
 				$imgMetadata,
 				$sanitizedData,
 				$user->getId(),
-				$setName
+				$setName,
+				$backgroundSettings
 			);
 
 			// Build success response

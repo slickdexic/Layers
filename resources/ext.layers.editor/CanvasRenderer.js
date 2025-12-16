@@ -277,6 +277,112 @@
 			}
 		}
 
+		/**
+		 * Render layers to an external context (used for export).
+		 * Does NOT include background image or checker pattern.
+		 *
+		 * @param {CanvasRenderingContext2D} targetCtx - Target context to draw on
+		 * @param {Array} layers - Array of layer objects to render
+		 * @param {number} scale - Scale factor for rendering (default: 1)
+		 */
+		renderLayersToContext( targetCtx, layers, scale = 1 ) {
+			if ( !targetCtx || !Array.isArray( layers ) ) {
+				return;
+			}
+
+			// Save original context and state
+			const originalCtx = this.ctx;
+			const originalZoom = this.zoom;
+			const originalPanX = this.panX;
+			const originalPanY = this.panY;
+
+			// Temporarily use the target context with export settings
+			this.ctx = targetCtx;
+			this.zoom = scale;
+			this.panX = 0;
+			this.panY = 0;
+
+			// Render layers (bottom to top)
+			for ( let i = layers.length - 1; i >= 0; i-- ) {
+				const layer = layers[ i ];
+				if ( layer && layer.visible !== false ) {
+					// Note: blur effects may not work correctly without the background
+					// in the target context, but we still attempt to render them
+					if ( layer.type === 'blur' ) {
+						// For export, blur layers need the region to already be drawn
+						// This is a limitation - blur on transparent may look different
+						this.drawBlurEffectToContext( targetCtx, layer, scale );
+					} else {
+						this.drawLayerWithEffects( layer );
+					}
+				}
+			}
+
+			// Restore original context and state
+			this.ctx = originalCtx;
+			this.zoom = originalZoom;
+			this.panX = originalPanX;
+			this.panY = originalPanY;
+		}
+
+		/**
+		 * Draw a blur effect to an external context for export
+		 *
+		 * @param {CanvasRenderingContext2D} targetCtx - Target context
+		 * @param {Object} layer - Blur layer
+		 * @param {number} scale - Scale factor
+		 */
+		drawBlurEffectToContext( targetCtx, layer, scale ) {
+			const x = ( layer.x || 0 ) * scale;
+			const y = ( layer.y || 0 ) * scale;
+			const w = ( layer.width || 0 ) * scale;
+			const h = ( layer.height || 0 ) * scale;
+
+			if ( w <= 0 || h <= 0 ) {
+				return;
+			}
+
+			const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+
+			targetCtx.save();
+
+			// Apply layer opacity
+			if ( typeof layer.opacity === 'number' ) {
+				targetCtx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+			}
+
+			try {
+				// Get the canvas this context belongs to
+				const targetCanvas = targetCtx.canvas;
+
+				// Create a temp canvas to capture and blur the region
+				const tempCanvas = document.createElement( 'canvas' );
+				tempCanvas.width = Math.max( 1, Math.ceil( w ) );
+				tempCanvas.height = Math.max( 1, Math.ceil( h ) );
+				const tempCtx = tempCanvas.getContext( '2d' );
+
+				if ( tempCtx ) {
+					// Copy the region from target canvas
+					tempCtx.drawImage( targetCanvas, x, y, w, h, 0, 0, w, h );
+
+					// Apply blur filter
+					targetCtx.filter = `blur(${ radius }px)`;
+
+					// Draw the blurred region back
+					targetCtx.drawImage( tempCanvas, x, y, w, h );
+
+					// Reset filter
+					targetCtx.filter = 'none';
+				}
+			} catch ( e ) {
+				// Fallback: just draw a semi-transparent overlay
+				targetCtx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+				targetCtx.fillRect( x, y, w, h );
+			}
+
+			targetCtx.restore();
+		}
+
 	/**
 		 * Draw a blur effect that blurs everything below it (background + layers)
 		 *

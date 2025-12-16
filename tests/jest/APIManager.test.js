@@ -951,6 +951,12 @@ describe( 'APIManager', function () {
 				if ( key === 'currentSetName' ) {
 					return 'my-set';
 				}
+				if ( key === 'backgroundVisible' ) {
+					return true;
+				}
+				if ( key === 'backgroundOpacity' ) {
+					return 1.0;
+				}
 				return null;
 			} );
 
@@ -960,7 +966,11 @@ describe( 'APIManager', function () {
 			expect( payload.filename ).toBe( 'Test_Image.jpg' );
 			expect( payload.setname ).toBe( 'my-set' );
 			expect( payload.format ).toBe( 'json' );
-			expect( payload.data ).toBe( '[{"id":"layer1","type":"rectangle"}]' );
+			// New format includes layers and background settings
+			const parsedData = JSON.parse( payload.data );
+			expect( parsedData.layers ).toEqual( [ { id: 'layer1', type: 'rectangle' } ] );
+			expect( parsedData.backgroundVisible ).toBe( true );
+			expect( parsedData.backgroundOpacity ).toBe( 1.0 );
 		} );
 
 		it( 'should default to empty array if no layers', function () {
@@ -970,7 +980,9 @@ describe( 'APIManager', function () {
 
 			const payload = apiManager.buildSavePayload();
 
-			expect( payload.data ).toBe( '[]' );
+			// New format wraps layers in object
+			const parsedData = JSON.parse( payload.data );
+			expect( parsedData.layers ).toEqual( [] );
 		} );
 
 		it( 'should default to "default" set name if not specified', function () {

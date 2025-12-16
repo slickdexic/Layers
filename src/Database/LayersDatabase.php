@@ -72,7 +72,8 @@ class LayersDatabase {
 		array $imgMetadata,
 		array $layersData,
 		int $userId,
-		?string $setName = null
+		?string $setName = null,
+		array $backgroundSettings = []
 	): ?int {
 		$dbw = $this->getWriteDb();
 		if ( !$dbw ) {
@@ -129,7 +130,9 @@ class LayersDatabase {
 					'revision' => $revision,
 					'schema' => 1,
 					'created' => $timestamp,
-					'layers' => $layersData
+					'layers' => $layersData,
+					'backgroundVisible' => $backgroundSettings['backgroundVisible'] ?? true,
+					'backgroundOpacity' => $backgroundSettings['backgroundOpacity'] ?? 1.0
 				];
 				$jsonBlob = json_encode( $dataStructure, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
 

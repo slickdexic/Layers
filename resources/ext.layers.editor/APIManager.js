@@ -441,10 +441,41 @@
 			this.editor.canvasManager.setBaseDimensions( baseWidth, baseHeight );
 		}
 
-		const rawLayers = layerSet.data.layers || [];
+		// Handle both old format (layers array) and new format (object with layers + settings)
+		let rawLayers;
+		let backgroundVisible = true;
+		let backgroundOpacity = 1.0;
+		
+		if ( layerSet.data ) {
+			if ( Array.isArray( layerSet.data ) ) {
+				// Old format: data is just the layers array
+				rawLayers = layerSet.data;
+			} else if ( layerSet.data.layers ) {
+				// New format: data is an object with layers and settings
+				rawLayers = layerSet.data.layers || [];
+				backgroundVisible = layerSet.data.backgroundVisible !== undefined ? 
+					layerSet.data.backgroundVisible : true;
+				backgroundOpacity = layerSet.data.backgroundOpacity !== undefined ? 
+					layerSet.data.backgroundOpacity : 1.0;
+			} else {
+				rawLayers = [];
+			}
+		} else {
+			rawLayers = [];
+		}
+		
 		const processedLayers = this.processRawLayers( rawLayers );
 		this.editor.stateManager.set( 'layers', processedLayers );
 		this.editor.stateManager.set( 'currentLayerSetId', layerSet.id || null );
+		
+		// Set background settings from layer set data
+		this.editor.stateManager.set( 'backgroundVisible', backgroundVisible );
+		this.editor.stateManager.set( 'backgroundOpacity', backgroundOpacity );
+		
+		// Update layer panel UI if available
+		if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateBackgroundLayerItem === 'function' ) {
+			this.editor.layerPanel.updateBackgroundLayerItem();
+		}
 	}
 
 	processRawLayers( rawLayers ) {
@@ -703,7 +734,19 @@
 
 	buildSavePayload() {
 		const layers = this.editor.stateManager.get( 'layers' ) || [];
-		const layersJson = JSON.stringify( layers );
+		
+		// Include background settings in the saved data
+		const backgroundVisible = this.editor.stateManager.get( 'backgroundVisible' );
+		const backgroundOpacity = this.editor.stateManager.get( 'backgroundOpacity' );
+		
+		// Build data object with layers and background settings
+		const dataObject = {
+			layers: layers,
+			backgroundVisible: backgroundVisible !== undefined ? backgroundVisible : true,
+			backgroundOpacity: backgroundOpacity !== undefined ? backgroundOpacity : 1.0
+		};
+		
+		const layersJson = JSON.stringify( dataObject );
 		
 		// Get current set name from state, fallback to 'default'
 		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
