@@ -301,6 +301,119 @@ class LayerRenderer {
 		if ( this.effectsRenderer ) { this.effectsRenderer.setContext( this.ctx ); this.effectsRenderer.drawBlur( layer, options ); }
 	}
 
+	/**
+	 * Draw an image layer
+	 *
+	 * @param {Object} layer - Image layer with src, x, y, width, height properties
+	 * @param {Object} [options] - Rendering options
+	 */
+	drawImage( layer, options ) {
+		const opts = this._prepareRenderOptions( options );
+		const scale = opts.scale;
+
+		// Get the cached image, or load it if not cached
+		const img = this._getImageElement( layer );
+		if ( !img || !img.complete ) {
+			// Image not ready yet - draw a placeholder
+			this._drawImagePlaceholder( layer, scale );
+			return;
+		}
+
+		// Calculate scaled position and dimensions
+		const x = ( layer.x || 0 ) * scale.sx;
+		const y = ( layer.y || 0 ) * scale.sy;
+		const width = ( layer.width || img.naturalWidth ) * scale.sx;
+		const height = ( layer.height || img.naturalHeight ) * scale.sy;
+
+		this.ctx.save();
+
+		// Apply opacity if specified
+		if ( layer.opacity !== undefined && layer.opacity !== 1 ) {
+			this.ctx.globalAlpha = layer.opacity;
+		}
+
+		// Apply rotation if specified
+		if ( layer.rotation ) {
+			const centerX = x + width / 2;
+			const centerY = y + height / 2;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( layer.rotation * Math.PI / 180 );
+			this.ctx.translate( -centerX, -centerY );
+		}
+
+		// Draw the image
+		this.ctx.drawImage( img, x, y, width, height );
+
+		this.ctx.restore();
+	}
+
+	/**
+	 * Get or create cached image element for a layer
+	 *
+	 * @param {Object} layer - Image layer
+	 * @return {HTMLImageElement|null} - Image element or null if not available
+	 */
+	_getImageElement( layer ) {
+		if ( !layer.src ) {
+			return null;
+		}
+
+		// Use layer id as cache key
+		const cacheKey = layer.id || layer.src.substring( 0, 50 );
+
+		// Check if we have a cached image
+		if ( !this._imageCache ) {
+			this._imageCache = new Map();
+		}
+
+		if ( this._imageCache.has( cacheKey ) ) {
+			return this._imageCache.get( cacheKey );
+		}
+
+		// Create new image element and start loading
+		const img = new Image();
+		img.src = layer.src;
+		this._imageCache.set( cacheKey, img );
+
+		// Request redraw when image loads
+		img.onload = () => {
+			// Trigger a redraw - the canvas manager should handle this
+			if ( typeof window !== 'undefined' && window.Layers && window.Layers.requestRedraw ) {
+				window.Layers.requestRedraw();
+			}
+		};
+
+		return img;
+	}
+
+	/**
+	 * Draw a placeholder while image is loading
+	 *
+	 * @param {Object} layer - Image layer
+	 * @param {Object} scale - Scale factors
+	 */
+	_drawImagePlaceholder( layer, scale ) {
+		const x = ( layer.x || 0 ) * scale.sx;
+		const y = ( layer.y || 0 ) * scale.sy;
+		const width = ( layer.width || 100 ) * scale.sx;
+		const height = ( layer.height || 100 ) * scale.sy;
+
+		this.ctx.save();
+		this.ctx.strokeStyle = '#888';
+		this.ctx.lineWidth = 1;
+		this.ctx.setLineDash( [ 5, 5 ] );
+		this.ctx.strokeRect( x, y, width, height );
+
+		// Draw loading indicator (diagonal lines)
+		this.ctx.beginPath();
+		this.ctx.moveTo( x, y );
+		this.ctx.lineTo( x + width, y + height );
+		this.ctx.moveTo( x + width, y );
+		this.ctx.lineTo( x, y + height );
+		this.ctx.stroke();
+		this.ctx.restore();
+	}
+
 	/** Draw a text layer */
 	drawText( layer, options ) {
 		if ( this.textRenderer ) { this.textRenderer.setContext( this.ctx ); this.textRenderer.draw( layer, this._prepareRenderOptions( options ) ); }
@@ -349,6 +462,9 @@ class LayerRenderer {
 			case 'blur':
 				this.drawBlur( layer, options );
 				break;
+			case 'image':
+				this.drawImage( layer, options );
+				break;
 		}
 	}
 
@@ -366,6 +482,10 @@ class LayerRenderer {
 		this.canvas = null;
 		this.baseWidth = null;
 		this.baseHeight = null;
+		if ( this._imageCache ) {
+			this._imageCache.clear();
+			this._imageCache = null;
+		}
 	}
 }
 

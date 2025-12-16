@@ -121,6 +121,101 @@
 			}
 		}
 
+		/**
+		 * Handle importing an image file as a layer
+		 *
+		 * @param {File} file - The image file to import
+		 * @return {Promise<void>}
+		 */
+		async handleImageImport( file ) {
+			// Validate file size (max 512KB to match server validation)
+			const maxSize = 512 * 1024;
+			if ( file.size > maxSize ) {
+				// eslint-disable-next-line no-alert
+				alert( this.msg( 'layers-import-image-too-large', 'Image file is too large (max 512KB)' ) );
+				return;
+			}
+
+			// Validate file type
+			const allowedTypes = [ 'image/png', 'image/jpeg', 'image/gif', 'image/webp' ];
+			if ( !allowedTypes.includes( file.type ) ) {
+				// eslint-disable-next-line no-alert
+				alert( this.msg( 'layers-import-image-invalid-type', 'Invalid image type. Allowed: PNG, JPEG, GIF, WebP' ) );
+				return;
+			}
+
+			try {
+				// Read file as base64 data URL
+				const dataUrl = await this.readFileAsDataURL( file );
+
+				// Load image to get dimensions
+				const img = await this.loadImage( dataUrl );
+
+				// Create a new image layer
+				const layer = {
+					id: 'image-' + Date.now() + '-' + Math.random().toString( 36 ).slice( 2, 9 ),
+					type: 'image',
+					name: file.name.replace( /\.[^.]+$/, '' ),
+					src: dataUrl,
+					x: 50,
+					y: 50,
+					width: img.naturalWidth,
+					height: img.naturalHeight,
+					originalWidth: img.naturalWidth,
+					originalHeight: img.naturalHeight,
+					opacity: 1,
+					rotation: 0,
+					visible: true,
+					locked: false,
+					preserveAspectRatio: true
+				};
+
+				// Add the layer via the editor's state management
+				if ( this.editor && this.editor.stateManager ) {
+					this.editor.stateManager.addLayer( layer );
+					// Trigger a redraw
+					if ( this.editor.canvasManager ) {
+						this.editor.canvasManager.requestRedraw();
+					}
+				}
+			} catch ( error ) {
+				// eslint-disable-next-line no-console
+				console.error( 'Failed to import image:', error );
+				// eslint-disable-next-line no-alert
+				alert( this.msg( 'layers-import-image-failed', 'Failed to import image' ) );
+			}
+		}
+
+		/**
+		 * Read a file as a data URL
+		 *
+		 * @param {File} file - File to read
+		 * @return {Promise<string>} - Data URL string
+		 */
+		readFileAsDataURL( file ) {
+			return new Promise( ( resolve, reject ) => {
+				const reader = new FileReader();
+				reader.onload = () => resolve( reader.result );
+				reader.onerror = () => reject( reader.error );
+				reader.readAsDataURL( file );
+			} );
+		}
+
+		/**
+		 * Load an image from a source URL
+		 *
+		 * @param {string} src - Image source (data URL or regular URL)
+		 * @return {Promise<HTMLImageElement>} - Loaded image element
+		 */
+		loadImage( src ) {
+			return new Promise( ( resolve, reject ) => {
+				const img = new Image();
+				img.onload = () => resolve( img );
+				img.onerror = () => reject( new Error( 'Failed to load image' ) );
+				img.src = src;
+			} );
+		}
+
 		destroy() {
 			this.runDialogCleanups();
 			this.removeAllListeners();
@@ -624,6 +719,20 @@
 		exportImageButton.setAttribute( 'aria-label', t( 'layers-export-image', 'Export as Image' ) );
 		actionGroup.appendChild( exportImageButton );
 
+		// Import Image Layer button + hidden file input
+		const importImageButton = document.createElement( 'button' );
+		importImageButton.className = 'toolbar-button import-image-button';
+		importImageButton.textContent = t( 'layers-import-image', 'Import Image' );
+		importImageButton.title = t( 'layers-import-image-tooltip', 'Add an image as a layer' );
+		importImageButton.setAttribute( 'aria-label', t( 'layers-import-image', 'Import Image' ) );
+		actionGroup.appendChild( importImageButton );
+
+		const importImageInput = document.createElement( 'input' );
+		importImageInput.type = 'file';
+		importImageInput.accept = 'image/*';
+		importImageInput.style.display = 'none';
+		actionGroup.appendChild( importImageInput );
+
 		// Separator before save/help
 		const separator2 = document.createElement( 'div' );
 		separator2.className = 'toolbar-separator';
@@ -660,6 +769,8 @@
 		this.importInput = importInput;
 		this.exportButton = exportButton;
 		this.exportImageButton = exportImageButton;
+		this.importImageButton = importImageButton;
+		this.importImageInput = importImageInput;
 	}
 
 	createActionButton( action ) {
@@ -759,6 +870,22 @@
 				typeof this.editor.apiManager.downloadAsImage === 'function' ) {
 				this.editor.apiManager.downloadAsImage( { format: 'png' } );
 			}
+		} );
+
+		// Import Image Layer - add an image file as a layer
+		this.addListener( this.importImageButton, 'click', () => {
+			this.importImageInput.click();
+		} );
+
+		this.addListener( this.importImageInput, 'change', () => {
+			const file = this.importImageInput.files && this.importImageInput.files[ 0 ];
+			if ( !file ) {
+				return;
+			}
+			this.handleImageImport( file )
+				.finally( () => {
+					this.importImageInput.value = '';
+				} );
 		} );
 
 		// Style controls are handled by ToolbarStyleControls module

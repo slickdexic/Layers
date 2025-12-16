@@ -24,7 +24,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	/** @var array Supported layer types */
 	private const SUPPORTED_LAYER_TYPES = [
 		'text', 'arrow', 'rectangle', 'circle', 'ellipse',
-		'polygon', 'star', 'line', 'path', 'blur'
+		'polygon', 'star', 'line', 'path', 'blur', 'image'
 	];
 
 	/** @var array Allowed properties and their types */
@@ -83,7 +83,12 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'startAngle' => 'numeric',
 		'endAngle' => 'numeric',
 		'innerRadius' => 'numeric',
-		'outerRadius' => 'numeric'
+		'outerRadius' => 'numeric',
+		// Image layer properties
+		'src' => 'string',
+		'originalWidth' => 'numeric',
+		'originalHeight' => 'numeric',
+		'preserveAspectRatio' => 'boolean'
 	];
 
 	/** @var array Value constraints for enum-like properties */
@@ -306,7 +311,12 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => false, 'error' => 'Must be a string' ];
 		}
 
-		// Length check
+		// Special handling for image src (base64 data URL)
+		if ( $property === 'src' ) {
+			return $this->validateImageSrc( $value );
+		}
+
+		// Length check for regular strings
 		if ( strlen( $value ) > 1000 ) {
 			return [ 'valid' => false, 'error' => 'String too long' ];
 		}
@@ -352,6 +362,42 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
+		return [ 'valid' => true, 'value' => $value ];
+	}
+
+	/**
+	 * Validate image src property (base64 data URL)
+	 *
+	 * @param string $value The src value (expected to be a data URL)
+	 * @return array Validation result
+	 */
+	private function validateImageSrc( string $value ): array {
+		// Max size: 512KB for image data (after base64 encoding, roughly 380KB raw image)
+		$maxSize = 512 * 1024;
+		if ( strlen( $value ) > $maxSize ) {
+			return [ 'valid' => false, 'error' => 'Image data too large (max 512KB)' ];
+		}
+
+		// Must be a valid data URL with allowed image types
+		$allowedMimeTypes = [
+			'image/png',
+			'image/jpeg',
+			'image/gif',
+			'image/webp',
+			'image/svg+xml'
+		];
+
+		// Parse data URL format: data:[<mediatype>][;base64],<data>
+		if ( !preg_match( '/^data:([^;,]+)(;base64)?,/', $value, $matches ) ) {
+			return [ 'valid' => false, 'error' => 'Invalid image data format' ];
+		}
+
+		$mimeType = $matches[1];
+		if ( !in_array( $mimeType, $allowedMimeTypes, true ) ) {
+			return [ 'valid' => false, 'error' => 'Unsupported image type: ' . $mimeType ];
+		}
+
+		// Basic validation passed - accept the value
 		return [ 'valid' => true, 'value' => $value ];
 	}
 
