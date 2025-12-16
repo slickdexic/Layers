@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "0.8.7",
+	"version": "0.8.8",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},

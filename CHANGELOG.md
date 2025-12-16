@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [0.8.8] - 2025-12-16
+
+### New Features
+- **Per-Layer-Set Background Settings**: Background visibility and opacity are now saved independently for each layer set
+- **Background Toggle Shortcut**: Added Shift+B keyboard shortcut to toggle background image visibility
+
+### Bug Fixes
+- Fixed image export showing blank/transparent images instead of layers
+- Fixed image export showing checkerboard pattern instead of transparency
+- Fixed export filename format (now uses `{filename}-layers-{timestamp}.png`)
+- Fixed `updateBackgroundLayerItem` error when loading layer sets
+- Added `setContext()` method to LayerRenderer for proper export context switching
+
+### Technical Improvements
+- Updated data format to include background settings: `{layers: [...], backgroundVisible, backgroundOpacity}`
+- Backward compatible with old layer set format (arrays)
+- Added `renderLayersToContext()` method for clean layer export rendering
+
+---
+
 ## [0.8.7] - 2025-12-14
 
 ### New Features
