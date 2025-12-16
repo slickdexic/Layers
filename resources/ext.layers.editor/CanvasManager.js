@@ -38,6 +38,7 @@
 		RenderCoordinator: 'Canvas.RenderCoordinator',
 		CanvasPoolController: 'Canvas.CanvasPoolController',
 		PointerController: 'Canvas.PointerController',
+		SelectionController: 'Canvas.SelectionController',
 		CanvasImageController: 'Canvas.ImageController',
 		MarqueeController: 'Canvas.MarqueeController',
 		InteractionController: 'Canvas.InteractionController',
