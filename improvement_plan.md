@@ -2,7 +2,7 @@
 
 **Last Updated:** December 16, 2025  
 **Status:** Active  
-**Version:** 0.8.7  
+**Version:** 0.8.8  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
@@ -16,7 +16,7 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Strong | 4,624 tests, 89.29% statement coverage, all passing |
+| **Test Suite** | ✅ Strong | 4,591 tests, 91% statement coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer 682 lines, Shared 3,886 lines, Editor 32,465 lines |
 | **ES6 Migration** | ✅ Complete | 66 ES6 classes, 0 prototype methods |

@@ -102,9 +102,9 @@ As a user, I want to import images (logos, icons, reference diagrams) as layers 
 
 **Priority:** Medium  
 **Complexity:** Low  
-**Status:** ✅ Completed (v0.8.7)
+**Status:** ✅ Completed (v0.8.8)
 
-> **Implementation Note:** Added in v0.8.7. Background appears as a special layer in the layer panel with opacity slider and visibility toggle. Keyboard shortcut: Shift+B to toggle background visibility.
+> **Implementation Note:** Added in v0.8.7, enhanced in v0.8.8. Background appears as a special layer in the layer panel with opacity slider and visibility toggle. Keyboard shortcut: Shift+B to toggle background visibility. **v0.8.8 adds per-layer-set background settings** - each named layer set now saves its own background visibility and opacity independently.
 
 ### Description
 Treat the background image as a special bottom layer with adjustable controls for opacity and visibility, while keeping it locked from direct editing (no move, resize, delete).
@@ -156,14 +156,14 @@ As a user, I want to adjust the background image opacity so I can make my annota
 
 | Feature | Priority | Effort | Dependencies | Status |
 |---------|----------|--------|--------------|--------|
-| Save as Image | Medium | Low | None | ✅ Completed |
-| Background Controls | Medium | Low | None | ✅ Completed |
-| Import Image Layer | Medium | Medium | Schema update, validation | Planned |
+| Save as Image | Medium | Low | None | ✅ Completed (v0.8.6) |
+| Background Controls | Medium | Low | None | ✅ Completed (v0.8.8) |
+| Import Image Layer | Medium | Medium | Schema update, validation | 🔜 Next |
 
 ### Recommended Order
-1. ~~**Save as Image**~~ - ✅ Already implemented
-2. ~~**Background Controls**~~ - ✅ Implemented in v0.8.7
-3. **Import Image Layer** - Next priority, requires schema changes
+1. ~~**Save as Image**~~ - ✅ Implemented in v0.8.6
+2. ~~**Background Controls**~~ - ✅ Implemented in v0.8.7, enhanced in v0.8.8 (per-set settings)
+3. **Import Image Layer** - 🔜 Next priority, requires schema changes
 
 ---
 
@@ -174,4 +174,4 @@ As a user, I want to adjust the background image opacity so I can make my annota
 ---
 
 *Document created: December 13, 2025*  
-*Last updated: January 2025*
+*Last updated: December 16, 2025*

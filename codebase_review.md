@@ -2,7 +2,7 @@
 
 **Review Date:** December 16, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 0.8.7
+**Version:** 0.8.8
 
 ## Executive Summary
 
@@ -26,7 +26,7 @@ The extension is **functional and feature-complete** with good test coverage (~8
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **Test Coverage** | 8/10 | 89.29% statement coverage, 4,624 tests all passing |
+| **Test Coverage** | 8/10 | 91% statement coverage, 4,591 tests all passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
 | **PHP Architecture** | 8/10 | Clean DI, service wiring, largest PHP file 970 lines |
 | **Documentation** | 7/10 | Good copilot-instructions.md, some docs need updates |
@@ -38,7 +38,7 @@ The extension is **functional and feature-complete** with good test coverage (~8
 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
-3. **Tests catch regressions** - 4,624 tests all passing
+3. **Tests catch regressions** - 4,591 tests all passing
 4. **Viewer is lightweight** - reading articles loads only 682 lines (viewer) + 3,886 lines (shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
 6. **ES6 100% complete** - All 66 classes use ES6 syntax, 0 prototype patterns remain
@@ -81,13 +81,13 @@ These metrics were collected directly from v0.8.7 source code using automated ve
 
 | Category | Value | Target | Status |
 |----------|-------|--------|--------|
-| Jest tests passing | **4,624** | - | ✅ All passing |
+| Jest tests passing | **4,591** | - | ✅ All passing |
 | Jest tests failing | **0** | 0 | ✅ All fixed |
 | Jest test suites | **92** | - | ✅ Good |
-| Statement coverage | **89.29%** | 80% | ✅ Exceeded |
-| Branch coverage | **77.16%** | 65% | ✅ Exceeded |
-| Line coverage | **~89%** | 80% | ✅ Exceeded |
-| Function coverage | **87.36%** | 80% | ✅ Exceeded |
+| Statement coverage | **91%** | 80% | ✅ Exceeded |
+| Branch coverage | **79%** | 65% | ✅ Exceeded |
+| Line coverage | **~91%** | 80% | ✅ Exceeded |
+| Function coverage | **87%** | 80% | ✅ Exceeded |
 
 ### PHP Backend
 
