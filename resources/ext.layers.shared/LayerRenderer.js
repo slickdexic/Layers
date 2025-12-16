@@ -113,6 +113,32 @@ class LayerRenderer {
 	// ========================================================================
 
 	/**
+	 * Update the rendering context
+	 * Used when rendering to a different context (e.g., export canvas)
+	 *
+	 * @param {CanvasRenderingContext2D} ctx - New rendering context
+	 */
+	setContext( ctx ) {
+		this.ctx = ctx;
+		// Update sub-renderers
+		if ( this.shadowRenderer ) {
+			this.shadowRenderer.setContext( ctx );
+		}
+		if ( this.arrowRenderer ) {
+			this.arrowRenderer.setContext( ctx );
+		}
+		if ( this.textRenderer ) {
+			this.textRenderer.setContext( ctx );
+		}
+		if ( this.shapeRenderer ) {
+			this.shapeRenderer.setContext( ctx );
+		}
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.setContext( ctx );
+		}
+	}
+
+	/**
 	 * Update the zoom level
 	 *
 	 * @param {number} zoom - New zoom level

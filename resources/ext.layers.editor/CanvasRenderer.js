@@ -302,6 +302,14 @@
 			this.panX = 0;
 			this.panY = 0;
 
+			// Update layerRenderer to use the target context
+			if ( this.layerRenderer && typeof this.layerRenderer.setContext === 'function' ) {
+				this.layerRenderer.setContext( targetCtx );
+			}
+
+			// Apply transformations to the target context
+			this.applyTransformations();
+
 			// Render layers (bottom to top)
 			for ( let i = layers.length - 1; i >= 0; i-- ) {
 				const layer = layers[ i ];
@@ -323,6 +331,11 @@
 			this.zoom = originalZoom;
 			this.panX = originalPanX;
 			this.panY = originalPanY;
+
+			// Restore layerRenderer to use the original context
+			if ( this.layerRenderer && typeof this.layerRenderer.setContext === 'function' ) {
+				this.layerRenderer.setContext( originalCtx );
+			}
 		}
 
 		/**
