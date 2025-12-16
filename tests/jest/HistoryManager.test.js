@@ -26,6 +26,7 @@ describe('HistoryManager', () => {
         mockCanvasManager = {
             layers: mockLayers,
             selectedLayerIds: [],
+            renderLayers: jest.fn(),
             redraw: jest.fn(),
             isModified: false
         };
@@ -115,14 +116,14 @@ describe('HistoryManager', () => {
             expect(result).toBe(true);
             expect(historyManager.currentIndex).toBe(0);
             expect(mockCanvasManager.layers[0].x).toBe(10);
-            expect(mockCanvasManager.redraw).toHaveBeenCalled();
+            expect(mockCanvasManager.renderLayers).toHaveBeenCalled();
         });
 
         test('should return false when no undo available', () => {
             const result = historyManager.undo();
 
             expect(result).toBe(false);
-            expect(mockCanvasManager.redraw).not.toHaveBeenCalled();
+            expect(mockCanvasManager.renderLayers).not.toHaveBeenCalled();
         });
 
         test('should handle multiple undos', () => {
@@ -155,7 +156,7 @@ describe('HistoryManager', () => {
             expect(result).toBe(true);
             expect(historyManager.currentIndex).toBe(1);
             expect(mockCanvasManager.layers[0].x).toBe(50);
-            expect(mockCanvasManager.redraw).toHaveBeenCalled();
+            expect(mockCanvasManager.renderLayers).toHaveBeenCalled();
         });
 
         test('should return false when no redo available', () => {
@@ -163,7 +164,7 @@ describe('HistoryManager', () => {
             const result = historyManager.redo();
 
             expect(result).toBe(false);
-            expect(mockCanvasManager.redraw).not.toHaveBeenCalled();
+            expect(mockCanvasManager.renderLayers).not.toHaveBeenCalled();
         });
 
         test('should handle multiple redos', () => {
@@ -340,7 +341,7 @@ describe('HistoryManager', () => {
                     redraw: jest.fn()
                 },
                 layerPanel: {
-                    updateLayers: jest.fn()
+                    renderLayerList: jest.fn()
                 },
                 markDirty: jest.fn()
             };
@@ -359,7 +360,7 @@ describe('HistoryManager', () => {
             expect(mockEditor.layers[0].x).toBe(10);
             expect(mockEditor.canvasManager.selectionManager.clearSelection).toHaveBeenCalled();
             expect(mockEditor.canvasManager.renderLayers).toHaveBeenCalled();
-            expect(mockEditor.layerPanel.updateLayers).toHaveBeenCalled();
+            expect(mockEditor.layerPanel.renderLayerList).toHaveBeenCalled();
             expect(mockEditor.markDirty).toHaveBeenCalled();
         });
 

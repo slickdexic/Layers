@@ -289,19 +289,17 @@
 				canvasMgr.selectedLayerIds = [];
 			}
 
-			// Re-render using the restored layers directly (not via getter)
-			// This ensures we render exactly what we just set
+			// Re-render using the restored layers directly
+			// NOTE: renderLayers internally calls redraw(), so we only call one
 			if ( canvasMgr && typeof canvasMgr.renderLayers === 'function' ) {
 				canvasMgr.renderLayers( restored );
 			}
-			if ( canvasMgr && typeof canvasMgr.redraw === 'function' ) {
-				canvasMgr.redraw();
-			}
 
-			// Update layer panel with restored layers
+			// Update layer panel directly without going through StateManager again
+			// (we already set layers via stateManager.set above, so this avoids double-update)
 			if ( editor && editor.layerPanel &&
-				typeof editor.layerPanel.updateLayers === 'function' ) {
-				editor.layerPanel.updateLayers( restored );
+				typeof editor.layerPanel.renderLayerList === 'function' ) {
+				editor.layerPanel.renderLayerList();
 			}
 
 			// Mark editor as dirty (when available)
