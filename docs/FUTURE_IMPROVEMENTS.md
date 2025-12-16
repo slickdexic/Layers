@@ -8,7 +8,9 @@ This document tracks planned feature enhancements for the Layers extension.
 
 **Priority:** Medium  
 **Complexity:** Low-Medium  
-**Status:** Planned
+**Status:** ✅ Completed (v0.8.6)
+
+> **Implementation Note:** This feature was already implemented in APIManager.js as `saveAsImage()`. Users can access it via the toolbar's save menu.
 
 ### Description
 Add a "Save as Image" button in the editor that exports the current canvas (background image + all visible layers) as a downloadable image file (PNG/JPEG).
@@ -100,7 +102,9 @@ As a user, I want to import images (logos, icons, reference diagrams) as layers 
 
 **Priority:** Medium  
 **Complexity:** Low  
-**Status:** Planned
+**Status:** ✅ Completed (v0.8.7)
+
+> **Implementation Note:** Added in v0.8.7. Background appears as a special layer in the layer panel with opacity slider and visibility toggle. Keyboard shortcut: Shift+B to toggle background visibility.
 
 ### Description
 Treat the background image as a special bottom layer with adjustable controls for opacity and visibility, while keeping it locked from direct editing (no move, resize, delete).
@@ -150,16 +154,16 @@ As a user, I want to adjust the background image opacity so I can make my annota
 
 ## Implementation Priority
 
-| Feature | Priority | Effort | Dependencies |
-|---------|----------|--------|--------------|
-| Save as Image | Medium | Low | None |
-| Background Controls | Medium | Low | None |
-| Import Image Layer | Medium | Medium | Schema update, validation |
+| Feature | Priority | Effort | Dependencies | Status |
+|---------|----------|--------|--------------|--------|
+| Save as Image | Medium | Low | None | ✅ Completed |
+| Background Controls | Medium | Low | None | ✅ Completed |
+| Import Image Layer | Medium | Medium | Schema update, validation | Planned |
 
 ### Recommended Order
-1. **Save as Image** - Quick win, standalone feature
-2. **Background Controls** - Enhances existing functionality
-3. **Import Image Layer** - Larger scope, requires schema changes
+1. ~~**Save as Image**~~ - ✅ Already implemented
+2. ~~**Background Controls**~~ - ✅ Implemented in v0.8.7
+3. **Import Image Layer** - Next priority, requires schema changes
 
 ---
 
@@ -170,4 +174,4 @@ As a user, I want to adjust the background image opacity so I can make my annota
 ---
 
 *Document created: December 13, 2025*  
-*Last updated: December 13, 2025*
+*Last updated: January 2025*
