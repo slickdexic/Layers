@@ -37,6 +37,7 @@
 		TextInputController: 'Canvas.TextInputController',
 		RenderCoordinator: 'Canvas.RenderCoordinator',
 		CanvasPoolController: 'Canvas.CanvasPoolController',
+		PointerController: 'Canvas.PointerController',
 		CanvasImageController: 'Canvas.ImageController',
 		MarqueeController: 'Canvas.MarqueeController',
 		InteractionController: 'Canvas.InteractionController',
