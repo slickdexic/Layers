@@ -88,6 +88,13 @@
 			return;
 		}
 
+		// Handle Shift+B for background visibility toggle
+		if ( e.shiftKey && key === 'b' ) {
+			e.preventDefault();
+			this.toggleBackgroundVisibility();
+			return;
+		}
+
 		switch ( key ) {
 			case 'v':
 				this.toolbar.selectTool( 'pointer' );
@@ -133,6 +140,28 @@
 	}
 
 	/**
+	 * Toggle background visibility
+	 * Uses LayerPanel if available, otherwise directly updates StateManager
+	 */
+	toggleBackgroundVisibility() {
+		// Try LayerPanel first (preferred - handles UI update)
+		if ( this.editor.layerPanel && typeof this.editor.layerPanel.toggleBackgroundVisibility === 'function' ) {
+			this.editor.layerPanel.toggleBackgroundVisibility();
+			return;
+		}
+
+		// Fallback to direct state manipulation
+		if ( this.editor.stateManager ) {
+			const current = this.editor.stateManager.get( 'backgroundVisible' );
+			this.editor.stateManager.set( 'backgroundVisible', !current );
+			// Trigger redraw
+			if ( this.editor.canvasManager ) {
+				this.editor.canvasManager.redraw();
+			}
+		}
+	}
+
+	/**
 	 * Get keyboard shortcuts configuration for documentation/help
 	 *
 	 * @return {Array<Object>} Array of shortcut definitions
@@ -151,6 +180,7 @@
 			{ key: 'L', description: 'Line Tool', category: 'tools' },
 			{ key: 'B', description: 'Blur/Redact Tool', category: 'tools' },
 			{ key: 'G', description: 'Toggle Grid', category: 'view' },
+			{ key: 'Shift+B', description: 'Toggle Background', category: 'view' },
 			// Ctrl shortcuts
 			{ key: 'Ctrl+Z', description: 'Undo', category: 'edit' },
 			{ key: 'Ctrl+Shift+Z', description: 'Redo', category: 'edit' },
