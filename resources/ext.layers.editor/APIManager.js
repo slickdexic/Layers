@@ -522,6 +522,12 @@
 						this.editor.layerPanel.updateLayers( layers );
 					}
 
+					// CRITICAL: Reset history with the loaded revision's layers as baseline
+					// This prevents undo from restoring the previous revision's state
+					if ( this.editor.historyManager && typeof this.editor.historyManager.saveInitialState === 'function' ) {
+						this.editor.historyManager.saveInitialState();
+					}
+
 					mw.notify( this.getMessage( 'layers-revision-loaded' ), { type: 'success' } );
 					resolve( data );
 				} else {
@@ -612,6 +618,12 @@
 				// Update layer panel
 				if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
 					this.editor.layerPanel.updateLayers( layers );
+				}
+
+				// CRITICAL: Reset history with the new layer set's layers as baseline
+				// This prevents undo from restoring the previous layer set's state
+				if ( this.editor.historyManager && typeof this.editor.historyManager.saveInitialState === 'function' ) {
+					this.editor.historyManager.saveInitialState();
 				}
 
 				// Mark as clean (no unsaved changes)

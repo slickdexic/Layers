@@ -594,4 +594,227 @@ describe('HistoryManager', () => {
             expect(info.batchMode).toBe(false);
         });
     });
+
+    describe('text layer move and undo scenario', () => {
+        let textLayerMockLayers;
+        let textLayerCanvasManager;
+        let textLayerHistoryManager;
+
+        beforeEach(() => {
+            // Create a text layer similar to real scenario
+            textLayerMockLayers = [
+                {
+                    id: 'text-layer-1',
+                    type: 'text',
+                    text: 'Hello World',
+                    x: 100,
+                    y: 200,
+                    fontSize: 16,
+                    fontFamily: 'Arial'
+                }
+            ];
+
+            textLayerCanvasManager = {
+                layers: textLayerMockLayers,
+                selectedLayerIds: [],
+                redraw: jest.fn(),
+                isModified: false
+            };
+
+            textLayerHistoryManager = new HistoryManager(textLayerCanvasManager);
+        });
+
+        test('should correctly undo text layer move - verifying history[0] has layers', () => {
+            // Step 1: Save initial state (simulates loadInitialLayers completion)
+            expect(textLayerMockLayers.length).toBe(1);
+            textLayerHistoryManager.saveState('initial');
+            
+            // Verify history[0] has the text layer
+            expect(textLayerHistoryManager.history.length).toBe(1);
+            expect(textLayerHistoryManager.history[0].layers.length).toBe(1);
+            expect(textLayerHistoryManager.history[0].layers[0].id).toBe('text-layer-1');
+            expect(textLayerHistoryManager.history[0].layers[0].x).toBe(100);
+
+            // Step 2: Move the text layer
+            textLayerMockLayers[0].x = 300;
+            textLayerMockLayers[0].y = 400;
+            textLayerHistoryManager.saveState('Move layer');
+
+            // Verify history[1] has the moved position
+            expect(textLayerHistoryManager.history.length).toBe(2);
+            expect(textLayerHistoryManager.history[1].layers[0].x).toBe(300);
+            expect(textLayerHistoryManager.history[1].layers[0].y).toBe(400);
+
+            // Step 3: Undo
+            const undoResult = textLayerHistoryManager.undo();
+
+            // Verify undo worked and restored original position
+            expect(undoResult).toBe(true);
+            expect(textLayerHistoryManager.currentIndex).toBe(0);
+            expect(textLayerCanvasManager.layers.length).toBe(1); // NOT 0!
+            expect(textLayerCanvasManager.layers[0].x).toBe(100); // Original position
+            expect(textLayerCanvasManager.layers[0].y).toBe(200); // Original position
+        });
+
+        test('should NOT have empty history[0] when layers exist before first saveState', () => {
+            // This test verifies that when layers exist, saveState captures them
+            expect(textLayerMockLayers.length).toBe(1);
+            
+            textLayerHistoryManager.saveState('initial');
+            
+            // history[0] must NOT be empty
+            expect(textLayerHistoryManager.history[0].layers.length).toBeGreaterThan(0);
+            expect(textLayerHistoryManager.history[0].layers.length).toBe(1);
+        });
+    });
+
+    describe('simulated editor initialization flow', () => {
+        test('should capture correct initial state when using StateManager pattern', () => {
+            // This test simulates the real LayersEditor initialization flow
+            // where HistoryManager gets layers via editor.stateManager.getLayers()
+
+            // Step 1: Create mock StateManager with empty layers (like initializeState())
+            const mockStateManagerState = { layers: [] };
+            const mockStateManager = {
+                getLayers: () => mockStateManagerState.layers.slice(),
+                set: (key, value) => { mockStateManagerState[key] = value; }
+            };
+
+            // Step 2: Create mock editor with stateManager
+            const mockEditor = {
+                stateManager: mockStateManager
+            };
+
+            // Step 3: Create HistoryManager with editor reference
+            const editorHistoryManager = new HistoryManager(mockEditor);
+
+            // At this point, layers are empty (like after initializeState())
+            expect(mockStateManager.getLayers().length).toBe(0);
+
+            // Step 4: Simulate API loading layers (like loadInitialLayers())
+            const loadedLayers = [
+                {
+                    id: 'loaded-text-1',
+                    type: 'text',
+                    text: 'Loaded Text',
+                    x: 50,
+                    y: 75
+                }
+            ];
+            mockStateManager.set('layers', loadedLayers);
+
+            // Step 5: Save initial state (like end of loadInitialLayers())
+            editorHistoryManager.saveState('initial');
+
+            // Verify history[0] has the LOADED layers, not empty
+            expect(editorHistoryManager.history.length).toBe(1);
+            expect(editorHistoryManager.history[0].layers.length).toBe(1);
+            expect(editorHistoryManager.history[0].layers[0].id).toBe('loaded-text-1');
+
+            // Step 6: Move the layer
+            loadedLayers[0].x = 200;
+            loadedLayers[0].y = 300;
+            editorHistoryManager.saveState('Move layer');
+
+            // Verify both states are captured correctly
+            expect(editorHistoryManager.history.length).toBe(2);
+            expect(editorHistoryManager.history[0].layers[0].x).toBe(50); // Original
+            expect(editorHistoryManager.history[1].layers[0].x).toBe(200); // Moved
+
+            // Step 7: Undo
+            editorHistoryManager.undo();
+
+            // Verify we're back to original position
+            expect(mockStateManagerState.layers.length).toBe(1);
+            expect(mockStateManagerState.layers[0].x).toBe(50);
+            expect(mockStateManagerState.layers[0].y).toBe(75);
+        });
+
+        test('BUG SCENARIO: saveState called before layers are set captures empty state', () => {
+            // This test demonstrates the potential bug:
+            // If saveState is called BEFORE layers are set, history[0] will be empty
+
+            const mockStateManagerState = { layers: [] };
+            const mockStateManager = {
+                getLayers: () => mockStateManagerState.layers.slice(),
+                set: (key, value) => { mockStateManagerState[key] = value; }
+            };
+
+            const mockEditor = {
+                stateManager: mockStateManager
+            };
+
+            const editorHistoryManager = new HistoryManager(mockEditor);
+
+            // BUG: saveState called while layers are still empty
+            editorHistoryManager.saveState('premature-initial');
+
+            // history[0] is EMPTY - this is the bug!
+            expect(editorHistoryManager.history[0].layers.length).toBe(0);
+
+            // Now layers arrive
+            const loadedLayers = [{ id: 'text-1', type: 'text', x: 100, y: 100 }];
+            mockStateManager.set('layers', loadedLayers);
+            
+            // saveState for the actual initial (but history[0] is already wrong!)
+            editorHistoryManager.saveState('actual-initial');
+
+            // Move layer
+            loadedLayers[0].x = 300;
+            editorHistoryManager.saveState('Move layer');
+
+            // Undo to 'actual-initial' - this works
+            editorHistoryManager.undo();
+            expect(mockStateManagerState.layers.length).toBe(1);
+            expect(mockStateManagerState.layers[0].x).toBe(100);
+
+            // Undo again to 'premature-initial' - this shows the BUG
+            editorHistoryManager.undo();
+            expect(mockStateManagerState.layers.length).toBe(0); // Canvas wiped!
+        });
+
+        test('FIX: saveInitialState clears premature history and saves correct state', () => {
+            // This test verifies the fix: using saveInitialState() instead of saveState('initial')
+
+            const mockStateManagerState = { layers: [] };
+            const mockStateManager = {
+                getLayers: () => mockStateManagerState.layers.slice(),
+                set: (key, value) => { mockStateManagerState[key] = value; }
+            };
+
+            const mockEditor = {
+                stateManager: mockStateManager
+            };
+
+            const editorHistoryManager = new HistoryManager(mockEditor);
+
+            // Simulate premature saveState (e.g., from some initialization code)
+            editorHistoryManager.saveState('premature-init');
+            expect(editorHistoryManager.history[0].layers.length).toBe(0); // Bad initial state
+
+            // Now layers arrive from API
+            const loadedLayers = [{ id: 'text-1', type: 'text', x: 100, y: 100 }];
+            mockStateManager.set('layers', loadedLayers);
+            
+            // FIX: Use saveInitialState() instead of saveState()
+            editorHistoryManager.saveInitialState();
+
+            // Verify history was cleared and initial state is correct
+            expect(editorHistoryManager.history.length).toBe(1);
+            expect(editorHistoryManager.history[0].layers.length).toBe(1);
+            expect(editorHistoryManager.history[0].description).toBe('Initial state');
+
+            // Move layer
+            loadedLayers[0].x = 300;
+            editorHistoryManager.saveState('Move layer');
+
+            // Undo - should go back to correct initial state
+            editorHistoryManager.undo();
+            expect(mockStateManagerState.layers.length).toBe(1); // NOT 0!
+            expect(mockStateManagerState.layers[0].x).toBe(100); // Original position
+
+            // canUndo should be false now (at initial state)
+            expect(editorHistoryManager.canUndo()).toBe(false);
+        });
+    });
 });

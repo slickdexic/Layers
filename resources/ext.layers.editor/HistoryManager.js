@@ -195,6 +195,7 @@
 		getLayersSnapshot() {
 			const editor = this.getEditor();
 			let layers = [];
+
 			if ( editor && editor.stateManager && typeof editor.stateManager.getLayers === 'function' ) {
 				layers = editor.stateManager.getLayers();
 			} else if ( editor && editor.layers ) {
@@ -202,6 +203,7 @@
 			} else if ( this.canvasManager && this.canvasManager.layers ) {
 				layers = this.canvasManager.layers;
 			}
+
 			return JSON.parse( JSON.stringify( layers || [] ) );
 		}
 
@@ -216,7 +218,8 @@
 			}
 
 			this.historyIndex--;
-			this.restoreState( this.history[ this.historyIndex ] );
+			const state = this.history[ this.historyIndex ];
+			this.restoreState( state );
 			this.updateUndoRedoButtons();
 
 			return true;
@@ -287,19 +290,19 @@
 				canvasMgr.selectedLayerIds = [];
 			}
 
-			// Re-render
-			const currentLayers = editor ? editor.layers : ( this.canvasManager && this.canvasManager.layers ) || [];
+			// Re-render using the restored layers directly (not via getter)
+			// This ensures we render exactly what we just set
 			if ( canvasMgr && typeof canvasMgr.renderLayers === 'function' ) {
-				canvasMgr.renderLayers( currentLayers );
+				canvasMgr.renderLayers( restored );
 			}
 			if ( canvasMgr && typeof canvasMgr.redraw === 'function' ) {
 				canvasMgr.redraw();
 			}
 
-			// Update layer panel
+			// Update layer panel with restored layers
 			if ( editor && editor.layerPanel &&
 				typeof editor.layerPanel.updateLayers === 'function' ) {
-				editor.layerPanel.updateLayers( currentLayers );
+				editor.layerPanel.updateLayers( restored );
 			}
 
 			// Mark editor as dirty (when available)
@@ -558,7 +561,8 @@
 		}
 
 		/**
-		 * Save initial state
+		 * Save initial state - clears history and saves current layers as baseline.
+		 * Called after layers are loaded from API to establish undo baseline.
 		 */
 		saveInitialState() {
 			this.clearHistory();

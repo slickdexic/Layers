@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 14, 2025  
+**Last Updated:** January 14, 2025  
 **Status:** Active  
-**Version:** 0.8.6  
+**Version:** 0.8.7  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
@@ -16,13 +16,12 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Strong | 4,617 tests, 91.22% coverage, all passing |
+| **Test Suite** | ✅ Strong | 4,617 tests, 89.26% statement coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
-| **Code Splitting** | ✅ Done | Viewer+Shared ~4,570 lines, Editor ~31,881 lines |
+| **Code Splitting** | ✅ Done | Viewer 682 lines, Shared 3,886 lines, Editor 32,440 lines |
 | **ES6 Migration** | ✅ Complete | 66 ES6 classes, 0 prototype methods |
-| **Integration Tests** | ✅ Done | 138 tests across 3 files |
-| **Namespace** | ✅ Complete | 0 deprecated exports (all use window.Layers.*) |
-| **God Classes** | ⚠️ Needs Work | 5 files over 1,000 lines (down from 7) |
+| **God Classes** | ⚠️ Needs Work | 7 files over 1,000 lines |
+| **Event Listeners** | ⚠️ Needs Audit | 94 add vs 33 remove (imbalance) |
 
 ---
 
@@ -470,13 +469,13 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 - [x] ResizeCalculator coverage > 90% ✓ (93%)
 
 ### Project "Healthy" When:
-- [ ] 0 files > 1,000 lines (currently 5)
+- [ ] 0 files > 1,000 lines (currently 7)
 - [x] ES6 classes throughout ✓ (100%)
-- [x] 0 direct global exports ✓
 - [x] 0 prototype methods ✓
 - [x] All tests passing ✓ (4,617)
-- [x] >90% statement coverage ✓ (91.22%)
-- [x] >75% branch coverage ✓ (79.18%)
+- [ ] >90% statement coverage (currently 89.26%)
+- [x] >75% branch coverage ✓ (77.06%)
+- [ ] Event listener balance (currently 94 add vs 33 remove)
 
 ---
 
@@ -489,7 +488,7 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 | Phase 2 | 4-6 weeks | Now |
 | Phase 3 | 8+ weeks | Phase 2 |
 
-**Remaining to "Healthy" state: Split 5 god classes**
+**Remaining to "Healthy" state: Split 7 god classes, audit event listeners**
 
 ---
 
@@ -506,22 +505,22 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 
 ## Quick Start: What to Do Next
 
-**Current God Classes (5 files >1000 lines) - Updated Dec 13, 2025:**
+**Current God Classes (7 files >1000 lines) - Verified January 14, 2025:**
 | File | Lines | Priority |
 |------|-------|----------|
-| CanvasManager.js | 1,895 | P2.3 - Dead code removed, ~50% extracted |
-| LayerPanel.js | 1,430 | P2.5 - LayerItemFactory extracted ✓ |
-| LayersEditor.js | 1,284 | Extract revision/dialog management |
-| SelectionManager.js | 1,266 | P2.7 - BoundsCalculator extracted ✓ |
-| ToolManager.js | 1,155 | 90% coverage ✓, text editor extract remaining |
-
-**Note:** ShapeRenderer.js (1,050 lines) is in shared module and is appropriately sized.
+| CanvasManager.js | 1,895 | High - Primary orchestrator |
+| LayerPanel.js | 1,430 | High - UI complexity |
+| APIManager.js | 1,311 | Medium - API + state mix |
+| LayersEditor.js | 1,284 | Medium - Main entry point |
+| SelectionManager.js | 1,266 | Medium - Selection logic |
+| ToolManager.js | 1,155 | Medium - Tool state |
+| ShapeRenderer.js | 1,049 | Low - Appropriately sized for shared renderer |
 
 **Recommended Next Actions:**
-1. **Split ToolManager** (P2.8) - Extract text editor controller (~200 lines)
-2. **Split LayersEditor** (P2.9) - Extract more to EditorBootstrap
-3. **Continue CanvasManager extraction** - Target <1,500 lines
-4. **Improve CanvasManager coverage** - 78% → 85%
+1. **Audit event listeners** - Document 94 addEventListener calls
+2. **Extract controllers from CanvasManager** - Split zoom/pan/transform
+3. **Split LayerPanel** - Extract layer item rendering
+4. **Improve branch coverage** - Target 85% (currently 77%)
 
 ---
 
@@ -572,4 +571,4 @@ find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | awk '
 ---
 
 *Plan created by GitHub Copilot (Claude Opus 4.5) on December 10, 2025*  
-*Last updated: December 14, 2025 (v0.8.6)*
+*Last updated: January 14, 2025 (v0.8.7)*
