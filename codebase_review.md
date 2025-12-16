@@ -1,24 +1,22 @@
 # Layers MediaWiki Extension - Critical Code Review
 
-**Review Date:** December 14, 2025  
-**Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 0.8.6
-
----
+**Review Date:** January 14, 2025
+**Reviewer:** GitHub Copilot (Claude Opus 4.5)
+**Version:** 0.8.7
 
 ## Executive Summary
 
 The "Layers" extension provides non-destructive image annotation capabilities for MediaWiki. This is a **comprehensive, honest assessment** of the codebase quality, architecture, and technical debt.
 
-### Overall Assessment: 7.5/10
+### Overall Assessment: 7/10
 
-The extension is **functional and usable** with good test coverage (91%), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete** - all prototype patterns have been eliminated.
+The extension is **functional and feature-complete** with good test coverage (89%), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete**.
 
 **Honest evaluation:**
 - The core functionality works well
-- PHP backend is professionally implemented  
-- Test coverage is genuinely good
-- **However:** 5 god classes remain (>1,000 lines each), 2 deprecated globals need cleanup, and 21 files are in the 500-1000 line "needs attention" range
+- PHP backend is professionally implemented
+- Test coverage is genuinely good (89.26%)
+- **However:** 7 god classes remain (>1,000 lines each), and there's a significant event listener imbalance (94 add vs 33 remove)
 
 **For the detailed, prioritized improvement plan, see [improvement_plan.md](./improvement_plan.md)**
 
@@ -28,11 +26,11 @@ The extension is **functional and usable** with good test coverage (91%), solid 
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **Test Coverage** | 9/10 | 91.22% statement coverage, 4,617 tests all passing |
+| **Test Coverage** | 8/10 | 89.26% statement coverage, 4,617 tests all passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
-| **PHP Architecture** | 8/10 | Clean DI, service wiring, no god classes (largest 810 lines) |
+| **PHP Architecture** | 8/10 | Clean DI, service wiring, largest PHP file 810 lines |
 | **Documentation** | 7/10 | Good copilot-instructions.md, some docs need updates |
-| **Code Splitting** | 8/10 | Viewer+Shared (~4,570 lines) vs Editor (~31,881 lines) |
+| **Code Splitting** | 7/10 | Viewer (682 lines) vs Editor (32,440 lines) |
 | **ES6 Migration** | 10/10 | 66 ES6 classes, 0 prototype methods remain (100% complete) |
 | **Accessibility** | 6/10 | ARIA live regions exist, but incomplete keyboard support |
 
@@ -41,10 +39,9 @@ The extension is **functional and usable** with good test coverage (91%), solid 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
 3. **Tests catch regressions** - 4,617 tests all passing
-4. **Viewer is lightweight** - reading articles loads only 682 lines (viewer) + 3,888 lines (shared)
+4. **Viewer is lightweight** - reading articles loads only 682 lines (viewer) + 3,886 lines (shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
 6. **ES6 100% complete** - All 66 classes use ES6 syntax, 0 prototype patterns remain
-7. **Integration tests** - 138 integration tests across 3 workflow files
 
 ---
 
@@ -52,33 +49,32 @@ The extension is **functional and usable** with good test coverage (91%), solid 
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **God Classes** | 5/10 | 5 files over 1,000 lines (largest 1,975 lines) |
-| **Mid-size Files** | 5/10 | 21 files between 500-1,000 lines |
-| **Global Namespace** | 10/10 | 0 direct `window.X` exports - all namespaced |
-| **Event Listener Balance** | 5/10 | 94 addEventListener vs 33 removeEventListener |
+| **God Classes** | 4/10 | 7 files over 1,000 lines (largest 1,895 lines) |
+| **Event Listener Balance** | 4/10 | 94 addEventListener vs 33 removeEventListener - potential memory leaks |
+| **Branch Coverage** | 6/10 | 77.06% branches - edge cases may be untested |
 
 ---
 
-## Verified Metrics (December 13, 2025)
+## Verified Metrics (January 14, 2025)
+
+These metrics were collected directly from v0.8.7 source code.
 
 ### JavaScript Codebase
 
 | Metric | Actual Value | Target | Status |
 |--------|--------------|--------|--------|
 | Total JS files | **75** | - | - |
-| Total JS lines | **37,622** | - | - |
+| Total JS lines | **38,179** | - | - |
 | Viewer module | **682 lines** | - | ✅ Lightweight |
-| Shared module | **3,888 lines** | - | ✅ Reused code |
-| Editor module | **31,881 lines** | - | Expected for full editor |
-| Files > 1,000 lines | **5** | 0 | ⚠️ God classes (down from 7) |
-| Files 500-1,000 lines | **21** | 5 | ⚠️ Needs attention |
+| Shared module | **3,886 lines** | - | ✅ Reused code |
+| Editor module | **32,440 lines** | - | Expected for full editor |
+| Files > 1,000 lines | **7** | 0 | ⚠️ God classes |
 | ES6 classes | **66** | 60+ | ✅ 100% Complete |
 | Prototype method definitions | **0** | 0 | ✅ Eliminated |
-| Direct window.X exports | **0** | 0 | ✅ Complete |
-| Namespaced exports | **215** | - | ✅ Good |
 | addEventListener calls | **94** | - | - |
-| removeEventListener calls | **33** | 94 | ⚠️ Needs EventTracker audit |
+| removeEventListener calls | **33** | 94 | ⚠️ Imbalance (potential leaks) |
 | ESLint errors | **0** | 0 | ✅ Clean |
+| Stylelint errors | **0** | 0 | ✅ Clean |
 
 ### Test Coverage
 
@@ -87,72 +83,53 @@ The extension is **functional and usable** with good test coverage (91%), solid 
 | Jest tests passing | **4,617** | - | ✅ All passing |
 | Jest tests failing | **0** | 0 | ✅ All fixed |
 | Jest test suites | **92** | - | ✅ Good |
-| Statement coverage | **91.22%** | 80% | ✅ Exceeded |
-| Branch coverage | **79.18%** | 65% | ✅ Exceeded |
-| Line coverage | **91.38%** | 80% | ✅ Exceeded |
-| Function coverage | **89.16%** | 80% | ✅ Exceeded |
-| Integration test files | **3** | 3+ | ✅ Complete |
-| Integration tests | **138** | 50+ | ✅ Exceeded |
+| Statement coverage | **89.26%** | 80% | ✅ Exceeded |
+| Branch coverage | **77.06%** | 65% | ✅ Exceeded |
+| Line coverage | **89.35%** | 80% | ✅ Exceeded |
+| Function coverage | **87.45%** | 80% | ✅ Exceeded |
 
 ### PHP Backend
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Largest file | **810 lines** (LayersDatabase.php) | ✅ Acceptable |
-| Files > 500 lines | **6** | ✅ Reasonable |
-| SQL injection risks | **0** | ✅ Parameterized |
+| Total PHP files | **31** | - |
+| Total PHP lines | **9,128** | - |
+| Largest PHP file | **810 lines** (LayersDatabase.php) | ✅ Acceptable |
 | PHPUnit test files | **17** | ✅ Good coverage |
-| Jest test files | **89** | ✅ Comprehensive |
+| SQL injection risks | **0** | ✅ Parameterized |
 
 ---
 
 ## Critical Issues
 
-### 1. ⚠️ God Classes (5 Files Over 1,000 Lines)
+### 1. ⚠️ God Classes (7 Files Over 1,000 Lines)
 
 | File | Lines | Concern |
 |------|-------|---------|
-| CanvasManager.js | **1,975** | Still large after controller extraction (~50% extracted) |
-| LayerPanel.js | **1,430** | Complex UI component |
-| LayersEditor.js | **1,284** | Main entry point |
-| SelectionManager.js | **1,266** | Core selection logic |
-| ToolManager.js | **1,155** | Tool state management |
+| CanvasManager.js | **1,895** | Orchestrates all canvas operations - needs controller extraction |
+| LayerPanel.js | **1,430** | Complex UI component - mix of rendering and logic |
+| APIManager.js | **1,311** | Handles API + state - could split state management |
+| LayersEditor.js | **1,284** | Main entry point - multiple responsibilities |
+| SelectionManager.js | **1,266** | Core selection logic - complex but cohesive |
+| ToolManager.js | **1,155** | Tool state management - could extract text editor |
+| ShapeRenderer.js | **1,049** | Shared rendering logic - appropriately sized for scope |
 
-**Note:** ShapeRenderer.js (1,050 lines) is technically 6th but is in the shared module and its functionality is appropriately sized for what it does.
+**Recommendation:** Prioritize extracting controllers from CanvasManager and LayerPanel first, as they have the highest line counts and most mixed responsibilities.
 
-**Progress Made:**
-- ShadowRenderer.js (521 lines) extracted from LayerRenderer.js
-- 9 controllers extracted from CanvasManager
-- EditorBootstrap, RevisionManager, DialogManager extracted from LayersEditor
-- LayerItemFactory extracted from LayerPanel
-- BoundsCalculator, PolygonGeometry, ResizeCalculator extracted
+### 2. ⚠️ Event Listener Imbalance (94 vs 33)
 
-### 2. ✅ Global Namespace (Complete)
-
-All modules now export to organized namespaces:
-
-```javascript
-// Good (namespaced - 215 instances):
-window.Layers.Canvas.Manager = CanvasManager;
-window.Layers.Utils.PolygonGeometry = PolygonGeometry;
-
-// 0 remaining direct exports
-```
-
-**Status:** Complete. All exports now use `window.Layers.{Core|Editor|Utils|Canvas|UI}.ClassName` pattern.
-
-### 3. ⚠️ Event Listener Imbalance (94 vs 33)
-
-Analysis shows **94 addEventListener calls but only 33 removeEventListener calls**.
+Analysis shows **94 addEventListener calls but only 33 removeEventListener calls**. This is a significant imbalance that could indicate memory leaks.
 
 **Architecture context:**
-- EventTracker pattern is used in critical components
-- Many listeners are on elements that get removed from DOM (GC handles cleanup)
+- EventTracker pattern exists but may not be consistently applied
+- Some listeners may be on elements that get removed from DOM (GC handles cleanup)
 - Some are intentionally permanent (error handlers, beforeunload)
 
-### 4. ✅ Legacy JavaScript (Complete)
+**Recommendation:** Audit all addEventListener calls and ensure cleanup on component destruction. Consider expanding EventTracker usage.
 
-**All JavaScript files have been migrated to ES6 classes.** There are 0 prototype method definitions remaining.
+### 3. ⚠️ Branch Coverage Could Improve
+
+At 77.06% branch coverage, some edge cases and error paths may not be tested. While statement coverage is good at 89.26%, improving branch coverage would catch more subtle bugs.
 
 ---
 
@@ -200,36 +177,31 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 ### Strengths ✅
 
 - **4,617 tests passing** - substantial coverage
-- **91.22% statement coverage** - genuinely high
+- **89.26% statement coverage** - good quality
 - **Well-organized** - dedicated directories for each component
-- **Controllers well-tested** - 85%+ coverage on extracted controllers
-- **Integration tests** - 138 tests across 3 workflow files:
-  - SelectionWorkflow.test.js (44 tests)
-  - LayerWorkflow.test.js (70 tests)
-  - SaveLoadWorkflow.test.js (24 tests)
+- **Integration tests present** - in tests/jest/integration/
 - **PHPUnit coverage** - 17 test files for backend
-- **89 Jest test files** - comprehensive component coverage
 
 ### Areas for Improvement ⚠️
 
 | Issue | Severity |
 |-------|----------|
 | No E2E test CI pipeline | ⚠️ Playwright tests exist but not in CI |
-| CanvasManager coverage | ⚠️ 78% statements, 61% branches |
+| Branch coverage at 77% | ⚠️ Some edge cases may be untested |
+| God class testing | ⚠️ Large files harder to test thoroughly |
 
 ---
 
 ## Technical Debt Summary
 
-| Debt Type | Severity | Effort to Fix | Progress |
-|-----------|----------|---------------|----------|
-| God class splitting | ⚠️ High | 4-6 weeks | 5 remain (down from 7) |
-| Global export cleanup | ✅ Complete | - | 0 remaining (was 50) |
-| Event listener audit | ⚠️ Medium | 1 week | - |
+| Debt Type | Severity | Effort to Fix | Status |
+|-----------|----------|---------------|--------|
+| God class splitting (7 files) | ⚠️ High | 6-8 weeks | Not started |
+| Event listener audit | ⚠️ Medium | 1-2 weeks | Not started |
+| Branch coverage improvement | ⚠️ Low | 2-3 weeks | 77% achieved |
 | ES6 migration | ✅ Complete | - | 100% done |
-| ResizeCalculator coverage | ✅ Complete | - | 93% coverage |
 
-**Total estimated effort: 4-6 weeks remaining**
+**Total estimated effort: 9-13 weeks for remaining technical debt**
 
 ---
 
@@ -237,86 +209,89 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 
 ### Immediate (This Week)
 
-1. **Improve CanvasManager coverage** - Currently 78% statements, 61% branches
-2. **Start ToolManager splitting** - Reduce from 1,155 lines
+1. **Audit event listeners** - Document the 94 addEventListener calls and identify which need cleanup
+2. **Review god classes** - Identify extraction candidates in CanvasManager and LayerPanel
 3. **Set up E2E tests in CI** - Playwright tests exist but aren't automated
 
 ### Short-term (1-2 Months)
 
-1. **Continue god class splitting**:
-   - Split ToolManager.js (1,155 lines) - extract text editor controller
-   - Extract more from CanvasManager (still 1,975 lines)
-   - Split SelectionManager.js (1,266 lines)
-2. **Set up E2E tests in CI** - Playwright tests exist but aren't automated
+1. **Extract controllers from CanvasManager** (1,895 lines):
+   - Extract ZoomController, PanController from existing code
+   - Consider TransformController for resize/rotate operations
+2. **Split LayerPanel** (1,430 lines):
+   - Extract layer item rendering to separate component
+   - Separate drag-drop logic from display logic
+3. **Improve branch coverage** - Target 85% from current 77%
 
 ### Medium-term (3-6 Months)
 
-1. **TypeScript definitions** - Add `.d.ts` files for API contracts
-2. **Complete global export removal** - Eliminate remaining `window.X` exports
-3. **Event listener audit** - Verify EventTracker coverage
+1. **Continue god class splitting**:
+   - APIManager (1,311 lines) - separate state from API calls
+   - SelectionManager (1,266 lines) - extract multi-selection logic
+   - ToolManager (1,155 lines) - extract text editing tools
+2. **TypeScript definitions** - Add `.d.ts` files for API contracts
+3. **EventTracker expansion** - Apply to all components with listeners
 
 ### Long-term (6+ Months)
 
-1. **TypeScript migration** - Now feasible with ES6 complete
-2. **Unified validation** - Generate client from server rules
-3. **ES modules** - Move away from globals entirely
+1. **TypeScript migration** - Feasible with ES6 complete
+2. **ES modules** - Move away from globals entirely
+3. **Unified validation** - Generate client validators from server rules
 
 ---
 
 ## Verification Commands
 
 ```bash
-# Test coverage
+# Test coverage (expect ~89% statements, ~77% branches)
 npm run test:js -- --coverage
 
-# God classes (>1000 lines)
+# God classes (>1000 lines) - expect 7 files
 find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | awk '$1 >= 1000 {print}' | sort -rn
 
-# ES6 class count
+# ES6 class count (expect 66)
 grep -rE "^\s*class\s+[A-Z]" resources --include="*.js" | wc -l
 
-# Prototype method count
+# Prototype method count (expect 0)
 grep -rE "\.prototype\.[a-zA-Z]+ = function" resources --include="*.js" | wc -l
 
-# Direct global exports (non-namespaced)
-grep -rE "window\.[A-Z][a-zA-Z]+ ?=" resources --include="*.js" | grep -v "window\.Layers" | wc -l
-
-# Event listener balance
+# Event listener balance (expect ~94 add, ~33 remove)
 echo "Add: $(grep -r "addEventListener" resources --include="*.js" | wc -l)"
 echo "Remove: $(grep -r "removeEventListener" resources --include="*.js" | wc -l)"
 
-# Viewer+Shared vs Editor size
-cat resources/ext.layers.shared/*.js resources/ext.layers/*.js | wc -l
-find resources/ext.layers.editor -name "*.js" -exec cat {} + | wc -l
+# Module sizes
+echo "Viewer: $(cat resources/ext.layers/*.js | wc -l) lines"
+echo "Shared: $(cat resources/ext.layers.shared/*.js | wc -l) lines"
+echo "Editor: $(find resources/ext.layers.editor -name '*.js' -exec cat {} + | wc -l) lines"
 
-# Integration tests
-grep -c "test(" tests/jest/integration/*.test.js
+# Total JS lines (expect ~38,179)
+find resources -name "*.js" -type f ! -path "*/dist/*" -exec cat {} + | wc -l
 
-# Total test files
-find tests/jest -name "*.test.js" -type f | wc -l
+# PHP files and lines
+find src -name "*.php" | wc -l
+find src -name "*.php" -exec cat {} + | wc -l
 ```
 
 ---
 
 ## Conclusion
 
-The Layers extension is a **mature product with excellent test coverage** and **complete ES6 modernization**. The high test coverage (89%) provides a safety net for ongoing refactoring.
+The Layers extension is a **functional product with good test coverage** and **complete ES6 modernization**. The 89% test coverage provides a safety net for future refactoring work.
 
 **Key achievements:**
 - ES6 migration 100% complete (66 classes, 0 prototype methods)
-- 4,617 tests all passing (up from 4,029)
-- 138 integration tests
-- Global exports: 0 remaining (complete migration from 50)
-- God classes reduced from 7 to 5
-- Test coverage increased to 91.22% statements, 79.18% branches
+- 4,617 tests all passing
+- 89.26% statement coverage
+- Lightweight viewer module (682 lines)
+- Professional PHP backend with good security practices
 
 **Remaining challenges:**
-- 5 god classes over 1,000 lines
-- Event listener cleanup needed
-- CanvasManager coverage (78%) could be improved
+- 7 god classes over 1,000 lines (totaling ~9,390 lines)
+- Event listener cleanup needed (94 add vs 33 remove)
+- Branch coverage at 77% could be improved
 
-**Priority recommendation:** Improve ResizeCalculator test coverage, then focus on splitting god classes. The test suite enables safe refactoring.
+**Priority recommendation:** Focus on extracting controllers from the largest god classes (CanvasManager, LayerPanel) while maintaining test coverage. The existing test suite enables safe refactoring.
 
 ---
 
-*Review performed by GitHub Copilot (Claude Opus 4.5) on December 14, 2025*
+*Review performed by GitHub Copilot (Claude Opus 4.5) on January 14, 2025, based on verified v0.8.7 metrics*

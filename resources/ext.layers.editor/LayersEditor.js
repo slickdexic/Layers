@@ -507,7 +507,14 @@ class LayersEditor {
 			if ( this.canvasManager ) {
 				this.canvasManager.renderLayers( layers );
 			}
-			this.saveState( 'initial' );
+
+			// Use saveInitialState to clear any premature history entries
+			// and establish correct baseline for undo/redo
+			if ( this.historyManager && typeof this.historyManager.saveInitialState === 'function' ) {
+				this.historyManager.saveInitialState();
+			} else {
+				this.saveState( 'initial' );
+			}
 		} ).catch( ( error ) => {
 			if ( this.isDestroyed ) {
 				return;
@@ -517,7 +524,12 @@ class LayersEditor {
 			if ( this.canvasManager ) {
 				this.canvasManager.renderLayers( [] );
 			}
-			this.saveState( 'initial' );
+			// Use saveInitialState to clear any premature history entries
+			if ( this.historyManager && typeof this.historyManager.saveInitialState === 'function' ) {
+				this.historyManager.saveInitialState();
+			} else {
+				this.saveState( 'initial' );
+			}
 		} );
 	}
 
