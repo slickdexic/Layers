@@ -73,17 +73,19 @@ describe('HistoryManager', () => {
             historyManager.saveState('State 2');
             historyManager.saveState('State 3');
 
-            // Undo twice
+            // Undo twice - now at State 1
             historyManager.undo();
             historyManager.undo();
 
-            // Save new state - should truncate State 3
+            // Save new state - should truncate State 2 AND State 3
             mockLayers[0].y = 100;
             historyManager.saveState('New State');
 
-            expect(historyManager.history).toHaveLength(3);
-            expect(historyManager.currentIndex).toBe(2);
-            expect(historyManager.history[2].description).toBe('New State');
+            // History should be [State 1, New State] - all redo entries removed
+            expect(historyManager.history).toHaveLength(2);
+            expect(historyManager.currentIndex).toBe(1);
+            expect(historyManager.history[0].description).toBe('State 1');
+            expect(historyManager.history[1].description).toBe('New State');
         });
 
         test('should maintain max history size', () => {
@@ -815,6 +817,126 @@ describe('HistoryManager', () => {
 
             // canUndo should be false now (at initial state)
             expect(editorHistoryManager.canUndo()).toBe(false);
+        });
+    });
+
+    describe('undo then edit different layer scenario', () => {
+        test('should NOT redo previous undone action when editing a different layer', () => {
+            // This test reproduces the bug:
+            // 1. Move layer1, undo → layer1 restored (correct)
+            // 2. Move layer2, undo → layer2 restored BUT layer1 also moves back (BUG)
+            
+            const mockStateManagerState = { 
+                layers: [
+                    { id: 'layer1', type: 'text', x: 100, y: 100 },
+                    { id: 'layer2', type: 'text', x: 200, y: 200 }
+                ]
+            };
+            const mockStateManager = {
+                getLayers: () => JSON.parse(JSON.stringify(mockStateManagerState.layers)),
+                set: (key, value) => { mockStateManagerState[key] = value; }
+            };
+
+            const mockEditor = {
+                stateManager: mockStateManager
+            };
+
+            const hm = new HistoryManager(mockEditor);
+
+            // Initial state: both layers at original positions
+            hm.saveInitialState();
+            expect(hm.history.length).toBe(1);
+            expect(hm.history[0].layers[0].x).toBe(100);
+            expect(hm.history[0].layers[1].x).toBe(200);
+
+            // Step 1: Move layer1 from x=100 to x=300
+            mockStateManagerState.layers[0].x = 300;
+            hm.saveState('Move layer1');
+            expect(hm.history.length).toBe(2);
+            expect(hm.historyIndex).toBe(1);
+
+            // Step 2: Undo - layer1 should go back to x=100
+            hm.undo();
+            expect(hm.historyIndex).toBe(0);
+            expect(mockStateManagerState.layers[0].x).toBe(100); // layer1 restored
+            expect(mockStateManagerState.layers[1].x).toBe(200); // layer2 unchanged
+
+            // Step 3: Move layer2 from x=200 to x=400
+            mockStateManagerState.layers[1].x = 400;
+            hm.saveState('Move layer2');
+            
+            // CRITICAL: After saving new state after undo, history should be truncated
+            // history should now be: [initial, move-layer2]
+            // The "Move layer1" state should be GONE
+            expect(hm.history.length).toBe(2);
+            expect(hm.historyIndex).toBe(1);
+            
+            // Verify the history contents are correct
+            expect(hm.history[0].layers[0].x).toBe(100); // layer1 at original
+            expect(hm.history[0].layers[1].x).toBe(200); // layer2 at original
+            expect(hm.history[1].layers[0].x).toBe(100); // layer1 still at original
+            expect(hm.history[1].layers[1].x).toBe(400); // layer2 at moved position
+
+            // Step 4: Undo - layer2 should go back to x=200, layer1 should STAY at x=100
+            hm.undo();
+            expect(mockStateManagerState.layers[0].x).toBe(100); // layer1 NOT moved!
+            expect(mockStateManagerState.layers[1].x).toBe(200); // layer2 restored
+
+            // Should not be able to undo further
+            expect(hm.canUndo()).toBe(false);
+        });
+
+        test('history truncation should remove all redo entries, not just some', () => {
+            const mockStateManagerState = { 
+                layers: [{ id: 'layer1', type: 'text', x: 0 }]
+            };
+            const mockStateManager = {
+                getLayers: () => JSON.parse(JSON.stringify(mockStateManagerState.layers)),
+                set: (key, value) => { mockStateManagerState[key] = value; }
+            };
+
+            const hm = new HistoryManager({ stateManager: mockStateManager });
+
+            // Build up history: initial, move1, move2, move3
+            hm.saveInitialState();
+            
+            mockStateManagerState.layers[0].x = 100;
+            hm.saveState('move1');
+            
+            mockStateManagerState.layers[0].x = 200;
+            hm.saveState('move2');
+            
+            mockStateManagerState.layers[0].x = 300;
+            hm.saveState('move3');
+
+            expect(hm.history.length).toBe(4);
+            expect(hm.historyIndex).toBe(3);
+
+            // Undo twice: now at move1
+            hm.undo(); // at move2
+            hm.undo(); // at move1
+            expect(hm.historyIndex).toBe(1);
+            expect(mockStateManagerState.layers[0].x).toBe(100);
+
+            // Make a new edit - should truncate move2 and move3
+            mockStateManagerState.layers[0].x = 999;
+            hm.saveState('new-edit');
+
+            // History should be: [initial, move1, new-edit]
+            expect(hm.history.length).toBe(3);
+            expect(hm.historyIndex).toBe(2);
+            expect(hm.history[2].layers[0].x).toBe(999);
+
+            // Undo should go to move1 (x=100), not move2 or move3
+            hm.undo();
+            expect(mockStateManagerState.layers[0].x).toBe(100);
+
+            // Undo again to initial
+            hm.undo();
+            expect(mockStateManagerState.layers[0].x).toBe(0);
+
+            // No more undo available
+            expect(hm.canUndo()).toBe(false);
         });
     });
 });

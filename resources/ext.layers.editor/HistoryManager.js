@@ -159,11 +159,10 @@
 			}
 
 			// Remove any future history if we're not at the end
-			// Keep the earlier entries and the current one; drop only the redo tail
+			// When saving after an undo, truncate all redo entries
 			if ( this.historyIndex < this.history.length - 1 ) {
-				// Keep one future entry (the immediate redo), drop the rest
-				const keepUntil = Math.min( this.history.length, this.historyIndex + 2 );
-				this.history = this.history.slice( 0, keepUntil );
+				// Keep only entries up to and including current position
+				this.history = this.history.slice( 0, this.historyIndex + 1 );
 			}
 
 			// Add new state
