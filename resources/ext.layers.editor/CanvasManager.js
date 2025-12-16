@@ -1643,11 +1643,28 @@ class CanvasManager {
 		if ( this.pointerController && typeof this.pointerController.getMousePointFromClient === 'function' ) {
 			return this.pointerController.getMousePointFromClient( clientX, clientY );
 		}
+
+		// If PointerController class is available but wasn't initialized, try a temp instance.
+		const PClass = findClass( 'PointerController' );
+		if ( PClass ) {
+			try {
+				const tmp = new PClass( this );
+				if ( tmp && typeof tmp.getMousePointFromClient === 'function' ) {
+					const val = tmp.getMousePointFromClient( clientX, clientY );
+					tmp.destroy && tmp.destroy();
+					return val;
+				}
+			} catch ( e ) {
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+					mw.log.warn( '[CanvasManager] Temporary PointerController call failed:', e && e.message );
+				}
+			}
+		}
+
+		// Fallback: inline conversion (kept for environments without PointerController)
 		const rect = this.canvas.getBoundingClientRect();
-		// Position within the displayed (transformed) element
 		const relX = clientX - rect.left;
 		const relY = clientY - rect.top;
-		// Scale to logical canvas pixels
 		const scaleX = this.canvas.width / rect.width;
 		const scaleY = this.canvas.height / rect.height;
 		let canvasX = relX * scaleX;
@@ -1667,6 +1684,24 @@ class CanvasManager {
 		if ( this.pointerController && typeof this.pointerController.getRawClientPoint === 'function' ) {
 			return this.pointerController.getRawClientPoint( e );
 		}
+
+		// Try temporary PointerController instance if available
+		const PClass = findClass( 'PointerController' );
+		if ( PClass ) {
+			try {
+				const tmp = new PClass( this );
+				if ( tmp && typeof tmp.getRawClientPoint === 'function' ) {
+					const val = tmp.getRawClientPoint( e );
+					tmp.destroy && tmp.destroy();
+					return val;
+				}
+			} catch ( err ) {
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+					mw.log.warn( '[CanvasManager] Temporary PointerController raw call failed:', err && err.message );
+				}
+			}
+		}
+
 		const rect = this.canvas.getBoundingClientRect();
 		const clientX = e.clientX - rect.left;
 		const clientY = e.clientY - rect.top;
