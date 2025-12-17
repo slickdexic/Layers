@@ -69,6 +69,7 @@ describe( 'LayerRenderer', () => {
 			resetTransform: jest.fn(),
 			clip: jest.fn(),
 			clearRect: jest.fn(),
+			setLineDash: jest.fn(),
 			fillStyle: '',
 			strokeStyle: '',
 			lineWidth: 1,
@@ -2125,6 +2126,258 @@ describe( 'LayerRenderer', () => {
 			} );
 
 			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+	} );
+
+	// ========================================================================
+	// Image Layer Tests
+	// ========================================================================
+
+	describe( 'drawImage', () => {
+		test( 'draws image with basic properties', () => {
+			// Create a mock image that is already loaded
+			const mockImg = {
+				complete: true,
+				naturalWidth: 200,
+				naturalHeight: 150
+			};
+			renderer._imageCache = new Map();
+			renderer._imageCache.set( 'test-layer', mockImg );
+
+			renderer.drawImage( {
+				id: 'test-layer',
+				src: 'data:image/png;base64,test',
+				x: 50,
+				y: 60,
+				width: 200,
+				height: 150
+			} );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.drawImage ).toHaveBeenCalledWith( mockImg, 50, 60, 200, 150 );
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'applies opacity to image', () => {
+			const mockImg = {
+				complete: true,
+				naturalWidth: 100,
+				naturalHeight: 100
+			};
+			renderer._imageCache = new Map();
+			renderer._imageCache.set( 'opacity-layer', mockImg );
+
+			renderer.drawImage( {
+				id: 'opacity-layer',
+				src: 'data:image/png;base64,test',
+				x: 0,
+				y: 0,
+				width: 100,
+				height: 100,
+				opacity: 0.5
+			} );
+
+			expect( ctx.globalAlpha ).toBe( 0.5 );
+		} );
+
+		test( 'applies rotation to image', () => {
+			const mockImg = {
+				complete: true,
+				naturalWidth: 100,
+				naturalHeight: 100
+			};
+			renderer._imageCache = new Map();
+			renderer._imageCache.set( 'rotated-layer', mockImg );
+
+			renderer.drawImage( {
+				id: 'rotated-layer',
+				src: 'data:image/png;base64,test',
+				x: 0,
+				y: 0,
+				width: 100,
+				height: 100,
+				rotation: 45
+			} );
+
+			expect( ctx.translate ).toHaveBeenCalledTimes( 2 );
+			expect( ctx.rotate ).toHaveBeenCalledWith( 45 * Math.PI / 180 );
+		} );
+
+		test( 'uses natural dimensions when width/height not specified', () => {
+			const mockImg = {
+				complete: true,
+				naturalWidth: 300,
+				naturalHeight: 200
+			};
+			renderer._imageCache = new Map();
+			renderer._imageCache.set( 'natural-layer', mockImg );
+
+			renderer.drawImage( {
+				id: 'natural-layer',
+				src: 'data:image/png;base64,test',
+				x: 10,
+				y: 20
+			} );
+
+			expect( ctx.drawImage ).toHaveBeenCalledWith( mockImg, 10, 20, 300, 200 );
+		} );
+
+		test( 'draws placeholder when image is not loaded', () => {
+			renderer._imageCache = new Map();
+
+			renderer.drawImage( {
+				id: 'loading-layer',
+				src: 'data:image/png;base64,test',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 80
+			} );
+
+			// Should draw placeholder (dashed rect with X)
+			expect( ctx.setLineDash ).toHaveBeenCalledWith( [ 5, 5 ] );
+			expect( ctx.strokeRect ).toHaveBeenCalled();
+		} );
+
+		test( 'handles missing src gracefully', () => {
+			renderer.drawImage( {
+				id: 'no-src-layer',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 80
+			} );
+
+			// Should draw placeholder when no src
+			expect( ctx.drawImage ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( '_getImageElement', () => {
+		test( 'returns null for layer without src', () => {
+			const result = renderer._getImageElement( { id: 'test' } );
+			expect( result ).toBeNull();
+		} );
+
+		test( 'creates new image element and caches it', () => {
+			const layer = {
+				id: 'new-image',
+				src: 'data:image/png;base64,iVBORw0KGgo='
+			};
+
+			const img = renderer._getImageElement( layer );
+
+			expect( img ).toBeDefined();
+			expect( img.src ).toBe( layer.src );
+			expect( renderer._imageCache.has( 'new-image' ) ).toBe( true );
+		} );
+
+		test( 'returns cached image on subsequent calls', () => {
+			const layer = {
+				id: 'cached-image',
+				src: 'data:image/png;base64,test'
+			};
+
+			const img1 = renderer._getImageElement( layer );
+			const img2 = renderer._getImageElement( layer );
+
+			expect( img1 ).toBe( img2 );
+		} );
+
+		test( 'uses src substring as fallback cache key', () => {
+			const layer = {
+				src: 'data:image/png;base64,verylongsrcstringthatwillbetruncated'
+			};
+
+			const img = renderer._getImageElement( layer );
+
+			expect( img ).toBeDefined();
+			expect( renderer._imageCache.size ).toBe( 1 );
+		} );
+	} );
+
+	describe( '_drawImagePlaceholder', () => {
+		test( 'draws dashed rectangle placeholder', () => {
+			const layer = {
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 80
+			};
+			const scale = { sx: 1, sy: 1 };
+
+			renderer._drawImagePlaceholder( layer, scale );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.setLineDash ).toHaveBeenCalledWith( [ 5, 5 ] );
+			expect( ctx.strokeRect ).toHaveBeenCalledWith( 10, 20, 100, 80 );
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'draws diagonal lines as loading indicator', () => {
+			const layer = {
+				x: 0,
+				y: 0,
+				width: 100,
+				height: 100
+			};
+			const scale = { sx: 1, sy: 1 };
+
+			renderer._drawImagePlaceholder( layer, scale );
+
+			// Should draw X pattern
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'applies scale factors', () => {
+			const layer = {
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 80
+			};
+			const scale = { sx: 2, sy: 1.5 };
+
+			renderer._drawImagePlaceholder( layer, scale );
+
+			expect( ctx.strokeRect ).toHaveBeenCalledWith( 20, 30, 200, 120 );
+		} );
+
+		test( 'uses default dimensions when not specified', () => {
+			const layer = {
+				x: 0,
+				y: 0
+			};
+			const scale = { sx: 1, sy: 1 };
+
+			renderer._drawImagePlaceholder( layer, scale );
+
+			expect( ctx.strokeRect ).toHaveBeenCalledWith( 0, 0, 100, 100 );
+		} );
+	} );
+
+	describe( 'setContext', () => {
+		test( 'updates context and sub-renderers', () => {
+			const newCtx = createMockContext();
+			renderer.setContext( newCtx );
+
+			expect( renderer.ctx ).toBe( newCtx );
+		} );
+	} );
+
+	describe( 'destroy', () => {
+		test( 'clears image cache', () => {
+			// Add an image to cache
+			renderer._imageCache = new Map();
+			renderer._imageCache.set( 'test', new Image() );
+
+			renderer.destroy();
+
+			// destroy() nulls out the cache
+			expect( renderer._imageCache ).toBeNull();
 		} );
 	} );
 } );
