@@ -285,4 +285,132 @@ describe( 'ToolbarKeyboard', function () {
 			expect( editShortcuts.some( s => s.key === 'Ctrl+D' ) ).toBe( true );
 		} );
 	} );
+
+	describe( 'Shift shortcuts', function () {
+		it( 'should show keyboard shortcuts help on Shift+?', function () {
+			mockEditor.dialogManager = {
+				showKeyboardShortcutsDialog: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '?',
+				ctrlKey: false,
+				metaKey: false,
+				shiftKey: true,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.dialogManager.showKeyboardShortcutsDialog ).toHaveBeenCalled();
+		} );
+
+		it( 'should toggle background visibility on Shift+B', function () {
+			mockEditor.layerPanel = {
+				toggleBackgroundVisibility: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'b',
+				ctrlKey: false,
+				metaKey: false,
+				shiftKey: true,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.layerPanel.toggleBackgroundVisibility ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'toggleBackgroundVisibility', function () {
+		it( 'should use LayerPanel when available', function () {
+			mockEditor.layerPanel = {
+				toggleBackgroundVisibility: jest.fn()
+			};
+
+			keyboardHandler.toggleBackgroundVisibility();
+
+			expect( mockEditor.layerPanel.toggleBackgroundVisibility ).toHaveBeenCalled();
+		} );
+
+		it( 'should fall back to StateManager when LayerPanel not available', function () {
+			mockEditor.layerPanel = null;
+			mockEditor.stateManager = {
+				get: jest.fn().mockReturnValue( true ),
+				set: jest.fn()
+			};
+			mockEditor.canvasManager = {
+				redraw: jest.fn()
+			};
+
+			keyboardHandler.toggleBackgroundVisibility();
+
+			expect( mockEditor.stateManager.get ).toHaveBeenCalledWith( 'backgroundVisible' );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', false );
+			expect( mockEditor.canvasManager.redraw ).toHaveBeenCalled();
+		} );
+
+		it( 'should toggle from false to true via StateManager', function () {
+			mockEditor.layerPanel = null;
+			mockEditor.stateManager = {
+				get: jest.fn().mockReturnValue( false ),
+				set: jest.fn()
+			};
+			mockEditor.canvasManager = {
+				redraw: jest.fn()
+			};
+
+			keyboardHandler.toggleBackgroundVisibility();
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', true );
+		} );
+
+		it( 'should handle missing canvasManager gracefully', function () {
+			mockEditor.layerPanel = null;
+			mockEditor.stateManager = {
+				get: jest.fn().mockReturnValue( true ),
+				set: jest.fn()
+			};
+			mockEditor.canvasManager = null;
+
+			// Should not throw
+			expect( () => keyboardHandler.toggleBackgroundVisibility() ).not.toThrow();
+			expect( mockEditor.stateManager.set ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'showKeyboardShortcutsHelp', function () {
+		it( 'should use DialogManager when available', function () {
+			mockEditor.dialogManager = {
+				showKeyboardShortcutsDialog: jest.fn()
+			};
+
+			keyboardHandler.showKeyboardShortcutsHelp();
+
+			expect( mockEditor.dialogManager.showKeyboardShortcutsDialog ).toHaveBeenCalled();
+		} );
+
+		it( 'should fall back to editor method when DialogManager not available', function () {
+			mockEditor.dialogManager = null;
+			mockEditor.showKeyboardShortcutsDialog = jest.fn();
+
+			keyboardHandler.showKeyboardShortcutsHelp();
+
+			expect( mockEditor.showKeyboardShortcutsDialog ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle case where neither DialogManager nor editor method exists', function () {
+			mockEditor.dialogManager = null;
+			mockEditor.showKeyboardShortcutsDialog = null;
+
+			// Should not throw
+			expect( () => keyboardHandler.showKeyboardShortcutsHelp() ).not.toThrow();
+		} );
+	} );
 } );
