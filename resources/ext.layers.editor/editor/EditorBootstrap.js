@@ -237,9 +237,17 @@
 	}
 
 	/**
+	 * Track if handlers have been set up (prevent duplicates on module reload)
+	 */
+	let handlersInitialized = false;
+
+	/**
 	 * Set up global error handlers for unhandled promise rejections
 	 */
 	function setupGlobalErrorHandlers() {
+		if ( handlersInitialized ) {
+			return; // Already set up
+		}
 		if ( typeof window !== 'undefined' && window.addEventListener ) {
 			window.addEventListener( 'unhandledrejection', ( event ) => {
 				const error = event.reason;
@@ -281,6 +289,9 @@
 	 * Set up cleanup handlers for page navigation
 	 */
 	function setupCleanupHandlers() {
+		if ( handlersInitialized ) {
+			return; // Already set up
+		}
 		if ( typeof window !== 'undefined' ) {
 			window.addEventListener( 'beforeunload', cleanupGlobalEditorInstance );
 
@@ -295,6 +306,7 @@
 				} );
 			}
 		}
+		handlersInitialized = true;
 	}
 
 	/**
