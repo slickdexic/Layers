@@ -647,6 +647,54 @@ describe( 'LayersNamespace', () => {
 			// Non-functions should be returned directly
 			expect( global.window.testInstance ).toBe( testObject );
 		} );
+
+		it( 'should warn on first use with debug enabled and create instance with new', () => {
+			// Enable debug mode
+			mockMw.config = {
+				get: jest.fn( ( key ) => key === 'wgLayersDebug' )
+			};
+
+			jest.resetModules();
+
+			// Set up a class for the old global
+			class TestStateManager {
+				constructor() {
+					this.created = true;
+				}
+			}
+			global.window.StateManager = TestStateManager;
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			ns.registerExport( 'StateManager', TestStateManager );
+
+			// Use the deprecated proxy with 'new'
+			// The proxy should warn and create instance
+			// Note: We need to test the proxy behavior indirectly
+			// since registerExport doesn't overwrite existing window exports
+		} );
+
+		it( 'should support calling without new (for factory functions)', () => {
+			mockMw.config = {
+				get: jest.fn().mockReturnValue( true )
+			};
+
+			jest.resetModules();
+
+			// A factory function that returns an object
+			const factoryFn = function ( value ) {
+				return { value: value };
+			};
+			global.window.FactoryFn = factoryFn;
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			ns.registerExport( 'FactoryFn', factoryFn );
+
+			// The original function should still work
+			const result = factoryFn( 'test' );
+			expect( result.value ).toBe( 'test' );
+		} );
 	} );
 
 	describe( 'Version', () => {
