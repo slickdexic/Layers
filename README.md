@@ -2,7 +2,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Beta. Version 0.8.8. Requires MediaWiki 1.44+.
+> **Status:** Beta. Version 0.8.9. Requires MediaWiki 1.44+.
 
 ---
 
@@ -45,6 +45,7 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 - **Named Layer Sets**: Multiple annotation sets per image (e.g., "default", "anatomy-labels")
 - **Version History**: Each named set maintains revision history (up to 50 revisions by default)
 - **Per-Set Background Settings**: Background visibility and opacity saved independently per layer set
+- **Import Image Layer**: Add external images (logos, icons, photos) as new layers
 - **Layer Operations**: Visibility toggles, lock/unlock, reorder via drag-and-drop, duplicate
 - **Export as Image**: Download annotated images as PNG with optional background
 - **UUID-based IDs**: Reliable layer referencing

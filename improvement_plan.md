@@ -2,7 +2,7 @@
 
 **Last Updated:** December 16, 2025  
 **Status:** Active  
-**Version:** 0.8.8  
+**Version:** 0.8.9  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---

@@ -2,7 +2,7 @@
 
 **Review Date:** December 16, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 0.8.8
+**Version:** 0.8.9
 
 ## Executive Summary
 

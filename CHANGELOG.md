@@ -2,6 +2,31 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [0.8.9] - 2025-12-16
+
+### New Features
+- **Import Image Layer**: Add external images (logos, icons, photos) as layers via the new "Import Image" button
+  - Supports PNG, JPEG, GIF, WebP formats
+  - Images stored as base64 data URLs within the layer set
+  - Full resize, move, and rotate support with Shift key for aspect ratio lock
+- **Configurable Image Size Limit**: New `$wgLayersMaxImageBytes` setting (default 1MB)
+  - Allows wiki admins to customize max imported image size
+  - Recommended range: 512KB - 2MB depending on storage capacity
+
+### Bug Fixes
+- Fixed image layers not responding to resize handles
+- Fixed image layers not responding to drag-to-move
+- Fixed undo not working properly after importing an image
+- Fixed config not being exposed on EditLayersAction page
+
+### Technical Improvements
+- Added 'image' layer type with src, originalWidth, originalHeight, preserveAspectRatio properties
+- Added image rendering with caching and placeholder support in LayerRenderer
+- Added 'image' case to HitTestController, GeometryUtils, ResizeCalculator, TransformController
+- Updated ServerSideLayerValidator with base64 data URL validation
+
+---
+
 ## [0.8.8] - 2025-12-16
 
 ### New Features

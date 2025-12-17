@@ -46,7 +46,7 @@ link.click();
 
 **Priority:** Medium  
 **Complexity:** Medium  
-**Status:** Planned
+**Status:** ✅ Completed (v0.8.9)
 
 ### Description
 Allow users to import external images as new layers, enabling composite annotations with logos, icons, reference images, or other visual elements.
@@ -158,12 +158,12 @@ As a user, I want to adjust the background image opacity so I can make my annota
 |---------|----------|--------|--------------|--------|
 | Save as Image | Medium | Low | None | ✅ Completed (v0.8.6) |
 | Background Controls | Medium | Low | None | ✅ Completed (v0.8.8) |
-| Import Image Layer | Medium | Medium | Schema update, validation | 🔜 Next |
+| Import Image Layer | Medium | Medium | Schema update, validation | ✅ Completed (v0.8.9) |
 
 ### Recommended Order
 1. ~~**Save as Image**~~ - ✅ Implemented in v0.8.6
 2. ~~**Background Controls**~~ - ✅ Implemented in v0.8.7, enhanced in v0.8.8 (per-set settings)
-3. **Import Image Layer** - 🔜 Next priority, requires schema changes
+3. ~~**Import Image Layer**~~ - ✅ Implemented in v0.8.9
 
 ---
 
