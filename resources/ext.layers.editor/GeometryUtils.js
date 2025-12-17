@@ -253,7 +253,8 @@
 					// Text bounds require canvas context - caller should handle this with TextUtils
 					return null;
 				case 'rectangle':
-				case 'blur': {
+				case 'blur':
+				case 'image': {
 					rectX = layer.x || 0;
 					rectY = layer.y || 0;
 					safeWidth = layer.width || 0;

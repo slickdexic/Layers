@@ -112,6 +112,7 @@
 			switch ( layer.type ) {
 				case 'rectangle':
 				case 'blur':
+				case 'image':
 					return this.isPointInRectangleLayer( point, layer );
 
 				case 'circle':

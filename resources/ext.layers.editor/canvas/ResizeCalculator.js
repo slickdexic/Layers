@@ -40,6 +40,7 @@
 			switch ( originalLayer.type ) {
 				case 'rectangle':
 				case 'blur':
+				case 'image':
 					return ResizeCalculator.calculateRectangleResize(
 						originalLayer, handleType, deltaX, deltaY, modifiers
 					);

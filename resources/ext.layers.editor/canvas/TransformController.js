@@ -615,6 +615,7 @@ class TransformController {
 			case 'ellipse':
 			case 'polygon':
 			case 'star':
+			case 'image':
 				layer.x = ( originalState.x || 0 ) + deltaX;
 				layer.y = ( originalState.y || 0 ) + deltaY;
 				break;
