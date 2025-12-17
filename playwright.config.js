@@ -10,7 +10,12 @@ module.exports = defineConfig( {
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	workers: process.env.CI ? 1 : undefined,
-	reporter: process.env.CI ? 'github' : 'list',
+	// Use multiple reporters in CI to get both console output and HTML report
+	reporter: process.env.CI ?
+		[ [ 'github' ], [ 'html', { open: 'never' } ] ] :
+		'list',
+	// Output directory for test results and traces
+	outputDir: 'test-results',
 	
 	// Global timeout for each test
 	timeout: 30000,
