@@ -175,7 +175,7 @@
 					this.editor.stateManager.addLayer( layer );
 					// Trigger a redraw
 					if ( this.editor.canvasManager ) {
-						this.editor.canvasManager.requestRedraw();
+						this.editor.canvasManager.redraw();
 					}
 				}
 			} catch ( error ) {
