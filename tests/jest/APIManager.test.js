@@ -1126,4 +1126,596 @@ describe( 'APIManager', function () {
 			expect( apiManager.api ).toBeNull(); // Was set to null after abort
 		} );
 	} );
+
+	describe( 'deleteLayerSet', function () {
+		beforeEach( function () {
+			mockEditor.uiManager = {
+				showSpinner: jest.fn(),
+				hideSpinner: jest.fn()
+			};
+		} );
+
+		it( 'should reject when setName is empty', async function () {
+			await expect( apiManager.deleteLayerSet( '' ) ).rejects.toThrow( 'Set name is required' );
+		} );
+
+		it( 'should reject when setName is null', async function () {
+			await expect( apiManager.deleteLayerSet( null ) ).rejects.toThrow( 'Set name is required' );
+		} );
+
+		it( 'should reject when no filename available', async function () {
+			mockEditor.filename = null;
+			mockEditor.config = null;
+
+			await expect( apiManager.deleteLayerSet( 'test-set' ) ).rejects.toThrow( 'No filename available' );
+		} );
+
+		it( 'should call API with correct parameters', async function () {
+			mockEditor.filename = 'Test_Image.jpg';
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersdelete: { success: 1, revisionsDeleted: 3 }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			await apiManager.deleteLayerSet( 'my-set' );
+
+			expect( apiManager.api.postWithToken ).toHaveBeenCalledWith( 'csrf', {
+				action: 'layersdelete',
+				filename: 'Test_Image.jpg',
+				setname: 'my-set'
+			} );
+		} );
+
+		it( 'should show and hide spinner during operation', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersdelete: { success: 1 }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			await apiManager.deleteLayerSet( 'test-set' );
+
+			expect( mockEditor.uiManager.showSpinner ).toHaveBeenCalled();
+			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle successful delete response', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersdelete: { success: 1, revisionsDeleted: 5 }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			const result = await apiManager.deleteLayerSet( 'test-set' );
+
+			expect( result.success ).toBe( 1 );
+			expect( result.revisionsDeleted ).toBe( 5 );
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should reload layers after successful delete', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersdelete: { success: 1 }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			await apiManager.deleteLayerSet( 'test-set' );
+
+			expect( apiManager.loadLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle permission denied error in response', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				error: { code: 'permissiondenied', info: 'Not allowed' }
+			} );
+
+			await expect( apiManager.deleteLayerSet( 'test-set' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should handle generic API error in response', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				error: { code: 'unknown', info: 'Something went wrong' }
+			} );
+
+			await expect( apiManager.deleteLayerSet( 'test-set' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should handle unexpected response format', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {} );
+
+			await expect( apiManager.deleteLayerSet( 'test-set' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should handle network error', async function () {
+			apiManager.api.postWithToken = jest.fn().mockRejectedValue( 'network-error' );
+
+			await expect( apiManager.deleteLayerSet( 'test-set' ) )
+				.rejects.toThrow();
+
+			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'renameLayerSet', function () {
+		beforeEach( function () {
+			mockEditor.uiManager = {
+				showSpinner: jest.fn(),
+				hideSpinner: jest.fn()
+			};
+		} );
+
+		it( 'should reject when oldName is empty', async function () {
+			await expect( apiManager.renameLayerSet( '', 'new-name' ) )
+				.rejects.toThrow( 'Both old and new names are required' );
+		} );
+
+		it( 'should reject when newName is empty', async function () {
+			await expect( apiManager.renameLayerSet( 'old-name', '' ) )
+				.rejects.toThrow( 'Both old and new names are required' );
+		} );
+
+		it( 'should reject when no filename available', async function () {
+			mockEditor.filename = null;
+			mockEditor.config = null;
+
+			await expect( apiManager.renameLayerSet( 'old', 'new' ) )
+				.rejects.toThrow( 'No filename available' );
+		} );
+
+		it( 'should call API with correct parameters', async function () {
+			mockEditor.filename = 'Test_Image.jpg';
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { success: 1, oldname: 'old-set', newname: 'new-set' }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			await apiManager.renameLayerSet( 'old-set', 'new-set' );
+
+			expect( apiManager.api.postWithToken ).toHaveBeenCalledWith( 'csrf', {
+				action: 'layersrename',
+				filename: 'Test_Image.jpg',
+				oldname: 'old-set',
+				newname: 'new-set'
+			} );
+		} );
+
+		it( 'should handle successful rename response', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { success: 1, oldname: 'old', newname: 'new' }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			const result = await apiManager.renameLayerSet( 'old', 'new' );
+
+			expect( result.success ).toBe( 1 );
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should reload layers after successful rename', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { success: 1 }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			await apiManager.renameLayerSet( 'old', 'new' );
+
+			expect( apiManager.loadLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle permission denied error', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				error: { code: 'permissiondenied', info: 'Not allowed' }
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'new' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should handle name conflict error', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				error: { code: 'layers-name-exists', info: 'Name already exists' }
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'existing' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should handle network error', async function () {
+			apiManager.api.postWithToken = jest.fn().mockRejectedValue( 'network-error' );
+
+			await expect( apiManager.renameLayerSet( 'old', 'new' ) )
+				.rejects.toThrow();
+
+			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'loadLayersBySetName', function () {
+		it( 'should call API with setname parameter', async function () {
+			apiManager.api.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: null,
+					all_layersets: [],
+					named_sets: []
+				}
+			} );
+
+			await apiManager.loadLayersBySetName( 'my-custom-set' );
+
+			expect( apiManager.api.get ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					action: 'layersinfo',
+					setname: 'my-custom-set'
+				} )
+			);
+		} );
+
+		it( 'should reject when setname is null', async function () {
+			await expect( apiManager.loadLayersBySetName( null ) )
+				.rejects.toThrow( 'No set name provided' );
+		} );
+
+		it( 'should reject when setname is empty string', async function () {
+			await expect( apiManager.loadLayersBySetName( '' ) )
+				.rejects.toThrow( 'No set name provided' );
+		} );
+
+		it( 'should reject when setname is undefined', async function () {
+			await expect( apiManager.loadLayersBySetName( undefined ) )
+				.rejects.toThrow( 'No set name provided' );
+		} );
+	} );
+
+	describe( 'exportAsImage', function () {
+		let mockCanvas;
+		let mockCtx;
+		let mockBlob;
+
+		beforeEach( function () {
+			mockBlob = new Blob( [ 'test' ], { type: 'image/png' } );
+			mockCtx = {
+				drawImage: jest.fn(),
+				fillRect: jest.fn(),
+				globalAlpha: 1,
+				fillStyle: ''
+			};
+			mockCanvas = {
+				width: 800,
+				height: 600,
+				getContext: jest.fn().mockReturnValue( mockCtx ),
+				toBlob: jest.fn( ( callback ) => callback( mockBlob ) )
+			};
+			jest.spyOn( document, 'createElement' ).mockReturnValue( mockCanvas );
+
+			mockEditor.canvasManager = {
+				canvas: { width: 800, height: 600 },
+				backgroundImage: { width: 800, height: 600 },
+				renderer: {
+					renderLayersToContext: jest.fn()
+				}
+			};
+			mockEditor.stateManager = {
+				get: jest.fn( ( key ) => {
+					const values = {
+						layers: [ { id: 'layer1', visible: true } ],
+						backgroundVisible: true,
+						backgroundOpacity: 1,
+						baseWidth: 800,
+						baseHeight: 600
+					};
+					return values[ key ];
+				} )
+			};
+		} );
+
+		afterEach( function () {
+			document.createElement.mockRestore();
+		} );
+
+		it( 'should create export canvas at correct dimensions', async function () {
+			await apiManager.exportAsImage();
+
+			expect( document.createElement ).toHaveBeenCalledWith( 'canvas' );
+			expect( mockCanvas.width ).toBe( 800 );
+			expect( mockCanvas.height ).toBe( 600 );
+		} );
+
+		it( 'should apply scale factor', async function () {
+			await apiManager.exportAsImage( { scale: 2 } );
+
+			expect( mockCanvas.width ).toBe( 1600 );
+			expect( mockCanvas.height ).toBe( 1200 );
+		} );
+
+		it( 'should draw background image when visible', async function () {
+			await apiManager.exportAsImage();
+
+			expect( mockCtx.drawImage ).toHaveBeenCalledWith(
+				mockEditor.canvasManager.backgroundImage,
+				0, 0, 800, 600
+			);
+		} );
+
+		it( 'should respect background opacity', async function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				const values = {
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: 0.5,
+					baseWidth: 800,
+					baseHeight: 600
+				};
+				return values[ key ];
+			} );
+
+			await apiManager.exportAsImage();
+
+			expect( mockCtx.globalAlpha ).toBe( 1 ); // Reset after drawing
+		} );
+
+		it( 'should skip background when includeBackground is false', async function () {
+			await apiManager.exportAsImage( { includeBackground: false } );
+
+			// Background should not be drawn
+			expect( mockCtx.drawImage ).not.toHaveBeenCalledWith(
+				mockEditor.canvasManager.backgroundImage,
+				expect.anything(), expect.anything(), expect.anything(), expect.anything()
+			);
+		} );
+
+		it( 'should use white background for JPEG without background', async function () {
+			await apiManager.exportAsImage( { format: 'jpeg', includeBackground: false } );
+
+			expect( mockCtx.fillStyle ).toBe( '#ffffff' );
+			expect( mockCtx.fillRect ).toHaveBeenCalledWith( 0, 0, 800, 600 );
+		} );
+
+		it( 'should render visible layers', async function () {
+			await apiManager.exportAsImage();
+
+			expect( mockEditor.canvasManager.renderer.renderLayersToContext )
+				.toHaveBeenCalledWith( mockCtx, [ { id: 'layer1', visible: true } ], 1 );
+		} );
+
+		it( 'should filter out hidden layers', async function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				const values = {
+					layers: [
+						{ id: 'layer1', visible: true },
+						{ id: 'layer2', visible: false },
+						{ id: 'layer3', visible: true }
+					],
+					backgroundVisible: true,
+					backgroundOpacity: 1,
+					baseWidth: 800,
+					baseHeight: 600
+				};
+				return values[ key ];
+			} );
+
+			await apiManager.exportAsImage();
+
+			expect( mockEditor.canvasManager.renderer.renderLayersToContext )
+				.toHaveBeenCalledWith(
+					mockCtx,
+					[
+						{ id: 'layer1', visible: true },
+						{ id: 'layer3', visible: true }
+					],
+					1
+				);
+		} );
+
+		it( 'should return blob in PNG format', async function () {
+			const result = await apiManager.exportAsImage( { format: 'png' } );
+
+			expect( result ).toBe( mockBlob );
+			expect( mockCanvas.toBlob ).toHaveBeenCalledWith(
+				expect.any( Function ),
+				'image/png',
+				0.92
+			);
+		} );
+
+		it( 'should return blob in JPEG format', async function () {
+			await apiManager.exportAsImage( { format: 'jpeg', quality: 0.8 } );
+
+			expect( mockCanvas.toBlob ).toHaveBeenCalledWith(
+				expect.any( Function ),
+				'image/jpeg',
+				0.8
+			);
+		} );
+
+		it( 'should reject when canvas manager not available', async function () {
+			mockEditor.canvasManager = null;
+
+			await expect( apiManager.exportAsImage() )
+				.rejects.toThrow( 'Canvas manager not available' );
+		} );
+
+		it( 'should reject when blob creation fails', async function () {
+			mockCanvas.toBlob = jest.fn( ( callback ) => callback( null ) );
+
+			await expect( apiManager.exportAsImage() )
+				.rejects.toThrow( 'Failed to create image blob' );
+		} );
+
+		it( 'should fallback to drawing canvas when renderer unavailable', async function () {
+			mockEditor.canvasManager.renderer = null;
+
+			await apiManager.exportAsImage();
+
+			expect( mockCtx.drawImage ).toHaveBeenCalledWith(
+				mockEditor.canvasManager.canvas,
+				0, 0, 800, 600
+			);
+		} );
+	} );
+
+	describe( 'downloadAsImage', function () {
+		let mockBlob;
+		let mockAnchor;
+		let mockUrl;
+
+		beforeEach( function () {
+			mockBlob = new Blob( [ 'test' ], { type: 'image/png' } );
+			mockUrl = 'blob:test-url';
+			mockAnchor = {
+				href: '',
+				download: '',
+				click: jest.fn()
+			};
+
+			// Mock URL APIs
+			global.URL.createObjectURL = jest.fn().mockReturnValue( mockUrl );
+			global.URL.revokeObjectURL = jest.fn();
+
+			// Mock document methods
+			jest.spyOn( document.body, 'appendChild' ).mockImplementation( () => {} );
+			jest.spyOn( document.body, 'removeChild' ).mockImplementation( () => {} );
+
+			mockEditor.uiManager = {
+				showSpinner: jest.fn(),
+				hideSpinner: jest.fn()
+			};
+			mockEditor.stateManager = {
+				get: jest.fn( ( key ) => {
+					const values = {
+						filename: 'File:TestImage.jpg',
+						currentSetName: 'default',
+						layers: [],
+						backgroundVisible: true,
+						backgroundOpacity: 1,
+						baseWidth: 800,
+						baseHeight: 600
+					};
+					return values[ key ];
+				} )
+			};
+
+			// Mock exportAsImage
+			apiManager.exportAsImage = jest.fn().mockResolvedValue( mockBlob );
+		} );
+
+		afterEach( function () {
+			document.body.appendChild.mockRestore();
+			document.body.removeChild.mockRestore();
+		} );
+
+		it( 'should show and hide spinner', async function () {
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			await apiManager.downloadAsImage();
+
+			expect( mockEditor.uiManager.showSpinner ).toHaveBeenCalled();
+			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
+
+			createElementSpy.mockRestore();
+		} );
+
+		it( 'should call exportAsImage with options', async function () {
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			await apiManager.downloadAsImage( { format: 'jpeg', quality: 0.8 } );
+
+			expect( apiManager.exportAsImage ).toHaveBeenCalledWith( { format: 'jpeg', quality: 0.8 } );
+
+			createElementSpy.mockRestore();
+		} );
+
+		it( 'should create download link with correct filename', async function () {
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			await apiManager.downloadAsImage();
+
+			expect( mockAnchor.download ).toBe( 'TestImage.png' );
+			expect( mockAnchor.click ).toHaveBeenCalled();
+
+			createElementSpy.mockRestore();
+		} );
+
+		it( 'should include set name in filename for non-default sets', async function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				const values = {
+					filename: 'File:TestImage.jpg',
+					currentSetName: 'anatomy',
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: 1
+				};
+				return values[ key ];
+			} );
+
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			await apiManager.downloadAsImage();
+
+			expect( mockAnchor.download ).toBe( 'TestImage-anatomy.png' );
+
+			createElementSpy.mockRestore();
+		} );
+
+		it( 'should use jpg extension for jpeg format', async function () {
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			await apiManager.downloadAsImage( { format: 'jpeg' } );
+
+			expect( mockAnchor.download ).toBe( 'TestImage.jpg' );
+
+			createElementSpy.mockRestore();
+		} );
+
+		it( 'should use custom filename when provided', async function () {
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			await apiManager.downloadAsImage( { filename: 'custom-export.png' } );
+
+			expect( mockAnchor.download ).toBe( 'custom-export.png' );
+
+			createElementSpy.mockRestore();
+		} );
+
+		it( 'should revoke object URL after download', async function () {
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			await apiManager.downloadAsImage();
+
+			expect( global.URL.revokeObjectURL ).toHaveBeenCalledWith( mockUrl );
+
+			createElementSpy.mockRestore();
+		} );
+
+		it( 'should show success notification', async function () {
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			await apiManager.downloadAsImage();
+
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				{ type: 'success' }
+			);
+
+			createElementSpy.mockRestore();
+		} );
+
+		it( 'should handle export failure gracefully', async function () {
+			apiManager.exportAsImage = jest.fn().mockRejectedValue( new Error( 'Export failed' ) );
+			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+
+			// downloadAsImage doesn't return a promise, so we use a spy to detect the error path
+			apiManager.downloadAsImage();
+
+			// Wait for the promise chain to complete using Jest's fake timers approach
+			await new Promise( process.nextTick );
+
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				{ type: 'error' }
+			);
+
+			createElementSpy.mockRestore();
+		} );
+	} );
 } );
