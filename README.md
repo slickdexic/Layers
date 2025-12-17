@@ -1,8 +1,11 @@
 # Layers – MediaWiki Extension
 
+[![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
+[![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
+
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Beta. Version 0.8.9. Requires MediaWiki 1.44+.
+> **Status:** Beta. Version 0.9.0. Requires MediaWiki 1.44+.
 
 ---
 
@@ -59,6 +62,14 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 - Font family and size selection
 - Opacity controls
 
+### Accessibility
+
+- **Skip Links**: Jump directly to toolbar, canvas, or layer panel
+- **ARIA Landmarks**: Semantic regions for screen reader navigation
+- **Keyboard Navigation**: Full keyboard support with discoverable shortcuts
+- **Focus Management**: Visible focus indicators throughout the interface
+- **Live Regions**: Status updates announced to assistive technologies
+
 ---
 
 ## Wikitext Integration
@@ -110,8 +121,14 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 - **Code Splitting:** Viewer module (682 lines) + Shared module (3,886 lines) loads separately from Editor (~32.5K lines)
 
 **Test Coverage (December 2025):**
-- Jest: 4,591 tests, 91% statement coverage, 79% branch coverage (92 test suites)
+- Jest: 4,661 tests, 89.64% statement coverage, 77.55% branch coverage (92 test suites)
 - PHPUnit: 17 test files covering API, database, validation
+
+**Accessibility (WCAG 2.1):**
+- Skip links for keyboard navigation (WCAG 2.4.1)
+- ARIA landmarks on all major sections (WCAG 1.3.1)
+- Keyboard shortcuts with help dialog (Shift+?)
+- Live regions for status updates
 
 **Requirements:**
 - MediaWiki 1.44.0 or later
