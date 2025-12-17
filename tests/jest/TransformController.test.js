@@ -973,4 +973,76 @@ describe( 'TransformController', () => {
 			expect( starLayer.innerRadius ).toBe( starLayer.radius * 0.5 );
 		} );
 	} );
+
+	describe( 'destroy', () => {
+		it( 'should clean up transform state', () => {
+			// Set some state first
+			controller.isResizing = true;
+			controller.isRotating = true;
+			controller.isDragging = true;
+			controller.resizeHandle = { type: 'se' };
+			controller.dragStartPoint = { x: 100, y: 100 };
+			controller.originalLayerState = { id: 'test' };
+			controller.originalMultiLayerStates = [ { id: 'test' } ];
+
+			controller.destroy();
+
+			expect( controller.isResizing ).toBe( false );
+			expect( controller.isRotating ).toBe( false );
+			expect( controller.isDragging ).toBe( false );
+			expect( controller.resizeHandle ).toBeNull();
+			expect( controller.dragStartPoint ).toBeNull();
+			expect( controller.originalLayerState ).toBeNull();
+			expect( controller.originalMultiLayerStates ).toBeNull();
+		} );
+
+		it( 'should cancel pending transform events', () => {
+			controller.transformEventScheduled = true;
+			controller.lastTransformPayload = { type: 'test' };
+
+			controller.destroy();
+
+			expect( controller.transformEventScheduled ).toBe( false );
+			expect( controller.lastTransformPayload ).toBeNull();
+		} );
+
+		it( 'should clear manager reference', () => {
+			expect( controller.manager ).not.toBeNull();
+
+			controller.destroy();
+
+			expect( controller.manager ).toBeNull();
+		} );
+	} );
+
+	describe( 'fallback paths', () => {
+		it( 'should return null from calculateResize when ResizeCalculator unavailable', () => {
+			// Temporarily remove ResizeCalculator
+			const savedCalc = global.window.Layers.Canvas.ResizeCalculator;
+			delete global.window.Layers.Canvas.ResizeCalculator;
+
+			const result = controller.calculateResize(
+				testLayer, 'se', 10, 10, {}
+			);
+
+			expect( result ).toBeNull();
+
+			// Restore
+			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
+		} );
+
+		it( 'should return empty object from calculateRectangleResize when ResizeCalculator unavailable', () => {
+			const savedCalc = global.window.Layers.Canvas.ResizeCalculator;
+			delete global.window.Layers.Canvas.ResizeCalculator;
+
+			const result = controller.calculateRectangleResize(
+				testLayer, 'se', 10, 10, {}
+			);
+
+			expect( result ).toEqual( {} );
+
+			// Restore
+			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
+		} );
+	} );
 } );
