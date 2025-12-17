@@ -104,6 +104,17 @@ describe( 'EventTracker', () => {
 
 			expect( entry ).toBeNull();
 		} );
+
+		it( 'should log warning when adding after destroy in debug mode', () => {
+			const debugTracker = new EventTracker( { debug: true } );
+			debugTracker.destroy();
+			
+			const handler = jest.fn();
+			const entry = debugTracker.add( mockElement, 'click', handler );
+
+			expect( entry ).toBeNull();
+			expect( mw.log.warn ).toHaveBeenCalledWith( '[EventTracker] Cannot add listener after destroy()' );
+		} );
 	} );
 
 	describe( 'remove', () => {
@@ -129,6 +140,26 @@ describe( 'EventTracker', () => {
 			const result = tracker.remove( unknownEntry );
 
 			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle error during removeEventListener gracefully', () => {
+			const debugTracker = new EventTracker( { debug: true } );
+			const handler = jest.fn();
+			const errorElement = {
+				addEventListener: jest.fn(),
+				removeEventListener: jest.fn().mockImplementation( () => {
+					throw new Error( 'Test removal error' );
+				} )
+			};
+			
+			const entry = debugTracker.add( errorElement, 'click', handler );
+			const result = debugTracker.remove( entry );
+
+			// Should still return true (entry was removed from list)
+			expect( result ).toBe( true );
+			expect( debugTracker.listeners.length ).toBe( 0 );
+			expect( mw.log.warn ).toHaveBeenCalledWith( '[EventTracker] Error removing listener:', 'Test removal error' );
+			debugTracker.destroy();
 		} );
 	} );
 
