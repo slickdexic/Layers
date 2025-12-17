@@ -357,6 +357,72 @@ describe( 'ShapeRenderer', () => {
 				100, 100, 60, 40, rotationRad, 0, 2 * Math.PI
 			);
 		} );
+
+		it( 'should use fallback scale transform when ctx.ellipse is unavailable', () => {
+			// Remove ellipse method to trigger fallback path
+			delete ctx.ellipse;
+
+			const layer = {
+				x: 100,
+				y: 100,
+				radiusX: 60,
+				radiusY: 40,
+				fill: '#ffff00',
+				fillOpacity: 1
+			};
+
+			shapeRenderer.drawEllipse( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			// Fallback uses translate + scale + arc
+			expect( ctx.translate ).toHaveBeenCalledWith( 100, 100 );
+			expect( ctx.scale ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalledWith( 0, 0, 1, 0, 2 * Math.PI );
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		it( 'should use fallback with stroke when ctx.ellipse is unavailable', () => {
+			// Remove ellipse method to trigger fallback path
+			delete ctx.ellipse;
+
+			const layer = {
+				x: 100,
+				y: 100,
+				radiusX: 60,
+				radiusY: 40,
+				stroke: '#ff0000',
+				strokeWidth: 2,
+				strokeOpacity: 1
+			};
+
+			shapeRenderer.drawEllipse( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			// Fallback uses translate + scale + arc
+			expect( ctx.translate ).toHaveBeenCalledWith( 100, 100 );
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		it( 'should use fallback with rotation when ctx.ellipse is unavailable', () => {
+			// Remove ellipse method to trigger fallback path
+			delete ctx.ellipse;
+
+			const layer = {
+				x: 100,
+				y: 100,
+				radiusX: 60,
+				radiusY: 40,
+				rotation: 45,
+				fill: '#ffff00',
+				fillOpacity: 1
+			};
+
+			shapeRenderer.drawEllipse( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			// Fallback uses translate + rotate + scale + arc
+			expect( ctx.translate ).toHaveBeenCalledWith( 100, 100 );
+			expect( ctx.rotate ).toHaveBeenCalled();
+			expect( ctx.scale ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalledWith( 0, 0, 1, 0, 2 * Math.PI );
+		} );
 	} );
 
 	describe( 'drawPolygon', () => {
