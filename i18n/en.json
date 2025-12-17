@@ -249,7 +249,7 @@
 	"layers-export-failed": "Failed to export image",
 	"layers-import-image": "Import Image",
 	"layers-import-image-tooltip": "Add an image as a layer",
-	"layers-import-image-too-large": "Image file is too large (max 512KB)",
+	"layers-import-image-too-large": "Image file is too large",
 	"layers-import-image-invalid-type": "Invalid image type. Allowed: PNG, JPEG, GIF, WebP",
 	"layers-import-image-failed": "Failed to import image",
 	"layers-set-name-label": "Set Name",

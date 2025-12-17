@@ -372,10 +372,12 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	 * @return array Validation result
 	 */
 	private function validateImageSrc( string $value ): array {
-		// Max size: 512KB for image data (after base64 encoding, roughly 380KB raw image)
-		$maxSize = 512 * 1024;
+		// Max size configurable via $wgLayersMaxImageBytes (default 1MB)
+		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+		$maxSize = $config->get( 'LayersMaxImageBytes' );
 		if ( strlen( $value ) > $maxSize ) {
-			return [ 'valid' => false, 'error' => 'Image data too large (max 512KB)' ];
+			$maxSizeKB = round( $maxSize / 1024 );
+			return [ 'valid' => false, 'error' => "Image data too large (max {$maxSizeKB}KB)" ];
 		}
 
 		// Must be a valid data URL with allowed image types

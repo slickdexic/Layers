@@ -115,13 +115,14 @@ See `docs/NAMED_LAYER_SETS.md` for full architecture documentation.
 ## 3) Data model (Layer objects)
 
 Layer objects are a sanitized subset of the client model. Common fields (whitelist on server):
-- id (string), type (enum: text, arrow, rectangle, circle, ellipse, polygon, star, line, path, blur)
+- id (string), type (enum: text, arrow, rectangle, circle, ellipse, polygon, star, line, path, blur, image)
 - Geometry: x, y, width, height, radius, radiusX, radiusY, x1, y1, x2, y2, rotation (numbers in safe ranges)
 - Style: stroke, fill, color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blendMode or blend (mapped), fontFamily, fontSize
 - Arrow/line: arrowhead (none|arrow|circle|diamond|triangle), arrowStyle (solid|dashed|dotted), arrowSize
 - Text: text (sanitized), textStrokeColor, textStrokeWidth, textShadow (bool), textShadowColor
 - Effects: shadow (bool), shadowColor, shadowBlur, shadowOffsetX/Y, shadowSpread, glow (bool)
 - Shapes/paths: points: Array<{x,y}> (capped ~1000)
+- Image: src (base64 data URL), originalWidth, originalHeight, preserveAspectRatio (bool)
 - Flags: visible (bool), locked (bool), name (string)
 
 Important: Unknown or invalid fields are dropped server-side. Keep editor state within these fields to avoid data loss.
@@ -133,14 +134,42 @@ Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersDebug (LayersDebug): verbose logging to 'Layers' channel (default true)
 - $wgLayersMaxBytes (LayersMaxBytes): max JSON size per set (default 2MB)
 - $wgLayersMaxLayerCount (LayersMaxLayerCount): max layers per set (default 100)
-- $wgLayersMaxNamedSets (LayersMaxNamedSets): max named sets per image (default 15) - NEW
-- $wgLayersMaxRevisionsPerSet (LayersMaxRevisionsPerSet): max revisions kept per named set (default 25) - NEW
-- $wgLayersDefaultSetName (LayersDefaultSetName): default name for layer sets (default 'default') - NEW
+- $wgLayersMaxImageBytes (LayersMaxImageBytes): max size for imported image layers (default 1MB, see recommendations below)
+- $wgLayersMaxNamedSets (LayersMaxNamedSets): max named sets per image (default 15)
+- $wgLayersMaxRevisionsPerSet (LayersMaxRevisionsPerSet): max revisions kept per named set (default 50)
+- $wgLayersDefaultSetName (LayersDefaultSetName): default name for layer sets (default 'default')
 - $wgLayersDefaultFonts (LayersDefaultFonts): allowed fonts list used by the editor
 - $wgLayersMaxImageSize (LayersMaxImageSize): max image size for editing (px)
 - $wgLayersThumbnailCache (LayersThumbnailCache): cache composite thumbs
 - $wgLayersImageMagickTimeout (LayersImageMagickTimeout): seconds for IM ops
 - $wgLayersMaxImageDimensions (LayersMaxImageDimensions): max width/height for processing
+
+### Image Layer Size Recommendations
+
+The `$wgLayersMaxImageBytes` setting controls the maximum size of imported image layers (stored as base64 data URLs). Consider these factors:
+
+| Setting | Raw Image | Use Case |
+|---------|-----------|----------|
+| 512KB | ~380KB | Small icons, logos, low-bandwidth environments |
+| 1MB (default) | ~750KB | Balanced - good for most use cases |
+| 2MB | ~1.5MB | High-quality images, enterprise/internal wikis |
+| 4MB | ~3MB | Maximum recommended - high storage cost |
+
+**Storage Impact**: Base64 encoding adds ~33% overhead. A 1MB setting allows ~750KB raw images.
+
+**Configuration Examples**:
+```php
+// Conservative (public wikis with storage concerns)
+$wgLayersMaxImageBytes = 512 * 1024;  // 512KB
+
+// Default (balanced)
+$wgLayersMaxImageBytes = 1048576;  // 1MB
+
+// Generous (internal/enterprise wikis)
+$wgLayersMaxImageBytes = 2 * 1024 * 1024;  // 2MB
+// Also increase total set limit to accommodate:
+$wgLayersMaxBytes = 4 * 1024 * 1024;  // 4MB
+```
 
 Permissions (see `extension.json`):
 - Rights: 'editlayers', 'createlayers', 'managelayerlibrary'

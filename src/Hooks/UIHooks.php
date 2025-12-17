@@ -349,6 +349,7 @@ class UIHooks {
 			'wgLayersMaxNamedSets' => $config->get( 'LayersMaxNamedSets' ),
 			'wgLayersMaxRevisionsPerSet' => $config->get( 'LayersMaxRevisionsPerSet' ),
 			'wgLayersDefaultSetName' => $config->get( 'LayersDefaultSetName' ),
+			'wgLayersMaxImageBytes' => $config->get( 'LayersMaxImageBytes' ),
 		] );
 
 		// Add basic HTML content to ensure page has content

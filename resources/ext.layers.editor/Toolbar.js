@@ -128,11 +128,13 @@
 		 * @return {Promise<void>}
 		 */
 		async handleImageImport( file ) {
-			// Validate file size (max 512KB to match server validation)
-			const maxSize = 512 * 1024;
+			// Validate file size using configurable limit (default 1MB)
+			const maxSize = ( typeof mw !== 'undefined' && mw.config ) ?
+				mw.config.get( 'wgLayersMaxImageBytes', 1048576 ) : 1048576;
+			const maxSizeKB = Math.round( maxSize / 1024 );
 			if ( file.size > maxSize ) {
 				// eslint-disable-next-line no-alert
-				alert( this.msg( 'layers-import-image-too-large', 'Image file is too large (max 512KB)' ) );
+				alert( this.msg( 'layers-import-image-too-large', 'Image file is too large' ) + ` (max ${maxSizeKB}KB)` );
 				return;
 			}
 

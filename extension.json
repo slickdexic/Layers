@@ -59,6 +59,10 @@
 			"description": "Maximum number of layers per layer set",
 			"value": 100
 		},
+		"LayersMaxImageBytes": {
+			"description": "Maximum size in bytes for imported image layers (base64 encoded). Default 1MB. Recommended: 512KB-2MB depending on storage capacity.",
+			"value": 1048576
+		},
 		"LayersMaxNamedSets": {
 			"description": "Maximum number of named layer sets per image",
 			"value": 15
