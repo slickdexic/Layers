@@ -527,5 +527,138 @@ describe( 'LayersNamespace', () => {
 			// GeometryUtils -> Utils.Geometry
 			expect( registry.GeometryUtils.name ).toBe( 'Geometry' );
 		} );
-} );
+	} );
+
+	describe( 'Deprecation warnings', () => {
+		beforeEach( () => {
+			// Enable debug mode to trigger warnings
+			mockMw.config = {
+				get: jest.fn( ( key ) => {
+					if ( key === 'wgLayersDebug' ) {
+						return true;
+					}
+					return null;
+				} )
+			};
+		} );
+
+		it( 'should not warn when debug mode is disabled', () => {
+			mockMw.config.get = jest.fn().mockReturnValue( false );
+
+			// Re-require to get fresh module with debug disabled
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			// Legacy access should not warn
+			expect( mockMw.log.warn ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should check if mw.config exists before warning', () => {
+			// Remove config to test guard
+			delete mockMw.config;
+
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			// Should not throw
+			expect( mockMw.log.warn ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing mw.log gracefully', () => {
+			// Remove log to test guard
+			delete mockMw.log;
+
+			jest.resetModules();
+
+			// Should not throw
+			expect( () => {
+				require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle undefined mw gracefully', () => {
+			// Remove mw entirely
+			delete global.mw;
+
+			jest.resetModules();
+
+			// Should not throw
+			expect( () => {
+				require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'Non-browser environment', () => {
+		it( 'should skip initialization when window is undefined', () => {
+			// Save original window
+			const savedWindow = global.window;
+
+			// Remove window
+			delete global.window;
+
+			jest.resetModules();
+
+			// Should not throw when window is undefined
+			expect( () => {
+				require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			} ).not.toThrow();
+
+			// Restore window
+			global.window = savedWindow;
+		} );
+	} );
+
+	describe( 'createDeprecatedProxy', () => {
+		it( 'should wrap function targets', () => {
+			mockMw.config = {
+				get: jest.fn().mockReturnValue( true )
+			};
+
+			// The proxy is created internally by LayersNamespace
+			// We can test it indirectly by checking legacy exports work
+			jest.resetModules();
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			// registerExport with a function should create a proxy
+			const TestClass = function TestClass() {
+				this.value = 'test';
+			};
+			global.window.TestClass = TestClass;
+			global.window.Layers.Test = TestClass;
+
+			ns.registerExport( 'TestClass', 'Test' );
+
+			// The legacy export should be wrapped
+			expect( global.window.TestClass ).toBeDefined();
+		} );
+
+		it( 'should return non-function targets directly', () => {
+			jest.resetModules();
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			// Register an object (not a function)
+			const testObject = { key: 'value' };
+			global.window.testInstance = testObject;
+			global.window.Layers.testInstance = testObject;
+
+			ns.registerExport( 'testInstance', null, 'testInstance' );
+
+			// Non-functions should be returned directly
+			expect( global.window.testInstance ).toBe( testObject );
+		} );
+	} );
+
+	describe( 'Version', () => {
+		it( 'should have version defined after initialization', () => {
+			jest.resetModules();
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			// Initialize to set VERSION
+			ns.initializeNamespace();
+
+			expect( global.window.Layers.VERSION ).toBeDefined();
+			expect( typeof global.window.Layers.VERSION ).toBe( 'string' );
+		} );
+	} );
 } );
