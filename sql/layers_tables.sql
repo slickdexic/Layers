@@ -16,7 +16,7 @@ CREATE TABLE /*_*/layer_sets (
     ls_size int unsigned NOT NULL DEFAULT 0,
     ls_layer_count tinyint unsigned NOT NULL DEFAULT 0,
     PRIMARY KEY (ls_id),
-    UNIQUE KEY ls_img_name_revision (ls_img_name, ls_img_sha1, ls_revision),
+    UNIQUE KEY ls_img_name_set_revision (ls_img_name, ls_img_sha1, ls_name, ls_revision),
     KEY ls_img_lookup (ls_img_name, ls_img_sha1),
     KEY ls_user_timestamp (ls_user_id, ls_timestamp),
     KEY ls_timestamp (ls_timestamp),

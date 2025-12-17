@@ -45,7 +45,21 @@ class LayersSchemaManager {
 				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::runCheckConstraintsPatch'
 			] );
 
+			// Add ls_name column for named layer sets (for upgrades from older versions)
+			$updater->addExtensionField(
+				'layer_sets',
+				'ls_name',
+				"$base/patches/patch-add-ls-name.sql"
+			);
+
+			// Update unique key to include ls_name for named sets
+			// This must run after ls_name column is added
+			$updater->addExtensionUpdate( [
+				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::updateUniqueKeyForNamedSets'
+			] );
+
 			// Named layer sets migration: set default name for existing rows
+			// Must run after ls_name column is added
 			$updater->addExtensionUpdate( [
 				'applyPatch',
 				"$base/patches/patch-named-sets-migration.sql",
@@ -112,6 +126,62 @@ class LayersSchemaManager {
 						throw $e;
 					}
 				}
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Update the unique key to include ls_name for named layer sets.
+	 *
+	 * This allows multiple named sets per image, each with their own revision sequence.
+	 * Old key: ls_img_name_revision (ls_img_name, ls_img_sha1, ls_revision)
+	 * New key: ls_img_name_set_revision (ls_img_name, ls_img_sha1, ls_name, ls_revision)
+	 *
+	 * @param DatabaseUpdater $updater
+	 * @return bool
+	 */
+	public static function updateUniqueKeyForNamedSets( DatabaseUpdater $updater ): bool {
+		$dbw = $updater->getDB();
+		$tableName = $dbw->tableName( 'layer_sets' );
+
+		// Check if the new key already exists
+		$indexInfo = $dbw->indexInfo( 'layer_sets', 'ls_img_name_set_revision', __METHOD__ );
+		if ( $indexInfo ) {
+			$updater->output( "   ...unique key ls_img_name_set_revision already exists.\n" );
+			return true;
+		}
+
+		// Check if the old key exists (it should, from initial schema)
+		$oldIndexInfo = $dbw->indexInfo( 'layer_sets', 'ls_img_name_revision', __METHOD__ );
+
+		$updater->output( "Updating unique key for named layer sets...\n" );
+
+		try {
+			if ( $oldIndexInfo ) {
+				// Drop the old unique key
+				$dbw->query(
+					"ALTER TABLE {$tableName} DROP INDEX ls_img_name_revision",
+					__METHOD__
+				);
+				$updater->output( "   Dropped old unique key ls_img_name_revision.\n" );
+			}
+
+			// Create the new unique key that includes ls_name
+			$dbw->query(
+				"ALTER TABLE {$tableName} ADD UNIQUE KEY ls_img_name_set_revision (ls_img_name, ls_img_sha1, ls_name, ls_revision)",
+				__METHOD__
+			);
+			$updater->output( "   Created new unique key ls_img_name_set_revision.\n" );
+		} catch ( \Wikimedia\Rdbms\DBQueryError $e ) {
+			// Handle duplicate key name error (already exists)
+			$message = $e->getMessage();
+			if ( strpos( $message, 'Duplicate key name' ) !== false ) {
+				$updater->output( "   ...unique key already exists (duplicate key name).\n" );
+			} else {
+				$updater->output( "   Warning: Failed to update unique key: {$message}\n" );
+				// Don't throw - this is not fatal, just log it
 			}
 		}
 
