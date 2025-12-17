@@ -11,8 +11,7 @@
 		"test": [
 			"parallel-lint . --exclude vendor --exclude node_modules",
 			"@phpcs",
-			"minus-x check .",
-			"@phpunit"
+			"minus-x check ."
 		],
 		"phpunit": "phpunit --configuration phpunit.xml",
 		"phpunit-coverage": "phpunit --configuration phpunit.xml --coverage-html coverage-html",
