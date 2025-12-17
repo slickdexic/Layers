@@ -9,13 +9,20 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 This is the first production-ready release of the Layers extension.
 
 ### Highlights
-- **91.1% test coverage** with 4,714 passing tests
+- **90.9% test coverage** with 4,754 passing tests
 - **66 ES6 classes** with zero legacy prototype patterns
 - **12 drawing tools**: Select, Zoom, Text, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Blur
 - **Named layer sets**: Multiple annotation sets per image with version history
 - **Image layer import**: Add external images as annotation layers
 - **Full accessibility**: Skip links, ARIA landmarks, keyboard navigation
 - **Security hardened**: CSRF protection, rate limiting, strict validation
+
+### Code Quality Improvements (December 17, 2025)
+- **Extracted BackgroundLayerController.js** (380 lines) from LayerPanel.js
+  - LayerPanel.js now delegates to 7 controllers for better separation of concerns
+  - Added 40 unit tests for the new controller
+- **God classes re-assessed**: CanvasManager.js and LayerPanel.js now recognized as facade/coordinator classes with extensive delegation patterns
+- **Test suite expanded**: 4,714 → 4,754 tests (40 new BackgroundLayerController tests)
 
 ### CI/CD Improvements
 - Fixed composer test script for CI environments

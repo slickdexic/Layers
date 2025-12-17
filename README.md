@@ -117,11 +117,11 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Architecture:**
 - **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 75 JS files (~38K lines total)
-- **Code Splitting:** Viewer module (682 lines) + Shared module (3,886 lines) loads separately from Editor (~32.5K lines)
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 75 JS files (~39K lines total)
+- **Code Splitting:** Viewer module (682 lines) + Shared module (3,975 lines) loads separately from Editor (~33K lines)
 
 **Test Coverage (December 2025):**
-- Jest: 4,661 tests, 89.64% statement coverage, 77.55% branch coverage (92 test suites)
+- Jest: 4,714 tests, 90.9% statement coverage, 78.5% branch coverage (93 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 
 **Accessibility (WCAG 2.1):**

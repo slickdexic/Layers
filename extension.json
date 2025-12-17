@@ -10,7 +10,7 @@
 	"type": "other",
 	"version": "1.0.0",
 	"requires": {
-		"MediaWiki": ">= 1.44.0"
+		"MediaWiki": ">= 1.39.0"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
@@ -250,6 +250,7 @@
 				"ui/ConfirmDialog.js",
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",
+				"ui/BackgroundLayerController.js",
 				"ui/LayerDragDrop.js",
 				"panel/LayerItemEvents.js",
 				"TextUtils.js",

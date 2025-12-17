@@ -574,23 +574,59 @@ describe( 'ResizeCalculator', () => {
 	describe( 'calculateEllipseResize', () => {
 		const ellipse = { type: 'ellipse', x: 50, y: 50, radiusX: 50, radiusY: 30 };
 
-		it( 'should return empty object for corner handles (no update logic for corners)', () => {
+		it( 'should resize both axes for SE corner handle', () => {
 			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'se', 10, 10 );
-			// Corner handles don't match 'e', 'w', 'n', or 's' so updates remain empty
 			expect( result ).not.toBeNull();
-			expect( Object.keys( result ).length ).toBe( 0 );
+			expect( result.radiusX ).toBe( 60 );
+			expect( result.radiusY ).toBe( 40 );
+		} );
+
+		it( 'should resize both axes for NW corner handle', () => {
+			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'nw', -10, -10 );
+			expect( result ).not.toBeNull();
+			expect( result.radiusX ).toBe( 60 );
+			expect( result.radiusY ).toBe( 40 );
+		} );
+
+		it( 'should resize both axes for NE corner handle', () => {
+			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'ne', 10, -10 );
+			expect( result ).not.toBeNull();
+			expect( result.radiusX ).toBe( 60 );
+			expect( result.radiusY ).toBe( 40 );
+		} );
+
+		it( 'should resize both axes for SW corner handle', () => {
+			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'sw', -10, 10 );
+			expect( result ).not.toBeNull();
+			expect( result.radiusX ).toBe( 60 );
+			expect( result.radiusY ).toBe( 40 );
 		} );
 
 		it( 'should resize only radiusX for E handle', () => {
 			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'e', 10, 0 );
 			expect( result ).not.toBeNull();
 			expect( result.radiusX ).toBeGreaterThan( 50 );
+			expect( result.radiusY ).toBeUndefined();
 		} );
 
 		it( 'should resize only radiusY for N handle', () => {
 			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'n', 0, -10 );
 			expect( result ).not.toBeNull();
 			expect( result.radiusY ).toBeGreaterThan( 30 );
+			expect( result.radiusX ).toBeUndefined();
+		} );
+
+		it( 'should enforce minimum radius of 5 for corner handles', () => {
+			const smallEllipse = { type: 'ellipse', x: 50, y: 50, radiusX: 10, radiusY: 8 };
+			const result = ResizeCalculator.calculateEllipseResize( smallEllipse, 'nw', 20, 20 );
+			expect( result.radiusX ).toBe( 5 );
+			expect( result.radiusY ).toBe( 5 );
+		} );
+
+		it( 'should handle shrinking via corner handles', () => {
+			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'se', -10, -10 );
+			expect( result.radiusX ).toBe( 40 );
+			expect( result.radiusY ).toBe( 20 );
 		} );
 	} );
 

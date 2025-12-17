@@ -306,4 +306,9 @@ class ViewerManager {
 		window.Layers.Viewer.Manager = ViewerManager;
 	}
 
+	// CommonJS export for Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = ViewerManager;
+	}
+
 }() );

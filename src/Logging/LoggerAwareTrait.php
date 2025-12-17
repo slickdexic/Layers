@@ -35,7 +35,7 @@ trait LoggerAwareTrait {
 	 *
 	 * @var LoggerInterface|null
 	 */
-	private ?LoggerInterface $logger = null;
+	private $logger = null;
 
 	/**
 	 * Get the Layers logger instance

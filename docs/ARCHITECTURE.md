@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 16, 2025  
-**Version:** 0.8.7
+**Last Updated:** December 17, 2025  
+**Version:** 1.0.0
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -24,12 +24,12 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 |--------|-------|
 | Total JS files | 75 |
 | Viewer module | 682 lines |
-| Shared module | 3,886 lines |
-| Editor module | ~32,465 lines |
+| Shared module | 3,975 lines |
+| Editor module | ~33,035 lines |
 | ES6 classes | 66 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | 89% statements, 77% branches |
-| Jest tests | 4,624 |
+| Test coverage | 91% statements, 78% branches |
+| Jest tests | 4,714 |
 | PHPUnit test files | 17 |
 
 ---
@@ -407,11 +407,11 @@ tests/jest/
 ```
 
 **Key patterns:**
-- Each controller has its own test file (87 test files total)
+- Each controller has its own test file (92 test files total)
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- 4,300 tests, 89% coverage
+- 4,714 tests, 91% coverage
 
 ### E2E Tests (Playwright)
 
@@ -489,7 +489,7 @@ $wgLayersDebug = true;               // Verbose logging
 $wgLayersMaxBytes = 2097152;         // 2MB max JSON
 $wgLayersMaxLayerCount = 100;        // Max layers per set
 $wgLayersMaxNamedSets = 15;          // Max named sets per image
-$wgLayersMaxRevisionsPerSet = 25;    // Max revisions kept
+$wgLayersMaxRevisionsPerSet = 50;    // Max revisions kept
 
 // Rate limits
 $wgRateLimits['editlayers-save']['user'] = [30, 3600];

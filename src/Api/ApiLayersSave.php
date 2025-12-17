@@ -8,8 +8,8 @@ use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
+use Title;
 
 /**
  * API module for saving layer data to a MediaWiki file.
@@ -58,8 +58,10 @@ use Psr\Log\LoggerInterface;
 class ApiLayersSave extends ApiBase {
 	use LayerSaveGuardsTrait;
 
-	/** @var LoggerInterface|null */
-	private ?LoggerInterface $logger = null;
+	/**
+	 * @var LoggerInterface|null
+	 */
+	private $logger = null;
 
 	/**
 	 * Main execution function for the layerssave API endpoint.

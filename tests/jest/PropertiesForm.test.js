@@ -594,4 +594,118 @@ describe( 'PropertiesForm', () => {
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { rotation: 90 } );
 		} );
 	} );
+
+	describe( 'shadow properties with zero values', () => {
+		test( 'should display shadowBlur of 0 correctly (not default to 8)', () => {
+			const layer = {
+				id: 'test-layer',
+				type: 'ellipse',
+				x: 100,
+				y: 100,
+				radiusX: 50,
+				radiusY: 30,
+				shadow: true,
+				shadowBlur: 0,
+				shadowOffsetX: 0,
+				shadowOffsetY: 0,
+				shadowSpread: 0
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find the shadow blur input (Shadow Size)
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			let shadowBlurInput = null;
+			inputs.forEach( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				if ( label && label.textContent.includes( 'Shadow Size' ) ) {
+					shadowBlurInput = input;
+				}
+			} );
+
+			expect( shadowBlurInput ).not.toBeNull();
+			expect( shadowBlurInput.value ).toBe( '0' );
+		} );
+
+		test( 'should display shadowOffsetX of 0 correctly (not default to 2)', () => {
+			const layer = {
+				id: 'test-layer',
+				type: 'ellipse',
+				x: 100,
+				y: 100,
+				radiusX: 50,
+				radiusY: 30,
+				shadow: true,
+				shadowBlur: 0,
+				shadowOffsetX: 0,
+				shadowOffsetY: 0
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			let shadowOffsetXInput = null;
+			inputs.forEach( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				if ( label && label.textContent.includes( 'Shadow Offset X' ) ) {
+					shadowOffsetXInput = input;
+				}
+			} );
+
+			expect( shadowOffsetXInput ).not.toBeNull();
+			expect( shadowOffsetXInput.value ).toBe( '0' );
+		} );
+
+		test( 'should display shadowOffsetY of 0 correctly (not default to 2)', () => {
+			const layer = {
+				id: 'test-layer',
+				type: 'ellipse',
+				x: 100,
+				y: 100,
+				radiusX: 50,
+				radiusY: 30,
+				shadow: true,
+				shadowBlur: 0,
+				shadowOffsetX: 0,
+				shadowOffsetY: 0
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			let shadowOffsetYInput = null;
+			inputs.forEach( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				if ( label && label.textContent.includes( 'Shadow Offset Y' ) ) {
+					shadowOffsetYInput = input;
+				}
+			} );
+
+			expect( shadowOffsetYInput ).not.toBeNull();
+			expect( shadowOffsetYInput.value ).toBe( '0' );
+		} );
+
+		test( 'should display shadowSpread of 0 correctly', () => {
+			const layer = {
+				id: 'test-layer',
+				type: 'ellipse',
+				x: 100,
+				y: 100,
+				radiusX: 50,
+				radiusY: 30,
+				shadow: true,
+				shadowSpread: 0
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			let shadowSpreadInput = null;
+			inputs.forEach( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				if ( label && label.textContent.includes( 'Shadow Spread' ) ) {
+					shadowSpreadInput = input;
+				}
+			} );
+
+			expect( shadowSpreadInput ).not.toBeNull();
+			expect( shadowSpreadInput.value ).toBe( '0' );
+		} );
+	} );
 } );

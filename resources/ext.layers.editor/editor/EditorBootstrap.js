@@ -432,6 +432,17 @@
 		};
 	}
 
+	// CommonJS export for testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = {
+			validateDependencies,
+			areEditorDependenciesReady,
+			sanitizeGlobalErrorMessage,
+			cleanupGlobalEditorInstance,
+			init
+		};
+	}
+
 	// Auto-initialize
 	init();
 

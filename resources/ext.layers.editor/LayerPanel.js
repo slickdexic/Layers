@@ -52,6 +52,9 @@
 			// Initialize LayerItemFactory for layer item creation
 			this.initLayerItemFactory();
 
+			// Initialize BackgroundLayerController (will be fully configured after createInterface)
+			this.backgroundLayerController = null;
+
 			this.createInterface();
 			this.setupEventHandlers();
 			this.subscribeToState();
@@ -269,6 +272,11 @@
 					}
 				} );
 				this.stateSubscriptions = [];
+			}
+			// Clean up BackgroundLayerController
+			if ( this.backgroundLayerController && typeof this.backgroundLayerController.destroy === 'function' ) {
+				this.backgroundLayerController.destroy();
+				this.backgroundLayerController = null;
 			}
 			// Clean up LayerItemEvents controller
 			if ( this.itemEventsController && typeof this.itemEventsController.destroy === 'function' ) {
@@ -515,6 +523,17 @@
 		 * Set up event handlers for the panel
 		 */
 		setupEventHandlers() {
+			// Initialize BackgroundLayerController for background layer UI
+			const BackgroundLayerController = getClass( 'UI.BackgroundLayerController', 'BackgroundLayerController' );
+			if ( BackgroundLayerController && this.layerList ) {
+				this.backgroundLayerController = new BackgroundLayerController( {
+					editor: this.editor,
+					layerList: this.layerList,
+					msg: this.msg.bind( this ),
+					addTargetListener: this.addTargetListener.bind( this )
+				} );
+			}
+
 			// Use extracted LayerItemEvents if available
 			const LayerItemEvents = getClass( 'UI.LayerItemEvents', 'LayerItemEvents' );
 			if ( LayerItemEvents && this.layerList ) {
@@ -690,6 +709,13 @@
 		 * provides controls for background visibility and opacity.
 		 */
 		renderBackgroundLayerItem() {
+			// Delegate to BackgroundLayerController if available
+			if ( this.backgroundLayerController ) {
+				this.backgroundLayerController.render();
+				return;
+			}
+
+			// Fallback: inline implementation (kept for backwards compatibility)
 			const listContainer = this.layerList;
 			let bgItem = listContainer.querySelector( '.background-layer-item' );
 
@@ -864,6 +890,11 @@
 		 * @return {boolean} True if background is visible
 		 */
 		getBackgroundVisible() {
+			// Delegate to controller if available
+			if ( this.backgroundLayerController ) {
+				return this.backgroundLayerController.getBackgroundVisible();
+			}
+			// Fallback
 			if ( this.editor.stateManager ) {
 				const visible = this.editor.stateManager.get( 'backgroundVisible' );
 				return visible !== false;
@@ -877,6 +908,11 @@
 		 * @return {number} Opacity value between 0 and 1
 		 */
 		getBackgroundOpacity() {
+			// Delegate to controller if available
+			if ( this.backgroundLayerController ) {
+				return this.backgroundLayerController.getBackgroundOpacity();
+			}
+			// Fallback
 			if ( this.editor.stateManager ) {
 				const opacity = this.editor.stateManager.get( 'backgroundOpacity' );
 				return typeof opacity === 'number' ? opacity : 1.0;
@@ -888,6 +924,12 @@
 		 * Toggle background visibility
 		 */
 		toggleBackgroundVisibility() {
+			// Delegate to controller if available
+			if ( this.backgroundLayerController ) {
+				this.backgroundLayerController.toggleBackgroundVisibility();
+				return;
+			}
+			// Fallback
 			if ( this.editor.stateManager ) {
 				const current = this.getBackgroundVisible();
 				this.editor.stateManager.set( 'backgroundVisible', !current );
@@ -904,6 +946,12 @@
 		 * @param {number} opacity Opacity value between 0 and 1
 		 */
 		setBackgroundOpacity( opacity ) {
+			// Delegate to controller if available
+			if ( this.backgroundLayerController ) {
+				this.backgroundLayerController.setBackgroundOpacity( opacity );
+				return;
+			}
+			// Fallback
 			if ( this.editor.stateManager ) {
 				this.editor.stateManager.set( 'backgroundOpacity', Math.max( 0, Math.min( 1, opacity ) ) );
 				if ( this.editor.canvasManager ) {

@@ -14,7 +14,7 @@ This document describes the Named Layer Sets feature, which restructures the lay
 
 - **Named Layer Set**: A logical grouping of layer annotations identified by a human-readable name (e.g., "default", "anatomy-labels", "tourist-highlights")
 - **Revision**: A specific saved state of a named layer set, identified by timestamp
-- **Version History**: Up to 25 most recent revisions stored per named set
+- **Version History**: Up to 50 most recent revisions stored per named set
 - **Layer Set Slot**: Each image can have up to 10-20 named layer sets
 
 ### User Value
@@ -74,7 +74,7 @@ Image (File:Example.jpg)
 ├── Named Set: "default" (auto-created for existing/new users)
 │   ├── Revision 25 (latest) ← loaded by default
 │   ├── Revision 24
-│   ├── ... (up to 25 revisions kept)
+│   ├── ... (up to 50 revisions kept)
 │   └── Revision 1 (oldest kept)
 ├── Named Set: "anatomy-labels"
 │   ├── Revision 3 (latest)
@@ -89,7 +89,7 @@ Image (File:Example.jpg)
 | Setting | Value | Description |
 |---------|-------|-------------|
 | `$wgLayersMaxNamedSets` | 15 | Maximum named sets per image |
-| `$wgLayersMaxRevisionsPerSet` | 25 | Maximum revisions kept per named set |
+| `$wgLayersMaxRevisionsPerSet` | 50 | Maximum revisions kept per named set |
 | `$wgLayersDefaultSetName` | "default" | Name for auto-created sets |
 | `$wgLayersSetNameMaxLength` | 64 | Maximum characters for set name |
 | `$wgLayersSetNamePattern` | `/^[\p{L}\p{N}_-]+$/u` | Allowed characters (unicode alphanumeric, underscore, dash) |
@@ -391,7 +391,7 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 ```php
 // Named Layer Sets Configuration
 $wgLayersMaxNamedSets = 15;           // Max named sets per image
-$wgLayersMaxRevisionsPerSet = 25;     // Max revisions kept per set
+$wgLayersMaxRevisionsPerSet = 50;     // Max revisions kept per set
 $wgLayersDefaultSetName = 'default';  // Auto-created set name
 
 // Existing settings remain unchanged

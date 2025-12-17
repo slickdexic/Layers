@@ -4,8 +4,8 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
+use Title;
 
 /**
  * API module for renaming layer sets.
@@ -30,8 +30,10 @@ use Psr\Log\LoggerInterface;
  */
 class ApiLayersRename extends ApiBase {
 
-	/** @var LoggerInterface|null */
-	private ?LoggerInterface $logger = null;
+	/**
+	 * @var LoggerInterface|null
+	 */
+	private $logger = null;
 
 	/**
 	 * Execute the rename operation.

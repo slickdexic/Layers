@@ -470,6 +470,7 @@
 			const origRX = originalLayer.radiusX || 1;
 			const origRY = originalLayer.radiusY || 1;
 
+			// Edge handles: adjust only the corresponding axis
 			if ( handleType === 'e' || handleType === 'w' ) {
 				updates.radiusX = Math.max(
 					5,
@@ -482,6 +483,19 @@
 					origRY + ( handleType === 's' ? deltaY : -deltaY )
 				);
 			}
+
+			// Corner handles: adjust both axes simultaneously
+			if ( handleType === 'ne' || handleType === 'nw' ||
+				handleType === 'se' || handleType === 'sw' ) {
+				// Determine direction for X axis (e = right side, w = left side)
+				const xSign = ( handleType === 'ne' || handleType === 'se' ) ? 1 : -1;
+				// Determine direction for Y axis (s = bottom, n = top)
+				const ySign = ( handleType === 'se' || handleType === 'sw' ) ? 1 : -1;
+
+				updates.radiusX = Math.max( 5, origRX + ( xSign * deltaX ) );
+				updates.radiusY = Math.max( 5, origRY + ( ySign * deltaY ) );
+			}
+
 			return updates;
 		}
 

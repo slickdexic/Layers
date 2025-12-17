@@ -379,4 +379,9 @@ class ApiFallback {
 		window.Layers.Viewer.ApiFallback = ApiFallback;
 	}
 
+	// CommonJS export for Jest testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = ApiFallback;
+	}
+
 }() );
