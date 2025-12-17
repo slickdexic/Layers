@@ -538,6 +538,29 @@ describe( 'ArrowRenderer', () => {
 
 			expect( mockShadowRenderer.getShadowSpread ).toHaveBeenCalled();
 		} );
+
+		it( 'should apply shadow for stroke-only arrow', () => {
+			const layer = {
+				x1: 0,
+				y1: 0,
+				x2: 100,
+				y2: 0,
+				fill: 'transparent', // No fill
+				stroke: '#000000',
+				strokeWidth: 2,
+				arrowSize: 15,
+				shadow: true,
+				shadowColor: 'rgba(0,0,0,0.5)',
+				shadowBlur: 10
+			};
+
+			arrowRenderer.draw( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			// Shadow should be applied and stroke should be drawn
+			expect( ctx.stroke ).toHaveBeenCalled();
+			// shadowBlur is set when applying shadow
+			expect( ctx.shadowBlur ).toBeDefined();
+		} );
 	} );
 
 	describe( 'destroy', () => {
