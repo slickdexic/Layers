@@ -2,6 +2,28 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.0.0] - 2025-12-17
+
+### 🎉 First Stable Release
+
+This is the first production-ready release of the Layers extension.
+
+### Highlights
+- **91.1% test coverage** with 4,714 passing tests
+- **66 ES6 classes** with zero legacy prototype patterns
+- **12 drawing tools**: Select, Zoom, Text, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Blur
+- **Named layer sets**: Multiple annotation sets per image with version history
+- **Image layer import**: Add external images as annotation layers
+- **Full accessibility**: Skip links, ARIA landmarks, keyboard navigation
+- **Security hardened**: CSRF protection, rate limiting, strict validation
+
+### CI/CD Improvements
+- Fixed composer test script for CI environments
+- Improved Playwright E2E workflow reliability
+- Added HTML reporter for better test diagnostics
+
+---
+
 ## [0.9.0] - 2025-12-17
 
 ### Accessibility Improvements

@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Beta. Version 0.9.0. Requires MediaWiki 1.44+.
+> **Status:** Stable. Version 1.0.0. Requires MediaWiki 1.44+.
 
 ---
 
