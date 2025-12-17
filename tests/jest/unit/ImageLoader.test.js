@@ -289,6 +289,78 @@ describe( 'ImageLoader', () => {
 		} );
 	} );
 
+	describe( 'loadTestImage', () => {
+		it( 'should call onLoad with placeholder info when test image loads', () => {
+			const onLoad = jest.fn();
+			const loader = new ImageLoader( { onLoad } );
+
+			loader.loadTestImage();
+
+			// Simulate successful load
+			loader.image.onload();
+
+			expect( onLoad ).toHaveBeenCalled();
+			const [ , info ] = onLoad.mock.calls[ 0 ];
+			expect( info.source ).toBe( 'test' );
+			expect( info.isPlaceholder ).toBe( true );
+			expect( loader.isLoading ).toBe( false );
+		} );
+
+		it( 'should call onError when test image fails to load', () => {
+			const onError = jest.fn();
+			const loader = new ImageLoader( { onError } );
+
+			loader.loadTestImage();
+
+			// Simulate failed load
+			loader.image.onerror();
+
+			expect( onError ).toHaveBeenCalled();
+			expect( onError ).toHaveBeenCalledWith( expect.any( Error ) );
+			expect( loader.isLoading ).toBe( false );
+		} );
+
+		it( 'should call onError on timeout', () => {
+			jest.useFakeTimers();
+			const onError = jest.fn();
+			const loader = new ImageLoader( { onError } );
+
+			// Manually set isLoading like load() does
+			loader.isLoading = true;
+			loader.loadTestImage();
+
+			// Fast-forward past the timeout
+			jest.advanceTimersByTime( 10001 );
+
+			expect( onError ).toHaveBeenCalled();
+			expect( onError ).toHaveBeenCalledWith( expect.any( Error ) );
+			expect( loader.isLoading ).toBe( false );
+
+			jest.useRealTimers();
+		} );
+
+		it( 'should not call onError on timeout if already loaded', () => {
+			jest.useFakeTimers();
+			const onError = jest.fn();
+			const loader = new ImageLoader( { onError } );
+
+			loader.isLoading = true;
+			loader.loadTestImage();
+
+			// Simulate successful load before timeout
+			loader.image.onload();
+			expect( loader.isLoading ).toBe( false );
+
+			// Fast-forward past the timeout
+			jest.advanceTimersByTime( 10001 );
+
+			// onError should NOT have been called (only onload)
+			expect( onError ).not.toHaveBeenCalled();
+
+			jest.useRealTimers();
+		} );
+	} );
+
 	describe( 'getImage', () => {
 		it( 'should return null before loading', () => {
 			const loader = new ImageLoader( {} );
@@ -393,6 +465,24 @@ describe( 'ImageLoader', () => {
 
 			// Protocol-relative URLs to different domains are cross-origin
 			expect( loader.isSameOrigin( '//other-domain.com/images/test.png' ) ).toBe( false );
+		} );
+
+		it( 'should handle invalid URLs via exception path', () => {
+			const loader = new ImageLoader( {} );
+			// Mock URL to throw an exception
+			const origURL = global.URL;
+			global.URL = function () {
+				throw new Error( 'Invalid URL' );
+			};
+
+			// Relative-looking URLs should return true when exception is caught
+			expect( loader.isSameOrigin( 'relative/path.png' ) ).toBe( true );
+			// Protocol URLs should return false even in exception path
+			expect( loader.isSameOrigin( 'http://example.com/path.png' ) ).toBe( false );
+			expect( loader.isSameOrigin( 'https://example.com/path.png' ) ).toBe( false );
+			expect( loader.isSameOrigin( '//example.com/path.png' ) ).toBe( false );
+
+			global.URL = origURL;
 		} );
 	} );
 
