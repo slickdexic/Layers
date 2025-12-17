@@ -732,10 +732,10 @@
 			editor.updateLayer( layer.id, updates );
 		} } );
 		addInput( { label: t( 'layers-effect-shadow-color', 'Shadow Color' ), type: 'color', value: layer.shadowColor || '#000000', onChange: function ( v ) { editor.updateLayer( layer.id, { shadowColor: v } ); } } );
-		addInput( { label: t( 'layers-effect-shadow-blur', 'Shadow Size' ), type: 'number', value: layer.shadowBlur || 8, min: 0, max: 64, step: 1, onChange: function ( v ) { const s = Math.max( 0, Math.min( 64, parseInt( v, 10 ) || 0 ) ); editor.updateLayer( layer.id, { shadowBlur: s } ); } } );
-		addInput( { label: t( 'layers-effect-shadow-spread', 'Shadow Spread' ), type: 'number', value: layer.shadowSpread || 0, min: 0, max: 64, step: 1, onChange: function ( v ) { const sp = Math.max( 0, parseInt( v, 10 ) || 0 ); editor.updateLayer( layer.id, { shadowSpread: sp } ); } } );
-		addInput( { label: t( 'layers-effect-shadow-offset-x', 'Shadow Offset X' ), type: 'number', value: layer.shadowOffsetX || 2, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { shadowOffsetX: parseInt( v, 10 ) } ); } } );
-		addInput( { label: t( 'layers-effect-shadow-offset-y', 'Shadow Offset Y' ), type: 'number', value: layer.shadowOffsetY || 2, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { shadowOffsetY: parseInt( v, 10 ) } ); } } );
+		addInput( { label: t( 'layers-effect-shadow-blur', 'Shadow Size' ), type: 'number', value: typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8, min: 0, max: 64, step: 1, onChange: function ( v ) { const s = Math.max( 0, Math.min( 64, parseInt( v, 10 ) || 0 ) ); editor.updateLayer( layer.id, { shadowBlur: s } ); } } );
+		addInput( { label: t( 'layers-effect-shadow-spread', 'Shadow Spread' ), type: 'number', value: typeof layer.shadowSpread === 'number' ? layer.shadowSpread : 0, min: 0, max: 64, step: 1, onChange: function ( v ) { const sp = Math.max( 0, parseInt( v, 10 ) || 0 ); editor.updateLayer( layer.id, { shadowSpread: sp } ); } } );
+		addInput( { label: t( 'layers-effect-shadow-offset-x', 'Shadow Offset X' ), type: 'number', value: typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { shadowOffsetX: parseInt( v, 10 ) } ); } } );
+		addInput( { label: t( 'layers-effect-shadow-offset-y', 'Shadow Offset Y' ), type: 'number', value: typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { shadowOffsetY: parseInt( v, 10 ) } ); } } );
 
 		return form;
 	};

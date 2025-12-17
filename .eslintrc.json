@@ -43,7 +43,9 @@
 			"files": [
 				"resources/ext.layers.editor/*.js",
 				"resources/ext.layers.editor/canvas/*.js",
-				"resources/ext.layers.editor/ui/*.js"
+				"resources/ext.layers.editor/editor/*.js",
+				"resources/ext.layers.editor/ui/*.js",
+				"resources/ext.layers/viewer/*.js"
 			],
 			"globals": {
 				"require": "readonly",

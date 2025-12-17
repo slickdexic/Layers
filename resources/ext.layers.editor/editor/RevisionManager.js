@@ -472,4 +472,9 @@
 		window.Layers.Core.RevisionManager = RevisionManager;
 	}
 
+	// CommonJS export for testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = RevisionManager;
+	}
+
 }() );

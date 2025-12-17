@@ -477,4 +477,9 @@ class UrlParser {
 		window.Layers.Viewer.UrlParser = UrlParser;
 	}
 
+	// CommonJS export for testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = UrlParser;
+	}
+
 }() );

@@ -44,7 +44,15 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
   - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
-  - UI: `Toolbar.js`, `LayerPanel.js`, plus editor CSS (editor-fixed.css theme)
+  - UI: `Toolbar.js`, `LayerPanel.js` (~1,720 lines - delegates to 7 controllers), plus editor CSS (editor-fixed.css theme)
+  - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js for separation of concerns:
+    - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
+    - `LayerItemFactory.js` (~299 lines) - layer list item DOM creation
+    - `LayerListRenderer.js` - layer list rendering
+    - `LayerDragDrop.js` - drag and drop reordering
+    - `PropertiesForm.js` - layer properties panel
+    - `ConfirmDialog.js` - confirmation dialogs
+    - `IconFactory.js` - SVG icon generation
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)

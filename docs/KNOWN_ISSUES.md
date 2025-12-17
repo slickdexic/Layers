@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** December 16, 2025  
-**Version:** 0.8.8
+**Last Updated:** December 17, 2025  
+**Version:** 1.0.0
 
 This document lists known functionality issues and their current status.
 
@@ -140,4 +140,4 @@ If you encounter issues:
 ---
 
 *Document created: December 8, 2025*  
-*Last updated: December 13, 2025*
+*Last updated: December 17, 2025*

@@ -840,6 +840,36 @@ describe( 'CanvasManager', () => {
 			canvasManager.updateCursor( { x: 100, y: 100 } );
 			expect( canvasManager.canvas.style.cursor ).toBe( 'pointer' );
 		} );
+
+		it( 'should adjust resize cursor for rotated layers', () => {
+			// Set up a rotated layer
+			const rotatedLayer = { id: 'layer1', type: 'rectangle', rotation: 45 };
+			mockEditor.layers = [ rotatedLayer ];
+			mockEditor.getLayerById = jest.fn( () => rotatedLayer );
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.currentTool = 'pointer';
+			canvasManager.hitTestController.hitTestSelectionHandles.mockReturnValue( { type: 'n' } );
+
+			// Mock getResizeCursor to use real rotation logic
+			canvasManager.transformController.getResizeCursor = jest.fn( ( handleType, rotation ) => {
+				const handleAngles = { n: 0, ne: 45, e: 90, se: 135, s: 180, sw: 225, w: 270, nw: 315 };
+				const baseAngle = handleAngles[ handleType ];
+				if ( baseAngle === undefined ) {
+					return 'default';
+				}
+				const worldAngle = ( baseAngle + ( rotation || 0 ) ) % 360;
+				const normalizedAngle = ( ( worldAngle % 360 ) + 360 ) % 360;
+				const sector = Math.round( normalizedAngle / 45 ) % 8;
+				const cursorMap = [ 'ns-resize', 'nesw-resize', 'ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize', 'ew-resize', 'nwse-resize' ];
+				return cursorMap[ sector ];
+			} );
+
+			canvasManager.updateCursor( { x: 100, y: 100 } );
+
+			// At 45° rotation, N handle should show nesw-resize (diagonal)
+			expect( canvasManager.transformController.getResizeCursor ).toHaveBeenCalledWith( 'n', 45 );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'nesw-resize' );
+		} );
 	} );
 
 	describe( 'zoom click handling', () => {
