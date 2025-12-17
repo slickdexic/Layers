@@ -80,13 +80,18 @@ class EditLayersAction extends \Action {
 
 			// Init config via JS config vars; module will bootstrap itself
 			$fileUrl = $this->getPublicImageUrl( $file );
+			$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
 			$out->addJsConfigVars( [
 			'wgLayersEditorInit' => [
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
 			],
 			'wgLayersCurrentImageUrl' => $fileUrl,
-			'wgLayersImageBaseUrl' => $this->getImageBaseUrl()
+			'wgLayersImageBaseUrl' => $this->getImageBaseUrl(),
+			'wgLayersMaxImageBytes' => $config->get( 'LayersMaxImageBytes' ),
+			'wgLayersMaxNamedSets' => $config->get( 'LayersMaxNamedSets' ),
+			'wgLayersMaxRevisionsPerSet' => $config->get( 'LayersMaxRevisionsPerSet' ),
+			'wgLayersDefaultSetName' => $config->get( 'LayersDefaultSetName' ),
 			] );
 
 			// Add basic HTML content to ensure page has content
