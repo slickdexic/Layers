@@ -70,6 +70,9 @@
 		// Add body class to hide skin chrome while editor is open
 		document.body.classList.add( 'layers-editor-open' );
 
+		// Add skip links for accessibility
+		this.createSkipLinks();
+
 		this.createHeader();
 		this.createToolbar();
 		this.createMainContent();
@@ -87,6 +90,40 @@
 		if ( mw.log && mw.config.get( 'wgLayersDebug' ) ) {
 			mw.log( '[UIManager] createInterface() completed' );
 		}
+	}
+
+	/**
+	 * Create skip links for keyboard navigation accessibility
+	 * @see https://www.w3.org/WAI/tutorials/page-structure/bypass/
+	 */
+	createSkipLinks() {
+		const skipLinksContainer = document.createElement( 'div' );
+		skipLinksContainer.className = 'layers-skip-links';
+
+		const skipLinks = [
+			{ target: 'layers-toolbar-section', label: this.getMessage( 'layers-skip-to-toolbar', 'Skip to toolbar' ) },
+			{ target: 'layers-canvas-section', label: this.getMessage( 'layers-skip-to-canvas', 'Skip to canvas' ) },
+			{ target: 'layers-panel-section', label: this.getMessage( 'layers-skip-to-layers', 'Skip to layers panel' ) }
+		];
+
+		skipLinks.forEach( link => {
+			const a = document.createElement( 'a' );
+			a.href = '#' + link.target;
+			a.className = 'layers-skip-link';
+			a.textContent = link.label;
+			// Handle click to focus the target element
+			this.addListener( a, 'click', ( e ) => {
+				e.preventDefault();
+				const target = document.getElementById( link.target );
+				if ( target ) {
+					target.focus();
+					target.scrollIntoView( { behavior: 'smooth', block: 'start' } );
+				}
+			} );
+			skipLinksContainer.appendChild( a );
+		} );
+
+		this.container.appendChild( skipLinksContainer );
 	}
 
 	createHeader() {
@@ -247,7 +284,11 @@
 
 	createToolbar() {
 		this.toolbarContainer = document.createElement( 'div' );
+		this.toolbarContainer.id = 'layers-toolbar-section';
 		this.toolbarContainer.className = 'layers-toolbar';
+		this.toolbarContainer.setAttribute( 'role', 'navigation' );
+		this.toolbarContainer.setAttribute( 'aria-label', this.getMessage( 'layers-toolbar-region', 'Editor tools' ) );
+		this.toolbarContainer.setAttribute( 'tabindex', '-1' );
 		this.container.appendChild( this.toolbarContainer );
 	}
 
@@ -255,6 +296,8 @@
 
 		this.content = document.createElement( 'div' );
 		this.content.className = 'layers-content';
+		this.content.setAttribute( 'role', 'main' );
+		this.content.setAttribute( 'aria-label', this.getMessage( 'layers-main-region', 'Editor workspace' ) );
 		this.container.appendChild( this.content );
 
 		const mainRow = document.createElement( 'div' );
@@ -262,17 +305,27 @@
 		this.content.appendChild( mainRow );
 
 		this.layerPanelContainer = document.createElement( 'div' );
+		this.layerPanelContainer.id = 'layers-panel-section';
 		this.layerPanelContainer.className = 'layers-panel';
+		this.layerPanelContainer.setAttribute( 'role', 'complementary' );
+		this.layerPanelContainer.setAttribute( 'aria-label', this.getMessage( 'layers-panel-region', 'Layers panel' ) );
+		this.layerPanelContainer.setAttribute( 'tabindex', '-1' );
 		mainRow.appendChild( this.layerPanelContainer );
 
 		this.canvasContainer = document.createElement( 'div' );
+		this.canvasContainer.id = 'layers-canvas-section';
 		this.canvasContainer.className = 'layers-canvas-container';
+		this.canvasContainer.setAttribute( 'role', 'region' );
+		this.canvasContainer.setAttribute( 'aria-label', this.getMessage( 'layers-canvas-region', 'Drawing canvas' ) );
+		this.canvasContainer.setAttribute( 'tabindex', '-1' );
 		mainRow.appendChild( this.canvasContainer );
 	}
 
 	createStatusBar() {
 		this.statusBar = document.createElement( 'div' );
 		this.statusBar.className = 'layers-statusbar';
+		this.statusBar.setAttribute( 'role', 'contentinfo' );
+		this.statusBar.setAttribute( 'aria-label', this.getMessage( 'layers-status-region', 'Status bar' ) );
 
 		const statusItems = [
 			{ label: this.getMessage( 'layers-status-tool' ), key: 'tool', value: 'pointer' },

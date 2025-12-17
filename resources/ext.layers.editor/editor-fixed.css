@@ -1760,3 +1760,41 @@ body.layers-resize-cursor {
 .toolbar-button.help-button:hover {
 	background: #e9ecef;
 }
+
+/* Skip links for keyboard accessibility */
+.layers-skip-links {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 10001;
+	display: flex;
+	gap: 4px;
+	padding: 4px;
+}
+
+.layers-skip-link {
+	position: absolute;
+	left: -9999px;
+	padding: 8px 16px;
+	background: #2a4b8d;
+	color: #fff;
+	font-weight: 600;
+	font-size: 0.9em;
+	text-decoration: none;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.3 );
+	transition: left 0.1s;
+}
+
+.layers-skip-link:focus {
+	position: static;
+	left: auto;
+	outline: 3px solid #72a7f9;
+	outline-offset: 2px;
+}
+
+.layers-skip-link:hover,
+.layers-skip-link:focus {
+	color: #fff;
+	text-decoration: underline;
+}

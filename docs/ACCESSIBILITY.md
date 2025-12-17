@@ -130,17 +130,23 @@ The extension uses MediaWiki's internationalization system (`mw.message()`) for 
    - Layer content (shapes, text, annotations) cannot be read by assistive technology
    - **Recommendation**: Add a screen-reader-only layer list describing visible layers
 
-2. **No Skip Links**
-   - Users cannot quickly skip to main content areas
-   - **Recommendation**: Add skip links to toolbar, canvas, and layer panel
+2. ~~**No Skip Links**~~ ✅ RESOLVED (December 2025)
+   - ~~Users cannot quickly skip to main content areas~~
+   - **Resolution**: Added skip links to toolbar, canvas, and layers panel
 
 3. **Color Contrast Not Verified**
    - CSS colors have not been audited for WCAG 2.1 AA contrast ratios
    - **Recommendation**: Audit and fix color contrast issues
 
-4. **Missing Landmarks**
-   - No ARIA landmark roles (`main`, `navigation`, `region`)
-   - **Recommendation**: Add appropriate landmark roles to major sections
+4. ~~**Missing Landmarks**~~ ✅ RESOLVED (December 2025)
+   - ~~No ARIA landmark roles (`main`, `navigation`, `region`)~~
+   - **Resolution**: Added landmark roles to all major sections:
+     - Header: `role="banner"`
+     - Toolbar: `role="navigation"`
+     - Main content: `role="main"`
+     - Canvas: `role="region"`
+     - Layers panel: `role="complementary"`
+     - Status bar: `role="contentinfo"`
 
 ### Medium Priority
 
@@ -245,11 +251,11 @@ Document messages in `i18n/qqq.json`:
 | Criterion | Level | Status | Notes |
 |-----------|-------|--------|-------|
 | 1.1.1 Non-text Content | A | ⚠️ Partial | Canvas content not accessible |
-| 1.3.1 Info and Relationships | A | ⚠️ Partial | Missing landmark roles |
+| 1.3.1 Info and Relationships | A | ✅ Pass | Landmark roles added (December 2025) |
 | 1.4.3 Contrast (Minimum) | AA | ❓ Unknown | Not audited |
 | 2.1.1 Keyboard | A | ✅ Pass | Most features keyboard accessible |
 | 2.1.2 No Keyboard Trap | A | ✅ Pass | Focus trapping properly implemented |
-| 2.4.1 Bypass Blocks | A | ❌ Fail | No skip links |
+| 2.4.1 Bypass Blocks | A | ✅ Pass | Skip links added (December 2025) |
 | 2.4.4 Link Purpose | A | ✅ Pass | Links have descriptive text |
 | 2.4.7 Focus Visible | AA | ✅ Pass | Focus indicators present |
 | 4.1.2 Name, Role, Value | A | ✅ Pass | Layer list and dialogs fully labeled |

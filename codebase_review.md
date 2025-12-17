@@ -32,7 +32,7 @@ The extension is **functional and feature-complete** with good test coverage (~8
 | **Documentation** | 7/10 | Good copilot-instructions.md, some docs need updates |
 | **Code Splitting** | 7/10 | Viewer (682 lines) vs Editor (32,465 lines) |
 | **ES6 Migration** | 10/10 | 66 ES6 classes, 0 prototype methods remain (100% complete) |
-| **Accessibility** | 6/10 | ARIA live regions exist, but incomplete keyboard support |
+| **Accessibility** | 8/10 | Skip links, ARIA landmarks, live regions, keyboard shortcuts |
 
 ### What's Actually Working
 
