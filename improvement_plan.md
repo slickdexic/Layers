@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 16, 2025  
+**Last Updated:** December 17, 2025  
 **Status:** Active  
-**Version:** 0.8.9  
+**Version:** 0.9.0  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
@@ -16,12 +16,13 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Strong | 4,591 tests, 91% statement coverage, all passing |
+| **Test Suite** | ✅ Strong | 4,653 tests, 89.64% statement coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer 682 lines, Shared 3,886 lines, Editor 32,465 lines |
 | **ES6 Migration** | ✅ Complete | 66 ES6 classes, 0 prototype methods |
 | **God Classes** | ⚠️ Needs Work | 6 files over 1,000 lines |
 | **Event Listeners** | ✅ Audited | 94 add vs 33 remove - properly managed via EventTracker pattern |
+| **Accessibility** | ✅ Improved | Skip links + ARIA landmarks (v0.9.0) |
 
 ---
 
@@ -313,13 +314,16 @@ Extracted `ResizeCalculator.js` (806 lines) with all shape-specific resize calcu
 
 ### P2.10 Improve APIManager Coverage
 
-**Status:** ✅ COMPLETE (December 14, 2025)  
+**Status:** ✅ COMPLETE (December 17, 2025)  
 **Effort:** 2 hours  
-**Impact:** Coverage improved from 84% to 87%
+**Impact:** Coverage improved from 58.94% to 80.35%
 
 **Result:**
-- Added 19 new tests for save/load workflows
-- Tests cover: loadLayersBySetName, buildSavePayload, performSaveWithRetry, handleSaveSuccess, enable/disableSaveButton
+- Added 46 new tests for APIManager
+- Tests cover: deleteLayerSet (11 tests), renameLayerSet (9 tests), exportAsImage (13 tests), downloadAsImage (10 tests), loadLayersBySetName validation (3 tests)
+- Statement coverage: 80.35%
+- Function coverage: 86.48%
+- Branch coverage: 67.46%
 
 ---
 
@@ -435,7 +439,7 @@ P2.5 ShadowRenderer Coverage: ████████████████�
 P2.6 ResizeCalculator Coverage: ██████████████████░░ 93% ✓ (76 tests)
 P2.8 LayerPanel Coverage:     █████████████████░░░ 87% ✓ (28 tests)
 P2.9 StateManager Coverage:   ████████████████████ 98% ✓ (101 tests)
-P2.10 APIManager Coverage:    █████████████████░░░ 87% ✓ (19 tests)
+P2.10 APIManager Coverage:    ████████████████░░░░ 80% ✓ (46 tests)
 P2.11 LayersNamespace Coverage: ███████████████░░░░░ 78% ✓ (27 tests)
 
 Phase 3 (Modernization):
@@ -474,10 +478,11 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 - [ ] 0 files > 1,000 lines (currently 6)
 - [x] ES6 classes throughout ✓ (100%)
 - [x] 0 prototype methods ✓
-- [x] All tests passing ✓ (4,624)
-- [ ] >90% statement coverage (currently 89.29%)
-- [x] >75% branch coverage ✓ (77.16%)
+- [x] All tests passing ✓ (4,653)
+- [ ] >90% statement coverage (currently 89.64%)
+- [x] >75% branch coverage ✓ (77.54%)
 - [x] Event listener audit complete (94 add vs 33 remove explained by EventTracker pattern)
+- [x] Accessibility: Skip links + ARIA landmarks ✓ (v0.9.0)
 
 ---
 

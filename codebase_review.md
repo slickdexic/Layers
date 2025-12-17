@@ -2,21 +2,22 @@
 
 **Review Date:** December 17, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 0.8.9
+**Version:** 0.9.0
 
 ## Executive Summary
 
 The "Layers" extension provides non-destructive image annotation capabilities for MediaWiki. This is a **comprehensive, honest assessment** of the codebase quality, architecture, and technical debt.
 
-### Overall Assessment: 7/10
+### Overall Assessment: 7.5/10
 
-The extension is **functional and feature-complete** with good test coverage (~89%), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete**.
+The extension is **functional and feature-complete** with good test coverage (~90%), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete**, and accessibility improvements have been implemented.
 
 **Honest evaluation:**
 - The core functionality works well
 - PHP backend is professionally implemented
-- Test coverage is genuinely good (89.29%)
-- **However:** 6 god classes remain (>1,000 lines each), and there's a significant event listener imbalance (94 add vs 33 remove)
+- Test coverage is genuinely good (89.64%)
+- Accessibility improved with skip links and ARIA landmarks (v0.9.0)
+- **However:** 6 god classes remain (>1,000 lines each)
 
 **For the detailed, prioritized improvement plan, see [improvement_plan.md](./improvement_plan.md)**
 
@@ -26,23 +27,24 @@ The extension is **functional and feature-complete** with good test coverage (~8
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **Test Coverage** | 8/10 | 91% statement coverage, 4,591 tests all passing |
+| **Test Coverage** | 8/10 | 89.64% statement coverage, 4,653 tests all passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
 | **PHP Architecture** | 8/10 | Clean DI, service wiring, largest PHP file 970 lines |
 | **Documentation** | 7/10 | Good copilot-instructions.md, some docs need updates |
 | **Code Splitting** | 7/10 | Viewer (682 lines) vs Editor (32,465 lines) |
 | **ES6 Migration** | 10/10 | 66 ES6 classes, 0 prototype methods remain (100% complete) |
-| **Accessibility** | 8/10 | Skip links, ARIA landmarks, live regions, keyboard shortcuts |
+| **Accessibility** | 9/10 | Skip links, ARIA landmarks, live regions, keyboard shortcuts |
 
 ### What's Actually Working
 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
-3. **Tests catch regressions** - 4,591 tests all passing
+3. **Tests catch regressions** - 4,653 tests all passing
 4. **Viewer is lightweight** - reading articles loads only 682 lines (viewer) + 3,886 lines (shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
 6. **ES6 100% complete** - All 66 classes use ES6 syntax, 0 prototype patterns remain
 7. **4 API endpoints** - layersinfo, layerssave, layersdelete, layersrename
+8. **Accessibility** - Skip links, ARIA landmarks, keyboard navigation
 
 ---
 
@@ -51,8 +53,8 @@ The extension is **functional and feature-complete** with good test coverage (~8
 | Area | Score | Notes |
 |------|-------|-------|
 | **God Classes** | 4/10 | 6 files over 1,000 lines (largest 1,895 lines) |
-| **Event Listener Balance** | 8/10 | 94 addEventListener vs 33 removeEventListener - but uses EventTracker pattern, proper cleanup |
-| **Branch Coverage** | 6/10 | 77.16% branches - edge cases may be untested |
+| **Event Listener Balance** | 8/10 | 94 addEventListener vs 33 removeEventListener - uses EventTracker pattern, proper cleanup |
+| **Branch Coverage** | 7/10 | 77.54% branches - good but edge cases may be untested |
 
 ---
 
@@ -81,13 +83,13 @@ These metrics were collected directly from v0.8.7 source code using automated ve
 
 | Category | Value | Target | Status |
 |----------|-------|--------|--------|
-| Jest tests passing | **4,591** | - | ✅ All passing |
+| Jest tests passing | **4,653** | - | ✅ All passing |
 | Jest tests failing | **0** | 0 | ✅ All fixed |
 | Jest test suites | **92** | - | ✅ Good |
-| Statement coverage | **91%** | 80% | ✅ Exceeded |
-| Branch coverage | **79%** | 65% | ✅ Exceeded |
-| Line coverage | **~91%** | 80% | ✅ Exceeded |
-| Function coverage | **87%** | 80% | ✅ Exceeded |
+| Statement coverage | **89.64%** | 80% | ✅ Exceeded |
+| Branch coverage | **77.54%** | 65% | ✅ Exceeded |
+| Line coverage | **89.82%** | 80% | ✅ Exceeded |
+| Function coverage | **87.37%** | 80% | ✅ Exceeded |
 
 ### PHP Backend
 
