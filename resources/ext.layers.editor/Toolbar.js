@@ -185,8 +185,9 @@
 					}
 				}
 			} catch ( error ) {
-				// eslint-disable-next-line no-console
-				console.error( 'Failed to import image:', error );
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+					mw.log.error( '[Toolbar] Failed to import image:', error );
+				}
 				// eslint-disable-next-line no-alert
 				alert( this.msg( 'layers-import-image-failed', 'Failed to import image' ) );
 			}
