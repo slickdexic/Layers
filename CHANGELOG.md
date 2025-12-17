@@ -2,6 +2,32 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [0.9.0] - 2025-12-17
+
+### Accessibility Improvements
+- **Skip Links**: Added skip links for keyboard navigation (WCAG 2.4.1 Bypass Blocks)
+  - Skip to toolbar, canvas, and layers panel
+  - Visually hidden until focused, then appear prominently
+- **ARIA Landmarks**: Added semantic landmark roles to major sections (WCAG 1.3.1)
+  - Header: `role="banner"`
+  - Toolbar: `role="navigation"`
+  - Main content: `role="main"`
+  - Canvas: `role="region"`
+  - Layers panel: `role="complementary"`
+  - Status bar: `role="contentinfo"`
+
+### Bug Fixes
+- Fixed potential duplicate global handler registration in EditorBootstrap
+
+### Technical Improvements
+- Event listener audit completed: 25/27 files have proper cleanup patterns
+- Added 16 new tests for image layer rendering
+- Test coverage for LayerRenderer improved: 62% → 95%
+- Total Jest tests: 4,591 → 4,607
+- Added 8 new i18n messages for accessibility labels
+
+---
+
 ## [0.8.9] - 2025-12-16
 
 ### New Features
