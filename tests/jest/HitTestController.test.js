@@ -226,6 +226,34 @@ describe('HitTestController', () => {
             const result = hitTestController.hitTestSelectionHandles(point);
             expect(result.type).toBe('test');
         });
+
+        test('should fall back to manager.selectionHandles when renderer and selectionManager have no handles', () => {
+            // Clear renderer handles
+            mockCanvasManager.renderer.selectionHandles = null;
+            // Clear selectionManager handles
+            mockCanvasManager.selectionManager.selectionHandles = [];
+            // Set manager.selectionHandles
+            mockCanvasManager.selectionHandles = [
+                { type: 'fallback', rect: { x: 10, y: 10, width: 10, height: 10 } }
+            ];
+            const point = { x: 15, y: 15 };
+            const result = hitTestController.hitTestSelectionHandles(point);
+            expect(result).not.toBeNull();
+            expect(result.type).toBe('fallback');
+        });
+
+        test('should use manager.selectionHandles when selectionManager exists but has empty handles array', () => {
+            mockCanvasManager.renderer.selectionHandles = null;
+            mockCanvasManager.selectionManager = {
+                selectionHandles: [] // empty array, length = 0
+            };
+            mockCanvasManager.selectionHandles = [
+                { type: 'direct', rect: { x: 20, y: 20, width: 10, height: 10 } }
+            ];
+            const point = { x: 25, y: 25 };
+            const result = hitTestController.hitTestSelectionHandles(point);
+            expect(result.type).toBe('direct');
+        });
     });
 
     describe('getLayerAtPoint', () => {
@@ -596,6 +624,14 @@ describe('HitTestController', () => {
             // Point in the "notch" of the L
             const point = { x: 75, y: 75 };
             expect(hitTestController.isPointInPolygon(point, polygon)).toBe(false);
+        });
+    });
+
+    describe('destroy', () => {
+        test('should clean up manager reference', () => {
+            expect(hitTestController.manager).not.toBeNull();
+            hitTestController.destroy();
+            expect(hitTestController.manager).toBeNull();
         });
     });
 });

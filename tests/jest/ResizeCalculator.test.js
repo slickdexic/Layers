@@ -259,77 +259,87 @@ describe( 'ResizeCalculator', () => {
 
 	describe( 'applyRotatedResizeCorrection', () => {
 		it( 'should return early for unknown handle type', () => {
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
 			const updates = { x: 50, y: 50, width: 100, height: 100 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 'unknown', 100, 100
-			);
-			// Updates should be unchanged
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'unknown' );
+			// Updates should be unchanged (no correction applied for unknown handle)
 			expect( updates.x ).toBe( 50 );
 		} );
 
+		it( 'should return early for zero rotation', () => {
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 0 };
+			const updates = { x: 50, y: 50, width: 120, height: 120 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'se' );
+			// No correction needed for non-rotated shapes
+			expect( updates.x ).toBe( 50 );
+			expect( updates.y ).toBe( 50 );
+		} );
+
 		it( 'should correct for N handle on rotated shape', () => {
-			const updates = { x: 50, y: 50, width: 100, height: 120 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 'n', 100, 100
-			);
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
+			const updates = { x: 0, y: -20, width: 100, height: 120 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'n' );
+			// Correction should be applied
 			expect( updates.x ).toBeDefined();
 			expect( updates.y ).toBeDefined();
 		} );
 
 		it( 'should correct for S handle on rotated shape', () => {
-			const updates = { x: 50, y: 50, width: 100, height: 120 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 's', 100, 100
-			);
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
+			const updates = { x: 0, y: 0, width: 100, height: 120 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 's' );
 			expect( updates.x ).toBeDefined();
 		} );
 
 		it( 'should correct for E handle on rotated shape', () => {
-			const updates = { x: 50, y: 50, width: 120, height: 100 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 'e', 100, 100
-			);
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
+			const updates = { x: 0, y: 0, width: 120, height: 100 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'e' );
 			expect( updates.x ).toBeDefined();
 		} );
 
 		it( 'should correct for W handle on rotated shape', () => {
-			const updates = { x: 50, y: 50, width: 120, height: 100 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 'w', 100, 100
-			);
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
+			const updates = { x: -20, y: 0, width: 120, height: 100 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'w' );
 			expect( updates.x ).toBeDefined();
 		} );
 
 		it( 'should correct for NW handle on rotated shape', () => {
-			const updates = { x: 50, y: 50, width: 120, height: 120 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 'nw', 100, 100
-			);
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
+			const updates = { x: -20, y: -20, width: 120, height: 120 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'nw' );
 			expect( updates.x ).toBeDefined();
 		} );
 
 		it( 'should correct for NE handle on rotated shape', () => {
-			const updates = { x: 50, y: 50, width: 120, height: 120 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 'ne', 100, 100
-			);
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
+			const updates = { x: 0, y: -20, width: 120, height: 120 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'ne' );
 			expect( updates.x ).toBeDefined();
 		} );
 
 		it( 'should correct for SW handle on rotated shape', () => {
-			const updates = { x: 50, y: 50, width: 120, height: 120 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 'sw', 100, 100
-			);
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
+			const updates = { x: -20, y: 0, width: 120, height: 120 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'sw' );
 			expect( updates.x ).toBeDefined();
 		} );
 
 		it( 'should correct for SE handle on rotated shape', () => {
-			const updates = { x: 50, y: 50, width: 120, height: 120 };
-			ResizeCalculator.applyRotatedResizeCorrection(
-				updates, 100, 100, 45, 'se', 100, 100
-			);
+			const originalLayer = { x: 0, y: 0, width: 100, height: 100, rotation: 45 };
+			const updates = { x: 0, y: 0, width: 120, height: 120 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'se' );
 			expect( updates.x ).toBeDefined();
+		} );
+
+		it( 'should not modify updates when centers are already the same', () => {
+			const originalLayer = { x: 50, y: 50, width: 100, height: 100, rotation: 45 };
+			// Updates that result in the same center
+			const updates = { x: 50, y: 50, width: 100, height: 100 };
+			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, 'se' );
+			expect( updates.x ).toBe( 50 );
+			expect( updates.y ).toBe( 50 );
 		} );
 	} );
 

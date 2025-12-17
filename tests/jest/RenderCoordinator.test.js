@@ -137,6 +137,29 @@ describe( 'RenderCoordinator', () => {
 
 			expect( global.requestAnimationFrame ).not.toHaveBeenCalled();
 		} );
+
+		it( 'should fall back to setTimeout when requestAnimationFrame is unavailable', () => {
+			jest.useFakeTimers();
+			
+			// Temporarily remove rAF
+			const originalRAF = global.requestAnimationFrame;
+			delete global.window.requestAnimationFrame;
+			global.requestAnimationFrame = undefined;
+			
+			// Create a new coordinator that will use the fallback
+			const fallbackCoordinator = new RenderCoordinator( mockCanvasManager );
+			fallbackCoordinator.scheduleRedraw();
+			
+			// Fast-forward timers
+			jest.advanceTimersByTime( 20 );
+			
+			expect( mockCanvasManager.renderer.redraw ).toHaveBeenCalled();
+			
+			// Cleanup
+			fallbackCoordinator.destroy();
+			global.requestAnimationFrame = originalRAF;
+			jest.useRealTimers();
+		} );
 	} );
 
 	describe( 'dirty regions', () => {
@@ -207,6 +230,26 @@ describe( 'RenderCoordinator', () => {
 			flushAnimationFrames();
 
 			expect( callback ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should support removing post-render callbacks', () => {
+			const callback = jest.fn();
+			coordinator.addPostRenderCallback( callback );
+			coordinator.removePostRenderCallback( callback );
+
+			coordinator.scheduleRedraw();
+			flushAnimationFrames();
+
+			expect( callback ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle removing callback that does not exist', () => {
+			const callback = jest.fn();
+			// Try to remove a callback that was never added
+			expect( () => {
+				coordinator.removePreRenderCallback( callback );
+				coordinator.removePostRenderCallback( callback );
+			} ).not.toThrow();
 		} );
 
 		it( 'should handle callback errors gracefully', () => {
@@ -309,6 +352,52 @@ describe( 'RenderCoordinator', () => {
 				coordinator.scheduleRedraw();
 				flushAnimationFrames();
 			} ).not.toThrow();
+		} );
+
+		it( 'should log errors using mw.log.error when available', () => {
+			const mockLogError = jest.fn();
+			global.mw = {
+				log: {
+					error: mockLogError
+				}
+			};
+			
+			mockCanvasManager.renderer.redraw = jest.fn( () => {
+				throw new Error( 'Render error' );
+			} );
+
+			coordinator.scheduleRedraw();
+			flushAnimationFrames();
+
+			expect( mockLogError ).toHaveBeenCalledWith(
+				'[RenderCoordinator]',
+				expect.any( String ),
+				expect.any( Error )
+			);
+			
+			delete global.mw;
+		} );
+
+		it( 'should call window.layersErrorHandler when available', () => {
+			const mockErrorHandler = jest.fn();
+			global.window.layersErrorHandler = {
+				handleError: mockErrorHandler
+			};
+			
+			mockCanvasManager.renderer.redraw = jest.fn( () => {
+				throw new Error( 'Render error' );
+			} );
+
+			coordinator.scheduleRedraw();
+			flushAnimationFrames();
+
+			expect( mockErrorHandler ).toHaveBeenCalledWith(
+				expect.any( Error ),
+				'RenderCoordinator._performRedraw',
+				'canvas'
+			);
+			
+			delete global.window.layersErrorHandler;
 		} );
 
 		it( 'should handle missing renderer', () => {

@@ -286,6 +286,21 @@ describe( 'GridRulersController', () => {
 
 			expect( controller.verticalGuides.filter( ( g ) => g === 200 ) ).toHaveLength( 1 );
 		} );
+
+		it( 'should redraw when guides are visible', () => {
+			mockManager.showGuides = true;
+			controller.addVerticalGuide( 250 );
+
+			expect( mockManager.redraw ).toHaveBeenCalled();
+			expect( mockManager.renderLayers ).toHaveBeenCalledWith( mockEditor.layers );
+		} );
+
+		it( 'should not redraw when guides are hidden', () => {
+			mockManager.showGuides = false;
+			controller.addVerticalGuide( 300 );
+
+			expect( mockManager.redraw ).not.toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'removeHorizontalGuide', () => {
@@ -327,6 +342,23 @@ describe( 'GridRulersController', () => {
 			controller.removeVerticalGuide( 100 );
 
 			expect( controller.verticalGuides ).toEqual( [ 50, 250 ] );
+		} );
+
+		it( 'should redraw when guides are visible', () => {
+			mockManager.showGuides = true;
+			controller.verticalGuides = [ 150 ];
+			controller.removeVerticalGuide( 150 );
+
+			expect( mockManager.redraw ).toHaveBeenCalled();
+			expect( mockManager.renderLayers ).toHaveBeenCalledWith( mockEditor.layers );
+		} );
+
+		it( 'should not redraw when guides are hidden', () => {
+			mockManager.showGuides = false;
+			controller.verticalGuides = [ 150 ];
+			controller.removeVerticalGuide( 150 );
+
+			expect( mockManager.redraw ).not.toHaveBeenCalled();
 		} );
 	} );
 
@@ -644,6 +676,24 @@ describe( 'GridRulersController', () => {
 			controller.clearAllGuides();
 			expect( controller.horizontalGuides ).toEqual( [] );
 			expect( controller.verticalGuides ).toEqual( [] );
+		} );
+	} );
+
+	describe( 'destroy', () => {
+		it( 'should clean up all state and references', () => {
+			// Add some guides first
+			controller.horizontalGuides = [ 100, 200 ];
+			controller.verticalGuides = [ 50, 150 ];
+			controller.startGuideDrag( 'h', 100 );
+
+			controller.destroy();
+
+			expect( controller.horizontalGuides ).toEqual( [] );
+			expect( controller.verticalGuides ).toEqual( [] );
+			expect( controller.isDraggingGuide ).toBe( false );
+			expect( controller.dragGuideOrientation ).toBeNull();
+			expect( controller.dragGuidePos ).toBe( 0 );
+			expect( controller.manager ).toBeNull();
 		} );
 	} );
 } );
