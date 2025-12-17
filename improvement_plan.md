@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 17, 2025  
+**Last Updated:** December 18, 2025  
 **Status:** Active  
 **Version:** 0.9.0  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
@@ -16,7 +16,7 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Excellent | 4,676 tests, 90.03% statement coverage, all passing |
+| **Test Suite** | ✅ Excellent | 4,700+ tests, 91.10% statement coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer 682 lines, Shared 3,886 lines, Editor 32,465 lines |
 | **ES6 Migration** | ✅ Complete | 66 ES6 classes, 0 prototype methods |
