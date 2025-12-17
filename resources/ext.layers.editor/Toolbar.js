@@ -175,6 +175,10 @@
 				// Add the layer via the editor's state management
 				if ( this.editor && this.editor.stateManager ) {
 					this.editor.stateManager.addLayer( layer );
+					// Save to undo/redo history
+					if ( typeof this.editor.saveState === 'function' ) {
+						this.editor.saveState( 'Import image layer' );
+					}
 					// Trigger a redraw
 					if ( this.editor.canvasManager ) {
 						this.editor.canvasManager.redraw();
