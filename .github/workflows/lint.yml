@@ -18,9 +18,9 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
       - name: Run PHP lint
-        run: composer run parallel-lint
+        run: vendor/bin/parallel-lint . --exclude vendor --exclude node_modules
       - name: Run PHPCS (warnings allowed)
-        run: composer run phpcs -- -n || true
+        run: vendor/bin/phpcs -sp --cache -n || true
 
   js-lint:
     runs-on: ubuntu-latest
