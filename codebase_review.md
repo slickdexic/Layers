@@ -10,12 +10,12 @@ The "Layers" extension provides non-destructive image annotation capabilities fo
 
 ### Overall Assessment: 7.5/10
 
-The extension is **functional and feature-complete** with good test coverage (~90%), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete**, and accessibility improvements have been implemented.
+The extension is **functional and feature-complete** with excellent test coverage (90%+), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete**, and accessibility improvements have been implemented.
 
 **Honest evaluation:**
 - The core functionality works well
 - PHP backend is professionally implemented
-- Test coverage is genuinely good (89.64%)
+- Test coverage milestone achieved (90.03%)
 - Accessibility improved with skip links and ARIA landmarks (v0.9.0)
 - **However:** 6 god classes remain (>1,000 lines each)
 
@@ -27,7 +27,7 @@ The extension is **functional and feature-complete** with good test coverage (~9
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **Test Coverage** | 8/10 | 89.64% statement coverage, 4,653 tests all passing |
+| **Test Coverage** | 9/10 | 90.03% statement coverage, 4,676 tests all passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
 | **PHP Architecture** | 8/10 | Clean DI, service wiring, largest PHP file 970 lines |
 | **Documentation** | 7/10 | Good copilot-instructions.md, some docs need updates |
@@ -39,7 +39,7 @@ The extension is **functional and feature-complete** with good test coverage (~9
 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
-3. **Tests catch regressions** - 4,653 tests all passing
+3. **Tests catch regressions** - 4,676 tests all passing (90.03% coverage)
 4. **Viewer is lightweight** - reading articles loads only 682 lines (viewer) + 3,886 lines (shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
 6. **ES6 100% complete** - All 66 classes use ES6 syntax, 0 prototype patterns remain

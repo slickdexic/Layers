@@ -16,7 +16,7 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Strong | 4,653 tests, 89.64% statement coverage, all passing |
+| **Test Suite** | ✅ Excellent | 4,676 tests, 90.03% statement coverage, all passing |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer 682 lines, Shared 3,886 lines, Editor 32,465 lines |
 | **ES6 Migration** | ✅ Complete | 66 ES6 classes, 0 prototype methods |
@@ -436,11 +436,13 @@ P2.2 Split LayerRenderer:     ████████████████�
 P2.3 CanvasManager Extraction: ██████████░░░░░░░░░░ 50% (1,895 lines)
 P2.4 Split TransformController: ████████████████████ 100% ✓ (761 lines)
 P2.5 ShadowRenderer Coverage: ████████████████████ 100% ✓
-P2.6 ResizeCalculator Coverage: ██████████████████░░ 93% ✓ (76 tests)
+P2.6 ResizeCalculator Coverage: ████████████████████ 100% ✓
 P2.8 LayerPanel Coverage:     █████████████████░░░ 87% ✓ (28 tests)
 P2.9 StateManager Coverage:   ████████████████████ 98% ✓ (101 tests)
 P2.10 APIManager Coverage:    ████████████████░░░░ 80% ✓ (46 tests)
-P2.11 LayersNamespace Coverage: ███████████████░░░░░ 78% ✓ (27 tests)
+P2.11 HitTestController:      ████████████████████ 100% ✓
+P2.12 GridRulersController:   ████████████████████ 100% ✓
+P2.13 RenderCoordinator:      ████████████████████ 98% ✓
 
 Phase 3 (Modernization):
 P3.1 Complete ES6 Migration:  ████████████████████ 100% ✓
@@ -472,7 +474,8 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 - [ ] CanvasManager < 1,500 lines (currently 1,895)
 - [x] TransformController < 800 lines ✓ (761 lines)
 - [x] ShadowRenderer coverage > 90% ✓ (100%)
-- [x] ResizeCalculator coverage > 90% ✓ (93%)
+- [x] ResizeCalculator coverage > 90% ✓ (100%)
+- [x] Overall test coverage > 90% ✓ (90.03%)
 
 ### Project "Healthy" When:
 - [ ] 0 files > 1,000 lines (currently 6)
