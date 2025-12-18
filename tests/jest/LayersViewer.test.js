@@ -841,4 +841,187 @@ describe( 'LayersViewer', () => {
 			expect( typeof window.Layers.Viewer ).toBe( 'function' );
 		} );
 	} );
+
+	describe( 'applyBackgroundSettings', () => {
+		const createImageWithStyle = () => {
+			return {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: {
+					visibility: '',
+					opacity: ''
+				}
+			};
+		};
+
+		test( 'should set visibility to hidden when backgroundVisible is false', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: false,
+					backgroundOpacity: 1.0
+				}
+			} );
+
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+		} );
+
+		test( 'should set visibility to visible when backgroundVisible is true', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+			imageElement.style.visibility = 'hidden'; // Start hidden
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: 1.0
+				}
+			} );
+
+			expect( imageElement.style.visibility ).toBe( 'visible' );
+		} );
+
+		test( 'should set visibility to hidden when backgroundVisible is string "false"', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: 'false',
+					backgroundOpacity: 1.0
+				}
+			} );
+
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+		} );
+
+		test( 'should set visibility to hidden when backgroundVisible is 0', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: 0,
+					backgroundOpacity: 1.0
+				}
+			} );
+
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+		} );
+
+		test( 'should apply opacity when backgroundOpacity is a number', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: 0.5
+				}
+			} );
+
+			expect( imageElement.style.opacity ).toBe( '0.5' );
+		} );
+
+		test( 'should apply opacity when backgroundOpacity is a string', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: '0.75'
+				}
+			} );
+
+			expect( imageElement.style.opacity ).toBe( '0.75' );
+		} );
+
+		test( 'should not apply invalid opacity values', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+			imageElement.style.opacity = '1'; // Set initial value
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: 1.5 // Invalid - out of range
+				}
+			} );
+
+			// Should not change because 1.5 > 1
+			expect( imageElement.style.opacity ).toBe( '1' );
+		} );
+
+		test( 'should handle missing style object gracefully', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				addEventListener: jest.fn()
+				// No style property
+			};
+
+			// Should not throw
+			expect( () => {
+				new window.LayersViewer( {
+					container,
+					imageElement,
+					layerData: {
+						layers: [],
+						backgroundVisible: false,
+						backgroundOpacity: 0.5
+					}
+				} );
+			} ).not.toThrow();
+		} );
+
+		test( 'should default to visible and full opacity when settings not provided', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+			imageElement.style.visibility = 'hidden'; // Start hidden
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: []
+					// No backgroundVisible or backgroundOpacity
+				}
+			} );
+
+			// Should be visible (default behavior - visibility restored)
+			expect( imageElement.style.visibility ).toBe( 'visible' );
+			// Opacity should not be modified (stays empty)
+			expect( imageElement.style.opacity ).toBe( '' );
+		} );
+	} );
 } );
