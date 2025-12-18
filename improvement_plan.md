@@ -16,10 +16,10 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|--------|
 | **Functionality** | ✅ Working | Extension works in production, 13 drawing tools |
-| **Test Suite** | ✅ Good | ~5,100 tests, ~91% statement coverage |
+| **Test Suite** | ✅ Good | ~5,236 tests, ~91.8% statement coverage |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer 682 lines, Shared ~5K lines, Editor ~34K lines |
-| **ES6 Migration** | ✅ Complete | 67 ES6 classes, 0 prototype methods |
+| **ES6 Migration** | ✅ Complete | 70 ES6 classes, 0 prototype methods |
 | **God Classes** | ⚠️ Technical Debt | **8 files over 1,000 lines** (was 9, ShapeRenderer extracted) |
 | **E2E Tests** | ❌ Not in CI | Playwright exists but not automated |
 | **Documentation** | ⚠️ Needs Work | Often lags behind code changes |
