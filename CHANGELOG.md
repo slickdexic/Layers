@@ -9,11 +9,16 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - `TextToolHandler.js` (~210 lines): Handles inline text input UI for creating text layers
   - `PathToolHandler.js` (~230 lines): Handles freeform path drawing with click-to-add points
   - ToolManager now delegates to handlers when available, with inline fallback for backwards compatibility
-- **58 new unit tests** for tool handlers
-- **Total test count: 5,164 tests passing**
+- **Test coverage improvements across multiple files**:
+  - CanvasRenderer.js: 77.81% → 91.12% (+13.3%)
+  - LayersNamespace.js: 78.68% → 81.96% (+3.3%)
+  - Toolbar.js: 82.82% → 90% (+7.2%)
+  - UIManager.js: 81.34% → 95.44% (+14.1%)
+- **Overall coverage**: 90.4% → 91.84%
+- **Total test count: 5,236 tests passing** (+72 new tests)
 
 ### Technical Notes
-- Both handlers registered in extension.json for ResourceLoader
+- Tool handlers registered in extension.json for ResourceLoader
 - Handlers use the established pattern from ShapeFactory, ToolRegistry, ToolStyles
 - No breaking changes - ToolManager maintains full backwards compatibility
 
