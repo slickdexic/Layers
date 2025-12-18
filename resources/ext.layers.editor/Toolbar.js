@@ -431,6 +431,14 @@
 				<rect x="14" y="3" width="7" height="7"/>
 				<rect x="14" y="14" width="7" height="7"/>
 				<rect x="3" y="14" width="7" height="7"/>
+			</svg>`,
+
+				// Text Box tool - Rectangle with text lines
+				textbox: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+				<line x1="7" y1="8" x2="17" y2="8"/>
+				<line x1="7" y1="12" x2="17" y2="12"/>
+				<line x1="7" y1="16" x2="12" y2="16"/>
 			</svg>`
 			};
 		}
@@ -513,6 +521,7 @@
 			const tools = [
 				{ id: 'pointer', icon: icons.pointer, title: t( 'layers-tool-select', 'Select Tool' ), key: 'V', isSvg: true },
 				{ id: 'text', icon: icons.text, title: t( 'layers-tool-text', 'Text Tool' ), key: 'T', isSvg: true },
+				{ id: 'textbox', icon: icons.textbox, title: t( 'layers-tool-textbox', 'Text Box Tool' ), key: 'X', isSvg: true },
 				{ id: 'pen', icon: icons.pen, title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P', isSvg: true },
 				{ id: 'rectangle', icon: icons.rectangle, title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R', isSvg: true },
 				{ id: 'circle', icon: icons.circle, title: t( 'layers-tool-circle', 'Circle Tool' ), key: 'C', isSvg: true },

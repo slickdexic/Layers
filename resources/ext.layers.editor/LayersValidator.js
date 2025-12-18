@@ -23,8 +23,8 @@
 			this.validationRules = {
 				// Layer type whitelist (must match server-side validation)
 				validTypes: [
-					'text', 'arrow', 'rectangle', 'circle', 'ellipse',
-					'polygon', 'star', 'line', 'path', 'blur'
+					'text', 'textbox', 'arrow', 'rectangle', 'circle', 'ellipse',
+					'polygon', 'star', 'line', 'path', 'blur', 'image'
 				],
 
 				// Coordinate limits

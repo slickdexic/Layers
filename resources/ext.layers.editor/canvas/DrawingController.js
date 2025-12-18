@@ -63,6 +63,9 @@ class DrawingController {
 			case 'rectangle':
 				this.startRectangleTool( point, style );
 				break;
+			case 'textbox':
+				this.startTextBoxTool( point, style );
+				break;
 			case 'circle':
 				this.startCircleTool( point, style );
 				break;
@@ -228,6 +231,34 @@ class DrawingController {
 	}
 
 	/**
+	 * Start text box tool - creates a rectangle with text content
+	 *
+	 * @param {Object} point - Starting point
+	 * @param {Object} style - Style options
+	 */
+	startTextBoxTool ( point, style ) {
+		this.tempLayer = {
+			type: 'textbox',
+			x: point.x,
+			y: point.y,
+			width: 0,
+			height: 0,
+			text: '',
+			fontSize: style.fontSize || 16,
+			fontFamily: style.fontFamily || 'Arial, sans-serif',
+			color: style.color || '#000000',
+			textAlign: 'left',
+			verticalAlign: 'top',
+			lineHeight: 1.2,
+			stroke: style.color || '#000000',
+			strokeWidth: style.strokeWidth || 1,
+			fill: style.fill || '#ffffff',
+			cornerRadius: 0,
+			padding: 8
+		};
+	}
+
+	/**
 	 * Start circle tool
 	 *
 	 * @param {Object} point - Starting point
@@ -367,6 +398,7 @@ class DrawingController {
 		// Update temp layer geometry based on type
 		switch ( this.tempLayer.type ) {
 			case 'rectangle':
+			case 'textbox':
 				this.tempLayer.width = point.x - this.tempLayer.x;
 				this.tempLayer.height = point.y - this.tempLayer.y;
 				break;
@@ -444,6 +476,7 @@ class DrawingController {
 		switch ( layer.type ) {
 			case 'rectangle':
 			case 'blur':
+			case 'textbox':
 				layer.width = point.x - layer.x;
 				layer.height = point.y - layer.y;
 				break;
@@ -499,6 +532,7 @@ class DrawingController {
 		switch ( layer.type ) {
 			case 'rectangle':
 			case 'blur':
+			case 'textbox':
 				return Math.abs( layer.width ) >= this.MIN_SHAPE_SIZE &&
 					Math.abs( layer.height ) >= this.MIN_SHAPE_SIZE;
 
@@ -543,6 +577,7 @@ class DrawingController {
 			case 'blur':
 			case 'pen':
 			case 'rectangle':
+			case 'textbox':
 			case 'circle':
 			case 'ellipse':
 			case 'polygon':
@@ -565,7 +600,7 @@ class DrawingController {
 	 */
 	isDrawingTool ( tool ) {
 		const drawingTools = [
-			'blur', 'text', 'pen', 'rectangle', 'circle',
+			'blur', 'text', 'textbox', 'pen', 'rectangle', 'circle',
 			'ellipse', 'polygon', 'star', 'line', 'arrow'
 		];
 		return drawingTools.indexOf( tool ) !== -1;

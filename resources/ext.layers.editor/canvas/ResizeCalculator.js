@@ -39,6 +39,7 @@
 
 			switch ( originalLayer.type ) {
 				case 'rectangle':
+				case 'textbox':
 				case 'blur':
 				case 'image':
 					return ResizeCalculator.calculateRectangleResize(

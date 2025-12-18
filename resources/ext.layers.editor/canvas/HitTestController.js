@@ -111,6 +111,7 @@
 
 			switch ( layer.type ) {
 				case 'rectangle':
+				case 'textbox':
 				case 'blur':
 				case 'image':
 					return this.isPointInRectangleLayer( point, layer );

@@ -2,6 +2,37 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.0] - 2025-12-17
+
+### New Feature: Text Box Tool
+- **Text Box Tool** (`X` key): New drawing tool combining rectangle container with multi-line text
+  - Multi-line text with automatic word wrapping
+  - Font family selector (Arial, Roboto, Noto Sans, Times New Roman, Courier New)
+  - Bold and italic text formatting options
+  - Text alignment: horizontal (left/center/right) and vertical (top/middle/bottom)
+  - Adjustable corner radius for rounded rectangles
+  - Configurable padding between text and box edges
+  - Text is clipped to box boundaries
+
+### Text Styling Enhancements
+- **Text stroke**: Outline effect for text with customizable width and color
+- **Text shadow**: Drop shadow effect for text with:
+  - Enable/disable toggle
+  - Shadow color picker
+  - Blur radius control (0-50px)
+  - X and Y offset controls (-100 to +100px)
+
+### Bug Fixes
+- Fixed text box stroke shadow (now matches rectangle shadow behavior)
+- Fixed wide textarea alignment in properties panel (now right-justified like other fields)
+
+### Files Added/Modified
+- 19 files modified across frontend and backend
+- New i18n messages for all text box properties
+- Server-side validation updated for new properties
+
+---
+
 ## [1.0.0] - 2025-12-17
 
 ### 🎉 First Stable Release

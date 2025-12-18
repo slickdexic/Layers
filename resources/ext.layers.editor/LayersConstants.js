@@ -15,6 +15,7 @@
 		TOOLS: {
 			POINTER: 'pointer',
 			TEXT: 'text',
+			TEXTBOX: 'textbox',
 			RECTANGLE: 'rectangle',
 			CIRCLE: 'circle',
 			ELLIPSE: 'ellipse',
@@ -29,6 +30,7 @@
 		// Layer types
 		LAYER_TYPES: {
 			TEXT: 'text',
+			TEXTBOX: 'textbox',
 			RECTANGLE: 'rectangle',
 			CIRCLE: 'circle',
 			ELLIPSE: 'ellipse',

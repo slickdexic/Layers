@@ -215,6 +215,40 @@ The user can toggle this mode via a setting or by a modifier key (for instance, 
 
 **Constraints:** Very long text is allowed, but extremely large text blocks might affect rendering performance or overflow the image. The extension might impose a limit on text length or total characters for sanity (not explicitly, but as a developer, keep in mind the JSON size limit per layer set). Font choices are limited to those configured (\$wgLayersDefaultFonts) to ensure the wiki can render them (either via web fonts or known system fonts). If a user tries to input characters not supported by the chosen font, fallback fonts might be used (e.g. since Noto Sans is included for wide Unicode coverage).
 
+### Text Box Tool
+
+**Purpose:** The Text Box tool creates a rectangular container with multi-line text that wraps within the box boundaries. Unlike the basic Text tool, the Text Box provides a defined area for text with visual styling for the container itself.
+
+**Interaction:** Select the Text Box tool (shortcut **X**). Click and drag on the canvas to define the rectangular area for the text box. The box shape is created immediately, and text can be entered via the Properties panel. The text automatically wraps within the box width and is clipped to the box boundaries.
+
+**Customization Options:** Text Box objects combine rectangle and text styling:
+
+* **Box Properties:**
+  * **Stroke:** Outline color, width, and opacity (same as rectangle)
+  * **Fill:** Background color for the text box (default white)
+  * **Corner Radius:** Rounded corners (0-200px)
+  * **Padding:** Space between text and box edges (0-100px, default 8px)
+  * **Drop Shadow:** Shadow for the box with color, blur, offset, and spread controls
+
+* **Text Properties:**
+  * **Font Family:** Choose from configured fonts (Arial, Roboto, Noto Sans, Times New Roman, Courier New)
+  * **Font Size:** 6-200px range
+  * **Bold/Italic:** Toggle formatting options
+  * **Text Color:** Fill color for the text
+  * **Text Stroke:** Outline effect for text with width and color controls
+  * **Text Shadow:** Drop shadow specifically for text (separate from box shadow) with:
+    * Enable/disable toggle
+    * Shadow color
+    * Blur radius (0-50px)
+    * X and Y offset (-100 to +100px)
+  * **Horizontal Alignment:** Left, center, or right
+  * **Vertical Alignment:** Top, middle, or bottom
+  * **Line Height:** Vertical spacing between lines (default 1.2)
+
+**SVG Output Model:** The text box is rendered as a composite of a `<rect>` element (the container) and clipped `<text>` elements. Text is wrapped at word boundaries to fit within the box width minus padding. Lines that would extend below the box bottom are clipped.
+
+**Constraints:** Text content is limited to 5000 characters. The text box must have positive width and height. Text that doesn't fit within the box is clipped rather than causing the box to expand.
+
 ### Rectangle Tool
 
 **Purpose:** Draw rectangular shapes, which can be used for framing, highlighting areas, or general annotations (boxes).
