@@ -600,6 +600,250 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 	} );
 
+	describe( 'addListener fallback', () => {
+		it( 'should use direct addEventListener when EventTracker not available', () => {
+			const controls = new ToolbarStyleControls( {
+				toolbar: mockToolbar,
+				msg: mockMsg
+			} );
+			controls.eventTracker = null;
+
+			const element = document.createElement( 'button' );
+			const handler = jest.fn();
+
+			controls.addListener( element, 'click', handler );
+			element.click();
+
+			expect( handler ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip if element is null', () => {
+			expect( () => styleControls.addListener( null, 'click', jest.fn() ) ).not.toThrow();
+		} );
+
+		it( 'should skip if handler is not a function', () => {
+			const element = document.createElement( 'button' );
+			expect( () => styleControls.addListener( element, 'click', 'not-a-function' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'color button click handlers', () => {
+		beforeEach( () => {
+			styleControls.create();
+		} );
+
+		it( 'should open color picker when stroke color button is clicked', () => {
+			const button = styleControls.strokeColorButton;
+			button.click();
+
+			expect( mockColorPickerOpen ).toHaveBeenCalled();
+		} );
+
+		it( 'should open color picker when fill color button is clicked', () => {
+			const button = styleControls.fillColorButton;
+			button.click();
+
+			expect( mockColorPickerOpen ).toHaveBeenCalled();
+		} );
+
+		it( 'should update stroke color when color picker applies', () => {
+			const button = styleControls.strokeColorButton;
+			button.click();
+
+			// Get the ColorPickerDialog constructor call
+			const dialogConfig = window.Layers.UI.ColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			
+			// Simulate applying a new color
+			dialogConfig.onApply( '#ff0000' );
+
+			expect( styleControls.strokeColorValue ).toBe( '#ff0000' );
+			expect( styleControls.strokeColorNone ).toBe( false );
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle none value for stroke color', () => {
+			const button = styleControls.strokeColorButton;
+			button.click();
+
+			const dialogConfig = window.Layers.UI.ColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			dialogConfig.onApply( 'none' );
+
+			expect( styleControls.strokeColorNone ).toBe( true );
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+
+		it( 'should update fill color when color picker applies', () => {
+			const button = styleControls.fillColorButton;
+			button.click();
+
+			const dialogConfig = window.Layers.UI.ColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			dialogConfig.onApply( '#00ff00' );
+
+			expect( styleControls.fillColorValue ).toBe( '#00ff00' );
+			expect( styleControls.fillColorNone ).toBe( false );
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle none value for fill color', () => {
+			const button = styleControls.fillColorButton;
+			button.click();
+
+			const dialogConfig = window.Layers.UI.ColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			dialogConfig.onApply( 'none' );
+
+			expect( styleControls.fillColorNone ).toBe( true );
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'stroke width input event handlers', () => {
+		beforeEach( () => {
+			styleControls.create();
+		} );
+
+		it( 'should update stroke width on input event', () => {
+			const input = styleControls.strokeWidthInput;
+			input.value = '10';
+			
+			const event = new Event( 'input' );
+			input.dispatchEvent( event );
+
+			expect( styleControls.currentStrokeWidth ).toBe( 10 );
+		} );
+
+		it( 'should handle blur event on stroke width input', () => {
+			const input = styleControls.strokeWidthInput;
+			input.value = 'invalid';
+			
+			const blurEvent = new Event( 'blur' );
+			input.dispatchEvent( blurEvent );
+
+			// Should reset to valid value
+			expect( input.value ).toBe( '2' );
+		} );
+	} );
+
+	describe( 'text stroke control event handlers', () => {
+		beforeEach( () => {
+			styleControls.create();
+			styleControls.strokeContainer.style.display = 'block';
+		} );
+
+		it( 'should update text stroke color on change', () => {
+			const colorInput = styleControls.textStrokeColor;
+			colorInput.value = '#ff0000';
+			
+			const event = new Event( 'change' );
+			colorInput.dispatchEvent( event );
+
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+
+		it( 'should update text stroke width on input', () => {
+			const widthInput = styleControls.textStrokeWidth;
+			widthInput.value = '5';
+			
+			const event = new Event( 'input' );
+			widthInput.dispatchEvent( event );
+
+			expect( styleControls.textStrokeValue.textContent ).toBe( '5' );
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'shadow control event handlers', () => {
+		beforeEach( () => {
+			styleControls.create();
+			styleControls.shadowContainer.style.display = 'block';
+		} );
+
+		it( 'should show color input when shadow toggle is checked', () => {
+			const toggle = styleControls.textShadowToggle;
+			const colorInput = styleControls.textShadowColor;
+			
+			toggle.checked = true;
+			const event = new Event( 'change' );
+			toggle.dispatchEvent( event );
+
+			expect( colorInput.style.display ).toBe( 'inline-block' );
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+
+		it( 'should hide color input when shadow toggle is unchecked', () => {
+			const toggle = styleControls.textShadowToggle;
+			const colorInput = styleControls.textShadowColor;
+			
+			toggle.checked = false;
+			const event = new Event( 'change' );
+			toggle.dispatchEvent( event );
+
+			expect( colorInput.style.display ).toBe( 'none' );
+		} );
+
+		it( 'should notify style change when shadow color changes', () => {
+			const colorInput = styleControls.textShadowColor;
+			colorInput.value = '#ff0000';
+			
+			const event = new Event( 'change' );
+			colorInput.dispatchEvent( event );
+
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'arrow style control event handlers', () => {
+		beforeEach( () => {
+			styleControls.create();
+			styleControls.arrowContainer.style.display = 'block';
+		} );
+
+		it( 'should notify style change when arrow style changes', () => {
+			const select = styleControls.arrowStyleSelect;
+			select.value = 'circle';
+			
+			const event = new Event( 'change' );
+			select.dispatchEvent( event );
+
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'font size input event handlers', () => {
+		beforeEach( () => {
+			styleControls.create();
+			styleControls.fontSizeContainer.style.display = 'block';
+		} );
+
+		it( 'should notify style change on font size input', () => {
+			const input = styleControls.fontSizeInput;
+			input.value = '24';
+			
+			const event = new Event( 'input' );
+			input.dispatchEvent( event );
+
+			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'getClass fallback', () => {
+		it( 'should work when window.Layers namespace exists but class does not', () => {
+			// This is testing internal getClass behavior
+			// Create a controls instance and verify it works with missing classes
+			const originalEventTracker = window.Layers.Utils.EventTracker;
+			window.Layers.Utils.EventTracker = undefined;
+
+			const controls = new ToolbarStyleControls( {
+				toolbar: mockToolbar,
+				msg: mockMsg
+			} );
+
+			// Should fall back gracefully
+			expect( controls.eventTracker ).toBeNull();
+
+			window.Layers.Utils.EventTracker = originalEventTracker;
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export to window.Layers.UI namespace', () => {
 			expect( window.Layers.UI.ToolbarStyleControls ).toBe( ToolbarStyleControls );
