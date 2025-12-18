@@ -520,6 +520,124 @@ describe( 'ImportExportManager', () => {
 		} );
 	} );
 
+	describe( 'importFromFile reader callbacks', () => {
+		it( 'should handle reader.onerror', async () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+
+			// Mock FileReader to trigger error
+			const mockFileReader = {
+				readAsText: jest.fn( function() {
+					// Trigger onerror asynchronously
+					setTimeout( () => this.onerror( new Error( 'Read error' ) ), 0 );
+				} ),
+				onerror: null,
+				onload: null
+			};
+
+			jest.spyOn( window, 'FileReader' ).mockImplementation( () => mockFileReader );
+
+			const file = new File( [ 'test' ], 'test.json', { type: 'application/json' } );
+
+			await expect( importManager.importFromFile( file ) ).rejects.toThrow( 'File read error' );
+
+			window.FileReader.mockRestore();
+		} );
+
+		it( 'should reject on JSON parse error in onload', async () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+
+			const mockFileReader = {
+				readAsText: jest.fn( function() {
+					setTimeout( () => this.onload( { target: { result: 'invalid json {{{' } } ), 0 );
+				} ),
+				onerror: null,
+				onload: null
+			};
+
+			jest.spyOn( window, 'FileReader' ).mockImplementation( () => mockFileReader );
+
+			const file = new File( [ 'test' ], 'test.json', { type: 'application/json' } );
+
+			await expect( importManager.importFromFile( file ) ).rejects.toThrow();
+
+			window.FileReader.mockRestore();
+		} );
+	} );
+
+	describe( 'createImportButton callbacks', () => {
+		it( 'should call onSuccess callback after successful import', async () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+			const onSuccess = jest.fn();
+			const onError = jest.fn();
+
+			// Create button with callbacks
+			const { button, input } = importManager.createImportButton( { onSuccess, onError } );
+
+			// Mock importFromFile to resolve
+			importManager.importFromFile = jest.fn().mockResolvedValue( [ { id: 'layer1', type: 'rectangle' } ] );
+
+			// Simulate file selection
+			const file = new File( [ '[]' ], 'test.json', { type: 'application/json' } );
+			Object.defineProperty( input, 'files', {
+				value: [ file ],
+				writable: false
+			} );
+
+			// Trigger change event
+			input.dispatchEvent( new Event( 'change' ) );
+
+			// Wait for promise to resolve
+			await new Promise( resolve => setTimeout( resolve, 10 ) );
+
+			expect( onSuccess ).toHaveBeenCalledWith( [ { id: 'layer1', type: 'rectangle' } ] );
+			expect( onError ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should call onError callback on import failure', async () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+			const onSuccess = jest.fn();
+			const onError = jest.fn();
+
+			const { button, input } = importManager.createImportButton( { onSuccess, onError } );
+
+			// Mock importFromFile to reject
+			const testError = new Error( 'Import failed' );
+			importManager.importFromFile = jest.fn().mockRejectedValue( testError );
+
+			// Simulate file selection
+			const file = new File( [ '[]' ], 'test.json', { type: 'application/json' } );
+			Object.defineProperty( input, 'files', {
+				value: [ file ],
+				writable: false
+			} );
+
+			// Trigger change event
+			input.dispatchEvent( new Event( 'change' ) );
+
+			// Wait for promise to reject
+			await new Promise( resolve => setTimeout( resolve, 10 ) );
+
+			expect( onError ).toHaveBeenCalledWith( testError );
+			expect( onSuccess ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should do nothing when no file selected', () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+			const onSuccess = jest.fn();
+			const { input } = importManager.createImportButton( { onSuccess } );
+
+			// Empty files array
+			Object.defineProperty( input, 'files', {
+				value: [],
+				writable: false
+			} );
+
+			input.dispatchEvent( new Event( 'change' ) );
+
+			expect( onSuccess ).not.toHaveBeenCalled();
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export ImportExportManager to window.Layers namespace', () => {
 			expect( window.Layers.Core.ImportExportManager ).toBeDefined();
