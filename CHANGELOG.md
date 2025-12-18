@@ -6,6 +6,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### 🎉 First Stable Release
 
+> **Note:** This is the REL1_39 branch for MediaWiki 1.39.x - 1.43.x.
+> For MediaWiki 1.44+, use the `main` branch.
+
+### REL1_39 Branch Fixes (2025-12-17)
+- **Removed foreign key constraints** for broader MySQL/MariaDB compatibility
+- **Added migration** to drop existing FK constraints on upgrade
+- **Fixed unique key** in `layer_sets` table for named sets support
+- **Improved error logging** in database save operations
+
 This is the first production-ready release of the Layers extension.
 
 ### Highlights

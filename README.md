@@ -5,7 +5,9 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.0.0. Requires MediaWiki 1.44+.
+> **Status:** Stable. Version 1.0.0. Requires MediaWiki 1.39+.
+>
+> **Branch:** REL1_39 (for MediaWiki 1.39.x - 1.43.x). For MediaWiki 1.44+, use the `main` branch.
 
 ---
 
@@ -131,7 +133,7 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 - Live regions for status updates
 
 **Requirements:**
-- MediaWiki 1.44.0 or later
+- MediaWiki 1.39.0 or later (this branch supports 1.39.x - 1.43.x)
 - PHP 8.1+
 - MySQL/MariaDB
 
