@@ -920,4 +920,192 @@ describe( 'CanvasManager Extended Coverage', () => {
 			delete window.mw;
 		} );
 	} );
+
+	describe( 'clipboard fallbacks', () => {
+		it( 'should log error when clipboardController unavailable for cutSelected', () => {
+			canvasManager.clipboardController = null;
+			window.mw = { log: { error: jest.fn() } };
+
+			canvasManager.cutSelected();
+
+			expect( window.mw.log.error ).toHaveBeenCalledWith(
+				'Layers: ClipboardController not available for cutSelected'
+			);
+			delete window.mw;
+		} );
+
+		it( 'should delegate deleteSelected to selectionManager', () => {
+			const deleteSelected = jest.fn();
+			canvasManager.selectionManager = { deleteSelected };
+
+			canvasManager.deleteSelected();
+
+			expect( deleteSelected ).toHaveBeenCalled();
+		} );
+
+		it( 'should fallback to editor.deleteSelected when selectionManager unavailable', () => {
+			canvasManager.selectionManager = null;
+			const deleteSelected = jest.fn();
+			canvasManager.editor = { deleteSelected };
+
+			canvasManager.deleteSelected();
+
+			expect( deleteSelected ).toHaveBeenCalled();
+		} );
+
+		it( 'should log error when no handler available for deleteSelected', () => {
+			canvasManager.selectionManager = null;
+			canvasManager.editor = {};
+			window.mw = { log: { error: jest.fn() } };
+
+			canvasManager.deleteSelected();
+
+			expect( window.mw.log.error ).toHaveBeenCalledWith(
+				'Layers: No handler available for deleteSelected'
+			);
+			delete window.mw;
+		} );
+	} );
+
+	describe( 'canvas resize', () => {
+		it( 'should call handleCanvasResize and update canvas', () => {
+			canvasManager.resizeCanvas = jest.fn();
+			canvasManager.updateCanvasTransform = jest.fn();
+			canvasManager.renderLayers = jest.fn();
+			canvasManager.editor = { layers: [] };
+
+			canvasManager.handleCanvasResize();
+
+			expect( canvasManager.resizeCanvas ).toHaveBeenCalled();
+			expect( canvasManager.updateCanvasTransform ).toHaveBeenCalled();
+			expect( canvasManager.renderLayers ).toHaveBeenCalledWith( [] );
+		} );
+
+		it( 'should set base dimensions', () => {
+			canvasManager.resizeCanvas = jest.fn();
+
+			canvasManager.setBaseDimensions( 1920, 1080 );
+
+			expect( canvasManager.baseWidth ).toBe( 1920 );
+			expect( canvasManager.baseHeight ).toBe( 1080 );
+			expect( canvasManager.resizeCanvas ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle null dimensions', () => {
+			canvasManager.resizeCanvas = jest.fn();
+
+			canvasManager.setBaseDimensions( null, null );
+
+			expect( canvasManager.baseWidth ).toBeNull();
+			expect( canvasManager.baseHeight ).toBeNull();
+		} );
+
+		it( 'should return early from resizeCanvas if no container or canvas', () => {
+			canvasManager.container = null;
+			canvasManager.canvas = null;
+
+			// Should not throw
+			expect( () => canvasManager.resizeCanvas() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'style options', () => {
+		it( 'should delegate updateStyleOptions to styleController', () => {
+			const updateStyleOptions = jest.fn().mockReturnValue( { color: '#ff0000' } );
+			canvasManager.styleController = { updateStyleOptions, applyToLayer: jest.fn() };
+			canvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [] );
+
+			canvasManager.updateStyleOptions( { color: '#ff0000' } );
+
+			expect( updateStyleOptions ).toHaveBeenCalledWith( { color: '#ff0000' } );
+			expect( canvasManager.currentStyle ).toEqual( { color: '#ff0000' } );
+		} );
+
+		it( 'should apply styles to selected layers', () => {
+			const applyToLayer = jest.fn();
+			const mockLayer = { id: 'layer1', type: 'rectangle' };
+			canvasManager.styleController = {
+				updateStyleOptions: jest.fn().mockReturnValue( { fill: '#00ff00' } ),
+				applyToLayer
+			};
+			canvasManager.getSelectedLayerIds = jest.fn().mockReturnValue( [ 'layer1' ] );
+			canvasManager.editor = {
+				getLayerById: jest.fn().mockReturnValue( mockLayer ),
+				layers: [ mockLayer ]
+			};
+			canvasManager.renderLayers = jest.fn();
+
+			canvasManager.updateStyleOptions( { fill: '#00ff00' } );
+
+			expect( applyToLayer ).toHaveBeenCalledWith( mockLayer, { fill: '#00ff00' } );
+			expect( canvasManager.renderLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should use fallback style logic when styleController unavailable', () => {
+			canvasManager.styleController = null;
+			canvasManager.currentStyle = { color: '#000000' };
+
+			canvasManager.updateStyleOptions( { fill: '#ffffff' } );
+
+			expect( canvasManager.currentStyle.fill ).toBe( '#ffffff' );
+			expect( canvasManager.currentStyle.color ).toBe( '#000000' );
+		} );
+	} );
+
+	describe( 'image loading', () => {
+		it( 'should try loading next URL on error', () => {
+			const urls = [ 'url1.jpg', 'url2.jpg', 'url3.jpg' ];
+			const mockImage = {
+				addEventListener: jest.fn(),
+				removeEventListener: jest.fn(),
+				dispatchEvent: jest.fn()
+			};
+			let errorHandler;
+
+			// Mock Image constructor
+			const originalImage = global.Image;
+			global.Image = jest.fn().mockImplementation( () => {
+				const img = {
+					set onload( fn ) { this._onload = fn; },
+					set onerror( fn ) { errorHandler = fn; }
+				};
+				return img;
+			} );
+
+			canvasManager.tryLoadImageFallback( urls, 0 );
+
+			// Trigger error to try next URL
+			if ( errorHandler ) {
+				errorHandler();
+			}
+
+			global.Image = originalImage;
+		} );
+
+		it( 'should handle tryLoadImageFallback when index exceeds urls length', () => {
+			canvasManager.handleImageLoadError = jest.fn();
+
+			canvasManager.tryLoadImageFallback( [ 'url1.jpg' ], 10 );
+
+			expect( canvasManager.handleImageLoadError ).toHaveBeenCalled();
+		} );
+
+		it( 'should call handleImageLoadError on exception', () => {
+			canvasManager.handleImageLoadError = jest.fn();
+			window.mw = { log: { error: jest.fn() } };
+
+			// Force an error by passing invalid data
+			const originalImage = global.Image;
+			global.Image = jest.fn().mockImplementation( () => {
+				throw new Error( 'Image constructor error' );
+			} );
+
+			canvasManager.tryLoadImageFallback( [ 'url.jpg' ], 0 );
+
+			expect( canvasManager.handleImageLoadError ).toHaveBeenCalled();
+
+			global.Image = originalImage;
+			delete window.mw;
+		} );
+	} );
 } );
