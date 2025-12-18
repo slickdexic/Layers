@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 17, 2025  
+**Last Updated:** December 18, 2025  
 **Status:** ⚠️ Production Ready with Technical Debt  
-**Version:** 1.1.0  
+**Version:** 1.1.1-dev  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
@@ -16,11 +16,11 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | Area | Status | Details |
 |------|--------|--------|
 | **Functionality** | ✅ Working | Extension works in production, 13 drawing tools |
-| **Test Suite** | ✅ Good | ~4,800 tests, ~91% statement coverage |
+| **Test Suite** | ✅ Good | ~5,100 tests, ~91% statement coverage |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
 | **Code Splitting** | ✅ Done | Viewer 682 lines, Shared ~5K lines, Editor ~34K lines |
 | **ES6 Migration** | ✅ Complete | 67 ES6 classes, 0 prototype methods |
-| **God Classes** | ⚠️ Critical Debt | **9 files over 1,000 lines** (was 8, grew with features) |
+| **God Classes** | ⚠️ Technical Debt | **8 files over 1,000 lines** (was 9, ShapeRenderer extracted) |
 | **E2E Tests** | ❌ Not in CI | Playwright exists but not automated |
 | **Documentation** | ⚠️ Needs Work | Often lags behind code changes |
 
@@ -93,13 +93,14 @@ This document provides a **prioritized, actionable improvement plan** based on t
 - LayersNamespace: 27% → 78%
 - LayerPanel: 77% → 87%
 
-### P2.10 ⚠️ Address ShapeRenderer Growth - NEW
+### P2.10 ✅ Extract TextBoxRenderer - COMPLETE
 
-- **Status:** NOT STARTED
+- **Status:** COMPLETE (December 18, 2025)
 - **Problem:** ShapeRenderer grew from ~1,050 to 1,367 lines with Text Box feature
-- **Action:** Extract TextBoxRenderer.js
-- **Effort:** 1 week
-- **Priority:** P1 (should be done before adding more features)
+- **Result:** Extracted TextBoxRenderer.js (~430 lines)
+- **ShapeRenderer:** Reduced from 1,367 to 1,049 lines (24% reduction)
+- **Tests:** 50 new unit tests, all passing
+- **Applied to:** Both main and REL1_39 branches
 
 ### P2.11 ⚠️ Set Up E2E Tests in CI - NOT STARTED
 
@@ -113,22 +114,24 @@ This document provides a **prioritized, actionable improvement plan** based on t
 
 ## Current God Classes (Priority P2)
 
-**These 9 files represent the main maintainability concern:**
+**These 8 files over 1,000 lines represent the main maintainability concern:**
 
 | File | Lines | Delegation | Priority | Action |
 |------|-------|------------|----------|--------|
 | CanvasManager.js | 1,893 | 10+ controllers | Low | Orchestrator, hard to split further |
 | LayerPanel.js | 1,720 | 7 controllers | Low | Well-delegated |
 | APIManager.js | 1,385 | None | **High** | Split into API + State layers |
-| ShapeRenderer.js | 1,367 | None | **High** | Extract TextBoxRenderer |
 | LayersEditor.js | 1,296 | 3 modules | Medium | Consider more extraction |
 | SelectionManager.js | 1,266 | None | Medium | Cohesive but large |
 | ToolManager.js | 1,180 | None | **High** | Extract tool-specific logic |
 | CanvasRenderer.js | 1,132 | None | Medium | Consider layer-type renderers |
 | Toolbar.js | 1,126 | None | Medium | Extract section builders |
 
+**Recently addressed:**
+- ✅ ShapeRenderer.js: 1,367 → 1,049 lines (extracted TextBoxRenderer)
+
 **Recommended extraction order:**
-1. ShapeRenderer → TextBoxRenderer (urgent - growing with features)
+1. ~~ShapeRenderer → TextBoxRenderer~~ ✅ DONE
 2. ToolManager → TextBoxTool, TextTool
 3. APIManager → APIClient + StateManager consolidation
 4. Toolbar → ToolbarSections (lower priority)
