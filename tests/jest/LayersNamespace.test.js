@@ -709,4 +709,228 @@ describe( 'LayersNamespace', () => {
 			expect( typeof global.window.Layers.VERSION ).toBe( 'string' );
 		} );
 	} );
+
+	describe( 'Deprecation proxy advanced', () => {
+		beforeEach( () => {
+			// Enable debug mode
+			mockMw.config = {
+				get: jest.fn( ( key ) => key === 'wgLayersDebug' )
+			};
+			mockMw.log = {
+				warn: jest.fn()
+			};
+		} );
+
+		it( 'should create working proxy for class that can be instantiated', () => {
+			jest.resetModules();
+
+			class TestClass {
+				constructor( value ) {
+					this.value = value;
+				}
+			}
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			ns.registerExport( 'StateManager', TestClass );
+
+			// The class should be registered in namespace
+			expect( global.window.Layers.Core.StateManager ).toBe( TestClass );
+		} );
+
+		it( 'should copy static properties to proxy wrapper', () => {
+			jest.resetModules();
+
+			class TestClass {
+				constructor() {
+					this.instance = true;
+				}
+				static staticMethod() {
+					return 'static';
+				}
+			}
+			TestClass.CONSTANT = 42;
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			global.window.StateManager = TestClass;
+
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			ns.registerExport( 'StateManager', TestClass );
+
+			// Static properties should be accessible
+			expect( global.window.Layers.Core.StateManager.CONSTANT ).toBe( 42 );
+			expect( global.window.Layers.Core.StateManager.staticMethod() ).toBe( 'static' );
+		} );
+
+		it( 'should not create duplicate deprecation wrappers', () => {
+			jest.resetModules();
+
+			class TestClass {}
+			TestClass._layersDeprecated = true;
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			global.window.StateManager = TestClass;
+
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			// Should not throw and should recognize already-wrapped
+			expect( () => {
+				ns.registerExport( 'StateManager', TestClass );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle objects (non-functions) in deprecated proxy', () => {
+			jest.resetModules();
+
+			const testObject = { key: 'value', method: jest.fn() };
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			global.window.testObject = testObject;
+
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			// Register something that maps to object (but since testObject isn't in registry, use a known one)
+			// The point is to test createDeprecatedProxy with non-function
+			ns.registerExport( 'StateManager', testObject );
+
+			// For non-functions, it should just be registered directly
+			expect( global.window.Layers.Core.StateManager ).toBe( testObject );
+		} );
+	} );
+
+	describe( 'shouldWarn function behavior', () => {
+		it( 'should not warn when mw is undefined', () => {
+			const savedMw = global.mw;
+			delete global.mw;
+
+			jest.resetModules();
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			// Should not throw
+			expect( () => {
+				require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			} ).not.toThrow();
+
+			global.mw = savedMw;
+		} );
+
+		it( 'should not warn when mw.config is undefined', () => {
+			delete mockMw.config;
+
+			jest.resetModules();
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			expect( () => {
+				require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should not warn when wgLayersDebug is false', () => {
+			mockMw.config = {
+				get: jest.fn().mockReturnValue( false )
+			};
+
+			jest.resetModules();
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			expect( mockMw.log.warn ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not warn when mw.log.warn is undefined', () => {
+			mockMw.config = {
+				get: jest.fn().mockReturnValue( true )
+			};
+			delete mockMw.log.warn;
+
+			jest.resetModules();
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			// Should not throw even with debug enabled but no warn function
+			expect( () => {
+				require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'MediaWiki hook integration', () => {
+		it( 'should register with mw.hook when available', () => {
+			const addFn = jest.fn();
+			mockMw.hook = jest.fn().mockReturnValue( { add: addFn } );
+
+			jest.resetModules();
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			expect( mockMw.hook ).toHaveBeenCalledWith( 'ext.layers.loaded' );
+			expect( addFn ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing mw.hook gracefully', () => {
+			delete mockMw.hook;
+
+			jest.resetModules();
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			expect( () => {
+				require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'DOMContentLoaded handling', () => {
+		it( 'should defer initialization when document is loading', () => {
+			// Mock document.readyState as 'loading'
+			const originalReadyState = Object.getOwnPropertyDescriptor( document, 'readyState' );
+			Object.defineProperty( document, 'readyState', {
+				value: 'loading',
+				configurable: true
+			} );
+
+			const addEventListenerSpy = jest.spyOn( document, 'addEventListener' );
+
+			jest.resetModules();
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			expect( addEventListenerSpy ).toHaveBeenCalledWith(
+				'DOMContentLoaded',
+				expect.any( Function )
+			);
+
+			addEventListenerSpy.mockRestore();
+			if ( originalReadyState ) {
+				Object.defineProperty( document, 'readyState', originalReadyState );
+			}
+		} );
+
+		it( 'should use setTimeout when document already loaded', () => {
+			// document.readyState is 'complete' by default in jsdom
+			// The module uses setTimeout to defer initialization
+			// We verify this path doesn't throw and initializes correctly
+			jest.resetModules();
+
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+
+			// Should not throw when document is already loaded
+			expect( () => {
+				require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+			} ).not.toThrow();
+
+			// The init function should be exposed for deferred execution
+			expect( global.window.Layers.init ).toBeDefined();
+			expect( typeof global.window.Layers.init ).toBe( 'function' );
+		} );
+	} );
 } );

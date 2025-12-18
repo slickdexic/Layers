@@ -985,4 +985,453 @@ describe( 'UIManager', () => {
 			expect( () => uiManager.showError( null ) ).not.toThrow();
 		} );
 	} );
+
+	describe( 'deleteCurrentSet', () => {
+		it( 'should do nothing when currentSet is not set', () => {
+			mockStateManager.get.mockReturnValue( null );
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			// No confirm called since there's no set
+			expect( window.confirm ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should show info message when default set has no layers', () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'default';
+				if ( key === 'layers' ) return [];
+				return null;
+			} );
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				'No layers to clear',
+				{ type: 'info' }
+			);
+		} );
+
+		it( 'should prompt to clear layers for default set', () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'default';
+				if ( key === 'layers' ) return [ { id: 'layer1' } ];
+				return null;
+			} );
+
+			window.confirm = jest.fn( () => false ); // User cancels
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			expect( window.confirm ).toHaveBeenCalledWith(
+				'Clear all layers from the default set? This will remove all annotations.'
+			);
+		} );
+
+		it( 'should clear layers when user confirms default set clear', () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'default';
+				if ( key === 'layers' ) return [ { id: 'layer1' } ];
+				return null;
+			} );
+
+			window.confirm = jest.fn( () => true ); // User confirms
+
+			const mockCanvasManager = { renderLayers: jest.fn() };
+			const mockLayerPanel = { renderLayerList: jest.fn() };
+			const mockSelectionManager = { clearSelection: jest.fn() };
+			const mockApiManager = { saveLayers: jest.fn().mockResolvedValue( {} ) };
+
+			mockEditor.canvasManager = mockCanvasManager;
+			mockEditor.layerPanel = mockLayerPanel;
+			mockEditor.selectionManager = mockSelectionManager;
+			mockEditor.apiManager = mockApiManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
+			expect( mockCanvasManager.renderLayers ).toHaveBeenCalledWith( [] );
+			expect( mockLayerPanel.renderLayerList ).toHaveBeenCalled();
+			expect( mockSelectionManager.clearSelection ).toHaveBeenCalled();
+			expect( mockApiManager.saveLayers ).toHaveBeenCalledWith( [], 'default' );
+		} );
+
+		it( 'should show success notification after clearing default set', async () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'default';
+				if ( key === 'layers' ) return [ { id: 'layer1' } ];
+				return null;
+			} );
+
+			window.confirm = jest.fn( () => true );
+
+			const mockApiManager = { saveLayers: jest.fn().mockResolvedValue( {} ) };
+			mockEditor.apiManager = mockApiManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			// Wait for promise to resolve
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'isDirty', false );
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				'All layers cleared from default set.',
+				{ type: 'success' }
+			);
+		} );
+
+		it( 'should show error notification when clearing default set fails', async () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'default';
+				if ( key === 'layers' ) return [ { id: 'layer1' } ];
+				return null;
+			} );
+
+			window.confirm = jest.fn( () => true );
+
+			const mockApiManager = {
+				saveLayers: jest.fn().mockRejectedValue( new Error( 'Save failed' ) )
+			};
+			mockEditor.apiManager = mockApiManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			// Wait for promise to reject
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				'Failed to save changes',
+				{ type: 'error' }
+			);
+		} );
+
+		it( 'should confirm and delete non-default set', () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'annotations';
+				if ( key === 'namedSets' ) {
+					return [
+						{ name: 'annotations', revision_count: 3 }
+					];
+				}
+				return null;
+			} );
+
+			window.confirm = jest.fn( () => false ); // User cancels
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			expect( window.confirm ).toHaveBeenCalledWith(
+				'layers-delete-set-confirm'
+			);
+		} );
+
+		it( 'should call API to delete non-default set when confirmed', async () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'annotations';
+				if ( key === 'namedSets' ) {
+					return [ { name: 'annotations', revision_count: 1 } ];
+				}
+				return null;
+			} );
+
+			window.confirm = jest.fn( () => true );
+
+			const mockApiManager = {
+				deleteLayerSet: jest.fn().mockResolvedValue( {} )
+			};
+			const mockRevisionManager = { buildSetSelector: jest.fn() };
+			mockEditor.apiManager = mockApiManager;
+			mockEditor.revisionManager = mockRevisionManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			expect( mockApiManager.deleteLayerSet ).toHaveBeenCalledWith( 'annotations' );
+
+			// Wait for promise
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect( mockRevisionManager.buildSetSelector ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle delete API error gracefully', async () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'annotations';
+				if ( key === 'namedSets' ) {
+					return [ { name: 'annotations', revision_count: 1 } ];
+				}
+				return null;
+			} );
+
+			window.confirm = jest.fn( () => true );
+
+			const mockApiManager = {
+				deleteLayerSet: jest.fn().mockRejectedValue( new Error( 'Delete failed' ) )
+			};
+			mockEditor.apiManager = mockApiManager;
+
+			global.mw.log.error = jest.fn();
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			// Wait for promise to reject
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect( global.mw.log.error ).toHaveBeenCalledWith(
+				'[UIManager] deleteCurrentSet error:',
+				expect.any( Error )
+			);
+		} );
+
+		it( 'should show error when apiManager is not available', () => {
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'annotations';
+				if ( key === 'namedSets' ) {
+					return [ { name: 'annotations', revision_count: 1 } ];
+				}
+				return null;
+			} );
+
+			window.confirm = jest.fn( () => true );
+			mockEditor.apiManager = null;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.deleteCurrentSet();
+
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				'layers-delete-failed',
+				{ type: 'error' }
+			);
+		} );
+	} );
+
+	describe( 'renameCurrentSet', () => {
+		it( 'should not allow renaming default set', () => {
+			mockStateManager.get.mockReturnValue( 'default' );
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				'The default layer set cannot be renamed',
+				{ type: 'warn' }
+			);
+		} );
+
+		it( 'should do nothing when user cancels prompt', () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => null ); // User cancels
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( window.prompt ).toHaveBeenCalled();
+			// No API call should be made
+			expect( mockEditor.apiManager ).toBeUndefined();
+		} );
+
+		it( 'should do nothing when new name is empty', () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => '   ' ); // Empty/whitespace
+
+			const mockApiManager = { renameLayerSet: jest.fn() };
+			mockEditor.apiManager = mockApiManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( mockApiManager.renameLayerSet ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should do nothing when new name is same as current', () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => 'annotations' ); // Same name
+
+			const mockApiManager = { renameLayerSet: jest.fn() };
+			mockEditor.apiManager = mockApiManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( mockApiManager.renameLayerSet ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should reject invalid set name format', () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => 'invalid name!' ); // Invalid chars
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				expect.stringContaining( 'layers-invalid-setname' ),
+				expect.objectContaining( { type: 'error' } )
+			);
+		} );
+
+		it( 'should reject set name that is too long', () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => 'a'.repeat( 51 ) ); // 51 chars
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				expect.stringContaining( 'layers-invalid-setname' ),
+				expect.objectContaining( { type: 'error' } )
+			);
+		} );
+
+		it( 'should call API to rename with valid name', async () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => 'new-name' );
+
+			const mockApiManager = {
+				renameLayerSet: jest.fn().mockResolvedValue( {} )
+			};
+			const mockRevisionManager = { buildSetSelector: jest.fn() };
+			mockEditor.apiManager = mockApiManager;
+			mockEditor.revisionManager = mockRevisionManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith( 'annotations', 'new-name' );
+
+			// Wait for promise
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect( mockRevisionManager.buildSetSelector ).toHaveBeenCalled();
+		} );
+
+		it( 'should trim whitespace from new name', async () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => '  trimmed-name  ' );
+
+			const mockApiManager = {
+				renameLayerSet: jest.fn().mockResolvedValue( {} )
+			};
+			mockEditor.apiManager = mockApiManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith(
+				'annotations',
+				'trimmed-name'
+			);
+		} );
+
+		it( 'should handle rename API error gracefully', async () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => 'new-name' );
+
+			const mockApiManager = {
+				renameLayerSet: jest.fn().mockRejectedValue( new Error( 'Rename failed' ) )
+			};
+			mockEditor.apiManager = mockApiManager;
+
+			global.mw.log.error = jest.fn();
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			// Wait for promise to reject
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect( global.mw.log.error ).toHaveBeenCalledWith(
+				'[UIManager] renameCurrentSet error:',
+				expect.any( Error )
+			);
+		} );
+
+		it( 'should show error when apiManager is not available', () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => 'new-name' );
+			mockEditor.apiManager = null;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				'Failed to rename layer set',
+				{ type: 'error' }
+			);
+		} );
+
+		it( 'should accept valid alphanumeric names with hyphens and underscores', async () => {
+			mockStateManager.get.mockReturnValue( 'old-set' );
+			window.prompt = jest.fn( () => 'my_new-Set123' );
+
+			const mockApiManager = {
+				renameLayerSet: jest.fn().mockResolvedValue( {} )
+			};
+			mockEditor.apiManager = mockApiManager;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith(
+				'old-set',
+				'my_new-Set123'
+			);
+		} );
+
+		it( 'should use editor.buildSetSelector if revisionManager is not available', async () => {
+			mockStateManager.get.mockReturnValue( 'annotations' );
+			window.prompt = jest.fn( () => 'new-name' );
+
+			const mockApiManager = {
+				renameLayerSet: jest.fn().mockResolvedValue( {} )
+			};
+			const buildSetSelector = jest.fn();
+			mockEditor.apiManager = mockApiManager;
+			mockEditor.revisionManager = null;
+			mockEditor.buildSetSelector = buildSetSelector;
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+			uiManager.renameCurrentSet();
+
+			// Wait for promise
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect( buildSetSelector ).toHaveBeenCalled();
+		} );
+	} );
 } );

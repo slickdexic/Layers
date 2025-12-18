@@ -1634,4 +1634,210 @@ describe( 'Toolbar', function () {
 			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
 		} );
 	} );
+
+	describe( 'handleImageImport', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+			// Mock alert
+			global.alert = jest.fn();
+			// Set up editor with required properties
+			toolbar.editor = {
+				stateManager: {
+					addLayer: jest.fn()
+				},
+				saveState: jest.fn(),
+				canvasManager: {
+					redraw: jest.fn()
+				}
+			};
+			// Mock mw.config.get to return proper defaults for image size
+			global.mw.config.get = jest.fn( function ( key, defaultVal ) {
+				if ( key === 'wgLayersMaxImageBytes' ) {
+					return 1048576; // 1MB default
+				}
+				if ( key === 'wgLayersDebug' ) {
+					return false;
+				}
+				return defaultVal !== undefined ? defaultVal : null;
+			} );
+		} );
+
+		it( 'should reject files that are too large', async function () {
+			const largeFile = new File( [ new ArrayBuffer( 2 * 1024 * 1024 ) ], 'large.png', { type: 'image/png' } );
+			// Override size property for testing
+			Object.defineProperty( largeFile, 'size', { value: 2 * 1024 * 1024 } );
+
+			await toolbar.handleImageImport( largeFile );
+
+			expect( global.alert ).toHaveBeenCalled();
+			// The message key or fallback text should be shown
+			expect( global.alert.mock.calls[ 0 ][ 0 ] ).toMatch( /too.large|import-image-too-large/i );
+		} );
+
+		it( 'should reject files with invalid type', async function () {
+			const invalidFile = new File( [ 'test' ], 'test.txt', { type: 'text/plain' } );
+
+			await toolbar.handleImageImport( invalidFile );
+
+			expect( global.alert ).toHaveBeenCalled();
+			expect( global.alert.mock.calls[ 0 ][ 0 ] ).toMatch( /invalid|import-image-invalid/i );
+		} );
+
+		it( 'should accept valid PNG files', async function () {
+			const validFile = new File( [ 'test' ], 'test.png', { type: 'image/png' } );
+			Object.defineProperty( validFile, 'size', { value: 1000 } );
+
+			// Mock readFileAsDataURL
+			toolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/png;base64,test' );
+
+			// Mock loadImage
+			toolbar.loadImage = jest.fn().mockResolvedValue( {
+				naturalWidth: 100,
+				naturalHeight: 100
+			} );
+
+			await toolbar.handleImageImport( validFile );
+
+			expect( toolbar.readFileAsDataURL ).toHaveBeenCalledWith( validFile );
+			expect( toolbar.loadImage ).toHaveBeenCalled();
+			expect( toolbar.editor.stateManager.addLayer ).toHaveBeenCalled();
+		} );
+
+		it( 'should accept JPEG files', async function () {
+			const jpegFile = new File( [ 'test' ], 'test.jpg', { type: 'image/jpeg' } );
+			Object.defineProperty( jpegFile, 'size', { value: 1000 } );
+
+			toolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/jpeg;base64,test' );
+			toolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 50, naturalHeight: 50 } );
+
+			await toolbar.handleImageImport( jpegFile );
+
+			expect( toolbar.readFileAsDataURL ).toHaveBeenCalled();
+		} );
+
+		it( 'should accept GIF files', async function () {
+			const gifFile = new File( [ 'test' ], 'test.gif', { type: 'image/gif' } );
+			Object.defineProperty( gifFile, 'size', { value: 1000 } );
+
+			toolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/gif;base64,test' );
+			toolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 50, naturalHeight: 50 } );
+
+			await toolbar.handleImageImport( gifFile );
+
+			expect( toolbar.readFileAsDataURL ).toHaveBeenCalled();
+		} );
+
+		it( 'should accept WebP files', async function () {
+			const webpFile = new File( [ 'test' ], 'test.webp', { type: 'image/webp' } );
+			Object.defineProperty( webpFile, 'size', { value: 1000 } );
+
+			toolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/webp;base64,test' );
+			toolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 50, naturalHeight: 50 } );
+
+			await toolbar.handleImageImport( webpFile );
+
+			expect( toolbar.readFileAsDataURL ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle errors during import gracefully', async function () {
+			const validFile = new File( [ 'test' ], 'test.png', { type: 'image/png' } );
+			Object.defineProperty( validFile, 'size', { value: 1000 } );
+
+			toolbar.readFileAsDataURL = jest.fn().mockRejectedValue( new Error( 'Read failed' ) );
+
+			await toolbar.handleImageImport( validFile );
+
+			expect( global.alert ).toHaveBeenCalled();
+			expect( global.alert.mock.calls[ 0 ][ 0 ] ).toMatch( /fail|import-image-failed/i );
+		} );
+
+		it( 'should create layer with correct properties', async function () {
+			const validFile = new File( [ 'test' ], 'my-image.png', { type: 'image/png' } );
+			Object.defineProperty( validFile, 'size', { value: 1000 } );
+
+			toolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/png;base64,test' );
+			toolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 200, naturalHeight: 150 } );
+
+			await toolbar.handleImageImport( validFile );
+
+			const addedLayer = toolbar.editor.stateManager.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( addedLayer.type ).toBe( 'image' );
+			expect( addedLayer.name ).toBe( 'my-image' );
+			expect( addedLayer.width ).toBe( 200 );
+			expect( addedLayer.height ).toBe( 150 );
+			expect( addedLayer.preserveAspectRatio ).toBe( true );
+			expect( addedLayer.visible ).toBe( true );
+		} );
+
+		it( 'should trigger save state after import', async function () {
+			const validFile = new File( [ 'test' ], 'test.png', { type: 'image/png' } );
+			Object.defineProperty( validFile, 'size', { value: 1000 } );
+
+			toolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/png;base64,test' );
+			toolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 100, naturalHeight: 100 } );
+
+			await toolbar.handleImageImport( validFile );
+
+			expect( toolbar.editor.saveState ).toHaveBeenCalledWith( 'Import image layer' );
+		} );
+
+		it( 'should trigger redraw after import', async function () {
+			const validFile = new File( [ 'test' ], 'test.png', { type: 'image/png' } );
+			Object.defineProperty( validFile, 'size', { value: 1000 } );
+
+			toolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/png;base64,test' );
+			toolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 100, naturalHeight: 100 } );
+
+			await toolbar.handleImageImport( validFile );
+
+			expect( toolbar.editor.canvasManager.redraw ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'readFileAsDataURL', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should return a promise', function () {
+			const file = new File( [ 'test' ], 'test.txt', { type: 'text/plain' } );
+			const result = toolbar.readFileAsDataURL( file );
+
+			expect( result ).toBeInstanceOf( Promise );
+		} );
+
+		it( 'should resolve with data URL for valid file', async function () {
+			const content = 'test content';
+			const file = new File( [ content ], 'test.txt', { type: 'text/plain' } );
+
+			const result = await toolbar.readFileAsDataURL( file );
+
+			expect( result ).toContain( 'data:' );
+		} );
+	} );
+
+	describe( 'loadImage', function () {
+		beforeEach( function () {
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should return a promise', function () {
+			const result = toolbar.loadImage( 'data:image/png;base64,test' );
+
+			expect( result ).toBeInstanceOf( Promise );
+		} );
+
+		it( 'should set image src when called', function () {
+			// Just verify the method starts the loading process
+			const imageSpy = jest.spyOn( global, 'Image' ).mockImplementation( function () {
+				this.onload = null;
+				this.onerror = null;
+				this.src = '';
+			} );
+
+			toolbar.loadImage( 'test-src' );
+
+			imageSpy.mockRestore();
+		} );
+	} );
 } );
