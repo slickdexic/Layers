@@ -2,7 +2,7 @@
 
 **Review Date:** December 18, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 ## Executive Summary
 
@@ -13,13 +13,14 @@ The "Layers" extension provides non-destructive image annotation capabilities fo
 The extension is **functional and production-ready** with good test coverage (~91%), solid security practices, and a **fully modernized ES6 JavaScript codebase**. However, significant technical debt remains that will hinder long-term maintainability.
 
 **Honest Highlights:**
-- ~5,100+ passing tests with ~91% statement coverage - solid but not bulletproof
+- **5,164 passing tests** with ~91% statement coverage - solid but not bulletproof
 - PHP backend demonstrates professional security practices
 - Accessibility features implemented (skip links, ARIA, keyboard support)
 - CI/CD pipelines operational
-- 68 ES6 classes, 0 prototype patterns remaining
+- **70 ES6 classes**, 0 prototype patterns remaining
 - New Text Box tool with multi-line text, styling, and shadow effects (v1.1.0)
 - TextBoxRenderer extracted from ShapeRenderer (December 2025)
+- TextToolHandler + PathToolHandler extracted from ToolManager (v1.1.2)
 
 **Honest Concerns:**
 - **8 god classes** (>1,000 lines each) - reduced from 9 with TextBoxRenderer extraction
@@ -76,13 +77,13 @@ These metrics were collected directly from v1.1.0 source code.
 
 | Metric | Actual Value | Target | Status |
 |--------|--------------|--------|--------|
-| Total JS files | **76** | - | - |
-| Total JS lines | **~39,879** | - | - |
+| Total JS files | **79** | - | - |
+| Total JS lines | **~40,719** | - | - |
 | Viewer module | ~682 lines | - | ✅ Lightweight |
 | Shared module | ~5,000+ lines | - | Growing (includes new renderers) |
-| Editor module | ~34,000+ lines | - | Large but expected for full editor |
-| Files > 1,000 lines | **8** | 0 | ⚠️ God classes (was 9) |
-| ES6 classes | **67** | 60+ | ✅ 100% Complete |
+| Editor module | ~35,000+ lines | - | Large but expected for full editor |
+| Files > 1,000 lines | **8** | 0 | ⚠️ God classes |
+| ES6 classes | **70** | 60+ | ✅ 100% Complete |
 | Prototype method definitions | **0** | 0 | ✅ Eliminated |
 | ESLint errors | **0** | 0 | ✅ Clean |
 | Stylelint errors | **0** | 0 | ✅ Clean |
@@ -96,23 +97,23 @@ These metrics were collected directly from v1.1.0 source code.
 | APIManager.js | **1,385** | → | API + state management mixed |
 | LayersEditor.js | **1,296** | → | Main entry point |
 | SelectionManager.js | **1,266** | → | Core selection logic |
-| ToolManager.js | **1,180** | ↑ | Added Text Box tool logic |
+| ToolManager.js | **1,275** | → | Delegates to TextToolHandler + PathToolHandler |
 | CanvasRenderer.js | **1,132** | → | Canvas rendering |
 | Toolbar.js | **1,126** | → | UI construction |
 
-**Recently Fixed:**
+**Recently Addressed:**
 - ✅ ShapeRenderer.js: 1,367 → **1,049** lines (TextBoxRenderer extracted)
-| Toolbar.js | **1,126** | → | UI controls |
+- ✅ ToolManager.js: Now delegates to TextToolHandler (209 lines) + PathToolHandler (231 lines)
 
-**Total: 12,365 lines in god classes** - this represents ~31% of the editor codebase concentrated in 9 files.
+**Total: ~12,373 lines in 8 god classes** - this represents ~35% of the editor codebase.
 
 ### Test Coverage
 
 | Category | Value | Target | Status |
 |----------|-------|--------|--------|
-| Jest tests passing | ~4,800+ | - | ✅ All passing |
-| Jest test suites | ~99 | - | ✅ Good |
-| Statement coverage | ~91% | 80% | ✅ Exceeded |
+| Jest tests passing | **5,164** | - | ✅ All passing |
+| Jest test suites | **103** | - | ✅ Good |
+| Statement coverage | **90.4%** | 80% | ✅ Exceeded |
 | Branch coverage | ~78% | 65% | ✅ Exceeded |
 | E2E tests in CI | **0** | 10+ | ❌ Not automated |
 
