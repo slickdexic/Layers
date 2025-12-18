@@ -23,7 +23,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 	/** @var array Supported layer types */
 	private const SUPPORTED_LAYER_TYPES = [
-		'text', 'arrow', 'rectangle', 'circle', 'ellipse',
+		'text', 'textbox', 'arrow', 'rectangle', 'circle', 'ellipse',
 		'polygon', 'star', 'line', 'path', 'blur', 'image'
 	];
 
@@ -63,6 +63,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'textStrokeWidth' => 'numeric',
 		'textShadow' => 'boolean',
 		'textShadowColor' => 'string',
+		'textShadowBlur' => 'numeric',
+		'textShadowOffsetX' => 'numeric',
+		'textShadowOffsetY' => 'numeric',
+		'fontWeight' => 'string',
+		'fontStyle' => 'string',
 		'shadow' => 'boolean',
 		'shadowColor' => 'string',
 		'shadowBlur' => 'numeric',
@@ -88,7 +93,12 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'src' => 'string',
 		'originalWidth' => 'numeric',
 		'originalHeight' => 'numeric',
-		'preserveAspectRatio' => 'boolean'
+		'preserveAspectRatio' => 'boolean',
+		// Text box properties
+		'textAlign' => 'string',
+		'verticalAlign' => 'string',
+		'padding' => 'numeric',
+		'lineHeight' => 'numeric'
 	];
 
 	/** @var array Value constraints for enum-like properties */
@@ -100,7 +110,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		],
 		'arrowhead' => [ 'none', 'arrow', 'circle', 'diamond', 'triangle' ],
 		'arrowStyle' => [ 'single', 'double', 'none' ],
-		'arrowHeadType' => [ 'pointed', 'chevron', 'standard' ]
+		'arrowHeadType' => [ 'pointed', 'chevron', 'standard' ],
+		'textAlign' => [ 'left', 'center', 'right' ],
+		'verticalAlign' => [ 'top', 'middle', 'bottom' ],
+		'fontWeight' => [ 'normal', 'bold' ],
+		'fontStyle' => [ 'normal', 'italic' ]
 	];
 
 	/** @var array Numeric constraints */
@@ -119,7 +133,13 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'arrowSize' => [ 'min' => 1, 'max' => 100 ],
 		'headScale' => [ 'min' => 0.1, 'max' => 5 ],
 		'tailWidth' => [ 'min' => 0, 'max' => 100 ],
-		'blurRadius' => [ 'min' => 0, 'max' => 100 ]
+		'blurRadius' => [ 'min' => 0, 'max' => 100 ],
+		'padding' => [ 'min' => 0, 'max' => 100 ],
+		'textShadowBlur' => [ 'min' => 0, 'max' => 50 ],
+		'textShadowOffsetX' => [ 'min' => -100, 'max' => 100 ],
+		'textShadowOffsetY' => [ 'min' => -100, 'max' => 100 ],
+		'lineHeight' => [ 'min' => 0.5, 'max' => 5 ],
+		'cornerRadius' => [ 'min' => 0, 'max' => 500 ]
 	];
 
 	/** @var int Maximum points in a path/polygon */

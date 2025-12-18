@@ -217,6 +217,8 @@ class ThumbnailRenderer {
 		switch ( $layer['type'] ) {
 			case 'text':
 				return $this->buildTextArguments( $layer, $scaleX, $scaleY );
+			case 'textbox':
+				return $this->buildTextBoxArguments( $layer, $scaleX, $scaleY );
 			case 'rectangle':
 				return $this->buildRectangleArguments( $layer, $scaleX, $scaleY );
 			case 'circle':
@@ -272,6 +274,78 @@ class ThumbnailRenderer {
 			'-annotate', '+' . (int)$x . '+' . (int)$y,
 			$text
 		] );
+		return $args;
+	}
+
+	/**
+	 * Build ImageMagick arguments for a text box layer (rectangle + text)
+	 *
+	 * @param array $layer Layer data
+	 * @param float $scaleX X scale factor
+	 * @param float $scaleY Y scale factor
+	 * @return array ImageMagick command arguments
+	 */
+	private function buildTextBoxArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$width = ( $layer['width'] ?? 100 ) * $scaleX;
+		$height = ( $layer['height'] ?? 100 ) * $scaleY;
+		$stroke = (string)( $layer['stroke'] ?? '#000000' );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+		$fill = (string)( $layer['fill'] ?? '#ffffff' );
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( $fill, $opacity );
+		$stroke = $this->withOpacity( $stroke, $opacity );
+
+		$args = [];
+
+		// Draw shadow if enabled
+		if ( !empty( $layer['shadow'] ) ) {
+			$shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
+			$shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
+			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
+			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
+			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+			$args = array_merge( $args, [
+				'-fill', $shadowColor,
+				'-draw',
+				'rectangle ' .
+					(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
+					(int)( $x + $width + $shadowOffsetX ) . ',' . (int)( $y + $height + $shadowOffsetY ),
+				'-blur', '0x' . (int)$shadowBlur
+			] );
+		}
+
+		// Draw the rectangle background
+		$args = array_merge( $args, [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', 'rectangle ' . (int)$x . ',' . (int)$y . ' ' . (int)( $x + $width ) . ',' . (int)( $y + $height )
+		] );
+
+		// Draw text if present
+		$text = (string)( $layer['text'] ?? '' );
+		if ( $text !== '' ) {
+			$fontSize = (int)round( ( $layer['fontSize'] ?? 16 ) * ( ( $scaleX + $scaleY ) / 2 ) );
+			$textColor = (string)( $layer['color'] ?? '#000000' );
+			$textColor = $this->withOpacity( $textColor, $opacity );
+			$font = (string)( $layer['fontFamily'] ?? 'DejaVu-Sans' );
+			$padding = ( $layer['padding'] ?? 8 ) * ( ( $scaleX + $scaleY ) / 2 );
+
+			// Calculate text position (simplified - top-left alignment)
+			$textX = (int)( $x + $padding );
+			$textY = (int)( $y + $padding + $fontSize );
+
+			$args = array_merge( $args, [
+				'-fill', $textColor,
+				'-pointsize', (string)$fontSize,
+				'-font', $font,
+				'-annotate', '+' . $textX . '+' . $textY,
+				$text
+			] );
+		}
+
 		return $args;
 	}
 

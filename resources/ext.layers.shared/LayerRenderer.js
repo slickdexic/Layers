@@ -261,6 +261,11 @@ class LayerRenderer {
 		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawRectangle( layer, this._prepareRenderOptions( options ) ); }
 	}
 
+	/** Draw a text box shape (rectangle with multi-line text) */
+	drawTextBox( layer, options ) {
+		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawTextBox( layer, this._prepareRenderOptions( options ) ); }
+	}
+
 	/** Draw a circle shape */
 	drawCircle( layer, options ) {
 		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawCircle( layer, this._prepareRenderOptions( options ) ); }
@@ -433,6 +438,9 @@ class LayerRenderer {
 		switch ( layer.type ) {
 			case 'text':
 				this.drawText( layer, options );
+				break;
+			case 'textbox':
+				this.drawTextBox( layer, options );
 				break;
 			case 'rectangle':
 			case 'rect':

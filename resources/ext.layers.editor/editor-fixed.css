@@ -747,6 +747,11 @@ body.layers-editor-open .mw-body-content {
 	margin-bottom: 6px;
 }
 
+.layer-properties-form .property-field--wide {
+	grid-template-columns: 1fr;
+	align-items: start;
+}
+
 .layer-properties-form label {
 	color: #495057;
 	font-size: 0.8em;
@@ -1310,6 +1315,22 @@ body.layers-editor-open .mw-body-content {
 	font-family: inherit;
 	resize: vertical;
 	font-size: 0.875em;
+}
+
+/* Wide property field overrides (must come after base styles) */
+
+.layer-properties-form .property-field--wide label {
+	margin-bottom: 4px;
+}
+
+.layer-properties-form .property-field--wide textarea {
+	width: 100%;
+	min-height: 60px;
+	padding: 6px;
+	border: 1px solid #ced4da;
+	border-radius: 4px;
+	font-size: 0.85em;
+	resize: vertical;
 }
 
 /* Error Display */

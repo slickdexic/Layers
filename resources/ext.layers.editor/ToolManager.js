@@ -191,6 +191,7 @@ class ToolManager {
 			case 'pen':
 				return 'crosshair';
 			case 'rectangle':
+			case 'textbox':
 			case 'circle':
 			case 'ellipse':
 			case 'line':
@@ -226,6 +227,9 @@ class ToolManager {
 				break;
 			case 'rectangle':
 				this.startRectangleTool( point );
+				break;
+			case 'textbox':
+				this.startTextBoxTool( point );
 				break;
 			case 'circle':
 				this.startCircleTool( point );
@@ -273,6 +277,7 @@ class ToolManager {
 				this.updatePenDrawing( point );
 				break;
 			case 'rectangle':
+			case 'textbox':
 				this.updateRectangleTool( point );
 				break;
 			case 'circle':
@@ -313,6 +318,7 @@ class ToolManager {
 				this.finishPenDrawing( point );
 				break;
 			case 'rectangle':
+			case 'textbox':
 			case 'circle':
 			case 'ellipse':
 			case 'line':
@@ -414,6 +420,45 @@ class ToolManager {
 			stroke: this.currentStyle.color,
 			strokeWidth: this.currentStyle.strokeWidth,
 			fill: this.currentStyle.fill,
+			shadow: this.currentStyle.shadow || false,
+			shadowColor: this.currentStyle.shadowColor || '#000000',
+			shadowBlur: this.currentStyle.shadowBlur || 8,
+			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
+			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+		};
+	}
+
+	/**
+	 * Start text box tool
+	 *
+	 * @param {Object} point Starting point
+	 */
+	startTextBoxTool( point ) {
+		// Delegate to ShapeFactory if available
+		if( this.shapeFactory && typeof this.shapeFactory.createTextBox === 'function' ) {
+			this.tempLayer = this.shapeFactory.createTextBox( point );
+			return;
+		}
+
+		// Fallback implementation
+		this.tempLayer = {
+			type: 'textbox',
+			x: point.x,
+			y: point.y,
+			width: 0,
+			height: 0,
+			text: '',
+			fontSize: this.currentStyle.fontSize || 16,
+			fontFamily: this.currentStyle.fontFamily || 'Arial, sans-serif',
+			color: this.currentStyle.color || '#000000',
+			textAlign: 'left',
+			verticalAlign: 'top',
+			lineHeight: 1.2,
+			stroke: this.currentStyle.color || '#000000',
+			strokeWidth: this.currentStyle.strokeWidth || 1,
+			fill: this.currentStyle.fill || '#ffffff',
+			cornerRadius: 0,
+			padding: 8,
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
 			shadowBlur: this.currentStyle.shadowBlur || 8,
@@ -810,6 +855,7 @@ class ToolManager {
 		switch( layer.type ) {
 			case 'rectangle':
 			case 'blur':
+			case 'textbox':
 				return layer.width > 1 && layer.height > 1;
 			case 'circle':
 				return layer.radius > 1;

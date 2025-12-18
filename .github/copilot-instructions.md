@@ -123,11 +123,12 @@ See `docs/NAMED_LAYER_SETS.md` for full architecture documentation.
 ## 3) Data model (Layer objects)
 
 Layer objects are a sanitized subset of the client model. Common fields (whitelist on server):
-- id (string), type (enum: text, arrow, rectangle, circle, ellipse, polygon, star, line, path, blur, image)
+- id (string), type (enum: text, textbox, arrow, rectangle, circle, ellipse, polygon, star, line, path, blur, image)
 - Geometry: x, y, width, height, radius, radiusX, radiusY, x1, y1, x2, y2, rotation (numbers in safe ranges)
-- Style: stroke, fill, color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blendMode or blend (mapped), fontFamily, fontSize
+- Style: stroke, fill, color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blendMode or blend (mapped), fontFamily, fontSize, fontWeight (normal|bold), fontStyle (normal|italic)
 - Arrow/line: arrowhead (none|arrow|circle|diamond|triangle), arrowStyle (solid|dashed|dotted), arrowSize
-- Text: text (sanitized), textStrokeColor, textStrokeWidth, textShadow (bool), textShadowColor
+- Text: text (sanitized), textStrokeColor, textStrokeWidth, textShadow (bool), textShadowColor, textShadowBlur, textShadowOffsetX, textShadowOffsetY
+- Text box: textAlign (left|center|right), verticalAlign (top|middle|bottom), padding, lineHeight, cornerRadius
 - Effects: shadow (bool), shadowColor, shadowBlur, shadowOffsetX/Y, shadowSpread, glow (bool)
 - Shapes/paths: points: Array<{x,y}> (capped ~1000)
 - Image: src (base64 data URL), originalWidth, originalHeight, preserveAspectRatio (bool)

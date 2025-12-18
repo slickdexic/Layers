@@ -73,38 +73,61 @@
 	 */
 	PropertiesForm.addInput = function ( opts, layerId, container ) {
 		const wrapper = document.createElement( 'div' );
-		wrapper.className = opts.type === 'checkbox' ? 'property-field property-field--checkbox' : 'property-field';
+		let wrapperClass = 'property-field';
+		if ( opts.type === 'checkbox' ) {
+			wrapperClass = 'property-field property-field--checkbox';
+		} else if ( opts.type === 'textarea' ) {
+			wrapperClass = 'property-field property-field--textarea';
+			if ( opts.wide ) {
+				wrapperClass += ' property-field--wide';
+			}
+		}
+		wrapper.className = wrapperClass;
 		const inputId = 'layer-prop-' + ( opts.prop || Math.random().toString( 36 ).slice( 2 ) ) + '-' + layerId;
 		const labelEl = document.createElement( 'label' );
 		labelEl.textContent = opts.label;
 		labelEl.setAttribute( 'for', inputId );
-		const input = document.createElement( 'input' );
+
+		// Create input or textarea element based on type
+		let input;
+		if ( opts.type === 'textarea' ) {
+			input = document.createElement( 'textarea' );
+			input.rows = opts.rows || 3;
+			if ( opts.maxLength !== undefined ) {
+				input.maxLength = opts.maxLength;
+			}
+		} else {
+			input = document.createElement( 'input' );
+			input.type = opts.type || 'text';
+			if ( opts.min !== undefined ) {
+				input.min = String( opts.min );
+			}
+			if ( opts.max !== undefined ) {
+				input.max = String( opts.max );
+			}
+			if ( opts.step !== undefined ) {
+				input.step = String( opts.step );
+			}
+			if ( opts.decimals === 1 && input.type === 'number' && !input.step ) {
+				input.step = '0.1';
+			}
+			if ( opts.maxLength !== undefined && input.type === 'text' ) {
+				input.maxLength = opts.maxLength;
+			}
+		}
+
 		input.id = inputId;
-		input.type = opts.type || 'text';
-		if ( opts.min !== undefined ) {
-			input.min = String( opts.min );
-		}
-		if ( opts.max !== undefined ) {
-			input.max = String( opts.max );
-		}
-		if ( opts.step !== undefined ) {
-			input.step = String( opts.step );
-		}
-		if ( opts.decimals === 1 && input.type === 'number' && !input.step ) {
-			input.step = '0.1';
-		}
-		if ( opts.maxLength !== undefined && input.type === 'text' ) {
-			input.maxLength = opts.maxLength;
-		}
 		input.value = ( opts.value !== undefined && opts.value !== null ) ? String( opts.value ) : '';
 
 		// Set appropriate width for different input types
-		if ( input.type === 'number' ) {
-			input.style.width = '80px'; // Narrower for number inputs
-		} else if ( input.type === 'text' && opts.prop !== 'text' ) {
-			input.style.width = '120px'; // Moderate width for short text
-		} else {
-			input.style.width = '100%'; // Full width for long text content
+		if ( opts.type !== 'textarea' ) {
+			if ( input.type === 'number' ) {
+				input.style.width = '80px'; // Narrower for number inputs
+			} else if ( input.type === 'text' && opts.prop !== 'text' ) {
+				input.style.width = '120px'; // Moderate width for short text
+			} else {
+				input.style.width = '100%'; // Full width for long text content
+			}
 		}
 
 		if ( opts.prop ) {
@@ -120,7 +143,9 @@
 		const validateInput = function ( value, showError ) {
 			let isValid = true;
 			let errorMessage = '';
-			if ( input.type === 'number' ) {
+			const isTextarea = opts.type === 'textarea';
+			const inputType = isTextarea ? 'text' : input.type;
+			if ( inputType === 'number' ) {
 				const num = parseFloat( value );
 				if ( value.trim() === '' ) {
 					isValid = false;
@@ -135,9 +160,9 @@
 					isValid = false;
 					errorMessage = 'Value must be at most ' + opts.max;
 				}
-			} else if ( input.type === 'text' ) {
+			} else if ( inputType === 'text' || isTextarea ) {
 				const textLength = value.length;
-				const maxLength = opts.maxLength || 1000;
+				const maxLength = opts.maxLength || ( isTextarea ? 5000 : 1000 );
 				const warnLength = Math.floor( maxLength * 0.95 );
 				if ( textLength > maxLength ) {
 					isValid = false;
@@ -182,7 +207,8 @@
 		input.addEventListener( 'input', function () {
 			try {
 				const value = input.value;
-				const showWarnings = input.type === 'text';
+				const isTextarea = opts.type === 'textarea';
+				const showWarnings = input.type === 'text' || isTextarea;
 				const valid = validateInput( value, showWarnings );
 				if ( input.type === 'number' ) {
 					let n = parseFloat( value );
@@ -206,7 +232,7 @@
 							safeOnChange( n );
 						}
 					}
-				} else if ( input.type === 'text' && valid ) {
+				} else if ( ( input.type === 'text' || isTextarea ) && valid ) {
 					safeOnChange( value );
 				}
 			} catch ( error ) {
@@ -608,6 +634,49 @@
 				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || 0 ), step: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: Math.round( layer.height || 0 ), step: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: Math.round( parseFloat( v ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-corner-radius', 'Corner Radius' ), type: 'number', value: Math.round( layer.cornerRadius || 0 ), min: 0, max: 200, step: 1, prop: 'cornerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { cornerRadius: Math.max( 0, Math.round( parseFloat( v ) ) || 0 ) } ); } } );
+				break;
+			case 'textbox':
+				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || 0 ), step: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: Math.round( layer.height || 0 ), step: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-corner-radius', 'Corner Radius' ), type: 'number', value: Math.round( layer.cornerRadius || 0 ), min: 0, max: 200, step: 1, prop: 'cornerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { cornerRadius: Math.max( 0, Math.round( parseFloat( v ) ) || 0 ) } ); } } );
+				// Textbox-specific: text properties
+				addSection( t( 'layers-section-text', 'Text' ), 'text' );
+				addInput( { label: t( 'layers-prop-text', 'Text' ), type: 'textarea', value: layer.text || '', maxLength: 5000, rows: 5, wide: true, onChange: function ( v ) { editor.updateLayer( layer.id, { text: v } ); } } );
+				// Font family dropdown
+				( function () {
+					const defaultFonts = mw.config.get( 'LayersDefaultFonts' ) || [ 'Arial', 'Roboto', 'Noto Sans', 'Times New Roman', 'Courier New' ];
+					const fontOptions = defaultFonts.map( function ( font ) {
+						return { value: font, text: font };
+					} );
+					addSelect( { label: t( 'layers-prop-font-family', 'Font' ), value: layer.fontFamily || 'Arial, sans-serif', options: fontOptions, onChange: function ( v ) { editor.updateLayer( layer.id, { fontFamily: v } ); } } );
+				}() );
+				addInput( { label: t( 'layers-prop-font-size', 'Font Size' ), type: 'number', value: layer.fontSize || 16, min: 6, max: 200, step: 1, prop: 'fontSize', onChange: function ( v ) { const fs = Math.max( 6, Math.min( 200, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { fontSize: fs } ); } } );
+				// Bold and Italic toggles
+				addCheckbox( { label: t( 'layers-prop-bold', 'Bold' ), checked: layer.fontWeight === 'bold', onChange: function ( checked ) { editor.updateLayer( layer.id, { fontWeight: checked ? 'bold' : 'normal' } ); } } );
+				addCheckbox( { label: t( 'layers-prop-italic', 'Italic' ), checked: layer.fontStyle === 'italic', onChange: function ( checked ) { editor.updateLayer( layer.id, { fontStyle: checked ? 'italic' : 'normal' } ); } } );
+				addColorPicker( { label: t( 'layers-prop-text-color', 'Text Color' ), value: layer.color || '#000000', property: 'color', onChange: function ( newColor ) { editor.updateLayer( layer.id, { color: newColor } ); } } );
+				addInput( { label: t( 'layers-prop-text-stroke-width', 'Text Stroke Width' ), type: 'number', value: layer.textStrokeWidth || 0, min: 0, max: 20, step: 0.5, prop: 'textStrokeWidth', onChange: function ( v ) { editor.updateLayer( layer.id, { textStrokeWidth: Math.max( 0, Math.min( 20, parseFloat( v ) ) ) } ); } } );
+				addColorPicker( { label: t( 'layers-prop-text-stroke-color', 'Text Stroke Color' ), value: layer.textStrokeColor || '#000000', property: 'textStrokeColor', onChange: function ( newColor ) { editor.updateLayer( layer.id, { textStrokeColor: newColor } ); } } );
+				// Text shadow section
+				addSection( t( 'layers-section-text-shadow', 'Text Shadow' ), 'text-shadow' );
+				addCheckbox( { label: t( 'layers-prop-text-shadow', 'Enable Text Shadow' ), checked: layer.textShadow === true, onChange: function ( checked ) { editor.updateLayer( layer.id, { textShadow: checked } ); } } );
+				addColorPicker( { label: t( 'layers-prop-text-shadow-color', 'Shadow Color' ), value: layer.textShadowColor || 'rgba(0,0,0,0.5)', property: 'textShadowColor', onChange: function ( newColor ) { editor.updateLayer( layer.id, { textShadowColor: newColor } ); } } );
+				addInput( { label: t( 'layers-prop-text-shadow-blur', 'Shadow Blur' ), type: 'number', value: layer.textShadowBlur || 4, min: 0, max: 50, step: 1, prop: 'textShadowBlur', onChange: function ( v ) { editor.updateLayer( layer.id, { textShadowBlur: Math.max( 0, Math.min( 50, parseFloat( v ) ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-text-shadow-offset-x', 'Shadow Offset X' ), type: 'number', value: layer.textShadowOffsetX || 2, min: -100, max: 100, step: 1, prop: 'textShadowOffsetX', onChange: function ( v ) { editor.updateLayer( layer.id, { textShadowOffsetX: Math.max( -100, Math.min( 100, parseFloat( v ) ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-text-shadow-offset-y', 'Shadow Offset Y' ), type: 'number', value: layer.textShadowOffsetY || 2, min: -100, max: 100, step: 1, prop: 'textShadowOffsetY', onChange: function ( v ) { editor.updateLayer( layer.id, { textShadowOffsetY: Math.max( -100, Math.min( 100, parseFloat( v ) ) ) } ); } } );
+				// Alignment section
+				addSection( t( 'layers-section-alignment', 'Alignment' ), 'alignment' );
+				addSelect( { label: t( 'layers-prop-text-align', 'Horizontal Align' ), value: layer.textAlign || 'left', options: [
+					{ value: 'left', text: t( 'layers-align-left', 'Left' ) },
+					{ value: 'center', text: t( 'layers-align-center', 'Center' ) },
+					{ value: 'right', text: t( 'layers-align-right', 'Right' ) }
+				], onChange: function ( v ) { editor.updateLayer( layer.id, { textAlign: v } ); } } );
+				addSelect( { label: t( 'layers-prop-vertical-align', 'Vertical Align' ), value: layer.verticalAlign || 'top', options: [
+					{ value: 'top', text: t( 'layers-align-top', 'Top' ) },
+					{ value: 'middle', text: t( 'layers-align-middle', 'Middle' ) },
+					{ value: 'bottom', text: t( 'layers-align-bottom', 'Bottom' ) }
+				], onChange: function ( v ) { editor.updateLayer( layer.id, { verticalAlign: v } ); } } );
+				addInput( { label: t( 'layers-prop-padding', 'Padding' ), type: 'number', value: layer.padding || 8, min: 0, max: 100, step: 1, prop: 'padding', onChange: function ( v ) { editor.updateLayer( layer.id, { padding: Math.max( 0, Math.min( 100, parseInt( v, 10 ) ) ) } ); } } );
 				break;
 			case ( LAYER_TYPES.CIRCLE || 'circle' ):
 				addInput( { label: t( 'layers-prop-radius', 'Radius' ), type: 'number', value: Math.round( layer.radius || DEFAULTS.RADIUS || 50 ), step: 1, prop: 'radius', onChange: function ( v ) { editor.updateLayer( layer.id, { radius: Math.round( parseFloat( v ) ) } ); } } );
