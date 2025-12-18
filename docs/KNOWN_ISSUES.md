@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** December 17, 2025  
-**Version:** 1.1.0
+**Last Updated:** December 18, 2025  
+**Version:** 1.1.2
 
 This document lists known functionality issues and their current status.
 
@@ -14,7 +14,7 @@ This document lists known functionality issues and their current status.
 **Status:** Ongoing concern  
 **Severity:** Medium-High for maintainability
 
-The codebase has **9 files exceeding 1,000 lines**, which impacts:
+The codebase has **8 files exceeding 1,000 lines**, which impacts:
 - New contributor onboarding
 - Test thoroughness
 - Code review efficiency
@@ -25,12 +25,15 @@ The codebase has **9 files exceeding 1,000 lines**, which impacts:
 | CanvasManager.js | 1,893 | Facade pattern, delegates to 10+ controllers |
 | LayerPanel.js | 1,720 | Delegates to 7 controllers |
 | APIManager.js | 1,385 | Needs API/state separation |
-| ShapeRenderer.js | 1,367 | **Grew with Text Box feature** |
 | LayersEditor.js | 1,296 | Main entry point |
 | SelectionManager.js | 1,266 | Core selection logic |
-| ToolManager.js | 1,180 | Needs tool extraction |
+| ToolManager.js | 1,275 | Delegates to TextToolHandler + PathToolHandler |
 | CanvasRenderer.js | 1,132 | Rendering logic |
 | Toolbar.js | 1,126 | UI controls |
+
+**Recently Addressed:**
+- ✅ ShapeRenderer.js: 1,367 → 1,049 lines (TextBoxRenderer extracted)
+- ✅ ToolManager.js: Delegates to TextToolHandler (209 lines) + PathToolHandler (231 lines)
 
 **See:** [improvement_plan.md](../improvement_plan.md) for remediation plan.
 
@@ -138,4 +141,4 @@ If you encounter issues:
 ---
 
 *Document created: December 8, 2025*  
-*Last updated: December 17, 2025*
+*Last updated: December 18, 2025*
