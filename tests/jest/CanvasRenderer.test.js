@@ -887,4 +887,304 @@ describe('CanvasRenderer', () => {
             expect(ctx.drawImage).toHaveBeenCalled();
         });
     });
+
+    describe('renderLayersToContext', () => {
+        let targetCanvas;
+        let targetCtx;
+
+        beforeEach(() => {
+            targetCanvas = document.createElement('canvas');
+            targetCanvas.width = 400;
+            targetCanvas.height = 300;
+            targetCtx = createMockContext();
+            targetCtx.canvas = targetCanvas;
+        });
+
+        test('should return early if targetCtx is null', () => {
+            // Should not throw
+            expect(() => renderer.renderLayersToContext(null, [])).not.toThrow();
+        });
+
+        test('should return early if layers is not an array', () => {
+            expect(() => renderer.renderLayersToContext(targetCtx, null)).not.toThrow();
+            expect(() => renderer.renderLayersToContext(targetCtx, 'invalid')).not.toThrow();
+            expect(() => renderer.renderLayersToContext(targetCtx, {})).not.toThrow();
+        });
+
+        test('should render visible layers to target context', () => {
+            const layers = [
+                { id: 'layer1', type: 'rectangle', visible: true, x: 10, y: 10, width: 100, height: 50 },
+                { id: 'layer2', type: 'circle', visible: true, x: 50, y: 50, radius: 30 }
+            ];
+
+            // Mock layerRenderer for this test
+            renderer.layerRenderer = {
+                setContext: jest.fn(),
+                drawLayer: jest.fn()
+            };
+
+            renderer.renderLayersToContext(targetCtx, layers);
+
+            // Should have called save/restore on target context
+            expect(targetCtx.save).toHaveBeenCalled();
+            expect(targetCtx.restore).toHaveBeenCalled();
+        });
+
+        test('should skip invisible layers', () => {
+            const layers = [
+                { id: 'layer1', type: 'rectangle', visible: false, x: 10, y: 10, width: 100, height: 50 }
+            ];
+
+            renderer.layerRenderer = {
+                setContext: jest.fn(),
+                drawLayer: jest.fn()
+            };
+
+            renderer.renderLayersToContext(targetCtx, layers);
+
+            // Layer should not be drawn (drawLayer not called for invisible layer)
+            expect(renderer.layerRenderer.drawLayer).not.toHaveBeenCalled();
+        });
+
+        test('should apply scale factor', () => {
+            const layers = [
+                { id: 'layer1', type: 'rectangle', visible: true, x: 10, y: 10, width: 100, height: 50 }
+            ];
+
+            renderer.layerRenderer = {
+                setContext: jest.fn(),
+                drawLayer: jest.fn()
+            };
+
+            const originalZoom = renderer.zoom;
+            renderer.renderLayersToContext(targetCtx, layers, 2);
+
+            // Zoom should be restored after rendering
+            expect(renderer.zoom).toBe(originalZoom);
+        });
+
+        test('should restore original context and state after rendering', () => {
+            const originalCtx = renderer.ctx;
+            const originalZoom = renderer.zoom;
+            const originalPanX = renderer.panX;
+            const originalPanY = renderer.panY;
+
+            renderer.layerRenderer = {
+                setContext: jest.fn(),
+                drawLayer: jest.fn()
+            };
+
+            const layers = [{ id: 'layer1', type: 'rectangle', visible: true, x: 0, y: 0, width: 10, height: 10 }];
+            renderer.renderLayersToContext(targetCtx, layers);
+
+            expect(renderer.ctx).toBe(originalCtx);
+            expect(renderer.zoom).toBe(originalZoom);
+            expect(renderer.panX).toBe(originalPanX);
+            expect(renderer.panY).toBe(originalPanY);
+        });
+
+        test('should handle blur layers specially with drawBlurEffectToContext', () => {
+            const layers = [
+                { id: 'blur1', type: 'blur', visible: true, x: 10, y: 10, width: 100, height: 100, blurRadius: 10 }
+            ];
+
+            renderer.layerRenderer = {
+                setContext: jest.fn(),
+                drawLayer: jest.fn()
+            };
+
+            // Spy on drawBlurEffectToContext
+            const spy = jest.spyOn(renderer, 'drawBlurEffectToContext');
+
+            renderer.renderLayersToContext(targetCtx, layers, 1);
+
+            expect(spy).toHaveBeenCalledWith(targetCtx, layers[0], 1);
+            spy.mockRestore();
+        });
+
+        test('should restore layerRenderer context after rendering', () => {
+            const mockSetContext = jest.fn();
+            const mockDrawLayer = jest.fn();
+            renderer.layerRenderer = { 
+                setContext: mockSetContext,
+                drawLayer: mockDrawLayer
+            };
+            const originalCtx = renderer.ctx;
+
+            const layers = [{ id: 'layer1', type: 'rectangle', visible: true, x: 0, y: 0, width: 10, height: 10 }];
+            renderer.renderLayersToContext(targetCtx, layers);
+
+            // Should have been called with target context and then restored
+            expect(mockSetContext).toHaveBeenCalledWith(targetCtx);
+            expect(mockSetContext).toHaveBeenCalledWith(originalCtx);
+        });
+    });
+
+    describe('drawBlurEffectToContext', () => {
+        let targetCanvas;
+        let targetCtx;
+
+        beforeEach(() => {
+            targetCanvas = document.createElement('canvas');
+            targetCanvas.width = 400;
+            targetCanvas.height = 300;
+            targetCtx = createMockContext();
+            targetCtx.canvas = targetCanvas;
+        });
+
+        test('should return early for zero or negative dimensions', () => {
+            const layer = { x: 10, y: 10, width: 0, height: 100, blurRadius: 10 };
+            renderer.drawBlurEffectToContext(targetCtx, layer, 1);
+            expect(targetCtx.save).not.toHaveBeenCalled();
+
+            const layer2 = { x: 10, y: 10, width: 100, height: -5, blurRadius: 10 };
+            renderer.drawBlurEffectToContext(targetCtx, layer2, 1);
+            expect(targetCtx.save).not.toHaveBeenCalled();
+        });
+
+        test('should apply blur filter with correct radius', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: 15 };
+            
+            renderer.drawBlurEffectToContext(targetCtx, layer, 1);
+
+            expect(targetCtx.save).toHaveBeenCalled();
+            expect(targetCtx.filter).toBe('none'); // Reset after applying
+            expect(targetCtx.restore).toHaveBeenCalled();
+        });
+
+        test('should clamp blur radius between 1 and 64', () => {
+            // Min clamping
+            const layerMin = { x: 10, y: 10, width: 100, height: 100, blurRadius: 0 };
+            renderer.drawBlurEffectToContext(targetCtx, layerMin, 1);
+            expect(targetCtx.save).toHaveBeenCalled();
+
+            // Max clamping
+            targetCtx.save.mockClear();
+            const layerMax = { x: 10, y: 10, width: 100, height: 100, blurRadius: 100 };
+            renderer.drawBlurEffectToContext(targetCtx, layerMax, 1);
+            expect(targetCtx.save).toHaveBeenCalled();
+        });
+
+        test('should apply layer opacity', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: 10, opacity: 0.5 };
+            
+            renderer.drawBlurEffectToContext(targetCtx, layer, 1);
+
+            // globalAlpha should have been set (check happens before restore)
+            expect(targetCtx.save).toHaveBeenCalled();
+            expect(targetCtx.restore).toHaveBeenCalled();
+        });
+
+        test('should apply scale factor to coordinates and dimensions', () => {
+            const layer = { x: 10, y: 20, width: 100, height: 50, blurRadius: 10 };
+            const scale = 2;
+
+            renderer.drawBlurEffectToContext(targetCtx, layer, scale);
+
+            // Drawing operations should use scaled values (20, 40, 200, 100)
+            expect(targetCtx.save).toHaveBeenCalled();
+        });
+
+        test('should use default blur radius of 12 when not specified', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100 };
+            
+            renderer.drawBlurEffectToContext(targetCtx, layer, 1);
+
+            expect(targetCtx.save).toHaveBeenCalled();
+            expect(targetCtx.restore).toHaveBeenCalled();
+        });
+    });
+
+    describe('drawBlurEffect', () => {
+        test('should return early for zero dimensions', () => {
+            const layer = { x: 10, y: 10, width: 0, height: 100, blurRadius: 10 };
+            ctx.save.mockClear();
+            
+            renderer.drawBlurEffect(layer);
+            
+            expect(ctx.save).not.toHaveBeenCalled();
+        });
+
+        test('should return early for negative dimensions', () => {
+            const layer = { x: 10, y: 10, width: 100, height: -10, blurRadius: 10 };
+            ctx.save.mockClear();
+            
+            renderer.drawBlurEffect(layer);
+            
+            expect(ctx.save).not.toHaveBeenCalled();
+        });
+
+        test('should apply blur with clamped radius', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: 20 };
+            
+            renderer.drawBlurEffect(layer);
+
+            expect(ctx.save).toHaveBeenCalled();
+            expect(ctx.restore).toHaveBeenCalled();
+        });
+
+        test('should clamp radius to minimum of 1', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: -5 };
+            
+            renderer.drawBlurEffect(layer);
+
+            expect(ctx.save).toHaveBeenCalled();
+        });
+
+        test('should clamp radius to maximum of 64', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: 200 };
+            
+            renderer.drawBlurEffect(layer);
+
+            expect(ctx.save).toHaveBeenCalled();
+        });
+
+        test('should apply layer opacity', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: 10, opacity: 0.7 };
+            
+            renderer.drawBlurEffect(layer);
+
+            expect(ctx.save).toHaveBeenCalled();
+            expect(ctx.restore).toHaveBeenCalled();
+        });
+
+        test('should apply blend mode if specified', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: 10, blend: 'multiply' };
+            
+            renderer.drawBlurEffect(layer);
+
+            expect(ctx.save).toHaveBeenCalled();
+        });
+
+        test('should use default blur radius of 12', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100 };
+            
+            renderer.drawBlurEffect(layer);
+
+            expect(ctx.save).toHaveBeenCalled();
+            expect(ctx.restore).toHaveBeenCalled();
+        });
+
+        test('should handle filter application and reset', () => {
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: 12 };
+            
+            renderer.drawBlurEffect(layer);
+
+            // Filter should be reset to 'none' after blur
+            expect(ctx.filter).toBe('none');
+        });
+
+        test('should account for zoom and pan in canvas capture', () => {
+            renderer.zoom = 2;
+            renderer.panX = 50;
+            renderer.panY = 30;
+            
+            const layer = { x: 10, y: 10, width: 100, height: 100, blurRadius: 12 };
+            
+            renderer.drawBlurEffect(layer);
+
+            expect(ctx.save).toHaveBeenCalled();
+            expect(ctx.restore).toHaveBeenCalled();
+        });
+    });
 });
