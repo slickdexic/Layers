@@ -1160,4 +1160,324 @@ describe( 'ToolManager', () => {
 			expect( toolManager.finishCurrentDrawing ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'fallback initialization paths', () => {
+		it( 'should use inline style management when ToolStyles is unavailable', () => {
+			// Clear the module cache to test without ToolStyles
+			jest.resetModules();
+
+			// Mock the require to simulate ToolStyles being unavailable
+			jest.doMock( '../../resources/ext.layers.editor/tools/ToolStyles.js', () => null );
+
+			const ToolManagerFresh = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tmFallback = new ToolManagerFresh( {}, mockCanvasManager );
+
+			// Should have initialized currentStyle with defaults
+			expect( tmFallback.currentStyle ).toBeDefined();
+			expect( tmFallback.currentStyle.color ).toBe( '#000000' );
+			expect( tmFallback.currentStyle.strokeWidth ).toBe( 2 );
+			expect( tmFallback.currentStyle.fontSize ).toBe( 16 );
+		} );
+
+		it( 'should handle null shapeFactory gracefully', () => {
+			toolManager.shapeFactory = null;
+
+			// Should use fallback rectangle creation
+			toolManager.setTool( 'rectangle' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'rectangle' );
+		} );
+
+		it( 'should use fallback path creation when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+
+			toolManager.setTool( 'pen' );
+			toolManager.startTool( { x: 50, y: 50 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'path' );
+			expect( toolManager.tempLayer.points ).toHaveLength( 1 );
+		} );
+
+		it( 'should handle null toolRegistry for cursor', () => {
+			toolManager.toolRegistry = null;
+
+			const cursor = toolManager.getToolCursor( 'rectangle' );
+
+			expect( cursor ).toBe( 'crosshair' );
+		} );
+
+		it( 'should handle toolRegistry without getCursor method', () => {
+			toolManager.toolRegistry = { someOtherMethod: jest.fn() };
+
+			const cursor = toolManager.getToolCursor( 'rectangle' );
+
+			expect( cursor ).toBe( 'crosshair' );
+		} );
+	} );
+
+	describe( 'screen reader announcer integration', () => {
+		it( 'should announce tool change via layersAnnouncer', () => {
+			const mockAnnouncer = {
+				announceTool: jest.fn()
+			};
+			window.layersAnnouncer = mockAnnouncer;
+
+			toolManager.setTool( 'rectangle' );
+
+			expect( mockAnnouncer.announceTool ).toHaveBeenCalledWith( 'Rectangle' );
+
+			delete window.layersAnnouncer;
+		} );
+
+		it( 'should handle missing announcer gracefully', () => {
+			delete window.layersAnnouncer;
+
+			// Should not throw
+			expect( () => toolManager.setTool( 'rectangle' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'textbox tool', () => {
+		it( 'should create textbox layer with fallback when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'textbox' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'textbox' );
+			expect( toolManager.tempLayer.x ).toBe( 100 );
+			expect( toolManager.tempLayer.y ).toBe( 100 );
+		} );
+
+		it( 'should update textbox dimensions like rectangle', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'textbox' );
+			toolManager.startTool( { x: 100, y: 100 } );
+			toolManager.updateTool( { x: 200, y: 150 } );
+
+			expect( toolManager.tempLayer.width ).toBe( 100 );
+			expect( toolManager.tempLayer.height ).toBe( 50 );
+		} );
+
+		it( 'should finish textbox and add layer', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'textbox' );
+			toolManager.startTool( { x: 100, y: 100 } );
+			toolManager.updateTool( { x: 200, y: 150 } );
+			toolManager.finishTool( { x: 200, y: 150 } );
+
+			// Should have added the layer
+			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'ellipse tool', () => {
+		it( 'should create ellipse with fallback when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'ellipse' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'ellipse' );
+		} );
+
+		it( 'should update ellipse radii on drag', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'ellipse' );
+			toolManager.startTool( { x: 100, y: 100 } );
+			toolManager.updateTool( { x: 200, y: 180 } );
+
+			expect( toolManager.tempLayer.radiusX ).toBe( 50 ); // half of 100
+			expect( toolManager.tempLayer.radiusY ).toBe( 40 ); // half of 80
+		} );
+	} );
+
+	describe( 'circle tool', () => {
+		it( 'should create circle with fallback when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'circle' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'circle' );
+		} );
+	} );
+
+	describe( 'line tool', () => {
+		it( 'should create line with fallback when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'line' );
+			toolManager.startTool( { x: 50, y: 50 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'line' );
+			expect( toolManager.tempLayer.x1 ).toBe( 50 );
+			expect( toolManager.tempLayer.y1 ).toBe( 50 );
+		} );
+
+		it( 'should update line endpoint on drag', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'line' );
+			toolManager.startTool( { x: 50, y: 50 } );
+			toolManager.updateTool( { x: 150, y: 100 } );
+
+			expect( toolManager.tempLayer.x2 ).toBe( 150 );
+			expect( toolManager.tempLayer.y2 ).toBe( 100 );
+		} );
+	} );
+
+	describe( 'arrow tool', () => {
+		it( 'should create arrow with fallback when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'arrow' );
+			toolManager.startTool( { x: 50, y: 50 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'arrow' );
+			expect( toolManager.tempLayer.arrowStyle ).toBe( 'single' ); // fallback uses arrowStyle, not arrowhead
+		} );
+	} );
+
+	describe( 'polygon tool fallback', () => {
+		it( 'should create polygon with fallback when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'polygon' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'polygon' );
+			expect( toolManager.tempLayer.sides ).toBe( 6 );
+		} );
+	} );
+
+	describe( 'star tool fallback', () => {
+		it( 'should create star with fallback when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'star' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'star' );
+			expect( toolManager.tempLayer.points ).toBe( 5 );
+		} );
+	} );
+
+	describe( 'blur tool fallback', () => {
+		it( 'should create blur with fallback when shapeFactory unavailable', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'blur' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			expect( toolManager.tempLayer ).toBeDefined();
+			expect( toolManager.tempLayer.type ).toBe( 'blur' );
+			expect( toolManager.tempLayer.blurRadius ).toBe( 10 ); // fallback uses blurRadius
+		} );
+
+		it( 'should update blur dimensions on drag', () => {
+			toolManager.shapeFactory = null;
+			toolManager.setTool( 'blur' );
+			toolManager.startTool( { x: 100, y: 100 } );
+			toolManager.updateTool( { x: 200, y: 180 } );
+
+			expect( toolManager.tempLayer.width ).toBe( 100 );
+			expect( toolManager.tempLayer.height ).toBe( 80 );
+		} );
+	} );
+
+	describe( 'updateStyle with toolStyles', () => {
+		it( 'should delegate to toolStyles when available', () => {
+			const mockToolStyles = {
+				update: jest.fn(),
+				get: jest.fn().mockReturnValue( { color: '#ff0000' } )
+			};
+			toolManager.toolStyles = mockToolStyles;
+
+			toolManager.updateStyle( { color: '#ff0000' } );
+
+			expect( mockToolStyles.update ).toHaveBeenCalledWith( { color: '#ff0000' } );
+		} );
+
+		it( 'should update currentStyle via toolStyles sync', () => {
+			const newStyle = { color: '#00ff00', strokeWidth: 5 };
+			const mockToolStyles = {
+				update: jest.fn(),
+				get: jest.fn().mockReturnValue( newStyle )
+			};
+			toolManager.toolStyles = mockToolStyles;
+
+			toolManager.updateStyle( newStyle );
+
+			// After update, currentStyle should be synced from toolStyles.get()
+			expect( mockToolStyles.get ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'getStyle with toolStyles', () => {
+		it( 'should delegate to toolStyles when available', () => {
+			const expectedStyle = { color: '#123456', strokeWidth: 3 };
+			const mockToolStyles = {
+				get: jest.fn().mockReturnValue( expectedStyle )
+			};
+			toolManager.toolStyles = mockToolStyles;
+
+			const result = toolManager.getStyle();
+
+			expect( mockToolStyles.get ).toHaveBeenCalled();
+			expect( result ).toEqual( expectedStyle );
+		} );
+	} );
+
+	describe( 'updateStyle fallback', () => {
+		it( 'should use manual property assignment when styleManager unavailable', () => {
+			toolManager.styleManager = null;
+			toolManager.currentStyle = { color: '#000000', strokeWidth: 2 };
+
+			toolManager.updateStyle( { color: '#ff0000', fontSize: 20 } );
+
+			expect( toolManager.currentStyle.color ).toBe( '#ff0000' );
+			expect( toolManager.currentStyle.fontSize ).toBe( 20 );
+			expect( toolManager.currentStyle.strokeWidth ).toBe( 2 ); // preserved
+		} );
+	} );
+
+	describe( 'getStyle fallback', () => {
+		it( 'should create shallow copy when styleManager unavailable', () => {
+			toolManager.styleManager = null;
+			toolManager.currentStyle = { color: '#abcdef', strokeWidth: 4 };
+
+			const result = toolManager.getStyle();
+
+			expect( result ).toEqual( toolManager.currentStyle );
+			// Ensure it's a copy, not the same reference
+			expect( result ).not.toBe( toolManager.currentStyle );
+		} );
+	} );
+
+	describe( 'destroy with handlers', () => {
+		it( 'should destroy textToolHandler if present', () => {
+			const mockHandler = {
+				destroy: jest.fn(),
+				hideTextEditor: jest.fn()
+			};
+			toolManager.textToolHandler = mockHandler;
+
+			toolManager.destroy();
+
+			expect( mockHandler.destroy ).toHaveBeenCalled();
+			expect( toolManager.textToolHandler ).toBeNull();
+		} );
+
+		it( 'should destroy pathToolHandler if present', () => {
+			const mockHandler = { destroy: jest.fn() };
+			toolManager.pathToolHandler = mockHandler;
+
+			toolManager.destroy();
+
+			expect( mockHandler.destroy ).toHaveBeenCalled();
+			expect( toolManager.pathToolHandler ).toBeNull();
+		} );
+	} );
 } );

@@ -707,6 +707,220 @@ describe( 'TextBoxRenderer', () => {
 	} );
 
 	// ========================================================================
+	// Shadow Delegation Tests
+	// ========================================================================
+
+	describe( 'drawSpreadShadow', () => {
+		it( 'should delegate to shadowRenderer when available', () => {
+			const mockShadowRenderer = {
+				drawSpreadShadow: jest.fn()
+			};
+			renderer.shadowRenderer = mockShadowRenderer;
+
+			const layer = { shadow: true };
+			const scale = { x: 1, y: 1, avg: 1 };
+			const spread = 5;
+			const drawFn = jest.fn();
+			const opacity = 0.8;
+
+			renderer.drawSpreadShadow( layer, scale, spread, drawFn, opacity );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalledWith( layer, scale, spread, drawFn, opacity );
+		} );
+
+		it( 'should do nothing when shadowRenderer is not available', () => {
+			renderer.shadowRenderer = null;
+
+			// Should not throw
+			expect( () => renderer.drawSpreadShadow( {}, {}, 5, jest.fn(), 1 ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'drawSpreadShadowStroke', () => {
+		it( 'should delegate to shadowRenderer when available', () => {
+			const mockShadowRenderer = {
+				drawSpreadShadowStroke: jest.fn()
+			};
+			renderer.shadowRenderer = mockShadowRenderer;
+
+			const layer = { shadow: true };
+			const scale = { x: 1, y: 1, avg: 1 };
+			const strokeWidth = 3;
+			const drawFn = jest.fn();
+			const opacity = 0.9;
+
+			renderer.drawSpreadShadowStroke( layer, scale, strokeWidth, drawFn, opacity );
+
+			expect( mockShadowRenderer.drawSpreadShadowStroke ).toHaveBeenCalledWith( layer, scale, strokeWidth, drawFn, opacity );
+		} );
+
+		it( 'should do nothing when shadowRenderer is not available', () => {
+			renderer.shadowRenderer = null;
+
+			// Should not throw
+			expect( () => renderer.drawSpreadShadowStroke( {}, {}, 3, jest.fn(), 1 ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'stroke shadow rendering', () => {
+		it( 'should draw stroke shadow with spread when enabled', () => {
+			const mockShadowRenderer = {
+				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				getShadowSpread: jest.fn().mockReturnValue( 5 ),
+				drawSpreadShadow: jest.fn(),
+				drawSpreadShadowStroke: jest.fn(),
+				clearShadow: jest.fn()
+			};
+			renderer.shadowRenderer = mockShadowRenderer;
+
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#0000ff',
+				fill: 'transparent',
+				strokeWidth: 2,
+				text: 'Test',
+				shadow: true,
+				shadowSpread: 5
+			};
+
+			renderer.draw( layer );
+
+			expect( mockShadowRenderer.drawSpreadShadowStroke ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw both fill and stroke shadows when both present', () => {
+			const mockShadowRenderer = {
+				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				getShadowSpread: jest.fn().mockReturnValue( 3 ),
+				drawSpreadShadow: jest.fn(),
+				drawSpreadShadowStroke: jest.fn(),
+				clearShadow: jest.fn()
+			};
+			renderer.shadowRenderer = mockShadowRenderer;
+
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				fill: '#ff0000',
+				stroke: '#0000ff',
+				strokeWidth: 2,
+				text: 'Test',
+				shadow: true,
+				shadowSpread: 3
+			};
+
+			renderer.draw( layer );
+
+			expect( mockShadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+			expect( mockShadowRenderer.drawSpreadShadowStroke ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'vertical alignment', () => {
+		it( 'should apply middle vertical alignment', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 80,
+				fill: '#ffffff',
+				text: 'Test',
+				verticalAlign: 'middle'
+			};
+
+			renderer.draw( layer );
+
+			// Check that fillText was called (text was rendered with middle alignment)
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply bottom vertical alignment', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 80,
+				fill: '#ffffff',
+				text: 'Test',
+				verticalAlign: 'bottom'
+			};
+
+			renderer.draw( layer );
+
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'text stroke with shadow', () => {
+		it( 'should temporarily disable shadow for text stroke', () => {
+			// Track shadowColor changes
+			let shadowColorHistory = [];
+			Object.defineProperty( ctx, 'shadowColor', {
+				get: function() { return this._shadowColor || 'transparent'; },
+				set: function( val ) {
+					shadowColorHistory.push( val );
+					this._shadowColor = val;
+				},
+				configurable: true
+			} );
+
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				fill: '#ffffff',
+				text: 'Test',
+				textStrokeWidth: 2,
+				textStrokeColor: '#000000',
+				textShadow: true,
+				textShadowColor: '#333333'
+			};
+
+			renderer.draw( layer );
+
+			// Should have set shadow color to transparent during stroke
+			expect( shadowColorHistory ).toContain( 'transparent' );
+			expect( ctx.strokeText ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'text clipping to box', () => {
+		it( 'should not draw text that exceeds box height', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 20, // Very small height
+				fill: '#ffffff',
+				text: 'Line 1\nLine 2\nLine 3\nLine 4', // Many lines
+				fontSize: 16,
+				padding: 2
+			};
+
+			const fillTextCalls = [];
+			ctx.fillText = jest.fn( ( text, x, y ) => fillTextCalls.push( { text, x, y } ) );
+
+			renderer.draw( layer );
+
+			// With small height, not all lines should be drawn
+			// Box height 20 - padding*2 (4) = 16 available, with fontSize 16 only 1 line fits
+			expect( fillTextCalls.length ).toBeLessThanOrEqual( 2 );
+		} );
+	} );
+
+	// ========================================================================
 	// Cleanup Tests
 	// ========================================================================
 
