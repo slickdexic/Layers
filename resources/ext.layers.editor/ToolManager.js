@@ -9,6 +9,8 @@
 	const ToolRegistry = window.ToolRegistry;
 	const ToolStyles = window.ToolStyles;
 	const ShapeFactory = window.ShapeFactory;
+	const TextToolHandler = window.Layers && window.Layers.Tools && window.Layers.Tools.TextToolHandler;
+	const PathToolHandler = window.Layers && window.Layers.Tools && window.Layers.Tools.PathToolHandler;
 
 	/**
 	 * Minimal typedef for CanvasManager used for JSDoc references in this file.
@@ -41,11 +43,11 @@ class ToolManager {
 		// Initialize extracted modules
 		this._initializeModules();
 
-		// Path drawing state
+		// Path drawing state (fallback if PathToolHandler unavailable)
 		this.pathPoints = [];
 		this.isPathComplete = false;
 
-		// Text editing state
+		// Text editing state (fallback if TextToolHandler unavailable)
 		this.textEditor = null;
 		this.editingTextLayer = null;
 	}
@@ -89,6 +91,34 @@ class ToolManager {
 			this.toolRegistry = window.Layers.Tools.registry;
 		} else {
 			this.toolRegistry = null;
+		}
+
+		// Initialize TextToolHandler if available
+		if( TextToolHandler ) {
+			this.textToolHandler = new TextToolHandler( {
+				canvasManager: this.canvasManager,
+				styleManager: this.styleManager,
+				addLayerCallback: ( layer ) => this.addLayerToCanvas( layer )
+			} );
+		} else {
+			this.textToolHandler = null;
+		}
+
+		// Initialize PathToolHandler if available
+		if( PathToolHandler ) {
+			this.pathToolHandler = new PathToolHandler( {
+				canvasManager: this.canvasManager,
+				styleManager: this.styleManager,
+				addLayerCallback: ( layer ) => this.addLayerToCanvas( layer ),
+				renderCallback: () => {
+					const currentLayers = this.canvasManager.editor.stateManager ?
+						this.canvasManager.editor.stateManager.getLayers() :
+						this.canvasManager.editor.layers;
+					this.canvasManager.renderLayers( currentLayers );
+				}
+			} );
+		} else {
+			this.pathToolHandler = null;
 		}
 	}
 
@@ -638,6 +668,12 @@ class ToolManager {
 	 * @param {Object} point Click point
 	 */
 	startTextTool( point ) {
+		// Delegate to TextToolHandler if available
+		if( this.textToolHandler ) {
+			this.textToolHandler.start( point );
+			return;
+		}
+		// Fallback to inline implementation
 		this.showTextEditor( point );
 	}
 
@@ -647,6 +683,18 @@ class ToolManager {
 	 * @param {Object} point Current point
 	 */
 	handlePathPoint( point ) {
+		// Delegate to PathToolHandler if available
+		if( this.pathToolHandler ) {
+			const completed = this.pathToolHandler.handlePoint( point );
+			if( !completed ) {
+				this.isDrawing = true;
+			} else {
+				this.isDrawing = false;
+			}
+			return;
+		}
+
+		// Fallback to inline implementation
 		if( this.pathPoints.length === 0 ) {
 			// Start new path
 			this.pathPoints = [ { x: point.x, y: point.y } ];
@@ -676,6 +724,14 @@ class ToolManager {
 	 * Complete path drawing
 	 */
 	completePath() {
+		// Delegate to PathToolHandler if available
+		if( this.pathToolHandler ) {
+			this.pathToolHandler.complete();
+			this.isDrawing = false;
+			return;
+		}
+
+		// Fallback to inline implementation
 		if( this.pathPoints.length > 2 ) {
 			const layer = {
 				type: 'path',
@@ -892,7 +948,13 @@ class ToolManager {
 	 * Render path preview
 	 */
 	renderPathPreview() {
-		// Use canvas manager directly(RenderEngine removed as redundant)
+		// Delegate to PathToolHandler if available
+		if( this.pathToolHandler ) {
+			this.pathToolHandler.renderPreview();
+			return;
+		}
+
+		// Fallback: Use canvas manager directly(RenderEngine removed as redundant)
 		this.canvasManager.renderLayers( this.canvasManager.editor.layers );
 
 		// Draw path preview
@@ -975,6 +1037,13 @@ class ToolManager {
 	 * @param {Object} point Position to show editor
 	 */
 	showTextEditor( point ) {
+		// Delegate to TextToolHandler if available
+		if( this.textToolHandler ) {
+			this.textToolHandler.showTextEditor( point );
+			return;
+		}
+
+		// Fallback to inline implementation
 		this.hideTextEditor();
 
 		const input = document.createElement( 'input' );
@@ -1016,6 +1085,13 @@ class ToolManager {
 	 * Hide text editor
 	 */
 	hideTextEditor() {
+		// Delegate to TextToolHandler if available
+		if( this.textToolHandler ) {
+			this.textToolHandler.hideTextEditor();
+			return;
+		}
+
+		// Fallback to inline implementation
 		if( this.textEditor ) {
 			this.textEditor.remove();
 			this.textEditor = null;
@@ -1029,6 +1105,13 @@ class ToolManager {
 	 * @param {Object} point Position point
 	 */
 	finishTextEditing( input, point ) {
+		// Delegate to TextToolHandler if available
+		if( this.textToolHandler ) {
+			this.textToolHandler.finishTextEditing( input, point );
+			return;
+		}
+
+		// Fallback to inline implementation
 		const text = input.value.trim();
 		if( text ) {
 			const layer = {
@@ -1140,7 +1223,19 @@ class ToolManager {
 		// Finish any active drawing
 		this.finishCurrentDrawing();
 
-		// Hide and clean up text editor
+		// Clean up TextToolHandler if available
+		if( this.textToolHandler ) {
+			this.textToolHandler.destroy();
+			this.textToolHandler = null;
+		}
+
+		// Clean up PathToolHandler if available
+		if( this.pathToolHandler ) {
+			this.pathToolHandler.destroy();
+			this.pathToolHandler = null;
+		}
+
+		// Hide and clean up text editor (fallback)
 		this.hideTextEditor();
 		if( this.textEditor && this.textEditor.parentNode ) {
 			this.textEditor.parentNode.removeChild( this.textEditor );

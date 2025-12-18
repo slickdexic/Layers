@@ -2,7 +2,7 @@
 
 **Last Updated:** December 18, 2025  
 **Status:** ⚠️ Production Ready with Technical Debt  
-**Version:** 1.1.1-dev  
+**Version:** 1.1.2-dev  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
@@ -110,6 +110,17 @@ This document provides a **prioritized, actionable improvement plan** based on t
 - **Effort:** 1-2 weeks
 - **Priority:** P1
 
+### P2.12 ✅ Extract Tool Handlers from ToolManager - COMPLETE
+
+- **Status:** COMPLETE (December 18, 2025)
+- **Problem:** ToolManager.js at 1,180 lines with embedded tool-specific logic
+- **Result:** Extracted 2 new handlers with delegation pattern:
+  - **TextToolHandler.js** (~210 lines) - text layer creation UI
+  - **PathToolHandler.js** (~230 lines) - freeform path drawing
+- **Tests:** 58 new unit tests, all passing
+- **Pattern:** ToolManager delegates to handlers when available, with inline fallback for backwards compatibility
+- **Total test count:** 5,164 tests passing
+
 ---
 
 ## Current God Classes (Priority P2)
@@ -123,16 +134,17 @@ This document provides a **prioritized, actionable improvement plan** based on t
 | APIManager.js | 1,385 | None | **High** | Split into API + State layers |
 | LayersEditor.js | 1,296 | 3 modules | Medium | Consider more extraction |
 | SelectionManager.js | 1,266 | None | Medium | Cohesive but large |
-| ToolManager.js | 1,180 | None | **High** | Extract tool-specific logic |
+| ToolManager.js | 1,275 | 2 handlers | Medium | **Has TextToolHandler + PathToolHandler** |
 | CanvasRenderer.js | 1,132 | None | Medium | Consider layer-type renderers |
 | Toolbar.js | 1,126 | None | Medium | Extract section builders |
 
 **Recently addressed:**
 - ✅ ShapeRenderer.js: 1,367 → 1,049 lines (extracted TextBoxRenderer)
+- ✅ ToolManager.js: Extracted TextToolHandler (210 lines) + PathToolHandler (230 lines)
 
 **Recommended extraction order:**
 1. ~~ShapeRenderer → TextBoxRenderer~~ ✅ DONE
-2. ToolManager → TextBoxTool, TextTool
+2. ~~ToolManager → TextToolHandler, PathToolHandler~~ ✅ DONE
 3. APIManager → APIClient + StateManager consolidation
 4. Toolbar → ToolbarSections (lower priority)
 
