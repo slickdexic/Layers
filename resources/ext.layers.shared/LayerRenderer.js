@@ -33,6 +33,11 @@
 		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './TextRenderer.js' ) : null );
 
+	// Get TextBoxRenderer - it should be loaded before this module
+	const TextBoxRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.TextBoxRenderer ) ||
+		// eslint-disable-next-line no-undef
+		( typeof require !== 'undefined' ? require( './TextBoxRenderer.js' ) : null );
+
 	// Get ShapeRenderer - it should be loaded before this module
 	const ShapeRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ShapeRenderer ) ||
 		// eslint-disable-next-line no-undef
@@ -95,6 +100,13 @@ class LayerRenderer {
 			this.shapeRenderer = null;
 		}
 
+		// Create TextBoxRenderer instance for text box shape operations
+		if ( TextBoxRenderer ) {
+			this.textBoxRenderer = new TextBoxRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
+		} else {
+			this.textBoxRenderer = null;
+		}
+
 		// Create EffectsRenderer instance for blur operations
 		if ( EffectsRenderer ) {
 			this.effectsRenderer = new EffectsRenderer( ctx, {
@@ -132,6 +144,9 @@ class LayerRenderer {
 		}
 		if ( this.shapeRenderer ) {
 			this.shapeRenderer.setContext( ctx );
+		}
+		if ( this.textBoxRenderer ) {
+			this.textBoxRenderer.setContext( ctx );
 		}
 		if ( this.effectsRenderer ) {
 			this.effectsRenderer.setContext( ctx );
@@ -263,7 +278,7 @@ class LayerRenderer {
 
 	/** Draw a text box shape (rectangle with multi-line text) */
 	drawTextBox( layer, options ) {
-		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawTextBox( layer, this._prepareRenderOptions( options ) ); }
+		if ( this.textBoxRenderer ) { this.textBoxRenderer.setContext( this.ctx ); this.textBoxRenderer.draw( layer, this._prepareRenderOptions( options ) ); }
 	}
 
 	/** Draw a circle shape */

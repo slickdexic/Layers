@@ -1,9 +1,47 @@
 # Known Issues
 
 **Last Updated:** December 17, 2025  
-**Version:** 1.0.0
+**Version:** 1.1.0
 
 This document lists known functionality issues and their current status.
+
+---
+
+## Architecture Concerns
+
+### ⚠️ God Classes (Technical Debt)
+
+**Status:** Ongoing concern  
+**Severity:** Medium-High for maintainability
+
+The codebase has **9 files exceeding 1,000 lines**, which impacts:
+- New contributor onboarding
+- Test thoroughness
+- Code review efficiency
+- Risk of unintended side effects
+
+| File | Lines | Notes |
+|------|-------|-------|
+| CanvasManager.js | 1,893 | Facade pattern, delegates to 10+ controllers |
+| LayerPanel.js | 1,720 | Delegates to 7 controllers |
+| APIManager.js | 1,385 | Needs API/state separation |
+| ShapeRenderer.js | 1,367 | **Grew with Text Box feature** |
+| LayersEditor.js | 1,296 | Main entry point |
+| SelectionManager.js | 1,266 | Core selection logic |
+| ToolManager.js | 1,180 | Needs tool extraction |
+| CanvasRenderer.js | 1,132 | Rendering logic |
+| Toolbar.js | 1,126 | UI controls |
+
+**See:** [improvement_plan.md](../improvement_plan.md) for remediation plan.
+
+### ⚠️ E2E Tests Not in CI
+
+**Status:** Not started  
+**Severity:** Medium
+
+Playwright tests exist in `tests/e2e/layers.spec.js` but are not running in CI. This means browser-level bugs may go undetected.
+
+**Recommendation:** Set up GitHub Actions workflow with Docker-based MediaWiki.
 
 ---
 
@@ -47,6 +85,19 @@ The following issues have been **fixed** and are now working:
 
 ---
 
+### 4. Shadow Rendering Issues
+
+**Status:** ✅ Fixed (December 8-10, 2025)
+
+Multiple shadow-related bugs were fixed:
+- Shadow offset not rotating with shape (spread > 0)
+- Rectangle/shape stroke shadow not visible (spread = 0)
+- Text shadow spread having no effect
+
+See archived bug analyses in `docs/archive/` for details.
+
+---
+
 ## Technical Details of Fixes
 
 ### Selection State Bug (Fixed)
@@ -69,59 +120,6 @@ The following issues have been **fixed** and are now working:
 - Added `getEditor()` helper that handles both old and new initialization patterns
 - Added `getCanvasManager()` helper that properly retrieves canvas manager
 - All methods updated to use helpers instead of direct property access
-
----
-
-## Remaining Known Issues
-
-### ~~Rectangle/Shape Stroke Shadow Not Visible (spread = 0)~~ - FIXED
-
-**Status:** ✅ Fixed (December 10, 2025)
-
-**Original Problem:**
-On rectangle (and other shapes), when shadow is enabled with `spread = 0`, the stroke did NOT produce a visible shadow. Increasing spread to any non-zero value made the stroke shadow appear.
-
-**Root Cause:**
-When `spread === 0`, the code path used native canvas shadow with `destination-over` composite mode for stroke shadows. This approach didn't work because the stroke shadow was drawn BEHIND the fill shadow, making it invisible.
-
-**Fix Applied:**
-Changed shadow rendering to always use the offscreen canvas technique (`drawSpreadShadow` and `drawSpreadShadowStroke`) for all shapes, regardless of spread value. This ensures consistent shadow rendering for both fill and stroke.
-
-**Files Changed:** `resources/ext.layers.shared/LayerRenderer.js` - `drawRectangle`, `drawCircle`, `drawEllipse` methods updated to use offscreen canvas for all shadow rendering.
-
----
-
-### ~~Text Shadow Spread Has No Effect~~ - FIXED
-
-**Status:** ✅ Fixed (December 10, 2025)
-
-**Original Problem:**
-On text layers, the "Shadow Spread" property had no effect. The shadow appeared correctly when shadow was enabled, but increasing spread did not increase the shadow size.
-
-**Root Cause:**
-The `drawText()` method only called `applyShadow()` which sets canvas shadow properties but doesn't support spread. Spread shadow requires drawing multiple shadow layers.
-
-**Fix Applied:**
-Implemented spread shadow support for text by drawing multiple shadow layers in a circular pattern around the text. Each layer is drawn at low opacity (0.1), and the number of layers increases with spread value, creating a larger shadow effect.
-
-**Location:** `resources/ext.layers.shared/LayerRenderer.js` - `drawText` method
-
----
-
-### ~~Shadow Offset Not Rotating with Shape (Spread > 0 Only)~~ - FIXED
-
-**Status:** ✅ Fixed (December 8, 2025)
-
-**Original Issue:**
-When rotating a shape with shadow **spread > 0**, the shadow would dramatically move vertically instead of staying aligned with the rotated shape.
-
-**Root Cause:**
-The `drawSpreadShadow()` method copied the full rotation transform to a temp canvas, then applied `translate(FAR_OFFSET, 0)` in the rotated coordinate space. But the shadow offset compensation assumed FAR_OFFSET was horizontal in screen space - these didn't align when rotated.
-
-**Fix Applied:**
-Extract rotation from transform matrix, use translation-only transform for temp canvas, apply rotation manually just for shape drawing. This keeps FAR_OFFSET horizontal so shadow offset compensation works correctly.
-
-See [BUG_SHADOW_ROTATION_2025-12-08.md](archive/BUG_SHADOW_ROTATION_2025-12-08.md) for detailed analysis.
 
 ---
 

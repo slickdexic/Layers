@@ -2,22 +2,30 @@
 
 **Review Date:** December 17, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 1.0.0
+**Version:** 1.1.0
 
 ## Executive Summary
 
 The "Layers" extension provides non-destructive image annotation capabilities for MediaWiki. This is a **comprehensive, honest assessment** of the codebase quality, architecture, and technical debt.
 
-### Overall Assessment: 8/10 ✅ Production Ready
+### Overall Assessment: 7.5/10 ⚠️ Production Ready with Caveats
 
-The extension is **production-ready** with excellent test coverage (90.9%), solid security, and a **fully modernized JavaScript codebase**. The ES6 class migration is **100% complete**, and accessibility features are implemented.
+The extension is **functional and production-ready** with good test coverage (~91%), solid security practices, and a **fully modernized ES6 JavaScript codebase**. However, significant technical debt remains that will hinder long-term maintainability.
 
-**Highlights:**
-- 4,754 passing tests with 90.9% statement coverage
-- PHP backend is professionally implemented with security best practices
-- Accessibility complete: skip links, ARIA landmarks, keyboard support
-- CI/CD pipelines fixed and operational
-- **Note:** 8 god classes remain (>1,000 lines each) - most now use delegation patterns
+**Honest Highlights:**
+- ~4,800+ passing tests with ~91% statement coverage - solid but not bulletproof
+- PHP backend demonstrates professional security practices
+- Accessibility features implemented (skip links, ARIA, keyboard support)
+- CI/CD pipelines operational
+- 67 ES6 classes, 0 prototype patterns remaining
+- New Text Box tool with multi-line text, styling, and shadow effects (v1.1.0)
+
+**Honest Concerns:**
+- **9 god classes** (>1,000 lines each) - a significant maintainability concern
+- ShapeRenderer.js grew to 1,367 lines during Text Box feature development
+- Test coverage numbers fluctuate; some edge cases likely untested
+- No E2E tests running in CI despite Playwright setup existing
+- Documentation sometimes lags behind actual code state
 
 **For the detailed improvement plan, see [improvement_plan.md](./improvement_plan.md)**
 
@@ -27,22 +35,23 @@ The extension is **production-ready** with excellent test coverage (90.9%), soli
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **Test Coverage** | 9/10 | 90.9% statement coverage, 4,754 tests all passing |
+| **Functionality** | 9/10 | 13 drawing tools work well, named layer sets, version history |
+| **Test Coverage** | 8/10 | ~91% statement coverage, ~4,800 tests passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
 | **PHP Architecture** | 8/10 | Clean DI, service wiring, largest PHP file 973 lines |
-| **Documentation** | 7/10 | Good copilot-instructions.md, some docs need updates |
-| **Code Splitting** | 7/10 | Viewer (682 lines) vs Editor (33,035 lines) |
-| **ES6 Migration** | 10/10 | 66 ES6 classes, 0 prototype methods remain (100% complete) |
-| **Accessibility** | 9/10 | Skip links, ARIA landmarks, live regions, keyboard shortcuts |
+| **Documentation** | 6/10 | Good copilot-instructions.md, but docs often lag behind code |
+| **Code Splitting** | 7/10 | Viewer (682 lines) + Shared (~5K lines) vs Editor (~34K lines) |
+| **ES6 Migration** | 10/10 | 67 ES6 classes, 0 prototype methods remain (100% complete) |
+| **Accessibility** | 8/10 | Skip links, ARIA landmarks, live regions, keyboard shortcuts |
 
 ### What's Actually Working
 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
-3. **Tests catch regressions** - 4,754 tests all passing (90.9% coverage)
-4. **Viewer is lightweight** - reading articles loads only 682 lines (viewer) + 3,975 lines (shared)
+3. **Tests catch regressions** - ~4,800 tests provide a safety net
+4. **Viewer is lightweight** - reading articles loads only ~4,600 lines (viewer + shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
-6. **ES6 100% complete** - All 66 classes use ES6 syntax, 0 prototype patterns remain
+6. **ES6 100% complete** - All 67 classes use ES6 syntax, 0 prototype patterns remain
 7. **4 API endpoints** - layersinfo, layerssave, layersdelete, layersrename
 8. **Accessibility** - Skip links, ARIA landmarks, keyboard navigation
 
@@ -52,100 +61,111 @@ The extension is **production-ready** with excellent test coverage (90.9%), soli
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **God Classes** | 3/10 | 8 files over 1,000 lines (largest 1,893 lines) |
-| **Event Listener Balance** | 8/10 | 94 addEventListener vs 33 removeEventListener - uses EventTracker pattern, proper cleanup |
-| **Branch Coverage** | 7/10 | 78.49% branches - good but edge cases may be untested |
+| **God Classes** | 3/10 | **9 files over 1,000 lines** (worst: 1,893 lines) |
+| **Code Complexity** | 4/10 | Large classes are hard to understand and test thoroughly |
+| **E2E Testing** | 2/10 | Playwright exists but not running in CI |
+| **Documentation Accuracy** | 5/10 | Metrics in docs sometimes outdated |
 
 ---
 
 ## Verified Metrics (December 17, 2025)
 
-These metrics were collected directly from v1.0.0 source code using automated verification.
+These metrics were collected directly from v1.1.0 source code.
 
 ### JavaScript Codebase
 
 | Metric | Actual Value | Target | Status |
 |--------|--------------|--------|--------|
-| Total JS files | **75** | - | - |
-| Total JS lines | **38,863** | - | - |
-| Viewer module | **682 lines** | - | ✅ Lightweight |
-| Shared module | **3,975 lines** | - | ✅ Reused code |
-| Editor module | **33,035 lines** | - | Expected for full editor |
-| Files > 1,000 lines | **8** | 0 | ⚠️ God classes |
-| ES6 classes | **66** | 60+ | ✅ 100% Complete |
+| Total JS files | **76** | - | - |
+| Total JS lines | **~39,879** | - | - |
+| Viewer module | ~682 lines | - | ✅ Lightweight |
+| Shared module | ~5,000+ lines | - | Growing (includes new renderers) |
+| Editor module | ~34,000+ lines | - | Large but expected for full editor |
+| Files > 1,000 lines | **9** | 0 | ⚠️ God classes |
+| ES6 classes | **67** | 60+ | ✅ 100% Complete |
 | Prototype method definitions | **0** | 0 | ✅ Eliminated |
-| addEventListener calls | **94** | - | - |
-| removeEventListener calls | **33** | 94 | ⚠️ Imbalance (uses EventTracker) |
 | ESLint errors | **0** | 0 | ✅ Clean |
 | Stylelint errors | **0** | 0 | ✅ Clean |
+
+### God Classes Detail
+
+| File | Lines | Trend | Notes |
+|------|-------|-------|-------|
+| CanvasManager.js | **1,893** | → | Facade/coordinator - delegates to 10+ controllers |
+| LayerPanel.js | **1,720** | → | Delegates to 7 controllers |
+| APIManager.js | **1,385** | → | API + state management mixed |
+| ShapeRenderer.js | **1,367** | ↑ | **Grew** with Text Box feature (was ~1,050) |
+| LayersEditor.js | **1,296** | → | Main entry point |
+| SelectionManager.js | **1,266** | → | Core selection logic |
+| ToolManager.js | **1,180** | ↑ | Added Text Box tool logic |
+| CanvasRenderer.js | **1,132** | → | Canvas rendering |
+| Toolbar.js | **1,126** | → | UI controls |
+
+**Total: 12,365 lines in god classes** - this represents ~31% of the editor codebase concentrated in 9 files.
 
 ### Test Coverage
 
 | Category | Value | Target | Status |
 |----------|-------|--------|--------|
-| Jest tests passing | **4,754** | - | ✅ All passing |
-| Jest tests failing | **0** | 0 | ✅ All fixed |
-| Jest test suites | **94** | - | ✅ Good |
-| Statement coverage | **90.9%** | 80% | ✅ Exceeded |
-| Branch coverage | **78.49%** | 65% | ✅ Exceeded |
-| Line coverage | **91.1%** | 80% | ✅ Exceeded |
-| Function coverage | **88.2%** | 80% | ✅ Exceeded |
+| Jest tests passing | ~4,800+ | - | ✅ All passing |
+| Jest test suites | ~99 | - | ✅ Good |
+| Statement coverage | ~91% | 80% | ✅ Exceeded |
+| Branch coverage | ~78% | 65% | ✅ Exceeded |
+| E2E tests in CI | **0** | 10+ | ❌ Not automated |
 
 ### PHP Backend
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total PHP files | **31** | - |
-| Total PHP lines | **9,188** | - |
-| Largest PHP file | **973 lines** (LayersDatabase.php) | ⚠️ Borderline |
-| PHPUnit test files | **17** | ✅ Good coverage |
-| SQL injection risks | **0** | ✅ Parameterized |
+| Total PHP files | 31 | - |
+| Total PHP lines | ~9,200 | - |
+| Largest PHP file | 973 lines (LayersDatabase.php) | ⚠️ Borderline |
+| PHPUnit test files | 17 | ✅ Good coverage |
+| SQL injection risks | 0 | ✅ Parameterized |
 
 ---
 
 ## Critical Issues
 
-### 1. ⚠️ God Classes (8 Files Over 1,000 Lines)
+### 1. ⚠️ God Classes (9 Files Over 1,000 Lines)
 
-| File | Lines | Concern |
-|------|-------|---------|
-| CanvasManager.js | **1,893** | Orchestrates all canvas operations - delegates to 10+ controllers |
-| LayerPanel.js | **1,720** | Complex UI component - delegates to 7 extracted controllers |
-| APIManager.js | **1,385** | Handles API + state - could split state management |
-| LayersEditor.js | **1,296** | Main entry point - multiple responsibilities |
-| SelectionManager.js | **1,266** | Core selection logic - complex but cohesive |
-| ToolManager.js | **1,134** | Tool state management - could extract text editor |
-| CanvasRenderer.js | **1,132** | Canvas rendering logic - complex but appropriate |
-| Toolbar.js | **1,117** | UI component with many controls |
+**This is the biggest maintainability issue.** Having 12,365 lines concentrated in 9 files means:
+- New contributors struggle to understand these files
+- Testing is difficult (hard to achieve full branch coverage)
+- Changes risk unintended side effects
+- Code reviews are time-consuming
 
-**Recent Extraction (December 17, 2025):**
-- **BackgroundLayerController.js** (380 lines) - Extracted from LayerPanel.js for background layer UI management
-- LayerPanel.js now delegates to: LayerItemFactory, LayerListRenderer, LayerItemEvents, LayerDragDrop, PropertiesForm, ConfirmDialog, **BackgroundLayerController**
+**Mitigation in place:**
+- CanvasManager delegates to 10+ controllers
+- LayerPanel delegates to 7 controllers
+- These are "facade" patterns, but the facades themselves are still large
 
-**Recommendation:** The god class count is higher than previously reported. CanvasManager.js already delegates to 10+ controllers and is essentially a facade. Further extraction from LayerPanel would require splitting core UI concerns. Consider these files as "appropriately complex" rather than strict technical debt.
+**What would help:**
+- Split APIManager into API layer and state layer
+- Extract tool-specific logic from ToolManager
+- Consider if CanvasRenderer can be split by layer type
 
-### 2. ⚠️ Event Listener Imbalance (94 vs 33) - AUDITED
+### 2. ⚠️ ShapeRenderer Growth
 
-**Status:** ✅ Audited - Actually Well-Managed
+ShapeRenderer.js grew from ~1,050 to 1,367 lines with the Text Box feature. This trend of growing renderers needs monitoring. Consider:
+- Extract TextBoxRenderer as a separate file
+- Keep shape-specific rendering logic in dedicated files
 
-Analysis shows **94 addEventListener calls but only 33 removeEventListener calls**. However, a comprehensive audit reveals this imbalance is explained by proper cleanup patterns:
+### 3. ⚠️ No E2E Tests in CI
 
-**Cleanup Patterns in Use:**
-- **EventTracker utility** - Centralized cleanup for 11+ files (Toolbar, LayerPanel, UIManager, etc.)
-- **Manual destroy()** - Components track handlers in arrays and clean up properly
-- **Permanent handlers** - Global error handlers, beforeunload (intentionally persistent)
-- **Dialog pattern** - `close()` method removes handlers
-- **DOM removal** - Elements removed from DOM are garbage collected
+Playwright tests exist in `tests/e2e/layers.spec.js` but are NOT running in CI. This means:
+- Browser-level bugs may go undetected
+- Real MediaWiki integration isn't tested automatically
+- Manual testing burden increases
 
-**Audit Result:** 25/27 files have proper cleanup patterns. Only 2 files have minor review items:
-- `ToolbarActions.js` - LOW risk (parent toolbar manages lifecycle)
-- `PropertiesForm.js` - LOW risk (form elements replaced on selection change)
+**Recommendation:** Set up GitHub Actions workflow with Docker-based MediaWiki for E2E testing.
 
-**Note:** The EditorBootstrap.js global handlers now have duplicate registration prevention (added December 17, 2025).
+### 4. ⚠️ Documentation Drift
 
-### 3. ⚠️ Branch Coverage Could Improve
-
-At 78.49% branch coverage, some edge cases and error paths may not be tested. While statement coverage is excellent at 90.9%, improving branch coverage to 85%+ would catch more subtle bugs.
+Documentation (including this file and ARCHITECTURE.md) sometimes contains outdated metrics. Examples found:
+- "66 ES6 classes" mentioned in some docs (actual: 67)
+- File line counts don't always match reality
+- Feature documentation sometimes lags behind implementation
 
 ---
 
@@ -159,7 +179,7 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 |---------|--------|
 | CSRF protection | ✅ Required on all writes |
 | Rate limiting | ✅ Via MediaWiki pingLimiter |
-| Property whitelist | ✅ 45+ fields, unknown dropped |
+| Property whitelist | ✅ 50+ fields, unknown dropped |
 | SQL injection | ✅ All queries parameterized |
 | XSS prevention | ✅ Text sanitization |
 | Color injection | ✅ Strict validation |
@@ -170,22 +190,9 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 |------|-------|---------------|
 | LayersDatabase.php | 973 | Clean DI, retry logic with exponential backoff |
 | WikitextHooks.php | 779 | Complex but well-organized |
-| ServerSideLayerValidator.php | 648 | Comprehensive whitelist approach |
+| ServerSideLayerValidator.php | ~700 | Comprehensive whitelist approach (grew with Text Box) |
 | ThumbnailRenderer.php | 590 | ImageMagick logic |
 | ApiLayersSave.php | 502 | Excellent security documentation |
-| ImageLinkProcessor.php | 450 | Wikitext parsing |
-| Hooks.php | 448 | Hook registration |
-| ApiLayersInfo.php | 418 | Read-only API |
-| UIHooks.php | 406 | UI hook handlers |
-
-### PHP Test Coverage
-
-**17 PHPUnit test files covering:**
-- API endpoints (ApiLayersInfo, ApiLayersSave)
-- Database layer (LayersDatabase)
-- Hooks and processors
-- Security (RateLimiter)
-- Validation (ColorValidator, ServerSideLayerValidator)
 
 ---
 
@@ -193,19 +200,20 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 
 ### Strengths ✅
 
-- **4,754 tests passing** - substantial coverage
-- **90.9% statement coverage** - excellent quality
-- **Well-organized** - 93 unit test files + 3 integration test files
-- **Integration tests present** - 138 tests in `tests/jest/integration/` (44 + 70 + 24)
+- **~4,800 tests passing** - substantial coverage
+- **~91% statement coverage** - good quality
+- **Well-organized** - 99 test files in logical structure
+- **Integration tests present** - 138 tests in `tests/jest/integration/`
 - **PHPUnit coverage** - 17 test files for backend
 
 ### Areas for Improvement ⚠️
 
-| Issue | Severity |
-|-------|----------|
-| No E2E test CI pipeline | ⚠️ Playwright tests exist but not in CI |
-| Branch coverage at 78% | ⚠️ Some edge cases may be untested |
-| God class testing | ⚠️ Large files harder to test thoroughly |
+| Issue | Severity | Notes |
+|-------|----------|-------|
+| No E2E tests in CI | High | Playwright exists but not automated |
+| Branch coverage ~78% | Medium | Some edge cases untested |
+| God class testing | Medium | Large files harder to test thoroughly |
+| Coverage variance | Low | Numbers vary between runs |
 
 ---
 
@@ -213,12 +221,13 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 
 | Debt Type | Severity | Effort to Fix | Status |
 |-----------|----------|---------------|--------|
-| God class splitting (8 files) | ⚠️ High | 8-10 weeks | Not started |
-| Event listener audit | ✅ Complete | - | Audited, managed via EventTracker |
+| God classes (9 files) | ⚠️ High | 12-16 weeks | Not addressed |
+| E2E CI setup | ⚠️ Medium | 1-2 weeks | Not started |
+| ShapeRenderer growth | ⚠️ Medium | 1 week | Needs attention |
+| Documentation accuracy | ⚠️ Low | Ongoing | Needs discipline |
 | Branch coverage improvement | ⚠️ Low | 2-3 weeks | 78% achieved |
-| ES6 migration | ✅ Complete | - | 100% done |
 
-**Total estimated effort: 10-13 weeks for remaining technical debt**
+**Total estimated effort for remaining technical debt: 16-22 weeks**
 
 ---
 
@@ -226,95 +235,80 @@ The PHP backend is **well-architected** and demonstrates professional practices:
 
 ### Immediate (This Week)
 
-1. **Audit event listeners** - Document the 94 addEventListener calls and identify which need cleanup
-2. **Review god classes** - Identify extraction candidates in CanvasManager and LayerPanel
-3. **Set up E2E tests in CI** - Playwright tests exist but aren't automated
+1. **Update all documentation** with accurate metrics ✅ (This review)
+2. **Review ShapeRenderer** - consider extracting TextBoxRenderer
+3. **Set up E2E CI workflow** - this is a gap that needs closing
 
 ### Short-term (1-2 Months)
 
-1. **Extract controllers from CanvasManager** (1,893 lines):
-   - More controller extraction may yield diminishing returns
-   - Consider whether remaining logic is cohesive orchestration
-2. **Split LayerPanel** (1,672 lines):
-   - Extract layer item rendering to separate component
-   - Separate drag-drop logic from display logic
-3. **Improve branch coverage** - Target 85% from current 78%
+1. **Split APIManager** (~1,385 lines):
+   - Extract `StateLayer.js` for state management
+   - Keep `APIManager.js` for pure API calls
+2. **Extract tool-specific logic from ToolManager** (~1,180 lines):
+   - TextBoxTool.js
+   - TextTool.js (existing text editing logic)
+3. **Document god class extraction patterns** for future contributors
 
 ### Medium-term (3-6 Months)
 
-1. **Continue god class splitting**:
-   - APIManager (1,385 lines) - separate state from API calls
-   - SelectionManager (1,266 lines) - extract multi-selection logic
-   - ToolManager (1,134 lines) - extract text editing tools
-   - CanvasRenderer (1,132 lines) - consider if splitting adds value
-   - Toolbar (1,117 lines) - extract section renderers
+1. **Continue god class splitting** - target 0 files over 1,000 lines
 2. **TypeScript definitions** - Add `.d.ts` files for API contracts
-3. **EventTracker expansion** - Apply to all components with listeners
+3. **E2E test expansion** - comprehensive browser testing
 
 ### Long-term (6+ Months)
 
-1. **TypeScript migration** - Feasible with ES6 complete
-2. **ES modules** - Move away from globals entirely
-3. **Unified validation** - Generate client validators from server rules
+1. **TypeScript migration** - feasible with ES6 complete
+2. **Performance optimization** - profile large layer sets
+3. **Mobile support** - touch gestures, responsive UI
 
 ---
 
 ## Verification Commands
 
 ```bash
-# Test coverage (expect ~91% statements, ~78% branches)
-npm run test:js -- --coverage
-
-# God classes (>1000 lines) - expect 8 files
+# God classes (>1000 lines) - expect 9 files currently
 find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | awk '$1 >= 1000 {print}' | sort -rn
 
-# ES6 class count (expect 66)
+# ES6 class count (expect 67)
 grep -rE "^\s*class\s+[A-Z]" resources --include="*.js" | wc -l
 
 # Prototype method count (expect 0)
 grep -rE "\.prototype\.[a-zA-Z]+ = function" resources --include="*.js" | wc -l
 
-# Event listener balance (expect ~94 add, ~33 remove)
-echo "Add: $(grep -r "addEventListener" resources --include="*.js" | wc -l)"
-echo "Remove: $(grep -r "removeEventListener" resources --include="*.js" | wc -l)"
+# Total JS files (expect 76)
+find resources -name "*.js" -type f ! -path "*/dist/*" | wc -l
 
-# Module sizes
-echo "Viewer: $(cat resources/ext.layers/*.js | wc -l) lines"
-echo "Shared: $(cat resources/ext.layers.shared/*.js | wc -l) lines"
-echo "Editor: $(find resources/ext.layers.editor -name '*.js' -exec cat {} + | wc -l) lines"
-
-# Total JS lines (expect ~38,863)
+# Total JS lines (expect ~39,900)
 find resources -name "*.js" -type f ! -path "*/dist/*" -exec cat {} + | wc -l
 
-# PHP files and lines
-find src -name "*.php" | wc -l
-find src -name "*.php" -exec cat {} + | wc -l
-
-# Largest PHP files
-find src -name "*.php" -exec wc -l {} \; | sort -rn | head -10
+# Test file count (expect ~99)
+find tests/jest -name "*.test.js" | wc -l
 ```
 
 ---
 
 ## Conclusion
 
-The Layers extension is a **functional product with excellent test coverage** and **complete ES6 modernization**. The 91% test coverage provides a safety net for future refactoring work.
+The Layers extension is a **functional product** that works well for its intended purpose. Users can annotate images, save their work, and view annotations in articles. The test coverage provides confidence for refactoring.
 
 **Key achievements:**
-- ES6 migration 100% complete (66 classes, 0 prototype methods)
-- 4,714 tests all passing
-- 90.9% statement coverage
-- Lightweight viewer module (682 lines)
+- ES6 migration 100% complete (67 classes, 0 prototype methods)
+- ~4,800 tests all passing
+- ~91% statement coverage
+- Lightweight viewer module (~682 lines)
 - Professional PHP backend with good security practices
 - 4 complete API endpoints with CSRF protection
+- New Text Box tool with rich text features (v1.1.0)
 
-**Remaining challenges:**
-- 8 god classes over 1,000 lines (totaling ~10,895 lines)
-- Event listener cleanup pattern in place (EventTracker) but not universally applied
-- Branch coverage at 78% could be improved to 85%
+**Honest challenges:**
+- **9 god classes** totaling ~12,365 lines - this is the main maintainability concern
+- No E2E tests running in CI
+- Documentation accuracy needs constant attention
+- ShapeRenderer growing as features are added
 
-**Priority recommendation:** Focus on extracting controllers from the largest god classes (CanvasManager, LayerPanel) while maintaining test coverage. The existing test suite enables safe refactoring.
+**Priority recommendation:** The god class problem should be addressed before adding more features. Each new feature (like Text Box) tends to grow existing large files rather than create focused new ones. Consider establishing a "no file over 800 lines" rule for new code.
 
 ---
 
-*Review performed by GitHub Copilot (Claude Opus 4.5) on December 17, 2025, based on verified v1.0.0 metrics*
+*Review performed by GitHub Copilot (Claude Opus 4.5) on December 17, 2025*  
+*Updated for v1.1.0 with Text Box feature*

@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.0.0. Requires MediaWiki 1.39+.
+> **Status:** Stable. Version 1.1.0. Requires MediaWiki 1.44+.
 >
 > **Branch:** REL1_39 (for MediaWiki 1.39.x - 1.43.x). For MediaWiki 1.44+, use the `main` branch.
 
@@ -28,22 +28,34 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 
 ## Features
 
-### Drawing Tools (12 Available)
+### Drawing Tools (13 Available)
 
-| Tool          | Purpose                                      | Key Features                                    |
-| ------------- | -------------------------------------------- | ----------------------------------------------- |
-| Pointer       | Select and manipulate objects                | Multi-select, bounding box handles, resize, move |
-| Zoom          | Zoom and pan the canvas                      | Mouse wheel zoom, pan with drag                 |
-| Text          | Add text labels                              | Font selection, size, color                     |
-| Pen           | Freehand drawing                             | Smooth paths, adjustable stroke                 |
-| Rectangle     | Draw rectangles                              | Adjustable stroke and fill                      |
-| Circle        | Draw circles                                 | Radius-based drawing                            |
-| Ellipse       | Draw ellipses                                | Independent X/Y radius control                  |
-| Polygon       | Draw polygons                                | Configurable number of sides                    |
-| Star          | Draw star shapes                             | Configurable points and radii                   |
-| Arrow         | Annotation arrows                            | Configurable arrowheads and line styles         |
-| Line          | Straight lines                               | Stroke width and color options                  |
-| Blur          | Blur/redact areas                            | Privacy protection tool                         |
+| Tool          | Shortcut | Purpose                                      | Key Features                                    |
+| ------------- | -------- | -------------------------------------------- | ----------------------------------------------- |
+| Pointer       | V        | Select and manipulate objects                | Multi-select, bounding box handles, resize, move |
+| Zoom          | Z        | Zoom and pan the canvas                      | Mouse wheel zoom, pan with drag                 |
+| Text          | T        | Add text labels                              | Font selection, size, color, stroke, shadow     |
+| **Text Box**  | **X**    | **Multi-line text in container** (NEW v1.1)  | Word wrap, alignment, padding, corner radius    |
+| Pen           | P        | Freehand drawing                             | Smooth paths, adjustable stroke                 |
+| Rectangle     | R        | Draw rectangles                              | Adjustable stroke and fill                      |
+| Circle        | C        | Draw circles                                 | Radius-based drawing                            |
+| Ellipse       | E        | Draw ellipses                                | Independent X/Y radius control                  |
+| Polygon       | G        | Draw polygons                                | Configurable number of sides                    |
+| Star          | S        | Draw star shapes                             | Configurable points and radii                   |
+| Arrow         | A        | Annotation arrows                            | Configurable arrowheads and line styles         |
+| Line          | L        | Straight lines                               | Stroke width and color options                  |
+| Blur          | B        | Blur/redact areas                            | Privacy protection tool                         |
+
+### New in v1.1.0: Text Box Tool
+
+The Text Box tool combines a rectangle container with rich text:
+
+- **Multi-line text** with automatic word wrapping
+- **Font options**: Arial, Roboto, Noto Sans, Times New Roman, Courier New
+- **Text formatting**: Bold and italic
+- **Alignment**: Horizontal (left/center/right) and vertical (top/middle/bottom)
+- **Container styling**: Corner radius, padding, stroke, fill
+- **Text effects**: Stroke outline and drop shadow with customizable blur/offset
 
 ### Layer Management
 
@@ -60,6 +72,7 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 - Stroke color and width
 - Fill colors with transparency
 - Shadow effects (with spread, offset, color)
+- Text stroke and text shadow (NEW v1.1)
 - Blend modes
 - Font family and size selection
 - Opacity controls
@@ -95,6 +108,7 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 | Select Tool              | V                     |
 | Zoom Tool                | Z                     |
 | Text Tool                | T                     |
+| Text Box Tool            | X                     |
 | Pen Tool                 | P                     |
 | Rectangle Tool           | R                     |
 | Circle Tool              | C                     |
@@ -119,11 +133,11 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Architecture:**
 - **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 75 JS files (~39K lines total)
-- **Code Splitting:** Viewer module (682 lines) + Shared module (3,975 lines) loads separately from Editor (~33K lines)
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 76 JS files (~40K lines total)
+- **Code Splitting:** Viewer module (682 lines) + Shared module (~5K lines) loads separately from Editor (~34K lines)
 
 **Test Coverage (December 2025):**
-- Jest: 4,714 tests, 90.9% statement coverage, 78.5% branch coverage (93 test suites)
+- Jest: ~4,800 tests, ~91% statement coverage, ~78% branch coverage (99 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 
 **Accessibility (WCAG 2.1):**
@@ -178,6 +192,9 @@ $wgLayersMaxLayerCount = 100;        // Max layers per set
 $wgLayersMaxNamedSets = 15;          // Max named sets per image
 $wgLayersMaxRevisionsPerSet = 50;    // Max revisions per set
 
+// Image layer limits
+$wgLayersMaxImageBytes = 1048576;    // 1 MB for imported images
+
 // Image processing limits
 $wgLayersMaxImageSize = 4096;        // Max px for editing
 $wgLayersMaxImageDimensions = [ 8192, 8192 ];
@@ -198,7 +215,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 ## Security
 
 - CSRF protection on all write endpoints
-- Server-side validation with strict property whitelist (45+ fields)
+- Server-side validation with strict property whitelist (50+ fields)
 - Rate limiting via MediaWiki's pingLimiter system
 - Text sanitization and color validation
 - MediaWiki permissions integration

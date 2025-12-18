@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** December 17, 2025  
-**Status:** ✅ Production Ready  
-**Version:** 1.0.0  
+**Status:** ⚠️ Production Ready with Technical Debt  
+**Version:** 1.1.0  
 **Related:** See [`codebase_review.md`](./codebase_review.md) for detailed analysis
 
 ---
@@ -11,19 +11,18 @@
 
 This document provides a **prioritized, actionable improvement plan** based on the critical code review performed December 17, 2025.
 
-### Current State
+### Current State (Honest Assessment)
 
 | Area | Status | Details |
 |------|--------|--------|
-| **Functionality** | ✅ Working | Extension works in production |
-| **Test Suite** | ✅ Excellent | 4,754 tests, 90.9% statement coverage, all passing |
+| **Functionality** | ✅ Working | Extension works in production, 13 drawing tools |
+| **Test Suite** | ✅ Good | ~4,800 tests, ~91% statement coverage |
 | **Security (PHP)** | ✅ Excellent | CSRF, rate limiting, validation |
-| **Code Splitting** | ✅ Done | Viewer 682 lines, Shared 3,975 lines, Editor 33,035 lines |
-| **ES6 Migration** | ✅ Complete | 66 ES6 classes, 0 prototype methods |
-| **God Classes** | ⚠️ Technical Debt | 8 files over 1,000 lines |
-| **Event Listeners** | ✅ Audited | 94 add vs 33 remove - properly managed via EventTracker pattern |
-| **Accessibility** | ✅ Complete | Skip links + ARIA landmarks |
-| **CI/CD** | ✅ Fixed | Workflows passing |
+| **Code Splitting** | ✅ Done | Viewer 682 lines, Shared ~5K lines, Editor ~34K lines |
+| **ES6 Migration** | ✅ Complete | 67 ES6 classes, 0 prototype methods |
+| **God Classes** | ⚠️ Critical Debt | **9 files over 1,000 lines** (was 8, grew with features) |
+| **E2E Tests** | ❌ Not in CI | Playwright exists but not automated |
+| **Documentation** | ⚠️ Needs Work | Often lags behind code changes |
 
 ---
 
@@ -38,378 +37,131 @@ This document provides a **prioritized, actionable improvement plan** based on t
 
 ---
 
-## Phase 0: Quick Wins (P0)
+## Completed Work (Phases 0-1)
 
-### P0.1 Remove Dead PHP Code
+### Phase 0: Quick Wins ✅ COMPLETE
 
-**Status:** ✅ COMPLETED (Dec 11, 2025)  
-**Effort:** 1 hour  
-**File:** `src/Database/LayersDatabase.php`
+| Task | Status | Notes |
+|------|--------|-------|
+| P0.1 Remove Dead PHP Code | ✅ Done | `getNextRevision()` removed |
+| P0.2 Empty Catch Blocks | ✅ Done | Added `mw.log.warn()` |
+| P0.3 Extract `getClass()` | ✅ Done | `NamespaceHelper.js` created |
+| P0.4 Remove Skipped Tests | ✅ Done | Cleaned up |
+| P0.5 Fix IconFactory Tests | ✅ Done | All 18 passing |
+| P0.6 LayersViewer ES6 | ✅ Done | Converted + 38 tests |
 
-**Resolution:** Dead `getNextRevision()` method was removed.
+### Phase 1: High-Impact Improvements ✅ COMPLETE
 
----
-
-### P0.2 Add Logging to Empty Catch Blocks
-
-**Status:** ✅ COMPLETED (Dec 11, 2025)  
-**Effort:** 30 minutes  
-**File:** `resources/ext.layers.editor/CanvasManager.js`
-
-**Resolution:** Added `mw.log.warn()` to all catch blocks.
-
----
-
-### P0.3 Extract Duplicated `getClass()` Helper
-
-**Status:** ✅ COMPLETED (Dec 11, 2025)  
-**Effort:** 2-3 hours  
-**Impact:** Stops code duplication
-
-**Resolution:** Created `utils/NamespaceHelper.js` with shared implementation.
+| Task | Status | Notes |
+|------|--------|-------|
+| P1.1 Global Export Cleanup | ✅ Done | 50 → 0 direct `window.X` exports |
+| P1.2 Integration Tests | ✅ Done | 138 tests across 3 files |
+| P1.3 PHP Logging | ✅ Done | All use injected logger |
 
 ---
 
-### P0.4 Remove Empty Skipped Test
+## Phase 2: Major Refactoring (Current Focus)
 
-**Status:** ✅ COMPLETED (Dec 11, 2025)  
-**Effort:** 5 minutes
+### P2.1 ES6 Class Migration ✅ COMPLETE
 
-**Resolution:** Empty skipped test removed.
+- **Status:** 100% complete
+- **Result:** 67 ES6 classes, 0 prototype methods
 
----
+### P2.2 Split LayerRenderer ✅ COMPLETE
 
-### P0.5 Fix Failing IconFactory Tests
+- **Status:** Reduced from 1,953 to 371 lines (81% reduction)
+- **Extracted:** ShapeRenderer (1,367), ArrowRenderer (702), ShadowRenderer (521), TextRenderer (343), EffectsRenderer (245)
 
-**Status:** ✅ COMPLETED (Dec 11, 2025)  
-**Effort:** 30 minutes  
-**Files:** `tests/jest/IconFactory.test.js`
+### P2.3 CanvasManager Extraction ✅ ~75% COMPLETE
 
-**Resolution:** All 18 IconFactory tests now pass.
+- **Status:** Delegates to 10+ controllers
+- **Current size:** 1,893 lines (down from ~4,000)
+- **Controllers extracted:** ZoomPan, GridRulers, Transform, HitTest, Drawing, Clipboard, Render, Interaction, Style, TextInput, ResizeCalculator
+- **Remaining:** Orchestration code is cohesive; further splitting has diminishing returns
 
----
+### P2.4 TransformController Split ✅ COMPLETE
 
-### P0.6 Convert LayersViewer.js to ES6
+- **Status:** Extracted ResizeCalculator.js (806 lines)
+- **TransformController:** 761 lines
 
-**Status:** ✅ COMPLETE  
-**Effort:** 2 hours  
-**File:** `resources/ext.layers/LayersViewer.js`
+### P2.5-P2.9 Coverage Improvements ✅ COMPLETE
 
-**Details:**
-Converted from prototype pattern to ES6 class. Added 38 new tests.
+- ShadowRenderer: 72% → 100%
+- ResizeCalculator: 75% → 93%
+- StateManager: 68% → 98%
+- APIManager: 59% → 80%
+- LayersNamespace: 27% → 78%
+- LayerPanel: 77% → 87%
 
-**Migration Pattern:**
-```javascript
-// Before:
-function LayersViewer( container, config ) { ... }
-LayersViewer.prototype.init = function() { ... };
+### P2.10 ⚠️ Address ShapeRenderer Growth - NEW
 
-// After:
-class LayersViewer {
-    constructor( container, config ) { ... }
-    init() { ... }
-}
-```
+- **Status:** NOT STARTED
+- **Problem:** ShapeRenderer grew from ~1,050 to 1,367 lines with Text Box feature
+- **Action:** Extract TextBoxRenderer.js
+- **Effort:** 1 week
+- **Priority:** P1 (should be done before adding more features)
 
----
+### P2.11 ⚠️ Set Up E2E Tests in CI - NOT STARTED
 
-## Phase 1: High-Impact Improvements (P1)
-
-### P1.1 Eliminate Direct Global Exports
-
-**Status:** ✅ COMPLETE (December 13, 2025)  
-**Effort:** 2 days  
-**Impact:** Enables future ES modules, prevents conflicts
-
-**Resolution:**
-- Removed all 50 deprecated `window.ClassName` exports
-- Updated 15+ test files to use namespaced paths (`window.Layers.*`)
-- Fixed `getClass()` helper to dynamically resolve namespace paths
-- All 4,300 tests pass
-
-**Success Criteria:**
-- [x] Direct `window.X` exports = 0 (was 50) ✓
-- [x] All tests pass ✓
-- [x] No runtime errors in browser ✓
+- **Status:** NOT STARTED
+- **Problem:** Playwright tests exist but not running in CI
+- **Action:** GitHub Actions workflow with Docker MediaWiki
+- **Effort:** 1-2 weeks
+- **Priority:** P1
 
 ---
 
-### P1.2 Add Integration Tests
+## Current God Classes (Priority P2)
 
-**Status:** ✅ COMPLETED (Dec 12, 2025)  
-**Effort:** 2 weeks  
-**Impact:** Catch multi-component bugs
+**These 9 files represent the main maintainability concern:**
 
-**Resolution:**
-Created 3 integration test files with **138 tests total**:
+| File | Lines | Delegation | Priority | Action |
+|------|-------|------------|----------|--------|
+| CanvasManager.js | 1,893 | 10+ controllers | Low | Orchestrator, hard to split further |
+| LayerPanel.js | 1,720 | 7 controllers | Low | Well-delegated |
+| APIManager.js | 1,385 | None | **High** | Split into API + State layers |
+| ShapeRenderer.js | 1,367 | None | **High** | Extract TextBoxRenderer |
+| LayersEditor.js | 1,296 | 3 modules | Medium | Consider more extraction |
+| SelectionManager.js | 1,266 | None | Medium | Cohesive but large |
+| ToolManager.js | 1,180 | None | **High** | Extract tool-specific logic |
+| CanvasRenderer.js | 1,132 | None | Medium | Consider layer-type renderers |
+| Toolbar.js | 1,126 | None | Medium | Extract section builders |
 
-1. **SelectionWorkflow.test.js** (44 tests)
-   - HitTestController layer detection for all 11 layer types
-   - Multi-selection workflows
-   - Selection toggle behavior
-
-2. **LayerWorkflow.test.js** (70 tests)
-   - Layer CRUD operations
-   - Reordering workflows
-   - Visibility/lock state management
-
-3. **SaveLoadWorkflow.test.js** (24 tests)
-   - API mock integration
-   - State persistence verification
-
----
-
-### P1.3 Standardize PHP Logging
-
-**Status:** ✅ COMPLETED (Dec 11, 2025)  
-**Effort:** 1 day  
-**Impact:** Debugging consistency
-
-**Resolution:** All `wfDebugLog('Layers', ...)` calls replaced with injected logger.
-
----
-
-## Phase 2: Major Refactoring (P2)
-
-### P2.1 ES6 Class Migration
-
-**Status:** ✅ 98% COMPLETE (Dec 12, 2025)  
-**Effort:** Completed over 4 days  
-**Impact:** Modern code, TypeScript readiness
-
-**Migration Summary:**
-| Phase | Files | Status |
-|-------|-------|--------|
-| Utilities | GeometryUtils, EventTracker, etc. | ✅ Done |
-| Managers | APIManager, HistoryManager, etc. | ✅ Done |
-| Controllers | All 9 canvas controllers | ✅ Done |
-| Core | CanvasManager, LayersEditor, SelectionManager | ✅ Done |
-| Renderers | LayerRenderer, ShadowRenderer | ✅ Done |
-| Viewer | LayersViewer.js | ⚠️ P0.6 |
-
-**Remaining:** 1 file (`LayersViewer.js`) with 10 prototype methods
-
----
-
-### P2.2 Split LayerRenderer.js
-
-**Status:** ✅ COMPLETE (December 13, 2025)  
-**Effort:** 2 weeks  
-**Impact:** Maintainability, isolated testing
-
-**Resolution:**
-LayerRenderer reduced from 1,953 lines to **371 lines** (81% reduction)
-
-**Extracted Renderers:**
-| Renderer | Lines | Purpose |
-|----------|-------|---------|
-| LayerRenderer | 371 | Facade/dispatcher |
-| ShapeRenderer | 1,050 | Rectangle, circle, ellipse, polygon, star, line, path |
-| ArrowRenderer | 702 | Arrow polygons with heads |
-| ShadowRenderer | 521 | Shadow effects (blur, spread, glow) |
-| TextRenderer | 343 | Text with stroke/shadow |
-| EffectsRenderer | 245 | Blur effects |
-
-**Tests:** All 4,300 tests pass
-
----
-
-### P2.3 Continue CanvasManager Extraction
-
-**Status:** ~50% COMPLETE  
-**Effort:** 3-4 weeks  
-**Target:** CanvasManager < 1,500 lines (currently 1,895)
-
-**Already Extracted Controllers:**
-| Controller | Lines | Coverage |
-|------------|-------|----------|
-| ZoomPanController | ~340 | 97% |
-| GridRulersController | ~385 | 93% |
-| TransformController | ~761 | 88% |
-| HitTestController | ~380 | 98% |
-| DrawingController | ~635 | 100% |
-| ClipboardController | ~210 | 98% |
-| RenderCoordinator | ~390 | 92% |
-| InteractionController | ~490 | 100% |
-| StyleController | ~100 | 100% |
-| TextInputController | ~120 | 100% |
-| ResizeCalculator | ~806 | 93% |
-
-**Progress (Dec 16, 2025):**
-- Many controllers already extracted
-- Remaining 1,895 lines are primarily orchestration logic
-- Further extraction may yield diminishing returns
-
-**Remaining in CanvasManager (~1,895 lines):**
-- Constructor/init (~200 lines) - Core, cannot extract
-- Event coordination (~200 lines) - Orchestration logic
-- Selection coordination (~150 lines) - Ties to SelectionManager
-- Render coordination (~150 lines) - Ties to RenderCoordinator
-- Delegation methods (~500 lines) - Facade pattern
-- Utility methods (~100 lines) - Various helpers
-
-**Note:** Getting below 1,000 lines would require fundamental architectural changes.
-Current target revised to <1,500 lines.
-
----
-
-### P2.4 Split TransformController
-
-**Status:** ✅ COMPLETE (December 13, 2025)  
-**Effort:** 1 hour  
-**Impact:** Reduced TransformController from 1,333 lines to 761 lines
-
-**Resolution:**
-Extracted `ResizeCalculator.js` (806 lines) with all shape-specific resize calculation methods:
-- `calculateResize()` - dispatcher by layer type
-- `calculateRectangleResize()`, `calculateCircleResize()`, `calculateEllipseResize()`
-- `calculatePolygonResize()`, `calculateLineResize()`, `calculatePathResize()`, `calculateTextResize()`
-- `applyRotatedResizeCorrection()` - rotation anchor correction
-
-**Result:**
-- TransformController: 1,333 → **761 lines** ✅
-- ResizeCalculator: (new) **806 lines**
-- All 4,025 tests pass
-
----
-
-### P2.5 Improve ShadowRenderer Coverage
-
-**Status:** ✅ COMPLETE  
-**Effort:** 1 day  
-**Impact:** Increased coverage from 72.72% to 100%
-
-**Result:** Added 78 new tests covering all shadow rendering functionality.
-
----
-
-### P2.6 Improve ResizeCalculator Coverage
-
-**Status:** ✅ COMPLETE (December 13, 2025)  
-**Effort:** 2 hours  
-**Impact:** Coverage improved from 75% to 93%
-
-**Result:**
-- Added 76 new tests in `ResizeCalculator.test.js`
-- Statement coverage: 92.78%
-- Function coverage: 100%
-- Branch coverage: 85.71%
-- Remaining uncovered lines: Complex rotation math in `applyRotatedResizeCorrection()`
-
----
-
-### P2.9 Improve StateManager Coverage
-
-**Status:** ✅ COMPLETE (December 14, 2025)  
-**Effort:** 3 hours  
-**Impact:** Coverage improved from 68% to 98%
-
-**Result:**
-- Added 101 new tests in `StateManager.test.js`
-- Statement coverage: 98.03%
-- Function coverage: 100%
-- Branch coverage: 85.29%
-- Tests cover: constructor, get/set, update, atomic operations, locking, subscribe, layer operations, selection, history, export/import, destroy
-
----
-
-### P2.10 Improve APIManager Coverage
-
-**Status:** ✅ COMPLETE (December 17, 2025)  
-**Effort:** 2 hours  
-**Impact:** Coverage improved from 58.94% to 80.35%
-
-**Result:**
-- Added 46 new tests for APIManager
-- Tests cover: deleteLayerSet (11 tests), renameLayerSet (9 tests), exportAsImage (13 tests), downloadAsImage (10 tests), loadLayersBySetName validation (3 tests)
-- Statement coverage: 80.35%
-- Function coverage: 86.48%
-- Branch coverage: 67.46%
-
----
-
-### P2.11 Improve LayersNamespace Coverage
-
-**Status:** ✅ COMPLETE (December 14, 2025)  
-**Effort:** 1 hour  
-**Impact:** Coverage improved from 27% to 78%
-
-**Result:**
-- Added 27 new tests for namespace registration
-- Tests cover: getExportRegistry, registerExport, initializeNamespace, exportRegistry structure
-
----
-
-### P2.8 Improve LayerPanel Coverage
-
-**Status:** ✅ COMPLETE (December 13, 2025)  
-**Effort:** 1 hour  
-**Impact:** Coverage improved from 77% to 87%
-
-**Result:**
-- Added 28 new tests in `LayerPanelKeyboard.test.js`
-- Statement coverage: 86.64%
-- Branch coverage: 74.29%
-- Tests cover keyboard navigation (ArrowUp/Down, Home/End, Enter/Space, Delete, V for visibility, L for lock)
+**Recommended extraction order:**
+1. ShapeRenderer → TextBoxRenderer (urgent - growing with features)
+2. ToolManager → TextBoxTool, TextTool
+3. APIManager → APIClient + StateManager consolidation
+4. Toolbar → ToolbarSections (lower priority)
 
 ---
 
 ## Phase 3: Modernization (P3)
 
-### P3.1 Complete ES6 Migration
+### P3.1 Add TypeScript Definitions
 
-**Status:** ⚠️ 1 file remaining  
-**Effort:** 2 hours  
-**Target:** 0 prototype methods
+- **Status:** NOT STARTED
+- **Effort:** 2-3 weeks
+- **Benefit:** IDE autocomplete, type checking, documentation
 
-Convert `LayersViewer.js` after P0.6.
+### P3.2 TypeScript Migration
 
----
+- **Status:** NOT STARTED
+- **Prerequisites:** P3.1 complete
+- **Effort:** 8+ weeks
+- **Approach:** Gradual `.js` → `.ts` conversion
 
-### P3.2 Add TypeScript Definitions
+### P3.3 E2E Test Expansion
 
-**Timeline:** After P3.1 complete  
-**Effort:** 2-3 weeks  
+- **Status:** NOT STARTED
+- **Prerequisites:** P2.11 complete (CI setup)
+- **Effort:** 2-3 weeks
+- **Target:** 20+ E2E tests covering core workflows
 
-Create `.d.ts` files for:
-- All exported classes
-- API contracts
-- Layer data structures
+### P3.4 Mobile/Touch Support
 
-Benefits:
-- IDE autocomplete without full TS migration
-- Type checking in consuming code
-- Documentation generation
-
----
-
-### P3.3 TypeScript Migration
-
-**Timeline:** 6+ months  
-**Prerequisites:** ES6 complete, globals eliminated
-
-**Approach:**
-1. Add `tsconfig.json` with `allowJs: true`
-2. Convert files incrementally (`.js` → `.ts`)
-3. Start with utilities, end with UI
-4. Maintain 100% test coverage during migration
-
----
-
-### P3.4 Set Up E2E Tests in CI
-
-**Status:** NOT STARTED  
-**Effort:** 1 week  
-**Impact:** Catch browser-level regressions
-
-**Current State:**
-- Playwright tests exist in `tests/e2e/layers.spec.js`
-- Not currently running in CI
-
-**Action:**
-- Add GitHub Actions workflow for Playwright
-- Set up MediaWiki test environment in Docker
-- Run on PR merge to main
+- **Status:** NOT STARTED
+- **Effort:** 4-6 weeks
+- **Features:** Touch gestures, responsive UI, mobile toolbar
 
 ---
 
@@ -432,61 +184,40 @@ P1.2 Integration Tests:       ████████████████�
 P1.3 PHP Logging:             ████████████████████ 100% ✓
 
 Phase 2 (Refactoring):
-P2.1 ES6 Class Migration:     ████████████████████ 100% ✓
-P2.2 Split LayerRenderer:     ████████████████████ 100% ✓ (371 lines)
-P2.3 CanvasManager Extraction: ██████████░░░░░░░░░░ 50% (1,895 lines)
-P2.4 Split TransformController: ████████████████████ 100% ✓ (761 lines)
-P2.5 ShadowRenderer Coverage: ████████████████████ 100% ✓
-P2.6 ResizeCalculator Coverage: ████████████████████ 100% ✓
-P2.8 LayerPanel Coverage:     █████████████████░░░ 87% ✓ (28 tests)
-P2.9 StateManager Coverage:   ████████████████████ 98% ✓ (101 tests)
-P2.10 APIManager Coverage:    ████████████████░░░░ 80% ✓ (46 tests)
-P2.11 HitTestController:      ████████████████████ 100% ✓
-P2.12 GridRulersController:   ████████████████████ 100% ✓
-P2.13 RenderCoordinator:      ████████████████████ 98% ✓
+P2.1 ES6 Migration:           ████████████████████ 100% ✓
+P2.2 LayerRenderer Split:     ████████████████████ 100% ✓
+P2.3 CanvasManager:           ███████████████░░░░░ 75%
+P2.4 TransformController:     ████████████████████ 100% ✓
+P2.5-P2.9 Coverage:           ████████████████████ 100% ✓
+P2.10 ShapeRenderer Split:    ░░░░░░░░░░░░░░░░░░░░ 0% ⚠️ URGENT
+P2.11 E2E CI Setup:           ░░░░░░░░░░░░░░░░░░░░ 0% ⚠️ URGENT
 
 Phase 3 (Modernization):
-P3.1 Complete ES6 Migration:  ████████████████████ 100% ✓
-P3.2 TypeScript Definitions:  ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.3 TypeScript Migration:    ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.1 TypeScript Definitions:  ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.2 TypeScript Migration:    ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.3 E2E Test Expansion:      ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.4 Mobile Support:          ░░░░░░░░░░░░░░░░░░░░ 0%
 ```
 
 ---
 
 ## Success Metrics
 
-### Phase 0 Complete When:
-- [x] Dead `getNextRevision()` method removed ✓
-- [x] 0 empty catch blocks ✓
-- [x] `getClass()` in single shared file ✓
-- [x] 0 skipped tests ✓
-- [x] 0 failing tests ✓
-- [x] LayersViewer.js converted to ES6 ✓
-
-### Phase 1 Complete When:
-- [x] Direct `window.X` exports = 0 ✓
-- [x] Integration tests ≥ 50 ✓ (138 tests)
-- [x] All PHP logging uses injected logger ✓
-
 ### Phase 2 Complete When:
-- [x] ES6 classes = 100% ✓
-- [x] LayerRenderer.js < 500 lines ✓ (371 lines)
-- [ ] CanvasManager < 1,500 lines (currently 1,895)
-- [x] TransformController < 800 lines ✓ (761 lines)
-- [x] ShadowRenderer coverage > 90% ✓ (100%)
-- [x] ResizeCalculator coverage > 90% ✓ (100%)
-- [x] Overall test coverage > 90% ✓ (90.03%)
+- [ ] ShapeRenderer < 1,000 lines (extract TextBoxRenderer)
+- [ ] ToolManager < 1,000 lines (extract tool modules)
+- [ ] APIManager < 1,000 lines (split API/state)
+- [ ] E2E tests running in CI
 
 ### Project "Healthy" When:
-- [ ] 0 files > 1,000 lines (currently 8)
+- [ ] 0 files > 1,000 lines (currently 9) ← **Main Goal**
 - [x] ES6 classes throughout ✓ (100%)
 - [x] 0 prototype methods ✓
-- [x] All tests passing ✓ (4,714)
-- [x] >90% statement coverage ✓ (90.9%)
-- [x] >75% branch coverage ✓ (78.49%)
-- [x] Event listener audit complete (94 add vs 33 remove explained by EventTracker pattern)
-- [x] Accessibility: Skip links + ARIA landmarks ✓ (v0.9.0)
+- [x] All tests passing ✓ (~4,800)
+- [x] >90% statement coverage ✓ (~91%)
+- [x] >75% branch coverage ✓ (~78%)
+- [ ] E2E tests automated in CI
+- [x] Accessibility: Skip links + ARIA landmarks ✓
 
 ---
 
@@ -496,99 +227,88 @@ P3.4 E2E Tests in CI:         ░░░░░░░░░░░░░░░░�
 |-------|----------|-------------|
 | Phase 0 | ✅ COMPLETE | - |
 | Phase 1 | ✅ COMPLETE | - |
-| Phase 2 | 4-6 weeks | Now |
-| Phase 3 | 8+ weeks | Phase 2 |
+| Phase 2 | 8-12 weeks remaining | Now |
+| Phase 3 | 12+ weeks | Phase 2 |
 
-**Remaining to "Healthy" state: Split god classes (currently 8 files >1000 lines)**
+**Remaining to "Healthy" state:** 
+- Split 6 god classes from >1,000 to <1,000 lines each
+- Set up E2E CI pipeline
 
 ---
 
-## Risk Mitigation
+## Risk Assessment
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| ~~Global removal breaks runtime~~ | ~~Medium~~ | ~~High~~ | ✅ Completed without issues |
-| LayerRenderer split causes regressions | Low | Medium | ✅ Complete, tests pass |
-| Test coverage drops during refactoring | Medium | Medium | CI gate on coverage |
-| TransformController refactor introduces bugs | Low | Medium | ✅ Complete, tests pass |
+| Feature growth adds to god classes | **High** | High | Establish "no file > 800 lines" rule |
+| E2E setup takes longer than expected | Medium | Medium | Start with minimal workflow |
+| Refactoring introduces bugs | Low | Medium | Rely on 91% test coverage |
+| Documentation falls behind | **High** | Low | Review docs with each PR |
 
 ---
 
-## Quick Start: What to Do Next
+## What To Do Next
 
-**Current God Classes (8 files >1000 lines) - Updated December 17, 2025:**
-| File | Lines | Priority | Notes |
-|------|-------|----------|-------|
-| CanvasManager.js | 1,893 | Low | Delegates to 10+ controllers - is a facade |
-| LayerPanel.js | 1,720 | Low | Delegates to 7 controllers - well-modularized |
-| APIManager.js | 1,385 | Medium | API + state mix |
-| LayersEditor.js | 1,296 | Medium | Main entry point |
-| SelectionManager.js | 1,266 | Medium | Selection logic |
-| ToolManager.js | 1,134 | Medium | Tool state |
-| CanvasRenderer.js | 1,132 | Low | Rendering logic, cohesive |
-| Toolbar.js | 1,117 | Low | UI controls, cohesive |
+### This Week (Urgent)
 
-*Note: ShapeRenderer.js at 1,050 lines is in the shared module and is appropriately sized for a renderer.*
+1. **Extract TextBoxRenderer.js from ShapeRenderer.js**
+   - ShapeRenderer grew to 1,367 lines with Text Box feature
+   - This sets a bad precedent for future features
+   - Effort: 3-4 days
 
-**December 17, 2025 Extraction: BackgroundLayerController.js (380 lines)**
-- Extracted background layer item UI management from LayerPanel.js
-- LayerPanel.js now delegates to 7 controllers: LayerItemFactory, LayerListRenderer, LayerItemEvents, LayerDragDrop, PropertiesForm, ConfirmDialog, BackgroundLayerController
-- Added 40 new tests for BackgroundLayerController
-- Total tests now: 4,754 (up from 4,714)
+2. **Set up E2E CI workflow**
+   - Playwright tests exist but aren't running
+   - Use GitHub Actions + Docker MediaWiki
+   - Effort: 2-3 days
 
-**Recommended Next Actions:**
-1. ~~**Audit event listeners**~~ - ✅ COMPLETE - Properly managed via EventTracker pattern (Dec 17, 2025)
-2. ~~**Extract controllers from CanvasManager**~~ - ✅ COMPLETE - Already delegates to 10+ controllers
-3. ~~**Split LayerPanel**~~ - ✅ COMPLETE - BackgroundLayerController extracted (Dec 17, 2025)
-4. **Improve branch coverage** - Target 85% (currently 78.49%)
+### This Month
+
+3. **Split ToolManager.js** (1,180 lines)
+   - Extract TextBoxTool.js, TextTool.js
+   - Each tool should be its own module
+
+4. **Split APIManager.js** (1,385 lines)
+   - Separate API calls from state management
+   - Consider consolidating with StateManager
+
+### This Quarter
+
+5. **Continue god class reduction**
+   - Target: 0 files > 1,000 lines
+   - Focus on files without delegation patterns first
 
 ---
 
-## Recent Coverage Improvements
+## New Rule: Prevent Future God Classes
 
-### December 14, 2025 (v0.8.6)
+**Proposed code review checklist item:**
 
-| Module | Before | After | Tests Added |
-|--------|--------|-------|-------------|
-| StateManager.js | 68% | 98% | +101 tests |
-| APIManager.js | 84% | 87% | +19 tests |
-| LayersNamespace.js | 27% | 78% | +27 tests |
+> ❌ **BLOCK** any PR that:
+> - Adds >100 lines to a file already >800 lines
+> - Creates a new file >500 lines without justification
+> - Adds features to god classes instead of extracting first
 
-### December 13, 2025 (v0.8.5)
-
-| Module | Before | After | Tests Added |
-|--------|--------|-------|-------------|
-| DeepClone.js | 81% | 100% | +4 fallback tests |
-| ToolManager.js | 84% | 90% | +9 destroy/getToolDisplayName tests |
-| ShadowRenderer.js | 72% | 100% | +78 tests |
-| ResizeCalculator.js | 75% | 93% | +76 tests |
-| TextUtils.js | 88% | 99% | +38 tests |
+This would have prevented ShapeRenderer from growing to 1,367 lines with the Text Box feature.
 
 ---
 
 ## Verification Commands
 
 ```bash
-# Run all tests
-npm run test:js -- --coverage
-
-# Check prototype methods remaining
-grep -rE "\.prototype\.[a-zA-Z]+ = function" resources --include="*.js"
-
-# Count integration tests
-grep -c "test(" tests/jest/integration/*.test.js
-
-# Check for remaining direct global exports
-grep -rE "window\.[A-Z][a-zA-Z]+ ?=" resources --include="*.js" | grep -v "window\.Layers" | wc -l
-
-# Count ES6 classes
-grep -rE "^\s*class\s+[A-Z]" resources --include="*.js" | wc -l
-
-# Find god classes (>1000 lines) - expect 8
+# God classes (>1000 lines) - target: 0
 find resources -name "*.js" -type f ! -path "*/dist/*" -exec wc -l {} \; | awk '$1 >= 1000 {print}' | sort -rn
+
+# Test count
+find tests/jest -name "*.test.js" -exec grep -c "test(" {} + | awk -F: '{sum+=$2} END {print sum}'
+
+# Coverage (run full suite)
+npx jest --coverage
+
+# ES6 class count (expect 67)
+grep -rE "^\s*class\s+[A-Z]" resources --include="*.js" | wc -l
 ```
 
 ---
 
 *Plan created by GitHub Copilot (Claude Opus 4.5) on December 10, 2025*  
-*Last updated: December 17, 2025 (v1.0.0)*
+*Last updated: December 17, 2025 (v1.1.0 - Text Box feature added)*
