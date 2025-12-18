@@ -26,10 +26,11 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Fixed text box stroke shadow (now matches rectangle shadow behavior)
 - Fixed wide textarea alignment in properties panel (now right-justified like other fields)
 
-### Files Added/Modified
+### Technical Notes
 - 19 files modified across frontend and backend
 - New i18n messages for all text box properties
-- Server-side validation updated for new properties
+- Server-side validation updated for new properties (50+ whitelisted fields)
+- **ShapeRenderer.js grew from ~1,050 to 1,367 lines** - extraction of TextBoxRenderer recommended
 
 ---
 
@@ -40,8 +41,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 This is the first production-ready release of the Layers extension.
 
 ### Highlights
-- **90.9% test coverage** with 4,754 passing tests
-- **66 ES6 classes** with zero legacy prototype patterns
+- **~91% test coverage** with ~4,800 passing tests
+- **67 ES6 classes** with zero legacy prototype patterns
 - **12 drawing tools**: Select, Zoom, Text, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Blur
 - **Named layer sets**: Multiple annotation sets per image with version history
 - **Image layer import**: Add external images as annotation layers
@@ -52,8 +53,13 @@ This is the first production-ready release of the Layers extension.
 - **Extracted BackgroundLayerController.js** (380 lines) from LayerPanel.js
   - LayerPanel.js now delegates to 7 controllers for better separation of concerns
   - Added 40 unit tests for the new controller
-- **God classes re-assessed**: CanvasManager.js and LayerPanel.js now recognized as facade/coordinator classes with extensive delegation patterns
-- **Test suite expanded**: 4,714 → 4,754 tests (40 new BackgroundLayerController tests)
+- **God classes identified**: 9 files exceed 1,000 lines (see improvement_plan.md)
+- **Test suite expanded**: ~4,800 tests across 99 test suites
+
+### Known Technical Debt
+- 9 god classes (>1,000 lines each) need refactoring
+- E2E tests exist but not running in CI
+- See `codebase_review.md` for detailed assessment
 
 ### CI/CD Improvements
 - Fixed composer test script for CI environments
