@@ -77,6 +77,12 @@ class LayersSchemaManager {
 				'idx_layer_sets_setname_revision',
 				"$base/patches/patch-idx-layer-sets-setname-revision.sql"
 			);
+
+			// Drop foreign key constraints for broader compatibility
+			// FK constraints can cause issues with shared DBs, replicas, etc.
+			$updater->addExtensionUpdate( [
+				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::dropForeignKeyConstraints'
+			] );
 		}
 	}
 
@@ -185,6 +191,73 @@ class LayersSchemaManager {
 			}
 		}
 
+		return true;
+	}
+
+	/**
+	 * Drop foreign key constraints for broader compatibility.
+	 *
+	 * Foreign keys can cause issues with:
+	 * - Shared database setups
+	 * - Database replicas
+	 * - MediaWiki setups with non-standard user table configurations
+	 * - Different MySQL/MariaDB engine configurations
+	 *
+	 * @param DatabaseUpdater $updater
+	 * @return bool
+	 */
+	public static function dropForeignKeyConstraints( DatabaseUpdater $updater ): bool {
+		$dbw = $updater->getDB();
+
+		// List of foreign keys to drop
+		$foreignKeys = [
+			'layer_sets' => [ 'fk_layer_sets_user_id' ],
+			'layer_assets' => [ 'fk_layer_assets_user_id' ],
+			'layer_set_usage' => [ 'fk_layer_set_usage_layer_set_id', 'fk_layer_set_usage_page_id' ]
+		];
+
+		$updater->output( "Checking for foreign key constraints to drop...\n" );
+
+		// Get the actual database name (not the domain ID)
+		$dbName = $dbw->getDBname();
+
+		foreach ( $foreignKeys as $tableNameSuffix => $constraints ) {
+			$tableName = $dbw->tableName( $tableNameSuffix );
+			// Get the actual table name without quotes for information_schema query
+			$rawTableName = str_replace( [ '`', '"' ], '', $tableName );
+
+			foreach ( $constraints as $constraintName ) {
+				try {
+					// Check if the FK exists before trying to drop it
+					// This uses information_schema for MySQL/MariaDB
+					$fkExists = $dbw->selectField(
+						'information_schema.TABLE_CONSTRAINTS',
+						'CONSTRAINT_NAME',
+						[
+							'TABLE_SCHEMA' => $dbName,
+							'TABLE_NAME' => $rawTableName,
+							'CONSTRAINT_NAME' => $constraintName,
+							'CONSTRAINT_TYPE' => 'FOREIGN KEY'
+						],
+						__METHOD__
+					);
+
+					if ( $fkExists ) {
+						$dbw->query(
+							"ALTER TABLE {$tableName} DROP FOREIGN KEY {$constraintName}",
+							__METHOD__
+						);
+						$updater->output( "   Dropped foreign key {$constraintName} from {$tableNameSuffix}.\n" );
+					}
+				} catch ( \Throwable $e ) {
+					// Silently ignore - FK might not exist or table might not support FKs
+					$updater->output( "   Note: Could not check/drop {$constraintName}: " .
+						substr( $e->getMessage(), 0, 100 ) . "\n" );
+				}
+			}
+		}
+
+		$updater->output( "   Foreign key check complete.\n" );
 		return true;
 	}
 

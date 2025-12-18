@@ -173,10 +173,22 @@ class LayersDatabase {
 			} catch ( \Throwable $e ) {
 				$dbw->endAtomic( __METHOD__ );
 				if ( $dbw->isDuplicateKeyError( $e ) ) {
-					$this->logError( "Race condition in saveLayerSet, retrying." );
+					$this->logError( "Race condition in saveLayerSet, retrying.", [
+						'attempt' => $retryCount + 1,
+						'maxRetries' => $maxRetries
+					] );
 					continue;
 				}
-				$this->logError( 'Failed to save layer set: ' . $e->getMessage() );
+				// Log detailed error info for debugging
+				$this->logError( 'Failed to save layer set', [
+					'error' => $e->getMessage(),
+					'errorClass' => get_class( $e ),
+					'errorCode' => method_exists( $e, 'getCode' ) ? $e->getCode() : 'N/A',
+					'imgName' => $imgName,
+					'setName' => $setName,
+					'userId' => $userId,
+					'trace' => $e->getTraceAsString()
+				] );
 				return null;
 			}
 		}
