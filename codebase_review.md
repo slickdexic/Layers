@@ -2,7 +2,7 @@
 
 **Review Date:** December 18, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 1.1.1-dev
+**Version:** 1.1.1
 
 ## Executive Summary
 
@@ -61,7 +61,7 @@ The extension is **functional and production-ready** with good test coverage (~9
 
 | Area | Score | Notes |
 |------|-------|-------|
-| **God Classes** | 3/10 | **9 files over 1,000 lines** (worst: 1,893 lines) |
+| **God Classes** | 4/10 | **8 files over 1,000 lines** (was 9, TextBoxRenderer extracted) |
 | **Code Complexity** | 4/10 | Large classes are hard to understand and test thoroughly |
 | **E2E Testing** | 2/10 | Playwright exists but not running in CI |
 | **Documentation Accuracy** | 5/10 | Metrics in docs sometimes outdated |
@@ -81,7 +81,7 @@ These metrics were collected directly from v1.1.0 source code.
 | Viewer module | ~682 lines | - | ✅ Lightweight |
 | Shared module | ~5,000+ lines | - | Growing (includes new renderers) |
 | Editor module | ~34,000+ lines | - | Large but expected for full editor |
-| Files > 1,000 lines | **9** | 0 | ⚠️ God classes |
+| Files > 1,000 lines | **8** | 0 | ⚠️ God classes (was 9) |
 | ES6 classes | **67** | 60+ | ✅ 100% Complete |
 | Prototype method definitions | **0** | 0 | ✅ Eliminated |
 | ESLint errors | **0** | 0 | ✅ Clean |
@@ -94,11 +94,14 @@ These metrics were collected directly from v1.1.0 source code.
 | CanvasManager.js | **1,893** | → | Facade/coordinator - delegates to 10+ controllers |
 | LayerPanel.js | **1,720** | → | Delegates to 7 controllers |
 | APIManager.js | **1,385** | → | API + state management mixed |
-| ShapeRenderer.js | **1,367** | ↑ | **Grew** with Text Box feature (was ~1,050) |
 | LayersEditor.js | **1,296** | → | Main entry point |
 | SelectionManager.js | **1,266** | → | Core selection logic |
 | ToolManager.js | **1,180** | ↑ | Added Text Box tool logic |
 | CanvasRenderer.js | **1,132** | → | Canvas rendering |
+| Toolbar.js | **1,126** | → | UI construction |
+
+**Recently Fixed:**
+- ✅ ShapeRenderer.js: 1,367 → **1,049** lines (TextBoxRenderer extracted)
 | Toolbar.js | **1,126** | → | UI controls |
 
 **Total: 12,365 lines in god classes** - this represents ~31% of the editor codebase concentrated in 9 files.

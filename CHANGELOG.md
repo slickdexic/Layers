@@ -2,6 +2,27 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.1] - 2025-12-18
+
+### Bug Fixes
+- **Background layer visibility/opacity now works in article viewer**: Previously, changing the base image layer's visibility or opacity in the editor was saved but not displayed when viewing the annotated image on article pages. Now these settings are correctly applied.
+  - LayersViewer.js: Added `applyBackgroundSettings()` method
+  - ViewerManager.js: Updated file page fallback to include background settings
+  - ThumbnailProcessor.php: Updated to extract and inject background settings
+  - LayersHtmlInjector.php: Extended payload building to support background settings
+
+### Code Quality
+- **TextBoxRenderer extracted from ShapeRenderer**: ShapeRenderer.js reduced from 1,367 to 1,049 lines (22% reduction)
+- **50 new unit tests** for TextBoxRenderer
+- **9 new unit tests** for background settings in LayersViewer
+- **God classes reduced from 9 to 8** (ShapeRenderer now under 1,100 lines)
+
+### Documentation
+- Added P3.5 Tool Defaults System to improvement_plan.md (future feature)
+- Updated codebase_review.md with current metrics
+
+---
+
 ## [1.1.0] - 2025-12-17
 
 ### New Feature: Text Box Tool
