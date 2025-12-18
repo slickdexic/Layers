@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.1.0. Requires MediaWiki 1.44+.
+> **Status:** Stable. Version 1.1.2. Requires MediaWiki 1.44+.
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 
@@ -133,11 +133,11 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Architecture:**
 - **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 76 JS files (~40K lines total)
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 79 JS files (~41K lines total), 70 ES6 classes
 - **Code Splitting:** Viewer module (682 lines) + Shared module (~5K lines) loads separately from Editor (~34K lines)
 
 **Test Coverage (December 2025):**
-- Jest: ~4,800 tests, ~91% statement coverage, ~78% branch coverage (99 test suites)
+- Jest: **5,214 tests**, ~91% statement coverage, ~79% branch coverage (103 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 
 **Accessibility (WCAG 2.1):**
