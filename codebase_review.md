@@ -1,8 +1,8 @@
 # Layers MediaWiki Extension - Critical Code Review
 
-**Review Date:** December 17, 2025  
+**Review Date:** December 18, 2025  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)  
-**Version:** 1.1.0
+**Version:** 1.1.1-dev
 
 ## Executive Summary
 
@@ -13,16 +13,16 @@ The "Layers" extension provides non-destructive image annotation capabilities fo
 The extension is **functional and production-ready** with good test coverage (~91%), solid security practices, and a **fully modernized ES6 JavaScript codebase**. However, significant technical debt remains that will hinder long-term maintainability.
 
 **Honest Highlights:**
-- ~4,800+ passing tests with ~91% statement coverage - solid but not bulletproof
+- ~5,100+ passing tests with ~91% statement coverage - solid but not bulletproof
 - PHP backend demonstrates professional security practices
 - Accessibility features implemented (skip links, ARIA, keyboard support)
 - CI/CD pipelines operational
-- 67 ES6 classes, 0 prototype patterns remaining
+- 68 ES6 classes, 0 prototype patterns remaining
 - New Text Box tool with multi-line text, styling, and shadow effects (v1.1.0)
+- TextBoxRenderer extracted from ShapeRenderer (December 2025)
 
 **Honest Concerns:**
-- **9 god classes** (>1,000 lines each) - a significant maintainability concern
-- ShapeRenderer.js grew to 1,367 lines during Text Box feature development
+- **8 god classes** (>1,000 lines each) - reduced from 9 with TextBoxRenderer extraction
 - Test coverage numbers fluctuate; some edge cases likely untested
 - No E2E tests running in CI despite Playwright setup existing
 - Documentation sometimes lags behind actual code state
@@ -36,19 +36,19 @@ The extension is **functional and production-ready** with good test coverage (~9
 | Area | Score | Notes |
 |------|-------|-------|
 | **Functionality** | 9/10 | 13 drawing tools work well, named layer sets, version history |
-| **Test Coverage** | 8/10 | ~91% statement coverage, ~4,800 tests passing |
+| **Test Coverage** | 8/10 | ~91% statement coverage, ~5,100 tests passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
 | **PHP Architecture** | 8/10 | Clean DI, service wiring, largest PHP file 973 lines |
 | **Documentation** | 6/10 | Good copilot-instructions.md, but docs often lag behind code |
 | **Code Splitting** | 7/10 | Viewer (682 lines) + Shared (~5K lines) vs Editor (~34K lines) |
-| **ES6 Migration** | 10/10 | 67 ES6 classes, 0 prototype methods remain (100% complete) |
+| **ES6 Migration** | 10/10 | 68 ES6 classes, 0 prototype methods remain (100% complete) |
 | **Accessibility** | 8/10 | Skip links, ARIA landmarks, live regions, keyboard shortcuts |
 
 ### What's Actually Working
 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
-3. **Tests catch regressions** - ~4,800 tests provide a safety net
+3. **Tests catch regressions** - ~5,100 tests provide a safety net
 4. **Viewer is lightweight** - reading articles loads only ~4,600 lines (viewer + shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
 6. **ES6 100% complete** - All 67 classes use ES6 syntax, 0 prototype patterns remain

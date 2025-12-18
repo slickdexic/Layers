@@ -27,7 +27,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
   - Core editor modules: `CanvasManager.js` (~1,895 lines - facade coordinating controllers), `ToolManager.js`, `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
-  - Shared modules: `LayerRenderer.js` (~371 lines), `ShadowRenderer.js` (~521 lines), `ArrowRenderer.js` (~702 lines), `TextRenderer.js` (~343 lines), `ShapeRenderer.js` (~1,367 lines - grew with Text Box), `EffectsRenderer.js` (~245 lines)
+  - Shared modules: `LayerRenderer.js` (~371 lines), `ShadowRenderer.js` (~521 lines), `ArrowRenderer.js` (~702 lines), `TextRenderer.js` (~343 lines), `TextBoxRenderer.js` (~430 lines), `ShapeRenderer.js` (~1,049 lines), `EffectsRenderer.js` (~245 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~340 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `GridRulersController.js` (~385 lines) - grid/ruler rendering, snap-to-grid/guides
@@ -56,8 +56,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
-  - ES6 classes: All 67 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 9 files exceed 1,000 lines - see improvement_plan.md for remediation
+  - ES6 classes: All 68 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
+  - **God classes:** 8 files exceed 1,000 lines - see improvement_plan.md for remediation
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.
