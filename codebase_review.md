@@ -13,7 +13,7 @@ The "Layers" extension provides non-destructive image annotation capabilities fo
 The extension is **functional and production-ready** with good test coverage (~91%), solid security practices, and a **fully modernized ES6 JavaScript codebase**. However, significant technical debt remains that will hinder long-term maintainability.
 
 **Honest Highlights:**
-- **5,164 passing tests** with ~91% statement coverage - solid but not bulletproof
+- **5,188 passing tests** with ~91% statement coverage - solid but not bulletproof
 - PHP backend demonstrates professional security practices
 - Accessibility features implemented (skip links, ARIA, keyboard support)
 - CI/CD pipelines operational
@@ -37,7 +37,7 @@ The extension is **functional and production-ready** with good test coverage (~9
 | Area | Score | Notes |
 |------|-------|-------|
 | **Functionality** | 9/10 | 13 drawing tools work well, named layer sets, version history |
-| **Test Coverage** | 8/10 | ~91% statement coverage, ~5,100 tests passing |
+| **Test Coverage** | 8/10 | ~91% statement coverage, ~5,188 tests passing |
 | **PHP Backend Security** | 9/10 | CSRF protection, rate limiting, parameterized queries, strict validation |
 | **PHP Architecture** | 8/10 | Clean DI, service wiring, largest PHP file 973 lines |
 | **Documentation** | 6/10 | Good copilot-instructions.md, but docs often lag behind code |
@@ -49,7 +49,7 @@ The extension is **functional and production-ready** with good test coverage (~9
 
 1. **The extension works** - users can annotate images, save, load, view
 2. **Security is solid** - PHP backend demonstrates professional practices
-3. **Tests catch regressions** - ~5,100 tests provide a safety net
+3. **Tests catch regressions** - ~5,188 tests provide a safety net
 4. **Viewer is lightweight** - reading articles loads only ~4,600 lines (viewer + shared)
 5. **Named layer sets** - Multiple annotation sets per image with version history
 6. **ES6 100% complete** - All 67 classes use ES6 syntax, 0 prototype patterns remain
