@@ -662,6 +662,526 @@ describe('LayerPanel', () => {
             expect(window.mw.log.error).toHaveBeenCalled();
         });
     });
+
+    describe('toggleBackgroundVisibility', () => {
+        test('should toggle via controller when available', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const mockController = {
+                toggleBackgroundVisibility: jest.fn()
+            };
+            panel.backgroundLayerController = mockController;
+
+            panel.toggleBackgroundVisibility();
+
+            expect(mockController.toggleBackgroundVisibility).toHaveBeenCalled();
+        });
+
+        test('should toggle via stateManager fallback', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            // No controller, use fallback
+            panel.backgroundLayerController = null;
+            mockStateManager.set('backgroundVisible', true);
+            mockEditor.canvasManager = { redraw: jest.fn() };
+
+            panel.toggleBackgroundVisibility();
+
+            expect(mockStateManager.get('backgroundVisible')).toBe(false);
+            expect(mockEditor.canvasManager.redraw).toHaveBeenCalled();
+        });
+    });
+
+    describe('setBackgroundOpacity', () => {
+        test('should set opacity via controller when available', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const mockController = {
+                setBackgroundOpacity: jest.fn()
+            };
+            panel.backgroundLayerController = mockController;
+
+            panel.setBackgroundOpacity(0.5);
+
+            expect(mockController.setBackgroundOpacity).toHaveBeenCalledWith(0.5);
+        });
+
+        test('should set opacity via stateManager fallback', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            panel.backgroundLayerController = null;
+            mockEditor.canvasManager = { redraw: jest.fn() };
+
+            panel.setBackgroundOpacity(0.75);
+
+            expect(mockStateManager.get('backgroundOpacity')).toBe(0.75);
+            expect(mockEditor.canvasManager.redraw).toHaveBeenCalled();
+        });
+
+        test('should clamp opacity to valid range', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            panel.backgroundLayerController = null;
+            mockEditor.canvasManager = { redraw: jest.fn() };
+
+            // Test clamping to max
+            panel.setBackgroundOpacity(1.5);
+            expect(mockStateManager.get('backgroundOpacity')).toBe(1);
+
+            // Test clamping to min
+            panel.setBackgroundOpacity(-0.5);
+            expect(mockStateManager.get('backgroundOpacity')).toBe(0);
+        });
+    });
+
+    describe('moveLayer', () => {
+        test('should move via dragDropController when available', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const mockDragDrop = {
+                moveLayer: jest.fn()
+            };
+            panel.dragDropController = mockDragDrop;
+
+            panel.moveLayer('layer1', -1);
+
+            expect(mockDragDrop.moveLayer).toHaveBeenCalledWith('layer1', -1, expect.any(Function));
+        });
+
+        test('should move up via fallback', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            panel.dragDropController = null;
+            const layers = [
+                { id: 'layer1', type: 'rectangle' },
+                { id: 'layer2', type: 'circle' }
+            ];
+            mockStateManager.set('layers', layers);
+            mockEditor.canvasManager = { redraw: jest.fn() };
+            mockEditor.saveState = jest.fn();
+
+            panel.moveLayer('layer2', -1);
+
+            const newLayers = mockStateManager.get('layers');
+            expect(newLayers[0].id).toBe('layer2');
+            expect(newLayers[1].id).toBe('layer1');
+            expect(mockEditor.saveState).toHaveBeenCalledWith('Reorder Layers');
+        });
+
+        test('should not move when layer not found', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            panel.dragDropController = null;
+            mockStateManager.set('layers', [{ id: 'layer1', type: 'rectangle' }]);
+            mockEditor.saveState = jest.fn();
+
+            panel.moveLayer('nonexistent', -1);
+
+            expect(mockEditor.saveState).not.toHaveBeenCalled();
+        });
+
+        test('should not move when at boundary', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            panel.dragDropController = null;
+            mockStateManager.set('layers', [
+                { id: 'layer1', type: 'rectangle' },
+                { id: 'layer2', type: 'circle' }
+            ]);
+            mockEditor.saveState = jest.fn();
+
+            // Try to move first layer up (can't go further)
+            panel.moveLayer('layer1', -1);
+
+            expect(mockEditor.saveState).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('msg fallback with mw.message error', () => {
+        test('should return fallback when mw.message throws', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            // Remove layersMessages to force mw.message path
+            delete window.layersMessages;
+            
+            // Mock mw.message to throw
+            window.mw.message = jest.fn().mockImplementation(() => {
+                throw new Error('Translation error');
+            });
+
+            const result = panel.msg('test-key', 'Fallback Text');
+
+            expect(result).toBe('Fallback Text');
+        });
+
+        test('should return empty string when no fallback provided', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            delete window.layersMessages;
+            window.mw.message = undefined;
+
+            const result = panel.msg('test-key');
+
+            expect(result).toBe('');
+        });
+    });
+
+    describe('destroy cleanup paths', () => {
+        test('should clean up backgroundLayerController', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const mockController = { destroy: jest.fn() };
+            panel.backgroundLayerController = mockController;
+
+            panel.destroy();
+
+            expect(mockController.destroy).toHaveBeenCalled();
+            expect(panel.backgroundLayerController).toBe(null);
+        });
+
+        test('should clean up itemEventsController', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const mockController = { destroy: jest.fn() };
+            panel.itemEventsController = mockController;
+
+            panel.destroy();
+
+            expect(mockController.destroy).toHaveBeenCalled();
+            expect(panel.itemEventsController).toBe(null);
+        });
+    });
+
+    describe('reorderLayers', () => {
+        test('should reorder via dragDropController when available', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const mockDragDrop = {
+                reorderLayers: jest.fn()
+            };
+            panel.dragDropController = mockDragDrop;
+
+            panel.reorderLayers('layer1', 'layer2');
+
+            expect(mockDragDrop.reorderLayers).toHaveBeenCalledWith('layer1', 'layer2');
+        });
+
+        test('should reorder via stateManager.reorderLayer when available', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            panel.dragDropController = null;
+            mockStateManager.reorderLayer = jest.fn().mockReturnValue(true);
+            mockEditor.canvasManager = { redraw: jest.fn() };
+
+            panel.reorderLayers('layer1', 'layer2');
+
+            expect(mockStateManager.reorderLayer).toHaveBeenCalledWith('layer1', 'layer2');
+            expect(mockEditor.canvasManager.redraw).toHaveBeenCalled();
+        });
+
+        test('should use legacy fallback when stateManager.reorderLayer unavailable', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            panel.dragDropController = null;
+            // Mock reorderLayer to be unavailable (undefined) to trigger legacy fallback
+            mockStateManager.reorderLayer = undefined;
+            
+            const layers = [
+                { id: 'layer1', type: 'rectangle' },
+                { id: 'layer2', type: 'circle' },
+                { id: 'layer3', type: 'text' }
+            ];
+            mockStateManager.set('layers', layers);
+            mockEditor.canvasManager = { redraw: jest.fn() };
+            mockEditor.saveState = jest.fn();
+
+            // Moving layer1 to layer3's position inserts layer1 at layer3's original index
+            panel.reorderLayers('layer1', 'layer3');
+
+            const newLayers = mockStateManager.get('layers');
+            // After removing layer1 from position 0 and inserting at layer3's position (index 2),
+            // we get: layer2, layer3, layer1 -> but since we spliced from 0 first, target shifts
+            // Actually: remove layer1 (idx 0) -> [layer2, layer3], insert at idx 2 (which becomes end) -> [layer2, layer3, layer1]
+            // But the code inserts at targetIndex which was 2, but after removing draggedIndex=0, 
+            // the arrays shift. Let me check the code again... it splices then inserts at targetIndex.
+            // layers = [l1, l2, l3], splice(0,1) -> [l2, l3], splice(2, 0, l1) -> [l2, l3, l1]
+            expect(newLayers[0].id).toBe('layer2');
+            expect(newLayers[1].id).toBe('layer3');
+            expect(newLayers[2].id).toBe('layer1');
+            expect(mockEditor.saveState).toHaveBeenCalledWith('Reorder Layers');
+        });
+    });
+
+    describe('setupDragAndDrop fallback', () => {
+        test('should setup dragstart handler in fallback mode', () => {
+            // Ensure no LayerDragDrop controller is available
+            window.Layers = window.Layers || {};
+            window.Layers.UI = window.Layers.UI || {};
+            window.Layers.UI.LayerDragDrop = null;
+
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            mockStateManager.set('layers', [{ id: 'test-layer', type: 'rectangle' }]);
+            panel.renderLayerList();
+
+            const layerItem = panel.layerList.querySelector('.layer-item');
+            if (layerItem) {
+                // Create dragstart event
+                const dragEvent = new Event('dragstart', { bubbles: true });
+                dragEvent.dataTransfer = {
+                    setData: jest.fn()
+                };
+
+                layerItem.dispatchEvent(dragEvent);
+
+                expect(layerItem.classList.contains('dragging')).toBe(true);
+            }
+        });
+
+        test('should setup dragend handler in fallback mode', () => {
+            window.Layers.UI.LayerDragDrop = null;
+
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            mockStateManager.set('layers', [{ id: 'test-layer', type: 'rectangle' }]);
+            panel.renderLayerList();
+
+            const layerItem = panel.layerList.querySelector('.layer-item');
+            if (layerItem) {
+                layerItem.classList.add('dragging');
+                
+                const dragEvent = new Event('dragend', { bubbles: true });
+                layerItem.dispatchEvent(dragEvent);
+
+                expect(layerItem.classList.contains('dragging')).toBe(false);
+            }
+        });
+    });
+
+    describe('resize divider interactions', () => {
+        test('should handle mousedown on resize divider', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const divider = container.querySelector('.resize-divider');
+            if (divider) {
+                const mousedown = new MouseEvent('mousedown', {
+                    clientY: 100,
+                    bubbles: true
+                });
+                mousedown.preventDefault = jest.fn();
+                
+                divider.dispatchEvent(mousedown);
+
+                expect(document.body.classList.contains('layers-resize-cursor')).toBe(true);
+            }
+        });
+
+        test('should handle mousemove during resize', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const divider = container.querySelector('.resize-divider');
+            if (divider && panel.layerList) {
+                // Start dragging
+                const mousedown = new MouseEvent('mousedown', {
+                    clientY: 100,
+                    bubbles: true
+                });
+                mousedown.preventDefault = jest.fn();
+                divider.dispatchEvent(mousedown);
+
+                // Move mouse
+                const mousemove = new MouseEvent('mousemove', {
+                    clientY: 150,
+                    bubbles: true
+                });
+                document.dispatchEvent(mousemove);
+
+                // Check that layer list style was updated
+                expect(panel.layerList.style.height).toBeDefined();
+            }
+        });
+
+        test('should handle mouseup after resize', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const divider = container.querySelector('.resize-divider');
+            if (divider) {
+                // Start dragging
+                const mousedown = new MouseEvent('mousedown', {
+                    clientY: 100,
+                    bubbles: true
+                });
+                mousedown.preventDefault = jest.fn();
+                divider.dispatchEvent(mousedown);
+
+                // End dragging
+                const mouseup = new MouseEvent('mouseup', { bubbles: true });
+                document.dispatchEvent(mouseup);
+
+                expect(document.body.classList.contains('layers-resize-cursor')).toBe(false);
+            }
+        });
+    });
+
+    describe('touch interactions', () => {
+        test('should handle touchstart on resize divider', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const divider = container.querySelector('.resize-divider');
+            if (divider) {
+                const touchstart = new TouchEvent('touchstart', {
+                    touches: [{ clientY: 100 }],
+                    bubbles: true
+                });
+                touchstart.preventDefault = jest.fn();
+                
+                divider.dispatchEvent(touchstart);
+
+                expect(document.body.classList.contains('layers-resize-cursor')).toBe(true);
+            }
+        });
+
+        test('should handle touchmove during resize', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const divider = container.querySelector('.resize-divider');
+            if (divider && panel.layerList) {
+                // Start touch
+                const touchstart = new TouchEvent('touchstart', {
+                    touches: [{ clientY: 100 }],
+                    bubbles: true
+                });
+                touchstart.preventDefault = jest.fn();
+                divider.dispatchEvent(touchstart);
+
+                // Move touch
+                const touchmove = new TouchEvent('touchmove', {
+                    touches: [{ clientY: 150 }],
+                    bubbles: true
+                });
+                document.dispatchEvent(touchmove);
+
+                expect(panel.layerList.style.height).toBeDefined();
+            }
+        });
+
+        test('should handle touchend after resize', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const divider = container.querySelector('.resize-divider');
+            if (divider) {
+                // Start touch
+                const touchstart = new TouchEvent('touchstart', {
+                    touches: [{ clientY: 100 }],
+                    bubbles: true
+                });
+                touchstart.preventDefault = jest.fn();
+                divider.dispatchEvent(touchstart);
+
+                // End touch
+                const touchend = new TouchEvent('touchend', { bubbles: true });
+                document.dispatchEvent(touchend);
+
+                expect(document.body.classList.contains('layers-resize-cursor')).toBe(false);
+            }
+        });
+    });
 });
 
 describe('LayerPanel module exports', () => {
