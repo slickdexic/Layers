@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -223,6 +223,8 @@
 				"tools/ToolRegistry.js",
 				"tools/ToolStyles.js",
 				"tools/ShapeFactory.js",
+				"tools/TextToolHandler.js",
+				"tools/PathToolHandler.js",
 				"ToolManager.js",
 				"TransformationEngine.js",
 				"CanvasRenderer.js",

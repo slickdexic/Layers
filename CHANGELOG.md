@@ -2,6 +2,23 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.2] - 2025-12-18
+
+### Code Quality
+- **Tool handlers extracted from ToolManager**: Improved code organization with delegation pattern
+  - `TextToolHandler.js` (~210 lines): Handles inline text input UI for creating text layers
+  - `PathToolHandler.js` (~230 lines): Handles freeform path drawing with click-to-add points
+  - ToolManager now delegates to handlers when available, with inline fallback for backwards compatibility
+- **58 new unit tests** for tool handlers
+- **Total test count: 5,164 tests passing**
+
+### Technical Notes
+- Both handlers registered in extension.json for ResourceLoader
+- Handlers use the established pattern from ShapeFactory, ToolRegistry, ToolStyles
+- No breaking changes - ToolManager maintains full backwards compatibility
+
+---
+
 ## [1.1.1] - 2025-12-18
 
 ### Bug Fixes
