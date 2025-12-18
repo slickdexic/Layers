@@ -137,7 +137,7 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 - **Code Splitting:** Viewer module (682 lines) + Shared module (~5K lines) loads separately from Editor (~34K lines)
 
 **Test Coverage (December 2025):**
-- Jest: **5,214 tests**, ~91% statement coverage, ~79% branch coverage (103 test suites)
+- Jest: **5,250 tests**, ~92% statement coverage, ~80% branch coverage (103 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 
 **Accessibility (WCAG 2.1):**
