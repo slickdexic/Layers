@@ -52,8 +52,43 @@
 				return;
 			}
 
+			this.applyBackgroundSettings();
 			this.createCanvas();
 			this.loadImageAndRender();
+		}
+
+		/**
+		 * Apply background visibility and opacity settings to the image element
+		 */
+		applyBackgroundSettings() {
+			if ( !this.imageElement || !this.layerData ) {
+				return;
+			}
+
+			// Ensure the image element has a style object (may be missing in tests)
+			if ( !this.imageElement.style ) {
+				return;
+			}
+
+			// Apply background visibility (default: true)
+			const bgVisible = this.layerData.backgroundVisible;
+			if ( bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0 ) {
+				this.imageElement.style.visibility = 'hidden';
+			} else {
+				// Ensure visibility is restored if it was previously hidden
+				this.imageElement.style.visibility = 'visible';
+			}
+
+			// Apply background opacity (default: 1.0)
+			const bgOpacity = this.layerData.backgroundOpacity;
+			if ( typeof bgOpacity === 'number' && bgOpacity >= 0 && bgOpacity <= 1 ) {
+				this.imageElement.style.opacity = String( bgOpacity );
+			} else if ( typeof bgOpacity === 'string' ) {
+				const parsed = parseFloat( bgOpacity );
+				if ( !isNaN( parsed ) && parsed >= 0 && parsed <= 1 ) {
+					this.imageElement.style.opacity = String( parsed );
+				}
+			}
 		}
 
 		/**

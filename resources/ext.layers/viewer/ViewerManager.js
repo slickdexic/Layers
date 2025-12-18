@@ -282,7 +282,9 @@ class ViewerManager {
 					const payload = {
 						layers: layersArr,
 						baseWidth: layerset.baseWidth || img.naturalWidth || img.width || null,
-						baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null
+						baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null,
+						backgroundVisible: layerset.data.backgroundVisible !== undefined ? layerset.data.backgroundVisible : true,
+						backgroundOpacity: layerset.data.backgroundOpacity !== undefined ? layerset.data.backgroundOpacity : 1.0
 					};
 
 					this.initializeViewer( img, payload );

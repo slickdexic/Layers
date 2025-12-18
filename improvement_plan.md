@@ -166,6 +166,65 @@ This document provides a **prioritized, actionable improvement plan** based on t
 - **Effort:** 4-6 weeks
 - **Features:** Touch gestures, responsive UI, mobile toolbar
 
+### P3.5 Tool Defaults System
+
+- **Status:** NOT STARTED
+- **Priority:** P3 (Future Enhancement)
+- **Effort:** 3-4 weeks
+- **Description:** Allow users to save and apply named style presets for tools
+
+**Concept:**
+Users create reusable style presets (e.g., "Red Warning Arrow", "Blue Label Text") that can be applied to tools. This ensures consistent styling across annotations and speeds up workflow.
+
+**Features:**
+1. **Tool Defaults Form** - A settings panel listing every tool with its configurable properties
+2. **Named Default Records** - User creates named presets (e.g., "Primary Heading", "Error Arrow")
+3. **Master Default** - One preset can be marked as the master/default for each tool type
+4. **Property Controls** - Each control gets a "Use default" checkbox or dropdown to select a named preset
+5. **Dynamic Updates** - Objects linked to a preset update when the preset changes (optional)
+
+**Example Use Cases:**
+- Medical diagrams: "Anatomy Label" preset (blue text, white outline, 14pt font)
+- Technical diagrams: "Warning" preset (red arrow, thick stroke, dashed)
+- Educational content: "Definition" preset (green textbox, rounded corners)
+
+**Implementation Approach:**
+1. Create `ToolDefaults.js` module with CRUD for preset storage
+2. Add UI panel for managing presets (modal dialog or side panel)
+3. Extend tool option controls to support "inherit from preset" mode
+4. Store presets per-user in browser localStorage initially
+5. Future: Store presets server-side for cross-device sync
+
+**Data Structure Example:**
+```javascript
+{
+  "userPresets": {
+    "arrow-warning": {
+      "tool": "arrow",
+      "name": "Warning Arrow",
+      "isDefault": true,
+      "properties": {
+        "stroke": "#ff0000",
+        "strokeWidth": 3,
+        "arrowhead": "arrow",
+        "arrowStyle": "solid"
+      }
+    },
+    "text-heading": {
+      "tool": "text",
+      "name": "Section Heading",
+      "isDefault": false,
+      "properties": {
+        "fontFamily": "Arial",
+        "fontSize": 24,
+        "fontWeight": "bold",
+        "color": "#333333"
+      }
+    }
+  }
+}
+```
+
 ---
 
 ## Progress Tracking
@@ -192,7 +251,7 @@ P2.2 LayerRenderer Split:     ████████████████�
 P2.3 CanvasManager:           ███████████████░░░░░ 75%
 P2.4 TransformController:     ████████████████████ 100% ✓
 P2.5-P2.9 Coverage:           ████████████████████ 100% ✓
-P2.10 ShapeRenderer Split:    ░░░░░░░░░░░░░░░░░░░░ 0% ⚠️ URGENT
+P2.10 ShapeRenderer Split:    ████████████████████ 100% ✓
 P2.11 E2E CI Setup:           ░░░░░░░░░░░░░░░░░░░░ 0% ⚠️ URGENT
 
 Phase 3 (Modernization):
@@ -207,7 +266,7 @@ P3.4 Mobile Support:          ░░░░░░░░░░░░░░░░�
 ## Success Metrics
 
 ### Phase 2 Complete When:
-- [ ] ShapeRenderer < 1,000 lines (extract TextBoxRenderer)
+- [ ] ShapeRenderer < 1,000 lines (extract TextBoxRenderer) ✓ (1,049 lines)
 - [ ] ToolManager < 1,000 lines (extract tool modules)
 - [ ] APIManager < 1,000 lines (split API/state)
 - [ ] E2E tests running in CI
@@ -216,7 +275,7 @@ P3.4 Mobile Support:          ░░░░░░░░░░░░░░░░�
 - [ ] 0 files > 1,000 lines (currently 9) ← **Main Goal**
 - [x] ES6 classes throughout ✓ (100%)
 - [x] 0 prototype methods ✓
-- [x] All tests passing ✓ (~4,800)
+- [x] All tests passing ✓ (~5,106)
 - [x] >90% statement coverage ✓ (~91%)
 - [x] >75% branch coverage ✓ (~78%)
 - [ ] E2E tests automated in CI
@@ -254,31 +313,31 @@ P3.4 Mobile Support:          ░░░░░░░░░░░░░░░░�
 
 ### This Week (Urgent)
 
-1. **Extract TextBoxRenderer.js from ShapeRenderer.js**
-   - ShapeRenderer grew to 1,367 lines with Text Box feature
-   - This sets a bad precedent for future features
-   - Effort: 3-4 days
-
-2. **Set up E2E CI workflow**
+1. **Set up E2E CI workflow**
    - Playwright tests exist but aren't running
    - Use GitHub Actions + Docker MediaWiki
    - Effort: 2-3 days
 
 ### This Month
 
-3. **Split ToolManager.js** (1,180 lines)
+2. **Split ToolManager.js** (1,180 lines)
    - Extract TextBoxTool.js, TextTool.js
    - Each tool should be its own module
 
-4. **Split APIManager.js** (1,385 lines)
+3. **Split APIManager.js** (1,385 lines)
    - Separate API calls from state management
    - Consider consolidating with StateManager
 
 ### This Quarter
 
-5. **Continue god class reduction**
+4. **Continue god class reduction**
    - Target: 0 files > 1,000 lines
    - Focus on files without delegation patterns first
+
+5. **Consider Tool Defaults feature** (P3.5)
+   - User-requested enhancement
+   - Allows named style presets for consistent annotations
+   - See P3.5 section for full specification
 
 ---
 
@@ -314,4 +373,4 @@ grep -rE "^\s*class\s+[A-Z]" resources --include="*.js" | wc -l
 ---
 
 *Plan created by GitHub Copilot (Claude Opus 4.5) on December 10, 2025*  
-*Last updated: December 17, 2025 (v1.1.0 - Text Box feature added)*
+*Last updated: December 18, 2025 (TextBoxRenderer extracted, background opacity/visibility bug fixed, Tool Defaults P3.5 added)*

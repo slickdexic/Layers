@@ -31,10 +31,22 @@ class LayersHtmlInjector {
 	 * @param array $layers Array of layer objects
 	 * @param int|null $baseWidth Original image width
 	 * @param int|null $baseHeight Original image height
+	 * @param bool $backgroundVisible Background visibility setting (default: true)
+	 * @param float $backgroundOpacity Background opacity setting (default: 1.0)
 	 * @return array Payload ready for JSON encoding
 	 */
-	public function buildPayload( array $layers, ?int $baseWidth = null, ?int $baseHeight = null ): array {
-		$payload = [ 'layers' => $layers ];
+	public function buildPayload(
+		array $layers,
+		?int $baseWidth = null,
+		?int $baseHeight = null,
+		bool $backgroundVisible = true,
+		float $backgroundOpacity = 1.0
+	): array {
+		$payload = [
+			'layers' => $layers,
+			'backgroundVisible' => $backgroundVisible,
+			'backgroundOpacity' => $backgroundOpacity
+		];
 
 		if ( $baseWidth !== null && $baseHeight !== null && $baseWidth > 0 && $baseHeight > 0 ) {
 			$payload['baseWidth'] = $baseWidth;
@@ -65,6 +77,8 @@ class LayersHtmlInjector {
 	 * @param int|null $baseWidth Original image width
 	 * @param int|null $baseHeight Original image height
 	 * @param string $context Logging context (e.g., 'MakeImageLink2')
+	 * @param bool $backgroundVisible Background visibility setting (default: true)
+	 * @param float $backgroundOpacity Background opacity setting (default: 1.0)
 	 * @return string Modified HTML with layer data injected
 	 */
 	public function injectIntoHtml(
@@ -72,9 +86,11 @@ class LayersHtmlInjector {
 		array $layers,
 		?int $baseWidth = null,
 		?int $baseHeight = null,
-		string $context = 'unknown'
+		string $context = 'unknown',
+		bool $backgroundVisible = true,
+		float $backgroundOpacity = 1.0
 	): string {
-		$payload = $this->buildPayload( $layers, $baseWidth, $baseHeight );
+		$payload = $this->buildPayload( $layers, $baseWidth, $baseHeight, $backgroundVisible, $backgroundOpacity );
 		$json = $this->encodePayload( $payload );
 
 		$result = preg_replace_callback(
@@ -199,14 +215,18 @@ class LayersHtmlInjector {
 	 * @param array $layers The layers to inject
 	 * @param int|null $baseWidth Original image width
 	 * @param int|null $baseHeight Original image height
+	 * @param bool $backgroundVisible Background visibility setting (default: true)
+	 * @param float $backgroundOpacity Background opacity setting (default: 1.0)
 	 */
 	public function injectIntoAttributes(
 		array &$attribs,
 		array $layers,
 		?int $baseWidth = null,
-		?int $baseHeight = null
+		?int $baseHeight = null,
+		bool $backgroundVisible = true,
+		float $backgroundOpacity = 1.0
 	): void {
-		$payload = $this->buildPayload( $layers, $baseWidth, $baseHeight );
+		$payload = $this->buildPayload( $layers, $baseWidth, $baseHeight, $backgroundVisible, $backgroundOpacity );
 
 		// Add or update class
 		$existingClass = $attribs['class'] ?? '';

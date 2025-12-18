@@ -124,9 +124,21 @@ class ThumbnailProcessor {
 			try {
 				$decoded = json_decode( $params['layersjson'], true, 512, JSON_THROW_ON_ERROR );
 				if ( is_array( $decoded ) ) {
-					$layerData = isset( $decoded['layers'] ) && is_array( $decoded['layers'] )
-						? $decoded['layers']
-						: $decoded;
+					// Preserve full structure with background settings if available
+					if ( isset( $decoded['layers'] ) && is_array( $decoded['layers'] ) ) {
+						$layerData = [
+							'layers' => $decoded['layers'],
+							'backgroundVisible' => $decoded['backgroundVisible'] ?? true,
+							'backgroundOpacity' => $decoded['backgroundOpacity'] ?? 1.0
+						];
+					} else {
+						// Raw layers array
+						$layerData = [
+							'layers' => $decoded,
+							'backgroundVisible' => true,
+							'backgroundOpacity' => 1.0
+						];
+					}
 				}
 			} catch ( \JsonException $e ) {
 				// Invalid JSON, continue to fallback
@@ -135,7 +147,21 @@ class ThumbnailProcessor {
 
 		// Fallback to layerData param
 		if ( $layerData === null && isset( $params['layerData'] ) ) {
-			$layerData = $params['layerData'];
+			$raw = $params['layerData'];
+			// Handle both array and object formats
+			if ( isset( $raw['layers'] ) && is_array( $raw['layers'] ) ) {
+				$layerData = [
+					'layers' => $raw['layers'],
+					'backgroundVisible' => $raw['backgroundVisible'] ?? true,
+					'backgroundOpacity' => $raw['backgroundOpacity'] ?? 1.0
+				];
+			} elseif ( is_array( $raw ) ) {
+				$layerData = [
+					'layers' => $raw,
+					'backgroundVisible' => true,
+					'backgroundOpacity' => 1.0
+				];
+			}
 			$this->log( 'Found layer data in transform params' );
 		}
 
@@ -224,7 +250,7 @@ class ThumbnailProcessor {
 	 *
 	 * @param mixed $file File object
 	 * @param string|null $layersFlag Layer set identifier
-	 * @return array|null
+	 * @return array|null Layer data with 'layers', 'backgroundVisible', 'backgroundOpacity'
 	 */
 	private function fetchLayersFromDatabase( $file, ?string $layersFlag ): ?array {
 		try {
@@ -240,9 +266,14 @@ class ThumbnailProcessor {
 				: $db->getLayerSetByName( $filename, $file->getSha1(), $layersFlag );
 
 			if ( $layerSet && isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] ) ) {
-				$layers = $layerSet['data']['layers'];
+				$data = $layerSet['data'];
+				$layers = $data['layers'];
 				$this->log( sprintf( 'DB fallback: %d layers (set: %s)', count( $layers ), $layersFlag ?? 'default' ) );
-				return $layers;
+				return [
+					'layers' => $layers,
+					'backgroundVisible' => $data['backgroundVisible'] ?? true,
+					'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
+				];
 			}
 		} catch ( \Throwable $e ) {
 			$logger = $this->getLogger();
@@ -258,7 +289,7 @@ class ThumbnailProcessor {
 	 * Inject layer data into thumbnail attributes.
 	 *
 	 * @param array &$attribs
-	 * @param array|null $layerData
+	 * @param array|null $layerData Layer data (array with 'layers' key or raw layers array)
 	 * @param string|null $layersFlag
 	 * @param mixed $thumbnail
 	 */
@@ -277,7 +308,26 @@ class ThumbnailProcessor {
 
 			// Get base dimensions for scaling
 			$file = method_exists( $thumbnail, 'getFile' ) ? $thumbnail->getFile() : null;
-			$payload = [ 'layers' => $layerData ];
+
+			// Normalize layer data format - handle both old (raw array) and new (object) formats
+			if ( isset( $layerData['layers'] ) && is_array( $layerData['layers'] ) ) {
+				// New format: { layers: [...], backgroundVisible, backgroundOpacity }
+				$layers = $layerData['layers'];
+				$backgroundVisible = $layerData['backgroundVisible'] ?? true;
+				$backgroundOpacity = $layerData['backgroundOpacity'] ?? 1.0;
+			} else {
+				// Old format: raw layers array
+				$layers = $layerData;
+				$backgroundVisible = true;
+				$backgroundOpacity = 1.0;
+			}
+
+			$payload = [
+				'layers' => $layers,
+				'backgroundVisible' => $backgroundVisible,
+				'backgroundOpacity' => $backgroundOpacity
+			];
+
 			if ( $file && method_exists( $file, 'getWidth' ) && method_exists( $file, 'getHeight' ) ) {
 				$payload['baseWidth'] = (int)$file->getWidth();
 				$payload['baseHeight'] = (int)$file->getHeight();
@@ -286,7 +336,7 @@ class ThumbnailProcessor {
 			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
 			$attribs['data-layer-data'] = json_encode( $payload );
 
-			$this->log( sprintf( 'Added %d layers, instance: %s', count( $layerData ), $instanceId ) );
+			$this->log( sprintf( 'Added %d layers, instance: %s', count( $layers ), $instanceId ) );
 		} else {
 			$this->log( "No layer data, instance: $instanceId" );
 
