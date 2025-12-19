@@ -21,7 +21,7 @@ However, "world-class" requires more than "working." This review identifies the 
 | **Functionality** | 8/10 | Core features work well; missing mobile, performance tooling |
 | **Architecture** | 5/10 | 8 god classes (28% of code in 8 files); facade pattern helps but doesn't solve |
 | **Code Quality** | 7/10 | ES6 complete, good practices, but complexity concentrated |
-| **Testing** | 8/10 | 5,297 tests, 92% coverage - but 1 flaky test, no real E2E in CI |
+| **Testing** | 8/10 | 5,297 tests passing, 92% coverage; E2E smoke tests in CI |
 | **Documentation** | 6/10 | Comprehensive but manual, frequently stale |
 | **Developer Experience** | 5/10 | Steep learning curve, god classes intimidating |
 | **Security** | 9/10 | Professional-grade PHP backend |
@@ -41,7 +41,7 @@ However, "world-class" requires more than "working." This review identifies the 
 | ES6 classes | 72 | 72 | ✅ Complete |
 | Prototype patterns | 0 | 0 | ✅ Eliminated |
 | Test files | 103 | 103 | ✅ 1:1 ratio |
-| Tests passing | 5,296 | 5,297 | 1 flaky test |
+| Tests passing | **5,297** | 5,297 | ✅ Fixed |
 | Statement coverage | 91.84% | >90% | ✅ |
 | Branch coverage | ~80% | >80% | ✅ |
 
@@ -56,7 +56,7 @@ However, "world-class" requires more than "working." This review identifies the 
 | APIManager.js | **1,168** | ✅ 1 handler | Still needs split |
 | SelectionManager.js | **1,147** | ✅ 3 modules | Acceptable (delegates to SelectionState, MarqueeSelection, SelectionHandles) |
 | Toolbar.js | **1,115** | Partial | Has some delegation, needs more |
-| ShapeRenderer.js | **1,049** | ❌ None | **Needs split** |
+| ShapeRenderer.js | **1,049** | ✅ ShadowRenderer | Borderline - has delegation |
 
 **Total in god classes: 11,580 lines (28% of codebase)**
 
@@ -213,7 +213,7 @@ The PHP backend demonstrates professional security:
 - Well-organized test structure
 - Integration tests present
 
-**Verdict:** Strong foundation. Fix the flaky test and improve E2E.
+**Verdict:** Strong foundation. Flaky test fixed Dec 18. E2E smoke tests active.
 
 ### 3. ES6 Modernization ✅
 
@@ -252,11 +252,11 @@ The PHP backend demonstrates professional security:
 
 | Priority | Task | Effort | Impact |
 |----------|------|--------|--------|
-| P0 | ✅ Fix flaky RenderBenchmark test | 2 hours | Trust |
+| P0 | ✅ Fix flaky RenderBenchmark test | ~~2 hours~~ Done | Trust |
+| P0 | ✅ Correct god class documentation | ~~1 day~~ Done | Accurate priorities |
 | P0 | Enable E2E editor tests in CI | 1 week | Integration confidence |
-| P1 | Split ShapeRenderer (no delegation) | 1 week | Reduce complexity |
 | P1 | Improve Toolbar delegation | 3 days | Easier maintenance |
-| P1 | Enforce 800-line CI warning | 2 hours | Prevent regression |
+| P1 | ✅ Update god-class-check baselines | ~~2 hours~~ Done | Accurate warnings |
 
 ### Phase 2: Architecture (8 weeks)
 
