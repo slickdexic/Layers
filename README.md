@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.1.3. Production-ready with architectural debt being addressed. Requires MediaWiki 1.44+.
+> **Status:** Stable. Version 1.1.5. Production-ready with architectural debt being addressed. Requires MediaWiki 1.44+.
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 >
