@@ -508,13 +508,6 @@
 	buildSavePayload() {
 		const layers = this.editor.stateManager.get( 'layers' ) || [];
 		
-		// Debug: log textbox layer textShadow values
-		layers.forEach( ( l ) => {
-			if ( l.type === 'textbox' ) {
-				console.log( '[APIManager] SAVE textbox layer.textShadow=', l.textShadow, 'type=', typeof l.textShadow );
-			}
-		} );
-		
 		// Include background settings in the saved data
 		const backgroundVisible = this.editor.stateManager.get( 'backgroundVisible' );
 		const backgroundOpacity = this.editor.stateManager.get( 'backgroundOpacity' );

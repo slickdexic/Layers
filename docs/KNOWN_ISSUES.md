@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** December 18, 2025  
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 This document lists known functionality issues and their current status.
 
@@ -11,7 +11,7 @@ This document lists known functionality issues and their current status.
 
 ### ⚠️ God Classes (Technical Debt)
 
-**Status:** Ongoing concern  
+**Status:** Ongoing concern - being addressed  
 **Severity:** Medium-High for maintainability
 
 The codebase has **8 files exceeding 1,000 lines**, which impacts:
@@ -22,29 +22,37 @@ The codebase has **8 files exceeding 1,000 lines**, which impacts:
 
 | File | Lines | Notes |
 |------|-------|-------|
-| CanvasManager.js | 1,893 | Facade pattern, delegates to 10+ controllers |
+| CanvasManager.js | 1,805 | Facade pattern, delegates to 10+ controllers |
 | LayerPanel.js | 1,720 | Delegates to 7 controllers |
-| APIManager.js | 1,385 | Needs API/state separation |
-| LayersEditor.js | 1,296 | Main entry point |
-| SelectionManager.js | 1,266 | Core selection logic |
-| ToolManager.js | 1,275 | Delegates to TextToolHandler + PathToolHandler |
-| CanvasRenderer.js | 1,132 | Rendering logic |
-| Toolbar.js | 1,126 | UI controls |
+| LayersEditor.js | 1,301 | Partial delegation |
+| ToolManager.js | 1,275 | Delegates to 2 handlers |
+| APIManager.js | 1,168 | Delegates to APIErrorHandler |
+| SelectionManager.js | 1,147 | ⚠️ **No delegation - needs split** |
+| Toolbar.js | 1,115 | Needs split |
+| ShapeRenderer.js | 1,049 | Needs split |
 
 **Recently Addressed:**
+- ✅ CanvasRenderer.js: 1,132 → 834 lines (SelectionRenderer extracted)
+- ✅ APIManager.js: 1,385 → 1,168 lines (APIErrorHandler extracted)
 - ✅ ShapeRenderer.js: 1,367 → 1,049 lines (TextBoxRenderer extracted)
-- ✅ ToolManager.js: Delegates to TextToolHandler (209 lines) + PathToolHandler (231 lines)
 
 **See:** [improvement_plan.md](../improvement_plan.md) for remediation plan.
 
-### ⚠️ E2E Tests Not in CI
+### ⚠️ E2E Tests Not Fully Enabled
 
-**Status:** Not started  
+**Status:** Smoke tests only  
 **Severity:** Medium
 
-Playwright tests exist in `tests/e2e/layers.spec.js` but are not running in CI. This means browser-level bugs may go undetected.
+Playwright tests exist but editor tests have `continue-on-error: true` in CI, effectively disabling them.
 
-**Recommendation:** Set up GitHub Actions workflow with Docker-based MediaWiki.
+**Recommendation:** Fix editor tests and remove `continue-on-error`.
+
+### ⚠️ One Flaky Test
+
+**Status:** Known  
+**File:** `tests/jest/performance/RenderBenchmark.test.js`
+
+Memory assertion is unreliable due to GC timing. Needs fix or removal.
 
 ---
 

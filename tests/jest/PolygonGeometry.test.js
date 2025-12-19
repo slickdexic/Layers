@@ -127,6 +127,7 @@ describe( 'PolygonGeometry', () => {
 				beginPath: jest.fn(),
 				moveTo: jest.fn(),
 				lineTo: jest.fn(),
+				arcTo: jest.fn(),
 				closePath: jest.fn()
 			};
 		} );
@@ -139,6 +140,88 @@ describe( 'PolygonGeometry', () => {
 			expect( mockCtx.lineTo ).toHaveBeenCalledTimes( 5 );
 			expect( mockCtx.closePath ).toHaveBeenCalled();
 		} );
+
+		it( 'should draw a hexagon with rounded corners when cornerRadius > 0', () => {
+			PolygonGeometry.drawPolygonPath( mockCtx, 100, 100, 50, 6, 10 );
+
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.moveTo ).toHaveBeenCalledTimes( 1 );
+			expect( mockCtx.arcTo ).toHaveBeenCalledTimes( 6 ); // One arcTo per vertex
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should use regular path when cornerRadius is 0', () => {
+			PolygonGeometry.drawPolygonPath( mockCtx, 100, 100, 50, 4, 0 );
+
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.arcTo ).not.toHaveBeenCalled();
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'drawRoundedPath', () => {
+		let mockCtx;
+
+		beforeEach( () => {
+			mockCtx = {
+				beginPath: jest.fn(),
+				moveTo: jest.fn(),
+				lineTo: jest.fn(),
+				arcTo: jest.fn(),
+				closePath: jest.fn()
+			};
+		} );
+
+		it( 'should draw a rounded path with arcTo for each vertex', () => {
+			const vertices = [
+				{ x: 0, y: 0 },
+				{ x: 100, y: 0 },
+				{ x: 100, y: 100 },
+				{ x: 0, y: 100 }
+			];
+			PolygonGeometry.drawRoundedPath( mockCtx, vertices, 10 );
+
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.moveTo ).toHaveBeenCalledTimes( 1 );
+			expect( mockCtx.arcTo ).toHaveBeenCalledTimes( 4 );
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle empty vertices array', () => {
+			PolygonGeometry.drawRoundedPath( mockCtx, [], 10 );
+
+			expect( mockCtx.beginPath ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle null vertices', () => {
+			PolygonGeometry.drawRoundedPath( mockCtx, null, 10 );
+
+			expect( mockCtx.beginPath ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle vertices with fewer than 3 points', () => {
+			const vertices = [
+				{ x: 0, y: 0 },
+				{ x: 100, y: 0 }
+			];
+			PolygonGeometry.drawRoundedPath( mockCtx, vertices, 10 );
+
+			expect( mockCtx.beginPath ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should limit corner radius to half the shortest edge', () => {
+			// Triangle with very short edges - cornerRadius should be clamped
+			const vertices = [
+				{ x: 0, y: 0 },
+				{ x: 20, y: 0 },
+				{ x: 10, y: 17.32 } // Equilateral triangle with ~20 unit sides
+			];
+			PolygonGeometry.drawRoundedPath( mockCtx, vertices, 100 ); // Large radius
+
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.arcTo ).toHaveBeenCalledTimes( 3 );
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'drawStarPath', () => {
@@ -149,6 +232,7 @@ describe( 'PolygonGeometry', () => {
 				beginPath: jest.fn(),
 				moveTo: jest.fn(),
 				lineTo: jest.fn(),
+				arcTo: jest.fn(),
 				closePath: jest.fn()
 			};
 		} );
@@ -160,6 +244,74 @@ describe( 'PolygonGeometry', () => {
 			expect( mockCtx.moveTo ).toHaveBeenCalledTimes( 1 );
 			expect( mockCtx.lineTo ).toHaveBeenCalledTimes( 9 ); // 10 vertices - 1 moveTo
 			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw a star with rounded points when pointRadius > 0', () => {
+			PolygonGeometry.drawStarPath( mockCtx, 100, 100, 50, 25, 5, 10, 0 );
+
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.arcTo ).toHaveBeenCalledTimes( 5 ); // Only outer points get rounded
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw a star with rounded valleys when valleyRadius > 0', () => {
+			PolygonGeometry.drawStarPath( mockCtx, 100, 100, 50, 25, 5, 0, 10 );
+
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.arcTo ).toHaveBeenCalledTimes( 5 ); // Only inner valleys get rounded
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw a star with both rounded points and valleys', () => {
+			PolygonGeometry.drawStarPath( mockCtx, 100, 100, 50, 25, 5, 10, 10 );
+
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.arcTo ).toHaveBeenCalledTimes( 10 ); // All 10 vertices get rounded
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'drawRoundedStarPath', () => {
+		let mockCtx;
+
+		beforeEach( () => {
+			mockCtx = {
+				beginPath: jest.fn(),
+				moveTo: jest.fn(),
+				lineTo: jest.fn(),
+				arcTo: jest.fn(),
+				closePath: jest.fn()
+			};
+		} );
+
+		it( 'should draw a rounded star path with different radii for points and valleys', () => {
+			// Create star vertices (alternating outer/inner)
+			const vertices = [];
+			for ( let i = 0; i < 10; i++ ) {
+				const angle = ( i * Math.PI ) / 5 - Math.PI / 2;
+				const r = i % 2 === 0 ? 50 : 25;
+				vertices.push( {
+					x: 100 + r * Math.cos( angle ),
+					y: 100 + r * Math.sin( angle )
+				} );
+			}
+			PolygonGeometry.drawRoundedStarPath( mockCtx, vertices, 10, 5 );
+
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.arcTo ).toHaveBeenCalledTimes( 10 );
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle empty vertices array', () => {
+			PolygonGeometry.drawRoundedStarPath( mockCtx, [], 10, 5 );
+
+			expect( mockCtx.beginPath ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle null vertices', () => {
+			PolygonGeometry.drawRoundedStarPath( mockCtx, null, 10, 5 );
+
+			expect( mockCtx.beginPath ).not.toHaveBeenCalled();
 		} );
 	} );
 

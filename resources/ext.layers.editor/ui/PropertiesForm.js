@@ -701,6 +701,7 @@
 					}
 				} );
 				addInput( { label: t( 'layers-prop-radius', 'Radius' ), type: 'number', value: Math.round( layer.radius || DEFAULTS.RADIUS || 50 ), step: 1, prop: 'radius', onChange: function ( v ) { editor.updateLayer( layer.id, { radius: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-corner-radius', 'Corner Radius' ), type: 'number', value: Math.round( layer.cornerRadius || 0 ), min: 0, max: 200, step: 1, prop: 'cornerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { cornerRadius: Math.max( 0, Math.round( parseFloat( v ) ) || 0 ) } ); } } );
 				break;
 			case ( LAYER_TYPES.STAR || 'star' ):
 				addInput( {
@@ -719,6 +720,8 @@
 				} );
 				addInput( { label: t( 'layers-prop-outer-radius', 'Outer Radius' ), type: 'number', value: Math.round( layer.outerRadius || layer.radius || 50 ), step: 1, prop: 'outerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { outerRadius: Math.round( parseFloat( v ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-inner-radius', 'Inner Radius' ), type: 'number', value: Math.round( layer.innerRadius || ( ( layer.outerRadius || 50 ) * 0.5 ) ), step: 1, prop: 'innerRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { innerRadius: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-point-radius', 'Point Radius' ), type: 'number', value: Math.round( layer.pointRadius || 0 ), min: 0, max: 200, step: 1, prop: 'pointRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { pointRadius: Math.max( 0, Math.round( parseFloat( v ) ) || 0 ) } ); } } );
+				addInput( { label: t( 'layers-prop-valley-radius', 'Valley Radius' ), type: 'number', value: Math.round( layer.valleyRadius || 0 ), min: 0, max: 200, step: 1, prop: 'valleyRadius', onChange: function ( v ) { editor.updateLayer( layer.id, { valleyRadius: Math.max( 0, Math.round( parseFloat( v ) ) || 0 ) } ); } } );
 				break;
 			case ( LAYER_TYPES.LINE || 'line' ):
 				addInput( { label: t( 'layers-prop-start-x', 'Start X' ), type: 'number', value: Math.round( layer.x1 || 0 ), step: 1, prop: 'x1', onChange: function ( v ) { editor.updateLayer( layer.id, { x1: Math.round( parseFloat( v ) ) } ); } } );

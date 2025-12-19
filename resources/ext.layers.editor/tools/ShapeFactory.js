@@ -200,6 +200,7 @@
 				y: point.y,
 				radius: 0,
 				sides: sides || 6,
+				cornerRadius: 0,
 				stroke: style.color,
 				strokeWidth: style.strokeWidth,
 				fill: style.fill
@@ -224,6 +225,8 @@
 				innerRadius: 0,
 				radius: 0, // For compatibility
 				points: points || 5,
+				pointRadius: 0,
+				valleyRadius: 0,
 				stroke: style.color,
 				strokeWidth: style.strokeWidth,
 				fill: style.fill

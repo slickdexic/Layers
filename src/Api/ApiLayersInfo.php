@@ -201,7 +201,34 @@ class ApiLayersInfo extends ApiBase {
 			$result['named_sets'] = $namedSets;
 		}
 
+		// Preserve boolean values in layer data (MediaWiki API drops false values)
+		$result = $this->preserveLayerBooleans( $result );
+
 		$this->getResult()->addValue( null, $this->getModuleName(), $result );
+	}
+
+	/**
+	 * Preserve boolean values in layer data by converting to integers.
+	 * MediaWiki's API result system can drop boolean false values during serialization.
+	 * This converts booleans to 0/1 integers which serialize correctly.
+	 *
+	 * @param array $result The API result array
+	 * @return array Result with booleans preserved as integers
+	 */
+	private function preserveLayerBooleans( array $result ): array {
+		if ( isset( $result['layerset']['data']['layers'] ) && is_array( $result['layerset']['data']['layers'] ) ) {
+			foreach ( $result['layerset']['data']['layers'] as &$layer ) {
+				// Convert boolean properties to integers for proper serialization
+				$booleanProps = [ 'visible', 'locked', 'shadow', 'glow', 'textShadow', 'preserveAspectRatio' ];
+				foreach ( $booleanProps as $prop ) {
+					if ( array_key_exists( $prop, $layer ) ) {
+						$layer[$prop] = $layer[$prop] ? 1 : 0;
+					}
+				}
+			}
+			unset( $layer );
+		}
+		return $result;
 	}
 
 	/**

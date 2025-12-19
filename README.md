@@ -5,9 +5,11 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.1.2. Production-ready with technical debt (see improvement_plan.md). Requires MediaWiki 1.44+.
+> **Status:** Stable. Version 1.1.3. Production-ready with architectural debt being addressed. Requires MediaWiki 1.44+.
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
+>
+> **Project Health:** See [CRITICAL_REVIEW_2025-12-18.md](CRITICAL_REVIEW_2025-12-18.md) for honest assessment.
 
 ---
 
@@ -133,13 +135,17 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Architecture:**
 - **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 102 JS files (~41K lines total), 70 ES6 classes
-- **Code Splitting:** Viewer module (682 lines) + Shared module (~5K lines) loads separately from Editor (~35K lines, 86% of codebase)
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 81 JS files (~41K lines total), 72 ES6 classes
+- **Code Splitting:** Viewer module (~610 lines) + Shared module (~5K lines) loads separately from Editor (~35K lines, 86% of codebase)
 
 **Test Coverage (December 2025):**
-- Jest: **5,236 tests**, ~92% statement coverage, ~80% branch coverage (102 test suites)
+- Jest: **5,297 tests**, ~92% statement coverage, ~80% branch coverage (103 test suites)
 - PHPUnit: 17 test files covering API, database, validation
-- **Note:** No E2E tests in CI (Playwright infrastructure exists but not automated)
+- E2E: Playwright smoke tests in CI; full editor tests pending
+
+**Technical Debt:**
+- 8 god classes (>1,000 lines) - CI blocks growth
+- See [improvement_plan.md](improvement_plan.md) for remediation roadmap
 
 **Accessibility (WCAG 2.1):**
 - Skip links for keyboard navigation (WCAG 2.4.1)
@@ -155,10 +161,10 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 **Project Status:**
 - **Production:** Stable and deployed. Extension works reliably for end users.
 - **Technical Health:** Debt being addressed. See [`improvement_plan.md`](improvement_plan.md) for details.
-- \u2705 70 ES6 classes, 0 legacy code
-- \u2705 5,236 tests (~92% coverage)
-- \u26a0\ufe0f 9 god classes (~12.6K LOC) - CI blocks growth
-- \u274c No E2E tests in CI
+- ✅ 72 ES6 classes, 0 legacy prototype code
+- ✅ 5,297 tests (~92% statement coverage)
+- ⚠️ 8 god classes (~11.6K LOC) - CI blocks growth
+- ⚠️ E2E smoke tests only (editor tests pending)
 
 ---
 

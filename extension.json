@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.1.3",
+	"version": "1.1.4",
 	"requires": {
 		"MediaWiki": ">= 1.39.0"
 	},
@@ -257,6 +257,8 @@
 				"ui/LayerListRenderer.js",
 				"ui/BackgroundLayerController.js",
 				"ui/LayerDragDrop.js",
+				"presets/PresetManager.js",
+				"presets/PresetDropdown.js",
 				"panel/LayerItemEvents.js",
 				"TextUtils.js",
 				"CanvasManager.js",
@@ -274,7 +276,8 @@
 				"LayersNamespace.js"
 			],
 			"styles": [
-				"editor-fixed.css"
+				"editor-fixed.css",
+				"presets/presets.css"
 			],
 			"messages": [
 				"layers-editor-title",
@@ -306,6 +309,17 @@
 				"layers-toggle-visibility",
 				"layers-toggle-lock",
 				"layers-toggle-background",
+				"layers-presets",
+				"layers-presets-tooltip",
+				"layers-presets-not-supported",
+				"layers-presets-none",
+				"layers-presets-save-current",
+				"layers-presets-enter-name",
+				"layers-presets-saved",
+				"layers-presets-default",
+				"layers-presets-set-default",
+				"layers-presets-delete",
+				"layers-presets-confirm-delete",
 				"layers-zoom-in",
 				"layers-zoom-out",
 				"layers-zoom-fit",
@@ -454,6 +468,8 @@
 				"layers-prop-points",
 				"layers-prop-outer-radius",
 				"layers-prop-inner-radius",
+				"layers-prop-point-radius",
+				"layers-prop-valley-radius",
 				"layers-prop-stroke-opacity",
 				"layers-prop-fill-opacity",
 				"layers-section-transform",
