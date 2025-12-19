@@ -80,7 +80,9 @@ describe( 'LayerPanel Keyboard Navigation', () => {
 			canvasManager: {
 				redraw: jest.fn(),
 				renderLayers: jest.fn(),
-				selectLayer: jest.fn()
+				selectLayer: jest.fn(),
+				setSelectedLayerIds: jest.fn(),
+				drawMultiSelectionIndicators: jest.fn()
 			},
 			container: document.body,
 			getLayerById: jest.fn( ( id ) => mockLayers.find( ( l ) => l.id === id ) ),

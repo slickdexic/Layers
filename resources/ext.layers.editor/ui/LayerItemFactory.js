@@ -31,6 +31,7 @@
 		 * @param {Object} config Configuration object
 		 * @param {Function} config.msg Message function for i18n
 		 * @param {Function} config.getSelectedLayerId Function to get selected layer ID
+		 * @param {Function} config.getSelectedLayerIds Function to get all selected layer IDs
 		 * @param {Function} config.addTargetListener Function to add event listeners with cleanup
 		 * @param {Function} config.onMoveLayer Callback when layer should be moved
 		 */
@@ -38,6 +39,7 @@
 			this.config = config || {};
 			this.msg = config.msg || ( ( key, fallback ) => fallback );
 			this.getSelectedLayerId = config.getSelectedLayerId || ( () => null );
+			this.getSelectedLayerIds = config.getSelectedLayerIds || ( () => [] );
 			this.addTargetListener = config.addTargetListener || ( () => {} );
 			this.onMoveLayer = config.onMoveLayer || ( () => {} );
 		}
@@ -130,11 +132,13 @@
 
 			// ARIA attributes for listbox option
 			item.setAttribute( 'role', 'option' );
-			item.setAttribute( 'aria-selected', layer.id === this.getSelectedLayerId() ? 'true' : 'false' );
+			const selectedIds = this.getSelectedLayerIds();
+			const isSelected = selectedIds.includes( layer.id );
+			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
 			const layerName = layer.name || this.getDefaultLayerName( layer );
 			item.setAttribute( 'aria-label', layerName );
 
-			if ( layer.id === this.getSelectedLayerId() ) {
+			if ( isSelected ) {
 				item.classList.add( 'selected' );
 			}
 
@@ -237,7 +241,8 @@
 			item.dataset.index = index;
 
 			// Update ARIA attributes
-			const isSelected = layer.id === this.getSelectedLayerId();
+			const selectedIds = this.getSelectedLayerIds();
+			const isSelected = selectedIds.includes( layer.id );
 			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
 			const layerName = layer.name || this.getDefaultLayerName( layer );
 			item.setAttribute( 'aria-label', layerName );

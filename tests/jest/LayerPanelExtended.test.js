@@ -79,7 +79,10 @@ describe( 'LayerPanel Extended', () => {
 			container: document.body,
 			canvasManager: {
 				redraw: jest.fn(),
-				selectLayer: jest.fn()
+				selectLayer: jest.fn(),
+				setSelectedLayerIds: jest.fn(),
+				renderLayers: jest.fn(),
+				drawMultiSelectionIndicators: jest.fn()
 			},
 			removeLayer: jest.fn(),
 			saveState: jest.fn(),
@@ -87,7 +90,8 @@ describe( 'LayerPanel Extended', () => {
 			getLayerById: jest.fn( ( id ) => {
 				const layers = mockStateManager.get( 'layers' ) || [];
 				return layers.find( ( l ) => l.id === id ) || null;
-			} )
+			} ),
+			layers: []
 		};
 
 		// Reset module cache and reload LayerPanel
@@ -750,11 +754,12 @@ describe( 'LayerPanel Extended', () => {
 			expect( selectedIds ).toContain( 'layer2' );
 		} );
 
-		it( 'should call canvasManager.selectLayer when not from canvas', () => {
+		it( 'should sync selection to canvasManager when not from canvas', () => {
 			const layers = [
 				{ id: 'layer1', type: 'rectangle' }
 			];
 			mockStateManager.set( 'layers', layers );
+			mockEditor.layers = layers;
 
 			const panel = new LayerPanel( {
 				container: container,
@@ -763,10 +768,12 @@ describe( 'LayerPanel Extended', () => {
 
 			panel.selectLayer( 'layer1', false );
 
-			expect( mockEditor.canvasManager.selectLayer ).toHaveBeenCalledWith( 'layer1', true );
+			expect( mockEditor.canvasManager.setSelectedLayerIds ).toHaveBeenCalledWith( [ 'layer1' ] );
+			expect( mockEditor.canvasManager.renderLayers ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.drawMultiSelectionIndicators ).toHaveBeenCalled();
 		} );
 
-		it( 'should not call canvasManager.selectLayer when from canvas', () => {
+		it( 'should not sync to canvasManager when from canvas', () => {
 			const layers = [
 				{ id: 'layer1', type: 'rectangle' }
 			];
@@ -779,7 +786,7 @@ describe( 'LayerPanel Extended', () => {
 
 			panel.selectLayer( 'layer1', true );
 
-			expect( mockEditor.canvasManager.selectLayer ).not.toHaveBeenCalled();
+			expect( mockEditor.canvasManager.setSelectedLayerIds ).not.toHaveBeenCalled();
 		} );
 
 		it( 'should clear selection when layerId is null', () => {
@@ -887,7 +894,13 @@ describe( 'LayerPanel touch support', () => {
 		mockEditor = {
 			stateManager: mockStateManager,
 			container: document.body,
-			canvasManager: { redraw: jest.fn(), selectLayer: jest.fn(), renderLayers: jest.fn() },
+			canvasManager: {
+				redraw: jest.fn(),
+				selectLayer: jest.fn(),
+				renderLayers: jest.fn(),
+				setSelectedLayerIds: jest.fn(),
+				drawMultiSelectionIndicators: jest.fn()
+			},
 			removeLayer: jest.fn(),
 			saveState: jest.fn(),
 			updateLayer: jest.fn(),
