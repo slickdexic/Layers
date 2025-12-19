@@ -152,6 +152,17 @@
 	"layers-zoom-reset": "Reset Zoom",
 	"layers-zoom-in": "Zoom In",
 	"layers-zoom-fit": "Fit to Window",
+
+	"layers-align-left": "Align Left",
+	"layers-align-center-h": "Align Center (Horizontal)",
+	"layers-align-right": "Align Right",
+	"layers-align-top": "Align Top",
+	"layers-align-center-v": "Align Center (Vertical)",
+	"layers-align-bottom": "Align Bottom",
+	"layers-distribute-h": "Distribute Horizontally",
+	"layers-distribute-v": "Distribute Vertically",
+	"layers-alignment-group": "Alignment",
+
 	"layers-toggle-grid": "Toggle Grid",
 	"layers-toggle-background": "Toggle Background",
 	"layers-toggle-rulers": "Toggle Rulers",

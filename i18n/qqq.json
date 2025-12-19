@@ -159,6 +159,17 @@
 	"layers-zoom-reset": "Tooltip for zoom reset button",
 	"layers-zoom-in": "Tooltip for zoom in button",
 	"layers-zoom-fit": "Tooltip for fit-to-window button",
+
+	"layers-align-left": "Tooltip for align left button - aligns selected layers to their leftmost edge",
+	"layers-align-center-h": "Tooltip for align center horizontal button - centers selected layers horizontally",
+	"layers-align-right": "Tooltip for align right button - aligns selected layers to their rightmost edge",
+	"layers-align-top": "Tooltip for align top button - aligns selected layers to their topmost edge",
+	"layers-align-center-v": "Tooltip for align center vertical button - centers selected layers vertically",
+	"layers-align-bottom": "Tooltip for align bottom button - aligns selected layers to their bottommost edge",
+	"layers-distribute-h": "Tooltip for distribute horizontally button - spaces selected layers evenly left to right",
+	"layers-distribute-v": "Tooltip for distribute vertically button - spaces selected layers evenly top to bottom",
+	"layers-alignment-group": "Label for the alignment toolbar group containing align and distribute buttons",
+
 	"layers-toggle-grid": "Tooltip for toggling grid overlay",
 	"layers-toggle-background": "Tooltip/label for toggling background image visibility",
 	"layers-toggle-rulers": "Tooltip for toggling rulers along the top/left edges of the canvas",

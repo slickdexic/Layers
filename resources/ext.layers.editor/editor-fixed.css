@@ -501,6 +501,30 @@ body.layers-editor-open .mw-body-content {
 	background-color: #f0f0f0;
 }
 
+/* Alignment Toolbar Group */
+.alignment-group {
+	padding: 0 4px;
+}
+
+.alignment-group .toolbar-button {
+	min-width: 32px;
+	width: 32px;
+	height: 32px;
+	padding: 4px;
+}
+
+.alignment-group .toolbar-button svg {
+	width: 18px;
+	height: 18px;
+}
+
+.toolbar-separator-small {
+	width: 1px;
+	height: 20px;
+	background: #ddd;
+	margin: 0 4px;
+}
+
 /* Layer Panel */
 
 .layers-panel {

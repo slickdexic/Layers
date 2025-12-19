@@ -452,6 +452,7 @@
 			// Create tool groups
 			this.createToolGroup();
 			this.createStyleGroup();
+			this.createAlignmentGroup();
 			this.createZoomGroup();
 			this.createActionGroup();
 		}
@@ -666,6 +667,145 @@
 			}
 		}
 
+		/**
+		 * Get SVG icons for alignment buttons
+		 *
+		 * @return {Object} Object containing alignment SVG icon strings
+		 */
+		getAlignmentIcons() {
+			const size = 18;
+			const stroke = 'currentColor';
+			const strokeWidth = 2;
+
+			return {
+				alignLeft: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+					<line x1="4" y1="4" x2="4" y2="20"/>
+					<rect x="4" y="6" width="12" height="4" rx="1"/>
+					<rect x="4" y="14" width="8" height="4" rx="1"/>
+				</svg>`,
+				alignCenterH: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+					<line x1="12" y1="4" x2="12" y2="20"/>
+					<rect x="6" y="6" width="12" height="4" rx="1"/>
+					<rect x="8" y="14" width="8" height="4" rx="1"/>
+				</svg>`,
+				alignRight: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+					<line x1="20" y1="4" x2="20" y2="20"/>
+					<rect x="8" y="6" width="12" height="4" rx="1"/>
+					<rect x="12" y="14" width="8" height="4" rx="1"/>
+				</svg>`,
+				alignTop: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+					<line x1="4" y1="4" x2="20" y2="4"/>
+					<rect x="6" y="4" width="4" height="12" rx="1"/>
+					<rect x="14" y="4" width="4" height="8" rx="1"/>
+				</svg>`,
+				alignCenterV: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+					<line x1="4" y1="12" x2="20" y2="12"/>
+					<rect x="6" y="6" width="4" height="12" rx="1"/>
+					<rect x="14" y="8" width="4" height="8" rx="1"/>
+				</svg>`,
+				alignBottom: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+					<line x1="4" y1="20" x2="20" y2="20"/>
+					<rect x="6" y="8" width="4" height="12" rx="1"/>
+					<rect x="14" y="12" width="4" height="8" rx="1"/>
+				</svg>`,
+				distributeH: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+					<line x1="4" y1="4" x2="4" y2="20"/>
+					<line x1="20" y1="4" x2="20" y2="20"/>
+					<rect x="7" y="8" width="4" height="8" rx="1"/>
+					<rect x="13" y="8" width="4" height="8" rx="1"/>
+				</svg>`,
+				distributeV: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+					<line x1="4" y1="4" x2="20" y2="4"/>
+					<line x1="4" y1="20" x2="20" y2="20"/>
+					<rect x="8" y="7" width="8" height="4" rx="1"/>
+					<rect x="8" y="13" width="8" height="4" rx="1"/>
+				</svg>`
+			};
+		}
+
+		/**
+		 * Create the alignment toolbar group
+		 * Buttons are disabled by default and enabled when 2+ layers are selected
+		 */
+		createAlignmentGroup() {
+			const alignGroup = document.createElement( 'div' );
+			alignGroup.className = 'toolbar-group alignment-group';
+			alignGroup.setAttribute( 'role', 'group' );
+			alignGroup.setAttribute( 'aria-label', this.msg( 'layers-alignment-group', 'Alignment' ) );
+
+			const t = this.msg.bind( this );
+			const icons = this.getAlignmentIcons();
+
+			const alignButtons = [
+				{ id: 'align-left', icon: icons.alignLeft, title: t( 'layers-align-left', 'Align Left' ) },
+				{ id: 'align-center-h', icon: icons.alignCenterH, title: t( 'layers-align-center-h', 'Align Center' ) },
+				{ id: 'align-right', icon: icons.alignRight, title: t( 'layers-align-right', 'Align Right' ) },
+				{ id: 'align-top', icon: icons.alignTop, title: t( 'layers-align-top', 'Align Top' ) },
+				{ id: 'align-center-v', icon: icons.alignCenterV, title: t( 'layers-align-center-v', 'Align Middle' ) },
+				{ id: 'align-bottom', icon: icons.alignBottom, title: t( 'layers-align-bottom', 'Align Bottom' ) }
+			];
+
+			const distributeButtons = [
+				{ id: 'distribute-h', icon: icons.distributeH, title: t( 'layers-distribute-h', 'Distribute Horizontally' ) },
+				{ id: 'distribute-v', icon: icons.distributeV, title: t( 'layers-distribute-v', 'Distribute Vertically' ) }
+			];
+
+			// Create alignment buttons
+			alignButtons.forEach( ( btn ) => {
+				const button = document.createElement( 'button' );
+				button.className = 'toolbar-button align-button';
+				button.innerHTML = btn.icon;
+				button.title = btn.title;
+				button.dataset.align = btn.id;
+				button.disabled = true; // Enabled when 2+ layers selected
+				button.setAttribute( 'aria-label', btn.title );
+				alignGroup.appendChild( button );
+			} );
+
+			// Separator
+			const separator = document.createElement( 'div' );
+			separator.className = 'toolbar-separator-small';
+			alignGroup.appendChild( separator );
+
+			// Create distribute buttons
+			distributeButtons.forEach( ( btn ) => {
+				const button = document.createElement( 'button' );
+				button.className = 'toolbar-button distribute-button';
+				button.innerHTML = btn.icon;
+				button.title = btn.title;
+				button.dataset.align = btn.id;
+				button.disabled = true; // Enabled when 3+ layers selected
+				button.setAttribute( 'aria-label', btn.title );
+				alignGroup.appendChild( button );
+			} );
+
+			this.container.appendChild( alignGroup );
+			this.alignmentGroup = alignGroup;
+		}
+
+		/**
+		 * Update alignment button states based on selection
+		 *
+		 * @param {number} selectedCount Number of selected layers
+		 */
+		updateAlignmentButtons( selectedCount ) {
+			if ( !this.alignmentGroup ) {
+				return;
+			}
+
+			// Alignment requires 2+ layers
+			const alignButtons = this.alignmentGroup.querySelectorAll( '.align-button' );
+			alignButtons.forEach( ( btn ) => {
+				btn.disabled = selectedCount < 2;
+			} );
+
+			// Distribution requires 3+ layers
+			const distButtons = this.alignmentGroup.querySelectorAll( '.distribute-button' );
+			distButtons.forEach( ( btn ) => {
+				btn.disabled = selectedCount < 3;
+			} );
+		}
+
 		// Effects group removed; moved to LayerPanel Properties
 
 		createZoomGroup() {
@@ -846,6 +986,7 @@
 			const helpButton = e.target.closest( '.help-button' );
 			const zoomButton = e.target.closest( '[data-action^="zoom"]' );
 			const fitButton = e.target.closest( '[data-action="fit-window"]' );
+			const alignButton = e.target.closest( '.align-button, .distribute-button' );
 
 			if ( toolButton ) {
 				this.selectTool( toolButton.dataset.tool );
@@ -857,6 +998,8 @@
 				this.executeZoomAction( zoomButton.dataset.action );
 			} else if ( fitButton ) {
 				this.executeZoomAction( fitButton.dataset.action );
+			} else if ( alignButton && !alignButton.disabled ) {
+				this.executeAlignmentAction( alignButton.dataset.align );
 			}
 		} );
 
@@ -1050,6 +1193,46 @@
 				break;
 			case 'fit-window':
 				this.editor.canvasManager.fitToWindow();
+				break;
+		}
+	}
+
+	/**
+	 * Execute an alignment action on selected layers
+	 *
+	 * @param {string} actionId - The alignment action identifier
+	 */
+	executeAlignmentAction( actionId ) {
+		if ( !this.editor.canvasManager || !this.editor.canvasManager.alignmentController ) {
+			return;
+		}
+
+		const controller = this.editor.canvasManager.alignmentController;
+
+		switch ( actionId ) {
+			case 'align-left':
+				controller.alignLeft();
+				break;
+			case 'align-center-h':
+				controller.alignCenterH();
+				break;
+			case 'align-right':
+				controller.alignRight();
+				break;
+			case 'align-top':
+				controller.alignTop();
+				break;
+			case 'align-center-v':
+				controller.alignCenterV();
+				break;
+			case 'align-bottom':
+				controller.alignBottom();
+				break;
+			case 'distribute-h':
+				controller.distributeHorizontal();
+				break;
+			case 'distribute-v':
+				controller.distributeVertical();
 				break;
 		}
 	}

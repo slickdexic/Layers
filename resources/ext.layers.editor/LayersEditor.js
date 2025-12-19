@@ -154,7 +154,7 @@ class LayersEditor {
 					ValidationManager: () => ( typeof ValidationManager === 'function' ) ? new ValidationManager( self ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
 					StateManager: () => ( typeof StateManager === 'function' ) ? new StateManager( self ) : self.createStubStateManager(),
 					HistoryManager: () => ( typeof HistoryManager === 'function' ) ? new HistoryManager( self ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
-					Toolbar: () => ( typeof Toolbar === 'function' ) ? new Toolbar( { container: ( self.uiManager && self.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {} },
+					Toolbar: () => ( typeof Toolbar === 'function' ) ? new Toolbar( { container: ( self.uiManager && self.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {}, updateAlignmentButtons: function () {} },
 					LayerPanel: () => ( typeof LayerPanel === 'function' ) ? new LayerPanel( { container: ( self.uiManager && self.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
 					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( self.uiManager && self.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: self, backgroundImageUrl: self.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
 				};
@@ -867,9 +867,14 @@ class LayersEditor {
 			if ( this.toolbar ) {
 				const canUndo = this.historyManager ? this.historyManager.canUndo() : false;
 				const canRedo = this.historyManager ? this.historyManager.canRedo() : false;
-				const hasSelection = this.getSelectedLayerIds().length > 0;
+				const selectedIds = this.getSelectedLayerIds();
+				const hasSelection = selectedIds.length > 0;
 				this.toolbar.updateUndoRedoState( canUndo, canRedo );
 				this.toolbar.updateDeleteState( hasSelection );
+				// Update alignment buttons based on selection count
+				if ( typeof this.toolbar.updateAlignmentButtons === 'function' ) {
+					this.toolbar.updateAlignmentButtons( selectedIds.length );
+				}
 			}
 		} catch ( error ) {
 			if ( this.debug ) {
