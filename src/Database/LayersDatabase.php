@@ -253,6 +253,8 @@ class LayersDatabase {
 	 * @return array|false Layer set data or false if not found
 	 */
 	public function getLatestLayerSet( string $imgName, string $sha1, ?string $setName = null ) {
+		$this->logDebug( "getLatestLayerSet called: imgName=$imgName, setName=" . ( $setName ?? 'null' ) );
+
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return false;
@@ -277,12 +279,16 @@ class LayersDatabase {
 		);
 
 		if ( !$row ) {
+			$this->logDebug( "getLatestLayerSet: no row found for imgName=$imgName, setName=" . ( $setName ?? 'null' ) );
 			return false;
 		}
 
+		$blobSize = strlen( $row->ls_json_blob );
+		$this->logDebug( "getLatestLayerSet: found ls_id=" . $row->ls_id . ", blob size=$blobSize bytes" );
+
 		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
-		if ( strlen( $row->ls_json_blob ) > $maxJsonSize ) {
-			$this->logError( "JSON blob too large for latest layer set" );
+		if ( $blobSize > $maxJsonSize ) {
+			$this->logError( "JSON blob too large for latest layer set: $blobSize > $maxJsonSize" );
 			return false;
 		}
 
@@ -821,8 +827,11 @@ class LayersDatabase {
 	}
 
 	public function getLayerSetByName( string $imgName, string $sha1, string $setName ): ?array {
+		$this->logDebug( "getLayerSetByName called: imgName=$imgName, sha1=$sha1, setName=$setName" );
+
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
+			$this->logError( "getLayerSetByName: no database connection" );
 			return null;
 		}
 		$row = $dbr->selectRow(
@@ -839,12 +848,15 @@ class LayersDatabase {
 		);
 
 		if ( !$row ) {
+			$this->logDebug( "getLayerSetByName: no row found for setName=$setName" );
 			return null;
 		}
 
+		$this->logDebug( "getLayerSetByName: found row with ls_id=" . $row->ls_id . ", blob size=" . strlen( $row->ls_json_blob ) );
+
 		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
 		if ( strlen( $row->ls_json_blob ) > $maxJsonSize ) {
-			$this->logError( "JSON blob too large for layer set by name" );
+			$this->logError( "JSON blob too large for layer set by name: " . strlen( $row->ls_json_blob ) . " > $maxJsonSize" );
 			return null;
 		}
 
@@ -890,6 +902,16 @@ class LayersDatabase {
 	 */
 	private function logError( string $message, array $context = [] ): void {
 		$this->logger->error( $message, $context );
+	}
+
+	/**
+	 * Log a debug message
+	 *
+	 * @param string $message Debug message
+	 * @param array $context Additional context
+	 */
+	private function logDebug( string $message, array $context = [] ): void {
+		$this->logger->debug( $message, $context );
 	}
 
 	/**

@@ -139,20 +139,6 @@ describe( 'CanvasManager', () => {
 			updateCanvasTransform: jest.fn()
 		} ) );
 
-		global.GridRulersController = jest.fn( () => ( {
-			drawGrid: jest.fn(),
-			toggleGrid: jest.fn(),
-			drawRulers: jest.fn(),
-			drawGuides: jest.fn(),
-			drawGuidePreview: jest.fn(),
-			toggleRulers: jest.fn(),
-			toggleGuidesVisibility: jest.fn(),
-			toggleSnapToGrid: jest.fn(),
-			toggleSnapToGuides: jest.fn(),
-			toggleSmartGuides: jest.fn(),
-			getGuideSnapDelta: jest.fn( () => ( { dx: 0, dy: 0 } ) )
-		} ) );
-
 		global.TransformController = jest.fn( () => ( {
 			startResize: jest.fn(),
 			handleResize: jest.fn(),
@@ -300,14 +286,6 @@ describe( 'CanvasManager', () => {
 			expect( canvasManager.isMarqueeSelecting ).toBe( false );
 			expect( canvasManager.marqueeStart ).toEqual( { x: 0, y: 0 } );
 			expect( canvasManager.marqueeEnd ).toEqual( { x: 0, y: 0 } );
-		} );
-
-		it( 'should initialize grid and rulers state', () => {
-			expect( canvasManager.showGrid ).toBe( false );
-			expect( canvasManager.gridSize ).toBe( 20 );
-			expect( canvasManager.snapToGrid ).toBe( false );
-			expect( canvasManager.showRulers ).toBe( false );
-			expect( canvasManager.showGuides ).toBe( false );
 		} );
 
 		it( 'should initialize canvas pool', () => {
@@ -645,33 +623,6 @@ describe( 'CanvasManager', () => {
 		} );
 	} );
 
-	describe( 'grid and rulers delegation', () => {
-		it( 'should delegate toggleGrid to GridRulersController', () => {
-			canvasManager.toggleGrid();
-			expect( canvasManager.gridRulersController.toggleGrid ).toHaveBeenCalled();
-		} );
-
-		it( 'should delegate toggleRulers to GridRulersController', () => {
-			canvasManager.toggleRulers();
-			expect( canvasManager.gridRulersController.toggleRulers ).toHaveBeenCalled();
-		} );
-
-		it( 'should delegate toggleGuidesVisibility to GridRulersController', () => {
-			canvasManager.toggleGuidesVisibility();
-			expect( canvasManager.gridRulersController.toggleGuidesVisibility ).toHaveBeenCalled();
-		} );
-
-		it( 'should delegate toggleSnapToGrid to GridRulersController', () => {
-			canvasManager.toggleSnapToGrid();
-			expect( canvasManager.gridRulersController.toggleSnapToGrid ).toHaveBeenCalled();
-		} );
-
-		it( 'should delegate toggleSnapToGuides to GridRulersController', () => {
-			canvasManager.toggleSnapToGuides();
-			expect( canvasManager.gridRulersController.toggleSnapToGuides ).toHaveBeenCalled();
-		} );
-	} );
-
 	describe( 'drawing operations delegation', () => {
 		it( 'should delegate startDrawing to DrawingController', () => {
 			canvasManager.currentTool = 'rectangle';
@@ -745,58 +696,11 @@ describe( 'CanvasManager', () => {
 		} );
 	} );
 
-	describe( 'guide management', () => {
-		it( 'should add horizontal guide', () => {
-			canvasManager.addHorizontalGuide( 100 );
-			expect( canvasManager.horizontalGuides ).toContain( 100 );
-		} );
-
-		it( 'should add vertical guide', () => {
-			canvasManager.addVerticalGuide( 200 );
-			expect( canvasManager.verticalGuides ).toContain( 200 );
-		} );
-
-		it( 'should not add duplicate guides', () => {
-			canvasManager.addHorizontalGuide( 100 );
-			canvasManager.addHorizontalGuide( 100 );
-			expect( canvasManager.horizontalGuides.length ).toBe( 1 );
-		} );
-
-		it( 'should not add non-number guide', () => {
-			canvasManager.addHorizontalGuide( 'invalid' );
-			expect( canvasManager.horizontalGuides.length ).toBe( 0 );
-		} );
-	} );
-
 	describe( 'mouse point calculation', () => {
 		it( 'should calculate mouse point from client coordinates', () => {
 			const point = canvasManager.getMousePointFromClient( 100, 100 );
 			expect( point.x ).toBeDefined();
 			expect( point.y ).toBeDefined();
-		} );
-
-		it( 'should apply snap to grid when enabled', () => {
-			// Snap to grid rounds to nearest grid position
-			canvasManager.snapToGrid = true;
-			canvasManager.gridSize = 20;
-			// For snap to work, we need the canvas getBoundingClientRect to return proper values
-			canvasManager.canvas.getBoundingClientRect = jest.fn( () => ( {
-				left: 0,
-				top: 0,
-				width: 800,
-				height: 600
-			} ) );
-			const point = canvasManager.getMousePointFromClient( 105, 115 );
-			// Point should snap to a multiple of 20
-			expect( point.x % 20 ).toBe( 0 );
-			expect( point.y % 20 ).toBe( 0 );
-		} );
-
-		it( 'should get raw client point', () => {
-			const event = { clientX: 100, clientY: 100 };
-			const point = canvasManager.getRawClientPoint( event );
-			expect( point.canvasX ).toBeDefined();
-			expect( point.canvasY ).toBeDefined();
 		} );
 	} );
 

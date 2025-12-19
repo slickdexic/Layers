@@ -26,14 +26,16 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,895 lines - facade coordinating controllers), `ToolManager.js` (~1,275 lines - delegates to tool handlers), `CanvasRenderer.js`, `SelectionManager.js`, `HistoryManager.js`
+  - Core editor modules: `CanvasManager.js` (~1,895 lines - facade coordinating controllers), `ToolManager.js` (~1,275 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,001 lines - delegates to SelectionRenderer), `SelectionManager.js`, `HistoryManager.js`
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
     - `TextToolHandler.js` (~209 lines) - inline text input UI for creating text layers
     - `PathToolHandler.js` (~231 lines) - freeform path drawing with click-to-add points
     - `ShapeFactory.js` (~527 lines) - shape creation factory
     - `ToolRegistry.js` (~373 lines) - tool configuration registry
     - `ToolStyles.js` (~507 lines) - style management for tools
-  - Shared modules: `LayerRenderer.js` (~371 lines), `ShadowRenderer.js` (~521 lines), `ArrowRenderer.js` (~702 lines), `TextRenderer.js` (~343 lines), `TextBoxRenderer.js` (~430 lines), `ShapeRenderer.js` (~1,049 lines), `EffectsRenderer.js` (~245 lines)
+  - Shared modules (`resources/ext.layers.shared/`): Used by both editor and viewer for consistent behavior:
+    - `LayerDataNormalizer.js` (~210 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
+    - `LayerRenderer.js` (~371 lines), `ShadowRenderer.js` (~521 lines), `ArrowRenderer.js` (~702 lines), `TextRenderer.js` (~343 lines), `TextBoxRenderer.js` (~430 lines), `ShapeRenderer.js` (~1,049 lines), `EffectsRenderer.js` (~245 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~340 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `GridRulersController.js` (~385 lines) - grid/ruler rendering, snap-to-grid/guides
@@ -45,6 +47,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RenderCoordinator.js` (~390 lines) - render scheduling and dirty region tracking
     - `InteractionController.js` (~490 lines) - mouse/touch event handling coordination
     - `TextInputController.js` - text editing input handling
+    - `SelectionRenderer.js` (~349 lines) - selection UI drawing (handles, marquee, rotation)
   - Editor modules (`resources/ext.layers.editor/editor/`): Extracted from LayersEditor:
     - `EditorBootstrap.js` (~400 lines) - initialization, hooks, cleanup
     - `RevisionManager.js` (~470 lines) - revision and named set management
@@ -59,11 +62,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `PropertiesForm.js` - layer properties panel
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
-  - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`
+  - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`, `APIErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 70 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 8 files exceed 1,000 lines - see improvement_plan.md for remediation
+  - **God classes:** 7 files exceed 1,000 lines - see improvement_plan.md for remediation
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.

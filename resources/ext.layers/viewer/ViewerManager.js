@@ -136,12 +136,21 @@ class ViewerManager {
 	 * Searches for:
 	 * 1. img[data-layer-data] - images with direct layer data
 	 * 2. a[data-layer-data] > img - images inside links with layer data
+	 * 3. img[data-layers-large] - images with large data that need API fetch
 	 */
 	initializeLayerViewers () {
 		// Primary: attributes directly on <img>
 		const images = Array.prototype.slice.call(
 			document.querySelectorAll( 'img[data-layer-data]' )
 		);
+
+		// Also find images that have large data marked for API fetch
+		const largeImages = Array.prototype.slice.call(
+			document.querySelectorAll( 'img[data-layers-large]' )
+		);
+
+		// Fetch layer data via API for large images
+		this.initializeLargeImages( largeImages );
 
 		// Ensure the marker class exists for any img we found
 		images.forEach( ( img ) => {
@@ -186,8 +195,10 @@ class ViewerManager {
 				}
 				let layerData = null;
 				try {
-					layerData = JSON.parse( this.urlParser.decodeHtmlEntities( raw ) );
+					const decoded = this.urlParser.decodeHtmlEntities( raw );
+					layerData = JSON.parse( decoded );
 				} catch ( eParse ) {
+					this.debugWarn( 'JSON parse error:', eParse.message );
 					layerData = null;
 				}
 				if ( !layerData ) {
@@ -198,6 +209,137 @@ class ViewerManager {
 				this.debugWarn( 'Error processing image:', e );
 			}
 		} );
+	}
+
+	/**
+	 * Initialize images with large layer data that requires API fetch.
+	 *
+	 * @param {HTMLImageElement[]} images Array of images with data-layers-large attribute
+	 */
+	initializeLargeImages( images ) {
+		if ( !images || images.length === 0 ) {
+			return;
+		}
+
+		if ( typeof mw === 'undefined' || !mw.Api ) {
+			this.debugWarn( 'mw.Api not available for large image fetch' );
+			return;
+		}
+
+		const api = new mw.Api();
+		const self = this;
+
+		images.forEach( ( img ) => {
+			// Skip if already initialized or pending
+			if ( img.layersViewer || img.layersPending ) {
+				return;
+			}
+
+			// Mark as pending to prevent duplicate fetches
+			img.layersPending = true;
+
+			// Get the layer set name from intent attribute
+			const setName = img.getAttribute( 'data-layers-intent' ) || 'default';
+
+			// Get filename from the image source
+			const filename = this.extractFilenameFromImg( img );
+			if ( !filename ) {
+				this.debugWarn( 'Could not extract filename from image for large data fetch' );
+				return;
+			}
+
+			this.debugLog( 'Fetching large layer data for:', filename, 'set:', setName );
+
+			const params = {
+				action: 'layersinfo',
+				format: 'json',
+				filename: filename
+			};
+			if ( setName && setName !== 'on' && setName !== 'default' ) {
+				params.setname = setName;
+			}
+
+			api.get( params ).then( ( data ) => {
+				try {
+					if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
+						self.debugLog( 'No layerset returned for large image' );
+						return;
+					}
+
+					const layerset = data.layersinfo.layerset;
+					let layersArr = null;
+
+					if ( layerset && layerset.data ) {
+						const arrTag = Object.prototype.toString.call( layerset.data.layers );
+						if ( layerset.data.layers && arrTag === '[object Array]' ) {
+							layersArr = layerset.data.layers;
+						} else if ( Array.isArray( layerset.data ) ) {
+							layersArr = layerset.data;
+						}
+					}
+
+					if ( !layersArr || !layersArr.length ) {
+						self.debugLog( 'No layers in fetched data for large image' );
+						return;
+					}
+
+					const payload = {
+						layers: layersArr,
+						baseWidth: layerset.baseWidth || img.naturalWidth || img.width || null,
+						baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null,
+						backgroundVisible: layerset.data.backgroundVisible !== undefined ? layerset.data.backgroundVisible : true,
+						backgroundOpacity: layerset.data.backgroundOpacity !== undefined ? layerset.data.backgroundOpacity : 1.0
+					};
+
+						const success = self.initializeViewer( img, payload );
+					if ( !success ) {
+						img.layersPending = false;
+					}
+				} catch ( e2 ) {
+					self.debugWarn( 'Error processing fetched large image data:', e2 );
+					img.layersPending = false;
+				}
+			} ).catch( ( apiErr ) => {
+				self.debugWarn( 'API request failed for large image:', apiErr );
+				img.layersPending = false;
+			} );
+		} );
+	}
+
+	/**
+	 * Extract filename from an image element.
+	 *
+	 * @param {HTMLImageElement} img Image element
+	 * @return {string|null} Filename or null if not found
+	 */
+	extractFilenameFromImg( img ) {
+		// Try data-file-name attribute first
+		const fileNameAttr = img.getAttribute( 'data-file-name' );
+		if ( fileNameAttr ) {
+			return fileNameAttr;
+		}
+
+		// Try extracting from src URL
+		const src = img.src || '';
+		const srcMatch = src.match( /\/(?:images\/.*?\/)?([^/]+\.[a-zA-Z]+)(?:[?]|$)/ );
+		if ( srcMatch && srcMatch[ 1 ] ) {
+			let filename = decodeURIComponent( srcMatch[ 1 ] );
+			// Remove any thumbnail prefix like "123px-"
+			filename = filename.replace( /^\d+px-/, '' );
+			return filename;
+		}
+
+		// Try extracting from parent link href
+		const parent = img.parentNode;
+		if ( parent && parent.tagName === 'A' ) {
+			const href = parent.getAttribute( 'href' ) || '';
+			const hrefMatch = href.match( /\/File:([^/?#]+)/ );
+			if ( hrefMatch && hrefMatch[ 1 ] ) {
+				return decodeURIComponent( hrefMatch[ 1 ].replace( /_/g, ' ' ) );
+			}
+		}
+
+		return null;
 	}
 
 	/**

@@ -261,9 +261,18 @@ class ThumbnailProcessor {
 
 			$filename = $file->getName();
 			$isDefaultSet = $layersFlag === null || in_array( $layersFlag, [ 'on', 'all', 'true' ], true );
+			$this->log( sprintf(
+				'fetchLayersFromDatabase: filename=%s, layersFlag=%s, isDefaultSet=%s',
+				$filename,
+				$layersFlag ?? 'null',
+				$isDefaultSet ? 'true' : 'false'
+			) );
+
 			$layerSet = $isDefaultSet
 				? $db->getLatestLayerSet( $filename, $file->getSha1() )
 				: $db->getLayerSetByName( $filename, $file->getSha1(), $layersFlag );
+
+			$this->log( 'fetchLayersFromDatabase: layerSet returned = ' . ( $layerSet ? 'yes' : 'no' ) );
 
 			if ( $layerSet && isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] ) ) {
 				$data = $layerSet['data'];
@@ -274,6 +283,8 @@ class ThumbnailProcessor {
 					'backgroundVisible' => $data['backgroundVisible'] ?? true,
 					'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
 				];
+			} else {
+				$this->log( 'fetchLayersFromDatabase: layerSet has no valid layers array' );
 			}
 		} catch ( \Throwable $e ) {
 			$logger = $this->getLogger();
@@ -334,9 +345,28 @@ class ThumbnailProcessor {
 			}
 
 			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
-			$attribs['data-layer-data'] = json_encode( $payload );
+			$jsonData = json_encode( $payload );
 
-			$this->log( sprintf( 'Added %d layers, instance: %s', count( $layers ), $instanceId ) );
+			// Check if JSON is too large for inline embedding (>100KB may cause browser issues)
+			$jsonSize = strlen( $jsonData );
+			if ( $jsonSize > 100000 ) {
+				// For large payloads, use intent marker for client-side API fallback
+				$this->log( sprintf(
+					'JSON too large for inline (%d bytes), using API fallback for instance: %s',
+					$jsonSize,
+					$instanceId
+				) );
+				$attribs['data-layers-intent'] = $layersFlag ?? 'on';
+				$attribs['data-layers-large'] = '1';
+				// Add filename for API lookup
+				if ( $file && method_exists( $file, 'getName' ) ) {
+					$attribs['data-file-name'] = $file->getName();
+				}
+			} else {
+				$attribs['data-layer-data'] = $jsonData;
+			}
+
+			$this->log( sprintf( 'Added %d layers, instance: %s, JSON size: %d bytes', count( $layers ), $instanceId, $jsonSize ) );
 		} else {
 			$this->log( "No layer data, instance: $instanceId" );
 

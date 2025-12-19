@@ -137,48 +137,33 @@
 			// Delegate to SelectionState module if available
 			if ( this._selectionState ) {
 				this._selectionState.selectLayer( layerId, addToSelection );
-				// Sync state from module
 				this.selectedLayerIds = this._selectionState.getSelectedIds();
 				this.lastSelectedId = this._selectionState.getLastSelectedId();
-
-				// Announce selection for screen readers
+			} else {
+				// Fallback for tests
+				if ( !addToSelection ) {
+					this.selectedLayerIds = [];
+					this.lastSelectedId = null;
+				}
+				// Toggle behavior when adding to selection and already selected
+				if ( addToSelection && layerId && this.isSelected( layerId ) ) {
+					this.deselectLayer( layerId );
+					return;
+				}
+				// Skip locked or invisible layers
 				const layer = this.getLayerById( layerId );
-				if ( window.layersAnnouncer && layer ) {
-					const layerName = layer.name || this.getDefaultLayerName( layer );
-					window.layersAnnouncer.announceLayerSelection( layerName );
+				if ( layerId && layer && layer.locked !== true && layer.visible !== false &&
+					this.selectedLayerIds.indexOf( layerId ) === -1 ) {
+					this.selectedLayerIds.push( layerId );
+					this.lastSelectedId = layerId;
 				}
-
-				this.updateSelectionHandles();
-				return;
 			}
 
-			// Fallback: inline implementation
-			if ( !addToSelection ) {
-				this.clearSelection();
-			}
-
-			// Toggle behavior when adding to selection and already selected
-			if ( addToSelection && layerId && this.isSelected( layerId ) ) {
-				this.deselectLayer( layerId );
-				return;
-			}
-
-			// Skip locked or invisible layers
+			// Announce selection for screen readers
 			const layer = this.getLayerById( layerId );
-			if (
-				layerId && layer &&
-				layer.locked !== true &&
-				layer.visible !== false &&
-				this.selectedLayerIds.indexOf( layerId ) === -1
-			) {
-				this.selectedLayerIds.push( layerId );
-				this.lastSelectedId = layerId;
-
-				// Announce selection for screen readers
-				if ( window.layersAnnouncer && layer ) {
-					const layerName = layer.name || this.getDefaultLayerName( layer );
-					window.layersAnnouncer.announceLayerSelection( layerName );
-				}
+			if ( window.layersAnnouncer && layer ) {
+				const layerName = layer.name || this.getDefaultLayerName( layer );
+				window.layersAnnouncer.announceLayerSelection( layerName );
 			}
 
 			this.updateSelectionHandles();
@@ -213,26 +198,21 @@
 		 * @param {string} layerId Layer ID to deselect
 		 */
 		deselectLayer( layerId ) {
-			// Delegate to SelectionState module if available
 			if ( this._selectionState ) {
 				this._selectionState.deselectLayer( layerId );
 				this.selectedLayerIds = this._selectionState.getSelectedIds();
 				this.lastSelectedId = this._selectionState.getLastSelectedId();
-				this.updateSelectionHandles();
-				return;
-			}
-
-			// Fallback: inline implementation
-			const index = this.selectedLayerIds.indexOf( layerId );
-			if ( index !== -1 ) {
-				this.selectedLayerIds.splice( index, 1 );
-
-				if ( this.lastSelectedId === layerId ) {
-					this.lastSelectedId = this.selectedLayerIds.length > 0 ?
-						this.selectedLayerIds[ this.selectedLayerIds.length - 1 ] : null;
+			} else {
+				const index = this.selectedLayerIds.indexOf( layerId );
+				if ( index !== -1 ) {
+					this.selectedLayerIds.splice( index, 1 );
+					if ( this.lastSelectedId === layerId ) {
+						this.lastSelectedId = this.selectedLayerIds.length > 0
+							? this.selectedLayerIds[ this.selectedLayerIds.length - 1 ]
+							: null;
+					}
 				}
 			}
-
 			this.updateSelectionHandles();
 			this.notifySelectionChange();
 		}
@@ -241,17 +221,9 @@
 		 * Clear all selections
 		 */
 		clearSelection() {
-			// Delegate to SelectionState module if available
 			if ( this._selectionState ) {
-				this._selectionState.clearSelection( false ); // Don't notify, we'll do it
-				this.selectedLayerIds = [];
-				this.selectionHandles = [];
-				this.lastSelectedId = null;
-				this.notifySelectionChange();
-				return;
+				this._selectionState.clearSelection( false );
 			}
-
-			// Fallback: inline implementation
 			this.selectedLayerIds = [];
 			this.selectionHandles = [];
 			this.lastSelectedId = null;
@@ -262,24 +234,15 @@
 		 * Select all layers
 		 */
 		selectAll() {
-			// Delegate to SelectionState module if available
 			if ( this._selectionState ) {
 				this._selectionState.selectAll();
 				this.selectedLayerIds = this._selectionState.getSelectedIds();
 				this.lastSelectedId = this._selectionState.getLastSelectedId();
-				this.updateSelectionHandles();
-				return;
+			} else {
+				const layers = this._getLayersArray();
+				this.selectedLayerIds = layers.map( ( layer ) => layer.id );
+				this.lastSelectedId = this.selectedLayerIds[ this.selectedLayerIds.length - 1 ] || null;
 			}
-
-			// Fallback: inline implementation
-			const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
-				this.canvasManager.layers || [];
-			this.selectedLayerIds = layers.map( ( layer ) => layer.id );
-
-			if ( this.selectedLayerIds.length > 0 ) {
-				this.lastSelectedId = this.selectedLayerIds[ this.selectedLayerIds.length - 1 ];
-			}
-
 			this.updateSelectionHandles();
 			this.notifySelectionChange();
 		}
@@ -291,7 +254,6 @@
 		 * @return {boolean} True if selected
 		 */
 		isSelected( layerId ) {
-			// Delegate to SelectionState module if available
 			if ( this._selectionState ) {
 				return this._selectionState.isSelected( layerId );
 			}
@@ -304,7 +266,6 @@
 		 * @return {number} Number of selected layers
 		 */
 		getSelectionCount() {
-			// Delegate to SelectionState module if available
 			if ( this._selectionState ) {
 				return this._selectionState.getSelectionCount();
 			}
@@ -317,12 +278,10 @@
 		 * @return {Array} Array of selected layer objects
 		 */
 		getSelectedLayers() {
-			// Delegate to SelectionState module if available
 			if ( this._selectionState ) {
 				return this._selectionState.getSelectedLayers();
 			}
-			const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
-				this.canvasManager.layers || [];
+			const layers = this._getLayersArray();
 			return layers.filter( ( layer ) => this.isSelected( layer.id ) );
 		}
 
@@ -334,17 +293,9 @@
 		 */
 		startMarqueeSelection( xOrPoint, y ) {
 			const pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
-
-			// Delegate to MarqueeSelection module if available
 			if ( this._marqueeSelection ) {
 				this._marqueeSelection.start( pt );
-				this.isMarqueeSelecting = true;
-				this.marqueeStart = { x: pt.x, y: pt.y };
-				this.marqueeEnd = { x: pt.x, y: pt.y };
-				return;
 			}
-
-			// Fallback: inline implementation
 			this.isMarqueeSelecting = true;
 			this.marqueeStart = { x: pt.x, y: pt.y };
 			this.marqueeEnd = { x: pt.x, y: pt.y };
@@ -362,36 +313,22 @@
 			}
 
 			const pt = ( typeof xOrPoint === 'object' ) ? xOrPoint : { x: xOrPoint, y: y };
-
-			// Delegate to MarqueeSelection module if available
-			if ( this._marqueeSelection ) {
-				const selectedIds = this._marqueeSelection.update( pt );
-				this.marqueeEnd = { x: pt.x, y: pt.y };
-				this.selectedLayerIds = selectedIds;
-				if ( this.canvasManager && typeof this.canvasManager.redraw === 'function' ) {
-					this.canvasManager.redraw();
-				}
-				return;
-			}
-
-			// Fallback: inline implementation
 			this.marqueeEnd = { x: pt.x, y: pt.y };
 
-			// Find layers within marquee
-			const marqueeRect = this.getMarqueeRect();
-			const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
-				this.canvasManager.layers || [];
-			const newSelection = [];
+			if ( this._marqueeSelection ) {
+				this.selectedLayerIds = this._marqueeSelection.update( pt );
+			} else {
+				// Minimal fallback for tests
+				const marqueeRect = this.getMarqueeRect();
+				const layers = this._getLayersArray();
+				this.selectedLayerIds = layers
+					.filter( ( layer ) => {
+						const bounds = this.getLayerBoundsCompat( layer );
+						return bounds && this.rectIntersects( marqueeRect, bounds );
+					} )
+					.map( ( layer ) => layer.id );
+			}
 
-			layers.forEach( ( layer ) => {
-				const bounds = this.getLayerBoundsCompat( layer );
-				if ( bounds && this.rectIntersects( marqueeRect, bounds ) ) {
-					newSelection.push( layer.id );
-				}
-			} );
-
-			// Update selection
-			this.selectedLayerIds = newSelection;
 			this.notifySelectionChange();
 			if ( this.canvasManager && typeof this.canvasManager.redraw === 'function' ) {
 				this.canvasManager.redraw();
@@ -402,17 +339,9 @@
 		 * Finish marquee selection
 		 */
 		finishMarqueeSelection() {
-			// Delegate to MarqueeSelection module if available
 			if ( this._marqueeSelection ) {
 				this._marqueeSelection.finish();
-				this.isMarqueeSelecting = false;
-				this.updateSelectionHandles();
-				this.marqueeStart = null;
-				this.marqueeEnd = null;
-				return;
 			}
-
-			// Fallback: inline implementation
 			this.isMarqueeSelecting = false;
 			this.updateSelectionHandles();
 			this.marqueeStart = null;
@@ -425,25 +354,17 @@
 		 * @return {Object} Rectangle object
 		 */
 		getMarqueeRect() {
-			// Delegate to MarqueeSelection module if available
 			if ( this._marqueeSelection ) {
 				return this._marqueeSelection.getRect();
 			}
-
-			// Fallback: inline implementation
 			if ( !this.marqueeStart || !this.marqueeEnd ) {
 				return { x: 0, y: 0, width: 0, height: 0 };
 			}
-			const minX = Math.min( this.marqueeStart.x, this.marqueeEnd.x );
-			const minY = Math.min( this.marqueeStart.y, this.marqueeEnd.y );
-			const maxX = Math.max( this.marqueeStart.x, this.marqueeEnd.x );
-			const maxY = Math.max( this.marqueeStart.y, this.marqueeEnd.y );
-
 			return {
-				x: minX,
-				y: minY,
-				width: maxX - minX,
-				height: maxY - minY
+				x: Math.min( this.marqueeStart.x, this.marqueeEnd.x ),
+				y: Math.min( this.marqueeStart.y, this.marqueeEnd.y ),
+				width: Math.abs( this.marqueeEnd.x - this.marqueeStart.x ),
+				height: Math.abs( this.marqueeEnd.y - this.marqueeStart.y )
 			};
 		}
 
@@ -465,137 +386,99 @@
 		 * Update selection handles
 		 */
 		updateSelectionHandles() {
-			// Delegate to SelectionHandles module if available
+			if ( this.selectedLayerIds.length === 0 ) {
+				if ( this._selectionHandles ) {
+					this._selectionHandles.clear();
+				}
+				this.selectionHandles = [];
+				return;
+			}
+
+			const bounds = this.selectedLayerIds.length === 1
+				? this.getLayerBoundsCompat( this.getLayerById( this.selectedLayerIds[ 0 ] ) )
+				: this.getMultiSelectionBounds();
+
+			if ( !bounds ) {
+				if ( this._selectionHandles ) {
+					this._selectionHandles.clear();
+				}
+				this.selectionHandles = [];
+				return;
+			}
+
 			if ( this._selectionHandles ) {
 				if ( this.selectedLayerIds.length === 1 ) {
-					const layer = this.getLayerById( this.selectedLayerIds[ 0 ] );
-					if ( layer ) {
-						const bounds = this.getLayerBoundsCompat( layer );
-						this._selectionHandles.createSingleSelectionHandles( bounds );
-						this.selectionHandles = this._selectionHandles.getHandles();
-					} else {
-						this._selectionHandles.clear();
-						this.selectionHandles = [];
-					}
-				} else if ( this.selectedLayerIds.length > 1 ) {
-					const bounds = this.getMultiSelectionBounds();
-					this._selectionHandles.createMultiSelectionHandles( bounds );
-					this.selectionHandles = this._selectionHandles.getHandles();
+					this._selectionHandles.createSingleSelectionHandles( bounds );
 				} else {
-					this._selectionHandles.clear();
-					this.selectionHandles = [];
+					this._selectionHandles.createMultiSelectionHandles( bounds );
 				}
-				return;
-			}
-
-			// Fallback: inline implementation
-			this.selectionHandles = [];
-
-			if ( this.selectedLayerIds.length === 1 ) {
-				// Single selection - show transformation handles
-				const layer = this.getLayerById( this.selectedLayerIds[ 0 ] );
-				if ( layer ) {
-					this.createSingleSelectionHandles( layer );
-				}
-			} else if ( this.selectedLayerIds.length > 1 ) {
-				// Multi-selection - show group handles
-				this.createMultiSelectionHandles();
+				this.selectionHandles = this._selectionHandles.getHandles();
+			} else {
+				// Minimal fallback for tests
+				this.selectionHandles = this._createHandlesFromBounds( bounds, this.selectedLayerIds.length === 1 );
 			}
 		}
 
 		/**
-		 * Create selection handles for single layer
+		 * Create handles from bounds (minimal fallback for tests)
 		 *
-		 * @param {Object} layer Layer object
+		 * @param {Object} bounds Bounds object
+		 * @param {boolean} isSingle Whether this is single selection
+		 * @return {Array} Handle objects
 		 */
-		createSingleSelectionHandles( layer ) {
-			// Delegate to SelectionHandles module if available
-			if ( this._selectionHandles ) {
-				const bounds = this.getLayerBoundsCompat( layer );
-				this._selectionHandles.createSingleSelectionHandles( bounds );
-				this.selectionHandles = this._selectionHandles.getHandles();
-				return;
-			}
-
-			// Fallback: inline implementation
-			const bounds = this.getLayerBoundsCompat( layer );
-			if ( !bounds ) {
-				return;
-			}
-
+		_createHandlesFromBounds( bounds, isSingle ) {
 			const handleSize = 8;
 			const handles = [
-				// Corner handles
-				{ x: bounds.x, y: bounds.y, type: 'nw' },
-				{ x: bounds.x + bounds.width, y: bounds.y, type: 'ne' },
-				{ x: bounds.x + bounds.width, y: bounds.y + bounds.height, type: 'se' },
-				{ x: bounds.x, y: bounds.y + bounds.height, type: 'sw' },
-
-				// Edge handles
-				{ x: bounds.x + bounds.width / 2, y: bounds.y, type: 'n' },
-				{ x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2, type: 'e' },
-				{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height, type: 's' },
-				{ x: bounds.x, y: bounds.y + bounds.height / 2, type: 'w' }
-			];
-
-			// Add rotation handle
-			handles.push( {
-				x: bounds.x + bounds.width / 2,
-				y: bounds.y - 20,
-				type: 'rotate'
-			} );
-
-			this.selectionHandles = handles.map( ( handle ) => ( {
-				x: handle.x,
-				y: handle.y,
-				type: handle.type,
-				rect: {
-					x: handle.x - handleSize / 2,
-					y: handle.y - handleSize / 2,
-					width: handleSize,
-					height: handleSize
-				}
-			} ) );
-		}
-
-		/**
-		 * Create selection handles for multiple layers
-		 */
-		createMultiSelectionHandles() {
-			// Delegate to SelectionHandles module if available
-			if ( this._selectionHandles ) {
-				const bounds = this.getMultiSelectionBounds();
-				this._selectionHandles.createMultiSelectionHandles( bounds );
-				this.selectionHandles = this._selectionHandles.getHandles();
-				return;
-			}
-
-			// Fallback: inline implementation
-			const bounds = this.getMultiSelectionBounds();
-			if ( !bounds ) {
-				return;
-			}
-
-			const handleSize = 8;
-			const handles = [
-				// Corner handles only for multi-selection
 				{ x: bounds.x, y: bounds.y, type: 'nw' },
 				{ x: bounds.x + bounds.width, y: bounds.y, type: 'ne' },
 				{ x: bounds.x + bounds.width, y: bounds.y + bounds.height, type: 'se' },
 				{ x: bounds.x, y: bounds.y + bounds.height, type: 'sw' }
 			];
-
-			this.selectionHandles = handles.map( ( handle ) => ( {
-				x: handle.x,
-				y: handle.y,
-				type: handle.type,
-				rect: {
-					x: handle.x - handleSize / 2,
-					y: handle.y - handleSize / 2,
-					width: handleSize,
-					height: handleSize
-				}
+			if ( isSingle ) {
+				handles.push(
+					{ x: bounds.x + bounds.width / 2, y: bounds.y, type: 'n' },
+					{ x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2, type: 'e' },
+					{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height, type: 's' },
+					{ x: bounds.x, y: bounds.y + bounds.height / 2, type: 'w' },
+					{ x: bounds.x + bounds.width / 2, y: bounds.y - 20, type: 'rotate' }
+				);
+			}
+			return handles.map( ( h ) => ( {
+				x: h.x, y: h.y, type: h.type,
+				rect: { x: h.x - handleSize / 2, y: h.y - handleSize / 2, width: handleSize, height: handleSize }
 			} ) );
+		}
+
+		/**
+		 * Create selection handles for single layer (legacy method, delegates to _createHandlesFromBounds)
+		 *
+		 * @param {Object} layer Layer object
+		 */
+		createSingleSelectionHandles( layer ) {
+			const bounds = this.getLayerBoundsCompat( layer );
+			if ( bounds ) {
+				if ( this._selectionHandles ) {
+					this._selectionHandles.createSingleSelectionHandles( bounds );
+					this.selectionHandles = this._selectionHandles.getHandles();
+				} else {
+					this.selectionHandles = this._createHandlesFromBounds( bounds, true );
+				}
+			}
+		}
+
+		/**
+		 * Create selection handles for multiple layers (legacy method, delegates to _createHandlesFromBounds)
+		 */
+		createMultiSelectionHandles() {
+			const bounds = this.getMultiSelectionBounds();
+			if ( bounds ) {
+				if ( this._selectionHandles ) {
+					this._selectionHandles.createMultiSelectionHandles( bounds );
+					this.selectionHandles = this._selectionHandles.getHandles();
+				} else {
+					this.selectionHandles = this._createHandlesFromBounds( bounds, false );
+				}
+			}
 		}
 
 		/**
@@ -643,15 +526,13 @@
 		 * @return {Object|null} Handle object or null
 		 */
 		hitTestSelectionHandles( point ) {
-			// Delegate to SelectionHandles module if available
 			if ( this._selectionHandles ) {
 				return this._selectionHandles.hitTest( point );
 			}
-
-			// Fallback: inline implementation
+			// Fallback for tests
 			for ( let i = 0; i < this.selectionHandles.length; i++ ) {
 				const handle = this.selectionHandles[ i ];
-				if ( this.pointInRect( point, handle.rect ) ) {
+				if ( handle.rect && this.pointInRect( point, handle.rect ) ) {
 					return handle;
 				}
 			}

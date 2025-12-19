@@ -24,6 +24,12 @@
 		return window[ globalName ];
 	};
 
+	// Get APIErrorHandler class
+	const APIErrorHandler = getClass( 'Editor.APIErrorHandler', 'APIErrorHandler' );
+
+	// Get shared LayerDataNormalizer for consistent data handling
+	const LayerDataNormalizer = ( window.Layers && window.Layers.LayerDataNormalizer ) || window.LayerDataNormalizer;
+
 	class APIManager {
 	constructor( editor ) {
 		this.editor = editor;
@@ -31,294 +37,50 @@
 		this.maxRetries = 3;
 		this.retryDelay = 1000; // Start with 1 second
 		
-		// Centralized error handling configuration
-		this.errorConfig = {
-			// Standard error codes and their user-friendly messages
-			errorMap: {
-				'invalidfilename': 'layers-invalid-filename',
-				'datatoolarge': 'layers-data-too-large',
-				'invalidjson': 'layers-json-parse-error',
-				'invaliddata': 'layers-invalid-data',
-				'ratelimited': 'layers-rate-limited',
-				'filenotfound': 'layers-file-not-found',
-				'savefailed': 'layers-save-failed',
-				'dbschema-missing': 'layers-db-error',
-				'permission-denied': 'layers-permission-denied',
-				'network-error': 'layers-network-error',
-				'timeout': 'layers-timeout-error'
-			},
-			// Default fallback messages
-			defaults: {
-				load: 'layers-load-error',
-				save: 'layers-save-error',
-				generic: 'layers-generic-error'
-			}
-		};
+		// Initialize error handler (extracted for separation of concerns)
+		this.errorHandler = new APIErrorHandler( {
+			editor: editor
+		} );
+		this.errorHandler.setEnableSaveButtonCallback( () => this.enableSaveButton() );
 	}
 
 	/**
-	 * Centralized error handling with consistent logging and user feedback
+	 * Delegate error handling to APIErrorHandler
 	 * @param {*} error Error object from API call
 	 * @param {string} operation Operation that failed (load, save, etc.)
 	 * @param {Object} context Additional context for error handling
 	 * @return {Object} Standardized error object
 	 */
 	handleError( error, operation = 'generic', context = {} ) {
-		// Normalize error structure
-		const normalizedError = this.normalizeError( error );
-		
-		// Get appropriate user message
-		const userMessage = this.getUserMessage( normalizedError, operation );
-		
-		// Log error securely (without exposing sensitive information)
-		this.logError( normalizedError, operation, context );
-		
-		// Show user notification
-		this.showUserNotification( userMessage, 'error' );
-		
-		// Report to centralized error handler if available
-		this.reportToErrorHandler( normalizedError, operation, context );
-		
-		// Update UI state
-		this.updateUIForError( operation );
-		
-		return {
-			code: normalizedError.code,
-			message: userMessage,
-			userMessage: userMessage,
-			operation: operation,
-			timestamp: new Date().toISOString()
-		};
+		return this.errorHandler.handleError( error, operation, context );
 	}
-	
+
 	/**
-	 * Normalize error object to consistent structure
+	 * Delegate normalizeError to APIErrorHandler (backward compatibility)
 	 * @param {*} error Raw error from API or other source
 	 * @return {Object} Normalized error object
 	 */
 	normalizeError( error ) {
-		const normalized = {
-			code: 'unknown',
-			message: 'An unknown error occurred',
-			originalError: null
-		};
-		
-		try {
-			if ( typeof error === 'string' ) {
-				normalized.message = error;
-				normalized.code = 'string-error';
-			} else if ( error && error.error ) {
-				// MediaWiki API error format
-				normalized.code = error.error.code || 'api-error';
-				normalized.message = error.error.info || error.error.message || 'API error';
-				normalized.originalError = error;
-			} else if ( error && error.message ) {
-				// Standard JavaScript Error object
-				normalized.code = error.name || 'js-error';
-				normalized.message = error.message;
-				normalized.originalError = error;
-			} else if ( error && typeof error === 'object' ) {
-				// Other object types
-				normalized.code = error.code || 'object-error';
-				normalized.message = error.message || error.info || JSON.stringify( error );
-				normalized.originalError = error;
-			}
-		} catch ( parseError ) {
-			normalized.code = 'error-parsing-failed';
-			normalized.message = 'Failed to parse error information';
-		}
-		
-		return normalized;
+		return this.errorHandler.normalizeError( error );
 	}
-	
+
 	/**
-	 * Get user-friendly message for error
-	 * Delegates to centralized MessageHelper for consistent i18n handling.
+	 * Delegate getUserMessage to APIErrorHandler (backward compatibility)
 	 * @param {Object} normalizedError Normalized error object
 	 * @param {string} operation Operation that failed
 	 * @return {string} User-friendly error message
 	 */
 	getUserMessage( normalizedError, operation ) {
-		// Hardcoded fallbacks
-		const fallbacks = {
-			load: 'Failed to load layer data',
-			save: 'Failed to save layer data',
-			generic: 'An error occurred'
-		};
-		const fallback = fallbacks[ operation ] || fallbacks.generic;
+		return this.errorHandler.getUserMessage( normalizedError, operation );
+	}
 
-		// Try to get specific message for error code via MessageHelper
-		const messageKey = this.errorConfig.errorMap[ normalizedError.code ];
-		if ( messageKey && window.layersMessages ) {
-			const msg = window.layersMessages.get( messageKey, '' );
-			if ( msg ) {
-				return msg;
-			}
-		}
-		
-		// Try to get default message for operation via MessageHelper
-		const defaultKey = this.errorConfig.defaults[ operation ];
-		if ( defaultKey && window.layersMessages ) {
-			const msg = window.layersMessages.get( defaultKey, '' );
-			if ( msg ) {
-				return msg;
-			}
-		}
-		
-		return fallback;
-	}
-	
 	/**
-	 * Log error securely without exposing sensitive information
-	 * @param {Object} normalizedError Normalized error object
-	 * @param {string} operation Operation that failed
-	 * @param {Object} context Additional context
-	 */
-	logError( normalizedError, operation, context ) {
-		try {
-			// Create sanitized log entry
-			const logEntry = {
-				operation: operation,
-				code: normalizedError.code,
-				message: this.sanitizeLogMessage( normalizedError.message ),
-				timestamp: new Date().toISOString(),
-				context: this.sanitizeContext( context )
-			};
-			
-			// Use editor's error logging if available
-			if ( this.editor && this.editor.errorLog ) {
-				this.editor.errorLog( 'API Error:', logEntry );
-			} else if ( typeof mw !== 'undefined' && mw.log ) {
-				// Fallback to mw.log with sanitized data
-				mw.log.error( '[APIManager] Error:', logEntry );
-			}
-		} catch ( logError ) {
-			// Prevent logging errors from breaking the application
-			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.error( '[APIManager] Failed to log error' );
-			}
-		}
-	}
-	
-	/**
-	 * Sanitize log message to prevent information disclosure
-	 * @param {string} message Raw error message
-	 * @return {string} Sanitized message
-	 */
-	sanitizeLogMessage( message ) {
-		if ( typeof message !== 'string' ) {
-			return 'Non-string error message';
-		}
-		
-		// Apply same sanitization as in LayersEditor
-		let sanitized = message;
-		
-		// Remove tokens and sensitive patterns
-		sanitized = sanitized.replace( /[a-zA-Z0-9+/=]{20,}/g, '[TOKEN]' );
-		sanitized = sanitized.replace( /[a-fA-F0-9]{16,}/g, '[HEX]' );
-		sanitized = sanitized.replace( /[A-Za-z]:[\\/][\w\s\\.-]*/g, '[PATH]' );
-		sanitized = sanitized.replace( /\/[\w\s.-]+/g, '[PATH]' );
-		sanitized = sanitized.replace( /https?:\/\/[^\s'"<>&]*/gi, '[URL]' );
-		sanitized = sanitized.replace( /\w+:\/\/[^\s'"<>&]*/gi, '[CONNECTION]' );
-		sanitized = sanitized.replace( /\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[IP]' );
-		sanitized = sanitized.replace( /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]' );
-		
-		// Truncate if too long
-		if ( sanitized.length > 200 ) {
-			sanitized = sanitized.slice( 0, 200 ) + '[TRUNCATED]';
-		}
-		
-		return sanitized;
-	}
-	
-	/**
-	 * Sanitize context object for logging
-	 * @param {Object} context Context object
-	 * @return {Object} Sanitized context
-	 */
-	sanitizeContext( context ) {
-		const sanitized = {};
-		
-		try {
-			Object.keys( context ).forEach( key => {
-				const value = context[ key ];
-				if ( typeof value === 'string' ) {
-					sanitized[ key ] = this.sanitizeLogMessage( value );
-				} else if ( typeof value === 'number' || typeof value === 'boolean' ) {
-					sanitized[ key ] = value;
-				} else {
-					sanitized[ key ] = '[OBJECT]';
-				}
-			} );
-		} catch ( sanitizeError ) {
-			return { sanitizationFailed: true };
-		}
-		
-		return sanitized;
-	}
-	
-	/**
-	 * Show user notification
+	 * Delegate showUserNotification to APIErrorHandler (backward compatibility)
 	 * @param {string} message Message to show
 	 * @param {string} type Notification type (error, warning, success)
 	 */
 	showUserNotification( message, type = 'error' ) {
-		try {
-			if ( mw.notify ) {
-				mw.notify( message, { type: type } );
-			} else if ( typeof mw !== 'undefined' && mw.log ) {
-				// Fallback for environments without mw.notify
-				mw.log.error( 'User notification:', message );
-			}
-		} catch ( notifyError ) {
-			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.error( 'Failed to show user notification:', message );
-			}
-		}
-	}
-	
-	/**
-	 * Report to centralized error handler
-	 * @param {Object} normalizedError Normalized error object
-	 * @param {string} operation Operation that failed
-	 * @param {Object} context Additional context
-	 */
-	reportToErrorHandler( normalizedError, operation, context ) {
-		try {
-			if ( window.layersErrorHandler && window.layersErrorHandler.handleError ) {
-				window.layersErrorHandler.handleError(
-					new Error( normalizedError.message ),
-					`API ${operation}`,
-					operation,
-					{ 
-						code: normalizedError.code,
-						context: context 
-					}
-				);
-			}
-		} catch ( reportError ) {
-			// Don't let error reporting break the application
-		}
-	}
-	
-	/**
-	 * Update UI state for error conditions
-	 * @param {string} operation Operation that failed
-	 */
-	updateUIForError( operation ) {
-		try {
-			// Hide any active spinners
-			if ( this.editor && this.editor.uiManager ) {
-				this.editor.uiManager.hideSpinner();
-			}
-			
-			// Re-enable buttons based on operation
-			if ( operation === 'save' ) {
-				this.enableSaveButton();
-			}
-		} catch ( uiError ) {
-			// Don't let UI updates break the application
-		}
+		return this.errorHandler.showUserNotification( message, type );
 	}
 	
 	/**
@@ -483,13 +245,24 @@
 			if ( !layer.id ) {
 				layer.id = this.generateLayerId();
 			}
-			this.normalizeBooleanProperties( layer );
+			// Use shared normalizer if available, otherwise fall back to local method
+			if ( LayerDataNormalizer && typeof LayerDataNormalizer.normalizeLayer === 'function' ) {
+				LayerDataNormalizer.normalizeLayer( layer );
+			} else {
+				this.normalizeBooleanProperties( layer );
+			}
 			return layer;
 		} );
 	}
 
+	/**
+	 * Normalize boolean properties on a layer
+	 * Fallback method when shared LayerDataNormalizer is not available
+	 * @deprecated Use LayerDataNormalizer.normalizeLayer() instead
+	 * @param {Object} layer - The layer to normalize
+	 */
 	normalizeBooleanProperties( layer ) {
-		const booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked' ];
+		const booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked', 'preserveAspectRatio' ];
 		
 		booleanProps.forEach( prop => {
 			const val = layer[ prop ];
@@ -734,6 +507,13 @@
 
 	buildSavePayload() {
 		const layers = this.editor.stateManager.get( 'layers' ) || [];
+		
+		// Debug: log textbox layer textShadow values
+		layers.forEach( ( l ) => {
+			if ( l.type === 'textbox' ) {
+				console.log( '[APIManager] SAVE textbox layer.textShadow=', l.textShadow, 'type=', typeof l.textShadow );
+			}
+		} );
 		
 		// Include background settings in the saved data
 		const backgroundVisible = this.editor.stateManager.get( 'backgroundVisible' );
@@ -1365,9 +1145,12 @@
 		if ( this.api && typeof this.api.abort === 'function' ) {
 			this.api.abort();
 		}
+		if ( this.errorHandler ) {
+			this.errorHandler.destroy();
+		}
 		this.api = null;
 		this.editor = null;
-		this.errorConfig = null;
+		this.errorHandler = null;
 	}
 }
 

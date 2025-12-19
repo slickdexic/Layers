@@ -133,11 +133,44 @@ class ShadowRenderer {
 	 * @return {boolean} True if shadow is enabled
 	 */
 	hasShadowEnabled ( layer ) {
-		return layer.shadow === true ||
+		// Explicit enable
+		if ( layer.shadow === true ||
 			layer.shadow === 'true' ||
 			layer.shadow === 1 ||
 			layer.shadow === '1' ||
-			( typeof layer.shadow === 'object' && layer.shadow );
+			( typeof layer.shadow === 'object' && layer.shadow ) ) {
+			return true;
+		}
+
+		// Explicit disable
+		if ( layer.shadow === false ||
+			layer.shadow === 'false' ||
+			layer.shadow === 0 ||
+			layer.shadow === '0' ) {
+			return false;
+		}
+
+		// Fallback: if any shadow property is set, treat as enabled
+		// This handles legacy data where shadow="" but other shadow props are present
+		if ( layer.shadowColor &&
+			typeof layer.shadowColor === 'string' &&
+			layer.shadowColor !== 'transparent' &&
+			layer.shadowColor !== 'rgba(0,0,0,0)' ) {
+			return true;
+		}
+
+		// Also check for shadowBlur or offset values
+		if ( typeof layer.shadowBlur === 'number' && layer.shadowBlur > 0 ) {
+			return true;
+		}
+		if ( typeof layer.shadowOffsetX === 'number' && layer.shadowOffsetX !== 0 ) {
+			return true;
+		}
+		if ( typeof layer.shadowOffsetY === 'number' && layer.shadowOffsetY !== 0 ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**

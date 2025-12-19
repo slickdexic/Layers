@@ -14,6 +14,9 @@ window.Layers.Utils = window.Layers.Utils || {};
 window.Layers.Canvas = window.Layers.Canvas || {};
 require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
 
+// Load SelectionRenderer so CanvasRenderer can delegate to it
+require( '../../resources/ext.layers.editor/canvas/SelectionRenderer.js' );
+
 const CanvasRenderer = require( '../../resources/ext.layers.editor/CanvasRenderer.js' );
 
 describe( 'CanvasRenderer Coverage Extension', () => {

@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.1.2. Requires MediaWiki 1.44+.
+> **Status:** Stable. Version 1.1.2. Production-ready with technical debt (see improvement_plan.md). Requires MediaWiki 1.44+.
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 
@@ -133,12 +133,13 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Architecture:**
 - **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 79 JS files (~41K lines total), 70 ES6 classes
-- **Code Splitting:** Viewer module (682 lines) + Shared module (~5K lines) loads separately from Editor (~34K lines)
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 102 JS files (~41K lines total), 70 ES6 classes
+- **Code Splitting:** Viewer module (682 lines) + Shared module (~5K lines) loads separately from Editor (~35K lines, 86% of codebase)
 
 **Test Coverage (December 2025):**
-- Jest: **5,250 tests**, ~92% statement coverage, ~80% branch coverage (103 test suites)
+- Jest: **5,236 tests**, ~92% statement coverage, ~80% branch coverage (102 test suites)
 - PHPUnit: 17 test files covering API, database, validation
+- **Note:** No E2E tests in CI (Playwright infrastructure exists but not automated)
 
 **Accessibility (WCAG 2.1):**
 - Skip links for keyboard navigation (WCAG 2.4.1)
@@ -150,6 +151,14 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 - MediaWiki 1.44.0 or later
 - PHP 8.1+
 - MySQL/MariaDB
+
+**Project Status:**
+- **Production:** Stable and deployed. Extension works reliably for end users.
+- **Technical Health:** Debt being addressed. See [`improvement_plan.md`](improvement_plan.md) for details.
+- \u2705 70 ES6 classes, 0 legacy code
+- \u2705 5,236 tests (~92% coverage)
+- \u26a0\ufe0f 9 god classes (~12.6K LOC) - CI blocks growth
+- \u274c No E2E tests in CI
 
 ---
 

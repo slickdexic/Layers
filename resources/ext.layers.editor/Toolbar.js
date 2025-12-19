@@ -507,6 +507,37 @@
 				<polyline points="9 21 3 21 3 15"/>
 				<line x1="21" y1="3" x2="14" y2="10"/>
 				<line x1="3" y1="21" x2="10" y2="14"/>
+			</svg>`,
+
+				// Import Layers - Folder with arrow up (upload/load file into editor)
+				importLayers: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+				<line x1="12" y1="17" x2="12" y2="11"/>
+				<polyline points="9 14 12 11 15 14"/>
+			</svg>`,
+
+				// Export Layers - Folder with arrow down (download/save file from editor)
+				exportLayers: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+				<line x1="12" y1="11" x2="12" y2="17"/>
+				<polyline points="9 14 12 17 15 14"/>
+			</svg>`,
+
+				// Export Image - Download/save icon (arrow down into tray)
+				exportImage: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+				<polyline points="7 10 12 15 17 10"/>
+				<line x1="12" y1="15" x2="12" y2="3"/>
+			</svg>`,
+
+				// Import Image - Image icon with plus badge (add image layer)
+				importImage: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="2" y="2" width="16" height="16" rx="2" ry="2"/>
+				<circle cx="7" cy="7" r="1.5"/>
+				<path d="M18 14l-4-4-8 8"/>
+				<circle cx="18" cy="18" r="5" fill="currentColor" stroke="none"/>
+				<line x1="18" y1="15.5" x2="18" y2="20.5" stroke="white" stroke-width="2"/>
+				<line x1="15.5" y1="18" x2="20.5" y2="18" stroke="white" stroke-width="2"/>
 			</svg>`
 			};
 		}
@@ -526,7 +557,7 @@
 				{ id: 'rectangle', icon: icons.rectangle, title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R', isSvg: true },
 				{ id: 'circle', icon: icons.circle, title: t( 'layers-tool-circle', 'Circle Tool' ), key: 'C', isSvg: true },
 				{ id: 'ellipse', icon: icons.ellipse, title: t( 'layers-tool-ellipse', 'Ellipse Tool' ), key: 'E', isSvg: true },
-				{ id: 'polygon', icon: icons.polygon, title: t( 'layers-tool-polygon', 'Polygon Tool' ), key: 'G', isSvg: true },
+				{ id: 'polygon', icon: icons.polygon, title: t( 'layers-tool-polygon', 'Polygon Tool' ), key: 'Y', isSvg: true },
 				{ id: 'star', icon: icons.star, title: t( 'layers-tool-star', 'Star Tool' ), key: 'S', isSvg: true },
 				{ id: 'arrow', icon: icons.arrow, title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A', isSvg: true },
 				{ id: 'line', icon: icons.line, title: t( 'layers-tool-line', 'Line Tool' ), key: 'L', isSvg: true },
@@ -707,11 +738,12 @@
 			separator.className = 'toolbar-separator';
 			actionGroup.appendChild( separator );
 
-			// Import button + hidden file input
+			// Import button + hidden file input (icon-only with tooltip)
 			const importButton = document.createElement( 'button' );
 			importButton.className = 'toolbar-button import-button';
-			importButton.textContent = t( 'layers-import-layers', 'Import Layers' );
+			importButton.innerHTML = icons.importLayers;
 			importButton.title = t( 'layers-import-layers', 'Import Layers' );
+			importButton.setAttribute( 'aria-label', t( 'layers-import-layers', 'Import Layers' ) );
 			actionGroup.appendChild( importButton );
 
 			const importInput = document.createElement( 'input' );
@@ -720,25 +752,26 @@
 			importInput.style.display = 'none';
 			actionGroup.appendChild( importInput );
 
-		// Export button
+		// Export button (icon-only with tooltip)
 		const exportButton = document.createElement( 'button' );
 		exportButton.className = 'toolbar-button export-button';
-		exportButton.textContent = t( 'layers-export-layers', 'Export Layers' );
+		exportButton.innerHTML = icons.exportLayers;
 		exportButton.title = t( 'layers-export-layers', 'Export Layers' );
+		exportButton.setAttribute( 'aria-label', t( 'layers-export-layers', 'Export Layers' ) );
 		actionGroup.appendChild( exportButton );
 
-		// Export as Image button (saves annotated image as PNG)
+		// Export as Image button (icon-only with tooltip)
 		const exportImageButton = document.createElement( 'button' );
 		exportImageButton.className = 'toolbar-button export-image-button';
-		exportImageButton.textContent = t( 'layers-export-image', 'Export as Image' );
+		exportImageButton.innerHTML = icons.exportImage;
 		exportImageButton.title = t( 'layers-export-image-tooltip', 'Download the image with annotations' );
 		exportImageButton.setAttribute( 'aria-label', t( 'layers-export-image', 'Export as Image' ) );
 		actionGroup.appendChild( exportImageButton );
 
-		// Import Image Layer button + hidden file input
+		// Import Image Layer button + hidden file input (icon-only with tooltip)
 		const importImageButton = document.createElement( 'button' );
 		importImageButton.className = 'toolbar-button import-image-button';
-		importImageButton.textContent = t( 'layers-import-image', 'Import Image' );
+		importImageButton.innerHTML = icons.importImage;
 		importImageButton.title = t( 'layers-import-image-tooltip', 'Add an image as a layer' );
 		importImageButton.setAttribute( 'aria-label', t( 'layers-import-image', 'Import Image' ) );
 		actionGroup.appendChild( importImageButton );
@@ -800,11 +833,6 @@
 			button.textContent = action.icon;
 		}
 		button.title = action.title + ( action.key ? ' (' + action.key + ')' : '' );
-
-		// Mark common toggle actions as toggle buttons
-		if ( [ 'grid', 'rulers', 'guides', 'snap-grid', 'snap-guides' ].includes( action.id ) ) {
-			button.setAttribute( 'aria-pressed', 'false' );
-		}
 
 		return button;
 	}
@@ -991,33 +1019,6 @@
 			case 'show-shortcuts':
 				this.editor.showKeyboardShortcutsDialog();
 				break;
-			case 'grid':
-				this.toggleGrid();
-				break;
-			case 'rulers':
-				if ( this.editor.canvasManager ) {
-					this.editor.canvasManager.toggleRulers();
-				}
-				this.toggleButtonState( 'rulers' );
-				break;
-			case 'guides':
-				if ( this.editor.canvasManager ) {
-					this.editor.canvasManager.toggleGuidesVisibility();
-				}
-				this.toggleButtonState( 'guides' );
-				break;
-			case 'snap-grid':
-				if ( this.editor.canvasManager ) {
-					this.editor.canvasManager.toggleSnapToGrid();
-				}
-				this.toggleButtonState( 'snap-grid' );
-				break;
-			case 'snap-guides':
-				if ( this.editor.canvasManager ) {
-					this.editor.canvasManager.toggleSnapToGuides();
-				}
-				this.toggleButtonState( 'snap-guides' );
-				break;
 		}
 	}
 
@@ -1029,18 +1030,6 @@
 				const pressed = btn.getAttribute( 'aria-pressed' ) === 'true';
 				btn.setAttribute( 'aria-pressed', pressed ? 'false' : 'true' );
 			}
-		}
-	}
-
-	toggleGrid() {
-		if ( this.editor.canvasManager ) {
-			this.editor.canvasManager.toggleGrid();
-		}
-
-		// Update button state
-		const gridButton = this.container.querySelector( '[data-action="grid"]' );
-		if ( gridButton ) {
-			gridButton.classList.toggle( 'active' );
 		}
 	}
 

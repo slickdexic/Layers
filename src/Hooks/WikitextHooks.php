@@ -660,14 +660,23 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserBeforeInternalParse( $parser, &$text, $stripState ): bool {
+		// Handle null or non-string text (PHP 8.1+ strict)
+		if ( $text === null || !is_string( $text ) ) {
+			return true;
+		}
+
 		try {
-			self::log( 'ParserBeforeInternalParse: text length=' . strlen( $text ) );
+			$textLen = strlen( $text );
+			$preview = substr( $text, 0, 200 );
+			self::log( "ParserBeforeInternalParse: text length=$textLen, preview: $preview" );
 
 			// First, find ALL File: usages to establish the complete render order
 			// This captures [[File:name.ext...]] patterns (with or without layers=)
 			$allFilesPattern = '/\[\[File:([^|\]]+)(?:\|[^\]]*?)?\]\]/i';
 			$allFileMatches = [];
-			if ( preg_match_all( $allFilesPattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE ) ) {
+			$fileMatchCount = preg_match_all( $allFilesPattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+			self::log( "File pattern matched $fileMatchCount times" );
+			if ( $fileMatchCount ) {
 				foreach ( $matches as $match ) {
 					$filename = trim( $match[1][0] );
 					// Use full match offset ($match[0][1]) not filename offset ($match[1][1])
@@ -686,7 +695,10 @@ class WikitextHooks {
 			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layers?\s*=\s*([^|\]]+)/i';
 			// filename => [offset => value, ...]
 			$layersMap = [];
-			if ( preg_match_all( $fileLayersPattern, $text, $allMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE ) ) {
+			self::log( 'Running layers regex on text: ' . substr( $text, 0, 200 ) );
+			$matchCount = preg_match_all( $fileLayersPattern, $text, $allMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+			self::log( "Layers regex matched $matchCount times" );
+			if ( $matchCount ) {
 				foreach ( $allMatches as $match ) {
 					$filename = trim( $match[1][0] );
 					$offset = $match[0][1];

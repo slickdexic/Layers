@@ -329,7 +329,7 @@
 
 			// Draw text (clipped to the box)
 			if ( layer.text && layer.text.length > 0 ) {
-				this.drawTextContent( layer, x, y, width, height, padding, scale, baseOpacity );
+				this.drawTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity );
 			}
 
 			this.ctx.restore();
@@ -346,9 +346,10 @@
 		 * @param {number} height - Box height
 		 * @param {number} padding - Padding in scaled pixels
 		 * @param {Object} scale - Scale factors
+		 * @param {Object} shadowScale - Shadow scale factors for text shadow
 		 * @param {number} baseOpacity - Base opacity
 		 */
-		drawTextContent( layer, x, y, width, height, padding, scale, baseOpacity ) {
+		drawTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity ) {
 			this.ctx.save();
 
 			// Create clipping region (simplified path)
@@ -416,12 +417,13 @@
 			const textStrokeColor = layer.textStrokeColor || '#000000';
 			const hasTextStroke = textStrokeWidth > 0;
 
-			// Text shadow properties
-			const hasTextShadow = layer.textShadow === true;
+			// Text shadow properties - use shadowScale for proper scaling in viewer
+			// Handle multiple possible types from JSON (boolean, string, number, empty string)
+			const hasTextShadow = layer.textShadow === true || layer.textShadow === 'true' || layer.textShadow === 1 || layer.textShadow === '1';
 			const textShadowColor = layer.textShadowColor || 'rgba(0,0,0,0.5)';
-			const textShadowBlur = ( layer.textShadowBlur || 4 ) * scale.avg;
-			const textShadowOffsetX = ( layer.textShadowOffsetX || 2 ) * scale.avg;
-			const textShadowOffsetY = ( layer.textShadowOffsetY || 2 ) * scale.avg;
+			const textShadowBlur = ( layer.textShadowBlur || 4 ) * shadowScale.avg;
+			const textShadowOffsetX = ( layer.textShadowOffsetX || 2 ) * shadowScale.avg;
+			const textShadowOffsetY = ( layer.textShadowOffsetY || 2 ) * shadowScale.avg;
 
 			// Draw each line (clipped to box)
 			for ( let i = 0; i < lines.length; i++ ) {
