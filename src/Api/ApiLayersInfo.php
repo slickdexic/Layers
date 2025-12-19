@@ -11,6 +11,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiMain;
+use ApiResult;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\MediaWikiServices;
 use Title;
@@ -204,7 +205,9 @@ class ApiLayersInfo extends ApiBase {
 		// Preserve boolean values in layer data (MediaWiki API drops false values)
 		$result = $this->preserveLayerBooleans( $result );
 
-		$this->getResult()->addValue( null, $this->getModuleName(), $result );
+		// Use NO_SIZE_CHECK flag to allow large layer sets (e.g., with embedded base64 images)
+		// Without this, MediaWiki API may reject responses > 8KB
+		$this->getResult()->addValue( null, $this->getModuleName(), $result, ApiResult::NO_SIZE_CHECK );
 	}
 
 	/**

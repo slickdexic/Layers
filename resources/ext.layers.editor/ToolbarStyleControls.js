@@ -903,6 +903,44 @@ class ToolbarStyleControls {
 	}
 
 	/**
+	 * All style properties that can be applied from presets.
+	 * This list matches PresetManager.extractStyleFromLayer() and sanitizeStyle().
+	 *
+	 * @type {string[]}
+	 */
+	static get PRESET_STYLE_PROPERTIES() {
+		return [
+			// Stroke
+			'stroke', 'strokeWidth', 'strokeOpacity',
+			// Fill
+			'fill', 'fillOpacity',
+			// Text
+			'color', 'fontSize', 'fontFamily', 'fontWeight', 'fontStyle',
+			'textAlign', 'verticalAlign', 'lineHeight', 'padding',
+			// Text stroke
+			'textStrokeColor', 'textStrokeWidth',
+			// Shape
+			'cornerRadius',
+			// Arrow
+			'arrowStyle', 'arrowhead', 'arrowSize', 'arrowHeadType', 'headScale', 'tailWidth',
+			// Polygon/Star
+			'sides', 'points', 'innerRadius', 'outerRadius', 'pointRadius', 'valleyRadius',
+			// Shadow
+			'shadow', 'shadowColor', 'shadowBlur',
+			'shadowOffsetX', 'shadowOffsetY', 'shadowSpread',
+			// Text shadow
+			'textShadow', 'textShadowColor', 'textShadowBlur',
+			'textShadowOffsetX', 'textShadowOffsetY',
+			// Glow
+			'glow',
+			// Blend mode
+			'blendMode',
+			// Opacity
+			'opacity'
+		];
+	}
+
+	/**
 	 * Apply a preset style to selected layers
 	 *
 	 * @param {Object} style Style properties from the preset
@@ -915,34 +953,12 @@ class ToolbarStyleControls {
 		// If we have selected layers, apply to them via the editor
 		if ( this.selectedLayers && this.selectedLayers.length > 0 && this.toolbar && this.toolbar.editor ) {
 			this.toolbar.editor.applyToSelection( ( layer ) => {
-				// Apply each style property to the layer
-				if ( style.stroke !== undefined ) {
-					layer.stroke = style.stroke;
-				}
-				if ( style.strokeWidth !== undefined ) {
-					layer.strokeWidth = style.strokeWidth;
-				}
-				if ( style.fill !== undefined ) {
-					layer.fill = style.fill;
-				}
-				if ( style.fontSize !== undefined ) {
-					layer.fontSize = style.fontSize;
-				}
-				if ( style.fontFamily !== undefined ) {
-					layer.fontFamily = style.fontFamily;
-				}
-				if ( style.arrowStyle !== undefined ) {
-					layer.arrowStyle = style.arrowStyle;
-				}
-				if ( style.arrowhead !== undefined ) {
-					layer.arrowhead = style.arrowhead;
-				}
-				if ( style.color !== undefined ) {
-					layer.color = style.color;
-				}
-				if ( style.opacity !== undefined ) {
-					layer.opacity = style.opacity;
-				}
+				// Apply all style properties from the preset
+				ToolbarStyleControls.PRESET_STYLE_PROPERTIES.forEach( ( prop ) => {
+					if ( style[ prop ] !== undefined ) {
+						layer[ prop ] = style[ prop ];
+					}
+				} );
 			} );
 		}
 
@@ -958,17 +974,16 @@ class ToolbarStyleControls {
 	getStyleFromSelection() {
 		if ( this.selectedLayers && this.selectedLayers.length > 0 ) {
 			const layer = this.selectedLayers[ 0 ];
-			return {
-				stroke: layer.stroke || '#000000',
-				strokeWidth: layer.strokeWidth || 2,
-				fill: layer.fill || 'transparent',
-				color: layer.color,
-				fontSize: layer.fontSize,
-				fontFamily: layer.fontFamily,
-				arrowStyle: layer.arrowStyle,
-				arrowhead: layer.arrowhead,
-				opacity: layer.opacity
-			};
+			const style = {};
+
+			// Extract all style properties from the layer
+			ToolbarStyleControls.PRESET_STYLE_PROPERTIES.forEach( ( prop ) => {
+				if ( layer[ prop ] !== undefined ) {
+					style[ prop ] = layer[ prop ];
+				}
+			} );
+
+			return style;
 		}
 
 		// Fallback to current toolbar controls
