@@ -41,11 +41,15 @@ jobs:
           if-no-files-found: ignore
 
   # Full E2E tests with MediaWiki container
-  # This job is complex and may fail due to MediaWiki setup issues
-  # It's marked as allowed to fail until we have a stable CI environment
+  # These tests require a working MediaWiki instance with database
+  # Currently optional due to CI environment complexity
+  # Target: Make these required once setup is stable
   editor:
     runs-on: ubuntu-latest
-    continue-on-error: true  # Allow this job to fail without failing the workflow
+    continue-on-error: true  # TODO: Remove once MediaWiki setup is stable
+    # Track status separately from workflow pass/fail
+    outputs:
+      result: ${{ job.status }}
     services:
       mariadb:
         image: mariadb:10.11

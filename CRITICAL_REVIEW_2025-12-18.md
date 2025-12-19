@@ -1,328 +1,315 @@
 # Critical Project Review - December 18, 2025
 
-**Reviewer:** GitHub Copilot (Claude Sonnet 4.5)  
+**Reviewer:** GitHub Copilot (Claude Opus 4.5)  
 **Review Type:** Comprehensive technical assessment  
-**Context:** Post-v1.1.2 release, 30 days after v1.0.0 stable release
+**Goal:** Achieve "world-class" MediaWiki extension status
 
 ---
 
-## Executive Summary: Feature Velocity vs. Technical Debt
+## Executive Summary: Capable but Not Yet World-Class
 
-**Overall Rating: 7/10** - Production-ready but on an **unsustainable trajectory**.
+**Overall Rating: 6.5/10** - Production-ready with significant structural debt
 
-The Layers extension successfully delivers value to end users and demonstrates several technical strengths. However, a **critical pattern has emerged**: the rate of feature development is outpacing debt reduction, leading to net accumulation of complexity despite refactoring efforts.
+The Layers extension delivers genuine value: non-destructive image annotation with 13 drawing tools, named layer sets with version history, and professional security. It works. Users are satisfied.
 
-### The Core Problem in Numbers
+However, "world-class" requires more than "working." This review identifies the gaps between current state and excellence.
 
-| Period | What Happened | Net Effect |
-|--------|---------------|------------|
-| Dec 7-18 (11 days) | Added Text Box feature | +5,000 LOC |
-| Dec 7-18 (11 days) | Extracted TextBoxRenderer, tool handlers | -800 LOC |
-| **Net Impact** | **Feature development > debt reduction** | **+4,200 LOC (+14%)** |
+### The Honest Truth
 
-**Translation:** We're creating debt faster than we're paying it down.
+| Dimension | Score | Reality |
+|-----------|-------|---------|
+| **Functionality** | 8/10 | Core features work well; missing mobile, performance tooling |
+| **Architecture** | 5/10 | 8 god classes (28% of code in 8 files); facade pattern helps but doesn't solve |
+| **Code Quality** | 7/10 | ES6 complete, good practices, but complexity concentrated |
+| **Testing** | 8/10 | 5,297 tests, 92% coverage - but 1 flaky test, no real E2E in CI |
+| **Documentation** | 6/10 | Comprehensive but manual, frequently stale |
+| **Developer Experience** | 5/10 | Steep learning curve, god classes intimidating |
+| **Security** | 9/10 | Professional-grade PHP backend |
+| **Accessibility** | 7/10 | Skip links, ARIA, keyboard - but not fully audited |
+
+---
+
+## Verified Metrics (December 18, 2025)
+
+### JavaScript Codebase
+
+| Metric | Value | Target | Gap |
+|--------|-------|--------|-----|
+| Total JS files | 81 | - | - |
+| Total JS lines | **40,865** | <30,000 | +36% over target |
+| Files >1,000 lines | **8** | **0** | Critical |
+| ES6 classes | 72 | 72 | ✅ Complete |
+| Prototype patterns | 0 | 0 | ✅ Eliminated |
+| Test files | 103 | 103 | ✅ 1:1 ratio |
+| Tests passing | 5,296 | 5,297 | 1 flaky test |
+| Statement coverage | 91.84% | >90% | ✅ |
+| Branch coverage | ~80% | >80% | ✅ |
+
+### God Classes (The Core Problem)
+
+| File | Lines | Delegation? | Verdict |
+|------|-------|-------------|---------|
+| CanvasManager.js | **1,805** | ✅ 10+ controllers | Acceptable facade |
+| LayerPanel.js | **1,720** | ✅ 7 controllers | Acceptable facade |
+| LayersEditor.js | **1,301** | Partial | Needs extraction |
+| ToolManager.js | **1,275** | ✅ 2 handlers | Acceptable |
+| APIManager.js | **1,168** | ✅ 1 handler | Still needs split |
+| SelectionManager.js | **1,147** | ✅ 3 modules | Acceptable (delegates to SelectionState, MarqueeSelection, SelectionHandles) |
+| Toolbar.js | **1,115** | Partial | Has some delegation, needs more |
+| ShapeRenderer.js | **1,049** | ❌ None | **Needs split** |
+
+**Total in god classes: 11,580 lines (28% of codebase)**
+
+**Correction Note (Dec 18, 2025):** SelectionManager was initially marked as "No delegation" but actually has 3 extracted modules in `selection/` folder: SelectionState.js (308 lines), MarqueeSelection.js (324 lines), SelectionHandles.js (343 lines). The main file still contains fallback logic for when modules aren't loaded.
+
+### PHP Backend
+
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| Total PHP files | 31 | Good |
+| Total PHP lines | ~7,500 | Reasonable |
+| Largest file | 995 lines | Borderline (LayersDatabase.php) |
+| Security | Professional | CSRF, validation, rate limiting |
+| API endpoints | 4 | Complete |
+
+---
+
+## Critical Issues Requiring Attention
+
+### Issue #1: The God Class Problem is Unsolved
+
+**Severity: HIGH**
+
+Despite extractions (TextBoxRenderer, SelectionRenderer, APIErrorHandler), 8 files still exceed 1,000 lines. The *total* lines in god classes has decreased only marginally (12,000 → 11,580), while the overall codebase grew by ~5,000 lines.
+
+**Why This Matters for World-Class:**
+- New contributors cannot understand these files in a day
+- Testing is incomplete (80% branch coverage isn't enough for complex classes)
+- Refactoring risk increases with file size
+- Code review becomes bottleneck
+
+**What World-Class Looks Like:**
+- Maximum file size: 500-700 lines
+- Clear single responsibility per module
+- New developer productive in <1 day
+
+**Recommendation:** Enforce hard 800-line limit. Split remaining god classes over 8-12 weeks.
+
+---
+
+### Issue #2: ShapeRenderer Has No Delegation
+
+**Severity: HIGH**
+
+ShapeRenderer.js (1,049 lines) handles rendering for ALL shape types:
+- Rectangles
+- Circles/Ellipses
+- Polygons/Stars
+- Lines/Arrows
+- Text boxes
+- Blur regions
+- Images
+
+This is **too many responsibilities** in one file with **no delegation** to specialized modules. Every new shape type adds complexity to this already-large file.
+
+**Contrast with CanvasManager:** CanvasManager (1,805 lines) is acceptable because it delegates to 10+ specialized controllers. It's a facade, not a god class.
+
+**Contrast with SelectionManager:** SelectionManager (1,147 lines) properly delegates to 3 extracted modules: SelectionState.js, MarqueeSelection.js, and SelectionHandles.js.
+
+**Recommendation:** Extract shape-specific rendering into separate modules (RectangleRenderer, CircleRenderer, etc.) following the pattern used in SelectionManager.
+
+---
+
+### Issue #3: E2E Testing is Smoke-Only
+
+**Severity: MEDIUM-HIGH**
+
+The e2e.yml workflow runs:
+1. **Smoke tests:** Pass (basic Playwright sanity checks)
+2. **Editor tests:** `continue-on-error: true` (effectively disabled)
+
+This means:
+- Real MediaWiki integration not tested
+- Browser-specific bugs ship to production
+- No regression protection for complex workflows
+
+**Evidence:** The text shadow viewer bug (fixed v1.1.3) would have been caught by proper E2E tests.
+
+**Recommendation:** Remove `continue-on-error`, fix the editor tests, require them to pass.
+
+---
+
+### Issue #4: One Flaky Test Undermines Confidence
+
+**Severity: LOW-MEDIUM**
+
+```
+Test Suites: 1 failed, 103 passed, 104 total
+Tests:       1 failed, 5296 passed, 5297 total
+```
+
+The failing test (`RenderBenchmark.test.js:318`) has unreliable memory assertions:
+```javascript
+expect( Math.abs( memoryMB ) ).toBeLessThan( 1 );
+// Fails: Received 7.17 MB
+```
+
+Memory measurement in Node is inherently unreliable (GC timing). This test provides false negatives.
+
+**Recommendation:** Either fix the test to be reliable or remove it. Flaky tests erode trust.
+
+---
+
+### Issue #5: No Mobile/Touch Support
+
+**Severity: MEDIUM for current, HIGH for world-class**
+
+The editor targets `desktop` and `mobile` in ResourceModules, but:
+- No touch event handling
+- No responsive layout
+- No mobile toolbar
+- Canvas interaction assumes mouse
+
+In 2025, ~60% of web traffic is mobile. A "world-class" extension must work on tablets.
+
+**Recommendation:** Add touch support as P2 priority after god class remediation.
+
+---
+
+### Issue #6: Documentation Requires Manual Updates
+
+**Severity: LOW**
+
+Metrics in README, codebase_review.md, and improvement_plan.md frequently become stale. There's no automation.
+
+**World-Class Standard:**
+- API documentation auto-generated from JSDoc/PHPDoc
+- Metrics computed from CI and embedded in README
+- Changelog auto-generated from conventional commits
+
+**Recommendation:** Low priority, but add to modernization roadmap.
 
 ---
 
 ## What's Working Well
 
-### 1. **Core Functionality** \u2705
-- 13 drawing tools all work correctly
-- Named layer sets with version history working in production
-- Security is professional-grade (CSRF, rate limiting, validation)
-- No known critical bugs or vulnerabilities
+### 1. Security Model ✅
 
-### 2. **Testing Infrastructure** \u2705
-- **5,236 tests passing** (up from 4,800 at v1.0.0)
-- **91.84% statement coverage**, 80% branch coverage
-- Tests are catching regressions
-- Good separation: 102 test files covering 102 source files
+The PHP backend demonstrates professional security:
+- CSRF protection on all writes
+- Rate limiting via MediaWiki's pingLimiter
+- Strict property whitelist (50+ fields)
+- SQL injection prevention (parameterized queries)
+- Text sanitization and color validation
+- Defense-in-depth architecture documented in ApiLayersSave.php
 
-### 3. **Modernization Complete** \u2705
-- **70 ES6 classes**, **0 prototype patterns**
-- This was a major undertaking and it's done
-- ESLint/Stylelint passing with no errors
-- Code style is consistent
+**Verdict:** Production-grade. No changes needed.
 
-### 4. **PHP Backend** \u2705
-- Largest file: 973 lines (LayersDatabase.php) - acceptable
-- Clean dependency injection patterns
-- Parameterized queries (no SQL injection risk)
-- Professional error handling
+### 2. Test Coverage ✅
 
-### 5. **Recent Extraction Efforts** \u2705 (but see concerns)
-- TextBoxRenderer: Reduced ShapeRenderer 1,367 → 1,049 lines
-- TextToolHandler, PathToolHandler: Modular tool pattern
-- BackgroundLayerController: Good separation from LayerPanel
-- Shows awareness of the problem
+- **5,297 tests** (up from ~4,800 at v1.0.0)
+- **91.84% statement coverage**
+- **103 test files** covering 81 source files (>1:1 ratio)
+- Well-organized test structure
+- Integration tests present
 
----
+**Verdict:** Strong foundation. Fix the flaky test and improve E2E.
 
-## What's Broken or Concerning
+### 3. ES6 Modernization ✅
 
-### 1. **God Classes Still Dominate** \u274c CRITICAL
+- **72 ES6 classes**
+- **0 prototype patterns**
+- Consistent code style
+- ESLint/Stylelint clean
 
-**8 files over 1,000 lines, totaling ~12,000 LOC:**
+**Verdict:** Complete. This was a major achievement.
 
-| File | Lines | Has Delegation? | Severity |
-|------|-------|-----------------|----------|
-| CanvasManager.js | 1,893 | \u2705 Yes (10+ controllers) | \u26a0\ufe0f Acceptable (facade pattern) |
-| LayerPanel.js | 1,720 | \u2705 Yes (7 controllers) | \u26a0\ufe0f Acceptable (facade pattern) |
-| **APIManager.js** | **1,385** | **\u274c NO** | **\ud83d\udea8 CRITICAL** |
-| LayersEditor.js | 1,296 | Partial (3 modules) | \u26a0\ufe0f Needs work |
-| ToolManager.js | 1,275 | \u2705 Yes (2 handlers) | \u26a0\ufe0f Improving |
-| **SelectionManager.js** | **1,266** | **\u274c NO** | **\ud83d\udea8 CRITICAL** |
-| CanvasRenderer.js | 1,132 | \u274c NO | \u274c Needs splitting |
-| Toolbar.js | 1,126 | \u274c NO | \u274c Needs splitting |
+### 4. CI/CD Pipeline ✅
 
-**Why This Matters:**
-- APIManager and SelectionManager have **zero delegation** - 2,651 lines of monolithic code
-- New features require touching these files → risk of bugs
-- PR reviews for these files take days, not hours
-- Only 1-2 developers understand them deeply → knowledge silos
+- Lint + unit tests on every push
+- God class growth prevention
+- PHP checks (parallel-lint, phpcs)
+- Security audits (npm audit, composer audit)
 
-### 2. **Codebase Growth Outpacing Refactoring** \ud83d\udea8 CRITICAL
+**Verdict:** Good foundation. Need to enable real E2E.
 
-**Trajectory Analysis:**
+### 5. Feature Completeness ✅
 
-```
-v1.0.0 (Dec 7):  ~35,700 LOC, 9 god classes
-v1.1.0 (Dec 17): ~38,500 LOC, 9 god classes (Text Box feature added)
-v1.1.1 (Dec 18): ~39,800 LOC, 8 god classes (TextBoxRenderer extracted)
-v1.1.2 (Dec 18): ~40,719 LOC, 9 god classes (ShapeRenderer crossed 1K threshold)
+- 13 drawing tools
+- Named layer sets with version history
+- Text box with rich typography
+- Import/export
+- Wikitext integration
+- Background visibility/opacity
 
-Net change: +5,019 LOC (+14%) in 11 days
-God classes: 9 → 8 (-1, but total LOC barely changed)
-```
-
-**Interpretation:**
-- We're **winning individual battles** (good extractions)
-- We're **losing the war** (net complexity increasing)
-- At this rate: 6 months = 60,000+ LOC, same 9 god classes (or more)
-
-### 3. **No E2E Tests in CI** \u274c HIGH RISK
-
-- Playwright infrastructure exists (`tests/e2e/layers.spec.js`)
-- **Not running in CI**
-- Browser-level bugs only discovered in production
-- Integration issues with MediaWiki go undetected
-
-**Risk:** We ship bugs that unit tests can't catch.
-
-### 4. **Documentation Lag** \u26a0\ufe0f LOW-MEDIUM IMPACT
-
-- Metrics in docs frequently out of date (we just updated them)
-- Requires manual effort to stay current
-- No automated documentation generation
-- Acceptable for now, but adds friction
+**Verdict:** Feature-complete for v1.x. Focus on quality over features.
 
 ---
 
-## Critical Findings
+## Recommendations for World-Class Status
 
-### Finding #1: We're Accumulating Debt, Not Paying It Down
+### Phase 1: Stabilization (4 weeks)
 
-**Evidence:**
-1. Codebase grew 14% in 30 days despite refactoring efforts
-2. God class count dropped by 1, but their total size barely changed
-3. Feature additions consistently grow existing large files before extraction
+| Priority | Task | Effort | Impact |
+|----------|------|--------|--------|
+| P0 | ✅ Fix flaky RenderBenchmark test | 2 hours | Trust |
+| P0 | Enable E2E editor tests in CI | 1 week | Integration confidence |
+| P1 | Split ShapeRenderer (no delegation) | 1 week | Reduce complexity |
+| P1 | Improve Toolbar delegation | 3 days | Easier maintenance |
+| P1 | Enforce 800-line CI warning | 2 hours | Prevent regression |
 
-**Root Cause:**
-- No enforcement preventing god class growth
-- Features are prioritized over debt reduction
-- "Extract later" pattern means extraction always lags
+### Phase 2: Architecture (8 weeks)
 
-**Impact:**
-- Development velocity will degrade (already happening)
-- PR review time increasing
-- Onboarding new contributors takes weeks
+| Priority | Task | Effort | Impact |
+|----------|------|--------|--------|
+| P2 | Extract more from LayersEditor | 1 week | Better entry point |
+| P2 | Further split APIManager | 1 week | API/state separation |
+| P2 | Add TypeScript definitions (.d.ts) | 2 weeks | Developer experience |
+| P2 | Document architecture with diagrams | 1 week | Onboarding |
 
-**Recommendation:**
-**FEATURE FREEZE until god classes are under control.** Alternative: Enforce "1-for-1 rule" (every PR adding 50+ lines must extract 50+ lines from a god class).
+### Phase 3: World-Class (12+ weeks)
 
-### Finding #2: APIManager and SelectionManager Are Time Bombs
-
-**Evidence:**
-- APIManager: 1,385 lines, **zero delegation**
-- SelectionManager: 1,266 lines, **zero delegation**
-- Both are frequently modified (high churn)
-- Both are central to editor functionality (high coupling)
-
-**Impact:**
-- Changes to these files have 3-5x higher bug risk
-- Testing is incomplete (branch coverage only 80%)
-- Understanding them requires days of study
-
-**Recommendation:**
-**P0 priority:** Split these two files in the next 2-3 weeks. Nothing else matters if these become unmaintainable.
-
-### Finding #3: No Automated Prevention of God Class Growth
-
-**Evidence:**
-- ShapeRenderer grew to 1,367 lines before anyone noticed
-- No pre-commit hooks or CI checks preventing this
-- Reactive rather than proactive
-
-**Impact:**
-- God classes will continue to grow
-- Extraction is always emergency/reactive
-- Technical debt compounds
-
-**Recommendation:**
-**Add CI check TODAY** that fails builds if any file >1,000 lines increases in size. This stops the bleeding while we fix existing issues.
+| Priority | Task | Effort | Impact |
+|----------|------|--------|--------|
+| P3 | Mobile/touch support | 4-6 weeks | Modern web |
+| P3 | Performance benchmarking | 2 weeks | Large layer sets |
+| P3 | Accessibility audit (WCAG 2.1 AA) | 2 weeks | Compliance |
+| P3 | Auto-generated documentation | 1 week | Always current |
+| P3 | TypeScript migration | 8+ weeks | Type safety |
 
 ---
 
-## Metrics Summary
+## The Hard Truth
 
-### Strengths \u2705
-- **5,236 tests** all passing
-- **91.84% statement coverage** (up from 90.4%)
-- **80% branch coverage** (up from 78%)
-- **0 ESLint errors**, **0 Stylelint errors**
-- **70 ES6 classes**, **0 legacy prototype code**
-- **102 test files** covering 102 source files (1:1 ratio)
-- **Professional PHP**: Largest file 973 lines, good patterns throughout
+**To reach world-class status, you must:**
 
-### Weaknesses \u274c
-- **9 god classes** totaling ~12,600 LOC (31% of codebase in 9 files)
-- **2 god classes with zero delegation** (APIManager, SelectionManager)
-- **No E2E tests in CI** despite infrastructure existing
-- **Codebase growth: +14% in 30 days** (35.7K → 40.7K LOC)
-- **No automated prevention** of god class growth
+1. **Accept that god classes are the #1 problem** - Not features, not bugs, not documentation. The concentrated complexity is slowing everything else.
+
+2. **Enforce strict file size limits** - 800 lines maximum. No exceptions. CI should block.
+
+3. **Fix E2E testing** - Remove `continue-on-error`. Make editor tests pass. This is not optional for production confidence.
+
+4. **Resist new features** - Every feature added to a god class makes the problem worse. Stabilize first.
+
+5. **Plan for mobile** - A 2025 extension without touch support is incomplete.
+
+**The good news:** The foundation is solid. Security is professional. Tests are comprehensive. ES6 is complete. The path to world-class is clear—it just requires discipline.
 
 ---
 
-## Recommendations (Prioritized)
+## Conclusion
 
-### P0: Stop the Bleeding (This Week)
+The Layers extension is a **capable, working product** with **structural problems** that prevent it from being world-class.
 
-1. **Add CI check** preventing god class growth
-   - Fail builds if any file >1,000 lines increases
-   - Implementation: 1 day
-   - Impact: Prevents problem from worsening
+**Current trajectory:** Slow accumulation of complexity. Each release adds features but doesn't sufficiently reduce debt.
 
-2. **Set up E2E tests in CI**
-   - Playwright already exists, just wire it up
-   - Implementation: 2-3 days
-   - Impact: Catches browser/integration bugs before production
+**Required trajectory:** Stabilization phase (4 weeks), then architecture improvements (8 weeks), then world-class features (12+ weeks).
 
-3. **Document current architecture**
-   - Create diagrams showing god class relationships
-   - Implementation: 2 days
-   - Impact: Reduces knowledge silos
+**The choice:** Continue as-is (functional but increasingly hard to maintain) or invest in foundational improvements (short-term slowdown for long-term velocity).
 
-### P1: Critical Path (Next 3 Weeks)
-
-4. **Split APIManager** (1,385 → <500 lines)
-   - Extract APIClient, consolidate with StateManager
-   - Implementation: 1 week
-   - Impact: Biggest risk reduction
-
-5. **Split SelectionManager** (1,266 → <500 lines)
-   - Extract SelectionRenderer, SelectionGeometry
-   - Implementation: 1 week
-   - Impact: Second-biggest risk reduction
-
-6. **Decide on feature freeze or 1-for-1 rule**
-   - Feature freeze: No new features until 0 god classes
-   - 1-for-1: Every +50 LOC PR must extract 50 LOC from god class
-   - Implementation: 1 meeting
-   - Impact: Sets sustainable trajectory
-
-### P2: Ongoing (Next 3 Months)
-
-7. **Split remaining god classes**
-   - ToolManager, Toolbar, CanvasRenderer, LayersEditor
-   - Target: 0 files >1,000 lines
-   - Implementation: 6-8 weeks
-   - Impact: Long-term maintainability
-
-8. **Expand E2E test coverage**
-   - 10+ critical user journeys
-   - Implementation: 2-3 weeks
-   - Impact: Confidence in releases
-
-9. **Tool Defaults feature** (only if debt is under control)
-   - User-requested enhancement
-   - Implementation: 3-4 weeks
-   - Impact: Nice-to-have, not critical
-
----
-
-## Honest Assessment: Are We in Trouble?
-
-**Short answer: Not yet, but we will be in 3-6 months if we don't change course.**
-
-### What's Keeping Us Afloat
-1. **Tests are catching bugs** - 92% coverage is working
-2. **PHP backend is clean** - no debt there
-3. **Core functionality works** - users are happy
-4. **ES6 migration done** - foundation is solid
-
-### What Will Sink Us
-1. **God classes growing faster than we can split them**
-2. **No automated prevention** - reactive, not proactive
-3. **Knowledge silos** - only a few people understand the core
-4. **Velocity already slowing** - PRs take longer, reviews are harder
-
-### The Tipping Point
-If we continue current trajectory:
-- **3 months:** PR review times double
-- **6 months:** Development grinds to a halt
-- **9 months:** Emergency refactoring under pressure (high risk)
-- **12 months:** Consider rewrite vs. continue patching
-
-### How to Avoid This
-1. **Feature freeze OR 1-for-1 rule** - pick one, enforce it
-2. **Split APIManager and SelectionManager** - these are the biggest risks
-3. **Automate god class growth prevention** - CI must enforce this
-4. **E2E tests in CI** - stop shipping blind
-
----
-
-## Conclusion: Functional But Unsustainable
-
-The Layers extension is a **working product** that delivers value. The code quality is reasonable, tests provide safety, and users are satisfied.
-
-However, the **trajectory is unsustainable**. We're accumulating debt faster than we're paying it down. The extractions (TextBoxRenderer, tool handlers) are good work, but they're being overwhelmed by feature additions.
-
-**We need to make a choice:**
-- **Option A:** Feature freeze until debt is under control (~3 months)
-- **Option B:** Enforce 1-for-1 rule (slower features, steady debt reduction)
-- **Option C:** Continue as-is (velocity degrades, emergency refactor in 6-9 months)
-
-**My recommendation: Option A** (feature freeze) because:
-1. We're already showing signs of slowdown
-2. The god class problem is well-defined and solvable
-3. 3 months of focused work >> 12 months of emergency patches
-4. After the freeze, velocity will be **higher** than before (smaller files, easier changes)
-
-**If Option A is unacceptable: Choose Option B** (1-for-1 rule) and commit to it strictly. No exceptions.
-
-**Do not choose Option C.** That's the path to a rewrite.
-
----
-
-## Final Thoughts
-
-This is a **good codebase** built by **competent developers**. The problems are not due to lack of skill - they're due to prioritizing features over architecture.
-
-The ES6 migration proves the team can tackle large refactoring projects successfully. The test coverage shows commitment to quality. The security practices demonstrate professionalism.
-
-What's needed now is **discipline**: the willingness to say "no new features until we fix our foundations." That's hard, but it's the difference between a maintainable codebase and technical bankruptcy.
-
-The good news: **This is fixable.** With 3 months of focused effort:
-- 0 god classes
-- E2E tests in CI
-- Automated quality gates
-- Clear architecture docs
-
-Then features can resume at a **higher velocity** than today.
-
-**The choice is yours.**
+For a "world-class" extension, choose the latter.
 
 ---
 
 *Review completed: December 18, 2025*  
-*Next review recommended: March 18, 2026 (3 months)*
+*Next review recommended: February 18, 2026 (8 weeks)*

@@ -24,14 +24,13 @@ Thanks for helping improve Layers! This guide covers local setup, how to run che
 ### Current God Classes (Do Not Grow These)
 | File | Lines | Status |
 |------|-------|--------|
-| CanvasManager.js | 1,893 | Facade - delegates to 10+ controllers |
+| CanvasManager.js | 1,805 | Facade - delegates to 10+ controllers |
 | LayerPanel.js | 1,720 | Delegates to 7 controllers |
-| APIManager.js | 1,147 | ✅ Delegates to APIErrorHandler |
-| LayersEditor.js | 1,296 | Partial delegation |
+| LayersEditor.js | 1,301 | Partial delegation |
 | ToolManager.js | 1,275 | Delegates to 2 handlers |
-| SelectionManager.js | 1,266 | ⚠️ Needs split - NO delegation |
-| CanvasRenderer.js | 1,132 | Needs split |
-| Toolbar.js | 1,126 | Needs split |
+| APIManager.js | 1,168 | Delegates to APIErrorHandler |
+| SelectionManager.js | 1,147 | ⚠️ **Needs split - NO delegation** |
+| Toolbar.js | 1,115 | Needs split |
 | ShapeRenderer.js | 1,049 | Needs split |
 
 See [`improvement_plan.md`](improvement_plan.md) for refactoring guidance.
