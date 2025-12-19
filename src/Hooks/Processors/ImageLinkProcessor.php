@@ -421,7 +421,10 @@ class ImageLinkProcessor {
 			return null;
 		}
 
-		$data = $layerSet->ls_data ?? $layerSet['ls_data'] ?? null;
+		// Try multiple key formats for compatibility:
+		// - 'data' from getLatestLayerSet(), getLayerSetByName(), etc.
+		// - 'ls_data' from raw database row (legacy)
+		$data = $layerSet['data'] ?? $layerSet->data ?? $layerSet['ls_data'] ?? $layerSet->ls_data ?? null;
 		if ( !$data ) {
 			return null;
 		}

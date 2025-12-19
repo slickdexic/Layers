@@ -896,6 +896,40 @@
 				typeof this.canvasManager.editor.layerPanel.updateSelection === 'function' ) {
 				this.canvasManager.editor.layerPanel.updateSelection( this.selectedLayerIds );
 			}
+
+			// Update toolbar preset dropdown with selected layers
+			this.notifyToolbarOfSelection();
+		}
+
+		/**
+		 * Notify toolbar of selection change for preset dropdown
+		 */
+		notifyToolbarOfSelection() {
+			const editor = this.canvasManager && this.canvasManager.editor;
+			if ( !editor || !editor.toolbar || !editor.toolbar.styleControls ) {
+				return;
+			}
+
+			// Get selected IDs - try multiple sources
+			let selectedIds = this.selectedLayerIds || [];
+			if ( selectedIds.length === 0 && this._selectionState ) {
+				selectedIds = this._selectionState.getSelectedIds() || [];
+			}
+			// Also check CanvasManager directly
+			if ( selectedIds.length === 0 && this.canvasManager && this.canvasManager.selectedLayerIds ) {
+				selectedIds = this.canvasManager.selectedLayerIds;
+			}
+
+			// Get the actual layer objects for selected IDs
+			const layers = this._getLayersArray();
+			const selectedLayers = selectedIds
+				.map( ( id ) => layers.find( ( l ) => l.id === id ) )
+				.filter( ( l ) => l != null );
+
+			// Notify style controls of selection change
+			if ( typeof editor.toolbar.styleControls.updateForSelection === 'function' ) {
+				editor.toolbar.styleControls.updateForSelection( selectedLayers );
+			}
 		}
 
 		/**

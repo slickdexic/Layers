@@ -1,0 +1,276 @@
+/**
+ * Style Presets UI Styles
+ * Dropdown and preset management interface
+ */
+
+/* Dropdown container */
+.layers-preset-dropdown {
+	position: relative;
+	display: inline-block;
+}
+
+/* Trigger button */
+.layers-preset-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	border: 1px solid #a2a9b1;
+	border-radius: 2px;
+	background: #f8f9fa;
+	color: #202122;
+	font-size: 0.8125em;
+	cursor: pointer;
+	transition: background-color 0.1s, border-color 0.1s;
+}
+
+.layers-preset-button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.layers-preset-button:focus {
+	border-color: #36c;
+	box-shadow: inset 0 0 0 1px #36c;
+	outline: 1px solid transparent;
+}
+
+.layers-preset-button:hover:not( :disabled ) {
+	background: #fff;
+	border-color: #72777d;
+}
+
+.layers-preset-button-icon {
+	display: flex;
+	align-items: center;
+}
+
+.layers-preset-button-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+.layers-preset-button-label {
+	flex: 1;
+}
+
+.layers-preset-button-arrow {
+	font-size: 0.625em;
+	opacity: 0.7;
+}
+
+/* Dropdown menu */
+.layers-preset-menu {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 1000;
+	min-width: 200px;
+	max-width: 300px;
+	max-height: 400px;
+	overflow-y: auto;
+	margin-top: 2px;
+	padding: 4px 0;
+	border: 1px solid #a2a9b1;
+	border-radius: 2px;
+	background: #fff;
+	box-shadow: 0 2px 6px rgba( 0, 0, 0, 0.15 );
+}
+
+/* Preset section */
+.layers-preset-section {
+	padding: 4px 0;
+}
+
+/* Individual preset item */
+.layers-preset-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	cursor: pointer;
+	transition: background-color 0.1s;
+}
+
+.layers-preset-item:hover {
+	background: #eaecf0;
+}
+
+.layers-preset-item:focus {
+	background: #eaf3ff;
+	outline: 1px solid transparent;
+}
+
+/* Default preset highlight */
+.layers-preset-item--default {
+	background: #f8f9fa;
+}
+
+.layers-preset-item--default:hover {
+	background: #eaecf0;
+}
+
+/* Color swatch */
+.layers-preset-swatch {
+	width: 16px;
+	height: 16px;
+	border: 1px solid rgba( 0, 0, 0, 0.2 );
+	border-radius: 2px;
+	flex-shrink: 0;
+}
+
+/* Preset name */
+.layers-preset-name {
+	flex: 1;
+	font-size: 0.8125em;
+	color: #202122;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Built-in indicator */
+.layers-preset-item--builtin .layers-preset-name {
+	color: #54595d;
+}
+
+/* Default star */
+.layers-preset-star {
+	color: #fc3;
+	font-size: 0.875em;
+}
+
+/* Item actions */
+.layers-preset-item-actions {
+	display: flex;
+	gap: 2px;
+	opacity: 0;
+	transition: opacity 0.1s;
+}
+
+.layers-preset-item:hover .layers-preset-item-actions {
+	opacity: 1;
+}
+
+.layers-preset-item-action {
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	border: 0;
+	border-radius: 2px;
+	background: transparent;
+	color: #72777d;
+	font-size: 0.875em;
+	line-height: 1.25em;
+	text-align: center;
+	cursor: pointer;
+	transition: background-color 0.1s, color 0.1s;
+}
+
+.layers-preset-item-action:hover {
+	background: #c8ccd1;
+	color: #202122;
+}
+
+.layers-preset-item-action--delete:hover {
+	background: #fee7e6;
+	color: #d33;
+}
+
+/* Divider */
+.layers-preset-divider {
+	margin: 4px 12px;
+	border: 0;
+	border-top: 1px solid #eaecf0;
+}
+
+/* Actions section */
+.layers-preset-actions {
+	padding: 4px 0;
+}
+
+.layers-preset-action {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 6px 12px;
+	border: 0;
+	background: transparent;
+	color: #36c;
+	font-size: 0.8125em;
+	text-align: left;
+	cursor: pointer;
+	transition: background-color 0.1s;
+}
+
+.layers-preset-action:hover {
+	background: #eaf3ff;
+}
+
+.layers-preset-action-icon {
+	width: 1em;
+	font-size: 1em;
+	font-weight: bold;
+	text-align: center;
+}
+
+/* Empty state */
+.layers-preset-empty {
+	padding: 12px;
+	color: #72777d;
+	font-size: 0.8125em;
+	font-style: italic;
+	text-align: center;
+}
+
+/* Dark theme support */
+@media ( prefers-color-scheme: dark ) {
+	.layers-preset-button {
+		background: #27292d;
+		border-color: #72777d;
+		color: #eaecf0;
+	}
+
+	.layers-preset-button:hover:not( :disabled ) {
+		background: #3a3d43;
+		border-color: #a2a9b1;
+	}
+
+	.layers-preset-menu {
+		background: #27292d;
+		border-color: #72777d;
+	}
+
+	.layers-preset-item:hover {
+		background: #3a3d43;
+	}
+
+	.layers-preset-item--default {
+		background: #1e2024;
+	}
+
+	.layers-preset-name {
+		color: #eaecf0;
+	}
+
+	.layers-preset-item--builtin .layers-preset-name {
+		color: #a2a9b1;
+	}
+
+	.layers-preset-divider {
+		border-top-color: #3a3d43;
+	}
+
+	.layers-preset-action {
+		color: #69f;
+	}
+
+	.layers-preset-action:hover {
+		background: #3a3d43;
+	}
+
+	.layers-preset-empty {
+		color: #a2a9b1;
+	}
+}

@@ -117,6 +117,12 @@ class ToolbarStyleControls {
 		styleGroup.className = 'toolbar-group style-group';
 		this.container = styleGroup;
 
+		// Preset dropdown (if PresetDropdown is available)
+		this.presetDropdown = this.createPresetDropdown();
+		if ( this.presetDropdown ) {
+			styleGroup.appendChild( this.presetDropdown.getElement() );
+		}
+
 		// Main style controls row (stroke, fill, width)
 		const styleControlsRow = this.createMainStyleRow();
 		styleGroup.appendChild( styleControlsRow );
@@ -623,6 +629,9 @@ class ToolbarStyleControls {
 			this.shadowContainer.style.display = 'none';
 			this.arrowContainer.style.display = 'none';
 		}
+
+		// Update preset dropdown for the current tool
+		this.setCurrentTool( toolId );
 	}
 
 	/**
@@ -714,9 +723,274 @@ class ToolbarStyleControls {
 	}
 
 	/**
+	 * Create the preset dropdown component
+	 *
+	 * @return {PresetDropdown|null} The preset dropdown or null if not available
+	 */
+	createPresetDropdown() {
+		const PresetManager = getClass( 'PresetManager', 'PresetManager' );
+		const PresetDropdown = getClass( 'PresetDropdown', 'PresetDropdown' );
+
+		// Check if PresetManager and PresetDropdown are available
+		if ( !PresetManager || !PresetDropdown ) {
+			return null;
+		}
+
+		// Create a shared preset manager instance
+		if ( !this.presetManager ) {
+			this.presetManager = new PresetManager();
+		}
+
+		// Store reference to selected layers for preset operations
+		this.selectedLayers = [];
+
+		// Create the dropdown
+		const dropdown = new PresetDropdown( {
+			presetManager: this.presetManager,
+			getMessage: this.msg.bind( this ),
+			onSelect: ( style ) => {
+				this.applyPresetToSelection( style );
+			},
+			onSave: ( callback ) => {
+				const currentStyle = this.getStyleFromSelection();
+				callback( currentStyle );
+			}
+		} );
+
+		return dropdown;
+	}
+
+	/**
+	 * Apply a preset style to the current controls
+	 *
+	 * @param {Object} style Style properties from the preset
+	 */
+	applyPresetStyle( style ) {
+		if ( !style ) {
+			return;
+		}
+
+		// Apply stroke color
+		if ( style.stroke !== undefined ) {
+			this.strokeColorValue = style.stroke;
+			this.strokeColorNone = ( style.stroke === 'none' || style.stroke === 'transparent' );
+			if ( this.strokeColorButton && this.toolbar ) {
+				this.toolbar.updateColorButtonDisplay(
+					this.strokeColorButton,
+					this.strokeColorNone ? 'none' : this.strokeColorValue,
+					this.msg( 'layers-transparent', 'Transparent' )
+				);
+			}
+		}
+
+		// Apply fill color
+		if ( style.fill !== undefined ) {
+			this.fillColorValue = style.fill;
+			this.fillColorNone = ( style.fill === 'none' || style.fill === 'transparent' );
+			if ( this.fillColorButton && this.toolbar ) {
+				this.toolbar.updateColorButtonDisplay(
+					this.fillColorButton,
+					this.fillColorNone ? 'none' : this.fillColorValue,
+					this.msg( 'layers-transparent', 'Transparent' )
+				);
+			}
+		}
+
+		// Apply stroke width
+		if ( style.strokeWidth !== undefined && this.strokeWidthInput ) {
+			this.currentStrokeWidth = style.strokeWidth;
+			this.strokeWidthInput.value = style.strokeWidth;
+		}
+
+		// Apply font size
+		if ( style.fontSize !== undefined && this.fontSizeInput ) {
+			this.fontSizeInput.value = style.fontSize;
+		}
+
+		// Apply arrow style
+		if ( style.arrowStyle !== undefined && this.arrowStyleSelect ) {
+			this.arrowStyleSelect.value = style.arrowStyle;
+		}
+
+		// Notify of style change
+		this.notifyStyleChange();
+	}
+
+	/**
+	 * Get the current style from all controls
+	 *
+	 * @return {Object} Current style properties
+	 */
+	getCurrentStyle() {
+		const style = {};
+
+		// Stroke
+		style.stroke = this.strokeColorNone ? 'transparent' : this.strokeColorValue;
+		style.strokeWidth = this.currentStrokeWidth;
+
+		// Fill
+		style.fill = this.fillColorNone ? 'transparent' : this.fillColorValue;
+
+		// Font size
+		if ( this.fontSizeInput ) {
+			style.fontSize = parseFloat( this.fontSizeInput.value ) || 16;
+		}
+
+		// Arrow style
+		if ( this.arrowStyleSelect ) {
+			style.arrowStyle = this.arrowStyleSelect.value;
+		}
+
+		return style;
+	}
+
+	/**
+	 * Update preset dropdown when tool changes
+	 *
+	 * @param {string} tool Current tool name
+	 */
+	setCurrentTool( tool ) {
+		// Only update for tool if no layers are selected
+		// Layer selection takes precedence over tool selection
+		if ( this.presetDropdown && ( !this.selectedLayers || this.selectedLayers.length === 0 ) ) {
+			this.presetDropdown.setTool( tool );
+		}
+	}
+
+	/**
+	 * Update preset dropdown when layer selection changes
+	 *
+	 * @param {Array} selectedLayers Array of selected layer objects
+	 */
+	updateForSelection( selectedLayers ) {
+		this.selectedLayers = selectedLayers || [];
+
+		if ( !this.presetDropdown ) {
+			return;
+		}
+
+		if ( this.selectedLayers.length === 0 ) {
+			// No selection - clear layer type, fall back to tool
+			this.presetDropdown.setLayerType( null );
+			if ( this.toolbar && this.toolbar.currentTool ) {
+				this.presetDropdown.setTool( this.toolbar.currentTool );
+			}
+			return;
+		}
+
+		// Get the type of the first selected layer
+		const firstLayer = this.selectedLayers[ 0 ];
+		const layerType = firstLayer.type;
+
+		// Map layer types to tool types for preset lookup
+		const typeMapping = {
+			'rect': 'rectangle',
+			'ellipse': 'ellipse',
+			'circle': 'circle',
+			'line': 'line',
+			'arrow': 'arrow',
+			'text': 'text',
+			'textbox': 'textbox',
+			'polygon': 'polygon',
+			'star': 'star',
+			'path': 'path',
+			'rectangle': 'rectangle'
+		};
+
+		const toolType = typeMapping[ layerType ] || layerType;
+		// Use setLayerType which takes precedence over tool
+		this.presetDropdown.setLayerType( toolType );
+	}
+
+	/**
+	 * Apply a preset style to selected layers
+	 *
+	 * @param {Object} style Style properties from the preset
+	 */
+	applyPresetToSelection( style ) {
+		if ( !style ) {
+			return;
+		}
+
+		// If we have selected layers, apply to them via the editor
+		if ( this.selectedLayers && this.selectedLayers.length > 0 && this.toolbar && this.toolbar.editor ) {
+			this.toolbar.editor.applyToSelection( ( layer ) => {
+				// Apply each style property to the layer
+				if ( style.stroke !== undefined ) {
+					layer.stroke = style.stroke;
+				}
+				if ( style.strokeWidth !== undefined ) {
+					layer.strokeWidth = style.strokeWidth;
+				}
+				if ( style.fill !== undefined ) {
+					layer.fill = style.fill;
+				}
+				if ( style.fontSize !== undefined ) {
+					layer.fontSize = style.fontSize;
+				}
+				if ( style.fontFamily !== undefined ) {
+					layer.fontFamily = style.fontFamily;
+				}
+				if ( style.arrowStyle !== undefined ) {
+					layer.arrowStyle = style.arrowStyle;
+				}
+				if ( style.arrowhead !== undefined ) {
+					layer.arrowhead = style.arrowhead;
+				}
+				if ( style.color !== undefined ) {
+					layer.color = style.color;
+				}
+				if ( style.opacity !== undefined ) {
+					layer.opacity = style.opacity;
+				}
+			} );
+		}
+
+		// Also update the toolbar controls for future drawings
+		this.applyPresetStyle( style );
+	}
+
+	/**
+	 * Get style from the first selected layer for saving as preset
+	 *
+	 * @return {Object} Style properties from selected layer, or current controls
+	 */
+	getStyleFromSelection() {
+		if ( this.selectedLayers && this.selectedLayers.length > 0 ) {
+			const layer = this.selectedLayers[ 0 ];
+			return {
+				stroke: layer.stroke || '#000000',
+				strokeWidth: layer.strokeWidth || 2,
+				fill: layer.fill || 'transparent',
+				color: layer.color,
+				fontSize: layer.fontSize,
+				fontFamily: layer.fontFamily,
+				arrowStyle: layer.arrowStyle,
+				arrowhead: layer.arrowhead,
+				opacity: layer.opacity
+			};
+		}
+
+		// Fallback to current toolbar controls
+		return this.getCurrentStyle();
+	}
+
+	/**
 	 * Destroy and cleanup
 	 */
 	destroy() {
+		// Clean up preset dropdown
+		if ( this.presetDropdown ) {
+			this.presetDropdown.destroy();
+			this.presetDropdown = null;
+		}
+
+		// Clean up preset manager
+		if ( this.presetManager ) {
+			this.presetManager.destroy();
+			this.presetManager = null;
+		}
+
 		// Clean up all event listeners via EventTracker
 		if ( this.eventTracker ) {
 			this.eventTracker.destroy();

@@ -40,7 +40,8 @@
 	const NUMERIC_PROPERTIES = [
 		'x', 'y', 'width', 'height',
 		'x1', 'y1', 'x2', 'y2',
-		'radius', 'radiusX', 'radiusY',
+		'radius', 'radiusX', 'radiusY', 'innerRadius', 'outerRadius',
+		'pointRadius', 'valleyRadius',
 		'rotation', 'opacity', 'fillOpacity', 'strokeOpacity',
 		'strokeWidth', 'fontSize', 'lineHeight', 'padding', 'cornerRadius',
 		'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'shadowSpread',

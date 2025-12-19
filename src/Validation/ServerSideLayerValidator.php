@@ -89,6 +89,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'endAngle' => 'numeric',
 		'innerRadius' => 'numeric',
 		'outerRadius' => 'numeric',
+		'pointRadius' => 'numeric',
+		'valleyRadius' => 'numeric',
 		// Image layer properties
 		'src' => 'string',
 		'originalWidth' => 'numeric',

@@ -85,10 +85,58 @@
 		 * @param {number} y - Center Y coordinate
 		 * @param {number} radius - Radius of the polygon
 		 * @param {number} sides - Number of sides
+		 * @param {number} [cornerRadius=0] - Corner radius for rounded corners
 		 */
-		static drawPolygonPath( ctx, x, y, radius, sides ) {
+		static drawPolygonPath( ctx, x, y, radius, sides, cornerRadius ) {
 			const vertices = PolygonGeometry.getPolygonVertices( x, y, radius, sides );
-			PolygonGeometry.drawPath( ctx, vertices );
+			if ( cornerRadius && cornerRadius > 0 ) {
+				PolygonGeometry.drawRoundedPath( ctx, vertices, cornerRadius );
+			} else {
+				PolygonGeometry.drawPath( ctx, vertices );
+			}
+		}
+
+		/**
+		 * Draw a path with rounded corners using arcTo
+		 *
+		 * @param {CanvasRenderingContext2D} ctx - Canvas 2D context
+		 * @param {Array<{x: number, y: number}>} vertices - Array of vertex points
+		 * @param {number} cornerRadius - Radius for rounded corners
+		 */
+		static drawRoundedPath( ctx, vertices, cornerRadius ) {
+			if ( !vertices || vertices.length < 3 ) {
+				return;
+			}
+			const n = vertices.length;
+			ctx.beginPath();
+
+			// Start at midpoint of edge from vertex 0 to vertex 1
+			// This ensures we're not near any corner
+			ctx.moveTo(
+				( vertices[ 0 ].x + vertices[ 1 ].x ) / 2,
+				( vertices[ 0 ].y + vertices[ 1 ].y ) / 2
+			);
+
+			// Arc around vertices 1, 2, ..., n-1
+			for ( let i = 1; i < n; i++ ) {
+				const curr = vertices[ i ];
+				const next = vertices[ ( i + 1 ) % n ];
+				if ( cornerRadius > 0 ) {
+					ctx.arcTo( curr.x, curr.y, next.x, next.y, cornerRadius );
+				} else {
+					ctx.lineTo( curr.x, curr.y );
+				}
+			}
+
+			// Arc around vertex 0
+			if ( cornerRadius > 0 ) {
+				ctx.arcTo( vertices[ 0 ].x, vertices[ 0 ].y, vertices[ 1 ].x, vertices[ 1 ].y, cornerRadius );
+			} else {
+				ctx.lineTo( vertices[ 0 ].x, vertices[ 0 ].y );
+			}
+
+			// Close path - connects back to our starting midpoint
+			ctx.closePath();
 		}
 
 		/**
@@ -100,10 +148,65 @@
 		 * @param {number} outerRadius - Outer radius
 		 * @param {number} innerRadius - Inner radius
 		 * @param {number} numPoints - Number of points
+		 * @param {number} [pointRadius=0] - Corner radius at star points (outer tips)
+		 * @param {number} [valleyRadius=0] - Corner radius at star valleys (inner corners)
 		 */
-		static drawStarPath( ctx, x, y, outerRadius, innerRadius, numPoints ) {
+		static drawStarPath( ctx, x, y, outerRadius, innerRadius, numPoints, pointRadius, valleyRadius ) {
 			const vertices = PolygonGeometry.getStarVertices( x, y, outerRadius, innerRadius, numPoints );
-			PolygonGeometry.drawPath( ctx, vertices );
+			if ( ( pointRadius && pointRadius > 0 ) || ( valleyRadius && valleyRadius > 0 ) ) {
+				PolygonGeometry.drawRoundedStarPath( ctx, vertices, pointRadius || 0, valleyRadius || 0 );
+			} else {
+				PolygonGeometry.drawPath( ctx, vertices );
+			}
+		}
+
+		/**
+		 * Draw a path with rounded corners for stars, with different radii for points and valleys
+		 *
+		 * @param {CanvasRenderingContext2D} ctx - Canvas 2D context
+		 * @param {Array<{x: number, y: number}>} vertices - Array of vertex points (alternating outer/inner)
+		 * @param {number} pointRadius - Radius for outer point corners
+		 * @param {number} valleyRadius - Radius for inner valley corners
+		 */
+		static drawRoundedStarPath( ctx, vertices, pointRadius, valleyRadius ) {
+			if ( !vertices || vertices.length < 3 ) {
+				return;
+			}
+			const n = vertices.length;
+			ctx.beginPath();
+
+			// Helper to get radius for a vertex (even = point, odd = valley)
+			const getRadius = ( i ) => ( i % 2 === 0 ? pointRadius : valleyRadius );
+
+			// Start at midpoint of edge from vertex 0 to vertex 1
+			// This ensures we're not near any corner
+			ctx.moveTo(
+				( vertices[ 0 ].x + vertices[ 1 ].x ) / 2,
+				( vertices[ 0 ].y + vertices[ 1 ].y ) / 2
+			);
+
+			// Arc around vertices 1, 2, ..., n-1
+			for ( let i = 1; i < n; i++ ) {
+				const curr = vertices[ i ];
+				const next = vertices[ ( i + 1 ) % n ];
+				const r = getRadius( i );
+				if ( r > 0 ) {
+					ctx.arcTo( curr.x, curr.y, next.x, next.y, r );
+				} else {
+					ctx.lineTo( curr.x, curr.y );
+				}
+			}
+
+			// Arc around vertex 0
+			const r0 = getRadius( 0 );
+			if ( r0 > 0 ) {
+				ctx.arcTo( vertices[ 0 ].x, vertices[ 0 ].y, vertices[ 1 ].x, vertices[ 1 ].y, r0 );
+			} else {
+				ctx.lineTo( vertices[ 0 ].x, vertices[ 0 ].y );
+			}
+
+			// Close path - connects back to our starting midpoint
+			ctx.closePath();
 		}
 
 		/**

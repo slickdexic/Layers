@@ -387,11 +387,36 @@ class CanvasManager {
 			return;
 		}
 
-		// Subscribe to selection changes to trigger re-render
-		this.editor.stateManager.subscribe( 'selectedLayerIds', () => {
+		// Subscribe to selection changes to trigger re-render and toolbar update
+		this.editor.stateManager.subscribe( 'selectedLayerIds', ( selectedIds ) => {
 			this.selectionHandles = [];
 			this.renderLayers( this.editor.layers );
+
+			// Notify toolbar of selection change for presets
+			this.notifyToolbarOfSelection( selectedIds );
 		} );
+	}
+
+	/**
+	 * Notify toolbar style controls of selection change for preset dropdown
+	 *
+	 * @param {Array} selectedIds Selected layer IDs
+	 */
+	notifyToolbarOfSelection( selectedIds ) {
+		if ( !this.editor || !this.editor.toolbar || !this.editor.toolbar.styleControls ) {
+			return;
+		}
+
+		// Get the actual layer objects for selected IDs
+		const layers = this.editor.layers || [];
+		const selectedLayers = ( selectedIds || [] )
+			.map( ( id ) => layers.find( ( l ) => l.id === id ) )
+			.filter( ( l ) => l != null );
+
+		// Notify style controls of selection change
+		if ( typeof this.editor.toolbar.styleControls.updateForSelection === 'function' ) {
+			this.editor.toolbar.styleControls.updateForSelection( selectedLayers );
+		}
 	}
 
 	/**

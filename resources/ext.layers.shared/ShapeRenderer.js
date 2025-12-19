@@ -181,6 +181,100 @@
 		}
 
 		// ========================================================================
+		// Geometry Helper Methods
+		// ========================================================================
+
+		/**
+		 * Draw a rounded polygon path on the context
+		 *
+		 * @param {Array<{x: number, y: number}>} vertices - Array of vertex points
+		 * @param {number} cornerRadius - Radius for rounded corners
+		 */
+		drawRoundedPolygonPath( vertices, cornerRadius ) {
+			if ( !vertices || vertices.length < 3 ) {
+				return;
+			}
+			const n = vertices.length;
+			this.ctx.beginPath();
+
+			// Start at midpoint of edge from vertex 0 to vertex 1
+			// This ensures we're not near any corner
+			this.ctx.moveTo(
+				( vertices[ 0 ].x + vertices[ 1 ].x ) / 2,
+				( vertices[ 0 ].y + vertices[ 1 ].y ) / 2
+			);
+
+			// Arc around vertices 1, 2, ..., n-1
+			for ( let i = 1; i < n; i++ ) {
+				const curr = vertices[ i ];
+				const next = vertices[ ( i + 1 ) % n ];
+				if ( cornerRadius > 0 ) {
+					this.ctx.arcTo( curr.x, curr.y, next.x, next.y, cornerRadius );
+				} else {
+					this.ctx.lineTo( curr.x, curr.y );
+				}
+			}
+
+			// Arc around vertex 0
+			if ( cornerRadius > 0 ) {
+				this.ctx.arcTo( vertices[ 0 ].x, vertices[ 0 ].y, vertices[ 1 ].x, vertices[ 1 ].y, cornerRadius );
+			} else {
+				this.ctx.lineTo( vertices[ 0 ].x, vertices[ 0 ].y );
+			}
+
+			// Close path - connects back to our starting midpoint
+			this.ctx.closePath();
+		}
+
+		/**
+		 * Draw a rounded star path on the context with different radii for points and valleys
+		 *
+		 * @param {Array<{x: number, y: number}>} vertices - Array of vertex points (alternating outer/inner)
+		 * @param {number} pointRadius - Radius for outer point corners
+		 * @param {number} valleyRadius - Radius for inner valley corners
+		 */
+		drawRoundedStarPath( vertices, pointRadius, valleyRadius ) {
+			if ( !vertices || vertices.length < 3 ) {
+				return;
+			}
+			const n = vertices.length;
+			this.ctx.beginPath();
+
+			// Helper to get radius for a vertex (even = point, odd = valley)
+			const getRadius = ( i ) => ( i % 2 === 0 ? pointRadius : valleyRadius );
+
+			// Start at midpoint of edge from vertex 0 to vertex 1
+			// This ensures we're not near any corner
+			this.ctx.moveTo(
+				( vertices[ 0 ].x + vertices[ 1 ].x ) / 2,
+				( vertices[ 0 ].y + vertices[ 1 ].y ) / 2
+			);
+
+			// Arc around vertices 1, 2, ..., n-1
+			for ( let i = 1; i < n; i++ ) {
+				const curr = vertices[ i ];
+				const next = vertices[ ( i + 1 ) % n ];
+				const r = getRadius( i );
+				if ( r > 0 ) {
+					this.ctx.arcTo( curr.x, curr.y, next.x, next.y, r );
+				} else {
+					this.ctx.lineTo( curr.x, curr.y );
+				}
+			}
+
+			// Arc around vertex 0
+			const r0 = getRadius( 0 );
+			if ( r0 > 0 ) {
+				this.ctx.arcTo( vertices[ 0 ].x, vertices[ 0 ].y, vertices[ 1 ].x, vertices[ 1 ].y, r0 );
+			} else {
+				this.ctx.lineTo( vertices[ 0 ].x, vertices[ 0 ].y );
+			}
+
+			// Close path - connects back to our starting midpoint
+			this.ctx.closePath();
+		}
+
+		// ========================================================================
 		// Rectangle
 		// ========================================================================
 
@@ -600,7 +694,7 @@
 		/**
 		 * Draw a regular polygon shape
 		 *
-		 * @param {Object} layer - Layer with polygon properties (sides, x, y, radius)
+		 * @param {Object} layer - Layer with polygon properties (sides, x, y, radius, cornerRadius)
 		 * @param {Object} [options] - Rendering options
 		 */
 		drawPolygon( layer, options ) {
@@ -612,6 +706,7 @@
 			const x = layer.x || 0;
 			const y = layer.y || 0;
 			const radius = layer.radius || 50;
+			const cornerRadius = layer.cornerRadius || 0;
 			let strokeW = layer.strokeWidth || 1;
 
 			if ( !opts.scaled ) {
@@ -639,19 +734,24 @@
 				if ( hasFillForShadow ) {
 					const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
 					const effectiveRadius = spread > 0 ? radius + spread : radius;
+					const PolygonGeometryShadow = getPolygonGeometry();
 					this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
-						ctx.beginPath();
-						for ( let i = 0; i < sides; i++ ) {
-							const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-							const px = x + effectiveRadius * Math.cos( angle );
-							const py = y + effectiveRadius * Math.sin( angle );
-							if ( i === 0 ) {
-								ctx.moveTo( px, py );
-							} else {
-								ctx.lineTo( px, py );
+						if ( PolygonGeometryShadow && cornerRadius > 0 ) {
+							PolygonGeometryShadow.drawPolygonPath( ctx, x, y, effectiveRadius, sides, cornerRadius );
+						} else {
+							ctx.beginPath();
+							for ( let i = 0; i < sides; i++ ) {
+								const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
+								const px = x + effectiveRadius * Math.cos( angle );
+								const py = y + effectiveRadius * Math.sin( angle );
+								if ( i === 0 ) {
+									ctx.moveTo( px, py );
+								} else {
+									ctx.lineTo( px, py );
+								}
 							}
+							ctx.closePath();
 						}
-						ctx.closePath();
 					}, fillShadowOpacity );
 				}
 
@@ -659,19 +759,24 @@
 				if ( hasStrokeForShadow ) {
 					const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 					const effectiveStrokeWidth = spread > 0 ? strokeW + spread * 2 : strokeW;
+					const PolygonGeometryStroke = getPolygonGeometry();
 					this.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( ctx ) => {
-						ctx.beginPath();
-						for ( let i = 0; i < sides; i++ ) {
-							const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
-							const px = x + radius * Math.cos( angle );
-							const py = y + radius * Math.sin( angle );
-							if ( i === 0 ) {
-								ctx.moveTo( px, py );
-							} else {
-								ctx.lineTo( px, py );
+						if ( PolygonGeometryStroke && cornerRadius > 0 ) {
+							PolygonGeometryStroke.drawPolygonPath( ctx, x, y, radius, sides, cornerRadius );
+						} else {
+							ctx.beginPath();
+							for ( let i = 0; i < sides; i++ ) {
+								const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
+								const px = x + radius * Math.cos( angle );
+								const py = y + radius * Math.sin( angle );
+								if ( i === 0 ) {
+									ctx.moveTo( px, py );
+								} else {
+									ctx.lineTo( px, py );
+								}
 							}
+							ctx.closePath();
 						}
-						ctx.closePath();
 					}, strokeShadowOpacity );
 				}
 			}
@@ -683,7 +788,18 @@
 			const PolygonGeometry = getPolygonGeometry();
 			const drawPolygonPath = () => {
 				if ( PolygonGeometry ) {
-					PolygonGeometry.drawPolygonPath( this.ctx, x, y, radius, sides );
+					PolygonGeometry.drawPolygonPath( this.ctx, x, y, radius, sides, cornerRadius );
+				} else if ( cornerRadius > 0 ) {
+					// Fallback with rounded corners
+					const vertices = [];
+					for ( let i = 0; i < sides; i++ ) {
+						const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
+						vertices.push( {
+							x: x + radius * Math.cos( angle ),
+							y: y + radius * Math.sin( angle )
+						} );
+					}
+					this.drawRoundedPolygonPath( vertices, cornerRadius );
 				} else {
 					// Fallback inline implementation
 					this.ctx.beginPath();
@@ -733,7 +849,7 @@
 		/**
 		 * Draw a star shape
 		 *
-		 * @param {Object} layer - Layer with star properties (points, x, y, outerRadius, innerRadius)
+		 * @param {Object} layer - Layer with star properties (points, x, y, outerRadius, innerRadius, pointRadius, valleyRadius)
 		 * @param {Object} [options] - Rendering options
 		 */
 		drawStar( layer, options ) {
@@ -746,6 +862,8 @@
 			const y = layer.y || 0;
 			const outerRadius = layer.outerRadius || layer.radius || 50;
 			const innerRadius = layer.innerRadius || outerRadius * 0.5;
+			const pointRadius = layer.pointRadius || 0;
+			const valleyRadius = layer.valleyRadius || 0;
 			let strokeW = layer.strokeWidth || 1;
 
 			if ( !opts.scaled ) {
@@ -772,20 +890,27 @@
 				// Draw fill shadow
 				if ( hasFillForShadow ) {
 					const fillShadowOpacity = baseOpacity * clampOpacity( layer.fillOpacity );
+					const PolygonGeometryShadow = getPolygonGeometry();
 					this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
-						ctx.beginPath();
-						for ( let i = 0; i < points * 2; i++ ) {
-							const angle = ( i * Math.PI ) / points - Math.PI / 2;
-							const r = i % 2 === 0 ? outerRadius + spread : innerRadius + spread;
-							const px = x + r * Math.cos( angle );
-							const py = y + r * Math.sin( angle );
-							if ( i === 0 ) {
-								ctx.moveTo( px, py );
-							} else {
-								ctx.lineTo( px, py );
+						const effectiveOuter = outerRadius + spread;
+						const effectiveInner = innerRadius + spread;
+						if ( PolygonGeometryShadow && ( pointRadius > 0 || valleyRadius > 0 ) ) {
+							PolygonGeometryShadow.drawStarPath( ctx, x, y, effectiveOuter, effectiveInner, points, pointRadius, valleyRadius );
+						} else {
+							ctx.beginPath();
+							for ( let i = 0; i < points * 2; i++ ) {
+								const angle = ( i * Math.PI ) / points - Math.PI / 2;
+								const r = i % 2 === 0 ? effectiveOuter : effectiveInner;
+								const px = x + r * Math.cos( angle );
+								const py = y + r * Math.sin( angle );
+								if ( i === 0 ) {
+									ctx.moveTo( px, py );
+								} else {
+									ctx.lineTo( px, py );
+								}
 							}
+							ctx.closePath();
 						}
-						ctx.closePath();
 					}, fillShadowOpacity );
 				}
 
@@ -793,20 +918,25 @@
 				if ( hasStrokeForShadow ) {
 					const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 					const effectiveStrokeWidth = spread > 0 ? strokeW + spread * 2 : strokeW;
+					const PolygonGeometryStroke = getPolygonGeometry();
 					this.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( ctx ) => {
-						ctx.beginPath();
-						for ( let i = 0; i < points * 2; i++ ) {
-							const angle = ( i * Math.PI ) / points - Math.PI / 2;
-							const r = i % 2 === 0 ? outerRadius : innerRadius;
-							const px = x + r * Math.cos( angle );
-							const py = y + r * Math.sin( angle );
-							if ( i === 0 ) {
-								ctx.moveTo( px, py );
-							} else {
-								ctx.lineTo( px, py );
+						if ( PolygonGeometryStroke && ( pointRadius > 0 || valleyRadius > 0 ) ) {
+							PolygonGeometryStroke.drawStarPath( ctx, x, y, outerRadius, innerRadius, points, pointRadius, valleyRadius );
+						} else {
+							ctx.beginPath();
+							for ( let i = 0; i < points * 2; i++ ) {
+								const angle = ( i * Math.PI ) / points - Math.PI / 2;
+								const r = i % 2 === 0 ? outerRadius : innerRadius;
+								const px = x + r * Math.cos( angle );
+								const py = y + r * Math.sin( angle );
+								if ( i === 0 ) {
+									ctx.moveTo( px, py );
+								} else {
+									ctx.lineTo( px, py );
+								}
 							}
+							ctx.closePath();
 						}
-						ctx.closePath();
 					}, strokeShadowOpacity );
 				}
 			}
@@ -818,7 +948,19 @@
 			const PolygonGeometry = getPolygonGeometry();
 			const drawStarPath = () => {
 				if ( PolygonGeometry ) {
-					PolygonGeometry.drawStarPath( this.ctx, x, y, outerRadius, innerRadius, points );
+					PolygonGeometry.drawStarPath( this.ctx, x, y, outerRadius, innerRadius, points, pointRadius, valleyRadius );
+				} else if ( pointRadius > 0 || valleyRadius > 0 ) {
+					// Fallback with rounded corners
+					const vertices = [];
+					for ( let i = 0; i < points * 2; i++ ) {
+						const angle = ( i * Math.PI ) / points - Math.PI / 2;
+						const r = i % 2 === 0 ? outerRadius : innerRadius;
+						vertices.push( {
+							x: x + r * Math.cos( angle ),
+							y: y + r * Math.sin( angle )
+						} );
+					}
+					this.drawRoundedStarPath( vertices, pointRadius, valleyRadius );
 				} else {
 					// Fallback inline implementation
 					this.ctx.beginPath();
