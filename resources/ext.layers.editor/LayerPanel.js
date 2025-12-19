@@ -1253,6 +1253,12 @@
 		 * @param {boolean} [addToSelection] Whether to add to existing selection (Ctrl+click)
 		 */
 		selectLayer( layerId, fromCanvas, addToSelection ) {
+			// When called from canvas, don't update StateManager - it's already set
+			// Just let the state subscription handle the UI update
+			if ( fromCanvas ) {
+				return;
+			}
+
 			// Update selection through StateManager (single source of truth)
 			if ( this.editor && this.editor.stateManager ) {
 				if ( addToSelection && layerId ) {
@@ -1274,7 +1280,7 @@
 				}
 			}
 			// Note: renderLayerList and updatePropertiesPanel are called by state subscription
-			if ( !fromCanvas && this.editor.canvasManager ) {
+			if ( this.editor.canvasManager ) {
 				// Sync full selection to canvas
 				const selectedIds = this.editor.stateManager ?
 					this.editor.stateManager.get( 'selectedLayerIds' ) || [] : [];

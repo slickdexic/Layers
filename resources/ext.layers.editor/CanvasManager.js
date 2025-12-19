@@ -1413,10 +1413,8 @@ class CanvasManager {
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
 
-		// Sync selection with layer panel
-		if ( this.editor && this.editor.layerPanel ) {
-			this.editor.layerPanel.selectLayer( this.getSelectedLayerId(), true );
-		}
+		// Note: LayerPanel will update via StateManager subscription
+		// Do NOT call layerPanel.selectLayer here as it would overwrite multi-selection
 
 		// Update status bar with selection count
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {

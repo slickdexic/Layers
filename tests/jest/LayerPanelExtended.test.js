@@ -802,6 +802,116 @@ describe( 'LayerPanel Extended', () => {
 			const selectedIds = mockStateManager.get( 'selectedLayerIds' );
 			expect( selectedIds ).toEqual( [] );
 		} );
+
+		it( 'should add to selection when addToSelection is true', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle' },
+				{ id: 'layer2', type: 'circle' }
+			];
+			mockStateManager.set( 'layers', layers );
+			mockStateManager.set( 'selectedLayerIds', [ 'layer1' ] );
+			mockEditor.layers = layers;
+
+			const panel = new LayerPanel( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			panel.selectLayer( 'layer2', false, true );
+
+			const selectedIds = mockStateManager.get( 'selectedLayerIds' );
+			expect( selectedIds ).toContain( 'layer1' );
+			expect( selectedIds ).toContain( 'layer2' );
+			expect( selectedIds.length ).toBe( 2 );
+		} );
+
+		it( 'should remove from selection when addToSelection is true and layer already selected', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle' },
+				{ id: 'layer2', type: 'circle' }
+			];
+			mockStateManager.set( 'layers', layers );
+			mockStateManager.set( 'selectedLayerIds', [ 'layer1', 'layer2' ] );
+
+			const panel = new LayerPanel( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			panel.selectLayer( 'layer1', false, true );
+
+			const selectedIds = mockStateManager.get( 'selectedLayerIds' );
+			expect( selectedIds ).not.toContain( 'layer1' );
+			expect( selectedIds ).toContain( 'layer2' );
+			expect( selectedIds.length ).toBe( 1 );
+		} );
+
+		it( 'should do nothing when fromCanvas is true', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle' }
+			];
+			mockStateManager.set( 'layers', layers );
+			mockStateManager.set( 'selectedLayerIds', [ 'layer1' ] );
+
+			const panel = new LayerPanel( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			panel.selectLayer( 'layer2', true );
+
+			// Should not change selection when fromCanvas is true
+			const selectedIds = mockStateManager.get( 'selectedLayerIds' );
+			expect( selectedIds ).toEqual( [ 'layer1' ] );
+		} );
+	} );
+
+	describe( 'selectLayerRange', () => {
+		it( 'should select range of layers between last selected and clicked', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle' },
+				{ id: 'layer2', type: 'circle' },
+				{ id: 'layer3', type: 'text' },
+				{ id: 'layer4', type: 'arrow' }
+			];
+			mockStateManager.set( 'layers', layers );
+			mockStateManager.set( 'selectedLayerIds', [ 'layer1' ] );
+			mockEditor.layers = layers;
+
+			const panel = new LayerPanel( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			panel.selectLayerRange( 'layer3' );
+
+			const selectedIds = mockStateManager.get( 'selectedLayerIds' );
+			expect( selectedIds ).toContain( 'layer1' );
+			expect( selectedIds ).toContain( 'layer2' );
+			expect( selectedIds ).toContain( 'layer3' );
+			expect( selectedIds ).not.toContain( 'layer4' );
+			expect( selectedIds.length ).toBe( 3 );
+		} );
+
+		it( 'should select single layer when no previous selection', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle' },
+				{ id: 'layer2', type: 'circle' }
+			];
+			mockStateManager.set( 'layers', layers );
+			mockStateManager.set( 'selectedLayerIds', [] );
+			mockEditor.layers = layers;
+
+			const panel = new LayerPanel( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			panel.selectLayerRange( 'layer2' );
+
+			const selectedIds = mockStateManager.get( 'selectedLayerIds' );
+			expect( selectedIds ).toEqual( [ 'layer2' ] );
+		} );
 	} );
 
 	describe( 'deleteLayer', () => {
