@@ -27,7 +27,7 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Run Playwright smoke tests
-        run: npx playwright test tests/e2e/smoke.spec.js --workers=1
+        run: npx playwright test tests/e2e/smoke.spec.js tests/e2e/modules.spec.js --workers=1
         env:
           CI: true
 
