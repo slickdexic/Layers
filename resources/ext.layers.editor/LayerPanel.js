@@ -631,6 +631,7 @@
 					layerList: this.layerList,
 					msg: this.msg.bind( this ),
 					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
+					getSelectedLayerIds: this.getSelectedLayerIds.bind( this ),
 					getLayers: this.getLayers.bind( this ),
 					onMoveLayer: this.moveLayer.bind( this )
 				} );

@@ -30,6 +30,7 @@
 			this.layerList = config.layerList;
 			this.msg = config.msg || ( ( key, fallback ) => fallback || key );
 			this.getSelectedLayerId = config.getSelectedLayerId || ( () => null );
+			this.getSelectedLayerIds = config.getSelectedLayerIds || ( () => [] );
 			this.getLayers = config.getLayers || ( () => [] );
 			this.onMoveLayer = config.onMoveLayer || null;
 		}
@@ -124,11 +125,14 @@
 
 			// ARIA attributes for listbox option
 			item.setAttribute( 'role', 'option' );
-			item.setAttribute( 'aria-selected', layer.id === this.getSelectedLayerId() ? 'true' : 'false' );
+			const selectedIds = this.getSelectedLayerIds();
+			const isSelected = selectedIds.includes( String( layer.id ) ) ||
+				selectedIds.includes( layer.id );
+			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
 			const layerName = layer.name || this.getDefaultLayerName( layer );
 			item.setAttribute( 'aria-label', layerName );
 
-			if ( layer.id === this.getSelectedLayerId() ) {
+			if ( isSelected ) {
 				item.classList.add( 'selected' );
 			}
 
@@ -294,7 +298,9 @@
 			item.dataset.index = index;
 
 			// Update ARIA attributes
-			const isSelected = layer.id === this.getSelectedLayerId();
+			const selectedIds = this.getSelectedLayerIds();
+			const isSelected = selectedIds.includes( String( layer.id ) ) ||
+				selectedIds.includes( layer.id );
 			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
 			const layerName = layer.name || this.getDefaultLayerName( layer );
 			item.setAttribute( 'aria-label', layerName );

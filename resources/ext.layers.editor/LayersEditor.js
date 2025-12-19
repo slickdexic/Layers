@@ -260,6 +260,20 @@ class LayersEditor {
 	}
 
 	/**
+	 * Subscribe to selection changes to update toolbar alignment buttons
+	 * @private
+	 */
+	subscribeToSelectionChanges () {
+		if ( !this.stateManager || typeof this.stateManager.subscribe !== 'function' ) {
+			return;
+		}
+		// Subscribe to selection changes to update UI (alignment buttons, delete button)
+		this.selectionUnsubscribe = this.stateManager.subscribe( 'selectedLayerIds', () => {
+			this.updateUIState();
+		} );
+	}
+
+	/**
 	 * Initialize extracted managers (RevisionManager, DialogManager)
 	 * @private
 	 */
@@ -464,6 +478,9 @@ class LayersEditor {
 		this.toolbar = this.registry.get( 'Toolbar' );
 		this.layerPanel = this.registry.get( 'LayerPanel' );
 		this.canvasManager = this.registry.get( 'CanvasManager' );
+
+		// Subscribe to selection changes to update toolbar alignment buttons
+		this.subscribeToSelectionChanges();
 
 		this.debugLog( '[LayersEditor] UI components initialized' );
 	}
@@ -1167,6 +1184,12 @@ class LayersEditor {
 			return;
 		}
 		this.isDestroyed = true;
+
+		// Clean up selection subscription
+		if ( this.selectionUnsubscribe && typeof this.selectionUnsubscribe === 'function' ) {
+			this.selectionUnsubscribe();
+			this.selectionUnsubscribe = null;
+		}
 
 		// Clean up event listeners
 		this.cleanupGlobalEventListeners();
