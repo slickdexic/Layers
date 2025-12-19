@@ -2,7 +2,7 @@
 	"name": "layers",
 	"private": true,
 	"scripts": {
-				"test:e2e": "npx playwright test --workers=1",
+		"test:e2e": "npx playwright test --workers=1",
 		"test": "grunt test --force",
 		"test:js": "jest",
 		"test:watch": "jest --watch",
@@ -14,7 +14,8 @@
 		"fix:php": "php vendor/bin/minus-x fix . && php vendor/bin/phpcbf",
 		"build": "webpack --mode=production",
 		"build:dev": "webpack --mode=development",
-		"watch": "webpack --mode=development --watch"
+		"watch": "webpack --mode=development --watch",
+		"check:godclass": "bash scripts/pre-commit-god-class-check.sh"
 	},
 	"devDependencies": {
 				"@playwright/test": "^1.40.0",

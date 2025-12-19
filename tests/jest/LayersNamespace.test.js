@@ -60,7 +60,6 @@ describe( 'LayersNamespace', () => {
 				RenderCoordinator: class RenderCoordinator {},
 				InteractionController: class InteractionController {},
 				ZoomPanController: class ZoomPanController {},
-				GridRulersController: class GridRulersController {},
 				TransformationEngine: class TransformationEngine {}
 			},
 			Utils: {
@@ -212,10 +211,6 @@ describe( 'LayersNamespace', () => {
 
 		it( 'should have ZoomPanController in Canvas', () => {
 			expect( global.window.Layers.Canvas.ZoomPanController ).toBeDefined();
-		} );
-
-		it( 'should have GridRulersController in Canvas', () => {
-			expect( global.window.Layers.Canvas.GridRulersController ).toBeDefined();
 		} );
 
 		it( 'should have LayerRenderer in Canvas', () => {

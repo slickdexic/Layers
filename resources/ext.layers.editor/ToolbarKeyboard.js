@@ -102,6 +102,9 @@
 			case 't':
 				this.toolbar.selectTool( 'text' );
 				break;
+			case 'x':
+				this.toolbar.selectTool( 'textbox' );
+				break;
 			case 'p':
 				this.toolbar.selectTool( 'pen' );
 				break;
@@ -113,6 +116,9 @@
 				break;
 			case 'e':
 				this.toolbar.selectTool( 'ellipse' );
+				break;
+			case 'y':
+				this.toolbar.selectTool( 'polygon' );
 				break;
 			case 's':
 				this.toolbar.selectTool( 'star' );
@@ -126,8 +132,18 @@
 			case 'l':
 				this.toolbar.selectTool( 'line' );
 				break;
-			case 'g':
-				this.toolbar.toggleGrid();
+			case '+':
+			case '=':
+				e.preventDefault();
+				this.handleZoom( 'in' );
+				break;
+			case '-':
+				e.preventDefault();
+				this.handleZoom( 'out' );
+				break;
+			case '0':
+				e.preventDefault();
+				this.handleZoom( 'fit' );
 				break;
 			case 'delete':
 			case 'backspace':
@@ -162,6 +178,42 @@
 	}
 
 	/**
+	 * Handle zoom keyboard shortcuts
+	 *
+	 * @param {string} action - 'in', 'out', or 'fit'
+	 */
+	handleZoom( action ) {
+		if ( !this.editor.canvasManager ) {
+			return;
+		}
+
+		const cm = this.editor.canvasManager;
+		switch ( action ) {
+			case 'in':
+				if ( typeof cm.zoomIn === 'function' ) {
+					cm.zoomIn();
+				} else if ( cm.zoomPanController && typeof cm.zoomPanController.zoomIn === 'function' ) {
+					cm.zoomPanController.zoomIn();
+				}
+				break;
+			case 'out':
+				if ( typeof cm.zoomOut === 'function' ) {
+					cm.zoomOut();
+				} else if ( cm.zoomPanController && typeof cm.zoomPanController.zoomOut === 'function' ) {
+					cm.zoomPanController.zoomOut();
+				}
+				break;
+			case 'fit':
+				if ( typeof cm.fitToWindow === 'function' ) {
+					cm.fitToWindow();
+				} else if ( cm.zoomPanController && typeof cm.zoomPanController.fitToWindow === 'function' ) {
+					cm.zoomPanController.fitToWindow();
+				}
+				break;
+		}
+	}
+
+	/**
 	 * Get keyboard shortcuts configuration for documentation/help
 	 *
 	 * @return {Array<Object>} Array of shortcut definitions
@@ -171,15 +223,20 @@
 			// Tool shortcuts
 			{ key: 'V', description: 'Select Tool', category: 'tools' },
 			{ key: 'T', description: 'Text Tool', category: 'tools' },
+			{ key: 'X', description: 'Text Box Tool', category: 'tools' },
 			{ key: 'P', description: 'Pen Tool', category: 'tools' },
 			{ key: 'R', description: 'Rectangle Tool', category: 'tools' },
 			{ key: 'C', description: 'Circle Tool', category: 'tools' },
 			{ key: 'E', description: 'Ellipse Tool', category: 'tools' },
+			{ key: 'Y', description: 'Polygon Tool', category: 'tools' },
 			{ key: 'S', description: 'Star Tool', category: 'tools' },
 			{ key: 'A', description: 'Arrow Tool', category: 'tools' },
 			{ key: 'L', description: 'Line Tool', category: 'tools' },
 			{ key: 'B', description: 'Blur/Redact Tool', category: 'tools' },
-			{ key: 'G', description: 'Toggle Grid', category: 'view' },
+			// View shortcuts
+			{ key: '+/=', description: 'Zoom In', category: 'view' },
+			{ key: '-', description: 'Zoom Out', category: 'view' },
+			{ key: '0', description: 'Fit to Window', category: 'view' },
 			{ key: 'Shift+B', description: 'Toggle Background', category: 'view' },
 			// Ctrl shortcuts
 			{ key: 'Ctrl+Z', description: 'Undo', category: 'edit' },

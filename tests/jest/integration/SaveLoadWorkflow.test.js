@@ -108,6 +108,12 @@ describe( 'Integration: Save/Load Workflow', () => {
 			showValidationErrors() {}
 		};
 
+		// Load APIErrorHandler first (dependency)
+		const APIErrorHandler = require( '../../../resources/ext.layers.editor/APIErrorHandler.js' );
+		global.window.Layers = global.window.Layers || {};
+		global.window.Layers.Editor = global.window.Layers.Editor || {};
+		global.window.Layers.Editor.APIErrorHandler = APIErrorHandler;
+
 		// Load APIManager code via require for proper Jest coverage instrumentation
 		const loaded = require( '../../../resources/ext.layers.editor/APIManager.js' );
 		APIManager = loaded.APIManager;
@@ -684,9 +690,9 @@ describe( 'Integration: Save/Load Workflow', () => {
 			expect( unknownMsg ).toBe( 'layers-save-error' );
 		} );
 
-		test( 'should sanitize log messages to prevent info disclosure', () => {
+		test( 'should sanitize log messages to prevent info disclosure (via errorHandler)', () => {
 			const sensitiveMessage = 'Error at C:\\Users\\admin\\secret\\file.js with token abc123xyz456789012345';
-			const sanitized = apiManager.sanitizeLogMessage( sensitiveMessage );
+			const sanitized = apiManager.errorHandler.sanitizeLogMessage( sensitiveMessage );
 
 			expect( sanitized ).not.toContain( 'C:\\Users\\admin' );
 			expect( sanitized ).not.toContain( 'abc123xyz456789012345' );

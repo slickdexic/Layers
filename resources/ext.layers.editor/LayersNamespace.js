@@ -155,7 +155,6 @@
 		RenderCoordinator: { ns: 'Canvas', name: 'RenderCoordinator' },
 		InteractionController: { ns: 'Canvas', name: 'InteractionController' },
 		ZoomPanController: { ns: 'Canvas', name: 'ZoomPanController' },
-		GridRulersController: { ns: 'Canvas', name: 'GridRulersController' },
 
 		// Utilities
 		GeometryUtils: { ns: 'Utils', name: 'Geometry' },

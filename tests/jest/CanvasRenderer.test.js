@@ -8,6 +8,9 @@ window.Layers.Utils = window.Layers.Utils || {};
 window.Layers.Canvas = window.Layers.Canvas || {};
 require('../../resources/ext.layers.editor/utils/NamespaceHelper.js');
 
+// Load SelectionRenderer so CanvasRenderer can delegate to it
+require('../../resources/ext.layers.editor/canvas/SelectionRenderer.js');
+
 const CanvasRenderer = require('../../resources/ext.layers.editor/CanvasRenderer.js');
 const TextUtils = require('../../resources/ext.layers.editor/TextUtils.js');
 const GeometryUtils = require('../../resources/ext.layers.editor/GeometryUtils.js');
@@ -138,13 +141,6 @@ describe('CanvasRenderer', () => {
             expect(renderer.panY).toBe(0);
         });
 
-        test('should initialize grid/ruler properties', () => {
-            expect(renderer.showGrid).toBe(false);
-            expect(renderer.gridSize).toBe(20);
-            expect(renderer.showRulers).toBe(false);
-            expect(renderer.rulerSize).toBe(20);
-        });
-
         test('should initialize selection state', () => {
             expect(renderer.selectedLayerIds).toEqual([]);
             expect(renderer.selectionHandles).toEqual([]);
@@ -223,44 +219,6 @@ describe('CanvasRenderer', () => {
 
             expect(renderer.isMarqueeSelecting).toBe(false);
             expect(renderer.marqueeRect).toBeNull();
-        });
-    });
-
-    describe('setGuides', () => {
-        test('should set guide visibility and positions', () => {
-            renderer.setGuides(true, [100, 200], [50, 150, 250]);
-
-            expect(renderer.showGuides).toBe(true);
-            expect(renderer.horizontalGuides).toEqual([100, 200]);
-            expect(renderer.verticalGuides).toEqual([50, 150, 250]);
-        });
-
-        test('should default to empty arrays for missing guides', () => {
-            renderer.setGuides(true, null, null);
-
-            expect(renderer.horizontalGuides).toEqual([]);
-            expect(renderer.verticalGuides).toEqual([]);
-        });
-    });
-
-    describe('setDragGuide', () => {
-        test('should set drag guide for horizontal orientation', () => {
-            renderer.setDragGuide('h', 150);
-
-            expect(renderer.dragGuide).toEqual({ orientation: 'h', pos: 150 });
-        });
-
-        test('should set drag guide for vertical orientation', () => {
-            renderer.setDragGuide('v', 200);
-
-            expect(renderer.dragGuide).toEqual({ orientation: 'v', pos: 200 });
-        });
-
-        test('should clear drag guide when orientation is falsy', () => {
-            renderer.setDragGuide('h', 100); // Set first
-            renderer.setDragGuide(null, 0);  // Clear
-
-            expect(renderer.dragGuide).toBeNull();
         });
     });
 
@@ -585,84 +543,6 @@ describe('CanvasRenderer', () => {
             expect(ctx.setLineDash).toHaveBeenCalled();
             expect(ctx.fillRect).toHaveBeenCalled();
             expect(ctx.strokeRect).toHaveBeenCalled();
-        });
-    });
-
-    describe('drawGrid', () => {
-        test('should draw grid lines', () => {
-            renderer.showGrid = true;
-            renderer.gridSize = 20;
-
-            renderer.drawGrid();
-
-            expect(ctx.beginPath).toHaveBeenCalled();
-            expect(ctx.stroke).toHaveBeenCalled();
-        });
-    });
-
-    describe('drawRulers', () => {
-        test('should draw rulers in screen space', () => {
-            renderer.showRulers = true;
-            renderer.rulerSize = 20;
-
-            renderer.drawRulers();
-
-            expect(ctx.save).toHaveBeenCalled();
-            expect(ctx.setTransform).toHaveBeenCalledWith(1, 0, 0, 1, 0, 0);
-            expect(ctx.restore).toHaveBeenCalled();
-        });
-    });
-
-    describe('drawGuides', () => {
-        test('should not draw when guides disabled', () => {
-            ctx.moveTo.mockClear();
-            renderer.showGuides = false;
-
-            renderer.drawGuides();
-
-            // moveTo is called for many things, so check stroke wasn't called for guides
-            // Actually this is hard to verify, let's just ensure it doesn't throw
-            expect(true).toBe(true);
-        });
-
-        test('should draw horizontal and vertical guides', () => {
-            renderer.showGuides = true;
-            renderer.horizontalGuides = [100, 200];
-            renderer.verticalGuides = [50, 150];
-
-            renderer.drawGuides();
-
-            expect(ctx.save).toHaveBeenCalled();
-            expect(ctx.setLineDash).toHaveBeenCalled();
-            expect(ctx.stroke).toHaveBeenCalled();
-        });
-    });
-
-    describe('drawGuidePreview', () => {
-        test('should not draw when no drag guide', () => {
-            ctx.save.mockClear();
-            renderer.dragGuide = null;
-
-            renderer.drawGuidePreview();
-
-            // save/restore are called by many methods, just check no throw
-            expect(true).toBe(true);
-        });
-
-        test('should draw horizontal drag guide preview', () => {
-            renderer.dragGuide = { orientation: 'h', pos: 150 };
-
-            renderer.drawGuidePreview();
-
-            expect(ctx.stroke).toHaveBeenCalled();
-        });
-
-        test('should draw vertical drag guide preview', () => {
-            renderer.dragGuide = { orientation: 'v', pos: 200 };
-
-            renderer.drawGuidePreview();
-
-            expect(ctx.stroke).toHaveBeenCalled();
         });
     });
 

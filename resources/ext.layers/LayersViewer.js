@@ -13,6 +13,9 @@
 	// Get the shared LayerRenderer from the Layers namespace
 	const LayerRenderer = ( window.Layers && window.Layers.LayerRenderer ) || window.LayerRenderer;
 
+	// Get the shared LayerDataNormalizer for consistent data handling
+	const LayerDataNormalizer = ( window.Layers && window.Layers.LayerDataNormalizer ) || window.LayerDataNormalizer;
+
 	/**
 	 * LayersViewer class - Renders layer annotations on images in article view
 	 *
@@ -52,9 +55,54 @@
 				return;
 			}
 
+			// Normalize layer data using the shared utility
+			// This ensures boolean properties are correctly typed for rendering
+			this.normalizeLayerData();
+
 			this.applyBackgroundSettings();
 			this.createCanvas();
 			this.loadImageAndRender();
+		}
+
+		/**
+		 * Normalize layer data to ensure consistent types
+		 * Uses the shared LayerDataNormalizer for consistency with the editor
+		 */
+		normalizeLayerData() {
+			if ( !this.layerData ) {
+				return;
+			}
+
+			// Use the shared normalizer if available
+			if ( LayerDataNormalizer && typeof LayerDataNormalizer.normalizeLayerData === 'function' ) {
+				LayerDataNormalizer.normalizeLayerData( this.layerData );
+			} else {
+				// Fallback for testing environments where the shared module may not be loaded
+				this.fallbackNormalize();
+			}
+		}
+
+		/**
+		 * Fallback normalization for when shared module is not available
+		 * @private
+		 */
+		fallbackNormalize() {
+			if ( !this.layerData || !this.layerData.layers ) {
+				return;
+			}
+
+			const booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked', 'preserveAspectRatio' ];
+
+			this.layerData.layers.forEach( ( layer ) => {
+				booleanProps.forEach( ( prop ) => {
+					const val = layer[ prop ];
+					if ( val === '0' || val === 'false' || val === 0 ) {
+						layer[ prop ] = false;
+					} else if ( val === '' || val === '1' || val === 'true' || val === 1 ) {
+						layer[ prop ] = true;
+					}
+				} );
+			} );
 		}
 
 		/**
@@ -106,11 +154,23 @@
 
 			this.ctx = this.canvas.getContext( '2d' );
 
-			// Initialize shared LayerRenderer
+			// DEBUG: Log when creating LayerRenderer
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log( '[LayersViewer] Creating LayerRenderer with onImageLoad callback' );
+			}
+
+			// Initialize shared LayerRenderer with image load callback
+			// This ensures image layers trigger a redraw when their base64 data loads
 			this.renderer = new LayerRenderer( this.ctx, {
 				canvas: this.canvas,
 				baseWidth: this.baseWidth,
-				baseHeight: this.baseHeight
+				baseHeight: this.baseHeight,
+				onImageLoad: () => {
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log( '[LayersViewer] onImageLoad callback triggered, calling renderLayers()' );
+					}
+					this.renderLayers();
+				}
 			} );
 
 			// Make container relative positioned
@@ -383,16 +443,24 @@
 				}
 			}
 
-			// Prepare shadow scale for the renderer
-			// BUG FIX (2025-12-08): Pass shadowScale in options instead of calling applyShadow here
-			// Previously, applyShadow was called here with correct scale, but then shape methods
-			// in LayerRenderer called applyShadow again with scale=1, overwriting the correct values.
-			// Now we pass shadowScale through options so shape methods use the correct scale.
+			// Apply shadow at the context level (matching editor behavior)
+			// This ensures ALL layer types (including image) get shadows applied
 			const shadowScale = { sx: sx, sy: sy, avg: scaleAvg };
+			if ( this.renderer && this.renderer.hasShadowEnabled( layer ) ) {
+				this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
+				this.ctx.shadowBlur = Math.round( ( layer.shadowBlur || 8 ) * scaleAvg );
+				this.ctx.shadowOffsetX = Math.round( ( layer.shadowOffsetX || 2 ) * sx );
+				this.ctx.shadowOffsetY = Math.round( ( layer.shadowOffsetY || 2 ) * sy );
+			} else {
+				this.ctx.shadowColor = 'transparent';
+				this.ctx.shadowBlur = 0;
+				this.ctx.shadowOffsetX = 0;
+				this.ctx.shadowOffsetY = 0;
+			}
 
 			// Delegate rendering to the shared LayerRenderer
 			// Using scaled=true since we pre-scaled the coordinates
-			// shadowScale tells shape methods to use this scale for shadow offsets (not 1:1)
+			// shadowScale passed for any shape-specific shadow handling
 			this.renderer.drawLayer( L, { scaled: true, imageElement: this.imageElement, shadowScale: shadowScale } );
 
 			// Restore to pre-layer state

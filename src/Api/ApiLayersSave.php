@@ -207,6 +207,19 @@ class ApiLayersSave extends ApiBase {
 			$sanitizedData = $validationResult->getData();
 			$layerCount = count( $sanitizedData );
 
+			// DEBUG: Log textShadow values for textbox layers
+			foreach ( $sanitizedData as $layer ) {
+				if ( isset( $layer['type'] ) && $layer['type'] === 'textbox' ) {
+					$this->getLogger()->debug(
+						'SAVE DEBUG: textbox layer textShadow={textShadow}, type={type}',
+						[
+							'textShadow' => var_export( $layer['textShadow'] ?? 'NOT SET', true ),
+							'type' => gettype( $layer['textShadow'] ?? null )
+						]
+					);
+				}
+			}
+
 			// Log warnings (non-fatal issues like dropped unknown properties)
 			// These are logged server-side but don't block the save operation
 			if ( $validationResult->hasWarnings() ) {

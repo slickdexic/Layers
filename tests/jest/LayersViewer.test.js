@@ -13,7 +13,8 @@ const mockLayerRenderer = {
 	setBaseDimensions: jest.fn(),
 	setBackgroundImage: jest.fn(),
 	drawLayer: jest.fn(),
-	destroy: jest.fn()
+	destroy: jest.fn(),
+	hasShadowEnabled: jest.fn( () => false )
 };
 
 const MockLayerRenderer = jest.fn( () => mockLayerRenderer );
@@ -1022,6 +1023,137 @@ describe( 'LayersViewer', () => {
 			expect( imageElement.style.visibility ).toBe( 'visible' );
 			// Opacity should not be modified (stays empty)
 			expect( imageElement.style.opacity ).toBe( '' );
+		} );
+	} );
+
+	describe( 'normalizeLayerData', () => {
+		const createImageWithStyle = () => {
+			return {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: {
+					visibility: '',
+					opacity: ''
+				}
+			};
+		};
+
+		test( 'should convert string boolean values to actual booleans', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				layers: [
+					{ id: 'layer1', type: 'textbox', textShadow: 'true', shadow: 'false', visible: '1' },
+					{ id: 'layer2', type: 'rectangle', shadow: '1', glow: '0', locked: 'true' }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// After normalization, string values should be converted to booleans
+			expect( viewer.layerData.layers[ 0 ].textShadow ).toBe( true );
+			expect( viewer.layerData.layers[ 0 ].shadow ).toBe( false );
+			expect( viewer.layerData.layers[ 0 ].visible ).toBe( true );
+			expect( viewer.layerData.layers[ 1 ].shadow ).toBe( true );
+			expect( viewer.layerData.layers[ 1 ].glow ).toBe( false );
+			expect( viewer.layerData.layers[ 1 ].locked ).toBe( true );
+		} );
+
+		test( 'should convert numeric boolean values to actual booleans', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				layers: [
+					{ id: 'layer1', type: 'textbox', textShadow: 1, shadow: 0 }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			expect( viewer.layerData.layers[ 0 ].textShadow ).toBe( true );
+			expect( viewer.layerData.layers[ 0 ].shadow ).toBe( false );
+		} );
+
+		test( 'should preserve actual boolean values', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				layers: [
+					{ id: 'layer1', type: 'textbox', textShadow: true, shadow: false }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			expect( viewer.layerData.layers[ 0 ].textShadow ).toBe( true );
+			expect( viewer.layerData.layers[ 0 ].shadow ).toBe( false );
+		} );
+
+		test( 'should handle missing layers gracefully', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {}
+			} );
+
+			expect( viewer.layerData.layers ).toBeUndefined();
+		} );
+
+		test( 'should normalize all supported boolean properties', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			// Test all boolean properties that should be normalized
+			const layerData = {
+				layers: [
+					{
+						id: 'layer1',
+						type: 'textbox',
+						shadow: 'true',
+						textShadow: '1',
+						glow: 1,
+						visible: 'false',
+						locked: '0',
+						preserveAspectRatio: 'true'
+					}
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			const layer = viewer.layerData.layers[ 0 ];
+			expect( layer.shadow ).toBe( true );
+			expect( layer.textShadow ).toBe( true );
+			expect( layer.glow ).toBe( true );
+			expect( layer.visible ).toBe( false );
+			expect( layer.locked ).toBe( false );
+			expect( layer.preserveAspectRatio ).toBe( true );
 		} );
 	} );
 } );

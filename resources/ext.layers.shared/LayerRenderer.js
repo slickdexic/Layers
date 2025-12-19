@@ -62,6 +62,7 @@ class LayerRenderer {
 	 * @param {HTMLCanvasElement} [config.canvas] - Canvas element reference
 	 * @param {number} [config.baseWidth] - Original image width for scaling (viewer mode)
 	 * @param {number} [config.baseHeight] - Original image height for scaling (viewer mode)
+	 * @param {Function} [config.onImageLoad] - Callback when an image layer finishes loading
 	 */
 	constructor( ctx, config ) {
 		this.ctx = ctx;
@@ -71,6 +72,7 @@ class LayerRenderer {
 		this.canvas = this.config.canvas || null;
 		this.baseWidth = this.config.baseWidth || null;
 		this.baseHeight = this.config.baseHeight || null;
+		this.onImageLoad = this.config.onImageLoad || null;
 
 		// Create ShadowRenderer instance for shadow operations
 		if ( ShadowRenderer ) {
@@ -328,12 +330,21 @@ class LayerRenderer {
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawImage( layer, options ) {
+		// DEBUG: Log when drawImage is called
+		if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log( '[LayerRenderer] drawImage called, layer.id:', layer.id, 'hasSrc:', !!layer.src );
+		}
+
 		const opts = this._prepareRenderOptions( options );
 		const scale = opts.scale;
 
 		// Get the cached image, or load it if not cached
 		const img = this._getImageElement( layer );
 		if ( !img || !img.complete ) {
+			// DEBUG: Log when image is not ready
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log( '[LayerRenderer] Image not ready, drawing placeholder. hasCallback:', !!this.onImageLoad );
+			}
 			// Image not ready yet - draw a placeholder
 			this._drawImagePlaceholder( layer, scale );
 			return;
@@ -361,8 +372,20 @@ class LayerRenderer {
 			this.ctx.translate( -centerX, -centerY );
 		}
 
+		// Apply shadow if enabled
+		// Use shadowScale from options if provided (for viewer scaling), otherwise use 1:1 scale
+		const shadowScale = opts.shadowScale || { sx: 1, sy: 1, avg: 1 };
+		if ( this.shadowRenderer && this.shadowRenderer.hasShadowEnabled( layer ) ) {
+			this.shadowRenderer.applyShadow( layer, shadowScale );
+		}
+
 		// Draw the image
 		this.ctx.drawImage( img, x, y, width, height );
+
+		// Clear shadow after drawing
+		if ( this.shadowRenderer ) {
+			this.shadowRenderer.clearShadow();
+		}
 
 		this.ctx.restore();
 	}
@@ -392,16 +415,39 @@ class LayerRenderer {
 
 		// Create new image element and start loading
 		const img = new Image();
-		img.src = layer.src;
 		this._imageCache.set( cacheKey, img );
+
+		// Store reference to this for closure
+		const self = this;
 
 		// Request redraw when image loads
 		img.onload = () => {
-			// Trigger a redraw - the canvas manager should handle this
-			if ( typeof window !== 'undefined' && window.Layers && window.Layers.requestRedraw ) {
+			// DEBUG: Log when image loads
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log( '[LayerRenderer] Image loaded, cacheKey:', cacheKey, 'hasCallback:', !!self.onImageLoad );
+			}
+			// Use the configured callback (preferred)
+			if ( self.onImageLoad && typeof self.onImageLoad === 'function' ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log( '[LayerRenderer] Calling onImageLoad callback' );
+				}
+				self.onImageLoad();
+			}
+			// Fallback to global requestRedraw if available
+			else if ( typeof window !== 'undefined' && window.Layers && window.Layers.requestRedraw ) {
 				window.Layers.requestRedraw();
 			}
 		};
+
+		// Handle load errors gracefully
+		img.onerror = () => {
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[LayerRenderer] Failed to load image layer:', cacheKey );
+			}
+		};
+
+		// Set src after handlers to ensure events fire
+		img.src = layer.src;
 
 		return img;
 	}

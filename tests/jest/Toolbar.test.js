@@ -86,11 +86,6 @@ describe( 'Toolbar', function () {
 		mockEditor = {
 			canvasManager: {
 				updateStyleOptions: jest.fn(),
-				toggleGrid: jest.fn(),
-				toggleRulers: jest.fn(),
-				toggleGuidesVisibility: jest.fn(),
-				toggleSnapToGrid: jest.fn(),
-				toggleSnapToGuides: jest.fn(),
 				zoomIn: jest.fn(),
 				zoomOut: jest.fn(),
 				resetZoom: jest.fn(),
@@ -472,37 +467,6 @@ describe( 'Toolbar', function () {
 			toolbar.executeAction( 'duplicate' );
 
 			expect( mockEditor.duplicateSelected ).toHaveBeenCalled();
-		} );
-
-		it( 'should toggle grid for grid action', function () {
-			const toggleSpy = jest.spyOn( toolbar, 'toggleGrid' );
-			toolbar.executeAction( 'grid' );
-
-			expect( toggleSpy ).toHaveBeenCalled();
-		} );
-
-		it( 'should toggle rulers for rulers action', function () {
-			toolbar.executeAction( 'rulers' );
-
-			expect( mockEditor.canvasManager.toggleRulers ).toHaveBeenCalled();
-		} );
-
-		it( 'should toggle guides for guides action', function () {
-			toolbar.executeAction( 'guides' );
-
-			expect( mockEditor.canvasManager.toggleGuidesVisibility ).toHaveBeenCalled();
-		} );
-
-		it( 'should toggle snap-grid for snap-grid action', function () {
-			toolbar.executeAction( 'snap-grid' );
-
-			expect( mockEditor.canvasManager.toggleSnapToGrid ).toHaveBeenCalled();
-		} );
-
-		it( 'should toggle snap-guides for snap-guides action', function () {
-			toolbar.executeAction( 'snap-guides' );
-
-			expect( mockEditor.canvasManager.toggleSnapToGuides ).toHaveBeenCalled();
 		} );
 	} );
 
@@ -1046,30 +1010,6 @@ describe( 'Toolbar', function () {
 		} );
 	} );
 
-	describe( 'toggleGrid', function () {
-		beforeEach( function () {
-			toolbar = new Toolbar( { container: container, editor: mockEditor } );
-		} );
-
-		it( 'should toggle grid via canvasManager', function () {
-			toolbar.toggleGrid();
-
-			expect( mockEditor.canvasManager.toggleGrid ).toHaveBeenCalled();
-		} );
-
-		it( 'should update button state', function () {
-			// Create a grid button
-			const gridBtn = document.createElement( 'button' );
-			gridBtn.dataset.action = 'grid';
-			gridBtn.setAttribute( 'aria-pressed', 'false' );
-			container.appendChild( gridBtn );
-
-			toolbar.toggleGrid();
-
-			expect( gridBtn.classList.contains( 'active' ) ).toBe( true );
-		} );
-	} );
-
 	describe( 'zoom actions via executeZoomAction', function () {
 		beforeEach( function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
@@ -1414,85 +1354,6 @@ describe( 'Toolbar', function () {
 			expect( mockEditor.showKeyboardShortcutsDialog ).toHaveBeenCalled();
 		} );
 
-		it( 'should toggle rulers via canvasManager', function () {
-			const rulersBtn = document.createElement( 'button' );
-			rulersBtn.dataset.action = 'rulers';
-			rulersBtn.setAttribute( 'aria-pressed', 'false' );
-			container.appendChild( rulersBtn );
-
-			toolbar.executeAction( 'rulers' );
-
-			expect( mockEditor.canvasManager.toggleRulers ).toHaveBeenCalled();
-			expect( rulersBtn.classList.contains( 'active' ) ).toBe( true );
-		} );
-
-		it( 'should toggle guides via canvasManager', function () {
-			const guidesBtn = document.createElement( 'button' );
-			guidesBtn.dataset.action = 'guides';
-			guidesBtn.setAttribute( 'aria-pressed', 'false' );
-			container.appendChild( guidesBtn );
-
-			toolbar.executeAction( 'guides' );
-
-			expect( mockEditor.canvasManager.toggleGuidesVisibility ).toHaveBeenCalled();
-			expect( guidesBtn.classList.contains( 'active' ) ).toBe( true );
-		} );
-
-		it( 'should toggle snap-grid via canvasManager', function () {
-			const snapGridBtn = document.createElement( 'button' );
-			snapGridBtn.dataset.action = 'snap-grid';
-			snapGridBtn.setAttribute( 'aria-pressed', 'false' );
-			container.appendChild( snapGridBtn );
-
-			toolbar.executeAction( 'snap-grid' );
-
-			expect( mockEditor.canvasManager.toggleSnapToGrid ).toHaveBeenCalled();
-			expect( snapGridBtn.classList.contains( 'active' ) ).toBe( true );
-		} );
-
-		it( 'should toggle snap-guides via canvasManager', function () {
-			const snapGuidesBtn = document.createElement( 'button' );
-			snapGuidesBtn.dataset.action = 'snap-guides';
-			snapGuidesBtn.setAttribute( 'aria-pressed', 'false' );
-			container.appendChild( snapGuidesBtn );
-
-			toolbar.executeAction( 'snap-guides' );
-
-			expect( mockEditor.canvasManager.toggleSnapToGuides ).toHaveBeenCalled();
-			expect( snapGuidesBtn.classList.contains( 'active' ) ).toBe( true );
-		} );
-
-		it( 'should handle rulers action when canvasManager not available', function () {
-			toolbar.editor.canvasManager = null;
-
-			expect( function () {
-				toolbar.executeAction( 'rulers' );
-			} ).not.toThrow();
-		} );
-
-		it( 'should handle guides action when canvasManager not available', function () {
-			toolbar.editor.canvasManager = null;
-
-			expect( function () {
-				toolbar.executeAction( 'guides' );
-			} ).not.toThrow();
-		} );
-
-		it( 'should handle snap-grid action when canvasManager not available', function () {
-			toolbar.editor.canvasManager = null;
-
-			expect( function () {
-				toolbar.executeAction( 'snap-grid' );
-			} ).not.toThrow();
-		} );
-
-		it( 'should handle snap-guides action when canvasManager not available', function () {
-			toolbar.editor.canvasManager = null;
-
-			expect( function () {
-				toolbar.executeAction( 'snap-guides' );
-			} ).not.toThrow();
-		} );
 	} );
 
 	describe( 'updateToolOptions', function () {
@@ -1568,36 +1429,6 @@ describe( 'Toolbar', function () {
 	describe( 'createActionButton toggle buttons', function () {
 		beforeEach( function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
-		} );
-
-		it( 'should set aria-pressed for grid toggle action', function () {
-			const button = toolbar.createActionButton( { id: 'grid', icon: '⊞', title: 'Toggle Grid' } );
-
-			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
-		} );
-
-		it( 'should set aria-pressed for rulers toggle action', function () {
-			const button = toolbar.createActionButton( { id: 'rulers', icon: 'R', title: 'Toggle Rulers' } );
-
-			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
-		} );
-
-		it( 'should set aria-pressed for guides toggle action', function () {
-			const button = toolbar.createActionButton( { id: 'guides', icon: 'G', title: 'Toggle Guides' } );
-
-			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
-		} );
-
-		it( 'should set aria-pressed for snap-grid toggle action', function () {
-			const button = toolbar.createActionButton( { id: 'snap-grid', icon: 'SG', title: 'Snap to Grid' } );
-
-			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
-		} );
-
-		it( 'should set aria-pressed for snap-guides toggle action', function () {
-			const button = toolbar.createActionButton( { id: 'snap-guides', icon: 'SH', title: 'Snap to Guides' } );
-
-			expect( button.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
 		} );
 
 		it( 'should not set aria-pressed for non-toggle actions', function () {

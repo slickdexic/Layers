@@ -2,6 +2,60 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.3] - 2025-12-18
+
+### Bug Fixes
+- **Text shadow rendering fix**: Text shadows on text box layers now render correctly in article view. Previously, text shadows would display in the editor but not when viewing the annotated image on article pages.
+  - Root cause: Boolean properties like `textShadow` were stored as strings ("true"/"1") but rendering code used strict equality (`=== true`)
+  - Solution: Created shared `LayerDataNormalizer.js` utility used by both editor and viewer
+- **Image layer shadows**: Shadows on image layers now render correctly in article view
+
+### Code Quality
+- **LayerDataNormalizer.js extracted** (~228 lines): New shared utility in `ext.layers.shared/` for consistent data type normalization
+  - Normalizes boolean properties: `shadow`, `textShadow`, `glow`, `visible`, `locked`, `preserveAspectRatio`
+  - Normalizes numeric properties: 20+ properties including coordinates, dimensions, opacity, shadow values
+  - Single source of truth - both editor and viewer use this
+- **SelectionRenderer.js extracted** (~349 lines): Selection UI rendering extracted from CanvasRenderer
+  - CanvasRenderer reduced from 1,132 to **834 lines** (no longer a god class!)
+- **APIErrorHandler.js extracted** (~347 lines): Error handling extracted from APIManager
+  - APIManager reduced from 1,385 to **1,168 lines**
+- **God classes reduced from 9 to 7**: CanvasRenderer and TextBoxRenderer both now under 1,000 lines
+- **47 new tests added**: LayerDataNormalizer (46 tests), SelectionRenderer (28 tests), LayersViewer shadow tests
+- **Total test count: 5,297 tests passing** (+61 from v1.1.2)
+
+### Technical Notes
+- The text shadow bug was a classic type coercion issue - JSON serialization loses type information
+- LayerDataNormalizer is loaded first in ext.layers.shared module to ensure availability
+- Fallback normalization preserved for testing environments where shared module may not load
+
+---
+
+## [CRITICAL REVIEW] - 2025-12-18
+
+### Project Health Assessment
+
+**Status:** \u26a0\ufe0f **Accumulating Technical Debt**
+
+A comprehensive critical review revealed that while the extension is **functional and production-ready**, the rate of feature development is outpacing debt reduction efforts. See [`CRITICAL_REVIEW_2025-12-18.md`](CRITICAL_REVIEW_2025-12-18.md) for full analysis.
+
+**Key Findings:**
+- \u2705 Core functionality works well, users satisfied
+- \u2705 5,236 tests passing, 92% coverage
+- \u2705 Professional security practices
+- \u26a0\ufe0f **Codebase grew 14% in 30 days** (35.7K → 40.7K LOC)
+- \u274c **9 god classes** (~12K LOC) - CI now blocks growth (Dec 18)
+- \u274c No E2E tests in CI
+
+**Recommended Actions:**
+1. 2705 **P0:** Add CI check preventing god class growth - **DONE**
+2. **P0:** Set up E2E tests in CI
+3. **P1:** Split APIManager and SelectionManager
+4. **Consider:** Feature freeze until debt controlled
+
+See improvement_plan.md for detailed remediation roadmap.
+
+---
+
 ## [1.1.2] - 2025-12-18
 
 ### Code Quality
@@ -9,11 +63,16 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - `TextToolHandler.js` (~210 lines): Handles inline text input UI for creating text layers
   - `PathToolHandler.js` (~230 lines): Handles freeform path drawing with click-to-add points
   - ToolManager now delegates to handlers when available, with inline fallback for backwards compatibility
-- **58 new unit tests** for tool handlers
-- **Total test count: 5,164 tests passing**
+- **Test coverage improvements across multiple files**:
+  - CanvasRenderer.js: 77.81% → 91.12% (+13.3%)
+  - LayersNamespace.js: 78.68% → 81.96% (+3.3%)
+  - Toolbar.js: 82.82% → 90% (+7.2%)
+  - UIManager.js: 81.34% → 95.44% (+14.1%)
+- **Overall coverage**: 90.4% → 91.84%
+- **Total test count: 5,236 tests passing** (+72 new tests)
 
 ### Technical Notes
-- Both handlers registered in extension.json for ResourceLoader
+- Tool handlers registered in extension.json for ResourceLoader
 - Handlers use the established pattern from ShapeFactory, ToolRegistry, ToolStyles
 - No breaking changes - ToolManager maintains full backwards compatibility
 

@@ -494,6 +494,26 @@ describe( 'TextBoxRenderer', () => {
 		} );
 
 		it( 'should apply text shadow when enabled', () => {
+			// Track shadow color history to verify it's set before fillText
+			const shadowColorHistory = [];
+			let shadowColorWhenFillTextCalled = null;
+			const originalFillText = ctx.fillText;
+
+			Object.defineProperty( ctx, 'shadowColor', {
+				get: function () {
+					return this._shadowColor || '';
+				},
+				set: function ( value ) {
+					shadowColorHistory.push( value );
+					this._shadowColor = value;
+				},
+				configurable: true
+			} );
+
+			ctx.fillText = jest.fn( () => {
+				shadowColorWhenFillTextCalled = ctx.shadowColor;
+			} );
+
 			const layer = {
 				type: 'textbox',
 				x: 10,
@@ -502,12 +522,19 @@ describe( 'TextBoxRenderer', () => {
 				height: 100,
 				text: 'Test',
 				textShadow: true,
-				textShadowColor: 'rgba(0,0,0,0.5)',
+				textShadowColor: 'rgba(255,0,0,0.8)',
 				textShadowBlur: 4
 			};
 			renderer.draw( layer );
-			// shadowColor should be set during text rendering
+
+			// Verify fillText was called
 			expect( ctx.fillText ).toHaveBeenCalled();
+
+			// Verify shadow color was set to the layer's textShadowColor
+			expect( shadowColorHistory ).toContain( 'rgba(255,0,0,0.8)' );
+
+			// Most importantly: verify shadow was set WHEN fillText was called
+			expect( shadowColorWhenFillTextCalled ).toBe( 'rgba(255,0,0,0.8)' );
 		} );
 
 		it( 'should apply font styling', () => {

@@ -652,14 +652,14 @@
 				}() );
 				addInput( { label: t( 'layers-prop-font-size', 'Font Size' ), type: 'number', value: layer.fontSize || 16, min: 6, max: 200, step: 1, prop: 'fontSize', onChange: function ( v ) { const fs = Math.max( 6, Math.min( 200, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { fontSize: fs } ); } } );
 				// Bold and Italic toggles
-				addCheckbox( { label: t( 'layers-prop-bold', 'Bold' ), checked: layer.fontWeight === 'bold', onChange: function ( checked ) { editor.updateLayer( layer.id, { fontWeight: checked ? 'bold' : 'normal' } ); } } );
-				addCheckbox( { label: t( 'layers-prop-italic', 'Italic' ), checked: layer.fontStyle === 'italic', onChange: function ( checked ) { editor.updateLayer( layer.id, { fontStyle: checked ? 'italic' : 'normal' } ); } } );
+				addCheckbox( { label: t( 'layers-prop-bold', 'Bold' ), value: layer.fontWeight === 'bold', onChange: function ( checked ) { editor.updateLayer( layer.id, { fontWeight: checked ? 'bold' : 'normal' } ); } } );
+				addCheckbox( { label: t( 'layers-prop-italic', 'Italic' ), value: layer.fontStyle === 'italic', onChange: function ( checked ) { editor.updateLayer( layer.id, { fontStyle: checked ? 'italic' : 'normal' } ); } } );
 				addColorPicker( { label: t( 'layers-prop-text-color', 'Text Color' ), value: layer.color || '#000000', property: 'color', onChange: function ( newColor ) { editor.updateLayer( layer.id, { color: newColor } ); } } );
 				addInput( { label: t( 'layers-prop-text-stroke-width', 'Text Stroke Width' ), type: 'number', value: layer.textStrokeWidth || 0, min: 0, max: 20, step: 0.5, prop: 'textStrokeWidth', onChange: function ( v ) { editor.updateLayer( layer.id, { textStrokeWidth: Math.max( 0, Math.min( 20, parseFloat( v ) ) ) } ); } } );
 				addColorPicker( { label: t( 'layers-prop-text-stroke-color', 'Text Stroke Color' ), value: layer.textStrokeColor || '#000000', property: 'textStrokeColor', onChange: function ( newColor ) { editor.updateLayer( layer.id, { textStrokeColor: newColor } ); } } );
 				// Text shadow section
 				addSection( t( 'layers-section-text-shadow', 'Text Shadow' ), 'text-shadow' );
-				addCheckbox( { label: t( 'layers-prop-text-shadow', 'Enable Text Shadow' ), checked: layer.textShadow === true, onChange: function ( checked ) { editor.updateLayer( layer.id, { textShadow: checked } ); } } );
+				addCheckbox( { label: t( 'layers-prop-text-shadow', 'Enable Text Shadow' ), value: layer.textShadow === true, onChange: function ( checked ) { editor.updateLayer( layer.id, { textShadow: checked } ); } } );
 				addColorPicker( { label: t( 'layers-prop-text-shadow-color', 'Shadow Color' ), value: layer.textShadowColor || 'rgba(0,0,0,0.5)', property: 'textShadowColor', onChange: function ( newColor ) { editor.updateLayer( layer.id, { textShadowColor: newColor } ); } } );
 				addInput( { label: t( 'layers-prop-text-shadow-blur', 'Shadow Blur' ), type: 'number', value: layer.textShadowBlur || 4, min: 0, max: 50, step: 1, prop: 'textShadowBlur', onChange: function ( v ) { editor.updateLayer( layer.id, { textShadowBlur: Math.max( 0, Math.min( 50, parseFloat( v ) ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-text-shadow-offset-x', 'Shadow Offset X' ), type: 'number', value: layer.textShadowOffsetX || 2, min: -100, max: 100, step: 1, prop: 'textShadowOffsetX', onChange: function ( v ) { editor.updateLayer( layer.id, { textShadowOffsetX: Math.max( -100, Math.min( 100, parseFloat( v ) ) ) } ); } } );
@@ -743,6 +743,10 @@
 				addInput( { label: t( 'layers-prop-stroke-width', 'Text Stroke Width' ), type: 'number', value: layer.textStrokeWidth || 0, min: 0, max: 200, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { textStrokeWidth: parseInt( v, 10 ) } ); } } );
 				addColorPicker( { label: t( 'layers-prop-stroke-color', 'Text Stroke Color' ), value: layer.textStrokeColor || '#000000', property: 'textStrokeColor', onChange: function ( newColor ) { editor.updateLayer( layer.id, { textStrokeColor: newColor } ); } } );
 				break;
+			case 'image':
+				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || 0 ), step: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } ); } } );
+				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: Math.round( layer.height || 0 ), step: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: Math.round( parseFloat( v ) ) } ); } } );
+				break;
 			case 'blur':
 				addInput( { label: t( 'layers-prop-width', 'Width' ), type: 'number', value: Math.round( layer.width || 0 ), step: 1, prop: 'width', onChange: function ( v ) { editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } ); } } );
 				addInput( { label: t( 'layers-prop-height', 'Height' ), type: 'number', value: Math.round( layer.height || 0 ), step: 1, prop: 'height', onChange: function ( v ) { editor.updateLayer( layer.id, { height: Math.round( parseFloat( v ) ) } ); } } );
@@ -750,17 +754,19 @@
 				break;
 		}
 
-		// Appearance
-		addSection( t( 'layers-section-appearance', 'Appearance' ), 'appearance' );
-		if ( layer.type !== 'text' ) {
-			addColorPicker( { label: t( 'layers-prop-stroke-color', 'Stroke Color' ), value: layer.stroke, property: 'stroke', onChange: function ( newColor ) { editor.updateLayer( layer.id, { stroke: newColor } ); } } );
-			addInput( { label: t( 'layers-prop-stroke-width', 'Stroke Width' ), type: 'number', value: layer.strokeWidth || 1, min: 0, max: 200, step: 1, onChange: function ( v ) { const val = Math.max( 0, Math.min( 200, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { strokeWidth: val } ); } } );
-		}
-		addSliderInput( { label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ), value: ( layer.strokeOpacity != null ) ? Math.round( layer.strokeOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { strokeOpacity: v / 100 } ); } } );
-		// Fill controls for shapes that use fill (lines are stroke-only)
-		if ( layer.type !== 'line' ) {
-			addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
-			addSliderInput( { label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ), value: ( layer.fillOpacity != null ) ? Math.round( layer.fillOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { fillOpacity: v / 100 } ); } } );
+		// Appearance (not applicable to image layers)
+		if ( layer.type !== 'image' ) {
+			addSection( t( 'layers-section-appearance', 'Appearance' ), 'appearance' );
+			if ( layer.type !== 'text' ) {
+				addColorPicker( { label: t( 'layers-prop-stroke-color', 'Stroke Color' ), value: layer.stroke, property: 'stroke', onChange: function ( newColor ) { editor.updateLayer( layer.id, { stroke: newColor } ); } } );
+				addInput( { label: t( 'layers-prop-stroke-width', 'Stroke Width' ), type: 'number', value: layer.strokeWidth || 1, min: 0, max: 200, step: 1, onChange: function ( v ) { const val = Math.max( 0, Math.min( 200, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { strokeWidth: val } ); } } );
+			}
+			addSliderInput( { label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ), value: ( layer.strokeOpacity != null ) ? Math.round( layer.strokeOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { strokeOpacity: v / 100 } ); } } );
+			// Fill controls for shapes that use fill (lines are stroke-only)
+			if ( layer.type !== 'line' ) {
+				addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
+				addSliderInput( { label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ), value: ( layer.fillOpacity != null ) ? Math.round( layer.fillOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { fillOpacity: v / 100 } ); } } );
+			}
 		}
 
 		// Effects

@@ -29,7 +29,6 @@
 		LayersSelectionManager: 'Core.SelectionManager',
 		StyleController: 'Core.StyleController',
 		ZoomPanController: 'Canvas.ZoomPanController',
-		GridRulersController: 'Canvas.GridRulersController',
 		TransformController: 'Canvas.TransformController',
 		HitTestController: 'Canvas.HitTestController',
 		DrawingController: 'Canvas.DrawingController',
@@ -180,23 +179,6 @@ class CanvasManager {
 		this.zoomAnimationStartZoom = 1.0;
 		this.zoomAnimationTargetZoom = 1.0;
 
-		// Grid settings
-		this.showGrid = false;
-		this.gridSize = uiConsts ? uiConsts.GRID_SIZE : 20;
-		this.snapToGrid = false;
-
-		// Rulers & guides
-		this.showRulers = false;
-		this.showGuides = false;
-		this.snapToGuides = false;
-		this.smartGuides = false; // reserved for future smart alignment
-		this.rulerSize = uiConsts ? uiConsts.RULER_SIZE : 30;
-		this.horizontalGuides = []; // y positions in canvas coords
-		this.verticalGuides = []; // x positions in canvas coords
-		this.isDraggingGuide = false;
-		this.dragGuideOrientation = null; // 'h' | 'v'
-		this.dragGuidePos = 0;
-
 		// Note: History/Undo is managed by HistoryManager (single source of truth)
 		// These legacy properties are kept for backward compatibility but are no longer used
 		// this.history, this.historyIndex are accessed via this.editor.historyManager
@@ -261,7 +243,6 @@ class CanvasManager {
 		
 		const controllers = [
 			[ 'ZoomPanController', 'zoomPanController' ],
-			[ 'GridRulersController', 'gridRulersController' ],
 			[ 'TransformController', 'transformController' ],
 			[ 'HitTestController', 'hitTestController' ],
 			[ 'DrawingController', 'drawingController' ],
@@ -1336,10 +1317,6 @@ class CanvasManager {
 		}
 	}
 
-	// Draw background grid if enabled
-	drawGrid () { if ( this.gridRulersController ) { this.gridRulersController.drawGrid(); } }
-	toggleGrid () { if ( this.gridRulersController ) { this.gridRulersController.toggleGrid(); } }
-
 	// Selection helpers
 	selectLayer ( layerId, fromPanel ) {
 		// Update selection through StateManager (single source of truth)
@@ -1561,52 +1538,11 @@ class CanvasManager {
 		// Scale to logical canvas pixels
 		const scaleX = this.canvas.width / rect.width;
 		const scaleY = this.canvas.height / rect.height;
-		let canvasX = relX * scaleX;
-		let canvasY = relY * scaleY;
-
-		if ( this.snapToGrid && this.gridSize > 0 ) {
-			const gridSize = this.gridSize;
-			canvasX = Math.round( canvasX / gridSize ) * gridSize;
-			canvasY = Math.round( canvasY / gridSize ) * gridSize;
-		}
+		const canvasX = relX * scaleX;
+		const canvasY = relY * scaleY;
 
 		return { x: canvasX, y: canvasY };
 	}
-
-	// Raw mapping without snapping, useful for ruler hit testing
-	getRawClientPoint ( e ) {
-		const rect = this.canvas.getBoundingClientRect();
-		const clientX = e.clientX - rect.left;
-		const clientY = e.clientY - rect.top;
-		return {
-			canvasX: ( clientX - ( this.panX || 0 ) ) / this.zoom,
-			canvasY: ( clientY - ( this.panY || 0 ) ) / this.zoom
-		};
-	}
-
-	addHorizontalGuide ( y ) {
-		if ( typeof y !== 'number' ) {
-			return;
-		}
-		if ( this.horizontalGuides.indexOf( y ) === -1 ) {
-			this.horizontalGuides.push( y );
-		}
-	}
-
-	addVerticalGuide ( x ) {
-		if ( typeof x !== 'number' ) {
-			return;
-		}
-		if ( this.verticalGuides.indexOf( x ) === -1 ) {
-			this.verticalGuides.push( x );
-		}
-	}
-
-	toggleRulers () { if ( this.gridRulersController ) { this.gridRulersController.toggleRulers(); } }
-	toggleGuidesVisibility () { if ( this.gridRulersController ) { this.gridRulersController.toggleGuidesVisibility(); } }
-	toggleSnapToGrid () { if ( this.gridRulersController ) { this.gridRulersController.toggleSnapToGrid(); } }
-	toggleSnapToGuides () { if ( this.gridRulersController ) { this.gridRulersController.toggleSnapToGuides(); } }
-	toggleSmartGuides () { if ( this.gridRulersController ) { this.gridRulersController.toggleSmartGuides(); } }
 
 	startDrawing ( point ) {
 		// Use current style options if available
@@ -1698,20 +1634,6 @@ class CanvasManager {
 			this.renderer.setBackgroundImage( this.backgroundImage );
 			this.renderer.setSelection( this.getSelectedLayerIds() );
 			this.renderer.setMarquee( this.isMarqueeSelecting, this.getMarqueeRect() );
-			this.renderer.setGuides( this.showGuides, this.horizontalGuides, this.verticalGuides );
-			
-			// Grid and Rulers
-			this.renderer.showGrid = this.showGrid;
-			this.renderer.gridSize = this.gridSize;
-			this.renderer.showRulers = this.showRulers;
-			this.renderer.rulerSize = this.rulerSize;
-
-			// Drag guide state
-			if ( this.isDraggingGuide ) {
-				this.renderer.setDragGuide( this.dragGuideOrientation, this.dragGuidePos );
-			} else {
-				this.renderer.setDragGuide( null );
-			}
 
 			// Perform redraw
 			const layersToDraw = layers || ( ( this.editor && this.editor.layers ) ? this.editor.layers : [] );
@@ -1817,15 +1739,6 @@ class CanvasManager {
 		}
 	}
 
-	// Draw rulers (top and left bars with ticks)
-	drawRulers () { if ( this.gridRulersController ) { this.gridRulersController.drawRulers(); } }
-	drawGuides () { if ( this.gridRulersController ) { this.gridRulersController.drawGuides(); } }
-	drawGuidePreview () { if ( this.gridRulersController ) { this.gridRulersController.drawGuidePreview(); } }
-
-	getGuideSnapDelta ( bounds, deltaX, deltaY, tol ) {
-		return this.gridRulersController ? this.gridRulersController.getGuideSnapDelta( bounds, deltaX, deltaY, tol ) : { dx: 0, dy: 0 };
-	}
-
 	destroy () {
 		// Clean up all controllers - order matters for dependencies
 		const controllersToDestroy = [
@@ -1833,7 +1746,6 @@ class CanvasManager {
 			'events',
 			'renderer',
 			'zoomPanController',
-			'gridRulersController',
 			'transformController',
 			'hitTestController',
 			'drawingController',

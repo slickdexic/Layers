@@ -6,6 +6,7 @@
 
 describe( 'APIManager', function () {
 	let APIManager;
+	let APIErrorHandler;
 	let apiManager;
 	let mockEditor;
 
@@ -55,6 +56,13 @@ describe( 'APIManager', function () {
 				};
 			} )
 		};
+
+		// Load APIErrorHandler first (dependency)
+		APIErrorHandler = require( '../../resources/ext.layers.editor/APIErrorHandler.js' );
+		// Make it available globally for APIManager to find
+		global.window.Layers = global.window.Layers || {};
+		global.window.Layers.Editor = global.window.Layers.Editor || {};
+		global.window.Layers.Editor.APIErrorHandler = APIErrorHandler;
 
 		// Load APIManager code using require for proper coverage tracking
 		const { APIManager: LoadedAPIManager } = require( '../../resources/ext.layers.editor/APIManager.js' );
@@ -120,10 +128,11 @@ describe( 'APIManager', function () {
 			expect( apiManager.retryDelay ).toBe( 1000 );
 		} );
 
-		it( 'should initialize errorConfig object', function () {
-			expect( apiManager.errorConfig ).toBeDefined();
-			expect( apiManager.errorConfig.errorMap ).toBeDefined();
-			expect( apiManager.errorConfig.defaults ).toBeDefined();
+		it( 'should initialize errorHandler with errorConfig object', function () {
+			expect( apiManager.errorHandler ).toBeDefined();
+			expect( apiManager.errorHandler.errorConfig ).toBeDefined();
+			expect( apiManager.errorHandler.errorConfig.errorMap ).toBeDefined();
+			expect( apiManager.errorHandler.errorConfig.defaults ).toBeDefined();
 		} );
 	} );
 
@@ -208,15 +217,15 @@ describe( 'APIManager', function () {
 		} );
 	} );
 
-	describe( 'sanitizeLogMessage', function () {
+	describe( 'sanitizeLogMessage (via errorHandler)', function () {
 		it( 'should return sanitized message for non-string input', function () {
-			const result = apiManager.sanitizeLogMessage( 12345 );
+			const result = apiManager.errorHandler.sanitizeLogMessage( 12345 );
 
 			expect( result ).toBe( 'Non-string error message' );
 		} );
 
 		it( 'should return sanitized message for object input', function () {
-			const result = apiManager.sanitizeLogMessage( { key: 'value' } );
+			const result = apiManager.errorHandler.sanitizeLogMessage( { key: 'value' } );
 
 			expect( result ).toBe( 'Non-string error message' );
 		} );
@@ -224,7 +233,7 @@ describe( 'APIManager', function () {
 		it( 'should remove long token patterns', function () {
 			const message = 'Error with token abcdefghijklmnopqrstuvwxyz123';
 
-			const result = apiManager.sanitizeLogMessage( message );
+			const result = apiManager.errorHandler.sanitizeLogMessage( message );
 
 			expect( result ).toContain( '[TOKEN]' );
 			expect( result ).not.toContain( 'abcdefghijklmnopqrstuvwxyz123' );
@@ -233,7 +242,7 @@ describe( 'APIManager', function () {
 		it( 'should remove URL patterns', function () {
 			const message = 'Failed to load from https://example.com/api/test';
 
-			const result = apiManager.sanitizeLogMessage( message );
+			const result = apiManager.errorHandler.sanitizeLogMessage( message );
 
 			// URL should be sanitized (may become [URL] or [PATH] depending on regex order)
 			expect( result ).not.toContain( 'example.com' );
@@ -242,7 +251,7 @@ describe( 'APIManager', function () {
 		it( 'should preserve simple messages without sensitive data', function () {
 			const message = 'Layer validation failed';
 
-			const result = apiManager.sanitizeLogMessage( message );
+			const result = apiManager.errorHandler.sanitizeLogMessage( message );
 
 			expect( result ).toBe( 'Layer validation failed' );
 		} );
@@ -382,9 +391,9 @@ describe( 'APIManager', function () {
 		} );
 	} );
 
-	describe( 'errorConfig structure', function () {
+	describe( 'errorConfig structure (via errorHandler)', function () {
 		it( 'should have errorMap with known error codes', function () {
-			const errorMap = apiManager.errorConfig.errorMap;
+			const errorMap = apiManager.errorHandler.errorConfig.errorMap;
 
 			expect( errorMap ).toHaveProperty( 'invalidfilename' );
 			expect( errorMap ).toHaveProperty( 'datatoolarge' );
@@ -394,7 +403,7 @@ describe( 'APIManager', function () {
 		} );
 
 		it( 'should have defaults for load, save, generic', function () {
-			const defaults = apiManager.errorConfig.defaults;
+			const defaults = apiManager.errorHandler.errorConfig.defaults;
 
 			expect( defaults ).toHaveProperty( 'load' );
 			expect( defaults ).toHaveProperty( 'save' );
@@ -1115,7 +1124,7 @@ describe( 'APIManager', function () {
 
 			expect( apiManager.api ).toBeNull();
 			expect( apiManager.editor ).toBeNull();
-			expect( apiManager.errorConfig ).toBeNull();
+			expect( apiManager.errorHandler ).toBeNull();
 		} );
 
 		it( 'should call abort if available', function () {

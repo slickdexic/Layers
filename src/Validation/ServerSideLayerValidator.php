@@ -480,7 +480,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => true ];
 		}
 
-		if ( $value === '0' || $value === 'false' ) {
+		if ( $value === '0' || $value === 'false' || $value === '' ) {
 			return [ 'valid' => true, 'value' => false ];
 		}
 

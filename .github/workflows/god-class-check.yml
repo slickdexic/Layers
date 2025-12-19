@@ -1,0 +1,141 @@
+name: God Class Growth Prevention
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'resources/**/*.js'
+
+jobs:
+  check-god-classes:
+    runs-on: ubuntu-latest
+    name: Prevent God Class Growth
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for god class growth
+        run: |
+          echo "🔍 Checking for god class growth..."
+          echo ""
+          
+          # Define god classes and their baseline sizes (as of Dec 18, 2025)
+          # These are the current line counts - PRs must not increase them
+          declare -A GOD_CLASSES=(
+            ["resources/ext.layers.editor/CanvasManager.js"]=1893
+            ["resources/ext.layers.editor/LayerPanel.js"]=1720
+            ["resources/ext.layers.editor/APIManager.js"]=1147
+            ["resources/ext.layers.editor/LayersEditor.js"]=1296
+            ["resources/ext.layers.editor/ToolManager.js"]=1275
+            ["resources/ext.layers.editor/SelectionManager.js"]=1266
+            ["resources/ext.layers.editor/CanvasRenderer.js"]=1132
+            ["resources/ext.layers.editor/Toolbar.js"]=1126
+            ["resources/ext.layers.shared/ShapeRenderer.js"]=1049
+          )
+          
+          FAILED=0
+          WARNINGS=""
+          BLOCKS=""
+          
+          for file in "${!GOD_CLASSES[@]}"; do
+            baseline=${GOD_CLASSES[$file]}
+            
+            if [ -f "$file" ]; then
+              current=$(wc -l < "$file" | tr -d ' ')
+              
+              if [ "$current" -gt "$baseline" ]; then
+                growth=$((current - baseline))
+                BLOCKS+="❌ BLOCKED: $file grew from $baseline to $current lines (+$growth)\n"
+                FAILED=1
+              elif [ "$current" -lt "$baseline" ]; then
+                reduction=$((baseline - current))
+                WARNINGS+="✅ GOOD: $file reduced from $baseline to $current lines (-$reduction)\n"
+              else
+                WARNINGS+="➖ UNCHANGED: $file remains at $current lines\n"
+              fi
+            fi
+          done
+          
+          # Check for NEW god classes (any file >1000 lines not in baseline)
+          echo "🔍 Checking for new god classes..."
+          while IFS= read -r file; do
+            lines=$(echo "$file" | awk '{print $1}')
+            filepath=$(echo "$file" | awk '{print $2}')
+            
+            # Skip if it's already tracked
+            is_tracked=0
+            for known in "${!GOD_CLASSES[@]}"; do
+              if [ "$known" == "$filepath" ]; then
+                is_tracked=1
+                break
+              fi
+            done
+            
+            if [ $is_tracked -eq 0 ] && [ "$lines" -gt 1000 ]; then
+              BLOCKS+="❌ NEW GOD CLASS: $filepath has $lines lines (max 1000 for new files)\n"
+              FAILED=1
+            elif [ $is_tracked -eq 0 ] && [ "$lines" -gt 800 ]; then
+              WARNINGS+="⚠️ WARNING: $filepath has $lines lines (approaching 1000 limit)\n"
+            fi
+          done < <(find resources -name "*.js" -type f ! -path "*/dist/*" ! -path "*backup*" -exec wc -l {} \; | sort -rn)
+          
+          echo "=========================================="
+          echo "GOD CLASS GROWTH PREVENTION REPORT"
+          echo "=========================================="
+          echo ""
+          
+          if [ -n "$BLOCKS" ]; then
+            echo "🚫 BLOCKING ISSUES:"
+            echo -e "$BLOCKS"
+            echo ""
+          fi
+          
+          if [ -n "$WARNINGS" ]; then
+            echo "📋 STATUS:"
+            echo -e "$WARNINGS"
+          fi
+          
+          echo ""
+          echo "=========================================="
+          
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "❌ BUILD FAILED: God class growth detected!"
+            echo ""
+            echo "To fix this:"
+            echo "1. Extract code from the growing file into a new, smaller module"
+            echo "2. Or refactor to reduce the file size"
+            echo "3. Do NOT increase god class sizes"
+            echo ""
+            echo "See: improvement_plan.md for refactoring guidance"
+            echo "See: CRITICAL_REVIEW_2025-12-18.md for context"
+            exit 1
+          else
+            echo ""
+            echo "✅ All god class checks passed!"
+            echo ""
+            echo "Tip: Help reduce technical debt by extracting code from god classes."
+            echo "Current god classes: ${#GOD_CLASSES[@]} files totaling ~12,000 lines"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## God Class Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This check prevents god classes (files >1,000 lines) from growing." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Current god classes (9 files, ~12,600 lines):**" >> $GITHUB_STEP_SUMMARY
+          echo "- CanvasManager.js (1,893 lines) - facade, delegates to 10+ controllers" >> $GITHUB_STEP_SUMMARY
+          echo "- LayerPanel.js (1,720 lines) - delegates to 7 controllers" >> $GITHUB_STEP_SUMMARY
+          echo "- APIManager.js (1,385 lines) - ⚠️ NO delegation, needs split" >> $GITHUB_STEP_SUMMARY
+          echo "- LayersEditor.js (1,296 lines) - partial delegation" >> $GITHUB_STEP_SUMMARY
+          echo "- ToolManager.js (1,275 lines) - delegates to 2 handlers" >> $GITHUB_STEP_SUMMARY
+          echo "- SelectionManager.js (1,266 lines) - ⚠️ NO delegation, needs split" >> $GITHUB_STEP_SUMMARY
+          echo "- CanvasRenderer.js (1,132 lines) - needs split" >> $GITHUB_STEP_SUMMARY
+          echo "- Toolbar.js (1,126 lines) - needs split" >> $GITHUB_STEP_SUMMARY
+          echo "- ShapeRenderer.js (1,049 lines) - needs split" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [improvement_plan.md](improvement_plan.md) for remediation roadmap." >> $GITHUB_STEP_SUMMARY

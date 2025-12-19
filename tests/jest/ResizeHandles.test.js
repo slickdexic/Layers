@@ -2,6 +2,15 @@
  * @jest-environment jsdom
  */
 
+// Setup namespace before loading modules
+window.Layers = window.Layers || {};
+window.Layers.Utils = window.Layers.Utils || {};
+window.Layers.Canvas = window.Layers.Canvas || {};
+window.Layers.Core = window.Layers.Core || {};
+
+// Load SelectionRenderer for CanvasRenderer delegation
+require('../../resources/ext.layers.editor/canvas/SelectionRenderer.js');
+
 const CanvasManager = require('../../resources/ext.layers.editor/CanvasManager.js');
 const CanvasEvents = require('../../resources/ext.layers.editor/CanvasEvents.js');
 const CanvasRenderer = require('../../resources/ext.layers.editor/CanvasRenderer.js');

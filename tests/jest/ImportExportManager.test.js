@@ -317,6 +317,7 @@ describe( 'ImportExportManager', () => {
 		let mockRevokeObjectURL;
 
 		beforeEach( () => {
+			jest.useFakeTimers();
 			mockAnchor = {
 				style: {},
 				click: jest.fn()
@@ -339,6 +340,8 @@ describe( 'ImportExportManager', () => {
 		} );
 
 		afterEach( () => {
+			jest.runOnlyPendingTimers();
+			jest.useRealTimers();
 			document.createElement.mockRestore();
 			document.body.appendChild.mockRestore();
 			document.body.removeChild.mockRestore();

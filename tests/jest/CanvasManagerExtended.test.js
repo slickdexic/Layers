@@ -56,20 +56,6 @@ describe( 'CanvasManager Extended Coverage', () => {
 			updateCanvasTransform: jest.fn()
 		} ) );
 
-		global.GridRulersController = jest.fn( () => ( {
-			drawGrid: jest.fn(),
-			toggleGrid: jest.fn(),
-			drawRulers: jest.fn(),
-			drawGuides: jest.fn(),
-			drawGuidePreview: jest.fn(),
-			toggleRulers: jest.fn(),
-			toggleGuidesVisibility: jest.fn(),
-			toggleSnapToGrid: jest.fn(),
-			toggleSnapToGuides: jest.fn(),
-			toggleSmartGuides: jest.fn(),
-			getGuideSnapDelta: jest.fn( () => ( { dx: 0, dy: 0 } ) )
-		} ) );
-
 		global.HitTestController = jest.fn( () => ( {
 			hitTestSelectionHandles: jest.fn(),
 			getLayerAtPoint: jest.fn(),
@@ -702,46 +688,6 @@ describe( 'CanvasManager Extended Coverage', () => {
 			canvasManager.renderer = null;
 			const layer = { type: 'rectangle', visible: true };
 			expect( () => canvasManager.drawLayer( layer ) ).not.toThrow();
-		} );
-	} );
-
-	describe( 'controller delegation methods', () => {
-		it( 'should delegate drawRulers to gridRulersController', () => {
-			canvasManager.gridRulersController = {
-				drawRulers: jest.fn()
-			};
-			canvasManager.drawRulers();
-			expect( canvasManager.gridRulersController.drawRulers ).toHaveBeenCalled();
-		} );
-
-		it( 'should delegate drawGuides to gridRulersController', () => {
-			canvasManager.gridRulersController = {
-				drawGuides: jest.fn()
-			};
-			canvasManager.drawGuides();
-			expect( canvasManager.gridRulersController.drawGuides ).toHaveBeenCalled();
-		} );
-
-		it( 'should delegate drawGuidePreview to gridRulersController', () => {
-			canvasManager.gridRulersController = {
-				drawGuidePreview: jest.fn()
-			};
-			canvasManager.drawGuidePreview();
-			expect( canvasManager.gridRulersController.drawGuidePreview ).toHaveBeenCalled();
-		} );
-
-		it( 'should delegate getGuideSnapDelta to gridRulersController', () => {
-			canvasManager.gridRulersController = {
-				getGuideSnapDelta: jest.fn( () => ( { dx: 5, dy: 10 } ) )
-			};
-			const result = canvasManager.getGuideSnapDelta( {}, 0, 0, 10 );
-			expect( result ).toEqual( { dx: 5, dy: 10 } );
-		} );
-
-		it( 'should return default when gridRulersController unavailable', () => {
-			canvasManager.gridRulersController = null;
-			const result = canvasManager.getGuideSnapDelta( {}, 0, 0, 10 );
-			expect( result ).toEqual( { dx: 0, dy: 0 } );
 		} );
 	} );
 

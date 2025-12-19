@@ -16,6 +16,7 @@
 	// Lazy-resolved utilities (resolved on first use)
 	let _TextUtils = null;
 	let _GeometryUtils = null;
+	let _SelectionRenderer = null;
 
 	function getTextUtils() {
 		if ( !_TextUtils ) {
@@ -29,6 +30,14 @@
 			_GeometryUtils = getClass( 'Utils.Geometry', 'GeometryUtils' );
 		}
 		return _GeometryUtils;
+	}
+
+	function getSelectionRendererClass() {
+		if ( !_SelectionRenderer ) {
+			_SelectionRenderer = ( window.Layers && window.Layers.Canvas &&
+				window.Layers.Canvas.SelectionRenderer ) || null;
+		}
+		return _SelectionRenderer;
 	}
 
 	/**
@@ -58,15 +67,6 @@
 			this.panX = 0;
 			this.panY = 0;
 
-			// Grid and rulers
-			this.showGrid = false;
-			this.gridSize = 20;
-			this.showRulers = false;
-			this.rulerSize = 20;
-			this.showGuides = false;
-			this.horizontalGuides = [];
-			this.verticalGuides = [];
-
 			// Selection state
 			this.selectedLayerIds = [];
 			this.selectionHandles = [];
@@ -81,6 +81,9 @@
 			// Layer renderer (delegated shape drawing - uses shared LayerRenderer)
 			this.layerRenderer = null;
 
+			// Selection renderer (delegated selection UI drawing)
+			this._selectionRenderer = null;
+
 			this.init();
 		}
 
@@ -92,12 +95,50 @@
 			// Uses shared LayerRenderer (ext.layers.shared) for consistency with viewer
 			const LayerRenderer = getClass( 'LayerRenderer', 'LayerRenderer' );
 			if ( LayerRenderer ) {
+				// Create callback for async image loading to trigger re-render
+				const onImageLoadCallback = () => {
+					if ( this.editor && this.editor.canvasManager ) {
+						this.editor.canvasManager.renderLayers( this.editor.layers );
+					}
+				};
+
 				this.layerRenderer = new LayerRenderer( this.ctx, {
 					zoom: this.zoom,
 					backgroundImage: this.backgroundImage,
-					canvas: this.canvas
+					canvas: this.canvas,
+					onImageLoad: onImageLoadCallback
 				} );
 			}
+
+			// Initialize SelectionRenderer for selection UI drawing
+			this._initSelectionRenderer();
+		}
+
+		/**
+		 * Initialize SelectionRenderer module
+		 */
+		_initSelectionRenderer() {
+			const SelectionRendererClass = getSelectionRendererClass();
+			if ( SelectionRendererClass ) {
+				this._selectionRenderer = new SelectionRendererClass( {
+					ctx: this.ctx,
+					getLayerById: ( id ) => this._getLayerById( id ),
+					getLayerBounds: ( layer ) => this.getLayerBounds( layer )
+				} );
+			}
+		}
+
+		/**
+		 * Get layer by ID (helper for SelectionRenderer)
+		 *
+		 * @param {string} layerId - Layer ID
+		 * @return {Object|null} Layer object or null
+		 */
+		_getLayerById( layerId ) {
+			if ( this.editor && typeof this.editor.getLayerById === 'function' ) {
+				return this.editor.getLayerById( layerId );
+			}
+			return null;
 		}
 
 		setTransform( zoom, panX, panY ) {
@@ -125,12 +166,6 @@
 		setMarquee( isSelecting, rect ) {
 			this.isMarqueeSelecting = isSelecting;
 			this.marqueeRect = rect;
-		}
-
-		setGuides( show, hGuides, vGuides ) {
-			this.showGuides = show;
-			this.horizontalGuides = hGuides || [];
-			this.verticalGuides = vGuides || [];
 		}
 
 		/**
@@ -183,20 +218,10 @@
 				this.drawBackgroundImage();
 			}
 
-			if ( this.showGrid ) {
-				this.drawGrid();
-			}
-
-			if ( this.showRulers ) {
-				this.drawRulers();
-			}
-
 			if ( layers && layers.length > 0 ) {
 				this.renderLayers( layers );
 			}
 
-			this.drawGuides();
-			this.drawGuidePreview();
 			this.drawMultiSelectionIndicators();
 			this.drawMarqueeBox();
 		}
@@ -558,418 +583,89 @@
 
 		// --- UI Rendering (Selection, Guides, etc.) ---
 
-		drawMultiSelectionIndicators() {
-			this.selectionHandles = [];
-			if ( !this.selectedLayerIds || this.selectedLayerIds.length === 0 ) {
-				return;
-			}
-			for ( let i = 0; i < this.selectedLayerIds.length; i++ ) {
-				this.drawSelectionIndicators( this.selectedLayerIds[ i ] );
-			}
-		}
-
-		drawSelectionIndicators( layerId ) {
-			// We need the layer object. Since we don't have direct access to editor.getLayerById here easily
-			// unless we pass it or look it up.
-			// We can pass the layer object instead of ID, or rely on this.editor.
-			if ( !this.editor ) {
-				return;
-			}
-			const layer = this.editor.getLayerById( layerId );
-			if ( !layer ) {
-				return;
-			}
-
-			this.ctx.save();
-
-			// Special handling for lines and arrows: use line-aligned selection box
-			if ( layer.type === 'line' || layer.type === 'arrow' ) {
-				this.drawLineSelectionIndicators( layer );
-				this.ctx.restore();
-				return;
-			}
-
-			const bounds = this.getLayerBounds( layer );
-			if ( !bounds ) {
-				this.ctx.restore();
-				return;
-			}
-
-			const rotation = layer.rotation || 0;
-			if ( rotation !== 0 ) {
-				const centerX = bounds.x + bounds.width / 2;
-				const centerY = bounds.y + bounds.height / 2;
-				this.ctx.translate( centerX, centerY );
-				this.ctx.rotate( rotation * Math.PI / 180 );
-				// When rotated, we draw handles around the unrotated bounds centered at 0,0
-				// But wait, if we translate/rotate context, the coordinates for drawing are local.
-				// But for hit testing, we need world coordinates.
-				// This complicates hit testing if we store transformed coordinates.
-				// For now, let's store the handles as they are drawn (transformed).
-				// Actually, if we rotate context, the rects we draw are aligned with local axes.
-				// But on screen they are rotated.
-				// Hit testing usually happens in world space.
-				// If we want to hit test rotated handles, we need to rotate the point or the handles.
-				// CanvasManager.hitTestSelectionHandles uses simple rect intersection.
-				// This implies handles are axis-aligned in world space?
-				// If rotation is supported, handles should rotate with the object.
-				// If CanvasManager doesn't support rotated hit testing, then we have a problem.
-				// But let's stick to drawing first.
-
-				// We need to pass the effective bounds for drawing handles.
-				// If we rotated the context, we draw at relative coordinates.
-				const localBounds = {
-					x: -bounds.width / 2,
-					y: -bounds.height / 2,
-					width: bounds.width,
-					height: bounds.height
-				};
-				// Pass world-space bounds for correct hit testing coordinate calculation
-				this.drawSelectionHandles( localBounds, layer, true, bounds );
-				this.drawRotationHandle( localBounds, layer, true, bounds );
-			} else {
-				this.drawSelectionHandles( bounds, layer, false, bounds );
-				this.drawRotationHandle( bounds, layer, false, bounds );
-			}
-
-			this.ctx.restore();
-		}
-
-	/**
-		 * Draw selection handles and register them for hit testing
-		 *
-		 * @param {Object} bounds - Drawing bounds (local if rotated, world if not)
-		 * @param {Object} layer - The layer object
-		 * @param {boolean} isRotated - Whether the layer is rotated
-		 * @param {Object} worldBounds - World-space bounds for hit testing calculation
+		/**
+		 * Draw selection indicators for all selected layers
+		 * Delegates to SelectionRenderer (required module)
 		 */
-		drawSelectionHandles( bounds, layer, isRotated, worldBounds ) {
-			const handleSize = 12;
-			const handleColor = '#2196f3';
-			const handleBorderColor = '#ffffff';
-
-			const handles = [
-				{ x: bounds.x, y: bounds.y, type: 'nw' },
-				{ x: bounds.x + bounds.width / 2, y: bounds.y, type: 'n' },
-				{ x: bounds.x + bounds.width, y: bounds.y, type: 'ne' },
-				{ x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2, type: 'e' },
-				{ x: bounds.x + bounds.width, y: bounds.y + bounds.height, type: 'se' },
-				{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height, type: 's' },
-				{ x: bounds.x, y: bounds.y + bounds.height, type: 'sw' },
-				{ x: bounds.x, y: bounds.y + bounds.height / 2, type: 'w' }
-			];
-
-			this.ctx.fillStyle = handleColor;
-			this.ctx.strokeStyle = handleBorderColor;
-			this.ctx.lineWidth = 1;
-			this.ctx.setLineDash( [] );
-
-			for ( let i = 0; i < handles.length; i++ ) {
-				const h = handles[ i ];
-				this.ctx.fillRect( h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize );
-				this.ctx.strokeRect( h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize );
-
-				// Store handle for hit testing
-				// If isRotated, the coordinates h.x/h.y are in local rotated space.
-				// We need to transform them back to world space for hit testing.
-				let worldX = h.x;
-				let worldY = h.y;
-
-				if ( isRotated && layer.rotation ) {
-					// We are currently in a rotated context centered at layer center.
-					// We need to transform (h.x, h.y) which are relative to center, back to world.
-					// Use worldBounds to get correct center for all layer types (including text)
-					const wb = worldBounds || bounds;
-					const centerX = wb.x + wb.width / 2;
-					const centerY = wb.y + wb.height / 2;
-					const rad = layer.rotation * Math.PI / 180;
-					const cos = Math.cos( rad );
-					const sin = Math.sin( rad );
-
-					worldX = centerX + ( h.x * cos - h.y * sin );
-					worldY = centerY + ( h.x * sin + h.y * cos );
-				}
-
-				this.selectionHandles.push( {
-					type: h.type,
-					x: worldX - handleSize / 2,
-					y: worldY - handleSize / 2,
-					width: handleSize,
-					height: handleSize,
-					layerId: layer.id,
-					rotation: layer.rotation || 0 // Store rotation if needed
-				} );
+		drawMultiSelectionIndicators() {
+			if ( this._selectionRenderer ) {
+				this._selectionRenderer.drawMultiSelectionIndicators( this.selectedLayerIds );
+				this.selectionHandles = this._selectionRenderer.getHandles();
+			} else {
+				// Minimal fallback for tests without SelectionRenderer
+				this.selectionHandles = [];
 			}
 		}
 
 		/**
-		 * Draw selection indicators for line/arrow layers - just endpoint handles
-		 * Lines and arrows don't need a bounding box or rotation handle -
-		 * they are manipulated by dragging their endpoints directly.
+		 * Draw selection indicators for a single layer
+		 * Delegates to SelectionRenderer (required module)
+		 *
+		 * @param {string} layerId - Layer ID
+		 */
+		drawSelectionIndicators( layerId ) {
+			if ( this._selectionRenderer ) {
+				this._selectionRenderer.drawSelectionIndicators( layerId );
+				this.selectionHandles = this._selectionRenderer.getHandles();
+			}
+		}
+
+		/**
+		 * Draw selection handles
+		 * Delegates to SelectionRenderer (required module)
+		 *
+		 * @param {Object} bounds - Drawing bounds
+		 * @param {Object} layer - The layer object
+		 * @param {boolean} isRotated - Whether the layer is rotated
+		 * @param {Object} worldBounds - World-space bounds
+		 */
+		drawSelectionHandles( bounds, layer, isRotated, worldBounds ) {
+			if ( this._selectionRenderer ) {
+				this._selectionRenderer.drawSelectionHandles( bounds, layer, isRotated, worldBounds );
+				this.selectionHandles = this._selectionRenderer.getHandles();
+			}
+		}
+
+		/**
+		 * Draw line selection indicators
+		 * Delegates to SelectionRenderer (required module)
 		 *
 		 * @param {Object} layer - The line or arrow layer
 		 */
 		drawLineSelectionIndicators( layer ) {
-			const handleSize = 12;
-			const handleColor = '#2196f3';
-			const handleBorderColor = '#ffffff';
-
-			const x1 = layer.x1 || 0;
-			const y1 = layer.y1 || 0;
-			const x2 = layer.x2 || 0;
-			const y2 = layer.y2 || 0;
-
-			this.ctx.fillStyle = handleColor;
-			this.ctx.strokeStyle = handleBorderColor;
-			this.ctx.lineWidth = 1;
-			this.ctx.setLineDash( [] );
-
-			// Draw and register endpoint handles at the actual coordinates
-			const endpoints = [
-				{ x: x1, y: y1, type: 'w' },  // Start point (tail)
-				{ x: x2, y: y2, type: 'e' }   // End point (head/tip)
-			];
-
-			for ( let i = 0; i < endpoints.length; i++ ) {
-				const ep = endpoints[ i ];
-
-				// Draw the handle
-				this.ctx.fillRect( ep.x - handleSize / 2, ep.y - handleSize / 2, handleSize, handleSize );
-				this.ctx.strokeRect( ep.x - handleSize / 2, ep.y - handleSize / 2, handleSize, handleSize );
-
-				// Register handle for hit testing
-				this.selectionHandles.push( {
-					type: ep.type,
-					x: ep.x - handleSize / 2,
-					y: ep.y - handleSize / 2,
-					width: handleSize,
-					height: handleSize,
-					layerId: layer.id,
-					rotation: 0,
-					isLine: true
-				} );
+			if ( this._selectionRenderer ) {
+				this._selectionRenderer.drawLineSelectionIndicators( layer );
+				this.selectionHandles = this._selectionRenderer.getHandles();
 			}
 		}
 
 		/**
-		 * Draw rotation handle and register it for hit testing
+		 * Draw rotation handle
+		 * Delegates to SelectionRenderer (required module)
 		 *
-		 * @param {Object} bounds - Drawing bounds (local if rotated, world if not)
+		 * @param {Object} bounds - Drawing bounds
 		 * @param {Object} layer - The layer object
 		 * @param {boolean} isRotated - Whether the layer is rotated
-		 * @param {Object} worldBounds - World-space bounds for hit testing calculation
+		 * @param {Object} worldBounds - World-space bounds
 		 */
 		drawRotationHandle( bounds, layer, isRotated, worldBounds ) {
-			const handleSize = 12;
-			const handleColor = '#ff9800';
-			const handleBorderColor = '#ffffff';
-			const lineColor = '#2196f3';
-
-			const rotationHandleX = bounds.x + bounds.width / 2;
-			const rotationHandleY = bounds.y - 20;
-
-			this.ctx.strokeStyle = lineColor;
-			this.ctx.lineWidth = 1;
-			this.ctx.setLineDash( [] );
-			this.ctx.beginPath();
-			this.ctx.moveTo( bounds.x + bounds.width / 2, bounds.y );
-			this.ctx.lineTo( rotationHandleX, rotationHandleY );
-			this.ctx.stroke();
-
-			this.ctx.fillStyle = handleColor;
-			this.ctx.strokeStyle = handleBorderColor;
-			this.ctx.beginPath();
-			this.ctx.arc( rotationHandleX, rotationHandleY, handleSize / 2, 0, 2 * Math.PI );
-			this.ctx.fill();
-			this.ctx.stroke();
-
-			// Add to selection handles for hit testing
-			// Rotation handle is circular, but we can use a rect for hit testing
-
-			let worldX = rotationHandleX;
-			let worldY = rotationHandleY;
-
-			if ( isRotated && layer.rotation ) {
-				// Transform local coordinates back to world coordinates
-				// Use worldBounds to get correct center for all layer types (including text)
-				const wb = worldBounds || bounds;
-				const centerX = wb.x + wb.width / 2;
-				const centerY = wb.y + wb.height / 2;
-				const rad = layer.rotation * Math.PI / 180;
-				const cos = Math.cos( rad );
-				const sin = Math.sin( rad );
-
-				// rotationHandleX/Y are relative to the rotated context origin (which is centerX, centerY)
-				// because bounds passed in are localBounds (centered at 0,0)
-				worldX = centerX + ( rotationHandleX * cos - rotationHandleY * sin );
-				worldY = centerY + ( rotationHandleX * sin + rotationHandleY * cos );
+			if ( this._selectionRenderer ) {
+				this._selectionRenderer.drawRotationHandle( bounds, layer, isRotated, worldBounds );
+				this.selectionHandles = this._selectionRenderer.getHandles();
 			}
-
-			this.selectionHandles.push( {
-				type: 'rotate',
-				x: worldX - handleSize / 2,
-				y: worldY - handleSize / 2,
-				width: handleSize,
-				height: handleSize,
-				layerId: layer.id,
-				rotation: layer.rotation || 0
-			} );
 		}
 
+		/**
+		 * Draw marquee selection box
+		 * Delegates to SelectionRenderer (required module)
+		 */
 		drawMarqueeBox() {
 			if ( !this.isMarqueeSelecting || !this.marqueeRect ) {
 				return;
 			}
-			const rect = this.marqueeRect;
-			this.ctx.save();
-			this.ctx.strokeStyle = '#007bff';
-			this.ctx.fillStyle = 'rgba(0, 123, 255, 0.1)';
-			this.ctx.lineWidth = 1;
-			this.ctx.setLineDash( [ 5, 5 ] );
-			this.ctx.fillRect( rect.x, rect.y, rect.width, rect.height );
-			this.ctx.strokeRect( rect.x, rect.y, rect.width, rect.height );
-			this.ctx.restore();
-		}
 
-		drawGrid() {
-			const size = this.gridSize || 20;
-
-			this.ctx.save();
-			this.ctx.strokeStyle = '#e9ecef';
-			this.ctx.lineWidth = 1;
-			this.ctx.setLineDash( [] );
-
-			// We need to account for pan/zoom if we want grid to move with canvas,
-			// but usually grid is drawn in world coordinates.
-			// Since we applied transform in redraw(), we are drawing in world coordinates.
-			// But we need to cover the visible area.
-			// For simplicity, let's draw a large enough grid or calculate visible bounds.
-			// The original code drew from 0 to canvas.width/height which implies screen coordinates?
-			// No, if transform is applied, 0,0 is world origin.
-			// If we want infinite grid, we need to calculate bounds.
-			// For now, let's just draw a fixed large area or match original behavior.
-			// Original behavior: 0 to canvas.width. This is likely wrong if zoomed/panned.
-			// But let's keep it simple and maybe improve later.
-			// Actually, let's try to cover the visible area.
-			const left = -this.panX / this.zoom;
-			const top = -this.panY / this.zoom;
-			const right = ( this.canvas.width - this.panX ) / this.zoom;
-			const bottom = ( this.canvas.height - this.panY ) / this.zoom;
-
-			// Snap to grid
-			const startX = Math.floor( left / size ) * size;
-			const startY = Math.floor( top / size ) * size;
-
-			this.ctx.beginPath();
-			for ( let x = startX; x < right; x += size ) {
-				this.ctx.moveTo( x, top );
-				this.ctx.lineTo( x, bottom );
-			}
-			for ( let y = startY; y < bottom; y += size ) {
-				this.ctx.moveTo( left, y );
-				this.ctx.lineTo( right, y );
-			}
-			this.ctx.stroke();
-			this.ctx.restore();
-		}
-
-		drawRulers() {
-			// Rulers should be drawn in screen space (fixed to top/left)
-			// So we need to reset transform temporarily.
-			this.ctx.save();
-			this.ctx.setTransform( 1, 0, 0, 1, 0, 0 );
-
-			const size = this.rulerSize;
-			const w = this.canvas.width;
-			const h = this.canvas.height;
-
-			this.ctx.fillStyle = '#f3f3f3';
-			this.ctx.fillRect( 0, 0, w, size );
-			this.ctx.fillRect( 0, 0, size, h );
-
-			this.ctx.strokeStyle = '#ddd';
-			this.ctx.lineWidth = 1;
-			this.ctx.beginPath();
-			this.ctx.moveTo( 0, size + 0.5 );
-			this.ctx.lineTo( w, size + 0.5 );
-			this.ctx.moveTo( size + 0.5, 0 );
-			this.ctx.lineTo( size + 0.5, h );
-			this.ctx.stroke();
-
-			// Draw ticks... (simplified for now)
-			this.ctx.restore();
-		}
-
-		drawGuides() {
-			if ( !this.showGuides ) {
-				return;
-			}
-			this.ctx.save();
-			this.ctx.strokeStyle = '#26c6da';
-			this.ctx.lineWidth = 1 / this.zoom; // Keep line width constant on screen
-			this.ctx.setLineDash( [ 4 / this.zoom, 4 / this.zoom ] );
-
-			// Guides are in world coordinates
-			// We need to draw them across the visible area
-			const top = -this.panY / this.zoom;
-			const bottom = ( this.canvas.height - this.panY ) / this.zoom;
-			const left = -this.panX / this.zoom;
-			const right = ( this.canvas.width - this.panX ) / this.zoom;
-
-			for ( let i = 0; i < this.verticalGuides.length; i++ ) {
-				const gx = this.verticalGuides[ i ];
-				this.ctx.beginPath();
-				this.ctx.moveTo( gx, top );
-				this.ctx.lineTo( gx, bottom );
-				this.ctx.stroke();
-			}
-			for ( let j = 0; j < this.horizontalGuides.length; j++ ) {
-				const gy = this.horizontalGuides[ j ];
-				this.ctx.beginPath();
-				this.ctx.moveTo( left, gy );
-				this.ctx.lineTo( right, gy );
-				this.ctx.stroke();
-			}
-			this.ctx.restore();
-		}
-
-		drawGuidePreview() {
-			// This requires state about dragging guide.
-			// We can pass it in or set it.
-			// For now, let's assume the controller handles the preview by drawing it manually or we add state.
-			// Let's add state methods: setDragGuide(orientation, pos)
-			if ( !this.dragGuide ) {
-				return;
-			}
-			this.ctx.save();
-			this.ctx.strokeStyle = '#ff4081';
-			this.ctx.lineWidth = 1 / this.zoom;
-			this.ctx.setLineDash( [ 8 / this.zoom, 4 / this.zoom ] );
-
-			const top = -this.panY / this.zoom;
-			const bottom = ( this.canvas.height - this.panY ) / this.zoom;
-			const left = -this.panX / this.zoom;
-			const right = ( this.canvas.width - this.panX ) / this.zoom;
-
-			if ( this.dragGuide.orientation === 'h' ) {
-				this.ctx.beginPath();
-				this.ctx.moveTo( left, this.dragGuide.pos );
-				this.ctx.lineTo( right, this.dragGuide.pos );
-				this.ctx.stroke();
-			} else {
-				this.ctx.beginPath();
-				this.ctx.moveTo( this.dragGuide.pos, top );
-				this.ctx.lineTo( this.dragGuide.pos, bottom );
-				this.ctx.stroke();
-			}
-			this.ctx.restore();
-		}
-
-		setDragGuide( orientation, pos ) {
-			if ( orientation ) {
-				this.dragGuide = { orientation: orientation, pos: pos };
-			} else {
-				this.dragGuide = null;
+			if ( this._selectionRenderer ) {
+				this._selectionRenderer.drawMarqueeBox( this.marqueeRect );
 			}
 		}
 
@@ -1107,6 +803,12 @@
 				this.layerRenderer.destroy();
 			}
 			this.layerRenderer = null;
+
+			// Destroy selection renderer
+			if ( this._selectionRenderer && typeof this._selectionRenderer.destroy === 'function' ) {
+				this._selectionRenderer.destroy();
+			}
+			this._selectionRenderer = null;
 
 			// Clear references
 			this.backgroundImage = null;

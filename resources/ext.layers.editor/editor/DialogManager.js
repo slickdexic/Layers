@@ -311,8 +311,9 @@
 			title.textContent = this.getMessage( 'layers-shortcuts-dialog-title', 'Keyboard Shortcuts' );
 			dialog.appendChild( title );
 
-			// Shortcuts list
+			// Shortcuts list - grouped by category
 			const shortcuts = [
+				// Edit commands
 				{ key: 'Ctrl+Z', action: this.getMessage( 'layers-undo', 'Undo' ) },
 				{ key: 'Ctrl+Y', action: this.getMessage( 'layers-redo', 'Redo' ) },
 				{ key: 'Ctrl+S', action: this.getMessage( 'layers-editor-save', 'Save' ) },
@@ -320,13 +321,24 @@
 				{ key: 'Ctrl+D', action: this.getMessage( 'layers-duplicate-selected', 'Duplicate Selected' ) },
 				{ key: 'Ctrl+A', action: this.getMessage( 'layers-shortcut-select-all', 'Select All' ) },
 				{ key: 'Escape', action: this.getMessage( 'layers-shortcut-deselect', 'Deselect / Cancel' ) },
+				// Tools
 				{ key: 'V', action: this.getMessage( 'layers-tool-select', 'Select Tool' ) },
 				{ key: 'T', action: this.getMessage( 'layers-tool-text', 'Text' ) },
+				{ key: 'X', action: this.getMessage( 'layers-tool-textbox', 'Text Box' ) },
+				{ key: 'P', action: this.getMessage( 'layers-tool-pen', 'Pen' ) },
 				{ key: 'R', action: this.getMessage( 'layers-tool-rectangle', 'Rectangle' ) },
+				{ key: 'C', action: this.getMessage( 'layers-tool-circle', 'Circle' ) },
 				{ key: 'E', action: this.getMessage( 'layers-tool-ellipse', 'Ellipse' ) },
+				{ key: 'Y', action: this.getMessage( 'layers-tool-polygon', 'Polygon' ) },
+				{ key: 'S', action: this.getMessage( 'layers-tool-star', 'Star' ) },
 				{ key: 'A', action: this.getMessage( 'layers-tool-arrow', 'Arrow' ) },
-				{ key: '+/-', action: this.getMessage( 'layers-shortcut-zoom', 'Zoom In/Out' ) },
-				{ key: '0', action: this.getMessage( 'layers-zoom-fit', 'Fit to Window' ) }
+				{ key: 'L', action: this.getMessage( 'layers-tool-line', 'Line' ) },
+				{ key: 'B', action: this.getMessage( 'layers-tool-blur', 'Blur/Redact' ) },
+				// View
+				{ key: '+/=', action: this.getMessage( 'layers-zoom-in', 'Zoom In' ) },
+				{ key: '-', action: this.getMessage( 'layers-zoom-out', 'Zoom Out' ) },
+				{ key: '0', action: this.getMessage( 'layers-zoom-fit', 'Fit to Window' ) },
+				{ key: 'Shift+B', action: this.getMessage( 'layers-toggle-background', 'Toggle Background' ) }
 			];
 
 			const list = document.createElement( 'dl' );

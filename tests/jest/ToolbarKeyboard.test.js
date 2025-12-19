@@ -25,8 +25,7 @@ describe( 'ToolbarKeyboard', function () {
 		// Create mock toolbar
 		mockToolbar = {
 			editor: mockEditor,
-			selectTool: jest.fn(),
-			toggleGrid: jest.fn()
+			selectTool: jest.fn()
 		};
 
 		keyboardHandler = new ToolbarKeyboard( mockToolbar );
@@ -110,19 +109,6 @@ describe( 'ToolbarKeyboard', function () {
 
 				expect( mockToolbar.selectTool ).toHaveBeenCalledWith( tool );
 			} );
-		} );
-
-		it( 'should toggle grid when pressing "g"', function () {
-			const event = {
-				target: { tagName: 'BODY' },
-				key: 'g',
-				ctrlKey: false,
-				metaKey: false
-			};
-
-			keyboardHandler.handleKeyboardShortcuts( event );
-
-			expect( mockToolbar.toggleGrid ).toHaveBeenCalled();
 		} );
 
 		it( 'should delete selected on Delete key', function () {
