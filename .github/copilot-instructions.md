@@ -62,6 +62,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `PropertiesForm.js` - layer properties panel
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
+    - `PresetStyleManager.js` (~275 lines) - preset dropdown UI integration (extracted from ToolbarStyleControls)
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`, `APIErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)

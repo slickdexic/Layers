@@ -13,9 +13,9 @@
 |------|--------|---------|
 | **Functionality** | ✅ Working | 13 tools, alignment, presets, named sets |
 | **Security** | ✅ Excellent | Professional PHP backend |
-| **Testing** | ✅ All Passing | 5,412 tests, 0 failures |
+| **Testing** | ✅ All Passing | 5,437 tests, 0 failures |
 | **ES6 Migration** | ✅ Complete | 76 classes, 0 prototype patterns |
-| **God Classes** | ⚠️ Managed | 9 files >1,000 lines (all have delegation) |
+| **God Classes** | ⚠️ Managed | 8 files >1,000 lines (all have delegation) |
 | **Code Volume** | ✅ Controlled | 43,913 lines (CI warns at 45K) |
 | **Mobile** | ❌ Missing | No touch support |
 
@@ -76,16 +76,15 @@
     fi
 ```
 
-### P1.2 Split ToolbarStyleControls ⏳ NOT STARTED
+### P1.2 Split ToolbarStyleControls ✅ COMPLETED
 
-- **Current:** 1,049 lines (NEW god class)
-- **Problem:** Crossed 1,000 lines on Dec 19
-- **Extract:**
-  - FontStyleControls.js (~300 lines) - font family, size, weight, style
-  - ShadowStyleControls.js (~250 lines) - shadow controls
-  - ColorStyleControls.js (~200 lines) - color/fill/stroke
-- **Target:** <600 lines
-- **Effort:** 1 week
+- **Was:** 1,101 lines (NEW god class as of Dec 19)
+- **Solution:** Extracted PresetStyleManager.js (~275 lines)
+- **Now:** 947 lines (below 1,000 threshold)
+- **Extract Performed:**
+  - PresetStyleManager.js - preset dropdown, apply/save, style property list
+- **Tests Added:** 25 new tests (PresetStyleManager.test.js)
+- **Completed:** December 20, 2025
 
 ### P1.3 Split PresetManager ⏳ NOT STARTED
 
