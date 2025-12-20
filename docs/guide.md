@@ -7,7 +7,7 @@ The **Layers** extension is a full-featured **non-destructive image editor** int
 * **Non-Destructive Editing:** The original image (base layer) is never modified. All annotations (shapes, text, highlights, etc.) are stored as overlay layers (vector graphics) that can be toggled or removed independently. This preserves original file integrity while enabling rich annotations.
 * **Professional-Grade Tools:** The editor provides an interface and features modeled after industry-standard image editors (e.g. Photoshop, Inkscape, Figma). Users have access to a wide range of drawing tools, layer effects, and editing controls comparable to professional desktop software.
 * **Seamless Wiki Integration:** Layers integrates with MediaWiki’s UI and parser. An **“Edit Layers”** tab is added to file pages for launching the editor, and wiki pages can embed images with selected annotation layers via wikitext. All data is stored in MediaWiki’s database, and rendered thumbnails with annotations are served through the normal image pipeline.
-* **Use Cases:** Typical use cases include adding callouts to diagrams, highlighting regions in photographs, redacting sensitive information by blurring parts of an image, translating labels on maps, or collaboratively annotating images for documentation. The system is designed to handle everything from simple highlights to complex multi-layer technical drawings.
+* **Use Cases:** Typical use cases include adding callouts to diagrams, highlighting regions in photographs, applying blur effects to create focus, translating labels on maps, or collaboratively annotating images for documentation. The system is designed to handle everything from simple highlights to complex multi-layer technical drawings.
 
 By storing overlays as SVG-like data, annotations remain **scalable** and high-quality at any zoom level. The extension emphasizes a **layer-based editing paradigm**: each annotation resides on its own layer (much like Photoshop), with order and visibility controls. This document describes the expected **features, behaviors, and design** of the Layers extension in detail, serving as a development guide for achieving a robust, professional image editing experience within MediaWiki.
 
@@ -405,9 +405,9 @@ The group would be treated as one layer (so moving the layer moves both box and 
 **Constraints:** The callout text length should ideally be short (a label or sentence). If it’s too long, the text box grows; multiline is possible if the user presses enter or if the box has a fixed width and text wraps. The pointer should not be too short or too long beyond reason; if the user places the box extremely far from the anchor, it's allowed but might look odd. Possibly no explicit limit. The pointer anchor ideally stays put relative to image even if the box is moved – i.e., moving the box will pivot the pointer around the anchor. Implementation wise, the anchor is a fixed point in image coordinates (or attached to some object maybe, but likely just coordinates).
 The user should avoid overlapping callout boxes with other content for clarity. There's no enforced rule, but visually they'd adjust.
 
-### Blur (Redaction) Tool
+### Blur Tool
 
-**Purpose:** The Blur tool is used to obscure parts of the image by applying a blur effect (or similar obfuscation) over a specific region. This is useful for redacting sensitive information (faces, license plates, text) in an image without permanently altering the original – the blur is an overlay layer that hides underlying details.
+**Purpose:** The Blur tool applies a blur effect to selected areas of the image. This creates visual effects like depth-of-field or draws attention to unblurred areas.
 
 **Interaction:** Select the Blur tool. The usage is similar to drawing a shape: click at one corner of the area to obscure, drag to the opposite corner, release to create a **blur region**. The region might initially show as a transparent gray box or a pixelated preview indicating the area that will be blurred. On release, the underlying image portion within that region immediately appears blurred on the canvas (as if a blur filter was applied to that portion).
 
@@ -417,7 +417,7 @@ After creation, the blur region can be moved or resized like a shape. This will 
 
 * **Blur Strength (Radius):** Controls how strong the blur effect is. Measured in pixels radius of Gaussian blur. For instance, options from 1px (very slight blur) up to, say, 20px or more for heavy blur. A moderate default like 5px radius might be used. The UI could present this as a slider or a few presets (light, medium, heavy blur).
 * **Shape:** By default, the blur region is a rectangle. Possibly an option to toggle to an ellipse (for blurring round areas). If not explicitly in UI, one could simulate elliptical blur by using an ellipse tool with blur effect (if that is allowed in styling – see Filters in styling section). But the Blur tool itself likely just does rectangles for simplicity.
-* **Pixelation (alternate mode):** Some redactions use pixelation (mosaic) instead of Gaussian blur. The tool could offer a mode switch between Gaussian blur and pixelate. For example, a checkbox "Pixelate instead of blur". If pixelate, then strength might control block size rather than radius. This is an optional extension – not mentioned explicitly, but worth considering in a full-featured editor.
+* **Pixelation (alternate mode):** Some blur effects use pixelation (mosaic) instead of Gaussian blur. The tool could offer a mode switch between Gaussian blur and pixelate. For example, a checkbox "Pixelate instead of blur". If pixelate, then strength might control block size rather than radius. This is an optional extension – not mentioned explicitly, but worth considering in a full-featured editor.
 * **Color/Tint:** Usually blur overlays don't add color, they just distort. But an optional slight tint might be applied to the region (like a semi-transparent black) to further obscure. Not necessary; likely no color, the blur just shows the original colors blurred.
 * **Border:** Typically none; the blur region isn’t meant to be seen as a shape, just an effect. So no stroke outline (unless a developer wanted to have an outline to indicate the region in editor, but in final output you probably want no visible border). The editor might show a dashed outline just for the editor’s benefit, but that wouldn’t be rendered on final thumbnail.
 
@@ -434,12 +434,12 @@ So in summary, think of blur tool not as a separate SVG shape but an operation: 
 **Constraints:** The blur region must be within the image bounds ideally, as blurring nothing outside image has no effect (if user draws partly outside, only the intersection with image matters). The system likely clips the blur to the image area automatically. Blur radius is capped for performance (extremely large blurs are expensive). Perhaps 0–20px range is enforced in UI. Also, multiple overlapping blur regions will each blur the original image beneath them (not sequentially double-blurring – effectively each layer sees original image as base, unless stacking blur on top of blur if user does that intentionally).
 One caveat: if a user blurs something, then draws a shape on top of it, the shape will overlay on the blurred content, which is fine. If they draw two blur regions overlapping, the area of overlap might be blurred twice if rendered sequentially (could result in extra blurry in overlap). To avoid complexity, maybe advise to use one blur per region or be aware double stacking intensifies blur. But it's an edge case.
 
-From a user perspective, the blur tool is straightforward: draw, area gets blurred. It's an important non-destructive alternative to manually editing the image to redact info.
+From a user perspective, the blur tool is straightforward: draw, area gets blurred. It provides a non-destructive way to apply blur effects.
 
 ---
 
 These tools collectively provide a comprehensive toolkit for annotation:
-**Summary of Tools:** Pointer (select/move), Marquee (select area), Text (labels), Rectangle/Ellipse (basic shapes), Polygon/Star (custom shapes), Line (simple lines), Arrow (pointing arrows), Callout (labels with pointers), Blur (redaction). This covers most annotation needs found in professional editors, all while storing each element as an independent, editable layer.
+**Summary of Tools:** Pointer (select/move), Marquee (select area), Text (labels), Rectangle/Ellipse (basic shapes), Polygon/Star (custom shapes), Line (simple lines), Arrow (pointing arrows), Callout (labels with pointers), Blur (visual effect). This covers most annotation needs found in professional editors, all while storing each element as an independent, editable layer.
 
 ## Styling and Effects
 

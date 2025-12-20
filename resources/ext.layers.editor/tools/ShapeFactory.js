@@ -255,7 +255,7 @@
 		}
 
 		/**
-		 * Create a blur/redaction layer
+		 * Create a blur effect layer
 		 *
 		 * @param {Object} point Starting point
 		 * @return {Object} Blur layer object

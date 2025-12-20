@@ -2,7 +2,7 @@
 
 namespace MediaWiki\Extension\Layers\Database;
 
-use DatabaseUpdater;
+use MediaWiki\Installer\DatabaseUpdater;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -77,12 +77,6 @@ class LayersSchemaManager {
 				'idx_layer_sets_setname_revision',
 				"$base/patches/patch-idx-layer-sets-setname-revision.sql"
 			);
-
-			// Drop foreign key constraints for broader compatibility
-			// FK constraints can cause issues with shared DBs, replicas, etc.
-			$updater->addExtensionUpdate( [
-				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::dropForeignKeyConstraints'
-			] );
 		}
 	}
 

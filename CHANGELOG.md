@@ -2,6 +2,40 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.7] - 2025-12-20
+
+### New Features
+- **Smart Guides** — Intelligent snapping to other objects
+  - Snap to object edges (left, right, top, bottom)
+  - Snap to object centers (horizontal, vertical)
+  - Visual guide lines: magenta for edges, cyan for centers
+  - 8px snap threshold, **off by default** — toggle with `;` key
+- **Arrange Dropdown Menu** — Consolidated toolbar UI
+  - New "Arrange & Snap" dropdown replaces 8 individual alignment buttons
+  - Contains: Smart Guides toggle, Align options, Distribute options
+  - Saves toolbar space for future features
+  - Shows disabled state when insufficient layers selected
+
+### Changes
+- Removed standalone eyedropper button from toolbar (use the eyedropper within the browser's color picker instead)
+- Removed **I**/**Shift+I** keyboard shortcuts (eyedropper available via native color picker)
+- Smart guides now **off by default** — press `;` to toggle or use Arrange menu
+- Updated blur tool documentation — now described as visual effect only, removed "redaction" and "privacy" terminology
+
+### Cleanup
+- Removed unused `EyedropperController` module (~480 lines, 66 tests) — redundant with browser's native color picker
+- Removed eyedropper CSS styles and ToolRegistry entry
+
+### Refactoring
+- Extracted `SmartGuidesController` (~500 lines)
+- Consolidated alignment buttons into dropdown menu
+
+### Testing
+- Added 43 new tests for Smart Guides
+- Total tests: 5,609 passing
+
+---
+
 ## [1.1.6] - 2025-12-20
 
 ### New Features
@@ -168,15 +202,6 @@ See improvement_plan.md for detailed remediation roadmap.
 ## [1.0.0] - 2025-12-17
 
 ### 🎉 First Stable Release
-
-> **Note:** This is the REL1_39 branch for MediaWiki 1.39.x - 1.43.x.
-> For MediaWiki 1.44+, use the `main` branch.
-
-### REL1_39 Branch Fixes (2025-12-17)
-- **Removed foreign key constraints** for broader MySQL/MariaDB compatibility
-- **Added migration** to drop existing FK constraints on upgrade
-- **Fixed unique key** in `layer_sets` table for named sets support
-- **Improved error logging** in database save operations
 
 This is the first production-ready release of the Layers extension.
 

@@ -1,4 +1,4 @@
-{{DISPLAYTITLE:Extension:Layers — Image Annotation Tool}}{{Extension
+{{DISPLAYTITLE:Extension:Layers — Professional Image Annotation}}{{Extension
 |name            = Layers
 |status          = stable
 |type1           = media
@@ -11,11 +11,11 @@
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
-|tags            = <image editor><image markup><annotation><canvas><drawing>
+|tags            = <image editor><image markup><annotation><canvas><drawing><non-destructive>
 |mediawiki       = >= 1.39
 |php             = >= 8.1
 |needs-updatephp = yes
-|description     = A professional-grade, non-destructive image annotation and markup system with 13 drawing tools.
+|description     = A professional-grade, non-destructive image annotation system with 13 drawing tools, style presets, named layer sets, and full keyboard accessibility.
 }}
 
 [[File:ExtensionLayersEditor.png|thumb|600px|right|The Layers editor interface showing drawing tools and layer management.]]
@@ -30,16 +30,38 @@ Inspired by industry standards like [[w:Figma|Figma]], [[w:Canva|Canva]], and [[
 
 {{Note|For '''MediaWiki 1.39.x - 1.43.x''', use the [https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39 branch].}}
 
+== Why Layers? ==
+{| class="wikitable" style="width: 100%;"
+|-
+! style="width: 33%;" | 🎨 '''Professional Tools'''
+! style="width: 33%;" | 🔒 '''Non-Destructive'''
+! style="width: 33%;" | ♿ '''Accessible'''
+|-
+| 13 drawing tools, style presets, alignment & distribution — everything you need to annotate images like a pro.
+| Original images are never modified. All annotations are stored separately and can be edited, versioned, or removed at any time.
+| WCAG 2.1 compliant with full keyboard navigation, screen reader support, and high contrast focus indicators.
+|}
+
 == Key Features ==
-* '''Professional Editor''': A responsive, single-panel canvas with 13 drawing tools.
-* '''Style Presets''': Save and reuse style configurations per tool type. Create custom presets from selected layers or use built-in defaults.
-* '''Named Layer Sets''': Multiple annotation sets per image (e.g., "default", "anatomy-labels", "notes").
-* '''Revision History''': Automatically tracks up to 50 revisions per layer set, integrated with MediaWiki permissions.
-* '''Import Images''': Add external images (logos, icons, photos) as new layers.
-* '''Export as PNG''': Download annotated images with optional background.
-* '''Accessibility-First''': Built with WCAG 2.1 compliance, featuring keyboard shortcuts, skip links, and ARIA landmarks.
-* '''Wikitext Integration''': Simple syntax to toggle layers on/off in standard image links.
-* '''TypeScript Support''': Full type definitions (<code>types/layers.d.ts</code>) for extension developers.
+
+=== New in v1.1.6: Key Object Alignment ===
+Industry-standard alignment behavior matching Adobe Illustrator and Photoshop:
+* When multiple layers are selected, the '''last selected layer''' becomes the "key object"
+* Other layers align '''TO''' the key object, which stays fixed in place
+* Key object is visually distinguished with an '''orange border''' (others have blue)
+* Works for all alignment operations: left, center, right, top, middle, bottom
+
+=== Core Features ===
+* '''Professional Editor''': A responsive, single-panel canvas with 13 drawing tools
+* '''Style Presets''': Save and reuse style configurations per tool type. Create custom presets from selected layers or use built-in defaults
+* '''Alignment & Distribution''': Align layers left/center/right, top/middle/bottom. Distribute layers evenly horizontally or vertically
+* '''Named Layer Sets''': Multiple annotation sets per image (e.g., "default", "anatomy-labels", "notes")
+* '''Revision History''': Automatically tracks up to 50 revisions per layer set, integrated with MediaWiki permissions
+* '''Import Images''': Add external images (logos, icons, photos) as new layers
+* '''Export as PNG''': Download annotated images with optional background
+* '''Accessibility-First''': Built with WCAG 2.1 compliance, featuring keyboard shortcuts, skip links, and ARIA landmarks
+* '''Wikitext Integration''': Simple syntax to toggle layers on/off in standard image links
+* '''TypeScript Support''': Full type definitions (<code>types/layers.d.ts</code>) for extension developers
 
 == Drawing Tools ==
 {| class="wikitable"
@@ -69,24 +91,58 @@ Inspired by industry standards like [[w:Figma|Figma]], [[w:Canva|Canva]], and [[
 |-
 | Line || {{key press|L}} || Straight lines || Stroke width and color options
 |-
-| Blur || {{key press|B}} || Blur/redact areas || Privacy protection tool
+| Blur || {{key press|B}} || Apply blur effect || Create depth and focus effects
 |}
 
+== Text Box Tool ==
+The Text Box tool ({{key press|X}}) combines a rectangle container with rich text capabilities:
+* '''Multi-line text''' with automatic word wrapping
+* '''Font options''': Arial, Roboto, Noto Sans, Times New Roman, Courier New
+* '''Text formatting''': Bold and italic styles
+* '''Alignment''': Horizontal (left/center/right) and vertical (top/middle/bottom)
+* '''Container styling''': Corner radius, padding, stroke, fill with transparency
+* '''Text effects''': Stroke outline and drop shadow with customizable blur/offset
+
+Perfect for creating professional callouts, labels, and information boxes.
+
 == Layer Management ==
-* '''Visibility toggles''': Show/hide individual layers
-* '''Lock/unlock''': Prevent accidental modifications
-* '''Drag-and-drop reorder''': Change layer stacking order
-* '''Duplicate layers''': Quick copy of existing layers
-* '''Per-set background settings''': Background visibility and opacity saved independently
+* '''Visibility toggles''': Show/hide individual layers with a single click
+* '''Lock/unlock''': Prevent accidental modifications to finalized layers
+* '''Drag-and-drop reorder''': Intuitive layer stacking order control
+* '''Duplicate layers''': Quick copy of existing layers with all properties
+* '''Multi-selection''': Select multiple layers with {{key press|Ctrl}}+click or marquee selection ({{key press|M}})
+* '''Per-set background settings''': Background visibility and opacity saved independently per named set
+* '''Delete with confirmation''': Safe deletion with undo support
 
 == Style Options ==
-* Stroke color and width
-* Fill colors with transparency
-* Shadow effects (with spread, offset, color)
-* Text stroke and text shadow
-* Blend modes
-* Font family and size selection
-* Opacity controls
+{| class="wikitable" style="width: 100%;"
+|-
+! Category !! Options
+|-
+| '''Stroke''' || Color picker, width (0-50px), opacity, dash patterns
+|-
+| '''Fill''' || Color picker with transparency, gradient support via blend modes
+|-
+| '''Shadow''' || Enable/disable, color, blur (0-50px), offset X/Y, spread
+|-
+| '''Text''' || Stroke outline, drop shadow, font family, font size (8-144px)
+|-
+| '''Blend Modes''' || Normal, multiply, screen, overlay, darken, lighten, and more
+|-
+| '''Opacity''' || Layer-level and stroke/fill-specific opacity (0-100%)
+|}
+
+== Alignment & Distribution ==
+Professional layout tools for precise positioning:
+
+'''Alignment''' (with Key Object support):
+* Align left, center (horizontal), right
+* Align top, middle (vertical), bottom
+* Last selected layer becomes the "key object" — other layers align to it
+
+'''Distribution''':
+* Distribute horizontally — equal spacing between layer centers
+* Distribute vertically — equal spacing between layer centers
 
 == Usage ==
 === In Wikitext ===
@@ -188,11 +244,44 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ]; // 5 saves per hour
 |}
 
 == Technical Details ==
-* '''Backend''': PHP 8.1+ with 4 custom API endpoints (<code>layersinfo</code>, <code>layerssave</code>, <code>layersdelete</code>, <code>layersrename</code>).
-* '''Frontend''': HTML5 Canvas-based editor with 81 JS files (~41K lines), 72 ES6 classes.
-* '''Code Splitting''': Viewer module (~610 lines) + Shared module (~5K lines) loads separately from Editor (~35K lines).
-* '''Testing''': 5,412 Jest tests (~92% coverage), PHPUnit integration tests, Playwright E2E tests.
-* '''Security''': Full CSRF protection, strict property whitelisting (50+ fields), rate limiting, text sanitization.
+=== Architecture ===
+* '''Backend''': PHP 8.1+ with 4 custom API endpoints (<code>layersinfo</code>, <code>layerssave</code>, <code>layersdelete</code>, <code>layersrename</code>)
+* '''Frontend''': HTML5 Canvas-based editor with 85 JS files (~44K lines), 76 ES6 classes
+* '''Code Splitting''': Viewer module (~610 lines) + Shared module (~5K lines) loads separately from Editor (~38K lines)
+* '''Modern JavaScript''': 100% ES6 classes, no legacy prototype patterns
+
+=== Testing ===
+* '''5,412 Jest tests''' with ~92% statement coverage
+* '''106 test suites''' covering all major components
+* '''PHPUnit integration tests''' for backend API validation
+* '''Playwright E2E tests''' for end-to-end workflow testing
+
+=== Security ===
+* '''CSRF protection''': All write endpoints require valid tokens
+* '''Property whitelisting''': 50+ explicitly allowed fields, unknown properties stripped
+* '''Rate limiting''': Configurable limits via MediaWiki's <code>pingLimiter</code>
+* '''Text sanitization''': HTML and dangerous protocols stripped from user input
+* '''Color validation''': Strict validation prevents XSS via style properties
+
+== Use Cases ==
+{| class="wikitable" style="width: 100%;"
+|-
+! Use Case !! How Layers Helps
+|-
+| '''Educational Content''' || Annotate diagrams, label anatomy, highlight key concepts with callouts
+|-
+| '''Documentation''' || Add numbered steps, highlight UI elements, create before/after comparisons
+|-
+| '''Visual Effects''' || Apply blur effects, draw attention to specific areas, create depth-of-field
+|-
+| '''Maps & Geography''' || Add markers, routes, region highlights without modifying base maps
+|-
+| '''Product Images''' || Add feature callouts, size indicators, brand overlays
+|-
+| '''Scientific Imagery''' || Label specimens, mark measurement points, add scale indicators
+|-
+| '''Collaborative Review''' || Multiple named layer sets allow different annotators to work independently
+|}
 
 == Accessibility ==
 Layers follows [[w:WCAG|WCAG 2.1]] guidelines:
@@ -216,10 +305,34 @@ Layers follows [[w:WCAG|WCAG 2.1]] guidelines:
 * [https://github.com/slickdexic/Layers/blob/main/docs/WIKITEXT_USAGE.md Wikitext Syntax]
 * [https://github.com/slickdexic/Layers/blob/main/docs/CSP_GUIDE.md Content Security Policy Guide]
 
+== Version History ==
+{| class="wikitable"
+! Version !! Date !! Highlights
+|-
+| '''1.1.6''' || 2025-12-20 || Key object alignment (Adobe-style), text layer alignment fix, ColorControlFactory extraction
+|-
+| '''1.1.5''' || 2025-12-18 || Alignment & distribution tools, style presets system
+|-
+| '''1.1.3''' || 2025-12-18 || Text shadow rendering fix, LayerDataNormalizer extraction
+|-
+| '''1.1.0''' || 2025-12-10 || Text Box tool, named layer sets, import/export
+|-
+| '''1.0.0''' || 2025-11-01 || Initial stable release
+|}
+
+See [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG.md] for complete version history.
+
 == Support ==
-* [https://github.com/slickdexic/Layers/issues Issue Tracker]
-* [https://github.com/slickdexic/Layers/blob/main/CONTRIBUTING.md Contributing Guide]
+* [https://github.com/slickdexic/Layers/issues Issue Tracker] — Report bugs or request features
+* [https://github.com/slickdexic/Layers/blob/main/CONTRIBUTING.md Contributing Guide] — Help improve Layers
+* [https://github.com/slickdexic/Layers/discussions Discussions] — Ask questions and share ideas
+
+== See Also ==
+* [[Extension:ImageAnnotator]] — Alternative annotation extension
+* [[Extension:DrawioEditor]] — Diagram editor integration
+* [[Manual:Image_administration]] — MediaWiki image handling
 
 [[Category:Image extensions]]
 [[Category:User interface extensions]]
 [[Category:API extensions]]
+[[Category:Stable extensions]]

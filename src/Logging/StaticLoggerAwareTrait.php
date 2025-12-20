@@ -35,7 +35,7 @@ trait StaticLoggerAwareTrait {
 	 *
 	 * @var LoggerInterface|null
 	 */
-	private static $staticLogger = null;
+	private static ?LoggerInterface $staticLogger = null;
 
 	/**
 	 * Get the Layers logger instance
@@ -65,7 +65,7 @@ trait StaticLoggerAwareTrait {
 	 * @param LoggerInterface|null $logger Pass null to reset
 	 * @return void
 	 */
-	public static function setStaticLogger( $logger ): void {
+	public static function setStaticLogger( ?LoggerInterface $logger ): void {
 		self::$staticLogger = $logger;
 	}
 

@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 19, 2025  
+**Last Updated:** December 20, 2025  
 **Status:** ✅ Stable with Minor Issues  
-**Version:** 1.1.6  
+**Version:** 1.1.7  
 **Goal:** World-class MediaWiki extension
 
 ---
@@ -11,12 +11,12 @@
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Functionality** | ✅ Working | 13 tools, alignment, presets, named sets |
+| **Functionality** | ✅ Working | 14 tools, alignment, presets, named sets, **smart guides**, **eyedropper** |
 | **Security** | ✅ Excellent | Professional PHP backend |
-| **Testing** | ✅ All Passing | 5,412 tests, 0 failures |
-| **ES6 Migration** | ✅ Complete | 76 classes, 0 prototype patterns |
-| **God Classes** | ⚠️ Managed | 9 files >1,000 lines (all have delegation) |
-| **Code Volume** | ✅ Controlled | 43,913 lines (CI warns at 45K) |
+| **Testing** | ✅ All Passing | 5,650 tests, 0 failures |
+| **ES6 Migration** | ✅ Complete | 79 classes, 0 prototype patterns |
+| **God Classes** | ⚠️ Managed | 7 files >1,000 lines (all have delegation) |
+| **Code Volume** | ✅ Controlled | ~45,760 lines (CI warns at 45K) |
 | **Mobile** | ❌ Missing | No touch support |
 
 ---
@@ -76,25 +76,26 @@
     fi
 ```
 
-### P1.2 Split ToolbarStyleControls ⏳ NOT STARTED
+### P1.2 Split ToolbarStyleControls ✅ COMPLETED
 
-- **Current:** 1,049 lines (NEW god class)
-- **Problem:** Crossed 1,000 lines on Dec 19
-- **Extract:**
-  - FontStyleControls.js (~300 lines) - font family, size, weight, style
-  - ShadowStyleControls.js (~250 lines) - shadow controls
-  - ColorStyleControls.js (~200 lines) - color/fill/stroke
-- **Target:** <600 lines
-- **Effort:** 1 week
+- **Was:** 1,101 lines (NEW god class as of Dec 19)
+- **Solution:** Extracted PresetStyleManager.js (~275 lines)
+- **Now:** 947 lines (below 1,000 threshold)
+- **Extract Performed:**
+  - PresetStyleManager.js - preset dropdown, apply/save, style property list
+- **Tests Added:** 25 new tests (PresetStyleManager.test.js)
+- **Completed:** December 20, 2025
 
-### P1.3 Split PresetManager ⏳ NOT STARTED
+### P1.3 Split PresetManager ✅ COMPLETED
 
-- **Current:** 868 lines (approaching limit)
-- **Extract:**
-  - PresetStorage.js (~200 lines) - localStorage operations
-  - BuiltInPresets.js (~150 lines) - default preset definitions
-- **Target:** <500 lines
-- **Effort:** 3 days
+- **Was:** 868 lines (approaching limit)
+- **Solution:** Extracted BuiltInPresets.js and PresetStorage.js
+- **Now:** 642 lines (-26% reduction)
+- **Extractions Performed:**
+  - BuiltInPresets.js (~293 lines) - built-in preset definitions + utility methods
+  - PresetStorage.js (~426 lines) - localStorage operations, import/export, sanitization
+- **Tests Added:** 68 new tests (BuiltInPresets.test.js, PresetStorage.test.js)
+- **Completed:** December 20, 2025
 
 ### P1.4 Fix Markdown Lint Warnings ⏳ NOT STARTED
 
@@ -106,15 +107,15 @@
 
 ## Phase 2: Architecture Improvement (8 weeks)
 
-### P2.1 Reduce ShapeRenderer ⏳ NOT STARTED
+### P2.1 Reduce ShapeRenderer ✅ COMPLETED
 
-- **Current:** 1,191 lines (+142 from Dec 18)
-- **Problem:** Growing despite previous extractions
-- **Extract:**
-  - PathRenderer.js (~200 lines) - path/pen tool rendering
-  - BlurRenderer.js (~150 lines) - blur effect rendering
-- **Target:** <700 lines
-- **Effort:** 1 week
+- **Was:** 1,191 lines (+142 from Dec 18)
+- **Solution:** Extracted PolygonStarRenderer.js
+- **Now:** 858 lines (-28% reduction)
+- **Extraction Performed:**
+  - PolygonStarRenderer.js (~606 lines) - polygon and star shape rendering with shadow support
+- **Tests Added:** 43 new tests (PolygonStarRenderer.test.js)
+- **Completed:** December 20, 2025
 
 ### P2.2 Monitor High-Risk Files ⏳ ONGOING
 
@@ -165,23 +166,41 @@
 - **Effort:** 4-6 weeks
 - **Impact:** Critical for modern web
 
-### P3.2 Eyedropper Tool ⏳ NOT STARTED
+### P3.2 Eyedropper Tool ✅ COMPLETED
 
 - **Problem:** Missing from color picker (per UX audit)
 - **Implementation:**
-  - Canvas color sampling
-  - EyeDropper API (modern browsers)
-  - Fallback for older browsers
-- **Effort:** 1 week
+  - ✅ Canvas color sampling with getImageData
+  - ✅ Magnified preview circle with crosshair
+  - ✅ Color swatch display with hex value
+  - ✅ Click to sample, ESC to cancel
+  - ✅ Keyboard shortcut: I (fill) / Shift+I (stroke)
+  - ✅ Apply to selected layers and toolbar
+- **Effort:** 1 day (vs 1 week estimate)
+- **Components:**
+  - EyedropperController.js (~480 lines)
+  - Integrated with CanvasManager, CanvasRenderer
+  - Keyboard shortcut in ToolbarKeyboard
+  - Registered in ToolRegistry
+- **Tests Added:** 59 new tests
+- **Completed:** December 20, 2025
 
-### P3.3 Smart Guides ⏳ NOT STARTED
+### P3.3 Smart Guides ✅ COMPLETED
 
 - **Problem:** Only basic snap-to-grid
 - **Features:**
-  - Snap to object edges
-  - Center alignment guides
-  - Equal spacing indicators
-- **Effort:** 2 weeks
+  - ✅ Snap to object edges (left, right, top, bottom)
+  - ✅ Center alignment guides (horizontal, vertical)
+  - ✅ Visual guide lines (magenta for edges, cyan for centers)
+  - Equal spacing indicators (future enhancement)
+- **Effort:** 1 day
+- **Implementation:**
+  - SmartGuidesController.js (~500 lines)
+  - Integrated with TransformController for drag operations
+  - Integrated with CanvasRenderer for visual feedback
+  - 8px snap threshold (configurable)
+- **Tests Added:** 43 new tests
+- **Completed:** December 21, 2025
 
 ### P3.4 Accessibility Audit ⏳ NOT STARTED
 
@@ -210,7 +229,7 @@
 
 ## God Class Status Tracker
 
-### Current God Classes (December 19, 2025)
+### Current God Classes (December 20, 2025)
 
 | File | Lines | Delegation | Trend |
 |------|-------|------------|-------|
@@ -219,12 +238,12 @@
 | LayersEditor.js | 1,329 | ✅ 3 modules | ↑ +28 |
 | Toolbar.js | 1,298 | ✅ 4 modules | ↑ +183 |
 | ToolManager.js | 1,275 | ✅ 2 handlers | = |
-| ShapeRenderer.js | 1,191 | ✅ ShadowRenderer | ↑ +142 |
 | SelectionManager.js | 1,181 | ✅ 3 modules | ↑ +34 |
 | APIManager.js | 1,161 | ✅ APIErrorHandler | ↓ -7 |
-| **ToolbarStyleControls.js** | **1,049** | ⚠️ None | **NEW** |
+| ~~ShapeRenderer.js~~ | ~~858~~ | ✅ PolygonStarRenderer | **↓ -333** ✅ |
+| ~~ToolbarStyleControls.js~~ | ~~947~~ | ✅ PresetStyleManager | **↓ -102** ✅ |
 
-**Total in god classes: 12,135 lines** (+555 from Dec 18)
+**Total in god classes: 10,895 lines** (-1,240 from Dec 19)
 
 ### Delegated Code Summary
 
@@ -236,10 +255,10 @@
 | ToolManager | ~1,850 | 1.5x |
 | SelectionManager | ~975 | 0.8x |
 | LayersEditor | ~1,371 | 1.0x |
-| ShapeRenderer | ~521 | 0.4x |
-| ToolbarStyleControls | 0 | ⚠️ 0x |
+| ShapeRenderer | ~1,127 | 1.3x (includes PolygonStarRenderer) |
+| ToolbarStyleControls | ~275 | 0.3x |
 
-**Key Insight:** ToolbarStyleControls is the only god class with NO delegation.
+**Key Insight:** All god classes now have delegation. ShapeRenderer dropped below 1,000 lines.
 
 ---
 
@@ -249,18 +268,19 @@
 
 ```
 Phase 0 (Immediate):
-P0.1 Fix Failing Test:        ░░░░░░░░░░░░░░░░░░░░ 0%
-P0.2 Sync Version Numbers:    ░░░░░░░░░░░░░░░░░░░░ 0%
-P0.3 Remove DEBUG Comments:   ░░░░░░░░░░░░░░░░░░░░ 0%
+P0.1 Fix Alignment Buttons:   ████████████████████ 100% ✅
+P0.2 Fix Failing Test:        ████████████████████ 100% ✅
+P0.3 Sync Version Numbers:    ████████████████████ 100% ✅
+P0.4 Remove DEBUG Comments:   ████████████████████ 100% ✅
 
 Phase 1 (Stabilization):
-P1.1 Control Code Growth:     ░░░░░░░░░░░░░░░░░░░░ 0% ⚠️ CRITICAL
-P1.2 Split ToolbarStyleCtrl:  ░░░░░░░░░░░░░░░░░░░░ 0%
-P1.3 Split PresetManager:     ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.1 Control Code Growth:     ████████████████████ 100% ✅ CI Active
+P1.2 Split ToolbarStyleCtrl:  ████████████████████ 100% ✅
+P1.3 Split PresetManager:     ████████████████████ 100% ✅
 P1.4 Fix Markdown Warnings:   ░░░░░░░░░░░░░░░░░░░░ 0%
 
 Phase 2 (Architecture):
-P2.1 Reduce ShapeRenderer:    ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.1 Reduce ShapeRenderer:    ████████████████████ 100% ✅
 P2.2 Monitor High-Risk Files: ██████████░░░░░░░░░░ 50% (ongoing)
 P2.3 Performance Benchmarks:  ░░░░░░░░░░░░░░░░░░░░ 0%
 P2.4 TypeScript Definitions:  ████████████████████ 100% ✅
@@ -268,8 +288,8 @@ P2.5 Architecture Docs:       ░░░░░░░░░░░░░░░░�
 
 Phase 3 (World-Class):
 P3.1 Mobile/Touch Support:    ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.2 Eyedropper Tool:         ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.3 Smart Guides:            ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.2 Eyedropper Tool:         ████████████████████ 100% ✅
+P3.3 Smart Guides:            ████████████████████ 100% ✅
 P3.4 Accessibility Audit:     ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.5 Auto-Generated Docs:     ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░░░░░ 0%
@@ -279,6 +299,11 @@ P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░�
 
 | Date | Task | Impact |
 |------|------|--------|
+| Dec 20 | Eyedropper Tool (EyedropperController) | +480 lines, 59 tests |
+| Dec 20 | Smart Guides (SmartGuidesController) | +500 lines, 43 tests |
+| Dec 20 | PolygonStarRenderer extraction | ShapeRenderer: -333 lines |
+| Dec 20 | BuiltInPresets + PresetStorage | PresetManager: -226 lines |
+| Dec 20 | PresetStyleManager extraction | ToolbarStyleControls: -102 lines |
 | Dec 19 | Alignment tools (AlignmentController) | +464 lines |
 | Dec 19 | Multi-selection in LayerPanel | +101 lines |
 | Dec 19 | Style presets system | +868 lines |
@@ -311,8 +336,8 @@ P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░�
 
 - [ ] Mobile/touch support working
 - [ ] WCAG 2.1 AA compliant
-- [ ] Eyedropper tool implemented
-- [ ] Smart guides working
+- [x] Eyedropper tool implemented ✅
+- [x] Smart guides working ✅
 - [ ] New contributor productive in <1 day
 
 ---

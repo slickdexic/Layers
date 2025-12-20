@@ -8,9 +8,9 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.1.6",
+	"version": "1.1.7",
 	"requires": {
-		"MediaWiki": ">= 1.39.0"
+		"MediaWiki": ">= 1.44.0"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
@@ -165,6 +165,7 @@
 				"BoundsCalculator.js",
 				"PolygonGeometry.js",
 				"ShadowRenderer.js",
+				"PolygonStarRenderer.js",
 				"ArrowRenderer.js",
 				"TextRenderer.js",
 				"TextBoxRenderer.js",
@@ -247,6 +248,7 @@
 				"canvas/DrawingController.js",
 				"canvas/ClipboardController.js",
 				"canvas/AlignmentController.js",
+				"canvas/SmartGuidesController.js",
 				"canvas/RenderCoordinator.js",
 				"canvas/InteractionController.js",
 				"canvas/TextInputController.js",
@@ -254,11 +256,13 @@
 				"ui/LayerItemFactory.js",
 				"ui/ColorPickerDialog.js",
 				"ui/ColorControlFactory.js",
+				"ui/PresetStyleManager.js",
 				"ui/ConfirmDialog.js",
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",
-				"ui/BackgroundLayerController.js",
 				"ui/LayerDragDrop.js",
+				"presets/BuiltInPresets.js",
+				"presets/PresetStorage.js",
 				"presets/PresetManager.js",
 				"presets/PresetDropdown.js",
 				"panel/LayerItemEvents.js",
@@ -610,7 +614,13 @@
 				"layers-validation-layers-array",
 				"layers-validation-too-many-layers",
 				"layers-validation-layer-error",
-				"layers-validation-duplicate-id"
+				"layers-validation-duplicate-id",
+				"layers-arrange-menu",
+				"layers-snap-options",
+				"layers-smart-guides",
+				"layers-smart-guides-desc",
+				"layers-align-section",
+				"layers-distribute-section"
 			]
 		}
 	},

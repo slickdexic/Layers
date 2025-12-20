@@ -10,12 +10,20 @@
 /* eslint-env jest */
 
 const ShapeRenderer = require( '../../resources/ext.layers.shared/ShapeRenderer.js' );
+const PolygonGeometry = require( '../../resources/ext.layers.shared/PolygonGeometry.js' );
+const PolygonStarRenderer = require( '../../resources/ext.layers.shared/PolygonStarRenderer.js' );
 
 describe( 'ShapeRenderer', () => {
 	let ctx;
 	let shapeRenderer;
+	let polygonStarRenderer;
 
 	beforeEach( () => {
+		// Setup window.Layers namespace for PolygonGeometry access
+		window.Layers = window.Layers || {};
+		window.Layers.Utils = window.Layers.Utils || {};
+		window.Layers.Utils.PolygonGeometry = PolygonGeometry;
+
 		// Create mock canvas context
 		ctx = {
 			save: jest.fn(),
@@ -48,11 +56,18 @@ describe( 'ShapeRenderer', () => {
 		};
 
 		shapeRenderer = new ShapeRenderer( ctx );
+
+		// Create and wire up PolygonStarRenderer for polygon/star tests
+		polygonStarRenderer = new PolygonStarRenderer( ctx );
+		shapeRenderer.setPolygonStarRenderer( polygonStarRenderer );
 	} );
 
 	afterEach( () => {
 		if ( shapeRenderer && shapeRenderer.destroy ) {
 			shapeRenderer.destroy();
+		}
+		if ( polygonStarRenderer && polygonStarRenderer.destroy ) {
+			polygonStarRenderer.destroy();
 		}
 	} );
 

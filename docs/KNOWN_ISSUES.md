@@ -1,27 +1,13 @@
 # Known Issues
 
-**Last Updated:** December 19, 2025  
-**Version:** 1.1.5
+**Last Updated:** December 20, 2025  
+**Version:** 1.1.7
 
 This document lists known functionality issues and their current status.
 
 ---
 
 ## Active Issues
-
-### ⚠️ One Failing Test (JSDOM Issue)
-
-**Status:** Active  
-**Severity:** Low  
-**File:** `tests/jest/ImportExportManager.test.js`
-
-The test `createImportButton callbacks › should call onError callback on import failure` fails due to JSDOM limitations with async DOM cleanup.
-
-**Root Cause:** `removeChild` is called on an element that's no longer in the DOM due to async timing in JSDOM.
-
-**Impact:** Test environment only. Not a production bug.
-
-**Fix:** Mock `document.body.removeChild` or check `parentNode` before removal.
 
 ### ⚠️ No Mobile/Touch Support
 
@@ -36,13 +22,6 @@ The editor does not handle touch events. Users on tablets and phones cannot:
 
 **Workaround:** Use desktop browser or browser with desktop mode.
 
-### ⚠️ Missing Eyedropper Tool
-
-**Status:** Not Implemented  
-**Severity:** Low  
-
-Color picker lacks eyedropper functionality to sample colors from the canvas or image. Users must manually enter color values.
-
 ---
 
 ## Architecture Concerns
@@ -52,34 +31,23 @@ Color picker lacks eyedropper functionality to sample colors from the canvas or 
 **Status:** Monitored with CI enforcement  
 **Severity:** Medium for maintainability
 
-The codebase has **9 files exceeding 1,000 lines**. All have delegation patterns but remain large:
+The codebase has **7 files exceeding 1,000 lines**. All have delegation patterns:
 
 | File | Lines | Delegation | Trend |
 |------|-------|------------|-------|
-| CanvasManager.js | 1,830 | ✅ 10+ controllers | ↑ Growing |
-| LayerPanel.js | 1,821 | ✅ 7 controllers | ↑ Growing |
+| CanvasManager.js | 1,830 | ✅ 10+ controllers | Stable |
+| LayerPanel.js | 1,821 | ✅ 7 controllers | Stable |
 | LayersEditor.js | 1,329 | ✅ 3 modules | Stable |
-| Toolbar.js | 1,298 | ✅ 4 modules | ↑ Growing |
+| Toolbar.js | 1,298 | ✅ 4 modules | Stable |
 | ToolManager.js | 1,275 | ✅ 2 handlers | Stable |
-| ShapeRenderer.js | 1,191 | ✅ ShadowRenderer | ↑ Growing |
 | SelectionManager.js | 1,181 | ✅ 3 modules | Stable |
 | APIManager.js | 1,161 | ✅ APIErrorHandler | Stable |
-| ToolbarStyleControls.js | 1,049 | ⚠️ None | **NEW** |
 
-**Total in god classes: ~12,135 lines** (28% of JS codebase)
+**Total in god classes: ~10,895 lines** (24% of JS codebase)
 
 **CI Protection:** `npm run check:godclass` blocks PRs that grow files beyond limits.
 
 **See:** [improvement_plan.md](../improvement_plan.md) for remediation plan.
-
-### ⚠️ Code Volume Growing
-
-**Status:** Needs attention  
-**Severity:** Medium
-
-Codebase grew from 40,865 lines (Dec 18) to 43,641 lines (Dec 19) - 6.8% in one day.
-
-**Recommendation:** Implement 1:1 extraction rule (new features require equivalent refactoring).
 
 ---
 
@@ -87,7 +55,28 @@ Codebase grew from 40,865 lines (Dec 18) to 43,641 lines (Dec 19) - 6.8% in one 
 
 The following issues have been **fixed** and are now working:
 
-### 1. Undo (Ctrl+Z)
+### 1. Eyedropper Tool
+
+**Status:** ✅ Available via browser's native color picker  
+**Note:** Eyedropper functionality built into `<input type="color">` element
+
+---
+
+### 2. Smart Guides (December 20, 2025)
+
+**Status:** ✅ Implemented  
+**Behavior:** Automatic snapping when moving objects
+
+**Implementation:**
+- `SmartGuidesController.js` (~500 lines) provides object-to-object snapping
+- Edge snapping: left, right, top, bottom (magenta guide lines)
+- Center snapping: horizontal and vertical centers (cyan guide lines)
+- 8px snap threshold (auto-activates when grid snap is off)
+- 43 comprehensive tests
+
+---
+
+### 3. Undo (Ctrl+Z)
 
 **Status:** ✅ Fixed  
 **Button:** Toolbar undo button  
@@ -100,7 +89,7 @@ The following issues have been **fixed** and are now working:
 
 ---
 
-### 2. Redo (Ctrl+Y / Ctrl+Shift+Z)
+### 4. Redo (Ctrl+Y / Ctrl+Shift+Z)
 
 **Status:** ✅ Fixed  
 **Button:** Toolbar redo button  
@@ -110,7 +99,7 @@ The following issues have been **fixed** and are now working:
 
 ---
 
-### 3. Duplicate Layer (Ctrl+D)
+### 5. Duplicate Layer (Ctrl+D)
 
 **Status:** ✅ Fixed  
 **Button:** Toolbar duplicate button  
@@ -123,7 +112,7 @@ The following issues have been **fixed** and are now working:
 
 ---
 
-### 4. Shadow Rendering Issues
+### 6. Shadow Rendering Issues
 
 **Status:** ✅ Fixed (December 8-10, 2025)
 
@@ -176,4 +165,4 @@ If you encounter issues:
 ---
 
 *Document created: December 8, 2025*  
-*Last updated: December 18, 2025*
+*Last updated: December 20, 2025*

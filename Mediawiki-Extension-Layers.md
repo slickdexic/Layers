@@ -69,7 +69,7 @@ Inspired by industry standards like [[w:Figma|Figma]], [[w:Canva|Canva]], and [[
 |-
 | Line || {{key press|L}} || Straight lines || Stroke width and color options
 |-
-| Blur || {{key press|B}} || Blur/redact areas || Privacy protection tool
+| Blur || {{key press|B}} || Apply blur effect || Create depth and focus effects
 |}
 
 == Layer Management ==

@@ -7,7 +7,7 @@ This guide is for contributors (human and AI) working on the Layers extension. I
 Separation of concerns is strict: PHP integrates with MediaWiki and storage; JavaScript implements the editor UI/state.
 
 - Backend (PHP, `src/`)
-  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.39)
+  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.44)
   - Service wiring: `services.php` registers 3 services: LayersLogger, LayersSchemaManager, LayersDatabase (uses DI pattern)
   - Logging: `src/Logging/` provides `LoggerAwareTrait` (for objects with getLogger/setLogger), `StaticLoggerAwareTrait` (for static contexts), and `LayersLogger` (factory via service container)
   - API modules (`src/Api/`)
@@ -62,6 +62,12 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `PropertiesForm.js` - layer properties panel
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
+    - `PresetStyleManager.js` (~275 lines) - preset dropdown UI integration (extracted from ToolbarStyleControls)
+  - Preset modules (`resources/ext.layers.editor/presets/`): Style preset system:
+    - `PresetManager.js` (~642 lines) - facade for preset operations, delegates to BuiltInPresets and PresetStorage
+    - `BuiltInPresets.js` (~293 lines) - built-in preset definitions (arrow, text, shapes, etc.)
+    - `PresetStorage.js` (~426 lines) - localStorage operations, import/export, style sanitization
+    - `PresetDropdown.js` (~528 lines) - dropdown UI component for selecting presets
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`, `APIErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)

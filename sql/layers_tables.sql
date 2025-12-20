@@ -20,9 +20,9 @@ CREATE TABLE /*_*/layer_sets (
     KEY ls_img_lookup (ls_img_name, ls_img_sha1),
     KEY ls_user_timestamp (ls_user_id, ls_timestamp),
     KEY ls_timestamp (ls_timestamp),
-    KEY ls_size_performance (ls_size, ls_layer_count)
-    -- Note: Foreign key constraints removed for broader compatibility
-    -- Some MediaWiki setups (shared DBs, replicas) don't support FK constraints
+    KEY ls_size_performance (ls_size, ls_layer_count),
+    -- Foreign key constraint to ensure user exists
+    CONSTRAINT fk_layer_sets_user_id FOREIGN KEY (ls_user_id) REFERENCES /*_*/user (user_id) ON DELETE CASCADE
 ) /*$wgDBTableOptions*/;
 
 CREATE TABLE /*_*/layer_assets (
@@ -36,8 +36,9 @@ CREATE TABLE /*_*/layer_assets (
     PRIMARY KEY (la_id),
     UNIQUE KEY la_title (la_title),
     KEY la_user_timestamp (la_user_id, la_timestamp),
-    KEY la_size (la_size)
-    -- Note: Foreign key constraints removed for broader compatibility
+    KEY la_size (la_size),
+    -- Foreign key constraint to ensure user exists
+    CONSTRAINT fk_layer_assets_user_id FOREIGN KEY (la_user_id) REFERENCES /*_*/user (user_id) ON DELETE CASCADE
 ) /*$wgDBTableOptions*/;
 
 CREATE TABLE /*_*/layer_set_usage (
@@ -49,5 +50,7 @@ CREATE TABLE /*_*/layer_set_usage (
     KEY lsu_page_id (lsu_page_id),
     KEY lsu_timestamp (lsu_timestamp),
     KEY lsu_usage_count (lsu_usage_count),
-    -- Foreign key constraints to ensure 
-    -- Note: Foreign key constraints removed for broader compatibility
+    -- Foreign key constraints to ensure referenced records exist
+    CONSTRAINT fk_layer_set_usage_layer_set_id FOREIGN KEY (lsu_layer_set_id) REFERENCES /*_*/layer_sets (ls_id) ON DELETE CASCADE,
+    CONSTRAINT fk_layer_set_usage_page_id FOREIGN KEY (lsu_page_id) REFERENCES /*_*/page (page_id) ON DELETE CASCADE
+) /*$wgDBTableOptions*/;

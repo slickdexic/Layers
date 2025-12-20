@@ -62,9 +62,10 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 | `A` | Select arrow tool |
 | `L` | Select line tool |
 | `G` | Toggle grid |
+| `;` | Toggle smart guides (snap to objects) |
 | `Delete` / `Backspace` | Delete selected layer(s) |
 | `Escape` | Cancel current operation / deselect |
-| `Shift + ?` | Show keyboard shortcuts help dialog (NEW) |
+| `Shift + ?` | Show keyboard shortcuts help dialog | |
 
 #### Layer Panel Navigation (NEW)
 

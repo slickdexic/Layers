@@ -35,6 +35,7 @@
 		ClipboardController: 'Canvas.ClipboardController',
 		TextInputController: 'Canvas.TextInputController',
 		AlignmentController: 'Canvas.AlignmentController',
+		SmartGuidesController: 'Canvas.SmartGuidesController',
 		RenderCoordinator: 'Canvas.RenderCoordinator',
 		InteractionController: 'Canvas.InteractionController',
 		ValidationManager: 'Validation.Manager',
@@ -249,7 +250,8 @@ class CanvasManager {
 			[ 'DrawingController', 'drawingController' ],
 			[ 'ClipboardController', 'clipboardController' ],
 			[ 'TextInputController', 'textInputController' ],
-			[ 'AlignmentController', 'alignmentController' ]
+			[ 'AlignmentController', 'alignmentController' ],
+			[ 'SmartGuidesController', 'smartGuidesController' ]
 		];
 
 		controllers.forEach( ( entry ) => {
@@ -1806,6 +1808,7 @@ class CanvasManager {
 			'hitTestController',
 			'drawingController',
 			'clipboardController',
+			'smartGuidesController',
 			'styleController'
 		];
 

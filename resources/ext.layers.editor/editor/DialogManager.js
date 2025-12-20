@@ -333,7 +333,7 @@
 				{ key: 'S', action: this.getMessage( 'layers-tool-star', 'Star' ) },
 				{ key: 'A', action: this.getMessage( 'layers-tool-arrow', 'Arrow' ) },
 				{ key: 'L', action: this.getMessage( 'layers-tool-line', 'Line' ) },
-				{ key: 'B', action: this.getMessage( 'layers-tool-blur', 'Blur/Redact' ) },
+				{ key: 'B', action: this.getMessage( 'layers-tool-blur', 'Blur' ) },
 				// View
 				{ key: '+/=', action: this.getMessage( 'layers-zoom-in', 'Zoom In' ) },
 				{ key: '-', action: this.getMessage( 'layers-zoom-out', 'Zoom Out' ) },

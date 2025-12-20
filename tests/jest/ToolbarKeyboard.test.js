@@ -270,6 +270,13 @@ describe( 'ToolbarKeyboard', function () {
 			expect( editShortcuts.some( s => s.key === 'Ctrl+Z' ) ).toBe( true );
 			expect( editShortcuts.some( s => s.key === 'Ctrl+D' ) ).toBe( true );
 		} );
+
+		it( 'should include smart guides shortcut in view category', function () {
+			const shortcuts = keyboardHandler.getShortcutsConfig();
+			const viewShortcuts = shortcuts.filter( s => s.category === 'view' );
+
+			expect( viewShortcuts.some( s => s.key === ';' && s.description === 'Toggle Smart Guides' ) ).toBe( true );
+		} );
 	} );
 
 	describe( 'Shift shortcuts', function () {
@@ -371,6 +378,87 @@ describe( 'ToolbarKeyboard', function () {
 		} );
 	} );
 
+	describe( 'toggleSmartGuides', function () {
+		it( 'should toggle smart guides off when currently on', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					enabled: true,
+					setEnabled: jest.fn()
+				}
+			};
+			mockToolbar.updateSmartGuidesButton = jest.fn();
+
+			keyboardHandler.toggleSmartGuides();
+
+			expect( mockEditor.canvasManager.smartGuidesController.setEnabled ).toHaveBeenCalledWith( false );
+			expect( mockToolbar.updateSmartGuidesButton ).toHaveBeenCalledWith( false );
+		} );
+
+		it( 'should toggle smart guides on when currently off', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					enabled: false,
+					setEnabled: jest.fn()
+				}
+			};
+			mockToolbar.updateSmartGuidesButton = jest.fn();
+
+			keyboardHandler.toggleSmartGuides();
+
+			expect( mockEditor.canvasManager.smartGuidesController.setEnabled ).toHaveBeenCalledWith( true );
+			expect( mockToolbar.updateSmartGuidesButton ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'should handle missing canvasManager gracefully', function () {
+			mockEditor.canvasManager = null;
+
+			expect( () => keyboardHandler.toggleSmartGuides() ).not.toThrow();
+		} );
+
+		it( 'should handle missing smartGuidesController gracefully', function () {
+			mockEditor.canvasManager = {};
+
+			expect( () => keyboardHandler.toggleSmartGuides() ).not.toThrow();
+		} );
+
+		it( 'should show status message when showStatus is available', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					enabled: false,
+					setEnabled: jest.fn()
+				}
+			};
+			mockEditor.showStatus = jest.fn();
+
+			keyboardHandler.toggleSmartGuides();
+
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Smart Guides: On', 1500 );
+		} );
+
+		it( 'should be triggered by semicolon key', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					enabled: false,
+					setEnabled: jest.fn()
+				}
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: ';',
+				ctrlKey: false,
+				metaKey: false,
+				shiftKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.smartGuidesController.setEnabled ).toHaveBeenCalledWith( true );
+		} );
+	} );
+
 	describe( 'showKeyboardShortcutsHelp', function () {
 		it( 'should use DialogManager when available', function () {
 			mockEditor.dialogManager = {
@@ -397,6 +485,164 @@ describe( 'ToolbarKeyboard', function () {
 
 			// Should not throw
 			expect( () => keyboardHandler.showKeyboardShortcutsHelp() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'zoom shortcuts', function () {
+		it( 'should zoom in on pressing "+"', function () {
+			mockEditor.canvasManager = {
+				zoomIn: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '+',
+				ctrlKey: false,
+				metaKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.zoomIn ).toHaveBeenCalled();
+		} );
+
+		it( 'should zoom in on pressing "="', function () {
+			mockEditor.canvasManager = {
+				zoomIn: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '=',
+				ctrlKey: false,
+				metaKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.zoomIn ).toHaveBeenCalled();
+		} );
+
+		it( 'should zoom out on pressing "-"', function () {
+			mockEditor.canvasManager = {
+				zoomOut: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '-',
+				ctrlKey: false,
+				metaKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.zoomOut ).toHaveBeenCalled();
+		} );
+
+		it( 'should fit to window on pressing "0"', function () {
+			mockEditor.canvasManager = {
+				fitToWindow: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '0',
+				ctrlKey: false,
+				metaKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.fitToWindow ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'handleZoom', function () {
+		it( 'should use zoomPanController when direct method not available', function () {
+			mockEditor.canvasManager = {
+				zoomPanController: {
+					zoomIn: jest.fn()
+				}
+			};
+
+			keyboardHandler.handleZoom( 'in' );
+
+			expect( mockEditor.canvasManager.zoomPanController.zoomIn ).toHaveBeenCalled();
+		} );
+
+		it( 'should use zoomPanController.zoomOut as fallback', function () {
+			mockEditor.canvasManager = {
+				zoomPanController: {
+					zoomOut: jest.fn()
+				}
+			};
+
+			keyboardHandler.handleZoom( 'out' );
+
+			expect( mockEditor.canvasManager.zoomPanController.zoomOut ).toHaveBeenCalled();
+		} );
+
+		it( 'should use zoomPanController.fitToWindow as fallback', function () {
+			mockEditor.canvasManager = {
+				zoomPanController: {
+					fitToWindow: jest.fn()
+				}
+			};
+
+			keyboardHandler.handleZoom( 'fit' );
+
+			expect( mockEditor.canvasManager.zoomPanController.fitToWindow ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing canvasManager gracefully', function () {
+			mockEditor.canvasManager = null;
+
+			expect( () => keyboardHandler.handleZoom( 'in' ) ).not.toThrow();
+		} );
+
+		it( 'should handle missing zoom methods gracefully', function () {
+			mockEditor.canvasManager = {};
+
+			expect( () => keyboardHandler.handleZoom( 'in' ) ).not.toThrow();
+			expect( () => keyboardHandler.handleZoom( 'out' ) ).not.toThrow();
+			expect( () => keyboardHandler.handleZoom( 'fit' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'additional tool shortcuts', function () {
+		it( 'should select textbox tool when pressing "x"', function () {
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'x',
+				ctrlKey: false,
+				metaKey: false
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockToolbar.selectTool ).toHaveBeenCalledWith( 'textbox' );
+		} );
+
+		it( 'should select polygon tool when pressing "y"', function () {
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'y',
+				ctrlKey: false,
+				metaKey: false
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockToolbar.selectTool ).toHaveBeenCalledWith( 'polygon' );
 		} );
 	} );
 } );

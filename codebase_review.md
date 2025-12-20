@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** December 19, 2025  
-**Version:** 1.1.6  
+**Review Date:** December 20, 2025  
+**Version:** 1.1.7  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -10,16 +10,18 @@
 
 The Layers extension provides non-destructive image annotation capabilities for MediaWiki. This document provides an **honest, data-driven assessment** of the codebase quality, architecture, and technical health.
 
-### Overall Assessment: 7.8/10 ⚠️ Solid Production-Ready Extension with Technical Debt
+### Overall Assessment: 8.0/10 ⚠️ Solid Production-Ready Extension with Technical Debt
 
-The extension is **functional and deployed** with professional security, excellent test coverage (~92%), and a fully modernized ES6 codebase. All tests pass (5,412 tests). Recent session improvements include Key Object alignment (Adobe-style), text layer alignment fixes, ColorControlFactory extraction, and comprehensive alignment test suite.
+The extension is **functional and deployed** with professional security, excellent test coverage (~91%), and a fully modernized ES6 codebase. All tests pass (5,650 tests). Recent improvements include Smart Guides, Eyedropper Tool, alignment tools, style presets, and comprehensive test coverage.
 
 **Key Strengths:**
 
-- ✅ **5,412 tests passing** with ~92% statement coverage
-- ✅ **85 JS files**, 76 ES6 classes, 0 legacy prototype patterns
+- ✅ **5,650 tests passing** with ~91% statement coverage
+- ✅ **87 JS files**, 79 ES6 classes, 0 legacy prototype patterns
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
-- ✅ 13 working drawing tools with named layer sets
+- ✅ 14 working drawing tools with named layer sets
+- ✅ Smart Guides for object-to-object snapping
+- ✅ Eyedropper tool for color sampling
 - ✅ Style presets system with built-in and user-saved presets
 - ✅ Alignment and distribution tools for multi-selection
 - ✅ Accessibility features (skip links, ARIA, keyboard navigation)
@@ -27,8 +29,8 @@ The extension is **functional and deployed** with professional security, excelle
 
 **Critical Concerns:**
 
-- ⚠️ **9 files >1,000 lines** (all have delegation patterns)
-- ⚠️ **Total codebase: 43,913 lines** - CI warns at 45K, blocks at 50K
+- ⚠️ **7 files >1,000 lines** (all have delegation patterns)
+- ⚠️ **Total codebase: ~46,000 lines** - CI warns at 47K, blocks at 52K
 - ❌ No mobile/touch support
 
 ---
@@ -41,13 +43,13 @@ All metrics collected directly from the codebase.
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total JS files | **85** | - | ✅ |
-| Total JS lines | **43,913** | <45,000 | ✅ Under warning |
-| ES6 classes | **76** | 70+ | ✅ |
-| Files >1,000 lines | **9** | 0 | ⚠️ All have delegation |
+| Total JS files | **87** | - | ✅ |
+| Total JS lines | **~46,000** | <47,000 | ✅ Under warning |
+| ES6 classes | **79** | 70+ | ✅ |
+| Files >1,000 lines | **7** | 0 | ⚠️ All have delegation |
 | ESLint errors | **0** | 0 | ✅ |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests | **5,412** | - | ✅ All passing |
+| Jest tests | **5,650** | - | ✅ All passing |
 
 ### Files Over 1,000 Lines (God Classes)
 
@@ -55,23 +57,23 @@ All metrics collected directly from the codebase.
 |------|-------|-----------------|-------|
 | CanvasManager.js | **1,830** | ✅ Yes (10+ controllers) | Facade pattern |
 | LayerPanel.js | **1,821** | ✅ Yes (7 controllers) | Facade pattern |
-| LayersEditor.js | **1,324** | ✅ Yes (3 modules) | Partial |
+| LayersEditor.js | **1,329** | ✅ Yes (3 modules) | Partial |
 | Toolbar.js | **1,298** | ✅ Yes (4 modules) | Partial |
 | ToolManager.js | **1,275** | ✅ Yes (2 handlers) | Acceptable |
-| ShapeRenderer.js | **1,191** | ✅ Yes (ShadowRenderer) | Acceptable |
 | SelectionManager.js | **1,181** | ✅ Yes (3 modules) | Acceptable |
 | APIManager.js | **1,161** | ✅ Yes (APIErrorHandler) | Acceptable |
-| ToolbarStyleControls.js | **1,100** | ✅ Yes (ColorControlFactory) | Delegation |
 
-**Total in god classes: 12,135 lines** (all have delegation patterns)
+**Total in god classes: ~10,895 lines** (all have delegation patterns)
 
 ### Files Approaching God Class Status (800+ lines)
 
 | File | Lines | Risk |
 |------|-------|------|
 | LayersValidator.js | 958 | ⚠️ Monitor |
+| ToolbarStyleControls.js | 947 | ↓ -102 (PresetStyleManager extracted) |
 | UIManager.js | 917 | ⚠️ Monitor |
-| PresetManager.js | 868 | ⚠️ NEW - monitor |
+| PresetManager.js | 868 | ⚠️ Monitor |
+| ShapeRenderer.js | 858 | ↓ -333 (PolygonStarRenderer extracted) |
 | CanvasRenderer.js | 834 | Stable |
 | PropertiesForm.js | 832 | ⚠️ Monitor |
 | ResizeCalculator.js | 822 | Stable |

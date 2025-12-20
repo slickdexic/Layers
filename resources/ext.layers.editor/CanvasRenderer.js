@@ -230,6 +230,22 @@
 
 			this.drawMultiSelectionIndicators( keyObjectId );
 			this.drawMarqueeBox();
+
+			// Draw smart guides if available and active
+			this.drawSmartGuides();
+		}
+
+		/**
+		 * Draw smart guides overlay (called after other overlays)
+		 */
+		drawSmartGuides() {
+			if ( !this.editor || !this.editor.canvasManager ) {
+				return;
+			}
+			const smartGuidesController = this.editor.canvasManager.smartGuidesController;
+			if ( smartGuidesController && typeof smartGuidesController.render === 'function' ) {
+				smartGuidesController.render( this.ctx );
+			}
 		}
 
 		applyTransformations() {

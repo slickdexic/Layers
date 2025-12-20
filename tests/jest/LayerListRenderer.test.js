@@ -454,7 +454,7 @@ describe( 'LayerListRenderer', () => {
 				arrow: 'Arrow',
 				line: 'Line',
 				path: 'Drawing',
-				blur: 'Blur/Redaction'
+				blur: 'Blur Effect'
 			};
 
 			for ( const [ type, expected ] of Object.entries( types ) ) {

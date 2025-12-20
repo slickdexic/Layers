@@ -35,10 +35,8 @@ class ImageLinkProcessor {
 	/** @var LayersParamExtractor */
 	private LayersParamExtractor $paramExtractor;
 
-	/**
-	 * @var LayersDatabase|null
-	 */
-	private $database = null;
+	/** @var LayersDatabase|null */
+	private ?LayersDatabase $database = null;
 
 	/**
 	 * Track if any image on the current page has layers enabled
