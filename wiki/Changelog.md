@@ -4,6 +4,35 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.1.7 (December 20, 2025)
+
+### New Features
+- **Smart Guides** — Intelligent snapping to other objects
+  - Snap to object edges (left, right, top, bottom)
+  - Snap to object centers (horizontal, vertical)
+  - Visual guide lines: magenta for edges, cyan for centers
+  - 8px snap threshold, auto-activates when grid snap is off
+- **Eyedropper Tool** — Sample colors from anywhere on canvas
+  - Press **I** to sample fill color, **Shift+I** for stroke
+  - Magnified preview (8x zoom) with crosshair
+  - Color swatch shows hex value and target
+  - Click to sample, ESC to cancel
+  - Toolbar button next to color controls
+
+### Improvements
+- Enhanced toolbar with discoverable eyedropper button
+- Right-click eyedropper button to sample stroke color
+
+### Refactoring
+- Extracted `SmartGuidesController` (~500 lines)
+- Extracted `EyedropperController` (~480 lines)
+
+### Testing
+- Added 102 new tests for Smart Guides and Eyedropper
+- Total tests: 5,650 passing
+
+---
+
 ## Version 1.1.6 (December 20, 2025)
 
 ### New Features

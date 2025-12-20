@@ -336,8 +336,8 @@ P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░�
 
 - [ ] Mobile/touch support working
 - [ ] WCAG 2.1 AA compliant
-- [ ] Eyedropper tool implemented
-- [ ] Smart guides working
+- [x] Eyedropper tool implemented ✅
+- [x] Smart guides working ✅
 - [ ] New contributor productive in <1 day
 
 ---
