@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.1.6. Production-ready with ongoing improvements. Requires MediaWiki 1.44+.
+> **Status:** Stable. Version 1.1.7. Production-ready with ongoing improvements. Requires MediaWiki 1.44+.
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 >
@@ -30,7 +30,7 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 
 ## Features
 
-### Drawing Tools (13 Available)
+### Drawing Tools (14 Available)
 
 | Tool          | Shortcut | Purpose                                      | Key Features                                    |
 | ------------- | -------- | -------------------------------------------- | ----------------------------------------------- |
@@ -47,6 +47,18 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 | Arrow         | A        | Annotation arrows                            | Configurable arrowheads and line styles         |
 | Line          | L        | Straight lines                               | Stroke width and color options                  |
 | Blur          | B        | Blur/redact areas                            | Privacy protection tool                         |
+| **Eyedropper**| **I**    | **Sample colors from canvas** (NEW v1.1.7)   | 8x magnified preview, fill/stroke sampling      |
+
+### New in v1.1.7: Smart Guides & Eyedropper
+
+- **Smart Guides**: Automatic snapping to object edges and centers when moving layers
+  - Edge snapping: left, right, top, bottom (magenta guide lines)
+  - Center snapping: horizontal and vertical centers (cyan guide lines)
+  - 8px snap threshold; auto-activates when grid snap is off
+- **Eyedropper Tool**: Sample colors from anywhere on the canvas
+  - Press **I** for fill color, **Shift+I** for stroke color
+  - 8x magnified preview with crosshair
+  - Toolbar button next to color controls
 
 ### New in v1.1.5: Alignment & Style Presets
 
@@ -128,6 +140,8 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 | Line Tool                | L                     |
 | Blur Tool                | B                     |
 | Marquee Select           | M                     |
+| Eyedropper (fill)        | I                     |
+| Eyedropper (stroke)      | Shift+I               |
 | Toggle Background        | Shift+B               |
 | Undo                     | Ctrl+Z                |
 | Redo                     | Ctrl+Y / Ctrl+Shift+Z |
@@ -143,18 +157,18 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 **Architecture:**
 
 - **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 84 JS files (~44K lines total), 75 ES6 classes
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 87 JS files (~46K lines total), 79 ES6 classes
 - **Code Splitting:** Viewer module (~610 lines) + Shared module (~5K lines) loads separately from Editor (~38K lines)
 
 **Test Coverage (December 2025):**
 
-- Jest: **5,412 tests**, ~92% statement coverage, ~80% branch coverage (106 test suites)
+- Jest: **5,650 tests**, ~91% statement coverage, ~78% branch coverage (112 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 - E2E: Playwright smoke tests in CI; full editor tests available locally
 
 **Technical Debt:**
 
-- 9 god classes (>1,000 lines) with delegation patterns - CI blocks growth
+- 7 god classes (>1,000 lines) with delegation patterns - CI blocks growth
 - See [improvement_plan.md](improvement_plan.md) for remediation roadmap
 
 **Accessibility (WCAG 2.1):**
@@ -174,9 +188,9 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 - **Production:** Stable and deployed. Extension works reliably for end users.
 - **Technical Health:** Active development with debt being addressed.
-- ✅ 75 ES6 classes, 0 legacy prototype code
-- ✅ 5,412 tests (~92% statement coverage)
-- ⚠️ 9 god classes (~12K LOC) - all have delegation, CI blocks growth
+- ✅ 79 ES6 classes, 0 legacy prototype code
+- ✅ 5,650 tests (~91% statement coverage)
+- ⚠️ 7 god classes (~11K LOC) - all have delegation, CI blocks growth
 - ⚠️ No mobile/touch support yet
 
 ---
