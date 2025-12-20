@@ -35,11 +35,6 @@ type LayerType =
 	| 'image';
 
 /**
- * Arrow head styles
- */
-type ArrowHead = 'none' | 'arrow' | 'circle' | 'diamond' | 'triangle';
-
-/**
  * Arrow style (head placement)
  * - single: head at end only
  * - double: heads at both ends
@@ -274,14 +269,11 @@ interface ArrowProperties {
 	/** Ending Y position */
 	y2?: number;
 
-	/** Arrow head shape style */
-	arrowhead?: ArrowHead;
-
 	/** Arrow style (head placement: single, double, none) */
 	arrowStyle?: ArrowStyle;
 
-	/** Arrow head rendering type (pointed, chevron, standard) */
-	arrowHeadType?: ArrowHeadType;
+	/** Arrow head type (pointed, chevron, standard) */
+	headType?: ArrowHeadType;
 
 	/** Arrow head size */
 	arrowSize?: number;
