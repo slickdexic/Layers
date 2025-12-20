@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 21, 2025  
+**Last Updated:** December 20, 2025  
 **Status:** ✅ Stable with Minor Issues  
 **Version:** 1.1.7  
 **Goal:** World-class MediaWiki extension
@@ -11,12 +11,12 @@
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Functionality** | ✅ Working | 13 tools, alignment, presets, named sets, **smart guides** |
+| **Functionality** | ✅ Working | 14 tools, alignment, presets, named sets, **smart guides**, **eyedropper** |
 | **Security** | ✅ Excellent | Professional PHP backend |
-| **Testing** | ✅ All Passing | 5,591 tests, 0 failures |
-| **ES6 Migration** | ✅ Complete | 78 classes, 0 prototype patterns |
+| **Testing** | ✅ All Passing | 5,650 tests, 0 failures |
+| **ES6 Migration** | ✅ Complete | 79 classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Managed | 7 files >1,000 lines (all have delegation) |
-| **Code Volume** | ✅ Controlled | ~45,260 lines (CI warns at 45K) |
+| **Code Volume** | ✅ Controlled | ~45,760 lines (CI warns at 45K) |
 | **Mobile** | ❌ Missing | No touch support |
 
 ---
@@ -166,14 +166,24 @@
 - **Effort:** 4-6 weeks
 - **Impact:** Critical for modern web
 
-### P3.2 Eyedropper Tool ⏳ NOT STARTED
+### P3.2 Eyedropper Tool ✅ COMPLETED
 
 - **Problem:** Missing from color picker (per UX audit)
 - **Implementation:**
-  - Canvas color sampling
-  - EyeDropper API (modern browsers)
-  - Fallback for older browsers
-- **Effort:** 1 week
+  - ✅ Canvas color sampling with getImageData
+  - ✅ Magnified preview circle with crosshair
+  - ✅ Color swatch display with hex value
+  - ✅ Click to sample, ESC to cancel
+  - ✅ Keyboard shortcut: I (fill) / Shift+I (stroke)
+  - ✅ Apply to selected layers and toolbar
+- **Effort:** 1 day (vs 1 week estimate)
+- **Components:**
+  - EyedropperController.js (~480 lines)
+  - Integrated with CanvasManager, CanvasRenderer
+  - Keyboard shortcut in ToolbarKeyboard
+  - Registered in ToolRegistry
+- **Tests Added:** 59 new tests
+- **Completed:** December 20, 2025
 
 ### P3.3 Smart Guides ✅ COMPLETED
 
@@ -278,7 +288,7 @@ P2.5 Architecture Docs:       ░░░░░░░░░░░░░░░░�
 
 Phase 3 (World-Class):
 P3.1 Mobile/Touch Support:    ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.2 Eyedropper Tool:         ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.2 Eyedropper Tool:         ████████████████████ 100% ✅
 P3.3 Smart Guides:            ████████████████████ 100% ✅
 P3.4 Accessibility Audit:     ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.5 Auto-Generated Docs:     ░░░░░░░░░░░░░░░░░░░░ 0%
@@ -289,7 +299,8 @@ P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░�
 
 | Date | Task | Impact |
 |------|------|--------|
-| Dec 21 | Smart Guides (SmartGuidesController) | +500 lines, 43 tests |
+| Dec 20 | Eyedropper Tool (EyedropperController) | +480 lines, 59 tests |
+| Dec 20 | Smart Guides (SmartGuidesController) | +500 lines, 43 tests |
 | Dec 20 | PolygonStarRenderer extraction | ShapeRenderer: -333 lines |
 | Dec 20 | BuiltInPresets + PresetStorage | PresetManager: -226 lines |
 | Dec 20 | PresetStyleManager extraction | ToolbarStyleControls: -102 lines |

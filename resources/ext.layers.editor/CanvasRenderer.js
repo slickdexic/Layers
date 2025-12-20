@@ -233,6 +233,9 @@
 
 			// Draw smart guides if available and active
 			this.drawSmartGuides();
+
+			// Draw eyedropper preview if active
+			this.drawEyedropperPreview();
 		}
 
 		/**
@@ -245,6 +248,19 @@
 			const smartGuidesController = this.editor.canvasManager.smartGuidesController;
 			if ( smartGuidesController && typeof smartGuidesController.render === 'function' ) {
 				smartGuidesController.render( this.ctx );
+			}
+		}
+
+		/**
+		 * Draw eyedropper preview overlay (magnified view and color swatch)
+		 */
+		drawEyedropperPreview() {
+			if ( !this.editor || !this.editor.canvasManager ) {
+				return;
+			}
+			const eyedropperController = this.editor.canvasManager.eyedropperController;
+			if ( eyedropperController && typeof eyedropperController.render === 'function' ) {
+				eyedropperController.render( this.ctx );
 			}
 		}
 

@@ -132,6 +132,9 @@
 			case 'l':
 				this.toolbar.selectTool( 'line' );
 				break;
+			case 'i':
+				this.activateEyedropper( e.shiftKey ? 'stroke' : 'fill' );
+				break;
 			case '+':
 			case '=':
 				e.preventDefault();
@@ -214,6 +217,22 @@
 	}
 
 	/**
+	 * Activate the eyedropper tool to sample a color
+	 *
+	 * @param {string} target - 'fill' or 'stroke'
+	 */
+	activateEyedropper( target ) {
+		if ( !this.editor.canvasManager ) {
+			return;
+		}
+
+		const cm = this.editor.canvasManager;
+		if ( cm.eyedropperController ) {
+			cm.eyedropperController.activate( target );
+		}
+	}
+
+	/**
 	 * Get keyboard shortcuts configuration for documentation/help
 	 *
 	 * @return {Array<Object>} Array of shortcut definitions
@@ -233,6 +252,8 @@
 			{ key: 'A', description: 'Arrow Tool', category: 'tools' },
 			{ key: 'L', description: 'Line Tool', category: 'tools' },
 			{ key: 'B', description: 'Blur/Redact Tool', category: 'tools' },
+			{ key: 'I', description: 'Eyedropper (fill)', category: 'tools' },
+			{ key: 'Shift+I', description: 'Eyedropper (stroke)', category: 'tools' },
 			// View shortcuts
 			{ key: '+/=', description: 'Zoom In', category: 'view' },
 			{ key: '-', description: 'Zoom Out', category: 'view' },
