@@ -255,12 +255,76 @@ class ToolbarStyleControls {
 			row.appendChild( fillItem.container );
 		}
 
+		// Eyedropper button for sampling colors from canvas
+		const eyedropperItem = this.createEyedropperButton();
+		this.eyedropperButton = eyedropperItem.button;
+		row.appendChild( eyedropperItem.container );
+
 		// Stroke width
 		const widthItem = this.createStrokeWidthControl();
 		this.strokeWidthInput = widthItem.input;
 		row.appendChild( widthItem.container );
 
 		return row;
+	}
+
+	/**
+	 * Create eyedropper button for color sampling
+	 *
+	 * @return {Object} Object with container and button elements
+	 */
+	createEyedropperButton() {
+		const container = document.createElement( 'div' );
+		container.className = 'style-control-item eyedropper-control';
+
+		const button = document.createElement( 'button' );
+		button.type = 'button';
+		button.className = 'toolbar-button eyedropper-button';
+		button.innerHTML = this.getEyedropperIcon();
+		button.title = this.msg( 'layers-tool-eyedropper', 'Eyedropper' ) + ' (I)';
+		button.setAttribute( 'aria-label', this.msg( 'layers-tool-eyedropper', 'Eyedropper' ) );
+		button.setAttribute( 'aria-keyshortcuts', 'I' );
+		container.appendChild( button );
+
+		this.addListener( button, 'click', () => {
+			this.activateEyedropper( 'fill' );
+		} );
+
+		// Right-click for stroke sampling
+		this.addListener( button, 'contextmenu', ( e ) => {
+			e.preventDefault();
+			this.activateEyedropper( 'stroke' );
+		} );
+
+		return { container, button };
+	}
+
+	/**
+	 * Get SVG icon for eyedropper tool
+	 *
+	 * @return {string} SVG markup
+	 */
+	getEyedropperIcon() {
+		return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M2 22l1-1h3l9-9"/>
+			<path d="M3 21v-3l9-9"/>
+			<path d="M14.5 5.5l4 4"/>
+			<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3l-2.5 2.5-4-4 2.5-2.5z"/>
+		</svg>`;
+	}
+
+	/**
+	 * Activate eyedropper mode via canvas manager
+	 *
+	 * @param {string} target - 'fill' or 'stroke'
+	 */
+	activateEyedropper( target ) {
+		if ( this.toolbar && this.toolbar.editor && this.toolbar.editor.canvasManager ) {
+			const cm = this.toolbar.editor.canvasManager;
+			if ( cm.eyedropperController ) {
+				cm.eyedropperController.activate( target );
+			}
+		}
 	}
 
 	/**
@@ -917,6 +981,7 @@ class ToolbarStyleControls {
 		this.container = null;
 		this.strokeColorButton = null;
 		this.fillColorButton = null;
+		this.eyedropperButton = null;
 		this.strokeWidthInput = null;
 		this.fontSizeInput = null;
 		this.fontSizeContainer = null;

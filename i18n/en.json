@@ -24,6 +24,7 @@
 	"layers-tool-blur": "Blur/Redact",
 	"layers-tool-textbox": "Text Box",
 	"layers-tool-marquee": "Marquee Select",
+	"layers-tool-eyedropper": "Eyedropper",
 	"layers-layer-name": "Layer Name",
 	"layers-layer-visible": "Visible",
 	"layers-layer-locked": "Locked",

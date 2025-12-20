@@ -453,6 +453,29 @@ body.layers-editor-open .mw-body-content {
 	box-shadow: 0 0 0 2px rgba( 0, 123, 255, 0.1 );
 }
 
+/* Eyedropper button in style controls */
+.eyedropper-control {
+	flex-direction: row;
+}
+
+.eyedropper-button {
+	width: 32px;
+	height: 32px;
+	min-width: 32px;
+	padding: 4px;
+	margin-top: auto;
+}
+
+.eyedropper-button svg {
+	width: 18px;
+	height: 18px;
+}
+
+.eyedropper-button:hover {
+	background: #e9ecef;
+	border-color: #bbb;
+}
+
 .toolbar-button {
 	background: #f8f9fa;
 	border: 1px solid #ddd;
