@@ -21,14 +21,14 @@ The editor has three main areas:
 ┌──────────────────────────────────────────────────────────────┐
 │  TOOLBAR (top)                                                │
 │  [Pointer][Zoom][Text][Shapes...][Style Controls][Actions]   │
-├────────────────────────────────────────────┬─────────────────┤
-│                                            │  LAYER PANEL    │
-│                                            │                 │
-│               CANVAS                       │  • Layer 1      │
-│           (your image)                     │  • Layer 2      │
-│                                            │  • Background   │
-│                                            │                 │
-└────────────────────────────────────────────┴─────────────────┘
+├─────────────────┬────────────────────────────────────────────┤
+│  LAYER PANEL    │                                            │
+│                 │                                            │
+│  • Layer 1      │               CANVAS                       │
+│  • Layer 2      │           (your image)                     │
+│  • Background   │                                            │
+│                 │                                            │
+└─────────────────┴────────────────────────────────────────────┘
 ```
 
 - **Toolbar**: Drawing tools and style controls
