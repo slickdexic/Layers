@@ -222,7 +222,13 @@
 				this.renderLayers( layers );
 			}
 
-			this.drawMultiSelectionIndicators();
+			// Get the key object ID from selection manager for visual distinction
+			let keyObjectId = null;
+			if ( this.editor && this.editor.canvasManager && this.editor.canvasManager.selectionManager ) {
+				keyObjectId = this.editor.canvasManager.selectionManager.lastSelectedId;
+			}
+
+			this.drawMultiSelectionIndicators( keyObjectId );
 			this.drawMarqueeBox();
 		}
 
@@ -586,10 +592,12 @@
 		/**
 		 * Draw selection indicators for all selected layers
 		 * Delegates to SelectionRenderer (required module)
+		 *
+		 * @param {string} [keyObjectId] - ID of the key object (last selected) for visual distinction
 		 */
-		drawMultiSelectionIndicators() {
+		drawMultiSelectionIndicators( keyObjectId ) {
 			if ( this._selectionRenderer ) {
-				this._selectionRenderer.drawMultiSelectionIndicators( this.selectedLayerIds );
+				this._selectionRenderer.drawMultiSelectionIndicators( this.selectedLayerIds, keyObjectId );
 				this.selectionHandles = this._selectionRenderer.getHandles();
 			} else {
 				// Minimal fallback for tests without SelectionRenderer
@@ -602,10 +610,11 @@
 		 * Delegates to SelectionRenderer (required module)
 		 *
 		 * @param {string} layerId - Layer ID
+		 * @param {boolean} [isKeyObject=false] - Whether this is the key object
 		 */
-		drawSelectionIndicators( layerId ) {
+		drawSelectionIndicators( layerId, isKeyObject ) {
 			if ( this._selectionRenderer ) {
-				this._selectionRenderer.drawSelectionIndicators( layerId );
+				this._selectionRenderer.drawSelectionIndicators( layerId, isKeyObject );
 				this.selectionHandles = this._selectionRenderer.getHandles();
 			}
 		}

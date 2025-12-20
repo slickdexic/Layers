@@ -69,6 +69,7 @@
 				this.layerItemFactory = new LayerItemFactory( {
 					msg: this.msg.bind( this ),
 					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
+					getSelectedLayerIds: this.getSelectedLayerIds.bind( this ),
 					addTargetListener: this.addTargetListener.bind( this ),
 					onMoveLayer: this.moveLayer.bind( this )
 				} );
@@ -98,6 +99,18 @@
 				return selectedIds.length > 0 ? selectedIds[ selectedIds.length - 1 ] : null;
 			}
 			return null;
+		}
+
+		/**
+		 * Get all selected layer IDs from StateManager
+		 *
+		 * @return {Array} Array of selected layer IDs
+		 */
+		getSelectedLayerIds() {
+			if ( this.editor && this.editor.stateManager ) {
+				return this.editor.stateManager.get( 'selectedLayerIds' ) || [];
+			}
+			return [];
 		}
 
 		/**
@@ -618,6 +631,7 @@
 					layerList: this.layerList,
 					msg: this.msg.bind( this ),
 					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
+					getSelectedLayerIds: this.getSelectedLayerIds.bind( this ),
 					getLayers: this.getLayers.bind( this ),
 					onMoveLayer: this.moveLayer.bind( this )
 				} );
@@ -1099,7 +1113,14 @@
 			} else if ( nameEl ) {
 				this.editLayerName( layerId, nameEl );
 			} else {
-				this.selectLayer( layerId );
+				// Support multi-selection with Ctrl/Cmd + click or Shift + click
+				const isCtrlClick = e.ctrlKey || e.metaKey;
+				const isShiftClick = e.shiftKey;
+				if ( isShiftClick ) {
+					this.selectLayerRange( layerId );
+				} else {
+					this.selectLayer( layerId, false, isCtrlClick );
+				}
 			}
 		}
 
@@ -1230,15 +1251,111 @@
 		 *
 		 * @param {string} layerId Layer ID to select
 		 * @param {boolean} [fromCanvas] Whether the selection originated from canvas
+		 * @param {boolean} [addToSelection] Whether to add to existing selection (Ctrl+click)
 		 */
-		selectLayer( layerId, fromCanvas ) {
+		selectLayer( layerId, fromCanvas, addToSelection ) {
+			// When called from canvas, don't update StateManager - it's already set
+			// Just let the state subscription handle the UI update
+			if ( fromCanvas ) {
+				return;
+			}
+
 			// Update selection through StateManager (single source of truth)
 			if ( this.editor && this.editor.stateManager ) {
-				this.editor.stateManager.set( 'selectedLayerIds', layerId ? [ layerId ] : [] );
+				if ( addToSelection && layerId ) {
+					// Toggle selection: add if not selected, remove if selected
+					const currentIds = this.editor.stateManager.get( 'selectedLayerIds' ) || [];
+					const idx = currentIds.indexOf( layerId );
+					let newIds;
+					if ( idx === -1 ) {
+						// Add to selection
+						newIds = [ ...currentIds, layerId ];
+					} else {
+						// Remove from selection
+						newIds = currentIds.filter( ( id ) => id !== layerId );
+					}
+					this.editor.stateManager.set( 'selectedLayerIds', newIds );
+				} else {
+					// Single selection - replace current selection
+					this.editor.stateManager.set( 'selectedLayerIds', layerId ? [ layerId ] : [] );
+				}
 			}
 			// Note: renderLayerList and updatePropertiesPanel are called by state subscription
-			if ( !fromCanvas && this.editor.canvasManager ) {
-				this.editor.canvasManager.selectLayer( layerId, true );
+			if ( this.editor.canvasManager ) {
+				// Sync full selection to canvas
+				const selectedIds = this.editor.stateManager ?
+					this.editor.stateManager.get( 'selectedLayerIds' ) || [] : [];
+				this.editor.canvasManager.setSelectedLayerIds( selectedIds );
+
+				// Update lastSelectedId for key object alignment
+				// When adding to selection, the clicked layer becomes the key object
+				// When replacing selection, the selected layer is the key object
+				if ( this.editor.canvasManager.selectionManager && layerId ) {
+					const isStillSelected = selectedIds.indexOf( layerId ) !== -1;
+					if ( isStillSelected ) {
+						this.editor.canvasManager.selectionManager.lastSelectedId = layerId;
+					} else if ( selectedIds.length > 0 ) {
+						// If we deselected the clicked layer, set last selected to the most recent remaining
+						this.editor.canvasManager.selectionManager.lastSelectedId = selectedIds[ selectedIds.length - 1 ];
+					} else {
+						this.editor.canvasManager.selectionManager.lastSelectedId = null;
+					}
+				}
+
+				this.editor.canvasManager.renderLayers( this.editor.layers );
+				this.editor.canvasManager.drawMultiSelectionIndicators();
+			}
+		}
+
+		/**
+		 * Select a range of layers (Shift+click behavior)
+		 * Selects all layers between the last selected layer and the clicked layer
+		 *
+		 * @param {string} layerId Layer ID that was shift-clicked
+		 */
+		selectLayerRange( layerId ) {
+			const layers = this.getLayers();
+			if ( layers.length === 0 ) {
+				return;
+			}
+
+			const currentIds = this.editor.stateManager ?
+				this.editor.stateManager.get( 'selectedLayerIds' ) || [] : [];
+
+			// If no current selection, just select the clicked layer
+			if ( currentIds.length === 0 ) {
+				this.selectLayer( layerId );
+				return;
+			}
+
+			// Find indices
+			const clickedIndex = layers.findIndex( ( l ) => String( l.id ) === String( layerId ) );
+			const lastSelectedId = currentIds[ currentIds.length - 1 ];
+			const lastSelectedIndex = layers.findIndex( ( l ) => String( l.id ) === String( lastSelectedId ) );
+
+			if ( clickedIndex === -1 || lastSelectedIndex === -1 ) {
+				this.selectLayer( layerId );
+				return;
+			}
+
+			// Select range between last selected and clicked
+			const startIndex = Math.min( clickedIndex, lastSelectedIndex );
+			const endIndex = Math.max( clickedIndex, lastSelectedIndex );
+
+			const rangeIds = [];
+			for ( let i = startIndex; i <= endIndex; i++ ) {
+				rangeIds.push( layers[ i ].id );
+			}
+
+			if ( this.editor && this.editor.stateManager ) {
+				this.editor.stateManager.set( 'selectedLayerIds', rangeIds );
+			}
+
+			// Sync to canvas
+			if ( this.editor.canvasManager ) {
+				this.editor.canvasManager.setSelectedLayerIds( rangeIds );
+				this.editor.canvasManager.renderLayers( this.editor.layers );
+				this.editor.canvasManager.drawMultiSelectionIndicators();
 			}
 		}
 

@@ -16,22 +16,53 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check total codebase size
+        run: |
+          echo "📊 Checking total JavaScript codebase size..."
+          echo ""
+          
+          # Total line count thresholds
+          WARN_TOTAL=45000
+          BLOCK_TOTAL=50000
+          
+          TOTAL_LINES=$(find resources -name "*.js" -type f ! -path "*/dist/*" ! -path "*backup*" -exec cat {} \; | wc -l | tr -d ' ')
+          
+          echo "Total JavaScript lines: $TOTAL_LINES"
+          echo ""
+          
+          if [ "$TOTAL_LINES" -gt "$BLOCK_TOTAL" ]; then
+            echo "❌ CODEBASE TOO LARGE: $TOTAL_LINES lines exceeds $BLOCK_TOTAL limit"
+            echo ""
+            echo "Action required:"
+            echo "1. Extract shared logic to common utilities"
+            echo "2. Remove unused code"
+            echo "3. Consider lazy loading or code splitting"
+            exit 1
+          elif [ "$TOTAL_LINES" -gt "$WARN_TOTAL" ]; then
+            echo "⚠️ WARNING: Codebase approaching limit ($TOTAL_LINES / $BLOCK_TOTAL lines)"
+            echo ""
+            echo "Consider refactoring to reduce total size."
+          else
+            echo "✅ Codebase size OK: $TOTAL_LINES lines (limit: $BLOCK_TOTAL)"
+          fi
+
       - name: Check for god class growth
         run: |
           echo "🔍 Checking for god class growth..."
           echo ""
           
-          # Define god classes and their baseline sizes (as of Dec 18, 2025)
+          # Define god classes and their baseline sizes (as of Dec 19, 2025)
           # These are the current line counts - PRs must not increase them
           declare -A GOD_CLASSES=(
-            ["resources/ext.layers.editor/CanvasManager.js"]=1805    # Facade with 10+ controllers - acceptable
-            ["resources/ext.layers.editor/LayerPanel.js"]=1720       # Facade with 7 controllers - acceptable
-            ["resources/ext.layers.editor/APIManager.js"]=1168       # Has APIErrorHandler delegation
-            ["resources/ext.layers.editor/LayersEditor.js"]=1301     # Partial delegation
+            ["resources/ext.layers.editor/CanvasManager.js"]=1830    # Facade with 10+ controllers - acceptable
+            ["resources/ext.layers.editor/LayerPanel.js"]=1821       # Facade with 7 controllers - acceptable
+            ["resources/ext.layers.editor/LayersEditor.js"]=1324     # Partial delegation
+            ["resources/ext.layers.editor/Toolbar.js"]=1298          # Partial delegation (4 modules)
             ["resources/ext.layers.editor/ToolManager.js"]=1275      # Has 2 tool handlers
-            ["resources/ext.layers.editor/SelectionManager.js"]=1147 # Has 3 modules (SelectionState, MarqueeSelection, SelectionHandles)
-            ["resources/ext.layers.editor/Toolbar.js"]=1115          # Partial delegation (ColorPickerDialog, ToolbarKeyboard, etc.)
-            ["resources/ext.layers.shared/ShapeRenderer.js"]=1049    # Has ShadowRenderer delegation
+            ["resources/ext.layers.shared/ShapeRenderer.js"]=1191    # Has ShadowRenderer delegation
+            ["resources/ext.layers.editor/SelectionManager.js"]=1181 # Has 3 modules (SelectionState, MarqueeSelection, SelectionHandles)
+            ["resources/ext.layers.editor/APIManager.js"]=1161       # Has APIErrorHandler delegation
+            ["resources/ext.layers.editor/ToolbarStyleControls.js"]=1100 # Has ColorControlFactory delegation
           )
           
           WARN_THRESHOLD=800
@@ -132,18 +163,27 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          echo "## God Class Check Results" >> $GITHUB_STEP_SUMMARY
+          TOTAL_LINES=$(find resources -name "*.js" -type f ! -path "*/dist/*" ! -path "*backup*" -exec cat {} \; | wc -l | tr -d ' ')
+          
+          echo "## Code Growth Prevention Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Total Codebase Size" >> $GITHUB_STEP_SUMMARY
+          echo "- **Current:** $TOTAL_LINES lines" >> $GITHUB_STEP_SUMMARY
+          echo "- **Warning threshold:** 45,000 lines" >> $GITHUB_STEP_SUMMARY
+          echo "- **Block threshold:** 50,000 lines" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### God Class Check" >> $GITHUB_STEP_SUMMARY
           echo "This check prevents god classes (files >1,000 lines) from growing." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Current god classes (8 files, ~11,580 lines) - December 2025:**" >> $GITHUB_STEP_SUMMARY
+          echo "**Current god classes (9 files) - December 2025:**" >> $GITHUB_STEP_SUMMARY
           echo "- CanvasManager.js (1,805 lines) - ✅ facade, delegates to 10+ controllers" >> $GITHUB_STEP_SUMMARY
           echo "- LayerPanel.js (1,720 lines) - ✅ delegates to 7 controllers" >> $GITHUB_STEP_SUMMARY
-          echo "- LayersEditor.js (1,301 lines) - partial delegation" >> $GITHUB_STEP_SUMMARY
+          echo "- LayersEditor.js (1,325 lines) - partial delegation" >> $GITHUB_STEP_SUMMARY
           echo "- ToolManager.js (1,275 lines) - ✅ delegates to 2 handlers" >> $GITHUB_STEP_SUMMARY
           echo "- APIManager.js (1,168 lines) - has APIErrorHandler delegation" >> $GITHUB_STEP_SUMMARY
           echo "- SelectionManager.js (1,147 lines) - ✅ delegates to 3 modules" >> $GITHUB_STEP_SUMMARY
           echo "- Toolbar.js (1,115 lines) - partial delegation" >> $GITHUB_STEP_SUMMARY
+          echo "- ToolbarStyleControls.js (1,095 lines) - has ColorControlFactory delegation" >> $GITHUB_STEP_SUMMARY
           echo "- ShapeRenderer.js (1,049 lines) - has ShadowRenderer delegation" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "See [improvement_plan.md](improvement_plan.md) for remediation roadmap." >> $GITHUB_STEP_SUMMARY

@@ -1,9 +1,47 @@
 # Known Issues
 
-**Last Updated:** December 18, 2025  
-**Version:** 1.1.3
+**Last Updated:** December 19, 2025  
+**Version:** 1.1.5
 
 This document lists known functionality issues and their current status.
+
+---
+
+## Active Issues
+
+### ⚠️ One Failing Test (JSDOM Issue)
+
+**Status:** Active  
+**Severity:** Low  
+**File:** `tests/jest/ImportExportManager.test.js`
+
+The test `createImportButton callbacks › should call onError callback on import failure` fails due to JSDOM limitations with async DOM cleanup.
+
+**Root Cause:** `removeChild` is called on an element that's no longer in the DOM due to async timing in JSDOM.
+
+**Impact:** Test environment only. Not a production bug.
+
+**Fix:** Mock `document.body.removeChild` or check `parentNode` before removal.
+
+### ⚠️ No Mobile/Touch Support
+
+**Status:** Not Implemented  
+**Severity:** Medium for desktop-focused, High for mobile users
+
+The editor does not handle touch events. Users on tablets and phones cannot:
+
+- Draw or select layers with touch
+- Use pinch-to-zoom or two-finger pan
+- Access mobile-optimized toolbar
+
+**Workaround:** Use desktop browser or browser with desktop mode.
+
+### ⚠️ Missing Eyedropper Tool
+
+**Status:** Not Implemented  
+**Severity:** Low  
+
+Color picker lacks eyedropper functionality to sample colors from the canvas or image. Users must manually enter color values.
 
 ---
 
@@ -11,48 +49,37 @@ This document lists known functionality issues and their current status.
 
 ### ⚠️ God Classes (Technical Debt)
 
-**Status:** Ongoing concern - being addressed  
-**Severity:** Medium-High for maintainability
+**Status:** Monitored with CI enforcement  
+**Severity:** Medium for maintainability
 
-The codebase has **8 files exceeding 1,000 lines**, which impacts:
-- New contributor onboarding
-- Test thoroughness
-- Code review efficiency
-- Risk of unintended side effects
+The codebase has **9 files exceeding 1,000 lines**. All have delegation patterns but remain large:
 
-| File | Lines | Notes |
-|------|-------|-------|
-| CanvasManager.js | 1,805 | Facade pattern, delegates to 10+ controllers |
-| LayerPanel.js | 1,720 | Delegates to 7 controllers |
-| LayersEditor.js | 1,301 | Partial delegation |
-| ToolManager.js | 1,275 | Delegates to 2 handlers |
-| APIManager.js | 1,168 | Delegates to APIErrorHandler |
-| SelectionManager.js | 1,147 | ⚠️ **No delegation - needs split** |
-| Toolbar.js | 1,115 | Needs split |
-| ShapeRenderer.js | 1,049 | Needs split |
+| File | Lines | Delegation | Trend |
+|------|-------|------------|-------|
+| CanvasManager.js | 1,830 | ✅ 10+ controllers | ↑ Growing |
+| LayerPanel.js | 1,821 | ✅ 7 controllers | ↑ Growing |
+| LayersEditor.js | 1,329 | ✅ 3 modules | Stable |
+| Toolbar.js | 1,298 | ✅ 4 modules | ↑ Growing |
+| ToolManager.js | 1,275 | ✅ 2 handlers | Stable |
+| ShapeRenderer.js | 1,191 | ✅ ShadowRenderer | ↑ Growing |
+| SelectionManager.js | 1,181 | ✅ 3 modules | Stable |
+| APIManager.js | 1,161 | ✅ APIErrorHandler | Stable |
+| ToolbarStyleControls.js | 1,049 | ⚠️ None | **NEW** |
 
-**Recently Addressed:**
-- ✅ CanvasRenderer.js: 1,132 → 834 lines (SelectionRenderer extracted)
-- ✅ APIManager.js: 1,385 → 1,168 lines (APIErrorHandler extracted)
-- ✅ ShapeRenderer.js: 1,367 → 1,049 lines (TextBoxRenderer extracted)
+**Total in god classes: ~12,135 lines** (28% of JS codebase)
+
+**CI Protection:** `npm run check:godclass` blocks PRs that grow files beyond limits.
 
 **See:** [improvement_plan.md](../improvement_plan.md) for remediation plan.
 
-### ⚠️ E2E Tests Not Fully Enabled
+### ⚠️ Code Volume Growing
 
-**Status:** Smoke tests only  
+**Status:** Needs attention  
 **Severity:** Medium
 
-Playwright tests exist but editor tests have `continue-on-error: true` in CI, effectively disabling them.
+Codebase grew from 40,865 lines (Dec 18) to 43,641 lines (Dec 19) - 6.8% in one day.
 
-**Recommendation:** Fix editor tests and remove `continue-on-error`.
-
-### ⚠️ One Flaky Test
-
-**Status:** Known  
-**File:** `tests/jest/performance/RenderBenchmark.test.js`
-
-Memory assertion is unreliable due to GC timing. Needs fix or removal.
+**Recommendation:** Implement 1:1 extraction rule (new features require equivalent refactoring).
 
 ---
 

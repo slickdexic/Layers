@@ -91,13 +91,17 @@
 			pastedIds.push( clone.id );
 		} );
 
-		// Select the last pasted layer
+		// Select the pasted layers
 		if ( pastedIds.length > 0 ) {
 			if ( cm.setSelectedLayerIds ) {
 				cm.setSelectedLayerIds( pastedIds );
 			} else {
 				cm.selectedLayerId = pastedIds[ pastedIds.length - 1 ];
 				cm.selectedLayerIds = pastedIds;
+			}
+			// Set lastSelectedId for key object alignment (last pasted is key object)
+			if ( cm.selectionManager ) {
+				cm.selectionManager.lastSelectedId = pastedIds[ pastedIds.length - 1 ];
 			}
 		}
 

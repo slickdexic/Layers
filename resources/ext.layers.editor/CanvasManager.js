@@ -34,6 +34,7 @@
 		DrawingController: 'Canvas.DrawingController',
 		ClipboardController: 'Canvas.ClipboardController',
 		TextInputController: 'Canvas.TextInputController',
+		AlignmentController: 'Canvas.AlignmentController',
 		RenderCoordinator: 'Canvas.RenderCoordinator',
 		InteractionController: 'Canvas.InteractionController',
 		ValidationManager: 'Validation.Manager',
@@ -247,7 +248,8 @@ class CanvasManager {
 			[ 'HitTestController', 'hitTestController' ],
 			[ 'DrawingController', 'drawingController' ],
 			[ 'ClipboardController', 'clipboardController' ],
-			[ 'TextInputController', 'textInputController' ]
+			[ 'TextInputController', 'textInputController' ],
+			[ 'AlignmentController', 'alignmentController' ]
 		];
 
 		controllers.forEach( ( entry ) => {
@@ -1322,7 +1324,7 @@ class CanvasManager {
 	// Renderer delegation methods
 	drawLayerWithEffects ( layer ) { if ( this.renderer ) { this.renderer.drawLayerWithEffects( layer ); } }
 	drawMarqueeBox () { if ( this.renderer ) { this.renderer.drawMarqueeBox(); } }
-	drawSelectionIndicators ( layerId ) { if ( this.renderer ) { this.renderer.drawSelectionIndicators( layerId ); } }
+	drawSelectionIndicators ( layerId, isKeyObject ) { if ( this.renderer ) { this.renderer.drawSelectionIndicators( layerId, isKeyObject ); } }
 	drawSelectionHandles ( bounds, layer ) { if ( this.renderer ) { this.renderer.drawSelectionHandles( bounds, layer ); } }
 	drawRotationHandle ( bounds, layer ) { if ( this.renderer ) { this.renderer.drawRotationHandle( bounds, layer ); } }
 
@@ -1363,6 +1365,10 @@ class CanvasManager {
 			.filter( function ( layer ) { return layer.visible !== false; } )
 			.map( function ( layer ) { return layer.id; } );
 		this.setSelectedLayerIds( allIds );
+		// Update lastSelectedId for key object alignment (last layer is key object)
+		if ( this.selectionManager && allIds.length > 0 ) {
+			this.selectionManager.lastSelectedId = allIds[ allIds.length - 1 ];
+		}
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
@@ -1374,6 +1380,10 @@ class CanvasManager {
 		this.setSelectedLayerIds( [] );
 		this.selectionHandles = [];
 		this.rotationHandle = null;
+		// Clear lastSelectedId when nothing is selected
+		if ( this.selectionManager ) {
+			this.selectionManager.lastSelectedId = null;
+		}
 		this.renderLayers( this.editor.layers );
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { selection: 0, size: { width: 0, height: 0 } } );
@@ -1408,13 +1418,25 @@ class CanvasManager {
 		// Update selection through StateManager
 		this.setSelectedLayerIds( newIds );
 
+		// Update lastSelectedId for key object alignment
+		if ( this.selectionManager ) {
+			const isHitSelected = newIds.indexOf( hit.id ) !== -1;
+			if ( isHitSelected ) {
+				// The clicked layer is selected, it becomes the key object
+				this.selectionManager.lastSelectedId = hit.id;
+			} else if ( newIds.length > 0 ) {
+				// The clicked layer was deselected, use the last remaining
+				this.selectionManager.lastSelectedId = newIds[ newIds.length - 1 ];
+			} else {
+				this.selectionManager.lastSelectedId = null;
+			}
+		}
+
 		this.renderLayers( this.editor.layers );
 		this.drawMultiSelectionIndicators();
 
-		// Sync selection with layer panel
-		if ( this.editor && this.editor.layerPanel ) {
-			this.editor.layerPanel.selectLayer( this.getSelectedLayerId(), true );
-		}
+		// Note: LayerPanel will update via StateManager subscription
+		// Do NOT call layerPanel.selectLayer here as it would overwrite multi-selection
 
 		// Update status bar with selection count
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
@@ -1424,13 +1446,22 @@ class CanvasManager {
 		return hit;
 	}
 
+	/**
+	 * Draw selection indicators for multiple selected layers
+	 * The key object (last selected) is visually distinguished with an orange border
+	 */
 	drawMultiSelectionIndicators () {
 		const selectedIds = this.getSelectedLayerIds();
 		if ( !selectedIds || selectedIds.length <= 1 ) {
 			return;
 		}
+		
+		// Get the key object ID (last selected layer) for visual distinction
+		const keyObjectId = this.selectionManager ? this.selectionManager.lastSelectedId : null;
+		
 		for ( let i = 0; i < selectedIds.length; i++ ) {
-			this.drawSelectionIndicators( selectedIds[ i ] );
+			const isKeyObject = selectedIds.length > 1 && selectedIds[ i ] === keyObjectId;
+			this.drawSelectionIndicators( selectedIds[ i ], isKeyObject );
 		}
 	}
 

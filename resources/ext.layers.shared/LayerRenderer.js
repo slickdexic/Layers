@@ -330,21 +330,12 @@ class LayerRenderer {
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawImage( layer, options ) {
-		// DEBUG: Log when drawImage is called
-		if ( typeof mw !== 'undefined' && mw.log ) {
-			mw.log( '[LayerRenderer] drawImage called, layer.id:', layer.id, 'hasSrc:', !!layer.src );
-		}
-
 		const opts = this._prepareRenderOptions( options );
 		const scale = opts.scale;
 
 		// Get the cached image, or load it if not cached
 		const img = this._getImageElement( layer );
 		if ( !img || !img.complete ) {
-			// DEBUG: Log when image is not ready
-			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log( '[LayerRenderer] Image not ready, drawing placeholder. hasCallback:', !!this.onImageLoad );
-			}
 			// Image not ready yet - draw a placeholder
 			this._drawImagePlaceholder( layer, scale );
 			return;
@@ -422,15 +413,8 @@ class LayerRenderer {
 
 		// Request redraw when image loads
 		img.onload = () => {
-			// DEBUG: Log when image loads
-			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log( '[LayerRenderer] Image loaded, cacheKey:', cacheKey, 'hasCallback:', !!self.onImageLoad );
-			}
 			// Use the configured callback (preferred)
 			if ( self.onImageLoad && typeof self.onImageLoad === 'function' ) {
-				if ( typeof mw !== 'undefined' && mw.log ) {
-					mw.log( '[LayerRenderer] Calling onImageLoad callback' );
-				}
 				self.onImageLoad();
 			}
 			// Fallback to global requestRedraw if available

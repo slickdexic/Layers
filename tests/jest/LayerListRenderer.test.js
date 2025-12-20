@@ -62,6 +62,7 @@ describe( 'LayerListRenderer', () => {
 	let mockLayerList;
 	let mockMsg;
 	let mockGetSelectedLayerId;
+	let mockGetSelectedLayerIds;
 	let mockGetLayers;
 	let mockOnMoveLayer;
 
@@ -72,6 +73,7 @@ describe( 'LayerListRenderer', () => {
 
 		mockMsg = jest.fn( ( key, fallback ) => fallback || key );
 		mockGetSelectedLayerId = jest.fn( () => null );
+		mockGetSelectedLayerIds = jest.fn( () => [] );
 		mockGetLayers = jest.fn( () => [] );
 		mockOnMoveLayer = jest.fn();
 
@@ -87,6 +89,7 @@ describe( 'LayerListRenderer', () => {
 				layerList: mockLayerList,
 				msg: mockMsg,
 				getSelectedLayerId: mockGetSelectedLayerId,
+				getSelectedLayerIds: mockGetSelectedLayerIds,
 				getLayers: mockGetLayers,
 				onMoveLayer: mockOnMoveLayer
 			} );
@@ -114,6 +117,7 @@ describe( 'LayerListRenderer', () => {
 				layerList: mockLayerList,
 				msg: mockMsg,
 				getSelectedLayerId: mockGetSelectedLayerId,
+				getSelectedLayerIds: mockGetSelectedLayerIds,
 				getLayers: mockGetLayers,
 				onMoveLayer: mockOnMoveLayer
 			} );
@@ -169,6 +173,7 @@ describe( 'LayerListRenderer', () => {
 
 		test( 'should mark selected layer', () => {
 			mockGetSelectedLayerId.mockReturnValue( 'layer_2' );
+			mockGetSelectedLayerIds.mockReturnValue( [ 'layer_2' ] );
 			mockGetLayers.mockReturnValue( [
 				{ id: 'layer_1', type: 'text' },
 				{ id: 'layer_2', type: 'rectangle' }
@@ -180,6 +185,25 @@ describe( 'LayerListRenderer', () => {
 
 			expect( item1.classList.contains( 'selected' ) ).toBe( false );
 			expect( item2.classList.contains( 'selected' ) ).toBe( true );
+		} );
+
+		test( 'should mark multiple selected layers', () => {
+			mockGetSelectedLayerId.mockReturnValue( 'layer_3' );
+			mockGetSelectedLayerIds.mockReturnValue( [ 'layer_1', 'layer_3' ] );
+			mockGetLayers.mockReturnValue( [
+				{ id: 'layer_1', type: 'text' },
+				{ id: 'layer_2', type: 'rectangle' },
+				{ id: 'layer_3', type: 'circle' }
+			] );
+			renderer.render();
+
+			const item1 = mockLayerList.querySelector( '[data-layer-id="layer_1"]' );
+			const item2 = mockLayerList.querySelector( '[data-layer-id="layer_2"]' );
+			const item3 = mockLayerList.querySelector( '[data-layer-id="layer_3"]' );
+
+			expect( item1.classList.contains( 'selected' ) ).toBe( true );
+			expect( item2.classList.contains( 'selected' ) ).toBe( false );
+			expect( item3.classList.contains( 'selected' ) ).toBe( true );
 		} );
 
 		test( 'should remove items no longer in layer list', () => {
@@ -230,6 +254,7 @@ describe( 'LayerListRenderer', () => {
 				layerList: mockLayerList,
 				msg: mockMsg,
 				getSelectedLayerId: mockGetSelectedLayerId,
+				getSelectedLayerIds: mockGetSelectedLayerIds,
 				getLayers: mockGetLayers,
 				onMoveLayer: mockOnMoveLayer
 			} );
@@ -261,6 +286,7 @@ describe( 'LayerListRenderer', () => {
 
 		test( 'should mark selected item', () => {
 			mockGetSelectedLayerId.mockReturnValue( 'layer_1' );
+			mockGetSelectedLayerIds.mockReturnValue( [ 'layer_1' ] );
 			const layer = { id: 'layer_1', type: 'text' };
 			const item = renderer.createLayerItem( layer, 0 );
 
@@ -306,6 +332,7 @@ describe( 'LayerListRenderer', () => {
 				layerList: mockLayerList,
 				msg: mockMsg,
 				getSelectedLayerId: mockGetSelectedLayerId,
+				getSelectedLayerIds: mockGetSelectedLayerIds,
 				getLayers: mockGetLayers
 			} );
 		} );
@@ -329,6 +356,7 @@ describe( 'LayerListRenderer', () => {
 
 			// Simulate selection change
 			mockGetSelectedLayerId.mockReturnValue( 'layer_1' );
+			mockGetSelectedLayerIds.mockReturnValue( [ 'layer_1' ] );
 			renderer.updateLayerItem( item, layer, 0 );
 
 			expect( item.classList.contains( 'selected' ) ).toBe( true );

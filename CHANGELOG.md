@@ -2,6 +2,40 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.6] - 2025-12-20
+
+### New Features
+- **Key Object Alignment**: Industry-standard alignment behavior (Adobe Illustrator/Photoshop pattern)
+  - When multiple layers are selected, the last selected layer becomes the "key object"
+  - Other layers align TO the key object, which stays fixed
+  - Key object is visually distinguished with an orange border instead of blue
+  - Works for all alignment operations: left, center, right, top, middle, bottom
+  - Fallback to combined bounds when no key object is available
+- **Text Layer Alignment**: Text layers now properly participate in alignment operations
+  - Text dimensions are measured using canvas context for accurate bounds
+  - Fallback estimation for environments without canvas context
+
+### Bug Fixes
+- **Alignment buttons working**: Fixed AlignmentController constructor to accept both CanvasManager directly and config object
+- **Selection tracking**: Fixed `lastSelectedId` not being updated in multiple code paths:
+  - LayerPanel.selectLayer now updates lastSelectedId
+  - MarqueeSelection callback updates lastSelectedId
+  - handleLayerSelection updates lastSelectedId for canvas clicks
+  - selectAll/deselectAll maintain lastSelectedId correctly
+  - ClipboardController.paste sets lastSelectedId for pasted layers
+
+### Code Quality
+- **ColorControlFactory.js extracted** (~244 lines): New UI module for color picker control creation
+  - Reduces ToolbarStyleControls.js complexity
+  - Reusable color button creation with proper ARIA support
+- **AlignmentController.test.js added** (~395 lines): Comprehensive test suite
+  - Tests for key object alignment pattern
+  - Tests for all alignment and distribution operations
+  - Tests for bounds calculation for different layer types
+- **Debug logging cleanup**: Removed all console.log statements from AlignmentController.js
+
+---
+
 ## [1.1.3] - 2025-12-18
 
 ### Bug Fixes

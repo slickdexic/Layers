@@ -143,9 +143,9 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 	} );
 
-	describe( 'createColorControl', () => {
+	describe( 'createColorControlFallback', () => {
 		it( 'should create control with label and button', () => {
-			const result = styleControls.createColorControl( {
+			const result = styleControls.createColorControlFallback( {
 				type: 'test',
 				label: 'Test Label',
 				initialColor: '#ff0000',
@@ -158,7 +158,7 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 
 		it( 'should set proper ARIA attributes', () => {
-			const result = styleControls.createColorControl( {
+			const result = styleControls.createColorControlFallback( {
 				type: 'stroke',
 				label: 'Stroke',
 				initialColor: '#000000',
