@@ -2,6 +2,10 @@
  * ToolbarStyleControls - Manages style controls UI for Layers Editor Toolbar
  * Handles stroke/fill colors, stroke width, font size, text effects, and arrow styles
  *
+ * Delegates to:
+ * - ColorControlFactory: Color picker button creation
+ * - PresetStyleManager: Style preset dropdown and application
+ *
  * @module ToolbarStyleControls
  */
 ( function () {
@@ -58,6 +62,15 @@ class ToolbarStyleControls {
 					this.toolbar.registerDialogCleanup( fn );
 				}
 			}
+		} ) : null;
+
+		// Initialize PresetStyleManager for preset UI delegation
+		const PresetStyleManager = getClass( 'UI.PresetStyleManager', 'PresetStyleManager' );
+		this.presetStyleManager = PresetStyleManager ? new PresetStyleManager( {
+			toolbar: this.toolbar,
+			msg: this.msg.bind( this ),
+			getStyleOptions: () => this.getCurrentStyle(),
+			applyStyle: ( style ) => this.applyPresetStyleInternal( style )
 		} ) : null;
 
 		// Style state
@@ -131,10 +144,12 @@ class ToolbarStyleControls {
 		styleGroup.className = 'toolbar-group style-group';
 		this.container = styleGroup;
 
-		// Preset dropdown (if PresetDropdown is available)
-		this.presetDropdown = this.createPresetDropdown();
-		if ( this.presetDropdown ) {
-			styleGroup.appendChild( this.presetDropdown.getElement() );
+		// Preset dropdown (via PresetStyleManager delegation)
+		if ( this.presetStyleManager ) {
+			const dropdown = this.presetStyleManager.createPresetDropdown();
+			if ( dropdown ) {
+				styleGroup.appendChild( this.presetStyleManager.getElement() );
+			}
 		}
 
 		// Main style controls row (stroke, fill, width)
@@ -774,49 +789,11 @@ class ToolbarStyleControls {
 	}
 
 	/**
-	 * Create the preset dropdown component
-	 *
-	 * @return {PresetDropdown|null} The preset dropdown or null if not available
-	 */
-	createPresetDropdown() {
-		const PresetManager = getClass( 'PresetManager', 'PresetManager' );
-		const PresetDropdown = getClass( 'PresetDropdown', 'PresetDropdown' );
-
-		// Check if PresetManager and PresetDropdown are available
-		if ( !PresetManager || !PresetDropdown ) {
-			return null;
-		}
-
-		// Create a shared preset manager instance
-		if ( !this.presetManager ) {
-			this.presetManager = new PresetManager();
-		}
-
-		// Store reference to selected layers for preset operations
-		this.selectedLayers = [];
-
-		// Create the dropdown
-		const dropdown = new PresetDropdown( {
-			presetManager: this.presetManager,
-			getMessage: this.msg.bind( this ),
-			onSelect: ( style ) => {
-				this.applyPresetToSelection( style );
-			},
-			onSave: ( callback ) => {
-				const currentStyle = this.getStyleFromSelection();
-				callback( currentStyle );
-			}
-		} );
-
-		return dropdown;
-	}
-
-	/**
-	 * Apply a preset style to the current controls
+	 * Apply a preset style to the current controls (internal, called by PresetStyleManager)
 	 *
 	 * @param {Object} style Style properties from the preset
 	 */
-	applyPresetStyle( style ) {
+	applyPresetStyleInternal( style ) {
 		if ( !style ) {
 			return;
 		}
@@ -896,165 +873,35 @@ class ToolbarStyleControls {
 	}
 
 	/**
-	 * Update preset dropdown when tool changes
+	 * Update preset dropdown when tool changes (delegates to PresetStyleManager)
 	 *
 	 * @param {string} tool Current tool name
 	 */
 	setCurrentTool( tool ) {
-		// Only update for tool if no layers are selected
-		// Layer selection takes precedence over tool selection
-		if ( this.presetDropdown && ( !this.selectedLayers || this.selectedLayers.length === 0 ) ) {
-			this.presetDropdown.setTool( tool );
+		if ( this.presetStyleManager ) {
+			this.presetStyleManager.setCurrentTool( tool );
 		}
 	}
 
 	/**
-	 * Update preset dropdown when layer selection changes
+	 * Update preset dropdown when layer selection changes (delegates to PresetStyleManager)
 	 *
 	 * @param {Array} selectedLayers Array of selected layer objects
 	 */
 	updateForSelection( selectedLayers ) {
-		this.selectedLayers = selectedLayers || [];
-
-		if ( !this.presetDropdown ) {
-			return;
+		if ( this.presetStyleManager ) {
+			this.presetStyleManager.updateForSelection( selectedLayers );
 		}
-
-		if ( this.selectedLayers.length === 0 ) {
-			// No selection - clear layer type, fall back to tool
-			this.presetDropdown.setLayerType( null );
-			if ( this.toolbar && this.toolbar.currentTool ) {
-				this.presetDropdown.setTool( this.toolbar.currentTool );
-			}
-			return;
-		}
-
-		// Get the type of the first selected layer
-		const firstLayer = this.selectedLayers[ 0 ];
-		const layerType = firstLayer.type;
-
-		// Map layer types to tool types for preset lookup
-		const typeMapping = {
-			'rect': 'rectangle',
-			'ellipse': 'ellipse',
-			'circle': 'circle',
-			'line': 'line',
-			'arrow': 'arrow',
-			'text': 'text',
-			'textbox': 'textbox',
-			'polygon': 'polygon',
-			'star': 'star',
-			'path': 'path',
-			'rectangle': 'rectangle'
-		};
-
-		const toolType = typeMapping[ layerType ] || layerType;
-		// Use setLayerType which takes precedence over tool
-		this.presetDropdown.setLayerType( toolType );
-	}
-
-	/**
-	 * All style properties that can be applied from presets.
-	 * This list matches PresetManager.extractStyleFromLayer() and sanitizeStyle().
-	 *
-	 * @type {string[]}
-	 */
-	static get PRESET_STYLE_PROPERTIES() {
-		return [
-			// Stroke
-			'stroke', 'strokeWidth', 'strokeOpacity',
-			// Fill
-			'fill', 'fillOpacity',
-			// Text
-			'color', 'fontSize', 'fontFamily', 'fontWeight', 'fontStyle',
-			'textAlign', 'verticalAlign', 'lineHeight', 'padding',
-			// Text stroke
-			'textStrokeColor', 'textStrokeWidth',
-			// Shape
-			'cornerRadius',
-			// Arrow
-			'arrowStyle', 'arrowhead', 'arrowSize', 'arrowHeadType', 'headScale', 'tailWidth',
-			// Polygon/Star
-			'sides', 'points', 'innerRadius', 'outerRadius', 'pointRadius', 'valleyRadius',
-			// Shadow
-			'shadow', 'shadowColor', 'shadowBlur',
-			'shadowOffsetX', 'shadowOffsetY', 'shadowSpread',
-			// Text shadow
-			'textShadow', 'textShadowColor', 'textShadowBlur',
-			'textShadowOffsetX', 'textShadowOffsetY',
-			// Glow
-			'glow',
-			// Blend mode
-			'blendMode',
-			// Opacity
-			'opacity'
-		];
-	}
-
-	/**
-	 * Apply a preset style to selected layers
-	 *
-	 * @param {Object} style Style properties from the preset
-	 */
-	applyPresetToSelection( style ) {
-		if ( !style ) {
-			return;
-		}
-
-		// If we have selected layers, apply to them via the editor
-		if ( this.selectedLayers && this.selectedLayers.length > 0 && this.toolbar && this.toolbar.editor ) {
-			this.toolbar.editor.applyToSelection( ( layer ) => {
-				// Apply all style properties from the preset
-				ToolbarStyleControls.PRESET_STYLE_PROPERTIES.forEach( ( prop ) => {
-					if ( style[ prop ] !== undefined ) {
-						layer[ prop ] = style[ prop ];
-					}
-				} );
-			} );
-		}
-
-		// Also update the toolbar controls for future drawings
-		this.applyPresetStyle( style );
-	}
-
-	/**
-	 * Get style from the first selected layer for saving as preset
-	 *
-	 * @return {Object} Style properties from selected layer, or current controls
-	 */
-	getStyleFromSelection() {
-		if ( this.selectedLayers && this.selectedLayers.length > 0 ) {
-			const layer = this.selectedLayers[ 0 ];
-			const style = {};
-
-			// Extract all style properties from the layer
-			ToolbarStyleControls.PRESET_STYLE_PROPERTIES.forEach( ( prop ) => {
-				if ( layer[ prop ] !== undefined ) {
-					style[ prop ] = layer[ prop ];
-				}
-			} );
-
-			return style;
-		}
-
-		// Fallback to current toolbar controls
-		return this.getCurrentStyle();
 	}
 
 	/**
 	 * Destroy and cleanup
 	 */
 	destroy() {
-		// Clean up preset dropdown
-		if ( this.presetDropdown ) {
-			this.presetDropdown.destroy();
-			this.presetDropdown = null;
-		}
-
-		// Clean up preset manager
-		if ( this.presetManager ) {
-			this.presetManager.destroy();
-			this.presetManager = null;
+		// Clean up PresetStyleManager
+		if ( this.presetStyleManager ) {
+			this.presetStyleManager.destroy();
+			this.presetStyleManager = null;
 		}
 
 		// Clean up all event listeners via EventTracker

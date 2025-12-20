@@ -254,6 +254,7 @@
 				"ui/LayerItemFactory.js",
 				"ui/ColorPickerDialog.js",
 				"ui/ColorControlFactory.js",
+				"ui/PresetStyleManager.js",
 				"ui/ConfirmDialog.js",
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",
