@@ -550,10 +550,36 @@ describe( 'EyedropperController', () => {
 		} );
 
 		it( 'should clean up references', () => {
+			controller._readCtx = mockCtx; // Simulate cached read context
 			controller.destroy();
 			expect( controller.manager ).toBeNull();
 			expect( controller.onColorSampled ).toBeNull();
 			expect( controller.onModeChange ).toBeNull();
+			expect( controller._readCtx ).toBeNull();
+		} );
+	} );
+
+	describe( 'getReadContext', () => {
+		it( 'should return context with willReadFrequently', () => {
+			const ctx = controller.getReadContext();
+			expect( ctx ).toBe( mockCtx );
+			expect( mockCanvas.getContext ).toHaveBeenCalledWith( '2d', { willReadFrequently: true } );
+		} );
+
+		it( 'should cache the context', () => {
+			controller.getReadContext();
+			controller.getReadContext();
+			// Only called once for caching
+			const willReadCalls = mockCanvas.getContext.mock.calls.filter(
+				( call ) => call[ 1 ] && call[ 1 ].willReadFrequently
+			);
+			expect( willReadCalls.length ).toBe( 1 );
+		} );
+
+		it( 'should return null if no canvas', () => {
+			controller.manager.canvas = null;
+			const ctx = controller.getReadContext();
+			expect( ctx ).toBeNull();
 		} );
 	} );
 } );

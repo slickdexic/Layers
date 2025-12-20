@@ -319,12 +319,28 @@ class ToolbarStyleControls {
 	 * @param {string} target - 'fill' or 'stroke'
 	 */
 	activateEyedropper( target ) {
-		if ( this.toolbar && this.toolbar.editor && this.toolbar.editor.canvasManager ) {
-			const cm = this.toolbar.editor.canvasManager;
-			if ( cm.eyedropperController ) {
-				cm.eyedropperController.activate( target );
-			}
+		if ( !this.toolbar ) {
+			// eslint-disable-next-line no-console
+			console.warn( 'Layers: activateEyedropper - toolbar not available' );
+			return;
 		}
+		if ( !this.toolbar.editor ) {
+			// eslint-disable-next-line no-console
+			console.warn( 'Layers: activateEyedropper - editor not available' );
+			return;
+		}
+		if ( !this.toolbar.editor.canvasManager ) {
+			// eslint-disable-next-line no-console
+			console.warn( 'Layers: activateEyedropper - canvasManager not available' );
+			return;
+		}
+		const cm = this.toolbar.editor.canvasManager;
+		if ( !cm.eyedropperController ) {
+			// eslint-disable-next-line no-console
+			console.warn( 'Layers: activateEyedropper - eyedropperController not available' );
+			return;
+		}
+		cm.eyedropperController.activate( target );
 	}
 
 	/**

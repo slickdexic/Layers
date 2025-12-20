@@ -232,6 +232,24 @@ class EyedropperController {
 	}
 
 	/**
+	 * Get a context optimized for reading pixel data
+	 * Uses willReadFrequently option for better getImageData performance
+	 *
+	 * @return {CanvasRenderingContext2D|null} The read-optimized context
+	 */
+	getReadContext() {
+		const canvas = this.getCanvas();
+		if ( !canvas ) {
+			return null;
+		}
+		// Cache the read context for performance
+		if ( !this._readCtx ) {
+			this._readCtx = canvas.getContext( '2d', { willReadFrequently: true } );
+		}
+		return this._readCtx;
+	}
+
+	/**
 	 * Add event listeners for eyedropper mode
 	 */
 	addEventListeners() {
@@ -365,7 +383,8 @@ class EyedropperController {
 	 * @return {string|null} Hex color or null if invalid
 	 */
 	sampleColorAt( x, y ) {
-		const ctx = this.getContext();
+		// Use read-optimized context for better getImageData performance
+		const ctx = this.getReadContext();
 		if ( !ctx ) {
 			return null;
 		}
@@ -683,6 +702,7 @@ class EyedropperController {
 		this.manager = null;
 		this.onColorSampled = null;
 		this.onModeChange = null;
+		this._readCtx = null;
 	}
 }
 
