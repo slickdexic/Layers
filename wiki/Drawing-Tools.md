@@ -20,7 +20,7 @@ Layers provides 13 professional drawing tools for comprehensive image annotation
 | **Star** | `S` | ★ | Shape | Star shapes |
 | **Arrow** | `A` | ➔ | Line | Arrows with customizable heads |
 | **Line** | `L` | ╱ | Line | Straight lines |
-| **Blur** | `B` | ▦ | Effect | Blur/redact sensitive areas |
+| **Blur** | `B` | ▦ | Effect | Apply blur effect to areas |
 
 ---
 
@@ -218,13 +218,13 @@ Draw straight lines between two points.
 
 ### Blur Tool (B)
 
-Blur or redact sensitive areas of an image.
+Apply a blur effect to selected areas of an image.
 
 **Use Cases:**
-- Redact faces for privacy
-- Hide license plates
-- Obscure sensitive text
-- Create focus effects
+- Create depth-of-field effects
+- Emphasize foreground elements
+- Soften backgrounds
+- Draw attention to unblurred areas
 
 **Properties:**
 | Property | Range | Default |
@@ -296,7 +296,7 @@ All tools share these style properties:
 | Paragraph/callout | Text Box (X) |
 | Point to something | Arrow (A) |
 | Highlight area | Rectangle (R) with semi-transparent fill |
-| Redact content | Blur (B) |
+| Blur background | Blur (B) |
 | Freehand annotation | Pen (P) |
 
 ---

@@ -2,6 +2,40 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.7] - 2025-12-20
+
+### New Features
+- **Smart Guides** — Intelligent snapping to other objects
+  - Snap to object edges (left, right, top, bottom)
+  - Snap to object centers (horizontal, vertical)
+  - Visual guide lines: magenta for edges, cyan for centers
+  - 8px snap threshold, **off by default** — toggle with `;` key
+- **Arrange Dropdown Menu** — Consolidated toolbar UI
+  - New "Arrange & Snap" dropdown replaces 8 individual alignment buttons
+  - Contains: Smart Guides toggle, Align options, Distribute options
+  - Saves toolbar space for future features
+  - Shows disabled state when insufficient layers selected
+
+### Changes
+- Removed standalone eyedropper button from toolbar (use the eyedropper within the browser's color picker instead)
+- Removed **I**/**Shift+I** keyboard shortcuts (eyedropper available via native color picker)
+- Smart guides now **off by default** — press `;` to toggle or use Arrange menu
+- Updated blur tool documentation — now described as visual effect only, removed "redaction" and "privacy" terminology
+
+### Cleanup
+- Removed unused `EyedropperController` module (~480 lines, 66 tests) — redundant with browser's native color picker
+- Removed eyedropper CSS styles and ToolRegistry entry
+
+### Refactoring
+- Extracted `SmartGuidesController` (~500 lines)
+- Consolidated alignment buttons into dropdown menu
+
+### Testing
+- Added 43 new tests for Smart Guides
+- Total tests: 5,609 passing
+
+---
+
 ## [1.1.6] - 2025-12-20
 
 ### New Features

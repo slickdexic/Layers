@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 17, 2025  
-**Version:** 1.1.0
+**Last Updated:** December 20, 2025  
+**Version:** 1.1.7
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -22,45 +22,48 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 76 |
+| Total JS files | 75 |
 | Viewer module | ~682 lines |
 | Shared module | ~5,000 lines |
 | Editor module | ~34,000 lines |
-| ES6 classes | 67 |
+| ES6 classes | 66 |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | ~91% statements, ~78% branches |
-| Jest tests | ~4,800 |
+| Jest tests | ~5,609 |
 | PHPUnit test files | 17 |
-| God classes (>1000 lines) | **9** ⚠️ |
+| God classes (>1000 lines) | **7** ⚠️ |
 | Drawing tools | 13 (including Text Box) |
 
 ---
 
-## Recent Architecture Changes
+### Recent Architecture Changes
 
-### December 2025: Text Box Tool & Continued Modularization
+### December 2025: Smart Guides & Arrange Menu
+
+**v1.1.7 - Smart Guides & Cleanup:**
+- New SmartGuidesController for intelligent object snapping
+- Arrange dropdown menu consolidates 8 alignment buttons
+- Removed EyedropperController (redundant with browser's native color picker)
+- God classes reduced from 8 to 7
+
+**v1.1.6 - Key Object Alignment:**
+- Industry-standard alignment behavior (last selected = key object)
+- ColorControlFactory and PresetStyleManager extracted
+- Text layer alignment improvements
+
+**v1.1.5 - Alignment & Style Presets:**
+- AlignmentController for layer alignment/distribution
+- Style presets system with save/load functionality
+- Built-in presets for common annotation styles
 
 **v1.1.0 - Text Box Tool:**
 - New Text Box tool combining rectangle container with multi-line text
 - Text stroke and text shadow effects
 - Font family selection, bold/italic, alignment options
-- ShapeRenderer grew to 1,367 lines (⚠️ needs extraction)
-
-**v1.0.0 - Modularization & ES6 Completion:**
-- **100% ES6 Migration** - All 67 classes now use ES6 syntax, 0 prototype patterns
-- **LayerRenderer Split** - Extracted 5 specialized renderers (ShapeRenderer, ArrowRenderer, ShadowRenderer, TextRenderer, EffectsRenderer)
-- **TransformController Split** - Extracted ResizeCalculator (806 lines)
-- **Namespace Migration** - Reduced direct window exports from 50 to 0
-- **AccessibilityAnnouncer.js** - ARIA live regions for screen reader support
-- **EditorBootstrap.js** - Extracted initialization, hooks, cleanup from LayersEditor
-- **RevisionManager.js** - Extracted revision and named layer set management
-- **DialogManager.js** - Extracted modal dialogs with ARIA accessibility
-- **NamespaceHelper.js** - Centralized getClass() utility
-- **API Endpoints** - 4 endpoints: layersinfo, layerssave, layersdelete, layersrename
 
 ### Known Technical Debt
 
-**9 files exceed 1,000 lines (god classes):**
+**7 files exceed 1,000 lines (god classes):**
 - CanvasManager.js (1,893) - facade with 10+ controllers
 - LayerPanel.js (1,720) - delegates to 7 controllers
 - APIManager.js (1,385) - needs API/state split
@@ -68,8 +71,6 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - LayersEditor.js (1,296) - main entry point
 - SelectionManager.js (1,266) - core selection logic
 - ToolManager.js (1,180) - needs tool extraction
-- CanvasRenderer.js (1,132) - rendering logic
-- Toolbar.js (1,126) - UI controls
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 

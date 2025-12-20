@@ -425,7 +425,7 @@
 				<line x1="5" y1="19" x2="19" y2="5"/>
 			</svg>`,
 
-				// Blur/Redact tool - Pixelated/mosaic pattern
+				// Blur tool - Pixelated/mosaic pattern
 				blur: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
 				<rect x="3" y="3" width="7" height="7"/>
 				<rect x="14" y="3" width="7" height="7"/>
@@ -562,7 +562,7 @@
 				{ id: 'star', icon: icons.star, title: t( 'layers-tool-star', 'Star Tool' ), key: 'S', isSvg: true },
 				{ id: 'arrow', icon: icons.arrow, title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A', isSvg: true },
 				{ id: 'line', icon: icons.line, title: t( 'layers-tool-line', 'Line Tool' ), key: 'L', isSvg: true },
-				{ id: 'blur', icon: icons.blur, title: t( 'layers-tool-blur', 'Blur/Redact Tool' ), key: 'B', isSvg: true }
+				{ id: 'blur', icon: icons.blur, title: t( 'layers-tool-blur', 'Blur Tool' ), key: 'B', isSvg: true }
 			];
 
 			tools.forEach( ( tool ) => {
@@ -724,63 +724,302 @@
 		}
 
 		/**
-		 * Create the alignment toolbar group
-		 * Buttons are disabled by default and enabled when 2+ layers are selected
+		 * Create the alignment toolbar group as a dropdown menu
+		 * Consolidates 8 buttons into a single dropdown to save toolbar space
 		 */
 		createAlignmentGroup() {
-			const alignGroup = document.createElement( 'div' );
-			alignGroup.className = 'toolbar-group alignment-group';
-			alignGroup.setAttribute( 'role', 'group' );
-			alignGroup.setAttribute( 'aria-label', this.msg( 'layers-alignment-group', 'Alignment' ) );
+			const arrangeGroup = document.createElement( 'div' );
+			arrangeGroup.className = 'toolbar-group arrange-dropdown-group';
+
+			// Create the dropdown trigger button
+			const triggerButton = document.createElement( 'button' );
+			triggerButton.className = 'toolbar-button arrange-dropdown-trigger';
+			triggerButton.setAttribute( 'aria-haspopup', 'true' );
+			triggerButton.setAttribute( 'aria-expanded', 'false' );
+			triggerButton.title = this.msg( 'layers-arrange-menu', 'Arrange & Snap' );
+			triggerButton.innerHTML = `
+				${ this.getArrangeIcon() }
+				<span class="dropdown-arrow">▼</span>
+			`;
+
+			// Create dropdown menu
+			const dropdownMenu = document.createElement( 'div' );
+			dropdownMenu.className = 'arrange-dropdown-menu';
+			dropdownMenu.setAttribute( 'role', 'menu' );
+			dropdownMenu.style.display = 'none';
 
 			const t = this.msg.bind( this );
 			const icons = this.getAlignmentIcons();
 
-			const alignButtons = [
-				{ id: 'align-left', icon: icons.alignLeft, title: t( 'layers-align-left', 'Align Left' ) },
-				{ id: 'align-center-h', icon: icons.alignCenterH, title: t( 'layers-align-center-h', 'Align Center' ) },
-				{ id: 'align-right', icon: icons.alignRight, title: t( 'layers-align-right', 'Align Right' ) },
-				{ id: 'align-top', icon: icons.alignTop, title: t( 'layers-align-top', 'Align Top' ) },
-				{ id: 'align-center-v', icon: icons.alignCenterV, title: t( 'layers-align-center-v', 'Align Middle' ) },
-				{ id: 'align-bottom', icon: icons.alignBottom, title: t( 'layers-align-bottom', 'Align Bottom' ) }
-			];
+			// Smart Guides toggle section
+			const snapSection = document.createElement( 'div' );
+			snapSection.className = 'dropdown-section';
+			snapSection.innerHTML = `<div class="dropdown-section-title">${ t( 'layers-snap-options', 'Snap Options' ) }</div>`;
 
-			const distributeButtons = [
-				{ id: 'distribute-h', icon: icons.distributeH, title: t( 'layers-distribute-h', 'Distribute Horizontally' ) },
-				{ id: 'distribute-v', icon: icons.distributeV, title: t( 'layers-distribute-v', 'Distribute Vertically' ) }
-			];
-
-			// Create alignment buttons
-			alignButtons.forEach( ( btn ) => {
-				const button = document.createElement( 'button' );
-				button.className = 'toolbar-button align-button';
-				button.innerHTML = btn.icon;
-				button.title = btn.title;
-				button.dataset.align = btn.id;
-				button.disabled = true; // Enabled when 2+ layers selected
-				button.setAttribute( 'aria-label', btn.title );
-				alignGroup.appendChild( button );
-			} );
+			const smartGuidesItem = this.createDropdownToggleItem(
+				'smart-guides',
+				t( 'layers-smart-guides', 'Smart Guides' ),
+				t( 'layers-smart-guides-desc', 'Snap to other objects' ),
+				';',
+				false // Default off
+			);
+			snapSection.appendChild( smartGuidesItem );
+			dropdownMenu.appendChild( snapSection );
 
 			// Separator
-			const separator = document.createElement( 'div' );
-			separator.className = 'toolbar-separator-small';
-			alignGroup.appendChild( separator );
+			dropdownMenu.appendChild( this.createDropdownSeparator() );
 
-			// Create distribute buttons
-			distributeButtons.forEach( ( btn ) => {
-				const button = document.createElement( 'button' );
-				button.className = 'toolbar-button distribute-button';
-				button.innerHTML = btn.icon;
-				button.title = btn.title;
-				button.dataset.align = btn.id;
-				button.disabled = true; // Enabled when 3+ layers selected
-				button.setAttribute( 'aria-label', btn.title );
-				alignGroup.appendChild( button );
+			// Alignment section
+			const alignSection = document.createElement( 'div' );
+			alignSection.className = 'dropdown-section';
+			alignSection.innerHTML = `<div class="dropdown-section-title">${ t( 'layers-align-section', 'Align (2+ layers)' ) }</div>`;
+
+			const alignItems = [
+				{ id: 'align-left', icon: icons.alignLeft, label: t( 'layers-align-left', 'Align Left' ) },
+				{ id: 'align-center-h', icon: icons.alignCenterH, label: t( 'layers-align-center-h', 'Align Center' ) },
+				{ id: 'align-right', icon: icons.alignRight, label: t( 'layers-align-right', 'Align Right' ) },
+				{ id: 'align-top', icon: icons.alignTop, label: t( 'layers-align-top', 'Align Top' ) },
+				{ id: 'align-center-v', icon: icons.alignCenterV, label: t( 'layers-align-center-v', 'Align Middle' ) },
+				{ id: 'align-bottom', icon: icons.alignBottom, label: t( 'layers-align-bottom', 'Align Bottom' ) }
+			];
+
+			alignItems.forEach( ( item ) => {
+				alignSection.appendChild( this.createDropdownActionItem( item, 'align' ) );
+			} );
+			dropdownMenu.appendChild( alignSection );
+
+			// Separator
+			dropdownMenu.appendChild( this.createDropdownSeparator() );
+
+			// Distribute section
+			const distSection = document.createElement( 'div' );
+			distSection.className = 'dropdown-section';
+			distSection.innerHTML = `<div class="dropdown-section-title">${ t( 'layers-distribute-section', 'Distribute (3+ layers)' ) }</div>`;
+
+			const distItems = [
+				{ id: 'distribute-h', icon: icons.distributeH, label: t( 'layers-distribute-h', 'Distribute Horizontally' ) },
+				{ id: 'distribute-v', icon: icons.distributeV, label: t( 'layers-distribute-v', 'Distribute Vertically' ) }
+			];
+
+			distItems.forEach( ( item ) => {
+				distSection.appendChild( this.createDropdownActionItem( item, 'distribute' ) );
+			} );
+			dropdownMenu.appendChild( distSection );
+
+			// Assemble dropdown
+			arrangeGroup.appendChild( triggerButton );
+			arrangeGroup.appendChild( dropdownMenu );
+			this.container.appendChild( arrangeGroup );
+
+			// Store references
+			this.alignmentGroup = arrangeGroup;
+			this.arrangeDropdownTrigger = triggerButton;
+			this.arrangeDropdownMenu = dropdownMenu;
+			this.smartGuidesToggle = smartGuidesItem.querySelector( 'input' );
+
+			// Set up dropdown event handlers
+			this.setupArrangeDropdownEvents( triggerButton, dropdownMenu );
+		}
+
+		/**
+		 * Get the arrange menu icon
+		 *
+		 * @return {string} SVG icon markup
+		 */
+		getArrangeIcon() {
+			return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+				<line x1="4" y1="6" x2="20" y2="6"/>
+				<line x1="4" y1="12" x2="20" y2="12"/>
+				<line x1="4" y1="18" x2="20" y2="18"/>
+				<line x1="10" y1="3" x2="10" y2="21"/>
+				<line x1="14" y1="3" x2="14" y2="21"/>
+			</svg>`;
+		}
+
+		/**
+		 * Create a dropdown separator
+		 *
+		 * @return {HTMLElement} Separator element
+		 */
+		createDropdownSeparator() {
+			const sep = document.createElement( 'div' );
+			sep.className = 'dropdown-separator';
+			return sep;
+		}
+
+		/**
+		 * Create a toggle item for the dropdown
+		 *
+		 * @param {string} id Item identifier
+		 * @param {string} label Display label
+		 * @param {string} description Description text
+		 * @param {string} shortcut Keyboard shortcut
+		 * @param {boolean} checked Initial checked state
+		 * @return {HTMLElement} Toggle item element
+		 */
+		createDropdownToggleItem( id, label, description, shortcut, checked ) {
+			const item = document.createElement( 'label' );
+			item.className = 'dropdown-item dropdown-toggle-item';
+			item.setAttribute( 'role', 'menuitemcheckbox' );
+			item.setAttribute( 'aria-checked', String( checked ) );
+
+			const checkbox = document.createElement( 'input' );
+			checkbox.type = 'checkbox';
+			checkbox.checked = checked;
+			checkbox.dataset.toggle = id;
+			checkbox.className = 'dropdown-toggle-checkbox';
+
+			item.innerHTML = `
+				<span class="dropdown-item-icon"></span>
+				<span class="dropdown-item-content">
+					<span class="dropdown-item-label">${ label }</span>
+					<span class="dropdown-item-desc">${ description }</span>
+				</span>
+				<span class="dropdown-item-shortcut">${ shortcut }</span>
+			`;
+			item.insertBefore( checkbox, item.firstChild );
+
+			return item;
+		}
+
+		/**
+		 * Create an action item for the dropdown
+		 *
+		 * @param {Object} config Item configuration
+		 * @param {string} config.id Action identifier
+		 * @param {string} config.icon SVG icon
+		 * @param {string} config.label Display label
+		 * @param {string} type 'align' or 'distribute'
+		 * @return {HTMLElement} Action item element
+		 */
+		createDropdownActionItem( config, type ) {
+			const item = document.createElement( 'button' );
+			item.className = `dropdown-item dropdown-action-item ${ type }-item`;
+			item.setAttribute( 'role', 'menuitem' );
+			item.dataset.align = config.id;
+			item.disabled = true; // Enabled based on selection
+
+			item.innerHTML = `
+				<span class="dropdown-item-icon">${ config.icon }</span>
+				<span class="dropdown-item-label">${ config.label }</span>
+			`;
+
+			return item;
+		}
+
+		/**
+		 * Set up event handlers for the arrange dropdown
+		 *
+		 * @param {HTMLElement} trigger Trigger button
+		 * @param {HTMLElement} menu Dropdown menu
+		 */
+		setupArrangeDropdownEvents( trigger, menu ) {
+			// Toggle dropdown on button click
+			this.addListener( trigger, 'click', ( e ) => {
+				e.stopPropagation();
+				this.toggleArrangeDropdown();
 			} );
 
-			this.container.appendChild( alignGroup );
-			this.alignmentGroup = alignGroup;
+			// Close on outside click
+			this.addDocumentListener( 'click', ( e ) => {
+				if ( !this.alignmentGroup.contains( e.target ) ) {
+					this.closeArrangeDropdown();
+				}
+			} );
+
+			// Handle menu item clicks
+			this.addListener( menu, 'click', ( e ) => {
+				const actionItem = e.target.closest( '.dropdown-action-item' );
+				const toggleItem = e.target.closest( '.dropdown-toggle-item' );
+
+				if ( actionItem && !actionItem.disabled ) {
+					this.executeAlignmentAction( actionItem.dataset.align );
+					// Don't close - user might want multiple operations
+				} else if ( toggleItem ) {
+					const checkbox = toggleItem.querySelector( 'input[type="checkbox"]' );
+					if ( checkbox && e.target !== checkbox ) {
+						checkbox.checked = !checkbox.checked;
+						checkbox.dispatchEvent( new Event( 'change' ) );
+					}
+				}
+			} );
+
+			// Handle toggle changes
+			this.addListener( menu, 'change', ( e ) => {
+				if ( e.target.dataset.toggle === 'smart-guides' ) {
+					this.setSmartGuidesEnabled( e.target.checked );
+					e.target.closest( '.dropdown-toggle-item' ).setAttribute( 'aria-checked', String( e.target.checked ) );
+				}
+			} );
+
+			// Keyboard navigation
+			this.addListener( menu, 'keydown', ( e ) => {
+				if ( e.key === 'Escape' ) {
+					this.closeArrangeDropdown();
+					trigger.focus();
+				}
+			} );
+		}
+
+		/**
+		 * Toggle the arrange dropdown open/closed
+		 */
+		toggleArrangeDropdown() {
+			const isOpen = this.arrangeDropdownMenu.style.display !== 'none';
+			if ( isOpen ) {
+				this.closeArrangeDropdown();
+			} else {
+				this.openArrangeDropdown();
+			}
+		}
+
+		/**
+		 * Open the arrange dropdown
+		 */
+		openArrangeDropdown() {
+			this.arrangeDropdownMenu.style.display = 'block';
+			this.arrangeDropdownTrigger.setAttribute( 'aria-expanded', 'true' );
+			this.arrangeDropdownTrigger.classList.add( 'active' );
+		}
+
+		/**
+		 * Close the arrange dropdown
+		 */
+		closeArrangeDropdown() {
+			if ( this.arrangeDropdownMenu ) {
+				this.arrangeDropdownMenu.style.display = 'none';
+			}
+			if ( this.arrangeDropdownTrigger ) {
+				this.arrangeDropdownTrigger.setAttribute( 'aria-expanded', 'false' );
+				this.arrangeDropdownTrigger.classList.remove( 'active' );
+			}
+		}
+
+		/**
+		 * Enable or disable smart guides
+		 *
+		 * @param {boolean} enabled Whether smart guides should be enabled
+		 */
+		setSmartGuidesEnabled( enabled ) {
+			if ( !this.editor.canvasManager || !this.editor.canvasManager.smartGuidesController ) {
+				return;
+			}
+			this.editor.canvasManager.smartGuidesController.setEnabled( enabled );
+		}
+
+		/**
+		 * Update smart guides button/toggle state (called from keyboard handler)
+		 *
+		 * @param {boolean} enabled Current enabled state
+		 */
+		updateSmartGuidesButton( enabled ) {
+			if ( this.smartGuidesToggle ) {
+				this.smartGuidesToggle.checked = enabled;
+				const item = this.smartGuidesToggle.closest( '.dropdown-toggle-item' );
+				if ( item ) {
+					item.setAttribute( 'aria-checked', String( enabled ) );
+				}
+			}
 		}
 
 		/**
@@ -793,16 +1032,18 @@
 				return;
 			}
 
-			// Alignment requires 2+ layers
-			const alignButtons = this.alignmentGroup.querySelectorAll( '.align-button' );
-			alignButtons.forEach( ( btn ) => {
-				btn.disabled = selectedCount < 2;
+			// Alignment requires 2+ layers (now in dropdown)
+			const alignItems = this.alignmentGroup.querySelectorAll( '.align-item' );
+			alignItems.forEach( ( item ) => {
+				item.disabled = selectedCount < 2;
+				item.classList.toggle( 'disabled', selectedCount < 2 );
 			} );
 
-			// Distribution requires 3+ layers
-			const distButtons = this.alignmentGroup.querySelectorAll( '.distribute-button' );
-			distButtons.forEach( ( btn ) => {
-				btn.disabled = selectedCount < 3;
+			// Distribution requires 3+ layers (now in dropdown)
+			const distItems = this.alignmentGroup.querySelectorAll( '.distribute-item' );
+			distItems.forEach( ( item ) => {
+				item.disabled = selectedCount < 3;
+				item.classList.toggle( 'disabled', selectedCount < 3 );
 			} );
 		}
 

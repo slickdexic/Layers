@@ -11,25 +11,31 @@ Version history for the Layers extension.
   - Snap to object edges (left, right, top, bottom)
   - Snap to object centers (horizontal, vertical)
   - Visual guide lines: magenta for edges, cyan for centers
-  - 8px snap threshold, auto-activates when grid snap is off
-- **Eyedropper Tool** — Sample colors from anywhere on canvas
-  - Press **I** to sample fill color, **Shift+I** for stroke
-  - Magnified preview (8x zoom) with crosshair
-  - Color swatch shows hex value and target
-  - Click to sample, ESC to cancel
-  - Toolbar button next to color controls
+  - 8px snap threshold, **off by default** — toggle with `;` key
+- **Arrange Dropdown Menu** — Consolidated toolbar UI
+  - New "Arrange & Snap" dropdown replaces 8 individual alignment buttons
+  - Contains: Smart Guides toggle, Align options, Distribute options
+  - Saves toolbar space for future features
+  - Shows disabled state when insufficient layers selected
 
-### Improvements
-- Enhanced toolbar with discoverable eyedropper button
-- Right-click eyedropper button to sample stroke color
+### Changes
+- Removed standalone eyedropper button from toolbar (use the eyedropper within the browser's color picker instead)
+- Removed **I**/**Shift+I** keyboard shortcuts (eyedropper available via native color picker)
+- Smart guides now **off by default** — press `;` to toggle or use Arrange menu
+- Added `;` keyboard shortcut to toggle Smart Guides
+- Updated blur tool documentation — now described as visual effect only, removed "redaction" and "privacy" terminology
+
+### Cleanup
+- Removed unused `EyedropperController` module (~480 lines, 66 tests) — redundant with browser's native color picker
+- Removed eyedropper CSS styles and ToolRegistry entry
 
 ### Refactoring
 - Extracted `SmartGuidesController` (~500 lines)
-- Extracted `EyedropperController` (~480 lines)
+- Consolidated alignment buttons into dropdown menu
 
 ### Testing
-- Added 102 new tests for Smart Guides and Eyedropper
-- Total tests: 5,650 passing
+- Added 43 new tests for Smart Guides
+- Total tests: 5,609 passing
 
 ---
 

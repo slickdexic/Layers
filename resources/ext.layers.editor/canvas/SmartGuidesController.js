@@ -31,7 +31,7 @@
 			this.manager = canvasManager;
 
 			// Configuration
-			this.enabled = true;
+			this.enabled = false; // Off by default - toggle with ';' key
 			this.snapThreshold = 8; // Pixels to snap within
 			this.showGuides = true;
 
@@ -359,7 +359,7 @@
 
 			// Also exclude other selected layers if multi-selecting
 			if ( this.manager && this.manager.selectionManager ) {
-				const selectedIds = this.manager.selectionManager.getSelectedIds();
+				const selectedIds = this.manager.selectionManager.selectedLayerIds;
 				if ( selectedIds && selectedIds.length > 1 ) {
 					excludeIds.push( ...selectedIds );
 				}

@@ -96,6 +96,10 @@
 		}
 
 		switch ( key ) {
+			case ';':
+				e.preventDefault();
+				this.toggleSmartGuides();
+				break;
 			case 'v':
 				this.toolbar.selectTool( 'pointer' );
 				break;
@@ -132,9 +136,6 @@
 			case 'l':
 				this.toolbar.selectTool( 'line' );
 				break;
-			case 'i':
-				this.activateEyedropper( e.shiftKey ? 'stroke' : 'fill' );
-				break;
 			case '+':
 			case '=':
 				e.preventDefault();
@@ -155,6 +156,31 @@
 			case 'escape':
 				this.editor.cancel();
 				break;
+		}
+	}
+
+	/**
+	 * Toggle smart guides on/off
+	 * Uses CanvasManager's SmartGuidesController
+	 */
+	toggleSmartGuides() {
+		if ( !this.editor.canvasManager || !this.editor.canvasManager.smartGuidesController ) {
+			return;
+		}
+
+		const controller = this.editor.canvasManager.smartGuidesController;
+		const newState = !controller.enabled;
+		controller.setEnabled( newState );
+
+		// Update toolbar button state if it exists
+		if ( this.toolbar.updateSmartGuidesButton ) {
+			this.toolbar.updateSmartGuidesButton( newState );
+		}
+
+		// Show brief status message
+		const msg = newState ? 'Smart Guides: On' : 'Smart Guides: Off';
+		if ( this.editor.showStatus ) {
+			this.editor.showStatus( msg, 1500 );
 		}
 	}
 
@@ -217,22 +243,6 @@
 	}
 
 	/**
-	 * Activate the eyedropper tool to sample a color
-	 *
-	 * @param {string} target - 'fill' or 'stroke'
-	 */
-	activateEyedropper( target ) {
-		if ( !this.editor.canvasManager ) {
-			return;
-		}
-
-		const cm = this.editor.canvasManager;
-		if ( cm.eyedropperController ) {
-			cm.eyedropperController.activate( target );
-		}
-	}
-
-	/**
 	 * Get keyboard shortcuts configuration for documentation/help
 	 *
 	 * @return {Array<Object>} Array of shortcut definitions
@@ -251,13 +261,13 @@
 			{ key: 'S', description: 'Star Tool', category: 'tools' },
 			{ key: 'A', description: 'Arrow Tool', category: 'tools' },
 			{ key: 'L', description: 'Line Tool', category: 'tools' },
-			{ key: 'B', description: 'Blur/Redact Tool', category: 'tools' },
-			{ key: 'I', description: 'Eyedropper (fill)', category: 'tools' },
-			{ key: 'Shift+I', description: 'Eyedropper (stroke)', category: 'tools' },
+			{ key: 'B', description: 'Blur Tool', category: 'tools' },
+
 			// View shortcuts
 			{ key: '+/=', description: 'Zoom In', category: 'view' },
 			{ key: '-', description: 'Zoom Out', category: 'view' },
 			{ key: '0', description: 'Fit to Window', category: 'view' },
+			{ key: ';', description: 'Toggle Smart Guides', category: 'view' },
 			{ key: 'Shift+B', description: 'Toggle Background', category: 'view' },
 			// Ctrl shortcuts
 			{ key: 'Ctrl+Z', description: 'Undo', category: 'edit' },

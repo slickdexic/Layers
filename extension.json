@@ -249,7 +249,6 @@
 				"canvas/ClipboardController.js",
 				"canvas/AlignmentController.js",
 				"canvas/SmartGuidesController.js",
-				"canvas/EyedropperController.js",
 				"canvas/RenderCoordinator.js",
 				"canvas/InteractionController.js",
 				"canvas/TextInputController.js",
@@ -615,7 +614,13 @@
 				"layers-validation-layers-array",
 				"layers-validation-too-many-layers",
 				"layers-validation-layer-error",
-				"layers-validation-duplicate-id"
+				"layers-validation-duplicate-id",
+				"layers-arrange-menu",
+				"layers-snap-options",
+				"layers-smart-guides",
+				"layers-smart-guides-desc",
+				"layers-align-section",
+				"layers-distribute-section"
 			]
 		}
 	},

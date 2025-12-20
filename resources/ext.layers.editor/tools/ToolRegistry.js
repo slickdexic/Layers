@@ -136,13 +136,6 @@
 				category: 'annotation',
 				createsLayer: true
 			} );
-
-			// Utility tools
-			this.register( 'eyedropper', {
-				cursor: 'crosshair',
-				category: 'utility',
-				createsLayer: false
-			} );
 		}
 
 		/**

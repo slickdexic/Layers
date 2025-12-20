@@ -55,22 +55,14 @@ The codebase has **7 files exceeding 1,000 lines**. All have delegation patterns
 
 The following issues have been **fixed** and are now working:
 
-### 1. Eyedropper Tool (NEW - December 20, 2025)
+### 1. Eyedropper Tool
 
-**Status:** ✅ Implemented  
-**Keyboard:** I (fill), Shift+I (stroke)  
-**Button:** Next to color controls in toolbar
-
-**Implementation:**
-- `EyedropperController.js` (~480 lines) provides color sampling from canvas
-- 8x magnified preview with crosshair shows sampling area
-- Color swatch displays hex value and target (fill/stroke)
-- Toolbar button for easy discovery (right-click for stroke mode)
-- 59 comprehensive tests
+**Status:** ✅ Available via browser's native color picker  
+**Note:** Eyedropper functionality built into `<input type="color">` element
 
 ---
 
-### 2. Smart Guides (NEW - December 20, 2025)
+### 2. Smart Guides (December 20, 2025)
 
 **Status:** ✅ Implemented  
 **Behavior:** Automatic snapping when moving objects

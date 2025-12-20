@@ -105,6 +105,7 @@ Or use a specific named layer set:
 | Text Tool | `T` |
 | Rectangle Tool | `R` |
 | Arrow Tool | `A` |
+| Toggle Smart Guides | `;` |
 | Undo | `Ctrl+Z` |
 | Redo | `Ctrl+Y` |
 | Save | `Ctrl+S` |

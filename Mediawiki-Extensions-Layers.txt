@@ -91,7 +91,7 @@ Industry-standard alignment behavior matching Adobe Illustrator and Photoshop:
 |-
 | Line || {{key press|L}} || Straight lines || Stroke width and color options
 |-
-| Blur || {{key press|B}} || Blur/redact areas || Privacy protection tool
+| Blur || {{key press|B}} || Apply blur effect || Create depth and focus effects
 |}
 
 == Text Box Tool ==
@@ -272,7 +272,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ]; // 5 saves per hour
 |-
 | '''Documentation''' || Add numbered steps, highlight UI elements, create before/after comparisons
 |-
-| '''Privacy Protection''' || Blur faces, license plates, or sensitive information with the Blur tool
+| '''Visual Effects''' || Apply blur effects, draw attention to specific areas, create depth-of-field
 |-
 | '''Maps & Geography''' || Add markers, routes, region highlights without modifying base maps
 |-

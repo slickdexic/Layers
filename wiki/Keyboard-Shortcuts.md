@@ -26,7 +26,7 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 | `S` | Star | Draw stars |
 | `A` | Arrow | Draw arrows |
 | `L` | Line | Draw straight lines |
-| `B` | Blur | Blur/redact areas |
+| `B` | Blur | Apply blur effect |
 
 ---
 
@@ -53,6 +53,7 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 | Shortcut | Action |
 |----------|--------|
 | `Shift+B` | Toggle background visibility |
+| `;` | Toggle smart guides (snap to objects) |
 | `Ctrl+0` | Fit to window |
 | `Ctrl+1` | Zoom to 100% |
 | `+` or `=` | Zoom in |

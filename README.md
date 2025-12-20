@@ -46,19 +46,17 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 | Star          | S        | Draw star shapes                             | Configurable points and radii                   |
 | Arrow         | A        | Annotation arrows                            | Configurable arrowheads and line styles         |
 | Line          | L        | Straight lines                               | Stroke width and color options                  |
-| Blur          | B        | Blur/redact areas                            | Privacy protection tool                         |
-| **Eyedropper**| **I**    | **Sample colors from canvas** (NEW v1.1.7)   | 8x magnified preview, fill/stroke sampling      |
+| Blur          | B        | Apply blur effect                            | Create depth and focus effects                  |
 
-### New in v1.1.7: Smart Guides & Eyedropper
+### New in v1.1.7: Smart Guides & Arrange Menu
 
 - **Smart Guides**: Automatic snapping to object edges and centers when moving layers
   - Edge snapping: left, right, top, bottom (magenta guide lines)
   - Center snapping: horizontal and vertical centers (cyan guide lines)
-  - 8px snap threshold; auto-activates when grid snap is off
-- **Eyedropper Tool**: Sample colors from anywhere on the canvas
-  - Press **I** for fill color, **Shift+I** for stroke color
-  - 8x magnified preview with crosshair
-  - Toolbar button next to color controls
+  - 8px snap threshold; **off by default** — toggle with `;` key
+- **Arrange Dropdown Menu**: Consolidated toolbar UI
+  - New "Arrange & Snap" dropdown replaces 8 individual alignment buttons
+  - Contains: Smart Guides toggle, Align options, Distribute options
 
 ### New in v1.1.5: Alignment & Style Presets
 
@@ -140,8 +138,7 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 | Line Tool                | L                     |
 | Blur Tool                | B                     |
 | Marquee Select           | M                     |
-| Eyedropper (fill)        | I                     |
-| Eyedropper (stroke)      | Shift+I               |
+| Toggle Smart Guides      | ;                     |
 | Toggle Background        | Shift+B               |
 | Undo                     | Ctrl+Z                |
 | Redo                     | Ctrl+Y / Ctrl+Shift+Z |
@@ -162,7 +159,7 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Test Coverage (December 2025):**
 
-- Jest: **5,650 tests**, ~91% statement coverage, ~78% branch coverage (112 test suites)
+- Jest: **5,609 tests**, ~91% statement coverage, ~78% branch coverage (111 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 - E2E: Playwright smoke tests in CI; full editor tests available locally
 

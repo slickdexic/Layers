@@ -270,6 +270,13 @@ describe( 'ToolbarKeyboard', function () {
 			expect( editShortcuts.some( s => s.key === 'Ctrl+Z' ) ).toBe( true );
 			expect( editShortcuts.some( s => s.key === 'Ctrl+D' ) ).toBe( true );
 		} );
+
+		it( 'should include smart guides shortcut in view category', function () {
+			const shortcuts = keyboardHandler.getShortcutsConfig();
+			const viewShortcuts = shortcuts.filter( s => s.category === 'view' );
+
+			expect( viewShortcuts.some( s => s.key === ';' && s.description === 'Toggle Smart Guides' ) ).toBe( true );
+		} );
 	} );
 
 	describe( 'Shift shortcuts', function () {
@@ -371,6 +378,87 @@ describe( 'ToolbarKeyboard', function () {
 		} );
 	} );
 
+	describe( 'toggleSmartGuides', function () {
+		it( 'should toggle smart guides off when currently on', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					enabled: true,
+					setEnabled: jest.fn()
+				}
+			};
+			mockToolbar.updateSmartGuidesButton = jest.fn();
+
+			keyboardHandler.toggleSmartGuides();
+
+			expect( mockEditor.canvasManager.smartGuidesController.setEnabled ).toHaveBeenCalledWith( false );
+			expect( mockToolbar.updateSmartGuidesButton ).toHaveBeenCalledWith( false );
+		} );
+
+		it( 'should toggle smart guides on when currently off', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					enabled: false,
+					setEnabled: jest.fn()
+				}
+			};
+			mockToolbar.updateSmartGuidesButton = jest.fn();
+
+			keyboardHandler.toggleSmartGuides();
+
+			expect( mockEditor.canvasManager.smartGuidesController.setEnabled ).toHaveBeenCalledWith( true );
+			expect( mockToolbar.updateSmartGuidesButton ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'should handle missing canvasManager gracefully', function () {
+			mockEditor.canvasManager = null;
+
+			expect( () => keyboardHandler.toggleSmartGuides() ).not.toThrow();
+		} );
+
+		it( 'should handle missing smartGuidesController gracefully', function () {
+			mockEditor.canvasManager = {};
+
+			expect( () => keyboardHandler.toggleSmartGuides() ).not.toThrow();
+		} );
+
+		it( 'should show status message when showStatus is available', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					enabled: false,
+					setEnabled: jest.fn()
+				}
+			};
+			mockEditor.showStatus = jest.fn();
+
+			keyboardHandler.toggleSmartGuides();
+
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Smart Guides: On', 1500 );
+		} );
+
+		it( 'should be triggered by semicolon key', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					enabled: false,
+					setEnabled: jest.fn()
+				}
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: ';',
+				ctrlKey: false,
+				metaKey: false,
+				shiftKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.smartGuidesController.setEnabled ).toHaveBeenCalledWith( true );
+		} );
+	} );
+
 	describe( 'showKeyboardShortcutsHelp', function () {
 		it( 'should use DialogManager when available', function () {
 			mockEditor.dialogManager = {
@@ -397,74 +485,6 @@ describe( 'ToolbarKeyboard', function () {
 
 			// Should not throw
 			expect( () => keyboardHandler.showKeyboardShortcutsHelp() ).not.toThrow();
-		} );
-	} );
-
-	describe( 'eyedropper shortcuts', function () {
-		it( 'should activate eyedropper for fill on pressing "i"', function () {
-			mockEditor.canvasManager = {
-				eyedropperController: {
-					activate: jest.fn()
-				}
-			};
-
-			const event = {
-				target: { tagName: 'BODY' },
-				key: 'i',
-				ctrlKey: false,
-				metaKey: false,
-				shiftKey: false
-			};
-
-			keyboardHandler.handleKeyboardShortcuts( event );
-
-			expect( mockEditor.canvasManager.eyedropperController.activate ).toHaveBeenCalledWith( 'fill' );
-		} );
-
-		it( 'should activate eyedropper for stroke on pressing Shift+I', function () {
-			mockEditor.canvasManager = {
-				eyedropperController: {
-					activate: jest.fn()
-				}
-			};
-
-			const event = {
-				target: { tagName: 'BODY' },
-				key: 'i',
-				ctrlKey: false,
-				metaKey: false,
-				shiftKey: true
-			};
-
-			keyboardHandler.handleKeyboardShortcuts( event );
-
-			expect( mockEditor.canvasManager.eyedropperController.activate ).toHaveBeenCalledWith( 'stroke' );
-		} );
-	} );
-
-	describe( 'activateEyedropper', function () {
-		it( 'should call eyedropperController.activate with target', function () {
-			mockEditor.canvasManager = {
-				eyedropperController: {
-					activate: jest.fn()
-				}
-			};
-
-			keyboardHandler.activateEyedropper( 'fill' );
-
-			expect( mockEditor.canvasManager.eyedropperController.activate ).toHaveBeenCalledWith( 'fill' );
-		} );
-
-		it( 'should handle missing canvasManager gracefully', function () {
-			mockEditor.canvasManager = null;
-
-			expect( () => keyboardHandler.activateEyedropper( 'fill' ) ).not.toThrow();
-		} );
-
-		it( 'should handle missing eyedropperController gracefully', function () {
-			mockEditor.canvasManager = {};
-
-			expect( () => keyboardHandler.activateEyedropper( 'stroke' ) ).not.toThrow();
 		} );
 	} );
 

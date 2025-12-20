@@ -61,12 +61,11 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 | `B` | Select blur tool |
 | `A` | Select arrow tool |
 | `L` | Select line tool |
-| `I` | Eyedropper - sample fill color |
-| `Shift+I` | Eyedropper - sample stroke color |
 | `G` | Toggle grid |
+| `;` | Toggle smart guides (snap to objects) |
 | `Delete` / `Backspace` | Delete selected layer(s) |
 | `Escape` | Cancel current operation / deselect |
-| `Shift + ?` | Show keyboard shortcuts help dialog (NEW) |
+| `Shift + ?` | Show keyboard shortcuts help dialog | |
 
 #### Layer Panel Navigation (NEW)
 

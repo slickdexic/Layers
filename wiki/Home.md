@@ -79,7 +79,7 @@
 
 - **Educational Content** — Annotate diagrams, label anatomy, highlight key concepts
 - **Documentation** — Add numbered steps, highlight UI elements
-- **Privacy Protection** — Blur faces, license plates, sensitive information
+- **Visual Effects** — Apply blur effects, draw attention to specific areas
 - **Maps & Geography** — Add markers, routes, region highlights
 - **Scientific Imagery** — Label specimens, mark measurement points
 - **Collaborative Review** — Multiple annotators with named layer sets

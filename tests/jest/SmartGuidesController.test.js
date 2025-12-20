@@ -23,7 +23,7 @@ describe( 'SmartGuidesController', () => {
 			panX: 0,
 			panY: 0,
 			selectionManager: {
-				getSelectedIds: jest.fn().mockReturnValue( [] )
+				selectedLayerIds: []
 			},
 			getLayerBounds: jest.fn( ( layer ) => {
 				if ( !layer ) {
@@ -69,7 +69,7 @@ describe( 'SmartGuidesController', () => {
 	describe( 'constructor', () => {
 		it( 'should create instance with default values', () => {
 			expect( controller ).toBeDefined();
-			expect( controller.enabled ).toBe( true );
+			expect( controller.enabled ).toBe( false ); // Off by default - toggle with ';' key
 			expect( controller.snapThreshold ).toBe( 8 );
 			expect( controller.showGuides ).toBe( true );
 		} );
@@ -279,6 +279,11 @@ describe( 'SmartGuidesController', () => {
 	} );
 
 	describe( 'calculateSnappedPosition', () => {
+		beforeEach( () => {
+			// Enable smart guides for snapping tests
+			controller.setEnabled( true );
+		} );
+
 		it( 'should return original position when disabled', () => {
 			controller.setEnabled( false );
 			const result = controller.calculateSnappedPosition(
@@ -438,6 +443,11 @@ describe( 'SmartGuidesController', () => {
 	} );
 
 	describe( 'integration - snap to alignment', () => {
+		beforeEach( () => {
+			// Enable smart guides for integration tests
+			controller.setEnabled( true );
+		} );
+
 		it( 'should snap layer left to another layer left', () => {
 			// layer2 is at x=300
 			const layer = { id: 'dragged', type: 'rectangle', x: 0, y: 200, width: 80, height: 40 };
