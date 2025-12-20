@@ -9,20 +9,6 @@ This document lists known functionality issues and their current status.
 
 ## Active Issues
 
-### ⚠️ One Failing Test (JSDOM Issue)
-
-**Status:** Active  
-**Severity:** Low  
-**File:** `tests/jest/ImportExportManager.test.js`
-
-The test `createImportButton callbacks › should call onError callback on import failure` fails due to JSDOM limitations with async DOM cleanup.
-
-**Root Cause:** `removeChild` is called on an element that's no longer in the DOM due to async timing in JSDOM.
-
-**Impact:** Test environment only. Not a production bug.
-
-**Fix:** Mock `document.body.removeChild` or check `parentNode` before removal.
-
 ### ⚠️ No Mobile/Touch Support
 
 **Status:** Not Implemented  
