@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.1.4",
+	"version": "1.1.6",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -253,6 +253,7 @@
 				"ui/IconFactory.js",
 				"ui/LayerItemFactory.js",
 				"ui/ColorPickerDialog.js",
+				"ui/ColorControlFactory.js",
 				"ui/ConfirmDialog.js",
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",

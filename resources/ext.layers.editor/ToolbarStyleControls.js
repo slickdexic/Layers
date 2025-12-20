@@ -48,6 +48,18 @@ class ToolbarStyleControls {
 		const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
 		this.eventTracker = EventTracker ? new EventTracker() : null;
 
+		// Initialize ColorControlFactory for color UI delegation
+		const ColorControlFactory = getClass( 'UI.ColorControlFactory', 'ColorControlFactory' );
+		this.colorFactory = ColorControlFactory ? new ColorControlFactory( {
+			msg: this.msg.bind( this ),
+			addListener: this.addListener.bind( this ),
+			registerDialogCleanup: ( fn ) => {
+				if ( this.toolbar && typeof this.toolbar.registerDialogCleanup === 'function' ) {
+					this.toolbar.registerDialogCleanup( fn );
+				}
+			}
+		} ) : null;
+
 		// Style state
 		this.strokeColorValue = '#000000';
 		this.fillColorValue = '#ffffff';
@@ -59,6 +71,8 @@ class ToolbarStyleControls {
 		this.container = null;
 		this.strokeColorButton = null;
 		this.fillColorButton = null;
+		this.strokeControl = null;
+		this.fillControl = null;
 		this.strokeWidthInput = null;
 		this.fontSizeInput = null;
 		this.fontSizeContainer = null;
@@ -158,37 +172,73 @@ class ToolbarStyleControls {
 		const row = document.createElement( 'div' );
 		row.className = 'style-controls-row';
 
-		// Stroke color
-		const strokeItem = this.createColorControl( {
-			type: 'stroke',
-			label: this.msg( 'layers-prop-stroke-color', 'Stroke' ),
-			initialColor: this.strokeColorValue,
-			onColorChange: ( color, isNone ) => {
-				this.strokeColorNone = isNone;
-				if ( !isNone ) {
-					this.strokeColorValue = color;
+		// Use ColorControlFactory if available, otherwise fall back to inline creation
+		if ( this.colorFactory ) {
+			// Stroke color (via factory)
+			this.strokeControl = this.colorFactory.createColorControl( {
+				type: 'stroke',
+				label: this.msg( 'layers-prop-stroke-color', 'Stroke' ),
+				initialColor: this.strokeColorValue,
+				initialNone: this.strokeColorNone,
+				onColorChange: ( color, isNone ) => {
+					this.strokeColorNone = isNone;
+					if ( !isNone ) {
+						this.strokeColorValue = color;
+					}
+					this.notifyStyleChange();
 				}
-				this.notifyStyleChange();
-			}
-		} );
-		this.strokeColorButton = strokeItem.button;
-		row.appendChild( strokeItem.container );
+			} );
+			this.strokeColorButton = this.strokeControl.button;
+			row.appendChild( this.strokeControl.container );
 
-		// Fill color
-		const fillItem = this.createColorControl( {
-			type: 'fill',
-			label: this.msg( 'layers-prop-fill-color', 'Fill' ),
-			initialColor: this.fillColorValue,
-			onColorChange: ( color, isNone ) => {
-				this.fillColorNone = isNone;
-				if ( !isNone ) {
-					this.fillColorValue = color;
+			// Fill color (via factory)
+			this.fillControl = this.colorFactory.createColorControl( {
+				type: 'fill',
+				label: this.msg( 'layers-prop-fill-color', 'Fill' ),
+				initialColor: this.fillColorValue,
+				initialNone: this.fillColorNone,
+				onColorChange: ( color, isNone ) => {
+					this.fillColorNone = isNone;
+					if ( !isNone ) {
+						this.fillColorValue = color;
+					}
+					this.notifyStyleChange();
 				}
-				this.notifyStyleChange();
-			}
-		} );
-		this.fillColorButton = fillItem.button;
-		row.appendChild( fillItem.container );
+			} );
+			this.fillColorButton = this.fillControl.button;
+			row.appendChild( this.fillControl.container );
+		} else {
+			// Fallback: inline creation (for testing environments)
+			const strokeItem = this.createColorControlFallback( {
+				type: 'stroke',
+				label: this.msg( 'layers-prop-stroke-color', 'Stroke' ),
+				initialColor: this.strokeColorValue,
+				onColorChange: ( color, isNone ) => {
+					this.strokeColorNone = isNone;
+					if ( !isNone ) {
+						this.strokeColorValue = color;
+					}
+					this.notifyStyleChange();
+				}
+			} );
+			this.strokeColorButton = strokeItem.button;
+			row.appendChild( strokeItem.container );
+
+			const fillItem = this.createColorControlFallback( {
+				type: 'fill',
+				label: this.msg( 'layers-prop-fill-color', 'Fill' ),
+				initialColor: this.fillColorValue,
+				onColorChange: ( color, isNone ) => {
+					this.fillColorNone = isNone;
+					if ( !isNone ) {
+						this.fillColorValue = color;
+					}
+					this.notifyStyleChange();
+				}
+			} );
+			this.fillColorButton = fillItem.button;
+			row.appendChild( fillItem.container );
+		}
 
 		// Stroke width
 		const widthItem = this.createStrokeWidthControl();
@@ -199,16 +249,12 @@ class ToolbarStyleControls {
 	}
 
 	/**
-	 * Create a color control item (stroke or fill)
+	 * Fallback color control creation (when ColorControlFactory not available)
 	 *
 	 * @param {Object} options Control options
-	 * @param {string} options.type 'stroke' or 'fill'
-	 * @param {string} options.label Label text
-	 * @param {string} options.initialColor Initial color value
-	 * @param {Function} options.onColorChange Callback when color changes
 	 * @return {Object} Object with container and button elements
 	 */
-	createColorControl( options ) {
+	createColorControlFallback( options ) {
 		const container = document.createElement( 'div' );
 		container.className = 'style-control-item';
 
@@ -226,7 +272,6 @@ class ToolbarStyleControls {
 		this.updateColorButtonDisplay( button, options.initialColor );
 		container.appendChild( button );
 
-		// Click handler - opens color picker dialog (tracked for cleanup)
 		this.addListener( button, 'click', () => {
 			const isNone = options.type === 'stroke' ? this.strokeColorNone : this.fillColorNone;
 			const currentValue = options.type === 'stroke' ? this.strokeColorValue : this.fillColorValue;
@@ -646,8 +691,11 @@ class ToolbarStyleControls {
 			this.strokeColorNone = false;
 			this.strokeColorValue = color;
 		}
-		if ( this.strokeColorButton ) {
-			this.updateColorButtonDisplay( this.strokeColorButton, this.strokeColorNone ? 'none' : this.strokeColorValue );
+		const displayColor = this.strokeColorNone ? 'none' : this.strokeColorValue;
+		if ( this.colorFactory && this.strokeControl ) {
+			this.colorFactory.updateColorButtonDisplay( this.strokeControl.button, displayColor );
+		} else if ( this.strokeColorButton ) {
+			this.updateColorButtonDisplay( this.strokeColorButton, displayColor );
 		}
 	}
 
@@ -663,8 +711,11 @@ class ToolbarStyleControls {
 			this.fillColorNone = false;
 			this.fillColorValue = color;
 		}
-		if ( this.fillColorButton ) {
-			this.updateColorButtonDisplay( this.fillColorButton, this.fillColorNone ? 'none' : this.fillColorValue );
+		const displayColor = this.fillColorNone ? 'none' : this.fillColorValue;
+		if ( this.colorFactory && this.fillControl ) {
+			this.colorFactory.updateColorButtonDisplay( this.fillControl.button, displayColor );
+		} else if ( this.fillColorButton ) {
+			this.updateColorButtonDisplay( this.fillColorButton, displayColor );
 		}
 	}
 

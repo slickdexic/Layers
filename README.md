@@ -5,11 +5,11 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.1.5. Production-ready with architectural debt being addressed. Requires MediaWiki 1.44+.
+> **Status:** Stable. Version 1.1.6. Production-ready with ongoing improvements. Requires MediaWiki 1.44+.
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 >
-> **Project Health:** See [CRITICAL_REVIEW_2025-12-18.md](CRITICAL_REVIEW_2025-12-18.md) for honest assessment.
+> **Project Health:** See [codebase_review.md](codebase_review.md) for detailed technical assessment.
 
 ---
 
@@ -47,6 +47,13 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 | Arrow         | A        | Annotation arrows                            | Configurable arrowheads and line styles         |
 | Line          | L        | Straight lines                               | Stroke width and color options                  |
 | Blur          | B        | Blur/redact areas                            | Privacy protection tool                         |
+
+### New in v1.1.5: Alignment & Style Presets
+
+- **Alignment Tools**: Align left/center/right, top/middle/bottom for multi-selection
+- **Distribution Tools**: Distribute layers evenly horizontally or vertically
+- **Style Presets**: Save and reuse style configurations per tool
+- **Built-in Presets**: Ships with default presets for common annotation styles
 
 ### New in v1.1.0: Text Box Tool
 
@@ -134,37 +141,43 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 ## Technical Details
 
 **Architecture:**
+
 - **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 81 JS files (~41K lines total), 72 ES6 classes
-- **Code Splitting:** Viewer module (~610 lines) + Shared module (~5K lines) loads separately from Editor (~35K lines, 86% of codebase)
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 84 JS files (~44K lines total), 75 ES6 classes
+- **Code Splitting:** Viewer module (~610 lines) + Shared module (~5K lines) loads separately from Editor (~38K lines)
 
 **Test Coverage (December 2025):**
-- Jest: **5,297 tests**, ~92% statement coverage, ~80% branch coverage (103 test suites)
+
+- Jest: **5,412 tests**, ~92% statement coverage, ~80% branch coverage (106 test suites)
 - PHPUnit: 17 test files covering API, database, validation
-- E2E: Playwright smoke tests in CI; full editor tests pending
+- E2E: Playwright smoke tests in CI; full editor tests available locally
 
 **Technical Debt:**
-- 8 god classes (>1,000 lines) - CI blocks growth
+
+- 9 god classes (>1,000 lines) with delegation patterns - CI blocks growth
 - See [improvement_plan.md](improvement_plan.md) for remediation roadmap
 
 **Accessibility (WCAG 2.1):**
+
 - Skip links for keyboard navigation (WCAG 2.4.1)
 - ARIA landmarks on all major sections (WCAG 1.3.1)
 - Keyboard shortcuts with help dialog (Shift+?)
 - Live regions for status updates
 
 **Requirements:**
+
 - MediaWiki 1.44.0 or later
 - PHP 8.1+
 - MySQL/MariaDB
 
 **Project Status:**
+
 - **Production:** Stable and deployed. Extension works reliably for end users.
-- **Technical Health:** Debt being addressed. See [`improvement_plan.md`](improvement_plan.md) for details.
-- ✅ 72 ES6 classes, 0 legacy prototype code
-- ✅ 5,297 tests (~92% statement coverage)
-- ⚠️ 8 god classes (~11.6K LOC) - CI blocks growth
-- ⚠️ E2E smoke tests only (editor tests pending)
+- **Technical Health:** Active development with debt being addressed.
+- ✅ 75 ES6 classes, 0 legacy prototype code
+- ✅ 5,412 tests (~92% statement coverage)
+- ⚠️ 9 god classes (~12K LOC) - all have delegation, CI blocks growth
+- ⚠️ No mobile/touch support yet
 
 ---
 

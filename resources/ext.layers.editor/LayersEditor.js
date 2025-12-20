@@ -592,11 +592,6 @@ class LayersEditor {
 	 */
 	updateLayer ( layerId, changes ) {
 		try {
-			// Debug: log changes involving textShadow
-			if ( Object.prototype.hasOwnProperty.call( changes, 'textShadow' ) ) {
-				console.log( '[LayersEditor] updateLayer textShadow=', changes.textShadow, 'type=', typeof changes.textShadow );
-			}
-			
 			if ( Object.prototype.hasOwnProperty.call( changes, 'outerRadius' ) &&
 				!Object.prototype.hasOwnProperty.call( changes, 'radius' ) ) {
 				changes.radius = changes.outerRadius;

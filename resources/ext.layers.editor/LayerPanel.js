@@ -1286,6 +1286,22 @@
 				const selectedIds = this.editor.stateManager ?
 					this.editor.stateManager.get( 'selectedLayerIds' ) || [] : [];
 				this.editor.canvasManager.setSelectedLayerIds( selectedIds );
+
+				// Update lastSelectedId for key object alignment
+				// When adding to selection, the clicked layer becomes the key object
+				// When replacing selection, the selected layer is the key object
+				if ( this.editor.canvasManager.selectionManager && layerId ) {
+					const isStillSelected = selectedIds.indexOf( layerId ) !== -1;
+					if ( isStillSelected ) {
+						this.editor.canvasManager.selectionManager.lastSelectedId = layerId;
+					} else if ( selectedIds.length > 0 ) {
+						// If we deselected the clicked layer, set last selected to the most recent remaining
+						this.editor.canvasManager.selectionManager.lastSelectedId = selectedIds[ selectedIds.length - 1 ];
+					} else {
+						this.editor.canvasManager.selectionManager.lastSelectedId = null;
+					}
+				}
+
 				this.editor.canvasManager.renderLayers( this.editor.layers );
 				this.editor.canvasManager.drawMultiSelectionIndicators();
 			}

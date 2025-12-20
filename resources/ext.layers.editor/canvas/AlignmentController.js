@@ -20,13 +20,28 @@
 		/**
 		 * Create an AlignmentController instance
 		 *
-		 * @param {Object} config Configuration options
-		 * @param {Object} config.editor Reference to LayersEditor
-		 * @param {Object} config.canvasManager Reference to CanvasManager
+		 * @param {Object} canvasManager Reference to CanvasManager (or config object)
 		 */
-		constructor( config ) {
-			this.editor = config.editor || null;
-			this.canvasManager = config.canvasManager || null;
+		constructor( canvasManager ) {
+			// Support both direct CanvasManager reference and config object
+			// A CanvasManager has both 'editor' AND canvas-specific methods like 'getSelectedLayerIds'
+			const isCanvasManager = canvasManager &&
+				canvasManager.editor &&
+				typeof canvasManager.getSelectedLayerIds === 'function';
+
+			if ( isCanvasManager ) {
+				// Direct CanvasManager reference (standard usage)
+				this.canvasManager = canvasManager;
+				this.editor = canvasManager.editor;
+			} else if ( canvasManager && canvasManager.canvasManager ) {
+				// Config object with canvasManager property (legacy)
+				this.canvasManager = canvasManager.canvasManager;
+				this.editor = canvasManager.editor || null;
+			} else {
+				// Fallback
+				this.canvasManager = canvasManager || null;
+				this.editor = null;
+			}
 		}
 
 		/**
@@ -39,6 +54,39 @@
 			let left, top, right, bottom;
 
 			switch ( layer.type ) {
+				case 'text': {
+					// Text layers need special handling - measure using canvas context
+					const ctx = this.canvasManager && this.canvasManager.ctx;
+					const canvasWidth = this.canvasManager && this.canvasManager.canvas ?
+						this.canvasManager.canvas.width : 800;
+
+					// Try to use TextUtils if available
+					const TextUtils = window.Layers && window.Layers.Utils && window.Layers.Utils.Text;
+					if ( TextUtils && ctx ) {
+						const metrics = TextUtils.measureTextLayer( layer, ctx, canvasWidth );
+						if ( metrics ) {
+							left = metrics.originX;
+							top = metrics.originY;
+							right = left + metrics.width;
+							bottom = top + metrics.height;
+							break;
+						}
+					}
+
+					// Fallback: estimate based on fontSize and text length
+					const fontSize = layer.fontSize || 16;
+					const text = layer.text || '';
+					const estimatedWidth = Math.max( text.length * fontSize * 0.6, fontSize );
+					const estimatedHeight = fontSize * 1.2;
+
+					// Text anchor is at baseline, so adjust top position
+					left = layer.x || 0;
+					top = ( layer.y || 0 ) - fontSize * 0.8; // Approximate ascent
+					right = left + estimatedWidth;
+					bottom = top + estimatedHeight;
+					break;
+				}
+
 				case 'line':
 				case 'arrow':
 					left = Math.min( layer.x1 || 0, layer.x2 || 0 );
@@ -70,7 +118,7 @@
 				}
 
 				default:
-					// Rectangle, ellipse, text, textbox, blur, image, polygon, star
+					// Rectangle, ellipse, textbox, blur, image, polygon, star
 					left = layer.x || 0;
 					top = layer.y || 0;
 					right = left + ( layer.width || 0 );
@@ -181,7 +229,28 @@
 		}
 
 		/**
-		 * Align selected layers to left edge
+		 * Get the key object (last selected layer) for alignment reference
+		 * Other layers align TO this layer, which stays fixed.
+		 * This follows the Adobe Illustrator/Photoshop "Key Object" pattern.
+		 *
+		 * @return {Object|null} The key object layer, or null if not found
+		 */
+		getKeyObject() {
+			if ( !this.canvasManager || !this.canvasManager.selectionManager ) {
+				return null;
+			}
+
+			const lastSelectedId = this.canvasManager.selectionManager.lastSelectedId;
+			if ( !lastSelectedId || !this.editor ) {
+				return null;
+			}
+
+			const layer = this.editor.getLayerById( lastSelectedId );
+			return ( layer && !layer.locked ) ? layer : null;
+		}
+
+		/**
+		 * Align selected layers to left edge of key object
 		 */
 		alignLeft() {
 			const layers = this.getSelectedLayers();
@@ -189,15 +258,21 @@
 				return;
 			}
 
-			const bounds = layers.map( ( layer ) => ( {
-				layer,
-				bounds: this.getLayerBounds( layer )
-			} ) );
+			const keyObject = this.getKeyObject();
+			const keyBounds = keyObject ? this.getLayerBounds( keyObject ) : null;
 
-			const targetLeft = Math.min( ...bounds.map( ( b ) => b.bounds.left ) );
+			// If no key object, fall back to leftmost layer
+			const targetLeft = keyBounds ?
+				keyBounds.left :
+				Math.min( ...layers.map( ( l ) => this.getLayerBounds( l ).left ) );
 
-			bounds.forEach( ( { layer, bounds: b } ) => {
-				const deltaX = targetLeft - b.left;
+			layers.forEach( ( layer ) => {
+				// Skip the key object - it stays fixed
+				if ( keyObject && layer.id === keyObject.id ) {
+					return;
+				}
+				const bounds = this.getLayerBounds( layer );
+				const deltaX = targetLeft - bounds.left;
 				if ( deltaX !== 0 ) {
 					this.moveLayer( layer, deltaX, 0 );
 				}
@@ -207,7 +282,7 @@
 		}
 
 		/**
-		 * Align selected layers to horizontal center
+		 * Align selected layers to horizontal center of key object
 		 */
 		alignCenterH() {
 			const layers = this.getSelectedLayers();
@@ -215,16 +290,24 @@
 				return;
 			}
 
-			const bounds = layers.map( ( layer ) => ( {
-				layer,
-				bounds: this.getLayerBounds( layer )
-			} ) );
+			const keyObject = this.getKeyObject();
+			const keyBounds = keyObject ? this.getLayerBounds( keyObject ) : null;
 
-			const combined = this.getCombinedBounds( layers );
-			const targetCenterX = ( combined.left + combined.right ) / 2;
+			// If no key object, use combined bounds center
+			let targetCenterX;
+			if ( keyBounds ) {
+				targetCenterX = keyBounds.centerX;
+			} else {
+				const combined = this.getCombinedBounds( layers );
+				targetCenterX = ( combined.left + combined.right ) / 2;
+			}
 
-			bounds.forEach( ( { layer, bounds: b } ) => {
-				const deltaX = targetCenterX - b.centerX;
+			layers.forEach( ( layer ) => {
+				if ( keyObject && layer.id === keyObject.id ) {
+					return;
+				}
+				const bounds = this.getLayerBounds( layer );
+				const deltaX = targetCenterX - bounds.centerX;
 				if ( deltaX !== 0 ) {
 					this.moveLayer( layer, deltaX, 0 );
 				}
@@ -234,7 +317,7 @@
 		}
 
 		/**
-		 * Align selected layers to right edge
+		 * Align selected layers to right edge of key object
 		 */
 		alignRight() {
 			const layers = this.getSelectedLayers();
@@ -242,15 +325,19 @@
 				return;
 			}
 
-			const bounds = layers.map( ( layer ) => ( {
-				layer,
-				bounds: this.getLayerBounds( layer )
-			} ) );
+			const keyObject = this.getKeyObject();
+			const keyBounds = keyObject ? this.getLayerBounds( keyObject ) : null;
 
-			const targetRight = Math.max( ...bounds.map( ( b ) => b.bounds.right ) );
+			const targetRight = keyBounds ?
+				keyBounds.right :
+				Math.max( ...layers.map( ( l ) => this.getLayerBounds( l ).right ) );
 
-			bounds.forEach( ( { layer, bounds: b } ) => {
-				const deltaX = targetRight - b.right;
+			layers.forEach( ( layer ) => {
+				if ( keyObject && layer.id === keyObject.id ) {
+					return;
+				}
+				const bounds = this.getLayerBounds( layer );
+				const deltaX = targetRight - bounds.right;
 				if ( deltaX !== 0 ) {
 					this.moveLayer( layer, deltaX, 0 );
 				}
@@ -260,7 +347,7 @@
 		}
 
 		/**
-		 * Align selected layers to top edge
+		 * Align selected layers to top edge of key object
 		 */
 		alignTop() {
 			const layers = this.getSelectedLayers();
@@ -268,15 +355,19 @@
 				return;
 			}
 
-			const bounds = layers.map( ( layer ) => ( {
-				layer,
-				bounds: this.getLayerBounds( layer )
-			} ) );
+			const keyObject = this.getKeyObject();
+			const keyBounds = keyObject ? this.getLayerBounds( keyObject ) : null;
 
-			const targetTop = Math.min( ...bounds.map( ( b ) => b.bounds.top ) );
+			const targetTop = keyBounds ?
+				keyBounds.top :
+				Math.min( ...layers.map( ( l ) => this.getLayerBounds( l ).top ) );
 
-			bounds.forEach( ( { layer, bounds: b } ) => {
-				const deltaY = targetTop - b.top;
+			layers.forEach( ( layer ) => {
+				if ( keyObject && layer.id === keyObject.id ) {
+					return;
+				}
+				const bounds = this.getLayerBounds( layer );
+				const deltaY = targetTop - bounds.top;
 				if ( deltaY !== 0 ) {
 					this.moveLayer( layer, 0, deltaY );
 				}
@@ -286,7 +377,7 @@
 		}
 
 		/**
-		 * Align selected layers to vertical center
+		 * Align selected layers to vertical center of key object
 		 */
 		alignCenterV() {
 			const layers = this.getSelectedLayers();
@@ -294,16 +385,23 @@
 				return;
 			}
 
-			const bounds = layers.map( ( layer ) => ( {
-				layer,
-				bounds: this.getLayerBounds( layer )
-			} ) );
+			const keyObject = this.getKeyObject();
+			const keyBounds = keyObject ? this.getLayerBounds( keyObject ) : null;
 
-			const combined = this.getCombinedBounds( layers );
-			const targetCenterY = ( combined.top + combined.bottom ) / 2;
+			let targetCenterY;
+			if ( keyBounds ) {
+				targetCenterY = keyBounds.centerY;
+			} else {
+				const combined = this.getCombinedBounds( layers );
+				targetCenterY = ( combined.top + combined.bottom ) / 2;
+			}
 
-			bounds.forEach( ( { layer, bounds: b } ) => {
-				const deltaY = targetCenterY - b.centerY;
+			layers.forEach( ( layer ) => {
+				if ( keyObject && layer.id === keyObject.id ) {
+					return;
+				}
+				const bounds = this.getLayerBounds( layer );
+				const deltaY = targetCenterY - bounds.centerY;
 				if ( deltaY !== 0 ) {
 					this.moveLayer( layer, 0, deltaY );
 				}
@@ -313,7 +411,7 @@
 		}
 
 		/**
-		 * Align selected layers to bottom edge
+		 * Align selected layers to bottom edge of key object
 		 */
 		alignBottom() {
 			const layers = this.getSelectedLayers();
@@ -321,15 +419,19 @@
 				return;
 			}
 
-			const bounds = layers.map( ( layer ) => ( {
-				layer,
-				bounds: this.getLayerBounds( layer )
-			} ) );
+			const keyObject = this.getKeyObject();
+			const keyBounds = keyObject ? this.getLayerBounds( keyObject ) : null;
 
-			const targetBottom = Math.max( ...bounds.map( ( b ) => b.bounds.bottom ) );
+			const targetBottom = keyBounds ?
+				keyBounds.bottom :
+				Math.max( ...layers.map( ( l ) => this.getLayerBounds( l ).bottom ) );
 
-			bounds.forEach( ( { layer, bounds: b } ) => {
-				const deltaY = targetBottom - b.bottom;
+			layers.forEach( ( layer ) => {
+				if ( keyObject && layer.id === keyObject.id ) {
+					return;
+				}
+				const bounds = this.getLayerBounds( layer );
+				const deltaY = targetBottom - bounds.bottom;
 				if ( deltaY !== 0 ) {
 					this.moveLayer( layer, 0, deltaY );
 				}

@@ -70,14 +70,16 @@
 		 * Draw selection indicators for multiple selected layers
 		 *
 		 * @param {Array} selectedLayerIds - Array of selected layer IDs
+		 * @param {string} [keyObjectId] - ID of the key object (last selected) for visual distinction
 		 */
-		drawMultiSelectionIndicators( selectedLayerIds ) {
+		drawMultiSelectionIndicators( selectedLayerIds, keyObjectId ) {
 			this.selectionHandles = [];
 			if ( !selectedLayerIds || selectedLayerIds.length === 0 ) {
 				return;
 			}
 			for ( let i = 0; i < selectedLayerIds.length; i++ ) {
-				this.drawSelectionIndicators( selectedLayerIds[ i ] );
+				const isKeyObject = selectedLayerIds.length > 1 && selectedLayerIds[ i ] === keyObjectId;
+				this.drawSelectionIndicators( selectedLayerIds[ i ], isKeyObject );
 			}
 		}
 
@@ -85,8 +87,9 @@
 		 * Draw selection indicators for a single layer
 		 *
 		 * @param {string} layerId - Layer ID to draw indicators for
+		 * @param {boolean} [isKeyObject=false] - Whether this is the key object (alignment reference)
 		 */
-		drawSelectionIndicators( layerId ) {
+		drawSelectionIndicators( layerId, isKeyObject ) {
 			if ( !this.ctx ) {
 				return;
 			}
@@ -100,7 +103,7 @@
 
 			// Special handling for lines and arrows: use line-aligned selection box
 			if ( layer.type === 'line' || layer.type === 'arrow' ) {
-				this.drawLineSelectionIndicators( layer );
+				this.drawLineSelectionIndicators( layer, isKeyObject );
 				this.ctx.restore();
 				return;
 			}
@@ -126,10 +129,10 @@
 					height: bounds.height
 				};
 				// Pass world-space bounds for correct hit testing coordinate calculation
-				this.drawSelectionHandles( localBounds, layer, true, bounds );
+				this.drawSelectionHandles( localBounds, layer, true, bounds, isKeyObject );
 				this.drawRotationHandle( localBounds, layer, true, bounds );
 			} else {
-				this.drawSelectionHandles( bounds, layer, false, bounds );
+				this.drawSelectionHandles( bounds, layer, false, bounds, isKeyObject );
 				this.drawRotationHandle( bounds, layer, false, bounds );
 			}
 
@@ -143,8 +146,9 @@
 		 * @param {Object} layer - The layer object
 		 * @param {boolean} isRotated - Whether the layer is rotated
 		 * @param {Object} worldBounds - World-space bounds for hit testing calculation
+		 * @param {boolean} [isKeyObject=false] - Whether this is the key object (alignment reference)
 		 */
-		drawSelectionHandles( bounds, layer, isRotated, worldBounds ) {
+		drawSelectionHandles( bounds, layer, isRotated, worldBounds, isKeyObject ) {
 			const handleSize = this.handleSize;
 
 			const handles = [
@@ -158,9 +162,16 @@
 				{ x: bounds.x, y: bounds.y + bounds.height / 2, type: 'w' }
 			];
 
-			this.ctx.fillStyle = this.handleColor;
-			this.ctx.strokeStyle = this.handleBorderColor;
-			this.ctx.lineWidth = 1;
+			// Key object gets a thicker orange border to distinguish it as the alignment reference
+			if ( isKeyObject ) {
+				this.ctx.fillStyle = this.handleColor;
+				this.ctx.strokeStyle = '#ff9800'; // Orange border for key object
+				this.ctx.lineWidth = 3;
+			} else {
+				this.ctx.fillStyle = this.handleColor;
+				this.ctx.strokeStyle = this.handleBorderColor;
+				this.ctx.lineWidth = 1;
+			}
 			this.ctx.setLineDash( [] );
 
 			for ( let i = 0; i < handles.length; i++ ) {
@@ -202,8 +213,9 @@
 		 * they are manipulated by dragging their endpoints directly.
 		 *
 		 * @param {Object} layer - The line or arrow layer
+		 * @param {boolean} [isKeyObject=false] - Whether this is the key object (alignment reference)
 		 */
-		drawLineSelectionIndicators( layer ) {
+		drawLineSelectionIndicators( layer, isKeyObject ) {
 			const handleSize = this.handleSize;
 
 			const x1 = layer.x1 || 0;
@@ -211,9 +223,16 @@
 			const x2 = layer.x2 || 0;
 			const y2 = layer.y2 || 0;
 
-			this.ctx.fillStyle = this.handleColor;
-			this.ctx.strokeStyle = this.handleBorderColor;
-			this.ctx.lineWidth = 1;
+			// Key object gets a thicker orange border to distinguish it as the alignment reference
+			if ( isKeyObject ) {
+				this.ctx.fillStyle = this.handleColor;
+				this.ctx.strokeStyle = '#ff9800'; // Orange border for key object
+				this.ctx.lineWidth = 3;
+			} else {
+				this.ctx.fillStyle = this.handleColor;
+				this.ctx.strokeStyle = this.handleBorderColor;
+				this.ctx.lineWidth = 1;
+			}
 			this.ctx.setLineDash( [] );
 
 			// Draw and register endpoint handles at the actual coordinates

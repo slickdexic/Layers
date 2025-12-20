@@ -288,7 +288,10 @@
 
 			// Clean up: remove element and revoke Blob URL
 			setTimeout( () => {
-				document.body.removeChild( a );
+				// Check parentNode to avoid errors in test environments
+				if ( a.parentNode ) {
+					a.parentNode.removeChild( a );
+				}
 				URL.revokeObjectURL( url );
 			}, 100 );
 		}

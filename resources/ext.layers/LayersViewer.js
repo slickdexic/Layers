@@ -154,11 +154,6 @@
 
 			this.ctx = this.canvas.getContext( '2d' );
 
-			// DEBUG: Log when creating LayerRenderer
-			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log( '[LayersViewer] Creating LayerRenderer with onImageLoad callback' );
-			}
-
 			// Initialize shared LayerRenderer with image load callback
 			// This ensures image layers trigger a redraw when their base64 data loads
 			this.renderer = new LayerRenderer( this.ctx, {

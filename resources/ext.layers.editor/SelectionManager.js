@@ -89,6 +89,12 @@
 					getLayerBounds: ( layer ) => self.getLayerBoundsCompat( layer ),
 					onSelectionUpdate: ( ids ) => {
 						self.selectedLayerIds = ids;
+						// Update lastSelectedId for key object alignment
+						if ( ids.length > 0 ) {
+							self.lastSelectedId = ids[ ids.length - 1 ];
+						} else {
+							self.lastSelectedId = null;
+						}
 						self.notifySelectionChange();
 					}
 				} );
@@ -327,6 +333,13 @@
 						return bounds && this.rectIntersects( marqueeRect, bounds );
 					} )
 					.map( ( layer ) => layer.id );
+			}
+
+			// Update lastSelectedId for key object alignment (use last in selection)
+			if ( this.selectedLayerIds.length > 0 ) {
+				this.lastSelectedId = this.selectedLayerIds[ this.selectedLayerIds.length - 1 ];
+			} else {
+				this.lastSelectedId = null;
 			}
 
 			this.notifySelectionChange();

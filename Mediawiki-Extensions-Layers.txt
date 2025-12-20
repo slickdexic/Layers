@@ -1,4 +1,4 @@
-{{Extension
+{{DISPLAYTITLE:Extension:Layers — Image Annotation Tool}}{{Extension
 |name            = Layers
 |status          = stable
 |type1           = media
@@ -12,7 +12,7 @@
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = <image editor><image markup><annotation><canvas><drawing>
-|mediawiki       = >= 1.44
+|mediawiki       = >= 1.39
 |php             = >= 8.1
 |needs-updatephp = yes
 |description     = A professional-grade, non-destructive image annotation and markup system with 13 drawing tools.
