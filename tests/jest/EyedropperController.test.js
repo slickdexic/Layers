@@ -44,7 +44,15 @@ describe( 'EyedropperController', () => {
 
 		// Create mock canvas
 		mockCanvas = {
-			style: { cursor: 'default' },
+			style: {
+				cursor: 'default',
+				setProperty: jest.fn(),
+				removeProperty: jest.fn()
+			},
+			classList: {
+				add: jest.fn(),
+				remove: jest.fn()
+			},
 			width: 800,
 			height: 600,
 			getContext: jest.fn().mockReturnValue( mockCtx ),
@@ -70,7 +78,7 @@ describe( 'EyedropperController', () => {
 				updateLayerProperties: jest.fn()
 			},
 			selectionManager: {
-				getSelectedIds: jest.fn().mockReturnValue( [] )
+				getSelectedLayers: jest.fn().mockReturnValue( [] )
 			},
 			requestRedraw: jest.fn()
 		};
@@ -122,7 +130,8 @@ describe( 'EyedropperController', () => {
 
 		it( 'should change cursor to crosshair', () => {
 			controller.activate();
-			expect( mockCanvas.style.cursor ).toBe( 'crosshair' );
+			expect( mockCanvas.classList.add ).toHaveBeenCalledWith( 'layers-eyedropper-active' );
+			expect( mockCanvas.style.setProperty ).toHaveBeenCalledWith( 'cursor', 'crosshair', 'important' );
 		} );
 
 		it( 'should add event listeners', () => {
@@ -163,10 +172,10 @@ describe( 'EyedropperController', () => {
 		} );
 
 		it( 'should restore original cursor', () => {
-			mockCanvas.style.cursor = 'crosshair';
 			controller.originalCursor = 'pointer';
 			controller.deactivate();
-			expect( mockCanvas.style.cursor ).toBe( 'pointer' );
+			expect( mockCanvas.classList.remove ).toHaveBeenCalledWith( 'layers-eyedropper-active' );
+			expect( mockCanvas.style.removeProperty ).toHaveBeenCalledWith( 'cursor' );
 		} );
 
 		it( 'should remove event listeners', () => {
@@ -438,10 +447,8 @@ describe( 'EyedropperController', () => {
 
 	describe( 'applyColor', () => {
 		it( 'should update selected layer fill', () => {
-			mockCanvasManager.selectionManager.getSelectedIds.mockReturnValue( [ 'layer1' ] );
-			mockCanvasManager.editor.layers = [
-				{ id: 'layer1', type: 'rectangle', fill: '#000000' }
-			];
+			const layer = { id: 'layer1', type: 'rectangle', fill: '#000000' };
+			mockCanvasManager.selectionManager.getSelectedLayers.mockReturnValue( [ layer ] );
 
 			controller.applyColor( '#ff0000', 'fill' );
 
@@ -452,10 +459,8 @@ describe( 'EyedropperController', () => {
 		} );
 
 		it( 'should update selected layer stroke', () => {
-			mockCanvasManager.selectionManager.getSelectedIds.mockReturnValue( [ 'layer1' ] );
-			mockCanvasManager.editor.layers = [
-				{ id: 'layer1', type: 'rectangle', stroke: '#000000' }
-			];
+			const layer = { id: 'layer1', type: 'rectangle', stroke: '#000000' };
+			mockCanvasManager.selectionManager.getSelectedLayers.mockReturnValue( [ layer ] );
 
 			controller.applyColor( '#00ff00', 'stroke' );
 

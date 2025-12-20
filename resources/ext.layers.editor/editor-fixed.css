@@ -1124,6 +1124,12 @@ body.layers-editor-open .mw-body-content {
 	transform-origin: 0 0;
 }
 
+/* Eyedropper cursor - override canvas crosshair with distinctive eyedropper cursor */
+.layers-canvas.layers-eyedropper-active {
+	/* stylelint-disable-next-line declaration-no-important */
+	cursor: copy !important;
+}
+
 /* Layer Items */
 
 .layer-item {

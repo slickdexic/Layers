@@ -120,11 +120,13 @@ class EyedropperController {
 		this.sampledColor = null;
 		this.previewPosition = null;
 
-		// Store original cursor
+		// Store original cursor and set eyedropper cursor
 		const canvas = this.getCanvas();
 		if ( canvas ) {
 			this.originalCursor = canvas.style.cursor;
-			canvas.style.cursor = 'crosshair';
+			// Use crosshair cursor with !important via class
+			canvas.classList.add( 'layers-eyedropper-active' );
+			canvas.style.setProperty( 'cursor', 'crosshair', 'important' );
 		}
 
 		// Add event listeners
@@ -152,10 +154,14 @@ class EyedropperController {
 		this.active = false;
 		this.previewPosition = null;
 
-		// Restore original cursor
+		// Restore original cursor and remove class
 		const canvas = this.getCanvas();
 		if ( canvas ) {
-			canvas.style.cursor = this.originalCursor;
+			canvas.classList.remove( 'layers-eyedropper-active' );
+			canvas.style.removeProperty( 'cursor' );
+			if ( this.originalCursor ) {
+				canvas.style.cursor = this.originalCursor;
+			}
 		}
 
 		// Remove event listeners
@@ -461,33 +467,20 @@ class EyedropperController {
 			return;
 		}
 
-		// Get selected layer IDs
-		const selectedIds = this.manager.selectionManager ?
-			this.manager.selectionManager.getSelectedIds() : [];
+		// Get selected layers - use getSelectedLayers() which returns layer objects
+		const selectedLayers = this.manager.selectionManager ?
+			this.manager.selectionManager.getSelectedLayers() : [];
 
-		if ( selectedIds.length > 0 ) {
+		if ( selectedLayers.length > 0 ) {
 			// Apply to selected layers
 			const editor = this.manager.editor;
-			if ( editor && editor.layers ) {
-				const updates = {};
-
-				selectedIds.forEach( ( id ) => {
-					const layer = editor.layers.find( ( l ) => l.id === id );
-					if ( layer ) {
-						if ( target === 'stroke' ) {
-							updates[ id ] = { stroke: color };
-						} else {
-							updates[ id ] = { fill: color };
-						}
+			if ( editor && editor.updateLayerProperties ) {
+				selectedLayers.forEach( ( layer ) => {
+					if ( layer && layer.id ) {
+						const props = target === 'stroke' ? { stroke: color } : { fill: color };
+						editor.updateLayerProperties( layer.id, props );
 					}
 				} );
-
-				// Apply updates through editor
-				if ( Object.keys( updates ).length > 0 && editor.updateLayerProperties ) {
-					Object.entries( updates ).forEach( ( [ id, props ] ) => {
-						editor.updateLayerProperties( id, props );
-					} );
-				}
 			}
 		}
 
