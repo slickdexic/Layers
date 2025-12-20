@@ -182,19 +182,34 @@ Create annotation arrows with customizable endpoints.
 **Properties:**
 | Property | Options | Default |
 |----------|---------|---------|
-| Arrow Head | none, arrow, circle, diamond, triangle | arrow |
-| Arrow Size | Small, Medium, Large | Medium |
-| Arrow Style | Solid, Dashed, Dotted | Solid |
-| Stroke Width | 1-20px | 2px |
+| arrowhead | `none`, `arrow`, `circle`, `diamond`, `triangle` | `arrow` |
+| arrowStyle | `single`, `double`, `none` | `single` |
+| arrowHeadType | `pointed`, `chevron`, `standard` | `pointed` |
+| arrowSize | 1-100 | 10 |
+| headScale | 0.1-5.0 | 1.0 |
+| tailWidth | 0-100 | 0 |
+| Stroke Width | 0-100px | 2px |
 
-**Head Styles:**
+**Arrow Style (arrowStyle):** Controls head placement
 ```
-arrow:    ──────▶
-circle:   ──────●
-diamond:  ──────◆
-triangle: ──────▷
-none:     ───────
+single:   ──────▶     (head at end only)
+double:   ◀─────▶     (heads at both ends)
+none:     ───────     (line only, no heads)
 ```
+
+**Head Shape (arrowhead):** Controls head icon shape
+```
+arrow:    ──────▶     (filled arrow)
+circle:   ──────●     (filled circle)
+diamond:  ──────◆     (filled diamond)
+triangle: ──────▷     (open triangle)
+none:     ───────     (no head)
+```
+
+**Head Type (arrowHeadType):** Controls rendering style
+- `pointed` — Sharp pointed arrow (default)
+- `chevron` — V-shaped chevron
+- `standard` — Classic arrow head
 
 ### Line Tool (L)
 

@@ -40,9 +40,20 @@ type LayerType =
 type ArrowHead = 'none' | 'arrow' | 'circle' | 'diamond' | 'triangle';
 
 /**
- * Line/arrow stroke styles
+ * Arrow style (head placement)
+ * - single: head at end only
+ * - double: heads at both ends
+ * - none: line only (no heads)
  */
-type ArrowStyle = 'solid' | 'dashed' | 'dotted';
+type ArrowStyle = 'single' | 'double' | 'none';
+
+/**
+ * Arrow head type (rendering style)
+ * - pointed: sharp pointed arrow
+ * - chevron: V-shaped chevron
+ * - standard: classic arrow head
+ */
+type ArrowHeadType = 'pointed' | 'chevron' | 'standard';
 
 /**
  * Text alignment options
@@ -263,14 +274,23 @@ interface ArrowProperties {
 	/** Ending Y position */
 	y2?: number;
 
-	/** Arrow head style */
+	/** Arrow head shape style */
 	arrowhead?: ArrowHead;
 
-	/** Arrow line style */
+	/** Arrow style (head placement: single, double, none) */
 	arrowStyle?: ArrowStyle;
+
+	/** Arrow head rendering type (pointed, chevron, standard) */
+	arrowHeadType?: ArrowHeadType;
 
 	/** Arrow head size */
 	arrowSize?: number;
+
+	/** Arrow head scale multiplier */
+	headScale?: number;
+
+	/** Arrow tail width */
+	tailWidth?: number;
 }
 
 /**
