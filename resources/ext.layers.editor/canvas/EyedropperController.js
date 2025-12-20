@@ -238,8 +238,9 @@ class EyedropperController {
 	}
 
 	/**
-	 * Get a context optimized for reading pixel data
-	 * Uses willReadFrequently option for better getImageData performance
+	 * Get a context optimized for reading pixel data.
+	 * Creates an offscreen canvas with willReadFrequently flag set on first call,
+	 * since the main canvas context is already initialized without this flag.
 	 *
 	 * @return {CanvasRenderingContext2D|null} The read-optimized context
 	 */
@@ -248,10 +249,22 @@ class EyedropperController {
 		if ( !canvas ) {
 			return null;
 		}
-		// Cache the read context for performance
-		if ( !this._readCtx ) {
-			this._readCtx = canvas.getContext( '2d', { willReadFrequently: true } );
+
+		// Create offscreen canvas for reading if not exists or size changed
+		if ( !this._readCanvas ||
+			this._readCanvas.width !== canvas.width ||
+			this._readCanvas.height !== canvas.height ) {
+			this._readCanvas = document.createElement( 'canvas' );
+			this._readCanvas.width = canvas.width;
+			this._readCanvas.height = canvas.height;
+			this._readCtx = this._readCanvas.getContext( '2d', { willReadFrequently: true } );
 		}
+
+		// Copy current canvas content to read canvas
+		if ( this._readCtx ) {
+			this._readCtx.drawImage( canvas, 0, 0 );
+		}
+
 		return this._readCtx;
 	}
 
@@ -342,8 +355,12 @@ class EyedropperController {
 		if ( color ) {
 			this.sampledColor = color;
 
-			// Determine target from modifier keys
-			const target = ( e.altKey || e.shiftKey ) ? 'stroke' : 'fill';
+			// Use the target set during activation, but modifier keys can override
+			// Alt/Shift switches to opposite target
+			let target = this.target;
+			if ( e.altKey || e.shiftKey ) {
+				target = this.target === 'fill' ? 'stroke' : 'fill';
+			}
 
 			// Apply the color
 			this.applyColor( color, target );
@@ -695,6 +712,7 @@ class EyedropperController {
 		this.manager = null;
 		this.onColorSampled = null;
 		this.onModeChange = null;
+		this._readCanvas = null;
 		this._readCtx = null;
 	}
 }

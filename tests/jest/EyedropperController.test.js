@@ -16,6 +16,9 @@ describe( 'EyedropperController', () => {
 	let mockCanvasManager;
 	let mockCanvas;
 	let mockCtx;
+	let offscreenCanvas;
+	let offscreenCtx;
+	let originalCreateElement;
 
 	beforeEach( () => {
 		// Create mock canvas context
@@ -41,6 +44,30 @@ describe( 'EyedropperController', () => {
 			font: '',
 			textAlign: ''
 		};
+
+		// Create mock offscreen context with same image data behavior
+		offscreenCtx = {
+			getImageData: jest.fn().mockReturnValue( {
+				data: new Uint8ClampedArray( [ 255, 128, 64, 255 ] ) // RGBA
+			} ),
+			drawImage: jest.fn()
+		};
+
+		// Create mock offscreen canvas for getReadContext
+		offscreenCanvas = {
+			width: 0,
+			height: 0,
+			getContext: jest.fn().mockReturnValue( offscreenCtx )
+		};
+
+		// Mock document.createElement to return offscreen canvas
+		originalCreateElement = document.createElement.bind( document );
+		document.createElement = jest.fn( ( tag ) => {
+			if ( tag === 'canvas' ) {
+				return offscreenCanvas;
+			}
+			return originalCreateElement( tag );
+		} );
 
 		// Create mock canvas
 		mockCanvas = {
@@ -91,6 +118,8 @@ describe( 'EyedropperController', () => {
 			controller.destroy();
 		}
 		document.removeEventListener( 'keydown', controller?.handleKeyDown );
+		// Restore original createElement
+		document.createElement = originalCreateElement;
 	} );
 
 	describe( 'constructor', () => {
@@ -255,12 +284,13 @@ describe( 'EyedropperController', () => {
 	describe( 'sampleColorAt', () => {
 		it( 'should sample color from canvas', () => {
 			const color = controller.sampleColorAt( 100, 100 );
-			expect( mockCtx.getImageData ).toHaveBeenCalledWith( 100, 100, 1, 1 );
+			// Uses offscreen context for reading
+			expect( offscreenCtx.getImageData ).toHaveBeenCalledWith( 100, 100, 1, 1 );
 			expect( color ).toBe( '#ff8040' ); // RGB 255, 128, 64
 		} );
 
 		it( 'should return white for transparent pixels', () => {
-			mockCtx.getImageData.mockReturnValue( {
+			offscreenCtx.getImageData.mockReturnValue( {
 				data: new Uint8ClampedArray( [ 0, 0, 0, 0 ] )
 			} );
 			const color = controller.sampleColorAt( 100, 100 );
@@ -277,7 +307,7 @@ describe( 'EyedropperController', () => {
 				pixels[ i * 4 + 2 ] = 200; // B
 				pixels[ i * 4 + 3 ] = 255; // A
 			}
-			mockCtx.getImageData.mockReturnValue( { data: pixels } );
+			offscreenCtx.getImageData.mockReturnValue( { data: pixels } );
 
 			const color = controller.sampleColorAt( 100, 100 );
 			expect( color ).toBe( '#6496c8' ); // RGB 100, 150, 200
@@ -393,7 +423,22 @@ describe( 'EyedropperController', () => {
 			expect( callback ).toHaveBeenCalledWith( '#ff8040', 'fill', { x: 100, y: 100 } );
 		} );
 
-		it( 'should use stroke target with modifier key', () => {
+		it( 'should use the target set during activation', () => {
+			controller.deactivate();
+			controller.activate( 'stroke' );
+			const callback = jest.fn();
+			controller.onColorSampled = callback;
+			const event = {
+				clientX: 100,
+				clientY: 100,
+				preventDefault: jest.fn(),
+				stopPropagation: jest.fn()
+			};
+			controller.handleMouseDown( event );
+			expect( callback ).toHaveBeenCalledWith( '#ff8040', 'stroke', { x: 100, y: 100 } );
+		} );
+
+		it( 'should toggle target with modifier key when activated for fill', () => {
 			const callback = jest.fn();
 			controller.onColorSampled = callback;
 			const event = {
@@ -404,7 +449,25 @@ describe( 'EyedropperController', () => {
 				stopPropagation: jest.fn()
 			};
 			controller.handleMouseDown( event );
+			// Activated with fill (default), alt toggles to stroke
 			expect( callback ).toHaveBeenCalledWith( '#ff8040', 'stroke', { x: 100, y: 100 } );
+		} );
+
+		it( 'should toggle target with modifier key when activated for stroke', () => {
+			controller.deactivate();
+			controller.activate( 'stroke' );
+			const callback = jest.fn();
+			controller.onColorSampled = callback;
+			const event = {
+				clientX: 100,
+				clientY: 100,
+				shiftKey: true,
+				preventDefault: jest.fn(),
+				stopPropagation: jest.fn()
+			};
+			controller.handleMouseDown( event );
+			// Activated with stroke, shift toggles to fill
+			expect( callback ).toHaveBeenCalledWith( '#ff8040', 'fill', { x: 100, y: 100 } );
 		} );
 
 		it( 'should deactivate after sampling', () => {
@@ -561,24 +624,50 @@ describe( 'EyedropperController', () => {
 			expect( controller.onColorSampled ).toBeNull();
 			expect( controller.onModeChange ).toBeNull();
 			expect( controller._readCtx ).toBeNull();
+			expect( controller._readCanvas ).toBeNull();
 		} );
 	} );
 
 	describe( 'getReadContext', () => {
-		it( 'should return context with willReadFrequently', () => {
-			const ctx = controller.getReadContext();
-			expect( ctx ).toBe( mockCtx );
-			expect( mockCanvas.getContext ).toHaveBeenCalledWith( '2d', { willReadFrequently: true } );
+		beforeEach( () => {
+			// Reset the controller's cached context before each test
+			controller._readCanvas = null;
+			controller._readCtx = null;
+			// Reset the mock call counts
+			document.createElement.mockClear();
+			offscreenCanvas.getContext.mockClear();
+			offscreenCtx.drawImage.mockClear();
 		} );
 
-		it( 'should cache the context', () => {
+		it( 'should create offscreen canvas with willReadFrequently', () => {
+			const ctx = controller.getReadContext();
+			expect( document.createElement ).toHaveBeenCalledWith( 'canvas' );
+			expect( offscreenCanvas.getContext ).toHaveBeenCalledWith( '2d', { willReadFrequently: true } );
+			expect( ctx ).toBe( offscreenCtx );
+		} );
+
+		it( 'should copy main canvas content to offscreen canvas', () => {
+			controller.getReadContext();
+			expect( offscreenCtx.drawImage ).toHaveBeenCalledWith( mockCanvas, 0, 0 );
+		} );
+
+		it( 'should cache the offscreen canvas', () => {
 			controller.getReadContext();
 			controller.getReadContext();
-			// Only called once for caching
-			const willReadCalls = mockCanvas.getContext.mock.calls.filter(
-				( call ) => call[ 1 ] && call[ 1 ].willReadFrequently
-			);
-			expect( willReadCalls.length ).toBe( 1 );
+			// Canvas created only once
+			expect( document.createElement ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'should recreate canvas if size changes', () => {
+			controller.getReadContext();
+			// Change main canvas size
+			mockCanvas.width = 200;
+			mockCanvas.height = 200;
+			controller._readCanvas = null; // Force recreation
+			controller._readCtx = null;
+			controller.getReadContext();
+			// Canvas recreated due to size change
+			expect( document.createElement ).toHaveBeenCalledTimes( 2 );
 		} );
 
 		it( 'should return null if no canvas', () => {
