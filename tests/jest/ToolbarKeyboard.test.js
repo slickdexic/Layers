@@ -399,4 +399,230 @@ describe( 'ToolbarKeyboard', function () {
 			expect( () => keyboardHandler.showKeyboardShortcutsHelp() ).not.toThrow();
 		} );
 	} );
+
+	describe( 'eyedropper shortcuts', function () {
+		it( 'should activate eyedropper for fill on pressing "i"', function () {
+			mockEditor.canvasManager = {
+				eyedropperController: {
+					activate: jest.fn()
+				}
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'i',
+				ctrlKey: false,
+				metaKey: false,
+				shiftKey: false
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockEditor.canvasManager.eyedropperController.activate ).toHaveBeenCalledWith( 'fill' );
+		} );
+
+		it( 'should activate eyedropper for stroke on pressing Shift+I', function () {
+			mockEditor.canvasManager = {
+				eyedropperController: {
+					activate: jest.fn()
+				}
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'i',
+				ctrlKey: false,
+				metaKey: false,
+				shiftKey: true
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockEditor.canvasManager.eyedropperController.activate ).toHaveBeenCalledWith( 'stroke' );
+		} );
+	} );
+
+	describe( 'activateEyedropper', function () {
+		it( 'should call eyedropperController.activate with target', function () {
+			mockEditor.canvasManager = {
+				eyedropperController: {
+					activate: jest.fn()
+				}
+			};
+
+			keyboardHandler.activateEyedropper( 'fill' );
+
+			expect( mockEditor.canvasManager.eyedropperController.activate ).toHaveBeenCalledWith( 'fill' );
+		} );
+
+		it( 'should handle missing canvasManager gracefully', function () {
+			mockEditor.canvasManager = null;
+
+			expect( () => keyboardHandler.activateEyedropper( 'fill' ) ).not.toThrow();
+		} );
+
+		it( 'should handle missing eyedropperController gracefully', function () {
+			mockEditor.canvasManager = {};
+
+			expect( () => keyboardHandler.activateEyedropper( 'stroke' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'zoom shortcuts', function () {
+		it( 'should zoom in on pressing "+"', function () {
+			mockEditor.canvasManager = {
+				zoomIn: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '+',
+				ctrlKey: false,
+				metaKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.zoomIn ).toHaveBeenCalled();
+		} );
+
+		it( 'should zoom in on pressing "="', function () {
+			mockEditor.canvasManager = {
+				zoomIn: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '=',
+				ctrlKey: false,
+				metaKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.zoomIn ).toHaveBeenCalled();
+		} );
+
+		it( 'should zoom out on pressing "-"', function () {
+			mockEditor.canvasManager = {
+				zoomOut: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '-',
+				ctrlKey: false,
+				metaKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.zoomOut ).toHaveBeenCalled();
+		} );
+
+		it( 'should fit to window on pressing "0"', function () {
+			mockEditor.canvasManager = {
+				fitToWindow: jest.fn()
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: '0',
+				ctrlKey: false,
+				metaKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.fitToWindow ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'handleZoom', function () {
+		it( 'should use zoomPanController when direct method not available', function () {
+			mockEditor.canvasManager = {
+				zoomPanController: {
+					zoomIn: jest.fn()
+				}
+			};
+
+			keyboardHandler.handleZoom( 'in' );
+
+			expect( mockEditor.canvasManager.zoomPanController.zoomIn ).toHaveBeenCalled();
+		} );
+
+		it( 'should use zoomPanController.zoomOut as fallback', function () {
+			mockEditor.canvasManager = {
+				zoomPanController: {
+					zoomOut: jest.fn()
+				}
+			};
+
+			keyboardHandler.handleZoom( 'out' );
+
+			expect( mockEditor.canvasManager.zoomPanController.zoomOut ).toHaveBeenCalled();
+		} );
+
+		it( 'should use zoomPanController.fitToWindow as fallback', function () {
+			mockEditor.canvasManager = {
+				zoomPanController: {
+					fitToWindow: jest.fn()
+				}
+			};
+
+			keyboardHandler.handleZoom( 'fit' );
+
+			expect( mockEditor.canvasManager.zoomPanController.fitToWindow ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing canvasManager gracefully', function () {
+			mockEditor.canvasManager = null;
+
+			expect( () => keyboardHandler.handleZoom( 'in' ) ).not.toThrow();
+		} );
+
+		it( 'should handle missing zoom methods gracefully', function () {
+			mockEditor.canvasManager = {};
+
+			expect( () => keyboardHandler.handleZoom( 'in' ) ).not.toThrow();
+			expect( () => keyboardHandler.handleZoom( 'out' ) ).not.toThrow();
+			expect( () => keyboardHandler.handleZoom( 'fit' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'additional tool shortcuts', function () {
+		it( 'should select textbox tool when pressing "x"', function () {
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'x',
+				ctrlKey: false,
+				metaKey: false
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockToolbar.selectTool ).toHaveBeenCalledWith( 'textbox' );
+		} );
+
+		it( 'should select polygon tool when pressing "y"', function () {
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'y',
+				ctrlKey: false,
+				metaKey: false
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockToolbar.selectTool ).toHaveBeenCalledWith( 'polygon' );
+		} );
+	} );
 } );
