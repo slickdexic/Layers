@@ -259,6 +259,8 @@
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",
 				"ui/LayerDragDrop.js",
+				"presets/BuiltInPresets.js",
+				"presets/PresetStorage.js",
 				"presets/PresetManager.js",
 				"presets/PresetDropdown.js",
 				"panel/LayerItemEvents.js",

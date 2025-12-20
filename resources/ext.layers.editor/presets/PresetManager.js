@@ -4,179 +4,47 @@
  * Manages tool-specific style presets stored in localStorage.
  * Allows users to save, load, and manage reusable style configurations.
  *
- * Storage key: 'mw-layers-style-presets'
+ * Delegates to:
+ * - BuiltInPresets: Built-in preset definitions
+ * - PresetStorage: localStorage operations
  *
  * @class PresetManager
  */
 ( function () {
 	'use strict';
 
-	const STORAGE_KEY = 'mw-layers-style-presets';
-	const SCHEMA_VERSION = 1;
-
-	/**
-	 * Default presets that ship with the extension
-	 *
-	 * @type {Object}
-	 */
-	const BUILT_IN_PRESETS = {
-		arrow: [
-			{
-				id: 'builtin-arrow-default',
-				name: 'Default Arrow',
-				builtIn: true,
-				style: {
-					stroke: '#000000',
-					strokeWidth: 2,
-					arrowStyle: 'single',
-					arrowhead: 'arrow'
-				}
-			},
-			{
-				id: 'builtin-arrow-callout',
-				name: 'Callout',
-				builtIn: true,
-				style: {
-					stroke: '#cc0000',
-					strokeWidth: 3,
-					arrowStyle: 'single',
-					arrowhead: 'arrow'
-				}
+	// Get dependencies from Layers namespace or require for testing
+	const getBuiltInPresets = () => {
+		if ( typeof window !== 'undefined' && window.Layers && window.Layers.BuiltInPresets ) {
+			return window.Layers.BuiltInPresets;
+		}
+		/* eslint-disable-next-line no-undef */
+		if ( typeof require !== 'undefined' ) {
+			try {
+				/* eslint-disable-next-line no-undef */
+				return require( './BuiltInPresets' );
+			} catch ( e ) {
+				return null;
 			}
-		],
-		text: [
-			{
-				id: 'builtin-text-label',
-				name: 'Label',
-				builtIn: true,
-				style: {
-					color: '#000000',
-					fontSize: 16,
-					fontFamily: 'Arial, sans-serif',
-					fontWeight: 'normal'
-				}
-			},
-			{
-				id: 'builtin-text-title',
-				name: 'Title',
-				builtIn: true,
-				style: {
-					color: '#000000',
-					fontSize: 24,
-					fontFamily: 'Arial, sans-serif',
-					fontWeight: 'bold'
-				}
-			}
-		],
-		textbox: [
-			{
-				id: 'builtin-textbox-default',
-				name: 'Default Box',
-				builtIn: true,
-				style: {
-					fill: '#ffffff',
-					stroke: '#000000',
-					strokeWidth: 1,
-					fontSize: 14,
-					fontFamily: 'Arial, sans-serif',
-					padding: 8,
-					cornerRadius: 4
-				}
-			}
-		],
-		rectangle: [
-			{
-				id: 'builtin-rect-outline',
-				name: 'Outline',
-				builtIn: true,
-				style: {
-					stroke: '#000000',
-					strokeWidth: 2,
-					fill: 'transparent'
-				}
-			},
-			{
-				id: 'builtin-rect-highlight',
-				name: 'Highlight',
-				builtIn: true,
-				style: {
-					stroke: 'transparent',
-					strokeWidth: 0,
-					fill: '#ffff00',
-					fillOpacity: 0.3
-				}
-			}
-		],
-		circle: [
-			{
-				id: 'builtin-circle-outline',
-				name: 'Outline',
-				builtIn: true,
-				style: {
-					stroke: '#000000',
-					strokeWidth: 2,
-					fill: 'transparent'
-				}
-			}
-		],
-		ellipse: [
-			{
-				id: 'builtin-ellipse-outline',
-				name: 'Outline',
-				builtIn: true,
-				style: {
-					stroke: '#000000',
-					strokeWidth: 2,
-					fill: 'transparent'
-				}
-			}
-		],
-		line: [
-			{
-				id: 'builtin-line-default',
-				name: 'Default Line',
-				builtIn: true,
-				style: {
-					stroke: '#000000',
-					strokeWidth: 2
-				}
-			}
-		],
-		polygon: [
-			{
-				id: 'builtin-polygon-outline',
-				name: 'Outline',
-				builtIn: true,
-				style: {
-					stroke: '#000000',
-					strokeWidth: 2,
-					fill: 'transparent'
-				}
-			}
-		],
-		star: [
-			{
-				id: 'builtin-star-filled',
-				name: 'Filled Star',
-				builtIn: true,
-				style: {
-					stroke: '#000000',
-					strokeWidth: 1,
-					fill: '#ffd700'
-				}
-			}
-		]
+		}
+		return null;
 	};
 
-	/**
-	 * Tools that support presets
-	 *
-	 * @type {string[]}
-	 */
-	const SUPPORTED_TOOLS = [
-		'arrow', 'text', 'textbox', 'rectangle', 'circle',
-		'ellipse', 'line', 'polygon', 'star', 'path'
-	];
+	const getPresetStorage = () => {
+		if ( typeof window !== 'undefined' && window.Layers && window.Layers.PresetStorage ) {
+			return window.Layers.PresetStorage;
+		}
+		/* eslint-disable-next-line no-undef */
+		if ( typeof require !== 'undefined' ) {
+			try {
+				/* eslint-disable-next-line no-undef */
+				return require( './PresetStorage' );
+			} catch ( e ) {
+				return null;
+			}
+		}
+		return null;
+	};
 
 	/**
 	 * PresetManager class
@@ -191,12 +59,30 @@
 		constructor( options ) {
 			const opts = options || {};
 
+			// Get dependencies
+			const BuiltInPresets = getBuiltInPresets();
+			const PresetStorage = getPresetStorage();
+
 			/**
-			 * Storage key for localStorage
+			 * Built-in presets provider
+			 *
+			 * @type {Object}
+			 */
+			this.builtInPresets = BuiltInPresets;
+
+			/**
+			 * Storage manager
+			 *
+			 * @type {PresetStorage}
+			 */
+			this.storage = PresetStorage ? new PresetStorage( opts ) : null;
+
+			/**
+			 * Storage key for localStorage (for backward compatibility)
 			 *
 			 * @type {string}
 			 */
-			this.storageKey = opts.storageKey || STORAGE_KEY;
+			this.storageKey = opts.storageKey || 'mw-layers-style-presets';
 
 			/**
 			 * Cached preset data
@@ -222,42 +108,35 @@
 		 * @return {Object} Loaded preset data
 		 */
 		load() {
-			try {
-				const stored = localStorage.getItem( this.storageKey );
-				if ( stored ) {
-					const parsed = JSON.parse( stored );
-					if ( parsed.version === SCHEMA_VERSION ) {
-						this.cache = parsed;
-						return this.cache;
-					}
-					// Future: handle migrations here
-				}
-			} catch ( err ) {
-				this.logError( 'Failed to load presets:', err );
+			if ( this.storage ) {
+				const loaded = this.storage.load();
+				this.cache = loaded || this.storage.createEmptyData();
+			} else {
+				// Fallback if storage not available
+				this.cache = this.createEmptyData();
 			}
-
-			// Initialize with empty user presets
-			this.cache = this.createEmptyData();
 			return this.cache;
 		}
 
 		/**
-		 * Create empty preset data structure
+		 * Create empty preset data structure (fallback)
 		 *
 		 * @return {Object} Empty data structure
 		 */
 		createEmptyData() {
-			const data = {
-				version: SCHEMA_VERSION,
-				toolPresets: {},
-				defaultPresets: {} // Maps tool -> preset ID
-			};
+			if ( this.storage ) {
+				return this.storage.createEmptyData();
+			}
 
-			// Initialize empty arrays for each supported tool
-			SUPPORTED_TOOLS.forEach( ( tool ) => {
+			const supportedTools = this.getSupportedTools();
+			const data = {
+				version: 1,
+				toolPresets: {},
+				defaultPresets: {}
+			};
+			supportedTools.forEach( ( tool ) => {
 				data.toolPresets[ tool ] = [];
 			} );
-
 			return data;
 		}
 
@@ -267,14 +146,14 @@
 		 * @return {boolean} Success
 		 */
 		save() {
-			try {
-				localStorage.setItem( this.storageKey, JSON.stringify( this.cache ) );
-				this.notifyListeners( 'save' );
-				return true;
-			} catch ( err ) {
-				this.logError( 'Failed to save presets:', err );
-				return false;
+			let success = false;
+			if ( this.storage ) {
+				success = this.storage.save( this.cache );
 			}
+			if ( success ) {
+				this.notifyListeners( 'save' );
+			}
+			return success;
 		}
 
 		/**
@@ -284,11 +163,13 @@
 		 * @return {Array} Array of preset objects
 		 */
 		getPresetsForTool( tool ) {
-			if ( !SUPPORTED_TOOLS.includes( tool ) ) {
+			if ( !this.isToolSupported( tool ) ) {
 				return [];
 			}
 
-			const builtIn = BUILT_IN_PRESETS[ tool ] || [];
+			const builtIn = this.builtInPresets ?
+				this.builtInPresets.getForTool( tool ) :
+				[];
 			const user = ( this.cache && this.cache.toolPresets[ tool ] ) || [];
 
 			// Combine: built-in first, then user presets
@@ -324,8 +205,9 @@
 			}
 
 			// Fall back to first built-in preset
-			const builtIn = BUILT_IN_PRESETS[ tool ];
-			return builtIn && builtIn.length > 0 ? builtIn[ 0 ] : null;
+			return this.builtInPresets ?
+				this.builtInPresets.getDefault( tool ) :
+				null;
 		}
 
 		/**
@@ -336,7 +218,7 @@
 		 * @return {boolean} Success
 		 */
 		setDefaultPreset( tool, presetId ) {
-			if ( !SUPPORTED_TOOLS.includes( tool ) ) {
+			if ( !this.isToolSupported( tool ) ) {
 				return false;
 			}
 
@@ -376,7 +258,7 @@
 		 * @return {Object|null} Created preset or null on failure
 		 */
 		addPreset( tool, name, style, options ) {
-			if ( !SUPPORTED_TOOLS.includes( tool ) ) {
+			if ( !this.isToolSupported( tool ) ) {
 				this.logError( 'Unsupported tool type:', tool );
 				return null;
 			}
@@ -552,44 +434,11 @@
 		 * @return {Object} Style properties
 		 */
 		extractStyleFromLayer( layer ) {
-			const style = {};
-			const styleProps = [
-				// Stroke
-				'stroke', 'strokeWidth', 'strokeOpacity',
-				// Fill
-				'fill', 'fillOpacity',
-				// Text
-				'color', 'fontSize', 'fontFamily', 'fontWeight', 'fontStyle',
-				'textAlign', 'verticalAlign', 'lineHeight', 'padding',
-				// Text stroke
-				'textStrokeColor', 'textStrokeWidth',
-				// Shape
-				'cornerRadius',
-				// Arrow
-				'arrowStyle', 'arrowhead', 'arrowSize', 'arrowHeadType', 'headScale', 'tailWidth',
-				// Polygon/Star
-				'sides', 'points', 'innerRadius', 'outerRadius', 'pointRadius', 'valleyRadius',
-				// Shadow
-				'shadow', 'shadowColor', 'shadowBlur',
-				'shadowOffsetX', 'shadowOffsetY', 'shadowSpread',
-				// Text shadow
-				'textShadow', 'textShadowColor', 'textShadowBlur',
-				'textShadowOffsetX', 'textShadowOffsetY',
-				// Glow
-				'glow',
-				// Blend mode
-				'blendMode',
-				// Opacity
-				'opacity'
-			];
-
-			styleProps.forEach( ( prop ) => {
-				if ( layer[ prop ] !== undefined ) {
-					style[ prop ] = layer[ prop ];
-				}
-			} );
-
-			return style;
+			if ( this.storage ) {
+				return this.storage.extractStyleFromLayer( layer );
+			}
+			// Fallback
+			return this.sanitizeStyle( layer );
 		}
 
 		/**
@@ -598,23 +447,11 @@
 		 * @return {string} JSON string
 		 */
 		exportPresets() {
-			const exportData = {
-				version: SCHEMA_VERSION,
-				exportedAt: new Date().toISOString(),
-				toolPresets: {},
-				defaultPresets: { ...this.cache.defaultPresets }
-			};
-
-			// Only export user presets (not built-in)
-			SUPPORTED_TOOLS.forEach( ( tool ) => {
-				const userPresets = ( this.cache.toolPresets[ tool ] || [] )
-					.filter( ( p ) => !p.builtIn );
-				if ( userPresets.length > 0 ) {
-					exportData.toolPresets[ tool ] = userPresets;
-				}
-			} );
-
-			return JSON.stringify( exportData, null, 2 );
+			if ( this.storage ) {
+				return this.storage.exportToJson( this.cache );
+			}
+			// Fallback
+			return JSON.stringify( this.cache, null, 2 );
 		}
 
 		/**
@@ -627,80 +464,22 @@
 		 * @return {Object} Import result { success, imported, skipped, errors }
 		 */
 		importPresets( jsonString, options ) {
-			const opts = Object.assign( { merge: true, overwrite: false }, options );
-			const result = { success: false, imported: 0, skipped: 0, errors: [] };
-
-			let importData;
-			try {
-				importData = JSON.parse( jsonString );
-			} catch ( err ) {
-				result.errors.push( 'Invalid JSON format' );
-				return result;
-			}
-
-			if ( !importData.version || !importData.toolPresets ) {
-				result.errors.push( 'Invalid preset file format' );
-				return result;
-			}
-
-			// Clear existing if not merging
-			if ( !opts.merge ) {
-				this.cache = this.createEmptyData();
-			}
-
-			// Import presets for each tool
-			Object.keys( importData.toolPresets ).forEach( ( tool ) => {
-				if ( !SUPPORTED_TOOLS.includes( tool ) ) {
-					result.errors.push( `Unsupported tool: ${ tool }` );
-					return;
+			if ( this.storage ) {
+				const result = this.storage.importFromJson( jsonString, this.cache, options );
+				if ( result.success && result.data ) {
+					this.cache = result.data;
+					this.save();
+					this.notifyListeners( 'presets-imported', result );
 				}
-
-				const presets = importData.toolPresets[ tool ];
-				if ( !Array.isArray( presets ) ) {
-					return;
-				}
-
-				presets.forEach( ( preset ) => {
-					if ( !preset.id || !preset.name || !preset.style ) {
-						result.skipped++;
-						return;
-					}
-
-					// Check for existing
-					const existing = this.getPreset( tool, preset.id );
-					if ( existing && !opts.overwrite ) {
-						result.skipped++;
-						return;
-					}
-
-					// Remove existing if overwriting
-					if ( existing && opts.overwrite ) {
-						this.deletePreset( tool, preset.id );
-					}
-
-					// Add preset
-					if ( !this.cache.toolPresets[ tool ] ) {
-						this.cache.toolPresets[ tool ] = [];
-					}
-					this.cache.toolPresets[ tool ].push( {
-						...preset,
-						builtIn: false,
-						importedAt: new Date().toISOString()
-					} );
-					result.imported++;
-				} );
-			} );
-
-			// Import default preferences
-			if ( importData.defaultPresets ) {
-				Object.assign( this.cache.defaultPresets, importData.defaultPresets );
+				return {
+					success: result.success,
+					imported: result.imported,
+					skipped: result.skipped,
+					errors: result.errors
+				};
 			}
-
-			this.save();
-			result.success = true;
-			this.notifyListeners( 'presets-imported', result );
-
-			return result;
+			// Fallback - no import without storage
+			return { success: false, imported: 0, skipped: 0, errors: [ 'Storage not available' ] };
 		}
 
 		/**
@@ -709,7 +488,13 @@
 		 * @return {string[]} Supported tool types
 		 */
 		getSupportedTools() {
-			return [ ...SUPPORTED_TOOLS ];
+			if ( this.builtInPresets ) {
+				return this.builtInPresets.getSupportedTools();
+			}
+			return [
+				'arrow', 'text', 'textbox', 'rectangle', 'circle',
+				'ellipse', 'line', 'polygon', 'star', 'path'
+			];
 		}
 
 		/**
@@ -719,7 +504,10 @@
 		 * @return {boolean} Whether tool supports presets
 		 */
 		isToolSupported( tool ) {
-			return SUPPORTED_TOOLS.includes( tool );
+			if ( this.builtInPresets ) {
+				return this.builtInPresets.isToolSupported( tool );
+			}
+			return this.getSupportedTools().includes( tool );
 		}
 
 		/**
@@ -730,6 +518,10 @@
 		 * @return {string} Unique ID
 		 */
 		generateId( tool, name ) {
+			if ( this.storage ) {
+				return this.storage.generateId( tool, name );
+			}
+			// Fallback
 			const slug = name.toLowerCase()
 				.replace( /[^a-z0-9]+/g, '-' )
 				.replace( /^-|-$/g, '' );
@@ -744,41 +536,11 @@
 		 * @return {Object} Sanitized style
 		 */
 		sanitizeStyle( style ) {
-			const allowed = [
-				'stroke', 'strokeWidth', 'strokeOpacity',
-				'fill', 'fillOpacity',
-				'color', 'fontSize', 'fontFamily', 'fontWeight', 'fontStyle',
-				'textAlign', 'verticalAlign', 'lineHeight', 'padding',
-				// Text stroke
-				'textStrokeColor', 'textStrokeWidth',
-				// Shape
-				'cornerRadius',
-				// Arrow
-				'arrowStyle', 'arrowhead', 'arrowSize', 'arrowHeadType', 'headScale', 'tailWidth',
-				// Polygon/Star
-				'sides', 'points', 'innerRadius', 'outerRadius', 'pointRadius', 'valleyRadius',
-				// Shadow
-				'shadow', 'shadowColor', 'shadowBlur',
-				'shadowOffsetX', 'shadowOffsetY', 'shadowSpread',
-				// Text shadow
-				'textShadow', 'textShadowColor', 'textShadowBlur',
-				'textShadowOffsetX', 'textShadowOffsetY',
-				// Glow
-				'glow',
-				// Blend mode
-				'blendMode',
-				// Opacity
-				'opacity'
-			];
-
-			const sanitized = {};
-			allowed.forEach( ( prop ) => {
-				if ( style[ prop ] !== undefined ) {
-					sanitized[ prop ] = style[ prop ];
-				}
-			} );
-
-			return sanitized;
+			if ( this.storage ) {
+				return this.storage.sanitizeStyle( style );
+			}
+			// Fallback - just clone
+			return { ...style };
 		}
 
 		/**
@@ -844,14 +606,26 @@
 		destroy() {
 			this.listeners = [];
 			this.cache = null;
+			this.storage = null;
+			this.builtInPresets = null;
 		}
 	}
 
-	// Export constants for testing
-	PresetManager.STORAGE_KEY = STORAGE_KEY;
-	PresetManager.SCHEMA_VERSION = SCHEMA_VERSION;
-	PresetManager.SUPPORTED_TOOLS = SUPPORTED_TOOLS;
-	PresetManager.BUILT_IN_PRESETS = BUILT_IN_PRESETS;
+	// Export constants for backward compatibility
+	PresetManager.STORAGE_KEY = 'mw-layers-style-presets';
+	PresetManager.SCHEMA_VERSION = 1;
+	PresetManager.SUPPORTED_TOOLS = [
+		'arrow', 'text', 'textbox', 'rectangle', 'circle',
+		'ellipse', 'line', 'polygon', 'star', 'path'
+	];
+
+	// For backward compatibility, expose BUILT_IN_PRESETS via getter
+	Object.defineProperty( PresetManager, 'BUILT_IN_PRESETS', {
+		get: function () {
+			const BuiltInPresets = getBuiltInPresets();
+			return BuiltInPresets ? BuiltInPresets.PRESETS : {};
+		}
+	} );
 
 	// Export to window.Layers namespace
 	if ( typeof window !== 'undefined' ) {

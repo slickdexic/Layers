@@ -63,6 +63,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
     - `PresetStyleManager.js` (~275 lines) - preset dropdown UI integration (extracted from ToolbarStyleControls)
+  - Preset modules (`resources/ext.layers.editor/presets/`): Style preset system:
+    - `PresetManager.js` (~642 lines) - facade for preset operations, delegates to BuiltInPresets and PresetStorage
+    - `BuiltInPresets.js` (~293 lines) - built-in preset definitions (arrow, text, shapes, etc.)
+    - `PresetStorage.js` (~426 lines) - localStorage operations, import/export, style sanitization
+    - `PresetDropdown.js` (~528 lines) - dropdown UI component for selecting presets
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`, `APIErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)

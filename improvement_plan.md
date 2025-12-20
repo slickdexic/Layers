@@ -86,14 +86,16 @@
 - **Tests Added:** 25 new tests (PresetStyleManager.test.js)
 - **Completed:** December 20, 2025
 
-### P1.3 Split PresetManager ⏳ NOT STARTED
+### P1.3 Split PresetManager ✅ COMPLETED
 
-- **Current:** 868 lines (approaching limit)
-- **Extract:**
-  - PresetStorage.js (~200 lines) - localStorage operations
-  - BuiltInPresets.js (~150 lines) - default preset definitions
-- **Target:** <500 lines
-- **Effort:** 3 days
+- **Was:** 868 lines (approaching limit)
+- **Solution:** Extracted BuiltInPresets.js and PresetStorage.js
+- **Now:** 642 lines (-26% reduction)
+- **Extractions Performed:**
+  - BuiltInPresets.js (~293 lines) - built-in preset definitions + utility methods
+  - PresetStorage.js (~426 lines) - localStorage operations, import/export, sanitization
+- **Tests Added:** 68 new tests (BuiltInPresets.test.js, PresetStorage.test.js)
+- **Completed:** December 20, 2025
 
 ### P1.4 Fix Markdown Lint Warnings ⏳ NOT STARTED
 
