@@ -15,21 +15,13 @@
  * @class EyedropperController
  * @since 1.1.7
  */
-
-const NamespaceHelper = require( '../utils/NamespaceHelper.js' );
+( function () {
+	'use strict';
 
 /**
  * @class EyedropperController
  */
 class EyedropperController {
-	/**
-	 * Get the class name for namespace registration
-	 *
-	 * @return {string} The class name
-	 */
-	static getClass() {
-		return NamespaceHelper.getClass( EyedropperController, 'EyedropperController' );
-	}
 
 	/**
 	 * Create an EyedropperController
@@ -694,4 +686,15 @@ class EyedropperController {
 	}
 }
 
-module.exports = EyedropperController;
+	// Export for MediaWiki ResourceLoader
+	if ( typeof window !== 'undefined' ) {
+		window.Layers = window.Layers || {};
+		window.Layers.Canvas = window.Layers.Canvas || {};
+		window.Layers.Canvas.EyedropperController = EyedropperController;
+	}
+
+	// Export for Node.js/Jest
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = EyedropperController;
+	}
+}() );
