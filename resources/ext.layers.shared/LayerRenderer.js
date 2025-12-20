@@ -38,6 +38,11 @@
 		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './TextBoxRenderer.js' ) : null );
 
+	// Get PolygonStarRenderer - it should be loaded before this module
+	const PolygonStarRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.PolygonStarRenderer ) ||
+		// eslint-disable-next-line no-undef
+		( typeof require !== 'undefined' ? require( './PolygonStarRenderer.js' ) : null );
+
 	// Get ShapeRenderer - it should be loaded before this module
 	const ShapeRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ShapeRenderer ) ||
 		// eslint-disable-next-line no-undef
@@ -95,9 +100,20 @@ class LayerRenderer {
 			this.textRenderer = null;
 		}
 
+		// Create PolygonStarRenderer for polygon/star operations
+		if ( PolygonStarRenderer ) {
+			this.polygonStarRenderer = new PolygonStarRenderer( ctx, {} );
+		} else {
+			this.polygonStarRenderer = null;
+		}
+
 		// Create ShapeRenderer instance for basic shape operations
 		if ( ShapeRenderer ) {
 			this.shapeRenderer = new ShapeRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
+			// Wire up PolygonStarRenderer for polygon/star delegation
+			if ( this.polygonStarRenderer ) {
+				this.shapeRenderer.setPolygonStarRenderer( this.polygonStarRenderer );
+			}
 		} else {
 			this.shapeRenderer = null;
 		}

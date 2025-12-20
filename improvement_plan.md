@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 19, 2025  
+**Last Updated:** December 20, 2025  
 **Status:** ✅ Stable with Minor Issues  
-**Version:** 1.1.6  
+**Version:** 1.1.7  
 **Goal:** World-class MediaWiki extension
 
 ---
@@ -13,10 +13,10 @@
 |------|--------|---------|
 | **Functionality** | ✅ Working | 13 tools, alignment, presets, named sets |
 | **Security** | ✅ Excellent | Professional PHP backend |
-| **Testing** | ✅ All Passing | 5,437 tests, 0 failures |
-| **ES6 Migration** | ✅ Complete | 76 classes, 0 prototype patterns |
-| **God Classes** | ⚠️ Managed | 8 files >1,000 lines (all have delegation) |
-| **Code Volume** | ✅ Controlled | 43,913 lines (CI warns at 45K) |
+| **Testing** | ✅ All Passing | 5,548 tests, 0 failures |
+| **ES6 Migration** | ✅ Complete | 77 classes, 0 prototype patterns |
+| **God Classes** | ⚠️ Managed | 7 files >1,000 lines (all have delegation) |
+| **Code Volume** | ✅ Controlled | 44,760 lines (CI warns at 45K) |
 | **Mobile** | ❌ Missing | No touch support |
 
 ---
@@ -107,15 +107,15 @@
 
 ## Phase 2: Architecture Improvement (8 weeks)
 
-### P2.1 Reduce ShapeRenderer ⏳ NOT STARTED
+### P2.1 Reduce ShapeRenderer ✅ COMPLETED
 
-- **Current:** 1,191 lines (+142 from Dec 18)
-- **Problem:** Growing despite previous extractions
-- **Extract:**
-  - PathRenderer.js (~200 lines) - path/pen tool rendering
-  - BlurRenderer.js (~150 lines) - blur effect rendering
-- **Target:** <700 lines
-- **Effort:** 1 week
+- **Was:** 1,191 lines (+142 from Dec 18)
+- **Solution:** Extracted PolygonStarRenderer.js
+- **Now:** 858 lines (-28% reduction)
+- **Extraction Performed:**
+  - PolygonStarRenderer.js (~606 lines) - polygon and star shape rendering with shadow support
+- **Tests Added:** 43 new tests (PolygonStarRenderer.test.js)
+- **Completed:** December 20, 2025
 
 ### P2.2 Monitor High-Risk Files ⏳ ONGOING
 
@@ -211,7 +211,7 @@
 
 ## God Class Status Tracker
 
-### Current God Classes (December 19, 2025)
+### Current God Classes (December 20, 2025)
 
 | File | Lines | Delegation | Trend |
 |------|-------|------------|-------|
@@ -220,12 +220,12 @@
 | LayersEditor.js | 1,329 | ✅ 3 modules | ↑ +28 |
 | Toolbar.js | 1,298 | ✅ 4 modules | ↑ +183 |
 | ToolManager.js | 1,275 | ✅ 2 handlers | = |
-| ShapeRenderer.js | 1,191 | ✅ ShadowRenderer | ↑ +142 |
 | SelectionManager.js | 1,181 | ✅ 3 modules | ↑ +34 |
 | APIManager.js | 1,161 | ✅ APIErrorHandler | ↓ -7 |
-| **ToolbarStyleControls.js** | **1,049** | ⚠️ None | **NEW** |
+| ~~ShapeRenderer.js~~ | ~~858~~ | ✅ PolygonStarRenderer | **↓ -333** ✅ |
+| ~~ToolbarStyleControls.js~~ | ~~947~~ | ✅ PresetStyleManager | **↓ -102** ✅ |
 
-**Total in god classes: 12,135 lines** (+555 from Dec 18)
+**Total in god classes: 10,895 lines** (-1,240 from Dec 19)
 
 ### Delegated Code Summary
 
@@ -237,10 +237,10 @@
 | ToolManager | ~1,850 | 1.5x |
 | SelectionManager | ~975 | 0.8x |
 | LayersEditor | ~1,371 | 1.0x |
-| ShapeRenderer | ~521 | 0.4x |
-| ToolbarStyleControls | 0 | ⚠️ 0x |
+| ShapeRenderer | ~1,127 | 1.3x (includes PolygonStarRenderer) |
+| ToolbarStyleControls | ~275 | 0.3x |
 
-**Key Insight:** ToolbarStyleControls is the only god class with NO delegation.
+**Key Insight:** All god classes now have delegation. ShapeRenderer dropped below 1,000 lines.
 
 ---
 
@@ -250,18 +250,19 @@
 
 ```
 Phase 0 (Immediate):
-P0.1 Fix Failing Test:        ░░░░░░░░░░░░░░░░░░░░ 0%
-P0.2 Sync Version Numbers:    ░░░░░░░░░░░░░░░░░░░░ 0%
-P0.3 Remove DEBUG Comments:   ░░░░░░░░░░░░░░░░░░░░ 0%
+P0.1 Fix Alignment Buttons:   ████████████████████ 100% ✅
+P0.2 Fix Failing Test:        ████████████████████ 100% ✅
+P0.3 Sync Version Numbers:    ████████████████████ 100% ✅
+P0.4 Remove DEBUG Comments:   ████████████████████ 100% ✅
 
 Phase 1 (Stabilization):
-P1.1 Control Code Growth:     ░░░░░░░░░░░░░░░░░░░░ 0% ⚠️ CRITICAL
-P1.2 Split ToolbarStyleCtrl:  ░░░░░░░░░░░░░░░░░░░░ 0%
-P1.3 Split PresetManager:     ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.1 Control Code Growth:     ████████████████████ 100% ✅ CI Active
+P1.2 Split ToolbarStyleCtrl:  ████████████████████ 100% ✅
+P1.3 Split PresetManager:     ████████████████████ 100% ✅
 P1.4 Fix Markdown Warnings:   ░░░░░░░░░░░░░░░░░░░░ 0%
 
 Phase 2 (Architecture):
-P2.1 Reduce ShapeRenderer:    ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.1 Reduce ShapeRenderer:    ████████████████████ 100% ✅
 P2.2 Monitor High-Risk Files: ██████████░░░░░░░░░░ 50% (ongoing)
 P2.3 Performance Benchmarks:  ░░░░░░░░░░░░░░░░░░░░ 0%
 P2.4 TypeScript Definitions:  ████████████████████ 100% ✅
@@ -280,6 +281,9 @@ P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░�
 
 | Date | Task | Impact |
 |------|------|--------|
+| Dec 20 | PolygonStarRenderer extraction | ShapeRenderer: -333 lines |
+| Dec 20 | BuiltInPresets + PresetStorage | PresetManager: -226 lines |
+| Dec 20 | PresetStyleManager extraction | ToolbarStyleControls: -102 lines |
 | Dec 19 | Alignment tools (AlignmentController) | +464 lines |
 | Dec 19 | Multi-selection in LayerPanel | +101 lines |
 | Dec 19 | Style presets system | +868 lines |
