@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 20, 2025  
+**Last Updated:** December 21, 2025  
 **Status:** ✅ Stable with Minor Issues  
 **Version:** 1.1.7  
 **Goal:** World-class MediaWiki extension
@@ -11,12 +11,12 @@
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Functionality** | ✅ Working | 13 tools, alignment, presets, named sets |
+| **Functionality** | ✅ Working | 13 tools, alignment, presets, named sets, **smart guides** |
 | **Security** | ✅ Excellent | Professional PHP backend |
-| **Testing** | ✅ All Passing | 5,548 tests, 0 failures |
-| **ES6 Migration** | ✅ Complete | 77 classes, 0 prototype patterns |
+| **Testing** | ✅ All Passing | 5,591 tests, 0 failures |
+| **ES6 Migration** | ✅ Complete | 78 classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Managed | 7 files >1,000 lines (all have delegation) |
-| **Code Volume** | ✅ Controlled | 44,760 lines (CI warns at 45K) |
+| **Code Volume** | ✅ Controlled | ~45,260 lines (CI warns at 45K) |
 | **Mobile** | ❌ Missing | No touch support |
 
 ---
@@ -175,14 +175,22 @@
   - Fallback for older browsers
 - **Effort:** 1 week
 
-### P3.3 Smart Guides ⏳ NOT STARTED
+### P3.3 Smart Guides ✅ COMPLETED
 
 - **Problem:** Only basic snap-to-grid
 - **Features:**
-  - Snap to object edges
-  - Center alignment guides
-  - Equal spacing indicators
-- **Effort:** 2 weeks
+  - ✅ Snap to object edges (left, right, top, bottom)
+  - ✅ Center alignment guides (horizontal, vertical)
+  - ✅ Visual guide lines (magenta for edges, cyan for centers)
+  - Equal spacing indicators (future enhancement)
+- **Effort:** 1 day
+- **Implementation:**
+  - SmartGuidesController.js (~500 lines)
+  - Integrated with TransformController for drag operations
+  - Integrated with CanvasRenderer for visual feedback
+  - 8px snap threshold (configurable)
+- **Tests Added:** 43 new tests
+- **Completed:** December 21, 2025
 
 ### P3.4 Accessibility Audit ⏳ NOT STARTED
 
@@ -271,7 +279,7 @@ P2.5 Architecture Docs:       ░░░░░░░░░░░░░░░░�
 Phase 3 (World-Class):
 P3.1 Mobile/Touch Support:    ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.2 Eyedropper Tool:         ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.3 Smart Guides:            ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.3 Smart Guides:            ████████████████████ 100% ✅
 P3.4 Accessibility Audit:     ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.5 Auto-Generated Docs:     ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░░░░░ 0%
@@ -281,6 +289,7 @@ P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░�
 
 | Date | Task | Impact |
 |------|------|--------|
+| Dec 21 | Smart Guides (SmartGuidesController) | +500 lines, 43 tests |
 | Dec 20 | PolygonStarRenderer extraction | ShapeRenderer: -333 lines |
 | Dec 20 | BuiltInPresets + PresetStorage | PresetManager: -226 lines |
 | Dec 20 | PresetStyleManager extraction | ToolbarStyleControls: -102 lines |

@@ -248,6 +248,7 @@
 				"canvas/DrawingController.js",
 				"canvas/ClipboardController.js",
 				"canvas/AlignmentController.js",
+				"canvas/SmartGuidesController.js",
 				"canvas/RenderCoordinator.js",
 				"canvas/InteractionController.js",
 				"canvas/TextInputController.js",

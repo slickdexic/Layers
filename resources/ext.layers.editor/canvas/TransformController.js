@@ -582,6 +582,18 @@ class TransformController {
 				const snappedPoint = this.manager.snapPointToGrid( { x: newX, y: newY } );
 				adjustedDeltaX = snappedPoint.x - ( originalState.x || 0 );
 				adjustedDeltaY = snappedPoint.y - ( originalState.y || 0 );
+			} else if ( this.manager.smartGuidesController && this.manager.smartGuidesController.enabled ) {
+				// Apply smart guides snapping when grid snap is disabled
+				const proposedX = ( originalState.x || 0 ) + deltaX;
+				const proposedY = ( originalState.y || 0 ) + deltaY;
+				const snapped = this.manager.smartGuidesController.calculateSnappedPosition(
+					layerToMove,
+					proposedX,
+					proposedY,
+					this.manager.editor.layers
+				);
+				adjustedDeltaX = snapped.x - ( originalState.x || 0 );
+				adjustedDeltaY = snapped.y - ( originalState.y || 0 );
 			}
 
 			// Update layer position based on type
@@ -649,6 +661,11 @@ class TransformController {
 		this.originalLayerState = null;
 		this.originalMultiLayerStates = null;
 		this.dragStartPoint = null;
+
+		// Clear smart guides after drag
+		if ( this.manager.smartGuidesController ) {
+			this.manager.smartGuidesController.clearGuides();
+		}
 
 		// Reset cursor to appropriate tool cursor
 		this.manager.canvas.style.cursor = this.manager.getToolCursor( this.manager.currentTool );
