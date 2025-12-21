@@ -26,11 +26,11 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Viewer module | ~682 lines |
 | Shared module | ~5,000 lines |
 | Editor module | ~40,000 lines |
-| Total JS lines | ~45,912 |
+| Total JS lines | ~45,924 |
 | ES6 classes | 81 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | ~91.5% statements, ~79% branches |
-| Jest tests | ~5,620 |
+| Test coverage | ~92% statements, ~80% branches |
+| Jest tests | ~5,695 |
 | PHPUnit test files | 17 |
 | God classes (>1000 lines) | **6** ⚠️ |
 | Drawing tools | 14 |
@@ -81,6 +81,136 @@ See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 ---
 
 ## Module Dependency Graph
+
+### High-Level Architecture (Mermaid)
+
+```mermaid
+graph TB
+    subgraph Entry["Entry Points"]
+        init["init.js<br/>(viewer)"]
+        editor["LayersEditor.js<br/>(orchestrator)"]
+    end
+
+    subgraph Viewer["Viewer (Article Pages)"]
+        viewer["LayersViewer.js"]
+        layerRenderer["LayerRenderer.js<br/>(shared)"]
+    end
+
+    subgraph Bootstrap["Editor Bootstrap"]
+        bootstrap["EditorBootstrap"]
+        revision["RevisionManager"]
+        dialog["DialogManager"]
+        announcer["AccessibilityAnnouncer"]
+    end
+
+    subgraph Registry["Module Registry"]
+        state["StateManager"]
+        event["EventManager"]
+        history["HistoryManager"]
+        validation["ValidationManager"]
+        ui["UIManager"]
+        api["APIManager"]
+    end
+
+    subgraph UI["User Interface"]
+        toolbar["Toolbar"]
+        keyboard["ToolbarKeyboard"]
+        panel["LayerPanel"]
+        styleControls["ToolbarStyleControls"]
+    end
+
+    subgraph Canvas["Canvas System"]
+        canvasManager["CanvasManager<br/>(facade)"]
+        canvasRenderer["CanvasRenderer"]
+        selection["SelectionManager"]
+    end
+
+    subgraph Controllers["Canvas Controllers"]
+        zoom["ZoomPanController"]
+        grid["GridRulersController"]
+        transform["TransformController"]
+        hit["HitTestController"]
+        drawing["DrawingController"]
+        clipboard["ClipboardController"]
+        interaction["InteractionController"]
+        render["RenderCoordinator"]
+        style["StyleController"]
+        guides["SmartGuidesController"]
+        alignment["AlignmentController"]
+    end
+
+    init --> viewer
+    viewer --> layerRenderer
+    editor --> bootstrap
+    editor --> Registry
+    editor --> UI
+    editor --> Canvas
+
+    bootstrap --> revision
+    bootstrap --> dialog
+    bootstrap --> announcer
+
+    canvasManager --> canvasRenderer
+    canvasManager --> selection
+    canvasManager --> Controllers
+
+    toolbar --> keyboard
+    toolbar --> styleControls
+```
+
+### Controller Delegation Pattern
+
+```mermaid
+graph LR
+    subgraph Facade["CanvasManager (Facade)"]
+        cm["CanvasManager<br/>1,868 lines"]
+    end
+
+    subgraph Zoom["Zoom/Pan"]
+        zpc["ZoomPanController<br/>340 lines"]
+    end
+
+    subgraph Grid["Grid/Rulers"]
+        grc["GridRulersController<br/>385 lines"]
+    end
+
+    subgraph Transform["Transforms"]
+        tc["TransformController<br/>761 lines"]
+        rc["ResizeCalculator<br/>806 lines"]
+    end
+
+    subgraph Hit["Hit Testing"]
+        htc["HitTestController<br/>380 lines"]
+    end
+
+    subgraph Draw["Drawing"]
+        dc["DrawingController<br/>635 lines"]
+    end
+
+    subgraph Clip["Clipboard"]
+        cc["ClipboardController<br/>210 lines"]
+    end
+
+    subgraph Interact["Interaction"]
+        ic["InteractionController<br/>490 lines"]
+    end
+
+    subgraph Render["Rendering"]
+        rco["RenderCoordinator<br/>390 lines"]
+    end
+
+    cm -->|zoomIn/Out| zpc
+    cm -->|showGrid| grc
+    cm -->|resize/rotate| tc
+    tc -->|calculations| rc
+    cm -->|layerAt| htc
+    cm -->|createShape| dc
+    cm -->|copy/paste| cc
+    cm -->|mouse events| ic
+    cm -->|redraw| rco
+```
+
+### ASCII Fallback (for non-Mermaid environments)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -354,8 +484,75 @@ window.Layers = {
 
 ## Data Flow
 
-### Save Flow
+### Save Flow (Mermaid)
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant Editor as LayersEditor
+    participant Validation as ValidationManager
+    participant API as APIManager
+    participant PHP as ApiLayersSave.php
+    participant Rate as RateLimiter
+    participant Validate as ServerSideValidator
+    participant DB as LayersDatabase
+
+    User->>Editor: Click Save
+    Editor->>Validation: validateLayers()
+    alt Validation fails
+        Validation-->>Editor: Return errors
+        Editor-->>User: Show error message
+    else Validation passes
+        Validation-->>Editor: OK
+        Editor->>API: saveLayers(layers, setname)
+        API->>PHP: POST /api.php?action=layerssave
+        PHP->>Rate: checkAndIncrement()
+        alt Rate limited
+            Rate-->>PHP: Blocked
+            PHP-->>API: Error: rate-limited
+        else OK
+            Rate-->>PHP: OK
+            PHP->>Validate: validate(layers)
+            Validate->>Validate: ColorValidator.sanitize()
+            Validate->>Validate: TextSanitizer.strip()
+            Validate-->>PHP: Sanitized layers
+            PHP->>DB: saveLayerSet()
+            DB-->>PHP: layersetid
+            PHP-->>API: Success
+            API-->>Editor: Success
+            Editor-->>User: "Saved!"
+        end
+    end
+```
+
+### Load Flow (Mermaid)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Editor as LayersEditor
+    participant API as APIManager
+    participant PHP as ApiLayersInfo.php
+    participant DB as LayersDatabase
+    participant Canvas as CanvasManager
+    participant Renderer as CanvasRenderer
+
+    User->>Editor: Open editor / Select revision
+    Editor->>API: loadLayerInfo(filename, setname)
+    API->>PHP: GET /api.php?action=layersinfo
+    PHP->>DB: getLayerSet()
+    DB-->>PHP: Layer data + revisions
+    PHP-->>API: { layerset, all_layersets, named_sets }
+    API-->>Editor: Layer data
+    Editor->>Editor: applyLoadedLayers()
+    Editor->>Canvas: setLayers(layers)
+    Canvas->>Renderer: redraw()
+    Renderer-->>User: Display layers
+```
+
+### ASCII Fallback (for non-Mermaid environments)
+
+**Save Flow:**
 ```
 User clicks Save
        │
@@ -384,8 +581,7 @@ ApiLayersSave.php
          MySQL/MariaDB (layers_layersets table)
 ```
 
-### Load Flow
-
+**Load Flow:**
 ```
 Page load / user selects revision
        │
@@ -414,6 +610,67 @@ LayersEditor.applyLoadedLayers()
        │
        ▼
 CanvasManager.setLayers() → CanvasRenderer.redraw()
+```
+
+---
+
+## Event Flow
+
+### User Interaction Flow (Mermaid)
+
+This diagram shows how a user action (like clicking to select a layer) propagates through the system:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Canvas as Canvas Element
+    participant IC as InteractionController
+    participant HTC as HitTestController
+    participant SM as SelectionManager
+    participant State as StateManager
+    participant Panel as LayerPanel
+    participant Announcer as AccessibilityAnnouncer
+
+    User->>Canvas: mousedown event
+    Canvas->>IC: handleMouseDown(e)
+    IC->>HTC: layerAt(x, y)
+    HTC-->>IC: layer or null
+    
+    alt Layer found
+        IC->>SM: selectLayer(layer)
+        SM->>State: set('selectedLayers', [layer])
+        State-->>Panel: change:selectedLayers
+        Panel->>Panel: updateSelection()
+        SM->>Announcer: announceLayerSelection(layer)
+        Announcer-->>User: "Layer 1 of 5 selected"
+    else No layer
+        IC->>SM: clearSelection()
+        SM->>State: set('selectedLayers', [])
+    end
+```
+
+### Tool Change Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Toolbar
+    participant TM as ToolManager
+    participant State as StateManager
+    participant Canvas as CanvasManager
+    participant Cursor as CursorManager
+    participant Announcer as AccessibilityAnnouncer
+
+    User->>Toolbar: Click rectangle tool
+    Toolbar->>TM: setTool('rectangle')
+    TM->>State: set('currentTool', 'rectangle')
+    State-->>Canvas: change:currentTool
+    Canvas->>Canvas: updateCursor()
+    Canvas->>Cursor: setCursor('crosshair')
+    TM->>Announcer: announceTool('rectangle')
+    Announcer-->>User: "Rectangle tool selected"
+    State-->>Toolbar: change:currentTool
+    Toolbar->>Toolbar: updateActiveButton()
 ```
 
 ---
