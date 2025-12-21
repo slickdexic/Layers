@@ -215,8 +215,16 @@
 			} else if ( layerSet.data.layers ) {
 				// New format: data is an object with layers and settings
 				rawLayers = layerSet.data.layers || [];
-				backgroundVisible = layerSet.data.backgroundVisible !== undefined ? 
-					layerSet.data.backgroundVisible : true;
+				// Normalize backgroundVisible to boolean - API returns 0/1 integers
+				// 0, false, "false", "0" should all be treated as hidden
+				const bgVal = layerSet.data.backgroundVisible;
+				if ( bgVal === undefined || bgVal === null ) {
+					backgroundVisible = true;
+				} else if ( bgVal === false || bgVal === 0 || bgVal === '0' || bgVal === 'false' ) {
+					backgroundVisible = false;
+				} else {
+					backgroundVisible = true;
+				}
 				backgroundOpacity = layerSet.data.backgroundOpacity !== undefined ? 
 					layerSet.data.backgroundOpacity : 1.0;
 			} else {
@@ -227,14 +235,19 @@
 		}
 		
 		const processedLayers = this.processRawLayers( rawLayers );
-		this.editor.stateManager.set( 'layers', processedLayers );
-		this.editor.stateManager.set( 'currentLayerSetId', layerSet.id || null );
 		
-		// Set background settings from layer set data
+		// Set background settings BEFORE setting layers
+		// This ensures correct values are available when the layers subscription triggers renderLayerList
 		this.editor.stateManager.set( 'backgroundVisible', backgroundVisible );
 		this.editor.stateManager.set( 'backgroundOpacity', backgroundOpacity );
 		
-		// Update layer panel UI if available
+		// Now set layers - this triggers the subscription which renders the layer list
+		// including the background layer item (which now has correct visibility/opacity values)
+		this.editor.stateManager.set( 'layers', processedLayers );
+		this.editor.stateManager.set( 'currentLayerSetId', layerSet.id || null );
+		
+		// Update layer panel UI to ensure background item is updated
+		// (This may be redundant now but keeps explicit sync)
 		if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateBackgroundLayerItem === 'function' ) {
 			this.editor.layerPanel.updateBackgroundLayerItem();
 		}

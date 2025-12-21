@@ -1021,8 +1021,8 @@ describe( 'LayersViewer', () => {
 
 			// Should be visible (default behavior - visibility restored)
 			expect( imageElement.style.visibility ).toBe( 'visible' );
-			// Opacity should not be modified (stays empty)
-			expect( imageElement.style.opacity ).toBe( '' );
+			// Opacity should be set to full (1) when visible
+			expect( imageElement.style.opacity ).toBe( '1' );
 		} );
 	} );
 

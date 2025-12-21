@@ -133,6 +133,19 @@ describe( 'BackgroundLayerController', () => {
 			expect( controller.getBackgroundVisible() ).toBe( false );
 		} );
 
+		it( 'should return false when backgroundVisible is integer 0 (API serialization)', () => {
+			// API returns 0/1 integers due to PHP boolean serialization
+			mockStateManager._stateMap.set( 'backgroundVisible', 0 );
+
+			expect( controller.getBackgroundVisible() ).toBe( false );
+		} );
+
+		it( 'should return true when backgroundVisible is integer 1 (API serialization)', () => {
+			mockStateManager._stateMap.set( 'backgroundVisible', 1 );
+
+			expect( controller.getBackgroundVisible() ).toBe( true );
+		} );
+
 		it( 'should return true when backgroundVisible is undefined (default)', () => {
 			// Not setting any value - should default to true
 			expect( controller.getBackgroundVisible() ).toBe( true );

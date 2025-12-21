@@ -1798,6 +1798,13 @@ class CanvasManager {
 	}
 
 	destroy () {
+		// Cancel any pending animation frame to prevent memory leaks
+		if ( this.animationFrameId ) {
+			window.cancelAnimationFrame( this.animationFrameId );
+			this.animationFrameId = null;
+		}
+		this.redrawScheduled = false;
+
 		// Clean up all controllers - order matters for dependencies
 		const controllersToDestroy = [
 			'renderCoordinator',

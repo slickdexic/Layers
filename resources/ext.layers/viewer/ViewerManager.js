@@ -207,7 +207,9 @@ class ViewerManager {
 				}
 				this.initializeViewer( img, layerData );
 			} catch ( e ) {
-				console.error( '[ViewerManager] Error processing image:', e );
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+					mw.log.error( '[ViewerManager] Error processing image:', e );
+				}
 			}
 		} );
 	}

@@ -14,13 +14,17 @@
 	'use strict';
 
 	/**
-	 * Clamp a value to a valid opacity range [0, 1]
+	 * Get clampOpacity from MathUtils namespace
 	 *
 	 * @private
 	 * @param {*} value - Value to clamp
-	 * @return {number} Clamped opacity value (defaults to 1 if invalid)
+	 * @return {number} Clamped opacity value
 	 */
 	function clampOpacity( value ) {
+		if ( typeof window !== 'undefined' && window.Layers && window.Layers.MathUtils ) {
+			return window.Layers.MathUtils.clampOpacity( value );
+		}
+		// Fallback if MathUtils not loaded
 		if ( typeof value !== 'number' || Number.isNaN( value ) ) {
 			return 1;
 		}
