@@ -120,22 +120,31 @@
 
 			// Apply background visibility (default: true)
 			const bgVisible = this.layerData.backgroundVisible;
-			if ( bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0 ) {
-				this.imageElement.style.visibility = 'hidden';
-			} else {
-				// Ensure visibility is restored if it was previously hidden
-				this.imageElement.style.visibility = 'visible';
+			
+			// Check if background should be hidden
+			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
+			
+			// Apply background opacity (default: 1.0)
+			let bgOpacity = 1.0;
+			const rawOpacity = this.layerData.backgroundOpacity;
+			if ( typeof rawOpacity === 'number' && rawOpacity >= 0 && rawOpacity <= 1 ) {
+				bgOpacity = rawOpacity;
+			} else if ( typeof rawOpacity === 'string' ) {
+				const parsed = parseFloat( rawOpacity );
+				if ( !isNaN( parsed ) && parsed >= 0 && parsed <= 1 ) {
+					bgOpacity = parsed;
+				}
 			}
 
-			// Apply background opacity (default: 1.0)
-			const bgOpacity = this.layerData.backgroundOpacity;
-			if ( typeof bgOpacity === 'number' && bgOpacity >= 0 && bgOpacity <= 1 ) {
+			// Apply visibility and opacity settings
+			if ( isHidden ) {
+				// Hide the background image completely
+				this.imageElement.style.visibility = 'hidden';
+				this.imageElement.style.opacity = '0';
+			} else {
+				// Show the image with configured opacity
+				this.imageElement.style.visibility = 'visible';
 				this.imageElement.style.opacity = String( bgOpacity );
-			} else if ( typeof bgOpacity === 'string' ) {
-				const parsed = parseFloat( bgOpacity );
-				if ( !isNaN( parsed ) && parsed >= 0 && parsed <= 1 ) {
-					this.imageElement.style.opacity = String( parsed );
-				}
 			}
 		}
 

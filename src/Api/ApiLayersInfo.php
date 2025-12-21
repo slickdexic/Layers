@@ -219,17 +219,26 @@ class ApiLayersInfo extends ApiBase {
 	 * @return array Result with booleans preserved as integers
 	 */
 	private function preserveLayerBooleans( array $result ): array {
-		if ( isset( $result['layerset']['data']['layers'] ) && is_array( $result['layerset']['data']['layers'] ) ) {
-			foreach ( $result['layerset']['data']['layers'] as &$layer ) {
-				// Convert boolean properties to integers for proper serialization
-				$booleanProps = [ 'visible', 'locked', 'shadow', 'glow', 'textShadow', 'preserveAspectRatio' ];
-				foreach ( $booleanProps as $prop ) {
-					if ( array_key_exists( $prop, $layer ) ) {
-						$layer[$prop] = $layer[$prop] ? 1 : 0;
+		if ( isset( $result['layerset']['data'] ) && is_array( $result['layerset']['data'] ) ) {
+			// Preserve top-level background settings
+			if ( array_key_exists( 'backgroundVisible', $result['layerset']['data'] ) ) {
+				$result['layerset']['data']['backgroundVisible'] = 
+					$result['layerset']['data']['backgroundVisible'] ? 1 : 0;
+			}
+			
+			// Preserve layer-level boolean properties
+			if ( isset( $result['layerset']['data']['layers'] ) && is_array( $result['layerset']['data']['layers'] ) ) {
+				foreach ( $result['layerset']['data']['layers'] as &$layer ) {
+					// Convert boolean properties to integers for proper serialization
+					$booleanProps = [ 'visible', 'locked', 'shadow', 'glow', 'textShadow', 'preserveAspectRatio' ];
+					foreach ( $booleanProps as $prop ) {
+						if ( array_key_exists( $prop, $layer ) ) {
+							$layer[$prop] = $layer[$prop] ? 1 : 0;
+						}
 					}
 				}
+				unset( $layer );
 			}
-			unset( $layer );
 		}
 		return $result;
 	}

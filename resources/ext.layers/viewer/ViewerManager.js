@@ -193,6 +193,7 @@ class ViewerManager {
 				if ( !raw ) {
 					return;
 				}
+				
 				let layerData = null;
 				try {
 					const decoded = this.urlParser.decodeHtmlEntities( raw );
@@ -206,7 +207,7 @@ class ViewerManager {
 				}
 				this.initializeViewer( img, layerData );
 			} catch ( e ) {
-				this.debugWarn( 'Error processing image:', e );
+				console.error( '[ViewerManager] Error processing image:', e );
 			}
 		} );
 	}
