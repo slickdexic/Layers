@@ -325,7 +325,10 @@
 		toggleBackgroundVisibility() {
 			if ( this.editor && this.editor.stateManager ) {
 				const current = this.getBackgroundVisible();
-				this.editor.stateManager.set( 'backgroundVisible', !current );
+				const newValue = !current;
+				console.log( '[BackgroundLayerController] toggleBackgroundVisibility - current:', current, '-> new:', newValue );
+				this.editor.stateManager.set( 'backgroundVisible', newValue );
+				console.log( '[BackgroundLayerController] After set, stateManager.get returns:', this.editor.stateManager.get( 'backgroundVisible' ) );
 				if ( this.editor.canvasManager ) {
 					this.editor.canvasManager.redraw();
 				}

@@ -512,12 +512,18 @@
 		const backgroundVisible = this.editor.stateManager.get( 'backgroundVisible' );
 		const backgroundOpacity = this.editor.stateManager.get( 'backgroundOpacity' );
 		
+		// DEBUG: Log the values being saved
+		console.log( '[APIManager] buildSavePayload - backgroundVisible from state:', backgroundVisible, 'type:', typeof backgroundVisible );
+		console.log( '[APIManager] buildSavePayload - backgroundOpacity from state:', backgroundOpacity );
+		
 		// Build data object with layers and background settings
 		const dataObject = {
 			layers: layers,
 			backgroundVisible: backgroundVisible !== undefined ? backgroundVisible : true,
 			backgroundOpacity: backgroundOpacity !== undefined ? backgroundOpacity : 1.0
 		};
+		
+		console.log( '[APIManager] buildSavePayload - dataObject.backgroundVisible:', dataObject.backgroundVisible );
 		
 		const layersJson = JSON.stringify( dataObject );
 		
