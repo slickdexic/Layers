@@ -119,9 +119,19 @@
 			}
 
 			// Apply background visibility (default: true)
-			// Use opacity instead of visibility to properly hide the image
-			// while maintaining layout space for the canvas overlay
 			const bgVisible = this.layerData.backgroundVisible;
+			
+			// DEBUG: Log the actual value received to help diagnose the issue
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log( '[LayersViewer] backgroundVisible value:', bgVisible, 'type:', typeof bgVisible );
+				mw.log( '[LayersViewer] layerData:', JSON.stringify( {
+					backgroundVisible: this.layerData.backgroundVisible,
+					backgroundOpacity: this.layerData.backgroundOpacity,
+					layerCount: this.layerData.layers ? this.layerData.layers.length : 0
+				} ) );
+			}
+			
+			// Check if background should be hidden
 			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
 			
 			// Apply background opacity (default: 1.0)
@@ -136,8 +146,16 @@
 				}
 			}
 
-			// If hidden, force opacity to 0; otherwise use the configured opacity
-			this.imageElement.style.opacity = isHidden ? '0' : String( bgOpacity );
+			// Apply visibility and opacity settings
+			if ( isHidden ) {
+				// Hide the background image completely
+				this.imageElement.style.visibility = 'hidden';
+				this.imageElement.style.opacity = '0';
+			} else {
+				// Show the image with configured opacity
+				this.imageElement.style.visibility = 'visible';
+				this.imageElement.style.opacity = String( bgOpacity );
+			}
 		}
 
 		/**

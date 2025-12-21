@@ -42,6 +42,11 @@ class LayersHtmlInjector {
 		bool $backgroundVisible = true,
 		float $backgroundOpacity = 1.0
 	): array {
+		// DEBUG: Log the values being put into the payload
+		$this->logDebug( 'buildPayload: backgroundVisible=' . ( $backgroundVisible ? 'true' : 'false' ) 
+			. ', backgroundOpacity=' . $backgroundOpacity 
+			. ', layerCount=' . count( $layers ) );
+		
 		$payload = [
 			'layers' => $layers,
 			'backgroundVisible' => $backgroundVisible,
