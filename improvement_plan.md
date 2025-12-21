@@ -147,15 +147,18 @@
   - SelectFieldRenderer.js
 - **Effort:** 4-6 hours
 
-### P2.3 Performance Benchmarks ⏳ NOT STARTED
+### P2.3 Performance Benchmarks ✅ COMPLETED (Dec 20, 2025)
 
-- **Create:** Reliable benchmarks (not flaky memory tests)
-- **Measure:**
-  - Render time with 10/50/100 layers
-  - Selection performance with 50+ layers
-  - Canvas redraw frequency
+- **Created:** `tests/jest/performance/SelectionBenchmark.test.js` (24 tests)
+- **Measures:**
+  - ✅ Render time with 10/50/100 layers (RenderBenchmark.test.js)
+  - ✅ Selection performance with 20/50/100 layers (NEW)
+  - ✅ Hit testing with overlapping layers (NEW)
+  - ✅ Multi-selection and bounds calculation (NEW)
+  - ✅ Marquee selection performance (NEW)
+  - ✅ Linear scaling verification (NEW)
 - **Location:** `tests/jest/performance/`
-- **Effort:** 2 weeks
+- **Total benchmark tests:** 39
 
 ### P2.4 Architecture Documentation ⏳ NOT STARTED
 
