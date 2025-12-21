@@ -22,7 +22,8 @@
 		"resources/dist/",
 		"node_modules/",
 		"vendor/",
-		"docs/api/"
+		"docs/api/",
+		"**/*.ts"
 	],
 	"rules": {
 		"no-implicit-globals": "off",

@@ -236,12 +236,17 @@ This extension at ~46K lines for a complete MediaWiki-integrated annotation syst
   - `docs/API.md` - Markdown documentation for GitHub viewing
 - **Tools:** jsdoc, jsdoc-to-markdown
 
-### P3.4 TypeScript Migration ⏳ NOT STARTED
+### P3.4 TypeScript Migration 🔄 STARTED (Dec 20, 2025)
 
-- **Prerequisite:** TypeScript definitions exist (types/layers.d.ts)
-- **Approach:** Gradual .js → .ts conversion
-- **Start with:** Shared utilities, then core modules
-- **Effort:** 8+ weeks
+- **Prerequisite:** TypeScript definitions exist (types/layers.d.ts) ✅
+- **Setup:** tsconfig.json, typescript, ts-jest installed ✅
+- **Migrated files:**
+  - `resources/ext.layers.shared/DeepClone.ts` ✅
+  - `resources/ext.layers.shared/BoundsCalculator.ts` ✅
+  - `resources/ext.layers.shared/globals.d.ts` ✅ (shared type declarations)
+- **npm scripts:** `npm run typecheck`, `npm run build:ts`
+- **Approach:** Gradual .js → .ts conversion starting with shared utilities
+- **Effort:** 8+ weeks (ongoing)
 
 ### P3.5 Layer Grouping ⏳ NOT STARTED
 
@@ -323,7 +328,7 @@ Phase 3 (World-Class - 12+ weeks):
 P3.1 Mobile/Touch:           ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.2 Accessibility Audit:    ██████████░░░░░░░░░░ 50% (automated tests in place)
 P3.3 Auto-Gen Docs:          ████████████████████ 100% ✅
-P3.4 TypeScript:             ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.4 TypeScript:             ██░░░░░░░░░░░░░░░░░░ 10% (2 modules migrated)
 P3.5 Layer Grouping:         ░░░░░░░░░░░░░░░░░░░░ 0%
 ```
 
