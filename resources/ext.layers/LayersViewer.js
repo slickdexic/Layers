@@ -119,24 +119,25 @@
 			}
 
 			// Apply background visibility (default: true)
+			// Use opacity instead of visibility to properly hide the image
+			// while maintaining layout space for the canvas overlay
 			const bgVisible = this.layerData.backgroundVisible;
-			if ( bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0 ) {
-				this.imageElement.style.visibility = 'hidden';
-			} else {
-				// Ensure visibility is restored if it was previously hidden
-				this.imageElement.style.visibility = 'visible';
-			}
-
+			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
+			
 			// Apply background opacity (default: 1.0)
-			const bgOpacity = this.layerData.backgroundOpacity;
-			if ( typeof bgOpacity === 'number' && bgOpacity >= 0 && bgOpacity <= 1 ) {
-				this.imageElement.style.opacity = String( bgOpacity );
-			} else if ( typeof bgOpacity === 'string' ) {
-				const parsed = parseFloat( bgOpacity );
+			let bgOpacity = 1.0;
+			const rawOpacity = this.layerData.backgroundOpacity;
+			if ( typeof rawOpacity === 'number' && rawOpacity >= 0 && rawOpacity <= 1 ) {
+				bgOpacity = rawOpacity;
+			} else if ( typeof rawOpacity === 'string' ) {
+				const parsed = parseFloat( rawOpacity );
 				if ( !isNaN( parsed ) && parsed >= 0 && parsed <= 1 ) {
-					this.imageElement.style.opacity = String( parsed );
+					bgOpacity = parsed;
 				}
 			}
+
+			// If hidden, force opacity to 0; otherwise use the configured opacity
+			this.imageElement.style.opacity = isHidden ? '0' : String( bgOpacity );
 		}
 
 		/**
