@@ -297,16 +297,23 @@ class ImageLinkProcessor {
 	private function injectLayersDirect(
 		string $html,
 		$file,
-		array $layersArray,
+		array $layerData,
 		string $context
 	): string {
+		// Handle both old format (raw layers array) and new format (object with layers + settings)
+		$layers = isset( $layerData['layers'] ) ? $layerData['layers'] : $layerData;
+		$backgroundVisible = $layerData['backgroundVisible'] ?? true;
+		$backgroundOpacity = $layerData['backgroundOpacity'] ?? 1.0;
+
 		$dimensions = $this->htmlInjector->getFileDimensions( $file );
 		$result = $this->htmlInjector->injectIntoHtml(
 			$html,
-			$layersArray,
+			$layers,
 			$dimensions['width'],
 			$dimensions['height'],
-			$context
+			$context,
+			$backgroundVisible,
+			$backgroundOpacity
 		);
 
 		$this->pageHasLayers = true;

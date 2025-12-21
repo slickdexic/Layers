@@ -100,10 +100,13 @@ class LayerInjector {
 
 		if ( $layerSet ) {
 			$params['layerSetId'] = $layerSet['id'];
-			// Pass only the layers array
-			$params['layerData'] = isset( $layerSet['data']['layers'] )
-				? $layerSet['data']['layers']
-				: $layerSet['data'];
+			// Pass full layer data object with background settings
+			$data = $layerSet['data'];
+			$params['layerData'] = [
+				'layers' => isset( $data['layers'] ) ? $data['layers'] : $data,
+				'backgroundVisible' => $data['backgroundVisible'] ?? true,
+				'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
+			];
 		}
 	}
 
@@ -136,9 +139,13 @@ class LayerInjector {
 
 		if ( $layerSet ) {
 			$params['layerSetId'] = $layerSet['id'];
-			$params['layerData'] = isset( $layerSet['data']['layers'] )
-				? $layerSet['data']['layers']
-				: $layerSet['data'];
+			// Pass full layer data object with background settings
+			$data = $layerSet['data'];
+			$params['layerData'] = [
+				'layers' => isset( $data['layers'] ) ? $data['layers'] : $data,
+				'backgroundVisible' => $data['backgroundVisible'] ?? true,
+				'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
+			];
 		}
 	}
 
@@ -170,7 +177,13 @@ class LayerInjector {
 		}
 		if ( $subset ) {
 			$params['layerSetId'] = $latest['id'];
-			$params['layerData'] = $subset;
+			// Pass full layer data object with background settings
+			$data = $latest['data'];
+			$params['layerData'] = [
+				'layers' => $subset,
+				'backgroundVisible' => $data['backgroundVisible'] ?? true,
+				'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
+			];
 		}
 	}
 
@@ -211,18 +224,23 @@ class LayerInjector {
 			return false;
 		}
 
+		$data = $layerSet['data'];
 		$layers = (
-			isset( $layerSet['data']['layers'] )
-			&& is_array( $layerSet['data']['layers'] )
+			isset( $data['layers'] )
+			&& is_array( $data['layers'] )
 		)
-			? $layerSet['data']['layers']
+			? $data['layers']
 			: [];
 
 		if ( empty( $layers ) ) {
 			return false;
 		}
 
-		// Use the HTML injector to add attributes
+		// Extract background settings
+		$backgroundVisible = $data['backgroundVisible'] ?? true;
+		$backgroundOpacity = $data['backgroundOpacity'] ?? 1.0;
+
+		// Use the HTML injector to add attributes with background settings
 		$injector = $this->getHtmlInjector();
 		$dimensions = $injector->getFileDimensions( $file );
 
@@ -230,7 +248,9 @@ class LayerInjector {
 			$attribs,
 			$layers,
 			$dimensions['width'],
-			$dimensions['height']
+			$dimensions['height'],
+			$backgroundVisible,
+			$backgroundOpacity
 		);
 
 		return true;

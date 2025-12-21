@@ -183,18 +183,27 @@ class LayersParamExtractor {
 	 * Extract layers JSON data from handler params
 	 *
 	 * @param array $handlerParams Handler parameters
-	 * @return array|null Decoded layers array, or null if not found
+	 * @return array|null Layer data with 'layers', 'backgroundVisible', 'backgroundOpacity', or null if not found
 	 */
 	public function extractLayersJson( array $handlerParams ): ?array {
 		if ( isset( $handlerParams['layersjson'] ) && is_string( $handlerParams['layersjson'] ) ) {
 			try {
 				$decoded = json_decode( $handlerParams['layersjson'], true, 512, JSON_THROW_ON_ERROR );
 				if ( is_array( $decoded ) ) {
-					// Handle both direct arrays and wrapped {layers: [...]} format
+					// Handle both direct arrays and wrapped {layers: [...], backgroundVisible, backgroundOpacity} format
 					if ( isset( $decoded['layers'] ) && is_array( $decoded['layers'] ) ) {
-						return $decoded['layers'];
+						return [
+							'layers' => $decoded['layers'],
+							'backgroundVisible' => $decoded['backgroundVisible'] ?? true,
+							'backgroundOpacity' => $decoded['backgroundOpacity'] ?? 1.0
+						];
 					}
-					return $decoded;
+					// Old format: raw layers array
+					return [
+						'layers' => $decoded,
+						'backgroundVisible' => true,
+						'backgroundOpacity' => 1.0
+					];
 				}
 			} catch ( \JsonException $e ) {
 				// Invalid JSON, continue to fallback
@@ -202,7 +211,21 @@ class LayersParamExtractor {
 		}
 
 		if ( isset( $handlerParams['layerData'] ) && is_array( $handlerParams['layerData'] ) ) {
-			return $handlerParams['layerData'];
+			$data = $handlerParams['layerData'];
+			// Handle both direct arrays and wrapped format
+			if ( isset( $data['layers'] ) && is_array( $data['layers'] ) ) {
+				return [
+					'layers' => $data['layers'],
+					'backgroundVisible' => $data['backgroundVisible'] ?? true,
+					'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
+				];
+			}
+			// Old format: raw layers array
+			return [
+				'layers' => $data,
+				'backgroundVisible' => true,
+				'backgroundOpacity' => 1.0
+			];
 		}
 
 		return null;
