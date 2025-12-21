@@ -188,12 +188,21 @@
 - **Effort:** 4-6 weeks
 - **Impact:** Critical for modern web
 
-### P3.2 Accessibility Audit ⏳ NOT STARTED
+### P3.2 Accessibility Audit ✅ STARTED (Dec 20, 2025)
 
-- **Current:** Good (skip links, ARIA, keyboard)
-- **Target:** WCAG 2.1 AA certification
-- **Method:** Automated (axe-core) + manual testing
-- **Effort:** 2 weeks
+- **Added:** jest-axe for automated WCAG 2.1 testing
+- **Created:** `tests/jest/accessibility/AccessibilityAudit.test.js` (16 tests)
+- **Tests cover:**
+  - Toolbar buttons (tools, actions, toggles)
+  - Layer panel (listbox, options, controls)
+  - Form controls (color, range, select, number)
+  - Dialogs (modal, alertdialog)
+  - Status bar with live regions
+  - Canvas wrapper with application role
+  - Landmark structure (main, nav, aside)
+  - Focus management
+- **Status:** Automated testing in place; 16 tests passing
+- **Next:** Manual testing with screen readers, color contrast audit
 
 ### P3.3 Auto-Generated Documentation ⏳ NOT STARTED
 
@@ -289,7 +298,7 @@ P2.4 Architecture Docs:      █████████████████
 
 Phase 3 (World-Class - 12+ weeks):
 P3.1 Mobile/Touch:           ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.2 Accessibility Audit:    ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.2 Accessibility Audit:    ██████████░░░░░░░░░░ 50% (automated tests in place)
 P3.3 Auto-Gen Docs:          ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.4 TypeScript:             ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.5 Layer Grouping:         ░░░░░░░░░░░░░░░░░░░░ 0%

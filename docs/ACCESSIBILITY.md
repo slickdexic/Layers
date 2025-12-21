@@ -264,6 +264,57 @@ Document messages in `i18n/qqq.json`:
 
 Legend: ✅ Pass | ⚠️ Partial | ❌ Fail | ❓ Unknown
 
+---
+
+## Automated Accessibility Testing (NEW - December 2025)
+
+The extension includes automated accessibility testing using [jest-axe](https://github.com/nickcolley/jest-axe), which runs the Deque axe-core engine against rendered UI components.
+
+### Running Accessibility Tests
+
+```bash
+npm run test:js -- AccessibilityAudit
+```
+
+### What's Tested
+
+| Category | Tests | Description |
+|----------|-------|-------------|
+| Toolbar Buttons | 3 | Tool buttons, action buttons, toggle buttons |
+| Layer Panel | 3 | Listbox structure, layer controls, visibility/lock |
+| Form Controls | 4 | Color pickers, sliders, selects, number inputs |
+| Dialogs | 2 | Modal dialogs, confirmation dialogs |
+| Status Bar | 1 | Live region for status updates |
+| Canvas | 1 | Application role, keyboard focus |
+| Landmarks | 1 | Main, navigation, complementary regions |
+| Focus | 1 | Focus visible indicators |
+
+### Adding New Tests
+
+When adding new UI components, create accessibility tests that verify:
+
+1. **ARIA labels** - All interactive elements have accessible names
+2. **Roles** - Correct ARIA roles for custom widgets
+3. **Keyboard access** - Elements are focusable and operable
+4. **Parent-child relationships** - ARIA relationships are valid
+5. **Live regions** - Status updates are announced
+
+Example test structure:
+
+```javascript
+const { axe, toHaveNoViolations } = require( 'jest-axe' );
+expect.extend( toHaveNoViolations );
+
+it( 'should be accessible', async () => {
+    const container = document.createElement( 'div' );
+    // ... add UI elements
+    const results = await axe( container );
+    expect( results ).toHaveNoViolations();
+} );
+```
+
+---
+
 ## Resources
 
 - [WCAG 2.1 Guidelines](https://www.w3.org/TR/WCAG21/)
