@@ -275,12 +275,24 @@ composer test
 | Metric | Value |
 |--------|-------|
 | Total JS files | 90 |
-| Total JS lines | ~45,924 |
+| Total JS lines | ~46,000 |
 | ES6 classes | 81 |
-| God classes | 7 (all with delegation) |
-| Tests passing | 5,609 |
-| Statement coverage | ~91% |
-| Branch coverage | ~78% |
+| God classes | 6 (all with delegation patterns) |
+| Tests passing | 5,758 |
+| Statement coverage | 92% |
+| Branch coverage | 80% |
+| Bundle size (minified) | 31 KB |
+
+### API Documentation
+
+Generate API documentation from JSDoc comments:
+
+```bash
+npm run docs          # HTML docs in docs/api/
+npm run docs:markdown # Markdown docs in docs/API.md
+```
+
+See [docs/API.md](docs/API.md) for the generated API reference.
 
 ### Troubleshooting
 
@@ -294,6 +306,7 @@ composer test
 
 ## Documentation
 
+- [API.md](docs/API.md) - Auto-generated API reference
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture
 - [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) - Accessibility features
 - [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) - Getting started
