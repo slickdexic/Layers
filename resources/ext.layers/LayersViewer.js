@@ -51,9 +51,7 @@
 		 * Initialize the viewer
 		 */
 		init() {
-			console.log( '[LayersViewer] init() called' );
 			if ( !this.container || !this.imageElement ) {
-				console.log( '[LayersViewer] init: missing container or imageElement' );
 				return;
 			}
 
@@ -112,30 +110,19 @@
 		 */
 		applyBackgroundSettings() {
 			if ( !this.imageElement || !this.layerData ) {
-				console.log( '[LayersViewer] applyBackgroundSettings: missing imageElement or layerData' );
 				return;
 			}
 
 			// Ensure the image element has a style object (may be missing in tests)
 			if ( !this.imageElement.style ) {
-				console.log( '[LayersViewer] applyBackgroundSettings: missing imageElement.style' );
 				return;
 			}
 
 			// Apply background visibility (default: true)
 			const bgVisible = this.layerData.backgroundVisible;
 			
-			// DEBUG: Log the actual value received to help diagnose the issue
-			console.log( '[LayersViewer] backgroundVisible value:', bgVisible, 'type:', typeof bgVisible );
-			console.log( '[LayersViewer] layerData:', JSON.stringify( {
-				backgroundVisible: this.layerData.backgroundVisible,
-				backgroundOpacity: this.layerData.backgroundOpacity,
-				layerCount: this.layerData.layers ? this.layerData.layers.length : 0
-			} ) );
-			
 			// Check if background should be hidden
 			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
-			console.log( '[LayersViewer] isHidden:', isHidden );
 			
 			// Apply background opacity (default: 1.0)
 			let bgOpacity = 1.0;

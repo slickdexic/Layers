@@ -2,6 +2,19 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.8] - 2025-12-21
+
+### Bug Fixes
+- **Background visibility not applied on article pages** — Fixed critical bug where `backgroundVisible: false` was not being honored on article pages when using the API fallback path (for large layer sets >100KB).
+  - **Root cause:** MediaWiki's API result system drops boolean `false` values during JSON serialization. The `preserveLayerBooleans()` method in `ApiLayersInfo.php` was only converting layer-level booleans to integers, but missed `backgroundVisible` at the data level.
+  - **Solution:** Extended `preserveLayerBooleans()` to also convert `backgroundVisible` to 0/1 integer, ensuring it serializes correctly through the API.
+  - **Affected:** Layer sets larger than 100KB that use the API fallback path for data fetching.
+
+### Testing
+- Added `ApiLayersInfoBooleanPreservationTest.php` with 8 tests to prevent regression of boolean serialization issues
+
+---
+
 ## [1.1.7] - 2025-12-20
 
 ### New Features
