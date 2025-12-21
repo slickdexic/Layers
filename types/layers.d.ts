@@ -10,7 +10,7 @@
  *   2. Or add to jsconfig.json: { "include": ["resources/**/*", "types/**/*"] }
  *
  * @module LayersTypes
- * @version 1.1.3
+ * @version 1.1.9
  */
 
 // =============================================================================

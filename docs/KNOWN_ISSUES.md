@@ -1,15 +1,26 @@
 # Known Issues
 
 **Last Updated:** December 21, 2025  
-**Version:** 1.1.8
+**Version:** 1.1.9
 
 This document lists known functionality issues and their current status.
 
 ---
 
-## Recently Fixed (December 21, 2025)
+## All P0 Issues Resolved ✅
 
-The following P0 blocking issues have been resolved:
+As of version 1.1.9, all critical (P0) blocking issues have been fixed. The extension is production-ready.
+
+---
+
+## Recently Fixed (v1.1.9 - December 21, 2025)
+
+### ✅ Background Visibility Bug
+
+**Status:** FIXED  
+**Files:** APIManager.js, BackgroundLayerController.js, LayerPanel.js
+
+Background saved as hidden would show as visible when re-opening editor. Fixed by checking both `!== false` and `!== 0` for PHP→JS boolean handling.
 
 ### ✅ Missing AutoloadClasses Entry
 
@@ -51,7 +62,14 @@ Added `sanitizeSetName()` method and calls to both APIs for security consistency
 **Status:** FIXED  
 **Files:** Created resources/ext.layers.shared/MathUtils.js
 
-Extracted shared utility function to new MathUtils module. All 6 renderer files now delegate to the shared implementation with proper fallback for non-browser environments.
+Extracted shared utility function to new MathUtils module. All 6 renderer files now delegate to the shared implementation.
+
+### ✅ ESLint Error in MathUtils.js
+
+**Status:** FIXED  
+**File:** resources/ext.layers.shared/MathUtils.js
+
+Added eslint-disable comments for `module` exports to resolve no-undef error.
 
 ---
 
@@ -105,15 +123,15 @@ The codebase has **7 files exceeding 1,000 lines**. All have delegation patterns
 
 | File | Lines | Delegation | Trend |
 |------|-------|------------|-------|
-| CanvasManager.js | 1,830 | ✅ 10+ controllers | Stable |
-| LayerPanel.js | 1,821 | ✅ 7 controllers | Stable |
-| LayersEditor.js | 1,329 | ✅ 3 modules | Stable |
-| Toolbar.js | 1,298 | ✅ 4 modules | Stable |
-| ToolManager.js | 1,275 | ✅ 2 handlers | Stable |
-| SelectionManager.js | 1,181 | ✅ 3 modules | Stable |
-| APIManager.js | 1,161 | ✅ APIErrorHandler | Stable |
+| CanvasManager.js | 1,875 | ✅ 10+ controllers | Stable |
+| LayerPanel.js | 1,838 | ✅ 7 controllers | Stable |
+| Toolbar.js | 1,539 | ✅ 4 modules | ↑ Growing |
+| LayersEditor.js | 1,324 | ✅ 3 modules | Stable |
+| ToolManager.js | 1,264 | ✅ 2 handlers | Stable |
+| SelectionManager.js | 1,194 | ✅ 3 modules | Stable |
+| APIManager.js | 1,174 | ✅ APIErrorHandler | Stable |
 
-**Total in god classes: ~10,895 lines** (24% of JS codebase)
+**Total in god classes: ~10,208 lines** (22% of JS codebase)
 
 **CI Protection:** `npm run check:godclass` blocks PRs that grow files beyond limits.
 

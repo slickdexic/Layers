@@ -5,8 +5,8 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Pvodrazka]]
-|version         = 1.1.6
-|update          = 2025-12-20
+|version         = 1.1.9
+|update          = 2025-12-21
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]

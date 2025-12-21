@@ -5,8 +5,8 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Pvodrazka]]
-|version         = 1.1.6
-|update          = 2025-12-20
+|version         = 1.1.9
+|update          = 2025-12-21
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
@@ -44,7 +44,15 @@ Inspired by industry standards like [[w:Figma|Figma]], [[w:Canva|Canva]], and [[
 
 == Key Features ==
 
-=== New in v1.1.6: Key Object Alignment ===
+=== New in v1.1.9: All P0 Issues Resolved ===
+Version 1.1.9 resolves all critical bugs identified in the codebase review:
+* Fixed background visibility resetting when re-opening editor
+* Fixed memory leak in CanvasManager (animation frame cleanup)
+* Added setname sanitization to Delete/Rename APIs
+* Extracted MathUtils.js shared utility (DRY improvement)
+* '''5,766 tests passing''' with 91% coverage
+
+=== Key Object Alignment (v1.1.6+) ===
 Industry-standard alignment behavior matching Adobe Illustrator and Photoshop:
 * When multiple layers are selected, the '''last selected layer''' becomes the "key object"
 * Other layers align '''TO''' the key object, which stays fixed in place
@@ -308,6 +316,12 @@ Layers follows [[w:WCAG|WCAG 2.1]] guidelines:
 == Version History ==
 {| class="wikitable"
 ! Version !! Date !! Highlights
+|-
+| '''1.1.9''' || 2025-12-21 || Background visibility bug fix, MathUtils extraction, memory leak fix, 5,766 tests
+|-
+| '''1.1.8''' || 2025-12-21 || Background visibility API serialization fix for large layer sets
+|-
+| '''1.1.7''' || 2025-12-20 || Smart Guides, Arrange dropdown menu, eyedropper removal
 |-
 | '''1.1.6''' || 2025-12-20 || Key object alignment (Adobe-style), text layer alignment fix, ColorControlFactory extraction
 |-

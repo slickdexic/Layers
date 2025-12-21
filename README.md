@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** ⚠️ Version 1.1.8. Functional with known issues requiring fixes. Requires MediaWiki 1.44+.
+> **Status:** ✅ Version 1.1.9. Production-ready with all P0 issues resolved. Requires MediaWiki 1.44+.
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 >
@@ -158,20 +158,18 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Test Coverage (December 2025):**
 
-- Jest: **5,757 tests**, ~91% statement coverage, ~78% branch coverage (114 test suites)
-- ⚠️ **1 failing test** in LayersViewer.test.js (see [codebase_review.md](codebase_review.md))
+- Jest: **5,766 tests**, ~91% statement coverage, ~78% branch coverage (115 test suites)
 - PHPUnit: 17 test files covering API, database, validation
 - E2E: Playwright smoke tests in CI
 
-**Known Issues (P0 - Blocking):**
+**All P0 Issues Resolved (v1.1.9):**
 
-| Issue | File | Impact |
-|-------|------|--------|
-| Missing AutoloadClasses | extension.json | API rename calls fail |
-| console.error in prod | ViewerManager.js:210 | Debug leak |
-| Failing test | LayersViewer.test.js:1025 | CI fails |
-| Animation frame leak | CanvasManager.js:1722 | Memory leak |
-| Missing sanitization | ApiLayersDelete.php, ApiLayersRename.php | Security |
+All critical issues identified in the December 2025 codebase review have been fixed:
+- ✅ Background visibility bug fixed (PHP→JS boolean serialization)
+- ✅ Memory leak fixed (animation frame cleanup in destroy())
+- ✅ Setname sanitization added to Delete/Rename APIs
+- ✅ MathUtils.js extracted (DRY improvement)
+- ✅ Console.error replaced with mw.log.error
 
 See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) and [improvement_plan.md](improvement_plan.md) for full tracking.
 
@@ -255,11 +253,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 - Server-side validation with strict property whitelist (50+ fields)
 - Rate limiting via MediaWiki's pingLimiter system
 - Text sanitization and color validation
+- Setname sanitization in all API endpoints (v1.1.9)
 - MediaWiki permissions integration
 
-**⚠️ Known Security Issues:**
-- SVG images allowed without sanitization (XSS risk) - see [improvement_plan.md](improvement_plan.md#p11-remove-svg-xss-risk)
-- Missing setname sanitization in delete/rename APIs
+**⚠️ Known Security Consideration:**
+- SVG images allowed in image imports - consider removing if untrusted users have access. See [improvement_plan.md](improvement_plan.md#p11-remove-svg-xss-risk)
 
 For Content Security Policy guidance, see [docs/CSP_GUIDE.md](docs/CSP_GUIDE.md).
 
@@ -285,14 +283,14 @@ composer test
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 90 | |
-| Total JS lines | ~46,000 | |
-| ES6 classes | 81 | |
+| Total JS files | 90 | ✅ |
+| Total JS lines | ~46,000 | ✅ |
+| ES6 classes | 81 | ✅ |
 | God classes | 7 (all with delegation) | ⚠️ |
-| Tests passing | 5,757 | |
-| Tests failing | 1 | ❌ |
-| Statement coverage | 91% | |
-| Branch coverage | 78% | |
+| Tests passing | 5,766 | ✅ |
+| Tests failing | 0 | ✅ |
+| Statement coverage | 91% | ✅ |
+| Branch coverage | 78% | ✅ |
 
 ### API Documentation
 

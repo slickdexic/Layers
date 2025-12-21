@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.39%2B-blue" alt="MediaWiki 1.39+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-5%2C437%20Passing-brightgreen" alt="5,437 Tests">
+  <img src="https://img.shields.io/badge/Tests-5%2C766%20Passing-brightgreen" alt="5,766 Tests">
   <img src="https://img.shields.io/badge/Coverage-92%25-brightgreen" alt="92% Coverage">
 </p>
 
@@ -65,10 +65,10 @@
 
 | Metric | Value |
 |--------|-------|
-| **Version** | 1.1.6 |
-| **Release Date** | December 20, 2025 |
-| **Test Suites** | 107 |
-| **Total Tests** | 5,437 |
+| **Version** | 1.1.9 |
+| **Release Date** | December 21, 2025 |
+| **Test Suites** | 115 |
+| **Total Tests** | 5,766 |
 | **Code Coverage** | ~92% |
 | **JavaScript Files** | 85+ |
 | **ES6 Classes** | 76+ |
