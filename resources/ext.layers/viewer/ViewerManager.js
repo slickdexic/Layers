@@ -139,10 +139,14 @@ class ViewerManager {
 	 * 3. img[data-layers-large] - images with large data that need API fetch
 	 */
 	initializeLayerViewers () {
+		console.log( '[ViewerManager] initializeLayerViewers() called' );
+		
 		// Primary: attributes directly on <img>
 		const images = Array.prototype.slice.call(
 			document.querySelectorAll( 'img[data-layer-data]' )
 		);
+		
+		console.log( '[ViewerManager] Found', images.length, 'images with data-layer-data' );
 
 		// Also find images that have large data marked for API fetch
 		const largeImages = Array.prototype.slice.call(
@@ -186,19 +190,28 @@ class ViewerManager {
 		// Initialize viewers for each image
 		images.forEach( ( img ) => {
 			if ( img.layersViewer ) {
+				console.log( '[ViewerManager] Skipping image - already has viewer' );
 				return;
 			}
 			try {
 				const raw = img.getAttribute( 'data-layer-data' );
 				if ( !raw ) {
+					console.log( '[ViewerManager] Skipping image - no data-layer-data value' );
 					return;
 				}
+				console.log( '[ViewerManager] Raw data-layer-data:', raw.substring( 0, 200 ) + '...' );
+				
 				let layerData = null;
 				try {
 					const decoded = this.urlParser.decodeHtmlEntities( raw );
 					layerData = JSON.parse( decoded );
+					console.log( '[ViewerManager] Parsed layerData:', {
+						backgroundVisible: layerData.backgroundVisible,
+						backgroundOpacity: layerData.backgroundOpacity,
+						layerCount: layerData.layers ? layerData.layers.length : 0
+					} );
 				} catch ( eParse ) {
-					this.debugWarn( 'JSON parse error:', eParse.message );
+					console.error( '[ViewerManager] JSON parse error:', eParse.message );
 					layerData = null;
 				}
 				if ( !layerData ) {
@@ -206,7 +219,7 @@ class ViewerManager {
 				}
 				this.initializeViewer( img, layerData );
 			} catch ( e ) {
-				this.debugWarn( 'Error processing image:', e );
+				console.error( '[ViewerManager] Error processing image:', e );
 			}
 		} );
 	}
