@@ -136,6 +136,31 @@ The named layer sets feature allows multiple named annotation sets per image, ea
 
 See `docs/NAMED_LAYER_SETS.md` for full architecture documentation.
 
+### ⚠️ CRITICAL: Boolean Serialization (PHP→JavaScript)
+
+**MediaWiki's API drops boolean `false` values during JSON serialization.** To preserve false values, `ApiLayersInfo.php` converts booleans to integers using `preserveLayerBooleans()`:
+- `true` → `1` (integer)
+- `false` → `0` (integer)
+
+**ALL JavaScript code that reads boolean flags from the API MUST handle both types:**
+
+```javascript
+// ❌ WRONG - will fail for integer 0 (0 !== false is TRUE in JavaScript!)
+return visible !== false;
+
+// ✅ CORRECT - handles both boolean and integer
+return visible !== false && visible !== 0;
+
+// ✅ BEST - normalize at source (APIManager.extractLayerSetData already does this)
+if ( bgVal === false || bgVal === 0 || bgVal === '0' || bgVal === 'false' ) {
+    backgroundVisible = false;
+}
+```
+
+**Why this matters:** JavaScript's strict equality (`!==`) does NOT convert types. `0 !== false` evaluates to `true` because they are different types (number vs boolean), even though they both represent "falsy" values.
+
+**See:** `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md` for the full story of how this bug resurfaced three times.
+
 ## 3) Data model (Layer objects)
 
 Layer objects are a sanitized subset of the client model. Common fields (whitelist on server):

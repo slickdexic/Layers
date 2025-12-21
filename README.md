@@ -5,11 +5,11 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** Stable. Version 1.1.7. Production-ready with ongoing improvements. Requires MediaWiki 1.44+.
+> **Status:** ⚠️ Version 1.1.8. Functional with known issues requiring fixes. Requires MediaWiki 1.44+.
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 >
-> **Project Health:** See [codebase_review.md](codebase_review.md) for detailed technical assessment.
+> **Project Health:** See [codebase_review.md](codebase_review.md) for detailed technical assessment. **P0 issues identified.**
 
 ---
 
@@ -158,15 +158,22 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 
 **Test Coverage (December 2025):**
 
-- Jest: **5,609 tests**, ~91% statement coverage, ~78% branch coverage (111 test suites)
+- Jest: **5,757 tests**, ~91% statement coverage, ~78% branch coverage (114 test suites)
+- ⚠️ **1 failing test** in LayersViewer.test.js (see [codebase_review.md](codebase_review.md))
 - PHPUnit: 17 test files covering API, database, validation
 - E2E: Playwright smoke tests in CI
 
-**Known Issues:**
+**Known Issues (P0 - Blocking):**
 
-- 7 god classes (>1,000 lines) with delegation patterns - CI monitors growth
-- No mobile/touch support
-- See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for tracked bugs
+| Issue | File | Impact |
+|-------|------|--------|
+| Missing AutoloadClasses | extension.json | API rename calls fail |
+| console.error in prod | ViewerManager.js:210 | Debug leak |
+| Failing test | LayersViewer.test.js:1025 | CI fails |
+| Animation frame leak | CanvasManager.js:1722 | Memory leak |
+| Missing sanitization | ApiLayersDelete.php, ApiLayersRename.php | Security |
+
+See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) and [improvement_plan.md](improvement_plan.md) for full tracking.
 
 **Accessibility (WCAG 2.1):**
 
@@ -250,6 +257,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 - Text sanitization and color validation
 - MediaWiki permissions integration
 
+**⚠️ Known Security Issues:**
+- SVG images allowed without sanitization (XSS risk) - see [improvement_plan.md](improvement_plan.md#p11-remove-svg-xss-risk)
+- Missing setname sanitization in delete/rename APIs
+
 For Content Security Policy guidance, see [docs/CSP_GUIDE.md](docs/CSP_GUIDE.md).
 
 ---
@@ -272,16 +283,16 @@ composer test
 
 ### Project Health
 
-| Metric | Value |
-|--------|-------|
-| Total JS files | 90 |
-| Total JS lines | ~46,000 |
-| ES6 classes | 81 |
-| God classes | 6 (all with delegation patterns) |
-| Tests passing | 5,758 |
-| Statement coverage | 92% |
-| Branch coverage | 80% |
-| Bundle size (minified) | 31 KB |
+| Metric | Value | Status |
+|--------|-------|--------|
+| Total JS files | 90 | |
+| Total JS lines | ~46,000 | |
+| ES6 classes | 81 | |
+| God classes | 7 (all with delegation) | ⚠️ |
+| Tests passing | 5,757 | |
+| Tests failing | 1 | ❌ |
+| Statement coverage | 91% | |
+| Branch coverage | 78% | |
 
 ### API Documentation
 
@@ -312,14 +323,16 @@ See [docs/API.md](docs/API.md) for the generated API reference.
 - [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) - Getting started
 - [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) - Named sets feature
 - [WIKITEXT_USAGE.md](docs/WIKITEXT_USAGE.md) - Wikitext syntax
-- [codebase_review.md](codebase_review.md) - Technical assessment
-- [improvement_plan.md](improvement_plan.md) - Roadmap
+- [codebase_review.md](codebase_review.md) - Technical assessment (December 2025)
+- [improvement_plan.md](improvement_plan.md) - Roadmap with P0 issues
 
 ---
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+⚠️ **Note:** P0 issues must be fixed before new features. See [improvement_plan.md](improvement_plan.md).
 
 ---
 

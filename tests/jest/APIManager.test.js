@@ -597,6 +597,109 @@ describe( 'APIManager', function () {
 			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', expect.any( Array ) );
 			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentLayerSetId', 123 );
 		} );
+
+		it( 'should extract backgroundVisible false from layer set data', function () {
+			mockEditor.stateManager.set.mockClear();
+
+			apiManager.extractLayerSetData( {
+				id: 456,
+				data: {
+					layers: [ { id: 'layer1', type: 'rectangle' } ],
+					backgroundVisible: false,
+					backgroundOpacity: 0.5
+				}
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', false );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundOpacity', 0.5 );
+		} );
+
+		it( 'should normalize integer 0 to boolean false for backgroundVisible', function () {
+			mockEditor.stateManager.set.mockClear();
+
+			// API returns 0/1 integers due to preserveLayerBooleans
+			apiManager.extractLayerSetData( {
+				id: 457,
+				data: {
+					layers: [],
+					backgroundVisible: 0,  // Integer 0 from PHP serialization
+					backgroundOpacity: 1.0
+				}
+			} );
+
+			// Should be normalized to boolean false, not integer 0
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', false );
+		} );
+
+		it( 'should normalize integer 1 to boolean true for backgroundVisible', function () {
+			mockEditor.stateManager.set.mockClear();
+
+			apiManager.extractLayerSetData( {
+				id: 458,
+				data: {
+					layers: [],
+					backgroundVisible: 1,  // Integer 1 from PHP serialization
+					backgroundOpacity: 1.0
+				}
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', true );
+		} );
+
+		it( 'should extract backgroundVisible true from layer set data', function () {
+			mockEditor.stateManager.set.mockClear();
+
+			apiManager.extractLayerSetData( {
+				id: 789,
+				data: {
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: 1.0
+				}
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', true );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundOpacity', 1.0 );
+		} );
+
+		it( 'should default backgroundVisible to true when not specified', function () {
+			mockEditor.stateManager.set.mockClear();
+
+			apiManager.extractLayerSetData( {
+				id: 101,
+				data: {
+					layers: [ { id: 'layer1', type: 'circle' } ]
+					// No backgroundVisible or backgroundOpacity specified
+				}
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', true );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundOpacity', 1.0 );
+		} );
+
+		it( 'should set backgroundVisible BEFORE layers for correct rendering order', function () {
+			mockEditor.stateManager.set.mockClear();
+			const setCalls = [];
+			mockEditor.stateManager.set.mockImplementation( ( key, value ) => {
+				setCalls.push( { key, value } );
+			} );
+
+			apiManager.extractLayerSetData( {
+				id: 202,
+				data: {
+					layers: [ { id: 'layer1', type: 'text' } ],
+					backgroundVisible: false
+				}
+			} );
+
+			// Find the indices of backgroundVisible and layers calls
+			const bgVisibleIndex = setCalls.findIndex( c => c.key === 'backgroundVisible' );
+			const layersIndex = setCalls.findIndex( c => c.key === 'layers' );
+
+			// backgroundVisible should be set BEFORE layers
+			expect( bgVisibleIndex ).toBeLessThan( layersIndex );
+			expect( bgVisibleIndex ).toBeGreaterThan( -1 );
+		} );
 	} );
 
 	describe( 'processRawLayers', function () {

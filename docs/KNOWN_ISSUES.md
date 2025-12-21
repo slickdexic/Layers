@@ -7,6 +7,76 @@ This document lists known functionality issues and their current status.
 
 ---
 
+## Recently Fixed (December 21, 2025)
+
+The following P0 blocking issues have been resolved:
+
+### ✅ Missing AutoloadClasses Entry
+
+**Status:** FIXED  
+**File:** extension.json
+
+Added `ApiLayersRename` to `AutoloadClasses` alongside the `APIModules` registration.
+
+### ✅ Console.error in Production
+
+**Status:** FIXED  
+**File:** resources/ext.layers/viewer/ViewerManager.js line 210
+
+Replaced `console.error()` with `mw.log.error()` to comply with MediaWiki coding standards.
+
+### ✅ Failing Test
+
+**Status:** FIXED  
+**File:** tests/jest/LayersViewer.test.js line 1025
+
+Updated test expectation from `''` to `'1'` to match actual behavior (opacity is set explicitly).
+
+### ✅ Memory Leak - Animation Frame
+
+**Status:** FIXED  
+**File:** resources/ext.layers.editor/CanvasManager.js
+
+Added `cancelAnimationFrame()` call in `destroy()` method to prevent memory leaks when editor is closed.
+
+### ✅ Missing Setname Sanitization
+
+**Status:** FIXED  
+**Files:** src/Api/ApiLayersDelete.php, src/Api/ApiLayersRename.php
+
+Added `sanitizeSetName()` method and calls to both APIs for security consistency.
+
+### ✅ Duplicated clampOpacity() Function
+
+**Status:** FIXED  
+**Files:** Created resources/ext.layers.shared/MathUtils.js
+
+Extracted shared utility function to new MathUtils module. All 6 renderer files now delegate to the shared implementation with proper fallback for non-browser environments.
+
+---
+
+## P1 Issues (Important)
+
+### ⚠️ SVG XSS Risk
+
+**Status:** Not Fixed  
+**Severity:** HIGH (Security)  
+**File:** src/Validation/ServerSideLayerValidator.php
+
+SVG images are allowed in image imports but SVG can contain JavaScript, creating XSS risk.
+
+**Fix:** Remove SVG from allowed MIME types or add SVG sanitization.
+
+### ⚠️ Inconsistent File Lookup
+
+**Status:** Not Fixed  
+**Severity:** MEDIUM  
+**Files:** ApiLayersDelete.php, ApiLayersRename.php
+
+Uses `getLocalRepo()->findFile()` instead of `getRepoGroup()->findFile()`, which won't find files from foreign repositories like Wikimedia Commons.
+
+---
+
 ## Active Issues
 
 ### ⚠️ No Mobile/Touch Support

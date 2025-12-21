@@ -911,7 +911,8 @@
 			// Fallback
 			if ( this.editor.stateManager ) {
 				const visible = this.editor.stateManager.get( 'backgroundVisible' );
-				return visible !== false;
+				// Handle both boolean false and integer 0 (from API serialization)
+				return visible !== false && visible !== 0;
 			}
 			return true;
 		}

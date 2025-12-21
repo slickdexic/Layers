@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.1.8",
+	"version": "1.1.9",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -22,6 +22,7 @@
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave": "src/Api/ApiLayersSave.php",
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo": "src/Api/ApiLayersInfo.php",
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersDelete": "src/Api/ApiLayersDelete.php",
+		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersRename": "src/Api/ApiLayersRename.php",
 		"MediaWiki\\Extension\\Layers\\Hooks": "src/Hooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks": "src/Hooks/WikitextHooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\UIHooks": "src/Hooks/UIHooks.php",
@@ -160,6 +161,7 @@
 			"remoteExtPath": "Layers/resources/ext.layers.shared",
 			"targets": [ "desktop", "mobile" ],
 			"scripts": [
+				"MathUtils.js",
 				"LayerDataNormalizer.js",
 				"DeepClone.js",
 				"BoundsCalculator.js",
@@ -254,6 +256,7 @@
 				"canvas/TextInputController.js",
 				"ui/IconFactory.js",
 				"ui/LayerItemFactory.js",
+				"ui/BackgroundLayerController.js",
 				"ui/ColorPickerDialog.js",
 				"ui/ColorControlFactory.js",
 				"ui/PresetStyleManager.js",

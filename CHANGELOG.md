@@ -2,6 +2,37 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.9] - 2025-12-21
+
+### Bug Fixes
+- **Background visibility resetting to visible when re-opening editor** — Fixed bug where background saved as hidden would show as visible when returning to the editor.
+  - **Root cause:** JavaScript used `visible !== false` which returns `true` for integer `0` because strict equality doesn't convert types.
+  - **Solution:** Fixed three locations to check `visible !== false && visible !== 0` and normalize integers to booleans at API boundary in `APIManager.extractLayerSetData()`.
+  - **Files fixed:** `APIManager.js`, `BackgroundLayerController.js`, `LayerPanel.js`
+  - **See:** `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md` for full analysis
+
+### Security
+- **Added setname sanitization** — `ApiLayersDelete.php` and `ApiLayersRename.php` now sanitize user-supplied set names
+
+### Code Quality
+- **Extracted MathUtils.js** — Created shared utility module for `clampOpacity()` and other math functions (DRY improvement)
+- **Fixed memory leak** — Added `cancelAnimationFrame()` to `CanvasManager.destroy()`
+- **Fixed console.error** — Replaced with `mw.log.error()` in `ViewerManager.js`
+- **Added BackgroundLayerController** — Added missing file to ResourceLoader modules
+
+### Testing
+- Added 4 new tests in `APIManager.test.js` for integer 0/1 normalization
+- Added 2 new tests in `BackgroundLayerController.test.js` for integer 0/1 handling
+- Fixed failing test in `LayersViewer.test.js` (opacity assertion)
+- **5,766 tests passing**
+
+### Documentation
+- Added `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md` — Comprehensive post-mortem preventing recurrence
+- Updated `copilot-instructions.md` with critical PHP→JS boolean serialization warning
+- Updated `improvement_plan.md` — P0 items now marked complete
+
+---
+
 ## [1.1.8] - 2025-12-21
 
 ### Bug Fixes

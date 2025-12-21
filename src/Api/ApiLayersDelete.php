@@ -38,7 +38,7 @@ class ApiLayersDelete extends ApiBase {
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
 		$requestedFilename = $params['filename'];
-		$setName = $params['setname'];
+		$setName = $this->sanitizeSetName( $params['setname'] );
 
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );
@@ -165,6 +165,39 @@ class ApiLayersDelete extends ApiBase {
 			'action=layersdelete&filename=Example.jpg&setname=my-annotations&token=123ABC' =>
 				'apihelp-layersdelete-example-1',
 		];
+	}
+
+	/**
+	 * Sanitize a user-supplied layer set name.
+	 *
+	 * @param string $rawSetName
+	 * @return string
+	 */
+	protected function sanitizeSetName( string $rawSetName ): string {
+		$setName = trim( $rawSetName );
+
+		// Remove control chars and path separators
+		$setName = preg_replace( '/[\x00-\x1F\x7F\/\\\\]/u', '', $setName );
+
+		// Allow letter/number from any script plus underscore, dash, spaces
+		$unicodeSafe = preg_replace( '/[^\p{L}\p{N}_\-\s]/u', '', $setName );
+
+		if ( $unicodeSafe === null ) {
+			$unicodeSafe = preg_replace( '/[^a-zA-Z0-9_\-\s]/', '', $setName );
+		}
+		$setName = $unicodeSafe ?? '';
+
+		// Collapse repeated whitespace
+		$setName = preg_replace( '/\s+/u', ' ', $setName );
+
+		// Enforce limit
+		if ( function_exists( 'mb_substr' ) ) {
+			$setName = mb_substr( $setName, 0, 255 );
+		} else {
+			$setName = substr( $setName, 0, 255 );
+		}
+
+		return $setName === '' ? 'default' : $setName;
 	}
 
 	/**
