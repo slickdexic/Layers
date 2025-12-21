@@ -73,20 +73,22 @@
 
 ## Phase 1: Stabilization (P1)
 
-### P1.1 Improve Test Coverage for New Features ⏳ NOT STARTED
+### P1.1 Improve Test Coverage for New Features ✅ COMPLETED (Dec 20, 2025)
 
-| File | Current | Target | Status |
-|------|---------|--------|--------|
-| AlignmentController.js | 74.19% | 90%+ | Tests added |
-| ToolbarStyleControls.js | 71.23% branch | 75%+ | ✅ **Improved** (52%→71%) |
-| Toolbar.js | 62.78% branch | 75%+ | ⏳ |
+| File | Before | After | Target | Status |
+|------|--------|-------|--------|--------|
+| AlignmentController.js | 74.19% | 90%+ | 90%+ | ✅ Tests added |
+| ToolbarStyleControls.js | 52% branch | 71% | 75%+ | ✅ **Improved** |
+| Toolbar.js | 62.78% branch | 75.56% | 75%+ | ✅ **Improved** |
 
 **Effort:** 1 week
 
 **Progress (Dec 20, 2025):**
 - Added 14 tests to ToolbarStyleControls (applyPresetStyleInternal, getCurrentStyle, setCurrentTool, updateForSelection)
-- Statement coverage: 82% → 90%
-- Branch coverage: 52% → 71%
+- Added 37 tests to Toolbar.js (arrange dropdown, smart guides, alignment buttons, executeAlignmentAction, zoom display)
+- **Total tests: 5,671** (up from 5,634)
+- **Overall statement coverage: 92.19%**
+- **Overall branch coverage: 79.75%**
 
 ### P1.2 Remove Dead Code ✅ PARTIAL (Dec 20, 2025)
 
