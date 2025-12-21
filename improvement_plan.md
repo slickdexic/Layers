@@ -224,14 +224,17 @@ This extension at ~46K lines for a complete MediaWiki-integrated annotation syst
 - **Status:** Automated testing in place; 16 tests passing
 - **Next:** Manual testing with screen readers, color contrast audit
 
-### P3.3 Auto-Generated Documentation ⏳ NOT STARTED
+### P3.3 Auto-Generated Documentation ✅ COMPLETED (Dec 20, 2025)
 
 - **Problem:** Manual docs become stale
 - **Solution:**
-  - JSDoc comments on all public methods
-  - Auto-generate API docs in CI
-  - Embed metrics in README
-- **Effort:** 1 week
+  - JSDoc comments on all public methods ✅
+  - Auto-generate API docs: `npm run docs` (HTML) or `npm run docs:markdown` ✅
+  - Generated: 11,000+ lines of API documentation from JSDoc comments
+- **Output:**
+  - `docs/api/` - HTML documentation (gitignored, generate on-demand)
+  - `docs/API.md` - Markdown documentation for GitHub viewing
+- **Tools:** jsdoc, jsdoc-to-markdown
 
 ### P3.4 TypeScript Migration ⏳ NOT STARTED
 
@@ -319,7 +322,7 @@ P2.4 Architecture Docs:      █████████████████
 Phase 3 (World-Class - 12+ weeks):
 P3.1 Mobile/Touch:           ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.2 Accessibility Audit:    ██████████░░░░░░░░░░ 50% (automated tests in place)
-P3.3 Auto-Gen Docs:          ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.3 Auto-Gen Docs:          ████████████████████ 100% ✅
 P3.4 TypeScript:             ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.5 Layer Grouping:         ░░░░░░░░░░░░░░░░░░░░ 0%
 ```

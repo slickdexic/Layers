@@ -43,6 +43,9 @@ coverage/
 # nyc test coverage
 .nyc_output
 
+# Generated documentation
+docs/api/
+
 # Cache files
 .eslintcache
 .npm

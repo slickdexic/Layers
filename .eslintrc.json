@@ -21,7 +21,8 @@
 		"test_load.js",
 		"resources/dist/",
 		"node_modules/",
-		"vendor/"
+		"vendor/",
+		"docs/api/"
 	],
 	"rules": {
 		"no-implicit-globals": "off",

@@ -1,5 +1,10 @@
 {
   "extends": "stylelint-config-wikimedia",
+  "ignoreFiles": [
+    "docs/api/**/*",
+    "node_modules/**/*",
+    "vendor/**/*"
+  ],
   "rules": {
     "@stylistic/linebreaks": null
   }

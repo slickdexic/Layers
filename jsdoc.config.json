@@ -1,0 +1,25 @@
+{
+	"source": {
+		"include": [
+			"resources/ext.layers",
+			"resources/ext.layers.editor",
+			"resources/ext.layers.shared"
+		],
+		"includePattern": ".+\\.js$",
+		"excludePattern": "(node_modules/|dist/|vendor/)"
+	},
+	"opts": {
+		"destination": "./docs/api",
+		"recurse": true,
+		"readme": "./README.md"
+	},
+	"plugins": [],
+	"templates": {
+		"cleverLinks": false,
+		"monospaceLinks": false
+	},
+	"tags": {
+		"allowUnknownTags": true,
+		"dictionaries": ["jsdoc", "closure"]
+	}
+}

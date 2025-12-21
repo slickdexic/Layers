@@ -15,7 +15,9 @@
 		"build": "webpack --mode=production",
 		"build:dev": "webpack --mode=development",
 		"watch": "webpack --mode=development --watch",
-		"check:godclass": "bash scripts/pre-commit-god-class-check.sh"
+		"check:godclass": "bash scripts/pre-commit-god-class-check.sh",
+		"docs": "jsdoc -c jsdoc.config.json",
+		"docs:markdown": "jsdoc2md resources/ext.layers.editor/*.js resources/ext.layers.shared/*.js > docs/API.md"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.26.0",
@@ -31,6 +33,8 @@
 		"jest": "^30.0.0",
 		"jest-axe": "^10.0.0",
 		"jest-environment-jsdom": "^30.0.0",
+		"jsdoc": "^4.0.5",
+		"jsdoc-to-markdown": "^9.1.3",
 		"stylelint-config-wikimedia": "0.18.0",
 		"webpack": "^5.97.1",
 		"webpack-cli": "^6.0.1"
