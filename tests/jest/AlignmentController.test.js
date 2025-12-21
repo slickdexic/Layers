@@ -363,6 +363,116 @@ describe( 'AlignmentController', () => {
 		} );
 	} );
 
+	describe( 'distributeVertical', () => {
+		it( 'should do nothing with less than 3 layers', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1', 'layer2' ] );
+			controller.distributeVertical();
+			expect( mockCanvasManager.renderLayers ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should distribute layers with equal vertical spacing', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1', 'layer2', 'layer3' ] );
+
+			// Before: layer1 centerY=45 (20+25), layer2 centerY=130 (100+30), layer3 centerY=70 (50+20)
+			// Sorted by centerY: layer1 (45), layer3 (70), layer2 (130)
+			// Step = (130 - 45) / 2 = 42.5
+			// layer3 should move to centerY = 45 + 42.5 = 87.5
+
+			controller.distributeVertical();
+
+			// First and last should stay in place
+			expect( mockLayers[ 0 ].y ).toBe( 20 ); // layer1 - first, unchanged
+			expect( mockLayers[ 1 ].y ).toBe( 100 ); // layer2 - last when sorted by center, unchanged
+		} );
+	} );
+
+	describe( 'alignCenterV - key object mode', () => {
+		it( 'should align layers to key object vertical center', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1', 'layer2' ] );
+			mockCanvasManager.selectionManager.lastSelectedId = 'layer2'; // Key object centerY = 100 + 30 = 130
+
+			controller.alignCenterV();
+
+			// Key object (layer2) stays unchanged, centerY = 130
+			// layer1: centerY should be 130, so y = 130 - 25 = 105
+			expect( mockLayers[ 0 ].y ).toBe( 105 );
+			expect( mockLayers[ 1 ].y ).toBe( 100 ); // unchanged (key object)
+		} );
+
+		it( 'should fall back to combined center when no key object', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1', 'layer2' ] );
+			mockCanvasManager.selectionManager.lastSelectedId = null;
+
+			controller.alignCenterV();
+
+			// Combined bounds: top=20 (layer1), bottom=160 (layer2: 100+60)
+			// CenterY = (20 + 160) / 2 = 90
+			// layer1: height=50, centerY should be 90, so y = 90 - 25 = 65
+			// layer2: height=60, centerY should be 90, so y = 90 - 30 = 60
+			expect( mockLayers[ 0 ].y ).toBe( 65 );
+			expect( mockLayers[ 1 ].y ).toBe( 60 );
+		} );
+
+		it( 'should do nothing with less than 2 layers', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			controller.alignCenterV();
+			expect( mockCanvasManager.renderLayers ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'getLayerBounds - text layers', () => {
+		it( 'should estimate bounds for text layer without context', () => {
+			const textLayer = { type: 'text', x: 100, y: 50, text: 'Hello', fontSize: 20 };
+			const bounds = controller.getLayerBounds( textLayer );
+			expect( bounds.left ).toBe( 100 );
+			// Top is adjusted for text baseline
+			expect( bounds.top ).toBeLessThan( 50 );
+			expect( bounds.right ).toBeGreaterThan( 100 );
+			expect( bounds.bottom ).toBeGreaterThan( bounds.top );
+		} );
+
+		it( 'should use default fontSize for text without fontSize', () => {
+			const textLayer = { type: 'text', x: 100, y: 50, text: 'Test' };
+			const bounds = controller.getLayerBounds( textLayer );
+			expect( bounds ).toBeDefined();
+			expect( bounds.left ).toBe( 100 );
+		} );
+
+		it( 'should handle empty text', () => {
+			const textLayer = { type: 'text', x: 100, y: 50, text: '', fontSize: 16 };
+			const bounds = controller.getLayerBounds( textLayer );
+			expect( bounds ).toBeDefined();
+			expect( bounds.width ).toBeGreaterThanOrEqual( 16 ); // At least fontSize
+		} );
+	} );
+
+	describe( 'getSelectedLayers - single selection fallback', () => {
+		it( 'should fall back to single selection when multi-select empty', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [] );
+			mockCanvasManager.getSelectedLayerId.mockReturnValue( 'layer1' );
+
+			const layers = controller.getSelectedLayers();
+			expect( layers ).toHaveLength( 1 );
+			expect( layers[ 0 ].id ).toBe( 'layer1' );
+		} );
+
+		it( 'should return empty array when both selections empty', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [] );
+			mockCanvasManager.getSelectedLayerId.mockReturnValue( null );
+
+			const layers = controller.getSelectedLayers();
+			expect( layers ).toEqual( [] );
+		} );
+
+		it( 'should return empty array when single selection layer not found', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [] );
+			mockCanvasManager.getSelectedLayerId.mockReturnValue( 'nonexistent' );
+
+			const layers = controller.getSelectedLayers();
+			expect( layers ).toEqual( [] );
+		} );
+	} );
+
 	describe( 'getAvailability', () => {
 		it( 'should return false for both when no selection', () => {
 			const avail = controller.getAvailability();

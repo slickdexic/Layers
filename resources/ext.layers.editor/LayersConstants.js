@@ -96,7 +96,21 @@
 			MAX_ZOOM: 5.0,
 			ANIMATION_DURATION: 300,
 			DIRTY_REGION_PADDING: 4,
-			HANDLE_PADDING: 5
+			HANDLE_PADDING: 5,
+			// Offsets for layer operations
+			PASTE_OFFSET: 20,
+			DUPLICATE_OFFSET: 20,
+			// Default canvas dimensions
+			DEFAULT_CANVAS_WIDTH: 800,
+			DEFAULT_CANVAS_HEIGHT: 600
+		},
+
+		// Z-index layering for UI elements
+		Z_INDEX: {
+			CANVAS_OVERLAY: 1000,
+			TEXT_INPUT: 1001,
+			MODAL: 1010,
+			TOOLTIP: 1020
 		},
 
 		// Colors for UI elements
@@ -295,6 +309,7 @@
 		Object.freeze( LayersConstants.DEFAULTS.SIZES );
 		Object.freeze( LayersConstants.DEFAULTS );
 		Object.freeze( LayersConstants.UI );
+		Object.freeze( LayersConstants.Z_INDEX );
 		Object.freeze( LayersConstants.UI_COLORS );
 		Object.freeze( LayersConstants.BLEND_MODES );
 		Object.freeze( LayersConstants.LINE_STYLES );

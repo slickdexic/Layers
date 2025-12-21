@@ -22,17 +22,18 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 75 |
+| Total JS files | 90 |
 | Viewer module | ~682 lines |
 | Shared module | ~5,000 lines |
-| Editor module | ~34,000 lines |
-| ES6 classes | 66 |
+| Editor module | ~40,000 lines |
+| Total JS lines | ~45,912 |
+| ES6 classes | 81 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | ~91% statements, ~78% branches |
-| Jest tests | ~5,609 |
+| Test coverage | ~91.5% statements, ~79% branches |
+| Jest tests | ~5,620 |
 | PHPUnit test files | 17 |
-| God classes (>1000 lines) | **7** ⚠️ |
-| Drawing tools | 13 (including Text Box) |
+| God classes (>1000 lines) | **6** ⚠️ |
+| Drawing tools | 14 |
 
 ---
 
@@ -63,14 +64,17 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ### Known Technical Debt
 
-**7 files exceed 1,000 lines (god classes):**
-- CanvasManager.js (1,893) - facade with 10+ controllers
-- LayerPanel.js (1,720) - delegates to 7 controllers
-- APIManager.js (1,385) - needs API/state split
-- ShapeRenderer.js (1,367) - **grew with Text Box, needs extraction**
-- LayersEditor.js (1,296) - main entry point
-- SelectionManager.js (1,266) - core selection logic
-- ToolManager.js (1,180) - needs tool extraction
+**6 files exceed 1,000 lines (god classes):**
+- CanvasManager.js (1,868) - facade with 10+ controllers
+- LayerPanel.js (1,837) - delegates to 7 controllers
+- Toolbar.js (1,539) - UI controls consolidation
+- LayersEditor.js (1,324) - main entry point
+- ToolManager.js (1,264) - needs tool extraction
+- SelectionManager.js (1,194) - core selection logic
+
+**Recently under 1,000 (no longer god classes):**
+- ShapeRenderer.js (857) - successfully refactored ✅
+- ToolbarStyleControls.js (947) - style controls extracted ✅
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 

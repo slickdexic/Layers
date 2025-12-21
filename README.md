@@ -37,7 +37,7 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 | Pointer       | V        | Select and manipulate objects                | Multi-select, bounding box handles, resize, move |
 | Zoom          | Z        | Zoom and pan the canvas                      | Mouse wheel zoom, pan with drag                 |
 | Text          | T        | Add text labels                              | Font selection, size, color, stroke, shadow     |
-| **Text Box**  | **X**    | **Multi-line text in container** (NEW v1.1)  | Word wrap, alignment, padding, corner radius    |
+| Text Box      | X        | Multi-line text in container                 | Word wrap, alignment, padding, corner radius    |
 | Pen           | P        | Freehand drawing                             | Smooth paths, adjustable stroke                 |
 | Rectangle     | R        | Draw rectangles                              | Adjustable stroke and fill                      |
 | Circle        | C        | Draw circles                                 | Radius-based drawing                            |
@@ -46,26 +46,25 @@ All edits are stored as a validated JSON structure server-side and rendered clie
 | Star          | S        | Draw star shapes                             | Configurable points and radii                   |
 | Arrow         | A        | Annotation arrows                            | Configurable arrowheads and line styles         |
 | Line          | L        | Straight lines                               | Stroke width and color options                  |
-| Blur          | B        | Apply blur effect                            | Create depth and focus effects                  |
+| Blur          | B        | Apply blur effect                            | Create visual effects                           |
+| Marquee       | M        | Area selection                               | Select multiple objects                         |
 
-### New in v1.1.7: Smart Guides & Arrange Menu
+### Smart Guides & Alignment (v1.1.7)
 
 - **Smart Guides**: Automatic snapping to object edges and centers when moving layers
   - Edge snapping: left, right, top, bottom (magenta guide lines)
   - Center snapping: horizontal and vertical centers (cyan guide lines)
   - 8px snap threshold; **off by default** — toggle with `;` key
-- **Arrange Dropdown Menu**: Consolidated toolbar UI
-  - New "Arrange & Snap" dropdown replaces 8 individual alignment buttons
-  - Contains: Smart Guides toggle, Align options, Distribute options
+- **Arrange Menu**: Consolidated toolbar dropdown for alignment/distribution
+- **Key Object Alignment**: Last selected layer becomes the reference (Adobe pattern)
 
-### New in v1.1.5: Alignment & Style Presets
+### Style Presets (v1.1.5)
 
-- **Alignment Tools**: Align left/center/right, top/middle/bottom for multi-selection
-- **Distribution Tools**: Distribute layers evenly horizontally or vertically
-- **Style Presets**: Save and reuse style configurations per tool
+- **Save & Load Presets**: Store frequently used style configurations per tool
 - **Built-in Presets**: Ships with default presets for common annotation styles
+- **User Presets**: Create, rename, delete, import/export your own presets
 
-### New in v1.1.0: Text Box Tool
+### Text Box Tool (v1.1.0)
 
 The Text Box tool combines a rectangle container with rich text:
 
@@ -91,7 +90,7 @@ The Text Box tool combines a rectangle container with rich text:
 - Stroke color and width
 - Fill colors with transparency
 - Shadow effects (with spread, offset, color)
-- Text stroke and text shadow (NEW v1.1)
+- Text stroke and text shadow
 - Blend modes
 - Font family and size selection
 - Opacity controls
@@ -154,19 +153,20 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 **Architecture:**
 
 - **Backend (PHP):** MediaWiki extension integration, 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), database persistence
-- **Frontend (JavaScript):** HTML5 Canvas-based editor with 87 JS files (~46K lines total), 79 ES6 classes
-- **Code Splitting:** Viewer module (~610 lines) + Shared module (~5K lines) loads separately from Editor (~38K lines)
+- **Frontend (JavaScript):** HTML5 Canvas-based editor with 90 JS files (~46K lines total), 81 ES6 classes
+- **Code Splitting:** Viewer module (~680 lines) + Shared module (~5.4K lines) loads separately from Editor (~38K lines)
 
 **Test Coverage (December 2025):**
 
 - Jest: **5,609 tests**, ~91% statement coverage, ~78% branch coverage (111 test suites)
 - PHPUnit: 17 test files covering API, database, validation
-- E2E: Playwright smoke tests in CI; full editor tests available locally
+- E2E: Playwright smoke tests in CI
 
-**Technical Debt:**
+**Known Issues:**
 
-- 7 god classes (>1,000 lines) with delegation patterns - CI blocks growth
-- See [improvement_plan.md](improvement_plan.md) for remediation roadmap
+- 7 god classes (>1,000 lines) with delegation patterns - CI monitors growth
+- No mobile/touch support
+- See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for tracked bugs
 
 **Accessibility (WCAG 2.1):**
 
@@ -180,15 +180,6 @@ Layers are displayed using standard MediaWiki file syntax with the `layers=` par
 - MediaWiki 1.44.0 or later
 - PHP 8.1+
 - MySQL/MariaDB
-
-**Project Status:**
-
-- **Production:** Stable and deployed. Extension works reliably for end users.
-- **Technical Health:** Active development with debt being addressed.
-- ✅ 79 ES6 classes, 0 legacy prototype code
-- ✅ 5,650 tests (~91% statement coverage)
-- ⚠️ 7 god classes (~11K LOC) - all have delegation, CI blocks growth
-- ⚠️ No mobile/touch support yet
 
 ---
 
@@ -279,10 +270,23 @@ npm run test:php
 composer test
 ```
 
+### Project Health
+
+| Metric | Value |
+|--------|-------|
+| Total JS files | 90 |
+| Total JS lines | ~45,924 |
+| ES6 classes | 81 |
+| God classes | 7 (all with delegation) |
+| Tests passing | 5,609 |
+| Statement coverage | ~91% |
+| Branch coverage | ~78% |
+
 ### Troubleshooting
 
 - See [docs/layers-all-troubleshooting.md](docs/layers-all-troubleshooting.md) for common issues
 - See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for tracked bugs
+- See [improvement_plan.md](improvement_plan.md) for technical debt roadmap
 
 **Windows Composer Conflict:** Some Windows systems have a Python package named "composer" that shadows PHP Composer. Use `npm run test:php` as an alternative.
 
@@ -295,6 +299,8 @@ composer test
 - [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) - Getting started
 - [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) - Named sets feature
 - [WIKITEXT_USAGE.md](docs/WIKITEXT_USAGE.md) - Wikitext syntax
+- [codebase_review.md](codebase_review.md) - Technical assessment
+- [improvement_plan.md](improvement_plan.md) - Roadmap
 
 ---
 
@@ -307,4 +313,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 ## License
 
 GPL-2.0-or-later
-

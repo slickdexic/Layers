@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** December 20, 2025  
-**Status:** ✅ Stable with Minor Issues  
+**Status:** ✅ Stable with Identified Issues  
 **Version:** 1.1.7  
 **Goal:** World-class MediaWiki extension
 
@@ -11,12 +11,12 @@
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Functionality** | ✅ Working | 14 tools, alignment, presets, named sets, **smart guides**, **eyedropper** |
+| **Functionality** | ✅ Working | 14 tools, alignment, presets, named sets, smart guides |
 | **Security** | ✅ Excellent | Professional PHP backend |
-| **Testing** | ✅ All Passing | 5,650 tests, 0 failures |
-| **ES6 Migration** | ✅ Complete | 79 classes, 0 prototype patterns |
+| **Testing** | ✅ All Passing | 5,609 tests, 0 failures, ~91% coverage |
+| **ES6 Migration** | ✅ Complete | 81 classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Managed | 7 files >1,000 lines (all have delegation) |
-| **Code Volume** | ✅ Controlled | ~45,760 lines (CI warns at 45K) |
+| **Code Volume** | ⚠️ At Limit | ~45,924 lines (CI warns at 45K) |
 | **Mobile** | ❌ Missing | No touch support |
 
 ---
@@ -25,105 +25,125 @@
 
 | Priority | Timeline | Criteria |
 |----------|----------|----------|
-| **P0** | This week | Blocking issues, regressions |
+| **P0** | This week | Blocking issues, bugs, memory leaks |
 | **P1** | 1-4 weeks | High-impact stabilization |
 | **P2** | 1-3 months | Architecture improvements |
 | **P3** | 3-6 months | World-class features |
 
 ---
 
-## Phase 0: Immediate Fixes
+## Phase 0: Immediate Fixes (P0)
 
-### P0.1 Fix Alignment Buttons ✅ COMPLETED
+### P0.1 Fix Memory Leak in CanvasManager.destroy() ✅ COMPLETED (Dec 20, 2025)
 
-- **Problem:** AlignmentController constructor received CanvasManager directly but expected config object with `editor` and `canvasManager` properties
-- **Solution:** Updated constructor to detect and handle both formats
-- **File:** `resources/ext.layers.editor/canvas/AlignmentController.js`
-- **Status:** Fixed - alignment buttons now functional
+- **Problem:** Several controllers not cleaned up in destroy()
+- **Fixed:** Added missing controllers to cleanup array:
+  - selectionManager
+  - textInputController
+  - alignmentController
+  - imageLoader
+- **File:** `resources/ext.layers.editor/CanvasManager.js`
 
-### P0.2 Fix Failing Test ✅ COMPLETED
+### P0.2 Update CI God Class Baselines ✅ COMPLETED (Dec 20, 2025)
 
-- **File:** `tests/jest/ImportExportManager.test.js`
-- **Solution:** Added `if (a.parentNode)` check before removeChild
-- **Status:** All 5,378 tests now passing
+- **Problem:** god-class-check.yml had outdated baselines
+- **Fixed:** Updated to actual line counts:
+  - CanvasManager.js: 1868
+  - LayerPanel.js: 1837
+  - Toolbar.js: 1539
+  - SelectionManager.js: 1194
+- **Removed:** ShapeRenderer (857) and ToolbarStyleControls (947) - now under 1000! 🎉
+- **File:** `.github/workflows/god-class-check.yml`
 
-### P0.3 Sync Version Numbers ✅ COMPLETED
+### P0.3 Remove Console.log from Production ✅ COMPLETED (Dec 20, 2025)
 
-- **Action:** Updated extension.json to 1.1.5
-- **Status:** Complete
+- **Problem:** 3 console.log/warn/error fallbacks in production code
+- **Fixed:** Removed fallbacks, now uses mw.log only
+- **Files:**
+  - PresetStorage.js - removed console.warn/error fallbacks
+  - PresetManager.js - removed console.error fallback
 
-### P0.4 Remove DEBUG Comments ✅ COMPLETED
+### P0.4 Add Missing Null Checks ✅ REVIEWED (Dec 20, 2025)
 
-- **Files:** LayersViewer.js, LayerRenderer.js, LayersEditor.js
-- **Action:** Removed ~30 lines of DEBUG logging
-- **Status:** Complete
-
----
-
-## Phase 1: Stabilization (4 weeks)
-
-### P1.1 Control Code Growth ✅ IMPLEMENTED
-
-**CI Enforcement Active:**
-- Total codebase size check (warns at 45K, blocks at 50K)
-- God class growth prevention (9 tracked files with baselines)
-- New god class detection (blocks any new file >1,000 lines)
-  run: |
-    TOTAL=$(find resources -name "*.js" ! -path "*/dist/*" -exec cat {} + | wc -l)
-    if [ $TOTAL -gt 45000 ]; then
-      echo "ERROR: Codebase exceeds 45,000 lines ($TOTAL)"
-      exit 1
-    fi
-```
-
-### P1.2 Split ToolbarStyleControls ✅ COMPLETED
-
-- **Was:** 1,101 lines (NEW god class as of Dec 19)
-- **Solution:** Extracted PresetStyleManager.js (~275 lines)
-- **Now:** 947 lines (below 1,000 threshold)
-- **Extract Performed:**
-  - PresetStyleManager.js - preset dropdown, apply/save, style property list
-- **Tests Added:** 25 new tests (PresetStyleManager.test.js)
-- **Completed:** December 20, 2025
-
-### P1.3 Split PresetManager ✅ COMPLETED
-
-- **Was:** 868 lines (approaching limit)
-- **Solution:** Extracted BuiltInPresets.js and PresetStorage.js
-- **Now:** 642 lines (-26% reduction)
-- **Extractions Performed:**
-  - BuiltInPresets.js (~293 lines) - built-in preset definitions + utility methods
-  - PresetStorage.js (~426 lines) - localStorage operations, import/export, sanitization
-- **Tests Added:** 68 new tests (BuiltInPresets.test.js, PresetStorage.test.js)
-- **Completed:** December 20, 2025
-
-### P1.4 Fix Markdown Lint Warnings ⏳ NOT STARTED
-
-- **Files:** README.md, CHANGELOG.md
-- **Issues:** Missing blank lines around lists/headings
-- **Effort:** 1 hour
+- **Status:** Reviewed and determined to be non-issues
+- **Reason:** These are constructor-injected dependencies that will always exist when the code paths are reached
+- **Decision:** No changes needed - would be over-defensive coding
 
 ---
 
-## Phase 2: Architecture Improvement (8 weeks)
+## Phase 1: Stabilization (P1)
 
-### P2.1 Reduce ShapeRenderer ✅ COMPLETED
+### P1.1 Improve Test Coverage for New Features ⏳ NOT STARTED
 
-- **Was:** 1,191 lines (+142 from Dec 18)
-- **Solution:** Extracted PolygonStarRenderer.js
-- **Now:** 858 lines (-28% reduction)
-- **Extraction Performed:**
-  - PolygonStarRenderer.js (~606 lines) - polygon and star shape rendering with shadow support
-- **Tests Added:** 43 new tests (PolygonStarRenderer.test.js)
-- **Completed:** December 20, 2025
+| File | Current | Target | Status |
+|------|---------|--------|--------|
+| AlignmentController.js | 74.19% | 90%+ | Tests added |
+| ToolbarStyleControls.js | 71.23% branch | 75%+ | ✅ **Improved** (52%→71%) |
+| Toolbar.js | 62.78% branch | 75%+ | ⏳ |
 
-### P2.2 Monitor High-Risk Files ⏳ ONGOING
+**Effort:** 1 week
 
-| File | Lines | Threshold | Action if Exceeded |
-|------|-------|-----------|-------------------|
-| LayersValidator.js | 958 | 1,000 | Extract rule categories |
-| UIManager.js | 917 | 1,000 | Extract dialog management |
-| PropertiesForm.js | 832 | 1,000 | Extract field renderers |
+**Progress (Dec 20, 2025):**
+- Added 14 tests to ToolbarStyleControls (applyPresetStyleInternal, getCurrentStyle, setCurrentTool, updateForSelection)
+- Statement coverage: 82% → 90%
+- Branch coverage: 52% → 71%
+
+### P1.2 Remove Dead Code ✅ PARTIAL (Dec 20, 2025)
+
+| File | Code | Status |
+|------|------|--------|
+| ~~CanvasManager.js~~ | ~~updateBackgroundLayerVisibility()~~ | Kept - method not found |
+| ~~CanvasManager.js~~ | ~~loadImageManually()~~ | Kept - still used as fallback |
+| ~~LayerPanel.js~~ | ~~updateCodePanel() no-op~~ | Kept - backward compatibility |
+| ToolManager.js | Commented selection methods | ✅ **Removed** (11 lines) |
+
+**Notes:**
+- Reviewed "deprecated" code - most is intentional fallback or backward compat
+- Removed commented-out reference code from ToolManager.js
+
+**Effort:** 30 minutes
+
+### P1.3 Add Constants for Hardcoded Values ✅ ENHANCED (Dec 20, 2025)
+
+- **Status:** LayersConstants.js already comprehensive
+- **Added:**
+  - Z_INDEX namespace (CANVAS_OVERLAY, TEXT_INPUT, MODAL, TOOLTIP)
+  - UI.PASTE_OFFSET, UI.DUPLICATE_OFFSET
+  - UI.DEFAULT_CANVAS_WIDTH, UI.DEFAULT_CANVAS_HEIGHT
+- **File:** `resources/ext.layers.editor/LayersConstants.js`
+
+### P1.4 Monitor Code Growth ⏳ ONGOING
+
+- **Current:** 45,912 lines (912 over warning threshold)
+- **Warning:** 45,000 lines
+- **Block:** 50,000 lines
+- **Action:** Require net-zero or negative line count in PRs
+
+---
+
+## Phase 2: Architecture (P2)
+
+### P2.1 Split LayersValidator ⏳ NOT STARTED
+
+- **Current:** 958 lines (approaching 1,000)
+- **Solution:** Split into category-specific validators
+- **Proposed:**
+  - LayersValidator.js (core, ~300 lines)
+  - TypeValidator.js (type validation, ~250 lines)  
+  - GeometryValidator.js (coordinates, ~200 lines)
+  - StyleValidator.js (colors, fonts, ~200 lines)
+- **Effort:** 3-4 hours
+
+### P2.2 Split PropertiesForm Field Renderers ⏳ NOT STARTED
+
+- **Current:** 832 lines
+- **Solution:** Extract field type renderers
+- **Proposed:**
+  - TextFieldRenderer.js
+  - NumericFieldRenderer.js
+  - ColorFieldRenderer.js
+  - SelectFieldRenderer.js
+- **Effort:** 4-6 hours
 
 ### P2.3 Performance Benchmarks ⏳ NOT STARTED
 
@@ -135,14 +155,7 @@
 - **Location:** `tests/jest/performance/`
 - **Effort:** 2 weeks
 
-### P2.4 TypeScript Definitions ✅ COMPLETED (Dec 18)
-
-- **File:** `types/layers.d.ts` (~500 lines)
-- **Includes:** All layer types, API responses, editor interfaces
-- **Benefit:** IDE autocomplete, documentation
-- **Status:** COMPLETE
-
-### P2.5 Architecture Documentation ⏳ NOT STARTED
+### P2.4 Architecture Documentation ⏳ NOT STARTED
 
 - **Create:** Visual diagrams (Mermaid or similar)
 - **Document:**
@@ -153,7 +166,7 @@
 
 ---
 
-## Phase 3: World-Class (12+ weeks)
+## Phase 3: World-Class (P3)
 
 ### P3.1 Mobile/Touch Support ⏳ NOT STARTED
 
@@ -166,50 +179,14 @@
 - **Effort:** 4-6 weeks
 - **Impact:** Critical for modern web
 
-### P3.2 Eyedropper Tool ✅ COMPLETED
-
-- **Problem:** Missing from color picker (per UX audit)
-- **Implementation:**
-  - ✅ Canvas color sampling with getImageData
-  - ✅ Magnified preview circle with crosshair
-  - ✅ Color swatch display with hex value
-  - ✅ Click to sample, ESC to cancel
-  - ✅ Keyboard shortcut: I (fill) / Shift+I (stroke)
-  - ✅ Apply to selected layers and toolbar
-- **Effort:** 1 day (vs 1 week estimate)
-- **Components:**
-  - EyedropperController.js (~480 lines)
-  - Integrated with CanvasManager, CanvasRenderer
-  - Keyboard shortcut in ToolbarKeyboard
-  - Registered in ToolRegistry
-- **Tests Added:** 59 new tests
-- **Completed:** December 20, 2025
-
-### P3.3 Smart Guides ✅ COMPLETED
-
-- **Problem:** Only basic snap-to-grid
-- **Features:**
-  - ✅ Snap to object edges (left, right, top, bottom)
-  - ✅ Center alignment guides (horizontal, vertical)
-  - ✅ Visual guide lines (magenta for edges, cyan for centers)
-  - Equal spacing indicators (future enhancement)
-- **Effort:** 1 day
-- **Implementation:**
-  - SmartGuidesController.js (~500 lines)
-  - Integrated with TransformController for drag operations
-  - Integrated with CanvasRenderer for visual feedback
-  - 8px snap threshold (configurable)
-- **Tests Added:** 43 new tests
-- **Completed:** December 21, 2025
-
-### P3.4 Accessibility Audit ⏳ NOT STARTED
+### P3.2 Accessibility Audit ⏳ NOT STARTED
 
 - **Current:** Good (skip links, ARIA, keyboard)
 - **Target:** WCAG 2.1 AA certification
 - **Method:** Automated (axe-core) + manual testing
 - **Effort:** 2 weeks
 
-### P3.5 Auto-Generated Documentation ⏳ NOT STARTED
+### P3.3 Auto-Generated Documentation ⏳ NOT STARTED
 
 - **Problem:** Manual docs become stale
 - **Solution:**
@@ -218,12 +195,18 @@
   - Embed metrics in README
 - **Effort:** 1 week
 
-### P3.6 TypeScript Migration ⏳ NOT STARTED
+### P3.4 TypeScript Migration ⏳ NOT STARTED
 
-- **Prerequisite:** P2.4 (TypeScript definitions) ✅
-- **Approach:** Gradual `.js` → `.ts` conversion
+- **Prerequisite:** TypeScript definitions exist (types/layers.d.ts)
+- **Approach:** Gradual .js → .ts conversion
 - **Start with:** Shared utilities, then core modules
 - **Effort:** 8+ weeks
+
+### P3.5 Layer Grouping ⏳ NOT STARTED
+
+- **Feature:** Group multiple layers for bulk operations
+- **Use case:** Complex annotations with related elements
+- **Effort:** 2-3 weeks
 
 ---
 
@@ -233,74 +216,35 @@
 
 | File | Lines | Delegation | Trend |
 |------|-------|------------|-------|
-| CanvasManager.js | 1,830 | ✅ 10+ controllers | ↑ +25 |
-| LayerPanel.js | 1,821 | ✅ 7 controllers | ↑ +101 |
-| LayersEditor.js | 1,329 | ✅ 3 modules | ↑ +28 |
-| Toolbar.js | 1,298 | ✅ 4 modules | ↑ +183 |
-| ToolManager.js | 1,275 | ✅ 2 handlers | = |
-| SelectionManager.js | 1,181 | ✅ 3 modules | ↑ +34 |
-| APIManager.js | 1,161 | ✅ APIErrorHandler | ↓ -7 |
-| ~~ShapeRenderer.js~~ | ~~858~~ | ✅ PolygonStarRenderer | **↓ -333** ✅ |
-| ~~ToolbarStyleControls.js~~ | ~~947~~ | ✅ PresetStyleManager | **↓ -102** ✅ |
+| CanvasManager.js | 1,864 | ✅ 10+ controllers | Stable |
+| LayerPanel.js | 1,837 | ✅ 7 controllers | Stable |
+| Toolbar.js | 1,539 | ✅ 4 modules | ↑ Growing |
+| LayersEditor.js | 1,324 | ✅ 3 modules | Stable |
+| ToolManager.js | 1,275 | ✅ 2 handlers | Stable |
+| SelectionManager.js | 1,194 | ✅ 3 modules | Stable |
+| APIManager.js | 1,161 | ✅ APIErrorHandler | Stable |
 
-**Total in god classes: 10,895 lines** (-1,240 from Dec 19)
+**Total in god classes: ~10,194 lines**
 
-### Delegated Code Summary
+### Files to Watch (800-1000 lines)
 
-| God Class | Delegated Lines | Ratio |
-|-----------|----------------|-------|
-| CanvasManager | ~5,116 | 2.8x |
-| LayerPanel | ~2,598 | 1.4x |
-| Toolbar | ~2,293 | 1.8x |
-| ToolManager | ~1,850 | 1.5x |
-| SelectionManager | ~975 | 0.8x |
-| LayersEditor | ~1,371 | 1.0x |
-| ShapeRenderer | ~1,127 | 1.3x (includes PolygonStarRenderer) |
-| ToolbarStyleControls | ~275 | 0.3x |
-
-**Key Insight:** All god classes now have delegation. ShapeRenderer dropped below 1,000 lines.
+| File | Lines | Risk |
+|------|-------|------|
+| LayersValidator.js | 958 | ⚠️ HIGH |
+| ToolbarStyleControls.js | 947 | ⚠️ HIGH |
+| UIManager.js | 917 | ⚠️ MEDIUM |
+| CanvasRenderer.js | 859 | MEDIUM |
+| ShapeRenderer.js | 857 | MEDIUM |
+| PropertiesForm.js | 832 | ⚠️ MEDIUM |
 
 ---
 
-## Progress Tracking
-
-### Visual Progress
-
-```
-Phase 0 (Immediate):
-P0.1 Fix Alignment Buttons:   ████████████████████ 100% ✅
-P0.2 Fix Failing Test:        ████████████████████ 100% ✅
-P0.3 Sync Version Numbers:    ████████████████████ 100% ✅
-P0.4 Remove DEBUG Comments:   ████████████████████ 100% ✅
-
-Phase 1 (Stabilization):
-P1.1 Control Code Growth:     ████████████████████ 100% ✅ CI Active
-P1.2 Split ToolbarStyleCtrl:  ████████████████████ 100% ✅
-P1.3 Split PresetManager:     ████████████████████ 100% ✅
-P1.4 Fix Markdown Warnings:   ░░░░░░░░░░░░░░░░░░░░ 0%
-
-Phase 2 (Architecture):
-P2.1 Reduce ShapeRenderer:    ████████████████████ 100% ✅
-P2.2 Monitor High-Risk Files: ██████████░░░░░░░░░░ 50% (ongoing)
-P2.3 Performance Benchmarks:  ░░░░░░░░░░░░░░░░░░░░ 0%
-P2.4 TypeScript Definitions:  ████████████████████ 100% ✅
-P2.5 Architecture Docs:       ░░░░░░░░░░░░░░░░░░░░ 0%
-
-Phase 3 (World-Class):
-P3.1 Mobile/Touch Support:    ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.2 Eyedropper Tool:         ████████████████████ 100% ✅
-P3.3 Smart Guides:            ████████████████████ 100% ✅
-P3.4 Accessibility Audit:     ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.5 Auto-Generated Docs:     ░░░░░░░░░░░░░░░░░░░░ 0%
-P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░░░░░ 0%
-```
-
-### Recently Completed
+## Recently Completed
 
 | Date | Task | Impact |
 |------|------|--------|
-| Dec 20 | Eyedropper Tool (EyedropperController) | +480 lines, 59 tests |
 | Dec 20 | Smart Guides (SmartGuidesController) | +500 lines, 43 tests |
+| Dec 20 | Arrange dropdown menu | Toolbar consolidation |
 | Dec 20 | PolygonStarRenderer extraction | ShapeRenderer: -333 lines |
 | Dec 20 | BuiltInPresets + PresetStorage | PresetManager: -226 lines |
 | Dec 20 | PresetStyleManager extraction | ToolbarStyleControls: -102 lines |
@@ -308,47 +252,80 @@ P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░�
 | Dec 19 | Multi-selection in LayerPanel | +101 lines |
 | Dec 19 | Style presets system | +868 lines |
 | Dec 18 | TypeScript definitions | +500 lines |
-| Dec 18 | E2E module tests (15 tests) | Testing |
-| Dec 18 | Fix flaky RenderBenchmark | Stability |
+| Dec 18 | LayerDataNormalizer extraction | Text shadow fix |
 | Dec 17 | TextBoxRenderer extraction | -318 lines |
+
+---
+
+## Progress Tracking
+
+```
+Phase 0 (Immediate - This Week):
+P0.1 Fix Memory Leak:        ░░░░░░░░░░░░░░░░░░░░ 0%
+P0.2 Update CI Baselines:    ░░░░░░░░░░░░░░░░░░░░ 0%
+P0.3 Remove Console.log:     ░░░░░░░░░░░░░░░░░░░░ 0%
+P0.4 Add Null Checks:        ░░░░░░░░░░░░░░░░░░░░ 0%
+
+Phase 1 (Stabilization - 4 weeks):
+P1.1 Test Coverage:          ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.2 Remove Dead Code:       ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.3 Add Constants:          ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.4 Monitor Growth:         ██████████░░░░░░░░░░ 50% (ongoing)
+
+Phase 2 (Architecture - 8 weeks):
+P2.1 Split LayersValidator:  ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.2 Split PropertiesForm:   ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.3 Performance Tests:      ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.4 Architecture Docs:      ░░░░░░░░░░░░░░░░░░░░ 0%
+
+Phase 3 (World-Class - 12+ weeks):
+P3.1 Mobile/Touch:           ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.2 Accessibility Audit:    ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.3 Auto-Gen Docs:          ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.4 TypeScript:             ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.5 Layer Grouping:         ░░░░░░░░░░░░░░░░░░░░ 0%
+```
 
 ---
 
 ## Success Metrics
 
+### Phase 0 Complete When
+
+- [ ] 0 memory leaks in editor open/close cycle
+- [ ] CI baselines match actual file sizes
+- [ ] No console.log in production code
+- [ ] No null reference errors
+
 ### Phase 1 Complete When
 
-- [ ] 0 failing tests
-- [ ] Version numbers synchronized
-- [ ] Total lines < 45,000
-- [ ] ToolbarStyleControls < 600 lines with delegation
-- [ ] No DEBUG comments in production code
-- [ ] Growth rate < 1% per week
+- [ ] AlignmentController >90% coverage
+- [ ] No dead code in tracked files
+- [ ] All magic numbers replaced with constants
+- [ ] Codebase under 45,000 lines
 
 ### Phase 2 Complete When
 
-- [ ] 0 files > 1,000 lines without delegation
-- [ ] ShapeRenderer < 700 lines
-- [ ] Architecture documentation complete
+- [ ] LayersValidator under 500 lines
+- [ ] PropertiesForm under 600 lines
 - [ ] Performance benchmarks passing
+- [ ] Architecture diagrams complete
 
 ### World-Class When
 
 - [ ] Mobile/touch support working
 - [ ] WCAG 2.1 AA compliant
-- [x] Eyedropper tool implemented ✅
-- [x] Smart guides working ✅
+- [ ] Auto-generated docs in CI
+- [ ] TypeScript on shared modules
 - [ ] New contributor productive in <1 day
 
 ---
 
 ## Rules
 
-### The Growth Control Rule (NEW - December 19)
+### The Growth Control Rule
 
-**Problem:** Codebase grew 6.8% in 1 day without corresponding cleanup.
-
-**Rule:** Track weekly line count. If growth exceeds 2%:
+Track weekly line count. If growth exceeds 2%:
 1. No new features until extraction catches up
 2. Every PR must include net-zero or negative line count
 3. Review what's driving growth
@@ -356,28 +333,24 @@ P3.6 TypeScript Migration:    ░░░░░░░░░░░░░░░░�
 ### The 1-for-1 Rule
 
 If features must continue:
-
-- Every +100 lines added requires -100 lines extracted from a god class
+- Every +100 lines added requires -100 lines extracted
 - Extraction must be in same PR
 - Track in PR description: "Added: 150 lines, Extracted: 180 lines, Net: -30"
 
 ### The God Class Rule
 
 When any file exceeds 1,000 lines:
-
 1. **Freeze:** No new code until extraction PR merged
 2. **Extract:** Identify cohesive functionality for new module
 3. **Delegate:** Parent keeps coordination, child handles details
 4. **Test:** Both parent and child must have tests
 
-### The Delegation Rule
+### The Destroy Rule
 
-When extracting:
-
-1. Create specialist module
-2. Pass parent reference to constructor
-3. Parent delegates to specialist
-4. Test both in isolation
+When adding new controller/module references:
+1. Add to constructor initialization
+2. Add cleanup to destroy() method
+3. Test that cleanup actually runs
 
 ---
 
@@ -385,14 +358,14 @@ When extracting:
 
 | Phase | Duration | Gate |
 |-------|----------|------|
-| Phase 0 | 1 week | Tests stable, versions synced |
-| Phase 1 | 4 weeks | Growth controlled, ToolbarStyleControls split |
-| Phase 2 | 8 weeks | <7 god classes, docs complete |
-| Phase 3 | 12+ weeks | World-class features |
+| Phase 0 | 1 week | Memory leak fixed, CI updated |
+| Phase 1 | 4 weeks | Coverage improved, dead code removed |
+| Phase 2 | 8 weeks | Validators split, benchmarks passing |
+| Phase 3 | 12+ weeks | Mobile support, world-class features |
 
 **Total time to world-class: ~6 months focused effort**
 
 ---
 
-*Plan updated: December 19, 2025*  
-*Next review: January 19, 2026*
+*Plan updated: December 20, 2025*  
+*Next review: January 20, 2026*

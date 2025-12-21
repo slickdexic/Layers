@@ -15,18 +15,19 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 | Key | Tool | Description |
 |-----|------|-------------|
 | `V` | Pointer | Select, move, resize, rotate layers |
-| `Z` | Zoom | Zoom and pan the canvas |
 | `T` | Text | Add single-line text labels |
 | `X` | Text Box | Add multi-line text with container |
 | `P` | Pen | Freehand path drawing |
 | `R` | Rectangle | Draw rectangles |
 | `C` | Circle | Draw circles |
 | `E` | Ellipse | Draw ellipses |
-| `G` | Polygon | Draw polygons |
+| `Y` | Polygon | Draw polygons |
 | `S` | Star | Draw stars |
 | `A` | Arrow | Draw arrows |
 | `L` | Line | Draw straight lines |
 | `B` | Blur | Apply blur effect |
+
+> **Note:** The Zoom tool (`Z`) has been removed. Use the zoom controls in the View shortcuts instead.
 
 ---
 
@@ -54,11 +55,12 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 |----------|--------|
 | `Shift+B` | Toggle background visibility |
 | `;` | Toggle smart guides (snap to objects) |
-| `Ctrl+0` | Fit to window |
-| `Ctrl+1` | Zoom to 100% |
+| `0` | Fit to window |
 | `+` or `=` | Zoom in |
 | `-` | Zoom out |
 | `Space+Drag` | Pan canvas (while holding Space) |
+
+> **Note:** Zoom shortcuts work both with and without Ctrl modifier.
 
 ---
 
@@ -66,9 +68,9 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 
 | Shortcut | Action |
 |----------|--------|
+| `Ctrl+A` | Select all layers |
 | `Ctrl+Click` | Add/remove layer from selection |
 | `Shift+Click` | Range select (select all between) |
-| `M` | Marquee selection mode |
 | `Escape` | Deselect all |
 
 ---
@@ -95,12 +97,15 @@ These modifiers work while drawing shapes:
 
 ## Layer Panel Shortcuts
 
+When a layer is selected in the Layer Panel:
+
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+]` | Move layer up |
-| `Ctrl+[` | Move layer down |
-| `Ctrl+Shift+]` | Move layer to top |
-| `Ctrl+Shift+[` | Move layer to bottom |
+| `Arrow Up` | Select previous layer |
+| `Arrow Down` | Select next layer |
+| `Delete` | Delete selected layer |
+
+> **Planned:** Layer reordering shortcuts (`Ctrl+]/[`) are on the roadmap.
 
 ---
 
@@ -109,7 +114,6 @@ These modifiers work while drawing shapes:
 | Shortcut | Action |
 |----------|--------|
 | `Shift+?` | Show keyboard shortcuts help |
-| `F1` | Show help (if available) |
 
 ---
 

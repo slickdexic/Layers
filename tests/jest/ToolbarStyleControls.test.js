@@ -33,7 +33,8 @@ describe( 'ToolbarStyleControls', () => {
 		mockMsg = jest.fn( ( key, fallback ) => fallback || key );
 		mockToolbar = {
 			registerDialogCleanup: jest.fn(),
-			onStyleChange: jest.fn()
+			onStyleChange: jest.fn(),
+			updateColorButtonDisplay: jest.fn()
 		};
 
 		styleControls = new ToolbarStyleControls( {
@@ -841,6 +842,135 @@ describe( 'ToolbarStyleControls', () => {
 			expect( controls.eventTracker ).toBeNull();
 
 			window.Layers.Utils.EventTracker = originalEventTracker;
+		} );
+	} );
+
+	describe( 'applyPresetStyleInternal', () => {
+		it( 'should do nothing when style is null', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			const origStroke = controls.strokeColorValue;
+			controls.applyPresetStyleInternal( null );
+			expect( controls.strokeColorValue ).toBe( origStroke );
+		} );
+
+		it( 'should apply stroke color from style', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.applyPresetStyleInternal( { stroke: '#ff0000' } );
+			expect( controls.strokeColorValue ).toBe( '#ff0000' );
+			expect( controls.strokeColorNone ).toBe( false );
+		} );
+
+		it( 'should set strokeColorNone for transparent stroke', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.applyPresetStyleInternal( { stroke: 'transparent' } );
+			expect( controls.strokeColorNone ).toBe( true );
+		} );
+
+		it( 'should apply fill color from style', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.applyPresetStyleInternal( { fill: '#00ff00' } );
+			expect( controls.fillColorValue ).toBe( '#00ff00' );
+			expect( controls.fillColorNone ).toBe( false );
+		} );
+
+		it( 'should set fillColorNone for none fill', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.applyPresetStyleInternal( { fill: 'none' } );
+			expect( controls.fillColorNone ).toBe( true );
+		} );
+
+		it( 'should apply strokeWidth from style', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.applyPresetStyleInternal( { strokeWidth: 5 } );
+			expect( controls.currentStrokeWidth ).toBe( 5 );
+			expect( controls.strokeWidthInput.value ).toBe( '5' );
+		} );
+
+		it( 'should apply fontSize from style', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.applyPresetStyleInternal( { fontSize: 24 } );
+			expect( controls.fontSizeInput.value ).toBe( '24' );
+		} );
+
+		it( 'should apply arrowStyle from style', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.applyPresetStyleInternal( { arrowStyle: 'double' } );
+			expect( controls.arrowStyleSelect.value ).toBe( 'double' );
+		} );
+	} );
+
+	describe( 'getCurrentStyle', () => {
+		it( 'should return current style with all properties', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.strokeColorValue = '#123456';
+			controls.strokeColorNone = false;
+			controls.fillColorValue = '#654321';
+			controls.fillColorNone = false;
+			controls.currentStrokeWidth = 3;
+			controls.fontSizeInput.value = '18';
+			controls.arrowStyleSelect.value = 'single';
+
+			const style = controls.getCurrentStyle();
+			expect( style.stroke ).toBe( '#123456' );
+			expect( style.fill ).toBe( '#654321' );
+			expect( style.strokeWidth ).toBe( 3 );
+			expect( style.fontSize ).toBe( 18 );
+			expect( style.arrowStyle ).toBe( 'single' );
+		} );
+
+		it( 'should return transparent for none colors', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.strokeColorNone = true;
+			controls.fillColorNone = true;
+
+			const style = controls.getCurrentStyle();
+			expect( style.stroke ).toBe( 'transparent' );
+			expect( style.fill ).toBe( 'transparent' );
+		} );
+	} );
+
+	describe( 'setCurrentTool', () => {
+		it( 'should delegate to presetStyleManager when available', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.presetStyleManager = { setCurrentTool: jest.fn() };
+			controls.setCurrentTool( 'arrow' );
+			expect( controls.presetStyleManager.setCurrentTool ).toHaveBeenCalledWith( 'arrow' );
+		} );
+
+		it( 'should not throw when presetStyleManager is null', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.presetStyleManager = null;
+			expect( () => controls.setCurrentTool( 'text' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateForSelection', () => {
+		it( 'should delegate to presetStyleManager when available', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.presetStyleManager = { updateForSelection: jest.fn() };
+			const layers = [ { id: '1', type: 'rectangle' } ];
+			controls.updateForSelection( layers );
+			expect( controls.presetStyleManager.updateForSelection ).toHaveBeenCalledWith( layers );
+		} );
+
+		it( 'should not throw when presetStyleManager is null', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.presetStyleManager = null;
+			expect( () => controls.updateForSelection( [] ) ).not.toThrow();
 		} );
 	} );
 

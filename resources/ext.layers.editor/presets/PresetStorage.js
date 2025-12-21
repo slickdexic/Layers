@@ -385,9 +385,6 @@
 		logWarn( ...args ) {
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
 				mw.log.warn( '[PresetStorage]', ...args );
-			} else if ( typeof console !== 'undefined' ) {
-				// eslint-disable-next-line no-console
-				console.warn( '[PresetStorage]', ...args );
 			}
 		}
 
@@ -399,9 +396,6 @@
 		logError( ...args ) {
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
 				mw.log.error( '[PresetStorage]', ...args );
-			} else if ( typeof console !== 'undefined' ) {
-				// eslint-disable-next-line no-console
-				console.error( '[PresetStorage]', ...args );
 			}
 		}
 	}

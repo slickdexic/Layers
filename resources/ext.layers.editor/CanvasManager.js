@@ -1803,13 +1803,17 @@ class CanvasManager {
 			'renderCoordinator',
 			'events',
 			'renderer',
+			'selectionManager',
 			'zoomPanController',
 			'transformController',
 			'hitTestController',
 			'drawingController',
 			'clipboardController',
+			'textInputController',
+			'alignmentController',
 			'smartGuidesController',
-			'styleController'
+			'styleController',
+			'imageLoader'
 		];
 
 		controllersToDestroy.forEach( function ( name ) {

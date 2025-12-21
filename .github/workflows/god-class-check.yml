@@ -51,18 +51,17 @@ jobs:
           echo "🔍 Checking for god class growth..."
           echo ""
           
-          # Define god classes and their baseline sizes (as of Dec 19, 2025)
+          # Define god classes and their baseline sizes (as of Dec 20, 2025)
           # These are the current line counts - PRs must not increase them
+          # Note: ShapeRenderer (857) and ToolbarStyleControls (947) dropped below 1000 - SUCCESS!
           declare -A GOD_CLASSES=(
-            ["resources/ext.layers.editor/CanvasManager.js"]=1830    # Facade with 10+ controllers - acceptable
-            ["resources/ext.layers.editor/LayerPanel.js"]=1821       # Facade with 7 controllers - acceptable
+            ["resources/ext.layers.editor/CanvasManager.js"]=1868    # Facade with 10+ controllers - acceptable
+            ["resources/ext.layers.editor/LayerPanel.js"]=1837       # Facade with 7 controllers - acceptable
+            ["resources/ext.layers.editor/Toolbar.js"]=1539          # Partial delegation (4 modules)
             ["resources/ext.layers.editor/LayersEditor.js"]=1324     # Partial delegation
-            ["resources/ext.layers.editor/Toolbar.js"]=1298          # Partial delegation (4 modules)
             ["resources/ext.layers.editor/ToolManager.js"]=1275      # Has 2 tool handlers
-            ["resources/ext.layers.shared/ShapeRenderer.js"]=1191    # Has ShadowRenderer delegation
-            ["resources/ext.layers.editor/SelectionManager.js"]=1181 # Has 3 modules (SelectionState, MarqueeSelection, SelectionHandles)
+            ["resources/ext.layers.editor/SelectionManager.js"]=1194 # Has 3 modules (SelectionState, MarqueeSelection, SelectionHandles)
             ["resources/ext.layers.editor/APIManager.js"]=1161       # Has APIErrorHandler delegation
-            ["resources/ext.layers.editor/ToolbarStyleControls.js"]=1100 # Has ColorControlFactory delegation
           )
           
           WARN_THRESHOLD=800

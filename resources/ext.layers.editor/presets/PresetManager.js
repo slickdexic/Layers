@@ -594,9 +594,6 @@
 		logError( ...args ) {
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
 				mw.log.error( '[PresetManager]', ...args );
-			} else if ( typeof console !== 'undefined' ) {
-				// eslint-disable-next-line no-console
-				console.error( '[PresetManager]', ...args );
 			}
 		}
 

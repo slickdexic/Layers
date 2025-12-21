@@ -167,6 +167,73 @@ As a user, I want to adjust the background image opacity so I can make my annota
 
 ---
 
+## 3. Blur as Blend Mode for All Shapes
+
+**Priority:** Medium  
+**Complexity:** Medium-High  
+**Status:** ⏳ Proposed
+
+### Description
+Allow any shape (rectangle, circle, ellipse, polygon, star, path) to use "blur" as a blend mode, creating blurred regions in any shape. This would generalize the current blur tool and enable creative use cases like privacy masks, focus effects, and stylized callouts.
+
+### User Story
+As a user, I want to apply blur effect to any shape (not just rectangles) so I can create circular privacy masks, star-shaped focus effects, or complex path-based blur regions.
+
+### Technical Challenges
+
+| Challenge | Approach |
+|-----------|----------|
+| Blur is a `filter`, not a blend mode | Intercept "blur" blend mode in renderer, use filter path |
+| Shape clipping for non-rectangles | Use shape geometry as clip path before applying blur |
+| Performance | Blur is expensive; consider caching or limiting blur radius |
+| Text layers | Apply blur to bounding box, or skip text (TBD) |
+
+### Implementation Approach
+
+1. **Add "blur" to blend mode options**
+   - Update LayersValidator.validBlendModes to include 'blur'
+   - Update blend mode dropdown in ToolbarStyleControls
+   - Update LayersConstants.BLEND_MODES
+
+2. **Modify ShapeRenderer**
+   - Detect `blendMode === 'blur'` before drawing
+   - Instead of normal fill/stroke, use shape as clip path
+   - Delegate to EffectsRenderer for blur effect within clip
+
+3. **Generalize EffectsRenderer.drawBlur()**
+   - Accept optional clip path (array of points or shape geometry)
+   - Use `ctx.clip()` with shape path before blur operation
+
+4. **Deprecate standalone blur tool?**
+   - Keep for backward compatibility
+   - Rectangle with blur blend mode is equivalent
+
+### Layer Example
+```javascript
+{
+  type: 'ellipse',
+  x: 200,
+  y: 150,
+  radiusX: 80,
+  radiusY: 60,
+  blendMode: 'blur',
+  blurRadius: 15,  // reuse existing property
+  opacity: 1
+}
+```
+
+### Estimated Effort
+- **3-5 days** for full implementation
+- Files to modify: ShapeRenderer, EffectsRenderer, LayersValidator, ToolbarStyleControls, LayersConstants
+
+### Benefits
+- Unique differentiation from other annotation tools
+- Privacy masking with arbitrary shapes
+- Creative effects (vignettes, spotlight-inverse)
+- Consolidates blur functionality
+
+---
+
 ## Related Issues
 
 - None currently linked
@@ -174,4 +241,4 @@ As a user, I want to adjust the background image opacity so I can make my annota
 ---
 
 *Document created: December 13, 2025*  
-*Last updated: December 16, 2025*
+*Last updated: December 20, 2025*

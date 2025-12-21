@@ -364,17 +364,6 @@ class ToolManager {
 		this.startPoint = null;
 	}
 
-	/*
-	 * The following selection-related methods are now obsolete, as the logic
-	 * has been moved to CanvasManager for better integration with hit-testing
-	 * and state management. They are kept here for reference but are no longer called.
-	 */
-	/*
-	startSelection( point, event ) { ... };
-	updateSelection( point, event ) { ... };
-	finishSelection( point, event ) { ... };
-	*/
-
 	/**
 	 * Start pen drawing
 	 *
