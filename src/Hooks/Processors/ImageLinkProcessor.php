@@ -183,27 +183,31 @@ class ImageLinkProcessor {
 				return true;
 			}
 
-			// Resolve layer data based on the param value
-			$layersArray = $this->resolveLayerSetFromParam( $file, $param );
+			// Resolve layer data based on the param value (now returns full data object)
+			$layerData = $this->resolveLayerSetFromParam( $file, $param );
 
-			if ( $layersArray !== null ) {
-				// Use injector for HTML modification
+			if ( $layerData !== null ) {
+				// Use injector for HTML modification with background settings
 				$dimensions = $this->htmlInjector->getFileDimensions( $file );
 				$res = $this->htmlInjector->injectIntoHtml(
 					$res,
-					$layersArray,
+					$layerData['layers'],
 					$dimensions['width'],
 					$dimensions['height'],
-					'LinkerMakeMediaLinkFile'
+					'LinkerMakeMediaLinkFile',
+					$layerData['backgroundVisible'],
+					$layerData['backgroundOpacity']
 				);
 
 				// Also set attributes via reference array for core-generated markup paths
 				if ( is_array( $attribs ) ) {
 					$this->htmlInjector->injectIntoAttributes(
 						$attribs,
-						$layersArray,
+						$layerData['layers'],
 						$dimensions['width'],
-						$dimensions['height']
+						$dimensions['height'],
+						$layerData['backgroundVisible'],
+						$layerData['backgroundOpacity']
 					);
 				}
 
@@ -259,20 +263,22 @@ class ImageLinkProcessor {
 			return $html;
 		}
 
-		// Extract layers array from the set
-		$layersArray = $this->extractLayersFromSet( $layerSet );
-		if ( $layersArray === null || empty( $layersArray ) ) {
+		// Extract full layer data from the set (including background settings)
+		$layerData = $this->extractLayerDataFromSet( $layerSet );
+		if ( $layerData === null || empty( $layerData['layers'] ) ) {
 			return $html;
 		}
 
-		// Use injector for HTML modification
+		// Use injector for HTML modification with background settings
 		$dimensions = $this->htmlInjector->getFileDimensions( $file );
 		$result = $this->htmlInjector->injectIntoHtml(
 			$html,
-			$layersArray,
+			$layerData['layers'],
 			$dimensions['width'],
 			$dimensions['height'],
-			$context
+			$context,
+			$layerData['backgroundVisible'],
+			$layerData['backgroundOpacity']
 		);
 
 		$this->pageHasLayers = true;
@@ -351,7 +357,7 @@ class ImageLinkProcessor {
 	 *
 	 * @param mixed $file The File object
 	 * @param string $param The normalized layers parameter value
-	 * @return array|null The layers array, or null if not found
+	 * @return array|null Array with 'layers', 'backgroundVisible', 'backgroundOpacity', or null if not found
 	 */
 	private function resolveLayerSetFromParam( $file, string $param ): ?array {
 		$db = $this->getDatabase();
@@ -365,31 +371,32 @@ class ImageLinkProcessor {
 		// 'on' or 'all' => show default set
 		if ( $param === 'on' || $param === 'all' ) {
 			$latest = $db->getLatestLayerSet( $filename, $sha1 );
-			return $this->extractLayersFromSet( $latest );
+			return $this->extractLayerDataFromSet( $latest );
 		}
 
 		// 'id:123' => specific set by ID
 		if ( preg_match( '/^id:(\d+)$/', $param, $idM ) ) {
 			$ls = $db->getLayerSet( (int)$idM[1] );
-			return $this->extractLayersFromSet( $ls );
+			return $this->extractLayerDataFromSet( $ls );
 		}
 
 		// 'name:setname' => specific named set
 		if ( preg_match( '/^name:(.+)$/', $param, $nameM ) ) {
 			$ls = $db->getLatestLayerSet( $filename, $sha1, $nameM[1] );
-			return $this->extractLayersFromSet( $ls );
+			return $this->extractLayerDataFromSet( $ls );
 		}
 
 		// Short IDs like 'abc1,def2' => filter layers by short ID
 		if ( preg_match( '/^[a-z0-9,]+$/i', $param ) && strpos( $param, ',' ) !== false ) {
 			$shortIds = array_map( 'trim', explode( ',', $param ) );
 			$latest = $db->getLatestLayerSet( $filename, $sha1 );
-			$allLayers = $this->extractLayersFromSet( $latest );
-			if ( $allLayers === null ) {
+			$layerData = $this->extractLayerDataFromSet( $latest );
+			if ( $layerData === null ) {
 				return null;
 			}
-			return array_values( array_filter(
-				$allLayers,
+			// Filter layers by short ID while preserving background settings
+			$filteredLayers = array_values( array_filter(
+				$layerData['layers'],
 				static function ( $layer ) use ( $shortIds ) {
 					if ( !isset( $layer['id'] ) ) {
 						return false;
@@ -403,11 +410,16 @@ class ImageLinkProcessor {
 					return false;
 				}
 			) );
+			return [
+				'layers' => $filteredLayers,
+				'backgroundVisible' => $layerData['backgroundVisible'],
+				'backgroundOpacity' => $layerData['backgroundOpacity']
+			];
 		}
 
 		// Plain string => treat as named set
 		$ls = $db->getLatestLayerSet( $filename, $sha1, $param );
-		return $this->extractLayersFromSet( $ls );
+		return $this->extractLayerDataFromSet( $ls );
 	}
 
 	/**
@@ -417,6 +429,18 @@ class ImageLinkProcessor {
 	 * @return array|null The layers array, or null if invalid
 	 */
 	private function extractLayersFromSet( $layerSet ): ?array {
+		$layerData = $this->extractLayerDataFromSet( $layerSet );
+		return $layerData !== null ? $layerData['layers'] : null;
+	}
+
+	/**
+	 * Extract full layer data from a layer set object
+	 * Returns layers array plus background settings
+	 *
+	 * @param mixed $layerSet The layer set object from database
+	 * @return array|null Array with 'layers', 'backgroundVisible', 'backgroundOpacity', or null if invalid
+	 */
+	private function extractLayerDataFromSet( $layerSet ): ?array {
 		if ( !$layerSet ) {
 			return null;
 		}
@@ -439,15 +463,23 @@ class ImageLinkProcessor {
 		}
 
 		// Extract layers array
+		$layers = null;
 		if ( isset( $data['layers'] ) && is_array( $data['layers'] ) ) {
-			return $data['layers'];
+			$layers = $data['layers'];
+		} elseif ( is_array( $data ) && isset( $data[0] ) ) {
+			// Direct array of layers (old format)
+			$layers = $data;
 		}
 
-		// Direct array of layers
-		if ( is_array( $data ) && isset( $data[0] ) ) {
-			return $data;
+		if ( $layers === null ) {
+			return null;
 		}
 
-		return null;
+		// Return full data object with background settings
+		return [
+			'layers' => $layers,
+			'backgroundVisible' => $data['backgroundVisible'] ?? true,
+			'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
+		];
 	}
 }
