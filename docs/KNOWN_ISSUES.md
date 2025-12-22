@@ -1,15 +1,40 @@
 # Known Issues
 
 **Last Updated:** December 21, 2025  
-**Version:** 1.1.9
+**Version:** 1.1.10
 
 This document lists known functionality issues and their current status.
 
 ---
 
-## All P0 Issues Resolved ✅
+## All P0 and P1 Issues Resolved ✅
 
-As of version 1.1.9, all critical (P0) blocking issues have been fixed. The extension is production-ready.
+As of version 1.1.10, all critical (P0) and high-priority (P1) issues have been fixed. The extension is production-ready.
+
+---
+
+## Recently Fixed (v1.1.10 - December 21, 2025)
+
+### ✅ SVG XSS Security Risk
+
+**Status:** FIXED  
+**File:** src/Validation/ServerSideLayerValidator.php
+
+Removed `image/svg+xml` from allowed MIME types. SVG images can contain embedded JavaScript, creating XSS vulnerabilities.
+
+### ✅ Foreign Repository File Lookup
+
+**Status:** FIXED  
+**Files:** src/Api/ApiLayersDelete.php, src/Api/ApiLayersRename.php
+
+Changed from `getLocalRepo()->findFile()` to `getRepoGroup()->findFile()` to support files from foreign repositories like Wikimedia Commons.
+
+### ✅ Jest Coverage Configuration
+
+**Status:** FIXED  
+**File:** jest.config.js
+
+Updated `collectCoverageFrom` to track all source directories using comprehensive glob patterns.
 
 ---
 

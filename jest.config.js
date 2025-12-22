@@ -15,13 +15,12 @@ module.exports = {
 	// Setup files to run after environment setup
 	setupFilesAfterEnv: [ '<rootDir>/tests/jest/setup.js' ],
 
-	// Coverage configuration
+	// Coverage configuration - track ALL source files
 	collectCoverageFrom: [
-		'resources/ext.layers.editor/*.js',
-		'resources/ext.layers.editor/canvas/*.js',
-		'resources/ext.layers.shared/*.js',
-		'resources/ext.layers.shared/renderers/*.js',
-		'!resources/ext.layers.editor/*.min.js',
+		'resources/ext.layers/**/*.js',
+		'resources/ext.layers.editor/**/*.js',
+		'resources/ext.layers.shared/**/*.js',
+		'!**/*.min.js',
 		'!**/node_modules/**',
 		'!**/vendor/**'
 	],

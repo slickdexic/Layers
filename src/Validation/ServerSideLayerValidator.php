@@ -403,12 +403,12 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		}
 
 		// Must be a valid data URL with allowed image types
+		// NOTE: SVG intentionally excluded - can contain embedded JavaScript (XSS risk)
 		$allowedMimeTypes = [
 			'image/png',
 			'image/jpeg',
 			'image/gif',
-			'image/webp',
-			'image/svg+xml'
+			'image/webp'
 		];
 
 		// Parse data URL format: data:[<mediatype>][;base64],<data>

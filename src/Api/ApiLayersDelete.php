@@ -60,8 +60,8 @@ class ApiLayersDelete extends ApiBase {
 				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
 			}
 
-			// Get file metadata
-			$file = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->findFile( $title );
+			// Get file metadata (use getRepoGroup() to support foreign repos like Commons)
+			$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
 			if ( !$file || !$file->exists() ) {
 				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
 			}

@@ -65,13 +65,13 @@
 
 | Metric | Value |
 |--------|-------|
-| **Version** | 1.1.9 |
+| **Version** | 1.1.10 |
 | **Release Date** | December 21, 2025 |
 | **Test Suites** | 115 |
 | **Total Tests** | 5,766 |
-| **Code Coverage** | ~92% |
-| **JavaScript Files** | 85+ |
-| **ES6 Classes** | 76+ |
+| **Code Coverage** | ~91% |
+| **JavaScript Files** | 93 |
+| **ES6 Classes** | 84 |
 
 ---
 

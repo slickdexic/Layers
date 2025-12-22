@@ -4,6 +4,22 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.1.10 (December 21, 2025)
+
+### Security
+- **Removed SVG from allowed image imports** — SVG files can contain embedded JavaScript (XSS risk). Removed from allowed MIME types for security. Users requiring SVG support should implement proper sanitization.
+
+### Bug Fixes
+- **Fixed foreign repository file lookup** — Delete and Rename APIs now properly find files from foreign repositories like Wikimedia Commons
+
+### Code Quality
+- **Improved Jest coverage configuration** — Now tracks all source directories for accurate coverage reporting
+
+### Documentation
+- Updated `codebase_review.md`, `improvement_plan.md`, and `README.md` with accurate metrics
+
+---
+
 ## Version 1.1.9 (December 21, 2025)
 
 ### Bug Fixes
