@@ -2,6 +2,16 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.10] - 2025-12-21
+
+### Security
+- **Removed SVG from allowed image imports** — SVG files can contain embedded JavaScript, creating XSS vulnerabilities. Removed `image/svg+xml` from allowed MIME types in `ServerSideLayerValidator.php`.
+
+### Bug Fixes
+- **Fixed foreign repository file lookup** — `ApiLayersDelete` and `ApiLayersRename` now use `getRepoGroup()->findFile()` instead of `getLocalRepo()->findFile()`, enabling proper support for files from foreign repositories like Wikimedia Commons.
+
+---
+
 ## [1.1.9] - 2025-12-21
 
 ### Bug Fixes
