@@ -117,6 +117,9 @@ jobs:
           echo "wfLoadExtension( 'Layers' );" >> ~/mediawiki/LocalSettings.php
           echo "\$wgGroupPermissions['user']['editlayers'] = true;" >> ~/mediawiki/LocalSettings.php
           echo "\$wgGroupPermissions['user']['createlayers'] = true;" >> ~/mediawiki/LocalSettings.php
+          # Allow anonymous access to editor for E2E tests (tests don't use loggedInPage fixture)
+          echo "\$wgGroupPermissions['*']['editlayers'] = true;" >> ~/mediawiki/LocalSettings.php
+          echo "\$wgGroupPermissions['*']['read'] = true;" >> ~/mediawiki/LocalSettings.php
 
       - name: Run MediaWiki database update
         run: |
