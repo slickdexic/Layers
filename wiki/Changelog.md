@@ -4,6 +4,37 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.1.12 (December 22, 2025)
+
+### Code Quality
+- **Memory leak prevention** — Added timeout tracking to `APIManager.js` and `ImageLoader.js` with proper cleanup in `destroy()` methods
+- **Reduced god classes** — Removed 189 lines of dead code from `LayersValidator.js` (1,036 → 843 lines)
+- **Magic numbers extracted** — Added `TIMING` section to `LayersConstants.js` with 9 named delay constants
+
+### Testing
+- **6,479 tests passing** (+142 from v1.1.11)
+- **92% statement coverage**, 80% branch coverage
+- Added tests for new TIMING constants
+
+### Documentation
+- Added deep linking feature request to `FUTURE_IMPROVEMENTS.md`
+- Added lightbox viewer feature request
+- Added 8 world-class feature ideas (templates, AI, collaboration, etc.)
+
+---
+
+## Version 1.1.11 (December 22, 2025)
+
+### Bug Fixes
+- **Fixed ToolStyles.js constructor initialization order** — Fixed crash when `initialStyle` was provided
+
+### Testing
+- **6,337 tests passing** (+238 from v1.1.10)
+- **92% statement coverage**, 80% branch coverage
+- Added comprehensive tests for APIErrorHandler, NamespaceHelper, ToolStyles, LayersViewer
+
+---
+
 ## Version 1.1.10 (December 21, 2025)
 
 ### Security

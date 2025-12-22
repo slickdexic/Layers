@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.1.10 (December 2025)  
+> **Version:** 1.1.12 (December 2025)  
 > **Status:** ✅ Production-ready. All P0 and P1 issues resolved.  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -164,7 +164,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`)
-- **Frontend:** HTML5 Canvas editor with 93 JS files (~46K lines), 85 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 96 JS files (~47K lines), 87 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -172,10 +172,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 5,766 passing |
-| Statement coverage | ~87% |
-| Branch coverage | ~75% |
-| Test suites | 115 |
+| Jest tests | 6,479 passing |
+| Statement coverage | 92% |
+| Branch coverage | 80% |
+| Test suites | 125 |
 
 **Security:**
 
