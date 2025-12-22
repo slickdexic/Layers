@@ -99,6 +99,24 @@ class LayersEditorPage {
 	}
 
 	/**
+	 * Login to MediaWiki (required for save operations)
+	 */
+	async login() {
+		const username = process.env.MW_USERNAME;
+		const password = process.env.MW_PASSWORD;
+		
+		if ( !username || !password ) {
+			throw new Error( 'MW_USERNAME and MW_PASSWORD required for login' );
+		}
+		
+		await this.page.goto( '/index.php?title=Special:UserLogin' );
+		await this.page.fill( '#wpName1', username );
+		await this.page.fill( '#wpPassword1', password );
+		await this.page.click( '#wpLoginAttempt' );
+		await this.page.waitForLoadState( 'networkidle' );
+	}
+
+	/**
 	 * Check if editor is loaded
 	 */
 	async isEditorLoaded() {
