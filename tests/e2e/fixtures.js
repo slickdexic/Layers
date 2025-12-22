@@ -155,7 +155,10 @@ class LayersEditorPage {
 	 * Save layers
 	 */
 	async save() {
-		await this.page.click( this.selectors.saveButton );
+		// Button may be outside viewport in CI, use force click
+		const saveBtn = await this.page.$( this.selectors.saveButton );
+		await saveBtn.scrollIntoViewIfNeeded();
+		await this.page.click( this.selectors.saveButton, { force: true } );
 		// Wait for save operation
 		await this.page.waitForResponse(
 			( response ) => response.url().includes( 'action=layerssave' ),
@@ -167,7 +170,9 @@ class LayersEditorPage {
 	 * Cancel and close editor
 	 */
 	async cancel() {
-		await this.page.click( this.selectors.cancelButton );
+		const cancelBtn = await this.page.$( this.selectors.cancelButton );
+		await cancelBtn.scrollIntoViewIfNeeded();
+		await this.page.click( this.selectors.cancelButton, { force: true } );
 	}
 
 	/**
