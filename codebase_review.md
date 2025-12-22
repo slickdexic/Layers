@@ -30,7 +30,7 @@ The extension is **functional and deployed** with professional security, excelle
 
 **Outstanding Issues:**
 
-- ⚠️ **8 files >1,000 lines** ("god classes" - maintainability concern, includes LayersValidator.js)
+- ⚠️ **7 files >1,000 lines** ("god classes" - maintainability concern)
 - ⚠️ **No mobile/touch support** - editor is desktop-only
 
 ---
@@ -46,7 +46,7 @@ All metrics collected directly from the codebase.
 | Total JS files | **95** | - | ✅ |
 | Total JS lines | **46,786** | <50,000 | ⚠️ Past warning |
 | ES6 classes | **87** | 70+ | ✅ |
-| Files >1,000 lines | **8** | 0 | ⚠️ |
+| Files >1,000 lines | **7** | 0 | ⚠️ |
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disable comments | **13** | 0 | ✅ Improved |
 | Stylelint errors | **0** | 0 | ✅ |
@@ -66,11 +66,10 @@ All metrics collected directly from the codebase.
 | Toolbar.js | **1,539** | ✅ 4 modules | Growing concern |
 | LayersEditor.js | **1,324** | ✅ 3 modules | Acceptable |
 | ToolManager.js | **1,264** | ✅ 2 handlers | Acceptable |
+| APIManager.js | **1,207** | ✅ APIErrorHandler | Acceptable |
 | SelectionManager.js | **1,194** | ✅ 3 modules | Acceptable |
-| APIManager.js | **1,174** | ✅ APIErrorHandler | Acceptable |
-| LayersValidator.js | **1,036** | ✅ 2 validators | Refactoring in progress |
 
-**Total in god classes: ~11,240 lines** (24% of JS codebase)
+**Total in god classes: ~10,197 lines** (22% of JS codebase)
 
 ### Files Approaching 1,000 Lines (Watch List)
 
@@ -78,7 +77,9 @@ All metrics collected directly from the codebase.
 |------|-------|------|
 | ToolbarStyleControls.js | 947 | ⚠️ HIGH |
 | UIManager.js | 945 | ⚠️ HIGH |
+| ShapeRenderer.js | 859 | ⚠️ MEDIUM |
 | CanvasRenderer.js | 859 | ⚠️ LOW |
+| LayersValidator.js | 843 | ✅ Reduced from 1,036 |
 | ShapeRenderer.js | 856 | ⚠️ LOW |
 | PropertiesForm.js | 830 | ⚠️ LOW |
 | ResizeCalculator.js | 806 | ⚠️ LOW |
