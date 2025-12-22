@@ -45,9 +45,7 @@
 		}
 
 		// Node/test environment fallback
-		/* eslint-disable-next-line no-undef */
 		if ( typeof global !== 'undefined' && global[ globalName ] ) {
-			/* eslint-disable-next-line no-undef */
 			return global[ globalName ];
 		}
 

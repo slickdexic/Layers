@@ -7,116 +7,44 @@ This document lists known functionality issues and their current status.
 
 ---
 
+## Status Summary
+
+| Category | Count | Status |
+|----------|-------|--------|
+| P0 (Blocking) | 0 | ✅ All resolved |
+| P1 (Security/Stability) | 0 | ✅ All resolved |
+| P2 (Code Quality) | 7 | ⏳ In progress |
+| Feature Gaps | 6 | ⏳ Planned |
+
+---
+
 ## All P0 and P1 Issues Resolved ✅
 
 As of version 1.1.10, all critical (P0) and high-priority (P1) issues have been fixed. The extension is production-ready.
 
 ---
 
-## Recently Fixed (v1.1.10 - December 21, 2025)
+## Recently Fixed Issues
 
-### ✅ SVG XSS Security Risk
+### v1.1.10 (December 21, 2025)
 
-**Status:** FIXED  
-**File:** src/Validation/ServerSideLayerValidator.php
+| Issue | Severity | Resolution |
+|-------|----------|------------|
+| **SVG XSS Security Risk** | HIGH | Removed `image/svg+xml` from allowed MIME types |
+| **Foreign Repository File Lookup** | MEDIUM | Changed to `getRepoGroup()->findFile()` in all APIs |
+| **Jest Coverage Configuration** | LOW | Updated `collectCoverageFrom` patterns |
+| **E2E Tests Failing** | MEDIUM | Fixed password length for MediaWiki 1.44 |
 
-Removed `image/svg+xml` from allowed MIME types. SVG images can contain embedded JavaScript, creating XSS vulnerabilities.
+### v1.1.9 (December 21, 2025)
 
-### ✅ Foreign Repository File Lookup
-
-**Status:** FIXED  
-**Files:** src/Api/ApiLayersDelete.php, src/Api/ApiLayersRename.php
-
-Changed from `getLocalRepo()->findFile()` to `getRepoGroup()->findFile()` to support files from foreign repositories like Wikimedia Commons.
-
-### ✅ Jest Coverage Configuration
-
-**Status:** FIXED  
-**File:** jest.config.js
-
-Updated `collectCoverageFrom` to track all source directories using comprehensive glob patterns.
-
----
-
-## Recently Fixed (v1.1.9 - December 21, 2025)
-
-### ✅ Background Visibility Bug
-
-**Status:** FIXED  
-**Files:** APIManager.js, BackgroundLayerController.js, LayerPanel.js
-
-Background saved as hidden would show as visible when re-opening editor. Fixed by checking both `!== false` and `!== 0` for PHP→JS boolean handling.
-
-### ✅ Missing AutoloadClasses Entry
-
-**Status:** FIXED  
-**File:** extension.json
-
-Added `ApiLayersRename` to `AutoloadClasses` alongside the `APIModules` registration.
-
-### ✅ Console.error in Production
-
-**Status:** FIXED  
-**File:** resources/ext.layers/viewer/ViewerManager.js line 210
-
-Replaced `console.error()` with `mw.log.error()` to comply with MediaWiki coding standards.
-
-### ✅ Failing Test
-
-**Status:** FIXED  
-**File:** tests/jest/LayersViewer.test.js line 1025
-
-Updated test expectation from `''` to `'1'` to match actual behavior (opacity is set explicitly).
-
-### ✅ Memory Leak - Animation Frame
-
-**Status:** FIXED  
-**File:** resources/ext.layers.editor/CanvasManager.js
-
-Added `cancelAnimationFrame()` call in `destroy()` method to prevent memory leaks when editor is closed.
-
-### ✅ Missing Setname Sanitization
-
-**Status:** FIXED  
-**Files:** src/Api/ApiLayersDelete.php, src/Api/ApiLayersRename.php
-
-Added `sanitizeSetName()` method and calls to both APIs for security consistency.
-
-### ✅ Duplicated clampOpacity() Function
-
-**Status:** FIXED  
-**Files:** Created resources/ext.layers.shared/MathUtils.js
-
-Extracted shared utility function to new MathUtils module. All 6 renderer files now delegate to the shared implementation.
-
-### ✅ ESLint Error in MathUtils.js
-
-**Status:** FIXED  
-**File:** resources/ext.layers.shared/MathUtils.js
-
-Added eslint-disable comments for `module` exports to resolve no-undef error.
-
----
-
-## P1 Issues (Important)
-
-### ⚠️ SVG XSS Risk
-
-**Status:** Not Fixed  
-**Severity:** HIGH (Security)  
-**File:** src/Validation/ServerSideLayerValidator.php
-
-SVG images are allowed in image imports but SVG can contain JavaScript, creating XSS risk.
-
-**Fix:** Remove SVG from allowed MIME types or add SVG sanitization.
-
-### ⚠️ Inconsistent File Lookup
-
-**Status:** Not Fixed  
-**Severity:** MEDIUM  
-**Files:** ApiLayersDelete.php, ApiLayersRename.php
-
-Uses `getLocalRepo()->findFile()` instead of `getRepoGroup()->findFile()`, which won't find files from foreign repositories like Wikimedia Commons.
+| Issue | Severity | Resolution |
+|-------|----------|------------|
+| **Background Visibility Bug** | HIGH | Fixed PHP→JS boolean serialization handling |
+| **Missing AutoloadClasses** | MEDIUM | Added ApiLayersRename to extension.json |
+| **Console.error in Production** | LOW | Replaced with mw.log.error |
+| **Memory Leak - Animation Frame** | MEDIUM | Added cancelAnimationFrame in destroy() |
+| **Missing Setname Sanitization** | MEDIUM | Added to Delete and Rename APIs |
+| **Duplicated clampOpacity()** | LOW | Created shared MathUtils.js |
 
 ---
 
@@ -125,15 +53,60 @@ Uses `getLocalRepo()->findFile()` instead of `getRepoGroup()->findFile()`, which
 ### ⚠️ No Mobile/Touch Support
 
 **Status:** Not Implemented  
-**Severity:** Medium for desktop-focused, High for mobile users
+**Severity:** HIGH for mobile users, MEDIUM for desktop-only deployments  
+**Effort:** 4-6 weeks
 
 The editor does not handle touch events. Users on tablets and phones cannot:
 
 - Draw or select layers with touch
 - Use pinch-to-zoom or two-finger pan
 - Access mobile-optimized toolbar
+- Use touch-friendly selection handles
 
 **Workaround:** Use desktop browser or browser with desktop mode.
+
+**Tracking:** [improvement_plan.md](../improvement_plan.md) P3.1
+
+### ⚠️ Files With Zero Test Coverage
+
+**Status:** P2 - Needs attention  
+**Severity:** MEDIUM  
+**Effort:** 4-8 hours
+
+Five files have 0% test coverage and are at risk for undetected regressions:
+
+| File | Lines | Risk |
+|------|-------|------|
+| ColorControlFactory.js | 241 | HIGH |
+| LayerDragDrop.js | 246 | HIGH |
+| LayerListRenderer.js | 433 | HIGH |
+| MathUtils.js | 78 | MEDIUM |
+| PresetDropdown.js | 526 | HIGH |
+
+**Tracking:** [improvement_plan.md](../improvement_plan.md) P2.1
+
+### ⚠️ SVG Images Not Supported
+
+**Status:** By Design (Security)  
+**Severity:** LOW  
+**Resolution:** Not planned
+
+SVG images are intentionally excluded from image imports because they can contain embedded JavaScript, creating XSS vulnerabilities.
+
+**Workaround:** Convert SVG to PNG before importing.
+
+### ⚠️ Codebase Size Warning
+
+**Status:** Monitoring  
+**Severity:** MEDIUM for maintainability
+
+- **Current:** 46,063 lines
+- **Warning threshold:** 45,000 lines (EXCEEDED)
+- **Block threshold:** 50,000 lines
+
+**Action:** Continue extracting functionality from god classes. Priority targets are LayersValidator.js and ToolbarStyleControls.js.
+
+**Tracking:** [improvement_plan.md](../improvement_plan.md) P2.7
 
 ---
 
@@ -142,7 +115,7 @@ The editor does not handle touch events. Users on tablets and phones cannot:
 ### ⚠️ God Classes (Technical Debt)
 
 **Status:** Monitored with CI enforcement  
-**Severity:** Medium for maintainability
+**Severity:** MEDIUM for maintainability
 
 The codebase has **7 files exceeding 1,000 lines**. All have delegation patterns:
 
@@ -162,104 +135,87 @@ The codebase has **7 files exceeding 1,000 lines**. All have delegation patterns
 
 **See:** [improvement_plan.md](../improvement_plan.md) for remediation plan.
 
----
+### ⚠️ ESLint Disable Comments
 
-## Recently Fixed Issues
+**Status:** P2 - Needs cleanup  
+**Count:** ~20 instances
 
-The following issues have been **fixed** and are now working:
+ESLint rules are being disabled in approximately 20 locations. Common patterns:
+- `no-undef` - Accessing global variables
+- `no-unused-vars` - Unused function parameters
+- `no-alert` - Using native alerts
 
-### 1. Eyedropper Tool
+**Action:** Refactor code to eliminate need for disabling rules.
 
-**Status:** ✅ Available via browser's native color picker  
-**Note:** Eyedropper functionality built into `<input type="color">` element
+### ⚠️ setTimeout Without Cleanup
 
----
+**Status:** P2 - Needs fix  
+**Count:** ~15 instances
 
-### 2. Smart Guides (December 20, 2025)
+Several `setTimeout` calls are made without storing the timer ID for cleanup, which could cause memory leaks if the editor is destroyed while timers are pending.
 
-**Status:** ✅ Implemented  
-**Behavior:** Automatic snapping when moving objects
+**Files affected:**
+- EditorBootstrap.js
+- ErrorHandler.js
+- UIManager.js
+- ImageLoader.js
 
-**Implementation:**
-- `SmartGuidesController.js` (~500 lines) provides object-to-object snapping
-- Edge snapping: left, right, top, bottom (magenta guide lines)
-- Center snapping: horizontal and vertical centers (cyan guide lines)
-- 8px snap threshold (auto-activates when grid snap is off)
-- 43 comprehensive tests
-
----
-
-### 3. Undo (Ctrl+Z)
-
-**Status:** ✅ Fixed  
-**Button:** Toolbar undo button  
-**Keyboard:** Ctrl+Z
-
-**Fix Summary:**
-- HistoryManager refactored with `getEditor()` and `getCanvasManager()` helper methods
-- Proper reference chain established: `HistoryManager → editor → canvasManager`
-- `updateUndoRedoButtons()` now correctly finds toolbar at `this.getEditor().toolbar`
+**Action:** Store timer IDs and clear in destroy() methods.
 
 ---
 
-### 4. Redo (Ctrl+Y / Ctrl+Shift+Z)
+## Feature Gaps
 
-**Status:** ✅ Fixed  
-**Button:** Toolbar redo button  
-**Keyboard:** Ctrl+Y or Ctrl+Shift+Z
+### Not Implemented
 
-**Fix Summary:** Same as Undo - HistoryManager refactoring resolved both issues.
-
----
-
-### 5. Duplicate Layer (Ctrl+D)
-
-**Status:** ✅ Fixed  
-**Button:** Toolbar duplicate button  
-**Keyboard:** Ctrl+D
-
-**Fix Summary:**
-- Fixed `LayersEditor.duplicateSelected()` to use `getSelectedLayerIds()` properly
-- Selection state now correctly reads from `canvasManager.getSelectedLayerIds()` method
-- Duplicated layer receives new ID and is properly added to layer stack
+| Feature | Priority | Effort | Notes |
+|---------|----------|--------|-------|
+| Mobile/Touch Support | HIGH | 4-6 weeks | Critical for mobile users |
+| Layer Grouping | MEDIUM | 2-3 weeks | Group layers for bulk operations |
+| Gradient Fills | LOW | 1 week | Linear and radial gradients |
+| Custom Fonts | LOW | 2 weeks | Upload and use custom fonts |
+| SVG Export | LOW | 1 week | Export annotations as SVG |
+| Rulers/Guides | LOW | 2 weeks | Persistent guide lines |
 
 ---
 
-### 6. Shadow Rendering Issues
+## Browser Compatibility
 
-**Status:** ✅ Fixed (December 8-10, 2025)
+### Tested Browsers
 
-Multiple shadow-related bugs were fixed:
-- Shadow offset not rotating with shape (spread > 0)
-- Rectangle/shape stroke shadow not visible (spread = 0)
-- Text shadow spread having no effect
+| Browser | Version | Status |
+|---------|---------|--------|
+| Chrome | 120+ | ✅ Fully supported |
+| Firefox | 120+ | ✅ Fully supported |
+| Safari | 17+ | ✅ Fully supported |
+| Edge | 120+ | ✅ Fully supported |
 
-See archived bug analyses in `docs/archive/` for details.
+### Known Browser Issues
+
+| Browser | Issue | Workaround |
+|---------|-------|------------|
+| Safari | Color picker may not show eyedropper | Use hex input instead |
+| Firefox | Slow with >50 layers | Reduce layer count |
 
 ---
 
-## Technical Details of Fixes
+## Performance Notes
 
-### Selection State Bug (Fixed)
+### Recommended Limits
 
-**Root Cause:** StateManager uses `selectedLayerIds` (plural, array) while LayersEditor methods were incorrectly using `stateManager.get('selectedLayerId')` (singular) which returned `undefined`.
+| Resource | Recommended | Maximum | Notes |
+|----------|-------------|---------|-------|
+| Image size | < 2048px | 4096px | Larger images may be slow |
+| Layer count | < 50 | 100 | Performance degrades with many layers |
+| Layer set size | < 1MB | 2MB | Configurable via $wgLayersMaxBytes |
+| Imported image size | < 500KB | 1MB | Configurable via $wgLayersMaxImageBytes |
 
-**Resolution:**
-- `getSelectedLayerIds()` now delegates to `canvasManager.getSelectedLayerIds()` method
-- `selectLayer()` delegates to CanvasManager or sets `selectedLayerIds` array directly
-- `deleteSelected()` uses `getSelectedLayerIds()` and properly clears selection
-- `duplicateSelected()` uses `getSelectedLayerIds()[last]` for primary selection
-- `updateUIState()` uses `getSelectedLayerIds().length > 0` for hasSelection check
-- `initializeState()` initializes `selectedLayerIds: []` instead of singular
+### Performance Tips
 
-### HistoryManager Integration Bug (Fixed)
-
-**Root Cause:** Constructor stored editor as `canvasManager` but methods expected a different reference chain (`this.canvasManager.editor`).
-
-**Resolution:**
-- Added `getEditor()` helper that handles both old and new initialization patterns
-- Added `getCanvasManager()` helper that properly retrieves canvas manager
-- All methods updated to use helpers instead of direct property access
+1. **Reduce layer count** - Merge similar layers when possible
+2. **Optimize images** - Use appropriately sized images
+3. **Use named sets** - Split complex annotations into multiple sets
+4. **Clear history** - Saving clears undo history, freeing memory
 
 ---
 
@@ -268,14 +224,14 @@ See archived bug analyses in `docs/archive/` for details.
 If you encounter issues:
 
 1. Check this document first
-2. Search existing GitHub issues
+2. Search existing [GitHub issues](https://github.com/slickdexic/Layers/issues)
 3. Create a new issue with:
    - Steps to reproduce
    - Expected vs actual behavior
    - Browser and MediaWiki version
    - Console errors (F12 → Console tab)
+   - Screenshots if applicable
 
 ---
 
-*Document created: December 8, 2025*  
-*Last updated: December 20, 2025*
+*Document updated: December 21, 2025*

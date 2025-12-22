@@ -52,7 +52,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 ### Smart Guides & Alignment
 
-- **Smart Guides**: Automatic snapping to object edges and centers
+- **Smart Guides**: Automatic snapping to object edges and centers (toggle with `;`)
 - **Key Object Alignment**: Last selected layer becomes the reference (Adobe pattern)
 - **Arrange Menu**: Consolidated toolbar dropdown for alignment/distribution
 
@@ -60,18 +60,21 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - **Built-in Presets**: Ships with default presets for common annotation styles
 - **User Presets**: Create, save, rename, delete, import/export your own presets
+- **Per-tool Presets**: Different presets for different tools
 
 ### Layer Management
 
 - **Named Layer Sets**: Multiple annotation sets per image (e.g., "default", "anatomy-labels")
 - **Version History**: Each named set maintains revision history (up to 50 revisions)
 - **Import/Export**: Add external images as layers, export annotated images as PNG
+- **Delete/Rename**: Manage your layer sets with full CRUD operations
 
 ### Accessibility
 
 - Skip links for keyboard navigation
 - ARIA landmarks on all major sections
 - Full keyboard support with help dialog (Shift+?)
+- Screen reader compatible
 
 ---
 
@@ -98,6 +101,8 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Copy                     | Ctrl+C                |
 | Paste                    | Ctrl+V                |
 | Delete                   | Delete                |
+| Select All               | Ctrl+A                |
+| Deselect All             | Escape                |
 | Show Keyboard Help       | Shift+?               |
 
 ---
@@ -132,7 +137,7 @@ php maintenance/update.php
 // Master switch
 $wgLayersEnable = true;
 
-// Debug logging
+// Debug logging (disable in production)
 $wgLayersDebug = false;
 
 // Limits
@@ -147,7 +152,7 @@ $wgGroupPermissions['user']['editlayers'] = true;
 $wgGroupPermissions['autoconfirmed']['createlayers'] = true;
 $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
 
-// Rate limits
+// Rate limits (optional)
 $wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];
 $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 ```
@@ -159,16 +164,17 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`)
-- **Frontend:** HTML5 Canvas editor with 93 JS files (~46K lines), 84 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 93 JS files (~46K lines), 85 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
+- **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
 **Test Coverage:**
 
 | Metric | Value |
 |--------|-------|
 | Jest tests | 5,766 passing |
-| Statement coverage | ~91% |
-| Branch coverage | ~78% |
+| Statement coverage | ~87% |
+| Branch coverage | ~75% |
 | Test suites | 115 |
 
 **Security:**
@@ -177,10 +183,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 - Server-side validation with 50+ field whitelist
 - Rate limiting via MediaWiki's pingLimiter
 - Text sanitization and color validation
+- SVG imports disabled (XSS prevention)
 
 ---
 
-## Known Issues
+## Known Limitations
 
 See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 
@@ -188,6 +195,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 
 - ⚠️ **No mobile/touch support** - editor is desktop-only
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
+- ⚠️ **Large images** - performance may degrade with images >4096px
 
 ---
 
@@ -202,6 +210,9 @@ npm run test:js
 
 # PHP lint and style checks
 npm run test:php
+
+# Run with coverage
+npm run test:js -- --coverage
 ```
 
 ### Project Health
@@ -209,11 +220,12 @@ npm run test:php
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 93 | ✅ |
-| Total JS lines | 46,062 | ✅ |
-| ES6 classes | 84 | ✅ |
+| Total JS lines | 46,063 | ⚠️ Past warning threshold |
+| ES6 classes | 85 | ✅ |
 | God classes (>1000 lines) | 7 | ⚠️ |
 | Tests passing | 5,766 | ✅ |
 | Tests failing | 0 | ✅ |
+| Files with 0% coverage | 5 | ⚠️ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
@@ -228,19 +240,88 @@ npm run docs:markdown # Markdown in docs/API.md
 
 ## Documentation
 
-- [API.md](docs/API.md) - Auto-generated API reference
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture
-- [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) - Accessibility features
-- [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) - Getting started
-- [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) - Named sets feature
-- [codebase_review.md](codebase_review.md) - Technical assessment
-- [improvement_plan.md](improvement_plan.md) - Roadmap
+| Document | Description |
+|----------|-------------|
+| [API.md](docs/API.md) | Auto-generated API reference |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture |
+| [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) | Accessibility features |
+| [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) | Getting started for contributors |
+| [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) | Named sets feature documentation |
+| [WIKITEXT_USAGE.md](docs/WIKITEXT_USAGE.md) | Wikitext syntax guide |
+| [codebase_review.md](codebase_review.md) | Technical assessment |
+| [improvement_plan.md](improvement_plan.md) | Development roadmap |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+
+---
+
+## API Endpoints
+
+### layersinfo (GET)
+
+Fetch layer data for an image.
+
+```javascript
+new mw.Api().get({
+    action: 'layersinfo',
+    filename: 'Example.jpg',
+    setname: 'default'  // optional
+}).then(function(result) {
+    console.log(result.layersinfo);
+});
+```
+
+### layerssave (POST)
+
+Save layer data to an image.
+
+```javascript
+new mw.Api().postWithToken('csrf', {
+    action: 'layerssave',
+    filename: 'Example.jpg',
+    setname: 'my-annotations',
+    data: JSON.stringify(layers)
+});
+```
+
+### layersdelete (POST)
+
+Delete a named layer set.
+
+```javascript
+new mw.Api().postWithToken('csrf', {
+    action: 'layersdelete',
+    filename: 'Example.jpg',
+    setname: 'my-annotations'
+});
+```
+
+### layersrename (POST)
+
+Rename a named layer set.
+
+```javascript
+new mw.Api().postWithToken('csrf', {
+    action: 'layersrename',
+    filename: 'Example.jpg',
+    oldname: 'my-annotations',
+    newname: 'anatomy-labels'
+});
+```
 
 ---
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+**Quick start:**
+
+1. Fork the repository
+2. Create a feature branch
+3. Run `npm install && composer install`
+4. Make changes and add tests
+5. Run `npm test && npm run test:php`
+6. Submit a pull request
 
 ---
 

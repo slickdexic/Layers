@@ -20,6 +20,8 @@
 			this.notificationContainer = null;
 			this.debugMode = false;
 			this.globalListeners = [];
+			/** @type {Set<number>} Tracked timeout IDs for cleanup */
+			this.activeTimeouts = new Set();
 
 			// Initialize error container
 			this.initErrorContainer();
@@ -37,6 +39,24 @@
 			this.notificationContainer.setAttribute( 'role', 'alert' );
 			this.notificationContainer.setAttribute( 'aria-live', 'polite' );
 			document.body.appendChild( this.notificationContainer );
+		}
+
+		/**
+		 * Schedule a timeout with automatic tracking for cleanup.
+		 * Use this instead of raw setTimeout to prevent memory leaks.
+		 *
+		 * @param {Function} callback - Function to execute after delay
+		 * @param {number} delay - Delay in milliseconds
+		 * @return {number} Timeout ID
+		 * @private
+		 */
+		_scheduleTimeout( callback, delay ) {
+			const timeoutId = setTimeout( () => {
+				this.activeTimeouts.delete( timeoutId );
+				callback();
+			}, delay );
+			this.activeTimeouts.add( timeoutId );
+			return timeoutId;
 		}
 
 		/**
@@ -305,7 +325,7 @@
 
 			// Auto-remove after delay for non-critical errors
 			if ( errorInfo.severity !== 'critical' ) {
-				setTimeout( () => {
+				this._scheduleTimeout( () => {
 					if ( notification.parentNode ) {
 						notification.remove();
 					}
@@ -464,13 +484,13 @@
 			switch ( strategy.action ) {
 				case 'retry':
 					this.showRecoveryNotification( strategy.message );
-					setTimeout( () => {
+					this._scheduleTimeout( () => {
 						this.retryOperation( errorInfo );
 					}, strategy.delay );
 					break;
 				case 'refresh':
 					this.showRecoveryNotification( strategy.message );
-					setTimeout( () => {
+					this._scheduleTimeout( () => {
 						window.location.reload();
 					}, 2000 );
 					break;
@@ -541,6 +561,13 @@
 		 * Destroy error handler and clean up
 		 */
 		destroy() {
+			// Cancel all tracked timeouts to prevent memory leaks
+			if ( this.activeTimeouts ) {
+				this.activeTimeouts.forEach( ( timeoutId ) => {
+					clearTimeout( timeoutId );
+				} );
+				this.activeTimeouts.clear();
+			}
 			if ( this.notificationContainer && this.notificationContainer.parentNode ) {
 				this.notificationContainer.parentNode.removeChild( this.notificationContainer );
 			}

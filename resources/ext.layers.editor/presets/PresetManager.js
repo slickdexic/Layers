@@ -18,10 +18,8 @@
 		if ( typeof window !== 'undefined' && window.Layers && window.Layers.BuiltInPresets ) {
 			return window.Layers.BuiltInPresets;
 		}
-		/* eslint-disable-next-line no-undef */
 		if ( typeof require !== 'undefined' ) {
 			try {
-				/* eslint-disable-next-line no-undef */
 				return require( './BuiltInPresets' );
 			} catch ( e ) {
 				return null;
@@ -34,10 +32,8 @@
 		if ( typeof window !== 'undefined' && window.Layers && window.Layers.PresetStorage ) {
 			return window.Layers.PresetStorage;
 		}
-		/* eslint-disable-next-line no-undef */
 		if ( typeof require !== 'undefined' ) {
 			try {
-				/* eslint-disable-next-line no-undef */
 				return require( './PresetStorage' );
 			} catch ( e ) {
 				return null;
@@ -631,9 +627,7 @@
 	}
 
 	// CommonJS export for testing
-	/* eslint-disable-next-line no-undef */
 	if ( typeof module !== 'undefined' && module.exports ) {
-		/* eslint-disable-next-line no-undef */
 		module.exports = PresetManager;
 	}
 }() );

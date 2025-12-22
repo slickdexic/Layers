@@ -32,9 +32,29 @@
 		this.revNameInputEl = null;
 		this.zoomReadoutEl = null;
 
+		/** @type {Set<number>} Tracked timeout IDs for cleanup */
+		this.activeTimeouts = new Set();
+
 		// Initialize EventTracker for memory-safe event listener management
 		const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
 		this.eventTracker = EventTracker ? new EventTracker() : null;
+	}
+
+	/**
+	 * Schedule a timeout with automatic tracking for cleanup.
+	 *
+	 * @param {Function} callback - Function to execute after delay
+	 * @param {number} delay - Delay in milliseconds
+	 * @return {number} Timeout ID
+	 * @private
+	 */
+	_scheduleTimeout( callback, delay ) {
+		const timeoutId = setTimeout( () => {
+			this.activeTimeouts.delete( timeoutId );
+			callback();
+		}, delay );
+		this.activeTimeouts.add( timeoutId );
+		return timeoutId;
 	}
 
 	/**
@@ -868,9 +888,9 @@
 
 		this.container.appendChild( errorEl );
 
-		setTimeout( () => {
+		this._scheduleTimeout( () => {
 			errorEl.style.opacity = '0';
-			setTimeout( () => {
+			this._scheduleTimeout( () => {
 				if ( errorEl.parentNode ) {
 					errorEl.parentNode.removeChild( errorEl );
 				}
@@ -879,6 +899,14 @@
 	}
 
 	destroy() {
+		// Cancel all tracked timeouts to prevent memory leaks
+		if ( this.activeTimeouts ) {
+			this.activeTimeouts.forEach( ( timeoutId ) => {
+				clearTimeout( timeoutId );
+			} );
+			this.activeTimeouts.clear();
+		}
+
 		// Clean up all tracked event listeners
 		if ( this.eventTracker ) {
 			this.eventTracker.destroy();

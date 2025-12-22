@@ -20,37 +20,30 @@
 
 	// Get ShadowRenderer - it should be loaded before this module
 	const ShadowRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ShadowRenderer ) ||
-		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './ShadowRenderer.js' ) : null );
 
 	// Get ArrowRenderer - it should be loaded before this module
 	const ArrowRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ArrowRenderer ) ||
-		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './ArrowRenderer.js' ) : null );
 
 	// Get TextRenderer - it should be loaded before this module
 	const TextRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.TextRenderer ) ||
-		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './TextRenderer.js' ) : null );
 
 	// Get TextBoxRenderer - it should be loaded before this module
 	const TextBoxRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.TextBoxRenderer ) ||
-		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './TextBoxRenderer.js' ) : null );
 
 	// Get PolygonStarRenderer - it should be loaded before this module
 	const PolygonStarRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.PolygonStarRenderer ) ||
-		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './PolygonStarRenderer.js' ) : null );
 
 	// Get ShapeRenderer - it should be loaded before this module
 	const ShapeRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ShapeRenderer ) ||
-		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './ShapeRenderer.js' ) : null );
 
 	// Get EffectsRenderer - it should be loaded before this module
 	const EffectsRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.EffectsRenderer ) ||
-		// eslint-disable-next-line no-undef
 		( typeof require !== 'undefined' ? require( './EffectsRenderer.js' ) : null );
 
 	/**
@@ -569,9 +562,7 @@ class LayerRenderer {
 	}
 
 	// CommonJS for testing
-	// eslint-disable-next-line no-undef
 	if ( typeof module !== 'undefined' && typeof module.exports !== 'undefined' ) {
-		// eslint-disable-next-line no-undef
 		module.exports = LayerRenderer;
 	}
 

@@ -13,9 +13,7 @@
 			if ( typeof window !== 'undefined' && window[ globalName ] ) {
 				return window[ globalName ];
 			}
-			/* eslint-disable-next-line no-undef */
 			if ( typeof global !== 'undefined' && global[ globalName ] ) {
-				/* eslint-disable-next-line no-undef */
 				return global[ globalName ];
 			}
 			return null;
@@ -52,7 +50,6 @@
 	 * @return {Function|undefined} The class or undefined
 	 */
 	function findClass( name ) {
-		/* eslint-disable no-undef */
 		// First, try namespace-aware lookup using the mapping
 		const namespacePath = CLASS_NAMESPACE_MAP[ name ];
 		if ( namespacePath && typeof window !== 'undefined' && window.Layers ) {
@@ -88,7 +85,6 @@
 			}
 		}
 		return undefined;
-		/* eslint-enable no-undef */
 	}
 
 	/**

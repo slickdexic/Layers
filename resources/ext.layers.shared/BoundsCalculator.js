@@ -331,9 +331,7 @@
 	}
 
 	// CommonJS for testing
-	// eslint-disable-next-line no-undef
 	if ( typeof module !== 'undefined' && typeof module.exports !== 'undefined' ) {
-		// eslint-disable-next-line no-undef
 		module.exports = BoundsCalculator;
 	}
 

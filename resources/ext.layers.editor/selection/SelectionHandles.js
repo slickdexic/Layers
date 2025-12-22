@@ -334,9 +334,7 @@
 	}
 
 	// Export for Node.js/Jest testing
-	/* eslint-disable-next-line no-undef */
 	if ( typeof module !== 'undefined' && module.exports ) {
-		/* eslint-disable-next-line no-undef */
 		module.exports = SelectionHandles;
 	}
 
