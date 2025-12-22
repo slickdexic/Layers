@@ -141,8 +141,8 @@ jobs:
           cd ~/mediawiki
           php -S 0.0.0.0:8080 &
           sleep 5
-          # Verify server is running
-          curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ | grep -q "200\|302" || exit 1
+          # Verify server is running (accepts 200, 301, 302 redirects)
+          curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ | grep -qE "200|301|302" || exit 1
         env:
           MW_SERVER: http://localhost:8080
 
