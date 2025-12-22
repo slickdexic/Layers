@@ -12,19 +12,21 @@
 | Area | Status | Details |
 |------|--------|---------|
 | **Functionality** | ✅ Working | 14 tools, alignment, presets, named sets, smart guides |
-| **Security** | ⚠️ Attention Needed | SVG XSS risk in image imports |
-| **Testing** | ✅ Excellent | 5,766 tests, 0 failing, 91% statement coverage |
-| **ES6 Migration** | ✅ Complete | 84 classes, 0 prototype patterns |
+| **Security** | ✅ Resolved | All known issues fixed (SVG XSS, sanitization) |
+| **Testing** | ✅ Excellent | 6,337 tests, 0 failing, 92% statement coverage, 80% branch |
+| **ES6 Migration** | ✅ Complete | 85 classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Monitored | 7 files >1,000 lines (all have delegation patterns) |
 | **Accessibility** | ✅ Good | Skip links, ARIA landmarks, keyboard navigation |
 | **Mobile** | ❌ Missing | No touch support |
-| **Production Ready** | ✅ Ready | All P0 blocking issues resolved |
+| **Production Ready** | ✅ Ready | All P0 and P1 issues resolved |
 
 ---
 
 ## Fixes Completed (December 21, 2025)
 
-All P0 blocking issues identified in the critical review have been fixed:
+All P0 and P1 issues identified in reviews have been fixed:
+
+### P0 (Blocking) - All Fixed ✅
 
 | Issue | Status | Fix Applied |
 |-------|--------|-------------|
@@ -37,7 +39,14 @@ All P0 blocking issues identified in the critical review have been fixed:
 | Duplicated clampOpacity | ✅ Fixed | Created MathUtils.js, updated 6 renderer files |
 | ESLint error MathUtils | ✅ Fixed | Added eslint-disable comments for module exports |
 
-**Verification:** All 5,766 tests passing. ESLint clean.
+### P1 (Security & Stability) - All Fixed ✅
+
+| Issue | Status | Fix Applied |
+|-------|--------|-------------|
+| SVG XSS Risk | ✅ Fixed | Removed SVG from allowed MIME types |
+| Foreign repo file lookup | ✅ Fixed | Changed to getRepoGroup()->findFile() |
+| Jest coverage gaps | ✅ Fixed | Updated collectCoverageFrom patterns |
+| E2E tests failing | ✅ Fixed | Fixed password length for MediaWiki 1.44 |
 
 ---
 
@@ -46,60 +55,32 @@ All P0 blocking issues identified in the critical review have been fixed:
 | Priority | Timeline | Criteria |
 |----------|----------|----------|
 | **P0** | Immediate | ✅ COMPLETE - All blocking bugs fixed |
-| **P1** | 1-4 weeks | Security issues, high-impact fixes |
-| **P2** | 1-3 months | Architecture improvements, code quality |
+| **P1** | 1-4 weeks | ✅ COMPLETE - Security and stability issues fixed |
+| **P2** | 1-3 months | Architecture improvements, test coverage |
 | **P3** | 3-6 months | Feature enhancements, future-proofing |
 
 ---
 
-## Phase 0: Immediate Fixes (P0) - ✅ COMPLETE
+## Phase 2: Code Quality & Testing (P2)
 
-All P0 items have been resolved. See "Fixes Completed" section above.
+### P2.1 Add Tests for Uncovered Files ✅ COMPLETE
 
----
+**Status:** All files now have test coverage  
+**Coverage:** 92.19% statements, 80.19% branches
 
-## Phase 1: Security & Stabilization (P1)
+Files previously at 0% now covered:
 
-### P1.1 Remove SVG XSS Risk ✅ FIXED
+| File | Lines | Coverage | Status |
+|------|-------|----------|--------|
+| MathUtils.js | 78 | 100% | ✅ Complete |
+| ColorControlFactory.js | 241 | 87.2% | ✅ Complete |
+| LayerDragDrop.js | 246 | 100% | ✅ Complete |
+| LayerListRenderer.js | 433 | 99.49% | ✅ Complete |
+| PresetDropdown.js | 526 | 93.25% | ✅ Complete |
+| APIErrorHandler.js | 348 | 98.03% | ✅ Complete |
+| NamespaceHelper.js | 91 | 95.65% | ✅ Complete |
 
-- **Problem:** SVG allowed in image imports without sanitization
-- **File:** `src/Validation/ServerSideLayerValidator.php` line 411
-- **Risk:** HIGH - SVG can contain embedded JavaScript
-- **Fix Applied:** Removed `'image/svg+xml'` from `$allowedMimeTypes` array
-- **Date:** December 21, 2025
-
-### P1.2 Fix Inconsistent File Lookup ✅ FIXED
-
-- **Problem:** `ApiLayersDelete` and `ApiLayersRename` used `getLocalRepo()->findFile()` instead of `getRepoGroup()->findFile()`
-- **Files:**
-  - `src/Api/ApiLayersDelete.php` line 64
-  - `src/Api/ApiLayersRename.php` line 77
-- **Impact:** Now correctly finds files from foreign repositories (e.g., Wikimedia Commons)
-- **Fix Applied:** Changed to `getRepoGroup()->findFile()`
-- **Date:** December 21, 2025
-
-### P1.3 Expand Jest Coverage Configuration ✅ FIXED
-
-- **Problem:** `collectCoverageFrom` in jest.config.js only tracked subset of source files
-- **File:** `jest.config.js`
-- **Fix Applied:** Updated to use glob patterns that cover all source directories
-- **Date:** December 21, 2025
-
-### P1.4 Stabilize E2E Tests ✅ FIXED
-
-- **Problem:** E2E editor tests used `continue-on-error: true` and always failed
-- **Root Cause:** MediaWiki 1.43 requires passwords ≥10 chars; workflow used `admin123` (8 chars)
-- **File:** `.github/workflows/e2e.yml`
-- **Fix Applied:**
-  - Changed password from `admin123` to `LayersE2E_Test_2025` (20 chars)
-  - Removed `continue-on-error: true` — tests are now required to pass
-- **Date:** December 21, 2025
-
----
-
-## Phase 2: Architecture & Code Quality (P2)
-
-### P2.1 Split LayersValidator.js ⏳ NOT STARTED
+### P2.2 Split LayersValidator.js ⏳ NOT STARTED
 
 - **Current:** 958 lines (HIGH risk - approaching 1,000 limit)
 - **Proposed structure:**
@@ -110,7 +91,7 @@ All P0 items have been resolved. See "Fixes Completed" section above.
   - `TextValidator.js` (~150 lines)
 - **Effort:** 4-6 hours
 
-### P2.2 Split ToolbarStyleControls.js ⏳ NOT STARTED
+### P2.3 Split ToolbarStyleControls.js ⏳ NOT STARTED
 
 - **Current:** 947 lines (HIGH risk - approaching limit)
 - **Proposed extraction:**
@@ -119,24 +100,33 @@ All P0 items have been resolved. See "Fixes Completed" section above.
   - `EffectStyleControls.js`
 - **Effort:** 4-6 hours
 
-### P2.3 Monitor Codebase Size ⏳ ONGOING
+### P2.4 Fix Timer Cleanup ⏳ NOT STARTED
 
-- **Current:** 46,062 lines
-- **Warning threshold:** 45,000 lines (EXCEEDED)
+- **Issue:** ~15 setTimeout calls without cleanup tracking
+- **Files affected:** EditorBootstrap.js, ErrorHandler.js, UIManager.js, etc.
+- **Fix:** Store timer IDs and clear in destroy() methods
+- **Effort:** 2-3 hours
+
+### P2.5 Extract Magic Numbers ⏳ NOT STARTED
+
+- **Issue:** Hardcoded values scattered throughout codebase
+- **Examples:** 800x600 canvas, 1001 z-index, 8px snap threshold, 5000ms timeout
+- **Fix:** Add to LayersConstants.js
+- **Effort:** 1-2 hours
+
+### P2.6 Reduce ESLint Disable Usage ⏳ NOT STARTED
+
+- **Current:** ~20 eslint-disable comments
+- **Goal:** Reduce to <5 (only truly unavoidable cases)
+- **Effort:** 3-4 hours
+
+### P2.7 Monitor Codebase Size ⏳ ONGOING
+
+- **Current:** 46,063 lines
+- **Warning threshold:** 45,000 lines (EXCEEDED by 1,063)
 - **Block threshold:** 50,000 lines
 - **Action:** Continue extracting functionality from god classes
 - **Goal:** Stay under 50,000 lines
-
-### P2.4 Performance Benchmarks ✅ COMPLETED
-
-- **Location:** `tests/jest/performance/`
-- **Files:** RenderBenchmark.test.js, SelectionBenchmark.test.js
-- **Total tests:** 39
-
-### P2.5 Architecture Documentation ✅ COMPLETED
-
-- **File:** `docs/ARCHITECTURE.md`
-- **Includes:** Mermaid diagrams for module dependencies, event flows
 
 ---
 
@@ -144,15 +134,17 @@ All P0 items have been resolved. See "Fixes Completed" section above.
 
 ### P3.1 Mobile/Touch Support ⏳ NOT STARTED
 
+- **Priority:** HIGH (for mobile users)
 - **Required:**
   - Touch event handlers in InteractionController
   - Responsive toolbar layout
   - Gesture support (pinch-to-zoom, two-finger pan)
-  - Touch-friendly selection handles
+  - Touch-friendly selection handles (larger hit areas)
+  - Mobile-optimized layer panel
 - **Effort:** 4-6 weeks
 - **Impact:** Critical for modern web, tablets
 
-### P3.2 Accessibility Audit ✅ STARTED (50%)
+### P3.2 Accessibility Audit ⏳ STARTED (50%)
 
 - **Completed:**
   - Skip links (WCAG 2.4.1)
@@ -162,24 +154,38 @@ All P0 items have been resolved. See "Fixes Completed" section above.
 - **Remaining:**
   - Manual screen reader testing
   - WCAG 2.1 AA full compliance audit
+  - Color contrast verification
+  - Focus visibility improvements
 
-### P3.3 Auto-Generated Documentation ✅ COMPLETED
+### P3.3 Remove Deprecated Code ⏳ NOT STARTED
 
-- **Commands:** `npm run docs`, `npm run docs:markdown`
-- **Output:** `docs/api/` (HTML), `docs/API.md` (Markdown)
+- **Items to remove:**
+  - Direct window lookup pattern (CanvasManager.js)
+  - Old normalization method (APIManager.js)
+  - Deprecated global exports (compat.js)
+- **Effort:** 2-3 hours
+- **Breaking changes:** May require version bump
 
-### P3.4 TypeScript Migration ✅ STARTED (10%)
+### P3.4 TypeScript Migration ⏳ STARTED (5%)
 
 - **Migrated:**
   - `resources/ext.layers.shared/DeepClone.ts`
   - `resources/ext.layers.shared/BoundsCalculator.ts`
 - **Commands:** `npm run typecheck`, `npm run build:ts`
 - **Priority:** Low - ES6 with JSDoc provides good type safety
+- **Effort:** 40-60 hours for full migration
 
 ### P3.5 Layer Grouping ⏳ NOT STARTED
 
 - **Feature:** Group multiple layers for bulk operations
+- **Use cases:** Move/scale/rotate groups, toggle visibility
 - **Effort:** 2-3 weeks
+
+### P3.6 Performance Benchmarks ⏳ NOT STARTED
+
+- **Goal:** Automated performance regression detection
+- **Metrics:** Render time, interaction latency, memory usage
+- **Effort:** 1 week
 
 ---
 
@@ -201,8 +207,8 @@ All P0 items have been resolved. See "Fixes Completed" section above.
 
 | File | Lines | Risk | Action |
 |------|-------|------|--------|
-| LayersValidator.js | 958 | ⚠️ HIGH | **Split in P2.1** |
-| ToolbarStyleControls.js | 947 | ⚠️ HIGH | **Split in P2.2** |
+| LayersValidator.js | 958 | ⚠️ HIGH | **Split in P2.2** |
+| ToolbarStyleControls.js | 947 | ⚠️ HIGH | **Split in P2.3** |
 | UIManager.js | 917 | ⚠️ MEDIUM | Monitor |
 | ShapeRenderer.js | 861 | ⚠️ LOW | Monitor |
 | CanvasRenderer.js | 859 | ⚠️ LOW | Monitor |
@@ -223,35 +229,35 @@ P1.2 Fix File Lookup:       █████████████████�
 P1.3 Expand Jest Coverage:  ████████████████████ 100% ✅
 P1.4 Stabilize E2E Tests:   ████████████████████ 100% ✅
 
-Phase 2 (Architecture - 8 weeks):
-P2.1 Split LayersValidator: ░░░░░░░░░░░░░░░░░░░░ 0%
-P2.2 Split ToolbarStyleCtrl:░░░░░░░░░░░░░░░░░░░░ 0%
-P2.3 Monitor Codebase Size: ██████████░░░░░░░░░░ 50% (ongoing)
-P2.4 Performance Tests:     ████████████████████ 100% ✅
-P2.5 Architecture Docs:     ████████████████████ 100% ✅
+Phase 2 (Code Quality - 8 weeks):
+P2.1 Test Uncovered Files:  ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.2 Split LayersValidator: ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.3 Split ToolbarStyle:    ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.4 Fix Timer Cleanup:     ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.5 Extract Magic Numbers: ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.6 Reduce ESLint Disable: ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.7 Monitor Codebase Size: ██████████░░░░░░░░░░ 50% (ongoing)
 
 Phase 3 (Features - 12+ weeks):
 P3.1 Mobile/Touch:          ░░░░░░░░░░░░░░░░░░░░ 0%
 P3.2 Accessibility Audit:   ██████████░░░░░░░░░░ 50%
-P3.3 Auto-Gen Docs:         ████████████████████ 100% ✅
-P3.4 TypeScript:            ██░░░░░░░░░░░░░░░░░░ 10%
+P3.3 Remove Deprecated:     ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.4 TypeScript:            █░░░░░░░░░░░░░░░░░░░ 5%
 P3.5 Layer Grouping:        ░░░░░░░░░░░░░░░░░░░░ 0%
+P3.6 Performance Benchmarks:░░░░░░░░░░░░░░░░░░░░ 0%
 ```
 
 ---
 
 ## Success Metrics
 
-### Phase 0 Complete ✅
+### Phase 0 & 1 Complete ✅
 
 - [x] All tests passing (5,766)
 - [x] No console.* in production code
 - [x] Animation frame cancelled in destroy()
 - [x] Setname sanitized in all APIs
 - [x] Background visibility works correctly
-
-### Phase 1 Complete When
-
 - [x] SVG removed from allowed MIME types
 - [x] All APIs use getRepoGroup()->findFile()
 - [x] Jest tracks all source directories
@@ -259,9 +265,12 @@ P3.5 Layer Grouping:        ░░░░░░░░░░░░░░░░░�
 
 ### Phase 2 Complete When
 
+- [ ] All files have >50% test coverage
 - [ ] LayersValidator split into specialized validators
 - [ ] ToolbarStyleControls split
-- [ ] All god classes <1,500 lines
+- [ ] All timers cleaned up in destroy()
+- [ ] Magic numbers extracted to constants
+- [ ] ESLint disables reduced to <5
 - [ ] Codebase under 50,000 lines
 
 ### World-Class When
@@ -269,6 +278,7 @@ P3.5 Layer Grouping:        ░░░░░░░░░░░░░░░░░�
 - [ ] Mobile/touch support working
 - [ ] WCAG 2.1 AA compliant
 - [ ] TypeScript on all shared modules
+- [ ] All files >80% test coverage
 - [ ] New contributor productive in <1 day
 
 ---
@@ -307,6 +317,12 @@ When adding new controller/module references:
 3. Cancel any animation frames or timers
 4. Test that cleanup actually runs
 
+### The Coverage Rule
+
+- No new file should be added without tests
+- Existing files should not drop below current coverage
+- UI components need at least smoke tests
+
 ---
 
 ## Quick Wins (< 30 minutes each)
@@ -314,7 +330,9 @@ When adding new controller/module references:
 1. ✅ ~~Remove SVG from allowed MIME types~~ → DONE (Dec 21, 2025)
 2. ✅ ~~Fix getLocalRepo() to getRepoGroup()~~ → DONE (Dec 21, 2025)
 3. ✅ ~~Expand Jest collectCoverageFrom~~ → DONE (Dec 21, 2025)
-4. ⏳ Add `// @ts-check` to high-traffic files → 5 min each
+4. ⏳ Add tests for MathUtils.js → 30 min
+5. ⏳ Extract SNAP_THRESHOLD to constants → 15 min
+6. ⏳ Add `// @ts-check` to high-traffic files → 5 min each
 
 ---
 
@@ -323,12 +341,21 @@ When adding new controller/module references:
 | Phase | Duration | Gate | Status |
 |-------|----------|------|--------|
 | Phase 0 | Complete | Bugs fixed, tests passing | ✅ DONE |
-| Phase 1 | 4 weeks | Security fixed, stability improved | 🔄 In Progress |
-| Phase 2 | 8 weeks | Architecture improvements | ⏳ Waiting |
+| Phase 1 | Complete | Security fixed, stability improved | ✅ DONE |
+| Phase 2 | 8 weeks | Code quality improvements | ⏳ Ready to start |
 | Phase 3 | 12+ weeks | Mobile, world-class features | ⏳ Waiting |
 
 ---
 
+## Next Actions
+
+1. **P2.1** - Add tests for MathUtils.js (30 min, quick win)
+2. **P2.2** - Split LayersValidator.js (4-6 hours)
+3. **P2.4** - Fix timer cleanup in EditorBootstrap.js (1 hour)
+4. **P2.5** - Extract SNAP_THRESHOLD constant (15 min)
+
+---
+
 *Plan updated: December 21, 2025*  
-*Status: P0 COMPLETE - Extension is production-ready*  
-*Next action: P1.1 - Remove SVG XSS Risk*
+*Status: P0 and P1 COMPLETE - Extension is production-ready*  
+*Next focus: P2 Code Quality improvements*

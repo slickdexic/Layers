@@ -2,6 +2,27 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.11] - 2025-12-22
+
+### Bug Fixes
+- **Fixed ToolStyles.js constructor initialization order** — Fixed bug where `this.update()` was called before `this.listeners = []` was initialized, causing a crash when `initialStyle` was provided to the constructor.
+- **Added opacity extraction to ToolStyles** — `extractFromLayer()` now properly extracts the `opacity` property from layers.
+
+### Testing
+- **Test coverage improved to 92.19%** — Up from 90.09% statements
+- **Branch coverage now exceeds 80%** — 80.19% (up from 77.53%)
+- **6,337 tests passing** — Added 238 new tests
+- Added comprehensive `APIErrorHandler.test.js` — 56 new tests (0% → 98.03%)
+- Added comprehensive `NamespaceHelper.test.js` — 19 new tests (73.91% → 95.65%)
+- Extended `ToolStyles.test.js` — +33 tests (78.67% → 100%)
+- Extended `LayersViewer.test.js` — +13 tests (80.15% → 91.26%)
+
+### Code Quality
+- Updated `codebase_review.md` with current metrics
+- Updated `improvement_plan.md` — P2.1 (Add Tests) now marked complete
+
+---
+
 ## [1.1.10] - 2025-12-21
 
 ### Security

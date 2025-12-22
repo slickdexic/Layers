@@ -56,17 +56,17 @@
 			 */
 			this.currentStyle = this.createDefaultStyle();
 
-			// Apply initial style if provided
-			if ( initialStyle ) {
-				this.update( initialStyle );
-			}
-
 			/**
 			 * Style change listeners
 			 *
 			 * @type {Function[]}
 			 */
 			this.listeners = [];
+
+			// Apply initial style if provided (must be after listeners init)
+			if ( initialStyle ) {
+				this.update( initialStyle );
+			}
 		}
 
 		/**
@@ -457,6 +457,9 @@
 			if ( layer.fontFamily ) {
 				style.fontFamily = layer.fontFamily;
 			}
+			if ( layer.opacity !== undefined ) {
+				style.opacity = layer.opacity;
+			}
 			if ( layer.shadow !== undefined ) {
 				style.shadow = layer.shadow;
 			}
@@ -499,9 +502,7 @@
 	}
 
 	// CommonJS export for testing
-	/* eslint-disable-next-line no-undef */
 	if ( typeof module !== 'undefined' && module.exports ) {
-		/* eslint-disable-next-line no-undef */
 		module.exports = ToolStyles;
 	}
 }() );

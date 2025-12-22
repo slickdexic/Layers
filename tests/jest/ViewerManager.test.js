@@ -770,4 +770,557 @@ describe( 'ViewerManager', () => {
 			expect( window.Layers.Viewer.Manager ).toBe( ViewerManager );
 		} );
 	} );
+
+	describe( 'initializeLargeImages', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( {
+				urlParser: mockUrlParser,
+				debug: true
+			} );
+		} );
+
+		it( 'should return early when images array is empty', () => {
+			manager.initializeLargeImages( [] );
+			expect( mockMw.Api ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when images is null', () => {
+			manager.initializeLargeImages( null );
+			expect( mockMw.Api ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should warn when mw.Api is not available', () => {
+			delete global.mw.Api;
+
+			document.body.innerHTML = `
+				<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			manager.initializeLargeImages( images );
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'mw.Api not available for large image fetch'
+			);
+		} );
+
+		it( 'should skip images that already have layersViewer', () => {
+			document.body.innerHTML = `
+				<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+			`;
+			const img = document.querySelector( 'img' );
+			img.layersViewer = {};
+
+			manager.initializeLargeImages( [ img ] );
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should skip images with layersPending flag', () => {
+			document.body.innerHTML = `
+				<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+			`;
+			const img = document.querySelector( 'img' );
+			img.layersPending = true;
+
+			manager.initializeLargeImages( [ img ] );
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should use data-layers-intent for set name', () => {
+			document.body.innerHTML = `
+				<img data-layers-large="true" data-layers-intent="custom-set" data-file-name="Test.jpg" src="test.jpg">
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			manager.initializeLargeImages( images );
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					setname: 'custom-set'
+				} )
+			);
+		} );
+
+		it( 'should not include setname for default or on values', () => {
+			document.body.innerHTML = `
+				<img data-layers-large="true" data-layers-intent="on" data-file-name="Test.jpg" src="test.jpg">
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			manager.initializeLargeImages( images );
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.not.objectContaining( {
+					setname: expect.anything()
+				} )
+			);
+		} );
+
+		it( 'should warn when filename cannot be extracted', () => {
+			document.body.innerHTML = `
+				<img data-layers-large="true" src="">
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			manager.initializeLargeImages( images );
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'Could not extract filename from image for large data fetch'
+			);
+		} );
+
+		it( 'should fetch and initialize viewer with API response', async () => {
+			document.body.innerHTML = `
+				<div style="position: relative">
+					<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+				</div>
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1' } ],
+							backgroundVisible: true,
+							backgroundOpacity: 0.8
+						},
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			manager.initializeLargeImages( images );
+
+			// Wait for promises
+			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+			expect( mockLayersViewer ).toHaveBeenCalled();
+		} );
+
+		it( 'should log when no layerset is returned', async () => {
+			document.body.innerHTML = `
+				<div style="position: relative">
+					<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+				</div>
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			mockApi.get.mockResolvedValue( { layersinfo: {} } );
+
+			manager.initializeLargeImages( images );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+			expect( mockMw.log ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'No layerset returned for large image'
+			);
+		} );
+
+		it( 'should log when layers array is empty', async () => {
+			document.body.innerHTML = `
+				<div style="position: relative">
+					<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+				</div>
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [] }
+					}
+				}
+			} );
+
+			manager.initializeLargeImages( images );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+			expect( mockMw.log ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'No layers in fetched data for large image'
+			);
+		} );
+
+		it( 'should handle data as array directly', async () => {
+			document.body.innerHTML = `
+				<div style="position: relative">
+					<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+				</div>
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: [ { id: 'layer1' } ],
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			manager.initializeLargeImages( images );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+			expect( mockLayersViewer ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle errors in response processing', async () => {
+			document.body.innerHTML = `
+				<div style="position: relative">
+					<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+				</div>
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: null // Invalid data that will cause no layers
+					}
+				}
+			} );
+
+			manager.initializeLargeImages( images );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+			// Should log that no layers were found (not an error, just no data)
+			expect( mockMw.log ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'No layers in fetched data for large image'
+			);
+		} );
+
+		it( 'should handle API errors', async () => {
+			document.body.innerHTML = `
+				<div style="position: relative">
+					<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+				</div>
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+			const img = images[ 0 ];
+
+			mockApi.get.mockRejectedValue( new Error( 'API error' ) );
+
+			manager.initializeLargeImages( images );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'API request failed for large image:',
+				expect.any( Error )
+			);
+			expect( img.layersPending ).toBe( false );
+		} );
+
+		it( 'should use image dimensions as fallback for baseWidth/baseHeight', async () => {
+			document.body.innerHTML = `
+				<div style="position: relative">
+					<img data-layers-large="true" data-file-name="Test.jpg" src="test.jpg">
+				</div>
+			`;
+			const images = Array.from( document.querySelectorAll( 'img[data-layers-large]' ) );
+			const img = images[ 0 ];
+
+			Object.defineProperty( img, 'naturalWidth', { value: 1024 } );
+			Object.defineProperty( img, 'naturalHeight', { value: 768 } );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1' } ]
+						}
+						// No baseWidth/baseHeight
+					}
+				}
+			} );
+
+			manager.initializeLargeImages( images );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+			expect( mockLayersViewer ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					layerData: expect.objectContaining( {
+						baseWidth: 1024,
+						baseHeight: 768
+					} )
+				} )
+			);
+		} );
+	} );
+
+	describe( 'extractFilenameFromImg', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( {
+				urlParser: mockUrlParser,
+				debug: true
+			} );
+		} );
+
+		it( 'should extract filename from data-file-name attribute', () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+
+			const result = manager.extractFilenameFromImg( img );
+
+			expect( result ).toBe( 'Test.jpg' );
+		} );
+
+		it( 'should extract filename from src URL', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/images/Test_Image.jpg';
+
+			const result = manager.extractFilenameFromImg( img );
+
+			expect( result ).toBe( 'Test_Image.jpg' );
+		} );
+
+		it( 'should remove thumbnail prefix from src URL', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/images/thumb/a/ab/Test.jpg/200px-Test.jpg';
+
+			const result = manager.extractFilenameFromImg( img );
+
+			expect( result ).toBe( 'Test.jpg' );
+		} );
+
+		it( 'should extract filename from parent link href', () => {
+			const a = document.createElement( 'a' );
+			a.href = '/wiki/File:Test_Image.jpg';
+			const img = document.createElement( 'img' );
+			img.src = '';
+			a.appendChild( img );
+			document.body.appendChild( a );
+
+			const result = manager.extractFilenameFromImg( img );
+
+			expect( result ).toBe( 'Test Image.jpg' );
+		} );
+
+		it( 'should return null when filename cannot be extracted', () => {
+			const img = document.createElement( 'img' );
+			img.src = '';
+
+			const result = manager.extractFilenameFromImg( img );
+
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should decode URL-encoded filenames from src', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/images/Test%20Image.jpg';
+
+			const result = manager.extractFilenameFromImg( img );
+
+			expect( result ).toBe( 'Test Image.jpg' );
+		} );
+	} );
+
+	describe( 'getClass fallback behavior', () => {
+		it( 'should use window.Layers namespace when available', () => {
+			jest.resetModules();
+
+			// Remove the mock and let the module use its own getClass
+			delete window.layersGetClass;
+
+			// Set up the namespace structure
+			window.Layers = {
+				Utils: {
+					UrlParser: function () {
+						return mockUrlParser;
+					}
+				},
+				Viewer: {
+					LayersViewer: mockLayersViewer
+				}
+			};
+
+			global.mw = mockMw;
+
+			const FreshViewerManager = require( '../../resources/ext.layers/viewer/ViewerManager.js' );
+			const manager = new FreshViewerManager( { debug: true } );
+
+			expect( manager.urlParser ).toBeDefined();
+		} );
+
+		it( 'should fall back to window globals when namespace path fails', () => {
+			jest.resetModules();
+
+			delete window.layersGetClass;
+
+			// Set up partial namespace
+			window.Layers = {};
+			// Set up globals
+			window.LayersUrlParser = function () {
+				return mockUrlParser;
+			};
+			window.LayersViewer = mockLayersViewer;
+
+			global.mw = mockMw;
+
+			const FreshViewerManager = require( '../../resources/ext.layers/viewer/ViewerManager.js' );
+			const manager = new FreshViewerManager( { debug: true } );
+
+			expect( manager.urlParser ).toBeDefined();
+		} );
+	} );
+
+	describe( 'initializeFilePageFallback edge cases', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( {
+				urlParser: mockUrlParser,
+				debug: true
+			} );
+		} );
+
+		it( 'should handle filename without namespace prefix', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'Just_Filename.jpg'; // No File: prefix
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			document.body.innerHTML = '<div id="file"><img src="test.jpg"></div>';
+
+			manager.initializeFilePageFallback();
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					filename: 'Just Filename.jpg'
+				} )
+			);
+		} );
+
+		it( 'should handle decodeURIComponent errors gracefully', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:%E0%A4%A'; // Invalid URI encoding
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			document.body.innerHTML = '<div id="file"><img src="test.jpg"></div>';
+
+			// Should not throw
+			expect( () => manager.initializeFilePageFallback() ).not.toThrow();
+
+			// Should warn about decode error
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'Failed to decode filename URI:',
+				expect.any( String )
+			);
+		} );
+
+		it( 'should handle errors in API response processing', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:Test.jpg';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			document.body.innerHTML = '<div id="file"><img src="test.jpg"></div>';
+
+			// Return invalid data structure that will cause processing error
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: 'not-an-array' // Invalid
+						}
+					}
+				}
+			} );
+
+			await manager.initializeFilePageFallback();
+
+			// Should not initialize viewer
+			expect( mockLayersViewer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should catch outer errors and log them', () => {
+			mockUrlParser.getNamespaceNumber.mockImplementation( () => {
+				throw new Error( 'Outer error' );
+			} );
+
+			expect( () => manager.initializeFilePageFallback() ).not.toThrow();
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'File page fallback outer error:',
+				expect.any( Error )
+			);
+		} );
+	} );
+
+	describe( 'initializeLayerViewers error handling', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( {
+				urlParser: mockUrlParser,
+				debug: true
+			} );
+
+			mockMw.log.error = jest.fn();
+		} );
+
+		it( 'should handle JSON parse error gracefully', () => {
+			// The try/catch in initializeLayerViewers catches errors at the image level
+			// When JSON.parse fails in the inner try, it sets layerData = null
+			// and the outer try logs if there's still an exception
+
+			document.body.innerHTML = `
+				<div style="position: relative">
+					<img data-layer-data='{"invalid":json}' src="test.jpg">
+				</div>
+			`;
+
+			// JSON.parse will fail but it's caught internally
+			manager.initializeLayerViewers();
+
+			// The error is logged as a warn for JSON parse error
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ViewerManager]',
+				'JSON parse error:',
+				expect.any( String )
+			);
+		} );
+	} );
 } );

@@ -16,7 +16,7 @@
 	'use strict';
 
 	// Extension version
-	const VERSION = '0.8.1-dev';
+	const VERSION = '1.1.11';
 
 	// Skip in non-browser environments
 	if ( typeof window === 'undefined' ) {

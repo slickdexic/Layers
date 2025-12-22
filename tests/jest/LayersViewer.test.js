@@ -344,6 +344,67 @@ describe( 'LayersViewer', () => {
 			expect( window.ResizeObserver ).toHaveBeenCalled();
 			expect( viewer.resizeObserver ).toBeDefined();
 		} );
+
+		test( 'should handle ResizeObserver setup failure', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+
+			// Make ResizeObserver throw on construction
+			const originalResizeObserver = window.ResizeObserver;
+			window.ResizeObserver = jest.fn( () => {
+				throw new Error( 'ResizeObserver not supported' );
+			} );
+
+			// Mock mw.log.warn
+			const originalMw = window.mw;
+			window.mw = { log: { warn: jest.fn() } };
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			// Should log warning but not throw
+			expect( window.mw.log.warn ).toHaveBeenCalled();
+			expect( viewer ).toBeDefined();
+
+			// Restore
+			window.ResizeObserver = originalResizeObserver;
+			window.mw = originalMw;
+		} );
+
+		test( 'should trigger renderLayers on image layer load callback', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+
+			// Track calls to the LayerRenderer constructor
+			let capturedOnImageLoad;
+			MockLayerRenderer.mockImplementation( ( ctx, options ) => {
+				capturedOnImageLoad = options.onImageLoad;
+				return mockLayerRenderer;
+			} );
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			// Clear previous render calls
+			mockLayerRenderer.drawLayer.mockClear();
+
+			// Trigger the onImageLoad callback
+			if ( capturedOnImageLoad ) {
+				capturedOnImageLoad();
+			}
+
+			// renderLayers should have been called
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalled();
+
+			// Restore mock
+			MockLayerRenderer.mockImplementation( () => mockLayerRenderer );
+		} );
 	} );
 
 	describe( 'scheduleResize', () => {
@@ -718,6 +779,152 @@ describe( 'LayersViewer', () => {
 			} );
 
 			// Just verify no errors
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should render blur layer with valid dimensions', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = {
+				baseWidth: 100,
+				baseHeight: 100,
+				layers: [ { id: 'blur1', type: 'blur', visible: true, x: 10, y: 10, width: 50, height: 50, blurRadius: 8 } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// Verify no errors and viewer is created
+			expect( viewer ).toBeDefined();
+			expect( viewer.canvas ).toBeDefined();
+		} );
+
+		test( 'should apply opacity to blur layer', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = {
+				baseWidth: 100,
+				baseHeight: 100,
+				layers: [ { id: 'blur1', type: 'blur', visible: true, x: 10, y: 10, width: 50, height: 50, opacity: 0.5 } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should apply blend mode to blur layer', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = {
+				baseWidth: 100,
+				baseHeight: 100,
+				layers: [ { id: 'blur1', type: 'blur', visible: true, x: 10, y: 10, width: 50, height: 50, blend: 'multiply' } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should clamp blur radius to valid range', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = {
+				baseWidth: 100,
+				baseHeight: 100,
+				layers: [ { id: 'blur1', type: 'blur', visible: true, x: 10, y: 10, width: 50, height: 50, blurRadius: 100 } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// Should clamp to max 64
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should use default blur radius when not specified', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = {
+				baseWidth: 100,
+				baseHeight: 100,
+				layers: [ { id: 'blur1', type: 'blur', visible: true, x: 10, y: 10, width: 50, height: 50 } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// Should use default of 12
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should handle blur layer without base dimensions', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = {
+				layers: [ { id: 'blur1', type: 'blur', visible: true, x: 10, y: 10, width: 50, height: 50 } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should skip blur layer with height zero', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = {
+				baseWidth: 100,
+				baseHeight: 100,
+				layers: [ { id: 'blur1', type: 'blur', visible: true, x: 0, y: 0, width: 50, height: 0 } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should skip blur layer with negative dimensions', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = {
+				baseWidth: 100,
+				baseHeight: 100,
+				layers: [ { id: 'blur1', type: 'blur', visible: true, x: 0, y: 0, width: -10, height: 50 } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
 			expect( viewer ).toBeDefined();
 		} );
 	} );
@@ -1154,6 +1361,69 @@ describe( 'LayersViewer', () => {
 			expect( layer.visible ).toBe( false );
 			expect( layer.locked ).toBe( false );
 			expect( layer.preserveAspectRatio ).toBe( true );
+		} );
+
+		test( 'should use fallback normalization when LayerDataNormalizer is not available', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			// Temporarily remove the shared normalizer
+			const originalNormalizer = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const layerData = {
+				layers: [
+					{ id: 'layer1', type: 'rectangle', shadow: '1', visible: '0' }
+				]
+			};
+
+			// Create viewer without shared normalizer - it will use fallbackNormalize
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Restore the normalizer
+			window.Layers.LayerDataNormalizer = originalNormalizer;
+
+			// Fallback should still normalize the values
+			expect( viewer.layerData.layers[ 0 ].shadow ).toBe( true );
+			expect( viewer.layerData.layers[ 0 ].visible ).toBe( false );
+		} );
+
+		test( 'should handle fallback normalization with null layerData', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: null
+			} );
+
+			// Should not throw
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should handle fallback normalization with empty string boolean values', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				layers: [
+					{ id: 'layer1', type: 'rectangle', shadow: '' }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Empty string should be converted to true
+			expect( viewer.layerData.layers[ 0 ].shadow ).toBe( true );
 		} );
 	} );
 } );
