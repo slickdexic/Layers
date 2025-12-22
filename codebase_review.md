@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** December 22, 2025  
-**Version:** 1.1.10  
+**Version:** 1.1.11  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -16,9 +16,9 @@ The extension is **functional and deployed** with professional security, excelle
 
 **Key Strengths:**
 
-- ✅ **6,337 tests passing** (0 failures)
-- ✅ **92.19% statement coverage, 80.19% branch coverage**
-- ✅ **93 JS files**, 85 ES6 classes, 0 legacy prototype patterns
+- ✅ **6,477 tests passing** (0 failures)
+- ✅ **92% statement coverage, 80% branch coverage**
+- ✅ **95 JS files**, 85 ES6 classes, 0 legacy prototype patterns
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 14 working drawing tools with named layer sets
 - ✅ Smart Guides for object-to-object snapping
@@ -30,7 +30,7 @@ The extension is **functional and deployed** with professional security, excelle
 
 **Outstanding Issues:**
 
-- ⚠️ **7 files >1,000 lines** ("god classes" - maintainability concern)
+- ⚠️ **8 files >1,000 lines** ("god classes" - maintainability concern, includes LayersValidator.js)
 - ⚠️ **No mobile/touch support** - editor is desktop-only
 
 ---
@@ -43,58 +43,58 @@ All metrics collected directly from the codebase.
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total JS files | **93** | - | ✅ |
-| Total JS lines | **46,063** | <50,000 | ⚠️ Past warning |
-| ES6 classes | **85** | 70+ | ✅ |
-| Files >1,000 lines | **7** | 0 | ⚠️ |
+| Total JS files | **95** | - | ✅ |
+| Total JS lines | **46,786** | <50,000 | ⚠️ Past warning |
+| ES6 classes | **87** | 70+ | ✅ |
+| Files >1,000 lines | **8** | 0 | ⚠️ |
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disable comments | **13** | 0 | ✅ Improved |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **6,337** | - | ✅ |
+| Jest tests passing | **6,477** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
-| Statement coverage | **92.19%** | 85%+ | ✅ Excellent |
-| Branch coverage | **80.19%** | 75%+ | ✅ Good |
-| Function coverage | **88.63%** | 80%+ | ✅ Good |
-| Line coverage | **92.67%** | 85%+ | ✅ Excellent |
+| Statement coverage | **92%** | 85%+ | ✅ Excellent |
+| Branch coverage | **80%** | 75%+ | ✅ Good |
+| Function coverage | **88%** | 80%+ | ✅ Good |
+| Line coverage | **92%** | 85%+ | ✅ Excellent |
 
 ### Files Over 1,000 Lines (God Classes)
 
 | File | Lines | Has Delegation? | Assessment |
 |------|-------|-----------------|------------|
-| CanvasManager.js | **1,875** | ✅ 10+ controllers | Facade - acceptable |
+| CanvasManager.js | **1,871** | ✅ 10+ controllers | Facade - acceptable |
 | LayerPanel.js | **1,838** | ✅ 7 controllers | Facade - acceptable |
 | Toolbar.js | **1,539** | ✅ 4 modules | Growing concern |
 | LayersEditor.js | **1,324** | ✅ 3 modules | Acceptable |
 | ToolManager.js | **1,264** | ✅ 2 handlers | Acceptable |
 | SelectionManager.js | **1,194** | ✅ 3 modules | Acceptable |
 | APIManager.js | **1,174** | ✅ APIErrorHandler | Acceptable |
+| LayersValidator.js | **1,036** | ✅ 2 validators | Refactoring in progress |
 
-**Total in god classes: ~10,208 lines** (22% of JS codebase)
+**Total in god classes: ~11,240 lines** (24% of JS codebase)
 
 ### Files Approaching 1,000 Lines (Watch List)
 
 | File | Lines | Risk |
 |------|-------|------|
-| LayersValidator.js | 958 | ⚠️ HIGH - needs split |
 | ToolbarStyleControls.js | 947 | ⚠️ HIGH |
-| UIManager.js | 917 | ⚠️ MEDIUM |
-| ShapeRenderer.js | 861 | ⚠️ LOW |
+| UIManager.js | 945 | ⚠️ HIGH |
 | CanvasRenderer.js | 859 | ⚠️ LOW |
-| PropertiesForm.js | 832 | ⚠️ LOW |
-| ResizeCalculator.js | 822 | ⚠️ LOW |
+| ShapeRenderer.js | 856 | ⚠️ LOW |
+| PropertiesForm.js | 830 | ⚠️ LOW |
+| ResizeCalculator.js | 806 | ⚠️ LOW |
 
 ### Test Coverage Summary
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Test suites passing | **123** | ✅ |
+| Test suites passing | **125** | ✅ |
 | Test suites failing | **0** | ✅ |
-| Tests passing | **6,337** | ✅ |
+| Tests passing | **6,477** | ✅ |
 | Tests failing | **0** | ✅ |
-| Statement coverage | **92.19%** | ✅ Excellent |
-| Branch coverage | **80.19%** | ✅ Good |
-| Function coverage | **88.63%** | ✅ Good |
-| Line coverage | **92.67%** | ✅ Excellent |
+| Statement coverage | **92%** | ✅ Excellent |
+| Branch coverage | **80%** | ✅ Good |
+| Function coverage | **88%** | ✅ Good |
+| Line coverage | **92%** | ✅ Excellent |
 | Files with 0% coverage | **0** | ✅ All covered |
 
 ### Recently Added Test Coverage

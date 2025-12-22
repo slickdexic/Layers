@@ -36,12 +36,42 @@
 		this.api = new mw.Api();
 		this.maxRetries = 3;
 		this.retryDelay = 1000; // Start with 1 second
+		this.activeTimeouts = new Set(); // Track active timeouts for cleanup
 		
 		// Initialize error handler (extracted for separation of concerns)
 		this.errorHandler = new APIErrorHandler( {
 			editor: editor
 		} );
 		this.errorHandler.setEnableSaveButtonCallback( () => this.enableSaveButton() );
+	}
+
+	/**
+	 * Schedule a timeout with automatic tracking for cleanup.
+	 * Use this instead of raw setTimeout to prevent memory leaks.
+	 *
+	 * @param {Function} callback - Function to execute after delay
+	 * @param {number} delay - Delay in milliseconds
+	 * @return {number} Timeout ID
+	 * @private
+	 */
+	_scheduleTimeout( callback, delay ) {
+		const timeoutId = setTimeout( () => {
+			this.activeTimeouts.delete( timeoutId );
+			callback();
+		}, delay );
+		this.activeTimeouts.add( timeoutId );
+		return timeoutId;
+	}
+
+	/**
+	 * Clear all active timeouts (for cleanup)
+	 * @private
+	 */
+	_clearAllTimeouts() {
+		for ( const timeoutId of this.activeTimeouts ) {
+			clearTimeout( timeoutId );
+		}
+		this.activeTimeouts.clear();
 	}
 
 	/**
@@ -590,7 +620,7 @@
 				if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 					mw.log( `[APIManager] Retrying save after delay: ${delay}ms` );
 				}
-				setTimeout( () => {
+				this._scheduleTimeout( () => {
 					this.performSaveWithRetry( payload, attempt + 1, resolve, reject );
 				}, delay );
 			} else {
@@ -608,7 +638,7 @@
 	disableSaveButton() {
 		if ( this.editor.toolbar && this.editor.toolbar.saveButton ) {
 			this.editor.toolbar.saveButton.disabled = true;
-			setTimeout( () => {
+			this._scheduleTimeout( () => {
 				if ( this.editor.toolbar.saveButton ) {
 					this.editor.toolbar.saveButton.disabled = false;
 				}
@@ -1147,6 +1177,9 @@
 	 * Clean up resources and abort pending requests
 	 */
 	destroy() {
+		// Clear all pending timeouts
+		this._clearAllTimeouts();
+		
 		// Abort any pending API requests if possible
 		if ( this.api && typeof this.api.abort === 'function' ) {
 			this.api.abort();

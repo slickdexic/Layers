@@ -59,6 +59,7 @@
 			this.onError = options.onError || function () {};
 			this.image = null;
 			this.isLoading = false;
+			this.loadTimeoutId = null; // Track timeout for cleanup
 		}
 
 		/**
@@ -249,8 +250,9 @@
 
 			this.image.src = svgDataUrl;
 
-			// Set a timeout fallback
-			setTimeout( () => {
+			// Set a timeout fallback (tracked for cleanup)
+			this.loadTimeoutId = setTimeout( () => {
+				this.loadTimeoutId = null;
 				if ( this.isLoading ) {
 					this.isLoading = false;
 					this.onError( new Error( 'Image load timeout' ) );
@@ -307,6 +309,11 @@
 		 * Abort any pending load operation
 		 */
 		abort() {
+			// Clear load timeout if pending
+			if ( this.loadTimeoutId ) {
+				clearTimeout( this.loadTimeoutId );
+				this.loadTimeoutId = null;
+			}
 			if ( this.image ) {
 				this.image.onload = null;
 				this.image.onerror = null;
