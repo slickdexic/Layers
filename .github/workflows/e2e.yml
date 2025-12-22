@@ -133,8 +133,11 @@ jobs:
             imagefill(\$img, 0, 0, \$bg);
             imagepng(\$img, 'test_image.png');
           "
+          ls -la test_image.png
           # Import test image via maintenance script
-          php maintenance/importImages.php --comment="Test image for E2E tests" --user=Admin . 2>/dev/null || true
+          php maintenance/importImages.php --comment="Test image for E2E tests" --user=Admin --overwrite . || echo "importImages failed, trying alternative method"
+          # Verify the file was imported by checking the database
+          php maintenance/run.php eval "echo \MediaWiki\MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->findFile('Test_image.png') ? 'File exists' : 'File NOT found';"
 
       - name: Start MediaWiki server
         run: |
@@ -145,6 +148,27 @@ jobs:
           curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ | grep -qE "200|301|302" || exit 1
         env:
           MW_SERVER: http://localhost:8080
+
+      - name: Verify test environment
+        run: |
+          # Check if the file page exists
+          echo "Checking file page..."
+          HTTP_CODE=$(curl -s -o /tmp/filepage.html -w "%{http_code}" "http://localhost:8080/index.php?title=File:Test_image.png")
+          echo "File page HTTP code: $HTTP_CODE"
+          
+          # Check if the editlayers action works
+          echo "Checking editlayers action..."
+          HTTP_CODE=$(curl -s -o /tmp/editorpage.html -w "%{http_code}" "http://localhost:8080/index.php?title=File:Test_image.png&action=editlayers")
+          echo "Editor page HTTP code: $HTTP_CODE"
+          
+          # Check if layers-canvas appears in the page
+          if grep -q "layers-canvas" /tmp/editorpage.html; then
+            echo "✓ layers-canvas found in page"
+          else
+            echo "✗ layers-canvas NOT found in page"
+            echo "Page content (first 2000 chars):"
+            head -c 2000 /tmp/editorpage.html
+          fi
 
       - name: Install npm dependencies
         run: npm ci
