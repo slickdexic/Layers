@@ -2,10 +2,50 @@
  * Client-side validation for the Layers editor
  * Provides immediate feedback to users about invalid input
  *
+ * Delegates to ValidationHelpers and NumericValidator for shared utilities.
+ *
  * @class LayersValidator
  */
 ( function () {
 	'use strict';
+
+	/**
+	 * Get ValidationHelpers from namespace or require
+	 *
+	 * @return {Object|null} ValidationHelpers class
+	 */
+	function getValidationHelpers() {
+		if ( window.Layers && window.Layers.Validation && window.Layers.Validation.ValidationHelpers ) {
+			return window.Layers.Validation.ValidationHelpers;
+		}
+		if ( typeof require === 'function' ) {
+			try {
+				return require( './validation/ValidationHelpers.js' );
+			} catch ( e ) {
+				return null;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Get NumericValidator from namespace or require
+	 *
+	 * @return {Object|null} NumericValidator class
+	 */
+	function getNumericValidator() {
+		if ( window.Layers && window.Layers.Validation && window.Layers.Validation.NumericValidator ) {
+			return window.Layers.Validation.NumericValidator;
+		}
+		if ( typeof require === 'function' ) {
+			try {
+				return require( './validation/NumericValidator.js' );
+			} catch ( e ) {
+				return null;
+			}
+		}
+		return null;
+	}
 
 	/**
 	 * LayersValidator class
@@ -20,6 +60,11 @@
 		constructor() {
 			const LayersConstants = ( window.Layers && window.Layers.Constants ) || {};
 			const limits = LayersConstants.LIMITS || {};
+
+			// Get helper classes
+			this.ValidationHelpers = getValidationHelpers();
+			const NumericValidatorClass = getNumericValidator();
+			this.numericValidator = NumericValidatorClass ? new NumericValidatorClass() : null;
 			this.validationRules = {
 				// Layer type whitelist (must match server-side validation)
 				validTypes: [
@@ -209,11 +254,30 @@
 
 		/**
 		 * Validate numeric properties with specific ranges
+		 * Delegates to NumericValidator when available.
 		 *
 		 * @param {Object} layer
 		 * @param {Object} result
 		 */
 		validateNumericProperties( layer, result ) {
+			// Delegate to NumericValidator if available
+			if ( this.numericValidator ) {
+				this.numericValidator.validateNumericProperties( layer, result );
+				return;
+			}
+
+			// Fallback to inline validation if NumericValidator not loaded
+			this._validateNumericPropertiesFallback( layer, result );
+		}
+
+		/**
+		 * Fallback numeric validation (used when NumericValidator not available)
+		 *
+		 * @param {Object} layer
+		 * @param {Object} result
+		 * @private
+		 */
+		_validateNumericPropertiesFallback( layer, result ) {
 			// Font size validation
 			if ( layer.fontSize !== undefined ) {
 				if ( !this.isValidNumber( layer.fontSize ) ) {
@@ -624,21 +688,31 @@
 
 		/**
 		 * Helper function to check if a value is a valid number
+		 * Delegates to ValidationHelpers when available.
 		 *
 		 * @param {*} value
 		 * @return {boolean} True if value is a valid number
 		 */
 		isValidNumber( value ) {
+			if ( this.ValidationHelpers && this.ValidationHelpers.isValidNumber ) {
+				return this.ValidationHelpers.isValidNumber( value );
+			}
 			return typeof value === 'number' && !isNaN( value ) && isFinite( value );
 		}
 
 		/**
 		 * Helper function to validate color values
+		 * Delegates to ValidationHelpers when available.
 		 *
 		 * @param {string} color
 		 * @return {boolean} True if color is valid
 		 */
 		isValidColor( color ) {
+			if ( this.ValidationHelpers && this.ValidationHelpers.isValidColor ) {
+				return this.ValidationHelpers.isValidColor( color );
+			}
+
+			// Fallback implementation
 			if ( typeof color !== 'string' ) {
 				return false;
 			}
@@ -705,23 +779,22 @@
 
 		/**
 		 * Check for potential script injection in text content
+		 * Delegates to ValidationHelpers when available.
 		 *
 		 * @param {string} text
 		 * @return {boolean} True if text contains potential script injection
 		 */
 		containsScriptInjection( text ) {
+			if ( this.ValidationHelpers && this.ValidationHelpers.containsScriptInjection ) {
+				return this.ValidationHelpers.containsScriptInjection( text );
+			}
 			return /<script|javascript:|data:|vbscript:|on\w+\s*=/i.test( text );
 		}
 
 		/**
-		 * Get localized message or fallback
-		 *
-		 * @param key
-		 */
-		/**
 		 * Get internationalized message with parameter support
 		 *
-		 * Delegates to MessageHelper for consistent i18n handling.
+		 * Delegates to ValidationHelpers for consistent i18n handling.
 		 * Falls back to built-in English messages if MediaWiki i18n unavailable.
 		 *
 		 * @param {string} key - Message key (e.g., 'layers-validation-layer-invalid')
@@ -729,6 +802,11 @@
 		 * @return {string} Localized message
 		 */
 		getMessage( key, ...args ) {
+			// Delegate to ValidationHelpers when available
+			if ( this.ValidationHelpers && this.ValidationHelpers.getMessage ) {
+				return this.ValidationHelpers.getMessage( key, ...args );
+			}
+
 			// Fallback messages in English (used when i18n unavailable)
 			const fallbacks = {
 				'layers-validation-layer-invalid': 'Invalid layer object',

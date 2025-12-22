@@ -272,6 +272,8 @@
 				"TextUtils.js",
 				"CanvasManager.js",
 				"LayerPanel.js",
+				"validation/ValidationHelpers.js",
+				"validation/NumericValidator.js",
 				"LayersValidator.js",
 				"ToolbarKeyboard.js",
 				"ImportExportManager.js",
