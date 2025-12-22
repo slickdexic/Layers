@@ -4,6 +4,86 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.1.12 (December 22, 2025)
+
+### Code Quality
+- **Memory leak prevention** — Added timeout tracking to `APIManager.js` and `ImageLoader.js` with proper cleanup in `destroy()` methods
+- **Reduced god classes** — Removed 189 lines of dead code from `LayersValidator.js` (1,036 → 843 lines)
+- **Magic numbers extracted** — Added `TIMING` section to `LayersConstants.js` with 9 named delay constants
+
+### Testing
+- **6,479 tests passing** (+142 from v1.1.11)
+- **92% statement coverage**, 80% branch coverage
+- Added tests for new TIMING constants
+
+### Documentation
+- Added deep linking feature request to `FUTURE_IMPROVEMENTS.md`
+- Added lightbox viewer feature request
+- Added 8 world-class feature ideas (templates, AI, collaboration, etc.)
+
+---
+
+## Version 1.1.11 (December 22, 2025)
+
+### Bug Fixes
+- **Fixed ToolStyles.js constructor initialization order** — Fixed crash when `initialStyle` was provided
+
+### Testing
+- **6,337 tests passing** (+238 from v1.1.10)
+- **92% statement coverage**, 80% branch coverage
+- Added comprehensive tests for APIErrorHandler, NamespaceHelper, ToolStyles, LayersViewer
+
+---
+
+## Version 1.1.10 (December 21, 2025)
+
+### Security
+- **Removed SVG from allowed image imports** — SVG files can contain embedded JavaScript (XSS risk). Removed from allowed MIME types for security. Users requiring SVG support should implement proper sanitization.
+
+### Bug Fixes
+- **Fixed foreign repository file lookup** — Delete and Rename APIs now properly find files from foreign repositories like Wikimedia Commons
+
+### Code Quality
+- **Improved Jest coverage configuration** — Now tracks all source directories for accurate coverage reporting
+
+### Documentation
+- Updated `codebase_review.md`, `improvement_plan.md`, and `README.md` with accurate metrics
+
+---
+
+## Version 1.1.9 (December 21, 2025)
+
+### Bug Fixes
+- **Background visibility resetting to visible** — Fixed critical bug where background saved as hidden would show as visible when returning to the editor
+  - Root cause: JavaScript used `visible !== false` which returns `true` for integer `0`
+  - Fixed three locations to check `visible !== false && visible !== 0`
+  - See `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md` for full analysis
+
+### Security
+- **Added setname sanitization** — Delete and Rename APIs now sanitize user-supplied set names
+
+### Code Quality
+- **Extracted MathUtils.js** — Shared utility module for `clampOpacity()` (DRY improvement)
+- **Fixed memory leak** — Added `cancelAnimationFrame()` to `CanvasManager.destroy()`
+- **Fixed console.error** — Replaced with `mw.log.error()` in ViewerManager.js
+
+### Testing
+- **5,766 tests passing** (+157 from v1.1.7)
+
+---
+
+## Version 1.1.8 (December 21, 2025)
+
+### Bug Fixes
+- **Background visibility not applied on article pages** — Fixed critical bug where `backgroundVisible: false` was not being honored on article pages for large layer sets (>100KB)
+  - Root cause: MediaWiki's API drops boolean `false` values during JSON serialization
+  - Solution: Extended `preserveLayerBooleans()` to convert `backgroundVisible` to 0/1 integer
+
+### Testing
+- Added `ApiLayersInfoBooleanPreservationTest.php` with 8 tests
+
+---
+
 ## Version 1.1.7 (December 20, 2025)
 
 ### New Features

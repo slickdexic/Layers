@@ -5,7 +5,9 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Status:** ⚠️ Version 1.1.8. Functional with known issues requiring fixes. Requires MediaWiki 1.44+.
+> **Version:** 1.1.12 (December 2025)  
+> **Status:** ✅ Production-ready. All P0 and P1 issues resolved.  
+> **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 >
@@ -249,7 +251,25 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 ---
 
-## Security
+## Technical Details
+
+**Architecture:**
+
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`)
+- **Frontend:** HTML5 Canvas editor with 96 JS files (~47K lines), 87 ES6 classes
+- **Code Splitting:** Viewer module loads separately from Editor for performance
+- **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
+
+**Test Coverage:**
+
+| Metric | Value |
+|--------|-------|
+| Jest tests | 6,479 passing |
+| Statement coverage | 92% |
+| Branch coverage | 80% |
+| Test suites | 125 |
+
+**Security:**
 
 - CSRF protection on all write endpoints
 - Server-side validation with strict property whitelist (50+ fields)

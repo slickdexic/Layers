@@ -2,6 +2,49 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.12] - 2025-12-22
+
+### Code Quality
+- **Memory leak prevention (P2.4)** — Added timeout tracking to `APIManager.js` and `ImageLoader.js` with proper cleanup in `destroy()` methods. Added `_scheduleTimeout()`, `_clearAllTimeouts()`, and `activeTimeouts` tracking.
+- **Reduced god classes (P2.2)** — Removed 189 lines of dead `_validateNumericPropertiesFallback` code from `LayersValidator.js`, reducing it from 1,036 to 843 lines (now under 1,000 threshold).
+- **Magic numbers extracted (P2.5)** — Added `TIMING` section to `LayersConstants.js` with 9 named delay constants: `IMAGE_LOAD_TIMEOUT`, `BOOTSTRAP_RETRY_DELAY`, `HOOK_LISTENER_DELAY`, `DEPENDENCY_WAIT_DELAY`, `API_RETRY_DELAY`, `DEBOUNCE_DEFAULT`, `NOTIFICATION_DURATION`, `ANIMATION_DURATION`, `SAVE_BUTTON_DISABLE_DELAY`.
+- **Updated files to use timing constants** — `ImageLoader.js` and `EditorBootstrap.js` now use `LayersConstants.TIMING` instead of magic numbers.
+
+### Testing
+- **6,479 tests passing** (+2 from v1.1.11)
+- **92% statement coverage, 80% branch coverage**
+- Added 2 new tests for TIMING constants validation
+
+### Documentation
+- Updated `FUTURE_IMPROVEMENTS.md` with 2 new feature requests:
+  - **Deep Linking to Editor** — URL parameters to open editor with specific file/layer set/layer
+  - **Lightbox Viewer** — `link=layers` option for inline viewing without navigation
+- Added 8 world-class feature ideas: collaborative editing, layer templates, AI-assisted annotations, animation mode, measurement tools, layer linking/hotspots, version comparison, mobile touch support
+- Updated all documentation with current metrics (96 JS files, 87 ES6 classes, 6,479 tests)
+
+---
+
+## [1.1.11] - 2025-12-22
+
+### Bug Fixes
+- **Fixed ToolStyles.js constructor initialization order** — Fixed bug where `this.update()` was called before `this.listeners = []` was initialized, causing a crash when `initialStyle` was provided to the constructor.
+- **Added opacity extraction to ToolStyles** — `extractFromLayer()` now properly extracts the `opacity` property from layers.
+
+### Testing
+- **Test coverage improved to 92.19%** — Up from 90.09% statements
+- **Branch coverage now exceeds 80%** — 80.19% (up from 77.53%)
+- **6,337 tests passing** — Added 238 new tests
+- Added comprehensive `APIErrorHandler.test.js` — 56 new tests (0% → 98.03%)
+- Added comprehensive `NamespaceHelper.test.js` — 19 new tests (73.91% → 95.65%)
+- Extended `ToolStyles.test.js` — +33 tests (78.67% → 100%)
+- Extended `LayersViewer.test.js` — +13 tests (80.15% → 91.26%)
+
+### Code Quality
+- Updated `codebase_review.md` with current metrics
+- Updated `improvement_plan.md` — P2.1 (Add Tests) now marked complete
+
+---
+
 ## [1.1.10] - 2025-12-21
 
 ### Security
