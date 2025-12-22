@@ -123,7 +123,7 @@ jobs:
           cd ~/mediawiki
           php maintenance/update.php --quick
 
-      - name: Upload test image
+      - name: Create and upload test image
         run: |
           cd ~/mediawiki
           # Create a simple test image
@@ -133,11 +133,16 @@ jobs:
             imagefill(\$img, 0, 0, \$bg);
             imagepng(\$img, 'test_image.png');
           "
+          echo "Created test image:"
           ls -la test_image.png
+          
+          # Enable file uploads in LocalSettings.php
+          echo "\$wgEnableUploads = true;" >> LocalSettings.php
+          echo "\$wgFileExtensions[] = 'png';" >> LocalSettings.php
+          
           # Import test image via maintenance script
-          php maintenance/importImages.php --comment="Test image for E2E tests" --user=Admin --overwrite . || echo "importImages failed, trying alternative method"
-          # Verify the file was imported by checking the database
-          php maintenance/run.php eval "echo \MediaWiki\MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->findFile('Test_image.png') ? 'File exists' : 'File NOT found';"
+          echo "Running importImages.php..."
+          php maintenance/importImages.php --comment="Test image for E2E tests" --user=Admin --overwrite . 2>&1 | head -20
 
       - name: Start MediaWiki server
         run: |
@@ -148,6 +153,40 @@ jobs:
           curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ | grep -qE "200|301|302" || exit 1
         env:
           MW_SERVER: http://localhost:8080
+
+      - name: Upload test image via API (fallback)
+        run: |
+          cd ~/mediawiki
+          
+          # Check if file already exists
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:8080/index.php?title=File:Test_image.png")
+          echo "File page HTTP code: $HTTP_CODE"
+          
+          if [ "$HTTP_CODE" -eq "200" ]; then
+            echo "✓ File already exists from importImages.php"
+          else
+            echo "File not found, uploading via API..."
+            
+            # Get login token
+            TOKEN=$(curl -s -c cookies.txt -b cookies.txt "http://localhost:8080/api.php?action=query&meta=tokens&type=login&format=json" | php -r 'echo json_decode(file_get_contents("php://stdin"))->query->tokens->logintoken;')
+            
+            # Login
+            curl -s -c cookies.txt -b cookies.txt -X POST "http://localhost:8080/api.php" \
+              -d "action=login&lgname=Admin&lgpassword=LayersE2E_Test_2025&lgtoken=$TOKEN&format=json" > /dev/null
+            
+            # Get CSRF token
+            CSRF=$(curl -s -c cookies.txt -b cookies.txt "http://localhost:8080/api.php?action=query&meta=tokens&format=json" | php -r 'echo json_decode(file_get_contents("php://stdin"))->query->tokens->csrftoken;')
+            
+            # Upload file
+            RESULT=$(curl -s -c cookies.txt -b cookies.txt -X POST "http://localhost:8080/api.php" \
+              -F "action=upload" \
+              -F "filename=Test_image.png" \
+              -F "comment=Test image for E2E tests" \
+              -F "file=@test_image.png" \
+              -F "token=$CSRF" \
+              -F "format=json")
+            echo "$RESULT" | php -r 'print_r(json_decode(file_get_contents("php://stdin")));'
+          fi
 
       - name: Verify test environment
         run: |
