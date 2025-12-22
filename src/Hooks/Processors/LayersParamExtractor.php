@@ -34,6 +34,13 @@ class LayersParamExtractor {
 	private const ENABLED_VALUES = [ 'on', 'all', 'true', '1' ];
 
 	/**
+	 * Valid layerslink values for deep linking
+	 * 'editor' - Open the layers editor
+	 * 'viewer' or 'lightbox' - Open full-size viewer with layers overlay
+	 */
+	private const VALID_LINK_VALUES = [ 'editor', 'viewer', 'lightbox' ];
+
+	/**
 	 * Extract layers parameter from handler and frame params
 	 *
 	 * @param array $handlerParams Handler parameters
@@ -281,6 +288,52 @@ class LayersParamExtractor {
 			return $flag;
 		}
 		return null;
+	}
+
+	/**
+	 * Extract layerslink parameter from handler and frame params
+	 * Returns 'editor', 'viewer', 'lightbox', or null
+	 *
+	 * @param array $handlerParams Handler parameters
+	 * @param array $frameParams Frame parameters
+	 * @return string|null The link type, or null if not found or invalid
+	 */
+	public function extractLayersLink( array $handlerParams, array $frameParams ): ?string {
+		$value = null;
+
+		// Check handler params first
+		if ( isset( $handlerParams['layerslink'] ) ) {
+			$value = strtolower( trim( (string)$handlerParams['layerslink'] ) );
+		} elseif ( isset( $frameParams['layerslink'] ) ) {
+			$value = strtolower( trim( (string)$frameParams['layerslink'] ) );
+		}
+
+		// Validate against allowed values
+		if ( $value !== null && in_array( $value, self::VALID_LINK_VALUES, true ) ) {
+			return $value;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Check if the layerslink value is for opening the editor
+	 *
+	 * @param string|null $linkType The layerslink value
+	 * @return bool True if should open editor
+	 */
+	public function isEditorLink( ?string $linkType ): bool {
+		return $linkType === 'editor';
+	}
+
+	/**
+	 * Check if the layerslink value is for opening the viewer/lightbox
+	 *
+	 * @param string|null $linkType The layerslink value
+	 * @return bool True if should open viewer
+	 */
+	public function isViewerLink( ?string $linkType ): bool {
+		return $linkType === 'viewer' || $linkType === 'lightbox';
 	}
 
 	/**

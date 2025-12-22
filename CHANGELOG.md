@@ -2,6 +2,43 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.0] - 2025-12-22
+
+### New Features
+- **Deep Linking to Editor** — URL parameters now allow opening the editor with a specific layer set pre-loaded:
+  - `?action=editlayers&setname=anatomy` — Opens editor with "anatomy" layer set
+  - Also supports `layerset` and `layers` parameter aliases
+  - Set name validation: alphanumeric characters, hyphens, and underscores only (max 50 chars)
+
+- **Wikitext Link Options** — New `layerslink` parameter for controlling click behavior on images with layers:
+  - `[[File:Example.jpg|layers=setname|layerslink=editor]]` — Opens layer editor for this image
+  - `[[File:Example.jpg|layers=setname|layerslink=viewer]]` — Opens fullscreen lightbox viewer
+  - `[[File:Example.jpg|layers=setname|layerslink=lightbox]]` — Alias for viewer mode
+  - Default behavior (no layerslink): Standard MediaWiki link to File page
+
+- **Fullscreen Lightbox Viewer** — New modal viewer for viewing layered images in full size:
+  - Keyboard accessible: Escape key closes the lightbox
+  - Click outside image to close
+  - Loading states and error handling
+  - Proper accessibility attributes (ARIA)
+
+### Technical
+- **New files added**:
+  - `resources/ext.layers/viewer/LayersLightbox.js` — Lightbox component (~450 lines)
+  - `resources/ext.layers/viewer/LayersLightbox.css` — Lightbox styling (~140 lines)
+- **Modified files**:
+  - `EditLayersAction.php` — URL parameter parsing for setname
+  - `WikitextHooks.php` — layerslink parameter registration
+  - `LayersParamExtractor.php` — layerslink extraction methods
+  - `ImageLinkProcessor.php` — Link modification for deep linking
+  - `EditorBootstrap.js` — Pass initialSetName to editor
+  - `LayersEditor.js` — Load initial set by name on startup
+
+### Documentation
+- Added i18n messages for link titles and lightbox UI
+
+---
+
 ## [1.1.12] - 2025-12-22
 
 ### Code Quality

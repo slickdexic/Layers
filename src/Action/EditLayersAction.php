@@ -28,6 +28,7 @@ class EditLayersAction extends \Action {
 			$out = $this->getOutput();
 			$user = $this->getUser();
 			$title = $this->getTitle();
+			$request = $this->getRequest();
 
 			// Check permission using Authority (modern MW 1.36+) or PermissionManager
 			$hasPermission = false;
@@ -67,6 +68,20 @@ class EditLayersAction extends \Action {
 				return;
 			}
 
+			// Get optional layer set name from URL (deep linking support)
+			// Accepts: ?setname=anatomy, ?layerset=anatomy, or &layers=anatomy
+			$initialSetName = $request->getText( 'setname', '' );
+			if ( $initialSetName === '' ) {
+				$initialSetName = $request->getText( 'layerset', '' );
+			}
+			if ( $initialSetName === '' ) {
+				$initialSetName = $request->getText( 'layers', '' );
+			}
+			// Sanitize: only allow alphanumeric, hyphens, underscores
+			if ( $initialSetName !== '' && !preg_match( '/^[a-zA-Z0-9_-]+$/', $initialSetName ) ) {
+				$initialSetName = '';
+			}
+
 			// Page title
 			$out->setPageTitle(
 				( function_exists( 'wfMessage' )
@@ -85,6 +100,7 @@ class EditLayersAction extends \Action {
 			'wgLayersEditorInit' => [
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
+				'initialSetName' => $initialSetName !== '' ? $initialSetName : null,
 			],
 			'wgLayersCurrentImageUrl' => $fileUrl,
 			'wgLayersImageBaseUrl' => $this->getImageBaseUrl(),

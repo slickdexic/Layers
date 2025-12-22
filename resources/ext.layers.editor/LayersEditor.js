@@ -487,10 +487,21 @@ class LayersEditor {
 
 	/**
 	 * Load initial layers from API
+	 * If config.initialSetName is provided (deep link), load that specific set
 	 * @private
 	 */
 	loadInitialLayers () {
-		this.apiManager.loadLayers().then( ( data ) => {
+		// Check for deep link: load specific set if initialSetName is provided
+		const initialSetName = this.config.initialSetName;
+		const loadPromise = initialSetName
+			? this.apiManager.loadLayersBySetName( initialSetName )
+			: this.apiManager.loadLayers();
+
+		if ( initialSetName ) {
+			this.debugLog( '[LayersEditor] Loading initial set via deep link:', initialSetName );
+		}
+
+		loadPromise.then( ( data ) => {
 			if ( this.isDestroyed ) {
 				return;
 			}

@@ -117,6 +117,15 @@ class ImageLinkProcessor {
 				return true;
 			}
 
+			// Extract layerslink parameter for deep linking
+			$layersLink = $this->paramExtractor->extractLayersLink( $handlerParams, $frameParams );
+
+			// Get set name for deep linking
+			$setName = $this->paramExtractor->getSetName( $layersFlag );
+			if ( $setName === null && $setNameFromQueue !== null ) {
+				$setName = $setNameFromQueue;
+			}
+
 			// Check for direct JSON layer data in params
 			$layersArray = $this->paramExtractor->extractLayersJson( $handlerParams );
 
@@ -124,11 +133,6 @@ class ImageLinkProcessor {
 			if ( $file && ( $layersFlag !== null || $layersArray !== null ) ) {
 				if ( $layersArray === null ) {
 					// No direct JSON - fetch from database
-					$setName = $this->paramExtractor->getSetName( $layersFlag );
-					if ( $setName === null && $setNameFromQueue !== null ) {
-						$setName = $setNameFromQueue;
-					}
-
 					$res = $this->injectLayersFromDatabase(
 						$res,
 						$file,
@@ -148,6 +152,11 @@ class ImageLinkProcessor {
 				// If no layers were found but intent was explicit, add intent marker
 				if ( strpos( $res, 'data-layer-data=' ) === false && $layersFlag !== null ) {
 					$res = $this->htmlInjector->injectIntentMarker( $res );
+				}
+
+				// Apply layerslink deep linking if specified
+				if ( $layersLink !== null && $file ) {
+					$res = $this->applyLayersLink( $res, $file, $layersLink, $setName );
 				}
 			}
 		} catch ( \Throwable $e ) {
@@ -488,5 +497,114 @@ class ImageLinkProcessor {
 			'backgroundVisible' => $data['backgroundVisible'] ?? true,
 			'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
 		];
+	}
+
+	/**
+	 * Apply layerslink deep linking to modify image link behavior
+	 *
+	 * @param string $html The HTML containing the image link
+	 * @param mixed $file The File object
+	 * @param string $linkType 'editor', 'viewer', or 'lightbox'
+	 * @param string|null $setName Optional layer set name for deep linking
+	 * @return string Modified HTML
+	 */
+	private function applyLayersLink( string $html, $file, string $linkType, ?string $setName ): string {
+		$filename = $file->getName();
+		$title = $file->getTitle();
+
+		if ( $this->paramExtractor->isEditorLink( $linkType ) ) {
+			// Build editor URL: File:Name.jpg?action=editlayers[&setname=name]
+			$editorUrl = $title->getLocalURL( [
+				'action' => 'editlayers',
+				'setname' => $setName ?? ''
+			] );
+
+			// Replace href in the <a> tag
+			$html = $this->replaceHref( $html, $editorUrl );
+
+			// Add data attribute for client-side enhancement and ARIA label
+			$html = $this->addLinkAttributes(
+				$html,
+				'data-layers-link="editor"',
+				wfMessage( 'layers-link-editor-title' )->text()
+			);
+
+			$this->logDebug( 'Applied editor deep link', [ 'file' => $filename, 'setName' => $setName ] );
+		} elseif ( $this->paramExtractor->isViewerLink( $linkType ) ) {
+			// For viewer/lightbox, set up client-side handler
+			// The link will open a fullscreen viewer via JavaScript
+
+			// Build viewer URL with layers parameter for fallback (no-JS case)
+			$viewerUrl = $title->getLocalURL( [
+				'layers' => $setName ?? 'on'
+			] );
+
+			$html = $this->replaceHref( $html, $viewerUrl );
+
+			// Add data attributes for lightbox initialization
+			$html = $this->addLinkAttributes(
+				$html,
+				'data-layers-link="viewer" data-layers-setname="' . htmlspecialchars( $setName ?? '' ) . '"',
+				wfMessage( 'layers-link-viewer-title' )->text()
+			);
+
+			// Add class for JS initialization
+			$html = preg_replace(
+				'/<a\s+([^>]*?)class="([^"]*)"/',
+				'<a $1class="$2 layers-lightbox-trigger"',
+				$html,
+				1
+			);
+
+			// If no class attribute, add one
+			if ( strpos( $html, 'layers-lightbox-trigger' ) === false ) {
+				$html = preg_replace(
+					'/<a\s+/',
+					'<a class="layers-lightbox-trigger" ',
+					$html,
+					1
+				);
+			}
+
+			$this->logDebug( 'Applied viewer deep link', [ 'file' => $filename, 'setName' => $setName ] );
+		}
+
+		return $html;
+	}
+
+	/**
+	 * Replace the href attribute in an anchor tag
+	 *
+	 * @param string $html HTML containing anchor tag
+	 * @param string $newHref New href value
+	 * @return string Modified HTML
+	 */
+	private function replaceHref( string $html, string $newHref ): string {
+		return preg_replace(
+			'/<a\s+([^>]*?)href="[^"]*"/',
+			'<a $1href="' . htmlspecialchars( $newHref ) . '"',
+			$html,
+			1
+		);
+	}
+
+	/**
+	 * Add data attributes and title to a link
+	 *
+	 * @param string $html HTML containing anchor tag
+	 * @param string $attrs Additional attributes to add
+	 * @param string $title Title attribute value
+	 * @return string Modified HTML
+	 */
+	private function addLinkAttributes( string $html, string $attrs, string $title ): string {
+		// Add attributes before the closing >
+		$html = preg_replace(
+			'/<a\s+([^>]*)>/',
+			'<a $1 ' . $attrs . ' title="' . htmlspecialchars( $title ) . '">',
+			$html,
+			1
+		);
+
+		return $html;
 	}
 }

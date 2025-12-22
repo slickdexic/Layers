@@ -376,6 +376,11 @@ class WikitextHooks {
 			'default' => null,
 			'description' => 'Selected layer set id'
 		];
+		$params['layerslink'] = [
+			'type' => 'string',
+			'default' => null,
+			'description' => 'Deep link behavior: "editor" to open editor, "viewer" or "lightbox" to open full-size viewer'
+		];
 		return true;
 	}
 
@@ -390,6 +395,7 @@ class WikitextHooks {
 		$types['layer'] = 'string';
 		$types['layersjson'] = 'string';
 		$types['layersetid'] = 'string';
+		$types['layerslink'] = 'string';
 		return true;
 	}
 
@@ -414,6 +420,9 @@ class WikitextHooks {
 		if ( !in_array( 'layersetid', $params, true ) ) {
 			$params[] = 'layersetid';
 		}
+		if ( !in_array( 'layerslink', $params, true ) ) {
+			$params[] = 'layerslink';
+		}
 		return true;
 	}
 
@@ -425,7 +434,7 @@ class WikitextHooks {
 	public static function onParserGetImageLinkOptions( array &$options ): bool {
 		self::log( 'Adding image link options' );
 
-		foreach ( [ 'layers', 'layer', 'layersjson', 'layersetid' ] as $opt ) {
+		foreach ( [ 'layers', 'layer', 'layersjson', 'layersetid', 'layerslink' ] as $opt ) {
 			if ( !in_array( $opt, $options, true ) ) {
 				$options[] = $opt;
 			}

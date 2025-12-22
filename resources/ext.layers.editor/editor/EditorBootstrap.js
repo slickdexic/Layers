@@ -377,10 +377,12 @@
 				mw.hook( 'layers.editor.init' ).fire( {
 					filename: init.filename,
 					imageUrl: init.imageUrl,
+					initialSetName: init.initialSetName || null,
 					container: container || document.body
 				} );
 
-				debugLog( 'Hook fired for: ' + init.filename );
+				debugLog( 'Hook fired for: ' + init.filename +
+					( init.initialSetName ? ' (initial set: ' + init.initialSetName + ')' : '' ) );
 
 				try {
 					// Check if editor already exists (created by hook listener)
@@ -398,6 +400,7 @@
 					const editor = new LayersEditor( {
 						filename: init.filename,
 						imageUrl: init.imageUrl,
+						initialSetName: init.initialSetName || null,
 						container: container || document.body
 					} );
 					debugLog( 'Direct editor creation successful' );
