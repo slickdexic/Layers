@@ -85,14 +85,14 @@ Files previously at 0% now covered:
 - **Initial:** 958 lines (HIGH risk - approaching 1,000 limit)
 - **Current:** 1,036 lines (delegating to extracted modules)
 - **Modules extracted:**
-  - ✅ `validation/ValidationHelpers.js` (~270 lines) - shared utilities
-  - ✅ `validation/NumericValidator.js` (~330 lines) - numeric property validation
+  - ✅ `validation/ValidationHelpers.js` (~270 lines) - shared utilities (100% coverage)
+  - ✅ `validation/NumericValidator.js` (~330 lines) - numeric property validation (92.66% coverage)
 - **Remaining work:**
   - `TypeValidator.js` (~250 lines) - layer type validation
   - `GeometryValidator.js` (~200 lines) - coordinate/bounds validation
   - `StyleValidator.js` (~200 lines) - color/style validation
   - `TextValidator.js` (~150 lines) - text content validation
-- **Tests added:** 109 new tests for validation modules
+- **Tests added:** 140 new tests for validation modules
 - **Effort:** 4-6 hours remaining
 
 ### P2.3 Split ToolbarStyleControls.js ⏳ NOT STARTED
@@ -235,7 +235,7 @@ P1.4 Stabilize E2E Tests:   █████████████████�
 
 Phase 2 (Code Quality - 8 weeks):
 P2.1 Test Uncovered Files:  ░░░░░░░░░░░░░░░░░░░░ 0%
-P2.2 Split LayersValidator: ░░░░░░░░░░░░░░░░░░░░ 0%
+P2.2 Split LayersValidator: ████████░░░░░░░░░░░░ 40% (2 modules extracted)
 P2.3 Split ToolbarStyle:    ░░░░░░░░░░░░░░░░░░░░ 0%
 P2.4 Fix Timer Cleanup:     ░░░░░░░░░░░░░░░░░░░░ 0%
 P2.5 Extract Magic Numbers: ░░░░░░░░░░░░░░░░░░░░ 0%
@@ -257,7 +257,7 @@ P3.6 Performance Benchmarks:░░░░░░░░░░░░░░░░░�
 
 ### Phase 0 & 1 Complete ✅
 
-- [x] All tests passing (5,766)
+- [x] All tests passing (6,477)
 - [x] No console.* in production code
 - [x] Animation frame cancelled in destroy()
 - [x] Setname sanitized in all APIs
