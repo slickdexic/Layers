@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 21, 2025  
-**Status:** ✅ P0 Complete, ✅ P1 Complete  
-**Version:** 1.1.10  
+**Last Updated:** December 22, 2025  
+**Status:** ✅ P0 Complete, ✅ P1 Complete, 🔄 P2 In Progress  
+**Version:** 1.1.11  
 **Goal:** Production-ready, secure, maintainable MediaWiki extension
 
 ---
@@ -13,7 +13,7 @@
 |------|--------|---------|
 | **Functionality** | ✅ Working | 14 tools, alignment, presets, named sets, smart guides |
 | **Security** | ✅ Resolved | All known issues fixed (SVG XSS, sanitization) |
-| **Testing** | ✅ Excellent | 6,337 tests, 0 failing, 92% statement coverage, 80% branch |
+| **Testing** | ✅ Excellent | 6,446 tests, 0 failing, 92% statement coverage, 80% branch |
 | **ES6 Migration** | ✅ Complete | 85 classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Monitored | 7 files >1,000 lines (all have delegation patterns) |
 | **Accessibility** | ✅ Good | Skip links, ARIA landmarks, keyboard navigation |
@@ -80,16 +80,20 @@ Files previously at 0% now covered:
 | APIErrorHandler.js | 348 | 98.03% | ✅ Complete |
 | NamespaceHelper.js | 91 | 95.65% | ✅ Complete |
 
-### P2.2 Split LayersValidator.js ⏳ NOT STARTED
+### P2.2 Split LayersValidator.js 🔄 IN PROGRESS
 
-- **Current:** 958 lines (HIGH risk - approaching 1,000 limit)
-- **Proposed structure:**
-  - `LayersValidator.js` (orchestrator, ~200 lines)
-  - `TypeValidator.js` (~250 lines)
-  - `GeometryValidator.js` (~200 lines)
-  - `StyleValidator.js` (~200 lines)
-  - `TextValidator.js` (~150 lines)
-- **Effort:** 4-6 hours
+- **Initial:** 958 lines (HIGH risk - approaching 1,000 limit)
+- **Current:** 1,036 lines (delegating to extracted modules)
+- **Modules extracted:**
+  - ✅ `validation/ValidationHelpers.js` (~270 lines) - shared utilities
+  - ✅ `validation/NumericValidator.js` (~330 lines) - numeric property validation
+- **Remaining work:**
+  - `TypeValidator.js` (~250 lines) - layer type validation
+  - `GeometryValidator.js` (~200 lines) - coordinate/bounds validation
+  - `StyleValidator.js` (~200 lines) - color/style validation
+  - `TextValidator.js` (~150 lines) - text content validation
+- **Tests added:** 109 new tests for validation modules
+- **Effort:** 4-6 hours remaining
 
 ### P2.3 Split ToolbarStyleControls.js ⏳ NOT STARTED
 

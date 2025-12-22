@@ -5,7 +5,7 @@
 		"es6": true
 	},
 	"parserOptions": {
-		"ecmaVersion": 2018
+		"ecmaVersion": 2022
 	},
 	"extends": ["eslint:recommended"],
 	"globals": {
@@ -52,6 +52,7 @@
 				"resources/ext.layers.editor/utils/*.js",
 				"resources/ext.layers.editor/selection/*.js",
 				"resources/ext.layers.editor/panel/*.js",
+				"resources/ext.layers.editor/validation/*.js",
 				"resources/ext.layers.shared/*.js",
 				"resources/ext.layers/viewer/*.js"
 			],
