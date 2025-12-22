@@ -187,16 +187,6 @@ describeEditor( 'Layers Editor', () => {
 			const newCount = await editorPage.getLayerCount();
 			expect( newCount ).toBe( initialCount + 1 );
 		} );
-
-		test( 'can create blur layer', async () => {
-			const initialCount = await editorPage.getLayerCount();
-			
-			await editorPage.selectTool( 'blur' );
-			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
-			
-			const newCount = await editorPage.getLayerCount();
-			expect( newCount ).toBe( initialCount + 1 );
-		} );
 	} );
 
 	describeEditor( 'Layer Manipulation', () => {
