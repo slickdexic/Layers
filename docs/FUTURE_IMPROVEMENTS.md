@@ -240,5 +240,316 @@ As a user, I want to apply blur effect to any shape (not just rectangles) so I c
 
 ---
 
+## 4. Deep Linking to Editor with Layer Selection
+
+**Priority:** High  
+**Complexity:** Medium  
+**Status:** ⏳ Proposed
+
+### Description
+Enable URL parameters to open the Layers editor directly to a specific file, layer set, and optionally select a specific layer. This enables integration with forms, documentation workflows, and cross-linking between wiki pages.
+
+### User Story
+As a user editing a form, I want to click a link that opens the Layers editor for a specific image in a new tab, so I can quickly annotate the image and return to my form without losing my work.
+
+As a documentation author, I want to link directly to a specific annotation on an image so readers can see exactly what I'm referring to.
+
+### URL Parameter Design
+
+```
+/wiki/Special:EditLayers?file=Example.jpg
+/wiki/Special:EditLayers?file=Example.jpg&set=anatomy
+/wiki/Special:EditLayers?file=Example.jpg&set=anatomy&layer=layer-abc123
+/wiki/Special:EditLayers?file=Example.jpg&set=anatomy&layer=layer-abc123&zoom=2&pan=100,200
+```
+
+| Parameter | Description | Required |
+|-----------|-------------|----------|
+| `file` | Target filename (with or without `File:` prefix) | Yes |
+| `set` | Named layer set to load (default: 'default') | No |
+| `layer` | Layer ID to select on load | No |
+| `zoom` | Initial zoom level | No |
+| `pan` | Initial pan position (x,y) | No |
+| `newtab` | Hint for link generators to use `target="_blank"` | No |
+
+### Technical Approach
+
+1. **Create Special:EditLayers page**
+   - New SpecialPage class in `src/Special/SpecialEditLayers.php`
+   - Parse URL parameters
+   - Validate file exists and user has permissions
+   - Render editor container with config vars
+
+2. **Modify LayersEditor initialization**
+   - Read URL parameters from `mw.config` or `URLSearchParams`
+   - After loading layer set, find and select specified layer
+   - Apply initial zoom/pan if specified
+
+3. **Add helper for generating links**
+   - PHP: `Layers::getEditorUrl($filename, $options)`
+   - JS: `window.Layers.getEditorUrl(filename, options)`
+   - Wikitext: `{{#layerslink:File.jpg|set=anatomy|layer=id|text=Edit}}`
+
+### Wikitext Helper (Parser Function)
+
+```wikitext
+{{#layerslink:Example.jpg|set=anatomy|layer=layer-123|Edit this annotation}}
+```
+
+Generates:
+```html
+<a href="/wiki/Special:EditLayers?file=Example.jpg&set=anatomy&layer=layer-123" 
+   target="_blank" rel="noopener">Edit this annotation</a>
+```
+
+### Implementation Steps
+
+1. Create `SpecialEditLayers.php` extending `SpecialPage`
+2. Register in `extension.json` under `SpecialPages`
+3. Add URL parameter handling in EditorBootstrap.js
+4. Add layer selection logic to LayersEditor initialization
+5. Create `{{#layerslink}}` parser function (optional)
+6. Add permissions check (require 'editlayers' right)
+
+### Security Considerations
+- Validate filename exists and is an image
+- Check user has 'editlayers' permission
+- Sanitize layer ID parameter
+- Rate limit Special page access
+
+### Estimated Effort
+- **3-4 days** for core functionality
+- **+1 day** for parser function helper
+- Files: New SpecialPage, EditorBootstrap.js, LayersEditor.js, extension.json
+
+---
+
+## 5. Lightbox Viewer with Layers Overlay
+
+**Priority:** High  
+**Complexity:** Medium  
+**Status:** ⏳ Proposed
+
+### Description
+Add a `link=layers` option for embedded images that opens a full-size lightbox overlay showing the image with its layer annotations, without requiring navigation to a separate page.
+
+### User Story
+As a reader, I want to click on an annotated image and see it full-size with all annotations visible in a lightbox, so I can examine details without leaving the current page.
+
+As an author, I want to embed annotated images that viewers can enlarge without creating separate gallery pages for each image.
+
+### Wikitext Syntax
+
+```wikitext
+[[File:Diagram.jpg|thumb|layers=anatomy|link=layers|Caption text]]
+```
+
+| Option | Description |
+|--------|-------------|
+| `layers=setname` | Which layer set to display |
+| `link=layers` | Open lightbox with layers instead of file page |
+| `link=layers-edit` | Open lightbox with "Edit" button linking to editor |
+
+### Technical Approach
+
+1. **Extend LayersFileTransform.php**
+   - Detect `link=layers` or `link=layers-edit` option
+   - Add click handler data attribute to thumbnail
+   - Include layer set name in data attributes
+
+2. **Create LayersLightbox.js module**
+   - Listen for clicks on images with `data-layers-lightbox`
+   - Create modal overlay with close button
+   - Load full-size image and layer data via API
+   - Render using existing LayersViewer/LayerRenderer
+   - Support zoom/pan within lightbox
+   - Keyboard: Escape to close, arrow keys for gallery
+
+3. **Lightbox UI Components**
+   - Semi-transparent backdrop
+   - Centered image container (max 90% viewport)
+   - Close button (X) in corner
+   - Optional "Edit" button if `link=layers-edit`
+   - Layer set selector if multiple sets exist
+   - Zoom controls (+/- buttons or scroll)
+
+### Lightbox HTML Structure
+```html
+<div class="layers-lightbox-overlay" role="dialog" aria-modal="true">
+  <div class="layers-lightbox-backdrop"></div>
+  <div class="layers-lightbox-content">
+    <button class="layers-lightbox-close" aria-label="Close">×</button>
+    <div class="layers-lightbox-canvas-container">
+      <canvas class="layers-lightbox-canvas"></canvas>
+    </div>
+    <div class="layers-lightbox-controls">
+      <button class="layers-lightbox-edit">Edit Layers</button>
+      <div class="layers-lightbox-zoom">
+        <button>−</button>
+        <span>100%</span>
+        <button>+</button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### Implementation Steps
+
+1. Modify Hooks/LayersHookHandler.php to detect `link=layers`
+2. Create `resources/ext.layers.lightbox/` module
+3. Implement LayersLightbox.js with modal, canvas, controls
+4. Add CSS for lightbox styling
+5. Register module in extension.json
+6. Add documentation for new syntax
+
+### Accessibility
+- Focus trap within lightbox
+- Escape key to close
+- ARIA labels and roles
+- Announce lightbox open/close to screen readers
+
+### Estimated Effort
+- **4-5 days** for full implementation
+- Files: New Lightbox module, hook modifications, CSS
+
+---
+
+## 6. World-Class Feature Ideas
+
+These are aspirational features that would differentiate Layers from other annotation tools.
+
+### 6.1 Collaborative Real-Time Editing
+
+**Complexity:** Very High  
+**Value:** High for team environments
+
+Enable multiple users to edit the same layer set simultaneously with live cursor positions and conflict resolution.
+
+- WebSocket or Server-Sent Events for real-time sync
+- Operational Transform or CRDT for conflict resolution
+- Show other users' cursors and selections
+- Lock layers being actively edited
+- Presence indicators (who's viewing/editing)
+
+### 6.2 Layer Templates / Stamps
+
+**Complexity:** Medium  
+**Value:** High for repeated workflows
+
+Pre-built annotation templates that can be dropped onto images.
+
+- Callout bubbles with customizable text
+- Measurement rulers/scales
+- Icon library (checkmarks, X marks, arrows, numbers)
+- Custom template creation and sharing
+- Organization-wide template library
+- Recent templates for quick access
+
+### 6.3 AI-Assisted Annotations
+
+**Complexity:** High  
+**Value:** Very High for productivity
+
+Leverage AI to suggest or auto-generate annotations.
+
+- **Object detection**: Suggest bounding boxes around detected objects
+- **OCR integration**: Extract text from images for annotation
+- **Smart labeling**: Suggest labels based on image content
+- **Auto-sizing**: Fit callouts to detected regions
+- **Accessibility**: Auto-generate alt text from annotations
+
+### 6.4 Animation / Presentation Mode
+
+**Complexity:** Medium-High  
+**Value:** High for educational content
+
+Animate layer visibility for step-by-step presentations.
+
+- Define reveal order for layers
+- Transition effects (fade, slide, zoom)
+- Play/pause/step controls
+- Export as GIF or video
+- Embed animated presentations in wiki pages
+- Timeline editor for sequencing
+
+### 6.5 Measurement Tools
+
+**Complexity:** Medium  
+**Value:** High for technical/scientific use
+
+Add calibrated measurement capabilities.
+
+- Set scale reference (e.g., "100px = 1cm")
+- Ruler tool that shows real-world measurements
+- Area measurement for shapes
+- Angle measurement tool
+- Export measurements as data
+
+### 6.6 Layer Linking / Hotspots
+
+**Complexity:** Medium  
+**Value:** High for documentation
+
+Make layers clickable to navigate to wiki pages or other resources.
+
+- Click a layer to navigate to linked wiki page
+- Tooltip preview on hover
+- Image maps with multiple clickable regions
+- External URL linking with confirmation
+- Cross-image layer linking (click to view related image)
+
+### 6.7 Version Comparison / Diff View
+
+**Complexity:** Medium  
+**Value:** Medium-High
+
+Compare layer sets across revisions.
+
+- Side-by-side revision comparison
+- Highlight added/removed/modified layers
+- Slider overlay comparison (like image diff tools)
+- Revert individual layers from previous revisions
+- Visual diff in revision history
+
+### 6.8 Mobile Touch Support
+
+**Complexity:** High  
+**Value:** High for accessibility
+
+Full touch support for tablets and phones.
+
+- Pinch-to-zoom, two-finger pan
+- Touch-optimized toolbar
+- On-screen keyboard integration for text
+- Gesture support (two-finger rotate)
+- Responsive layout for small screens
+- Progressive Web App capabilities
+
+---
+
+## Implementation Priority (Updated)
+
+| Feature | Priority | Effort | Value | Status |
+|---------|----------|--------|-------|--------|
+| Deep Linking to Editor | High | Medium | High | ⏳ Proposed |
+| Lightbox Viewer | High | Medium | High | ⏳ Proposed |
+| Blur as Blend Mode | Medium | Medium | Medium | ⏳ Proposed |
+| Layer Templates | Medium | Medium | High | 💡 Idea |
+| Measurement Tools | Medium | Medium | High | 💡 Idea |
+| Layer Linking/Hotspots | Medium | Medium | High | 💡 Idea |
+| Mobile Touch Support | Medium | High | High | 💡 Idea |
+| Version Comparison | Low | Medium | Medium | 💡 Idea |
+| Animation Mode | Low | High | Medium | 💡 Idea |
+| Collaborative Editing | Low | Very High | High | 💡 Idea |
+| AI-Assisted Annotations | Low | High | Very High | 💡 Idea |
+
+### Recommended Next Features
+1. **Deep Linking to Editor** - Enables form integration workflow
+2. **Lightbox Viewer** - Major UX improvement for readers
+3. **Layer Templates** - High productivity gain for common annotations
+
+---
+
 *Document created: December 13, 2025*  
-*Last updated: December 20, 2025*
+*Last updated: December 22, 2025*
