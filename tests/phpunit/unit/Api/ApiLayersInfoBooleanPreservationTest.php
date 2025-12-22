@@ -1,6 +1,9 @@
 <?php
+
+namespace MediaWiki\Extension\Layers\Tests\Unit\Api;
+
 /**
- * Tests for API boolean preservation in ApiLayersInfo
+ * Tests for API boolean preservation in ApiLayersInfo.
  *
  * This test ensures that boolean values like backgroundVisible are correctly
  * preserved when serialized through MediaWiki's API result system.
@@ -9,19 +12,9 @@
  * The preserveLayerBooleans() method converts booleans to integers (0/1) to
  * ensure they serialize correctly.
  *
- * @file
- * @ingroup Extensions
- * @see https://github.com/slickdexic/Layers/issues/XXX
- */
-
-namespace MediaWiki\Extension\Layers\Tests\Api;
-
-use PHPUnit\Framework\TestCase;
-
-/**
  * @covers \MediaWiki\Extension\Layers\Api\ApiLayersInfo::preserveLayerBooleans
  */
-class ApiLayersInfoBooleanPreservationTest extends TestCase {
+class ApiLayersInfoBooleanPreservationTest extends \MediaWikiUnitTestCase {
 
 	/**
 	 * Helper to call the private preserveLayerBooleans method via reflection
