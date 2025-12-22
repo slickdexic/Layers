@@ -160,6 +160,25 @@ describe( 'NumericValidator', () => {
 			validator.validateStrokeWidth( { strokeWidth: 51 }, result );
 			expect( result.isValid ).toBe( false );
 		} );
+
+		test( 'returns invalid for non-numeric values', () => {
+			const result = createResult();
+			validator.validateStrokeWidth( { strokeWidth: 'thick' }, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'returns invalid for NaN', () => {
+			const result = createResult();
+			validator.validateStrokeWidth( { strokeWidth: NaN }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'skips validation when strokeWidth is undefined', () => {
+			const result = createResult();
+			validator.validateStrokeWidth( {}, result );
+			expect( result.isValid ).toBe( true );
+		} );
 	} );
 
 	describe( 'validateOpacity', () => {
@@ -189,6 +208,25 @@ describe( 'NumericValidator', () => {
 			const result = createResult();
 			validator.validateOpacity( { opacity: 1.1 }, result );
 			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for non-numeric values', () => {
+			const result = createResult();
+			validator.validateOpacity( { opacity: 'half' }, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'returns invalid for NaN', () => {
+			const result = createResult();
+			validator.validateOpacity( { opacity: NaN }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'skips validation when opacity is undefined', () => {
+			const result = createResult();
+			validator.validateOpacity( {}, result );
+			expect( result.isValid ).toBe( true );
 		} );
 	} );
 
@@ -221,6 +259,25 @@ describe( 'NumericValidator', () => {
 			const result = createResult();
 			validator.validateBlurRadius( { blurRadius: 101 }, result );
 			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for non-numeric values', () => {
+			const result = createResult();
+			validator.validateBlurRadius( { blurRadius: 'medium' }, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'returns invalid for NaN', () => {
+			const result = createResult();
+			validator.validateBlurRadius( { blurRadius: NaN }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'skips validation when blurRadius is undefined', () => {
+			const result = createResult();
+			validator.validateBlurRadius( {}, result );
+			expect( result.isValid ).toBe( true );
 		} );
 	} );
 
@@ -280,6 +337,30 @@ describe( 'NumericValidator', () => {
 			validator.validateShadowProperties( {}, result );
 			expect( result.isValid ).toBe( true );
 		} );
+
+		test( 'returns invalid for non-numeric shadowOffsetX', () => {
+			const result = createResult();
+			validator.validateShadowProperties( { shadowOffsetX: 'right' }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for non-numeric shadowOffsetY', () => {
+			const result = createResult();
+			validator.validateShadowProperties( { shadowOffsetY: 'down' }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for non-numeric shadowBlur', () => {
+			const result = createResult();
+			validator.validateShadowProperties( { shadowBlur: 'soft' }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for non-numeric shadowSpread', () => {
+			const result = createResult();
+			validator.validateShadowProperties( { shadowSpread: 'wide' }, result );
+			expect( result.isValid ).toBe( false );
+		} );
 	} );
 
 	describe( 'validateArrowSize', () => {
@@ -317,6 +398,19 @@ describe( 'NumericValidator', () => {
 			const result = createResult();
 			validator.validateArrowSize( {}, result );
 			expect( result.isValid ).toBe( true );
+		} );
+
+		test( 'returns invalid for non-numeric values', () => {
+			const result = createResult();
+			validator.validateArrowSize( { arrowSize: 'big' }, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'returns invalid for NaN', () => {
+			const result = createResult();
+			validator.validateArrowSize( { arrowSize: NaN }, result );
+			expect( result.isValid ).toBe( false );
 		} );
 	} );
 
@@ -359,6 +453,19 @@ describe( 'NumericValidator', () => {
 			const result = createResult();
 			validator.validateSides( {}, result );
 			expect( result.isValid ).toBe( true );
+		} );
+
+		test( 'returns invalid for non-numeric values', () => {
+			const result = createResult();
+			validator.validateSides( { sides: 'hexagon' }, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'returns invalid for NaN', () => {
+			const result = createResult();
+			validator.validateSides( { sides: NaN }, result );
+			expect( result.isValid ).toBe( false );
 		} );
 	} );
 
@@ -403,6 +510,19 @@ describe( 'NumericValidator', () => {
 			const result = createResult();
 			validator.validateStarPoints( undefined, result );
 			expect( result.isValid ).toBe( true );
+		} );
+
+		test( 'returns invalid for non-numeric values', () => {
+			const result = createResult();
+			validator.validateStarPoints( 'five', result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'returns invalid for NaN', () => {
+			const result = createResult();
+			validator.validateStarPoints( NaN, result );
+			expect( result.isValid ).toBe( false );
 		} );
 	} );
 

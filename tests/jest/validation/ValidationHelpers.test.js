@@ -106,6 +106,21 @@ describe( 'ValidationHelpers', () => {
 			expect( ValidationHelpers.isValidColor( 'hsla(0, 0%, 0%, 0.5)' ) ).toBe( true );
 		} );
 
+		test( 'returns false for hsl with saturation out of range', () => {
+			// Saturation > 100%
+			expect( ValidationHelpers.isValidColor( 'hsl(180, 150%, 50%)' ) ).toBe( false );
+		} );
+
+		test( 'returns false for hsl with lightness out of range', () => {
+			// Lightness > 100%
+			expect( ValidationHelpers.isValidColor( 'hsl(180, 50%, 150%)' ) ).toBe( false );
+		} );
+
+		test( 'returns false for extremely long color strings', () => {
+			const longColor = '#' + 'f'.repeat( 100 );
+			expect( ValidationHelpers.isValidColor( longColor ) ).toBe( false );
+		} );
+
 		test( 'returns true for safe named colors', () => {
 			expect( ValidationHelpers.isValidColor( 'red' ) ).toBe( true );
 			expect( ValidationHelpers.isValidColor( 'blue' ) ).toBe( true );
@@ -189,6 +204,31 @@ describe( 'ValidationHelpers', () => {
 	} );
 
 	describe( 'getMessage', () => {
+		let originalMw;
+
+		beforeEach( () => {
+			// Store original mw state
+			originalMw = global.mw;
+			// Reset mw to a fresh mock
+			global.mw = {
+				message: jest.fn( ( key ) => ( {
+					text: jest.fn( () => `Mocked: ${ key }` ),
+					params: jest.fn( function () {
+						return this;
+					} ),
+					exists: jest.fn( () => true )
+				} ) )
+			};
+			// Ensure layersMessages is cleared
+			delete window.layersMessages;
+		} );
+
+		afterEach( () => {
+			// Restore original mw
+			global.mw = originalMw;
+			delete window.layersMessages;
+		} );
+
 		test( 'uses mw.message when available', () => {
 			const result = ValidationHelpers.getMessage( 'layers-validation-type-invalid' );
 			expect( global.mw.message ).toHaveBeenCalledWith( 'layers-validation-type-invalid' );
@@ -196,13 +236,115 @@ describe( 'ValidationHelpers', () => {
 		} );
 
 		test( 'returns key when no fallback exists for unknown keys', () => {
-			const originalMw = global.mw;
 			delete global.mw;
 
 			const result = ValidationHelpers.getMessage( 'nonexistent-key' );
 			expect( result ).toBe( 'nonexistent-key' );
+		} );
 
-			global.mw = originalMw;
+		test( 'uses layersMessages when available', () => {
+			// Set up mock layersMessages
+			const mockGetWithParams = jest.fn().mockReturnValue( 'translated with params' );
+			const mockGet = jest.fn().mockReturnValue( 'translated' );
+			window.layersMessages = {
+				get: mockGet,
+				getWithParams: mockGetWithParams
+			};
+
+			const result = ValidationHelpers.getMessage( 'layers-validation-type-invalid' );
+
+			// layersMessages takes precedence, with fallback as second arg
+			expect( mockGet ).toHaveBeenCalledWith( 'layers-validation-type-invalid', 'Invalid layer type: $1' );
+			expect( result ).toBe( 'translated' );
+		} );
+
+		test( 'uses layersMessages.getWithParams when args provided', () => {
+			const mockGetWithParams = jest.fn().mockReturnValue( 'translated with params' );
+			const mockGet = jest.fn();
+			window.layersMessages = {
+				get: mockGet,
+				getWithParams: mockGetWithParams
+			};
+
+			const result = ValidationHelpers.getMessage( 'some-key', 'arg1', 'arg2' );
+
+			expect( mockGetWithParams ).toHaveBeenCalledWith( 'some-key', 'arg1', 'arg2' );
+			expect( mockGet ).not.toHaveBeenCalled();
+			expect( result ).toBe( 'translated with params' );
+		} );
+
+		test( 'falls back when layersMessages.getWithParams returns null', () => {
+			const mockGetWithParams = jest.fn().mockReturnValue( null );
+			window.layersMessages = {
+				get: jest.fn(),
+				getWithParams: mockGetWithParams
+			};
+			// Remove mw so we go to manual fallback
+			delete global.mw;
+
+			const result = ValidationHelpers.getMessage( 'layers-validation-type-invalid', 'testArg' );
+
+			// When getWithParams returns null, falls back to raw FALLBACK_MESSAGES (no substitution)
+			expect( result ).toBe( 'Invalid layer type: $1' );
+		} );
+
+		test( 'uses mw.message with params when layersMessages not available', () => {
+			// Set up mw.message().params().text() chain
+			const paramsText = jest.fn().mockReturnValue( 'translated via mw.message' );
+			const params = jest.fn().mockReturnValue( { text: paramsText } );
+			const msg = {
+				text: jest.fn().mockReturnValue( 'basic text' ),
+				params: params
+			};
+			global.mw = { message: jest.fn().mockReturnValue( msg ) };
+
+			const result = ValidationHelpers.getMessage( 'some-key', 'param1', 'param2' );
+
+			expect( params ).toHaveBeenCalledWith( [ 'param1', 'param2' ] );
+			expect( paramsText ).toHaveBeenCalled();
+			expect( result ).toBe( 'translated via mw.message' );
+		} );
+
+		test( 'uses manual parameter substitution when mw unavailable', () => {
+			delete global.mw;
+
+			// Use a message key that becomes the fallback (key used as message when not found)
+			const result = ValidationHelpers.getMessage( 'layers-validation-type-invalid', 'TextType' );
+
+			// Should substitute $1 in fallback message
+			expect( result ).toBe( 'Invalid layer type: TextType' );
+		} );
+
+		test( 'uses fallback message with manual substitution', () => {
+			delete global.mw;
+
+			// Temporarily add a fallback message with placeholders
+			const savedFallback = ValidationHelpers.FALLBACK_MESSAGES[ 'test-with-placeholder' ];
+			ValidationHelpers.FALLBACK_MESSAGES[ 'test-with-placeholder' ] = 'Value is $1 and $2';
+
+			const result = ValidationHelpers.getMessage( 'test-with-placeholder', 'alpha', 'beta' );
+
+			expect( result ).toBe( 'Value is alpha and beta' );
+
+			// Restore
+			if ( savedFallback ) {
+				ValidationHelpers.FALLBACK_MESSAGES[ 'test-with-placeholder' ] = savedFallback;
+			} else {
+				delete ValidationHelpers.FALLBACK_MESSAGES[ 'test-with-placeholder' ];
+			}
+		} );
+
+		test( 'handles mw.message exception gracefully', () => {
+			global.mw = {
+				message: jest.fn().mockImplementation( () => {
+					throw new Error( 'Test error' );
+				} )
+			};
+
+			const result = ValidationHelpers.getMessage( 'layers-validation-type-invalid' );
+
+			// Should fall back to FALLBACK_MESSAGES
+			expect( result ).toBe( 'Invalid layer type: $1' );
 		} );
 	} );
 
@@ -294,6 +436,26 @@ describe( 'ValidationHelpers', () => {
 	} );
 
 	describe( 'showValidationErrors', () => {
+		let originalMw;
+
+		beforeEach( () => {
+			originalMw = global.mw;
+			// Reset mw to fresh state
+			global.mw = {
+				message: jest.fn( ( key ) => ( {
+					text: jest.fn( () => `Mocked: ${ key }` ),
+					params: jest.fn( function () {
+						return this;
+					} ),
+					exists: jest.fn( () => true )
+				} ) )
+			};
+		} );
+
+		afterEach( () => {
+			global.mw = originalMw;
+		} );
+
 		test( 'does nothing for empty errors array', () => {
 			// Should not throw
 			expect( () => ValidationHelpers.showValidationErrors( [] ) ).not.toThrow();
@@ -307,7 +469,25 @@ describe( 'ValidationHelpers', () => {
 			ValidationHelpers.showValidationErrors( [ 'Error 1', 'Error 2' ] );
 
 			expect( mockNotify ).toHaveBeenCalled();
-			delete global.mw.notify;
+		} );
+
+		test( 'falls back to mw.log when mw.notify is not available', () => {
+			// Don't set mw.notify
+			// Create mock mw.log.error
+			const mockLogError = jest.fn();
+			global.mw.log = { error: mockLogError };
+
+			ValidationHelpers.showValidationErrors( [ 'Error 1', 'Error 2' ] );
+
+			expect( mockLogError ).toHaveBeenCalledWith( 'Layers validation errors:', [ 'Error 1', 'Error 2' ] );
+		} );
+
+		test( 'does nothing when neither mw.notify nor mw.log is available', () => {
+			// Remove both notify and log
+			delete global.mw;
+
+			// Should not throw
+			expect( () => ValidationHelpers.showValidationErrors( [ 'Error' ] ) ).not.toThrow();
 		} );
 	} );
 } );
