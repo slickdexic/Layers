@@ -85,16 +85,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/mediawiki
-          key: mediawiki-1.43-${{ hashFiles('.github/workflows/e2e.yml') }}
+          key: mediawiki-1.44.3-${{ hashFiles('.github/workflows/e2e.yml') }}
 
       - name: Download MediaWiki
         if: steps.cache-mediawiki.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/mediawiki
           cd ~/mediawiki
-          wget -q https://releases.wikimedia.org/mediawiki/1.43/mediawiki-1.43.0.tar.gz
-          tar -xzf mediawiki-1.43.0.tar.gz --strip-components=1
-          rm mediawiki-1.43.0.tar.gz
+          wget -q https://releases.wikimedia.org/mediawiki/1.44/mediawiki-1.44.3.tar.gz
+          tar -xzf mediawiki-1.44.3.tar.gz --strip-components=1
+          rm mediawiki-1.44.3.tar.gz
 
       - name: Install MediaWiki
         run: |
