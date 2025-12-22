@@ -239,7 +239,7 @@ class LayerInjector {
 		// Extract background settings
 		$backgroundVisible = $data['backgroundVisible'] ?? true;
 		$backgroundOpacity = $data['backgroundOpacity'] ?? 1.0;
-		
+
 		// DEBUG: Log what we got from the database
 		if ( $this->logger ) {
 			$this->logger->debug( 'injectIntoAttributes: backgroundVisible from DB = {bgVisible}, backgroundOpacity = {bgOpacity}', [

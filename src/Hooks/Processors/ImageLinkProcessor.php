@@ -299,7 +299,7 @@ class ImageLinkProcessor {
 	 *
 	 * @param string $html The HTML to modify
 	 * @param mixed $file The File object
-	 * @param array $layersArray The layers to inject
+	 * @param array $layerData The layers to inject
 	 * @param string $context Logging context
 	 * @return string Modified HTML
 	 */
