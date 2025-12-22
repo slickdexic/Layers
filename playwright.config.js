@@ -44,7 +44,11 @@ module.exports = defineConfig( {
 	projects: [
 		{
 			name: 'chromium',
-			use: { ...devices[ 'Desktop Chrome' ] }
+			use: {
+				...devices[ 'Desktop Chrome' ],
+				// Larger viewport to ensure toolbar buttons are visible
+				viewport: { width: 1920, height: 1080 }
+			}
 		}
 		// Can add more browsers:
 		// { name: 'firefox', use: { ...devices['Desktop Firefox'] } },

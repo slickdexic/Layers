@@ -100,9 +100,16 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.selectTool( 'text' );
 			await editorPage.clickCanvas( 150, 150 );
 			
+			// Wait for text input to appear
+			await page.waitForTimeout( 500 );
+			
 			// Type some text
 			await page.keyboard.type( 'Test Label' );
+			await page.waitForTimeout( 200 );
 			await page.keyboard.press( 'Escape' );
+			
+			// Wait for layer to be created
+			await page.waitForTimeout( 300 );
 			
 			const newCount = await editorPage.getLayerCount();
 			expect( newCount ).toBe( initialCount + 1 );
@@ -173,16 +180,21 @@ describeEditor( 'Layers Editor', () => {
 			
 			await editorPage.selectTool( 'path' );
 			
-			// Draw a path with multiple clicks
+			// Draw a path with multiple clicks (add delays for stability)
 			await editorPage.clickCanvas( 50, 50 );
+			await page.waitForTimeout( 100 );
 			await editorPage.clickCanvas( 100, 80 );
+			await page.waitForTimeout( 100 );
 			await editorPage.clickCanvas( 150, 50 );
-			await editorPage.clickCanvas( 200, 100 );
+			await page.waitForTimeout( 100 );
 			
 			// Double-click to finish path
 			const canvas = await page.$( editorPage.selectors.canvas );
 			const box = await canvas.boundingBox();
-			await page.mouse.dblclick( box.x + 200, box.y + 100 );
+			await page.mouse.dblclick( box.x + 150, box.y + 50 );
+			
+			// Wait for path to be finalized
+			await page.waitForTimeout( 300 );
 			
 			const newCount = await editorPage.getLayerCount();
 			expect( newCount ).toBe( initialCount + 1 );
@@ -206,10 +218,10 @@ describeEditor( 'Layers Editor', () => {
 			// Click on the layer
 			await editorPage.clickCanvas( 150, 150 );
 			
-			// Check for selection handles (implementation-specific)
-			// This might need adjustment based on actual DOM structure
-			const selectionHandles = await editorPage.page.$$( '.selection-handle, .resize-handle' );
-			expect( selectionHandles.length ).toBeGreaterThan( 0 );
+			// Selection handles are drawn on canvas, not DOM elements
+			// Instead, verify the layer is selected by checking the layer panel
+			const selectedLayer = await editorPage.page.$( '.layer-item.selected, .layer-item[aria-selected="true"]' );
+			expect( selectedLayer ).not.toBeNull();
 		} );
 
 		test( 'can delete selected layer', async () => {
@@ -233,10 +245,15 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.selectTool( 'circle' );
 			await editorPage.drawOnCanvas( 300, 300, 350, 350 );
 			
+			// Wait for layer creation
+			await editorPage.page.waitForTimeout( 300 );
 			expect( await editorPage.getLayerCount() ).toBe( initialCount + 1 );
 			
 			// Undo
 			await editorPage.undo();
+			
+			// Wait for undo to complete
+			await editorPage.page.waitForTimeout( 300 );
 			
 			expect( await editorPage.getLayerCount() ).toBe( initialCount );
 		} );
@@ -248,12 +265,17 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.selectTool( 'circle' );
 			await editorPage.drawOnCanvas( 300, 300, 350, 350 );
 			
+			// Wait for layer creation
+			await editorPage.page.waitForTimeout( 300 );
+			
 			// Undo
 			await editorPage.undo();
+			await editorPage.page.waitForTimeout( 300 );
 			expect( await editorPage.getLayerCount() ).toBe( initialCount );
 			
 			// Redo
 			await editorPage.redo();
+			await editorPage.page.waitForTimeout( 300 );
 			expect( await editorPage.getLayerCount() ).toBe( initialCount + 1 );
 		} );
 	} );
