@@ -59,8 +59,9 @@ class LayersEditorPage {
 			canvas: '.layers-canvas',
 			toolbar: '.layers-toolbar',
 			layerPanel: '.layers-panel, .layer-panel',
-			saveButton: '.layers-save-btn, [data-action="save"]',
-			cancelButton: '.layers-cancel-btn, [data-action="cancel"]',
+			// Actual button classes from Toolbar.js
+			saveButton: '.save-button',
+			cancelButton: '.cancel-button',
 			
 			// Tools - all 11 layer types
 			pointerTool: '[data-tool="pointer"], .tool-pointer',
@@ -76,8 +77,8 @@ class LayersEditorPage {
 			pathTool: '[data-tool="path"], .tool-path, [data-tool="pen"], .tool-pen',
 			blurTool: '[data-tool="blur"], .tool-blur',
 			
-			// Layer panel items
-			layerItem: '.layer-item',
+			// Layer panel items - exclude background layer from count
+			layerItem: '.layer-item:not(.background-layer-item)',
 			layerName: '.layer-name',
 			layerVisibility: '.layer-visibility-toggle',
 			layerLock: '.layer-lock-toggle',
@@ -91,6 +92,10 @@ class LayersEditorPage {
 	async openEditor( filename ) {
 		await this.page.goto( `/index.php?title=File:${ filename }&action=editlayers` );
 		await this.page.waitForSelector( this.selectors.canvas, { timeout: 10000 } );
+		// Wait for editor to fully initialize (toolbar, panels, etc.)
+		await this.page.waitForSelector( this.selectors.saveButton, { timeout: 5000 } );
+		// Small delay to ensure all event handlers are attached
+		await this.page.waitForTimeout( 500 );
 	}
 
 	/**
