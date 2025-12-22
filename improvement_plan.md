@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** December 21, 2025  
-**Status:** ✅ P0 Complete, P1 Complete  
+**Status:** ✅ P0 Complete, ✅ P1 Complete  
 **Version:** 1.1.10  
 **Goal:** Production-ready, secure, maintainable MediaWiki extension
 
@@ -85,13 +85,15 @@ All P0 items have been resolved. See "Fixes Completed" section above.
 - **Fix Applied:** Updated to use glob patterns that cover all source directories
 - **Date:** December 21, 2025
 
-### P1.4 Stabilize E2E Tests ⏳ NOT STARTED
+### P1.4 Stabilize E2E Tests ✅ FIXED
 
-- **Problem:** E2E editor tests use `continue-on-error: true`
-- **File:** `.github/workflows/e2e.yml` line 54
-- **Risk:** Regressions could be missed
-- **Action:** Debug why tests are flaky, then remove `continue-on-error`
-- **Effort:** 2-4 hours
+- **Problem:** E2E editor tests used `continue-on-error: true` and always failed
+- **Root Cause:** MediaWiki 1.43 requires passwords ≥10 chars; workflow used `admin123` (8 chars)
+- **File:** `.github/workflows/e2e.yml`
+- **Fix Applied:**
+  - Changed password from `admin123` to `LayersE2E_Test_2025` (20 chars)
+  - Removed `continue-on-error: true` — tests are now required to pass
+- **Date:** December 21, 2025
 
 ---
 
@@ -219,7 +221,7 @@ Phase 1 (Security - 4 weeks):
 P1.1 Remove SVG XSS:        ████████████████████ 100% ✅
 P1.2 Fix File Lookup:       ████████████████████ 100% ✅
 P1.3 Expand Jest Coverage:  ████████████████████ 100% ✅
-P1.4 Stabilize E2E Tests:   ░░░░░░░░░░░░░░░░░░░░ 0%
+P1.4 Stabilize E2E Tests:   ████████████████████ 100% ✅
 
 Phase 2 (Architecture - 8 weeks):
 P2.1 Split LayersValidator: ░░░░░░░░░░░░░░░░░░░░ 0%
@@ -253,7 +255,7 @@ P3.5 Layer Grouping:        ░░░░░░░░░░░░░░░░░�
 - [x] SVG removed from allowed MIME types
 - [x] All APIs use getRepoGroup()->findFile()
 - [x] Jest tracks all source directories
-- [ ] E2E tests run without continue-on-error
+- [x] E2E tests run without continue-on-error
 
 ### Phase 2 Complete When
 
