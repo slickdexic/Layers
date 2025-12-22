@@ -280,6 +280,19 @@
 			MAX_STAR_POINTS: 20
 		},
 
+		// Timing constants for delays and timeouts
+		TIMING: {
+			IMAGE_LOAD_TIMEOUT: 5000, // Timeout for background image loading
+			BOOTSTRAP_RETRY_DELAY: 50, // Delay between bootstrap retries
+			HOOK_LISTENER_DELAY: 50, // Delay for hook listener retry
+			DEPENDENCY_WAIT_DELAY: 100, // Delay waiting for dependencies
+			API_RETRY_DELAY: 1000, // Delay between API retry attempts
+			DEBOUNCE_DEFAULT: 150, // Default debounce delay
+			NOTIFICATION_DURATION: 5000, // How long notifications show
+			ANIMATION_DURATION: 300, // CSS transition duration
+			SAVE_BUTTON_DISABLE_DELAY: 2000 // Re-enable save button delay
+		},
+
 		// File and data constants
 		DATA: {
 			SCHEMA_VERSION: 1,
@@ -324,6 +337,7 @@
 		Object.freeze( LayersConstants.STATUS_MESSAGES );
 		Object.freeze( LayersConstants.ACTION_MESSAGES );
 		Object.freeze( LayersConstants.LIMITS );
+		Object.freeze( LayersConstants.TIMING );
 		Object.freeze( LayersConstants.DATA );
 		Object.freeze( LayersConstants.VALIDATION );
 		Object.freeze( LayersConstants );

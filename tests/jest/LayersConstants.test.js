@@ -352,6 +352,24 @@ describe( 'LayersConstants', () => {
 		} );
 	} );
 
+	describe( 'TIMING', () => {
+		it( 'should define timing constants', () => {
+			expect( LayersConstants.TIMING.IMAGE_LOAD_TIMEOUT ).toBe( 5000 );
+			expect( LayersConstants.TIMING.BOOTSTRAP_RETRY_DELAY ).toBe( 50 );
+			expect( LayersConstants.TIMING.HOOK_LISTENER_DELAY ).toBe( 50 );
+			expect( LayersConstants.TIMING.DEPENDENCY_WAIT_DELAY ).toBe( 100 );
+			expect( LayersConstants.TIMING.API_RETRY_DELAY ).toBe( 1000 );
+			expect( LayersConstants.TIMING.DEBOUNCE_DEFAULT ).toBe( 150 );
+			expect( LayersConstants.TIMING.NOTIFICATION_DURATION ).toBe( 5000 );
+			expect( LayersConstants.TIMING.ANIMATION_DURATION ).toBe( 300 );
+			expect( LayersConstants.TIMING.SAVE_BUTTON_DISABLE_DELAY ).toBe( 2000 );
+		} );
+
+		it( 'should be frozen', () => {
+			expect( Object.isFrozen( LayersConstants.TIMING ) ).toBe( true );
+		} );
+	} );
+
 	describe( 'DATA', () => {
 		it( 'should define data constants', () => {
 			expect( LayersConstants.DATA.SCHEMA_VERSION ).toBe( 1 );

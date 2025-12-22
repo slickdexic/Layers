@@ -12,11 +12,16 @@
 	'use strict';
 
 	/**
-	 * Timeout duration for image loading (ms)
+	 * Get LayersConstants for timing values
 	 *
-	 * @type {number}
+	 * @return {Object} LayersConstants or defaults
 	 */
-	const LOAD_TIMEOUT = 5000;
+	function getConstants() {
+		if ( typeof window !== 'undefined' && window.Layers && window.Layers.Constants ) {
+			return window.Layers.Constants;
+		}
+		return { TIMING: { IMAGE_LOAD_TIMEOUT: 5000 } };
+	}
 
 	/**
 	 * Default placeholder image dimensions
@@ -251,13 +256,14 @@
 			this.image.src = svgDataUrl;
 
 			// Set a timeout fallback (tracked for cleanup)
+			const timeout = getConstants().TIMING.IMAGE_LOAD_TIMEOUT;
 			this.loadTimeoutId = setTimeout( () => {
 				this.loadTimeoutId = null;
 				if ( this.isLoading ) {
 					this.isLoading = false;
 					this.onError( new Error( 'Image load timeout' ) );
 				}
-			}, LOAD_TIMEOUT );
+			}, timeout );
 		}
 
 		/**

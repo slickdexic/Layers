@@ -18,6 +18,22 @@
 		};
 
 	/**
+	 * Get timing constants from LayersConstants or use defaults
+	 *
+	 * @return {Object} Timing configuration
+	 */
+	function getTiming() {
+		if ( window.Layers && window.Layers.Constants && window.Layers.Constants.TIMING ) {
+			return window.Layers.Constants.TIMING;
+		}
+		return {
+			BOOTSTRAP_RETRY_DELAY: 50,
+			HOOK_LISTENER_DELAY: 50,
+			DEPENDENCY_WAIT_DELAY: 100
+		};
+	}
+
+	/**
 	 * Required classes for editor initialization, mapped to their namespace paths
 	 * @type {Object.<string, string>}
 	 */
@@ -219,13 +235,14 @@
 		} else {
 			// Fallback: try to add hook listener when mw becomes available
 			let mwHookRetries = 0;
+			const timing = getTiming();
 			const addHookListener = function () {
 				if ( typeof mw !== 'undefined' && mw.hook ) {
 					mw.hook( 'layers.editor.init' ).add( hookListener );
 				} else {
 					mwHookRetries++;
 					if ( mwHookRetries < MAX_MW_HOOK_RETRIES ) {
-						setTimeout( addHookListener, 50 );
+						setTimeout( addHookListener, timing.HOOK_LISTENER_DELAY );
 					}
 				}
 			};
@@ -314,6 +331,7 @@
 	 */
 	function autoBootstrap() {
 		let dependencyRetries = 0;
+		const timing = getTiming();
 
 		function tryBootstrap() {
 			try {
@@ -327,8 +345,8 @@
 
 				// Check if MediaWiki is available
 				if ( !window.mw || !mw.config || !mw.config.get ) {
-					debugLog( 'MediaWiki not ready, retrying in 100ms...' );
-					setTimeout( tryBootstrap, 100 );
+					debugLog( 'MediaWiki not ready, retrying...' );
+					setTimeout( tryBootstrap, timing.DEPENDENCY_WAIT_DELAY );
 					return;
 				}
 
@@ -345,8 +363,8 @@
 					dependencyRetries++;
 					if ( dependencyRetries < MAX_DEPENDENCY_RETRIES ) {
 						debugLog( 'Dependencies not ready (attempt ' + dependencyRetries + '/' +
-							MAX_DEPENDENCY_RETRIES + '), retrying in 50ms...' );
-						setTimeout( tryBootstrap, 50 );
+							MAX_DEPENDENCY_RETRIES + '), retrying...' );
+						setTimeout( tryBootstrap, timing.BOOTSTRAP_RETRY_DELAY );
 						return;
 					}
 					debugLog( 'Max dependency retries reached, proceeding with available dependencies' );
