@@ -99,11 +99,9 @@ jobs:
       - name: Install MediaWiki
         run: |
           cd ~/mediawiki
-          # Skip install if LocalSettings.php already exists (from cache)
-          if [ -f LocalSettings.php ]; then
-            echo "MediaWiki already installed (LocalSettings.php exists), skipping install"
-            exit 0
-          fi
+          # Always reinstall - the database is fresh on each run (services don't cache)
+          # Remove old LocalSettings.php if it exists from cache
+          rm -f LocalSettings.php
           php maintenance/install.php \
             --dbtype=mysql \
             --dbserver=127.0.0.1 \
