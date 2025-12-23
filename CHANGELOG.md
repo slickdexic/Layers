@@ -2,6 +2,17 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.14] - 2025-12-23
+
+### Bug Fixes
+- **Fixed text box rendering when image is scaled down** — Text boxes with vertical centering (middle alignment) now display correctly when images are resized in article view. Previously, the top line of text would be cut off because the `padding` property was not being scaled along with other dimensions like width, height, fontSize, and cornerRadius.
+
+### Technical
+- **Modified files**:
+  - `resources/ext.layers/LayersViewer.js` — Added `padding` scaling in `scaleLayerCoordinates()`
+
+---
+
 ## [1.1.13] - 2025-12-23
 
 ### Bug Fixes

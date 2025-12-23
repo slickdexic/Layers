@@ -552,6 +552,10 @@
 			if ( typeof L.valleyRadius === 'number' ) {
 				L.valleyRadius = L.valleyRadius * scaleAvg;
 			}
+			// Text box padding
+			if ( typeof L.padding === 'number' ) {
+				L.padding = L.padding * scaleAvg;
+			}
 			if ( Array.isArray( L.points ) ) {
 				const pts = [];
 				for ( let i = 0; i < L.points.length; i++ ) {
