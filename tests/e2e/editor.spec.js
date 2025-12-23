@@ -101,7 +101,7 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.clickCanvas( 150, 150 );
 			
 			// Wait for text input to appear
-			await page.waitForTimeout( 500 );
+			await page.waitForSelector( '.layers-text-editor', { timeout: 5000 } );
 			
 			// Type some text
 			await page.keyboard.type( 'Test Label' );
@@ -110,7 +110,7 @@ describeEditor( 'Layers Editor', () => {
 			await page.keyboard.press( 'Enter' );
 			
 			// Wait for layer to be created
-			await page.waitForTimeout( 300 );
+			await page.waitForTimeout( 500 );
 			
 			const newCount = await editorPage.getLayerCount();
 			expect( newCount ).toBe( initialCount + 1 );
@@ -246,15 +246,15 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.selectTool( 'circle' );
 			await editorPage.drawOnCanvas( 300, 300, 350, 350 );
 			
-			// Wait for layer creation
-			await editorPage.page.waitForTimeout( 300 );
+			// Wait for layer creation to complete
+			await editorPage.page.waitForTimeout( 500 );
 			expect( await editorPage.getLayerCount() ).toBe( initialCount + 1 );
 			
 			// Undo
 			await editorPage.undo();
 			
 			// Wait for undo to complete
-			await editorPage.page.waitForTimeout( 300 );
+			await editorPage.page.waitForTimeout( 500 );
 			
 			expect( await editorPage.getLayerCount() ).toBe( initialCount );
 		} );
@@ -266,17 +266,17 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.selectTool( 'circle' );
 			await editorPage.drawOnCanvas( 300, 300, 350, 350 );
 			
-			// Wait for layer creation
-			await editorPage.page.waitForTimeout( 300 );
+			// Wait for layer creation to complete
+			await editorPage.page.waitForTimeout( 500 );
 			
 			// Undo
 			await editorPage.undo();
-			await editorPage.page.waitForTimeout( 300 );
+			await editorPage.page.waitForTimeout( 500 );
 			expect( await editorPage.getLayerCount() ).toBe( initialCount );
 			
 			// Redo
 			await editorPage.redo();
-			await editorPage.page.waitForTimeout( 300 );
+			await editorPage.page.waitForTimeout( 500 );
 			expect( await editorPage.getLayerCount() ).toBe( initialCount + 1 );
 		} );
 	} );
@@ -295,14 +295,12 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
 			
-			// Wait for layer to be created
-			await editorPage.page.waitForTimeout( 300 );
+			// Wait for layer to be created and dirty state to be set
+			await editorPage.page.waitForTimeout( 500 );
 			
-			// Save and wait for response
-			await editorPage.save();
-			
-			// If we got here without timeout, save succeeded
-			expect( true ).toBe( true );
+			// Save and verify response
+			const response = await editorPage.save();
+			expect( response.ok() ).toBe( true );
 		} );
 
 		test( 'saved layers persist on reload', async () => {

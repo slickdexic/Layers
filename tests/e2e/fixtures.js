@@ -173,13 +173,17 @@ class LayersEditorPage {
 	 * Save layers
 	 */
 	async save() {
-		// With 1920x1080 viewport, button should be visible
-		await this.page.click( this.selectors.saveButton );
-		// Wait for save operation
-		await this.page.waitForResponse(
+		// Set up response listener BEFORE clicking (avoid race condition)
+		const responsePromise = this.page.waitForResponse(
 			( response ) => response.url().includes( 'action=layerssave' ),
-			{ timeout: 10000 }
+			{ timeout: 15000 }
 		);
+		
+		// Click save button
+		await this.page.click( this.selectors.saveButton );
+		
+		// Wait for response
+		return responsePromise;
 	}
 
 	/**
