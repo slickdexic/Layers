@@ -174,8 +174,19 @@ class LayersEditorPage {
 	 */
 	async save() {
 		// Set up response listener BEFORE clicking (avoid race condition)
+		// Note: MediaWiki API uses POST body for action parameter, not URL query string
+		// So we check for POST to api.php and verify action=layerssave in postData
 		const responsePromise = this.page.waitForResponse(
-			( response ) => response.url().includes( 'action=layerssave' ),
+			( response ) => {
+				const url = response.url();
+				const request = response.request();
+				// Check if it's a POST to api.php with layerssave action
+				if ( url.includes( 'api.php' ) && request.method() === 'POST' ) {
+					const postData = request.postData() || '';
+					return postData.includes( 'action=layerssave' );
+				}
+				return false;
+			},
 			{ timeout: 15000 }
 		);
 		

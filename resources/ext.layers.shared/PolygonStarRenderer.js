@@ -279,11 +279,12 @@
 			const x = layer.x || 0;
 			const y = layer.y || 0;
 			const radius = layer.radius || 50;
-			const cornerRadius = layer.cornerRadius || 0;
+			let cornerRadius = layer.cornerRadius || 0;
 			let strokeW = layer.strokeWidth || 1;
 
 			if ( !opts.scaled ) {
 				strokeW = strokeW * scale.avg;
+				cornerRadius = cornerRadius * scale.avg;
 			}
 
 			this.ctx.save();
@@ -438,12 +439,14 @@
 			const y = layer.y || 0;
 			const outerRadius = layer.outerRadius || layer.radius || 50;
 			const innerRadius = layer.innerRadius || outerRadius * 0.5;
-			const pointRadius = layer.pointRadius || 0;
-			const valleyRadius = layer.valleyRadius || 0;
+			let pointRadius = layer.pointRadius || 0;
+			let valleyRadius = layer.valleyRadius || 0;
 			let strokeW = layer.strokeWidth || 1;
 
 			if ( !opts.scaled ) {
 				strokeW = strokeW * scale.avg;
+				pointRadius = pointRadius * scale.avg;
+				valleyRadius = valleyRadius * scale.avg;
 			}
 
 			this.ctx.save();

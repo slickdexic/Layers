@@ -2,6 +2,27 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.1] - 2025-12-23
+
+### Bug Fixes
+- **Fixed corner radius scaling on article pages** — Shape corner radii (`cornerRadius`, `pointRadius`, `valleyRadius`) now scale correctly when images are resized in article view. Previously, stars, polygons, textboxes, and rounded rectangles would display with full-size radii even when the image was scaled smaller, causing visual artifacts.
+
+### Developer Experience
+- **Added Docker-based PHP test scripts** — New npm scripts `test:php:docker` and `fix:php:docker` for Windows developers who may have composer conflicts (Python's `composer` package can shadow PHP's Composer). These scripts run PHP linting tools inside the MediaWiki Docker container.
+
+### Testing
+- **E2E test improvements** — Fixed race conditions in editor E2E tests, improved login handling, corrected save response detection for MediaWiki API POST requests, and fixed path/pen tool test expectations.
+
+### Technical
+- **Modified files**:
+  - `resources/ext.layers/LayersViewer.js` — Added scaling for `cornerRadius`, `pointRadius`, `valleyRadius` in `scaleLayerCoordinates()`
+  - `resources/ext.layers.shared/PolygonStarRenderer.js` — Added scaling in `drawPolygon()` and `drawStar()` when `scaled: false`
+  - `package.json` — Added `test:php:docker` and `fix:php:docker` scripts
+  - `tests/e2e/editor.spec.js` — Fixed test stability issues
+  - `tests/e2e/fixtures.js` — Fixed save() response detection
+
+---
+
 ## [1.2.0] - 2025-12-22
 
 ### New Features

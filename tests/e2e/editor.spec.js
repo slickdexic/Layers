@@ -23,6 +23,8 @@ describeEditor( 'Layers Editor', () => {
 
 	test.beforeEach( async ( { page } ) => {
 		editorPage = new LayersEditorPage( page );
+		// Login required for all editor operations
+		await editorPage.login();
 	} );
 
 	describeEditor( 'Editor Loading', () => {
@@ -100,8 +102,11 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.selectTool( 'text' );
 			await editorPage.clickCanvas( 150, 150 );
 			
-			// Wait for text input to appear
-			await page.waitForSelector( '.layers-text-editor', { timeout: 5000 } );
+			// Wait for text input modal to appear (uses .text-input class in modal)
+			const textInput = await page.waitForSelector( '.text-input, .layers-text-editor', { timeout: 5000 } );
+			
+			// Click to ensure focus
+			await textInput.click();
 			
 			// Type some text
 			await page.keyboard.type( 'Test Label' );
@@ -181,21 +186,12 @@ describeEditor( 'Layers Editor', () => {
 			
 			await editorPage.selectTool( 'path' );
 			
-			// Draw a path with multiple clicks (add delays for stability)
-			await editorPage.clickCanvas( 50, 50 );
-			await page.waitForTimeout( 100 );
-			await editorPage.clickCanvas( 100, 80 );
-			await page.waitForTimeout( 100 );
-			await editorPage.clickCanvas( 150, 50 );
-			await page.waitForTimeout( 100 );
-			
-			// Double-click to finish path
-			const canvas = await page.$( editorPage.selectors.canvas );
-			const box = await canvas.boundingBox();
-			await page.mouse.dblclick( box.x + 150, box.y + 50 );
+			// Pen tool uses freehand drawing (mouse down, drag, mouse up)
+			// Draw a path by dragging
+			await editorPage.drawOnCanvas( 50, 50, 150, 100 );
 			
 			// Wait for path to be finalized
-			await page.waitForTimeout( 300 );
+			await page.waitForTimeout( 500 );
 			
 			const newCount = await editorPage.getLayerCount();
 			expect( newCount ).toBe( initialCount + 1 );
@@ -239,27 +235,47 @@ describeEditor( 'Layers Editor', () => {
 			expect( newCount ).toBe( initialCount - 1 );
 		} );
 
-		test( 'can undo layer creation', async () => {
+		test( 'can undo layer creation', async ( { page } ) => {
+			// This test opens a fresh editor to avoid undo history interference
+			// from beforeEach layer creation
+			const testFile = process.env.TEST_FILE || 'Test.png';
+			
+			// Open a fresh editor - this resets undo history
+			await page.goto( `/index.php?title=File:${ testFile }&action=editlayers` );
+			await page.waitForSelector( '.layers-canvas', { timeout: 10000 } );
+			await page.waitForTimeout( 500 );
+			
 			const initialCount = await editorPage.getLayerCount();
 			
-			// Create another layer
+			// Create a layer
 			await editorPage.selectTool( 'circle' );
 			await editorPage.drawOnCanvas( 300, 300, 350, 350 );
 			
-			// Wait for layer creation to complete
-			await editorPage.page.waitForTimeout( 500 );
-			expect( await editorPage.getLayerCount() ).toBe( initialCount + 1 );
+			// Wait for layer creation to complete and verify
+			await page.waitForTimeout( 500 );
+			const afterCreate = await editorPage.getLayerCount();
+			expect( afterCreate ).toBe( initialCount + 1 );
+			
+			// Click on canvas to ensure focus before keyboard shortcut
+			await editorPage.clickCanvas( 50, 50 );
+			await page.waitForTimeout( 200 );
 			
 			// Undo
 			await editorPage.undo();
-			
-			// Wait for undo to complete
-			await editorPage.page.waitForTimeout( 500 );
+			await page.waitForTimeout( 500 );
 			
 			expect( await editorPage.getLayerCount() ).toBe( initialCount );
 		} );
 
-		test( 'can redo undone action', async () => {
+		test( 'can redo undone action', async ( { page } ) => {
+			// This test opens a fresh editor to avoid undo history interference
+			const testFile = process.env.TEST_FILE || 'Test.png';
+			
+			// Open a fresh editor - this resets undo history
+			await page.goto( `/index.php?title=File:${ testFile }&action=editlayers` );
+			await page.waitForSelector( '.layers-canvas', { timeout: 10000 } );
+			await page.waitForTimeout( 500 );
+			
 			const initialCount = await editorPage.getLayerCount();
 			
 			// Create layer
@@ -267,26 +283,26 @@ describeEditor( 'Layers Editor', () => {
 			await editorPage.drawOnCanvas( 300, 300, 350, 350 );
 			
 			// Wait for layer creation to complete
-			await editorPage.page.waitForTimeout( 500 );
+			await page.waitForTimeout( 500 );
+			expect( await editorPage.getLayerCount() ).toBe( initialCount + 1 );
+			
+			// Click on canvas to ensure focus before keyboard shortcut
+			await editorPage.clickCanvas( 50, 50 );
+			await page.waitForTimeout( 200 );
 			
 			// Undo
 			await editorPage.undo();
-			await editorPage.page.waitForTimeout( 500 );
+			await page.waitForTimeout( 500 );
 			expect( await editorPage.getLayerCount() ).toBe( initialCount );
 			
 			// Redo
 			await editorPage.redo();
-			await editorPage.page.waitForTimeout( 500 );
+			await page.waitForTimeout( 500 );
 			expect( await editorPage.getLayerCount() ).toBe( initialCount + 1 );
 		} );
 	} );
 
 	describeEditor( 'Save and Load', () => {
-		// Save operations require authentication
-		test.beforeEach( async () => {
-			await editorPage.login();
-		} );
-
 		test( 'can save layers', async () => {
 			const testFile = process.env.TEST_FILE || 'Test.png';
 			await editorPage.openEditor( testFile );

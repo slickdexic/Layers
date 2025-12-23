@@ -542,6 +542,16 @@
 			if ( typeof L.textStrokeWidth === 'number' ) {
 				L.textStrokeWidth = L.textStrokeWidth * scaleAvg;
 			}
+			// Corner radii for shapes (rectangles, polygons, textboxes, stars)
+			if ( typeof L.cornerRadius === 'number' ) {
+				L.cornerRadius = L.cornerRadius * scaleAvg;
+			}
+			if ( typeof L.pointRadius === 'number' ) {
+				L.pointRadius = L.pointRadius * scaleAvg;
+			}
+			if ( typeof L.valleyRadius === 'number' ) {
+				L.valleyRadius = L.valleyRadius * scaleAvg;
+			}
 			if ( Array.isArray( L.points ) ) {
 				const pts = [];
 				for ( let i = 0; i < L.points.length; i++ ) {
