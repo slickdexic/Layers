@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.39%2B-blue" alt="MediaWiki 1.39+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-6%2C479%20Passing-brightgreen" alt="6,479 Tests">
+  <img src="https://img.shields.io/badge/Tests-6%2C549%20Passing-brightgreen" alt="6,549 Tests">
   <img src="https://img.shields.io/badge/Coverage-92%25-brightgreen" alt="92% Coverage">
 </p>
 
@@ -25,6 +25,7 @@
 - **Deep Linking to Editor** — Open the editor with a specific layer set via URL parameters
 - **Fullscreen Lightbox Viewer** — View annotated images in a modal overlay
 - **Wikitext Link Options** — Control click behavior with `layerslink=editor` or `layerslink=viewer`
+- **v1.2.3**: Fixed text box rendering when images are scaled down
 
 See [[Changelog]] for full details.
 
@@ -75,11 +76,11 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.2.2 |
+| **Version (main)** | 1.2.3 |
 | **Version (REL1_39)** | 1.1.13 |
 | **Release Date** | December 23, 2025 |
-| **Test Suites** | 125 |
-| **Total Tests** | 6,479 |
+| **Test Suites** | 126 |
+| **Total Tests** | 6,549 |
 | **Code Coverage** | 92% |
 | **JavaScript Files** | 96 |
 | **ES6 Classes** | 87 |

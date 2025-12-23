@@ -959,7 +959,8 @@ describe( 'LayersViewer', () => {
 				outerRadius: 100,
 				innerRadius: 50,
 				tailWidth: 20,
-				textStrokeWidth: 1
+				textStrokeWidth: 1,
+				padding: 8
 			};
 
 			const scaled = viewer.scaleLayerCoordinates( layer, 2, 3, 2.5 );
@@ -982,6 +983,8 @@ describe( 'LayersViewer', () => {
 			expect( scaled.innerRadius ).toBe( 125 );
 			expect( scaled.tailWidth ).toBe( 50 );
 			expect( scaled.textStrokeWidth ).toBe( 2.5 );
+			// Text box padding must be scaled to maintain correct text positioning
+			expect( scaled.padding ).toBe( 20 );
 		} );
 
 		test( 'should scale points array', () => {

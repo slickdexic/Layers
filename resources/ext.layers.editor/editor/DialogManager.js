@@ -173,6 +173,292 @@
 		}
 
 		/**
+		 * Show a generic confirmation dialog (Promise-based replacement for window.confirm)
+		 *
+		 * @param {Object} options Dialog options
+		 * @param {string} options.message The message to display
+		 * @param {string} [options.title] Optional title
+		 * @param {string} [options.confirmText] Text for confirm button (default: 'OK')
+		 * @param {string} [options.cancelText] Text for cancel button (default: 'Cancel')
+		 * @param {boolean} [options.isDanger] Whether this is a destructive action
+		 * @return {Promise<boolean>} Resolves to true if confirmed, false if cancelled
+		 */
+		showConfirmDialog( options ) {
+			return new Promise( ( resolve ) => {
+				const overlay = this.createOverlay();
+				const dialog = this.createDialog( options.title || this.getMessage( 'layers-confirm-title', 'Confirm' ) );
+
+				// Title
+				if ( options.title ) {
+					const titleEl = document.createElement( 'h3' );
+					titleEl.className = 'layers-modal-title';
+					titleEl.textContent = options.title;
+					dialog.appendChild( titleEl );
+				}
+
+				// Message
+				const message = document.createElement( 'p' );
+				message.textContent = options.message;
+				dialog.appendChild( message );
+
+				// Buttons
+				const buttons = document.createElement( 'div' );
+				buttons.className = 'layers-modal-buttons';
+
+				const cancelBtn = this.createButton(
+					options.cancelText || this.getMessage( 'layers-cancel', 'Cancel' ),
+					'layers-btn layers-btn-secondary'
+				);
+
+				const confirmBtnClass = options.isDanger
+					? 'layers-btn layers-btn-primary layers-btn-danger'
+					: 'layers-btn layers-btn-primary';
+				const confirmBtn = this.createButton(
+					options.confirmText || this.getMessage( 'layers-ok', 'OK' ),
+					confirmBtnClass
+				);
+
+				buttons.appendChild( cancelBtn );
+				buttons.appendChild( confirmBtn );
+				dialog.appendChild( buttons );
+
+				document.body.appendChild( overlay );
+				document.body.appendChild( dialog );
+
+				// Track active dialog
+				this.activeDialogs.push( { overlay, dialog } );
+
+				const cleanup = () => {
+					if ( overlay.parentNode ) {
+						overlay.parentNode.removeChild( overlay );
+					}
+					if ( dialog.parentNode ) {
+						dialog.parentNode.removeChild( dialog );
+					}
+					document.removeEventListener( 'keydown', handleKey );
+					const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
+					if ( index !== -1 ) {
+						this.activeDialogs.splice( index, 1 );
+					}
+				};
+
+				const handleKey = this.setupKeyboardHandler( dialog, () => {
+					cleanup();
+					resolve( false );
+				} );
+
+				cancelBtn.addEventListener( 'click', () => {
+					cleanup();
+					resolve( false );
+				} );
+
+				confirmBtn.addEventListener( 'click', () => {
+					cleanup();
+					resolve( true );
+				} );
+
+				// Focus the cancel button by default (safer)
+				cancelBtn.focus();
+			} );
+		}
+
+		/**
+		 * Show an alert dialog (Promise-based replacement for window.alert)
+		 *
+		 * @param {Object} options Dialog options
+		 * @param {string} options.message The message to display
+		 * @param {string} [options.title] Optional title
+		 * @param {string} [options.type] Type: 'error', 'warning', 'info' (affects styling)
+		 * @return {Promise<void>} Resolves when user dismisses the alert
+		 */
+		showAlertDialog( options ) {
+			return new Promise( ( resolve ) => {
+				const overlay = this.createOverlay();
+				const dialog = this.createDialog( options.title || this.getMessage( 'layers-alert-title', 'Alert' ) );
+
+				// Add type class if specified
+				if ( options.type ) {
+					dialog.classList.add( 'layers-modal-' + options.type );
+				}
+
+				// Title
+				if ( options.title ) {
+					const titleEl = document.createElement( 'h3' );
+					titleEl.className = 'layers-modal-title';
+					titleEl.textContent = options.title;
+					dialog.appendChild( titleEl );
+				}
+
+				// Message
+				const message = document.createElement( 'p' );
+				message.textContent = options.message;
+				dialog.appendChild( message );
+
+				// Button
+				const buttons = document.createElement( 'div' );
+				buttons.className = 'layers-modal-buttons';
+
+				const okBtn = this.createButton(
+					this.getMessage( 'layers-ok', 'OK' ),
+					'layers-btn layers-btn-primary'
+				);
+
+				buttons.appendChild( okBtn );
+				dialog.appendChild( buttons );
+
+				document.body.appendChild( overlay );
+				document.body.appendChild( dialog );
+
+				// Track active dialog
+				this.activeDialogs.push( { overlay, dialog } );
+
+				const cleanup = () => {
+					if ( overlay.parentNode ) {
+						overlay.parentNode.removeChild( overlay );
+					}
+					if ( dialog.parentNode ) {
+						dialog.parentNode.removeChild( dialog );
+					}
+					document.removeEventListener( 'keydown', handleKey );
+					const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
+					if ( index !== -1 ) {
+						this.activeDialogs.splice( index, 1 );
+					}
+				};
+
+				const handleKey = this.setupKeyboardHandler( dialog, () => {
+					cleanup();
+					resolve();
+				} );
+
+				okBtn.addEventListener( 'click', () => {
+					cleanup();
+					resolve();
+				} );
+
+				okBtn.focus();
+			} );
+		}
+
+		/**
+		 * Show a prompt dialog for text input (Promise-based replacement for window.prompt)
+		 *
+		 * @param {Object} options Dialog options
+		 * @param {string} [options.title] Dialog title
+		 * @param {string} [options.message] Prompt message
+		 * @param {string} [options.placeholder] Input placeholder
+		 * @param {string} [options.defaultValue] Default input value
+		 * @param {string} [options.confirmText] Text for confirm button
+		 * @param {string} [options.cancelText] Text for cancel button
+		 * @return {Promise<string|null>} Resolves to input value if confirmed, null if cancelled
+		 */
+		showPromptDialogAsync( options ) {
+			return new Promise( ( resolve ) => {
+				const overlay = this.createOverlay();
+				const dialog = this.createDialog( options.title || this.getMessage( 'layers-prompt-title', 'Input' ) );
+
+				// Title
+				if ( options.title ) {
+					const titleEl = document.createElement( 'h3' );
+					titleEl.className = 'layers-modal-title';
+					titleEl.textContent = options.title;
+					dialog.appendChild( titleEl );
+				}
+
+				// Message
+				if ( options.message ) {
+					const message = document.createElement( 'p' );
+					message.textContent = options.message;
+					dialog.appendChild( message );
+				}
+
+				// Input
+				const input = document.createElement( 'input' );
+				input.type = 'text';
+				input.className = 'layers-modal-input';
+				input.placeholder = options.placeholder || '';
+				input.value = options.defaultValue || '';
+				dialog.appendChild( input );
+
+				// Buttons
+				const buttons = document.createElement( 'div' );
+				buttons.className = 'layers-modal-buttons';
+
+				const cancelBtn = this.createButton(
+					options.cancelText || this.getMessage( 'layers-cancel', 'Cancel' ),
+					'layers-btn layers-btn-secondary'
+				);
+
+				const confirmBtn = this.createButton(
+					options.confirmText || this.getMessage( 'layers-ok', 'OK' ),
+					'layers-btn layers-btn-primary'
+				);
+
+				buttons.appendChild( cancelBtn );
+				buttons.appendChild( confirmBtn );
+				dialog.appendChild( buttons );
+
+				document.body.appendChild( overlay );
+				document.body.appendChild( dialog );
+
+				// Track active dialog
+				this.activeDialogs.push( { overlay, dialog } );
+
+				const cleanup = () => {
+					if ( overlay.parentNode ) {
+						overlay.parentNode.removeChild( overlay );
+					}
+					if ( dialog.parentNode ) {
+						dialog.parentNode.removeChild( dialog );
+					}
+					document.removeEventListener( 'keydown', handleKey );
+					const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
+					if ( index !== -1 ) {
+						this.activeDialogs.splice( index, 1 );
+					}
+				};
+
+				const handleKey = ( e ) => {
+					if ( e.key === 'Escape' ) {
+						cleanup();
+						resolve( null );
+					} else if ( e.key === 'Enter' ) {
+						cleanup();
+						resolve( input.value );
+					} else if ( e.key === 'Tab' ) {
+						const focusable = dialog.querySelectorAll( 'button, input' );
+						if ( focusable.length ) {
+							const first = focusable[ 0 ];
+							const last = focusable[ focusable.length - 1 ];
+							if ( e.shiftKey && document.activeElement === first ) {
+								e.preventDefault();
+								last.focus();
+							} else if ( !e.shiftKey && document.activeElement === last ) {
+								e.preventDefault();
+								first.focus();
+							}
+						}
+					}
+				};
+				document.addEventListener( 'keydown', handleKey );
+
+				cancelBtn.addEventListener( 'click', () => {
+					cleanup();
+					resolve( null );
+				} );
+
+				confirmBtn.addEventListener( 'click', () => {
+					cleanup();
+					resolve( input.value );
+				} );
+
+				// Focus input for immediate typing
+				input.focus();
+				input.select();
+			} );
+		}
+
+		/**
 		 * Show a prompt dialog for text input
 		 *
 		 * @param {Object} options Dialog options

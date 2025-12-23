@@ -65,6 +65,26 @@
 		}
 
 		/**
+		 * Show a confirmation dialog
+		 *
+		 * @private
+		 * @param {Object} options Dialog options
+		 * @param {string} options.message The message to display
+		 * @param {string} [options.title] Dialog title
+		 * @param {string} [options.confirmText] Text for confirm button
+		 * @param {boolean} [options.isDanger] Whether this is a destructive action
+		 * @return {Promise<boolean>} Resolves to true if confirmed
+		 */
+		async showConfirmDialog( options ) {
+			if ( this.editor && this.editor.dialogManager ) {
+				return this.editor.dialogManager.showConfirmDialog( options );
+			}
+			// Fallback to native confirm
+			// eslint-disable-next-line no-alert
+			return window.confirm( options.message );
+		}
+
+		/**
 		 * Import layers from a JSON file
 		 *
 		 * @param {File} file The JSON file to import
@@ -72,26 +92,29 @@
 		 * @param {boolean} [options.confirmOverwrite=true] Prompt for confirmation if unsaved changes
 		 * @return {Promise<Array>} Resolves with imported layers or rejects on error
 		 */
-		importFromFile( file, options ) {
+		async importFromFile( file, options ) {
 			options = options || {};
 			const confirmOverwrite = options.confirmOverwrite !== false;
 
+			if ( !file ) {
+				throw new Error( 'No file provided' );
+			}
+
+			// Confirm overwrite if there are unsaved changes
+			if ( confirmOverwrite && this.editor && this.editor.isDirty ) {
+				const msg = this.msg( 'layers-import-unsaved-confirm', 'You have unsaved changes. Import anyway?' );
+				const confirmed = await this.showConfirmDialog( {
+					message: msg,
+					title: this.msg( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
+					confirmText: this.msg( 'layers-import-anyway', 'Import Anyway' ),
+					isDanger: true
+				} );
+				if ( !confirmed ) {
+					throw new Error( 'Import cancelled by user' );
+				}
+			}
+
 			return new Promise( ( resolve, reject ) => {
-				if ( !file ) {
-					reject( new Error( 'No file provided' ) );
-					return;
-				}
-
-				// Confirm overwrite if there are unsaved changes
-				if ( confirmOverwrite && this.editor && this.editor.isDirty ) {
-					const msg = this.msg( 'layers-import-unsaved-confirm', 'You have unsaved changes. Import anyway?' );
-					// eslint-disable-next-line no-alert
-					if ( !window.confirm( msg ) ) {
-						reject( new Error( 'Import cancelled by user' ) );
-						return;
-					}
-				}
-
 				const reader = new FileReader();
 
 				reader.onload = () => {

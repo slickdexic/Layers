@@ -2,6 +2,25 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.3] - 2025-12-23
+
+### Bug Fixes
+- **Fixed text box rendering when image is scaled down** — Text boxes with vertical centering (middle alignment) now display correctly when images are resized in article view. Previously, the top line of text would be cut off because the `padding` property was not being scaled along with other dimensions.
+
+### Technical
+- **Modified files**:
+  - `resources/ext.layers/LayersViewer.js` — Added `padding` to `scaleLayerCoordinates()` to scale with the image
+  - `tests/jest/LayersViewer.test.js` — Added regression test for padding scaling
+
+### Code Quality
+- **UIManager refactored** — Extracted `SetSelectorController.js` (~567 lines) from `UIManager.js`, reducing it from 1,029 to 681 lines. This improves separation of concerns for named layer set management.
+
+### Testing
+- **6,549 tests passing** (+70 from v1.2.2)
+- **All linting passes** (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
 ## [1.2.2] - 2025-12-23
 
 ### Bug Fixes

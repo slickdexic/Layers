@@ -133,16 +133,20 @@
 				mw.config.get( 'wgLayersMaxImageBytes', 1048576 ) : 1048576;
 			const maxSizeKB = Math.round( maxSize / 1024 );
 			if ( file.size > maxSize ) {
-				// eslint-disable-next-line no-alert
-				alert( this.msg( 'layers-import-image-too-large', 'Image file is too large' ) + ` (max ${maxSizeKB}KB)` );
+				mw.notify(
+					this.msg( 'layers-import-image-too-large', 'Image file is too large' ) + ` (max ${maxSizeKB}KB)`,
+					{ type: 'error' }
+				);
 				return;
 			}
 
 			// Validate file type
 			const allowedTypes = [ 'image/png', 'image/jpeg', 'image/gif', 'image/webp' ];
 			if ( !allowedTypes.includes( file.type ) ) {
-				// eslint-disable-next-line no-alert
-				alert( this.msg( 'layers-import-image-invalid-type', 'Invalid image type. Allowed: PNG, JPEG, GIF, WebP' ) );
+				mw.notify(
+					this.msg( 'layers-import-image-invalid-type', 'Invalid image type. Allowed: PNG, JPEG, GIF, WebP' ),
+					{ type: 'error' }
+				);
 				return;
 			}
 
@@ -188,8 +192,10 @@
 				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
 					mw.log.error( '[Toolbar] Failed to import image:', error );
 				}
-				// eslint-disable-next-line no-alert
-				alert( this.msg( 'layers-import-image-failed', 'Failed to import image' ) );
+				mw.notify(
+					this.msg( 'layers-import-image-failed', 'Failed to import image' ),
+					{ type: 'error' }
+				);
 			}
 		}
 

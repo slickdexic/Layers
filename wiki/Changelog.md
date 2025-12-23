@@ -4,6 +4,19 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.3 (December 23, 2025)
+
+### Bug Fixes
+- **Fixed text box rendering when image is scaled down** — Text boxes with vertical centering (middle alignment) now display correctly when images are resized in article view. Previously, the top line of text would be cut off because the `padding` property was not being scaled along with other dimensions.
+
+### Code Quality
+- **UIManager refactored** — Extracted `SetSelectorController.js` (~567 lines) from `UIManager.js`, reducing it from 1,029 to 681 lines
+
+### Testing
+- **6,549 tests passing** (+70 from v1.2.2)
+
+---
+
 ## Version 1.2.2 (December 23, 2025)
 
 ### Bug Fixes

@@ -10,8 +10,24 @@
 		( typeof window !== 'undefined' && window.layersGetClass ) ||
 		function ( namespacePath, globalName ) {
 			// Minimal fallback for environments where NamespaceHelper hasn't loaded
-			if ( typeof window !== 'undefined' && window[ globalName ] ) {
-				return window[ globalName ];
+			if ( typeof window !== 'undefined' ) {
+				// Check global first
+				if ( window[ globalName ] ) {
+					return window[ globalName ];
+				}
+				// Check in Layers namespace hierarchy
+				if ( window.Layers ) {
+					// Check common namespaces
+					if ( namespacePath.startsWith( 'UI.' ) && window.Layers.UI && window.Layers.UI[ globalName ] ) {
+						return window.Layers.UI[ globalName ];
+					}
+					if ( namespacePath.startsWith( 'Utils.' ) && window.Layers.Utils && window.Layers.Utils[ globalName ] ) {
+						return window.Layers.Utils[ globalName ];
+					}
+					if ( namespacePath.startsWith( 'Core.' ) && window.Layers.Core && window.Layers.Core[ globalName ] ) {
+						return window.Layers.Core[ globalName ];
+					}
+				}
 			}
 			return null;
 		};
@@ -22,7 +38,7 @@
 		this.container = null;
 		this.statusBar = null;
 		this.spinnerEl = null;
-		// Named Set selector elements
+		// Named Set selector elements (managed by SetSelectorController)
 		this.setSelectEl = null;
 		this.newSetInputEl = null;
 		this.newSetBtnEl = null;
@@ -38,6 +54,10 @@
 		// Initialize EventTracker for memory-safe event listener management
 		const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
 		this.eventTracker = EventTracker ? new EventTracker() : null;
+
+		// Initialize SetSelectorController for managing named layer sets
+		const SetSelectorController = getClass( 'UI.SetSelectorController', 'SetSelectorController' );
+		this.setSelectorController = SetSelectorController ? new SetSelectorController( this ) : null;
 	}
 
 	/**
@@ -199,67 +219,18 @@
 
 	/**
 	 * Create the Named Set selector UI
-	 * Allows users to switch between different annotation sets (e.g., "default", "anatomy-labels")
+	 * Delegates to SetSelectorController for implementation
 	 * @return {HTMLElement} The set selector wrapper element
 	 */
 	createSetSelector() {
+		// Delegate to SetSelectorController if available
+		if ( this.setSelectorController ) {
+			return this.setSelectorController.createSetSelector();
+		}
+
+		// Minimal fallback if controller not available
 		const setWrap = document.createElement( 'div' );
 		setWrap.className = 'layers-set-wrap';
-		setWrap.setAttribute( 'role', 'group' );
-		setWrap.setAttribute( 'aria-label', this.getMessage( 'layers-set-selector-group' ) );
-
-		// Set label
-		const setLabel = document.createElement( 'label' );
-		setLabel.className = 'layers-set-label';
-		setLabel.textContent = this.getMessage( 'layers-set-label' ) + ':';
-		const setSelectId = 'layers-set-select-' + Math.random().toString( 36 ).slice( 2, 11 );
-		setLabel.setAttribute( 'for', setSelectId );
-		setWrap.appendChild( setLabel );
-
-		// Set dropdown
-		this.setSelectEl = document.createElement( 'select' );
-		this.setSelectEl.className = 'layers-set-select';
-		this.setSelectEl.id = setSelectId;
-		this.setSelectEl.setAttribute( 'aria-label', this.getMessage( 'layers-set-select-aria' ) );
-		setWrap.appendChild( this.setSelectEl );
-
-		// New set input (hidden by default, shown when "+ New" is selected)
-		this.newSetInputEl = document.createElement( 'input' );
-		this.newSetInputEl.type = 'text';
-		this.newSetInputEl.className = 'layers-new-set-input';
-		this.newSetInputEl.placeholder = this.getMessage( 'layers-new-set-placeholder' );
-		this.newSetInputEl.setAttribute( 'aria-label', this.getMessage( 'layers-new-set-aria' ) );
-		this.newSetInputEl.maxLength = 255;
-		this.newSetInputEl.style.display = 'none';
-		setWrap.appendChild( this.newSetInputEl );
-
-		// Create new set button (hidden by default)
-		this.newSetBtnEl = document.createElement( 'button' );
-		this.newSetBtnEl.type = 'button';
-		this.newSetBtnEl.className = 'layers-new-set-btn';
-		this.newSetBtnEl.textContent = this.getMessage( 'layers-new-set-create' );
-		this.newSetBtnEl.setAttribute( 'aria-label', this.getMessage( 'layers-new-set-create-aria' ) );
-		this.newSetBtnEl.style.display = 'none';
-		setWrap.appendChild( this.newSetBtnEl );
-
-		// Rename set button - allows renaming the current set (only for owner/admin)
-		this.setRenameBtnEl = document.createElement( 'button' );
-		this.setRenameBtnEl.type = 'button';
-		this.setRenameBtnEl.className = 'layers-set-action-btn layers-set-rename-btn';
-		this.setRenameBtnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
-		this.setRenameBtnEl.title = this.getMessage( 'layers-rename-set-tooltip', 'Rename this layer set' );
-		this.setRenameBtnEl.setAttribute( 'aria-label', this.getMessage( 'layers-rename-set', 'Rename set' ) );
-		setWrap.appendChild( this.setRenameBtnEl );
-
-		// Delete set button - allows deleting the current set (only for owner/admin)
-		this.setDeleteBtnEl = document.createElement( 'button' );
-		this.setDeleteBtnEl.type = 'button';
-		this.setDeleteBtnEl.className = 'layers-set-action-btn layers-set-delete-btn';
-		this.setDeleteBtnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
-		this.setDeleteBtnEl.title = this.getMessage( 'layers-delete-set-tooltip', 'Delete this layer set' );
-		this.setDeleteBtnEl.setAttribute( 'aria-label', this.getMessage( 'layers-delete-set', 'Delete set' ) );
-		setWrap.appendChild( this.setDeleteBtnEl );
-
 		return setWrap;
 	}
 
@@ -468,371 +439,136 @@
 
 	/**
 	 * Set up event handlers for the Named Set selector
+	 * Delegates to SetSelectorController for implementation
 	 */
 	setupSetSelectorControls() {
-		if ( !this.setSelectEl ) {
-			return;
-		}
-
-		// Handle set selection change
-		this.addListener( this.setSelectEl, 'change', () => {
-			const selectedValue = this.setSelectEl.value;
-
-			if ( selectedValue === '__new__' ) {
-				// Show new set input
-				this.showNewSetInput( true );
-			} else {
-				// Hide new set input
-				this.showNewSetInput( false );
-
-				// Load selected set
-				if ( selectedValue && this.editor.loadLayerSetByName ) {
-					// Check for unsaved changes
-					const isDirty = this.editor.stateManager ?
-						this.editor.stateManager.get( 'isDirty' ) : false;
-
-					if ( isDirty ) {
-						const confirmed = window.confirm(
-							this.getMessage( 'layers-switch-set-unsaved-confirm' )
-						);
-						if ( !confirmed ) {
-							// Restore previous selection
-							const currentSet = this.editor.stateManager ?
-								this.editor.stateManager.get( 'currentSetName' ) : 'default';
-							this.setSelectEl.value = currentSet;
-							return;
-						}
-					}
-
-					this.editor.loadLayerSetByName( selectedValue );
-				}
-			}
-		} );
-
-		// Handle new set creation
-		if ( this.newSetBtnEl ) {
-			this.addListener( this.newSetBtnEl, 'click', () => {
-				this.createNewSet();
-			} );
-		}
-
-		// Handle set deletion
-		if ( this.setDeleteBtnEl ) {
-			this.addListener( this.setDeleteBtnEl, 'click', () => {
-				this.deleteCurrentSet();
-			} );
-		}
-
-		// Handle set renaming
-		if ( this.setRenameBtnEl ) {
-			this.addListener( this.setRenameBtnEl, 'click', () => {
-				this.renameCurrentSet();
-			} );
-		}
-
-		// Handle Enter key in new set input
-		if ( this.newSetInputEl ) {
-			this.addListener( this.newSetInputEl, 'keydown', ( e ) => {
-				if ( e.key === 'Enter' ) {
-					e.preventDefault();
-					this.createNewSet();
-				} else if ( e.key === 'Escape' ) {
-					this.showNewSetInput( false );
-					// Restore previous selection
-					const currentSet = this.editor.stateManager ?
-						this.editor.stateManager.get( 'currentSetName' ) : 'default';
-					this.setSelectEl.value = currentSet;
-				}
-			} );
+		// Delegate to SetSelectorController if available
+		if ( this.setSelectorController ) {
+			this.setSelectorController.setupControls();
 		}
 	}
 
 	/**
 	 * Show or hide the new set input field
+	 * Delegates to SetSelectorController
 	 * @param {boolean} show Whether to show the input
 	 */
 	showNewSetInput( show ) {
-		if ( this.newSetInputEl ) {
-			this.newSetInputEl.style.display = show ? 'inline-block' : 'none';
-			if ( show ) {
-				this.newSetInputEl.value = '';
-				this.newSetInputEl.focus();
-			}
-		}
-		if ( this.newSetBtnEl ) {
-			this.newSetBtnEl.style.display = show ? 'inline-block' : 'none';
+		if ( this.setSelectorController ) {
+			this.setSelectorController.showNewSetInput( show );
 		}
 	}
 
 	/**
 	 * Create a new named set from the input field
+	 * Delegates to SetSelectorController
 	 */
 	createNewSet() {
-		if ( !this.newSetInputEl ) {
-			return;
+		if ( this.setSelectorController ) {
+			this.setSelectorController.createNewSet();
 		}
-
-		const newName = this.newSetInputEl.value.trim();
-
-		if ( !newName ) {
-			mw.notify( this.getMessage( 'layers-new-set-name-required' ), { type: 'warn' } );
-			this.newSetInputEl.focus();
-			return;
-		}
-
-		// Validate name (allow letters, numbers, underscores, dashes, spaces - matches server)
-		if ( !/^[\p{L}\p{N}_\-\s]+$/u.test( newName ) ) {
-			mw.notify( this.getMessage( 'layers-invalid-setname' ), { type: 'error' } );
-			this.newSetInputEl.focus();
-			return;
-		}
-
-		// Check if name already exists
-		const namedSets = this.editor.stateManager ?
-			this.editor.stateManager.get( 'namedSets' ) : [];
-		const exists = namedSets.some( set => set.name.toLowerCase() === newName.toLowerCase() );
-
-		if ( exists ) {
-			mw.notify( this.getMessage( 'layers-set-name-exists' ), { type: 'warn' } );
-			this.newSetInputEl.focus();
-			return;
-		}
-
-		// Hide input and set the new name as current
-		this.showNewSetInput( false );
-
-		// Update state to use new set name
-		if ( this.editor.stateManager ) {
-			this.editor.stateManager.set( 'currentSetName', newName );
-			this.editor.stateManager.set( 'currentLayerSetId', null ); // New set has no ID yet
-			this.editor.stateManager.set( 'setRevisions', [] ); // No revisions yet
-			this.editor.stateManager.set( 'isDirty', true );
-
-			// Add to namedSets array so it's tracked properly
-			const updatedSets = [ ...namedSets, {
-				name: newName,
-				revision_count: 0,
-				latest_revision: null,
-				latest_timestamp: null,
-				latest_user_name: mw.config.get( 'wgUserName' )
-			} ];
-			this.editor.stateManager.set( 'namedSets', updatedSets );
-		}
-
-		// Add to set selector and select it
-		this.addSetOption( newName, true );
-
-		mw.notify(
-			this.getMessage( 'layers-new-set-created' ).replace( '$1', newName ),
-			{ type: 'success' }
-		);
 	}
 
 	/**
 	 * Delete the current layer set with confirmation
-	 * Only the original creator or an admin can delete a set
+	 * Delegates to SetSelectorController
+	 * @return {Promise<void>}
 	 */
-	deleteCurrentSet() {
-		const currentSet = this.editor.stateManager ?
-			this.editor.stateManager.get( 'currentSetName' ) : 'default';
-
-		if ( !currentSet ) {
-			return;
-		}
-
-		// For the default set, offer to clear all layers instead of deleting
-		if ( currentSet === 'default' ) {
-			const layers = this.editor.stateManager ?
-				this.editor.stateManager.get( 'layers' ) : [];
-			if ( !layers || layers.length === 0 ) {
-				mw.notify( this.getMessage( 'layers-no-layers-to-clear', 'No layers to clear' ), { type: 'info' } );
-				return;
-			}
-
-			// Confirm clearing all layers from default set
-			const clearMsg = this.getMessage(
-				'layers-clear-default-set-confirm',
-				'Clear all layers from the default set? This will remove all annotations.'
-			);
-			// eslint-disable-next-line no-alert
-			if ( !window.confirm( clearMsg ) ) {
-				return;
-			}
-
-			// Clear all layers and save immediately
-			if ( this.editor.stateManager ) {
-				this.editor.stateManager.set( 'layers', [] );
-			}
-			if ( this.editor.canvasManager ) {
-				this.editor.canvasManager.renderLayers( [] );
-			}
-			if ( this.editor.layerPanel ) {
-				this.editor.layerPanel.renderLayerList();
-			}
-			if ( this.editor.selectionManager ) {
-				this.editor.selectionManager.clearSelection();
-			}
-
-			// Save the empty layer set immediately via API
-			if ( this.editor.apiManager && typeof this.editor.apiManager.saveLayers === 'function' ) {
-				this.editor.apiManager.saveLayers( [], 'default' ).then( () => {
-					if ( this.editor.stateManager ) {
-						this.editor.stateManager.set( 'isDirty', false );
-					}
-					mw.notify(
-						this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
-						{ type: 'success' }
-					);
-				} ).catch( ( error ) => {
-					if ( mw.log && mw.log.error ) {
-						mw.log.error( '[UIManager] Failed to save cleared layers:', error );
-					}
-					mw.notify( this.getMessage( 'layers-save-failed', 'Failed to save changes' ), { type: 'error' } );
-				} );
-			} else {
-				mw.notify(
-					this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
-					{ type: 'success' }
-				);
-			}
-			return;
-		}
-
-		// Get revision count for confirmation message
-		const namedSets = this.editor.stateManager ?
-			this.editor.stateManager.get( 'namedSets' ) : [];
-		const setInfo = namedSets.find( set => set.name === currentSet );
-		const revisionCount = setInfo ? ( setInfo.revision_count || 1 ) : 1;
-
-		// Build confirmation message with set name and revision count
-		const confirmMsg = this.getMessage( 'layers-delete-set-confirm' )
-			.replace( '$1', currentSet )
-			.replace( '$2', revisionCount );
-
-		// eslint-disable-next-line no-alert
-		if ( !window.confirm( confirmMsg ) ) {
-			return;
-		}
-
-		// Call API to delete the set
-		if ( this.editor.apiManager && typeof this.editor.apiManager.deleteLayerSet === 'function' ) {
-			this.editor.apiManager.deleteLayerSet( currentSet ).then( () => {
-				// The APIManager reloads layers after delete, so we just update the selector
-				if ( this.editor.buildSetSelector ) {
-					this.editor.buildSetSelector();
-				} else if ( this.editor.revisionManager ) {
-					this.editor.revisionManager.buildSetSelector();
-				}
-			} ).catch( ( error ) => {
-				// Error notification is handled by APIManager
-				if ( mw.log && mw.log.error ) {
-					mw.log.error( '[UIManager] deleteCurrentSet error:', error );
-				}
-			} );
-		} else {
-			mw.notify( this.getMessage( 'layers-delete-failed' ), { type: 'error' } );
+	async deleteCurrentSet() {
+		if ( this.setSelectorController ) {
+			return this.setSelectorController.deleteCurrentSet();
 		}
 	}
 
 	/**
 	 * Rename the current layer set
-	 * Uses a prompt dialog to get the new name, then calls API to rename
+	 * Delegates to SetSelectorController
+	 * @return {Promise<void>}
 	 */
-	renameCurrentSet() {
-		const currentSet = this.editor.stateManager ?
-			this.editor.stateManager.get( 'currentSetName' ) : 'default';
-
-		// For default set, don't allow rename
-		if ( currentSet === 'default' ) {
-			mw.notify(
-				this.getMessage( 'layers-cannot-rename-default', 'The default layer set cannot be renamed' ),
-				{ type: 'warn' }
-			);
-			return;
-		}
-
-		// Prompt for new name
-		const promptMsg = this.getMessage(
-			'layers-rename-set-prompt',
-			'Enter new name for layer set:'
-		);
-		// eslint-disable-next-line no-alert
-		const newName = window.prompt( promptMsg, currentSet );
-
-		// User cancelled or empty input
-		if ( !newName || newName.trim() === '' ) {
-			return;
-		}
-
-		const trimmedName = newName.trim();
-
-		// No change
-		if ( trimmedName === currentSet ) {
-			return;
-		}
-
-		// Validate name format
-		if ( !/^[a-zA-Z0-9_-]{1,50}$/.test( trimmedName ) ) {
-			mw.notify(
-				this.getMessage(
-					'layers-invalid-setname',
-					'Invalid set name. Use only letters, numbers, hyphens, and underscores (1-50 characters).'
-				),
-				{ type: 'error' }
-			);
-			return;
-		}
-
-		// Call API to rename the set
-		if ( this.editor.apiManager && typeof this.editor.apiManager.renameLayerSet === 'function' ) {
-			this.editor.apiManager.renameLayerSet( currentSet, trimmedName ).then( () => {
-				// The APIManager reloads layers after rename, so we just update the selector
-				if ( this.editor.buildSetSelector ) {
-					this.editor.buildSetSelector();
-				} else if ( this.editor.revisionManager ) {
-					this.editor.revisionManager.buildSetSelector();
-				}
-			} ).catch( ( error ) => {
-				// Error notification is handled by APIManager
-				if ( mw.log && mw.log.error ) {
-					mw.log.error( '[UIManager] renameCurrentSet error:', error );
-				}
-			} );
-		} else {
-			mw.notify( this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' ), { type: 'error' } );
+	async renameCurrentSet() {
+		if ( this.setSelectorController ) {
+			return this.setSelectorController.renameCurrentSet();
 		}
 	}
 
 	/**
 	 * Add a new option to the set selector
+	 * Delegates to SetSelectorController
 	 * @param {string} name Set name
 	 * @param {boolean} select Whether to select the new option
 	 */
 	addSetOption( name, select = false ) {
-		if ( !this.setSelectEl ) {
-			return;
-		}
-
-		const option = document.createElement( 'option' );
-		option.value = name;
-		option.textContent = name;
-
-		// Insert before the "+ New" option
-		const newOption = this.setSelectEl.querySelector( 'option[value="__new__"]' );
-		if ( newOption ) {
-			this.setSelectEl.insertBefore( option, newOption );
-		} else {
-			this.setSelectEl.appendChild( option );
-		}
-
-		if ( select ) {
-			this.setSelectEl.value = name;
+		if ( this.setSelectorController ) {
+			this.setSelectorController.addSetOption( name, select );
 		}
 	}
 
 	getMessage( key, fallback = '' ) {
 		const messages = getClass( 'Core.Messages', 'layersMessages' );
 		return messages ? messages.get( key, fallback ) : fallback;
+	}
+
+	/**
+	 * Show a confirmation dialog using DialogManager
+	 * Replaces window.confirm() with an accessible, styled dialog
+	 *
+	 * @param {Object} options - Dialog options
+	 * @param {string} options.message - The confirmation message
+	 * @param {string} [options.title] - Dialog title
+	 * @param {string} [options.confirmText] - Text for confirm button
+	 * @param {string} [options.cancelText] - Text for cancel button
+	 * @param {boolean} [options.isDanger] - Whether this is a dangerous action
+	 * @return {Promise<boolean>} Resolves to true if confirmed, false if cancelled
+	 */
+	async showConfirmDialog( options ) {
+		if ( this.editor && this.editor.dialogManager ) {
+			return this.editor.dialogManager.showConfirmDialog( options );
+		}
+		// Fallback to native confirm if DialogManager not available
+		// eslint-disable-next-line no-alert
+		return window.confirm( options.message );
+	}
+
+	/**
+	 * Show an alert dialog using DialogManager
+	 * Replaces window.alert() with an accessible, styled dialog
+	 *
+	 * @param {Object} options - Dialog options
+	 * @param {string} options.message - The alert message
+	 * @param {string} [options.title] - Dialog title
+	 * @param {string} [options.buttonText] - Text for the OK button
+	 * @param {boolean} [options.isError] - Whether this is an error message
+	 * @return {Promise<void>} Resolves when dialog is dismissed
+	 */
+	async showAlertDialog( options ) {
+		if ( this.editor && this.editor.dialogManager ) {
+			return this.editor.dialogManager.showAlertDialog( options );
+		}
+		// Fallback to native alert if DialogManager not available
+		// eslint-disable-next-line no-alert
+		window.alert( options.message );
+	}
+
+	/**
+	 * Show a prompt dialog using DialogManager
+	 * Replaces window.prompt() with an accessible, styled dialog
+	 *
+	 * @param {Object} options - Dialog options
+	 * @param {string} options.message - The prompt message
+	 * @param {string} [options.title] - Dialog title
+	 * @param {string} [options.defaultValue] - Default input value
+	 * @param {string} [options.placeholder] - Input placeholder
+	 * @param {string} [options.confirmText] - Text for confirm button
+	 * @param {string} [options.cancelText] - Text for cancel button
+	 * @return {Promise<string|null>} Resolves to input value if confirmed, null if cancelled
+	 */
+	async showPromptDialog( options ) {
+		if ( this.editor && this.editor.dialogManager ) {
+			return this.editor.dialogManager.showPromptDialogAsync( options );
+		}
+		// Fallback to native prompt if DialogManager not available
+		// eslint-disable-next-line no-alert
+		return window.prompt( options.message, options.defaultValue || '' );
 	}
 
 	showSpinner( message ) {

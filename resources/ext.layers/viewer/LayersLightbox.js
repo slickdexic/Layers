@@ -288,6 +288,11 @@
 		 * @private
 		 */
 		renderViewer( imageUrl, layerData ) {
+			// Guard against calling after close
+			if ( !this.imageWrapper ) {
+				return;
+			}
+
 			// Clear loading indicator
 			this.imageWrapper.innerHTML = '';
 
@@ -348,6 +353,10 @@
 		 * @private
 		 */
 		showError( message ) {
+			// Guard against calling after close
+			if ( !this.imageWrapper ) {
+				return;
+			}
 			this.imageWrapper.innerHTML = '';
 			const error = document.createElement( 'div' );
 			error.className = 'layers-lightbox-error';
