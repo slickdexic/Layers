@@ -709,7 +709,7 @@ class WikitextHooks {
 	 * This method ensures both values come from the same queue index
 	 *
 	 * @param string $filename The filename (without namespace prefix)
-	 * @return array{setName: string|null, linkType: string|null}
+	 * @return array Array with 'setName' and 'linkType' keys (both string|null)
 	 */
 	public static function getFileParamsForRender( string $filename ): array {
 		// Initialize render count for this file if not set
