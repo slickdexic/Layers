@@ -2,6 +2,18 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.13] - 2025-12-23
+
+### Bug Fixes
+- **Fixed corner radius scaling on article pages** — Shape corner radii (`cornerRadius`, `pointRadius`, `valleyRadius`) now scale correctly when images are resized in article view. Previously, stars, polygons, textboxes, and rounded rectangles would display with full-size radii even when the image was scaled smaller, causing visual artifacts.
+
+### Technical
+- **Modified files**:
+  - `resources/ext.layers/LayersViewer.js` — Added scaling for `cornerRadius`, `pointRadius`, `valleyRadius` in `scaleLayerCoordinates()`
+  - `resources/ext.layers.shared/PolygonStarRenderer.js` — Added scaling in `drawPolygon()` and `drawStar()` when `scaled: false`
+
+---
+
 ## [1.1.12] - 2025-12-22
 
 ### Code Quality
