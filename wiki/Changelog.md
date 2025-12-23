@@ -4,6 +4,50 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.1 (December 23, 2025)
+
+### Bug Fixes
+- **Fixed corner radius scaling on article pages** — Shape corner radii (`cornerRadius`, `pointRadius`, `valleyRadius`) now scale correctly when images are resized in article view. Stars, polygons, textboxes, and rounded rectangles display properly at all sizes.
+
+### Developer Experience
+- **Docker-based PHP test scripts** — New npm scripts `test:php:docker` and `fix:php:docker` for Windows developers with composer conflicts
+
+### Testing
+- E2E test stability improvements
+
+---
+
+## Version 1.2.0 (December 22, 2025)
+
+### New Features
+- **Deep Linking to Editor** — URL parameters allow opening the editor with a specific layer set pre-loaded:
+  - `?action=editlayers&setname=anatomy` — Opens editor with "anatomy" layer set
+  - Also supports `layerset` and `layers` parameter aliases
+  - Set name validation: alphanumeric, hyphens, and underscores only (max 50 chars)
+
+- **Wikitext Link Options** — New `layerslink` parameter for controlling click behavior:
+  - `[[File:Example.jpg|layers=setname|layerslink=editor]]` — Opens layer editor
+  - `[[File:Example.jpg|layers=setname|layerslink=viewer]]` — Opens fullscreen lightbox
+  - `[[File:Example.jpg|layers=setname|layerslink=lightbox]]` — Alias for viewer mode
+  - Default behavior (no layerslink): Standard MediaWiki link to File page
+
+- **Fullscreen Lightbox Viewer** — New modal viewer for viewing layered images:
+  - Keyboard accessible: Escape key closes the lightbox
+  - Click outside image to close
+  - Loading states and error handling
+  - Proper accessibility attributes (ARIA)
+
+---
+
+## Version 1.1.13-REL1_39 (December 23, 2025)
+
+### Bug Fixes
+- **Fixed corner radius scaling on article pages** — Backport of the corner radius scaling fix from v1.2.1. Shape corner radii now scale correctly when images are resized in article view.
+
+> **Note:** This is a maintenance release for the REL1_39 branch (MediaWiki 1.39-1.43).
+
+---
+
 ## Version 1.1.12 (December 22, 2025)
 
 ### Code Quality

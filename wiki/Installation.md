@@ -12,7 +12,7 @@ This guide covers downloading, configuring, and setting up the Layers extension 
 | **PHP** | 8.1+ |
 | **Database** | MySQL 5.7+ / MariaDB 10.3+ / PostgreSQL 10+ / SQLite 3.8+ |
 
-> **Note:** For MediaWiki 1.39.x through 1.43.x, use the [REL1_39 branch](https://github.com/slickdexic/Layers/tree/REL1_39). The `main` branch requires MediaWiki 1.44+.
+> **Note:** For MediaWiki 1.39.x through 1.43.x, use the [REL1_39 branch](https://github.com/slickdexic/Layers/tree/REL1_39) (current version: **1.1.13**). The `main` branch requires MediaWiki 1.44+ (current version: **1.2.1**).
 
 ---
 
@@ -46,7 +46,7 @@ composer install --no-dev
 npm install
 ```
 
-> **Windows Users:** If you encounter issues with `composer`, you may have a Python package named "composer" shadowing PHP Composer. Use `php composer.phar install` instead.
+> **Windows Users:** If you encounter issues with `composer`, you may have a Python package named "composer" shadowing PHP Composer. Use `php composer.phar install` instead, or use the Docker-based test commands: `npm run test:php:docker`.
 
 ---
 

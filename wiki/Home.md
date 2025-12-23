@@ -20,6 +20,16 @@
 
 ---
 
+## 🆕 What's New in v1.2
+
+- **Deep Linking to Editor** — Open the editor with a specific layer set via URL parameters
+- **Fullscreen Lightbox Viewer** — View annotated images in a modal overlay
+- **Wikitext Link Options** — Control click behavior with `layerslink=editor` or `layerslink=viewer`
+
+See [[Changelog]] for full details.
+
+---
+
 ## 📚 Wiki Contents
 
 ### Getting Started
@@ -65,8 +75,9 @@
 
 | Metric | Value |
 |--------|-------|
-| **Version** | 1.1.12 |
-| **Release Date** | December 22, 2025 |
+| **Version (main)** | 1.2.1 |
+| **Version (REL1_39)** | 1.1.13 |
+| **Release Date** | December 23, 2025 |
 | **Test Suites** | 125 |
 | **Total Tests** | 6,479 |
 | **Code Coverage** | 92% |

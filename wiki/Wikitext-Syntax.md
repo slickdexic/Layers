@@ -88,6 +88,68 @@ Human heart with anatomical labels]]
 
 ---
 
+## Link Behavior (layerslink)
+
+*New in v1.2.0*
+
+Control what happens when users click on layered images with the `layerslink` parameter:
+
+| Value | Effect |
+|-------|--------|
+| (none) | Standard MediaWiki link to File page |
+| `editor` | Opens the layer editor for this image |
+| `viewer` | Opens fullscreen lightbox viewer |
+| `lightbox` | Alias for `viewer` |
+
+### Examples
+
+```wikitext
+<!-- Click opens the layer editor -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor]]
+
+<!-- Click opens fullscreen lightbox viewer -->
+[[File:Diagram.png|layers=anatomy|layerslink=viewer]]
+
+<!-- Lightbox is an alias for viewer -->
+[[File:Diagram.png|layers=anatomy|layerslink=lightbox]]
+
+<!-- Default behavior: click goes to File page -->
+[[File:Diagram.png|layers=anatomy]]
+```
+
+### Use Cases
+
+**Educational content** — Let students view annotations in a lightbox:
+```wikitext
+[[File:Cell_Diagram.png|thumb|300px|layers=organelles|layerslink=viewer|
+Click to view labeled organelles]]
+```
+
+**Collaborative editing** — Direct users to the editor:
+```wikitext
+[[File:Project_Map.png|thumb|400px|layers=draft|layerslink=editor|
+Click to add your annotations]]
+```
+
+---
+
+## Deep Linking to Editor
+
+*New in v1.2.0*
+
+You can link directly to the editor with a specific layer set pre-loaded using URL parameters:
+
+```
+/wiki/File:Example.jpg?action=editlayers&setname=anatomy
+```
+
+Supported URL parameters:
+- `setname` — Layer set name to load
+- `layerset` — Alias for `setname`
+- `layers` — Alias for `setname`
+
+---
+
 ## File Pages
 
 On **File:** pages, layers are **NOT automatically displayed**. You must explicitly enable them.
