@@ -2,6 +2,29 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.2] - 2025-12-23
+
+### Bug Fixes
+- **Fixed `layerslink=editor` and `layerslink=viewer` not working** — Deep linking parameters now correctly modify the image link destination. Previously, clicking layered images with these parameters would still navigate to the File: page instead of opening the editor or lightbox viewer. The fix ensures the `ThumbnailBeforeProduceHTML` hook properly modifies the anchor `href` attribute.
+- **Fixed editor dropdown showing 'default' on deep link** — When using `layerslink=editor` with a specific layer set (e.g., `layers=anatomy`), the set selector dropdown in the editor now correctly shows the loaded set name instead of always showing 'default'.
+
+### Technical
+- **Hook flow discovery**: MediaWiki 1.44 uses `ThumbnailBeforeProduceHTML` for thumbnail rendering instead of `MakeImageLink2`. The `$linkAttribs` parameter must be modified to change anchor destinations.
+- **Queue synchronization**: Added `$fileLinkTypes` queue in `WikitextHooks.php` to track `layerslink` values per file occurrence, synchronized with the existing `$fileSetNames` queue.
+- **Modified files**:
+  - `src/Hooks/WikitextHooks.php` — Added `$fileLinkTypes` queue and `getFileParamsForRender()` method for synchronized parameter retrieval
+  - `src/Hooks/Processors/ThumbnailProcessor.php` — Added `applyLayersLink()` method that modifies `$linkAttribs['href']` for deep linking
+  - `src/Hooks/Processors/ImageLinkProcessor.php` — Added `$linkTypeFromQueue` parameter support
+  - `src/Hooks/Processors/LayersParamExtractor.php` — Enhanced `extractLayersLink()` to check nested parameter locations
+  - `resources/ext.layers.editor/APIManager.js` — Fixed ordering: `currentSetName` is now set before `buildSetSelector()` is called
+  - `wiki/Wikitext-Syntax.md` — Clarified that `layerslink` must be used with `layers`
+
+### Testing
+- **6,479 tests passing** (Jest)
+- **All PHP linting and style checks pass**
+
+---
+
 ## [1.2.1] - 2025-12-23
 
 ### Bug Fixes

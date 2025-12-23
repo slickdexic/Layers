@@ -439,14 +439,14 @@
 					this.editor.stateManager.set( 'setRevisions', [] );
 				}
 
+				// Update current set name in state FIRST (before building selectors)
+				this.editor.stateManager.set( 'currentSetName', setName );
+
 				// Update named sets list if provided
 				if ( Array.isArray( layersInfo.named_sets ) ) {
 					this.editor.stateManager.set( 'namedSets', layersInfo.named_sets );
 					this.editor.buildSetSelector();
 				}
-
-				// Update current set name in state
-				this.editor.stateManager.set( 'currentSetName', setName );
 
 				// Update the revision selector UI
 				this.editor.buildRevisionSelector();

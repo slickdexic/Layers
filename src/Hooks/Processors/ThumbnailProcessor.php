@@ -56,15 +56,17 @@ class ThumbnailProcessor {
 	 *
 	 * @param mixed $thumbnail The thumbnail object
 	 * @param array &$attribs Image attributes (modified by reference)
-	 * @param array &$linkAttribs Link attributes
-	 * @param callable|null $getFileSetName Callback to get file set name from WikitextHooks queue
+	 * @param array &$linkAttribs Link attributes (modified by reference for layerslink)
+	 * @param string|null $setNameFromQueue Set name from wikitext queue
+	 * @param string|null $linkTypeFromQueue Link type from wikitext queue (editor, viewer, lightbox)
 	 * @return bool
 	 */
 	public function processThumbnail(
 		$thumbnail,
 		array &$attribs,
 		array &$linkAttribs,
-		?callable $getFileSetName = null
+		?string $setNameFromQueue = null,
+		?string $linkTypeFromQueue = null
 	): bool {
 		$fileName = ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() )
 			? $thumbnail->getFile()->getName()
@@ -73,6 +75,12 @@ class ThumbnailProcessor {
 
 		// Extract layer data and flag from transform params
 		[ $layerData, $layersFlag ] = $this->extractLayerDataFromThumbnail( $thumbnail );
+
+		// Use set name from queue if not in params
+		if ( $layersFlag === null && $setNameFromQueue !== null ) {
+			$layersFlag = $setNameFromQueue;
+			$this->log( "Using set name from queue: $setNameFromQueue" );
+		}
 
 		// Try to get layers flag from link href if not in params
 		if ( $layersFlag === null && isset( $linkAttribs['href'] ) ) {
@@ -89,16 +97,23 @@ class ThumbnailProcessor {
 
 		// Try to fetch from DB if no data yet
 		if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
-			$layerData = $this->fetchLayerDataForThumbnail(
+			$layerData = $this->fetchLayerDataForThumbnailDirect(
 				$thumbnail,
 				$layersFlag,
-				$linkAttribs,
-				$getFileSetName
+				$linkAttribs
 			);
 		}
 
 		// Inject layer data into attributes
 		$this->injectThumbnailLayerData( $attribs, $layerData, $layersFlag, $thumbnail );
+
+		// Apply layerslink deep linking if specified
+		if ( $linkTypeFromQueue !== null && method_exists( $thumbnail, 'getFile' ) ) {
+			$file = $thumbnail->getFile();
+			if ( $file ) {
+				$this->applyLayersLink( $linkAttribs, $attribs, $file, $linkTypeFromQueue, $layersFlag );
+			}
+		}
 
 		return true;
 	}
@@ -408,6 +423,106 @@ class ThumbnailProcessor {
 				$logger->error( 'Layers: Unable to resolve LayersDatabase service', [ 'exception' => $e ] );
 			}
 			return null;
+		}
+	}
+
+	/**
+	 * Fetch layer data from database for a thumbnail (direct version without callback).
+	 *
+	 * @param mixed $thumbnail
+	 * @param string|null $layersFlag
+	 * @param array $linkAttribs
+	 * @return array|null
+	 */
+	private function fetchLayerDataForThumbnailDirect(
+		$thumbnail,
+		?string $layersFlag,
+		array $linkAttribs
+	): ?array {
+		$file = $thumbnail->getFile();
+		if ( !$file ) {
+			return null;
+		}
+
+		$shouldFallback = false;
+
+		// Check if flag indicates layers should show
+		if ( $layersFlag !== null && !in_array( $layersFlag, [ 'off', 'none' ], true ) ) {
+			$shouldFallback = true;
+		}
+
+		// Check href for layers param
+		if ( !$shouldFallback && isset( $linkAttribs['href'] ) ) {
+			$hrefParam = $this->paramExtractor->extractFromHref( (string)$linkAttribs['href'] );
+			if ( $hrefParam !== null && !in_array( $hrefParam, [ 'off', 'none' ], true ) ) {
+				$shouldFallback = true;
+				$layersFlag = $hrefParam;
+			}
+		}
+
+		// Enable for editlayers action
+		if ( !$shouldFallback && $this->isEditLayersAction() ) {
+			$shouldFallback = true;
+			$this->log( 'Enabling fallback for action=editlayers' );
+		}
+
+		if ( !$shouldFallback ) {
+			return null;
+		}
+
+		// Fetch from database
+		return $this->fetchLayersFromDatabase( $file, $layersFlag );
+	}
+
+	/**
+	 * Apply layerslink deep linking by modifying link attributes.
+	 *
+	 * @param array &$linkAttribs Link attributes (modified by reference)
+	 * @param array &$attribs Image attributes (modified by reference for data attrs)
+	 * @param mixed $file The File object
+	 * @param string $linkType 'editor', 'viewer', or 'lightbox'
+	 * @param string|null $setName Optional layer set name
+	 */
+	private function applyLayersLink(
+		array &$linkAttribs,
+		array &$attribs,
+		$file,
+		string $linkType,
+		?string $setName
+	): void {
+		$filename = $file->getName();
+		$title = $file->getTitle();
+
+		$this->log( sprintf( 'applyLayersLink: file=%s, linkType=%s, setName=%s', $filename, $linkType, $setName ?? 'null' ) );
+
+		if ( $this->paramExtractor->isEditorLink( $linkType ) ) {
+			// Build editor URL: File:Name.jpg?action=editlayers[&setname=name]
+			$editorUrl = $title->getLocalURL( [
+				'action' => 'editlayers',
+				'setname' => $setName ?? ''
+			] );
+
+			$linkAttribs['href'] = $editorUrl;
+			$linkAttribs['data-layers-link'] = 'editor';
+			$linkAttribs['title'] = wfMessage( 'layers-link-editor-title' )->text();
+			$attribs['data-layers-link'] = 'editor';
+
+			$this->log( "Applied editor deep link: $editorUrl" );
+
+		} elseif ( $this->paramExtractor->isViewerLink( $linkType ) ) {
+			// For viewer/lightbox, set up client-side handler
+			$viewerUrl = $title->getLocalURL( [
+				'layers' => $setName ?? 'on'
+			] );
+
+			$linkAttribs['href'] = $viewerUrl;
+			$linkAttribs['data-layers-link'] = 'viewer';
+			$linkAttribs['data-layers-setname'] = $setName ?? '';
+			$linkAttribs['title'] = wfMessage( 'layers-link-viewer-title' )->text();
+			$linkAttribs['class'] = trim( ( $linkAttribs['class'] ?? '' ) . ' layers-lightbox-trigger' );
+			$attribs['data-layers-link'] = 'viewer';
+
+			$this->log( "Applied viewer deep link: $viewerUrl" );
 		}
 	}
 }

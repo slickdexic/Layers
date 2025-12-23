@@ -94,6 +94,8 @@ Human heart with anatomical labels]]
 
 Control what happens when users click on layered images with the `layerslink` parameter:
 
+> **Note:** `layerslink` must be used together with `layers`. It controls the click behavior for images that have layers enabled. Without `layers=on` or `layers=<setname>`, the `layerslink` parameter has no effect.
+
 | Value | Effect |
 |-------|--------|
 | (none) | Standard MediaWiki link to File page |
@@ -104,8 +106,11 @@ Control what happens when users click on layered images with the `layerslink` pa
 ### Examples
 
 ```wikitext
-<!-- Click opens the layer editor -->
+<!-- Click opens the layer editor with the 'anatomy' set -->
 [[File:Diagram.png|layers=anatomy|layerslink=editor]]
+
+<!-- Click opens the layer editor with the default set -->
+[[File:Diagram.png|layers=on|layerslink=editor]]
 
 <!-- Click opens fullscreen lightbox viewer -->
 [[File:Diagram.png|layers=anatomy|layerslink=viewer]]

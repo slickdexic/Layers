@@ -155,6 +155,13 @@ class WikitextHooks {
 	private static $fileRenderCount = [];
 
 	/**
+	 * Queue of layerslink values per filename detected from wikitext (in order of appearance)
+	 * e.g. ['ImageTest02.jpg' => ['editor', null, 'viewer']]
+	 * @var array<string, array<string|null>>
+	 */
+	private static $fileLinkTypes = [];
+
+	/**
 	 * Handle file parameter parsing in wikitext
 	 * Called when MediaWiki processes [[File:...]] syntax
 	 *
@@ -253,14 +260,28 @@ class WikitextHooks {
 		...$rest
 	): bool {
 		$processor = self::getImageLinkProcessor();
-		$setNameFromQueue = $file ? self::getFileSetName( $file->getName() ) : null;
+		$filename = $file ? $file->getName() : null;
+
+		// Get both params together to ensure they're from the same queue index
+		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
+
+		// DEBUG: Log what we're receiving
+		self::log( sprintf(
+			'MakeImageLink2: file=%s, setName=%s, linkType=%s, res_len=%d',
+			$filename ?? 'null',
+			$fileParams['setName'] ?? 'null',
+			$fileParams['linkType'] ?? 'null',
+			strlen( $res )
+		) );
+
 		$result = $processor->processImageLink(
 			$file,
 			$handlerParams,
 			$frameParams,
 			$res,
-			$setNameFromQueue,
-			'MakeImageLink2'
+			$fileParams['setName'],
+			'MakeImageLink2',
+			$fileParams['linkType']
 		);
 
 		// Sync page-level flag
@@ -289,13 +310,19 @@ class WikitextHooks {
 		$linker, $title, $file, $frameParams, $handlerParams, $time, &$res, ...$rest
 	): bool {
 		$processor = self::getImageLinkProcessor();
+		$filename = $file ? $file->getName() : null;
+
+		// Get both params together to ensure they're from the same queue index
+		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
+
 		$result = $processor->processImageLink(
 			$file,
 			$handlerParams,
 			$frameParams,
 			$res,
-			null,
-			'LinkerMakeImageLink'
+			$fileParams['setName'],
+			'LinkerMakeImageLink',
+			$fileParams['linkType']
 		);
 
 		// Sync page-level flag
@@ -475,11 +502,22 @@ class WikitextHooks {
 	 */
 	public static function onThumbnailBeforeProduceHTML( $thumbnail, array &$attribs, array &$linkAttribs ): bool {
 		$processor = self::getThumbnailProcessor();
+
+		// Get filename for queue lookup
+		$filename = null;
+		if ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() ) {
+			$filename = $thumbnail->getFile()->getName();
+		}
+
+		// Get both set name and link type from queue
+		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
+
 		$result = $processor->processThumbnail(
 			$thumbnail,
 			$attribs,
 			$linkAttribs,
-			[ __CLASS__, 'getFileSetName' ]
+			$fileParams['setName'],
+			$fileParams['linkType']
 		);
 		if ( $processor->pageHasLayers() ) {
 			self::$pageHasLayers = true;
@@ -532,7 +570,8 @@ class WikitextHooks {
 		if ( $layersRaw === true || $layersRaw === 'on' || $layersRaw === 'all' ) {
 			// Show latest/default set
 			if ( $file ) {
-				$setName = self::getFileSetName( $file->getName() );
+				// Use peek to avoid consuming the queue entry (it will be consumed in MakeImageLink2)
+				$setName = self::peekFileSetName( $file->getName() );
 				$injector->addLatestLayersToImage( $file, $params, $setName );
 			}
 		} elseif (
@@ -623,10 +662,26 @@ class WikitextHooks {
 	}
 
 	/**
+	 * Peek at the stored set name for the current occurrence without consuming it
+	 * Use this when you need the value but don't want to advance the queue
+	 * @param string $filename The filename (without namespace prefix)
+	 * @return string|null The set name, or null if not specified
+	 */
+	public static function peekFileSetName( string $filename ): ?string {
+		if ( !isset( self::$fileSetNames[$filename] ) || empty( self::$fileSetNames[$filename] ) ) {
+			return null;
+		}
+
+		$index = self::$fileRenderCount[$filename] ?? 0;
+		return self::$fileSetNames[$filename][$index] ?? null;
+	}
+
+	/**
 	 * Get the stored set name for the next occurrence of a specific file
 	 * This consumes from the queue, so each call returns the next set name in order
 	 * @param string $filename The filename (without namespace prefix)
 	 * @return string|null The set name, or null if not specified
+	 * @deprecated Use getFileParamsForRender() to get both setName and linkType together
 	 */
 	public static function getFileSetName( string $filename ): ?string {
 		if ( !isset( self::$fileSetNames[$filename] ) || empty( self::$fileSetNames[$filename] ) ) {
@@ -650,12 +705,59 @@ class WikitextHooks {
 	}
 
 	/**
+	 * Get both set name and link type for the next occurrence of a file
+	 * This method ensures both values come from the same queue index
+	 *
+	 * @param string $filename The filename (without namespace prefix)
+	 * @return array{setName: string|null, linkType: string|null}
+	 */
+	public static function getFileParamsForRender( string $filename ): array {
+		// Initialize render count for this file if not set
+		if ( !isset( self::$fileRenderCount[$filename] ) ) {
+			self::$fileRenderCount[$filename] = 0;
+		}
+
+		$index = self::$fileRenderCount[$filename];
+
+		// Get both values at the same index
+		$setName = self::$fileSetNames[$filename][$index] ?? null;
+		$linkType = self::$fileLinkTypes[$filename][$index] ?? null;
+
+		// Increment counter for next call
+		self::$fileRenderCount[$filename]++;
+
+		return [
+			'setName' => $setName,
+			'linkType' => $linkType
+		];
+	}
+
+	/**
+	 * Get the stored link type for the next occurrence of a specific file
+	 * This is used to match render calls to their corresponding layerslink value
+	 * @param string $filename The filename (without namespace prefix)
+	 * @return string|null The link type (editor, viewer, lightbox), or null if not specified
+	 * @deprecated Use getFileParamsForRender() instead to avoid counter sync issues
+	 */
+	public static function getFileLinkType( string $filename ): ?string {
+		if ( !isset( self::$fileLinkTypes[$filename] ) || empty( self::$fileLinkTypes[$filename] ) ) {
+			return null;
+		}
+
+		// Use the SAME counter as getFileSetName to stay in sync
+		// Note: This assumes getFileLinkType is always called WITH getFileSetName
+		$index = ( self::$fileRenderCount[$filename] ?? 1 ) - 1;
+		return self::$fileLinkTypes[$filename][$index] ?? null;
+	}
+
+	/**
 	 * Reset the page layers flag (useful for testing)
 	 */
 	public static function resetPageLayersFlag(): void {
 		self::$pageHasLayers = false;
 		self::$fileSetNames = [];
 		self::$fileRenderCount = [];
+		self::$fileLinkTypes = [];
 	}
 
 	/**
@@ -754,6 +856,50 @@ class WikitextHooks {
 					self::$fileSetNames[$filename][] = null;
 					$queueLen = count( self::$fileSetNames[$filename] );
 					self::log( "No layers param for $filename (occurrence #$queueLen, placeholder added)" );
+				}
+			}
+
+			// Extract layerslink= values (editor, viewer, lightbox)
+			$layerslinkPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layerslink\s*=\s*([^|\]]+)/i';
+			$layerslinkMap = [];
+			$linkMatchCount = preg_match_all( $layerslinkPattern, $text, $linkMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+			self::log( "Layerslink regex matched $linkMatchCount times" );
+			if ( $linkMatchCount ) {
+				foreach ( $linkMatches as $match ) {
+					$filename = trim( $match[1][0] );
+					$offset = $match[0][1];
+					$linkValue = strtolower( trim( $match[2][0] ) );
+					// Validate against allowed values
+					if ( in_array( $linkValue, [ 'editor', 'viewer', 'lightbox' ], true ) ) {
+						if ( !isset( $layerslinkMap[$filename] ) ) {
+							$layerslinkMap[$filename] = [];
+						}
+						$layerslinkMap[$filename][$offset] = $linkValue;
+						self::log( "Detected layerslink=$linkValue for $filename at offset $offset" );
+					}
+				}
+			}
+
+			// Build fileLinkTypes queues matching file render order
+			foreach ( $allFileMatches as $fileMatch ) {
+				$filename = $fileMatch['filename'];
+				$offset = $fileMatch['offset'];
+
+				// Initialize queue for this file if not exists
+				if ( !isset( self::$fileLinkTypes[$filename] ) ) {
+					self::$fileLinkTypes[$filename] = [];
+				}
+
+				// Check if this occurrence has a layerslink= value
+				$linkType = null;
+				if ( isset( $layerslinkMap[$filename][$offset] ) ) {
+					$linkType = $layerslinkMap[$filename][$offset];
+					unset( $layerslinkMap[$filename][$offset] );
+				}
+
+				self::$fileLinkTypes[$filename][] = $linkType;
+				if ( $linkType !== null ) {
+					self::log( "Queued layerslink=$linkType for $filename" );
 				}
 			}
 

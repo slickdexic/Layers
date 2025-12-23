@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.1.12 (December 2025)  
+> **Version:** 1.2.2 (December 2025)  
 > **Status:** ✅ Production-ready. All P0 and P1 issues resolved.  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >

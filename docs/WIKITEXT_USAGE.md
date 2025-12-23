@@ -113,6 +113,34 @@ The extension automatically:
 5. Caches the result for performance
 
 
+## Deep Linking with layerslink
+
+*New in v1.2.2*
+
+Control what happens when users click on layered images:
+
+```text
+<!-- Click opens the layer editor with the specified set -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor]]
+
+<!-- Click opens fullscreen lightbox viewer -->
+[[File:Diagram.png|layers=anatomy|layerslink=viewer]]
+```
+
+| Value | Effect |
+|-------|--------|
+| (none) | Standard link to File: page |
+| `editor` | Opens layer editor for this image/set |
+| `viewer` | Opens fullscreen lightbox viewer |
+| `lightbox` | Alias for `viewer` |
+
+> **Note:** `layerslink` requires `layers=on` or `layers=<setname>` to be present.
+
+You can also link directly to the editor via URL:
+```
+/wiki/File:Example.jpg?action=editlayers&setname=anatomy
+```
+
 ## Performance Notes
 
 - Layered thumbnails are cached just like normal thumbnails

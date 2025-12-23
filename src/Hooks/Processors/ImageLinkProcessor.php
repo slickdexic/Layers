@@ -93,6 +93,7 @@ class ImageLinkProcessor {
 	 * @param string &$res The HTML result to modify
 	 * @param string|null $setNameFromQueue Optional set name from wikitext queue
 	 * @param string $context Hook context for logging
+	 * @param string|null $linkTypeFromQueue Optional layerslink type from wikitext queue (editor, viewer, lightbox)
 	 * @return bool True to continue hook processing
 	 */
 	public function processImageLink(
@@ -101,7 +102,8 @@ class ImageLinkProcessor {
 		array $frameParams,
 		string &$res,
 		?string $setNameFromQueue = null,
-		string $context = 'ImageLink'
+		string $context = 'ImageLink',
+		?string $linkTypeFromQueue = null
 	): bool {
 		try {
 			// Extract layers flag from all available sources
@@ -118,7 +120,11 @@ class ImageLinkProcessor {
 			}
 
 			// Extract layerslink parameter for deep linking
+			// First try from params, then fall back to queue
 			$layersLink = $this->paramExtractor->extractLayersLink( $handlerParams, $frameParams );
+			if ( $layersLink === null && $linkTypeFromQueue !== null ) {
+				$layersLink = $linkTypeFromQueue;
+			}
 
 			// Get set name for deep linking
 			$setName = $this->paramExtractor->getSetName( $layersFlag );
@@ -129,8 +135,23 @@ class ImageLinkProcessor {
 			// Check for direct JSON layer data in params
 			$layersArray = $this->paramExtractor->extractLayersJson( $handlerParams );
 
+			// Determine if layers are enabled from any source:
+			// - $layersFlag: extracted from handler/frame params, link attribs, or data-mw
+			// - $setNameFromQueue: extracted from wikitext by onParserBeforeInternalParse
+			// - $layersArray: direct JSON layer data in params
+			$layersEnabled = ( $layersFlag !== null || $setNameFromQueue !== null || $layersArray !== null );
+
+			// DEBUG: Log state
+			$this->logDebug( sprintf(
+				'processImageLink: layersFlag=%s, setNameFromQueue=%s, linkTypeFromQueue=%s, layersEnabled=%s',
+				$layersFlag ?? 'null',
+				$setNameFromQueue ?? 'null',
+				$linkTypeFromQueue ?? 'null',
+				$layersEnabled ? 'yes' : 'no'
+			) );
+
 			// Enable layers if we have a valid parameter or direct JSON
-			if ( $file && ( $layersFlag !== null || $layersArray !== null ) ) {
+			if ( $file && $layersEnabled ) {
 				if ( $layersArray === null ) {
 					// No direct JSON - fetch from database
 					$res = $this->injectLayersFromDatabase(
@@ -150,12 +171,17 @@ class ImageLinkProcessor {
 				}
 
 				// If no layers were found but intent was explicit, add intent marker
-				if ( strpos( $res, 'data-layer-data=' ) === false && $layersFlag !== null ) {
+				if ( strpos( $res, 'data-layer-data=' ) === false && $layersEnabled ) {
 					$res = $this->htmlInjector->injectIntentMarker( $res );
 				}
 
-				// Apply layerslink deep linking if specified
-				if ( $layersLink !== null && $file ) {
+				// Apply layerslink deep linking if specified (only when layers are enabled)
+				if ( $layersLink !== null ) {
+					$this->logDebug( sprintf(
+						'Calling applyLayersLink: linkType=%s, setName=%s',
+						$layersLink,
+						$setName ?? 'null'
+					) );
 					$res = $this->applyLayersLink( $res, $file, $layersLink, $setName );
 				}
 			}
