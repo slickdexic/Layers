@@ -86,6 +86,26 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 [[File:MyImage.jpg|500px|layers=none]]                   <!-- No layers -->
 ```
 
+### Deep Linking (v1.2.0+)
+
+Control what happens when users click on layered images:
+
+```wikitext
+[[File:Diagram.png|layers=anatomy|layerslink=editor]]  <!-- Click opens editor -->
+[[File:Diagram.png|layers=anatomy|layerslink=viewer]]  <!-- Click opens lightbox -->
+```
+
+| Value | Effect |
+|-------|--------|
+| `editor` | Opens the layer editor for this image |
+| `viewer` | Opens fullscreen lightbox viewer |
+| `lightbox` | Alias for `viewer` |
+
+You can also link directly to the editor via URL:
+```
+/wiki/File:Example.jpg?action=editlayers&setname=anatomy
+```
+
 > **Note:** On File: pages, layers are NOT auto-displayed. You must explicitly use `layers=on` or `layers=setname`.
 
 ---
