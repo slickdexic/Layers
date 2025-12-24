@@ -1514,4 +1514,295 @@ describe( 'LayersValidator', () => {
 			expect( result.isValid ).toBe( true );
 		} );
 	} );
+
+	// ============================================
+	// Fallback Path Tests (for code coverage)
+	// ============================================
+
+	describe( 'Fallback Paths', () => {
+		describe( 'isValidNumber fallback', () => {
+			it( 'should use fallback when ValidationHelpers unavailable', () => {
+				// Remove ValidationHelpers
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				expect( validator.isValidNumber( 42 ) ).toBe( true );
+				expect( validator.isValidNumber( 3.14 ) ).toBe( true );
+				expect( validator.isValidNumber( NaN ) ).toBe( false );
+				expect( validator.isValidNumber( Infinity ) ).toBe( false );
+				expect( validator.isValidNumber( 'not a number' ) ).toBe( false );
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+		} );
+
+		describe( 'isValidColor fallback', () => {
+			it( 'should validate hex colors in fallback mode', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				expect( validator.isValidColor( '#fff' ) ).toBe( true );
+				expect( validator.isValidColor( '#ffffff' ) ).toBe( true );
+				expect( validator.isValidColor( '#ffff' ) ).toBe( true ); // 4 digit (with alpha)
+				expect( validator.isValidColor( '#ffffffff' ) ).toBe( true ); // 8 digit
+				expect( validator.isValidColor( '#zzzzzz' ) ).toBe( false );
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+
+			it( 'should validate rgb/rgba colors in fallback mode', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				expect( validator.isValidColor( 'rgb(255, 0, 0)' ) ).toBe( true );
+				expect( validator.isValidColor( 'rgba(255, 0, 0, 0.5)' ) ).toBe( true );
+				expect( validator.isValidColor( 'rgb(300, 0, 0)' ) ).toBe( false ); // Out of range
+				expect( validator.isValidColor( 'rgb(-1, 0, 0)' ) ).toBe( false ); // Negative
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+
+			it( 'should validate hsl/hsla colors in fallback mode', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				expect( validator.isValidColor( 'hsl(180, 50%, 50%)' ) ).toBe( true );
+				expect( validator.isValidColor( 'hsla(180, 50%, 50%, 0.5)' ) ).toBe( true );
+				expect( validator.isValidColor( 'hsl(400, 50%, 50%)' ) ).toBe( false ); // Hue > 360
+				expect( validator.isValidColor( 'hsl(180, 150%, 50%)' ) ).toBe( false ); // Saturation > 100
+				expect( validator.isValidColor( 'hsl(180, 50%, 150%)' ) ).toBe( false ); // Lightness > 100
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+
+			it( 'should validate named colors in fallback mode', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				expect( validator.isValidColor( 'red' ) ).toBe( true );
+				expect( validator.isValidColor( 'transparent' ) ).toBe( true );
+				expect( validator.isValidColor( 'BLUE' ) ).toBe( true ); // Case insensitive
+				expect( validator.isValidColor( 'notacolor' ) ).toBe( false );
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+
+			it( 'should reject non-string colors in fallback mode', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				expect( validator.isValidColor( 123 ) ).toBe( false );
+				expect( validator.isValidColor( null ) ).toBe( false );
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+
+			it( 'should reject extremely long color strings in fallback mode', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				const longString = 'a'.repeat( 100 );
+				expect( validator.isValidColor( longString ) ).toBe( false );
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+		} );
+
+		describe( 'containsScriptInjection fallback', () => {
+			it( 'should detect script injection in fallback mode', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				expect( validator.containsScriptInjection( '<script>alert(1)</script>' ) ).toBe( true );
+				expect( validator.containsScriptInjection( 'javascript:void(0)' ) ).toBe( true );
+				expect( validator.containsScriptInjection( 'onclick=alert(1)' ) ).toBe( true );
+				expect( validator.containsScriptInjection( 'data:text/html' ) ).toBe( true );
+				expect( validator.containsScriptInjection( 'Hello World' ) ).toBe( false );
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+		} );
+
+		describe( 'getMessage fallback', () => {
+			it( 'should use fallback messages when i18n unavailable', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				const originalLayersMessages = window.layersMessages;
+				const originalMw = window.mw;
+
+				validator.ValidationHelpers = null;
+				window.layersMessages = null;
+				window.mw = null;
+
+				const message = validator.getMessage( 'layers-validation-layer-invalid' );
+				expect( message ).toBe( 'Invalid layer object' );
+
+				validator.ValidationHelpers = originalHelpers;
+				window.layersMessages = originalLayersMessages;
+				window.mw = originalMw;
+			} );
+
+			it( 'should substitute parameters in fallback messages', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				const originalLayersMessages = window.layersMessages;
+				const originalMw = window.mw;
+
+				validator.ValidationHelpers = null;
+				window.layersMessages = null;
+				window.mw = null;
+
+				const message = validator.getMessage( 'layers-validation-type-invalid', 'badtype' );
+				expect( message ).toBe( 'Invalid layer type: badtype' );
+
+				validator.ValidationHelpers = originalHelpers;
+				window.layersMessages = originalLayersMessages;
+				window.mw = originalMw;
+			} );
+
+			it( 'should return key for unknown message', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				const originalLayersMessages = window.layersMessages;
+				const originalMw = window.mw;
+
+				validator.ValidationHelpers = null;
+				window.layersMessages = null;
+				window.mw = null;
+
+				const message = validator.getMessage( 'unknown-key' );
+				expect( message ).toBe( 'unknown-key' );
+
+				validator.ValidationHelpers = originalHelpers;
+				window.layersMessages = originalLayersMessages;
+				window.mw = originalMw;
+			} );
+
+			it( 'should use layersMessages when available', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+
+				const mockMessages = {
+					get: jest.fn( () => 'Translated message' ),
+					getWithParams: jest.fn( () => 'Translated with params' )
+				};
+				window.layersMessages = mockMessages;
+
+				const message = validator.getMessage( 'layers-validation-layer-invalid' );
+				expect( mockMessages.get ).toHaveBeenCalledWith( 'layers-validation-layer-invalid', expect.any( String ) );
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+
+			it( 'should use mw.message when layersMessages unavailable', () => {
+				const originalHelpers = validator.ValidationHelpers;
+				validator.ValidationHelpers = null;
+				window.layersMessages = null;
+
+				const mockMsg = {
+					text: jest.fn( () => 'MW message' ),
+					params: jest.fn( function () {
+						return this;
+					} )
+				};
+				window.mw = {
+					message: jest.fn( () => mockMsg )
+				};
+
+				const message = validator.getMessage( 'layers-validation-layer-invalid' );
+				expect( window.mw.message ).toHaveBeenCalledWith( 'layers-validation-layer-invalid' );
+
+				validator.ValidationHelpers = originalHelpers;
+			} );
+		} );
+
+		describe( 'showValidationErrors fallback', () => {
+			it( 'should use mw.log.error when mw.notify unavailable', () => {
+				const logError = jest.fn();
+				window.mw = {
+					notify: null,
+					log: { error: logError }
+				};
+
+				validator.showValidationErrors( [ 'Error 1', 'Error 2' ] );
+
+				expect( logError ).toHaveBeenCalledWith( 'Layers validation errors:', [ 'Error 1', 'Error 2' ] );
+			} );
+
+			it( 'should not throw when both mw.notify and mw.log unavailable', () => {
+				window.mw = {};
+
+				expect( () => validator.showValidationErrors( [ 'Error' ] ) ).not.toThrow();
+			} );
+		} );
+	} );
+
+	// ============================================
+	// createInputValidator Extended Tests
+	// ============================================
+
+	describe( 'createInputValidator extended', () => {
+		let mockInput;
+
+		beforeEach( () => {
+			mockInput = {
+				value: '',
+				style: {},
+				parentNode: {
+					insertBefore: jest.fn()
+				},
+				nextSibling: null,
+				addEventListener: jest.fn(),
+				removeEventListener: jest.fn()
+			};
+
+			global.document = {
+				createElement: jest.fn( () => ( {
+					className: '',
+					textContent: '',
+					style: {},
+					parentNode: {
+						removeChild: jest.fn()
+					}
+				} ) )
+			};
+		} );
+
+		it( 'should invalidate text that is too long', () => {
+			mockInput.value = 'a'.repeat( 600 ); // Exceeds maxTextLength of 500
+			const inputValidator = validator.createInputValidator( mockInput, 'text' );
+
+			expect( inputValidator.validate() ).toBe( false );
+		} );
+
+		it( 'should respect custom maxLength option', () => {
+			mockInput.value = 'a'.repeat( 50 );
+			const inputValidator = validator.createInputValidator( mockInput, 'text', { maxLength: 30 } );
+
+			expect( inputValidator.validate() ).toBe( false );
+		} );
+
+		it( 'should invalidate non-numeric value for number type', () => {
+			mockInput.value = 'not a number';
+			const inputValidator = validator.createInputValidator( mockInput, 'number' );
+
+			expect( inputValidator.validate() ).toBe( false );
+		} );
+
+		it( 'should validate empty value for all types', () => {
+			mockInput.value = '';
+			const numberValidator = validator.createInputValidator( mockInput, 'number' );
+			const colorValidator = validator.createInputValidator( mockInput, 'color' );
+			const textValidator = validator.createInputValidator( mockInput, 'text' );
+
+			expect( numberValidator.validate() ).toBe( true );
+			expect( colorValidator.validate() ).toBe( true );
+			expect( textValidator.validate() ).toBe( true );
+		} );
+
+		it( 'should run initial validation when input has value', () => {
+			mockInput.value = 'initial value';
+			const inputValidator = validator.createInputValidator( mockInput, 'text' );
+
+			// The validate function should have been called during initialization
+			expect( mockInput.parentNode.insertBefore ).not.toHaveBeenCalled(); // No error for valid text
+		} );
+	} );
 } );
