@@ -72,14 +72,19 @@ All **P0 (Critical)** and **P1 (Important)** issues have been resolved. The exte
 
 ## Phase 2: Code Quality (P2) - In Progress
 
-### P2.1 Improve Low-Coverage Files ⏳
+### P2.1 Improve Low-Coverage Files ✅ MOSTLY COMPLETE
 
-| File | Current | Target | Effort |
-|------|---------|--------|--------|
-| CanvasManager.js | 64.84% branch | 75% | 4-6 hours |
-| LayersValidator.js | 72% branch | 80% | 2-3 hours |
-| LayersNamespace.js | 60.65% branch | 75% | 2 hours |
-| ColorPickerDialog.js | 68.99% branch | 80% | 2 hours |
+| File | Before | After | Status |
+|------|--------|-------|--------|
+| ColorPickerDialog.js | 68.99% branch | 88.37% branch | ✅ Done |
+| LayersValidator.js | 72% branch | 95.27% branch | ✅ Done |
+| LayersEditorModal.js | 65.51% branch | 77.58% branch | ✅ Done |
+| CanvasManager.js | 64.84% branch | 64.84% branch | ⏳ Remaining |
+| LayersNamespace.js | 60.65% branch | 60.65% branch | ⚠️ Dead code |
+
+**Notes:**
+- LayersNamespace.js has low coverage due to unused deprecation proxy code (dead code by design)
+- CanvasManager.js is the largest file (1,805 lines) and would require 4-6 hours of focused effort
 
 ### P2.2 Reduce ESLint Disable Count ⚠️ ACCEPTABLE
 
