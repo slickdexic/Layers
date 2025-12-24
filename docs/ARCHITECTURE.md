@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 23, 2025  
-**Version:** 1.2.4
+**Last Updated:** December 24, 2025  
+**Version:** 1.2.5
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
