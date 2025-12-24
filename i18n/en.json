@@ -197,7 +197,7 @@
 	"layers-blend-lighten": "Lighten",
 	"layers-blend-difference": "Difference",
 	"layers-blend-exclusion": "Exclusion",
-	"layers-blend-blur": "Blur",
+	"layers-blend-blur": "Blur (Fill)",
 	"layers-code-none": "No layers visible.",
 	"layers-code-enable": "Enable layers to see the code.",
 	"layers-code-all-visible": "All layers visible:",

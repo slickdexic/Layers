@@ -559,7 +559,7 @@
 		/**
 		 * Draw a layer with blur blend mode
 		 * Uses the shape as a clipping region for a blur effect on everything below.
-		 * Blur acts as a fill - stroke is drawn separately on top.
+		 * Blur acts as a fill - stroke and content (text, arrows) are drawn on top.
 		 *
 		 * @param {Object} layer - Layer with blur blend mode
 		 */
@@ -572,14 +572,25 @@
 			const width = ( layer.width || 0 ) * this.zoom;
 			const height = ( layer.height || 0 ) * this.zoom;
 
+			// For arrow, calculate center differently
+			let centerX, centerY;
+			if ( layer.type === 'arrow' || layer.type === 'line' ) {
+				const x1 = ( layer.x1 || 0 ) * this.zoom + this.panX;
+				const y1 = ( layer.y1 || 0 ) * this.zoom + this.panY;
+				const x2 = ( layer.x2 || 0 ) * this.zoom + this.panX;
+				const y2 = ( layer.y2 || 0 ) * this.zoom + this.panY;
+				centerX = ( x1 + x2 ) / 2;
+				centerY = ( y1 + y2 ) / 2;
+			} else {
+				centerX = x + width / 2;
+				centerY = y + height / 2;
+			}
+
 			this.ctx.save();
 
 			// Apply rotation if needed
 			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
-			let centerX, centerY;
 			if ( hasRotation ) {
-				centerX = x + width / 2;
-				centerY = y + height / 2;
 				this.ctx.translate( centerX, centerY );
 				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
 				this.ctx.translate( -centerX, -centerY );
@@ -624,6 +635,27 @@
 
 			// Draw stroke AFTER the blur (outside the clipped/saved state)
 			// This makes blur act as a fill effect only
+			this._drawBlurStroke( layer, hasRotation, centerX, centerY );
+
+			// Draw content on top (text for textbox/text, arrow shape for arrows)
+			this._drawBlurContent( layer, hasRotation, centerX, centerY );
+		}
+
+		/**
+		 * Draw stroke for blur blend mode layer
+		 *
+		 * @param {Object} layer - Layer
+		 * @param {boolean} hasRotation - Whether rotation is applied
+		 * @param {number} centerX - Rotation center X
+		 * @param {number} centerY - Rotation center Y
+		 * @private
+		 */
+		_drawBlurStroke( layer, hasRotation, centerX, centerY ) {
+			// Skip stroke for text type (it doesn't have shape stroke)
+			if ( layer.type === 'text' ) {
+				return;
+			}
+
 			if ( layer.stroke && layer.strokeWidth > 0 ) {
 				this.ctx.save();
 
@@ -661,6 +693,68 @@
 		}
 
 		/**
+		 * Draw content on top of blur (text, arrows)
+		 *
+		 * @param {Object} layer - Layer
+		 * @param {boolean} hasRotation - Whether rotation is applied
+		 * @param {number} centerX - Rotation center X
+		 * @param {number} centerY - Rotation center Y
+		 * @private
+		 */
+		_drawBlurContent( layer, hasRotation, centerX, centerY ) {
+			// Handle text content for textbox
+			if ( layer.type === 'textbox' && layer.text ) {
+				// Use the layerRenderer to draw only the text portion
+				if ( this.layerRenderer && this.layerRenderer.textBoxRenderer ) {
+					this.ctx.save();
+					if ( hasRotation ) {
+						this.ctx.translate( centerX, centerY );
+						this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+						this.ctx.translate( -centerX, -centerY );
+					}
+					this.layerRenderer.textBoxRenderer.setContext( this.ctx );
+					this.layerRenderer.textBoxRenderer.drawTextOnly( layer, {
+						scale: { sx: this.zoom, sy: this.zoom, avg: this.zoom },
+						offset: { x: this.panX, y: this.panY }
+					} );
+					this.ctx.restore();
+				}
+			}
+
+			// Handle text type layers
+			if ( layer.type === 'text' && layer.text ) {
+				if ( this.layerRenderer && this.layerRenderer.textRenderer ) {
+					this.ctx.save();
+					if ( hasRotation ) {
+						this.ctx.translate( centerX, centerY );
+						this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+						this.ctx.translate( -centerX, -centerY );
+					}
+					this.layerRenderer.textRenderer.setContext( this.ctx );
+					this.layerRenderer.textRenderer.draw( layer, {
+						scale: { sx: this.zoom, sy: this.zoom, avg: this.zoom },
+						offset: { x: this.panX, y: this.panY }
+					} );
+					this.ctx.restore();
+				}
+			}
+
+			// Handle arrow type - draw arrow shape on top
+			if ( layer.type === 'arrow' ) {
+				if ( this.layerRenderer && this.layerRenderer.arrowRenderer ) {
+					this.ctx.save();
+					// Arrow handles its own rotation
+					this.layerRenderer.arrowRenderer.setContext( this.ctx );
+					this.layerRenderer.arrowRenderer.draw( layer, {
+						scale: { sx: this.zoom, sy: this.zoom, avg: this.zoom },
+						offset: { x: this.panX, y: this.panY }
+					} );
+					this.ctx.restore();
+				}
+			}
+		}
+
+		/**
 		 * Draw the clipping path for blur blend mode based on layer type
 		 *
 		 * @param {Object} layer - Layer with shape properties
@@ -679,9 +773,29 @@
 					cornerRadius = Math.min( cornerRadius, Math.min( width, height ) / 2 );
 					if ( cornerRadius > 0 && this.ctx.roundRect ) {
 						this.ctx.roundRect( x, y, width, height, cornerRadius );
+					} else if ( cornerRadius > 0 ) {
+						this._drawRoundedRectPath( x, y, width, height, cornerRadius );
 					} else {
 						this.ctx.rect( x, y, width, height );
 					}
+					break;
+				}
+				case 'textbox': {
+					// Textbox is like rectangle but always supports corner radius
+					let cornerRadius = ( layer.cornerRadius || 0 ) * this.zoom;
+					cornerRadius = Math.min( cornerRadius, Math.min( width, height ) / 2 );
+					if ( cornerRadius > 0 && this.ctx.roundRect ) {
+						this.ctx.roundRect( x, y, width, height, cornerRadius );
+					} else if ( cornerRadius > 0 ) {
+						this._drawRoundedRectPath( x, y, width, height, cornerRadius );
+					} else {
+						this.ctx.rect( x, y, width, height );
+					}
+					break;
+				}
+				case 'text': {
+					// Text uses its bounding box
+					this.ctx.rect( x, y, width, height );
 					break;
 				}
 				case 'circle': {
@@ -729,10 +843,57 @@
 					this.ctx.closePath();
 					break;
 				}
+				case 'arrow':
+				case 'line': {
+					// Arrow uses line endpoints to create a bounding region
+					const x1 = ( layer.x1 || 0 ) * this.zoom + this.panX;
+					const y1 = ( layer.y1 || 0 ) * this.zoom + this.panY;
+					const x2 = ( layer.x2 || 0 ) * this.zoom + this.panX;
+					const y2 = ( layer.y2 || 0 ) * this.zoom + this.panY;
+					const arrowSize = ( layer.arrowSize || 15 ) * this.zoom;
+					const strokeWidth = ( layer.strokeWidth || 2 ) * this.zoom;
+					const halfWidth = Math.max( arrowSize, strokeWidth * 2 );
+
+					// Create a thick line path (rectangle along the arrow)
+					const angle = Math.atan2( y2 - y1, x2 - x1 );
+					const perpAngle = angle + Math.PI / 2;
+					const dx = Math.cos( perpAngle ) * halfWidth;
+					const dy = Math.sin( perpAngle ) * halfWidth;
+
+					this.ctx.moveTo( x1 - dx, y1 - dy );
+					this.ctx.lineTo( x2 - dx, y2 - dy );
+					this.ctx.lineTo( x2 + dx, y2 + dy );
+					this.ctx.lineTo( x1 + dx, y1 + dy );
+					this.ctx.closePath();
+					break;
+				}
 				default:
 					// Default to rectangle bounding box
 					this.ctx.rect( x, y, width, height );
 			}
+		}
+
+		/**
+		 * Draw a rounded rectangle path manually (fallback for browsers without roundRect)
+		 *
+		 * @param {number} x - X position
+		 * @param {number} y - Y position
+		 * @param {number} width - Width
+		 * @param {number} height - Height
+		 * @param {number} radius - Corner radius
+		 * @private
+		 */
+		_drawRoundedRectPath( x, y, width, height, radius ) {
+			this.ctx.moveTo( x + radius, y );
+			this.ctx.lineTo( x + width - radius, y );
+			this.ctx.quadraticCurveTo( x + width, y, x + width, y + radius );
+			this.ctx.lineTo( x + width, y + height - radius );
+			this.ctx.quadraticCurveTo( x + width, y + height, x + width - radius, y + height );
+			this.ctx.lineTo( x + radius, y + height );
+			this.ctx.quadraticCurveTo( x, y + height, x, y + height - radius );
+			this.ctx.lineTo( x, y + radius );
+			this.ctx.quadraticCurveTo( x, y, x + radius, y );
+			this.ctx.closePath();
 		}
 
 		supportsGlow( type ) {

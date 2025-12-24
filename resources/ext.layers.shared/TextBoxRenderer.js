@@ -555,6 +555,42 @@
 			this.config = null;
 			this.shadowRenderer = null;
 		}
+
+		/**
+		 * Draw only the text content of a textbox (no background fill/stroke)
+		 * Used by blur blend mode to render text on top of blur effect
+		 *
+		 * @param {Object} layer - Layer with text properties
+		 * @param {Object} [options] - Rendering options
+		 * @param {Object} [options.scale] - Scale factors {sx, sy, avg}
+		 * @param {Object} [options.offset] - Offset {x, y} for position adjustment
+		 */
+		drawTextOnly( layer, options ) {
+			const opts = options || {};
+			const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
+			const offset = opts.offset || { x: 0, y: 0 };
+
+			// Calculate scaled dimensions
+			const x = ( layer.x || 0 ) * scale.sx + offset.x;
+			const y = ( layer.y || 0 ) * scale.sy + offset.y;
+			const width = ( layer.width || 100 ) * scale.sx;
+			const height = ( layer.height || 50 ) * scale.sy;
+			const padding = ( layer.padding || 8 ) * scale.avg;
+
+			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
+
+			// Draw only the text content
+			if ( layer.text && layer.text.length > 0 ) {
+				this.ctx.save();
+
+				// Apply layer opacity
+				this.ctx.globalAlpha = baseOpacity;
+
+				this.drawTextContent( layer, x, y, width, height, padding, scale, scale, baseOpacity );
+
+				this.ctx.restore();
+			}
+		}
 	}
 
 	// ========================================================================
