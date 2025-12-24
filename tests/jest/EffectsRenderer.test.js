@@ -20,8 +20,12 @@ describe( 'EffectsRenderer', () => {
 			drawImage: jest.fn(),
 			getContext: jest.fn(),
 			fill: jest.fn(),
+			stroke: jest.fn(),
+			setLineDash: jest.fn(),
 			globalAlpha: 1,
 			fillStyle: '',
+			strokeStyle: '',
+			lineWidth: 1,
 			filter: 'none'
 		};
 		renderer = new EffectsRenderer( mockCtx );
@@ -415,15 +419,33 @@ describe( 'EffectsRenderer', () => {
 			expect( filterValues ).toContain( 'blur(12px)' );
 		} );
 
-		it( 'should draw fallback overlay when no image is available', () => {
-			renderer.backgroundImage = null;
+		it( 'should capture current canvas content for blur', () => {
+			// Set up canvas with existing content
+			renderer.backgroundImage = null; // Not needed anymore - we capture canvas
 			const drawPathFn = jest.fn();
 
 			renderer.drawBlurWithShape( { x: 10, y: 10, width: 100, height: 100 }, drawPathFn );
 
-			expect( mockCtx.fillStyle ).toBe( 'rgba(128, 128, 128, 0.5)' );
-			// drawPathFn called twice: once for clip, once for fill
-			expect( drawPathFn ).toHaveBeenCalledTimes( 2 );
+			// Should still call clip path
+			expect( drawPathFn ).toHaveBeenCalled();
+			// drawImage should be called to copy canvas content
+			expect( mockCtx.drawImage ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw stroke after blur fill if stroke is specified', () => {
+			const drawPathFn = jest.fn();
+			const layer = {
+				x: 10, y: 10, width: 100, height: 100,
+				stroke: '#ff0000',
+				strokeWidth: 2
+			};
+
+			renderer.drawBlurWithShape( layer, drawPathFn, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			// Stroke should be set
+			expect( mockCtx.strokeStyle ).toBe( '#ff0000' );
+			expect( mockCtx.lineWidth ).toBe( 2 );
+			expect( mockCtx.stroke ).toHaveBeenCalled();
 		} );
 	} );
 

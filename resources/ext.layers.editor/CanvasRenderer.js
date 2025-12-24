@@ -558,7 +558,8 @@
 
 		/**
 		 * Draw a layer with blur blend mode
-		 * Uses the shape as a clipping region for a blur effect
+		 * Uses the shape as a clipping region for a blur effect on everything below.
+		 * Blur acts as a fill - stroke is drawn separately on top.
 		 *
 		 * @param {Object} layer - Layer with blur blend mode
 		 */
@@ -573,11 +574,6 @@
 
 			this.ctx.save();
 
-			// Apply layer opacity
-			if ( typeof layer.opacity === 'number' ) {
-				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
-			}
-
 			// Apply rotation if needed
 			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
 			let centerX, centerY;
@@ -589,35 +585,34 @@
 				this.ctx.translate( -centerX, -centerY );
 			}
 
+			// Apply layer opacity for the blur fill
+			if ( typeof layer.opacity === 'number' ) {
+				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+			}
+
 			// Create clipping path based on shape type
 			this.ctx.beginPath();
 			this._drawBlurClipPath( layer );
 			this.ctx.clip();
 
 			try {
-				// Capture the canvas content and apply blur within the clip region
+				// Capture EVERYTHING currently on the canvas (all layers below)
 				const tempCanvas = document.createElement( 'canvas' );
 				tempCanvas.width = this.canvas.width;
 				tempCanvas.height = this.canvas.height;
 				const tempCtx = tempCanvas.getContext( '2d' );
 
-				if ( tempCtx && this.backgroundImage && this.backgroundImage.complete ) {
-					// Draw background at current canvas size
-					tempCtx.drawImage( this.backgroundImage, 0, 0, this.canvas.width, this.canvas.height );
+				if ( tempCtx ) {
+					// Copy the current canvas content (includes background + all previously drawn layers)
+					tempCtx.drawImage( this.canvas, 0, 0 );
 
-					// Apply blur and draw back
+					// Apply blur and draw back within the clip region
 					this.ctx.filter = 'blur(' + radius + 'px)';
 					this.ctx.drawImage( tempCanvas, 0, 0 );
 					this.ctx.filter = 'none';
-				} else {
-					// Fallback: draw a semi-transparent overlay
-					this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-					this.ctx.beginPath();
-					this._drawBlurClipPath( layer );
-					this.ctx.fill();
 				}
 			} catch ( e ) {
-				// Error fallback
+				// Error fallback - draw a semi-transparent overlay
 				mw.log.warn( '[CanvasRenderer] Blur blend mode failed:', e.message );
 				this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
 				this.ctx.beginPath();
@@ -626,6 +621,43 @@
 			}
 
 			this.ctx.restore();
+
+			// Draw stroke AFTER the blur (outside the clipped/saved state)
+			// This makes blur act as a fill effect only
+			if ( layer.stroke && layer.strokeWidth > 0 ) {
+				this.ctx.save();
+
+				// Re-apply rotation for stroke
+				if ( hasRotation ) {
+					this.ctx.translate( centerX, centerY );
+					this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+					this.ctx.translate( -centerX, -centerY );
+				}
+
+				// Apply stroke opacity
+				if ( typeof layer.strokeOpacity === 'number' ) {
+					this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.strokeOpacity ) );
+				} else if ( typeof layer.opacity === 'number' ) {
+					this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+				}
+
+				this.ctx.strokeStyle = layer.stroke;
+				this.ctx.lineWidth = ( layer.strokeWidth || 1 ) * this.zoom;
+
+				// Apply stroke style (dashed, dotted, etc.)
+				if ( layer.strokeStyle === 'dashed' ) {
+					this.ctx.setLineDash( [ 8 * this.zoom, 4 * this.zoom ] );
+				} else if ( layer.strokeStyle === 'dotted' ) {
+					this.ctx.setLineDash( [ 2 * this.zoom, 2 * this.zoom ] );
+				} else {
+					this.ctx.setLineDash( [] );
+				}
+
+				this.ctx.beginPath();
+				this._drawBlurClipPath( layer );
+				this.ctx.stroke();
+				this.ctx.restore();
+			}
 		}
 
 		/**

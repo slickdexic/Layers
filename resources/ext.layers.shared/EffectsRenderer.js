@@ -182,17 +182,17 @@
 		 *
 		 * This enables blur as a "blend mode" for any shape type.
 		 * The shape's geometry defines the blurred region.
+		 * Blur acts as a fill effect - stroke should be drawn separately after calling this.
 		 *
 		 * @param {Object} layer - Layer with shape properties and blurRadius
 		 * @param {Function} drawPathFn - Function that draws the shape path (ctx) => void
 		 * @param {Object} [options] - Rendering options
 		 * @param {boolean} [options.scaled] - Whether coordinates are pre-scaled
-		 * @param {HTMLImageElement} [options.imageElement] - Image for blur source
+		 * @param {Object} [options.scale] - Scale factors {sx, sy, avg} for stroke drawing
 		 */
 		drawBlurWithShape( layer, drawPathFn, options ) {
 			const opts = options || {};
 			const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
-			const imgSource = opts.imageElement || this.backgroundImage;
 
 			if ( !this.canvas ) {
 				return;
@@ -200,7 +200,7 @@
 
 			this.ctx.save();
 
-			// Apply layer opacity
+			// Apply layer opacity for the blur fill
 			if ( typeof layer.opacity === 'number' ) {
 				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
 			}
@@ -210,44 +210,66 @@
 			drawPathFn( this.ctx );
 			this.ctx.clip();
 
-			// Calculate bounds of the shape for the temp canvas
-			// We'll use the full canvas for simplicity (more performant would be to compute bounds)
+			// We'll use the full canvas for simplicity
 			const canvasWidth = this.canvas.width;
 			const canvasHeight = this.canvas.height;
 
-			if ( imgSource && imgSource.complete ) {
-				// Create temp canvas for blur effect
-				const tempCanvas = document.createElement( 'canvas' );
-				tempCanvas.width = canvasWidth;
-				tempCanvas.height = canvasHeight;
-				const tempCtx = tempCanvas.getContext( '2d' );
+			// Create temp canvas to capture current content
+			const tempCanvas = document.createElement( 'canvas' );
+			tempCanvas.width = canvasWidth;
+			tempCanvas.height = canvasHeight;
+			const tempCtx = tempCanvas.getContext( '2d' );
 
-				if ( tempCtx ) {
-					try {
-						// Draw the background image at canvas size
-						tempCtx.drawImage( imgSource, 0, 0, canvasWidth, canvasHeight );
+			if ( tempCtx ) {
+				try {
+					// Capture EVERYTHING currently on the canvas (all layers below)
+					tempCtx.drawImage( this.canvas, 0, 0 );
 
-						// Apply blur filter and draw back to main canvas
-						this.ctx.filter = 'blur(' + radius + 'px)';
-						this.ctx.drawImage( tempCanvas, 0, 0 );
-						this.ctx.filter = 'none';
-					} catch ( e ) {
-						// CORS or other error - fall back to tinted overlay
-						this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-						this.ctx.beginPath();
-						drawPathFn( this.ctx );
-						this.ctx.fill();
-					}
+					// Apply blur filter and draw back to main canvas within clip region
+					this.ctx.filter = 'blur(' + radius + 'px)';
+					this.ctx.drawImage( tempCanvas, 0, 0 );
+					this.ctx.filter = 'none';
+				} catch ( e ) {
+					// CORS or other error - fall back to tinted overlay
+					this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+					this.ctx.beginPath();
+					drawPathFn( this.ctx );
+					this.ctx.fill();
 				}
-			} else {
-				// No image available - draw a tinted overlay as fallback
-				this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-				this.ctx.beginPath();
-				drawPathFn( this.ctx );
-				this.ctx.fill();
 			}
 
 			this.ctx.restore();
+
+			// Draw stroke AFTER the blur (outside the clipped/saved state)
+			// This makes blur act as a fill effect only
+			if ( layer.stroke && layer.strokeWidth > 0 ) {
+				this.ctx.save();
+
+				// Apply stroke opacity
+				if ( typeof layer.strokeOpacity === 'number' ) {
+					this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.strokeOpacity ) );
+				} else if ( typeof layer.opacity === 'number' ) {
+					this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+				}
+
+				const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
+				this.ctx.strokeStyle = layer.stroke;
+				this.ctx.lineWidth = ( layer.strokeWidth || 1 ) * scale.avg;
+
+				// Apply stroke style (dashed, dotted, etc.)
+				if ( layer.strokeStyle === 'dashed' ) {
+					this.ctx.setLineDash( [ 8 * scale.avg, 4 * scale.avg ] );
+				} else if ( layer.strokeStyle === 'dotted' ) {
+					this.ctx.setLineDash( [ 2 * scale.avg, 2 * scale.avg ] );
+				} else {
+					this.ctx.setLineDash( [] );
+				}
+
+				this.ctx.beginPath();
+				drawPathFn( this.ctx );
+				this.ctx.stroke();
+				this.ctx.restore();
+			}
 		}
 
 		/**
