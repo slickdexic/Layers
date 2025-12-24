@@ -1,23 +1,32 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 23, 2025  
+**Last Updated:** December 24, 2025  
 **Status:** ✅ P0 Complete, P1 Complete, P2 In Progress  
-**Version:** 1.2.4  
+**Version:** 1.2.5  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-All **P0 (Critical)** and **P1 (Important)** issues have been resolved. The extension is production-ready with 91%+ test coverage and no blocking issues.
+All **P0 (Critical)** and **P1 (Important)** issues have been resolved. The extension is production-ready with 92%+ test coverage and no blocking issues.
 
 **Current Rating: 8.5/10**
 
 ---
 
-## Completed Work (v1.2.4)
+## Completed Work (v1.2.5)
 
-### ✅ P0: Critical Issues - ALL RESOLVED
+### ✅ New Features - Advanced Editor Link Modes
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Editor returns to origin | ✅ SHIPPED | `layerslink=editor` now returns to originating page |
+| editor-newtab mode | ✅ SHIPPED | Opens editor in new browser tab |
+| editor-modal mode | ✅ SHIPPED | Opens editor in iframe overlay |
+| MW 1.44+ Title fix | ✅ FIXED | Fixed `Class 'Title' not found` error |
+
+### ✅ P0: Critical Issues - ALL RESOLVED (v1.2.4)
 
 | Issue | Status | Evidence |
 |-------|--------|----------|
@@ -39,10 +48,10 @@ All **P0 (Critical)** and **P1 (Important)** issues have been resolved. The exte
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Functionality** | ✅ Complete | 14 tools, alignment, presets, named sets, smart guides |
+| **Functionality** | ✅ Complete | 14 tools, alignment, presets, named sets, smart guides, modal editor |
 | **Security** | ✅ Resolved | All known security issues fixed (SVG XSS, sanitization) |
-| **Testing** | ✅ Excellent | 6,623 tests, 91%+ statement coverage |
-| **ES6 Migration** | ✅ Complete | 87 classes, 0 prototype patterns |
+| **Testing** | ✅ Excellent | 6,646 tests, 92%+ statement coverage |
+| **ES6 Migration** | ✅ Complete | 88 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **Documentation** | ✅ Accurate | All docs updated with current metrics |
 | **God Classes** | ⚠️ Monitor | 6 files >1,000 lines (all use delegation) |
@@ -185,7 +194,7 @@ P3.4 WCAG Audit:               ░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 6,623 passing tests with 91%+ coverage
+- 6,646 passing tests with 92%+ coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
 - 100% ES6 classes (no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
@@ -194,6 +203,8 @@ P3.4 WCAG Audit:               ░░░░░░░░░░░░░░░░�
 - Smart guides and key object alignment
 - Style presets with import/export
 - 4 API endpoints with full validation
+- **NEW:** Modal editor mode for iframe editing
+- **NEW:** Editor returns to originating page
 - Rate limiting and security hardening
 
 ### Need for 10/10

@@ -378,5 +378,116 @@ describe( 'LayersEditorModal', () => {
 
 			expect( addEventListenerSpy ).not.toHaveBeenCalled();
 		} );
+
+		it( 'should handle null container', () => {
+			const initModalTriggers = window.Layers.Modal.initModalTriggers;
+
+			// Should not throw when passed null
+			expect( () => initModalTriggers( null ) ).not.toThrow();
+		} );
+
+		it( 'should warn and not open modal when trigger missing filename', () => {
+			const initModalTriggers = window.Layers.Modal.initModalTriggers;
+			const warnSpy = jest.spyOn( console, 'warn' ).mockImplementation( () => {} );
+
+			// Create trigger without filename
+			const trigger = document.createElement( 'a' );
+			trigger.className = 'layers-editor-modal-trigger';
+			// Intentionally missing data-layers-filename
+			document.body.appendChild( trigger );
+
+			initModalTriggers( document.body );
+
+			// Simulate click
+			trigger.click();
+
+			expect( warnSpy ).toHaveBeenCalledWith(
+				'[LayersModal] Missing data-layers-filename attribute'
+			);
+
+			warnSpy.mockRestore();
+		} );
+
+		it( 'should open modal when trigger clicked with valid filename', () => {
+			const initModalTriggers = window.Layers.Modal.initModalTriggers;
+
+			// Create trigger with filename
+			const trigger = document.createElement( 'a' );
+			trigger.className = 'layers-editor-modal-trigger';
+			trigger.dataset.layersFilename = 'ValidFile.jpg';
+			trigger.dataset.layersSetname = 'annotations';
+			trigger.dataset.layersEditorUrl = '/wiki/File:ValidFile.jpg?action=editlayers&modal=1';
+			document.body.appendChild( trigger );
+
+			initModalTriggers( document.body );
+
+			// Simulate click
+			trigger.click();
+
+			// Modal should be created
+			const modal = document.querySelector( '.layers-editor-modal-overlay' );
+			expect( modal ).not.toBeNull();
+
+			// Clean up
+			modal.remove();
+			document.body.style.overflow = '';
+			document.body.classList.remove( 'layers-modal-open' );
+		} );
+	} );
+
+	describe( 'postMessage edge cases', () => {
+		it( 'should ignore messages with invalid data structure', async () => {
+			const modal = new LayersEditorModal();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			modal.iframe.dispatchEvent( new Event( 'load' ) );
+
+			// Message with null data
+			const nullDataEvent = new MessageEvent( 'message', {
+				origin: window.location.origin,
+				data: null
+			} );
+			window.dispatchEvent( nullDataEvent );
+
+			// Message with non-string type
+			const invalidTypeEvent = new MessageEvent( 'message', {
+				origin: window.location.origin,
+				data: { type: 123 }
+			} );
+			window.dispatchEvent( invalidTypeEvent );
+
+			// Modal should still be open
+			expect( modal.overlay ).not.toBeNull();
+
+			modal.close( false );
+			await openPromise;
+		} );
+	} );
+
+	describe( 'getMessage fallback', () => {
+		it( 'should return fallback when mw.message is not available', async () => {
+			// Temporarily remove mw.message but keep mw.util
+			const originalMessage = window.mw.message;
+			delete window.mw.message;
+
+			// Reload module to pick up the change
+			jest.resetModules();
+			delete window.Layers;
+			require( '../../resources/ext.layers.modal/LayersEditorModal.js' );
+			const ModalClass = window.Layers.Modal.LayersEditorModal;
+
+			const modal = new ModalClass();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			// The overlay title should use fallback text
+			const title = modal.overlay.querySelector( '.layers-editor-modal-title' );
+			expect( title.textContent ).toContain( 'Edit Layers' );
+
+			modal.close( false );
+			await openPromise;
+
+			// Restore mw.message
+			window.mw.message = originalMessage;
+		} );
 	} );
 } );

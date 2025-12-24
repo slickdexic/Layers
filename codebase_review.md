@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** December 23, 2025 (Updated)  
-**Version:** 1.2.3  
+**Review Date:** December 24, 2025 (Updated)  
+**Version:** 1.2.5  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -12,18 +12,20 @@ The Layers extension provides non-destructive image annotation capabilities for 
 
 ### Overall Assessment: 8.5/10 - Production-Ready with Minor Technical Debt
 
-The extension is **functional and production-ready** with professional security, excellent test coverage, and clean code practices. Recent fixes have addressed critical issues.
+The extension is **functional and production-ready** with professional security, excellent test coverage, and clean code practices. v1.2.5 adds advanced editor navigation modes.
 
 **Key Strengths:**
 
-- ✅ **6,623 tests passing** (0 failures)
-- ✅ **~91% statement coverage, ~79% branch coverage**
+- ✅ **6,646 tests passing** (0 failures)
+- ✅ **92% statement coverage, 80% branch coverage**
 - ✅ **DialogManager at 96% coverage** (was 53%)
 - ✅ **PropertiesForm function coverage at 68%** (was 41%)
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 14 working drawing tools with named layer sets
 - ✅ Smart Guides for object-to-object snapping
 - ✅ All native dialogs now use DialogManager with fallbacks
+- ✅ **NEW: Modal editor mode** for iframe editing (Page Forms support)
+- ✅ **NEW: Editor returns to originating page** (UX improvement)
 
 **Remaining Issues:**
 
@@ -34,7 +36,7 @@ The extension is **functional and production-ready** with professional security,
 
 ---
 
-## Verified Metrics (December 23, 2025)
+## Verified Metrics (December 24, 2025)
 
 All metrics collected directly from the codebase via automated tooling.
 
