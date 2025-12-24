@@ -111,7 +111,8 @@
 				validBlendModes: [
 					'normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten',
 					'color-dodge', 'color-burn', 'hard-light', 'soft-light',
-					'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'
+					'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity',
+					'blur'
 				],
 
 				// Valid text alignments

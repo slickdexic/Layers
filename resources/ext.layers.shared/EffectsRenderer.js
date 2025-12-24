@@ -176,6 +176,90 @@
 
 			this.ctx.restore();
 		}
+
+		/**
+		 * Draw a blur effect using a shape as the clipping region
+		 *
+		 * This enables blur as a "blend mode" for any shape type.
+		 * The shape's geometry defines the blurred region.
+		 *
+		 * @param {Object} layer - Layer with shape properties and blurRadius
+		 * @param {Function} drawPathFn - Function that draws the shape path (ctx) => void
+		 * @param {Object} [options] - Rendering options
+		 * @param {boolean} [options.scaled] - Whether coordinates are pre-scaled
+		 * @param {HTMLImageElement} [options.imageElement] - Image for blur source
+		 */
+		drawBlurWithShape( layer, drawPathFn, options ) {
+			const opts = options || {};
+			const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+			const imgSource = opts.imageElement || this.backgroundImage;
+
+			if ( !this.canvas ) {
+				return;
+			}
+
+			this.ctx.save();
+
+			// Apply layer opacity
+			if ( typeof layer.opacity === 'number' ) {
+				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+			}
+
+			// Create the clipping path using the shape
+			this.ctx.beginPath();
+			drawPathFn( this.ctx );
+			this.ctx.clip();
+
+			// Calculate bounds of the shape for the temp canvas
+			// We'll use the full canvas for simplicity (more performant would be to compute bounds)
+			const canvasWidth = this.canvas.width;
+			const canvasHeight = this.canvas.height;
+
+			if ( imgSource && imgSource.complete ) {
+				// Create temp canvas for blur effect
+				const tempCanvas = document.createElement( 'canvas' );
+				tempCanvas.width = canvasWidth;
+				tempCanvas.height = canvasHeight;
+				const tempCtx = tempCanvas.getContext( '2d' );
+
+				if ( tempCtx ) {
+					try {
+						// Draw the background image at canvas size
+						tempCtx.drawImage( imgSource, 0, 0, canvasWidth, canvasHeight );
+
+						// Apply blur filter and draw back to main canvas
+						this.ctx.filter = 'blur(' + radius + 'px)';
+						this.ctx.drawImage( tempCanvas, 0, 0 );
+						this.ctx.filter = 'none';
+					} catch ( e ) {
+						// CORS or other error - fall back to tinted overlay
+						this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+						this.ctx.beginPath();
+						drawPathFn( this.ctx );
+						this.ctx.fill();
+					}
+				}
+			} else {
+				// No image available - draw a tinted overlay as fallback
+				this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+				this.ctx.beginPath();
+				drawPathFn( this.ctx );
+				this.ctx.fill();
+			}
+
+			this.ctx.restore();
+		}
+
+		/**
+		 * Check if a layer has blur as its blend mode
+		 *
+		 * @param {Object} layer - Layer to check
+		 * @return {boolean} True if layer uses blur blend mode
+		 */
+		hasBlurBlendMode( layer ) {
+			const blendMode = layer.blendMode || layer.blend;
+			return blendMode === 'blur';
+		}
 	}
 
 	// ========================================================================

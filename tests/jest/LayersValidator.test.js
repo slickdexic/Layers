@@ -1045,7 +1045,8 @@ describe( 'LayersValidator', () => {
 			const validModes = [
 				'normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten',
 				'color-dodge', 'color-burn', 'hard-light', 'soft-light',
-				'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'
+				'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity',
+				'blur'
 			];
 
 			validModes.forEach( mode => {
@@ -1066,6 +1067,20 @@ describe( 'LayersValidator', () => {
 
 			it( 'should accept blend property (alias)', () => {
 				const layer = { id: 'test', type: 'rectangle', blend: 'multiply' };
+				const result = validator.validateLayer( layer );
+
+				expect( result.isValid ).toBe( true );
+			} );
+
+			it( 'should accept blur blend mode with blurRadius', () => {
+				const layer = { id: 'test', type: 'rectangle', blendMode: 'blur', blurRadius: 15 };
+				const result = validator.validateLayer( layer );
+
+				expect( result.isValid ).toBe( true );
+			} );
+
+			it( 'should accept blur as blend alias', () => {
+				const layer = { id: 'test', type: 'circle', blend: 'blur', blurRadius: 20 };
 				const result = validator.validateLayer( layer );
 
 				expect( result.isValid ).toBe( true );

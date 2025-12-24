@@ -19,6 +19,7 @@ describe( 'EffectsRenderer', () => {
 			clip: jest.fn(),
 			drawImage: jest.fn(),
 			getContext: jest.fn(),
+			fill: jest.fn(),
 			globalAlpha: 1,
 			fillStyle: '',
 			filter: 'none'
@@ -331,6 +332,118 @@ describe( 'EffectsRenderer', () => {
 			expect( mockCtx.rect ).toHaveBeenCalledWith( 10, 20, 100, 50 );
 			expect( mockCtx.clip ).toHaveBeenCalled();
 			expect( mockCtx.drawImage ).toHaveBeenCalledWith( renderer.backgroundImage, 0, 0 );
+		} );
+	} );
+
+	// ========================================
+	// Blur Blend Mode Tests (new feature)
+	// ========================================
+
+	describe( 'drawBlurWithShape', () => {
+		let canvasWithContext;
+		let filterValues;
+
+		beforeEach( () => {
+			canvasWithContext = {
+				width: 800,
+				height: 600,
+				getContext: jest.fn().mockReturnValue( {
+					drawImage: jest.fn()
+				} )
+			};
+			renderer.canvas = canvasWithContext;
+
+			// Track filter value assignments to verify blur was applied
+			filterValues = [];
+			Object.defineProperty( mockCtx, 'filter', {
+				get: function() { return this._filter || 'none'; },
+				set: function( val ) { this._filter = val; filterValues.push( val ); },
+				configurable: true
+			} );
+		} );
+
+		it( 'should return early if canvas is not set', () => {
+			renderer.canvas = null;
+			const drawPathFn = jest.fn();
+
+			renderer.drawBlurWithShape( { x: 10, y: 10, width: 100, height: 100 }, drawPathFn );
+
+			expect( drawPathFn ).not.toHaveBeenCalled();
+			expect( mockCtx.save ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should apply clipping path using provided draw function', () => {
+			renderer.backgroundImage = { complete: true, naturalWidth: 800, naturalHeight: 600 };
+			const drawPathFn = jest.fn();
+
+			renderer.drawBlurWithShape( { x: 10, y: 10, width: 100, height: 100, blurRadius: 15 }, drawPathFn );
+
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( drawPathFn ).toHaveBeenCalledWith( mockCtx );
+			expect( mockCtx.clip ).toHaveBeenCalled();
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply layer opacity', () => {
+			renderer.backgroundImage = { complete: true };
+			const drawPathFn = jest.fn();
+
+			renderer.drawBlurWithShape( { opacity: 0.5 }, drawPathFn );
+
+			expect( mockCtx.globalAlpha ).toBe( 0.5 );
+		} );
+
+		it( 'should clamp blurRadius to valid range', () => {
+			renderer.backgroundImage = { complete: true };
+			const drawPathFn = jest.fn();
+
+			// Test with very high blur radius (should be clamped to 64)
+			renderer.drawBlurWithShape( { blurRadius: 200 }, drawPathFn );
+
+			// Filter should be set to blur(64px) at some point (then reset to 'none')
+			expect( filterValues ).toContain( 'blur(64px)' );
+		} );
+
+		it( 'should use default blurRadius of 12 when not specified', () => {
+			renderer.backgroundImage = { complete: true };
+			const drawPathFn = jest.fn();
+
+			renderer.drawBlurWithShape( {}, drawPathFn );
+
+			// Filter should be set to blur(12px) at some point
+			expect( filterValues ).toContain( 'blur(12px)' );
+		} );
+
+		it( 'should draw fallback overlay when no image is available', () => {
+			renderer.backgroundImage = null;
+			const drawPathFn = jest.fn();
+
+			renderer.drawBlurWithShape( { x: 10, y: 10, width: 100, height: 100 }, drawPathFn );
+
+			expect( mockCtx.fillStyle ).toBe( 'rgba(128, 128, 128, 0.5)' );
+			// drawPathFn called twice: once for clip, once for fill
+			expect( drawPathFn ).toHaveBeenCalledTimes( 2 );
+		} );
+	} );
+
+	describe( 'hasBlurBlendMode', () => {
+		it( 'should return true for blendMode: blur', () => {
+			expect( renderer.hasBlurBlendMode( { blendMode: 'blur' } ) ).toBe( true );
+		} );
+
+		it( 'should return true for blend: blur', () => {
+			expect( renderer.hasBlurBlendMode( { blend: 'blur' } ) ).toBe( true );
+		} );
+
+		it( 'should return false for other blend modes', () => {
+			expect( renderer.hasBlurBlendMode( { blendMode: 'multiply' } ) ).toBe( false );
+			expect( renderer.hasBlurBlendMode( { blend: 'screen' } ) ).toBe( false );
+		} );
+
+		it( 'should return false when no blend mode specified', () => {
+			expect( renderer.hasBlurBlendMode( {} ) ).toBe( false );
+			expect( renderer.hasBlurBlendMode( { type: 'rectangle' } ) ).toBe( false );
 		} );
 	} );
 } );

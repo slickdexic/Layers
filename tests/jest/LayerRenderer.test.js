@@ -1119,6 +1119,131 @@ describe( 'LayerRenderer', () => {
 				renderer.drawLayer( { type: 'unknown' } );
 			} ).not.toThrow();
 		} );
+
+		test( 'uses blur blend mode rendering for shapes with blend: blur', () => {
+			const spy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blend: 'blur' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'uses blur blend mode rendering for shapes with blendMode: blur', () => {
+			const spy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
+			const layer = { type: 'circle', x: 100, y: 100, radius: 50, blendMode: 'blur' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'does not use blur blend mode for type: blur layers', () => {
+			const blurBlendSpy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
+			const blurDrawSpy = jest.spyOn( renderer, 'drawBlur' );
+			const layer = { type: 'blur', x: 10, y: 20, width: 100, height: 50, blend: 'blur' };
+
+			renderer.drawLayer( layer );
+
+			// Should call drawBlur, not drawLayerWithBlurBlend
+			expect( blurDrawSpy ).toHaveBeenCalled();
+			expect( blurBlendSpy ).not.toHaveBeenCalled();
+		} );
+
+		test( 'uses normal rendering for shapes with other blend modes', () => {
+			const blurBlendSpy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
+			const rectSpy = jest.spyOn( renderer, 'drawRectangle' );
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blend: 'multiply' };
+
+			renderer.drawLayer( layer );
+
+			expect( blurBlendSpy ).not.toHaveBeenCalled();
+			expect( rectSpy ).toHaveBeenCalled();
+		} );
+	} );
+
+	// ========================================================================
+	// Blur Blend Mode Tests
+	// ========================================================================
+
+	describe( 'blur blend mode', () => {
+		test( 'hasBlurBlendMode returns true for blend: blur', () => {
+			expect( renderer.hasBlurBlendMode( { blend: 'blur' } ) ).toBe( true );
+		} );
+
+		test( 'hasBlurBlendMode returns true for blendMode: blur', () => {
+			expect( renderer.hasBlurBlendMode( { blendMode: 'blur' } ) ).toBe( true );
+		} );
+
+		test( 'hasBlurBlendMode returns false for other blend modes', () => {
+			expect( renderer.hasBlurBlendMode( { blend: 'multiply' } ) ).toBe( false );
+			expect( renderer.hasBlurBlendMode( { blendMode: 'screen' } ) ).toBe( false );
+		} );
+
+		test( 'hasBlurBlendMode returns false when no blend mode set', () => {
+			expect( renderer.hasBlurBlendMode( {} ) ).toBe( false );
+		} );
+
+		test( '_drawRectPath draws rectangle path', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 10, y: 20, width: 100, height: 50 };
+
+			renderer._drawRectPath( layer, scale, ctx );
+
+			expect( ctx.rect ).toHaveBeenCalledWith( 10, 20, 100, 50 );
+		} );
+
+		test( '_drawCirclePath draws circle arc', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radius: 50 };
+
+			renderer._drawCirclePath( layer, scale, ctx );
+
+			expect( ctx.arc ).toHaveBeenCalledWith( 100, 100, 50, 0, Math.PI * 2 );
+		} );
+
+		test( '_drawEllipsePath draws ellipse', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radiusX: 60, radiusY: 40 };
+
+			renderer._drawEllipsePath( layer, scale, ctx );
+
+			expect( ctx.ellipse ).toHaveBeenCalledWith( 100, 100, 60, 40, 0, 0, Math.PI * 2 );
+		} );
+
+		test( '_drawPolygonPath draws polygon with correct number of sides', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radius: 50, sides: 6 };
+
+			renderer._drawPolygonPath( layer, scale, ctx );
+
+			// Should call moveTo once and lineTo 5 times (6 sides - 1)
+			expect( ctx.moveTo ).toHaveBeenCalledTimes( 1 );
+			expect( ctx.lineTo ).toHaveBeenCalledTimes( 5 );
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		test( '_drawStarPath draws star with correct number of points', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radius: 50, points: 5 };
+
+			renderer._drawStarPath( layer, scale, ctx );
+
+			// Star with 5 points has 10 vertices (5 outer + 5 inner)
+			expect( ctx.moveTo ).toHaveBeenCalledTimes( 1 );
+			expect( ctx.lineTo ).toHaveBeenCalledTimes( 9 ); // 10 - 1
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		test( 'drawLayerWithBlurBlend falls back when effectsRenderer is not available', () => {
+			renderer.effectsRenderer = null;
+			const rectSpy = jest.spyOn( renderer, '_drawLayerByType' );
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blend: 'blur' };
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			expect( rectSpy ).toHaveBeenCalled();
+		} );
 	} );
 
 	// ========================================================================

@@ -2,6 +2,49 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.6] - 2025-12-24
+
+### New Feature - Blur as Blend Mode
+
+Added "blur" as a blend mode option for shapes, enabling blurred regions in any shape - not just rectangles.
+
+**Supported Shapes:** rectangle, circle, ellipse, polygon, star
+
+**Usage:**
+```javascript
+{
+  type: 'ellipse',
+  x: 200,
+  y: 150,
+  radiusX: 80,
+  radiusY: 60,
+  blendMode: 'blur',
+  blurRadius: 15  // optional, default 12, range 1-64
+}
+```
+
+**How it works:**
+- Shapes with `blendMode: 'blur'` use the shape geometry as a clipping region
+- The background image is rendered with a CSS blur filter within that clip
+- If no background image is available, a gray semi-transparent overlay is shown
+
+**Use Cases:**
+- Privacy masking with arbitrary shapes (circular blur over faces)
+- Focus effects with star or polygon shapes
+- Creative vignettes and stylized callouts
+
+### Technical
+- **Modified validators**: `LayersValidator.js`, `LayersConstants.js`, `ServerSideLayerValidator.php` — Added 'blur' to valid blend modes
+- **Modified renderers**: `EffectsRenderer.js` — Added `drawBlurWithShape()` and `hasBlurBlendMode()` methods
+- **Modified renderers**: `LayerRenderer.js` — Added blur blend mode dispatcher and shape path drawing helpers
+- **Modified renderers**: `CanvasRenderer.js` — Added `drawLayerWithBlurBlend()` for editor preview
+- **Documentation**: Updated `FUTURE_IMPROVEMENTS.md` to mark feature as implemented
+
+### Testing
+- **6,718 tests passing** (+27 new tests for blur blend mode)
+
+---
+
 ## [1.2.5] - 2025-12-24
 
 ### Improved Editor Navigation

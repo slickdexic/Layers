@@ -510,6 +510,13 @@
 		}
 
 		drawLayerWithEffects( layer ) {
+			// Check for blur blend mode - use special rendering path
+			const blendMode = layer.blendMode || layer.blend;
+			if ( blendMode === 'blur' && layer.type !== 'blur' ) {
+				this.drawLayerWithBlurBlend( layer );
+				return;
+			}
+
 			this.ctx.save();
 			if ( typeof layer.opacity === 'number' ) {
 				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
@@ -546,6 +553,153 @@
 				}
 			} finally {
 				this.ctx.restore();
+			}
+		}
+
+		/**
+		 * Draw a layer with blur blend mode
+		 * Uses the shape as a clipping region for a blur effect
+		 *
+		 * @param {Object} layer - Layer with blur blend mode
+		 */
+		drawLayerWithBlurBlend( layer ) {
+			const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+
+			// Calculate scaled coordinates
+			const x = ( layer.x || 0 ) * this.zoom + this.panX;
+			const y = ( layer.y || 0 ) * this.zoom + this.panY;
+			const width = ( layer.width || 0 ) * this.zoom;
+			const height = ( layer.height || 0 ) * this.zoom;
+
+			this.ctx.save();
+
+			// Apply layer opacity
+			if ( typeof layer.opacity === 'number' ) {
+				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+			}
+
+			// Apply rotation if needed
+			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+			let centerX, centerY;
+			if ( hasRotation ) {
+				centerX = x + width / 2;
+				centerY = y + height / 2;
+				this.ctx.translate( centerX, centerY );
+				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+				this.ctx.translate( -centerX, -centerY );
+			}
+
+			// Create clipping path based on shape type
+			this.ctx.beginPath();
+			this._drawBlurClipPath( layer );
+			this.ctx.clip();
+
+			try {
+				// Capture the canvas content and apply blur within the clip region
+				const tempCanvas = document.createElement( 'canvas' );
+				tempCanvas.width = this.canvas.width;
+				tempCanvas.height = this.canvas.height;
+				const tempCtx = tempCanvas.getContext( '2d' );
+
+				if ( tempCtx && this.backgroundImage && this.backgroundImage.complete ) {
+					// Draw background at current canvas size
+					tempCtx.drawImage( this.backgroundImage, 0, 0, this.canvas.width, this.canvas.height );
+
+					// Apply blur and draw back
+					this.ctx.filter = 'blur(' + radius + 'px)';
+					this.ctx.drawImage( tempCanvas, 0, 0 );
+					this.ctx.filter = 'none';
+				} else {
+					// Fallback: draw a semi-transparent overlay
+					this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+					this.ctx.beginPath();
+					this._drawBlurClipPath( layer );
+					this.ctx.fill();
+				}
+			} catch ( e ) {
+				// Error fallback
+				mw.log.warn( '[CanvasRenderer] Blur blend mode failed:', e.message );
+				this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+				this.ctx.beginPath();
+				this._drawBlurClipPath( layer );
+				this.ctx.fill();
+			}
+
+			this.ctx.restore();
+		}
+
+		/**
+		 * Draw the clipping path for blur blend mode based on layer type
+		 *
+		 * @param {Object} layer - Layer with shape properties
+		 * @private
+		 */
+		_drawBlurClipPath( layer ) {
+			const x = ( layer.x || 0 ) * this.zoom + this.panX;
+			const y = ( layer.y || 0 ) * this.zoom + this.panY;
+			const width = ( layer.width || 0 ) * this.zoom;
+			const height = ( layer.height || 0 ) * this.zoom;
+
+			switch ( layer.type ) {
+				case 'rectangle':
+				case 'rect': {
+					let cornerRadius = ( layer.cornerRadius || 0 ) * this.zoom;
+					cornerRadius = Math.min( cornerRadius, Math.min( width, height ) / 2 );
+					if ( cornerRadius > 0 && this.ctx.roundRect ) {
+						this.ctx.roundRect( x, y, width, height, cornerRadius );
+					} else {
+						this.ctx.rect( x, y, width, height );
+					}
+					break;
+				}
+				case 'circle': {
+					const radius = ( layer.radius || 0 ) * this.zoom;
+					this.ctx.arc( x, y, radius, 0, Math.PI * 2 );
+					break;
+				}
+				case 'ellipse': {
+					const radiusX = ( layer.radiusX || width / 2 || 0 ) * this.zoom;
+					const radiusY = ( layer.radiusY || height / 2 || 0 ) * this.zoom;
+					this.ctx.ellipse( x, y, radiusX, radiusY, 0, 0, Math.PI * 2 );
+					break;
+				}
+				case 'polygon': {
+					const radius = ( layer.radius || 50 ) * this.zoom;
+					const sides = layer.sides || 6;
+					for ( let i = 0; i < sides; i++ ) {
+						const angle = ( i * 2 * Math.PI / sides ) - Math.PI / 2;
+						const px = x + radius * Math.cos( angle );
+						const py = y + radius * Math.sin( angle );
+						if ( i === 0 ) {
+							this.ctx.moveTo( px, py );
+						} else {
+							this.ctx.lineTo( px, py );
+						}
+					}
+					this.ctx.closePath();
+					break;
+				}
+				case 'star': {
+					const outerRadius = ( layer.radius || layer.outerRadius || 50 ) * this.zoom;
+					const innerRadius = ( layer.innerRadius || outerRadius * 0.5 ) * this.zoom;
+					const points = layer.points || 5;
+					for ( let i = 0; i < points * 2; i++ ) {
+						const r = i % 2 === 0 ? outerRadius : innerRadius;
+						const angle = ( i * Math.PI / points ) - Math.PI / 2;
+						const px = x + r * Math.cos( angle );
+						const py = y + r * Math.sin( angle );
+						if ( i === 0 ) {
+							this.ctx.moveTo( px, py );
+						} else {
+							this.ctx.lineTo( px, py );
+						}
+					}
+					this.ctx.closePath();
+					break;
+				}
+				default:
+					// Default to rectangle bounding box
+					this.ctx.rect( x, y, width, height );
 			}
 		}
 

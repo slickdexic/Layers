@@ -167,46 +167,26 @@ As a user, I want to adjust the background image opacity so I can make my annota
 
 ---
 
-## 3. Blur as Blend Mode for All Shapes
+## ~~3. Blur as Blend Mode for All Shapes~~
 
 **Priority:** Medium  
 **Complexity:** Medium-High  
-**Status:** ⏳ Proposed
+**Status:** ✅ Implemented in v1.2.6
 
 ### Description
-Allow any shape (rectangle, circle, ellipse, polygon, star, path) to use "blur" as a blend mode, creating blurred regions in any shape. This would generalize the current blur tool and enable creative use cases like privacy masks, focus effects, and stylized callouts.
+Allow any shape (rectangle, circle, ellipse, polygon, star) to use "blur" as a blend mode, creating blurred regions in any shape. This generalizes the current blur tool and enables creative use cases like privacy masks, focus effects, and stylized callouts.
+
+### Implementation Summary
+- Added 'blur' to valid blend modes in `LayersValidator.js`, `LayersConstants.js`, and `ServerSideLayerValidator.php`
+- Added `drawBlurWithShape()` and `hasBlurBlendMode()` methods to `EffectsRenderer.js`
+- Added blur blend mode support to `LayerRenderer.js` with shape path drawing helpers
+- Added blur blend mode support to `CanvasRenderer.js` for editor preview
+- Shapes with `blendMode: 'blur'` use shape geometry as clip path, apply blur filter within
+- Uses `blurRadius` property (default 12, clamped 1-64)
+- Fallback: gray semi-transparent overlay when no background image available
 
 ### User Story
 As a user, I want to apply blur effect to any shape (not just rectangles) so I can create circular privacy masks, star-shaped focus effects, or complex path-based blur regions.
-
-### Technical Challenges
-
-| Challenge | Approach |
-|-----------|----------|
-| Blur is a `filter`, not a blend mode | Intercept "blur" blend mode in renderer, use filter path |
-| Shape clipping for non-rectangles | Use shape geometry as clip path before applying blur |
-| Performance | Blur is expensive; consider caching or limiting blur radius |
-| Text layers | Apply blur to bounding box, or skip text (TBD) |
-
-### Implementation Approach
-
-1. **Add "blur" to blend mode options**
-   - Update LayersValidator.validBlendModes to include 'blur'
-   - Update blend mode dropdown in ToolbarStyleControls
-   - Update LayersConstants.BLEND_MODES
-
-2. **Modify ShapeRenderer**
-   - Detect `blendMode === 'blur'` before drawing
-   - Instead of normal fill/stroke, use shape as clip path
-   - Delegate to EffectsRenderer for blur effect within clip
-
-3. **Generalize EffectsRenderer.drawBlur()**
-   - Accept optional clip path (array of points or shape geometry)
-   - Use `ctx.clip()` with shape path before blur operation
-
-4. **Deprecate standalone blur tool?**
-   - Keep for backward compatibility
-   - Rectangle with blur blend mode is equivalent
 
 ### Layer Example
 ```javascript
@@ -217,20 +197,10 @@ As a user, I want to apply blur effect to any shape (not just rectangles) so I c
   radiusX: 80,
   radiusY: 60,
   blendMode: 'blur',
-  blurRadius: 15,  // reuse existing property
+  blurRadius: 15,  // optional, default 12
   opacity: 1
 }
 ```
-
-### Estimated Effort
-- **3-5 days** for full implementation
-- Files to modify: ShapeRenderer, EffectsRenderer, LayersValidator, ToolbarStyleControls, LayersConstants
-
-### Benefits
-- Unique differentiation from other annotation tools
-- Privacy masking with arbitrary shapes
-- Creative effects (vignettes, spotlight-inverse)
-- Consolidates blur functionality
 
 ---
 
@@ -535,7 +505,7 @@ Full touch support for tablets and phones.
 | **Enhanced Layerslink Navigation** | **High** | **Low-High** | **High** | ⏳ **Proposed** |
 | Deep Linking to Editor | High | Medium | High | ⏳ Proposed |
 | Lightbox Viewer | High | Medium | High | ⏳ Proposed |
-| Blur as Blend Mode | Medium | Medium | Medium | ⏳ Proposed |
+| ~~Blur as Blend Mode~~ | Medium | Medium | Medium | ✅ v1.2.6 |
 | Layer Templates | Medium | Medium | High | 💡 Idea |
 | Measurement Tools | Medium | Medium | High | 💡 Idea |
 | Layer Linking/Hotspots | Medium | Medium | High | 💡 Idea |
