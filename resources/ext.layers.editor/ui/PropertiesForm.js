@@ -789,7 +789,8 @@
 			{ value: 'darken', text: t( 'layers-blend-darken', 'Darken' ) },
 			{ value: 'lighten', text: t( 'layers-blend-lighten', 'Lighten' ) },
 			{ value: 'difference', text: t( 'layers-blend-difference', 'Difference' ) },
-			{ value: 'exclusion', text: t( 'layers-blend-exclusion', 'Exclusion' ) }
+			{ value: 'exclusion', text: t( 'layers-blend-exclusion', 'Exclusion' ) },
+			{ value: 'blur', text: t( 'layers-blend-blur', 'Blur' ) }
 		], onChange: function ( v ) { editor.updateLayer( layer.id, { blend: v } ); } } );
 		addCheckbox( { label: t( 'layers-effect-shadow', 'Drop Shadow' ), value: !!layer.shadow, onChange: function ( checked ) {
 			const updates = { shadow: !!checked };

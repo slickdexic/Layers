@@ -202,6 +202,7 @@
 	"layers-blend-darken": "Blend mode option: darken",
 	"layers-blend-lighten": "Blend mode option: lighten",
 	"layers-blend-difference": "Blend mode option: difference",
+	"layers-blend-blur": "Blend mode option: blur - applies blur effect using shape as clip region",
 	"layers-blend-exclusion": "Blend mode option: exclusion",
 	"layers-code-none": "Message in code panel when no layers are visible",
 	"layers-code-enable": "Helper text in code panel prompting to enable layers",
