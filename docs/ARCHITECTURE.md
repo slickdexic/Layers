@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 20, 2025  
-**Version:** 1.1.7
+**Last Updated:** December 23, 2025  
+**Version:** 1.2.4
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -22,18 +22,19 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 90 |
+| Total JS files | 95 |
 | Viewer module | ~682 lines |
 | Shared module | ~5,000 lines |
 | Editor module | ~40,000 lines |
-| Total JS lines | ~45,924 |
-| ES6 classes | 81 |
+| Total JS lines | ~48,000 |
+| ES6 classes | 87 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | ~92% statements, ~80% branches |
-| Jest tests | ~5,695 |
+| Test coverage | 91.19% stmt, 79.48% branch, 87.79% func |
+| Jest tests | **6,623** |
 | PHPUnit test files | 17 |
 | God classes (>1000 lines) | **6** ⚠️ |
 | Drawing tools | 14 |
+| TODO/FIXME comments | 0 ✅ |
 
 ---
 

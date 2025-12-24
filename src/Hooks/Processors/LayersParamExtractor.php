@@ -352,7 +352,37 @@ class LayersParamExtractor {
 	 * @return bool True if should open editor
 	 */
 	public function isEditorLink( ?string $linkType ): bool {
-		return $linkType === 'editor';
+		return in_array( $linkType, [ 'editor', 'editor-newtab', 'editor-return', 'editor-modal' ], true );
+	}
+
+	/**
+	 * Check if the layerslink value is for opening editor in a new tab
+	 *
+	 * @param string|null $linkType The layerslink value
+	 * @return bool True if should open in new tab
+	 */
+	public function isEditorNewtab( ?string $linkType ): bool {
+		return $linkType === 'editor-newtab';
+	}
+
+	/**
+	 * Check if the layerslink value is for opening editor with return URL
+	 *
+	 * @param string|null $linkType The layerslink value
+	 * @return bool True if should return to origin page after close
+	 */
+	public function isEditorReturn( ?string $linkType ): bool {
+		return $linkType === 'editor-return';
+	}
+
+	/**
+	 * Check if the layerslink value is for opening editor in modal overlay
+	 *
+	 * @param string|null $linkType The layerslink value
+	 * @return bool True if should open in modal overlay
+	 */
+	public function isEditorModal( ?string $linkType ): bool {
+		return $linkType === 'editor-modal';
 	}
 
 	/**

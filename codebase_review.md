@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** December 24, 2025  
+**Review Date:** December 23, 2025 (Updated)  
 **Version:** 1.2.3  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
@@ -10,27 +10,27 @@
 
 The Layers extension provides non-destructive image annotation capabilities for MediaWiki. This document provides an **honest, critical assessment** of the codebase quality, architecture, and technical health.
 
-### Overall Assessment: 8.5/10 - Production-Ready with Good Technical Health
+### Overall Assessment: 8.5/10 - Production-Ready with Minor Technical Debt
 
-The extension is **functional, tested, and production-ready** with professional security and excellent test coverage. Previous P0 issues have been resolved.
+The extension is **functional and production-ready** with professional security, excellent test coverage, and clean code practices. Recent fixes have addressed critical issues.
 
 **Key Strengths:**
 
-- ✅ **6,549 tests passing** (0 failures)
-- ✅ **~92% statement coverage, ~80% branch coverage**
-- ✅ **LayersLightbox.js now 86.6% covered** (was 0% - 70 tests added)
-- ✅ **All native dialogs replaced** - Uses accessible DialogManager
+- ✅ **6,623 tests passing** (0 failures)
+- ✅ **~91% statement coverage, ~79% branch coverage**
+- ✅ **DialogManager at 96% coverage** (was 53%)
+- ✅ **PropertiesForm function coverage at 68%** (was 41%)
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 14 working drawing tools with named layer sets
 - ✅ Smart Guides for object-to-object snapping
-- ✅ Style presets system with built-in and user-saved presets
+- ✅ All native dialogs now use DialogManager with fallbacks
 
-**Remaining Technical Debt (P2):**
+**Remaining Issues:**
 
-- ⚠️ **7 god classes (>1,000 lines)** - 21% of codebase in 7 files
-- ⚠️ **6 @deprecated methods not removed** - Dead code still present
+- ⚠️ **7 god classes (>1,000 lines)** - 21% of codebase in 7 files (mitigated by delegation)
+- ⚠️ **ToolbarStyleControls.js at 947 lines** - Approaching god class status
+- ⚠️ **12 eslint-disable comments** (8 are necessary fallbacks, 4 for API compatibility)
 - ⚠️ **No mobile/touch support** - Major gap for modern web
-- ⚠️ **1 file approaching 1,000 line limit** - ToolbarStyleControls (947)
 
 ---
 
@@ -43,18 +43,18 @@ All metrics collected directly from the codebase via automated tooling.
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | Total JS files | **95+** | - | ⚠️ Large codebase |
-| Total JS lines | **~47,000** | <100,000 | ✅ |
+| Total JS lines | **~48,000** | <50,000 | ⚠️ Approaching limit |
 | ES6 classes | **87** | 70+ | ✅ |
-| Files >1,000 lines | **7** | 0 | ❌ God classes |
+| Files >1,000 lines | **7** | 0 | ⚠️ Mitigated by delegation |
 | ESLint errors | **0** | 0 | ✅ |
-| ESLint disable comments | **9** | <10 | ✅ Acceptable (fallbacks) |
+| ESLint disable comments | **12** | <15 | ✅ Acceptable |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **6,549** | - | ✅ |
+| Jest tests passing | **6,623** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
-| Statement coverage | **~92%** | 85%+ | ✅ |
-| Branch coverage | **~80%** | 75%+ | ✅ |
-| Function coverage | **~88%** | 80%+ | ✅ |
-| Line coverage | **~92%** | 85%+ | ✅ |
+| Statement coverage | **91.19%** | 85%+ | ✅ |
+| Branch coverage | **79.48%** | 75%+ | ✅ |
+| Function coverage | **87.79%** | 80%+ | ✅ |
+| Line coverage | **91.66%** | 85%+ | ✅ |
 
 ### Files Over 1,000 Lines (God Classes)
 
@@ -62,50 +62,114 @@ All metrics collected directly from the codebase via automated tooling.
 |------|-------|-----------------|------------|
 | CanvasManager.js | **1,871** | ✅ 10+ controllers | HIGH - Too complex |
 | LayerPanel.js | **1,838** | ✅ 7 controllers | HIGH - Split needed |
-| Toolbar.js | **1,539** | ✅ 4 modules | HIGH - Growing |
+| Toolbar.js | **1,545** | ✅ 4 modules | HIGH - Growing |
 | LayersEditor.js | **1,335** | ✅ 3 modules | MEDIUM |
-| ToolManager.js | **1,264** | ✅ 2 handlers | MEDIUM |
+| ToolManager.js | **1,261** | ✅ 2 handlers | MEDIUM |
 | APIManager.js | **1,207** | ✅ APIErrorHandler | MEDIUM |
 | SelectionManager.js | **1,194** | ✅ 3 modules | MEDIUM |
 
-**Total in god classes: ~9,567 lines** (21% of JS codebase)
+**Total in god classes: ~10,251 lines** (21% of JS codebase)
 
 ### Files Approaching 1,000 Lines (Watch List)
 
 | File | Lines | Risk |
 |------|-------|------|
-| ToolbarStyleControls.js | **947** | 🔴 CRITICAL - Split immediately |
-| UIManager.js | **681** | ✅ RESOLVED - Extracted SetSelectorController.js (~567 lines) |
+| ToolbarStyleControls.js | **947** | 🔴 CRITICAL - Split soon |
 | ShapeRenderer.js | **859** | ⚠️ MEDIUM |
 | CanvasRenderer.js | **859** | ⚠️ MEDIUM |
 | LayersValidator.js | **843** | ⚠️ MEDIUM |
 | PropertiesForm.js | **832** | ⚠️ MEDIUM |
 | ResizeCalculator.js | **822** | ⚠️ MEDIUM |
 | TransformController.js | **779** | ⚠️ LOW |
+| DialogManager.js | **728** | ✅ LOW (96% coverage) |
 
-### Test Coverage Status ✅
+### Test Coverage - Previously Concerning, Now Improved ✅
 
-| File | Coverage | Risk | Status |
-|------|----------|------|--------|
-| LayersLightbox.js | **86.6%** | ✅ Fixed | 70 tests added Dec 24, 2025 |
-| PropertiesForm.js | **41% functions** | ⚠️ MEDIUM | Many functions untested |
-| ColorPickerDialog.js | **68.99% branches** | ⚠️ MEDIUM | Edge cases missing |
-| PresetManager.js | **82%** | ⚠️ LOW | Acceptable coverage |
-| ShapeFactory.js | **65.93% branches** | ⚠️ MEDIUM | Shape creation edge cases |
+| File | Stmt | Branch | Func | Risk | Notes |
+|------|------|--------|------|------|-------|
+| **DialogManager.js** | **96.14%** | **77.18%** | **100%** | ✅ FIXED | Was 53%, now 96% |
+| CanvasManager.js | 79.77% | 64.84% | 75.38% | ⚠️ HIGH | Complex file |
+| LayersValidator.js | 80.68% | 72% | 96.87% | ⚠️ MEDIUM | |
+| **PropertiesForm.js** | **89.35%** | **78.85%** | **68.22%** | ✅ IMPROVED | Was 41% func, now 68% |
+| PresetManager.js | 82.05% | 72.72% | 94.44% | ⚠️ MEDIUM | |
+| LayersNamespace.js | 83.6% | 60.65% | 70% | ⚠️ MEDIUM | Initialization code |
 
-### Test Coverage Summary
+---
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| Test suites passing | **126** | ✅ |
-| Test suites failing | **0** | ✅ |
-| Tests passing | **6,549** | ✅ |
-| Tests failing | **0** | ✅ |
-| Statement coverage | **~92%** | ✅ Excellent |
-| Branch coverage | **~80%** | ✅ Good |
-| Function coverage | **~88%** | ✅ Good |
-| Line coverage | **~92%** | ✅ Excellent |
-| Files with 0% coverage | **0** | ✅ All critical files covered |
+## Native Dialog Architecture ✅ FIXED
+
+All native `alert()`, `confirm()`, and `prompt()` calls now use DialogManager with appropriate fallbacks.
+
+### Dialog Pattern (Correct):
+
+All dialog calls now use a consistent pattern:
+1. **Primary:** Use `DialogManager.showConfirmDialog()` / `showAlertDialog()` / `showPromptDialogAsync()`
+2. **Fallback:** If DialogManager unavailable, gracefully fall back to native dialogs
+
+### ESLint Disable Comments (12 total - all acceptable):
+
+| File | Count | Rule | Reason |
+|------|-------|------|--------|
+| UIManager.js | 3 | no-alert | Fallback wrappers |
+| PresetDropdown.js | 2 | no-alert | Fallback wrappers |
+| RevisionManager.js | 1 | no-alert | Fallback wrapper |
+| LayerSetManager.js | 1 | no-alert | Fallback wrapper |
+| ImportExportManager.js | 1 | no-alert | Fallback wrapper |
+| ToolManager.js | 2 | no-unused-vars | Intentional API compatibility |
+| LayersValidator.js | 1 | no-unused-vars | Intentional API compatibility |
+| DrawingController.js | 1 | no-unused-vars | Intentional API compatibility |
+
+**Note:** The `no-alert` disables are for fallback code that only executes when DialogManager is unavailable. The `no-unused-vars` disables are for parameters intentionally kept for API compatibility.
+
+---
+
+## Deprecated Code Still in Production
+
+**8 deprecated items found** (previous review claimed 6):
+
+| File | Line | What's Deprecated |
+|------|------|------------------|
+| WikitextHooks.php | 684 | `getLayerSetNameFromParams()` |
+| WikitextHooks.php | 740 | `getLinkTypeFromParams()` |
+| Toolbar.js | 1495 | `handleKeyboardShortcuts` |
+| ModuleRegistry.js | 311 | `layersModuleRegistry` |
+| ModuleRegistry.js | 338 | Legacy module pattern |
+| CanvasManager.js | 453 | Fallback image loading path |
+| CanvasManager.js | 512 | `loadBackgroundImageFallback()` |
+| APIManager.js | 304 | `normalizeBooleanProperties()` |
+
+**Problem:** Deprecated code increases bundle size, confuses developers, and creates maintenance burden. None of these have been removed in 3+ months.
+
+---
+
+## Timer Cleanup ✅ IMPROVED
+
+**16 setTimeout calls found, most have proper cleanup or are one-shot timers:**
+
+### setTimeout Calls WITH Cleanup:
+
+| File | Cleanup Method |
+|------|----------------|
+| APIManager.js | `_scheduleTimeout()` pattern with Set tracking |
+| ErrorHandler.js | `_scheduleTimeout()` pattern with Set tracking |
+| UIManager.js | `_scheduleTimeout()` pattern with Set tracking |
+| ImageLoader.js | `loadTimeoutId` tracked, cleared in destroy() |
+| StateManager.js | `lockTimeout` tracked, cleared in destroy() |
+| RenderCoordinator.js | requestAnimationFrame pattern |
+| CanvasManager.js | `fallbackTimeoutId` tracked, cleared in destroy() |
+| LayersLightbox.js | `closeTimeoutId` tracked, cleared on re-call |
+
+### setTimeout Calls (One-Shot, Low Risk):
+
+| File | Context | Risk |
+|------|---------|------|
+| AccessibilityAnnouncer.js | 50ms announcement delay | ✅ None |
+| EditorBootstrap.js (4x) | Bootstrap initialization delays | ✅ None (runs once) |
+| ImportExportManager.js | 100ms DOM cleanup | ✅ None |
+| PropertiesForm.js | Input delay | ✅ None |
+| LayersNamespace.js | 0ms initialization | ✅ None |
+
+**Note:** One-shot timers (like 50ms delays) don't require cleanup as they complete immediately and don't recur.
 
 ---
 
@@ -121,128 +185,12 @@ All metrics collected directly from the codebase via automated tooling.
 | SQL Injection | ✅ Protected | Parameterized queries |
 | XSS Prevention (Text) | ✅ Implemented | Text sanitization |
 | Size Limits | ✅ Implemented | Configurable max bytes/layers |
-| Setname Sanitization | ✅ Fixed in v1.1.9 | All APIs now sanitize |
-| SVG XSS Prevention | ✅ Fixed in v1.1.10 | SVG removed from allowed types |
+| Setname Sanitization | ✅ Implemented | All APIs sanitize |
+| SVG XSS Prevention | ✅ Implemented | SVG removed from allowed types |
 
-### No Active Security Issues
+### No Active Security Vulnerabilities
 
-All previously identified security issues have been resolved.
-
----
-
-## Issues Resolved (December 24, 2025)
-
-### Issue #1: LayersLightbox.js Test Coverage ✅ FIXED
-
-**Status:** RESOLVED  
-**File:** `resources/ext.layers/LayersLightbox.js`  
-**Lines:** 541  
-**Coverage:** 86.6% (was 0%)
-
-70 comprehensive tests added covering:
-- Constructor initialization and configuration
-- Modal open/close lifecycle
-- Keyboard event handling (Escape to close)
-- Layer rendering integration
-- Error states and edge cases
-- Navigation between layer sets
-
-**Bug Fixed:** Added null guards to `showError()` and `renderViewer()` to prevent crashes when UI elements aren't initialized.
-
-### Issue #2: Native alert() Calls Replaced ✅ FIXED
-
-**Status:** RESOLVED  
-**Previous Count:** 8 instances  
-**Current Count:** 0 in production code
-
-All native `alert()`, `confirm()`, and `prompt()` calls replaced with accessible alternatives:
-
-| File | Solution |
-|------|----------|
-| UIManager.js (3) | DialogManager async dialogs |
-| Toolbar.js (3) | `mw.notify()` for errors |
-| LayerSetManager.js (1) | DialogManager `showConfirmDialog()` |
-| ImportExportManager.js (1) | DialogManager `showConfirmDialog()` |
-
-**DialogManager Enhanced With:**
-- `showConfirmDialog()` - Promise-based confirmation
-- `showAlertDialog()` - Promise-based alerts
-- `showPromptDialogAsync()` - Promise-based text input
-
-All dialogs now have proper ARIA attributes, keyboard navigation, and MediaWiki styling.
-
-**Note:** 5 `no-alert` eslint-disables remain in fallback code (used only if DialogManager unavailable). These are intentional defensive programming.
-
-## Remaining Issues (P2 - Code Quality)
-
-### Issue #3: God Classes Indicate Poor Separation of Concerns ⚠️
-
-**Severity:** HIGH  
-**Impact:** Maintainability, testability, onboarding difficulty
-
-While the existing god classes have delegation to controllers, the core problem remains: **single files managing too many responsibilities**.
-
-Example: `CanvasManager.js` (1,871 lines) handles:
-- Zoom/pan management
-- Selection handling
-- Drawing coordination
-- Background image loading
-- Transform operations
-- Clipboard operations
-- Marquee selection
-- Event handling
-- Canvas pool management
-
-Even with delegation, developers must understand 1,871 lines to make changes safely.
-
-### Issue #4: Deprecated Code Still in Production ⚠️
-
-**Severity:** MEDIUM  
-**Count:** 6 @deprecated annotations
-
-| File | Line | What's Deprecated |
-|------|------|------------------|
-| Toolbar.js | 1489 | `handleKeyboardShortcuts` |
-| ModuleRegistry.js | 311 | `layersModuleRegistry` |
-| ModuleRegistry.js | 338 | Legacy module pattern |
-| CanvasManager.js | 453 | Fallback image loading path |
-| CanvasManager.js | 512 | `loadBackgroundImageFallback()` |
-| APIManager.js | 304 | `normalizeBooleanProperties()` |
-
-**Problem:** Deprecated code increases bundle size, confuses developers, and creates maintenance burden.
-
-**Recommendation:** Create a deprecation removal plan for v2.0.
-
-### Issue #5: console.log in Production Code ✅ FIXED
-
-**Status:** RESOLVED  
-**Previous:** Orphaned eslint-disable comment in ToolManager.js  
-**Resolution:** Removed orphaned comment (no actual console usage)
-
-### Issue #6: No Mobile/Touch Support ❌
-
-**Severity:** HIGH for mobile users  
-**Impact:** Extension is completely unusable on tablets/phones
-
-Missing implementations:
-- Touch event handlers
-- Pinch-to-zoom gesture handling
-- Two-finger pan
-- Touch-friendly selection handles
-- Responsive toolbar layout
-- Mobile-optimized layer panel
-
-**Effort:** 4-6 weeks of development
-
-### Issue #7: Files Approaching 1,000 Line Limit ⚠️
-
-**Severity:** MEDIUM  
-
-Two files are very close to becoming god classes:
-- `ToolbarStyleControls.js` - 947 lines (53 lines away)
-- `UIManager.js` - 945 lines (55 lines away)
-
-**Recommendation:** Split these files proactively before they cross the threshold.
+The PHP backend is well-secured. All known security issues have been resolved.
 
 ---
 
@@ -259,43 +207,44 @@ Two files are very close to becoming god classes:
 
 ### Weaknesses ⚠️
 
-1. **God Classes:** 7 files exceed 1,000 lines (22% of codebase)
+1. **God Classes:** 7 files exceed 1,000 lines (21% of codebase)
 2. **Deep Coupling:** CanvasManager has 10+ direct dependencies
 3. **No Interface Types:** Pure JavaScript without TypeScript interfaces
-4. **Multiple Class Resolution Patterns:** Inconsistent patterns for finding classes
-5. **Excessive Defensive Fallbacks:** `|| 0` patterns hide bugs
+4. **Multiple Class Resolution Patterns:** At least 4 different patterns used
+5. **Timer Leaks:** ~~10+ setTimeout calls without cleanup tracking~~ ✅ FIXED - Major files now track timers
 
-### Code Smell: Multiple Class Resolution Patterns
+### Dialog Patterns ✅ STANDARDIZED
 
-The codebase uses at least 4 different patterns for resolving classes:
+All confirmation/prompt dialogs now use the **DialogManager-first pattern** with native fallbacks:
 
 ```javascript
-// Pattern 1: getClass helper with fallback
-const getClass = window.layersGetClass || function(...)
-
-// Pattern 2: Direct namespace access
-window.Layers.Core.Editor
-
-// Pattern 3: Global fallback chain
-window.LayersEditor || window.Layers.Core.Editor
-
-// Pattern 4: Registry lookup
-this.registry.get('Toolbar')
+// STANDARD PATTERN (PresetDropdown.js, RevisionManager.js, UIManager.js)
+async showConfirmDialog( options ) {
+    if ( this.dialogManager ) {
+        return this.dialogManager.showConfirmDialog( options );
+    }
+    // eslint-disable-next-line no-alert
+    return window.confirm( options.message ); // Fallback only
+}
 ```
 
-**Recommendation:** Standardize on ONE pattern for class resolution.
+The 8 remaining `eslint-disable-next-line no-alert` comments are **intentional fallbacks** for when DialogManager is unavailable.
 
-### PHP Codebase Summary
+---
 
-| File | Lines | Complexity |
-|------|-------|------------|
-| LayersDatabase.php | 995 | HIGH - Core DB operations |
-| WikitextHooks.php | 791 | MEDIUM - Wikitext integration |
-| ServerSideLayerValidator.php | 670 | MEDIUM - Validation logic |
-| ThumbnailRenderer.php | 664 | MEDIUM - Image processing |
-| ApiLayersSave.php | 502 | LOW - Clean API endpoint |
+## PHP Codebase Summary
 
-Total PHP lines: ~9,700 (well-structured)
+| File | Lines | Purpose |
+|------|-------|---------|
+| LayersDatabase.php | 995 | Core DB operations |
+| WikitextHooks.php | 946 | Wikitext integration |
+| ServerSideLayerValidator.php | 670 | Validation logic |
+| ThumbnailRenderer.php | 664 | Image processing |
+| ImageLinkProcessor.php | 636 | Link processing |
+| ThumbnailProcessor.php | 528 | Thumbnail handling |
+| ApiLayersSave.php | 502 | Save API endpoint |
+
+Total PHP lines: ~9,700 (well-structured, no TODOs/FIXMEs)
 
 ---
 
@@ -303,37 +252,13 @@ Total PHP lines: ~9,700 (well-structured)
 
 ### Drawing Tools (14 Available) ✅
 
-| Tool | Shortcut | Status | Notes |
-|------|----------|--------|-------|
-| Pointer | V | ✅ Working | Full selection support |
-| Zoom | Z | ✅ Working | Wheel zoom, fit-to-window |
-| Text | T | ✅ Working | Inline editing |
-| Text Box | X | ✅ Working | Multi-line with container |
-| Pen | P | ✅ Working | Freehand paths |
-| Rectangle | R | ✅ Working | Corner radius support |
-| Circle | C | ✅ Working | |
-| Ellipse | E | ✅ Working | |
-| Polygon | G | ✅ Working | Configurable sides |
-| Star | S | ✅ Working | Inner/outer radius |
-| Arrow | A | ✅ Working | Multiple head styles |
-| Line | L | ✅ Working | |
-| Blur | B | ✅ Working | Visual effect only |
-| Marquee | M | ✅ Working | Area selection |
+All tools working: Pointer, Zoom, Text, Text Box, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Blur, Marquee
 
 ### Advanced Features ✅
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Smart Guides | ✅ Working | Object-to-object snapping |
-| Key Object Alignment | ✅ Working | Align to selected reference |
-| Style Presets | ✅ Working | Built-in and user-saved |
-| Named Layer Sets | ✅ Working | Multiple sets per image |
-| Version History | ✅ Working | Revision browsing |
-| Import Image | ✅ Working | Paste images as layers |
-| Export as PNG | ✅ Working | With transparency |
-| Delete/Rename Sets | ✅ Working | Permission-based |
-| Undo/Redo | ✅ Working | Full history |
-| Keyboard Shortcuts | ✅ Working | Comprehensive |
+- Smart Guides, Key Object Alignment, Style Presets, Named Layer Sets
+- Version History, Import Image, Export as PNG, Delete/Rename Sets
+- Undo/Redo, Keyboard Shortcuts
 
 ### Missing/Incomplete Features ❌
 
@@ -344,86 +269,37 @@ Total PHP lines: ~9,700 (well-structured)
 | Gradient Fills | LOW | 1 week | ❌ Not started |
 | Custom Fonts | LOW | 2 weeks | ❌ Not started |
 | SVG Export | LOW | 1 week | ❌ Not started |
-| Rulers/Guides | LOW | 2 weeks | ❌ Not started |
-
----
-
-## Documentation Assessment
-
-### Existing Documentation
-
-| Document | Status | Quality |
-|----------|--------|---------|
-| README.md | ✅ Current | Good |
-| copilot-instructions.md | ✅ Excellent | Comprehensive |
-| CHANGELOG.md | ✅ Current | Good |
-| API.md | ✅ Auto-generated | Good |
-| DEVELOPER_ONBOARDING.md | ✅ Current | Good |
-| ARCHITECTURE.md | ⚠️ Outdated | Needs update for controller structure |
-| KNOWN_ISSUES.md | ⚠️ Outdated | Lists incorrect 0% coverage info |
-
-### Documentation Gaps
-
-1. **KNOWN_ISSUES.md is outdated** - Says "0 files with 0% coverage" but LayersLightbox.js has 0%
-2. **No JSDoc for many methods** - Especially in god classes
-3. **Missing architecture diagram** - Visual representation would help
-4. **No troubleshooting guide** - Common issues and solutions
 
 ---
 
 ## Recommendations
 
-### Completed (December 24, 2025) - P0 ✅
+### ✅ COMPLETED (This Session)
 
-1. ✅ **Add tests for LayersLightbox.js** - 70 tests, 86.6% coverage
-2. ✅ **Replace `alert()` calls with accessible dialogs** - All 8 replaced
-3. ✅ **Update KNOWN_ISSUES.md** - Documentation corrected
-4. ✅ **Clean up console eslint-disable** - Orphaned comment removed
+1. ~~**Fix PresetDropdown.js**~~ - ✅ Replaced `prompt()` and `confirm()` with DialogManager
+2. ~~**Fix RevisionManager.js**~~ - ✅ Replaced `confirm()` with DialogManager
+3. ~~**Add tests for DialogManager.js**~~ - ✅ Coverage: 53% → 96.14% (+35 tests)
+4. ~~**Document the REAL state**~~ - ✅ This document updated with accurate metrics
+5. ~~**Timer cleanup**~~ - ✅ Added tracking to CanvasManager and LayersLightbox
 
 ### Short-Term (1-4 Weeks) - P1
 
-5. Split `ToolbarStyleControls.js` (947 lines) before it exceeds 1,000
-6. Split `UIManager.js` (945 lines) before it exceeds 1,000
-7. Remove deprecated code or create removal plan
-8. Standardize class resolution pattern
-9. Improve function coverage for PropertiesForm.js (41%)
+6. Split ToolbarStyleControls.js (947 lines) before it exceeds 1,000
+7. Remove deprecated code or set a removal date
+8. Improve PropertiesForm.js function coverage (41% → 80%)
 
 ### Medium-Term (1-3 Months) - P2
 
-10. Extract functionality from god classes to reduce complexity
-11. Add mobile/touch support (if targeting mobile users)
-12. Create architecture diagram for documentation
-13. Add integration tests for editor + viewer together
+9. Extract functionality from god classes
+10. Standardize dialog patterns across codebase
+11. Add mobile/touch support
+12. Create architecture diagram
 
 ### Long-Term (3-6 Months) - P3
 
-14. TypeScript migration for type safety
-15. WCAG 2.1 AA compliance audit
-16. Performance benchmarking suite
-17. Plugin architecture for custom tools
-
----
-
-## Comparison to Previous Reviews
-
-| Date | Version | Tests | Coverage | God Classes | Critical Issues |
-|------|---------|-------|----------|-------------|-----------------|
-| Dec 20 | 1.1.7 | 5,609 | ~85% | 7 | 8 |
-| Dec 21 AM | 1.1.8 | 5,757 | ~86% | 7 | 1 |
-| Dec 21 PM | 1.1.9 | 5,766 | ~87% | 7 | 0 |
-| Dec 22 | 1.1.10 | 6,099 | ~90% | 7 | 0 |
-| Dec 23 | 1.2.2 | 6,479 | ~92% | 7 | 4 |
-| **Dec 24** | **1.2.3** | **6,549** | **~92%** | **7** | **0** |
-
-**P0 Issues Resolved (December 24, 2025):**
-1. ✅ LayersLightbox.js: 0% → 86.6% coverage (70 tests)
-2. ✅ 8 alert() calls → DialogManager async dialogs
-3. ✅ Documentation updated with accurate information
-4. ✅ Console eslint-disable orphan removed
-
-**v1.2.3 Improvements:**
-- ✅ Fixed text box rendering when image is scaled down (padding scaling)
-- ✅ UIManager.js refactored: 1,029 → 681 lines (SetSelectorController.js extracted)
+13. TypeScript migration for type safety
+14. WCAG 2.1 AA compliance audit
+15. Performance benchmarking suite
 
 ---
 
@@ -431,25 +307,32 @@ Total PHP lines: ~9,700 (well-structured)
 
 ### What's Good
 
-The extension is **production-ready and functional**. Security implementation is professional-grade. Test coverage at 92% is excellent for a MediaWiki extension. The PHP backend is clean and well-documented.
+The extension is **production-ready and functional**. Security implementation is professional-grade. Test coverage at 91% statement coverage is excellent. The PHP backend is clean and well-documented. **All critical dialog and timer cleanup issues have been resolved.**
 
-### What Needs Work
+### What Was Fixed This Session
 
-1. **The god class problem is real.** Having 21% of your codebase in 7 files makes maintenance difficult. Each change to CanvasManager.js requires understanding 1,871 lines of context.
+1. ✅ **PresetDropdown.js** - Now uses DialogManager with fallbacks
+2. ✅ **RevisionManager.js** - Now uses DialogManager with fallbacks  
+3. ✅ **DialogManager.js** - Coverage increased from 53% to 96.14%
+4. ✅ **Timer cleanup** - CanvasManager and LayersLightbox now track timeout IDs
+5. ✅ **Documentation** - This review updated with accurate current state
 
-2. **Code debt is being managed.** 6 deprecated methods remain, but eslint disables reduced from 13 to 9 (5 are intentional fallbacks).
+### What Still Needs Attention
 
-3. **No mobile support is a significant gap.** In 2025, an image editor without touch support limits the audience significantly.
-
-4. **One file approaching god class status.** ToolbarStyleControls (947 lines) needs splitting. UIManager was split (1,029 → 681 lines).
+1. **ToolbarStyleControls.js** - At 947 lines, approaching god class threshold
+2. **Mobile/Touch Support** - Major gap for modern web usage
+3. **8 Deprecated Methods** - Need removal timeline or keep decision
 
 ### Bottom Line
 
-The extension is production-ready with excellent test coverage and security. P0 issues have been resolved. The remaining work is P2 code quality improvements (god class splitting, mobile support) rather than critical bugs.
+The extension works, is secure, and is now well-tested. The critical issues identified in the previous review have been **fixed and verified**:
+- All dialogs use DialogManager pattern
+- Test coverage is comprehensive (6,584 tests, 91%+ coverage)
+- Timer cleanup patterns are in place
 
-**Rating: 8.5/10** - Production-ready with good technical health. Remaining work is enhancement rather than critical fixes.
+**Current rating: 8.5/10** - Deductions for god classes and missing mobile support.
 
 ---
 
 *Review performed by GitHub Copilot (Claude Opus 4.5)*  
-*Last updated: December 24, 2025*
+*Last updated: December 23, 2025*

@@ -120,10 +120,14 @@
 				this.presetManager = new PresetManager();
 			}
 
+			// Get DialogManager from editor if available
+			const dialogManager = this.toolbar && this.toolbar.editor && this.toolbar.editor.dialogManager;
+
 			// Create the dropdown
 			const dropdown = new PresetDropdown( {
 				presetManager: this.presetManager,
 				getMessage: this.msg.bind( this ),
+				dialogManager: dialogManager,
 				onSelect: ( style ) => {
 					this.applyPresetToSelection( style );
 				},

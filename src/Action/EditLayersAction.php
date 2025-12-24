@@ -82,6 +82,24 @@ class EditLayersAction extends \Action {
 			$initialSetName = '';
 		}
 
+		// Get return URL for editor-return mode
+		$returnTo = $request->getText( 'returnto', '' );
+		$returnToUrl = null;
+		if ( $returnTo !== '' ) {
+			// Validate returnto is a valid title to prevent open redirects
+			// Use fully qualified class name for MW 1.44+ compatibility
+			$titleClass = class_exists( '\\MediaWiki\\Title\\Title' )
+				? '\\MediaWiki\\Title\\Title'
+				: '\\Title';
+			$returnTitle = $titleClass::newFromText( $returnTo );
+			if ( $returnTitle && $returnTitle->isKnown() ) {
+				$returnToUrl = $returnTitle->getLocalURL();
+			}
+		}
+
+		// Check if editor is in modal mode
+		$isModalMode = $request->getBool( 'modal' );
+
 		// Page title
 		$out->setPageTitle(
 			( function_exists( 'wfMessage' )
@@ -101,7 +119,11 @@ class EditLayersAction extends \Action {
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
 				'initialSetName' => $initialSetName !== '' ? $initialSetName : null,
+				'returnToUrl' => $returnToUrl,
+				'isModalMode' => $isModalMode,
 			],
+			'wgLayersReturnToUrl' => $returnToUrl,
+			'wgLayersIsModalMode' => $isModalMode,
 			'wgLayersCurrentImageUrl' => $fileUrl,
 			'wgLayersImageBaseUrl' => $this->getImageBaseUrl(),
 			'wgLayersMaxImageBytes' => $config->get( 'LayersMaxImageBytes' ),

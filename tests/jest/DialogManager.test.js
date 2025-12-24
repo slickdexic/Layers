@@ -379,6 +379,459 @@ describe( 'DialogManager', () => {
 
 			expect( tabEvent.preventDefault ).toHaveBeenCalled();
 		} );
+
+		it( 'should trap Shift+Tab focus at first element', () => {
+			const dialog = document.createElement( 'div' );
+			const button1 = document.createElement( 'button' );
+			button1.textContent = 'First';
+			const button2 = document.createElement( 'button' );
+			button2.textContent = 'Last';
+			dialog.appendChild( button1 );
+			dialog.appendChild( button2 );
+			document.body.appendChild( dialog );
+
+			const onEscape = jest.fn();
+			dialogManager.setupKeyboardHandler( dialog, onEscape );
+
+			// Focus first button
+			button1.focus();
+
+			// Shift+Tab should wrap to last
+			const tabEvent = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				shiftKey: true,
+				bubbles: true
+			} );
+			Object.defineProperty( tabEvent, 'preventDefault', { value: jest.fn() } );
+			document.dispatchEvent( tabEvent );
+
+			expect( tabEvent.preventDefault ).toHaveBeenCalled();
+		} );
+
+		it( 'should call onEscape when Escape is pressed', () => {
+			const dialog = document.createElement( 'div' );
+			document.body.appendChild( dialog );
+
+			const onEscape = jest.fn();
+			dialogManager.setupKeyboardHandler( dialog, onEscape );
+
+			const escapeEvent = new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } );
+			document.dispatchEvent( escapeEvent );
+
+			expect( onEscape ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'showConfirmDialog (Promise-based)', () => {
+		it( 'should return a Promise', () => {
+			const result = dialogManager.showConfirmDialog( { message: 'Test?' } );
+			expect( result ).toBeInstanceOf( Promise );
+			// Clean up by clicking cancel
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should create dialog with message', () => {
+			dialogManager.showConfirmDialog( { message: 'Are you sure?' } );
+
+			const message = document.querySelector( '.layers-modal-dialog p' );
+			expect( message.textContent ).toBe( 'Are you sure?' );
+
+			// Clean up
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should display title when provided', () => {
+			dialogManager.showConfirmDialog( {
+				title: 'Confirm Action',
+				message: 'Test'
+			} );
+
+			const title = document.querySelector( '.layers-modal-title' );
+			expect( title.textContent ).toBe( 'Confirm Action' );
+
+			// Clean up
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should resolve to true when confirm is clicked', async () => {
+			const promise = dialogManager.showConfirmDialog( { message: 'Confirm?' } );
+
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+			confirmBtn.click();
+
+			const result = await promise;
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should resolve to false when cancel is clicked', async () => {
+			const promise = dialogManager.showConfirmDialog( { message: 'Confirm?' } );
+
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+
+			const result = await promise;
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should resolve to false when Escape is pressed', async () => {
+			const promise = dialogManager.showConfirmDialog( { message: 'Confirm?' } );
+
+			const event = new KeyboardEvent( 'keydown', { key: 'Escape' } );
+			document.dispatchEvent( event );
+
+			const result = await promise;
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should use custom button text', () => {
+			dialogManager.showConfirmDialog( {
+				message: 'Delete item?',
+				confirmText: 'Delete',
+				cancelText: 'Keep'
+			} );
+
+			const buttons = document.querySelectorAll( '.layers-modal-buttons button' );
+			expect( buttons[ 0 ].textContent ).toBe( 'Keep' );
+			expect( buttons[ 1 ].textContent ).toBe( 'Delete' );
+
+			// Clean up
+			buttons[ 0 ].click();
+		} );
+
+		it( 'should apply danger styling when isDanger is true', () => {
+			dialogManager.showConfirmDialog( {
+				message: 'Delete permanently?',
+				isDanger: true
+			} );
+
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+			expect( confirmBtn.className ).toContain( 'layers-btn-danger' );
+
+			// Clean up
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should focus cancel button by default', () => {
+			dialogManager.showConfirmDialog( { message: 'Confirm?' } );
+
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			expect( document.activeElement ).toBe( cancelBtn );
+
+			// Clean up
+			cancelBtn.click();
+		} );
+
+		it( 'should remove dialog from DOM after resolution', async () => {
+			const promise = dialogManager.showConfirmDialog( { message: 'Confirm?' } );
+
+			expect( document.querySelector( '.layers-modal-dialog' ) ).not.toBeNull();
+
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+			confirmBtn.click();
+
+			await promise;
+
+			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeNull();
+			expect( document.querySelector( '.layers-modal-overlay' ) ).toBeNull();
+		} );
+
+		it( 'should track and untrack dialog in activeDialogs', async () => {
+			const promise = dialogManager.showConfirmDialog( { message: 'Confirm?' } );
+
+			expect( dialogManager.activeDialogs.length ).toBe( 1 );
+
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+			confirmBtn.click();
+
+			await promise;
+
+			expect( dialogManager.activeDialogs.length ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'showAlertDialog (Promise-based)', () => {
+		it( 'should return a Promise', () => {
+			const result = dialogManager.showAlertDialog( { message: 'Alert!' } );
+			expect( result ).toBeInstanceOf( Promise );
+			// Clean up
+			const okBtn = document.querySelector( '.layers-btn-primary' );
+			okBtn.click();
+		} );
+
+		it( 'should display message', () => {
+			dialogManager.showAlertDialog( { message: 'Something happened!' } );
+
+			const message = document.querySelector( '.layers-modal-dialog p' );
+			expect( message.textContent ).toBe( 'Something happened!' );
+
+			// Clean up
+			const okBtn = document.querySelector( '.layers-btn-primary' );
+			okBtn.click();
+		} );
+
+		it( 'should display title when provided', () => {
+			dialogManager.showAlertDialog( {
+				title: 'Error',
+				message: 'Something went wrong'
+			} );
+
+			const title = document.querySelector( '.layers-modal-title' );
+			expect( title.textContent ).toBe( 'Error' );
+
+			// Clean up
+			const okBtn = document.querySelector( '.layers-btn-primary' );
+			okBtn.click();
+		} );
+
+		it( 'should have only OK button', () => {
+			dialogManager.showAlertDialog( { message: 'Alert!' } );
+
+			const buttons = document.querySelectorAll( '.layers-modal-buttons button' );
+			expect( buttons.length ).toBe( 1 );
+			expect( buttons[ 0 ].textContent ).toBe( 'OK' );
+
+			// Clean up
+			buttons[ 0 ].click();
+		} );
+
+		it( 'should apply type class when specified', () => {
+			dialogManager.showAlertDialog( {
+				message: 'Error occurred',
+				type: 'error'
+			} );
+
+			const dialog = document.querySelector( '.layers-modal-dialog' );
+			expect( dialog.className ).toContain( 'layers-modal-error' );
+
+			// Clean up
+			const okBtn = document.querySelector( '.layers-btn-primary' );
+			okBtn.click();
+		} );
+
+		it( 'should resolve when OK is clicked', async () => {
+			const promise = dialogManager.showAlertDialog( { message: 'Alert!' } );
+
+			const okBtn = document.querySelector( '.layers-btn-primary' );
+			okBtn.click();
+
+			// Should resolve without value
+			await expect( promise ).resolves.toBeUndefined();
+		} );
+
+		it( 'should resolve when Escape is pressed', async () => {
+			const promise = dialogManager.showAlertDialog( { message: 'Alert!' } );
+
+			const event = new KeyboardEvent( 'keydown', { key: 'Escape' } );
+			document.dispatchEvent( event );
+
+			await expect( promise ).resolves.toBeUndefined();
+		} );
+
+		it( 'should focus OK button', () => {
+			dialogManager.showAlertDialog( { message: 'Alert!' } );
+
+			const okBtn = document.querySelector( '.layers-btn-primary' );
+			expect( document.activeElement ).toBe( okBtn );
+
+			// Clean up
+			okBtn.click();
+		} );
+
+		it( 'should clean up dialog after resolution', async () => {
+			const promise = dialogManager.showAlertDialog( { message: 'Alert!' } );
+
+			const okBtn = document.querySelector( '.layers-btn-primary' );
+			okBtn.click();
+
+			await promise;
+
+			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeNull();
+			expect( dialogManager.activeDialogs.length ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'showPromptDialogAsync (Promise-based)', () => {
+		it( 'should return a Promise', () => {
+			const result = dialogManager.showPromptDialogAsync( {} );
+			expect( result ).toBeInstanceOf( Promise );
+			// Clean up
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should create input field', () => {
+			dialogManager.showPromptDialogAsync( {} );
+
+			const input = document.querySelector( '.layers-modal-input' );
+			expect( input ).not.toBeNull();
+			expect( input.type ).toBe( 'text' );
+
+			// Clean up
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should set placeholder and default value', () => {
+			dialogManager.showPromptDialogAsync( {
+				placeholder: 'Enter name...',
+				defaultValue: 'Default Name'
+			} );
+
+			const input = document.querySelector( '.layers-modal-input' );
+			expect( input.placeholder ).toBe( 'Enter name...' );
+			expect( input.value ).toBe( 'Default Name' );
+
+			// Clean up
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should display title and message when provided', () => {
+			dialogManager.showPromptDialogAsync( {
+				title: 'Enter Value',
+				message: 'Please type something'
+			} );
+
+			const title = document.querySelector( '.layers-modal-title' );
+			const message = document.querySelector( '.layers-modal-dialog p' );
+
+			expect( title.textContent ).toBe( 'Enter Value' );
+			expect( message.textContent ).toBe( 'Please type something' );
+
+			// Clean up
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should use custom button text', () => {
+			dialogManager.showPromptDialogAsync( {
+				confirmText: 'Save',
+				cancelText: 'Discard'
+			} );
+
+			const buttons = document.querySelectorAll( '.layers-modal-buttons button' );
+			expect( buttons[ 0 ].textContent ).toBe( 'Discard' );
+			expect( buttons[ 1 ].textContent ).toBe( 'Save' );
+
+			// Clean up
+			buttons[ 0 ].click();
+		} );
+
+		it( 'should focus and select input', () => {
+			dialogManager.showPromptDialogAsync( {
+				defaultValue: 'Selected Text'
+			} );
+
+			const input = document.querySelector( '.layers-modal-input' );
+			expect( document.activeElement ).toBe( input );
+
+			// Clean up
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+		} );
+
+		it( 'should resolve with input value when confirm clicked', async () => {
+			const promise = dialogManager.showPromptDialogAsync( {
+				defaultValue: 'Test Value'
+			} );
+
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+			confirmBtn.click();
+
+			const result = await promise;
+			expect( result ).toBe( 'Test Value' );
+		} );
+
+		it( 'should resolve with modified input value', async () => {
+			const promise = dialogManager.showPromptDialogAsync( {
+				defaultValue: 'Original'
+			} );
+
+			const input = document.querySelector( '.layers-modal-input' );
+			input.value = 'Modified Value';
+
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+			confirmBtn.click();
+
+			const result = await promise;
+			expect( result ).toBe( 'Modified Value' );
+		} );
+
+		it( 'should resolve with null when cancel clicked', async () => {
+			const promise = dialogManager.showPromptDialogAsync( {
+				defaultValue: 'Some Value'
+			} );
+
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+
+			const result = await promise;
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should resolve with input value when Enter pressed', async () => {
+			const promise = dialogManager.showPromptDialogAsync( {
+				defaultValue: 'Enter Test'
+			} );
+
+			const event = new KeyboardEvent( 'keydown', { key: 'Enter' } );
+			document.dispatchEvent( event );
+
+			const result = await promise;
+			expect( result ).toBe( 'Enter Test' );
+		} );
+
+		it( 'should resolve with null when Escape pressed', async () => {
+			const promise = dialogManager.showPromptDialogAsync( {
+				defaultValue: 'Escape Test'
+			} );
+
+			const event = new KeyboardEvent( 'keydown', { key: 'Escape' } );
+			document.dispatchEvent( event );
+
+			const result = await promise;
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should trap Tab focus within dialog', () => {
+			dialogManager.showPromptDialogAsync( {} );
+
+			const input = document.querySelector( '.layers-modal-input' );
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+
+			// Focus confirm button (last focusable)
+			confirmBtn.focus();
+
+			// Tab should wrap to input (first focusable)
+			const tabEvent = new KeyboardEvent( 'keydown', { key: 'Tab', bubbles: true } );
+			Object.defineProperty( tabEvent, 'preventDefault', { value: jest.fn() } );
+			document.dispatchEvent( tabEvent );
+
+			expect( tabEvent.preventDefault ).toHaveBeenCalled();
+
+			// Clean up
+			cancelBtn.click();
+		} );
+
+		it( 'should clean up dialog after resolution', async () => {
+			const promise = dialogManager.showPromptDialogAsync( {} );
+
+			expect( document.querySelector( '.layers-modal-dialog' ) ).not.toBeNull();
+			expect( dialogManager.activeDialogs.length ).toBe( 1 );
+
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			cancelBtn.click();
+
+			await promise;
+
+			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeNull();
+			expect( dialogManager.activeDialogs.length ).toBe( 0 );
+		} );
 	} );
 
 	describe( 'closeAllDialogs', () => {

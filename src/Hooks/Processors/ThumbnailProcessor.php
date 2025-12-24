@@ -480,7 +480,7 @@ class ThumbnailProcessor {
 	 * @param array &$linkAttribs Link attributes (modified by reference)
 	 * @param array &$attribs Image attributes (modified by reference for data attrs)
 	 * @param mixed $file The File object
-	 * @param string $linkType 'editor', 'viewer', or 'lightbox'
+	 * @param string $linkType 'editor', 'editor-newtab', 'editor-return', 'editor-modal', 'viewer', or 'lightbox'
 	 * @param string|null $setName Optional layer set name
 	 */
 	private function applyLayersLink(
@@ -496,18 +496,55 @@ class ThumbnailProcessor {
 		$this->log( sprintf( 'applyLayersLink: file=%s, linkType=%s, setName=%s', $filename, $linkType, $setName ?? 'null' ) );
 
 		if ( $this->paramExtractor->isEditorLink( $linkType ) ) {
-			// Build editor URL: File:Name.jpg?action=editlayers[&setname=name]
-			$editorUrl = $title->getLocalURL( [
+			// Build base editor URL parameters
+			$urlParams = [
 				'action' => 'editlayers',
 				'setname' => $setName ?? ''
-			] );
+			];
 
-			$linkAttribs['href'] = $editorUrl;
-			$linkAttribs['data-layers-link'] = 'editor';
-			$linkAttribs['title'] = wfMessage( 'layers-link-editor-title' )->text();
-			$attribs['data-layers-link'] = 'editor';
+			// Add returnto parameter for ALL editor links from article pages
+			// This ensures closing the editor returns to the originating page
+			$context = \RequestContext::getMain();
+			$currentTitle = $context->getTitle();
+			if ( $currentTitle && !$currentTitle->equals( $title ) ) {
+				$urlParams['returnto'] = $currentTitle->getPrefixedDBkey();
+			}
 
-			$this->log( "Applied editor deep link: $editorUrl" );
+			// Handle modal mode: pass modal flag
+			if ( $this->paramExtractor->isEditorModal( $linkType ) ) {
+				$urlParams['modal'] = '1';
+			}
+
+			$editorUrl = $title->getLocalURL( $urlParams );
+
+			// Handle editor-modal: use JavaScript handler instead of navigation
+			if ( $this->paramExtractor->isEditorModal( $linkType ) ) {
+				$linkAttribs['href'] = '#';
+				$linkAttribs['data-layers-modal'] = '1';
+				$linkAttribs['data-layers-filename'] = $filename;
+				$linkAttribs['data-layers-setname'] = $setName ?? '';
+				$linkAttribs['data-layers-editor-url'] = $editorUrl;
+				$linkAttribs['data-layers-link'] = 'editor-modal';
+				$linkAttribs['title'] = wfMessage( 'layers-link-editor-modal-title' )->text();
+				$attribs['data-layers-link'] = 'editor-modal';
+				$linkAttribs['class'] = trim( ( $linkAttribs['class'] ?? '' ) . ' layers-editor-modal-trigger' );
+				$this->log( "Applied modal editor link for: $filename" );
+			} else {
+				// Standard navigation modes
+				$linkAttribs['href'] = $editorUrl;
+				$linkAttribs['data-layers-link'] = 'editor';
+				$linkAttribs['title'] = wfMessage( 'layers-link-editor-title' )->text();
+				$attribs['data-layers-link'] = 'editor';
+
+				// Handle editor-newtab: open in new tab
+				if ( $this->paramExtractor->isEditorNewtab( $linkType ) ) {
+					$linkAttribs['target'] = '_blank';
+					$linkAttribs['rel'] = 'noopener noreferrer';
+					$linkAttribs['title'] = wfMessage( 'layers-link-editor-newtab-title' )->text();
+				}
+
+				$this->log( "Applied editor deep link: $editorUrl" );
+			}
 
 		} elseif ( $this->paramExtractor->isViewerLink( $linkType ) ) {
 			// For viewer/lightbox, set up client-side handler

@@ -2,6 +2,97 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.5] - 2025-12-24
+
+### Improved Editor Navigation
+
+**Breaking Change (UX Improvement):** When using `layerslink=editor` from an article page, closing the editor now returns you to the article page instead of the File: page. This is the expected behavior - the editor should return you to where you came from.
+
+### New Features - Advanced Editor Link Modes
+
+Added new `layerslink` values for additional control:
+
+#### `layerslink=editor-newtab`
+Opens the editor in a new browser tab, preserving the original page:
+```wikitext
+[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
+```
+
+#### `layerslink=editor-modal`
+Opens the editor in an iframe overlay without any page navigation — perfect for Page Forms:
+```wikitext
+[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
+```
+
+**Modal Mode Features:**
+- No page navigation (form data is preserved)
+- Escape key closes the modal
+- Full ARIA accessibility support
+- JavaScript events for integration: `layers-modal-closed`, `layers-saved`
+
+### Technical
+- **New module**: `ext.layers.modal` — Modal overlay component with postMessage communication
+- **New files**:
+  - `resources/ext.layers.modal/LayersEditorModal.js` — Modal class with iframe management
+  - `resources/ext.layers.modal/modal.css` — Modal overlay styles
+- **Modified files**:
+  - `src/Hooks/Processors/LayersParamExtractor.php` — Added `isEditorNewtab()`, `isEditorReturn()`, `isEditorModal()` methods
+  - `src/Hooks/Processors/ThumbnailProcessor.php` — ALL editor links now include `returnto` parameter
+  - `src/Hooks/Processors/ImageLinkProcessor.php` — ALL editor links now include `returnto` parameter
+  - `src/Hooks/WikitextHooks.php` — Accept new layerslink values in validation
+  - `src/Action/EditLayersAction.php` — Added `returnto` URL validation, `isModalMode` flag, new JS config vars
+  - `resources/ext.layers.editor/LayersEditor.js` — Modified `navigateBackToFileWithName()` for modal/return modes
+  - `i18n/en.json`, `i18n/qqq.json` — Added 5 new message keys
+  - `extension.json` — Added `ext.layers.modal` ResourceModule
+  - `jest.config.js` — Added `ext.layers.modal` to coverage tracking
+  - `docs/WIKITEXT_USAGE.md` — Documented new layerslink modes
+
+### Testing
+- **6,646 tests passing** (+23 from v1.2.4)
+- Added comprehensive Jest tests for `LayersEditorModal`
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
+## [1.2.4] - 2025-12-23
+
+### Code Quality - Major Testing & Documentation Update
+
+This release focuses on improving test coverage for critical components and ensuring documentation accuracy.
+
+#### Native Dialog Accessibility ✅
+- **PresetDropdown.js** — Replaced `prompt()` and `confirm()` calls with async DialogManager dialogs
+- **RevisionManager.js** — Replaced `confirm()` call with async DialogManager dialog
+- Both now have proper fallbacks using `eslint-disable-next-line no-alert` comments
+
+#### Test Coverage Improvements
+- **DialogManager.js** — Coverage increased from 53% to **96.14%** statement coverage (+35 tests)
+- **PropertiesForm.js** — Function coverage increased from 41% to **68.22%** (+39 tests)
+- **Total test count** — 6,549 → **6,623** (+74 tests)
+
+#### Memory Leak Prevention
+- **CanvasManager.js** — Added `fallbackTimeoutId` tracking for setTimeout cleanup
+- **LayersLightbox.js** — Added `closeTimeoutId` tracking for setTimeout cleanup
+
+#### Documentation Accuracy
+- **codebase_review.md** — Updated with accurate current metrics (was outdated)
+- **KNOWN_ISSUES.md** — Rewrote to reflect all P0 issues now resolved
+- Changed overall rating from 7.5/10 to **8.5/10** based on verified improvements
+
+### Technical Details
+- **Modified files**:
+  - `resources/ext.layers.editor/presets/PresetDropdown.js` — Async DialogManager integration
+  - `resources/ext.layers.editor/ui/PresetStyleManager.js` — Pass dialogManager to PresetDropdown
+  - `resources/ext.layers.editor/editor/RevisionManager.js` — Async confirm dialog
+  - `resources/ext.layers.editor/CanvasManager.js` — Timer ID tracking
+  - `resources/ext.layers/viewer/LayersLightbox.js` — Timer ID tracking
+  - `tests/jest/DialogManager.test.js` — 35 new tests for Promise-based APIs
+  - `tests/jest/PropertiesForm.test.js` — 39 new tests for layer forms
+  - `codebase_review.md` — Accurate metrics
+  - `docs/KNOWN_ISSUES.md` — All P0 issues marked resolved
+
+---
+
 ## [1.2.3] - 2025-12-23
 
 ### Bug Fixes

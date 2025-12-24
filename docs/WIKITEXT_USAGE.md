@@ -115,7 +115,7 @@ The extension automatically:
 
 ## Deep Linking with layerslink
 
-*New in v1.2.2*
+*New in v1.2.2, improved in v1.2.5*
 
 Control what happens when users click on layered images:
 
@@ -130,11 +130,56 @@ Control what happens when users click on layered images:
 | Value | Effect |
 |-------|--------|
 | (none) | Standard link to File: page |
-| `editor` | Opens layer editor for this image/set |
+| `editor` | Opens layer editor; closes back to originating page |
 | `viewer` | Opens fullscreen lightbox viewer |
 | `lightbox` | Alias for `viewer` |
 
 > **Note:** `layerslink` requires `layers=on` or `layers=<setname>` to be present.
+
+> **v1.2.5 Change:** When using `layerslink=editor` from an article page, closing the editor now returns you to the article (not the File: page). This is now the default behavior.
+
+### Advanced Editor Link Modes (v1.2.5+)
+
+For additional control over editor behavior:
+
+```text
+<!-- Opens editor in a new browser tab -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
+
+<!-- Opens editor in a modal overlay without navigating away -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
+```
+
+| Value | Effect |
+|-------|--------|
+| `editor-newtab` | Opens editor in new browser tab (original page preserved) |
+| `editor-modal` | Opens editor in an iframe overlay on top of current page |
+
+**Modal Mode Benefits:**
+- **No page navigation** - Perfect for Page Forms or complex editing workflows
+- **Preserves form data** - Your unsaved form data is protected
+- **Inline editing** - Edit layers without leaving your current context
+- **Keyboard support** - Press Escape to close the modal
+- **Accessible** - Full ARIA support for screen readers
+
+**JavaScript Events (Modal Mode):**
+
+When using `layerslink=editor-modal`, your page can listen for these events:
+
+```javascript
+// Fires when the modal closes (saved or cancelled)
+document.addEventListener('layers-modal-closed', function(e) {
+    console.log('Modal closed, saved:', e.detail.saved);
+    if (e.detail.saved) {
+        // Optionally refresh layered image preview
+    }
+});
+
+// Fires whenever layers are saved (can fire multiple times)
+document.addEventListener('layers-saved', function(e) {
+    console.log('Layers saved:', e.detail.filename);
+});
+```
 
 You can also link directly to the editor via URL:
 ```

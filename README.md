@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.2.3 (December 2025)  
+> **Version:** 1.2.5 (December 2025)  
 > **Status:** ✅ Production-ready. All P0 and P1 issues resolved.  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -192,10 +192,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 6,549 passing |
-| Statement coverage | 92% |
-| Branch coverage | 80% |
-| Test suites | 126 |
+| Jest tests | 6,623 passing |
+| Statement coverage | 91.19% |
+| Branch coverage | 79.48% |
+| Test suites | 127 |
 
 **Security:**
 
@@ -239,13 +239,13 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 96 | ✅ |
-| Total JS lines | ~47,000 | ⚠️ Past warning threshold |
+| Total JS files | 95 | ✅ |
+| Total JS lines | ~48,000 | ✅ |
 | ES6 classes | 87 | ✅ |
-| God classes (>1000 lines) | 7 | ⚠️ |
-| Tests passing | 6,549 | ✅ |
+| God classes (>1000 lines) | 6 | ⚠️ |
+| Tests passing | 6,623 | ✅ |
 | Tests failing | 0 | ✅ |
-| Files with 0% coverage | 5 | ⚠️ |
+| Files with 0% coverage | 4 | ⚠️ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

@@ -90,7 +90,7 @@ Human heart with anatomical labels]]
 
 ## Link Behavior (layerslink)
 
-*New in v1.2.0*
+*New in v1.2.0, improved in v1.2.5*
 
 Control what happens when users click on layered images with the `layerslink` parameter:
 
@@ -99,14 +99,19 @@ Control what happens when users click on layered images with the `layerslink` pa
 | Value | Effect |
 |-------|--------|
 | (none) | Standard MediaWiki link to File page |
-| `editor` | Opens the layer editor for this image |
+| `editor` | Opens the layer editor; returns to originating page on close |
+| `editor-newtab` | Opens editor in a new browser tab |
+| `editor-modal` | Opens editor in overlay without navigation |
 | `viewer` | Opens fullscreen lightbox viewer |
 | `lightbox` | Alias for `viewer` |
+
+> **v1.2.5 Change:** When using `layerslink=editor` from an article page, closing the editor now returns you to the article (not the File: page). This is the default behavior.
 
 ### Examples
 
 ```wikitext
 <!-- Click opens the layer editor with the 'anatomy' set -->
+<!-- Closing the editor returns you to THIS page -->
 [[File:Diagram.png|layers=anatomy|layerslink=editor]]
 
 <!-- Click opens the layer editor with the default set -->
@@ -121,6 +126,24 @@ Control what happens when users click on layered images with the `layerslink` pa
 <!-- Default behavior: click goes to File page -->
 [[File:Diagram.png|layers=anatomy]]
 ```
+
+### Advanced Editor Modes (v1.2.5+)
+
+For additional control over editor behavior:
+
+```wikitext
+<!-- Opens editor in a new browser tab -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
+
+<!-- Opens editor in modal overlay (no navigation) -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
+```
+
+**Modal Mode** is ideal for Page Forms because:
+- No page navigation occurs
+- Your unsaved form data is preserved
+- Press Escape or the X button to close
+- JavaScript events for integration (`layers-modal-closed`, `layers-saved`)
 
 ### Use Cases
 

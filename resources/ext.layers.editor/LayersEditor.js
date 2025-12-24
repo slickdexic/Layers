@@ -965,6 +965,26 @@ class LayersEditor {
 	 */
 	navigateBackToFileWithName ( filename ) {
 		try {
+			// Check if we're in modal mode - use postMessage to close
+			const isModalMode = mw && mw.config && mw.config.get( 'wgLayersIsModalMode' );
+			if ( isModalMode && window.parent !== window ) {
+				const hasSaved = !this.stateManager.get( 'isDirty' );
+				window.parent.postMessage( {
+					type: 'layers-editor-close',
+					saved: hasSaved,
+					filename: filename
+				}, window.location.origin );
+				return;
+			}
+
+			// Check for returnto URL (editor-return mode)
+			const returnToUrl = mw && mw.config && mw.config.get( 'wgLayersReturnToUrl' );
+			if ( returnToUrl ) {
+				window.location.href = returnToUrl;
+				return;
+			}
+
+			// Default: navigate to File: page
 			if ( filename && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
 				const url = mw.util.getUrl( 'File:' + filename );
 				window.location.href = url;

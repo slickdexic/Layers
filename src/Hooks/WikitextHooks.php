@@ -870,7 +870,7 @@ class WikitextHooks {
 					$offset = $match[0][1];
 					$linkValue = strtolower( trim( $match[2][0] ) );
 					// Validate against allowed values
-					if ( in_array( $linkValue, [ 'editor', 'viewer', 'lightbox' ], true ) ) {
+					if ( in_array( $linkValue, [ 'editor', 'editor-newtab', 'editor-return', 'editor-modal', 'viewer', 'lightbox' ], true ) ) {
 						if ( !isset( $layerslinkMap[$filename] ) ) {
 							$layerslinkMap[$filename] = [];
 						}

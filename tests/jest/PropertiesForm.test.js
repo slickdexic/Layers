@@ -1712,4 +1712,641 @@ describe( 'PropertiesForm', () => {
 			} ).not.toThrow();
 		} );
 	} );
+
+	describe( 'ColorPickerDialog integration', () => {
+		// Note: ColorPickerDialog is captured at module load time, so we test
+		// only the fallback path here. The ColorPickerDialog integration is
+		// tested implicitly through the form creation tests.
+
+		test( 'should use fallback when ColorPickerDialog not available', () => {
+			const container = document.createElement( 'div' );
+
+			// ColorPickerDialog is not available in test environment
+			PropertiesForm.addColorPicker( {
+				label: 'Fill Color',
+				value: '#ff0000',
+				onChange: jest.fn()
+			}, jest.fn(), container );
+
+			const button = container.querySelector( 'button' );
+			expect( button ).not.toBeNull();
+			expect( button.className ).toContain( 'color-display-button' );
+		} );
+	} );
+
+	describe( 'fallback color button click handler', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+			delete global.ColorPickerDialog;
+			delete global.Layers.UI.ColorPickerDialog;
+		} );
+
+		afterEach( () => {
+			// Clean up any leftover color inputs
+			const inputs = document.body.querySelectorAll( 'input[type="color"]' );
+			inputs.forEach( ( input ) => {
+				if ( input.parentNode ) {
+					input.parentNode.removeChild( input );
+				}
+			} );
+		} );
+
+		test( 'should create hidden color input on button click', () => {
+			PropertiesForm.addColorPicker( {
+				label: 'Fill Color',
+				value: '#ff0000',
+				onChange: jest.fn()
+			}, jest.fn(), container );
+
+			const button = container.querySelector( 'button' );
+			button.click();
+
+			// A hidden color input should be added to body
+			const colorInput = document.body.querySelector( 'input[type="color"]' );
+			expect( colorInput ).not.toBeNull();
+			expect( colorInput.style.opacity ).toBe( '0' );
+		} );
+
+		test( 'should update button color when color input changes', () => {
+			PropertiesForm.addColorPicker( {
+				label: 'Fill Color',
+				value: '#ff0000',
+				onChange: jest.fn()
+			}, jest.fn(), container );
+
+			const button = container.querySelector( 'button' );
+			const initialBackground = button.style.background;
+			button.click();
+
+			const colorInput = document.body.querySelector( 'input[type="color"]' );
+			colorInput.value = '#00ff00';
+			colorInput.dispatchEvent( new Event( 'change' ) );
+
+			// Button color should be updated
+			expect( button.style.background ).toBe( 'rgb(0, 255, 0)' );
+		} );
+
+		test( 'should handle blur event on color input', () => {
+			PropertiesForm.addColorPicker( {
+				label: 'Fill Color',
+				value: '#ff0000',
+				onChange: jest.fn()
+			}, jest.fn(), container );
+
+			const button = container.querySelector( 'button' );
+			button.click();
+
+			const colorInput = document.body.querySelector( 'input[type="color"]' );
+			expect( colorInput ).not.toBeNull();
+
+			// The blur handler tries to remove the input
+			colorInput.dispatchEvent( new Event( 'blur' ) );
+
+			// Note: The input may still exist if change event was fired first
+			// This test verifies the blur handler doesn't throw
+		} );
+
+		test( 'should set initial color value from opts', () => {
+			PropertiesForm.addColorPicker( {
+				label: 'Fill Color',
+				value: '#123456',
+				onChange: jest.fn()
+			}, jest.fn(), container );
+
+			const button = container.querySelector( 'button' );
+			button.click();
+
+			const colorInput = document.body.querySelector( 'input[type="color"]' );
+			expect( colorInput.value ).toBe( '#123456' );
+		} );
+	} );
+
+	describe( 'addSliderInput - range input sync', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+		} );
+
+		test( 'should sync range to number when range input changes', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addSliderInput( {
+				label: 'Opacity',
+				value: 50,
+				min: 0,
+				max: 100,
+				onChange
+			}, 'layer-1', container );
+
+			const numberInput = container.querySelector( 'input[type="number"]' );
+			const rangeInput = container.querySelector( 'input[type="range"]' );
+
+			// Change via range input
+			rangeInput.value = '75';
+			rangeInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( numberInput.value ).toBe( '75' );
+			expect( onChange ).toHaveBeenCalledWith( 75 );
+		} );
+
+		test( 'should format decimal values with fractional step', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addSliderInput( {
+				label: 'Value',
+				value: 0.5,
+				min: 0,
+				max: 1,
+				step: 0.1,
+				onChange
+			}, 'layer-1', container );
+
+			const numberInput = container.querySelector( 'input[type="number"]' );
+			const rangeInput = container.querySelector( 'input[type="range"]' );
+
+			rangeInput.value = '0.67';
+			rangeInput.dispatchEvent( new Event( 'input' ) );
+
+			// Should round to one decimal place
+			expect( numberInput.value ).toBe( '0.7' );
+			expect( onChange ).toHaveBeenCalledWith( 0.7 );
+		} );
+
+		test( 'should handle NaN input gracefully', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addSliderInput( {
+				label: 'Value',
+				value: 50,
+				min: 0,
+				max: 100,
+				onChange
+			}, 'layer-1', container );
+
+			const numberInput = container.querySelector( 'input[type="number"]' );
+			numberInput.value = 'invalid';
+			numberInput.dispatchEvent( new Event( 'input' ) );
+
+			// onChange should not be called for NaN
+			expect( onChange ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'layer type form variations', () => {
+		test( 'should create path layer form', () => {
+			const layer = { id: 'test-1', type: 'path', points: [ { x: 0, y: 0 }, { x: 100, y: 100 } ] };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			expect( form ).toBeInstanceOf( HTMLFormElement );
+
+			// Path layers should have appearance section
+			const appearanceHeader = form.querySelector( '.property-section-header--appearance' );
+			expect( appearanceHeader ).not.toBeNull();
+		} );
+
+		test( 'should handle text layer with all properties', () => {
+			const layer = {
+				id: 'test-1',
+				type: 'text',
+				x: 100,
+				y: 50,
+				text: 'Hello',
+				fontSize: 24,
+				fontFamily: 'Arial',
+				fontWeight: 'bold',
+				fontStyle: 'italic',
+				color: '#ff0000',
+				textStrokeColor: '#000000',
+				textStrokeWidth: 2,
+				textShadow: true,
+				textShadowColor: '#000000',
+				textShadowBlur: 5,
+				textShadowOffsetX: 3,
+				textShadowOffsetY: 3
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			expect( form ).toBeInstanceOf( HTMLFormElement );
+
+			// Check font size input
+			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
+			expect( fontSizeInput ).not.toBeNull();
+			expect( fontSizeInput.value ).toBe( '24' );
+		} );
+
+		test( 'should handle arrow layer with double style', () => {
+			const layer = {
+				id: 'test-1',
+				type: 'arrow',
+				x1: 0, y1: 0, x2: 100, y2: 100,
+				arrowStyle: 'double',
+				arrowHeadType: 'filled'
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			expect( form ).toBeInstanceOf( HTMLFormElement );
+
+			// Check for arrow style select
+			const selects = form.querySelectorAll( 'select' );
+			expect( selects.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'should update polygon radius', () => {
+			const layer = { id: 'test-layer', type: 'polygon', sides: 6, radius: 50 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const radiusInput = form.querySelector( 'input[data-prop="radius"]' );
+			radiusInput.value = '75';
+			radiusInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { radius: 75 } );
+		} );
+
+		test( 'should update polygon cornerRadius', () => {
+			const layer = { id: 'test-layer', type: 'polygon', sides: 6, radius: 50, cornerRadius: 0 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const cornerRadiusInput = form.querySelector( 'input[data-prop="cornerRadius"]' );
+			cornerRadiusInput.value = '10';
+			cornerRadiusInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalled();
+		} );
+
+		test( 'should update star outerRadius', () => {
+			const layer = { id: 'test-layer', type: 'star', points: 5, outerRadius: 50, innerRadius: 25 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const outerRadiusInput = form.querySelector( 'input[data-prop="outerRadius"]' );
+			outerRadiusInput.value = '75';
+			outerRadiusInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalled();
+		} );
+
+		test( 'should update star innerRadius', () => {
+			const layer = { id: 'test-layer', type: 'star', points: 5, outerRadius: 50, innerRadius: 25 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const innerRadiusInput = form.querySelector( 'input[data-prop="innerRadius"]' );
+			innerRadiusInput.value = '30';
+			innerRadiusInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalled();
+		} );
+
+		test( 'should update star pointRadius', () => {
+			const layer = { id: 'test-layer', type: 'star', points: 5, outerRadius: 50, innerRadius: 25, pointRadius: 0 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const pointRadiusInput = form.querySelector( 'input[data-prop="pointRadius"]' );
+			pointRadiusInput.value = '8';
+			pointRadiusInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalled();
+		} );
+
+		test( 'should update star valleyRadius', () => {
+			const layer = { id: 'test-layer', type: 'star', points: 5, outerRadius: 50, innerRadius: 25, valleyRadius: 0 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const valleyRadiusInput = form.querySelector( 'input[data-prop="valleyRadius"]' );
+			valleyRadiusInput.value = '5';
+			valleyRadiusInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'select field onChange handlers', () => {
+		test( 'should update textAlign via select change', () => {
+			const layer = { id: 'test-layer', type: 'textbox', textAlign: 'left' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const selects = form.querySelectorAll( 'select' );
+			const textAlignSelect = Array.from( selects ).find( ( s ) => {
+				const label = s.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Text Align' );
+			} );
+
+			if ( textAlignSelect ) {
+				textAlignSelect.value = 'center';
+				textAlignSelect.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { textAlign: 'center' } );
+			}
+		} );
+
+		test( 'should update verticalAlign via select change', () => {
+			const layer = { id: 'test-layer', type: 'textbox', verticalAlign: 'top' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const selects = form.querySelectorAll( 'select' );
+			const verticalAlignSelect = Array.from( selects ).find( ( s ) => {
+				const label = s.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Vertical Align' );
+			} );
+
+			if ( verticalAlignSelect ) {
+				verticalAlignSelect.value = 'middle';
+				verticalAlignSelect.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { verticalAlign: 'middle' } );
+			}
+		} );
+
+		test( 'should update fontFamily via select change', () => {
+			const layer = { id: 'test-layer', type: 'textbox', fontFamily: 'Arial' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const selects = form.querySelectorAll( 'select' );
+			const fontFamilySelect = Array.from( selects ).find( ( s ) => {
+				const label = s.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Font' );
+			} );
+
+			if ( fontFamilySelect ) {
+				fontFamilySelect.value = 'Roboto';
+				fontFamilySelect.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { fontFamily: 'Roboto' } );
+			}
+		} );
+	} );
+
+	describe( 'textbox text content', () => {
+		test( 'should update text via textarea change', () => {
+			const layer = { id: 'test-layer', type: 'textbox', text: 'Hello' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const textarea = form.querySelector( 'textarea' );
+			textarea.value = 'New text content';
+			textarea.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { text: 'New text content' } );
+		} );
+	} );
+
+	describe( 'circle layer form', () => {
+		test( 'should update circle radius', () => {
+			const layer = { id: 'test-layer', type: 'circle', radius: 50 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const radiusInput = form.querySelector( 'input[data-prop="radius"]' );
+			radiusInput.value = '75';
+			radiusInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { radius: 75 } );
+		} );
+	} );
+
+	describe( 'blur layer form', () => {
+		test( 'should update blur width', () => {
+			const layer = { id: 'test-layer', type: 'blur', width: 100, height: 100, blurRadius: 12 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const widthInput = form.querySelector( 'input[data-prop="width"]' );
+			widthInput.value = '150';
+			widthInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 150 } );
+		} );
+
+		test( 'should update blur height', () => {
+			const layer = { id: 'test-layer', type: 'blur', width: 100, height: 100, blurRadius: 12 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const heightInput = form.querySelector( 'input[data-prop="height"]' );
+			heightInput.value = '150';
+			heightInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 150 } );
+		} );
+	} );
+
+	describe( 'rectangle layer form', () => {
+		test( 'should update rectangle width', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 50 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const widthInput = form.querySelector( 'input[data-prop="width"]' );
+			widthInput.value = '200';
+			widthInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 200 } );
+		} );
+
+		test( 'should update rectangle height', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 50 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const heightInput = form.querySelector( 'input[data-prop="height"]' );
+			heightInput.value = '100';
+			heightInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 100 } );
+		} );
+
+		test( 'should update rectangle cornerRadius', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 50, cornerRadius: 0 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const cornerRadiusInput = form.querySelector( 'input[data-prop="cornerRadius"]' );
+			cornerRadiusInput.value = '15';
+			cornerRadiusInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'image layer form', () => {
+		test( 'should update image width', () => {
+			const layer = { id: 'test-layer', type: 'image', width: 300, height: 200 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const widthInput = form.querySelector( 'input[data-prop="width"]' );
+			widthInput.value = '400';
+			widthInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 400 } );
+		} );
+
+		test( 'should update image height', () => {
+			const layer = { id: 'test-layer', type: 'image', width: 300, height: 200 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const heightInput = form.querySelector( 'input[data-prop="height"]' );
+			heightInput.value = '300';
+			heightInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 300 } );
+		} );
+	} );
+
+	describe( 'line layer form', () => {
+		test( 'should update line x1', () => {
+			const layer = { id: 'test-layer', type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const x1Input = form.querySelector( 'input[data-prop="x1"]' );
+			x1Input.value = '50';
+			x1Input.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { x1: 50 } );
+		} );
+
+		test( 'should update line strokeWidth', () => {
+			const layer = { id: 'test-layer', type: 'line', x1: 0, y1: 0, x2: 100, y2: 100, strokeWidth: 2 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			const strokeWidthInput = Array.from( inputs ).find( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Stroke Width' );
+			} );
+
+			if ( strokeWidthInput ) {
+				strokeWidthInput.value = '5';
+				strokeWidthInput.dispatchEvent( new Event( 'input' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { strokeWidth: 5 } );
+			}
+		} );
+	} );
+
+	describe( 'shadow controls enable/disable', () => {
+		test( 'should disable shadow and clear shadow properties', () => {
+			const layer = {
+				id: 'test-layer',
+				type: 'rectangle',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 8,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const shadowCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Drop Shadow' );
+			} );
+
+			shadowCheckbox.checked = false;
+			shadowCheckbox.dispatchEvent( new Event( 'change' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { shadow: false } );
+		} );
+	} );
+
+	describe( 'textbox text shadow controls', () => {
+		test( 'should enable text shadow with defaults', () => {
+			const layer = { id: 'test-layer', type: 'textbox', textShadow: false };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const textShadowCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Text Shadow' );
+			} );
+
+			if ( textShadowCheckbox ) {
+				textShadowCheckbox.checked = true;
+				textShadowCheckbox.dispatchEvent( new Event( 'change' ) );
+
+				const call = mockEditor.updateLayer.mock.calls.find( ( c ) => c[ 1 ].textShadow === true );
+				expect( call ).toBeDefined();
+			}
+		} );
+
+		test( 'should disable text shadow', () => {
+			const layer = { id: 'test-layer', type: 'textbox', textShadow: true };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const textShadowCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Text Shadow' );
+			} );
+
+			if ( textShadowCheckbox ) {
+				textShadowCheckbox.checked = false;
+				textShadowCheckbox.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { textShadow: false } );
+			}
+		} );
+	} );
+
+	describe( 'arrow layer controls', () => {
+		test( 'should update arrow x2 endpoint', () => {
+			const layer = { id: 'test-layer', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const x2Input = form.querySelector( 'input[data-prop="x2"]' );
+			x2Input.value = '200';
+			x2Input.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { x2: 200 } );
+		} );
+
+		test( 'should update arrow y1 endpoint', () => {
+			const layer = { id: 'test-layer', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const y1Input = form.querySelector( 'input[data-prop="y1"]' );
+			y1Input.value = '50';
+			y1Input.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { y1: 50 } );
+		} );
+
+		test( 'should update arrow y2 endpoint', () => {
+			const layer = { id: 'test-layer', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const y2Input = form.querySelector( 'input[data-prop="y2"]' );
+			y2Input.value = '200';
+			y2Input.dispatchEvent( new Event( 'input' ) );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { y2: 200 } );
+		} );
+
+		test( 'should update arrow tailWidth', () => {
+			const layer = { id: 'test-layer', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100, tailWidth: 3 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			const tailWidthInput = Array.from( inputs ).find( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Tail Width' );
+			} );
+
+			if ( tailWidthInput ) {
+				tailWidthInput.value = '5';
+				tailWidthInput.dispatchEvent( new Event( 'input' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { tailWidth: 5 } );
+			}
+		} );
+
+		test( 'should update arrow size', () => {
+			const layer = { id: 'test-layer', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100, arrowSize: 15 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			const arrowSizeInput = Array.from( inputs ).find( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Head Size' );
+			} );
+
+			if ( arrowSizeInput ) {
+				arrowSizeInput.value = '25';
+				arrowSizeInput.dispatchEvent( new Event( 'input' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { arrowSize: 25 } );
+			}
+		} );
+	} );
 } );

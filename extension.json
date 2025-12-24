@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.2.3",
+	"version": "1.2.5",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -180,7 +180,7 @@
 			"localBasePath": "resources/ext.layers",
 			"remoteExtPath": "Layers/resources/ext.layers",
 			"targets": [ "desktop", "mobile" ],
-			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util", "ext.layers.shared" ],
+			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util", "ext.layers.shared", "ext.layers.modal" ],
 			"styles": [
 				"viewer/LayersLightbox.css"
 			],
@@ -202,6 +202,23 @@
 				"layers-lightbox-close",
 				"layers-lightbox-close-tooltip",
 				"layers-lightbox-loading"
+			]
+		},
+		"ext.layers.modal": {
+			"localBasePath": "resources/ext.layers.modal",
+			"remoteExtPath": "Layers/resources/ext.layers.modal",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "mediawiki.util" ],
+			"styles": [
+				"modal.css"
+			],
+			"scripts": [
+				"LayersEditorModal.js"
+			],
+			"messages": [
+				"layers-editor-modal-title",
+				"layers-editor-modal-close",
+				"layers-editor-modal-saved"
 			]
 		},
 		"ext.layers.editor": {
