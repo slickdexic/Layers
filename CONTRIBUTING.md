@@ -2,9 +2,23 @@
 
 Thanks for helping improve Layers! This guide covers local setup, how to run checks, and important code quality rules.
 
+## Codebase Size Policy
+
+**Target: <75,000 lines of JavaScript**
+
+This extension is feature-rich by design—14 drawing tools, multiple rendering systems, comprehensive validation, and extensive test coverage. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension. The 75K target provides room for continued feature development.
+
+**There is no arbitrary 50K limit.** The focus is on code quality, not line counts:
+- ✅ Well-structured with clear separation of concerns
+- ✅ Secure with CSRF protection, rate limiting, validation
+- ✅ Thoroughly tested (92%+ coverage, 6,800+ tests)
+- ✅ Properly delegated (god classes use controller patterns)
+
+---
+
 ## ⚠️ MANDATORY: God Class Rules
 
-**We have 9 "god classes" (files >1,000 lines) that represent critical technical debt. These rules are enforced by CI:**
+**We have 8 "god classes" (files >1,000 lines) that represent technical debt. These rules are enforced by CI:**
 
 ### Rule 1: No God Class Growth
 - **CI will BLOCK your PR** if you increase the size of any god class

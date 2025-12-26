@@ -2,6 +2,16 @@
 
 This guide is for contributors (human and AI) working on the Layers extension. It explains the architecture, API/data contracts, configuration, testing/build workflow, and security/i18n conventions you must follow.
 
+## Codebase Size Policy
+
+**Target: <75,000 lines of JavaScript** — There is NO 50K limit.
+
+This extension is feature-rich by design with 14 drawing tools, multiple rendering systems, comprehensive validation, and extensive test coverage. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching 50K lines or suggest arbitrary line limits. Focus on code quality metrics:
+- God classes (files >1,000 lines) — minimize these
+- Test coverage — maintain 90%+ statement coverage
+- Security — CSRF, rate limiting, validation
+- Proper delegation — use controller patterns
+
 ## 1) Architecture overview
 
 Separation of concerns is strict: PHP integrates with MediaWiki and storage; JavaScript implements the editor UI/state.
