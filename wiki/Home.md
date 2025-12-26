@@ -22,8 +22,8 @@
 
 ## 🆕 What's New in v1.2
 
-- **Blur Fill Mode** — "Frosted glass" effect for shapes including arrows (v1.2.7)
-- **Compact Layer Panel** — Redesigned UI inspired by Figma/Photoshop (v1.2.7)
+- **Blur Fill Mode** — "Frosted glass" effect for shapes including arrows (v1.2.8)
+- **Compact Layer Panel** — Redesigned UI inspired by Figma/Photoshop (v1.2.8)
 - **Deep Linking to Editor** — Open the editor with a specific layer set via URL parameters
 - **Fullscreen Lightbox Viewer** — View annotated images in a modal overlay
 - **Wikitext Link Options** — Control click behavior with `layerslink=editor` or `layerslink=viewer`
@@ -78,7 +78,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.2.7 |
+| **Version (main)** | 1.2.8 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | December 26, 2025 |
 | **Test Suites** | 126 |
