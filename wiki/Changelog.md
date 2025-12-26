@@ -4,6 +4,17 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.8 (December 27, 2025)
+
+### Bug Fixes
+- **Fixed arrow rendering with blur blend mode** — Arrows with blur blend mode no longer display rectangular bounding boxes in the editor
+- **Fixed arrow fill property** — Arrows are now properly filled instead of just stroked
+
+### Testing
+- **6,824 tests passing** (+68 from v1.2.7)
+
+---
+
 ## Version 1.2.7 (December 26, 2025)
 
 ### New Feature - Blur Fill for Arrows

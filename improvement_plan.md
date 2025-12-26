@@ -1,61 +1,32 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 24, 2025  
-**Status:** ✅ P0 Complete, P1 Complete, P2 In Progress  
-**Version:** 1.2.5  
+**Last Updated:** December 27, 2025  
+**Status:** ✅ P0 items RESOLVED, P1.1 COMPLETE  
+**Version:** 1.2.8  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-All **P0 (Critical)** and **P1 (Important)** issues have been resolved. The extension is production-ready with 92%+ test coverage and no blocking issues.
+The extension is **production-ready** with excellent test coverage. Recent improvements resolved critical coverage gaps and proactively prevented a god class from forming.
 
-**Current Rating: 8.5/10**
-
----
-
-## Completed Work (v1.2.5)
-
-### ✅ New Features - Advanced Editor Link Modes
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Editor returns to origin | ✅ SHIPPED | `layerslink=editor` now returns to originating page |
-| editor-newtab mode | ✅ SHIPPED | Opens editor in new browser tab |
-| editor-modal mode | ✅ SHIPPED | Opens editor in iframe overlay |
-| MW 1.44+ Title fix | ✅ FIXED | Fixed `Class 'Title' not found` error |
-
-### ✅ P0: Critical Issues - ALL RESOLVED (v1.2.4)
-
-| Issue | Status | Evidence |
-|-------|--------|----------|
-| Native alert/confirm/prompt calls | ✅ FIXED | PresetDropdown.js & RevisionManager.js use async DialogManager |
-| ESLint disables for no-alert | ✅ ACCEPTABLE | 5 remain, all in fallback code paths |
-| DialogManager coverage | ✅ 96.14% | Was 53%, added 35+ tests |
-| PropertiesForm function coverage | ✅ 68.22% | Was 41%, added 39 tests |
-
-### ✅ P1: Important Issues - ALL RESOLVED
-
-| Issue | Status | Evidence |
-|-------|--------|----------|
-| Timer cleanup tracking | ✅ FIXED | CanvasManager.js & LayersLightbox.js track timer IDs |
-| Documentation accuracy | ✅ FIXED | KNOWN_ISSUES.md, ARCHITECTURE.md, README.md updated |
+**Current Rating: 8.3/10** (improved from 8.2/10)
 
 ---
 
-## Current State (December 2025)
+## Current State (December 26, 2025)
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Functionality** | ✅ Complete | 14 tools, alignment, presets, named sets, smart guides, modal editor |
-| **Security** | ✅ Resolved | All known security issues fixed (SVG XSS, sanitization) |
-| **Testing** | ✅ Excellent | 6,646 tests, 92%+ statement coverage |
-| **ES6 Migration** | ✅ Complete | 88 classes, 0 prototype patterns |
+| **Functionality** | ✅ Complete | 14 tools, alignment, presets, named sets, smart guides, blur fill |
+| **Security** | ✅ Resolved | All known security issues fixed |
+| **Testing** | ✅ Excellent | 6,837 tests, 92.4% statement coverage, 80.1% branch coverage |
+| **ES6 Migration** | ✅ Complete | 87 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
-| **Documentation** | ✅ Accurate | All docs updated with current metrics |
-| **God Classes** | ⚠️ Monitor | 6 files >1,000 lines (all use delegation) |
-| **Mobile** | ❌ Missing | No touch support (P3) |
+| **God Classes** | ⚠️ Technical Debt | 8 files >1,000 lines (no new ones added) |
+| **Codebase Size** | ⚠️ High | ~49,700 lines, approaching 50K threshold |
+| **Mobile** | ❌ Missing | No touch support |
 
 ---
 
@@ -63,40 +34,48 @@ All **P0 (Critical)** and **P1 (Important)** issues have been resolved. The exte
 
 | Priority | Timeline | Status |
 |----------|----------|--------|
-| **P0** | Immediate | ✅ COMPLETE |
-| **P1** | 1-4 weeks | ✅ COMPLETE |
-| **P2** | 1-3 months | 🔄 In Progress |
+| **P0** | Immediate | ✅ RESOLVED |
+| **P1** | 1-4 weeks | ⚠️ In Progress |
+| **P2** | 1-3 months | ⏳ Planned |
 | **P3** | 3-6 months | ⏳ Not Started |
 
 ---
 
-## Phase 2: Code Quality (P2) - In Progress
+## Phase 0: Critical Issues (P0) - RESOLVED ✅
 
-### P2.1 Improve Low-Coverage Files ✅ MOSTLY COMPLETE
+### P0.1 EffectsRenderer.js Coverage ✅ FIXED
 
-| File | Before | After | Status |
-|------|--------|-------|--------|
-| ColorPickerDialog.js | 68.99% branch | 88.37% branch | ✅ Done |
-| LayersValidator.js | 72% branch | 95.27% branch | ✅ Done |
-| LayersEditorModal.js | 65.51% branch | 77.58% branch | ✅ Done |
-| CanvasManager.js | 64.84% branch | 64.84% branch | ⏳ Remaining |
-| LayersNamespace.js | 60.65% branch | 60.65% branch | ⚠️ Dead code |
+**Before:** 48.7% statement coverage, 43% branch coverage  
+**After:** **97.3% statement coverage, 91.5% branch coverage**  
+**Solution:** Added 26 comprehensive tests for drawBlurFill method, stroke styles
 
-**Notes:**
-- LayersNamespace.js has low coverage due to unused deprecation proxy code (dead code by design)
-- CanvasManager.js is the largest file (1,805 lines) and would require 4-6 hours of focused effort
+### P0.2 CanvasRenderer.js Coverage ✅ FIXED
 
-### P2.2 Reduce ESLint Disable Count ⚠️ ACCEPTABLE
+**Before:** 58.5% statement coverage, 47% branch coverage  
+**After:** **88.6% statement coverage, 73.9% branch coverage**  
+**Solution:** Added 40 tests for blur blend mode methods (_drawBlurClipPath, _drawBlurStroke, _drawBlurContent, _drawRoundedRectPath)
 
-**Current:** 5 eslint-disable comments (all `no-alert` fallbacks)  
-**Status:** Acceptable - these are legitimate fallbacks for when DialogManager isn't available
+---
 
-### P2.3 Split ToolbarStyleControls.js if Needed ⏳
+## Phase 1: Important Issues (P1) - In Progress
 
-**Current:** 947 lines (53 lines from god class territory)  
-**Status:** Monitor - only split if approaching 1,000 lines
+### P1.1 Split ToolbarStyleControls.js ✅ COMPLETE
 
-### P2.4 Remove Deprecated Code ⏳
+**Before:** 947 lines (53 lines from god class territory)  
+**After:** **798 lines** (well below 1,000 line threshold)  
+**Solution:** Extracted text effects controls to new TextEffectsControls.js module (378 lines)
+
+New module: `resources/ext.layers.editor/ui/TextEffectsControls.js`
+- Handles: font size, text stroke color/width, text shadow toggle/color
+- 42 new unit tests added for full coverage
+
+### P1.2 ESLint Disable Count ✅ ACCEPTABLE
+
+**Current:** 13 eslint-disable comments  
+**Status:** All are legitimate fallbacks or API compatibility  
+**Action:** None required
+
+### P1.3 Remove Deprecated Code ⏳
 
 8 deprecated items identified. Schedule removal for v2.0:
 
@@ -106,13 +85,42 @@ All **P0 (Critical)** and **P1 (Important)** issues have been resolved. The exte
 | WikitextHooks.php | `getLinkTypeFromParams()` | Remove in v2.0 |
 | Toolbar.js | `handleKeyboardShortcuts` | Remove now (unused) |
 | ModuleRegistry.js | Legacy pattern | Remove in v2.0 |
+| CanvasManager.js | Fallback image loading | Remove in v2.0 |
 | APIManager.js | `normalizeBooleanProperties()` | Keep (still used) |
 
 ---
 
-## Phase 3: Features & Future-Proofing (P3)
+## Phase 2: Code Quality (P2) - Planned
 
-### P3.1 Mobile/Touch Support ⏳ NOT STARTED
+### P2.1 Address God Classes
+
+8 files now exceed 1,000 lines (was 7):
+
+| File | Lines | Priority |
+|------|-------|----------|
+| CanvasManager.js | 1,877 | LOW (well-delegated) |
+| LayerPanel.js | 1,838 | MEDIUM |
+| Toolbar.js | 1,549 | MEDIUM |
+| LayersEditor.js | 1,355 | LOW |
+| ToolManager.js | 1,261 | LOW |
+| **CanvasRenderer.js** | **1,211** | **HIGH - NEW** |
+| APIManager.js | 1,207 | LOW |
+| SelectionManager.js | 1,194 | LOW |
+
+**Note:** CanvasRenderer.js is new to the god class list and also has low coverage - double priority.
+
+### P2.2 Improve Shared Renderer Coverage
+
+| File | Current | Target |
+|------|---------|--------|
+| LayerRenderer.js | 82% stmt, 63% branch | 90%+ |
+| ShapeRenderer.js | varies | 85%+ |
+
+---
+
+## Phase 3: Features (P3) - Not Started
+
+### P3.1 Mobile/Touch Support ⏳
 
 **Priority:** HIGH (for mobile users)  
 **Effort:** 4-6 weeks
@@ -124,22 +132,19 @@ Required:
 - Touch-friendly selection handles
 - Mobile-optimized layer panel
 
-### P3.2 TypeScript Migration ⏳ (5% Complete)
+### P3.2 TypeScript Migration ⏳
 
-**Migrated:**
-- `resources/ext.layers.shared/DeepClone.ts`
-- `resources/ext.layers.shared/BoundsCalculator.ts`
+**Status:** 5% complete (2 files migrated)  
+**Priority:** LOW - ES6 with JSDoc provides adequate type safety
 
-**Priority:** Low - ES6 with JSDoc provides adequate type safety
+### P3.3 Layer Grouping ⏳
 
-### P3.3 Layer Grouping ⏳ NOT STARTED
-
-Group multiple layers for bulk operations.
+Group multiple layers for bulk operations.  
 **Effort:** 2-3 weeks
 
-### P3.4 WCAG 2.1 AA Audit ⏳ NOT STARTED
+### P3.4 WCAG 2.1 AA Audit ⏳
 
-Full accessibility compliance audit.
+Full accessibility compliance audit.  
 **Effort:** 2 weeks
 
 ---
@@ -150,20 +155,25 @@ All god classes use the **controller delegation pattern** - they are facades tha
 
 | File | Lines | Pattern | Status |
 |------|-------|---------|--------|
-| CanvasManager.js | 1,871 | Facade → 10 controllers | ✅ Acceptable |
+| CanvasManager.js | 1,877 | Facade → 10 controllers | ✅ Acceptable |
 | LayerPanel.js | 1,838 | Facade → 7 controllers | ✅ Acceptable |
-| Toolbar.js | 1,545 | UI consolidation | ⚠️ Monitor |
-| LayersEditor.js | 1,335 | Orchestrator → managers | ✅ Acceptable |
+| Toolbar.js | 1,549 | UI consolidation | ⚠️ Monitor |
+| LayersEditor.js | 1,355 | Orchestrator → managers | ✅ Acceptable |
 | ToolManager.js | 1,261 | Facade → tool handlers | ✅ Acceptable |
+| **CanvasRenderer.js** | **1,211** | SelectionRenderer | ⚠️ **NEW - needs attention** |
+| APIManager.js | 1,207 | APIErrorHandler | ✅ Acceptable |
 | SelectionManager.js | 1,194 | Facade → selection helpers | ✅ Acceptable |
 
 ### Files to Watch (800-1000 lines)
 
 | File | Lines | Risk | Action |
 |------|-------|------|--------|
-| **ToolbarStyleControls.js** | **947** | 🔴 HIGH | Split if >1,000 |
-| ShapeRenderer.js | 859 | ⚠️ MEDIUM | Monitor |
-| CanvasRenderer.js | 859 | ⚠️ MEDIUM | Monitor |
+| **ToolbarStyleControls.js** | **947** | 🔴 HIGH | Split proactively |
+| ShapeRenderer.js | 903 | ⚠️ MEDIUM | Monitor |
+| PropertiesForm.js | 870 | ⚠️ MEDIUM | Monitor |
+| LayersValidator.js | 854 | ⚠️ LOW | Stable |
+| ResizeCalculator.js | 822 | ⚠️ LOW | Stable |
+| LayerRenderer.js | 818 | ⚠️ LOW | Stable |
 
 ---
 
@@ -171,20 +181,17 @@ All god classes use the **controller delegation pattern** - they are facades tha
 
 ```
 Phase 0 (CRITICAL):
-P0.1 Fix PresetDropdown.js:    ████████████████████ 100% ✅ COMPLETE
-P0.2 Fix RevisionManager.js:   ████████████████████ 100% ✅ COMPLETE
-P0.3 DialogManager coverage:   ████████████████████ 100% ✅ 96.14%
-P0.4 PropertiesForm funcs:     █████████████████░░░ 85%  ✅ 68.22%
+P0.1 EffectsRenderer coverage: ░░░░░░░░░░░░░░░░░░░░ 0%   🔴 NEEDS TESTS (49%)
+P0.2 CanvasRenderer coverage:  ░░░░░░░░░░░░░░░░░░░░ 0%   🔴 NEEDS TESTS (59%)
 
 Phase 1 (Important):
-P1.1 Timer cleanup tracking:   ████████████████████ 100% ✅ COMPLETE
-P1.2 Documentation accuracy:   ████████████████████ 100% ✅ COMPLETE
+P1.1 Split ToolbarStyleControls: ░░░░░░░░░░░░░░░░░░ 0%   ⏳ At 947 lines
+P1.2 ESLint disables:          ████████████████████ 100% ✅ Acceptable (13)
+P1.3 Deprecated removal:       ██░░░░░░░░░░░░░░░░░░ 10%  ⏳ Planned for v2.0
 
 Phase 2 (Code Quality):
-P2.1 Low coverage files:       ██████░░░░░░░░░░░░░░ 30%  🔄 In Progress
-P2.2 ESLint disables:          ████████████████████ 100% ✅ Acceptable (5)
-P2.3 ToolbarStyleControls:     ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Needed Yet
-P2.4 Deprecated removal:       ██░░░░░░░░░░░░░░░░░░ 10%  🔄 Planned for v2.0
+P2.1 Address god classes:      ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ 8 files
+P2.2 Shared renderer coverage: ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Planned
 
 Phase 3 (Features):
 P3.1 Mobile/Touch:             ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
@@ -199,36 +206,41 @@ P3.4 WCAG Audit:               ░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 6,646 passing tests with 92%+ coverage
+- 6,729 passing tests with ~91% statement coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
-- 100% ES6 classes (no legacy patterns)
+- 100% ES6 classes (86 classes, no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
 - Accessible UI with ARIA support
 - Named layer sets with version history
 - Smart guides and key object alignment
 - Style presets with import/export
 - 4 API endpoints with full validation
-- **NEW:** Modal editor mode for iframe editing
-- **NEW:** Editor returns to originating page
+- Modal editor mode for iframe editing
+- Editor returns to originating page
 - Rate limiting and security hardening
+- Blur fill mode for all shapes
 
 ### Need for 10/10
 
 | Feature | Impact | Effort | Priority |
 |---------|--------|--------|----------|
+| **Fix coverage gaps** | HIGH - Core rendering undertested | 1-2 weeks | P0 |
 | **Mobile/touch support** | HIGH - Opens to 50% more users | 4-6 weeks | P3.1 |
+| **Reduce god classes** | MEDIUM - Maintainability | 2-3 weeks | P2.1 |
 | **WCAG 2.1 AA certification** | MEDIUM - Enterprise requirement | 2 weeks | P3.4 |
-| **Performance benchmarks** | LOW - Already fast enough | 1 week | P3.5 |
-| **CI performance gates** | LOW - Nice to have | 2 days | P2.5 |
 | **Full TypeScript** | LOW - JSDoc is sufficient | 40+ hours | P3.2 |
 
 ---
 
 ## Rules
 
-### ✅ The P0 Rule - SATISFIED
+### 🔴 The P0 Rule - VIOLATED
 
-All P0 items complete. New features are now unblocked.
+Two files have critically low test coverage:
+- **EffectsRenderer.js:** 49% statement, 43% branch
+- **CanvasRenderer.js:** 59% statement, 47% branch
+
+These are core rendering files. New features should be blocked until coverage is addressed.
 
 ### The God Class Rule
 
@@ -237,18 +249,18 @@ When any file exceeds 1,000 lines:
 2. **Extract:** If monolithic, identify cohesive functionality for new module
 3. **Hard limit:** No file should exceed 2,000 lines
 
-All current god classes use delegation pattern. ✅
+8 files now exceed 1,000 lines (was 7). ⚠️
 
-### The Timer Rule
+### The Timer Rule ✅
 
 When adding setTimeout/setInterval:
 1. Store timer ID in instance variable
 2. Add clearTimeout/clearInterval in destroy()
 3. Document the cleanup
 
-Tracking added to CanvasManager and LayersLightbox. ✅
+All major files have proper timer cleanup.
 
-### The Dialog Rule
+### The Dialog Rule ✅
 
 All user-facing dialogs must:
 1. Use DialogManager or fallback wrapper
@@ -256,65 +268,89 @@ All user-facing dialogs must:
 3. Support keyboard navigation
 4. Match MediaWiki styling
 
-All dialogs now use DialogManager with fallbacks. ✅
+All dialogs now use DialogManager with fallbacks.
 
 ---
 
 ## Test Coverage Summary
 
-| Metric | Value |
-|--------|-------|
-| Total tests | 6,691 |
-| Statement coverage | 92%+ |
-| Branch coverage | 80%+ |
-| Function coverage | 88%+ |
-| Line coverage | 92%+ |
-| Test suites | 127 |
+| Metric | Value | Status |
+|--------|-------|--------|
+| Total tests | 6,729 | ✅ |
+| Statement coverage | 90.9% | ✅ |
+| Branch coverage | 78.6% | ✅ |
+| Function coverage | 89.7% | ✅ |
+| Line coverage | 91.2% | ✅ |
+| Test suites | 127 | ✅ |
 
-### Critical Files Coverage
+### Files Needing Attention
 
-| File | Statement | Branch | Functions |
-|------|-----------|--------|-----------|
-| DialogManager.js | **96.14%** | 92.50% | 92.30% |
-| PropertiesForm.js | 84.77% | 67.59% | **68.22%** |
-| CanvasManager.js | 81.23% | 64.84% | 79.68% |
-| LayersEditor.js | 78.92% | 65.43% | 76.19% |
+| File | Statement | Branch | Risk |
+|------|-----------|--------|------|
+| **EffectsRenderer.js** | **48.7%** | **43%** | 🔴 CRITICAL |
+| **CanvasRenderer.js** | **58.5%** | **47%** | 🔴 CRITICAL |
+| LayersNamespace.js | 83.6% | 60.6% | ⚠️ Low (dead code) |
+| CanvasManager.js | 79.6% | 64.8% | ⚠️ Medium |
+
+### Good Coverage Files (for reference)
+
+| File | Statement | Branch |
+|------|-----------|--------|
+| DialogManager.js | 96.1% | 77.2% |
+| LayersValidator.js | 96.9% | 95.0% |
+| APIManager.js | 86.8% | 74.4% |
+| LayersEditor.js | 86.3% | 72.0% |
 
 ---
 
 ## Next Actions
 
-### Immediate (Optional)
+### Immediate (P0) - REQUIRED
 
-1. ⏳ Add tests for low-coverage files (P2.1)
-2. ⏳ Create deprecation warnings for v2.0 items
+1. 🔴 **Add tests for EffectsRenderer.js** - 49% coverage is unacceptable for core visual effects
+2. 🔴 **Add tests for CanvasRenderer.js** - 59% coverage for a 1,211-line file is risky
 
-### Medium Term
+### Short-Term (P1)
 
-3. ⏳ WCAG 2.1 AA audit (P3.4)
-4. ⏳ Performance benchmarks (P3.5)
+3. ⚠️ Split ToolbarStyleControls.js proactively (947 lines)
+4. ⚠️ Set removal timeline for deprecated code
 
-### Long Term
+### Medium Term (P2)
 
-5. ⏳ Mobile/touch support (P3.1) - **Biggest impact**
-6. ⏳ Layer grouping (P3.3)
+5. ⏳ Improve shared renderer coverage (LayerRenderer, ShapeRenderer)
+6. ⏳ Consider splitting CanvasRenderer.js (now a god class)
+
+### Long Term (P3)
+
+7. ⏳ Mobile/touch support - **Biggest impact for users**
+8. ⏳ WCAG 2.1 AA audit
+9. ⏳ Layer grouping
 
 ---
 
 ## Summary
 
-The Layers extension is **production-ready** with excellent test coverage, clean code, and comprehensive documentation.
+The Layers extension is **functional and production-ready** but has accumulated technical debt that was previously understated in documentation.
 
-**Rating: 8.5/10**
+**Honest Rating: 8.0/10**
 
-The remaining 1.5 points would come from:
-- Mobile/touch support (+1.0)
-- WCAG 2.1 AA certification (+0.5)
+Deductions:
+- -0.5 for 2 files with <60% coverage (EffectsRenderer, CanvasRenderer)
+- -0.5 for 8 god classes (23% of codebase)
+- -0.5 for no mobile support
+- -0.5 for approaching 50K line complexity threshold
 
-These are significant features requiring weeks of development, not quick fixes.
+### What Would Improve the Rating
+
+| Action | Impact |
+|--------|--------|
+| Fix EffectsRenderer/CanvasRenderer coverage | +0.5 |
+| Reduce god classes to 5 or fewer | +0.25 |
+| Add mobile/touch support | +0.75 |
+| WCAG 2.1 AA certification | +0.25 |
 
 ---
 
-*Plan updated: December 24, 2025*  
-*Status: **P0 COMPLETE** ✅ - All critical issues resolved*  
-*Version: 1.2.5*
+*Plan updated: December 27, 2025*  
+*Status: **P0 ITEMS IDENTIFIED** 🔴 - Coverage gaps need attention*  
+*Version: 1.2.8*

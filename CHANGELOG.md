@@ -2,6 +2,23 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.8] - 2025-12-27
+
+### Bug Fixes
+- **Fixed arrow rendering with blur blend mode** — Arrows with blur blend mode (set via Blend Mode dropdown) no longer display rectangular bounding boxes in the editor. The issue was that the blur blend mode path used rectangular clip regions instead of the arrow's actual shape. Arrows and lines now render normally and ArrowRenderer handles blur fill correctly via EffectsRenderer.
+- **Fixed arrow fill property** — Arrows were being created without a `fill` property, causing ArrowRenderer to only stroke (not fill) the polygon outline. Added explicit `fill: style.color` to ShapeFactory.createArrow() and BuiltInPresets arrow definitions.
+
+### Technical
+- Updated CanvasRenderer.js to skip arrows/lines from blur blend mode rendering path
+- Updated LayerRenderer.js (shared) with same fix for consistency
+- Added fill and arrowSize properties to arrow presets in BuiltInPresets.js
+
+### Testing
+- **6,824 tests passing** (+68 from v1.2.7)
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
 ## [1.2.7] - 2025-12-26
 
 ### New Feature - Blur Fill for Arrows

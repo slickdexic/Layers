@@ -838,4 +838,721 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 			expect( ctx.save ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'drawLayerWithBlurBlend', () => {
+		it( 'should apply blur effect to rectangle layer', () => {
+			const layer = {
+				id: 'blur-rect',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				blurRadius: 12,
+				blendMode: 'blur'
+			};
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.clip ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle arrow layer type', () => {
+			const layer = {
+				id: 'blur-arrow',
+				type: 'arrow',
+				x1: 10,
+				y1: 10,
+				x2: 100,
+				y2: 50,
+				blurRadius: 12,
+				blendMode: 'blur'
+			};
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			// Arrow/line type calculates center differently
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply rotation when present', () => {
+			const layer = {
+				id: 'blur-rotated',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				rotation: 45,
+				blendMode: 'blur'
+			};
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply layer opacity', () => {
+			const layer = {
+				id: 'blur-opacity',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				opacity: 0.5,
+				blendMode: 'blur'
+			};
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			expect( ctx.globalAlpha ).toBe( 0.5 );
+		} );
+
+		it( 'should clamp blur radius to valid range', () => {
+			const layer = {
+				id: 'blur-extreme',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				blurRadius: 100, // Over max of 64
+				blendMode: 'blur'
+			};
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			// The blur filter should be set with clamped radius
+			expect( ctx.filter ).toBe( 'none' ); // Filter is reset after drawing
+		} );
+
+		it( 'should use default blur radius of 12 when not specified', () => {
+			const layer = {
+				id: 'blur-default',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				blendMode: 'blur'
+			};
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		it( 'should fall back to gray fill on canvas capture error', () => {
+			const layer = {
+				id: 'blur-error',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				blendMode: 'blur'
+			};
+
+			// Mock the canvas to throw on getContext
+			const originalGetContext = canvas.getContext;
+			canvas.getContext = jest.fn( () => {
+				throw new Error( 'Canvas error' );
+			} );
+
+			// Should not throw due to try/catch in implementation
+			expect( () => {
+				renderer.drawLayerWithBlurBlend( layer );
+			} ).not.toThrow();
+
+			expect( ctx.restore ).toHaveBeenCalled();
+
+			// Restore
+			canvas.getContext = originalGetContext;
+		} );
+
+		it( 'should handle line layer type same as arrow', () => {
+			const layer = {
+				id: 'blur-line',
+				type: 'line',
+				x1: 10,
+				y1: 10,
+				x2: 100,
+				y2: 50,
+				blurRadius: 12,
+				blendMode: 'blur'
+			};
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( '_drawBlurStroke', () => {
+		it( 'should skip stroke for text type', () => {
+			const layer = {
+				id: 'text-layer',
+				type: 'text',
+				stroke: '#ff0000',
+				strokeWidth: 2
+			};
+
+			ctx.stroke.mockClear();
+			renderer._drawBlurStroke( layer, false, 50, 50 );
+
+			expect( ctx.stroke ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should draw stroke when present on rectangle', () => {
+			const layer = {
+				id: 'rect-stroke',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#ff0000',
+				strokeWidth: 2
+			};
+
+			renderer._drawBlurStroke( layer, false, 60, 35 );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply stroke opacity when specified', () => {
+			const layer = {
+				id: 'rect-stroke-opacity',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#ff0000',
+				strokeWidth: 2,
+				strokeOpacity: 0.5
+			};
+
+			renderer._drawBlurStroke( layer, false, 60, 35 );
+
+			expect( ctx.globalAlpha ).toBe( 0.5 );
+		} );
+
+		it( 'should fall back to layer opacity when strokeOpacity not specified', () => {
+			const layer = {
+				id: 'rect-opacity-fallback',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#ff0000',
+				strokeWidth: 2,
+				opacity: 0.7
+			};
+
+			renderer._drawBlurStroke( layer, false, 60, 35 );
+
+			expect( ctx.globalAlpha ).toBe( 0.7 );
+		} );
+
+		it( 'should apply dashed stroke style', () => {
+			const layer = {
+				id: 'rect-dashed',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#ff0000',
+				strokeWidth: 2,
+				strokeStyle: 'dashed'
+			};
+
+			renderer._drawBlurStroke( layer, false, 60, 35 );
+
+			expect( ctx.setLineDash ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply dotted stroke style', () => {
+			const layer = {
+				id: 'rect-dotted',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#ff0000',
+				strokeWidth: 2,
+				strokeStyle: 'dotted'
+			};
+
+			renderer._drawBlurStroke( layer, false, 60, 35 );
+
+			expect( ctx.setLineDash ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply rotation when specified', () => {
+			const layer = {
+				id: 'rect-rotated-stroke',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#ff0000',
+				strokeWidth: 2
+			};
+
+			ctx.translate.mockClear();
+			ctx.rotate.mockClear();
+			renderer._drawBlurStroke( layer, true, 60, 35 );
+
+			expect( ctx.translate ).toHaveBeenCalledWith( 60, 35 );
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip when no stroke is specified', () => {
+			const layer = {
+				id: 'rect-no-stroke',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50
+			};
+
+			ctx.stroke.mockClear();
+			renderer._drawBlurStroke( layer, false, 60, 35 );
+
+			expect( ctx.stroke ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should skip when strokeWidth is zero', () => {
+			const layer = {
+				id: 'rect-zero-stroke',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#ff0000',
+				strokeWidth: 0
+			};
+
+			ctx.stroke.mockClear();
+			renderer._drawBlurStroke( layer, false, 60, 35 );
+
+			expect( ctx.stroke ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( '_drawBlurContent', () => {
+		it( 'should draw textbox text when textBoxRenderer is available', () => {
+			const mockTextBoxRenderer = {
+				setContext: jest.fn(),
+				drawTextOnly: jest.fn()
+			};
+			renderer.layerRenderer = {
+				textBoxRenderer: mockTextBoxRenderer
+			};
+
+			const layer = {
+				id: 'textbox-blur',
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				text: 'Hello World'
+			};
+
+			renderer._drawBlurContent( layer, false, 60, 35 );
+
+			expect( mockTextBoxRenderer.setContext ).toHaveBeenCalled();
+			expect( mockTextBoxRenderer.drawTextOnly ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw text layer when textRenderer is available', () => {
+			const mockTextRenderer = {
+				setContext: jest.fn(),
+				draw: jest.fn()
+			};
+			renderer.layerRenderer = {
+				textRenderer: mockTextRenderer
+			};
+
+			const layer = {
+				id: 'text-blur',
+				type: 'text',
+				x: 10,
+				y: 10,
+				text: 'Hello World'
+			};
+
+			renderer._drawBlurContent( layer, false, 60, 35 );
+
+			expect( mockTextRenderer.setContext ).toHaveBeenCalled();
+			expect( mockTextRenderer.draw ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw arrow when arrowRenderer is available', () => {
+			const mockArrowRenderer = {
+				setContext: jest.fn(),
+				draw: jest.fn()
+			};
+			renderer.layerRenderer = {
+				arrowRenderer: mockArrowRenderer
+			};
+
+			const layer = {
+				id: 'arrow-blur',
+				type: 'arrow',
+				x1: 10,
+				y1: 10,
+				x2: 100,
+				y2: 50
+			};
+
+			renderer._drawBlurContent( layer, false, 55, 30 );
+
+			expect( mockArrowRenderer.setContext ).toHaveBeenCalled();
+			expect( mockArrowRenderer.draw ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply rotation for textbox content', () => {
+			const mockTextBoxRenderer = {
+				setContext: jest.fn(),
+				drawTextOnly: jest.fn()
+			};
+			renderer.layerRenderer = {
+				textBoxRenderer: mockTextBoxRenderer
+			};
+
+			const layer = {
+				id: 'textbox-rotated',
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				text: 'Rotated Text'
+			};
+
+			ctx.translate.mockClear();
+			ctx.rotate.mockClear();
+			renderer._drawBlurContent( layer, true, 60, 35 );
+
+			expect( ctx.translate ).toHaveBeenCalledWith( 60, 35 );
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing layerRenderer gracefully', () => {
+			renderer.layerRenderer = null;
+
+			const layer = {
+				id: 'textbox-no-renderer',
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				text: 'Hello'
+			};
+
+			expect( () => {
+				renderer._drawBlurContent( layer, false, 60, 35 );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle textbox without text', () => {
+			const mockTextBoxRenderer = {
+				setContext: jest.fn(),
+				drawTextOnly: jest.fn()
+			};
+			renderer.layerRenderer = {
+				textBoxRenderer: mockTextBoxRenderer
+			};
+
+			const layer = {
+				id: 'textbox-empty',
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50
+			};
+
+			renderer._drawBlurContent( layer, false, 60, 35 );
+
+			// Should not call renderer since no text
+			expect( mockTextBoxRenderer.drawTextOnly ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( '_drawBlurClipPath', () => {
+		it( 'should draw rectangle clip path', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.rect ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw rectangle with cornerRadius using roundRect', () => {
+			ctx.roundRect = jest.fn();
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				cornerRadius: 10
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.roundRect ).toHaveBeenCalled();
+		} );
+
+		it( 'should fall back to manual rounded rect when roundRect unavailable', () => {
+			delete ctx.roundRect;
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				cornerRadius: 10
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw textbox clip path', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.rect ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw textbox with cornerRadius', () => {
+			ctx.roundRect = jest.fn();
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				cornerRadius: 8
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.roundRect ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw text clip path', () => {
+			const layer = {
+				type: 'text',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 20
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.rect ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw circle clip path', () => {
+			const layer = {
+				type: 'circle',
+				x: 50,
+				y: 50,
+				radius: 25
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.arc ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw ellipse clip path', () => {
+			const layer = {
+				type: 'ellipse',
+				x: 50,
+				y: 50,
+				radiusX: 40,
+				radiusY: 25
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.ellipse ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw polygon clip path', () => {
+			const layer = {
+				type: 'polygon',
+				x: 50,
+				y: 50,
+				radius: 30,
+				sides: 6
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw star clip path', () => {
+			const layer = {
+				type: 'star',
+				x: 50,
+				y: 50,
+				radius: 30,
+				innerRadius: 15,
+				points: 5
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw arrow clip path', () => {
+			const layer = {
+				type: 'arrow',
+				x1: 10,
+				y1: 10,
+				x2: 100,
+				y2: 50
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw line clip path same as arrow', () => {
+			const layer = {
+				type: 'line',
+				x1: 10,
+				y1: 10,
+				x2: 100,
+				y2: 50
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+		} );
+
+		it( 'should default to rectangle for unknown types', () => {
+			const layer = {
+				type: 'unknown',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.rect ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply zoom and pan to coordinates', () => {
+			renderer.zoom = 2;
+			renderer.panX = 50;
+			renderer.panY = 30;
+
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			// With zoom=2, panX=50, panY=30:
+			// x = 10 * 2 + 50 = 70
+			// y = 10 * 2 + 30 = 50
+			// width = 100 * 2 = 200
+			// height = 50 * 2 = 100
+			expect( ctx.rect ).toHaveBeenCalledWith( 70, 50, 200, 100 );
+		} );
+	} );
+
+	describe( '_drawRoundedRectPath', () => {
+		it( 'should draw rounded rectangle path manually', () => {
+			renderer._drawRoundedRectPath( 10, 10, 100, 50, 5 );
+
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.quadraticCurveTo ).toHaveBeenCalledTimes( 4 );
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle zero radius (fallback to rect-like)', () => {
+			renderer._drawRoundedRectPath( 10, 10, 100, 50, 0 );
+
+			expect( ctx.moveTo ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle large radius clamped to half of min dimension', () => {
+			// This tests the integration with _drawBlurClipPath
+			ctx.roundRect = undefined; // Force fallback
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				cornerRadius: 100 // Much larger than dimensions
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			// Should use clamped radius (25, which is height/2)
+			expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+		} );
+	} );
 } );

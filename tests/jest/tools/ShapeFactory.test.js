@@ -158,6 +158,20 @@ describe( 'ShapeFactory', () => {
 			const layer = factory.createArrow( { x: 0, y: 0 } );
 			expect( layer.arrowStyle ).toBe( 'single' );
 		} );
+
+		it( 'should include fill for proper arrow rendering', () => {
+			const layer = factory.createArrow( { x: 0, y: 0 } );
+			expect( layer.fill ).toBeDefined();
+			expect( layer.fill ).not.toBe( 'transparent' );
+			expect( layer.fill ).not.toBe( 'none' );
+		} );
+
+		it( 'should include arrowSize', () => {
+			const layer = factory.createArrow( { x: 0, y: 0 } );
+			expect( layer.arrowSize ).toBeDefined();
+			expect( typeof layer.arrowSize ).toBe( 'number' );
+			expect( layer.arrowSize ).toBeGreaterThan( 0 );
+		} );
 	} );
 
 	describe( 'createPolygon', () => {

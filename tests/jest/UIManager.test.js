@@ -2,7 +2,7 @@
  * UIManager.test.js - Tests for the UIManager class
  *
  * UIManager handles all UI creation and management for the Layers editor.
- * It creates DOM elements for the overlay, toolbar, layer panel, status bar,
+ * It creates DOM elements for the overlay, toolbar, layer panel,
  * set selectors, revision selectors, and manages spinners/errors.
  */
 
@@ -119,7 +119,6 @@ describe( 'UIManager', () => {
 			const uiManager = new UIManager( mockEditor );
 
 			expect( uiManager.container ).toBeNull();
-			expect( uiManager.statusBar ).toBeNull();
 			expect( uiManager.spinnerEl ).toBeNull();
 			expect( uiManager.setSelectEl ).toBeNull();
 			expect( uiManager.newSetInputEl ).toBeNull();
@@ -176,14 +175,6 @@ describe( 'UIManager', () => {
 
 			const main = uiManager.container.querySelector( '.layers-main' );
 			expect( main ).toBeTruthy();
-		} );
-
-		it( 'should create status bar', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			expect( uiManager.statusBar ).toBeTruthy();
-			expect( uiManager.statusBar.className ).toBe( 'layers-statusbar' );
 		} );
 
 		it( 'should create toolbar', () => {
@@ -320,131 +311,6 @@ describe( 'UIManager', () => {
 
 			const closeBtn = uiManager.container.querySelector( '.layers-header-close' );
 			expect( closeBtn.textContent ).toBe( '×' );
-		} );
-	} );
-
-	describe( 'createStatusBar', () => {
-		it( 'should create status items', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			const statusItems = uiManager.statusBar.querySelectorAll( '.status-item' );
-			expect( statusItems.length ).toBeGreaterThan( 0 );
-		} );
-
-		it( 'should create tool status item', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			const toolItem = uiManager.statusBar.querySelector( '[data-status="tool"]' );
-			expect( toolItem ).toBeTruthy();
-		} );
-
-		it( 'should create zoom status item', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			const zoomItem = uiManager.statusBar.querySelector( '[data-status="zoom"]' );
-			expect( zoomItem ).toBeTruthy();
-		} );
-
-		it( 'should create position status item', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			const posItem = uiManager.statusBar.querySelector( '[data-status="pos"]' );
-			expect( posItem ).toBeTruthy();
-		} );
-
-		it( 'should create size status item', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			const sizeItem = uiManager.statusBar.querySelector( '[data-status="size"]' );
-			expect( sizeItem ).toBeTruthy();
-		} );
-
-		it( 'should create selection status item', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			const selItem = uiManager.statusBar.querySelector( '[data-status="selection"]' );
-			expect( selItem ).toBeTruthy();
-		} );
-
-		it( 'should create code display section', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			const code = uiManager.statusBar.querySelector( '.status-code' );
-			expect( code ).toBeTruthy();
-		} );
-	} );
-
-	describe( 'setupStatusUpdates', () => {
-		it( 'should set updateZoomReadout function on uiManager', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			expect( typeof uiManager.updateZoomReadout ).toBe( 'function' );
-		} );
-
-		it( 'should set updateStatus function on uiManager', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			expect( typeof uiManager.updateStatus ).toBe( 'function' );
-		} );
-
-		it( 'updateZoomReadout should update zoom readout element', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			uiManager.updateZoomReadout( 150 );
-
-			expect( uiManager.zoomReadoutEl.textContent ).toBe( '150%' );
-		} );
-
-		it( 'updateStatus should update status items', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			uiManager.updateStatus( { tool: 'rectangle' } );
-
-			const toolItem = uiManager.statusBar.querySelector( '[data-status="tool"]' );
-			expect( toolItem.textContent ).toBe( 'rectangle' );
-		} );
-
-		it( 'updateStatus should format zoomPercent as percentage', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			uiManager.updateStatus( { zoomPercent: 75.5 } );
-
-			const zoomItem = uiManager.statusBar.querySelector( '[data-status="zoomPercent"]' );
-			// zoomPercent may not have a status item, check zoom instead
-			const zoomItemAlt = uiManager.statusBar.querySelector( '[data-status="zoom"]' );
-			// The formatting logic uses zoomPercent key but displays on zoom status
-		} );
-
-		it( 'updateStatus should format pos as x,y', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			uiManager.updateStatus( { pos: { x: 100.5, y: 200.7 } } );
-
-			const posItem = uiManager.statusBar.querySelector( '[data-status="pos"]' );
-			expect( posItem.textContent ).toBe( '101,201' );
-		} );
-
-		it( 'updateStatus should format size as width×height', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			uiManager.updateStatus( { size: { width: 150.3, height: 100.8 } } );
-
-			const sizeItem = uiManager.statusBar.querySelector( '[data-status="size"]' );
-			expect( sizeItem.textContent ).toBe( '150×101' );
 		} );
 	} );
 

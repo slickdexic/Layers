@@ -511,8 +511,11 @@
 
 		drawLayerWithEffects( layer ) {
 			// Check for blur blend mode - use special rendering path
+			// Skip arrows and lines - they handle blur fill via ArrowRenderer/effectsRenderer,
+			// and blur blend mode with rectangular clip doesn't make sense for these shapes
 			const blendMode = layer.blendMode || layer.blend;
-			if ( blendMode === 'blur' && layer.type !== 'blur' ) {
+			const isArrowOrLine = layer.type === 'arrow' || layer.type === 'line';
+			if ( blendMode === 'blur' && layer.type !== 'blur' && !isArrowOrLine ) {
 				this.drawLayerWithBlurBlend( layer );
 				return;
 			}
@@ -652,7 +655,8 @@
 		 */
 		_drawBlurStroke( layer, hasRotation, centerX, centerY ) {
 			// Skip stroke for text type (it doesn't have shape stroke)
-			if ( layer.type === 'text' ) {
+			// Skip stroke for arrow/line types - _drawBlurContent renders them with stroke via LayerRenderer
+			if ( layer.type === 'text' || layer.type === 'arrow' || layer.type === 'line' ) {
 				return;
 			}
 
@@ -748,6 +752,19 @@
 					this.layerRenderer.arrowRenderer.draw( layer, {
 						scale: { sx: this.zoom, sy: this.zoom, avg: this.zoom },
 						offset: { x: this.panX, y: this.panY }
+					} );
+					this.ctx.restore();
+				}
+			}
+
+			// Handle line type - draw line on top
+			if ( layer.type === 'line' ) {
+				if ( this.layerRenderer ) {
+					this.ctx.save();
+					this.layerRenderer.drawLine( layer, {
+						zoom: this.zoom,
+						panX: this.panX,
+						panY: this.panY
 					} );
 					this.ctx.restore();
 				}

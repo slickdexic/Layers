@@ -73,6 +73,14 @@ class ToolbarStyleControls {
 			applyStyle: ( style ) => this.applyPresetStyleInternal( style )
 		} ) : null;
 
+		// Initialize TextEffectsControls for text-specific UI delegation
+		const TextEffectsControls = getClass( 'UI.TextEffectsControls', 'TextEffectsControls' );
+		this.textEffectsControls = TextEffectsControls ? new TextEffectsControls( {
+			msg: this.msg.bind( this ),
+			addListener: this.addListener.bind( this ),
+			notifyStyleChange: this.notifyStyleChange.bind( this )
+		} ) : null;
+
 		// Style state
 		this.strokeColorValue = '#000000';
 		this.fillColorValue = '#ffffff';
@@ -87,16 +95,8 @@ class ToolbarStyleControls {
 		this.strokeControl = null;
 		this.fillControl = null;
 		this.strokeWidthInput = null;
-		this.fontSizeInput = null;
-		this.fontSizeContainer = null;
 		this.strokeContainer = null;
-		this.shadowContainer = null;
 		this.arrowContainer = null;
-		this.textStrokeColor = null;
-		this.textStrokeWidth = null;
-		this.textStrokeValue = null;
-		this.textShadowToggle = null;
-		this.textShadowColor = null;
 		this.arrowStyleSelect = null;
 
 		// Input validators
@@ -156,17 +156,17 @@ class ToolbarStyleControls {
 		const styleControlsRow = this.createMainStyleRow();
 		styleGroup.appendChild( styleControlsRow );
 
-		// Font size container (for text tool)
-		this.fontSizeContainer = this.createFontSizeControl();
-		styleGroup.appendChild( this.fontSizeContainer );
+		// Text effects controls (via TextEffectsControls delegation)
+		if ( this.textEffectsControls ) {
+			// Font size container (for text tool)
+			styleGroup.appendChild( this.textEffectsControls.createFontSizeControl() );
 
-		// Text stroke options
-		this.strokeContainer = this.createTextStrokeControl();
-		styleGroup.appendChild( this.strokeContainer );
+			// Text stroke options
+			styleGroup.appendChild( this.textEffectsControls.createTextStrokeControl() );
 
-		// Drop shadow options
-		this.shadowContainer = this.createShadowControl();
-		styleGroup.appendChild( this.shadowContainer );
+			// Drop shadow options
+			styleGroup.appendChild( this.textEffectsControls.createShadowControl() );
+		}
 
 		// Arrow style options
 		this.arrowContainer = this.createArrowStyleControl();
@@ -382,135 +382,6 @@ class ToolbarStyleControls {
 	}
 
 	/**
-	 * Create the font size control (for text tool)
-	 *
-	 * @return {HTMLElement} The font size container
-	 */
-	createFontSizeControl() {
-		const container = document.createElement( 'div' );
-		container.className = 'font-size-container style-control-item';
-		container.style.display = 'none';
-
-		const label = document.createElement( 'span' );
-		label.className = 'style-control-label';
-		label.textContent = this.msg( 'layers-prop-font-size', 'Size' );
-		container.appendChild( label );
-
-		const input = document.createElement( 'input' );
-		input.type = 'number';
-		input.min = '8';
-		input.max = '72';
-		input.value = '16';
-		input.className = 'font-size';
-		input.title = this.msg( 'layers-prop-font-size', 'Font Size' );
-		container.appendChild( input );
-
-		this.fontSizeInput = input;
-
-		this.addListener( input, 'change', () => {
-			this.notifyStyleChange();
-		} );
-
-		return container;
-	}
-
-	/**
-	 * Create the text stroke control
-	 *
-	 * @return {HTMLElement} The text stroke container
-	 */
-	createTextStrokeControl() {
-		const container = document.createElement( 'div' );
-		container.className = 'text-stroke-container';
-		container.style.display = 'none';
-
-		const label = document.createElement( 'label' );
-		label.textContent = this.msg( 'layers-prop-stroke-color', 'Stroke Color' ) + ':';
-		label.className = 'stroke-color-label';
-		container.appendChild( label );
-
-		const colorInput = document.createElement( 'input' );
-		colorInput.type = 'color';
-		colorInput.value = '#000000';
-		colorInput.className = 'text-stroke-color';
-		colorInput.title = this.msg( 'layers-prop-stroke-color', 'Text Stroke Color' );
-		container.appendChild( colorInput );
-		this.textStrokeColor = colorInput;
-
-		const widthInput = document.createElement( 'input' );
-		widthInput.type = 'range';
-		widthInput.min = '0';
-		widthInput.max = '10';
-		widthInput.value = '0';
-		widthInput.className = 'text-stroke-width';
-		widthInput.title = this.msg( 'layers-prop-stroke-width', 'Text Stroke Width' );
-		container.appendChild( widthInput );
-		this.textStrokeWidth = widthInput;
-
-		const widthValue = document.createElement( 'span' );
-		widthValue.className = 'text-stroke-value';
-		widthValue.textContent = '0';
-		container.appendChild( widthValue );
-		this.textStrokeValue = widthValue;
-
-		// Event handlers (tracked for cleanup)
-		this.addListener( colorInput, 'change', () => {
-			this.notifyStyleChange();
-		} );
-
-		this.addListener( widthInput, 'input', () => {
-			widthValue.textContent = widthInput.value;
-			this.notifyStyleChange();
-		} );
-
-		return container;
-	}
-
-	/**
-	 * Create the shadow control
-	 *
-	 * @return {HTMLElement} The shadow container
-	 */
-	createShadowControl() {
-		const container = document.createElement( 'div' );
-		container.className = 'text-shadow-container';
-		container.style.display = 'none';
-
-		const label = document.createElement( 'label' );
-		label.textContent = this.msg( 'layers-effect-shadow', 'Shadow' ) + ':';
-		label.className = 'shadow-label';
-		container.appendChild( label );
-
-		const toggle = document.createElement( 'input' );
-		toggle.type = 'checkbox';
-		toggle.className = 'text-shadow-toggle';
-		toggle.title = this.msg( 'layers-effect-shadow-enable', 'Enable Drop Shadow' );
-		container.appendChild( toggle );
-		this.textShadowToggle = toggle;
-
-		const colorInput = document.createElement( 'input' );
-		colorInput.type = 'color';
-		colorInput.value = '#000000';
-		colorInput.className = 'text-shadow-color';
-		colorInput.title = this.msg( 'layers-effect-shadow-color', 'Shadow Color' );
-		colorInput.style.display = 'none';
-		container.appendChild( colorInput );
-		this.textShadowColor = colorInput;
-
-		// Event handlers (tracked for cleanup)
-		this.addListener( toggle, 'change', () => {
-			colorInput.style.display = toggle.checked ? 'inline-block' : 'none';
-			this.notifyStyleChange();
-		} );
-
-		this.addListener( colorInput, 'change', () => {
-			this.notifyStyleChange();
-		} );
-
-		return container;
-	}
-
-	/**
 	 * Create the arrow style control
 	 *
 	 * @return {HTMLElement} The arrow style container
@@ -649,18 +520,23 @@ class ToolbarStyleControls {
 	 * @return {Object} Style options object
 	 */
 	getStyleOptions() {
+		// Get text effects from delegate
+		const textEffects = this.textEffectsControls ?
+			this.textEffectsControls.getStyleValues() :
+			{ fontSize: 16, textStrokeColor: '#000000', textStrokeWidth: 0, textShadow: false, textShadowColor: '#000000' };
+
 		return {
 			color: this.strokeColorNone ? 'transparent' : this.strokeColorValue,
 			fill: this.fillColorNone ? 'transparent' : this.fillColorValue,
 			strokeWidth: this.currentStrokeWidth,
-			fontSize: this.fontSizeInput ? parseInt( this.fontSizeInput.value, 10 ) : 16,
-			textStrokeColor: this.textStrokeColor ? this.textStrokeColor.value : '#000000',
-			textStrokeWidth: this.textStrokeWidth ? parseInt( this.textStrokeWidth.value, 10 ) : 0,
-			textShadow: this.textShadowToggle ? this.textShadowToggle.checked : false,
-			textShadowColor: this.textShadowColor ? this.textShadowColor.value : '#000000',
+			fontSize: textEffects.fontSize,
+			textStrokeColor: textEffects.textStrokeColor,
+			textStrokeWidth: textEffects.textStrokeWidth,
+			textShadow: textEffects.textShadow,
+			textShadowColor: textEffects.textShadowColor,
 			arrowStyle: this.arrowStyleSelect ? this.arrowStyleSelect.value : 'single',
-			shadow: this.textShadowToggle ? this.textShadowToggle.checked : false,
-			shadowColor: this.textShadowColor ? this.textShadowColor.value : '#000000',
+			shadow: textEffects.textShadow,
+			shadowColor: textEffects.textShadowColor,
 			shadowBlur: 8,
 			shadowOffsetX: 2,
 			shadowOffsetY: 2
@@ -673,20 +549,16 @@ class ToolbarStyleControls {
 	 * @param {string} toolId The currently selected tool
 	 */
 	updateForTool( toolId ) {
-		if ( toolId === 'text' ) {
-			this.fontSizeContainer.style.display = 'block';
-			this.strokeContainer.style.display = 'block';
-			this.shadowContainer.style.display = 'block';
-			this.arrowContainer.style.display = 'none';
-		} else if ( toolId === 'arrow' ) {
-			this.fontSizeContainer.style.display = 'none';
-			this.strokeContainer.style.display = 'none';
-			this.shadowContainer.style.display = 'none';
+		// Delegate text effects visibility to TextEffectsControls
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.updateForTool( toolId );
+		}
+
+		// Handle arrow container visibility directly
+		if ( toolId === 'arrow' ) {
 			this.arrowContainer.style.display = 'block';
 		} else {
-			this.fontSizeContainer.style.display = 'none';
-			this.strokeContainer.style.display = 'none';
-			this.shadowContainer.style.display = 'none';
+			this.arrowContainer.style.display = 'none';
 			this.arrowContainer.style.display = 'none';
 		}
 
@@ -757,34 +629,15 @@ class ToolbarStyleControls {
 			return;
 		}
 
-		if ( this.fontSizeInput ) {
-			this.inputValidators.push(
-				validator.createInputValidator( this.fontSizeInput, 'number', { min: 1, max: 200 } )
-			);
-		}
-
 		if ( this.strokeWidthInput ) {
 			this.inputValidators.push(
 				validator.createInputValidator( this.strokeWidthInput, 'number', { min: 0, max: 100 } )
 			);
 		}
 
-		if ( this.textStrokeWidth ) {
-			this.inputValidators.push(
-				validator.createInputValidator( this.textStrokeWidth, 'number', { min: 0, max: 10 } )
-			);
-		}
-
-		if ( this.textStrokeColor ) {
-			this.inputValidators.push(
-				validator.createInputValidator( this.textStrokeColor, 'color' )
-			);
-		}
-
-		if ( this.textShadowColor ) {
-			this.inputValidators.push(
-				validator.createInputValidator( this.textShadowColor, 'color' )
-			);
+		// Text effect validation is handled by TextEffectsControls
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.setupValidation( validator, this.inputValidators );
 		}
 	}
 
@@ -830,9 +683,9 @@ class ToolbarStyleControls {
 			this.strokeWidthInput.value = style.strokeWidth;
 		}
 
-		// Apply font size
-		if ( style.fontSize !== undefined && this.fontSizeInput ) {
-			this.fontSizeInput.value = style.fontSize;
+		// Delegate text effects (font size, text stroke, text shadow) to TextEffectsControls
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.applyStyle( style );
 		}
 
 		// Apply arrow style
@@ -859,9 +712,9 @@ class ToolbarStyleControls {
 		// Fill
 		style.fill = this.fillColorNone ? 'transparent' : this.fillColorValue;
 
-		// Font size
-		if ( this.fontSizeInput ) {
-			style.fontSize = parseFloat( this.fontSizeInput.value ) || 16;
+		// Merge in text effects from delegate
+		if ( this.textEffectsControls ) {
+			Object.assign( style, this.textEffectsControls.getStyleValues() );
 		}
 
 		// Arrow style
@@ -904,6 +757,12 @@ class ToolbarStyleControls {
 			this.presetStyleManager = null;
 		}
 
+		// Clean up text effects controller
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.destroy();
+			this.textEffectsControls = null;
+		}
+
 		// Clean up all event listeners via EventTracker
 		if ( this.eventTracker ) {
 			this.eventTracker.destroy();
@@ -913,21 +772,13 @@ class ToolbarStyleControls {
 		// Clear input validators
 		this.inputValidators = [];
 
-		// Clear DOM references
+		// Clear DOM references (text-related refs are in TextEffectsControls)
 		this.container = null;
 		this.strokeColorButton = null;
 		this.fillColorButton = null;
 		this.strokeWidthInput = null;
-		this.fontSizeInput = null;
-		this.fontSizeContainer = null;
 		this.strokeContainer = null;
-		this.shadowContainer = null;
 		this.arrowContainer = null;
-		this.textStrokeColor = null;
-		this.textStrokeWidth = null;
-		this.textStrokeValue = null;
-		this.textShadowToggle = null;
-		this.textShadowColor = null;
 		this.arrowStyleSelect = null;
 	}
 }

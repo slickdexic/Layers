@@ -6,7 +6,7 @@
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
 > **Version:** 1.2.7 (December 2025)  
-> **Status:** ✅ Production-ready. All P0 and P1 issues resolved.  
+> **Status:** ✅ Production-ready with minor technical debt  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
@@ -194,7 +194,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`)
-- **Frontend:** HTML5 Canvas editor with 96 JS files (~47K lines), 87 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 98 JS files (~49K lines), 86 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -202,9 +202,9 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 6,756 passing |
-| Statement coverage | 91.19% |
-| Branch coverage | 79.48% |
+| Jest tests | 6,795 passing |
+| Statement coverage | 92.4% |
+| Branch coverage | 80.1% |
 | Test suites | 127 |
 
 **Security:**
@@ -249,13 +249,13 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 95 | ✅ |
-| Total JS lines | ~48,000 | ✅ |
+| Total JS files | 99 | ✅ |
+| Total JS lines | ~49,700 | ⚠️ Approaching 50K |
 | ES6 classes | 87 | ✅ |
-| God classes (>1000 lines) | 6 | ⚠️ |
-| Tests passing | 6,756 | ✅ |
+| God classes (>1000 lines) | 8 | ⚠️ |
+| Tests passing | 6,837 | ✅ |
 | Tests failing | 0 | ✅ |
-| Files with 0% coverage | 4 | ⚠️ |
+| Files with <60% coverage | 0 | ✅ Fixed |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

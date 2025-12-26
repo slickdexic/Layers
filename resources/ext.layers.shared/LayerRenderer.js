@@ -722,7 +722,10 @@ class LayerRenderer {
 	 */
 	drawLayer ( layer, options ) {
 		// Check for blur blend mode - use special rendering path
-		if ( this.hasBlurBlendMode( layer ) && layer.type !== 'blur' ) {
+		// Skip arrows and lines - they handle blur fill via ArrowRenderer/effectsRenderer,
+		// and blur blend mode with rectangular clip doesn't make sense for these shapes
+		const isArrowOrLine = layer.type === 'arrow' || layer.type === 'line';
+		if ( this.hasBlurBlendMode( layer ) && layer.type !== 'blur' && !isArrowOrLine ) {
 			this.drawLayerWithBlurBlend( layer, options );
 			return;
 		}

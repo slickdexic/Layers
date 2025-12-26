@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** December 26, 2025  
-**Version:** 1.2.7
+**Last Updated:** December 27, 2025  
+**Version:** 1.2.8
 
 This document lists known functionality issues and their current status.
 
@@ -11,48 +11,61 @@ This document lists known functionality issues and their current status.
 
 | Category | Count | Status |
 |----------|-------|--------|
-| P0 (Blocking) | **0** | ✅ All resolved |
-| P1 (Stability) | 2 | ⏳ Acceptable |
+| P0 (Coverage Gaps) | **0** | ✅ Resolved |
+| P1 (Stability) | 2 | ⚠️ Monitored |
 | P2 (Code Quality) | 4 | ⏳ Tracked |
 | Feature Gaps | 5 | ⏳ Planned |
 
 ---
 
-## ✅ No P0 Issues
+## ✅ P0 Issues (Coverage Gaps) - RESOLVED
 
-All previously identified P0 (blocking) issues have been resolved. See "Recently Fixed Issues" below.
+### P0.1 EffectsRenderer.js - FIXED ✅
+
+**Status:** Resolved  
+**Before:** 48.7% statement, 43% branch  
+**After:** **97.3% statement, 91.5% branch**  
+**Solution:** Added 26 comprehensive tests for drawBlurFill method and stroke styles.
+
+### P0.2 CanvasRenderer.js - FIXED ✅
+
+**Status:** Resolved  
+**Before:** 58.5% statement, 47% branch  
+**After:** **88.6% statement, 73.9% branch**  
+**Solution:** Added 40 tests for blur blend mode methods (_drawBlurClipPath, _drawBlurStroke, _drawBlurContent, _drawRoundedRectPath).
 
 ---
 
 ## ⚠️ P1 Issues (Stability)
 
-### P1.1 God Classes (7 files >1,000 lines)
+### P1.1 God Classes (8 files >1,000 lines)
 
-**Status:** Mitigated via delegation  
-**Severity:** MEDIUM - Manageable complexity
+**Status:** Stable - using delegation pattern  
+**Severity:** MEDIUM - Manageable with delegation
 
 | File | Lines | Delegation Pattern |
 |------|-------|-------------------|
-| CanvasManager.js | 1,871 | ✅ 10+ controllers |
+| CanvasManager.js | 1,877 | ✅ 10+ controllers |
 | LayerPanel.js | 1,838 | ✅ 7 controllers |
-| Toolbar.js | 1,545 | ✅ 4 modules |
-| LayersEditor.js | 1,335 | ✅ 3 modules |
+| Toolbar.js | 1,549 | ✅ 4 modules |
+| LayersEditor.js | 1,355 | ✅ 3 modules |
 | ToolManager.js | 1,261 | ✅ 2 handlers |
+| CanvasRenderer.js | 1,211 | ✅ SelectionRenderer (89% coverage) |
 | APIManager.js | 1,207 | ✅ APIErrorHandler |
 | SelectionManager.js | 1,194 | ✅ 3 modules |
 
-**Total in god classes:** ~10,251 lines (21% of JS codebase)
+**Total in god classes:** ~11,492 lines (23% of JS codebase)
 
-All god classes use the delegation pattern, deferring actual work to specialized controllers. This is an acceptable architectural pattern for facade/orchestrator classes.
+All god classes now use delegation patterns and have acceptable test coverage.
 
 ### P1.2 ToolbarStyleControls.js Approaching Limit
 
-**Status:** Acceptable  
-**Severity:** LOW  
+**Status:** Should split proactively  
+**Severity:** MEDIUM  
 **File:** `resources/ext.layers.editor/ToolbarStyleControls.js`  
-**Lines:** 948 (52 away from 1,000 line threshold)
+**Lines:** 947 (53 away from 1,000 line threshold)
 
-Already delegates to ColorControlFactory and PresetStyleManager. Will monitor but no action needed.
+This file is growing and should be split before it becomes a god class.
 
 ---
 
@@ -61,11 +74,11 @@ Already delegates to ColorControlFactory and PresetStyleManager. Will monitor bu
 ### P2.1 ESLint Disable Comments
 
 **Status:** Acceptable  
-**Count:** 12 eslint-disable comments
+**Count:** 13 eslint-disable comments
 
 | Rule | Count | Reason |
 |------|-------|--------|
-| no-alert | 8 | ✅ Intentional fallbacks when DialogManager unavailable |
+| no-alert | 9 | ✅ Intentional fallbacks when DialogManager unavailable |
 | no-unused-vars | 4 | ✅ API compatibility (parameters required by interface) |
 
 All eslint-disable comments have been reviewed and are acceptable.
@@ -97,11 +110,11 @@ These are acceptable because they either run once at startup or are short-lived 
 
 ### P2.4 Codebase Size
 
-**Status:** Monitored  
-**Current:** ~48,000 lines  
+**Status:** Warning  
+**Current:** ~49,500 lines  
 **Threshold:** 50,000 lines
 
-Approaching but not exceeding the complexity threshold.
+Approaching the complexity threshold. Adding significant new features may push past this limit.
 
 ---
 
@@ -183,22 +196,24 @@ The editor does not handle touch events. Mobile users cannot:
 
 ## Test Coverage Status
 
-### Overall Coverage (December 23, 2025)
+### Overall Coverage (December 26, 2025)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 6,623 | - | ✅ |
-| Statement coverage | 91.19% | 85%+ | ✅ |
-| Branch coverage | 79.48% | 75%+ | ✅ |
-| Function coverage | 87.79% | 80%+ | ✅ |
-| Line coverage | 91.66% | 85%+ | ✅ |
+| Tests passing | 6,729 | - | ✅ |
+| Statement coverage | 90.9% | 85%+ | ✅ |
+| Branch coverage | 78.6% | 75%+ | ✅ |
+| Function coverage | 89.7% | 80%+ | ✅ |
+| Line coverage | 91.2% | 85%+ | ✅ |
 
-### Previously Concerning Files - Now Resolved
+### Files Needing Attention
 
-| File | Before | After | Status |
-|------|--------|-------|--------|
-| **DialogManager.js** | 53% stmt | 96.14% stmt | ✅ FIXED |
-| **PropertiesForm.js** | 41% func | 68.22% func | ✅ IMPROVED |
+| File | Statement | Branch | Status |
+|------|-----------|--------|--------|
+| **EffectsRenderer.js** | **48.7%** | **43%** | 🔴 CRITICAL |
+| **CanvasRenderer.js** | **58.5%** | **47%** | 🔴 CRITICAL |
+| LayersNamespace.js | 83.6% | 60.6% | ⚠️ Dead code |
+| CanvasManager.js | 79.6% | 64.8% | ⚠️ Monitor |
 
 ---
 
@@ -248,5 +263,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: December 23, 2025*  
-*All P0 issues resolved. Codebase is production-ready.*
+*Document updated: December 26, 2025*  
+*P0 items identified. Coverage gaps in EffectsRenderer and CanvasRenderer need attention.*

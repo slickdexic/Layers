@@ -14,6 +14,9 @@ window.Layers.Utils = window.Layers.Utils || {};
 window.Layers.UI = window.Layers.UI || {};
 require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
 
+// Load TextEffectsControls first (dependency of ToolbarStyleControls)
+require( '../../resources/ext.layers.editor/ui/TextEffectsControls.js' );
+
 window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
 	this.config = config;
 	this.open = mockColorPickerOpen;
@@ -119,22 +122,22 @@ describe( 'ToolbarStyleControls', () => {
 			expect( styleControls.strokeWidthInput.type ).toBe( 'number' );
 		} );
 
-		it( 'should create font size container (hidden)', () => {
+		it( 'should create font size container (hidden) via delegate', () => {
 			styleControls.create();
-			expect( styleControls.fontSizeContainer ).toBeInstanceOf( HTMLElement );
-			expect( styleControls.fontSizeContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.fontSizeContainer ).toBeInstanceOf( HTMLElement );
+			expect( styleControls.textEffectsControls.fontSizeContainer.style.display ).toBe( 'none' );
 		} );
 
-		it( 'should create text stroke container (hidden)', () => {
+		it( 'should create text stroke container (hidden) via delegate', () => {
 			styleControls.create();
-			expect( styleControls.strokeContainer ).toBeInstanceOf( HTMLElement );
-			expect( styleControls.strokeContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.textStrokeContainer ).toBeInstanceOf( HTMLElement );
+			expect( styleControls.textEffectsControls.textStrokeContainer.style.display ).toBe( 'none' );
 		} );
 
-		it( 'should create shadow container (hidden)', () => {
+		it( 'should create shadow container (hidden) via delegate', () => {
 			styleControls.create();
-			expect( styleControls.shadowContainer ).toBeInstanceOf( HTMLElement );
-			expect( styleControls.shadowContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.shadowContainer ).toBeInstanceOf( HTMLElement );
+			expect( styleControls.textEffectsControls.shadowContainer.style.display ).toBe( 'none' );
 		} );
 
 		it( 'should create arrow container (hidden)', () => {
@@ -388,14 +391,14 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 
 		it( 'should include font size', () => {
-			styleControls.fontSizeInput.value = '24';
+			styleControls.textEffectsControls.fontSizeInput.value = '24';
 			const options = styleControls.getStyleOptions();
 			expect( options.fontSize ).toBe( 24 );
 		} );
 
 		it( 'should include text stroke options', () => {
-			styleControls.textStrokeColor.value = '#0000ff';
-			styleControls.textStrokeWidth.value = '3';
+			styleControls.textEffectsControls.textStrokeColor.value = '#0000ff';
+			styleControls.textEffectsControls.textStrokeWidth.value = '3';
 
 			const options = styleControls.getStyleOptions();
 
@@ -404,8 +407,8 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 
 		it( 'should include shadow options', () => {
-			styleControls.textShadowToggle.checked = true;
-			styleControls.textShadowColor.value = '#333333';
+			styleControls.textEffectsControls.textShadowToggle.checked = true;
+			styleControls.textEffectsControls.textShadowColor.value = '#333333';
 
 			const options = styleControls.getStyleOptions();
 
@@ -430,27 +433,27 @@ describe( 'ToolbarStyleControls', () => {
 		it( 'should show text options for text tool', () => {
 			styleControls.updateForTool( 'text' );
 
-			expect( styleControls.fontSizeContainer.style.display ).toBe( 'block' );
-			expect( styleControls.strokeContainer.style.display ).toBe( 'block' );
-			expect( styleControls.shadowContainer.style.display ).toBe( 'block' );
+			expect( styleControls.textEffectsControls.fontSizeContainer.style.display ).toBe( 'flex' );
+			expect( styleControls.textEffectsControls.textStrokeContainer.style.display ).toBe( 'flex' );
+			expect( styleControls.textEffectsControls.shadowContainer.style.display ).toBe( 'flex' );
 			expect( styleControls.arrowContainer.style.display ).toBe( 'none' );
 		} );
 
 		it( 'should show arrow options for arrow tool', () => {
 			styleControls.updateForTool( 'arrow' );
 
-			expect( styleControls.fontSizeContainer.style.display ).toBe( 'none' );
-			expect( styleControls.strokeContainer.style.display ).toBe( 'none' );
-			expect( styleControls.shadowContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.fontSizeContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.textStrokeContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.shadowContainer.style.display ).toBe( 'none' );
 			expect( styleControls.arrowContainer.style.display ).toBe( 'block' );
 		} );
 
 		it( 'should hide all extra options for other tools', () => {
 			styleControls.updateForTool( 'rectangle' );
 
-			expect( styleControls.fontSizeContainer.style.display ).toBe( 'none' );
-			expect( styleControls.strokeContainer.style.display ).toBe( 'none' );
-			expect( styleControls.shadowContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.fontSizeContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.textStrokeContainer.style.display ).toBe( 'none' );
+			expect( styleControls.textEffectsControls.shadowContainer.style.display ).toBe( 'none' );
 			expect( styleControls.arrowContainer.style.display ).toBe( 'none' );
 		} );
 	} );
@@ -596,7 +599,7 @@ describe( 'ToolbarStyleControls', () => {
 			expect( styleControls.strokeColorButton ).toBeNull();
 			expect( styleControls.fillColorButton ).toBeNull();
 			expect( styleControls.strokeWidthInput ).toBeNull();
-			expect( styleControls.fontSizeInput ).toBeNull();
+			expect( styleControls.textEffectsControls ).toBeNull();
 			expect( styleControls.inputValidators ).toEqual( [] );
 		} );
 	} );
@@ -727,11 +730,11 @@ describe( 'ToolbarStyleControls', () => {
 	describe( 'text stroke control event handlers', () => {
 		beforeEach( () => {
 			styleControls.create();
-			styleControls.strokeContainer.style.display = 'block';
+			styleControls.textEffectsControls.textStrokeContainer.style.display = 'block';
 		} );
 
 		it( 'should update text stroke color on change', () => {
-			const colorInput = styleControls.textStrokeColor;
+			const colorInput = styleControls.textEffectsControls.textStrokeColor;
 			colorInput.value = '#ff0000';
 			
 			const event = new Event( 'change' );
@@ -741,13 +744,13 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 
 		it( 'should update text stroke width on input', () => {
-			const widthInput = styleControls.textStrokeWidth;
+			const widthInput = styleControls.textEffectsControls.textStrokeWidth;
 			widthInput.value = '5';
 			
 			const event = new Event( 'input' );
 			widthInput.dispatchEvent( event );
 
-			expect( styleControls.textStrokeValue.textContent ).toBe( '5' );
+			expect( styleControls.textEffectsControls.textStrokeValue.textContent ).toBe( '5' );
 			expect( mockToolbar.onStyleChange ).toHaveBeenCalled();
 		} );
 	} );
@@ -755,12 +758,12 @@ describe( 'ToolbarStyleControls', () => {
 	describe( 'shadow control event handlers', () => {
 		beforeEach( () => {
 			styleControls.create();
-			styleControls.shadowContainer.style.display = 'block';
+			styleControls.textEffectsControls.shadowContainer.style.display = 'block';
 		} );
 
 		it( 'should show color input when shadow toggle is checked', () => {
-			const toggle = styleControls.textShadowToggle;
-			const colorInput = styleControls.textShadowColor;
+			const toggle = styleControls.textEffectsControls.textShadowToggle;
+			const colorInput = styleControls.textEffectsControls.textShadowColor;
 			
 			toggle.checked = true;
 			const event = new Event( 'change' );
@@ -771,8 +774,8 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 
 		it( 'should hide color input when shadow toggle is unchecked', () => {
-			const toggle = styleControls.textShadowToggle;
-			const colorInput = styleControls.textShadowColor;
+			const toggle = styleControls.textEffectsControls.textShadowToggle;
+			const colorInput = styleControls.textEffectsControls.textShadowColor;
 			
 			toggle.checked = false;
 			const event = new Event( 'change' );
@@ -782,7 +785,7 @@ describe( 'ToolbarStyleControls', () => {
 		} );
 
 		it( 'should notify style change when shadow color changes', () => {
-			const colorInput = styleControls.textShadowColor;
+			const colorInput = styleControls.textEffectsControls.textShadowColor;
 			colorInput.value = '#ff0000';
 			
 			const event = new Event( 'change' );
@@ -812,11 +815,11 @@ describe( 'ToolbarStyleControls', () => {
 	describe( 'font size input event handlers', () => {
 		beforeEach( () => {
 			styleControls.create();
-			styleControls.fontSizeContainer.style.display = 'block';
+			styleControls.textEffectsControls.fontSizeContainer.style.display = 'block';
 		} );
 
 		it( 'should notify style change on font size input', () => {
-			const input = styleControls.fontSizeInput;
+			const input = styleControls.textEffectsControls.fontSizeInput;
 			input.value = '24';
 			
 			const event = new Event( 'input' );
@@ -892,11 +895,11 @@ describe( 'ToolbarStyleControls', () => {
 			expect( controls.strokeWidthInput.value ).toBe( '5' );
 		} );
 
-		it( 'should apply fontSize from style', () => {
+		it( 'should apply fontSize from style via delegate', () => {
 			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
 			controls.create();
 			controls.applyPresetStyleInternal( { fontSize: 24 } );
-			expect( controls.fontSizeInput.value ).toBe( '24' );
+			expect( controls.textEffectsControls.fontSizeInput.value ).toBe( '24' );
 		} );
 
 		it( 'should apply arrowStyle from style', () => {
@@ -916,7 +919,7 @@ describe( 'ToolbarStyleControls', () => {
 			controls.fillColorValue = '#654321';
 			controls.fillColorNone = false;
 			controls.currentStrokeWidth = 3;
-			controls.fontSizeInput.value = '18';
+			controls.textEffectsControls.fontSizeInput.value = '18';
 			controls.arrowStyleSelect.value = 'single';
 
 			const style = controls.getCurrentStyle();

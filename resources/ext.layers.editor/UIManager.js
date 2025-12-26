@@ -36,7 +36,6 @@
 	constructor( editor ) {
 		this.editor = editor;
 		this.container = null;
-		this.statusBar = null;
 		this.spinnerEl = null;
 		// Named Set selector elements (managed by SetSelectorController)
 		this.setSelectEl = null;
@@ -116,14 +115,12 @@
 		this.createHeader();
 		this.createToolbar();
 		this.createMainContent();
-		this.createStatusBar();
 
 		// Create jQuery-style references for compatibility
 		this.editor.$canvasContainer = $( this.canvasContainer );
 		this.editor.$layerPanel = $( this.layerPanelContainer );
 		this.editor.$toolbar = $( this.toolbarContainer );
 
-		this.setupStatusUpdates();
 		this.setupRevisionControls();
 
 		// SECURITY FIX: Use mw.log instead of console.log
@@ -310,102 +307,6 @@
 		this.canvasContainer.setAttribute( 'aria-label', this.getMessage( 'layers-canvas-region', 'Drawing canvas' ) );
 		this.canvasContainer.setAttribute( 'tabindex', '-1' );
 		mainRow.appendChild( this.canvasContainer );
-	}
-
-	createStatusBar() {
-		this.statusBar = document.createElement( 'div' );
-		this.statusBar.className = 'layers-statusbar';
-		this.statusBar.setAttribute( 'role', 'contentinfo' );
-		this.statusBar.setAttribute( 'aria-label', this.getMessage( 'layers-status-region', 'Status bar' ) );
-
-		const statusItems = [
-			{ label: this.getMessage( 'layers-status-tool' ), key: 'tool', value: 'pointer' },
-			{ label: this.getMessage( 'layers-status-zoom' ), key: 'zoom', value: '100%' },
-			{ label: this.getMessage( 'layers-status-pos' ), key: 'pos', value: '0,0' },
-			{ label: this.getMessage( 'layers-status-size' ), key: 'size', value: '-' },
-			{ label: this.getMessage( 'layers-status-selection' ), key: 'selection', value: '0' }
-		];
-
-		statusItems.forEach( item => {
-			this.statusBar.appendChild( this.createStatusItem( item.label, item.key, item.value ) );
-		} );
-
-		const spacer = document.createElement( 'span' );
-		spacer.className = 'status-spacer';
-		this.statusBar.appendChild( spacer );
-
-		const statusCode = this.createStatusCode();
-		this.statusBar.appendChild( statusCode );
-
-		this.container.appendChild( this.statusBar );
-	}
-
-	createStatusItem( labelText, dataKey, initialText ) {
-		const item = document.createElement( 'span' );
-		item.className = 'status-item';
-
-		const label = document.createElement( 'span' );
-		label.className = 'status-label';
-		label.textContent = labelText + ':';
-		item.appendChild( label );
-
-		const value = document.createElement( 'span' );
-		value.className = 'status-value';
-		if ( dataKey ) {
-			value.setAttribute( 'data-status', dataKey );
-		}
-		value.textContent = initialText;
-		item.appendChild( value );
-
-		return item;
-	}
-
-	createStatusCode() {
-		const statusCode = document.createElement( 'span' );
-		statusCode.className = 'status-code';
-		statusCode.setAttribute( 'aria-label', this.getMessage( 'layers-code-title' ) );
-
-		const codeEl = document.createElement( 'code' );
-		codeEl.className = 'status-code-text';
-		codeEl.title = this.getMessage( 'layers-code-title' );
-		statusCode.appendChild( codeEl );
-
-		const copyBtn = document.createElement( 'button' );
-		copyBtn.className = 'status-copy-btn';
-		copyBtn.type = 'button';
-		copyBtn.textContent = this.getMessage( 'layers-code-copy' );
-		statusCode.appendChild( copyBtn );
-
-		return statusCode;
-	}
-
-	setupStatusUpdates() {
-		this.updateZoomReadout = ( percent ) => {
-			if ( this.zoomReadoutEl ) {
-				this.zoomReadoutEl.textContent = percent + '%';
-			}
-		};
-
-		this.updateStatus = ( fields ) => {
-			if ( !fields || !this.statusBar ) {
-				return;
-			}
-
-			Object.keys( fields ).forEach( key => {
-				const el = this.statusBar.querySelector( `[data-status="${ key }"]` );
-				if ( el ) {
-					let value = fields[ key ];
-					if ( key === 'zoomPercent' ) {
-						value = Math.round( value ) + '%';
-					} else if ( key === 'pos' && value.x !== undefined && value.y !== undefined ) {
-						value = Math.round( value.x ) + ',' + Math.round( value.y );
-					} else if ( key === 'size' && value.width !== undefined && value.height !== undefined ) {
-						value = Math.round( value.width ) + '×' + Math.round( value.height );
-					}
-					el.textContent = value;
-				}
-			} );
-		};
 	}
 
 	setupRevisionControls() {
@@ -657,7 +558,6 @@
 
 		// Clear element references
 		this.container = null;
-		this.statusBar = null;
 		this.setSelectEl = null;
 		this.newSetInputEl = null;
 		this.newSetBtnEl = null;

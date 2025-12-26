@@ -31,10 +31,12 @@
 				name: 'Default Arrow',
 				builtIn: true,
 				style: {
+					fill: '#000000',
 					stroke: '#000000',
 					strokeWidth: 2,
 					arrowStyle: 'single',
-					arrowhead: 'arrow'
+					arrowhead: 'arrow',
+					arrowSize: 15
 				}
 			},
 			{
@@ -42,10 +44,12 @@
 				name: 'Callout',
 				builtIn: true,
 				style: {
+					fill: '#cc0000',
 					stroke: '#cc0000',
 					strokeWidth: 3,
 					arrowStyle: 'single',
-					arrowhead: 'arrow'
+					arrowhead: 'arrow',
+					arrowSize: 18
 				}
 			}
 		],
