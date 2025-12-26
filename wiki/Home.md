@@ -16,7 +16,7 @@
 
 | 🎨 **Professional Tools** | 🔒 **Non-Destructive** | ♿ **Accessible** |
 |---------------------------|------------------------|------------------|
-| 14 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
+| 13 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
 
 ---
 

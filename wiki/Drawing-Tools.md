@@ -121,7 +121,7 @@ Draw rectangles and squares.
 **Properties:**
 - Stroke color, width, opacity
 - Fill color, opacity
-- Corner radius (coming soon)
+- Corner radius
 - Shadow effects
 
 ### Circle Tool (C)
@@ -202,6 +202,23 @@ pointed:   ──────▶     (sharp pointed arrow - default)
 chevron:   ──────❯     (V-shaped chevron)
 standard:  ──────➤     (classic filled arrow head)
 ```
+
+### Pen Tool (P)
+
+Draw freehand paths with point-by-point control.
+
+**How to Use:**
+1. Click to place the first point
+2. Click to add additional points
+3. Double-click or press Enter to finish the path
+4. Press Escape to cancel
+
+**Properties:**
+- Stroke color and width
+- Opacity
+- Closed path option
+
+---
 
 ### Line Tool (L)
 
