@@ -100,15 +100,23 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'textAlign' => 'string',
 		'verticalAlign' => 'string',
 		'padding' => 'numeric',
-		'lineHeight' => 'numeric'
+		'lineHeight' => 'numeric',
+		// Blur fill state preservation
+		'_previousFill' => 'string'
 	];
 
 	/** @var array Value constraints for enum-like properties */
 	private const VALUE_CONSTRAINTS = [
+		// Canvas 2D globalCompositeOperation values (complete list)
+		// 'blur' is NOT a valid blend mode - it's handled as fill='blur' instead
 		'blendMode' => [
-			'normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten',
-			'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference',
-			'exclusion', 'blur'
+			'source-over', 'source-in', 'source-out', 'source-atop',
+			'destination-over', 'destination-in', 'destination-out', 'destination-atop',
+			'lighter', 'copy', 'xor', 'multiply', 'screen', 'overlay',
+			'darken', 'lighten', 'color-dodge', 'color-burn',
+			'hard-light', 'soft-light', 'difference', 'exclusion',
+			'hue', 'saturation', 'color', 'luminosity',
+			'normal' // Alias for source-over
 		],
 		'arrowhead' => [ 'none', 'arrow', 'circle', 'diamond', 'triangle' ],
 		'arrowStyle' => [ 'single', 'double', 'none' ],
@@ -374,9 +382,13 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 		// Colors
 		$colorProps = [
-			'color', 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor'
+			'color', 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor', '_previousFill'
 		];
 		if ( in_array( $property, $colorProps, true ) ) {
+			// Special case: 'blur' is a valid fill value (blur fill effect)
+			if ( $property === 'fill' && $value === 'blur' ) {
+				return [ 'valid' => true, 'value' => 'blur' ];
+			}
 			if ( !$this->colorValidator->isSafeColor( $value ) ) {
 				return [ 'valid' => false, 'error' => 'Unsafe color value' ];
 			}

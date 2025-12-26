@@ -1,6 +1,6 @@
 # Drawing Tools
 
-Layers provides 13 professional drawing tools for comprehensive image annotation.
+Layers provides 14 professional drawing tools for comprehensive image annotation.
 
 ---
 
@@ -252,8 +252,31 @@ All tools share these style properties:
 ### Fill Properties
 | Property | Description | Range |
 |----------|-------------|-------|
-| fill | Fill color | Any color |
+| fill | Fill color or `blur` | Any color or "blur" |
 | fillOpacity | Fill transparency | 0-1 |
+| blurRadius | Blur intensity (when fill=blur) | 1-64px |
+
+### Blur Fill Mode (New in v1.2.6)
+
+Any filled shape can use **blur fill** instead of a solid color — creating a "frosted glass" effect that blurs the content beneath.
+
+**How to Use:**
+1. Select a shape (rectangle, circle, ellipse, polygon, star, text box, or arrow)
+2. Set **Fill** to `blur` in the properties panel
+3. Adjust **Blur Radius** to control intensity (default: 12px)
+4. Adjust **Fill Opacity** to fine-tune the effect
+
+**Supported Shapes:**
+- Rectangle (with corner radius support)
+- Circle / Ellipse
+- Polygon / Star (with rounded corners support)
+- Text Box (with corner radius and rotation support)
+- Arrow (v1.2.7+)
+
+**Tips:**
+- Lower fill opacity makes the blur more subtle
+- Works with rotation — blur correctly follows rotated shapes
+- Blur captures everything beneath, including other annotation layers
 
 ### Shadow Properties
 | Property | Description | Range |

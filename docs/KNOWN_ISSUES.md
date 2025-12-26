@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** December 24, 2025  
-**Version:** 1.2.5
+**Last Updated:** December 26, 2025  
+**Version:** 1.2.7
 
 This document lists known functionality issues and their current status.
 

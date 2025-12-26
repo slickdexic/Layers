@@ -41,11 +41,13 @@
 		 * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
 		 * @param {Object} [config] - Configuration options
 		 * @param {Object} [config.shadowRenderer] - ShadowRenderer instance for shadow operations
+		 * @param {Object} [config.effectsRenderer] - EffectsRenderer instance for blur fill
 		 */
 		constructor( ctx, config ) {
 			this.ctx = ctx;
 			this.config = config || {};
 			this.shadowRenderer = this.config.shadowRenderer || null;
+			this.effectsRenderer = this.config.effectsRenderer || null;
 		}
 
 		/**
@@ -55,6 +57,15 @@
 		 */
 		setShadowRenderer( shadowRenderer ) {
 			this.shadowRenderer = shadowRenderer;
+		}
+
+		/**
+		 * Set the effects renderer instance for blur fill
+		 *
+		 * @param {Object} effectsRenderer - EffectsRenderer instance
+		 */
+		setEffectsRenderer( effectsRenderer ) {
+			this.effectsRenderer = effectsRenderer;
 		}
 
 		/**
@@ -604,36 +615,58 @@
 			);
 
 			// Helper to draw the arrow path
-			const drawArrowPath = () => {
-				this.ctx.beginPath();
+			// Accepts ctx parameter for blur fill (where EffectsRenderer passes its own ctx)
+			const drawArrowPath = ( ctx ) => {
+				const targetCtx = ctx || this.ctx;
+				targetCtx.beginPath();
 				if ( vertices.length > 0 ) {
-					this.ctx.moveTo( vertices[ 0 ].x, vertices[ 0 ].y );
+					targetCtx.moveTo( vertices[ 0 ].x, vertices[ 0 ].y );
 					for ( let i = 1; i < vertices.length; i++ ) {
-						this.ctx.lineTo( vertices[ i ].x, vertices[ i ].y );
+						targetCtx.lineTo( vertices[ i ].x, vertices[ i ].y );
 					}
-					this.ctx.closePath();
+					targetCtx.closePath();
 				}
 			};
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
+			const isBlurFill = layer.fill === 'blur';
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 			const shadowEnabled = this.hasShadowEnabled( layer ) && spread === 0;
 
-			// Draw fill (with shadow if enabled and spread === 0)
+			// Draw fill (blur fill or regular)
 			if ( hasFill ) {
-				if ( shadowEnabled ) {
-					this.applyShadow( layer, shadowScale );
+				if ( isBlurFill && this.effectsRenderer ) {
+					// Blur fill - use EffectsRenderer to blur background within arrow
+					// Calculate bounding box from vertices
+					const xs = vertices.map( function ( v ) { return v.x; } );
+					const ys = vertices.map( function ( v ) { return v.y; } );
+					const minX = Math.min.apply( null, xs );
+					const minY = Math.min.apply( null, ys );
+					const maxX = Math.max.apply( null, xs );
+					const maxY = Math.max.apply( null, ys );
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.effectsRenderer.drawBlurFill(
+						layer,
+						drawArrowPath,
+						{ x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+						opts
+					);
+				} else if ( !isBlurFill ) {
+					// Regular color fill (with shadow if enabled and spread === 0)
+					if ( shadowEnabled ) {
+						this.applyShadow( layer, shadowScale );
+					}
+					drawArrowPath();
+					this.ctx.fillStyle = layer.fill;
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.ctx.fill();
 				}
-				drawArrowPath();
-				this.ctx.fillStyle = layer.fill;
-				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				this.ctx.fill();
 			}
 
 			// Clear shadow before stroke only if there was a visible fill
-			if ( hasFill ) {
+			if ( hasFill && !isBlurFill ) {
 				this.clearShadow();
 			}
 
@@ -683,6 +716,7 @@
 			this.ctx = null;
 			this.config = null;
 			this.shadowRenderer = null;
+			this.effectsRenderer = null;
 		}
 	}
 

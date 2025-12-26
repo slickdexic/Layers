@@ -396,7 +396,11 @@ describe('CanvasRenderer', () => {
 
             renderer.drawLayer(layer);
 
-            expect(mockLayerRenderer.drawLayer).toHaveBeenCalledWith(layer);
+            expect(mockLayerRenderer.drawLayer).toHaveBeenCalledWith(layer, {
+                zoom: renderer.zoom,
+                panX: renderer.panX,
+                panY: renderer.panY
+            });
         });
 
         test('should not throw when layerRenderer is not available', () => {

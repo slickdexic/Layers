@@ -167,7 +167,7 @@ if ( bgVal === false || bgVal === 0 || bgVal === '0' || bgVal === 'false' ) {
 Layer objects are a sanitized subset of the client model. Common fields (whitelist on server):
 - id (string), type (enum: text, textbox, arrow, rectangle, circle, ellipse, polygon, star, line, path, blur, image)
 - Geometry: x, y, width, height, radius, radiusX, radiusY, x1, y1, x2, y2, rotation (numbers in safe ranges)
-- Style: stroke, fill, color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blendMode or blend (mapped), fontFamily, fontSize, fontWeight (normal|bold), fontStyle (normal|italic)
+- Style: stroke, fill (color or 'blur'), color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blurRadius (1-64, for blur fill), blendMode or blend (mapped), fontFamily, fontSize, fontWeight (normal|bold), fontStyle (normal|italic)
 - Arrow/line: arrowhead (none|arrow|circle|diamond|triangle), arrowStyle (solid|dashed|dotted), arrowSize
 - Text: text (sanitized), textStrokeColor, textStrokeWidth, textShadow (bool), textShadowColor, textShadowBlur, textShadowOffsetX, textShadowOffsetY
 - Text box: textAlign (left|center|right), verticalAlign (top|middle|bottom), padding, lineHeight, cornerRadius
@@ -175,6 +175,7 @@ Layer objects are a sanitized subset of the client model. Common fields (whiteli
 - Shapes/paths: points: Array<{x,y}> (capped ~1000)
 - Image: src (base64 data URL), originalWidth, originalHeight, preserveAspectRatio (bool)
 - Flags: visible (bool), locked (bool), name (string)
+- Blur fill: When fill='blur', shapes display a "frosted glass" effect that blurs content beneath. blurRadius controls intensity (default 12px).
 
 Important: Unknown or invalid fields are dropped server-side. Keep editor state within these fields to avoid data loss.
 

@@ -556,6 +556,10 @@
 			if ( typeof L.padding === 'number' ) {
 				L.padding = L.padding * scaleAvg;
 			}
+			// Blur radius - must be scaled for blur layers and blur fill
+			if ( typeof L.blurRadius === 'number' ) {
+				L.blurRadius = L.blurRadius * scaleAvg;
+			}
 			if ( Array.isArray( L.points ) ) {
 				const pts = [];
 				for ( let i = 0; i < L.points.length; i++ ) {

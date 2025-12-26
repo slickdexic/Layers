@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.2.5 (December 2025)  
+> **Version:** 1.2.7 (December 2025)  
 > **Status:** ✅ Production-ready. All P0 and P1 issues resolved.  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -49,6 +49,16 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Line          | L        | Straight lines                               |
 | Blur          | B        | Apply blur effect                            |
 | Marquee       | M        | Area selection                               |
+
+### Blur Fill Mode (v1.2.6+)
+
+Any filled shape can use **blur fill** instead of a solid color — creating a "frosted glass" effect:
+
+```
+Fill: blur  →  Blurs content beneath the shape
+```
+
+Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box, Arrow (v1.2.7+)
 
 ### Smart Guides & Alignment
 
@@ -192,7 +202,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 6,623 passing |
+| Jest tests | 6,756 passing |
 | Statement coverage | 91.19% |
 | Branch coverage | 79.48% |
 | Test suites | 127 |
@@ -243,7 +253,7 @@ npm run test:js -- --coverage
 | Total JS lines | ~48,000 | ✅ |
 | ES6 classes | 87 | ✅ |
 | God classes (>1000 lines) | 6 | ⚠️ |
-| Tests passing | 6,623 | ✅ |
+| Tests passing | 6,756 | ✅ |
 | Tests failing | 0 | ✅ |
 | Files with 0% coverage | 4 | ⚠️ |
 

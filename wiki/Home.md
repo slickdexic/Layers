@@ -1,10 +1,10 @@
 # Layers — Professional Image Annotation for MediaWiki
 
 <p align="center">
-  <img src="https://img.shields.io/badge/MediaWiki-1.39%2B-blue" alt="MediaWiki 1.39+">
+  <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-6%2C549%20Passing-brightgreen" alt="6,549 Tests">
+  <img src="https://img.shields.io/badge/Tests-6%2C756%20Passing-brightgreen" alt="6,756 Tests">
   <img src="https://img.shields.io/badge/Coverage-92%25-brightgreen" alt="92% Coverage">
 </p>
 
@@ -16,16 +16,18 @@
 
 | 🎨 **Professional Tools** | 🔒 **Non-Destructive** | ♿ **Accessible** |
 |---------------------------|------------------------|------------------|
-| 13 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
+| 14 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
 
 ---
 
 ## 🆕 What's New in v1.2
 
+- **Blur Fill Mode** — "Frosted glass" effect for shapes including arrows (v1.2.7)
+- **Compact Layer Panel** — Redesigned UI inspired by Figma/Photoshop (v1.2.7)
 - **Deep Linking to Editor** — Open the editor with a specific layer set via URL parameters
 - **Fullscreen Lightbox Viewer** — View annotated images in a modal overlay
 - **Wikitext Link Options** — Control click behavior with `layerslink=editor` or `layerslink=viewer`
-- **v1.2.3**: Fixed text box rendering when images are scaled down
+- **Modal Editor Mode** — Open editor in overlay without navigation (v1.2.5)
 
 See [[Changelog]] for full details.
 

@@ -946,7 +946,12 @@
 		 */
 		drawLayer( layer ) {
 			if ( this.layerRenderer ) {
-				this.layerRenderer.drawLayer( layer );
+				// Pass editor transform info for blur fill support
+				this.layerRenderer.drawLayer( layer, {
+					zoom: this.zoom,
+					panX: this.panX,
+					panY: this.panY
+				} );
 			}
 		}
 

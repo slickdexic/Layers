@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.2.6",
+	"version": "1.2.7",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -471,6 +471,8 @@
 				"layers-revision-select-aria",
 				"layers-revision-load-aria",
 				"layers-switch-set-unsaved-confirm",
+				"layers-unsaved-changes-title",
+				"layers-switch-anyway",
 				"layers-invalid-setname",
 				"layers-export",
 				"layers-export-layers",
@@ -493,6 +495,7 @@
 				"layers-type-layer",
 				"layers-type-blur",
 				"layers-prop-blur-radius",
+				"layers-prop-blur-fill",
 				"layers-arrow-single",
 				"layers-arrow-double",
 				"layers-arrow-none",

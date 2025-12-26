@@ -4,6 +4,77 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.7 (December 26, 2025)
+
+### New Feature - Blur Fill for Arrows
+
+Extended blur fill support to **arrow shapes**. Arrows can now use the "frosted glass" blur effect.
+
+### Bug Fixes
+- **Fixed validation error blocking save** — Layer sets with blur-filled arrows could not be saved due to incorrect blend mode validation
+
+### UI Improvements
+- **Compact layer panel** — Redesigned with smaller layer items (28px vs 36px), smaller buttons, and better space allocation for the properties panel
+
+### Testing
+- **6,756 tests passing** (+105 from v1.2.6)
+
+---
+
+## Version 1.2.6 (December 25, 2025)
+
+### New Feature - Blur Fill for Shapes
+
+Added **blur fill mode** for all filled shapes — a "frosted glass" effect that blurs the content beneath the shape instead of using a solid color fill.
+
+**Supported Shapes:**
+- Rectangle
+- Circle / Ellipse
+- Polygon / Star
+- Text Box
+
+**How to Use:**
+1. Select a shape layer
+2. In the Properties panel, set **Fill** to `blur`
+3. Optionally adjust **Blur Radius** (default: 12px, range: 1-64px)
+4. Adjust **Fill Opacity** to control the effect intensity
+
+**Technical Details:**
+- Works with rotation — blur correctly follows rotated shapes
+- Works in both editor and article view
+- Captures all content beneath (background image + other layers)
+
+### Bug Fixes
+- **Fixed blur fill with rotated shapes** — Blur now correctly captures and clips content for shapes with any rotation angle
+
+### Testing
+- **6,651 tests passing** (+5 from v1.2.5)
+
+---
+
+## Version 1.2.5 (December 24, 2025)
+
+### Improved Editor Navigation
+
+**Breaking Change (UX Improvement):** When using `layerslink=editor` from an article page, closing the editor now returns you to the article page instead of the File: page.
+
+### New Features - Advanced Editor Link Modes
+
+- `layerslink=editor-newtab` — Opens editor in a new tab
+- `layerslink=editor-modal` — Opens editor in an iframe overlay (perfect for Page Forms)
+
+---
+
+## Version 1.2.4 (December 23, 2025)
+
+### Code Quality - Major Testing & Documentation Update
+
+- **DialogManager.js** — Coverage increased to 96.14%
+- **PropertiesForm.js** — Coverage increased to 68.22%
+- **6,623 tests passing**
+
+---
+
 ## Version 1.2.3 (December 23, 2025)
 
 ### Bug Fixes

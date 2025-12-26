@@ -126,6 +126,18 @@ class LayerRenderer {
 				baseWidth: this.baseWidth,
 				baseHeight: this.baseHeight
 			} );
+			// Wire up EffectsRenderer to ShapeRenderer for blur fill support
+			if ( this.shapeRenderer ) {
+				this.shapeRenderer.setEffectsRenderer( this.effectsRenderer );
+			}
+			// Wire up EffectsRenderer to TextBoxRenderer for blur fill support
+			if ( this.textBoxRenderer ) {
+				this.textBoxRenderer.setEffectsRenderer( this.effectsRenderer );
+			}
+			// Wire up EffectsRenderer to ArrowRenderer for blur fill support
+			if ( this.arrowRenderer ) {
+				this.arrowRenderer.setEffectsRenderer( this.effectsRenderer );
+			}
 		} else {
 			this.effectsRenderer = null;
 		}
@@ -180,6 +192,10 @@ class LayerRenderer {
 	 */
 	setBackgroundImage ( img ) {
 		this.backgroundImage = img;
+		// Propagate to EffectsRenderer for blur fill support
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.setBackgroundImage( img );
+		}
 	}
 
 	/**
@@ -192,6 +208,10 @@ class LayerRenderer {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.setCanvas( canvas );
 		}
+		// Propagate to EffectsRenderer for blur fill support
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.canvas = canvas;
+		}
 	}
 
 	/**
@@ -203,6 +223,10 @@ class LayerRenderer {
 	setBaseDimensions ( width, height ) {
 		this.baseWidth = width;
 		this.baseHeight = height;
+		// Propagate to EffectsRenderer for blur fill support
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.setBaseDimensions( width, height );
+		}
 	}
 
 	/**
@@ -279,7 +303,16 @@ class LayerRenderer {
 	_prepareRenderOptions( options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		return { scale, shadowScale: opts.shadowScale || scale, scaled: opts.scaled };
+		return {
+			scale,
+			shadowScale: opts.shadowScale || scale,
+			scaled: opts.scaled,
+			imageElement: opts.imageElement,
+			// Pass through editor transform info for blur fill
+			zoom: opts.zoom,
+			panX: opts.panX,
+			panY: opts.panY
+		};
 	}
 
 	/** Draw a rectangle shape */

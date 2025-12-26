@@ -50,12 +50,14 @@
 		 * @param {Object} [config] - Configuration options
 		 * @param {Object} [config.shadowRenderer] - ShadowRenderer instance for shadow operations
 		 * @param {Object} [config.polygonStarRenderer] - PolygonStarRenderer instance for polygon/star shapes
+		 * @param {Object} [config.effectsRenderer] - EffectsRenderer instance for blur fill
 		 */
 		constructor( ctx, config ) {
 			this.ctx = ctx;
 			this.config = config || {};
 			this.shadowRenderer = this.config.shadowRenderer || null;
 			this.polygonStarRenderer = this.config.polygonStarRenderer || null;
+			this.effectsRenderer = this.config.effectsRenderer || null;
 		}
 
 		/**
@@ -65,6 +67,15 @@
 		 */
 		setShadowRenderer( shadowRenderer ) {
 			this.shadowRenderer = shadowRenderer;
+		}
+
+		/**
+		 * Set the effects renderer instance (for blur fill)
+		 *
+		 * @param {Object} effectsRenderer - EffectsRenderer instance
+		 */
+		setEffectsRenderer( effectsRenderer ) {
+			this.effectsRenderer = effectsRenderer;
 		}
 
 		/**
@@ -274,8 +285,9 @@
 			const useRoundedRect = cornerRadius > 0 && this.ctx.roundRect;
 
 			// Shadow handling
+			// Note: Blur fill (fill='blur') should NOT trigger fill shadow rendering
 			if ( this.hasShadowEnabled( layer ) ) {
-				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
+				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur';
 				const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
 
 				// Draw fill shadow
@@ -342,29 +354,46 @@
 			this.clearShadow();
 
 			// Helper to draw the rectangle path
-			const drawRectPath = () => {
-				if ( useRoundedRect ) {
-					this.ctx.beginPath();
-					this.ctx.roundRect( x, y, width, height, cornerRadius );
-				} else if ( cornerRadius > 0 ) {
-					this.drawRoundedRectPath( x, y, width, height, cornerRadius );
+			// Accepts ctx parameter for blur fill (where EffectsRenderer passes its own ctx)
+			const drawRectPath = ( ctx ) => {
+				const targetCtx = ctx || this.ctx;
+				if ( useRoundedRect || cornerRadius > 0 ) {
+					if ( targetCtx.roundRect ) {
+						targetCtx.beginPath();
+						targetCtx.roundRect( x, y, width, height, cornerRadius );
+					} else {
+						this.drawRoundedRectPath( x, y, width, height, cornerRadius, targetCtx );
+					}
 				} else {
-					this.ctx.beginPath();
-					this.ctx.rect( x, y, width, height );
+					targetCtx.beginPath();
+					targetCtx.rect( x, y, width, height );
 				}
 			};
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
+			const isBlurFill = layer.fill === 'blur';
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
 			// Draw fill
 			if ( hasFill ) {
-				this.ctx.fillStyle = layer.fill;
-				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				drawRectPath();
-				this.ctx.fill();
+				if ( isBlurFill && this.effectsRenderer ) {
+					// Blur fill - use EffectsRenderer to blur background within shape
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.effectsRenderer.drawBlurFill(
+						layer,
+						drawRectPath,
+						{ x: x, y: y, width: width, height: height },
+						opts
+					);
+				} else if ( !isBlurFill ) {
+					// Regular color fill
+					this.ctx.fillStyle = layer.fill;
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					drawRectPath();
+					this.ctx.fill();
+				}
 			}
 
 			// Draw stroke
@@ -434,8 +463,9 @@
 			const spread = this.getShadowSpread( layer, shadowScale );
 
 			// Shadow handling
+			// Note: Blur fill (fill='blur') should NOT trigger fill shadow rendering
 			if ( this.hasShadowEnabled( layer ) ) {
-				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
+				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur';
 				const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
 
 				// Draw fill shadow
@@ -464,22 +494,40 @@
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
+			const isBlurFill = layer.fill === 'blur';
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
+			// Helper to draw circle path
+			const drawCirclePath = ( ctx ) => {
+				const context = ctx || this.ctx;
+				context.beginPath();
+				context.arc( cx, cy, radius, 0, 2 * Math.PI );
+			};
+
 			// Draw fill
 			if ( hasFill ) {
-				this.ctx.beginPath();
-				this.ctx.arc( cx, cy, radius, 0, 2 * Math.PI );
-				this.ctx.fillStyle = layer.fill;
-				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				this.ctx.fill();
+				if ( isBlurFill && this.effectsRenderer ) {
+					// Blur fill - use EffectsRenderer to blur background within circle
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.effectsRenderer.drawBlurFill(
+						layer,
+						drawCirclePath,
+						{ x: cx - radius, y: cy - radius, width: radius * 2, height: radius * 2 },
+						opts
+					);
+				} else if ( !isBlurFill ) {
+					// Regular color fill
+					drawCirclePath();
+					this.ctx.fillStyle = layer.fill;
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.ctx.fill();
+				}
 			}
 
 			// Draw stroke
 			if ( hasStroke ) {
-				this.ctx.beginPath();
-				this.ctx.arc( cx, cy, radius, 0, 2 * Math.PI );
+				drawCirclePath();
 				this.ctx.strokeStyle = layer.stroke;
 				this.ctx.lineWidth = strokeW;
 				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
@@ -524,8 +572,9 @@
 			const rotationRad = hasRotation ? ( layer.rotation * Math.PI ) / 180 : 0;
 
 			// Shadow handling
+			// Note: Blur fill (fill='blur') should NOT trigger fill shadow rendering
 			if ( this.hasShadowEnabled( layer ) ) {
-				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
+				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur';
 				const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
 
 				// Draw fill shadow
@@ -577,60 +626,55 @@
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
+			const isBlurFill = layer.fill === 'blur';
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
-			// Use native ellipse() if available
-			if ( this.ctx.ellipse ) {
-				// Draw fill
-				if ( hasFill ) {
-					this.ctx.beginPath();
-					this.ctx.ellipse( x, y, radiusX, radiusY, rotationRad, 0, 2 * Math.PI );
+			// Helper to draw ellipse path
+			const drawEllipsePath = ( ctx ) => {
+				const context = ctx || this.ctx;
+				context.beginPath();
+				if ( context.ellipse ) {
+					context.ellipse( x, y, radiusX, radiusY, rotationRad, 0, 2 * Math.PI );
+				} else {
+					context.save();
+					context.translate( x, y );
+					if ( hasRotation ) {
+						context.rotate( rotationRad );
+					}
+					context.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
+					context.arc( 0, 0, 1, 0, 2 * Math.PI );
+					context.restore();
+				}
+			};
+
+			// Draw fill
+			if ( hasFill ) {
+				if ( isBlurFill && this.effectsRenderer ) {
+					// Blur fill - use EffectsRenderer to blur background within ellipse
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.effectsRenderer.drawBlurFill(
+						layer,
+						drawEllipsePath,
+						{ x: x - radiusX, y: y - radiusY, width: radiusX * 2, height: radiusY * 2 },
+						opts
+					);
+				} else if ( !isBlurFill ) {
+					// Regular color fill
+					drawEllipsePath();
 					this.ctx.fillStyle = layer.fill;
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.ctx.fill();
 				}
+			}
 
-				// Draw stroke
-				if ( hasStroke ) {
-					this.ctx.beginPath();
-					this.ctx.ellipse( x, y, radiusX, radiusY, rotationRad, 0, 2 * Math.PI );
-					this.ctx.strokeStyle = layer.stroke;
-					this.ctx.lineWidth = strokeW;
-					this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-					this.ctx.stroke();
-				}
-			} else {
-				// Fallback: use scale transform
-				this.ctx.translate( x, y );
-				if ( hasRotation ) {
-					this.ctx.rotate( rotationRad );
-				}
-
-				// Draw fill
-				if ( hasFill ) {
-					this.ctx.beginPath();
-					this.ctx.save();
-					this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
-					this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
-					this.ctx.restore();
-					this.ctx.fillStyle = layer.fill;
-					this.ctx.globalAlpha = baseOpacity * fillOpacity;
-					this.ctx.fill();
-				}
-
-				// Draw stroke
-				if ( hasStroke ) {
-					this.ctx.beginPath();
-					this.ctx.save();
-					this.ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
-					this.ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
-					this.ctx.restore();
-					this.ctx.strokeStyle = layer.stroke;
-					this.ctx.lineWidth = strokeW;
-					this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-					this.ctx.stroke();
-				}
+			// Draw stroke
+			if ( hasStroke ) {
+				drawEllipsePath();
+				this.ctx.strokeStyle = layer.stroke;
+				this.ctx.lineWidth = strokeW;
+				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
+				this.ctx.stroke();
 			}
 
 			this.ctx.restore();

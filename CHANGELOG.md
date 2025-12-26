@@ -2,46 +2,69 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.2.6] - 2025-12-24
+## [1.2.7] - 2025-12-26
 
-### New Feature - Blur as Blend Mode
+### New Feature - Blur Fill for Arrows
 
-Added "blur" as a blend mode option for shapes, enabling blurred regions in any shape - not just rectangles.
+Extended the blur fill feature (introduced in v1.2.6) to support **arrow shapes**. Arrows can now use the "frosted glass" blur effect just like rectangles, circles, and other shapes.
 
-**Supported Shapes:** rectangle, circle, ellipse, polygon, star
+**How to Use:**
+1. Select an arrow layer
+2. In the Properties panel, check **Blur Fill**
+3. Adjust **Blur Radius** (default: 12px, range: 1-64px)
 
-**Usage:**
-```javascript
-{
-  type: 'ellipse',
-  x: 200,
-  y: 150,
-  radiusX: 80,
-  radiusY: 60,
-  blendMode: 'blur',
-  blurRadius: 15  // optional, default 12, range 1-64
-}
-```
+### Bug Fixes
+- **Fixed "Invalid blend mode" validation error blocking save** — Layer sets containing arrows with blur fill could not be saved due to `blur` being incorrectly rejected as an invalid blend mode. Updated both client-side (`LayersValidator.js`) and server-side (`ServerSideLayerValidator.php`) validators to:
+  - Include all Canvas 2D `globalCompositeOperation` values (`source-over`, `multiply`, etc.)
+  - Add special case handling for `blur` as a fill type indicator (not a blend mode)
 
-**How it works:**
-- Shapes with `blendMode: 'blur'` use the shape geometry as a clipping region
-- The background image is rendered with a CSS blur filter within that clip
-- If no background image is available, a gray semi-transparent overlay is shown
-
-**Use Cases:**
-- Privacy masking with arbitrary shapes (circular blur over faces)
-- Focus effects with star or polygon shapes
-- Creative vignettes and stylized callouts
-
-### Technical
-- **Modified validators**: `LayersValidator.js`, `LayersConstants.js`, `ServerSideLayerValidator.php` — Added 'blur' to valid blend modes
-- **Modified renderers**: `EffectsRenderer.js` — Added `drawBlurWithShape()` and `hasBlurBlendMode()` methods
-- **Modified renderers**: `LayerRenderer.js` — Added blur blend mode dispatcher and shape path drawing helpers
-- **Modified renderers**: `CanvasRenderer.js` — Added `drawLayerWithBlurBlend()` for editor preview
-- **Documentation**: Updated `FUTURE_IMPROVEMENTS.md` to mark feature as implemented
+### UI Improvements
+- **Compact layer panel** — Layer manager redesigned with a more compact look inspired by Figma and Photoshop:
+  - Layer item height reduced from 36px to 28px
+  - Control buttons reduced from 28px to 22px
+  - Padding and gaps reduced throughout
+  - Properties panel given flex priority (more space for properties, less for layer list)
+  - Default view shows ~6 layers before scrolling
 
 ### Testing
-- **6,718 tests passing** (+27 new tests for blur blend mode)
+- **6,756 tests passing** (+38 from v1.2.6)
+- Added blur fill tests for ArrowRenderer
+- Added blur fill tests for TextBoxRenderer
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
+## [1.2.6] - 2025-12-25
+
+### New Feature - Blur Fill for Shapes
+
+Added **blur fill mode** for all filled shapes — a "frosted glass" effect that blurs the content beneath the shape instead of using a solid color fill.
+
+**Supported Shapes:**
+- Rectangle
+- Circle / Ellipse
+- Polygon / Star
+- Text Box
+
+**How to Use:**
+1. Select a shape layer
+2. In the Properties panel, set **Fill** to `blur`
+3. Optionally adjust **Blur Radius** (default: 12px, range: 1-64px)
+4. Adjust **Fill Opacity** to control the effect intensity
+
+**Technical Details:**
+- Works with rotation — blur correctly follows rotated shapes
+- Works in both editor and article view
+- Captures all content beneath (background image + other layers)
+- Falls back to gray placeholder if no background available
+
+### Bug Fixes
+- **Fixed blur fill with rotated shapes** — Blur now correctly captures and clips content for shapes with any rotation angle. Previously, rotated shapes would show distorted or misaligned blur content.
+
+### Testing
+- **6,718 tests passing** (+72 from v1.2.5)
+- Added comprehensive blur fill tests for TextBoxRenderer
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
 
 ---
 

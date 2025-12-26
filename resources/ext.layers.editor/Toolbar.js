@@ -1260,7 +1260,11 @@
 
 		// Save/Cancel buttons - tracked for cleanup
 		this.addListener( this.saveButton, 'click', () => {
-			this.editor.save();
+			if ( this.editor ) {
+				this.editor.save();
+			} else {
+				console.error( '[Toolbar] Cannot save - editor reference is null' );
+			}
 		} );
 
 		this.addListener( this.cancelButton, 'click', () => {

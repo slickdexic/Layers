@@ -948,6 +948,174 @@ describe( 'TextBoxRenderer', () => {
 	} );
 
 	// ========================================================================
+	// Blur Fill Tests
+	// ========================================================================
+
+	describe( 'blur fill', () => {
+		it( 'should call effectsRenderer.drawBlurFill when fill is blur', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			renderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				type: 'textbox',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				fill: 'blur',
+				stroke: '#000000',
+				strokeWidth: 2,
+				text: 'Blur Test'
+			};
+
+			renderer.draw( layer );
+
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledTimes( 1 );
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledWith(
+				layer,
+				expect.any( Function ), // drawBlurPath function
+				expect.objectContaining( { x: 50, y: 50, width: 200, height: 100 } ),
+				expect.any( Object ) // options
+			);
+		} );
+
+		it( 'should not call effectsRenderer.drawBlurFill when fillOpacity is 0', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			renderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				type: 'textbox',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				fill: 'blur',
+				fillOpacity: 0
+			};
+
+			renderer.draw( layer );
+
+			expect( mockEffectsRenderer.drawBlurFill ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not draw regular fill when fill is blur', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			renderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				type: 'textbox',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				fill: 'blur',
+				stroke: '#000000'
+			};
+
+			ctx.fill.mockClear();
+			renderer.draw( layer );
+
+			// fill() should NOT be called for blur fill (only for regular color fill)
+			expect( ctx.fill ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle blur fill with rotation', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			renderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				type: 'textbox',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				fill: 'blur',
+				rotation: 45
+			};
+
+			renderer.draw( layer );
+
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledTimes( 1 );
+
+			// Verify rotation was applied to the main context BEFORE drawBlurFill was called
+			// The context should have translate and rotate called on it
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+
+			// Get the drawBlurPath function that was passed
+			const drawBlurPath = mockEffectsRenderer.drawBlurFill.mock.calls[ 0 ][ 1 ];
+
+			// Call the path function to verify it works
+			const mockCtx = createMockContext();
+			drawBlurPath( mockCtx );
+
+			// The path function should just draw the rect (rotation is already on the context)
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.rect ).toHaveBeenCalled();
+
+			// Verify the bounds passed use AABB (axis-aligned bounding box) coordinates
+			// For a 200x100 rect at (50,50) rotated 45°, center is at (150, 100)
+			// AABB for 45° rotation: both dimensions become width*cos(45)+height*sin(45)
+			const bounds = mockEffectsRenderer.drawBlurFill.mock.calls[ 0 ][ 2 ];
+			const angleRad = ( 45 * Math.PI ) / 180;
+			const cos45 = Math.abs( Math.cos( angleRad ) );
+			const sin45 = Math.abs( Math.sin( angleRad ) );
+			const expectedWidth = 200 * cos45 + 100 * sin45;
+			const expectedHeight = 200 * sin45 + 100 * cos45;
+			const centerX = 50 + 200 / 2; // 150
+			const centerY = 50 + 100 / 2; // 100
+			expect( bounds.x ).toBeCloseTo( centerX - expectedWidth / 2 );
+			expect( bounds.y ).toBeCloseTo( centerY - expectedHeight / 2 );
+			expect( bounds.width ).toBeCloseTo( expectedWidth );
+			expect( bounds.height ).toBeCloseTo( expectedHeight );
+		} );
+
+		it( 'should handle blur fill with corner radius', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			renderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				type: 'textbox',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				fill: 'blur',
+				cornerRadius: 10
+			};
+
+			renderer.draw( layer );
+
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledTimes( 1 );
+
+			// Get the drawBlurPath function
+			const drawBlurPath = mockEffectsRenderer.drawBlurFill.mock.calls[ 0 ][ 1 ];
+
+			// Call the path function
+			const mockCtx = createMockContext();
+			drawBlurPath( mockCtx );
+
+			// Should have used roundRect or fallback
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			// Either roundRect was called or the manual path (moveTo, lineTo, arcTo)
+			const usedRoundRect = mockCtx.roundRect.mock.calls.length > 0;
+			const usedManualPath = mockCtx.moveTo.mock.calls.length > 0;
+			expect( usedRoundRect || usedManualPath ).toBe( true );
+		} );
+	} );
+
+	// ========================================================================
 	// Cleanup Tests
 	// ========================================================================
 
