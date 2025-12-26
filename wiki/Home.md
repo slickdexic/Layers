@@ -78,11 +78,11 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.2.3 |
-| **Version (REL1_39)** | 1.1.13 |
-| **Release Date** | December 23, 2025 |
+| **Version (main)** | 1.2.7 |
+| **Version (REL1_39)** | 1.1.14 |
+| **Release Date** | December 26, 2025 |
 | **Test Suites** | 126 |
-| **Total Tests** | 6,549 |
+| **Total Tests** | 6,756 |
 | **Code Coverage** | 92% |
 | **JavaScript Files** | 96 |
 | **ES6 Classes** | 87 |
