@@ -113,6 +113,14 @@ if ( typeof global.mw === 'undefined' ) {
                 return undefined;
             }
         },
+        log: Object.assign(
+            jest.fn(),
+            {
+                warn: jest.fn(),
+                error: jest.fn(),
+                deprecate: jest.fn()
+            }
+        ),
         hook: function ( _name ) {
             const callbacks = [];
             return {

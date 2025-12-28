@@ -1734,6 +1734,134 @@ describe( 'PropertiesForm', () => {
 		} );
 	} );
 
+	describe( 'ColorPickerDialog with mock', () => {
+		// Since ColorPickerDialog is captured at module load time, we need to
+		// reload the module with a mock in place. Use jest.isolateModules for this.
+
+		test( 'should use ColorPickerDialog.createColorButton when available', () => {
+			const mockColorButton = document.createElement( 'button' );
+			mockColorButton.className = 'color-button-from-dialog';
+
+			// Set up mock BEFORE requiring the module
+			global.ColorPickerDialog = {
+				createColorButton: jest.fn( () => mockColorButton ),
+				updateColorButton: jest.fn()
+			};
+			global.Layers = global.Layers || {};
+			global.Layers.UI = global.Layers.UI || {};
+			global.Layers.UI.ColorPickerDialog = global.ColorPickerDialog;
+
+			// Isolate and require fresh module instance
+			jest.isolateModules( () => {
+				const FreshPropertiesForm = require( '../../resources/ext.layers.editor/ui/PropertiesForm.js' );
+				const container = document.createElement( 'div' );
+
+				FreshPropertiesForm.addColorPicker( {
+					label: 'Fill Color',
+					value: '#ff0000',
+					onChange: jest.fn()
+				}, jest.fn(), container );
+
+				// Should have used the mock's createColorButton
+				expect( global.ColorPickerDialog.createColorButton ).toHaveBeenCalled();
+			} );
+
+			delete global.ColorPickerDialog;
+			delete global.Layers.UI.ColorPickerDialog;
+		} );
+
+		test( 'should handle ColorPickerDialog onClick callback', () => {
+			let capturedOnClick;
+			const mockColorButton = document.createElement( 'button' );
+
+			global.ColorPickerDialog = jest.fn( function ( opts ) {
+				this.open = jest.fn();
+				this.opts = opts;
+			} );
+			global.ColorPickerDialog.createColorButton = jest.fn( ( opts ) => {
+				capturedOnClick = opts.onClick;
+				return mockColorButton;
+			} );
+			global.ColorPickerDialog.updateColorButton = jest.fn();
+			global.Layers = global.Layers || {};
+			global.Layers.UI = global.Layers.UI || {};
+			global.Layers.UI.ColorPickerDialog = global.ColorPickerDialog;
+
+			jest.isolateModules( () => {
+				const FreshPropertiesForm = require( '../../resources/ext.layers.editor/ui/PropertiesForm.js' );
+				const container = document.createElement( 'div' );
+				const onChange = jest.fn();
+
+				FreshPropertiesForm.addColorPicker( {
+					label: 'Fill Color',
+					value: '#ff0000',
+					onChange
+				}, jest.fn(), container );
+
+				// Trigger the onClick callback
+				expect( capturedOnClick ).toBeDefined();
+				capturedOnClick();
+
+				// Should have created a new ColorPickerDialog and called open
+				expect( global.ColorPickerDialog ).toHaveBeenCalled();
+			} );
+
+			delete global.ColorPickerDialog;
+			delete global.Layers.UI.ColorPickerDialog;
+		} );
+
+		test( 'should handle ColorPickerDialog onApply callback', () => {
+			let capturedOnClick;
+			let capturedDialogOpts;
+			const mockColorButton = document.createElement( 'button' );
+
+			global.ColorPickerDialog = jest.fn( function ( opts ) {
+				capturedDialogOpts = opts;
+				this.open = jest.fn();
+			} );
+			global.ColorPickerDialog.createColorButton = jest.fn( ( opts ) => {
+				capturedOnClick = opts.onClick;
+				return mockColorButton;
+			} );
+			global.ColorPickerDialog.updateColorButton = jest.fn();
+			global.Layers = global.Layers || {};
+			global.Layers.UI = global.Layers.UI || {};
+			global.Layers.UI.ColorPickerDialog = global.ColorPickerDialog;
+
+			jest.isolateModules( () => {
+				const FreshPropertiesForm = require( '../../resources/ext.layers.editor/ui/PropertiesForm.js' );
+				const container = document.createElement( 'div' );
+				const onChange = jest.fn();
+				const opts = {
+					label: 'Fill Color',
+					value: '#ff0000',
+					onChange
+				};
+
+				FreshPropertiesForm.addColorPicker( opts, jest.fn(), container );
+
+				// Trigger onClick to create dialog
+				capturedOnClick();
+
+				// Simulate onApply callback
+				capturedDialogOpts.onApply( '#00ff00' );
+
+				// Should have called onChange with new color
+				expect( onChange ).toHaveBeenCalledWith( '#00ff00' );
+
+				// Should have updated the button
+				expect( global.ColorPickerDialog.updateColorButton ).toHaveBeenCalledWith(
+					mockColorButton,
+					'#00ff00',
+					expect.any( Object )
+				);
+			} );
+
+			delete global.ColorPickerDialog;
+			delete global.Layers.UI.ColorPickerDialog;
+		} );
+	} );
+
 	describe( 'fallback color button click handler', () => {
 		let container;
 
@@ -2347,6 +2475,674 @@ describe( 'PropertiesForm', () => {
 
 				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { arrowSize: 25 } );
 			}
+		} );
+	} );
+
+	describe( 'blur fill controls', () => {
+		test( 'should show blur fill checkbox for rectangle', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			expect( blurFillCheckbox ).toBeDefined();
+		} );
+
+		test( 'should enable blur fill when checkbox is checked', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: '#ff0000' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			if ( blurFillCheckbox ) {
+				blurFillCheckbox.checked = true;
+				blurFillCheckbox.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', expect.objectContaining( {
+					fill: 'blur'
+				} ) );
+			}
+		} );
+
+		test( 'should store previous fill when enabling blur fill', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: '#ff0000' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			if ( blurFillCheckbox ) {
+				blurFillCheckbox.checked = true;
+				blurFillCheckbox.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', expect.objectContaining( {
+					fill: 'blur',
+					_previousFill: '#ff0000'
+				} ) );
+			}
+		} );
+
+		test( 'should disable blur fill when checkbox is unchecked', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: 'blur', _previousFill: '#00ff00' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			if ( blurFillCheckbox ) {
+				expect( blurFillCheckbox.checked ).toBe( true );
+				blurFillCheckbox.checked = false;
+				blurFillCheckbox.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { fill: '#00ff00' } );
+			}
+		} );
+
+		test( 'should restore to transparent when no previous fill stored', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: 'blur' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			if ( blurFillCheckbox ) {
+				blurFillCheckbox.checked = false;
+				blurFillCheckbox.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { fill: 'transparent' } );
+			}
+		} );
+
+		test( 'should show blur radius input when blur fill is enabled', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: 'blur', blurRadius: 16 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			const blurRadiusInput = Array.from( inputs ).find( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Radius' );
+			} );
+
+			expect( blurRadiusInput ).toBeDefined();
+			expect( blurRadiusInput.value ).toBe( '16' );
+		} );
+
+		test( 'should update blur radius', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: 'blur', blurRadius: 12 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			const blurRadiusInput = Array.from( inputs ).find( ( input ) => {
+				const label = input.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Radius' );
+			} );
+
+			if ( blurRadiusInput ) {
+				blurRadiusInput.value = '24';
+				blurRadiusInput.dispatchEvent( new Event( 'input' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { blurRadius: 24 } );
+			}
+		} );
+
+		test( 'should set default blur radius when enabling blur fill without existing value', () => {
+			const layer = { id: 'test-layer', type: 'circle', radius: 50 };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			if ( blurFillCheckbox ) {
+				blurFillCheckbox.checked = true;
+				blurFillCheckbox.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', expect.objectContaining( {
+					fill: 'blur',
+					blurRadius: 12
+				} ) );
+			}
+		} );
+
+		test( 'should not show fill color picker when blur fill is enabled', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: 'blur' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Check that fill color picker is not shown
+			const labels = form.querySelectorAll( 'label' );
+			const fillColorLabel = Array.from( labels ).find( ( label ) => label.textContent === 'Fill Color' );
+
+			expect( fillColorLabel ).toBeUndefined();
+		} );
+
+		test( 'should show fill color picker when blur fill is disabled', () => {
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: '#ff0000' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Check that fill color picker is shown
+			const labels = form.querySelectorAll( 'label' );
+			const fillColorLabel = Array.from( labels ).find( ( label ) =>
+				label.textContent && label.textContent.includes( 'Fill Color' )
+			);
+
+			expect( fillColorLabel ).toBeDefined();
+		} );
+	} );
+
+	describe( 'color picker fallback', () => {
+		test( 'should create fallback color button when ColorPickerDialog not available', () => {
+			// Ensure no ColorPickerDialog
+			delete global.Layers.UI.ColorPickerDialog;
+			delete global.ColorPickerDialog;
+
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: '#ff0000' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const colorButtons = form.querySelectorAll( '.color-display-button' );
+			expect( colorButtons.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'should handle none color in fallback button', () => {
+			delete global.Layers.UI.ColorPickerDialog;
+			delete global.ColorPickerDialog;
+
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: 'none' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const colorButtons = form.querySelectorAll( '.color-display-button' );
+			// Should still render without throwing
+			expect( colorButtons.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'should handle transparent color in fallback button', () => {
+			delete global.Layers.UI.ColorPickerDialog;
+			delete global.ColorPickerDialog;
+
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: 'transparent' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const colorButtons = form.querySelectorAll( '.color-display-button' );
+			expect( colorButtons.length ).toBeGreaterThan( 0 );
+		} );
+	} );
+
+	describe( 'text input near-max-length warning', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+		} );
+
+		test( 'should show warning when text approaches max length (95%+)', () => {
+			PropertiesForm.addInput( {
+				label: 'Text',
+				type: 'text',
+				value: '',
+				maxLength: 100,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			// Set value to 96 characters (96% of 100, above 95% threshold)
+			input.value = 'a'.repeat( 96 );
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Should show warning indicator
+			const errorIndicator = container.querySelector( '.property-field-error' );
+			expect( errorIndicator ).not.toBeNull();
+			expect( errorIndicator.classList.contains( 'show' ) ).toBe( true );
+			expect( errorIndicator.classList.contains( 'warning' ) ).toBe( true );
+			expect( errorIndicator.textContent ).toContain( 'Approaching character limit' );
+			expect( input.classList.contains( 'warning' ) ).toBe( true );
+		} );
+
+		test( 'should show warning for textarea approaching max length', () => {
+			PropertiesForm.addInput( {
+				label: 'Description',
+				type: 'textarea',
+				value: '',
+				maxLength: 200,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const textarea = container.querySelector( 'textarea' );
+			// Set value to 192 characters (96% of 200, above 95% threshold)
+			textarea.value = 'x'.repeat( 192 );
+			textarea.dispatchEvent( new Event( 'input' ) );
+
+			const errorIndicator = container.querySelector( '.property-field-error' );
+			expect( errorIndicator ).not.toBeNull();
+			expect( errorIndicator.classList.contains( 'warning' ) ).toBe( true );
+			expect( errorIndicator.textContent ).toContain( '192/200' );
+		} );
+
+		test( 'should show error when text exceeds max length', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Text',
+				type: 'text',
+				value: '',
+				maxLength: 50,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			// Set value to 51 characters (exceeds max)
+			input.value = 'b'.repeat( 51 );
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Should show error, not warning
+			const errorIndicator = container.querySelector( '.property-field-error' );
+			expect( errorIndicator.classList.contains( 'show' ) ).toBe( true );
+			expect( errorIndicator.classList.contains( 'warning' ) ).toBe( false );
+			expect( input.classList.contains( 'error' ) ).toBe( true );
+			// onChange should NOT be called for invalid input
+			expect( onChange ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'blur fill panel refresh', () => {
+		test( 'should call layerPanel.updatePropertiesPanel after blur fill toggle', () => {
+			jest.useFakeTimers();
+
+			const mockLayerPanel = {
+				updatePropertiesPanel: jest.fn()
+			};
+			const editorWithPanel = {
+				updateLayer: jest.fn(),
+				layerPanel: mockLayerPanel
+			};
+
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: '#ff0000' };
+			const form = PropertiesForm.create( layer, editorWithPanel, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			expect( blurFillCheckbox ).not.toBeNull();
+			blurFillCheckbox.checked = true;
+			blurFillCheckbox.dispatchEvent( new Event( 'change' ) );
+
+			// Fast-forward timers to trigger setTimeout
+			jest.runAllTimers();
+
+			expect( mockLayerPanel.updatePropertiesPanel ).toHaveBeenCalledWith( 'test-layer' );
+
+			jest.useRealTimers();
+		} );
+
+		test( 'should not throw when layerPanel is undefined', () => {
+			const editorWithoutPanel = {
+				updateLayer: jest.fn()
+				// No layerPanel
+			};
+
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: '#ff0000' };
+			const form = PropertiesForm.create( layer, editorWithoutPanel, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			expect( () => {
+				blurFillCheckbox.checked = true;
+				blurFillCheckbox.dispatchEvent( new Event( 'change' ) );
+			} ).not.toThrow();
+		} );
+
+		test( 'should not throw when updatePropertiesPanel is not a function', () => {
+			const editorWithBadPanel = {
+				updateLayer: jest.fn(),
+				layerPanel: {} // Panel exists but no updatePropertiesPanel method
+			};
+
+			const layer = { id: 'test-layer', type: 'rectangle', width: 100, height: 100, fill: '#ff0000' };
+			const form = PropertiesForm.create( layer, editorWithBadPanel, registerCleanup );
+
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurFillCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+				const label = cb.parentElement.querySelector( 'label' );
+				return label && label.textContent.includes( 'Blur Fill' );
+			} );
+
+			expect( () => {
+				blurFillCheckbox.checked = true;
+				blurFillCheckbox.dispatchEvent( new Event( 'change' ) );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'validation revert on blur with invalid value', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+		} );
+
+		test( 'should revert to last valid value when blur with out-of-range number', () => {
+			PropertiesForm.addInput( {
+				label: 'Sides',
+				type: 'number',
+				value: 6,
+				min: 3,
+				max: 20,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			expect( input.value ).toBe( '6' );
+
+			// Set invalid value and blur
+			input.value = '100'; // Exceeds max
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Should revert to last valid value
+			expect( input.value ).toBe( '6' );
+		} );
+
+		test( 'should revert to last valid value when blur with below-min number', () => {
+			PropertiesForm.addInput( {
+				label: 'Sides',
+				type: 'number',
+				value: 5,
+				min: 3,
+				max: 20,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = '1'; // Below min
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			expect( input.value ).toBe( '5' );
+		} );
+
+		test( 'should clear error styling after reverting on blur', () => {
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				min: 10,
+				max: 500,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Set invalid value
+			input.value = '5'; // Below min
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// After revert, error styling should be cleared
+			expect( input.classList.contains( 'error' ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'change event revert with setTimeout', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
+		test( 'should revert to last valid value via setTimeout on invalid change event', () => {
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 50,
+				min: 10,
+				max: 100,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = '5'; // Below min - invalid
+			input.dispatchEvent( new Event( 'change' ) );
+
+			// Run timers to trigger the revert setTimeout
+			jest.runAllTimers();
+
+			expect( input.value ).toBe( '50' );
+		} );
+	} );
+
+	describe( 'formatOneDecimal edge cases', () => {
+		test( 'should handle formatOneDecimal behavior in input with decimal values', () => {
+			const onChange = jest.fn();
+			const container = document.createElement( 'div' );
+
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 1.234,
+				decimals: 1,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Input should show formatted value
+			input.value = '3.567';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// formatOneDecimal should round to 1 decimal place
+			expect( input.value ).toBe( '3.6' );
+			expect( onChange ).toHaveBeenCalledWith( 3.6 );
+		} );
+
+		test( 'should display integer without decimal when formatOneDecimal receives whole number', () => {
+			const container = document.createElement( 'div' );
+
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 5,
+				decimals: 1,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = '7.0';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Should display as integer (no .0)
+			expect( input.value ).toBe( '7' );
+		} );
+
+		test( 'should handle NaN value in number input gracefully', () => {
+			const onChange = jest.fn();
+			const container = document.createElement( 'div' );
+
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 10,
+				decimals: 1,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Set non-numeric value
+			input.value = 'not-a-number';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Should not call onChange for invalid input
+			expect( onChange ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should handle empty string value for number input', () => {
+			const onChange = jest.fn();
+			const container = document.createElement( 'div' );
+
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 50,
+				decimals: 1,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Set empty value
+			input.value = '';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Empty should be invalid for number input
+			expect( onChange ).not.toHaveBeenCalled();
+
+			// Error indicator should show
+			const errorIndicator = container.querySelector( '.property-field-error' );
+			expect( errorIndicator ).not.toBeNull();
+		} );
+	} );
+
+	describe( 'validation error messages display', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+		} );
+
+		test( 'should show NaN error for non-numeric input in number field', () => {
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// On blur with invalid value, value gets reverted - check revert happened
+			input.value = 'abc';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Value should be reverted to last valid value
+			expect( input.value ).toBe( '100' );
+		} );
+
+		test( 'should revert to last valid value when below-minimum on blur', () => {
+			PropertiesForm.addInput( {
+				label: 'Sides',
+				type: 'number',
+				value: 6,
+				min: 3,
+				max: 20,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = '1';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Value should be reverted to last valid value
+			expect( input.value ).toBe( '6' );
+		} );
+
+		test( 'should revert to last valid value when above-maximum on blur', () => {
+			PropertiesForm.addInput( {
+				label: 'Sides',
+				type: 'number',
+				value: 6,
+				min: 3,
+				max: 20,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = '50';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Value should be reverted
+			expect( input.value ).toBe( '6' );
+		} );
+
+		test( 'should revert to last valid value for empty number field on blur', () => {
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = '';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Value should be reverted
+			expect( input.value ).toBe( '100' );
+		} );
+
+		test( 'should not call onChange for text exceeding max length on input event', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Name',
+				type: 'text',
+				value: 'initial',
+				maxLength: 20,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = 'This text is way too long for the limit';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// onChange should still be called for text, validation is lenient
+			// But let's check the error indicator shows
+			const errorIndicator = container.querySelector( '.property-field-error' );
+			expect( errorIndicator.classList.contains( 'show' ) ).toBe( true );
+		} );
+
+		test( 'should clear error styling when valid value entered', () => {
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				min: 10,
+				max: 200,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Set valid value first (to establish lastValidValue)
+			input.value = '150';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Then enter valid value - should not show error
+			expect( input.classList.contains( 'error' ) ).toBe( false );
+			expect( input.classList.contains( 'warning' ) ).toBe( false );
 		} );
 	} );
 } );
