@@ -370,6 +370,11 @@
 				const tempCtx = tempCanvas.getContext( '2d' );
 
 				if ( tempCtx ) {
+					// Fill with white first to ensure blur works with PNG transparency
+					// Without this, transparent areas blur to transparent pixels
+					tempCtx.fillStyle = '#ffffff';
+					tempCtx.fillRect( 0, 0, tempCanvas.width, tempCanvas.height );
+
 					// First draw the background image region
 					if ( this.imageElement && this.imageElement.complete ) {
 						const imgW = this.imageElement.naturalWidth || this.imageElement.width;

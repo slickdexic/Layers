@@ -16,7 +16,7 @@
 	'use strict';
 
 	// Extension version
-	const VERSION = '1.2.5';
+	const VERSION = '1.2.8';
 
 	// Skip in non-browser environments
 	if ( typeof window === 'undefined' ) {
@@ -271,7 +271,9 @@
 			registerExport: registerExport,
 			initializeNamespace: initializeNamespace,
 			getExportRegistry: getExportRegistry,
-			exportRegistry: exportRegistry
+			exportRegistry: exportRegistry,
+			// Exposed for testing
+			_createDeprecatedProxy: createDeprecatedProxy
 		};
 	}
 

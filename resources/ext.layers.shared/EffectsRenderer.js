@@ -372,6 +372,11 @@
 				return;
 			}
 
+			// Fill with white first to ensure blur works with PNG transparency
+			// Without this, transparent areas would blur to transparent pixels
+			tempCtx.fillStyle = '#ffffff';
+			tempCtx.fillRect( 0, 0, tempCanvas.width, tempCanvas.height );
+
 			// Determine if we're in viewer mode (canvas overlay without background image drawn on it)
 			// In viewer mode, the background image is a separate HTML element, so we need to
 			// draw from the image source first, then optionally overlay canvas content

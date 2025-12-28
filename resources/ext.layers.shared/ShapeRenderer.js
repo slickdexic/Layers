@@ -270,6 +270,11 @@
 
 			this.ctx.save();
 
+			// Store world coordinates BEFORE rotation for blur fill capture
+			// (drawBlurFill needs world coords to capture the correct canvas region)
+			const worldX = x;
+			const worldY = y;
+
 			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
 			if ( hasRotation ) {
 				this.ctx.translate( x + width / 2, y + height / 2 );
@@ -380,11 +385,12 @@
 			if ( hasFill ) {
 				if ( isBlurFill && this.effectsRenderer ) {
 					// Blur fill - use EffectsRenderer to blur background within shape
+					// Use world coordinates for capture bounds (before rotation transform)
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.effectsRenderer.drawBlurFill(
 						layer,
 						drawRectPath,
-						{ x: x, y: y, width: width, height: height },
+						{ x: worldX, y: worldY, width: width, height: height },
 						opts
 					);
 				} else if ( !isBlurFill ) {

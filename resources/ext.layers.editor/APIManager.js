@@ -288,36 +288,11 @@
 			if ( !layer.id ) {
 				layer.id = this.generateLayerId();
 			}
-			// Use shared normalizer if available, otherwise fall back to local method
+			// Use shared normalizer (guaranteed to be loaded via ext.layers.shared dependency)
 			if ( LayerDataNormalizer && typeof LayerDataNormalizer.normalizeLayer === 'function' ) {
 				LayerDataNormalizer.normalizeLayer( layer );
-			} else {
-				this.normalizeBooleanProperties( layer );
 			}
 			return layer;
-		} );
-	}
-
-	/**
-	 * Normalize boolean properties on a layer
-	 * Fallback method when shared LayerDataNormalizer is not available
-	 * @deprecated Use LayerDataNormalizer.normalizeLayer() instead
-	 * @param {Object} layer - The layer to normalize
-	 */
-	normalizeBooleanProperties( layer ) {
-		const booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked', 'preserveAspectRatio' ];
-		
-		booleanProps.forEach( prop => {
-			const val = layer[ prop ];
-			// Convert string/numeric representations to actual booleans
-			// Explicit false values: '0', 'false', numeric 0
-			if ( val === '0' || val === 'false' || val === 0 ) {
-				layer[ prop ] = false;
-			// Explicit true values: '1', 'true', numeric 1, or empty string (legacy data)
-			} else if ( val === '' || val === '1' || val === 'true' || val === 1 ) {
-				layer[ prop ] = true;
-			}
-			// Note: actual boolean true/false and undefined are left as-is
 		} );
 	}
 

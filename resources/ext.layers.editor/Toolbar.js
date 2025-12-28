@@ -1262,8 +1262,8 @@
 		this.addListener( this.saveButton, 'click', () => {
 			if ( this.editor ) {
 				this.editor.save();
-			} else {
-				console.error( '[Toolbar] Cannot save - editor reference is null' );
+			} else if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+				mw.log.error( '[Toolbar] Cannot save - editor reference is null' );
 			}
 		} );
 
@@ -1492,18 +1492,6 @@
 		if ( this.zoomDisplay ) {
 			this.zoomDisplay.textContent = zoomPercent + '%';
 			this.zoomDisplay.setAttribute( 'aria-label', this.msg( 'layers-status-zoom', 'Zoom' ) + ': ' + zoomPercent + '%' );
-		}
-	}
-
-	/**
-	 * @deprecated Use ToolbarKeyboard.handleKeyboardShortcuts instead.
-	 * Kept for backward compatibility - delegates to ToolbarKeyboard module.
-	 *
-	 * @param {Event} e - The keyboard event
-	 */
-	handleKeyboardShortcuts( e ) {
-		if ( this.keyboardHandler ) {
-			this.keyboardHandler.handleKeyboardShortcuts( e );
 		}
 	}
 

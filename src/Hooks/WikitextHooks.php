@@ -677,34 +677,6 @@ class WikitextHooks {
 	}
 
 	/**
-	 * Get the stored set name for the next occurrence of a specific file
-	 * This consumes from the queue, so each call returns the next set name in order
-	 * @param string $filename The filename (without namespace prefix)
-	 * @return string|null The set name, or null if not specified
-	 * @deprecated Use getFileParamsForRender() to get both setName and linkType together
-	 */
-	public static function getFileSetName( string $filename ): ?string {
-		if ( !isset( self::$fileSetNames[$filename] ) || empty( self::$fileSetNames[$filename] ) ) {
-			return null;
-		}
-
-		// Initialize render count for this file if not set
-		if ( !isset( self::$fileRenderCount[$filename] ) ) {
-			self::$fileRenderCount[$filename] = 0;
-		}
-
-		// Get the set name for the current occurrence
-		$index = self::$fileRenderCount[$filename];
-		$queue = self::$fileSetNames[$filename];
-
-		// Increment the counter for next call
-		self::$fileRenderCount[$filename]++;
-
-		// Return the set name at this index, or null if we've exhausted the queue
-		return $queue[$index] ?? null;
-	}
-
-	/**
 	 * Get both set name and link type for the next occurrence of a file
 	 * This method ensures both values come from the same queue index
 	 *
@@ -730,24 +702,6 @@ class WikitextHooks {
 			'setName' => $setName,
 			'linkType' => $linkType
 		];
-	}
-
-	/**
-	 * Get the stored link type for the next occurrence of a specific file
-	 * This is used to match render calls to their corresponding layerslink value
-	 * @param string $filename The filename (without namespace prefix)
-	 * @return string|null The link type (editor, viewer, lightbox), or null if not specified
-	 * @deprecated Use getFileParamsForRender() instead to avoid counter sync issues
-	 */
-	public static function getFileLinkType( string $filename ): ?string {
-		if ( !isset( self::$fileLinkTypes[$filename] ) || empty( self::$fileLinkTypes[$filename] ) ) {
-			return null;
-		}
-
-		// Use the SAME counter as getFileSetName to stay in sync
-		// Note: This assumes getFileLinkType is always called WITH getFileSetName
-		$index = ( self::$fileRenderCount[$filename] ?? 1 ) - 1;
-		return self::$fileLinkTypes[$filename][$index] ?? null;
 	}
 
 	/**

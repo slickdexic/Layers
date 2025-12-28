@@ -248,8 +248,9 @@
 				const editorUrl = trigger.dataset.layersEditorUrl;
 
 				if ( !filename ) {
-					// eslint-disable-next-line no-console
-					console.warn( '[LayersModal] Missing data-layers-filename attribute' );
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[LayersModal] Missing data-layers-filename attribute' );
+					}
 					return;
 				}
 

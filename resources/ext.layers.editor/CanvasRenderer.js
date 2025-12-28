@@ -262,12 +262,20 @@
 
 			const opacity = this.getBackgroundOpacity();
 			this.ctx.save();
+
+			// Always draw a solid white background first to ensure blur fill works
+			// correctly with PNG images that have transparency. Without this,
+			// transparent areas would blur to transparent pixels instead of white.
+			this.ctx.globalAlpha = 1;
+			this.ctx.fillStyle = '#ffffff';
+			this.ctx.fillRect( 0, 0, this.canvas.width / this.zoom, this.canvas.height / this.zoom );
+
 			if ( opacity < 1 ) {
-				// Draw checker pattern underneath for transparency visualization
-				this.ctx.globalAlpha = 1;
+				// Draw checker pattern for transparency visualization when opacity is reduced
 				this.drawCheckerPatternToContext();
-				this.ctx.globalAlpha = opacity;
 			}
+
+			this.ctx.globalAlpha = opacity;
 			this.ctx.drawImage( this.backgroundImage, 0, 0 );
 			this.ctx.restore();
 		}
@@ -569,7 +577,7 @@
 		drawLayerWithBlurBlend( layer ) {
 			const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
 
-			// Calculate scaled coordinates
+			// Calculate scaled coordinates (screen space)
 			const x = ( layer.x || 0 ) * this.zoom + this.panX;
 			const y = ( layer.y || 0 ) * this.zoom + this.panY;
 			const width = ( layer.width || 0 ) * this.zoom;
@@ -591,7 +599,12 @@
 
 			this.ctx.save();
 
-			// Apply rotation if needed
+			// CRITICAL: Reset transform to identity for blur operations.
+			// We're working in screen/pixel coordinates, not layer coordinates.
+			// The clipping path and blur must be drawn in screen space.
+			this.ctx.setTransform( 1, 0, 0, 1, 0, 0 );
+
+			// Apply rotation if needed (in screen coordinates)
 			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
 			if ( hasRotation ) {
 				this.ctx.translate( centerX, centerY );
@@ -604,7 +617,7 @@
 				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
 			}
 
-			// Create clipping path based on shape type
+			// Create clipping path based on shape type (in screen coordinates)
 			this.ctx.beginPath();
 			this._drawBlurClipPath( layer );
 			this.ctx.clip();
@@ -621,6 +634,7 @@
 					tempCtx.drawImage( this.canvas, 0, 0 );
 
 					// Apply blur and draw back within the clip region
+					// Note: blur radius stays in pixels, not scaled by zoom
 					this.ctx.filter = 'blur(' + radius + 'px)';
 					this.ctx.drawImage( tempCanvas, 0, 0 );
 					this.ctx.filter = 'none';
