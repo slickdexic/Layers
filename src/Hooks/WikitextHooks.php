@@ -459,19 +459,36 @@ class WikitextHooks {
 
 	/**
 	 * Add data attributes to thumbnails for client-side rendering when available
+	 *
+	 * Note: In MediaWiki 1.39-1.43 LTS, $linkAttribs can be false (boolean) when
+	 * the image has no link. We accept mixed type for backward compatibility.
+	 *
 	 * @param mixed $thumbnail
 	 * @param array &$attribs
-	 * @param array &$linkAttribs
+	 * @param array|bool &$linkAttribs Link attributes array, or false if no link
 	 * @return bool
 	 */
-	public static function onThumbnailBeforeProduceHTML( $thumbnail, array &$attribs, array &$linkAttribs ): bool {
+	public static function onThumbnailBeforeProduceHTML( $thumbnail, array &$attribs, &$linkAttribs ): bool {
+		// Handle case where $linkAttribs is false (no link) in older MW versions
+		$linkAttribsIsArray = is_array( $linkAttribs );
+
 		$processor = self::getThumbnailProcessor();
+
+		// Convert false to empty array for processor compatibility (MW 1.39-1.43 LTS compat)
+		$linkAttribsForProcessor = $linkAttribsIsArray ? $linkAttribs : [];
+
 		$result = $processor->processThumbnail(
 			$thumbnail,
 			$attribs,
-			$linkAttribs,
+			$linkAttribsForProcessor,
 			[ __CLASS__, 'getFileSetName' ]
 		);
+
+		// Write back any changes if linkAttribs was originally an array
+		if ( $linkAttribsIsArray ) {
+			$linkAttribs = $linkAttribsForProcessor;
+		}
+
 		if ( $processor->pageHasLayers() ) {
 			self::$pageHasLayers = true;
 		}

@@ -2,6 +2,17 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.15] - 2025-12-23
+
+### Bug Fixes
+- **Fixed TypeError in ThumbnailBeforeProduceHTML hook** — The `onThumbnailBeforeProduceHTML` method now properly handles cases where `$linkAttribs` is `false` (boolean) instead of an array. This occurs in MediaWiki 1.39-1.43 when images have `link=` (no link) in their wikitext syntax. The fix removes the strict `array` type hint and adds proper type checking.
+
+### Technical
+- **Modified files**:
+  - `src/Hooks/WikitextHooks.php` — Fixed `$linkAttribs` parameter to accept `bool|array`, added compatibility layer for MW 1.39-1.43 LTS
+
+---
+
 ## [1.1.14] - 2025-12-23
 
 ### Bug Fixes
