@@ -302,7 +302,7 @@ await api.postWithToken('csrf', {
 | ES6 Classes | 76+ |
 | Test Files | 107 |
 | Test Cases | 5,437 |
-| Code Coverage | ~92% |
+| Code Coverage | ~94% |
 
 ---
 

@@ -4,6 +4,22 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.9 (December 28, 2025)
+
+### Testing
+- **7,270 tests passing** (+23 from v1.2.8)
+- **130 test suites** (up from 128)
+- **94.45% statement coverage**, 82.88% branch, 91.98% function, 94.73% line
+- **PropertiesForm.js coverage improved** (68% → 72% function coverage)
+- **ImageLoader.js: First dedicated test file** — 47 tests
+- **LayerItemFactory.js: First dedicated test file** — 51 tests
+
+### Documentation
+- Updated all documentation with accurate metrics
+- Full release preparation with wiki sync
+
+---
+
 ## Version 1.2.8 (December 27, 2025)
 
 ### Bug Fixes
@@ -11,7 +27,7 @@ Version history for the Layers extension.
 - **Fixed arrow fill property** — Arrows are now properly filled instead of just stroked
 
 ### Testing
-- **6,824 tests passing** (+68 from v1.2.7)
+- **7,247 tests passing** (+491 from v1.2.7)
 
 ---
 

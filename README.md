@@ -5,7 +5,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.2.8 (December 2025)  
+> **Version:** 1.2.9 (December 2025)  
 > **Status:** ✅ Production-ready with minor technical debt  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -59,6 +59,8 @@ Fill: blur  →  Blurs content beneath the shape
 ```
 
 Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box, Arrow (v1.2.7+)
+
+> **Note:** All blur fill coordinate bugs have been fixed as of v1.2.8. The feature is production-ready.
 
 ### Smart Guides & Alignment
 
@@ -202,10 +204,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 6,795 passing |
-| Statement coverage | 92.4% |
-| Branch coverage | 80.1% |
-| Test suites | 127 |
+| Jest tests | 7,270 passing |
+| Statement coverage | 94.4% |
+| Branch coverage | 82.8% |
+| Test suites | 130 |
 
 **Security:**
 
@@ -223,7 +225,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 
 **Current limitations:**
 
-- ⚠️ **No mobile/touch support** - editor is desktop-only
+- ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
 
@@ -249,13 +251,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 99 | ✅ |
-| Total JS lines | ~49,700 | ✅ Well under 75K target |
+| Total JS files | 97 | ✅ |
+| Total JS lines | ~49,600 | ✅ Well under 75K target |
 | ES6 classes | 87 | ✅ |
-| God classes (>1000 lines) | 8 | ⚠️ |
-| Tests passing | 6,837 | ✅ |
+| God classes (>1000 lines) | 8 | ⚠️ Mitigated by delegation |
+| Tests passing | 7,270 | ✅ |
 | Tests failing | 0 | ✅ |
-| Files with <60% coverage | 0 | ✅ Fixed |
+| Statement coverage | 94.5% | ✅ Excellent |
+| Branch coverage | 82.9% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

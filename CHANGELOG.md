@@ -2,19 +2,64 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.9] - 2025-12-28
+
+### Testing
+- **7,270 tests passing** (+23 from v1.2.8)
+- **130 test suites** (up from 128)
+- **94.45% statement coverage**, 82.88% branch coverage, 91.98% function coverage, 94.73% line coverage
+- **PropertiesForm.js: Improved coverage (68% → 72% function coverage)** — 25 new tests for ColorPickerDialog integration, validation edge cases, blur fill panel refresh, opacity change handling
+- **ImageLoader.js: First dedicated test file** — 47 tests organized for background image loading, URL building, same-origin detection, SVG placeholders, abort/destroy cleanup
+- **LayerItemFactory.js: First dedicated test file** — 51 tests for layer item DOM creation, updates, icon delegation, keyboard navigation, ARIA accessibility
+
+### Documentation
+- Updated all documentation with accurate metrics (7,270 tests, 94% coverage)
+- Updated improvement_plan.md with test coverage progress
+- Updated codebase_review.md with current state
+
+---
+
 ## [1.2.8] - 2025-12-27
 
 ### Bug Fixes
+- **Fixed rectangle blur fill appearing transparent** — Rectangles with blur fill were appearing completely transparent because rotation transformation modified x/y coordinates to local space before passing to EffectsRenderer.drawBlurFill. Now stores world coordinates (worldX, worldY) BEFORE rotation and passes those to drawBlurFill for correct canvas capture bounds.
 - **Fixed arrow rendering with blur blend mode** — Arrows with blur blend mode (set via Blend Mode dropdown) no longer display rectangular bounding boxes in the editor. The issue was that the blur blend mode path used rectangular clip regions instead of the arrow's actual shape. Arrows and lines now render normally and ArrowRenderer handles blur fill correctly via EffectsRenderer.
 - **Fixed arrow fill property** — Arrows were being created without a `fill` property, causing ArrowRenderer to only stroke (not fill) the polygon outline. Added explicit `fill: style.color` to ShapeFactory.createArrow() and BuiltInPresets arrow definitions.
 
 ### Technical
+- Updated ShapeRenderer.drawRectangle() to store world coordinates before rotation transformation
 - Updated CanvasRenderer.js to skip arrows/lines from blur blend mode rendering path
 - Updated LayerRenderer.js (shared) with same fix for consistency
 - Added fill and arrowSize properties to arrow presets in BuiltInPresets.js
+- **Replaced console.log with mw.log** — Toolbar.js and LayersEditorModal.js now use MediaWiki's logging system instead of console methods for consistency and proper production logging
+
+### Security
+- **Fixed npm security vulnerabilities** — Updated `glob` 10.4.5 → 10.5.0 (high: command injection via CLI) and `js-yaml` 3.14.1 → 3.14.2 (moderate: prototype pollution)
 
 ### Testing
-- **6,824 tests passing** (+68 from v1.2.7)
+- **7,247 tests passing** (+371 since start of v1.2.8 development)
+- Added 3 blur fill tests for ShapeRenderer (verifying world coordinate handling with rotation)
+- **CanvasManager.js coverage improved: 79.6% → 86.3% statement, 64.8% → 71.9% branch**
+- Added 52 new tests for CanvasManager covering: `withLocalAlpha`, `applyLayerEffects`, `notifyToolbarOfSelection`, `selectLayer`, renderer delegation, text input controller delegation, marquee selection, rect intersection
+- **ImageLoader.js: First test coverage (0% → 100% statement, 92.8% branch)** — 47 new tests covering URL building, same-origin detection, image loading, SVG placeholder creation, timeout handling, abort, destroy
+- **LayersEditor.js coverage improved: 79.2% → 87% statement, 54.5% → 66.9% function** — 29 new tests for stub managers, fallback registry, navigation, cancel dialog
+- **LayerItemFactory.js: First test coverage (0% → 98.7% statement, 100% lines)** — 51 new tests for layer item DOM creation, updates, icon delegation, keyboard navigation
+- **CanvasEvents.js: Improved coverage (99% → 100% statement)** — 4 new tests for resize error handling and marquee tool
+- **LayersLightbox.js: Improved coverage (86.8% → 96.7% statement)** — 4 new tests for image onload handling and viewer initialization
+- **PresetManager.js: Improved coverage (82.6% → 93.8% statement, 100% function)** — 21 new tests for fallback behavior without storage/builtInPresets, edge cases
+- **ToolbarStyleControls.js: Improved coverage (87.7% → 93.8% statement, 79.1% → 83.7% function)** — 25 new tests for ColorControlFactory integration, PresetStyleManager integration, getClass fallback, addListener fallback, setStrokeColor/setFillColor with colorFactory
+- **ColorControlFactory.js: Improved coverage (87.2% → 88.4% statement, 80% → 85% function)** — 5 new tests for click handler and fallback
+- **PropertiesForm.js: Improved coverage (86.8% → 89.4% statement, 75.2% → 79% branch)** — 13 new tests for blur fill checkbox and color picker fallback
+- **ToolRegistry.js: Improved coverage (89.6% → 97.4% statement, 80% → 95% function)** — 8 new tests for isShapeTool, getCursorMap, clear, reset
+- **SelectionManager.js: Improved coverage (87.5% → 91.7% statement, 84.3% → 90% function)** — 11 new tests for accessibility, layer naming, toolbar notification
+- **ToolManager.js: Improved coverage (86.5% → 90.6% statement, 74.3% → 76.9% branch)** — 20 new tests for path handler delegation, destroy cleanup, initialization fallbacks, module availability (ToolStyles, ShapeFactory, ToolRegistry, TextToolHandler, PathToolHandler)
+- **CanvasRenderer.js: Improved coverage (88.5% → 93.5% statement, 92.5% → 96.2% function)** — 18 new tests for destroy, blur content rendering, _getLayerById
+- **LayerSetManager.js: Improved coverage (88.5% → 94% statement, 95.8% → 100% function)** — 13 new tests for getMessageWithParams, createNewLayerSet validation, loadRevisionById, reloadRevisions
+- **TextBoxRenderer.js: Improved coverage (88.4% → 93.8% statement)** — 8 new tests for drawTextOnly, shadow with spread
+- **ColorControlFactory.js: Improved coverage (88.4% → 91.9% statement)** — 6 new tests for openColorPicker, click handler
+- **HistoryManager.js: Improved coverage (87.2% → 100% statement, 97.1% → 100% function)** — 22 new tests for constructor branches, getEditor/getCanvasManager edge cases, endBatch early returns, cancelBatch restoration paths, compressHistory, destroy
+- **LayersNamespace.js: Improved coverage (83.6% → 98.4% statement, 70% → 100% function)** — 10 new tests for _createDeprecatedProxy direct invocation, warnDeprecated triggering, shouldWarn branches
+- Overall statement coverage: 92.8% → 94.4%
 - All linting passes (ESLint, Stylelint, PHP CodeSniffer)
 
 ---

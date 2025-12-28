@@ -413,7 +413,7 @@ global.mw = {
 | ES6 Classes | 76+ |
 | Test Files | 109 |
 | Test Cases | 5,505 |
-| Coverage | ~92% |
+| Coverage | ~94% |
 
 ### God Classes (>1,000 lines)
 
