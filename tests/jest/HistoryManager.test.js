@@ -245,6 +245,33 @@ describe('HistoryManager', () => {
             expect(historyManager.batchOperations).toEqual([]);
             expect(mockCanvasManager.layers[0].x).toBe(10); // Restored to initial
         });
+
+        test('endBatch should early return when not in batch mode', () => {
+            // Save initial state
+            historyManager.saveState('Initial');
+            const historyLengthBefore = historyManager.history.length;
+            
+            // Call endBatch without starting a batch
+            expect(historyManager.batchMode).toBe(false);
+            historyManager.endBatch();
+            
+            // History should be unchanged
+            expect(historyManager.history.length).toBe(historyLengthBefore);
+            expect(historyManager.batchMode).toBe(false);
+        });
+
+        test('endBatch should early return when batchChanges is empty', () => {
+            // Start batch but don't add any changes
+            historyManager.startBatch('Empty batch');
+            expect(historyManager.batchMode).toBe(true);
+            expect(historyManager.batchChanges.length).toBe(0);
+            
+            historyManager.endBatch();
+            
+            // Should reset batch state but not save to history
+            expect(historyManager.batchMode).toBe(false);
+            expect(historyManager.history.length).toBe(0); // No history entry created
+        });
     });
 
     describe('utility methods', () => {
@@ -938,6 +965,339 @@ describe('HistoryManager', () => {
 
             // No more undo available
             expect(hm.canUndo()).toBe(false);
+        });
+    });
+
+    describe('constructor initialization branches', () => {
+        test('should handle CanvasManager with renderLayers as first arg', () => {
+            const canvasManagerLike = {
+                renderLayers: jest.fn(),
+                redraw: jest.fn(),
+                layers: [],
+                editor: { name: 'testEditor' }
+            };
+            
+            const hm = new HistoryManager(canvasManagerLike);
+            
+            expect(hm.canvasManager).toBe(canvasManagerLike);
+            expect(hm.editor).toBe(canvasManagerLike.editor);
+            expect(hm.config).toEqual({});
+        });
+
+        test('should handle plain config object without canvasManager', () => {
+            const plainConfig = { maxHistorySteps: 25 };
+            
+            const hm = new HistoryManager(plainConfig);
+            
+            expect(hm.config).toBe(plainConfig);
+            expect(hm.canvasManager).toBeNull();
+            expect(hm.editor).toBeNull();
+            expect(hm.maxHistorySteps).toBe(25);
+        });
+
+        test('should handle traditional (config, canvasManager) signature', () => {
+            const config = { maxHistorySteps: 30 };
+            const canvasMgr = {
+                layers: [],
+                renderLayers: jest.fn(),
+                editor: { name: 'myEditor' }
+            };
+            
+            const hm = new HistoryManager(config, canvasMgr);
+            
+            expect(hm.config).toBe(config);
+            expect(hm.canvasManager).toBe(canvasMgr);
+            expect(hm.editor).toBe(canvasMgr.editor);
+        });
+    });
+
+    describe('getEditor edge cases', () => {
+        test('should return editor from direct reference', () => {
+            const editor = { name: 'directEditor' };
+            const hm = new HistoryManager({ stateManager: {} });
+            hm.editor = editor;
+            
+            expect(hm.getEditor()).toBe(editor);
+        });
+
+        test('should return canvasManager when it has stateManager', () => {
+            const canvasManagerWithState = {
+                layers: [],
+                stateManager: { get: jest.fn() }
+            };
+            const hm = new HistoryManager(canvasManagerWithState);
+            
+            // getEditor should return canvasManager when it has stateManager (meaning it IS the editor)
+            expect(hm.getEditor()).toBe(canvasManagerWithState);
+        });
+
+        test('should return canvasManager via stateManager when canvasManager has stateManager but no editor', () => {
+            // Create a plain config object (not editor, not canvasManager-like)
+            // Then manually set canvasManager to something with stateManager
+            const hm = new HistoryManager({ maxHistorySteps: 10 });
+            
+            // Manually set up scenario: no direct editor, canvasManager without .editor, but WITH .stateManager
+            hm.editor = null;
+            hm.canvasManager = {
+                stateManager: { get: jest.fn() },
+                layers: []
+            };
+            
+            // Now getEditor should: skip direct editor (null), skip canvasManager.editor (undefined),
+            // then hit canvasManager.stateManager check and return canvasManager
+            expect(hm.getEditor()).toBe(hm.canvasManager);
+        });
+
+        test('should return null when no editor references available', () => {
+            const hm = new HistoryManager({ maxHistorySteps: 10 });
+            
+            expect(hm.getEditor()).toBeNull();
+        });
+    });
+
+    describe('getCanvasManager edge cases', () => {
+        test('should return canvasManager from editor.canvasManager', () => {
+            const innerCanvasManager = { canvas: document.createElement('canvas') };
+            const editor = { canvasManager: innerCanvasManager };
+            const hm = new HistoryManager({ stateManager: {} });
+            hm.editor = editor;
+            
+            expect(hm.getCanvasManager()).toBe(innerCanvasManager);
+        });
+
+        test('should return canvasManager when it has canvas property', () => {
+            const canvasMgr = {
+                layers: [],
+                canvas: document.createElement('canvas')
+            };
+            const hm = new HistoryManager(canvasMgr);
+            
+            expect(hm.getCanvasManager()).toBe(canvasMgr);
+        });
+
+        test('should fallback to stored canvasManager without canvas', () => {
+            const simpleMock = { layers: [] };
+            const hm = new HistoryManager(simpleMock);
+            
+            expect(hm.getCanvasManager()).toBe(simpleMock);
+        });
+    });
+
+    describe('updateUndoRedoButtons with toolbar.updateUndoRedoState', () => {
+        test('should call toolbar.updateUndoRedoState when available', () => {
+            const mockUpdateUndoRedoState = jest.fn();
+            const editor = {
+                layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }],
+                stateManager: {
+                    get: jest.fn().mockReturnValue([{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]),
+                    set: jest.fn()
+                },
+                toolbar: {
+                    updateUndoRedoState: mockUpdateUndoRedoState
+                }
+            };
+            
+            const hm = new HistoryManager(editor);
+            hm.saveState('test');
+            
+            expect(mockUpdateUndoRedoState).toHaveBeenCalledWith(false, false);
+        });
+    });
+
+    describe('cancelBatch with different restoration paths', () => {
+        test('should restore via stateManager.set when available', () => {
+            const mockSet = jest.fn();
+            const editor = {
+                layers: [{ id: '1', type: 'rect', x: 10, y: 10, width: 50, height: 50 }],
+                stateManager: {
+                    get: jest.fn().mockReturnValue([{ id: '1', type: 'rect', x: 10, y: 10, width: 50, height: 50 }]),
+                    set: mockSet
+                }
+            };
+            
+            const hm = new HistoryManager(editor);
+            hm.startBatch('test batch');
+            
+            // Simulate some changes
+            editor.layers[0].x = 100;
+            hm.batchChanges.push({ layers: [{ id: '1', type: 'rect', x: 100, y: 10, width: 50, height: 50 }] });
+            
+            hm.cancelBatch();
+            
+            // Should have called stateManager.set with the snapshot
+            expect(mockSet).toHaveBeenCalledWith('layers', expect.any(Array));
+        });
+
+        test('should restore via editor.layers when stateManager not available', () => {
+            // Create editor with getLayers function so it's recognized as editor
+            // but without stateManager so it uses the else if (editor) branch
+            const editor = {
+                layers: [{ id: '1', type: 'rect', x: 10, y: 10, width: 50, height: 50 }],
+                getLayers: jest.fn().mockReturnValue([{ id: '1', type: 'rect', x: 10, y: 10, width: 50, height: 50 }]),
+                canvasManager: {
+                    layers: [],
+                    renderLayers: jest.fn(),
+                    redraw: jest.fn()
+                }
+            };
+            
+            const hm = new HistoryManager(editor);
+            hm.startBatch('test batch');
+            
+            // Simulate changes
+            editor.layers[0].x = 200;
+            
+            hm.cancelBatch();
+            
+            // Editor layers should be restored to original x=10
+            expect(editor.layers[0].x).toBe(10);
+        });
+
+        test('should call redraw after restoring batch', () => {
+            const mockRedraw = jest.fn();
+            const mockRenderLayers = jest.fn();
+            const canvasMgr = {
+                layers: [{ id: '1', type: 'rect', x: 10, y: 10, width: 50, height: 50 }],
+                renderLayers: mockRenderLayers,
+                redraw: mockRedraw,
+                canvas: document.createElement('canvas')
+            };
+            
+            const hm = new HistoryManager(canvasMgr);
+            hm.startBatch('test batch');
+            
+            // Simulate changes
+            canvasMgr.layers[0].x = 300;
+            
+            hm.cancelBatch();
+            
+            expect(mockRenderLayers).toHaveBeenCalled();
+            expect(mockRedraw).toHaveBeenCalled();
+        });
+    });
+
+    describe('compressHistory edge cases', () => {
+        test('should not compress when history is at or below half max', () => {
+            const canvasMgr = {
+                layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
+            };
+            const hm = new HistoryManager(canvasMgr);
+            hm.maxHistorySteps = 10;
+            
+            // Add only 5 entries (half of max)
+            for (let i = 0; i < 5; i++) {
+                canvasMgr.layers[0].x = i * 10;
+                hm.saveState(`state ${i}`);
+            }
+            
+            expect(hm.history.length).toBe(5);
+            
+            // Call compressHistory directly
+            hm.compressHistory();
+            
+            // Should remain unchanged since it's at half
+            expect(hm.history.length).toBe(5);
+        });
+
+        test('should compress when history exceeds half max', () => {
+            const canvasMgr = {
+                layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
+            };
+            const hm = new HistoryManager(canvasMgr);
+            hm.maxHistorySteps = 10;
+            
+            // Add 6 entries (more than half of max)
+            for (let i = 0; i < 6; i++) {
+                canvasMgr.layers[0].x = i * 10;
+                hm.saveState(`state ${i}`);
+            }
+            
+            expect(hm.history.length).toBe(6);
+            
+            // Call compressHistory directly
+            hm.compressHistory();
+            
+            // Should compress to keepCount (5)
+            expect(hm.history.length).toBe(5);
+        });
+    });
+
+    describe('destroy method', () => {
+        test('should clear all state and references', () => {
+            const canvasMgr = {
+                layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
+            };
+            const hm = new HistoryManager(canvasMgr);
+            
+            // Add some history
+            hm.saveState('state 1');
+            hm.saveState('state 2');
+            hm.startBatch('batch');
+            hm.batchChanges.push({ layers: [] });
+            
+            expect(hm.history.length).toBe(2);
+            expect(hm.canvasManager).toBe(canvasMgr);
+            
+            // Destroy
+            hm.destroy();
+            
+            expect(hm.history).toEqual([]);
+            expect(hm.batchChanges).toEqual([]);
+            expect(hm.batchOperations).toEqual([]);
+            expect(hm.batchStartSnapshot).toBeNull();
+            expect(hm.canvasManager).toBeNull();
+            expect(hm.config).toBeNull();
+        });
+
+        test('should be safe to call multiple times', () => {
+            const canvasMgr = {
+                layers: []
+            };
+            const hm = new HistoryManager(canvasMgr);
+            
+            hm.destroy();
+            hm.destroy(); // Should not throw
+            
+            expect(hm.history).toEqual([]);
+            expect(hm.canvasManager).toBeNull();
+        });
+    });
+
+    describe('getEditor additional paths', () => {
+        test('should return editor from canvasManager.editor when no direct editor', () => {
+            const editorRef = { name: 'editorFromCanvasManager' };
+            const canvasMgr = {
+                layers: [],
+                editor: editorRef
+            };
+            
+            const hm = new HistoryManager(canvasMgr);
+            hm.editor = null; // Ensure no direct editor reference
+            
+            expect(hm.getEditor()).toBe(editorRef);
+        });
+    });
+
+    describe('cancelBatch restoration via canvasManager.layers', () => {
+        test('should restore via canvasManager.layers when no editor available', () => {
+            const canvasMgr = {
+                layers: [{ id: '1', type: 'rect', x: 10, y: 10, width: 50, height: 50 }],
+                renderLayers: jest.fn(),
+                redraw: jest.fn()
+            };
+            
+            const hm = new HistoryManager(canvasMgr);
+            hm.editor = null; // Ensure no editor
+            
+            hm.startBatch('test batch');
+            
+            // Simulate changes
+            canvasMgr.layers[0].x = 500;
+            
+            hm.cancelBatch();
+            
+            // canvasManager.layers should be restored to original x=10
+            expect(canvasMgr.layers[0].x).toBe(10);
         });
     });
 });

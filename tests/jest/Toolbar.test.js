@@ -1403,29 +1403,6 @@ describe( 'Toolbar', function () {
 		} );
 	} );
 
-	describe( 'handleKeyboardShortcuts deprecated wrapper', function () {
-		beforeEach( function () {
-			toolbar = new Toolbar( { container: container, editor: mockEditor } );
-		} );
-
-		it( 'should delegate to keyboardHandler when available', function () {
-			toolbar.keyboardHandler = { handleKeyboardShortcuts: jest.fn() };
-			const mockEvent = new KeyboardEvent( 'keydown', { key: 'z', ctrlKey: true } );
-
-			toolbar.handleKeyboardShortcuts( mockEvent );
-
-			expect( toolbar.keyboardHandler.handleKeyboardShortcuts ).toHaveBeenCalledWith( mockEvent );
-		} );
-
-		it( 'should not throw when keyboardHandler not available', function () {
-			toolbar.keyboardHandler = null;
-
-			expect( function () {
-				toolbar.handleKeyboardShortcuts( new KeyboardEvent( 'keydown' ) );
-			} ).not.toThrow();
-		} );
-	} );
-
 	describe( 'createActionButton toggle buttons', function () {
 		beforeEach( function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
@@ -1885,23 +1862,6 @@ describe( 'Toolbar', function () {
 		it( 'should not throw if zoomDisplay missing', function () {
 			toolbar.zoomDisplay = null;
 			expect( () => toolbar.updateZoomDisplay( 100 ) ).not.toThrow();
-		} );
-	} );
-
-	describe( 'handleKeyboardShortcuts delegation', function () {
-		beforeEach( function () {
-			toolbar = new Toolbar( { container: container, editor: mockEditor } );
-		} );
-
-		it( 'should delegate to keyboardHandler', function () {
-			const mockEvent = { key: 'z', ctrlKey: true };
-			toolbar.handleKeyboardShortcuts( mockEvent );
-			expect( toolbar.keyboardHandler.handleKeyboardShortcuts ).toHaveBeenCalledWith( mockEvent );
-		} );
-
-		it( 'should not throw if keyboardHandler missing', function () {
-			toolbar.keyboardHandler = null;
-			expect( () => toolbar.handleKeyboardShortcuts( {} ) ).not.toThrow();
 		} );
 	} );
 

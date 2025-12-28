@@ -1053,4 +1053,74 @@ describe( 'ShapeRenderer', () => {
 			expect( ctx.lineCap ).toBe( 'round' );
 		} );
 	} );
+
+	describe( 'blur fill', () => {
+		it( 'should call effectsRenderer.drawBlurFill for rectangle with fill=blur', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			shapeRenderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				fill: 'blur'
+			};
+
+			shapeRenderer.drawRectangle( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'should pass world coordinates to drawBlurFill even with rotation', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			shapeRenderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				fill: 'blur',
+				rotation: 45
+			};
+
+			shapeRenderer.drawRectangle( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledTimes( 1 );
+
+			// Verify the bounds passed use WORLD coordinates (x=50, y=50)
+			// NOT local rotated coordinates (x=-100, y=-50)
+			const bounds = mockEffectsRenderer.drawBlurFill.mock.calls[ 0 ][ 2 ];
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 50 );
+			expect( bounds.width ).toBe( 200 );
+			expect( bounds.height ).toBe( 100 );
+		} );
+
+		it( 'should NOT call ctx.fill for blur fill', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			shapeRenderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				fill: 'blur'
+			};
+
+			ctx.fill.mockClear();
+			shapeRenderer.drawRectangle( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			// fill() should NOT be called for blur fill (effectsRenderer handles the fill)
+			expect( ctx.fill ).not.toHaveBeenCalled();
+		} );
+	} );
 } );

@@ -602,9 +602,11 @@ describe( 'EffectsRenderer', () => {
 			};
 			renderer.canvas = canvasWithContext;
 
-			// Create mock for temporary canvas
+			// Create mock for temporary canvas - includes fillRect for white background
 			mockTempCtx = {
-				drawImage: jest.fn()
+				drawImage: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: ''
 			};
 		} );
 
@@ -819,7 +821,9 @@ describe( 'EffectsRenderer', () => {
 						throw new Error( 'Canvas tainted' );
 					}
 					// Success for background image
-				} )
+				} ),
+				fillRect: jest.fn(),
+				fillStyle: ''
 			};
 
 			document.createElement = jest.fn().mockReturnValue( {
@@ -850,7 +854,9 @@ describe( 'EffectsRenderer', () => {
 			const tempCtxNoContent = {
 				drawImage: jest.fn().mockImplementation( () => {
 					throw new Error( 'No content' );
-				} )
+				} ),
+				fillRect: jest.fn(),
+				fillStyle: ''
 			};
 
 			document.createElement = jest.fn().mockReturnValue( {
@@ -1045,6 +1051,82 @@ describe( 'EffectsRenderer', () => {
 
 			// Should use baseWidth/baseHeight as fallback
 			expect( mockCtx.save ).toHaveBeenCalled();
+
+			document.createElement = origCreateElement;
+		} );
+	} );
+
+	// Note: _extendEdges tests removed - method was never implemented
+	// Edge extension was planned but not needed for the blur fill implementation
+
+	describe( 'drawBlurFill edge cases', () => {
+		it( 'should handle shape near left edge of canvas', () => {
+			const origCreateElement = document.createElement;
+			const localMockTempCtx = { drawImage: jest.fn(), fillRect: jest.fn(), fillStyle: '' };
+			const tempCanvasMock = {
+				width: 0,
+				height: 0,
+				getContext: jest.fn().mockReturnValue( localMockTempCtx )
+			};
+			document.createElement = jest.fn().mockReturnValue( tempCanvasMock );
+
+			// Mock canvas with limited size
+			renderer.canvas = { width: 800, height: 600 };
+
+			const drawPathFn = jest.fn();
+			// Shape at x=10, blurRadius=12, so padding=24 would extend to x=-14 (clamped to 0)
+			const bounds = { x: 10, y: 300, width: 100, height: 80 };
+
+			renderer.drawBlurFill( { blurRadius: 12 }, drawPathFn, bounds );
+
+			// Should still work - temp canvas should be created
+			expect( document.createElement ).toHaveBeenCalledWith( 'canvas' );
+
+			document.createElement = origCreateElement;
+		} );
+
+		it( 'should handle shape near top edge of canvas', () => {
+			const origCreateElement = document.createElement;
+			const localMockTempCtx = { drawImage: jest.fn(), fillRect: jest.fn(), fillStyle: '' };
+			const tempCanvasMock = {
+				width: 0,
+				height: 0,
+				getContext: jest.fn().mockReturnValue( localMockTempCtx )
+			};
+			document.createElement = jest.fn().mockReturnValue( tempCanvasMock );
+
+			renderer.canvas = { width: 800, height: 600 };
+
+			const drawPathFn = jest.fn();
+			// Shape at y=5, blurRadius=12, so padding would extend beyond top
+			const bounds = { x: 400, y: 5, width: 100, height: 80 };
+
+			renderer.drawBlurFill( { blurRadius: 12 }, drawPathFn, bounds );
+
+			expect( document.createElement ).toHaveBeenCalledWith( 'canvas' );
+
+			document.createElement = origCreateElement;
+		} );
+
+		it( 'should handle shape near bottom-right corner of canvas', () => {
+			const origCreateElement = document.createElement;
+			const localMockTempCtx = { drawImage: jest.fn(), fillRect: jest.fn(), fillStyle: '' };
+			const tempCanvasMock = {
+				width: 0,
+				height: 0,
+				getContext: jest.fn().mockReturnValue( localMockTempCtx )
+			};
+			document.createElement = jest.fn().mockReturnValue( tempCanvasMock );
+
+			renderer.canvas = { width: 800, height: 600 };
+
+			const drawPathFn = jest.fn();
+			// Shape near bottom-right, padding would extend beyond canvas
+			const bounds = { x: 750, y: 550, width: 100, height: 80 };
+
+			renderer.drawBlurFill( { blurRadius: 12 }, drawPathFn, bounds );
+
+			expect( document.createElement ).toHaveBeenCalledWith( 'canvas' );
 
 			document.createElement = origCreateElement;
 		} );

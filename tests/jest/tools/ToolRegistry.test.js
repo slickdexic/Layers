@@ -290,6 +290,78 @@ describe( 'ToolRegistry', () => {
 		} );
 	} );
 
+	describe( 'isShapeTool', () => {
+		beforeEach( () => {
+			registry.clear();
+			registry.register( 'pointer', { category: 'selection' } );
+			registry.register( 'rectangle', { category: 'shape' } );
+			registry.register( 'circle', { category: 'shape' } );
+		} );
+
+		it( 'should return true for shape tools', () => {
+			expect( registry.isShapeTool( 'rectangle' ) ).toBe( true );
+			expect( registry.isShapeTool( 'circle' ) ).toBe( true );
+		} );
+
+		it( 'should return false for non-shape tools', () => {
+			expect( registry.isShapeTool( 'pointer' ) ).toBe( false );
+		} );
+
+		it( 'should return false for unregistered tools', () => {
+			expect( registry.isShapeTool( 'nonexistent' ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'getCursorMap', () => {
+		beforeEach( () => {
+			registry.clear();
+			registry.register( 'pointer', { cursor: 'default' } );
+			registry.register( 'text', { cursor: 'text' } );
+			registry.register( 'crosshair', { cursor: 'crosshair' } );
+		} );
+
+		it( 'should return an object with all cursors', () => {
+			const map = registry.getCursorMap();
+			expect( typeof map ).toBe( 'object' );
+		} );
+
+		it( 'should contain registered cursors', () => {
+			const map = registry.getCursorMap();
+			expect( map.pointer ).toBe( 'default' );
+			expect( map.text ).toBe( 'text' );
+			expect( map.crosshair ).toBe( 'crosshair' );
+		} );
+	} );
+
+	describe( 'clear', () => {
+		beforeEach( () => {
+			registry.register( 'tool1', {} );
+			registry.register( 'tool2', {} );
+		} );
+
+		it( 'should remove all tools', () => {
+			expect( registry.getToolNames().length ).toBeGreaterThan( 0 );
+			registry.clear();
+			expect( registry.getToolNames().length ).toBe( 0 );
+		} );
+
+		it( 'should clear categories', () => {
+			registry.clear();
+			expect( registry.getToolsByCategory( 'shape' ).length ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'reset', () => {
+		it( 'should reset to default tools', () => {
+			registry.clear();
+			expect( registry.getToolNames().length ).toBe( 0 );
+
+			registry.reset();
+			// After reset, should have default tools
+			expect( registry.getToolNames().length ).toBeGreaterThan( 0 );
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export ToolRegistry class', () => {
 			expect( typeof ToolRegistry ).toBe( 'function' );

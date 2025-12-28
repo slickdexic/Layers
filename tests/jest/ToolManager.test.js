@@ -1480,4 +1480,374 @@ describe( 'ToolManager', () => {
 			expect( toolManager.pathToolHandler ).toBeNull();
 		} );
 	} );
+
+	describe( 'handlePathPoint with PathToolHandler', () => {
+		it( 'should delegate to pathToolHandler when available', () => {
+			const mockHandler = {
+				handlePoint: jest.fn().mockReturnValue( false )
+			};
+			toolManager.pathToolHandler = mockHandler;
+
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+
+			expect( mockHandler.handlePoint ).toHaveBeenCalledWith( { x: 100, y: 100 } );
+			expect( toolManager.isDrawing ).toBe( true );
+		} );
+
+		it( 'should set isDrawing false when pathToolHandler returns completed', () => {
+			const mockHandler = {
+				handlePoint: jest.fn().mockReturnValue( true )
+			};
+			toolManager.pathToolHandler = mockHandler;
+
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+
+			expect( toolManager.isDrawing ).toBe( false );
+		} );
+	} );
+
+	describe( 'completePath with PathToolHandler', () => {
+		it( 'should delegate to pathToolHandler when available', () => {
+			const mockHandler = {
+				complete: jest.fn()
+			};
+			toolManager.pathToolHandler = mockHandler;
+			toolManager.isDrawing = true;
+
+			toolManager.completePath();
+
+			expect( mockHandler.complete ).toHaveBeenCalled();
+			expect( toolManager.isDrawing ).toBe( false );
+		} );
+	} );
+
+	describe( 'showTextEditor with TextToolHandler', () => {
+		it( 'should delegate to textToolHandler when available', () => {
+			const mockHandler = {
+				showTextEditor: jest.fn()
+			};
+			toolManager.textToolHandler = mockHandler;
+
+			toolManager.showTextEditor( { x: 50, y: 50 } );
+
+			expect( mockHandler.showTextEditor ).toHaveBeenCalledWith( { x: 50, y: 50 } );
+		} );
+	} );
+
+	describe( 'destroy with inline textEditor', () => {
+		it( 'should call remove on textEditor via hideTextEditor', () => {
+			const mockTextEditor = {
+				remove: jest.fn()
+			};
+			toolManager.textEditor = mockTextEditor;
+			toolManager.textToolHandler = null;
+			toolManager.pathToolHandler = null;
+
+			toolManager.destroy();
+
+			expect( mockTextEditor.remove ).toHaveBeenCalled();
+			expect( toolManager.textEditor ).toBeNull();
+		} );
+
+		it( 'should clear editingTextLayer on destroy', () => {
+			toolManager.editingTextLayer = { id: 'text-1', type: 'text' };
+			toolManager.textToolHandler = null;
+			toolManager.pathToolHandler = null;
+			toolManager.textEditor = { remove: jest.fn(), parentNode: null };
+
+			toolManager.destroy();
+
+			expect( toolManager.editingTextLayer ).toBeNull();
+		} );
+	} );
+
+	describe( 'path fallback - completion by closing loop', () => {
+		beforeEach( () => {
+			toolManager.pathToolHandler = null;
+			toolManager.shapeFactory = null;
+		} );
+
+		it( 'should complete path when clicking near start point', () => {
+			// Start the path
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+			expect( toolManager.pathPoints.length ).toBe( 1 );
+
+			// Add more points
+			toolManager.handlePathPoint( { x: 200, y: 100 } );
+			toolManager.handlePathPoint( { x: 200, y: 200 } );
+			expect( toolManager.pathPoints.length ).toBe( 3 );
+
+			// Click near start (within 10px threshold)
+			toolManager.handlePathPoint( { x: 105, y: 105 } );
+
+			// Path should be completed and reset
+			expect( toolManager.pathPoints.length ).toBe( 0 );
+			expect( toolManager.isDrawing ).toBe( false );
+		} );
+
+		it( 'should not complete path when far from start', () => {
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+			toolManager.handlePathPoint( { x: 200, y: 100 } );
+			toolManager.handlePathPoint( { x: 200, y: 200 } );
+
+			// Click far from start
+			toolManager.handlePathPoint( { x: 300, y: 300 } );
+
+			// Path should still be building
+			expect( toolManager.pathPoints.length ).toBe( 4 );
+			expect( toolManager.isDrawing ).toBe( true );
+		} );
+	} );
+
+	describe( 'renderPathPreview fallback', () => {
+		beforeEach( () => {
+			toolManager.pathToolHandler = null;
+		} );
+
+		it( 'should render path preview when points exist', () => {
+			toolManager.pathPoints = [
+				{ x: 0, y: 0 },
+				{ x: 100, y: 100 }
+			];
+
+			// Should not throw
+			expect( () => toolManager.renderPathPreview() ).not.toThrow();
+		} );
+
+		it( 'should not render when no points', () => {
+			toolManager.pathPoints = [];
+
+			expect( () => toolManager.renderPathPreview() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'initialization fallbacks', () => {
+		it( 'should use inline style when ToolStyles unavailable', () => {
+			// Reset modules to get fresh require with modified globals
+			jest.resetModules();
+
+			// Save and clear ToolStyles
+			const originalToolStyles = window.ToolStyles;
+			window.ToolStyles = null;
+
+			// Re-require the module with ToolStyles = null
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.styleManager ).toBeNull();
+			expect( tm.currentStyle ).toBeDefined();
+			expect( tm.currentStyle.color ).toBe( '#000000' );
+			expect( tm.currentStyle.strokeWidth ).toBe( 2 );
+			expect( tm.currentStyle.fontSize ).toBe( 16 );
+			expect( tm.currentStyle.fontFamily ).toBe( 'Arial, sans-serif' );
+			expect( tm.currentStyle.fill ).toBe( 'transparent' );
+
+			// Restore
+			window.ToolStyles = originalToolStyles;
+		} );
+
+		it( 'should set toolRegistry to null when registry unavailable', () => {
+			// Reset modules
+			jest.resetModules();
+
+			const originalRegistry = window.Layers?.Tools?.registry;
+			const originalLayers = window.Layers;
+
+			// Clear the registry path
+			window.Layers = { Tools: { registry: null } };
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			// toolRegistry should be null since registry is unavailable
+			expect( tm.toolRegistry ).toBeNull();
+
+			// Restore
+			window.Layers = originalLayers;
+			if ( window.Layers?.Tools ) {
+				window.Layers.Tools.registry = originalRegistry;
+			}
+		} );
+
+		it( 'should set textToolHandler to null when TextToolHandler unavailable', () => {
+			jest.resetModules();
+
+			const originalLayers = window.Layers;
+			// Ensure TextToolHandler path is null
+			window.Layers = { Tools: {} };
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.textToolHandler ).toBeNull();
+
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should set pathToolHandler to null when PathToolHandler unavailable', () => {
+			jest.resetModules();
+
+			const originalLayers = window.Layers;
+			// Ensure PathToolHandler path is null
+			window.Layers = { Tools: {} };
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.pathToolHandler ).toBeNull();
+
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should set shapeFactory to null when ShapeFactory unavailable', () => {
+			jest.resetModules();
+
+			const originalShapeFactory = window.ShapeFactory;
+			window.ShapeFactory = null;
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.shapeFactory ).toBeNull();
+
+			window.ShapeFactory = originalShapeFactory;
+		} );
+
+		it( 'should use ToolStyles when available', () => {
+			jest.resetModules();
+
+			// Create a mock ToolStyles class
+			const MockToolStyles = function() {
+				this.currentStyle = {
+					color: '#ff0000',
+					strokeWidth: 5,
+					fontSize: 20,
+					fontFamily: 'Verdana',
+					fill: '#0000ff'
+				};
+			};
+
+			// Set it on window before requiring
+			const originalToolStyles = window.ToolStyles;
+			window.ToolStyles = MockToolStyles;
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			// styleManager should be an instance of our MockToolStyles
+			expect( tm.styleManager ).not.toBeNull();
+			expect( tm.styleManager ).toBeInstanceOf( MockToolStyles );
+			// currentStyle should reference the styleManager's currentStyle
+			expect( tm.currentStyle ).toBe( tm.styleManager.currentStyle );
+			expect( tm.currentStyle.color ).toBe( '#ff0000' );
+
+			window.ToolStyles = originalToolStyles;
+		} );
+
+		it( 'should use ShapeFactory when available', () => {
+			jest.resetModules();
+
+			// Create a mock ShapeFactory class
+			const MockShapeFactory = function( config ) {
+				this.config = config;
+			};
+
+			const originalShapeFactory = window.ShapeFactory;
+			window.ShapeFactory = MockShapeFactory;
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.shapeFactory ).not.toBeNull();
+			expect( tm.shapeFactory ).toBeInstanceOf( MockShapeFactory );
+
+			window.ShapeFactory = originalShapeFactory;
+		} );
+
+		it( 'should use ToolRegistry when available', () => {
+			jest.resetModules();
+
+			// Set up the registry in the correct location
+			const mockRegistry = { getTool: jest.fn() };
+			const originalLayers = window.Layers;
+			window.Layers = {
+				Tools: {
+					registry: mockRegistry
+				}
+			};
+
+			// Also need to set window.ToolRegistry for the top-level capture
+			const originalToolRegistry = window.ToolRegistry;
+			window.ToolRegistry = { someProp: true };
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.toolRegistry ).toBe( mockRegistry );
+
+			window.Layers = originalLayers;
+			window.ToolRegistry = originalToolRegistry;
+		} );
+
+		it( 'should use TextToolHandler when available', () => {
+			jest.resetModules();
+
+			// Create a mock TextToolHandler class
+			const MockTextToolHandler = function( config ) {
+				this.config = config;
+			};
+
+			const originalLayers = window.Layers;
+			window.Layers = {
+				Tools: {
+					TextToolHandler: MockTextToolHandler
+				}
+			};
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.textToolHandler ).not.toBeNull();
+			expect( tm.textToolHandler ).toBeInstanceOf( MockTextToolHandler );
+
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should use PathToolHandler when available', () => {
+			jest.resetModules();
+
+			// Create a mock PathToolHandler class
+			const MockPathToolHandler = function( config ) {
+				this.config = config;
+			};
+
+			const originalLayers = window.Layers;
+			window.Layers = {
+				Tools: {
+					PathToolHandler: MockPathToolHandler
+				}
+			};
+
+			// Need to provide a canvasManager with proper structure for the callback setup
+			const localMockCanvasManager = {
+				canvas: { width: 100, height: 100 },
+				ctx: {},
+				editor: {
+					stateManager: {
+						getLayers: jest.fn().mockReturnValue( [] )
+					},
+					layers: []
+				},
+				renderLayers: jest.fn()
+			};
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, localMockCanvasManager );
+
+			expect( tm.pathToolHandler ).not.toBeNull();
+			expect( tm.pathToolHandler ).toBeInstanceOf( MockPathToolHandler );
+
+			window.Layers = originalLayers;
+		} );
+	} );
 } );

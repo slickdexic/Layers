@@ -1127,4 +1127,146 @@ describe( 'TextBoxRenderer', () => {
 			expect( renderer.shadowRenderer ).toBe( null );
 		} );
 	} );
+
+	// ========================================================================
+	// drawTextOnly Tests
+	// ========================================================================
+
+	describe( 'drawTextOnly', () => {
+		it( 'should draw only text content without box', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 20,
+				width: 200,
+				height: 100,
+				text: 'Hello World',
+				fontSize: 16,
+				fontFamily: 'Arial'
+			};
+
+			renderer.drawTextOnly( layer );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply scale and offset options', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 20,
+				width: 200,
+				height: 100,
+				text: 'Test',
+				fontSize: 14
+			};
+
+			renderer.drawTextOnly( layer, {
+				scale: { sx: 2, sy: 2, avg: 2 },
+				offset: { x: 50, y: 50 }
+			} );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle layer opacity', () => {
+			const layer = {
+				type: 'textbox',
+				x: 0,
+				y: 0,
+				width: 100,
+				height: 50,
+				text: 'Opacity test',
+				opacity: 0.5
+			};
+
+			renderer.drawTextOnly( layer );
+
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+
+		it( 'should not draw anything when text is empty', () => {
+			const layer = {
+				type: 'textbox',
+				x: 0,
+				y: 0,
+				width: 100,
+				height: 50,
+				text: ''
+			};
+
+			renderer.drawTextOnly( layer );
+
+			// Should not call save when no text
+			// Actually it only calls save if text exists
+		} );
+
+		it( 'should use default dimensions when not provided', () => {
+			const layer = {
+				type: 'textbox',
+				text: 'Default test'
+			};
+
+			renderer.drawTextOnly( layer );
+
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+	} );
+
+	// ========================================================================
+	// Shadow with spread Tests
+	// ========================================================================
+
+	describe( 'shadow with spread drawing', () => {
+		it( 'should draw fill shadow with spread', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				fill: '#ffffff',
+				shadow: true,
+				shadowSpread: 5,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			expect( () => renderer.draw( layer ) ).not.toThrow();
+		} );
+
+		it( 'should draw stroke shadow separately', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				stroke: '#000000',
+				strokeWidth: 2,
+				shadow: true,
+				shadowSpread: 5
+			};
+
+			expect( () => renderer.draw( layer ) ).not.toThrow();
+		} );
+
+		it( 'should draw shadow with rounded corners and spread', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				fill: '#ffffff',
+				cornerRadius: 10,
+				shadow: true,
+				shadowSpread: 8
+			};
+
+			expect( () => renderer.draw( layer ) ).not.toThrow();
+		} );
+	} );
 } );

@@ -667,6 +667,19 @@ describe( 'LayersLightbox', () => {
 			const loading = lightbox.imageWrapper.querySelector( '.layers-lightbox-loading' );
 			expect( loading ).toBeNull();
 		} );
+
+		it( 'should do nothing if imageWrapper is null', () => {
+			const lightbox = new LayersLightbox();
+			// Don't create overlay, so imageWrapper is null/undefined
+
+			// Should not throw
+			expect( () => {
+				lightbox.showError( 'Error message' );
+			} ).not.toThrow();
+
+			// imageWrapper should still be falsy (null or undefined)
+			expect( lightbox.imageWrapper ).toBeFalsy();
+		} );
 	} );
 
 	describe( 'handleKeyDown', () => {
@@ -1042,6 +1055,93 @@ describe( 'LayersLightbox', () => {
 			img.onerror();
 
 			expect( errorSpy ).toHaveBeenCalledWith( 'Failed to load image' );
+		} );
+
+		it( 'should create viewer on successful image load', () => {
+			// Mock LayersViewer class
+			const mockViewer = { render: jest.fn() };
+			const MockLayersViewer = jest.fn( () => mockViewer );
+			window.Layers = window.Layers || {};
+			window.Layers.Viewer = window.Layers.Viewer || {};
+			window.Layers.Viewer.LayersViewer = MockLayersViewer;
+
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+
+			const layerData = { layers: [ { id: 'test-layer', type: 'rectangle' } ] };
+			lightbox.renderViewer( 'http://example.com/test.jpg', layerData );
+
+			const img = lightbox.imageWrapper.querySelector( 'img' );
+
+			// Simulate image load with dimensions
+			Object.defineProperty( img, 'naturalWidth', { value: 800, configurable: true } );
+			Object.defineProperty( img, 'naturalHeight', { value: 600, configurable: true } );
+			img.onload();
+
+			// Should have created a viewer
+			expect( MockLayersViewer ).toHaveBeenCalled();
+			expect( lightbox.viewer ).toBe( mockViewer );
+
+			delete window.Layers.Viewer.LayersViewer;
+		} );
+
+		it( 'should set baseWidth/baseHeight from image if not provided', () => {
+			const mockViewer = {};
+			const MockLayersViewer = jest.fn( () => mockViewer );
+			window.Layers = window.Layers || {};
+			window.Layers.Viewer = window.Layers.Viewer || {};
+			window.Layers.Viewer.LayersViewer = MockLayersViewer;
+
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+
+			// Layer data without baseWidth/baseHeight
+			const layerData = { layers: [] };
+			lightbox.renderViewer( 'http://example.com/test.jpg', layerData );
+
+			const img = lightbox.imageWrapper.querySelector( 'img' );
+			Object.defineProperty( img, 'naturalWidth', { value: 1024, configurable: true } );
+			Object.defineProperty( img, 'naturalHeight', { value: 768, configurable: true } );
+			img.onload();
+
+			// Should have been called with updated layerData
+			expect( MockLayersViewer ).toHaveBeenCalled();
+			const callArgs = MockLayersViewer.mock.calls[ 0 ][ 0 ];
+			expect( callArgs.layerData.baseWidth ).toBe( 1024 );
+			expect( callArgs.layerData.baseHeight ).toBe( 768 );
+
+			delete window.Layers.Viewer.LayersViewer;
+		} );
+
+		it( 'should handle missing LayersViewer class gracefully', () => {
+			// Remove LayersViewer
+			const originalViewer = window.Layers && window.Layers.Viewer;
+			if ( window.Layers ) {
+				delete window.Layers.Viewer;
+			}
+
+			const lightbox = new LayersLightbox( { debug: true } );
+			lightbox.createOverlay();
+
+			const layerData = { layers: [] };
+			lightbox.renderViewer( 'http://example.com/test.jpg', layerData );
+
+			const img = lightbox.imageWrapper.querySelector( 'img' );
+			Object.defineProperty( img, 'naturalWidth', { value: 800, configurable: true } );
+			Object.defineProperty( img, 'naturalHeight', { value: 600, configurable: true } );
+
+			// Should not throw
+			expect( () => {
+				img.onload();
+			} ).not.toThrow();
+
+			// Viewer should not be set
+			expect( lightbox.viewer ).toBeNull();
+
+			// Restore
+			if ( window.Layers && originalViewer ) {
+				window.Layers.Viewer = originalViewer;
+			}
 		} );
 	} );
 

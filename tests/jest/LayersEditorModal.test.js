@@ -29,7 +29,14 @@ describe( 'LayersEditorModal', () => {
 			util: {
 				getUrl: jest.fn( ( title ) => '/wiki/' + title )
 			},
-			notify: jest.fn()
+			notify: jest.fn(),
+			log: Object.assign(
+				jest.fn(),
+				{
+					warn: jest.fn(),
+					error: jest.fn()
+				}
+			)
 		};
 		window.mw = mockMw;
 
@@ -388,7 +395,7 @@ describe( 'LayersEditorModal', () => {
 
 		it( 'should warn and not open modal when trigger missing filename', () => {
 			const initModalTriggers = window.Layers.Modal.initModalTriggers;
-			const warnSpy = jest.spyOn( console, 'warn' ).mockImplementation( () => {} );
+			const warnSpy = jest.spyOn( mockMw.log, 'warn' ).mockImplementation( () => {} );
 
 			// Create trigger without filename
 			const trigger = document.createElement( 'a' );

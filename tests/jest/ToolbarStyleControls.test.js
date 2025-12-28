@@ -987,4 +987,433 @@ describe( 'ToolbarStyleControls', () => {
 			expect( ToolbarStyleControls.prototype.create ).toBeDefined();
 		} );
 	} );
+
+	describe( 'fallback behavior without ColorControlFactory', () => {
+		it( 'should use createColorControlFallback when colorFactory is null', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+
+			const container = controls.create();
+
+			// Should still have stroke and fill color buttons
+			expect( controls.strokeColorButton ).toBeTruthy();
+			expect( controls.fillColorButton ).toBeTruthy();
+			expect( container.querySelector( '.stroke-color' ) ).toBeTruthy();
+			expect( container.querySelector( '.fill-color' ) ).toBeTruthy();
+		} );
+
+		it( 'should create functional fallback stroke color control', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+			controls.create();
+
+			// Fallback button should have proper attributes
+			const strokeBtn = controls.strokeColorButton;
+			expect( strokeBtn.getAttribute( 'aria-haspopup' ) ).toBe( 'dialog' );
+			expect( strokeBtn.classList.contains( 'stroke-color' ) ).toBe( true );
+		} );
+
+		it( 'should create functional fallback fill color control', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+			controls.create();
+
+			// Fallback button should have proper attributes
+			const fillBtn = controls.fillColorButton;
+			expect( fillBtn.getAttribute( 'aria-haspopup' ) ).toBe( 'dialog' );
+			expect( fillBtn.classList.contains( 'fill-color' ) ).toBe( true );
+		} );
+
+		it( 'should handle click event on fallback stroke color button', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+			controls.create();
+
+			// Mock the openColorPicker method
+			controls.openColorPicker = jest.fn();
+
+			// Simulate click
+			const strokeBtn = controls.strokeColorButton;
+			strokeBtn.click();
+
+			expect( controls.openColorPicker ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle click event on fallback fill color button', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+			controls.create();
+
+			// Mock the openColorPicker method
+			controls.openColorPicker = jest.fn();
+
+			// Simulate click
+			const fillBtn = controls.fillColorButton;
+			fillBtn.click();
+
+			expect( controls.openColorPicker ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'namespace class resolution fallback', () => {
+		it( 'should handle when getClass returns undefined for factories', () => {
+			// Temporarily remove classes to test fallback
+			const savedColorFactory = window.Layers.UI.ColorControlFactory;
+			window.Layers.UI.ColorControlFactory = undefined;
+
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			expect( controls.colorFactory ).toBeFalsy();
+			controls.destroy();
+
+			// Restore
+			window.Layers.UI.ColorControlFactory = savedColorFactory;
+		} );
+	} );
+
+	describe( 'registerDialogCleanup callback', () => {
+		it( 'should call toolbar.registerDialogCleanup when provided', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			// The colorFactory is created in constructor with registerDialogCleanup callback
+			// Verify the toolbar method exists
+			expect( mockToolbar.registerDialogCleanup ).toBeDefined();
+		} );
+
+		it( 'should not throw when toolbar is null', () => {
+			const controls = new ToolbarStyleControls( { toolbar: null } );
+			expect( controls.toolbar ).toBeNull();
+			controls.destroy();
+		} );
+
+		it( 'should not throw when toolbar lacks registerDialogCleanup', () => {
+			const noCleanupToolbar = { onStyleChange: jest.fn() };
+			const controls = new ToolbarStyleControls( { toolbar: noCleanupToolbar } );
+			expect( controls.toolbar ).toBe( noCleanupToolbar );
+			controls.destroy();
+		} );
+	} );
+
+	describe( 'destroy with managers', () => {
+		it( 'should call destroy on presetStyleManager when present', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			// Mock presetStyleManager with destroy
+			const mockDestroy = jest.fn();
+			controls.presetStyleManager = { destroy: mockDestroy };
+
+			controls.destroy();
+
+			expect( mockDestroy ).toHaveBeenCalled();
+			expect( controls.presetStyleManager ).toBeNull();
+		} );
+
+		it( 'should call destroy on textEffectsControls when present', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			// Mock textEffectsControls with destroy
+			const mockDestroy = jest.fn();
+			controls.textEffectsControls = { destroy: mockDestroy };
+
+			controls.destroy();
+
+			expect( mockDestroy ).toHaveBeenCalled();
+			expect( controls.textEffectsControls ).toBeNull();
+		} );
+	} );
+
+	describe( 'ColorControlFactory integration', () => {
+		let FreshToolbarStyleControls;
+		let mockCreateColorControl;
+
+		beforeEach( () => {
+			jest.resetModules();
+
+			// Setup namespace structure
+			window.Layers = window.Layers || {};
+			window.Layers.Utils = window.Layers.Utils || {};
+			window.Layers.UI = window.Layers.UI || {};
+
+			// Load NamespaceHelper
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
+			// Load TextEffectsControls
+			require( '../../resources/ext.layers.editor/ui/TextEffectsControls.js' );
+
+			// Setup ColorPickerDialog mock
+			window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
+				this.config = config;
+				this.open = jest.fn();
+			} );
+			window.Layers.UI.ColorPickerDialog.updateColorButton = jest.fn();
+
+			// Setup ColorControlFactory mock with createColorControl
+			mockCreateColorControl = jest.fn().mockReturnValue( {
+				container: document.createElement( 'div' ),
+				button: document.createElement( 'button' )
+			} );
+
+			window.Layers.UI.ColorControlFactory = function () {
+				this.createColorControl = mockCreateColorControl;
+				this.updateColorButtonDisplay = jest.fn();
+			};
+
+			// Re-require module with factory available
+			FreshToolbarStyleControls = require( '../../resources/ext.layers.editor/ToolbarStyleControls.js' );
+		} );
+
+		it( 'should use ColorControlFactory when available', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+
+			expect( controls.colorFactory ).not.toBeNull();
+			controls.destroy();
+		} );
+
+		it( 'should call createColorControl for stroke and fill colors', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			// Should call createColorControl twice (stroke and fill)
+			expect( mockCreateColorControl ).toHaveBeenCalledTimes( 2 );
+
+			// First call should be for stroke
+			expect( mockCreateColorControl.mock.calls[ 0 ][ 0 ].type ).toBe( 'stroke' );
+
+			// Second call should be for fill
+			expect( mockCreateColorControl.mock.calls[ 1 ][ 0 ].type ).toBe( 'fill' );
+
+			controls.destroy();
+		} );
+
+		it( 'should invoke onColorChange callback for stroke color', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			// Get the onColorChange callback passed to createColorControl for stroke
+			const strokeConfig = mockCreateColorControl.mock.calls[ 0 ][ 0 ];
+			expect( strokeConfig.onColorChange ).toBeDefined();
+
+			// Invoke the callback
+			strokeConfig.onColorChange( '#ff0000', false );
+
+			expect( controls.strokeColorValue ).toBe( '#ff0000' );
+			expect( controls.strokeColorNone ).toBe( false );
+
+			controls.destroy();
+		} );
+
+		it( 'should invoke onColorChange callback for fill color', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			// Get the onColorChange callback passed to createColorControl for fill
+			const fillConfig = mockCreateColorControl.mock.calls[ 1 ][ 0 ];
+			expect( fillConfig.onColorChange ).toBeDefined();
+
+			// Invoke the callback
+			fillConfig.onColorChange( '#00ff00', false );
+
+			expect( controls.fillColorValue ).toBe( '#00ff00' );
+			expect( controls.fillColorNone ).toBe( false );
+
+			controls.destroy();
+		} );
+
+		it( 'should handle none color for stroke', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			const strokeConfig = mockCreateColorControl.mock.calls[ 0 ][ 0 ];
+
+			// Invoke callback with isNone=true
+			strokeConfig.onColorChange( '#000000', true );
+
+			expect( controls.strokeColorNone ).toBe( true );
+			// strokeColorValue should NOT be updated when isNone is true
+			expect( controls.strokeColorValue ).toBe( '#000000' ); // Original value
+
+			controls.destroy();
+		} );
+
+		it( 'should handle none color for fill', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			const fillConfig = mockCreateColorControl.mock.calls[ 1 ][ 0 ];
+
+			// Invoke callback with isNone=true
+			fillConfig.onColorChange( '#000000', true );
+
+			expect( controls.fillColorNone ).toBe( true );
+			// fillColorValue should NOT be updated when isNone is true
+			expect( controls.fillColorValue ).toBe( '#ffffff' ); // Original value
+
+			controls.destroy();
+		} );
+
+		it( 'should set strokeControl and fillControl from factory result', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			expect( controls.strokeControl ).toBeDefined();
+			expect( controls.strokeControl.container ).toBeDefined();
+			expect( controls.strokeControl.button ).toBeDefined();
+
+			expect( controls.fillControl ).toBeDefined();
+			expect( controls.fillControl.container ).toBeDefined();
+			expect( controls.fillControl.button ).toBeDefined();
+
+			controls.destroy();
+		} );
+	} );
+
+	describe( 'getClass inline fallback', () => {
+		it( 'should resolve class from Layers namespace', () => {
+			// ToolbarStyleControls already successfully resolves classes
+			// This test verifies the namespace resolution works
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+
+			// TextEffectsControls should be resolved from namespace
+			expect( controls.textEffectsControls ).not.toBeNull();
+			controls.destroy();
+		} );
+
+		it( 'should fall back to window global when namespace path fails', () => {
+			jest.resetModules();
+
+			// Setup minimal namespace without ColorControlFactory
+			window.Layers = { UI: {} };
+
+			// But add ColorControlFactory as a global
+			const mockFactory = function () {
+				this.createColorControl = jest.fn().mockReturnValue( {
+					container: document.createElement( 'div' ),
+					button: document.createElement( 'button' )
+				} );
+			};
+			window.ColorControlFactory = mockFactory;
+
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+			require( '../../resources/ext.layers.editor/ui/TextEffectsControls.js' );
+
+			const Fresh = require( '../../resources/ext.layers.editor/ToolbarStyleControls.js' );
+			const controls = new Fresh( { toolbar: mockToolbar } );
+
+			// Should have found ColorControlFactory via global fallback
+			expect( controls.colorFactory ).not.toBeNull();
+
+			controls.destroy();
+			delete window.ColorControlFactory;
+		} );
+	} );
+
+	describe( 'addListener fallback', () => {
+		it( 'should use addEventListener directly when eventTracker is null', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.eventTracker = null;
+
+			const element = document.createElement( 'button' );
+			const handler = jest.fn();
+			const addEventListenerSpy = jest.spyOn( element, 'addEventListener' );
+
+			controls.addListener( element, 'click', handler );
+
+			expect( addEventListenerSpy ).toHaveBeenCalledWith( 'click', handler, undefined );
+
+			controls.destroy();
+		} );
+	} );
+
+	describe( 'presetStyleManager integration', () => {
+		let FreshToolbarStyleControls;
+		let mockCreatePresetDropdown;
+		let mockGetElement;
+
+		beforeEach( () => {
+			jest.resetModules();
+
+			window.Layers = window.Layers || {};
+			window.Layers.Utils = window.Layers.Utils || {};
+			window.Layers.UI = window.Layers.UI || {};
+
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+			require( '../../resources/ext.layers.editor/ui/TextEffectsControls.js' );
+
+			// Setup PresetStyleManager mock
+			mockCreatePresetDropdown = jest.fn().mockReturnValue( document.createElement( 'div' ) );
+			mockGetElement = jest.fn().mockReturnValue( document.createElement( 'div' ) );
+
+			window.Layers.UI.PresetStyleManager = function () {
+				this.createPresetDropdown = mockCreatePresetDropdown;
+				this.getElement = mockGetElement;
+				this.destroy = jest.fn();
+			};
+
+			// Also set up ColorPickerDialog
+			window.Layers.UI.ColorPickerDialog = jest.fn();
+			window.Layers.UI.ColorPickerDialog.updateColorButton = jest.fn();
+
+			FreshToolbarStyleControls = require( '../../resources/ext.layers.editor/ToolbarStyleControls.js' );
+		} );
+
+		it( 'should call presetStyleManager.createPresetDropdown in create()', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			expect( mockCreatePresetDropdown ).toHaveBeenCalled();
+			expect( mockGetElement ).toHaveBeenCalled();
+
+			controls.destroy();
+		} );
+
+		it( 'should append preset dropdown element to style group', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			const container = controls.create();
+
+			// Container should have children (preset dropdown appended)
+			expect( container.children.length ).toBeGreaterThan( 0 );
+
+			controls.destroy();
+		} );
+	} );
+
+	describe( 'setStrokeColor with colorFactory', () => {
+		it( 'should use colorFactory.updateColorButtonDisplay when available', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+
+			// Mock colorFactory and strokeControl
+			const mockUpdateDisplay = jest.fn();
+			controls.colorFactory = {
+				updateColorButtonDisplay: mockUpdateDisplay
+			};
+			controls.strokeControl = {
+				button: document.createElement( 'button' )
+			};
+
+			controls.setStrokeColor( '#ff0000' );
+
+			expect( mockUpdateDisplay ).toHaveBeenCalledWith( controls.strokeControl.button, '#ff0000' );
+			controls.destroy();
+		} );
+	} );
+
+	describe( 'setFillColor with colorFactory', () => {
+		it( 'should use colorFactory.updateColorButtonDisplay when available', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+
+			// Mock colorFactory and fillControl
+			const mockUpdateDisplay = jest.fn();
+			controls.colorFactory = {
+				updateColorButtonDisplay: mockUpdateDisplay
+			};
+			controls.fillControl = {
+				button: document.createElement( 'button' )
+			};
+
+			controls.setFillColor( '#00ff00' );
+
+			expect( mockUpdateDisplay ).toHaveBeenCalledWith( controls.fillControl.button, '#00ff00' );
+			controls.destroy();
+		} );
+	} );
 } );

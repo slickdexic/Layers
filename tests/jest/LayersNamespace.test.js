@@ -1181,4 +1181,189 @@ describe( 'LayersNamespace', () => {
 			expect( global.window.Layers.Core.StateManager ).toBe( TestClass );
 		} );
 	} );
+
+	describe( '_createDeprecatedProxy direct invocation', () => {
+		beforeEach( () => {
+			mockMw.config = {
+				get: jest.fn( ( key ) => key === 'wgLayersDebug' )
+			};
+			mockMw.log = { warn: jest.fn() };
+		} );
+
+		it( 'should return a proxy function for class targets', () => {
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			class TestClass {
+				constructor( value ) {
+					this.value = value;
+				}
+			}
+
+			const proxy = ns._createDeprecatedProxy( TestClass, 'TestClass', 'Core.TestClass' );
+			expect( typeof proxy ).toBe( 'function' );
+		} );
+
+		it( 'should return object directly for non-function targets', () => {
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			const testObject = { key: 'value' };
+			const result = ns._createDeprecatedProxy( testObject, 'testObj', 'Utils.testObj' );
+
+			expect( result ).toBe( testObject );
+		} );
+
+		it( 'should invoke warnDeprecated on first proxy call with new', () => {
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			class TestClass {
+				constructor( value ) {
+					this.value = value;
+				}
+			}
+
+			const proxy = ns._createDeprecatedProxy( TestClass, 'TestClass', 'Core.TestClass' );
+
+			// First invocation with new should warn
+			const instance = new proxy( 'hello' );
+
+			expect( instance ).toBeInstanceOf( TestClass );
+			expect( instance.value ).toBe( 'hello' );
+			expect( mockMw.log.warn ).toHaveBeenCalledTimes( 1 );
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers] window.TestClass is deprecated. Use window.Layers.Core.TestClass instead.'
+			);
+		} );
+
+		it( 'should only warn once on multiple proxy invocations', () => {
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			class TestClass {}
+
+			const proxy = ns._createDeprecatedProxy( TestClass, 'TestClass', 'Core.TestClass' );
+
+			// Multiple invocations
+			new proxy();
+			new proxy();
+			new proxy();
+
+			// Should only warn once
+			expect( mockMw.log.warn ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'should invoke target via apply when called without new', () => {
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			function factoryFn( config ) {
+				return { type: 'widget', config: config };
+			}
+
+			const proxy = ns._createDeprecatedProxy( factoryFn, 'factoryFn', 'Utils.factoryFn' );
+
+			// Call without new (factory pattern)
+			const result = proxy( { id: 123 } );
+
+			expect( result.type ).toBe( 'widget' );
+			expect( result.config.id ).toBe( 123 );
+			expect( mockMw.log.warn ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'should not warn when mw.log.warn is missing', () => {
+			delete mockMw.log.warn;
+
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			class TestClass {}
+
+			const proxy = ns._createDeprecatedProxy( TestClass, 'TestClass', 'Core.TestClass' );
+
+			// Should not throw
+			expect( () => {
+				new proxy();
+			} ).not.toThrow();
+		} );
+
+		it( 'should not warn when debug is disabled', () => {
+			mockMw.config.get = jest.fn().mockReturnValue( false );
+
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			class TestClass {}
+
+			const proxy = ns._createDeprecatedProxy( TestClass, 'TestClass', 'Core.TestClass' );
+			new proxy();
+
+			// Should not warn when debug is disabled
+			expect( mockMw.log.warn ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not warn when mw is undefined', () => {
+			const savedMw = global.mw;
+			delete global.mw;
+
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			class TestClass {}
+
+			const proxy = ns._createDeprecatedProxy( TestClass, 'TestClass', 'Core.TestClass' );
+
+			// Should not throw when mw is undefined
+			expect( () => {
+				new proxy();
+			} ).not.toThrow();
+
+			global.mw = savedMw;
+		} );
+
+		it( 'should pass all arguments to target constructor', () => {
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			class TestClass {
+				constructor( a, b, c ) {
+					this.a = a;
+					this.b = b;
+					this.c = c;
+				}
+			}
+
+			const proxy = ns._createDeprecatedProxy( TestClass, 'TestClass', 'Core.TestClass' );
+			const instance = new proxy( 1, 2, 3 );
+
+			expect( instance.a ).toBe( 1 );
+			expect( instance.b ).toBe( 2 );
+			expect( instance.c ).toBe( 3 );
+		} );
+
+		it( 'should pass all arguments to factory function', () => {
+			jest.resetModules();
+			global.window.Layers = { Core: {}, UI: {}, Canvas: {}, Utils: {}, Validation: {} };
+			const ns = require( '../../resources/ext.layers.editor/LayersNamespace.js' );
+
+			function factoryFn( a, b, c ) {
+				return { sum: a + b + c };
+			}
+
+			const proxy = ns._createDeprecatedProxy( factoryFn, 'factoryFn', 'Utils.factoryFn' );
+			const result = proxy( 10, 20, 30 );
+
+			expect( result.sum ).toBe( 60 );
+		} );
+	} );
 } );

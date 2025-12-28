@@ -643,4 +643,202 @@ describe( 'PresetManager', () => {
 			expect( PresetManager.BUILT_IN_PRESETS.arrow.length ).toBeGreaterThan( 0 );
 		} );
 	} );
+
+	describe( 'fallback behavior without storage', () => {
+		it( 'should handle storage being null', () => {
+			const mgr = new PresetManager();
+			mgr.storage = null; // Simulate missing storage
+
+			// createEmptyData fallback
+			const emptyData = mgr.createEmptyData();
+			expect( emptyData.version ).toBe( 1 );
+			expect( emptyData.toolPresets ).toBeTruthy();
+			expect( emptyData.defaultPresets ).toBeTruthy();
+
+			mgr.destroy();
+		} );
+
+		it( 'should handle save when storage is null', () => {
+			const mgr = new PresetManager();
+			mgr.storage = null;
+
+			const success = mgr.save();
+
+			expect( success ).toBe( false );
+			mgr.destroy();
+		} );
+
+		it( 'should use fallback generateId when storage is null', () => {
+			const mgr = new PresetManager();
+			mgr.storage = null;
+
+			const id = mgr.generateId( 'arrow', 'Test Name' );
+
+			expect( id ).toContain( 'arrow-test-name' );
+			mgr.destroy();
+		} );
+
+		it( 'should use fallback sanitizeStyle when storage is null', () => {
+			const mgr = new PresetManager();
+			mgr.storage = null;
+
+			const sanitized = mgr.sanitizeStyle( { stroke: '#ff0000', extra: 'value' } );
+
+			expect( sanitized ).toEqual( { stroke: '#ff0000', extra: 'value' } );
+			mgr.destroy();
+		} );
+
+		it( 'should handle importPresets when storage is null', () => {
+			const mgr = new PresetManager();
+			mgr.storage = null;
+
+			const result = mgr.importPresets( '{}' );
+
+			expect( result.success ).toBe( false );
+			expect( result.errors ).toContain( 'Storage not available' );
+			mgr.destroy();
+		} );
+
+		it( 'should handle exportPresets when storage is null', () => {
+			const mgr = new PresetManager();
+			mgr.storage = null;
+
+			// Set up cache directly
+			mgr.cache = {
+				version: 1,
+				toolPresets: { arrow: [] },
+				defaultPresets: {}
+			};
+
+			const exported = mgr.exportPresets();
+			const parsed = JSON.parse( exported );
+
+			expect( parsed.version ).toBe( 1 );
+			mgr.destroy();
+		} );
+
+		it( 'should use fallback extractStyleFromLayer when storage is null', () => {
+			const mgr = new PresetManager();
+			mgr.storage = null;
+
+			const layer = { type: 'arrow', stroke: '#ff0000', x: 100 };
+			const style = mgr.extractStyleFromLayer( layer );
+
+			// Fallback just clones via sanitizeStyle
+			expect( style.stroke ).toBe( '#ff0000' );
+			mgr.destroy();
+		} );
+	} );
+
+	describe( 'fallback behavior without builtInPresets', () => {
+		it( 'should return empty array when builtInPresets is null in getPresetsForTool', () => {
+			const mgr = new PresetManager();
+			mgr.builtInPresets = null;
+
+			const presets = mgr.getPresetsForTool( 'arrow' );
+
+			// Should return only user presets (empty initially)
+			expect( presets ).toEqual( [] );
+			mgr.destroy();
+		} );
+
+		it( 'should return null default preset when builtInPresets is null', () => {
+			const mgr = new PresetManager();
+			mgr.builtInPresets = null;
+
+			const defaultPreset = mgr.getDefaultPreset( 'arrow' );
+
+			expect( defaultPreset ).toBeNull();
+			mgr.destroy();
+		} );
+
+		it( 'should use fallback getSupportedTools when builtInPresets is null', () => {
+			const mgr = new PresetManager();
+			mgr.builtInPresets = null;
+
+			const tools = mgr.getSupportedTools();
+
+			expect( tools ).toContain( 'arrow' );
+			expect( tools ).toContain( 'text' );
+			expect( tools ).toContain( 'rectangle' );
+			mgr.destroy();
+		} );
+
+		it( 'should use fallback isToolSupported when builtInPresets is null', () => {
+			const mgr = new PresetManager();
+			mgr.builtInPresets = null;
+
+			expect( mgr.isToolSupported( 'arrow' ) ).toBe( true );
+			expect( mgr.isToolSupported( 'unsupported' ) ).toBe( false );
+			mgr.destroy();
+		} );
+	} );
+
+	describe( 'edge cases', () => {
+		it( 'should handle null style in addPreset', () => {
+			const preset = manager.addPreset( 'arrow', 'Test', null );
+
+			expect( preset ).toBeNull();
+		} );
+
+		it( 'should handle non-object style in addPreset', () => {
+			const preset = manager.addPreset( 'arrow', 'Test', 'invalid' );
+
+			expect( preset ).toBeNull();
+		} );
+
+		it( 'should handle non-string name in addPreset', () => {
+			const preset = manager.addPreset( 'arrow', 123, {} );
+
+			expect( preset ).toBeNull();
+		} );
+
+		it( 'should handle null cache in getDefaultPreset', () => {
+			manager.cache = null;
+
+			const defaultPreset = manager.getDefaultPreset( 'arrow' );
+
+			expect( defaultPreset ).toBeNull();
+		} );
+
+		it( 'should return false when setting default for unsupported tool', () => {
+			const success = manager.setDefaultPreset( 'unsupported', 'some-id' );
+
+			expect( success ).toBe( false );
+		} );
+
+		it( 'should handle deletePreset for non-existent tool', () => {
+			const success = manager.deletePreset( 'notatool', 'some-id' );
+
+			expect( success ).toBe( false );
+		} );
+
+		it( 'should handle updatePreset for non-existent tool', () => {
+			const success = manager.updatePreset( 'notatool', 'some-id', { name: 'Test' } );
+
+			expect( success ).toBe( false );
+		} );
+
+		it( 'should ignore non-function listeners in subscribe', () => {
+			const unsubscribe = manager.subscribe( 'not a function' );
+
+			expect( typeof unsubscribe ).toBe( 'function' );
+			expect( () => unsubscribe() ).not.toThrow();
+		} );
+
+		it( 'should handle clearDefaultPreset when no default exists', () => {
+			// Should not throw
+			expect( () => manager.clearDefaultPreset( 'arrow' ) ).not.toThrow();
+		} );
+
+		it( 'should initialize toolPresets for tool if missing in addPreset', () => {
+			// Clear tool presets
+			manager.cache.toolPresets = {};
+
+			const preset = manager.addPreset( 'arrow', 'Test', { stroke: '#000' } );
+
+			expect( preset ).toBeTruthy();
+			expect( manager.cache.toolPresets.arrow ).toHaveLength( 1 );
+		} );
+	} );
 } );

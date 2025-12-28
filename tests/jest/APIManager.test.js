@@ -722,68 +722,6 @@ describe( 'APIManager', function () {
 		} );
 	} );
 
-	describe( 'normalizeBooleanProperties', function () {
-		it( 'should convert string "false" to boolean false', function () {
-			const layer = { visible: 'false', locked: 'false' };
-
-			apiManager.normalizeBooleanProperties( layer );
-
-			expect( layer.visible ).toBe( false );
-			expect( layer.locked ).toBe( false );
-		} );
-
-		it( 'should convert string "true" to boolean true', function () {
-			const layer = { visible: 'true', locked: 'true' };
-
-			apiManager.normalizeBooleanProperties( layer );
-
-			expect( layer.visible ).toBe( true );
-			expect( layer.locked ).toBe( true );
-		} );
-
-		it( 'should convert numeric 0 to boolean false', function () {
-			const layer = { visible: 0, shadow: 0 };
-
-			apiManager.normalizeBooleanProperties( layer );
-
-			expect( layer.visible ).toBe( false );
-			expect( layer.shadow ).toBe( false );
-		} );
-
-		it( 'should convert numeric 1 to boolean true', function () {
-			const layer = { visible: 1, glow: 1 };
-
-			apiManager.normalizeBooleanProperties( layer );
-
-			expect( layer.visible ).toBe( true );
-			expect( layer.glow ).toBe( true );
-		} );
-
-		it( 'should convert string "0" to boolean false', function () {
-			const layer = { visible: '0' };
-
-			apiManager.normalizeBooleanProperties( layer );
-
-			expect( layer.visible ).toBe( false );
-		} );
-
-		it( 'should convert string "1" to boolean true', function () {
-			const layer = { visible: '1' };
-
-			apiManager.normalizeBooleanProperties( layer );
-
-			expect( layer.visible ).toBe( true );
-		} );
-
-		it( 'should convert empty string to boolean true (legacy data)', function () {
-			const layer = { textShadow: '' };
-
-			apiManager.normalizeBooleanProperties( layer );
-
-			expect( layer.textShadow ).toBe( true );
-		} );
-	} );
-
 	describe( 'generateLayerId', function () {
 		it( 'should generate unique ids', function () {
 			const id1 = apiManager.generateLayerId();

@@ -389,4 +389,243 @@ describe( 'ColorControlFactory', () => {
 			expect( instance ).toBeInstanceOf( ColorControlFactory );
 		} );
 	} );
+
+	describe( 'createColorControl click handler', () => {
+		it( 'should open color picker when button is clicked', () => {
+			const onColorChange = jest.fn();
+			const control = factory.createColorControl( {
+				type: 'stroke',
+				label: 'Stroke',
+				initialColor: '#ff0000',
+				onColorChange
+			} );
+
+			// Mock openColorPicker
+			factory.openColorPicker = jest.fn();
+
+			// Click the button
+			control.button.click();
+
+			expect( factory.openColorPicker ).toHaveBeenCalledWith(
+				control.button,
+				'#ff0000',
+				expect.objectContaining( {
+					onApply: expect.any( Function )
+				} )
+			);
+		} );
+
+		it( 'should pass "none" to openColorPicker when isNone is true', () => {
+			const onColorChange = jest.fn();
+			const control = factory.createColorControl( {
+				type: 'stroke',
+				label: 'Stroke',
+				initialColor: '#ff0000',
+				initialNone: true,
+				onColorChange
+			} );
+
+			// Mock openColorPicker
+			factory.openColorPicker = jest.fn();
+
+			// Click the button
+			control.button.click();
+
+			expect( factory.openColorPicker ).toHaveBeenCalledWith(
+				control.button,
+				'none',
+				expect.any( Object )
+			);
+		} );
+	} );
+
+	describe( 'updateColorButtonDisplay fallback', () => {
+		it( 'should use fallback when ColorPickerDialog not available', () => {
+			const button = document.createElement( 'button' );
+
+			// Ensure no ColorPickerDialog available
+			const savedColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			if ( window.Layers?.UI ) {
+				window.Layers.UI.ColorPickerDialog = undefined;
+			}
+
+			// Should not throw and should handle the fallback
+			expect( () => {
+				factory.updateColorButtonDisplay( button, '#ff0000' );
+			} ).not.toThrow();
+
+			// Restore
+			if ( window.Layers?.UI && savedColorPickerDialog ) {
+				window.Layers.UI.ColorPickerDialog = savedColorPickerDialog;
+			}
+		} );
+
+		it( 'should add is-transparent class for none color in fallback', () => {
+			const button = document.createElement( 'button' );
+
+			// Ensure no ColorPickerDialog available
+			const savedColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			if ( window.Layers?.UI ) {
+				window.Layers.UI.ColorPickerDialog = undefined;
+			}
+
+			factory.updateColorButtonDisplay( button, 'none' );
+
+			expect( button.classList.contains( 'is-transparent' ) ).toBe( true );
+
+			// Restore
+			if ( window.Layers?.UI && savedColorPickerDialog ) {
+				window.Layers.UI.ColorPickerDialog = savedColorPickerDialog;
+			}
+		} );
+
+		it( 'should add is-transparent class for transparent color in fallback', () => {
+			const button = document.createElement( 'button' );
+
+			// Ensure no ColorPickerDialog available
+			if ( window.Layers?.UI ) {
+				window.Layers.UI.ColorPickerDialog = undefined;
+			}
+
+			factory.updateColorButtonDisplay( button, 'transparent' );
+
+			expect( button.classList.contains( 'is-transparent' ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'openColorPicker', () => {
+		it( 'should open ColorPickerDialog when available', () => {
+			const mockOpen = jest.fn();
+			const MockColorPickerDialog = jest.fn().mockImplementation( () => ( {
+				open: mockOpen
+			} ) );
+
+			// Save and set mock
+			const savedColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.ColorPickerDialog = MockColorPickerDialog;
+
+			const anchorButton = document.createElement( 'button' );
+			const onApply = jest.fn();
+
+			factory.openColorPicker( anchorButton, '#ff0000', { onApply } );
+
+			expect( MockColorPickerDialog ).toHaveBeenCalled();
+			expect( mockOpen ).toHaveBeenCalled();
+
+			// Restore
+			if ( savedColorPickerDialog ) {
+				window.Layers.UI.ColorPickerDialog = savedColorPickerDialog;
+			} else {
+				delete window.Layers.UI.ColorPickerDialog;
+			}
+		} );
+
+		it( 'should do nothing when ColorPickerDialog not available', () => {
+			// Ensure no ColorPickerDialog available
+			const savedColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			if ( window.Layers?.UI ) {
+				window.Layers.UI.ColorPickerDialog = undefined;
+			}
+
+			const anchorButton = document.createElement( 'button' );
+
+			// Should not throw
+			expect( () => {
+				factory.openColorPicker( anchorButton, '#ff0000', {} );
+			} ).not.toThrow();
+
+			// Restore
+			if ( window.Layers?.UI && savedColorPickerDialog ) {
+				window.Layers.UI.ColorPickerDialog = savedColorPickerDialog;
+			}
+		} );
+
+		it( 'should handle none as initial value', () => {
+			const mockOpen = jest.fn();
+			const MockColorPickerDialog = jest.fn().mockImplementation( () => ( {
+				open: mockOpen
+			} ) );
+
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			const saved = window.Layers.UI.ColorPickerDialog;
+			window.Layers.UI.ColorPickerDialog = MockColorPickerDialog;
+
+			const anchorButton = document.createElement( 'button' );
+
+			factory.openColorPicker( anchorButton, 'none', {} );
+
+			expect( MockColorPickerDialog ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					currentColor: 'none'
+				} )
+			);
+
+			window.Layers.UI.ColorPickerDialog = saved;
+		} );
+
+		it( 'should use empty object for options when not provided', () => {
+			const mockOpen = jest.fn();
+			const MockColorPickerDialog = jest.fn().mockImplementation( () => ( {
+				open: mockOpen
+			} ) );
+
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			const saved = window.Layers.UI.ColorPickerDialog;
+			window.Layers.UI.ColorPickerDialog = MockColorPickerDialog;
+
+			const anchorButton = document.createElement( 'button' );
+
+			// Call without options
+			expect( () => {
+				factory.openColorPicker( anchorButton, '#00ff00' );
+			} ).not.toThrow();
+
+			window.Layers.UI.ColorPickerDialog = saved;
+		} );
+	} );
+
+	describe( 'createColorControl click handler', () => {
+		it( 'should open color picker on button click', () => {
+			const openColorPickerSpy = jest.spyOn( factory, 'openColorPicker' ).mockImplementation( () => {} );
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				onColorChange: jest.fn()
+			} );
+
+			// Simulate click
+			control.button.click();
+
+			expect( openColorPickerSpy ).toHaveBeenCalled();
+
+			openColorPickerSpy.mockRestore();
+		} );
+
+		it( 'should pass isNone state to color picker', () => {
+			const openColorPickerSpy = jest.spyOn( factory, 'openColorPicker' ).mockImplementation( () => {} );
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				initialNone: true,
+				onColorChange: jest.fn()
+			} );
+
+			// Simulate click - should pass 'none' as value since initialNone is true
+			control.button.click();
+
+			expect( openColorPickerSpy ).toHaveBeenCalledWith(
+				control.button,
+				'none',
+				expect.any( Object )
+			);
+
+			openColorPickerSpy.mockRestore();
+		} );
+	} );
 } );
