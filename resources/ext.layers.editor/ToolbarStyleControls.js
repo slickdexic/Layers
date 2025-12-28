@@ -98,6 +98,13 @@ class ToolbarStyleControls {
 		this.strokeContainer = null;
 		this.arrowContainer = null;
 		this.arrowStyleSelect = null;
+		this.mainStyleRow = null;
+		this.presetContainer = null;
+
+		// Context-aware toolbar state
+		this.contextAwareEnabled = ( typeof mw !== 'undefined' && mw.config ) ?
+			mw.config.get( 'wgLayersContextAwareToolbar', true ) : true;
+		this.currentToolContext = 'pointer';
 
 		// Input validators
 		this.inputValidators = [];
@@ -144,17 +151,23 @@ class ToolbarStyleControls {
 		styleGroup.className = 'toolbar-group style-group';
 		this.container = styleGroup;
 
+		// Add context-aware class if enabled
+		if ( this.contextAwareEnabled ) {
+			styleGroup.classList.add( 'context-aware' );
+		}
+
 		// Preset dropdown (via PresetStyleManager delegation)
 		if ( this.presetStyleManager ) {
 			const dropdown = this.presetStyleManager.createPresetDropdown();
 			if ( dropdown ) {
-				styleGroup.appendChild( this.presetStyleManager.getElement() );
+				this.presetContainer = this.presetStyleManager.getElement();
+				styleGroup.appendChild( this.presetContainer );
 			}
 		}
 
 		// Main style controls row (stroke, fill, width)
-		const styleControlsRow = this.createMainStyleRow();
-		styleGroup.appendChild( styleControlsRow );
+		this.mainStyleRow = this.createMainStyleRow();
+		styleGroup.appendChild( this.mainStyleRow );
 
 		// Text effects controls (via TextEffectsControls delegation)
 		if ( this.textEffectsControls ) {
@@ -171,6 +184,11 @@ class ToolbarStyleControls {
 		// Arrow style options
 		this.arrowContainer = this.createArrowStyleControl();
 		styleGroup.appendChild( this.arrowContainer );
+
+		// Apply initial visibility based on default tool (pointer = hidden)
+		if ( this.contextAwareEnabled ) {
+			this.updateContextVisibility( 'pointer' );
+		}
 
 		// Notify toolbar of initial style settings to sync with ToolManager
 		this.notifyStyleChange();
@@ -559,11 +577,105 @@ class ToolbarStyleControls {
 			this.arrowContainer.style.display = 'block';
 		} else {
 			this.arrowContainer.style.display = 'none';
-			this.arrowContainer.style.display = 'none';
 		}
 
 		// Update preset dropdown for the current tool
 		this.setCurrentTool( toolId );
+
+		// Update context-aware visibility if enabled
+		if ( this.contextAwareEnabled ) {
+			this.updateContextVisibility( toolId );
+		}
+	}
+
+	/**
+	 * Update visibility of controls based on tool context
+	 * Implements context-aware toolbar feature
+	 *
+	 * @param {string} toolId The currently selected tool
+	 */
+	updateContextVisibility( toolId ) {
+		this.currentToolContext = toolId;
+
+		// Define tool categories for context-aware visibility
+		const drawingTools = [ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'blur' ];
+		const strokeOnlyTools = [ 'pen', 'arrow' ];
+
+		// Determine what controls should be visible
+		// textbox shows stroke/fill, text tool only shows text-specific controls
+		const showMainStyleRow = drawingTools.includes( toolId ) ||
+			strokeOnlyTools.includes( toolId ) ||
+			toolId === 'textbox';
+		const showPresets = toolId !== 'pointer';
+
+		// Apply visibility with CSS classes for smooth transitions
+		if ( this.mainStyleRow ) {
+			if ( showMainStyleRow ) {
+				this.mainStyleRow.classList.remove( 'context-hidden' );
+			} else {
+				this.mainStyleRow.classList.add( 'context-hidden' );
+			}
+		}
+
+		if ( this.presetContainer ) {
+			if ( showPresets ) {
+				this.presetContainer.classList.remove( 'context-hidden' );
+			} else {
+				this.presetContainer.classList.add( 'context-hidden' );
+			}
+		}
+
+		// Show/hide fill color based on tool (pen and arrow don't use fill)
+		if ( this.fillControl && this.fillControl.container ) {
+			if ( strokeOnlyTools.includes( toolId ) ) {
+				this.fillControl.container.classList.add( 'context-hidden' );
+			} else {
+				this.fillControl.container.classList.remove( 'context-hidden' );
+			}
+		}
+	}
+
+	/**
+	 * Check if context-aware toolbar is enabled
+	 *
+	 * @return {boolean} True if context-aware mode is active
+	 */
+	isContextAwareEnabled() {
+		return this.contextAwareEnabled;
+	}
+
+	/**
+	 * Enable or disable context-aware toolbar mode
+	 *
+	 * @param {boolean} enabled Whether to enable context-aware mode
+	 */
+	setContextAwareEnabled( enabled ) {
+		this.contextAwareEnabled = enabled;
+		if ( this.container ) {
+			if ( enabled ) {
+				this.container.classList.add( 'context-aware' );
+				this.updateContextVisibility( this.currentToolContext );
+			} else {
+				this.container.classList.remove( 'context-aware' );
+				// Show all controls when disabled
+				this.showAllControls();
+			}
+		}
+	}
+
+	/**
+	 * Show all controls (for legacy mode or when a layer is selected)
+	 */
+	showAllControls() {
+		if ( this.mainStyleRow ) {
+			this.mainStyleRow.classList.remove( 'context-hidden' );
+		}
+		if ( this.presetContainer ) {
+			this.presetContainer.classList.remove( 'context-hidden' );
+		}
+		if ( this.fillControl && this.fillControl.container ) {
+			this.fillControl.container.classList.remove( 'context-hidden' );
+		}
 	}
 
 	/**
@@ -738,12 +850,77 @@ class ToolbarStyleControls {
 
 	/**
 	 * Update preset dropdown when layer selection changes (delegates to PresetStyleManager)
+	 * Also updates control visibility in context-aware mode
 	 *
 	 * @param {Array} selectedLayers Array of selected layer objects
 	 */
 	updateForSelection( selectedLayers ) {
 		if ( this.presetStyleManager ) {
 			this.presetStyleManager.updateForSelection( selectedLayers );
+		}
+
+		// Update context-aware visibility based on selected layer types
+		if ( this.contextAwareEnabled && selectedLayers && selectedLayers.length > 0 ) {
+			this.updateContextForSelectedLayers( selectedLayers );
+		}
+	}
+
+	/**
+	 * Update control visibility based on selected layer types
+	 * Shows controls appropriate for the selected layer(s)
+	 *
+	 * @param {Array} selectedLayers Array of selected layer objects
+	 */
+	updateContextForSelectedLayers( selectedLayers ) {
+		// Determine what types of layers are selected
+		const types = selectedLayers.map( ( l ) => l.type ).filter( ( t, i, arr ) => arr.indexOf( t ) === i );
+
+		// Check for text, shape, and stroke-only types
+		const hasTextLayers = types.some( ( t ) => t === 'text' || t === 'textbox' );
+		const hasShapeLayers = types.some( ( t ) =>
+			[ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'blur', 'image' ].includes( t )
+		);
+		const hasArrowLayers = types.includes( 'arrow' );
+		const hasStrokeOnlyLayers = types.some( ( t ) => t === 'pen' || t === 'path' || t === 'arrow' );
+
+		// Show main style row if any shape or stroke-based layers are selected
+		const showMainStyleRow = hasShapeLayers || hasStrokeOnlyLayers || hasArrowLayers || types.includes( 'textbox' );
+
+		// Show presets when any layer is selected
+		const showPresets = selectedLayers.length > 0;
+
+		// Apply visibility
+		if ( this.mainStyleRow ) {
+			if ( showMainStyleRow ) {
+				this.mainStyleRow.classList.remove( 'context-hidden' );
+			} else {
+				this.mainStyleRow.classList.add( 'context-hidden' );
+			}
+		}
+
+		if ( this.presetContainer ) {
+			if ( showPresets ) {
+				this.presetContainer.classList.remove( 'context-hidden' );
+			} else {
+				this.presetContainer.classList.add( 'context-hidden' );
+			}
+		}
+
+		// Hide fill color for stroke-only layer types (but not if other shapes are also selected)
+		if ( this.fillControl && this.fillControl.container ) {
+			if ( hasStrokeOnlyLayers && !hasShapeLayers ) {
+				this.fillControl.container.classList.add( 'context-hidden' );
+			} else if ( showMainStyleRow ) {
+				this.fillControl.container.classList.remove( 'context-hidden' );
+			}
+		}
+
+		// Delegate text effect visibility to TextEffectsControls based on layer types
+		if ( this.textEffectsControls && hasTextLayers ) {
+			// Show text controls when text layers are selected
+			const hasPureTextLayer = types.includes( 'text' );
+			const hasTextBoxLayer = types.includes( 'textbox' );
+			this.textEffectsControls.updateForSelectedTypes( hasPureTextLayer, hasTextBoxLayer );
 		}
 	}
 

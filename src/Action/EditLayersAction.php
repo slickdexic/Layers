@@ -82,6 +82,23 @@ class EditLayersAction extends \Action {
 			$initialSetName = '';
 		}
 
+		// Check if auto-create is requested (for layerslink=editor to non-existent sets)
+		$autoCreate = $request->getBool( 'autocreate' );
+		// Also check for createlayers permission if auto-create is requested
+		$canCreateLayers = false;
+		if ( $autoCreate ) {
+			if ( $services && method_exists( $services, 'getPermissionManager' ) ) {
+				$permManager = $services->getPermissionManager();
+				$canCreateLayers = $permManager->userHasRight( $user, 'createlayers' );
+			} elseif ( method_exists( $user, 'isAllowed' ) ) {
+				$canCreateLayers = $user->isAllowed( 'createlayers' );
+			}
+			// Only allow auto-create if user has createlayers permission
+			if ( !$canCreateLayers ) {
+				$autoCreate = false;
+			}
+		}
+
 		// Get return URL for editor-return mode
 		$returnTo = $request->getText( 'returnto', '' );
 		$returnToUrl = null;
@@ -119,6 +136,7 @@ class EditLayersAction extends \Action {
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
 				'initialSetName' => $initialSetName !== '' ? $initialSetName : null,
+				'autoCreate' => $autoCreate,
 				'returnToUrl' => $returnToUrl,
 				'isModalMode' => $isModalMode,
 			],

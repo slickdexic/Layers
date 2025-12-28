@@ -1416,4 +1416,182 @@ describe( 'ToolbarStyleControls', () => {
 			controls.destroy();
 		} );
 	} );
+
+	describe( 'Context-Aware Toolbar', () => {
+		beforeEach( () => {
+			// Enable context-aware mode
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+		} );
+
+		describe( 'updateContextVisibility', () => {
+			it( 'should hide main style row for pointer tool', () => {
+				styleControls.updateContextVisibility( 'pointer' );
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( true );
+			} );
+
+			it( 'should show main style row for rectangle tool', () => {
+				styleControls.updateContextVisibility( 'rectangle' );
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+			} );
+
+			it( 'should show main style row for circle tool', () => {
+				styleControls.updateContextVisibility( 'circle' );
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+			} );
+
+			it( 'should show main style row for arrow tool', () => {
+				styleControls.updateContextVisibility( 'arrow' );
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+			} );
+
+			it( 'should hide main style row for text tool (text has its own controls)', () => {
+				styleControls.updateContextVisibility( 'text' );
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( true );
+			} );
+
+			it( 'should show main style row for textbox tool', () => {
+				styleControls.updateContextVisibility( 'textbox' );
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+			} );
+
+			it( 'should show main style row for pen tool', () => {
+				styleControls.updateContextVisibility( 'pen' );
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+			} );
+
+			it( 'should hide presets for pointer tool', () => {
+				// Ensure presetContainer exists
+				if ( styleControls.presetContainer ) {
+					styleControls.updateContextVisibility( 'pointer' );
+
+					expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( true );
+				}
+			} );
+
+			it( 'should show presets for drawing tools', () => {
+				// Ensure presetContainer exists
+				if ( styleControls.presetContainer ) {
+					styleControls.updateContextVisibility( 'rectangle' );
+
+					expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( false );
+				}
+			} );
+
+			it( 'should hide fill color for stroke-only tools', () => {
+				// Ensure fillControl exists
+				if ( styleControls.fillControl && styleControls.fillControl.container ) {
+					styleControls.updateContextVisibility( 'pen' );
+
+					expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
+				}
+			} );
+
+			it( 'should show fill color for shape tools', () => {
+				// Ensure fillControl exists
+				if ( styleControls.fillControl && styleControls.fillControl.container ) {
+					styleControls.updateContextVisibility( 'rectangle' );
+
+					expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( false );
+				}
+			} );
+		} );
+
+		describe( 'setContextAwareEnabled', () => {
+			it( 'should add context-aware class when enabled', () => {
+				styleControls.setContextAwareEnabled( true );
+
+				expect( styleControls.container.classList.contains( 'context-aware' ) ).toBe( true );
+			} );
+
+			it( 'should remove context-aware class when disabled', () => {
+				styleControls.setContextAwareEnabled( false );
+
+				expect( styleControls.container.classList.contains( 'context-aware' ) ).toBe( false );
+			} );
+
+			it( 'should show all controls when disabled', () => {
+				// First hide some controls
+				styleControls.updateContextVisibility( 'pointer' );
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( true );
+
+				// Disable context-aware mode
+				styleControls.setContextAwareEnabled( false );
+
+				// Should show all controls
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+			} );
+		} );
+
+		describe( 'isContextAwareEnabled', () => {
+			it( 'should return true when enabled', () => {
+				styleControls.contextAwareEnabled = true;
+				expect( styleControls.isContextAwareEnabled() ).toBe( true );
+			} );
+
+			it( 'should return false when disabled', () => {
+				styleControls.contextAwareEnabled = false;
+				expect( styleControls.isContextAwareEnabled() ).toBe( false );
+			} );
+		} );
+
+		describe( 'updateContextForSelectedLayers', () => {
+			it( 'should show main style row when shape layers are selected', () => {
+				const selectedLayers = [
+					{ id: 'rect-1', type: 'rectangle' },
+					{ id: 'circle-1', type: 'circle' }
+				];
+
+				styleControls.updateContextForSelectedLayers( selectedLayers );
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+			} );
+
+			it( 'should hide fill for path/arrow layers', () => {
+				const selectedLayers = [
+					{ id: 'arrow-1', type: 'arrow' }
+				];
+
+				// Ensure fillControl exists
+				if ( styleControls.fillControl && styleControls.fillControl.container ) {
+					styleControls.updateContextForSelectedLayers( selectedLayers );
+
+					expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
+				}
+			} );
+
+			it( 'should show fill when mixed shape and arrow layers selected', () => {
+				const selectedLayers = [
+					{ id: 'arrow-1', type: 'arrow' },
+					{ id: 'rect-1', type: 'rectangle' }
+				];
+
+				// Ensure fillControl exists
+				if ( styleControls.fillControl && styleControls.fillControl.container ) {
+					styleControls.updateContextForSelectedLayers( selectedLayers );
+
+					expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( false );
+				}
+			} );
+		} );
+
+		describe( 'showAllControls', () => {
+			it( 'should remove context-hidden from all controls', () => {
+				// First hide controls
+				styleControls.updateContextVisibility( 'pointer' );
+
+				// Then show all
+				styleControls.showAllControls();
+
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+			} );
+		} );
+	} );
 } );

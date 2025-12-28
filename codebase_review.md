@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** December 27, 2025 (Updated)  
-**Version:** 1.2.8  
+**Version:** 1.2.9  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -43,7 +43,7 @@ All metrics collected directly from the codebase via automated tooling.
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total JS files | **97** | - | ✅ Feature-rich |
+| Total JS files | **99** | - | ✅ Feature-rich |
 | Total JS lines | **~49,600** | <75,000 | ✅ Well under target |
 | ES6 classes | **87** | 70+ | ✅ |
 | Files >1,000 lines | **8** | 0 | ⚠️ Technical debt |
@@ -52,10 +52,10 @@ All metrics collected directly from the codebase via automated tooling.
 | Stylelint errors | **0** | 0 | ✅ |
 | Jest tests passing | **7,270** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
-| Statement coverage | **94.5%** | 85%+ | ✅ Excellent |
-| Branch coverage | **82.9%** | 75%+ | ✅ Excellent |
-| Function coverage | **92.0%** | 80%+ | ✅ |
-| Line coverage | **94.7%** | 85%+ | ✅ Excellent |
+| Statement coverage | **94.45%** | 85%+ | ✅ Excellent |
+| Branch coverage | **82.88%** | 75%+ | ✅ Excellent |
+| Function coverage | **91.98%** | 80%+ | ✅ |
+| Line coverage | **94.73%** | 85%+ | ✅ Excellent |
 
 ### Files Over 1,000 Lines (God Classes)
 
@@ -66,7 +66,7 @@ All metrics collected directly from the codebase via automated tooling.
 | Toolbar.js | **1,537** | ✅ 4 modules | HIGH - Growing |
 | LayersEditor.js | **1,355** | ✅ 3 modules | MEDIUM |
 | ToolManager.js | **1,261** | ✅ 2 handlers | MEDIUM |
-| CanvasRenderer.js | **1,242** | ✅ SelectionRenderer | MEDIUM |
+| CanvasRenderer.js | **1,242** | ✅ SelectionRenderer (94% cov) | MEDIUM |
 | SelectionManager.js | **1,194** | ✅ 3 modules | MEDIUM |
 | APIManager.js | **1,182** | ✅ APIErrorHandler | MEDIUM |
 
@@ -116,19 +116,18 @@ All dialog calls now use a consistent pattern:
 1. **Primary:** Use `DialogManager.showConfirmDialog()` / `showAlertDialog()` / `showPromptDialogAsync()`
 2. **Fallback:** If DialogManager unavailable, gracefully fall back to native dialogs
 
-### ESLint Disable Comments (13 total - all acceptable):
+### ESLint Disable Comments (12 total - all acceptable):
 
 | File | Count | Rule | Reason |
 |------|-------|------|--------|
 | UIManager.js | 3 | no-alert | Fallback wrappers |
 | PresetDropdown.js | 2 | no-alert | Fallback wrappers |
+| ToolManager.js | 2 | no-unused-vars | Intentional API compatibility |
 | RevisionManager.js | 1 | no-alert | Fallback wrapper |
 | LayerSetManager.js | 1 | no-alert | Fallback wrapper |
 | ImportExportManager.js | 1 | no-alert | Fallback wrapper |
-| ToolManager.js | 2 | no-unused-vars | Intentional API compatibility |
 | LayersValidator.js | 1 | no-unused-vars | Intentional API compatibility |
 | DrawingController.js | 1 | no-unused-vars | Intentional API compatibility |
-| LayersEditorModal.js | 1 | no-alert | Fallback wrapper |
 
 **Note:** The `no-alert` disables are for fallback code that only executes when DialogManager is unavailable. The `no-unused-vars` disables are for parameters intentionally kept for API compatibility.
 
@@ -358,17 +357,19 @@ All critical coverage gaps have been addressed:
 
 ### What's Good
 
-The extension is **production-ready and fully functional**. Security implementation is professional-grade. Test coverage at 94.5% statement coverage is excellent. The PHP backend is clean and well-documented. The editor has 14 working tools, smart guides, named layer sets, and blur fill effects. All major bugs have been fixed in v1.2.8.
+The extension is **production-ready and fully functional**. Security implementation is professional-grade. Test coverage at 94.45% statement coverage is excellent. The PHP backend is clean and well-documented. The editor has 14 working tools, smart guides, named layer sets, and blur fill effects. All major bugs have been fixed.
 
 ### What Needs Honest Attention
 
 1. **8 god classes** - Technical debt that should be monitored (but all use delegation patterns)
 2. **Mobile-optimized UI missing** - Basic touch works, but no responsive toolbar/panels
-3. **PropertiesForm.js function coverage** - Only 68% function coverage (lower than other files)
+3. **PropertiesForm.js function coverage** - Only 72% function coverage (lower than other files)
+4. **PHP code style warnings** - 13 line-length warnings in phpcs (minor but unfixed)
+5. **ShapeRenderer.js approaching limit** - At 909 lines, needs monitoring
 
 ### What's Been Fixed (December 2025)
 
-- ✅ **Blur fill coordinate bug** - Fixed in v1.2.8 (rectangles no longer transparent)
+- ✅ **Blur fill coordinate bug** - Fixed (rectangles no longer transparent)
 - ✅ EffectsRenderer.js coverage: 49% → 99%
 - ✅ CanvasRenderer.js coverage: 59% → 94%
 - ✅ DialogManager.js coverage: 53% → 96%
@@ -380,6 +381,13 @@ The extension is **production-ready and fully functional**. Security implementat
 - ✅ Basic touch event handling (pinch-to-zoom, double-tap)
 - ✅ Deprecated code cleanup: multiple methods removed, fallbacks documented
 
+### Honest Criticisms
+
+1. **Over-engineered in places** - Some modules have deep abstraction layers that add complexity without clear benefit (e.g., 4 different class resolution patterns)
+2. **Documentation sprawl** - 20+ markdown files with some overlapping content
+3. **No formal architecture diagram** - Despite claims of good architecture, no visual representation exists
+4. **Mobile support is aspirational** - Documentation claims "touch support" but it's very basic
+
 ### Bottom Line
 
 This extension is in **excellent shape**. The codebase is well-tested (94%+ coverage), well-structured (delegation patterns, ES6 classes), and feature-complete for its core use case. All major bugs have been fixed.
@@ -389,8 +397,8 @@ This extension is in **excellent shape**. The codebase is well-tested (94%+ cove
 Deductions:
 - -0.5 for 8 god classes (23% of codebase) - mitigated by delegation patterns
 - -0.5 for mobile UI not responsive (basic touch works)
-- -0.25 for PropertiesForm.js function coverage at 72% (improved from 68%)
-- -0.25 for deprecated code still present (documented fallbacks)
+- -0.25 for PropertiesForm.js function coverage at 72%
+- -0.25 for deprecated fallback code still present
 
 ---
 

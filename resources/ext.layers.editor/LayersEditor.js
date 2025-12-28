@@ -488,17 +488,20 @@ class LayersEditor {
 	/**
 	 * Load initial layers from API
 	 * If config.initialSetName is provided (deep link), load that specific set
+	 * If config.autoCreate is true and the set doesn't exist, auto-create it
 	 * @private
 	 */
 	loadInitialLayers () {
 		// Check for deep link: load specific set if initialSetName is provided
 		const initialSetName = this.config.initialSetName;
+		const autoCreate = this.config.autoCreate || false;
 		const loadPromise = initialSetName
 			? this.apiManager.loadLayersBySetName( initialSetName )
 			: this.apiManager.loadLayers();
 
 		if ( initialSetName ) {
-			this.debugLog( '[LayersEditor] Loading initial set via deep link:', initialSetName );
+			this.debugLog( '[LayersEditor] Loading initial set via deep link:', initialSetName,
+				autoCreate ? '(autoCreate enabled)' : '' );
 		}
 
 		loadPromise.then( ( data ) => {
@@ -507,6 +510,17 @@ class LayersEditor {
 			}
 
 			this.debugLog( '[LayersEditor] API loadLayers completed' );
+
+			// Check if we need to auto-create the set
+			// This happens when autoCreate is true and no layerset was returned
+			const needsAutoCreate = autoCreate && initialSetName &&
+				( !data || !data.currentLayerSetId );
+
+			if ( needsAutoCreate ) {
+				this.debugLog( '[LayersEditor] Set does not exist, auto-creating:', initialSetName );
+				this.autoCreateLayerSet( initialSetName );
+				return; // autoCreateLayerSet will handle the rest
+			}
 
 			if ( data && data.layers ) {
 				const normalizedLayers = this.normalizeLayers( data.layers );
@@ -548,6 +562,14 @@ class LayersEditor {
 				return;
 			}
 			this.debugLog( '[LayersEditor] API loadLayers failed:', error );
+
+			// If autoCreate is enabled and we failed to load, try to auto-create
+			if ( autoCreate && initialSetName ) {
+				this.debugLog( '[LayersEditor] Load failed, attempting auto-create:', initialSetName );
+				this.autoCreateLayerSet( initialSetName );
+				return;
+			}
+
 			this.stateManager.set( 'layers', [] );
 			if ( this.canvasManager ) {
 				this.canvasManager.renderLayers( [] );
@@ -559,6 +581,88 @@ class LayersEditor {
 				this.saveState( 'initial' );
 			}
 		} );
+	}
+
+	/**
+	 * Auto-create a new layer set when opened via deep link
+	 * This is called when config.autoCreate is true and the requested set doesn't exist
+	 * @param {string} setName - Name of the set to create
+	 * @private
+	 */
+	autoCreateLayerSet ( setName ) {
+		this.debugLog( '[LayersEditor] Auto-creating layer set:', setName );
+
+		// Use the LayerSetManager if available (preferred)
+		if ( this.layerSetManager && typeof this.layerSetManager.createNewLayerSet === 'function' ) {
+			this.layerSetManager.createNewLayerSet( setName ).then( ( success ) => {
+				if ( success ) {
+					this.showAutoCreateNotification( setName );
+				}
+				this.finalizeInitialState();
+			} ).catch( () => {
+				// Creation failed, just show empty editor
+				this.finalizeInitialState();
+			} );
+			return;
+		}
+
+		// Fallback: manually create the set state
+		this.stateManager.set( 'layers', [] );
+		this.stateManager.set( 'currentSetName', setName );
+		this.stateManager.set( 'currentLayerSetId', null );
+		this.stateManager.set( 'hasUnsavedChanges', true );
+
+		// Add to named sets list
+		const namedSets = this.stateManager.get( 'namedSets' ) || [];
+		const userName = mw.config.get( 'wgUserName' ) || 'Anonymous';
+		namedSets.push( {
+			name: setName,
+			revision_count: 0,
+			latest_revision: null,
+			latest_timestamp: null,
+			latest_user_name: userName
+		} );
+		this.stateManager.set( 'namedSets', namedSets );
+
+		// Update UI
+		if ( this.canvasManager ) {
+			this.canvasManager.renderLayers( [] );
+		}
+
+		// Update selectors
+		this.buildSetSelector();
+		this.buildRevisionSelector();
+
+		// Show notification
+		this.showAutoCreateNotification( setName );
+
+		// Finalize initial state
+		this.finalizeInitialState();
+	}
+
+	/**
+	 * Show notification that a layer set was auto-created
+	 * @param {string} setName - Name of the created set
+	 * @private
+	 */
+	showAutoCreateNotification ( setName ) {
+		if ( typeof mw !== 'undefined' && mw.notify ) {
+			const message = mw.message( 'layers-set-auto-created', setName ).text();
+			mw.notify( message, { type: 'info', autoHide: true, autoHideSeconds: 5 } );
+		}
+	}
+
+	/**
+	 * Finalize the initial state after loading or creating a set
+	 * @private
+	 */
+	finalizeInitialState () {
+		if ( this.historyManager && typeof this.historyManager.saveInitialState === 'function' ) {
+			this.historyManager.saveInitialState();
+		} else {
+			this.saveState( 'initial' );
+		}
+		this.updateSaveButtonState();
 	}
 
 	/**

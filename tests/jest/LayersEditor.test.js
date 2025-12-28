@@ -717,3 +717,160 @@ describe('LayersEditor showCancelConfirmDialog', () => {
         expect(document.querySelector('.layers-modal-dialog')).toBeFalsy();
     });
 });
+
+describe('Auto-create layer set functionality', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        
+        // Setup window globals
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        
+        // Setup DOM
+        document.body.innerHTML = '<div id="layers-editor-container"></div>';
+        
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    describe('showAutoCreateNotification', () => {
+        test('should show notification with set name', () => {
+            const mockNotify = jest.fn();
+            global.mw = {
+                notify: mockNotify,
+                message: jest.fn((key, param) => ({
+                    text: () => `Layer set "${param}" was created automatically.`
+                }))
+            };
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.showAutoCreateNotification('my-new-set');
+
+            expect(global.mw.message).toHaveBeenCalledWith('layers-set-auto-created', 'my-new-set');
+            expect(mockNotify).toHaveBeenCalledWith(
+                expect.stringContaining('my-new-set'),
+                expect.objectContaining({ type: 'info' })
+            );
+        });
+
+        test('should not throw when mw.notify is not available', () => {
+            global.mw = {};
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            
+            expect(() => {
+                editorInstance.showAutoCreateNotification('test-set');
+            }).not.toThrow();
+        });
+    });
+
+    describe('autoCreateLayerSet', () => {
+        test('should use layerSetManager when available', async () => {
+            const mockCreateNewLayerSet = jest.fn().mockResolvedValue(true);
+            const mockSaveInitialState = jest.fn();
+            const mockUpdateSaveButtonState = jest.fn();
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.layerSetManager = {
+                createNewLayerSet: mockCreateNewLayerSet
+            };
+            editorInstance.historyManager = {
+                saveInitialState: mockSaveInitialState
+            };
+            editorInstance.updateSaveButtonState = mockUpdateSaveButtonState;
+            editorInstance.showAutoCreateNotification = jest.fn();
+            editorInstance.debugLog = jest.fn();
+
+            editorInstance.autoCreateLayerSet('anatomy-labels');
+
+            // Wait for promise
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(mockCreateNewLayerSet).toHaveBeenCalledWith('anatomy-labels');
+        });
+
+        test('should show notification after successful creation', async () => {
+            const mockCreateNewLayerSet = jest.fn().mockResolvedValue(true);
+            const mockShowNotification = jest.fn();
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.layerSetManager = {
+                createNewLayerSet: mockCreateNewLayerSet
+            };
+            editorInstance.historyManager = { saveInitialState: jest.fn() };
+            editorInstance.updateSaveButtonState = jest.fn();
+            editorInstance.showAutoCreateNotification = mockShowNotification;
+            editorInstance.debugLog = jest.fn();
+
+            editorInstance.autoCreateLayerSet('new-set');
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(mockShowNotification).toHaveBeenCalledWith('new-set');
+        });
+
+        test('should use fallback when layerSetManager not available', () => {
+            const mockStateManager = {
+                set: jest.fn(),
+                get: jest.fn().mockReturnValue([])
+            };
+
+            global.mw = {
+                config: {
+                    get: jest.fn().mockReturnValue('TestUser')
+                },
+                notify: jest.fn(),
+                message: jest.fn(() => ({ text: () => 'message' }))
+            };
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.layerSetManager = null;
+            editorInstance.stateManager = mockStateManager;
+            editorInstance.canvasManager = { renderLayers: jest.fn() };
+            editorInstance.historyManager = { saveInitialState: jest.fn() };
+            editorInstance.updateSaveButtonState = jest.fn();
+            editorInstance.buildSetSelector = jest.fn();
+            editorInstance.buildRevisionSelector = jest.fn();
+            editorInstance.showAutoCreateNotification = jest.fn();
+            editorInstance.debugLog = jest.fn();
+
+            editorInstance.autoCreateLayerSet('fallback-set');
+
+            expect(mockStateManager.set).toHaveBeenCalledWith('layers', []);
+            expect(mockStateManager.set).toHaveBeenCalledWith('currentSetName', 'fallback-set');
+            expect(mockStateManager.set).toHaveBeenCalledWith('hasUnsavedChanges', true);
+        });
+    });
+
+    describe('finalizeInitialState', () => {
+        test('should call historyManager.saveInitialState when available', () => {
+            const mockSaveInitialState = jest.fn();
+            const mockUpdateSaveButtonState = jest.fn();
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.historyManager = { saveInitialState: mockSaveInitialState };
+            editorInstance.updateSaveButtonState = mockUpdateSaveButtonState;
+
+            editorInstance.finalizeInitialState();
+
+            expect(mockSaveInitialState).toHaveBeenCalled();
+            expect(mockUpdateSaveButtonState).toHaveBeenCalled();
+        });
+
+        test('should fall back to saveState when historyManager not available', () => {
+            const mockSaveState = jest.fn();
+            const mockUpdateSaveButtonState = jest.fn();
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.historyManager = null;
+            editorInstance.saveState = mockSaveState;
+            editorInstance.updateSaveButtonState = mockUpdateSaveButtonState;
+
+            editorInstance.finalizeInitialState();
+
+            expect(mockSaveState).toHaveBeenCalledWith('initial');
+        });
+    });
+});

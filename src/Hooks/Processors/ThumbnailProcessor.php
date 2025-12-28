@@ -502,6 +502,13 @@ class ThumbnailProcessor {
 				'setname' => $setName ?? ''
 			];
 
+			// Add autocreate flag when linking to a specific named set
+			// This allows auto-creation of the set if it doesn't exist
+			// (only for named sets, not for generic 'on' or 'default')
+			if ( $setName !== null && $setName !== '' && $setName !== 'default' ) {
+				$urlParams['autocreate'] = '1';
+			}
+
 			// Add returnto parameter for ALL editor links from article pages
 			// This ensures closing the editor returns to the originating page
 			$context = \RequestContext::getMain();

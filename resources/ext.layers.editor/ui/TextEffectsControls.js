@@ -277,6 +277,27 @@
 		}
 
 		/**
+		 * Show/hide controls based on selected layer types
+		 * Used by context-aware toolbar when layers are selected
+		 *
+		 * @param {boolean} hasPureTextLayer Whether pure text layers are selected
+		 * @param {boolean} hasTextBoxLayer Whether textbox layers are selected
+		 */
+		updateForSelectedTypes( hasPureTextLayer, hasTextBoxLayer ) {
+			const hasAnyTextLayer = hasPureTextLayer || hasTextBoxLayer;
+
+			if ( this.fontSizeContainer ) {
+				this.fontSizeContainer.style.display = hasAnyTextLayer ? 'flex' : 'none';
+			}
+			if ( this.textStrokeContainer ) {
+				this.textStrokeContainer.style.display = hasAnyTextLayer ? 'flex' : 'none';
+			}
+			if ( this.shadowContainer ) {
+				this.shadowContainer.style.display = hasAnyTextLayer ? 'flex' : 'none';
+			}
+		}
+
+		/**
 		 * Update controls from selected layer properties
 		 *
 		 * @param {Object} layer Selected layer object

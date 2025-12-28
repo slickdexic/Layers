@@ -126,6 +126,33 @@ $wgLayersMaxImageBytes = 2097152;
 
 ---
 
+## User Interface
+
+### $wgLayersContextAwareToolbar
+
+Enable context-aware toolbar that shows only relevant controls for the active tool.
+
+| Property | Value |
+|----------|-------|
+| Type | `boolean` |
+| Default | `true` |
+
+```php
+// Disable context-aware toolbar (show all controls always)
+$wgLayersContextAwareToolbar = false;
+```
+
+When enabled (default):
+- **Pointer tool**: Only tool buttons visible
+- **Shape tools** (rectangle, circle, etc.): Stroke/fill colors, stroke width
+- **Text tool**: Font size, text stroke, text shadow controls
+- **Arrow tool**: Stroke color, stroke width, arrow style
+- **Layer selection**: Controls adapt to selected layer types
+
+When disabled: All style controls are always visible (classic mode).
+
+---
+
 ## Image Processing
 
 ### $wgLayersMaxImageSize

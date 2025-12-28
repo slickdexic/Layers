@@ -320,6 +320,7 @@
 	"layers-set-name-exists": "A set with this name already exists",
 	"layers-set-limit-reached": "Maximum of $1 sets reached for this image",
 	"layers-set-created": "Created new set: $1. Add layers and save.",
+	"layers-set-auto-created": "Layer set \"$1\" was created automatically. Add your annotations and save.",
 	"layers-set-create-error": "Failed to create layer set",
 	"layers-set-loaded": "Loaded layer set: $1",
 	"layers-set-load-error": "Failed to load layer set",

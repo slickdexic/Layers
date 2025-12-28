@@ -297,6 +297,7 @@
 	"layers-set-name-exists": "Error shown when trying to create a set with a name that already exists",
 	"layers-set-limit-reached": "Error shown when the maximum number of sets has been reached. $1 is the maximum number.",
 	"layers-set-created": "Success notification shown after creating a new set. $1 is the set name.",
+	"layers-set-auto-created": "Notification shown when a layer set is automatically created via deep link. $1 is the set name.",
 	"layers-set-create-error": "Error shown when set creation fails",
 	"layers-set-loaded": "Success notification shown after loading a set. $1 is the set name.",
 	"layers-set-load-error": "Error shown when loading a set fails",

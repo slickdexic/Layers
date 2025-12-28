@@ -571,5 +571,104 @@ See full specification document for implementation details, security considerati
 
 ---
 
+## 8. Auto-Create Layer Set on Editor Link
+
+**Priority:** Medium  
+**Complexity:** Medium  
+**Status:** ✅ Implemented (v1.2.9)  
+**Full Specification:** [FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md](FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md)
+
+### Description
+When a wikitext link references a layer set that doesn't exist yet using `layerslink=editor`, automatically create that layer set when the user opens the editor (if they have `createlayers` permission).
+
+### User Story
+As a wiki author, I want to add `[[File:Diagram.png|layers=heart-diagram|layerslink=editor]]` to my article and have the `heart-diagram` layer set auto-created when I first click the link, so I don't have to manually create it on the File: page first.
+
+### Key Benefits
+- **Streamlined workflow**: No manual set creation step required
+- **Template-friendly**: Article templates can define layer set names that get created on first use
+- **Page Forms integration**: Form-generated layer set names work automatically
+- **Collaborative workflows**: Team members can be assigned specific sets via links
+
+### Wikitext Example
+
+```wikitext
+<!-- Link to non-existent set - auto-created on first editor open -->
+[[File:Anatomy.png|layers=heart-diagram|layerslink=editor]]
+```
+
+### Permission Requirements
+- User must have `createlayers` right (not just `editlayers`)
+- Rate limiting applies via existing `editlayers-create` limiter
+- Set name validated against allowed pattern
+
+### Implementation Estimate
+~12 hours total (backend, frontend, testing, documentation)
+
+See full specification document for implementation details, edge cases, and security considerations.
+
+---
+
+## 9. Layer Groups (Folders)
+
+**Priority:** High  
+**Complexity:** High (~50 hours)  
+**Status:** ⏳ Proposed  
+**Full Specification:** [FEATURE_REQUEST_LAYER_GROUPS.md](FEATURE_REQUEST_LAYER_GROUPS.md)
+
+### Description
+Allow users to organize layers into collapsible groups (folders) in the Layer Panel. Groups behave as a single unit for selection, movement, visibility, and other operations.
+
+### Key Features
+- Create/rename/delete layer groups
+- Drag layers into/out of groups
+- Expand/collapse groups to reduce clutter
+- Selecting a group selects all child layers
+- Moving a group moves all children together
+- Group visibility toggle affects all children
+- Support for nested groups (2-3 levels deep)
+- Keyboard shortcuts: Ctrl+G to group, Ctrl+Shift+G to ungroup
+
+### Industry References
+- Adobe Photoshop: Layer Groups with folder metaphor
+- Figma: Frames and Groups with nesting
+- Sketch: Groups with double-click to enter
+
+---
+
+## 10. Context-Aware Toolbar
+
+**Priority:** Medium  
+**Complexity:** Medium (~4 hours actual)  
+**Status:** ✅ Implemented (v1.2.10)  
+**Full Specification:** [FEATURE_REQUEST_CONTEXT_AWARE_TOOLBAR.md](FEATURE_REQUEST_CONTEXT_AWARE_TOOLBAR.md)
+
+### Description
+Show only relevant toolbar controls based on the currently selected tool or layer. Hide stroke width, stroke color, fill color, and other style controls when they are not applicable.
+
+### Implementation Summary
+- Added `updateContextVisibility()` to `ToolbarStyleControls.js`
+- Added `updateContextForSelectedLayers()` for selection-based visibility
+- CSS transitions via `context-hidden` class with opacity/max-width animation
+- Configuration: `$wgLayersContextAwareToolbar` (default: true)
+- 20 new Jest tests added
+
+### Context Examples
+| Context | Controls Shown |
+|---------|----------------|
+| Select tool (nothing selected) | Tool buttons only |
+| Rectangle/shape tools | Stroke, Fill, Width, Presets |
+| Text tool | Font size, Text stroke, Shadow |
+| Arrow/Pen tools | Stroke, Width (no fill) |
+| Shape layer selected | Full style controls |
+
+### Configuration
+```php
+// Disable context-aware toolbar (show all controls always)
+$wgLayersContextAwareToolbar = false;
+```
+
+---
+
 *Document created: December 13, 2025*  
-*Last updated: December 23, 2025*
+*Last updated: December 28, 2025*

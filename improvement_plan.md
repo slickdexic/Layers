@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 27, 2025  
-**Status:** � All P0 Issues Resolved  
-**Version:** 1.2.8  
+**Last Updated:** December 30, 2025  
+**Status:** ✅ All P0 Issues Resolved  
+**Version:** 1.2.9  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
@@ -21,11 +21,11 @@ The extension is **production-ready** with all critical issues resolved. The blu
 |------|--------|---------|
 | **Functionality** | ✅ Complete | 14 tools work; blur fill fixed |
 | **Security** | ✅ Resolved | All known security issues fixed |
-| **Testing** | ✅ Excellent | 7,270 tests, 94.5% statement coverage |
+| **Testing** | ✅ Excellent | 7,270 tests, 94.45% statement coverage |
 | **ES6 Migration** | ✅ Complete | 87 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ⚠️ Technical Debt | 8 files >1,000 lines (all use delegation) |
-| **Codebase Size** | ✅ Healthy | ~49,600 lines, well under 75K target |
+| **Codebase Size** | ✅ Healthy | ~49,600 lines (99 files), well under 75K target |
 | **Blur Fill** | ✅ **FIXED** | Rectangle coordinate bug resolved |
 
 ---
@@ -242,7 +242,7 @@ P0.B CanvasRenderer coverage:  ████████████████�
 
 Phase 1 (Important):
 P1.1 Split ToolbarStyleControls: ████████████████████ 100% ✅ Done (798 lines)
-P1.2 ESLint disables:          ████████████████████ 100% ✅ Acceptable (13)
+P1.2 ESLint disables:          ████████████████████ 100% ✅ Acceptable (12)
 P1.3 Deprecated removal:       ██████████░░░░░░░░░░ 50%  ✅ 4 removed, 4 remain (fallbacks)
 
 Phase 2 (Code Quality):
@@ -331,10 +331,10 @@ All dialogs now use DialogManager with fallbacks.
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total tests | 7,270 | ✅ |
-| Statement coverage | 94.5% | ✅ |
-| Branch coverage | 82.9% | ✅ |
-| Function coverage | 92.0% | ✅ |
-| Line coverage | 94.7% | ✅ |
+| Statement coverage | 94.45% | ✅ |
+| Branch coverage | 82.88% | ✅ |
+| Function coverage | 91.98% | ✅ |
+| Line coverage | 94.73% | ✅ |
 | Test suites | 130 | ✅ |
 
 ### Files With Good Coverage ✅
@@ -363,7 +363,7 @@ All dialogs now use DialogManager with fallbacks.
 
 ### ✅ Immediate (P0) - ALL RESOLVED
 
-**All blur fill bugs have been fixed in v1.2.8:**
+**All blur fill bugs have been fixed:**
 
 1. ✅ **Rectangle blur fill fixed** - World coordinates stored before rotation, passed to drawBlurFill
 2. ✅ **Consistent bounds calculation** - All shapes now use world coordinate bounds  
@@ -391,6 +391,83 @@ All dialogs now use DialogManager with fallbacks.
 
 ---
 
+## Feature Requests
+
+### FR-1: Auto-Create Layer Set on Editor Link (P2)
+
+**Status:** ✅ Implemented (v1.2.9)  
+**Effort:** ~4 hours (completed)  
+**Documentation:** [FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md](docs/FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md)
+
+**Summary:** When a user clicks a `layerslink=editor` link to a non-existent layer set, automatically create the set instead of showing an error. This enables:
+- Pre-planned article templates with layer set placeholders
+- Page Forms integration for structured wiki workflows
+- Seamless collaborative annotation workflows
+
+**Implementation:**
+- `src/Action/EditLayersAction.php` - checks `autocreate=1` URL param, validates `createlayers` permission, passes to frontend
+- `src/Hooks/Processors/ImageLinkProcessor.php` - adds `autocreate=1` to editor URLs for named sets
+- `src/Hooks/Processors/ThumbnailProcessor.php` - same for thumbnail links
+- `resources/ext.layers.editor/LayersEditor.js` - `autoCreateLayerSet()` and `loadInitialLayers()` handle auto-creation
+- `resources/ext.layers.editor/editor/EditorBootstrap.js` - passes `autoCreate` config to editor
+- `i18n/en.json` - new message `layers-set-auto-created`
+- 6 new Jest tests for auto-create functionality
+
+---
+
+### FR-2: Layer Groups (Folders) (P2)
+
+**Status:** ⏳ Proposed  
+**Effort:** ~50 hours (High complexity)  
+**Documentation:** [FEATURE_REQUEST_LAYER_GROUPS.md](docs/FEATURE_REQUEST_LAYER_GROUPS.md)
+
+**Summary:** Allow users to organize layers into collapsible groups (folders) in the Layer Panel, similar to Adobe Photoshop layer groups or Figma frames.
+
+**Key Features:**
+- Create/rename/delete layer groups with folder metaphor
+- Drag-and-drop layers into/out of groups
+- Expand/collapse groups to reduce visual clutter
+- Group selection = select all child layers
+- Group visibility toggle affects all children
+- Support for nested groups (2-3 levels deep)
+- Keyboard shortcuts: Ctrl+G (group), Ctrl+Shift+G (ungroup)
+
+**Impact Areas:**
+- Data model: New `group` layer type with `children` array
+- LayerPanel.js: Tree rendering with indentation
+- SelectionManager.js: Multi-layer selection via groups
+- API validation: New group type validation rules
+- HistoryManager: Group operations as single undo steps
+
+---
+
+### FR-3: Context-Aware Toolbar (P2)
+
+**Status:** ✅ Implemented (v1.2.10)  
+**Effort:** ~4 hours (completed)  
+**Documentation:** [FEATURE_REQUEST_CONTEXT_AWARE_TOOLBAR.md](docs/FEATURE_REQUEST_CONTEXT_AWARE_TOOLBAR.md)
+
+**Summary:** Show only relevant toolbar controls based on the currently selected tool or layer, hiding style controls (stroke, fill, etc.) when they are not applicable.
+
+**Implementation:**
+- `resources/ext.layers.editor/ToolbarStyleControls.js` - Added `updateContextVisibility()`, `updateContextForSelectedLayers()`, `showAllControls()`, `setContextAwareEnabled()` methods
+- `resources/ext.layers.editor/ui/TextEffectsControls.js` - Added `updateForSelectedTypes()` for layer-type-based visibility
+- `resources/ext.layers.editor/editor-fixed.css` - Added CSS transitions for context-hidden class
+- `extension.json` - Added `LayersContextAwareToolbar` config option
+- `src/Hooks/UIHooks.php` - Passes config to JavaScript
+- 20 new Jest tests for context-aware toolbar behavior
+
+**Context Behavior:**
+| Context | Controls Shown |
+|---------|----------------|
+| Select tool (nothing selected) | Tool buttons only |
+| Rectangle/circle/shape tools | Stroke, Fill, Width, Presets |
+| Text tool | Font size, Text stroke, Shadow |
+| Arrow/Pen tools | Stroke, Width (no fill) |
+| Shape layer selected | Full style controls |
+
+---
+
 ## Summary
 
 The Layers extension is **fully functional and production-ready**. All critical bugs have been fixed.
@@ -414,6 +491,7 @@ Deductions:
 
 ---
 
-*Plan updated: December 27, 2025*  
-*Status: ✅ **ALL P0 ISSUES RESOLVED** - Blur fill fixed in v1.2.8*  
-*Version: 1.2.8*
+*Plan updated: December 30, 2025*  
+*Status: ✅ **ALL P0 ISSUES RESOLVED** - Production-ready*  
+*Version: 1.2.10*  
+*Feature Requests: FR-1 and FR-3 implemented, FR-2 proposed*

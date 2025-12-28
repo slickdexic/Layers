@@ -2,11 +2,14 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
+[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-7277%20passing-brightgreen)](tests/)
+[![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
 > **Version:** 1.2.9 (December 2025)  
-> **Status:** ✅ Production-ready with minor technical debt  
+> **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
@@ -196,7 +199,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`)
-- **Frontend:** HTML5 Canvas editor with 98 JS files (~49K lines), 86 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 99 JS files (~49,600 lines), 87 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -251,14 +254,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 97 | ✅ |
+| Total JS files | 99 | ✅ |
 | Total JS lines | ~49,600 | ✅ Well under 75K target |
 | ES6 classes | 87 | ✅ |
 | God classes (>1000 lines) | 8 | ⚠️ Mitigated by delegation |
 | Tests passing | 7,270 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.5% | ✅ Excellent |
-| Branch coverage | 82.9% | ✅ |
+| Statement coverage | 94.45% | ✅ Excellent |
+| Branch coverage | 82.88% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

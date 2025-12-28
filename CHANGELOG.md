@@ -2,20 +2,48 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.2.9] - 2025-12-28
+## [1.2.10] - 2025-12-28
+
+### Features
+- **Context-Aware Toolbar** — Toolbar now shows only relevant controls based on the active tool or selected layers. When using the pointer tool with nothing selected, only tool buttons are visible. Drawing tools reveal stroke/fill controls, text tools show font controls, etc. Smooth CSS transitions (0.2s) animate control visibility changes. Configurable via `$wgLayersContextAwareToolbar` (default: true, set to false for classic mode).
+
+### Bug Fixes
+- **Fixed MediaWiki 1.39-1.43 LTS compatibility** — Fixed TypeError in `onThumbnailBeforeProduceHTML` hook where `$linkAttribs` parameter could be `false` (boolean) instead of an array when images have no link. The hook now accepts both types for backward compatibility with LTS versions.
+
+### Configuration
+- Added `$wgLayersContextAwareToolbar` — Enable/disable context-aware toolbar (default: true)
 
 ### Testing
-- **7,270 tests passing** (+23 from v1.2.8)
-- **130 test suites** (up from 128)
+- **7,297 tests passing** (+20 new tests)
+- Added 20 new tests for context-aware toolbar functionality covering `updateContextVisibility`, `setContextAwareEnabled`, `isContextAwareEnabled`, `updateContextForSelectedLayers`, and `showAllControls`
+
+---
+
+## [1.2.9] - 2025-12-28
+
+### Features
+- **Auto-create layer set on editor link** — When a user clicks a `layerslink=editor` link to a non-existent layer set (e.g., `[[File:Example.jpg|layers=anatomy|layerslink=editor]]`), the set is automatically created if the user has `createlayers` permission. Shows a notification informing the user the set was created. This enables pre-planned article templates with layer set placeholders.
+
+### Testing
+- **7,277 tests passing** (+7 from previous)
+- **130 test suites**
 - **94.45% statement coverage**, 82.88% branch coverage, 91.98% function coverage, 94.73% line coverage
 - **PropertiesForm.js: Improved coverage (68% → 72% function coverage)** — 25 new tests for ColorPickerDialog integration, validation edge cases, blur fill panel refresh, opacity change handling
 - **ImageLoader.js: First dedicated test file** — 47 tests organized for background image loading, URL building, same-origin detection, SVG placeholders, abort/destroy cleanup
 - **LayerItemFactory.js: First dedicated test file** — 51 tests for layer item DOM creation, updates, icon delegation, keyboard navigation, ARIA accessibility
+- **LayersEditor.js: Auto-create tests** — 6 new tests for showAutoCreateNotification, autoCreateLayerSet, and finalizeInitialState
 
 ### Documentation
-- Updated all documentation with accurate metrics (7,270 tests, 94% coverage)
-- Updated improvement_plan.md with test coverage progress
+- Updated all documentation with accurate metrics (7,277 tests, 94% coverage)
+- Updated improvement_plan.md with test coverage progress and feature requests section
 - Updated codebase_review.md with current state
+- **ARCHITECTURE.md**: Updated to v1.2.9 with accurate file counts (99 JS files), god class count (8), and controller line counts
+- **KNOWN_ISSUES.md**: Fixed ESLint disable count (12), updated CanvasRenderer line count (1,242)
+- **FUTURE_IMPROVEMENTS.md**: Added section 8 for auto-create layer set feature
+- **New feature request**: Auto-create layer set on editor link ([FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md](docs/FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md))
+- **README.md**: Added coverage (94%), test count (7,277), and license badges
+- **CONTRIBUTING.md**: Updated god class table with accurate line counts, fixed broken documentation links
+- **SECURITY.md**: Enhanced with proper vulnerability reporting section and improved formatting
 
 ---
 

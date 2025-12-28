@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** December 27, 2025  
-**Version:** 1.2.8
+**Version:** 1.2.9
 
 This document lists known functionality issues and their current status.
 
@@ -79,11 +79,11 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 | Toolbar.js | 1,537 | ✅ 4 modules |
 | LayersEditor.js | 1,355 | ✅ 3 modules |
 | ToolManager.js | 1,261 | ✅ 2 handlers |
-| CanvasRenderer.js | 1,228 | ✅ SelectionRenderer (89% coverage) |
+| CanvasRenderer.js | 1,242 | ✅ SelectionRenderer |
 | SelectionManager.js | 1,194 | ✅ 3 modules |
 | APIManager.js | 1,182 | ✅ APIErrorHandler |
 
-**Total in god classes:** ~11,472 lines (23% of JS codebase)
+**Total in god classes:** ~11,486 lines (23% of JS codebase)
 
 All god classes now use delegation patterns and have acceptable test coverage.
 
@@ -103,11 +103,11 @@ This file was previously approaching the limit but PresetStyleManager was extrac
 ### P2.1 ESLint Disable Comments
 
 **Status:** Acceptable  
-**Count:** 13 eslint-disable comments
+**Count:** 12 eslint-disable comments
 
 | Rule | Count | Reason |
 |------|-------|--------|
-| no-alert | 9 | ✅ Intentional fallbacks when DialogManager unavailable |
+| no-alert | 8 | ✅ Intentional fallbacks when DialogManager unavailable |
 | no-unused-vars | 4 | ✅ API compatibility (parameters required by interface) |
 
 All eslint-disable comments have been reviewed and are acceptable.

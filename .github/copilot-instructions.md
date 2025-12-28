@@ -36,7 +36,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,877 lines - facade coordinating controllers), `ToolManager.js` (~1,261 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,228 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,194 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`
+  - Core editor modules: `CanvasManager.js` (~1,877 lines - facade coordinating controllers), `ToolManager.js` (~1,261 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,242 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,194 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
     - `TextToolHandler.js` (~207 lines) - inline text input UI for creating text layers
     - `PathToolHandler.js` (~229 lines) - freeform path drawing with click-to-add points
@@ -45,7 +45,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ToolStyles.js` (~508 lines) - style management for tools
   - Shared modules (`resources/ext.layers.shared/`): Used by both editor and viewer for consistent behavior:
     - `LayerDataNormalizer.js` (~229 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
-    - `LayerRenderer.js` (~821 lines), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~738 lines), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~903 lines), `EffectsRenderer.js` (~538 lines)
+    - `LayerRenderer.js` (~821 lines), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~738 lines), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines), `EffectsRenderer.js` (~538 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~370 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `SmartGuidesController.js` (~568 lines) - smart guides and snap alignment
