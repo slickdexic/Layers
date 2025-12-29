@@ -309,6 +309,7 @@
 				"ImportExportManager.js",
 				"ToolbarStyleControls.js",
 				"Toolbar.js",
+				"GroupManager.js",
 				"LayerSetManager.js",
 				"LayersEditor.js",
 				"editor/RevisionManager.js",

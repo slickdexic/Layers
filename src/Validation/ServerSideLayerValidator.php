@@ -24,7 +24,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	/** @var array Supported layer types */
 	private const SUPPORTED_LAYER_TYPES = [
 		'text', 'textbox', 'arrow', 'rectangle', 'circle', 'ellipse',
-		'polygon', 'star', 'line', 'path', 'blur', 'image'
+		'polygon', 'star', 'line', 'path', 'blur', 'image', 'group'
 	];
 
 	/** @var array Allowed properties and their types */
@@ -102,7 +102,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'padding' => 'numeric',
 		'lineHeight' => 'numeric',
 		// Blur fill state preservation
-		'_previousFill' => 'string'
+		'_previousFill' => 'string',
+		// Group layer properties
+		'children' => 'array',
+		'expanded' => 'boolean',
+		'parentGroup' => 'string'
 	];
 
 	/** @var array Value constraints for enum-like properties */
@@ -502,7 +506,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	}
 
 	/**
-	 * Validate array property (like points)
+	 * Validate array property (like points or children)
 	 *
 	 * @param string $property Property name
 	 * @param mixed $value Property value
@@ -533,6 +537,23 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			}
 
 			return [ 'valid' => true, 'value' => $validPoints ];
+		}
+
+		if ( $property === 'children' ) {
+			// Children array contains layer IDs (strings)
+			// Limit to prevent deeply nested structures
+			if ( count( $value ) > 100 ) {
+				return [ 'valid' => false, 'error' => 'Too many children in group' ];
+			}
+
+			$validChildren = [];
+			foreach ( $value as $childId ) {
+				if ( is_string( $childId ) && strlen( $childId ) <= 100 ) {
+					$validChildren[] = $childId;
+				}
+			}
+
+			return [ 'valid' => true, 'value' => $validChildren ];
 		}
 
 		return [ 'valid' => true, 'value' => $value ];
@@ -621,6 +642,16 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			case 'path':
 				if ( !$this->hasValidPointArray( $layer, 2 ) ) {
 					return [ 'valid' => false, 'error' => 'path layer must have points' ];
+				}
+				break;
+
+			case 'group':
+				// Group layers must have a children array (can be empty)
+				if ( !isset( $layer['children'] ) ) {
+					return [ 'valid' => false, 'error' => 'Group layer must have children array' ];
+				}
+				if ( !is_array( $layer['children'] ) ) {
+					return [ 'valid' => false, 'error' => 'Group children must be an array' ];
 				}
 				break;
 		}
