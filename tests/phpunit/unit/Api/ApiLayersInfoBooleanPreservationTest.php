@@ -17,7 +17,6 @@
 namespace MediaWiki\Extension\Layers\Tests\Api;
 
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 /**
  * @covers \MediaWiki\Extension\Layers\Api\ApiLayersInfo::preserveLayerBooleans

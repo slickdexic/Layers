@@ -444,5 +444,9 @@
 	"apihelp-layerssave-param-data": "JSON-encoded array of layer objects to persist.",
 	"apihelp-layerssave-param-setname": "Optional short label shown in the revision picker.",
 	"apihelp-layerssave-param-token": "CSRF token obtained via action=query&meta=tokens.",
-	"apihelp-layerssave-example-1": "Save layers for a file (CSRF token required): action=layerssave&filename=Example.jpg&data=[…]&token=…"
+	"apihelp-layerssave-example-1": "Save layers for a file (CSRF token required): action=layerssave&filename=Example.jpg&data=[…]&token=…",
+	"layers-link-editor-title": "Click to edit layers",
+	"layers-link-editor-newtab-title": "Click to edit layers in a new tab",
+	"layers-link-editor-modal-title": "Click to edit layers in a modal",
+	"layers-link-viewer-title": "Click to view image with layers"
 }

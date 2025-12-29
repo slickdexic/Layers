@@ -222,10 +222,10 @@ class ApiLayersInfo extends ApiBase {
 		if ( isset( $result['layerset']['data'] ) && is_array( $result['layerset']['data'] ) ) {
 			// Preserve top-level background settings
 			if ( array_key_exists( 'backgroundVisible', $result['layerset']['data'] ) ) {
-				$result['layerset']['data']['backgroundVisible'] = 
+				$result['layerset']['data']['backgroundVisible'] =
 					$result['layerset']['data']['backgroundVisible'] ? 1 : 0;
 			}
-			
+
 			// Preserve layer-level boolean properties
 			if ( isset( $result['layerset']['data']['layers'] ) && is_array( $result['layerset']['data']['layers'] ) ) {
 				foreach ( $result['layerset']['data']['layers'] as &$layer ) {

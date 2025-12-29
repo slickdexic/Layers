@@ -93,6 +93,7 @@ class ImageLinkProcessor {
 	 * @param string &$res The HTML result to modify
 	 * @param string|null $setNameFromQueue Optional set name from wikitext queue
 	 * @param string $context Hook context for logging
+	 * @param string|null $linkTypeFromQueue Optional link type from wikitext queue (editor, viewer, etc.)
 	 * @return bool True to continue hook processing
 	 */
 	public function processImageLink(
@@ -101,7 +102,8 @@ class ImageLinkProcessor {
 		array $frameParams,
 		string &$res,
 		?string $setNameFromQueue = null,
-		string $context = 'ImageLink'
+		string $context = 'ImageLink',
+		?string $linkTypeFromQueue = null
 	): bool {
 		try {
 			// Extract layers flag from all available sources
@@ -148,6 +150,16 @@ class ImageLinkProcessor {
 				// If no layers were found but intent was explicit, add intent marker
 				if ( strpos( $res, 'data-layer-data=' ) === false && $layersFlag !== null ) {
 					$res = $this->htmlInjector->injectIntentMarker( $res );
+				}
+
+				// Apply layerslink deep linking if specified
+				if ( $linkTypeFromQueue !== null ) {
+					$res = $this->applyLayersLinkToHtml(
+						$res,
+						$file,
+						$linkTypeFromQueue,
+						$setNameFromQueue ?? $this->paramExtractor->getSetName( $layersFlag )
+					);
 				}
 			}
 		} catch ( \Throwable $e ) {
@@ -449,5 +461,109 @@ class ImageLinkProcessor {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Apply layerslink deep linking by modifying the HTML anchor.
+	 *
+	 * @param string $html The HTML containing the image link
+	 * @param mixed $file The File object
+	 * @param string $linkType 'editor', 'editor-newtab', 'viewer', or 'lightbox'
+	 * @param string|null $setName Optional layer set name
+	 * @return string Modified HTML with updated link
+	 */
+	private function applyLayersLinkToHtml(
+		string $html,
+		$file,
+		string $linkType,
+		?string $setName
+	): string {
+		if ( !$file ) {
+			return $html;
+		}
+
+		$filename = $file->getName();
+		$title = $file->getTitle();
+
+		$this->log( sprintf( 'applyLayersLinkToHtml: file=%s, linkType=%s, setName=%s', $filename, $linkType, $setName ?? 'null' ) );
+
+		if ( $this->paramExtractor->isEditorLink( $linkType ) ) {
+			// Build editor URL
+			$urlParams = [
+				'action' => 'editlayers',
+				'setname' => $setName ?? ''
+			];
+
+			// Add autocreate flag for named sets
+			if ( $setName !== null && $setName !== '' && $setName !== 'default' ) {
+				$urlParams['autocreate'] = '1';
+			}
+
+			// Add returnto parameter
+			try {
+				$context = \RequestContext::getMain();
+				$currentTitle = $context->getTitle();
+				if ( $currentTitle && !$currentTitle->equals( $title ) ) {
+					$urlParams['returnto'] = $currentTitle->getPrefixedDBkey();
+				}
+			} catch ( \Throwable $e ) {
+				// Ignore
+			}
+
+			$editorUrl = $title->getLocalURL( $urlParams );
+
+			// Replace href in anchor tag
+			$html = preg_replace(
+				'/(<a[^>]*\s)href="[^"]*"/',
+				'$1href="' . htmlspecialchars( $editorUrl ) . '" data-layers-link="editor"',
+				$html,
+				1
+			);
+
+			// Add title attribute
+			$editorTitle = wfMessage( 'layers-link-editor-title' )->text();
+			$html = preg_replace(
+				'/(<a[^>]*)>/',
+				'$1 title="' . htmlspecialchars( $editorTitle ) . '">',
+				$html,
+				1
+			);
+
+			// Handle editor-newtab
+			if ( $this->paramExtractor->isEditorNewtab( $linkType ) ) {
+				$html = preg_replace(
+					'/(<a[^>]*)>/',
+					'$1 target="_blank" rel="noopener">',
+					$html,
+					1
+				);
+			}
+		} elseif ( $this->paramExtractor->isViewerLink( $linkType ) ) {
+			// Viewer/lightbox mode
+			$fullUrl = $file->getFullUrl();
+
+			// Build replacement string with data attributes
+			$replacement = '$1href="' . htmlspecialchars( $fullUrl ) . '"'
+				. ' data-layers-link="viewer"'
+				. ' data-layers-filename="' . htmlspecialchars( $filename ) . '"'
+				. ' data-layers-setname="' . htmlspecialchars( $setName ?? '' ) . '"';
+			$html = preg_replace(
+				'/(<a[^>]*\s)href="[^"]*"/',
+				$replacement,
+				$html,
+				1
+			);
+
+			// Add title and class
+			$viewerTitle = wfMessage( 'layers-link-viewer-title' )->text();
+			$html = preg_replace(
+				'/(<a[^>]*class=")([^"]*)"/',
+				'$1$2 layers-lightbox-trigger" title="' . htmlspecialchars( $viewerTitle ) . '"',
+				$html,
+				1
+			);
+		}
+
+		return $html;
 	}
 }

@@ -440,5 +440,9 @@
 	"apihelp-layerssave-param-data": "Parameter documentation string for the data payload parameter",
 	"apihelp-layerssave-param-setname": "Parameter documentation string for the optional setname parameter",
 	"apihelp-layerssave-param-token": "Parameter documentation string for the CSRF token parameter",
-	"apihelp-layerssave-example-1": "API help example for saving layers with action=layerssave; includes required filename, data JSON, and CSRF token"
+	"apihelp-layerssave-example-1": "API help example for saving layers with action=layerssave; includes required filename, data JSON, and CSRF token",
+	"layers-link-editor-title": "Title attribute for image links that open the layers editor",
+	"layers-link-editor-newtab-title": "Title attribute for image links that open the layers editor in a new tab",
+	"layers-link-editor-modal-title": "Title attribute for image links that open the layers editor in a modal dialog",
+	"layers-link-viewer-title": "Title attribute for image links that open the layers viewer/lightbox"
 }

@@ -72,7 +72,8 @@
 	}
 
 	// Export for Node.js/Jest testing
+	// eslint-disable-next-line no-undef
 	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = MathUtils;
+		module.exports = MathUtils; // eslint-disable-line no-undef
 	}
 }() );

@@ -4,8 +4,8 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\MediaWikiServices;
-use Title;
 use Psr\Log\LoggerInterface;
+use Title;
 
 /**
  * API module for deleting layer sets.

@@ -304,4 +304,93 @@ class LayersParamExtractor {
 
 		return null;
 	}
+
+	/**
+	 * Valid layerslink values for deep linking
+	 * 'editor' - Open the layers editor
+	 * 'editor-newtab' - Open editor in new tab
+	 * 'editor-return' - Open editor with return link
+	 * 'editor-modal' - Open editor in modal
+	 * 'viewer' or 'lightbox' - Open full-size viewer with layers overlay
+	 */
+	private const VALID_LINK_VALUES = [ 'editor', 'editor-newtab', 'editor-return', 'editor-modal', 'viewer', 'lightbox' ];
+
+	/**
+	 * Check if a link type indicates an editor link
+	 *
+	 * @param string $linkType The link type value
+	 * @return bool
+	 */
+	public function isEditorLink( string $linkType ): bool {
+		return strpos( $linkType, 'editor' ) === 0;
+	}
+
+	/**
+	 * Check if a link type indicates a viewer/lightbox link
+	 *
+	 * @param string $linkType The link type value
+	 * @return bool
+	 */
+	public function isViewerLink( string $linkType ): bool {
+		return in_array( $linkType, [ 'viewer', 'lightbox' ], true );
+	}
+
+	/**
+	 * Check if a link type indicates editor should open in new tab
+	 *
+	 * @param string $linkType The link type value
+	 * @return bool
+	 */
+	public function isEditorNewtab( string $linkType ): bool {
+		return $linkType === 'editor-newtab';
+	}
+
+	/**
+	 * Check if a link type indicates editor should open in modal
+	 *
+	 * @param string $linkType The link type value
+	 * @return bool
+	 */
+	public function isEditorModal( string $linkType ): bool {
+		return $linkType === 'editor-modal';
+	}
+
+	/**
+	 * Extract layerslink parameter from handler and frame params
+	 * Returns 'editor', 'viewer', 'lightbox', or null
+	 *
+	 * Checks multiple locations where MediaWiki might store the parameter:
+	 * - Direct handler/frame params (e.g., $handlerParams['layerslink'])
+	 * - Nested frame params (e.g., $frameParams['options']['layerslink'])
+	 * - Frame params caption/alt options
+	 *
+	 * @param array $handlerParams Handler parameters
+	 * @param array $frameParams Frame parameters
+	 * @return string|null The link type, or null if not found or invalid
+	 */
+	public function extractLayersLink( array $handlerParams, array $frameParams ): ?string {
+		$value = null;
+
+		// Check handler params first (direct)
+		if ( isset( $handlerParams['layerslink'] ) ) {
+			$value = strtolower( trim( (string)$handlerParams['layerslink'] ) );
+		}
+
+		// Check frame params (direct)
+		if ( $value === null && isset( $frameParams['layerslink'] ) ) {
+			$value = strtolower( trim( (string)$frameParams['layerslink'] ) );
+		}
+
+		// Check frame params options (nested)
+		if ( $value === null && isset( $frameParams['options']['layerslink'] ) ) {
+			$value = strtolower( trim( (string)$frameParams['options']['layerslink'] ) );
+		}
+
+		// Validate against allowed values
+		if ( $value !== null && in_array( $value, self::VALID_LINK_VALUES, true ) ) {
+			return $value;
+		}
+
+		return null;
+	}
 }
