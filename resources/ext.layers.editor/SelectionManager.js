@@ -140,11 +140,31 @@
 		 * @param {boolean} addToSelection Whether to add to existing selection
 		 */
 		selectLayer( layerId, addToSelection ) {
+			// Check if this is a group layer and get its children
+			const layer = this.getLayerById( layerId );
+			const isGroup = layer && layer.type === 'group';
+			let childIds = [];
+
+			if ( isGroup ) {
+				// Get all descendant layer IDs (recursive)
+				childIds = this._getGroupDescendantIds( layerId );
+			}
+
 			// Delegate to SelectionState module if available
 			if ( this._selectionState ) {
 				this._selectionState.selectLayer( layerId, addToSelection );
 				this.selectedLayerIds = this._selectionState.getSelectedIds();
 				this.lastSelectedId = this._selectionState.getLastSelectedId();
+
+				// If group, also select all children
+				if ( isGroup && childIds.length > 0 ) {
+					childIds.forEach( ( childId ) => {
+						if ( !this.isSelected( childId ) ) {
+							this._selectionState.selectLayer( childId, true );
+						}
+					} );
+					this.selectedLayerIds = this._selectionState.getSelectedIds();
+				}
 			} else {
 				// Fallback for tests
 				if ( !addToSelection ) {
@@ -157,16 +177,23 @@
 					return;
 				}
 				// Skip locked or invisible layers
-				const layer = this.getLayerById( layerId );
 				if ( layerId && layer && layer.locked !== true && layer.visible !== false &&
 					this.selectedLayerIds.indexOf( layerId ) === -1 ) {
 					this.selectedLayerIds.push( layerId );
 					this.lastSelectedId = layerId;
+
+					// If group, also select all children
+					if ( isGroup && childIds.length > 0 ) {
+						childIds.forEach( ( childId ) => {
+							if ( this.selectedLayerIds.indexOf( childId ) === -1 ) {
+								this.selectedLayerIds.push( childId );
+							}
+						} );
+					}
 				}
 			}
 
 			// Announce selection for screen readers
-			const layer = this.getLayerById( layerId );
 			if ( window.layersAnnouncer && layer ) {
 				const layerName = layer.name || this.getDefaultLayerName( layer );
 				window.layersAnnouncer.announceLayerSelection( layerName );
@@ -174,6 +201,40 @@
 
 			this.updateSelectionHandles();
 			this.notifySelectionChange();
+		}
+
+		/**
+		 * Get all descendant IDs of a group (recursive)
+		 *
+		 * @param {string} groupId Group layer ID
+		 * @return {Array<string>} Array of all descendant layer IDs
+		 */
+		_getGroupDescendantIds( groupId ) {
+			const ids = [];
+			const groupLayer = this.getLayerById( groupId );
+
+			if ( !groupLayer || groupLayer.type !== 'group' || !Array.isArray( groupLayer.children ) ) {
+				return ids;
+			}
+
+			// Use GroupManager if available
+			if ( this.canvasManager && this.canvasManager.editor && this.canvasManager.editor.groupManager ) {
+				return this.canvasManager.editor.groupManager.getGroupChildren( groupId, true );
+			}
+
+			// Fallback: manually traverse
+			const traverse = ( parentId ) => {
+				const parent = this.getLayerById( parentId );
+				if ( parent && parent.type === 'group' && Array.isArray( parent.children ) ) {
+					parent.children.forEach( ( childId ) => {
+						ids.push( childId );
+						traverse( childId ); // Recurse for nested groups
+					} );
+				}
+			};
+
+			traverse( groupId );
+			return ids;
 		}
 
 		/**
@@ -204,8 +265,17 @@
 		 * @param {string} layerId Layer ID to deselect
 		 */
 		deselectLayer( layerId ) {
+			// Check if this is a group and get children to deselect too
+			const layer = this.getLayerById( layerId );
+			const isGroup = layer && layer.type === 'group';
+			const childIds = isGroup ? this._getGroupDescendantIds( layerId ) : [];
+
 			if ( this._selectionState ) {
 				this._selectionState.deselectLayer( layerId );
+				// Also deselect all children of the group
+				childIds.forEach( ( childId ) => {
+					this._selectionState.deselectLayer( childId );
+				} );
 				this.selectedLayerIds = this._selectionState.getSelectedIds();
 				this.lastSelectedId = this._selectionState.getLastSelectedId();
 			} else {
@@ -218,6 +288,13 @@
 							: null;
 					}
 				}
+				// Also deselect all children of the group
+				childIds.forEach( ( childId ) => {
+					const childIndex = this.selectedLayerIds.indexOf( childId );
+					if ( childIndex !== -1 ) {
+						this.selectedLayerIds.splice( childIndex, 1 );
+					}
+				} );
 			}
 			this.updateSelectionHandles();
 			this.notifySelectionChange();
@@ -511,12 +588,23 @@
 			let maxY = -Infinity;
 
 			selectedLayers.forEach( ( layer ) => {
-				const bounds = this.getLayerBoundsCompat( layer );
-				if ( bounds ) {
-					minX = Math.min( minX, bounds.x );
-					minY = Math.min( minY, bounds.y );
-					maxX = Math.max( maxX, bounds.x + bounds.width );
-					maxY = Math.max( maxY, bounds.y + bounds.height );
+				// For groups, get bounds of all children
+				if ( layer.type === 'group' ) {
+					const groupBounds = this._getGroupBounds( layer );
+					if ( groupBounds ) {
+						minX = Math.min( minX, groupBounds.x );
+						minY = Math.min( minY, groupBounds.y );
+						maxX = Math.max( maxX, groupBounds.x + groupBounds.width );
+						maxY = Math.max( maxY, groupBounds.y + groupBounds.height );
+					}
+				} else {
+					const bounds = this.getLayerBoundsCompat( layer );
+					if ( bounds ) {
+						minX = Math.min( minX, bounds.x );
+						minY = Math.min( minY, bounds.y );
+						maxX = Math.max( maxX, bounds.x + bounds.width );
+						maxY = Math.max( maxY, bounds.y + bounds.height );
+					}
 				}
 			} );
 
@@ -530,6 +618,83 @@
 				width: maxX - minX,
 				height: maxY - minY
 			};
+		}
+
+		/**
+		 * Get combined bounds of a group layer (includes all children)
+		 *
+		 * @param {Object} groupLayer Group layer object
+		 * @return {Object|null} Bounds object or null
+		 */
+		_getGroupBounds( groupLayer ) {
+			if ( !groupLayer || groupLayer.type !== 'group' ) {
+				return null;
+			}
+
+			// Use GroupManager if available
+			if ( this.canvasManager && this.canvasManager.editor && this.canvasManager.editor.groupManager ) {
+				return this.canvasManager.editor.groupManager.getGroupBounds( groupLayer.id );
+			}
+
+			// Fallback: calculate manually
+			const childIds = this._getGroupDescendantIds( groupLayer.id );
+			if ( childIds.length === 0 ) {
+				return null;
+			}
+
+			let minX = Infinity;
+			let minY = Infinity;
+			let maxX = -Infinity;
+			let maxY = -Infinity;
+
+			childIds.forEach( ( childId ) => {
+				const child = this.getLayerById( childId );
+				if ( child && child.type !== 'group' ) {
+					const bounds = this.getLayerBoundsCompat( child );
+					if ( bounds ) {
+						minX = Math.min( minX, bounds.x );
+						minY = Math.min( minY, bounds.y );
+						maxX = Math.max( maxX, bounds.x + bounds.width );
+						maxY = Math.max( maxY, bounds.y + bounds.height );
+					}
+				}
+			} );
+
+			if ( minX === Infinity ) {
+				return null;
+			}
+
+			return {
+				x: minX,
+				y: minY,
+				width: maxX - minX,
+				height: maxY - minY
+			};
+		}
+
+		/**
+		 * Check if a layer is a descendant of any selected group
+		 *
+		 * @param {string} layerId Layer ID to check
+		 * @return {boolean} True if layer is a child of a selected group
+		 */
+		isChildOfSelectedGroup( layerId ) {
+			const layer = this.getLayerById( layerId );
+			if ( !layer || !layer.parentGroup ) {
+				return false;
+			}
+
+			// Check if parent group (or any ancestor) is selected
+			let currentParentId = layer.parentGroup;
+			while ( currentParentId ) {
+				if ( this.isSelected( currentParentId ) ) {
+					return true;
+				}
+				const parentLayer = this.getLayerById( currentParentId );
+				currentParentId = parentLayer ? parentLayer.parentGroup : null;
+			}
+
+			return false;
 		}
 
 		/**

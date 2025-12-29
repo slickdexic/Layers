@@ -1288,4 +1288,439 @@ describe('SelectionManager', () => {
             expect(mockUpdateForSelection).toHaveBeenCalled();
         });
     });
+
+    describe('group layer selection', () => {
+        let groupLayers;
+
+        beforeEach(() => {
+            // Create a set of layers with group structure
+            groupLayers = [
+                {
+                    id: 'group1',
+                    type: 'group',
+                    name: 'My Group',
+                    children: ['child1', 'child2'],
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'child1',
+                    type: 'rectangle',
+                    x: 10,
+                    y: 20,
+                    width: 50,
+                    height: 30,
+                    parentGroup: 'group1',
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'child2',
+                    type: 'circle',
+                    x: 100,
+                    y: 50,
+                    radius: 25,
+                    parentGroup: 'group1',
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'standalone',
+                    type: 'rectangle',
+                    x: 200,
+                    y: 200,
+                    width: 40,
+                    height: 40,
+                    visible: true,
+                    locked: false
+                }
+            ];
+
+            mockCanvasManager.layers = groupLayers;
+            selectionManager = new SelectionManager(mockCanvasManager);
+        });
+
+        test('should select group and all children when selecting a group layer', () => {
+            selectionManager.selectLayer('group1', false);
+
+            expect(selectionManager.selectedLayerIds).toContain('group1');
+            expect(selectionManager.selectedLayerIds).toContain('child1');
+            expect(selectionManager.selectedLayerIds).toContain('child2');
+            expect(selectionManager.selectedLayerIds.length).toBe(3);
+        });
+
+        test('should deselect group and all children when deselecting a group layer', () => {
+            selectionManager.selectLayer('group1', false);
+            expect(selectionManager.selectedLayerIds.length).toBe(3);
+
+            selectionManager.deselectLayer('group1');
+
+            expect(selectionManager.selectedLayerIds).not.toContain('group1');
+            expect(selectionManager.selectedLayerIds).not.toContain('child1');
+            expect(selectionManager.selectedLayerIds).not.toContain('child2');
+            expect(selectionManager.selectedLayerIds.length).toBe(0);
+        });
+
+        test('should toggle deselect group and children with addToSelection', () => {
+            selectionManager.selectLayer('group1', false);
+            expect(selectionManager.selectedLayerIds.length).toBe(3);
+
+            // Toggle deselect with addToSelection=true
+            selectionManager.selectLayer('group1', true);
+
+            expect(selectionManager.selectedLayerIds.length).toBe(0);
+        });
+
+        test('should only select individual layer when not a group', () => {
+            selectionManager.selectLayer('child1', false);
+
+            expect(selectionManager.selectedLayerIds).toEqual(['child1']);
+        });
+
+        test('should handle nested groups correctly', () => {
+            // Create a nested group structure
+            const nestedGroupLayers = [
+                {
+                    id: 'outerGroup',
+                    type: 'group',
+                    children: ['innerGroup', 'outerChild'],
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'innerGroup',
+                    type: 'group',
+                    children: ['innerChild1', 'innerChild2'],
+                    parentGroup: 'outerGroup',
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'outerChild',
+                    type: 'rectangle',
+                    x: 10,
+                    y: 10,
+                    width: 50,
+                    height: 50,
+                    parentGroup: 'outerGroup',
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'innerChild1',
+                    type: 'circle',
+                    x: 100,
+                    y: 100,
+                    radius: 20,
+                    parentGroup: 'innerGroup',
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'innerChild2',
+                    type: 'rectangle',
+                    x: 150,
+                    y: 150,
+                    width: 30,
+                    height: 30,
+                    parentGroup: 'innerGroup',
+                    visible: true,
+                    locked: false
+                }
+            ];
+
+            mockCanvasManager.layers = nestedGroupLayers;
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            selectionManager.selectLayer('outerGroup', false);
+
+            // Should select outer group, inner group, and all children
+            expect(selectionManager.selectedLayerIds).toContain('outerGroup');
+            expect(selectionManager.selectedLayerIds).toContain('innerGroup');
+            expect(selectionManager.selectedLayerIds).toContain('outerChild');
+            expect(selectionManager.selectedLayerIds).toContain('innerChild1');
+            expect(selectionManager.selectedLayerIds).toContain('innerChild2');
+            expect(selectionManager.selectedLayerIds.length).toBe(5);
+        });
+
+        test('should use GroupManager when available', () => {
+            const mockGroupManager = {
+                getGroupChildren: jest.fn().mockReturnValue(['child1', 'child2']),
+                getGroupBounds: jest.fn().mockReturnValue({ x: 10, y: 20, width: 130, height: 100 })
+            };
+            mockCanvasManager.editor = {
+                groupManager: mockGroupManager
+            };
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            selectionManager.selectLayer('group1', false);
+
+            expect(mockGroupManager.getGroupChildren).toHaveBeenCalledWith('group1', true);
+            expect(selectionManager.selectedLayerIds).toContain('group1');
+            expect(selectionManager.selectedLayerIds).toContain('child1');
+            expect(selectionManager.selectedLayerIds).toContain('child2');
+        });
+    });
+
+    describe('group bounds calculation', () => {
+        let groupLayers;
+
+        beforeEach(() => {
+            groupLayers = [
+                {
+                    id: 'group1',
+                    type: 'group',
+                    children: ['child1', 'child2'],
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'child1',
+                    type: 'rectangle',
+                    x: 10,
+                    y: 20,
+                    width: 50,
+                    height: 30,
+                    parentGroup: 'group1',
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'child2',
+                    type: 'rectangle',
+                    x: 100,
+                    y: 80,
+                    width: 40,
+                    height: 40,
+                    parentGroup: 'group1',
+                    visible: true,
+                    locked: false
+                }
+            ];
+
+            mockCanvasManager.layers = groupLayers;
+            selectionManager = new SelectionManager(mockCanvasManager);
+        });
+
+        test('should calculate bounds for group based on children', () => {
+            const bounds = selectionManager._getGroupBounds(groupLayers[0]);
+
+            // child1: x:10, y:20, w:50, h:30 -> max x:60, y:50
+            // child2: x:100, y:80, w:40, h:40 -> max x:140, y:120
+            expect(bounds.x).toBe(10);
+            expect(bounds.y).toBe(20);
+            expect(bounds.width).toBe(130); // 140 - 10
+            expect(bounds.height).toBe(100); // 120 - 20
+        });
+
+        test('should return null for non-group layer', () => {
+            const bounds = selectionManager._getGroupBounds(groupLayers[1]);
+            expect(bounds).toBeNull();
+        });
+
+        test('should return null for group with no children', () => {
+            const emptyGroup = {
+                id: 'emptyGroup',
+                type: 'group',
+                children: []
+            };
+            mockCanvasManager.layers.push(emptyGroup);
+
+            const bounds = selectionManager._getGroupBounds(emptyGroup);
+            expect(bounds).toBeNull();
+        });
+
+        test('should use GroupManager.getGroupBounds when available', () => {
+            const mockGroupManager = {
+                getGroupBounds: jest.fn().mockReturnValue({ x: 5, y: 10, width: 150, height: 120 }),
+                getGroupChildren: jest.fn().mockReturnValue(['child1', 'child2'])
+            };
+            mockCanvasManager.editor = {
+                groupManager: mockGroupManager
+            };
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const bounds = selectionManager._getGroupBounds(groupLayers[0]);
+
+            expect(mockGroupManager.getGroupBounds).toHaveBeenCalledWith('group1');
+            expect(bounds).toEqual({ x: 5, y: 10, width: 150, height: 120 });
+        });
+
+        test('should include group bounds in getMultiSelectionBounds', () => {
+            selectionManager.selectLayer('group1', false);
+
+            const bounds = selectionManager.getMultiSelectionBounds();
+
+            // Group bounds should be calculated from children
+            expect(bounds.x).toBe(10);
+            expect(bounds.y).toBe(20);
+            expect(bounds.width).toBe(130);
+            expect(bounds.height).toBe(100);
+        });
+    });
+
+    describe('isChildOfSelectedGroup', () => {
+        let groupLayers;
+
+        beforeEach(() => {
+            groupLayers = [
+                {
+                    id: 'group1',
+                    type: 'group',
+                    children: ['child1'],
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'child1',
+                    type: 'rectangle',
+                    x: 10,
+                    y: 20,
+                    width: 50,
+                    height: 30,
+                    parentGroup: 'group1',
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'standalone',
+                    type: 'rectangle',
+                    x: 200,
+                    y: 200,
+                    width: 40,
+                    height: 40,
+                    visible: true,
+                    locked: false
+                }
+            ];
+
+            mockCanvasManager.layers = groupLayers;
+            selectionManager = new SelectionManager(mockCanvasManager);
+        });
+
+        test('should return true when parent group is selected', () => {
+            selectionManager.selectLayer('group1', false);
+
+            expect(selectionManager.isChildOfSelectedGroup('child1')).toBe(true);
+        });
+
+        test('should return false when layer has no parent', () => {
+            selectionManager.selectLayer('standalone', false);
+
+            expect(selectionManager.isChildOfSelectedGroup('standalone')).toBe(false);
+        });
+
+        test('should return false when parent group is not selected', () => {
+            selectionManager.selectLayer('standalone', false);
+
+            expect(selectionManager.isChildOfSelectedGroup('child1')).toBe(false);
+        });
+
+        test('should handle nested groups - detect ancestor selection', () => {
+            const nestedLayers = [
+                {
+                    id: 'outerGroup',
+                    type: 'group',
+                    children: ['innerGroup'],
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'innerGroup',
+                    type: 'group',
+                    children: ['deepChild'],
+                    parentGroup: 'outerGroup',
+                    visible: true,
+                    locked: false
+                },
+                {
+                    id: 'deepChild',
+                    type: 'rectangle',
+                    x: 10,
+                    y: 10,
+                    width: 50,
+                    height: 50,
+                    parentGroup: 'innerGroup',
+                    visible: true,
+                    locked: false
+                }
+            ];
+
+            mockCanvasManager.layers = nestedLayers;
+            selectionManager = new SelectionManager(mockCanvasManager);
+            selectionManager.selectLayer('outerGroup', false);
+
+            expect(selectionManager.isChildOfSelectedGroup('deepChild')).toBe(true);
+        });
+    });
+
+    describe('_getGroupDescendantIds', () => {
+        test('should return empty array for non-group layer', () => {
+            mockCanvasManager.layers = [
+                { id: 'rect1', type: 'rectangle', x: 0, y: 0, width: 50, height: 50 }
+            ];
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const ids = selectionManager._getGroupDescendantIds('rect1');
+            expect(ids).toEqual([]);
+        });
+
+        test('should return empty array when group has no children', () => {
+            mockCanvasManager.layers = [
+                { id: 'group1', type: 'group', children: [] }
+            ];
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const ids = selectionManager._getGroupDescendantIds('group1');
+            expect(ids).toEqual([]);
+        });
+
+        test('should return children for simple group', () => {
+            mockCanvasManager.layers = [
+                { id: 'group1', type: 'group', children: ['child1', 'child2'] },
+                { id: 'child1', type: 'rectangle' },
+                { id: 'child2', type: 'circle' }
+            ];
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const ids = selectionManager._getGroupDescendantIds('group1');
+            expect(ids).toContain('child1');
+            expect(ids).toContain('child2');
+            expect(ids.length).toBe(2);
+        });
+
+        test('should recursively get nested group children', () => {
+            mockCanvasManager.layers = [
+                { id: 'group1', type: 'group', children: ['nested', 'child1'] },
+                { id: 'nested', type: 'group', children: ['nestedChild'] },
+                { id: 'child1', type: 'rectangle' },
+                { id: 'nestedChild', type: 'circle' }
+            ];
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const ids = selectionManager._getGroupDescendantIds('group1');
+            expect(ids).toContain('nested');
+            expect(ids).toContain('child1');
+            expect(ids).toContain('nestedChild');
+            expect(ids.length).toBe(3);
+        });
+
+        test('should use GroupManager when available', () => {
+            const mockGroupManager = {
+                getGroupChildren: jest.fn().mockReturnValue(['child1', 'child2'])
+            };
+            mockCanvasManager.layers = [
+                { id: 'group1', type: 'group', children: ['child1', 'child2'] }
+            ];
+            mockCanvasManager.editor = {
+                groupManager: mockGroupManager
+            };
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const ids = selectionManager._getGroupDescendantIds('group1');
+
+            expect(mockGroupManager.getGroupChildren).toHaveBeenCalledWith('group1', true);
+            expect(ids).toEqual(['child1', 'child2']);
+        });
+    });
 });
