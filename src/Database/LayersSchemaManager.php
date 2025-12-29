@@ -2,7 +2,6 @@
 
 namespace MediaWiki\Extension\Layers\Database;
 
-use MediaWiki\Installer\DatabaseUpdater;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -18,9 +17,13 @@ class LayersSchemaManager {
 	/**
 	 * Implements the LoadExtensionSchemaUpdates hook.
 	 *
-	 * @param DatabaseUpdater $updater
+	 * Note: In MediaWiki 1.39-1.43 LTS, the $updater parameter is MysqlUpdater
+	 * (or similar DB-specific updater class), not MediaWiki\Installer\DatabaseUpdater.
+	 * We remove the type hint for backward compatibility.
+	 *
+	 * @param \DatabaseUpdater $updater The database updater object
 	 */
-	public static function onLoadExtensionSchemaUpdates( DatabaseUpdater $updater ) {
+	public static function onLoadExtensionSchemaUpdates( $updater ) {
 		$dbType = $updater->getDB()->getType();
 		$base = __DIR__ . '/../../sql';
 
@@ -83,10 +86,10 @@ class LayersSchemaManager {
 	/**
 	 * Apply the patch-add-check-constraints.sql patch idempotently.
 	 *
-	 * @param DatabaseUpdater $updater
+	 * @param \DatabaseUpdater $updater The database updater object
 	 * @return bool
 	 */
-	public static function runCheckConstraintsPatch( DatabaseUpdater $updater ): bool {
+	public static function runCheckConstraintsPatch( $updater ): bool {
 		$dbw = $updater->getDB();
 
 		$constraints = [
@@ -139,10 +142,10 @@ class LayersSchemaManager {
 	 * Old key: ls_img_name_revision (ls_img_name, ls_img_sha1, ls_revision)
 	 * New key: ls_img_name_set_revision (ls_img_name, ls_img_sha1, ls_name, ls_revision)
 	 *
-	 * @param DatabaseUpdater $updater
+	 * @param \DatabaseUpdater $updater The database updater object
 	 * @return bool
 	 */
-	public static function updateUniqueKeyForNamedSets( DatabaseUpdater $updater ): bool {
+	public static function updateUniqueKeyForNamedSets( $updater ): bool {
 		$dbw = $updater->getDB();
 		$tableName = $dbw->tableName( 'layer_sets' );
 

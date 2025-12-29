@@ -2,6 +2,17 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.16] - 2025-12-29
+
+### Bug Fixes
+- **Fixed TypeError in LayersSchemaManager hook** — The `onLoadExtensionSchemaUpdates` method now properly handles MediaWiki 1.39-1.43 LTS where the updater parameter is `MysqlUpdater` (or similar DB-specific class) instead of `MediaWiki\Installer\DatabaseUpdater`. This was causing the database update to hang/fail with a TypeError during `maintenance/update.php` or web-based upgrades.
+
+### Technical
+- **Modified files**:
+  - `src/Database/LayersSchemaManager.php` — Removed `DatabaseUpdater` type hints from `onLoadExtensionSchemaUpdates`, `runCheckConstraintsPatch`, and `updateUniqueKeyForNamedSets` methods for MW 1.39-1.43 LTS compatibility
+
+---
+
 ## [1.1.15] - 2025-12-23
 
 ### Bug Fixes
