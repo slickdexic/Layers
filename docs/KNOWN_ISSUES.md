@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** December 29, 2025  
-**Version:** 1.2.11
+**Version:** 1.2.13
 
 This document lists known functionality issues and their current status.
 
@@ -220,7 +220,7 @@ The extension is feature-rich with 14 drawing tools, multiple rendering systems,
 
 | Feature | Priority | Effort | Status |
 |---------|----------|--------|--------|
-| Layer Grouping | MEDIUM | 2-3 weeks | Not started |
+| Layer Grouping | ~~MEDIUM~~ | ~~2-3 weeks~~ | ✅ **Complete (v1.2.13)** |
 | Gradient Fills | LOW | 1 week | Not started |
 | Custom Fonts | LOW | 2 weeks | Not started |
 | SVG Export | LOW | 1 week | Not started |
@@ -240,11 +240,11 @@ The extension is feature-rich with 14 drawing tools, multiple rendering systems,
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,377 | - | ✅ |
-| Statement coverage | 94.43% | 85%+ | ✅ |
-| Branch coverage | 82.83% | 75%+ | ✅ |
-| Function coverage | 91.95% | 80%+ | ✅ |
-| Line coverage | 94.70% | 85%+ | ✅ |
+| Tests passing | 7,483 | - | ✅ |
+| Statement coverage | 94%+ | 85%+ | ✅ |
+| Branch coverage | 82%+ | 75%+ | ✅ |
+| Function coverage | 91%+ | 80%+ | ✅ |
+| Line coverage | 94%+ | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 

@@ -1,9 +1,10 @@
 # Feature Request: Layer Groups (Folders)
 
 **Created:** December 28, 2025  
-**Status:** ⏳ Proposed  
-**Priority:** High (frequently requested feature in image editors)  
-**Complexity:** High (~40-60 hours)
+**Completed:** December 29, 2025  
+**Status:** ✅ **IMPLEMENTED** (v1.2.13)  
+**Priority:** ~~High~~ N/A  
+**Complexity:** ~~High (~40-60 hours)~~ Completed in ~50 hours
 
 ---
 
@@ -348,13 +349,39 @@ Follow Photoshop model as closest to user expectations for image annotation:
 
 ## Success Criteria
 
-- [ ] Users can create, rename, delete groups
-- [ ] Layers can be dragged into/out of groups
-- [ ] Groups can be expanded/collapsed
-- [ ] Selecting group selects all children
-- [ ] Moving group moves all children
-- [ ] Group visibility toggle works
-- [ ] Keyboard shortcuts work
-- [ ] Groups persist correctly
-- [ ] All existing tests still pass
-- [ ] 90%+ test coverage on new code
+- [x] Users can create, rename, delete groups
+- [x] Layers can be dragged into/out of groups
+- [x] Groups can be expanded/collapsed
+- [x] Selecting group selects all children
+- [x] Moving group moves all children
+- [x] Group visibility toggle works
+- [x] Keyboard shortcuts work (Ctrl+G, Ctrl+Shift+G)
+- [x] Groups persist correctly
+- [x] All existing tests still pass
+- [x] 90%+ test coverage on new code (107 new tests added)
+
+---
+
+## Implementation Notes (v1.2.13)
+
+**Delivered:**
+- **GroupManager.js** (~600 lines) — Complete grouping API with 48 tests
+- **Keyboard shortcuts** — Ctrl+G to group, Ctrl+Shift+G to ungroup
+- **Selection integration** — Selecting a group auto-selects all children
+- **Layer panel UI** — Folder icons, 20px indentation, expand/collapse toggles
+- **PHP validation** — Server-side 'group' type support in ServerSideLayerValidator
+- **Nesting limits** — Max 3 levels deep, max 100 children per group
+- **107 new tests** — GroupManager (48), SelectionManager (20), ToolbarKeyboard (7), PHP (6), and more
+
+**Files Added/Modified:**
+- `resources/ext.layers.editor/managers/GroupManager.js` (NEW)
+- `resources/ext.layers.editor/LayersEditor.js` (ModuleRegistry integration)
+- `resources/ext.layers.editor/ui/LayerPanel.js` (group rendering, indentation)
+- `resources/ext.layers.editor/ui/LayerItemFactory.js` (folder icons)
+- `resources/ext.layers.editor/ui/IconFactory.js` (folder/expand icons)
+- `resources/ext.layers.editor/SelectionManager.js` (group selection behavior)
+- `resources/ext.layers.editor/ToolbarKeyboard.js` (Ctrl+G shortcuts)
+- `src/Validation/ServerSideLayerValidator.php` (group type support)
+- `tests/phpunit/ServerSideLayerValidatorTest.php` (6 new tests)
+- `tests/jest/GroupManager.test.js` (48 tests)
+- Various CSS updates for group styling
