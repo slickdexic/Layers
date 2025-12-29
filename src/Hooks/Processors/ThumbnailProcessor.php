@@ -111,7 +111,13 @@ class ThumbnailProcessor {
 		if ( $linkTypeFromQueue !== null && method_exists( $thumbnail, 'getFile' ) ) {
 			$file = $thumbnail->getFile();
 			if ( $file ) {
-				$this->applyLayersLink( $linkAttribs, $attribs, $file, $linkTypeFromQueue, $layersFlag );
+				// Use setNameFromQueue for deep linking, not $layersFlag which gets normalized to 'on'
+				// Boolean values like 'on', 'off', 'all' should not be passed as set names
+				$setNameForLink = $setNameFromQueue;
+				if ( in_array( $setNameForLink, [ 'on', 'off', 'none', 'all', 'true', 'false' ], true ) ) {
+					$setNameForLink = null; // Use default set
+				}
+				$this->applyLayersLink( $linkAttribs, $attribs, $file, $linkTypeFromQueue, $setNameForLink );
 			}
 		}
 

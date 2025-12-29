@@ -448,5 +448,8 @@
 	"layers-link-editor-title": "Click to edit layers",
 	"layers-link-editor-newtab-title": "Click to edit layers in a new tab",
 	"layers-link-editor-modal-title": "Click to edit layers in a modal",
-	"layers-link-viewer-title": "Click to view image with layers"
+	"layers-link-viewer-title": "Click to view image with layers",
+	"layers-editor-modal-title": "Edit Layers",
+	"layers-editor-modal-close": "Close editor",
+	"layers-editor-modal-saved": "Layers saved"
 }

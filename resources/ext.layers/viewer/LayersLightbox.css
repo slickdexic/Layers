@@ -1,0 +1,157 @@
+/**
+ * Layers Lightbox Styles
+ *
+ * Styles for the fullscreen lightbox viewer that shows
+ * images with layer overlays.
+ */
+
+/* Overlay background */
+.layers-lightbox-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba( 0, 0, 0, 0.9 );
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+.layers-lightbox-overlay.layers-lightbox-visible {
+	opacity: 1;
+}
+
+/* Content container */
+.layers-lightbox-container {
+	position: relative;
+	max-width: 95vw;
+	max-height: 95vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Close button */
+.layers-lightbox-close {
+	position: absolute;
+	top: -40px;
+	right: -10px;
+	width: 36px;
+	height: 36px;
+	background: rgba( 255, 255, 255, 0.1 );
+	border: 2px solid rgba( 255, 255, 255, 0.5 );
+	border-radius: 50%;
+	color: #fff;
+	font-size: 1.5em;
+	line-height: 1;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+
+.layers-lightbox-close:hover {
+	background: rgba( 255, 255, 255, 0.2 );
+	border-color: #fff;
+	transform: scale( 1.1 );
+}
+
+.layers-lightbox-close:focus {
+	outline: 2px solid #36c;
+	outline-offset: 2px;
+}
+
+/* Image wrapper - contains both img and canvas overlay */
+.layers-lightbox-image-wrapper {
+	position: relative;
+	display: inline-block;
+	max-width: 95vw;
+	max-height: 90vh;
+}
+
+/* Main image */
+.layers-lightbox-image {
+	max-width: 95vw;
+	max-height: 90vh;
+	object-fit: contain;
+	display: block;
+}
+
+/* Canvas overlay for layers */
+.layers-lightbox-image-wrapper .layers-viewer-canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+	pointer-events: none;
+}
+
+/* Loading indicator */
+.layers-lightbox-loading {
+	color: #fff;
+	font-size: 1em;
+	padding: 40px;
+	text-align: center;
+}
+
+.layers-lightbox-loading::before {
+	content: '';
+	display: block;
+	width: 40px;
+	height: 40px;
+	margin: 0 auto 16px;
+	border: 3px solid rgba( 255, 255, 255, 0.3 );
+	border-top-color: #fff;
+	border-radius: 50%;
+	animation: layers-lightbox-spin 1s linear infinite;
+}
+
+@keyframes layers-lightbox-spin {
+	to {
+		transform: rotate( 360deg );
+	}
+}
+
+/* Error message */
+.layers-lightbox-error {
+	color: #ff6b6b;
+	font-size: 1em;
+	padding: 40px;
+	text-align: center;
+	background: rgba( 255, 107, 107, 0.1 );
+	border-radius: 8px;
+	min-width: 200px;
+}
+
+/* Trigger link styling (optional - can be customized) */
+.layers-lightbox-trigger {
+	cursor: pointer;
+}
+
+.layers-lightbox-trigger:focus {
+	outline: 2px solid #36c;
+	outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media ( max-width: 768px ) {
+	.layers-lightbox-close {
+		top: 10px;
+		right: 10px;
+	}
+
+	.layers-lightbox-image-wrapper {
+		max-width: 100vw;
+		max-height: 85vh;
+	}
+
+	.layers-lightbox-image {
+		max-width: 100vw;
+		max-height: 85vh;
+	}
+}

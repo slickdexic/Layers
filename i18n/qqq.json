@@ -444,5 +444,8 @@
 	"layers-link-editor-title": "Title attribute for image links that open the layers editor",
 	"layers-link-editor-newtab-title": "Title attribute for image links that open the layers editor in a new tab",
 	"layers-link-editor-modal-title": "Title attribute for image links that open the layers editor in a modal dialog",
-	"layers-link-viewer-title": "Title attribute for image links that open the layers viewer/lightbox"
+	"layers-link-viewer-title": "Title attribute for image links that open the layers viewer/lightbox",
+	"layers-editor-modal-title": "Title shown in the modal editor header bar",
+	"layers-editor-modal-close": "Close button label for the modal editor",
+	"layers-editor-modal-saved": "Notification shown when layers are saved in modal editor"
 }

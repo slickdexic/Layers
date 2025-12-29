@@ -948,12 +948,24 @@ class LayersEditor {
 	}
 
 	/**
-	 * Navigate back to file page with specific filename
-	 * @param {string} filename The filename to navigate to
+	 * Navigate back to the originating page or file page
+	 * @param {string} filename The filename to navigate to (fallback)
 	 * @private
 	 */
 	navigateBackToFileWithName ( filename ) {
 		try {
+			// Check for returnto parameter in URL (set by layerslink deep linking)
+			const returnTo = mw && mw.util && typeof mw.util.getParamValue === 'function' ?
+				mw.util.getParamValue( 'returnto' ) : null;
+
+			if ( returnTo && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
+				// Navigate back to the originating article page
+				const url = mw.util.getUrl( returnTo );
+				window.location.href = url;
+				return;
+			}
+
+			// Fallback: navigate to File: page
 			if ( filename && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
 				const url = mw.util.getUrl( 'File:' + filename );
 				window.location.href = url;
