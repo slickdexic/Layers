@@ -279,10 +279,24 @@
 
 				// Check for unsaved changes before switching
 				if ( this.editor.hasUnsavedChanges() ) {
-					const confirmSwitch = confirm(
-						this.getMessage( 'layers-unsaved-changes-warning',
-							'You have unsaved changes. Switch sets without saving?' )
-					);
+					let confirmSwitch = false;
+					if ( this.editor.dialogManager && typeof this.editor.dialogManager.showConfirmDialog === 'function' ) {
+						confirmSwitch = await this.editor.dialogManager.showConfirmDialog( {
+							title: this.getMessage( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
+							message: this.getMessage( 'layers-unsaved-changes-warning',
+								'You have unsaved changes. Switch sets without saving?' ),
+							isDanger: true,
+							confirmText: this.getMessage( 'layers-discard', 'Discard' ),
+							cancelText: this.getMessage( 'layers-cancel', 'Cancel' )
+						} );
+					} else {
+						// Fallback to native confirm only if DialogManager unavailable
+						// eslint-disable-next-line no-alert
+						confirmSwitch = window.confirm(
+							this.getMessage( 'layers-unsaved-changes-warning',
+								'You have unsaved changes. Switch sets without saving?' )
+						);
+					}
 					if ( !confirmSwitch ) {
 						// Revert selector to current set
 						this.buildSetSelector();

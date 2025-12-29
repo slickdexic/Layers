@@ -57,6 +57,13 @@
 			this.getMessage = options.getMessage || ( ( key ) => key );
 
 			/**
+			 * DialogManager for accessible dialogs (optional but recommended)
+			 *
+			 * @type {Object|null}
+			 */
+			this.dialogManager = options.dialogManager || null;
+
+			/**
 			 * Current tool type
 			 *
 			 * @type {string|null}
@@ -386,12 +393,25 @@
 
 		/**
 		 * Handle save current style click
+		 * Uses accessible dialog if DialogManager is available
 		 */
-		handleSaveClick() {
+		async handleSaveClick() {
 			this.close();
 
-			// Prompt for name
-			const name = prompt( this.getMessage( 'layers-presets-enter-name' ) );
+			// Prompt for name using accessible dialog
+			let name = null;
+			if ( this.dialogManager && typeof this.dialogManager.showPromptDialogAsync === 'function' ) {
+				name = await this.dialogManager.showPromptDialogAsync( {
+					title: this.getMessage( 'layers-presets-save-title', 'Save Preset' ),
+					message: this.getMessage( 'layers-presets-enter-name', 'Enter a name for the preset:' ),
+					placeholder: this.getMessage( 'layers-presets-name-placeholder', 'Preset name' )
+				} );
+			} else {
+				// Fallback to native prompt only if DialogManager unavailable
+				// eslint-disable-next-line no-alert
+				name = window.prompt( this.getMessage( 'layers-presets-enter-name', 'Enter a name for the preset:' ) );
+			}
+
 			if ( !name || !name.trim() ) {
 				return;
 			}
@@ -426,15 +446,31 @@
 
 		/**
 		 * Handle delete click
+		 * Uses accessible dialog if DialogManager is available
 		 *
 		 * @param {string} presetId Preset ID
 		 * @param {string} name Preset name for confirmation
 		 */
-		handleDelete( presetId, name ) {
-			const confirmMsg = this.getMessage( 'layers-presets-confirm-delete' )
+		async handleDelete( presetId, name ) {
+			const confirmMsg = this.getMessage( 'layers-presets-confirm-delete', 'Delete preset "$1"?' )
 				.replace( '$1', name );
 
-			if ( confirm( confirmMsg ) ) {
+			let confirmed = false;
+			if ( this.dialogManager && typeof this.dialogManager.showConfirmDialog === 'function' ) {
+				confirmed = await this.dialogManager.showConfirmDialog( {
+					title: this.getMessage( 'layers-presets-delete-title', 'Delete Preset' ),
+					message: confirmMsg,
+					isDanger: true,
+					confirmText: this.getMessage( 'layers-delete', 'Delete' ),
+					cancelText: this.getMessage( 'layers-cancel', 'Cancel' )
+				} );
+			} else {
+				// Fallback to native confirm only if DialogManager unavailable
+				// eslint-disable-next-line no-alert
+				confirmed = window.confirm( confirmMsg );
+			}
+
+			if ( confirmed ) {
 				this.presetManager.deletePreset( this.currentTool, presetId );
 				this.renderMenu(); // Refresh
 			}

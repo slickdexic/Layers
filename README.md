@@ -2,11 +2,14 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
+[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-7361%20passing-brightgreen)](tests/)
+[![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.1.12 (December 2025)  
-> **Status:** ✅ Production-ready. All P0 and P1 issues resolved.  
+> **Version:** 1.2.11 (December 2025)  
+> **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
@@ -50,6 +53,18 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Blur          | B        | Apply blur effect                            |
 | Marquee       | M        | Area selection                               |
 
+### Blur Fill Mode (v1.2.6+)
+
+Any filled shape can use **blur fill** instead of a solid color — creating a "frosted glass" effect:
+
+```
+Fill: blur  →  Blurs content beneath the shape
+```
+
+Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box, Arrow (v1.2.7+)
+
+> **Note:** All blur fill coordinate bugs have been fixed as of v1.2.8. The feature is production-ready.
+
 ### Smart Guides & Alignment
 
 - **Smart Guides**: Automatic snapping to object edges and centers (toggle with `;`)
@@ -84,6 +99,26 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 [[File:MyImage.jpg|500px|layers=on|Annotated image]]     <!-- Default layer set -->
 [[File:MyImage.jpg|500px|layers=anatomy|Anatomy labels]] <!-- Named set -->
 [[File:MyImage.jpg|500px|layers=none]]                   <!-- No layers -->
+```
+
+### Deep Linking (v1.2.0+)
+
+Control what happens when users click on layered images:
+
+```wikitext
+[[File:Diagram.png|layers=anatomy|layerslink=editor]]  <!-- Click opens editor -->
+[[File:Diagram.png|layers=anatomy|layerslink=viewer]]  <!-- Click opens lightbox -->
+```
+
+| Value | Effect |
+|-------|--------|
+| `editor` | Opens the layer editor for this image |
+| `viewer` | Opens fullscreen lightbox viewer |
+| `lightbox` | Alias for `viewer` |
+
+You can also link directly to the editor via URL:
+```
+/wiki/File:Example.jpg?action=editlayers&setname=anatomy
 ```
 
 > **Note:** On File: pages, layers are NOT auto-displayed. You must explicitly use `layers=on` or `layers=setname`.
@@ -164,7 +199,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`)
-- **Frontend:** HTML5 Canvas editor with 96 JS files (~47K lines), 87 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 97 JS files (~49,900 lines), 87 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -172,10 +207,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 6,479 passing |
-| Statement coverage | 92% |
-| Branch coverage | 80% |
-| Test suites | 125 |
+| Jest tests | 7,322 passing |
+| Statement coverage | 94.43% |
+| Branch coverage | 82.83% |
+| Test suites | 130 |
 
 **Security:**
 
@@ -193,7 +228,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 
 **Current limitations:**
 
-- ⚠️ **No mobile/touch support** - editor is desktop-only
+- ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
 
@@ -219,13 +254,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 93 | ✅ |
-| Total JS lines | 46,063 | ⚠️ Past warning threshold |
-| ES6 classes | 85 | ✅ |
-| God classes (>1000 lines) | 7 | ⚠️ |
-| Tests passing | 5,766 | ✅ |
+| Total JS files | 97 | ✅ |
+| Total JS lines | ~49,900 | ✅ Well under 75K target |
+| ES6 classes | 87 | ✅ |
+| God classes (>1000 lines) | 8 | ⚠️ Mitigated by delegation |
+| Tests passing | 7,322 | ✅ |
 | Tests failing | 0 | ✅ |
-| Files with 0% coverage | 5 | ⚠️ |
+| Statement coverage | 94.43% | ✅ Excellent |
+| Branch coverage | 82.83% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

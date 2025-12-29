@@ -73,6 +73,22 @@ class ToolbarStyleControls {
 			applyStyle: ( style ) => this.applyPresetStyleInternal( style )
 		} ) : null;
 
+		// Initialize TextEffectsControls for text-specific UI delegation
+		const TextEffectsControls = getClass( 'UI.TextEffectsControls', 'TextEffectsControls' );
+		this.textEffectsControls = TextEffectsControls ? new TextEffectsControls( {
+			msg: this.msg.bind( this ),
+			addListener: this.addListener.bind( this ),
+			notifyStyleChange: this.notifyStyleChange.bind( this )
+		} ) : null;
+
+		// Initialize ArrowStyleControl for arrow-specific UI delegation
+		const ArrowStyleControl = getClass( 'UI.ArrowStyleControl', 'ArrowStyleControl' );
+		this.arrowStyleControl = ArrowStyleControl ? new ArrowStyleControl( {
+			msg: this.msg.bind( this ),
+			addListener: this.addListener.bind( this ),
+			notifyStyleChange: this.notifyStyleChange.bind( this )
+		} ) : null;
+
 		// Style state
 		this.strokeColorValue = '#000000';
 		this.fillColorValue = '#ffffff';
@@ -87,17 +103,16 @@ class ToolbarStyleControls {
 		this.strokeControl = null;
 		this.fillControl = null;
 		this.strokeWidthInput = null;
-		this.fontSizeInput = null;
-		this.fontSizeContainer = null;
 		this.strokeContainer = null;
-		this.shadowContainer = null;
 		this.arrowContainer = null;
-		this.textStrokeColor = null;
-		this.textStrokeWidth = null;
-		this.textStrokeValue = null;
-		this.textShadowToggle = null;
-		this.textShadowColor = null;
 		this.arrowStyleSelect = null;
+		this.mainStyleRow = null;
+		this.presetContainer = null;
+
+		// Context-aware toolbar state
+		this.contextAwareEnabled = ( typeof mw !== 'undefined' && mw.config ) ?
+			mw.config.get( 'wgLayersContextAwareToolbar', true ) : true;
+		this.currentToolContext = 'pointer';
 
 		// Input validators
 		this.inputValidators = [];
@@ -144,33 +159,46 @@ class ToolbarStyleControls {
 		styleGroup.className = 'toolbar-group style-group';
 		this.container = styleGroup;
 
+		// Add context-aware class if enabled
+		if ( this.contextAwareEnabled ) {
+			styleGroup.classList.add( 'context-aware' );
+		}
+
 		// Preset dropdown (via PresetStyleManager delegation)
 		if ( this.presetStyleManager ) {
 			const dropdown = this.presetStyleManager.createPresetDropdown();
 			if ( dropdown ) {
-				styleGroup.appendChild( this.presetStyleManager.getElement() );
+				this.presetContainer = this.presetStyleManager.getElement();
+				styleGroup.appendChild( this.presetContainer );
 			}
 		}
 
 		// Main style controls row (stroke, fill, width)
-		const styleControlsRow = this.createMainStyleRow();
-		styleGroup.appendChild( styleControlsRow );
+		this.mainStyleRow = this.createMainStyleRow();
+		styleGroup.appendChild( this.mainStyleRow );
 
-		// Font size container (for text tool)
-		this.fontSizeContainer = this.createFontSizeControl();
-		styleGroup.appendChild( this.fontSizeContainer );
+		// Text effects controls (via TextEffectsControls delegation)
+		if ( this.textEffectsControls ) {
+			// Font size container (for text tool)
+			styleGroup.appendChild( this.textEffectsControls.createFontSizeControl() );
 
-		// Text stroke options
-		this.strokeContainer = this.createTextStrokeControl();
-		styleGroup.appendChild( this.strokeContainer );
+			// Text stroke options
+			styleGroup.appendChild( this.textEffectsControls.createTextStrokeControl() );
 
-		// Drop shadow options
-		this.shadowContainer = this.createShadowControl();
-		styleGroup.appendChild( this.shadowContainer );
+			// Drop shadow options
+			styleGroup.appendChild( this.textEffectsControls.createShadowControl() );
+		}
 
-		// Arrow style options
-		this.arrowContainer = this.createArrowStyleControl();
+		// Arrow style options (via ArrowStyleControl delegation)
+		this.arrowContainer = this.arrowStyleControl.create();
+		// Expose internal select for backward compatibility with existing code
+		this.arrowStyleSelect = this.arrowStyleControl.arrowStyleSelect;
 		styleGroup.appendChild( this.arrowContainer );
+
+		// Apply initial visibility based on default tool (pointer = hidden)
+		if ( this.contextAwareEnabled ) {
+			this.updateContextVisibility( 'pointer' );
+		}
 
 		// Notify toolbar of initial style settings to sync with ToolManager
 		this.notifyStyleChange();
@@ -382,178 +410,6 @@ class ToolbarStyleControls {
 	}
 
 	/**
-	 * Create the font size control (for text tool)
-	 *
-	 * @return {HTMLElement} The font size container
-	 */
-	createFontSizeControl() {
-		const container = document.createElement( 'div' );
-		container.className = 'font-size-container style-control-item';
-		container.style.display = 'none';
-
-		const label = document.createElement( 'span' );
-		label.className = 'style-control-label';
-		label.textContent = this.msg( 'layers-prop-font-size', 'Size' );
-		container.appendChild( label );
-
-		const input = document.createElement( 'input' );
-		input.type = 'number';
-		input.min = '8';
-		input.max = '72';
-		input.value = '16';
-		input.className = 'font-size';
-		input.title = this.msg( 'layers-prop-font-size', 'Font Size' );
-		container.appendChild( input );
-
-		this.fontSizeInput = input;
-
-		this.addListener( input, 'change', () => {
-			this.notifyStyleChange();
-		} );
-
-		return container;
-	}
-
-	/**
-	 * Create the text stroke control
-	 *
-	 * @return {HTMLElement} The text stroke container
-	 */
-	createTextStrokeControl() {
-		const container = document.createElement( 'div' );
-		container.className = 'text-stroke-container';
-		container.style.display = 'none';
-
-		const label = document.createElement( 'label' );
-		label.textContent = this.msg( 'layers-prop-stroke-color', 'Stroke Color' ) + ':';
-		label.className = 'stroke-color-label';
-		container.appendChild( label );
-
-		const colorInput = document.createElement( 'input' );
-		colorInput.type = 'color';
-		colorInput.value = '#000000';
-		colorInput.className = 'text-stroke-color';
-		colorInput.title = this.msg( 'layers-prop-stroke-color', 'Text Stroke Color' );
-		container.appendChild( colorInput );
-		this.textStrokeColor = colorInput;
-
-		const widthInput = document.createElement( 'input' );
-		widthInput.type = 'range';
-		widthInput.min = '0';
-		widthInput.max = '10';
-		widthInput.value = '0';
-		widthInput.className = 'text-stroke-width';
-		widthInput.title = this.msg( 'layers-prop-stroke-width', 'Text Stroke Width' );
-		container.appendChild( widthInput );
-		this.textStrokeWidth = widthInput;
-
-		const widthValue = document.createElement( 'span' );
-		widthValue.className = 'text-stroke-value';
-		widthValue.textContent = '0';
-		container.appendChild( widthValue );
-		this.textStrokeValue = widthValue;
-
-		// Event handlers (tracked for cleanup)
-		this.addListener( colorInput, 'change', () => {
-			this.notifyStyleChange();
-		} );
-
-		this.addListener( widthInput, 'input', () => {
-			widthValue.textContent = widthInput.value;
-			this.notifyStyleChange();
-		} );
-
-		return container;
-	}
-
-	/**
-	 * Create the shadow control
-	 *
-	 * @return {HTMLElement} The shadow container
-	 */
-	createShadowControl() {
-		const container = document.createElement( 'div' );
-		container.className = 'text-shadow-container';
-		container.style.display = 'none';
-
-		const label = document.createElement( 'label' );
-		label.textContent = this.msg( 'layers-effect-shadow', 'Shadow' ) + ':';
-		label.className = 'shadow-label';
-		container.appendChild( label );
-
-		const toggle = document.createElement( 'input' );
-		toggle.type = 'checkbox';
-		toggle.className = 'text-shadow-toggle';
-		toggle.title = this.msg( 'layers-effect-shadow-enable', 'Enable Drop Shadow' );
-		container.appendChild( toggle );
-		this.textShadowToggle = toggle;
-
-		const colorInput = document.createElement( 'input' );
-		colorInput.type = 'color';
-		colorInput.value = '#000000';
-		colorInput.className = 'text-shadow-color';
-		colorInput.title = this.msg( 'layers-effect-shadow-color', 'Shadow Color' );
-		colorInput.style.display = 'none';
-		container.appendChild( colorInput );
-		this.textShadowColor = colorInput;
-
-		// Event handlers (tracked for cleanup)
-		this.addListener( toggle, 'change', () => {
-			colorInput.style.display = toggle.checked ? 'inline-block' : 'none';
-			this.notifyStyleChange();
-		} );
-
-		this.addListener( colorInput, 'change', () => {
-			this.notifyStyleChange();
-		} );
-
-		return container;
-	}
-
-	/**
-	 * Create the arrow style control
-	 *
-	 * @return {HTMLElement} The arrow style container
-	 */
-	createArrowStyleControl() {
-		const container = document.createElement( 'div' );
-		container.className = 'arrow-style-container';
-		container.style.display = 'none';
-
-		const label = document.createElement( 'label' );
-		label.textContent = this.msg( 'layers-tool-arrow', 'Arrow' ) + ':';
-		label.className = 'arrow-label';
-		container.appendChild( label );
-
-		const select = document.createElement( 'select' );
-		select.className = 'arrow-style-select';
-
-		const optSingle = document.createElement( 'option' );
-		optSingle.value = 'single';
-		optSingle.textContent = this.msg( 'layers-arrow-single', 'Single →' );
-		select.appendChild( optSingle );
-
-		const optDouble = document.createElement( 'option' );
-		optDouble.value = 'double';
-		optDouble.textContent = this.msg( 'layers-arrow-double', 'Double ↔' );
-		select.appendChild( optDouble );
-
-		const optNone = document.createElement( 'option' );
-		optNone.value = 'none';
-		optNone.textContent = this.msg( 'layers-arrow-none', 'Line only' );
-		select.appendChild( optNone );
-
-		container.appendChild( select );
-		this.arrowStyleSelect = select;
-
-		this.addListener( select, 'change', () => {
-			this.notifyStyleChange();
-		} );
-
-		return container;
-	}
-
-	/**
 	 * Get color picker strings for i18n
 	 *
 	 * @return {Object} Color picker string map
@@ -649,18 +505,28 @@ class ToolbarStyleControls {
 	 * @return {Object} Style options object
 	 */
 	getStyleOptions() {
+		// Get text effects from delegate
+		const textEffects = this.textEffectsControls ?
+			this.textEffectsControls.getStyleValues() :
+			{ fontSize: 16, textStrokeColor: '#000000', textStrokeWidth: 0, textShadow: false, textShadowColor: '#000000' };
+
+		// Get arrow style from delegate or fallback
+		const arrowStyle = this.arrowStyleControl ?
+			this.arrowStyleControl.getValue() :
+			( this.arrowStyleSelect ? this.arrowStyleSelect.value : 'single' );
+
 		return {
 			color: this.strokeColorNone ? 'transparent' : this.strokeColorValue,
 			fill: this.fillColorNone ? 'transparent' : this.fillColorValue,
 			strokeWidth: this.currentStrokeWidth,
-			fontSize: this.fontSizeInput ? parseInt( this.fontSizeInput.value, 10 ) : 16,
-			textStrokeColor: this.textStrokeColor ? this.textStrokeColor.value : '#000000',
-			textStrokeWidth: this.textStrokeWidth ? parseInt( this.textStrokeWidth.value, 10 ) : 0,
-			textShadow: this.textShadowToggle ? this.textShadowToggle.checked : false,
-			textShadowColor: this.textShadowColor ? this.textShadowColor.value : '#000000',
-			arrowStyle: this.arrowStyleSelect ? this.arrowStyleSelect.value : 'single',
-			shadow: this.textShadowToggle ? this.textShadowToggle.checked : false,
-			shadowColor: this.textShadowColor ? this.textShadowColor.value : '#000000',
+			fontSize: textEffects.fontSize,
+			textStrokeColor: textEffects.textStrokeColor,
+			textStrokeWidth: textEffects.textStrokeWidth,
+			textShadow: textEffects.textShadow,
+			textShadowColor: textEffects.textShadowColor,
+			arrowStyle: arrowStyle,
+			shadow: textEffects.textShadow,
+			shadowColor: textEffects.textShadowColor,
 			shadowBlur: 8,
 			shadowOffsetX: 2,
 			shadowOffsetY: 2
@@ -673,25 +539,115 @@ class ToolbarStyleControls {
 	 * @param {string} toolId The currently selected tool
 	 */
 	updateForTool( toolId ) {
-		if ( toolId === 'text' ) {
-			this.fontSizeContainer.style.display = 'block';
-			this.strokeContainer.style.display = 'block';
-			this.shadowContainer.style.display = 'block';
-			this.arrowContainer.style.display = 'none';
-		} else if ( toolId === 'arrow' ) {
-			this.fontSizeContainer.style.display = 'none';
-			this.strokeContainer.style.display = 'none';
-			this.shadowContainer.style.display = 'none';
-			this.arrowContainer.style.display = 'block';
-		} else {
-			this.fontSizeContainer.style.display = 'none';
-			this.strokeContainer.style.display = 'none';
-			this.shadowContainer.style.display = 'none';
-			this.arrowContainer.style.display = 'none';
+		// Delegate text effects visibility to TextEffectsControls
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.updateForTool( toolId );
+		}
+
+		// Handle arrow container visibility (delegate or direct)
+		if ( this.arrowStyleControl ) {
+			this.arrowStyleControl.updateForTool( toolId );
+		} else if ( this.arrowContainer ) {
+			this.arrowContainer.style.display = toolId === 'arrow' ? 'block' : 'none';
 		}
 
 		// Update preset dropdown for the current tool
 		this.setCurrentTool( toolId );
+
+		// Update context-aware visibility if enabled
+		if ( this.contextAwareEnabled ) {
+			this.updateContextVisibility( toolId );
+		}
+	}
+
+	/**
+	 * Update visibility of controls based on tool context
+	 * Implements context-aware toolbar feature
+	 *
+	 * @param {string} toolId The currently selected tool
+	 */
+	updateContextVisibility( toolId ) {
+		this.currentToolContext = toolId;
+
+		// Define tool categories for context-aware visibility
+		const drawingTools = [ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'blur' ];
+		const strokeOnlyTools = [ 'pen', 'arrow' ];
+
+		// Determine what controls should be visible
+		// textbox shows stroke/fill, text tool only shows text-specific controls
+		const showMainStyleRow = drawingTools.includes( toolId ) ||
+			strokeOnlyTools.includes( toolId ) ||
+			toolId === 'textbox';
+		const showPresets = toolId !== 'pointer';
+
+		// Apply visibility with CSS classes for smooth transitions
+		if ( this.mainStyleRow ) {
+			if ( showMainStyleRow ) {
+				this.mainStyleRow.classList.remove( 'context-hidden' );
+			} else {
+				this.mainStyleRow.classList.add( 'context-hidden' );
+			}
+		}
+
+		if ( this.presetContainer ) {
+			if ( showPresets ) {
+				this.presetContainer.classList.remove( 'context-hidden' );
+			} else {
+				this.presetContainer.classList.add( 'context-hidden' );
+			}
+		}
+
+		// Show/hide fill color based on tool (pen and arrow don't use fill)
+		if ( this.fillControl && this.fillControl.container ) {
+			if ( strokeOnlyTools.includes( toolId ) ) {
+				this.fillControl.container.classList.add( 'context-hidden' );
+			} else {
+				this.fillControl.container.classList.remove( 'context-hidden' );
+			}
+		}
+	}
+
+	/**
+	 * Check if context-aware toolbar is enabled
+	 *
+	 * @return {boolean} True if context-aware mode is active
+	 */
+	isContextAwareEnabled() {
+		return this.contextAwareEnabled;
+	}
+
+	/**
+	 * Enable or disable context-aware toolbar mode
+	 *
+	 * @param {boolean} enabled Whether to enable context-aware mode
+	 */
+	setContextAwareEnabled( enabled ) {
+		this.contextAwareEnabled = enabled;
+		if ( this.container ) {
+			if ( enabled ) {
+				this.container.classList.add( 'context-aware' );
+				this.updateContextVisibility( this.currentToolContext );
+			} else {
+				this.container.classList.remove( 'context-aware' );
+				// Show all controls when disabled
+				this.showAllControls();
+			}
+		}
+	}
+
+	/**
+	 * Show all controls (for legacy mode or when a layer is selected)
+	 */
+	showAllControls() {
+		if ( this.mainStyleRow ) {
+			this.mainStyleRow.classList.remove( 'context-hidden' );
+		}
+		if ( this.presetContainer ) {
+			this.presetContainer.classList.remove( 'context-hidden' );
+		}
+		if ( this.fillControl && this.fillControl.container ) {
+			this.fillControl.container.classList.remove( 'context-hidden' );
+		}
 	}
 
 	/**
@@ -757,34 +713,15 @@ class ToolbarStyleControls {
 			return;
 		}
 
-		if ( this.fontSizeInput ) {
-			this.inputValidators.push(
-				validator.createInputValidator( this.fontSizeInput, 'number', { min: 1, max: 200 } )
-			);
-		}
-
 		if ( this.strokeWidthInput ) {
 			this.inputValidators.push(
 				validator.createInputValidator( this.strokeWidthInput, 'number', { min: 0, max: 100 } )
 			);
 		}
 
-		if ( this.textStrokeWidth ) {
-			this.inputValidators.push(
-				validator.createInputValidator( this.textStrokeWidth, 'number', { min: 0, max: 10 } )
-			);
-		}
-
-		if ( this.textStrokeColor ) {
-			this.inputValidators.push(
-				validator.createInputValidator( this.textStrokeColor, 'color' )
-			);
-		}
-
-		if ( this.textShadowColor ) {
-			this.inputValidators.push(
-				validator.createInputValidator( this.textShadowColor, 'color' )
-			);
+		// Text effect validation is handled by TextEffectsControls
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.setupValidation( validator, this.inputValidators );
 		}
 	}
 
@@ -830,14 +767,18 @@ class ToolbarStyleControls {
 			this.strokeWidthInput.value = style.strokeWidth;
 		}
 
-		// Apply font size
-		if ( style.fontSize !== undefined && this.fontSizeInput ) {
-			this.fontSizeInput.value = style.fontSize;
+		// Delegate text effects (font size, text stroke, text shadow) to TextEffectsControls
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.applyStyle( style );
 		}
 
-		// Apply arrow style
-		if ( style.arrowStyle !== undefined && this.arrowStyleSelect ) {
-			this.arrowStyleSelect.value = style.arrowStyle;
+		// Apply arrow style (delegate or fallback)
+		if ( style.arrowStyle !== undefined ) {
+			if ( this.arrowStyleControl ) {
+				this.arrowStyleControl.applyStyle( style );
+			} else if ( this.arrowStyleSelect ) {
+				this.arrowStyleSelect.value = style.arrowStyle;
+			}
 		}
 
 		// Notify of style change
@@ -859,13 +800,15 @@ class ToolbarStyleControls {
 		// Fill
 		style.fill = this.fillColorNone ? 'transparent' : this.fillColorValue;
 
-		// Font size
-		if ( this.fontSizeInput ) {
-			style.fontSize = parseFloat( this.fontSizeInput.value ) || 16;
+		// Merge in text effects from delegate
+		if ( this.textEffectsControls ) {
+			Object.assign( style, this.textEffectsControls.getStyleValues() );
 		}
 
-		// Arrow style
-		if ( this.arrowStyleSelect ) {
+		// Arrow style (delegate or fallback)
+		if ( this.arrowStyleControl ) {
+			Object.assign( style, this.arrowStyleControl.getStyleValues() );
+		} else if ( this.arrowStyleSelect ) {
 			style.arrowStyle = this.arrowStyleSelect.value;
 		}
 
@@ -885,12 +828,77 @@ class ToolbarStyleControls {
 
 	/**
 	 * Update preset dropdown when layer selection changes (delegates to PresetStyleManager)
+	 * Also updates control visibility in context-aware mode
 	 *
 	 * @param {Array} selectedLayers Array of selected layer objects
 	 */
 	updateForSelection( selectedLayers ) {
 		if ( this.presetStyleManager ) {
 			this.presetStyleManager.updateForSelection( selectedLayers );
+		}
+
+		// Update context-aware visibility based on selected layer types
+		if ( this.contextAwareEnabled && selectedLayers && selectedLayers.length > 0 ) {
+			this.updateContextForSelectedLayers( selectedLayers );
+		}
+	}
+
+	/**
+	 * Update control visibility based on selected layer types
+	 * Shows controls appropriate for the selected layer(s)
+	 *
+	 * @param {Array} selectedLayers Array of selected layer objects
+	 */
+	updateContextForSelectedLayers( selectedLayers ) {
+		// Determine what types of layers are selected
+		const types = selectedLayers.map( ( l ) => l.type ).filter( ( t, i, arr ) => arr.indexOf( t ) === i );
+
+		// Check for text, shape, and stroke-only types
+		const hasTextLayers = types.some( ( t ) => t === 'text' || t === 'textbox' );
+		const hasShapeLayers = types.some( ( t ) =>
+			[ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'blur', 'image' ].includes( t )
+		);
+		const hasArrowLayers = types.includes( 'arrow' );
+		const hasStrokeOnlyLayers = types.some( ( t ) => t === 'pen' || t === 'path' || t === 'arrow' );
+
+		// Show main style row if any shape or stroke-based layers are selected
+		const showMainStyleRow = hasShapeLayers || hasStrokeOnlyLayers || hasArrowLayers || types.includes( 'textbox' );
+
+		// Show presets when any layer is selected
+		const showPresets = selectedLayers.length > 0;
+
+		// Apply visibility
+		if ( this.mainStyleRow ) {
+			if ( showMainStyleRow ) {
+				this.mainStyleRow.classList.remove( 'context-hidden' );
+			} else {
+				this.mainStyleRow.classList.add( 'context-hidden' );
+			}
+		}
+
+		if ( this.presetContainer ) {
+			if ( showPresets ) {
+				this.presetContainer.classList.remove( 'context-hidden' );
+			} else {
+				this.presetContainer.classList.add( 'context-hidden' );
+			}
+		}
+
+		// Hide fill color for stroke-only layer types (but not if other shapes are also selected)
+		if ( this.fillControl && this.fillControl.container ) {
+			if ( hasStrokeOnlyLayers && !hasShapeLayers ) {
+				this.fillControl.container.classList.add( 'context-hidden' );
+			} else if ( showMainStyleRow ) {
+				this.fillControl.container.classList.remove( 'context-hidden' );
+			}
+		}
+
+		// Delegate text effect visibility to TextEffectsControls based on layer types
+		if ( this.textEffectsControls && hasTextLayers ) {
+			// Show text controls when text layers are selected
+			const hasPureTextLayer = types.includes( 'text' );
+			const hasTextBoxLayer = types.includes( 'textbox' );
+			this.textEffectsControls.updateForSelectedTypes( hasPureTextLayer, hasTextBoxLayer );
 		}
 	}
 
@@ -904,6 +912,18 @@ class ToolbarStyleControls {
 			this.presetStyleManager = null;
 		}
 
+		// Clean up text effects controller
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.destroy();
+			this.textEffectsControls = null;
+		}
+
+		// Clean up arrow style controller
+		if ( this.arrowStyleControl ) {
+			this.arrowStyleControl.destroy();
+			this.arrowStyleControl = null;
+		}
+
 		// Clean up all event listeners via EventTracker
 		if ( this.eventTracker ) {
 			this.eventTracker.destroy();
@@ -913,21 +933,13 @@ class ToolbarStyleControls {
 		// Clear input validators
 		this.inputValidators = [];
 
-		// Clear DOM references
+		// Clear DOM references (text-related refs are in TextEffectsControls)
 		this.container = null;
 		this.strokeColorButton = null;
 		this.fillColorButton = null;
 		this.strokeWidthInput = null;
-		this.fontSizeInput = null;
-		this.fontSizeContainer = null;
 		this.strokeContainer = null;
-		this.shadowContainer = null;
 		this.arrowContainer = null;
-		this.textStrokeColor = null;
-		this.textStrokeWidth = null;
-		this.textStrokeValue = null;
-		this.textShadowToggle = null;
-		this.textShadowColor = null;
 		this.arrowStyleSelect = null;
 	}
 }

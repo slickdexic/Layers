@@ -678,4 +678,169 @@ describe( 'LayerSetManager', () => {
 			expect( mw.log.error ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'getMessageWithParams', () => {
+		it( 'should use layersMessages.getWithParams when available', () => {
+			const originalLayersMessages = window.layersMessages;
+			window.layersMessages = {
+				getWithParams: jest.fn().mockReturnValue( 'Loaded set: test' )
+			};
+
+			const result = layerSetManager.getMessageWithParams(
+				'layers-set-loaded',
+				[ 'test' ],
+				'fallback'
+			);
+
+			expect( window.layersMessages.getWithParams ).toHaveBeenCalledWith(
+				'layers-set-loaded',
+				[ 'test' ],
+				'fallback'
+			);
+			expect( result ).toBe( 'Loaded set: test' );
+
+			window.layersMessages = originalLayersMessages;
+		} );
+
+		it( 'should fall back to mw.message with params', () => {
+			const originalLayersMessages = window.layersMessages;
+			window.layersMessages = null;
+
+			mw.message.mockImplementation( ( key, ...params ) => ( {
+				text: () => `${key} with ${params.join( ', ' )}`
+			} ) );
+
+			const result = layerSetManager.getMessageWithParams(
+				'test-key',
+				[ 'param1', 'param2' ],
+				'fallback'
+			);
+
+			expect( result ).toBe( 'test-key with param1, param2' );
+
+			window.layersMessages = originalLayersMessages;
+		} );
+
+		it( 'should use manual substitution as last resort', () => {
+			const originalMw = window.mw;
+			const originalLayersMessages = window.layersMessages;
+			window.mw = undefined;
+			window.layersMessages = null;
+
+			const newManager = new LayerSetManager( {} );
+			const result = newManager.getMessageWithParams(
+				'test-key',
+				[ 'foo', 'bar' ],
+				'Value $1 and $2'
+			);
+
+			expect( result ).toBe( 'Value foo and bar' );
+
+			window.mw = originalMw;
+			window.layersMessages = originalLayersMessages;
+			newManager.destroy();
+		} );
+
+		it( 'should handle mw.message exception gracefully', () => {
+			const originalLayersMessages = window.layersMessages;
+			window.layersMessages = null;
+
+			mw.message.mockImplementation( () => {
+				throw new Error( 'mw.message failed' );
+			} );
+
+			const result = layerSetManager.getMessageWithParams(
+				'test-key',
+				[ 'param1' ],
+				'Default $1'
+			);
+
+			expect( result ).toBe( 'Default param1' );
+
+			window.layersMessages = originalLayersMessages;
+		} );
+	} );
+
+	describe( 'createNewLayerSet', () => {
+		it( 'should return false for empty name', async () => {
+			const result = await layerSetManager.createNewLayerSet( '' );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for whitespace-only name', async () => {
+			const result = await layerSetManager.createNewLayerSet( '   ' );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for invalid name characters', async () => {
+			const result = await layerSetManager.createNewLayerSet( 'my set!' );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for name with spaces', async () => {
+			const result = await layerSetManager.createNewLayerSet( 'my set name' );
+
+			expect( result ).toBe( false );
+		} );
+	} );
+
+	describe( 'loadRevisionById', () => {
+		it( 'should delegate to apiManager when available', () => {
+			const mockApiManager = {
+				loadRevisionById: jest.fn()
+			};
+			layerSetManager.apiManager = mockApiManager;
+
+			layerSetManager.loadRevisionById( 123 );
+
+			expect( mockApiManager.loadRevisionById ).toHaveBeenCalledWith( 123 );
+		} );
+
+		it( 'should handle error when apiManager throws', () => {
+			const mockApiManager = {
+				loadRevisionById: jest.fn().mockImplementation( () => {
+					throw new Error( 'API error' );
+				} )
+			};
+			layerSetManager.apiManager = mockApiManager;
+
+			expect( () => layerSetManager.loadRevisionById( 123 ) ).not.toThrow();
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should do nothing when apiManager unavailable', () => {
+			layerSetManager.apiManager = null;
+
+			expect( () => layerSetManager.loadRevisionById( 123 ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'reloadRevisions', () => {
+		it( 'should fetch and rebuild selectors', async () => {
+			const mockApiManager = {
+				fetchLayerSetInfo: jest.fn().mockResolvedValue( undefined )
+			};
+			layerSetManager.apiManager = mockApiManager;
+			jest.spyOn( layerSetManager, 'buildRevisionSelector' ).mockImplementation( () => {} );
+			jest.spyOn( layerSetManager, 'buildSetSelector' ).mockImplementation( () => {} );
+
+			await layerSetManager.reloadRevisions();
+
+			expect( mockApiManager.fetchLayerSetInfo ).toHaveBeenCalled();
+			expect( layerSetManager.buildRevisionSelector ).toHaveBeenCalled();
+			expect( layerSetManager.buildSetSelector ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle errors gracefully', async () => {
+			const mockApiManager = {
+				fetchLayerSetInfo: jest.fn().mockRejectedValue( new Error( 'Network error' ) )
+			};
+			layerSetManager.apiManager = mockApiManager;
+
+			await expect( layerSetManager.reloadRevisions() ).resolves.not.toThrow();
+		} );
+	} );
 } );

@@ -133,6 +133,26 @@
 		}
 
 		/**
+		 * Show a confirmation dialog
+		 *
+		 * @private
+		 * @param {Object} options Dialog options
+		 * @param {string} options.message The message to display
+		 * @param {string} [options.title] Dialog title
+		 * @param {string} [options.confirmText] Text for confirm button
+		 * @param {boolean} [options.isDanger] Whether this is a destructive action
+		 * @return {Promise<boolean>} Resolves to true if confirmed
+		 */
+		async showConfirmDialog( options ) {
+			if ( this.editor && this.editor.dialogManager ) {
+				return this.editor.dialogManager.showConfirmDialog( options );
+			}
+			// Fallback to native confirm
+			// eslint-disable-next-line no-alert
+			return window.confirm( options.message );
+		}
+
+		/**
 		 * Build the revision selector dropdown
 		 * Populates the revision dropdown with available layer set revisions
 		 */
@@ -316,8 +336,12 @@
 						'layers-unsaved-changes-warning',
 						'You have unsaved changes. Switch sets without saving?'
 					);
-					// eslint-disable-next-line no-alert
-					const confirmSwitch = confirm( confirmMsg );
+					const confirmSwitch = await this.showConfirmDialog( {
+						message: confirmMsg,
+						title: this.getMessage( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
+						confirmText: this.getMessage( 'layers-switch-anyway', 'Switch Anyway' ),
+						isDanger: true
+					} );
 					if ( !confirmSwitch ) {
 						// Revert selector to current set
 						this.buildSetSelector();

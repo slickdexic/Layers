@@ -138,7 +138,8 @@
 			HARD_LIGHT: 'hard-light',
 			SOFT_LIGHT: 'soft-light',
 			DIFFERENCE: 'difference',
-			EXCLUSION: 'exclusion'
+			EXCLUSION: 'exclusion',
+			BLUR: 'blur'
 		},
 
 		// Line styles

@@ -2,6 +2,315 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.11] - 2025-12-29
+
+### Bug Fixes
+- **Fixed blend modes not rendering on article pages** — Layer blend modes (exclusion, multiply, screen, etc.) were not being applied when viewing images on article pages. The viewer used a transparent canvas overlay on top of the DOM image element, but canvas `globalCompositeOperation` only blends with content already on the canvas, not DOM elements. The viewer now detects when any layer uses a non-default blend mode and draws the background image onto the canvas first, enabling proper blend mode rendering.
+- **Fixed blend mode property normalization** — The server stores blend mode as `blendMode` but client code was reading `blend`. Added property alias normalization to ensure both property names work correctly in both editor and viewer.
+- **Removed redundant 'blur' from blend mode dropdown** — The 'blur' option in the blend mode dropdown was redundant with the blur fill feature (introduced in v1.2.6) and caused confusion. Blur effects should be applied via Fill → blur, not blend mode.
+
+### Technical
+- Added `normalizeAliases()` method to `LayerDataNormalizer.js` for consistent blend/blendMode handling
+- Updated `LayersViewer.js` with `drawBackgroundOnCanvas()` method for blend mode support
+- Updated `fallbackNormalize()` in viewer to include blend mode alias handling
+- Added blend alias normalization tests to LayerDataNormalizer.test.js
+
+### Testing
+- **7,361 tests passing** (+64 from v1.2.10)
+- **131 test suites**
+- Added 5 new tests for blend mode alias normalization
+
+---
+
+## [1.2.10] - 2025-12-28
+
+### Features
+- **Context-Aware Toolbar** — Toolbar now shows only relevant controls based on the active tool or selected layers. When using the pointer tool with nothing selected, only tool buttons are visible. Drawing tools reveal stroke/fill controls, text tools show font controls, etc. Smooth CSS transitions (0.2s) animate control visibility changes. Configurable via `$wgLayersContextAwareToolbar` (default: true, set to false for classic mode).
+
+### Bug Fixes
+- **Fixed MediaWiki 1.39-1.43 LTS compatibility** — Fixed TypeError in `onThumbnailBeforeProduceHTML` hook where `$linkAttribs` parameter could be `false` (boolean) instead of an array when images have no link. The hook now accepts both types for backward compatibility with LTS versions.
+
+### Configuration
+- Added `$wgLayersContextAwareToolbar` — Enable/disable context-aware toolbar (default: true)
+
+### Testing
+- **7,297 tests passing** (+20 new tests)
+- Added 20 new tests for context-aware toolbar functionality covering `updateContextVisibility`, `setContextAwareEnabled`, `isContextAwareEnabled`, `updateContextForSelectedLayers`, and `showAllControls`
+
+---
+
+## [1.2.9] - 2025-12-28
+
+### Features
+- **Auto-create layer set on editor link** — When a user clicks a `layerslink=editor` link to a non-existent layer set (e.g., `[[File:Example.jpg|layers=anatomy|layerslink=editor]]`), the set is automatically created if the user has `createlayers` permission. Shows a notification informing the user the set was created. This enables pre-planned article templates with layer set placeholders.
+
+### Testing
+- **7,277 tests passing** (+7 from previous)
+- **130 test suites**
+- **94.45% statement coverage**, 82.88% branch coverage, 91.98% function coverage, 94.73% line coverage
+- **PropertiesForm.js: Improved coverage (68% → 72% function coverage)** — 25 new tests for ColorPickerDialog integration, validation edge cases, blur fill panel refresh, opacity change handling
+- **ImageLoader.js: First dedicated test file** — 47 tests organized for background image loading, URL building, same-origin detection, SVG placeholders, abort/destroy cleanup
+- **LayerItemFactory.js: First dedicated test file** — 51 tests for layer item DOM creation, updates, icon delegation, keyboard navigation, ARIA accessibility
+- **LayersEditor.js: Auto-create tests** — 6 new tests for showAutoCreateNotification, autoCreateLayerSet, and finalizeInitialState
+
+### Documentation
+- Updated all documentation with accurate metrics (7,277 tests, 94% coverage)
+- Updated improvement_plan.md with test coverage progress and feature requests section
+- Updated codebase_review.md with current state
+- **ARCHITECTURE.md**: Updated to v1.2.9 with accurate file counts (99 JS files), god class count (8), and controller line counts
+- **KNOWN_ISSUES.md**: Fixed ESLint disable count (12), updated CanvasRenderer line count (1,242)
+- **FUTURE_IMPROVEMENTS.md**: Added section 8 for auto-create layer set feature
+- **New feature request**: Auto-create layer set on editor link ([FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md](docs/FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md))
+- **README.md**: Added coverage (94%), test count (7,277), and license badges
+- **CONTRIBUTING.md**: Updated god class table with accurate line counts, fixed broken documentation links
+- **SECURITY.md**: Enhanced with proper vulnerability reporting section and improved formatting
+
+---
+
+## [1.2.8] - 2025-12-27
+
+### Bug Fixes
+- **Fixed rectangle blur fill appearing transparent** — Rectangles with blur fill were appearing completely transparent because rotation transformation modified x/y coordinates to local space before passing to EffectsRenderer.drawBlurFill. Now stores world coordinates (worldX, worldY) BEFORE rotation and passes those to drawBlurFill for correct canvas capture bounds.
+- **Fixed arrow rendering with blur blend mode** — Arrows with blur blend mode (set via Blend Mode dropdown) no longer display rectangular bounding boxes in the editor. The issue was that the blur blend mode path used rectangular clip regions instead of the arrow's actual shape. Arrows and lines now render normally and ArrowRenderer handles blur fill correctly via EffectsRenderer.
+- **Fixed arrow fill property** — Arrows were being created without a `fill` property, causing ArrowRenderer to only stroke (not fill) the polygon outline. Added explicit `fill: style.color` to ShapeFactory.createArrow() and BuiltInPresets arrow definitions.
+
+### Technical
+- Updated ShapeRenderer.drawRectangle() to store world coordinates before rotation transformation
+- Updated CanvasRenderer.js to skip arrows/lines from blur blend mode rendering path
+- Updated LayerRenderer.js (shared) with same fix for consistency
+- Added fill and arrowSize properties to arrow presets in BuiltInPresets.js
+- **Replaced console.log with mw.log** — Toolbar.js and LayersEditorModal.js now use MediaWiki's logging system instead of console methods for consistency and proper production logging
+
+### Security
+- **Fixed npm security vulnerabilities** — Updated `glob` 10.4.5 → 10.5.0 (high: command injection via CLI) and `js-yaml` 3.14.1 → 3.14.2 (moderate: prototype pollution)
+
+### Testing
+- **7,247 tests passing** (+371 since start of v1.2.8 development)
+- Added 3 blur fill tests for ShapeRenderer (verifying world coordinate handling with rotation)
+- **CanvasManager.js coverage improved: 79.6% → 86.3% statement, 64.8% → 71.9% branch**
+- Added 52 new tests for CanvasManager covering: `withLocalAlpha`, `applyLayerEffects`, `notifyToolbarOfSelection`, `selectLayer`, renderer delegation, text input controller delegation, marquee selection, rect intersection
+- **ImageLoader.js: First test coverage (0% → 100% statement, 92.8% branch)** — 47 new tests covering URL building, same-origin detection, image loading, SVG placeholder creation, timeout handling, abort, destroy
+- **LayersEditor.js coverage improved: 79.2% → 87% statement, 54.5% → 66.9% function** — 29 new tests for stub managers, fallback registry, navigation, cancel dialog
+- **LayerItemFactory.js: First test coverage (0% → 98.7% statement, 100% lines)** — 51 new tests for layer item DOM creation, updates, icon delegation, keyboard navigation
+- **CanvasEvents.js: Improved coverage (99% → 100% statement)** — 4 new tests for resize error handling and marquee tool
+- **LayersLightbox.js: Improved coverage (86.8% → 96.7% statement)** — 4 new tests for image onload handling and viewer initialization
+- **PresetManager.js: Improved coverage (82.6% → 93.8% statement, 100% function)** — 21 new tests for fallback behavior without storage/builtInPresets, edge cases
+- **ToolbarStyleControls.js: Improved coverage (87.7% → 93.8% statement, 79.1% → 83.7% function)** — 25 new tests for ColorControlFactory integration, PresetStyleManager integration, getClass fallback, addListener fallback, setStrokeColor/setFillColor with colorFactory
+- **ColorControlFactory.js: Improved coverage (87.2% → 88.4% statement, 80% → 85% function)** — 5 new tests for click handler and fallback
+- **PropertiesForm.js: Improved coverage (86.8% → 89.4% statement, 75.2% → 79% branch)** — 13 new tests for blur fill checkbox and color picker fallback
+- **ToolRegistry.js: Improved coverage (89.6% → 97.4% statement, 80% → 95% function)** — 8 new tests for isShapeTool, getCursorMap, clear, reset
+- **SelectionManager.js: Improved coverage (87.5% → 91.7% statement, 84.3% → 90% function)** — 11 new tests for accessibility, layer naming, toolbar notification
+- **ToolManager.js: Improved coverage (86.5% → 90.6% statement, 74.3% → 76.9% branch)** — 20 new tests for path handler delegation, destroy cleanup, initialization fallbacks, module availability (ToolStyles, ShapeFactory, ToolRegistry, TextToolHandler, PathToolHandler)
+- **CanvasRenderer.js: Improved coverage (88.5% → 93.5% statement, 92.5% → 96.2% function)** — 18 new tests for destroy, blur content rendering, _getLayerById
+- **LayerSetManager.js: Improved coverage (88.5% → 94% statement, 95.8% → 100% function)** — 13 new tests for getMessageWithParams, createNewLayerSet validation, loadRevisionById, reloadRevisions
+- **TextBoxRenderer.js: Improved coverage (88.4% → 93.8% statement)** — 8 new tests for drawTextOnly, shadow with spread
+- **ColorControlFactory.js: Improved coverage (88.4% → 91.9% statement)** — 6 new tests for openColorPicker, click handler
+- **HistoryManager.js: Improved coverage (87.2% → 100% statement, 97.1% → 100% function)** — 22 new tests for constructor branches, getEditor/getCanvasManager edge cases, endBatch early returns, cancelBatch restoration paths, compressHistory, destroy
+- **LayersNamespace.js: Improved coverage (83.6% → 98.4% statement, 70% → 100% function)** — 10 new tests for _createDeprecatedProxy direct invocation, warnDeprecated triggering, shouldWarn branches
+- Overall statement coverage: 92.8% → 94.4%
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
+## [1.2.7] - 2025-12-26
+
+### New Feature - Blur Fill for Arrows
+
+Extended the blur fill feature (introduced in v1.2.6) to support **arrow shapes**. Arrows can now use the "frosted glass" blur effect just like rectangles, circles, and other shapes.
+
+**How to Use:**
+1. Select an arrow layer
+2. In the Properties panel, check **Blur Fill**
+3. Adjust **Blur Radius** (default: 12px, range: 1-64px)
+
+### Bug Fixes
+- **Fixed "Invalid blend mode" validation error blocking save** — Layer sets containing arrows with blur fill could not be saved due to `blur` being incorrectly rejected as an invalid blend mode. Updated both client-side (`LayersValidator.js`) and server-side (`ServerSideLayerValidator.php`) validators to:
+  - Include all Canvas 2D `globalCompositeOperation` values (`source-over`, `multiply`, etc.)
+  - Add special case handling for `blur` as a fill type indicator (not a blend mode)
+
+### UI Improvements
+- **Compact layer panel** — Layer manager redesigned with a more compact look inspired by Figma and Photoshop:
+  - Layer item height reduced from 36px to 28px
+  - Control buttons reduced from 28px to 22px
+  - Padding and gaps reduced throughout
+  - Properties panel given flex priority (more space for properties, less for layer list)
+  - Default view shows ~6 layers before scrolling
+
+### Testing
+- **6,756 tests passing** (+38 from v1.2.6)
+- Added blur fill tests for ArrowRenderer
+- Added blur fill tests for TextBoxRenderer
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
+## [1.2.6] - 2025-12-25
+
+### New Feature - Blur Fill for Shapes
+
+Added **blur fill mode** for all filled shapes — a "frosted glass" effect that blurs the content beneath the shape instead of using a solid color fill.
+
+**Supported Shapes:**
+- Rectangle
+- Circle / Ellipse
+- Polygon / Star
+- Text Box
+
+**How to Use:**
+1. Select a shape layer
+2. In the Properties panel, set **Fill** to `blur`
+3. Optionally adjust **Blur Radius** (default: 12px, range: 1-64px)
+4. Adjust **Fill Opacity** to control the effect intensity
+
+**Technical Details:**
+- Works with rotation — blur correctly follows rotated shapes
+- Works in both editor and article view
+- Captures all content beneath (background image + other layers)
+- Falls back to gray placeholder if no background available
+
+### Bug Fixes
+- **Fixed blur fill with rotated shapes** — Blur now correctly captures and clips content for shapes with any rotation angle. Previously, rotated shapes would show distorted or misaligned blur content.
+
+### Testing
+- **6,718 tests passing** (+72 from v1.2.5)
+- Added comprehensive blur fill tests for TextBoxRenderer
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
+## [1.2.5] - 2025-12-24
+
+### Improved Editor Navigation
+
+**Breaking Change (UX Improvement):** When using `layerslink=editor` from an article page, closing the editor now returns you to the article page instead of the File: page. This is the expected behavior - the editor should return you to where you came from.
+
+### New Features - Advanced Editor Link Modes
+
+Added new `layerslink` values for additional control:
+
+#### `layerslink=editor-newtab`
+Opens the editor in a new browser tab, preserving the original page:
+```wikitext
+[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
+```
+
+#### `layerslink=editor-modal`
+Opens the editor in an iframe overlay without any page navigation — perfect for Page Forms:
+```wikitext
+[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
+```
+
+**Modal Mode Features:**
+- No page navigation (form data is preserved)
+- Escape key closes the modal
+- Full ARIA accessibility support
+- JavaScript events for integration: `layers-modal-closed`, `layers-saved`
+
+### Technical
+- **New module**: `ext.layers.modal` — Modal overlay component with postMessage communication
+- **New files**:
+  - `resources/ext.layers.modal/LayersEditorModal.js` — Modal class with iframe management
+  - `resources/ext.layers.modal/modal.css` — Modal overlay styles
+- **Modified files**:
+  - `src/Hooks/Processors/LayersParamExtractor.php` — Added `isEditorNewtab()`, `isEditorReturn()`, `isEditorModal()` methods
+  - `src/Hooks/Processors/ThumbnailProcessor.php` — ALL editor links now include `returnto` parameter
+  - `src/Hooks/Processors/ImageLinkProcessor.php` — ALL editor links now include `returnto` parameter
+  - `src/Hooks/WikitextHooks.php` — Accept new layerslink values in validation
+  - `src/Action/EditLayersAction.php` — Added `returnto` URL validation, `isModalMode` flag, new JS config vars
+  - `resources/ext.layers.editor/LayersEditor.js` — Modified `navigateBackToFileWithName()` for modal/return modes
+  - `i18n/en.json`, `i18n/qqq.json` — Added 5 new message keys
+  - `extension.json` — Added `ext.layers.modal` ResourceModule
+  - `jest.config.js` — Added `ext.layers.modal` to coverage tracking
+  - `docs/WIKITEXT_USAGE.md` — Documented new layerslink modes
+
+### Testing
+- **6,646 tests passing** (+23 from v1.2.4)
+- Added comprehensive Jest tests for `LayersEditorModal`
+- All linting passes (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
+## [1.2.4] - 2025-12-23
+
+### Code Quality - Major Testing & Documentation Update
+
+This release focuses on improving test coverage for critical components and ensuring documentation accuracy.
+
+#### Native Dialog Accessibility ✅
+- **PresetDropdown.js** — Replaced `prompt()` and `confirm()` calls with async DialogManager dialogs
+- **RevisionManager.js** — Replaced `confirm()` call with async DialogManager dialog
+- Both now have proper fallbacks using `eslint-disable-next-line no-alert` comments
+
+#### Test Coverage Improvements
+- **DialogManager.js** — Coverage increased from 53% to **96.14%** statement coverage (+35 tests)
+- **PropertiesForm.js** — Function coverage increased from 41% to **68.22%** (+39 tests)
+- **Total test count** — 6,549 → **6,623** (+74 tests)
+
+#### Memory Leak Prevention
+- **CanvasManager.js** — Added `fallbackTimeoutId` tracking for setTimeout cleanup
+- **LayersLightbox.js** — Added `closeTimeoutId` tracking for setTimeout cleanup
+
+#### Documentation Accuracy
+- **codebase_review.md** — Updated with accurate current metrics (was outdated)
+- **KNOWN_ISSUES.md** — Rewrote to reflect all P0 issues now resolved
+- Changed overall rating from 7.5/10 to **8.5/10** based on verified improvements
+
+### Technical Details
+- **Modified files**:
+  - `resources/ext.layers.editor/presets/PresetDropdown.js` — Async DialogManager integration
+  - `resources/ext.layers.editor/ui/PresetStyleManager.js` — Pass dialogManager to PresetDropdown
+  - `resources/ext.layers.editor/editor/RevisionManager.js` — Async confirm dialog
+  - `resources/ext.layers.editor/CanvasManager.js` — Timer ID tracking
+  - `resources/ext.layers/viewer/LayersLightbox.js` — Timer ID tracking
+  - `tests/jest/DialogManager.test.js` — 35 new tests for Promise-based APIs
+  - `tests/jest/PropertiesForm.test.js` — 39 new tests for layer forms
+  - `codebase_review.md` — Accurate metrics
+  - `docs/KNOWN_ISSUES.md` — All P0 issues marked resolved
+
+---
+
+## [1.2.3] - 2025-12-23
+
+### Bug Fixes
+- **Fixed text box rendering when image is scaled down** — Text boxes with vertical centering (middle alignment) now display correctly when images are resized in article view. Previously, the top line of text would be cut off because the `padding` property was not being scaled along with other dimensions.
+
+### Technical
+- **Modified files**:
+  - `resources/ext.layers/LayersViewer.js` — Added `padding` to `scaleLayerCoordinates()` to scale with the image
+  - `tests/jest/LayersViewer.test.js` — Added regression test for padding scaling
+
+### Code Quality
+- **UIManager refactored** — Extracted `SetSelectorController.js` (~567 lines) from `UIManager.js`, reducing it from 1,029 to 681 lines. This improves separation of concerns for named layer set management.
+
+### Testing
+- **6,549 tests passing** (+70 from v1.2.2)
+- **All linting passes** (ESLint, Stylelint, PHP CodeSniffer)
+
+---
+
+## [1.2.2] - 2025-12-23
+
+### Bug Fixes
+- **Fixed `layerslink=editor` and `layerslink=viewer` not working** — Deep linking parameters now correctly modify the image link destination. Previously, clicking layered images with these parameters would still navigate to the File: page instead of opening the editor or lightbox viewer. The fix ensures the `ThumbnailBeforeProduceHTML` hook properly modifies the anchor `href` attribute.
+- **Fixed editor dropdown showing 'default' on deep link** — When using `layerslink=editor` with a specific layer set (e.g., `layers=anatomy`), the set selector dropdown in the editor now correctly shows the loaded set name instead of always showing 'default'.
+
+### Technical
+- **Hook flow discovery**: MediaWiki 1.44 uses `ThumbnailBeforeProduceHTML` for thumbnail rendering instead of `MakeImageLink2`. The `$linkAttribs` parameter must be modified to change anchor destinations.
+- **Queue synchronization**: Added `$fileLinkTypes` queue in `WikitextHooks.php` to track `layerslink` values per file occurrence, synchronized with the existing `$fileSetNames` queue.
+- **Modified files**:
+  - `src/Hooks/WikitextHooks.php` — Added `$fileLinkTypes` queue and `getFileParamsForRender()` method for synchronized parameter retrieval
+  - `src/Hooks/Processors/ThumbnailProcessor.php` — Added `applyLayersLink()` method that modifies `$linkAttribs['href']` for deep linking
+  - `src/Hooks/Processors/ImageLinkProcessor.php` — Added `$linkTypeFromQueue` parameter support
+  - `src/Hooks/Processors/LayersParamExtractor.php` — Enhanced `extractLayersLink()` to check nested parameter locations
+  - `resources/ext.layers.editor/APIManager.js` — Fixed ordering: `currentSetName` is now set before `buildSetSelector()` is called
+  - `wiki/Wikitext-Syntax.md` — Clarified that `layerslink` must be used with `layers`
+
+### Testing
+- **6,479 tests passing** (Jest)
+- **All PHP linting and style checks pass**
+
+---
+
 ## [1.2.1] - 2025-12-23
 
 ### Bug Fixes

@@ -4,6 +4,202 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.11 (December 29, 2025)
+
+### Bug Fixes
+- **Fixed blend modes not rendering on article pages** — Layer blend modes (exclusion, multiply, screen, etc.) were not being applied when viewing images on article pages. The viewer now properly draws the background image onto the canvas when blend modes are used.
+- **Fixed blend mode property normalization** — The server stores blend mode as `blendMode` but client code was reading `blend`. Added property alias normalization for consistency.
+- **Removed redundant 'blur' from blend mode dropdown** — The 'blur' option was redundant with blur fill feature (v1.2.6+).
+
+### Testing
+- **7,361 tests passing** (+64 from v1.2.10)
+- **131 test suites**
+
+---
+
+## Version 1.2.10 (December 28, 2025)
+
+### Features
+- **Context-Aware Toolbar** — Toolbar shows only relevant controls based on the active tool or selected layers
+
+### Bug Fixes
+- **Fixed MediaWiki 1.39-1.43 LTS compatibility** — Fixed TypeError in hook where `$linkAttribs` could be `false`
+
+### Configuration
+- Added `$wgLayersContextAwareToolbar` — Enable/disable context-aware toolbar (default: true)
+
+### Testing
+- **7,297 tests passing** (+20 new tests)
+
+---
+
+## Version 1.2.9 (December 28, 2025)
+
+### Testing
+- **7,270 tests passing** (+23 from v1.2.8)
+- **130 test suites** (up from 128)
+- **94.45% statement coverage**, 82.88% branch, 91.98% function, 94.73% line
+- **PropertiesForm.js coverage improved** (68% → 72% function coverage)
+- **ImageLoader.js: First dedicated test file** — 47 tests
+- **LayerItemFactory.js: First dedicated test file** — 51 tests
+
+### Documentation
+- Updated all documentation with accurate metrics
+- Full release preparation with wiki sync
+
+---
+
+## Version 1.2.8 (December 27, 2025)
+
+### Bug Fixes
+- **Fixed arrow rendering with blur blend mode** — Arrows with blur blend mode no longer display rectangular bounding boxes in the editor
+- **Fixed arrow fill property** — Arrows are now properly filled instead of just stroked
+
+### Testing
+- **7,247 tests passing** (+491 from v1.2.7)
+
+---
+
+## Version 1.2.7 (December 26, 2025)
+
+### New Feature - Blur Fill for Arrows
+
+Extended blur fill support to **arrow shapes**. Arrows can now use the "frosted glass" blur effect.
+
+### Bug Fixes
+- **Fixed validation error blocking save** — Layer sets with blur-filled arrows could not be saved due to incorrect blend mode validation
+
+### UI Improvements
+- **Compact layer panel** — Redesigned with smaller layer items (28px vs 36px), smaller buttons, and better space allocation for the properties panel
+
+### Testing
+- **6,756 tests passing** (+105 from v1.2.6)
+
+---
+
+## Version 1.2.6 (December 25, 2025)
+
+### New Feature - Blur Fill for Shapes
+
+Added **blur fill mode** for all filled shapes — a "frosted glass" effect that blurs the content beneath the shape instead of using a solid color fill.
+
+**Supported Shapes:**
+- Rectangle
+- Circle / Ellipse
+- Polygon / Star
+- Text Box
+
+**How to Use:**
+1. Select a shape layer
+2. In the Properties panel, set **Fill** to `blur`
+3. Optionally adjust **Blur Radius** (default: 12px, range: 1-64px)
+4. Adjust **Fill Opacity** to control the effect intensity
+
+**Technical Details:**
+- Works with rotation — blur correctly follows rotated shapes
+- Works in both editor and article view
+- Captures all content beneath (background image + other layers)
+
+### Bug Fixes
+- **Fixed blur fill with rotated shapes** — Blur now correctly captures and clips content for shapes with any rotation angle
+
+### Testing
+- **6,651 tests passing** (+5 from v1.2.5)
+
+---
+
+## Version 1.2.5 (December 24, 2025)
+
+### Improved Editor Navigation
+
+**Breaking Change (UX Improvement):** When using `layerslink=editor` from an article page, closing the editor now returns you to the article page instead of the File: page.
+
+### New Features - Advanced Editor Link Modes
+
+- `layerslink=editor-newtab` — Opens editor in a new tab
+- `layerslink=editor-modal` — Opens editor in an iframe overlay (perfect for Page Forms)
+
+---
+
+## Version 1.2.4 (December 23, 2025)
+
+### Code Quality - Major Testing & Documentation Update
+
+- **DialogManager.js** — Coverage increased to 96.14%
+- **PropertiesForm.js** — Coverage increased to 68.22%
+- **6,623 tests passing**
+
+---
+
+## Version 1.2.3 (December 23, 2025)
+
+### Bug Fixes
+- **Fixed text box rendering when image is scaled down** — Text boxes with vertical centering (middle alignment) now display correctly when images are resized in article view. Previously, the top line of text would be cut off because the `padding` property was not being scaled along with other dimensions.
+
+### Code Quality
+- **UIManager refactored** — Extracted `SetSelectorController.js` (~567 lines) from `UIManager.js`, reducing it from 1,029 to 681 lines
+
+### Testing
+- **6,549 tests passing** (+70 from v1.2.2)
+
+---
+
+## Version 1.2.2 (December 23, 2025)
+
+### Bug Fixes
+- **Fixed `layerslink=editor` and `layerslink=viewer` not working** — Deep linking parameters now correctly modify the image link destination. Previously, clicking layered images with these parameters would still navigate to the File: page instead of opening the editor or lightbox viewer.
+- **Fixed editor dropdown showing 'default' on deep link** — When using `layerslink=editor` with a specific layer set (e.g., `layers=anatomy`), the set selector dropdown in the editor now correctly shows the loaded set name instead of always showing 'default'.
+
+### Technical
+- MediaWiki 1.44 uses `ThumbnailBeforeProduceHTML` for thumbnail rendering instead of `MakeImageLink2`. The `$linkAttribs` parameter must be modified to change anchor destinations.
+- Added `$fileLinkTypes` queue in `WikitextHooks.php` to track `layerslink` values per file occurrence, synchronized with the existing `$fileSetNames` queue.
+
+---
+
+## Version 1.2.1 (December 23, 2025)
+
+### Bug Fixes
+- **Fixed corner radius scaling on article pages** — Shape corner radii (`cornerRadius`, `pointRadius`, `valleyRadius`) now scale correctly when images are resized in article view. Stars, polygons, textboxes, and rounded rectangles display properly at all sizes.
+
+### Developer Experience
+- **Docker-based PHP test scripts** — New npm scripts `test:php:docker` and `fix:php:docker` for Windows developers with composer conflicts
+
+### Testing
+- E2E test stability improvements
+
+---
+
+## Version 1.2.0 (December 22, 2025)
+
+### New Features
+- **Deep Linking to Editor** — URL parameters allow opening the editor with a specific layer set pre-loaded:
+  - `?action=editlayers&setname=anatomy` — Opens editor with "anatomy" layer set
+  - Also supports `layerset` and `layers` parameter aliases
+  - Set name validation: alphanumeric, hyphens, and underscores only (max 50 chars)
+
+- **Wikitext Link Options** — New `layerslink` parameter for controlling click behavior:
+  - `[[File:Example.jpg|layers=setname|layerslink=editor]]` — Opens layer editor
+  - `[[File:Example.jpg|layers=setname|layerslink=viewer]]` — Opens fullscreen lightbox
+  - `[[File:Example.jpg|layers=setname|layerslink=lightbox]]` — Alias for viewer mode
+  - Default behavior (no layerslink): Standard MediaWiki link to File page
+
+- **Fullscreen Lightbox Viewer** — New modal viewer for viewing layered images:
+  - Keyboard accessible: Escape key closes the lightbox
+  - Click outside image to close
+  - Loading states and error handling
+  - Proper accessibility attributes (ARIA)
+
+---
+
+## Version 1.1.13-REL1_39 (December 23, 2025)
+
+### Bug Fixes
+- **Fixed corner radius scaling on article pages** — Backport of the corner radius scaling fix from v1.2.1. Shape corner radii now scale correctly when images are resized in article view.
+
+> **Note:** This is a maintenance release for the REL1_39 branch (MediaWiki 1.39-1.43).
+
+---
+
 ## Version 1.1.12 (December 22, 2025)
 
 ### Code Quality

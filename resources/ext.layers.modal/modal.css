@@ -1,0 +1,115 @@
+/**
+ * Layers Editor Modal Overlay Styles
+ *
+ * Styles for the modal overlay that displays the layers editor
+ * inline without navigating away from the current page.
+ */
+
+/* Modal overlay - covers entire viewport */
+.layers-editor-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba( 0, 0, 0, 0.9 );
+	z-index: 100000;
+	display: flex;
+	flex-direction: column;
+	animation: layers-modal-fade-in 0.2s ease-out;
+}
+
+/* Modal header with title and close button */
+.layers-editor-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 16px;
+	background: #1a1a1a;
+	border-bottom: 1px solid #333;
+	flex-shrink: 0;
+}
+
+.layers-editor-modal-title {
+	color: #fff;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+/* Close button */
+.layers-editor-modal-close {
+	background: transparent;
+	color: #fff;
+	border-color: transparent;
+	border-radius: 4px;
+	width: 36px;
+	height: 36px;
+	font-size: 1.5rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.15s ease;
+}
+
+.layers-editor-modal-close:hover {
+	background: rgba( 255, 255, 255, 0.1 );
+}
+
+.layers-editor-modal-close:focus {
+	outline: 2px solid #36c;
+	outline-offset: 2px;
+}
+
+.layers-editor-modal-close:active {
+	background: rgba( 255, 255, 255, 0.2 );
+}
+
+/* Editor iframe */
+.layers-editor-modal-iframe {
+	flex: 1;
+	width: 100%;
+	height: 100%;
+	border-color: transparent;
+	background: #fff;
+}
+
+/* Prevent body scroll when modal is open */
+body.layers-modal-open {
+	overflow: hidden;
+}
+
+/* Animation for modal appearance */
+@keyframes layers-modal-fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+/* Ensure modal trigger links have pointer cursor */
+.layers-editor-modal-trigger,
+a[ data-layers-modal ] {
+	cursor: pointer;
+}
+
+/* High contrast mode support */
+@media ( prefers-contrast: high ) {
+	.layers-editor-modal-header {
+		border-bottom: 2px solid #fff;
+	}
+
+	.layers-editor-modal-close {
+		border: 1px solid #fff;
+	}
+}
+
+/* Reduced motion preference */
+@media ( prefers-reduced-motion: reduce ) {
+	.layers-editor-modal-overlay {
+		animation-duration: 0s;
+	}
+}

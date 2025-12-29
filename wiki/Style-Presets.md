@@ -97,8 +97,9 @@ When you save a preset, these properties are captured:
 - `strokeOpacity` — Stroke transparency
 
 ### Fill Properties
-- `fill` — Fill color
+- `fill` — Fill color or `blur` for frosted glass effect
 - `fillOpacity` — Fill transparency
+- `blurRadius` — Blur intensity when using blur fill (1-64px)
 
 ### Shadow Properties
 - `shadow` — Shadow enabled

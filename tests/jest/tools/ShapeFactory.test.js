@@ -158,6 +158,20 @@ describe( 'ShapeFactory', () => {
 			const layer = factory.createArrow( { x: 0, y: 0 } );
 			expect( layer.arrowStyle ).toBe( 'single' );
 		} );
+
+		it( 'should include fill for proper arrow rendering', () => {
+			const layer = factory.createArrow( { x: 0, y: 0 } );
+			expect( layer.fill ).toBeDefined();
+			expect( layer.fill ).not.toBe( 'transparent' );
+			expect( layer.fill ).not.toBe( 'none' );
+		} );
+
+		it( 'should include arrowSize', () => {
+			const layer = factory.createArrow( { x: 0, y: 0 } );
+			expect( layer.arrowSize ).toBeDefined();
+			expect( typeof layer.arrowSize ).toBe( 'number' );
+			expect( layer.arrowSize ).toBeGreaterThan( 0 );
+		} );
 	} );
 
 	describe( 'createPolygon', () => {
@@ -237,6 +251,101 @@ describe( 'ShapeFactory', () => {
 		} );
 	} );
 
+	describe( 'createBlur', () => {
+		it( 'should create blur layer with correct type', () => {
+			const point = { x: 100, y: 200 };
+			const layer = factory.createBlur( point );
+
+			expect( layer.type ).toBe( 'blur' );
+			expect( layer.x ).toBe( 100 );
+			expect( layer.y ).toBe( 200 );
+		} );
+
+		it( 'should have zero initial dimensions', () => {
+			const layer = factory.createBlur( { x: 0, y: 0 } );
+
+			expect( layer.width ).toBe( 0 );
+			expect( layer.height ).toBe( 0 );
+		} );
+
+		it( 'should have blurAmount property', () => {
+			const layer = factory.createBlur( { x: 0, y: 0 } );
+
+			expect( layer.blurAmount ).toBe( 10 );
+		} );
+
+		it( 'should apply stroke from current style', () => {
+			const layer = factory.createBlur( { x: 0, y: 0 } );
+
+			expect( layer.stroke ).toBe( '#ff0000' );
+			expect( layer.strokeWidth ).toBe( 3 );
+		} );
+	} );
+
+	describe( 'createTextBox', () => {
+		it( 'should create textbox layer with correct type', () => {
+			const point = { x: 150, y: 250 };
+			const layer = factory.createTextBox( point );
+
+			expect( layer.type ).toBe( 'textbox' );
+			expect( layer.x ).toBe( 150 );
+			expect( layer.y ).toBe( 250 );
+		} );
+
+		it( 'should have zero initial dimensions', () => {
+			const layer = factory.createTextBox( { x: 0, y: 0 } );
+
+			expect( layer.width ).toBe( 0 );
+			expect( layer.height ).toBe( 0 );
+		} );
+
+		it( 'should have text properties', () => {
+			const layer = factory.createTextBox( { x: 0, y: 0 } );
+
+			expect( layer.text ).toBe( '' );
+			expect( layer.fontSize ).toBe( 16 );
+			expect( layer.fontFamily ).toBe( 'Arial' );
+			expect( layer.fontWeight ).toBe( 'normal' );
+			expect( layer.fontStyle ).toBe( 'normal' );
+			expect( layer.textAlign ).toBe( 'left' );
+			expect( layer.verticalAlign ).toBe( 'top' );
+			expect( layer.lineHeight ).toBe( 1.2 );
+		} );
+
+		it( 'should have text stroke properties', () => {
+			const layer = factory.createTextBox( { x: 0, y: 0 } );
+
+			expect( layer.textStrokeWidth ).toBe( 0 );
+			expect( layer.textStrokeColor ).toBe( '#000000' );
+		} );
+
+		it( 'should have text shadow properties', () => {
+			const layer = factory.createTextBox( { x: 0, y: 0 } );
+
+			expect( layer.textShadow ).toBe( false );
+			expect( layer.textShadowColor ).toBe( 'rgba(0,0,0,0.5)' );
+			expect( layer.textShadowBlur ).toBe( 4 );
+			expect( layer.textShadowOffsetX ).toBe( 2 );
+			expect( layer.textShadowOffsetY ).toBe( 2 );
+		} );
+
+		it( 'should have rectangle properties', () => {
+			const layer = factory.createTextBox( { x: 0, y: 0 } );
+
+			expect( layer.stroke ).toBe( '#ff0000' );
+			expect( layer.strokeWidth ).toBe( 3 );
+			expect( layer.fill ).toBe( '#00ff00' );
+			expect( layer.cornerRadius ).toBe( 0 );
+			expect( layer.padding ).toBe( 8 );
+		} );
+
+		it( 'should apply color from style', () => {
+			const layer = factory.createTextBox( { x: 0, y: 0 } );
+
+			expect( layer.color ).toBe( '#ff0000' );
+		} );
+	} );
+
 	describe( 'create', () => {
 		it( 'should create layer by type', () => {
 			const layer = factory.create( 'rectangle', { x: 10, y: 20 } );
@@ -251,6 +360,62 @@ describe( 'ShapeFactory', () => {
 		it( 'should pass options to creation method', () => {
 			const layer = factory.create( 'text', { x: 0, y: 0 }, { text: 'Custom' } );
 			expect( layer.text ).toBe( 'Custom' );
+		} );
+
+		it( 'should create blur layer via create method', () => {
+			const layer = factory.create( 'blur', { x: 50, y: 60 } );
+			expect( layer.type ).toBe( 'blur' );
+			expect( layer.x ).toBe( 50 );
+			expect( layer.y ).toBe( 60 );
+		} );
+
+		it( 'should create textbox layer via create method', () => {
+			const layer = factory.create( 'textbox', { x: 70, y: 80 } );
+			expect( layer.type ).toBe( 'textbox' );
+			expect( layer.x ).toBe( 70 );
+			expect( layer.y ).toBe( 80 );
+		} );
+
+		it( 'should create pen layer as path', () => {
+			const layer = factory.create( 'pen', { x: 0, y: 0 } );
+			expect( layer.type ).toBe( 'path' );
+		} );
+
+		it( 'should create circle layer via create method', () => {
+			const layer = factory.create( 'circle', { x: 0, y: 0 } );
+			expect( layer.type ).toBe( 'circle' );
+		} );
+
+		it( 'should create ellipse layer via create method', () => {
+			const layer = factory.create( 'ellipse', { x: 0, y: 0 } );
+			expect( layer.type ).toBe( 'ellipse' );
+		} );
+
+		it( 'should create line layer via create method', () => {
+			const layer = factory.create( 'line', { x: 0, y: 0 } );
+			expect( layer.type ).toBe( 'line' );
+		} );
+
+		it( 'should create arrow layer via create method', () => {
+			const layer = factory.create( 'arrow', { x: 0, y: 0 } );
+			expect( layer.type ).toBe( 'arrow' );
+		} );
+
+		it( 'should create polygon layer via create method', () => {
+			const layer = factory.create( 'polygon', { x: 0, y: 0 }, { sides: 6 } );
+			expect( layer.type ).toBe( 'polygon' );
+			expect( layer.sides ).toBe( 6 );
+		} );
+
+		it( 'should create star layer via create method', () => {
+			const layer = factory.create( 'star', { x: 0, y: 0 }, { points: 5 } );
+			expect( layer.type ).toBe( 'star' );
+			expect( layer.points ).toBe( 5 );
+		} );
+
+		it( 'should create path layer via create method', () => {
+			const layer = factory.create( 'path', { x: 0, y: 0 } );
+			expect( layer.type ).toBe( 'path' );
 		} );
 	} );
 

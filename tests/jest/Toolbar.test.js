@@ -1403,29 +1403,6 @@ describe( 'Toolbar', function () {
 		} );
 	} );
 
-	describe( 'handleKeyboardShortcuts deprecated wrapper', function () {
-		beforeEach( function () {
-			toolbar = new Toolbar( { container: container, editor: mockEditor } );
-		} );
-
-		it( 'should delegate to keyboardHandler when available', function () {
-			toolbar.keyboardHandler = { handleKeyboardShortcuts: jest.fn() };
-			const mockEvent = new KeyboardEvent( 'keydown', { key: 'z', ctrlKey: true } );
-
-			toolbar.handleKeyboardShortcuts( mockEvent );
-
-			expect( toolbar.keyboardHandler.handleKeyboardShortcuts ).toHaveBeenCalledWith( mockEvent );
-		} );
-
-		it( 'should not throw when keyboardHandler not available', function () {
-			toolbar.keyboardHandler = null;
-
-			expect( function () {
-				toolbar.handleKeyboardShortcuts( new KeyboardEvent( 'keydown' ) );
-			} ).not.toThrow();
-		} );
-	} );
-
 	describe( 'createActionButton toggle buttons', function () {
 		beforeEach( function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
@@ -1469,8 +1446,8 @@ describe( 'Toolbar', function () {
 	describe( 'handleImageImport', function () {
 		beforeEach( function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
-			// Mock alert
-			global.alert = jest.fn();
+			// Mock mw.notify for error notifications
+			global.mw.notify = jest.fn();
 			// Set up editor with required properties
 			toolbar.editor = {
 				stateManager: {
@@ -1500,9 +1477,10 @@ describe( 'Toolbar', function () {
 
 			await toolbar.handleImageImport( largeFile );
 
-			expect( global.alert ).toHaveBeenCalled();
-			// The message key or fallback text should be shown
-			expect( global.alert.mock.calls[ 0 ][ 0 ] ).toMatch( /too.large|import-image-too-large/i );
+			expect( global.mw.notify ).toHaveBeenCalled();
+			// The message key or fallback text should be shown with error type
+			expect( global.mw.notify.mock.calls[ 0 ][ 0 ] ).toMatch( /too.large|import-image-too-large/i );
+			expect( global.mw.notify.mock.calls[ 0 ][ 1 ] ).toEqual( { type: 'error' } );
 		} );
 
 		it( 'should reject files with invalid type', async function () {
@@ -1510,8 +1488,9 @@ describe( 'Toolbar', function () {
 
 			await toolbar.handleImageImport( invalidFile );
 
-			expect( global.alert ).toHaveBeenCalled();
-			expect( global.alert.mock.calls[ 0 ][ 0 ] ).toMatch( /invalid|import-image-invalid/i );
+			expect( global.mw.notify ).toHaveBeenCalled();
+			expect( global.mw.notify.mock.calls[ 0 ][ 0 ] ).toMatch( /invalid|import-image-invalid/i );
+			expect( global.mw.notify.mock.calls[ 0 ][ 1 ] ).toEqual( { type: 'error' } );
 		} );
 
 		it( 'should accept valid PNG files', async function () {
@@ -1578,8 +1557,9 @@ describe( 'Toolbar', function () {
 
 			await toolbar.handleImageImport( validFile );
 
-			expect( global.alert ).toHaveBeenCalled();
-			expect( global.alert.mock.calls[ 0 ][ 0 ] ).toMatch( /fail|import-image-failed/i );
+			expect( global.mw.notify ).toHaveBeenCalled();
+			expect( global.mw.notify.mock.calls[ 0 ][ 0 ] ).toMatch( /fail|import-image-failed/i );
+			expect( global.mw.notify.mock.calls[ 0 ][ 1 ] ).toEqual( { type: 'error' } );
 		} );
 
 		it( 'should create layer with correct properties', async function () {
@@ -1882,23 +1862,6 @@ describe( 'Toolbar', function () {
 		it( 'should not throw if zoomDisplay missing', function () {
 			toolbar.zoomDisplay = null;
 			expect( () => toolbar.updateZoomDisplay( 100 ) ).not.toThrow();
-		} );
-	} );
-
-	describe( 'handleKeyboardShortcuts delegation', function () {
-		beforeEach( function () {
-			toolbar = new Toolbar( { container: container, editor: mockEditor } );
-		} );
-
-		it( 'should delegate to keyboardHandler', function () {
-			const mockEvent = { key: 'z', ctrlKey: true };
-			toolbar.handleKeyboardShortcuts( mockEvent );
-			expect( toolbar.keyboardHandler.handleKeyboardShortcuts ).toHaveBeenCalledWith( mockEvent );
-		} );
-
-		it( 'should not throw if keyboardHandler missing', function () {
-			toolbar.keyboardHandler = null;
-			expect( () => toolbar.handleKeyboardShortcuts( {} ) ).not.toThrow();
 		} );
 	} );
 

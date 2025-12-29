@@ -107,11 +107,16 @@
 				// Points array limits
 				maxPoints: 500,
 
-				// Valid blend modes
+				// Valid blend modes - must match Canvas 2D globalCompositeOperation values
+				// 'source-over' is the default/normal blend mode used by Canvas 2D
 				validBlendModes: [
-					'normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten',
-					'color-dodge', 'color-burn', 'hard-light', 'soft-light',
-					'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'
+					'source-over', 'source-in', 'source-out', 'source-atop',
+					'destination-over', 'destination-in', 'destination-out', 'destination-atop',
+					'lighter', 'copy', 'xor', 'multiply', 'screen', 'overlay',
+					'darken', 'lighten', 'color-dodge', 'color-burn',
+					'hard-light', 'soft-light', 'difference', 'exclusion',
+					'hue', 'saturation', 'color', 'luminosity',
+					'normal' // Alias for 'source-over', kept for backward compatibility
 				],
 
 				// Valid text alignments
@@ -328,6 +333,10 @@
 
 			colorFields.forEach( ( field ) => {
 				if ( layer[ field ] !== undefined ) {
+					// Special case: 'blur' is a valid fill value (blur fill effect)
+					if ( field === 'fill' && layer[ field ] === 'blur' ) {
+						return;
+					}
 					if ( !this.isValidColor( layer[ field ] ) ) {
 						result.isValid = false;
 						result.errors.push( this.getMessage( 'layers-validation-color-invalid', field ) );
@@ -428,9 +437,11 @@
 			}
 
 			// Blend mode validation
+			// Note: 'blur' is a special fill type, not a blend mode - skip validation for it
 			if ( layer.blendMode !== undefined || layer.blend !== undefined ) {
 				const blendValue = layer.blendMode || layer.blend;
-				if ( !this.validationRules.validBlendModes.includes( blendValue ) ) {
+				// 'blur' is used as a fill type indicator, not a blend mode
+				if ( blendValue !== 'blur' && !this.validationRules.validBlendModes.includes( blendValue ) ) {
 					result.isValid = false;
 					result.errors.push( this.getMessage( 'layers-validation-blendmode-invalid' ) );
 				}

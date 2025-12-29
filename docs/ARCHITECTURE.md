@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 20, 2025  
-**Version:** 1.1.7
+**Last Updated:** December 29, 2025  
+**Version:** 1.2.11
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -22,18 +22,19 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 90 |
+| Total JS files | 97 |
 | Viewer module | ~682 lines |
 | Shared module | ~5,000 lines |
-| Editor module | ~40,000 lines |
-| Total JS lines | ~45,924 |
-| ES6 classes | 81 |
+| Editor module | ~43,000 lines |
+| Total JS lines | ~49,900 |
+| ES6 classes | 87 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | ~92% statements, ~80% branches |
-| Jest tests | ~5,695 |
+| Test coverage | 94.43% stmt, 82.83% branch, 91.95% func |
+| Jest tests | **7,322** |
 | PHPUnit test files | 17 |
-| God classes (>1000 lines) | **6** ⚠️ |
+| God classes (>1000 lines) | **8** ⚠️ |
 | Drawing tools | 14 |
+| TODO/FIXME comments | 0 ✅ |
 
 ---
 
@@ -64,17 +65,19 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ### Known Technical Debt
 
-**6 files exceed 1,000 lines (god classes):**
-- CanvasManager.js (1,868) - facade with 10+ controllers
-- LayerPanel.js (1,837) - delegates to 7 controllers
-- Toolbar.js (1,539) - UI controls consolidation
-- LayersEditor.js (1,324) - main entry point
-- ToolManager.js (1,264) - needs tool extraction
+**8 files exceed 1,000 lines (god classes):**
+- CanvasManager.js (1,877) - facade with 10+ controllers
+- LayerPanel.js (1,838) - delegates to 7 controllers
+- Toolbar.js (1,537) - UI controls consolidation
+- LayersEditor.js (1,459) - main entry point
+- ToolManager.js (1,261) - tool delegation pattern
+- CanvasRenderer.js (1,242) - rendering coordination
 - SelectionManager.js (1,194) - core selection logic
+- APIManager.js (1,182) - API integration layer
 
 **Recently under 1,000 (no longer god classes):**
-- ShapeRenderer.js (857) - successfully refactored ✅
-- ToolbarStyleControls.js (947) - style controls extracted ✅
+- ToolbarStyleControls.js (975) - approaching limit again ⚠️
+- ShapeRenderer.js (909) - approaching limit, well-structured ⚠️
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 
@@ -163,11 +166,11 @@ graph TB
 ```mermaid
 graph LR
     subgraph Facade["CanvasManager (Facade)"]
-        cm["CanvasManager<br/>1,868 lines"]
+        cm["CanvasManager<br/>1,877 lines"]
     end
 
     subgraph Zoom["Zoom/Pan"]
-        zpc["ZoomPanController<br/>340 lines"]
+        zpc["ZoomPanController<br/>370 lines"]
     end
 
     subgraph Grid["Grid/Rulers"]
@@ -175,28 +178,28 @@ graph LR
     end
 
     subgraph Transform["Transforms"]
-        tc["TransformController<br/>761 lines"]
-        rc["ResizeCalculator<br/>806 lines"]
+        tc["TransformController<br/>779 lines"]
+        rc["ResizeCalculator<br/>822 lines"]
     end
 
     subgraph Hit["Hit Testing"]
-        htc["HitTestController<br/>380 lines"]
+        htc["HitTestController<br/>382 lines"]
     end
 
     subgraph Draw["Drawing"]
-        dc["DrawingController<br/>635 lines"]
+        dc["DrawingController<br/>630 lines"]
     end
 
     subgraph Clip["Clipboard"]
-        cc["ClipboardController<br/>210 lines"]
+        cc["ClipboardController<br/>248 lines"]
     end
 
     subgraph Interact["Interaction"]
-        ic["InteractionController<br/>490 lines"]
+        ic["InteractionController<br/>501 lines"]
     end
 
     subgraph Render["Rendering"]
-        rco["RenderCoordinator<br/>390 lines"]
+        rco["RenderCoordinator<br/>398 lines"]
     end
 
     cm -->|zoomIn/Out| zpc
@@ -310,16 +313,16 @@ ZoomPanController.prototype.zoomIn = function() {
 **Controllers extracted from CanvasManager:**
 | Controller | Responsibility | Lines |
 |------------|----------------|-------|
-| ZoomPanController | Zoom, pan, fit-to-window | ~340 |
+| ZoomPanController | Zoom, pan, fit-to-window | ~370 |
 | GridRulersController | Grid, rulers, snap-to-grid | ~385 |
-| TransformController | Resize, rotate, drag | ~761 |
-| HitTestController | Click detection, selection | ~380 |
-| DrawingController | Shape creation | ~635 |
-| ClipboardController | Copy, cut, paste | ~210 |
-| InteractionController | Mouse/touch events | ~490 |
-| RenderCoordinator | Render scheduling | ~390 |
+| TransformController | Resize, rotate, drag | ~779 |
+| HitTestController | Click detection, selection | ~382 |
+| DrawingController | Shape creation | ~630 |
+| ClipboardController | Copy, cut, paste | ~248 |
+| InteractionController | Mouse/touch events | ~501 |
+| RenderCoordinator | Render scheduling | ~398 |
 | StyleController | Style options | ~100 |
-| ResizeCalculator | Shape resize calculations | ~806 |
+| ResizeCalculator | Shape resize calculations | ~822 |
 
 ### 3. Editor Module Extraction Pattern
 

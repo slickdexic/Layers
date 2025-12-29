@@ -430,6 +430,29 @@ body.layers-editor-open .mw-body-content {
 	gap: 2px;
 }
 
+/* Context-aware toolbar transitions (after base rules for proper specificity) */
+.style-group.context-aware .style-controls-row,
+.style-group.context-aware .style-control-item,
+.style-group.context-aware .preset-dropdown-container {
+	transition: opacity 0.2s ease-out, max-width 0.2s ease-out, margin 0.2s ease-out, padding 0.2s ease-out;
+	overflow: hidden;
+}
+
+.style-group.context-aware .context-hidden {
+	opacity: 0;
+	max-width: 0;
+	margin: 0;
+	padding: 0;
+	pointer-events: none;
+}
+
+.style-group.context-aware .style-controls-row:not( .context-hidden ),
+.style-group.context-aware .style-control-item:not( .context-hidden ),
+.style-group.context-aware .preset-dropdown-container:not( .context-hidden ) {
+	opacity: 1;
+	max-width: 400px;
+}
+
 .style-control-label {
 	font-size: 0.625em;
 	color: #666;
@@ -713,7 +736,7 @@ body.layers-editor-open .mw-body-content {
 
 .layers-panel-divider {
 	position: relative;
-	height: 12px;
+	height: 8px;
 	background: transparent;
 	cursor: row-resize;
 	width: 100%;
@@ -761,13 +784,14 @@ body.layers-editor-open .mw-body-content {
 }
 
 .layers-list {
-	flex: 1 1 auto;
+	flex: 0 0 auto;
 	overflow: hidden auto;
-	padding: 8px;
-	min-height: 80px;
-	max-height: 40vh;
+	padding: 6px;
+	min-height: 60px;
+	/* Default to showing ~6 compact layer items (28px each + gaps) */
+	max-height: 200px;
 	/* Keep last items visible above the fixed-height status bar */
-	padding-bottom: 72px;
+	padding-bottom: 48px;
 }
 
 /* When manually resized, use border-box so height includes padding */
@@ -843,18 +867,18 @@ body.layers-editor-open .mw-body-content {
 .layers-properties,
 .layers-code-panel {
 	border-top: 1px solid #eee;
-	padding: 12px;
+	padding: 10px;
 	overflow-y: auto;
-	flex: 1;
-	min-height: 80px;
+	flex: 1 1 auto;
+	min-height: 120px;
 	/* Keep controls from being obscured by the status bar */
-	padding-bottom: 72px;
+	padding-bottom: 56px;
 }
 
 .layers-properties h4,
 .layers-code-panel h4 {
-	margin: 0 0 12px 0;
-	font-size: 0.95em;
+	margin: 0 0 8px 0;
+	font-size: 0.9em;
 	font-weight: 600;
 }
 
@@ -862,10 +886,10 @@ body.layers-editor-open .mw-body-content {
 
 .property-section {
 	border: 1px solid #e3e6ea;
-	border-radius: 6px;
-	margin-bottom: 16px;
+	border-radius: 4px;
+	margin-bottom: 10px;
 	background: #fff;
-	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.04 );
+	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.03 );
 }
 
 .property-section:last-child {
@@ -873,16 +897,16 @@ body.layers-editor-open .mw-body-content {
 }
 
 .property-section-header {
-	background: linear-gradient( to bottom, #f8f9fa, #e9ecef );
+	background: linear-gradient( to bottom, #f8f9fa, #f0f1f2 );
 	border-bottom: 1px solid #e3e6ea;
-	border-radius: 5px 5px 0 0;
-	padding: 8px 12px;
+	border-radius: 3px 3px 0 0;
+	padding: 5px 8px;
 	font-weight: 600;
-	font-size: 0.85em;
+	font-size: 0.8em;
 	color: #495057;
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 5px;
 }
 
 .property-section-header::before {
@@ -906,15 +930,15 @@ body.layers-editor-open .mw-body-content {
 }
 
 .property-section-body {
-	padding: 8px 12px;
+	padding: 6px 8px;
 }
 
 .layer-properties-form .property-field {
 	display: grid;
-	grid-template-columns: 1fr 120px;
-	gap: 6px;
+	grid-template-columns: 1fr 110px;
+	gap: 4px;
 	align-items: center;
-	margin-bottom: 6px;
+	margin-bottom: 4px;
 }
 
 .layer-properties-form .property-field--wide {
@@ -1253,20 +1277,20 @@ body.layers-editor-open .mw-body-content {
 	cursor: copy !important;
 }
 
-/* Layer Items */
+/* Layer Items - Compact design inspired by Figma/Photoshop */
 
 .layer-item {
 	display: flex;
 	align-items: center;
-	padding: 6px 8px;
-	margin-bottom: 4px;
+	padding: 4px 6px;
+	margin-bottom: 2px;
 	background: #fafafa;
 	border: 1px solid #e8e8e8;
-	border-radius: 8px;
+	border-radius: 4px;
 	cursor: pointer;
-	transition: all 0.15s ease;
-	gap: 8px;
-	min-height: 36px;
+	transition: all 0.1s ease;
+	gap: 4px;
+	min-height: 28px;
 }
 
 .layer-item .layer-visibility,
@@ -1275,13 +1299,13 @@ body.layers-editor-open .mw-body-content {
 	background: transparent;
 	border: 0;
 	cursor: pointer;
-	width: 28px;
-	height: 28px;
+	width: 22px;
+	height: 22px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border-radius: 6px;
-	transition: all 0.15s ease;
+	border-radius: 3px;
+	transition: all 0.1s ease;
 	padding: 0;
 	flex-shrink: 0;
 }
@@ -1317,9 +1341,9 @@ body.layers-editor-open .mw-body-content {
 /* Background Layer Item - special styling to distinguish from regular layers */
 .background-layer-item {
 	background: linear-gradient( 135deg, #f5f5f5 25%, #e8e8e8 25%, #e8e8e8 50%, #f5f5f5 50%, #f5f5f5 75%, #e8e8e8 75% );
-	background-size: 8px 8px;
+	background-size: 6px 6px;
 	border: 1px dashed #bbb;
-	margin-top: 8px;
+	margin-top: 4px;
 	cursor: default;
 }
 
@@ -1400,16 +1424,16 @@ body.layers-editor-open .mw-body-content {
 
 .layer-name {
 	flex: 1;
-	font-size: 0.85em;
+	font-size: 0.8em;
 	color: #333;
-	padding: 4px 8px;
-	border-radius: 4px;
+	padding: 2px 4px;
+	border-radius: 3px;
 	min-width: 0;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	border: 1px solid transparent;
-	transition: all 0.15s ease;
+	transition: all 0.1s ease;
 }
 
 .layer-name:hover {
@@ -1439,16 +1463,16 @@ body.layers-editor-open .mw-body-content {
 }
 
 .layer-grab-area {
-	width: 20px;
-	height: 28px;
+	width: 16px;
+	height: 20px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: grab;
-	border-radius: 4px;
-	transition: all 0.15s ease;
+	border-radius: 2px;
+	transition: all 0.1s ease;
 	flex-shrink: 0;
-	opacity: 0.6;
+	opacity: 0.5;
 }
 
 .layer-grab-area:focus {
@@ -1533,83 +1557,6 @@ body.layers-editor-open .mw-body-content {
 .layers-error p {
 	margin: 0;
 	color: #333;
-}
-
-/* Status bar */
-
-.layers-statusbar {
-	flex: 0 0 auto;
-	background: #fbfbfb;
-	border-top: 1px solid #ddd;
-	padding: 6px 10px;
-	font-size: 0.75em;
-	color: #495057;
-	display: flex;
-	align-items: center;
-	gap: 16px;
-	z-index: 2; /* keep above sidebars and scrollables */
-	/* Establish stacking and reserve visual space */
-	min-height: 40px;
-}
-
-.layers-statusbar .status-item {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-}
-
-.layers-statusbar .status-label {
-	color: #6c757d;
-}
-
-.layers-statusbar .status-value {
-	font-variant-numeric: tabular-nums;
-}
-
-/* Compact Wikitext code slot in status bar */
-.layers-statusbar .status-spacer {
-	flex: 1 1 auto;
-}
-
-.layers-statusbar .status-code {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	max-width: 50%;
-	overflow: hidden;
-}
-
-.layers-statusbar .status-code-text {
-	display: inline-block;
-	max-width: 32ch;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	font-family: ui-monospace, 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
-	background: #f1f3f5;
-	border: 1px solid #e1e5e9;
-	border-radius: 3px;
-	padding: 2px 6px;
-}
-
-.layers-statusbar .status-copy-btn {
-	background: #f8f9fa;
-	border: 1px solid #ddd;
-	padding: 4px 8px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 0.75em;
-}
-
-.layers-statusbar .status-copy-btn:hover {
-	background: #e9ecef;
-}
-
-.layers-statusbar .status-copy-btn:disabled,
-.layers-statusbar .status-copy-btn[ disabled ] {
-	opacity: 0.5;
-	cursor: not-allowed;
-	background-color: #f0f0f0;
 }
 
 /* Footer Wikitext code area */

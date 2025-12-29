@@ -1176,4 +1176,116 @@ describe('SelectionManager', () => {
             expect(rect).toEqual({ x: 50, y: 50, width: 50, height: 50 });
         });
     });
+
+    describe('getDefaultLayerName', () => {
+        test('should return "Layer" for null layer', () => {
+            const name = selectionManager.getDefaultLayerName(null);
+            expect(name).toBe('Layer');
+        });
+
+        test('should return "Layer" for layer without type', () => {
+            const name = selectionManager.getDefaultLayerName({});
+            expect(name).toBe('Layer');
+        });
+
+        test('should return capitalized type when no i18n available', () => {
+            delete window.layersMessages;
+            const name = selectionManager.getDefaultLayerName({ type: 'rectangle' });
+            expect(name).toBe('Rectangle');
+        });
+
+        test('should use i18n message when available', () => {
+            window.layersMessages = {
+                get: jest.fn((key, fallback) => {
+                    if (key === 'layers-type-arrow') {
+                        return 'Arrow Shape';
+                    }
+                    return fallback;
+                })
+            };
+            const name = selectionManager.getDefaultLayerName({ type: 'arrow' });
+            expect(name).toBe('Arrow Shape');
+            delete window.layersMessages;
+        });
+
+        test('should fall back to capitalized type when i18n returns empty', () => {
+            window.layersMessages = {
+                get: jest.fn(() => '')
+            };
+            const name = selectionManager.getDefaultLayerName({ type: 'circle' });
+            expect(name).toBe('Circle');
+            delete window.layersMessages;
+        });
+    });
+
+    describe('accessibility announcer', () => {
+        test('should announce layer selection when announcer available', () => {
+            const mockAnnouncer = {
+                announceLayerSelection: jest.fn()
+            };
+            window.layersAnnouncer = mockAnnouncer;
+
+            // Add a layer with a name
+            mockLayers.push({ id: 'namedLayer', name: 'My Named Layer', type: 'rectangle', x: 0, y: 0, width: 50, height: 50 });
+            
+            selectionManager.selectLayer('namedLayer', false);
+
+            expect(mockAnnouncer.announceLayerSelection).toHaveBeenCalledWith('My Named Layer');
+
+            delete window.layersAnnouncer;
+            // Clean up
+            mockLayers.pop();
+        });
+
+        test('should use default layer name when layer has no name', () => {
+            const mockAnnouncer = {
+                announceLayerSelection: jest.fn()
+            };
+            window.layersAnnouncer = mockAnnouncer;
+
+            selectionManager.selectLayer('layer1', false);
+
+            // Should be called with default name (capitalized type)
+            expect(mockAnnouncer.announceLayerSelection).toHaveBeenCalled();
+
+            delete window.layersAnnouncer;
+        });
+    });
+
+    describe('notifyToolbarOfSelection', () => {
+        test('should do nothing when editor not available', () => {
+            selectionManager.canvasManager = {};
+            expect(() => selectionManager.notifyToolbarOfSelection()).not.toThrow();
+        });
+
+        test('should do nothing when toolbar not available', () => {
+            selectionManager.canvasManager = { editor: {} };
+            expect(() => selectionManager.notifyToolbarOfSelection()).not.toThrow();
+        });
+
+        test('should do nothing when styleControls not available', () => {
+            selectionManager.canvasManager = { editor: { toolbar: {} } };
+            expect(() => selectionManager.notifyToolbarOfSelection()).not.toThrow();
+        });
+
+        test('should call updateForSelection when available', () => {
+            const mockUpdateForSelection = jest.fn();
+            selectionManager.canvasManager = {
+                editor: {
+                    toolbar: {
+                        styleControls: {
+                            updateForSelection: mockUpdateForSelection
+                        }
+                    },
+                    layers: mockLayers
+                },
+                layers: mockLayers
+            };
+            selectionManager.selectedLayerIds = ['layer1'];
+
+            selectionManager.notifyToolbarOfSelection();
+
+            expect(mockUpdateForSelection).toHaveBeenCalled();
+        });
+    });
 });

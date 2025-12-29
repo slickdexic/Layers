@@ -247,9 +247,6 @@ class ToolManager {
 		this.isDrawing = true;
 		this.startPoint = point;
 
-		// eslint-disable-next-line no-console
-
-
 		switch( this.currentTool ) {
 			// Pointer tool is handled by CanvasManager directly
 			case 'pen':

@@ -378,11 +378,13 @@
 					filename: init.filename,
 					imageUrl: init.imageUrl,
 					initialSetName: init.initialSetName || null,
+					autoCreate: init.autoCreate || false,
 					container: container || document.body
 				} );
 
 				debugLog( 'Hook fired for: ' + init.filename +
-					( init.initialSetName ? ' (initial set: ' + init.initialSetName + ')' : '' ) );
+					( init.initialSetName ? ' (initial set: ' + init.initialSetName + ')' : '' ) +
+					( init.autoCreate ? ' (autoCreate enabled)' : '' ) );
 
 				try {
 					// Check if editor already exists (created by hook listener)
@@ -401,6 +403,7 @@
 						filename: init.filename,
 						imageUrl: init.imageUrl,
 						initialSetName: init.initialSetName || null,
+						autoCreate: init.autoCreate || false,
 						container: container || document.body
 					} );
 					debugLog( 'Direct editor creation successful' );

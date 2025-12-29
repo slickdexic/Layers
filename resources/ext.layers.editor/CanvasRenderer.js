@@ -262,12 +262,20 @@
 
 			const opacity = this.getBackgroundOpacity();
 			this.ctx.save();
+
+			// Always draw a solid white background first to ensure blur fill works
+			// correctly with PNG images that have transparency. Without this,
+			// transparent areas would blur to transparent pixels instead of white.
+			this.ctx.globalAlpha = 1;
+			this.ctx.fillStyle = '#ffffff';
+			this.ctx.fillRect( 0, 0, this.canvas.width / this.zoom, this.canvas.height / this.zoom );
+
 			if ( opacity < 1 ) {
-				// Draw checker pattern underneath for transparency visualization
-				this.ctx.globalAlpha = 1;
+				// Draw checker pattern for transparency visualization when opacity is reduced
 				this.drawCheckerPatternToContext();
-				this.ctx.globalAlpha = opacity;
 			}
+
+			this.ctx.globalAlpha = opacity;
 			this.ctx.drawImage( this.backgroundImage, 0, 0 );
 			this.ctx.restore();
 		}
@@ -510,6 +518,16 @@
 		}
 
 		drawLayerWithEffects( layer ) {
+			// Check for blur blend mode - use special rendering path
+			// Skip arrows and lines - they handle blur fill via ArrowRenderer/effectsRenderer,
+			// and blur blend mode with rectangular clip doesn't make sense for these shapes
+			const blendMode = layer.blendMode || layer.blend;
+			const isArrowOrLine = layer.type === 'arrow' || layer.type === 'line';
+			if ( blendMode === 'blur' && layer.type !== 'blur' && !isArrowOrLine ) {
+				this.drawLayerWithBlurBlend( layer );
+				return;
+			}
+
 			this.ctx.save();
 			if ( typeof layer.opacity === 'number' ) {
 				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
@@ -547,6 +565,366 @@
 			} finally {
 				this.ctx.restore();
 			}
+		}
+
+		/**
+		 * Draw a layer with blur blend mode
+		 * Uses the shape as a clipping region for a blur effect on everything below.
+		 * Blur acts as a fill - stroke and content (text, arrows) are drawn on top.
+		 *
+		 * @param {Object} layer - Layer with blur blend mode
+		 */
+		drawLayerWithBlurBlend( layer ) {
+			const radius = Math.max( 1, Math.min( 64, Math.round( layer.blurRadius || 12 ) ) );
+
+			// Calculate scaled coordinates (screen space)
+			const x = ( layer.x || 0 ) * this.zoom + this.panX;
+			const y = ( layer.y || 0 ) * this.zoom + this.panY;
+			const width = ( layer.width || 0 ) * this.zoom;
+			const height = ( layer.height || 0 ) * this.zoom;
+
+			// For arrow, calculate center differently
+			let centerX, centerY;
+			if ( layer.type === 'arrow' || layer.type === 'line' ) {
+				const x1 = ( layer.x1 || 0 ) * this.zoom + this.panX;
+				const y1 = ( layer.y1 || 0 ) * this.zoom + this.panY;
+				const x2 = ( layer.x2 || 0 ) * this.zoom + this.panX;
+				const y2 = ( layer.y2 || 0 ) * this.zoom + this.panY;
+				centerX = ( x1 + x2 ) / 2;
+				centerY = ( y1 + y2 ) / 2;
+			} else {
+				centerX = x + width / 2;
+				centerY = y + height / 2;
+			}
+
+			this.ctx.save();
+
+			// CRITICAL: Reset transform to identity for blur operations.
+			// We're working in screen/pixel coordinates, not layer coordinates.
+			// The clipping path and blur must be drawn in screen space.
+			this.ctx.setTransform( 1, 0, 0, 1, 0, 0 );
+
+			// Apply rotation if needed (in screen coordinates)
+			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+			if ( hasRotation ) {
+				this.ctx.translate( centerX, centerY );
+				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+				this.ctx.translate( -centerX, -centerY );
+			}
+
+			// Apply layer opacity for the blur fill
+			if ( typeof layer.opacity === 'number' ) {
+				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+			}
+
+			// Create clipping path based on shape type (in screen coordinates)
+			this.ctx.beginPath();
+			this._drawBlurClipPath( layer );
+			this.ctx.clip();
+
+			try {
+				// Capture EVERYTHING currently on the canvas (all layers below)
+				const tempCanvas = document.createElement( 'canvas' );
+				tempCanvas.width = this.canvas.width;
+				tempCanvas.height = this.canvas.height;
+				const tempCtx = tempCanvas.getContext( '2d' );
+
+				if ( tempCtx ) {
+					// Copy the current canvas content (includes background + all previously drawn layers)
+					tempCtx.drawImage( this.canvas, 0, 0 );
+
+					// Apply blur and draw back within the clip region
+					// Note: blur radius stays in pixels, not scaled by zoom
+					this.ctx.filter = 'blur(' + radius + 'px)';
+					this.ctx.drawImage( tempCanvas, 0, 0 );
+					this.ctx.filter = 'none';
+				}
+			} catch ( e ) {
+				// Error fallback - draw a semi-transparent overlay
+				mw.log.warn( '[CanvasRenderer] Blur blend mode failed:', e.message );
+				this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+				this.ctx.beginPath();
+				this._drawBlurClipPath( layer );
+				this.ctx.fill();
+			}
+
+			this.ctx.restore();
+
+			// Draw stroke AFTER the blur (outside the clipped/saved state)
+			// This makes blur act as a fill effect only
+			this._drawBlurStroke( layer, hasRotation, centerX, centerY );
+
+			// Draw content on top (text for textbox/text, arrow shape for arrows)
+			this._drawBlurContent( layer, hasRotation, centerX, centerY );
+		}
+
+		/**
+		 * Draw stroke for blur blend mode layer
+		 *
+		 * @param {Object} layer - Layer
+		 * @param {boolean} hasRotation - Whether rotation is applied
+		 * @param {number} centerX - Rotation center X
+		 * @param {number} centerY - Rotation center Y
+		 * @private
+		 */
+		_drawBlurStroke( layer, hasRotation, centerX, centerY ) {
+			// Skip stroke for text type (it doesn't have shape stroke)
+			// Skip stroke for arrow/line types - _drawBlurContent renders them with stroke via LayerRenderer
+			if ( layer.type === 'text' || layer.type === 'arrow' || layer.type === 'line' ) {
+				return;
+			}
+
+			if ( layer.stroke && layer.strokeWidth > 0 ) {
+				this.ctx.save();
+
+				// Re-apply rotation for stroke
+				if ( hasRotation ) {
+					this.ctx.translate( centerX, centerY );
+					this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+					this.ctx.translate( -centerX, -centerY );
+				}
+
+				// Apply stroke opacity
+				if ( typeof layer.strokeOpacity === 'number' ) {
+					this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.strokeOpacity ) );
+				} else if ( typeof layer.opacity === 'number' ) {
+					this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
+				}
+
+				this.ctx.strokeStyle = layer.stroke;
+				this.ctx.lineWidth = ( layer.strokeWidth || 1 ) * this.zoom;
+
+				// Apply stroke style (dashed, dotted, etc.)
+				if ( layer.strokeStyle === 'dashed' ) {
+					this.ctx.setLineDash( [ 8 * this.zoom, 4 * this.zoom ] );
+				} else if ( layer.strokeStyle === 'dotted' ) {
+					this.ctx.setLineDash( [ 2 * this.zoom, 2 * this.zoom ] );
+				} else {
+					this.ctx.setLineDash( [] );
+				}
+
+				this.ctx.beginPath();
+				this._drawBlurClipPath( layer );
+				this.ctx.stroke();
+				this.ctx.restore();
+			}
+		}
+
+		/**
+		 * Draw content on top of blur (text, arrows)
+		 *
+		 * @param {Object} layer - Layer
+		 * @param {boolean} hasRotation - Whether rotation is applied
+		 * @param {number} centerX - Rotation center X
+		 * @param {number} centerY - Rotation center Y
+		 * @private
+		 */
+		_drawBlurContent( layer, hasRotation, centerX, centerY ) {
+			// Handle text content for textbox
+			if ( layer.type === 'textbox' && layer.text ) {
+				// Use the layerRenderer to draw only the text portion
+				if ( this.layerRenderer && this.layerRenderer.textBoxRenderer ) {
+					this.ctx.save();
+					if ( hasRotation ) {
+						this.ctx.translate( centerX, centerY );
+						this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+						this.ctx.translate( -centerX, -centerY );
+					}
+					this.layerRenderer.textBoxRenderer.setContext( this.ctx );
+					this.layerRenderer.textBoxRenderer.drawTextOnly( layer, {
+						scale: { sx: this.zoom, sy: this.zoom, avg: this.zoom },
+						offset: { x: this.panX, y: this.panY }
+					} );
+					this.ctx.restore();
+				}
+			}
+
+			// Handle text type layers
+			if ( layer.type === 'text' && layer.text ) {
+				if ( this.layerRenderer && this.layerRenderer.textRenderer ) {
+					this.ctx.save();
+					if ( hasRotation ) {
+						this.ctx.translate( centerX, centerY );
+						this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+						this.ctx.translate( -centerX, -centerY );
+					}
+					this.layerRenderer.textRenderer.setContext( this.ctx );
+					this.layerRenderer.textRenderer.draw( layer, {
+						scale: { sx: this.zoom, sy: this.zoom, avg: this.zoom },
+						offset: { x: this.panX, y: this.panY }
+					} );
+					this.ctx.restore();
+				}
+			}
+
+			// Handle arrow type - draw arrow shape on top
+			if ( layer.type === 'arrow' ) {
+				if ( this.layerRenderer && this.layerRenderer.arrowRenderer ) {
+					this.ctx.save();
+					// Arrow handles its own rotation
+					this.layerRenderer.arrowRenderer.setContext( this.ctx );
+					this.layerRenderer.arrowRenderer.draw( layer, {
+						scale: { sx: this.zoom, sy: this.zoom, avg: this.zoom },
+						offset: { x: this.panX, y: this.panY }
+					} );
+					this.ctx.restore();
+				}
+			}
+
+			// Handle line type - draw line on top
+			if ( layer.type === 'line' ) {
+				if ( this.layerRenderer ) {
+					this.ctx.save();
+					this.layerRenderer.drawLine( layer, {
+						zoom: this.zoom,
+						panX: this.panX,
+						panY: this.panY
+					} );
+					this.ctx.restore();
+				}
+			}
+		}
+
+		/**
+		 * Draw the clipping path for blur blend mode based on layer type
+		 *
+		 * @param {Object} layer - Layer with shape properties
+		 * @private
+		 */
+		_drawBlurClipPath( layer ) {
+			const x = ( layer.x || 0 ) * this.zoom + this.panX;
+			const y = ( layer.y || 0 ) * this.zoom + this.panY;
+			const width = ( layer.width || 0 ) * this.zoom;
+			const height = ( layer.height || 0 ) * this.zoom;
+
+			switch ( layer.type ) {
+				case 'rectangle':
+				case 'rect': {
+					let cornerRadius = ( layer.cornerRadius || 0 ) * this.zoom;
+					cornerRadius = Math.min( cornerRadius, Math.min( width, height ) / 2 );
+					if ( cornerRadius > 0 && this.ctx.roundRect ) {
+						this.ctx.roundRect( x, y, width, height, cornerRadius );
+					} else if ( cornerRadius > 0 ) {
+						this._drawRoundedRectPath( x, y, width, height, cornerRadius );
+					} else {
+						this.ctx.rect( x, y, width, height );
+					}
+					break;
+				}
+				case 'textbox': {
+					// Textbox is like rectangle but always supports corner radius
+					let cornerRadius = ( layer.cornerRadius || 0 ) * this.zoom;
+					cornerRadius = Math.min( cornerRadius, Math.min( width, height ) / 2 );
+					if ( cornerRadius > 0 && this.ctx.roundRect ) {
+						this.ctx.roundRect( x, y, width, height, cornerRadius );
+					} else if ( cornerRadius > 0 ) {
+						this._drawRoundedRectPath( x, y, width, height, cornerRadius );
+					} else {
+						this.ctx.rect( x, y, width, height );
+					}
+					break;
+				}
+				case 'text': {
+					// Text uses its bounding box
+					this.ctx.rect( x, y, width, height );
+					break;
+				}
+				case 'circle': {
+					const radius = ( layer.radius || 0 ) * this.zoom;
+					this.ctx.arc( x, y, radius, 0, Math.PI * 2 );
+					break;
+				}
+				case 'ellipse': {
+					const radiusX = ( layer.radiusX || width / 2 || 0 ) * this.zoom;
+					const radiusY = ( layer.radiusY || height / 2 || 0 ) * this.zoom;
+					this.ctx.ellipse( x, y, radiusX, radiusY, 0, 0, Math.PI * 2 );
+					break;
+				}
+				case 'polygon': {
+					const radius = ( layer.radius || 50 ) * this.zoom;
+					const sides = layer.sides || 6;
+					for ( let i = 0; i < sides; i++ ) {
+						const angle = ( i * 2 * Math.PI / sides ) - Math.PI / 2;
+						const px = x + radius * Math.cos( angle );
+						const py = y + radius * Math.sin( angle );
+						if ( i === 0 ) {
+							this.ctx.moveTo( px, py );
+						} else {
+							this.ctx.lineTo( px, py );
+						}
+					}
+					this.ctx.closePath();
+					break;
+				}
+				case 'star': {
+					const outerRadius = ( layer.radius || layer.outerRadius || 50 ) * this.zoom;
+					const innerRadius = ( layer.innerRadius || outerRadius * 0.5 ) * this.zoom;
+					const points = layer.points || 5;
+					for ( let i = 0; i < points * 2; i++ ) {
+						const r = i % 2 === 0 ? outerRadius : innerRadius;
+						const angle = ( i * Math.PI / points ) - Math.PI / 2;
+						const px = x + r * Math.cos( angle );
+						const py = y + r * Math.sin( angle );
+						if ( i === 0 ) {
+							this.ctx.moveTo( px, py );
+						} else {
+							this.ctx.lineTo( px, py );
+						}
+					}
+					this.ctx.closePath();
+					break;
+				}
+				case 'arrow':
+				case 'line': {
+					// Arrow uses line endpoints to create a bounding region
+					const x1 = ( layer.x1 || 0 ) * this.zoom + this.panX;
+					const y1 = ( layer.y1 || 0 ) * this.zoom + this.panY;
+					const x2 = ( layer.x2 || 0 ) * this.zoom + this.panX;
+					const y2 = ( layer.y2 || 0 ) * this.zoom + this.panY;
+					const arrowSize = ( layer.arrowSize || 15 ) * this.zoom;
+					const strokeWidth = ( layer.strokeWidth || 2 ) * this.zoom;
+					const halfWidth = Math.max( arrowSize, strokeWidth * 2 );
+
+					// Create a thick line path (rectangle along the arrow)
+					const angle = Math.atan2( y2 - y1, x2 - x1 );
+					const perpAngle = angle + Math.PI / 2;
+					const dx = Math.cos( perpAngle ) * halfWidth;
+					const dy = Math.sin( perpAngle ) * halfWidth;
+
+					this.ctx.moveTo( x1 - dx, y1 - dy );
+					this.ctx.lineTo( x2 - dx, y2 - dy );
+					this.ctx.lineTo( x2 + dx, y2 + dy );
+					this.ctx.lineTo( x1 + dx, y1 + dy );
+					this.ctx.closePath();
+					break;
+				}
+				default:
+					// Default to rectangle bounding box
+					this.ctx.rect( x, y, width, height );
+			}
+		}
+
+		/**
+		 * Draw a rounded rectangle path manually (fallback for browsers without roundRect)
+		 *
+		 * @param {number} x - X position
+		 * @param {number} y - Y position
+		 * @param {number} width - Width
+		 * @param {number} height - Height
+		 * @param {number} radius - Corner radius
+		 * @private
+		 */
+		_drawRoundedRectPath( x, y, width, height, radius ) {
+			this.ctx.moveTo( x + radius, y );
+			this.ctx.lineTo( x + width - radius, y );
+			this.ctx.quadraticCurveTo( x + width, y, x + width, y + radius );
+			this.ctx.lineTo( x + width, y + height - radius );
+			this.ctx.quadraticCurveTo( x + width, y + height, x + width - radius, y + height );
+			this.ctx.lineTo( x + radius, y + height );
+			this.ctx.quadraticCurveTo( x, y + height, x, y + height - radius );
+			this.ctx.lineTo( x, y + radius );
+			this.ctx.quadraticCurveTo( x, y, x + radius, y );
+			this.ctx.closePath();
 		}
 
 		supportsGlow( type ) {
@@ -599,7 +977,12 @@
 		 */
 		drawLayer( layer ) {
 			if ( this.layerRenderer ) {
-				this.layerRenderer.drawLayer( layer );
+				// Pass editor transform info for blur fill support
+				this.layerRenderer.drawLayer( layer, {
+					zoom: this.zoom,
+					panX: this.panX,
+					panY: this.panY
+				} );
 			}
 		}
 

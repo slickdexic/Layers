@@ -172,17 +172,19 @@
 		 *
 		 * @param {Array<{x: number, y: number}>} vertices - Array of vertex points
 		 * @param {number} cornerRadius - Radius for rounded corners
+		 * @param {CanvasRenderingContext2D} [context] - Optional context (defaults to this.ctx)
 		 */
-		drawRoundedPolygonPath( vertices, cornerRadius ) {
+		drawRoundedPolygonPath( vertices, cornerRadius, context ) {
 			if ( !vertices || vertices.length < 3 ) {
 				return;
 			}
+			const ctx = context || this.ctx;
 			const n = vertices.length;
-			this.ctx.beginPath();
+			ctx.beginPath();
 
 			// Start at midpoint of edge from vertex 0 to vertex 1
 			// This ensures we're not near any corner
-			this.ctx.moveTo(
+			ctx.moveTo(
 				( vertices[ 0 ].x + vertices[ 1 ].x ) / 2,
 				( vertices[ 0 ].y + vertices[ 1 ].y ) / 2
 			);
@@ -192,21 +194,21 @@
 				const curr = vertices[ i ];
 				const next = vertices[ ( i + 1 ) % n ];
 				if ( cornerRadius > 0 ) {
-					this.ctx.arcTo( curr.x, curr.y, next.x, next.y, cornerRadius );
+					ctx.arcTo( curr.x, curr.y, next.x, next.y, cornerRadius );
 				} else {
-					this.ctx.lineTo( curr.x, curr.y );
+					ctx.lineTo( curr.x, curr.y );
 				}
 			}
 
 			// Arc around vertex 0
 			if ( cornerRadius > 0 ) {
-				this.ctx.arcTo( vertices[ 0 ].x, vertices[ 0 ].y, vertices[ 1 ].x, vertices[ 1 ].y, cornerRadius );
+				ctx.arcTo( vertices[ 0 ].x, vertices[ 0 ].y, vertices[ 1 ].x, vertices[ 1 ].y, cornerRadius );
 			} else {
-				this.ctx.lineTo( vertices[ 0 ].x, vertices[ 0 ].y );
+				ctx.lineTo( vertices[ 0 ].x, vertices[ 0 ].y );
 			}
 
 			// Close path - connects back to our starting midpoint
-			this.ctx.closePath();
+			ctx.closePath();
 		}
 
 		/**
@@ -215,20 +217,22 @@
 		 * @param {Array<{x: number, y: number}>} vertices - Array of vertex points (alternating outer/inner)
 		 * @param {number} pointRadius - Radius for outer point corners
 		 * @param {number} valleyRadius - Radius for inner valley corners
+		 * @param {CanvasRenderingContext2D} [context] - Optional context (defaults to this.ctx)
 		 */
-		drawRoundedStarPath( vertices, pointRadius, valleyRadius ) {
+		drawRoundedStarPath( vertices, pointRadius, valleyRadius, context ) {
 			if ( !vertices || vertices.length < 3 ) {
 				return;
 			}
+			const ctx = context || this.ctx;
 			const n = vertices.length;
-			this.ctx.beginPath();
+			ctx.beginPath();
 
 			// Helper to get radius for a vertex (even = point, odd = valley)
 			const getRadius = ( i ) => ( i % 2 === 0 ? pointRadius : valleyRadius );
 
 			// Start at midpoint of edge from vertex 0 to vertex 1
 			// This ensures we're not near any corner
-			this.ctx.moveTo(
+			ctx.moveTo(
 				( vertices[ 0 ].x + vertices[ 1 ].x ) / 2,
 				( vertices[ 0 ].y + vertices[ 1 ].y ) / 2
 			);
@@ -239,22 +243,22 @@
 				const next = vertices[ ( i + 1 ) % n ];
 				const r = getRadius( i );
 				if ( r > 0 ) {
-					this.ctx.arcTo( curr.x, curr.y, next.x, next.y, r );
+					ctx.arcTo( curr.x, curr.y, next.x, next.y, r );
 				} else {
-					this.ctx.lineTo( curr.x, curr.y );
+					ctx.lineTo( curr.x, curr.y );
 				}
 			}
 
 			// Arc around vertex 0
 			const r0 = getRadius( 0 );
 			if ( r0 > 0 ) {
-				this.ctx.arcTo( vertices[ 0 ].x, vertices[ 0 ].y, vertices[ 1 ].x, vertices[ 1 ].y, r0 );
+				ctx.arcTo( vertices[ 0 ].x, vertices[ 0 ].y, vertices[ 1 ].x, vertices[ 1 ].y, r0 );
 			} else {
-				this.ctx.lineTo( vertices[ 0 ].x, vertices[ 0 ].y );
+				ctx.lineTo( vertices[ 0 ].x, vertices[ 0 ].y );
 			}
 
 			// Close path - connects back to our starting midpoint
-			this.ctx.closePath();
+			ctx.closePath();
 		}
 
 		// ========================================================================
@@ -300,8 +304,9 @@
 			}
 
 			// Shadow handling
+			// Note: Blur fill (fill='blur') should NOT trigger fill shadow rendering
 			if ( this.hasShadowEnabled( layer ) ) {
-				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
+				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur';
 				const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
 
 				// Draw fill shadow
@@ -359,10 +364,12 @@
 			this.clearShadow();
 
 			// Helper to draw the polygon path - use PolygonGeometry if available
+			// Accepts ctx parameter for blur fill (where EffectsRenderer passes its own ctx)
 			const PolygonGeometry = getPolygonGeometry();
-			const drawPolygonPath = () => {
+			const drawPolygonPath = ( ctx ) => {
+				const targetCtx = ctx || this.ctx;
 				if ( PolygonGeometry ) {
-					PolygonGeometry.drawPolygonPath( this.ctx, x, y, radius, sides, cornerRadius );
+					PolygonGeometry.drawPolygonPath( targetCtx, x, y, radius, sides, cornerRadius );
 				} else if ( cornerRadius > 0 ) {
 					// Fallback with rounded corners
 					const vertices = [];
@@ -373,35 +380,48 @@
 							y: y + radius * Math.sin( angle )
 						} );
 					}
-					this.drawRoundedPolygonPath( vertices, cornerRadius );
+					this.drawRoundedPolygonPath( vertices, cornerRadius, targetCtx );
 				} else {
 					// Fallback inline implementation
-					this.ctx.beginPath();
+					targetCtx.beginPath();
 					for ( let i = 0; i < sides; i++ ) {
 						const angle = ( i * 2 * Math.PI ) / sides - Math.PI / 2;
 						const px = x + radius * Math.cos( angle );
 						const py = y + radius * Math.sin( angle );
 						if ( i === 0 ) {
-							this.ctx.moveTo( px, py );
+							targetCtx.moveTo( px, py );
 						} else {
-							this.ctx.lineTo( px, py );
+							targetCtx.lineTo( px, py );
 						}
 					}
-					this.ctx.closePath();
+					targetCtx.closePath();
 				}
 			};
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
+			const isBlurFill = layer.fill === 'blur';
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
 			// Draw fill
 			if ( hasFill ) {
-				drawPolygonPath();
-				this.ctx.fillStyle = layer.fill;
-				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				this.ctx.fill();
+				if ( isBlurFill && this.shapeRenderer && this.shapeRenderer.effectsRenderer ) {
+					// Blur fill - use EffectsRenderer to blur background within polygon
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.shapeRenderer.effectsRenderer.drawBlurFill(
+						layer,
+						drawPolygonPath,
+						{ x: x - radius, y: y - radius, width: radius * 2, height: radius * 2 },
+						opts
+					);
+				} else if ( !isBlurFill ) {
+					// Regular color fill
+					drawPolygonPath();
+					this.ctx.fillStyle = layer.fill;
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.ctx.fill();
+				}
 			}
 
 			// Draw stroke
@@ -462,8 +482,9 @@
 			}
 
 			// Shadow handling
+			// Note: Blur fill (fill='blur') should NOT trigger fill shadow rendering
 			if ( this.hasShadowEnabled( layer ) ) {
-				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
+				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur';
 				const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
 
 				// Draw fill shadow
@@ -524,10 +545,12 @@
 			this.clearShadow();
 
 			// Helper to draw the star path - use PolygonGeometry if available
+			// Accepts ctx parameter for blur fill (where EffectsRenderer passes its own ctx)
 			const PolygonGeometry = getPolygonGeometry();
-			const drawStarPath = () => {
+			const drawStarPath = ( ctx ) => {
+				const targetCtx = ctx || this.ctx;
 				if ( PolygonGeometry ) {
-					PolygonGeometry.drawStarPath( this.ctx, x, y, outerRadius, innerRadius, points, pointRadius, valleyRadius );
+					PolygonGeometry.drawStarPath( targetCtx, x, y, outerRadius, innerRadius, points, pointRadius, valleyRadius );
 				} else if ( pointRadius > 0 || valleyRadius > 0 ) {
 					// Fallback with rounded corners
 					const vertices = [];
@@ -539,36 +562,49 @@
 							y: y + r * Math.sin( angle )
 						} );
 					}
-					this.drawRoundedStarPath( vertices, pointRadius, valleyRadius );
+					this.drawRoundedStarPath( vertices, pointRadius, valleyRadius, targetCtx );
 				} else {
 					// Fallback inline implementation
-					this.ctx.beginPath();
+					targetCtx.beginPath();
 					for ( let i = 0; i < points * 2; i++ ) {
 						const angle = ( i * Math.PI ) / points - Math.PI / 2;
 						const r = i % 2 === 0 ? outerRadius : innerRadius;
 						const px = x + r * Math.cos( angle );
 						const py = y + r * Math.sin( angle );
 						if ( i === 0 ) {
-							this.ctx.moveTo( px, py );
+							targetCtx.moveTo( px, py );
 						} else {
-							this.ctx.lineTo( px, py );
+							targetCtx.lineTo( px, py );
 						}
 					}
-					this.ctx.closePath();
+					targetCtx.closePath();
 				}
 			};
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
+			const isBlurFill = layer.fill === 'blur';
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
 			// Draw fill
 			if ( hasFill ) {
-				drawStarPath();
-				this.ctx.fillStyle = layer.fill;
-				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				this.ctx.fill();
+				if ( isBlurFill && this.shapeRenderer && this.shapeRenderer.effectsRenderer ) {
+					// Blur fill - use EffectsRenderer to blur background within star
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.shapeRenderer.effectsRenderer.drawBlurFill(
+						layer,
+						drawStarPath,
+						{ x: x - outerRadius, y: y - outerRadius, width: outerRadius * 2, height: outerRadius * 2 },
+						opts
+					);
+				} else if ( !isBlurFill ) {
+					// Regular color fill
+					drawStarPath();
+					this.ctx.fillStyle = layer.fill;
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.ctx.fill();
+				}
 			}
 
 			// Draw stroke

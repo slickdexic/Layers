@@ -82,6 +82,41 @@ class EditLayersAction extends \Action {
 			$initialSetName = '';
 		}
 
+		// Check if auto-create is requested (for layerslink=editor to non-existent sets)
+		$autoCreate = $request->getBool( 'autocreate' );
+		// Also check for createlayers permission if auto-create is requested
+		$canCreateLayers = false;
+		if ( $autoCreate ) {
+			if ( $services && method_exists( $services, 'getPermissionManager' ) ) {
+				$permManager = $services->getPermissionManager();
+				$canCreateLayers = $permManager->userHasRight( $user, 'createlayers' );
+			} elseif ( method_exists( $user, 'isAllowed' ) ) {
+				$canCreateLayers = $user->isAllowed( 'createlayers' );
+			}
+			// Only allow auto-create if user has createlayers permission
+			if ( !$canCreateLayers ) {
+				$autoCreate = false;
+			}
+		}
+
+		// Get return URL for editor-return mode
+		$returnTo = $request->getText( 'returnto', '' );
+		$returnToUrl = null;
+		if ( $returnTo !== '' ) {
+			// Validate returnto is a valid title to prevent open redirects
+			// Use fully qualified class name for MW 1.44+ compatibility
+			$titleClass = class_exists( '\\MediaWiki\\Title\\Title' )
+				? '\\MediaWiki\\Title\\Title'
+				: '\\Title';
+			$returnTitle = $titleClass::newFromText( $returnTo );
+			if ( $returnTitle && $returnTitle->isKnown() ) {
+				$returnToUrl = $returnTitle->getLocalURL();
+			}
+		}
+
+		// Check if editor is in modal mode
+		$isModalMode = $request->getBool( 'modal' );
+
 		// Page title
 		$out->setPageTitle(
 			( function_exists( 'wfMessage' )
@@ -101,7 +136,12 @@ class EditLayersAction extends \Action {
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
 				'initialSetName' => $initialSetName !== '' ? $initialSetName : null,
+				'autoCreate' => $autoCreate,
+				'returnToUrl' => $returnToUrl,
+				'isModalMode' => $isModalMode,
 			],
+			'wgLayersReturnToUrl' => $returnToUrl,
+			'wgLayersIsModalMode' => $isModalMode,
 			'wgLayersCurrentImageUrl' => $fileUrl,
 			'wgLayersImageBaseUrl' => $this->getImageBaseUrl(),
 			'wgLayersMaxImageBytes' => $config->get( 'LayersMaxImageBytes' ),

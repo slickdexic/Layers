@@ -42,11 +42,13 @@
 		 * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
 		 * @param {Object} [config] - Configuration options
 		 * @param {Object} [config.shadowRenderer] - ShadowRenderer instance for shadow operations
+		 * @param {Object} [config.effectsRenderer] - EffectsRenderer instance for blur fill
 		 */
 		constructor( ctx, config ) {
 			this.ctx = ctx;
 			this.config = config || {};
 			this.shadowRenderer = this.config.shadowRenderer || null;
+			this.effectsRenderer = this.config.effectsRenderer || null;
 		}
 
 		/**
@@ -56,6 +58,15 @@
 		 */
 		setShadowRenderer( shadowRenderer ) {
 			this.shadowRenderer = shadowRenderer;
+		}
+
+		/**
+		 * Set the effects renderer instance (for blur fill)
+		 *
+		 * @param {Object} effectsRenderer - EffectsRenderer instance
+		 */
+		setEffectsRenderer( effectsRenderer ) {
+			this.effectsRenderer = effectsRenderer;
 		}
 
 		/**
@@ -218,9 +229,20 @@
 			const maxRadius = Math.min( Math.abs( width ), Math.abs( height ) ) / 2;
 			cornerRadius = Math.min( cornerRadius, maxRadius );
 
+			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
+			const isBlurFill = layer.fill === 'blur';
+			const fillOpacity = clampOpacity( layer.fillOpacity );
+
+			// Save original coordinates BEFORE rotation transform for blur capture
+			// After rotation, x/y become local coords (-width/2, -height/2) but blur
+			// capture needs world coords or axis-aligned bounding box of rotated shape
+			const originalX = x;
+			const originalY = y;
+
 			this.ctx.save();
 
-			const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+			// Apply rotation FIRST - this affects blur fill, shadow, stroke, and text
 			if ( hasRotation ) {
 				this.ctx.translate( x + width / 2, y + height / 2 );
 				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
@@ -228,30 +250,67 @@
 				y = -height / 2;
 			}
 
-			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
 			const spread = this.getShadowSpread( layer, shadowScale );
 
 			// Use rounded rect if cornerRadius > 0
 			const useRoundedRect = cornerRadius > 0 && this.ctx.roundRect;
 
-			// Helper to draw the rectangle path (needed for shadow)
-			const drawRectPathFor = ( ctx ) => {
+			// Helper to draw the rectangle path
+			// Accepts ctx parameter for blur fill (where EffectsRenderer passes its own ctx)
+			const drawRectPath = ( ctx ) => {
+				const targetCtx = ctx || this.ctx;
 				if ( useRoundedRect || cornerRadius > 0 ) {
-					if ( ctx.roundRect ) {
-						ctx.beginPath();
-						ctx.roundRect( x, y, width, height, cornerRadius );
+					if ( targetCtx.roundRect ) {
+						targetCtx.beginPath();
+						targetCtx.roundRect( x, y, width, height, cornerRadius );
 					} else {
-						this.drawRoundedRectPath( x, y, width, height, cornerRadius, ctx );
+						this.drawRoundedRectPath( x, y, width, height, cornerRadius, targetCtx );
 					}
 				} else {
-					ctx.beginPath();
-					ctx.rect( x, y, width, height );
+					targetCtx.beginPath();
+					targetCtx.rect( x, y, width, height );
 				}
 			};
 
+			// Handle blur fill - delegate to EffectsRenderer
+			// Must be done AFTER rotation is applied to the context
+			if ( isBlurFill && this.effectsRenderer && fillOpacity > 0 ) {
+				// Calculate blur capture bounds - for rotated shapes, need axis-aligned
+				// bounding box in world coordinates, not the transformed local coords
+				let blurBounds;
+				if ( hasRotation ) {
+					// Compute axis-aligned bounding box of the rotated rectangle
+					const centerX = originalX + width / 2;
+					const centerY = originalY + height / 2;
+					const angleRad = ( layer.rotation * Math.PI ) / 180;
+					const cos = Math.abs( Math.cos( angleRad ) );
+					const sin = Math.abs( Math.sin( angleRad ) );
+					// Width and height of axis-aligned bounding box
+					const aabbWidth = width * cos + height * sin;
+					const aabbHeight = width * sin + height * cos;
+					blurBounds = {
+						x: centerX - aabbWidth / 2,
+						y: centerY - aabbHeight / 2,
+						width: aabbWidth,
+						height: aabbHeight
+					};
+				} else {
+					blurBounds = { x: originalX, y: originalY, width: width, height: height };
+				}
+
+				this.ctx.globalAlpha = baseOpacity * fillOpacity;
+				this.effectsRenderer.drawBlurFill(
+					layer,
+					drawRectPath,
+					blurBounds,
+					opts
+				);
+			}
+
 			// Shadow handling (same as rectangle - includes stroke shadow)
+			// Note: Blur fill (fill='blur') should NOT trigger fill shadow rendering
 			if ( this.hasShadowEnabled( layer ) ) {
-				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
+				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur';
 				const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
 
 				// Draw fill shadow
@@ -278,7 +337,7 @@
 						}, fillShadowOpacity );
 					} else {
 						this.drawSpreadShadow( layer, shadowScale, 0, ( ctx ) => {
-							drawRectPathFor( ctx );
+							drawRectPath( ctx );
 						}, fillShadowOpacity );
 					}
 				}
@@ -288,7 +347,7 @@
 					const strokeShadowOpacity = baseOpacity * clampOpacity( layer.strokeOpacity );
 					const effectiveStrokeWidth = spread > 0 ? strokeW + spread * 2 : strokeW;
 					this.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( ctx ) => {
-						drawRectPathFor( ctx );
+						drawRectPath( ctx );
 					}, strokeShadowOpacity );
 				}
 			}
@@ -296,26 +355,15 @@
 			// Clear shadow state
 			this.clearShadow();
 
-			// Helper to draw the rectangle path
-			const drawRectPath = () => {
-				if ( useRoundedRect ) {
-					this.ctx.beginPath();
-					this.ctx.roundRect( x, y, width, height, cornerRadius );
-				} else if ( cornerRadius > 0 ) {
-					this.drawRoundedRectPath( x, y, width, height, cornerRadius );
-				} else {
-					this.ctx.beginPath();
-					this.ctx.rect( x, y, width, height );
-				}
-			};
-
-			const fillOpacity = clampOpacity( layer.fillOpacity );
+			// Note: fillOpacity was already calculated above for blur fill handling
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
+			// Note: isBlurFill was already calculated above
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
-			// Draw fill
-			if ( hasFill ) {
+			// Draw fill (blur fill is handled earlier, after rotation transform is applied)
+			if ( hasFill && !isBlurFill ) {
+				// Regular color fill
 				this.ctx.fillStyle = layer.fill;
 				this.ctx.globalAlpha = baseOpacity * fillOpacity;
 				drawRectPath();
@@ -554,6 +602,42 @@
 			this.ctx = null;
 			this.config = null;
 			this.shadowRenderer = null;
+		}
+
+		/**
+		 * Draw only the text content of a textbox (no background fill/stroke)
+		 * Used by blur blend mode to render text on top of blur effect
+		 *
+		 * @param {Object} layer - Layer with text properties
+		 * @param {Object} [options] - Rendering options
+		 * @param {Object} [options.scale] - Scale factors {sx, sy, avg}
+		 * @param {Object} [options.offset] - Offset {x, y} for position adjustment
+		 */
+		drawTextOnly( layer, options ) {
+			const opts = options || {};
+			const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
+			const offset = opts.offset || { x: 0, y: 0 };
+
+			// Calculate scaled dimensions
+			const x = ( layer.x || 0 ) * scale.sx + offset.x;
+			const y = ( layer.y || 0 ) * scale.sy + offset.y;
+			const width = ( layer.width || 100 ) * scale.sx;
+			const height = ( layer.height || 50 ) * scale.sy;
+			const padding = ( layer.padding || 8 ) * scale.avg;
+
+			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
+
+			// Draw only the text content
+			if ( layer.text && layer.text.length > 0 ) {
+				this.ctx.save();
+
+				// Apply layer opacity
+				this.ctx.globalAlpha = baseOpacity;
+
+				this.drawTextContent( layer, x, y, width, height, padding, scale, scale, baseOpacity );
+
+				this.ctx.restore();
+			}
 		}
 	}
 

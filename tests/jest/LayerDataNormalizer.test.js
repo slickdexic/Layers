@@ -480,4 +480,50 @@ describe( 'LayerDataNormalizer', () => {
 			expect( layer.shadowColor ).toBe( '#000000' );
 		} );
 	} );
+
+	describe( 'normalizeAliases', () => {
+		describe( 'blendMode to blend alias', () => {
+			test( 'should copy blendMode to blend when blend is missing', () => {
+				const layer = { blendMode: 'multiply' };
+				LayerDataNormalizer.normalizeLayer( layer );
+				expect( layer.blend ).toBe( 'multiply' );
+				expect( layer.blendMode ).toBe( 'multiply' );
+			} );
+
+			test( 'should not overwrite existing blend property', () => {
+				const layer = { blendMode: 'screen', blend: 'overlay' };
+				LayerDataNormalizer.normalizeLayer( layer );
+				expect( layer.blend ).toBe( 'overlay' );
+				expect( layer.blendMode ).toBe( 'screen' );
+			} );
+
+			test( 'should copy blend to blendMode when blendMode is missing', () => {
+				const layer = { blend: 'darken' };
+				LayerDataNormalizer.normalizeLayer( layer );
+				expect( layer.blend ).toBe( 'darken' );
+				expect( layer.blendMode ).toBe( 'darken' );
+			} );
+
+			test( 'should handle all standard blend modes', () => {
+				const blendModes = [
+					'normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten',
+					'color-dodge', 'color-burn', 'hard-light', 'soft-light',
+					'difference', 'exclusion', 'blur'
+				];
+
+				blendModes.forEach( ( mode ) => {
+					const layer = { blendMode: mode };
+					LayerDataNormalizer.normalizeLayer( layer );
+					expect( layer.blend ).toBe( mode );
+				} );
+			} );
+
+			test( 'should handle layer without any blend property', () => {
+				const layer = { type: 'rectangle', x: 0, y: 0 };
+				LayerDataNormalizer.normalizeLayer( layer );
+				expect( layer.blend ).toBeUndefined();
+				expect( layer.blendMode ).toBeUndefined();
+			} );
+		} );
+	} );
 } );

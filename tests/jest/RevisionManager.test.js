@@ -591,4 +591,270 @@ describe( 'RevisionManager', () => {
 			expect( window.Layers.Core.RevisionManager ).toBe( RevisionManager );
 		} );
 	} );
+
+	describe( 'error handling', () => {
+		it( 'should handle error in buildRevisionSelector gracefully', () => {
+			// Make stateManager.get throw an error
+			mockStateManager.get.mockImplementation( () => {
+				throw new Error( 'State error' );
+			} );
+
+			expect( () => revisionManager.buildRevisionSelector() ).not.toThrow();
+			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle error in updateRevisionLoadButton gracefully', () => {
+			mockStateManager.get.mockImplementation( () => {
+				throw new Error( 'State error' );
+			} );
+
+			expect( () => revisionManager.updateRevisionLoadButton() ).not.toThrow();
+			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle error in buildSetSelector gracefully', () => {
+			mockStateManager.get.mockImplementation( () => {
+				throw new Error( 'State error' );
+			} );
+
+			expect( () => revisionManager.buildSetSelector() ).not.toThrow();
+			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle error in updateNewSetButtonState gracefully', () => {
+			mockStateManager.get.mockImplementation( () => {
+				throw new Error( 'State error' );
+			} );
+
+			expect( () => revisionManager.updateNewSetButtonState() ).not.toThrow();
+			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle error in loadRevisionById gracefully', () => {
+			mockApiManager.loadRevisionById.mockImplementation( () => {
+				throw new Error( 'API error' );
+			} );
+
+			expect( () => revisionManager.loadRevisionById( 42 ) ).not.toThrow();
+			expect( mw.log.error ).toHaveBeenCalled();
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { type: 'error' } )
+			);
+		} );
+
+		it( 'should handle error in createNewLayerSet gracefully', async () => {
+			// Make canvasManager.clearLayers throw
+			mockEditor.canvasManager.clearLayers.mockImplementation( () => {
+				throw new Error( 'Canvas error' );
+			} );
+
+			const result = await revisionManager.createNewLayerSet( 'valid-name' );
+
+			expect( result ).toBe( false );
+			expect( mw.log.error ).toHaveBeenCalled();
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { type: 'error' } )
+			);
+		} );
+	} );
+
+	describe( 'missing UI elements', () => {
+		it( 'should handle missing revSelectEl in buildRevisionSelector', () => {
+			revisionManager.uiManager.revSelectEl = null;
+
+			expect( () => revisionManager.buildRevisionSelector() ).not.toThrow();
+		} );
+
+		it( 'should handle missing revLoadBtnEl in updateRevisionLoadButton', () => {
+			revisionManager.uiManager.revLoadBtnEl = null;
+
+			expect( () => revisionManager.updateRevisionLoadButton() ).not.toThrow();
+		} );
+
+		it( 'should handle missing setSelectEl in buildSetSelector', () => {
+			revisionManager.uiManager.setSelectEl = null;
+
+			revisionManager.buildSetSelector();
+
+			// Should return early without error
+			expect( mw.log.error ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing setNewBtnEl in updateNewSetButtonState', () => {
+			revisionManager.uiManager.setNewBtnEl = null;
+
+			revisionManager.updateNewSetButtonState();
+
+			// Should return early without error
+			expect( mw.log.error ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'buildRevisionSelector edge cases', () => {
+		it( 'should use alternative property names (id, timestamp, userName)', () => {
+			mockStateManager.state.allLayerSets = [
+				{ id: 10, timestamp: '20251220100000', userName: 'AltUser', name: 'alt-set' }
+			];
+
+			revisionManager.buildRevisionSelector();
+
+			const options = mockUIManager.revSelectEl.querySelectorAll( 'option' );
+			expect( options.length ).toBe( 2 );
+			expect( options[ 1 ].value ).toBe( '10' );
+			expect( options[ 1 ].textContent ).toContain( 'AltUser' );
+		} );
+
+		it( 'should show Unknown for missing userName', () => {
+			mockStateManager.state.allLayerSets = [
+				{ ls_id: 5, ls_timestamp: '20251220100000' }
+			];
+
+			revisionManager.buildRevisionSelector();
+
+			const options = mockUIManager.revSelectEl.querySelectorAll( 'option' );
+			expect( options[ 1 ].textContent ).toContain( 'Unknown' );
+		} );
+
+		it( 'should not include set name in display when empty', () => {
+			mockStateManager.state.allLayerSets = [
+				{ ls_id: 5, ls_timestamp: '20251220100000', ls_user_name: 'User1', ls_name: '' }
+			];
+
+			revisionManager.buildRevisionSelector();
+
+			const options = mockUIManager.revSelectEl.querySelectorAll( 'option' );
+			expect( options[ 1 ].textContent ).not.toContain( '()' );
+		} );
+	} );
+
+	describe( 'buildSetSelector edge cases', () => {
+		it( 'should format single revision correctly', () => {
+			mockStateManager.state.namedSets = [
+				{ name: 'single-rev', revision_count: 1 }
+			];
+
+			revisionManager.buildSetSelector();
+
+			const options = mockUIManager.setSelectEl.querySelectorAll( 'option' );
+			expect( options[ 0 ].textContent ).toContain( '1 revision' );
+		} );
+
+		it( 'should format multiple revisions correctly', () => {
+			mockStateManager.state.namedSets = [
+				{ name: 'multi-rev', revision_count: 5 }
+			];
+
+			revisionManager.buildSetSelector();
+
+			const options = mockUIManager.setSelectEl.querySelectorAll( 'option' );
+			expect( options[ 0 ].textContent ).toContain( '5' );
+		} );
+
+		it( 'should default to 1 revision when revision_count missing', () => {
+			mockStateManager.state.namedSets = [
+				{ name: 'no-count' }
+			];
+
+			revisionManager.buildSetSelector();
+
+			const options = mockUIManager.setSelectEl.querySelectorAll( 'option' );
+			expect( options[ 0 ].textContent ).toContain( '1 revision' );
+		} );
+	} );
+
+	describe( 'loadLayerSetByName with DialogManager', () => {
+		it( 'should use DialogManager.showConfirmDialog when available', async () => {
+			mockEditor.hasUnsavedChanges.mockReturnValue( true );
+			mockEditor.dialogManager = {
+				showConfirmDialog: jest.fn().mockResolvedValue( true )
+			};
+
+			await revisionManager.loadLayerSetByName( 'new-set' );
+
+			expect( mockEditor.dialogManager.showConfirmDialog ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					isDanger: true
+				} )
+			);
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalled();
+		} );
+
+		it( 'should cancel load when DialogManager confirm returns false', async () => {
+			mockEditor.hasUnsavedChanges.mockReturnValue( true );
+			mockEditor.dialogManager = {
+				showConfirmDialog: jest.fn().mockResolvedValue( false )
+			};
+
+			await revisionManager.loadLayerSetByName( 'new-set' );
+
+			expect( mockApiManager.loadLayersBySetName ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'getMessage edge cases', () => {
+		it( 'should handle layersMessages without get function', () => {
+			window.layersMessages = {};
+
+			const result = revisionManager.getMessage( 'key', 'fallback' );
+
+			expect( result ).toBe( 'fallback' );
+		} );
+
+		it( 'should handle layersMessages.get not being a function', () => {
+			window.layersMessages = { get: 'not a function' };
+
+			const result = revisionManager.getMessage( 'key', 'fallback' );
+
+			expect( result ).toBe( 'fallback' );
+		} );
+	} );
+
+	describe( 'createNewLayerSet edge cases', () => {
+		it( 'should handle missing canvasManager', async () => {
+			delete mockEditor.canvasManager;
+
+			const result = await revisionManager.createNewLayerSet( 'new-set' );
+
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should handle missing layerPanel', async () => {
+			delete mockEditor.layerPanel;
+
+			const result = await revisionManager.createNewLayerSet( 'new-set' );
+
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should trim whitespace from set name', async () => {
+			const result = await revisionManager.createNewLayerSet( '  trimmed-name  ' );
+
+			expect( result ).toBe( true );
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'trimmed-name' );
+		} );
+	} );
+
+	describe( 'updateNewSetButtonState edge cases', () => {
+		it( 'should set appropriate tooltip when under limit', () => {
+			mockStateManager.state.namedSets = [ { name: 'default' } ];
+
+			revisionManager.updateNewSetButtonState();
+
+			expect( mockUIManager.setNewBtnEl.title ).toBe( 'Create a new layer set' );
+		} );
+
+		it( 'should set appropriate tooltip when at limit', () => {
+			const sets = [];
+			for ( let i = 0; i < 15; i++ ) {
+				sets.push( { name: `set${ i }` } );
+			}
+			mockStateManager.state.namedSets = sets;
+
+			revisionManager.updateNewSetButtonState();
+
+			expect( mockUIManager.setNewBtnEl.title ).toContain( '15' );
+		} );
+	} );
 } );

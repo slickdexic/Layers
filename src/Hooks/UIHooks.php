@@ -350,6 +350,7 @@ class UIHooks {
 			'wgLayersMaxRevisionsPerSet' => $config->get( 'LayersMaxRevisionsPerSet' ),
 			'wgLayersDefaultSetName' => $config->get( 'LayersDefaultSetName' ),
 			'wgLayersMaxImageBytes' => $config->get( 'LayersMaxImageBytes' ),
+			'wgLayersContextAwareToolbar' => $config->get( 'LayersContextAwareToolbar' ),
 		] );
 
 		// Add basic HTML content to ensure page has content

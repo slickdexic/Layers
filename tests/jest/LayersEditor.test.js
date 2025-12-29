@@ -297,3 +297,580 @@ describe('LayersEditor module exports', () => {
         expect(typeof LayersEditor.prototype.parseMWTimestamp).toBe('function');
     });
 });
+
+describe('LayersEditor createStubUIManager', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    test('should create stub with container elements', () => {
+        const stub = LayersEditor.prototype.createStubUIManager();
+        
+        expect(stub.container).toBeInstanceOf(HTMLElement);
+        expect(stub.toolbarContainer).toBeInstanceOf(HTMLElement);
+        expect(stub.layerPanelContainer).toBeInstanceOf(HTMLElement);
+        expect(stub.canvasContainer).toBeInstanceOf(HTMLElement);
+    });
+
+    test('should create stub with no-op methods', () => {
+        const stub = LayersEditor.prototype.createStubUIManager();
+        
+        expect(typeof stub.createInterface).toBe('function');
+        expect(typeof stub.destroy).toBe('function');
+        expect(typeof stub.showSpinner).toBe('function');
+        expect(typeof stub.hideSpinner).toBe('function');
+        expect(typeof stub.showBrowserCompatibilityWarning).toBe('function');
+        
+        // Methods should not throw
+        expect(() => stub.createInterface()).not.toThrow();
+        expect(() => stub.destroy()).not.toThrow();
+        expect(() => stub.showSpinner()).not.toThrow();
+        expect(() => stub.hideSpinner()).not.toThrow();
+        expect(() => stub.showBrowserCompatibilityWarning()).not.toThrow();
+    });
+});
+
+describe('LayersEditor createStubStateManager', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    test('should create stub with get/set methods', () => {
+        const stub = LayersEditor.prototype.createStubStateManager();
+        
+        stub.set('testKey', 'testValue');
+        expect(stub.get('testKey')).toBe('testValue');
+    });
+
+    test('should return undefined for unset keys', () => {
+        const stub = LayersEditor.prototype.createStubStateManager();
+        expect(stub.get('nonexistent')).toBeUndefined();
+    });
+
+    test('should have getLayers returning empty array by default', () => {
+        const stub = LayersEditor.prototype.createStubStateManager();
+        expect(stub.getLayers()).toEqual([]);
+    });
+
+    test('should return layers from store if set', () => {
+        const stub = LayersEditor.prototype.createStubStateManager();
+        const testLayers = [{ id: 'layer1' }];
+        stub.set('layers', testLayers);
+        expect(stub.getLayers()).toEqual(testLayers);
+    });
+
+    test('should have isDirty returning false', () => {
+        const stub = LayersEditor.prototype.createStubStateManager();
+        expect(stub.isDirty()).toBe(false);
+    });
+
+    test('should have no-op methods', () => {
+        const stub = LayersEditor.prototype.createStubStateManager();
+        
+        expect(typeof stub.subscribe).toBe('function');
+        expect(typeof stub.setDirty).toBe('function');
+        expect(typeof stub.destroy).toBe('function');
+        
+        expect(() => stub.subscribe()).not.toThrow();
+        expect(() => stub.setDirty()).not.toThrow();
+        expect(() => stub.destroy()).not.toThrow();
+    });
+});
+
+describe('LayersEditor createFallbackRegistry', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    test('should create registry with get method', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.debug = false;
+        
+        const registry = LayersEditor.prototype.createFallbackRegistry.call(editorInstance);
+        
+        expect(typeof registry.get).toBe('function');
+    });
+
+    test('should throw for unknown module', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.debug = false;
+        
+        const registry = LayersEditor.prototype.createFallbackRegistry.call(editorInstance);
+        
+        expect(() => registry.get('UnknownModule')).toThrow('Module UnknownModule not found');
+    });
+
+    test('should return stub StateManager', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.debug = false;
+        
+        const registry = LayersEditor.prototype.createFallbackRegistry.call(editorInstance);
+        const stateManager = registry.get('StateManager');
+        
+        expect(typeof stateManager.get).toBe('function');
+        expect(typeof stateManager.set).toBe('function');
+    });
+
+    test('should return stub HistoryManager', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.debug = false;
+        // Set StateManager to undefined to get stub
+        window.StateManager = undefined;
+        window.HistoryManager = undefined;
+        
+        const registry = LayersEditor.prototype.createFallbackRegistry.call(editorInstance);
+        const historyManager = registry.get('HistoryManager');
+        
+        expect(typeof historyManager.saveState).toBe('function');
+        expect(typeof historyManager.undo).toBe('function');
+        expect(typeof historyManager.redo).toBe('function');
+        expect(historyManager.canUndo()).toBe(false);
+        expect(historyManager.canRedo()).toBe(false);
+    });
+});
+
+describe('LayersEditor navigation methods', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    test('navigateBackToFile should call navigateBackToFileWithName with filename', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.filename = 'Test.png';
+        editorInstance.navigateBackToFileWithName = jest.fn();
+        
+        editorInstance.navigateBackToFile();
+        
+        expect(editorInstance.navigateBackToFileWithName).toHaveBeenCalledWith('Test.png');
+    });
+
+    test('navigateBackToFileWithName should call mw.util.getUrl for File page', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(false) };
+        
+        // Mock mw.config to not have modal mode or returnto
+        window.mw.config.get = jest.fn().mockReturnValue(null);
+        window.mw.util = { getUrl: jest.fn().mockReturnValue('/wiki/File:Test.png') };
+        
+        // Can't easily test location.href assignment in JSDOM, but can verify getUrl was called correctly
+        editorInstance.navigateBackToFileWithName('Test.png');
+        
+        expect(window.mw.util.getUrl).toHaveBeenCalledWith('File:Test.png');
+    });
+
+    test('navigateBackToFileWithName should check returnToUrl config', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(false) };
+        
+        // Mock mw.config to have returnto URL
+        window.mw.config.get = jest.fn((key) => {
+            if (key === 'wgLayersReturnToUrl') return '/wiki/Main_Page';
+            return null;
+        });
+        
+        // The function will try to set location.href - we verify it checked the config
+        editorInstance.navigateBackToFileWithName('Test.png');
+        
+        expect(window.mw.config.get).toHaveBeenCalledWith('wgLayersReturnToUrl');
+    });
+
+    test('navigateBackToFileWithName should postMessage in modal mode', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(false) };
+        
+        // Mock mw.config for modal mode
+        window.mw.config.get = jest.fn((key) => {
+            if (key === 'wgLayersIsModalMode') return true;
+            return null;
+        });
+        
+        // Mock window.parent
+        const mockPostMessage = jest.fn();
+        const originalParent = window.parent;
+        Object.defineProperty(window, 'parent', {
+            value: { postMessage: mockPostMessage },
+            writable: true,
+            configurable: true
+        });
+        
+        editorInstance.navigateBackToFileWithName('Test.png');
+        
+        expect(mockPostMessage).toHaveBeenCalledWith(
+            { type: 'layers-editor-close', saved: true, filename: 'Test.png' },
+            expect.any(String)
+        );
+        
+        // Restore
+        Object.defineProperty(window, 'parent', { value: originalParent, writable: true, configurable: true });
+    });
+
+    test('navigateBackToFileWithName should fall back to history.back()', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(false) };
+        
+        // Mock mw.config and mw.util to not provide navigation
+        window.mw.config.get = jest.fn().mockReturnValue(null);
+        window.mw.util = undefined;
+        
+        const mockHistoryBack = jest.fn();
+        Object.defineProperty(window, 'history', {
+            value: { length: 5, back: mockHistoryBack },
+            writable: true,
+            configurable: true
+        });
+        
+        editorInstance.navigateBackToFileWithName(null);
+        
+        expect(mockHistoryBack).toHaveBeenCalled();
+    });
+
+    test('navigateBackToFileWithName should not throw on error', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = { get: jest.fn().mockImplementation(() => { throw new Error('test'); }) };
+        
+        // Should not throw - catches error internally and calls reload
+        expect(() => editorInstance.navigateBackToFileWithName('Test.png')).not.toThrow();
+    });
+});
+
+describe('LayersEditor cancel method', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    test('should destroy uiManager when not dirty', () => {
+        const mockDestroy = jest.fn();
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.filename = 'Test.png';
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(false) };
+        editorInstance.uiManager = { destroy: mockDestroy };
+        editorInstance.navigateBackToFileWithName = jest.fn();
+        
+        editorInstance.cancel(false);
+        
+        expect(mockDestroy).toHaveBeenCalled();
+    });
+
+    test('should navigate back when requested and not dirty', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.filename = 'Test.png';
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(false) };
+        editorInstance.uiManager = { destroy: jest.fn() };
+        editorInstance.navigateBackToFileWithName = jest.fn();
+        
+        editorInstance.cancel(true);
+        
+        expect(editorInstance.navigateBackToFileWithName).toHaveBeenCalledWith('Test.png');
+    });
+
+    test('should show dialog when dirty and dialogManager available', () => {
+        const mockShowDialog = jest.fn();
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.filename = 'Test.png';
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(true) };
+        editorInstance.dialogManager = { showCancelConfirmDialog: mockShowDialog };
+        
+        editorInstance.cancel(true);
+        
+        expect(mockShowDialog).toHaveBeenCalled();
+    });
+
+    test('should use fallback showCancelConfirmDialog when dialogManager not available', () => {
+        const mockShowDialog = jest.fn();
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.filename = 'Test.png';
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(true) };
+        editorInstance.dialogManager = null;
+        editorInstance.showCancelConfirmDialog = mockShowDialog;
+        
+        editorInstance.cancel(true);
+        
+        expect(mockShowDialog).toHaveBeenCalled();
+    });
+});
+
+describe('LayersEditor showCancelConfirmDialog', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+        document.body.innerHTML = '';
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    test('should create dialog elements', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        
+        editorInstance.showCancelConfirmDialog(jest.fn());
+        
+        expect(document.querySelector('.layers-modal-overlay')).toBeTruthy();
+        expect(document.querySelector('.layers-modal-dialog')).toBeTruthy();
+    });
+
+    test('should set ARIA attributes on dialog', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        
+        editorInstance.showCancelConfirmDialog(jest.fn());
+        
+        const dialog = document.querySelector('.layers-modal-dialog');
+        expect(dialog.getAttribute('role')).toBe('alertdialog');
+        expect(dialog.getAttribute('aria-modal')).toBe('true');
+    });
+
+    test('should have cancel and confirm buttons', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        
+        editorInstance.showCancelConfirmDialog(jest.fn());
+        
+        const buttons = document.querySelectorAll('.layers-modal-buttons button');
+        expect(buttons.length).toBe(2);
+    });
+
+    test('should call onConfirm when discard button clicked', () => {
+        const onConfirm = jest.fn();
+        const editorInstance = Object.create(LayersEditor.prototype);
+        
+        editorInstance.showCancelConfirmDialog(onConfirm);
+        
+        // Second button is the confirm/discard button
+        const confirmBtn = document.querySelectorAll('.layers-modal-buttons button')[1];
+        confirmBtn.click();
+        
+        expect(onConfirm).toHaveBeenCalled();
+    });
+
+    test('should remove dialog when cancel button clicked', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        
+        editorInstance.showCancelConfirmDialog(jest.fn());
+        
+        // First button is the cancel/continue button
+        const cancelBtn = document.querySelectorAll('.layers-modal-buttons button')[0];
+        cancelBtn.click();
+        
+        expect(document.querySelector('.layers-modal-overlay')).toBeFalsy();
+        expect(document.querySelector('.layers-modal-dialog')).toBeFalsy();
+    });
+
+    test('should use layersMessages if available', () => {
+        window.layersMessages = {
+            get: jest.fn((key, fallback) => `translated-${key}`)
+        };
+        
+        const editorInstance = Object.create(LayersEditor.prototype);
+        
+        editorInstance.showCancelConfirmDialog(jest.fn());
+        
+        expect(window.layersMessages.get).toHaveBeenCalled();
+        
+        delete window.layersMessages;
+    });
+
+    test('should handle escape key to close dialog', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        
+        editorInstance.showCancelConfirmDialog(jest.fn());
+        
+        expect(document.querySelector('.layers-modal-dialog')).toBeTruthy();
+        
+        // Simulate escape key
+        const event = new KeyboardEvent('keydown', { key: 'Escape' });
+        document.dispatchEvent(event);
+        
+        expect(document.querySelector('.layers-modal-dialog')).toBeFalsy();
+    });
+});
+
+describe('Auto-create layer set functionality', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        
+        // Setup window globals
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        
+        // Setup DOM
+        document.body.innerHTML = '<div id="layers-editor-container"></div>';
+        
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    describe('showAutoCreateNotification', () => {
+        test('should show notification with set name', () => {
+            const mockNotify = jest.fn();
+            global.mw = {
+                notify: mockNotify,
+                message: jest.fn((key, param) => ({
+                    text: () => `Layer set "${param}" was created automatically.`
+                }))
+            };
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.showAutoCreateNotification('my-new-set');
+
+            expect(global.mw.message).toHaveBeenCalledWith('layers-set-auto-created', 'my-new-set');
+            expect(mockNotify).toHaveBeenCalledWith(
+                expect.stringContaining('my-new-set'),
+                expect.objectContaining({ type: 'info' })
+            );
+        });
+
+        test('should not throw when mw.notify is not available', () => {
+            global.mw = {};
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            
+            expect(() => {
+                editorInstance.showAutoCreateNotification('test-set');
+            }).not.toThrow();
+        });
+    });
+
+    describe('autoCreateLayerSet', () => {
+        test('should use layerSetManager when available', async () => {
+            const mockCreateNewLayerSet = jest.fn().mockResolvedValue(true);
+            const mockSaveInitialState = jest.fn();
+            const mockUpdateSaveButtonState = jest.fn();
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.layerSetManager = {
+                createNewLayerSet: mockCreateNewLayerSet
+            };
+            editorInstance.historyManager = {
+                saveInitialState: mockSaveInitialState
+            };
+            editorInstance.updateSaveButtonState = mockUpdateSaveButtonState;
+            editorInstance.showAutoCreateNotification = jest.fn();
+            editorInstance.debugLog = jest.fn();
+
+            editorInstance.autoCreateLayerSet('anatomy-labels');
+
+            // Wait for promise
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(mockCreateNewLayerSet).toHaveBeenCalledWith('anatomy-labels');
+        });
+
+        test('should show notification after successful creation', async () => {
+            const mockCreateNewLayerSet = jest.fn().mockResolvedValue(true);
+            const mockShowNotification = jest.fn();
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.layerSetManager = {
+                createNewLayerSet: mockCreateNewLayerSet
+            };
+            editorInstance.historyManager = { saveInitialState: jest.fn() };
+            editorInstance.updateSaveButtonState = jest.fn();
+            editorInstance.showAutoCreateNotification = mockShowNotification;
+            editorInstance.debugLog = jest.fn();
+
+            editorInstance.autoCreateLayerSet('new-set');
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(mockShowNotification).toHaveBeenCalledWith('new-set');
+        });
+
+        test('should use fallback when layerSetManager not available', () => {
+            const mockStateManager = {
+                set: jest.fn(),
+                get: jest.fn().mockReturnValue([])
+            };
+
+            global.mw = {
+                config: {
+                    get: jest.fn().mockReturnValue('TestUser')
+                },
+                notify: jest.fn(),
+                message: jest.fn(() => ({ text: () => 'message' }))
+            };
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.layerSetManager = null;
+            editorInstance.stateManager = mockStateManager;
+            editorInstance.canvasManager = { renderLayers: jest.fn() };
+            editorInstance.historyManager = { saveInitialState: jest.fn() };
+            editorInstance.updateSaveButtonState = jest.fn();
+            editorInstance.buildSetSelector = jest.fn();
+            editorInstance.buildRevisionSelector = jest.fn();
+            editorInstance.showAutoCreateNotification = jest.fn();
+            editorInstance.debugLog = jest.fn();
+
+            editorInstance.autoCreateLayerSet('fallback-set');
+
+            expect(mockStateManager.set).toHaveBeenCalledWith('layers', []);
+            expect(mockStateManager.set).toHaveBeenCalledWith('currentSetName', 'fallback-set');
+            expect(mockStateManager.set).toHaveBeenCalledWith('hasUnsavedChanges', true);
+        });
+    });
+
+    describe('finalizeInitialState', () => {
+        test('should call historyManager.saveInitialState when available', () => {
+            const mockSaveInitialState = jest.fn();
+            const mockUpdateSaveButtonState = jest.fn();
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.historyManager = { saveInitialState: mockSaveInitialState };
+            editorInstance.updateSaveButtonState = mockUpdateSaveButtonState;
+
+            editorInstance.finalizeInitialState();
+
+            expect(mockSaveInitialState).toHaveBeenCalled();
+            expect(mockUpdateSaveButtonState).toHaveBeenCalled();
+        });
+
+        test('should fall back to saveState when historyManager not available', () => {
+            const mockSaveState = jest.fn();
+            const mockUpdateSaveButtonState = jest.fn();
+
+            const editorInstance = Object.create(LayersEditor.prototype);
+            editorInstance.historyManager = null;
+            editorInstance.saveState = mockSaveState;
+            editorInstance.updateSaveButtonState = mockUpdateSaveButtonState;
+
+            editorInstance.finalizeInitialState();
+
+            expect(mockSaveState).toHaveBeenCalledWith('initial');
+        });
+    });
+});

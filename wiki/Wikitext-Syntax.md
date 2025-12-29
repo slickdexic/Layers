@@ -88,6 +88,96 @@ Human heart with anatomical labels]]
 
 ---
 
+## Link Behavior (layerslink)
+
+*New in v1.2.0, improved in v1.2.5*
+
+Control what happens when users click on layered images with the `layerslink` parameter:
+
+> **Note:** `layerslink` must be used together with `layers`. It controls the click behavior for images that have layers enabled. Without `layers=on` or `layers=<setname>`, the `layerslink` parameter has no effect.
+
+| Value | Effect |
+|-------|--------|
+| (none) | Standard MediaWiki link to File page |
+| `editor` | Opens the layer editor; returns to originating page on close |
+| `editor-newtab` | Opens editor in a new browser tab |
+| `editor-modal` | Opens editor in overlay without navigation |
+| `viewer` | Opens fullscreen lightbox viewer |
+| `lightbox` | Alias for `viewer` |
+
+> **v1.2.5 Change:** When using `layerslink=editor` from an article page, closing the editor now returns you to the article (not the File: page). This is the default behavior.
+
+### Examples
+
+```wikitext
+<!-- Click opens the layer editor with the 'anatomy' set -->
+<!-- Closing the editor returns you to THIS page -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor]]
+
+<!-- Click opens the layer editor with the default set -->
+[[File:Diagram.png|layers=on|layerslink=editor]]
+
+<!-- Click opens fullscreen lightbox viewer -->
+[[File:Diagram.png|layers=anatomy|layerslink=viewer]]
+
+<!-- Lightbox is an alias for viewer -->
+[[File:Diagram.png|layers=anatomy|layerslink=lightbox]]
+
+<!-- Default behavior: click goes to File page -->
+[[File:Diagram.png|layers=anatomy]]
+```
+
+### Advanced Editor Modes (v1.2.5+)
+
+For additional control over editor behavior:
+
+```wikitext
+<!-- Opens editor in a new browser tab -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
+
+<!-- Opens editor in modal overlay (no navigation) -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
+```
+
+**Modal Mode** is ideal for Page Forms because:
+- No page navigation occurs
+- Your unsaved form data is preserved
+- Press Escape or the X button to close
+- JavaScript events for integration (`layers-modal-closed`, `layers-saved`)
+
+### Use Cases
+
+**Educational content** — Let students view annotations in a lightbox:
+```wikitext
+[[File:Cell_Diagram.png|thumb|300px|layers=organelles|layerslink=viewer|
+Click to view labeled organelles]]
+```
+
+**Collaborative editing** — Direct users to the editor:
+```wikitext
+[[File:Project_Map.png|thumb|400px|layers=draft|layerslink=editor|
+Click to add your annotations]]
+```
+
+---
+
+## Deep Linking to Editor
+
+*New in v1.2.0*
+
+You can link directly to the editor with a specific layer set pre-loaded using URL parameters:
+
+```
+/wiki/File:Example.jpg?action=editlayers&setname=anatomy
+```
+
+Supported URL parameters:
+- `setname` — Layer set name to load
+- `layerset` — Alias for `setname`
+- `layers` — Alias for `setname`
+
+---
+
 ## File Pages
 
 On **File:** pages, layers are **NOT automatically displayed**. You must explicitly enable them.

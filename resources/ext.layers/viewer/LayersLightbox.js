@@ -46,6 +46,7 @@
 			this.isOpen = false;
 			this.boundKeyHandler = null;
 			this.boundClickHandler = null;
+			this.closeTimeoutId = null; // Track animation timeout for cleanup
 		}
 
 		/**
@@ -288,6 +289,11 @@
 		 * @private
 		 */
 		renderViewer( imageUrl, layerData ) {
+			// Guard against calling after close
+			if ( !this.imageWrapper ) {
+				return;
+			}
+
 			// Clear loading indicator
 			this.imageWrapper.innerHTML = '';
 
@@ -348,6 +354,10 @@
 		 * @private
 		 */
 		showError( message ) {
+			// Guard against calling after close
+			if ( !this.imageWrapper ) {
+				return;
+			}
 			this.imageWrapper.innerHTML = '';
 			const error = document.createElement( 'div' );
 			error.className = 'layers-lightbox-error';
@@ -406,8 +416,14 @@
 			// Animate out
 			this.overlay.classList.remove( 'layers-lightbox-visible' );
 
+			// Cancel any pending close timeout
+			if ( this.closeTimeoutId ) {
+				clearTimeout( this.closeTimeoutId );
+			}
+
 			// Remove after animation
-			setTimeout( () => {
+			this.closeTimeoutId = setTimeout( () => {
+				this.closeTimeoutId = null;
 				if ( this.overlay && this.overlay.parentNode ) {
 					this.overlay.parentNode.removeChild( this.overlay );
 				}

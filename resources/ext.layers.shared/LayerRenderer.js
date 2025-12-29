@@ -126,6 +126,18 @@ class LayerRenderer {
 				baseWidth: this.baseWidth,
 				baseHeight: this.baseHeight
 			} );
+			// Wire up EffectsRenderer to ShapeRenderer for blur fill support
+			if ( this.shapeRenderer ) {
+				this.shapeRenderer.setEffectsRenderer( this.effectsRenderer );
+			}
+			// Wire up EffectsRenderer to TextBoxRenderer for blur fill support
+			if ( this.textBoxRenderer ) {
+				this.textBoxRenderer.setEffectsRenderer( this.effectsRenderer );
+			}
+			// Wire up EffectsRenderer to ArrowRenderer for blur fill support
+			if ( this.arrowRenderer ) {
+				this.arrowRenderer.setEffectsRenderer( this.effectsRenderer );
+			}
 		} else {
 			this.effectsRenderer = null;
 		}
@@ -180,6 +192,10 @@ class LayerRenderer {
 	 */
 	setBackgroundImage ( img ) {
 		this.backgroundImage = img;
+		// Propagate to EffectsRenderer for blur fill support
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.setBackgroundImage( img );
+		}
 	}
 
 	/**
@@ -192,6 +208,10 @@ class LayerRenderer {
 		if ( this.shadowRenderer ) {
 			this.shadowRenderer.setCanvas( canvas );
 		}
+		// Propagate to EffectsRenderer for blur fill support
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.canvas = canvas;
+		}
 	}
 
 	/**
@@ -203,6 +223,10 @@ class LayerRenderer {
 	setBaseDimensions ( width, height ) {
 		this.baseWidth = width;
 		this.baseHeight = height;
+		// Propagate to EffectsRenderer for blur fill support
+		if ( this.effectsRenderer ) {
+			this.effectsRenderer.setBaseDimensions( width, height );
+		}
 	}
 
 	/**
@@ -279,7 +303,16 @@ class LayerRenderer {
 	_prepareRenderOptions( options ) {
 		const opts = options || {};
 		const scale = opts.scaled ? { sx: 1, sy: 1, avg: 1 } : this.getScaleFactors();
-		return { scale, shadowScale: opts.shadowScale || scale, scaled: opts.scaled };
+		return {
+			scale,
+			shadowScale: opts.shadowScale || scale,
+			scaled: opts.scaled,
+			imageElement: opts.imageElement,
+			// Pass through editor transform info for blur fill
+			zoom: opts.zoom,
+			panX: opts.panX,
+			panY: opts.panY
+		};
 	}
 
 	/** Draw a rectangle shape */
@@ -479,6 +512,205 @@ class LayerRenderer {
 	}
 
 	// ========================================================================
+	// Blur Blend Mode Support
+	// ========================================================================
+
+	/**
+	 * Check if a layer uses blur as its blend mode
+	 *
+	 * @param {Object} layer - Layer to check
+	 * @return {boolean} True if layer uses blur blend mode
+	 */
+	hasBlurBlendMode( layer ) {
+		const blendMode = layer.blendMode || layer.blend;
+		return blendMode === 'blur';
+	}
+
+	/**
+	 * Draw a layer with blur blend mode (uses shape as clip region for blur effect)
+	 *
+	 * @param {Object} layer - Layer with blur blend mode
+	 * @param {Object} [options] - Rendering options
+	 */
+	drawLayerWithBlurBlend( layer, options ) {
+		if ( !this.effectsRenderer ) {
+			// Fallback: draw shape normally if effects renderer unavailable
+			this._drawLayerByType( layer, options );
+			return;
+		}
+
+		const self = this;
+		const opts = this._prepareRenderOptions( options );
+
+		// Create a function that draws the shape path
+		const drawPathFn = ( ctx ) => {
+			self._drawShapePath( layer, opts, ctx );
+		};
+
+		// Use the effects renderer to apply blur with the shape as clip
+		this.effectsRenderer.setContext( this.ctx );
+		this.effectsRenderer.drawBlurWithShape( layer, drawPathFn, opts );
+	}
+
+	/**
+	 * Draw just the shape path (for clipping in blur blend mode)
+	 *
+	 * @param {Object} layer - Layer with shape properties
+	 * @param {Object} opts - Render options with scale
+	 * @param {CanvasRenderingContext2D} ctx - Context to draw on
+	 */
+	_drawShapePath( layer, opts, ctx ) {
+		const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
+		const type = layer.type;
+
+		// Apply rotation transform if needed
+		let x, y, width, height, centerX, centerY;
+		const hasRotation = typeof layer.rotation === 'number' && layer.rotation !== 0;
+
+		if ( hasRotation ) {
+			// Calculate center for rotation
+			switch ( type ) {
+				case 'circle':
+					x = ( layer.x || 0 ) * scale.sx;
+					y = ( layer.y || 0 ) * scale.sy;
+					centerX = x;
+					centerY = y;
+					break;
+				case 'ellipse':
+					x = ( layer.x || 0 ) * scale.sx;
+					y = ( layer.y || 0 ) * scale.sy;
+					centerX = x;
+					centerY = y;
+					break;
+				default:
+					x = ( layer.x || 0 ) * scale.sx;
+					y = ( layer.y || 0 ) * scale.sy;
+					width = ( layer.width || 0 ) * scale.sx;
+					height = ( layer.height || 0 ) * scale.sy;
+					centerX = x + width / 2;
+					centerY = y + height / 2;
+			}
+			ctx.translate( centerX, centerY );
+			ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			ctx.translate( -centerX, -centerY );
+		}
+
+		switch ( type ) {
+			case 'rectangle':
+			case 'rect':
+				this._drawRectPath( layer, scale, ctx );
+				break;
+			case 'circle':
+				this._drawCirclePath( layer, scale, ctx );
+				break;
+			case 'ellipse':
+				this._drawEllipsePath( layer, scale, ctx );
+				break;
+			case 'polygon':
+				this._drawPolygonPath( layer, scale, ctx );
+				break;
+			case 'star':
+				this._drawStarPath( layer, scale, ctx );
+				break;
+			default:
+				// Fallback: rectangle bounding box
+				this._drawRectPath( layer, scale, ctx );
+		}
+	}
+
+	/**
+	 * Draw rectangle path
+	 * @private
+	 */
+	_drawRectPath( layer, scale, ctx ) {
+		const x = ( layer.x || 0 ) * scale.sx;
+		const y = ( layer.y || 0 ) * scale.sy;
+		const w = ( layer.width || 0 ) * scale.sx;
+		const h = ( layer.height || 0 ) * scale.sy;
+		let cornerRadius = ( layer.cornerRadius || 0 ) * scale.avg;
+		cornerRadius = Math.min( cornerRadius, Math.min( w, h ) / 2 );
+
+		if ( cornerRadius > 0 && ctx.roundRect ) {
+			ctx.roundRect( x, y, w, h, cornerRadius );
+		} else {
+			ctx.rect( x, y, w, h );
+		}
+	}
+
+	/**
+	 * Draw circle path
+	 * @private
+	 */
+	_drawCirclePath( layer, scale, ctx ) {
+		const x = ( layer.x || 0 ) * scale.sx;
+		const y = ( layer.y || 0 ) * scale.sy;
+		const radius = ( layer.radius || 0 ) * scale.avg;
+		ctx.arc( x, y, radius, 0, Math.PI * 2 );
+	}
+
+	/**
+	 * Draw ellipse path
+	 * @private
+	 */
+	_drawEllipsePath( layer, scale, ctx ) {
+		const x = ( layer.x || 0 ) * scale.sx;
+		const y = ( layer.y || 0 ) * scale.sy;
+		const radiusX = ( layer.radiusX || layer.width / 2 || 0 ) * scale.sx;
+		const radiusY = ( layer.radiusY || layer.height / 2 || 0 ) * scale.sy;
+		ctx.ellipse( x, y, radiusX, radiusY, 0, 0, Math.PI * 2 );
+	}
+
+	/**
+	 * Draw polygon path
+	 * @private
+	 */
+	_drawPolygonPath( layer, scale, ctx ) {
+		const x = ( layer.x || 0 ) * scale.sx;
+		const y = ( layer.y || 0 ) * scale.sy;
+		const radius = ( layer.radius || 50 ) * scale.avg;
+		const sides = layer.sides || 6;
+		const rotation = ( layer.rotation || 0 ) * Math.PI / 180;
+
+		for ( let i = 0; i < sides; i++ ) {
+			const angle = ( i * 2 * Math.PI / sides ) - Math.PI / 2 + rotation;
+			const px = x + radius * Math.cos( angle );
+			const py = y + radius * Math.sin( angle );
+			if ( i === 0 ) {
+				ctx.moveTo( px, py );
+			} else {
+				ctx.lineTo( px, py );
+			}
+		}
+		ctx.closePath();
+	}
+
+	/**
+	 * Draw star path
+	 * @private
+	 */
+	_drawStarPath( layer, scale, ctx ) {
+		const x = ( layer.x || 0 ) * scale.sx;
+		const y = ( layer.y || 0 ) * scale.sy;
+		const outerRadius = ( layer.radius || layer.outerRadius || 50 ) * scale.avg;
+		const innerRadius = ( layer.innerRadius || outerRadius * 0.5 ) * scale.avg;
+		const points = layer.points || 5;
+		const rotation = ( layer.rotation || 0 ) * Math.PI / 180;
+
+		for ( let i = 0; i < points * 2; i++ ) {
+			const radius = i % 2 === 0 ? outerRadius : innerRadius;
+			const angle = ( i * Math.PI / points ) - Math.PI / 2 + rotation;
+			const px = x + radius * Math.cos( angle );
+			const py = y + radius * Math.sin( angle );
+			if ( i === 0 ) {
+				ctx.moveTo( px, py );
+			} else {
+				ctx.lineTo( px, py );
+			}
+		}
+		ctx.closePath();
+	}
+
+	// ========================================================================
 	// Dispatcher
 	// ========================================================================
 
@@ -489,6 +721,26 @@ class LayerRenderer {
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawLayer ( layer, options ) {
+		// Check for blur blend mode - use special rendering path
+		// Skip arrows and lines - they handle blur fill via ArrowRenderer/effectsRenderer,
+		// and blur blend mode with rectangular clip doesn't make sense for these shapes
+		const isArrowOrLine = layer.type === 'arrow' || layer.type === 'line';
+		if ( this.hasBlurBlendMode( layer ) && layer.type !== 'blur' && !isArrowOrLine ) {
+			this.drawLayerWithBlurBlend( layer, options );
+			return;
+		}
+
+		this._drawLayerByType( layer, options );
+	}
+
+	/**
+	 * Draw layer by type (internal dispatch)
+	 *
+	 * @param {Object} layer - Layer to draw
+	 * @param {Object} [options] - Rendering options
+	 * @private
+	 */
+	_drawLayerByType( layer, options ) {
 		switch ( layer.type ) {
 			case 'text':
 				this.drawText( layer, options );

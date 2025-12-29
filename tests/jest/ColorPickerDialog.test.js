@@ -464,4 +464,287 @@ describe( 'ColorPickerDialog', () => {
 			expect( typeof exported.updateColorButton ).toBe( 'function' );
 		} );
 	} );
+
+	describe( 'localStorage error handling', () => {
+		it( 'should return empty array when localStorage.getItem throws', () => {
+			const originalGetItem = localStorageMock.getItem;
+			localStorageMock.getItem = jest.fn( () => {
+				throw new Error( 'localStorage unavailable' );
+			} );
+
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+			const colors = dialog.getSavedColors();
+			expect( colors ).toEqual( [] );
+
+			localStorageMock.getItem = originalGetItem;
+		} );
+
+		it( 'should handle localStorage.setItem throwing when saving color', () => {
+			const originalSetItem = localStorageMock.setItem;
+			localStorageMock.setItem = jest.fn( () => {
+				throw new Error( 'Quota exceeded' );
+			} );
+
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+			// Should not throw
+			expect( () => dialog.saveCustomColor( '#ff0000' ) ).not.toThrow();
+
+			localStorageMock.setItem = originalSetItem;
+		} );
+	} );
+
+	describe( 'updateSelection edge cases', () => {
+		it( 'should handle null button parameter', () => {
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+			dialog.selectedButton = null;
+
+			// Should not throw when passing null
+			expect( () => dialog.updateSelection( null ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'calculatePosition edge cases', () => {
+		it( 'should clamp left position when exceeding maxLeft', () => {
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+
+			// Create anchor element positioned far right
+			const anchor = document.createElement( 'div' );
+			anchor.getBoundingClientRect = () => ( {
+				top: 100,
+				bottom: 120,
+				left: window.innerWidth + 100,
+				right: window.innerWidth + 200
+			} );
+			dialog.anchorElement = anchor;
+
+			const pos = dialog.calculatePosition();
+			expect( pos.left ).toBeLessThanOrEqual( window.innerWidth - 300 );
+		} );
+
+		it( 'should clamp left position when too far left', () => {
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+
+			// Create anchor element positioned far left
+			const anchor = document.createElement( 'div' );
+			anchor.getBoundingClientRect = () => ( {
+				top: 100,
+				bottom: 120,
+				left: -100,
+				right: 0
+			} );
+			dialog.anchorElement = anchor;
+
+			const pos = dialog.calculatePosition();
+			expect( pos.left ).toBeGreaterThanOrEqual( 10 );
+		} );
+	} );
+
+	describe( 'selectedColor initialization', () => {
+		it( 'should select none button when currentColor is none', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: 'none',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const noneBtn = document.querySelector( '.color-picker-none-btn' );
+			expect( noneBtn.classList.contains( 'selected' ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'saved colors display', () => {
+		it( 'should display saved colors with click handlers', () => {
+			localStorageMock.store[ 'layers-custom-colors' ] = JSON.stringify( [ '#ff0000', '#00ff00' ] );
+
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+			dialog.open();
+
+			// Find saved color buttons (they're in the second grid section)
+			const grids = document.querySelectorAll( '.color-picker-grid' );
+			const customGrid = grids[ 1 ];
+			const savedButton = customGrid.querySelector( '[style*="rgb(255, 0, 0)"]' );
+
+			expect( savedButton ).not.toBeNull();
+			expect( savedButton.title ).toBe( '#ff0000' );
+
+			// Click the saved color button
+			savedButton.click();
+			expect( dialog.selectedColor ).toBe( '#ff0000' );
+		} );
+	} );
+
+	describe( 'Apply button behavior', () => {
+		it( 'should save new custom color when applying different color', () => {
+			const onApply = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: onApply
+			} );
+			dialog.open();
+
+			// Change color via custom input
+			dialog.selectedColor = '#abcdef';
+
+			// Click OK button
+			const okBtn = document.querySelector( '.color-picker-btn--primary' );
+			okBtn.click();
+
+			expect( onApply ).toHaveBeenCalledWith( '#abcdef' );
+			expect( localStorageMock.setItem ).toHaveBeenCalled();
+		} );
+
+		it( 'should not save when applying same color as current', () => {
+			localStorageMock.setItem.mockClear();
+
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			// Keep the same color
+			dialog.selectedColor = '#ff0000';
+
+			// Click OK button
+			const okBtn = document.querySelector( '.color-picker-btn--primary' );
+			okBtn.click();
+
+			expect( localStorageMock.setItem ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'overlay click behavior', () => {
+		it( 'should close and cancel when clicking overlay', () => {
+			const onCancel = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				onApply: () => {},
+				onCancel: onCancel
+			} );
+			dialog.open();
+
+			const overlay = document.querySelector( '.color-picker-overlay' );
+			overlay.click();
+
+			expect( onCancel ).toHaveBeenCalled();
+			expect( document.querySelector( '.color-picker-dialog' ) ).toBeNull();
+		} );
+
+		it( 'should not close when clicking inside dialog', () => {
+			const onCancel = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				onApply: () => {},
+				onCancel: onCancel
+			} );
+			dialog.open();
+
+			const dialogEl = document.querySelector( '.color-picker-dialog' );
+			const overlay = document.querySelector( '.color-picker-overlay' );
+
+			// Create click event on overlay but with dialog as target
+			const event = new MouseEvent( 'click', { bubbles: true } );
+			Object.defineProperty( event, 'target', { value: dialogEl } );
+			overlay.dispatchEvent( event );
+
+			expect( onCancel ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'focus trap', () => {
+		it( 'should trap Tab key at end of dialog', () => {
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+			dialog.open();
+
+			const focusable = dialog.dialog.querySelectorAll( 'button, input' );
+			const first = focusable[ 0 ];
+			const last = focusable[ focusable.length - 1 ];
+
+			// Focus last element
+			last.focus();
+			expect( document.activeElement ).toBe( last );
+
+			// Tab key should wrap to first
+			const tabEvent = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				shiftKey: false,
+				bubbles: true
+			} );
+			const preventDefault = jest.spyOn( tabEvent, 'preventDefault' );
+			dialog.dialog.dispatchEvent( tabEvent );
+
+			expect( preventDefault ).toHaveBeenCalled();
+		} );
+
+		it( 'should trap Shift+Tab at start of dialog', () => {
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+			dialog.open();
+
+			const focusable = dialog.dialog.querySelectorAll( 'button, input' );
+			const first = focusable[ 0 ];
+
+			// Focus first element
+			first.focus();
+			expect( document.activeElement ).toBe( first );
+
+			// Shift+Tab should wrap to last
+			const tabEvent = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				shiftKey: true,
+				bubbles: true
+			} );
+			const preventDefault = jest.spyOn( tabEvent, 'preventDefault' );
+			dialog.dialog.dispatchEvent( tabEvent );
+
+			expect( preventDefault ).toHaveBeenCalled();
+		} );
+
+		it( 'should ignore non-Tab keys in focus trap', () => {
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+			dialog.open();
+
+			const enterEvent = new KeyboardEvent( 'keydown', {
+				key: 'Enter',
+				bubbles: true
+			} );
+			const preventDefault = jest.spyOn( enterEvent, 'preventDefault' );
+			dialog.dialog.dispatchEvent( enterEvent );
+
+			expect( preventDefault ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle dialog with no focusable elements', () => {
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+			dialog.open();
+
+			// Remove all focusable elements (simulate edge case)
+			const focusable = dialog.dialog.querySelectorAll( 'button, input' );
+			focusable.forEach( ( el ) => el.remove() );
+
+			// Tab key should not throw
+			const tabEvent = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				bubbles: true
+			} );
+			expect( () => dialog.dialog.dispatchEvent( tabEvent ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'open focus behavior', () => {
+		it( 'should focus dialog when no focusable elements', () => {
+			const dialog = new ColorPickerDialog( { onApply: () => {} } );
+
+			// Override createDialogDOM to return dialog without buttons
+			const originalCreateDialogDOM = dialog.createDialogDOM.bind( dialog );
+			dialog.createDialogDOM = () => {
+				const result = originalCreateDialogDOM();
+				// Remove all buttons and inputs
+				result.dialog.querySelectorAll( 'button, input' ).forEach( ( el ) => el.remove() );
+				return result;
+			};
+
+			dialog.open();
+
+			// Dialog itself should be focused
+			expect( document.activeElement ).toBe( dialog.dialog );
+		} );
+	} );
 } );

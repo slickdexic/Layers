@@ -294,6 +294,11 @@ class LayersParamExtractor {
 	 * Extract layerslink parameter from handler and frame params
 	 * Returns 'editor', 'viewer', 'lightbox', or null
 	 *
+	 * Checks multiple locations where MediaWiki might store the parameter:
+	 * - Direct handler/frame params (e.g., $handlerParams['layerslink'])
+	 * - Nested frame params (e.g., $frameParams['options']['layerslink'])
+	 * - Frame params caption/alt options
+	 *
 	 * @param array $handlerParams Handler parameters
 	 * @param array $frameParams Frame parameters
 	 * @return string|null The link type, or null if not found or invalid
@@ -301,11 +306,35 @@ class LayersParamExtractor {
 	public function extractLayersLink( array $handlerParams, array $frameParams ): ?string {
 		$value = null;
 
-		// Check handler params first
+		// Check handler params first (direct)
 		if ( isset( $handlerParams['layerslink'] ) ) {
 			$value = strtolower( trim( (string)$handlerParams['layerslink'] ) );
-		} elseif ( isset( $frameParams['layerslink'] ) ) {
+		}
+
+		// Check frame params (direct)
+		if ( $value === null && isset( $frameParams['layerslink'] ) ) {
 			$value = strtolower( trim( (string)$frameParams['layerslink'] ) );
+		}
+
+		// Check nested under 'options' key (some MW versions)
+		if ( $value === null && isset( $frameParams['options']['layerslink'] ) ) {
+			$value = strtolower( trim( (string)$frameParams['options']['layerslink'] ) );
+		}
+
+		// Check handler params nested under 'options'
+		if ( $value === null && isset( $handlerParams['options']['layerslink'] ) ) {
+			$value = strtolower( trim( (string)$handlerParams['options']['layerslink'] ) );
+		}
+
+		// Check for layerslink= in caption/alt text fallback (rare edge case)
+		if ( $value === null ) {
+			foreach ( [ 'alt', 'caption' ] as $key ) {
+				$text = $frameParams[$key] ?? $handlerParams[$key] ?? '';
+				if ( preg_match( '/\blayerslink\s*=\s*(\w+)/i', $text, $m ) ) {
+					$value = strtolower( trim( $m[1] ) );
+					break;
+				}
+			}
 		}
 
 		// Validate against allowed values
@@ -323,7 +352,37 @@ class LayersParamExtractor {
 	 * @return bool True if should open editor
 	 */
 	public function isEditorLink( ?string $linkType ): bool {
-		return $linkType === 'editor';
+		return in_array( $linkType, [ 'editor', 'editor-newtab', 'editor-return', 'editor-modal' ], true );
+	}
+
+	/**
+	 * Check if the layerslink value is for opening editor in a new tab
+	 *
+	 * @param string|null $linkType The layerslink value
+	 * @return bool True if should open in new tab
+	 */
+	public function isEditorNewtab( ?string $linkType ): bool {
+		return $linkType === 'editor-newtab';
+	}
+
+	/**
+	 * Check if the layerslink value is for opening editor with return URL
+	 *
+	 * @param string|null $linkType The layerslink value
+	 * @return bool True if should return to origin page after close
+	 */
+	public function isEditorReturn( ?string $linkType ): bool {
+		return $linkType === 'editor-return';
+	}
+
+	/**
+	 * Check if the layerslink value is for opening editor in modal overlay
+	 *
+	 * @param string|null $linkType The layerslink value
+	 * @return bool True if should open in modal overlay
+	 */
+	public function isEditorModal( ?string $linkType ): bool {
+		return $linkType === 'editor-modal';
 	}
 
 	/**

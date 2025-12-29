@@ -75,6 +75,9 @@
 			// Normalize numeric properties
 			LayerDataNormalizer.normalizeNumbers( layer );
 
+			// Normalize property aliases (e.g., blendMode → blend)
+			LayerDataNormalizer.normalizeAliases( layer );
+
 			// Normalize nested points array if present
 			if ( Array.isArray( layer.points ) ) {
 				layer.points.forEach( ( point ) => {
@@ -90,6 +93,26 @@
 			}
 
 			return layer;
+		}
+
+		/**
+		 * Normalize property aliases
+		 *
+		 * The server normalizes 'blend' to 'blendMode' and removes 'blend'.
+		 * This ensures both properties are available for client code that
+		 * may use either property name.
+		 *
+		 * @param {Object} layer - The layer object
+		 */
+		static normalizeAliases( layer ) {
+			// blendMode → blend: Server saves as blendMode, client code uses blend
+			if ( layer.blendMode !== undefined && layer.blend === undefined ) {
+				layer.blend = layer.blendMode;
+			}
+			// blend → blendMode: Ensure blendMode is also set for code that reads it
+			if ( layer.blend !== undefined && layer.blendMode === undefined ) {
+				layer.blendMode = layer.blend;
+			}
 		}
 
 		/**

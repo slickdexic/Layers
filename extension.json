@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.2.1",
+	"version": "1.2.11",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -63,6 +63,10 @@
 		"LayersMaxImageBytes": {
 			"description": "Maximum size in bytes for imported image layers (base64 encoded). Default 1MB. Recommended: 512KB-2MB depending on storage capacity.",
 			"value": 1048576
+		},
+		"LayersContextAwareToolbar": {
+			"description": "Enable context-aware toolbar that shows only relevant controls for the active tool. Set to false for classic mode with all controls visible.",
+			"value": true
 		},
 		"LayersMaxNamedSets": {
 			"description": "Maximum number of named layer sets per image",
@@ -180,7 +184,7 @@
 			"localBasePath": "resources/ext.layers",
 			"remoteExtPath": "Layers/resources/ext.layers",
 			"targets": [ "desktop", "mobile" ],
-			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util", "ext.layers.shared" ],
+			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util", "ext.layers.shared", "ext.layers.modal" ],
 			"styles": [
 				"viewer/LayersLightbox.css"
 			],
@@ -202,6 +206,23 @@
 				"layers-lightbox-close",
 				"layers-lightbox-close-tooltip",
 				"layers-lightbox-loading"
+			]
+		},
+		"ext.layers.modal": {
+			"localBasePath": "resources/ext.layers.modal",
+			"remoteExtPath": "Layers/resources/ext.layers.modal",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "mediawiki.util" ],
+			"styles": [
+				"modal.css"
+			],
+			"scripts": [
+				"LayersEditorModal.js"
+			],
+			"messages": [
+				"layers-editor-modal-title",
+				"layers-editor-modal-close",
+				"layers-editor-modal-saved"
 			]
 		},
 		"ext.layers.editor": {
@@ -263,9 +284,12 @@
 				"ui/IconFactory.js",
 				"ui/LayerItemFactory.js",
 				"ui/BackgroundLayerController.js",
+				"ui/SetSelectorController.js",
 				"ui/ColorPickerDialog.js",
 				"ui/ColorControlFactory.js",
 				"ui/PresetStyleManager.js",
+				"ui/TextEffectsControls.js",
+				"ui/ArrowStyleControl.js",
 				"ui/ConfirmDialog.js",
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",
@@ -453,6 +477,8 @@
 				"layers-revision-select-aria",
 				"layers-revision-load-aria",
 				"layers-switch-set-unsaved-confirm",
+				"layers-unsaved-changes-title",
+				"layers-switch-anyway",
 				"layers-invalid-setname",
 				"layers-export",
 				"layers-export-layers",
@@ -475,6 +501,7 @@
 				"layers-type-layer",
 				"layers-type-blur",
 				"layers-prop-blur-radius",
+				"layers-prop-blur-fill",
 				"layers-arrow-single",
 				"layers-arrow-double",
 				"layers-arrow-none",

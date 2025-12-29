@@ -2,6 +2,16 @@
 
 This guide is for contributors (human and AI) working on the Layers extension. It explains the architecture, API/data contracts, configuration, testing/build workflow, and security/i18n conventions you must follow.
 
+## Codebase Size Policy
+
+**Target: <75,000 lines of JavaScript** — There is NO 50K limit.
+
+This extension is feature-rich by design with 14 drawing tools, multiple rendering systems, comprehensive validation, and extensive test coverage. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching 50K lines or suggest arbitrary line limits. Focus on code quality metrics:
+- God classes (files >1,000 lines) — minimize these
+- Test coverage — maintain 90%+ statement coverage
+- Security — CSRF, rate limiting, validation
+- Proper delegation — use controller patterns
+
 ## 1) Architecture overview
 
 Separation of concerns is strict: PHP integrates with MediaWiki and storage; JavaScript implements the editor UI/state.
@@ -26,36 +36,38 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,805 lines - facade coordinating controllers), `ToolManager.js` (~1,275 lines - delegates to tool handlers), `CanvasRenderer.js` (~834 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,147 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`
+  - Core editor modules: `CanvasManager.js` (~1,877 lines - facade coordinating controllers), `ToolManager.js` (~1,261 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,242 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,194 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
-    - `TextToolHandler.js` (~209 lines) - inline text input UI for creating text layers
-    - `PathToolHandler.js` (~231 lines) - freeform path drawing with click-to-add points
-    - `ShapeFactory.js` (~527 lines) - shape creation factory
-    - `ToolRegistry.js` (~373 lines) - tool configuration registry
-    - `ToolStyles.js` (~507 lines) - style management for tools
+    - `TextToolHandler.js` (~207 lines) - inline text input UI for creating text layers
+    - `PathToolHandler.js` (~229 lines) - freeform path drawing with click-to-add points
+    - `ShapeFactory.js` (~531 lines) - shape creation factory
+    - `ToolRegistry.js` (~371 lines) - tool configuration registry
+    - `ToolStyles.js` (~508 lines) - style management for tools
   - Shared modules (`resources/ext.layers.shared/`): Used by both editor and viewer for consistent behavior:
-    - `LayerDataNormalizer.js` (~210 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
-    - `LayerRenderer.js` (~371 lines), `ShadowRenderer.js` (~521 lines), `ArrowRenderer.js` (~702 lines), `TextRenderer.js` (~343 lines), `TextBoxRenderer.js` (~430 lines), `ShapeRenderer.js` (~1,049 lines), `EffectsRenderer.js` (~245 lines)
+    - `LayerDataNormalizer.js` (~229 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
+    - `LayerRenderer.js` (~821 lines), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~738 lines), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines), `EffectsRenderer.js` (~538 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
-    - `ZoomPanController.js` (~340 lines) - zoom, pan, fit-to-window, coordinate transforms
-    - `GridRulersController.js` (~385 lines) - grid/ruler rendering, snap-to-grid/guides
-    - `TransformController.js` (~761 lines) - resize, rotation, multi-layer transforms
-    - `ResizeCalculator.js` (~806 lines) - shape-specific resize calculations
-    - `HitTestController.js` (~380 lines) - selection handle and layer hit testing
-    - `DrawingController.js` (~635 lines) - shape/tool creation and drawing preview
-    - `ClipboardController.js` (~210 lines) - copy/cut/paste operations
-    - `RenderCoordinator.js` (~390 lines) - render scheduling and dirty region tracking
-    - `InteractionController.js` (~490 lines) - mouse/touch event handling coordination
-    - `TextInputController.js` - text editing input handling
-    - `SelectionRenderer.js` (~349 lines) - selection UI drawing (handles, marquee, rotation)
+    - `ZoomPanController.js` (~370 lines) - zoom, pan, fit-to-window, coordinate transforms
+    - `SmartGuidesController.js` (~568 lines) - smart guides and snap alignment
+    - `TransformController.js` (~779 lines) - resize, rotation, multi-layer transforms
+    - `ResizeCalculator.js` (~822 lines) - shape-specific resize calculations
+    - `HitTestController.js` (~382 lines) - selection handle and layer hit testing
+    - `DrawingController.js` (~630 lines) - shape/tool creation and drawing preview
+    - `ClipboardController.js` (~248 lines) - copy/cut/paste operations
+    - `RenderCoordinator.js` (~398 lines) - render scheduling and dirty region tracking
+    - `InteractionController.js` (~501 lines) - mouse/touch event handling coordination
+    - `TextInputController.js` (~194 lines) - text editing input handling
+    - `SelectionRenderer.js` (~368 lines) - selection UI drawing (handles, marquee, rotation)
+    - `AlignmentController.js` (~564 lines) - layer alignment and distribution
   - Editor modules (`resources/ext.layers.editor/editor/`): Extracted from LayersEditor:
     - `EditorBootstrap.js` (~400 lines) - initialization, hooks, cleanup
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
   - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
-  - UI: `Toolbar.js`, `LayerPanel.js` (~1,720 lines - delegates to 7 controllers), plus editor CSS (editor-fixed.css theme)
-  - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js for separation of concerns:
+  - UI: `Toolbar.js` (~1,537 lines), `LayerPanel.js` (~1,838 lines - delegates to 7 controllers), plus editor CSS (editor-fixed.css theme)
+  - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js and UIManager.js for separation of concerns:
     - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
+    - `SetSelectorController.js` (~567 lines) - named layer set selection, creation, deletion, renaming (extracted from UIManager.js)
     - `LayerItemFactory.js` (~299 lines) - layer list item DOM creation
     - `LayerListRenderer.js` - layer list rendering
     - `LayerDragDrop.js` - drag and drop reordering
@@ -63,6 +75,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
     - `PresetStyleManager.js` (~275 lines) - preset dropdown UI integration (extracted from ToolbarStyleControls)
+    - `ArrowStyleControl.js` (~209 lines) - arrow style dropdown UI (extracted from ToolbarStyleControls)
   - Preset modules (`resources/ext.layers.editor/presets/`): Style preset system:
     - `PresetManager.js` (~642 lines) - facade for preset operations, delegates to BuiltInPresets and PresetStorage
     - `BuiltInPresets.js` (~293 lines) - built-in preset definitions (arrow, text, shapes, etc.)
@@ -71,8 +84,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`, `APIErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
-  - ES6 classes: All 72 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 8 files exceed 1,000 lines - see improvement_plan.md for remediation
+  - ES6 classes: All 73 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
+  - **God classes:** 8 files exceed 1,000 lines (CanvasManager, LayerPanel, Toolbar, LayersEditor, ToolManager, CanvasRenderer, SelectionManager, APIManager) - all use delegation patterns, see improvement_plan.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.
@@ -166,7 +179,7 @@ if ( bgVal === false || bgVal === 0 || bgVal === '0' || bgVal === 'false' ) {
 Layer objects are a sanitized subset of the client model. Common fields (whitelist on server):
 - id (string), type (enum: text, textbox, arrow, rectangle, circle, ellipse, polygon, star, line, path, blur, image)
 - Geometry: x, y, width, height, radius, radiusX, radiusY, x1, y1, x2, y2, rotation (numbers in safe ranges)
-- Style: stroke, fill, color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blendMode or blend (mapped), fontFamily, fontSize, fontWeight (normal|bold), fontStyle (normal|italic)
+- Style: stroke, fill (color or 'blur'), color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blurRadius (1-64, for blur fill), blendMode or blend (mapped), fontFamily, fontSize, fontWeight (normal|bold), fontStyle (normal|italic)
 - Arrow/line: arrowhead (none|arrow|circle|diamond|triangle), arrowStyle (solid|dashed|dotted), arrowSize
 - Text: text (sanitized), textStrokeColor, textStrokeWidth, textShadow (bool), textShadowColor, textShadowBlur, textShadowOffsetX, textShadowOffsetY
 - Text box: textAlign (left|center|right), verticalAlign (top|middle|bottom), padding, lineHeight, cornerRadius
@@ -174,6 +187,7 @@ Layer objects are a sanitized subset of the client model. Common fields (whiteli
 - Shapes/paths: points: Array<{x,y}> (capped ~1000)
 - Image: src (base64 data URL), originalWidth, originalHeight, preserveAspectRatio (bool)
 - Flags: visible (bool), locked (bool), name (string)
+- Blur fill: When fill='blur', shapes display a "frosted glass" effect that blurs content beneath. blurRadius controls intensity (default 12px).
 
 Important: Unknown or invalid fields are dropped server-side. Keep editor state within these fields to avoid data loss.
 

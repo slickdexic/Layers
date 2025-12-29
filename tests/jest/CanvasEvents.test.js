@@ -303,6 +303,15 @@ describe( 'CanvasEvents', () => {
 			expect( mockCanvasManager.startMarqueeSelection ).toHaveBeenCalled();
 		} );
 
+		it( 'should start marquee selection with marquee tool', () => {
+			mockCanvasManager.currentTool = 'marquee';
+
+			const event = { clientX: 100, clientY: 200, button: 0, ctrlKey: false, metaKey: false };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.startMarqueeSelection ).toHaveBeenCalled();
+		} );
+
 		it( 'should start guide drag when clicking in ruler area', () => {
 			mockCanvasManager.showRulers = true;
 			mockCanvasManager.rulerSize = 20;
@@ -370,6 +379,76 @@ describe( 'CanvasEvents', () => {
 			canvasEvents.handleMouseMove( event );
 
 			expect( mockCanvasManager.transformController.handleResize ).toHaveBeenCalled();
+		} );
+
+		it( 'should log error and continue when handleResize throws', () => {
+			// Setup mw.log.error mock
+			global.mw = { log: { error: jest.fn() } };
+
+			mockCanvasManager.transformController.isResizing = true;
+			mockCanvasManager.transformController.resizeHandle = { type: 'se' };
+			mockCanvasManager.transformController.dragStartPoint = { x: 100, y: 100 };
+			mockCanvasManager.transformController.handleResize.mockImplementation( () => {
+				throw new Error( 'Resize calculation failed' );
+			} );
+
+			const event = { clientX: 150, clientY: 150 };
+
+			// Should not throw
+			expect( () => {
+				canvasEvents.handleMouseMove( event );
+			} ).not.toThrow();
+
+			// Should log the error
+			expect( global.mw.log.error ).toHaveBeenCalledWith(
+				'[CanvasEvents] handleResize error:',
+				'Resize calculation failed'
+			);
+
+			delete global.mw;
+		} );
+
+		it( 'should handle resize error when mw.log is not available', () => {
+			// No mw global
+			delete global.mw;
+
+			mockCanvasManager.transformController.isResizing = true;
+			mockCanvasManager.transformController.resizeHandle = { type: 'se' };
+			mockCanvasManager.transformController.dragStartPoint = { x: 100, y: 100 };
+			mockCanvasManager.transformController.handleResize.mockImplementation( () => {
+				throw new Error( 'Resize error' );
+			} );
+
+			const event = { clientX: 150, clientY: 150 };
+
+			// Should not throw even without mw.log
+			expect( () => {
+				canvasEvents.handleMouseMove( event );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle resize error with error object without message', () => {
+			global.mw = { log: { error: jest.fn() } };
+
+			mockCanvasManager.transformController.isResizing = true;
+			mockCanvasManager.transformController.resizeHandle = { type: 'se' };
+			mockCanvasManager.transformController.dragStartPoint = { x: 100, y: 100 };
+
+			const errorObj = { code: 'ERR_UNKNOWN' };
+			mockCanvasManager.transformController.handleResize.mockImplementation( () => {
+				throw errorObj;
+			} );
+
+			const event = { clientX: 150, clientY: 150 };
+			canvasEvents.handleMouseMove( event );
+
+			// Should log the error object itself when no message
+			expect( global.mw.log.error ).toHaveBeenCalledWith(
+				'[CanvasEvents] handleResize error:',
+				errorObj
+			);
+
+			delete global.mw;
 		} );
 
 		it( 'should handle rotation when rotating', () => {
@@ -961,6 +1040,68 @@ describe( 'CanvasEvents', () => {
 			canvasEvents.handleTouchEnd( event );
 
 			expect( mockCanvasManager.isPinching ).toBe( false );
+		} );
+
+		it( 'should trigger double-tap when tapped twice quickly', () => {
+			// Setup: recent touch time to trigger double-tap
+			const now = Date.now();
+			mockCanvasManager.lastTouchTime = now - 100; // 100ms ago
+			mockCanvasManager.lastTouchPoint = { clientX: 100, clientY: 100 };
+			mockCanvasManager.zoom = 1;
+
+			// Spy on handleDoubleTap
+			const doubleTapSpy = jest.spyOn( canvasEvents, 'handleDoubleTap' );
+
+			const event = {
+				changedTouches: [ { clientX: 100, clientY: 100 } ]
+			};
+			canvasEvents.handleTouchEnd( event );
+
+			expect( doubleTapSpy ).toHaveBeenCalled();
+			doubleTapSpy.mockRestore();
+		} );
+
+		it( 'should convert touch to mouseUp when not double-tap or pinch', () => {
+			// No recent touch time, not pinching
+			mockCanvasManager.lastTouchTime = null;
+			mockCanvasManager.isPinching = false;
+			mockCanvasManager.lastTouchPoint = { clientX: 150, clientY: 250 };
+
+			// Spy on handleMouseUp
+			const mouseUpSpy = jest.spyOn( canvasEvents, 'handleMouseUp' ).mockImplementation( () => {} );
+
+			const event = {
+				changedTouches: [ { clientX: 150, clientY: 250 } ]
+			};
+			canvasEvents.handleTouchEnd( event );
+
+			expect( mouseUpSpy ).toHaveBeenCalled();
+			mouseUpSpy.mockRestore();
+		} );
+	} );
+
+	describe( 'handleTouchMove (extended)', () => {
+		it( 'should do nothing when no touches', () => {
+			const event = { touches: [] };
+			const result = canvasEvents.handleTouchMove( event );
+
+			// Should return early
+			expect( result ).toBeUndefined();
+		} );
+
+		it( 'should convert single touch to mouse move', () => {
+			mockCanvasManager.isPinching = false;
+
+			// Spy on handleMouseMove
+			const mouseMoveSpy = jest.spyOn( canvasEvents, 'handleMouseMove' ).mockImplementation( () => {} );
+
+			const event = {
+				touches: [ { clientX: 200, clientY: 300 } ]
+			};
+			canvasEvents.handleTouchMove( event );
+
+			expect( mouseMoveSpy ).toHaveBeenCalled();
+			mouseMoveSpy.mockRestore();
 		} );
 	} );
 

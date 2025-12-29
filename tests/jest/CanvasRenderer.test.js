@@ -396,7 +396,11 @@ describe('CanvasRenderer', () => {
 
             renderer.drawLayer(layer);
 
-            expect(mockLayerRenderer.drawLayer).toHaveBeenCalledWith(layer);
+            expect(mockLayerRenderer.drawLayer).toHaveBeenCalledWith(layer, {
+                zoom: renderer.zoom,
+                panX: renderer.panX,
+                panY: renderer.panY
+            });
         });
 
         test('should not throw when layerRenderer is not available', () => {
@@ -1065,6 +1069,199 @@ describe('CanvasRenderer', () => {
 
             expect(ctx.save).toHaveBeenCalled();
             expect(ctx.restore).toHaveBeenCalled();
+        });
+    });
+
+    describe('destroy', () => {
+        test('should clear canvas pool', () => {
+            const pooledCanvas = { width: 100, height: 100 };
+            renderer.canvasPool = [pooledCanvas];
+
+            renderer.destroy();
+
+            expect(pooledCanvas.width).toBe(0);
+            expect(pooledCanvas.height).toBe(0);
+            expect(renderer.canvasPool).toEqual([]);
+        });
+
+        test('should clear canvas state stack', () => {
+            renderer.canvasStateStack = [{ zoom: 1 }, { zoom: 2 }];
+
+            renderer.destroy();
+
+            expect(renderer.canvasStateStack).toEqual([]);
+        });
+
+        test('should clear selection state', () => {
+            renderer.selectedLayerIds = ['layer1', 'layer2'];
+            renderer.selectionHandles = [{ x: 0, y: 0 }];
+            renderer.rotationHandle = { x: 50, y: 50 };
+            renderer.marqueeRect = { x: 0, y: 0, width: 100, height: 100 };
+
+            renderer.destroy();
+
+            expect(renderer.selectedLayerIds).toEqual([]);
+            expect(renderer.selectionHandles).toEqual([]);
+            expect(renderer.rotationHandle).toBeNull();
+            expect(renderer.marqueeRect).toBeNull();
+        });
+
+        test('should clear guides', () => {
+            renderer.horizontalGuides = [50, 100];
+            renderer.verticalGuides = [75, 150];
+
+            renderer.destroy();
+
+            expect(renderer.horizontalGuides).toEqual([]);
+            expect(renderer.verticalGuides).toEqual([]);
+        });
+
+        test('should destroy and clear layer renderer', () => {
+            const mockLayerRenderer = { destroy: jest.fn() };
+            renderer.layerRenderer = mockLayerRenderer;
+
+            renderer.destroy();
+
+            expect(mockLayerRenderer.destroy).toHaveBeenCalled();
+            expect(renderer.layerRenderer).toBeNull();
+        });
+
+        test('should destroy and clear selection renderer', () => {
+            const mockSelectionRenderer = { destroy: jest.fn() };
+            renderer._selectionRenderer = mockSelectionRenderer;
+
+            renderer.destroy();
+
+            expect(mockSelectionRenderer.destroy).toHaveBeenCalled();
+            expect(renderer._selectionRenderer).toBeNull();
+        });
+
+        test('should clear all references', () => {
+            renderer.backgroundImage = { src: 'test.jpg' };
+            renderer.config = { foo: 'bar' };
+
+            renderer.destroy();
+
+            expect(renderer.backgroundImage).toBeNull();
+            expect(renderer.canvas).toBeNull();
+            expect(renderer.ctx).toBeNull();
+            expect(renderer.config).toBeNull();
+            expect(renderer.editor).toBeNull();
+        });
+
+        test('should handle layerRenderer without destroy method', () => {
+            renderer.layerRenderer = { someMethod: jest.fn() };
+
+            expect(() => renderer.destroy()).not.toThrow();
+            expect(renderer.layerRenderer).toBeNull();
+        });
+
+        test('should handle selectionRenderer without destroy method', () => {
+            renderer._selectionRenderer = { someMethod: jest.fn() };
+
+            expect(() => renderer.destroy()).not.toThrow();
+            expect(renderer._selectionRenderer).toBeNull();
+        });
+    });
+
+    describe('_drawBlurContent', () => {
+        test('should draw text for text type layers', () => {
+            const mockTextRenderer = {
+                setContext: jest.fn(),
+                draw: jest.fn()
+            };
+            renderer.layerRenderer = { textRenderer: mockTextRenderer };
+            const layer = { type: 'text', text: 'Hello', x: 10, y: 10 };
+
+            renderer._drawBlurContent(layer, false, 0, 0);
+
+            expect(mockTextRenderer.setContext).toHaveBeenCalled();
+            expect(mockTextRenderer.draw).toHaveBeenCalled();
+        });
+
+        test('should handle text with rotation', () => {
+            const mockTextRenderer = {
+                setContext: jest.fn(),
+                draw: jest.fn()
+            };
+            renderer.layerRenderer = { textRenderer: mockTextRenderer };
+            const layer = { type: 'text', text: 'Hello', rotation: 45, x: 10, y: 10 };
+
+            renderer._drawBlurContent(layer, true, 50, 50);
+
+            expect(ctx.translate).toHaveBeenCalled();
+            expect(ctx.rotate).toHaveBeenCalled();
+        });
+
+        test('should draw arrow for arrow type layers', () => {
+            const mockArrowRenderer = {
+                setContext: jest.fn(),
+                draw: jest.fn()
+            };
+            renderer.layerRenderer = { arrowRenderer: mockArrowRenderer };
+            const layer = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+
+            renderer._drawBlurContent(layer, false, 0, 0);
+
+            expect(mockArrowRenderer.setContext).toHaveBeenCalled();
+            expect(mockArrowRenderer.draw).toHaveBeenCalled();
+        });
+
+        test('should draw line for line type layers', () => {
+            const mockDrawLine = jest.fn();
+            renderer.layerRenderer = { drawLine: mockDrawLine };
+            const layer = { type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 };
+
+            renderer._drawBlurContent(layer, false, 0, 0);
+
+            expect(mockDrawLine).toHaveBeenCalled();
+        });
+
+        test('should not draw without layerRenderer', () => {
+            renderer.layerRenderer = null;
+            const layer = { type: 'text', text: 'Hello' };
+
+            expect(() => renderer._drawBlurContent(layer, false, 0, 0)).not.toThrow();
+        });
+    });
+
+    describe('blur blend mode error handling', () => {
+        test('should handle drawBlurEffect gracefully when filter fails', () => {
+            // The drawBlurEffect method should handle errors internally
+            const layer = { type: 'blur', x: 10, y: 10, width: 100, height: 100, fill: 'blur' };
+
+            // Should not throw even with unusual configurations
+            expect(() => renderer.drawBlurEffect(layer)).not.toThrow();
+        });
+    });
+
+    describe('_getLayerById', () => {
+        test('should get layer from editor when method exists', () => {
+            const mockLayer = { id: 'layer1', type: 'rectangle' };
+            renderer.editor = {
+                getLayerById: jest.fn().mockReturnValue(mockLayer)
+            };
+
+            const result = renderer._getLayerById('layer1');
+
+            expect(renderer.editor.getLayerById).toHaveBeenCalledWith('layer1');
+            expect(result).toBe(mockLayer);
+        });
+
+        test('should return null when editor lacks getLayerById', () => {
+            renderer.editor = { someOtherMethod: jest.fn() };
+
+            const result = renderer._getLayerById('layer1');
+
+            expect(result).toBeNull();
+        });
+
+        test('should return null when editor is null', () => {
+            renderer.editor = null;
+
+            const result = renderer._getLayerById('layer1');
+
+            expect(result).toBeNull();
         });
     });
 });

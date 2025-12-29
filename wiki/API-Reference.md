@@ -406,8 +406,9 @@ All layer types share these properties:
 | `stroke` | string | — | Stroke color (hex, rgba) |
 | `strokeWidth` | number | 0-50 | Stroke width in pixels |
 | `strokeOpacity` | number | 0-1 | Stroke opacity |
-| `fill` | string | — | Fill color |
+| `fill` | string | — | Fill color or `blur` for frosted glass effect |
 | `fillOpacity` | number | 0-1 | Fill opacity |
+| `blurRadius` | number | 1-64 | Blur intensity when fill=blur (default: 12). Supported on all filled shapes including arrows (v1.2.7+) |
 
 ### Shadow Properties
 

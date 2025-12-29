@@ -178,9 +178,12 @@
 				y1: point.y,
 				x2: point.x,
 				y2: point.y,
+				// Arrows are filled polygons - use stroke color as fill
+				fill: style.color,
 				stroke: style.color,
 				strokeWidth: style.strokeWidth,
-				arrowStyle: style.arrowStyle || 'single'
+				arrowStyle: style.arrowStyle || 'single',
+				arrowSize: style.arrowSize || 15
 			};
 			return this.applyShadow( layer, style );
 		}

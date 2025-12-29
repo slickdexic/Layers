@@ -1721,9 +1721,10 @@ class CanvasManager {
 			}.bind( this ) );
 		} else {
 			// Fallback for older browsers
-			setTimeout( function () {
+			this.fallbackTimeoutId = setTimeout( function () {
 				this.redraw();
 				this.redrawScheduled = false;
+				this.fallbackTimeoutId = null;
 			}.bind( this ), 16 ); // ~60fps
 		}
 	}
@@ -1798,6 +1799,11 @@ class CanvasManager {
 		if ( this.animationFrameId ) {
 			window.cancelAnimationFrame( this.animationFrameId );
 			this.animationFrameId = null;
+		}
+		// Cancel fallback timeout if used
+		if ( this.fallbackTimeoutId ) {
+			clearTimeout( this.fallbackTimeoutId );
+			this.fallbackTimeoutId = null;
 		}
 		this.redrawScheduled = false;
 

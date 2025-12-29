@@ -99,6 +99,9 @@ jobs:
       - name: Install MediaWiki
         run: |
           cd ~/mediawiki
+          # Always reinstall - the database is fresh on each run (services don't cache)
+          # Remove old LocalSettings.php if it exists from cache
+          rm -f LocalSettings.php
           php maintenance/install.php \
             --dbtype=mysql \
             --dbserver=127.0.0.1 \

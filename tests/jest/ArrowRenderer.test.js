@@ -650,4 +650,103 @@ describe( 'ArrowRenderer', () => {
 			expect( mockShadowRenderer.applyShadow ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'setEffectsRenderer', () => {
+		it( 'should set effects renderer instance', () => {
+			const mockEffectsRenderer = { drawBlurFill: jest.fn() };
+			arrowRenderer.setEffectsRenderer( mockEffectsRenderer );
+			expect( arrowRenderer.effectsRenderer ).toBe( mockEffectsRenderer );
+		} );
+	} );
+
+	describe( 'blur fill', () => {
+		it( 'should call effectsRenderer.drawBlurFill when fill is blur', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			arrowRenderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				type: 'arrow',
+				x1: 50,
+				y1: 50,
+				x2: 150,
+				y2: 100,
+				fill: 'blur',
+				stroke: '#000000',
+				strokeWidth: 2
+			};
+
+			arrowRenderer.draw( layer );
+
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledTimes( 1 );
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledWith(
+				layer,
+				expect.any( Function ), // drawArrowPath function
+				expect.objectContaining( {
+					x: expect.any( Number ),
+					y: expect.any( Number ),
+					width: expect.any( Number ),
+					height: expect.any( Number )
+				} ),
+				expect.any( Object ) // options
+			);
+		} );
+
+		it( 'should not call effectsRenderer.drawBlurFill when fillOpacity is 0', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			arrowRenderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				type: 'arrow',
+				x1: 50,
+				y1: 50,
+				x2: 150,
+				y2: 100,
+				fill: 'blur',
+				fillOpacity: 0
+			};
+
+			arrowRenderer.draw( layer );
+
+			expect( mockEffectsRenderer.drawBlurFill ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not draw regular fill when fill is blur', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			arrowRenderer.setEffectsRenderer( mockEffectsRenderer );
+
+			const layer = {
+				type: 'arrow',
+				x1: 50,
+				y1: 50,
+				x2: 150,
+				y2: 100,
+				fill: 'blur'
+			};
+
+			arrowRenderer.draw( layer );
+
+			// fill() should NOT be called for blur fill (only for regular color fill)
+			expect( ctx.fill ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle blur fill without effectsRenderer gracefully', () => {
+			// No effectsRenderer set - should not throw
+			const layer = {
+				type: 'arrow',
+				x1: 50,
+				y1: 50,
+				x2: 150,
+				y2: 100,
+				fill: 'blur'
+			};
+
+			expect( () => arrowRenderer.draw( layer ) ).not.toThrow();
+		} );
+	} );
 } );

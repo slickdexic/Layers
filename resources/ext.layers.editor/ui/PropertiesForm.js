@@ -765,9 +765,46 @@
 				addInput( { label: t( 'layers-prop-stroke-width', 'Stroke Width' ), type: 'number', value: layer.strokeWidth || 1, min: 0, max: 200, step: 1, onChange: function ( v ) { const val = Math.max( 0, Math.min( 200, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { strokeWidth: val } ); } } );
 			}
 			addSliderInput( { label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ), value: ( layer.strokeOpacity != null ) ? Math.round( layer.strokeOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { strokeOpacity: v / 100 } ); } } );
-			// Fill controls for shapes that use fill (lines are stroke-only)
+			// Fill controls for shapes that use fill (lines are stroke-only, but arrows support fill)
 			if ( layer.type !== 'line' ) {
-				addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
+				// Blur fill checkbox (mutually exclusive with color fill)
+				const isBlurFill = layer.fill === 'blur';
+				addCheckbox( { label: t( 'layers-prop-blur-fill', 'Blur Fill' ), value: isBlurFill, onChange: function ( checked ) {
+					if ( checked ) {
+						// Enable blur fill - store current fill color and set fill to 'blur'
+						const updates = { fill: 'blur' };
+						// Store the current fill color for restoration later (only if it's a valid color)
+						if ( layer.fill && layer.fill !== 'blur' && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
+							updates._previousFill = layer.fill;
+						} else if ( !layer._previousFill ) {
+							// If no previous fill stored and current is not a color, default to transparent
+							updates._previousFill = 'transparent';
+						}
+						if ( typeof layer.blurRadius === 'undefined' ) {
+							updates.blurRadius = 12;
+						}
+						editor.updateLayer( layer.id, updates );
+					} else {
+						// Disable blur fill - restore to previous fill color or transparent
+						const restoredFill = layer._previousFill || 'transparent';
+						editor.updateLayer( layer.id, { fill: restoredFill } );
+					}
+					// Refresh properties panel to show/hide blur radius and fill color picker
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+						// Use setTimeout to let the layer update complete first
+						setTimeout( function () {
+							editor.layerPanel.updatePropertiesPanel( layer.id );
+						}, 0 );
+					}
+				} } );
+				// Blur radius (only shown when blur fill is enabled)
+				if ( isBlurFill ) {
+					addInput( { label: t( 'layers-prop-blur-radius', 'Blur Radius' ), type: 'number', value: layer.blurRadius || 12, min: 1, max: 64, step: 1, onChange: function ( v ) { const br = Math.max( 1, Math.min( 64, parseInt( v, 10 ) || 12 ) ); editor.updateLayer( layer.id, { blurRadius: br } ); } } );
+				}
+				// Color fill (only shown when blur fill is disabled)
+				if ( !isBlurFill ) {
+					addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
+				}
 				addSliderInput( { label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ), value: ( layer.fillOpacity != null ) ? Math.round( layer.fillOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { fillOpacity: v / 100 } ); } } );
 			}
 		}
@@ -777,7 +814,8 @@
 		let layerOpacityValue = ( layer.opacity != null ) ? layer.opacity : 1;
 		layerOpacityValue = Math.round( layerOpacityValue * 100 );
 		addSliderInput( { label: t( 'layers-prop-opacity', 'Layer Opacity' ), value: layerOpacityValue, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { opacity: v / 100 } ); } } );
-		addSelect( { label: t( 'layers-prop-blend', 'Blend' ), value: layer.blend || 'normal', options: [
+		// Note: 'blur' removed from blend options - use fill='blur' for frosted glass effect instead
+		addSelect( { label: t( 'layers-prop-blend', 'Blend' ), value: layer.blend || layer.blendMode || 'normal', options: [
 			{ value: 'normal', text: t( 'layers-blend-normal', 'Normal' ) },
 			{ value: 'multiply', text: t( 'layers-blend-multiply', 'Multiply' ) },
 			{ value: 'screen', text: t( 'layers-blend-screen', 'Screen' ) },

@@ -167,46 +167,26 @@ As a user, I want to adjust the background image opacity so I can make my annota
 
 ---
 
-## 3. Blur as Blend Mode for All Shapes
+## ~~3. Blur as Blend Mode for All Shapes~~
 
 **Priority:** Medium  
 **Complexity:** Medium-High  
-**Status:** ⏳ Proposed
+**Status:** ✅ Implemented in v1.2.6
 
 ### Description
-Allow any shape (rectangle, circle, ellipse, polygon, star, path) to use "blur" as a blend mode, creating blurred regions in any shape. This would generalize the current blur tool and enable creative use cases like privacy masks, focus effects, and stylized callouts.
+Allow any shape (rectangle, circle, ellipse, polygon, star) to use "blur" as a blend mode, creating blurred regions in any shape. This generalizes the current blur tool and enables creative use cases like privacy masks, focus effects, and stylized callouts.
+
+### Implementation Summary
+- Added 'blur' to valid blend modes in `LayersValidator.js`, `LayersConstants.js`, and `ServerSideLayerValidator.php`
+- Added `drawBlurWithShape()` and `hasBlurBlendMode()` methods to `EffectsRenderer.js`
+- Added blur blend mode support to `LayerRenderer.js` with shape path drawing helpers
+- Added blur blend mode support to `CanvasRenderer.js` for editor preview
+- Shapes with `blendMode: 'blur'` use shape geometry as clip path, apply blur filter within
+- Uses `blurRadius` property (default 12, clamped 1-64)
+- Fallback: gray semi-transparent overlay when no background image available
 
 ### User Story
 As a user, I want to apply blur effect to any shape (not just rectangles) so I can create circular privacy masks, star-shaped focus effects, or complex path-based blur regions.
-
-### Technical Challenges
-
-| Challenge | Approach |
-|-----------|----------|
-| Blur is a `filter`, not a blend mode | Intercept "blur" blend mode in renderer, use filter path |
-| Shape clipping for non-rectangles | Use shape geometry as clip path before applying blur |
-| Performance | Blur is expensive; consider caching or limiting blur radius |
-| Text layers | Apply blur to bounding box, or skip text (TBD) |
-
-### Implementation Approach
-
-1. **Add "blur" to blend mode options**
-   - Update LayersValidator.validBlendModes to include 'blur'
-   - Update blend mode dropdown in ToolbarStyleControls
-   - Update LayersConstants.BLEND_MODES
-
-2. **Modify ShapeRenderer**
-   - Detect `blendMode === 'blur'` before drawing
-   - Instead of normal fill/stroke, use shape as clip path
-   - Delegate to EffectsRenderer for blur effect within clip
-
-3. **Generalize EffectsRenderer.drawBlur()**
-   - Accept optional clip path (array of points or shape geometry)
-   - Use `ctx.clip()` with shape path before blur operation
-
-4. **Deprecate standalone blur tool?**
-   - Keep for backward compatibility
-   - Rectangle with blur blend mode is equivalent
 
 ### Layer Example
 ```javascript
@@ -217,20 +197,10 @@ As a user, I want to apply blur effect to any shape (not just rectangles) so I c
   radiusX: 80,
   radiusY: 60,
   blendMode: 'blur',
-  blurRadius: 15,  // reuse existing property
+  blurRadius: 15,  // optional, default 12
   opacity: 1
 }
 ```
-
-### Estimated Effort
-- **3-5 days** for full implementation
-- Files to modify: ShapeRenderer, EffectsRenderer, LayersValidator, ToolbarStyleControls, LayersConstants
-
-### Benefits
-- Unique differentiation from other annotation tools
-- Privacy masking with arbitrary shapes
-- Creative effects (vignettes, spotlight-inverse)
-- Consolidates blur functionality
 
 ---
 
@@ -532,9 +502,10 @@ Full touch support for tablets and phones.
 
 | Feature | Priority | Effort | Value | Status |
 |---------|----------|--------|-------|--------|
+| **Enhanced Layerslink Navigation** | **High** | **Low-High** | **High** | ⏳ **Proposed** |
 | Deep Linking to Editor | High | Medium | High | ⏳ Proposed |
 | Lightbox Viewer | High | Medium | High | ⏳ Proposed |
-| Blur as Blend Mode | Medium | Medium | Medium | ⏳ Proposed |
+| ~~Blur as Blend Mode~~ | Medium | Medium | Medium | ✅ v1.2.6 |
 | Layer Templates | Medium | Medium | High | 💡 Idea |
 | Measurement Tools | Medium | Medium | High | 💡 Idea |
 | Layer Linking/Hotspots | Medium | Medium | High | 💡 Idea |
@@ -545,11 +516,159 @@ Full touch support for tablets and phones.
 | AI-Assisted Annotations | Low | High | Very High | 💡 Idea |
 
 ### Recommended Next Features
-1. **Deep Linking to Editor** - Enables form integration workflow
-2. **Lightbox Viewer** - Major UX improvement for readers
-3. **Layer Templates** - High productivity gain for common annotations
+1. **Enhanced Layerslink Navigation** - Critical for Page Forms integration (Phase 1: newtab is quick win)
+2. **Deep Linking to Editor** - Enables form integration workflow
+3. **Lightbox Viewer** - Major UX improvement for readers
+4. **Layer Templates** - High productivity gain for common annotations
+
+---
+
+## 7. Enhanced Layerslink Navigation Modes
+
+**Priority:** High  
+**Complexity:** Low to High (phased)  
+**Status:** ⏳ Proposed  
+**Full Specification:** [FEATURE_REQUEST_LAYERSLINK_RETURN.md](FEATURE_REQUEST_LAYERSLINK_RETURN.md)
+
+### Description
+Extend the `layerslink` parameter to support better navigation workflows when editing layers from within wiki pages, especially for Page Forms integration.
+
+### User Story
+As a user editing a Page Forms form, I want to click on a layered image to edit its annotations, then return to my form without losing my unsaved form data.
+
+### Proposed Values
+
+| Value | Behavior | Effort |
+|-------|----------|--------|
+| `editor-newtab` | Opens editor in new browser tab | Low (1 hour) |
+| `editor-return` | Returns to original page after save/close | Medium (4-6 hours) |
+| `editor-modal` | Opens editor in overlay modal on current page | High (2-3 days) |
+
+### Wikitext Examples
+
+```wikitext
+<!-- Open in new tab (simple, preserves original page) -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
+
+<!-- Return to this page after editing -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-return]]
+
+<!-- Best UX: Modal overlay, form data preserved -->
+[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
+```
+
+### Benefits
+- **Form compatibility**: Edit layers without losing form data
+- **Better flow**: Return to original context after editing
+- **Multi-image editing**: Edit several images without navigation ping-pong
+
+### Recommended Implementation Order
+1. **Phase 1 (v1.2.1)**: `editor-newtab` — Quick win, no risk
+2. **Phase 2 (v1.3.0)**: `editor-return` — Better UX, familiar MediaWiki pattern
+3. **Phase 3 (v1.4.0)**: `editor-modal` — Best experience for form workflows
+
+See full specification document for implementation details, security considerations, and accessibility requirements.
+
+---
+
+## 8. Auto-Create Layer Set on Editor Link
+
+**Priority:** Medium  
+**Complexity:** Medium  
+**Status:** ✅ Implemented (v1.2.9)  
+**Full Specification:** [FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md](FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md)
+
+### Description
+When a wikitext link references a layer set that doesn't exist yet using `layerslink=editor`, automatically create that layer set when the user opens the editor (if they have `createlayers` permission).
+
+### User Story
+As a wiki author, I want to add `[[File:Diagram.png|layers=heart-diagram|layerslink=editor]]` to my article and have the `heart-diagram` layer set auto-created when I first click the link, so I don't have to manually create it on the File: page first.
+
+### Key Benefits
+- **Streamlined workflow**: No manual set creation step required
+- **Template-friendly**: Article templates can define layer set names that get created on first use
+- **Page Forms integration**: Form-generated layer set names work automatically
+- **Collaborative workflows**: Team members can be assigned specific sets via links
+
+### Wikitext Example
+
+```wikitext
+<!-- Link to non-existent set - auto-created on first editor open -->
+[[File:Anatomy.png|layers=heart-diagram|layerslink=editor]]
+```
+
+### Permission Requirements
+- User must have `createlayers` right (not just `editlayers`)
+- Rate limiting applies via existing `editlayers-create` limiter
+- Set name validated against allowed pattern
+
+### Implementation Estimate
+~12 hours total (backend, frontend, testing, documentation)
+
+See full specification document for implementation details, edge cases, and security considerations.
+
+---
+
+## 9. Layer Groups (Folders)
+
+**Priority:** High  
+**Complexity:** High (~50 hours)  
+**Status:** ⏳ Proposed  
+**Full Specification:** [FEATURE_REQUEST_LAYER_GROUPS.md](FEATURE_REQUEST_LAYER_GROUPS.md)
+
+### Description
+Allow users to organize layers into collapsible groups (folders) in the Layer Panel. Groups behave as a single unit for selection, movement, visibility, and other operations.
+
+### Key Features
+- Create/rename/delete layer groups
+- Drag layers into/out of groups
+- Expand/collapse groups to reduce clutter
+- Selecting a group selects all child layers
+- Moving a group moves all children together
+- Group visibility toggle affects all children
+- Support for nested groups (2-3 levels deep)
+- Keyboard shortcuts: Ctrl+G to group, Ctrl+Shift+G to ungroup
+
+### Industry References
+- Adobe Photoshop: Layer Groups with folder metaphor
+- Figma: Frames and Groups with nesting
+- Sketch: Groups with double-click to enter
+
+---
+
+## 10. Context-Aware Toolbar
+
+**Priority:** Medium  
+**Complexity:** Medium (~4 hours actual)  
+**Status:** ✅ Implemented (v1.2.10)  
+**Full Specification:** [FEATURE_REQUEST_CONTEXT_AWARE_TOOLBAR.md](FEATURE_REQUEST_CONTEXT_AWARE_TOOLBAR.md)
+
+### Description
+Show only relevant toolbar controls based on the currently selected tool or layer. Hide stroke width, stroke color, fill color, and other style controls when they are not applicable.
+
+### Implementation Summary
+- Added `updateContextVisibility()` to `ToolbarStyleControls.js`
+- Added `updateContextForSelectedLayers()` for selection-based visibility
+- CSS transitions via `context-hidden` class with opacity/max-width animation
+- Configuration: `$wgLayersContextAwareToolbar` (default: true)
+- 20 new Jest tests added
+
+### Context Examples
+| Context | Controls Shown |
+|---------|----------------|
+| Select tool (nothing selected) | Tool buttons only |
+| Rectangle/shape tools | Stroke, Fill, Width, Presets |
+| Text tool | Font size, Text stroke, Shadow |
+| Arrow/Pen tools | Stroke, Width (no fill) |
+| Shape layer selected | Full style controls |
+
+### Configuration
+```php
+// Disable context-aware toolbar (show all controls always)
+$wgLayersContextAwareToolbar = false;
+```
 
 ---
 
 *Document created: December 13, 2025*  
-*Last updated: December 22, 2025*
+*Last updated: December 28, 2025*

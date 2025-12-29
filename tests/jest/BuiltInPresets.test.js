@@ -182,8 +182,10 @@ describe( 'BuiltInPresets', () => {
 		test( 'arrow presets have correct style properties', () => {
 			const presets = BuiltInPresets.getForTool( 'arrow' );
 			presets.forEach( ( preset ) => {
+				expect( preset.style ).toHaveProperty( 'fill' );
 				expect( preset.style ).toHaveProperty( 'stroke' );
 				expect( preset.style ).toHaveProperty( 'strokeWidth' );
+				expect( preset.style ).toHaveProperty( 'arrowSize' );
 			} );
 		} );
 

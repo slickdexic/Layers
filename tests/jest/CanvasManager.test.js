@@ -183,6 +183,12 @@ describe( 'CanvasManager', () => {
 			cutSelected: jest.fn()
 		} ) );
 
+		global.TextInputController = jest.fn( () => ( {
+			createTextInputModal: jest.fn( () => ( { element: {} } ) ),
+			finishTextInput: jest.fn(),
+			hideTextInputModal: jest.fn()
+		} ) );
+
 		global.LayersSelectionManager = jest.fn( () => ( {
 			selectLayer: jest.fn(),
 			deselectAll: jest.fn(),
@@ -957,6 +963,434 @@ describe( 'CanvasManager', () => {
 		it( 'should export CanvasManager', () => {
 			expect( CanvasManager ).toBeDefined();
 			expect( typeof CanvasManager ).toBe( 'function' );
+		} );
+	} );
+
+	describe( 'withLocalAlpha', () => {
+		it( 'should execute callback with modified globalAlpha', () => {
+			const callback = jest.fn();
+			canvasManager.withLocalAlpha( 0.5, callback );
+			expect( callback ).toHaveBeenCalled();
+		} );
+
+		it( 'should restore original globalAlpha after callback', () => {
+			const originalAlpha = canvasManager.ctx.globalAlpha;
+			canvasManager.withLocalAlpha( 0.5, () => {} );
+			expect( canvasManager.ctx.globalAlpha ).toBe( originalAlpha );
+		} );
+
+		it( 'should skip alpha modification when factor is 1', () => {
+			const callback = jest.fn();
+			const originalAlpha = canvasManager.ctx.globalAlpha;
+			canvasManager.withLocalAlpha( 1, callback );
+			expect( callback ).toHaveBeenCalled();
+			expect( canvasManager.ctx.globalAlpha ).toBe( originalAlpha );
+		} );
+
+		it( 'should clamp factor to valid range', () => {
+			const callback = jest.fn();
+			canvasManager.withLocalAlpha( 2.5, callback );
+			expect( callback ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle negative factor by clamping to 0', () => {
+			const callback = jest.fn();
+			canvasManager.withLocalAlpha( -0.5, callback );
+			expect( callback ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle non-number factor as 1', () => {
+			const callback = jest.fn();
+			canvasManager.withLocalAlpha( 'invalid', callback );
+			expect( callback ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'applyLayerEffects', () => {
+		it( 'should execute draw callback', () => {
+			const drawCallback = jest.fn();
+			canvasManager.applyLayerEffects( { id: 'layer1' }, drawCallback );
+			expect( drawCallback ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing callback gracefully', () => {
+			expect( () => {
+				canvasManager.applyLayerEffects( { id: 'layer1' } );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'notifyToolbarOfSelection', () => {
+		it( 'should notify style controls of selection change', () => {
+			const mockUpdateForSelection = jest.fn();
+			canvasManager.editor.toolbar = {
+				styleControls: {
+					updateForSelection: mockUpdateForSelection
+				}
+			};
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.notifyToolbarOfSelection( [ 'layer1' ] );
+			expect( mockUpdateForSelection ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing toolbar gracefully', () => {
+			canvasManager.editor.toolbar = null;
+			expect( () => {
+				canvasManager.notifyToolbarOfSelection( [ 'layer1' ] );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle missing styleControls gracefully', () => {
+			canvasManager.editor.toolbar = {};
+			expect( () => {
+				canvasManager.notifyToolbarOfSelection( [ 'layer1' ] );
+			} ).not.toThrow();
+		} );
+
+		it( 'should pass correct layers to updateForSelection', () => {
+			const mockUpdateForSelection = jest.fn();
+			canvasManager.editor.toolbar = {
+				styleControls: {
+					updateForSelection: mockUpdateForSelection
+				}
+			};
+			canvasManager.notifyToolbarOfSelection( [ 'layer1', 'layer2' ] );
+			expect( mockUpdateForSelection ).toHaveBeenCalledWith(
+				expect.arrayContaining( [
+					expect.objectContaining( { id: 'layer1' } ),
+					expect.objectContaining( { id: 'layer2' } )
+				] )
+			);
+		} );
+	} );
+
+	describe( 'updateStyleOptions fallback path', () => {
+		beforeEach( () => {
+			// Remove styleController to test fallback path
+			canvasManager.styleController = null;
+		} );
+
+		it( 'should apply color to stroke for non-text layers', () => {
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.updateStyleOptions( { color: '#ff0000' } );
+			expect( mockEditor.layers[ 0 ].stroke ).toBe( '#ff0000' );
+		} );
+
+		it( 'should apply color to fill for text layers', () => {
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer3' ] );
+			canvasManager.updateStyleOptions( { color: '#0000ff' } );
+			expect( mockEditor.layers[ 2 ].fill ).toBe( '#0000ff' );
+		} );
+
+		it( 'should apply fill to non-text, non-line, non-arrow layers', () => {
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.updateStyleOptions( { fill: '#00ff00' } );
+			expect( mockEditor.layers[ 0 ].fill ).toBe( '#00ff00' );
+		} );
+
+		it( 'should not apply fill to text layers', () => {
+			const originalFill = mockEditor.layers[ 2 ].fill;
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer3' ] );
+			canvasManager.updateStyleOptions( { fill: '#00ff00' } );
+			// Text layer should not get fill from fill option (only from color)
+			expect( mockEditor.layers[ 2 ].fill ).not.toBe( '#00ff00' );
+		} );
+
+		it( 'should apply strokeWidth to non-text layers', () => {
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.updateStyleOptions( { strokeWidth: 5 } );
+			expect( mockEditor.layers[ 0 ].strokeWidth ).toBe( 5 );
+		} );
+
+		it( 'should not apply strokeWidth to text layers', () => {
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer3' ] );
+			canvasManager.updateStyleOptions( { strokeWidth: 5 } );
+			expect( mockEditor.layers[ 2 ].strokeWidth ).toBeUndefined();
+		} );
+
+		it( 'should apply text-specific properties to text layers', () => {
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer3' ] );
+			canvasManager.updateStyleOptions( {
+				fontSize: 24,
+				fontFamily: 'Helvetica',
+				textStrokeColor: '#333',
+				textStrokeWidth: 2
+			} );
+			expect( mockEditor.layers[ 2 ].fontSize ).toBe( 24 );
+			expect( mockEditor.layers[ 2 ].fontFamily ).toBe( 'Helvetica' );
+			expect( mockEditor.layers[ 2 ].textStrokeColor ).toBe( '#333' );
+			expect( mockEditor.layers[ 2 ].textStrokeWidth ).toBe( 2 );
+		} );
+
+		it( 'should apply shadow properties when shadow is enabled', () => {
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.updateStyleOptions( {
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10,
+				shadowOffsetX: 5,
+				shadowOffsetY: 5
+			} );
+			expect( mockEditor.layers[ 0 ].shadow ).toBe( true );
+			expect( mockEditor.layers[ 0 ].shadowColor ).toBe( '#000000' );
+			expect( mockEditor.layers[ 0 ].shadowBlur ).toBe( 10 );
+			expect( mockEditor.layers[ 0 ].shadowOffsetX ).toBe( 5 );
+			expect( mockEditor.layers[ 0 ].shadowOffsetY ).toBe( 5 );
+		} );
+
+		it( 'should preserve existing style when updating partial options', () => {
+			canvasManager.currentStyle = { color: '#ff0000', strokeWidth: 3 };
+			canvasManager.updateStyleOptions( { color: '#0000ff' } );
+			expect( canvasManager.currentStyle.color ).toBe( '#0000ff' );
+			expect( canvasManager.currentStyle.strokeWidth ).toBe( 3 );
+		} );
+
+		it( 'should handle undefined currentStyle gracefully', () => {
+			canvasManager.currentStyle = undefined;
+			expect( () => {
+				canvasManager.updateStyleOptions( { color: '#ff0000' } );
+			} ).not.toThrow();
+			expect( canvasManager.currentStyle.color ).toBe( '#ff0000' );
+		} );
+	} );
+
+	describe( 'selectLayer', () => {
+		it( 'should update selection through stateManager', () => {
+			canvasManager.selectLayer( 'layer1' );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith(
+				'selectedLayerIds',
+				[ 'layer1' ]
+			);
+		} );
+
+		it( 'should clear selection when layerId is null', () => {
+			canvasManager.selectLayer( null );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith(
+				'selectedLayerIds',
+				[]
+			);
+		} );
+
+		it( 'should reset selection handles', () => {
+			canvasManager.selectionHandles = [ { type: 'nw' }, { type: 'se' } ];
+			canvasManager.selectLayer( 'layer1' );
+			expect( canvasManager.selectionHandles ).toEqual( [] );
+		} );
+
+		it( 'should trigger re-render', () => {
+			const renderSpy = jest.spyOn( canvasManager, 'renderLayers' );
+			canvasManager.selectLayer( 'layer1' );
+			expect( renderSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should update status with selection count', () => {
+			canvasManager.selectLayer( 'layer1' );
+			expect( mockEditor.updateStatus ).toHaveBeenCalledWith(
+				expect.objectContaining( { selection: expect.any( Number ) } )
+			);
+		} );
+	} );
+
+	describe( 'renderer delegation methods', () => {
+		it( 'should delegate drawLayerWithEffects to renderer', () => {
+			const layer = { id: 'layer1' };
+			canvasManager.drawLayerWithEffects( layer );
+			expect( canvasManager.renderer.drawLayerWithEffects ).toHaveBeenCalledWith( layer );
+		} );
+
+		it( 'should delegate drawMarqueeBox to renderer', () => {
+			canvasManager.drawMarqueeBox();
+			expect( canvasManager.renderer.drawMarqueeBox ).toHaveBeenCalled();
+		} );
+
+		it( 'should delegate drawSelectionIndicators to renderer', () => {
+			canvasManager.drawSelectionIndicators( 'layer1', true );
+			expect( canvasManager.renderer.drawSelectionIndicators ).toHaveBeenCalledWith( 'layer1', true );
+		} );
+
+		it( 'should delegate drawSelectionHandles to renderer', () => {
+			const bounds = { x: 0, y: 0, width: 100, height: 100 };
+			const layer = { id: 'layer1' };
+			canvasManager.drawSelectionHandles( bounds, layer );
+			expect( canvasManager.renderer.drawSelectionHandles ).toHaveBeenCalledWith( bounds, layer );
+		} );
+
+		it( 'should delegate drawRotationHandle to renderer', () => {
+			const bounds = { x: 0, y: 0, width: 100, height: 100 };
+			const layer = { id: 'layer1' };
+			canvasManager.drawRotationHandle( bounds, layer );
+			expect( canvasManager.renderer.drawRotationHandle ).toHaveBeenCalledWith( bounds, layer );
+		} );
+
+		it( 'should handle missing renderer gracefully for drawLayerWithEffects', () => {
+			canvasManager.renderer = null;
+			expect( () => {
+				canvasManager.drawLayerWithEffects( { id: 'layer1' } );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle missing renderer gracefully for drawMarqueeBox', () => {
+			canvasManager.renderer = null;
+			expect( () => {
+				canvasManager.drawMarqueeBox();
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'text input controller delegation', () => {
+		it( 'should delegate createTextInputModal to textInputController', () => {
+			canvasManager.createTextInputModal( { x: 100, y: 100 }, { fontSize: 16 } );
+			expect( canvasManager.textInputController.createTextInputModal )
+				.toHaveBeenCalledWith( { x: 100, y: 100 }, { fontSize: 16 } );
+		} );
+
+		it( 'should delegate finishTextInput to textInputController', () => {
+			const input = { value: 'Hello' };
+			canvasManager.finishTextInput( input, { x: 100, y: 100 }, { fontSize: 16 } );
+			expect( canvasManager.textInputController.finishTextInput )
+				.toHaveBeenCalledWith( input, { x: 100, y: 100 }, { fontSize: 16 } );
+		} );
+
+		it( 'should delegate hideTextInputModal to textInputController', () => {
+			canvasManager.textInputModal = { remove: jest.fn() };
+			canvasManager.hideTextInputModal();
+			expect( canvasManager.textInputController.hideTextInputModal ).toHaveBeenCalled();
+			expect( canvasManager.textInputModal ).toBeNull();
+		} );
+
+		it( 'should return null from createTextInputModal when controller is missing', () => {
+			canvasManager.textInputController = null;
+			const result = canvasManager.createTextInputModal( { x: 100, y: 100 }, {} );
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should handle missing textInputController in finishTextInput', () => {
+			canvasManager.textInputController = null;
+			expect( () => {
+				canvasManager.finishTextInput( {}, { x: 100, y: 100 }, {} );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle missing textInputController in hideTextInputModal', () => {
+			canvasManager.textInputController = null;
+			canvasManager.textInputModal = { remove: jest.fn() };
+			expect( () => {
+				canvasManager.hideTextInputModal();
+			} ).not.toThrow();
+			expect( canvasManager.textInputModal ).toBeNull();
+		} );
+	} );
+
+	describe( 'marquee selection completion', () => {
+		beforeEach( () => {
+			canvasManager.marqueeStart = { x: 0, y: 0 };
+			canvasManager.marqueeEnd = { x: 100, y: 100 };
+			canvasManager.isMarqueeSelecting = true;
+			canvasManager.selectionManager.finishMarqueeSelection = jest.fn();
+			canvasManager.selectionManager.getSelectedLayerIds = jest.fn( () => [ 'layer1', 'layer2' ] );
+		} );
+
+		it( 'should delegate to selectionManager', () => {
+			canvasManager.finishMarqueeSelection();
+			expect( canvasManager.selectionManager.finishMarqueeSelection ).toHaveBeenCalled();
+		} );
+
+		it( 'should sync selection state back from selectionManager', () => {
+			canvasManager.finishMarqueeSelection();
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith(
+				'selectedLayerIds',
+				expect.arrayContaining( [ 'layer1', 'layer2' ] )
+			);
+		} );
+
+		it( 'should deselect all when no layers selected', () => {
+			canvasManager.selectionManager.getSelectedLayerIds = jest.fn( () => [] );
+			const deselectSpy = jest.spyOn( canvasManager, 'deselectAll' );
+			canvasManager.finishMarqueeSelection();
+			expect( deselectSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should reset isMarqueeSelecting flag', () => {
+			canvasManager.finishMarqueeSelection();
+			expect( canvasManager.isMarqueeSelecting ).toBe( false );
+		} );
+
+		it( 'should trigger re-render and update status', () => {
+			const renderSpy = jest.spyOn( canvasManager, 'renderLayers' );
+			canvasManager.finishMarqueeSelection();
+			expect( renderSpy ).toHaveBeenCalled();
+			expect( mockEditor.updateStatus ).toHaveBeenCalledWith(
+				expect.objectContaining( { selection: expect.any( Number ) } )
+			);
+		} );
+	} );
+
+	describe( 'getMarqueeRect', () => {
+		it( 'should calculate rect from marquee start and end', () => {
+			canvasManager.marqueeStart = { x: 50, y: 50 };
+			canvasManager.marqueeEnd = { x: 150, y: 200 };
+			const rect = canvasManager.getMarqueeRect();
+			expect( rect.x ).toBe( 50 );
+			expect( rect.y ).toBe( 50 );
+			expect( rect.width ).toBe( 100 );
+			expect( rect.height ).toBe( 150 );
+		} );
+
+		it( 'should handle reversed coordinates', () => {
+			canvasManager.marqueeStart = { x: 150, y: 200 };
+			canvasManager.marqueeEnd = { x: 50, y: 50 };
+			const rect = canvasManager.getMarqueeRect();
+			expect( rect.x ).toBe( 50 );
+			expect( rect.y ).toBe( 50 );
+			expect( rect.width ).toBe( 100 );
+			expect( rect.height ).toBe( 150 );
+		} );
+	} );
+
+	describe( 'getLayersInRect', () => {
+		it( 'should return layers that intersect with rect', () => {
+			jest.spyOn( canvasManager, 'getLayerBounds' ).mockImplementation( ( layer ) => {
+				if ( layer.id === 'layer1' ) {
+					return { x: 100, y: 100, width: 200, height: 150 };
+				}
+				return { x: 1000, y: 1000, width: 50, height: 50 };
+			} );
+			jest.spyOn( canvasManager, 'rectsIntersect' ).mockImplementation( ( r1, r2 ) => {
+				return r2.x < 300 && r2.y < 300;
+			} );
+
+			const layers = canvasManager.getLayersInRect( { x: 0, y: 0, width: 300, height: 300 } );
+			expect( layers ).toContainEqual( expect.objectContaining( { id: 'layer1' } ) );
+		} );
+
+		it( 'should return empty array when no layers intersect', () => {
+			jest.spyOn( canvasManager, 'getLayerBounds' ).mockReturnValue( {
+				x: 1000, y: 1000, width: 50, height: 50
+			} );
+			jest.spyOn( canvasManager, 'rectsIntersect' ).mockReturnValue( false );
+
+			const layers = canvasManager.getLayersInRect( { x: 0, y: 0, width: 100, height: 100 } );
+			expect( layers ).toEqual( [] );
+		} );
+	} );
+
+	describe( 'rectsIntersect', () => {
+		it( 'should return true for overlapping rects', () => {
+			const rect1 = { x: 0, y: 0, width: 100, height: 100 };
+			const rect2 = { x: 50, y: 50, width: 100, height: 100 };
+			expect( canvasManager.rectsIntersect( rect1, rect2 ) ).toBe( true );
+		} );
+
+		it( 'should return false for non-overlapping rects', () => {
+			const rect1 = { x: 0, y: 0, width: 100, height: 100 };
+			const rect2 = { x: 200, y: 200, width: 100, height: 100 };
+			expect( canvasManager.rectsIntersect( rect1, rect2 ) ).toBe( false );
+		} );
+
+		it( 'should return false for touching but not overlapping rects', () => {
+			const rect1 = { x: 0, y: 0, width: 100, height: 100 };
+			const rect2 = { x: 100, y: 0, width: 100, height: 100 };
+			expect( canvasManager.rectsIntersect( rect1, rect2 ) ).toBe( false );
 		} );
 	} );
 } );

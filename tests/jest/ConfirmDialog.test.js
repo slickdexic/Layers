@@ -188,6 +188,80 @@ describe( 'ConfirmDialog', () => {
 			expect( onCancel ).toHaveBeenCalled();
 			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeNull();
 		} );
+
+		it( 'should trap focus with Tab key - wrap from last to first button', () => {
+			const dialog = new ConfirmDialog( {
+				message: 'Test'
+			} );
+			dialog.open();
+
+			const buttons = dialog.dialog.querySelectorAll( 'button' );
+			const lastBtn = buttons[ buttons.length - 1 ];
+			lastBtn.focus();
+
+			const event = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				shiftKey: false,
+				bubbles: true
+			} );
+			// Mock preventDefault
+			event.preventDefault = jest.fn();
+			document.dispatchEvent( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( document.activeElement ).toBe( buttons[ 0 ] );
+
+			dialog.close();
+		} );
+
+		it( 'should trap focus with Shift+Tab - wrap from first to last button', () => {
+			const dialog = new ConfirmDialog( {
+				message: 'Test'
+			} );
+			dialog.open();
+
+			const buttons = dialog.dialog.querySelectorAll( 'button' );
+			const firstBtn = buttons[ 0 ];
+			firstBtn.focus();
+
+			const event = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				shiftKey: true,
+				bubbles: true
+			} );
+			event.preventDefault = jest.fn();
+			document.dispatchEvent( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( document.activeElement ).toBe( buttons[ buttons.length - 1 ] );
+
+			dialog.close();
+		} );
+
+		it( 'should allow normal Tab when not at boundary', () => {
+			const dialog = new ConfirmDialog( {
+				message: 'Test'
+			} );
+			dialog.open();
+
+			const buttons = dialog.dialog.querySelectorAll( 'button' );
+			// Focus first button, Tab forward should NOT wrap (middle of focus list)
+			buttons[ 0 ].focus();
+
+			const event = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				shiftKey: false,
+				bubbles: true
+			} );
+			event.preventDefault = jest.fn();
+			document.dispatchEvent( event );
+
+			// Should NOT prevent default when tabbing forward from first button
+			// (only prevents when on last button)
+			expect( event.preventDefault ).not.toHaveBeenCalled();
+
+			dialog.close();
+		} );
 	} );
 
 	describe( 'static methods', () => {

@@ -1119,6 +1119,131 @@ describe( 'LayerRenderer', () => {
 				renderer.drawLayer( { type: 'unknown' } );
 			} ).not.toThrow();
 		} );
+
+		test( 'uses blur blend mode rendering for shapes with blend: blur', () => {
+			const spy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blend: 'blur' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'uses blur blend mode rendering for shapes with blendMode: blur', () => {
+			const spy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
+			const layer = { type: 'circle', x: 100, y: 100, radius: 50, blendMode: 'blur' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'does not use blur blend mode for type: blur layers', () => {
+			const blurBlendSpy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
+			const blurDrawSpy = jest.spyOn( renderer, 'drawBlur' );
+			const layer = { type: 'blur', x: 10, y: 20, width: 100, height: 50, blend: 'blur' };
+
+			renderer.drawLayer( layer );
+
+			// Should call drawBlur, not drawLayerWithBlurBlend
+			expect( blurDrawSpy ).toHaveBeenCalled();
+			expect( blurBlendSpy ).not.toHaveBeenCalled();
+		} );
+
+		test( 'uses normal rendering for shapes with other blend modes', () => {
+			const blurBlendSpy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
+			const rectSpy = jest.spyOn( renderer, 'drawRectangle' );
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blend: 'multiply' };
+
+			renderer.drawLayer( layer );
+
+			expect( blurBlendSpy ).not.toHaveBeenCalled();
+			expect( rectSpy ).toHaveBeenCalled();
+		} );
+	} );
+
+	// ========================================================================
+	// Blur Blend Mode Tests
+	// ========================================================================
+
+	describe( 'blur blend mode', () => {
+		test( 'hasBlurBlendMode returns true for blend: blur', () => {
+			expect( renderer.hasBlurBlendMode( { blend: 'blur' } ) ).toBe( true );
+		} );
+
+		test( 'hasBlurBlendMode returns true for blendMode: blur', () => {
+			expect( renderer.hasBlurBlendMode( { blendMode: 'blur' } ) ).toBe( true );
+		} );
+
+		test( 'hasBlurBlendMode returns false for other blend modes', () => {
+			expect( renderer.hasBlurBlendMode( { blend: 'multiply' } ) ).toBe( false );
+			expect( renderer.hasBlurBlendMode( { blendMode: 'screen' } ) ).toBe( false );
+		} );
+
+		test( 'hasBlurBlendMode returns false when no blend mode set', () => {
+			expect( renderer.hasBlurBlendMode( {} ) ).toBe( false );
+		} );
+
+		test( '_drawRectPath draws rectangle path', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 10, y: 20, width: 100, height: 50 };
+
+			renderer._drawRectPath( layer, scale, ctx );
+
+			expect( ctx.rect ).toHaveBeenCalledWith( 10, 20, 100, 50 );
+		} );
+
+		test( '_drawCirclePath draws circle arc', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radius: 50 };
+
+			renderer._drawCirclePath( layer, scale, ctx );
+
+			expect( ctx.arc ).toHaveBeenCalledWith( 100, 100, 50, 0, Math.PI * 2 );
+		} );
+
+		test( '_drawEllipsePath draws ellipse', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radiusX: 60, radiusY: 40 };
+
+			renderer._drawEllipsePath( layer, scale, ctx );
+
+			expect( ctx.ellipse ).toHaveBeenCalledWith( 100, 100, 60, 40, 0, 0, Math.PI * 2 );
+		} );
+
+		test( '_drawPolygonPath draws polygon with correct number of sides', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radius: 50, sides: 6 };
+
+			renderer._drawPolygonPath( layer, scale, ctx );
+
+			// Should call moveTo once and lineTo 5 times (6 sides - 1)
+			expect( ctx.moveTo ).toHaveBeenCalledTimes( 1 );
+			expect( ctx.lineTo ).toHaveBeenCalledTimes( 5 );
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		test( '_drawStarPath draws star with correct number of points', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radius: 50, points: 5 };
+
+			renderer._drawStarPath( layer, scale, ctx );
+
+			// Star with 5 points has 10 vertices (5 outer + 5 inner)
+			expect( ctx.moveTo ).toHaveBeenCalledTimes( 1 );
+			expect( ctx.lineTo ).toHaveBeenCalledTimes( 9 ); // 10 - 1
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		test( 'drawLayerWithBlurBlend falls back when effectsRenderer is not available', () => {
+			renderer.effectsRenderer = null;
+			const rectSpy = jest.spyOn( renderer, '_drawLayerByType' );
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blend: 'blur' };
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			expect( rectSpy ).toHaveBeenCalled();
+		} );
 	} );
 
 	// ========================================================================
@@ -2378,6 +2503,393 @@ describe( 'LayerRenderer', () => {
 
 			// destroy() nulls out the cache
 			expect( renderer._imageCache ).toBeNull();
+		} );
+	} );
+
+	// ========================================================================
+	// Null Renderer Branch Coverage Tests
+	// ========================================================================
+
+	describe( 'null renderer branches', () => {
+		test( 'drawRectangle does nothing when shapeRenderer is null', () => {
+			renderer.shapeRenderer = null;
+			expect( () => {
+				renderer.drawRectangle( { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawTextBox does nothing when textBoxRenderer is null', () => {
+			renderer.textBoxRenderer = null;
+			expect( () => {
+				renderer.drawTextBox( { type: 'textbox', x: 10, y: 20, width: 100, height: 50, text: 'Hello' } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawCircle does nothing when shapeRenderer is null', () => {
+			renderer.shapeRenderer = null;
+			expect( () => {
+				renderer.drawCircle( { type: 'circle', x: 50, y: 50, radius: 30 } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawEllipse does nothing when shapeRenderer is null', () => {
+			renderer.shapeRenderer = null;
+			expect( () => {
+				renderer.drawEllipse( { type: 'ellipse', x: 50, y: 50, radiusX: 40, radiusY: 20 } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawLine does nothing when shapeRenderer is null', () => {
+			renderer.shapeRenderer = null;
+			expect( () => {
+				renderer.drawLine( { type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawArrow does nothing when arrowRenderer is null', () => {
+			renderer.arrowRenderer = null;
+			expect( () => {
+				renderer.drawArrow( { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawPolygon does nothing when shapeRenderer is null', () => {
+			renderer.shapeRenderer = null;
+			expect( () => {
+				renderer.drawPolygon( { type: 'polygon', x: 50, y: 50, radius: 40, sides: 6 } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawStar does nothing when shapeRenderer is null', () => {
+			renderer.shapeRenderer = null;
+			expect( () => {
+				renderer.drawStar( { type: 'star', x: 50, y: 50, radius: 40, points: 5 } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawPath does nothing when shapeRenderer is null', () => {
+			renderer.shapeRenderer = null;
+			expect( () => {
+				renderer.drawPath( { type: 'path', points: [ { x: 0, y: 0 }, { x: 50, y: 50 } ] } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawBlur does nothing when effectsRenderer is null', () => {
+			renderer.effectsRenderer = null;
+			expect( () => {
+				renderer.drawBlur( { type: 'blur', x: 10, y: 20, width: 100, height: 50 } );
+			} ).not.toThrow();
+		} );
+
+		test( 'drawText does nothing when textRenderer is null', () => {
+			renderer.textRenderer = null;
+			expect( () => {
+				renderer.drawText( { type: 'text', x: 10, y: 20, text: 'Hello' } );
+			} ).not.toThrow();
+		} );
+	} );
+
+	// ========================================================================
+	// _drawShapePath Rotation Branch Coverage Tests
+	// ========================================================================
+
+	describe( '_drawShapePath with rotation', () => {
+		test( 'applies rotation transform for circle type', () => {
+			const layer = { type: 'circle', x: 100, y: 100, radius: 50, rotation: 45 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			ctx.beginPath();
+			renderer._drawShapePath( layer, opts, ctx );
+
+			// Circle with rotation should translate and rotate
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalled();
+		} );
+
+		test( 'applies rotation transform for ellipse type', () => {
+			const layer = { type: 'ellipse', x: 100, y: 100, radiusX: 60, radiusY: 40, rotation: 30 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			ctx.beginPath();
+			renderer._drawShapePath( layer, opts, ctx );
+
+			// Ellipse with rotation should translate and rotate
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+			expect( ctx.ellipse ).toHaveBeenCalled();
+		} );
+
+		test( 'applies rotation transform for rectangle type (default case)', () => {
+			const layer = { type: 'rectangle', x: 50, y: 50, width: 100, height: 60, rotation: 90 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			ctx.beginPath();
+			renderer._drawShapePath( layer, opts, ctx );
+
+			// Rectangle with rotation should translate and rotate
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+			expect( ctx.rect ).toHaveBeenCalled();
+		} );
+
+		test( 'does not apply rotation when rotation is 0', () => {
+			const layer = { type: 'rectangle', x: 50, y: 50, width: 100, height: 60, rotation: 0 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, ctx );
+
+			// Rotation of 0 should not trigger translate/rotate
+			expect( ctx.translate ).not.toHaveBeenCalled();
+			expect( ctx.rotate ).not.toHaveBeenCalled();
+		} );
+
+		test( 'draws polygon path in _drawShapePath', () => {
+			const layer = { type: 'polygon', x: 100, y: 100, radius: 50, sides: 6, rotation: 15 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			ctx.beginPath();
+			renderer._drawShapePath( layer, opts, ctx );
+
+			// Should draw polygon with rotation
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalled();
+		} );
+
+		test( 'draws star path in _drawShapePath', () => {
+			const layer = { type: 'star', x: 100, y: 100, radius: 50, points: 5, rotation: 20 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			ctx.beginPath();
+			renderer._drawShapePath( layer, opts, ctx );
+
+			// Should draw star with rotation
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalled();
+		} );
+
+		test( 'falls back to rectangle for unknown type in _drawShapePath', () => {
+			const layer = { type: 'unknown', x: 50, y: 50, width: 100, height: 60, rotation: 45 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			ctx.beginPath();
+			renderer._drawShapePath( layer, opts, ctx );
+
+			// Unknown type should fallback to rectangle path
+			expect( ctx.rect ).toHaveBeenCalled();
+		} );
+
+		test( 'uses default scale when not provided in opts', () => {
+			const layer = { type: 'circle', x: 100, y: 100, radius: 50, rotation: 45 };
+			const opts = {}; // No scale provided
+
+			ctx.beginPath();
+			renderer._drawShapePath( layer, opts, ctx );
+
+			// Should use default scale { sx: 1, sy: 1, avg: 1 }
+			expect( ctx.arc ).toHaveBeenCalledWith( 100, 100, 50, 0, Math.PI * 2 );
+		} );
+	} );
+
+	// ========================================================================
+	// Image Loading Callback Tests
+	// ========================================================================
+
+	describe( 'image loading callbacks', () => {
+		let originalWindow;
+
+		beforeEach( () => {
+			originalWindow = global.window;
+		} );
+
+		afterEach( () => {
+			global.window = originalWindow;
+		} );
+
+		test( '_getImageElement uses onImageLoad callback when available', () => {
+			const onImageLoadMock = jest.fn();
+			const rendererWithCallback = new LayerRenderer( ctx, { onImageLoad: onImageLoadMock } );
+			const layer = { id: 'test-image', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' };
+
+			const img = rendererWithCallback._getImageElement( layer );
+
+			// Trigger the onload callback
+			img.onload();
+
+			expect( onImageLoadMock ).toHaveBeenCalled();
+			rendererWithCallback.destroy();
+		} );
+
+		test( '_getImageElement falls back to global requestRedraw when no callback', () => {
+			const requestRedrawMock = jest.fn();
+			// Set up window.Layers.requestRedraw for the fallback
+			if ( !global.window.Layers ) {
+				global.window.Layers = {};
+			}
+			global.window.Layers.requestRedraw = requestRedrawMock;
+
+			// Create renderer without onImageLoad callback
+			const rendererNoCallback = new LayerRenderer( ctx, { onImageLoad: null } );
+			const layer = { id: 'test-fallback-image', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' };
+
+			const img = rendererNoCallback._getImageElement( layer );
+
+			// Trigger the onload callback
+			img.onload();
+
+			expect( requestRedrawMock ).toHaveBeenCalled();
+
+			// Cleanup
+			delete global.window.Layers.requestRedraw;
+			rendererNoCallback.destroy();
+		} );
+
+		test( '_getImageElement handles image load error gracefully', () => {
+			// Mock mw.log.warn
+			const originalMw = global.window.mw;
+			const warnMock = jest.fn();
+			global.mw = { log: { warn: warnMock } };
+
+			const rendererForError = new LayerRenderer( ctx, {} );
+			const layer = { id: 'error-image', src: 'invalid-src' };
+
+			const img = rendererForError._getImageElement( layer );
+
+			// Trigger the onerror callback
+			img.onerror();
+
+			expect( warnMock ).toHaveBeenCalledWith( '[LayerRenderer] Failed to load image layer:', 'error-image' );
+
+			global.mw = originalMw;
+			rendererForError.destroy();
+		} );
+
+		test( '_getImageElement returns null when no src', () => {
+			const result = renderer._getImageElement( { id: 'no-src' } );
+			expect( result ).toBeNull();
+		} );
+
+		test( '_getImageElement returns cached image on second call', () => {
+			const layer = { id: 'cached-image', src: 'data:image/png;base64,test' };
+
+			const img1 = renderer._getImageElement( layer );
+			const img2 = renderer._getImageElement( layer );
+
+			expect( img1 ).toBe( img2 );
+		} );
+	} );
+
+	// ========================================================================
+	// Constructor Null Sub-Renderer Branches
+	// ========================================================================
+
+	describe( 'constructor null sub-renderer handling', () => {
+		// These tests verify that the constructor handles missing sub-renderers gracefully
+		// by temporarily removing the global renderer references
+
+		test( 'constructor handles missing ShadowRenderer', () => {
+			// The renderer is already created in beforeEach, but we can verify the null path
+			// by checking that operations work when shadowRenderer is null
+			const testRenderer = new LayerRenderer( ctx );
+			testRenderer.shadowRenderer = null;
+
+			expect( () => {
+				testRenderer.drawRectangle( { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, shadow: true } );
+			} ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'constructor handles missing ArrowRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			testRenderer.arrowRenderer = null;
+
+			expect( () => {
+				testRenderer.drawArrow( { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 } );
+			} ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'constructor handles missing TextRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			testRenderer.textRenderer = null;
+
+			expect( () => {
+				testRenderer.drawText( { type: 'text', x: 10, y: 20, text: 'Test' } );
+			} ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'constructor handles missing PolygonStarRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			testRenderer.polygonStarRenderer = null;
+
+			// PolygonStarRenderer is used internally by ShapeRenderer
+			expect( () => {
+				testRenderer.drawPolygon( { type: 'polygon', x: 50, y: 50, radius: 40, sides: 6 } );
+			} ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'constructor handles missing EffectsRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			testRenderer.effectsRenderer = null;
+
+			expect( () => {
+				testRenderer.drawBlur( { type: 'blur', x: 10, y: 20, width: 100, height: 50, blurRadius: 10 } );
+			} ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'constructor handles missing TextBoxRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			testRenderer.textBoxRenderer = null;
+
+			expect( () => {
+				testRenderer.drawTextBox( { type: 'textbox', x: 10, y: 20, width: 100, height: 50, text: 'Test' } );
+			} ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+	} );
+
+	// ========================================================================
+	// _drawRectPath Corner Radius Branch Tests
+	// ========================================================================
+
+	describe( '_drawRectPath corner radius', () => {
+		test( 'uses roundRect when cornerRadius > 0 and roundRect available', () => {
+			const layer = { x: 10, y: 20, width: 100, height: 50, cornerRadius: 10 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawRectPath( layer, scale, ctx );
+
+			expect( ctx.roundRect ).toHaveBeenCalledWith( 10, 20, 100, 50, 10 );
+		} );
+
+		test( 'clamps cornerRadius to half of min dimension', () => {
+			// Width 100, height 50, so max radius is 25
+			const layer = { x: 10, y: 20, width: 100, height: 50, cornerRadius: 50 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawRectPath( layer, scale, ctx );
+
+			// cornerRadius should be clamped to 25 (half of height)
+			expect( ctx.roundRect ).toHaveBeenCalledWith( 10, 20, 100, 50, 25 );
+		} );
+
+		test( 'falls back to rect when roundRect not available', () => {
+			const ctxNoRoundRect = { ...ctx, roundRect: undefined };
+			const layer = { x: 10, y: 20, width: 100, height: 50, cornerRadius: 10 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawRectPath( layer, scale, ctxNoRoundRect );
+
+			expect( ctxNoRoundRect.rect ).toHaveBeenCalledWith( 10, 20, 100, 50 );
 		} );
 	} );
 } );
