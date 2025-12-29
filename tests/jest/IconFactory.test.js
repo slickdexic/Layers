@@ -200,6 +200,81 @@ describe( 'IconFactory', () => {
 		} );
 	} );
 
+	describe( 'createFolderIcon', () => {
+		it( 'should create a folder icon', () => {
+			const icon = IconFactory.createFolderIcon();
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBeGreaterThan( 0 );
+		} );
+
+		it( 'should create expanded folder by default', () => {
+			const icon = IconFactory.createFolderIcon( true );
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			// Expanded folder has a flap path
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBe( 2 );
+		} );
+
+		it( 'should create collapsed folder when expanded=false', () => {
+			const icon = IconFactory.createFolderIcon( false );
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			// Collapsed folder has just one path
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBe( 1 );
+		} );
+
+		it( 'should apply custom options', () => {
+			const icon = IconFactory.createFolderIcon( true, { size: 24, color: '#333' } );
+			expect( icon.getAttribute( 'width' ) ).toBe( '24' );
+			const path = icon.querySelector( 'path' );
+			expect( path.getAttribute( 'fill' ) ).toBe( '#333' );
+		} );
+
+		it( 'should use default golden color', () => {
+			const icon = IconFactory.createFolderIcon( true );
+			const path = icon.querySelector( 'path' );
+			expect( path.getAttribute( 'fill' ) ).toBe( '#f39c12' );
+		} );
+	} );
+
+	describe( 'createExpandIcon', () => {
+		it( 'should create an expand icon', () => {
+			const icon = IconFactory.createExpandIcon();
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			const path = icon.querySelector( 'path' );
+			expect( path ).toBeTruthy();
+		} );
+
+		it( 'should create down-pointing triangle when expanded', () => {
+			const icon = IconFactory.createExpandIcon( true );
+			const path = icon.querySelector( 'path' );
+			// Expanded: points down (M2 4l4 5 4-5z)
+			expect( path.getAttribute( 'd' ) ).toBe( 'M2 4l4 5 4-5z' );
+		} );
+
+		it( 'should create right-pointing triangle when collapsed', () => {
+			const icon = IconFactory.createExpandIcon( false );
+			const path = icon.querySelector( 'path' );
+			// Collapsed: points right (M4 2l5 4-5 4z)
+			expect( path.getAttribute( 'd' ) ).toBe( 'M4 2l5 4-5 4z' );
+		} );
+
+		it( 'should apply custom options', () => {
+			const icon = IconFactory.createExpandIcon( true, { size: 16, color: '#999' } );
+			expect( icon.getAttribute( 'width' ) ).toBe( '16' );
+			const path = icon.querySelector( 'path' );
+			expect( path.getAttribute( 'fill' ) ).toBe( '#999' );
+		} );
+
+		it( 'should use default size of 12', () => {
+			const icon = IconFactory.createExpandIcon( true );
+			expect( icon.getAttribute( 'width' ) ).toBe( '12' );
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export IconFactory for Node.js', () => {
 			const exported = require( '../../resources/ext.layers.editor/ui/IconFactory.js' );

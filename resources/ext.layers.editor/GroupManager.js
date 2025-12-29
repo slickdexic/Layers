@@ -176,6 +176,7 @@
 			// Remove parentGroup reference from children
 			const updatedLayers = layers.map( ( layer ) => {
 				if ( childIds.includes( layer.id ) ) {
+					// eslint-disable-next-line no-unused-vars
 					const { parentGroup, ...rest } = layer;
 					return rest;
 				}
@@ -282,6 +283,7 @@
 					};
 				}
 				if ( l.id === layerId ) {
+					// eslint-disable-next-line no-unused-vars
 					const { parentGroup, ...rest } = l;
 					return rest;
 				}
@@ -310,6 +312,7 @@
 					};
 				}
 				if ( l.id === layerId && l.parentGroup === groupId ) {
+					// eslint-disable-next-line no-unused-vars
 					const { parentGroup, ...rest } = l;
 					return rest;
 				}

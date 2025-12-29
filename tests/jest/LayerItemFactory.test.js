@@ -27,7 +27,8 @@ describe('LayerItemFactory', () => {
                     ARROW: 'arrow',
                     LINE: 'line',
                     PATH: 'path',
-                    BLUR: 'blur'
+                    BLUR: 'blur',
+                    GROUP: 'group'
                 }
             }
         };
@@ -37,7 +38,9 @@ describe('LayerItemFactory', () => {
             getSelectedLayerId: jest.fn(() => null),
             getSelectedLayerIds: jest.fn(() => []),
             addTargetListener: jest.fn(),
-            onMoveLayer: jest.fn()
+            onMoveLayer: jest.fn(),
+            onToggleGroupExpand: jest.fn(),
+            getLayerDepth: jest.fn(() => 0)
         };
 
         factory = new LayerItemFactory(mockConfig);
@@ -496,6 +499,217 @@ describe('LayerItemFactory', () => {
 
             expect(event.preventDefault).not.toHaveBeenCalled();
             expect(mockConfig.onMoveLayer).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('group layers', () => {
+        test('should return "Group" for group layers', () => {
+            const layer = { type: 'group', children: [] };
+            const name = factory.getDefaultLayerName(layer);
+            expect(name).toBe('Group');
+        });
+
+        test('should add layer-item-group class for group layers', () => {
+            const layer = { id: 'group1', type: 'group', children: ['layer1'], expanded: true };
+            const item = factory.createLayerItem(layer, 0);
+
+            expect(item.classList.contains('layer-item-group')).toBe(true);
+        });
+
+        test('should create expand toggle for group layers', () => {
+            const layer = { id: 'group1', type: 'group', children: ['layer1'], expanded: true };
+            const item = factory.createLayerItem(layer, 0);
+            const toggle = item.querySelector('.layer-expand-toggle');
+
+            expect(toggle).toBeTruthy();
+            expect(toggle.type).toBe('button');
+            expect(toggle.getAttribute('aria-expanded')).toBe('true');
+        });
+
+        test('should set aria-expanded=false for collapsed groups', () => {
+            const layer = { id: 'group1', type: 'group', children: ['layer1'], expanded: false };
+            const item = factory.createLayerItem(layer, 0);
+            const toggle = item.querySelector('.layer-expand-toggle');
+
+            expect(toggle.getAttribute('aria-expanded')).toBe('false');
+        });
+
+        test('should not create expand toggle for non-group layers', () => {
+            const layer = { id: 'layer1', type: 'rectangle' };
+            const item = factory.createLayerItem(layer, 0);
+            const toggle = item.querySelector('.layer-expand-toggle');
+
+            expect(toggle).toBeNull();
+        });
+
+        test('should apply indentation for child layers', () => {
+            mockConfig.getLayerDepth.mockReturnValue(2);
+            const layer = { id: 'layer1', type: 'rectangle', parentGroup: 'group1' };
+            const item = factory.createLayerItem(layer, 0);
+
+            expect(item.style.paddingLeft).toBe('40px'); // 2 * 20px
+            expect(item.classList.contains('layer-item-child')).toBe(true);
+        });
+
+        test('should not apply indentation for top-level layers', () => {
+            mockConfig.getLayerDepth.mockReturnValue(0);
+            const layer = { id: 'layer1', type: 'rectangle' };
+            const item = factory.createLayerItem(layer, 0);
+
+            expect(item.style.paddingLeft).toBe('');
+            expect(item.classList.contains('layer-item-child')).toBe(false);
+        });
+
+        test('should use folder icon for group layers', () => {
+            const mockFolderIcon = document.createElement('svg');
+            mockFolderIcon.id = 'folder-icon';
+            window.Layers.UI.IconFactory = {
+                createFolderIcon: jest.fn().mockReturnValue(mockFolderIcon),
+                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createDeleteIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createExpandIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+            };
+
+            const layer = { id: 'group1', type: 'group', children: [], expanded: true };
+            const item = factory.createLayerItem(layer, 0);
+            const grabArea = item.querySelector('.layer-grab-area');
+
+            expect(grabArea.querySelector('#folder-icon')).toBeTruthy();
+            expect(window.Layers.UI.IconFactory.createFolderIcon).toHaveBeenCalledWith(true);
+        });
+
+        test('should use expand icon in toggle', () => {
+            const mockExpandIcon = document.createElement('svg');
+            mockExpandIcon.id = 'expand-icon';
+            window.Layers.UI.IconFactory = {
+                createExpandIcon: jest.fn().mockReturnValue(mockExpandIcon),
+                createFolderIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createDeleteIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+            };
+
+            const layer = { id: 'group1', type: 'group', children: [], expanded: true };
+            const item = factory.createLayerItem(layer, 0);
+            const toggle = item.querySelector('.layer-expand-toggle');
+
+            expect(toggle.querySelector('#expand-icon')).toBeTruthy();
+            expect(window.Layers.UI.IconFactory.createExpandIcon).toHaveBeenCalledWith(true);
+        });
+
+        test('should call onToggleGroupExpand when expand toggle clicked', () => {
+            const layer = { id: 'group1', type: 'group', children: [], expanded: true };
+            factory.createLayerItem(layer, 0);
+
+            // Find the click handler call for the expand toggle
+            const toggleCall = mockConfig.addTargetListener.mock.calls.find(
+                call => call[1] === 'click'
+            );
+            expect(toggleCall).toBeTruthy();
+
+            // Simulate click
+            const event = { stopPropagation: jest.fn() };
+            toggleCall[2](event);
+
+            expect(event.stopPropagation).toHaveBeenCalled();
+            expect(mockConfig.onToggleGroupExpand).toHaveBeenCalledWith('group1');
+        });
+
+        test('should use text fallback when IconFactory not available for expand toggle', () => {
+            const layer = { id: 'group1', type: 'group', children: [], expanded: true };
+            const item = factory.createLayerItem(layer, 0);
+            const toggle = item.querySelector('.layer-expand-toggle');
+
+            // Without IconFactory, should use text fallback
+            expect(toggle.textContent).toBe('▼');
+        });
+
+        test('should use collapsed text when group is collapsed and IconFactory not available', () => {
+            const layer = { id: 'group1', type: 'group', children: [], expanded: false };
+            const item = factory.createLayerItem(layer, 0);
+            const toggle = item.querySelector('.layer-expand-toggle');
+
+            expect(toggle.textContent).toBe('▶');
+        });
+    });
+
+    describe('updateLayerItem with groups', () => {
+        test('should update expand toggle state', () => {
+            const mockExpandIcon = document.createElement('svg');
+            window.Layers.UI.IconFactory = {
+                createExpandIcon: jest.fn().mockReturnValue(mockExpandIcon),
+                createFolderIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createDeleteIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+            };
+
+            const layer = { id: 'group1', type: 'group', children: [], expanded: true };
+            const item = factory.createLayerItem(layer, 0);
+
+            // Update to collapsed
+            const updatedLayer = { id: 'group1', type: 'group', children: [], expanded: false };
+            factory.updateLayerItem(item, updatedLayer, 0);
+
+            const toggle = item.querySelector('.layer-expand-toggle');
+            expect(toggle.getAttribute('aria-expanded')).toBe('false');
+        });
+
+        test('should add expand toggle when layer becomes a group', () => {
+            mockConfig.getLayerDepth.mockReturnValue(0);
+            const layer = { id: 'layer1', type: 'rectangle' };
+            const item = factory.createLayerItem(layer, 0);
+
+            // Verify no toggle initially
+            expect(item.querySelector('.layer-expand-toggle')).toBeNull();
+
+            // Update to group type
+            window.Layers.UI.IconFactory = {
+                createExpandIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createFolderIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+            };
+
+            const updatedLayer = { id: 'layer1', type: 'group', children: [], expanded: true };
+            factory.updateLayerItem(item, updatedLayer, 0);
+
+            expect(item.querySelector('.layer-expand-toggle')).toBeTruthy();
+            expect(item.classList.contains('layer-item-group')).toBe(true);
+        });
+
+        test('should remove expand toggle when layer is no longer a group', () => {
+            mockConfig.getLayerDepth.mockReturnValue(0);
+            const layer = { id: 'group1', type: 'group', children: [], expanded: true };
+            const item = factory.createLayerItem(layer, 0);
+
+            // Verify toggle exists
+            expect(item.querySelector('.layer-expand-toggle')).toBeTruthy();
+
+            // Update to rectangle type
+            const updatedLayer = { id: 'group1', type: 'rectangle' };
+            factory.updateLayerItem(item, updatedLayer, 0);
+
+            expect(item.querySelector('.layer-expand-toggle')).toBeNull();
+            expect(item.classList.contains('layer-item-group')).toBe(false);
+        });
+
+        test('should update indentation when depth changes', () => {
+            mockConfig.getLayerDepth.mockReturnValue(1);
+            const layer = { id: 'layer1', type: 'rectangle', parentGroup: 'group1' };
+            const item = factory.createLayerItem(layer, 0);
+
+            expect(item.style.paddingLeft).toBe('20px');
+            expect(item.classList.contains('layer-item-child')).toBe(true);
+
+            // Change depth to 0 (ungroup)
+            mockConfig.getLayerDepth.mockReturnValue(0);
+            const updatedLayer = { id: 'layer1', type: 'rectangle' };
+            factory.updateLayerItem(item, updatedLayer, 0);
+
+            expect(item.style.paddingLeft).toBe('');
+            expect(item.classList.contains('layer-item-child')).toBe(false);
         });
     });
 

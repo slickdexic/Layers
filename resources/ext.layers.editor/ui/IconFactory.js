@@ -411,6 +411,97 @@
 		return svg;
 	};
 
+	/**
+	 * Create a folder icon for group layers
+	 * @param {boolean} [expanded=true] - Whether the folder is expanded
+	 * @param {Object} [options] - Icon options
+	 * @param {number} [options.size=18] - Icon size
+	 * @param {string} [options.color='#f39c12'] - Icon color (default golden yellow)
+	 * @return {SVGSVGElement} Folder icon SVG
+	 */
+	IconFactory.createFolderIcon = function ( expanded, options ) {
+		options = options || {};
+		const size = options.size || 18;
+		const color = options.color || '#f39c12';
+
+		const svg = IconFactory.createSVGElement( 'svg', {
+			width: String( size ),
+			height: String( size ),
+			viewBox: '0 0 24 24',
+			'aria-hidden': 'true'
+		} );
+
+		if ( expanded ) {
+			// Open folder icon
+			const path = IconFactory.createSVGElement( 'path', {
+				d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z',
+				fill: color,
+				stroke: color,
+				'stroke-width': '1.5',
+				'stroke-linecap': 'round',
+				'stroke-linejoin': 'round'
+			} );
+			svg.appendChild( path );
+
+			// Open folder flap
+			const flap = IconFactory.createSVGElement( 'path', {
+				d: 'M2 10l2.5-2h17l-2.5 2',
+				fill: 'none',
+				stroke: '#fff',
+				'stroke-width': '1',
+				'stroke-linecap': 'round',
+				'stroke-linejoin': 'round',
+				opacity: '0.5'
+			} );
+			svg.appendChild( flap );
+		} else {
+			// Closed folder icon
+			const path = IconFactory.createSVGElement( 'path', {
+				d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z',
+				fill: color,
+				stroke: color,
+				'stroke-width': '1.5',
+				'stroke-linecap': 'round',
+				'stroke-linejoin': 'round'
+			} );
+			svg.appendChild( path );
+		}
+
+		return svg;
+	};
+
+	/**
+	 * Create an expand/collapse toggle icon (triangle)
+	 * @param {boolean} [expanded=true] - Whether expanded (pointing down) or collapsed (pointing right)
+	 * @param {Object} [options] - Icon options
+	 * @param {number} [options.size=12] - Icon size
+	 * @param {string} [options.color='#666'] - Icon color
+	 * @return {SVGSVGElement} Triangle icon SVG
+	 */
+	IconFactory.createExpandIcon = function ( expanded, options ) {
+		options = options || {};
+		const size = options.size || 12;
+		const color = options.color || '#666';
+
+		const svg = IconFactory.createSVGElement( 'svg', {
+			width: String( size ),
+			height: String( size ),
+			viewBox: '0 0 12 12',
+			'aria-hidden': 'true'
+		} );
+
+		// Rotate the triangle based on expanded state
+		// Expanded (down): points down
+		// Collapsed (right): points right
+		const path = IconFactory.createSVGElement( 'path', {
+			d: expanded ? 'M2 4l4 5 4-5z' : 'M4 2l5 4-5 4z',
+			fill: color
+		} );
+		svg.appendChild( path );
+
+		return svg;
+	};
+
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};

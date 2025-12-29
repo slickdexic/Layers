@@ -71,8 +71,61 @@
 					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
 					getSelectedLayerIds: this.getSelectedLayerIds.bind( this ),
 					addTargetListener: this.addTargetListener.bind( this ),
-					onMoveLayer: this.moveLayer.bind( this )
+					onMoveLayer: this.moveLayer.bind( this ),
+					onToggleGroupExpand: this.toggleGroupExpand.bind( this ),
+					getLayerDepth: this.getLayerDepth.bind( this )
 				} );
+			}
+		}
+
+		/**
+		 * Get the nesting depth of a layer
+		 *
+		 * @param {string} layerId Layer ID
+		 * @return {number} Nesting depth (0 for top-level)
+		 */
+		getLayerDepth( layerId ) {
+			// Use GroupManager if available
+			if ( this.editor && this.editor.groupManager ) {
+				return this.editor.groupManager.getLayerDepth( layerId );
+			}
+			// Fallback: calculate from parentGroup chain
+			const layers = this.getLayers();
+			let depth = 0;
+			const currentId = layerId;
+
+			const findLayer = ( id ) => layers.find( ( l ) => l.id === id );
+			let layer = findLayer( currentId );
+
+			while ( layer && layer.parentGroup ) {
+				depth++;
+				layer = findLayer( layer.parentGroup );
+				// Prevent infinite loops
+				if ( depth > 10 ) {
+					break;
+				}
+			}
+
+			return depth;
+		}
+
+		/**
+		 * Toggle expand/collapse state of a group layer
+		 *
+		 * @param {string} groupId Group layer ID
+		 */
+		toggleGroupExpand( groupId ) {
+			// Use GroupManager if available
+			if ( this.editor && this.editor.groupManager ) {
+				this.editor.groupManager.toggleExpanded( groupId );
+				return;
+			}
+
+			// Fallback: update layer directly
+			const layer = this.editor.getLayerById( groupId );
+			if ( layer && layer.type === 'group' ) {
+				layer.expanded = layer.expanded === false;
+				this.renderLayerList();
 			}
 		}
 

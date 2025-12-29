@@ -1490,6 +1490,59 @@ body.layers-editor-open .mw-body-content {
 	opacity: 1;
 }
 
+/* Group Layer Items - hierarchical styling */
+.layer-item-group {
+	background: linear-gradient( 90deg, #fff8e1 0%, #fafafa 100% );
+	border-color: #f5d76e;
+}
+
+.layer-item-group:hover {
+	background: linear-gradient( 90deg, #fff3cd 0%, #f0f4f8 100% );
+	border-color: #f0c14b;
+}
+
+.layer-item-group.selected {
+	background: linear-gradient( 90deg, #fff3cd 0%, #e8f4fd 100% );
+	border-color: #f0c14b;
+}
+
+/* Child layer indentation visual indicator */
+.layer-item-child {
+	border-left: 2px solid #e0e0e0;
+	margin-left: 8px;
+}
+
+.layer-item-child:hover {
+	border-left-color: #bbb;
+}
+
+/* Expand/collapse toggle button */
+.layer-expand-toggle {
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+	width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 3px;
+	transition: all 0.1s ease;
+	padding: 0;
+	flex-shrink: 0;
+	margin-right: 2px;
+}
+
+.layer-expand-toggle:hover {
+	background: rgba( 0, 0, 0, 0.08 );
+}
+
+.layer-expand-toggle:focus {
+	outline: 2px solid #2196f3;
+	outline-offset: 1px;
+	background: rgba( 33, 150, 243, 0.08 );
+}
+
 .text-input-modal {
 	background: #fff;
 	border-radius: 8px;

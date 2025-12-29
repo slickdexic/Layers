@@ -2,6 +2,32 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [Unreleased] - Layer Grouping Feature
+
+### Features
+- **Layer Grouping (Phase 1: Data Model & UI)** — Initial implementation of layer grouping:
+  - **GroupManager.js** (~600 lines) — Full grouping API with `createGroup()`, `ungroup()`, `addToGroup()`, `removeFromGroup()`, `toggleExpanded()`, `getGroupChildren()`, `groupSelected()`, `ungroupSelected()`, `renameGroup()`, `deleteGroup()`
+  - **Server-side validation** — Added 'group' to SUPPORTED_LAYER_TYPES with `children` (array), `expanded` (boolean), `parentGroup` (string) properties
+  - **Client-side validation** — Added 'group' type to LayersValidator
+  - **Layer Panel UI** — Groups display with folder icons, expand/collapse toggles (▼/▶), and child layer indentation (20px per level)
+  - Max nesting depth: 3 levels, max children per group: 100
+
+### Added
+- **IconFactory.createFolderIcon()** — Golden folder icon for group layers (expanded/collapsed states)
+- **IconFactory.createExpandIcon()** — Triangle toggle icon for expand/collapse
+- **LayerItemFactory group support** — Groups render with folder icon, expand toggle, and CSS classes
+- **CSS for group layers** — `.layer-item-group`, `.layer-item-child`, `.layer-expand-toggle` styles
+- **i18n messages** — `layers-type-group`, `layers-expand-group`, `layers-collapse-group`
+
+### Testing
+- **7,456 tests passing** (+74 from v1.2.12)
+- **132 test suites**
+- 48 new tests for GroupManager
+- 16 new tests for LayerItemFactory group support
+- 10 new tests for IconFactory folder/expand icons
+
+---
+
 ## [1.2.12] - 2025-12-29
 
 ### Changed
