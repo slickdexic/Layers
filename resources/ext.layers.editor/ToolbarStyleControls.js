@@ -830,6 +830,10 @@ class ToolbarStyleControls {
 	 * Update preset dropdown when layer selection changes (delegates to PresetStyleManager)
 	 * Also updates control visibility in context-aware mode
 	 *
+	 * When a layer is selected, toolbar style controls are HIDDEN because
+	 * they are redundant with the Properties panel in the Layer Manager.
+	 * Style controls only show when a drawing tool is active for creating new layers.
+	 *
 	 * @param {Array} selectedLayers Array of selected layer objects
 	 */
 	updateForSelection( selectedLayers ) {
@@ -837,69 +841,52 @@ class ToolbarStyleControls {
 			this.presetStyleManager.updateForSelection( selectedLayers );
 		}
 
-		// Update context-aware visibility based on selected layer types
+		// When a layer is selected, hide toolbar style controls (they're in Properties panel)
+		// Only show style controls when drawing tools are active for new layer creation
 		if ( this.contextAwareEnabled && selectedLayers && selectedLayers.length > 0 ) {
-			this.updateContextForSelectedLayers( selectedLayers );
+			this.hideControlsForSelectedLayers( selectedLayers );
 		}
 	}
 
 	/**
-	 * Update control visibility based on selected layer types
-	 * Shows controls appropriate for the selected layer(s)
+	 * Hide control visibility when layers are selected
+	 * Controls are redundant because the Properties panel in the Layer Manager
+	 * provides all the same controls for editing selected layers.
 	 *
 	 * @param {Array} selectedLayers Array of selected layer objects
 	 */
-	updateContextForSelectedLayers( selectedLayers ) {
-		// Determine what types of layers are selected
+	hideControlsForSelectedLayers( selectedLayers ) {
+		// eslint-disable-next-line no-unused-vars
 		const types = selectedLayers.map( ( l ) => l.type ).filter( ( t, i, arr ) => arr.indexOf( t ) === i );
 
-		// Check for text, shape, and stroke-only types
-		const hasTextLayers = types.some( ( t ) => t === 'text' || t === 'textbox' );
-		const hasShapeLayers = types.some( ( t ) =>
-			[ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'blur', 'image' ].includes( t )
-		);
-		const hasArrowLayers = types.includes( 'arrow' );
-		const hasStrokeOnlyLayers = types.some( ( t ) => t === 'pen' || t === 'path' || t === 'arrow' );
-
-		// Show main style row if any shape or stroke-based layers are selected
-		const showMainStyleRow = hasShapeLayers || hasStrokeOnlyLayers || hasArrowLayers || types.includes( 'textbox' );
-
-		// Show presets when any layer is selected
-		const showPresets = selectedLayers.length > 0;
-
-		// Apply visibility
+		// Hide main style row when layers are selected (Properties panel has these)
 		if ( this.mainStyleRow ) {
-			if ( showMainStyleRow ) {
-				this.mainStyleRow.classList.remove( 'context-hidden' );
-			} else {
-				this.mainStyleRow.classList.add( 'context-hidden' );
-			}
+			this.mainStyleRow.classList.add( 'context-hidden' );
 		}
 
+		// Hide presets when layers are selected (can apply from Properties panel)
 		if ( this.presetContainer ) {
-			if ( showPresets ) {
-				this.presetContainer.classList.remove( 'context-hidden' );
-			} else {
-				this.presetContainer.classList.add( 'context-hidden' );
-			}
+			this.presetContainer.classList.add( 'context-hidden' );
 		}
 
-		// Hide fill color for stroke-only layer types (but not if other shapes are also selected)
+		// Hide fill control
 		if ( this.fillControl && this.fillControl.container ) {
-			if ( hasStrokeOnlyLayers && !hasShapeLayers ) {
-				this.fillControl.container.classList.add( 'context-hidden' );
-			} else if ( showMainStyleRow ) {
-				this.fillControl.container.classList.remove( 'context-hidden' );
-			}
+			this.fillControl.container.classList.add( 'context-hidden' );
 		}
 
-		// Delegate text effect visibility to TextEffectsControls based on layer types
-		if ( this.textEffectsControls && hasTextLayers ) {
-			// Show text controls when text layers are selected
-			const hasPureTextLayer = types.includes( 'text' );
-			const hasTextBoxLayer = types.includes( 'textbox' );
-			this.textEffectsControls.updateForSelectedTypes( hasPureTextLayer, hasTextBoxLayer );
+		// Hide text effects controls
+		if ( this.textEffectsControls ) {
+			this.textEffectsControls.hideAll();
 		}
+	}
+
+	/**
+	 * Legacy method name for backward compatibility
+	 * @deprecated Use hideControlsForSelectedLayers instead
+	 * @param {Array} selectedLayers Array of selected layer objects
+	 */
+	updateContextForSelectedLayers( selectedLayers ) {
+		this.hideControlsForSelectedLayers( selectedLayers );
 	}
 
 	/**

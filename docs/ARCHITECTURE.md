@@ -266,6 +266,163 @@ graph LR
 
 ---
 
+### Rendering Pipeline (Mermaid)
+
+```mermaid
+graph TD
+    subgraph Trigger["Render Triggers"]
+        layerChange["Layer Added/Modified"]
+        selection["Selection Changed"]
+        zoom["Zoom/Pan"]
+        resize["Canvas Resize"]
+    end
+
+    subgraph Coordinator["RenderCoordinator"]
+        dirty["Mark Dirty"]
+        raf["requestAnimationFrame"]
+        debounce["Debounce"]
+    end
+
+    subgraph Renderer["CanvasRenderer"]
+        clear["Clear Canvas"]
+        drawBg["Draw Background Image"]
+        layers["For Each Layer"]
+    end
+
+    subgraph Dispatch["LayerRenderer (Dispatcher)"]
+        typeCheck["Check layer.type"]
+        shape["ShapeRenderer"]
+        arrow["ArrowRenderer"]
+        text["TextRenderer"]
+        textbox["TextBoxRenderer"]
+        effects["EffectsRenderer"]
+    end
+
+    subgraph Effects["Effects Pipeline"]
+        shadow["ShadowRenderer"]
+        blur["Blur Fill"]
+        stroke["Stroke/Fill"]
+    end
+
+    subgraph Selection["Selection Overlay"]
+        handles["Selection Handles"]
+        guides["Smart Guides"]
+        marquee["Marquee Selection"]
+    end
+
+    layerChange --> dirty
+    selection --> dirty
+    zoom --> dirty
+    resize --> dirty
+    
+    dirty --> raf
+    raf --> debounce
+    debounce --> clear
+    clear --> drawBg
+    drawBg --> layers
+    
+    layers --> typeCheck
+    typeCheck -->|rectangle/circle/ellipse| shape
+    typeCheck -->|arrow/line| arrow
+    typeCheck -->|text| text
+    typeCheck -->|textbox| textbox
+    
+    shape --> effects
+    arrow --> effects
+    textbox --> effects
+    
+    effects --> shadow
+    effects --> blur
+    effects --> stroke
+    
+    stroke --> handles
+    handles --> guides
+    guides --> marquee
+```
+
+### Layer State Machine (Mermaid)
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle: No layer selected
+
+    Idle --> Selected: Click on layer
+    Idle --> Drawing: Activate drawing tool
+    
+    Selected --> Editing: Double-click (text) or start drag
+    Selected --> MultiSelect: Shift+click another
+    Selected --> Idle: Click empty area / Escape
+    Selected --> Selected: Click different layer
+    
+    MultiSelect --> Selected: Click single layer
+    MultiSelect --> Idle: Escape
+    MultiSelect --> Transforming: Drag selection
+    
+    Editing --> Selected: Click outside / Enter (text)
+    Editing --> Idle: Escape
+    
+    Drawing --> Idle: Complete shape / Escape
+    Drawing --> Selected: Shape created
+    
+    Transforming --> Selected: Mouse up
+    Transforming --> Idle: Escape
+    
+    state Selected {
+        [*] --> ShowPropertiesPanel
+        ShowPropertiesPanel --> HideToolbarControls: Context-aware mode
+    }
+    
+    state Drawing {
+        [*] --> ShowToolbarControls
+        ShowToolbarControls --> PreviewShape: Mouse move
+    }
+```
+
+### Data Flow Overview (Mermaid)
+
+```mermaid
+flowchart LR
+    subgraph Client["JavaScript (Browser)"]
+        UI["Toolbar / LayerPanel"]
+        State["StateManager"]
+        Canvas["CanvasManager"]
+        API["APIManager"]
+        History["HistoryManager"]
+    end
+    
+    subgraph Server["PHP (MediaWiki)"]
+        ApiInfo["ApiLayersInfo"]
+        ApiSave["ApiLayersSave"]
+        ApiDelete["ApiLayersDelete"]
+        Validator["ServerSideValidator"]
+        DB["LayersDatabase"]
+    end
+    
+    subgraph Storage["MySQL/MariaDB"]
+        Table["layers_layersets"]
+    end
+    
+    UI -->|"User action"| State
+    State -->|"State change"| Canvas
+    State -->|"State change"| UI
+    State <-->|"Undo/Redo"| History
+    
+    Canvas -->|"Render"| State
+    
+    API -->|"GET layersinfo"| ApiInfo
+    API -->|"POST layerssave"| ApiSave
+    API -->|"POST layersdelete"| ApiDelete
+    
+    ApiInfo --> DB
+    ApiSave --> Validator
+    Validator --> DB
+    ApiDelete --> DB
+    
+    DB <--> Table
+```
+
+---
+
 ## Core Patterns
 
 ### 1. Module Registry Pattern

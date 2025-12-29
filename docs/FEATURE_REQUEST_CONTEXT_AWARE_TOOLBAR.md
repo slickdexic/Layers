@@ -1,7 +1,7 @@
 # Feature Request: Context-Aware Toolbar
 
 **Created:** December 28, 2025  
-**Status:** ✅ Implemented (v1.2.10)  
+**Status:** ✅ Implemented (v1.2.10, refined v1.2.12)  
 **Priority:** Medium (UX polish, reduces visual clutter)  
 **Complexity:** Medium (~4 hours actual)
 
@@ -9,27 +9,25 @@
 
 ## Overview
 
-Show only relevant toolbar controls based on the currently selected tool or layer. Hide stroke width, stroke color, fill color, and other style controls when they are not applicable (e.g., when using the Select tool with nothing selected). Display basic, relevant controls when a drawing tool is activated.
+Show only relevant toolbar controls based on the currently selected tool. **Hide** style controls when an existing layer is selected (because the Properties panel in the Layer Manager provides all the same controls). Display controls only when a drawing tool is active for creating **new** layers.
 
 ---
 
 ## Problem Statement
 
-### Current Behavior
+### Current Behavior (Pre-v1.2.12)
 
-- All style controls (stroke width, stroke color, fill color, opacity, etc.) are always visible
-- Toolbar is cluttered with options that don't apply to the current context
-- New users may be overwhelmed by the number of controls
-- Controls take up space even when not usable
-- No visual indication of which controls affect the current tool/selection
+- Style controls were shown in two places simultaneously: toolbar AND Properties panel
+- Redundant UI created confusion about which controls to use
+- Toolbar remained cluttered even when the Properties panel was available for editing
+- Space wasted on controls already accessible elsewhere
 
-### Desired Behavior
+### Desired Behavior (v1.2.12+)
 
 - Toolbar shows minimal controls by default (tool buttons only)
-- When a drawing tool is selected, relevant style controls appear
-- When a layer is selected, editing controls for that layer type appear
-- Controls smoothly animate in/out for a polished experience
-- Advanced options available via expandable panel or dropdown
+- When a **drawing tool** is selected, relevant style controls appear (for new layer creation)
+- When an **existing layer** is selected, toolbar style controls are **hidden** (use Properties panel instead)
+- This eliminates redundancy and focuses users on the appropriate UI for their task
 
 ---
 

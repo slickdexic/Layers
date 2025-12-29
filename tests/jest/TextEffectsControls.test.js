@@ -385,6 +385,73 @@ describe( 'TextEffectsControls', () => {
 		} );
 	} );
 
+	describe( 'hideAll', () => {
+		beforeEach( () => {
+			textEffects.createFontSizeControl();
+			textEffects.createTextStrokeControl();
+			textEffects.createShadowControl();
+		} );
+
+		it( 'should hide all text effect controls', () => {
+			// First show them
+			textEffects.updateForTool( 'text' );
+			expect( textEffects.fontSizeContainer.style.display ).toBe( 'flex' );
+
+			// Then hide all
+			textEffects.hideAll();
+
+			expect( textEffects.fontSizeContainer.style.display ).toBe( 'none' );
+			expect( textEffects.textStrokeContainer.style.display ).toBe( 'none' );
+			expect( textEffects.shadowContainer.style.display ).toBe( 'none' );
+		} );
+
+		it( 'should not throw if containers are null', () => {
+			textEffects.fontSizeContainer = null;
+			textEffects.textStrokeContainer = null;
+			textEffects.shadowContainer = null;
+
+			expect( () => textEffects.hideAll() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateForSelectedTypes', () => {
+		beforeEach( () => {
+			textEffects.createFontSizeControl();
+			textEffects.createTextStrokeControl();
+			textEffects.createShadowControl();
+		} );
+
+		it( 'should show controls for pure text layers', () => {
+			textEffects.hideAll(); // Start hidden
+
+			textEffects.updateForSelectedTypes( true, false );
+
+			expect( textEffects.fontSizeContainer.style.display ).toBe( 'flex' );
+			expect( textEffects.textStrokeContainer.style.display ).toBe( 'flex' );
+			expect( textEffects.shadowContainer.style.display ).toBe( 'flex' );
+		} );
+
+		it( 'should show controls for textbox layers', () => {
+			textEffects.hideAll(); // Start hidden
+
+			textEffects.updateForSelectedTypes( false, true );
+
+			expect( textEffects.fontSizeContainer.style.display ).toBe( 'flex' );
+			expect( textEffects.textStrokeContainer.style.display ).toBe( 'flex' );
+			expect( textEffects.shadowContainer.style.display ).toBe( 'flex' );
+		} );
+
+		it( 'should hide controls for non-text layers', () => {
+			textEffects.updateForTool( 'text' ); // Start shown
+
+			textEffects.updateForSelectedTypes( false, false );
+
+			expect( textEffects.fontSizeContainer.style.display ).toBe( 'none' );
+			expect( textEffects.textStrokeContainer.style.display ).toBe( 'none' );
+			expect( textEffects.shadowContainer.style.display ).toBe( 'none' );
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export to window.Layers.UI namespace', () => {
 			expect( window.Layers.UI.TextEffectsControls ).toBe( TextEffectsControls );

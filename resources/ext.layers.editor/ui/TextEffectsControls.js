@@ -298,6 +298,22 @@
 		}
 
 		/**
+		 * Hide all text effect controls
+		 * Used when layers are selected (controls are available in Properties panel)
+		 */
+		hideAll() {
+			if ( this.fontSizeContainer ) {
+				this.fontSizeContainer.style.display = 'none';
+			}
+			if ( this.textStrokeContainer ) {
+				this.textStrokeContainer.style.display = 'none';
+			}
+			if ( this.shadowContainer ) {
+				this.shadowContainer.style.display = 'none';
+			}
+		}
+
+		/**
 		 * Update controls from selected layer properties
 		 *
 		 * @param {Object} layer Selected layer object

@@ -2,6 +2,24 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.12] - 2025-12-29
+
+### Changed
+- **Context-Aware Toolbar behavior refined** — Toolbar style controls (stroke, fill, presets) are now **hidden** when an existing layer is selected, since the Properties panel in the Layer Manager provides all the same controls. This eliminates redundancy and focuses users on the appropriate UI. Style controls only appear when a drawing tool is active for creating new layers.
+
+### Documentation
+- **Enhanced Architecture diagrams** — Added three new Mermaid diagrams to ARCHITECTURE.md:
+  - **Rendering Pipeline** — Shows how render triggers flow through RenderCoordinator to LayerRenderer dispatch
+  - **Layer State Machine** — Documents states (Idle, Selected, Drawing, Editing, etc.) and transitions
+  - **Data Flow Overview** — Shows client-server data flow between StateManager, APIManager, and PHP endpoints
+
+### Testing
+- **7,382 tests passing** (+5 new tests)
+- Added 6 new tests for `hideAll()` and `updateForSelectedTypes()` in TextEffectsControls
+- Updated context-aware toolbar tests to reflect new behavior (hide on layer selection)
+
+---
+
 ## [1.2.11] - 2025-12-29
 
 ### Bug Fixes

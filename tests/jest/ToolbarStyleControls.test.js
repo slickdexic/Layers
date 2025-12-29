@@ -1620,8 +1620,12 @@ describe( 'ToolbarStyleControls', () => {
 			} );
 		} );
 
-		describe( 'updateContextForSelectedLayers', () => {
-			it( 'should show main style row when shape layers are selected', () => {
+		describe( 'updateContextForSelectedLayers (hideControlsForSelectedLayers)', () => {
+			// v1.2.12+: Controls are HIDDEN when layers are selected because
+			// the Properties panel in the Layer Manager provides all the same controls.
+			// This eliminates redundancy and focuses users on the appropriate UI.
+
+			it( 'should hide main style row when layers are selected (use Properties panel)', () => {
 				const selectedLayers = [
 					{ id: 'rect-1', type: 'rectangle' },
 					{ id: 'circle-1', type: 'circle' }
@@ -1629,10 +1633,11 @@ describe( 'ToolbarStyleControls', () => {
 
 				styleControls.updateContextForSelectedLayers( selectedLayers );
 
-				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
+				// Controls are hidden because Properties panel has them
+				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( true );
 			} );
 
-			it( 'should hide fill for path/arrow layers', () => {
+			it( 'should hide fill control when layers are selected', () => {
 				const selectedLayers = [
 					{ id: 'arrow-1', type: 'arrow' }
 				];
@@ -1641,21 +1646,22 @@ describe( 'ToolbarStyleControls', () => {
 				if ( styleControls.fillControl && styleControls.fillControl.container ) {
 					styleControls.updateContextForSelectedLayers( selectedLayers );
 
+					// All controls hidden when layer is selected
 					expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
 				}
 			} );
 
-			it( 'should show fill when mixed shape and arrow layers selected', () => {
+			it( 'should hide presets when layers are selected', () => {
 				const selectedLayers = [
 					{ id: 'arrow-1', type: 'arrow' },
 					{ id: 'rect-1', type: 'rectangle' }
 				];
 
-				// Ensure fillControl exists
-				if ( styleControls.fillControl && styleControls.fillControl.container ) {
+				if ( styleControls.presetContainer ) {
 					styleControls.updateContextForSelectedLayers( selectedLayers );
 
-					expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( false );
+					// Presets hidden because Properties panel has them
+					expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( true );
 				}
 			} );
 		} );
