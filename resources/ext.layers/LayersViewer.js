@@ -355,7 +355,10 @@
 			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
 
 			if ( isHidden ) {
-				return; // Background is hidden, don't draw it
+				// Even when hidden, fill with white so blend modes have something to blend with
+				this.ctx.fillStyle = '#ffffff';
+				this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+				return;
 			}
 
 			// Apply background opacity
@@ -371,6 +374,13 @@
 					}
 				}
 			}
+
+			// Always fill with white first to ensure consistent rendering with the editor.
+			// PNG images with transparency would otherwise blend with transparent pixels,
+			// producing different results than the editor (which uses a white canvas).
+			// This ensures blend modes like 'exclusion' look identical in editor and viewer.
+			this.ctx.fillStyle = '#ffffff';
+			this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
 
 			this.ctx.save();
 			this.ctx.globalAlpha = bgOpacity;
