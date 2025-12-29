@@ -396,4 +396,87 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $result->isValid() );
 		$this->assertStringContainsString( 'ellipse layer must have', $result->getErrors()[0] );
 	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateLayerGroupType() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'group_1',
+			'type' => 'group',
+			'name' => 'My Group',
+			'children' => [ 'layer_1', 'layer_2' ],
+			'expanded' => true
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'Group layer should validate successfully' );
+		$data = $result->getData();
+		$this->assertEquals( 'group', $data['type'] );
+		$this->assertEquals( 'My Group', $data['name'] );
+		$this->assertEquals( [ 'layer_1', 'layer_2' ], $data['children'] );
+		$this->assertTrue( $data['expanded'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateLayerGroupWithParentGroup() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'nested_group',
+			'type' => 'group',
+			'name' => 'Nested Group',
+			'children' => [ 'layer_3' ],
+			'parentGroup' => 'group_1',
+			'expanded' => false
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'Nested group with parentGroup should validate' );
+		$data = $result->getData();
+		$this->assertEquals( 'group_1', $data['parentGroup'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateLayerGroupEmptyChildren() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'empty_group',
+			'type' => 'group',
+			'name' => 'Empty Group',
+			'children' => []
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'Group with empty children array should validate' );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::isLayerTypeSupported
+	 */
+	public function testGroupTypeIsSupported() {
+		$validator = $this->createValidator();
+
+		$this->assertTrue( $validator->isLayerTypeSupported( 'group' ) );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::getSupportedLayerTypes
+	 */
+	public function testGetSupportedLayerTypesIncludesGroup() {
+		$validator = $this->createValidator();
+
+		$types = $validator->getSupportedLayerTypes();
+		$this->assertContains( 'group', $types );
+	}
 }
