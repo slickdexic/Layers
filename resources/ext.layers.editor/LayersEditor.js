@@ -236,7 +236,10 @@ class LayersEditor {
 			this.stateManager.set( 'currentLayerSetId', null );
 			// Named Layer Sets state
 			this.stateManager.set( 'namedSets', [] );
-			this.stateManager.set( 'currentSetName', 'default' );
+			// Read setname from URL parameter (set by layerslink deep linking)
+			const setNameFromUrl = mw && mw.util && typeof mw.util.getParamValue === 'function' ?
+				mw.util.getParamValue( 'setname' ) : null;
+			this.stateManager.set( 'currentSetName', setNameFromUrl || 'default' );
 		}
 	}
 
@@ -487,15 +490,25 @@ class LayersEditor {
 
 	/**
 	 * Load initial layers from API
+	 * Uses setname from URL parameter if available (set by layerslink deep linking)
 	 * @private
 	 */
 	loadInitialLayers () {
-		this.apiManager.loadLayers().then( ( data ) => {
+		// Check if we have a specific set name to load (from URL parameter)
+		const setName = this.stateManager.get( 'currentSetName' );
+		const useSpecificSet = setName && setName !== 'default' &&
+			this.apiManager && typeof this.apiManager.loadLayersBySetName === 'function';
+
+		const loadPromise = useSpecificSet ?
+			this.apiManager.loadLayersBySetName( setName ) :
+			this.apiManager.loadLayers();
+
+		loadPromise.then( ( data ) => {
 			if ( this.isDestroyed ) {
 				return;
 			}
 
-			this.debugLog( '[LayersEditor] API loadLayers completed' );
+			this.debugLog( '[LayersEditor] API loadLayers completed for set: ' + ( setName || 'default' ) );
 
 			if ( data && data.layers ) {
 				const normalizedLayers = this.normalizeLayers( data.layers );
