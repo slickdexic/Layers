@@ -2,13 +2,14 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [Unreleased] - Layer Grouping Feature
+## [1.2.13] - 2025-12-29
 
 ### Features
-- **Layer Grouping (Phase 1: Data Model & UI)** — Initial implementation of layer grouping:
-  - **GroupManager.js** (~600 lines) — Full grouping API with `createGroup()`, `ungroup()`, `addToGroup()`, `removeFromGroup()`, `toggleExpanded()`, `getGroupChildren()`, `groupSelected()`, `ungroupSelected()`, `renameGroup()`, `deleteGroup()`
-  - **Server-side validation** — Added 'group' to SUPPORTED_LAYER_TYPES with `children` (array), `expanded` (boolean), `parentGroup` (string) properties
-  - **Client-side validation** — Added 'group' type to LayersValidator
+- **Layer Grouping (Complete)** — Group multiple layers for bulk operations:
+  - **GroupManager.js** (~600 lines) — Full grouping API with `createGroup()`, `ungroup()`, `addToGroup()`, `removeFromGroup()`, `toggleExpanded()`, `getGroupChildren()`, `groupSelected()`, `ungroupSelected()`, `renameGroup()`, `deleteGroup()`, `getGroupBounds()`
+  - **Keyboard shortcuts** — **Ctrl+G** to group selected layers, **Ctrl+Shift+G** to ungroup
+  - **Selection integration** — Selecting a group automatically selects all children; deselecting a group deselects all children
+  - **Server-side validation** — 'group' type with `children` (array), `expanded` (boolean), `parentGroup` (string) properties
   - **Layer Panel UI** — Groups display with folder icons, expand/collapse toggles (▼/▶), and child layer indentation (20px per level)
   - Max nesting depth: 3 levels, max children per group: 100
 
@@ -16,15 +17,20 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **IconFactory.createFolderIcon()** — Golden folder icon for group layers (expanded/collapsed states)
 - **IconFactory.createExpandIcon()** — Triangle toggle icon for expand/collapse
 - **LayerItemFactory group support** — Groups render with folder icon, expand toggle, and CSS classes
+- **SelectionManager group support** — `_getGroupBounds()`, `isChildOfSelectedGroup()`, `_getGroupDescendantIds()` helpers
+- **ToolbarKeyboard group shortcuts** — `groupSelected()`, `ungroupSelected()` methods
 - **CSS for group layers** — `.layer-item-group`, `.layer-item-child`, `.layer-expand-toggle` styles
 - **i18n messages** — `layers-type-group`, `layers-expand-group`, `layers-collapse-group`
+- **PHP validation tests** — 6 new tests for 'group' layer type validation
 
 ### Testing
-- **7,456 tests passing** (+74 from v1.2.12)
+- **7,483 tests passing** (+101 from v1.2.12)
 - **132 test suites**
 - 48 new tests for GroupManager
+- 20 new tests for SelectionManager group handling
 - 16 new tests for LayerItemFactory group support
 - 10 new tests for IconFactory folder/expand icons
+- 7 new tests for ToolbarKeyboard group shortcuts
 
 ---
 

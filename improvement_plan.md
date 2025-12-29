@@ -2,31 +2,31 @@
 
 **Last Updated:** December 29, 2025  
 **Status:** ✅ All P0 Issues Resolved  
-**Version:** 1.2.11  
+**Version:** 1.2.13  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-The extension is **production-ready** with all critical issues resolved. The blur fill coordinate bug has been fixed.
+The extension is **production-ready** with all critical issues resolved. Layer Grouping feature is complete.
 
-**Current Rating: 8.5/10**
+**Current Rating: 9.0/10**
 
 ---
 
-## Current State (December 30, 2025)
+## Current State (December 29, 2025)
 
 | Area | Status | Details |
 |------|--------|--------|
-| **Functionality** | ✅ Complete | 14 tools work; blur fill fixed |
+| **Functionality** | ✅ Complete | 14 tools + layer grouping |
 | **Security** | ✅ Resolved | All known security issues fixed |
-| **Testing** | ✅ Excellent | 7,377 tests, 94.4% statement coverage |
-| **ES6 Migration** | ✅ Complete | 88 classes, 0 prototype patterns |
+| **Testing** | ✅ Excellent | 7,483 tests, 94%+ statement coverage |
+| **ES6 Migration** | ✅ Complete | 89 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ⚠️ Technical Debt | 8 files >1,000 lines (all use delegation) |
-| **Codebase Size** | ✅ Healthy | ~50,200 lines (98 files), well under 75K target |
-| **Blur Fill** | ✅ **FIXED** | Rectangle coordinate bug resolved |
+| **Codebase Size** | ✅ Healthy | ~51,000 lines (99 files), well under 75K target |
+| **Layer Grouping** | ✅ **COMPLETE** | Ctrl+G/Ctrl+Shift+G, nested groups, selection |
 
 ---
 
@@ -190,10 +190,19 @@ Both modules use the delegation pattern with clean interfaces.
 **Status:** 5% complete (2 files migrated)  
 **Priority:** LOW - ES6 with JSDoc provides adequate type safety
 
-### P3.3 Layer Grouping ⏳
+### P3.3 Layer Grouping ✅ COMPLETE (v1.2.13)
 
 Group multiple layers for bulk operations.  
-**Effort:** 2-3 weeks
+**Completed:** December 29, 2025
+
+**Implemented:**
+- ✅ **GroupManager.js** (~600 lines) — Full grouping API with 48 tests
+- ✅ **Keyboard shortcuts** — Ctrl+G to group, Ctrl+Shift+G to ungroup
+- ✅ **Selection integration** — Selecting group auto-selects children
+- ✅ **Layer panel UI** — Folder icons, indentation, expand/collapse
+- ✅ **PHP validation** — Server-side 'group' type support
+- ✅ **Nesting support** — Up to 3 levels deep, max 100 children
+- ✅ **107 new tests** — GroupManager, SelectionManager, ToolbarKeyboard
 
 ### P3.4 WCAG 2.1 AA Audit ⏳
 
@@ -255,7 +264,7 @@ P2.2 Shared renderer coverage: ████████████████�
 Phase 3 (Features):
 P3.1 Mobile UI optimization:   ██████░░░░░░░░░░░░░░ 30%  ⏳ Basic touch works
 P3.2 TypeScript:               █░░░░░░░░░░░░░░░░░░░ 5%   ⏳ Low Priority
-P3.3 Layer Grouping:           ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
+P3.3 Layer Grouping:           ████████████████████ 100% ✅ COMPLETE (v1.2.13)
 P3.4 WCAG Audit:               ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 ```
 
