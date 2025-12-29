@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** December 27, 2025 (Updated)  
-**Version:** 1.2.9  
+**Review Date:** December 29, 2025 (Updated)  
+**Version:** 1.2.10  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -16,7 +16,7 @@ The extension is **fully functional and production-ready** with professional sec
 
 **Key Strengths:**
 
-- ✅ **7,270 tests passing** (0 failures)
+- ✅ **7,322 tests passing** (0 failures)
 - ✅ **94.5% statement coverage, 82.9% branch coverage**
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 14 working drawing tools with named layer sets
@@ -43,19 +43,19 @@ All metrics collected directly from the codebase via automated tooling.
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total JS files | **99** | - | ✅ Feature-rich |
-| Total JS lines | **~49,600** | <75,000 | ✅ Well under target |
+| Total JS files | **97** | - | ✅ Feature-rich |
+| Total JS lines | **~49,900** | <75,000 | ✅ Well under target |
 | ES6 classes | **87** | 70+ | ✅ |
 | Files >1,000 lines | **8** | 0 | ⚠️ Technical debt |
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disable comments | **12** | <15 | ✅ Acceptable |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **7,270** | - | ✅ |
+| Jest tests passing | **7,322** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
-| Statement coverage | **94.45%** | 85%+ | ✅ Excellent |
-| Branch coverage | **82.88%** | 75%+ | ✅ Excellent |
-| Function coverage | **91.98%** | 80%+ | ✅ |
-| Line coverage | **94.73%** | 85%+ | ✅ Excellent |
+| Statement coverage | **94.43%** | 85%+ | ✅ Excellent |
+| Branch coverage | **82.83%** | 75%+ | ✅ Excellent |
+| Function coverage | **91.95%** | 80%+ | ✅ |
+| Line coverage | **94.70%** | 85%+ | ✅ Excellent |
 
 ### Files Over 1,000 Lines (God Classes)
 
@@ -64,7 +64,7 @@ All metrics collected directly from the codebase via automated tooling.
 | CanvasManager.js | **1,877** | ✅ 10+ controllers | HIGH - Too complex |
 | LayerPanel.js | **1,838** | ✅ 7 controllers | HIGH - Split needed |
 | Toolbar.js | **1,537** | ✅ 4 modules | HIGH - Growing |
-| LayersEditor.js | **1,355** | ✅ 3 modules | MEDIUM |
+| LayersEditor.js | **1,459** | ✅ 3 modules | MEDIUM |
 | ToolManager.js | **1,261** | ✅ 2 handlers | MEDIUM |
 | CanvasRenderer.js | **1,242** | ✅ SelectionRenderer (94% cov) | MEDIUM |
 | SelectionManager.js | **1,194** | ✅ 3 modules | MEDIUM |
@@ -76,12 +76,12 @@ All metrics collected directly from the codebase via automated tooling.
 
 | File | Lines | Risk |
 |------|-------|------|
-| ShapeRenderer.js | **903** | ⚠️ MEDIUM |
+| ToolbarStyleControls.js | **975** | ⚠️ MEDIUM - Approaching 1000 |
+| ShapeRenderer.js | **909** | ⚠️ MEDIUM |
 | PropertiesForm.js | **870** | ✅ OK |
 | LayersValidator.js | **854** | ⚠️ MEDIUM |
-| ResizeCalculator.js | **822** | ⚠️ MEDIUM |
-| ToolbarStyleControls.js | **798** | ✅ RESOLVED - Split completed |
-| LayerRenderer.js | **818** | ⚠️ MEDIUM |
+| ResizeCalculator.js | **822** | ✅ LOW |
+| LayerRenderer.js | **821** | ✅ LOW |
 | TransformController.js | **779** | ✅ LOW |
 | ArrowRenderer.js | **738** | ✅ LOW |
 | DialogManager.js | **728** | ✅ LOW (96% coverage) |
@@ -357,7 +357,7 @@ All critical coverage gaps have been addressed:
 
 ### What's Good
 
-The extension is **production-ready and fully functional**. Security implementation is professional-grade. Test coverage at 94.45% statement coverage is excellent. The PHP backend is clean and well-documented. The editor has 14 working tools, smart guides, named layer sets, and blur fill effects. All major bugs have been fixed.
+The extension is **production-ready and fully functional**. Security implementation is professional-grade. Test coverage at 94.43% statement coverage is excellent. The PHP backend is clean and well-documented. The editor has 14 working tools, smart guides, named layer sets, and blur fill effects. All major bugs have been fixed.
 
 ### What Needs Honest Attention
 
@@ -387,6 +387,7 @@ The extension is **production-ready and fully functional**. Security implementat
 2. **Documentation sprawl** - 20+ markdown files with some overlapping content
 3. **No formal architecture diagram** - Despite claims of good architecture, no visual representation exists
 4. **Mobile support is aspirational** - Documentation claims "touch support" but it's very basic
+5. **ToolbarStyleControls.js growing** - At 975 lines, it's 25 lines from becoming a god class again
 
 ### Bottom Line
 
@@ -403,4 +404,4 @@ Deductions:
 ---
 
 *Review performed by GitHub Copilot (Claude Opus 4.5)*  
-*Last updated: December 27, 2025*
+*Last updated: December 29, 2025*

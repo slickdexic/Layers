@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 30, 2025  
-**Version:** 1.2.9
+**Last Updated:** December 29, 2025  
+**Version:** 1.2.11
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -22,15 +22,15 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 99 |
+| Total JS files | 97 |
 | Viewer module | ~682 lines |
 | Shared module | ~5,000 lines |
 | Editor module | ~43,000 lines |
-| Total JS lines | ~49,600 |
+| Total JS lines | ~49,900 |
 | ES6 classes | 87 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | 94.45% stmt, 82.88% branch, 91.98% func |
-| Jest tests | **7,270** |
+| Test coverage | 94.43% stmt, 82.83% branch, 91.95% func |
+| Jest tests | **7,322** |
 | PHPUnit test files | 17 |
 | God classes (>1000 lines) | **8** ⚠️ |
 | Drawing tools | 14 |
@@ -69,15 +69,15 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - CanvasManager.js (1,877) - facade with 10+ controllers
 - LayerPanel.js (1,838) - delegates to 7 controllers
 - Toolbar.js (1,537) - UI controls consolidation
-- LayersEditor.js (1,355) - main entry point
+- LayersEditor.js (1,459) - main entry point
 - ToolManager.js (1,261) - tool delegation pattern
 - CanvasRenderer.js (1,242) - rendering coordination
 - SelectionManager.js (1,194) - core selection logic
 - APIManager.js (1,182) - API integration layer
 
 **Recently under 1,000 (no longer god classes):**
+- ToolbarStyleControls.js (975) - approaching limit again ⚠️
 - ShapeRenderer.js (909) - approaching limit, well-structured ⚠️
-- ToolbarStyleControls.js (947) - style controls extracted ✅
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 

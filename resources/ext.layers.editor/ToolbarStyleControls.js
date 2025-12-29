@@ -81,6 +81,14 @@ class ToolbarStyleControls {
 			notifyStyleChange: this.notifyStyleChange.bind( this )
 		} ) : null;
 
+		// Initialize ArrowStyleControl for arrow-specific UI delegation
+		const ArrowStyleControl = getClass( 'UI.ArrowStyleControl', 'ArrowStyleControl' );
+		this.arrowStyleControl = ArrowStyleControl ? new ArrowStyleControl( {
+			msg: this.msg.bind( this ),
+			addListener: this.addListener.bind( this ),
+			notifyStyleChange: this.notifyStyleChange.bind( this )
+		} ) : null;
+
 		// Style state
 		this.strokeColorValue = '#000000';
 		this.fillColorValue = '#ffffff';
@@ -181,8 +189,10 @@ class ToolbarStyleControls {
 			styleGroup.appendChild( this.textEffectsControls.createShadowControl() );
 		}
 
-		// Arrow style options
-		this.arrowContainer = this.createArrowStyleControl();
+		// Arrow style options (via ArrowStyleControl delegation)
+		this.arrowContainer = this.arrowStyleControl.create();
+		// Expose internal select for backward compatibility with existing code
+		this.arrowStyleSelect = this.arrowStyleControl.arrowStyleSelect;
 		styleGroup.appendChild( this.arrowContainer );
 
 		// Apply initial visibility based on default tool (pointer = hidden)
@@ -400,49 +410,6 @@ class ToolbarStyleControls {
 	}
 
 	/**
-	 * Create the arrow style control
-	 *
-	 * @return {HTMLElement} The arrow style container
-	 */
-	createArrowStyleControl() {
-		const container = document.createElement( 'div' );
-		container.className = 'arrow-style-container';
-		container.style.display = 'none';
-
-		const label = document.createElement( 'label' );
-		label.textContent = this.msg( 'layers-tool-arrow', 'Arrow' ) + ':';
-		label.className = 'arrow-label';
-		container.appendChild( label );
-
-		const select = document.createElement( 'select' );
-		select.className = 'arrow-style-select';
-
-		const optSingle = document.createElement( 'option' );
-		optSingle.value = 'single';
-		optSingle.textContent = this.msg( 'layers-arrow-single', 'Single →' );
-		select.appendChild( optSingle );
-
-		const optDouble = document.createElement( 'option' );
-		optDouble.value = 'double';
-		optDouble.textContent = this.msg( 'layers-arrow-double', 'Double ↔' );
-		select.appendChild( optDouble );
-
-		const optNone = document.createElement( 'option' );
-		optNone.value = 'none';
-		optNone.textContent = this.msg( 'layers-arrow-none', 'Line only' );
-		select.appendChild( optNone );
-
-		container.appendChild( select );
-		this.arrowStyleSelect = select;
-
-		this.addListener( select, 'change', () => {
-			this.notifyStyleChange();
-		} );
-
-		return container;
-	}
-
-	/**
 	 * Get color picker strings for i18n
 	 *
 	 * @return {Object} Color picker string map
@@ -543,6 +510,11 @@ class ToolbarStyleControls {
 			this.textEffectsControls.getStyleValues() :
 			{ fontSize: 16, textStrokeColor: '#000000', textStrokeWidth: 0, textShadow: false, textShadowColor: '#000000' };
 
+		// Get arrow style from delegate or fallback
+		const arrowStyle = this.arrowStyleControl ?
+			this.arrowStyleControl.getValue() :
+			( this.arrowStyleSelect ? this.arrowStyleSelect.value : 'single' );
+
 		return {
 			color: this.strokeColorNone ? 'transparent' : this.strokeColorValue,
 			fill: this.fillColorNone ? 'transparent' : this.fillColorValue,
@@ -552,7 +524,7 @@ class ToolbarStyleControls {
 			textStrokeWidth: textEffects.textStrokeWidth,
 			textShadow: textEffects.textShadow,
 			textShadowColor: textEffects.textShadowColor,
-			arrowStyle: this.arrowStyleSelect ? this.arrowStyleSelect.value : 'single',
+			arrowStyle: arrowStyle,
 			shadow: textEffects.textShadow,
 			shadowColor: textEffects.textShadowColor,
 			shadowBlur: 8,
@@ -572,11 +544,11 @@ class ToolbarStyleControls {
 			this.textEffectsControls.updateForTool( toolId );
 		}
 
-		// Handle arrow container visibility directly
-		if ( toolId === 'arrow' ) {
-			this.arrowContainer.style.display = 'block';
-		} else {
-			this.arrowContainer.style.display = 'none';
+		// Handle arrow container visibility (delegate or direct)
+		if ( this.arrowStyleControl ) {
+			this.arrowStyleControl.updateForTool( toolId );
+		} else if ( this.arrowContainer ) {
+			this.arrowContainer.style.display = toolId === 'arrow' ? 'block' : 'none';
 		}
 
 		// Update preset dropdown for the current tool
@@ -800,9 +772,13 @@ class ToolbarStyleControls {
 			this.textEffectsControls.applyStyle( style );
 		}
 
-		// Apply arrow style
-		if ( style.arrowStyle !== undefined && this.arrowStyleSelect ) {
-			this.arrowStyleSelect.value = style.arrowStyle;
+		// Apply arrow style (delegate or fallback)
+		if ( style.arrowStyle !== undefined ) {
+			if ( this.arrowStyleControl ) {
+				this.arrowStyleControl.applyStyle( style );
+			} else if ( this.arrowStyleSelect ) {
+				this.arrowStyleSelect.value = style.arrowStyle;
+			}
 		}
 
 		// Notify of style change
@@ -829,8 +805,10 @@ class ToolbarStyleControls {
 			Object.assign( style, this.textEffectsControls.getStyleValues() );
 		}
 
-		// Arrow style
-		if ( this.arrowStyleSelect ) {
+		// Arrow style (delegate or fallback)
+		if ( this.arrowStyleControl ) {
+			Object.assign( style, this.arrowStyleControl.getStyleValues() );
+		} else if ( this.arrowStyleSelect ) {
 			style.arrowStyle = this.arrowStyleSelect.value;
 		}
 
@@ -938,6 +916,12 @@ class ToolbarStyleControls {
 		if ( this.textEffectsControls ) {
 			this.textEffectsControls.destroy();
 			this.textEffectsControls = null;
+		}
+
+		// Clean up arrow style controller
+		if ( this.arrowStyleControl ) {
+			this.arrowStyleControl.destroy();
+			this.arrowStyleControl = null;
 		}
 
 		// Clean up all event listeners via EventTracker

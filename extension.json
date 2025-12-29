@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.2.10",
+	"version": "1.2.11",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -289,6 +289,7 @@
 				"ui/ColorControlFactory.js",
 				"ui/PresetStyleManager.js",
 				"ui/TextEffectsControls.js",
+				"ui/ArrowStyleControl.js",
 				"ui/ConfirmDialog.js",
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",

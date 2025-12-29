@@ -75,6 +75,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
     - `PresetStyleManager.js` (~275 lines) - preset dropdown UI integration (extracted from ToolbarStyleControls)
+    - `ArrowStyleControl.js` (~209 lines) - arrow style dropdown UI (extracted from ToolbarStyleControls)
   - Preset modules (`resources/ext.layers.editor/presets/`): Style preset system:
     - `PresetManager.js` (~642 lines) - facade for preset operations, delegates to BuiltInPresets and PresetStorage
     - `BuiltInPresets.js` (~293 lines) - built-in preset definitions (arrow, text, shapes, etc.)

@@ -94,6 +94,7 @@
 			const booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked', 'preserveAspectRatio' ];
 
 			this.layerData.layers.forEach( ( layer ) => {
+				// Normalize boolean properties
 				booleanProps.forEach( ( prop ) => {
 					const val = layer[ prop ];
 					if ( val === '0' || val === 'false' || val === 0 ) {
@@ -102,6 +103,14 @@
 						layer[ prop ] = true;
 					}
 				} );
+
+				// Normalize blend mode alias (server stores blendMode, client uses blend)
+				if ( layer.blendMode !== undefined && layer.blend === undefined ) {
+					layer.blend = layer.blendMode;
+				}
+				if ( layer.blend !== undefined && layer.blendMode === undefined ) {
+					layer.blendMode = layer.blend;
+				}
 			} );
 		}
 
@@ -304,8 +313,22 @@
 			// Clear canvas
 			this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
-			// Render layers from bottom to top so top-most (index 0 in editor) is drawn last.
 			const layers = Array.isArray( this.layerData.layers ) ? this.layerData.layers : [];
+
+			// Check if any layer uses a non-default blend mode
+			// Blend modes only work when blending with content on the canvas, not DOM elements
+			// So we need to draw the background image onto the canvas for blend to work
+			const hasBlendMode = layers.some( ( layer ) => {
+				const blend = layer.blend || layer.blendMode;
+				return blend && blend !== 'normal' && blend !== 'source-over';
+			} );
+
+			if ( hasBlendMode ) {
+				// Draw background image onto canvas so blend modes work
+				this.drawBackgroundOnCanvas();
+			}
+
+			// Render layers from bottom to top so top-most (index 0 in editor) is drawn last.
 			for ( let i = layers.length - 1; i >= 0; i-- ) {
 				const layer = layers[ i ];
 				// Special handling for blur layers - blur everything rendered so far
@@ -314,6 +337,50 @@
 				} else {
 					this.renderLayer( layer );
 				}
+			}
+		}
+
+		/**
+		 * Draw the background image onto the canvas
+		 * Required for blend modes to work (they blend with canvas content, not DOM)
+		 * @private
+		 */
+		drawBackgroundOnCanvas() {
+			if ( !this.imageElement || !this.ctx ) {
+				return;
+			}
+
+			// Get background settings
+			const bgVisible = this.layerData ? this.layerData.backgroundVisible : true;
+			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
+
+			if ( isHidden ) {
+				return; // Background is hidden, don't draw it
+			}
+
+			// Apply background opacity
+			let bgOpacity = 1.0;
+			if ( this.layerData && this.layerData.backgroundOpacity !== undefined ) {
+				const rawOpacity = this.layerData.backgroundOpacity;
+				if ( typeof rawOpacity === 'number' && rawOpacity >= 0 && rawOpacity <= 1 ) {
+					bgOpacity = rawOpacity;
+				} else if ( typeof rawOpacity === 'string' ) {
+					const parsed = parseFloat( rawOpacity );
+					if ( !isNaN( parsed ) && parsed >= 0 && parsed <= 1 ) {
+						bgOpacity = parsed;
+					}
+				}
+			}
+
+			this.ctx.save();
+			this.ctx.globalAlpha = bgOpacity;
+			this.ctx.drawImage( this.imageElement, 0, 0, this.canvas.width, this.canvas.height );
+			this.ctx.restore();
+
+			// Hide the DOM image element since we're drawing it on canvas
+			// This prevents double-rendering
+			if ( this.imageElement.style ) {
+				this.imageElement.style.visibility = 'hidden';
 			}
 		}
 
@@ -354,9 +421,11 @@
 			if ( typeof layer.opacity === 'number' ) {
 				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
 			}
-			if ( layer.blend ) {
+			// Check both blend and blendMode for robustness (server stores blendMode)
+			const blurBlendMode = layer.blend || layer.blendMode;
+			if ( blurBlendMode ) {
 				try {
-					this.ctx.globalCompositeOperation = String( layer.blend );
+					this.ctx.globalCompositeOperation = String( blurBlendMode );
 				} catch ( e ) {
 					this.ctx.globalCompositeOperation = 'source-over';
 				}
@@ -442,12 +511,14 @@
 			if ( typeof layer.opacity === 'number' ) {
 				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
 			}
-			if ( layer.blend ) {
+			// Check both blend and blendMode for robustness (server stores blendMode)
+			const blendMode = layer.blend || layer.blendMode;
+			if ( blendMode ) {
 				try {
-					this.ctx.globalCompositeOperation = String( layer.blend );
+					this.ctx.globalCompositeOperation = String( blendMode );
 				} catch ( e ) {
 					if ( window.mw && window.mw.log ) {
-						mw.log.warn( '[LayersViewer] Unsupported blend mode: ' + layer.blend );
+						mw.log.warn( '[LayersViewer] Unsupported blend mode: ' + blendMode );
 					}
 				}
 			}

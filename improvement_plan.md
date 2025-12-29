@@ -2,7 +2,7 @@
 
 **Last Updated:** December 30, 2025  
 **Status:** ✅ All P0 Issues Resolved  
-**Version:** 1.2.9  
+**Version:** 1.2.10  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
@@ -15,17 +15,17 @@ The extension is **production-ready** with all critical issues resolved. The blu
 
 ---
 
-## Current State (December 27, 2025)
+## Current State (December 30, 2025)
 
 | Area | Status | Details |
-|------|--------|---------|
+|------|--------|--------|
 | **Functionality** | ✅ Complete | 14 tools work; blur fill fixed |
 | **Security** | ✅ Resolved | All known security issues fixed |
-| **Testing** | ✅ Excellent | 7,270 tests, 94.45% statement coverage |
+| **Testing** | ✅ Excellent | 7,356 tests, 94.43% statement coverage |
 | **ES6 Migration** | ✅ Complete | 87 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ⚠️ Technical Debt | 8 files >1,000 lines (all use delegation) |
-| **Codebase Size** | ✅ Healthy | ~49,600 lines (99 files), well under 75K target |
+| **Codebase Size** | ✅ Healthy | ~50,100 lines (98 files), well under 75K target |
 | **Blur Fill** | ✅ **FIXED** | Rectangle coordinate bug resolved |
 
 ---
@@ -107,13 +107,15 @@ EffectsRenderer handles both editor (zoom/pan) and viewer (scaling) modes. Most 
 
 ### P1.1 Split ToolbarStyleControls.js ✅ COMPLETE
 
-**Before:** 947 lines (53 lines from god class territory)  
-**After:** **798 lines** (well below 1,000 line threshold)  
-**Solution:** Extracted text effects controls to new TextEffectsControls.js module (378 lines)
+**Before:** 975 lines (25 lines from god class territory)  
+**After:** **959 lines** (safely below 1,000 line threshold)  
+**Solution:** Extracted arrow style controls to ArrowStyleControl.js module (209 lines)
 
-New module: `resources/ext.layers.editor/ui/TextEffectsControls.js`
-- Handles: font size, text stroke color/width, text shadow toggle/color
-- 42 new unit tests added for full coverage
+Extractions performed:
+1. **TextEffectsControls.js** (378 lines) - Handles font size, text stroke, shadow toggle
+2. **ArrowStyleControl.js** (209 lines) - Handles arrow style dropdown UI
+
+Both modules use the delegation pattern with clean interfaces.
 
 ### P1.2 ESLint Disable Count ✅ ACCEPTABLE
 
@@ -209,7 +211,7 @@ All god classes use the **controller delegation pattern** - they are facades tha
 | CanvasManager.js | 1,877 | Facade → 10 controllers | ✅ Acceptable |
 | LayerPanel.js | 1,838 | Facade → 7 controllers | ✅ Acceptable |
 | Toolbar.js | 1,537 | UI consolidation | ⚠️ Monitor |
-| LayersEditor.js | 1,355 | Orchestrator → managers | ✅ Acceptable |
+| LayersEditor.js | 1,459 | Orchestrator → managers | ✅ Acceptable |
 | ToolManager.js | 1,261 | Facade → tool handlers | ✅ Acceptable |
 | CanvasRenderer.js | 1,242 | SelectionRenderer | ✅ Acceptable (94% coverage) |
 | SelectionManager.js | 1,194 | Facade → selection helpers | ✅ Acceptable |
@@ -219,12 +221,13 @@ All god classes use the **controller delegation pattern** - they are facades tha
 
 | File | Lines | Risk | Action |
 |------|-------|------|--------|
+| ToolbarStyleControls.js | 959 | ✅ OK | ArrowStyleControl extracted |
 | ShapeRenderer.js | 909 | ⚠️ MEDIUM | Monitor |
 | PropertiesForm.js | 870 | ✅ OK | 72% func coverage (improved) |
 | LayersValidator.js | 854 | ✅ LOW | Stable |
 | ResizeCalculator.js | 822 | ✅ LOW | Stable |
 | LayerRenderer.js | 821 | ✅ LOW | 95% coverage |
-| ToolbarStyleControls.js | 798 | ✅ LOW | Stable |
+| TransformController.js | 779 | ✅ LOW | Stable |
 
 ---
 
@@ -241,7 +244,7 @@ P0.A EffectsRenderer coverage: ████████████████�
 P0.B CanvasRenderer coverage:  ████████████████████ 100% ✅ FIXED (94%)
 
 Phase 1 (Important):
-P1.1 Split ToolbarStyleControls: ████████████████████ 100% ✅ Done (798 lines)
+P1.1 Split ToolbarStyleControls: ████████████████████ 100% ✅ Done (959 lines)
 P1.2 ESLint disables:          ████████████████████ 100% ✅ Acceptable (12)
 P1.3 Deprecated removal:       ██████████░░░░░░░░░░ 50%  ✅ 4 removed, 4 remain (fallbacks)
 
@@ -330,11 +333,11 @@ All dialogs now use DialogManager with fallbacks.
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,270 | ✅ |
-| Statement coverage | 94.45% | ✅ |
-| Branch coverage | 82.88% | ✅ |
-| Function coverage | 91.98% | ✅ |
-| Line coverage | 94.73% | ✅ |
+| Total tests | 7,322 | ✅ |
+| Statement coverage | 94.43% | ✅ |
+| Branch coverage | 82.83% | ✅ |
+| Function coverage | 91.95% | ✅ |
+| Line coverage | 94.70% | ✅ |
 | Test suites | 130 | ✅ |
 
 ### Files With Good Coverage ✅
@@ -343,6 +346,7 @@ All dialogs now use DialogManager with fallbacks.
 |------|-----------|--------|--------|
 | EffectsRenderer.js | 99.1% | 93.0% | ✅ Fixed |
 | CanvasRenderer.js | 93.7% | 78.2% | ✅ Fixed |
+| RevisionManager.js | 100% | 89.6% | ✅ Improved |
 | DialogManager.js | 96.1% | 77.2% | ✅ |
 | LayersValidator.js | 96.9% | 95.0% | ✅ |
 | APIManager.js | 86.6% | 73.8% | ✅ |
@@ -491,7 +495,7 @@ Deductions:
 
 ---
 
-*Plan updated: December 30, 2025*  
+*Plan updated: December 29, 2025*  
 *Status: ✅ **ALL P0 ISSUES RESOLVED** - Production-ready*  
 *Version: 1.2.10*  
 *Feature Requests: FR-1 and FR-3 implemented, FR-2 proposed*

@@ -17,6 +17,81 @@ require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
 // Load TextEffectsControls first (dependency of ToolbarStyleControls)
 require( '../../resources/ext.layers.editor/ui/TextEffectsControls.js' );
 
+// Mock ArrowStyleControl to expose the underlying select element for tests
+class MockArrowStyleControl {
+	constructor( config ) {
+		this.config = config;
+		this.container = null;
+		this.arrowStyleSelect = null;
+		this.owner = null;
+	}
+
+	create() {
+		// Create real container and select for tests to access
+		this.container = document.createElement( 'div' );
+		this.container.className = 'arrow-style-container';
+		this.container.style.display = 'none';
+
+		const label = document.createElement( 'label' );
+		label.textContent = 'Arrow:';
+		label.className = 'arrow-label';
+		this.container.appendChild( label );
+
+		const select = document.createElement( 'select' );
+		select.className = 'arrow-style-select';
+		[ 'single', 'double', 'none' ].forEach( ( val ) => {
+			const opt = document.createElement( 'option' );
+			opt.value = val;
+			opt.textContent = val;
+			select.appendChild( opt );
+		} );
+		this.container.appendChild( select );
+		this.arrowStyleSelect = select;
+
+		return this.container;
+	}
+
+	getValue() {
+		return this.arrowStyleSelect ? this.arrowStyleSelect.value : 'single';
+	}
+
+	setValue( value ) {
+		if ( this.arrowStyleSelect ) {
+			this.arrowStyleSelect.value = value;
+		}
+	}
+
+	updateForTool( toolId ) {
+		if ( this.container ) {
+			this.container.style.display = ( toolId === 'arrow' ) ? 'block' : 'none';
+		}
+	}
+
+	applyStyle( style ) {
+		if ( style && style.arrowStyle && this.arrowStyleSelect ) {
+			this.arrowStyleSelect.value = style.arrowStyle;
+		}
+	}
+
+	getStyleValues() {
+		return { arrowStyle: this.getValue() };
+	}
+
+	destroy() {
+		this.container = null;
+		this.arrowStyleSelect = null;
+	}
+
+	setOwner( owner ) {
+		this.owner = owner;
+		// Expose the select element to the owner for backward-compatible tests
+		if ( owner ) {
+			owner.arrowStyleSelect = this.arrowStyleSelect;
+		}
+	}
+}
+window.Layers.UI.ArrowStyleControl = MockArrowStyleControl;
+
 window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
 	this.config = config;
 	this.open = mockColorPickerOpen;
@@ -1352,6 +1427,9 @@ describe( 'ToolbarStyleControls', () => {
 			// Also set up ColorPickerDialog
 			window.Layers.UI.ColorPickerDialog = jest.fn();
 			window.Layers.UI.ColorPickerDialog.updateColorButton = jest.fn();
+
+			// Add ArrowStyleControl mock (required since it's no longer optional)
+			window.Layers.UI.ArrowStyleControl = MockArrowStyleControl;
 
 			FreshToolbarStyleControls = require( '../../resources/ext.layers.editor/ToolbarStyleControls.js' );
 		} );

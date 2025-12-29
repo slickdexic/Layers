@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** December 27, 2025  
-**Version:** 1.2.9
+**Last Updated:** December 29, 2025  
+**Version:** 1.2.11
 
 This document lists known functionality issues and their current status.
 
@@ -236,15 +236,15 @@ The extension is feature-rich with 14 drawing tools, multiple rendering systems,
 
 ## Test Coverage Status
 
-### Overall Coverage (December 27, 2025)
+### Overall Coverage (December 29, 2025)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,270 | - | ✅ |
-| Statement coverage | 94.5% | 85%+ | ✅ |
-| Branch coverage | 82.9% | 75%+ | ✅ |
-| Function coverage | 92.0% | 80%+ | ✅ |
-| Line coverage | 94.7% | 85%+ | ✅ |
+| Tests passing | 7,322 | - | ✅ |
+| Statement coverage | 94.43% | 85%+ | ✅ |
+| Branch coverage | 82.83% | 75%+ | ✅ |
+| Function coverage | 91.95% | 80%+ | ✅ |
+| Line coverage | 94.70% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -306,5 +306,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: December 27, 2025*  
+*Document updated: December 29, 2025*  
 *Status: All critical issues resolved. Extension is production-ready.*

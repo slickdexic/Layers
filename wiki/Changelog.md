@@ -4,6 +4,35 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.11 (December 29, 2025)
+
+### Bug Fixes
+- **Fixed blend modes not rendering on article pages** — Layer blend modes (exclusion, multiply, screen, etc.) were not being applied when viewing images on article pages. The viewer now properly draws the background image onto the canvas when blend modes are used.
+- **Fixed blend mode property normalization** — The server stores blend mode as `blendMode` but client code was reading `blend`. Added property alias normalization for consistency.
+- **Removed redundant 'blur' from blend mode dropdown** — The 'blur' option was redundant with blur fill feature (v1.2.6+).
+
+### Testing
+- **7,361 tests passing** (+64 from v1.2.10)
+- **131 test suites**
+
+---
+
+## Version 1.2.10 (December 28, 2025)
+
+### Features
+- **Context-Aware Toolbar** — Toolbar shows only relevant controls based on the active tool or selected layers
+
+### Bug Fixes
+- **Fixed MediaWiki 1.39-1.43 LTS compatibility** — Fixed TypeError in hook where `$linkAttribs` could be `false`
+
+### Configuration
+- Added `$wgLayersContextAwareToolbar` — Enable/disable context-aware toolbar (default: true)
+
+### Testing
+- **7,297 tests passing** (+20 new tests)
+
+---
+
 ## Version 1.2.9 (December 28, 2025)
 
 ### Testing

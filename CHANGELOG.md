@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.11] - 2025-12-29
+
+### Bug Fixes
+- **Fixed blend modes not rendering on article pages** — Layer blend modes (exclusion, multiply, screen, etc.) were not being applied when viewing images on article pages. The viewer used a transparent canvas overlay on top of the DOM image element, but canvas `globalCompositeOperation` only blends with content already on the canvas, not DOM elements. The viewer now detects when any layer uses a non-default blend mode and draws the background image onto the canvas first, enabling proper blend mode rendering.
+- **Fixed blend mode property normalization** — The server stores blend mode as `blendMode` but client code was reading `blend`. Added property alias normalization to ensure both property names work correctly in both editor and viewer.
+- **Removed redundant 'blur' from blend mode dropdown** — The 'blur' option in the blend mode dropdown was redundant with the blur fill feature (introduced in v1.2.6) and caused confusion. Blur effects should be applied via Fill → blur, not blend mode.
+
+### Technical
+- Added `normalizeAliases()` method to `LayerDataNormalizer.js` for consistent blend/blendMode handling
+- Updated `LayersViewer.js` with `drawBackgroundOnCanvas()` method for blend mode support
+- Updated `fallbackNormalize()` in viewer to include blend mode alias handling
+- Added blend alias normalization tests to LayerDataNormalizer.test.js
+
+### Testing
+- **7,361 tests passing** (+64 from v1.2.10)
+- **131 test suites**
+- Added 5 new tests for blend mode alias normalization
+
+---
+
 ## [1.2.10] - 2025-12-28
 
 ### Features
