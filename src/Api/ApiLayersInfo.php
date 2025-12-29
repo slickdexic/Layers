@@ -14,7 +14,7 @@ use ApiMain;
 use ApiResult;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
+use Title;
 
 class ApiLayersInfo extends ApiBase {
 	use LayersContinuationTrait;

@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.17] - 2025-12-29
+
+### Bug Fixes
+- **Fixed namespace compatibility for MW 1.39-1.43 LTS** — Several classes used MediaWiki 1.44+ namespaces that don't exist in older versions:
+  - `MediaWiki\Title\Title` → `Title` (global namespace)
+  - `MediaWiki\Context\RequestContext` → `RequestContext` (global namespace)
+  
+  This was causing 500 errors when accessing File: pages or using the API.
+
+### Technical
+- **Modified files**:
+  - `src/Api/ApiLayersInfo.php` — Changed `use MediaWiki\Title\Title` to `use Title`
+  - `src/Api/ApiLayersDelete.php` — Changed `use MediaWiki\Title\Title` to `use Title`
+  - `src/Api/ApiLayersRename.php` — Changed `use MediaWiki\Title\Title` to `use Title`
+  - `src/Api/ApiLayersSave.php` — Changed `use MediaWiki\Title\Title` to `use Title`
+  - `src/Hooks/WikitextHooks.php` — Changed `use MediaWiki\Context\RequestContext` to `use RequestContext`
+  - `src/Hooks/Processors/ThumbnailProcessor.php` — Changed `use MediaWiki\Context\RequestContext` to `use RequestContext`
+
+---
+
 ## [1.1.16] - 2025-12-29
 
 ### Bug Fixes

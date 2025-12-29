@@ -8,7 +8,7 @@ use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
+use Title;
 use Psr\Log\LoggerInterface;
 
 /**

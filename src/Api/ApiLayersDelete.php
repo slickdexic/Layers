@@ -4,7 +4,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
+use Title;
 use Psr\Log\LoggerInterface;
 
 /**

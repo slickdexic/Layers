@@ -2,7 +2,7 @@
 
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
-use MediaWiki\Context\RequestContext;
+use RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
