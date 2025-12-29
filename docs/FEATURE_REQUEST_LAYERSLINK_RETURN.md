@@ -1,34 +1,37 @@
 # Feature Request: Enhanced Layerslink Navigation Modes
 
 **Created:** December 23, 2025  
-**Status:** Documented  
+**Updated:** December 29, 2025  
+**Status:** ✅ Phases 1-2 Implemented | ⏳ Phase 3 Proposed  
 **Priority:** Medium (UX improvement for embedded editor workflows)
+
+---
+
+## Implementation Status
+
+| Phase | Feature | Status | Version |
+|-------|---------|--------|---------|
+| **Phase 1** | `editor-newtab` | ✅ **Complete** | v1.2.8 |
+| **Phase 2** | Return-to behavior | ✅ **Complete (Default)** | v1.2.10 |
+| **Phase 3** | `editor-modal` | ✅ **Complete** | v1.2.11 |
+
+### Current Behavior (v1.2.11+)
+
+The return-to functionality is now the **default behavior** for all editor links from article pages:
+
+1. User is on `Article:MyPage` 
+2. User clicks a layered image to edit it
+3. Browser navigates to editor with `?returnto=MyPage` parameter automatically added
+4. User makes edits and saves/closes
+5. **User is automatically returned to `Article:MyPage`** ✅
+
+No explicit `layerslink=editor-return` is needed—this works automatically for all `layerslink=editor` links when clicked from an article page.
 
 ---
 
 ## Overview
 
-This document proposes enhancements to the `layerslink` parameter to support better navigation workflows when editing layers from within wiki pages. Currently, when a user clicks on a layered image with `layerslink=editor`, they are taken to the File: page editor, and after saving/closing, they remain on the File: page—losing context of their original location.
-
-This is particularly problematic for:
-- Form-based workflows (Page Forms, Semantic Forms) where users may lose unsaved form data
-- Article reading flow where users want to make quick annotations without leaving the page
-- Multi-image pages where users want to edit several layer sets in sequence
-
----
-
-## Problem Statement
-
-### Current Behavior
-
-```wikitext
-[[File:Diagram.png|layers=anatomy|layerslink=editor]]
-```
-
-1. User is on `Article:MyPage` editing a Page Forms form
-2. User clicks the layered image to annotate it
-3. Browser navigates to `File:Diagram.png?action=editlayers&setname=anatomy`
-4. User makes edits and saves
+This document describes the enhanced navigation modes for the `layerslink` parameter.
 5. User is now on `File:Diagram.png` — **original page context is lost**
 6. Form data on `Article:MyPage` is lost
 

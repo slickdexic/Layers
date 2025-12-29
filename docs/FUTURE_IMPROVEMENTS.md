@@ -525,49 +525,26 @@ Full touch support for tablets and phones.
 
 ## 7. Enhanced Layerslink Navigation Modes
 
-**Priority:** High  
-**Complexity:** Low to High (phased)  
-**Status:** ⏳ Proposed  
+**Priority:** ~~High~~  
+**Complexity:** ~~Low to High (phased)~~  
+**Status:** ✅ All Phases Implemented  
 **Full Specification:** [FEATURE_REQUEST_LAYERSLINK_RETURN.md](FEATURE_REQUEST_LAYERSLINK_RETURN.md)
 
 ### Description
 Extend the `layerslink` parameter to support better navigation workflows when editing layers from within wiki pages, especially for Page Forms integration.
 
-### User Story
-As a user editing a Page Forms form, I want to click on a layered image to edit its annotations, then return to my form without losing my unsaved form data.
+### Implementation Summary
 
-### Proposed Values
+| Phase | Feature | Status | Version |
+|-------|---------|--------|---------|
+| **Phase 1** | `editor-newtab` | ✅ Complete | v1.2.8 |
+| **Phase 2** | Return-to behavior | ✅ Complete (Default) | v1.2.10 |
+| **Phase 3** | `editor-modal` | ✅ Complete | v1.2.11 |
 
-| Value | Behavior | Effort |
-|-------|----------|--------|
-| `editor-newtab` | Opens editor in new browser tab | Low (1 hour) |
-| `editor-return` | Returns to original page after save/close | Medium (4-6 hours) |
-| `editor-modal` | Opens editor in overlay modal on current page | High (2-3 days) |
-
-### Wikitext Examples
-
-```wikitext
-<!-- Open in new tab (simple, preserves original page) -->
-[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
-
-<!-- Return to this page after editing -->
-[[File:Diagram.png|layers=anatomy|layerslink=editor-return]]
-
-<!-- Best UX: Modal overlay, form data preserved -->
-[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
-```
-
-### Benefits
-- **Form compatibility**: Edit layers without losing form data
-- **Better flow**: Return to original context after editing
-- **Multi-image editing**: Edit several images without navigation ping-pong
-
-### Recommended Implementation Order
-1. **Phase 1 (v1.2.1)**: `editor-newtab` — Quick win, no risk
-2. **Phase 2 (v1.3.0)**: `editor-return` — Better UX, familiar MediaWiki pattern
-3. **Phase 3 (v1.4.0)**: `editor-modal` — Best experience for form workflows
-
-See full specification document for implementation details, security considerations, and accessibility requirements.
+**Key features:**
+- `layerslink=editor-newtab` — Opens editor in new browser tab
+- **Return-to behavior** — Automatic for all editor links from article pages (no explicit option needed)
+- `layerslink=editor-modal` — Opens editor in overlay modal on current page (best for forms)
 
 ---
 
