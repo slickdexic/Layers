@@ -113,12 +113,14 @@ Control what happens when users click on layered images:
 | Value | Effect |
 |-------|--------|
 | `editor` | Opens the layer editor for this image |
+| `editor-newtab` | Opens the layer editor in a new browser tab |
+| `editor-modal` | Opens the layer editor in a modal overlay |
 | `viewer` | Opens fullscreen lightbox viewer |
 | `lightbox` | Alias for `viewer` |
 
 You can also link directly to the editor via URL:
 ```
-/wiki/File:Example.jpg?action=editlayers&setname=anatomy
+/wiki/File:Example.jpg?action=editlayers&setname=anatomy&returnto=Main_Page
 ```
 
 > **Note:** On File: pages, layers are NOT auto-displayed. You must explicitly use `layers=on` or `layers=setname`.
