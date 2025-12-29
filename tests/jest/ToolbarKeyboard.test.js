@@ -645,4 +645,146 @@ describe( 'ToolbarKeyboard', function () {
 			expect( mockToolbar.selectTool ).toHaveBeenCalledWith( 'polygon' );
 		} );
 	} );
+
+	describe( 'group shortcuts', function () {
+		it( 'should group selected layers on Ctrl+G', function () {
+			mockEditor.groupManager = {
+				groupSelected: jest.fn().mockReturnValue( { id: 'group1' } )
+			};
+			mockEditor.canvasManager = { redraw: jest.fn() };
+			mockEditor.layerPanel = { renderLayerList: jest.fn() };
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'g',
+				ctrlKey: true,
+				metaKey: false,
+				shiftKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.groupManager.groupSelected ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.redraw ).toHaveBeenCalled();
+			expect( mockEditor.layerPanel.renderLayerList ).toHaveBeenCalled();
+		} );
+
+		it( 'should ungroup selected group on Ctrl+Shift+G', function () {
+			mockEditor.groupManager = {
+				ungroupSelected: jest.fn().mockReturnValue( true )
+			};
+			mockEditor.canvasManager = { redraw: jest.fn() };
+			mockEditor.layerPanel = { renderLayerList: jest.fn() };
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'g',
+				ctrlKey: true,
+				metaKey: false,
+				shiftKey: true,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.groupManager.ungroupSelected ).toHaveBeenCalled();
+			expect( mockEditor.canvasManager.redraw ).toHaveBeenCalled();
+			expect( mockEditor.layerPanel.renderLayerList ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing groupManager gracefully', function () {
+			mockEditor.groupManager = null;
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'g',
+				ctrlKey: true,
+				metaKey: false,
+				shiftKey: false,
+				preventDefault: jest.fn()
+			};
+
+			expect( () => keyboardHandler.handleKeyboardShortcuts( event ) ).not.toThrow();
+		} );
+
+		it( 'should not update UI when group operation fails', function () {
+			mockEditor.groupManager = {
+				groupSelected: jest.fn().mockReturnValue( null ) // Less than 2 layers selected
+			};
+			mockEditor.canvasManager = { redraw: jest.fn() };
+			mockEditor.layerPanel = { renderLayerList: jest.fn() };
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'g',
+				ctrlKey: true,
+				metaKey: false,
+				shiftKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			// Should still prevent default
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockEditor.groupManager.groupSelected ).toHaveBeenCalled();
+			// UI should NOT be updated when result is null
+			expect( mockEditor.canvasManager.redraw ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should show status message when grouping succeeds', function () {
+			mockEditor.groupManager = {
+				groupSelected: jest.fn().mockReturnValue( { id: 'group1' } )
+			};
+			mockEditor.canvasManager = { redraw: jest.fn() };
+			mockEditor.showStatus = jest.fn();
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'g',
+				ctrlKey: true,
+				metaKey: false,
+				shiftKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Layers grouped', 1500 );
+		} );
+
+		it( 'should show status message when ungrouping succeeds', function () {
+			mockEditor.groupManager = {
+				ungroupSelected: jest.fn().mockReturnValue( true )
+			};
+			mockEditor.canvasManager = { redraw: jest.fn() };
+			mockEditor.showStatus = jest.fn();
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: 'g',
+				ctrlKey: true,
+				metaKey: false,
+				shiftKey: true,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Group dissolved', 1500 );
+		} );
+	} );
+
+	describe( 'getShortcutsConfig - group shortcuts', function () {
+		it( 'should include group shortcuts in layers category', function () {
+			const shortcuts = keyboardHandler.getShortcutsConfig();
+			const layerShortcuts = shortcuts.filter( s => s.category === 'layers' );
+
+			expect( layerShortcuts.some( s => s.key === 'Ctrl+G' ) ).toBe( true );
+			expect( layerShortcuts.some( s => s.key === 'Ctrl+Shift+G' ) ).toBe( true );
+		} );
+	} );
 } );

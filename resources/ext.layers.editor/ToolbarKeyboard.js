@@ -71,6 +71,68 @@
 				e.preventDefault();
 				this.editor.duplicateSelected();
 				break;
+			case 'g':
+				e.preventDefault();
+				if ( e.shiftKey ) {
+					this.ungroupSelected();
+				} else {
+					this.groupSelected();
+				}
+				break;
+		}
+	}
+
+	/**
+	 * Group currently selected layers
+	 * Delegates to GroupManager if available
+	 */
+	groupSelected() {
+		if ( !this.editor.groupManager ) {
+			return;
+		}
+
+		const result = this.editor.groupManager.groupSelected();
+		if ( result ) {
+			// Show success message
+			const msg = 'Layers grouped';
+			if ( this.editor.showStatus ) {
+				this.editor.showStatus( msg, 1500 );
+			}
+			// Redraw canvas
+			if ( this.editor.canvasManager ) {
+				this.editor.canvasManager.redraw();
+			}
+			// Update layer panel
+			if ( this.editor.layerPanel ) {
+				this.editor.layerPanel.renderLayerList();
+			}
+		}
+	}
+
+	/**
+	 * Ungroup currently selected group
+	 * Delegates to GroupManager if available
+	 */
+	ungroupSelected() {
+		if ( !this.editor.groupManager ) {
+			return;
+		}
+
+		const result = this.editor.groupManager.ungroupSelected();
+		if ( result ) {
+			// Show success message
+			const msg = 'Group dissolved';
+			if ( this.editor.showStatus ) {
+				this.editor.showStatus( msg, 1500 );
+			}
+			// Redraw canvas
+			if ( this.editor.canvasManager ) {
+				this.editor.canvasManager.redraw();
+			}
+			// Update layer panel
+			if ( this.editor.layerPanel ) {
+				this.editor.layerPanel.renderLayerList();
+			}
 		}
 	}
 
@@ -275,6 +337,8 @@
 			{ key: 'Ctrl+Y', description: 'Redo', category: 'edit' },
 			{ key: 'Ctrl+S', description: 'Save', category: 'file' },
 			{ key: 'Ctrl+D', description: 'Duplicate', category: 'edit' },
+			{ key: 'Ctrl+G', description: 'Group Selected', category: 'layers' },
+			{ key: 'Ctrl+Shift+G', description: 'Ungroup', category: 'layers' },
 			// Other
 			{ key: 'Delete/Backspace', description: 'Delete Selected', category: 'edit' },
 			{ key: 'Escape', description: 'Cancel Operation', category: 'general' },
