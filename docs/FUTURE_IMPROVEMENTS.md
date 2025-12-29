@@ -611,28 +611,32 @@ See full specification document for implementation details, edge cases, and secu
 
 ## 9. Layer Groups (Folders)
 
-**Priority:** High  
-**Complexity:** High (~50 hours)  
-**Status:** ⏳ Proposed  
+**Priority:** ~~High~~  
+**Complexity:** ~~High (~50 hours)~~  
+**Status:** ✅ Implemented (v1.2.13)  
 **Full Specification:** [FEATURE_REQUEST_LAYER_GROUPS.md](FEATURE_REQUEST_LAYER_GROUPS.md)
 
 ### Description
 Allow users to organize layers into collapsible groups (folders) in the Layer Panel. Groups behave as a single unit for selection, movement, visibility, and other operations.
 
-### Key Features
-- Create/rename/delete layer groups
-- Drag layers into/out of groups
-- Expand/collapse groups to reduce clutter
-- Selecting a group selects all child layers
-- Moving a group moves all children together
-- Group visibility toggle affects all children
-- Support for nested groups (2-3 levels deep)
-- Keyboard shortcuts: Ctrl+G to group, Ctrl+Shift+G to ungroup
+### Implementation Summary (v1.2.13)
+- **GroupManager.js** (~600 lines) — Complete grouping API with 48 tests
+- Keyboard shortcuts: **Ctrl+G** to group, **Ctrl+Shift+G** to ungroup
+- Selecting a group auto-selects all child layers
+- Layer panel shows folder icons, 20px indentation, expand/collapse toggles
+- Server-side 'group' type validation in PHP
+- Max 3 nesting levels, max 100 children per group
+- **107 new tests** added across GroupManager, SelectionManager, ToolbarKeyboard, and PHP
 
-### Industry References
-- Adobe Photoshop: Layer Groups with folder metaphor
-- Figma: Frames and Groups with nesting
-- Sketch: Groups with double-click to enter
+### Key Features Delivered
+- ✅ Create/rename/delete layer groups
+- ✅ Drag layers into/out of groups
+- ✅ Expand/collapse groups to reduce clutter
+- ✅ Selecting a group selects all child layers
+- ✅ Moving a group moves all children together
+- ✅ Group visibility toggle affects all children
+- ✅ Support for nested groups (up to 3 levels deep)
+- ✅ Keyboard shortcuts: Ctrl+G to group, Ctrl+Shift+G to ungroup
 
 ---
 
