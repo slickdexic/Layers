@@ -12,7 +12,7 @@ Version history for the Layers extension.
 - **Removed redundant 'blur' from blend mode dropdown** — The 'blur' option was redundant with blur fill feature (v1.2.6+).
 
 ### Testing
-- **7,361 tests passing** (+64 from v1.2.10)
+- **7,377 tests passing** (+80 from v1.2.10)
 - **131 test suites**
 
 ---

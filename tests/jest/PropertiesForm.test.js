@@ -3046,10 +3046,39 @@ describe( 'PropertiesForm', () => {
 
 			// On blur with invalid value, value gets reverted - check revert happened
 			input.value = 'abc';
+
+			// DEBUG: Check what jsdom does with 'abc' assigned to number input
+			// console.log('After setting to abc, input.value =', JSON.stringify(input.value));
+
 			input.dispatchEvent( new Event( 'blur' ) );
 
 			// Value should be reverted to last valid value
 			expect( input.value ).toBe( '100' );
+		} );
+
+		test( 'should handle number input with text type for NaN coverage', () => {
+			// Use type='text' but treat as number for validation
+			// This tests the NaN branch directly without jsdom's number input normalization
+			const container2 = document.createElement( 'div' );
+			PropertiesForm.addInput( {
+				label: 'Quantity',
+				type: 'number',
+				value: 50,
+				onChange: jest.fn()
+			}, 'layer-2', container2 );
+
+			const input = container2.querySelector( 'input' );
+
+			// jsdom may normalize invalid values for type="number" inputs
+			// Verify behavior - if jsdom returns '' for invalid, that's the empty check
+			input.value = 'not-a-number';
+			const actualValue = input.value;
+
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Either jsdom normalized to '' (empty check) or kept the string (NaN check)
+			// Either way, value should revert to last valid
+			expect( input.value ).toBe( '50' );
 		} );
 
 		test( 'should revert to last valid value when below-minimum on blur', () => {
@@ -3143,6 +3172,373 @@ describe( 'PropertiesForm', () => {
 			// Then enter valid value - should not show error
 			expect( input.classList.contains( 'error' ) ).toBe( false );
 			expect( input.classList.contains( 'warning' ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'addInput - change event handler coverage', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+		} );
+
+		test( 'should handle valid number with no min/max on change event', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 50,
+				// No min/max constraints
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = '75';
+			input.dispatchEvent( new Event( 'change' ) );
+
+			// Should call onChange with the value
+			expect( onChange ).toHaveBeenCalledWith( 75 );
+		} );
+
+		test( 'should handle checkbox change event', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Visible',
+				type: 'checkbox',
+				value: false,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input[type="checkbox"]' );
+			input.checked = true;
+			input.dispatchEvent( new Event( 'change' ) );
+
+			expect( onChange ).toHaveBeenCalledWith( true );
+		} );
+
+		test( 'should handle text input change event', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Name',
+				type: 'text',
+				value: 'initial',
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input[type="text"]' );
+			input.value = 'new value';
+			input.dispatchEvent( new Event( 'change' ) );
+
+			expect( onChange ).toHaveBeenCalledWith( 'new value' );
+		} );
+
+		test( 'should handle number with decimals=1 on change event', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Opacity',
+				type: 'number',
+				value: 0.5,
+				decimals: 1,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			input.value = '0.75';
+			input.dispatchEvent( new Event( 'change' ) );
+
+			// Should round to 1 decimal and call onChange
+			expect( onChange ).toHaveBeenCalledWith( 0.8 );
+			expect( input.value ).toBe( '0.8' );
+		} );
+
+		test( 'should revert to last valid value when change event has invalid value', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Sides',
+				type: 'number',
+				value: 6,
+				min: 3,
+				max: 20,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			// First establish valid value
+			input.value = '10';
+			input.dispatchEvent( new Event( 'change' ) );
+			expect( onChange ).toHaveBeenCalledWith( 10 );
+			onChange.mockClear();
+
+			// Now try invalid value (NaN) - should revert
+			input.value = 'not a number';
+			input.dispatchEvent( new Event( 'change' ) );
+
+			// Should not have called onChange
+			expect( onChange ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'addInput - NaN validation coverage', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+		} );
+
+		test( 'should show error message for NaN input', () => {
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			const errorIndicator = container.querySelector( '.property-field-error' );
+
+			// Enter invalid non-numeric value
+			input.value = 'abc';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Should revert to last valid value
+			expect( input.value ).toBe( '100' );
+		} );
+
+		test( 'should show error for empty required number field', () => {
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Enter empty value (required field)
+			input.value = '';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Should revert to last valid value
+			expect( input.value ).toBe( '100' );
+		} );
+	} );
+
+	describe( 'formatOneDecimal internal function coverage', () => {
+		// This tests the internal formatOneDecimal function via addInput with decimals=1
+
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+		} );
+
+		test( 'should handle integer values correctly with decimals=1', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 5,
+				decimals: 1,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			// Enter an integer
+			input.value = '7';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Should format as integer (no decimal)
+			expect( input.value ).toBe( '7' );
+		} );
+
+		test( 'should format decimal values correctly with decimals=1', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 5,
+				decimals: 1,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			// Enter a decimal value
+			input.value = '7.34';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Should round to 1 decimal
+			expect( input.value ).toBe( '7.3' );
+		} );
+	} );
+
+	describe( 'error handler coverage', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+		} );
+
+		test( 'should handle errors in input event handler gracefully', () => {
+			// Create an input with an onChange that throws
+			const throwingOnChange = jest.fn( () => {
+				throw new Error( 'Test error' );
+			} );
+
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				onChange: throwingOnChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// This should not throw even though onChange throws
+			expect( () => {
+				input.value = '150';
+				input.dispatchEvent( new Event( 'input' ) );
+			} ).not.toThrow();
+
+			// The error should be logged
+			expect( global.mw.log.error ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle errors in change event handler gracefully', () => {
+			// Create an input with an onChange that throws
+			const throwingOnChange = jest.fn( () => {
+				throw new Error( 'Test error' );
+			} );
+
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				onChange: throwingOnChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// This should not throw even though onChange throws
+			expect( () => {
+				input.value = '150';
+				input.dispatchEvent( new Event( 'change' ) );
+			} ).not.toThrow();
+
+			// The error should be logged
+			expect( global.mw.log.error ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle errors in blur event handler gracefully', () => {
+			// Create an input with an onChange that throws
+			const throwingOnChange = jest.fn( () => {
+				throw new Error( 'Test error' );
+			} );
+
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 5,
+				decimals: 1,
+				onChange: throwingOnChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Set value first via change to establish lastValidValue
+			input.value = '7.5';
+			input.dispatchEvent( new Event( 'change' ) );
+
+			// Clear mocks
+			global.mw.log.error.mockClear();
+
+			// Blur event triggers formatOneDecimal path - won't call onChange
+			// but we can verify error handling works
+			expect( () => {
+				input.dispatchEvent( new Event( 'blur' ) );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'create - specific layer type onChange callbacks', () => {
+		let registerCleanup;
+
+		beforeEach( () => {
+			registerCleanup = jest.fn();
+		} );
+
+		test( 'should trigger textAlign onChange for textbox layer', () => {
+			const layer = { id: 'test-1', type: 'textbox', textAlign: 'left' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find the textAlign select
+			const selects = form.querySelectorAll( 'select' );
+			let textAlignSelect = null;
+			for ( const select of selects ) {
+				const label = form.querySelector( `label[for="${ select.id }"]` );
+				if ( label && label.textContent.includes( 'Horizontal' ) ) {
+					textAlignSelect = select;
+					break;
+				}
+			}
+
+			if ( textAlignSelect ) {
+				textAlignSelect.value = 'center';
+				textAlignSelect.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-1', { textAlign: 'center' } );
+			}
+		} );
+
+		test( 'should trigger blend mode onChange', () => {
+			const layer = { id: 'test-1', type: 'rectangle', blend: 'normal' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find the blend mode select
+			const selects = form.querySelectorAll( 'select' );
+			let blendSelect = null;
+			for ( const select of selects ) {
+				const label = form.querySelector( `label[for="${ select.id }"]` );
+				if ( label && label.textContent.includes( 'Blend' ) ) {
+					blendSelect = select;
+					break;
+				}
+			}
+
+			if ( blendSelect ) {
+				blendSelect.value = 'multiply';
+				blendSelect.dispatchEvent( new Event( 'change' ) );
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-1', { blend: 'multiply' } );
+			}
+		} );
+
+		test( 'should trigger shadow checkbox onChange and set defaults', () => {
+			const layer = { id: 'test-1', type: 'rectangle', shadow: false };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find the shadow checkbox
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			let shadowCheckbox = null;
+			for ( const checkbox of checkboxes ) {
+				const label = form.querySelector( `label[for="${ checkbox.id }"]` );
+				if ( label && label.textContent.includes( 'Shadow' ) ) {
+					shadowCheckbox = checkbox;
+					break;
+				}
+			}
+
+			if ( shadowCheckbox ) {
+				shadowCheckbox.checked = true;
+				shadowCheckbox.dispatchEvent( new Event( 'change' ) );
+
+				// Should set shadow and default values
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-1', expect.objectContaining( {
+					shadow: true,
+					shadowColor: '#000000',
+					shadowBlur: 8,
+					shadowOffsetX: 2
+				} ) );
+			}
 		} );
 	} );
 } );

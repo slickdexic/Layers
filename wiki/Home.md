@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-7%2C361%20Passing-brightgreen" alt="7,361 Tests">
+  <img src="https://img.shields.io/badge/Tests-7%2C377%20Passing-brightgreen" alt="7,377 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 

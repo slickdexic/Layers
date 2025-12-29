@@ -16,7 +16,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Added blend alias normalization tests to LayerDataNormalizer.test.js
 
 ### Testing
-- **7,361 tests passing** (+64 from v1.2.10)
+- **7,377 tests passing** (+80 from v1.2.10)
 - **131 test suites**
 - Added 5 new tests for blend mode alias normalization
 

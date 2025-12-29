@@ -77,7 +77,7 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 | CanvasManager.js | 1,877 | ✅ 10+ controllers |
 | LayerPanel.js | 1,838 | ✅ 7 controllers |
 | Toolbar.js | 1,537 | ✅ 4 modules |
-| LayersEditor.js | 1,355 | ✅ 3 modules |
+| LayersEditor.js | 1,459 | ✅ 3 modules |
 | ToolManager.js | 1,261 | ✅ 2 handlers |
 | CanvasRenderer.js | 1,242 | ✅ SelectionRenderer |
 | SelectionManager.js | 1,194 | ✅ 3 modules |
@@ -240,7 +240,7 @@ The extension is feature-rich with 14 drawing tools, multiple rendering systems,
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,322 | - | ✅ |
+| Tests passing | 7,377 | - | ✅ |
 | Statement coverage | 94.43% | 85%+ | ✅ |
 | Branch coverage | 82.83% | 75%+ | ✅ |
 | Function coverage | 91.95% | 80%+ | ✅ |

@@ -1,5 +1,9 @@
 # Layers MediaWiki Extension (Developer Specification)
 
+**Last Updated:** December 29, 2025  
+**Version:** 1.2.11  
+**Status:** Core specification - some sections may need review against current implementation
+
 ## Overview
 
 The **Layers** extension is a full-featured **non-destructive image editor** integrated into MediaWiki. It allows wiki users to create and manage **annotation layers** on top of images without altering the original files. All edits are stored as separate vector-based layers, enabling advanced image markup directly on wiki pages. Key goals of the extension include:

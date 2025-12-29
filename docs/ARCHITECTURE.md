@@ -22,15 +22,15 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 97 |
+| Total JS files | 98 |
 | Viewer module | ~682 lines |
-| Shared module | ~5,000 lines |
-| Editor module | ~43,000 lines |
-| Total JS lines | ~49,900 |
-| ES6 classes | 87 |
+| Shared module | ~5,400 lines |
+| Editor module | ~44,100 lines |
+| Total JS lines | ~50,200 |
+| ES6 classes | 88 |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | 94.43% stmt, 82.83% branch, 91.95% func |
-| Jest tests | **7,322** |
+| Jest tests | **7,377** |
 | PHPUnit test files | 17 |
 | God classes (>1000 lines) | **8** ⚠️ |
 | Drawing tools | 14 |
@@ -76,8 +76,8 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - APIManager.js (1,182) - API integration layer
 
 **Recently under 1,000 (no longer god classes):**
-- ToolbarStyleControls.js (975) - approaching limit again ⚠️
-- ShapeRenderer.js (909) - approaching limit, well-structured ⚠️
+- ToolbarStyleControls.js (959) - stable ✅
+- ShapeRenderer.js (909) - stable, well-structured ✅
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 

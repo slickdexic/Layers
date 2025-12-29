@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 30, 2025  
+**Last Updated:** December 29, 2025  
 **Status:** ✅ All P0 Issues Resolved  
-**Version:** 1.2.10  
+**Version:** 1.2.11  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
@@ -21,11 +21,11 @@ The extension is **production-ready** with all critical issues resolved. The blu
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 14 tools work; blur fill fixed |
 | **Security** | ✅ Resolved | All known security issues fixed |
-| **Testing** | ✅ Excellent | 7,356 tests, 94.43% statement coverage |
-| **ES6 Migration** | ✅ Complete | 87 classes, 0 prototype patterns |
+| **Testing** | ✅ Excellent | 7,377 tests, 94.4% statement coverage |
+| **ES6 Migration** | ✅ Complete | 88 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ⚠️ Technical Debt | 8 files >1,000 lines (all use delegation) |
-| **Codebase Size** | ✅ Healthy | ~50,100 lines (98 files), well under 75K target |
+| **Codebase Size** | ✅ Healthy | ~50,200 lines (98 files), well under 75K target |
 | **Blur Fill** | ✅ **FIXED** | Rectangle coordinate bug resolved |
 
 ---
@@ -149,7 +149,7 @@ Both modules use the delegation pattern with clean interfaces.
 | CanvasManager.js | 1,877 | LOW (well-delegated) |
 | LayerPanel.js | 1,838 | MEDIUM |
 | Toolbar.js | 1,537 | MEDIUM |
-| LayersEditor.js | 1,355 | LOW |
+| LayersEditor.js | 1,459 | LOW |
 | ToolManager.js | 1,261 | LOW |
 | CanvasRenderer.js | 1,242 | LOW |
 | SelectionManager.js | 1,194 | LOW |
@@ -265,7 +265,7 @@ P3.4 WCAG Audit:               ░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 7,270 passing tests with 94.5% statement coverage
+- 7,377 passing tests with 94.4% statement coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
 - 100% ES6 classes (87 classes, no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
@@ -333,7 +333,7 @@ All dialogs now use DialogManager with fallbacks.
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,322 | ✅ |
+| Total tests | 7,377 | ✅ |
 | Statement coverage | 94.43% | ✅ |
 | Branch coverage | 82.83% | ✅ |
 | Function coverage | 91.95% | ✅ |
@@ -350,7 +350,7 @@ All dialogs now use DialogManager with fallbacks.
 | DialogManager.js | 96.1% | 77.2% | ✅ |
 | LayersValidator.js | 96.9% | 95.0% | ✅ |
 | APIManager.js | 86.6% | 73.8% | ✅ |
-| LayersEditor.js | 88.9% | 75.3% | ✅ |
+| LayersEditor.js | 88.5% | 74.5% | ✅ |
 | LayerRenderer.js | 95.5% | 78.1% | ✅ Improved |
 | LayersNamespace.js | 98.4% | 82.0% | ✅ Improved |
 
@@ -497,5 +497,5 @@ Deductions:
 
 *Plan updated: December 29, 2025*  
 *Status: ✅ **ALL P0 ISSUES RESOLVED** - Production-ready*  
-*Version: 1.2.10*  
+*Version: 1.2.11*  
 *Feature Requests: FR-1 and FR-3 implemented, FR-2 proposed*
