@@ -296,33 +296,27 @@ Generates:
 
 ## 5. Lightbox Viewer with Layers Overlay
 
-**Priority:** High  
-**Complexity:** Medium  
-**Status:** ⏳ Proposed
+**Priority:** ~~High~~  
+**Complexity:** ~~Medium~~  
+**Status:** ✅ Implemented
 
 ### Description
-Add a `link=layers` option for embedded images that opens a full-size lightbox overlay showing the image with its layer annotations, without requiring navigation to a separate page.
-
-### User Story
-As a reader, I want to click on an annotated image and see it full-size with all annotations visible in a lightbox, so I can examine details without leaving the current page.
-
-As an author, I want to embed annotated images that viewers can enlarge without creating separate gallery pages for each image.
+The `layerslink=viewer` (or `layerslink=lightbox`) option opens a full-size lightbox overlay showing the image with all layer annotations visible.
 
 ### Wikitext Syntax
 
 ```wikitext
-[[File:Diagram.jpg|thumb|layers=anatomy|link=layers|Caption text]]
+[[File:Diagram.jpg|thumb|layers=anatomy|layerslink=viewer|Caption text]]
+[[File:Diagram.jpg|thumb|layers=anatomy|layerslink=lightbox|Caption text]]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `layers=setname` | Which layer set to display |
-| `link=layers` | Open lightbox with layers instead of file page |
-| `link=layers-edit` | Open lightbox with "Edit" button linking to editor |
-
-### Technical Approach
-
-1. **Extend LayersFileTransform.php**
+### Implementation
+- **LayersLightbox.js** (~560 lines) — Full-featured lightbox viewer
+- Keyboard navigation (Escape to close, arrow keys for zoom/pan)
+- Zoom/pan controls within lightbox
+- Layer visibility toggles
+- Edit button linking to editor
+- 86.6% test coverage
    - Detect `link=layers` or `link=layers-edit` option
    - Add click handler data attribute to thumbnail
    - Include layer set name in data attributes
