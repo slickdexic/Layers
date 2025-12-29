@@ -2,6 +2,9 @@
  * Event Manager for Layers Editor
  * Centralized event handling and management
  */
+( function () {
+	'use strict';
+
 class EventManager {
 	constructor( editor ) {
 		this.editor = editor;
@@ -122,3 +125,10 @@ if ( typeof window !== 'undefined' ) {
 	window.Layers.Core = window.Layers.Core || {};
 	window.Layers.Core.EventManager = EventManager;
 }
+
+// Export for CommonJS/Jest tests
+if ( typeof module !== 'undefined' && module.exports ) {
+	module.exports = EventManager;
+}
+
+}() );

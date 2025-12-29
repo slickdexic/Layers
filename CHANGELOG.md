@@ -2,6 +2,19 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.1.18] - 2025-12-29
+
+### Bug Fixes
+- **Fixed JavaScript SyntaxError: await is only valid in async functions** — Three JavaScript files were missing IIFE (Immediately Invoked Function Expression) wrappers, causing class definitions to leak into the global scope when ResourceLoader concatenates files. This resulted in `async` class methods not being recognized properly, triggering the "await is only valid in async functions" error.
+
+### Technical
+- **Modified files**:
+  - `resources/ext.layers.editor/EventManager.js` — Added IIFE wrapper `( function () { 'use strict'; ... }() );`
+  - `resources/ext.layers.editor/StateManager.js` — Added IIFE wrapper `( function () { 'use strict'; ... }() );`
+  - `resources/ext.layers.editor/ValidationManager.js` — Added IIFE wrapper `( function () { 'use strict'; ... }() );`
+
+---
+
 ## [1.1.17] - 2025-12-29
 
 ### Bug Fixes

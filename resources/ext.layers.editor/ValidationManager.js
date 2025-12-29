@@ -2,6 +2,9 @@
  * Validation Manager for Layers Editor
  * Handles data validation and sanitization
  */
+( function () {
+	'use strict';
+
 class ValidationManager {
 	constructor( editor ) {
 		this.editor = editor;
@@ -258,3 +261,10 @@ if ( typeof window !== 'undefined' ) {
 	window.Layers.Validation = window.Layers.Validation || {};
 	window.Layers.Validation.Manager = ValidationManager;
 }
+
+// Export for CommonJS/Jest tests
+if ( typeof module !== 'undefined' && module.exports ) {
+	module.exports = ValidationManager;
+}
+
+}() );

@@ -2,6 +2,9 @@
  * State Manager for Layers Editor
  * Centralized state management with race condition prevention
  */
+( function () {
+	'use strict';
+
 class StateManager {
 	constructor( editor ) {
 		this.editor = editor;
@@ -662,3 +665,5 @@ if ( typeof window !== 'undefined' ) {
 if ( typeof module !== 'undefined' && module.exports ) {
 	module.exports = StateManager;
 }
+
+}() );
