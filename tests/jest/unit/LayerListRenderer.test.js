@@ -649,4 +649,204 @@ describe( 'LayerListRenderer', () => {
 			expect( instance ).toBeInstanceOf( LayerListRenderer );
 		} );
 	} );
+
+	describe( '_createExpandToggle', () => {
+		it( 'should create expand toggle for groups', () => {
+			const layer = { id: 'folder-1', type: 'group', expanded: true };
+			const t = ( key, fallback ) => fallback;
+			const toggle = renderer._createExpandToggle( layer, true, t );
+
+			expect( toggle ).toBeDefined();
+			expect( toggle.className ).toBe( 'layer-expand-toggle' );
+			expect( toggle.getAttribute( 'aria-expanded' ) ).toBe( 'true' );
+		} );
+
+		it( 'should set aria-expanded to false when collapsed', () => {
+			const layer = { id: 'folder-1', type: 'group', expanded: false };
+			const t = ( key, fallback ) => fallback;
+			const toggle = renderer._createExpandToggle( layer, false, t );
+
+			expect( toggle.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
+		} );
+
+		it( 'should call onToggleGroupExpand when clicked', () => {
+			const onToggle = jest.fn();
+			renderer.onToggleGroupExpand = onToggle;
+
+			const layer = { id: 'folder-1', type: 'group' };
+			const t = ( key, fallback ) => fallback;
+			const toggle = renderer._createExpandToggle( layer, true, t );
+
+			toggle.click();
+
+			expect( onToggle ).toHaveBeenCalledWith( 'folder-1' );
+		} );
+
+		it( 'should use fallback text when IconFactory not available', () => {
+			// Temporarily remove IconFactory
+			const savedIconFactory = global.window.Layers.UI.IconFactory;
+			delete global.window.Layers.UI.IconFactory;
+
+			const layer = { id: 'folder-1', type: 'group' };
+			const t = ( key, fallback ) => fallback;
+			const toggle = renderer._createExpandToggle( layer, true, t );
+
+			expect( toggle.textContent ).toBe( '▼' );
+
+			// Restore
+			global.window.Layers.UI.IconFactory = savedIconFactory;
+		} );
+
+		it( 'should use collapsed fallback text when not expanded', () => {
+			const savedIconFactory = global.window.Layers.UI.IconFactory;
+			delete global.window.Layers.UI.IconFactory;
+
+			const layer = { id: 'folder-1', type: 'group' };
+			const t = ( key, fallback ) => fallback;
+			const toggle = renderer._createExpandToggle( layer, false, t );
+
+			expect( toggle.textContent ).toBe( '▶' );
+
+			global.window.Layers.UI.IconFactory = savedIconFactory;
+		} );
+	} );
+
+	describe( '_createFolderIconFallback', () => {
+		it( 'should create SVG folder icon', () => {
+			const icon = renderer._createFolderIconFallback( false );
+
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'width' ) ).toBe( '18' );
+		} );
+
+		it( 'should add flap indicator when expanded', () => {
+			const icon = renderer._createFolderIconFallback( true );
+
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBe( 2 ); // folder + flap
+		} );
+
+		it( 'should not add flap when collapsed', () => {
+			const icon = renderer._createFolderIconFallback( false );
+
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBe( 1 ); // folder only
+		} );
+	} );
+
+	describe( 'render with empty layers', () => {
+		it( 'should show empty message when no layers', () => {
+			mockGetLayers.mockReturnValue( [] );
+			renderer.render();
+
+			const emptyMsg = mockLayerList.querySelector( '.layers-empty' );
+			expect( emptyMsg ).not.toBeNull();
+		} );
+
+		it( 'should remove empty message when layers added', () => {
+			// First render with no layers
+			mockGetLayers.mockReturnValue( [] );
+			renderer.render();
+
+			// Then render with layers
+			mockGetLayers.mockReturnValue( [
+				{ id: 'layer-1', type: 'rectangle' }
+			] );
+			renderer.render();
+
+			const emptyMsg = mockLayerList.querySelector( '.layers-empty' );
+			expect( emptyMsg ).toBeNull();
+		} );
+	} );
+
+	describe( 'updateLayerItem for groups', () => {
+		it( 'should add layer-item-group class for group layers', () => {
+			const regularLayer = { id: 'layer-1', type: 'rectangle' };
+			const item = renderer.createLayerItem( regularLayer, 0 );
+
+			// Update to group
+			const groupLayer = { id: 'layer-1', type: 'group', children: [] };
+			renderer.updateLayerItem( item, groupLayer, 0 );
+
+			expect( item.classList.contains( 'layer-item-group' ) ).toBe( true );
+		} );
+
+		it( 'should remove layer-item-group class for non-group layers', () => {
+			const groupLayer = { id: 'folder-1', type: 'group', children: [] };
+			const item = renderer.createLayerItem( groupLayer, 0 );
+
+			// Update to regular layer
+			const regularLayer = { id: 'folder-1', type: 'rectangle' };
+			renderer.updateLayerItem( item, regularLayer, 0 );
+
+			expect( item.classList.contains( 'layer-item-group' ) ).toBe( false );
+		} );
+
+		it( 'should add folder-empty class for empty folders', () => {
+			const emptyFolder = { id: 'folder-1', type: 'group', children: [] };
+			const item = renderer.createLayerItem( emptyFolder, 0 );
+
+			expect( item.classList.contains( 'folder-empty' ) ).toBe( true );
+		} );
+
+		it( 'should remove folder-empty class when folder has children', () => {
+			const emptyFolder = { id: 'folder-1', type: 'group', children: [] };
+			const item = renderer.createLayerItem( emptyFolder, 0 );
+
+			const fullFolder = { id: 'folder-1', type: 'group', children: [ 'child-1' ] };
+			renderer.updateLayerItem( item, fullFolder, 0 );
+
+			expect( item.classList.contains( 'folder-empty' ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'getLayerDepth with deeply nested layers', () => {
+		it( 'should calculate correct depth for nested layers', () => {
+			mockGetLayers.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'folder-2' ] },
+				{ id: 'folder-2', type: 'group', parentGroup: 'folder-1', children: [ 'layer-1' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-2' }
+			] );
+
+			const depth = renderer.getLayerDepth( 'layer-1' );
+			expect( depth ).toBe( 2 );
+		} );
+
+		it( 'should return 0 for top-level layers', () => {
+			mockGetLayers.mockReturnValue( [
+				{ id: 'layer-1', type: 'rectangle' }
+			] );
+
+			const depth = renderer.getLayerDepth( 'layer-1' );
+			expect( depth ).toBe( 0 );
+		} );
+
+		it( 'should handle max iteration limit', () => {
+			// Create a circular reference (edge case)
+			mockGetLayers.mockReturnValue( [
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'layer-2' },
+				{ id: 'layer-2', type: 'group', parentGroup: 'layer-1', children: [ 'layer-1' ] }
+			] );
+
+			// Should not hang - limited by maxIterations
+			const depth = renderer.getLayerDepth( 'layer-1' );
+			expect( depth ).toBeLessThan( 100 ); // Should hit limit
+		} );
+	} );
+
+	describe( '_createGrabArea with folder icon fallback', () => {
+		it( 'should use folder icon fallback when IconFactory.createFolderIcon not available', () => {
+			const savedIconFactory = global.window.Layers.UI.IconFactory;
+			global.window.Layers.UI.IconFactory = {}; // Empty - no createFolderIcon
+
+			const groupLayer = { id: 'folder-1', type: 'group' };
+			const t = ( key, fallback ) => fallback;
+			const grabArea = renderer._createGrabArea( groupLayer, 'Folder', t, true, true );
+
+			const svg = grabArea.querySelector( 'svg' );
+			expect( svg ).not.toBeNull();
+
+			global.window.Layers.UI.IconFactory = savedIconFactory;
+		} );
+	} );
 } );
