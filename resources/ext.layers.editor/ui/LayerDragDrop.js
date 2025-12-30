@@ -348,11 +348,9 @@
 					}
 				}
 			} else {
-				if ( typeof console !== 'undefined' && console.error ) {
-					console.error( '[LayerDragDrop] groupManager.moveToFolder not available:', {
-						editor: this.editor,
-						groupManager: this.editor && this.editor.groupManager
-					} );
+				// SECURITY FIX: Use mw.log instead of console.error
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[LayerDragDrop] groupManager.moveToFolder not available' );
 				}
 				// Fallback notification
 				if ( typeof mw !== 'undefined' && mw.notify ) {

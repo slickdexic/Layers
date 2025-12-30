@@ -36,7 +36,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,877 lines - facade coordinating controllers), `ToolManager.js` (~1,261 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,242 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,194 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`
+  - Core editor modules: `CanvasManager.js` (~1,877 lines - facade coordinating controllers), `ToolManager.js` (~1,261 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,242 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,359 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
     - `TextToolHandler.js` (~207 lines) - inline text input UI for creating text layers
     - `PathToolHandler.js` (~229 lines) - freeform path drawing with click-to-add points
@@ -64,7 +64,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
   - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
-  - UI: `Toolbar.js` (~1,537 lines), `LayerPanel.js` (~2,148 lines - delegates to 9 controllers), plus editor CSS (editor-fixed.css theme)
+  - UI: `Toolbar.js` (~1,556 lines), `LayerPanel.js` (~2,140 lines - delegates to 9 controllers), plus editor CSS (editor-fixed.css theme)
   - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js and UIManager.js for separation of concerns:
     - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
     - `FolderOperationsController.js` (~383 lines) - folder create/delete, layer visibility toggle, ungroup operations

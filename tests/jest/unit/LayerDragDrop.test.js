@@ -945,6 +945,661 @@ describe( 'LayerDragDrop', () => {
 		} );
 	} );
 
+	describe( '_handleDragOver with folders', () => {
+		test( 'should show drop-target-above for regular layer top half', () => {
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Set the dragged ID to simulate an active drag operation
+			dragDrop._draggedId = 'layer-3';
+
+			const targetItem = layerList.querySelector( '[data-layer-id="layer-2"]' );
+
+			// Call the handler directly for more reliable testing
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => targetItem ) },
+				clientY: 5 // Top of element
+			};
+
+			// Mock getBoundingClientRect
+			targetItem.getBoundingClientRect = jest.fn( () => ( { top: 0, height: 40 } ) );
+
+			dragDrop._handleDragOver( mockEvent );
+
+			expect( targetItem.classList.contains( 'drop-target-above' ) ).toBe( true );
+		} );
+
+		test( 'should show drop-target-below for regular layer bottom half', () => {
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop._draggedId = 'layer-3';
+
+			const targetItem = layerList.querySelector( '[data-layer-id="layer-2"]' );
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => targetItem ) },
+				clientY: 35 // Bottom of element (height is 40)
+			};
+
+			targetItem.getBoundingClientRect = jest.fn( () => ( { top: 0, height: 40 } ) );
+
+			dragDrop._handleDragOver( mockEvent );
+
+			expect( targetItem.classList.contains( 'drop-target-below' ) ).toBe( true );
+		} );
+
+		test( 'should show folder-drop-target for expanded folder middle zone', () => {
+			// Add a folder item
+			const folderItem = document.createElement( 'div' );
+			folderItem.className = 'layer-item layer-item-group';
+			folderItem.dataset.layerId = 'folder-1';
+			folderItem.setAttribute( 'aria-expanded', 'true' );
+			layerList.appendChild( folderItem );
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop._draggedId = 'layer-1';
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => folderItem ) },
+				clientY: 20 // Middle of folder (50% of height 40 = middle zone 15%-85%)
+			};
+
+			folderItem.getBoundingClientRect = jest.fn( () => ( { top: 0, height: 40 } ) );
+
+			dragDrop._handleDragOver( mockEvent );
+
+			expect( folderItem.classList.contains( 'folder-drop-target' ) ).toBe( true );
+		} );
+
+		test( 'should show drop-target-above for collapsed folder top half', () => {
+			const folderItem = document.createElement( 'div' );
+			folderItem.className = 'layer-item layer-item-group collapsed';
+			folderItem.dataset.layerId = 'folder-1';
+			folderItem.setAttribute( 'aria-expanded', 'false' );
+			layerList.appendChild( folderItem );
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop._draggedId = 'layer-1';
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => folderItem ) },
+				clientY: 5 // Top half
+			};
+
+			folderItem.getBoundingClientRect = jest.fn( () => ( { top: 0, height: 40 } ) );
+
+			dragDrop._handleDragOver( mockEvent );
+
+			expect( folderItem.classList.contains( 'drop-target-above' ) ).toBe( true );
+			expect( folderItem.classList.contains( 'folder-drop-target' ) ).toBe( false );
+		} );
+
+		test( 'should show drop-target-below for collapsed folder bottom half', () => {
+			const folderItem = document.createElement( 'div' );
+			folderItem.className = 'layer-item layer-item-group collapsed';
+			folderItem.dataset.layerId = 'folder-1';
+			folderItem.setAttribute( 'aria-expanded', 'false' );
+			layerList.appendChild( folderItem );
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop._draggedId = 'layer-1';
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => folderItem ) },
+				clientY: 35 // Bottom half
+			};
+
+			folderItem.getBoundingClientRect = jest.fn( () => ( { top: 0, height: 40 } ) );
+
+			dragDrop._handleDragOver( mockEvent );
+
+			expect( folderItem.classList.contains( 'drop-target-below' ) ).toBe( true );
+		} );
+
+		test( 'should show drop-target-above for expanded folder top zone', () => {
+			const folderItem = document.createElement( 'div' );
+			folderItem.className = 'layer-item layer-item-group';
+			folderItem.dataset.layerId = 'folder-1';
+			folderItem.setAttribute( 'aria-expanded', 'true' );
+			layerList.appendChild( folderItem );
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop._draggedId = 'layer-1';
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => folderItem ) },
+				clientY: 2 // Very top (< 15% of 40 = 6)
+			};
+
+			folderItem.getBoundingClientRect = jest.fn( () => ( { top: 0, height: 40 } ) );
+
+			dragDrop._handleDragOver( mockEvent );
+
+			expect( folderItem.classList.contains( 'drop-target-above' ) ).toBe( true );
+		} );
+
+		test( 'should show drop-target-below for expanded folder bottom zone', () => {
+			const folderItem = document.createElement( 'div' );
+			folderItem.className = 'layer-item layer-item-group';
+			folderItem.dataset.layerId = 'folder-1';
+			folderItem.setAttribute( 'aria-expanded', 'true' );
+			layerList.appendChild( folderItem );
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop._draggedId = 'layer-1';
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => folderItem ) },
+				clientY: 38 // Very bottom (> 85% of 40 = 34)
+			};
+
+			folderItem.getBoundingClientRect = jest.fn( () => ( { top: 0, height: 40 } ) );
+
+			dragDrop._handleDragOver( mockEvent );
+
+			expect( folderItem.classList.contains( 'drop-target-below' ) ).toBe( true );
+		} );
+
+		test( 'should not highlight when dragging over self', () => {
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop._draggedId = 'layer-1';
+
+			const targetItem = layerList.querySelector( '[data-layer-id="layer-1"]' );
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => targetItem ) },
+				clientY: 20
+			};
+
+			dragDrop._handleDragOver( mockEvent );
+
+			expect( targetItem.classList.contains( 'drop-target-above' ) ).toBe( false );
+			expect( targetItem.classList.contains( 'drop-target-below' ) ).toBe( false );
+		} );
+
+		test( 'should return early when no target item found', () => {
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop._draggedId = 'layer-1';
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				dataTransfer: { dropEffect: null },
+				target: { closest: jest.fn( () => null ) },
+				clientY: 20
+			};
+
+			// Should not throw
+			expect( () => {
+				dragDrop._handleDragOver( mockEvent );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( '_handleDragLeave', () => {
+		test( 'should remove all drop highlight classes on dragleave', () => {
+			new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			const targetItem = layerList.querySelector( '[data-layer-id="layer-2"]' );
+			targetItem.classList.add( 'folder-drop-target' );
+			targetItem.classList.add( 'drop-target-above' );
+			targetItem.classList.add( 'drop-target-below' );
+
+			const event = new Event( 'dragleave', { bubbles: true } );
+			targetItem.dispatchEvent( event );
+
+			expect( targetItem.classList.contains( 'folder-drop-target' ) ).toBe( false );
+			expect( targetItem.classList.contains( 'drop-target-above' ) ).toBe( false );
+			expect( targetItem.classList.contains( 'drop-target-below' ) ).toBe( false );
+		} );
+	} );
+
+	describe( '_handleDrop with folders', () => {
+		test( 'should call moveToFolder when drop on folder with folder-drop-target class', () => {
+			// Add a folder item
+			const folderItem = document.createElement( 'div' );
+			folderItem.className = 'layer-item layer-item-group folder-drop-target';
+			folderItem.dataset.layerId = 'folder-1';
+			layerList.appendChild( folderItem );
+
+			mockEditor.groupManager = {
+				moveToFolder: jest.fn( () => true )
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			const moveToFolderSpy = jest.spyOn( dragDrop, 'moveToFolder' );
+
+			const mockDataTransfer = {
+				getData: jest.fn( () => 'layer-1' )
+			};
+
+			const event = new Event( 'drop', { bubbles: true } );
+			Object.defineProperty( event, 'dataTransfer', {
+				value: mockDataTransfer
+			} );
+			event.preventDefault = jest.fn();
+
+			folderItem.dispatchEvent( event );
+
+			expect( moveToFolderSpy ).toHaveBeenCalledWith( 'layer-1', 'folder-1' );
+		} );
+
+		test( 'should handle drop below collapsed folder with children', () => {
+			const folderItem = document.createElement( 'div' );
+			folderItem.className = 'layer-item layer-item-group drop-target-below';
+			folderItem.dataset.layerId = 'folder-1';
+			layerList.appendChild( folderItem );
+
+			mockEditor.getLayerById = jest.fn( ( id ) => {
+				if ( id === 'folder-1' ) {
+					return {
+						id: 'folder-1',
+						type: 'group',
+						expanded: false,
+						children: [ 'child-1', 'child-2' ]
+					};
+				}
+				if ( id === 'layer-1' ) {
+					return { id: 'layer-1', type: 'rectangle' };
+				}
+				return null;
+			} );
+			mockEditor.stateManager.reorderLayer = jest.fn( () => true );
+
+			new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			const mockDataTransfer = {
+				getData: jest.fn( () => 'layer-1' )
+			};
+
+			const event = new Event( 'drop', { bubbles: true } );
+			Object.defineProperty( event, 'dataTransfer', {
+				value: mockDataTransfer
+			} );
+			event.preventDefault = jest.fn();
+
+			folderItem.dispatchEvent( event );
+
+			// Should reorder after the last child, not the folder itself
+			expect( mockEditor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer-1', 'child-2', true );
+		} );
+
+		test( 'should handle drop on background layer', () => {
+			const bgItem = document.createElement( 'div' );
+			bgItem.className = 'layer-item';
+			bgItem.dataset.layerId = '__background__';
+			layerList.appendChild( bgItem );
+
+			mockEditor.getLayerById = jest.fn( () => ( { id: 'layer-1', type: 'rectangle' } ) );
+			mockEditor.stateManager.sendToBack = jest.fn();
+
+			new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			const mockDataTransfer = {
+				getData: jest.fn( () => 'layer-1' )
+			};
+
+			const event = new Event( 'drop', { bubbles: true } );
+			Object.defineProperty( event, 'dataTransfer', {
+				value: mockDataTransfer
+			} );
+			event.preventDefault = jest.fn();
+
+			bgItem.dispatchEvent( event );
+
+			expect( mockEditor.stateManager.sendToBack ).toHaveBeenCalledWith( 'layer-1' );
+		} );
+
+		test( 'should remove from folder when dropping on background', () => {
+			const bgItem = document.createElement( 'div' );
+			bgItem.className = 'layer-item';
+			bgItem.dataset.layerId = '__background__';
+			layerList.appendChild( bgItem );
+
+			mockEditor.getLayerById = jest.fn( () => ( {
+				id: 'layer-1',
+				type: 'rectangle',
+				parentGroup: 'folder-1'
+			} ) );
+			mockEditor.stateManager.sendToBack = jest.fn();
+			mockEditor.groupManager = {
+				removeFromFolder: jest.fn()
+			};
+
+			new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			const mockDataTransfer = {
+				getData: jest.fn( () => 'layer-1' )
+			};
+
+			const event = new Event( 'drop', { bubbles: true } );
+			Object.defineProperty( event, 'dataTransfer', {
+				value: mockDataTransfer
+			} );
+			event.preventDefault = jest.fn();
+
+			bgItem.dispatchEvent( event );
+
+			expect( mockEditor.groupManager.removeFromFolder ).toHaveBeenCalledWith( 'layer-1' );
+			expect( mockEditor.stateManager.sendToBack ).toHaveBeenCalledWith( 'layer-1' );
+		} );
+	} );
+
+	describe( 'moveToFolder', () => {
+		test( 'should call groupManager.moveToFolder and show success notification', () => {
+			mockEditor.groupManager = {
+				moveToFolder: jest.fn( () => true )
+			};
+
+			// Mock mw.notify
+			const mockNotify = jest.fn();
+			global.mw = { notify: mockNotify };
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop.moveToFolder( 'layer-1', 'folder-1' );
+
+			expect( mockEditor.groupManager.moveToFolder ).toHaveBeenCalledWith( 'layer-1', 'folder-1' );
+			expect( mockNotify ).toHaveBeenCalledWith(
+				'Layer moved to folder',
+				expect.objectContaining( { type: 'success' } )
+			);
+			expect( mockEditor.canvasManager.redraw ).toHaveBeenCalled();
+			expect( renderLayerList ).toHaveBeenCalled();
+
+			delete global.mw;
+		} );
+
+		test( 'should show error notification when moveToFolder fails', () => {
+			mockEditor.groupManager = {
+				moveToFolder: jest.fn( () => false )
+			};
+
+			const mockNotify = jest.fn();
+			global.mw = { notify: mockNotify };
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop.moveToFolder( 'layer-1', 'folder-1' );
+
+			expect( mockNotify ).toHaveBeenCalledWith(
+				'Could not move layer to folder',
+				expect.objectContaining( { type: 'error' } )
+			);
+			expect( mockEditor.canvasManager.redraw ).not.toHaveBeenCalled();
+
+			delete global.mw;
+		} );
+
+		test( 'should log error when groupManager not available', () => {
+			mockEditor.groupManager = null;
+
+			const mockLogWarn = jest.fn();
+			const mockNotify = jest.fn();
+			global.mw = {
+				notify: mockNotify,
+				log: { warn: mockLogWarn }
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop.moveToFolder( 'layer-1', 'folder-1' );
+
+			// Uses mw.log.warn instead of console.error (security fix)
+			expect( mockLogWarn ).toHaveBeenCalledWith(
+				'[LayerDragDrop] groupManager.moveToFolder not available'
+			);
+			expect( mockNotify ).toHaveBeenCalledWith(
+				'Folder functionality not available - please reload',
+				expect.objectContaining( { type: 'error' } )
+			);
+
+			delete global.mw;
+		} );
+
+		test( 'should handle missing mw.notify gracefully', () => {
+			mockEditor.groupManager = {
+				moveToFolder: jest.fn( () => true )
+			};
+
+			delete global.mw;
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			expect( () => {
+				dragDrop.moveToFolder( 'layer-1', 'folder-1' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'moveLayer with folder handling', () => {
+		test( 'should remove layer from folder when moving outside', () => {
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-1' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-1' },
+				{ id: 'layer-2', type: 'circle' }
+			] );
+			mockEditor.groupManager = {
+				removeFromFolder: jest.fn( () => {
+					// After removal, simulate updated layers
+					mockEditor.stateManager.get.mockReturnValue( [
+						{ id: 'folder-1', type: 'group', children: [] },
+						{ id: 'layer-1', type: 'rectangle' },
+						{ id: 'layer-2', type: 'circle' }
+					] );
+				} )
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Move layer-1 down to layer-2 (outside folder)
+			dragDrop.moveLayer( 'layer-1', 1 );
+
+			expect( mockEditor.groupManager.removeFromFolder ).toHaveBeenCalledWith( 'layer-1' );
+			expect( mockEditor.saveState ).toHaveBeenCalledWith( 'Move Layer Out of Folder' );
+		} );
+
+		test( 'should call focus callback when moving out of folder', () => {
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-1' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-1' },
+				{ id: 'layer-2', type: 'circle' }
+			] );
+			mockEditor.groupManager = {
+				removeFromFolder: jest.fn( () => {
+					mockEditor.stateManager.get.mockReturnValue( [
+						{ id: 'folder-1', type: 'group', children: [] },
+						{ id: 'layer-1', type: 'rectangle' },
+						{ id: 'layer-2', type: 'circle' }
+					] );
+				} )
+			};
+
+			const focusCallback = jest.fn();
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop.moveLayer( 'layer-1', 1, focusCallback );
+
+			expect( focusCallback ).toHaveBeenCalledWith( 'layer-1' );
+		} );
+
+		test( 'should allow moving to folder itself (exit folder)', () => {
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-1' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-1' }
+			] );
+			mockEditor.groupManager = {
+				removeFromFolder: jest.fn()
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Move layer-1 up (to folder-1 header)
+			dragDrop.moveLayer( 'layer-1', -1 );
+
+			// Moving to the folder header itself should do a normal swap
+			// (the layer is still in the folder in this case)
+			expect( mockEditor.stateManager.set ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( '_clearDropHighlights', () => {
+		test( 'should clear all highlight classes from all items', () => {
+			new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Add highlights to all items
+			layerList.querySelectorAll( '.layer-item' ).forEach( ( item ) => {
+				item.classList.add( 'folder-drop-target' );
+				item.classList.add( 'drop-target-above' );
+				item.classList.add( 'drop-target-below' );
+			} );
+
+			// Trigger dragend which calls _clearDropHighlights
+			const event = new Event( 'dragend', { bubbles: true } );
+			layerList.querySelector( '.layer-item' ).dispatchEvent( event );
+
+			// All highlights should be cleared
+			layerList.querySelectorAll( '.layer-item' ).forEach( ( item ) => {
+				expect( item.classList.contains( 'folder-drop-target' ) ).toBe( false );
+				expect( item.classList.contains( 'drop-target-above' ) ).toBe( false );
+				expect( item.classList.contains( 'drop-target-below' ) ).toBe( false );
+			} );
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		test( 'should export LayerDragDrop class', () => {
 			expect( LayerDragDrop ).toBeDefined();

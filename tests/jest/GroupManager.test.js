@@ -578,6 +578,206 @@ describe( 'GroupManager', () => {
 		} );
 	} );
 
+	describe( 'createFolder', () => {
+		it( 'should create an empty folder', () => {
+			const folder = groupManager.createFolder();
+
+			expect( folder ).not.toBeNull();
+			expect( folder.type ).toBe( 'group' );
+			expect( folder.children ).toEqual( [] );
+			expect( folder.expanded ).toBe( true );
+			expect( folder.visible ).toBe( true );
+		} );
+
+		it( 'should create folder with specified name', () => {
+			const folder = groupManager.createFolder( null, 'My Folder' );
+
+			expect( folder.name ).toBe( 'My Folder' );
+		} );
+
+		it( 'should create folder with layers if provided', () => {
+			const folder = groupManager.createFolder( [ 'layer-1', 'layer-2' ], 'With Layers' );
+
+			expect( folder ).not.toBeNull();
+			expect( folder.children ).toContain( 'layer-1' );
+			expect( folder.children ).toContain( 'layer-2' );
+		} );
+
+		it( 'should return null without stateManager', () => {
+			const gm = new GroupManager( {} );
+			expect( gm.createFolder() ).toBeNull();
+		} );
+
+		it( 'should generate unique folder names', () => {
+			const folder1 = groupManager.createFolder( null, null );
+			const folder2 = groupManager.createFolder( null, null );
+
+			expect( folder1.name ).toMatch( /^Folder \d+$/ );
+			expect( folder2.name ).toMatch( /^Folder \d+$/ );
+		} );
+	} );
+
+	describe( 'moveToFolder', () => {
+		let folder;
+
+		beforeEach( () => {
+			folder = groupManager.createFolder( null, 'Test Folder' );
+		} );
+
+		it( 'should move a layer into a folder', () => {
+			const result = groupManager.moveToFolder( 'layer-1', folder.id );
+
+			expect( result ).toBe( true );
+
+			const layers = mockStateManager.get( 'layers' );
+			const movedLayer = layers.find( ( l ) => l.id === 'layer-1' );
+			const updatedFolder = layers.find( ( l ) => l.id === folder.id );
+
+			expect( movedLayer.parentGroup ).toBe( folder.id );
+			expect( updatedFolder.children ).toContain( 'layer-1' );
+		} );
+
+		it( 'should return false when moving folder into itself', () => {
+			const result = groupManager.moveToFolder( folder.id, folder.id );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false when layer already in folder', () => {
+			groupManager.moveToFolder( 'layer-1', folder.id );
+			const result = groupManager.moveToFolder( 'layer-1', folder.id );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for non-existent layer', () => {
+			const result = groupManager.moveToFolder( 'nonexistent', folder.id );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for non-existent folder', () => {
+			const result = groupManager.moveToFolder( 'layer-1', 'nonexistent' );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false without stateManager', () => {
+			const gm = new GroupManager( {} );
+			expect( gm.moveToFolder( 'layer-1', 'folder-1' ) ).toBe( false );
+		} );
+
+		it( 'should save history when moving layer', () => {
+			groupManager.moveToFolder( 'layer-1', folder.id );
+			expect( mockHistoryManager.saveState ).toHaveBeenCalledWith( 'Move to folder' );
+		} );
+
+		it( 'should remove layer from previous folder when moving', () => {
+			// Move layer-1 to folder
+			groupManager.moveToFolder( 'layer-1', folder.id );
+
+			// Create second folder and move layer-1 there
+			const folder2 = groupManager.createFolder( null, 'Folder 2' );
+			groupManager.moveToFolder( 'layer-1', folder2.id );
+
+			const layers = mockStateManager.get( 'layers' );
+			const originalFolder = layers.find( ( l ) => l.id === folder.id );
+			const newFolder = layers.find( ( l ) => l.id === folder2.id );
+
+			expect( originalFolder.children ).not.toContain( 'layer-1' );
+			expect( newFolder.children ).toContain( 'layer-1' );
+		} );
+
+		it( 'should enforce max nesting depth', () => {
+			// Create a nested folder structure at max depth
+			// maxNestingDepth is 3, so folder at depth 2 is the limit for adding groups
+			const folder1 = groupManager.createFolder( null, 'Level 1' );
+			const folder2 = groupManager.createFolder( null, 'Level 2' );
+
+			// Move folder2 into folder1 (folder2 is now at depth 1)
+			groupManager.moveToFolder( folder2.id, folder1.id );
+
+			// Create folder3 and move it into folder2 (folder3 would be at depth 2)
+			const folder3 = groupManager.createFolder( null, 'Level 3' );
+			groupManager.moveToFolder( folder3.id, folder2.id );
+
+			// Now folder3 is at depth 2. Create folder4 and try to move it into folder3
+			// This would put folder4 at depth 3, which equals maxNestingDepth
+			// The check is: folderDepth + 1 + layerMaxDepth > maxNestingDepth
+			// For an empty folder: 2 + 1 + 0 = 3, which is NOT > 3, so it should succeed
+			const folder4 = groupManager.createFolder( null, 'Level 4' );
+			const result1 = groupManager.moveToFolder( folder4.id, folder3.id );
+			expect( result1 ).toBe( true ); // Depth 3 is allowed
+
+			// Now try to add folder5 inside folder4 (would be depth 4)
+			// Check: 3 + 1 + 0 = 4 > 3, should fail
+			const folder5 = groupManager.createFolder( null, 'Level 5' );
+			const result2 = groupManager.moveToFolder( folder5.id, folder4.id );
+			expect( result2 ).toBe( false ); // Depth 4 exceeds limit
+		} );
+
+		it( 'should position layer after folder in flat array', () => {
+			groupManager.moveToFolder( 'layer-1', folder.id );
+
+			const layers = mockStateManager.get( 'layers' );
+			const folderIndex = layers.findIndex( ( l ) => l.id === folder.id );
+			const layerIndex = layers.findIndex( ( l ) => l.id === 'layer-1' );
+
+			expect( layerIndex ).toBeGreaterThan( folderIndex );
+		} );
+	} );
+
+	describe( 'removeFromFolder', () => {
+		let folder;
+
+		beforeEach( () => {
+			folder = groupManager.createFolder( null, 'Test Folder' );
+			groupManager.moveToFolder( 'layer-1', folder.id );
+		} );
+
+		it( 'should remove layer from folder', () => {
+			const result = groupManager.removeFromFolder( 'layer-1' );
+
+			expect( result ).toBe( true );
+
+			const layers = mockStateManager.get( 'layers' );
+			const layer = layers.find( ( l ) => l.id === 'layer-1' );
+			const updatedFolder = layers.find( ( l ) => l.id === folder.id );
+
+			expect( layer.parentGroup ).toBeUndefined();
+			expect( updatedFolder.children ).not.toContain( 'layer-1' );
+		} );
+
+		it( 'should return false for layer not in folder', () => {
+			const result = groupManager.removeFromFolder( 'layer-2' );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for non-existent layer', () => {
+			const result = groupManager.removeFromFolder( 'nonexistent' );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false without stateManager', () => {
+			const gm = new GroupManager( {} );
+			expect( gm.removeFromFolder( 'layer-1' ) ).toBe( false );
+		} );
+
+		it( 'should save history when removing layer', () => {
+			mockHistoryManager.saveState.mockClear();
+			groupManager.removeFromFolder( 'layer-1' );
+			expect( mockHistoryManager.saveState ).toHaveBeenCalledWith( 'Remove from folder' );
+		} );
+	} );
+
+	describe( 'generateDefaultFolderName', () => {
+		it( 'should generate sequential folder names', () => {
+			const layers = [];
+			const name1 = groupManager.generateDefaultFolderName( layers );
+			expect( name1 ).toBe( 'Folder 1' );
+
+			layers.push( { id: 'folder-1', type: 'group', name: 'Folder 1' } );
+			const name2 = groupManager.generateDefaultFolderName( layers );
+			expect( name2 ).toBe( 'Folder 2' );
+		} );
+	} );
+
 	describe( 'edge cases', () => {
 		it( 'should handle operations without stateManager', () => {
 			const gm = new GroupManager( {} );

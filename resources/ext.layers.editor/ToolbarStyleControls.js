@@ -855,10 +855,8 @@ class ToolbarStyleControls {
 	 *
 	 * @param {Array} selectedLayers Array of selected layer objects
 	 */
+	// eslint-disable-next-line no-unused-vars
 	hideControlsForSelectedLayers( selectedLayers ) {
-		// eslint-disable-next-line no-unused-vars
-		const types = selectedLayers.map( ( l ) => l.type ).filter( ( t, i, arr ) => arr.indexOf( t ) === i );
-
 		// Hide main style row when layers are selected (Properties panel has these)
 		if ( this.mainStyleRow ) {
 			this.mainStyleRow.classList.add( 'context-hidden' );
