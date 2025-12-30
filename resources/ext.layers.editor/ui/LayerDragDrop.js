@@ -234,24 +234,8 @@
 			const targetId = targetItem.dataset.layerId;
 			const isFolder = targetItem.classList && targetItem.classList.contains( 'layer-item-group' );
 
-			// Debug logging
-			if ( typeof console !== 'undefined' && console.log ) {
-				console.log( '[LayerDragDrop] Drop event:', {
-					draggedId,
-					targetId,
-					isFolder,
-					isFolderDrop,
-					isDropAbove,
-					isDropBelow,
-					targetClasses: targetItem.className
-				} );
-			}
-
 			// Check if dropping into a folder using the highlight class (more reliable than position)
 			if ( isFolderDrop && isFolder ) {
-				if ( typeof console !== 'undefined' && console.log ) {
-					console.log( '[LayerDragDrop] Dropping into folder via highlight class' );
-				}
 				this.moveToFolder( draggedId, targetId );
 				return;
 			}
@@ -263,15 +247,6 @@
 				const rect = targetItem.getBoundingClientRect();
 				const mouseY = e.clientY - rect.top;
 				const height = rect.height;
-
-				if ( typeof console !== 'undefined' && console.log ) {
-					console.log( '[LayerDragDrop] Folder position check (fallback):', {
-						mouseY,
-						height,
-						ratio: mouseY / height,
-						inDropZone: mouseY > height * 0.15 && mouseY < height * 0.85
-					} );
-				}
 
 				// Use the same zone as dragover (15%-85% for folder drop)
 				if ( mouseY > height * 0.15 && mouseY < height * 0.85 ) {
@@ -291,14 +266,6 @@
 				if ( folder && folder.expanded === false && folder.children && folder.children.length > 0 ) {
 					// Folder is collapsed and has children - find the last child
 					const lastChildId = folder.children[ folder.children.length - 1 ];
-					if ( typeof console !== 'undefined' && console.log ) {
-						console.log( '[LayerDragDrop] Dropping below collapsed folder - direct reorder:', {
-							draggedId,
-							originalTarget: targetId,
-							lastChildId,
-							folderChildren: folder.children
-						} );
-					}
 
 					// First, remove from any current folder (if applicable)
 					const draggedLayer = this.editor.getLayerById ? this.editor.getLayerById( draggedId ) : null;
@@ -327,10 +294,6 @@
 			// The background layer item has ID '__background__' and is not a real layer
 			// Dropping "above" it should move the layer to the end of the layers array
 			if ( targetId === '__background__' ) {
-				if ( typeof console !== 'undefined' && console.log ) {
-					console.log( '[LayerDragDrop] Dropping onto background layer - moving to end' );
-				}
-
 				// First, remove from any current folder
 				const draggedLayer = this.editor.getLayerById ? this.editor.getLayerById( draggedId ) : null;
 				if ( draggedLayer && draggedLayer.parentGroup ) {
@@ -364,23 +327,9 @@
 		 * @param {string} folderId ID of the target folder
 		 */
 		moveToFolder( layerId, folderId ) {
-			// Log for debugging
-			if ( typeof console !== 'undefined' && console.log ) {
-				console.log( '[LayerDragDrop] moveToFolder called:', {
-					layerId,
-					folderId,
-					hasEditor: !!this.editor,
-					hasGroupManager: !!( this.editor && this.editor.groupManager ),
-					hasMoveToFolder: !!( this.editor && this.editor.groupManager && this.editor.groupManager.moveToFolder )
-				} );
-			}
-
 			if ( this.editor && this.editor.groupManager &&
 				typeof this.editor.groupManager.moveToFolder === 'function' ) {
 				const success = this.editor.groupManager.moveToFolder( layerId, folderId );
-				if ( typeof console !== 'undefined' && console.log ) {
-					console.log( '[LayerDragDrop] moveToFolder result:', success );
-				}
 				if ( success ) {
 					// Show success notification
 					if ( typeof mw !== 'undefined' && mw.notify ) {
@@ -438,9 +387,6 @@
 				if ( draggedInFolder && draggedLayer.parentGroup !== targetFolderId ) {
 					if ( this.editor.groupManager && this.editor.groupManager.removeFromFolder ) {
 						this.editor.groupManager.removeFromFolder( draggedId );
-						if ( typeof console !== 'undefined' && console.log ) {
-							console.log( '[LayerDragDrop] Removed layer from folder:', draggedId );
-						}
 					}
 				}
 
@@ -464,15 +410,9 @@
 				if ( this.editor.groupManager && this.editor.groupManager.addToFolderAtPosition ) {
 					// Use position-aware method - this handles both children array and flat array positioning
 					this.editor.groupManager.addToFolderAtPosition( draggedId, targetFolderId, beforeSiblingId );
-					if ( typeof console !== 'undefined' && console.log ) {
-						console.log( '[LayerDragDrop] Added layer to folder at position:', draggedId, targetFolderId, beforeSiblingId );
-					}
 				} else if ( this.editor.groupManager && this.editor.groupManager.moveToFolder ) {
 					// Fallback: add to folder (will go to end, then reorder separately)
 					this.editor.groupManager.moveToFolder( draggedId, targetFolderId );
-					if ( typeof console !== 'undefined' && console.log ) {
-						console.log( '[LayerDragDrop] Added layer to folder:', draggedId, targetFolderId );
-					}
 					// Only reorder as fallback when using moveToFolder (which doesn't position)
 					if ( this.editor.stateManager && this.editor.stateManager.reorderLayer ) {
 						this.editor.stateManager.reorderLayer( draggedId, targetId );
@@ -494,9 +434,6 @@
 				// (meaning the user wants to move the layer out of the folder)
 				if ( this.editor.groupManager && this.editor.groupManager.removeFromFolder ) {
 					this.editor.groupManager.removeFromFolder( draggedId );
-					if ( typeof console !== 'undefined' && console.log ) {
-						console.log( '[LayerDragDrop] Removed layer from folder:', draggedId );
-					}
 				}
 			}
 

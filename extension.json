@@ -133,9 +133,7 @@
 		"ImageBeforeProduceHTML": "LayersWikitextHooks",
 		"ThumbnailBeforeProduceHTML": "LayersWikitextHooks",
 		"ParserMakeImageParams": "LayersWikitextHooks",
-		"SkinTemplateNavigation": "LayersUIHooks",
 		"SkinTemplateNavigation::Universal": "LayersUIHooks",
-		"UnknownAction": "LayersUIHooks",
 		"BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform"
 	},
 	"Actions": {

@@ -28,10 +28,8 @@
 |hook8           = ParserBeforeInternalParse
 |hook9           = ParserFirstCallInit
 |hook10          = ParserMakeImageParams
-|hook11          = SkinTemplateNavigation
-|hook12          = SkinTemplateNavigation::Universal
-|hook13          = ThumbnailBeforeProduceHTML
-|hook14          = UnknownAction
+|hook11          = SkinTemplateNavigation::Universal
+|hook12          = ThumbnailBeforeProduceHTML
 |description     = A professional-grade, non-destructive image annotation system with 14 drawing tools, layer folders, style presets, named layer sets, and full keyboard accessibility.
 }}
 

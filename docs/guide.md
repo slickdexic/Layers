@@ -802,7 +802,8 @@ The backend encompasses the PHP code that integrates with MediaWiki's databases,
 
 * **extension.json:** Declares the extension and integrates with MW. It registers:
 
-  * Hooks (like `SkinTemplateNavigation` to add the tab, `UnknownAction` to handle the page action, parser hooks, image transform hooks).
+  * Hooks (like `SkinTemplateNavigation` to add the tab, parser hooks, image transform hooks).
+  * Actions (like `editlayers` mapped to `EditLayersAction` to handle the editor page action).
   * API modules `layerssave` and `layersinfo` for handling AJAX requests from the editor.
   * ResourceLoader modules for the front-end (ext.layers and ext.layers.editor) with their scripts and style files.
   * Permissions as discussed and messages (i18n).
@@ -818,8 +819,7 @@ The backend encompasses the PHP code that integrates with MediaWiki's databases,
 * **Hooks Implementation:**
 
   * **UIHooks (SkinTemplateNavigation):** Adds the "Edit Layers" tab on file pages. It checks user perms and that the file exists. The tab links to `?action=editlayers` on the file.
-  * **UIHooks (UnknownAction):** Catches the `action=editlayers` and replaces the normal page view with the editor interface. It verifies permission and target is a File page. Then calls `showLayersEditor()`.
-  * **showLayersEditor():** Sets up the OutputPage for the editor – sets a page title like "Edit Layers: File.png", adds the required JS/CSS modules, injects the container HTML, and uses `mw.hook('layers.editor.init').fire({...})` passing the needed data (filename, image URL, container element) to initialize the JS app. It then calls `$out->setArticleBodyOnly(true)` to render just the editor (suppressing the normal skin content).
+  * **EditLayersAction:** A dedicated MediaWiki Action class that handles the `action=editlayers` request. It verifies permissions and that the target is a File page, then renders the editor interface. It sets the page title, adds the required JS/CSS modules, configures JS variables (filename, image URL, settings), and adds a container div where the JavaScript editor initializes.
   * **Parser hook (ParserMakeImageParams):** Intercepts the file tag parsing. If `layers` param is present, it calls either `addLatestLayersToImage` or `addSpecificLayersToImage` to attach the data needed for rendering the layers onto the image output. Essentially, it stuffs the layer set data or an identifier into the image rendering pipeline by adding entries to `$params` (like `layerSetId` or raw `layerData`). This data travels with the File object into the transformation stage.
   * **FileTransform hook (onFileTransform):** This is triggered when generating a thumbnail or transformed image file. The extension checks if the 'layers' param was in effect. If yes, it calls `ThumbnailRenderer->generateLayeredThumbnail($file, $params)`. That method likely takes the base image and either:
 
@@ -861,7 +861,7 @@ The backend encompasses the PHP code that integrates with MediaWiki's databases,
 
 Putting it all together, a typical user interaction flows like this:
 
-1. **Launch Editor:** User clicks "Edit Layers" on a File page. The request goes to `index.php?title=File:Example.jpg&action=editlayers`. MediaWiki calls our UnknownAction hook, which initializes the editor page. The browser loads the HTML with the container and the JS modules.
+1. **Launch Editor:** User clicks "Edit Layers" on a File page. The request goes to `index.php?title=File:Example.jpg&action=editlayers`. MediaWiki routes this to our `EditLayersAction` class, which initializes the editor page. The browser loads the HTML with the container and the JS modules.
 2. **Load Existing Data:** The JS (LayersEditor) fires and calls the API `action=layersinfo&filename=Example.jpg&limit=50`. The PHP enforces the user's read rights on the file, confirms any requested layer set matches the file, and then returns the JSON of the latest layer set for that image (or an empty structure if none). The editor then populates the internal state (if any) and the `limit` parameter bounds how many historical revisions are included in `all_layersets`.
 3. **Editing Session:** The user draws, edits, adds layers. All changes are happening client-side, updating the JS model and re-rendering canvas. The extension might not continuously save (no mention of autosave) – it's manual save. Undo/redo is handled in JS by keeping history of states up to maybe 50 steps by default.
 4. **Save:** When the user clicks "Save", the editor gathers the entire layer set data structure. This is serialized to JSON (if not already in JSON form) and sent via `action=layerssave` POST. The server receives it, validates length and content, then writes it to `layer_sets` table (new row) and perhaps marks it as current. The API responds success.

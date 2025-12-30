@@ -195,20 +195,6 @@
 				return [];
 			}
 
-			// Debug: log layers state
-			if ( typeof console !== 'undefined' && console.log ) {
-				const groupsAndChildren = allLayers.filter( ( l ) => l.type === 'group' || l.parentGroup );
-				if ( groupsAndChildren.length > 0 ) {
-					console.log( '[LayerPanel] getVisibleLayers - groups and children:', groupsAndChildren.map( ( l ) => ( {
-						id: l.id,
-						type: l.type,
-						name: l.name,
-						parentGroup: l.parentGroup,
-						children: l.children
-					} ) ) );
-				}
-			}
-
 			// Build a map of collapsed groups
 			const collapsedGroupIds = new Set();
 			for ( const layer of allLayers ) {
