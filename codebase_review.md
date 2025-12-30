@@ -16,8 +16,8 @@ The extension is **fully functional and production-ready** with professional sec
 
 **Key Strengths:**
 
-- ✅ **7,629 tests passing** (0 failures, 135 test suites)
-- ✅ **93.9% statement coverage, 82.0% branch coverage**
+- ✅ **7,647 tests passing** (0 failures, 135 test suites)
+- ✅ **93.9% statement coverage, 82.2% branch coverage**
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 14 working drawing tools with named layer sets
 - ✅ Layer grouping/folders feature complete
@@ -49,7 +49,7 @@ All metrics collected directly from the codebase via automated tooling.
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disable comments | **17** | <15 | ⚠️ Above target |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **7,586** | - | ✅ |
+| Jest tests passing | **7,647** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
 | Statement coverage | **94.4%** | 85%+ | ✅ Excellent |
 | Branch coverage | **82.8%** | 75%+ | ✅ Good |

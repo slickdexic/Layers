@@ -3,7 +3,7 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94.4%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-7629%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-7647%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -260,7 +260,7 @@ npm run test:js -- --coverage
 | Total JS lines | ~52,000 | ✅ Well under 75K target |
 | ES6 classes | 91 | ✅ |
 | God classes (>1000 lines) | 9 | ⚠️ Technical debt |
-| Tests passing | 7,586 | ✅ |
+| Tests passing | 7,647 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 94.4% | ✅ Excellent |
 | Branch coverage | 82.8% | ✅ |
