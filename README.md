@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.4%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-7506%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-93.1%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-7574%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.2.14 (December 2025)  
+> **Version:** 1.2.15 (December 2025)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -201,7 +201,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`)
-- **Frontend:** HTML5 Canvas editor with 98 JS files (~50,200 lines), 88 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 99 JS files (~53,000 lines), 89 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -209,10 +209,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 7,377 passing |
-| Statement coverage | 94.43% |
-| Branch coverage | 82.83% |
-| Test suites | 131 |
+| Jest tests | 7,506 passing |
+| Statement coverage | 92.6% |
+| Branch coverage | 81.3% |
+| Test suites | 133 |
 
 **Security:**
 
@@ -256,14 +256,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 98 | ✅ |
-| Total JS lines | ~50,200 | ✅ Well under 75K target |
-| ES6 classes | 88 | ✅ |
-| God classes (>1000 lines) | 8 | ⚠️ Mitigated by delegation |
-| Tests passing | 7,377 | ✅ |
+| Total JS files | 99 | ✅ |
+| Total JS lines | ~53,000 | ✅ Well under 75K target |
+| ES6 classes | 89 | ✅ |
+| God classes (>1000 lines) | 9 | ⚠️ Technical debt |
+| Tests passing | 7,506 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.43% | ✅ Excellent |
-| Branch coverage | 82.83% | ✅ |
+| Statement coverage | 92.6% | ✅ Excellent |
+| Branch coverage | 81.3% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

@@ -280,7 +280,8 @@ describe( 'LayerDragDrop', () => {
 			dropHandler( mockEvent );
 
 			expect( mockEvent.preventDefault ).toHaveBeenCalled();
-			expect( mockEditor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'layer_2' );
+			// Third parameter is insertAfter (false when no drop-target-below class)
+			expect( mockEditor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'layer_2', false );
 		} );
 
 		test( 'should not reorder if dragged onto same layer', () => {
@@ -319,7 +320,8 @@ describe( 'LayerDragDrop', () => {
 		test( 'should use StateManager reorderLayer when available', () => {
 			controller.reorderLayers( 'layer_1', 'layer_2' );
 
-			expect( mockEditor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'layer_2' );
+			// Third parameter is insertAfter (undefined when not passed)
+			expect( mockEditor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'layer_2', undefined );
 			expect( mockEditor.canvasManager.redraw ).toHaveBeenCalled();
 			expect( mockRenderLayerList ).toHaveBeenCalled();
 		} );

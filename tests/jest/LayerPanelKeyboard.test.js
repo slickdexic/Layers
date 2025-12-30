@@ -106,6 +106,14 @@ describe( 'LayerPanel Keyboard Navigation', () => {
 		window.Layers.UI.ConfirmDialog = null;
 		window.Layers.UI.PropertiesForm = null;
 
+		// Load FolderOperationsController for folder operations
+		const FolderOperationsController = require( '../../resources/ext.layers.editor/ui/FolderOperationsController.js' );
+		window.Layers.UI.FolderOperationsController = FolderOperationsController;
+
+		// Load LayerItemFactory for layer item creation
+		const LayerItemFactory = require( '../../resources/ext.layers.editor/ui/LayerItemFactory.js' );
+		window.Layers.UI.LayerItemFactory = LayerItemFactory;
+
 		require( '../../resources/ext.layers.editor/LayerPanel.js' );
 		LayerPanel = window.Layers.UI.LayerPanel;
 

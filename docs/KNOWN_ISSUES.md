@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** December 29, 2025  
-**Version:** 1.2.13
+**Last Updated:** December 30, 2025  
+**Version:** 1.2.14
 
 This document lists known functionality issues and their current status.
 
@@ -11,10 +11,30 @@ This document lists known functionality issues and their current status.
 
 | Category | Count | Status |
 |----------|-------|--------|
-| P0 (Critical Bugs) | **0** | ✅ **All Resolved** |
+| P0 (Critical Bugs) | **1** | ⚠️ **LayerPanel.js size** |
 | P1 (Stability) | 2 | ⚠️ Monitored |
 | P2 (Code Quality) | 4 | ⏳ Tracked |
-| Feature Gaps | 5 | ⏳ Planned |
+| Feature Gaps | 4 | ⏳ Planned |
+
+---
+
+## ⚠️ P0 Issue - NEW
+
+### P0.NEW LayerPanel.js at 2,572 Lines
+
+**Status:** URGENT  
+**Identified:** December 30, 2025  
+**Severity:** HIGH
+
+LayerPanel.js has grown from 1,838 lines to **2,572 lines** (40% increase), exceeding the project's 2,000 line hard limit. This occurred during the layer grouping feature implementation (v1.2.13-v1.2.14).
+
+**Required Actions:**
+1. Extract folder/group rendering to `FolderController.js`
+2. Extract visibility cascading to `LayerStateController.js`
+3. Extract delete dialogs to dedicated module
+4. Target: Reduce to under 1,800 lines
+
+**Effort:** 2-3 days
 
 ---
 
@@ -67,34 +87,35 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 ## ⚠️ P1 Issues (Stability)
 
-### P1.1 God Classes (8 files >1,000 lines)
+### P1.1 God Classes (9 files >1,000 lines)
 
-**Status:** Stable - using delegation pattern  
-**Severity:** MEDIUM - Manageable with delegation
+**Status:** Worsening - LayerPanel.js now at 2,572 lines  
+**Severity:** HIGH - LayerPanel.js exceeds 2,000 line hard limit
 
-| File | Lines | Delegation Pattern |
-|------|-------|-------------------|
-| CanvasManager.js | 1,877 | ✅ 10+ controllers |
-| LayerPanel.js | 1,838 | ✅ 7 controllers |
-| Toolbar.js | 1,537 | ✅ 4 modules |
-| LayersEditor.js | 1,459 | ✅ 3 modules |
-| ToolManager.js | 1,261 | ✅ 2 handlers |
-| CanvasRenderer.js | 1,242 | ✅ SelectionRenderer |
-| SelectionManager.js | 1,194 | ✅ 3 modules |
-| APIManager.js | 1,182 | ✅ APIErrorHandler |
+| File | Lines | Delegation Pattern | Status |
+|------|-------|-------------------|--------|
+| **LayerPanel.js** | **2,572** | ✅ 7 controllers | **⛔ OVER LIMIT** |
+| CanvasManager.js | 1,877 | ✅ 10+ controllers | ⚠️ At limit |
+| Toolbar.js | 1,537 | ✅ 4 modules | ⚠️ Monitor |
+| LayersEditor.js | 1,465 | ✅ 3 modules | ✅ OK |
+| SelectionManager.js | 1,359 | ✅ 3 modules | ✅ OK |
+| ToolManager.js | 1,261 | ✅ 2 handlers | ✅ OK |
+| CanvasRenderer.js | 1,242 | ✅ SelectionRenderer | ✅ OK |
+| APIManager.js | 1,182 | ✅ APIErrorHandler | ✅ OK |
+| GroupManager.js | 1,015 | New (v1.2.13) | ✅ OK |
 
-**Total in god classes:** ~11,486 lines (23% of JS codebase)
+**Total in god classes:** ~13,510 lines (26% of JS codebase)
 
-All god classes now use delegation patterns and have acceptable test coverage.
+### P1.2 Files Approaching 1,000 Lines
 
-### P1.2 ToolbarStyleControls.js - Under Control
+**Status:** Monitoring  
+**Severity:** MEDIUM
 
-**Status:** Healthy  
-**Severity:** LOW  
-**File:** `resources/ext.layers.editor/ToolbarStyleControls.js`  
-**Lines:** 798 (202 away from 1,000 line threshold)
-
-This file was previously approaching the limit but PresetStyleManager was extracted.
+| File | Lines | Risk |
+|------|-------|------|
+| ToolbarStyleControls.js | 946 | ⚠️ Monitor |
+| PropertiesForm.js | 914 | ⚠️ Monitor |
+| ShapeRenderer.js | 909 | ⚠️ Monitor |
 
 ---
 
@@ -102,17 +123,27 @@ This file was previously approaching the limit but PresetStyleManager was extrac
 
 ### P2.1 ESLint Disable Comments
 
-**Status:** Acceptable  
-**Count:** 12 eslint-disable comments
+**Status:** Above target  
+**Count:** 17 eslint-disable comments (was 12)
 
 | Rule | Count | Reason |
 |------|-------|--------|
 | no-alert | 8 | ✅ Intentional fallbacks when DialogManager unavailable |
-| no-unused-vars | 4 | ✅ API compatibility (parameters required by interface) |
+| no-unused-vars | 9 | ⚠️ API compatibility (4 from GroupManager.js) |
 
-All eslint-disable comments have been reviewed and are acceptable.
+The increase from 12 to 17 is due to GroupManager.js (4 new comments).
 
-### P2.2 Deprecated Code Present
+### P2.2 Test Coverage Decreased
+
+**Status:** Monitoring  
+**Before:** 94.4% statement coverage  
+**After:** 92.6% statement coverage
+
+Files below 85% target:
+- LayerDragDrop.js: 68.9%
+- LayerListRenderer.js: 78.6%
+
+### P2.4 Deprecated Code Present
 
 **Status:** Partially cleaned  
 **Severity:** LOW  
@@ -123,31 +154,13 @@ Remaining deprecated items (all are legitimate fallbacks):
 - Legacy module pattern export (backward compat)
 - CanvasManager fallback image loading (edge cases)
 
-**Removed in cleanup:**
-- ✅ `getFileSetName()` / `getFileLinkType()` from WikitextHooks.php
-- ✅ `handleKeyboardShortcuts` wrapper from Toolbar.js
-- ✅ `normalizeBooleanProperties()` from APIManager.js
-
-### P2.3 Some Timer Cleanup Missing
-
-**Status:** Partially addressed  
-**Severity:** LOW  
-**Impact:** Minor memory considerations during long editing sessions
-
-Major files (CanvasManager, LayersLightbox) now have timer cleanup. Remaining cases are in:
-- EditorBootstrap.js (initialization delays - run once)
-- AccessibilityAnnouncer.js (screen reader debouncing)
-- PropertiesForm.js (input debouncing)
-
-These are acceptable because they either run once at startup or are short-lived UI timers.
-
-### P2.4 Codebase Size
+### P2.5 Codebase Size
 
 **Status:** ✅ Healthy  
-**Current:** ~49,700 lines  
+**Current:** ~53,000 lines (99 files)  
 **Target:** <75,000 lines
 
-The extension is feature-rich with 14 drawing tools, multiple rendering systems, comprehensive validation, and extensive test coverage. A 75K line target provides room for continued feature development while maintaining code quality. This is not an arbitrary limit—a well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension.
+The extension is feature-rich with 14 drawing tools, layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
 
 ---
 
@@ -220,7 +233,7 @@ The extension is feature-rich with 14 drawing tools, multiple rendering systems,
 
 | Feature | Priority | Effort | Status |
 |---------|----------|--------|--------|
-| Layer Grouping | ~~MEDIUM~~ | ~~2-3 weeks~~ | ✅ **Complete (v1.2.13)** |
+| Mobile-Optimized UI | MEDIUM | 3-4 weeks | ⏳ Basic touch works |
 | Gradient Fills | LOW | 1 week | Not started |
 | Custom Fonts | LOW | 2 weeks | Not started |
 | SVG Export | LOW | 1 week | Not started |
@@ -236,27 +249,31 @@ The extension is feature-rich with 14 drawing tools, multiple rendering systems,
 
 ## Test Coverage Status
 
-### Overall Coverage (December 29, 2025)
+### Overall Coverage (December 30, 2025)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,483 | - | ✅ |
-| Statement coverage | 94%+ | 85%+ | ✅ |
-| Branch coverage | 82%+ | 75%+ | ✅ |
-| Function coverage | 91%+ | 80%+ | ✅ |
-| Line coverage | 94%+ | 85%+ | ✅ |
+| Tests passing | 7,506 | - | ✅ |
+| Statement coverage | 92.6% | 85%+ | ✅ |
+| Branch coverage | 81.3% | 75%+ | ✅ |
+| Function coverage | 90.2% | 80%+ | ✅ |
+| Line coverage | 92.9% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
-All previously critical coverage gaps have been fixed:
+| File | Statement | Branch | Status |
+|------|-----------|--------|--------|
+| EffectsRenderer.js | 99.1% | 93.0% | ✅ Excellent |
+| CanvasRenderer.js | 93.7% | 78.2% | ✅ Good |
+| LayerRenderer.js | 95.5% | 78.1% | ✅ Good |
+| ShapeRenderer.js | 93.9% | 84.6% | ✅ Good |
+
+### Files Needing Improvement ⚠️
 
 | File | Statement | Branch | Status |
 |------|-----------|--------|--------|
-| **EffectsRenderer.js** | **99.1%** | **93.0%** | ✅ FIXED |
-| **CanvasRenderer.js** | **93.7%** | **78.2%** | ✅ FIXED |
-| **CanvasManager.js** | **86.6%** | **72.2%** | ✅ **Improved** |
-| LayerRenderer.js | 95.5% | 78.1% | ✅ Improved |
-| LayersNamespace.js | 98.4% | 82.0% | ✅ Fixed |
+| LayerDragDrop.js | 68.9% | 48.1% | ⚠️ Below target |
+| LayerListRenderer.js | 78.6% | 67.4% | ⚠️ Below target |
 
 ---
 
@@ -306,5 +323,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: December 29, 2025*  
-*Status: All critical issues resolved. Extension is production-ready.*
+*Document updated: December 30, 2025*  
+*Status: ⚠️ P0 Issue: LayerPanel.js at 2,572 lines. Extension is production-ready but technical debt is accumulating.*

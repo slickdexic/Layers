@@ -35,13 +35,20 @@ describe('LayerPanel confirmation flows', () => {
             removeLayer: jest.fn(),
             saveState: jest.fn(),
             stateManager: mockStateManager,
-            getLayerById: jest.fn().mockReturnValue({ id: 'layer-1', type: 'rectangle' })
+            getLayerById: jest.fn().mockReturnValue({ id: 'layer-1', type: 'rectangle' }),
+            historyManager: null
         };
         panel.renderLayerList = jest.fn();
         panel.updateCodePanel = jest.fn();
         panel.updatePropertiesPanel = jest.fn();
         panel.msg = jest.fn().mockReturnValue('Delete?');
         panel.logWarn = jest.fn();
+        panel.getSelectedLayerId = jest.fn().mockReturnValue('layer-1');
+        panel.registerDialogCleanup = jest.fn();
+        // Mock folderController for delegation - will be overridden in individual tests
+        panel.folderController = {
+            deleteLayer: jest.fn()
+        };
         return panel;
     }
 
@@ -68,28 +75,28 @@ describe('LayerPanel confirmation flows', () => {
         expect(result).toBe(true);
     });
 
-    test('deleteLayer aborts when fallback confirmation rejects', () => {
+    test('deleteLayer delegates to folderController', () => {
         const panel = buildPanel();
-        // Mock createConfirmDialog to NOT call the callback (simulating cancel)
+
+        panel.deleteLayer('layer-1');
+
+        // deleteLayer now delegates to folderController
+        expect(panel.folderController.deleteLayer).toHaveBeenCalledWith(
+            'layer-1',
+            expect.any(Function) // the bound createConfirmDialog
+        );
+    });
+
+    test('deleteLayer passes createConfirmDialog bound to panel', () => {
+        const panel = buildPanel();
         panel.createConfirmDialog = jest.fn();
 
         panel.deleteLayer('layer-1');
 
-        expect(panel.editor.removeLayer).not.toHaveBeenCalled();
-        expect(panel.editor.saveState).not.toHaveBeenCalled();
-    });
-
-    test('deleteLayer proceeds when fallback confirmation accepts', () => {
-        const panel = buildPanel();
-        // Mock createConfirmDialog to immediately call the callback (simulating confirm)
-        panel.createConfirmDialog = jest.fn((msg, callback) => callback());
-
-        panel.deleteLayer('layer-1');
-
-        expect(panel.editor.removeLayer).toHaveBeenCalledWith('layer-1');
-        expect(panel.editor.saveState).toHaveBeenCalledWith('Delete Layer');
-        // Selection should be cleared via StateManager
-        expect(panel.editor.stateManager.set).toHaveBeenCalledWith('selectedLayerIds', []);
-        expect(panel.updatePropertiesPanel).toHaveBeenCalledWith(null);
+        // Get the callback that was passed to folderController
+        const passedCallback = panel.folderController.deleteLayer.mock.calls[0][1];
+        // Call it to verify it's bound correctly
+        passedCallback('test message', () => {});
+        expect(panel.createConfirmDialog).toHaveBeenCalledWith('test message', expect.any(Function));
     });
 });

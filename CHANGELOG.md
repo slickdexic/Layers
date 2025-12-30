@@ -2,6 +2,27 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.15] - 2025-12-30
+
+### Fixed
+- **Background layer label showing raw message key** — The background layer item in the layer panel was displaying `⧼layers-background-layer⧽` instead of "Background Image" because the i18n message was not included in the ResourceLoader module's messages array.
+
+### Removed
+- **7 non-existent MediaWiki hooks removed** — Cleaned up extension.json and WikitextHooks.php by removing hook registrations and handler methods for hooks that don't exist in MediaWiki core:
+  - `FileLink`, `GetLinkParamDefinitions`, `GetLinkParamTypes`
+  - `ParserGetImageLinkParams`, `ParserGetImageLinkOptions`
+  - `MakeImageLink2`, `LinkerMakeImageLink`
+  - These were never called by MediaWiki and represented dead code
+
+### Changed
+- **Mediawiki-Extension-Layers.txt** — Updated hook list to only include the 14 valid, documented hooks
+
+### Testing
+- All existing tests continue to pass
+- PHP linting passes with no syntax errors
+
+---
+
 ## [1.2.14] - 2025-12-30
 
 ### Features

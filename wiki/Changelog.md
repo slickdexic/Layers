@@ -4,6 +4,19 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.15 (December 30, 2025)
+
+### Fixed
+- **Background layer label showing raw message key** — The background layer item in the layer panel was displaying `⧼layers-background-layer⧽` instead of "Background Image" because the i18n message was not included in the ResourceLoader module.
+
+### Removed
+- **7 non-existent MediaWiki hooks removed** — Cleaned up extension.json by removing registrations for hooks that don't exist in MediaWiki core (`FileLink`, `GetLinkParamDefinitions`, `GetLinkParamTypes`, `ParserGetImageLinkParams`, `ParserGetImageLinkOptions`, `MakeImageLink2`, `LinkerMakeImageLink`)
+
+### Testing
+- All tests continue to pass
+
+---
+
 ## Version 1.2.14 (December 30, 2025)
 
 ### Features

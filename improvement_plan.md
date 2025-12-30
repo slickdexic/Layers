@@ -1,17 +1,17 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** December 30, 2025  
-**Status:** ✅ All P0 Issues Resolved  
-**Version:** 1.2.14  
+**Status:** ⏳ P0 Issue In Progress - LayerPanel.js Refactoring  
+**Version:** 1.2.15  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-The extension is **production-ready** with all critical issues resolved. Layer Grouping feature is complete with full folder UI.
+The extension is **production-ready** with layer grouping feature complete. LayerPanel.js refactoring is **in progress**, with ~629 lines extracted to new controllers, along with 57 new unit tests.
 
-**Current Rating: 9.0/10**
+**Current Rating: 8.0/10**
 
 ---
 
@@ -21,11 +21,11 @@ The extension is **production-ready** with all critical issues resolved. Layer G
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 14 tools + layer grouping with folders |
 | **Security** | ✅ Resolved | All known security issues fixed |
-| **Testing** | ✅ Excellent | 7,506 tests, 94%+ statement coverage |
-| **ES6 Migration** | ✅ Complete | 89 classes, 0 prototype patterns |
+| **Testing** | ✅ Good | 7,574 tests (135 suites), 92.6% statement coverage |
+| **ES6 Migration** | ✅ Complete | 91 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
-| **God Classes** | ⚠️ Technical Debt | 8 files >1,000 lines (all use delegation) |
-| **Codebase Size** | ✅ Healthy | ~52,000 lines (99 files), well under 75K target |
+| **God Classes** | ⏳ **IN PROGRESS** | 9 files >1,000 lines, LayerPanel.js reduced from 2,572→2,148 |
+| **Codebase Size** | ✅ Healthy | ~54,000 lines (101 files), well under 75K target |
 | **Layer Grouping** | ✅ **COMPLETE** | Folders, expand/collapse, visibility cascade, delete options |
 
 ---
@@ -34,14 +34,52 @@ The extension is **production-ready** with all critical issues resolved. Layer G
 
 | Priority | Timeline | Status |
 |----------|----------|--------|
-| **P0** | Immediate | ✅ **All Resolved** |
+| **P0** | Immediate | ⏳ **In Progress: LayerPanel.js** |
 | **P1** | 1-4 weeks | ⏳ In Progress |
 | **P2** | 1-3 months | ⏳ Planned |
 | **P3** | 3-6 months | ⏳ Not Started |
 
 ---
 
-## Phase 0: Critical Issues (P0) - ✅ ALL RESOLVED
+## Phase 0: Critical Issues (P0) - ⏳ IN PROGRESS
+
+### P0.NEW LayerPanel.js Refactoring - IN PROGRESS ⏳
+
+**Status:** IN PROGRESS - 629 lines extracted  
+**Started:** December 30, 2025
+
+**Original Problem:** LayerPanel.js had grown to **2,572 lines**, exceeding the 2,000 line limit.
+
+**Progress Made:**
+| Extraction | Lines | Tests | Status |
+|------------|-------|-------|--------|
+| FolderOperationsController.js | 383 | 45 | ✅ Complete |
+| ContextMenuController.js | 246 | 23 | ✅ Complete |
+| **Total Extracted** | **629** | **68** | |
+| **LayerPanel.js Current** | **2,148** | | Still ~350 over target |
+
+**Remaining Work:**
+- Extract keyboard navigation to KeyboardController.js (~80 lines)
+- Extract selection methods to SelectionController.js (~150 lines)
+- Target: Reduce to under 1,800 lines
+
+**Files Created:**
+- `resources/ext.layers.editor/ui/FolderOperationsController.js` - folder operations (create, delete, toggle visibility, ungroup)
+- `resources/ext.layers.editor/ui/ContextMenuController.js` - right-click context menu
+
+**Tests Created:**
+- `tests/jest/FolderOperationsController.test.js` - 34 tests
+- `tests/jest/ContextMenuController.test.js` - 23 tests
+
+**Tests Updated:**
+- LayerPanelMultiSelect.test.js - added FolderOperationsController and ContextMenuController mocks
+- LayerPanelKeyboard.test.js - added FolderOperationsController mock
+- LayerPanelExtended.test.js - added FolderOperationsController mock
+- LayerPanelConfirmations.test.js - updated for delegation pattern
+
+**Effort Remaining:** ~1 day
+
+---
 
 ### P0.1 Rectangle Blur Fill Appears Transparent - FIXED ✅
 
@@ -140,29 +178,30 @@ Both modules use the delegation pattern with clean interfaces.
 
 ## Phase 2: Code Quality (P2) - Planned
 
-### P2.1 Address God Classes
+### P2.1 Address God Classes - NOW CRITICAL
 
-8 files now exceed 1,000 lines (was 7):
+9 files now exceed 1,000 lines (**was 8, LayerPanel.js has breached 2,000 line hard limit**):
 
 | File | Lines | Priority |
 |------|-------|----------|
+| **LayerPanel.js** | **2,572** | **P0 - URGENT** |
 | CanvasManager.js | 1,877 | LOW (well-delegated) |
-| LayerPanel.js | 1,838 | MEDIUM |
 | Toolbar.js | 1,537 | MEDIUM |
-| LayersEditor.js | 1,459 | LOW |
+| LayersEditor.js | 1,465 | LOW |
+| SelectionManager.js | 1,359 | LOW |
 | ToolManager.js | 1,261 | LOW |
 | CanvasRenderer.js | 1,242 | LOW |
-| SelectionManager.js | 1,194 | LOW |
 | APIManager.js | 1,182 | LOW |
+| GroupManager.js | 1,015 | LOW (new) |
 
-**Note:** All god classes use delegation patterns and have acceptable test coverage.
+**Note:** LayerPanel.js requires immediate attention. Other god classes use delegation patterns and are acceptable.
 
-### P2.2 Improve Shared Renderer Coverage
+### P2.2 Improve Test Coverage for UI Components
 
-| File | Current | Target |
-|------|---------|--------|
-| LayerRenderer.js | 82% stmt, 63% branch | 90%+ |
-| ShapeRenderer.js | varies | 85%+ |
+| File | Current | Target | Priority |
+|------|---------|--------|----------|
+| LayerDragDrop.js | 68.9% | 85%+ | MEDIUM |
+| LayerListRenderer.js | 78.6% | 85%+ | MEDIUM |
 
 ---
 
@@ -213,26 +252,27 @@ Full accessibility compliance audit.
 
 ## God Class Status Tracker
 
-All god classes use the **controller delegation pattern** - they are facades that delegate to specialized controllers, not monolithic code.
+**⚠️ WARNING: LayerPanel.js has exceeded the 2,000 line hard limit!**
 
 | File | Lines | Pattern | Status |
 |------|-------|---------|--------|
+| **LayerPanel.js** | **2,572** | Facade → 7 controllers | **⛔ OVER LIMIT - NEEDS SPLIT** |
 | CanvasManager.js | 1,877 | Facade → 10 controllers | ✅ Acceptable |
-| LayerPanel.js | 1,838 | Facade → 7 controllers | ✅ Acceptable |
 | Toolbar.js | 1,537 | UI consolidation | ⚠️ Monitor |
-| LayersEditor.js | 1,459 | Orchestrator → managers | ✅ Acceptable |
+| LayersEditor.js | 1,465 | Orchestrator → managers | ✅ Acceptable |
+| SelectionManager.js | 1,359 | Facade → selection helpers | ✅ Acceptable |
 | ToolManager.js | 1,261 | Facade → tool handlers | ✅ Acceptable |
-| CanvasRenderer.js | 1,242 | SelectionRenderer | ✅ Acceptable (94% coverage) |
-| SelectionManager.js | 1,194 | Facade → selection helpers | ✅ Acceptable |
+| CanvasRenderer.js | 1,242 | SelectionRenderer | ✅ Acceptable |
 | APIManager.js | 1,182 | APIErrorHandler | ✅ Acceptable |
+| GroupManager.js | 1,015 | New (v1.2.13) | ✅ Acceptable |
 
 ### Files to Watch (800-1000 lines)
 
 | File | Lines | Risk | Action |
 |------|-------|------|--------|
-| ToolbarStyleControls.js | 959 | ✅ OK | ArrowStyleControl extracted |
+| ToolbarStyleControls.js | 946 | ⚠️ MEDIUM | Monitor |
+| PropertiesForm.js | 914 | ⚠️ MEDIUM | Monitor |
 | ShapeRenderer.js | 909 | ⚠️ MEDIUM | Monitor |
-| PropertiesForm.js | 870 | ✅ OK | 72% func coverage (improved) |
 | LayersValidator.js | 854 | ✅ LOW | Stable |
 | ResizeCalculator.js | 822 | ✅ LOW | Stable |
 | LayerRenderer.js | 821 | ✅ LOW | 95% coverage |
@@ -243,23 +283,24 @@ All god classes use the **controller delegation pattern** - they are facades tha
 ## Progress Tracking
 
 ```
-Phase 0 (CRITICAL - BLUR FILL):
+Phase 0 (CRITICAL - NEW):
+P0.NEW LayerPanel.js split:  ░░░░░░░░░░░░░░░░░░░░ 0%   ⚠️ URGENT - 2,572 lines
+
+Phase 0 (Previous - RESOLVED):
 P0.1 Rectangle blur fix:     ████████████████████ 100% ✅ FIXED (v1.2.8)
 P0.2 Consistent blur bounds: ████████████████████ 100% ✅ FIXED
 P0.3 Editor/Viewer parity:   ████████████████████ 100% ✅ Core fixed
-
-Phase 0 (Previous - COVERAGE):
 P0.A EffectsRenderer coverage: ████████████████████ 100% ✅ FIXED (99%)
 P0.B CanvasRenderer coverage:  ████████████████████ 100% ✅ FIXED (94%)
 
 Phase 1 (Important):
-P1.1 Split ToolbarStyleControls: ████████████████████ 100% ✅ Done (959 lines)
-P1.2 ESLint disables:          ████████████████████ 100% ✅ Acceptable (12)
-P1.3 Deprecated removal:       ██████████░░░░░░░░░░ 50%  ✅ 4 removed, 4 remain (fallbacks)
+P1.1 Split ToolbarStyleControls: ████████████████████ 100% ✅ Done (946 lines)
+P1.2 ESLint disables:          ██████████████░░░░░░ 70%  ⚠️ Now 17 (was 12)
+P1.3 Deprecated removal:       ██████████░░░░░░░░░░ 50%  ✅ 4 removed, 4 remain
 
 Phase 2 (Code Quality):
-P2.1 God class delegation:     ████████████████████ 100% ✅ All use delegation
-P2.2 Shared renderer coverage: ████████████████░░░░ 80%  ✅ Good (82%+)
+P2.1 God class delegation:     ████████████████░░░░ 80%  ⚠️ LayerPanel.js issue
+P2.2 UI component coverage:    ████████████░░░░░░░░ 60%  ⚠️ LayerDragDrop at 69%
 
 Phase 3 (Features):
 P3.1 Mobile UI optimization:   ██████░░░░░░░░░░░░░░ 30%  ⏳ Basic touch works
@@ -274,12 +315,13 @@ P3.4 WCAG Audit:               ░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 7,377 passing tests with 94.4% statement coverage
+- 7,506 passing tests with 92.6% statement coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
-- 100% ES6 classes (87 classes, no legacy patterns)
+- 89 ES6 classes (no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
 - Accessible UI with ARIA support
 - Named layer sets with version history
+- Layer grouping with folder UI (v1.2.13+)
 - Smart guides and key object alignment
 - Style presets with import/export
 - 4 API endpoints with full validation
@@ -293,31 +335,25 @@ P3.4 WCAG Audit:               ░░░░░░░░░░░░░░░░�
 
 | Feature | Impact | Effort | Priority |
 |---------|--------|--------|----------|
+| **Split LayerPanel.js** | HIGH - Maintainability | 2-3 days | **P0** |
 | **Mobile-optimized UI** | HIGH - Opens to 50% more users | 3-4 weeks | P3.1 |
-| **Reduce god classes** | MEDIUM - Maintainability | 2-3 weeks | P2.1 |
+| **Improve UI component coverage** | MEDIUM - Quality | 1 week | P2.2 |
 | **WCAG 2.1 AA certification** | MEDIUM - Enterprise requirement | 2 weeks | P3.4 |
-| **Full TypeScript** | LOW - JSDoc is sufficient | 40+ hours | P3.2 |
 
 ---
 
 ## Rules
 
-### ✅ The P0 Rule - SATISFIED
-
-All files now have acceptable test coverage:
-- **EffectsRenderer.js:** 97.3% statement, 93.0% branch ✅
-- **CanvasRenderer.js:** 88.5% statement, 74.9% branch ✅
-
-### The God Class Rule
+### ⚠️ The God Class Rule - VIOLATED
 
 When any file exceeds 1,000 lines:
 1. **Assess:** Is it a facade with good delegation? If yes, acceptable up to 2,000 lines.
 2. **Extract:** If monolithic, identify cohesive functionality for new module
 3. **Hard limit:** No file should exceed 2,000 lines
 
-8 files exceed 1,000 lines - all use delegation patterns. ✅
+**LayerPanel.js at 2,572 lines violates the hard limit!** ⛔
 
-### The Timer Rule ✅
+### ✅ The Timer Rule
 
 When adding setTimeout/setInterval:
 1. Store timer ID in instance variable
@@ -326,7 +362,7 @@ When adding setTimeout/setInterval:
 
 All major files have proper timer cleanup.
 
-### The Dialog Rule ✅
+### ✅ The Dialog Rule
 
 All user-facing dialogs must:
 1. Use DialogManager or fallback wrapper
@@ -342,65 +378,63 @@ All dialogs now use DialogManager with fallbacks.
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,377 | ✅ |
-| Statement coverage | 94.43% | ✅ |
-| Branch coverage | 82.83% | ✅ |
-| Function coverage | 91.95% | ✅ |
-| Line coverage | 94.70% | ✅ |
-| Test suites | 130 | ✅ |
+| Total tests | 7,506 | ✅ |
+| Statement coverage | 92.6% | ✅ |
+| Branch coverage | 81.3% | ✅ |
+| Function coverage | 90.2% | ✅ |
+| Line coverage | 92.9% | ✅ |
+| Test suites | 133 | ✅ |
+
+### Files Needing Coverage Improvement
+
+| File | Statement | Branch | Status |
+|------|-----------|--------|--------|
+| LayerDragDrop.js | 68.9% | 48.1% | ⚠️ Below target |
+| LayerListRenderer.js | 78.6% | 67.4% | ⚠️ Below target |
+| CanvasManager.js | 86.6% | 72.2% | ✅ Acceptable for facade |
+| APIManager.js | 86.6% | 73.8% | ✅ Acceptable |
 
 ### Files With Good Coverage ✅
 
 | File | Statement | Branch | Status |
 |------|-----------|--------|--------|
-| EffectsRenderer.js | 99.1% | 93.0% | ✅ Fixed |
-| CanvasRenderer.js | 93.7% | 78.2% | ✅ Fixed |
-| RevisionManager.js | 100% | 89.6% | ✅ Improved |
-| DialogManager.js | 96.1% | 77.2% | ✅ |
-| LayersValidator.js | 96.9% | 95.0% | ✅ |
-| APIManager.js | 86.6% | 73.8% | ✅ |
-| LayersEditor.js | 88.5% | 74.5% | ✅ |
-| LayerRenderer.js | 95.5% | 78.1% | ✅ Improved |
-| LayersNamespace.js | 98.4% | 82.0% | ✅ Improved |
-
-### Files to Monitor (Lower Coverage)
-
-| File | Statement | Branch | Notes |
-|------|-----------|--------|-------|
-| PropertiesForm.js | 92.3% | 81.2% | Function coverage 72% (improved) |
-| CanvasManager.js | 86.6% | 72.2% | ✅ Improved (was 79.6%) |
+| EffectsRenderer.js | 99.1% | 93.0% | ✅ Excellent |
+| CanvasRenderer.js | 93.7% | 78.2% | ✅ Good |
+| LayerRenderer.js | 95.5% | 78.1% | ✅ Good |
+| ShapeRenderer.js | 93.9% | 84.6% | ✅ Good |
+| LayersValidator.js | 96.9% | 95.0% | ✅ Excellent |
+| DialogManager.js | 96.1% | 77.2% | ✅ Good |
 
 ---
 
 ## Next Actions
 
-### ✅ Immediate (P0) - ALL RESOLVED
+### Immediate (P0) - ⚠️ NEW ISSUE
 
-**All blur fill bugs have been fixed:**
+**LayerPanel.js at 2,572 lines requires immediate refactoring:**
 
-1. ✅ **Rectangle blur fill fixed** - World coordinates stored before rotation, passed to drawBlurFill
-2. ✅ **Consistent bounds calculation** - All shapes now use world coordinate bounds  
-3. ✅ **EffectsRenderer coordinate handling** - Works correctly for common cases
+1. ⚠️ **Extract folder/group rendering** to `FolderController.js` (~300 lines)
+2. ⚠️ **Extract visibility cascading** to `LayerStateController.js` (~200 lines)
+3. ⚠️ **Extract delete dialogs** to existing `ConfirmDialog.js` (~150 lines)
+4. **Target:** Reduce LayerPanel.js to under 1,800 lines
 
-**Files modified:**
-- `resources/ext.layers.shared/ShapeRenderer.js` (drawRectangle - added worldX/worldY)
-- `resources/ext.layers.shared/TextBoxRenderer.js` (already had AABB calculation)
+**Estimated effort:** 2-3 days
 
 ### Short-Term (P1)
 
-1. ⏳ Continue monitoring files approaching 1,000 lines (ShapeRenderer at 909)
-2. ✅ Improved PropertiesForm.js function coverage (68% → 72%)
+1. ⏳ Improve LayerDragDrop.js coverage (68.9% → 85%+)
+2. ⏳ Improve LayerListRenderer.js coverage (78.6% → 85%+)
+3. ⏳ Monitor files approaching 1,000 lines (ToolbarStyleControls at 946, PropertiesForm at 914)
 
 ### Medium Term (P2)
 
-3. ⏳ Consider responsive toolbar for mobile devices
-4. ⏳ Document all deprecated fallbacks with migration paths
+4. ⏳ Consider responsive toolbar for mobile devices
+5. ⏳ Address 17 eslint-disable comments (reduce by extracting fallback code)
 
 ### Long Term (P3)
 
-5. ⏳ Mobile-optimized UI - **Biggest impact for users**
-6. ⏳ WCAG 2.1 AA audit
-7. ⏳ Layer grouping
+6. ⏳ Mobile-optimized UI - **Biggest impact for users**
+7. ⏳ WCAG 2.1 AA audit
 
 ---
 
@@ -485,28 +519,30 @@ All dialogs now use DialogManager with fallbacks.
 
 ## Summary
 
-The Layers extension is **fully functional and production-ready**. All critical bugs have been fixed.
+The Layers extension is **fully functional and production-ready**. However, **LayerPanel.js at 2,572 lines is critical technical debt** that needs immediate attention.
 
-**Honest Rating: 8.5/10**
+**Honest Rating: 8.0/10**
 
 Deductions:
-- -0.5 for 8 god classes (23% of codebase) - mitigated by delegation patterns
+- -0.75 for 9 god classes (26% of codebase), especially LayerPanel.js at 2,572 lines
 - -0.5 for mobile UI not responsive (basic touch works)
-- -0.25 for PropertiesForm.js function coverage at 72% (improved from 68%)
-- -0.25 for deprecated fallback code still present (documented)
+- -0.25 for coverage decrease (94.4% → 92.6%)
+- -0.25 for 17 eslint-disable comments (above target)
+- -0.25 for LayerDragDrop.js and LayerListRenderer.js below coverage target
 
 ### What Would Improve the Rating
 
 | Action | Impact |
 |--------|--------|
+| **Split LayerPanel.js** | **+0.5** |
 | Mobile-responsive UI | +0.5 |
-| Reduce god classes to 5 or fewer | +0.25 |
+| Improve UI component coverage | +0.25 |
 | WCAG 2.1 AA certification | +0.25 |
-| Improve PropertiesForm.js coverage | +0.25 |
+| Reduce eslint-disable comments | +0.25 |
 
 ---
 
 *Plan updated: December 30, 2025*  
-*Status: ✅ **ALL P0 ISSUES RESOLVED** - Production-ready*  
+*Status: ⚠️ **P0 Issue: LayerPanel.js at 2,572 lines** - Requires immediate refactoring*  
 *Version: 1.2.14*  
 *Feature Requests: FR-1, FR-2, and FR-3 implemented*

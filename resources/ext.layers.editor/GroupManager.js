@@ -362,6 +362,131 @@
 		}
 
 		/**
+		 * Add a layer to a folder at a specific position (before a sibling)
+		 * Used when dragging a layer between items inside an expanded folder
+		 *
+		 * @param {string} layerId ID of the layer to add
+		 * @param {string} folderId ID of the target folder
+		 * @param {string} beforeSiblingId ID of the sibling to insert before
+		 * @return {boolean} True if successful
+		 */
+		addToFolderAtPosition( layerId, folderId, beforeSiblingId ) {
+			if ( !this.stateManager ) {
+				return false;
+			}
+
+			const layers = this.stateManager.get( 'layers' ) || [];
+			const layer = layers.find( ( l ) => l.id === layerId );
+			const folder = layers.find( ( l ) => l.id === folderId && l.type === 'group' );
+
+			if ( !layer || !folder ) {
+				return false;
+			}
+
+			// Don't move a folder into itself
+			if ( layerId === folderId ) {
+				return false;
+			}
+
+			// Check if layer is already in this folder
+			if ( layer.parentGroup === folderId ) {
+				return false; // Already in folder, just reorder
+			}
+
+			// Check nesting depth
+			const folderDepth = this.getLayerDepth( folder, layers );
+			const layerMaxDepth = layer.type === 'group' ? this.getMaxChildDepth( layer, layers ) : 0;
+			if ( folderDepth + 1 + layerMaxDepth > this.maxNestingDepth ) {
+				return false;
+			}
+
+			// Remove layer from its current parent's children array (if any)
+			let updatedLayers = layers.map( ( l ) => {
+				if ( l.type === 'group' && l.children && l.children.includes( layerId ) ) {
+					return { ...l, children: l.children.filter( ( id ) => id !== layerId ) };
+				}
+				return l;
+			} );
+
+			// Find the position of the sibling in the folder's children array
+			const currentChildren = folder.children || [];
+			const siblingIndex = beforeSiblingId ? currentChildren.indexOf( beforeSiblingId ) : -1;
+
+			// Update target folder to include the layer at the correct position
+			updatedLayers = updatedLayers.map( ( l ) => {
+				if ( l.id === folderId ) {
+					const newChildren = [ ...( l.children || [] ).filter( ( id ) => id !== layerId ) ];
+					if ( siblingIndex >= 0 ) {
+						// Insert before the sibling
+						newChildren.splice( siblingIndex, 0, layerId );
+					} else {
+						// Sibling not found or null, add at end
+						newChildren.push( layerId );
+					}
+					return { ...l, children: newChildren };
+				}
+				return l;
+			} );
+
+			// Update the layer's parentGroup reference
+			updatedLayers = updatedLayers.map( ( l ) => {
+				if ( l.id === layerId ) {
+					return { ...l, parentGroup: folderId };
+				}
+				return l;
+			} );
+
+			// Reorder in the flat layers array
+			const layerFlatIndex = updatedLayers.findIndex( ( l ) => l.id === layerId );
+
+			if ( beforeSiblingId ) {
+				// Insert before the sibling in the flat array
+				const siblingFlatIndex = updatedLayers.findIndex( ( l ) => l.id === beforeSiblingId );
+				if ( siblingFlatIndex !== -1 && layerFlatIndex !== -1 && layerFlatIndex !== siblingFlatIndex ) {
+					const [ movedLayer ] = updatedLayers.splice( layerFlatIndex, 1 );
+					// Recalculate sibling index after removal
+					const newSiblingIndex = updatedLayers.findIndex( ( l ) => l.id === beforeSiblingId );
+					updatedLayers.splice( newSiblingIndex, 0, movedLayer );
+				}
+			} else {
+				// Add at end of folder's children - position after the last child in flat array
+				const updatedFolder = updatedLayers.find( ( l ) => l.id === folderId );
+				const folderChildren = ( updatedFolder && updatedFolder.children ) || [];
+				// Find the last child that's not the layer we're adding
+				const lastChildId = folderChildren.length > 1 ?
+					folderChildren[ folderChildren.length - 2 ] : // -2 because layerId was just added at end
+					null;
+
+				if ( lastChildId && layerFlatIndex !== -1 ) {
+					const lastChildFlatIndex = updatedLayers.findIndex( ( l ) => l.id === lastChildId );
+					if ( lastChildFlatIndex !== -1 && layerFlatIndex !== lastChildFlatIndex + 1 ) {
+						const [ movedLayer ] = updatedLayers.splice( layerFlatIndex, 1 );
+						// Recalculate last child index after removal
+						const newLastChildIndex = updatedLayers.findIndex( ( l ) => l.id === lastChildId );
+						updatedLayers.splice( newLastChildIndex + 1, 0, movedLayer );
+					}
+				} else if ( layerFlatIndex !== -1 ) {
+					// No other children, position after the folder itself
+					const folderFlatIndex = updatedLayers.findIndex( ( l ) => l.id === folderId );
+					if ( folderFlatIndex !== -1 && layerFlatIndex !== folderFlatIndex + 1 ) {
+						const [ movedLayer ] = updatedLayers.splice( layerFlatIndex, 1 );
+						const newFolderIndex = updatedLayers.findIndex( ( l ) => l.id === folderId );
+						updatedLayers.splice( newFolderIndex + 1, 0, movedLayer );
+					}
+				}
+			}
+
+			// Save state with history
+			if ( this.historyManager ) {
+				this.historyManager.saveState( 'Add to folder' );
+			}
+
+			this.stateManager.set( 'layers', updatedLayers );
+
+			return true;
+		}
+
+		/**
 		 * Remove a layer from its parent folder (move to root level)
 		 *
 		 * @param {string} layerId ID of the layer to remove from folder

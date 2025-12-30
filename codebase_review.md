@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** December 29, 2025 (Updated)  
-**Version:** 1.2.11  
+**Review Date:** December 30, 2025 (Updated)  
+**Version:** 1.2.14  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -10,32 +10,31 @@
 
 The Layers extension provides non-destructive image annotation capabilities for MediaWiki. This document provides an **honest, critical assessment** of the codebase quality, architecture, and technical health.
 
-### Overall Assessment: 8.5/10 - Production-Ready
+### Overall Assessment: 8.0/10 - Production-Ready
 
-The extension is **fully functional and production-ready** with professional security, excellent test coverage, and clean code practices. Blur fill bugs have been fixed as of v1.2.8.
+The extension is **fully functional and production-ready** with professional security, good test coverage, and clean code practices. However, **technical debt is accumulating** in the form of oversized files.
 
 **Key Strengths:**
 
-- ✅ **7,377 tests passing** (0 failures, 131 test suites)
-- ✅ **94.43% statement coverage, 82.83% branch coverage**
+- ✅ **7,574 tests passing** (0 failures, 135 test suites)
+- ✅ **92.6% statement coverage, 81.3% branch coverage**
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 14 working drawing tools with named layer sets
+- ✅ Layer grouping/folders feature complete
 - ✅ Smart Guides for object-to-object snapping
-- ✅ All native dialogs now use DialogManager with fallbacks
 - ✅ Modal editor mode for iframe editing (Page Forms support)
 - ✅ **Blur fill fully working** - all coordinate bugs fixed in v1.2.8
-- ✅ **EffectsRenderer coverage fixed: 49% → 97%**
-- ✅ **CanvasRenderer coverage fixed: 59% → 89%**
-- ✅ **Basic touch support** - pinch-to-zoom, double-tap, touch-to-mouse conversion
 
 **Areas for Improvement:**
 
-- ⚠️ **8 god classes (>1,000 lines)** - 23% of codebase in 8 files (mitigated by delegation patterns)
+- ⏳ **9 god classes (>1,000 lines)** - 25% of codebase in 9 files (LayerPanel.js refactoring in progress)
+- ⏳ **LayerPanel.js reduced from 2,572→2,148 lines** - 424 lines extracted, still ~350 over target
+- ⚠️ **17 eslint-disable comments** (up from 12)
 - ⚠️ **Mobile UI not responsive** - basic touch works, but toolbar needs optimization
 
 ---
 
-## Verified Metrics (December 27, 2025)
+## Verified Metrics (December 30, 2025)
 
 All metrics collected directly from the codebase via automated tooling.
 
@@ -43,84 +42,62 @@ All metrics collected directly from the codebase via automated tooling.
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total JS files | **98** | - | ✅ Feature-rich |
-| Total JS lines | **~50,200** | <75,000 | ✅ Well under target |
-| ES6 classes | **88** | 70+ | ✅ |
-| Files >1,000 lines | **8** | 0 | ⚠️ Technical debt |
+| Total JS files | **101** | - | ✅ Feature-rich |
+| Total JS lines | **~54,000** | <75,000 | ✅ Under target |
+| ES6 classes | **91** | 70+ | ✅ |
+| Files >1,000 lines | **10** | 0 | ⏳ In progress |
 | ESLint errors | **0** | 0 | ✅ |
-| ESLint disable comments | **12** | <15 | ✅ Acceptable |
+| ESLint disable comments | **17** | <15 | ⚠️ Above target |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **7,377** | - | ✅ |
+| Jest tests passing | **7,574** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
-| Statement coverage | **94.43%** | 85%+ | ✅ Excellent |
-| Branch coverage | **82.83%** | 75%+ | ✅ Excellent |
-| Function coverage | **91.95%** | 80%+ | ✅ |
-| Line coverage | **94.70%** | 85%+ | ✅ Excellent |
+| Statement coverage | **92.6%** | 85%+ | ✅ Good |
+| Branch coverage | **81.3%** | 75%+ | ✅ Good |
+| Function coverage | **90.2%** | 80%+ | ✅ |
+| Line coverage | **92.9%** | 85%+ | ✅ |
 
-### Files Over 1,000 Lines (God Classes)
+### Files Over 1,000 Lines (God Classes) - IN PROGRESS
 
 | File | Lines | Has Delegation? | Risk Level |
 |------|-------|-----------------|------------|
-| CanvasManager.js | **1,877** | ✅ 10+ controllers | HIGH - Too complex |
-| LayerPanel.js | **1,838** | ✅ 7 controllers | HIGH - Split needed |
-| Toolbar.js | **1,537** | ✅ 4 modules | HIGH - Growing |
-| LayersEditor.js | **1,459** | ✅ 3 modules | MEDIUM |
+| **LayerPanel.js** | **2,148** | ✅ 9 controllers | **HIGH - Actively reducing** |
+| CanvasManager.js | **1,877** | ✅ 10+ controllers | HIGH - At limit |
+| Toolbar.js | **1,537** | ✅ 4 modules | HIGH |
+| LayersEditor.js | **1,465** | ✅ 3 modules | MEDIUM |
+| SelectionManager.js | **1,359** | ✅ 3 modules | MEDIUM |
 | ToolManager.js | **1,261** | ✅ 2 handlers | MEDIUM |
-| CanvasRenderer.js | **1,242** | ✅ SelectionRenderer (94% cov) | MEDIUM |
-| SelectionManager.js | **1,194** | ✅ 3 modules | MEDIUM |
+| CanvasRenderer.js | **1,242** | ✅ SelectionRenderer | MEDIUM |
 | APIManager.js | **1,182** | ✅ APIErrorHandler | MEDIUM |
+| LayerListRenderer.js | **1,039** | ✅ Delegates | MEDIUM |
+| GroupManager.js | **1,015** | ✅ New (v1.2.13) | LOW |
 
-**Total in god classes: ~11,486 lines** (23% of JS codebase)
+**Total in god classes: ~13,125 lines** (25% of JS codebase)
+
+**⏳ PROGRESS:** LayerPanel.js reduced from 2,572 to 2,148 lines (424 lines extracted). New controllers created:
+- FolderOperationsController.js (383 lines) - folder operations
+- ContextMenuController.js (246 lines) - right-click menu
 
 ### Files Approaching 1,000 Lines (Watch List)
 
 | File | Lines | Risk |
 |------|-------|------|
-| ToolbarStyleControls.js | **959** | ✅ OK - Safely below 1,000 |
+| ToolbarStyleControls.js | **946** | ⚠️ MEDIUM - Close to limit |
+| PropertiesForm.js | **914** | ⚠️ MEDIUM - Growing |
 | ShapeRenderer.js | **909** | ⚠️ MEDIUM |
-| PropertiesForm.js | **870** | ✅ OK |
-| LayersValidator.js | **854** | ⚠️ MEDIUM |
+| LayersValidator.js | **854** | ✅ OK |
 | ResizeCalculator.js | **822** | ✅ LOW |
 | LayerRenderer.js | **821** | ✅ LOW |
 | TransformController.js | **779** | ✅ LOW |
 | ArrowRenderer.js | **738** | ✅ LOW |
-| DialogManager.js | **728** | ✅ LOW (96% coverage) |
+| DialogManager.js | **728** | ✅ LOW |
+| LayersViewer.js | **665** | ✅ LOW |
 
-### Test Coverage - Files Resolved ✅
-
-| File | Before | After | Status |
-|------|--------|-------|--------|
-| **EffectsRenderer.js** | 48.7% stmt, 43% branch | **99.1% stmt, 93.0% branch** | ✅ FIXED |
-| **CanvasRenderer.js** | 58.5% stmt, 47% branch | **93.7% stmt, 78.2% branch** | ✅ FIXED |
-
-### Remaining Coverage Attention Items
-
-| File | Stmt | Branch | Func | Risk | Notes |
-|------|------|--------|------|------|-------|
-| PropertiesForm.js | 92.3% | 81.2% | 72% | ⚠️ LOW | Function coverage could improve |
-| CanvasManager.js | 86.6% | 72.2% | 86% | ✅ OK | Good for facade class |
-| LayerRenderer.js | 95.5% | 78.1% | 98% | ✅ OK | Excellent |
-| ShapeRenderer.js | 94.0% | 84.6% | 94% | ✅ OK | Excellent |
-
-**Note:** All files now have >85% statement coverage. No critical coverage gaps remain.
-
----
-
-## Native Dialog Architecture ✅ FIXED
-
-All native `alert()`, `confirm()`, and `prompt()` calls now use DialogManager with appropriate fallbacks.
-
-### Dialog Pattern (Correct):
-
-All dialog calls now use a consistent pattern:
-1. **Primary:** Use `DialogManager.showConfirmDialog()` / `showAlertDialog()` / `showPromptDialogAsync()`
-2. **Fallback:** If DialogManager unavailable, gracefully fall back to native dialogs
-
-### ESLint Disable Comments (12 total - all acceptable):
+### ESLint Disable Comments (17 total)
 
 | File | Count | Rule | Reason |
 |------|-------|------|--------|
 | UIManager.js | 3 | no-alert | Fallback wrappers |
+| GroupManager.js | 4 | no-unused-vars | API compatibility |
 | PresetDropdown.js | 2 | no-alert | Fallback wrappers |
 | ToolManager.js | 2 | no-unused-vars | Intentional API compatibility |
 | RevisionManager.js | 1 | no-alert | Fallback wrapper |
@@ -128,8 +105,26 @@ All dialog calls now use a consistent pattern:
 | ImportExportManager.js | 1 | no-alert | Fallback wrapper |
 | LayersValidator.js | 1 | no-unused-vars | Intentional API compatibility |
 | DrawingController.js | 1 | no-unused-vars | Intentional API compatibility |
+| ToolbarStyleControls.js | 1 | no-unused-vars | API compatibility |
 
-**Note:** The `no-alert` disables (8 total) are for fallback code that only executes when DialogManager is unavailable. The `no-unused-vars` disables (4 total) are for parameters intentionally kept for API compatibility.
+**Note:** The `no-alert` disables (8 total) are for fallback code that only executes when DialogManager is unavailable. The `no-unused-vars` disables (9 total) are for parameters intentionally kept for API compatibility.
+
+---
+
+## Test Coverage Status
+
+### Current Coverage (December 30, 2025)
+
+| File | Statement | Branch | Status |
+|------|-----------|--------|--------|
+| EffectsRenderer.js | 99.1% | 93.0% | ✅ Excellent |
+| CanvasRenderer.js | 93.7% | 78.2% | ✅ Good |
+| LayerRenderer.js | 95.5% | 78.1% | ✅ Good |
+| ShapeRenderer.js | 93.9% | 84.6% | ✅ Good |
+| CanvasManager.js | 86.6% | 72.2% | ✅ Acceptable for facade |
+| PropertiesForm.js | 89.9% | 79.7% | ✅ Improved |
+| LayerDragDrop.js | 68.9% | 48.1% | ⚠️ Needs improvement |
+| LayerListRenderer.js | 78.6% | 67.4% | ⚠️ Needs improvement |
 
 ---
 
@@ -357,53 +352,51 @@ All critical coverage gaps have been addressed:
 
 ### What's Good
 
-The extension is **production-ready and fully functional**. Security implementation is professional-grade. Test coverage at 94.43% statement coverage is excellent. The PHP backend is clean and well-documented. The editor has 14 working tools, smart guides, named layer sets, and blur fill effects. All major bugs have been fixed.
+The extension is **production-ready and fully functional**. Security implementation is professional-grade. Test coverage at 92.6% statement coverage is good. The PHP backend is clean and well-documented. The editor has 14 working tools, smart guides, named layer sets, layer grouping, and blur fill effects. All major bugs have been fixed.
 
 ### What Needs Honest Attention
 
-1. **8 god classes** - Technical debt that should be monitored (but all use delegation patterns)
-2. **Mobile-optimized UI missing** - Basic touch works, but no responsive toolbar/panels
-3. **PropertiesForm.js function coverage** - Only 72% function coverage (lower than other files)
-4. **PHP code style warnings** - 11 style warnings in phpcs (mostly comments, minor line length)
-5. **Documentation sprawl** - 20+ markdown files with some overlapping and potentially outdated content
+1. **9 god classes, with LayerPanel.js at 2,572 lines** - This is critical technical debt. LayerPanel.js is 60% over the 1,600-line informal limit and exceeds the 2,000-line "hard limit" suggested in improvement_plan.md
+2. **Coverage has decreased from 94.4% to 92.6%** - New features (GroupManager) may have reduced overall coverage
+3. **17 eslint-disable comments** (was 12) - Growing tech debt from GroupManager additions
+4. **Mobile-optimized UI missing** - Basic touch works, but no responsive toolbar/panels
+5. **LayerDragDrop.js at 68.9% coverage** - Below 85% target
+6. **LayerListRenderer.js at 78.6% coverage** - Below 85% target
 
 ### What's Been Fixed (December 2025)
 
+- ✅ **Layer Grouping feature complete** (v1.2.13-v1.2.14)
+- ✅ **Folder delete dialog with options** - Keep children or delete all
 - ✅ **Blur fill coordinate bug** - Fixed (rectangles no longer transparent)
-- ✅ **Blend mode rendering on article pages** - Fixed (viewer now draws background on canvas)
-- ✅ EffectsRenderer.js coverage: 49% → 99%
-- ✅ CanvasRenderer.js coverage: 59% → 94%
-- ✅ DialogManager.js coverage: 53% → 96%
-- ✅ LayerRenderer.js coverage: 82% → 95%
-- ✅ LayersNamespace.js coverage: 84% → 98%
-- ✅ CanvasManager.js coverage: 80% → 87%
-- ✅ All native alert/confirm/prompt calls use DialogManager pattern
-- ✅ Timer cleanup patterns in major files
-- ✅ Basic touch event handling (pinch-to-zoom, double-tap)
-- ✅ Deprecated code cleanup: multiple methods removed, fallbacks documented
+- ✅ **Blend mode rendering on article pages** - Fixed
+- ✅ Basic touch support (pinch-to-zoom, touch-to-mouse)
+- ✅ Context-aware toolbar implemented
+- ✅ Auto-create layer sets on editor link
 
 ### Honest Criticisms
 
-1. **Over-engineered in places** - Some modules have deep abstraction layers that add complexity without clear benefit (e.g., 4 different class resolution patterns)
-2. **Documentation sprawl** - 20+ markdown files with some overlapping and potentially outdated content
-3. **No formal architecture diagram** - Despite claims of good architecture, no visual representation exists
-4. **Mobile support is aspirational** - Documentation claims "touch support" but it's very basic
-5. **God classes are a real concern** - While delegation patterns help, 23% of the codebase in 8 files is not ideal for maintainability
-6. **Missing automated E2E tests** - Playwright config exists but E2E test coverage is minimal
+1. **LayerPanel.js is out of control** - At 2,572 lines, this file has grown 40% since the last review and needs to be split urgently. Despite having 7 controllers for delegation, the core file is still too large.
+2. **GroupManager.js added 4 new eslint-disable comments** - Pattern of adding tech debt during feature development
+3. **Coverage decrease** - From 94.4% to 92.6% suggests new code is less thoroughly tested
+4. **Over-engineered in places** - Some modules have deep abstraction layers that add complexity without clear benefit
+5. **Documentation sprawl** - 20+ markdown files with overlapping and potentially outdated content
+6. **No formal architecture diagram** - Despite claims of good architecture, no visual representation exists
+7. **Missing automated E2E tests** - Playwright config exists but E2E test coverage is minimal
 
 ### Bottom Line
 
-This extension is in **excellent shape**. The codebase is well-tested (94%+ coverage), well-structured (delegation patterns, ES6 classes), and feature-complete for its core use case. All major bugs have been fixed.
+This extension is in **good shape** but **technical debt is accumulating**. The codebase is functional (7,563 tests, 92.6%+ coverage, feature-complete). LayerPanel.js refactoring is in progress - reduced from 2,572 to 2,148 lines with 629 lines extracted to new controllers.
 
-**Honest rating: 8.5/10**
+**Honest rating: 8.0/10**
 
 Deductions:
-- -0.5 for 8 god classes (23% of codebase) - mitigated by delegation patterns
-- -0.5 for mobile UI not responsive (basic touch works)
-- -0.25 for PropertiesForm.js function coverage at 74% (improved from 72%)
-- -0.25 for documentation sprawl (being addressed - duplicates archived)
+- -0.75 for 9 god classes (26% of codebase), especially LayerPanel.js at 2,572 lines
+- -0.5 for mobile UI not responsive
+- -0.25 for coverage decrease (94.4% → 92.6%)
+- -0.25 for 17 eslint-disable comments (above target)
+- -0.25 for LayerDragDrop.js and LayerListRenderer.js below coverage target
 
 ---
 
 *Review performed by GitHub Copilot (Claude Opus 4.5)*  
-*Last updated: December 29, 2025*
+*Last updated: December 30, 2025*

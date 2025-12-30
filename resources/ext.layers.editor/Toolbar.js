@@ -766,7 +766,7 @@
 				'smart-guides',
 				t( 'layers-smart-guides', 'Smart Guides' ),
 				t( 'layers-smart-guides-desc', 'Snap to other objects' ),
-				';',
+				'',
 				false // Default off
 			);
 			snapSection.appendChild( smartGuidesItem );
@@ -875,15 +875,34 @@
 			checkbox.dataset.toggle = id;
 			checkbox.className = 'dropdown-toggle-checkbox';
 
-			item.innerHTML = `
-				<span class="dropdown-item-icon"></span>
-				<span class="dropdown-item-content">
-					<span class="dropdown-item-label">${ label }</span>
-					<span class="dropdown-item-desc">${ description }</span>
-				</span>
-				<span class="dropdown-item-shortcut">${ shortcut }</span>
-			`;
-			item.insertBefore( checkbox, item.firstChild );
+			const iconSpan = document.createElement( 'span' );
+			iconSpan.className = 'dropdown-item-icon';
+
+			const contentSpan = document.createElement( 'span' );
+			contentSpan.className = 'dropdown-item-content';
+
+			const labelSpan = document.createElement( 'span' );
+			labelSpan.className = 'dropdown-item-label';
+			labelSpan.textContent = label;
+
+			const descSpan = document.createElement( 'span' );
+			descSpan.className = 'dropdown-item-desc';
+			descSpan.textContent = description;
+
+			contentSpan.appendChild( labelSpan );
+			contentSpan.appendChild( descSpan );
+
+			item.appendChild( checkbox );
+			item.appendChild( iconSpan );
+			item.appendChild( contentSpan );
+
+			// Only add shortcut if provided
+			if ( shortcut ) {
+				const shortcutSpan = document.createElement( 'span' );
+				shortcutSpan.className = 'dropdown-item-shortcut';
+				shortcutSpan.textContent = shortcut;
+				item.appendChild( shortcutSpan );
+			}
 
 			return item;
 		}

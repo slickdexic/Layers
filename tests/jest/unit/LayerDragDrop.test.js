@@ -354,7 +354,8 @@ describe( 'LayerDragDrop', () => {
 			targetItem.dispatchEvent( event );
 
 			expect( event.preventDefault ).toHaveBeenCalled();
-			expect( reorderSpy ).toHaveBeenCalledWith( 'layer-1', 'layer-2' );
+			// Third parameter is insertAfter (false when no drop-target-below class)
+			expect( reorderSpy ).toHaveBeenCalledWith( 'layer-1', 'layer-2', false );
 		} );
 
 		test( 'should not reorder when dropping on same layer', () => {
@@ -471,7 +472,8 @@ describe( 'LayerDragDrop', () => {
 
 			dragDrop.reorderLayers( 'layer-1', 'layer-2' );
 
-			expect( mockEditor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer-1', 'layer-2' );
+			// Third parameter is insertAfter (undefined when not passed)
+			expect( mockEditor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer-1', 'layer-2', undefined );
 			expect( mockEditor.canvasManager.redraw ).toHaveBeenCalled();
 			expect( renderLayerList ).toHaveBeenCalled();
 		} );
@@ -571,6 +573,189 @@ describe( 'LayerDragDrop', () => {
 			expect( () => {
 				dragDrop.reorderLayers( 'layer-1', 'layer-2' );
 			} ).not.toThrow();
+		} );
+
+		test( 'should remove layer from folder when dragged outside folder', () => {
+			// Setup layers with one inside a folder
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-2' ] },
+				{ id: 'layer-1', type: 'rectangle' },
+				{ id: 'layer-2', type: 'circle', parentGroup: 'folder-1' },
+				{ id: 'layer-3', type: 'text' }
+			] );
+			mockEditor.getLayerById = jest.fn( ( id ) => {
+				const layers = mockEditor.stateManager.get();
+				return layers.find( ( l ) => l.id === id );
+			} );
+			mockEditor.groupManager = {
+				removeFromFolder: jest.fn( () => true )
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Drag layer-2 (in folder-1) to layer-3 (not in folder)
+			dragDrop.reorderLayers( 'layer-2', 'layer-3' );
+
+			// Should have called removeFromFolder
+			expect( mockEditor.groupManager.removeFromFolder ).toHaveBeenCalledWith( 'layer-2' );
+		} );
+
+		test( 'should not remove from folder when dragging within same folder', () => {
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-1', 'layer-2' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-1' },
+				{ id: 'layer-2', type: 'circle', parentGroup: 'folder-1' }
+			] );
+			mockEditor.getLayerById = jest.fn( ( id ) => {
+				const layers = mockEditor.stateManager.get();
+				return layers.find( ( l ) => l.id === id );
+			} );
+			mockEditor.groupManager = {
+				removeFromFolder: jest.fn()
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Drag layer-1 to layer-2 (both in same folder)
+			dragDrop.reorderLayers( 'layer-1', 'layer-2' );
+
+			// Should NOT have called removeFromFolder
+			expect( mockEditor.groupManager.removeFromFolder ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should remove from folder when dragging to the folder itself', () => {
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-1' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-1' }
+			] );
+			mockEditor.getLayerById = jest.fn( ( id ) => {
+				const layers = mockEditor.stateManager.get();
+				return layers.find( ( l ) => l.id === id );
+			} );
+			mockEditor.groupManager = {
+				removeFromFolder: jest.fn()
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Drag layer-1 to its parent folder (meaning: move out of folder, above/below folder header)
+			dragDrop.reorderLayers( 'layer-1', 'folder-1' );
+
+			// SHOULD have called removeFromFolder - user is dragging layer out of folder
+			expect( mockEditor.groupManager.removeFromFolder ).toHaveBeenCalledWith( 'layer-1' );
+		} );
+
+		test( 'should add layer to folder when dragging between folder children', () => {
+			// Layer-3 is outside folder, layer-1 and layer-2 are inside folder-1
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-1', 'layer-2' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-1' },
+				{ id: 'layer-2', type: 'circle', parentGroup: 'folder-1' },
+				{ id: 'layer-3', type: 'text' } // Not in folder
+			] );
+			mockEditor.getLayerById = jest.fn( ( id ) => {
+				const layers = mockEditor.stateManager.get();
+				return layers.find( ( l ) => l.id === id );
+			} );
+			mockEditor.groupManager = {
+				addToFolderAtPosition: jest.fn( () => true ),
+				moveToFolder: jest.fn( () => true ),
+				removeFromFolder: jest.fn()
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Drag layer-3 (outside) to layer-2 (inside folder-1)
+			dragDrop.reorderLayers( 'layer-3', 'layer-2' );
+
+			// Should have called addToFolderAtPosition
+			expect( mockEditor.groupManager.addToFolderAtPosition ).toHaveBeenCalledWith(
+				'layer-3', 'folder-1', 'layer-2'
+			);
+		} );
+
+		test( 'should fallback to moveToFolder if addToFolderAtPosition not available', () => {
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-1' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-1' },
+				{ id: 'layer-2', type: 'circle' }
+			] );
+			mockEditor.getLayerById = jest.fn( ( id ) => {
+				const layers = mockEditor.stateManager.get();
+				return layers.find( ( l ) => l.id === id );
+			} );
+			mockEditor.groupManager = {
+				moveToFolder: jest.fn( () => true ),
+				removeFromFolder: jest.fn()
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			dragDrop.reorderLayers( 'layer-2', 'layer-1' );
+
+			// Should have called moveToFolder as fallback
+			expect( mockEditor.groupManager.moveToFolder ).toHaveBeenCalledWith(
+				'layer-2', 'folder-1'
+			);
+		} );
+
+		test( 'should move layer between folders correctly', () => {
+			// layer-1 is in folder-1, dragging to folder-2
+			mockEditor.stateManager.get.mockReturnValue( [
+				{ id: 'folder-1', type: 'group', children: [ 'layer-1' ] },
+				{ id: 'layer-1', type: 'rectangle', parentGroup: 'folder-1' },
+				{ id: 'folder-2', type: 'group', children: [ 'layer-2' ] },
+				{ id: 'layer-2', type: 'circle', parentGroup: 'folder-2' }
+			] );
+			mockEditor.getLayerById = jest.fn( ( id ) => {
+				const layers = mockEditor.stateManager.get();
+				return layers.find( ( l ) => l.id === id );
+			} );
+			mockEditor.groupManager = {
+				addToFolderAtPosition: jest.fn( () => true ),
+				removeFromFolder: jest.fn( () => true )
+			};
+
+			const dragDrop = new LayerDragDrop( {
+				layerList,
+				editor: mockEditor,
+				renderLayerList,
+				addTargetListener
+			} );
+
+			// Drag layer-1 (in folder-1) to layer-2 (in folder-2)
+			dragDrop.reorderLayers( 'layer-1', 'layer-2' );
+
+			// Should have removed from folder-1 and added to folder-2
+			expect( mockEditor.groupManager.removeFromFolder ).toHaveBeenCalledWith( 'layer-1' );
+			expect( mockEditor.groupManager.addToFolderAtPosition ).toHaveBeenCalledWith(
+				'layer-1', 'folder-2', 'layer-2'
+			);
 		} );
 	} );
 

@@ -64,9 +64,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
   - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
-  - UI: `Toolbar.js` (~1,537 lines), `LayerPanel.js` (~1,838 lines - delegates to 7 controllers), plus editor CSS (editor-fixed.css theme)
+  - UI: `Toolbar.js` (~1,537 lines), `LayerPanel.js` (~2,148 lines - delegates to 9 controllers), plus editor CSS (editor-fixed.css theme)
   - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js and UIManager.js for separation of concerns:
     - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
+    - `FolderOperationsController.js` (~383 lines) - folder create/delete, layer visibility toggle, ungroup operations
+    - `ContextMenuController.js` (~246 lines) - right-click context menu for layer actions
     - `SetSelectorController.js` (~567 lines) - named layer set selection, creation, deletion, renaming (extracted from UIManager.js)
     - `LayerItemFactory.js` (~299 lines) - layer list item DOM creation
     - `LayerListRenderer.js` - layer list rendering
@@ -84,8 +86,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`, `APIErrorHandler.js`
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
-  - ES6 classes: All 73 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 8 files exceed 1,000 lines (CanvasManager, LayerPanel, Toolbar, LayersEditor, ToolManager, CanvasRenderer, SelectionManager, APIManager) - all use delegation patterns, see improvement_plan.md
+  - ES6 classes: All 91 modules use ES6 classes; ES6 migration is 100% complete (0 prototype patterns remaining)
+  - **God classes:** 9 files exceed 1,000 lines (CanvasManager, LayerPanel, Toolbar, LayersEditor, ToolManager, CanvasRenderer, SelectionManager, APIManager, LayerListRenderer) - all use delegation patterns, see improvement_plan.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.

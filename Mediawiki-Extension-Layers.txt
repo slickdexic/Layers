@@ -6,7 +6,7 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Pvodrazka]]
-|version         = 1.2.14
+|version         = 1.2.15
 |update          = 2025-12-30
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -21,13 +21,17 @@
 |hook1           = BeforePageDisplay
 |hook2           = BitmapHandlerTransform
 |hook3           = FileDeleteComplete
-|hook4           = LoadExtensionSchemaUpdates
-|hook5           = MakeGlobalVariablesScript
-|hook6           = ParserFirstCallInit
-|hook7           = SkinTemplateNavigation
-|hook8           = SkinTemplateNavigation::Universal
-|hook9           = ThumbnailBeforeProduceHTML
-|hook10          = UnknownAction
+|hook4           = ImageBeforeProduceHTML
+|hook5           = LinkerMakeMediaLinkFile
+|hook6           = LoadExtensionSchemaUpdates
+|hook7           = MakeGlobalVariablesScript
+|hook8           = ParserBeforeInternalParse
+|hook9           = ParserFirstCallInit
+|hook10          = ParserMakeImageParams
+|hook11          = SkinTemplateNavigation
+|hook12          = SkinTemplateNavigation::Universal
+|hook13          = ThumbnailBeforeProduceHTML
+|hook14          = UnknownAction
 |description     = A professional-grade, non-destructive image annotation system with 14 drawing tools, layer folders, style presets, named layer sets, and full keyboard accessibility.
 }}
 

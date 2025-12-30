@@ -51,7 +51,10 @@ describe('LayerPanel Multi-Select', () => {
         
         // Mock mw object
         global.mw = {
-            log: jest.fn(),
+            log: Object.assign(jest.fn(), {
+                error: jest.fn(),
+                warn: jest.fn()
+            }),
             config: {
                 get: jest.fn(() => false)
             },
@@ -92,13 +95,26 @@ describe('LayerPanel Multi-Select', () => {
                 groupSelected: jest.fn(() => ({ success: true })),
                 createGroup: jest.fn((layerIds) => ({ id: 'group-1', type: 'group', children: layerIds })),
                 createFolder: jest.fn((layerIds) => ({ id: 'folder-1', type: 'group', children: layerIds || [] })),
-                ungroup: jest.fn(() => ({ success: true }))
+                ungroup: jest.fn(() => ({ success: true })),
+                getLayerDepth: jest.fn(() => 0)
             },
             updateLayer: jest.fn(),
             saveState: jest.fn(),
             removeLayer: jest.fn(),
             duplicateSelected: jest.fn()
         };
+
+        // Load FolderOperationsController for folder operations
+        const FolderOperationsController = require('../../resources/ext.layers.editor/ui/FolderOperationsController.js');
+        window.Layers.UI.FolderOperationsController = FolderOperationsController;
+
+        // Load ContextMenuController for context menu operations
+        const ContextMenuController = require('../../resources/ext.layers.editor/ui/ContextMenuController.js');
+        window.Layers.UI.ContextMenuController = ContextMenuController;
+
+        // Load LayerItemFactory for layer item creation
+        const LayerItemFactory = require('../../resources/ext.layers.editor/ui/LayerItemFactory.js');
+        window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
         // Load LayerPanel
         LayerPanel = require('../../resources/ext.layers.editor/LayerPanel.js');

@@ -218,6 +218,92 @@ describe( 'GroupManager', () => {
 		} );
 	} );
 
+	describe( 'addToFolderAtPosition', () => {
+		it( 'should add layer to folder at specific position', () => {
+			// Create a folder with 2 layers
+			const folder = groupManager.createGroup( [ 'layer-1', 'layer-2' ], 'Folder' );
+
+			// Add layer-3 at position before layer-2
+			const result = groupManager.addToFolderAtPosition( 'layer-3', folder.id, 'layer-2' );
+
+			expect( result ).toBe( true );
+
+			const layers = mockStateManager.get( 'layers' );
+			const updatedFolder = layers.find( ( l ) => l.id === folder.id );
+
+			// layer-3 should be inserted before layer-2 in children array
+			expect( updatedFolder.children ).toEqual( [ 'layer-1', 'layer-3', 'layer-2' ] );
+
+			const layer3 = layers.find( ( l ) => l.id === 'layer-3' );
+			expect( layer3.parentGroup ).toBe( folder.id );
+
+			// Also verify flat array order: layer-3 should appear before layer-2
+			const layer3FlatIndex = layers.findIndex( ( l ) => l.id === 'layer-3' );
+			const layer2FlatIndex = layers.findIndex( ( l ) => l.id === 'layer-2' );
+			expect( layer3FlatIndex ).toBeLessThan( layer2FlatIndex );
+		} );
+
+		it( 'should add layer at end if beforeSiblingId not in folder', () => {
+			const folder = groupManager.createGroup( [ 'layer-1', 'layer-2' ], 'Folder' );
+
+			// Add layer-3 with a non-existent sibling ID
+			const result = groupManager.addToFolderAtPosition( 'layer-3', folder.id, 'nonexistent' );
+
+			expect( result ).toBe( true );
+
+			const layers = mockStateManager.get( 'layers' );
+			const updatedFolder = layers.find( ( l ) => l.id === folder.id );
+
+			// layer-3 should be at the end
+			expect( updatedFolder.children ).toEqual( [ 'layer-1', 'layer-2', 'layer-3' ] );
+		} );
+
+		it( 'should move layer from one folder to another at position', () => {
+			// Create two folders
+			const folder1 = groupManager.createGroup( [ 'layer-1', 'layer-2' ], 'Folder 1' );
+			const folder2 = groupManager.createGroup( [ 'layer-3', 'layer-4' ], 'Folder 2' );
+
+			// Move layer-1 from folder1 to folder2 before layer-4
+			const result = groupManager.addToFolderAtPosition( 'layer-1', folder2.id, 'layer-4' );
+
+			expect( result ).toBe( true );
+
+			const layers = mockStateManager.get( 'layers' );
+			const updatedFolder1 = layers.find( ( l ) => l.id === folder1.id );
+			const updatedFolder2 = layers.find( ( l ) => l.id === folder2.id );
+
+			// layer-1 should be removed from folder1
+			expect( updatedFolder1.children ).not.toContain( 'layer-1' );
+			// layer-1 should be in folder2 before layer-4
+			expect( updatedFolder2.children ).toEqual( [ 'layer-3', 'layer-1', 'layer-4' ] );
+
+			const layer1 = layers.find( ( l ) => l.id === 'layer-1' );
+			expect( layer1.parentGroup ).toBe( folder2.id );
+		} );
+
+		it( 'should return false for non-existent layer', () => {
+			const folder = groupManager.createGroup( [ 'layer-1' ], 'Folder' );
+			const result = groupManager.addToFolderAtPosition( 'nonexistent', folder.id, 'layer-1' );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for non-existent folder', () => {
+			const result = groupManager.addToFolderAtPosition( 'layer-1', 'nonexistent', null );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false when layer is already in the same folder', () => {
+			const folder = groupManager.createGroup( [ 'layer-1', 'layer-2', 'layer-3' ], 'Folder' );
+
+			// Try to reposition layer-3 within same folder (this is not what addToFolderAtPosition is for)
+			const result = groupManager.addToFolderAtPosition( 'layer-3', folder.id, 'layer-2' );
+
+			// addToFolderAtPosition returns false when layer is already in the folder
+			// Use reorderLayer for repositioning within the same folder
+			expect( result ).toBe( false );
+		} );
+	} );
+
 	describe( 'toggleExpanded', () => {
 		it( 'should toggle expanded state', () => {
 			const group = groupManager.createGroup( [ 'layer-1', 'layer-2' ] );

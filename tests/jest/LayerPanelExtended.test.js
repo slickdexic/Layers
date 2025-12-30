@@ -60,6 +60,10 @@ describe( 'LayerPanel Extended', () => {
 		const LayerItemFactory = require( '../../resources/ext.layers.editor/ui/LayerItemFactory.js' );
 		window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
+		// Load FolderOperationsController for folder operations
+		const FolderOperationsController = require( '../../resources/ext.layers.editor/ui/FolderOperationsController.js' );
+		window.Layers.UI.FolderOperationsController = FolderOperationsController;
+
 		// Setup DOM
 		document.body.innerHTML = `
 			<div id="layers-panel-container"></div>
