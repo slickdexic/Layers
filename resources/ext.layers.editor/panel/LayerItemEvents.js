@@ -78,6 +78,20 @@
 				return;
 			}
 
+			// Check for multi-select modifiers FIRST (industry standard)
+			const isCtrlClick = e.ctrlKey || e.metaKey;
+			const isShiftClick = e.shiftKey;
+
+			if ( isCtrlClick || isShiftClick ) {
+				e.preventDefault();
+				if ( isShiftClick ) {
+					this.triggerCallback( 'onShiftSelect', layerId );
+				} else {
+					this.triggerCallback( 'onCtrlSelect', layerId );
+				}
+				return;
+			}
+
 			// Determine which element was clicked
 			const visibilityBtn = target.closest( '.layer-visibility' );
 			const lockBtn = target.closest( '.layer-lock' );
@@ -91,7 +105,8 @@
 			} else if ( deleteBtn ) {
 				this.triggerCallback( 'onDelete', layerId );
 			} else if ( nameEl ) {
-				this.triggerCallback( 'onEditName', layerId, nameEl );
+				// Call onNameClick - the panel will decide whether to select or edit
+				this.triggerCallback( 'onNameClick', layerId, nameEl );
 			} else {
 				this.triggerCallback( 'onSelect', layerId );
 			}

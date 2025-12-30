@@ -1,32 +1,32 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 29, 2025  
+**Last Updated:** December 30, 2025  
 **Status:** ✅ All P0 Issues Resolved  
-**Version:** 1.2.13  
+**Version:** 1.2.14  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-The extension is **production-ready** with all critical issues resolved. Layer Grouping feature is complete.
+The extension is **production-ready** with all critical issues resolved. Layer Grouping feature is complete with full folder UI.
 
 **Current Rating: 9.0/10**
 
 ---
 
-## Current State (December 29, 2025)
+## Current State (December 30, 2025)
 
 | Area | Status | Details |
 |------|--------|--------|
-| **Functionality** | ✅ Complete | 14 tools + layer grouping |
+| **Functionality** | ✅ Complete | 14 tools + layer grouping with folders |
 | **Security** | ✅ Resolved | All known security issues fixed |
-| **Testing** | ✅ Excellent | 7,483 tests, 94%+ statement coverage |
+| **Testing** | ✅ Excellent | 7,506 tests, 94%+ statement coverage |
 | **ES6 Migration** | ✅ Complete | 89 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ⚠️ Technical Debt | 8 files >1,000 lines (all use delegation) |
-| **Codebase Size** | ✅ Healthy | ~51,000 lines (99 files), well under 75K target |
-| **Layer Grouping** | ✅ **COMPLETE** | Ctrl+G/Ctrl+Shift+G, nested groups, selection |
+| **Codebase Size** | ✅ Healthy | ~52,000 lines (99 files), well under 75K target |
+| **Layer Grouping** | ✅ **COMPLETE** | Folders, expand/collapse, visibility cascade, delete options |
 
 ---
 
@@ -430,13 +430,13 @@ All dialogs now use DialogManager with fallbacks.
 
 ### FR-2: Layer Groups (Folders) (P2)
 
-**Status:** ⏳ Proposed  
+**Status:** ✅ Complete (v1.2.13-v1.2.14)  
 **Effort:** ~50 hours (High complexity)  
 **Documentation:** [FEATURE_REQUEST_LAYER_GROUPS.md](docs/FEATURE_REQUEST_LAYER_GROUPS.md)
 
-**Summary:** Allow users to organize layers into collapsible groups (folders) in the Layer Panel, similar to Adobe Photoshop layer groups or Figma frames.
+**Summary:** Organize layers into collapsible groups (folders) in the Layer Panel, similar to Adobe Photoshop layer groups or Figma frames.
 
-**Key Features:**
+**Implemented Features:**
 - Create/rename/delete layer groups with folder metaphor
 - Drag-and-drop layers into/out of groups
 - Expand/collapse groups to reduce visual clutter
@@ -444,6 +444,8 @@ All dialogs now use DialogManager with fallbacks.
 - Group visibility toggle affects all children
 - Support for nested groups (2-3 levels deep)
 - Keyboard shortcuts: Ctrl+G (group), Ctrl+Shift+G (ungroup)
+- Folder delete dialog with options (keep children or delete all)
+- Batch undo for folder operations
 
 **Impact Areas:**
 - Data model: New `group` layer type with `children` array
@@ -504,7 +506,7 @@ Deductions:
 
 ---
 
-*Plan updated: December 29, 2025*  
+*Plan updated: December 30, 2025*  
 *Status: ✅ **ALL P0 ISSUES RESOLVED** - Production-ready*  
-*Version: 1.2.11*  
-*Feature Requests: FR-1 and FR-3 implemented, FR-2 proposed*
+*Version: 1.2.14*  
+*Feature Requests: FR-1, FR-2, and FR-3 implemented*

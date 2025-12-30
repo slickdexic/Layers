@@ -332,10 +332,10 @@ describe( 'LayerListRenderer', () => {
 			expect( grabArea.getAttribute( 'role' ) ).toBe( 'button' );
 		} );
 
-		it( 'should set cursor to grab', () => {
+		it( 'should have layer-grab-area class (CSS controls cursor style)', () => {
 			const layer = { id: '1', type: 'rectangle' };
 			const grabArea = renderer._createGrabArea( layer, 'Test Layer', mockMsg );
-			expect( grabArea.style.cursor ).toBe( 'grab' );
+			expect( grabArea.className ).toBe( 'layer-grab-area' );
 		} );
 
 		it( 'should contain SVG icon', () => {

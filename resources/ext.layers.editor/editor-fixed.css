@@ -763,24 +763,51 @@ body.layers-editor-open .mw-body-content {
 }
 
 .layers-panel-header {
-	padding: 12px 16px;
+	padding: 4px 10px;
 	border-bottom: 1px solid #eee;
 	background: #fafafa;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 28px;
 }
 
 .layers-panel-header h3 {
 	margin: 0;
-	font-size: 0.9em;
+	font-size: 0.85em;
 	font-weight: 600;
 	color: #333;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
+	line-height: 1;
+}
+
+/* Icon-only button in layers panel header */
+.layers-btn.layers-btn-icon {
+	padding: 2px 4px;
+	background: transparent;
+	border-width: 0;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.layers-btn.layers-btn-icon:hover {
+	background: rgba( 0, 0, 0, 0.08 );
+	border-radius: 4px;
+}
+
+.layers-btn.layers-btn-icon svg {
+	width: 18px;
+	height: 18px;
 }
 
 .layers-panel-subtitle {
-	margin-top: 2px;
-	font-size: 0.7em;
+	margin-top: 0;
+	font-size: 0.65em;
 	color: #888;
+	line-height: 1.2;
 }
 
 .layers-list {
@@ -931,6 +958,38 @@ body.layers-editor-open .mw-body-content {
 
 .property-section-body {
 	padding: 6px 8px;
+}
+
+/* Folder properties - special info row styling */
+.properties-row.properties-info {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 0;
+	border-bottom: 1px solid #e0e0e0;
+	margin-bottom: 8px;
+}
+
+.properties-row.properties-info .properties-label {
+	font-size: 0.8em;
+	font-weight: 500;
+	color: #616161;
+}
+
+.properties-row.properties-info .properties-value {
+	font-size: 0.8em;
+	color: #424242;
+	font-style: italic;
+}
+
+/* Folder section header styling */
+.property-section[ data-type='folder' ] .property-section-header {
+	background: linear-gradient( 90deg, #ff9800, #ffc107 );
+	color: #fff;
+}
+
+.property-section[ data-type='folder' ] .property-section-header::before {
+	content: '📁 ';
 }
 
 .layer-properties-form .property-field {
@@ -1282,15 +1341,15 @@ body.layers-editor-open .mw-body-content {
 .layer-item {
 	display: flex;
 	align-items: center;
-	padding: 4px 6px;
-	margin-bottom: 2px;
+	padding: 2px 4px;
+	margin-bottom: 1px;
 	background: #fafafa;
 	border: 1px solid #e8e8e8;
-	border-radius: 4px;
+	border-radius: 3px;
 	cursor: pointer;
 	transition: all 0.1s ease;
-	gap: 4px;
-	min-height: 28px;
+	gap: 3px;
+	min-height: 22px;
 }
 
 .layer-item .layer-visibility,
@@ -1299,12 +1358,12 @@ body.layers-editor-open .mw-body-content {
 	background: transparent;
 	border: 0;
 	cursor: pointer;
-	width: 22px;
-	height: 22px;
+	width: 18px;
+	height: 18px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border-radius: 3px;
+	border-radius: 2px;
 	transition: all 0.1s ease;
 	padding: 0;
 	flex-shrink: 0;
@@ -1424,16 +1483,17 @@ body.layers-editor-open .mw-body-content {
 
 .layer-name {
 	flex: 1;
-	font-size: 0.8em;
+	font-size: 0.72em;
 	color: #333;
-	padding: 2px 4px;
-	border-radius: 3px;
+	padding: 1px 3px;
+	border-radius: 2px;
 	min-width: 0;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	border: 1px solid transparent;
 	transition: all 0.1s ease;
+	line-height: 1.3;
 }
 
 .layer-name:hover {
@@ -1463,8 +1523,8 @@ body.layers-editor-open .mw-body-content {
 }
 
 .layer-grab-area {
-	width: 16px;
-	height: 20px;
+	width: 14px;
+	height: 16px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1481,39 +1541,154 @@ body.layers-editor-open .mw-body-content {
 	opacity: 1;
 }
 
+/* ========================================
+   Folder/Group Layer Items - Container Styling
+   Distinct from regular layers - looks like a folder/container
+   ======================================== */
+.layer-item-group {
+	background: #f5f5f5;
+	border: 1px solid #bdbdbd;
+	border-left: 4px solid #ff9800;
+	border-radius: 4px;
+	margin-bottom: 2px;
+	position: relative;
+}
+
+.layer-item-group::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 100%;
+	background: linear-gradient( 180deg, rgba( 255, 152, 0, 0.08 ) 0%, transparent 100% );
+	pointer-events: none;
+	border-radius: 0 3px 3px 0;
+}
+
+.layer-item-group:hover {
+	background: #eee;
+	border-color: #9e9e9e;
+	border-left-color: #f57c00;
+}
+
+.layer-item-group.selected {
+	background: #e3f2fd;
+	border-color: #2196f3;
+	border-left-color: #ff9800;
+	box-shadow: 0 0 0 1px rgba( 33, 150, 243, 0.3 );
+}
+
+/* Folder icon container in layer item - distinct container styling */
+.layer-item-group .layer-grab-area {
+	background: linear-gradient( 135deg, #ff9800 0%, #ffc107 100% );
+	border-radius: 4px;
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.2 );
+	padding: 2px;
+}
+
+.layer-item-group .layer-grab-area svg {
+	filter: drop-shadow( 0 1px 1px rgba( 0, 0, 0, 0.2 ) );
+}
+
+/* Folder name styling - bolder for container */
+.layer-item-group .layer-name {
+	font-weight: 600;
+	color: #424242;
+}
+
+/* General grab area hover comes first for proper specificity */
 .layer-grab-area:hover {
 	background: rgba( 0, 0, 0, 0.06 );
 	opacity: 1;
+}
+
+/* Folder grab area hover override - comes after general hover */
+.layer-item-group .layer-grab-area:hover {
+	background: linear-gradient( 135deg, #f57c00 0%, #ffb300 100% );
+	transform: scale( 1.05 );
 }
 
 .layer-item:hover .layer-grab-area {
 	opacity: 1;
 }
 
-/* Group Layer Items - hierarchical styling */
-.layer-item-group {
-	background: linear-gradient( 90deg, #fff8e1 0%, #fafafa 100% );
-	border-color: #f5d76e;
+/* Folder empty state indicator - more prominent */
+.layer-item-group.folder-empty {
+	opacity: 0.85;
+	border-style: dashed;
 }
 
-.layer-item-group:hover {
-	background: linear-gradient( 90deg, #fff3cd 0%, #f0f4f8 100% );
-	border-color: #f0c14b;
+.layer-item-group.folder-empty .layer-name::after {
+	content: ' (empty)';
+	font-size: 0.75em;
+	color: #9e9e9e;
+	font-style: italic;
+	font-weight: normal;
 }
 
-.layer-item-group.selected {
-	background: linear-gradient( 90deg, #fff3cd 0%, #e8f4fd 100% );
-	border-color: #f0c14b;
+/* Drag and drop visual feedback */
+.layer-item.dragging {
+	opacity: 0.5;
+	background: #e3f2fd;
+}
+
+/* Folder drop target - very distinct green highlight */
+.layers-list .layer-item.folder-drop-target {
+	background: #c8e6c9;
+	border: 2px dashed #4caf50;
+	border-left-width: 4px;
+	border-left-style: solid;
+	box-shadow: inset 0 0 12px rgba( 76, 175, 80, 0.4 ), 0 0 8px rgba( 76, 175, 80, 0.3 );
+	transform: scale( 1.02 );
+	transition: all 0.15s ease;
+}
+
+.layers-list .layer-item.folder-drop-target .layer-name::after {
+	content: ' ← Drop here';
+	font-size: 0.75em;
+	color: #2e7d32;
+	font-style: italic;
+	font-weight: normal;
+	animation: pulse-hint 1s ease-in-out infinite;
+}
+
+@keyframes pulse-hint {
+	0%,
+	100% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.6;
+	}
+}
+
+/* Reorder drop indicators - higher specificity via doubled class */
+.layers-list .layer-item.drop-target-above {
+	border-top: 3px solid #2196f3;
+	margin-top: -1px;
+}
+
+.layers-list .layer-item.drop-target-below {
+	border-bottom: 3px solid #2196f3;
+	margin-bottom: -1px;
 }
 
 /* Child layer indentation visual indicator */
 .layer-item-child {
-	border-left: 2px solid #e0e0e0;
-	margin-left: 8px;
+	border-left: 2px solid #f39c12;
+	margin-left: 12px;
+	background: linear-gradient( 90deg, rgba( 243, 156, 18, 0.05 ) 0%, transparent 20% );
 }
 
 .layer-item-child:hover {
-	border-left-color: #bbb;
+	border-left-color: #e67e22;
+}
+
+.layer-item-child.selected {
+	border-left-color: #e67e22;
+	border-left-width: 3px;
 }
 
 /* Expand/collapse toggle button */
@@ -1521,16 +1696,16 @@ body.layers-editor-open .mw-body-content {
 	background: transparent;
 	border: 0;
 	cursor: pointer;
-	width: 18px;
-	height: 18px;
+	width: 14px;
+	height: 14px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border-radius: 3px;
+	border-radius: 2px;
 	transition: all 0.1s ease;
 	padding: 0;
 	flex-shrink: 0;
-	margin-right: 2px;
+	margin-right: 1px;
 }
 
 .layer-expand-toggle:hover {

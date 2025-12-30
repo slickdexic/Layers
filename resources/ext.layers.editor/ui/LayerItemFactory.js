@@ -87,6 +87,49 @@
 		}
 
 		/**
+		 * Create folder icon fallback when IconFactory is not available
+		 *
+		 * @param {boolean} expanded Whether the folder is expanded
+		 * @return {SVGElement} Folder icon SVG element
+		 */
+		createFolderIconFallback( expanded ) {
+			const SVG_NS = 'http://www.w3.org/2000/svg';
+			const size = 18;
+			const color = '#f39c12';
+
+			const svg = document.createElementNS( SVG_NS, 'svg' );
+			svg.setAttribute( 'width', String( size ) );
+			svg.setAttribute( 'height', String( size ) );
+			svg.setAttribute( 'viewBox', '0 0 24 24' );
+			svg.setAttribute( 'aria-hidden', 'true' );
+
+			// Folder path - same for both open and closed
+			const path = document.createElementNS( SVG_NS, 'path' );
+			path.setAttribute( 'd', 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z' );
+			path.setAttribute( 'fill', color );
+			path.setAttribute( 'stroke', color );
+			path.setAttribute( 'stroke-width', '1.5' );
+			path.setAttribute( 'stroke-linecap', 'round' );
+			path.setAttribute( 'stroke-linejoin', 'round' );
+			svg.appendChild( path );
+
+			if ( expanded ) {
+				// Add open folder flap indicator
+				const flap = document.createElementNS( SVG_NS, 'path' );
+				flap.setAttribute( 'd', 'M2 10l2.5-2h17l-2.5 2' );
+				flap.setAttribute( 'fill', 'none' );
+				flap.setAttribute( 'stroke', '#fff' );
+				flap.setAttribute( 'stroke-width', '1' );
+				flap.setAttribute( 'stroke-linecap', 'round' );
+				flap.setAttribute( 'stroke-linejoin', 'round' );
+				flap.setAttribute( 'opacity', '0.5' );
+				svg.appendChild( flap );
+			}
+
+			return svg;
+		}
+
+		/**
 		 * Get the default name for a layer based on its type
 		 *
 		 * @param {Object} layer Layer object
@@ -98,7 +141,7 @@
 			const LAYER_TYPES = LayersConstants.LAYER_TYPES || {};
 			switch ( layer.type ) {
 				case ( LAYER_TYPES.GROUP || 'group' ):
-					return t( 'layers-type-group', 'Group' );
+					return t( 'layers-type-folder', 'Folder' );
 				case ( LAYER_TYPES.TEXT || 'text' ): {
 					const prefix = t( 'layers-default-text-prefix', 'Text: ' );
 					const emptyText = t( 'layers-default-empty', 'Empty' );
@@ -138,10 +181,14 @@
 			const t = this.msg;
 			const isGroup = layer.type === 'group';
 			const isExpanded = isGroup && layer.expanded !== false;
+			const isEmpty = isGroup && ( !layer.children || layer.children.length === 0 );
 			const depth = this.getLayerDepth( layer.id );
 
 			const item = document.createElement( 'div' );
 			item.className = 'layer-item' + ( isGroup ? ' layer-item-group' : '' );
+			if ( isEmpty ) {
+				item.classList.add( 'folder-empty' );
+			}
 			item.dataset.layerId = layer.id;
 			item.dataset.index = index;
 			item.dataset.depth = depth;
@@ -174,17 +221,15 @@
 			// Grab area - serves as the focusable element for keyboard navigation
 			const grabArea = document.createElement( 'div' );
 			grabArea.className = 'layer-grab-area';
-			grabArea.title = t( 'layers-grab-area', 'Drag to move/select' ) + ' (' +
+			const grabTitle = isGroup ?
+				t( 'layers-folder-grab', 'Drag to reorder folder' ) :
+				t( 'layers-grab-area', 'Drag to move/select' );
+			grabArea.title = grabTitle + ' (' +
 				t( 'layers-keyboard-nav-hint', 'Use arrow keys to navigate, Enter to select' ) + ')';
 			grabArea.setAttribute( 'tabindex', '0' );
 			grabArea.setAttribute( 'role', 'button' );
-			grabArea.setAttribute( 'aria-label', layerName + ' - ' + t( 'layers-grab-area', 'Drag to move/select' ) );
-			grabArea.style.width = '36px';
-			grabArea.style.height = '36px';
-			grabArea.style.display = 'flex';
-			grabArea.style.alignItems = 'center';
-			grabArea.style.justifyContent = 'center';
-			grabArea.style.cursor = 'grab';
+			grabArea.setAttribute( 'aria-label', layerName + ' - ' + grabTitle );
+			// Size is controlled by CSS - no inline styles needed
 
 			// Keyboard reordering
 			this.addTargetListener( grabArea, 'keydown', ( e ) => {
@@ -200,6 +245,10 @@
 				const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 				if ( IconFactory && IconFactory.createFolderIcon ) {
 					const folderIcon = IconFactory.createFolderIcon( isExpanded );
+					grabArea.appendChild( folderIcon );
+				} else {
+					// Fallback: create inline folder icon if IconFactory not available
+					const folderIcon = this.createFolderIconFallback( isExpanded );
 					grabArea.appendChild( folderIcon );
 				}
 			} else {
@@ -232,12 +281,13 @@
 			visibilityBtn.type = 'button';
 			visibilityBtn.setAttribute( 'aria-label', t( 'layers-toggle-visibility', 'Toggle visibility' ) );
 
-			// Name (editable)
+			// Name - NOT editable by default (only becomes editable on double-click when layer is selected)
 			const name = document.createElement( 'span' );
 			name.className = 'layer-name';
 			name.textContent = layer.name || this.getDefaultLayerName( layer );
-			name.contentEditable = true;
-			name.setAttribute( 'role', 'textbox' );
+			name.contentEditable = 'false';
+			name.style.cursor = 'pointer';
+			name.setAttribute( 'role', 'button' );
 			name.setAttribute( 'aria-label', t( 'layers-layer-name', 'Layer Name' ) );
 
 			// Lock toggle

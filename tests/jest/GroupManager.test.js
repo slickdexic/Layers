@@ -118,7 +118,7 @@ describe( 'GroupManager', () => {
 
 		it( 'should generate default group name', () => {
 			const group = groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
-			expect( group.name ).toBe( 'Group 1' );
+			expect( group.name ).toBe( 'Folder 1' );
 		} );
 
 		it( 'should use provided name', () => {

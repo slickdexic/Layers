@@ -22,13 +22,15 @@
 		/**
 		 * Create a new GroupManager instance
 		 *
-		 * @param {Object} editor Reference to LayersEditor instance
+		 * @param {Object} config Configuration object
+		 * @param {Object} config.editor Reference to LayersEditor instance
 		 */
-		constructor( editor ) {
-			this.editor = editor;
-			this.stateManager = null;
-			this.selectionManager = null;
-			this.historyManager = null;
+		constructor( config ) {
+			this.editor = config.editor;
+			// Dependencies are resolved lazily via getters to handle initialization order
+			this._stateManager = null;
+			this._historyManager = null;
+			this._selectionManager = null;
 
 			// Configuration
 			this.maxNestingDepth = 3;
@@ -36,7 +38,44 @@
 		}
 
 		/**
+		 * State manager getter - resolves lazily from editor if needed
+		 *
+		 * @return {Object|null} StateManager instance
+		 */
+		get stateManager() {
+			if ( !this._stateManager && this.editor ) {
+				this._stateManager = this.editor.stateManager || null;
+			}
+			return this._stateManager;
+		}
+
+		/**
+		 * History manager getter - resolves lazily from editor if needed
+		 *
+		 * @return {Object|null} HistoryManager instance
+		 */
+		get historyManager() {
+			if ( !this._historyManager && this.editor ) {
+				this._historyManager = this.editor.historyManager || null;
+			}
+			return this._historyManager;
+		}
+
+		/**
+		 * Selection manager getter - resolves lazily from editor if needed
+		 *
+		 * @return {Object|null} SelectionManager instance
+		 */
+		get selectionManager() {
+			if ( !this._selectionManager && this.editor && this.editor.canvasManager ) {
+				this._selectionManager = this.editor.canvasManager.selectionManager || null;
+			}
+			return this._selectionManager;
+		}
+
+		/**
 		 * Initialize the GroupManager with required dependencies
+		 * Can be called later if dependencies weren't available at construction time
 		 *
 		 * @param {Object} options Configuration options
 		 * @param {Object} options.stateManager StateManager instance
@@ -44,9 +83,9 @@
 		 * @param {Object} options.historyManager HistoryManager instance
 		 */
 		initialize( options ) {
-			this.stateManager = options.stateManager || null;
-			this.selectionManager = options.selectionManager || null;
-			this.historyManager = options.historyManager || null;
+			this._stateManager = options.stateManager || this._stateManager;
+			this._selectionManager = options.selectionManager || this._selectionManager;
+			this._historyManager = options.historyManager || this._historyManager;
 		}
 
 		/**
@@ -119,16 +158,34 @@
 				return layer;
 			} );
 
-			// Find insertion index (position of first grouped layer)
+			// Find the position of the first grouped layer (topmost in visual order)
 			const firstLayerIndex = updatedLayers.findIndex(
 				( l ) => validLayerIds.includes( l.id )
 			);
 
-			// Insert group at the position of the first grouped layer
+			// Separate layers: non-grouped layers and grouped layers (children)
+			const nonGroupedLayers = updatedLayers.filter(
+				( l ) => !validLayerIds.includes( l.id )
+			);
+			const groupedLayers = updatedLayers.filter(
+				( l ) => validLayerIds.includes( l.id )
+			);
+
+			// Build new layer order: insert group followed by its children at the first layer's position
+			// Count how many non-grouped layers come before the first grouped layer
+			let insertionPoint = 0;
+			for ( let i = 0; i < firstLayerIndex; i++ ) {
+				if ( !validLayerIds.includes( updatedLayers[ i ].id ) ) {
+					insertionPoint++;
+				}
+			}
+
+			// Insert group and children into the non-grouped array
 			const newLayers = [
-				...updatedLayers.slice( 0, firstLayerIndex ),
+				...nonGroupedLayers.slice( 0, insertionPoint ),
 				group,
-				...updatedLayers.slice( firstLayerIndex )
+				...groupedLayers,
+				...nonGroupedLayers.slice( insertionPoint )
 			];
 
 			// Save state with history
@@ -142,6 +199,61 @@
 		}
 
 		/**
+		 * Create a folder (group) - can be empty or include specified layers
+		 * This is the primary method for the "Add Folder" button
+		 *
+		 * @param {Array} [layerIds] Optional array of layer IDs to include in the folder
+		 * @param {string} [name] Optional folder name
+		 * @return {Object|null} The created folder layer, or null if failed
+		 */
+		createFolder( layerIds, name ) {
+			if ( !this.stateManager ) {
+				return null;
+			}
+
+			const layers = this.stateManager.get( 'layers' ) || [];
+
+			// If layerIds provided, use createGroup logic to include them
+			if ( layerIds && layerIds.length > 0 ) {
+				return this.createGroup( layerIds, name || this.generateDefaultFolderName( layers ) );
+			}
+
+			// Create an empty folder
+			const folder = {
+				id: this.generateGroupId(),
+				type: 'group',
+				name: name || this.generateDefaultFolderName( layers ),
+				visible: true,
+				locked: false,
+				expanded: true,
+				children: []
+			};
+
+			// Insert folder at the top of the layer list
+			const newLayers = [ folder, ...layers ];
+
+			// Save state with history
+			if ( this.historyManager ) {
+				this.historyManager.saveState( 'Create folder' );
+			}
+
+			this.stateManager.set( 'layers', newLayers );
+
+			return folder;
+		}
+
+		/**
+		 * Generate a default name for a new folder
+		 *
+		 * @param {Array} layers Current layers array
+		 * @return {string} Default folder name
+		 */
+		generateDefaultFolderName( layers ) {
+			const existingFolders = layers.filter( ( l ) => l.type === 'group' );
+			return 'Folder ' + ( existingFolders.length + 1 );
+		}
+
+		/**
 		 * Generate a default name for a new group
 		 *
 		 * @param {Array} layers Current layers array
@@ -149,7 +261,152 @@
 		 */
 		generateDefaultGroupName( layers ) {
 			const existingGroups = layers.filter( ( l ) => l.type === 'group' );
-			return 'Group ' + ( existingGroups.length + 1 );
+			return 'Folder ' + ( existingGroups.length + 1 );
+		}
+
+		/**
+		 * Move a layer into a folder
+		 *
+		 * @param {string} layerId ID of the layer to move
+		 * @param {string} folderId ID of the target folder
+		 * @return {boolean} True if successful
+		 */
+		moveToFolder( layerId, folderId ) {
+			if ( !this.stateManager ) {
+				return false;
+			}
+
+			const layers = this.stateManager.get( 'layers' ) || [];
+			const layer = layers.find( ( l ) => l.id === layerId );
+			const folder = layers.find( ( l ) => l.id === folderId && l.type === 'group' );
+
+			if ( !layer || !folder ) {
+				return false;
+			}
+
+			// Don't move a folder into itself or its children
+			if ( layerId === folderId ) {
+				return false;
+			}
+
+			// Check if layer is already in this folder
+			if ( layer.parentGroup === folderId ) {
+				return false;
+			}
+
+			// Check nesting depth
+			const folderDepth = this.getLayerDepth( folder, layers );
+			const layerMaxDepth = layer.type === 'group' ? this.getMaxChildDepth( layer, layers ) : 0;
+			if ( folderDepth + 1 + layerMaxDepth > this.maxNestingDepth ) {
+				return false;
+			}
+
+			// Remove layer from its current parent's children array (if any)
+			let updatedLayers = layers.map( ( l ) => {
+				if ( l.type === 'group' && l.children && l.children.includes( layerId ) ) {
+					return { ...l, children: l.children.filter( ( id ) => id !== layerId ) };
+				}
+				return l;
+			} );
+
+			// Update target folder to include the layer
+			updatedLayers = updatedLayers.map( ( l ) => {
+				if ( l.id === folderId ) {
+					const newChildren = [ ...( l.children || [] ), layerId ];
+					return { ...l, children: newChildren };
+				}
+				return l;
+			} );
+
+			// Update the layer's parentGroup reference
+			updatedLayers = updatedLayers.map( ( l ) => {
+				if ( l.id === layerId ) {
+					return { ...l, parentGroup: folderId };
+				}
+				return l;
+			} );
+
+			// Reorder layers so that the moved layer appears after the folder
+			const folderIndex = updatedLayers.findIndex( ( l ) => l.id === folderId );
+			const layerIndex = updatedLayers.findIndex( ( l ) => l.id === layerId );
+
+			if ( folderIndex !== -1 && layerIndex !== -1 && layerIndex !== folderIndex + 1 ) {
+				// Remove the layer from its current position
+				const [ movedLayer ] = updatedLayers.splice( layerIndex, 1 );
+
+				// Find the new folder index (may have shifted after removal)
+				const newFolderIndex = updatedLayers.findIndex( ( l ) => l.id === folderId );
+
+				// Find where the folder's children end
+				let insertIndex = newFolderIndex + 1;
+				for ( let i = newFolderIndex + 1; i < updatedLayers.length; i++ ) {
+					if ( updatedLayers[ i ].parentGroup === folderId ) {
+						insertIndex = i + 1;
+					} else {
+						break;
+					}
+				}
+
+				// Insert the layer after the folder's existing children
+				updatedLayers.splice( insertIndex, 0, movedLayer );
+			}
+
+			// Save state with history
+			if ( this.historyManager ) {
+				this.historyManager.saveState( 'Move to folder' );
+			}
+
+			this.stateManager.set( 'layers', updatedLayers );
+
+			return true;
+		}
+
+		/**
+		 * Remove a layer from its parent folder (move to root level)
+		 *
+		 * @param {string} layerId ID of the layer to remove from folder
+		 * @return {boolean} True if successful
+		 */
+		removeFromFolder( layerId ) {
+			if ( !this.stateManager ) {
+				return false;
+			}
+
+			const layers = this.stateManager.get( 'layers' ) || [];
+			const layer = layers.find( ( l ) => l.id === layerId );
+
+			if ( !layer || !layer.parentGroup ) {
+				return false; // Layer not in a folder
+			}
+
+			const parentId = layer.parentGroup;
+
+			// Remove from parent's children array
+			let updatedLayers = layers.map( ( l ) => {
+				if ( l.id === parentId && l.type === 'group' && l.children ) {
+					return { ...l, children: l.children.filter( ( id ) => id !== layerId ) };
+				}
+				return l;
+			} );
+
+			// Remove parentGroup reference from the layer
+			updatedLayers = updatedLayers.map( ( l ) => {
+				if ( l.id === layerId ) {
+					// eslint-disable-next-line no-unused-vars
+					const { parentGroup, ...rest } = l;
+					return rest;
+				}
+				return l;
+			} );
+
+			// Save state with history
+			if ( this.historyManager ) {
+				this.historyManager.saveState( 'Remove from folder' );
+			}
+
+			this.stateManager.set( 'layers', updatedLayers );
+
+			return true;
 		}
 
 		/**
@@ -412,13 +669,31 @@
 		}
 
 		/**
-		 * Get the nesting depth of a layer
+		 * Get the nesting depth of a layer by ID
+		 * Convenience method for LayerPanel that resolves the layer internally
 		 *
-		 * @param {Object} layer Layer object
-		 * @param {Array} layers All layers array
+		 * @param {string|Object} layerOrId Layer object or layer ID
+		 * @param {Array} [layers] All layers array (optional, will be fetched if not provided)
 		 * @return {number} Nesting depth (0 = root level)
 		 */
-		getLayerDepth( layer, layers ) {
+		getLayerDepth( layerOrId, layers ) {
+			// If layers not provided, get from stateManager
+			if ( !layers && this.stateManager ) {
+				layers = this.stateManager.get( 'layers' ) || [];
+			}
+			if ( !layers ) {
+				return 0;
+			}
+
+			// If passed an ID (string), find the layer object
+			let layer = layerOrId;
+			if ( typeof layerOrId === 'string' ) {
+				layer = layers.find( ( l ) => l.id === layerOrId );
+				if ( !layer ) {
+					return 0;
+				}
+			}
+
 			let depth = 0;
 			let current = layer;
 
@@ -720,15 +995,18 @@
 		 */
 		destroy() {
 			this.editor = null;
-			this.stateManager = null;
-			this.selectionManager = null;
-			this.historyManager = null;
+			this._stateManager = null;
+			this._selectionManager = null;
+			this._historyManager = null;
 		}
 	}
 
-	// Register in namespace
+	// Register in namespace (multiple paths for compatibility)
 	window.Layers = window.Layers || {};
+	window.Layers.Core = window.Layers.Core || {};
 	window.Layers.GroupManager = GroupManager;
+	window.Layers.Core.GroupManager = GroupManager;
+	window.GroupManager = GroupManager;
 
 	// Also export for module systems
 	if ( typeof module !== 'undefined' && module.exports ) {

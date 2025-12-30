@@ -502,6 +502,76 @@
 		return svg;
 	};
 
+	/**
+	 * Create a folder icon with a plus badge (for "Add Folder" button)
+	 * @param {Object} [options] - Icon options
+	 * @param {number} [options.size=20] - Icon size
+	 * @param {string} [options.folderColor='#f39c12'] - Folder color
+	 * @param {string} [options.badgeColor='#4caf50'] - Plus badge color
+	 * @return {SVGSVGElement} Folder with plus icon SVG
+	 */
+	IconFactory.createAddFolderIcon = function ( options ) {
+		options = options || {};
+		const size = options.size || 20;
+		const folderColor = options.folderColor || '#f39c12';
+		const badgeColor = options.badgeColor || '#4caf50';
+
+		const svg = IconFactory.createSVGElement( 'svg', {
+			width: String( size ),
+			height: String( size ),
+			viewBox: '0 0 24 24',
+			'aria-hidden': 'true'
+		} );
+
+		// Folder shape
+		const folder = IconFactory.createSVGElement( 'path', {
+			d: 'M20 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11z',
+			fill: folderColor,
+			stroke: folderColor,
+			'stroke-width': '1',
+			'stroke-linecap': 'round',
+			'stroke-linejoin': 'round'
+		} );
+		svg.appendChild( folder );
+
+		// Plus badge circle background
+		const badgeCircle = IconFactory.createSVGElement( 'circle', {
+			cx: '18',
+			cy: '17',
+			r: '6',
+			fill: badgeColor,
+			stroke: '#fff',
+			'stroke-width': '1.5'
+		} );
+		svg.appendChild( badgeCircle );
+
+		// Plus sign horizontal line
+		const plusH = IconFactory.createSVGElement( 'line', {
+			x1: '15',
+			y1: '17',
+			x2: '21',
+			y2: '17',
+			stroke: '#fff',
+			'stroke-width': '2',
+			'stroke-linecap': 'round'
+		} );
+		svg.appendChild( plusH );
+
+		// Plus sign vertical line
+		const plusV = IconFactory.createSVGElement( 'line', {
+			x1: '18',
+			y1: '14',
+			x2: '18',
+			y2: '20',
+			stroke: '#fff',
+			'stroke-width': '2',
+			'stroke-linecap': 'round'
+		} );
+		svg.appendChild( plusV );
+
+		return svg;
+	};
+
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};

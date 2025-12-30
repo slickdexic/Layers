@@ -33,6 +33,36 @@
 			this.getSelectedLayerIds = config.getSelectedLayerIds || ( () => [] );
 			this.getLayers = config.getLayers || ( () => [] );
 			this.onMoveLayer = config.onMoveLayer || null;
+			this.onToggleGroupExpand = config.onToggleGroupExpand || null;
+
+			// Indentation per nesting level in pixels
+			this.indentPerLevel = 20;
+		}
+
+		/**
+		 * Get the nesting depth of a layer (0 = top level)
+		 *
+		 * @param {string} layerId Layer ID
+		 * @return {number} Nesting depth
+		 */
+		getLayerDepth( layerId ) {
+			const layers = this.getLayers();
+			let depth = 0;
+			let currentId = layerId;
+			let iterations = 0;
+			const maxIterations = 10; // Prevent infinite loops
+
+			while ( iterations < maxIterations ) {
+				const layer = layers.find( ( l ) => l.id === currentId );
+				if ( !layer || !layer.parentGroup ) {
+					break;
+				}
+				depth++;
+				currentId = layer.parentGroup;
+				iterations++;
+			}
+
+			return depth;
 		}
 
 		/**
@@ -117,11 +147,26 @@
 		 */
 		createLayerItem( layer, index ) {
 			const t = this.msg;
+			const isGroup = layer.type === 'group';
+			const isExpanded = isGroup && layer.expanded !== false;
+			const isEmpty = isGroup && ( !layer.children || layer.children.length === 0 );
+			const depth = this.getLayerDepth( layer.id );
+
 			const item = document.createElement( 'div' );
-			item.className = 'layer-item';
+			item.className = 'layer-item' + ( isGroup ? ' layer-item-group' : '' );
+			if ( isEmpty ) {
+				item.classList.add( 'folder-empty' );
+			}
 			item.dataset.layerId = layer.id;
 			item.dataset.index = index;
+			item.dataset.depth = depth;
 			item.draggable = true;
+
+			// Apply indentation for nested layers
+			if ( depth > 0 ) {
+				item.style.paddingLeft = ( depth * this.indentPerLevel ) + 'px';
+				item.classList.add( 'layer-item-child' );
+			}
 
 			// ARIA attributes for listbox option
 			item.setAttribute( 'role', 'option' );
@@ -136,18 +181,25 @@
 				item.classList.add( 'selected' );
 			}
 
+			// Expand/collapse toggle for groups (before grab area)
+			if ( isGroup ) {
+				const expandToggle = this._createExpandToggle( layer, isExpanded, t );
+				item.appendChild( expandToggle );
+			}
+
 			// Grab area - also serves as the focusable element for keyboard navigation
-			const grabArea = this._createGrabArea( layer, layerName, t );
+			const grabArea = this._createGrabArea( layer, layerName, t, isGroup, isExpanded );
 
 			// Visibility toggle
 			const visibilityBtn = this._createVisibilityButton( layer, t );
 
-			// Name (editable)
+			// Name - NOT editable by default (only becomes editable when clicking on already-selected layer)
 			const name = document.createElement( 'span' );
 			name.className = 'layer-name';
 			name.textContent = layerName;
-			name.contentEditable = true;
-			name.setAttribute( 'role', 'textbox' );
+			name.contentEditable = 'false';
+			name.style.cursor = 'pointer';
+			name.setAttribute( 'role', 'button' );
 			name.setAttribute( 'aria-label', t( 'layers-layer-name', 'Layer Name' ) );
 
 			// Lock toggle
@@ -171,22 +223,22 @@
 		 * @param {Object} layer Layer object
 		 * @param {string} layerName Layer display name
 		 * @param {Function} t Message getter
+		 * @param {boolean} [isGroup=false] Whether this is a group layer
+		 * @param {boolean} [isExpanded=true] Whether the group is expanded
 		 * @return {HTMLElement} Grab area element
 		 * @private
 		 */
-		_createGrabArea( layer, layerName, t ) {
+		_createGrabArea( layer, layerName, t, isGroup, isExpanded ) {
 			const grabArea = document.createElement( 'div' );
 			grabArea.className = 'layer-grab-area';
-			grabArea.title = t( 'layers-grab-area', 'Drag to move/select' ) + ' (' + t( 'layers-keyboard-nav-hint', 'Use arrow keys to navigate, Enter to select' ) + ')';
+			const grabTitle = isGroup ?
+				t( 'layers-folder-grab', 'Drag to reorder folder' ) :
+				t( 'layers-grab-area', 'Drag to move/select' );
+			grabArea.title = grabTitle + ' (' + t( 'layers-keyboard-nav-hint', 'Use arrow keys to navigate, Enter to select' ) + ')';
 			grabArea.setAttribute( 'tabindex', '0' );
 			grabArea.setAttribute( 'role', 'button' );
-			grabArea.setAttribute( 'aria-label', layerName + ' - ' + t( 'layers-grab-area', 'Drag to move/select' ) );
-			grabArea.style.width = '36px';
-			grabArea.style.height = '36px';
-			grabArea.style.display = 'flex';
-			grabArea.style.alignItems = 'center';
-			grabArea.style.justifyContent = 'center';
-			grabArea.style.cursor = 'grab';
+			grabArea.setAttribute( 'aria-label', layerName + ' - ' + grabTitle );
+			// Size is controlled by CSS - no inline styles needed
 
 			// Keyboard reordering
 			if ( this.onMoveLayer ) {
@@ -199,27 +251,39 @@
 				} );
 			}
 
-			// Build grab icon via DOM to avoid innerHTML
-			const grabSvg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
-			grabSvg.setAttribute( 'width', '24' );
-			grabSvg.setAttribute( 'height', '24' );
-			grabSvg.setAttribute( 'viewBox', '0 0 24 24' );
-			grabSvg.setAttribute( 'aria-hidden', 'true' );
+			// Use folder icon for groups, grab dots for regular layers
+			if ( isGroup ) {
+				if ( IconFactory && IconFactory.createFolderIcon ) {
+					const folderIcon = IconFactory.createFolderIcon( isExpanded );
+					grabArea.appendChild( folderIcon );
+				} else {
+					// Fallback folder icon
+					const folderIcon = this._createFolderIconFallback( isExpanded );
+					grabArea.appendChild( folderIcon );
+				}
+			} else {
+				// Build grab icon via DOM to avoid innerHTML
+				const grabSvg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+				grabSvg.setAttribute( 'width', '24' );
+				grabSvg.setAttribute( 'height', '24' );
+				grabSvg.setAttribute( 'viewBox', '0 0 24 24' );
+				grabSvg.setAttribute( 'aria-hidden', 'true' );
 
-			const mkCircle = ( cx, cy ) => {
-				const c = document.createElementNS( 'http://www.w3.org/2000/svg', 'circle' );
-				c.setAttribute( 'cx', String( cx ) );
-				c.setAttribute( 'cy', String( cy ) );
-				c.setAttribute( 'r', '2.5' );
-				c.setAttribute( 'fill', '#bbb' );
-				return c;
-			};
+				const mkCircle = ( cx, cy ) => {
+					const c = document.createElementNS( 'http://www.w3.org/2000/svg', 'circle' );
+					c.setAttribute( 'cx', String( cx ) );
+					c.setAttribute( 'cy', String( cy ) );
+					c.setAttribute( 'r', '2.5' );
+					c.setAttribute( 'fill', '#bbb' );
+					return c;
+				};
 
-			grabSvg.appendChild( mkCircle( 7, 7 ) );
-			grabSvg.appendChild( mkCircle( 17, 7 ) );
-			grabSvg.appendChild( mkCircle( 7, 17 ) );
-			grabSvg.appendChild( mkCircle( 17, 17 ) );
-			grabArea.appendChild( grabSvg );
+				grabSvg.appendChild( mkCircle( 7, 7 ) );
+				grabSvg.appendChild( mkCircle( 17, 7 ) );
+				grabSvg.appendChild( mkCircle( 7, 17 ) );
+				grabSvg.appendChild( mkCircle( 17, 17 ) );
+				grabArea.appendChild( grabSvg );
+			}
 
 			return grabArea;
 		}
@@ -292,10 +356,37 @@
 		 */
 		updateLayerItem( item, layer, index ) {
 			const t = this.msg;
+			const isGroup = layer.type === 'group';
+			const isEmpty = isGroup && ( !layer.children || layer.children.length === 0 );
+			const depth = this.getLayerDepth( layer.id );
 
 			// Update attributes
 			item.dataset.layerId = layer.id;
 			item.dataset.index = index;
+			item.dataset.depth = depth;
+
+			// Update indentation
+			if ( depth > 0 ) {
+				item.style.paddingLeft = ( depth * this.indentPerLevel ) + 'px';
+				item.classList.add( 'layer-item-child' );
+			} else {
+				item.style.paddingLeft = '';
+				item.classList.remove( 'layer-item-child' );
+			}
+
+			// Update group class
+			if ( isGroup ) {
+				item.classList.add( 'layer-item-group' );
+			} else {
+				item.classList.remove( 'layer-item-group' );
+			}
+
+			// Update empty folder state
+			if ( isEmpty ) {
+				item.classList.add( 'folder-empty' );
+			} else {
+				item.classList.remove( 'folder-empty' );
+			}
 
 			// Update ARIA attributes
 			const selectedIds = this.getSelectedLayerIds();
@@ -315,7 +406,10 @@
 			// Update grab area aria-label
 			const grabArea = item.querySelector( '.layer-grab-area' );
 			if ( grabArea ) {
-				grabArea.setAttribute( 'aria-label', layerName + ' - ' + t( 'layers-grab-area', 'Drag to move/select' ) );
+				const grabTitle = isGroup ?
+					t( 'layers-folder-grab', 'Drag to reorder folder' ) :
+					t( 'layers-grab-area', 'Drag to move/select' );
+				grabArea.setAttribute( 'aria-label', layerName + ' - ' + grabTitle );
 			}
 
 			// Update visibility icon
@@ -360,6 +454,8 @@
 			const LAYER_TYPES = LayersConstants.LAYER_TYPES || {};
 
 			switch ( layer.type ) {
+				case ( LAYER_TYPES.GROUP || 'group' ):
+					return t( 'layers-type-folder', 'Folder' );
 				case ( LAYER_TYPES.TEXT || 'text' ): {
 					const prefix = t( 'layers-default-text-prefix', 'Text: ' );
 					const emptyText = t( 'layers-default-empty', 'Empty' );
@@ -418,6 +514,92 @@
 		 */
 		_createDeleteIcon() {
 			return IconFactory ? IconFactory.createDeleteIcon() : document.createElement( 'span' );
+		}
+
+		/**
+		 * Create expand/collapse toggle for group layers
+		 *
+		 * @param {Object} layer Layer object
+		 * @param {boolean} isExpanded Whether the group is expanded
+		 * @param {Function} t Message getter
+		 * @return {HTMLElement} Expand toggle element
+		 * @private
+		 */
+		_createExpandToggle( layer, isExpanded, t ) {
+			const toggle = document.createElement( 'button' );
+			toggle.className = 'layer-expand-toggle';
+			toggle.type = 'button';
+			toggle.setAttribute( 'aria-expanded', isExpanded ? 'true' : 'false' );
+			toggle.setAttribute( 'aria-label', isExpanded ?
+				t( 'layers-folder-collapse', 'Collapse folder' ) :
+				t( 'layers-folder-expand', 'Expand folder' ) );
+			toggle.title = isExpanded ?
+				t( 'layers-folder-collapse', 'Collapse folder' ) :
+				t( 'layers-folder-expand', 'Expand folder' );
+
+			// Create triangle icon
+			if ( IconFactory && IconFactory.createExpandIcon ) {
+				toggle.appendChild( IconFactory.createExpandIcon( isExpanded ) );
+			} else {
+				// Fallback text indicator
+				toggle.textContent = isExpanded ? '▼' : '▶';
+				toggle.style.fontSize = '10px';
+				toggle.style.width = '20px';
+			}
+
+			// Add click handler to toggle expanded state
+			if ( this.onToggleGroupExpand ) {
+				toggle.addEventListener( 'click', ( e ) => {
+					e.stopPropagation(); // Don't select the layer
+					this.onToggleGroupExpand( layer.id );
+				} );
+			}
+
+			return toggle;
+		}
+
+		/**
+		 * Create folder icon fallback when IconFactory is not available
+		 *
+		 * @param {boolean} expanded Whether the folder is expanded
+		 * @return {SVGElement} Folder icon SVG element
+		 * @private
+		 */
+		_createFolderIconFallback( expanded ) {
+			const SVG_NS = 'http://www.w3.org/2000/svg';
+			const size = 18;
+			const color = '#f39c12';
+
+			const svg = document.createElementNS( SVG_NS, 'svg' );
+			svg.setAttribute( 'width', String( size ) );
+			svg.setAttribute( 'height', String( size ) );
+			svg.setAttribute( 'viewBox', '0 0 24 24' );
+			svg.setAttribute( 'aria-hidden', 'true' );
+
+			// Folder path
+			const path = document.createElementNS( SVG_NS, 'path' );
+			path.setAttribute( 'd', 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z' );
+			path.setAttribute( 'fill', color );
+			path.setAttribute( 'stroke', color );
+			path.setAttribute( 'stroke-width', '1.5' );
+			path.setAttribute( 'stroke-linecap', 'round' );
+			path.setAttribute( 'stroke-linejoin', 'round' );
+			svg.appendChild( path );
+
+			if ( expanded ) {
+				// Add open folder flap indicator
+				const flap = document.createElementNS( SVG_NS, 'path' );
+				flap.setAttribute( 'd', 'M2 10l2.5-2h17l-2.5 2' );
+				flap.setAttribute( 'fill', 'none' );
+				flap.setAttribute( 'stroke', '#fff' );
+				flap.setAttribute( 'stroke-width', '1' );
+				flap.setAttribute( 'stroke-linecap', 'round' );
+				flap.setAttribute( 'stroke-linejoin', 'round' );
+				flap.setAttribute( 'opacity', '0.5' );
+				svg.appendChild( flap );
+			}
+
+			return svg;
 		}
 	}
 

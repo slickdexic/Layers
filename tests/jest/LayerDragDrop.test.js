@@ -83,7 +83,7 @@ describe( 'LayerDragDrop', () => {
 				addTargetListener: mockAddTargetListener
 			} );
 
-			expect( mockAddTargetListener ).toHaveBeenCalledTimes( 4 );
+			expect( mockAddTargetListener ).toHaveBeenCalledTimes( 5 );
 			expect( mockAddTargetListener ).toHaveBeenCalledWith(
 				mockLayerList,
 				'dragstart',
@@ -97,6 +97,11 @@ describe( 'LayerDragDrop', () => {
 			expect( mockAddTargetListener ).toHaveBeenCalledWith(
 				mockLayerList,
 				'dragover',
+				expect.any( Function )
+			);
+			expect( mockAddTargetListener ).toHaveBeenCalledWith(
+				mockLayerList,
+				'dragleave',
 				expect.any( Function )
 			);
 			expect( mockAddTargetListener ).toHaveBeenCalledWith(
@@ -223,8 +228,25 @@ describe( 'LayerDragDrop', () => {
 			const dragoverHandler = addedListeners.find( ( l ) => l.event === 'dragover' )?.handler;
 			expect( dragoverHandler ).toBeDefined();
 
+			const mockTargetItem = {
+				dataset: { layerId: 'layer_2' },
+				classList: {
+					contains: jest.fn( () => false ),
+					add: jest.fn(),
+					remove: jest.fn()
+				},
+				getBoundingClientRect: jest.fn( () => ( { top: 0, height: 40 } ) )
+			};
+
 			const mockEvent = {
-				preventDefault: jest.fn()
+				preventDefault: jest.fn(),
+				dataTransfer: {
+					dropEffect: null
+				},
+				target: {
+					closest: jest.fn( () => mockTargetItem )
+				},
+				clientY: 20
 			};
 
 			dragoverHandler( mockEvent );
@@ -237,7 +259,12 @@ describe( 'LayerDragDrop', () => {
 			expect( dropHandler ).toBeDefined();
 
 			const mockTargetItem = {
-				dataset: { layerId: 'layer_2' }
+				dataset: { layerId: 'layer_2' },
+				classList: {
+					contains: jest.fn( () => false ),
+					add: jest.fn(),
+					remove: jest.fn()
+				}
 			};
 
 			const mockEvent = {

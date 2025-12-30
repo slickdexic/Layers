@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-7%2C377%20Passing-brightgreen" alt="7,377 Tests">
+  <img src="https://img.shields.io/badge/Tests-7%2C506%20Passing-brightgreen" alt="7,506 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -22,6 +22,8 @@
 
 ## 🆕 What's New in v1.2
 
+- **Layer Folders with Full UI** — Collapsible folders, visibility cascade, delete options (v1.2.14)
+- **Layer Grouping** — Group/ungroup layers with Ctrl+G/Ctrl+Shift+G (v1.2.13)
 - **Blend Modes on Article Pages** — All blend modes now render correctly in article view (v1.2.11)
 - **Context-Aware Toolbar** — Shows only relevant controls based on active tool (v1.2.10)
 - **Blur Fill Mode** — "Frosted glass" effect for shapes including arrows (v1.2.8)

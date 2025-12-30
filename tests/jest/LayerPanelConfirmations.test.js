@@ -34,7 +34,8 @@ describe('LayerPanel confirmation flows', () => {
         panel.editor = {
             removeLayer: jest.fn(),
             saveState: jest.fn(),
-            stateManager: mockStateManager
+            stateManager: mockStateManager,
+            getLayerById: jest.fn().mockReturnValue({ id: 'layer-1', type: 'rectangle' })
         };
         panel.renderLayerList = jest.fn();
         panel.updateCodePanel = jest.fn();

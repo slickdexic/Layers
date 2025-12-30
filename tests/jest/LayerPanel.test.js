@@ -182,6 +182,56 @@ describe('LayerPanel', () => {
         });
     });
 
+    describe('getVisibleLayers', () => {
+        test('should return all layers when no groups are collapsed', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const testLayers = [
+                { id: 'group1', type: 'group', expanded: true, children: ['layer1'] },
+                { id: 'layer1', type: 'rectangle', parentGroup: 'group1' },
+                { id: 'layer2', type: 'circle' }
+            ];
+            mockStateManager.set('layers', testLayers);
+
+            expect(panel.getVisibleLayers()).toEqual(testLayers);
+        });
+
+        test('should hide children of collapsed groups', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const testLayers = [
+                { id: 'group1', type: 'group', expanded: false, children: ['layer1', 'layer2'] },
+                { id: 'layer1', type: 'rectangle', parentGroup: 'group1' },
+                { id: 'layer2', type: 'circle', parentGroup: 'group1' },
+                { id: 'layer3', type: 'arrow' }
+            ];
+            mockStateManager.set('layers', testLayers);
+
+            const visible = panel.getVisibleLayers();
+            expect(visible.length).toBe(2);
+            expect(visible.map(l => l.id)).toEqual(['group1', 'layer3']);
+        });
+
+        test('should return empty array when no layers', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            mockStateManager.set('layers', []);
+            expect(panel.getVisibleLayers()).toEqual([]);
+        });
+    });
+
     describe('getSelectedLayerId', () => {
         test('should return last selected layer ID', () => {
             const container = document.getElementById('layers-panel-container');

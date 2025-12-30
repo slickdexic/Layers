@@ -142,6 +142,60 @@
 		}
 
 		/**
+		 * Get layers visible in the layer panel (excludes children of collapsed groups)
+		 *
+		 * @return {Array} Layers that should be displayed in the layer panel
+		 */
+		getVisibleLayers() {
+			const allLayers = this.getLayers();
+			if ( allLayers.length === 0 ) {
+				return [];
+			}
+
+			// Debug: log layers state
+			if ( typeof console !== 'undefined' && console.log ) {
+				const groupsAndChildren = allLayers.filter( ( l ) => l.type === 'group' || l.parentGroup );
+				if ( groupsAndChildren.length > 0 ) {
+					console.log( '[LayerPanel] getVisibleLayers - groups and children:', groupsAndChildren.map( ( l ) => ( {
+						id: l.id,
+						type: l.type,
+						name: l.name,
+						parentGroup: l.parentGroup,
+						children: l.children
+					} ) ) );
+				}
+			}
+
+			// Build a map of collapsed groups
+			const collapsedGroupIds = new Set();
+			for ( const layer of allLayers ) {
+				if ( layer.type === 'group' && layer.expanded === false ) {
+					collapsedGroupIds.add( layer.id );
+				}
+			}
+
+			// If no collapsed groups, return all layers
+			if ( collapsedGroupIds.size === 0 ) {
+				return allLayers;
+			}
+
+			// Filter out layers whose parent (or any ancestor) is collapsed
+			return allLayers.filter( ( layer ) => {
+				// Check if any ancestor group is collapsed
+				let parentId = layer.parentGroup;
+				while ( parentId ) {
+					if ( collapsedGroupIds.has( parentId ) ) {
+						return false; // Hide this layer - its parent is collapsed
+					}
+					// Find the parent layer to check its parent
+					const parent = allLayers.find( ( l ) => l.id === parentId );
+					parentId = parent ? parent.parentGroup : null;
+				}
+				return true; // No collapsed ancestor, show this layer
+			} );
+		}
+
+		/**
 		 * Get selected layer ID from StateManager
 		 *
 		 * @return {string|null} Currently selected layer ID
@@ -164,6 +218,59 @@
 				return this.editor.stateManager.get( 'selectedLayerIds' ) || [];
 			}
 			return [];
+		}
+
+		/**
+		 * Create a folder (group) - can be empty or include selected layers
+		 * This is the UI action for the "Create Folder" button
+		 */
+		createFolder() {
+			const selectedIds = this.getSelectedLayerIds();
+
+			// Use GroupManager if available
+			if ( this.editor && this.editor.groupManager ) {
+				// createFolder() can create empty folders or include selected layers
+				const createdFolder = this.editor.groupManager.createFolder( selectedIds );
+				if ( createdFolder ) {
+					// Select the new folder
+					if ( this.editor.stateManager ) {
+						this.editor.stateManager.set( 'selectedLayerIds', [ createdFolder.id ] );
+					}
+					// Notify success
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						const msg = selectedIds.length > 0 ?
+							this.msg( 'layers-folder-created-with-layers', 'Folder created with ' + selectedIds.length + ' layer(s)' ) :
+							this.msg( 'layers-folder-created', 'Folder created' );
+						mw.notify( msg, { type: 'success', tag: 'layers-folder' } );
+					}
+					// Refresh the layer list
+					this.renderLayerList();
+				} else {
+					// Folder creation failed
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify(
+							this.msg( 'layers-folder-failed', 'Failed to create folder' ),
+							{ type: 'error', tag: 'layers-folder' }
+						);
+					}
+				}
+			} else {
+				// Fallback: notify that folders are not available
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify(
+						this.msg( 'layers-folder-unavailable', 'Folders are not available' ),
+						{ type: 'error', tag: 'layers-folder' }
+					);
+				}
+			}
+		}
+
+		/**
+		 * @deprecated Use createFolder() instead
+		 * Create a group from currently selected layers (legacy method)
+		 */
+		createGroupFromSelection() {
+			this.createFolder();
 		}
 
 		/**
@@ -457,10 +564,50 @@
 			// Header
 			const header = document.createElement( 'div' );
 			header.className = 'layers-panel-header';
+
+			// Title row with actions
+			const titleRow = document.createElement( 'div' );
+			titleRow.className = 'layers-panel-title-row';
+			titleRow.style.display = 'flex';
+			titleRow.style.alignItems = 'center';
+			titleRow.style.justifyContent = 'space-between';
+
+			// Left side: folder button + title
+			const titleLeft = document.createElement( 'div' );
+			titleLeft.style.display = 'flex';
+			titleLeft.style.alignItems = 'center';
+			titleLeft.style.gap = '6px';
+
+			// Create Folder button (placed before title)
+			const createGroupBtn = document.createElement( 'button' );
+			createGroupBtn.className = 'layers-btn layers-btn-icon layers-create-group-btn';
+			createGroupBtn.type = 'button';
+			createGroupBtn.title = this.msg( 'layers-add-folder', 'Add folder' );
+			createGroupBtn.setAttribute( 'aria-label', this.msg( 'layers-add-folder', 'Add folder' ) );
+
+			// Folder icon with plus badge for create folder
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
+			if ( IconFactory && IconFactory.createAddFolderIcon ) {
+				createGroupBtn.appendChild( IconFactory.createAddFolderIcon() );
+			} else if ( IconFactory && IconFactory.createFolderIcon ) {
+				createGroupBtn.appendChild( IconFactory.createFolderIcon( false ) );
+			} else {
+				createGroupBtn.textContent = '📁+';
+			}
+
+			this.addTargetListener( createGroupBtn, 'click', () => {
+				this.createFolder();
+			} );
+			titleLeft.appendChild( createGroupBtn );
+
 			const title = document.createElement( 'h3' );
 			title.className = 'layers-panel-title';
 			title.textContent = this.msg( 'layers-panel-title', 'Layers' );
-			header.appendChild( title );
+			titleLeft.appendChild( title );
+
+			titleRow.appendChild( titleLeft );
+			header.appendChild( titleRow );
+
 			const subtitle = document.createElement( 'div' );
 			subtitle.className = 'layers-panel-subtitle';
 			subtitle.textContent = this.msg( 'layers-panel-subtitle', 'Drag to reorder • Click name to rename' );
@@ -609,9 +756,12 @@
 					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
 					callbacks: {
 						onSelect: ( layerId ) => this.selectLayer( layerId ),
+						onCtrlSelect: ( layerId ) => this.selectLayer( layerId, false, true ),
+						onShiftSelect: ( layerId ) => this.selectLayerRange( layerId ),
 						onToggleVisibility: ( layerId ) => this.toggleLayerVisibility( layerId ),
 						onToggleLock: ( layerId ) => this.toggleLayerLock( layerId ),
 						onDelete: ( layerId ) => this.deleteLayer( layerId ),
+						onNameClick: ( layerId, nameEl ) => this.handleNameClick( layerId, nameEl ),
 						onEditName: ( layerId, nameEl ) => this.editLayerName( layerId, nameEl )
 					},
 					addTargetListener: this.addTargetListener.bind( this )
@@ -621,6 +771,14 @@
 				if ( this.layerList ) {
 					this.addTargetListener( this.layerList, 'click', ( e ) => {
 						this.handleLayerListClick( e );
+					} );
+					// Double-click to edit layer name (industry standard)
+					this.addTargetListener( this.layerList, 'dblclick', ( e ) => {
+						this.handleLayerListDblClick( e );
+					} );
+					// Right-click context menu for layer actions
+					this.addTargetListener( this.layerList, 'contextmenu', ( e ) => {
+						this.handleLayerContextMenu( e );
 					} );
 					// Keyboard navigation for accessibility
 					this.addTargetListener( this.layerList, 'keydown', ( e ) => {
@@ -685,8 +843,9 @@
 					msg: this.msg.bind( this ),
 					getSelectedLayerId: this.getSelectedLayerId.bind( this ),
 					getSelectedLayerIds: this.getSelectedLayerIds.bind( this ),
-					getLayers: this.getLayers.bind( this ),
-					onMoveLayer: this.moveLayer.bind( this )
+					getLayers: this.getVisibleLayers.bind( this ),
+					onMoveLayer: this.moveLayer.bind( this ),
+					onToggleGroupExpand: this.toggleGroupExpand.bind( this )
 				} );
 				this.layerListRenderer.render();
 				// Always render background layer item at the bottom
@@ -695,7 +854,7 @@
 			}
 
 			// Fallback: inline implementation
-			const layers = this.getLayers();
+			const layers = this.getVisibleLayers();
 			const listContainer = this.layerList;
 
 			// Map existing DOM items by ID (exclude background layer item)
@@ -1154,10 +1313,29 @@
 			if ( !layer ) {
 				return;
 			}
+
+			// Check for multi-select modifiers FIRST (industry standard)
+			// Ctrl/Cmd + click or Shift + click should select, not edit
+			const isCtrlClick = e.ctrlKey || e.metaKey;
+			const isShiftClick = e.shiftKey;
+
+			if ( isCtrlClick || isShiftClick ) {
+				// Prevent text selection/editing during multi-select
+				e.preventDefault();
+				if ( isShiftClick ) {
+					this.selectLayerRange( layerId );
+				} else {
+					this.selectLayer( layerId, false, true );
+				}
+				return;
+			}
+
+			// Check for button clicks
 			const visibilityBtn = target.closest( '.layer-visibility' );
 			const lockBtn = target.closest( '.layer-lock' );
 			const deleteBtn = target.closest( '.layer-delete' );
 			const nameEl = target.closest( '.layer-name' );
+
 			if ( visibilityBtn ) {
 				this.toggleLayerVisibility( layerId );
 			} else if ( lockBtn ) {
@@ -1165,15 +1343,284 @@
 			} else if ( deleteBtn ) {
 				this.deleteLayer( layerId );
 			} else if ( nameEl ) {
+				// Check if this layer is already selected - if so, enter edit mode
+				// Otherwise, just select the layer (industry standard: click to select, click again to edit)
+				const selectedIds = this.getSelectedLayerIds();
+				const isAlreadySelected = selectedIds.includes( layerId );
+				if ( isAlreadySelected && selectedIds.length === 1 ) {
+					// Layer is already the only selected layer - enter edit mode
+					this.editLayerName( layerId, nameEl );
+				} else {
+					// Select the layer first
+					this.selectLayer( layerId, false, false );
+				}
+			} else {
+				// Click on other areas (grab handle, etc.) - select layer
+				this.selectLayer( layerId, false, false );
+			}
+		}
+
+		/**
+		 * Handle click on a layer name - decides whether to select or enter edit mode
+		 * Industry standard: first click selects, click on already-selected layer enters edit mode
+		 *
+		 * @param {string} layerId Layer ID
+		 * @param {HTMLElement} nameEl Name element
+		 */
+		handleNameClick( layerId, nameEl ) {
+			const selectedIds = this.getSelectedLayerIds();
+			const isAlreadySelected = selectedIds.includes( layerId );
+
+			if ( isAlreadySelected && selectedIds.length === 1 ) {
+				// Layer is already the only selected layer - enter edit mode
 				this.editLayerName( layerId, nameEl );
 			} else {
-				// Support multi-selection with Ctrl/Cmd + click or Shift + click
-				const isCtrlClick = e.ctrlKey || e.metaKey;
-				const isShiftClick = e.shiftKey;
-				if ( isShiftClick ) {
-					this.selectLayerRange( layerId );
+				// Select the layer first
+				this.selectLayer( layerId, false, false );
+			}
+		}
+
+		/**
+		 * Handle double-click on the layer list (for editing layer names)
+		 * Industry standard: double-click to edit name, single click to select
+		 *
+		 * @param {MouseEvent} e Mouse event
+		 */
+		handleLayerListDblClick( e ) {
+			const target = e.target;
+			const layerItem = target.closest( '.layer-item' );
+			if ( !layerItem ) {
+				return;
+			}
+
+			const layerId = layerItem.dataset.layerId;
+			const layer = this.editor.getLayerById( layerId );
+			if ( !layer ) {
+				return;
+			}
+
+			// Double-click anywhere on the layer item enables name editing
+			const nameEl = layerItem.querySelector( '.layer-name' );
+			if ( nameEl ) {
+				// First ensure the layer is selected
+				this.selectLayer( layerId, false, false );
+				// Then enter edit mode
+				this.editLayerName( layerId, nameEl );
+			}
+		}
+
+		/**
+		 * Handle right-click context menu on the layer list
+		 * Provides quick access to layer actions like Group, Ungroup, etc.
+		 *
+		 * @param {MouseEvent} e Mouse event
+		 */
+		handleLayerContextMenu( e ) {
+			e.preventDefault();
+
+			const target = e.target;
+			const layerItem = target.closest( '.layer-item' );
+
+			// Get current selection
+			const selectedIds = this.getSelectedLayerIds();
+
+			// Close any existing context menu
+			this.closeLayerContextMenu();
+
+			// Create context menu
+			const menu = document.createElement( 'div' );
+			menu.className = 'layers-context-menu';
+			menu.setAttribute( 'role', 'menu' );
+			menu.style.position = 'fixed';
+			menu.style.left = e.clientX + 'px';
+			menu.style.top = e.clientY + 'px';
+			menu.style.zIndex = '10000';
+			menu.style.backgroundColor = '#fff';
+			menu.style.border = '1px solid #ccc';
+			menu.style.borderRadius = '4px';
+			menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+			menu.style.padding = '4px 0';
+			menu.style.minWidth = '160px';
+
+			const addMenuItem = ( label, icon, callback, disabled ) => {
+				const item = document.createElement( 'button' );
+				item.className = 'layers-context-menu-item';
+				item.type = 'button';
+				item.setAttribute( 'role', 'menuitem' );
+				item.style.display = 'flex';
+				item.style.alignItems = 'center';
+				item.style.width = '100%';
+				item.style.padding = '8px 12px';
+				item.style.border = 'none';
+				item.style.background = 'none';
+				item.style.cursor = disabled ? 'default' : 'pointer';
+				item.style.textAlign = 'left';
+				item.style.fontSize = '13px';
+				item.style.color = disabled ? '#999' : '#333';
+				item.style.gap = '8px';
+				if ( !disabled ) {
+					item.addEventListener( 'mouseenter', () => {
+						item.style.backgroundColor = '#f0f0f0';
+					} );
+					item.addEventListener( 'mouseleave', () => {
+						item.style.backgroundColor = 'transparent';
+					} );
+				}
+				if ( icon ) {
+					const iconSpan = document.createElement( 'span' );
+					iconSpan.textContent = icon;
+					iconSpan.style.width = '16px';
+					item.appendChild( iconSpan );
+				}
+				const labelSpan = document.createElement( 'span' );
+				labelSpan.textContent = label;
+				item.appendChild( labelSpan );
+				if ( disabled ) {
+					item.disabled = true;
 				} else {
-					this.selectLayer( layerId, false, isCtrlClick );
+					item.addEventListener( 'click', () => {
+						this.closeLayerContextMenu();
+						callback();
+					} );
+				}
+				menu.appendChild( item );
+			};
+
+			const addSeparator = () => {
+				const sep = document.createElement( 'div' );
+				sep.style.height = '1px';
+				sep.style.backgroundColor = '#e0e0e0';
+				sep.style.margin = '4px 0';
+				menu.appendChild( sep );
+			};
+
+			// Determine context based on selection
+			const hasMultipleSelected = selectedIds.length >= 2;
+			const hasSingleSelected = selectedIds.length === 1;
+			const clickedLayerId = layerItem ? layerItem.dataset.layerId : null;
+			const clickedLayer = clickedLayerId ? this.editor.getLayerById( clickedLayerId ) : null;
+			const isGroup = clickedLayer && clickedLayer.type === 'group';
+
+			// If clicked on a layer not in selection, select it first
+			if ( clickedLayerId && !selectedIds.includes( clickedLayerId ) ) {
+				this.selectLayer( clickedLayerId, false, false );
+			}
+
+			// Group option (requires 2+ layers selected)
+			addMenuItem(
+				this.msg( 'layers-context-group', 'Group (Ctrl+G)' ),
+				'📁',
+				() => this.createGroupFromSelection(),
+				!hasMultipleSelected
+			);
+
+			// Ungroup option (only for group layers)
+			addMenuItem(
+				this.msg( 'layers-context-ungroup', 'Ungroup (Ctrl+Shift+G)' ),
+				'📂',
+				() => this.ungroupLayer( clickedLayerId ),
+				!isGroup
+			);
+
+			addSeparator();
+
+			// Standard layer operations
+			addMenuItem(
+				this.msg( 'layers-context-rename', 'Rename' ),
+				'✏️',
+				() => {
+					if ( layerItem ) {
+						const nameEl = layerItem.querySelector( '.layer-name' );
+						if ( nameEl ) {
+							this.editLayerName( clickedLayerId, nameEl );
+							nameEl.focus();
+						}
+					}
+				},
+				!hasSingleSelected && !clickedLayerId
+			);
+
+			addMenuItem(
+				this.msg( 'layers-context-duplicate', 'Duplicate' ),
+				'📋',
+				() => {
+					if ( this.editor && this.editor.duplicateSelected ) {
+						this.editor.duplicateSelected();
+					}
+				},
+				selectedIds.length === 0
+			);
+
+			addMenuItem(
+				this.msg( 'layers-context-delete', 'Delete' ),
+				'🗑️',
+				() => {
+					if ( clickedLayerId ) {
+						this.deleteLayer( clickedLayerId );
+					}
+				},
+				selectedIds.length === 0 && !clickedLayerId
+			);
+
+			document.body.appendChild( menu );
+			this.activeContextMenu = menu;
+
+			// Close menu when clicking outside
+			const closeHandler = ( evt ) => {
+				if ( !menu.contains( evt.target ) ) {
+					this.closeLayerContextMenu();
+					document.removeEventListener( 'click', closeHandler );
+				}
+			};
+			setTimeout( () => {
+				document.addEventListener( 'click', closeHandler );
+			}, 0 );
+
+			// Close on Escape
+			const escHandler = ( evt ) => {
+				if ( evt.key === 'Escape' ) {
+					this.closeLayerContextMenu();
+					document.removeEventListener( 'keydown', escHandler );
+				}
+			};
+			document.addEventListener( 'keydown', escHandler );
+		}
+
+		/**
+		 * Close the active layer context menu if open
+		 */
+		closeLayerContextMenu() {
+			if ( this.activeContextMenu && this.activeContextMenu.parentNode ) {
+				this.activeContextMenu.parentNode.removeChild( this.activeContextMenu );
+			}
+			this.activeContextMenu = null;
+		}
+
+		/**
+		 * Ungroup a group layer, moving its children to the parent level
+		 *
+		 * @param {string} groupId The ID of the group layer to ungroup
+		 */
+		ungroupLayer( groupId ) {
+			if ( !groupId ) {
+				return;
+			}
+
+			// Use GroupManager if available
+			if ( this.editor && this.editor.groupManager ) {
+				const result = this.editor.groupManager.ungroup( groupId );
+				if ( result && result.success ) {
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify(
+							this.msg( 'layers-ungrouped', 'Group removed' ),
+							{ type: 'success', tag: 'layers-group' }
+						);
+					}
+					this.renderLayerList();
+				} else if ( result && result.error ) {
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify( result.error, { type: 'error', tag: 'layers-group' } );
+					}
 				}
 			}
 		}
@@ -1421,7 +1868,14 @@
 		toggleLayerVisibility( layerId ) {
 			const layer = this.editor.getLayerById( layerId );
 			if ( layer ) {
-				layer.visible = !( layer.visible !== false );
+				const newVisibility = !( layer.visible !== false );
+				layer.visible = newVisibility;
+
+				// If this is a group, cascade visibility to all children
+				if ( layer.type === 'group' && Array.isArray( layer.children ) ) {
+					this._setChildrenVisibility( layer.children, newVisibility );
+				}
+
 				if ( this.editor.canvasManager ) {
 					const layers = this.editor.stateManager ? this.editor.stateManager.get( 'layers' ) || [] : [];
 					this.editor.canvasManager.renderLayers( layers );
@@ -1429,6 +1883,26 @@
 				this.renderLayerList();
 				this.updateCodePanel();
 				this.editor.saveState( layer.visible ? 'Show Layer' : 'Hide Layer' );
+			}
+		}
+
+		/**
+		 * Recursively set visibility on child layer IDs
+		 *
+		 * @param {Array} childIds Array of child layer IDs
+		 * @param {boolean} visible Visibility state to set
+		 * @private
+		 */
+		_setChildrenVisibility( childIds, visible ) {
+			for ( const childId of childIds ) {
+				const child = this.editor.getLayerById( childId );
+				if ( child ) {
+					child.visible = visible;
+					// Recurse if child is also a group
+					if ( child.type === 'group' && Array.isArray( child.children ) ) {
+						this._setChildrenVisibility( child.children, visible );
+					}
+				}
 			}
 		}
 
@@ -1453,24 +1927,215 @@
 		 */
 		deleteLayer( layerId ) {
 			const t = this.msg.bind( this );
-			const confirmMessage = t( 'layers-delete-confirm', 'Are you sure you want to delete this layer?' );
+			const layer = this.editor.getLayerById( layerId );
 
-			const performDelete = () => {
-				this.editor.removeLayer( layerId );
-				this.renderLayerList();
-				this.updateCodePanel();
-				if ( this.getSelectedLayerId() === layerId ) {
-					// Clear selection through StateManager
-					if ( this.editor && this.editor.stateManager ) {
-						this.editor.stateManager.set( 'selectedLayerIds', [] );
-					}
-					this.updatePropertiesPanel( null );
+			if ( !layer ) {
+				return;
+			}
+
+			// Check if this is a folder with children
+			const isGroupWithChildren = layer.type === 'group' &&
+				Array.isArray( layer.children ) && layer.children.length > 0;
+
+			if ( isGroupWithChildren ) {
+				// Show folder-specific dialog with options
+				this._showFolderDeleteDialog( layerId, layer );
+			} else {
+				// Standard delete confirmation
+				const confirmMessage = t( 'layers-delete-confirm', 'Are you sure you want to delete this layer?' );
+				this.createConfirmDialog( confirmMessage, () => {
+					this._performLayerDelete( layerId );
+					this.editor.saveState( layer.type === 'group' ? 'Delete Folder' : 'Delete Layer' );
+				} );
+			}
+		}
+
+		/**
+		 * Show delete dialog for a folder with options
+		 *
+		 * @param {string} folderId Folder layer ID
+		 * @param {Object} folder Folder layer object
+		 * @private
+		 */
+		_showFolderDeleteDialog( folderId, folder ) {
+			const t = this.msg.bind( this );
+			const childCount = folder.children.length;
+
+			// Create custom dialog with two options
+			const overlay = document.createElement( 'div' );
+			overlay.className = 'layers-modal-overlay';
+			overlay.setAttribute( 'role', 'presentation' );
+
+			const dialog = document.createElement( 'div' );
+			dialog.className = 'layers-modal-dialog';
+			dialog.setAttribute( 'role', 'alertdialog' );
+			dialog.setAttribute( 'aria-modal', 'true' );
+			dialog.setAttribute( 'aria-label', t( 'layers-delete-folder-title', 'Delete Folder' ) );
+
+			const title = document.createElement( 'h3' );
+			title.textContent = t( 'layers-delete-folder-title', 'Delete Folder' );
+			title.style.margin = '0 0 12px 0';
+			dialog.appendChild( title );
+
+			const text = document.createElement( 'p' );
+			text.textContent = t(
+				'layers-delete-folder-message',
+				'This folder contains ' + childCount + ' layer(s). What would you like to do?'
+			).replace( '$1', childCount );
+			dialog.appendChild( text );
+
+			const buttons = document.createElement( 'div' );
+			buttons.className = 'layers-modal-buttons';
+			buttons.style.flexDirection = 'column';
+			buttons.style.gap = '8px';
+
+			// Option 1: Delete folder only (keep children)
+			const keepChildrenBtn = document.createElement( 'button' );
+			keepChildrenBtn.textContent = t( 'layers-delete-folder-keep-children', 'Delete folder only (keep layers)' );
+			keepChildrenBtn.className = 'layers-btn layers-btn-secondary';
+			keepChildrenBtn.style.width = '100%';
+
+			// Option 2: Delete folder and all contents
+			const deleteAllBtn = document.createElement( 'button' );
+			deleteAllBtn.textContent = t( 'layers-delete-folder-delete-all', 'Delete folder and all layers inside' );
+			deleteAllBtn.className = 'layers-btn layers-btn-danger';
+			deleteAllBtn.style.width = '100%';
+
+			// Cancel button
+			const cancelBtn = document.createElement( 'button' );
+			cancelBtn.textContent = t( 'layers-cancel', 'Cancel' );
+			cancelBtn.className = 'layers-btn';
+			cancelBtn.style.width = '100%';
+
+			buttons.appendChild( keepChildrenBtn );
+			buttons.appendChild( deleteAllBtn );
+			buttons.appendChild( cancelBtn );
+			dialog.appendChild( buttons );
+
+			document.body.appendChild( overlay );
+			document.body.appendChild( dialog );
+
+			const cleanup = () => {
+				if ( overlay.parentNode ) {
+					overlay.parentNode.removeChild( overlay );
 				}
-				this.editor.saveState( 'Delete Layer' );
+				if ( dialog.parentNode ) {
+					dialog.parentNode.removeChild( dialog );
+				}
 			};
 
-			// Always use custom dialog - OOUI dialogs have z-index issues with the fixed editor container
-			this.createConfirmDialog( confirmMessage, performDelete );
+			this.registerDialogCleanup( cleanup );
+
+			// Handle option 1: Delete folder only, unparent children
+			keepChildrenBtn.addEventListener( 'click', () => {
+				cleanup();
+				this._deleteFolderKeepChildren( folderId, folder );
+			} );
+
+			// Handle option 2: Delete folder and all contents
+			deleteAllBtn.addEventListener( 'click', () => {
+				cleanup();
+				this._deleteFolderAndContents( folderId, folder );
+			} );
+
+			cancelBtn.addEventListener( 'click', cleanup );
+			overlay.addEventListener( 'click', cleanup );
+
+			// Focus the cancel button for accessibility
+			cancelBtn.focus();
+		}
+
+		/**
+		 * Delete a folder but keep its children (unparent them)
+		 *
+		 * @param {string} folderId Folder layer ID
+		 * @param {Object} folder Folder layer object
+		 * @private
+		 */
+		_deleteFolderKeepChildren( folderId, folder ) {
+			// Start batch mode so all operations are one undo step
+			if ( this.editor.historyManager ) {
+				this.editor.historyManager.startBatch( 'Delete Folder (Keep Layers)' );
+			}
+
+			// Unparent all children
+			for ( const childId of folder.children ) {
+				const child = this.editor.getLayerById( childId );
+				if ( child ) {
+					delete child.parentGroup;
+				}
+			}
+
+			// Now delete the folder itself
+			this._performLayerDelete( folderId );
+
+			// End batch mode - saves as single history entry
+			if ( this.editor.historyManager ) {
+				this.editor.historyManager.endBatch();
+			}
+		}
+
+		/**
+		 * Delete a folder and all its contents recursively
+		 *
+		 * @param {string} folderId Folder layer ID
+		 * @param {Object} folder Folder layer object
+		 * @private
+		 */
+		_deleteFolderAndContents( folderId, folder ) {
+			// Start batch mode so all operations are one undo step
+			if ( this.editor.historyManager ) {
+				this.editor.historyManager.startBatch( 'Delete Folder and Contents' );
+			}
+
+			// Delete children first (recursively handles nested folders)
+			this._deleteChildrenRecursively( folder.children );
+
+			// Now delete the folder itself
+			this._performLayerDelete( folderId );
+
+			// End batch mode - saves as single history entry
+			if ( this.editor.historyManager ) {
+				this.editor.historyManager.endBatch();
+			}
+		}
+
+		/**
+		 * Recursively delete child layers
+		 *
+		 * @param {Array} childIds Array of child layer IDs
+		 * @private
+		 */
+		_deleteChildrenRecursively( childIds ) {
+			for ( const childId of childIds ) {
+				const child = this.editor.getLayerById( childId );
+				if ( child ) {
+					// If child is also a group, delete its children first
+					if ( child.type === 'group' && Array.isArray( child.children ) ) {
+						this._deleteChildrenRecursively( child.children );
+					}
+					this.editor.removeLayer( childId );
+				}
+			}
+		}
+
+		/**
+		 * Perform the actual layer deletion
+		 *
+		 * @param {string} layerId Layer ID to delete
+		 * @private
+		 */
+		_performLayerDelete( layerId ) {
+			this.editor.removeLayer( layerId );
+			this.renderLayerList();
+			this.updateCodePanel();
+			if ( this.getSelectedLayerId() === layerId ) {
+				// Clear selection through StateManager
+				if ( this.editor && this.editor.stateManager ) {
+					this.editor.stateManager.set( 'selectedLayerIds', [] );
+				}
+				this.updatePropertiesPanel( null );
+			}
 		}
 
 		/**
@@ -1480,6 +2145,18 @@
 		 * @param {HTMLElement} nameElement Name element to edit
 		 */
 		editLayerName( layerId, nameElement ) {
+			// Enable contentEditable for editing
+			nameElement.contentEditable = 'true';
+			nameElement.style.cursor = 'text';
+			nameElement.focus();
+
+			// Select all text for easy replacement
+			const selection = window.getSelection();
+			const range = document.createRange();
+			range.selectNodeContents( nameElement );
+			selection.removeAllRanges();
+			selection.addRange( range );
+
 			// Prevent adding duplicate listeners
 			if ( nameElement._hasEditListeners ) {
 				return;
@@ -1508,6 +2185,10 @@
 					this.editor.updateLayer( layerId, { name: newName } );
 					this.editor.saveState( 'Rename Layer' );
 				}
+				// Disable contentEditable when done editing
+				nameElement.contentEditable = 'false';
+				nameElement.style.cursor = 'pointer';
+				nameElement._hasEditListeners = false;
 			} );
 			this.addTargetListener( nameElement, 'keydown', ( e ) => {
 				if ( e.key === 'Enter' ) {

@@ -75,7 +75,11 @@
 			} );
 
 			this.addTargetListener( this.layerList, 'dragover', ( e ) => {
-				e.preventDefault();
+				this._handleDragOver( e );
+			} );
+
+			this.addTargetListener( this.layerList, 'dragleave', ( e ) => {
+				this._handleDragLeave( e );
 			} );
 
 			this.addTargetListener( this.layerList, 'drop', ( e ) => {
@@ -93,8 +97,84 @@
 			const li = e.target.closest( '.layer-item' );
 			if ( li ) {
 				e.dataTransfer.setData( 'text/plain', li.dataset.layerId );
+				e.dataTransfer.effectAllowed = 'move';
 				li.classList.add( 'dragging' );
+				this._draggedId = li.dataset.layerId;
 			}
+		}
+
+		/**
+		 * Handle drag over event - highlight drop targets
+		 *
+		 * @param {DragEvent} e Drag event
+		 * @private
+		 */
+		_handleDragOver( e ) {
+			e.preventDefault();
+			e.dataTransfer.dropEffect = 'move';
+
+			const targetItem = e.target.closest( '.layer-item' );
+			if ( !targetItem || targetItem.dataset.layerId === this._draggedId ) {
+				return;
+			}
+
+			// Clear previous highlights
+			this._clearDropHighlights();
+
+			// Check if target is a folder (group)
+			if ( targetItem.classList.contains( 'layer-item-group' ) ) {
+				// For folders, the entire item is a drop target
+				// Use a larger zone (15%-85%) for dropping INTO the folder
+				const rect = targetItem.getBoundingClientRect();
+				const mouseY = e.clientY - rect.top;
+				const height = rect.height;
+
+				if ( mouseY > height * 0.15 && mouseY < height * 0.85 ) {
+					// Middle zone - drop INTO folder (most of the item)
+					targetItem.classList.add( 'folder-drop-target' );
+				} else if ( mouseY <= height * 0.15 ) {
+					// Top zone - reorder above
+					targetItem.classList.add( 'drop-target-above' );
+				} else {
+					// Bottom zone - reorder below
+					targetItem.classList.add( 'drop-target-below' );
+				}
+			} else {
+				// Regular layer - show reorder indicator
+				const rect = targetItem.getBoundingClientRect();
+				const mouseY = e.clientY - rect.top;
+
+				if ( mouseY < rect.height / 2 ) {
+					targetItem.classList.add( 'drop-target-above' );
+				} else {
+					targetItem.classList.add( 'drop-target-below' );
+				}
+			}
+		}
+
+		/**
+		 * Handle drag leave event
+		 *
+		 * @param {DragEvent} e Drag event
+		 * @private
+		 */
+		_handleDragLeave( e ) {
+			const targetItem = e.target.closest( '.layer-item' );
+			if ( targetItem ) {
+				targetItem.classList.remove( 'folder-drop-target', 'drop-target-above', 'drop-target-below' );
+			}
+		}
+
+		/**
+		 * Clear all drop highlight classes
+		 *
+		 * @private
+		 */
+		_clearDropHighlights() {
+			const highlighted = this.layerList.querySelectorAll( '.folder-drop-target, .drop-target-above, .drop-target-below' );
+			highlighted.forEach( ( el ) => {
+				el.classList.remove( 'folder-drop-target', 'drop-target-above', 'drop-target-below' );
+			} );
 		}
 
 		/**
@@ -108,6 +188,8 @@
 			if ( li ) {
 				li.classList.remove( 'dragging' );
 			}
+			this._clearDropHighlights();
+			this._draggedId = null;
 		}
 
 		/**
@@ -121,8 +203,118 @@
 			const draggedId = e.dataTransfer.getData( 'text/plain' );
 			const targetItem = e.target.closest( '.layer-item' );
 
-			if ( targetItem && draggedId && draggedId !== targetItem.dataset.layerId ) {
-				this.reorderLayers( draggedId, targetItem.dataset.layerId );
+			// Check for folder drop BEFORE clearing highlights (defensive check for classList)
+			const isFolderDrop = targetItem && targetItem.classList &&
+				targetItem.classList.contains( 'folder-drop-target' );
+
+			this._clearDropHighlights();
+
+			if ( !targetItem || !draggedId || draggedId === targetItem.dataset.layerId ) {
+				return;
+			}
+
+			const targetId = targetItem.dataset.layerId;
+			const isFolder = targetItem.classList && targetItem.classList.contains( 'layer-item-group' );
+
+			// Debug logging
+			if ( typeof console !== 'undefined' && console.log ) {
+				console.log( '[LayerDragDrop] Drop event:', {
+					draggedId,
+					targetId,
+					isFolder,
+					isFolderDrop,
+					targetClasses: targetItem.className
+				} );
+			}
+
+			// Check if dropping into a folder using the highlight class (more reliable than position)
+			if ( isFolderDrop && isFolder ) {
+				if ( typeof console !== 'undefined' && console.log ) {
+					console.log( '[LayerDragDrop] Dropping into folder via highlight class' );
+				}
+				this.moveToFolder( draggedId, targetId );
+				return;
+			}
+
+			// Fallback: Check if dropping into a folder by position
+			if ( isFolder ) {
+				const rect = targetItem.getBoundingClientRect();
+				const mouseY = e.clientY - rect.top;
+				const height = rect.height;
+
+				if ( typeof console !== 'undefined' && console.log ) {
+					console.log( '[LayerDragDrop] Folder position check:', {
+						mouseY,
+						height,
+						ratio: mouseY / height,
+						inDropZone: mouseY > height * 0.15 && mouseY < height * 0.85
+					} );
+				}
+
+				// Use the same zone as dragover (15%-85% for folder drop)
+				if ( mouseY > height * 0.15 && mouseY < height * 0.85 ) {
+					// Drop INTO folder
+					this.moveToFolder( draggedId, targetId );
+					return;
+				}
+			}
+
+			// Standard reorder
+			this.reorderLayers( draggedId, targetId );
+		}
+
+		/**
+		 * Move a layer into a folder
+		 *
+		 * @param {string} layerId ID of the layer to move
+		 * @param {string} folderId ID of the target folder
+		 */
+		moveToFolder( layerId, folderId ) {
+			// Log for debugging
+			if ( typeof console !== 'undefined' && console.log ) {
+				console.log( '[LayerDragDrop] moveToFolder called:', {
+					layerId,
+					folderId,
+					hasEditor: !!this.editor,
+					hasGroupManager: !!( this.editor && this.editor.groupManager ),
+					hasMoveToFolder: !!( this.editor && this.editor.groupManager && this.editor.groupManager.moveToFolder )
+				} );
+			}
+
+			if ( this.editor && this.editor.groupManager &&
+				typeof this.editor.groupManager.moveToFolder === 'function' ) {
+				const success = this.editor.groupManager.moveToFolder( layerId, folderId );
+				if ( typeof console !== 'undefined' && console.log ) {
+					console.log( '[LayerDragDrop] moveToFolder result:', success );
+				}
+				if ( success ) {
+					// Show success notification
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify( 'Layer moved to folder', { type: 'success', autoHide: true, autoHideSeconds: 2 } );
+					}
+					if ( this.editor.canvasManager ) {
+						this.editor.canvasManager.redraw();
+					}
+					if ( typeof this.renderLayerList === 'function' ) {
+						this.renderLayerList();
+					}
+				} else {
+					// Show error notification
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify( 'Could not move layer to folder', { type: 'error' } );
+					}
+				}
+			} else {
+				if ( typeof console !== 'undefined' && console.error ) {
+					console.error( '[LayerDragDrop] groupManager.moveToFolder not available:', {
+						editor: this.editor,
+						groupManager: this.editor && this.editor.groupManager
+					} );
+				}
+				// Fallback notification
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify( 'Folder functionality not available - please reload', { type: 'error' } );
+				}
 			}
 		}
 

@@ -615,6 +615,50 @@
 			return PropertiesForm.addSliderInput( opts, layer.id, currentSectionBody || form );
 		};
 
+		// Special handling for folder/group layers - they don't have transform/appearance properties
+		if ( layer.type === 'group' ) {
+			// Folder Info section
+			addSection( t( 'layers-section-folder', 'Folder' ), 'folder' );
+
+			// Folder name (editable)
+			addInput( {
+				label: t( 'layers-prop-name', 'Name' ),
+				type: 'text',
+				value: layer.name || t( 'layers-type-folder', 'Folder' ),
+				maxLength: 100,
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, { name: v } );
+				}
+			} );
+
+			// Children count (read-only info)
+			const childCount = ( layer.children && layer.children.length ) || 0;
+			const infoRow = document.createElement( 'div' );
+			infoRow.className = 'properties-row properties-info';
+			const infoLabel = document.createElement( 'span' );
+			infoLabel.className = 'properties-label';
+			infoLabel.textContent = t( 'layers-folder-contents', 'Contents' );
+			const infoValue = document.createElement( 'span' );
+			infoValue.className = 'properties-value';
+			infoValue.textContent = childCount === 0 ?
+				t( 'layers-folder-empty-hint', 'Empty — drag layers here' ) :
+				( childCount === 1 ? '1 layer' : childCount + ' layers' );
+			infoRow.appendChild( infoLabel );
+			infoRow.appendChild( infoValue );
+			( currentSectionBody || form ).appendChild( infoRow );
+
+			// Tip for empty folders
+			if ( childCount === 0 ) {
+				const tipRow = document.createElement( 'div' );
+				tipRow.className = 'properties-row properties-tip';
+				tipRow.innerHTML = '<em style="font-size: 0.8em; color: #666;">Tip: Drag layers onto this folder in the layer panel to add them.</em>';
+				( currentSectionBody || form ).appendChild( tipRow );
+			}
+
+			// That's all for folders - no transform, appearance, or other properties
+			return form;
+		}
+
 		// Transform - Position should be integers (no decimals)
 		// Note: arrows and lines use x1/y1/x2/y2 instead of x/y
 		addSection( t( 'layers-section-transform', 'Transform' ), 'transform' );

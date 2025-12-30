@@ -4,6 +4,63 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.14 (December 30, 2025)
+
+### Features
+- **Layer Folder UI Improvements** — Complete folder/group visual enhancements:
+  - Folders display with distinctive styling (orange border, gradient background, folder icon)
+  - Child layers appear indented under parent folders with color-coded backgrounds
+  - Expand/collapse toggles now functional — click the triangle to collapse/expand
+  - Folder visibility toggle cascades to all child layers
+  - "Add Folder" button moved to left of title for better layout
+
+### Added
+- **Folder Delete Dialog** — When deleting a folder containing layers, choose between:
+  - "Delete folder only (keep layers)" — Unparents children
+  - "Delete folder and all layers inside" — Recursively deletes all
+- **Batch Undo for Folder Operations** — Folder deletes are single undo steps
+
+### Fixed
+- Folder expand toggle not responding to clicks
+- Folder visibility toggle had no effect on children
+- Deleted folder left children indented
+- Multiple undo clicks needed for folder delete
+
+### Testing
+- **7,506 tests passing** (+23 from v1.2.13)
+- **133 test suites**
+
+---
+
+## Version 1.2.13 (December 29, 2025)
+
+### Features
+- **Layer Grouping (Complete)** — Group multiple layers for bulk operations:
+  - Keyboard shortcuts: Ctrl+G to group, Ctrl+Shift+G to ungroup
+  - Selection integration: Selecting a group selects all children
+  - Max nesting depth: 3 levels, max children per group: 100
+
+### Added
+- GroupManager.js (~600 lines) — Full grouping API
+- Folder icons and expand toggles in Layer Panel
+- PHP validation for 'group' layer type
+
+### Testing
+- **7,483 tests passing**
+- **132 test suites**
+
+---
+
+## Version 1.2.12 (December 29, 2025)
+
+### Changed
+- **Context-Aware Toolbar behavior refined** — Style controls hidden when layer selected (Properties panel provides same controls)
+
+### Testing
+- **7,382 tests passing**
+
+---
+
 ## Version 1.2.11 (December 29, 2025)
 
 ### Bug Fixes

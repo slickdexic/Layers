@@ -99,8 +99,8 @@ describe( 'LayerDragDrop', () => {
 				addTargetListener
 			} );
 
-			// Should have registered 4 event listeners
-			expect( addTargetListener ).toHaveBeenCalledTimes( 4 );
+			// Should have registered 5 event listeners (including dragleave for folder drop)
+			expect( addTargetListener ).toHaveBeenCalledTimes( 5 );
 			expect( addTargetListener ).toHaveBeenCalledWith(
 				layerList, 'dragstart', expect.any( Function )
 			);
@@ -109,6 +109,9 @@ describe( 'LayerDragDrop', () => {
 			);
 			expect( addTargetListener ).toHaveBeenCalledWith(
 				layerList, 'dragover', expect.any( Function )
+			);
+			expect( addTargetListener ).toHaveBeenCalledWith(
+				layerList, 'dragleave', expect.any( Function )
 			);
 			expect( addTargetListener ).toHaveBeenCalledWith(
 				layerList, 'drop', expect.any( Function )
@@ -141,6 +144,7 @@ describe( 'LayerDragDrop', () => {
 			expect( events ).toContain( 'dragstart' );
 			expect( events ).toContain( 'dragend' );
 			expect( events ).toContain( 'dragover' );
+			expect( events ).toContain( 'dragleave' );
 			expect( events ).toContain( 'drop' );
 		} );
 	} );
@@ -440,7 +444,14 @@ describe( 'LayerDragDrop', () => {
 				addTargetListener
 			} );
 
+			const mockDataTransfer = {
+				dropEffect: null
+			};
+
 			const event = new Event( 'dragover', { bubbles: true } );
+			Object.defineProperty( event, 'dataTransfer', {
+				value: mockDataTransfer
+			} );
 			event.preventDefault = jest.fn();
 
 			layerList.dispatchEvent( event );

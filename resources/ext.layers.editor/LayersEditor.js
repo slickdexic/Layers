@@ -274,7 +274,7 @@ class LayersEditor {
 	}
 
 	/**
-	 * Initialize extracted managers (RevisionManager, DialogManager)
+	 * Initialize extracted managers (RevisionManager, DialogManager, GroupManager)
 	 * @private
 	 */
 	initializeExtractedManagers () {
@@ -288,6 +288,12 @@ class LayersEditor {
 		const DialogManager = getClass( 'UI.DialogManager', 'DialogManager' );
 		if ( typeof DialogManager === 'function' ) {
 			this.dialogManager = new DialogManager( { editor: this } );
+		}
+
+		// Initialize GroupManager for layer grouping
+		const GroupManager = getClass( 'Core.GroupManager', 'GroupManager' );
+		if ( typeof GroupManager === 'function' ) {
+			this.groupManager = new GroupManager( { editor: this } );
 		}
 	}
 

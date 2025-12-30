@@ -104,8 +104,8 @@ When a layer is selected in the Layer Panel:
 | `Arrow Up` | Select previous layer |
 | `Arrow Down` | Select next layer |
 | `Delete` | Delete selected layer |
-
-> **Planned:** Layer reordering shortcuts (`Ctrl+]/[`) are on the roadmap.
+| `Ctrl+G` | Group selected layers into folder |
+| `Ctrl+Shift+G` | Ungroup selected folder |
 
 ---
 

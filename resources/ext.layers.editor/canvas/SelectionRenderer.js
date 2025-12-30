@@ -99,6 +99,12 @@
 				return;
 			}
 
+			// Group layers (folders) are containers only - no canvas representation
+			// They should not have selection handles drawn on the canvas
+			if ( layer.type === 'group' ) {
+				return;
+			}
+
 			this.ctx.save();
 
 			// Special handling for lines and arrows: use line-aligned selection box

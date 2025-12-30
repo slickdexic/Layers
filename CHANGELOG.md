@@ -2,6 +2,39 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.14] - 2025-12-30
+
+### Features
+- **Layer Folder UI Improvements** — Complete folder/group visual enhancements:
+  - Folders now display with distinctive styling (orange border, gradient background, folder icon)
+  - Child layers appear indented under parent folders with color-coded backgrounds
+  - Expand/collapse toggles now functional — click the triangle to collapse/expand folders
+  - Folder visibility toggle cascades to all child layers
+  - "Add Folder" button moved to left of title for better layout
+  - Reduced header padding for more compact layer panel
+
+### Added
+- **Folder Delete Dialog** — When deleting a folder containing layers, users now choose between:
+  - "Delete folder only (keep layers)" — Unparents children, making them top-level layers
+  - "Delete folder and all layers inside" — Recursively deletes folder and all contents
+- **Batch Undo for Folder Operations** — Folder deletes are now single undo steps using HistoryManager batch mode
+- **i18n messages** — `layers-delete-folder-title`, `layers-delete-folder-message`, `layers-delete-folder-keep-children`, `layers-delete-folder-delete-all`
+- **LayerListRenderer `onToggleGroupExpand` callback** — Enables folder expand/collapse from rendered layer items
+- **CSS for `.layers-btn-icon`** — Compact icon-only buttons in layer panel header
+
+### Fixed
+- **Folder expand toggle not responding to clicks** — Added missing click event handler in LayerListRenderer
+- **Folder visibility toggle had no effect** — `toggleLayerVisibility()` now cascades visibility to all child layers
+- **Deleted folder left children indented** — Children are properly unparented or deleted based on user choice
+- **Multiple undo clicks needed for folder delete** — Now uses batch mode for single-step undo
+
+### Testing
+- **7,506 tests passing** (+23 from v1.2.13)
+- **133 test suites**
+- Updated LayerPanelConfirmations.test.js with `getLayerById` mock
+
+---
+
 ## [1.2.13] - 2025-12-29
 
 ### Features

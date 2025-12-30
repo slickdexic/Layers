@@ -59,9 +59,12 @@ describe( 'LayerItemEvents', () => {
 
 		callbacks = {
 			onSelect: jest.fn(),
+			onCtrlSelect: jest.fn(),
+			onShiftSelect: jest.fn(),
 			onToggleVisibility: jest.fn(),
 			onToggleLock: jest.fn(),
 			onDelete: jest.fn(),
+			onNameClick: jest.fn(),
 			onEditName: jest.fn()
 		};
 	} );
@@ -168,12 +171,12 @@ describe( 'LayerItemEvents', () => {
 			expect( callbacks.onDelete ).toHaveBeenCalledWith( 'layer3' );
 		} );
 
-		it( 'should call onEditName when clicking name element', () => {
+		it( 'should call onNameClick when clicking name element', () => {
 			const nameEl = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-name' );
 			const event = new MouseEvent( 'click', { bubbles: true } );
 			nameEl.dispatchEvent( event );
 
-			expect( callbacks.onEditName ).toHaveBeenCalledWith( 'layer1', nameEl );
+			expect( callbacks.onNameClick ).toHaveBeenCalledWith( 'layer1', nameEl );
 		} );
 
 		it( 'should ignore clicks outside layer items', () => {
@@ -182,6 +185,24 @@ describe( 'LayerItemEvents', () => {
 
 			expect( callbacks.onSelect ).not.toHaveBeenCalled();
 			expect( callbacks.onToggleVisibility ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should call onCtrlSelect when Ctrl+clicking', () => {
+			const grabArea = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-grab-area' );
+			const event = new MouseEvent( 'click', { bubbles: true, ctrlKey: true } );
+			grabArea.dispatchEvent( event );
+
+			expect( callbacks.onCtrlSelect ).toHaveBeenCalledWith( 'layer1' );
+			expect( callbacks.onSelect ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should call onShiftSelect when Shift+clicking', () => {
+			const grabArea = layerList.querySelector( '.layer-item[data-layer-id="layer2"] .layer-grab-area' );
+			const event = new MouseEvent( 'click', { bubbles: true, shiftKey: true } );
+			grabArea.dispatchEvent( event );
+
+			expect( callbacks.onShiftSelect ).toHaveBeenCalledWith( 'layer2' );
+			expect( callbacks.onSelect ).not.toHaveBeenCalled();
 		} );
 	} );
 

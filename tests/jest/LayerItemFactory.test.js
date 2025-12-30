@@ -288,14 +288,14 @@ describe('LayerItemFactory', () => {
             expect(visibilityBtn.getAttribute('aria-label')).toBe('Toggle visibility');
         });
 
-        test('should create name element with contentEditable', () => {
+        test('should create name element with contentEditable disabled by default', () => {
             const layer = { id: 'layer1', type: 'rectangle', name: 'Test Layer' };
             const item = factory.createLayerItem(layer, 0);
             const nameEl = item.querySelector('.layer-name');
 
             expect(nameEl).toBeTruthy();
-            // contentEditable can be boolean true or string 'true' depending on browser
-            expect(nameEl.contentEditable === true || nameEl.contentEditable === 'true').toBe(true);
+            // contentEditable should be 'false' by default (only enabled on edit)
+            expect(nameEl.contentEditable === false || nameEl.contentEditable === 'false').toBe(true);
             expect(nameEl.textContent).toBe('Test Layer');
         });
 
@@ -503,10 +503,10 @@ describe('LayerItemFactory', () => {
     });
 
     describe('group layers', () => {
-        test('should return "Group" for group layers', () => {
+        test('should return "Folder" for group layers', () => {
             const layer = { type: 'group', children: [] };
             const name = factory.getDefaultLayerName(layer);
-            expect(name).toBe('Group');
+            expect(name).toBe('Folder');
         });
 
         test('should add layer-item-group class for group layers', () => {
