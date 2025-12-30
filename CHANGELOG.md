@@ -8,14 +8,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Background layer label showing raw message key** — The background layer item in the layer panel was displaying `⧼layers-background-layer⧽` instead of "Background Image" because the i18n message was not included in the ResourceLoader module's messages array.
 
 ### Removed
-- **7 non-existent MediaWiki hooks removed** — Cleaned up extension.json and WikitextHooks.php by removing hook registrations and handler methods for hooks that don't exist in MediaWiki core:
-  - `FileLink`, `GetLinkParamDefinitions`, `GetLinkParamTypes`
-  - `ParserGetImageLinkParams`, `ParserGetImageLinkOptions`
-  - `MakeImageLink2`, `LinkerMakeImageLink`
-  - These were never called by MediaWiki and represented dead code
+- **9 deprecated/non-existent MediaWiki hooks removed** — Cleaned up extension.json and hook handlers:
+  - 7 non-existent hooks: `FileLink`, `GetLinkParamDefinitions`, `GetLinkParamTypes`, `ParserGetImageLinkParams`, `ParserGetImageLinkOptions`, `MakeImageLink2`, `LinkerMakeImageLink`
+  - 2 deprecated hooks: `SkinTemplateNavigation` (removed MW 1.41), `UnknownAction` (removed MW 1.32)
+  - ~130 lines of dead code removed from UIHooks.php
+- **Debug console.log statements removed** — Cleaned up folder/grouping debug logging from LayerDragDrop.js and LayerPanel.js
 
 ### Changed
-- **Mediawiki-Extension-Layers.txt** — Updated hook list to only include the 14 valid, documented hooks
+- **Mediawiki-Extension-Layers.txt** — Updated hook list to 12 valid, documented hooks
+- **docs/guide.md** — Updated to reference EditLayersAction instead of deprecated UnknownAction hook
 
 ### Testing
 - All existing tests continue to pass

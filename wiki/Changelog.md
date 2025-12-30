@@ -10,7 +10,14 @@ Version history for the Layers extension.
 - **Background layer label showing raw message key** — The background layer item in the layer panel was displaying `⧼layers-background-layer⧽` instead of "Background Image" because the i18n message was not included in the ResourceLoader module.
 
 ### Removed
-- **7 non-existent MediaWiki hooks removed** — Cleaned up extension.json by removing registrations for hooks that don't exist in MediaWiki core (`FileLink`, `GetLinkParamDefinitions`, `GetLinkParamTypes`, `ParserGetImageLinkParams`, `ParserGetImageLinkOptions`, `MakeImageLink2`, `LinkerMakeImageLink`)
+- **9 deprecated/non-existent MediaWiki hooks removed** — Cleaned up extension.json and hook handlers:
+  - 7 non-existent hooks: `FileLink`, `GetLinkParamDefinitions`, `GetLinkParamTypes`, `ParserGetImageLinkParams`, `ParserGetImageLinkOptions`, `MakeImageLink2`, `LinkerMakeImageLink`
+  - 2 deprecated hooks: `SkinTemplateNavigation` (removed MW 1.41), `UnknownAction` (removed MW 1.32)
+  - ~130 lines of dead code removed from UIHooks.php
+- **Debug console.log statements removed** — Cleaned up folder/grouping debug logging
+
+### Changed
+- **Mediawiki-Extension-Layers.txt** — Updated hook list to 12 valid, documented hooks
 
 ### Testing
 - All tests continue to pass
