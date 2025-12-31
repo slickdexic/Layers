@@ -59,6 +59,27 @@ Industry-standard alignment behavior matching Adobe Illustrator and Photoshop:
 * '''Import/Export''': Add external images as layers or export the final result as a PNG.
 * '''TypeScript Support''': Full type definitions for extension developers.
 
+=== Deep Linking (v1.2.0+) ===
+Control how users interact with layered images using the <code>layerslink</code> parameter:
+
+{| class="wikitable"
+! Parameter !! Behavior !! Use Case
+|-
+| <code>layerslink=viewer</code> || Opens fullscreen lightbox viewer || Enlarged view for detailed inspection
+|-
+| <code>layerslink=editor</code> || Opens layer editor directly || Quick access from article to editing
+|-
+| <code>layerslink=editor-newtab</code> || Opens editor in new browser tab || Edit without losing article context
+|-
+| <code>layerslink=editor-modal</code> || Opens editor in iframe overlay || Perfect for Page Forms integration
+|}
+
+'''Example usage:'''
+<syntaxhighlight lang="wikitext">
+[[File:Anatomy.png|thumb|layers=anatomy|layerslink=viewer]]
+[[File:Diagram.png|thumb|layers=labels|layerslink=editor]]
+</syntaxhighlight>
+
 == Drawing Tools ==
 {| class="wikitable"
 ! Tool !! Shortcut !! Purpose !! Key Features
