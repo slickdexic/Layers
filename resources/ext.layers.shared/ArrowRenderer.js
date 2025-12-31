@@ -545,7 +545,7 @@
 
 		/**
 		 * Draw a curved arrow using quadratic Bézier
-		 * Uses a filled polygon for the curved shaft to match straight arrow rendering.
+		 * Draws the entire arrow (shaft + head) as one unified polygon path.
 		 *
 		 * @param {Object} layer - Layer with arrow properties
 		 * @param {Object} [options] - Rendering options
@@ -596,8 +596,13 @@
 			const startAngle = this.getBezierTangent( 0, x1, y1, cx, cy, x2, y2 );
 			const endAngle = this.getBezierTangent( 1, x1, y1, cx, cy, x2, y2 );
 
-			// Calculate head depth to offset curve endpoint
-			const headDepth = arrowSize * 1.3 * headScale;
+			// Arrow head geometry (matching straight arrow logic)
+			const effectiveHeadScale = headScale || 1.0;
+			const barbAngle = Math.PI / 6; // 30 degrees
+			const barbLength = arrowSize * 1.56 * effectiveHeadScale;
+			const barbWidth = arrowSize * 0.8;
+			const chevronDepth = arrowSize * 0.52 * effectiveHeadScale;
+			const headDepth = arrowSize * 1.3 * effectiveHeadScale;
 
 			// Apply shadow if enabled
 			if ( this.hasShadowEnabled( layer ) ) {
@@ -609,7 +614,7 @@
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
-			// Calculate perpendicular offset for shaft edges
+			// Calculate perpendicular angles at key points
 			const startPerp = startAngle + Math.PI / 2;
 			const endPerp = endAngle + Math.PI / 2;
 			const ctrlPerp = this.getBezierTangent( 0.5, x1, y1, cx, cy, x2, y2 ) + Math.PI / 2;
@@ -617,7 +622,7 @@
 			// Calculate tail extra width
 			const tailExtra = tailWidth / 2;
 
-			// Adjust endpoints to not extend into arrow heads
+			// Calculate where shaft ends (before head)
 			let curveEndX = x2;
 			let curveEndY = y2;
 			let curveStartX = x1;
@@ -632,13 +637,11 @@
 				curveStartY = y1 + Math.sin( startAngle ) * headDepth;
 			}
 
-			// Helper to draw the curved shaft as a filled polygon
-			// We approximate the curve with two quadratic Béziers for each edge
-			const drawShaftPath = ( ctx ) => {
-				const targetCtx = ctx || this.ctx;
-				targetCtx.beginPath();
+			// Draw the unified arrow path (shaft + integrated heads)
+			const drawUnifiedArrowPath = () => {
+				this.ctx.beginPath();
 
-				// Top edge of shaft (from start to end, offset perpendicular)
+				// Calculate shaft edge points
 				const startTopX = curveStartX + Math.cos( startPerp ) * ( halfShaft + tailExtra );
 				const startTopY = curveStartY + Math.sin( startPerp ) * ( halfShaft + tailExtra );
 				const ctrlTopX = cx + Math.cos( ctrlPerp ) * halfShaft;
@@ -646,7 +649,6 @@
 				const endTopX = curveEndX + Math.cos( endPerp ) * halfShaft;
 				const endTopY = curveEndY + Math.sin( endPerp ) * halfShaft;
 
-				// Bottom edge of shaft (from end to start, offset perpendicular other way)
 				const startBotX = curveStartX - Math.cos( startPerp ) * ( halfShaft + tailExtra );
 				const startBotY = curveStartY - Math.sin( startPerp ) * ( halfShaft + tailExtra );
 				const ctrlBotX = cx - Math.cos( ctrlPerp ) * halfShaft;
@@ -654,23 +656,138 @@
 				const endBotX = curveEndX - Math.cos( endPerp ) * halfShaft;
 				const endBotY = curveEndY - Math.sin( endPerp ) * halfShaft;
 
-				// Draw top edge
-				targetCtx.moveTo( startTopX, startTopY );
-				targetCtx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+				if ( arrowStyle === 'double' ) {
+					// Start with tail head (at x1, y1)
+					const tailAngle = startAngle + Math.PI; // pointing backwards
+					const tailLeftAngle = tailAngle - barbAngle;
+					const tailRightAngle = tailAngle + barbAngle;
 
-				// Connect to bottom edge (line to end bottom point)
-				targetCtx.lineTo( endBotX, endBotY );
+					if ( headType === 'chevron' ) {
+						// Left barb
+						this.ctx.moveTo(
+							x1 - Math.cos( tailAngle ) * chevronDepth + Math.cos( startPerp ) * barbWidth,
+							y1 - Math.sin( tailAngle ) * chevronDepth + Math.sin( startPerp ) * barbWidth
+						);
+						// Tip
+						this.ctx.lineTo( x1, y1 );
+						// Right barb
+						this.ctx.lineTo(
+							x1 - Math.cos( tailAngle ) * chevronDepth - Math.cos( startPerp ) * barbWidth,
+							y1 - Math.sin( tailAngle ) * chevronDepth - Math.sin( startPerp ) * barbWidth
+						);
+					} else {
+						// Left barb
+						this.ctx.moveTo(
+							x1 - barbLength * Math.cos( tailLeftAngle ),
+							y1 - barbLength * Math.sin( tailLeftAngle )
+						);
+						// Tip
+						this.ctx.lineTo( x1, y1 );
+						// Right barb
+						this.ctx.lineTo(
+							x1 - barbLength * Math.cos( tailRightAngle ),
+							y1 - barbLength * Math.sin( tailRightAngle )
+						);
+					}
+					// Connect to shaft bottom edge start
+					this.ctx.lineTo( startBotX, startBotY );
+				} else {
+					// Start at top edge of shaft tail
+					this.ctx.moveTo( startTopX, startTopY );
+				}
 
-				// Draw bottom edge (reverse direction)
-				targetCtx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+				// Draw top edge curve (tail to head)
+				if ( arrowStyle === 'double' ) {
+					// Coming from tail head, go along bottom edge first (we're going counter-clockwise)
+					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, endBotX, endBotY );
+				} else {
+					// Draw top edge
+					this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+				}
 
-				// Close path
-				targetCtx.closePath();
+				// Draw the head at x2, y2
+				if ( arrowStyle === 'single' || arrowStyle === 'double' ) {
+					const headLeftAngle = endAngle - barbAngle;
+					const headRightAngle = endAngle + barbAngle;
+
+					if ( arrowStyle === 'double' ) {
+						// Coming from bottom edge, draw head right-to-left
+						if ( headType === 'chevron' ) {
+							this.ctx.lineTo(
+								x2 - Math.cos( endAngle ) * chevronDepth - Math.cos( endPerp ) * barbWidth,
+								y2 - Math.sin( endAngle ) * chevronDepth - Math.sin( endPerp ) * barbWidth
+							);
+							this.ctx.lineTo( x2, y2 );
+							this.ctx.lineTo(
+								x2 - Math.cos( endAngle ) * chevronDepth + Math.cos( endPerp ) * barbWidth,
+								y2 - Math.sin( endAngle ) * chevronDepth + Math.sin( endPerp ) * barbWidth
+							);
+						} else {
+							// Right barb first (we're going counter-clockwise)
+							this.ctx.lineTo(
+								x2 - barbLength * Math.cos( headRightAngle ),
+								y2 - barbLength * Math.sin( headRightAngle )
+							);
+							// Tip
+							this.ctx.lineTo( x2, y2 );
+							// Left barb
+							this.ctx.lineTo(
+								x2 - barbLength * Math.cos( headLeftAngle ),
+								y2 - barbLength * Math.sin( headLeftAngle )
+							);
+						}
+						// Connect to top edge
+						this.ctx.lineTo( endTopX, endTopY );
+						// Draw top edge back to start
+						this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, startTopX, startTopY );
+					} else {
+						// Single head: coming from top edge, draw head left-to-right
+						if ( headType === 'chevron' ) {
+							this.ctx.lineTo(
+								x2 - Math.cos( endAngle ) * chevronDepth + Math.cos( endPerp ) * barbWidth,
+								y2 - Math.sin( endAngle ) * chevronDepth + Math.sin( endPerp ) * barbWidth
+							);
+							this.ctx.lineTo( x2, y2 );
+							this.ctx.lineTo(
+								x2 - Math.cos( endAngle ) * chevronDepth - Math.cos( endPerp ) * barbWidth,
+								y2 - Math.sin( endAngle ) * chevronDepth - Math.sin( endPerp ) * barbWidth
+							);
+						} else {
+							// Left barb
+							this.ctx.lineTo(
+								x2 - barbLength * Math.cos( headLeftAngle ),
+								y2 - barbLength * Math.sin( headLeftAngle )
+							);
+							// Tip
+							this.ctx.lineTo( x2, y2 );
+							// Right barb
+							this.ctx.lineTo(
+								x2 - barbLength * Math.cos( headRightAngle ),
+								y2 - barbLength * Math.sin( headRightAngle )
+							);
+						}
+						// Connect to bottom edge
+						this.ctx.lineTo( endBotX, endBotY );
+						// Draw bottom edge back to start
+						this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+					}
+				} else {
+					// No head (arrowStyle === 'none')
+					this.ctx.lineTo( endBotX, endBotY );
+					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+				}
+
+				// Close back to start for double-headed
+				if ( arrowStyle === 'double' ) {
+					// Path already connects back via tail head
+				}
+
+				this.ctx.closePath();
 			};
 
 			// Draw fill
 			if ( hasFill ) {
-				drawShaftPath();
+				drawUnifiedArrowPath();
 				this.ctx.fillStyle = layer.fill;
 				this.ctx.globalAlpha = baseOpacity * fillOpacity;
 				this.ctx.fill();
@@ -680,26 +797,12 @@
 
 			// Draw stroke
 			if ( hasStroke ) {
-				drawShaftPath();
+				drawUnifiedArrowPath();
 				this.ctx.strokeStyle = layer.stroke;
 				this.ctx.lineWidth = strokeWidth;
 				this.ctx.lineJoin = 'round';
 				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
 				this.ctx.stroke();
-			}
-
-			// Draw arrow heads at appropriate angles
-			if ( arrowStyle === 'single' || arrowStyle === 'double' ) {
-				this.drawArrowHead(
-					x2, y2, endAngle, arrowSize, headScale, headType,
-					layer.fill || layer.stroke, baseOpacity * fillOpacity, layer.stroke, strokeWidth, baseOpacity * strokeOpacity
-				);
-			}
-			if ( arrowStyle === 'double' ) {
-				this.drawArrowHead(
-					x1, y1, startAngle + Math.PI, arrowSize, headScale, headType,
-					layer.fill || layer.stroke, baseOpacity * fillOpacity, layer.stroke, strokeWidth, baseOpacity * strokeOpacity
-				);
 			}
 
 			this.ctx.restore();
