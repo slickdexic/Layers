@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.3.0-REL1_43] - 2025-12-30
+
+### Changed
+- **MediaWiki 1.43 LTS Support** — This branch supports MediaWiki 1.43.x (LTS until December 2027)
+- All features from main branch v1.2.18 included:
+  - 14 drawing tools with blur fill support
+  - Layer grouping/folders
+  - Named layer sets with revision history
+  - Smart guides and alignment tools
+  - Style presets
+  - Deep linking (`layerslink=editor`, `layerslink=viewer`)
+  - Fullscreen lightbox viewer
+
+### Technical
+- MediaWiki requirement changed: `>= 1.44.0` → `>= 1.43.0`
+- All 7,688 tests passing
+- 94.1% statement coverage
+
+---
+
 ## [1.2.18] - 2025-12-30
 
 ### Added

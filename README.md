@@ -10,7 +10,7 @@
 
 > **Version:** 1.2.18 (December 2025)  
 > **Status:** ✅ Production-ready  
-> **Requires:** MediaWiki 1.44+, PHP 8.1+
+> **Requires:** MediaWiki 1.43+, PHP 8.1+
 >
 > **For MediaWiki 1.39.x - 1.43.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39).
 

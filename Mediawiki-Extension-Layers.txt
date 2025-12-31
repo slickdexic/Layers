@@ -6,14 +6,14 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Pvodrazka]]
-|version         = 1.2.18
+|version         = 1.3.0-REL1_43
 |update          = 2025-12-30
 |download        = {{GithubDownload|slickdexic|Layers}}
-|readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
-|changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
+|readme          = [https://github.com/slickdexic/Layers/blob/REL1_43/README.md README]
+|changelog       = [https://github.com/slickdexic/Layers/blob/REL1_43/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|<annotation>|<canvas>|<drawing>|<image editor>|<image markup>|<non-destructive>}}
-|mediawiki       = >= 1.44
+|mediawiki       = >= 1.43
 |php             = >= 8.1
 |needs-updatephp = yes
 |rights          = {{bulleted list|createlayers|editlayers|managelayerlibrary}}
