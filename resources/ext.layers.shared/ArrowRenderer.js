@@ -544,8 +544,173 @@
 		}
 
 		/**
+		 * Build head vertices for an arrow head at a given position/angle.
+		 * This is the same logic used by _buildSingleHeadVertices for consistent heads.
+		 *
+		 * @private
+		 * @param {number} tipX - X coordinate of arrow tip
+		 * @param {number} tipY - Y coordinate of arrow tip
+		 * @param {number} angle - Direction angle (radians)
+		 * @param {number} halfShaft - Half of shaft width
+		 * @param {number} arrowSize - Arrow size
+		 * @param {number} headScale - Head scale factor
+		 * @param {string} headType - 'pointed', 'chevron', or 'standard'
+		 * @param {boolean} isLeftToRight - True if traversing left-to-right (affects vertex order)
+		 * @return {Array} Array of vertex objects {x, y}
+		 */
+		_buildHeadVertices( tipX, tipY, angle, halfShaft, arrowSize, headScale, headType, isLeftToRight ) {
+			const vertices = [];
+			const effectiveHeadScale = headScale || 1.0;
+			const barbAngle = Math.PI / 6; // 30 degrees
+			const barbLength = arrowSize * 1.56 * effectiveHeadScale;
+			const barbWidth = arrowSize * 0.8;
+			const barbThickness = halfShaft * 1.5;
+			const chevronDepth = arrowSize * 0.52 * effectiveHeadScale;
+			const headDepth = arrowSize * 1.3 * effectiveHeadScale;
+
+			const cos = Math.cos( angle );
+			const sin = Math.sin( angle );
+			const perpCos = Math.cos( angle + Math.PI / 2 );
+			const perpSin = Math.sin( angle + Math.PI / 2 );
+
+			const headBaseX = tipX - cos * headDepth;
+			const headBaseY = tipY - sin * headDepth;
+
+			const leftBarbAngle = angle - barbAngle;
+			const leftBarbCos = Math.cos( leftBarbAngle );
+			const leftBarbSin = Math.sin( leftBarbAngle );
+
+			const rightBarbAngle = angle + barbAngle;
+			const rightBarbCos = Math.cos( rightBarbAngle );
+			const rightBarbSin = Math.sin( rightBarbAngle );
+
+			if ( isLeftToRight ) {
+				// Left side vertices first, then tip, then right side
+				if ( headType === 'standard' ) {
+					const leftOuterX = tipX - barbLength * leftBarbCos;
+					const leftOuterY = tipY - barbLength * leftBarbSin;
+					const leftInnerX = leftOuterX + barbThickness * leftBarbSin;
+					const leftInnerY = leftOuterY - barbThickness * leftBarbCos;
+					const leftDx = leftInnerX - headBaseX;
+					const leftDy = leftInnerY - headBaseY;
+					const leftCurrentDist = leftDx * perpCos + leftDy * perpSin;
+					const leftDeltaPerStep = leftBarbCos * perpCos + leftBarbSin * perpSin;
+					const leftT = ( halfShaft - leftCurrentDist ) / leftDeltaPerStep;
+					const leftShaftX = leftInnerX + leftT * leftBarbCos;
+					const leftShaftY = leftInnerY + leftT * leftBarbSin;
+					vertices.push( { x: leftShaftX, y: leftShaftY } );
+					vertices.push( { x: leftInnerX, y: leftInnerY } );
+					vertices.push( { x: leftOuterX, y: leftOuterY } );
+				} else if ( headType === 'chevron' ) {
+					vertices.push( { x: headBaseX + perpCos * halfShaft, y: headBaseY + perpSin * halfShaft } );
+					vertices.push( {
+						x: headBaseX - cos * chevronDepth + perpCos * barbWidth,
+						y: headBaseY - sin * chevronDepth + perpSin * barbWidth
+					} );
+				} else {
+					// pointed
+					vertices.push( { x: headBaseX + perpCos * halfShaft, y: headBaseY + perpSin * halfShaft } );
+					vertices.push( { x: tipX - barbLength * leftBarbCos, y: tipY - barbLength * leftBarbSin } );
+				}
+
+				// Tip
+				vertices.push( { x: tipX, y: tipY } );
+
+				// Right side
+				if ( headType === 'standard' ) {
+					const rightOuterX = tipX - barbLength * rightBarbCos;
+					const rightOuterY = tipY - barbLength * rightBarbSin;
+					const rightInnerX = rightOuterX - barbThickness * rightBarbSin;
+					const rightInnerY = rightOuterY + barbThickness * rightBarbCos;
+					const rightDx = rightInnerX - headBaseX;
+					const rightDy = rightInnerY - headBaseY;
+					const rightCurrentDist = rightDx * perpCos + rightDy * perpSin;
+					const rightDeltaPerStep = rightBarbCos * perpCos + rightBarbSin * perpSin;
+					const rightT = ( -halfShaft - rightCurrentDist ) / rightDeltaPerStep;
+					const rightShaftX = rightInnerX + rightT * rightBarbCos;
+					const rightShaftY = rightInnerY + rightT * rightBarbSin;
+					vertices.push( { x: rightOuterX, y: rightOuterY } );
+					vertices.push( { x: rightInnerX, y: rightInnerY } );
+					vertices.push( { x: rightShaftX, y: rightShaftY } );
+				} else if ( headType === 'chevron' ) {
+					vertices.push( {
+						x: headBaseX - cos * chevronDepth - perpCos * barbWidth,
+						y: headBaseY - sin * chevronDepth - perpSin * barbWidth
+					} );
+					vertices.push( { x: headBaseX - perpCos * halfShaft, y: headBaseY - perpSin * halfShaft } );
+				} else {
+					// pointed
+					vertices.push( { x: tipX - barbLength * rightBarbCos, y: tipY - barbLength * rightBarbSin } );
+					vertices.push( { x: headBaseX - perpCos * halfShaft, y: headBaseY - perpSin * halfShaft } );
+				}
+			} else {
+				// Right side vertices first, then tip, then left side (reverse order)
+				if ( headType === 'standard' ) {
+					const rightOuterX = tipX - barbLength * rightBarbCos;
+					const rightOuterY = tipY - barbLength * rightBarbSin;
+					const rightInnerX = rightOuterX - barbThickness * rightBarbSin;
+					const rightInnerY = rightOuterY + barbThickness * rightBarbCos;
+					const rightDx = rightInnerX - headBaseX;
+					const rightDy = rightInnerY - headBaseY;
+					const rightCurrentDist = rightDx * perpCos + rightDy * perpSin;
+					const rightDeltaPerStep = rightBarbCos * perpCos + rightBarbSin * perpSin;
+					const rightT = ( -halfShaft - rightCurrentDist ) / rightDeltaPerStep;
+					const rightShaftX = rightInnerX + rightT * rightBarbCos;
+					const rightShaftY = rightInnerY + rightT * rightBarbSin;
+					vertices.push( { x: rightShaftX, y: rightShaftY } );
+					vertices.push( { x: rightInnerX, y: rightInnerY } );
+					vertices.push( { x: rightOuterX, y: rightOuterY } );
+				} else if ( headType === 'chevron' ) {
+					vertices.push( { x: headBaseX - perpCos * halfShaft, y: headBaseY - perpSin * halfShaft } );
+					vertices.push( {
+						x: headBaseX - cos * chevronDepth - perpCos * barbWidth,
+						y: headBaseY - sin * chevronDepth - perpSin * barbWidth
+					} );
+				} else {
+					// pointed
+					vertices.push( { x: headBaseX - perpCos * halfShaft, y: headBaseY - perpSin * halfShaft } );
+					vertices.push( { x: tipX - barbLength * rightBarbCos, y: tipY - barbLength * rightBarbSin } );
+				}
+
+				// Tip
+				vertices.push( { x: tipX, y: tipY } );
+
+				// Left side
+				if ( headType === 'standard' ) {
+					const leftOuterX = tipX - barbLength * leftBarbCos;
+					const leftOuterY = tipY - barbLength * leftBarbSin;
+					const leftInnerX = leftOuterX + barbThickness * leftBarbSin;
+					const leftInnerY = leftOuterY - barbThickness * leftBarbCos;
+					const leftDx = leftInnerX - headBaseX;
+					const leftDy = leftInnerY - headBaseY;
+					const leftCurrentDist = leftDx * perpCos + leftDy * perpSin;
+					const leftDeltaPerStep = leftBarbCos * perpCos + leftBarbSin * perpSin;
+					const leftT = ( halfShaft - leftCurrentDist ) / leftDeltaPerStep;
+					const leftShaftX = leftInnerX + leftT * leftBarbCos;
+					const leftShaftY = leftInnerY + leftT * leftBarbSin;
+					vertices.push( { x: leftOuterX, y: leftOuterY } );
+					vertices.push( { x: leftInnerX, y: leftInnerY } );
+					vertices.push( { x: leftShaftX, y: leftShaftY } );
+				} else if ( headType === 'chevron' ) {
+					vertices.push( {
+						x: headBaseX - cos * chevronDepth + perpCos * barbWidth,
+						y: headBaseY - sin * chevronDepth + perpSin * barbWidth
+					} );
+					vertices.push( { x: headBaseX + perpCos * halfShaft, y: headBaseY + perpSin * halfShaft } );
+				} else {
+					// pointed
+					vertices.push( { x: tipX - barbLength * leftBarbCos, y: tipY - barbLength * leftBarbSin } );
+					vertices.push( { x: headBaseX + perpCos * halfShaft, y: headBaseY + perpSin * halfShaft } );
+				}
+			}
+
+			return vertices;
+		}
+
+		/**
 		 * Draw a curved arrow using quadratic Bézier
 		 * Draws the entire arrow (shaft + head) as one unified polygon path.
+		 * Uses the same head vertex logic as straight arrows for consistent appearance.
 		 *
 		 * @param {Object} layer - Layer with arrow properties
 		 * @param {Object} [options] - Rendering options
@@ -575,7 +740,6 @@
 			const arrowStyle = layer.arrowStyle || 'single';
 			const headType = layer.arrowHeadType || 'pointed';
 			const headScale = typeof layer.headScale === 'number' ? layer.headScale : 1.0;
-			// Calculate shaft width matching straight arrow logic
 			const shaftWidth = Math.max( arrowSize * 0.4, strokeWidth * 1.5, 4 );
 			const halfShaft = shaftWidth / 2;
 
@@ -592,16 +756,11 @@
 				this.ctx.translate( -centerX, -centerY );
 			}
 
-			// Get tangent angles at endpoints for shaft offset and arrow heads
+			// Get tangent angles at endpoints
 			const startAngle = this.getBezierTangent( 0, x1, y1, cx, cy, x2, y2 );
 			const endAngle = this.getBezierTangent( 1, x1, y1, cx, cy, x2, y2 );
 
-			// Arrow head geometry (matching straight arrow logic)
 			const effectiveHeadScale = headScale || 1.0;
-			const barbAngle = Math.PI / 6; // 30 degrees
-			const barbLength = arrowSize * 1.56 * effectiveHeadScale;
-			const barbWidth = arrowSize * 0.8;
-			const chevronDepth = arrowSize * 0.52 * effectiveHeadScale;
 			const headDepth = arrowSize * 1.3 * effectiveHeadScale;
 
 			// Apply shadow if enabled
@@ -619,7 +778,6 @@
 			const endPerp = endAngle + Math.PI / 2;
 			const ctrlPerp = this.getBezierTangent( 0.5, x1, y1, cx, cy, x2, y2 ) + Math.PI / 2;
 
-			// Calculate tail extra width
 			const tailExtra = tailWidth / 2;
 
 			// Calculate where shaft ends (before head)
@@ -637,7 +795,7 @@
 				curveStartY = y1 + Math.sin( startAngle ) * headDepth;
 			}
 
-			// Draw the unified arrow path (shaft + integrated heads)
+			// Build the unified arrow path
 			const drawUnifiedArrowPath = () => {
 				this.ctx.beginPath();
 
@@ -657,129 +815,56 @@
 				const endBotY = curveEndY - Math.sin( endPerp ) * halfShaft;
 
 				if ( arrowStyle === 'double' ) {
-					// Start with tail head (at x1, y1)
-					const tailAngle = startAngle + Math.PI; // pointing backwards
-					const tailLeftAngle = tailAngle - barbAngle;
-					const tailRightAngle = tailAngle + barbAngle;
+					// Get tail head vertices (pointing backwards, right-to-left order)
+					const tailHeadVertices = this._buildHeadVertices(
+						x1, y1, startAngle + Math.PI, halfShaft, arrowSize, headScale, headType, false
+					);
 
-					if ( headType === 'chevron' ) {
-						// Left barb
-						this.ctx.moveTo(
-							x1 - Math.cos( tailAngle ) * chevronDepth + Math.cos( startPerp ) * barbWidth,
-							y1 - Math.sin( tailAngle ) * chevronDepth + Math.sin( startPerp ) * barbWidth
-						);
-						// Tip
-						this.ctx.lineTo( x1, y1 );
-						// Right barb
-						this.ctx.lineTo(
-							x1 - Math.cos( tailAngle ) * chevronDepth - Math.cos( startPerp ) * barbWidth,
-							y1 - Math.sin( tailAngle ) * chevronDepth - Math.sin( startPerp ) * barbWidth
-						);
-					} else {
-						// Left barb
-						this.ctx.moveTo(
-							x1 - barbLength * Math.cos( tailLeftAngle ),
-							y1 - barbLength * Math.sin( tailLeftAngle )
-						);
-						// Tip
-						this.ctx.lineTo( x1, y1 );
-						// Right barb
-						this.ctx.lineTo(
-							x1 - barbLength * Math.cos( tailRightAngle ),
-							y1 - barbLength * Math.sin( tailRightAngle )
-						);
+					// Start from first tail vertex
+					this.ctx.moveTo( tailHeadVertices[ 0 ].x, tailHeadVertices[ 0 ].y );
+					for ( let i = 1; i < tailHeadVertices.length; i++ ) {
+						this.ctx.lineTo( tailHeadVertices[ i ].x, tailHeadVertices[ i ].y );
 					}
-					// Connect to shaft bottom edge start
-					this.ctx.lineTo( startBotX, startBotY );
-				} else {
-					// Start at top edge of shaft tail
-					this.ctx.moveTo( startTopX, startTopY );
-				}
 
-				// Draw top edge curve (tail to head)
-				if ( arrowStyle === 'double' ) {
-					// Coming from tail head, go along bottom edge first (we're going counter-clockwise)
-					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, endBotX, endBotY );
-				} else {
-					// Draw top edge
+					// Connect to shaft top edge and curve to head
+					this.ctx.lineTo( startTopX, startTopY );
 					this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
-				}
 
-				// Draw the head at x2, y2
-				if ( arrowStyle === 'single' || arrowStyle === 'double' ) {
-					const headLeftAngle = endAngle - barbAngle;
-					const headRightAngle = endAngle + barbAngle;
-
-					if ( arrowStyle === 'double' ) {
-						// Coming from bottom edge, draw head right-to-left
-						if ( headType === 'chevron' ) {
-							this.ctx.lineTo(
-								x2 - Math.cos( endAngle ) * chevronDepth - Math.cos( endPerp ) * barbWidth,
-								y2 - Math.sin( endAngle ) * chevronDepth - Math.sin( endPerp ) * barbWidth
-							);
-							this.ctx.lineTo( x2, y2 );
-							this.ctx.lineTo(
-								x2 - Math.cos( endAngle ) * chevronDepth + Math.cos( endPerp ) * barbWidth,
-								y2 - Math.sin( endAngle ) * chevronDepth + Math.sin( endPerp ) * barbWidth
-							);
-						} else {
-							// Right barb first (we're going counter-clockwise)
-							this.ctx.lineTo(
-								x2 - barbLength * Math.cos( headRightAngle ),
-								y2 - barbLength * Math.sin( headRightAngle )
-							);
-							// Tip
-							this.ctx.lineTo( x2, y2 );
-							// Left barb
-							this.ctx.lineTo(
-								x2 - barbLength * Math.cos( headLeftAngle ),
-								y2 - barbLength * Math.sin( headLeftAngle )
-							);
-						}
-						// Connect to top edge
-						this.ctx.lineTo( endTopX, endTopY );
-						// Draw top edge back to start
-						this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, startTopX, startTopY );
-					} else {
-						// Single head: coming from top edge, draw head left-to-right
-						if ( headType === 'chevron' ) {
-							this.ctx.lineTo(
-								x2 - Math.cos( endAngle ) * chevronDepth + Math.cos( endPerp ) * barbWidth,
-								y2 - Math.sin( endAngle ) * chevronDepth + Math.sin( endPerp ) * barbWidth
-							);
-							this.ctx.lineTo( x2, y2 );
-							this.ctx.lineTo(
-								x2 - Math.cos( endAngle ) * chevronDepth - Math.cos( endPerp ) * barbWidth,
-								y2 - Math.sin( endAngle ) * chevronDepth - Math.sin( endPerp ) * barbWidth
-							);
-						} else {
-							// Left barb
-							this.ctx.lineTo(
-								x2 - barbLength * Math.cos( headLeftAngle ),
-								y2 - barbLength * Math.sin( headLeftAngle )
-							);
-							// Tip
-							this.ctx.lineTo( x2, y2 );
-							// Right barb
-							this.ctx.lineTo(
-								x2 - barbLength * Math.cos( headRightAngle ),
-								y2 - barbLength * Math.sin( headRightAngle )
-							);
-						}
-						// Connect to bottom edge
-						this.ctx.lineTo( endBotX, endBotY );
-						// Draw bottom edge back to start
-						this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+					// Draw front head vertices (left-to-right order)
+					const frontHeadVertices = this._buildHeadVertices(
+						x2, y2, endAngle, halfShaft, arrowSize, headScale, headType, true
+					);
+					for ( const v of frontHeadVertices ) {
+						this.ctx.lineTo( v.x, v.y );
 					}
-				} else {
-					// No head (arrowStyle === 'none')
+
+					// Return along bottom edge
 					this.ctx.lineTo( endBotX, endBotY );
 					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
-				}
+				} else if ( arrowStyle === 'single' ) {
+					// Start at top edge of shaft tail
+					this.ctx.moveTo( startTopX, startTopY );
 
-				// Close back to start for double-headed
-				if ( arrowStyle === 'double' ) {
-					// Path already connects back via tail head
+					// Curve to head base
+					this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+
+					// Draw head vertices (left-to-right order)
+					const headVertices = this._buildHeadVertices(
+						x2, y2, endAngle, halfShaft, arrowSize, headScale, headType, true
+					);
+					for ( const v of headVertices ) {
+						this.ctx.lineTo( v.x, v.y );
+					}
+
+					// Return along bottom edge
+					this.ctx.lineTo( endBotX, endBotY );
+					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+				} else {
+					// No head (arrowStyle === 'none')
+					this.ctx.moveTo( startTopX, startTopY );
+					this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+					this.ctx.lineTo( endBotX, endBotY );
+					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
 				}
 
 				this.ctx.closePath();
