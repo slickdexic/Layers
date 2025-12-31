@@ -170,6 +170,10 @@
 				return;
 			}
 
+			// DEBUG: Trace what we're passing
+			// eslint-disable-next-line no-console
+			console.log( '[ColorControlFactory] openColorPicker, options.onPreview=', typeof options.onPreview, options.onPreview );
+
 			const picker = new ColorPickerDialog( {
 				currentColor: initialValue === 'none' ? 'none' : ( initialValue || '#000000' ),
 				anchorElement: anchorButton,
