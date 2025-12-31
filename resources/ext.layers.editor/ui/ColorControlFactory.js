@@ -92,6 +92,7 @@
 		 * @param {string} options.initialColor Initial color value
 		 * @param {boolean} options.initialNone Whether initial state is "none"
 		 * @param {Function} options.onColorChange Callback when color changes (color, isNone)
+		 * @param {Function} [options.onColorPreview] Callback for live preview (color, isNone)
 		 * @return {Object} Object with container, button, and state methods
 		 */
 		createColorControl( options ) {
@@ -127,6 +128,14 @@
 						}
 						options.onColorChange( colorValue, isNone );
 						this.updateColorButtonDisplay( button, none ? 'none' : colorValue );
+					},
+					onPreview: options.onColorPreview ? ( previewColor ) => {
+						const none = previewColor === 'none';
+						options.onColorPreview( none ? colorValue : previewColor, none );
+					} : null,
+					onCancel: () => {
+						// Button display is already correct (not updated during preview)
+						// The canvas will be restored by ColorPickerDialog.restoreOriginalColor
 					}
 				} );
 			} );
@@ -151,7 +160,7 @@
 		 *
 		 * @param {HTMLElement} anchorButton The button that triggered the picker
 		 * @param {string} initialValue Current color value
-		 * @param {Object} options Options including onApply callback
+		 * @param {Object} options Options including onApply, onPreview, and onCancel callbacks
 		 */
 		openColorPicker( anchorButton, initialValue, options ) {
 			options = options || {};
@@ -167,7 +176,8 @@
 				strings: this.getColorPickerStrings(),
 				registerCleanup: this.registerDialogCleanupFn,
 				onApply: options.onApply || function () {},
-				onCancel: options.onCancel || function () {}
+				onCancel: options.onCancel || function () {},
+				onPreview: options.onPreview || null
 			} );
 
 			picker.open();

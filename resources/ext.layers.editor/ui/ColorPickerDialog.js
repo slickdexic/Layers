@@ -67,6 +67,7 @@ class ColorPickerDialog {
 	 * @param {string} [config.currentColor] - The currently selected color
 	 * @param {Function} config.onApply - Callback when color is applied: function(color)
 	 * @param {Function} [config.onCancel] - Callback when dialog is cancelled
+	 * @param {Function} [config.onPreview] - Callback for live preview: function(color)
 	 * @param {Object} [config.strings] - i18n strings (see DEFAULT_STRINGS for keys)
 	 * @param {HTMLElement} [config.anchorElement] - Element to position dialog near
 	 * @param {Function} [config.registerCleanup] - Function to register cleanup callback
@@ -74,9 +75,11 @@ class ColorPickerDialog {
 	constructor( config ) {
 		this.config = config || {};
 		this.currentColor = config.currentColor || '#000000';
+		this.originalColor = this.currentColor; // Store original for cancel restoration
 		this.selectedColor = this.currentColor;
 		this.onApply = config.onApply || function () {};
 		this.onCancel = config.onCancel || function () {};
+		this.onPreview = config.onPreview || null; // Live preview callback
 		this.strings = Object.assign( {}, DEFAULT_STRINGS, config.strings || {} );
 		this.anchorElement = config.anchorElement || null;
 		this.registerCleanup = config.registerCleanup || function () {};
@@ -175,16 +178,37 @@ class ColorPickerDialog {
 	}
 
 	/**
-	 * Update the selected button state
+	 * Update the selected button state and trigger live preview
+	 *
 	 * @param {HTMLButtonElement} button - Button to select
 	 */
-	updateSelection ( button ) {
+	updateSelection( button ) {
 		if ( this.selectedButton ) {
 			this.selectedButton.classList.remove( 'selected' );
 		}
 		if ( button ) {
 			button.classList.add( 'selected' );
 			this.selectedButton = button;
+		}
+		// Trigger live preview callback
+		this.triggerPreview();
+	}
+
+	/**
+	 * Trigger the live preview callback with the currently selected color
+	 */
+	triggerPreview() {
+		if ( typeof this.onPreview === 'function' ) {
+			this.onPreview( this.selectedColor );
+		}
+	}
+
+	/**
+	 * Restore the original color (used when cancelling)
+	 */
+	restoreOriginalColor() {
+		if ( typeof this.onPreview === 'function' ) {
+			this.onPreview( this.originalColor );
 		}
 	}
 
@@ -348,8 +372,14 @@ class ColorPickerDialog {
 		customInput.type = 'color';
 		customInput.className = 'color-picker-custom-input';
 		customInput.setAttribute( 'aria-label', strings.customSection );
+		// Live preview on input for real-time feedback
+		customInput.addEventListener( 'input', () => {
+			this.selectedColor = customInput.value;
+			this.triggerPreview();
+		} );
 		customInput.addEventListener( 'change', () => {
 			this.selectedColor = customInput.value;
+			this.triggerPreview();
 		} );
 		inputSection.appendChild( customInput );
 		dialog.appendChild( inputSection );
@@ -363,6 +393,7 @@ class ColorPickerDialog {
 		cancelBtn.className = 'color-picker-btn color-picker-btn--secondary';
 		cancelBtn.textContent = strings.cancel;
 		cancelBtn.addEventListener( 'click', () => {
+			this.restoreOriginalColor();
 			this.close();
 			this.onCancel();
 		} );
@@ -387,6 +418,7 @@ class ColorPickerDialog {
 		// Close on overlay click
 		overlay.addEventListener( 'click', ( e ) => {
 			if ( e.target === overlay ) {
+				this.restoreOriginalColor();
 				this.close();
 				this.onCancel();
 			}
@@ -398,12 +430,13 @@ class ColorPickerDialog {
 	/**
 	 * Set up keyboard event handlers
 	 */
-	setupKeyboardHandlers () {
+	setupKeyboardHandlers() {
 		const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-		// Escape to close
+		// Escape to close and restore original color
 		this.escapeHandler = ( e ) => {
 			if ( e.key === 'Escape' ) {
+				this.restoreOriginalColor();
 				this.close();
 				this.onCancel();
 			}

@@ -2,6 +2,20 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Live Color Picker Preview (FR-9)** — Canvas now updates in real-time as colors are selected in the color picker, matching professional editor UX
+  - ColorPickerDialog tracks original color for cancel restoration
+  - Preview updates on swatch selection and custom color input
+  - Original color restored when user cancels or presses Escape
+  - ToolbarStyleControls applies preview to selected layers without affecting undo history
+
+### Changed
+- **Test count** — 7,733 tests (135 suites, all passing)
+
+---
+
 ## [1.3.2] - 2025-12-31
 
 ### Added

@@ -245,17 +245,24 @@ Allow direct text editing on the canvas instead of only in the properties panel:
 
 **Use Case:** Faster annotation workflow, WYSIWYG experience matching Figma/Canva.
 
-### FR-9: Live Color Picker Preview ⏳
+### FR-9: Live Color Picker Preview ✅
 
 **Priority:** HIGH - Core UX improvement  
 **Effort:** 1 week
+**Status:** COMPLETED (v1.3.3)
 
 Update canvas in real-time as colors are changed in the color picker:
-- Preview shows on canvas before applying
-- Works for stroke, fill, text color, shadow color, etc.
-- No commit until "Apply" is clicked
-- Revert to original on "Cancel"
-- Matches behavior of professional editors (Figma, Photoshop, Illustrator)
+- ✅ Preview shows on canvas before applying
+- ✅ Works for stroke and fill colors
+- ✅ No commit until "Apply" is clicked
+- ✅ Revert to original on "Cancel" or Escape
+- ✅ Matches behavior of professional editors (Figma, Photoshop, Illustrator)
+
+**Implementation:**
+- ColorPickerDialog: Added `onPreview` callback, `originalColor` tracking, `restoreOriginalColor()` method
+- ColorControlFactory: Added `onColorPreview` option that wraps callback for preview integration
+- ToolbarStyleControls: Added `applyColorPreview()` method that applies color directly to selected layers and re-renders canvas
+- 22 new tests covering all preview functionality
 
 **Use Case:** Faster color selection, better visual feedback, reduced trial-and-error.
 
@@ -313,7 +320,7 @@ FR-5 Toolbar Dropdowns:          ░░░░░░░░░░░░░░░�
 FR-6 Chat Bubble Tool:           ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Speech bubbles
 FR-7 Text Balloon Tool:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Diagram callouts
 FR-8 Inline Text Editing:        ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - WYSIWYG text
-FR-9 Live Color Preview:         ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - Real-time feedback
+FR-9 Live Color Preview:         ████████████████████ 100% ✅ DONE (v1.3.3)
 FR-10 Live Article Preview:      ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - No page edit needed
 ```
 

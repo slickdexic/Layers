@@ -1677,5 +1677,130 @@ describe( 'ToolbarStyleControls', () => {
 				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
 			} );
 		} );
+
+		describe( 'applyColorPreview', () => {
+			let mockEditor;
+			let mockCanvasManager;
+
+			beforeEach( () => {
+				mockCanvasManager = {
+					layers: [],
+					getSelectedLayerIds: jest.fn().mockReturnValue( [] ),
+					renderLayers: jest.fn()
+				};
+				mockEditor = {
+					canvasManager: mockCanvasManager,
+					layers: [],
+					getLayerById: jest.fn().mockImplementation( ( id ) =>
+						mockCanvasManager.layers.find( ( l ) => l.id === id ) || null
+					)
+				};
+				mockToolbar.editor = mockEditor;
+			} );
+
+			it( 'should apply stroke color preview to selected layers', () => {
+				mockCanvasManager.layers = [
+					{ id: 'layer-1', type: 'rectangle', stroke: '#000000' },
+					{ id: 'layer-2', type: 'circle', stroke: '#000000' }
+				];
+				mockEditor.layers = mockCanvasManager.layers;
+				mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer-1' ] );
+
+				styleControls.applyColorPreview( 'stroke', '#ff0000' );
+
+				// Verify layer was updated
+				expect( mockCanvasManager.layers[ 0 ].stroke ).toBe( '#ff0000' );
+				// Verify render was called
+				expect( mockCanvasManager.renderLayers ).toHaveBeenCalled();
+			} );
+
+			it( 'should apply fill color preview to selected layers', () => {
+				mockCanvasManager.layers = [
+					{ id: 'layer-1', type: 'rectangle', fill: '#ffffff' }
+				];
+				mockEditor.layers = mockCanvasManager.layers;
+				mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer-1' ] );
+
+				styleControls.applyColorPreview( 'fill', '#00ff00' );
+
+				expect( mockCanvasManager.layers[ 0 ].fill ).toBe( '#00ff00' );
+				expect( mockCanvasManager.renderLayers ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle none color for fill (transparent)', () => {
+				mockCanvasManager.layers = [
+					{ id: 'layer-1', type: 'rectangle', fill: '#ffffff' }
+				];
+				mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer-1' ] );
+
+				styleControls.applyColorPreview( 'fill', 'none' );
+
+				expect( mockCanvasManager.layers[ 0 ].fill ).toBe( 'none' );
+			} );
+
+			it( 'should apply preview to multiple selected layers', () => {
+				mockCanvasManager.layers = [
+					{ id: 'layer-1', type: 'rectangle', stroke: '#000000' },
+					{ id: 'layer-2', type: 'circle', stroke: '#000000' },
+					{ id: 'layer-3', type: 'ellipse', stroke: '#000000' }
+				];
+				mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer-1', 'layer-3' ] );
+
+				styleControls.applyColorPreview( 'stroke', '#0000ff' );
+
+				expect( mockCanvasManager.layers[ 0 ].stroke ).toBe( '#0000ff' );
+				expect( mockCanvasManager.layers[ 1 ].stroke ).toBe( '#000000' ); // Not selected
+				expect( mockCanvasManager.layers[ 2 ].stroke ).toBe( '#0000ff' );
+			} );
+
+			it( 'should not throw when no layers selected', () => {
+				mockCanvasManager.getSelectedLayerIds.mockReturnValue( [] );
+
+				expect( () => {
+					styleControls.applyColorPreview( 'stroke', '#ff0000' );
+				} ).not.toThrow();
+			} );
+
+			it( 'should skip layers that do not exist', () => {
+				mockCanvasManager.layers = [
+					{ id: 'layer-1', type: 'rectangle', stroke: '#000000' }
+				];
+				mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer-1', 'nonexistent' ] );
+
+				expect( () => {
+					styleControls.applyColorPreview( 'stroke', '#ff0000' );
+				} ).not.toThrow();
+
+				expect( mockCanvasManager.layers[ 0 ].stroke ).toBe( '#ff0000' );
+			} );
+
+			it( 'should not throw when toolbar is null', () => {
+				styleControls.toolbar = null;
+
+				expect( () => {
+					styleControls.applyColorPreview( 'stroke', '#ff0000' );
+				} ).not.toThrow();
+			} );
+
+			it( 'should not throw when editor is null', () => {
+				mockToolbar.editor = null;
+
+				expect( () => {
+					styleControls.applyColorPreview( 'stroke', '#ff0000' );
+				} ).not.toThrow();
+			} );
+
+			it( 'should apply stroke to fill for text layers', () => {
+				mockCanvasManager.layers = [
+					{ id: 'layer-1', type: 'text', fill: '#000000' }
+				];
+				mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer-1' ] );
+
+				styleControls.applyColorPreview( 'stroke', '#ff0000' );
+
+				// Text layers use fill for stroke color
+				expect( mockCanvasManager.layers[ 0 ].fill ).toBe( '#ff0000' );
+			} );
+		} );
 	} );
 } );

@@ -229,6 +229,9 @@ class ToolbarStyleControls {
 						this.strokeColorValue = color;
 					}
 					this.notifyStyleChange();
+				},
+				onColorPreview: ( color, isNone ) => {
+					this.applyColorPreview( 'stroke', isNone ? 'transparent' : color );
 				}
 			} );
 			this.strokeColorButton = this.strokeControl.button;
@@ -246,6 +249,9 @@ class ToolbarStyleControls {
 						this.fillColorValue = color;
 					}
 					this.notifyStyleChange();
+				},
+				onColorPreview: ( color, isNone ) => {
+					this.applyColorPreview( 'fill', isNone ? 'transparent' : color );
 				}
 			} );
 			this.fillColorButton = this.fillControl.button;
@@ -496,6 +502,58 @@ class ToolbarStyleControls {
 	notifyStyleChange() {
 		if ( this.toolbar && typeof this.toolbar.onStyleChange === 'function' ) {
 			this.toolbar.onStyleChange( this.getStyleOptions() );
+		}
+	}
+
+	/**
+	 * Apply color preview to selected layers without committing to history.
+	 * Used for live preview in color picker dialog.
+	 *
+	 * @param {string} colorType 'stroke' or 'fill'
+	 * @param {string} color The preview color value
+	 */
+	applyColorPreview( colorType, color ) {
+		if ( !this.toolbar || !this.toolbar.editor ) {
+			return;
+		}
+
+		const editor = this.toolbar.editor;
+		const canvasManager = editor.canvasManager;
+		if ( !canvasManager ) {
+			return;
+		}
+
+		// Get selected layer IDs
+		const selectedIds = canvasManager.getSelectedLayerIds ? canvasManager.getSelectedLayerIds() : [];
+		if ( !selectedIds || !selectedIds.length ) {
+			return;
+		}
+
+		// Apply preview color to each selected layer
+		for ( const id of selectedIds ) {
+			const layer = editor.getLayerById ? editor.getLayerById( id ) : null;
+			if ( !layer ) {
+				continue;
+			}
+
+			if ( colorType === 'stroke' ) {
+				// For text layers, stroke color = fill
+				if ( layer.type === 'text' ) {
+					layer.fill = color;
+				} else {
+					layer.stroke = color;
+				}
+			} else if ( colorType === 'fill' ) {
+				// Fill applies to shapes (not text, line, arrow)
+				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
+					layer.fill = color;
+				}
+			}
+		}
+
+		// Re-render to show preview
+		if ( canvasManager.renderLayers && editor.layers ) {
+			canvasManager.renderLayers( editor.layers );
 		}
 	}
 
