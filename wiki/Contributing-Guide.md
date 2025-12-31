@@ -66,7 +66,8 @@ If you have a local MediaWiki installation:
 ### Branching Strategy
 
 - `main` — Latest stable code (MediaWiki 1.44+)
-- `REL1_39` — Stable for MediaWiki 1.39-1.43
+- `REL1_43` — LTS for MediaWiki 1.43.x (full feature parity with main)
+- `REL1_39` — Legacy for MediaWiki 1.39-1.42 (community maintained)
 - Feature branches — Create from `main`
 
 ### Creating a Feature Branch

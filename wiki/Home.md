@@ -85,6 +85,7 @@ See [[Changelog]] for full details.
 | Metric | Value |
 |--------|-------|
 | **Version (main)** | 1.2.18 |
+| **Version (REL1_43)** | 1.3.0-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | December 30, 2025 |
 | **Test Suites** | 135 |

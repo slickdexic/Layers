@@ -17,7 +17,8 @@ Non-destructive means your original images are never changed. All annotations ar
 ### Which MediaWiki versions are supported?
 
 - **MediaWiki 1.44+**: Use the `main` branch
-- **MediaWiki 1.39 - 1.43**: Use the `REL1_39` branch
+- **MediaWiki 1.43.x**: Use the `REL1_43` branch (LTS until Dec 2027)
+- **MediaWiki 1.39 - 1.42**: Use the `REL1_39` branch (community maintained, MW 1.39 EOL Dec 31, 2025)
 
 ### What browsers are supported?
 
