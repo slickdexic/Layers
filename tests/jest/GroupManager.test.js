@@ -805,6 +805,237 @@ describe( 'GroupManager', () => {
 			// This should still work since layer-2 itself has no children
 			expect( result ).toBe( true );
 		} );
+
+		it( 'should reject adding nested group that would exceed max depth', () => {
+			// Set max nesting depth to 2 for this test
+			const originalMax = groupManager.maxNestingDepth;
+			groupManager.maxNestingDepth = 2;
+
+			// Create a group with layer-1 (group1 is at depth 0)
+			const group1 = groupManager.createGroup( [ 'layer-1' ], 'Level 1' );
+
+			// Create group2 containing group1 (group1 becomes child, so internal depth is 1)
+			const group2 = groupManager.createGroup( [ group1.id ], 'Level 2' );
+
+			// Create group3 with layer-2 (group3 has internal depth 0)
+			const group3 = groupManager.createGroup( [ 'layer-2' ], 'Level 3' );
+
+			// group2 has internal child depth of 1 (contains group1)
+			// Try to add group2 to group3
+			// group3 is at depth 0
+			// group2's maxChildDepth is 1 (because it contains group1)
+			// check: groupDepth(0) + layerDepth(1) + 1 = 2, which is NOT > 2
+			// So we need depth limit of 1 to trigger rejection
+
+			groupManager.maxNestingDepth = 1;
+
+			// Now try: depth(0) + childDepth(1) + 1 = 2 > 1, should fail
+			const result = groupManager.addToGroup( group2.id, group3.id );
+
+			expect( result ).toBe( false );
+
+			groupManager.maxNestingDepth = originalMax;
+		} );
+
+		it( 'should reject layers exceeding max children per group', () => {
+			// Create a group with one layer
+			const group = groupManager.createGroup( [ 'layer-1' ], 'Test Group' );
+
+			// Save original max
+			const originalMax = groupManager.maxChildrenPerGroup;
+
+			// Set max children to 1 for testing
+			groupManager.maxChildrenPerGroup = 1;
+
+			// Try to add another layer - should fail
+			const result = groupManager.addToGroup( 'layer-2', group.id );
+			expect( result ).toBe( false );
+
+			// Restore original
+			groupManager.maxChildrenPerGroup = originalMax;
+		} );
+
+		it( 'should skip layers at max depth when creating group', () => {
+			// Create nested groups to reach max depth
+			const group1 = groupManager.createGroup( [ 'layer-1' ], 'Level 1' );
+			const group2 = groupManager.createGroup( [ group1.id ], 'Level 2' );
+			groupManager.createGroup( [ group2.id ], 'Level 3' );
+
+			// Try to create a group with layer-2 (at root) and group1 (at depth 2 already)
+			// layer-2 should be included, but very deeply nested items may be skipped
+			const result = groupManager.createGroup( [ 'layer-2' ], 'Mixed' );
+			expect( result ).not.toBeNull();
+			expect( result.children ).toContain( 'layer-2' );
+		} );
+
+		it( 'should return null when trying to group layers already at max depth', () => {
+			// Set max nesting depth to 1
+			const originalMax = groupManager.maxNestingDepth;
+			groupManager.maxNestingDepth = 1;
+
+			// Create a group with layer-1 (layer-1 is now at depth 1)
+			const group1 = groupManager.createGroup( [ 'layer-1' ], 'Level 1' );
+			expect( group1 ).not.toBeNull();
+
+			// Try to create another group with layer-1 (which is at depth 1 already)
+			// Since maxNestingDepth is 1, layer-1 at depth 1 >= max, should be skipped
+			const result = groupManager.createGroup( [ 'layer-1' ], 'Should Skip' );
+			
+			// layer-1 is already at depth 1, equal to max, so it gets skipped
+			// No valid layers remain, so result should be null
+			expect( result ).toBeNull();
+
+			groupManager.maxNestingDepth = originalMax;
+		} );
+
+		it( 'should return null when createGroup exceeds max children limit', () => {
+			const originalMax = groupManager.maxChildrenPerGroup;
+			groupManager.maxChildrenPerGroup = 2;
+
+			// Try to create group with 3 layers
+			const result = groupManager.createGroup(
+				[ 'layer-1', 'layer-2', 'layer-3' ],
+				'Too Many'
+			);
+			expect( result ).toBeNull();
+
+			groupManager.maxChildrenPerGroup = originalMax;
+		} );
+
+		it( 'should resolve stateManager from editor lazily', () => {
+			const mockEditor = {
+				stateManager: mockStateManager
+			};
+			const gm = new GroupManager( { editor: mockEditor } );
+
+			// Access stateManager via getter - should resolve from editor
+			expect( gm.stateManager ).toBe( mockStateManager );
+		} );
+
+		it( 'should resolve historyManager from editor lazily', () => {
+			const mockEditor = {
+				historyManager: mockHistoryManager
+			};
+			const gm = new GroupManager( { editor: mockEditor } );
+
+			expect( gm.historyManager ).toBe( mockHistoryManager );
+		} );
+
+		it( 'should resolve selectionManager from editor.canvasManager lazily', () => {
+			const mockEditor = {
+				canvasManager: {
+					selectionManager: mockSelectionManager
+				}
+			};
+			const gm = new GroupManager( { editor: mockEditor } );
+
+			expect( gm.selectionManager ).toBe( mockSelectionManager );
+		} );
+
+		it( 'should return null for getGroupBounds with empty group', () => {
+			// Create an empty folder
+			const folder = groupManager.createFolder( [], 'Empty' );
+			expect( folder ).not.toBeNull();
+
+			const bounds = groupManager.getGroupBounds( folder.id );
+			expect( bounds ).toBeNull();
+		} );
+
+		it( 'should return null for getGroupBounds when group contains only groups', () => {
+			// Create an outer group first (empty folder)
+			const outerGroup = groupManager.createFolder( [], 'Outer' );
+
+			// Create an inner group
+			const innerGroup = groupManager.createFolder( [], 'Inner' );
+
+			// Add inner group to outer (this creates a group containing only another group)
+			groupManager.addToGroup( innerGroup.id, outerGroup.id );
+
+			// Get bounds - since innerGroup has no children, recursive search finds no layers
+			const bounds = groupManager.getGroupBounds( outerGroup.id );
+			
+			// When recursive finds only groups with no actual layer children, bounds should be null
+			expect( bounds ).toBeNull();
+		} );
+
+		it( 'should calculate correct bounds for group with layers', () => {
+			// Create a group with layers at known positions
+			const group = groupManager.createGroup( [ 'layer-1', 'layer-2' ], 'Bounded' );
+
+			const bounds = groupManager.getGroupBounds( group.id );
+			expect( bounds ).not.toBeNull();
+			expect( bounds ).toHaveProperty( 'x' );
+			expect( bounds ).toHaveProperty( 'y' );
+			expect( bounds ).toHaveProperty( 'width' );
+			expect( bounds ).toHaveProperty( 'height' );
+		} );
+
+		it( 'should handle getLayerBounds with null layer', () => {
+			const bounds = groupManager.getLayerBounds( null );
+			expect( bounds ).toBeNull();
+		} );
+
+		it( 'should fallback to basic bounds calculation without BoundsCalculator', () => {
+			// Ensure BoundsCalculator is not available
+			const originalBoundsCalculator = window.Layers.BoundsCalculator;
+			delete window.Layers.BoundsCalculator;
+
+			const layer = { x: 10, y: 20, width: 100, height: 50 };
+			const bounds = groupManager.getLayerBounds( layer );
+
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+
+			// Restore if existed
+			if ( originalBoundsCalculator ) {
+				window.Layers.BoundsCalculator = originalBoundsCalculator;
+			}
+		} );
+
+		it( 'should calculate bounds for circle layers using radius', () => {
+			const originalBoundsCalculator = window.Layers.BoundsCalculator;
+			delete window.Layers.BoundsCalculator;
+
+			const layer = { x: 50, y: 50, radius: 25 };
+			const bounds = groupManager.getLayerBounds( layer );
+
+			expect( bounds ).toEqual( { x: 50, y: 50, width: 50, height: 50 } );
+
+			if ( originalBoundsCalculator ) {
+				window.Layers.BoundsCalculator = originalBoundsCalculator;
+			}
+		} );
+
+		it( 'should use default size when layer has no dimensions', () => {
+			const originalBoundsCalculator = window.Layers.BoundsCalculator;
+			delete window.Layers.BoundsCalculator;
+
+			const layer = { type: 'text' }; // No x, y, width, height
+			const bounds = groupManager.getLayerBounds( layer );
+
+			expect( bounds ).toEqual( { x: 0, y: 0, width: 100, height: 100 } );
+
+			if ( originalBoundsCalculator ) {
+				window.Layers.BoundsCalculator = originalBoundsCalculator;
+			}
+		} );
+
+		it( 'should get top level layers', () => {
+			// Initially all layers are top-level
+			const topLevel = groupManager.getTopLevelLayers();
+			expect( topLevel.length ).toBe( 4 );
+
+			// Create a group - children should no longer be top-level
+			groupManager.createGroup( [ 'layer-1', 'layer-2' ], 'Group' );
+
+			const topLevelAfter = groupManager.getTopLevelLayers();
+			// Should have: the group + layer-3 + layer-4 = 3 (layer-1 and layer-2 are children)
+			expect( topLevelAfter.length ).toBe( 3 );
+		} );
+
+		it( 'should return empty array for getTopLevelLayers without stateManager', () => {
+			const gm = new GroupManager( {} );
+			expect( gm.getTopLevelLayers() ).toEqual( [] );
+		} );
 	} );
 
 	describe( 'module exports', () => {

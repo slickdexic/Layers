@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.2.17 (December 2025)  
+> **Version:** 1.2.18 (December 2025)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -209,8 +209,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 7,671 passing |
-| Statement coverage | 94.4% |
+| Jest tests | 7,688 passing |
+| Statement coverage | 94% |
 | Branch coverage | 82.8% |
 | Test suites | 135 |
 
@@ -260,9 +260,9 @@ npm run test:js -- --coverage
 | Total JS lines | ~53,500 | ✅ Well under 75K target |
 | ES6 classes | 94 | ✅ |
 | God classes (>1000 lines) | 9 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 7,671 | ✅ |
+| Tests passing | 7,688 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.4% | ✅ Excellent |
+| Statement coverage | 94% | ✅ Excellent |
 | Branch coverage | 82.8% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).

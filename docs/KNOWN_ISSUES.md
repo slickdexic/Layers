@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** December 30, 2025  
-**Version:** 1.2.17
+**Version:** 1.2.18
 
 This document lists known functionality issues and their current status.
 
@@ -252,11 +252,11 @@ The extension is feature-rich with 14 drawing tools, layer grouping, multiple re
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,671 | - | ✅ |
-| Statement coverage | 94.4% | 85%+ | ✅ Excellent |
+| Tests passing | 7,688 | - | ✅ |
+| Statement coverage | 94% | 85%+ | ✅ Excellent |
 | Branch coverage | 82.8% | 75%+ | ✅ |
-| Function coverage | 92.0% | 80%+ | ✅ |
-| Line coverage | 94.7% | 85%+ | ✅ |
+| Function coverage | 92% | 80%+ | ✅ |
+| Line coverage | 94% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -272,7 +272,7 @@ The extension is feature-rich with 14 drawing tools, layer grouping, multiple re
 | File | Statement | Branch | Status |
 |------|-----------|--------|--------|
 | LayerDragDrop.js | 100% | 87.7% | ✅ Improved from 68.9% |
-| GroupManager.js | 85% | 69.6% | ✅ Improved from 54% |
+| GroupManager.js | 89.1% | 75.1% | ✅ Improved from 84.9% |
 
 ---
 
@@ -323,4 +323,4 @@ If you encounter issues:
 ---
 
 *Document updated: December 30, 2025*  
-*Status: ✅ No critical issues. Extension is production-ready with excellent test coverage (94.4%, 7,671 tests).*
+*Status: ✅ No critical issues. Extension is production-ready with excellent test coverage (94%, 7,688 tests).*

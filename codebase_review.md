@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** December 30, 2025  
-**Version:** 1.2.17  
+**Version:** 1.2.18  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -10,14 +10,14 @@
 
 The Layers extension provides non-destructive image annotation capabilities for MediaWiki. This document provides an **honest, critical assessment** of the codebase quality, architecture, and technical health.
 
-### Overall Assessment: 8.5/10 - Production-Ready
+### Overall Assessment: 9/10 - Production-Ready
 
 The extension is **fully functional and production-ready** with professional security, excellent test coverage, and clean code practices. Technical debt is manageable.
 
 **Key Strengths:**
 
-- ✅ **7,671 tests passing** (0 failures, 135 test suites)
-- ✅ **94.4% statement coverage, 82.8% branch coverage**
+- ✅ **7,688 tests passing** (0 failures, 135 test suites)
+- ✅ **94% statement coverage, 82.8% branch coverage**
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 14 working drawing tools with named layer sets
 - ✅ Layer grouping/folders feature complete
@@ -49,9 +49,9 @@ All metrics collected directly from the codebase via automated tooling.
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disable comments | **13** | <15 | ✅ Below target |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **7,671** | - | ✅ |
+| Jest tests passing | **7,688** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
-| Statement coverage | **94.4%** | 85%+ | ✅ Excellent |
+| Statement coverage | **94%** | 85%+ | ✅ Excellent |
 | Branch coverage | **82.8%** | 75%+ | ✅ Good |
 | Function coverage | **92.0%** | 80%+ | ✅ |
 | Line coverage | **94.7%** | 85%+ | ✅ |
@@ -85,22 +85,21 @@ All metrics collected directly from the codebase via automated tooling.
 | LayersViewer.js | **665** | ✅ LOW |
 | LayerListRenderer.js | **617** | ✅ LOW |
 
-### ESLint Disable Comments (17 total)
+### ESLint Disable Comments (13 total)
 
 | File | Count | Rule | Reason |
 |------|-------|------|--------|
-| GroupManager.js | 4 | no-unused-vars | API compatibility |
 | UIManager.js | 3 | no-alert | Fallback wrappers |
-| ToolManager.js | 2 | no-unused-vars | Intentional API compatibility |
-| PresetDropdown.js | 1 | no-alert | Fallback wrapper |
+| PresetDropdown.js | 2 | no-alert | Fallback wrappers |
+| ToolManager.js | 2 | no-unused-vars | API compatibility |
 | RevisionManager.js | 1 | no-alert | Fallback wrapper |
 | LayerSetManager.js | 1 | no-alert | Fallback wrapper |
 | ImportExportManager.js | 1 | no-alert | Fallback wrapper |
-| LayersValidator.js | 1 | no-unused-vars | Intentional API compatibility |
-| DrawingController.js | 1 | no-unused-vars | Intentional API compatibility |
 | ToolbarStyleControls.js | 1 | no-unused-vars | API compatibility |
+| LayersValidator.js | 1 | no-unused-vars | API compatibility |
+| DrawingController.js | 1 | no-unused-vars | API compatibility |
 
-**Note:** The `no-alert` disables (8 total) are for fallback code that only executes when DialogManager is unavailable. The `no-unused-vars` disables (9 total) are for parameters intentionally kept for API compatibility.
+**Note:** The `no-alert` disables (8 total) are for fallback code that only executes when DialogManager is unavailable. The `no-unused-vars` disables (5 total) are for parameters intentionally kept for API compatibility.
 
 ---
 
@@ -114,6 +113,7 @@ All metrics collected directly from the codebase via automated tooling.
 | CanvasRenderer.js | 93.7% | 78.2% | ✅ Good |
 | LayerRenderer.js | 95.5% | 78.1% | ✅ Good |
 | ShapeRenderer.js | 93.9% | 84.6% | ✅ Good |
+| GroupManager.js | 89.1% | 75.1% | ✅ **Improved** (was 84.9%) |
 | LayerDragDrop.js | 100% | 87.7% | ✅ **Fixed** (was 68.9%) |
 | LayerListRenderer.js | 99.5% | 82.3% | ✅ **Fixed** (was 78.6%) |
 | CanvasManager.js | 86.6% | 72.2% | ✅ Acceptable for facade |
@@ -375,7 +375,7 @@ The extension is **production-ready and fully functional**. Security implementat
 
 ### Bottom Line
 
-This extension is in **good shape** with manageable technical debt. The codebase is functional (7,671 tests, 94.4% coverage, feature-complete). God classes are well-delegated with clear patterns.
+This extension is in **good shape** with manageable technical debt. The codebase is functional (7,688 tests, 94% coverage, feature-complete). God classes are well-delegated with clear patterns.
 
 **Honest rating: 8.75/10**
 

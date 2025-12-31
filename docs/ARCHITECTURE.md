@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** December 30, 2025  
-**Version:** 1.2.17
+**Version:** 1.2.18
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -29,8 +29,8 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Total JS lines | ~53,500 |
 | ES6 classes | 94 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | 94.4% stmt, 82.8% branch, 92.0% func |
-| Jest tests | **7,671** |
+| Test coverage | 94% stmt, 82.8% branch, 92% func |
+| Jest tests | **7,688** |
 | PHPUnit test files | 17 |
 | God classes (>1000 lines) | **9** (all delegated) |
 | Drawing tools | 14 |

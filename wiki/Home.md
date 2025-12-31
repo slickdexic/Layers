@@ -22,6 +22,7 @@
 
 ## 🆕 What's New in v1.2
 
+- **GroupManager Coverage Improvement** — 89% statement coverage with 17 new edge case tests (v1.2.18)
 - **Community-Ready Infrastructure** — Issue templates, PR template, wiki auto-sync (v1.2.17)
 - **Background Layer i18n Fix** — Proper internationalization support (v1.2.15)
 - **Layer Folders with Full UI** — Collapsible folders, visibility cascade, delete options (v1.2.14)
@@ -83,14 +84,14 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.2.17 |
+| **Version (main)** | 1.2.18 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | December 30, 2025 |
 | **Test Suites** | 135 |
-| **Total Tests** | 7,658 |
+| **Total Tests** | 7,688 |
 | **Code Coverage** | 94% |
-| **JavaScript Files** | 101 |
-| **ES6 Classes** | 91 |
+| **JavaScript Files** | 103 |
+| **ES6 Classes** | 94 |
 
 ---
 

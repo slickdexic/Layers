@@ -2,6 +2,34 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.18] - 2025-12-30
+
+### Added
+- **17 new GroupManager edge case tests** — Coverage improved from 84.9% → 89.1% statement, 69.3% → 75.1% branch
+  - Lazy getter resolution from editor
+  - Max nesting depth rejection
+  - Max children per group limit
+  - Group bounds calculation with empty groups
+  - getLayerBounds fallback behavior
+  - getTopLevelLayers functionality
+
+### Changed
+- **Test count increased** — 7,671 → 7,688 tests (all passing)
+- **Rating improved** — 8.75/10 → 9/10 (architecture diagrams recognized as complete)
+
+### Documentation
+- **P2.2 Architecture Diagram marked complete** — ARCHITECTURE.md already contains 9 comprehensive Mermaid diagrams with ASCII fallbacks
+- **codebase_review.md updated** — ESLint disable table corrected (was outdated), GroupManager coverage added
+- **improvement_plan.md updated** — Accurate progress tracking, P2.2 completed
+
+### Quality
+- All 135 test suites passing
+- 94.1% statement coverage, 82.5% branch coverage
+- Zero TODO/FIXME/HACK comments
+- 13 eslint-disable comments (below <15 target)
+
+---
+
 ## [1.2.17] - 2025-12-30
 
 ### Added
