@@ -1323,4 +1323,278 @@ describe( 'ViewerManager', () => {
 			);
 		} );
 	} );
+
+	describe( 'FR-10: Live Preview / Freshness Checking', () => {
+		let manager;
+		let mockFreshnessChecker;
+
+		beforeEach( () => {
+			mockFreshnessChecker = {
+				checkFreshness: jest.fn(),
+				checkMultipleFreshness: jest.fn()
+			};
+
+			// Update window.layersGetClass to provide mock FreshnessChecker
+			window.layersGetClass = jest.fn( ( namespacePath ) => {
+				if ( namespacePath === 'Utils.UrlParser' ) {
+					return function () { return mockUrlParser; };
+				}
+				if ( namespacePath === 'Viewer.LayersViewer' ) {
+					return mockLayersViewer;
+				}
+				if ( namespacePath === 'Viewer.FreshnessChecker' ) {
+					return function () { return mockFreshnessChecker; };
+				}
+				return null;
+			} );
+
+			// Reload module to pick up new mocks
+			jest.resetModules();
+			ViewerManager = require( '../../resources/ext.layers/viewer/ViewerManager.js' );
+
+			manager = new ViewerManager( {
+				urlParser: mockUrlParser,
+				freshnessChecker: mockFreshnessChecker,
+				debug: true
+			} );
+		} );
+
+		describe( 'reinitializeViewer', () => {
+			it( 'should destroy existing viewer and create new one', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+
+				// Mock existing viewer with destroy method
+				const destroyMock = jest.fn();
+				img.layersViewer = { destroy: destroyMock };
+
+				const newLayerData = {
+					layers: [ { id: '1', type: 'text' } ],
+					baseWidth: 800,
+					baseHeight: 600
+				};
+
+				const result = manager.reinitializeViewer( img, newLayerData );
+
+				expect( destroyMock ).toHaveBeenCalled();
+				expect( result ).toBe( true );
+				expect( mockLayersViewer ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle viewer without destroy method', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+
+				// Mock existing viewer without destroy method
+				img.layersViewer = { someOtherMethod: jest.fn() };
+
+				const newLayerData = {
+					layers: [ { id: '1', type: 'text' } ]
+				};
+
+				const result = manager.reinitializeViewer( img, newLayerData );
+
+				expect( result ).toBe( true );
+				expect( img.layersViewer ).not.toBeNull();
+			} );
+
+			it( 'should clear pending flag', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+				img.layersPending = true;
+				img.layersViewer = null;
+
+				const newLayerData = { layers: [] };
+
+				manager.reinitializeViewer( img, newLayerData );
+
+				expect( img.layersPending ).toBe( false );
+			} );
+
+			it( 'should return false on error', () => {
+				const img = document.createElement( 'img' );
+				// No src attribute, might cause issues
+
+				// Force an error by making LayersViewer throw
+				mockLayersViewer.mockImplementationOnce( () => {
+					throw new Error( 'Init failed' );
+				} );
+
+				const result = manager.reinitializeViewer( img, { layers: [] } );
+
+				expect( result ).toBe( false );
+			} );
+		} );
+
+		describe( 'checkAndRefreshStaleViewers', () => {
+			it( 'should skip if no freshnessChecker', () => {
+				const managerNoChecker = new ViewerManager( {
+					urlParser: mockUrlParser,
+					freshnessChecker: null,
+					debug: true
+				} );
+
+				const images = [ document.createElement( 'img' ) ];
+
+				// Should not throw
+				expect( () => {
+					managerNoChecker.checkAndRefreshStaleViewers( images );
+				} ).not.toThrow();
+
+				expect( mockFreshnessChecker.checkMultipleFreshness ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should skip images without revision info', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+				// No data-layer-revision or data-file-name
+
+				manager.checkAndRefreshStaleViewers( [ img ] );
+
+				expect( mockFreshnessChecker.checkMultipleFreshness ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should check images with revision info', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+				img.setAttribute( 'data-layer-revision', '5' );
+				img.setAttribute( 'data-file-name', 'test.jpg' );
+
+				mockFreshnessChecker.checkMultipleFreshness.mockResolvedValue( new Map() );
+
+				manager.checkAndRefreshStaleViewers( [ img ] );
+
+				expect( mockFreshnessChecker.checkMultipleFreshness ).toHaveBeenCalledWith( [ img ] );
+			} );
+
+			it( 'should reinitialize stale viewers', async () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+				img.setAttribute( 'data-layer-revision', '5' );
+				img.setAttribute( 'data-file-name', 'test.jpg' );
+				img.layersViewer = { destroy: jest.fn() };
+
+				const freshLayerData = {
+					layers: [ { id: '1', type: 'arrow' } ],
+					baseWidth: 1000,
+					baseHeight: 800
+				};
+
+				const resultMap = new Map();
+				resultMap.set( img, {
+					isFresh: false,
+					inlineRevision: 5,
+					latestRevision: 8,
+					layerData: freshLayerData
+				} );
+				mockFreshnessChecker.checkMultipleFreshness.mockResolvedValue( resultMap );
+
+				manager.checkAndRefreshStaleViewers( [ img ] );
+
+				// Wait for async completion
+				await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+				// Should have reinitialized the viewer
+				expect( mockLayersViewer ).toHaveBeenCalled();
+				expect( img.layersViewer ).not.toBeNull();
+			} );
+
+			it( 'should not reinitialize fresh viewers', async () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+				img.setAttribute( 'data-layer-revision', '5' );
+				img.setAttribute( 'data-file-name', 'test.jpg' );
+
+				const resultMap = new Map();
+				resultMap.set( img, {
+					isFresh: true,
+					inlineRevision: 5,
+					latestRevision: 5,
+					layerData: null
+				} );
+				mockFreshnessChecker.checkMultipleFreshness.mockResolvedValue( resultMap );
+
+				const viewerCallsBefore = mockLayersViewer.mock.calls.length;
+
+				manager.checkAndRefreshStaleViewers( [ img ] );
+
+				await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+				// Should not have created a new viewer
+				expect( mockLayersViewer.mock.calls.length ).toBe( viewerCallsBefore );
+			} );
+
+			it( 'should handle freshness check errors gracefully', async () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+				img.setAttribute( 'data-layer-revision', '5' );
+				img.setAttribute( 'data-file-name', 'test.jpg' );
+
+				mockFreshnessChecker.checkMultipleFreshness.mockRejectedValue(
+					new Error( 'Network error' )
+				);
+
+				// Should not throw
+				expect( () => {
+					manager.checkAndRefreshStaleViewers( [ img ] );
+				} ).not.toThrow();
+			} );
+		} );
+
+		describe( 'initializeLayerViewers with freshness checking', () => {
+			it( 'should call checkAndRefreshStaleViewers after initialization', () => {
+				document.body.innerHTML = `
+					<div style="position: relative">
+						<img 
+							data-layer-data='{"layers":[{"id":"1","type":"text"}]}' 
+							data-layer-revision="5"
+							data-file-name="test.jpg"
+							data-layer-setname="default"
+							src="test.jpg"
+						>
+					</div>
+				`;
+
+				mockFreshnessChecker.checkMultipleFreshness.mockResolvedValue( new Map() );
+
+				manager.initializeLayerViewers();
+
+				// Viewer should be initialized
+				expect( mockLayersViewer ).toHaveBeenCalled();
+
+				// Freshness check should be called
+				expect( mockFreshnessChecker.checkMultipleFreshness ).toHaveBeenCalled();
+			} );
+
+			it( 'should pass only initialized images to freshness checker', () => {
+				document.body.innerHTML = `
+					<div style="position: relative">
+						<img 
+							data-layer-data='{"layers":[{"id":"1","type":"text"}]}' 
+							data-layer-revision="5"
+							data-file-name="test.jpg"
+							src="test.jpg"
+						>
+						<img 
+							data-layer-data='{"layers":[{"id":"2","type":"arrow"}]}' 
+							data-layer-revision="3"
+							data-file-name="test2.jpg"
+							src="test2.jpg"
+						>
+					</div>
+				`;
+
+				mockFreshnessChecker.checkMultipleFreshness.mockResolvedValue( new Map() );
+
+				manager.initializeLayerViewers();
+
+				// Should have initialized both viewers
+				expect( mockLayersViewer ).toHaveBeenCalledTimes( 2 );
+
+				// Freshness check should be called with both images
+				const checkedImages = mockFreshnessChecker.checkMultipleFreshness.mock.calls[ 0 ][ 0 ];
+				expect( checkedImages ).toHaveLength( 2 );
+			} );
+		} );
+	} );
 } );

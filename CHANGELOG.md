@@ -10,9 +10,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Preview updates on swatch selection and custom color input
   - Original color restored when user cancels or presses Escape
   - ToolbarStyleControls applies preview to selected layers without affecting undo history
+- **Live Article Preview (FR-10)** — Layer changes now visible on article pages immediately after saving, without needing to edit and save the wiki page
+  - New `FreshnessChecker.js` module compares inline revision with API
+  - ViewerManager automatically detects and refreshes stale viewers
+  - ThumbnailProcessor embeds revision metadata (`data-layer-revision`, `data-layer-setname`, `data-file-name`)
+  - 30-second sessionStorage cache prevents excessive API calls
+  - 45 new tests for FreshnessChecker (33) and ViewerManager FR-10 integration (12)
 
 ### Changed
-- **Test count** — 7,733 tests (135 suites, all passing)
+- **Test count** — 7,778 tests (136 suites, all passing)
 
 ---
 

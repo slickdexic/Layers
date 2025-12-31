@@ -182,6 +182,7 @@
 			"scripts": [
 				"LayersViewer.js",
 				"viewer/UrlParser.js",
+				"viewer/FreshnessChecker.js",
 				"viewer/ViewerManager.js",
 				"viewer/ApiFallback.js",
 				"viewer/LayersLightbox.js",

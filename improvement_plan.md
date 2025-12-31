@@ -21,13 +21,14 @@ The extension is **production-ready** with layer grouping feature complete. All 
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping with folders |
 | **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
-| **Testing** | ✅ Excellent | 7,711 tests (135 suites), 94.2% statement coverage |
-| **ES6 Migration** | ✅ Complete | 91 classes, 0 prototype patterns |
+| **Testing** | ✅ Excellent | 7,778 tests (136 suites), 94.2% statement coverage |
+| **ES6 Migration** | ✅ Complete | 92 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ✅ Managed | 9 files >1,000 lines, all well-delegated |
-| **Codebase Size** | ✅ Healthy | ~53,500 lines (101 files), well under 75K target |
+| **Codebase Size** | ✅ Healthy | ~53,500 lines (102 files), well under 75K target |
 | **Layer Grouping** | ✅ **COMPLETE** | Folders, expand/collapse, visibility cascade, delete options |
 | **Performance** | ✅ Improved | Number inputs debounced in PropertiesForm |
+| **Live Preview** | ✅ **NEW** | FR-10: Changes visible without page edit |
 
 ---
 
@@ -266,21 +267,29 @@ Update canvas in real-time as colors are changed in the color picker:
 
 **Use Case:** Faster color selection, better visual feedback, reduced trial-and-error.
 
-### FR-10: Live Preview Without Page Edit/Save ⏳
+### FR-10: Live Preview Without Page Edit/Save ✅
 
 **Priority:** HIGH - Core UX improvement  
 **Effort:** 2-3 weeks
+**Status:** COMPLETED (v1.3.3)
 
-Changes made in the editor should be visible on article pages immediately after saving layers, without needing to edit and save the wiki page:
-- Viewer fetches latest layer data on page load
-- No page cache invalidation required
-- Real-time updates when switching between editor and article
-- Consider using ResourceLoader cache-busting or API polling
+Changes made in the editor are visible on article pages immediately after saving layers, without needing to edit and save the wiki page:
+- ✅ Viewer detects stale inline data via revision comparison
+- ✅ API is queried for latest revision on page load
+- ✅ Stale viewers are automatically reinitialized with fresh data
+- ✅ Results cached briefly (30s) to avoid repeated API calls
+- ✅ Graceful fallback on errors (assumes fresh to avoid breaking viewer)
 
-**Technical Considerations:**
-- May require ResourceLoader module changes
-- Cache invalidation strategy needed
-- Could use revision timestamp for cache key
+**Implementation:**
+- ThumbnailProcessor: Added `data-layer-revision`, `data-layer-setname`, `data-file-name` attributes
+- FreshnessChecker.js: New module for checking if inline data is stale
+- ViewerManager: Added `reinitializeViewer()`, `checkAndRefreshStaleViewers()` methods
+- 45 new tests (33 for FreshnessChecker + 12 for ViewerManager)
+
+**Technical Notes:**
+- Uses sessionStorage for caching freshness checks (30 second TTL)
+- API call includes `limit=1` for minimal response when checking freshness
+- If stale, full layer data is included in response for immediate reinitialization
 
 **Use Case:** Streamlined workflow for annotators, immediate feedback, reduced confusion.
 
@@ -321,7 +330,7 @@ FR-6 Chat Bubble Tool:           ░░░░░░░░░░░░░░░�
 FR-7 Text Balloon Tool:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Diagram callouts
 FR-8 Inline Text Editing:        ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - WYSIWYG text
 FR-9 Live Color Preview:         ████████████████████ 100% ✅ DONE (v1.3.3)
-FR-10 Live Article Preview:      ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - No page edit needed
+FR-10 Live Article Preview:      ████████████████████ 100% ✅ DONE (v1.3.3)
 ```
 
 ---
@@ -330,12 +339,12 @@ FR-10 Live Article Preview:      ░░░░░░░░░░░░░░░�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,711 | ✅ |
+| Total tests | 7,778 | ✅ |
 | Statement coverage | 94.2% | ✅ Excellent |
 | Branch coverage | 82.6% | ✅ |
 | Function coverage | 92% | ✅ |
 | Line coverage | 94% | ✅ |
-| Test suites | 135 | ✅ |
+| Test suites | 136 | ✅ |
 
 ### Files With Excellent Coverage ✅
 
