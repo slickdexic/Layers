@@ -268,6 +268,9 @@ class ToolbarStyleControls {
 						this.strokeColorValue = color;
 					}
 					this.notifyStyleChange();
+				},
+				onColorPreview: ( color, isNone ) => {
+					this.applyColorPreview( 'stroke', isNone ? 'transparent' : color );
 				}
 			} );
 			this.strokeColorButton = strokeItem.button;
@@ -283,6 +286,9 @@ class ToolbarStyleControls {
 						this.fillColorValue = color;
 					}
 					this.notifyStyleChange();
+				},
+				onColorPreview: ( color, isNone ) => {
+					this.applyColorPreview( 'fill', isNone ? 'transparent' : color );
 				}
 			} );
 			this.fillColorButton = fillItem.button;
@@ -330,7 +336,11 @@ class ToolbarStyleControls {
 					const none = chosen === 'none';
 					options.onColorChange( chosen, none );
 					this.updateColorButtonDisplay( button, none ? 'none' : chosen );
-				}
+				},
+				onPreview: options.onColorPreview ? ( previewColor ) => {
+					const none = previewColor === 'none';
+					options.onColorPreview( none ? currentValue : previewColor, none );
+				} : null
 			} );
 		} );
 
@@ -461,7 +471,8 @@ class ToolbarStyleControls {
 				}
 			},
 			onApply: options.onApply || function () {},
-			onCancel: options.onCancel || function () {}
+			onCancel: options.onCancel || function () {},
+			onPreview: options.onPreview || null
 		} );
 
 		picker.open();
