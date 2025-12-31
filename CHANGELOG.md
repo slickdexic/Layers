@@ -2,6 +2,37 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.3.2] - 2025-12-31
+
+### Added
+- **Release Guide** — New `docs/RELEASE_GUIDE.md` with comprehensive checklist to prevent missed documentation updates
+
+### Documentation
+- Updated all documentation for release consistency
+- Wiki documentation synchronized with main repo
+
+---
+
+## [1.3.1] - 2025-12-31
+
+### Fixed
+- **ToolRegistry textbox tool registration** — Added missing textbox tool to `registerDefaultTools()` for consistency with Toolbar
+- **PHP code quality** — Fixed ALL PHP warnings (45 → 0)
+  - Fixed 29 source file warnings (line length, comment placement, variable naming)
+  - Fixed 16 test file warnings (inline comments, line length, indentation, duplicate class)
+  - All files now pass phpcs with 0 errors and 0 warnings
+
+### Added
+- **localStorage color validation** — ColorPickerDialog now validates saved colors from localStorage, filtering out malformed data
+- **Folder tip i18n message** — Added `layers-folder-empty-tip` for localized folder help text
+
+### Changed
+- **PropertiesForm debounce** — Number inputs now use 100ms debounce to reduce render thrashing during rapid value changes
+- **PropertiesForm DOM methods** — Replaced innerHTML usage with DOM methods (createElement/textContent) for folder tip display
+- **Test count** — 7,711 tests (135 suites, all passing)
+
+---
+
 ## [1.3.0] - 2025-12-31
 
 ### Added

@@ -4,6 +4,33 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.3.2 (December 31, 2025)
+
+### Added
+- **Release Guide** — New `docs/RELEASE_GUIDE.md` with comprehensive checklist to prevent missed documentation updates
+
+### Documentation
+- Updated all documentation for release consistency
+- Wiki documentation synchronized with main repo
+
+---
+
+## Version 1.3.1 (December 31, 2025)
+
+### Fixed
+- **ToolRegistry textbox tool registration** — Added missing textbox tool for consistency with Toolbar
+- **PHP code quality** — Fixed ALL PHP warnings (45 → 0)
+
+### Added
+- **localStorage color validation** — ColorPickerDialog validates saved colors from localStorage
+- **Folder tip i18n message** — Added `layers-folder-empty-tip` for localized folder help text
+
+### Changed
+- **PropertiesForm debounce** — Number inputs use 100ms debounce to reduce render thrashing
+- **Test count** — 7,711 tests (135 suites, all passing)
+
+---
+
 ## Version 1.3.0 (December 31, 2025)
 
 ### Added

@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-7%2C688%20Passing-brightgreen" alt="7,688 Tests">
+  <img src="https://img.shields.io/badge/Tests-7%2C711%20Passing-brightgreen" alt="7,711 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -20,7 +20,16 @@
 
 ---
 
-## 🆕 What's New in v1.2
+## 🆕 What's New in v1.3
+
+- **REL1_43 Branch** — New LTS branch for MediaWiki 1.43.x with full feature parity (v1.3.0)
+- **Release Guide** — Comprehensive release checklist for maintainers (v1.3.2)
+- **Zero PHP Warnings** — All 45 phpcs warnings fixed (v1.3.1)
+- **localStorage Validation** — Color picker validates stored data (v1.3.1)
+- **Input Debouncing** — PropertiesForm number inputs debounced for performance (v1.3.1)
+- **7,711 tests passing** — 94.2% statement coverage
+
+### Previous v1.2 Highlights
 
 - **GroupManager Coverage Improvement** — 89% statement coverage with 17 new edge case tests (v1.2.18)
 - **Community-Ready Infrastructure** — Issue templates, PR template, wiki auto-sync (v1.2.17)
@@ -84,12 +93,12 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.3.0 |
-| **Version (REL1_43)** | 1.3.0-REL1_43 |
+| **Version (main)** | 1.3.2 |
+| **Version (REL1_43)** | 1.3.2-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | December 31, 2025 |
 | **Test Suites** | 135 |
-| **Total Tests** | 7,688 |
+| **Total Tests** | 7,711 |
 | **Code Coverage** | 94% |
 | **JavaScript Files** | 103 |
 | **ES6 Classes** | 94 |

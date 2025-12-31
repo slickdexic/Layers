@@ -2,16 +2,16 @@
 
 **Last Updated:** December 31, 2025  
 **Status:** ✅ No Critical Issues - Production Ready  
-**Version:** 1.3.0  
+**Version:** 1.3.2  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-The extension is **production-ready** with layer grouping feature complete. All god classes use delegation patterns. All coverage gaps have been addressed.
+The extension is **production-ready** with layer grouping feature complete. All god classes use delegation patterns. All coverage gaps have been addressed. **All PHP warnings fixed (45 → 0).**
 
-**Current Rating: 9/10**
+**Current Rating: 9.3/10**
 
 ---
 
@@ -19,14 +19,15 @@ The extension is **production-ready** with layer grouping feature complete. All 
 
 | Area | Status | Details |
 |------|--------|--------|
-| **Functionality** | ✅ Complete | 14 tools + layer grouping with folders |
-| **Security** | ✅ Resolved | All known security issues fixed |
-| **Testing** | ✅ Excellent | 7,688 tests (135 suites), 94% statement coverage |
-| **ES6 Migration** | ✅ Complete | 94 classes, 0 prototype patterns |
+| **Functionality** | ✅ Complete | 12 tools + layer grouping with folders |
+| **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
+| **Testing** | ✅ Excellent | 7,711 tests (135 suites), 94.2% statement coverage |
+| **ES6 Migration** | ✅ Complete | 91 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ✅ Managed | 9 files >1,000 lines, all well-delegated |
-| **Codebase Size** | ✅ Healthy | ~53,500 lines (103 files), well under 75K target |
+| **Codebase Size** | ✅ Healthy | ~53,500 lines (101 files), well under 75K target |
 | **Layer Grouping** | ✅ **COMPLETE** | Folders, expand/collapse, visibility cascade, delete options |
+| **Performance** | ✅ Improved | Number inputs debounced in PropertiesForm |
 
 ---
 
@@ -94,9 +95,9 @@ All 9 files exceeding 1,000 lines use proper delegation patterns:
 | ToolManager.js | 1,261 | Facade → tool handlers | ✅ Acceptable |
 | CanvasRenderer.js | 1,242 | SelectionRenderer | ✅ Acceptable |
 | APIManager.js | 1,182 | APIErrorHandler | ✅ Acceptable |
-| GroupManager.js | 1,140 | New (v1.2.13) | ✅ Acceptable |
+| GroupManager.js | 1,132 | New (v1.2.13) | ✅ Acceptable |
 
-**Total in god classes: ~12,222 lines** (23% of JS codebase)
+**Total in god classes: ~12,186 lines** (23% of JS codebase)
 
 ---
 
@@ -169,6 +170,115 @@ Allow users to specify custom fonts.
 
 ---
 
+## Future Feature Requests (P4)
+
+User-requested enhancements that would elevate the extension to world-class status:
+
+### FR-4: Curved Arrows with Spline Handles ⏳
+
+**Priority:** HIGH - Core annotation improvement  
+**Effort:** 2-3 weeks
+
+Add a draggable control handle in the middle of arrow objects to create curved arrows:
+- Control point drives a Bézier/spline curve for the arrow body
+- Arrow heads follow the tangent at endpoints
+- Intuitive drag interaction for curve shaping
+- Works with all arrow head types (pointed, chevron, standard)
+
+**Use Case:** Pointing to off-axis targets, flowing diagrams, organic annotations.
+
+### FR-5: Toolbar Dropdown Grouping ⏳
+
+**Priority:** MEDIUM - UI scalability  
+**Effort:** 1-2 weeks
+
+Reorganize the top toolbar using dropdown menus to conserve horizontal space:
+- Group similar tools (e.g., Shapes: Rectangle, Circle, Ellipse, Polygon, Star)
+- Group line tools (Arrow, Line)
+- Group text tools (Text, Text Box)
+- Show most recently used tool as the visible button
+- Keyboard shortcuts continue to work globally
+
+**Use Case:** Accommodating future tool additions without toolbar overflow.
+
+### FR-6: Chat Bubble Tool ⏳
+
+**Priority:** MEDIUM - New annotation type  
+**Effort:** 2 weeks
+
+A text box variant designed for speech/thought bubbles:
+- All text box properties (alignment, padding, font, etc.)
+- Configurable tail/pointer options:
+  - Position: any edge or corner
+  - Style: pointed, rounded, thought bubble (circles)
+  - Direction: adjustable angle
+- Preset shapes: rounded rectangle, cloud (thought), oval
+
+**Use Case:** Comic-style annotations, dialogue callouts, instructional content.
+
+### FR-7: Text Balloon Tool ⏳
+
+**Priority:** MEDIUM - New annotation type  
+**Effort:** 1-2 weeks
+
+A circular text container with pointer for diagram labeling:
+- Circle or ellipse shape with centered text
+- Single-line or multi-line text support
+- Adjustable leader line/arrow pointing to target
+- Auto-sizing based on text content
+- Standard text properties (font, size, color, etc.)
+
+**Use Case:** Technical diagrams, parts callouts, numbered annotations.
+
+### FR-8: Inline Canvas Text Editing ⏳
+
+**Priority:** HIGH - Core UX improvement  
+**Effort:** 3-4 weeks
+
+Allow direct text editing on the canvas instead of only in the properties panel:
+- Click text layer to enter edit mode
+- Cursor and selection within text
+- Inline formatting toolbar (font, size, weight, color, etc.)
+- Real-time rendering as you type
+- Escape to exit edit mode
+- Works for both Text and Text Box layers
+
+**Use Case:** Faster annotation workflow, WYSIWYG experience matching Figma/Canva.
+
+### FR-9: Live Color Picker Preview ⏳
+
+**Priority:** HIGH - Core UX improvement  
+**Effort:** 1 week
+
+Update canvas in real-time as colors are changed in the color picker:
+- Preview shows on canvas before applying
+- Works for stroke, fill, text color, shadow color, etc.
+- No commit until "Apply" is clicked
+- Revert to original on "Cancel"
+- Matches behavior of professional editors (Figma, Photoshop, Illustrator)
+
+**Use Case:** Faster color selection, better visual feedback, reduced trial-and-error.
+
+### FR-10: Live Preview Without Page Edit/Save ⏳
+
+**Priority:** HIGH - Core UX improvement  
+**Effort:** 2-3 weeks
+
+Changes made in the editor should be visible on article pages immediately after saving layers, without needing to edit and save the wiki page:
+- Viewer fetches latest layer data on page load
+- No page cache invalidation required
+- Real-time updates when switching between editor and article
+- Consider using ResourceLoader cache-busting or API polling
+
+**Technical Considerations:**
+- May require ResourceLoader module changes
+- Cache invalidation strategy needed
+- Could use revision timestamp for cache key
+
+**Use Case:** Streamlined workflow for annotators, immediate feedback, reduced confusion.
+
+---
+
 ## Progress Tracking
 
 ```
@@ -196,6 +306,15 @@ P3.1 TypeScript:                 █░░░░░░░░░░░░░░�
 P3.2 WCAG Audit:                 ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 P3.3 Gradient Fills:             ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 P3.4 Custom Fonts:               ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
+
+Phase 4 (Future Feature Requests):
+FR-4 Curved Arrows:              ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - Spline handles
+FR-5 Toolbar Dropdowns:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - UI scalability
+FR-6 Chat Bubble Tool:           ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Speech bubbles
+FR-7 Text Balloon Tool:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Diagram callouts
+FR-8 Inline Text Editing:        ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - WYSIWYG text
+FR-9 Live Color Preview:         ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - Real-time feedback
+FR-10 Live Article Preview:      ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - No page edit needed
 ```
 
 ---
@@ -204,9 +323,9 @@ P3.4 Custom Fonts:               ░░░░░░░░░░░░░░░�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,688 | ✅ |
-| Statement coverage | 94% | ✅ Excellent |
-| Branch coverage | 82% | ✅ |
+| Total tests | 7,711 | ✅ |
+| Statement coverage | 94.2% | ✅ Excellent |
+| Branch coverage | 82.6% | ✅ |
 | Function coverage | 92% | ✅ |
 | Line coverage | 94% | ✅ |
 | Test suites | 135 | ✅ |
@@ -228,9 +347,9 @@ P3.4 Custom Fonts:               ░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 7,688 passing tests with 94% statement coverage
+- 7,711 passing tests with 94.2% statement coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
-- 94 ES6 classes (no legacy patterns)
+- 91 ES6 classes (no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
 - Accessible UI with ARIA support
 - Named layer sets with version history
