@@ -327,8 +327,13 @@ class StateManager {
 
 	/**
 	 * Layer ordering methods
+	 *
+	 * @param {string} layerId The ID of the layer to move
+	 * @param {string} targetId The ID of the target layer
+	 * @param {boolean} [insertAfter=false] If true, insert after the target; if false, insert before
+	 * @return {boolean} True if reorder succeeded, false otherwise
 	 */
-	reorderLayer( layerId, targetId ) {
+	reorderLayer( layerId, targetId, insertAfter = false ) {
 		const layers = this.state.layers;
 		const draggedIndex = layers.findIndex( layer => layer.id === layerId );
 		const targetIndex = layers.findIndex( layer => layer.id === targetId );
@@ -340,7 +345,20 @@ class StateManager {
 		this.atomic( ( state ) => {
 			const newLayers = [ ...state.layers ];
 			const [ draggedLayer ] = newLayers.splice( draggedIndex, 1 );
-			newLayers.splice( targetIndex, 0, draggedLayer );
+
+			// After removing the dragged element, recalculate target position
+			// If we removed from before the target, the target index has shifted down by 1
+			let newTargetIndex = targetIndex;
+			if ( draggedIndex < targetIndex ) {
+				newTargetIndex = targetIndex - 1;
+			}
+
+			// If insertAfter is true, we want to place the layer after the target
+			if ( insertAfter ) {
+				newTargetIndex = newTargetIndex + 1;
+			}
+
+			newLayers.splice( newTargetIndex, 0, draggedLayer );
 
 			return {
 				layers: newLayers,

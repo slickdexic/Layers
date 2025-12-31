@@ -418,19 +418,21 @@ describe( 'StateManager', () => {
 				// Note: addLayer uses unshift, so order is [layer3, layer2, layer1]
 			} );
 
-			it( 'should move layer to target position', () => {
+			it( 'should move layer to target position (before target)', () => {
 				// Initial order: [layer3, layer2, layer1]
-				// Reorder layer3 to layer1's position
+				// Reorder layer3 to be before layer1
 				const initialLayers = stateManager.getLayers();
 				expect( initialLayers[ 0 ].id ).toBe( 'layer3' );
 
 				stateManager.reorderLayer( 'layer3', 'layer1' );
 
 				const layers = stateManager.getLayers();
-				// layer3 was removed from index 0 and inserted at index 2
-				// Result: [layer2, layer1, layer3]
+				// layer3 was removed from index 0, then inserted before layer1
+				// After removal: [layer2, layer1], layer1 is at index 1
+				// Insert before layer1 at index 1: [layer2, layer3, layer1]
 				expect( layers[ 0 ].id ).toBe( 'layer2' );
-				expect( layers[ 2 ].id ).toBe( 'layer3' );
+				expect( layers[ 1 ].id ).toBe( 'layer3' );
+				expect( layers[ 2 ].id ).toBe( 'layer1' );
 			} );
 
 			it( 'should return true on success', () => {
@@ -455,6 +457,74 @@ describe( 'StateManager', () => {
 				const result = stateManager.reorderLayer( 'layer1', 'layer1' );
 
 				expect( result ).toBe( false );
+			} );
+
+			it( 'should insert after target when insertAfter is true', () => {
+				// Initial order: [layer3, layer2, layer1]
+				// Move layer3 to after layer1 (at index 2)
+				stateManager.reorderLayer( 'layer3', 'layer1', true );
+
+				const layers = stateManager.getLayers();
+				// layer3 should be after layer1
+				// Result: [layer2, layer1, layer3]
+				expect( layers[ 0 ].id ).toBe( 'layer2' );
+				expect( layers[ 1 ].id ).toBe( 'layer1' );
+				expect( layers[ 2 ].id ).toBe( 'layer3' );
+			} );
+
+			it( 'should insert before target when insertAfter is false', () => {
+				// Initial order: [layer3, layer2, layer1]
+				// Move layer1 to before layer3 (at index 0)
+				stateManager.reorderLayer( 'layer1', 'layer3', false );
+
+				const layers = stateManager.getLayers();
+				// layer1 should be before layer3
+				// Result: [layer1, layer3, layer2]
+				expect( layers[ 0 ].id ).toBe( 'layer1' );
+				expect( layers[ 1 ].id ).toBe( 'layer3' );
+				expect( layers[ 2 ].id ).toBe( 'layer2' );
+			} );
+
+			it( 'should correctly handle insertAfter when dragging from before target', () => {
+				// Initial order: [layer3, layer2, layer1]
+				// Move layer3 (index 0) to after layer2 (index 1)
+				stateManager.reorderLayer( 'layer3', 'layer2', true );
+
+				const layers = stateManager.getLayers();
+				// After removing layer3: [layer2, layer1]
+				// layer2 is now at index 0, insert after it means index 1
+				// Result: [layer2, layer3, layer1]
+				expect( layers[ 0 ].id ).toBe( 'layer2' );
+				expect( layers[ 1 ].id ).toBe( 'layer3' );
+				expect( layers[ 2 ].id ).toBe( 'layer1' );
+			} );
+
+			it( 'should correctly handle insertAfter when dragging from after target', () => {
+				// Initial order: [layer3, layer2, layer1]
+				// Move layer1 (index 2) to after layer3 (index 0)
+				stateManager.reorderLayer( 'layer1', 'layer3', true );
+
+				const layers = stateManager.getLayers();
+				// After removing layer1: [layer3, layer2]
+				// layer3 is still at index 0, insert after it means index 1
+				// Result: [layer3, layer1, layer2]
+				expect( layers[ 0 ].id ).toBe( 'layer3' );
+				expect( layers[ 1 ].id ).toBe( 'layer1' );
+				expect( layers[ 2 ].id ).toBe( 'layer2' );
+			} );
+
+			it( 'should place layer at end when insertAfter on last element', () => {
+				// Initial order: [layer3, layer2, layer1]
+				// Move layer3 (index 0) to after layer1 (index 2)
+				stateManager.reorderLayer( 'layer3', 'layer1', true );
+
+				const layers = stateManager.getLayers();
+				// After removing layer3: [layer2, layer1]
+				// layer1 is now at index 1, insert after it means index 2
+				// Result: [layer2, layer1, layer3]
+				expect( layers[ 0 ].id ).toBe( 'layer2' );
+				expect( layers[ 1 ].id ).toBe( 'layer1' );
+				expect( layers[ 2 ].id ).toBe( 'layer3' );
 			} );
 		} );
 
