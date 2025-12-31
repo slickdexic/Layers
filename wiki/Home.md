@@ -22,6 +22,7 @@
 
 ## 🆕 What's New in v1.2
 
+- **Background Layer i18n Fix** — Proper internationalization support (v1.2.15)
 - **Layer Folders with Full UI** — Collapsible folders, visibility cascade, delete options (v1.2.14)
 - **Layer Grouping** — Group/ungroup layers with Ctrl+G/Ctrl+Shift+G (v1.2.13)
 - **Blend Modes on Article Pages** — All blend modes now render correctly in article view (v1.2.11)
@@ -82,14 +83,14 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.2.9 |
+| **Version (main)** | 1.2.15 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | December 28, 2025 |
-| **Test Suites** | 130 |
-| **Total Tests** | 7,270 |
+| **Release Date** | December 30, 2025 |
+| **Test Suites** | 135 |
+| **Total Tests** | 7,658 |
 | **Code Coverage** | 94% |
-| **JavaScript Files** | 97 |
-| **ES6 Classes** | 87 |
+| **JavaScript Files** | 101 |
+| **ES6 Classes** | 91 |
 
 ---
 
