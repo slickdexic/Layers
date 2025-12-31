@@ -216,6 +216,8 @@ class ToolbarStyleControls {
 		row.className = 'style-controls-row';
 
 		// Use ColorControlFactory if available, otherwise fall back to inline creation
+		// eslint-disable-next-line no-console
+		console.log( '[ToolbarStyleControls] createMainStyleRow, colorFactory=', this.colorFactory ? 'available' : 'null' );
 		if ( this.colorFactory ) {
 			// Stroke color (via factory)
 			this.strokeControl = this.colorFactory.createColorControl( {
@@ -455,6 +457,8 @@ class ToolbarStyleControls {
 	 */
 	openColorPicker( anchorButton, initialValue, options ) {
 		options = options || {};
+		// eslint-disable-next-line no-console
+		console.log( '[ToolbarStyleControls] openColorPicker (fallback), options.onPreview=', typeof options.onPreview );
 
 		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
 		if ( !ColorPickerDialog ) {
