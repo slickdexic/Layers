@@ -117,6 +117,10 @@
 			let colorValue = options.initialColor || '#000000';
 			let isNone = options.initialNone || false;
 
+			// DEBUG: Log button creation
+			// eslint-disable-next-line no-console
+			console.log( '[ColorControlFactory] createColorControl - button created, class:', button.className, 'addListenerFn:', typeof this.addListenerFn );
+
 			// Click handler - opens color picker dialog
 			this.addListenerFn( button, 'click', () => {
 				// eslint-disable-next-line no-console
@@ -141,6 +145,10 @@
 					}
 				} );
 			} );
+
+			// DEBUG: Verify listener was attached
+			// eslint-disable-next-line no-console
+			console.log( '[ColorControlFactory] createColorControl - click listener attached to button' );
 
 			return {
 				container: container,
