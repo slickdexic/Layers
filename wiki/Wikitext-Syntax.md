@@ -145,6 +145,11 @@ For additional control over editor behavior:
 - Press Escape or the X button to close
 - JavaScript events for integration (`layers-modal-closed`, `layers-saved`)
 
+> **⚠️ Configuration Required:** Modal mode uses an iframe, which MediaWiki blocks by default. Add to `LocalSettings.php`:
+> ```php
+> $wgEditPageFrameOptions = 'SAMEORIGIN';
+> ```
+
 ### Use Cases
 
 **Educational content** — Let students view annotations in a lightbox:

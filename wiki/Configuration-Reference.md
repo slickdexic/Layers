@@ -4,6 +4,29 @@ Complete reference for all Layers extension configuration parameters.
 
 ---
 
+## MediaWiki Core Settings
+
+These are MediaWiki core settings that affect Layers functionality.
+
+### $wgEditPageFrameOptions
+
+**Required for `layerslink=editor-modal`** — MediaWiki blocks iframe embedding by default. To enable modal editor mode, you must allow same-origin framing.
+
+| Property | Value |
+|----------|-------|
+| Type | `string` |
+| Default | `'deny'` |
+| Required Value | `'SAMEORIGIN'` |
+
+```php
+// Enable iframe embedding for modal editor
+$wgEditPageFrameOptions = 'SAMEORIGIN';
+```
+
+> **Security Note:** This only allows framing from the same origin (your own wiki). External sites cannot embed your wiki pages.
+
+---
+
 ## Core Settings
 
 ### $wgLayersEnable
