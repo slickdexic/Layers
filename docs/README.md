@@ -1,6 +1,6 @@
 # Layers Extension Documentation
 
-**Last Updated:** December 30, 2025
+**Last Updated:** December 31, 2025
 
 This directory contains technical documentation for the Layers MediaWiki extension. For user-facing documentation, see the [wiki/](../wiki/) directory.
 

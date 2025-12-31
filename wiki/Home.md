@@ -87,7 +87,7 @@ See [[Changelog]] for full details.
 | **Version (main)** | 1.3.0 |
 | **Version (REL1_43)** | 1.3.0-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | December 30, 2025 |
+| **Release Date** | December 31, 2025 |
 | **Test Suites** | 135 |
 | **Total Tests** | 7,688 |
 | **Code Coverage** | 94% |

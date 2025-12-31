@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** December 30, 2025  
+**Last Updated:** December 31, 2025  
 **Version:** 1.3.0
 
 This document lists known functionality issues and their current status.
@@ -23,7 +23,7 @@ This document lists known functionality issues and their current status.
 ### P0.NEW LayerPanel.js Status - ACCEPTABLE
 
 **Status:** Acceptable  
-**Verified:** December 30, 2025
+**Verified:** December 31, 2025
 
 LayerPanel.js is **2,140 lines** (previously incorrectly documented as 2,572). While exceeding the 2,000 line soft target, the file:
 - Delegates to 9 specialized controllers
@@ -248,7 +248,7 @@ The extension is feature-rich with 14 drawing tools, layer grouping, multiple re
 
 ## Test Coverage Status
 
-### Overall Coverage (December 30, 2025)
+### Overall Coverage (December 31, 2025)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
@@ -322,5 +322,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: December 30, 2025*  
+*Document updated: December 31, 2025*  
 *Status: ✅ No critical issues. Extension is production-ready with excellent test coverage (94%, 7,688 tests).*
