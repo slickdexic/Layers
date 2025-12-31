@@ -74,6 +74,8 @@ Control how users interact with layered images using the <code>layerslink</code>
 | <code>layerslink=editor-modal</code> || Opens editor in iframe overlay || Perfect for Page Forms integration
 |}
 
+{{Note|Modal mode requires <code>$wgEditPageFrameOptions = 'SAMEORIGIN';</code> in LocalSettings.php to allow iframe embedding.}}
+
 '''Example usage:'''
 <syntaxhighlight lang="wikitext">
 [[File:Anatomy.png|thumb|layers=anatomy|layerslink=viewer]]
