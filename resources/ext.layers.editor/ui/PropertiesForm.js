@@ -43,6 +43,33 @@
 	}
 
 	/**
+	 * Debounce delay for number inputs in milliseconds
+	 * @constant {number}
+	 */
+	const DEBOUNCE_DELAY = 100;
+
+	/**
+	 * Simple debounce utility for input handlers
+	 * @param {Function} fn - Function to debounce
+	 * @param {number} delay - Delay in milliseconds
+	 * @return {Function} Debounced function
+	 */
+	function debounce( fn, delay ) {
+		let timer = null;
+		return function () {
+			const context = this;
+			const args = arguments;
+			if ( timer !== null ) {
+				clearTimeout( timer );
+			}
+			timer = setTimeout( function () {
+				fn.apply( context, args );
+				timer = null;
+			}, delay );
+		};
+	}
+
+	/**
 	 * Safe error logging
 	 * @param {...*} args - Arguments to log
 	 */
@@ -204,6 +231,9 @@
 			}
 		};
 
+		// Debounced version for number inputs to avoid excessive updates while typing
+		const debouncedOnChange = debounce( safeOnChange, DEBOUNCE_DELAY );
+
 		input.addEventListener( 'input', function () {
 			try {
 				const value = input.value;
@@ -229,7 +259,8 @@
 						}
 						lastValidValue = input.value;
 						if ( valid ) {
-							safeOnChange( n );
+							// Use debounced version for number inputs to reduce render thrashing
+							debouncedOnChange( n );
 						}
 					}
 				} else if ( ( input.type === 'text' || isTextarea ) && valid ) {
@@ -651,7 +682,10 @@
 			if ( childCount === 0 ) {
 				const tipRow = document.createElement( 'div' );
 				tipRow.className = 'properties-row properties-tip';
-				tipRow.innerHTML = '<em style="font-size: 0.8em; color: #666;">Tip: Drag layers onto this folder in the layer panel to add them.</em>';
+				const tipText = document.createElement( 'em' );
+				tipText.className = 'properties-tip-text';
+				tipText.textContent = t( 'layers-folder-empty-tip', 'Tip: Drag layers onto this folder in the layer panel to add them.' );
+				tipRow.appendChild( tipText );
 				( currentSectionBody || form ).appendChild( tipRow );
 			}
 

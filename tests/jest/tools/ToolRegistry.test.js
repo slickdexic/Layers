@@ -25,6 +25,8 @@ describe( 'ToolRegistry', () => {
 		it( 'should register default tools on creation', () => {
 			const freshRegistry = new ToolRegistry();
 			expect( freshRegistry.has( 'pointer' ) ).toBe( true );
+			expect( freshRegistry.has( 'text' ) ).toBe( true );
+			expect( freshRegistry.has( 'textbox' ) ).toBe( true );
 			expect( freshRegistry.has( 'rectangle' ) ).toBe( true );
 		} );
 
@@ -271,6 +273,7 @@ describe( 'ToolRegistry', () => {
 
 			registry.reset();
 			expect( registry.has( 'pointer' ) ).toBe( true );
+			expect( registry.has( 'textbox' ) ).toBe( true );
 			expect( registry.has( 'rectangle' ) ).toBe( true );
 		} );
 	} );

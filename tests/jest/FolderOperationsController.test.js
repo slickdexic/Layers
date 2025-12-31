@@ -160,6 +160,28 @@ describe( 'FolderOperationsController', () => {
 
 			expect( () => controller.createFolder() ).not.toThrow();
 		} );
+
+		it( 'should show error notification when folder creation fails', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [] );
+			// Mock createFolder returning null/undefined to simulate failure
+			mockEditor.groupManager.createFolder.mockReturnValue( null );
+
+			controller.createFolder();
+
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { type: 'error' } )
+			);
+		} );
+
+		it( 'should return null when folder creation fails', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [] );
+			mockEditor.groupManager.createFolder.mockReturnValue( null );
+
+			const result = controller.createFolder();
+
+			expect( result ).toBeNull();
+		} );
 	} );
 
 	describe( 'toggleLayerVisibility', () => {
@@ -295,6 +317,25 @@ describe( 'FolderOperationsController', () => {
 			controller.performLayerDelete( 'layer1' );
 
 			expect( mockCallbacks.updateCodePanel ).toHaveBeenCalled();
+		} );
+
+		it( 'should clear selection when deleting selected layer', () => {
+			// Set up stateManager to return the layer being deleted as selected
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+
+			controller.performLayerDelete( 'layer1' );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'selectedLayerIds', [] );
+		} );
+
+		it( 'should not clear selection when deleting non-selected layer', () => {
+			// Set up stateManager to return a different layer as selected
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer2' ] );
+
+			controller.performLayerDelete( 'layer1' );
+
+			// set should not be called to clear selection
+			expect( mockEditor.stateManager.set ).not.toHaveBeenCalledWith( 'selectedLayerIds', [] );
 		} );
 	} );
 

@@ -1084,14 +1084,14 @@
 			const zoomOutBtn = document.createElement( 'button' );
 			zoomOutBtn.className = 'toolbar-button zoom-button';
 			zoomOutBtn.innerHTML = icons.zoomOut;
-			zoomOutBtn.title = t2( 'layers-zoom-out', 'Zoom Out' ) + ' (Ctrl+-)';
+			zoomOutBtn.title = t2( 'layers-zoom-out', 'Zoom Out' ) + ' (-)';
 			zoomOutBtn.dataset.action = 'zoom-out';
 
 			// Zoom display/reset
 			const zoomDisplay = document.createElement( 'button' );
 			zoomDisplay.className = 'toolbar-button zoom-display';
 			zoomDisplay.textContent = '100%';
-			zoomDisplay.title = t2( 'layers-zoom-reset', 'Reset Zoom' ) + ' (Ctrl+0)';
+			zoomDisplay.title = t2( 'layers-zoom-reset', 'Reset Zoom' ) + ' (0)';
 			zoomDisplay.dataset.action = 'zoom-reset';
 			// Announce zoom changes for screen readers
 			zoomDisplay.setAttribute( 'aria-live', 'polite' );
@@ -1101,7 +1101,7 @@
 			const zoomInBtn = document.createElement( 'button' );
 			zoomInBtn.className = 'toolbar-button zoom-button';
 			zoomInBtn.innerHTML = icons.zoomIn;
-			zoomInBtn.title = t2( 'layers-zoom-in', 'Zoom In' ) + ' (Ctrl++)';
+			zoomInBtn.title = t2( 'layers-zoom-in', 'Zoom In' ) + ' (+/=)';
 			zoomInBtn.dataset.action = 'zoom-in';
 
 			// Fit to window button

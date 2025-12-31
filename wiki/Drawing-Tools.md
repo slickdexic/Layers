@@ -9,18 +9,19 @@ Layers provides 14 professional drawing tools for comprehensive image annotation
 | Tool | Shortcut | Icon | Category | Description |
 |------|----------|------|----------|-------------|
 | **Pointer** | `V` | ➡️ | Selection | Select, move, resize, and rotate layers |
-| **Zoom** | `Z` | 🔍 | Navigation | Zoom and pan the canvas |
 | **Text** | `T` | T | Annotation | Single-line text labels |
 | **Text Box** | `X` | 📝 | Annotation | Multi-line text with container |
 | **Pen** | `P` | ✏️ | Drawing | Freehand path drawing |
 | **Rectangle** | `R` | ▢ | Shape | Rectangles and squares |
 | **Circle** | `C` | ○ | Shape | Perfect circles |
 | **Ellipse** | `E` | ⬭ | Shape | Ovals with independent radii |
-| **Polygon** | `G` | ⬡ | Shape | Multi-sided polygons |
+| **Polygon** | `Y` | ⬡ | Shape | Multi-sided polygons |
 | **Star** | `S` | ★ | Shape | Star shapes |
 | **Arrow** | `A` | ➔ | Line | Arrows with customizable heads |
 | **Line** | `L` | ╱ | Line | Straight lines |
 | **Blur** | `B` | ▦ | Effect | Apply blur effect to areas |
+
+> **Note:** Use `+`/`-` or mouse wheel to zoom, and hold `Space` to pan the canvas.
 
 ---
 
@@ -51,16 +52,19 @@ The primary tool for manipulating existing layers.
 **Key Object Alignment:**
 When multiple layers are selected, the last-selected layer becomes the "key object" (shown with orange border). Other layers align TO the key object.
 
-### Zoom Tool (Z)
+### Zooming and Panning
 
-Navigate large images with precision.
+Navigate large images with precision using keyboard shortcuts and mouse controls.
 
-**Features:**
-- Click to zoom in
-- `Alt+Click` to zoom out
-- Drag to pan
-- Mouse wheel to zoom at cursor position
-- Fit-to-window button in toolbar
+**Zoom Controls:**
+- `+` or `=` — Zoom in
+- `-` — Zoom out
+- `0` — Fit to window
+- Mouse wheel — Zoom at cursor position
+
+**Pan Controls:**
+- Hold `Space` and drag — Pan the canvas
+- Click and drag on empty canvas area — Pan (when using Pointer tool)
 
 ---
 
@@ -143,7 +147,7 @@ Draw ovals with independent X and Y radii.
 | radiusX | Horizontal radius |
 | radiusY | Vertical radius |
 
-### Polygon Tool (G)
+### Polygon Tool (Y)
 
 Draw multi-sided regular polygons.
 

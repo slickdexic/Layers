@@ -190,7 +190,7 @@ Slightly. The viewer JavaScript must load, and layer data must be fetched. For t
 
 | Feature | Layers | ImageAnnotator |
 |---------|--------|----------------|
-| Tools | 13 drawing tools | Basic annotations |
+| Tools | 12 drawing tools | Basic annotations |
 | Style presets | Yes | No |
 | Named sets | Yes | No |
 | Non-destructive | Yes | Varies |

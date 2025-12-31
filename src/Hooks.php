@@ -52,22 +52,24 @@ class Hooks {
 			if ( $title && $title->inNamespace( NS_FILE ) ) {
 				if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
 					$logger->info( 'Layers: Adding editor module for file page' );
-					$out->addModules( 'ext.layers.editor' );
+									$out->addModules( 'ext.layers.editor' );
 
-					// Add a strict Content Security Policy to reduce XSS risk in the editor UI
-					// Note: MediaWiki may already send a site-wide CSP. Here we add a page-level header conservatively.
+					// Add a strict Content Security Policy to reduce XSS risk in the editor UI.
+					// Note: MediaWiki may already send a site-wide CSP.
+					// Here we add a page-level header conservatively.
 					try {
-						// Get wgServer to allow cross-origin access when accessing via different hostname
+						// Get server config to allow cross-origin access when accessing via different hostname
 						$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
-						$wgServer = $config->get( 'Server' );
-						// Extract origin from wgServer (handles protocol-relative URLs)
+						$serverUrl = $config->get( 'Server' );
+						// Extract origin from server URL (handles protocol-relative URLs)
 						$serverOrigin = '';
-						if ( $wgServer ) {
+						if ( $serverUrl ) {
 							// If protocol-relative, use current protocol
-							if ( strpos( $wgServer, '//' ) === 0 ) {
-								$serverOrigin = ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? 'https:' : 'http:' ) . $wgServer;
+							if ( strpos( $serverUrl, '//' ) === 0 ) {
+								$isHttps = isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on';
+								$serverOrigin = ( $isHttps ? 'https:' : 'http:' ) . $serverUrl;
 							} else {
-								$serverOrigin = $wgServer;
+								$serverOrigin = $serverUrl;
 							}
 						}
 

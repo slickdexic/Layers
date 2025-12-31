@@ -279,7 +279,8 @@ class LayersDatabase {
 		);
 
 		if ( !$row ) {
-			$this->logDebug( "getLatestLayerSet: no row found for imgName=$imgName, setName=" . ( $setName ?? 'null' ) );
+			$setNameLog = $setName ?? 'null';
+			$this->logDebug( "getLatestLayerSet: no row found for imgName=$imgName, setName=$setNameLog" );
 			return false;
 		}
 
@@ -848,15 +849,16 @@ class LayersDatabase {
 		);
 
 		if ( !$row ) {
-			$this->logDebug( "getLayerSetByName: no row found for setName=$setName" );
+					$this->logDebug( "getLayerSetByName: no row found for setName=$setName" );
 			return null;
 		}
 
-		$this->logDebug( "getLayerSetByName: found row with ls_id=" . $row->ls_id . ", blob size=" . strlen( $row->ls_json_blob ) );
+		$blobSize = strlen( $row->ls_json_blob );
+		$this->logDebug( "getLayerSetByName: found row with ls_id={$row->ls_id}, blob size=$blobSize" );
 
 		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
-		if ( strlen( $row->ls_json_blob ) > $maxJsonSize ) {
-			$this->logError( "JSON blob too large for layer set by name: " . strlen( $row->ls_json_blob ) . " > $maxJsonSize" );
+		if ( $blobSize > $maxJsonSize ) {
+			$this->logError( "JSON blob too large for layer set by name: $blobSize > $maxJsonSize" );
 			return null;
 		}
 

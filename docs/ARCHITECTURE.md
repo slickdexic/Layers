@@ -22,18 +22,18 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 103 |
+| Total JS files | 101 |
 | Viewer module | ~682 lines |
 | Shared module | ~6,100 lines |
 | Editor module | ~46,700 lines |
 | Total JS lines | ~53,500 |
-| ES6 classes | 94 |
+| ES6 classes | 91 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | 94% stmt, 82.8% branch, 92% func |
-| Jest tests | **7,688** |
-| PHPUnit test files | 17 |
+| Test coverage | 94.2% stmt, 82.6% branch, 92% func |
+| Jest tests | **7,711** |
+| PHPUnit test files | 19 |
 | God classes (>1000 lines) | **9** (all delegated) |
-| Drawing tools | 14 |
+| Drawing tools | 12 |
 | eslint-disable comments | 13 ✅ (below <15 target) |
 
 ---
@@ -69,7 +69,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - ToolManager.js (1,261) - tool delegation pattern
 - CanvasRenderer.js (1,242) - delegates to SelectionRenderer
 - APIManager.js (1,182) - API integration layer
-- GroupManager.js (1,140) - layer grouping operations (new in v1.2.13)
+- GroupManager.js (1,132) - layer grouping operations (new in v1.2.13)
 
 **Note:** All god classes use delegation patterns. Code quality is maintained with 94.4% test coverage.
 

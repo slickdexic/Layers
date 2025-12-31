@@ -994,6 +994,16 @@ body.layers-editor-open .mw-body-content {
 	font-style: italic;
 }
 
+/* Folder tip styling */
+.properties-row.properties-tip {
+	padding: 8px;
+}
+
+.properties-tip-text {
+	font-size: 0.8em;
+	color: #666;
+}
+
 /* Folder section header styling */
 .property-section[ data-type='folder' ] .property-section-header {
 	background: linear-gradient( 90deg, #ff9800, #ffc107 );

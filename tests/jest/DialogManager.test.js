@@ -313,6 +313,40 @@ describe( 'DialogManager', () => {
 			expect( shortcuts ).toContain( 'Escape' );
 		} );
 
+		it( 'should include clipboard shortcuts', () => {
+			dialogManager.showKeyboardShortcutsDialog();
+
+			const list = document.querySelector( '.layers-shortcuts-list' );
+			const kbdElements = list.querySelectorAll( 'kbd' );
+			const shortcuts = Array.from( kbdElements ).map( ( kbd ) => kbd.textContent );
+
+			expect( shortcuts ).toContain( 'Ctrl+C' );
+			expect( shortcuts ).toContain( 'Ctrl+X' );
+			expect( shortcuts ).toContain( 'Ctrl+V' );
+		} );
+
+		it( 'should include group/ungroup shortcuts', () => {
+			dialogManager.showKeyboardShortcutsDialog();
+
+			const list = document.querySelector( '.layers-shortcuts-list' );
+			const kbdElements = list.querySelectorAll( 'kbd' );
+			const shortcuts = Array.from( kbdElements ).map( ( kbd ) => kbd.textContent );
+
+			expect( shortcuts ).toContain( 'Ctrl+G' );
+			expect( shortcuts ).toContain( 'Ctrl+Shift+G' );
+		} );
+
+		it( 'should include smart guides and help shortcuts', () => {
+			dialogManager.showKeyboardShortcutsDialog();
+
+			const list = document.querySelector( '.layers-shortcuts-list' );
+			const kbdElements = list.querySelectorAll( 'kbd' );
+			const shortcuts = Array.from( kbdElements ).map( ( kbd ) => kbd.textContent );
+
+			expect( shortcuts ).toContain( ';' );
+			expect( shortcuts ).toContain( 'Shift+?' );
+		} );
+
 		it( 'should have Close button', () => {
 			dialogManager.showKeyboardShortcutsDialog();
 

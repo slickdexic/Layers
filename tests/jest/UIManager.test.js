@@ -1439,4 +1439,187 @@ describe( 'UIManager', () => {
 			expect( uiManager ).toBeDefined();
 		} );
 	} );
+
+	describe( 'skip links accessibility', () => {
+		it( 'should create skip links container', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+
+			const skipLinks = uiManager.container.querySelector( '.layers-skip-links' );
+			expect( skipLinks ).toBeTruthy();
+		} );
+
+		it( 'should create three skip links', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+
+			const links = uiManager.container.querySelectorAll( '.layers-skip-link' );
+			expect( links.length ).toBe( 3 );
+		} );
+
+		it( 'should navigate to target element when skip link clicked', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+
+			// Get skip link for canvas
+			const canvasLink = uiManager.container.querySelector( 'a[href="#layers-canvas-section"]' );
+			expect( canvasLink ).toBeTruthy();
+
+			// Create mock for focus and scrollIntoView
+			const canvasSection = document.getElementById( 'layers-canvas-section' );
+			const focusSpy = jest.spyOn( canvasSection, 'focus' );
+			canvasSection.scrollIntoView = jest.fn();
+
+			// Click the skip link
+			const clickEvent = new MouseEvent( 'click', { bubbles: true } );
+			Object.defineProperty( clickEvent, 'preventDefault', { value: jest.fn() } );
+			canvasLink.dispatchEvent( clickEvent );
+
+			expect( clickEvent.preventDefault ).toHaveBeenCalled();
+			expect( focusSpy ).toHaveBeenCalled();
+			expect( canvasSection.scrollIntoView ).toHaveBeenCalledWith(
+				expect.objectContaining( { behavior: 'smooth' } )
+			);
+		} );
+
+		it( 'should handle missing target element gracefully', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+
+			// Remove the target element
+			const canvasSection = document.getElementById( 'layers-canvas-section' );
+			canvasSection.remove();
+
+			// Get skip link for canvas
+			const canvasLink = uiManager.container.querySelector( 'a[href="#layers-canvas-section"]' );
+
+			// Should not throw when clicked
+			expect( () => {
+				canvasLink.dispatchEvent( new MouseEvent( 'click', { bubbles: true } ) );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'addListener edge cases', () => {
+		it( 'should handle null element gracefully', () => {
+			const uiManager = new UIManager( mockEditor );
+
+			expect( () => {
+				uiManager.addListener( null, 'click', jest.fn() );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle element without addEventListener', () => {
+			const uiManager = new UIManager( mockEditor );
+			const invalidElement = { addEventListener: 'not a function' };
+
+			expect( () => {
+				uiManager.addListener( invalidElement, 'click', jest.fn() );
+			} ).not.toThrow();
+		} );
+
+		it( 'should use direct addEventListener when eventTracker not available', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.eventTracker = null; // Disable eventTracker
+
+			const element = document.createElement( 'button' );
+			const handler = jest.fn();
+			const addEventSpy = jest.spyOn( element, 'addEventListener' );
+
+			uiManager.addListener( element, 'click', handler );
+
+			expect( addEventSpy ).toHaveBeenCalledWith( 'click', handler, undefined );
+		} );
+	} );
+
+	describe( 'debug logging', () => {
+		it( 'should log when wgLayersDebug is enabled', () => {
+			// Enable debug mode
+			global.mw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgLayersDebug' ) return true;
+				return null;
+			} );
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+
+			expect( global.mw.log ).toHaveBeenCalledWith(
+				'[UIManager] createInterface() completed'
+			);
+		} );
+
+		it( 'should not log when wgLayersDebug is disabled', () => {
+			// Disable debug mode
+			global.mw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgLayersDebug' ) return false;
+				return null;
+			} );
+
+			// Clear previous calls
+			global.mw.log.mockClear();
+
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+
+			expect( global.mw.log ).not.toHaveBeenCalledWith(
+				'[UIManager] createInterface() completed'
+			);
+		} );
+	} );
+
+	describe( 'createSetSelector fallback', () => {
+		it( 'should create minimal wrapper when setSelectorController not available', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.setSelectorController = null;
+
+			const wrapper = uiManager.createSetSelector();
+
+			expect( wrapper ).toBeTruthy();
+			expect( wrapper.className ).toBe( 'layers-set-wrap' );
+		} );
+	} );
+
+	describe( 'delegation methods without controller', () => {
+		it( 'showNewSetInput should do nothing without controller', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.setSelectorController = null;
+
+			expect( () => uiManager.showNewSetInput( true ) ).not.toThrow();
+		} );
+
+		it( 'createNewSet should do nothing without controller', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.setSelectorController = null;
+
+			expect( () => uiManager.createNewSet() ).not.toThrow();
+		} );
+
+		it( 'addSetOption should do nothing without controller', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.setSelectorController = null;
+
+			expect( () => uiManager.addSetOption( 'test' ) ).not.toThrow();
+		} );
+
+		it( 'deleteCurrentSet should resolve without controller', async () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.setSelectorController = null;
+
+			await expect( uiManager.deleteCurrentSet() ).resolves.toBeUndefined();
+		} );
+
+		it( 'renameCurrentSet should resolve without controller', async () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.setSelectorController = null;
+
+			await expect( uiManager.renameCurrentSet() ).resolves.toBeUndefined();
+		} );
+
+		it( 'setupSetSelectorControls should do nothing without controller', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.setSelectorController = null;
+
+			expect( () => uiManager.setupSetSelectorControls() ).not.toThrow();
+		} );
+	} );
 } );

@@ -603,10 +603,16 @@
 				{ key: 'Ctrl+Z', action: this.getMessage( 'layers-undo', 'Undo' ) },
 				{ key: 'Ctrl+Y', action: this.getMessage( 'layers-redo', 'Redo' ) },
 				{ key: 'Ctrl+S', action: this.getMessage( 'layers-editor-save', 'Save' ) },
+				{ key: 'Ctrl+C', action: this.getMessage( 'layers-shortcut-copy', 'Copy' ) },
+				{ key: 'Ctrl+X', action: this.getMessage( 'layers-shortcut-cut', 'Cut' ) },
+				{ key: 'Ctrl+V', action: this.getMessage( 'layers-shortcut-paste', 'Paste' ) },
 				{ key: 'Delete', action: this.getMessage( 'layers-delete-selected', 'Delete Selected' ) },
 				{ key: 'Ctrl+D', action: this.getMessage( 'layers-duplicate-selected', 'Duplicate Selected' ) },
 				{ key: 'Ctrl+A', action: this.getMessage( 'layers-shortcut-select-all', 'Select All' ) },
 				{ key: 'Escape', action: this.getMessage( 'layers-shortcut-deselect', 'Deselect / Cancel' ) },
+				// Layer organization
+				{ key: 'Ctrl+G', action: this.getMessage( 'layers-shortcut-group', 'Group Layers' ) },
+				{ key: 'Ctrl+Shift+G', action: this.getMessage( 'layers-shortcut-ungroup', 'Ungroup' ) },
 				// Tools
 				{ key: 'V', action: this.getMessage( 'layers-tool-select', 'Select Tool' ) },
 				{ key: 'T', action: this.getMessage( 'layers-tool-text', 'Text' ) },
@@ -624,7 +630,10 @@
 				{ key: '+/=', action: this.getMessage( 'layers-zoom-in', 'Zoom In' ) },
 				{ key: '-', action: this.getMessage( 'layers-zoom-out', 'Zoom Out' ) },
 				{ key: '0', action: this.getMessage( 'layers-zoom-fit', 'Fit to Window' ) },
-				{ key: 'Shift+B', action: this.getMessage( 'layers-toggle-background', 'Toggle Background' ) }
+				{ key: ';', action: this.getMessage( 'layers-shortcut-smart-guides', 'Toggle Smart Guides' ) },
+				{ key: 'Shift+B', action: this.getMessage( 'layers-toggle-background', 'Toggle Background' ) },
+				// Help
+				{ key: 'Shift+?', action: this.getMessage( 'layers-shortcut-show-help', 'Show Keyboard Shortcuts' ) }
 			];
 
 			const list = document.createElement( 'dl' );

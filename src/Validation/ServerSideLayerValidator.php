@@ -117,10 +117,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			'source-over', 'source-in', 'source-out', 'source-atop',
 			'destination-over', 'destination-in', 'destination-out', 'destination-atop',
 			'lighter', 'copy', 'xor', 'multiply', 'screen', 'overlay',
-			'darken', 'lighten', 'color-dodge', 'color-burn',
+					'darken', 'lighten', 'color-dodge', 'color-burn',
 			'hard-light', 'soft-light', 'difference', 'exclusion',
 			'hue', 'saturation', 'color', 'luminosity',
-			'normal' // Alias for source-over
+			// Alias for source-over
+			'normal'
 		],
 		'arrowhead' => [ 'none', 'arrow', 'circle', 'diamond', 'triangle' ],
 		'arrowStyle' => [ 'single', 'double', 'none' ],

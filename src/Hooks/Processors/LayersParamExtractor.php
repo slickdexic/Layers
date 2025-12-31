@@ -194,10 +194,11 @@ class LayersParamExtractor {
 	 */
 	public function extractLayersJson( array $handlerParams ): ?array {
 		if ( isset( $handlerParams['layersjson'] ) && is_string( $handlerParams['layersjson'] ) ) {
-			try {
+					try {
 				$decoded = json_decode( $handlerParams['layersjson'], true, 512, JSON_THROW_ON_ERROR );
 				if ( is_array( $decoded ) ) {
-					// Handle both direct arrays and wrapped {layers: [...], backgroundVisible, backgroundOpacity} format
+					// Handle both direct arrays and wrapped format:
+					// {layers: [...], backgroundVisible, backgroundOpacity}
 					if ( isset( $decoded['layers'] ) && is_array( $decoded['layers'] ) ) {
 						return [
 							'layers' => $decoded['layers'],
@@ -212,9 +213,9 @@ class LayersParamExtractor {
 						'backgroundOpacity' => 1.0
 					];
 				}
-			} catch ( \JsonException $e ) {
+					} catch ( \JsonException $e ) {
 				// Invalid JSON, continue to fallback
-			}
+					}
 		}
 
 		if ( isset( $handlerParams['layerData'] ) && is_array( $handlerParams['layerData'] ) ) {

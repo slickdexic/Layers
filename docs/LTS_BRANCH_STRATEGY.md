@@ -21,7 +21,7 @@ This document outlines the support strategy for MediaWiki LTS branches.
 
 ### Feature Parity
 The REL1_43 branch includes **all features** from main v1.3.0:
-- 14 drawing tools with blur fill support
+- 12 drawing tools with blur fill support
 - Layer grouping/folders (Ctrl+G, Ctrl+Shift+G)
 - Named layer sets with revision history
 - Smart guides and alignment tools
@@ -120,7 +120,7 @@ All branches use the same APIs and data format:
 
 | Feature | main | REL1_43 | REL1_39 |
 |---------|------|---------|---------|
-| 14 Drawing Tools | ✅ | ✅ | ✅ |
+| 12 Drawing Tools | ✅ | ✅ | ✅ |
 | Named Layer Sets | ✅ | ✅ | ✅ |
 | Version History | ✅ | ✅ | ✅ |
 | Image Import | ✅ | ✅ | ✅ |

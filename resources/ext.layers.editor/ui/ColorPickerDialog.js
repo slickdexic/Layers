@@ -110,7 +110,12 @@ class ColorPickerDialog {
 	 */
 	getSavedColors() {
 		try {
-			return JSON.parse( localStorage.getItem( STORAGE_KEY ) || '[]' );
+			const parsed = JSON.parse( localStorage.getItem( STORAGE_KEY ) || '[]' );
+			// Validate each color matches hex format to prevent malformed data
+			if ( !Array.isArray( parsed ) ) {
+				return [];
+			}
+			return parsed.filter( ( c ) => typeof c === 'string' && /^#[0-9A-Fa-f]{6}$/.test( c ) );
 		} catch ( e ) {
 			// localStorage parse failed or unavailable
 			if ( window.mw && window.mw.log ) {

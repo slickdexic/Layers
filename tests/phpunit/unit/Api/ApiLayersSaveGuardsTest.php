@@ -1,6 +1,7 @@
 <?php
 // phpcs:disable MediaWiki.Files.ClassMatchesFilename,MediaWiki.Files.OneClassPerFile,Generic.Files.OneObjectStructurePerFile
 // phpcs:disable MediaWiki.Commenting.FunctionComment.MissingDocumentationPublic -- Test harness
+// phpcs:disable Generic.Classes.DuplicateClassName.Found -- Test stub class with class_exists guard
 
 namespace MediaWiki\Extension\Layers\Security;
 

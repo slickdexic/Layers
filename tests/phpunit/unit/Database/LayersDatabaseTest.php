@@ -41,11 +41,12 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$this->dbr = $this->createMock( IDatabase::class );
 		$this->loadBalancer = $this->createMock( LoadBalancer::class );
 		$this->logger = $this->createMock( LoggerInterface::class );
-		$this->schemaManager = $this->createMock( LayersSchemaManager::class );
+			$this->schemaManager = $this->createMock( LayersSchemaManager::class );
 
 		$this->config = new \HashConfig( [
 			'LayersDefaultSetName' => 'default',
-			'LayersMaxBytes' => 2097152, // 2MB
+			// 2MB max JSON size
+			'LayersMaxBytes' => 2097152,
 			'LayersMaxLayerCount' => 100,
 			'LayersMaxNamedSets' => 15,
 			'LayersMaxRevisionsPerSet' => 25,
@@ -422,12 +423,16 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		// Mock namedSetExists to return false (new set)
 		$this->dbr->method( 'selectField' )
 			->willReturnOnConsecutiveCalls(
-				0,  // namedSetExists returns false
-				0,  // countNamedSets returns 0
-				0   // getNextRevisionForSet returns 0
+				// namedSetExists returns false
+				0,
+				// countNamedSets returns 0
+				0,
+				// getNextRevisionForSet returns 0
+				0
 			);
 
-		$this->dbw->method( 'selectField' )->willReturn( 0 ); // First revision
+		// First revision
+		$this->dbw->method( 'selectField' )->willReturn( 0 );
 		$this->dbw->method( 'timestamp' )->willReturn( '20231209120000' );
 		$this->dbw->method( 'insert' )->willReturn( true );
 		$this->dbw->method( 'insertId' )->willReturn( 42 );
@@ -520,7 +525,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			0
 		);
 
-		$this->assertNull( $result );
+			$this->assertNull( $result );
 	}
 
 	/**
@@ -530,8 +535,10 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		// Return count >= max (15)
 		$this->dbr->method( 'selectField' )
 			->willReturnOnConsecutiveCalls(
-				0,  // namedSetExists returns false (new set)
-				15  // countNamedSets returns max
+				// namedSetExists returns false (new set)
+				0,
+				// countNamedSets returns max
+				15
 			);
 
 		$db = $this->createLayersDatabase();
@@ -543,7 +550,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			'Test.jpg',
 			[ 'mime' => 'image/jpeg', 'sha1' => 'abc123' ],
 			[],
-			1,
+					1,
 			'new-set-exceeds-limit'
 		);
 	}
@@ -552,8 +559,9 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	 * @covers ::saveLayerSet
 	 */
 	public function testSaveLayerSetDataTooLarge(): void {
+		// Existing set
 		$this->dbr->method( 'selectField' )
-			->willReturnOnConsecutiveCalls( 1, 1, 0 ); // Existing set
+			->willReturnOnConsecutiveCalls( 1, 1, 0 );
 
 		$this->dbw->method( 'selectField' )->willReturn( 5 );
 		$this->dbw->method( 'timestamp' )->willReturn( '20231209120000' );
@@ -715,9 +723,18 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	 */
 	public function testGetSetRevisionsSuccess(): void {
 		$rows = [
-			(object)[ 'ls_id' => 5, 'ls_revision' => 5, 'ls_timestamp' => '20231209', 'ls_user_id' => 1, 'ls_layer_count' => 10 ],
-			(object)[ 'ls_id' => 4, 'ls_revision' => 4, 'ls_timestamp' => '20231208', 'ls_user_id' => 1, 'ls_layer_count' => 8 ],
-			(object)[ 'ls_id' => 3, 'ls_revision' => 3, 'ls_timestamp' => '20231207', 'ls_user_id' => 2, 'ls_layer_count' => 5 ],
+			(object)[
+				'ls_id' => 5, 'ls_revision' => 5, 'ls_timestamp' => '20231209',
+				'ls_user_id' => 1, 'ls_layer_count' => 10
+			],
+			(object)[
+				'ls_id' => 4, 'ls_revision' => 4, 'ls_timestamp' => '20231208',
+				'ls_user_id' => 1, 'ls_layer_count' => 8
+			],
+			(object)[
+				'ls_id' => 3, 'ls_revision' => 3, 'ls_timestamp' => '20231207',
+				'ls_user_id' => 2, 'ls_layer_count' => 5
+			],
 		];
 
 		$result = $this->createResultWrapper( $rows );

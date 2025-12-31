@@ -144,9 +144,11 @@ class LayeredFileRenderer {
 			return (int)$match[1];
 		}
 		if ( $size === 'thumb' ) {
-			return 220; // MediaWiki default thumb size
+			// MediaWiki default thumb size
+			return 220;
 		}
-		return 300; // Default width
+		// Default width
+		return 300;
 	}
 
 	/**

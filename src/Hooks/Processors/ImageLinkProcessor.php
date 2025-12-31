@@ -567,16 +567,18 @@ class ImageLinkProcessor {
 
 			$editorUrl = $title->getLocalURL( $urlParams );
 
-			// Handle editor-modal: use JavaScript handler
+					// Handle editor-modal: use JavaScript handler
 			if ( $this->paramExtractor->isEditorModal( $linkType ) ) {
 				$html = preg_replace( '/<a\s+([^>]*?)href="[^"]*"/', '<a $1href="#"', $html, 1 );
 
-				$modalAttrs = sprintf(
-					'data-layers-modal="1" data-layers-filename="%s" data-layers-setname="%s" data-layers-editor-url="%s" data-layers-link="editor-modal"',
-					htmlspecialchars( $filename ),
-					htmlspecialchars( $setName ?? '' ),
-					htmlspecialchars( $editorUrl )
-				);
+				$escapedFilename = htmlspecialchars( $filename );
+				$escapedSetName = htmlspecialchars( $setName ?? '' );
+				$escapedEditorUrl = htmlspecialchars( $editorUrl );
+				$modalAttrs = 'data-layers-modal="1" ' .
+					"data-layers-filename=\"$escapedFilename\" " .
+					"data-layers-setname=\"$escapedSetName\" " .
+					"data-layers-editor-url=\"$escapedEditorUrl\" " .
+					'data-layers-link="editor-modal"';
 				$html = $this->addLinkAttributes(
 					$html,
 					$modalAttrs,

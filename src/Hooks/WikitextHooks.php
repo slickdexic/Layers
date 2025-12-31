@@ -565,12 +565,17 @@ class WikitextHooks {
 				return $a['offset'] - $b['offset'];
 			} );
 
-			// Now extract layers= values with their offsets
+					// Now extract layers= values with their offsets
 			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layers?\s*=\s*([^|\]]+)/i';
 			// filename => [offset => value, ...]
 			$layersMap = [];
 			self::log( 'Running layers regex on text: ' . substr( $text, 0, 200 ) );
-			$matchCount = preg_match_all( $fileLayersPattern, $text, $allMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+			$matchCount = preg_match_all(
+				$fileLayersPattern,
+				$text,
+				$allMatches,
+				PREG_SET_ORDER | PREG_OFFSET_CAPTURE
+			);
 			self::log( "Layers regex matched $matchCount times" );
 			if ( $matchCount ) {
 				foreach ( $allMatches as $match ) {
@@ -617,7 +622,7 @@ class WikitextHooks {
 				} else {
 					// Add null placeholder to keep queue aligned with render order
 					self::$fileSetNames[$filename][] = null;
-					$queueLen = count( self::$fileSetNames[$filename] );
+									$queueLen = count( self::$fileSetNames[$filename] );
 					self::log( "No layers param for $filename (occurrence #$queueLen, placeholder added)" );
 				}
 			}
@@ -625,15 +630,24 @@ class WikitextHooks {
 			// Extract layerslink= values (editor, viewer, lightbox)
 			$layerslinkPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layerslink\s*=\s*([^|\]]+)/i';
 			$layerslinkMap = [];
-			$linkMatchCount = preg_match_all( $layerslinkPattern, $text, $linkMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+			$linkMatchCount = preg_match_all(
+				$layerslinkPattern,
+				$text,
+				$linkMatches,
+				PREG_SET_ORDER | PREG_OFFSET_CAPTURE
+			);
 			self::log( "Layerslink regex matched $linkMatchCount times" );
 			if ( $linkMatchCount ) {
 				foreach ( $linkMatches as $match ) {
 					$filename = trim( $match[1][0] );
 					$offset = $match[0][1];
-					$linkValue = strtolower( trim( $match[2][0] ) );
+									$linkValue = strtolower( trim( $match[2][0] ) );
 					// Validate against allowed values
-					if ( in_array( $linkValue, [ 'editor', 'editor-newtab', 'editor-return', 'editor-modal', 'viewer', 'lightbox' ], true ) ) {
+					$allowedLinks = [
+						'editor', 'editor-newtab', 'editor-return',
+						'editor-modal', 'viewer', 'lightbox'
+					];
+					if ( in_array( $linkValue, $allowedLinks, true ) ) {
 						if ( !isset( $layerslinkMap[$filename] ) ) {
 							$layerslinkMap[$filename] = [];
 						}

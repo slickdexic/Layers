@@ -32,7 +32,7 @@ class LayersTest extends Maintenance {
 		$this->testDatabaseTables();
 		$this->testLayersDatabase();
 		$this->testConfigurationValues();
-		$this->testUserPermissions();
+			$this->testUserPermissions();
 		$this->testResourceModules();
 		$this->testApiEndpoints();
 		$this->testThumbnailRenderer();
@@ -48,6 +48,15 @@ class LayersTest extends Maintenance {
 		}
 	}
 
+	/**
+	 * Helper method to run and report on a single test condition.
+	 * This is not a test method - it's a utility for manual verification scripts.
+	 *
+	 * @param string $name Test name
+	 * @param bool $condition Whether test passed
+	 * @param string $details Optional failure details
+	 * @coversNothing
+	 */
 	private function test( $name, $condition, $details = '' ) {
 		if ( $condition ) {
 			$this->output( "✅ $name\n" );

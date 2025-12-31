@@ -381,7 +381,8 @@ class ThumbnailProcessor {
 				$attribs['data-layer-data'] = $jsonData;
 			}
 
-			$this->log( sprintf( 'Added %d layers, instance: %s, JSON size: %d bytes', count( $layers ), $instanceId, $jsonSize ) );
+			$msg = 'Added %d layers, instance: %s, JSON size: %d bytes';
+			$this->log( sprintf( $msg, count( $layers ), $instanceId, $jsonSize ) );
 		} else {
 			$this->log( "No layer data, instance: $instanceId" );
 
@@ -493,7 +494,8 @@ class ThumbnailProcessor {
 		$filename = $file->getName();
 		$title = $file->getTitle();
 
-		$this->log( sprintf( 'applyLayersLink: file=%s, linkType=%s, setName=%s', $filename, $linkType, $setName ?? 'null' ) );
+		$setNameStr = $setName ?? 'null';
+		$this->log( "applyLayersLink: file=$filename, linkType=$linkType, setName=$setNameStr" );
 
 		if ( $this->paramExtractor->isEditorLink( $linkType ) ) {
 			// Build base editor URL parameters

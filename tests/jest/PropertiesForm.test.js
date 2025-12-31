@@ -4,12 +4,26 @@
 
 const PropertiesForm = require( '../../resources/ext.layers.editor/ui/PropertiesForm.js' );
 
+// Debounce delay used in PropertiesForm for number inputs
+const DEBOUNCE_DELAY = 100;
+
+/**
+ * Helper to dispatch an input event and advance timers to trigger debounced handlers
+ * @param {HTMLElement} input - The input element
+ */
+function dispatchInputAndAdvanceTimers( input ) {
+	input.dispatchEvent( new Event( 'input' ) );
+	jest.advanceTimersByTime( DEBOUNCE_DELAY + 10 );
+}
+
 describe( 'PropertiesForm', () => {
 	// Mock editor for updateLayer calls
 	let mockEditor;
 	let registerCleanup;
 
 	beforeEach( () => {
+		jest.useFakeTimers();
+
 		mockEditor = {
 			updateLayer: jest.fn()
 		};
@@ -67,6 +81,7 @@ describe( 'PropertiesForm', () => {
 	} );
 
 	afterEach( () => {
+		jest.useRealTimers();
 		delete global.mw;
 		delete global.LayersConstants;
 		delete global.Layers;
@@ -578,7 +593,7 @@ describe( 'PropertiesForm', () => {
 
 			const input = container.querySelector( 'input[type="number"]' );
 			input.value = '150';
-			input.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( input );
 
 			expect( onChange ).toHaveBeenCalledWith( 150 );
 		} );
@@ -856,7 +871,7 @@ describe( 'PropertiesForm', () => {
 
 			const xInput = form.querySelector( 'input[data-prop="x"]' );
 			xInput.value = '100';
-			xInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( xInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { x: 100 } );
 		} );
@@ -867,7 +882,7 @@ describe( 'PropertiesForm', () => {
 
 			const yInput = form.querySelector( 'input[data-prop="y"]' );
 			yInput.value = '200';
-			yInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( yInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { y: 200 } );
 		} );
@@ -878,7 +893,7 @@ describe( 'PropertiesForm', () => {
 
 			const rotInput = form.querySelector( 'input[data-prop="rotation"]' );
 			rotInput.value = '90';
-			rotInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( rotInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { rotation: 90 } );
 		} );
@@ -1340,7 +1355,7 @@ describe( 'PropertiesForm', () => {
 			// Should not throw
 			expect( () => {
 				input.value = '150';
-				input.dispatchEvent( new Event( 'input' ) );
+				dispatchInputAndAdvanceTimers( input );
 			} ).not.toThrow();
 
 			// Should have logged error
@@ -1361,7 +1376,7 @@ describe( 'PropertiesForm', () => {
 
 			const input = container.querySelector( 'input' );
 			input.value = '150';
-			input.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( input );
 
 			expect( global.mw.notify ).toHaveBeenCalled();
 		} );
@@ -1480,7 +1495,7 @@ describe( 'PropertiesForm', () => {
 
 			const widthInput = form.querySelector( 'input[data-prop="width"]' );
 			widthInput.value = '200';
-			widthInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( widthInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 200, radiusX: 100 } );
 		} );
@@ -1491,7 +1506,7 @@ describe( 'PropertiesForm', () => {
 
 			const heightInput = form.querySelector( 'input[data-prop="height"]' );
 			heightInput.value = '100';
-			heightInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( heightInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 100, radiusY: 50 } );
 		} );
@@ -1502,7 +1517,7 @@ describe( 'PropertiesForm', () => {
 
 			const sidesInput = form.querySelector( 'input[data-prop="sides"]' );
 			sidesInput.value = '8';
-			sidesInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( sidesInput );
 
 			// The onChange should be called with parsed value
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
@@ -1514,7 +1529,7 @@ describe( 'PropertiesForm', () => {
 
 			const pointsInput = form.querySelector( 'input[data-prop="points"]' );
 			pointsInput.value = '7';
-			pointsInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( pointsInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -1530,7 +1545,7 @@ describe( 'PropertiesForm', () => {
 			} );
 
 			blurInput.value = '30';
-			blurInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( blurInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -1634,7 +1649,7 @@ describe( 'PropertiesForm', () => {
 
 			const input = form.querySelector( 'input[data-prop="textStrokeWidth"]' );
 			input.value = '5';
-			input.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( input );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -1652,7 +1667,7 @@ describe( 'PropertiesForm', () => {
 			} );
 
 			strokeWidthInput.value = '5';
-			strokeWidthInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( strokeWidthInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { textStrokeWidth: 5 } );
 		} );
@@ -2085,7 +2100,7 @@ describe( 'PropertiesForm', () => {
 
 			const radiusInput = form.querySelector( 'input[data-prop="radius"]' );
 			radiusInput.value = '75';
-			radiusInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( radiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { radius: 75 } );
 		} );
@@ -2096,7 +2111,7 @@ describe( 'PropertiesForm', () => {
 
 			const cornerRadiusInput = form.querySelector( 'input[data-prop="cornerRadius"]' );
 			cornerRadiusInput.value = '10';
-			cornerRadiusInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( cornerRadiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -2107,7 +2122,7 @@ describe( 'PropertiesForm', () => {
 
 			const outerRadiusInput = form.querySelector( 'input[data-prop="outerRadius"]' );
 			outerRadiusInput.value = '75';
-			outerRadiusInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( outerRadiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -2118,7 +2133,7 @@ describe( 'PropertiesForm', () => {
 
 			const innerRadiusInput = form.querySelector( 'input[data-prop="innerRadius"]' );
 			innerRadiusInput.value = '30';
-			innerRadiusInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( innerRadiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -2129,7 +2144,7 @@ describe( 'PropertiesForm', () => {
 
 			const pointRadiusInput = form.querySelector( 'input[data-prop="pointRadius"]' );
 			pointRadiusInput.value = '8';
-			pointRadiusInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( pointRadiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -2140,7 +2155,7 @@ describe( 'PropertiesForm', () => {
 
 			const valleyRadiusInput = form.querySelector( 'input[data-prop="valleyRadius"]' );
 			valleyRadiusInput.value = '5';
-			valleyRadiusInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( valleyRadiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -2222,7 +2237,7 @@ describe( 'PropertiesForm', () => {
 
 			const radiusInput = form.querySelector( 'input[data-prop="radius"]' );
 			radiusInput.value = '75';
-			radiusInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( radiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { radius: 75 } );
 		} );
@@ -2235,7 +2250,7 @@ describe( 'PropertiesForm', () => {
 
 			const widthInput = form.querySelector( 'input[data-prop="width"]' );
 			widthInput.value = '150';
-			widthInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( widthInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 150 } );
 		} );
@@ -2246,7 +2261,7 @@ describe( 'PropertiesForm', () => {
 
 			const heightInput = form.querySelector( 'input[data-prop="height"]' );
 			heightInput.value = '150';
-			heightInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( heightInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 150 } );
 		} );
@@ -2259,7 +2274,7 @@ describe( 'PropertiesForm', () => {
 
 			const widthInput = form.querySelector( 'input[data-prop="width"]' );
 			widthInput.value = '200';
-			widthInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( widthInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 200 } );
 		} );
@@ -2270,7 +2285,7 @@ describe( 'PropertiesForm', () => {
 
 			const heightInput = form.querySelector( 'input[data-prop="height"]' );
 			heightInput.value = '100';
-			heightInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( heightInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 100 } );
 		} );
@@ -2281,7 +2296,7 @@ describe( 'PropertiesForm', () => {
 
 			const cornerRadiusInput = form.querySelector( 'input[data-prop="cornerRadius"]' );
 			cornerRadiusInput.value = '15';
-			cornerRadiusInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( cornerRadiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
@@ -2294,7 +2309,7 @@ describe( 'PropertiesForm', () => {
 
 			const widthInput = form.querySelector( 'input[data-prop="width"]' );
 			widthInput.value = '400';
-			widthInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( widthInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 400 } );
 		} );
@@ -2305,7 +2320,7 @@ describe( 'PropertiesForm', () => {
 
 			const heightInput = form.querySelector( 'input[data-prop="height"]' );
 			heightInput.value = '300';
-			heightInput.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( heightInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 300 } );
 		} );
@@ -2318,7 +2333,7 @@ describe( 'PropertiesForm', () => {
 
 			const x1Input = form.querySelector( 'input[data-prop="x1"]' );
 			x1Input.value = '50';
-			x1Input.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( x1Input );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { x1: 50 } );
 		} );
@@ -2335,7 +2350,7 @@ describe( 'PropertiesForm', () => {
 
 			if ( strokeWidthInput ) {
 				strokeWidthInput.value = '5';
-				strokeWidthInput.dispatchEvent( new Event( 'input' ) );
+				dispatchInputAndAdvanceTimers( strokeWidthInput );
 
 				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { strokeWidth: 5 } );
 			}
@@ -2414,7 +2429,7 @@ describe( 'PropertiesForm', () => {
 
 			const x2Input = form.querySelector( 'input[data-prop="x2"]' );
 			x2Input.value = '200';
-			x2Input.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( x2Input );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { x2: 200 } );
 		} );
@@ -2425,7 +2440,7 @@ describe( 'PropertiesForm', () => {
 
 			const y1Input = form.querySelector( 'input[data-prop="y1"]' );
 			y1Input.value = '50';
-			y1Input.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( y1Input );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { y1: 50 } );
 		} );
@@ -2436,7 +2451,7 @@ describe( 'PropertiesForm', () => {
 
 			const y2Input = form.querySelector( 'input[data-prop="y2"]' );
 			y2Input.value = '200';
-			y2Input.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( y2Input );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { y2: 200 } );
 		} );
@@ -2453,7 +2468,7 @@ describe( 'PropertiesForm', () => {
 
 			if ( tailWidthInput ) {
 				tailWidthInput.value = '5';
-				tailWidthInput.dispatchEvent( new Event( 'input' ) );
+				dispatchInputAndAdvanceTimers( tailWidthInput );
 
 				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { tailWidth: 5 } );
 			}
@@ -2471,7 +2486,7 @@ describe( 'PropertiesForm', () => {
 
 			if ( arrowSizeInput ) {
 				arrowSizeInput.value = '25';
-				arrowSizeInput.dispatchEvent( new Event( 'input' ) );
+				dispatchInputAndAdvanceTimers( arrowSizeInput );
 
 				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { arrowSize: 25 } );
 			}
@@ -2596,7 +2611,7 @@ describe( 'PropertiesForm', () => {
 
 			if ( blurRadiusInput ) {
 				blurRadiusInput.value = '24';
-				blurRadiusInput.dispatchEvent( new Event( 'input' ) );
+				dispatchInputAndAdvanceTimers( blurRadiusInput );
 
 				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { blurRadius: 24 } );
 			}
@@ -2952,7 +2967,7 @@ describe( 'PropertiesForm', () => {
 
 			// Input should show formatted value
 			input.value = '3.567';
-			input.dispatchEvent( new Event( 'input' ) );
+			dispatchInputAndAdvanceTimers( input );
 
 			// formatOneDecimal should round to 1 decimal place
 			expect( input.value ).toBe( '3.6' );
@@ -3396,7 +3411,7 @@ describe( 'PropertiesForm', () => {
 			// This should not throw even though onChange throws
 			expect( () => {
 				input.value = '150';
-				input.dispatchEvent( new Event( 'input' ) );
+				dispatchInputAndAdvanceTimers( input );
 			} ).not.toThrow();
 
 			// The error should be logged

@@ -254,7 +254,8 @@ class ApiLayersSave extends ApiBase {
 			// LayersDatabase::saveLayerSet() performs:
 			// - Automatic revision number incrementing (per-image counter)
 			// - Transaction with retry logic (3 attempts with exponential backoff)
-			// - Wraps data in structure: {revision, schema: 1, created, layers: [...], backgroundVisible, backgroundOpacity}
+			// - Wraps data in structure: {revision, schema: 1, created, layers: [...],
+			//   backgroundVisible, backgroundOpacity}
 			// - Calculates and stores size for monitoring/limits
 			// Returns: new layer set ID (ls_id) or null on failure
 			$layerSetId = $db->saveLayerSet(

@@ -169,8 +169,10 @@ class LayersSchemaManager {
 			}
 
 			// Create the new unique key that includes ls_name
+			$uniqueKey = 'ls_img_name_set_revision';
+			$columns = 'ls_img_name, ls_img_sha1, ls_name, ls_revision';
 			$dbw->query(
-				"ALTER TABLE {$tableName} ADD UNIQUE KEY ls_img_name_set_revision (ls_img_name, ls_img_sha1, ls_name, ls_revision)",
+				"ALTER TABLE {$tableName} ADD UNIQUE KEY $uniqueKey ($columns)",
 				__METHOD__
 			);
 			$updater->output( "   Created new unique key ls_img_name_set_revision.\n" );

@@ -98,9 +98,9 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 | ToolManager.js | 1,261 | ✅ 2 handlers | ✅ OK |
 | CanvasRenderer.js | 1,242 | ✅ SelectionRenderer | ✅ OK |
 | APIManager.js | 1,182 | ✅ APIErrorHandler | ✅ OK |
-| GroupManager.js | 1,140 | New (v1.2.13) | ✅ OK |
+| GroupManager.js | 1,132 | New (v1.2.13) | ✅ OK |
 
-**Total in god classes:** ~12,222 lines (24% of JS codebase)
+**Total in god classes:** ~12,186 lines (23% of JS codebase)
 
 **Note:** LayerListRenderer.js is now 617 lines (previously incorrectly documented as 1,039).
 
@@ -111,7 +111,7 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 | File | Lines | Risk |
 |------|-------|------|
-| ToolbarStyleControls.js | 946 | ⚠️ Monitor |
+| ToolbarStyleControls.js | 944 | ⚠️ Monitor |
 | PropertiesForm.js | 914 | ⚠️ Monitor |
 | ShapeRenderer.js | 909 | ⚠️ Monitor |
 
@@ -159,7 +159,7 @@ Remaining deprecated items (all are legitimate fallbacks):
 **Current:** ~53,500 lines (103 files)  
 **Target:** <75,000 lines
 
-The extension is feature-rich with 14 drawing tools, layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
+The extension is feature-rich with 12 drawing tools, layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
 
 ---
 
@@ -252,9 +252,9 @@ The extension is feature-rich with 14 drawing tools, layer grouping, multiple re
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,688 | - | ✅ |
-| Statement coverage | 94% | 85%+ | ✅ Excellent |
-| Branch coverage | 82.8% | 75%+ | ✅ |
+| Tests passing | 7,711 | - | ✅ |
+| Statement coverage | 94.2% | 85%+ | ✅ Excellent |
+| Branch coverage | 82.6% | 75%+ | ✅ |
 | Function coverage | 92% | 80%+ | ✅ |
 | Line coverage | 94% | 85%+ | ✅ |
 
@@ -323,4 +323,4 @@ If you encounter issues:
 ---
 
 *Document updated: December 31, 2025*  
-*Status: ✅ No critical issues. Extension is production-ready with excellent test coverage (94%, 7,688 tests).*
+*Status: ✅ No critical issues. Extension is production-ready with excellent test coverage (94.2%, 7,711 tests).*

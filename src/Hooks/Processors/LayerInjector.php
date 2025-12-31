@@ -242,10 +242,14 @@ class LayerInjector {
 
 		// DEBUG: Log what we got from the database
 		if ( $this->logger ) {
-			$this->logger->debug( 'injectIntoAttributes: backgroundVisible from DB = {bgVisible}, backgroundOpacity = {bgOpacity}', [
-				'bgVisible' => $backgroundVisible ? 'true' : 'false',
+			$bgVisStr = $backgroundVisible ? 'true' : 'false';
+			$rawBg = var_export( $data['backgroundVisible'] ?? null, true );
+			$msg = 'injectIntoAttributes: backgroundVisible from DB = {bgVisible}, ' .
+				'backgroundOpacity = {bgOpacity}';
+			$this->logger->debug( $msg, [
+				'bgVisible' => $bgVisStr,
 				'bgOpacity' => $backgroundOpacity,
-				'rawBgVisible' => var_export( $data['backgroundVisible'] ?? null, true )
+				'rawBgVisible' => $rawBg
 			] );
 		}
 
