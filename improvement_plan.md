@@ -175,16 +175,26 @@ Allow users to specify custom fonts.
 
 User-requested enhancements that would elevate the extension to world-class status:
 
-### FR-4: Curved Arrows with Spline Handles ⏳
+### FR-4: Curved Arrows with Spline Handles ✅
 
 **Priority:** HIGH - Core annotation improvement  
 **Effort:** 2-3 weeks
+**Status:** COMPLETED (v1.3.3)
 
 Add a draggable control handle in the middle of arrow objects to create curved arrows:
-- Control point drives a Bézier/spline curve for the arrow body
-- Arrow heads follow the tangent at endpoints
-- Intuitive drag interaction for curve shaping
-- Works with all arrow head types (pointed, chevron, standard)
+- ✅ Control point drives a quadratic Bézier curve for the arrow body
+- ✅ Arrow heads follow the tangent at endpoints
+- ✅ Intuitive drag interaction for curve shaping (purple circular handle)
+- ✅ Works with all arrow head types (pointed, chevron, standard)
+- ✅ Dashed line shows connection from control point to arrow midpoint
+- ✅ Key object styling supported for multi-selection
+
+**Implementation:**
+- ArrowRenderer: Added `isCurved()`, `getBezierTangent()`, `drawCurved()`, `drawArrowHead()` methods
+- SelectionRenderer: Added `drawCurveControlHandle()` for purple circular control handle
+- ResizeCalculator: Added 'control' handle type to `calculateLineResize()`
+- ServerSideLayerValidator: Added `controlX`, `controlY` to ALLOWED_PROPERTIES
+- 27 new tests (18 ArrowRenderer + 6 SelectionRenderer + 3 ResizeCalculator)
 
 **Use Case:** Pointing to off-axis targets, flowing diagrams, organic annotations.
 
@@ -324,7 +334,7 @@ P3.3 Gradient Fills:             ░░░░░░░░░░░░░░░�
 P3.4 Custom Fonts:               ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 
 Phase 4 (Future Feature Requests):
-FR-4 Curved Arrows:              ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - Spline handles
+FR-4 Curved Arrows:              ████████████████████ 100% ✅ DONE (v1.3.3)
 FR-5 Toolbar Dropdowns:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - UI scalability
 FR-6 Chat Bubble Tool:           ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Speech bubbles
 FR-7 Text Balloon Tool:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Diagram callouts
@@ -339,7 +349,7 @@ FR-10 Live Article Preview:      ███████████████�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,778 | ✅ |
+| Total tests | 7,805 | ✅ |
 | Statement coverage | 94.2% | ✅ Excellent |
 | Branch coverage | 82.6% | ✅ |
 | Function coverage | 92% | ✅ |

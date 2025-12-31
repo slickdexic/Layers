@@ -749,4 +749,210 @@ describe( 'ArrowRenderer', () => {
 			expect( () => arrowRenderer.draw( layer ) ).not.toThrow();
 		} );
 	} );
+
+	describe( 'curved arrows', () => {
+		beforeEach( () => {
+			// Add quadraticCurveTo to mock context for curved arrow tests
+			ctx.quadraticCurveTo = jest.fn();
+			ctx.arc = jest.fn();
+			ctx.lineCap = 'butt';
+			ctx.setLineDash = jest.fn();
+		} );
+
+		describe( 'isCurved', () => {
+			it( 'should return false when controlX is not set', () => {
+				const layer = { x1: 0, y1: 0, x2: 100, y2: 100 };
+				expect( arrowRenderer.isCurved( layer ) ).toBe( false );
+			} );
+
+			it( 'should return false when controlY is not set', () => {
+				const layer = { x1: 0, y1: 0, x2: 100, y2: 100, controlX: 50 };
+				expect( arrowRenderer.isCurved( layer ) ).toBe( false );
+			} );
+
+			it( 'should return false when control point is at midpoint', () => {
+				const layer = { x1: 0, y1: 0, x2: 100, y2: 100, controlX: 50, controlY: 50 };
+				expect( arrowRenderer.isCurved( layer ) ).toBe( false );
+			} );
+
+			it( 'should return true when control point differs from midpoint', () => {
+				const layer = { x1: 0, y1: 0, x2: 100, y2: 100, controlX: 50, controlY: 80 };
+				expect( arrowRenderer.isCurved( layer ) ).toBe( true );
+			} );
+
+			it( 'should return true when control point is significantly offset', () => {
+				const layer = { x1: 0, y1: 0, x2: 100, y2: 0, controlX: 50, controlY: 50 };
+				expect( arrowRenderer.isCurved( layer ) ).toBe( true );
+			} );
+		} );
+
+		describe( 'getBezierTangent', () => {
+			it( 'should return correct tangent at t=0 (start)', () => {
+				// For P0=(0,0), P1=(50,50), P2=(100,0), tangent at t=0 is towards P1
+				const angle = arrowRenderer.getBezierTangent( 0, 0, 0, 50, 50, 100, 0 );
+				// At t=0, tangent is 2*(P1-P0) = 2*(50,50) = (100,100), angle = π/4
+				expect( angle ).toBeCloseTo( Math.PI / 4, 5 );
+			} );
+
+			it( 'should return correct tangent at t=1 (end)', () => {
+				// For P0=(0,0), P1=(50,50), P2=(100,0), tangent at t=1 is from P1 to P2
+				const angle = arrowRenderer.getBezierTangent( 1, 0, 0, 50, 50, 100, 0 );
+				// At t=1, tangent is 2*(P2-P1) = 2*(50,-50) = (100,-100), angle = -π/4
+				expect( angle ).toBeCloseTo( -Math.PI / 4, 5 );
+			} );
+
+			it( 'should return correct tangent at t=0.5 (middle)', () => {
+				// For P0=(0,0), P1=(50,100), P2=(100,0), tangent at t=0.5 is horizontal
+				const angle = arrowRenderer.getBezierTangent( 0.5, 0, 0, 50, 100, 100, 0 );
+				// At t=0.5, tangent is: 2*(0.5)*(50,100) + 2*(0.5)*(50,-100) = (50,50)+(50,-50)=(100,0)
+				expect( angle ).toBeCloseTo( 0, 5 );
+			} );
+		} );
+
+		describe( 'drawCurved', () => {
+			it( 'should use quadraticCurveTo for curved arrows', () => {
+				const layer = {
+					type: 'arrow',
+					x1: 0,
+					y1: 0,
+					x2: 100,
+					y2: 0,
+					controlX: 50,
+					controlY: 50,
+					fill: '#ff0000',
+					arrowStyle: 'single'
+				};
+
+				arrowRenderer.drawCurved( layer );
+
+				expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+			} );
+
+			it( 'should call stroke for the curved shaft', () => {
+				const layer = {
+					type: 'arrow',
+					x1: 0,
+					y1: 0,
+					x2: 100,
+					y2: 0,
+					controlX: 50,
+					controlY: 50,
+					fill: '#ff0000',
+					arrowStyle: 'single'
+				};
+
+				arrowRenderer.drawCurved( layer );
+
+				expect( ctx.stroke ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle double-headed curved arrow', () => {
+				const layer = {
+					type: 'arrow',
+					x1: 0,
+					y1: 0,
+					x2: 100,
+					y2: 0,
+					controlX: 50,
+					controlY: 50,
+					fill: '#ff0000',
+					arrowStyle: 'double'
+				};
+
+				// Should not throw
+				expect( () => arrowRenderer.drawCurved( layer ) ).not.toThrow();
+			} );
+
+			it( 'should handle arrowStyle = none for curved path', () => {
+				const layer = {
+					type: 'arrow',
+					x1: 0,
+					y1: 0,
+					x2: 100,
+					y2: 0,
+					controlX: 50,
+					controlY: 50,
+					fill: '#ff0000',
+					arrowStyle: 'none'
+				};
+
+				// Should not throw and should still draw the curve
+				expect( () => arrowRenderer.drawCurved( layer ) ).not.toThrow();
+				expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'drawArrowHead', () => {
+			it( 'should draw a pointed arrow head', () => {
+				arrowRenderer.drawArrowHead( 100, 50, 0, 15, 1.0, 'pointed', '#ff0000', 1 );
+
+				expect( ctx.save ).toHaveBeenCalled();
+				expect( ctx.translate ).toHaveBeenCalledWith( 100, 50 );
+				expect( ctx.rotate ).toHaveBeenCalledWith( 0 );
+				expect( ctx.fill ).toHaveBeenCalled();
+				expect( ctx.restore ).toHaveBeenCalled();
+			} );
+
+			it( 'should draw a chevron arrow head', () => {
+				arrowRenderer.drawArrowHead( 100, 50, Math.PI / 2, 15, 1.0, 'chevron', '#00ff00', 1 );
+
+				expect( ctx.fill ).toHaveBeenCalled();
+			} );
+
+			it( 'should draw a standard arrow head', () => {
+				arrowRenderer.drawArrowHead( 100, 50, Math.PI, 15, 1.0, 'standard', '#0000ff', 0.5 );
+
+				expect( ctx.fill ).toHaveBeenCalled();
+				expect( ctx.globalAlpha ).toBe( 0.5 );
+			} );
+
+			it( 'should apply head scale', () => {
+				const saveCalls = ctx.save.mock.calls.length;
+				arrowRenderer.drawArrowHead( 100, 50, 0, 15, 2.0, 'pointed', '#ff0000', 1 );
+
+				// Should have made a new save call
+				expect( ctx.save.mock.calls.length ).toBeGreaterThan( saveCalls );
+			} );
+		} );
+
+		describe( 'draw integration for curved arrows', () => {
+			it( 'should dispatch to drawCurved when arrow is curved', () => {
+				const layer = {
+					type: 'arrow',
+					x1: 0,
+					y1: 0,
+					x2: 100,
+					y2: 0,
+					controlX: 50,
+					controlY: 50,
+					fill: '#ff0000',
+					arrowStyle: 'single'
+				};
+
+				// draw() should call drawCurved internally
+				arrowRenderer.draw( layer );
+
+				// Should use quadraticCurveTo (which is used by drawCurved)
+				expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+			} );
+
+			it( 'should not dispatch to drawCurved when arrow is straight', () => {
+				const layer = {
+					type: 'arrow',
+					x1: 0,
+					y1: 0,
+					x2: 100,
+					y2: 0,
+					fill: '#ff0000',
+					arrowStyle: 'single'
+				};
+
+				arrowRenderer.draw( layer );
+
+				// Should NOT use quadraticCurveTo (straight arrow uses lineTo)
+				expect( ctx.quadraticCurveTo ).not.toHaveBeenCalled();
+				expect( ctx.lineTo ).toHaveBeenCalled();
+			} );
+		} );
+	} );
 } );

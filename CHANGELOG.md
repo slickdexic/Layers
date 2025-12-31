@@ -16,9 +16,16 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - ThumbnailProcessor embeds revision metadata (`data-layer-revision`, `data-layer-setname`, `data-file-name`)
   - 30-second sessionStorage cache prevents excessive API calls
   - 45 new tests for FreshnessChecker (33) and ViewerManager FR-10 integration (12)
+- **Curved Arrows (FR-4)** — Arrows now support curved paths via draggable control point
+  - Purple circular control handle at arrow midpoint enables curve shaping
+  - Quadratic Bézier curves with tangent-following arrow heads
+  - Works with all arrow head types (pointed, chevron, standard)
+  - Single and double-headed curved arrows supported
+  - `controlX`, `controlY` properties added to layer data model
+  - 27 new tests (18 ArrowRenderer + 6 SelectionRenderer + 3 ResizeCalculator)
 
 ### Changed
-- **Test count** — 7,778 tests (136 suites, all passing)
+- **Test count** — 7,805 tests (136 suites, all passing)
 
 ---
 

@@ -503,6 +503,235 @@
 		// ========================================================================
 
 		/**
+		 * Check if an arrow layer has a curve (non-default control point)
+		 *
+		 * @param {Object} layer - Arrow layer to check
+		 * @return {boolean} True if the arrow is curved
+		 */
+		isCurved( layer ) {
+			if ( typeof layer.controlX !== 'number' || typeof layer.controlY !== 'number' ) {
+				return false;
+			}
+			// Check if control point differs from midpoint by more than 1px
+			const x1 = layer.x1 || 0;
+			const y1 = layer.y1 || 0;
+			const x2 = layer.x2 || 0;
+			const y2 = layer.y2 || 0;
+			const midX = ( x1 + x2 ) / 2;
+			const midY = ( y1 + y2 ) / 2;
+			const dx = layer.controlX - midX;
+			const dy = layer.controlY - midY;
+			return Math.sqrt( dx * dx + dy * dy ) > 1;
+		}
+
+		/**
+		 * Get the tangent angle at a point on a quadratic Bézier curve
+		 *
+		 * @param {number} t - Parameter 0 to 1 (0 = start, 1 = end)
+		 * @param {number} x1 - Start X
+		 * @param {number} y1 - Start Y
+		 * @param {number} cx - Control X
+		 * @param {number} cy - Control Y
+		 * @param {number} x2 - End X
+		 * @param {number} y2 - End Y
+		 * @return {number} Angle in radians
+		 */
+		getBezierTangent( t, x1, y1, cx, cy, x2, y2 ) {
+			// Derivative of quadratic Bézier: B'(t) = 2(1-t)(P1-P0) + 2t(P2-P1)
+			const dx = 2 * ( 1 - t ) * ( cx - x1 ) + 2 * t * ( x2 - cx );
+			const dy = 2 * ( 1 - t ) * ( cy - y1 ) + 2 * t * ( y2 - cy );
+			return Math.atan2( dy, dx );
+		}
+
+		/**
+		 * Draw a curved arrow using quadratic Bézier
+		 *
+		 * @param {Object} layer - Layer with arrow properties
+		 * @param {Object} [options] - Rendering options
+		 */
+		drawCurved( layer, options ) {
+			const opts = options || {};
+			const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
+			const shadowScale = opts.shadowScale || scale;
+
+			const x1 = layer.x1 || 0;
+			const y1 = layer.y1 || 0;
+			const x2 = layer.x2 || 0;
+			const y2 = layer.y2 || 0;
+			const cx = layer.controlX;
+			const cy = layer.controlY;
+
+			let arrowSize = layer.arrowSize || 15;
+			let strokeWidth = layer.strokeWidth || 2;
+
+			if ( !opts.scaled ) {
+				arrowSize = arrowSize * scale.avg;
+				strokeWidth = strokeWidth * scale.avg;
+			}
+
+			const arrowStyle = layer.arrowStyle || 'single';
+			const headType = layer.arrowHeadType || 'pointed';
+			const headScale = typeof layer.headScale === 'number' ? layer.headScale : 1.0;
+			const shaftWidth = Math.max( arrowSize * 0.4, strokeWidth * 1.5, 4 );
+
+			this.ctx.save();
+
+			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
+
+			// Handle rotation around arrow center
+			if ( typeof layer.rotation === 'number' && layer.rotation !== 0 ) {
+				const centerX = ( x1 + x2 ) / 2;
+				const centerY = ( y1 + y2 ) / 2;
+				this.ctx.translate( centerX, centerY );
+				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+				this.ctx.translate( -centerX, -centerY );
+			}
+
+			// Get tangent angles at endpoints for arrow heads
+			const startAngle = this.getBezierTangent( 0, x1, y1, cx, cy, x2, y2 );
+			const endAngle = this.getBezierTangent( 1, x1, y1, cx, cy, x2, y2 );
+
+			// Calculate head depth to offset curve endpoint
+			const headDepth = arrowSize * 1.3 * headScale;
+
+			// Apply shadow if enabled
+			if ( this.hasShadowEnabled( layer ) ) {
+				this.applyShadow( layer, shadowScale );
+			}
+
+			const fillOpacity = clampOpacity( layer.fillOpacity );
+			const strokeOpacity = clampOpacity( layer.strokeOpacity );
+			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
+
+			// Curved arrows use stroke-based rendering rather than filled polygon
+			// Draw the curved shaft
+			this.ctx.beginPath();
+
+			// Adjust endpoints to not extend into arrow heads
+			let curveEndX = x2;
+			let curveEndY = y2;
+			let curveStartX = x1;
+			let curveStartY = y1;
+
+			if ( arrowStyle === 'single' || arrowStyle === 'double' ) {
+				// Pull back end point so curve doesn't overlap arrow head
+				curveEndX = x2 - Math.cos( endAngle ) * headDepth;
+				curveEndY = y2 - Math.sin( endAngle ) * headDepth;
+			}
+			if ( arrowStyle === 'double' ) {
+				// Pull back start point for double-headed arrow
+				curveStartX = x1 + Math.cos( startAngle ) * headDepth;
+				curveStartY = y1 + Math.sin( startAngle ) * headDepth;
+			}
+
+			// Adjust control point proportionally
+			const t = 0.5; // midpoint parameter
+			const adjustedCx = cx;
+			const adjustedCy = cy;
+
+			this.ctx.moveTo( curveStartX, curveStartY );
+			this.ctx.quadraticCurveTo( adjustedCx, adjustedCy, curveEndX, curveEndY );
+
+			// Draw shaft with fill color (as thick stroke)
+			if ( hasFill && layer.fill !== 'blur' ) {
+				this.ctx.strokeStyle = layer.fill;
+				this.ctx.lineWidth = shaftWidth;
+				this.ctx.lineCap = 'round';
+				this.ctx.lineJoin = 'round';
+				this.ctx.globalAlpha = baseOpacity * fillOpacity;
+				this.ctx.stroke();
+			}
+
+			// Draw outline stroke
+			if ( hasStroke ) {
+				this.ctx.beginPath();
+				this.ctx.moveTo( curveStartX, curveStartY );
+				this.ctx.quadraticCurveTo( adjustedCx, adjustedCy, curveEndX, curveEndY );
+				this.ctx.strokeStyle = layer.stroke;
+				this.ctx.lineWidth = strokeWidth;
+				this.ctx.lineCap = 'round';
+				this.ctx.lineJoin = 'round';
+				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
+				this.ctx.stroke();
+			}
+
+			this.clearShadow();
+
+			// Draw arrow heads at appropriate angles
+			if ( arrowStyle === 'single' || arrowStyle === 'double' ) {
+				// Draw head at end (tip) following curve tangent
+				this.drawArrowHead(
+					x2, y2, endAngle, arrowSize, headScale, headType,
+					layer.fill || layer.stroke, baseOpacity * fillOpacity
+				);
+			}
+			if ( arrowStyle === 'double' ) {
+				// Draw head at start (tail) following curve tangent (reversed)
+				this.drawArrowHead(
+					x1, y1, startAngle + Math.PI, arrowSize, headScale, headType,
+					layer.fill || layer.stroke, baseOpacity * fillOpacity
+				);
+			}
+
+			this.ctx.restore();
+		}
+
+		/**
+		 * Draw an arrow head at the specified position and angle
+		 *
+		 * @param {number} tipX - X coordinate of arrow tip
+		 * @param {number} tipY - Y coordinate of arrow tip
+		 * @param {number} angle - Angle the arrow is pointing (radians)
+		 * @param {number} size - Arrow head size
+		 * @param {number} headScale - Scale factor for head
+		 * @param {string} headType - Head type: 'pointed', 'chevron', 'standard'
+		 * @param {string} color - Fill color for head
+		 * @param {number} opacity - Opacity
+		 */
+		drawArrowHead( tipX, tipY, angle, size, headScale, headType, color, opacity ) {
+			const effectiveSize = size * headScale;
+			const barbAngle = Math.PI / 6; // 30 degrees
+			const barbLength = effectiveSize * 1.56;
+
+			this.ctx.save();
+			this.ctx.translate( tipX, tipY );
+			this.ctx.rotate( angle );
+
+			this.ctx.beginPath();
+			this.ctx.moveTo( 0, 0 ); // Tip
+
+			// Left barb
+			const leftX = -barbLength * Math.cos( barbAngle );
+			const leftY = -barbLength * Math.sin( barbAngle );
+			this.ctx.lineTo( leftX, leftY );
+
+			if ( headType === 'chevron' ) {
+				// Chevron has inward notch
+				const notchDepth = effectiveSize * 0.52;
+				this.ctx.lineTo( -notchDepth, 0 );
+			} else if ( headType === 'standard' ) {
+				// Standard has inner barb
+				const innerLength = barbLength * 0.65;
+				this.ctx.lineTo( -innerLength * Math.cos( barbAngle * 0.5 ), -innerLength * Math.sin( barbAngle * 0.5 ) );
+				this.ctx.lineTo( -innerLength * Math.cos( barbAngle * 0.5 ), innerLength * Math.sin( barbAngle * 0.5 ) );
+			}
+
+			// Right barb
+			const rightX = -barbLength * Math.cos( barbAngle );
+			const rightY = barbLength * Math.sin( barbAngle );
+			this.ctx.lineTo( rightX, rightY );
+
+			this.ctx.closePath();
+
+			this.ctx.fillStyle = color || '#000000';
+			this.ctx.globalAlpha = opacity;
+			this.ctx.fill();
+
+			this.ctx.restore();
+		}
+
+		/**
 		 * Draw an arrow as a closed polygon
 		 *
 		 * @param {Object} layer - Layer with arrow properties
@@ -512,6 +741,11 @@
 		 * @param {boolean} [options.scaled] - Whether coords are pre-scaled
 		 */
 		draw( layer, options ) {
+			// Check if this is a curved arrow
+			if ( this.isCurved( layer ) ) {
+				return this.drawCurved( layer, options );
+			}
+
 			const opts = options || {};
 			const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
 			const shadowScale = opts.shadowScale || scale;

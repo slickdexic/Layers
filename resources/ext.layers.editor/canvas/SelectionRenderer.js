@@ -217,6 +217,7 @@
 		 * Draw selection indicators for line/arrow layers - just endpoint handles
 		 * Lines and arrows don't need a bounding box or rotation handle -
 		 * they are manipulated by dragging their endpoints directly.
+		 * Arrows with control points also get a draggable curve handle.
 		 *
 		 * @param {Object} layer - The line or arrow layer
 		 * @param {boolean} [isKeyObject=false] - Whether this is the key object (alignment reference)
@@ -266,6 +267,81 @@
 					isLine: true
 				} );
 			}
+
+			// For arrows with control points, draw a curve control handle
+			if ( layer.type === 'arrow' ) {
+				this.drawCurveControlHandle( layer, x1, y1, x2, y2, handleSize, isKeyObject );
+			}
+		}
+
+		/**
+		 * Draw a curve control handle for arrows
+		 * The control handle allows users to bend the arrow into a curve.
+		 *
+		 * @param {Object} layer - The arrow layer
+		 * @param {number} x1 - Start X coordinate
+		 * @param {number} y1 - Start Y coordinate
+		 * @param {number} x2 - End X coordinate
+		 * @param {number} y2 - End Y coordinate
+		 * @param {number} handleSize - Size of handles
+		 * @param {boolean} isKeyObject - Whether this is the key object
+		 */
+		drawCurveControlHandle( layer, x1, y1, x2, y2, handleSize, isKeyObject ) {
+			// Calculate control point position (default to midpoint if not set)
+			let controlX, controlY;
+			if ( typeof layer.controlX === 'number' && typeof layer.controlY === 'number' ) {
+				controlX = layer.controlX;
+				controlY = layer.controlY;
+			} else {
+				// Default: midpoint of line
+				controlX = ( x1 + x2 ) / 2;
+				controlY = ( y1 + y2 ) / 2;
+			}
+
+			// Draw a line from control point to the midpoint (visual connection)
+			const midX = ( x1 + x2 ) / 2;
+			const midY = ( y1 + y2 ) / 2;
+
+			this.ctx.save();
+			this.ctx.strokeStyle = '#9c27b0'; // Purple for curve control
+			this.ctx.lineWidth = 1;
+			this.ctx.setLineDash( [ 4, 4 ] );
+			this.ctx.beginPath();
+			this.ctx.moveTo( midX, midY );
+			this.ctx.lineTo( controlX, controlY );
+			this.ctx.stroke();
+			this.ctx.restore();
+
+			// Draw circular control handle (different from square endpoint handles)
+			this.ctx.save();
+			this.ctx.fillStyle = '#9c27b0'; // Purple for curve control
+			if ( isKeyObject ) {
+				this.ctx.strokeStyle = '#ff9800';
+				this.ctx.lineWidth = 3;
+			} else {
+				this.ctx.strokeStyle = this.handleBorderColor;
+				this.ctx.lineWidth = 1;
+			}
+			this.ctx.setLineDash( [] );
+
+			this.ctx.beginPath();
+			this.ctx.arc( controlX, controlY, handleSize / 2, 0, 2 * Math.PI );
+			this.ctx.fill();
+			this.ctx.stroke();
+			this.ctx.restore();
+
+			// Register control handle for hit testing
+			this.selectionHandles.push( {
+				type: 'control',
+				x: controlX - handleSize / 2,
+				y: controlY - handleSize / 2,
+				width: handleSize,
+				height: handleSize,
+				layerId: layer.id,
+				rotation: 0,
+				isLine: true,
+				isControl: true
+			} );
 		}
 
 		/**

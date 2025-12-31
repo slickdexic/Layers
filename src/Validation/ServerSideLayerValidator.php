@@ -82,6 +82,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'arrowSize' => 'numeric',
 		'headScale' => 'numeric',
 		'tailWidth' => 'numeric',
+		// Curved arrow control point
+		'controlX' => 'numeric',
+		'controlY' => 'numeric',
 		'blurRadius' => 'numeric',
 		'points' => 'array',
 		'sides' => 'numeric',
