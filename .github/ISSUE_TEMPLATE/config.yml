@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/slickdexic/Layers/wiki
+    about: Check the wiki for guides and documentation before opening an issue.
+  - name: 💬 Discussions
+    url: https://github.com/slickdexic/Layers/discussions
+    about: Ask questions or discuss ideas in Discussions (no GitHub account required to read).
+  - name: 🔍 Search Existing Issues
+    url: https://github.com/slickdexic/Layers/issues
+    about: Please search existing issues before creating a new one.

@@ -1,0 +1,107 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the form below to help us understand and fix the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: I expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the extension is affected?
+      options:
+        - Editor (canvas, tools, drawing)
+        - Layer Panel (layer list, properties)
+        - Toolbar (buttons, controls)
+        - Viewer (lightbox, article display)
+        - API (save, load, delete)
+        - Wikitext Integration
+        - Other/Unknown
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Layers Version
+      description: What version of Layers are you using?
+      placeholder: "1.2.15"
+    validations:
+      required: true
+
+  - type: input
+    id: mediawiki-version
+    attributes:
+      label: MediaWiki Version
+      description: What version of MediaWiki are you running?
+      placeholder: "1.44.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      description: What browser are you using?
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console Errors
+      description: Any JavaScript errors in the browser console? (F12 → Console tab)
+      placeholder: Paste any error messages here...
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain the problem.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might be helpful?
