@@ -84,7 +84,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.2.18 |
+| **Version (main)** | 1.3.0 |
 | **Version (REL1_43)** | 1.3.0-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | December 30, 2025 |

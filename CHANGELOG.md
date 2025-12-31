@@ -2,6 +2,25 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.3.0] - 2025-12-31
+
+### Added
+- **REL1_43 branch** — New LTS branch for MediaWiki 1.43.x with full feature parity
+- **Deep linking documentation** — Added `layerslink` parameter guide to extension page
+- **Branch selection guide** — Clear guidance for choosing the right branch per MW version
+- **$wgEditPageFrameOptions documentation** — Required setting for `layerslink=editor-modal`
+
+### Changed
+- **Extension page updated** — Now shows MW 1.39+ support with branch selection table
+- **LTS strategy updated** — REL1_39 now covers MW 1.39-1.42 only (community maintained after EOL)
+
+### Documentation
+- Wikitext-Syntax.md — Added iframe configuration warning for modal mode
+- Configuration-Reference.md — New "MediaWiki Core Settings" section
+- All wiki docs updated with new branch structure
+
+---
+
 ## [1.2.18] - 2025-12-30
 
 ### Added

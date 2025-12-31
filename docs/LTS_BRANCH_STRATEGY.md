@@ -8,7 +8,7 @@ This document outlines the support strategy for MediaWiki LTS branches.
 
 | Branch | MediaWiki Version | Current Version | Status |
 |--------|------------------|-----------------|--------|
-| `main` | 1.44+ | 1.2.18 | Active Development |
+| `main` | 1.44+ | 1.3.0 | Active Development |
 | `REL1_43` | 1.43.x | 1.3.0-REL1_43 | LTS (until Dec 2027) |
 | `REL1_39` | 1.39.x - 1.42.x | 1.1.14 | Community Maintained (EOL Dec 31, 2025) |
 
@@ -20,7 +20,7 @@ This document outlines the support strategy for MediaWiki LTS branches.
 - MediaWiki 1.43.x (LTS until December 2027)
 
 ### Feature Parity
-The REL1_43 branch includes **all features** from main v1.2.18:
+The REL1_43 branch includes **all features** from main v1.3.0:
 - 14 drawing tools with blur fill support
 - Layer grouping/folders (Ctrl+G, Ctrl+Shift+G)
 - Named layer sets with revision history
@@ -61,7 +61,7 @@ This branch is now **community maintained**. The core team will no longer active
 
 | Branch | Version Series | Example |
 |--------|----------------|---------|
-| `main` | 1.2.x | 1.2.18 |
+| `main` | 1.3.x | 1.3.0 |
 | `REL1_43` | 1.3.x-REL1_43 | 1.3.0-REL1_43 |
 | `REL1_39` | 1.1.x | 1.1.14 |
 

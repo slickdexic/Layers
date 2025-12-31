@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.2.18 (December 2025)  
+> **Version:** 1.3.0 (December 2025)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >

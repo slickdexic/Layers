@@ -4,6 +4,24 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.3.0 (December 31, 2025)
+
+### Added
+- **REL1_43 branch** — New LTS branch for MediaWiki 1.43.x with full feature parity
+- **Deep linking documentation** — Added `layerslink` parameter guide to extension page
+- **Branch selection guide** — Clear guidance for choosing the right branch per MW version
+
+### Changed
+- **Extension page updated** — Now shows MW 1.39+ support with branch selection table
+- **LTS strategy updated** — REL1_39 now covers MW 1.39-1.42 only (community maintained)
+
+### Documentation
+- Added `$wgEditPageFrameOptions` requirement for `layerslink=editor-modal`
+- Configuration-Reference.md — New "MediaWiki Core Settings" section
+- All wiki docs updated with new branch structure
+
+---
+
 ## Version 1.2.18 (December 30, 2025)
 
 ### Added
