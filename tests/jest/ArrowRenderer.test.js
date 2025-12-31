@@ -828,7 +828,7 @@ describe( 'ArrowRenderer', () => {
 				expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
 			} );
 
-			it( 'should call stroke for the curved shaft', () => {
+			it( 'should call fill for the curved shaft polygon', () => {
 				const layer = {
 					type: 'arrow',
 					x1: 0,
@@ -843,7 +843,8 @@ describe( 'ArrowRenderer', () => {
 
 				arrowRenderer.drawCurved( layer );
 
-				expect( ctx.stroke ).toHaveBeenCalled();
+				// Curved shafts use filled polygon instead of stroke
+				expect( ctx.fill ).toHaveBeenCalled();
 			} );
 
 			it( 'should handle double-headed curved arrow', () => {

@@ -545,6 +545,7 @@
 
 		/**
 		 * Draw a curved arrow using quadratic Bézier
+		 * Uses a filled polygon for the curved shaft to match straight arrow rendering.
 		 *
 		 * @param {Object} layer - Layer with arrow properties
 		 * @param {Object} [options] - Rendering options
@@ -562,17 +563,21 @@
 			const cy = layer.controlY;
 
 			let arrowSize = layer.arrowSize || 15;
+			let tailWidth = typeof layer.tailWidth === 'number' ? layer.tailWidth : 0;
 			let strokeWidth = layer.strokeWidth || 2;
 
 			if ( !opts.scaled ) {
 				arrowSize = arrowSize * scale.avg;
+				tailWidth = tailWidth * scale.avg;
 				strokeWidth = strokeWidth * scale.avg;
 			}
 
 			const arrowStyle = layer.arrowStyle || 'single';
 			const headType = layer.arrowHeadType || 'pointed';
 			const headScale = typeof layer.headScale === 'number' ? layer.headScale : 1.0;
+			// Calculate shaft width matching straight arrow logic
 			const shaftWidth = Math.max( arrowSize * 0.4, strokeWidth * 1.5, 4 );
+			const halfShaft = shaftWidth / 2;
 
 			this.ctx.save();
 
@@ -587,7 +592,7 @@
 				this.ctx.translate( -centerX, -centerY );
 			}
 
-			// Get tangent angles at endpoints for arrow heads
+			// Get tangent angles at endpoints for shaft offset and arrow heads
 			const startAngle = this.getBezierTangent( 0, x1, y1, cx, cy, x2, y2 );
 			const endAngle = this.getBezierTangent( 1, x1, y1, cx, cy, x2, y2 );
 
@@ -601,12 +606,16 @@
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
-			// Curved arrows use stroke-based rendering rather than filled polygon
-			// Draw the curved shaft
-			this.ctx.beginPath();
+			// Calculate perpendicular offset for shaft edges
+			const startPerp = startAngle + Math.PI / 2;
+			const endPerp = endAngle + Math.PI / 2;
+			const ctrlPerp = this.getBezierTangent( 0.5, x1, y1, cx, cy, x2, y2 ) + Math.PI / 2;
+
+			// Calculate tail extra width
+			const tailExtra = tailWidth / 2;
 
 			// Adjust endpoints to not extend into arrow heads
 			let curveEndX = x2;
@@ -615,62 +624,81 @@
 			let curveStartY = y1;
 
 			if ( arrowStyle === 'single' || arrowStyle === 'double' ) {
-				// Pull back end point so curve doesn't overlap arrow head
 				curveEndX = x2 - Math.cos( endAngle ) * headDepth;
 				curveEndY = y2 - Math.sin( endAngle ) * headDepth;
 			}
 			if ( arrowStyle === 'double' ) {
-				// Pull back start point for double-headed arrow
 				curveStartX = x1 + Math.cos( startAngle ) * headDepth;
 				curveStartY = y1 + Math.sin( startAngle ) * headDepth;
 			}
 
-			// Adjust control point proportionally
-			const t = 0.5; // midpoint parameter
-			const adjustedCx = cx;
-			const adjustedCy = cy;
+			// Helper to draw the curved shaft as a filled polygon
+			// We approximate the curve with two quadratic Béziers for each edge
+			const drawShaftPath = ( ctx ) => {
+				const targetCtx = ctx || this.ctx;
+				targetCtx.beginPath();
 
-			this.ctx.moveTo( curveStartX, curveStartY );
-			this.ctx.quadraticCurveTo( adjustedCx, adjustedCy, curveEndX, curveEndY );
+				// Top edge of shaft (from start to end, offset perpendicular)
+				const startTopX = curveStartX + Math.cos( startPerp ) * ( halfShaft + tailExtra );
+				const startTopY = curveStartY + Math.sin( startPerp ) * ( halfShaft + tailExtra );
+				const ctrlTopX = cx + Math.cos( ctrlPerp ) * halfShaft;
+				const ctrlTopY = cy + Math.sin( ctrlPerp ) * halfShaft;
+				const endTopX = curveEndX + Math.cos( endPerp ) * halfShaft;
+				const endTopY = curveEndY + Math.sin( endPerp ) * halfShaft;
 
-			// Draw shaft with fill color (as thick stroke)
-			if ( hasFill && layer.fill !== 'blur' ) {
-				this.ctx.strokeStyle = layer.fill;
-				this.ctx.lineWidth = shaftWidth;
-				this.ctx.lineCap = 'round';
-				this.ctx.lineJoin = 'round';
+				// Bottom edge of shaft (from end to start, offset perpendicular other way)
+				const startBotX = curveStartX - Math.cos( startPerp ) * ( halfShaft + tailExtra );
+				const startBotY = curveStartY - Math.sin( startPerp ) * ( halfShaft + tailExtra );
+				const ctrlBotX = cx - Math.cos( ctrlPerp ) * halfShaft;
+				const ctrlBotY = cy - Math.sin( ctrlPerp ) * halfShaft;
+				const endBotX = curveEndX - Math.cos( endPerp ) * halfShaft;
+				const endBotY = curveEndY - Math.sin( endPerp ) * halfShaft;
+
+				// Draw top edge
+				targetCtx.moveTo( startTopX, startTopY );
+				targetCtx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+
+				// Connect to bottom edge (line to end bottom point)
+				targetCtx.lineTo( endBotX, endBotY );
+
+				// Draw bottom edge (reverse direction)
+				targetCtx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+
+				// Close path
+				targetCtx.closePath();
+			};
+
+			// Draw fill
+			if ( hasFill ) {
+				drawShaftPath();
+				this.ctx.fillStyle = layer.fill;
 				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				this.ctx.stroke();
+				this.ctx.fill();
 			}
 
-			// Draw outline stroke
+			this.clearShadow();
+
+			// Draw stroke
 			if ( hasStroke ) {
-				this.ctx.beginPath();
-				this.ctx.moveTo( curveStartX, curveStartY );
-				this.ctx.quadraticCurveTo( adjustedCx, adjustedCy, curveEndX, curveEndY );
+				drawShaftPath();
 				this.ctx.strokeStyle = layer.stroke;
 				this.ctx.lineWidth = strokeWidth;
-				this.ctx.lineCap = 'round';
 				this.ctx.lineJoin = 'round';
 				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
 				this.ctx.stroke();
 			}
 
-			this.clearShadow();
-
 			// Draw arrow heads at appropriate angles
 			if ( arrowStyle === 'single' || arrowStyle === 'double' ) {
-				// Draw head at end (tip) following curve tangent
 				this.drawArrowHead(
 					x2, y2, endAngle, arrowSize, headScale, headType,
-					layer.fill || layer.stroke, baseOpacity * fillOpacity
+					layer.fill || layer.stroke, baseOpacity * fillOpacity, layer.stroke, strokeWidth, baseOpacity * strokeOpacity
 				);
 			}
 			if ( arrowStyle === 'double' ) {
-				// Draw head at start (tail) following curve tangent (reversed)
 				this.drawArrowHead(
 					x1, y1, startAngle + Math.PI, arrowSize, headScale, headType,
-					layer.fill || layer.stroke, baseOpacity * fillOpacity
+					layer.fill || layer.stroke, baseOpacity * fillOpacity, layer.stroke, strokeWidth, baseOpacity * strokeOpacity
 				);
 			}
 
@@ -688,8 +716,11 @@
 		 * @param {string} headType - Head type: 'pointed', 'chevron', 'standard'
 		 * @param {string} color - Fill color for head
 		 * @param {number} opacity - Opacity
+		 * @param {string} [strokeColor] - Stroke color for head outline
+		 * @param {number} [strokeWidth] - Stroke width for head outline
+		 * @param {number} [strokeOpacity] - Stroke opacity for head outline
 		 */
-		drawArrowHead( tipX, tipY, angle, size, headScale, headType, color, opacity ) {
+		drawArrowHead( tipX, tipY, angle, size, headScale, headType, color, opacity, strokeColor, strokeWidth, strokeOpacity ) {
 			const effectiveSize = size * headScale;
 			const barbAngle = Math.PI / 6; // 30 degrees
 			const barbLength = effectiveSize * 1.56;
@@ -727,6 +758,15 @@
 			this.ctx.fillStyle = color || '#000000';
 			this.ctx.globalAlpha = opacity;
 			this.ctx.fill();
+
+			// Draw stroke if provided
+			if ( strokeColor && strokeWidth > 0 ) {
+				this.ctx.strokeStyle = strokeColor;
+				this.ctx.lineWidth = strokeWidth;
+				this.ctx.lineJoin = 'round';
+				this.ctx.globalAlpha = typeof strokeOpacity === 'number' ? strokeOpacity : opacity;
+				this.ctx.stroke();
+			}
 
 			this.ctx.restore();
 		}
