@@ -22,7 +22,7 @@
 
 ## 🆕 What's New in v1.2
 
-- **Community-Ready Infrastructure** — Issue templates, PR template, wiki auto-sync (v1.2.16)
+- **Community-Ready Infrastructure** — Issue templates, PR template, wiki auto-sync (v1.2.17)
 - **Background Layer i18n Fix** — Proper internationalization support (v1.2.15)
 - **Layer Folders with Full UI** — Collapsible folders, visibility cascade, delete options (v1.2.14)
 - **Blend Modes on Article Pages** — All blend modes now render correctly in article view (v1.2.11)
@@ -83,7 +83,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.2.16 |
+| **Version (main)** | 1.2.17 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | December 30, 2025 |
 | **Test Suites** | 135 |

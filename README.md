@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.3%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-7%2C658%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-94.4%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-7%2C663%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.2.16 (December 2025)  
+> **Version:** 1.2.17 (December 2025)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -201,7 +201,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`)
-- **Frontend:** HTML5 Canvas editor with 101 JS files (~52,000 lines), 91 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 103 JS files (~53,500 lines), 94 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -209,7 +209,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 7,586 passing |
+| Jest tests | 7,671 passing |
 | Statement coverage | 94.4% |
 | Branch coverage | 82.8% |
 | Test suites | 135 |
@@ -256,11 +256,11 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 101 | ✅ |
-| Total JS lines | ~52,000 | ✅ Well under 75K target |
-| ES6 classes | 91 | ✅ |
-| God classes (>1000 lines) | 9 | ⚠️ Technical debt |
-| Tests passing | 7,658 | ✅ |
+| Total JS files | 103 | ✅ |
+| Total JS lines | ~53,500 | ✅ Well under 75K target |
+| ES6 classes | 94 | ✅ |
+| God classes (>1000 lines) | 9 | ⚠️ Technical debt (all use delegation) |
+| Tests passing | 7,671 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 94.4% | ✅ Excellent |
 | Branch coverage | 82.8% | ✅ |

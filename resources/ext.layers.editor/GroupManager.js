@@ -517,9 +517,7 @@
 			// Remove parentGroup reference from the layer
 			updatedLayers = updatedLayers.map( ( l ) => {
 				if ( l.id === layerId ) {
-					// eslint-disable-next-line no-unused-vars
-					const { parentGroup, ...rest } = l;
-					return rest;
+					return window.Layers.Utils.omitProperty( l, 'parentGroup' );
 				}
 				return l;
 			} );
@@ -558,9 +556,7 @@
 			// Remove parentGroup reference from children
 			const updatedLayers = layers.map( ( layer ) => {
 				if ( childIds.includes( layer.id ) ) {
-					// eslint-disable-next-line no-unused-vars
-					const { parentGroup, ...rest } = layer;
-					return rest;
+					return window.Layers.Utils.omitProperty( layer, 'parentGroup' );
 				}
 				return layer;
 			} );
@@ -665,9 +661,7 @@
 					};
 				}
 				if ( l.id === layerId ) {
-					// eslint-disable-next-line no-unused-vars
-					const { parentGroup, ...rest } = l;
-					return rest;
+					return window.Layers.Utils.omitProperty( l, 'parentGroup' );
 				}
 				return l;
 			} );
@@ -694,9 +688,7 @@
 					};
 				}
 				if ( l.id === layerId && l.parentGroup === groupId ) {
-					// eslint-disable-next-line no-unused-vars
-					const { parentGroup, ...rest } = l;
-					return rest;
+					return window.Layers.Utils.omitProperty( l, 'parentGroup' );
 				}
 				return l;
 			} );

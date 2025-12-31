@@ -3,7 +3,7 @@
  */
 
 describe( 'DeepClone', () => {
-	let deepClone, deepCloneArray, deepCloneLayer;
+	let deepClone, deepCloneArray, deepCloneLayer, omitProperty;
 
 	beforeEach( () => {
 		jest.resetModules();
@@ -18,6 +18,7 @@ describe( 'DeepClone', () => {
 		deepClone = module.deepClone;
 		deepCloneArray = module.deepCloneArray;
 		deepCloneLayer = module.deepCloneLayer;
+		omitProperty = module.omitProperty;
 	} );
 
 	afterEach( () => {
@@ -266,6 +267,81 @@ describe( 'DeepClone', () => {
 			expect( window.Layers.Utils.deepClone ).toBeDefined();
 			expect( window.Layers.Utils.deepCloneArray ).toBeDefined();
 			expect( window.Layers.Utils.deepCloneLayer ).toBeDefined();
+			expect( window.Layers.Utils.omitProperty ).toBeDefined();
+		} );
+	} );
+
+	describe( 'omitProperty', () => {
+		it( 'should return a new object without the specified property', () => {
+			const original = { a: 1, b: 2, c: 3 };
+			const result = omitProperty( original, 'b' );
+
+			expect( result ).toEqual( { a: 1, c: 3 } );
+			expect( result ).not.toBe( original );
+			expect( original ).toEqual( { a: 1, b: 2, c: 3 } ); // Original unchanged
+		} );
+
+		it( 'should return copy if property does not exist', () => {
+			const original = { a: 1, b: 2 };
+			const result = omitProperty( original, 'notThere' );
+
+			expect( result ).toEqual( { a: 1, b: 2 } );
+			expect( result ).not.toBe( original );
+		} );
+
+		it( 'should handle empty object', () => {
+			const original = {};
+			const result = omitProperty( original, 'any' );
+
+			expect( result ).toEqual( {} );
+			expect( result ).not.toBe( original );
+		} );
+
+		it( 'should handle null input', () => {
+			expect( omitProperty( null, 'prop' ) ).toBe( null );
+		} );
+
+		it( 'should handle undefined input', () => {
+			expect( omitProperty( undefined, 'prop' ) ).toBe( undefined );
+		} );
+
+		it( 'should handle non-object input', () => {
+			expect( omitProperty( 'string', 'prop' ) ).toBe( 'string' );
+			expect( omitProperty( 123, 'prop' ) ).toBe( 123 );
+			expect( omitProperty( true, 'prop' ) ).toBe( true );
+		} );
+
+		it( 'should work with layer objects - removing parentGroup', () => {
+			const layer = {
+				id: 'layer1',
+				type: 'rectangle',
+				x: 100,
+				y: 200,
+				parentGroup: 'group1'
+			};
+			const result = omitProperty( layer, 'parentGroup' );
+
+			expect( result ).toEqual( {
+				id: 'layer1',
+				type: 'rectangle',
+				x: 100,
+				y: 200
+			} );
+			expect( result.parentGroup ).toBeUndefined();
+			expect( layer.parentGroup ).toBe( 'group1' ); // Original unchanged
+		} );
+
+		it( 'should only copy own properties', () => {
+			function Parent() {
+				this.ownProp = 'owned';
+			}
+			Parent.prototype.inheritedProp = 'inherited';
+
+			const original = new Parent();
+			const result = omitProperty( original, 'ownProp' );
+
+			expect( result ).toEqual( {} );
+			expect( result.inheritedProp ).toBeUndefined();
 		} );
 	} );
 

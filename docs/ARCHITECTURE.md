@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 29, 2025  
-**Version:** 1.2.11
+**Last Updated:** December 30, 2025  
+**Version:** 1.2.17
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -22,62 +22,56 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 98 |
+| Total JS files | 103 |
 | Viewer module | ~682 lines |
-| Shared module | ~5,400 lines |
-| Editor module | ~44,100 lines |
-| Total JS lines | ~50,200 |
-| ES6 classes | 88 |
+| Shared module | ~6,100 lines |
+| Editor module | ~46,700 lines |
+| Total JS lines | ~53,500 |
+| ES6 classes | 94 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | 94.43% stmt, 82.83% branch, 91.95% func |
-| Jest tests | **7,377** |
+| Test coverage | 94.4% stmt, 82.8% branch, 92.0% func |
+| Jest tests | **7,671** |
 | PHPUnit test files | 17 |
-| God classes (>1000 lines) | **8** ⚠️ |
+| God classes (>1000 lines) | **9** (all delegated) |
 | Drawing tools | 14 |
-| TODO/FIXME comments | 0 ✅ |
+| eslint-disable comments | 13 ✅ (below <15 target) |
 
 ---
 
 ### Recent Architecture Changes
 
-### December 2025: Smart Guides & Arrange Menu
+### December 2025: Layer Grouping & Folders
 
-**v1.1.7 - Smart Guides & Cleanup:**
-- New SmartGuidesController for intelligent object snapping
-- Arrange dropdown menu consolidates 8 alignment buttons
-- Removed EyedropperController (redundant with browser's native color picker)
-- God classes reduced from 8 to 7
+**v1.2.13-v1.2.16 - Layer Grouping Feature:**
+- New GroupManager.js (1,140 lines) for folder/grouping operations
+- FolderOperationsController for folder create/delete, visibility toggle
+- SetSelectorController for named layer set management
+- omitProperty utility for clean property removal (replacing eslint-disable patterns)
+- eslint-disable count reduced from 17 to 13
 
-**v1.1.6 - Key Object Alignment:**
-- Industry-standard alignment behavior (last selected = key object)
-- ColorControlFactory and PresetStyleManager extracted
-- Text layer alignment improvements
+**v1.2.8 - Blur Fill Bug Fix:**
+- Fixed coordinate transformation issues for blur fill
+- Rectangle blur regions now render correctly
 
-**v1.1.5 - Alignment & Style Presets:**
-- AlignmentController for layer alignment/distribution
-- Style presets system with save/load functionality
-- Built-in presets for common annotation styles
-
-**v1.1.0 - Text Box Tool:**
-- New Text Box tool combining rectangle container with multi-line text
-- Text stroke and text shadow effects
-- Font family selection, bold/italic, alignment options
+**v1.2.0 - Named Layer Sets:**
+- Multiple named annotation sets per image
+- SetSelectorController extracted from UIManager
+- Full version history per named set
 
 ### Known Technical Debt
 
-**8 files exceed 1,000 lines (god classes):**
+**9 files exceed 1,000 lines (god classes) - all use delegation patterns:**
+- LayerPanel.js (2,140) - facade with 9 controllers
 - CanvasManager.js (1,877) - facade with 10+ controllers
-- LayerPanel.js (1,838) - delegates to 7 controllers
-- Toolbar.js (1,537) - UI controls consolidation
-- LayersEditor.js (1,459) - main entry point
+- Toolbar.js (1,556) - UI controls consolidation
+- LayersEditor.js (1,465) - main entry point/orchestrator
+- SelectionManager.js (1,359) - delegates to SelectionState, MarqueeSelection
 - ToolManager.js (1,261) - tool delegation pattern
-- CanvasRenderer.js (1,242) - rendering coordination
-- SelectionManager.js (1,194) - core selection logic
+- CanvasRenderer.js (1,242) - delegates to SelectionRenderer
 - APIManager.js (1,182) - API integration layer
+- GroupManager.js (1,140) - layer grouping operations (new in v1.2.13)
 
-**Recently under 1,000 (no longer god classes):**
-- ToolbarStyleControls.js (959) - stable ✅
-- ShapeRenderer.js (909) - stable, well-structured ✅
+**Note:** All god classes use delegation patterns. Code quality is maintained with 94.4% test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 

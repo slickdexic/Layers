@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** December 30, 2025  
-**Version:** 1.2.15
+**Version:** 1.2.17
 
 This document lists known functionality issues and their current status.
 
@@ -122,7 +122,7 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 ### P2.1 ESLint Disable Comments
 
 **Status:** Above target  
-**Count:** 17 eslint-disable comments (was 12)
+**Count:** 13 eslint-disable comments (reduced from 17)
 
 | Rule | Count | Reason |
 |------|-------|--------|
@@ -156,7 +156,7 @@ Remaining deprecated items (all are legitimate fallbacks):
 ### P2.5 Codebase Size
 
 **Status:** ✅ Healthy  
-**Current:** ~53,000 lines (99 files)  
+**Current:** ~53,500 lines (103 files)  
 **Target:** <75,000 lines
 
 The extension is feature-rich with 14 drawing tools, layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
@@ -252,11 +252,11 @@ The extension is feature-rich with 14 drawing tools, layer grouping, multiple re
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,629 | - | ✅ |
-| Statement coverage | 93.9% | 85%+ | ✅ Excellent |
-| Branch coverage | 82.0% | 75%+ | ✅ |
-| Function coverage | 91.2% | 80%+ | ✅ |
-| Line coverage | 93.9% | 85%+ | ✅ |
+| Tests passing | 7,671 | - | ✅ |
+| Statement coverage | 94.4% | 85%+ | ✅ Excellent |
+| Branch coverage | 82.8% | 75%+ | ✅ |
+| Function coverage | 92.0% | 80%+ | ✅ |
+| Line coverage | 94.7% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -323,4 +323,4 @@ If you encounter issues:
 ---
 
 *Document updated: December 30, 2025*  
-*Status: ✅ No critical issues. Extension is production-ready with excellent test coverage (93.9%, 7,629 tests).*
+*Status: ✅ No critical issues. Extension is production-ready with excellent test coverage (94.4%, 7,671 tests).*

@@ -80,6 +80,29 @@
 		return deepClone( layer );
 	}
 
+	/**
+	 * Create a shallow copy of an object without the specified property
+	 *
+	 * This is a cleaner alternative to the destructuring idiom:
+	 *   const { propToRemove, ...rest } = obj; // triggers eslint no-unused-vars
+	 *
+	 * @param {Object} obj - The source object
+	 * @param {string} propName - The property name to omit
+	 * @return {Object} A new object without the specified property
+	 */
+	function omitProperty( obj, propName ) {
+		if ( !obj || typeof obj !== 'object' ) {
+			return obj;
+		}
+		const result = {};
+		for ( const key in obj ) {
+			if ( Object.prototype.hasOwnProperty.call( obj, key ) && key !== propName ) {
+				result[ key ] = obj[ key ];
+			}
+		}
+		return result;
+	}
+
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};
@@ -87,6 +110,7 @@
 		window.Layers.Utils.deepClone = deepClone;
 		window.Layers.Utils.deepCloneArray = deepCloneArray;
 		window.Layers.Utils.deepCloneLayer = deepCloneLayer;
+		window.Layers.Utils.omitProperty = omitProperty;
 	}
 
 	// CommonJS export for Node.js/Jest testing
@@ -94,7 +118,8 @@
 		module.exports = {
 			deepClone: deepClone,
 			deepCloneArray: deepCloneArray,
-			deepCloneLayer: deepCloneLayer
+			deepCloneLayer: deepCloneLayer,
+			omitProperty: omitProperty
 		};
 	}
 

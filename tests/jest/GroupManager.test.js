@@ -3,6 +3,9 @@
  */
 'use strict';
 
+// Load DeepClone first for omitProperty utility
+require( '../../resources/ext.layers.shared/DeepClone.js' );
+
 // Load the module
 require( '../../resources/ext.layers.editor/GroupManager.js' );
 
