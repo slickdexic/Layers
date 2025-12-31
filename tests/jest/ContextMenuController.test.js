@@ -353,4 +353,92 @@ describe( 'ContextMenuController', () => {
 			}, 10 );
 		} );
 	} );
+
+	describe( 'menu item interactions', () => {
+		it( 'should highlight menu item on mouseenter', () => {
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const menu = document.querySelector( '.layers-context-menu' );
+			const menuItems = menu.querySelectorAll( 'button' );
+			const enabledItem = Array.from( menuItems ).find( ( btn ) => !btn.disabled );
+
+			if ( enabledItem ) {
+				const enterEvent = new Event( 'mouseenter' );
+				enabledItem.dispatchEvent( enterEvent );
+
+				expect( enabledItem.style.backgroundColor ).toBe( 'rgb(240, 240, 240)' );
+			}
+		} );
+
+		it( 'should remove highlight on mouseleave', () => {
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const menu = document.querySelector( '.layers-context-menu' );
+			const menuItems = menu.querySelectorAll( 'button' );
+			const enabledItem = Array.from( menuItems ).find( ( btn ) => !btn.disabled );
+
+			if ( enabledItem ) {
+				enabledItem.dispatchEvent( new Event( 'mouseenter' ) );
+				enabledItem.dispatchEvent( new Event( 'mouseleave' ) );
+
+				expect( enabledItem.style.backgroundColor ).toBe( 'transparent' );
+			}
+		} );
+
+		it( 'should call editLayerName when rename is clicked', () => {
+			// Create layer item with name element
+			const layerItem = document.createElement( 'div' );
+			layerItem.className = 'layer-item';
+			layerItem.dataset.layerId = 'layer1';
+			const nameEl = document.createElement( 'span' );
+			nameEl.className = 'layer-name';
+			nameEl.focus = jest.fn();
+			layerItem.appendChild( nameEl );
+			document.body.appendChild( layerItem );
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				stopPropagation: jest.fn(),
+				clientX: 100,
+				clientY: 200,
+				target: layerItem
+			};
+
+			controller.handleLayerContextMenu( mockEvent );
+
+			const menu = document.querySelector( '.layers-context-menu' );
+			const renameBtn = Array.from( menu.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.textContent.includes( 'Rename' ) );
+
+			if ( renameBtn && !renameBtn.disabled ) {
+				renameBtn.click();
+				expect( mockCallbacks.editLayerName ).toHaveBeenCalledWith( 'layer1', nameEl );
+			}
+		} );
+
+		it( 'should call editor.duplicateSelected when duplicate is clicked', () => {
+			mockEditor.duplicateSelected = jest.fn();
+			mockCallbacks.getSelectedLayerIds = jest.fn( () => [ 'layer1' ] );
+
+			// Recreate controller with updated mock
+			controller = new ContextMenuController( {
+				editor: mockEditor,
+				...mockCallbacks
+			} );
+
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const menu = document.querySelector( '.layers-context-menu' );
+			const duplicateBtn = Array.from( menu.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.textContent.includes( 'Duplicate' ) );
+
+			if ( duplicateBtn && !duplicateBtn.disabled ) {
+				duplicateBtn.click();
+				expect( mockEditor.duplicateSelected ).toHaveBeenCalled();
+			}
+		} );
+	} );
 } );
