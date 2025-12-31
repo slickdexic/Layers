@@ -8,7 +8,7 @@ This guide covers downloading, configuring, and setting up the Layers extension 
 
 | Requirement | Minimum Version |
 |-------------|-----------------|
-| **MediaWiki** | 1.43+ (or 1.39+ with REL1_39 branch) |
+| **MediaWiki** | 1.44+ (or 1.43.x with REL1_43, or 1.39+ with REL1_39 branch) |
 | **PHP** | 8.1+ |
 | **Database** | MySQL 5.7+ / MariaDB 10.3+ / PostgreSQL 10+ / SQLite 3.8+ |
 

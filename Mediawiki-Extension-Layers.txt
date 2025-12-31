@@ -13,7 +13,7 @@
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|<annotation>|<canvas>|<drawing>|<image editor>|<image markup>|<non-destructive>}}
-|mediawiki       = >= 1.39
+|mediawiki       = >= 1.44
 |php             = >= 8.1
 |needs-updatephp = yes
 |rights          = {{bulleted list|createlayers|editlayers|managelayerlibrary}}
