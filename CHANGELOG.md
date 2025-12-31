@@ -2,6 +2,32 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.2.16] - 2025-12-30
+
+### Added
+- **GitHub Issue Templates** — Structured bug report and feature request forms with component selection, version fields, and contribution interest options
+- **Pull Request Template** — Comprehensive PR checklist enforcing code quality standards, testing requirements, and documentation updates
+- **Wiki Auto-Sync Workflow** — GitHub Action automatically syncs wiki/ directory to GitHub Wiki on releases and wiki file changes
+- **Full Code of Conduct** — Replaced minimal placeholder with complete Contributor Covenant v2.1
+
+### Changed
+- **README badges updated** — Coverage badge corrected to 94.3% (accurate rounding), test count formatted with comma separator
+- **CONTRIBUTING.md updated** — Test count updated from 7,270 to 7,658
+
+### Documentation
+- All wiki pages now auto-sync to GitHub Wiki via workflow
+- Issue templates guide contributors with structured forms
+- PR template ensures consistent quality across contributions
+
+### Infrastructure
+- `.github/ISSUE_TEMPLATE/bug_report.yml` — Bug report form with component, version, browser fields
+- `.github/ISSUE_TEMPLATE/feature_request.yml` — Feature request form with priority and contribution options
+- `.github/ISSUE_TEMPLATE/config.yml` — Links to wiki, discussions, and existing issues
+- `.github/PULL_REQUEST_TEMPLATE.md` — PR checklist for code quality
+- `.github/workflows/wiki-sync.yml` — Automatic wiki synchronization
+
+---
+
 ## [1.2.15] - 2025-12-30
 
 ### Fixed

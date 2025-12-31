@@ -4,6 +4,25 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.2.16 (December 30, 2025)
+
+### Added
+- **GitHub Issue Templates** — Structured bug report and feature request forms with component selection, version fields, and contribution interest options
+- **Pull Request Template** — Comprehensive PR checklist enforcing code quality standards, testing requirements, and documentation updates
+- **Wiki Auto-Sync Workflow** — GitHub Action automatically syncs wiki/ directory to GitHub Wiki on releases and wiki file changes
+- **Full Code of Conduct** — Replaced minimal placeholder with complete Contributor Covenant v2.1
+
+### Changed
+- README badges updated with accurate coverage (94.3%) and formatted test count
+- CONTRIBUTING.md updated with current test count (7,658)
+
+### Infrastructure
+- `.github/ISSUE_TEMPLATE/` — Bug report and feature request forms
+- `.github/PULL_REQUEST_TEMPLATE.md` — PR quality checklist
+- `.github/workflows/wiki-sync.yml` — Automatic wiki synchronization
+
+---
+
 ## Version 1.2.15 (December 30, 2025)
 
 ### Fixed

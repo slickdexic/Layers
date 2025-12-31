@@ -6,7 +6,7 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Pvodrazka]]
-|version         = 1.2.15
+|version         = 1.2.16
 |update          = 2025-12-30
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -123,7 +123,7 @@ Industry-standard alignment behavior matching Adobe Illustrator and Photoshop:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~43k lines).
-* '''Stability:''' 7,506 Jest tests across 133 test suites achieving 94% statement coverage.
+* '''Stability:''' 7,658 Jest tests across 135 test suites achieving 94% statement coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 
 == See also ==
