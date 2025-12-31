@@ -119,6 +119,8 @@
 
 			// Click handler - opens color picker dialog
 			this.addListenerFn( button, 'click', () => {
+				// eslint-disable-next-line no-console
+				console.log( '[ColorControlFactory] Button click handler fired, calling openColorPicker' );
 				this.openColorPicker( button, isNone ? 'none' : colorValue, {
 					onApply: ( chosen ) => {
 						const none = chosen === 'none';
