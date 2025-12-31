@@ -1324,4 +1324,119 @@ describe( 'UIManager', () => {
 			expect( buildSetSelector ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'dialog fallbacks', () => {
+		it( 'showConfirmDialog should fallback to window.confirm when dialogManager not available', async () => {
+			const editorWithoutDialog = {
+				...mockEditor,
+				dialogManager: null
+			};
+			const uiManager = new UIManager( editorWithoutDialog );
+
+			const mockConfirm = jest.fn( () => true );
+			window.confirm = mockConfirm;
+
+			const result = await uiManager.showConfirmDialog( { message: 'Test message' } );
+
+			expect( mockConfirm ).toHaveBeenCalledWith( 'Test message' );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'showConfirmDialog should use dialogManager when available', async () => {
+			const mockShowConfirm = jest.fn().mockResolvedValue( false );
+			const editorWithDialog = {
+				...mockEditor,
+				dialogManager: {
+					showConfirmDialog: mockShowConfirm
+				}
+			};
+			const uiManager = new UIManager( editorWithDialog );
+
+			const result = await uiManager.showConfirmDialog( { message: 'Test', title: 'Title' } );
+
+			expect( mockShowConfirm ).toHaveBeenCalledWith( { message: 'Test', title: 'Title' } );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'showAlertDialog should fallback to window.alert when dialogManager not available', async () => {
+			const editorWithoutDialog = {
+				...mockEditor,
+				dialogManager: null
+			};
+			const uiManager = new UIManager( editorWithoutDialog );
+
+			const mockAlert = jest.fn();
+			window.alert = mockAlert;
+
+			await uiManager.showAlertDialog( { message: 'Alert message' } );
+
+			expect( mockAlert ).toHaveBeenCalledWith( 'Alert message' );
+		} );
+
+		it( 'showAlertDialog should use dialogManager when available', async () => {
+			const mockShowAlert = jest.fn().mockResolvedValue();
+			const editorWithDialog = {
+				...mockEditor,
+				dialogManager: {
+					showAlertDialog: mockShowAlert
+				}
+			};
+			const uiManager = new UIManager( editorWithDialog );
+
+			await uiManager.showAlertDialog( { message: 'Alert', isError: true } );
+
+			expect( mockShowAlert ).toHaveBeenCalledWith( { message: 'Alert', isError: true } );
+		} );
+
+		it( 'showPromptDialog should fallback to window.prompt when dialogManager not available', async () => {
+			const editorWithoutDialog = {
+				...mockEditor,
+				dialogManager: null
+			};
+			const uiManager = new UIManager( editorWithoutDialog );
+
+			const mockPrompt = jest.fn( () => 'user input' );
+			window.prompt = mockPrompt;
+
+			const result = await uiManager.showPromptDialog( {
+				message: 'Enter value',
+				defaultValue: 'default'
+			} );
+
+			expect( mockPrompt ).toHaveBeenCalledWith( 'Enter value', 'default' );
+			expect( result ).toBe( 'user input' );
+		} );
+
+		it( 'showPromptDialog should use dialogManager when available', async () => {
+			const mockShowPrompt = jest.fn().mockResolvedValue( 'dialog input' );
+			const editorWithDialog = {
+				...mockEditor,
+				dialogManager: {
+					showPromptDialogAsync: mockShowPrompt
+				}
+			};
+			const uiManager = new UIManager( editorWithDialog );
+
+			const result = await uiManager.showPromptDialog( { message: 'Prompt', placeholder: 'hint' } );
+
+			expect( mockShowPrompt ).toHaveBeenCalledWith( { message: 'Prompt', placeholder: 'hint' } );
+			expect( result ).toBe( 'dialog input' );
+		} );
+	} );
+
+	describe( 'namespace fallback getClass', () => {
+		it( 'should use window.Layers.UI namespace when available', () => {
+			// This tests the getClass fallback logic indirectly
+			// The UIManager loads EventTracker via getClass
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.EventTracker = class MockEventTracker {
+				add() {}
+				destroy() {}
+			};
+
+			const uiManager = new UIManager( mockEditor );
+			expect( uiManager ).toBeDefined();
+		} );
+	} );
 } );
