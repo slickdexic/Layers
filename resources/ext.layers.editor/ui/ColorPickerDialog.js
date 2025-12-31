@@ -198,6 +198,9 @@ class ColorPickerDialog {
 	 * Trigger the live preview callback with the currently selected color
 	 */
 	triggerPreview() {
+		// DEBUG: Trace preview callback
+		// eslint-disable-next-line no-console
+		console.log( '[ColorPickerDialog] triggerPreview called, onPreview=', typeof this.onPreview, 'color=', this.selectedColor );
 		if ( typeof this.onPreview === 'function' ) {
 			this.onPreview( this.selectedColor );
 		}
