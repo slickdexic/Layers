@@ -347,6 +347,21 @@ class WikitextHooks {
 		$fileName = $file ? $file->getName() : 'null';
 		self::log( "ParserMakeImageParams for: $fileName" );
 
+		// Handle layerslink parameter - queue it and remove from params to prevent caption leakage
+		if ( isset( $params['layerslink'] ) ) {
+			$linkValue = strtolower( trim( (string)$params['layerslink'] ) );
+			$validLinkValues = [ 'viewer', 'lightbox', 'editor', 'editor-newtab', 'editor-return', 'editor-modal' ];
+			if ( in_array( $linkValue, $validLinkValues, true ) && $fileName !== 'null' ) {
+				if ( !isset( self::$fileLinkTypes[$fileName] ) ) {
+					self::$fileLinkTypes[$fileName] = [];
+				}
+				self::$fileLinkTypes[$fileName][] = $linkValue;
+				self::log( "Queued layerslink=$linkValue for $fileName from ParserMakeImageParams" );
+			}
+			// Remove from params to prevent it from becoming caption text
+			unset( $params['layerslink'] );
+		}
+
 		// Normalize alias 'layer' to 'layers'
 		if ( !isset( $params['layers'] ) && isset( $params['layer'] ) ) {
 			$params['layers'] = $params['layer'];
