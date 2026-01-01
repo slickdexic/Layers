@@ -216,8 +216,6 @@ class ToolbarStyleControls {
 		row.className = 'style-controls-row';
 
 		// Use ColorControlFactory if available, otherwise fall back to inline creation
-		// eslint-disable-next-line no-console
-		console.log( '[ToolbarStyleControls] createMainStyleRow, colorFactory=', this.colorFactory ? 'available' : 'null' );
 		if ( this.colorFactory ) {
 			// Stroke color (via factory)
 			this.strokeControl = this.colorFactory.createColorControl( {
@@ -457,8 +455,6 @@ class ToolbarStyleControls {
 	 */
 	openColorPicker( anchorButton, initialValue, options ) {
 		options = options || {};
-		// eslint-disable-next-line no-console
-		console.log( '[ToolbarStyleControls] openColorPicker (fallback), options.onPreview=', typeof options.onPreview );
 
 		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
 		if ( !ColorPickerDialog ) {
@@ -528,27 +524,18 @@ class ToolbarStyleControls {
 	 * @param {string} color The preview color value
 	 */
 	applyColorPreview( colorType, color ) {
-		// DEBUG: Trace color preview
-		// eslint-disable-next-line no-console
-		console.log( '[ToolbarStyleControls] applyColorPreview called:', colorType, color );
 		if ( !this.toolbar || !this.toolbar.editor ) {
-			// eslint-disable-next-line no-console
-			console.log( '[ToolbarStyleControls] applyColorPreview: no toolbar or editor' );
 			return;
 		}
 
 		const editor = this.toolbar.editor;
 		const canvasManager = editor.canvasManager;
 		if ( !canvasManager ) {
-			// eslint-disable-next-line no-console
-			console.log( '[ToolbarStyleControls] applyColorPreview: no canvasManager' );
 			return;
 		}
 
 		// Get selected layer IDs
 		const selectedIds = canvasManager.getSelectedLayerIds ? canvasManager.getSelectedLayerIds() : [];
-		// eslint-disable-next-line no-console
-		console.log( '[ToolbarStyleControls] applyColorPreview: selectedIds=', selectedIds );
 		if ( !selectedIds || !selectedIds.length ) {
 			return;
 		}

@@ -80,11 +80,6 @@ class ColorPickerDialog {
 		this.onApply = config.onApply || function () {};
 		this.onCancel = config.onCancel || function () {};
 		this.onPreview = config.onPreview || null; // Live preview callback
-		// DEBUG: Trace what we received and where from
-		// eslint-disable-next-line no-console
-		console.log( '[ColorPickerDialog] constructor, config.onPreview=', typeof config.onPreview, 'this.onPreview=', typeof this.onPreview );
-		// eslint-disable-next-line no-console
-		console.log( '[ColorPickerDialog] constructor called from:', new Error().stack );
 		this.strings = Object.assign( {}, DEFAULT_STRINGS, config.strings || {} );
 		this.anchorElement = config.anchorElement || null;
 		this.registerCleanup = config.registerCleanup || function () {};
@@ -203,9 +198,6 @@ class ColorPickerDialog {
 	 * Trigger the live preview callback with the currently selected color
 	 */
 	triggerPreview() {
-		// DEBUG: Trace preview callback
-		// eslint-disable-next-line no-console
-		console.log( '[ColorPickerDialog] triggerPreview called, onPreview=', typeof this.onPreview, 'color=', this.selectedColor );
 		if ( typeof this.onPreview === 'function' ) {
 			this.onPreview( this.selectedColor );
 		}
