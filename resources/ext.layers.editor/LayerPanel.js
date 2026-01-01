@@ -1846,7 +1846,8 @@
 					const isInt = Math.abs( r - Math.round( r ) ) < 1e-9;
 					return isInt ? String( Math.round( r ) ) : r.toFixed( 1 );
 				}
-				return String( n );
+				// Default: round to whole numbers for clean display
+				return String( Math.round( n ) );
 			};
 			inputs.forEach( ( input ) => {
 				const prop = input.getAttribute( 'data-prop' );

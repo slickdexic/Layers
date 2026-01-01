@@ -8,6 +8,20 @@ _No unreleased changes._
 
 ---
 
+## [1.4.1] - 2026-01-01
+
+### Fixed
+- **Real-time property panel updates** — Transform values (x, y, width, height, rotation) now update in the properties panel immediately during drag/resize/rotate operations
+  - Fixed event dispatch/listen target mismatch: `editor.container` was undefined (property was `containerElement`)
+  - Added `container` getter on LayersEditor that aliases to `containerElement` for backward compatibility
+  - Changed `emitTransforming` to dispatch synchronously instead of throttled via requestAnimationFrame
+  - Reordered event/render flow in handleDrag to emit BEFORE renderLayers for immediate UI updates
+- **Curved arrow control point during drag** — Control point (`controlX`, `controlY`) now moves with the arrow when dragging, maintaining curve shape
+- **Arrow head shadow with spread** — Arrow heads now included in shadow spread calculations for curved arrows via `_buildHeadVertices()`
+- **Decimal places in property fields** — Properties panel now displays whole numbers instead of excessive decimal precision (e.g., `123` instead of `123.456789`)
+
+---
+
 ## [1.4.0] - 2025-12-31
 
 ### Added

@@ -257,6 +257,16 @@ class LayersEditor {
 			enumerable: true,
 			configurable: true
 		} );
+
+		// Alias 'container' to 'containerElement' for backward compatibility
+		// Some components reference editor.container instead of editor.containerElement
+		Object.defineProperty( this, 'container', {
+			get: function () {
+				return this.containerElement;
+			}.bind( this ),
+			enumerable: true,
+			configurable: true
+		} );
 	}
 
 	/**

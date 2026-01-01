@@ -21,8 +21,8 @@ The extension is **production-ready** with layer grouping feature complete. All 
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping with folders |
 | **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
-| **Testing** | ✅ Excellent | 7,852 tests (136 suites), 94.2% statement, 82.9% branch, 91.9% function coverage |
-| **ES6 Migration** | ✅ Complete | 83 classes, 0 prototype patterns |
+| **Testing** | ✅ Excellent | 7,852 tests (136 suites), 94.0% statement, 82.9% branch, 91.9% function coverage |
+| **ES6 Migration** | ✅ Complete | 92 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ⚠️ Managed | 11 files >1,000 lines, all well-delegated |
 | **Codebase Size** | ✅ Healthy | ~54,700 lines (102 files), well under 75K target |
@@ -163,8 +163,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for comprehensive visualization
 ### P3.2 WCAG 2.1 AA Audit ⏳
 
 Full accessibility compliance audit.  
-**Status:** 30% - Reduced motion support added (December 2025)
-**Effort:** 2 weeks (remaining)
+**Status:** 85% - Color contrast fixed, reduced motion added, focus indicators completed (January 2026)
+**Effort:** 1 week (remaining)
 
 ### P3.3 Gradient Fills ⏳
 
@@ -336,7 +336,7 @@ P2.3 Mobile UI optimization:     ██████░░░░░░░░░�
 
 Phase 3 (Features):
 P3.1 TypeScript:                 █░░░░░░░░░░░░░░░░░░░ 5%   ⏳ Low Priority
-P3.2 WCAG Audit:                 ██████░░░░░░░░░░░░░░ 30%  ⏳ Reduced motion done
+P3.2 WCAG Audit:                 █████████████████░░░ 85%  ⏳ Focus indicators added (January 2026)
 P3.3 Gradient Fills:             ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 P3.4 Custom Fonts:               ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 
@@ -357,10 +357,10 @@ FR-10 Live Article Preview:      ███████████████�
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total tests | 7,852 | ✅ |
-| Statement coverage | 94.2% | ✅ Excellent |
+| Statement coverage | 94.0% | ✅ Excellent |
 | Branch coverage | 82.9% | ✅ |
 | Function coverage | 91.9% | ✅ |
-| Line coverage | 94.5% | ✅ |
+| Line coverage | 94.3% | ✅ |
 | Test suites | 136 | ✅ |
 
 ### Files With Excellent Coverage ✅
@@ -380,9 +380,9 @@ FR-10 Live Article Preview:      ███████████████�
 
 ### Already Have ✅
 
-- 7,852 passing tests with 94.2% statement coverage
+- 7,852 passing tests with 94.0% statement coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
-- 83 ES6 classes (no legacy patterns)
+- 92 ES6 classes (no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
 - TypeScript definitions (types/layers.d.ts) for IDE IntelliSense
 - Accessible UI with ARIA support and reduced motion preference
@@ -525,7 +525,7 @@ The Layers extension is **fully functional and production-ready**. Technical deb
 Deductions:
 - -0.75 for 11 god classes (26% of codebase)
 - -0.5 for mobile UI not responsive (basic touch works)
-- -0.25 for documentation sprawl (22 files in docs/)
+- -0.25 for documentation sprawl (18 files in docs/, reduced from 21)
 
 ### What Would Improve the Rating
 

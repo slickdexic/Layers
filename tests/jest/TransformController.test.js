@@ -893,27 +893,23 @@ describe( 'TransformController', () => {
 
 			controller.emitTransforming( testLayer );
 
-			// Simulate requestAnimationFrame
-			jest.advanceTimersByTime( 16 );
-
+			// Events are now emitted synchronously for responsive UI
 			expect( dispatchSpy ).toHaveBeenCalled();
 			const event = dispatchSpy.mock.calls[ 0 ][ 0 ];
 			expect( event.type ).toBe( 'layers:transforming' );
 			expect( event.detail.id ).toBe( 'layer1' );
 		} );
 
-		it( 'should throttle events', () => {
+		it( 'should emit events synchronously for responsive UI', () => {
 			const dispatchSpy = jest.spyOn( mockEditor.container, 'dispatchEvent' );
 
-			// Emit multiple times rapidly
+			// Emit multiple times - each should dispatch immediately for responsive UI
 			controller.emitTransforming( testLayer );
 			controller.emitTransforming( testLayer );
 			controller.emitTransforming( testLayer );
 
-			// Only one should be scheduled
-			jest.advanceTimersByTime( 16 );
-
-			expect( dispatchSpy ).toHaveBeenCalledTimes( 1 );
+			// All events should have been dispatched synchronously
+			expect( dispatchSpy ).toHaveBeenCalledTimes( 3 );
 		} );
 
 		it( 'should do nothing for null layer', () => {
@@ -931,8 +927,8 @@ describe( 'TransformController', () => {
 			const dispatchSpy = jest.spyOn( mockManager.container, 'dispatchEvent' );
 
 			controller.emitTransforming( testLayer );
-			jest.advanceTimersByTime( 16 );
 
+			// Events are now emitted synchronously
 			expect( dispatchSpy ).toHaveBeenCalled();
 		} );
 	} );

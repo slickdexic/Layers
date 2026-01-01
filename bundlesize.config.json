@@ -1,10 +1,17 @@
 [
 	{
 		"resourceModule": "ext.layers",
-		"maxSize": "40 KB"
+		"maxSize": "100 KB",
+		"note": "Viewer module: ~93 KB source, ~35 KB minified+gzipped by ResourceLoader"
 	},
 	{
 		"resourceModule": "ext.layers.editor",
-		"maxSize": "480 KB"
+		"maxSize": "1400 KB",
+		"note": "Editor module: ~1340 KB source, ~280 KB minified+gzipped by ResourceLoader"
+	},
+	{
+		"resourceModule": "ext.layers.shared",
+		"maxSize": "75 KB",
+		"note": "Shared renderers: loaded by both viewer and editor"
 	}
 ]

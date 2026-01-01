@@ -126,13 +126,29 @@
 					return this.isPointInTextLayer( point, layer );
 
 				case 'line':
-				case 'arrow':
+				case 'arrow': {
+					const tolerance = Math.max( 6, ( layer.strokeWidth || 2 ) + 4 );
+					// Check if arrow is curved (has non-default control point)
+					const hasCurve = layer.controlX !== undefined &&
+						layer.controlY !== undefined &&
+						( layer.controlX !== ( layer.x1 + layer.x2 ) / 2 ||
+						layer.controlY !== ( layer.y1 + layer.y2 ) / 2 );
+					if ( hasCurve ) {
+						return this.isPointNearQuadraticBezier(
+							point,
+							layer.x1, layer.y1,
+							layer.controlX, layer.controlY,
+							layer.x2, layer.y2,
+							tolerance
+						);
+					}
 					return this.isPointNearLine(
 						point,
 						layer.x1, layer.y1,
 						layer.x2, layer.y2,
-						Math.max( 6, ( layer.strokeWidth || 2 ) + 4 )
+						tolerance
 					);
+				}
 
 				case 'path':
 					return this.isPointInPath( point, layer );
@@ -328,6 +344,60 @@
 			const projY = y1 + t * dy;
 
 			return Math.sqrt( Math.pow( px - projX, 2 ) + Math.pow( py - projY, 2 ) );
+		}
+
+		/**
+		 * Test if a point is near a quadratic Bézier curve
+		 *
+		 * @param {Object} point Point with x, y
+		 * @param {number} x1 Start x
+		 * @param {number} y1 Start y
+		 * @param {number} cx Control point x
+		 * @param {number} cy Control point y
+		 * @param {number} x2 End x
+		 * @param {number} y2 End y
+		 * @param {number} tolerance Distance tolerance
+		 * @return {boolean} True if point is within tolerance of curve
+		 */
+		isPointNearQuadraticBezier( point, x1, y1, cx, cy, x2, y2, tolerance ) {
+			const dist = this.pointToQuadraticBezierDistance( point.x, point.y, x1, y1, cx, cy, x2, y2 );
+			return dist <= ( tolerance || 6 );
+		}
+
+		/**
+		 * Calculate minimum distance from a point to a quadratic Bézier curve
+		 * Uses adaptive subdivision for accuracy
+		 *
+		 * @param {number} px Point x
+		 * @param {number} py Point y
+		 * @param {number} x1 Start x
+		 * @param {number} y1 Start y
+		 * @param {number} cx Control point x
+		 * @param {number} cy Control point y
+		 * @param {number} x2 End x
+		 * @param {number} y2 End y
+		 * @return {number} Minimum distance to curve
+		 */
+		pointToQuadraticBezierDistance( px, py, x1, y1, cx, cy, x2, y2 ) {
+			// Sample the curve at multiple points and find minimum distance
+			// Use 20 samples for a good balance of accuracy and performance
+			const numSamples = 20;
+			let minDist = Infinity;
+
+			for ( let i = 0; i <= numSamples; i++ ) {
+				const t = i / numSamples;
+				// Quadratic Bézier formula: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+				const invT = 1 - t;
+				const bx = invT * invT * x1 + 2 * invT * t * cx + t * t * x2;
+				const by = invT * invT * y1 + 2 * invT * t * cy + t * t * y2;
+
+				const dist = Math.sqrt( Math.pow( px - bx, 2 ) + Math.pow( py - by, 2 ) );
+				if ( dist < minDist ) {
+					minDist = dist;
+				}
+			}
+
+			return minDist;
 		}
 
 		/**

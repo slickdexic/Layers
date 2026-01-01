@@ -105,8 +105,9 @@
 				// Standard delete confirmation
 				const confirmMessage = this.msg( 'layers-delete-confirm', 'Are you sure you want to delete this layer?' );
 				createConfirmDialog( confirmMessage, () => {
+					// performLayerDelete calls removeLayer which already saves state,
+					// so we don't call saveState here to avoid double-undo
 					this.performLayerDelete( layerId );
-					this.editor.saveState( layer.type === 'group' ? 'Delete Folder' : 'Delete Layer' );
 				} );
 			}
 		}

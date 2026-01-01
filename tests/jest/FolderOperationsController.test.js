@@ -321,7 +321,7 @@ describe( 'FolderOperationsController', () => {
 			);
 		} );
 
-		it( 'should execute callback and saveState when confirmation is accepted', () => {
+		it( 'should execute callback when confirmation is accepted (saveState handled by removeLayer)', () => {
 			const layer = mockLayers[ 0 ];
 			mockEditor.getLayerById.mockReturnValue( layer );
 			// Create a mock that executes the callback immediately
@@ -331,12 +331,12 @@ describe( 'FolderOperationsController', () => {
 
 			controller.deleteLayer( 'layer1', mockConfirmDialog );
 
-			// Callback should have been executed
+			// Callback should have been executed - removeLayer handles saveState internally
 			expect( mockEditor.removeLayer ).toHaveBeenCalledWith( 'layer1' );
-			expect( mockEditor.saveState ).toHaveBeenCalledWith( 'Delete Layer' );
+			// Note: saveState is NOT called separately; removeLayer calls it internally with 'Remove layer'
 		} );
 
-		it( 'should saveState with "Delete Folder" message for empty group deletion', () => {
+		it( 'should call removeLayer for empty group deletion (saveState handled by removeLayer)', () => {
 			const emptyFolder = { id: 'empty', type: 'group', children: [] };
 			mockEditor.getLayerById.mockReturnValue( emptyFolder );
 			const mockConfirmDialog = jest.fn( ( _message, callback ) => {
@@ -345,7 +345,8 @@ describe( 'FolderOperationsController', () => {
 
 			controller.deleteLayer( 'empty', mockConfirmDialog );
 
-			expect( mockEditor.saveState ).toHaveBeenCalledWith( 'Delete Folder' );
+			// removeLayer handles saveState internally with 'Remove layer'
+			expect( mockEditor.removeLayer ).toHaveBeenCalledWith( 'empty' );
 		} );
 
 		it( 'should show folder delete dialog for groups with children', () => {

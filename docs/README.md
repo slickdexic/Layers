@@ -35,21 +35,19 @@ This directory contains technical documentation for the Layers MediaWiki extensi
 ### Quality & Standards
 - [ACCESSIBILITY.md](ACCESSIBILITY.md) - ARIA roles, keyboard navigation, screen reader support
 - [UX_STANDARDS_AUDIT.md](UX_STANDARDS_AUDIT.md) - UX consistency audit results
-- [EVENT_LISTENER_AUDIT.md](EVENT_LISTENER_AUDIT.md) - Memory leak prevention audit
 
 ### Troubleshooting
 - [KNOWN_ISSUES.md](KNOWN_ISSUES.md) - Current bugs and limitations
-- [layers-all-troubleshooting.md](layers-all-troubleshooting.md) - Comprehensive troubleshooting guide
+- [layers-all-troubleshooting.md](layers-all-troubleshooting.md) - Troubleshooting guide for layer visibility issues
 - [POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md](POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md) - Boolean serialization bug analysis
 
 ### Pending Feature Requests
 - [FEATURE_REQUEST_TEXT_IMPROVEMENTS.md](FEATURE_REQUEST_TEXT_IMPROVEMENTS.md) - Enhanced text layer capabilities
-- [FEATURE_REQUEST_LAYERSLINK_RETURN.md](FEATURE_REQUEST_LAYERSLINK_RETURN.md) - Navigation mode enhancements (Phase 3)
+- [FEATURE_REQUEST_LAYERSLINK_RETURN.md](FEATURE_REQUEST_LAYERSLINK_RETURN.md) - Navigation mode enhancements
 
 ### Planning
-- [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) - Roadmap and improvement ideas
-- [guide.md](guide.md) - Implementation guide
-- [structure-suite-status.md](structure-suite-status.md) - Test suite structure status
+- [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) - Active feature proposals and ideas
+- [RELEASE_GUIDE.md](RELEASE_GUIDE.md) - Release checklist and process
 
 ---
 
@@ -58,9 +56,11 @@ This directory contains technical documentation for the Layers MediaWiki extensi
 The [archive/](archive/) directory contains completed feature requests, historical bug fixes, and superseded documentation. These are preserved for reference but are no longer actively maintained.
 
 **Archived documents include:**
-- Completed feature requests (Layer Groups, Auto-Create Layer Set, Context-Aware Toolbar)
-- Historical bug fix documentation
-- Superseded implementation plans
+- Completed feature requests (Layer Groups, Auto-Create Layer Set, Context-Aware Toolbar, Enhanced Layerslink)
+- Historical bug fix documentation and postmortems
+- Original developer specification (guide.md)
+- One-time audits (Event Listener Audit, Structure Suite Status)
+- Full feature implementation history (FUTURE_IMPROVEMENTS_FULL.md)
 
 ---
 
@@ -69,7 +69,7 @@ The [archive/](archive/) directory contains completed feature requests, historic
 | File | Location | Purpose |
 |------|----------|---------|
 | [README.md](../README.md) | Root | Project overview, installation, quick start |
-| [codebase_review.md](../codebase_review.md) | Root | Honest assessment of code quality (8.75/10) |
+| [codebase_review.md](../codebase_review.md) | Root | Honest assessment of code quality (8.5/10) |
 | [improvement_plan.md](../improvement_plan.md) | Root | Technical debt remediation roadmap |
 | [copilot-instructions.md](../.github/copilot-instructions.md) | .github | AI contributor guidelines |
 | [CHANGELOG.md](../CHANGELOG.md) | Root | Version history |

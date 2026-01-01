@@ -17,7 +17,7 @@ This extension is feature-rich by design with 12 drawing tools, multiple renderi
 Separation of concerns is strict: PHP integrates with MediaWiki and storage; JavaScript implements the editor UI/state.
 
 - Backend (PHP, `src/`)
-  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.44)
+  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.43)
   - Service wiring: `services.php` registers 3 services: LayersLogger, LayersSchemaManager, LayersDatabase (uses DI pattern)
   - Logging: `src/Logging/` provides `LoggerAwareTrait` (for objects with getLogger/setLogger), `StaticLoggerAwareTrait` (for static contexts), and `LayersLogger` (factory via service container)
   - API modules (`src/Api/`)

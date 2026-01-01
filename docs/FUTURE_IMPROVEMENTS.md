@@ -1,649 +1,178 @@
 # Future Improvements
 
-This document tracks planned feature enhancements for the Layers extension.
+This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
+
+**Last Updated:** December 31, 2025
 
 ---
 
-## 1. Save as Image
+## Active Proposals
 
-**Priority:** Medium  
-**Complexity:** Low-Medium  
-**Status:** ✅ Completed (v0.8.6)
+### 1. Deep Linking to Editor with Layer Selection
 
-> **Implementation Note:** This feature was already implemented in APIManager.js as `saveAsImage()`. Users can access it via the toolbar's save menu.
-
-### Description
-Add a "Save as Image" button in the editor that exports the current canvas (background image + all visible layers) as a downloadable image file (PNG/JPEG).
-
-### User Story
-As a user, I want to export my annotated image as a standalone file so I can share it outside of MediaWiki or use it in other contexts.
-
-### Technical Approach
-- Add export button to toolbar or file menu
-- Use `canvas.toDataURL()` or `canvas.toBlob()` to generate image
-- Create temporary download link with appropriate filename
-- Support format selection (PNG for transparency, JPEG for smaller size)
-- Consider adding quality/resolution options
-
-### UI Considerations
-- Button location: Toolbar actions group or File menu dropdown
-- Icon: Download/export icon
-- Format dialog: Optional advanced options for format, quality, scale
-
-### Implementation Notes
-```javascript
-// Basic approach
-const dataUrl = canvas.toDataURL('image/png');
-const link = document.createElement('a');
-link.download = 'annotated-image.png';
-link.href = dataUrl;
-link.click();
-```
-
----
-
-## 2. Import Image to Layer
-
-**Priority:** Medium  
-**Complexity:** Medium  
-**Status:** ✅ Completed (v0.8.9)
-
-### Description
-Allow users to import external images as new layers, enabling composite annotations with logos, icons, reference images, or other visual elements.
-
-### User Story
-As a user, I want to import images (logos, icons, reference diagrams) as layers so I can create richer annotations by combining multiple visual elements.
-
-### Technical Approach
-- Add "Import Image" button to toolbar or layer panel
-- File input accepting common image formats (PNG, JPEG, GIF, SVG, WebP)
-- Create new layer type: `type: 'image'`
-- Store image data as base64 or reference to uploaded file
-- Support drag-and-drop import onto canvas
-- Implement resize handles for imported images
-
-### Layer Properties
-```javascript
-{
-  type: 'image',
-  id: 'layer-uuid',
-  name: 'Imported Image',
-  x: 100,
-  y: 100,
-  width: 200,
-  height: 150,
-  opacity: 1,
-  rotation: 0,
-  locked: false,
-  visible: true,
-  // Image-specific
-  src: 'data:image/png;base64,...', // or URL reference
-  preserveAspectRatio: true,
-  originalWidth: 400,
-  originalHeight: 300
-}
-```
-
-### UI Considerations
-- Import via: Button click, drag-and-drop, paste from clipboard
-- Show loading indicator for large images
-- Warn about file size limits (consider $wgLayersMaxBytes)
-- Preview before adding to canvas
-
-### Server-Side Considerations
-- Validate image data in ApiLayersSave
-- Add image data to allowed properties whitelist
-- Consider separate storage for large images (reference vs inline)
-- Size limits for base64 data
-
----
-
-## 3. Background Image Layer Controls
-
-**Priority:** Medium  
-**Complexity:** Low  
-**Status:** ✅ Completed (v0.8.8)
-
-> **Implementation Note:** Added in v0.8.7, enhanced in v0.8.8. Background appears as a special layer in the layer panel with opacity slider and visibility toggle. Keyboard shortcut: Shift+B to toggle background visibility. **v0.8.8 adds per-layer-set background settings** - each named layer set now saves its own background visibility and opacity independently.
-
-### Description
-Treat the background image as a special bottom layer with adjustable controls for opacity and visibility, while keeping it locked from direct editing (no move, resize, delete).
-
-### User Story
-As a user, I want to adjust the background image opacity so I can make my annotations more visible against busy images, or temporarily hide the background to focus on my layer work.
-
-### Technical Approach
-- Create virtual "Background" layer entry in LayerPanel
-- Always positioned at bottom of layer list
-- Locked icon always shown (cannot be unlocked)
-- Add opacity slider control
-- Add visibility toggle (eye icon)
-- Store background settings in layer set data or separate config
-
-### Background Layer Properties
-```javascript
-{
-  type: 'background',
-  id: '__background__',
-  name: 'Background Image',
-  locked: true,        // Always true, cannot be changed
-  visible: true,       // Toggleable
-  opacity: 1.0,        // Adjustable 0-1
-  // No position/size - determined by image dimensions
-}
-```
-
-### UI Considerations
-- Display in layer panel with distinct styling (grayed background, lock icon)
-- Opacity control: Slider in properties panel when selected, or inline in layer panel
-- Visibility: Standard eye icon toggle
-- Prevent: drag reordering, delete, rename, unlock
-- Consider keyboard shortcut for quick background toggle (e.g., B)
-
-### Implementation Notes
-- Modify CanvasRenderer to apply background opacity
-- Update LayerPanel to render background layer entry
-- Store background settings in layer set JSON
-- Apply opacity via `ctx.globalAlpha` before drawing background
-
-### Migration
-- Existing layer sets: Default to visible=true, opacity=1.0
-- Background settings optional in schema (backwards compatible)
-
----
-
-## Implementation Priority
-
-| Feature | Priority | Effort | Dependencies | Status |
-|---------|----------|--------|--------------|--------|
-| Save as Image | Medium | Low | None | ✅ Completed (v0.8.6) |
-| Background Controls | Medium | Low | None | ✅ Completed (v0.8.8) |
-| Import Image Layer | Medium | Medium | Schema update, validation | ✅ Completed (v0.8.9) |
-
-### Recommended Order
-1. ~~**Save as Image**~~ - ✅ Implemented in v0.8.6
-2. ~~**Background Controls**~~ - ✅ Implemented in v0.8.7, enhanced in v0.8.8 (per-set settings)
-3. ~~**Import Image Layer**~~ - ✅ Implemented in v0.8.9
-
----
-
-## ~~3. Blur as Blend Mode for All Shapes~~
-
-**Priority:** Medium  
-**Complexity:** Medium-High  
-**Status:** ✅ Implemented in v1.2.6
-
-### Description
-Allow any shape (rectangle, circle, ellipse, polygon, star) to use "blur" as a blend mode, creating blurred regions in any shape. This generalizes the current blur tool and enables creative use cases like privacy masks, focus effects, and stylized callouts.
-
-### Implementation Summary
-- Added 'blur' to valid blend modes in `LayersValidator.js`, `LayersConstants.js`, and `ServerSideLayerValidator.php`
-- Added `drawBlurWithShape()` and `hasBlurBlendMode()` methods to `EffectsRenderer.js`
-- Added blur blend mode support to `LayerRenderer.js` with shape path drawing helpers
-- Added blur blend mode support to `CanvasRenderer.js` for editor preview
-- Shapes with `blendMode: 'blur'` use shape geometry as clip path, apply blur filter within
-- Uses `blurRadius` property (default 12, clamped 1-64)
-- Fallback: gray semi-transparent overlay when no background image available
-
-### User Story
-As a user, I want to apply blur effect to any shape (not just rectangles) so I can create circular privacy masks, star-shaped focus effects, or complex path-based blur regions.
-
-### Layer Example
-```javascript
-{
-  type: 'ellipse',
-  x: 200,
-  y: 150,
-  radiusX: 80,
-  radiusY: 60,
-  blendMode: 'blur',
-  blurRadius: 15,  // optional, default 12
-  opacity: 1
-}
-```
-
----
-
-## Related Issues
-
-- None currently linked
-
----
-
-## 4. Deep Linking to Editor with Layer Selection
-
-**Priority:** High  
+**Priority:** HIGH  
 **Complexity:** Medium  
 **Status:** ⏳ Proposed
 
-### Description
-Enable URL parameters to open the Layers editor directly to a specific file, layer set, and optionally select a specific layer. This enables integration with forms, documentation workflows, and cross-linking between wiki pages.
+Enable URL parameters to open the Layers editor directly to a specific file, layer set, and optionally select a specific layer.
 
-### User Story
-As a user editing a form, I want to click a link that opens the Layers editor for a specific image in a new tab, so I can quickly annotate the image and return to my form without losing my work.
-
-As a documentation author, I want to link directly to a specific annotation on an image so readers can see exactly what I'm referring to.
-
-### URL Parameter Design
-
+**URL Parameter Design:**
 ```
-/wiki/Special:EditLayers?file=Example.jpg
-/wiki/Special:EditLayers?file=Example.jpg&set=anatomy
 /wiki/Special:EditLayers?file=Example.jpg&set=anatomy&layer=layer-abc123
-/wiki/Special:EditLayers?file=Example.jpg&set=anatomy&layer=layer-abc123&zoom=2&pan=100,200
 ```
 
 | Parameter | Description | Required |
 |-----------|-------------|----------|
-| `file` | Target filename (with or without `File:` prefix) | Yes |
-| `set` | Named layer set to load (default: 'default') | No |
+| `file` | Target filename | Yes |
+| `set` | Named layer set (default: 'default') | No |
 | `layer` | Layer ID to select on load | No |
 | `zoom` | Initial zoom level | No |
-| `pan` | Initial pan position (x,y) | No |
-| `newtab` | Hint for link generators to use `target="_blank"` | No |
 
-### Technical Approach
-
-1. **Create Special:EditLayers page**
-   - New SpecialPage class in `src/Special/SpecialEditLayers.php`
-   - Parse URL parameters
-   - Validate file exists and user has permissions
-   - Render editor container with config vars
-
-2. **Modify LayersEditor initialization**
-   - Read URL parameters from `mw.config` or `URLSearchParams`
-   - After loading layer set, find and select specified layer
-   - Apply initial zoom/pan if specified
-
-3. **Add helper for generating links**
-   - PHP: `Layers::getEditorUrl($filename, $options)`
-   - JS: `window.Layers.getEditorUrl(filename, options)`
-   - Wikitext: `{{#layerslink:File.jpg|set=anatomy|layer=id|text=Edit}}`
-
-### Wikitext Helper (Parser Function)
-
-```wikitext
-{{#layerslink:Example.jpg|set=anatomy|layer=layer-123|Edit this annotation}}
-```
-
-Generates:
-```html
-<a href="/wiki/Special:EditLayers?file=Example.jpg&set=anatomy&layer=layer-123" 
-   target="_blank" rel="noopener">Edit this annotation</a>
-```
-
-### Implementation Steps
-
-1. Create `SpecialEditLayers.php` extending `SpecialPage`
-2. Register in `extension.json` under `SpecialPages`
-3. Add URL parameter handling in EditorBootstrap.js
-4. Add layer selection logic to LayersEditor initialization
-5. Create `{{#layerslink}}` parser function (optional)
-6. Add permissions check (require 'editlayers' right)
-
-### Security Considerations
-- Validate filename exists and is an image
-- Check user has 'editlayers' permission
-- Sanitize layer ID parameter
-- Rate limit Special page access
-
-### Estimated Effort
-- **3-4 days** for core functionality
-- **+1 day** for parser function helper
-- Files: New SpecialPage, EditorBootstrap.js, LayersEditor.js, extension.json
+**Effort:** 3-4 days
 
 ---
 
-## 5. Lightbox Viewer with Layers Overlay
+### 2. Chat Bubble / Speech Balloon Tool
 
-**Priority:** ~~High~~  
-**Complexity:** ~~Medium~~  
-**Status:** ✅ Implemented
+**Priority:** MEDIUM  
+**Complexity:** Medium  
+**Status:** ⏳ Proposed
 
-### Description
-The `layerslink=viewer` (or `layerslink=lightbox`) option opens a full-size lightbox overlay showing the image with all layer annotations visible.
+A text box variant designed for speech/thought bubbles and diagram callouts.
 
-### Wikitext Syntax
+**Features:**
+- All text box properties (alignment, padding, font)
+- Configurable tail/pointer (position, style, direction)
+- Preset shapes: rounded rectangle, cloud (thought), oval, circle
+- Leader line/arrow for pointing to targets
 
-```wikitext
-[[File:Diagram.jpg|thumb|layers=anatomy|layerslink=viewer|Caption text]]
-[[File:Diagram.jpg|thumb|layers=anatomy|layerslink=lightbox|Caption text]]
-```
+**Use Case:** Comic-style annotations, dialogue callouts, instructional content, diagram labeling.
 
-### Implementation
-- **LayersLightbox.js** (~560 lines) — Full-featured lightbox viewer
-- Keyboard navigation (Escape to close, arrow keys for zoom/pan)
-- Zoom/pan controls within lightbox
-- Layer visibility toggles
-- Edit button linking to editor
-- 86.6% test coverage
-   - Detect `link=layers` or `link=layers-edit` option
-   - Add click handler data attribute to thumbnail
-   - Include layer set name in data attributes
-
-2. **Create LayersLightbox.js module**
-   - Listen for clicks on images with `data-layers-lightbox`
-   - Create modal overlay with close button
-   - Load full-size image and layer data via API
-   - Render using existing LayersViewer/LayerRenderer
-   - Support zoom/pan within lightbox
-   - Keyboard: Escape to close, arrow keys for gallery
-
-3. **Lightbox UI Components**
-   - Semi-transparent backdrop
-   - Centered image container (max 90% viewport)
-   - Close button (X) in corner
-   - Optional "Edit" button if `link=layers-edit`
-   - Layer set selector if multiple sets exist
-   - Zoom controls (+/- buttons or scroll)
-
-### Lightbox HTML Structure
-```html
-<div class="layers-lightbox-overlay" role="dialog" aria-modal="true">
-  <div class="layers-lightbox-backdrop"></div>
-  <div class="layers-lightbox-content">
-    <button class="layers-lightbox-close" aria-label="Close">×</button>
-    <div class="layers-lightbox-canvas-container">
-      <canvas class="layers-lightbox-canvas"></canvas>
-    </div>
-    <div class="layers-lightbox-controls">
-      <button class="layers-lightbox-edit">Edit Layers</button>
-      <div class="layers-lightbox-zoom">
-        <button>−</button>
-        <span>100%</span>
-        <button>+</button>
-      </div>
-    </div>
-  </div>
-</div>
-```
-
-### Implementation Steps
-
-1. Modify Hooks/LayersHookHandler.php to detect `link=layers`
-2. Create `resources/ext.layers.lightbox/` module
-3. Implement LayersLightbox.js with modal, canvas, controls
-4. Add CSS for lightbox styling
-5. Register module in extension.json
-6. Add documentation for new syntax
-
-### Accessibility
-- Focus trap within lightbox
-- Escape key to close
-- ARIA labels and roles
-- Announce lightbox open/close to screen readers
-
-### Estimated Effort
-- **4-5 days** for full implementation
-- Files: New Lightbox module, hook modifications, CSS
+**Effort:** 2-3 weeks
 
 ---
 
-## 6. World-Class Feature Ideas
+### 3. Inline Canvas Text Editing (FR-8)
 
-These are aspirational features that would differentiate Layers from other annotation tools.
-
-### 6.1 Collaborative Real-Time Editing
-
-**Complexity:** Very High  
-**Value:** High for team environments
-
-Enable multiple users to edit the same layer set simultaneously with live cursor positions and conflict resolution.
-
-- WebSocket or Server-Sent Events for real-time sync
-- Operational Transform or CRDT for conflict resolution
-- Show other users' cursors and selections
-- Lock layers being actively edited
-- Presence indicators (who's viewing/editing)
-
-### 6.2 Layer Templates / Stamps
-
-**Complexity:** Medium  
-**Value:** High for repeated workflows
-
-Pre-built annotation templates that can be dropped onto images.
-
-- Callout bubbles with customizable text
-- Measurement rulers/scales
-- Icon library (checkmarks, X marks, arrows, numbers)
-- Custom template creation and sharing
-- Organization-wide template library
-- Recent templates for quick access
-
-### 6.3 AI-Assisted Annotations
-
+**Priority:** HIGH  
 **Complexity:** High  
-**Value:** Very High for productivity
+**Status:** ⏳ Proposed
 
-Leverage AI to suggest or auto-generate annotations.
+Allow direct text editing on the canvas instead of only in the properties panel.
 
-- **Object detection**: Suggest bounding boxes around detected objects
-- **OCR integration**: Extract text from images for annotation
-- **Smart labeling**: Suggest labels based on image content
-- **Auto-sizing**: Fit callouts to detected regions
-- **Accessibility**: Auto-generate alt text from annotations
+**Features:**
+- Click text layer to enter edit mode
+- Cursor and selection within text
+- Inline formatting toolbar
+- Real-time rendering as you type
+- Works for both Text and Text Box layers
 
-### 6.4 Animation / Presentation Mode
+**Effort:** 3-4 weeks
 
-**Complexity:** Medium-High  
-**Value:** High for educational content
+---
 
-Animate layer visibility for step-by-step presentations.
+### 4. Toolbar Dropdown Grouping (FR-5)
 
-- Define reveal order for layers
-- Transition effects (fade, slide, zoom)
-- Play/pause/step controls
-- Export as GIF or video
-- Embed animated presentations in wiki pages
-- Timeline editor for sequencing
+**Priority:** MEDIUM  
+**Complexity:** Low-Medium  
+**Status:** ⏳ Proposed
 
-### 6.5 Measurement Tools
+Reorganize the top toolbar using dropdown menus for better scalability.
 
-**Complexity:** Medium  
-**Value:** High for technical/scientific use
+**Features:**
+- Group similar tools (Shapes: Rectangle, Circle, Ellipse, Polygon, Star)
+- Group line tools (Arrow, Line)
+- Show most recently used tool as visible button
+- Keyboard shortcuts continue to work globally
 
-Add calibrated measurement capabilities.
+**Use Case:** Accommodating future tool additions without toolbar overflow.
 
-- Set scale reference (e.g., "100px = 1cm")
-- Ruler tool that shows real-world measurements
-- Area measurement for shapes
-- Angle measurement tool
-- Export measurements as data
+**Effort:** 1-2 weeks
 
-### 6.6 Layer Linking / Hotspots
+---
 
-**Complexity:** Medium  
-**Value:** High for documentation
+## World-Class Aspirational Features
 
-Make layers clickable to navigate to wiki pages or other resources.
+These are longer-term ideas that would differentiate Layers from other annotation tools.
 
-- Click a layer to navigate to linked wiki page
-- Tooltip preview on hover
-- Image maps with multiple clickable regions
-- External URL linking with confirmation
-- Cross-image layer linking (click to view related image)
+### Mobile-Optimized UI
 
-### 6.7 Version Comparison / Diff View
-
-**Complexity:** Medium  
-**Value:** Medium-High
-
-Compare layer sets across revisions.
-
-- Side-by-side revision comparison
-- Highlight added/removed/modified layers
-- Slider overlay comparison (like image diff tools)
-- Revert individual layers from previous revisions
-- Visual diff in revision history
-
-### 6.8 Mobile Touch Support
-
-**Complexity:** High  
-**Value:** High for accessibility
+**Complexity:** High | **Value:** Very High
 
 Full touch support for tablets and phones.
+- Responsive toolbar layout for small screens
+- Mobile-optimized layer panel
+- Touch-friendly selection handles
+- On-screen keyboard integration
 
-- Pinch-to-zoom, two-finger pan
-- Touch-optimized toolbar
-- On-screen keyboard integration for text
-- Gesture support (two-finger rotate)
-- Responsive layout for small screens
-- Progressive Web App capabilities
+**Status:** Basic touch works (pinch-to-zoom, touch-to-mouse). UI needs responsive design.
 
----
+### Measurement Tools
 
-## Implementation Priority (Updated)
+**Complexity:** Medium | **Value:** High for technical/scientific use
 
-| Feature | Priority | Effort | Value | Status |
-|---------|----------|--------|-------|--------|
-| **Enhanced Layerslink Navigation** | **High** | **Low-High** | **High** | ⏳ **Proposed** |
-| Deep Linking to Editor | High | Medium | High | ⏳ Proposed |
-| Lightbox Viewer | High | Medium | High | ⏳ Proposed |
-| ~~Blur as Blend Mode~~ | Medium | Medium | Medium | ✅ v1.2.6 |
-| Layer Templates | Medium | Medium | High | 💡 Idea |
-| Measurement Tools | Medium | Medium | High | 💡 Idea |
-| Layer Linking/Hotspots | Medium | Medium | High | 💡 Idea |
-| Mobile Touch Support | Medium | High | High | 💡 Idea |
-| Version Comparison | Low | Medium | Medium | 💡 Idea |
-| Animation Mode | Low | High | Medium | 💡 Idea |
-| Collaborative Editing | Low | Very High | High | 💡 Idea |
-| AI-Assisted Annotations | Low | High | Very High | 💡 Idea |
+Calibrated measurement capabilities.
+- Set scale reference (e.g., "100px = 1cm")
+- Ruler tool with real-world measurements
+- Area measurement for shapes
+- Angle measurement tool
 
-### Recommended Next Features
-1. **Enhanced Layerslink Navigation** - Critical for Page Forms integration (Phase 1: newtab is quick win)
-2. **Deep Linking to Editor** - Enables form integration workflow
-3. **Lightbox Viewer** - Major UX improvement for readers
-4. **Layer Templates** - High productivity gain for common annotations
+### Layer Templates / Stamps
 
----
+**Complexity:** Medium | **Value:** High for repeated workflows
 
-## 7. Enhanced Layerslink Navigation Modes
+Pre-built annotation templates.
+- Callout bubbles, measurement rulers, icon library
+- Custom template creation and sharing
+- Organization-wide template library
 
-**Priority:** ~~High~~  
-**Complexity:** ~~Low to High (phased)~~  
-**Status:** ✅ All Phases Implemented  
-**Full Specification:** [FEATURE_REQUEST_LAYERSLINK_RETURN.md](FEATURE_REQUEST_LAYERSLINK_RETURN.md)
+### Layer Linking / Hotspots
 
-### Description
-Extend the `layerslink` parameter to support better navigation workflows when editing layers from within wiki pages, especially for Page Forms integration.
+**Complexity:** Medium | **Value:** High for documentation
 
-### Implementation Summary
+Make layers clickable to navigate to wiki pages.
+- Click a layer to navigate to linked page
+- Tooltip preview on hover
+- Image maps with multiple clickable regions
 
-| Phase | Feature | Status | Version |
-|-------|---------|--------|---------|
-| **Phase 1** | `editor-newtab` | ✅ Complete | v1.2.8 |
-| **Phase 2** | Return-to behavior | ✅ Complete (Default) | v1.2.10 |
-| **Phase 3** | `editor-modal` | ✅ Complete | v1.2.11 |
+### Gradient Fills
 
-**Key features:**
-- `layerslink=editor-newtab` — Opens editor in new browser tab
-- **Return-to behavior** — Automatic for all editor links from article pages (no explicit option needed)
-- `layerslink=editor-modal` — Opens editor in overlay modal on current page (best for forms)
+**Complexity:** Low | **Value:** Medium
+
+Linear and radial gradient fills for shapes.
+
+### Custom Fonts
+
+**Complexity:** Medium | **Value:** Medium
+
+Allow users to specify custom fonts beyond the default list.
+
+### SVG Export
+
+**Complexity:** Low | **Value:** Medium
+
+Export annotations as SVG for use in vector graphics software.
 
 ---
 
-## 8. Auto-Create Layer Set on Editor Link
+## Recently Completed
 
-**Priority:** Medium  
-**Complexity:** Medium  
-**Status:** ✅ Implemented (v1.2.9)  
-**Full Specification:** [FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md](FEATURE_REQUEST_AUTO_CREATE_LAYER_SET.md)
+The following features have been completed and archived:
 
-### Description
-When a wikitext link references a layer set that doesn't exist yet using `layerslink=editor`, automatically create that layer set when the user opens the editor (if they have `createlayers` permission).
-
-### User Story
-As a wiki author, I want to add `[[File:Diagram.png|layers=heart-diagram|layerslink=editor]]` to my article and have the `heart-diagram` layer set auto-created when I first click the link, so I don't have to manually create it on the File: page first.
-
-### Key Benefits
-- **Streamlined workflow**: No manual set creation step required
-- **Template-friendly**: Article templates can define layer set names that get created on first use
-- **Page Forms integration**: Form-generated layer set names work automatically
-- **Collaborative workflows**: Team members can be assigned specific sets via links
-
-### Wikitext Example
-
-```wikitext
-<!-- Link to non-existent set - auto-created on first editor open -->
-[[File:Anatomy.png|layers=heart-diagram|layerslink=editor]]
-```
-
-### Permission Requirements
-- User must have `createlayers` right (not just `editlayers`)
-- Rate limiting applies via existing `editlayers-create` limiter
-- Set name validated against allowed pattern
-
-### Implementation Estimate
-~12 hours total (backend, frontend, testing, documentation)
-
-See full specification document for implementation details, edge cases, and security considerations.
+| Feature | Version | Notes |
+|---------|---------|-------|
+| Curved Arrows (FR-4) | v1.3.3 | Bézier curves with control point |
+| Live Color Preview (FR-9) | v1.3.3 | Real-time canvas preview |
+| Live Article Preview (FR-10) | v1.3.3 | Auto-refresh stale viewers |
+| Layer Groups/Folders | v1.2.13 | Ctrl+G to group, folders in panel |
+| Context-Aware Toolbar | v1.2.10 | Show only relevant controls |
+| Auto-Create Layer Set | v1.2.9 | Create set on first editor open |
+| Enhanced Layerslink | v1.2.11 | editor-newtab, editor-modal, return-to |
+| Blur Fill Mode | v1.2.6 | Frosted glass effect for shapes |
+| Save as Image | v0.8.6 | Export PNG via toolbar |
+| Import Image Layer | v0.8.9 | Import external images as layers |
+| Background Controls | v0.8.8 | Opacity slider, visibility toggle |
 
 ---
 
-## 9. Layer Groups (Folders)
-
-**Priority:** ~~High~~  
-**Complexity:** ~~High (~50 hours)~~  
-**Status:** ✅ Implemented (v1.2.13)  
-**Full Specification:** [FEATURE_REQUEST_LAYER_GROUPS.md](FEATURE_REQUEST_LAYER_GROUPS.md)
-
-### Description
-Allow users to organize layers into collapsible groups (folders) in the Layer Panel. Groups behave as a single unit for selection, movement, visibility, and other operations.
-
-### Implementation Summary (v1.2.13)
-- **GroupManager.js** (~600 lines) — Complete grouping API with 48 tests
-- Keyboard shortcuts: **Ctrl+G** to group, **Ctrl+Shift+G** to ungroup
-- Selecting a group auto-selects all child layers
-- Layer panel shows folder icons, 20px indentation, expand/collapse toggles
-- Server-side 'group' type validation in PHP
-- Max 3 nesting levels, max 100 children per group
-- **107 new tests** added across GroupManager, SelectionManager, ToolbarKeyboard, and PHP
-
-### Key Features Delivered
-- ✅ Create/rename/delete layer groups
-- ✅ Drag layers into/out of groups
-- ✅ Expand/collapse groups to reduce clutter
-- ✅ Selecting a group selects all child layers
-- ✅ Moving a group moves all children together
-- ✅ Group visibility toggle affects all children
-- ✅ Support for nested groups (up to 3 levels deep)
-- ✅ Keyboard shortcuts: Ctrl+G to group, Ctrl+Shift+G to ungroup
-
----
-
-## 10. Context-Aware Toolbar
-
-**Priority:** Medium  
-**Complexity:** Medium (~4 hours actual)  
-**Status:** ✅ Implemented (v1.2.10)  
-**Full Specification:** [FEATURE_REQUEST_CONTEXT_AWARE_TOOLBAR.md](FEATURE_REQUEST_CONTEXT_AWARE_TOOLBAR.md)
-
-### Description
-Show only relevant toolbar controls based on the currently selected tool or layer. Hide stroke width, stroke color, fill color, and other style controls when they are not applicable.
-
-### Implementation Summary
-- Added `updateContextVisibility()` to `ToolbarStyleControls.js`
-- Added `updateContextForSelectedLayers()` for selection-based visibility
-- CSS transitions via `context-hidden` class with opacity/max-width animation
-- Configuration: `$wgLayersContextAwareToolbar` (default: true)
-- 20 new Jest tests added
-
-### Context Examples
-| Context | Controls Shown |
-|---------|----------------|
-| Select tool (nothing selected) | Tool buttons only |
-| Rectangle/shape tools | Stroke, Fill, Width, Presets |
-| Text tool | Font size, Text stroke, Shadow |
-| Arrow/Pen tools | Stroke, Width (no fill) |
-| Shape layer selected | Full style controls |
-
-### Configuration
-```php
-// Disable context-aware toolbar (show all controls always)
-$wgLayersContextAwareToolbar = false;
-```
-
----
-
-*Document created: December 13, 2025*  
-*Last updated: December 28, 2025*
+*For implementation details on completed features, see the archived feature request documents in `docs/archive/`.*

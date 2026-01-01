@@ -167,6 +167,12 @@ class TransformController {
 	 * Finish the resize operation
 	 */
 	finishResize () {
+		// Emit final transform event synchronously to sync properties panel with final dimensions
+		const selectedLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
+		if ( selectedLayer ) {
+			this.emitTransforming( selectedLayer, true );
+		}
+
 		this.isResizing = false;
 		this.resizeHandle = null;
 		this.originalLayerState = null;
@@ -479,6 +485,12 @@ class TransformController {
 	 * Finish the rotation operation
 	 */
 	finishRotation () {
+		// Emit final transform event synchronously to sync properties panel with final rotation value
+		const selectedLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
+		if ( selectedLayer ) {
+			this.emitTransforming( selectedLayer, true );
+		}
+
 		this.isRotating = false;
 		this.originalLayerState = null;
 		this.dragStartPoint = null;
@@ -600,12 +612,14 @@ class TransformController {
 			this.updateLayerPosition( layerToMove, originalState, adjustedDeltaX, adjustedDeltaY );
 		}
 
-		// Re-render and emit live-transform event
-		this.manager.renderLayers( this.manager.editor.layers );
+		// Emit live-transform event BEFORE rendering (so UI updates while render is processing)
 		const active = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( active ) {
 			this.emitTransforming( active );
 		}
+
+		// Re-render (this can be slow for complex layers with shadows)
+		this.manager.renderLayers( this.manager.editor.layers );
 	}
 
 	/**
@@ -638,6 +652,13 @@ class TransformController {
 				layer.y1 = ( originalState.y1 || 0 ) + deltaY;
 				layer.x2 = ( originalState.x2 || 0 ) + deltaX;
 				layer.y2 = ( originalState.y2 || 0 ) + deltaY;
+				// Move control point with the arrow (for curved arrows)
+				if ( originalState.controlX !== undefined ) {
+					layer.controlX = originalState.controlX + deltaX;
+				}
+				if ( originalState.controlY !== undefined ) {
+					layer.controlY = originalState.controlY + deltaY;
+				}
 				break;
 			case 'path':
 				if ( originalState.points && originalState.points.length > 0 ) {
@@ -655,6 +676,14 @@ class TransformController {
 	finishDrag () {
 		// Only mark dirty if actual drag movement occurred (showDragPreview is set in handleDrag)
 		const hadMovement = this.showDragPreview;
+
+		// Emit final transform event synchronously to sync properties panel with final position
+		if ( hadMovement ) {
+			const selectedLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
+			if ( selectedLayer ) {
+				this.emitTransforming( selectedLayer, true );
+			}
+		}
 
 		this.isDragging = false;
 		this.showDragPreview = false;
@@ -685,37 +714,37 @@ class TransformController {
 	// ==================== Utility Methods ====================
 
 	/**
-	 * Emit a throttled custom event with current transform values
-	 * to allow the properties panel to live-sync during manipulation.
+	 * Emit a custom event with current transform values
+	 * to allow the properties panel to sync during manipulation.
+	 *
+	 * Events are emitted synchronously to ensure the UI updates before
+	 * expensive rendering operations. The receiving handler (syncPropertiesFromLayer)
+	 * only updates a few input values, which is very fast.
 	 *
 	 * @param {Object} layer The layer object to serialize and emit
+	 * @param {boolean} [_force=false] Deprecated parameter, kept for compatibility
 	 */
-	emitTransforming ( layer ) {
+	emitTransforming ( layer, _force ) {
 		if ( !layer ) {
 			return;
 		}
-		this.lastTransformPayload = layer;
-		if ( this.transformEventScheduled ) {
-			return;
-		}
-		this.transformEventScheduled = true;
-		window.requestAnimationFrame( () => {
-			this.transformEventScheduled = false;
-			const target = ( this.manager.editor && this.manager.editor.container ) ||
-				this.manager.container || document;
-			try {
-				const detail = {
-					id: this.lastTransformPayload.id,
-					layer: JSON.parse( JSON.stringify( this.lastTransformPayload ) )
-				};
-				const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
-				target.dispatchEvent( evt );
-			} catch ( e ) {
-				if ( window.layersErrorHandler ) {
-					window.layersErrorHandler.handleError( e, 'TransformController.emitTransformEvent', 'canvas' );
-				}
+
+		// Emit synchronously - DOM updates are fast, and this ensures
+		// the UI updates before blocking render operations
+		const target = ( this.manager.editor && this.manager.editor.container ) ||
+			this.manager.container || document;
+		try {
+			const detail = {
+				id: layer.id,
+				layer: JSON.parse( JSON.stringify( layer ) )
+			};
+			const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
+			target.dispatchEvent( evt );
+		} catch ( e ) {
+			if ( window.layersErrorHandler ) {
+				window.layersErrorHandler.handleError( e, 'TransformController.emitTransformEvent', 'canvas' );
 			}
-		} );
+		}
 	}
 
 	/**

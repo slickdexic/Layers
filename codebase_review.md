@@ -17,7 +17,7 @@ The extension is **fully functional and production-ready** with professional sec
 **Key Strengths:**
 
 - ✅ **7,852 tests passing** (0 failures, 136 test suites)
-- ✅ **94.2% statement coverage, 82.9% branch coverage**
+- ✅ **94.0% statement coverage, 82.9% branch coverage**
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 12 working drawing tools with named layer sets
 - ✅ Layer grouping/folders feature complete
@@ -47,17 +47,17 @@ All metrics collected directly from the codebase via automated tooling.
 |--------|-------|--------|--------|
 | Total JS files | **102** | - | ✅ Feature-rich |
 | Total JS lines | **~54,700** | <75,000 | ✅ Under target |
-| ES6 classes | **83** | 70+ | ✅ |
+| ES6 classes | **92** | 70+ | ✅ |
 | Files >1,000 lines | **11** | 0 | ⏳ Managed with delegation |
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disable comments | **8** | <15 | ✅ Below target |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **7,840** | - | ✅ |
+| Jest tests passing | **7,852** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
-| Statement coverage | **94.2%** | 85%+ | ✅ Excellent |
-| Branch coverage | **82.6%** | 75%+ | ✅ Good |
-| Function coverage | **91.6%** | 80%+ | ✅ |
-| Line coverage | **94.5%** | 85%+ | ✅ |
+| Statement coverage | **94.0%** | 85%+ | ✅ Excellent |
+| Branch coverage | **82.9%** | 75%+ | ✅ Good |
+| Function coverage | **91.9%** | 80%+ | ✅ |
+| Line coverage | **94.3%** | 85%+ | ✅ |
 
 ### Files Over 1,000 Lines (God Classes)
 
@@ -371,20 +371,20 @@ The extension is **production-ready and fully functional**. Security implementat
 1. **God classes are a maintenance burden** - 11 files >1,000 lines (26% of codebase) create cognitive load, even with delegation
 2. **ArrowRenderer.js and ToolbarStyleControls.js crossed 1000 lines** - Grew due to curved arrows and live color preview features
 3. **Over-engineered in places** - Some modules have deep abstraction layers that add complexity
-4. **Documentation sprawl** - 20 markdown files in docs/ with some overlapping content
+4. **Documentation sprawl** - 21 markdown files in docs/ with some overlapping content
 5. **E2E test coverage is minimal** - Only ~1,200 lines of Playwright tests vs 7,840 Jest tests
 6. **PHP line ending warnings** - 14 files have CRLF line endings (auto-fixable, cosmetic only)
 
 ### Bottom Line
 
-This extension is in **good shape** with manageable technical debt. The codebase is functional (7,840 tests, 94.2% coverage, feature-complete). God classes are well-delegated with clear patterns.
+This extension is in **good shape** with manageable technical debt. The codebase is functional (7,852 tests, 94.0% coverage, feature-complete). God classes are well-delegated with clear patterns.
 
 **Honest rating: 8.5/10**
 
 Deductions:
 - -0.75 for 11 god classes (26% of codebase in large files)
 - -0.5 for mobile UI not responsive (basic touch works, but not mobile-friendly)
-- -0.25 for documentation sprawl (22 files in docs/, some overlap)
+- -0.25 for documentation sprawl (18 files in docs/, reduced from 21)
 
 ---
 

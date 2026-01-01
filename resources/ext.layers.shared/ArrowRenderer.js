@@ -763,10 +763,7 @@
 			const effectiveHeadScale = headScale || 1.0;
 			const headDepth = arrowSize * 1.3 * effectiveHeadScale;
 
-			// Apply shadow if enabled
-			if ( this.hasShadowEnabled( layer ) ) {
-				this.applyShadow( layer, shadowScale );
-			}
+			const spread = this.getShadowSpread( layer, shadowScale );
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
@@ -870,6 +867,102 @@
 
 				this.ctx.closePath();
 			};
+
+			// Helper to build expanded path for spread shadow (includes heads)
+			const buildExpandedArrowPath = ( ctx, extraSpread ) => {
+				const expandedHalfShaft = halfShaft + extraSpread;
+				const expandedTailExtra = tailExtra + extraSpread;
+				const expandedHeadScale = ( arrowSize + extraSpread ) / arrowSize * effectiveHeadScale;
+
+				const startTopX = curveStartX + Math.cos( startPerp ) * ( expandedHalfShaft + expandedTailExtra );
+				const startTopY = curveStartY + Math.sin( startPerp ) * ( expandedHalfShaft + expandedTailExtra );
+				const ctrlTopX = cx + Math.cos( ctrlPerp ) * expandedHalfShaft;
+				const ctrlTopY = cy + Math.sin( ctrlPerp ) * expandedHalfShaft;
+				const endTopX = curveEndX + Math.cos( endPerp ) * expandedHalfShaft;
+				const endTopY = curveEndY + Math.sin( endPerp ) * expandedHalfShaft;
+
+				const startBotX = curveStartX - Math.cos( startPerp ) * ( expandedHalfShaft + expandedTailExtra );
+				const startBotY = curveStartY - Math.sin( startPerp ) * ( expandedHalfShaft + expandedTailExtra );
+				const ctrlBotX = cx - Math.cos( ctrlPerp ) * expandedHalfShaft;
+				const ctrlBotY = cy - Math.sin( ctrlPerp ) * expandedHalfShaft;
+				const endBotX = curveEndX - Math.cos( endPerp ) * expandedHalfShaft;
+				const endBotY = curveEndY - Math.sin( endPerp ) * expandedHalfShaft;
+
+				ctx.beginPath();
+				if ( arrowStyle === 'double' ) {
+					// Get expanded tail head vertices (pointing backwards, right-to-left order)
+					const tailHeadVertices = this._buildHeadVertices(
+						x1, y1, startAngle + Math.PI, expandedHalfShaft, arrowSize, expandedHeadScale, headType, false
+					);
+
+					ctx.moveTo( tailHeadVertices[ 0 ].x, tailHeadVertices[ 0 ].y );
+					for ( let i = 1; i < tailHeadVertices.length; i++ ) {
+						ctx.lineTo( tailHeadVertices[ i ].x, tailHeadVertices[ i ].y );
+					}
+
+					ctx.lineTo( startTopX, startTopY );
+					ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+
+					// Draw expanded front head vertices
+					const frontHeadVertices = this._buildHeadVertices(
+						x2, y2, endAngle, expandedHalfShaft, arrowSize, expandedHeadScale, headType, true
+					);
+					for ( const v of frontHeadVertices ) {
+						ctx.lineTo( v.x, v.y );
+					}
+
+					ctx.lineTo( endBotX, endBotY );
+					ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+				} else if ( arrowStyle === 'single' ) {
+					ctx.moveTo( startTopX, startTopY );
+					ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+
+					// Draw expanded head vertices
+					const headVertices = this._buildHeadVertices(
+						x2, y2, endAngle, expandedHalfShaft, arrowSize, expandedHeadScale, headType, true
+					);
+					for ( const v of headVertices ) {
+						ctx.lineTo( v.x, v.y );
+					}
+
+					ctx.lineTo( endBotX, endBotY );
+					ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+				} else {
+					// No head (arrowStyle === 'none')
+					ctx.moveTo( startTopX, startTopY );
+					ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+					ctx.lineTo( endBotX, endBotY );
+					ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+				}
+				ctx.closePath();
+			};
+
+			// Shadow handling with spread
+			if ( spread > 0 && this.hasShadowEnabled( layer ) ) {
+				// Draw fill shadow at fill opacity
+				if ( hasFill && !isBlurFill ) {
+					const fillShadowOpacity = baseOpacity * fillOpacity;
+					this.drawSpreadShadow( layer, shadowScale, spread, ( ctx ) => {
+						buildExpandedArrowPath( ctx, spread );
+					}, fillShadowOpacity );
+				}
+
+				// Draw stroke shadow at stroke opacity
+				if ( hasStroke ) {
+					const strokeShadowOpacity = baseOpacity * strokeOpacity;
+					const expandedStrokeWidth = strokeWidth + spread * 2;
+					this.drawSpreadShadowStroke( layer, shadowScale, expandedStrokeWidth, ( ctx ) => {
+						buildExpandedArrowPath( ctx, 0 );
+					}, strokeShadowOpacity );
+				}
+			} else if ( this.hasShadowEnabled( layer ) ) {
+				this.applyShadow( layer, shadowScale );
+			}
+
+			// Clear shadow for actual drawing if spread was used
+			if ( spread > 0 ) {
+				this.clearShadow();
+			}
 
 			// Draw fill (blur fill or regular)
 			if ( hasFill ) {

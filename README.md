@@ -2,17 +2,17 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.2%25-brightgreen)](coverage/lcov-report/index.html)
+[![Coverage](https://img.shields.io/badge/coverage-94.0%25-brightgreen)](coverage/lcov-report/index.html)
 [![Tests](https://img.shields.io/badge/tests-7%2C852%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.4.0 (December 2025)  
+> **Version:** 1.4.0-REL1_43 (December 2025)  
 > **Status:** ✅ Production-ready  
-> **Requires:** MediaWiki 1.44+, PHP 8.1+
+> **Requires:** MediaWiki 1.43+, PHP 8.1+
 >
-> **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
+> **For MediaWiki 1.44+:** Use the [`main` branch](https://github.com/slickdexic/Layers/tree/main).  
 > **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).
 
 ---
@@ -229,7 +229,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~10,100 lines across 31 files
-- **Frontend:** HTML5 Canvas editor with 102 JS files (~54,700 lines), 83 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 102 JS files (~54,700 lines), 92 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -238,8 +238,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 | Metric | Value |
 |--------|-------|
 | Jest tests | 7,852 passing |
-| Statement coverage | 94.2% |
-| Branch coverage | 82.6% |
+| Statement coverage | 94.0% |
+| Branch coverage | 82.9% |
 | Test suites | 136 |
 
 **Security:**
@@ -286,12 +286,12 @@ npm run test:js -- --coverage
 |--------|-------|--------|
 | Total JS files | 102 | ✅ |
 | Total JS lines | ~54,700 | ✅ Well under 75K target |
-| ES6 classes | 83 | ✅ |
+| ES6 classes | 92 | ✅ |
 | God classes (>1000 lines) | 11 | ⚠️ Technical debt (all use delegation) |
 | Tests passing | 7,852 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.2% | ✅ Excellent |
-| Branch coverage | 82.6% | ✅ |
+| Statement coverage | 94.0% | ✅ Excellent |
+| Branch coverage | 82.9% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
