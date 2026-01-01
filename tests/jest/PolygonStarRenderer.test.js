@@ -455,6 +455,42 @@ describe( 'PolygonStarRenderer', () => {
 			expect( ctx.shadowBlur ).toBe( 0 );
 			renderer.destroy();
 		} );
+
+		it( 'should fallback to local getShadowSpread when no shapeRenderer and shadow disabled', () => {
+			const renderer = new PolygonStarRenderer( ctx );
+			const layer = { shadow: false };
+			const result = renderer.getShadowSpread( layer, { avg: 1 } );
+			expect( result ).toBe( 0 );
+			renderer.destroy();
+		} );
+
+		it( 'should fallback to local getShadowSpread when no shapeRenderer and shadow enabled', () => {
+			const renderer = new PolygonStarRenderer( ctx );
+			const layer = { shadow: true, shadowSpread: 10 };
+			const result = renderer.getShadowSpread( layer, { avg: 2 } );
+			expect( result ).toBe( 20 ); // spread * avg
+			renderer.destroy();
+		} );
+
+		it( 'should handle drawSpreadShadow with no shapeRenderer (no-op)', () => {
+			const renderer = new PolygonStarRenderer( ctx );
+			const layer = { shadow: true };
+			// Should not throw - it's a no-op when shapeRenderer is null
+			expect( () => {
+				renderer.drawSpreadShadow( layer, { avg: 1 }, 5, () => {}, 1 );
+			} ).not.toThrow();
+			renderer.destroy();
+		} );
+
+		it( 'should handle drawSpreadShadowStroke with no shapeRenderer (no-op)', () => {
+			const renderer = new PolygonStarRenderer( ctx );
+			const layer = { shadow: true };
+			// Should not throw - it's a no-op when shapeRenderer is null
+			expect( () => {
+				renderer.drawSpreadShadowStroke( layer, { avg: 1 }, 2, () => {}, 1 );
+			} ).not.toThrow();
+			renderer.destroy();
+		} );
 	} );
 
 	describe( 'drawRoundedPolygonPath', () => {
@@ -608,6 +644,314 @@ describe( 'PolygonStarRenderer', () => {
 
 			expect( () => {
 				polygonStarRenderer.drawPolygon( layer );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle polygon with cornerRadius using fallback path', () => {
+			// Remove PolygonGeometry to test fallback
+			const savedPolygonGeometry = window.Layers.Utils.PolygonGeometry;
+			window.Layers.Utils.PolygonGeometry = null;
+
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				cornerRadius: 5,
+				fill: '#00ffff'
+			};
+
+			expect( () => {
+				polygonStarRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+			} ).not.toThrow();
+
+			// Restore
+			window.Layers.Utils.PolygonGeometry = savedPolygonGeometry;
+		} );
+
+		it( 'should handle star with pointRadius/valleyRadius using fallback path', () => {
+			// Remove PolygonGeometry to test fallback
+			const savedPolygonGeometry = window.Layers.Utils.PolygonGeometry;
+			window.Layers.Utils.PolygonGeometry = null;
+
+			const layer = {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				pointRadius: 3,
+				valleyRadius: 2,
+				fill: '#ffcc00'
+			};
+
+			expect( () => {
+				polygonStarRenderer.drawStar( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+			} ).not.toThrow();
+
+			// Restore
+			window.Layers.Utils.PolygonGeometry = savedPolygonGeometry;
+		} );
+	} );
+
+	describe( 'polygon with shadows', () => {
+		let mockShapeRenderer;
+
+		beforeEach( () => {
+			mockShapeRenderer = {
+				clearShadow: jest.fn(),
+				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				getShadowSpread: jest.fn().mockReturnValue( 0 ),
+				applyShadow: jest.fn(),
+				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, opacity ) => {
+					// Call drawFn to test path drawing
+					drawFn( ctx );
+				} ),
+				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, opacity ) => {
+					drawFn( ctx );
+				} )
+			};
+			polygonStarRenderer.setShapeRenderer( mockShapeRenderer );
+		} );
+
+		it( 'should draw polygon with shadow and fill', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				fill: '#00ffff',
+				fillOpacity: 1,
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 10
+			};
+
+			polygonStarRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockShapeRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw polygon with shadow and stroke', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				stroke: '#ff0000',
+				strokeWidth: 2,
+				strokeOpacity: 1,
+				shadow: true
+			};
+
+			polygonStarRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockShapeRenderer.drawSpreadShadowStroke ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw polygon with shadow spread', () => {
+			mockShapeRenderer.getShadowSpread.mockReturnValue( 5 );
+
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				fill: '#00ffff',
+				fillOpacity: 1,
+				shadow: true,
+				shadowSpread: 5
+			};
+
+			polygonStarRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockShapeRenderer.getShadowSpread ).toHaveBeenCalled();
+			expect( mockShapeRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw polygon shadow with cornerRadius using PolygonGeometry', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				cornerRadius: 5,
+				fill: '#00ffff',
+				fillOpacity: 1,
+				shadow: true
+			};
+
+			polygonStarRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockShapeRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw polygon shadow without PolygonGeometry (fallback path)', () => {
+			// Remove PolygonGeometry to test fallback
+			const savedPolygonGeometry = window.Layers.Utils.PolygonGeometry;
+			window.Layers.Utils.PolygonGeometry = null;
+
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				fill: '#00ffff',
+				fillOpacity: 1,
+				shadow: true
+			};
+
+			polygonStarRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockShapeRenderer.drawSpreadShadow ).toHaveBeenCalled();
+
+			// Restore
+			window.Layers.Utils.PolygonGeometry = savedPolygonGeometry;
+		} );
+	} );
+
+	describe( 'star with shadows', () => {
+		let mockShapeRenderer;
+
+		beforeEach( () => {
+			mockShapeRenderer = {
+				clearShadow: jest.fn(),
+				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				getShadowSpread: jest.fn().mockReturnValue( 0 ),
+				applyShadow: jest.fn(),
+				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, opacity ) => {
+					drawFn( ctx );
+				} ),
+				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, opacity ) => {
+					drawFn( ctx );
+				} )
+			};
+			polygonStarRenderer.setShapeRenderer( mockShapeRenderer );
+		} );
+
+		it( 'should draw star with shadow and fill', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				fill: '#ffcc00',
+				fillOpacity: 1,
+				shadow: true
+			};
+
+			polygonStarRenderer.drawStar( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockShapeRenderer.drawSpreadShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw star with shadow and stroke', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				stroke: '#993300',
+				strokeWidth: 2,
+				strokeOpacity: 1,
+				shadow: true
+			};
+
+			polygonStarRenderer.drawStar( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockShapeRenderer.drawSpreadShadowStroke ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw star shadow without PolygonGeometry (fallback path)', () => {
+			// Remove PolygonGeometry to test fallback
+			const savedPolygonGeometry = window.Layers.Utils.PolygonGeometry;
+			window.Layers.Utils.PolygonGeometry = null;
+
+			const layer = {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				fill: '#ffcc00',
+				fillOpacity: 1,
+				shadow: true
+			};
+
+			polygonStarRenderer.drawStar( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockShapeRenderer.drawSpreadShadow ).toHaveBeenCalled();
+
+			// Restore
+			window.Layers.Utils.PolygonGeometry = savedPolygonGeometry;
+		} );
+	} );
+
+	describe( 'blur fill', () => {
+		let mockShapeRenderer;
+		let mockEffectsRenderer;
+
+		beforeEach( () => {
+			mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			mockShapeRenderer = {
+				clearShadow: jest.fn(),
+				hasShadowEnabled: jest.fn().mockReturnValue( false ),
+				getShadowSpread: jest.fn().mockReturnValue( 0 ),
+				effectsRenderer: mockEffectsRenderer
+			};
+			polygonStarRenderer.setShapeRenderer( mockShapeRenderer );
+		} );
+
+		it( 'should draw polygon with blur fill', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				fill: 'blur',
+				fillOpacity: 1,
+				blurRadius: 10
+			};
+
+			polygonStarRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
+		} );
+
+		it( 'should draw star with blur fill', () => {
+			const layer = {
+				x: 100,
+				y: 100,
+				outerRadius: 50,
+				innerRadius: 25,
+				points: 5,
+				fill: 'blur',
+				fillOpacity: 1
+			};
+
+			polygonStarRenderer.drawStar( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
+		} );
+
+		it( 'should not draw blur fill when effectsRenderer is missing', () => {
+			mockShapeRenderer.effectsRenderer = null;
+
+			const layer = {
+				x: 100,
+				y: 100,
+				radius: 50,
+				sides: 6,
+				fill: 'blur',
+				fillOpacity: 1
+			};
+
+			expect( () => {
+				polygonStarRenderer.drawPolygon( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
 			} ).not.toThrow();
 		} );
 	} );

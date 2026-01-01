@@ -111,8 +111,8 @@ describe('HitTestController', () => {
                 locked: false
             },
             {
-                id: 'blur1',
-                type: 'blur',
+                id: 'rect1',
+                type: 'rectangle',
                 x: 300,
                 y: 500,
                 width: 200,
@@ -121,8 +121,8 @@ describe('HitTestController', () => {
                 locked: false
             },
             {
-                id: 'blur2',
-                type: 'blur',
+                id: 'rect2',
+                type: 'rectangle',
                 x: 550,
                 y: 500,
                 width: 150,
@@ -335,6 +335,72 @@ describe('HitTestController', () => {
         });
     });
 
+    describe('isPointInLayer - textbox', () => {
+        test('should detect point inside textbox', () => {
+            const textbox = {
+                id: 'textbox1',
+                type: 'textbox',
+                x: 100,
+                y: 100,
+                width: 200,
+                height: 100,
+                text: 'Hello World',
+                visible: true,
+                locked: false
+            };
+            const point = { x: 200, y: 150 };
+            expect(hitTestController.isPointInLayer(point, textbox)).toBe(true);
+        });
+
+        test('should detect point outside textbox', () => {
+            const textbox = {
+                id: 'textbox2',
+                type: 'textbox',
+                x: 100,
+                y: 100,
+                width: 200,
+                height: 100,
+                visible: true,
+                locked: false
+            };
+            const point = { x: 50, y: 50 };
+            expect(hitTestController.isPointInLayer(point, textbox)).toBe(false);
+        });
+    });
+
+    describe('isPointInLayer - image', () => {
+        test('should detect point inside image layer', () => {
+            const imageLayer = {
+                id: 'image1',
+                type: 'image',
+                x: 100,
+                y: 100,
+                width: 200,
+                height: 150,
+                src: 'data:image/png;base64,test',
+                visible: true,
+                locked: false
+            };
+            const point = { x: 200, y: 175 };
+            expect(hitTestController.isPointInLayer(point, imageLayer)).toBe(true);
+        });
+
+        test('should detect point outside image layer', () => {
+            const imageLayer = {
+                id: 'image2',
+                type: 'image',
+                x: 100,
+                y: 100,
+                width: 200,
+                height: 150,
+                visible: true,
+                locked: false
+            };
+            const point = { x: 50, y: 50 };
+            expect(hitTestController.isPointInLayer(point, imageLayer)).toBe(false);
+        });
+    });
+
     describe('isPointInLayer - circle', () => {
         test('should detect point inside circle', () => {
             const layer = mockLayers[1]; // circle1
@@ -379,6 +445,68 @@ describe('HitTestController', () => {
             const point = { x: 100, y: 100 };
             expect(hitTestController.isPointInEllipse(point, layer)).toBe(false);
         });
+
+        test('should detect point inside ellipse directly', () => {
+            const layer = {
+                type: 'ellipse',
+                x: 100,
+                y: 100,
+                radiusX: 50,
+                radiusY: 30
+            };
+            // Point at center should be inside
+            const centerPoint = { x: 100, y: 100 };
+            expect(hitTestController.isPointInEllipse(centerPoint, layer)).toBe(true);
+
+            // Point on horizontal edge should be inside
+            const edgeX = { x: 149, y: 100 };
+            expect(hitTestController.isPointInEllipse(edgeX, layer)).toBe(true);
+
+            // Point on vertical edge should be inside
+            const edgeY = { x: 100, y: 129 };
+            expect(hitTestController.isPointInEllipse(edgeY, layer)).toBe(true);
+        });
+
+        test('should detect point outside ellipse directly', () => {
+            const layer = {
+                type: 'ellipse',
+                x: 100,
+                y: 100,
+                radiusX: 50,
+                radiusY: 30
+            };
+            // Point outside horizontally
+            const outsideX = { x: 160, y: 100 };
+            expect(hitTestController.isPointInEllipse(outsideX, layer)).toBe(false);
+
+            // Point outside vertically
+            const outsideY = { x: 100, y: 140 };
+            expect(hitTestController.isPointInEllipse(outsideY, layer)).toBe(false);
+        });
+
+        test('should handle ellipse with only radiusY zero', () => {
+            const layer = {
+                type: 'ellipse',
+                x: 100,
+                y: 100,
+                radiusX: 50,
+                radiusY: 0
+            };
+            const point = { x: 100, y: 100 };
+            expect(hitTestController.isPointInEllipse(point, layer)).toBe(false);
+        });
+
+        test('should handle ellipse with only radiusX zero', () => {
+            const layer = {
+                type: 'ellipse',
+                x: 100,
+                y: 100,
+                radiusX: 0,
+                radiusY: 30
+            };
+            const point = { x: 100, y: 100 };
+            expect(hitTestController.isPointInEllipse(point, layer)).toBe(false);
+        });
     });
 
     describe('isPointInLayer - text', () => {
@@ -412,6 +540,63 @@ describe('HitTestController', () => {
             const layer = mockLayers[5]; // arrow1
             const point = { x: 400, y: 410 };
             expect(hitTestController.isPointInLayer(point, layer)).toBe(true);
+        });
+
+        test('should detect point near curved arrow (Bézier curve)', () => {
+            const curvedArrow = {
+                id: 'curvedArrow1',
+                type: 'arrow',
+                x1: 100,
+                y1: 100,
+                x2: 300,
+                y2: 100,
+                controlX: 200,
+                controlY: 0, // control point above the line - makes it curved
+                strokeWidth: 2,
+                visible: true,
+                locked: false
+            };
+            // Point near the top of the curve
+            const point = { x: 200, y: 55 };
+            expect(hitTestController.isPointInLayer(point, curvedArrow)).toBe(true);
+        });
+
+        test('should detect point far from curved arrow', () => {
+            const curvedArrow = {
+                id: 'curvedArrow2',
+                type: 'arrow',
+                x1: 100,
+                y1: 100,
+                x2: 300,
+                y2: 100,
+                controlX: 200,
+                controlY: 0,
+                strokeWidth: 2,
+                visible: true,
+                locked: false
+            };
+            // Point far from curve
+            const point = { x: 200, y: 200 };
+            expect(hitTestController.isPointInLayer(point, curvedArrow)).toBe(false);
+        });
+
+        test('should treat arrow without curve offset as straight line', () => {
+            // Control point at midpoint = no curve (straight line)
+            const straightArrow = {
+                id: 'straightArrow',
+                type: 'arrow',
+                x1: 100,
+                y1: 100,
+                x2: 300,
+                y2: 100,
+                controlX: 200,  // midpoint
+                controlY: 100,  // midpoint - no offset
+                strokeWidth: 2,
+                visible: true,
+                locked: false
+            };
+            const point = { x: 200, y: 104 };
+            expect(hitTestController.isPointInLayer(point, straightArrow)).toBe(true);
         });
     });
 
@@ -472,6 +657,77 @@ describe('HitTestController', () => {
             const layer = mockLayers[7];
             const point = { x: 950, y: 500 };
             expect(hitTestController.isPointInLayer(point, layer)).toBe(false);
+        });
+
+        test('should handle star with points as number instead of starPoints', () => {
+            // This tests the fallback: (typeof layer.points === 'number' ? layer.points : null)
+            const layer = {
+                id: 'starWithNumericPoints',
+                type: 'star',
+                x: 100,
+                y: 100,
+                points: 6, // Using 'points' instead of 'starPoints'
+                outerRadius: 50,
+                innerRadius: 20,
+                rotation: 0,
+                visible: true,
+                locked: false
+            };
+            // Point at center should be inside
+            const centerPoint = { x: 100, y: 100 };
+            expect(hitTestController.isPointInLayer(centerPoint, layer)).toBe(true);
+        });
+
+        test('should handle star using radius instead of outerRadius', () => {
+            const layer = {
+                id: 'starWithRadius',
+                type: 'star',
+                x: 100,
+                y: 100,
+                starPoints: 5,
+                radius: 50, // Using 'radius' instead of 'outerRadius'
+                rotation: 0,
+                visible: true,
+                locked: false
+            };
+            // Point at center should be inside
+            const centerPoint = { x: 100, y: 100 };
+            expect(hitTestController.isPointInLayer(centerPoint, layer)).toBe(true);
+        });
+
+        test('should calculate innerRadius from outerRadius when not provided', () => {
+            const layer = {
+                id: 'starNoInner',
+                type: 'star',
+                x: 100,
+                y: 100,
+                starPoints: 5,
+                outerRadius: 50,
+                // No innerRadius - should default to outerRadius * 0.4
+                rotation: 0,
+                visible: true,
+                locked: false
+            };
+            // Point at center should be inside
+            const centerPoint = { x: 100, y: 100 };
+            expect(hitTestController.isPointInLayer(centerPoint, layer)).toBe(true);
+        });
+
+        test('should handle polygon with outerRadius property', () => {
+            const layer = {
+                id: 'polygonWithOuterRadius',
+                type: 'polygon',
+                x: 100,
+                y: 100,
+                sides: 5,
+                outerRadius: 50, // Using 'outerRadius' instead of 'radius'
+                rotation: 0,
+                visible: true,
+                locked: false
+            };
+            // Point at center should be inside
+            const centerPoint = { x: 100, y: 100 };
+            expect(hitTestController.isPointInLayer(centerPoint, layer)).toBe(true);
         });
     });
 
@@ -576,6 +832,108 @@ describe('HitTestController', () => {
                 // no tolerance - should default to 6
             );
             expect(result).toBe(true);
+        });
+    });
+
+    describe('isPointNearQuadraticBezier', () => {
+        test('should return true for point near curved path', () => {
+            // Quadratic Bézier from (0,0) to (200,0) with control at (100,-50)
+            const result = hitTestController.isPointNearQuadraticBezier(
+                { x: 100, y: -23 },  // Near the apex of the curve
+                0, 0,                 // start
+                100, -50,             // control
+                200, 0,               // end
+                10                    // tolerance
+            );
+            expect(result).toBe(true);
+        });
+
+        test('should return false for point far from curved path', () => {
+            const result = hitTestController.isPointNearQuadraticBezier(
+                { x: 100, y: 50 },   // Far below the curve
+                0, 0,
+                100, -50,
+                200, 0,
+                10
+            );
+            expect(result).toBe(false);
+        });
+
+        test('should return true for point at start of curve', () => {
+            const result = hitTestController.isPointNearQuadraticBezier(
+                { x: 5, y: 2 },
+                0, 0,
+                100, -50,
+                200, 0,
+                10
+            );
+            expect(result).toBe(true);
+        });
+
+        test('should return true for point at end of curve', () => {
+            const result = hitTestController.isPointNearQuadraticBezier(
+                { x: 195, y: 2 },
+                0, 0,
+                100, -50,
+                200, 0,
+                10
+            );
+            expect(result).toBe(true);
+        });
+
+        test('should use default tolerance when not provided', () => {
+            const result = hitTestController.isPointNearQuadraticBezier(
+                { x: 100, y: -23 },
+                0, 0,
+                100, -50,
+                200, 0
+                // no tolerance - should default to 6
+            );
+            expect(result).toBe(true);
+        });
+    });
+
+    describe('pointToQuadraticBezierDistance', () => {
+        test('should return 0 for point exactly on curve', () => {
+            // Point at the start of the curve
+            const dist = hitTestController.pointToQuadraticBezierDistance(
+                0, 0,          // point at start
+                0, 0,          // start
+                100, -50,      // control
+                200, 0         // end
+            );
+            expect(dist).toBe(0);
+        });
+
+        test('should return small distance for point near curve', () => {
+            // Point near the middle of a curve
+            const dist = hitTestController.pointToQuadraticBezierDistance(
+                100, -25,      // point near apex (apex is at ~-25)
+                0, 0,
+                100, -50,
+                200, 0
+            );
+            expect(dist).toBeLessThan(5);
+        });
+
+        test('should return large distance for point far from curve', () => {
+            const dist = hitTestController.pointToQuadraticBezierDistance(
+                100, 100,      // point far below
+                0, 0,
+                100, -50,
+                200, 0
+            );
+            expect(dist).toBeGreaterThan(100);
+        });
+
+        test('should handle S-curve (extreme control point)', () => {
+            const dist = hitTestController.pointToQuadraticBezierDistance(
+                50, 50,        // test point
+                0, 0,          // start
+                100, 100,      // control - makes curve bow outward
+                200, 0         // end
+            );
+            expect(dist).toBeLessThan(20);
         });
     });
 

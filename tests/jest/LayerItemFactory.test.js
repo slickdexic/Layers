@@ -253,12 +253,6 @@ describe('LayerItemFactory', () => {
             expect(name).toBe('Drawing');
         });
 
-        test('should return "Blur Effect" for blur layers', () => {
-            const layer = { type: 'blur' };
-            const name = factory.getDefaultLayerName(layer);
-            expect(name).toBe('Blur Effect');
-        });
-
         test('should return "Layer" for unknown types', () => {
             const layer = { type: 'unknown' };
             const name = factory.getDefaultLayerName(layer);

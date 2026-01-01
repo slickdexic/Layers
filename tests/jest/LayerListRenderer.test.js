@@ -47,8 +47,7 @@ const mockWindow = {
 			STAR: 'star',
 			ARROW: 'arrow',
 			LINE: 'line',
-			PATH: 'path',
-			BLUR: 'blur'
+			PATH: 'path'
 		}
 	}
 };
@@ -453,8 +452,7 @@ describe( 'LayerListRenderer', () => {
 				star: 'Star',
 				arrow: 'Arrow',
 				line: 'Line',
-				path: 'Drawing',
-				blur: 'Blur Effect'
+				path: 'Drawing'
 			};
 
 			for ( const [ type, expected ] of Object.entries( types ) ) {

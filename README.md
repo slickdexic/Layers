@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94.0%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-7%2C852%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-7%2C881%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.4.0-REL1_43 (December 2025)  
+> **Version:** 1.4.1-REL1_43 (January 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.43+, PHP 8.1+
 >
@@ -27,7 +27,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - ✅ Original images preserved (non-destructive)
 - ✅ Modern, intuitive editor UI
-- ✅ 12 drawing tools with customizable properties
+- ✅ 11 drawing tools with customizable properties
 - ✅ Multiple named layer sets per image with version history
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
 
@@ -35,7 +35,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 ## Features
 
-### Drawing Tools (12 Available)
+### Drawing Tools (11 Available)
 
 | Tool          | Shortcut | Purpose                                      |
 | ------------- | -------- | -------------------------------------------- |
@@ -50,7 +50,6 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Star          | S        | Draw star shapes                             |
 | Arrow         | A        | Annotation arrows                            |
 | Line          | L        | Straight lines                               |
-| Blur          | B        | Apply blur effect                            |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers).
 
@@ -229,7 +228,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~10,100 lines across 31 files
-- **Frontend:** HTML5 Canvas editor with 102 JS files (~54,700 lines), 92 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 105 JS files (~55,000 lines), 93 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -237,10 +236,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 7,852 passing |
+| Jest tests | 7,881 passing |
 | Statement coverage | 94.0% |
 | Branch coverage | 82.9% |
-| Test suites | 136 |
+| Test suites | 137 |
 
 **Security:**
 
@@ -284,11 +283,11 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 102 | ✅ |
-| Total JS lines | ~54,700 | ✅ Well under 75K target |
-| ES6 classes | 92 | ✅ |
+| Total JS files | 105 | ✅ |
+| Total JS lines | ~55,000 | ✅ Well under 75K target |
+| ES6 classes | 93 | ✅ |
 | God classes (>1000 lines) | 11 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 7,852 | ✅ |
+| Tests passing | 7,881 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 94.0% | ✅ Excellent |
 | Branch coverage | 82.9% | ✅ |

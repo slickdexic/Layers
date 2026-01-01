@@ -80,8 +80,8 @@ describe( 'ResizeCalculator', () => {
 			expect( result.fontSize ).toBeDefined();
 		} );
 
-		it( 'should dispatch to calculateRectangleResize for blur', () => {
-			const layer = { type: 'blur', x: 0, y: 0, width: 100, height: 100 };
+		it( 'should dispatch to calculateRectangleResize for textbox', () => {
+			const layer = { type: 'textbox', x: 0, y: 0, width: 100, height: 100 };
 			const result = ResizeCalculator.calculateResize( layer, 'se', 10, 10, {} );
 			expect( result ).not.toBeNull();
 		} );

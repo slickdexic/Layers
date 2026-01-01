@@ -136,12 +136,6 @@
 				category: 'annotation',
 				createsLayer: true
 			} );
-
-			this.register( 'blur', {
-				cursor: 'crosshair',
-				category: 'annotation',
-				createsLayer: true
-			} );
 		}
 
 		/**

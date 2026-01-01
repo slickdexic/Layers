@@ -1,34 +1,34 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** December 31, 2025  
+**Last Updated:** January 1, 2026  
 **Status:** ✅ No Critical Issues - Production Ready  
-**Version:** 1.4.0  
+**Version:** 1.4.1  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-The extension is **production-ready** with layer grouping feature complete. All god classes use delegation patterns. All coverage gaps have been addressed. **All PHP warnings fixed (45 → 0).**
+The extension is **production-ready** with layer grouping feature complete. All god classes use delegation patterns. All coverage gaps have been addressed. **All PHP warnings fixed (45 → 0).** Three major features added in v1.3.3-v1.4.1: curved arrows, live color preview, live article preview.
 
 **Current Rating: 8.5/10**
 
 ---
 
-## Current State (December 31, 2025)
+## Current State (January 1, 2026)
 
 | Area | Status | Details |
 |------|--------|--------|
-| **Functionality** | ✅ Complete | 12 tools + layer grouping with folders |
+| **Functionality** | ✅ Complete | 11 tools + layer grouping + curved arrows |
 | **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
-| **Testing** | ✅ Excellent | 7,852 tests (136 suites), 94.0% statement, 82.9% branch, 91.9% function coverage |
-| **ES6 Migration** | ✅ Complete | 92 classes, 0 prototype patterns |
+| **Testing** | ✅ Excellent | 7,881 tests (137 suites), 94.0% statement, 82.9% branch, 91.9% function coverage |
+| **ES6 Migration** | ✅ Complete | 93 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
 | **God Classes** | ⚠️ Managed | 11 files >1,000 lines, all well-delegated |
-| **Codebase Size** | ✅ Healthy | ~54,700 lines (102 files), well under 75K target |
+| **Codebase Size** | ✅ Healthy | ~55,000 lines (105 files), well under 75K target |
 | **Layer Grouping** | ✅ **COMPLETE** | Folders, expand/collapse, visibility cascade, delete options |
-| **Performance** | ✅ Improved | Number inputs debounced in PropertiesForm |
-| **Live Preview** | ✅ **NEW** | FR-10: Changes visible without page edit |
+| **Curved Arrows** | ✅ **COMPLETE** | v1.3.3: Bézier curves with control handles |
+| **Live Preview** | ✅ **COMPLETE** | FR-9, FR-10: Real-time color preview + article preview |
 
 ---
 
@@ -69,7 +69,7 @@ No critical issues. All previously identified P0 issues have been fixed:
 | ShapeRenderer.js | 909 | Stable | ⚠️ Monitor |
 | LayersValidator.js | 854 | Stable | ✅ OK |
 
-**Note:** ToolbarStyleControls.js (1,012 lines) and ArrowRenderer.js (1,217 lines) have now crossed the 1,000 line threshold due to curved arrows and live color preview features.
+**Note:** ToolbarStyleControls.js (1,012 lines) and ArrowRenderer.js (1,310 lines) have now crossed the 1,000 line threshold due to curved arrows and live color preview features.
 
 ### P1.2 ESLint Disable Count
 
@@ -91,19 +91,19 @@ All 11 files exceeding 1,000 lines use proper delegation patterns:
 
 | File | Lines | Pattern | Status |
 |------|-------|---------|--------|
-| **LayerPanel.js** | **2,140** | Facade → 9 controllers | ✅ At limit |
+| **LayerPanel.js** | **2,141** | Facade → 9 controllers | ✅ At limit |
 | CanvasManager.js | 1,877 | Facade → 10 controllers | ✅ Acceptable |
-| Toolbar.js | 1,556 | UI consolidation | ✅ Acceptable |
-| LayersEditor.js | 1,465 | Orchestrator → managers | ✅ Acceptable |
+| Toolbar.js | 1,652 | UI consolidation | ✅ Acceptable |
+| LayersEditor.js | 1,475 | Orchestrator → managers | ✅ Acceptable |
 | SelectionManager.js | 1,359 | Facade → selection helpers | ✅ Acceptable |
-| ToolManager.js | 1,259 | Facade → tool handlers | ✅ Acceptable |
-| CanvasRenderer.js | 1,242 | SelectionRenderer | ✅ Acceptable |
-| **ArrowRenderer.js** | **1,217** | Rendering (curved arrows) | ✅ Acceptable |
+| **ArrowRenderer.js** | **1,310** | Rendering (curved arrows) | ✅ Acceptable |
+| ToolManager.js | 1,214 | Facade → tool handlers | ✅ Acceptable |
 | APIManager.js | 1,182 | APIErrorHandler | ✅ Acceptable |
-| GroupManager.js | 1,132 | New (v1.2.13) | ✅ Acceptable |
-| **ToolbarStyleControls.js** | **1,012** | Style controls (live preview) | ✅ Acceptable |
+| GroupManager.js | 1,132 | v1.2.13 | ✅ Acceptable |
+| CanvasRenderer.js | 1,105 | SelectionRenderer | ✅ Acceptable |
+| ToolbarStyleControls.js | 1,012 | Style controls (live preview) | ✅ Acceptable |
 
-**Total in god classes: ~14,441 lines** (26% of JS codebase)
+**Total in god classes: ~14,459 lines** (26% of JS codebase)
 
 ---
 
@@ -356,12 +356,12 @@ FR-10 Live Article Preview:      ███████████████�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,852 | ✅ |
+| Total tests | 7,881 | ✅ |
 | Statement coverage | 94.0% | ✅ Excellent |
 | Branch coverage | 82.9% | ✅ |
 | Function coverage | 91.9% | ✅ |
 | Line coverage | 94.3% | ✅ |
-| Test suites | 136 | ✅ |
+| Test suites | 137 | ✅ |
 
 ### Files With Excellent Coverage ✅
 
@@ -380,9 +380,9 @@ FR-10 Live Article Preview:      ███████████████�
 
 ### Already Have ✅
 
-- 7,852 passing tests with 94.0% statement coverage
+- 7,881 passing tests with 94.0% statement coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
-- 92 ES6 classes (no legacy patterns)
+- 93 ES6 classes (no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
 - TypeScript definitions (types/layers.d.ts) for IDE IntelliSense
 - Accessible UI with ARIA support and reduced motion preference
@@ -399,6 +399,7 @@ FR-10 Live Article Preview:      ███████████████�
 - Curved arrows with Bézier curves (v1.3.3+)
 - Live color picker preview (v1.3.3+)
 - Live article preview (v1.3.3+)
+- Real-time property panel updates during drag (v1.4.1+)
 
 ### Need for 10/10
 
@@ -525,7 +526,7 @@ The Layers extension is **fully functional and production-ready**. Technical deb
 Deductions:
 - -0.75 for 11 god classes (26% of codebase)
 - -0.5 for mobile UI not responsive (basic touch works)
-- -0.25 for documentation sprawl (18 files in docs/, reduced from 21)
+- -0.25 for documentation sprawl (18 files in docs/)
 
 ### What Would Improve the Rating
 
@@ -539,6 +540,6 @@ Deductions:
 
 ---
 
-*Plan updated: December 31, 2025*  
-*Status: ⚠️ **11 god classes** - Extension is production-ready but technical debt increased with curved arrows and live preview features*  
-*Version: 1.4.0*
+*Plan updated: January 1, 2026*  
+*Status: ⚠️ **11 god classes** - Extension is production-ready with manageable technical debt*  
+*Version: 1.4.1*

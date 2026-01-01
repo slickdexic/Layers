@@ -591,16 +591,6 @@ describe( 'NumericValidator', () => {
 			expect( invalidResult.isValid ).toBe( false );
 		} );
 
-		test( 'validates blur layer with blurRadius', () => {
-			const validResult = createResult();
-			validator.validateNumericProperties( { type: 'blur', blurRadius: 10 }, validResult );
-			expect( validResult.isValid ).toBe( true );
-
-			const invalidResult = createResult();
-			validator.validateNumericProperties( { type: 'blur', blurRadius: 0 }, invalidResult );
-			expect( invalidResult.isValid ).toBe( false );
-		} );
-
 		test( 'validates shadow properties', () => {
 			const validResult = createResult();
 			validator.validateNumericProperties(

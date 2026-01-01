@@ -376,7 +376,7 @@ describe( 'PresetManager', () => {
 		} );
 
 		it( 'should return null for unsupported layer type', () => {
-			const layer = { type: 'blur' }; // blur not in supported tools
+			const layer = { type: 'unknown' }; // unknown type not in supported tools
 
 			const preset = manager.createFromLayer( layer, 'Test' );
 
@@ -546,7 +546,7 @@ describe( 'PresetManager', () => {
 		} );
 
 		it( 'should return false for unsupported tools', () => {
-			expect( manager.isToolSupported( 'blur' ) ).toBe( false );
+			expect( manager.isToolSupported( 'unknown' ) ).toBe( false );
 			expect( manager.isToolSupported( 'select' ) ).toBe( false );
 		} );
 	} );

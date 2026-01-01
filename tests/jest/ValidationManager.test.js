@@ -266,7 +266,7 @@ describe( 'ValidationManager', () => {
 		} );
 
 		test( 'should accept all valid types', () => {
-			const validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'path', 'blur' ];
+			const validTypes = [ 'text', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'path' ];
 			validTypes.forEach( type => {
 				const result = manager.validateLayer( { ...validLayer, type } );
 				expect( result.errors.some( e => e.includes( 'type-invalid' ) ) ).toBe( false );

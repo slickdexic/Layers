@@ -23,8 +23,7 @@
 			ARROW: 'arrow',
 			POLYGON: 'polygon',
 			STAR: 'star',
-			PATH: 'path',
-			BLUR: 'blur'
+			PATH: 'path'
 		},
 
 		// Layer types
@@ -38,8 +37,7 @@
 			ARROW: 'arrow',
 			POLYGON: 'polygon',
 			STAR: 'star',
-			PATH: 'path',
-			BLUR: 'blur'
+			PATH: 'path'
 		},
 
 		// Selection handle types

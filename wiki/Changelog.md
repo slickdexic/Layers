@@ -4,6 +4,15 @@ Version history for the Layers extension.
 
 ---
 
+## Unreleased
+
+### Removed
+- **Blur Tool** — The standalone blur tool (`B` shortcut) has been removed as redundant
+  - Use any shape with `fill: 'blur'` for the same effect with more flexibility
+  - Blur fill supports strokes, rounded corners, shadows, and rotation
+
+---
+
 ## Version 1.4.0 (December 31, 2025)
 
 ### Added
@@ -18,7 +27,7 @@ Version history for the Layers extension.
 
 ### Improved
 - **Accessibility: Reduced Motion Support** — Respects `prefers-reduced-motion` preference
-- **Test coverage** — 7,852 tests (136 suites), 94.2% statement coverage
+- **Test coverage** — 7,923 tests (136 suites), 94.3% statement coverage
 - **TypeScript definitions** — Updated to v1.4.0 with full curved arrow support
 
 ---

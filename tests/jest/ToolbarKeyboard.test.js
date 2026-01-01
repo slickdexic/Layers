@@ -91,7 +91,6 @@ describe( 'ToolbarKeyboard', function () {
 			{ key: 'c', tool: 'circle' },
 			{ key: 'e', tool: 'ellipse' },
 			{ key: 's', tool: 'star' },
-			{ key: 'b', tool: 'blur' },
 			{ key: 'a', tool: 'arrow' },
 			{ key: 'l', tool: 'line' }
 		];

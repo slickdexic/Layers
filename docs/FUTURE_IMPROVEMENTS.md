@@ -2,37 +2,13 @@
 
 This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
 
-**Last Updated:** December 31, 2025
+**Last Updated:** January 6, 2025
 
 ---
 
 ## Active Proposals
 
-### 1. Deep Linking to Editor with Layer Selection
-
-**Priority:** HIGH  
-**Complexity:** Medium  
-**Status:** ⏳ Proposed
-
-Enable URL parameters to open the Layers editor directly to a specific file, layer set, and optionally select a specific layer.
-
-**URL Parameter Design:**
-```
-/wiki/Special:EditLayers?file=Example.jpg&set=anatomy&layer=layer-abc123
-```
-
-| Parameter | Description | Required |
-|-----------|-------------|----------|
-| `file` | Target filename | Yes |
-| `set` | Named layer set (default: 'default') | No |
-| `layer` | Layer ID to select on load | No |
-| `zoom` | Initial zoom level | No |
-
-**Effort:** 3-4 days
-
----
-
-### 2. Chat Bubble / Speech Balloon Tool
+### 1. Chat Bubble / Speech Balloon Tool
 
 **Priority:** MEDIUM  
 **Complexity:** Medium  
@@ -52,7 +28,7 @@ A text box variant designed for speech/thought bubbles and diagram callouts.
 
 ---
 
-### 3. Inline Canvas Text Editing (FR-8)
+### 2. Inline Canvas Text Editing (FR-8)
 
 **Priority:** HIGH  
 **Complexity:** High  
@@ -68,26 +44,6 @@ Allow direct text editing on the canvas instead of only in the properties panel.
 - Works for both Text and Text Box layers
 
 **Effort:** 3-4 weeks
-
----
-
-### 4. Toolbar Dropdown Grouping (FR-5)
-
-**Priority:** MEDIUM  
-**Complexity:** Low-Medium  
-**Status:** ⏳ Proposed
-
-Reorganize the top toolbar using dropdown menus for better scalability.
-
-**Features:**
-- Group similar tools (Shapes: Rectangle, Circle, Ellipse, Polygon, Star)
-- Group line tools (Arrow, Line)
-- Show most recently used tool as visible button
-- Keyboard shortcuts continue to work globally
-
-**Use Case:** Accommodating future tool additions without toolbar overflow.
-
-**Effort:** 1-2 weeks
 
 ---
 
@@ -161,6 +117,7 @@ The following features have been completed and archived:
 
 | Feature | Version | Notes |
 |---------|---------|-------|
+| Toolbar Dropdown Grouping (FR-5) | v1.5.0 | Grouped tools with MRU, keyboard nav |
 | Curved Arrows (FR-4) | v1.3.3 | Bézier curves with control point |
 | Live Color Preview (FR-9) | v1.3.3 | Real-time canvas preview |
 | Live Article Preview (FR-10) | v1.3.3 | Auto-refresh stale viewers |

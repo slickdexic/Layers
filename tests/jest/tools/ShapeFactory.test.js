@@ -251,37 +251,6 @@ describe( 'ShapeFactory', () => {
 		} );
 	} );
 
-	describe( 'createBlur', () => {
-		it( 'should create blur layer with correct type', () => {
-			const point = { x: 100, y: 200 };
-			const layer = factory.createBlur( point );
-
-			expect( layer.type ).toBe( 'blur' );
-			expect( layer.x ).toBe( 100 );
-			expect( layer.y ).toBe( 200 );
-		} );
-
-		it( 'should have zero initial dimensions', () => {
-			const layer = factory.createBlur( { x: 0, y: 0 } );
-
-			expect( layer.width ).toBe( 0 );
-			expect( layer.height ).toBe( 0 );
-		} );
-
-		it( 'should have blurAmount property', () => {
-			const layer = factory.createBlur( { x: 0, y: 0 } );
-
-			expect( layer.blurAmount ).toBe( 10 );
-		} );
-
-		it( 'should apply stroke from current style', () => {
-			const layer = factory.createBlur( { x: 0, y: 0 } );
-
-			expect( layer.stroke ).toBe( '#ff0000' );
-			expect( layer.strokeWidth ).toBe( 3 );
-		} );
-	} );
-
 	describe( 'createTextBox', () => {
 		it( 'should create textbox layer with correct type', () => {
 			const point = { x: 150, y: 250 };
@@ -360,13 +329,6 @@ describe( 'ShapeFactory', () => {
 		it( 'should pass options to creation method', () => {
 			const layer = factory.create( 'text', { x: 0, y: 0 }, { text: 'Custom' } );
 			expect( layer.text ).toBe( 'Custom' );
-		} );
-
-		it( 'should create blur layer via create method', () => {
-			const layer = factory.create( 'blur', { x: 50, y: 60 } );
-			expect( layer.type ).toBe( 'blur' );
-			expect( layer.x ).toBe( 50 );
-			expect( layer.y ).toBe( 60 );
 		} );
 
 		it( 'should create textbox layer via create method', () => {

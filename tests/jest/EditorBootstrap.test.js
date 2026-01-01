@@ -1127,5 +1127,33 @@ describe( 'EditorBootstrap', () => {
 
 			delete window.LayersEditor;
 		} );
+
+		it( 'should use fallback timing values when LayersConstants not available', () => {
+			// Ensure Constants.TIMING is not available
+			delete window.Layers.Constants;
+
+			// The auto-bootstrap should still work with default timing
+			expect( () => EditorBootstrap.init() ).not.toThrow();
+		} );
+
+		it( 'should wait for DOMContentLoaded when document is still loading', () => {
+			// Mock document.readyState as 'loading'
+			const originalReadyState = Object.getOwnPropertyDescriptor( document, 'readyState' );
+			Object.defineProperty( document, 'readyState', {
+				configurable: true,
+				value: 'loading'
+			} );
+
+			const addEventListenerSpy = jest.spyOn( document, 'addEventListener' );
+
+			EditorBootstrap.init();
+
+			expect( addEventListenerSpy ).toHaveBeenCalledWith( 'DOMContentLoaded', expect.any( Function ) );
+
+			addEventListenerSpy.mockRestore();
+			if ( originalReadyState ) {
+				Object.defineProperty( document, 'readyState', originalReadyState );
+			}
+		} );
 	} );
 } );

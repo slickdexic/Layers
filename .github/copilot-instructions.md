@@ -46,7 +46,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Shared modules (`resources/ext.layers.shared/`): Used by both editor and viewer for consistent behavior:
     - `DeepClone.js` - Object cloning utilities including `omitProperty(obj, propName)` for creating copies without specific properties (avoids eslint-disable for destructuring)
     - `LayerDataNormalizer.js` (~229 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
-    - `LayerRenderer.js` (~821 lines), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,217 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines), `EffectsRenderer.js` (~538 lines)
+    - `LayerRenderer.js` (~821 lines), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,310 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines), `EffectsRenderer.js` (~538 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~370 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `SmartGuidesController.js` (~568 lines) - smart guides and snap alignment
@@ -65,7 +65,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
   - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
-  - UI: `Toolbar.js` (~1,556 lines), `LayerPanel.js` (~2,140 lines - delegates to 9 controllers), plus editor CSS (editor-fixed.css theme)
+  - UI: `Toolbar.js` (~1,556 lines), `LayerPanel.js` (~2,141 lines - delegates to 9 controllers), plus editor CSS (editor-fixed.css theme)
   - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js and UIManager.js for separation of concerns:
     - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
     - `FolderOperationsController.js` (~383 lines) - folder create/delete, layer visibility toggle, ungroup operations

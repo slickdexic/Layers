@@ -258,26 +258,6 @@
 		}
 
 		/**
-		 * Create a blur effect layer
-		 *
-		 * @param {Object} point Starting point
-		 * @return {Object} Blur layer object
-		 */
-		createBlur( point ) {
-			const style = this.getCurrentStyle();
-			return {
-				type: 'blur',
-				x: point.x,
-				y: point.y,
-				width: 0,
-				height: 0,
-				blurAmount: 10,
-				stroke: style.color,
-				strokeWidth: style.strokeWidth
-			};
-		}
-
-		/**
 		 * Create a text box layer
 		 * Text box combines rectangle properties with multi-line text
 		 *
@@ -352,8 +332,6 @@
 					return this.createStar( point, opts.points );
 				case 'text':
 					return this.createText( point, opts.text );
-				case 'blur':
-					return this.createBlur( point );
 				case 'textbox':
 					return this.createTextBox( point );
 				default:
@@ -457,7 +435,6 @@
 
 			switch ( layer.type ) {
 				case 'rectangle':
-				case 'blur':
 				case 'textbox':
 					return layer.width > min && layer.height > min;
 				case 'circle':

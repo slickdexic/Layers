@@ -25,7 +25,6 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 | `S` | Star | Draw stars |
 | `A` | Arrow | Draw arrows |
 | `L` | Line | Draw straight lines |
-| `B` | Blur | Apply blur effect |
 
 > **Note:** The Zoom tool (`Z`) has been removed. Use the zoom controls in the View shortcuts instead.
 

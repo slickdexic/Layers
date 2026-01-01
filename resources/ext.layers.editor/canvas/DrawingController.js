@@ -51,9 +51,6 @@ class DrawingController {
 
 		// Prepare for drawing based on current tool
 		switch ( tool ) {
-			case 'blur':
-				this.startBlurTool( point, style );
-				break;
 			case 'text':
 				this.startTextTool( point, style );
 				break;
@@ -148,26 +145,6 @@ class DrawingController {
 	}
 
 	// ========== Tool-specific start methods ==========
-
-	/**
-	 * Start blur tool - uses rectangle preview for blur region
-	 *
-	 * @param {Object} point - Starting point
-	 * @param {Object} style - Style options
-	 */
-	startBlurTool ( point, style ) {
-		this.tempLayer = {
-			type: 'blur',
-			x: point.x,
-			y: point.y,
-			width: 0,
-			height: 0,
-			blurRadius: style.blurRadius || 10,
-			stroke: 'transparent',
-			strokeWidth: 0,
-			fill: 'transparent'
-		};
-	}
 
 	/**
 	 * Start text tool - creates text input modal
@@ -474,7 +451,6 @@ class DrawingController {
 		// Final adjustments based on tool type
 		switch ( layer.type ) {
 			case 'rectangle':
-			case 'blur':
 			case 'textbox':
 				layer.width = point.x - layer.x;
 				layer.height = point.y - layer.y;
@@ -530,7 +506,6 @@ class DrawingController {
 	isValidShape ( layer ) {
 		switch ( layer.type ) {
 			case 'rectangle':
-			case 'blur':
 			case 'textbox':
 				return Math.abs( layer.width ) >= this.MIN_SHAPE_SIZE &&
 					Math.abs( layer.height ) >= this.MIN_SHAPE_SIZE;
@@ -573,7 +548,6 @@ class DrawingController {
 	 */
 	getToolCursor ( tool ) {
 		switch ( tool ) {
-			case 'blur':
 			case 'pen':
 			case 'rectangle':
 			case 'textbox':
@@ -599,7 +573,7 @@ class DrawingController {
 	 */
 	isDrawingTool ( tool ) {
 		const drawingTools = [
-			'blur', 'text', 'textbox', 'pen', 'rectangle', 'circle',
+			'text', 'textbox', 'pen', 'rectangle', 'circle',
 			'ellipse', 'polygon', 'star', 'line', 'arrow'
 		];
 		return drawingTools.indexOf( tool ) !== -1;

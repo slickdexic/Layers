@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-7%2C852%20Passing-brightgreen" alt="7,852 Tests">
+  <img src="https://img.shields.io/badge/Tests-7%2C921%20Passing-brightgreen" alt="7,921 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -26,7 +26,7 @@
 - **Live Color Picker Preview (FR-9)** — Canvas updates in real-time during color selection
 - **Live Article Preview (FR-10)** — Layer changes visible immediately after saving
 - **Reduced Motion Support** — Respects `prefers-reduced-motion` accessibility preference
-- **7,852 tests passing** — 94.2% statement coverage
+- **7,923 tests passing** — 94.3% statement coverage
 
 ### Previous v1.3 Highlights
 
@@ -103,7 +103,7 @@ See [[Changelog]] for full details.
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | December 31, 2025 |
 | **Test Suites** | 136 |
-| **Total Tests** | 7,852 |
+| **Total Tests** | 7,923 |
 | **Code Coverage** | 94% |
 | **JavaScript Files** | 102 |
 | **ES6 Classes** | 83 |

@@ -27,25 +27,21 @@ CanvasRenderer.redraw(layers)
 CanvasRenderer.renderLayers(layers)  // loops layers bottom-to-top
     ↓
 For each layer:
-    if (layer.type === 'blur')
-        → CanvasRenderer.drawBlurEffect(layer)  [EDITOR-SPECIFIC]
-    else
-        → CanvasRenderer.drawLayerWithEffects(layer)
-              ↓
-              1. Check for blur blend mode → drawLayerWithBlurBlend() [EDITOR-SPECIFIC]
-              2. ctx.save()
-              3. Apply layer.opacity → ctx.globalAlpha
-              4. Apply layer.blend → ctx.globalCompositeOperation
-              5. Apply shadow → ctx.shadowColor/Blur/Offset
-              6. drawLayer(layer) → delegates to LayerRenderer.drawLayer()
-              7. Draw glow if enabled
-              8. ctx.restore()
+    → CanvasRenderer.drawLayerWithEffects(layer)
+          ↓
+          1. Check for blur blend mode → drawLayerWithBlurBlend() [EDITOR-SPECIFIC]
+          2. ctx.save()
+          3. Apply layer.opacity → ctx.globalAlpha
+          4. Apply layer.blend → ctx.globalCompositeOperation
+          5. Apply shadow → ctx.shadowColor/Blur/Offset
+          6. drawLayer(layer) → delegates to LayerRenderer.drawLayer()
+          7. Draw glow if enabled
+          8. ctx.restore()
 ```
 
 **Key Observations**:
 - Effects (opacity, blend, shadow) applied **before** calling LayerRenderer
 - Has **blur blend mode** implementation in `drawLayerWithBlurBlend()`
-- Has **blur layer type** implementation in `drawBlurEffect()`
 - Uses `this.zoom` and `this.panX/Y` for transformations
 - Shadow is applied **at context level**, not inside shape renderers
 
@@ -57,26 +53,22 @@ For each layer:
 LayersViewer.renderLayers()
     ↓
 For each layer (bottom-to-top):
-    if (layer.type === 'blur')
-        → LayersViewer.renderBlurLayer(layer)  [VIEWER-SPECIFIC]
-    else
-        → LayersViewer.renderLayer(layer)
-              ↓
-              1. Check visibility
-              2. Compute scale factors (sx, sy, scaleAvg)
-              3. Scale layer coordinates → scaleLayerCoordinates()
-              4. ctx.save()
-              5. Check for blur blend mode → handled by LayerRenderer
-              6. Apply layer.opacity → ctx.globalAlpha (if not blur blend)
-              7. Apply layer.blend → ctx.globalCompositeOperation (if not blur blend)
-              8. Apply shadow at CONTEXT level → ctx.shadowColor/Blur/Offset
-              9. renderer.drawLayer(L, {scaled: true, shadowScale: ...})
-              10. ctx.restore()
+    → LayersViewer.renderLayer(layer)
+          ↓
+          1. Check visibility
+          2. Compute scale factors (sx, sy, scaleAvg)
+          3. Scale layer coordinates → scaleLayerCoordinates()
+          4. ctx.save()
+          5. Check for blur blend mode → handled by LayerRenderer
+          6. Apply layer.opacity → ctx.globalAlpha (if not blur blend)
+          7. Apply layer.blend → ctx.globalCompositeOperation (if not blur blend)
+          8. Apply shadow at CONTEXT level → ctx.shadowColor/Blur/Offset
+          9. renderer.drawLayer(L, {scaled: true, shadowScale: ...})
+          10. ctx.restore()
 ```
 
 **Key Observations**:
 - Effects (opacity, blend, shadow) applied **before** calling LayerRenderer (same as Editor)
-- Has its own `renderBlurLayer()` for blur layer type (different implementation!)
 - Pre-scales coordinates before passing to LayerRenderer (`scaled: true`)
 - Passes `shadowScale` option for scaled shadow rendering
 - Background is **not drawn on canvas** - it's the underlying `<img>` element
@@ -149,71 +141,11 @@ drawLayer(layer, options)
 
 ## 3. Key Differences & Inconsistencies
 
-### 3.1 Blur Layer Implementation (MAJOR DIFFERENCE)
+### 3.1 Blur Blend Mode Implementation
 
-#### Editor (`CanvasRenderer.drawBlurEffect`):
-```javascript
-drawBlurEffect(layer) {
-    // Captures current canvas state (includes background + lower layers)
-    tempCtx.drawImage(
-        this.canvas,
-        x * this.zoom + this.panX,  // Uses zoom/pan transforms
-        y * this.zoom + this.panY,
-        w * this.zoom,
-        h * this.zoom,
-        ...
-    );
-    // Applies blur filter
-    this.ctx.filter = 'blur(' + radius + 'px)';
-    this.ctx.drawImage(tempCanvas, x, y, w, h);
-}
-```
+> **Note**: The standalone blur layer tool (`type: 'blur'`) was removed in v1.4.0 as it was redundant with blur fill on any shape. The blur *blend mode* (where a shape uses blur as its fill effect, `fill: 'blur'`) is still supported.
 
-#### Viewer (`LayersViewer.renderBlurLayer`):
-```javascript
-renderBlurLayer(layer) {
-    // First draws background image region
-    tempCtx.drawImage(
-        this.imageElement,
-        x * imgScaleX, y * imgScaleY, w * imgScaleX, h * imgScaleY,
-        0, 0, ...
-    );
-    // Then overlays what's on canvas (layers below)
-    tempCtx.drawImage(
-        this.canvas,
-        x, y, w, h,
-        0, 0, ...
-    );
-    // Applies blur filter
-    this.ctx.filter = 'blur(' + radius + 'px)';
-    this.ctx.drawImage(tempCanvas, x, y, w, h);
-}
-```
-
-**Difference**: The viewer **explicitly composites background + canvas layers**, while the editor relies on the background already being drawn on the same canvas. This can cause subtle differences in blur appearance.
-
-#### Shared (`EffectsRenderer.drawBlur`):
-```javascript
-drawBlur(layer, options) {
-    // Has BOTH approaches depending on what's available
-    if (imgSource && imgSource.complete) {
-        // Uses image source directly (like viewer)
-    } else if (this.backgroundImage) {
-        // Uses clip + filter (different approach)
-        this.ctx.beginPath();
-        this.ctx.rect(x, y, w, h);
-        this.ctx.clip();
-        this.ctx.filter = 'blur(' + radius + 'px)';
-        this.ctx.drawImage(this.backgroundImage, 0, 0);
-    }
-}
-```
-
-**Issue**: Three different blur implementations exist!
-
-### 3.2 Blur Blend Mode (MAJOR DIFFERENCE)
-
-The "blur" blend mode (where a shape uses blur as its fill effect) has separate implementations:
+The blur blend mode has implementations across layers:
 
 1. **Editor**: `CanvasRenderer.drawLayerWithBlurBlend()` - full implementation
 2. **LayerRenderer**: `drawLayerWithBlurBlend()` - delegates to `EffectsRenderer.drawBlurWithShape()`
@@ -221,7 +153,7 @@ The "blur" blend mode (where a shape uses blur as its fill effect) has separate 
 
 **Potential Issue**: The Editor's implementation may not be identical to EffectsRenderer's implementation.
 
-### 3.3 Shadow Application Level
+### 3.2 Shadow Application Level
 
 #### Editor (`CanvasRenderer.drawLayerWithEffects`):
 ```javascript
@@ -295,20 +227,20 @@ For 'blur' blend mode:
 
 ## 4. Code Duplication Analysis
 
-### 4.1 Blur Rendering (HIGH PRIORITY)
+### 4.1 Blur Blend Mode Rendering (MEDIUM PRIORITY)
+
+> **Note**: The standalone blur layer tool (`type: 'blur'`) was removed in v1.4.0. The table below shows the remaining blur blend mode implementations.
 
 | Location | Implementation |
 |----------|----------------|
-| `CanvasRenderer.drawBlurEffect()` | Editor-specific blur layer |
 | `CanvasRenderer.drawLayerWithBlurBlend()` | Editor-specific blur blend |
 | `CanvasRenderer._drawTextBlurBlend()` | Editor-specific text blur blend |
-| `LayersViewer.renderBlurLayer()` | Viewer-specific blur layer |
-| `EffectsRenderer.drawBlur()` | Shared blur layer |
 | `EffectsRenderer.drawBlurWithShape()` | Shared blur blend |
+| `EffectsRenderer.drawBlurFill()` | Shared blur fill |
 | `LayerRenderer.drawLayerWithBlurBlend()` | Shared blur blend dispatcher |
 | `LayerRenderer._drawTextBlurBlend()` | Shared text blur blend |
 
-**Result**: 8 blur-related implementations when there should be 2-3.
+**Result**: 6 blur-related implementations when there could be 2-3.
 
 ### 4.2 Arrow Clip Path (MEDIUM PRIORITY)
 
@@ -378,12 +310,12 @@ This is separate from `LayerRenderer._drawShapePath()` which does the same thing
 
 ## 6. Recommendations
 
-### 6.1 Unify Blur Rendering (HIGH PRIORITY)
+### 6.1 Unify Blur Blend Rendering (MEDIUM PRIORITY)
 
-1. Remove `CanvasRenderer.drawBlurEffect()` - delegate to `EffectsRenderer.drawBlur()`
-2. Remove `CanvasRenderer.drawLayerWithBlurBlend()` - delegate to `LayerRenderer.drawLayerWithBlurBlend()`
-3. Remove `LayersViewer.renderBlurLayer()` - delegate to `LayerRenderer.drawLayer()` for blur type
-4. Ensure `EffectsRenderer` handles both background-on-canvas (editor) and background-as-image (viewer) modes
+> **Note**: The standalone blur layer tool (`type: 'blur'`) was removed in v1.4.0. These recommendations apply to the blur *blend mode* only.
+
+1. Remove `CanvasRenderer.drawLayerWithBlurBlend()` - delegate to `LayerRenderer.drawLayerWithBlurBlend()`
+2. Ensure `EffectsRenderer` handles both background-on-canvas (editor) and background-as-image (viewer) modes
 
 ### 6.2 Unify Shape Path Drawing (MEDIUM PRIORITY)
 

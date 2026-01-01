@@ -22,6 +22,16 @@ global.alert = jest.fn();
 global.confirm = jest.fn(function () {
     return true; });
 
+// Mock CSS.escape for DOM queries with special characters
+if ( typeof global.CSS === 'undefined' ) {
+    global.CSS = {
+        escape: function ( str ) {
+            // Basic CSS.escape polyfill for tests
+            return String( str ).replace( /([^\w\u0080-\uFFFF-])/g, '\\$1' );
+        }
+    };
+}
+
 // Mock browser APIs that might be used
 Object.defineProperty(window, 'localStorage', {
     value: {

@@ -360,11 +360,6 @@ class LayerRenderer {
 		if ( this.shapeRenderer ) { this.shapeRenderer.setContext( this.ctx ); this.shapeRenderer.drawPath( layer, this._prepareRenderOptions( options ) ); }
 	}
 
-	/** Draw a blur effect region */
-	drawBlur( layer, options ) {
-		if ( this.effectsRenderer ) { this.effectsRenderer.setContext( this.ctx ); this.effectsRenderer.drawBlur( layer, options ); }
-	}
-
 	/**
 	 * Draw an image layer
 	 *
@@ -725,7 +720,7 @@ class LayerRenderer {
 		// Skip arrows and lines - they handle blur fill via ArrowRenderer/effectsRenderer,
 		// and blur blend mode with rectangular clip doesn't make sense for these shapes
 		const isArrowOrLine = layer.type === 'arrow' || layer.type === 'line';
-		if ( this.hasBlurBlendMode( layer ) && layer.type !== 'blur' && !isArrowOrLine ) {
+		if ( this.hasBlurBlendMode( layer ) && !isArrowOrLine ) {
 			this.drawLayerWithBlurBlend( layer, options );
 			return;
 		}
@@ -772,9 +767,6 @@ class LayerRenderer {
 				break;
 			case 'path':
 				this.drawPath( layer, options );
-				break;
-			case 'blur':
-				this.drawBlur( layer, options );
 				break;
 			case 'image':
 				this.drawImage( layer, options );

@@ -374,25 +374,6 @@ describe( 'PropertiesForm', () => {
 			expect( appearanceHeader ).toBeNull();
 		} );
 
-		test( 'should create blur layer form with blur radius', () => {
-			const layer = { id: 'test-1', type: 'blur', width: 100, height: 100, blurRadius: 20 };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const widthInput = form.querySelector( 'input[data-prop="width"]' );
-			const heightInput = form.querySelector( 'input[data-prop="height"]' );
-			expect( widthInput ).not.toBeNull();
-			expect( heightInput ).not.toBeNull();
-
-			// Find blur radius input by label
-			const inputs = form.querySelectorAll( 'input[type="number"]' );
-			const blurRadiusInput = Array.from( inputs ).find( ( input ) => {
-				const label = input.parentElement.querySelector( 'label' );
-				return label && label.textContent.includes( 'Blur Radius' );
-			} );
-			expect( blurRadiusInput ).not.toBeNull();
-			expect( blurRadiusInput.value ).toBe( '20' );
-		} );
-
 		test( 'should create arrow layer form with arrow-specific controls', () => {
 			const layer = {
 				id: 'test-1',
@@ -1609,22 +1590,6 @@ describe( 'PropertiesForm', () => {
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
 
-		test( 'should update blur radius via input handler', () => {
-			const layer = { id: 'test-layer', type: 'blur', width: 100, height: 100, blurRadius: 12 };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const inputs = form.querySelectorAll( 'input[type="number"]' );
-			const blurInput = Array.from( inputs ).find( ( input ) => {
-				const label = input.parentElement.querySelector( 'label' );
-				return label && label.textContent.includes( 'Blur Radius' );
-			} );
-
-			blurInput.value = '30';
-			dispatchInputAndAdvanceTimers( blurInput );
-
-			expect( mockEditor.updateLayer ).toHaveBeenCalled();
-		} );
-
 		test( 'should toggle bold fontWeight on checkbox change', () => {
 			const layer = { id: 'test-layer', type: 'textbox', fontWeight: 'normal' };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
@@ -2315,30 +2280,6 @@ describe( 'PropertiesForm', () => {
 			dispatchInputAndAdvanceTimers( radiusInput );
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { radius: 75 } );
-		} );
-	} );
-
-	describe( 'blur layer form', () => {
-		test( 'should update blur width', () => {
-			const layer = { id: 'test-layer', type: 'blur', width: 100, height: 100, blurRadius: 12 };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const widthInput = form.querySelector( 'input[data-prop="width"]' );
-			widthInput.value = '150';
-			dispatchInputAndAdvanceTimers( widthInput );
-
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 150 } );
-		} );
-
-		test( 'should update blur height', () => {
-			const layer = { id: 'test-layer', type: 'blur', width: 100, height: 100, blurRadius: 12 };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const heightInput = form.querySelector( 'input[data-prop="height"]' );
-			heightInput.value = '150';
-			dispatchInputAndAdvanceTimers( heightInput );
-
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 150 } );
 		} );
 	} );
 

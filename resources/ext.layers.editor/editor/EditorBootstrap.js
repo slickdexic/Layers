@@ -378,6 +378,7 @@
 					filename: init.filename,
 					imageUrl: init.imageUrl,
 					initialSetName: init.initialSetName || null,
+
 					autoCreate: init.autoCreate || false,
 					container: container || document.body
 				} );

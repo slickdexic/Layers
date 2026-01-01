@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** December 31, 2025  
-**Version:** 1.3.2
+**Last Updated:** January 1, 2026  
+**Version:** 1.4.1
 
 This document lists known functionality issues and their current status.
 
@@ -90,19 +90,19 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 | File | Lines | Delegation Pattern | Status |
 |------|-------|-------------------|--------|
-| **LayerPanel.js** | **2,140** | ✅ 9 controllers | ⚠️ Monitor |
+| **LayerPanel.js** | **2,141** | ✅ 9 controllers | ⚠️ Monitor |
 | CanvasManager.js | 1,877 | ✅ 10+ controllers | ✅ OK |
 | Toolbar.js | 1,556 | ✅ 4 modules | ✅ OK |
-| LayersEditor.js | 1,465 | ✅ 3 modules | ✅ OK |
+| LayersEditor.js | 1,475 | ✅ 3 modules | ✅ OK |
 | SelectionManager.js | 1,359 | ✅ 3 modules | ✅ OK |
+| **ArrowRenderer.js** | **1,310** | ✅ Rendering (curved arrows) | ✅ OK |
 | ToolManager.js | 1,259 | ✅ 2 handlers | ✅ OK |
 | CanvasRenderer.js | 1,242 | ✅ SelectionRenderer | ✅ OK |
-| **ArrowRenderer.js** | **1,217** | ✅ Rendering (curved arrows) | **NEW** |
 | APIManager.js | 1,182 | ✅ APIErrorHandler | ✅ OK |
 | GroupManager.js | 1,132 | New (v1.2.13) | ✅ OK |
-| **ToolbarStyleControls.js** | **1,013** | ✅ Style controls (live preview) | **NEW** |
+| ToolbarStyleControls.js | 1,012 | ✅ Style controls (live preview) | ✅ OK |
 
-**Total in god classes:** ~14,427 lines (26% of JS codebase)
+**Total in god classes:** ~14,545 lines (26% of JS codebase)
 
 **Note:** ArrowRenderer.js grew due to curved arrow feature (v1.3.3). ToolbarStyleControls.js grew due to live color preview feature.
 
@@ -251,15 +251,15 @@ The extension is feature-rich with 12 drawing tools, layer grouping, multiple re
 
 ## Test Coverage Status
 
-### Overall Coverage (December 31, 2025)
+### Overall Coverage (January 1, 2026)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,817 | - | ✅ |
-| Statement coverage | 93.93% | 85%+ | ✅ Excellent |
-| Branch coverage | 82.63% | 75%+ | ✅ |
-| Function coverage | 91.45% | 80%+ | ✅ |
-| Line coverage | 94.21% | 85%+ | ✅ |
+| Tests passing | 7,923 | - | ✅ |
+| Statement coverage | 94.3% | 85%+ | ✅ Excellent |
+| Branch coverage | 83.2% | 75%+ | ✅ |
+| Function coverage | 91.8% | 80%+ | ✅ |
+| Line coverage | 94.6% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -325,5 +325,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: December 31, 2025*  
-*Status: ⚠️ 11 god classes. Extension is production-ready with excellent test coverage (93.8%, 7,805 tests).*
+*Document updated: January 1, 2026*  
+*Status: ⚠️ 11 god classes. Extension is production-ready with excellent test coverage (94.3%, 7,923 tests).*

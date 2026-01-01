@@ -283,9 +283,9 @@ describe( 'TransformController', () => {
 			expect( result.fontSize ).toBeGreaterThan( 16 );
 		} );
 
-		it( 'should dispatch to rectangle resize for blur', () => {
+		it( 'should dispatch to rectangle resize for textbox', () => {
 			const result = controller.calculateResize(
-				{ type: 'blur', x: 0, y: 0, width: 100, height: 100 },
+				{ type: 'textbox', x: 0, y: 0, width: 100, height: 100 },
 				'se', 10, 10, {}
 			);
 			expect( result.width ).toBe( 110 );
@@ -799,7 +799,7 @@ describe( 'TransformController', () => {
 		} );
 
 		it( 'should update various layer types', () => {
-			const types = [ 'blur', 'circle', 'text', 'ellipse', 'polygon', 'star' ];
+			const types = [ 'textbox', 'circle', 'text', 'ellipse', 'polygon', 'star' ];
 
 			for ( const type of types ) {
 				const layer = { type, x: 50, y: 50 };

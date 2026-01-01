@@ -478,11 +478,11 @@ describe( 'Integration: HitTestController Layer Detection', () => {
 		} );
 	} );
 
-	describe( 'Blur Hit Testing', () => {
+	describe( 'Rectangle Hit Testing', () => {
 		beforeEach( () => {
 			mockEditor.layers = [ {
-				id: 'blur',
-				type: 'blur',
+				id: 'rect1',
+				type: 'rectangle',
 				x: 100,
 				y: 100,
 				width: 150,
@@ -492,12 +492,12 @@ describe( 'Integration: HitTestController Layer Detection', () => {
 			} ];
 		} );
 
-		test( 'should detect point inside blur region', () => {
+		test( 'should detect point inside rectangle region', () => {
 			const hit = hitTestController.getLayerAtPoint( { x: 150, y: 150 } );
-			expect( hit.id ).toBe( 'blur' );
+			expect( hit.id ).toBe( 'rect1' );
 		} );
 
-		test( 'should not detect point outside blur region', () => {
+		test( 'should not detect point outside rectangle region', () => {
 			const hit = hitTestController.getLayerAtPoint( { x: 300, y: 300 } );
 			expect( hit ).toBeNull();
 		} );

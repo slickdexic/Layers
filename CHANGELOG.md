@@ -4,7 +4,23 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Removed
+- **Blur Tool** — The standalone blur tool (`B` shortcut) has been removed as redundant
+  - Blur fill (`fill: 'blur'`) on any shape provides the same functionality with more flexibility
+  - Use any shape (rectangle, circle, ellipse, polygon, star, arrow) with `fill: 'blur'` instead
+  - Blur fill supports strokes, rounded corners, shadows, and rotation that the blur tool lacked
+  - The `B` keyboard shortcut is now available for future use
+
+### Added
+- **Toolbar Dropdown Grouping** — Reorganized the toolbar using dropdown menus for better scalability
+  - Text tools grouped: Text, Text Box
+  - Shape tools grouped: Rectangle, Circle, Ellipse, Polygon, Star
+  - Line tools grouped: Arrow, Line
+  - Most recently used tool in each group is shown as the visible button
+  - MRU persisted in localStorage across sessions
+  - Full keyboard navigation support (Arrow keys, Home, End, Escape)
+  - 35 new tests in `ToolDropdown.test.js`
+  - New component: `resources/ext.layers.editor/ui/ToolDropdown.js`
 
 ---
 
@@ -45,7 +61,7 @@ _No unreleased changes._
   - 27 new tests (18 ArrowRenderer + 6 SelectionRenderer + 3 ResizeCalculator)
 
 ### Changed
-- **Test count** — 7,852 tests (136 suites, all passing)
+- **Test count** — 7,923 tests (136 suites, all passing)
 - **ESLint config** — Added underscore-prefix pattern (`_paramName`) for intentionally unused parameters
 - **ESLint-disable comments** — Reduced from 13 to 8 by using underscore convention instead of inline disables
 

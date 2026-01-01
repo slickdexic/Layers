@@ -134,7 +134,7 @@ describe( 'ToolRegistry', () => {
 			registry.register( 'pen', { category: 'drawing' } );
 			registry.register( 'rectangle', { category: 'shape' } );
 			registry.register( 'arrow', { category: 'line' } );
-			registry.register( 'blur', { category: 'annotation' } );
+			registry.register( 'text', { category: 'annotation' } );
 			registry.register( 'pointer', { category: 'selection' } );
 		} );
 
@@ -150,8 +150,8 @@ describe( 'ToolRegistry', () => {
 			expect( registry.isDrawingTool( 'arrow' ) ).toBe( true );
 		} );
 
-		it( 'should return true for annotation category tools', () => {
-			expect( registry.isDrawingTool( 'blur' ) ).toBe( true );
+		it( 'should return true for text category tools', () => {
+			expect( registry.isDrawingTool( 'text' ) ).toBe( true );
 		} );
 
 		it( 'should return false for non-drawing tools', () => {

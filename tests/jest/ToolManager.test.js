@@ -247,13 +247,6 @@ describe( 'ToolManager', () => {
 			expect( toolManager.tempLayer.type ).toBe( 'arrow' );
 		} );
 
-		it( 'should create temp layer for blur tool', () => {
-			toolManager.setTool( 'blur' );
-			toolManager.startTool( point );
-			expect( toolManager.tempLayer ).not.toBeNull();
-			expect( toolManager.tempLayer.type ).toBe( 'blur' );
-		} );
-
 		it( 'should create temp layer for pen tool with path', () => {
 			toolManager.setTool( 'pen' );
 			toolManager.startTool( point );
@@ -338,14 +331,6 @@ describe( 'ToolManager', () => {
 			expect( toolManager.tempLayer.points ).toHaveLength( 2 );
 		} );
 
-		it( 'should update blur dimensions', () => {
-			toolManager.setTool( 'blur' );
-			toolManager.startTool( startPoint );
-			toolManager.updateTool( updatePoint );
-			expect( toolManager.tempLayer.width ).toBe( 100 );
-			expect( toolManager.tempLayer.height ).toBe( 50 );
-		} );
-
 		it( 'should call renderTempLayer after update', () => {
 			toolManager.setTool( 'rectangle' );
 			toolManager.startTool( startPoint );
@@ -405,16 +390,6 @@ describe( 'ToolManager', () => {
 			// No update calls - only one point
 			toolManager.finishTool( startPoint );
 			expect( mockEditor.stateManager.addLayer ).not.toHaveBeenCalled();
-		} );
-
-		it( 'should add blur layer via stateManager', () => {
-			toolManager.setTool( 'blur' );
-			toolManager.startTool( startPoint );
-			toolManager.updateTool( endPoint );
-			toolManager.finishTool( endPoint );
-			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
-			const addedLayer = mockEditor.stateManager.addLayer.mock.calls.slice( -1 )[ 0 ][ 0 ];
-			expect( addedLayer.type ).toBe( 'blur' );
 		} );
 	} );
 
@@ -812,9 +787,9 @@ describe( 'ToolManager', () => {
 			expect( toolManager.hasValidSize( { type: 'rectangle', width: 1, height: 1 } ) ).toBe( false );
 		} );
 
-		it( 'should validate blur size', () => {
-			expect( toolManager.hasValidSize( { type: 'blur', width: 10, height: 10 } ) ).toBe( true );
-			expect( toolManager.hasValidSize( { type: 'blur', width: 1, height: 1 } ) ).toBe( false );
+		it( 'should validate textbox size', () => {
+			expect( toolManager.hasValidSize( { type: 'textbox', width: 10, height: 10 } ) ).toBe( true );
+			expect( toolManager.hasValidSize( { type: 'textbox', width: 1, height: 1 } ) ).toBe( false );
 		} );
 
 		it( 'should validate circle radius', () => {
@@ -1028,17 +1003,6 @@ describe( 'ToolManager', () => {
 			expect( modifiers.ctrl ).toBe( false );
 			expect( modifiers.alt ).toBe( true );
 			expect( modifiers.meta ).toBe( false );
-		} );
-	} );
-
-	describe( 'blur tool', () => {
-		it( 'should create blur layer with correct type', () => {
-			toolManager.setTool( 'blur' );
-			toolManager.startTool( { x: 100, y: 100 } );
-
-			if ( toolManager.tempLayer ) {
-				expect( toolManager.tempLayer.type ).toBe( 'blur' );
-			}
 		} );
 	} );
 
@@ -1362,28 +1326,6 @@ describe( 'ToolManager', () => {
 			expect( toolManager.tempLayer ).toBeDefined();
 			expect( toolManager.tempLayer.type ).toBe( 'star' );
 			expect( toolManager.tempLayer.points ).toBe( 5 );
-		} );
-	} );
-
-	describe( 'blur tool fallback', () => {
-		it( 'should create blur with fallback when shapeFactory unavailable', () => {
-			toolManager.shapeFactory = null;
-			toolManager.setTool( 'blur' );
-			toolManager.startTool( { x: 100, y: 100 } );
-
-			expect( toolManager.tempLayer ).toBeDefined();
-			expect( toolManager.tempLayer.type ).toBe( 'blur' );
-			expect( toolManager.tempLayer.blurRadius ).toBe( 10 ); // fallback uses blurRadius
-		} );
-
-		it( 'should update blur dimensions on drag', () => {
-			toolManager.shapeFactory = null;
-			toolManager.setTool( 'blur' );
-			toolManager.startTool( { x: 100, y: 100 } );
-			toolManager.updateTool( { x: 200, y: 180 } );
-
-			expect( toolManager.tempLayer.width ).toBe( 100 );
-			expect( toolManager.tempLayer.height ).toBe( 80 );
 		} );
 	} );
 

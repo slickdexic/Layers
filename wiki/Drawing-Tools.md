@@ -19,7 +19,6 @@ Layers provides 14 professional drawing tools for comprehensive image annotation
 | **Star** | `S` | ★ | Shape | Star shapes |
 | **Arrow** | `A` | ➔ | Line | Arrows with customizable heads |
 | **Line** | `L` | ╱ | Line | Straight lines |
-| **Blur** | `B` | ▦ | Effect | Apply blur effect to areas |
 
 > **Note:** Use `+`/`-` or mouse wheel to zoom, and hold `Space` to pan the canvas.
 
@@ -232,30 +231,6 @@ Draw straight lines between two points.
 - Stroke color and width
 - Opacity
 - No fill (lines have no area)
-
----
-
-## Effect Tools
-
-### Blur Tool (B)
-
-Apply a blur effect to selected areas of an image.
-
-**Use Cases:**
-- Create depth-of-field effects
-- Emphasize foreground elements
-- Soften backgrounds
-- Draw attention to unblurred areas
-
-**Properties:**
-| Property | Range | Default |
-|----------|-------|---------|
-| Blur Radius | 5-50px | 12px |
-| Width | Drawn area | — |
-| Height | Drawn area | — |
-
-**How It Works:**
-The blur tool creates a region that samples and blurs the underlying image. The original image is never modified.
 
 ---
 

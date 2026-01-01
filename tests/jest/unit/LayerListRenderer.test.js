@@ -553,10 +553,6 @@ describe( 'LayerListRenderer', () => {
 			expect( renderer.getDefaultLayerName( { type: 'path' } ) ).toBe( 'Drawing' );
 		} );
 
-		it( 'should return Blur Effect for blur type', () => {
-			expect( renderer.getDefaultLayerName( { type: 'blur' } ) ).toBe( 'Blur Effect' );
-		} );
-
 		it( 'should return text prefix with content for text type', () => {
 			const result = renderer.getDefaultLayerName( { type: 'text', text: 'Hello World' } );
 			expect( result ).toBe( 'Text: Hello World' );

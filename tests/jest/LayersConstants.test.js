@@ -30,7 +30,6 @@ describe( 'LayersConstants', () => {
 			expect( LayersConstants.TOOLS.POLYGON ).toBe( 'polygon' );
 			expect( LayersConstants.TOOLS.STAR ).toBe( 'star' );
 			expect( LayersConstants.TOOLS.PATH ).toBe( 'path' );
-			expect( LayersConstants.TOOLS.BLUR ).toBe( 'blur' );
 		} );
 
 		it( 'should be frozen', () => {
@@ -49,7 +48,6 @@ describe( 'LayersConstants', () => {
 			expect( LayersConstants.LAYER_TYPES.POLYGON ).toBe( 'polygon' );
 			expect( LayersConstants.LAYER_TYPES.STAR ).toBe( 'star' );
 			expect( LayersConstants.LAYER_TYPES.PATH ).toBe( 'path' );
-			expect( LayersConstants.LAYER_TYPES.BLUR ).toBe( 'blur' );
 		} );
 
 		it( 'should be frozen', () => {

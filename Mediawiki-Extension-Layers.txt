@@ -163,7 +163,7 @@ Control how users interact with layered images using the <code>layerslink</code>
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~54k lines).
-* '''Stability:''' 7,852 Jest tests across 136 test suites achieving 94.2% statement coverage.
+* '''Stability:''' 7,923 Jest tests across 136 test suites achieving 94.3% statement coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

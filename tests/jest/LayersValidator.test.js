@@ -482,22 +482,22 @@ describe( 'LayersValidator', () => {
 		} );
 
 		describe( 'blurRadius', () => {
-			it( 'should accept valid blur radius', () => {
-				const layer = { id: 'test', type: 'blur', blurRadius: 10 };
+			it( 'should accept valid blur radius for blur fill shapes', () => {
+				const layer = { id: 'test', type: 'rectangle', fill: 'blur', blurRadius: 10 };
 				const result = validator.validateLayer( layer );
 
 				expect( result.isValid ).toBe( true );
 			} );
 
 			it( 'should reject blur radius below minimum', () => {
-				const layer = { id: 'test', type: 'blur', blurRadius: 0 };
+				const layer = { id: 'test', type: 'rectangle', fill: 'blur', blurRadius: 0 };
 				const result = validator.validateLayer( layer );
 
 				expect( result.isValid ).toBe( false );
 			} );
 
 			it( 'should reject blur radius above maximum', () => {
-				const layer = { id: 'test', type: 'blur', blurRadius: 101 };
+				const layer = { id: 'test', type: 'rectangle', fill: 'blur', blurRadius: 101 };
 				const result = validator.validateLayer( layer );
 
 				expect( result.isValid ).toBe( false );

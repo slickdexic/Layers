@@ -321,11 +321,6 @@ describe( 'GeometryUtils', () => {
 			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
 		} );
 
-		it( 'should handle blur layer like rectangle', () => {
-			const layer = { type: 'blur', x: 10, y: 20, width: 100, height: 50 };
-			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
-		} );
-
 		it( 'should handle textbox layer like rectangle', () => {
 			const layer = { type: 'textbox', x: 15, y: 25, width: 200, height: 100 };
 			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 15, y: 25, width: 200, height: 100 } );

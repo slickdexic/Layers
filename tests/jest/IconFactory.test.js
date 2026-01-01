@@ -275,6 +275,62 @@ describe( 'IconFactory', () => {
 		} );
 	} );
 
+	describe( 'createAddFolderIcon', () => {
+		it( 'should create a folder icon with plus badge', () => {
+			const icon = IconFactory.createAddFolderIcon();
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			// Should have folder path
+			const path = icon.querySelector( 'path' );
+			expect( path ).not.toBeNull();
+			// Should have badge circle
+			const circle = icon.querySelector( 'circle' );
+			expect( circle ).not.toBeNull();
+			// Should have plus sign (2 lines)
+			const lines = icon.querySelectorAll( 'line' );
+			expect( lines.length ).toBe( 2 );
+		} );
+
+		it( 'should use default colors and size', () => {
+			const icon = IconFactory.createAddFolderIcon();
+			expect( icon.getAttribute( 'width' ) ).toBe( '20' );
+			const path = icon.querySelector( 'path' );
+			expect( path.getAttribute( 'fill' ) ).toBe( '#f39c12' ); // default folder color
+			const circle = icon.querySelector( 'circle' );
+			expect( circle.getAttribute( 'fill' ) ).toBe( '#4caf50' ); // default badge color
+		} );
+
+		it( 'should apply custom options', () => {
+			const icon = IconFactory.createAddFolderIcon( {
+				size: 32,
+				folderColor: '#3498db',
+				badgeColor: '#e74c3c'
+			} );
+			expect( icon.getAttribute( 'width' ) ).toBe( '32' );
+			const path = icon.querySelector( 'path' );
+			expect( path.getAttribute( 'fill' ) ).toBe( '#3498db' );
+			const circle = icon.querySelector( 'circle' );
+			expect( circle.getAttribute( 'fill' ) ).toBe( '#e74c3c' );
+		} );
+
+		it( 'should create plus sign with correct stroke properties', () => {
+			const icon = IconFactory.createAddFolderIcon();
+			const lines = icon.querySelectorAll( 'line' );
+			lines.forEach( ( line ) => {
+				expect( line.getAttribute( 'stroke' ) ).toBe( '#fff' );
+				expect( line.getAttribute( 'stroke-width' ) ).toBe( '2' );
+				expect( line.getAttribute( 'stroke-linecap' ) ).toBe( 'round' );
+			} );
+		} );
+
+		it( 'should create badge circle with white border', () => {
+			const icon = IconFactory.createAddFolderIcon();
+			const circle = icon.querySelector( 'circle' );
+			expect( circle.getAttribute( 'stroke' ) ).toBe( '#fff' );
+			expect( circle.getAttribute( 'stroke-width' ) ).toBe( '1.5' );
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export IconFactory for Node.js', () => {
 			const exported = require( '../../resources/ext.layers.editor/ui/IconFactory.js' );

@@ -254,7 +254,6 @@
 					return null;
 				case 'rectangle':
 				case 'textbox':
-				case 'blur':
 				case 'image': {
 					rectX = layer.x || 0;
 					rectY = layer.y || 0;

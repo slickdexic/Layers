@@ -463,8 +463,6 @@
 				}
 				case ( LAYER_TYPES.RECTANGLE || 'rectangle' ):
 					return t( 'layers-type-rectangle', 'Rectangle' );
-				case ( LAYER_TYPES.BLUR || 'blur' ):
-						return t( 'layers-type-blur', 'Blur Effect' );
 				case ( LAYER_TYPES.CIRCLE || 'circle' ):
 					return t( 'layers-type-circle', 'Circle' );
 				case ( LAYER_TYPES.ELLIPSE || 'ellipse' ):

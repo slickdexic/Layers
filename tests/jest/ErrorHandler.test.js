@@ -784,6 +784,43 @@ describe( 'ErrorHandler', function () {
 			expect( errorHandler.notificationContainer.contains( notification ) ).toBe( false );
 		} );
 
+		it( 'should announce error for screen readers when layersAnnouncer is available', function () {
+			// Set up mock layersAnnouncer
+			const mockAnnouncer = {
+				announceError: jest.fn()
+			};
+			window.layersAnnouncer = mockAnnouncer;
+
+			const errorInfo = {
+				severity: 'high',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			errorHandler.createUserNotification( errorInfo );
+
+			expect( mockAnnouncer.announceError ).toHaveBeenCalled();
+
+			// Clean up
+			delete window.layersAnnouncer;
+		} );
+
+		it( 'should not fail when layersAnnouncer is not available', function () {
+			// Ensure layersAnnouncer is not defined
+			delete window.layersAnnouncer;
+
+			const errorInfo = {
+				severity: 'high',
+				type: 'api',
+				timestamp: new Date().toISOString()
+			};
+
+			// Should not throw
+			expect( () => {
+				errorHandler.createUserNotification( errorInfo );
+			} ).not.toThrow();
+		} );
+
 		it( 'should auto-remove non-critical notifications after timeout', function () {
 			jest.useFakeTimers();
 

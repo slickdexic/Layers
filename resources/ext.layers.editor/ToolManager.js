@@ -282,9 +282,6 @@ class ToolManager {
 			case 'star':
 				this.startStarTool( point );
 				break;
-			case 'blur':
-				this.startBlurTool( point );
-				break;
 		}
 	}
 
@@ -323,9 +320,6 @@ class ToolManager {
 			case 'star':
 				this.updateStarTool( point );
 				break;
-			case 'blur':
-				this.updateBlurTool( point );
-				break;
 		}
 	}
 
@@ -352,7 +346,6 @@ class ToolManager {
 			case 'arrow':
 			case 'polygon':
 			case 'star':
-			case 'blur':
 				this.finishShapeDrawing( point );
 				break;
 		}
@@ -822,44 +815,6 @@ class ToolManager {
 			this.tempLayer.outerRadius = radius;
 			this.tempLayer.radius = radius;
 			this.tempLayer.innerRadius = radius * 0.4;
-			this.renderTempLayer();
-		}
-	}
-
-	/**
-	 * Start blur tool
-	 *
-	 * @param {Object} point Starting point
-	 */
-	startBlurTool( point ) {
-		// Delegate to ShapeFactory if available
-		if( this.shapeFactory && typeof this.shapeFactory.createBlur === 'function' ) {
-			this.tempLayer = this.shapeFactory.createBlur( point );
-			return;
-		}
-
-		// Fallback implementation
-		this.tempLayer = {
-			type: 'blur',
-			x: point.x,
-			y: point.y,
-			width: 0,
-			height: 0,
-			blurRadius: this.currentStyle.blurRadius || 10
-		};
-	}
-
-	/**
-	 * Update blur tool
-	 *
-	 * @param {Object} point Current point
-	 */
-	updateBlurTool( point ) {
-		if( this.tempLayer && this.startPoint ) {
-			this.tempLayer.x = Math.min( this.startPoint.x, point.x );
-			this.tempLayer.y = Math.min( this.startPoint.y, point.y );
-			this.tempLayer.width = Math.abs( point.x - this.startPoint.x );
-			this.tempLayer.height = Math.abs( point.y - this.startPoint.y );
 			this.renderTempLayer();
 		}
 	}

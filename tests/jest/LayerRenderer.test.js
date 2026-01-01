@@ -1094,15 +1094,6 @@ describe( 'LayerRenderer', () => {
 			expect( spy ).toHaveBeenCalledWith( layer, undefined );
 		} );
 
-		test( 'dispatches to drawBlur for blur type', () => {
-			const spy = jest.spyOn( renderer, 'drawBlur' );
-			const layer = { type: 'blur', x: 10, y: 20, width: 100, height: 50 };
-
-			renderer.drawLayer( layer );
-
-			expect( spy ).toHaveBeenCalledWith( layer, undefined );
-		} );
-
 		test( 'passes options to draw methods', () => {
 			const spy = jest.spyOn( renderer, 'drawRectangle' );
 			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
@@ -1136,18 +1127,6 @@ describe( 'LayerRenderer', () => {
 			renderer.drawLayer( layer );
 
 			expect( spy ).toHaveBeenCalledWith( layer, undefined );
-		} );
-
-		test( 'does not use blur blend mode for type: blur layers', () => {
-			const blurBlendSpy = jest.spyOn( renderer, 'drawLayerWithBlurBlend' );
-			const blurDrawSpy = jest.spyOn( renderer, 'drawBlur' );
-			const layer = { type: 'blur', x: 10, y: 20, width: 100, height: 50, blend: 'blur' };
-
-			renderer.drawLayer( layer );
-
-			// Should call drawBlur, not drawLayerWithBlurBlend
-			expect( blurDrawSpy ).toHaveBeenCalled();
-			expect( blurBlendSpy ).not.toHaveBeenCalled();
 		} );
 
 		test( 'uses normal rendering for shapes with other blend modes', () => {
@@ -1286,7 +1265,6 @@ describe( 'LayerRenderer', () => {
 			expect( typeof LayerRenderer.prototype.drawPolygon ).toBe( 'function' );
 			expect( typeof LayerRenderer.prototype.drawStar ).toBe( 'function' );
 			expect( typeof LayerRenderer.prototype.drawText ).toBe( 'function' );
-			expect( typeof LayerRenderer.prototype.drawBlur ).toBe( 'function' );
 			expect( typeof LayerRenderer.prototype.drawLayer ).toBe( 'function' );
 		} );
 	} );
@@ -1595,132 +1573,6 @@ describe( 'LayerRenderer', () => {
 
 			// Should not throw even without text
 			expect( ctx.save ).toHaveBeenCalled();
-		} );
-	} );
-
-	// ========================================================================
-	// drawBlur Tests
-	// ========================================================================
-
-	describe( 'drawBlur', () => {
-		test( 'draws blur region without background image', () => {
-			renderer.drawBlur( {
-				x: 50,
-				y: 50,
-				width: 100,
-				height: 100,
-				blurAmount: 10
-			} );
-
-			// Without background image, just draws a semi-transparent rectangle
-			expect( ctx.save ).toHaveBeenCalled();
-			expect( ctx.restore ).toHaveBeenCalled();
-		} );
-
-		test( 'handles rotation in blur', () => {
-			renderer.drawBlur( {
-				x: 50,
-				y: 50,
-				width: 100,
-				height: 100,
-				rotation: 45
-			} );
-
-			// Blur may or may not use translate/rotate depending on implementation
-			// Just verify it completes without error
-			expect( ctx.save ).toHaveBeenCalled();
-			expect( ctx.restore ).toHaveBeenCalled();
-		} );
-
-		test( 'uses default blur amount', () => {
-			renderer.drawBlur( {
-				x: 50,
-				y: 50,
-				width: 100,
-				height: 100
-			} );
-
-			// Should still render something even without explicit blurAmount
-			expect( ctx.save ).toHaveBeenCalled();
-		} );
-
-		test( 'draws blur with background image (editor mode)', () => {
-			// The blur implementation uses a complex temp canvas pattern
-			// that requires document.createElement mocking.
-			// For now, verify it handles background images without error.
-			const mockImage = {
-				complete: true,
-				width: 400,
-				height: 300,
-				naturalWidth: 400,
-				naturalHeight: 300
-			};
-			renderer.setBackgroundImage( mockImage );
-
-			// This will try the temp canvas path but fall through gracefully
-			renderer.drawBlur( {
-				x: 50,
-				y: 50,
-				width: 100,
-				height: 100,
-				blurAmount: 8
-			} );
-
-			// Should complete without error
-			expect( ctx.save ).toHaveBeenCalled();
-			expect( ctx.restore ).toHaveBeenCalled();
-		} );
-
-		test( 'draws blur with imageElement option (viewer mode)', () => {
-			// Viewer mode passes imageElement through options
-			const mockImage = {
-				complete: true,
-				width: 400,
-				height: 300
-			};
-
-			renderer.drawBlur( {
-				x: 25,
-				y: 25,
-				width: 150,
-				height: 150,
-				blurAmount: 12
-			}, {
-				imageElement: mockImage
-			} );
-
-			expect( ctx.save ).toHaveBeenCalled();
-			expect( ctx.restore ).toHaveBeenCalled();
-		} );
-
-		test( 'uses fallback gray overlay when CORS error occurs', () => {
-			// This tests the try/catch error path indirectly
-			// When no background is available, uses gray overlay
-			renderer.drawBlur( {
-				x: 50,
-				y: 50,
-				width: 100,
-				height: 100,
-				blurAmount: 10
-			} );
-
-			// Falls back to fillRect with gray
-			expect( ctx.fillRect ).toHaveBeenCalled();
-		} );
-
-		test( 'handles blur with scaling', () => {
-			renderer.setBaseDimensions( 1000, 800 );
-			
-			renderer.drawBlur( {
-				x: 50,
-				y: 50,
-				width: 100,
-				height: 100,
-				blurAmount: 10
-			} );
-
-			expect( ctx.save ).toHaveBeenCalled();
-			expect( ctx.restore ).toHaveBeenCalled();
 		} );
 	} );
 
@@ -2574,13 +2426,6 @@ describe( 'LayerRenderer', () => {
 			} ).not.toThrow();
 		} );
 
-		test( 'drawBlur does nothing when effectsRenderer is null', () => {
-			renderer.effectsRenderer = null;
-			expect( () => {
-				renderer.drawBlur( { type: 'blur', x: 10, y: 20, width: 100, height: 50 } );
-			} ).not.toThrow();
-		} );
-
 		test( 'drawText does nothing when textRenderer is null', () => {
 			renderer.textRenderer = null;
 			expect( () => {
@@ -2839,7 +2684,7 @@ describe( 'LayerRenderer', () => {
 			testRenderer.effectsRenderer = null;
 
 			expect( () => {
-				testRenderer.drawBlur( { type: 'blur', x: 10, y: 20, width: 100, height: 50, blurRadius: 10 } );
+				testRenderer.drawLayerWithBlurBlend( { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blend: 'blur' } );
 			} ).not.toThrow();
 
 			testRenderer.destroy();

@@ -431,14 +431,6 @@
 				<line x1="5" y1="19" x2="19" y2="5"/>
 			</svg>`,
 
-				// Blur tool - Pixelated/mosaic pattern
-				blur: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
-				<rect x="3" y="3" width="7" height="7"/>
-				<rect x="14" y="3" width="7" height="7"/>
-				<rect x="14" y="14" width="7" height="7"/>
-				<rect x="3" y="14" width="7" height="7"/>
-			</svg>`,
-
 				// Text Box tool - Rectangle with text lines
 				textbox: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
 				<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -556,22 +548,111 @@
 
 			// SVG icons following industry standards (Figma, Adobe, etc.)
 			const icons = this.getToolIcons();
-			const tools = [
-				{ id: 'pointer', icon: icons.pointer, title: t( 'layers-tool-select', 'Select Tool' ), key: 'V', isSvg: true },
+
+			// Tool definitions with grouping information
+			// Standalone tools are rendered as individual buttons
+			// Grouped tools are rendered in dropdown menus
+			const standAloneTools = [
+				{ id: 'pointer', icon: icons.pointer, title: t( 'layers-tool-select', 'Select Tool' ), key: 'V', isSvg: true }
+			];
+
+			// Text tools group
+			const textTools = [
 				{ id: 'text', icon: icons.text, title: t( 'layers-tool-text', 'Text Tool' ), key: 'T', isSvg: true },
-				{ id: 'textbox', icon: icons.textbox, title: t( 'layers-tool-textbox', 'Text Box Tool' ), key: 'X', isSvg: true },
-				{ id: 'pen', icon: icons.pen, title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P', isSvg: true },
+				{ id: 'textbox', icon: icons.textbox, title: t( 'layers-tool-textbox', 'Text Box Tool' ), key: 'X', isSvg: true }
+			];
+
+			// Shape tools group
+			const shapeTools = [
 				{ id: 'rectangle', icon: icons.rectangle, title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R', isSvg: true },
 				{ id: 'circle', icon: icons.circle, title: t( 'layers-tool-circle', 'Circle Tool' ), key: 'C', isSvg: true },
 				{ id: 'ellipse', icon: icons.ellipse, title: t( 'layers-tool-ellipse', 'Ellipse Tool' ), key: 'E', isSvg: true },
 				{ id: 'polygon', icon: icons.polygon, title: t( 'layers-tool-polygon', 'Polygon Tool' ), key: 'Y', isSvg: true },
-				{ id: 'star', icon: icons.star, title: t( 'layers-tool-star', 'Star Tool' ), key: 'S', isSvg: true },
-				{ id: 'arrow', icon: icons.arrow, title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A', isSvg: true },
-				{ id: 'line', icon: icons.line, title: t( 'layers-tool-line', 'Line Tool' ), key: 'L', isSvg: true },
-				{ id: 'blur', icon: icons.blur, title: t( 'layers-tool-blur', 'Blur Tool' ), key: 'B', isSvg: true }
+				{ id: 'star', icon: icons.star, title: t( 'layers-tool-star', 'Star Tool' ), key: 'S', isSvg: true }
 			];
 
-			tools.forEach( ( tool ) => {
+			// Line tools group
+			const lineTools = [
+				{ id: 'arrow', icon: icons.arrow, title: t( 'layers-tool-arrow', 'Arrow Tool' ), key: 'A', isSvg: true },
+				{ id: 'line', icon: icons.line, title: t( 'layers-tool-line', 'Line Tool' ), key: 'L', isSvg: true }
+			];
+
+			// Additional standalone tools
+			const additionalTools = [
+				{ id: 'pen', icon: icons.pen, title: t( 'layers-tool-pen', 'Pen Tool' ), key: 'P', isSvg: true }
+			];
+
+			// Store dropdown references for managing active states
+			this.toolDropdowns = [];
+
+			// Get ToolDropdown class
+			const ToolDropdown = getClass( 'UI.ToolDropdown', 'ToolDropdown' );
+
+			// Render standalone tools (pointer)
+			standAloneTools.forEach( ( tool ) => {
+				const button = this.createToolButton( tool );
+				toolGroup.appendChild( button );
+			} );
+
+			// Create Text dropdown
+			if ( ToolDropdown ) {
+				const textDropdown = new ToolDropdown( {
+					groupId: 'text',
+					groupLabel: t( 'layers-tool-group-text', 'Text Tools' ),
+					tools: textTools,
+					defaultTool: 'text',
+					onToolSelect: ( toolId ) => this.selectTool( toolId ),
+					msg: t
+				} );
+				toolGroup.appendChild( textDropdown.create() );
+				this.toolDropdowns.push( textDropdown );
+			} else {
+				// Fallback: render as individual buttons
+				textTools.forEach( ( tool ) => {
+					toolGroup.appendChild( this.createToolButton( tool ) );
+				} );
+			}
+
+			// Create Shapes dropdown
+			if ( ToolDropdown ) {
+				const shapesDropdown = new ToolDropdown( {
+					groupId: 'shapes',
+					groupLabel: t( 'layers-tool-group-shapes', 'Shape Tools' ),
+					tools: shapeTools,
+					defaultTool: 'rectangle',
+					onToolSelect: ( toolId ) => this.selectTool( toolId ),
+					msg: t
+				} );
+				toolGroup.appendChild( shapesDropdown.create() );
+				this.toolDropdowns.push( shapesDropdown );
+			} else {
+				// Fallback: render as individual buttons
+				shapeTools.forEach( ( tool ) => {
+					toolGroup.appendChild( this.createToolButton( tool ) );
+				} );
+			}
+
+			// Create Lines dropdown
+			if ( ToolDropdown ) {
+				const linesDropdown = new ToolDropdown( {
+					groupId: 'lines',
+					groupLabel: t( 'layers-tool-group-lines', 'Line Tools' ),
+					tools: lineTools,
+					defaultTool: 'arrow',
+					onToolSelect: ( toolId ) => this.selectTool( toolId ),
+					msg: t
+				} );
+				toolGroup.appendChild( linesDropdown.create() );
+				this.toolDropdowns.push( linesDropdown );
+			} else {
+				// Fallback: render as individual buttons
+				lineTools.forEach( ( tool ) => {
+					toolGroup.appendChild( this.createToolButton( tool ) );
+				} );
+			}
+
+			// Render additional standalone tools (pen, blur)
+			additionalTools.forEach( ( tool ) => {
 				const button = this.createToolButton( tool );
 				toolGroup.appendChild( button );
 			} );
@@ -1359,13 +1440,28 @@
 	}
 
 	selectTool( toolId ) {
-		// Update UI
-		Array.prototype.forEach.call( this.container.querySelectorAll( '.tool-button' ), ( button ) => {
+		// Update UI - clear active state from all standalone tool buttons
+		Array.prototype.forEach.call( this.container.querySelectorAll( '.tool-button:not(.tool-dropdown-trigger)' ), ( button ) => {
 			button.classList.remove( 'active' );
 			button.setAttribute( 'aria-pressed', 'false' );
 		} );
 
-		const selectedButton = this.container.querySelector( '[data-tool="' + toolId + '"]' );
+		// Update dropdown active states
+		if ( this.toolDropdowns && this.toolDropdowns.length > 0 ) {
+			this.toolDropdowns.forEach( ( dropdown ) => {
+				if ( dropdown.hasTool( toolId ) ) {
+					// This dropdown contains the tool - activate it and update MRU
+					dropdown.setActive( true );
+					// skipCallback=true to prevent recursive call back to selectTool
+					dropdown.selectTool( toolId, true, true );
+				} else {
+					dropdown.setActive( false );
+				}
+			} );
+		}
+
+		// For standalone buttons, set active state directly
+		const selectedButton = this.container.querySelector( '.tool-button:not(.tool-dropdown-trigger)[data-tool="' + toolId + '"]' );
 		if ( selectedButton ) {
 			selectedButton.classList.add( 'active' );
 			selectedButton.setAttribute( 'aria-pressed', 'true' );
@@ -1379,8 +1475,8 @@
 		// Notify editor
 		this.editor.setCurrentTool( toolId, { skipToolbarSync: true } );
 
-		// Ensure focus remains on selected tool for keyboard users
-		const focusedBtn = this.container.querySelector( '[data-tool="' + toolId + '"]' );
+		// Focus: for standalone buttons, focus them; for dropdowns, focus the trigger
+		const focusedBtn = this.container.querySelector( '.tool-button:not(.tool-dropdown-trigger)[data-tool="' + toolId + '"]' );
 		if ( focusedBtn ) {
 			focusedBtn.focus();
 		}

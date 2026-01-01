@@ -102,7 +102,7 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 		}
 
 		// High complexity layers should be limited
-		$highComplexityTypes = [ 'path', 'blur' ];
+		$highComplexityTypes = [ 'path' ];
 		foreach ( $highComplexityTypes as $type ) {
 			$layers = array_fill( 0, 5, [ 'type' => $type ] );
 			$result = $limiter->isComplexityAllowed( $layers );
@@ -243,8 +243,7 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 			'arrow' => 3,
 			'line' => 2,
 			'polygon' => 3,
-			'path' => 5,
-			'blur' => 4
+			'path' => 5
 		];
 
 		foreach ( $layerTypes as $type => $expectedScore ) {
