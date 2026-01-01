@@ -2,6 +2,76 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [Unreleased]
+
+_No unreleased changes._
+
+---
+
+## [1.4.0] - 2025-12-31
+
+### Added
+- **Live Color Picker Preview (FR-9)** — Canvas now updates in real-time as colors are selected in the color picker, matching professional editor UX
+  - ColorPickerDialog tracks original color for cancel restoration
+  - Preview updates on swatch selection and custom color input
+  - Original color restored when user cancels or presses Escape
+  - ToolbarStyleControls applies preview to selected layers without affecting undo history
+- **Live Article Preview (FR-10)** — Layer changes now visible on article pages immediately after saving, without needing to edit and save the wiki page
+  - New `FreshnessChecker.js` module compares inline revision with API
+  - ViewerManager automatically detects and refreshes stale viewers
+  - ThumbnailProcessor embeds revision metadata (`data-layer-revision`, `data-layer-setname`, `data-file-name`)
+  - 30-second sessionStorage cache prevents excessive API calls
+  - 45 new tests for FreshnessChecker (33) and ViewerManager FR-10 integration (12)
+- **Curved Arrows (FR-4)** — Arrows now support curved paths via draggable control point
+  - Purple circular control handle at arrow midpoint enables curve shaping
+  - Quadratic Bézier curves with tangent-following arrow heads
+  - Works with all arrow head types (pointed, chevron, standard)
+  - Single and double-headed curved arrows supported
+  - `controlX`, `controlY` properties added to layer data model
+  - 27 new tests (18 ArrowRenderer + 6 SelectionRenderer + 3 ResizeCalculator)
+
+### Changed
+- **Test count** — 7,852 tests (136 suites, all passing)
+- **ESLint config** — Added underscore-prefix pattern (`_paramName`) for intentionally unused parameters
+- **ESLint-disable comments** — Reduced from 13 to 8 by using underscore convention instead of inline disables
+
+### Fixed
+- **Curved arrow scaling bug** — Control point (`controlX`, `controlY`) was not scaled in `LayersViewer.scaleLayerCoordinates()`, causing dramatic distortion when viewing curved arrows on scaled images
+- **Curved arrow blur fill** — Blur fill (frosted glass effect) was not working for curved arrows in `ArrowRenderer.drawCurved()` — now properly calls `effectsRenderer.drawBlurFill()`
+- **PHP line endings** — Fixed CRLF line endings in 14 PHP files (auto-fixed with phpcbf)
+
+### Improved
+- **Accessibility: Reduced Motion Support** — Added `@media (prefers-reduced-motion: reduce)` to respect user motion preferences (WCAG 2.3.3)
+  - `editor-fixed.css`: Disables slide-in animation, removes all toolbar/button transitions
+  - `LayersLightbox.css`: Disables fade transitions, stops spinner animation
+  - `presets.css`: Disables dropdown/button transitions
+  - Updated ACCESSIBILITY.md to mark item #8 as resolved
+- **Developer onboarding** — Updated DEVELOPER_ONBOARDING.md with accurate line counts for all key modules
+- **ToolbarStyleControls coverage** — Added 5 new tests for destroy, fallback paths, and context-aware mode
+- **PropertiesForm coverage** — Branch coverage improved from 72.41% → 81.69% (+9.28pp)
+  - Added 5 tests for folder/group layer properties panel
+  - Added test for formatOneDecimal NaN edge case
+- **FolderOperationsController coverage** — Branch coverage improved from 72.56% → 88.49% (+15.93pp)
+  - Added 10 tests for default fallbacks, callback invocation, missing managers
+  - 100% statement and function coverage now achieved
+- **LayerItemFactory coverage** — Function coverage improved from 71.42% → 100%
+  - Added 5 tests for createFolderIconFallback and default callbacks
+  - Statement coverage improved 97.58% → 98.79%
+- **SmartGuidesController coverage** — Branch coverage improved from 70.55% → 76.64%
+  - Added 8 tests for getLayerBounds, text/arrow bounds, edge cases
+- **GeometryUtils coverage** — Branch coverage improved from 72.09% → 85.27% (+13.18pp)
+  - Added 10 tests for textbox, image, path fallbacks, and edge cases
+- **ContextMenuController coverage** — Branch coverage improved from 74% → 80% (+6pp)
+  - Added tests for Escape key handling and inside-click behavior
+- **TypeScript definitions** — Updated `types/layers.d.ts` to v1.4.0 with comprehensive property coverage
+  - Added ArrowProperties: `controlX`, `controlY` (curved arrows), `arrowhead`/`arrowHeadType` aliases
+  - Added StarProperties: `innerRadius`, `outerRadius`, `pointRadius`, `valleyRadius`
+  - Added BlurProperties: `blurRadius`, `_previousFill` (frosted glass effect)
+  - Added GroupProperties: `children`, `expanded`, `parentGroup`
+  - Extended PathProperties: `sides`, `startAngle`, `endAngle` (polygon support)
+
+---
+
 ## [1.3.2] - 2025-12-31
 
 ### Added

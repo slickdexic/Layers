@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** December 31, 2025  
-**Version:** 1.3.0
+**Version:** 1.3.2
 
 This document lists known functionality issues and their current status.
 
@@ -12,8 +12,8 @@ This document lists known functionality issues and their current status.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ **None** |
-| P1 (Stability) | 2 | ⚠️ Monitored |
-| P2 (Code Quality) | 3 | ⏳ Tracked |
+| P1 (Stability) | 2 | ⚠️ 11 god classes (all well-delegated) |
+| P2 (Code Quality) | 2 | ✅ ESLint disables reduced to 8 |
 | Feature Gaps | 4 | ⏳ Planned |
 
 ---
@@ -83,10 +83,10 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 ## ⚠️ P1 Issues (Stability)
 
-### P1.1 God Classes (9 files >1,000 lines)
+### P1.1 God Classes (11 files >1,000 lines)
 
 **Status:** Managed - All use delegation patterns  
-**Severity:** LOW - Acceptable with good delegation
+**Severity:** MEDIUM - Increased from 9 to 11 in v1.3.3
 
 | File | Lines | Delegation Pattern | Status |
 |------|-------|-------------------|--------|
@@ -95,14 +95,16 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 | Toolbar.js | 1,556 | ✅ 4 modules | ✅ OK |
 | LayersEditor.js | 1,465 | ✅ 3 modules | ✅ OK |
 | SelectionManager.js | 1,359 | ✅ 3 modules | ✅ OK |
-| ToolManager.js | 1,261 | ✅ 2 handlers | ✅ OK |
+| ToolManager.js | 1,259 | ✅ 2 handlers | ✅ OK |
 | CanvasRenderer.js | 1,242 | ✅ SelectionRenderer | ✅ OK |
+| **ArrowRenderer.js** | **1,217** | ✅ Rendering (curved arrows) | **NEW** |
 | APIManager.js | 1,182 | ✅ APIErrorHandler | ✅ OK |
 | GroupManager.js | 1,132 | New (v1.2.13) | ✅ OK |
+| **ToolbarStyleControls.js** | **1,013** | ✅ Style controls (live preview) | **NEW** |
 
-**Total in god classes:** ~12,186 lines (23% of JS codebase)
+**Total in god classes:** ~14,427 lines (26% of JS codebase)
 
-**Note:** LayerListRenderer.js is now 617 lines (previously incorrectly documented as 1,039).
+**Note:** ArrowRenderer.js grew due to curved arrow feature (v1.3.3). ToolbarStyleControls.js grew due to live color preview feature.
 
 ### P1.2 Files Approaching 1,000 Lines
 
@@ -111,9 +113,9 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 | File | Lines | Risk |
 |------|-------|------|
-| ToolbarStyleControls.js | 944 | ⚠️ Monitor |
-| PropertiesForm.js | 914 | ⚠️ Monitor |
+| PropertiesForm.js | 957 | ⚠️ Monitor |
 | ShapeRenderer.js | 909 | ⚠️ Monitor |
+| LayersValidator.js | 854 | ✅ OK |
 
 ---
 
@@ -121,15 +123,16 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 ### P2.1 ESLint Disable Comments
 
-**Status:** Above target  
-**Count:** 13 eslint-disable comments (reduced from 17)
+**Status:** ✅ Well below target  
+**Count:** 8 eslint-disable comments (reduced from 17 → 13 → 8)
 
 | Rule | Count | Reason |
 |------|-------|--------|
 | no-alert | 8 | ✅ Intentional fallbacks when DialogManager unavailable |
-| no-unused-vars | 9 | ⚠️ API compatibility (4 from GroupManager.js) |
 
-The increase from 12 to 17 is due to GroupManager.js (4 new comments).
+**Improvements Made:**
+- Refactored GroupManager.js to use `omitProperty` utility (removed 4)
+- Added underscore-prefix pattern to .eslintrc.json for intentionally unused params (removed 5)
 
 ### P2.2 Test Coverage
 
@@ -252,11 +255,11 @@ The extension is feature-rich with 12 drawing tools, layer grouping, multiple re
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,711 | - | ✅ |
-| Statement coverage | 94.2% | 85%+ | ✅ Excellent |
-| Branch coverage | 82.6% | 75%+ | ✅ |
-| Function coverage | 92% | 80%+ | ✅ |
-| Line coverage | 94% | 85%+ | ✅ |
+| Tests passing | 7,817 | - | ✅ |
+| Statement coverage | 93.93% | 85%+ | ✅ Excellent |
+| Branch coverage | 82.63% | 75%+ | ✅ |
+| Function coverage | 91.45% | 80%+ | ✅ |
+| Line coverage | 94.21% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -323,4 +326,4 @@ If you encounter issues:
 ---
 
 *Document updated: December 31, 2025*  
-*Status: ✅ No critical issues. Extension is production-ready with excellent test coverage (94.2%, 7,711 tests).*
+*Status: ⚠️ 11 god classes. Extension is production-ready with excellent test coverage (93.8%, 7,805 tests).*

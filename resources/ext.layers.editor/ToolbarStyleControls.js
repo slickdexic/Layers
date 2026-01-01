@@ -229,6 +229,9 @@ class ToolbarStyleControls {
 						this.strokeColorValue = color;
 					}
 					this.notifyStyleChange();
+				},
+				onColorPreview: ( color, isNone ) => {
+					this.applyColorPreview( 'stroke', isNone ? 'transparent' : color );
 				}
 			} );
 			this.strokeColorButton = this.strokeControl.button;
@@ -246,6 +249,9 @@ class ToolbarStyleControls {
 						this.fillColorValue = color;
 					}
 					this.notifyStyleChange();
+				},
+				onColorPreview: ( color, isNone ) => {
+					this.applyColorPreview( 'fill', isNone ? 'transparent' : color );
 				}
 			} );
 			this.fillColorButton = this.fillControl.button;
@@ -262,6 +268,9 @@ class ToolbarStyleControls {
 						this.strokeColorValue = color;
 					}
 					this.notifyStyleChange();
+				},
+				onColorPreview: ( color, isNone ) => {
+					this.applyColorPreview( 'stroke', isNone ? 'transparent' : color );
 				}
 			} );
 			this.strokeColorButton = strokeItem.button;
@@ -277,6 +286,9 @@ class ToolbarStyleControls {
 						this.fillColorValue = color;
 					}
 					this.notifyStyleChange();
+				},
+				onColorPreview: ( color, isNone ) => {
+					this.applyColorPreview( 'fill', isNone ? 'transparent' : color );
 				}
 			} );
 			this.fillColorButton = fillItem.button;
@@ -324,7 +336,11 @@ class ToolbarStyleControls {
 					const none = chosen === 'none';
 					options.onColorChange( chosen, none );
 					this.updateColorButtonDisplay( button, none ? 'none' : chosen );
-				}
+				},
+				onPreview: options.onColorPreview ? ( previewColor ) => {
+					const none = previewColor === 'none';
+					options.onColorPreview( none ? currentValue : previewColor, none );
+				} : null
 			} );
 		} );
 
@@ -455,7 +471,8 @@ class ToolbarStyleControls {
 				}
 			},
 			onApply: options.onApply || function () {},
-			onCancel: options.onCancel || function () {}
+			onCancel: options.onCancel || function () {},
+			onPreview: options.onPreview || null
 		} );
 
 		picker.open();
@@ -496,6 +513,58 @@ class ToolbarStyleControls {
 	notifyStyleChange() {
 		if ( this.toolbar && typeof this.toolbar.onStyleChange === 'function' ) {
 			this.toolbar.onStyleChange( this.getStyleOptions() );
+		}
+	}
+
+	/**
+	 * Apply color preview to selected layers without committing to history.
+	 * Used for live preview in color picker dialog.
+	 *
+	 * @param {string} colorType 'stroke' or 'fill'
+	 * @param {string} color The preview color value
+	 */
+	applyColorPreview( colorType, color ) {
+		if ( !this.toolbar || !this.toolbar.editor ) {
+			return;
+		}
+
+		const editor = this.toolbar.editor;
+		const canvasManager = editor.canvasManager;
+		if ( !canvasManager ) {
+			return;
+		}
+
+		// Get selected layer IDs
+		const selectedIds = canvasManager.getSelectedLayerIds ? canvasManager.getSelectedLayerIds() : [];
+		if ( !selectedIds || !selectedIds.length ) {
+			return;
+		}
+
+		// Apply preview color to each selected layer
+		for ( const id of selectedIds ) {
+			const layer = editor.getLayerById ? editor.getLayerById( id ) : null;
+			if ( !layer ) {
+				continue;
+			}
+
+			if ( colorType === 'stroke' ) {
+				// For text layers, stroke color = fill
+				if ( layer.type === 'text' ) {
+					layer.fill = color;
+				} else {
+					layer.stroke = color;
+				}
+			} else if ( colorType === 'fill' ) {
+				// Fill applies to shapes (not text, line, arrow)
+				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
+					layer.fill = color;
+				}
+			}
+		}
+
+		// Re-render to show preview
+		if ( canvasManager.renderLayers && editor.layers ) {
+			canvasManager.renderLayers( editor.layers );
 		}
 	}
 
@@ -853,10 +922,9 @@ class ToolbarStyleControls {
 	 * Controls are redundant because the Properties panel in the Layer Manager
 	 * provides all the same controls for editing selected layers.
 	 *
-	 * @param {Array} selectedLayers Array of selected layer objects
+	 * @param {Array} _selectedLayers Array of selected layer objects (unused)
 	 */
-	// eslint-disable-next-line no-unused-vars
-	hideControlsForSelectedLayers( selectedLayers ) {
+	hideControlsForSelectedLayers( _selectedLayers ) {
 		// Hide main style row when layers are selected (Properties panel has these)
 		if ( this.mainStyleRow ) {
 			this.mainStyleRow.classList.add( 'context-hidden' );

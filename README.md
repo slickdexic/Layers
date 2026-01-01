@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94.2%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-7%2C711%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-7%2C852%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.3.2 (December 2025)  
+> **Version:** 1.4.0 (December 2025)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -66,6 +66,32 @@ Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box, Arrow (v1.2.7
 
 > **Note:** All blur fill coordinate bugs have been fixed as of v1.2.8. The feature is production-ready.
 
+### Curved Arrows (v1.3.3+)
+
+Arrows can now be curved by dragging the purple control point at the arrow's midpoint:
+
+- **Quadratic Bézier curves** for smooth, organic arrow paths
+- **Tangent-following arrow heads** that point along the curve direction
+- Works with all arrow head types (pointed, chevron, standard)
+- Single and double-headed curved arrows supported
+- Perfect for pointing to off-axis targets and creating flowing diagrams
+
+### Live Color Preview (v1.3.3+)
+
+The canvas updates in real-time as you select colors in the color picker:
+
+- Preview changes on the canvas before applying
+- Cancel or press Escape to restore the original color
+- Matches professional editor UX (Figma, Photoshop, Illustrator)
+
+### Live Article Preview (v1.3.3+)
+
+Layer changes are visible on article pages immediately after saving, without needing to edit and save the wiki page:
+
+- Viewer detects stale inline data via revision comparison
+- Automatic refresh of viewers with latest layer data
+- Streamlined workflow for annotators with immediate feedback
+
 ### Smart Guides & Alignment
 
 - **Smart Guides**: Automatic snapping to object edges and centers (toggle with `;`)
@@ -91,6 +117,7 @@ Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box, Arrow (v1.2.7
 - ARIA landmarks on all major sections
 - Full keyboard support with help dialog (Shift+?)
 - Screen reader compatible
+- Respects `prefers-reduced-motion` user preference (WCAG 2.3.3)
 
 ---
 
@@ -201,8 +228,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~10,000 lines across 31 files
-- **Frontend:** HTML5 Canvas editor with 101 JS files (~53,500 lines), 91 ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~10,100 lines across 31 files
+- **Frontend:** HTML5 Canvas editor with 102 JS files (~54,700 lines), 83 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -210,10 +237,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 7,711 passing |
+| Jest tests | 7,852 passing |
 | Statement coverage | 94.2% |
 | Branch coverage | 82.6% |
-| Test suites | 135 |
+| Test suites | 136 |
 
 **Security:**
 
@@ -257,11 +284,11 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 101 | ✅ |
-| Total JS lines | ~53,500 | ✅ Well under 75K target |
-| ES6 classes | 91 | ✅ |
-| God classes (>1000 lines) | 9 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 7,711 | ✅ |
+| Total JS files | 102 | ✅ |
+| Total JS lines | ~54,700 | ✅ Well under 75K target |
+| ES6 classes | 83 | ✅ |
+| God classes (>1000 lines) | 11 | ⚠️ Technical debt (all use delegation) |
+| Tests passing | 7,852 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 94.2% | ✅ Excellent |
 | Branch coverage | 82.6% | ✅ |

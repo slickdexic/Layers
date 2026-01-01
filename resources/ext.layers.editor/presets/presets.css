@@ -274,3 +274,16 @@
 		color: #a2a9b1;
 	}
 }
+
+/* Reduced Motion Accessibility Support
+ * Respects user preferences for reduced motion (WCAG 2.3.3)
+ */
+@media ( prefers-reduced-motion: reduce ) {
+	.layers-preset-button,
+	.layers-preset-item,
+	.layers-preset-item-actions,
+	.layers-preset-item-action,
+	.layers-preset-action {
+		transition: none;
+	}
+}

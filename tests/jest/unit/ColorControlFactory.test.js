@@ -628,4 +628,128 @@ describe( 'ColorControlFactory', () => {
 			openColorPickerSpy.mockRestore();
 		} );
 	} );
+
+	describe( 'live preview (onColorPreview)', () => {
+		it( 'should pass onPreview wrapper to openColorPicker when onColorPreview provided', () => {
+			const openColorPickerSpy = jest.spyOn( factory, 'openColorPicker' ).mockImplementation( () => {} );
+			const onColorPreview = jest.fn();
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				onColorChange: jest.fn(),
+				onColorPreview: onColorPreview
+			} );
+
+			control.button.click();
+
+			// The factory wraps onColorPreview in its own function
+			expect( openColorPickerSpy ).toHaveBeenCalled();
+			const callOptions = openColorPickerSpy.mock.calls[ 0 ][ 2 ];
+			expect( callOptions.onPreview ).toBeInstanceOf( Function );
+
+			openColorPickerSpy.mockRestore();
+		} );
+
+		it( 'should call onColorPreview when onPreview wrapper is invoked', () => {
+			const openColorPickerSpy = jest.spyOn( factory, 'openColorPicker' ).mockImplementation( () => {} );
+			const onColorPreview = jest.fn();
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				onColorChange: jest.fn(),
+				onColorPreview: onColorPreview
+			} );
+
+			control.button.click();
+
+			// Get the wrapped onPreview function
+			const callOptions = openColorPickerSpy.mock.calls[ 0 ][ 2 ];
+			const onPreviewWrapper = callOptions.onPreview;
+
+			// Call the wrapper with a preview color
+			onPreviewWrapper( '#00ff00' );
+
+			expect( onColorPreview ).toHaveBeenCalledWith( '#00ff00', false );
+
+			openColorPickerSpy.mockRestore();
+		} );
+
+		it( 'should pass none=true when preview color is none', () => {
+			const openColorPickerSpy = jest.spyOn( factory, 'openColorPicker' ).mockImplementation( () => {} );
+			const onColorPreview = jest.fn();
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				onColorChange: jest.fn(),
+				onColorPreview: onColorPreview
+			} );
+
+			control.button.click();
+
+			const callOptions = openColorPickerSpy.mock.calls[ 0 ][ 2 ];
+			const onPreviewWrapper = callOptions.onPreview;
+
+			// Call with 'none' color
+			onPreviewWrapper( 'none' );
+
+			// When none, onColorPreview gets the original colorValue (ff0000) with none=true
+			expect( onColorPreview ).toHaveBeenCalledWith( '#ff0000', true );
+
+			openColorPickerSpy.mockRestore();
+		} );
+
+		it( 'should pass onPreview to ColorPickerDialog when provided in options', () => {
+			// Save original
+			const saved = window.Layers?.UI?.ColorPickerDialog;
+			const mockDialog = {
+				open: jest.fn()
+			};
+			const MockColorPickerDialog = jest.fn().mockReturnValue( mockDialog );
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.ColorPickerDialog = MockColorPickerDialog;
+
+			const onPreview = jest.fn();
+			const anchorButton = document.createElement( 'button' );
+
+			factory.openColorPicker( anchorButton, '#ff0000', {
+				onColorChange: jest.fn(),
+				onPreview: onPreview
+			} );
+
+			// Verify ColorPickerDialog was called with onPreview
+			expect( MockColorPickerDialog ).toHaveBeenCalled();
+			const callArgs = MockColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			expect( callArgs.onPreview ).toBe( onPreview );
+
+			window.Layers.UI.ColorPickerDialog = saved;
+		} );
+
+		it( 'should pass null for onPreview when not provided in options', () => {
+			const saved = window.Layers?.UI?.ColorPickerDialog;
+			const MockColorPickerDialog = jest.fn().mockReturnValue( {
+				open: jest.fn()
+			} );
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.ColorPickerDialog = MockColorPickerDialog;
+
+			const anchorButton = document.createElement( 'button' );
+
+			factory.openColorPicker( anchorButton, '#ff0000', {
+				onColorChange: jest.fn()
+				// No onPreview
+			} );
+
+			// Verify ColorPickerDialog was called with onPreview=null
+			expect( MockColorPickerDialog ).toHaveBeenCalled();
+			const callArgs = MockColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			expect( callArgs.onPreview ).toBeNull();
+
+			window.Layers.UI.ColorPickerDialog = saved;
+		} );
+	} );
 } );

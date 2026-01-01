@@ -326,6 +326,40 @@ describe( 'GeometryUtils', () => {
 			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
 		} );
 
+		it( 'should handle textbox layer like rectangle', () => {
+			const layer = { type: 'textbox', x: 15, y: 25, width: 200, height: 100 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 15, y: 25, width: 200, height: 100 } );
+		} );
+
+		it( 'should handle image layer like rectangle', () => {
+			const layer = { type: 'image', x: 0, y: 0, width: 400, height: 300 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 0, y: 0, width: 400, height: 300 } );
+		} );
+
+		it( 'should handle rectangle with missing x/y as zero', () => {
+			const layer = { type: 'rectangle', width: 100, height: 50 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 0, y: 0, width: 100, height: 50 } );
+		} );
+
+		it( 'should handle rectangle with missing width/height as zero', () => {
+			const layer = { type: 'rectangle', x: 10, y: 20 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 0, height: 0 } );
+		} );
+
+		it( 'should handle line with only x,y properties (no x1,y1,x2,y2)', () => {
+			const layer = { type: 'line', x: 50, y: 75 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 75 );
+			expect( bounds.width ).toBe( 1 );
+			expect( bounds.height ).toBe( 1 );
+		} );
+
+		it( 'should handle ellipse using radius as fallback for radiusX/radiusY', () => {
+			const layer = { type: 'ellipse', x: 100, y: 100, radius: 50 };
+			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 50, y: 50, width: 100, height: 100 } );
+		} );
+
 		it( 'should handle path with points', () => {
 			const layer = { type: 'path', points: [ { x: 0, y: 0 }, { x: 100, y: 50 }, { x: 50, y: 100 } ] };
 			const bounds = GeometryUtils.getLayerBoundsForType( layer );
@@ -335,9 +369,36 @@ describe( 'GeometryUtils', () => {
 			expect( bounds.height ).toBe( 100 );
 		} );
 
+		it( 'should handle path without points using radius fallback', () => {
+			const layer = { type: 'path', x: 100, y: 100, radius: 30 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 70 );
+			expect( bounds.y ).toBe( 70 );
+			expect( bounds.width ).toBe( 60 );
+			expect( bounds.height ).toBe( 60 );
+		} );
+
+		it( 'should use default radius of 50 for polygon without radius', () => {
+			const layer = { type: 'polygon', x: 100, y: 100 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 50 );
+			expect( bounds.width ).toBe( 100 );
+			expect( bounds.height ).toBe( 100 );
+		} );
+
 		it( 'should return default bounds for unknown type', () => {
 			const layer = { type: 'unknown', x: 10, y: 20, width: 30, height: 40 };
 			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 30, height: 40 } );
+		} );
+
+		it( 'should use default 50x50 for unknown type without dimensions', () => {
+			const layer = { type: 'custom', x: 10, y: 20 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 10 );
+			expect( bounds.y ).toBe( 20 );
+			expect( bounds.width ).toBe( 50 );
+			expect( bounds.height ).toBe( 50 );
 		} );
 	} );
 

@@ -144,8 +144,12 @@ describe( 'SelectionRenderer', () => {
 
 		test( 'should draw line-specific handles for arrow layer', () => {
 			renderer.drawSelectionIndicators( 'layer3' );
-			// 2 endpoint handles only (no rotation for lines)
-			expect( renderer.selectionHandles.length ).toBe( 2 );
+			// 2 endpoint handles + 1 curve control handle for arrows
+			expect( renderer.selectionHandles.length ).toBe( 3 );
+			const types = renderer.selectionHandles.map( ( h ) => h.type );
+			expect( types ).toContain( 'w' ); // Start point
+			expect( types ).toContain( 'e' ); // End point
+			expect( types ).toContain( 'control' ); // Curve control
 		} );
 
 		test( 'should call ctx.save and ctx.restore', () => {
@@ -229,6 +233,66 @@ describe( 'SelectionRenderer', () => {
 			// Should default to 0,0
 			expect( renderer.selectionHandles[ 0 ].x ).toBeDefined();
 			expect( renderer.selectionHandles[ 0 ].y ).toBeDefined();
+		} );
+	} );
+
+	describe( 'drawCurveControlHandle', () => {
+		test( 'should create control handle for arrow', () => {
+			const layer = { id: 'arrow1', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			renderer.drawCurveControlHandle( layer, 0, 0, 100, 100, 12, false );
+
+			expect( renderer.selectionHandles.length ).toBe( 1 );
+			const handle = renderer.selectionHandles[ 0 ];
+			expect( handle.type ).toBe( 'control' );
+			expect( handle.isControl ).toBe( true );
+			expect( handle.isLine ).toBe( true );
+		} );
+
+		test( 'should position at midpoint by default', () => {
+			const layer = { id: 'arrow1', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 0 };
+			renderer.drawCurveControlHandle( layer, 0, 0, 100, 0, 12, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			// Midpoint is (50, 0), handle is centered at that point minus handleSize/2
+			expect( handle.x ).toBe( 50 - 12 / 2 );
+			expect( handle.y ).toBe( 0 - 12 / 2 );
+		} );
+
+		test( 'should use existing control point if set', () => {
+			const layer = {
+				id: 'arrow1', type: 'arrow',
+				x1: 0, y1: 0, x2: 100, y2: 0,
+				controlX: 50, controlY: 80
+			};
+			renderer.drawCurveControlHandle( layer, 0, 0, 100, 0, 12, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			expect( handle.x ).toBe( 50 - 12 / 2 );
+			expect( handle.y ).toBe( 80 - 12 / 2 );
+		} );
+
+		test( 'should draw circular handle', () => {
+			const layer = { id: 'arrow1', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			renderer.drawCurveControlHandle( layer, 0, 0, 100, 100, 12, false );
+
+			expect( mockCtx.arc ).toHaveBeenCalled();
+			expect( mockCtx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw dashed line to midpoint', () => {
+			const layer = { id: 'arrow1', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			renderer.drawCurveControlHandle( layer, 0, 0, 100, 100, 12, false );
+
+			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [ 4, 4 ] );
+			expect( mockCtx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'should use key object style when isKeyObject', () => {
+			const layer = { id: 'arrow1', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			renderer.drawCurveControlHandle( layer, 0, 0, 100, 100, 12, true );
+
+			// When key object, strokeStyle should be orange
+			expect( mockCtx.strokeStyle ).toBe( '#ff9800' );
 		} );
 	} );
 

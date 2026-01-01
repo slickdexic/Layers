@@ -417,6 +417,7 @@
 				color: opts.value,
 				strings: colorPickerStrings,
 				onClick: function () {
+					const originalColor = opts.value; // Store for cancel restoration
 					const dialog = new ColorPickerDialog( {
 						currentColor: opts.value,
 						strings: colorPickerStrings,
@@ -426,6 +427,14 @@
 							opts.onChange( newColor );
 							opts.value = newColor; // Update for next dialog open
 							ColorPickerDialog.updateColorButton( colorButton, newColor, colorPickerStrings );
+						},
+						onPreview: function ( previewColor ) {
+							// Apply preview to selected layer
+							opts.onChange( previewColor );
+						},
+						onCancel: function () {
+							// Restore original color on cancel
+							opts.onChange( originalColor );
 						}
 					} );
 					dialog.open();

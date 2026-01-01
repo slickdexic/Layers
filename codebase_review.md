@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** December 31, 2025  
-**Version:** 1.3.2  
+**Version:** 1.4.0  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -10,14 +10,14 @@
 
 The Layers extension provides non-destructive image annotation capabilities for MediaWiki. This document provides an **honest, critical assessment** of the codebase quality, architecture, and technical health.
 
-### Overall Assessment: 9.3/10 - Production-Ready
+### Overall Assessment: 8.5/10 - Production-Ready
 
-The extension is **fully functional and production-ready** with professional security, excellent test coverage, and clean code practices. Technical debt is minimal.
+The extension is **fully functional and production-ready** with professional security, excellent test coverage, and clean code practices. Technical debt is manageable.
 
 **Key Strengths:**
 
-- ✅ **7,711 tests passing** (0 failures, 135 test suites)
-- ✅ **94.2% statement coverage, 82.6% branch coverage**
+- ✅ **7,852 tests passing** (0 failures, 136 test suites)
+- ✅ **94.2% statement coverage, 82.9% branch coverage**
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 12 working drawing tools with named layer sets
 - ✅ Layer grouping/folders feature complete
@@ -30,9 +30,9 @@ The extension is **fully functional and production-ready** with professional sec
 
 **Areas for Improvement:**
 
-- ⏳ **9 god classes (>1,000 lines)** - 23% of codebase in 9 files
+- ⏳ **11 god classes (>1,000 lines)** - 24% of codebase in 11 files
 - ⏳ **LayerPanel.js at 2,140 lines** - exceeds 2,000 line target, but well-delegated
-- ✅ **13 eslint-disable comments** (below <15 target)
+- ✅ **8 eslint-disable comments** (below <15 target)
 - ⚠️ **Mobile UI not responsive** - basic touch works, but toolbar needs optimization
 
 ---
@@ -45,19 +45,19 @@ All metrics collected directly from the codebase via automated tooling.
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total JS files | **101** | - | ✅ Feature-rich |
-| Total JS lines | **~53,500** | <75,000 | ✅ Under target |
-| ES6 classes | **91** | 70+ | ✅ |
-| Files >1,000 lines | **9** | 0 | ⏳ Managed with delegation |
+| Total JS files | **102** | - | ✅ Feature-rich |
+| Total JS lines | **~54,700** | <75,000 | ✅ Under target |
+| ES6 classes | **83** | 70+ | ✅ |
+| Files >1,000 lines | **11** | 0 | ⏳ Managed with delegation |
 | ESLint errors | **0** | 0 | ✅ |
-| ESLint disable comments | **13** | <15 | ✅ Below target |
+| ESLint disable comments | **8** | <15 | ✅ Below target |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **7,711** | - | ✅ |
+| Jest tests passing | **7,840** | - | ✅ |
 | Jest tests failing | **0** | 0 | ✅ |
 | Statement coverage | **94.2%** | 85%+ | ✅ Excellent |
 | Branch coverage | **82.6%** | 75%+ | ✅ Good |
-| Function coverage | **92.0%** | 80%+ | ✅ |
-| Line coverage | **94.7%** | 85%+ | ✅ |
+| Function coverage | **91.6%** | 80%+ | ✅ |
+| Line coverage | **94.5%** | 85%+ | ✅ |
 
 ### Files Over 1,000 Lines (God Classes)
 
@@ -68,41 +68,40 @@ All metrics collected directly from the codebase via automated tooling.
 | Toolbar.js | **1,556** | ✅ 4 modules | LOW |
 | LayersEditor.js | **1,465** | ✅ 3 modules | LOW |
 | SelectionManager.js | **1,359** | ✅ 3 modules | LOW |
-| ToolManager.js | **1,261** | ✅ 2 handlers | LOW |
+| ToolManager.js | **1,259** | ✅ 2 handlers | LOW |
 | CanvasRenderer.js | **1,242** | ✅ SelectionRenderer | LOW |
+| **ArrowRenderer.js** | **1,217** | ✅ Rendering logic | LOW |
 | APIManager.js | **1,182** | ✅ APIErrorHandler | LOW |
 | GroupManager.js | **1,132** | New (v1.2.13) | LOW |
+| **ToolbarStyleControls.js** | **1,012** | ✅ Style controls | LOW |
 
-**Total in god classes: ~12,186 lines** (23% of JS codebase)
+**Total in god classes: ~14,441 lines** (26% of JS codebase)
 
-**Note:** All god classes use delegation patterns. LayerListRenderer.js is 617 lines (not a god class).
+**Note:** All god classes use delegation patterns. ArrowRenderer.js grew due to curved arrow feature (v1.3.3). ToolbarStyleControls.js grew due to live color preview feature.
 
 ### Files Approaching 1,000 Lines (Watch List)
 
 | File | Lines | Risk |
 |------|-------|------|
-| ToolbarStyleControls.js | **944** | ⚠️ MEDIUM - Close to limit |
-| PropertiesForm.js | **914** | ⚠️ MEDIUM |
+| PropertiesForm.js | **957** | ⚠️ MEDIUM - Close to limit |
 | ShapeRenderer.js | **909** | ⚠️ MEDIUM |
-| LayersValidator.js | **854** | ✅ OK |
-| ResizeCalculator.js | **822** | ✅ OK |
+| LayersValidator.js | **853** | ✅ OK |
+| ResizeCalculator.js | **835** | ✅ OK |
 | LayerRenderer.js | **821** | ✅ LOW |
+| TransformController.js | **779** | ✅ OK |
+| DialogManager.js | **737** | ✅ OK |
 
-### ESLint Disable Comments (13 total)
+### ESLint Disable Comments (8 total)
 
 | File | Count | Rule | Reason |
 |------|-------|------|--------|
 | UIManager.js | 3 | no-alert | Fallback wrappers |
 | PresetDropdown.js | 2 | no-alert | Fallback wrappers |
-| ToolManager.js | 2 | no-unused-vars | API compatibility |
 | RevisionManager.js | 1 | no-alert | Fallback wrapper |
 | LayerSetManager.js | 1 | no-alert | Fallback wrapper |
 | ImportExportManager.js | 1 | no-alert | Fallback wrapper |
-| ToolbarStyleControls.js | 1 | no-unused-vars | API compatibility |
-| LayersValidator.js | 1 | no-unused-vars | API compatibility |
-| DrawingController.js | 1 | no-unused-vars | API compatibility |
 
-**Note:** The `no-alert` disables (8 total) are for fallback code that only executes when DialogManager is unavailable. The `no-unused-vars` disables (5 total) are for parameters intentionally kept for API compatibility.
+**Note:** All 8 remaining `no-alert` disables are for fallback code that only executes when DialogManager is unavailable. The previous 5 `no-unused-vars` disables were replaced with underscore-prefix convention (`_paramName`) per ESLint best practices.
 
 ---
 
@@ -116,11 +115,11 @@ All metrics collected directly from the codebase via automated tooling.
 | CanvasRenderer.js | 93.7% | 78.2% | ✅ Good |
 | LayerRenderer.js | 95.5% | 78.1% | ✅ Good |
 | ShapeRenderer.js | 93.9% | 84.6% | ✅ Good |
-| GroupManager.js | 89.1% | 75.1% | ✅ **Improved** (was 84.9%) |
-| LayerDragDrop.js | 100% | 87.7% | ✅ **Fixed** (was 68.9%) |
-| LayerListRenderer.js | 99.5% | 82.3% | ✅ **Fixed** (was 78.6%) |
+| GroupManager.js | 89.1% | 75.1% | ✅ Good |
+| LayerDragDrop.js | 94.4% | 79.6% | ✅ Good |
+| LayerListRenderer.js | 97.2% | 84.5% | ✅ Good |
 | CanvasManager.js | 86.6% | 72.2% | ✅ Acceptable for facade |
-| PropertiesForm.js | 92.3% | 81.2% | ✅ Good |
+| PropertiesForm.js | 89.9% | 79.7% | ✅ Good |
 
 ---
 
@@ -327,7 +326,7 @@ All critical coverage gaps have been addressed:
 ### Short-Term (1-4 Weeks) - P1
 
 1. Monitor ToolbarStyleControls.js (944 lines) - close to 1,000 threshold
-2. ✅ ESLint-disable comments reduced (17 → 13, below <15 target)
+2. ✅ ESLint-disable comments reduced (17 → 13 → 8, below <15 target)
 3. Monitor files approaching 1,000 lines (PropertiesForm at 914)
 
 ### Medium-Term (1-3 Months) - P2
@@ -348,12 +347,12 @@ All critical coverage gaps have been addressed:
 
 ### What's Good
 
-The extension is **production-ready and fully functional**. Security implementation is professional-grade. Test coverage at 94.2% statement coverage is excellent. The PHP backend is clean and well-documented. The editor has 12 working tools, smart guides, named layer sets, layer grouping, and blur fill effects. All major bugs have been fixed.
+The extension is **production-ready and fully functional**. Security implementation is professional-grade. Test coverage at 93.8% statement coverage is excellent. The PHP backend is clean and well-documented. The editor has 12 working tools, smart guides, named layer sets, layer grouping, and blur fill effects. All major bugs have been fixed.
 
 ### What Needs Honest Attention
 
-1. **9 god classes totaling ~12,186 lines (23% of codebase)** - All well-delegated but still large
-2. **13 eslint-disable comments** - Now below the <15 target after omitProperty utility refactoring
+1. **11 god classes totaling ~14,427 lines (26% of codebase)** - All well-delegated but still large
+2. **8 eslint-disable comments** - Reduced from 17 to 8 using underscore-prefix convention for unused params
 3. **Mobile-optimized UI missing** - Basic touch works, but no responsive toolbar/panels
 
 ### What's Been Fixed (December 2025)
@@ -369,26 +368,23 @@ The extension is **production-ready and fully functional**. Security implementat
 
 ### Honest Criticisms
 
-1. **God classes are a maintenance burden** - Even with delegation, 9 files >1,000 lines create cognitive load
-2. ✅ **eslint-disable comments reduced** - Refactored GroupManager.js to use omitProperty utility
-3. ✅ **GroupManager.js refactored** - Removed 4 eslint-disables using new DeepClone.omitProperty utility
-4. **Over-engineered in places** - Some modules have deep abstraction layers that add complexity
-5. **Documentation sprawl** - 20 markdown files in docs/ with some overlapping content
-6. ✅ **Architecture diagrams exist** - 9 Mermaid diagrams in ARCHITECTURE.md (previously claimed missing, now verified)
-7. **E2E test coverage is minimal** - Only ~1,200 lines of Playwright tests vs 7,711 Jest tests
-8. **ToolRegistry vs Toolbar inconsistency** - ToolRegistry.js registers 13 tools, Toolbar.js shows 12 (textbox missing from registry)
-9. **PHP line length warnings** - Several files exceed 120 character limit (cosmetic, not breaking)
+1. **God classes are a maintenance burden** - 11 files >1,000 lines (26% of codebase) create cognitive load, even with delegation
+2. **ArrowRenderer.js and ToolbarStyleControls.js crossed 1000 lines** - Grew due to curved arrows and live color preview features
+3. **Over-engineered in places** - Some modules have deep abstraction layers that add complexity
+4. **Documentation sprawl** - 20 markdown files in docs/ with some overlapping content
+5. **E2E test coverage is minimal** - Only ~1,200 lines of Playwright tests vs 7,840 Jest tests
+6. **PHP line ending warnings** - 14 files have CRLF line endings (auto-fixable, cosmetic only)
 
 ### Bottom Line
 
-This extension is in **good shape** with manageable technical debt. The codebase is functional (7,711 tests, 94.2% coverage, feature-complete). God classes are well-delegated with clear patterns.
+This extension is in **good shape** with manageable technical debt. The codebase is functional (7,840 tests, 94.2% coverage, feature-complete). God classes are well-delegated with clear patterns.
 
-**Honest rating: 8.75/10**
+**Honest rating: 8.5/10**
 
 Deductions:
-- -0.5 for 9 god classes (23% of codebase in large files)
+- -0.75 for 11 god classes (26% of codebase in large files)
 - -0.5 for mobile UI not responsive (basic touch works, but not mobile-friendly)
-- -0.25 for documentation sprawl (20 files, some overlap)
+- -0.25 for documentation sprawl (22 files in docs/, some overlap)
 
 ---
 

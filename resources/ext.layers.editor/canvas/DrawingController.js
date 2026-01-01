@@ -105,11 +105,10 @@ class DrawingController {
 	 * Finish drawing operation and create layer
 	 *
 	 * @param {Object} point - Final mouse position {x, y}
-	 * @param {string} currentTool - Current tool name (unused but kept for API compatibility)
+	 * @param {string} _currentTool - Current tool name (unused but kept for API compatibility)
 	 * @return {Object|null} Layer data if valid, null otherwise
 	 */
-	// eslint-disable-next-line no-unused-vars
-	finishDrawing ( point, currentTool ) {
+	finishDrawing ( point, _currentTool ) {
 		this.isDrawing = false;
 
 		// Finish drawing and create layer

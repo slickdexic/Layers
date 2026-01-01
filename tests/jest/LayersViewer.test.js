@@ -1043,6 +1043,40 @@ describe( 'LayersViewer', () => {
 			expect( scaled.fill ).toBe( '#00ff00' );
 			expect( scaled.opacity ).toBe( 0.8 );
 		} );
+
+		test( 'should scale curved arrow control point (FR-4 fix)', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = createSampleLayerData();
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// Curved arrow with control point at (150, 75) - midpoint offset by 50 pixels
+			const layer = {
+				type: 'arrow',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 50,
+				controlX: 150,
+				controlY: 25
+			};
+
+			const scaled = viewer.scaleLayerCoordinates( layer, 2, 3, 2.5 );
+
+			// Arrow endpoints should scale with x/y factors
+			expect( scaled.x1 ).toBe( 200 );
+			expect( scaled.y1 ).toBe( 300 );
+			expect( scaled.x2 ).toBe( 400 );
+			expect( scaled.y2 ).toBe( 150 );
+			// Control point must also scale to maintain curve shape
+			expect( scaled.controlX ).toBe( 300 ); // 150 * 2
+			expect( scaled.controlY ).toBe( 75 );  // 25 * 3
+		} );
 	} );
 
 	describe( 'exports', () => {

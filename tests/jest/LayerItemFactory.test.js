@@ -66,6 +66,20 @@ describe('LayerItemFactory', () => {
             const defaultFactory = new LayerItemFactory({});
             expect(defaultFactory.msg('key', 'fallback')).toBe('fallback');
         });
+
+        test('should use default no-op callbacks when not provided', () => {
+            const defaultFactory = new LayerItemFactory({});
+            
+            // Verify all default callbacks exist and don't throw
+            expect(() => defaultFactory.addTargetListener()).not.toThrow();
+            expect(() => defaultFactory.onMoveLayer()).not.toThrow();
+            expect(() => defaultFactory.onToggleGroupExpand()).not.toThrow();
+            
+            // Verify default getters return expected defaults
+            expect(defaultFactory.getSelectedLayerId()).toBeNull();
+            expect(defaultFactory.getSelectedLayerIds()).toEqual([]);
+            expect(defaultFactory.getLayerDepth()).toBe(0);
+        });
     });
 
     describe('createEyeIcon', () => {
@@ -133,6 +147,42 @@ describe('LayerItemFactory', () => {
         test('should return span when IconFactory not available', () => {
             const icon = factory.createDeleteIcon();
             expect(icon.tagName).toBe('SPAN');
+        });
+    });
+
+    describe('createFolderIconFallback', () => {
+        test('should create SVG element with folder path', () => {
+            const icon = factory.createFolderIconFallback(false);
+            
+            expect(icon.tagName.toLowerCase()).toBe('svg');
+            expect(icon.getAttribute('width')).toBe('18');
+            expect(icon.getAttribute('height')).toBe('18');
+            expect(icon.getAttribute('viewBox')).toBe('0 0 24 24');
+            expect(icon.getAttribute('aria-hidden')).toBe('true');
+        });
+
+        test('should create folder icon for collapsed state (no flap)', () => {
+            const icon = factory.createFolderIconFallback(false);
+            
+            // Should have only the main folder path (1 child)
+            const paths = icon.querySelectorAll('path');
+            expect(paths.length).toBe(1);
+        });
+
+        test('should create folder icon with flap for expanded state', () => {
+            const icon = factory.createFolderIconFallback(true);
+            
+            // Should have folder path + flap indicator (2 children)
+            const paths = icon.querySelectorAll('path');
+            expect(paths.length).toBe(2);
+        });
+
+        test('should use orange color for folder', () => {
+            const icon = factory.createFolderIconFallback(false);
+            const path = icon.querySelector('path');
+            
+            expect(path.getAttribute('fill')).toBe('#f39c12');
+            expect(path.getAttribute('stroke')).toBe('#f39c12');
         });
     });
 
@@ -274,7 +324,7 @@ describe('LayerItemFactory', () => {
             factory.createLayerItem(layer, 0);
 
             expect(mockConfig.addTargetListener).toHaveBeenCalled();
-            const [element, event] = mockConfig.addTargetListener.mock.calls[0];
+            const [_element, event] = mockConfig.addTargetListener.mock.calls[0];
             expect(event).toBe('keydown');
         });
 

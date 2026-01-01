@@ -404,10 +404,9 @@ class ToolManager {
 	/**
 	 * Finish pen drawing
 	 *
-	 * @param {Object} point End point(unused)
+	 * @param {Object} _point End point (unused)
 	 */
-	// eslint-disable-next-line no-unused-vars
-	finishPenDrawing( point ) {
+	finishPenDrawing( _point ) {
 		if( this.tempLayer && this.tempLayer.points && this.tempLayer.points.length > 1 ) {
 			this.addLayerToCanvas( this.tempLayer );
 		}
@@ -868,10 +867,9 @@ class ToolManager {
 	/**
 	 * Finish shape drawing
 	 *
-	 * @param {Object} point End point(unused)
+	 * @param {Object} _point End point (unused)
 	 */
-	// eslint-disable-next-line no-unused-vars
-	finishShapeDrawing( point ) {
+	finishShapeDrawing( _point ) {
 		if( this.tempLayer ) {
 			// Only add layer if it has meaningful size
 			if( this.hasValidSize( this.tempLayer ) ) {

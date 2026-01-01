@@ -2192,3 +2192,59 @@ body.layers-resize-cursor {
 	color: #fff;
 	text-decoration: underline;
 }
+
+/* Reduced Motion Accessibility Support
+ * Respects user preferences for reduced motion (WCAG 2.3.3)
+ * See: https://www.w3.org/WAI/WCAG21/Understanding/animation-from-interactions.html
+ */
+@media ( prefers-reduced-motion: reduce ) {
+	/* Remove slide-in animation */
+	.layers-error-notification {
+		animation: none;
+	}
+
+	/* Disable button hover effects - lower specificity first */
+	.toolbar-button {
+		transition: none;
+	}
+
+	/* Disable toolbar transitions - higher specificity after */
+	.layers-editor-toolbar button {
+		transition: none;
+	}
+
+	.layers-editor-toolbar .toolbar-button {
+		transition: none;
+	}
+
+	.layers-editor-toolbar .toolbar-divider {
+		transition: none;
+	}
+
+	.layers-editor-group-inner {
+		transition: none;
+	}
+
+	.layers-skip-link {
+		transition: none;
+	}
+
+	/* Disable layer panel transitions */
+	.layers-panel-layer-item {
+		transition: none;
+	}
+
+	.layers-panel-header {
+		transition: none;
+	}
+
+	/* Disable dropdown transitions */
+	.layers-dropdown {
+		transition: none;
+	}
+
+	/* Disable dialog transitions */
+	.layers-dialog-overlay {
+		transition: none;
+	}
+}

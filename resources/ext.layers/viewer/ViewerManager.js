@@ -37,11 +37,17 @@ class ViewerManager {
 	 * @param {Object} [options] Configuration options
 	 * @param {boolean} [options.debug=false] Enable debug logging
 	 * @param {LayersUrlParser} [options.urlParser] URL parser instance
+	 * @param {FreshnessChecker} [options.freshnessChecker] Freshness checker instance
 	 */
 	constructor( options ) {
 		this.debug = options && options.debug;
 		const LayersUrlParser = getClass( 'Utils.UrlParser', 'LayersUrlParser' );
 		this.urlParser = ( options && options.urlParser ) || new LayersUrlParser( { debug: this.debug } );
+
+		// Create freshness checker for FR-10: Live Preview Without Page Edit/Save
+		const FreshnessChecker = getClass( 'Viewer.FreshnessChecker', 'FreshnessChecker' );
+		this.freshnessChecker = ( options && options.freshnessChecker ) ||
+			( FreshnessChecker ? new FreshnessChecker( { debug: this.debug } ) : null );
 	}
 
 	/**
@@ -131,6 +137,88 @@ class ViewerManager {
 	}
 
 	/**
+	 * Reinitialize a viewer with fresh layer data (FR-10: Live Preview).
+	 *
+	 * This is called when the inline data is stale (outdated) and fresh data
+	 * has been fetched from the API. It destroys the existing viewer and
+	 * creates a new one with the updated data.
+	 *
+	 * @param {HTMLImageElement} img Image element with existing viewer
+	 * @param {Object} layerData Fresh layer data from API
+	 * @return {boolean} True if viewer was reinitialized
+	 */
+	reinitializeViewer ( img, layerData ) {
+		try {
+			// Destroy existing viewer if present
+			if ( img.layersViewer ) {
+				if ( typeof img.layersViewer.destroy === 'function' ) {
+					img.layersViewer.destroy();
+				}
+				img.layersViewer = null;
+			}
+
+			// Clear any pending flags
+			img.layersPending = false;
+
+			// Initialize with fresh data
+			const success = this.initializeViewer( img, layerData );
+			if ( success ) {
+				this.debugLog( 'Viewer reinitialized with fresh data' );
+			}
+			return success;
+		} catch ( e ) {
+			this.debugWarn( 'Viewer reinit error:', e );
+			return false;
+		}
+	}
+
+	/**
+	 * Check freshness of initialized viewers and update stale ones (FR-10).
+	 *
+	 * After viewers are initialized with inline data, this method checks
+	 * if the data is stale by comparing revision numbers with the API.
+	 * If stale data is detected, the viewer is reinitialized with fresh data.
+	 *
+	 * @param {HTMLImageElement[]} images Array of images with initialized viewers
+	 */
+	checkAndRefreshStaleViewers ( images ) {
+		if ( !this.freshnessChecker || !images || images.length === 0 ) {
+			return;
+		}
+
+		// Filter to images that have revision info for freshness checking
+		const checkableImages = images.filter( ( img ) =>
+			img.hasAttribute( 'data-layer-revision' ) &&
+			img.hasAttribute( 'data-file-name' )
+		);
+
+		if ( checkableImages.length === 0 ) {
+			this.debugLog( 'No images with revision info to check' );
+			return;
+		}
+
+		this.debugLog( 'Checking freshness for', checkableImages.length, 'images' );
+
+		// Check freshness for all images
+		this.freshnessChecker.checkMultipleFreshness( checkableImages )
+			.then( ( resultMap ) => {
+				resultMap.forEach( ( result, img ) => {
+					if ( !result.isFresh && result.layerData ) {
+						this.debugLog(
+							'Stale data detected for image, reinitializing',
+							'(inline rev=', result.inlineRevision,
+							', latest rev=', result.latestRevision, ')'
+						);
+						this.reinitializeViewer( img, result.layerData );
+					}
+				} );
+			} )
+			.catch( ( err ) => {
+				this.debugWarn( 'Freshness check failed:', err );
+			} );
+	}
+
+	/**
 	 * Find all images with server-provided layer data and initialize viewers.
 	 *
 	 * Searches for:
@@ -184,6 +272,7 @@ class ViewerManager {
 		} );
 
 		// Initialize viewers for each image
+		const initializedImages = [];
 		images.forEach( ( img ) => {
 			if ( img.layersViewer ) {
 				return;
@@ -206,12 +295,18 @@ class ViewerManager {
 					return;
 				}
 				this.initializeViewer( img, layerData );
+				initializedImages.push( img );
 			} catch ( e ) {
 				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
 					mw.log.error( '[ViewerManager] Error processing image:', e );
 				}
 			}
 		} );
+
+		// FR-10: Check freshness of initialized viewers and update stale ones
+		// This ensures changes made in the editor are visible immediately
+		// without requiring a page edit/save
+		this.checkAndRefreshStaleViewers( initializedImages );
 	}
 
 	/**

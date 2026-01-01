@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** December 31, 2025  
-**Version:** 1.3.0
+**Version:** 1.3.3
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -22,17 +22,17 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 101 |
-| Viewer module | ~682 lines |
-| Shared module | ~6,100 lines |
-| Editor module | ~46,700 lines |
-| Total JS lines | ~53,500 |
-| ES6 classes | 91 |
+| Total JS files | 102 |
+| Viewer module | ~750 lines |
+| Shared module | ~6,200 lines |
+| Editor module | ~47,700 lines |
+| Total JS lines | ~54,700 |
+| ES6 classes | 83 |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | 94.2% stmt, 82.6% branch, 92% func |
-| Jest tests | **7,711** |
+| Test coverage | 93.8% stmt, 82.5% branch, 91.6% func |
+| Jest tests | **7,805** |
 | PHPUnit test files | 19 |
-| God classes (>1000 lines) | **9** (all delegated) |
+| God classes (>1000 lines) | **11** (all delegated) |
 | Drawing tools | 12 |
 | eslint-disable comments | 13 ✅ (below <15 target) |
 
@@ -60,7 +60,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ### Known Technical Debt
 
-**9 files exceed 1,000 lines (god classes) - all use delegation patterns:**
+**11 files exceed 1,000 lines (god classes) - all use delegation patterns:**
 - LayerPanel.js (2,140) - facade with 9 controllers
 - CanvasManager.js (1,877) - facade with 10+ controllers
 - Toolbar.js (1,556) - UI controls consolidation
@@ -68,10 +68,12 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - SelectionManager.js (1,359) - delegates to SelectionState, MarqueeSelection
 - ToolManager.js (1,261) - tool delegation pattern
 - CanvasRenderer.js (1,242) - delegates to SelectionRenderer
+- **ArrowRenderer.js (1,200)** - rendering logic (grew with curved arrows in v1.3.3)
 - APIManager.js (1,182) - API integration layer
 - GroupManager.js (1,132) - layer grouping operations (new in v1.2.13)
+- **ToolbarStyleControls.js (1,013)** - style controls (grew with live preview in v1.3.3)
 
-**Note:** All god classes use delegation patterns. Code quality is maintained with 94.4% test coverage.
+**Note:** All god classes use delegation patterns. Code quality is maintained with 93.8% test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 

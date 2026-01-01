@@ -382,6 +382,32 @@ describe( 'ResizeCalculator', () => {
 			const result = ResizeCalculator.calculateLineResize( line, 'n', 10, 10, 0, Math.PI / 4 );
 			expect( result ).not.toBeNull();
 		} );
+
+		describe( 'control handle for curved arrows', () => {
+			it( 'should move control point from default midpoint', () => {
+				const arrow = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 0 };
+				const result = ResizeCalculator.calculateLineResize( arrow, 'control', 0, 30, 0, 0 );
+				// Default control point is at midpoint (50, 0), should move to (50, 30)
+				expect( result.controlX ).toBe( 50 );
+				expect( result.controlY ).toBe( 30 );
+			} );
+
+			it( 'should move existing control point', () => {
+				const arrow = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 0, controlX: 50, controlY: 50 };
+				const result = ResizeCalculator.calculateLineResize( arrow, 'control', 10, -20, 0, 0 );
+				expect( result.controlX ).toBe( 60 );
+				expect( result.controlY ).toBe( 30 );
+			} );
+
+			it( 'should not affect endpoint coordinates', () => {
+				const arrow = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 0, controlX: 50, controlY: 50 };
+				const result = ResizeCalculator.calculateLineResize( arrow, 'control', 10, 10, 0, 0 );
+				expect( result.x1 ).toBeUndefined();
+				expect( result.y1 ).toBeUndefined();
+				expect( result.x2 ).toBeUndefined();
+				expect( result.y2 ).toBeUndefined();
+			} );
+		} );
 	} );
 
 	describe( 'calculatePathResize', () => {

@@ -707,10 +707,9 @@
 		 * Show validation errors to the user
 		 *
 		 * @param {Array<string>} errors Array of error messages
-		 * @param {Object} [context] Context information (unused)
+		 * @param {Object} [_context] Context information (unused)
 		 */
-		// eslint-disable-next-line no-unused-vars
-		showValidationErrors( errors, context ) {
+		showValidationErrors( errors, _context ) {
 			if ( !errors || errors.length === 0 ) {
 				return;
 			}

@@ -144,6 +144,35 @@ describe( 'SmartGuidesController', () => {
 		} );
 	} );
 
+	describe( 'getLayerBounds', () => {
+		it( 'should return null for null layer', () => {
+			expect( controller.getLayerBounds( null ) ).toBeNull();
+		} );
+
+		it( 'should delegate to manager.getLayerBounds when available', () => {
+			const expectedBounds = { x: 10, y: 20, width: 100, height: 50 };
+			mockCanvasManager.getLayerBounds = jest.fn().mockReturnValue( expectedBounds );
+			controller.manager = mockCanvasManager;
+
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
+			const bounds = controller.getLayerBounds( layer );
+
+			expect( mockCanvasManager.getLayerBounds ).toHaveBeenCalledWith( layer );
+			expect( bounds ).toEqual( expectedBounds );
+		} );
+
+		it( 'should fall back to calculateBounds when manager.getLayerBounds is not available', () => {
+			// Ensure manager doesn't have getLayerBounds
+			delete mockCanvasManager.getLayerBounds;
+			controller.manager = mockCanvasManager;
+
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
+			const bounds = controller.getLayerBounds( layer );
+
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+		} );
+	} );
+
 	describe( 'calculateBounds', () => {
 		it( 'should calculate bounds for rectangle', () => {
 			const layer = { type: 'rectangle', x: 50, y: 50, width: 100, height: 80 };
@@ -200,6 +229,34 @@ describe( 'SmartGuidesController', () => {
 
 		it( 'should return null for unknown type', () => {
 			expect( controller.calculateBounds( { type: 'unknown' } ) ).toBeNull();
+		} );
+
+		it( 'should calculate bounds for text layer', () => {
+			const layer = { type: 'text', x: 50, y: 50, width: 200, fontSize: 24 };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: 50, y: 50, width: 200, height: 24 } );
+		} );
+
+		it( 'should use default values for text layer without width/fontSize', () => {
+			const layer = { type: 'text' };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: 0, y: 0, width: 100, height: 16 } );
+		} );
+
+		it( 'should calculate bounds for arrow layer like line', () => {
+			const layer = { type: 'arrow', x1: 20, y1: 30, x2: 120, y2: 80 };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: 20, y: 30, width: 100, height: 50 } );
+		} );
+
+		it( 'should return null for path with no points', () => {
+			const layer = { type: 'path', points: [] };
+			expect( controller.calculateBounds( layer ) ).toBeNull();
+		} );
+
+		it( 'should return null for path without points array', () => {
+			const layer = { type: 'path' };
+			expect( controller.calculateBounds( layer ) ).toBeNull();
 		} );
 	} );
 

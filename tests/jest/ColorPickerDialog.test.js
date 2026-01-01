@@ -747,4 +747,145 @@ describe( 'ColorPickerDialog', () => {
 			expect( document.activeElement ).toBe( dialog.dialog );
 		} );
 	} );
+
+	describe( 'live preview (onPreview callback)', () => {
+		it( 'should store originalColor for cancel restoration', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply: () => {}
+			} );
+			expect( dialog.originalColor ).toBe( '#ff0000' );
+		} );
+
+		it( 'should call onPreview when color is selected', () => {
+			const onPreview = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {},
+				onPreview: onPreview
+			} );
+			dialog.open();
+
+			// Click a color swatch
+			const swatch = dialog.dialog.querySelector( '.color-picker-swatch-btn' );
+			swatch.click();
+
+			expect( onPreview ).toHaveBeenCalled();
+			dialog.close();
+		} );
+
+		it( 'should call onPreview with the selected color value', () => {
+			const onPreview = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {},
+				onPreview: onPreview
+			} );
+			dialog.open();
+
+			// Change the custom color input
+			const customInput = dialog.dialog.querySelector( '.color-picker-custom-input' );
+			customInput.value = '#00ff00';
+			customInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( onPreview ).toHaveBeenCalledWith( '#00ff00' );
+			dialog.close();
+		} );
+
+		it( 'should restore original color on cancel', () => {
+			const onPreview = jest.fn();
+			const onCancel = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply: () => {},
+				onCancel: onCancel,
+				onPreview: onPreview
+			} );
+			dialog.open();
+
+			// Change color
+			dialog.selectedColor = '#00ff00';
+			dialog.triggerPreview();
+			expect( onPreview ).toHaveBeenCalledWith( '#00ff00' );
+
+			// Click cancel
+			const cancelBtn = dialog.dialog.querySelector( '.color-picker-btn--secondary' );
+			cancelBtn.click();
+
+			// Should restore original color
+			expect( onPreview ).toHaveBeenCalledWith( '#ff0000' );
+			expect( onCancel ).toHaveBeenCalled();
+		} );
+
+		it( 'should restore original color on Escape key', () => {
+			const onPreview = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply: () => {},
+				onPreview: onPreview
+			} );
+			dialog.open();
+
+			// Change color
+			dialog.selectedColor = '#00ff00';
+			dialog.triggerPreview();
+			onPreview.mockClear();
+
+			// Press Escape
+			const event = new KeyboardEvent( 'keydown', { key: 'Escape' } );
+			document.dispatchEvent( event );
+
+			// Should restore original color
+			expect( onPreview ).toHaveBeenCalledWith( '#ff0000' );
+		} );
+
+		it( 'should restore original color on overlay click', () => {
+			const onPreview = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply: () => {},
+				onPreview: onPreview
+			} );
+			dialog.open();
+
+			// Change color
+			dialog.selectedColor = '#00ff00';
+			dialog.triggerPreview();
+			onPreview.mockClear();
+
+			// Click overlay
+			dialog.overlay.click();
+
+			// Should restore original color
+			expect( onPreview ).toHaveBeenCalledWith( '#ff0000' );
+		} );
+
+		it( 'should not call onPreview if not provided', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {}
+				// No onPreview provided
+			} );
+			dialog.open();
+
+			// This should not throw
+			expect( () => {
+				dialog.triggerPreview();
+			} ).not.toThrow();
+
+			dialog.close();
+		} );
+
+		it( 'restoreOriginalColor should not throw if onPreview is null', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply: () => {}
+				// No onPreview
+			} );
+
+			expect( () => {
+				dialog.restoreOriginalColor();
+			} ).not.toThrow();
+		} );
+	} );
 } );

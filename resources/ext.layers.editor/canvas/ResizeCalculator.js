@@ -572,11 +572,13 @@
 
 		/**
 		 * Calculate line/arrow resize adjustments
-		 * Handles both endpoint movement (w/e handles) and perpendicular offset (n/s handles)
+		 * Handles both endpoint movement (w/e handles), perpendicular offset (n/s handles),
+		 * and curve control point movement (control handle)
 		 *
 		 * @param {Object} originalLayer Original layer properties
 		 * @param {string} handleType Handle being dragged: 'w' = start point, 'e' = end point,
-		 *                           'n'/'s' = perpendicular offset (adjusts both endpoints)
+		 *                           'n'/'s' = perpendicular offset (adjusts both endpoints),
+		 *                           'control' = curve control point
 		 * @param {number} deltaX Delta X movement in world coordinates
 		 * @param {number} deltaY Delta Y movement in world coordinates
 		 * @return {Object} Updates object with new endpoint coordinates
@@ -609,6 +611,17 @@
 					updates.x2 = x2 + deltaX;
 					updates.y2 = y2 + deltaY;
 					break;
+				case 'control': {
+					// Move curve control point
+					// Get original control point or default to midpoint
+					const origControlX = typeof originalLayer.controlX === 'number' ?
+						originalLayer.controlX : ( x1 + x2 ) / 2;
+					const origControlY = typeof originalLayer.controlY === 'number' ?
+						originalLayer.controlY : ( y1 + y2 ) / 2;
+					updates.controlX = origControlX + deltaX;
+					updates.controlY = origControlY + deltaY;
+					break;
+				}
 				case 'n':
 				case 's': {
 					// Perpendicular movement - offset both points perpendicular to line

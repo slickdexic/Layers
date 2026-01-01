@@ -10,7 +10,7 @@
  *   2. Or add to jsconfig.json: { "include": ["resources/**/*", "types/**/*"] }
  *
  * @module LayersTypes
- * @version 1.3.0
+ * @version 1.4.0
  */
 
 // =============================================================================
@@ -272,7 +272,13 @@ interface ArrowProperties {
 	/** Arrow style (head placement: single, double, none) */
 	arrowStyle?: ArrowStyle;
 
+	/** Arrow head type (pointed, chevron, standard) - alias for headType */
+	arrowhead?: ArrowHeadType;
+
 	/** Arrow head type (pointed, chevron, standard) */
+	arrowHeadType?: ArrowHeadType;
+
+	/** Arrow head type (pointed, chevron, standard) - legacy name */
 	headType?: ArrowHeadType;
 
 	/** Arrow head size */
@@ -283,6 +289,12 @@ interface ArrowProperties {
 
 	/** Arrow tail width */
 	tailWidth?: number;
+
+	/** Control point X for curved arrows (Bézier) */
+	controlX?: number;
+
+	/** Control point Y for curved arrows (Bézier) */
+	controlY?: number;
 }
 
 /**
@@ -305,6 +317,57 @@ interface CircleProperties {
 interface PathProperties {
 	/** Array of points defining the path */
 	points?: Point[];
+
+	/** Number of sides for polygon */
+	sides?: number;
+
+	/** Start angle in degrees */
+	startAngle?: number;
+
+	/** End angle in degrees (for arcs) */
+	endAngle?: number;
+}
+
+/**
+ * Star-specific properties
+ */
+interface StarProperties {
+	/** Inner radius for star shapes */
+	innerRadius?: number;
+
+	/** Outer radius for star shapes */
+	outerRadius?: number;
+
+	/** Point radius for star tips */
+	pointRadius?: number;
+
+	/** Valley radius for star indentations */
+	valleyRadius?: number;
+}
+
+/**
+ * Blur effect properties
+ */
+interface BlurProperties {
+	/** Blur radius for blur fill effect (1-64) */
+	blurRadius?: number;
+
+	/** Previous fill value before blur was applied */
+	_previousFill?: string;
+}
+
+/**
+ * Group/folder layer properties
+ */
+interface GroupProperties {
+	/** Child layer IDs in this group */
+	children?: string[];
+
+	/** Whether the group is expanded in the layer panel */
+	expanded?: boolean;
+
+	/** Parent group ID if nested */
+	parentGroup?: string;
 }
 
 /**
@@ -338,9 +401,15 @@ interface Layer extends
 	ArrowProperties,
 	CircleProperties,
 	PathProperties,
+	StarProperties,
+	BlurProperties,
+	GroupProperties,
 	ImageProperties {
 	/** Enable glow effect */
 	glow?: boolean;
+
+	/** Blend mode alias */
+	blend?: BlendMode;
 }
 
 // =============================================================================

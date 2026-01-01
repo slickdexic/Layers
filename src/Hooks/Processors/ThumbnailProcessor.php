@@ -265,7 +265,8 @@ class ThumbnailProcessor {
 	 *
 	 * @param mixed $file File object
 	 * @param string|null $layersFlag Layer set identifier
-	 * @return array|null Layer data with 'layers', 'backgroundVisible', 'backgroundOpacity'
+	 * @return array|null Layer data with 'layers', 'backgroundVisible', 'backgroundOpacity',
+	 *                    'revision', 'setName' for freshness checking
 	 */
 	private function fetchLayersFromDatabase( $file, ?string $layersFlag ): ?array {
 		try {
@@ -296,7 +297,10 @@ class ThumbnailProcessor {
 				return [
 					'layers' => $layers,
 					'backgroundVisible' => $data['backgroundVisible'] ?? true,
-					'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0
+					'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0,
+					// Include revision and set name for client-side freshness checking (FR-10)
+					'revision' => $layerSet['revision'] ?? null,
+					'setName' => $layerSet['name'] ?? $layerSet['setName'] ?? 'default'
 				];
 			} else {
 				$this->log( 'fetchLayersFromDatabase: layerSet has no valid layers array' );
@@ -341,11 +345,16 @@ class ThumbnailProcessor {
 				$layers = $layerData['layers'];
 				$backgroundVisible = $layerData['backgroundVisible'] ?? true;
 				$backgroundOpacity = $layerData['backgroundOpacity'] ?? 1.0;
+				// Extract revision and setName for freshness checking (FR-10)
+				$revision = $layerData['revision'] ?? null;
+				$setName = $layerData['setName'] ?? 'default';
 			} else {
 				// Old format: raw layers array
 				$layers = $layerData;
 				$backgroundVisible = true;
 				$backgroundOpacity = 1.0;
+				$revision = null;
+				$setName = 'default';
 			}
 
 			$payload = [
@@ -381,8 +390,21 @@ class ThumbnailProcessor {
 				$attribs['data-layer-data'] = $jsonData;
 			}
 
-			$msg = 'Added %d layers, instance: %s, JSON size: %d bytes';
-			$this->log( sprintf( $msg, count( $layers ), $instanceId, $jsonSize ) );
+			// Add revision and set name for client-side freshness checking (FR-10)
+			// This allows the viewer to detect stale inline data and fetch fresh data via API
+			if ( $revision !== null ) {
+				$attribs['data-layer-revision'] = (string)$revision;
+			}
+			if ( $setName !== null && $setName !== '' ) {
+				$attribs['data-layer-setname'] = $setName;
+			}
+			// Add filename for API lookup in freshness checks
+			if ( $file && method_exists( $file, 'getName' ) ) {
+				$attribs['data-file-name'] = $file->getName();
+			}
+
+			$msg = 'Added %d layers, instance: %s, JSON size: %d bytes, revision: %s';
+			$this->log( sprintf( $msg, count( $layers ), $instanceId, $jsonSize, $revision ?? 'null' ) );
 		} else {
 			$this->log( "No layer data, instance: $instanceId" );
 

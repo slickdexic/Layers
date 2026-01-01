@@ -335,6 +335,7 @@ class StateManager {
 	 */
 	reorderLayer( layerId, targetId, insertAfter = false ) {
 		const layers = this.state.layers;
+		const draggedLayer = layers.find( layer => layer.id === layerId );
 		const draggedIndex = layers.findIndex( layer => layer.id === layerId );
 		const targetIndex = layers.findIndex( layer => layer.id === targetId );
 
@@ -342,23 +343,54 @@ class StateManager {
 			return false;
 		}
 
+		// Check if the dragged layer is a folder (group) with children
+		const isFolder = draggedLayer && draggedLayer.type === 'group';
+		const folderChildren = isFolder && draggedLayer.children ? draggedLayer.children : [];
+
 		this.atomic( ( state ) => {
 			const newLayers = [ ...state.layers ];
-			const [ draggedLayer ] = newLayers.splice( draggedIndex, 1 );
 
-			// After removing the dragged element, recalculate target position
-			// If we removed from before the target, the target index has shifted down by 1
-			let newTargetIndex = targetIndex;
-			if ( draggedIndex < targetIndex ) {
-				newTargetIndex = targetIndex - 1;
+			// Collect all layers to move: the folder + its children (in order)
+			const layersToMove = [];
+			const indicesToRemove = [];
+
+			// First, find the folder
+			const folderIdx = newLayers.findIndex( l => l.id === layerId );
+			if ( folderIdx !== -1 ) {
+				layersToMove.push( newLayers[ folderIdx ] );
+				indicesToRemove.push( folderIdx );
 			}
 
-			// If insertAfter is true, we want to place the layer after the target
+			// If it's a folder, also find its children in their current order
+			if ( isFolder && folderChildren.length > 0 ) {
+				for ( let i = 0; i < newLayers.length; i++ ) {
+					if ( folderChildren.includes( newLayers[ i ].id ) ) {
+						layersToMove.push( newLayers[ i ] );
+						indicesToRemove.push( i );
+					}
+				}
+			}
+
+			// Remove all the layers to move (in reverse order to maintain indices)
+			indicesToRemove.sort( ( a, b ) => b - a );
+			for ( const idx of indicesToRemove ) {
+				newLayers.splice( idx, 1 );
+			}
+
+			// Find the new target position in the modified array
+			let newTargetIndex = newLayers.findIndex( l => l.id === targetId );
+			if ( newTargetIndex === -1 ) {
+				// Target was removed (shouldn't happen, but handle gracefully)
+				newTargetIndex = newLayers.length;
+			}
+
+			// If insertAfter is true, we want to place the layers after the target
 			if ( insertAfter ) {
 				newTargetIndex = newTargetIndex + 1;
 			}
 
-			newLayers.splice( newTargetIndex, 0, draggedLayer );
+			// Insert all layers at the target position (maintaining their relative order)
+			newLayers.splice( newTargetIndex, 0, ...layersToMove );
 
 			return {
 				layers: newLayers,
