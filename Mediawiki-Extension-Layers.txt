@@ -6,7 +6,7 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Pvodrazka]]
-|version         = 1.3.2
+|version         = 1.4.0
 |update          = 2025-12-31
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -30,7 +30,7 @@
 |hook10          = ParserMakeImageParams
 |hook11          = SkinTemplateNavigation::Universal
 |hook12          = ThumbnailBeforeProduceHTML
-|description     = A professional-grade, non-destructive image annotation system with 14 drawing tools, layer folders, style presets, named layer sets, and full keyboard accessibility.
+|description     = A professional-grade, non-destructive image annotation system with 14 drawing tools, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
 }}
 
 The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
@@ -52,6 +52,9 @@ Industry-standard alignment behavior matching Adobe Illustrator and Photoshop:
 * Works for all alignment operations: left, center, right, top, middle, bottom.
 
 === Core Features ===
+* '''Curved Arrows (v1.4.0+)''': Arrows support curved paths via draggable control point for professional diagrams.
+* '''Live Color Preview (v1.4.0+)''': Canvas updates in real-time as colors are selected in the color picker.
+* '''Live Article Preview (v1.4.0+)''': Layer changes visible immediately after saving, without page reload.
 * '''Layer Grouping (v1.2.13+)''': Group layers into folders for bulk operations ({{key press|Ctrl}}+{{key press|G}} to group, {{key press|Ctrl}}+{{key press|Shift}}+{{key press|G}} to ungroup).
 * '''Named Layer Sets''': Multiple annotation sets per image (e.g., "default", "anatomy-labels").
 * '''Style Presets''': Save and reuse style configurations per tool type.
@@ -142,9 +145,9 @@ Control how users interact with layered images using the <code>layerslink</code>
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.3.0
+| 1.44+ || <code>main</code> || 1.4.0
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.3.0-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.4.0-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}
@@ -158,8 +161,8 @@ Control how users interact with layered images using the <code>layerslink</code>
 # Run <code>php maintenance/run.php update.php</code>.
 
 == Technical Details ==
-* '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~43k lines).
-* '''Stability:''' 7,688 Jest tests across 135 test suites achieving 94% statement coverage.
+* '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~54k lines).
+* '''Stability:''' 7,852 Jest tests across 136 test suites achieving 94.2% statement coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 
 == See also ==
