@@ -13,7 +13,7 @@
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|<annotation>|<canvas>|<drawing>|<image editor>|<image markup>|<non-destructive>}}
-|mediawiki       = >= 1.44
+|mediawiki       = >= 1.39
 |php             = >= 8.1
 |needs-updatephp = yes
 |rights          = {{bulleted list|createlayers|editlayers|managelayerlibrary}}
@@ -42,6 +42,53 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 * '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
 * '''Accessible:''' WCAG 2.1 compliant with full keyboard navigation, screen reader support, and high-contrast indicators.
 
+== Installation ==
+=== Branch Selection ===
+{| class="wikitable"
+! MediaWiki Version !! Branch !! Current Version
+|-
+| 1.44+ || <code>main</code> || 1.4.0
+|-
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.4.0-REL1_43
+|-
+| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
+|}
+
+{{Note|MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_43 branch provides full feature parity with main and is recommended for MediaWiki 1.43 users.}}
+
+# Clone the relevant repository branch into your <code>extensions/</code> directory.
+# Add <code>wfLoadExtension( 'Layers' );</code> to <code>LocalSettings.php</code>.
+# Run <code>php maintenance/run.php update.php</code>.
+
+{{Note|<code>composer install</code> and <code>npm install</code> are only required for development (running tests, linting). Basic installation does not require these steps.}}
+
+== Configuration ==
+=== Parameters ===
+{| class="wikitable"
+! Variable !! Type !! Default !! Description
+|-
+| <code>$wgLayersMaxLayerCount</code> || integer || <code>100</code> || Max layers per set.
+|-
+| <code>$wgLayersMaxNamedSets</code> || integer || <code>15</code> || Max named sets per image.
+|-
+| <code>$wgLayersMaxRevisionsPerSet</code> || integer || <code>50</code> || Historical revisions to keep.
+|-
+| <code>$wgLayersMaxImageBytes</code> || integer || <code>1048576</code> || Max size for imported image layers.
+|-
+| <code>$wgLayersMaxBytes</code> || integer || <code>2097152</code> || Max JSON size for a single layer set.
+|}
+
+=== Permissions ===
+{| class="wikitable"
+! Right !! Description !! Default Groups
+|-
+| <code>editlayers</code> || Edit existing layer sets || <code>user</code>
+|-
+| <code>createlayers</code> || Create new layer sets || <code>autoconfirmed</code>
+|-
+| <code>managelayerlibrary</code> || Manage global layer library || <code>sysop</code>
+|}
+
 == Key Features ==
 
 === Key Object Alignment (v1.1.6+) ===
@@ -52,9 +99,9 @@ Industry-standard alignment behavior matching Adobe Illustrator and Photoshop:
 * Works for all alignment operations: left, center, right, top, middle, bottom.
 
 === Core Features ===
-* '''Curved Arrows (v1.4.0+)''': Arrows support curved paths via draggable control point for professional diagrams.
+* '''Curved Arrows (v1.4.0+)''': Arrows support curved paths via a draggable control point for professional diagrams.
 * '''Live Color Preview (v1.4.0+)''': Canvas updates in real-time as colors are selected in the color picker.
-* '''Live Article Preview (v1.4.0+)''': Layer changes visible immediately after saving, without page reload.
+* '''Live Article Preview (v1.4.0+)''': Layer changes are visible immediately after saving, without needing to reload the page.
 * '''Layer Grouping (v1.2.13+)''': Group layers into folders for bulk operations ({{key press|Ctrl}}+{{key press|G}} to group, {{key press|Ctrl}}+{{key press|Shift}}+{{key press|G}} to ungroup).
 * '''Named Layer Sets''': Multiple annotation sets per image (e.g., "default", "anatomy-labels").
 * '''Style Presets''': Save and reuse style configurations per tool type.
@@ -77,7 +124,7 @@ Control how users interact with layered images using the <code>layerslink</code>
 | <code>layerslink=editor-modal</code> || Opens editor in iframe overlay || Perfect for Page Forms integration
 |}
 
-{{Note|Modal mode requires <code>$wgEditPageFrameOptions = 'SAMEORIGIN';</code> in LocalSettings.php to allow iframe embedding.}}
+{{note|text={{para|layerslink|editor-modal}} requires {{ll|1=Manual:$wgEditPageFrameOptions|2=$wgEditPageFrameOptions}} {{=}} 'SAMEORIGIN';}}
 
 '''Example usage:'''
 <syntaxhighlight lang="wikitext">
@@ -114,62 +161,12 @@ Control how users interact with layered images using the <code>layerslink</code>
 | Blur || {{key press|B}} || Privacy/Focus || Non-destructive background blurring
 |}
 
-== Configuration ==
-=== Parameters ===
-{| class="wikitable"
-! Variable !! Type !! Default !! Description
-|-
-| <code>$wgLayersMaxLayerCount</code> || integer || <code>100</code> || Max layers per set.
-|-
-| <code>$wgLayersMaxNamedSets</code> || integer || <code>15</code> || Max named sets per image.
-|-
-| <code>$wgLayersMaxRevisionsPerSet</code> || integer || <code>50</code> || Historical revisions to keep.
-|-
-| <code>$wgLayersMaxImageBytes</code> || integer || <code>1048576</code> || Max size for imported image layers.
-|-
-| <code>$wgLayersMaxBytes</code> || integer || <code>2097152</code> || Max JSON size for a single layer set.
-|}
-
-=== Permissions ===
-{| class="wikitable"
-! Right !! Description !! Default Groups
-|-
-| <code>editlayers</code> || Edit existing layer sets || <code>user</code>
-|-
-| <code>createlayers</code> || Create new layer sets || <code>autoconfirmed</code>
-|-
-| <code>managelayerlibrary</code> || Manage global layer library || <code>sysop</code>
-|}
-
-== Branch Selection ==
-{| class="wikitable"
-! MediaWiki Version !! Branch !! Current Version
-|-
-| 1.44+ || <code>main</code> || 1.4.0
-|-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.4.0-REL1_43
-|-
-| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
-|}
-
-{{Note|MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_43 branch provides full feature parity with main and is recommended for MediaWiki 1.43 users.}}
-
-== Installation ==
-# Clone the repository into your <code>extensions/</code> directory.
-# Run <code>composer install</code> and <code>npm install</code> within the folder.
-# Add <code>wfLoadExtension( 'Layers' );</code> to <code>LocalSettings.php</code>.
-# Run <code>php maintenance/run.php update.php</code>.
-
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~54k lines).
 * '''Stability:''' 7,852 Jest tests across 136 test suites achieving 94.2% statement coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
+* '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 
 == See also ==
 * [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md Full Changelog]
 * [https://github.com/slickdexic/Layers/wiki Project Wiki]
-
-[[Category:Image extensions]]
-[[Category:User interface extensions]]
-[[Category:API extensions]]
-[[Category:Stable extensions]]
