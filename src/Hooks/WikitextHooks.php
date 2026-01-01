@@ -706,11 +706,14 @@ class WikitextHooks {
 				}
 			}
 
-			// Fallback: check for any layers= text
-			if ( strpos( $text, 'layers=' ) !== false || strpos( $text, 'layer=' ) !== false ) {
-				self::$pageHasLayers = true;
-				self::log( 'Found layers= in wikitext, setting pageHasLayers=true' );
-			}
+			// Strip layers= and layer= from wikitext to prevent caption leakage
+			// Pattern matches: |layers=value or |layer=value (with optional whitespace)
+			$text = preg_replace(
+				'/\|layers?\s*=\s*[^|\]]+/i',
+				'',
+				$text
+			);
+			self::log( 'Stripped layers/layer parameters from wikitext' );
 		} catch ( \Throwable $e ) {
 			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
 		}
