@@ -6,7 +6,7 @@ Thanks for helping improve Layers! This guide covers local setup, how to run che
 
 **Target: <75,000 lines of JavaScript**
 
-This extension is feature-rich by design—14 drawing tools, multiple rendering systems, comprehensive validation, and extensive test coverage. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension. The 75K target provides room for continued feature development.
+This extension is feature-rich by design—11 drawing tools, multiple rendering systems, comprehensive validation, and extensive test coverage. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension. The 75K target provides room for continued feature development.
 
 **There is no arbitrary 50K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns

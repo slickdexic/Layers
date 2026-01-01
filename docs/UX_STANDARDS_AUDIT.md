@@ -30,8 +30,8 @@ The Layers editor is **95% compliant** with modern design tool conventions. User
 
 ### ✅ COMPLIANT - Core Drawing Tools
 
-**What users expect:** 13+ drawing tools with intuitive behavior  
-**What we have:** 13 tools (Pointer, Zoom, Text, Text Box, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Blur)
+**What users expect:** 11+ drawing tools with intuitive behavior  
+**What we have:** 11 tools (Pointer, Text, Text Box, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line). Blur effect available via fill='blur' on any shape.
 
 | Feature | Figma | Canva | Layers | Notes |
 |---------|-------|-------|--------|-------|
@@ -40,7 +40,7 @@ The Layers editor is **95% compliant** with modern design tool conventions. User
 | Text tool | ✅ | ✅ | ✅ | Click-to-type |
 | Text box | ✅ | ✅ | ✅ | Multi-line, word wrap |
 | Arrow tool | ✅ | ✅ | ✅ | Multiple head types |
-| Blur effect | ❌ | ✅ | ✅ | Visual effect |
+| Blur effect | ❌ | ✅ | ✅ | Via fill='blur' on any shape |
 | Polygon | ✅ | ✅ | ✅ | Configurable sides |
 | Star | ✅ | ✅ | ✅ | Configurable points |
 

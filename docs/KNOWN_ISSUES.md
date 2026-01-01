@@ -159,10 +159,10 @@ Remaining deprecated items (all are legitimate fallbacks):
 ### P2.5 Codebase Size
 
 **Status:** ✅ Healthy  
-**Current:** ~53,500 lines (103 files)  
+**Current:** ~55,000 lines (106 files)  
 **Target:** <75,000 lines
 
-The extension is feature-rich with 12 drawing tools, layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
+The extension is feature-rich with 11 drawing tools (blur tool deprecated), layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
 
 ---
 
