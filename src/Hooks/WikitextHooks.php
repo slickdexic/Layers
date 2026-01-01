@@ -642,7 +642,8 @@ class WikitextHooks {
 				}
 			}
 
-			// Extract layerslink= values (editor, viewer, lightbox)
+			// Extract layerslink= values (editor, viewer, lightbox) and REMOVE from text
+			// to prevent them from appearing as caption text in thumbnails
 			$layerslinkPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layerslink\s*=\s*([^|\]]+)/i';
 			$layerslinkMap = [];
 			$linkMatchCount = preg_match_all(
@@ -656,7 +657,7 @@ class WikitextHooks {
 				foreach ( $linkMatches as $match ) {
 					$filename = trim( $match[1][0] );
 					$offset = $match[0][1];
-									$linkValue = strtolower( trim( $match[2][0] ) );
+					$linkValue = strtolower( trim( $match[2][0] ) );
 					// Validate against allowed values
 					$allowedLinks = [
 						'editor', 'editor-newtab', 'editor-return',
@@ -671,6 +672,16 @@ class WikitextHooks {
 					}
 				}
 			}
+
+			// Strip layerslink=value from wikitext to prevent caption leakage
+			// Pattern matches: |layerslink=value (with optional whitespace)
+			// We remove just the parameter, keeping surrounding pipe delimiters intact
+			$text = preg_replace(
+				'/\|layerslink\s*=\s*[^|\]]+/i',
+				'',
+				$text
+			);
+			self::log( 'Stripped layerslink parameters from wikitext' );
 
 			// Build fileLinkTypes queues matching file render order
 			foreach ( $allFileMatches as $fileMatch ) {
