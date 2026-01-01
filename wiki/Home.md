@@ -16,7 +16,7 @@
 
 | 🎨 **Professional Tools** | 🔒 **Non-Destructive** | ♿ **Accessible** |
 |---------------------------|------------------------|------------------|
-| 14 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
+| 11 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
 
 ---
 
@@ -26,7 +26,7 @@
 - **Live Color Picker Preview (FR-9)** — Canvas updates in real-time during color selection
 - **Live Article Preview (FR-10)** — Layer changes visible immediately after saving
 - **Reduced Motion Support** — Respects `prefers-reduced-motion` accessibility preference
-- **7,923 tests passing** — 94.3% statement coverage
+- **7,881 tests passing** — 94.0% statement coverage
 
 ### Previous v1.3 Highlights
 
@@ -61,7 +61,7 @@ See [[Changelog]] for full details.
 - [[Configuration Reference]] — All configuration parameters explained
 
 ### User Guide
-- [[Drawing Tools]] — Complete guide to all 13 tools
+- [[Drawing Tools]] — Complete guide to all 11 tools
 - [[Keyboard Shortcuts]] — Master the keyboard for faster editing
 - [[Style Presets]] — Save and reuse style configurations
 - [[Named Layer Sets]] — Multiple annotation sets per image

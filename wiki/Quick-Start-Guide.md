@@ -138,7 +138,7 @@ Use `Z` to switch to zoom mode, or scroll the mouse wheel to zoom in/out.
 
 ## Next Steps
 
-- [[Drawing Tools]] — Master all 13 tools
+- [[Drawing Tools]] — Master all 11 tools
 - [[Keyboard Shortcuts]] — Speed up your workflow
 - [[Style Presets]] — Save and reuse styles
 - [[Named Layer Sets]] — Organize multiple annotation sets
