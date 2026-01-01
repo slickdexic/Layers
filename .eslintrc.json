@@ -30,7 +30,7 @@
 		"linebreak-style": "off",
 		"no-var": "warn",
 		"prefer-const": "warn",
-		"no-unused-vars": "error",
+		"no-unused-vars": ["error", { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }],
 		"no-empty": "off"
 	},
 	"overrides": [

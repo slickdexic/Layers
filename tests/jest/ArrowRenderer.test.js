@@ -954,6 +954,41 @@ describe( 'ArrowRenderer', () => {
 				expect( ctx.quadraticCurveTo ).not.toHaveBeenCalled();
 				expect( ctx.lineTo ).toHaveBeenCalled();
 			} );
+
+			it( 'should call effectsRenderer.drawBlurFill for curved arrows with blur fill', () => {
+				const mockEffectsRenderer = {
+					drawBlurFill: jest.fn()
+				};
+				arrowRenderer.setEffectsRenderer( mockEffectsRenderer );
+
+				const layer = {
+					type: 'arrow',
+					x1: 0,
+					y1: 0,
+					x2: 100,
+					y2: 0,
+					controlX: 50,
+					controlY: 50,
+					fill: 'blur',
+					arrowStyle: 'single'
+				};
+
+				arrowRenderer.draw( layer );
+
+				// Blur fill should be called for curved arrows (FR-4 blur fix)
+				expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledTimes( 1 );
+				expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalledWith(
+					layer,
+					expect.any( Function ), // drawPathFn
+					expect.objectContaining( {
+						x: expect.any( Number ),
+						y: expect.any( Number ),
+						width: expect.any( Number ),
+						height: expect.any( Number )
+					} ),
+					expect.any( Object ) // options
+				);
+			} );
 		} );
 	} );
 } );

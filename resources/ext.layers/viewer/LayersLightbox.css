@@ -155,3 +155,26 @@
 		max-height: 85vh;
 	}
 }
+
+/* Reduced Motion Accessibility Support
+ * Respects user preferences for reduced motion (WCAG 2.3.3)
+ */
+@media ( prefers-reduced-motion: reduce ) {
+	.layers-lightbox-overlay {
+		transition: none;
+	}
+
+	.layers-lightbox-close {
+		transition: none;
+	}
+
+	.layers-lightbox-close:hover {
+		transform: none;
+	}
+
+	.layers-lightbox-loading::before {
+		animation: none;
+		/* Show a static indicator instead of spinning */
+		border-top-color: rgba( 255, 255, 255, 0.7 );
+	}
+}

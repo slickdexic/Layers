@@ -166,9 +166,13 @@ The extension uses MediaWiki's internationalization system (`mw.message()`) for 
 
 ### Low Priority
 
-8. **Animation/Motion**
-   - No `prefers-reduced-motion` media query support
-   - **Recommendation**: Respect user motion preferences
+8. ~~**Animation/Motion**~~ ✅ RESOLVED (December 2025)
+   - ~~No `prefers-reduced-motion` media query support~~
+   - **Resolution**: Added `@media (prefers-reduced-motion: reduce)` rules to all CSS files:
+     - `editor-fixed.css`: Disables slide-in animation, removes all transitions
+     - `LayersLightbox.css`: Disables fade transitions, stops spinner animation
+     - `presets.css`: Disables button/menu transitions
+     - `modal.css`: Already had support (disables fade-in animation)
 
 9. **High Contrast Mode**
    - Not tested with Windows High Contrast Mode

@@ -770,7 +770,8 @@
 
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur' && fillOpacity > 0;
+			const isBlurFill = layer.fill === 'blur';
+			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
 			// Calculate perpendicular angles at key points
@@ -870,12 +871,28 @@
 				this.ctx.closePath();
 			};
 
-			// Draw fill
+			// Draw fill (blur fill or regular)
 			if ( hasFill ) {
-				drawUnifiedArrowPath();
-				this.ctx.fillStyle = layer.fill;
-				this.ctx.globalAlpha = baseOpacity * fillOpacity;
-				this.ctx.fill();
+				if ( isBlurFill && this.effectsRenderer ) {
+					// Blur fill - calculate bounding box from curve and heads
+					const padding = arrowSize * 2;
+					const minX = Math.min( x1, x2, cx ) - padding;
+					const minY = Math.min( y1, y2, cy ) - padding;
+					const maxX = Math.max( x1, x2, cx ) + padding;
+					const maxY = Math.max( y1, y2, cy ) + padding;
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.effectsRenderer.drawBlurFill(
+						layer,
+						drawUnifiedArrowPath,
+						{ x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+						opts
+					);
+				} else if ( !isBlurFill ) {
+					drawUnifiedArrowPath();
+					this.ctx.fillStyle = layer.fill;
+					this.ctx.globalAlpha = baseOpacity * fillOpacity;
+					this.ctx.fill();
+				}
 			}
 
 			this.clearShadow();

@@ -613,6 +613,13 @@
 			if ( typeof L.y2 === 'number' ) {
 				L.y2 = L.y2 * sy;
 			}
+			// Curved arrow control point - must be scaled for proper Bézier curve
+			if ( typeof L.controlX === 'number' ) {
+				L.controlX = L.controlX * sx;
+			}
+			if ( typeof L.controlY === 'number' ) {
+				L.controlY = L.controlY * sy;
+			}
 			if ( typeof L.fontSize === 'number' ) {
 				L.fontSize = L.fontSize * scaleAvg;
 			}

@@ -983,6 +983,17 @@ describe( 'ToolbarStyleControls', () => {
 			controls.applyPresetStyleInternal( { arrowStyle: 'double' } );
 			expect( controls.arrowStyleSelect.value ).toBe( 'double' );
 		} );
+
+		it( 'should apply arrowStyle via fallback when arrowStyleControl is null', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			// Ensure arrowStyleSelect exists but arrowStyleControl is null
+			controls.arrowStyleControl = null;
+			controls.arrowStyleSelect.value = 'none';
+
+			controls.applyPresetStyleInternal( { arrowStyle: 'double' } );
+			expect( controls.arrowStyleSelect.value ).toBe( 'double' );
+		} );
 	} );
 
 	describe( 'getCurrentStyle', () => {
@@ -1014,6 +1025,17 @@ describe( 'ToolbarStyleControls', () => {
 			const style = controls.getCurrentStyle();
 			expect( style.stroke ).toBe( 'transparent' );
 			expect( style.fill ).toBe( 'transparent' );
+		} );
+
+		it( 'should use arrowStyleSelect fallback when arrowStyleControl is null', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			// Null out the arrowStyleControl to test the fallback path
+			controls.arrowStyleControl = null;
+			controls.arrowStyleSelect.value = 'double';
+
+			const style = controls.getCurrentStyle();
+			expect( style.arrowStyle ).toBe( 'double' );
 		} );
 	} );
 
@@ -1049,6 +1071,20 @@ describe( 'ToolbarStyleControls', () => {
 			controls.create();
 			controls.presetStyleManager = null;
 			expect( () => controls.updateForSelection( [] ) ).not.toThrow();
+		} );
+
+		it( 'should call hideControlsForSelectedLayers when contextAwareEnabled and layers selected', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+			controls.contextAwareEnabled = true;
+			const layers = [ { id: '1', type: 'rectangle' } ];
+
+			// Spy on hideControlsForSelectedLayers
+			const spy = jest.spyOn( controls, 'hideControlsForSelectedLayers' );
+			controls.updateForSelection( layers );
+
+			expect( spy ).toHaveBeenCalledWith( layers );
+			spy.mockRestore();
 		} );
 	} );
 
@@ -1194,6 +1230,20 @@ describe( 'ToolbarStyleControls', () => {
 
 			expect( mockDestroy ).toHaveBeenCalled();
 			expect( controls.textEffectsControls ).toBeNull();
+		} );
+
+		it( 'should call destroy on arrowStyleControl when present', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.create();
+
+			// Mock arrowStyleControl with destroy
+			const mockDestroy = jest.fn();
+			controls.arrowStyleControl = { destroy: mockDestroy };
+
+			controls.destroy();
+
+			expect( mockDestroy ).toHaveBeenCalled();
+			expect( controls.arrowStyleControl ).toBeNull();
 		} );
 	} );
 
@@ -1663,6 +1713,27 @@ describe( 'ToolbarStyleControls', () => {
 					// Presets hidden because Properties panel has them
 					expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( true );
 				}
+			} );
+
+			it( 'should call textEffectsControls.hideAll when layers are selected', () => {
+				const selectedLayers = [
+					{ id: 'text-1', type: 'text' }
+				];
+
+				// Mock hideAll method (keep existing properties)
+				const mockHideAll = jest.fn();
+				const originalTextEffectsControls = styleControls.textEffectsControls;
+				styleControls.textEffectsControls = {
+					...originalTextEffectsControls,
+					hideAll: mockHideAll
+				};
+
+				styleControls.hideControlsForSelectedLayers( selectedLayers );
+
+				expect( mockHideAll ).toHaveBeenCalled();
+
+				// Restore original
+				styleControls.textEffectsControls = originalTextEffectsControls;
 			} );
 		} );
 

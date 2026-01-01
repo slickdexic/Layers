@@ -352,6 +352,47 @@ describe( 'ContextMenuController', () => {
 				done();
 			}, 10 );
 		} );
+
+		it( 'should not close menu when clicking inside', ( done ) => {
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+			const menu = document.querySelector( '.layers-context-menu' );
+			expect( menu ).toBeTruthy();
+
+			// Need to wait for the setTimeout(0) in the controller
+			setTimeout( () => {
+				// Click inside menu should not close it
+				menu.click();
+				expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+				done();
+			}, 10 );
+		} );
+	} );
+
+	describe( 'escape key handling', () => {
+		it( 'should close menu when Escape key is pressed', () => {
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+
+			// Simulate Escape key press
+			const escapeEvent = new KeyboardEvent( 'keydown', { key: 'Escape' } );
+			document.dispatchEvent( escapeEvent );
+
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeFalsy();
+		} );
+
+		it( 'should not close menu on other key presses', () => {
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+
+			// Simulate Enter key press
+			const enterEvent = new KeyboardEvent( 'keydown', { key: 'Enter' } );
+			document.dispatchEvent( enterEvent );
+
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+		} );
 	} );
 
 	describe( 'menu item interactions', () => {

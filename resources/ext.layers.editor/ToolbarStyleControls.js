@@ -922,10 +922,9 @@ class ToolbarStyleControls {
 	 * Controls are redundant because the Properties panel in the Layer Manager
 	 * provides all the same controls for editing selected layers.
 	 *
-	 * @param {Array} selectedLayers Array of selected layer objects
+	 * @param {Array} _selectedLayers Array of selected layer objects (unused)
 	 */
-	// eslint-disable-next-line no-unused-vars
-	hideControlsForSelectedLayers( selectedLayers ) {
+	hideControlsForSelectedLayers( _selectedLayers ) {
 		// Hide main style row when layers are selected (Properties panel has these)
 		if ( this.mainStyleRow ) {
 			this.mainStyleRow.classList.add( 'context-hidden' );

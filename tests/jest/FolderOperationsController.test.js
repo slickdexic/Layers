@@ -117,6 +117,25 @@ describe( 'FolderOperationsController', () => {
 			expect( typeof controller.getSelectedLayerIds ).toBe( 'function' );
 			expect( typeof controller.renderLayerList ).toBe( 'function' );
 		} );
+
+		it( 'should use default fallbacks when config callbacks are missing', () => {
+			const minimalController = new FolderOperationsController( {
+				editor: mockEditor
+			} );
+
+			// Default msg should return key or fallback
+			expect( minimalController.msg( 'test-key', 'fallback' ) ).toBe( 'fallback' );
+			expect( minimalController.msg( 'test-key' ) ).toBe( 'test-key' );
+
+			// Default getSelectedLayerIds returns empty array
+			expect( minimalController.getSelectedLayerIds() ).toEqual( [] );
+
+			// Default callbacks should not throw
+			expect( () => minimalController.renderLayerList() ).not.toThrow();
+			expect( () => minimalController.updateCodePanel() ).not.toThrow();
+			expect( () => minimalController.updatePropertiesPanel() ).not.toThrow();
+			expect( () => minimalController.registerDialogCleanup() ).not.toThrow();
+		} );
 	} );
 
 	describe( 'createFolder', () => {
@@ -181,6 +200,23 @@ describe( 'FolderOperationsController', () => {
 			const result = controller.createFolder();
 
 			expect( result ).toBeNull();
+		} );
+
+		it( 'should work when mw.notify is not available', () => {
+			delete global.mw.notify;
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [] );
+
+			// Should not throw when mw.notify is undefined
+			expect( () => controller.createFolder() ).not.toThrow();
+		} );
+
+		it( 'should select the new folder after creation', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [] );
+			mockEditor.groupManager.createFolder.mockReturnValue( { id: 'new-folder', type: 'group', children: [] } );
+
+			controller.createFolder();
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'selectedLayerIds', [ 'new-folder' ] );
 		} );
 	} );
 
@@ -252,6 +288,23 @@ describe( 'FolderOperationsController', () => {
 
 			expect( mockCallbacks.renderLayerList ).not.toHaveBeenCalled();
 		} );
+
+		it( 'should work when canvasManager is not available', () => {
+			mockEditor.canvasManager = null;
+			const layer = { ...mockLayers[ 0 ], visible: true };
+			mockEditor.getLayerById.mockReturnValue( layer );
+
+			expect( () => controller.toggleLayerVisibility( 'layer1' ) ).not.toThrow();
+			expect( layer.visible ).toBe( false );
+		} );
+
+		it( 'should work when stateManager is not available for layer retrieval', () => {
+			mockEditor.stateManager = null;
+			const layer = { ...mockLayers[ 0 ], visible: true };
+			mockEditor.getLayerById.mockReturnValue( layer );
+
+			expect( () => controller.toggleLayerVisibility( 'layer1' ) ).not.toThrow();
+		} );
 	} );
 
 	describe( 'deleteLayer', () => {
@@ -266,6 +319,33 @@ describe( 'FolderOperationsController', () => {
 				expect.any( String ),
 				expect.any( Function )
 			);
+		} );
+
+		it( 'should execute callback and saveState when confirmation is accepted', () => {
+			const layer = mockLayers[ 0 ];
+			mockEditor.getLayerById.mockReturnValue( layer );
+			// Create a mock that executes the callback immediately
+			const mockConfirmDialog = jest.fn( ( _message, callback ) => {
+				callback();
+			} );
+
+			controller.deleteLayer( 'layer1', mockConfirmDialog );
+
+			// Callback should have been executed
+			expect( mockEditor.removeLayer ).toHaveBeenCalledWith( 'layer1' );
+			expect( mockEditor.saveState ).toHaveBeenCalledWith( 'Delete Layer' );
+		} );
+
+		it( 'should saveState with "Delete Folder" message for empty group deletion', () => {
+			const emptyFolder = { id: 'empty', type: 'group', children: [] };
+			mockEditor.getLayerById.mockReturnValue( emptyFolder );
+			const mockConfirmDialog = jest.fn( ( _message, callback ) => {
+				callback();
+			} );
+
+			controller.deleteLayer( 'empty', mockConfirmDialog );
+
+			expect( mockEditor.saveState ).toHaveBeenCalledWith( 'Delete Folder' );
 		} );
 
 		it( 'should show folder delete dialog for groups with children', () => {
@@ -384,6 +464,16 @@ describe( 'FolderOperationsController', () => {
 
 			expect( () => controller.ungroupLayer( 'folder1' ) ).not.toThrow();
 		} );
+
+		it( 'should not show notification or call callbacks when ungroup returns false', () => {
+			mockEditor.groupManager.ungroup.mockReturnValue( false );
+
+			controller.ungroupLayer( 'folder1' );
+
+			expect( mw.notify ).not.toHaveBeenCalled();
+			expect( mockCallbacks.renderLayerList ).not.toHaveBeenCalled();
+			expect( mockEditor.saveState ).not.toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'setChildrenVisibility', () => {
@@ -459,6 +549,14 @@ describe( 'FolderOperationsController', () => {
 
 			expect( mockEditor.removeLayer ).toHaveBeenCalledWith( 'folder1' );
 		} );
+
+		it( 'should work when historyManager is not available', () => {
+			mockEditor.historyManager = null;
+			const folder = { id: 'folder1', type: 'group', children: [] };
+
+			expect( () => controller.deleteFolderKeepChildren( 'folder1', folder ) ).not.toThrow();
+			expect( mockEditor.removeLayer ).toHaveBeenCalledWith( 'folder1' );
+		} );
 	} );
 
 	describe( 'deleteFolderAndContents', () => {
@@ -481,6 +579,14 @@ describe( 'FolderOperationsController', () => {
 
 			expect( mockEditor.historyManager.startBatch ).toHaveBeenCalledWith( 'Delete Folder and Contents' );
 			expect( mockEditor.historyManager.endBatch ).toHaveBeenCalled();
+		} );
+
+		it( 'should work when historyManager is not available', () => {
+			mockEditor.historyManager = null;
+			const folder = { id: 'folder1', type: 'group', children: [] };
+
+			expect( () => controller.deleteFolderAndContents( 'folder1', folder ) ).not.toThrow();
+			expect( mockEditor.removeLayer ).toHaveBeenCalledWith( 'folder1' );
 		} );
 	} );
 

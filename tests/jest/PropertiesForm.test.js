@@ -517,6 +517,81 @@ describe( 'PropertiesForm', () => {
 			const fillLabel = Array.from( labels ).find( ( l ) => l.textContent.includes( 'Fill Color' ) );
 			expect( fillLabel ).toBeUndefined();
 		} );
+
+		test( 'should create folder/group layer form with folder-specific controls', () => {
+			const layer = {
+				id: 'folder-1',
+				type: 'group',
+				name: 'My Folder',
+				children: [ 'layer-1', 'layer-2', 'layer-3' ]
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Folder should have name input
+			const nameInput = form.querySelector( 'input[type="text"]' );
+			expect( nameInput ).not.toBeNull();
+			expect( nameInput.value ).toBe( 'My Folder' );
+
+			// Folder should show contents info (3 layers)
+			const infoValue = form.querySelector( '.properties-value' );
+			expect( infoValue ).not.toBeNull();
+			expect( infoValue.textContent ).toContain( '3 layers' );
+
+			// Folder should NOT have transform section (no x, y, rotation)
+			const xInput = form.querySelector( 'input[data-prop="x"]' );
+			expect( xInput ).toBeNull();
+
+			// Folder should NOT have appearance section
+			const appearanceHeader = form.querySelector( '.property-section-header--appearance' );
+			expect( appearanceHeader ).toBeNull();
+		} );
+
+		test( 'should show empty folder tip when folder has no children', () => {
+			const layer = {
+				id: 'folder-1',
+				type: 'group',
+				name: 'Empty Folder',
+				children: []
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Should show empty hint
+			const infoValue = form.querySelector( '.properties-value' );
+			expect( infoValue.textContent ).toContain( 'Empty' );
+
+			// Should show tip row for empty folders
+			const tipRow = form.querySelector( '.properties-tip' );
+			expect( tipRow ).not.toBeNull();
+		} );
+
+		test( 'should update folder name via editor.updateLayer', () => {
+			const layer = {
+				id: 'folder-1',
+				type: 'group',
+				name: 'Original Name'
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const nameInput = form.querySelector( 'input[type="text"]' );
+			nameInput.value = 'New Folder Name';
+			nameInput.dispatchEvent( new Event( 'input' ) );
+			jest.advanceTimersByTime( 150 );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'folder-1', { name: 'New Folder Name' } );
+		} );
+
+		test( 'should show singular "1 layer" for folder with one child', () => {
+			const layer = {
+				id: 'folder-1',
+				type: 'group',
+				name: 'Single Item Folder',
+				children: [ 'layer-1' ]
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const infoValue = form.querySelector( '.properties-value' );
+			expect( infoValue.textContent ).toBe( '1 layer' );
+		} );
 	} );
 
 	describe( 'addInput', () => {
@@ -3383,6 +3458,27 @@ describe( 'PropertiesForm', () => {
 
 			// Should round to 1 decimal
 			expect( input.value ).toBe( '7.3' );
+		} );
+
+		test( 'should handle NaN/invalid input with decimals=1 (formatOneDecimal edge case)', () => {
+			const onChange = jest.fn();
+			PropertiesForm.addInput( {
+				label: 'Value',
+				type: 'number',
+				value: 5,
+				decimals: 1,
+				onChange
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+			// Enter non-numeric value - formatOneDecimal returns '' for NaN
+			input.value = 'abc';
+			input.dispatchEvent( new Event( 'blur' ) );
+
+			// Should revert to last valid value since 'abc' is invalid
+			expect( input.value ).toBe( '5' );
+			// onChange should not have been called with invalid input
+			expect( onChange ).not.toHaveBeenCalled();
 		} );
 	} );
 

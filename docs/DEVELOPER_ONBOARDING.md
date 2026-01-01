@@ -14,19 +14,20 @@ This document provides an overview of the Layers extension architecture and onbo
 
 | Module | Purpose | Lines |
 |--------|---------|-------|
-| `LayersEditor.js` | Main orchestrator | ~1,296 |
-| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~1,893 |
-| `LayerRenderer.js` | Shared rendering engine | ~371 |
-| `ShapeRenderer.js` | Shape rendering (shared) | ~1,050 |
-| `ShadowRenderer.js` | Shadow effect rendering | ~521 |
-| `LayerPanel.js` | Layer list UI component | ~1,672 |
-| `TransformController.js` | Resize, rotate, drag operations | ~761 |
-| `SelectionManager.js` | Selection state management | ~1,266 |
-| `ToolManager.js` | Tool state and switching | ~1,134 |
-| `EditorBootstrap.js` | Initialization, hooks, cleanup | ~400 |
-| `RevisionManager.js` | Revision and named set management | ~470 |
-| `DialogManager.js` | Modal dialogs with ARIA | ~420 |
-| `AccessibilityAnnouncer.js` | Screen reader support | ~200 |
+| `LayersEditor.js` | Main orchestrator | ~1,465 |
+| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~1,877 |
+| `LayerPanel.js` | Layer list UI component | ~2,140 |
+| `SelectionManager.js` | Selection state management | ~1,359 |
+| `ToolManager.js` | Tool state and switching | ~1,259 |
+| `ArrowRenderer.js` | Arrow rendering (curved support) | ~1,217 |
+| `ShapeRenderer.js` | Shape rendering (shared) | ~909 |
+| `LayerRenderer.js` | Shared rendering engine | ~821 |
+| `TransformController.js` | Resize, rotate, drag operations | ~779 |
+| `DialogManager.js` | Modal dialogs with ARIA | ~737 |
+| `ShadowRenderer.js` | Shadow effect rendering | ~556 |
+| `RevisionManager.js` | Revision and named set management | ~494 |
+| `EditorBootstrap.js` | Initialization, hooks, cleanup | ~473 |
+| `AccessibilityAnnouncer.js` | Screen reader support | ~225 |
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full module dependency graph.
 

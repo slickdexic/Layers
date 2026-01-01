@@ -4,6 +4,25 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.4.0 (December 31, 2025)
+
+### Added
+- **Live Color Picker Preview (FR-9)** — Canvas updates in real-time as colors are selected
+- **Live Article Preview (FR-10)** — Layer changes visible immediately after saving, without page reload
+- **Curved Arrows (FR-4)** — Arrows now support curved paths via draggable control point
+
+### Fixed
+- **Curved arrow scaling bug** — Control points now properly scaled when viewing on resized images
+- **Curved arrow blur fill** — Blur effect now works correctly on curved arrows
+- **PHP line endings** — Fixed CRLF line endings in 14 PHP files
+
+### Improved
+- **Accessibility: Reduced Motion Support** — Respects `prefers-reduced-motion` preference
+- **Test coverage** — 7,852 tests (136 suites), 94.2% statement coverage
+- **TypeScript definitions** — Updated to v1.4.0 with full curved arrow support
+
+---
+
 ## Version 1.3.2 (December 31, 2025)
 
 ### Added

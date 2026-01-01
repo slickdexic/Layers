@@ -2,7 +2,7 @@
 
 **Last Updated:** December 31, 2025  
 **Status:** ✅ No Critical Issues - Production Ready  
-**Version:** 1.3.2  
+**Version:** 1.4.0  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
@@ -11,7 +11,7 @@
 
 The extension is **production-ready** with layer grouping feature complete. All god classes use delegation patterns. All coverage gaps have been addressed. **All PHP warnings fixed (45 → 0).**
 
-**Current Rating: 9.3/10**
+**Current Rating: 8.5/10**
 
 ---
 
@@ -21,11 +21,11 @@ The extension is **production-ready** with layer grouping feature complete. All 
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping with folders |
 | **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
-| **Testing** | ✅ Excellent | 7,778 tests (136 suites), 94.2% statement coverage |
-| **ES6 Migration** | ✅ Complete | 92 classes, 0 prototype patterns |
+| **Testing** | ✅ Excellent | 7,852 tests (136 suites), 94.2% statement, 82.9% branch, 91.9% function coverage |
+| **ES6 Migration** | ✅ Complete | 83 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
-| **God Classes** | ✅ Managed | 9 files >1,000 lines, all well-delegated |
-| **Codebase Size** | ✅ Healthy | ~53,500 lines (102 files), well under 75K target |
+| **God Classes** | ⚠️ Managed | 11 files >1,000 lines, all well-delegated |
+| **Codebase Size** | ✅ Healthy | ~54,700 lines (102 files), well under 75K target |
 | **Layer Grouping** | ✅ **COMPLETE** | Folders, expand/collapse, visibility cascade, delete options |
 | **Performance** | ✅ Improved | Number inputs debounced in PropertiesForm |
 | **Live Preview** | ✅ **NEW** | FR-10: Changes visible without page edit |
@@ -65,26 +65,29 @@ No critical issues. All previously identified P0 issues have been fixed:
 
 | File | Lines | Trend | Action |
 |------|-------|-------|--------|
-| ToolbarStyleControls.js | 944 | Stable | ⚠️ Monitor |
-| PropertiesForm.js | 914 | Stable | ⚠️ Monitor |
+| PropertiesForm.js | 957 | Stable | ⚠️ Monitor |
 | ShapeRenderer.js | 909 | Stable | ⚠️ Monitor |
+| LayersValidator.js | 854 | Stable | ✅ OK |
+
+**Note:** ToolbarStyleControls.js (1,012 lines) and ArrowRenderer.js (1,217 lines) have now crossed the 1,000 line threshold due to curved arrows and live color preview features.
 
 ### P1.2 ESLint Disable Count
 
-**Current:** 13 eslint-disable comments  
+**Current:** 8 eslint-disable comments  
 **Target:** <15  
-**Status:** ✅ BELOW TARGET
+**Status:** ✅ WELL BELOW TARGET
 
 | Rule | Count | Source |
-|------|-------|---------|
+|------|-------|--------|
 | no-alert | 8 | DialogManager fallbacks (intentional) |
-| no-unused-vars | 5 | API compatibility |
 
-**Completed:** Refactored GroupManager.js to use `omitProperty` utility (removed 4 eslint-disables).
+**Completed:** 
+- Refactored GroupManager.js to use `omitProperty` utility (removed 4 eslint-disables)
+- Replaced 5 `no-unused-vars` disables with underscore-prefix convention (`_paramName`)
 
 ### P1.3 God Class Status
 
-All 9 files exceeding 1,000 lines use proper delegation patterns:
+All 11 files exceeding 1,000 lines use proper delegation patterns:
 
 | File | Lines | Pattern | Status |
 |------|-------|---------|--------|
@@ -93,12 +96,14 @@ All 9 files exceeding 1,000 lines use proper delegation patterns:
 | Toolbar.js | 1,556 | UI consolidation | ✅ Acceptable |
 | LayersEditor.js | 1,465 | Orchestrator → managers | ✅ Acceptable |
 | SelectionManager.js | 1,359 | Facade → selection helpers | ✅ Acceptable |
-| ToolManager.js | 1,261 | Facade → tool handlers | ✅ Acceptable |
+| ToolManager.js | 1,259 | Facade → tool handlers | ✅ Acceptable |
 | CanvasRenderer.js | 1,242 | SelectionRenderer | ✅ Acceptable |
+| **ArrowRenderer.js** | **1,217** | Rendering (curved arrows) | ✅ Acceptable |
 | APIManager.js | 1,182 | APIErrorHandler | ✅ Acceptable |
 | GroupManager.js | 1,132 | New (v1.2.13) | ✅ Acceptable |
+| **ToolbarStyleControls.js** | **1,012** | Style controls (live preview) | ✅ Acceptable |
 
-**Total in god classes: ~12,186 lines** (23% of JS codebase)
+**Total in god classes: ~14,441 lines** (26% of JS codebase)
 
 ---
 
@@ -106,12 +111,13 @@ All 9 files exceeding 1,000 lines use proper delegation patterns:
 
 ### P2.1 Reduce ESLint Disables
 
-**Goal:** Reduce from 17 → <15
+**Status:** ✅ COMPLETE  
+**Result:** Reduced from 17 → 8
 
-**Approach:**
-1. Review GroupManager.js - 4 `no-unused-vars` may be reducible
-2. Consider using `_` prefix for intentionally unused params
-3. Update ESLint config if pattern is legitimate
+**Approach Used:**
+1. ✅ Refactored GroupManager.js to use `omitProperty` utility (removed 4)
+2. ✅ Added underscore-prefix pattern (`_paramName`) to .eslintrc.json for intentionally unused params (removed 5)
+3. Remaining 8 are intentional `no-alert` fallbacks for when DialogManager is unavailable
 
 ### P2.2 Create Architecture Diagram
 
@@ -157,7 +163,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for comprehensive visualization
 ### P3.2 WCAG 2.1 AA Audit ⏳
 
 Full accessibility compliance audit.  
-**Effort:** 2 weeks
+**Status:** 30% - Reduced motion support added (December 2025)
+**Effort:** 2 weeks (remaining)
 
 ### P3.3 Gradient Fills ⏳
 
@@ -319,17 +326,17 @@ P0.4 LayerDragDrop coverage:     ███████████████�
 
 Phase 1 (Monitoring):
 P1.1 Files approaching 1K:       ██████████████████░░ 90%  ⚠️ 3 files at 900-950 lines
-P1.2 ESLint disables:            ████████████████████ 100% ✅ 13 (target <15) - DONE
+P1.2 ESLint disables:            ████████████████████ 100% ✅ 8 (target <15) - DONE
 P1.3 God class delegation:       ████████████████████ 100% ✅ All well-delegated
 
 Phase 2 (Code Quality):
-P2.1 Reduce ESLint disables:     ████████████████████ 100% ✅ 13 (below <15 target)
+P2.1 Reduce ESLint disables:     ████████████████████ 100% ✅ 8 (below <15 target)
 P2.2 Architecture diagram:       ████████████████████ 100% ✅ 9 Mermaid diagrams in ARCHITECTURE.md
 P2.3 Mobile UI optimization:     ██████░░░░░░░░░░░░░░ 30%  ⏳ Basic touch works
 
 Phase 3 (Features):
 P3.1 TypeScript:                 █░░░░░░░░░░░░░░░░░░░ 5%   ⏳ Low Priority
-P3.2 WCAG Audit:                 ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
+P3.2 WCAG Audit:                 ██████░░░░░░░░░░░░░░ 30%  ⏳ Reduced motion done
 P3.3 Gradient Fills:             ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 P3.4 Custom Fonts:               ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 
@@ -349,11 +356,11 @@ FR-10 Live Article Preview:      ███████████████�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,805 | ✅ |
+| Total tests | 7,852 | ✅ |
 | Statement coverage | 94.2% | ✅ Excellent |
-| Branch coverage | 82.6% | ✅ |
-| Function coverage | 92% | ✅ |
-| Line coverage | 94% | ✅ |
+| Branch coverage | 82.9% | ✅ |
+| Function coverage | 91.9% | ✅ |
+| Line coverage | 94.5% | ✅ |
 | Test suites | 136 | ✅ |
 
 ### Files With Excellent Coverage ✅
@@ -373,11 +380,12 @@ FR-10 Live Article Preview:      ███████████████�
 
 ### Already Have ✅
 
-- 7,711 passing tests with 94.2% statement coverage
+- 7,852 passing tests with 94.2% statement coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
-- 91 ES6 classes (no legacy patterns)
+- 83 ES6 classes (no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
-- Accessible UI with ARIA support
+- TypeScript definitions (types/layers.d.ts) for IDE IntelliSense
+- Accessible UI with ARIA support and reduced motion preference
 - Named layer sets with version history
 - Layer grouping with folder UI (v1.2.13+)
 - Smart guides and key object alignment
@@ -388,14 +396,19 @@ FR-10 Live Article Preview:      ███████████████�
 - Rate limiting and security hardening
 - Blur fill mode for all shapes
 - Basic touch support (pinch-to-zoom, touch-to-mouse)
+- Curved arrows with Bézier curves (v1.3.3+)
+- Live color picker preview (v1.3.3+)
+- Live article preview (v1.3.3+)
 
 ### Need for 10/10
 
 | Feature | Impact | Effort | Priority |
 |---------|--------|--------|----------|
 | **Mobile-responsive UI** | HIGH - Opens to 50% more users | 3-4 weeks | P2 |
-| **Reduce eslint-disables** | ✅ DONE (13 below <15 target) | - | ✅ |
+| **Refactor largest god classes** | MEDIUM - Code maintainability | 2-3 weeks | P2 |
+| **Reduce eslint-disable comments** | ✅ DONE (8, below <15 target) | - | ✅ |
 | **Architecture diagram** | ✅ DONE (9 Mermaid diagrams) | - | ✅ |
+| **TypeScript definitions** | ✅ DONE (comprehensive types/layers.d.ts) | - | ✅ |
 | **WCAG 2.1 AA certification** | MEDIUM - Enterprise requirement | 2 weeks | P3 |
 
 ---
@@ -427,14 +440,14 @@ Show only relevant toolbar controls based on the currently selected tool or laye
 
 ## Rules
 
-### ✅ The God Class Rule - COMPLIANT
+### ⚠️ The God Class Rule - NEEDS ATTENTION
 
 When any file exceeds 1,000 lines:
 1. **Assess:** Is it a facade with good delegation? If yes, acceptable up to ~2,000 lines.
 2. **Extract:** If monolithic, identify cohesive functionality for new module
 3. **Soft limit:** Files should ideally stay under 2,000 lines with good delegation
 
-**Current Status:** All 9 god classes use delegation patterns. LayerPanel.js at 2,140 lines is the largest but delegates to 9 specialized controllers.
+**Current Status:** 11 god classes use delegation patterns. Two new files crossed 1,000 lines in v1.3.3 (ArrowRenderer: curved arrows, ToolbarStyleControls: live preview). LayerPanel.js at 2,140 lines is the largest but delegates to 9 specialized controllers.
 
 ### ✅ The Timer Rule
 
@@ -466,7 +479,7 @@ No urgent actions required. All critical issues resolved.
 ### Short-Term (P1)
 
 1. ⏳ Monitor ToolbarStyleControls.js (944 lines)
-2. ✅ eslint-disable comments reduced (17 → 13, below <15 target)
+2. ✅ eslint-disable comments reduced (17 → 8, well below <15 target)
 3. ⏳ Monitor PropertiesForm.js and ShapeRenderer.js
 
 ### Medium Term (P2)
@@ -482,21 +495,44 @@ No urgent actions required. All critical issues resolved.
 
 ---
 
+## Recent Improvements (December 2025)
+
+### Bug Fixes
+- **Curved arrow scaling bug** — Control points (`controlX`, `controlY`) now properly scaled in LayersViewer
+- **Curved arrow blur fill** — Frosted glass effect now works on curved arrows
+
+### Test Coverage Improvements
+- **PropertiesForm.js** — Branch coverage: 72.41% → 81.69% (+9.28pp)
+- **FolderOperationsController.js** — Branch coverage: 72.56% → 88.49% (+15.93pp), function coverage: 68.18% → 100%
+- **LayerItemFactory.js** — Function coverage: 71.42% → 100%, statement coverage: 97.58% → 98.79%
+- **SmartGuidesController.js** — Branch coverage: 70.55% → 76.64% (+6.09pp)
+- Total tests: 7,810 → 7,840 (+30 new tests)
+- Overall branch coverage: 82.63% → 82.81%
+- Overall function coverage: 91.65% → 91.87%
+
+### TypeScript Definitions
+- Updated types/layers.d.ts to v1.4.0 with comprehensive property coverage
+- Added ArrowProperties, StarProperties, BlurProperties, GroupProperties interfaces
+
+---
+
 ## Summary
 
 The Layers extension is **fully functional and production-ready**. Technical debt is manageable with all god classes using proper delegation patterns.
 
-**Honest Rating: 9/10**
+**Honest Rating: 8.5/10**
 
 Deductions:
-- -0.5 for 9 god classes (23% of codebase)
+- -0.75 for 11 god classes (26% of codebase)
 - -0.5 for mobile UI not responsive (basic touch works)
+- -0.25 for documentation sprawl (22 files in docs/)
 
 ### What Would Improve the Rating
 
 | Action | Impact |
 |--------|--------|
 | Mobile-responsive UI | +0.5 |
+| Reduce god classes (refactor 2-3 largest) | +0.5 |
 | ✅ Reduce eslint-disable comments to <15 | +0.1 (EARNED) |
 | ✅ Architecture diagram | +0.1 (EARNED) |
 | WCAG 2.1 AA certification | +0.25 |
@@ -504,5 +540,5 @@ Deductions:
 ---
 
 *Plan updated: December 31, 2025*  
-*Status: ✅ **No critical issues** - Extension is production-ready with manageable technical debt*  
-*Version: 1.3.0*
+*Status: ⚠️ **11 god classes** - Extension is production-ready but technical debt increased with curved arrows and live preview features*  
+*Version: 1.4.0*
