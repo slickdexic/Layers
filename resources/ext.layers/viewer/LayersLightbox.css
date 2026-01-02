@@ -178,3 +178,110 @@
 		border-top-color: rgba( 255, 255, 255, 0.7 );
 	}
 }
+
+/* Windows High Contrast Mode Support
+ * Ensures lightbox elements remain visible with system high contrast colors
+ */
+@media ( forced-colors: active ) {
+	.layers-lightbox-overlay {
+		background: Canvas;
+		border: 2px solid CanvasText;
+	}
+
+	.layers-lightbox-close {
+		background: ButtonFace;
+		border: 2px solid ButtonText;
+		color: ButtonText;
+		forced-color-adjust: none;
+	}
+
+	.layers-lightbox-close:hover,
+	.layers-lightbox-close:focus {
+		background: Highlight;
+		color: HighlightText;
+		border-color: Highlight;
+	}
+
+	.layers-lightbox-close:focus {
+		outline: 2px solid Highlight;
+		outline-offset: 2px;
+	}
+
+	.layers-lightbox-image {
+		border: 1px solid CanvasText;
+	}
+
+	.layers-lightbox-loading {
+		color: CanvasText;
+	}
+
+	.layers-lightbox-loading::before {
+		border-color: GrayText;
+		border-top-color: CanvasText;
+	}
+
+	.layers-lightbox-error {
+		color: CanvasText;
+		background: Canvas;
+		border: 2px solid LinkText;
+	}
+
+	.layers-lightbox-trigger:focus {
+		outline: 2px solid Highlight;
+	}
+}
+
+/* ==========================================================================
+   Vector 2022 Night Mode / Dark Theme Support
+   Note: Lightbox already uses dark backgrounds, but this ensures consistency
+   ========================================================================== */
+
+/* Forced night mode */
+@media screen {
+	html.skin-theme-clientpref-night .layers-lightbox-overlay {
+		background: rgba( 0, 0, 0, 0.95 );
+	}
+
+	html.skin-theme-clientpref-night .layers-lightbox-close {
+		background: rgba( 255, 255, 255, 0.15 );
+		border-color: rgba( 255, 255, 255, 0.6 );
+	}
+
+	html.skin-theme-clientpref-night .layers-lightbox-close:hover {
+		background: rgba( 255, 255, 255, 0.25 );
+	}
+
+	html.skin-theme-clientpref-night .layers-lightbox-loading {
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-night .layers-lightbox-error {
+		color: #ff6b6b;
+		background: rgba( 255, 107, 107, 0.15 );
+	}
+}
+
+/* Automatic mode - follows OS dark mode preference */
+@media screen and ( prefers-color-scheme: dark ) {
+	html.skin-theme-clientpref-os .layers-lightbox-overlay {
+		background: rgba( 0, 0, 0, 0.95 );
+	}
+
+	html.skin-theme-clientpref-os .layers-lightbox-close {
+		background: rgba( 255, 255, 255, 0.15 );
+		border-color: rgba( 255, 255, 255, 0.6 );
+	}
+
+	html.skin-theme-clientpref-os .layers-lightbox-close:hover {
+		background: rgba( 255, 255, 255, 0.25 );
+	}
+
+	html.skin-theme-clientpref-os .layers-lightbox-loading {
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-os .layers-lightbox-error {
+		color: #ff6b6b;
+		background: rgba( 255, 107, 107, 0.15 );
+	}
+}

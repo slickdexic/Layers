@@ -263,7 +263,7 @@
 		 * @param {string} toolId Current tool ID
 		 */
 		updateForTool( toolId ) {
-			const isTextTool = toolId === 'text' || toolId === 'textbox';
+			const isTextTool = toolId === 'text' || toolId === 'textbox' || toolId === 'callout';
 
 			if ( this.fontSizeContainer ) {
 				this.fontSizeContainer.style.display = isTextTool ? 'flex' : 'none';
@@ -281,9 +281,10 @@
 		 * Used by context-aware toolbar when layers are selected
 		 *
 		 * @param {boolean} hasPureTextLayer Whether pure text layers are selected
-		 * @param {boolean} hasTextBoxLayer Whether textbox layers are selected
+		 * @param {boolean} hasTextBoxLayer Whether textbox or callout layers are selected
 		 */
 		updateForSelectedTypes( hasPureTextLayer, hasTextBoxLayer ) {
+			// Note: hasTextBoxLayer includes both textbox AND callout layer types
 			const hasAnyTextLayer = hasPureTextLayer || hasTextBoxLayer;
 
 			if ( this.fontSizeContainer ) {

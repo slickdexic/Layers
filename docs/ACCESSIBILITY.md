@@ -162,9 +162,16 @@ The extension uses MediaWiki's internationalization system (`mw.message()`) for 
    - Some resize/rotate handles are only mouse-accessible
    - **Recommendation**: Add keyboard alternatives for common operations
 
-7. **Color Picker Accessibility**
-   - Color picker relies heavily on mouse interaction
-   - **Recommendation**: Add keyboard navigation and color value inputs
+7. ~~**Color Picker Accessibility**~~ ✅ RESOLVED (January 2026)
+   - ~~Color picker relies heavily on mouse interaction~~
+   - **Resolution**: Added hex color text input alongside the native color picker
+     - Users can type hex values directly (e.g., `#FF5500`)
+     - Auto-adds `#` prefix when typing without it
+     - Real-time validation with visual feedback for invalid values
+     - Syncs bidirectionally with native color picker
+     - Live preview updates as you type valid colors
+     - Proper ARIA labels and keyboard focus management
+   - 11 new tests added for hex input functionality
 
 ### Low Priority
 
@@ -176,9 +183,14 @@ The extension uses MediaWiki's internationalization system (`mw.message()`) for 
      - `presets.css`: Disables button/menu transitions
      - `modal.css`: Already had support (disables fade-in animation)
 
-9. **High Contrast Mode**
-   - Not tested with Windows High Contrast Mode
-   - **Recommendation**: Test and add high contrast stylesheet
+9. ~~**High Contrast Mode**~~ ✅ RESOLVED (January 2026)
+   - ~~Not tested with Windows High Contrast Mode~~
+   - **Resolution**: Added `@media (forced-colors: active)` rules to all CSS files:
+     - `editor-fixed.css`: Full high contrast support for toolbar, layer panel, inputs, buttons, dialogs
+     - `LayersLightbox.css`: Lightbox overlay, close button, loading states
+     - `modal.css`: Modal overlay, header, close button
+     - `presets.css`: Preset dropdowns, items, actions
+   - Uses system colors (ButtonText, Highlight, Canvas, etc.) for automatic adaptation
 
 ## Guidelines for Contributors
 
@@ -257,16 +269,23 @@ Document messages in `i18n/qqq.json`:
 
 | Criterion | Level | Status | Notes |
 |-----------|-------|--------|-------|
-| 1.1.1 Non-text Content | A | ⚠️ Partial | Canvas content not accessible |
+| 1.1.1 Non-text Content | A | ⚠️ Partial | Canvas content not accessible (inherent HTML5 limitation) |
 | 1.3.1 Info and Relationships | A | ✅ Pass | Landmark roles added (December 2025) |
 | 1.4.3 Contrast (Minimum) | AA | ✅ Pass | Audited December 2025 - all text meets 4.5:1 ratio |
+| 1.4.11 Non-text Contrast | AA | ✅ Pass | High contrast mode support added (January 2026) |
 | 2.1.1 Keyboard | A | ✅ Pass | Most features keyboard accessible |
 | 2.1.2 No Keyboard Trap | A | ✅ Pass | Focus trapping properly implemented |
+| 2.3.3 Animation from Interactions | AAA | ✅ Pass | prefers-reduced-motion support |
 | 2.4.1 Bypass Blocks | A | ✅ Pass | Skip links added (December 2025) |
 | 2.4.4 Link Purpose | A | ✅ Pass | Links have descriptive text |
 | 2.4.7 Focus Visible | AA | ✅ Pass | All interactive elements have visible focus indicators (January 2026) |
 | 4.1.2 Name, Role, Value | A | ✅ Pass | Layer list and dialogs fully labeled |
 | 4.1.3 Status Messages | AA | ✅ Pass | ARIA live regions for announcements |
+
+**Additional Accessibility Support:**
+- ✅ Windows High Contrast Mode (forced-colors) - January 2026
+- ✅ Reduced Motion preference - December 2025
+- ✅ Dark theme support (presets dropdown) - December 2025
 
 Legend: ✅ Pass | ⚠️ Partial | ❌ Fail | ❓ Unknown
 

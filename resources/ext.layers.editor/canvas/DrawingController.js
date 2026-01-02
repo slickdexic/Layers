@@ -63,6 +63,9 @@ class DrawingController {
 			case 'textbox':
 				this.startTextBoxTool( point, style );
 				break;
+			case 'callout':
+				this.startCalloutTool( point, style );
+				break;
 			case 'circle':
 				this.startCircleTool( point, style );
 				break;
@@ -235,6 +238,37 @@ class DrawingController {
 	}
 
 	/**
+	 * Start callout tool - creates a speech bubble with tail
+	 *
+	 * @param {Object} point - Starting point
+	 * @param {Object} style - Style options
+	 */
+	startCalloutTool( point, style ) {
+		this.tempLayer = {
+			type: 'callout',
+			x: point.x,
+			y: point.y,
+			width: 0,
+			height: 0,
+			text: '',
+			fontSize: style.fontSize || 16,
+			fontFamily: style.fontFamily || 'Arial, sans-serif',
+			color: style.color || '#000000',
+			textAlign: 'center',
+			verticalAlign: 'middle',
+			lineHeight: 1.2,
+			stroke: style.color || '#000000',
+			strokeWidth: style.strokeWidth || 1,
+			fill: style.fill || '#ffffff',
+			cornerRadius: 8,
+			padding: 12,
+			tailDirection: 'bottom',
+			tailPosition: 0.5,
+			tailSize: 20
+		};
+	}
+
+	/**
 	 * Start circle tool
 	 *
 	 * @param {Object} point - Starting point
@@ -375,6 +409,7 @@ class DrawingController {
 		switch ( this.tempLayer.type ) {
 			case 'rectangle':
 			case 'textbox':
+			case 'callout':
 				this.tempLayer.width = point.x - this.tempLayer.x;
 				this.tempLayer.height = point.y - this.tempLayer.y;
 				break;
@@ -452,6 +487,7 @@ class DrawingController {
 		switch ( layer.type ) {
 			case 'rectangle':
 			case 'textbox':
+			case 'callout':
 				layer.width = point.x - layer.x;
 				layer.height = point.y - layer.y;
 				break;
@@ -507,6 +543,7 @@ class DrawingController {
 		switch ( layer.type ) {
 			case 'rectangle':
 			case 'textbox':
+			case 'callout':
 				return Math.abs( layer.width ) >= this.MIN_SHAPE_SIZE &&
 					Math.abs( layer.height ) >= this.MIN_SHAPE_SIZE;
 
@@ -551,6 +588,7 @@ class DrawingController {
 			case 'pen':
 			case 'rectangle':
 			case 'textbox':
+			case 'callout':
 			case 'circle':
 			case 'ellipse':
 			case 'polygon':
@@ -573,7 +611,7 @@ class DrawingController {
 	 */
 	isDrawingTool ( tool ) {
 		const drawingTools = [
-			'text', 'textbox', 'pen', 'rectangle', 'circle',
+			'text', 'textbox', 'callout', 'pen', 'rectangle', 'circle',
 			'ellipse', 'polygon', 'star', 'line', 'arrow'
 		];
 		return drawingTools.indexOf( tool ) !== -1;

@@ -888,4 +888,202 @@ describe( 'ColorPickerDialog', () => {
 			} ).not.toThrow();
 		} );
 	} );
+
+	describe( 'hex input (keyboard accessibility)', () => {
+		it( 'should have hex input alongside color picker', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+			expect( hexInput ).not.toBeNull();
+			expect( hexInput.tagName.toLowerCase() ).toBe( 'input' );
+			expect( hexInput.getAttribute( 'type' ) ).toBe( 'text' );
+
+			dialog.close();
+		} );
+
+		it( 'should initialize hex input with current color', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#00ff00',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+			expect( hexInput.value ).toBe( '#00ff00' );
+
+			dialog.close();
+		} );
+
+		it( 'should sync color picker changes to hex input', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const colorPicker = document.querySelector( '.color-picker-custom-input' );
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+
+			// Simulate color picker change
+			colorPicker.value = '#ff5500';
+			colorPicker.dispatchEvent( new Event( 'input' ) );
+
+			expect( hexInput.value ).toBe( '#ff5500' );
+			expect( dialog.selectedColor ).toBe( '#ff5500' );
+
+			dialog.close();
+		} );
+
+		it( 'should sync valid hex input to color picker', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const colorPicker = document.querySelector( '.color-picker-custom-input' );
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+
+			// Type a valid hex color
+			hexInput.value = '#aabbcc';
+			hexInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( colorPicker.value ).toBe( '#aabbcc' );
+			expect( dialog.selectedColor ).toBe( '#aabbcc' );
+
+			dialog.close();
+		} );
+
+		it( 'should auto-add # prefix when typing without it', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+
+			// Type without # prefix
+			hexInput.value = 'ff0000';
+			hexInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( hexInput.value ).toBe( '#ff0000' );
+
+			dialog.close();
+		} );
+
+		it( 'should add invalid class for malformed hex input', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+
+			// Type invalid hex
+			hexInput.value = '#xyz';
+			hexInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( hexInput.classList.contains( 'color-picker-hex-input--invalid' ) ).toBe( true );
+
+			dialog.close();
+		} );
+
+		it( 'should remove invalid class for valid hex input', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+
+			// First make it invalid
+			hexInput.value = '#xyz';
+			hexInput.dispatchEvent( new Event( 'input' ) );
+			expect( hexInput.classList.contains( 'color-picker-hex-input--invalid' ) ).toBe( true );
+
+			// Then make it valid
+			hexInput.value = '#aabbcc';
+			hexInput.dispatchEvent( new Event( 'input' ) );
+			expect( hexInput.classList.contains( 'color-picker-hex-input--invalid' ) ).toBe( false );
+
+			dialog.close();
+		} );
+
+		it( 'should reset to valid color on blur if invalid', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+
+			// Type invalid value
+			hexInput.value = '#invalid';
+			hexInput.dispatchEvent( new Event( 'input' ) );
+
+			// Blur should reset to last valid color
+			hexInput.dispatchEvent( new Event( 'blur' ) );
+
+			expect( hexInput.value ).toBe( '#ff0000' );
+			expect( hexInput.classList.contains( 'color-picker-hex-input--invalid' ) ).toBe( false );
+
+			dialog.close();
+		} );
+
+		it( 'should trigger live preview on valid hex input', () => {
+			const onPreview = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {},
+				onPreview: onPreview
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+
+			// Type valid hex
+			hexInput.value = '#123456';
+			hexInput.dispatchEvent( new Event( 'input' ) );
+
+			expect( onPreview ).toHaveBeenCalledWith( '#123456' );
+
+			dialog.close();
+		} );
+
+		it( 'should have proper accessibility attributes', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#000000',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+			expect( hexInput.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( hexInput.getAttribute( 'maxlength' ) ).toBe( '7' );
+			expect( hexInput.getAttribute( 'placeholder' ) ).toBeTruthy();
+
+			dialog.close();
+		} );
+
+		it( 'should not set hex input value for "none" color', () => {
+			const dialog = new ColorPickerDialog( {
+				currentColor: 'none',
+				onApply: () => {}
+			} );
+			dialog.open();
+
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+			expect( hexInput.value ).toBe( '' );
+
+			dialog.close();
+		} );
+	} );
 } );

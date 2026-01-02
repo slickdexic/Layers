@@ -107,9 +107,101 @@ a[ data-layers-modal ] {
 	}
 }
 
+/* Windows High Contrast Mode (forced-colors) Support */
+@media ( forced-colors: active ) {
+	.layers-editor-modal-overlay {
+		background: Canvas;
+		border: 2px solid CanvasText;
+	}
+
+	.layers-editor-modal-header {
+		background: Canvas;
+		border-bottom: 2px solid CanvasText;
+	}
+
+	.layers-editor-modal-title {
+		color: CanvasText;
+	}
+
+	.layers-editor-modal-close {
+		background: ButtonFace;
+		border: 2px solid ButtonText;
+		color: ButtonText;
+		forced-color-adjust: none;
+	}
+
+	.layers-editor-modal-close:hover,
+	.layers-editor-modal-close:focus {
+		background: Highlight;
+		color: HighlightText;
+		border-color: Highlight;
+	}
+
+	.layers-editor-modal-close:focus {
+		outline: 2px solid Highlight;
+		outline-offset: 2px;
+	}
+
+	.layers-editor-modal-iframe {
+		border: 1px solid CanvasText;
+	}
+}
+
 /* Reduced motion preference */
 @media ( prefers-reduced-motion: reduce ) {
 	.layers-editor-modal-overlay {
 		animation-duration: 0s;
+	}
+}
+
+/* ==========================================================================
+   Vector 2022 Night Mode / Dark Theme Support
+   ========================================================================== */
+
+/* Forced night mode */
+@media screen {
+	html.skin-theme-clientpref-night .layers-editor-modal-header {
+		background: #27292d;
+		border-bottom-color: #4a4a4a;
+	}
+
+	html.skin-theme-clientpref-night .layers-editor-modal-title {
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-night .layers-editor-modal-close {
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-night .layers-editor-modal-close:hover {
+		background: rgba( 255, 255, 255, 0.15 );
+	}
+
+	html.skin-theme-clientpref-night .layers-editor-modal-close:active {
+		background: rgba( 255, 255, 255, 0.25 );
+	}
+}
+
+/* Automatic mode - follows OS dark mode preference */
+@media screen and ( prefers-color-scheme: dark ) {
+	html.skin-theme-clientpref-os .layers-editor-modal-header {
+		background: #27292d;
+		border-bottom-color: #4a4a4a;
+	}
+
+	html.skin-theme-clientpref-os .layers-editor-modal-title {
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-os .layers-editor-modal-close {
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-os .layers-editor-modal-close:hover {
+		background: rgba( 255, 255, 255, 0.15 );
+	}
+
+	html.skin-theme-clientpref-os .layers-editor-modal-close:active {
+		background: rgba( 255, 255, 255, 0.25 );
 	}
 }

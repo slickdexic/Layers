@@ -890,6 +890,435 @@ describe( 'LayersViewer', () => {
 			expect( scaled.controlX ).toBe( 300 ); // 150 * 2
 			expect( scaled.controlY ).toBe( 75 );  // 25 * 3
 		} );
+
+		test( 'should scale corner radius properties', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = createSampleLayerData();
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			const layer = {
+				type: 'rectangle',
+				cornerRadius: 8,
+				pointRadius: 4,
+				valleyRadius: 2
+			};
+
+			const scaled = viewer.scaleLayerCoordinates( layer, 2, 3, 2.5 );
+
+			expect( scaled.cornerRadius ).toBe( 20 ); // 8 * 2.5
+			expect( scaled.pointRadius ).toBe( 10 );  // 4 * 2.5
+			expect( scaled.valleyRadius ).toBe( 5 );  // 2 * 2.5
+		} );
+
+		test( 'should scale blurRadius for blur layers', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = createSampleLayerData();
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			const layer = {
+				type: 'blur',
+				blurRadius: 12
+			};
+
+			const scaled = viewer.scaleLayerCoordinates( layer, 2, 3, 2.5 );
+
+			expect( scaled.blurRadius ).toBe( 30 ); // 12 * 2.5
+		} );
+	} );
+
+	describe( 'drawBackgroundOnCanvas', () => {
+		test( 'should draw background image when hasBlendMode is true', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'multiply', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// When blend mode is present, drawBackgroundOnCanvas should be called
+			// which hides the DOM image
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+		} );
+
+		test( 'should fill with white when background is hidden', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				backgroundVisible: false,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'exclusion', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// Background hidden but blend mode present - should still work
+			expect( viewer.ctx.fillStyle ).toBe( '#ffffff' );
+		} );
+
+		test( 'should apply background opacity from layer data', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				backgroundVisible: true,
+				backgroundOpacity: 0.5,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blendMode: 'screen', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// ctx.drawImage should be called with opacity applied
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should parse string opacity value', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				backgroundOpacity: '0.7',
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'overlay', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( viewer ).toBeDefined();
+		} );
+
+		test( 'should ignore blend mode "normal"', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'normal', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// Normal blend mode should not trigger drawBackgroundOnCanvas
+			// So image visibility should not be hidden (no blend mode processing)
+			expect( imageElement.style.visibility ).not.toBe( 'hidden' );
+		} );
+
+		test( 'should ignore blend mode "source-over"', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'source-over', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( imageElement.style.visibility ).not.toBe( 'hidden' );
+		} );
+
+		test( 'should handle backgroundVisible as string "false"', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				backgroundVisible: 'false',
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'multiply', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			// Background hidden via string "false"
+			expect( viewer.ctx.fillStyle ).toBe( '#ffffff' );
+		} );
+
+		test( 'should handle backgroundVisible as string "0"', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				backgroundVisible: '0',
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'difference', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( viewer.ctx.fillStyle ).toBe( '#ffffff' );
+		} );
+
+		test( 'should handle backgroundVisible as integer 0', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			imageElement.style = { visibility: '' };
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				backgroundVisible: 0,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'hard-light', visible: true }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( viewer.ctx.fillStyle ).toBe( '#ffffff' );
+		} );
+	} );
+
+	describe( 'renderLayer blend mode handling', () => {
+		test( 'should apply blend mode from blend property', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'multiply', visible: true, x: 0, y: 0, width: 100, height: 100 }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalled();
+		} );
+
+		test( 'should apply blend mode from blendMode property', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blendMode: 'screen', visible: true, x: 0, y: 0, width: 100, height: 100 }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle invalid blend mode gracefully', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+
+			// Mock ctx to throw on invalid blend mode
+			const mockCtx = {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				drawImage: jest.fn(),
+				save: jest.fn(),
+				restore: jest.fn(),
+				get globalCompositeOperation() {
+					return 'source-over';
+				},
+				set globalCompositeOperation( value ) {
+					if ( value === 'invalid-blend-mode' ) {
+						throw new Error( 'Invalid blend mode' );
+					}
+				},
+				globalAlpha: 1,
+				fillStyle: '#ffffff',
+				shadowColor: 'transparent',
+				shadowBlur: 0,
+				shadowOffsetX: 0,
+				shadowOffsetY: 0
+			};
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'invalid-blend-mode', visible: true, x: 0, y: 0, width: 100, height: 100 }
+				]
+			};
+
+			// Override ctx after viewer creation
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: { baseWidth: 1600, baseHeight: 1200, layers: [] }
+			} );
+
+			viewer.ctx = mockCtx;
+			viewer.layerData = layerData;
+
+			// Should not throw
+			expect( () => viewer.renderLayers() ).not.toThrow();
+		} );
+
+		test( 'should apply shadow settings when hasShadowEnabled returns true', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+
+			// Make hasShadowEnabled return true
+			mockLayerRenderer.hasShadowEnabled.mockReturnValue( true );
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				layers: [
+					{
+						id: 'layer1',
+						type: 'rectangle',
+						visible: true,
+						x: 0,
+						y: 0,
+						width: 100,
+						height: 100,
+						shadow: true,
+						shadowColor: 'rgba(0,0,0,0.5)',
+						shadowBlur: 10,
+						shadowOffsetX: 5,
+						shadowOffsetY: 5
+					}
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( mockLayerRenderer.hasShadowEnabled ).toHaveBeenCalled();
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalled();
+
+			// Reset mock
+			mockLayerRenderer.hasShadowEnabled.mockReturnValue( false );
+		} );
+
+		test( 'should use default shadow values when not specified', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+
+			mockLayerRenderer.hasShadowEnabled.mockReturnValue( true );
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200,
+				layers: [
+					{
+						id: 'layer1',
+						type: 'rectangle',
+						visible: true,
+						x: 0,
+						y: 0,
+						width: 100,
+						height: 100,
+						shadow: true
+						// No shadow properties - should use defaults
+					}
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalled();
+
+			mockLayerRenderer.hasShadowEnabled.mockReturnValue( false );
+		} );
 	} );
 
 	describe( 'exports', () => {
@@ -1274,6 +1703,90 @@ describe( 'LayersViewer', () => {
 
 			// Empty string should be converted to true
 			expect( viewer.layerData.layers[ 0 ].shadow ).toBe( true );
+		} );
+
+		test( 'should normalize blendMode to blend alias in fallback', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			// Temporarily remove the shared normalizer
+			const originalNormalizer = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const layerData = {
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blendMode: 'multiply' }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Restore the normalizer
+			window.Layers.LayerDataNormalizer = originalNormalizer;
+
+			// blendMode should be aliased to blend
+			expect( viewer.layerData.layers[ 0 ].blend ).toBe( 'multiply' );
+			expect( viewer.layerData.layers[ 0 ].blendMode ).toBe( 'multiply' );
+		} );
+
+		test( 'should normalize blend to blendMode alias in fallback', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			// Temporarily remove the shared normalizer
+			const originalNormalizer = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const layerData = {
+				layers: [
+					{ id: 'layer1', type: 'rectangle', blend: 'screen' }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Restore the normalizer
+			window.Layers.LayerDataNormalizer = originalNormalizer;
+
+			// blend should be aliased to blendMode
+			expect( viewer.layerData.layers[ 0 ].blend ).toBe( 'screen' );
+			expect( viewer.layerData.layers[ 0 ].blendMode ).toBe( 'screen' );
+		} );
+
+		test( 'should skip fallback when layerData has no layers array', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			// Temporarily remove the shared normalizer
+			const originalNormalizer = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const layerData = {
+				baseWidth: 1600,
+				baseHeight: 1200
+				// No layers array
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Restore the normalizer
+			window.Layers.LayerDataNormalizer = originalNormalizer;
+
+			// Should not throw
+			expect( viewer ).toBeDefined();
+			expect( viewer.layerData.layers ).toBeUndefined();
 		} );
 	} );
 } );

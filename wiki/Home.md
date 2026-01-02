@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-7%2C921%20Passing-brightgreen" alt="7,921 Tests">
+  <img src="https://img.shields.io/badge/Tests-8%2C000%2B%20Passing-brightgreen" alt="8,000+ Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -20,13 +20,21 @@
 
 ---
 
-## 🆕 What's New in v1.4
+## 🆕 What's New in v1.4.2
+
+- **Callout/Speech Bubble Tool** — New annotation type for chat bubbles and callouts with configurable tail direction
+- **Vector 2022 Dark Mode** — Full support for MediaWiki's Vector 2022 skin night mode
+- **Windows High Contrast Mode** — WCAG 1.4.11 compliance for forced-colors mode
+- **Color Picker Hex Input** — Keyboard-accessible hex color input field
+- **Toolbar Dropdown Grouping** — Text, shapes, and lines grouped into dropdown menus for cleaner UI
+- **8,000+ tests passing** — 94% statement coverage
+
+### Previous v1.4.0 Highlights
 
 - **Curved Arrows (FR-4)** — Arrows now support curved paths via draggable control point
 - **Live Color Picker Preview (FR-9)** — Canvas updates in real-time during color selection
 - **Live Article Preview (FR-10)** — Layer changes visible immediately after saving
 - **Reduced Motion Support** — Respects `prefers-reduced-motion` accessibility preference
-- **7,881 tests passing** — 94.0% statement coverage
 
 ### Previous v1.3 Highlights
 

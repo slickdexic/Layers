@@ -4,10 +4,26 @@ Version history for the Layers extension.
 
 ---
 
-## Unreleased
+## Version 1.4.2 (January 2, 2026)
+
+### Added
+- **Callout/Speech Bubble Tool** — New annotation layer type for creating chat bubbles and callouts
+  - Rounded rectangle container with configurable corner radius
+  - Triangular tail/pointer with 8 direction options
+  - Configurable tail position and size
+  - Full text support with alignment, font, and color controls
+  - Keyboard shortcut: `B`
+- **Vector 2022 Dark Mode** — Full support for Vector 2022 skin's night mode
+- **Windows High Contrast Mode** — WCAG 1.4.11 compliance for forced-colors mode
+- **Color Picker Hex Input** — Keyboard-accessible hex color input field
+- **Toolbar Dropdown Grouping** — Text, shapes, and lines grouped into dropdown menus
+
+### Fixed
+- **Text with apostrophes showing HTML entities** — Text containing apostrophes (e.g., "I'M HERE") no longer displays as `I&apos;M HERE` after saving and reopening
+- **Wrong layer set displayed after `layerslink=editor`** — When opening the editor via a link for a specific layer set, then editing a different set, the article now correctly displays the original set
 
 ### Removed
-- **Blur Tool** — The standalone blur tool (`B` shortcut) has been removed as redundant
+- **Blur Tool** — The standalone blur tool has been removed as redundant
   - Use any shape with `fill: 'blur'` for the same effect with more flexibility
   - Blur fill supports strokes, rounded corners, shadows, and rotation
 

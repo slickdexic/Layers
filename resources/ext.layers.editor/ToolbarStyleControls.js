@@ -556,6 +556,7 @@ class ToolbarStyleControls {
 				}
 			} else if ( colorType === 'fill' ) {
 				// Fill applies to shapes (not text, line, arrow)
+				// Note: textbox and callout support fill for background color
 				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
 					layer.fill = color;
 				}
@@ -646,7 +647,8 @@ class ToolbarStyleControls {
 		// textbox shows stroke/fill, text tool only shows text-specific controls
 		const showMainStyleRow = drawingTools.includes( toolId ) ||
 			strokeOnlyTools.includes( toolId ) ||
-			toolId === 'textbox';
+			toolId === 'textbox' ||
+			toolId === 'callout';
 		const showPresets = toolId !== 'pointer';
 
 		// Apply visibility with CSS classes for smooth transitions

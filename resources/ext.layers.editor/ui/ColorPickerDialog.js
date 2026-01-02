@@ -17,6 +17,8 @@
 		standard: 'Standard colors',
 		saved: 'Saved colors',
 		customSection: 'Custom color',
+		hexInput: 'Hex color value',
+		hexPlaceholder: '#RRGGBB',
 		none: 'No fill (transparent)',
 		emptySlot: 'Empty slot - colors will be saved here automatically',
 		cancel: 'Cancel',
@@ -368,20 +370,76 @@ class ColorPickerDialog {
 		inputLabel.textContent = strings.customSection;
 		inputSection.appendChild( inputLabel );
 
+		// Container for color picker and hex input
+		const inputRow = document.createElement( 'div' );
+		inputRow.className = 'color-picker-input-row';
+
 		const customInput = document.createElement( 'input' );
 		customInput.type = 'color';
 		customInput.className = 'color-picker-custom-input';
 		customInput.setAttribute( 'aria-label', strings.customSection );
-		// Live preview on input for real-time feedback
+		// Set initial value
+		if ( this.selectedColor && this.selectedColor !== 'none' && /^#[0-9A-Fa-f]{6}$/.test( this.selectedColor ) ) {
+			customInput.value = this.selectedColor;
+		}
+
+		// Hex text input for keyboard accessibility
+		const hexInput = document.createElement( 'input' );
+		hexInput.type = 'text';
+		hexInput.className = 'color-picker-hex-input';
+		hexInput.setAttribute( 'aria-label', strings.hexInput );
+		hexInput.setAttribute( 'placeholder', strings.hexPlaceholder );
+		hexInput.setAttribute( 'maxlength', '7' );
+		hexInput.setAttribute( 'pattern', '#[0-9A-Fa-f]{6}' );
+		// Set initial value
+		if ( this.selectedColor && this.selectedColor !== 'none' ) {
+			hexInput.value = this.selectedColor;
+		}
+
+		// Sync color picker to hex input
 		customInput.addEventListener( 'input', () => {
 			this.selectedColor = customInput.value;
+			hexInput.value = customInput.value;
 			this.triggerPreview();
 		} );
 		customInput.addEventListener( 'change', () => {
 			this.selectedColor = customInput.value;
+			hexInput.value = customInput.value;
 			this.triggerPreview();
 		} );
-		inputSection.appendChild( customInput );
+
+		// Sync hex input to color picker (with validation)
+		hexInput.addEventListener( 'input', () => {
+			const value = hexInput.value.trim();
+			// Auto-add # if user types without it
+			if ( value.length > 0 && !value.startsWith( '#' ) ) {
+				hexInput.value = '#' + value;
+			}
+			// Validate hex format
+			if ( /^#[0-9A-Fa-f]{6}$/i.test( hexInput.value ) ) {
+				this.selectedColor = hexInput.value.toLowerCase();
+				customInput.value = this.selectedColor;
+				hexInput.classList.remove( 'color-picker-hex-input--invalid' );
+				this.triggerPreview();
+			} else if ( hexInput.value.length > 0 ) {
+				hexInput.classList.add( 'color-picker-hex-input--invalid' );
+			} else {
+				hexInput.classList.remove( 'color-picker-hex-input--invalid' );
+			}
+		} );
+
+		// Final validation on blur
+		hexInput.addEventListener( 'blur', () => {
+			if ( hexInput.value.length > 0 && !/^#[0-9A-Fa-f]{6}$/i.test( hexInput.value ) ) {
+				// Reset to current valid color
+				hexInput.value = this.selectedColor !== 'none' ? this.selectedColor : '';
+				hexInput.classList.remove( 'color-picker-hex-input--invalid' );
+			}
+		} );
+
+		inputRow.appendChild( customInput );
+		inputRow.appendChild( hexInput );
+		inputSection.appendChild( inputRow );
 		dialog.appendChild( inputSection );
 
 		// Action buttons

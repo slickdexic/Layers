@@ -1613,13 +1613,21 @@ class CanvasManager {
 	}
 
 	continueDrawing ( point ) {
-		// Delegate to DrawingController
+		// Delegate to DrawingController - update geometry immediately
 		if ( this.drawingController ) {
 			this.drawingController.continueDrawing( point );
 			this.tempLayer = this.drawingController.getTempLayer();
-			if ( this.tempLayer ) {
-				this.renderLayers( this.editor.layers );
-				this.drawingController.drawPreview();
+
+			// Throttle rendering using requestAnimationFrame to avoid lag
+			if ( this.tempLayer && !this._drawingFrameScheduled ) {
+				this._drawingFrameScheduled = true;
+				window.requestAnimationFrame( () => {
+					this._drawingFrameScheduled = false;
+					if ( this.tempLayer ) {
+						this.renderLayers( this.editor.layers );
+						this.drawingController.drawPreview();
+					}
+				} );
 			}
 		}
 	}

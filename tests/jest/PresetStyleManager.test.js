@@ -325,4 +325,182 @@ describe( 'PresetStyleManager', () => {
 			expect( () => manager.destroy() ).not.toThrow();
 		} );
 	} );
+
+	describe( 'applyPresetToSelection', () => {
+		it( 'should apply style to selected layers via editor.applyToSelection', () => {
+			manager.createPresetDropdown();
+			manager.selectedLayers = [
+				{ id: 'layer-1', type: 'rectangle', stroke: '#000000' }
+			];
+
+			const presetStyle = {
+				stroke: '#ff0000',
+				fill: '#00ff00',
+				strokeWidth: 3
+			};
+
+			manager.applyPresetToSelection( presetStyle );
+
+			// Should have called applyToSelection on the editor
+			expect( mockToolbar.editor.applyToSelection ).toHaveBeenCalled();
+
+			// Should also apply to toolbar controls
+			expect( mockApplyStyle ).toHaveBeenCalledWith( presetStyle );
+		} );
+
+		it( 'should apply PRESET_STYLE_PROPERTIES to layer in callback', () => {
+			manager.createPresetDropdown();
+			const mockLayer = { id: 'layer-1', type: 'rectangle' };
+			manager.selectedLayers = [ mockLayer ];
+
+			// Capture the callback passed to applyToSelection
+			let capturedCallback;
+			mockToolbar.editor.applyToSelection = jest.fn( ( callback ) => {
+				capturedCallback = callback;
+			} );
+
+			const presetStyle = {
+				stroke: '#ff0000',
+				fill: '#00ff00',
+				strokeWidth: 3,
+				opacity: 0.8
+			};
+
+			manager.applyPresetToSelection( presetStyle );
+
+			// Execute the captured callback
+			expect( capturedCallback ).toBeDefined();
+			const targetLayer = { id: 'test' };
+			capturedCallback( targetLayer );
+
+			// Verify properties were applied
+			expect( targetLayer.stroke ).toBe( '#ff0000' );
+			expect( targetLayer.fill ).toBe( '#00ff00' );
+			expect( targetLayer.strokeWidth ).toBe( 3 );
+			expect( targetLayer.opacity ).toBe( 0.8 );
+		} );
+
+		it( 'should not apply preset when no selected layers', () => {
+			manager.createPresetDropdown();
+			manager.selectedLayers = [];
+
+			const presetStyle = {
+				stroke: '#ff0000'
+			};
+
+			manager.applyPresetToSelection( presetStyle );
+
+			// Should still apply to toolbar controls (for future drawings)
+			expect( mockApplyStyle ).toHaveBeenCalledWith( presetStyle );
+			// But not call applyToSelection since no layers
+			expect( mockToolbar.editor.applyToSelection ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not apply when style is null', () => {
+			manager.createPresetDropdown();
+			manager.selectedLayers = [
+				{ id: 'layer-1', type: 'rectangle' }
+			];
+
+			manager.applyPresetToSelection( null );
+
+			expect( mockToolbar.editor.applyToSelection ).not.toHaveBeenCalled();
+			expect( mockApplyStyle ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'createDropdown onSelect callback', () => {
+		it( 'should call applyPresetToSelection when preset is selected', () => {
+			// Capture the options passed to PresetDropdown constructor
+			let capturedOptions;
+			const originalPresetDropdownClass = window.Layers.PresetDropdown;
+			window.Layers.PresetDropdown = jest.fn( ( opts ) => {
+				capturedOptions = opts;
+				return mockPresetDropdown;
+			} );
+
+			manager.createPresetDropdown();
+
+			// Verify onSelect was provided
+			expect( capturedOptions ).toBeDefined();
+			expect( capturedOptions.onSelect ).toBeDefined();
+
+			// Spy on applyPresetToSelection
+			const applyPresetSpy = jest.spyOn( manager, 'applyPresetToSelection' );
+
+			// Simulate selecting a preset
+			const selectedStyle = { stroke: '#123456', fill: '#654321' };
+			capturedOptions.onSelect( selectedStyle );
+
+			expect( applyPresetSpy ).toHaveBeenCalledWith( selectedStyle );
+
+			// Restore
+			window.Layers.PresetDropdown = originalPresetDropdownClass;
+		} );
+
+		it( 'should call onSave callback with style from selection', () => {
+			// Capture the options passed to PresetDropdown constructor
+			let capturedOptions;
+			const originalPresetDropdownClass = window.Layers.PresetDropdown;
+			window.Layers.PresetDropdown = jest.fn( ( opts ) => {
+				capturedOptions = opts;
+				return mockPresetDropdown;
+			} );
+
+			manager.createPresetDropdown();
+			manager.selectedLayers = [
+				{ id: 'layer-1', type: 'rectangle', stroke: '#ff0000', fill: '#00ff00' }
+			];
+
+			// Verify onSave was provided
+			expect( capturedOptions ).toBeDefined();
+			expect( capturedOptions.onSave ).toBeDefined();
+
+			// Mock callback that receives the style
+			const mockCallback = jest.fn();
+
+			// Call the onSave callback
+			capturedOptions.onSave( mockCallback );
+
+			// The callback should have been called with the style from selection
+			expect( mockCallback ).toHaveBeenCalled();
+			const savedStyle = mockCallback.mock.calls[ 0 ][ 0 ];
+			expect( savedStyle ).toBeDefined();
+			// Style should contain properties from the selected layer
+			expect( savedStyle.stroke ).toBe( '#ff0000' );
+			expect( savedStyle.fill ).toBe( '#00ff00' );
+
+			// Restore
+			window.Layers.PresetDropdown = originalPresetDropdownClass;
+		} );
+	} );
+
+	describe( 'updateForSelection edge cases', () => {
+		it( 'should fall back to tool when selection is cleared', () => {
+			manager.createPresetDropdown();
+
+			// First set some selection
+			manager.selectedLayers = [
+				{ id: 'layer-1', type: 'rectangle' }
+			];
+
+			// Now clear selection
+			manager.updateForSelection( [] );
+
+			// Should have called setLayerType with null and setTool with current tool
+			expect( mockPresetDropdown.setLayerType ).toHaveBeenCalledWith( null );
+			expect( mockPresetDropdown.setTool ).toHaveBeenCalledWith( 'rectangle' );
+		} );
+
+		it( 'should not call setTool when toolbar has no currentTool', () => {
+			manager.createPresetDropdown();
+			mockToolbar.currentTool = null;
+
+			manager.updateForSelection( [] );
+
+			// setLayerType should be called with null
+			expect( mockPresetDropdown.setLayerType ).toHaveBeenCalledWith( null );
+			// setTool should not be called (currentTool is falsy)
+		} );
+	} );
 } );

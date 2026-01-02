@@ -2095,12 +2095,41 @@ body.layers-editor-open .mw-body-content {
 	border-width: 2px;
 }
 
+.color-picker-input-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
 .color-picker-custom-input {
 	width: 30px;
 	height: 30px;
 	border: 1px solid #ccc;
 	border-radius: 4px;
 	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.color-picker-hex-input {
+	flex: 1;
+	padding: 6px 8px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 0.8125em;
+	text-transform: uppercase;
+	min-width: 0;
+}
+
+.color-picker-hex-input:focus {
+	border-color: #007cba;
+	outline-offset: 2px;
+	box-shadow: 0 0 0 2px rgba( 0, 124, 186, 0.2 );
+}
+
+.color-picker-hex-input--invalid {
+	border-color: #d33;
+	background-color: #fff3f3;
 }
 
 .color-picker-actions {
@@ -2410,5 +2439,1271 @@ body.layers-resize-cursor {
 	/* Disable dialog transitions */
 	.layers-dialog-overlay {
 		transition: none;
+	}
+}
+
+/* Windows High Contrast Mode Support
+ * Uses forced-colors media query for accessibility compliance
+ * Ensures UI elements remain visible with system high contrast colors
+ * See: https://www.w3.org/WAI/WCAG21/Techniques/css/C40 */
+@media ( forced-colors: active ) {
+	/* Toolbar buttons - ensure visible borders */
+	.toolbar-button {
+		border: 1px solid ButtonText;
+		forced-color-adjust: none;
+	}
+
+	.toolbar-button:hover,
+	.toolbar-button:focus {
+		outline: 2px solid Highlight;
+		outline-offset: 2px;
+	}
+
+	.toolbar-button.active {
+		background: Highlight;
+		color: HighlightText;
+		border-color: Highlight;
+	}
+
+	/* Layer panel items */
+	.layer-item {
+		border: 1px solid ButtonText;
+	}
+
+	.layer-item.selected {
+		background: Highlight;
+		color: HighlightText;
+		border-color: Highlight;
+	}
+
+	.layer-item:focus {
+		outline: 2px solid Highlight;
+		outline-offset: 2px;
+	}
+
+	/* Input fields */
+	.layers-editor input,
+	.layers-editor select,
+	.layers-editor textarea {
+		border: 1px solid ButtonText;
+		background: Field;
+		color: FieldText;
+	}
+
+	.layers-editor input:focus,
+	.layers-editor select:focus,
+	.layers-editor textarea:focus {
+		outline: 2px solid Highlight;
+		outline-offset: 1px;
+	}
+
+	/* Buttons */
+	.layers-editor button {
+		border: 1px solid ButtonText;
+		background: ButtonFace;
+		color: ButtonText;
+	}
+
+	.layers-editor button:hover,
+	.layers-editor button:focus {
+		outline: 2px solid Highlight;
+		outline-offset: 2px;
+	}
+
+	.layers-editor button:disabled {
+		border-color: GrayText;
+		color: GrayText;
+	}
+
+	/* Save and Cancel buttons - primary actions */
+	.save-button,
+	.cancel-button {
+		border: 2px solid ButtonText;
+	}
+
+	.save-button:hover,
+	.save-button:focus {
+		background: Highlight;
+		color: HighlightText;
+		border-color: Highlight;
+	}
+
+	/* Error notifications */
+	.layers-error-notification {
+		border: 2px solid ButtonText;
+		background: Field;
+		color: FieldText;
+	}
+
+	/* Skip links */
+	.layers-skip-link:focus {
+		background: Highlight;
+		color: HighlightText;
+		outline: 2px solid ButtonText;
+	}
+
+	/* Dialog overlays */
+	.layers-dialog-overlay .layers-dialog {
+		border: 2px solid ButtonText;
+		background: Canvas;
+		color: CanvasText;
+	}
+
+	/* Icons - ensure visibility */
+	.layers-editor svg {
+		forced-color-adjust: auto;
+	}
+
+	/* Canvas container border for visibility */
+	.layers-canvas-container {
+		border: 1px solid ButtonText;
+	}
+
+	/* Dividers */
+	.toolbar-divider {
+		background: ButtonText;
+	}
+
+	/* Dropdowns */
+	.layers-dropdown-menu,
+	.preset-dropdown-menu {
+		border: 1px solid ButtonText;
+		background: Canvas;
+	}
+
+	.layers-dropdown-item:hover,
+	.layers-dropdown-item:focus,
+	.preset-dropdown-item:hover,
+	.preset-dropdown-item:focus {
+		background: Highlight;
+		color: HighlightText;
+	}
+
+	/* Color swatches - show border since colors won't display */
+	.color-swatch,
+	.preset-color-swatch {
+		border: 2px solid ButtonText;
+	}
+
+	/* Color picker dialog */
+	.color-picker-swatch-btn,
+	.color-picker-none-btn {
+		border: 2px solid ButtonText;
+	}
+
+	.color-picker-swatch-btn.selected,
+	.color-picker-none-btn.selected {
+		outline: 2px solid Highlight;
+		outline-offset: 2px;
+	}
+
+	.color-picker-hex-input {
+		border: 1px solid ButtonText;
+		background: Canvas;
+		color: CanvasText;
+	}
+
+	.color-picker-hex-input:focus {
+		outline: 2px solid Highlight;
+		outline-offset: 1px;
+	}
+
+	.color-picker-hex-input--invalid {
+		border: 2px solid LinkText;
+	}
+
+	/* Sliders */
+	.layers-editor input[ type='range' ] {
+		forced-color-adjust: none;
+	}
+
+	.layers-editor input[ type='range' ]::-webkit-slider-thumb {
+		background: ButtonText;
+		border: 1px solid Canvas;
+	}
+
+	.layers-editor input[ type='range' ]::-moz-range-thumb {
+		background: ButtonText;
+		border: 1px solid Canvas;
+	}
+
+	/* Properties panel sections */
+	.layer-properties-section {
+		border: 1px solid ButtonText;
+	}
+
+	.layer-properties-section-header {
+		border-bottom: 1px solid ButtonText;
+	}
+}
+
+/* ==========================================================================
+   Vector 2022 Night Mode / Dark Theme Support
+   Follows MediaWiki recommendations: https://www.mediawiki.org/wiki/Recommendations_for_night_mode_compatibility_on_Wikimedia_wikis
+
+   Two selectors are needed:
+   1. html.skin-theme-clientpref-night - For forced night mode
+   2. @media (prefers-color-scheme: dark) with html.skin-theme-clientpref-os - For automatic mode
+   ========================================================================== */
+
+/* Define dark theme CSS custom properties */
+@media screen {
+	html.skin-theme-clientpref-night {
+		/* Dark theme colors for Layers editor */
+		--layers-bg-primary: #1a1a1a;
+		--layers-bg-secondary: #27292d;
+		--layers-bg-tertiary: #3a3d43;
+		--layers-bg-elevated: #323232;
+		--layers-border-color: #4a4a4a;
+		--layers-border-light: #3a3d43;
+		--layers-text-primary: #eaecf0;
+		--layers-text-secondary: #a2a9b1;
+		--layers-text-muted: #72777d;
+		--layers-accent: #36c;
+		--layers-accent-hover: #447ff5;
+		--layers-error: #ff6b6b;
+		--layers-success: #4caf50;
+		--layers-warning: #ffc107;
+	}
+
+	/* Main Editor Container */
+	html.skin-theme-clientpref-night .layers-editor {
+		background: var( --layers-bg-primary );
+		color: var( --layers-text-primary );
+	}
+
+	/* Error notifications */
+	html.skin-theme-clientpref-night .layers-error-notification {
+		background: var( --layers-bg-elevated );
+		color: var( --layers-text-primary );
+		box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.4 );
+	}
+
+	html.skin-theme-clientpref-night .layers-error-notification .error-time {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .layers-error-notification .error-close {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .layers-error-notification .error-close:hover {
+		color: var( --layers-text-primary );
+	}
+
+	/* Toolbar */
+	html.skin-theme-clientpref-night .layers-toolbar {
+		background: var( --layers-bg-secondary );
+		border-bottom-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .toolbar-group:not( :last-child ) {
+		border-right-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .toolbar-button {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .toolbar-button svg {
+		stroke: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .toolbar-button:hover {
+		background: #4a4d53;
+		border-color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .toolbar-button:hover svg {
+		stroke: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .toolbar-button.active {
+		background: var( --layers-accent );
+		border-color: var( --layers-accent );
+	}
+
+	html.skin-theme-clientpref-night .toolbar-button.active svg {
+		stroke: #fff;
+	}
+
+	html.skin-theme-clientpref-night .toolbar-button:disabled {
+		background-color: var( --layers-bg-tertiary );
+		opacity: 0.4;
+	}
+
+	html.skin-theme-clientpref-night .toolbar-separator-small {
+		background: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .style-control-label {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .style-control-item .stroke-width-input {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	/* Tool dropdown */
+	html.skin-theme-clientpref-night .tool-dropdown-menu {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		box-shadow: 0 4px 12px rgba( 0, 0, 0, 0.4 );
+	}
+
+	html.skin-theme-clientpref-night .tool-dropdown-item {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .tool-dropdown-item:hover,
+	html.skin-theme-clientpref-night .tool-dropdown-item:focus {
+		background: var( --layers-bg-tertiary );
+	}
+
+	html.skin-theme-clientpref-night .tool-dropdown-item.current {
+		background: rgba( 54, 102, 204, 0.2 );
+	}
+
+	html.skin-theme-clientpref-night .tool-dropdown-shortcut {
+		color: var( --layers-text-muted );
+		background: var( --layers-bg-tertiary );
+	}
+
+	/* Arrange dropdown */
+	html.skin-theme-clientpref-night .arrange-dropdown-trigger {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .arrange-dropdown-trigger:hover {
+		background: #4a4d53;
+		border-color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .arrange-dropdown-menu {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.4 );
+	}
+
+	html.skin-theme-clientpref-night .dropdown-section-title {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .dropdown-separator {
+		background: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .dropdown-item {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .dropdown-item:hover:not( :disabled ) {
+		background: var( --layers-bg-tertiary );
+	}
+
+	html.skin-theme-clientpref-night .dropdown-item-shortcut {
+		color: var( --layers-text-muted );
+		background: var( --layers-bg-tertiary );
+	}
+
+	html.skin-theme-clientpref-night .dropdown-item-desc {
+		color: var( --layers-text-muted );
+	}
+
+	/* Layer Panel */
+	html.skin-theme-clientpref-night .layers-panel {
+		background: var( --layers-bg-secondary );
+		border-right-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel::after {
+		background: linear-gradient( to bottom, transparent, var( --layers-text-muted ) 20%, var( --layers-text-muted ) 80%, transparent );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel-header {
+		background: var( --layers-bg-tertiary );
+		border-bottom-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel-header h3 {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel-divider::after {
+		background: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel-divider:hover::after {
+		background: var( --layers-accent );
+	}
+
+	/* Layer items */
+	html.skin-theme-clientpref-night .layer-item {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layer-item:hover {
+		background: #4a4d53;
+		border-color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .layer-item.selected {
+		background: rgba( 54, 102, 204, 0.25 );
+		border-color: var( --layers-accent );
+	}
+
+	html.skin-theme-clientpref-night .layer-name {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layer-name:hover {
+		background: rgba( 255, 255, 255, 0.08 );
+	}
+
+	html.skin-theme-clientpref-night .layer-name:focus {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-accent );
+	}
+
+	html.skin-theme-clientpref-night .layer-visibility:hover,
+	html.skin-theme-clientpref-night .layer-lock:hover {
+		background: rgba( 255, 255, 255, 0.1 );
+	}
+
+	html.skin-theme-clientpref-night .layer-delete:hover {
+		background: rgba( 255, 107, 107, 0.2 );
+	}
+
+	/* Folder/group layer items */
+	html.skin-theme-clientpref-night .layer-item-group {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layer-item-group::before {
+		background: linear-gradient( 180deg, rgba( 255, 152, 0, 0.15 ) 0%, transparent 100% );
+	}
+
+	html.skin-theme-clientpref-night .layer-item-group:hover {
+		background: #4a4d53;
+	}
+
+	html.skin-theme-clientpref-night .layer-item-group.selected {
+		background: rgba( 54, 102, 204, 0.25 );
+	}
+
+	html.skin-theme-clientpref-night .layer-item-group .layer-name {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layer-item-child {
+		background: linear-gradient( 90deg, rgba( 243, 156, 18, 0.1 ) 0%, transparent 20% );
+	}
+
+	/* Background layer */
+	html.skin-theme-clientpref-night .background-layer-item {
+		background: linear-gradient( 135deg, #3a3d43 25%, #2a2d33 25%, #2a2d33 50%, #3a3d43 50%, #3a3d43 75%, #2a2d33 75% );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .background-layer-item:hover {
+		background: linear-gradient( 135deg, #4a4d53 25%, #3a3d43 25%, #3a3d43 50%, #4a4d53 50%, #4a4d53 75%, #3a3d43 75% );
+	}
+
+	html.skin-theme-clientpref-night .background-layer-item .background-name {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-night .background-opacity-slider {
+		background: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .background-opacity-label {
+		color: var( --layers-text-muted );
+	}
+
+	/* Text input modal - must come before layer-properties-form for specificity */
+	html.skin-theme-clientpref-night .text-input-modal {
+		background: var( --layers-bg-secondary );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .text-input-modal h3 {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .text-input-modal textarea {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	/* Properties panel */
+	html.skin-theme-clientpref-night .layers-properties,
+	html.skin-theme-clientpref-night .layers-code-panel {
+		background: var( --layers-bg-secondary );
+		border-top-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layers-properties h4,
+	html.skin-theme-clientpref-night .layers-code-panel h4 {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .property-section {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .property-section-header {
+		background: linear-gradient( to bottom, #3a3d43, #323538 );
+		border-bottom-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .property-section-body {
+		background: var( --layers-bg-tertiary );
+	}
+
+	html.skin-theme-clientpref-night .layer-properties-form label {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-night .layer-properties-form input[ type='number' ],
+	html.skin-theme-clientpref-night .layer-properties-form input[ type='text' ],
+	html.skin-theme-clientpref-night .layer-properties-form textarea {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layer-properties-form input[ type='number' ]:focus,
+	html.skin-theme-clientpref-night .layer-properties-form input[ type='text' ]:focus,
+	html.skin-theme-clientpref-night .layer-properties-form textarea:focus {
+		border-color: var( --layers-accent );
+		box-shadow: 0 0 0 3px rgba( 54, 102, 204, 0.2 );
+	}
+
+	html.skin-theme-clientpref-night .layer-properties-form select {
+		background-color: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layer-properties-form select:focus {
+		border-color: var( --layers-accent );
+		box-shadow: 0 0 0 3px rgba( 54, 102, 204, 0.2 );
+	}
+
+	html.skin-theme-clientpref-night .properties-row.properties-info .properties-label {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .properties-row.properties-info .properties-value {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-night .properties-tip-text {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .property-field--color-group {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .color-opacity-pair {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .compact-number {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .compact-range {
+		background: linear-gradient( to right, #4a4d53, var( --layers-border-color ) );
+	}
+
+	/* Footer code area - must come before code-panel for specificity */
+	html.skin-theme-clientpref-night .layers-footer-code {
+		background: var( --layers-bg-tertiary );
+		border-top-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layers-footer-code .footer-code-header {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layers-footer-code .layers-code {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	/* Copy buttons - base states first for specificity */
+	html.skin-theme-clientpref-night .layers-footer-code .copy-btn,
+	html.skin-theme-clientpref-night .layers-code-panel .copy-btn {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layers-footer-code .copy-btn:hover,
+	html.skin-theme-clientpref-night .layers-code-panel .copy-btn:hover {
+		background: #4a4d53;
+	}
+
+	/* Code panel */
+	html.skin-theme-clientpref-night .layers-code-panel .layers-code {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layers-empty {
+		color: var( --layers-text-muted );
+	}
+
+	/* Canvas container */
+	html.skin-theme-clientpref-night .layers-canvas-container {
+		background: #1a1d21;
+	}
+
+	html.skin-theme-clientpref-night .layers-canvas {
+		border-color: var( --layers-border-color );
+	}
+
+	/* Modal dialogs */
+	html.skin-theme-clientpref-night .layers-modal-dialog {
+		background: var( --layers-bg-secondary );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layers-modal-dialog p {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layers-btn-secondary {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layers-btn-secondary:hover {
+		background: #4a4d53;
+	}
+
+	/* Shortcuts dialog */
+	html.skin-theme-clientpref-night .layers-shortcuts-dialog .layers-modal-title {
+		color: var( --layers-text-primary );
+		border-bottom-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layers-shortcuts-list dd {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-night .layers-shortcuts-list kbd {
+		background-color: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+		box-shadow: inset 0 -1px 0 var( --layers-border-color );
+	}
+
+	/* Color picker dialog */
+	html.skin-theme-clientpref-night .color-picker-dialog {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .color-picker-title {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .color-picker-section-title {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .color-picker-swatch-btn,
+	html.skin-theme-clientpref-night .color-picker-none-btn {
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .color-picker-hex-input {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .color-picker-hex-input:focus {
+		border-color: var( --layers-accent );
+	}
+
+	html.skin-theme-clientpref-night .color-picker-btn {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .color-picker-btn:hover {
+		background: #4a4d53;
+	}
+
+	/* Error display */
+	html.skin-theme-clientpref-night .layers-error {
+		background: var( --layers-bg-secondary );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .layers-error p {
+		color: var( --layers-text-primary );
+	}
+
+	/* Status bar (if visible in panel) */
+	html.skin-theme-clientpref-night .layers-status-bar {
+		background: var( --layers-bg-tertiary );
+		border-top-color: var( --layers-border-color );
+		color: var( --layers-text-secondary );
+	}
+}
+
+/* Automatic mode - follows OS preference */
+@media screen and ( prefers-color-scheme: dark ) {
+	html.skin-theme-clientpref-os {
+		/* Dark theme colors for Layers editor */
+		--layers-bg-primary: #1a1a1a;
+		--layers-bg-secondary: #27292d;
+		--layers-bg-tertiary: #3a3d43;
+		--layers-bg-elevated: #323232;
+		--layers-border-color: #4a4a4a;
+		--layers-border-light: #3a3d43;
+		--layers-text-primary: #eaecf0;
+		--layers-text-secondary: #a2a9b1;
+		--layers-text-muted: #72777d;
+		--layers-accent: #36c;
+		--layers-accent-hover: #447ff5;
+		--layers-error: #ff6b6b;
+		--layers-success: #4caf50;
+		--layers-warning: #ffc107;
+	}
+
+	/* Main Editor Container */
+	html.skin-theme-clientpref-os .layers-editor {
+		background: var( --layers-bg-primary );
+		color: var( --layers-text-primary );
+	}
+
+	/* Error notifications */
+	html.skin-theme-clientpref-os .layers-error-notification {
+		background: var( --layers-bg-elevated );
+		color: var( --layers-text-primary );
+		box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.4 );
+	}
+
+	html.skin-theme-clientpref-os .layers-error-notification .error-time {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .layers-error-notification .error-close {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .layers-error-notification .error-close:hover {
+		color: var( --layers-text-primary );
+	}
+
+	/* Toolbar */
+	html.skin-theme-clientpref-os .layers-toolbar {
+		background: var( --layers-bg-secondary );
+		border-bottom-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .toolbar-group:not( :last-child ) {
+		border-right-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .toolbar-button {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .toolbar-button svg {
+		stroke: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .toolbar-button:hover {
+		background: #4a4d53;
+		border-color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .toolbar-button:hover svg {
+		stroke: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .toolbar-button.active {
+		background: var( --layers-accent );
+		border-color: var( --layers-accent );
+	}
+
+	html.skin-theme-clientpref-os .toolbar-button.active svg {
+		stroke: #fff;
+	}
+
+	html.skin-theme-clientpref-os .toolbar-button:disabled {
+		background-color: var( --layers-bg-tertiary );
+		opacity: 0.4;
+	}
+
+	html.skin-theme-clientpref-os .toolbar-separator-small {
+		background: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .style-control-label {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .style-control-item .stroke-width-input {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	/* Tool dropdown */
+	html.skin-theme-clientpref-os .tool-dropdown-menu {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		box-shadow: 0 4px 12px rgba( 0, 0, 0, 0.4 );
+	}
+
+	html.skin-theme-clientpref-os .tool-dropdown-item {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .tool-dropdown-item:hover,
+	html.skin-theme-clientpref-os .tool-dropdown-item:focus {
+		background: var( --layers-bg-tertiary );
+	}
+
+	html.skin-theme-clientpref-os .tool-dropdown-item.current {
+		background: rgba( 54, 102, 204, 0.2 );
+	}
+
+	html.skin-theme-clientpref-os .tool-dropdown-shortcut {
+		color: var( --layers-text-muted );
+		background: var( --layers-bg-tertiary );
+	}
+
+	/* Arrange dropdown */
+	html.skin-theme-clientpref-os .arrange-dropdown-trigger {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .arrange-dropdown-trigger:hover {
+		background: #4a4d53;
+		border-color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .arrange-dropdown-menu {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.4 );
+	}
+
+	html.skin-theme-clientpref-os .dropdown-section-title {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .dropdown-separator {
+		background: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .dropdown-item {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .dropdown-item:hover:not( :disabled ) {
+		background: var( --layers-bg-tertiary );
+	}
+
+	html.skin-theme-clientpref-os .dropdown-item-shortcut {
+		color: var( --layers-text-muted );
+		background: var( --layers-bg-tertiary );
+	}
+
+	html.skin-theme-clientpref-os .dropdown-item-desc {
+		color: var( --layers-text-muted );
+	}
+
+	/* Layer Panel */
+	html.skin-theme-clientpref-os .layers-panel {
+		background: var( --layers-bg-secondary );
+		border-right-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .layers-panel::after {
+		background: linear-gradient( to bottom, transparent, var( --layers-text-muted ) 20%, var( --layers-text-muted ) 80%, transparent );
+	}
+
+	html.skin-theme-clientpref-os .layers-panel-header {
+		background: var( --layers-bg-tertiary );
+		border-bottom-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .layers-panel-header h3 {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layers-panel-divider::after {
+		background: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .layers-panel-divider:hover::after {
+		background: var( --layers-accent );
+	}
+
+	/* Layer items */
+	html.skin-theme-clientpref-os .layer-item {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .layer-item:hover {
+		background: #4a4d53;
+		border-color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .layer-item.selected {
+		background: rgba( 54, 102, 204, 0.25 );
+		border-color: var( --layers-accent );
+	}
+
+	html.skin-theme-clientpref-os .layer-name {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layer-name:hover {
+		background: rgba( 255, 255, 255, 0.08 );
+	}
+
+	html.skin-theme-clientpref-os .layer-name:focus {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-accent );
+	}
+
+	html.skin-theme-clientpref-os .layer-visibility:hover,
+	html.skin-theme-clientpref-os .layer-lock:hover {
+		background: rgba( 255, 255, 255, 0.1 );
+	}
+
+	html.skin-theme-clientpref-os .layer-delete:hover {
+		background: rgba( 255, 107, 107, 0.2 );
+	}
+
+	/* Folder/group layer items */
+	html.skin-theme-clientpref-os .layer-item-group {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .layer-item-group::before {
+		background: linear-gradient( 180deg, rgba( 255, 152, 0, 0.15 ) 0%, transparent 100% );
+	}
+
+	html.skin-theme-clientpref-os .layer-item-group:hover {
+		background: #4a4d53;
+	}
+
+	html.skin-theme-clientpref-os .layer-item-group.selected {
+		background: rgba( 54, 102, 204, 0.25 );
+	}
+
+	html.skin-theme-clientpref-os .layer-item-group .layer-name {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layer-item-child {
+		background: linear-gradient( 90deg, rgba( 243, 156, 18, 0.1 ) 0%, transparent 20% );
+	}
+
+	/* Background layer */
+	html.skin-theme-clientpref-os .background-layer-item {
+		background: linear-gradient( 135deg, #3a3d43 25%, #2a2d33 25%, #2a2d33 50%, #3a3d43 50%, #3a3d43 75%, #2a2d33 75% );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .background-layer-item:hover {
+		background: linear-gradient( 135deg, #4a4d53 25%, #3a3d43 25%, #3a3d43 50%, #4a4d53 50%, #4a4d53 75%, #3a3d43 75% );
+	}
+
+	html.skin-theme-clientpref-os .background-layer-item .background-name {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-os .background-opacity-slider {
+		background: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .background-opacity-label {
+		color: var( --layers-text-muted );
+	}
+
+	/* Text input modal - must come before layer-properties-form for specificity */
+	html.skin-theme-clientpref-os .text-input-modal {
+		background: var( --layers-bg-secondary );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .text-input-modal h3 {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .text-input-modal textarea {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	/* Properties panel */
+	html.skin-theme-clientpref-os .layers-properties,
+	html.skin-theme-clientpref-os .layers-code-panel {
+		background: var( --layers-bg-secondary );
+		border-top-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .layers-properties h4,
+	html.skin-theme-clientpref-os .layers-code-panel h4 {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .property-section {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .property-section-header {
+		background: linear-gradient( to bottom, #3a3d43, #323538 );
+		border-bottom-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .property-section-body {
+		background: var( --layers-bg-tertiary );
+	}
+
+	html.skin-theme-clientpref-os .layer-properties-form label {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-os .layer-properties-form input[ type='number' ],
+	html.skin-theme-clientpref-os .layer-properties-form input[ type='text' ],
+	html.skin-theme-clientpref-os .layer-properties-form textarea {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layer-properties-form input[ type='number' ]:focus,
+	html.skin-theme-clientpref-os .layer-properties-form input[ type='text' ]:focus,
+	html.skin-theme-clientpref-os .layer-properties-form textarea:focus {
+		border-color: var( --layers-accent );
+		box-shadow: 0 0 0 3px rgba( 54, 102, 204, 0.2 );
+	}
+
+	html.skin-theme-clientpref-os .layer-properties-form select {
+		background-color: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layer-properties-form select:focus {
+		border-color: var( --layers-accent );
+		box-shadow: 0 0 0 3px rgba( 54, 102, 204, 0.2 );
+	}
+
+	html.skin-theme-clientpref-os .properties-row.properties-info .properties-label {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .properties-row.properties-info .properties-value {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-os .properties-tip-text {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .property-field--color-group {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .color-opacity-pair {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .compact-number {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .compact-range {
+		background: linear-gradient( to right, #4a4d53, var( --layers-border-color ) );
+	}
+
+	/* Footer code area - must come before code-panel for specificity */
+	html.skin-theme-clientpref-os .layers-footer-code {
+		background: var( --layers-bg-tertiary );
+		border-top-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .layers-footer-code .footer-code-header {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layers-footer-code .layers-code {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	/* Copy buttons - base states first for specificity */
+	html.skin-theme-clientpref-os .layers-footer-code .copy-btn,
+	html.skin-theme-clientpref-os .layers-code-panel .copy-btn {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layers-footer-code .copy-btn:hover,
+	html.skin-theme-clientpref-os .layers-code-panel .copy-btn:hover {
+		background: #4a4d53;
+	}
+
+	/* Code panel */
+	html.skin-theme-clientpref-os .layers-code-panel .layers-code {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layers-empty {
+		color: var( --layers-text-muted );
+	}
+
+	/* Canvas container */
+	html.skin-theme-clientpref-os .layers-canvas-container {
+		background: #1a1d21;
+	}
+
+	html.skin-theme-clientpref-os .layers-canvas {
+		border-color: var( --layers-border-color );
+	}
+
+	/* Modal dialogs */
+	html.skin-theme-clientpref-os .layers-modal-dialog {
+		background: var( --layers-bg-secondary );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layers-modal-dialog p {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layers-btn-secondary {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layers-btn-secondary:hover {
+		background: #4a4d53;
+	}
+
+	/* Shortcuts dialog */
+	html.skin-theme-clientpref-os .layers-shortcuts-dialog .layers-modal-title {
+		color: var( --layers-text-primary );
+		border-bottom-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .layers-shortcuts-list dd {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-os .layers-shortcuts-list kbd {
+		background-color: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+		box-shadow: inset 0 -1px 0 var( --layers-border-color );
+	}
+
+	/* Color picker dialog */
+	html.skin-theme-clientpref-os .color-picker-dialog {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .color-picker-title {
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .color-picker-section-title {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .color-picker-swatch-btn,
+	html.skin-theme-clientpref-os .color-picker-none-btn {
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .color-picker-hex-input {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .color-picker-hex-input:focus {
+		border-color: var( --layers-accent );
+	}
+
+	html.skin-theme-clientpref-os .color-picker-btn {
+		background: var( --layers-bg-tertiary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .color-picker-btn:hover {
+		background: #4a4d53;
+	}
+
+	/* Error display */
+	html.skin-theme-clientpref-os .layers-error {
+		background: var( --layers-bg-secondary );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .layers-error p {
+		color: var( --layers-text-primary );
+	}
+
+	/* Status bar (if visible in panel) */
+	html.skin-theme-clientpref-os .layers-status-bar {
+		background: var( --layers-bg-tertiary );
+		border-top-color: var( --layers-border-color );
+		color: var( --layers-text-secondary );
 	}
 }

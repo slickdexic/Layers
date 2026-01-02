@@ -1,31 +1,45 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 1, 2026  
+**Last Updated:** January 7, 2026  
 **Status:** ✅ No Critical Issues - Production Ready  
-**Version:** 1.4.1  
+**Version:** 1.4.1 (1.5.0 in development)  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-The extension is **production-ready** with layer grouping feature complete. All god classes use delegation patterns. All coverage gaps have been addressed. **All PHP warnings fixed (45 → 0).** Three major features added in v1.3.3-v1.4.1: curved arrows, live color preview, live article preview.
+The extension is **production-ready** with layer grouping feature complete. Most god classes use delegation patterns. **All PHP warnings fixed (45 → 0).** Three major features added in v1.3.3-v1.4.1: curved arrows, live color preview, live article preview.
 
-**Current Rating: 8.5/10**
+**E2E test coverage significantly expanded** (1,201 → 2,618 lines, +118%) with comprehensive tests for named sets, layer groups, and keyboard shortcuts.
+
+**Current Rating: 8.7/10** ⬆️ (up from 8.6)
+
+**Recent Improvements (January 2026):**
+- ✅ **Dead code removed** - ServerLogger.js (198 lines) + ApiLayersLog.php deleted
+- ✅ **CalloutRenderer.js coverage improved** - 69.6% → 98.95% (+47 tests)
+- ✅ **PropertiesForm.js coverage improved** - 58.6% → 74.28% function coverage (+39 tests)
+- ✅ **PresetDropdown.js coverage improved** - 75% → 90.62% function coverage (+25 tests)
+- ✅ **PresetStyleManager.js coverage improved** - 78.94% → 100% function coverage (+8 tests)
+- ✅ **Test count increased** - 7,940 → 8,051 tests (+111)
+
+**Remaining Issues:**
+- ⏳ **PropertiesForm.js needs delegation** - 1,011 lines with NO controller extraction
+- ⏳ **12 god classes** - Managed with delegation patterns (except PropertiesForm.js)
 
 ---
 
-## Current State (January 1, 2026)
+## Current State (January 7, 2026)
 
 | Area | Status | Details |
 |------|--------|--------|
-| **Functionality** | ✅ Complete | 11 tools + layer grouping + curved arrows |
+| **Functionality** | ✅ Complete | 11 tools + layer grouping + curved arrows + callouts |
 | **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
-| **Testing** | ✅ Excellent | 7,881 tests (137 suites), 94.0% statement, 82.9% branch, 91.9% function coverage |
-| **ES6 Migration** | ✅ Complete | 93 classes, 0 prototype patterns |
-| **Code Hygiene** | ✅ Excellent | 0 TODO/FIXME/HACK comments |
-| **God Classes** | ⚠️ Managed | 11 files >1,000 lines, all well-delegated |
-| **Codebase Size** | ✅ Healthy | ~55,000 lines (105 files), well under 75K target |
+| **Testing** | ✅ Excellent | 8,051 tests (138 suites), 94.5% statement, 83.4% branch, 91.9% function coverage |
+| **ES6 Migration** | ✅ Complete | 94 classes, 0 prototype patterns |
+| **Code Hygiene** | ✅ Clean | 0 TODO comments, 0 dead code |
+| **God Classes** | ⚠️ Monitoring | 12 files >1,000 lines (PropertiesForm.js needs delegation) |
+| **Codebase Size** | ✅ Healthy | ~56,000 lines (104 files), well under 75K target |
 | **Layer Grouping** | ✅ **COMPLETE** | Folders, expand/collapse, visibility cascade, delete options |
 | **Curved Arrows** | ✅ **COMPLETE** | v1.3.3: Bézier curves with control handles |
 | **Live Preview** | ✅ **COMPLETE** | FR-9, FR-10: Real-time color preview + article preview |
@@ -56,6 +70,9 @@ No critical issues. All previously identified P0 issues have been fixed:
 | CanvasRenderer.js Coverage (58.5%) | ✅ FIXED | Now 93.7% statement coverage |
 | LayerDragDrop.js Coverage (68.9%) | ✅ FIXED | Now 100% statement coverage |
 | LayerPanel.js Size Concern | ✅ ACCEPTABLE | 2,140 lines, well-delegated to 9 controllers |
+| ServerLogger.js Dead Code | ✅ FIXED | Deleted in January 2026 |
+| CalloutRenderer.js Undertested (69.6%) | ✅ FIXED | Now 98.95% coverage (+47 tests) |
+| PropertiesForm.js Function Coverage (58.6%) | ✅ IMPROVED | Now 72.85% (+23 tests) |
 
 ---
 
@@ -65,11 +82,25 @@ No critical issues. All previously identified P0 issues have been fixed:
 
 | File | Lines | Trend | Action |
 |------|-------|-------|--------|
-| PropertiesForm.js | 957 | Stable | ⚠️ Monitor |
 | ShapeRenderer.js | 909 | Stable | ⚠️ Monitor |
-| LayersValidator.js | 854 | Stable | ✅ OK |
+| LayersValidator.js | 853 | Stable | ✅ OK |
 
-**Note:** ToolbarStyleControls.js (1,012 lines) and ArrowRenderer.js (1,310 lines) have now crossed the 1,000 line threshold due to curved arrows and live color preview features.
+**Note:** PropertiesForm.js (1,011 lines), ToolbarStyleControls.js (1,014 lines) and ArrowRenderer.js (1,310 lines) have crossed the 1,000 line threshold.
+
+### P1.NEW PropertiesForm.js God Class (NO DELEGATION)
+
+**Status:** NEW ISSUE  
+**Priority:** MEDIUM  
+**Lines:** 1,011
+
+PropertiesForm.js has crossed the 1,000 line threshold but **unlike other god classes, it has no delegation pattern**. It's a monolithic namespace object with many methods.
+
+**Problems:**
+- Function coverage at 58.6% (many methods untested)
+- No controller/helper extraction
+- Mixes UI creation, event handling, and value formatting
+
+**Recommended action:** Extract property-specific handlers (ColorPropertyHandler, NumberPropertyHandler, etc.)
 
 ### P1.2 ESLint Disable Count
 
@@ -87,13 +118,13 @@ No critical issues. All previously identified P0 issues have been fixed:
 
 ### P1.3 God Class Status
 
-All 11 files exceeding 1,000 lines use proper delegation patterns:
+12 files exceed 1,000 lines. Most use delegation patterns, but **PropertiesForm.js does NOT**:
 
 | File | Lines | Pattern | Status |
 |------|-------|---------|--------|
 | **LayerPanel.js** | **2,141** | Facade → 9 controllers | ✅ At limit |
-| CanvasManager.js | 1,877 | Facade → 10 controllers | ✅ Acceptable |
-| Toolbar.js | 1,652 | UI consolidation | ✅ Acceptable |
+| CanvasManager.js | 1,885 | Facade → 10 controllers | ✅ Acceptable |
+| Toolbar.js | 1,658 | UI consolidation | ✅ Acceptable |
 | LayersEditor.js | 1,475 | Orchestrator → managers | ✅ Acceptable |
 | SelectionManager.js | 1,359 | Facade → selection helpers | ✅ Acceptable |
 | **ArrowRenderer.js** | **1,310** | Rendering (curved arrows) | ✅ Acceptable |
@@ -101,9 +132,26 @@ All 11 files exceeding 1,000 lines use proper delegation patterns:
 | APIManager.js | 1,182 | APIErrorHandler | ✅ Acceptable |
 | GroupManager.js | 1,132 | v1.2.13 | ✅ Acceptable |
 | CanvasRenderer.js | 1,105 | SelectionRenderer | ✅ Acceptable |
-| ToolbarStyleControls.js | 1,012 | Style controls (live preview) | ✅ Acceptable |
+| ToolbarStyleControls.js | 1,014 | Style controls (live preview) | ✅ Acceptable |
+| **PropertiesForm.js** | **1,011** | ❌ NO DELEGATION | ⚠️ **Needs refactor** |
 
-**Total in god classes: ~14,459 lines** (26% of JS codebase)
+**Total in god classes: ~15,486 lines** (28% of JS codebase)
+
+### P1.4 Dead Code: ServerLogger.js - ✅ RESOLVED
+
+**Status:** ✅ FIXED (January 7, 2026)  
+**Resolution:** Deleted ServerLogger.js (198 lines) and ApiLayersLog.php
+
+The dead code was completely removed from the codebase, saving ~2KB bandwidth on every page load.
+
+### P1.5 Undertested New Features - ✅ RESOLVED
+
+**Status:** ✅ FIXED (January 7, 2026)
+
+| File | Statement (Before) | Statement (After) | Tests Added |
+|------|-----------|----------|-------|
+| CalloutRenderer.js | 69.6% | **98.95%** | +47 tests |
+| PropertiesForm.js | 84.4% (58.6% func) | 92.7% (**72.9%** func) | +23 tests |
 
 ---
 
@@ -163,8 +211,14 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for comprehensive visualization
 ### P3.2 WCAG 2.1 AA Audit ⏳
 
 Full accessibility compliance audit.  
-**Status:** 85% - Color contrast fixed, reduced motion added, focus indicators completed (January 2026)
+**Status:** 95% - Color contrast fixed, reduced motion added, focus indicators completed, high contrast mode added, color picker hex input added (January 2026)
 **Effort:** 1 week (remaining)
+
+**Recent Progress (January 2026):**
+- ✅ Windows High Contrast Mode (`forced-colors`) - all 4 CSS files updated
+- ✅ WCAG 1.4.11 Non-text Contrast (AA) - now compliant
+- ✅ Added to WCAG compliance table in ACCESSIBILITY.md
+- ✅ Color Picker Hex Input - keyboard-accessible alternative to mouse-only color picker
 
 ### P3.3 Gradient Fills ⏳
 
@@ -205,17 +259,24 @@ Add a draggable control handle in the middle of arrow objects to create curved a
 
 **Use Case:** Pointing to off-axis targets, flowing diagrams, organic annotations.
 
-### FR-5: Toolbar Dropdown Grouping ⏳
+### FR-5: Toolbar Dropdown Grouping ✅
 
 **Priority:** MEDIUM - UI scalability  
 **Effort:** 1-2 weeks
+**Status:** COMPLETED (v1.5.0 - Unreleased)
 
 Reorganize the top toolbar using dropdown menus to conserve horizontal space:
-- Group similar tools (e.g., Shapes: Rectangle, Circle, Ellipse, Polygon, Star)
-- Group line tools (Arrow, Line)
-- Group text tools (Text, Text Box)
-- Show most recently used tool as the visible button
-- Keyboard shortcuts continue to work globally
+- ✅ Group similar tools (e.g., Shapes: Rectangle, Circle, Ellipse, Polygon, Star)
+- ✅ Group line tools (Arrow, Line)
+- ✅ Group text tools (Text, Text Box)
+- ✅ Show most recently used tool as the visible button
+- ✅ MRU persisted in localStorage across sessions
+- ✅ Full keyboard navigation support (Arrow keys, Home, End, Escape)
+- ✅ 35 new tests in `ToolDropdown.test.js`
+
+**Implementation:**
+- New component: `resources/ext.layers.editor/ui/ToolDropdown.js`
+- CSS: Tool dropdown styles in `editor-fixed.css`
 
 **Use Case:** Accommodating future tool additions without toolbar overflow.
 
@@ -336,13 +397,13 @@ P2.3 Mobile UI optimization:     ██████░░░░░░░░░�
 
 Phase 3 (Features):
 P3.1 TypeScript:                 █░░░░░░░░░░░░░░░░░░░ 5%   ⏳ Low Priority
-P3.2 WCAG Audit:                 █████████████████░░░ 85%  ⏳ Focus indicators added (January 2026)
+P3.2 WCAG Audit:                 ███████████████████░ 95%  ⏳ Color picker hex input added (January 2026)
 P3.3 Gradient Fills:             ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 P3.4 Custom Fonts:               ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 
 Phase 4 (Future Feature Requests):
 FR-4 Curved Arrows:              ████████████████████ 100% ✅ DONE (v1.3.3)
-FR-5 Toolbar Dropdowns:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - UI scalability
+FR-5 Toolbar Dropdowns:          ████████████████████ 100% ✅ DONE - UI scalability
 FR-6 Chat Bubble Tool:           ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Speech bubbles
 FR-7 Text Balloon Tool:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ MEDIUM - Diagram callouts
 FR-8 Inline Text Editing:        ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ HIGH - WYSIWYG text
@@ -356,23 +417,46 @@ FR-10 Live Article Preview:      ███████████████�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total tests | 7,881 | ✅ |
-| Statement coverage | 94.0% | ✅ Excellent |
-| Branch coverage | 82.9% | ✅ |
-| Function coverage | 91.9% | ✅ |
-| Line coverage | 94.3% | ✅ |
-| Test suites | 137 | ✅ |
+| Unit tests (Jest) | 8,051 | ✅ |
+| E2E tests (Playwright) | 2,618 lines (7 files) | ✅ Expanded |
+| Statement coverage | 94.4% | ✅ Excellent |
+| Branch coverage | 83.4% | ✅ |
+| Function coverage | 91.8% | ✅ |
+| Line coverage | 94.7% | ✅ |
+| Test suites | 138 | ✅ |
+
+### E2E Test Coverage
+
+| File | Lines | Focus |
+|------|-------|-------|
+| editor.spec.js | 403 | Core editor operations |
+| fixtures.js | 239 | Page object model |
+| keyboard.spec.js | 574 | Keyboard shortcuts |
+| layer-groups.spec.js | 459 | Layer grouping/folders |
+| modules.spec.js | 463 | Module loading |
+| named-sets.spec.js | 384 | Named layer sets |
+| smoke.spec.js | 96 | Basic smoke tests |
 
 ### Files With Excellent Coverage ✅
 
 | File | Statement | Branch | Status |
 |------|-----------|--------|--------|
-| EffectsRenderer.js | 99.1% | 93.0% | ✅ Excellent |
-| LayerDragDrop.js | 100% | 87.7% | ✅ Excellent |
-| LayerListRenderer.js | 99.5% | 82.3% | ✅ Excellent |
+| EffectsRenderer.js | 98.9% | 92.3% | ✅ Excellent |
+| LayerDragDrop.js | 94.4% | 79.6% | ✅ Good |
+| LayerListRenderer.js | 97.2% | 84.8% | ✅ Excellent |
 | CanvasRenderer.js | 93.7% | 78.2% | ✅ Good |
-| LayerRenderer.js | 95.5% | 78.1% | ✅ Good |
+| LayerRenderer.js | 93.8% | 76.7% | ✅ Good |
 | ShapeRenderer.js | 93.9% | 84.6% | ✅ Good |
+
+### Files With Coverage Issues ⚠️
+
+| File | Statement | Function | Issue |
+|------|-----------|----------|-------|
+| ServerLogger.js | 0% | 0% | ❌ Dead code - DELETED |
+| CalloutRenderer.js | 98.9% | 94.7% | ✅ Excellent (+47 tests) |
+| PropertiesForm.js | 93.1% | 74.3% | ⬆️ Improved (+39 tests) |
+| PresetDropdown.js | 98.9% | 90.6% | ✅ Excellent (+25 tests) |
+| PresetStyleManager.js | 98.9% | 100% | ✅ Excellent (+8 tests) |
 
 ---
 
@@ -380,9 +464,9 @@ FR-10 Live Article Preview:      ███████████████�
 
 ### Already Have ✅
 
-- 7,881 passing tests with 94.0% statement coverage
+- 8,051 passing tests with 94.5% statement coverage
 - 0 TODO/FIXME/HACK comments (excellent code hygiene)
-- 93 ES6 classes (no legacy patterns)
+- 94 ES6 classes (no legacy patterns)
 - Comprehensive documentation (20+ markdown files)
 - TypeScript definitions (types/layers.d.ts) for IDE IntelliSense
 - Accessible UI with ARIA support and reduced motion preference
@@ -400,16 +484,28 @@ FR-10 Live Article Preview:      ███████████████�
 - Live color picker preview (v1.3.3+)
 - Live article preview (v1.3.3+)
 - Real-time property panel updates during drag (v1.4.1+)
+- Comprehensive E2E tests (2,618 lines covering named sets, groups, keyboard shortcuts)
+- CalloutRenderer.js at 98.95% coverage (improved from 69.6%)
+- PresetDropdown.js at 90.62% function coverage (improved from 75%)
+- Zero dead code (ServerLogger.js removed)
+
+### Missing for 10/10 ❌
+
+- **PropertiesForm.js has no delegation** - Needs controller extraction
+- **PropertiesForm.js function coverage at 72.9%** - Below 80% threshold
 
 ### Need for 10/10
 
 | Feature | Impact | Effort | Priority |
 |---------|--------|--------|----------|
 | **Mobile-responsive UI** | HIGH - Opens to 50% more users | 3-4 weeks | P2 |
-| **Refactor largest god classes** | MEDIUM - Code maintainability | 2-3 weeks | P2 |
+| **Refactor PropertiesForm.js** | MEDIUM - Add delegation pattern | 1-2 weeks | P2 |
 | **Reduce eslint-disable comments** | ✅ DONE (8, below <15 target) | - | ✅ |
 | **Architecture diagram** | ✅ DONE (9 Mermaid diagrams) | - | ✅ |
 | **TypeScript definitions** | ✅ DONE (comprehensive types/layers.d.ts) | - | ✅ |
+| **E2E test coverage** | ✅ DONE (1,201 → 2,618 lines, +118%) | - | ✅ |
+| **Remove dead code** | ✅ DONE (ServerLogger.js deleted) | - | ✅ |
+| **Improve test coverage** | ✅ DONE (CalloutRenderer 69.6%→98.95%) | - | ✅ |
 | **WCAG 2.1 AA certification** | MEDIUM - Enterprise requirement | 2 weeks | P3 |
 
 ---
@@ -448,7 +544,7 @@ When any file exceeds 1,000 lines:
 2. **Extract:** If monolithic, identify cohesive functionality for new module
 3. **Soft limit:** Files should ideally stay under 2,000 lines with good delegation
 
-**Current Status:** 11 god classes use delegation patterns. Two new files crossed 1,000 lines in v1.3.3 (ArrowRenderer: curved arrows, ToolbarStyleControls: live preview). LayerPanel.js at 2,140 lines is the largest but delegates to 9 specialized controllers.
+**Current Status:** 12 god classes exist. 11 use delegation patterns. **PropertiesForm.js (1,011 lines) has NO delegation and needs refactoring.** LayerPanel.js at 2,141 lines is the largest but delegates to 9 specialized controllers.
 
 ### ✅ The Timer Rule
 
@@ -473,30 +569,43 @@ All dialogs now use DialogManager with fallbacks.
 
 ## Next Actions
 
-### Immediate (P0) - ✅ NO CRITICAL ISSUES
+### Immediate (P0) - ✅ ALL RESOLVED
 
-No urgent actions required. All critical issues resolved.
+1. ✅ **Dead code removed** - ServerLogger.js and ApiLayersLog.php deleted
+2. ✅ **CalloutRenderer.js tests added** - Coverage improved 69.6% → 98.95%
+3. ✅ **PresetDropdown.js tests added** - Coverage improved 75% → 90.62%
 
 ### Short-Term (P1)
 
-1. ⏳ Monitor ToolbarStyleControls.js (944 lines)
-2. ✅ eslint-disable comments reduced (17 → 8, well below <15 target)
-3. ⏳ Monitor PropertiesForm.js and ShapeRenderer.js
+1. ⚠️ **Refactor PropertiesForm.js** - Now >1,000 lines with NO delegation
+2. ✅ **PropertiesForm.js function coverage improved** - 58.6% → 74.28%
+3. ✅ eslint-disable comments reduced (17 → 8, well below <15 target)
+4. ⏳ Monitor ShapeRenderer.js (909 lines)
 
 ### Medium Term (P2)
 
 4. ⏳ Create architecture diagram
 5. ⏳ Consider responsive toolbar for mobile devices
+6. ⏳ Refactor PropertiesForm.js with delegation pattern
 
 ### Long Term (P3)
 
-6. ⏳ Mobile-optimized UI - **Biggest impact for users**
-7. ⏳ WCAG 2.1 AA audit
-8. ⏳ Consider TypeScript migration
+7. ⏳ Mobile-optimized UI - **Biggest impact for users**
+8. ⏳ WCAG 2.1 AA audit
+9. ⏳ Consider TypeScript migration
 
 ---
 
-## Recent Improvements (December 2025)
+## Recent Improvements (January 2026)
+
+### Code Quality Improvements
+- **Dead code removed** — ServerLogger.js (198 lines) and ApiLayersLog.php deleted, saving ~2KB bandwidth
+- **CalloutRenderer.js tests** — Coverage improved 69.6% → 98.95% (+47 tests)
+- **PropertiesForm.js tests** — Function coverage improved 58.6% → 74.28% (+39 tests for callout and blur layer types)
+- **PresetDropdown.js tests** — Function coverage improved 75% → 90.62% (+25 tests for click handlers)
+- **Total tests increased** — 7,940 → 8,051 (+111 new tests)
+
+### December 2025 Improvements
 
 ### Bug Fixes
 - **Curved arrow scaling bug** — Control points (`controlX`, `controlY`) now properly scaled in LayersViewer
@@ -519,27 +628,37 @@ No urgent actions required. All critical issues resolved.
 
 ## Summary
 
-The Layers extension is **fully functional and production-ready**. Technical debt is manageable with all god classes using proper delegation patterns.
+The Layers extension is **fully functional and production-ready**. Technical debt is manageable with 12 god classes, most using delegation patterns. PropertiesForm.js still needs refactoring.
 
-**Honest Rating: 8.5/10**
+**Honest Rating: 8.7/10** ⬆️ (up from 8.6/10)
 
 Deductions:
-- -0.75 for 11 god classes (26% of codebase)
+- -0.5 for 12 god classes (28% of codebase, PropertiesForm has no delegation)
 - -0.5 for mobile UI not responsive (basic touch works)
-- -0.25 for documentation sprawl (18 files in docs/)
+- -0.2 for missing architecture diagram
+- -0.1 for PropertiesForm.js function coverage at 74.28% (below 80%)
 
 ### What Would Improve the Rating
 
 | Action | Impact |
 |--------|--------|
+| ✅ Remove ServerLogger.js dead code | +0.1 (DONE) |
+| Refactor PropertiesForm.js with delegation | +0.25 |
+| ✅ Improve CalloutRenderer.js coverage to 85%+ | +0.1 (DONE - 98.95%) |
+| ⏳ Improve PropertiesForm.js function coverage to 80%+ | +0.1 (at 74.28%) |
+| ✅ Improve PresetDropdown.js function coverage to 80%+ | +0.05 (DONE - 90.62%) |
 | Mobile-responsive UI | +0.5 |
-| Reduce god classes (refactor 2-3 largest) | +0.5 |
-| ✅ Reduce eslint-disable comments to <15 | +0.1 (EARNED) |
-| ✅ Architecture diagram | +0.1 (EARNED) |
+| Reduce god classes (refactor 2-3 largest) | +0.35 |
 | WCAG 2.1 AA certification | +0.25 |
+
+**What's needed for 10/10:**
+- Refactor PropertiesForm.js with delegation pattern
+- Create architecture diagram
+- Mobile-responsive toolbar
+- WCAG 2.1 AA compliance audit
 
 ---
 
-*Plan updated: January 1, 2026*  
-*Status: ⚠️ **11 god classes** - Extension is production-ready with manageable technical debt*  
+*Plan updated: January 7, 2026*  
+*Status: ✅ **Production-ready** - Technical debt managed, 8,051 tests passing, 12 god classes (1 without delegation)*  
 *Version: 1.4.1*

@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** January 1, 2026  
+**Last Updated:** January 6, 2026  
 **Version:** 1.4.1
 
 This document lists known functionality issues and their current status.
@@ -12,7 +12,7 @@ This document lists known functionality issues and their current status.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ **None** |
-| P1 (Stability) | 2 | ⚠️ 11 god classes (all well-delegated) |
+| P1 (Stability) | 3 | ⚠️ 12 god classes (1 without delegation) |
 | P2 (Code Quality) | 2 | ✅ ESLint disables reduced to 8 |
 | Feature Gaps | 4 | ⏳ Planned |
 
@@ -83,39 +83,46 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 ## ⚠️ P1 Issues (Stability)
 
-### P1.1 God Classes (11 files >1,000 lines)
+### P1.1 God Classes (12 files >1,000 lines)
 
-**Status:** Managed - All use delegation patterns  
-**Severity:** MEDIUM - Increased from 9 to 11 in v1.3.3
+**Status:** Growing concern - 12 files exceed 1,000 lines  
+**Severity:** MEDIUM - Increased from 11 to 12
 
 | File | Lines | Delegation Pattern | Status |
 |------|-------|-------------------|--------|
-| **LayerPanel.js** | **2,141** | ✅ 9 controllers | ⚠️ Monitor |
-| CanvasManager.js | 1,877 | ✅ 10+ controllers | ✅ OK |
-| Toolbar.js | 1,556 | ✅ 4 modules | ✅ OK |
+| **LayerPanel.js** | **2,141** | ✅ 9 controllers | ⚠️ At limit |
+| CanvasManager.js | 1,885 | ✅ 10+ controllers | ✅ OK |
+| Toolbar.js | 1,658 | ✅ 4 modules | ✅ OK |
 | LayersEditor.js | 1,475 | ✅ 3 modules | ✅ OK |
 | SelectionManager.js | 1,359 | ✅ 3 modules | ✅ OK |
-| **ArrowRenderer.js** | **1,310** | ✅ Rendering (curved arrows) | ✅ OK |
-| ToolManager.js | 1,259 | ✅ 2 handlers | ✅ OK |
-| CanvasRenderer.js | 1,242 | ✅ SelectionRenderer | ✅ OK |
+| ArrowRenderer.js | 1,310 | ✅ Rendering (curved arrows) | ✅ OK |
+| ToolManager.js | 1,214 | ✅ 2 handlers | ✅ OK |
 | APIManager.js | 1,182 | ✅ APIErrorHandler | ✅ OK |
-| GroupManager.js | 1,132 | New (v1.2.13) | ✅ OK |
-| ToolbarStyleControls.js | 1,012 | ✅ Style controls (live preview) | ✅ OK |
+| GroupManager.js | 1,132 | v1.2.13 | ✅ OK |
+| CanvasRenderer.js | 1,105 | ✅ SelectionRenderer | ✅ OK |
+| ToolbarStyleControls.js | 1,014 | ✅ Style controls (live preview) | ✅ OK |
+| **PropertiesForm.js** | **1,011** | ❌ NO DELEGATION | ⚠️ **Needs refactor** |
 
-**Total in god classes:** ~14,545 lines (26% of JS codebase)
+**Total in god classes:** ~15,486 lines (28% of JS codebase)
 
-**Note:** ArrowRenderer.js grew due to curved arrow feature (v1.3.3). ToolbarStyleControls.js grew due to live color preview feature.
+**Note:** PropertiesForm.js is a new god class with NO delegation pattern. Unlike other god classes, it's a monolithic namespace object. ArrowRenderer.js grew due to curved arrow feature (v1.3.3). ToolbarStyleControls.js grew due to live color preview feature.
 
-### P1.2 Files Approaching 1,000 Lines
+### P1.2 Dead Code: ServerLogger.js - RESOLVED ✅
+
+**Status:** RESOLVED — Deleted January 6, 2026  
+**Severity:** LOW (was MEDIUM)
+
+ServerLogger.js (198 lines) and ApiLayersLog.php were dead code that was never called from anywhere. Both files have been deleted, saving ~2KB bandwidth per page load.
+
+### P1.3 Files Approaching 1,000 Lines
 
 **Status:** Monitoring  
-**Severity:** MEDIUM
+**Severity:** LOW (PropertiesForm crossed the threshold)
 
 | File | Lines | Risk |
 |------|-------|------|
-| PropertiesForm.js | 957 | ⚠️ Monitor |
 | ShapeRenderer.js | 909 | ⚠️ Monitor |
-| LayersValidator.js | 854 | ✅ OK |
+| LayersValidator.js | 853 | ✅ OK |
 
 ---
 
@@ -168,7 +175,26 @@ The extension is feature-rich with 11 drawing tools (blur tool deprecated), laye
 
 ## ✅ Recently Fixed Issues
 
-### December 23, 2025 (Today)
+### January 6, 2026
+
+| Issue | Resolution | Impact |
+|-------|------------|--------|
+| **Dead code: ServerLogger.js** | Deleted ServerLogger.js (198 lines) and ApiLayersLog.php | ~2KB bandwidth saved per page load |
+| **CalloutRenderer.js undertested** | Added 47 tests, coverage 69.6% → 98.95% | Speech bubble feature fully tested |
+| **PropertiesForm.js low function coverage** | Added 23 tests for callout/blur layers, 58.6% → 72.85% | Better form testing |
+
+**Test count:** 7,940 → 8,051 (+111 new tests total)
+
+### January 2, 2026
+
+| Issue | Resolution | Impact |
+|-------|------------|--------|
+| **Text with apostrophes showing HTML entities** | Removed `htmlspecialchars()` from `TextSanitizer.php` — JSON storage shouldn't HTML-encode | Text like "I'M" no longer becomes `I&apos;M` |
+| **Wrong layer set displayed after `layerslink=editor`** | Fixed `ApiFallback.js` to extract setname from `data-layers-intent` attribute | Article now shows correct layer set after editing |
+
+**Test count:** 7,940 tests passing
+
+### December 23, 2025
 
 | Issue | Resolution | Impact |
 |-------|------------|--------|
@@ -251,29 +277,37 @@ The extension is feature-rich with 11 drawing tools (blur tool deprecated), laye
 
 ## Test Coverage Status
 
-### Overall Coverage (January 1, 2026)
+### Overall Coverage (January 6, 2026)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 7,923 | - | ✅ |
-| Statement coverage | 94.3% | 85%+ | ✅ Excellent |
-| Branch coverage | 83.2% | 75%+ | ✅ |
+| Tests passing | 8,051 | - | ✅ |
+| Statement coverage | 94.4% | 85%+ | ✅ Excellent |
+| Branch coverage | 83.4% | 75%+ | ✅ |
 | Function coverage | 91.8% | 80%+ | ✅ |
-| Line coverage | 94.6% | 85%+ | ✅ |
+| Line coverage | 94.7% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
 | File | Statement | Branch | Status |
 |------|-----------|--------|--------|
-| EffectsRenderer.js | 99.1% | 93.0% | ✅ Excellent |
+| EffectsRenderer.js | 98.9% | 92.3% | ✅ Excellent |
 | CanvasRenderer.js | 93.7% | 78.2% | ✅ Good |
-| LayerRenderer.js | 95.5% | 78.1% | ✅ Good |
+| LayerRenderer.js | 93.8% | 76.7% | ✅ Good |
 | ShapeRenderer.js | 93.9% | 84.6% | ✅ Good |
+
+### Files With Coverage Issues ⚠️
+
+| File | Statement | Function | Status |
+|------|-----------|----------|--------|
+| PropertiesForm.js | 92.7% | 72.9% | ⚠️ Function coverage below 80% |
 
 ### Files Recently Improved ✅
 
 | File | Statement | Branch | Status |
 |------|-----------|--------|--------|
+| CalloutRenderer.js | 98.95% | 93.0% | ✅ Improved from 69.6% |
+| PropertiesForm.js | 92.7% | 82.2% | ✅ Function coverage improved 58.6% → 72.9% |
 | LayerDragDrop.js | 100% | 87.7% | ✅ Improved from 68.9% |
 | GroupManager.js | 89.1% | 75.1% | ✅ Improved from 84.9% |
 
@@ -325,5 +359,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 1, 2026*  
-*Status: ⚠️ 11 god classes. Extension is production-ready with excellent test coverage (94.3%, 7,923 tests).*
+*Document updated: January 6, 2026*  
+*Status: ⚠️ 12 god classes (1 without delegation). Extension is production-ready with excellent test coverage (94.5%, 8,051 tests).*

@@ -488,7 +488,7 @@
 				return this.builtInPresets.getSupportedTools();
 			}
 			return [
-				'arrow', 'text', 'textbox', 'rectangle', 'circle',
+				'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
 				'ellipse', 'line', 'polygon', 'star', 'path'
 			];
 		}
@@ -608,7 +608,7 @@
 	PresetManager.STORAGE_KEY = 'mw-layers-style-presets';
 	PresetManager.SCHEMA_VERSION = 1;
 	PresetManager.SUPPORTED_TOOLS = [
-		'arrow', 'text', 'textbox', 'rectangle', 'circle',
+		'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
 		'ellipse', 'line', 'polygon', 'star', 'path'
 	];
 

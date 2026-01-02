@@ -34,6 +34,10 @@
 	const TextBoxRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.TextBoxRenderer ) ||
 		( typeof require !== 'undefined' ? require( './TextBoxRenderer.js' ) : null );
 
+	// Get CalloutRenderer - it should be loaded before this module
+	const CalloutRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.CalloutRenderer ) ||
+		( typeof require !== 'undefined' ? require( './CalloutRenderer.js' ) : null );
+
 	// Get PolygonStarRenderer - it should be loaded before this module
 	const PolygonStarRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.PolygonStarRenderer ) ||
 		( typeof require !== 'undefined' ? require( './PolygonStarRenderer.js' ) : null );
@@ -118,6 +122,16 @@ class LayerRenderer {
 			this.textBoxRenderer = null;
 		}
 
+		// Create CalloutRenderer instance for callout/chat bubble shape operations
+		if ( CalloutRenderer ) {
+			this.calloutRenderer = new CalloutRenderer( ctx, {
+				shadowRenderer: this.shadowRenderer,
+				textBoxRenderer: this.textBoxRenderer
+			} );
+		} else {
+			this.calloutRenderer = null;
+		}
+
 		// Create EffectsRenderer instance for blur operations
 		if ( EffectsRenderer ) {
 			this.effectsRenderer = new EffectsRenderer( ctx, {
@@ -133,6 +147,10 @@ class LayerRenderer {
 			// Wire up EffectsRenderer to TextBoxRenderer for blur fill support
 			if ( this.textBoxRenderer ) {
 				this.textBoxRenderer.setEffectsRenderer( this.effectsRenderer );
+			}
+			// Wire up EffectsRenderer to CalloutRenderer for blur fill support
+			if ( this.calloutRenderer ) {
+				this.calloutRenderer.setEffectsRenderer( this.effectsRenderer );
 			}
 			// Wire up EffectsRenderer to ArrowRenderer for blur fill support
 			if ( this.arrowRenderer ) {
@@ -170,6 +188,9 @@ class LayerRenderer {
 		}
 		if ( this.textBoxRenderer ) {
 			this.textBoxRenderer.setContext( ctx );
+		}
+		if ( this.calloutRenderer ) {
+			this.calloutRenderer.setContext( ctx );
 		}
 		if ( this.effectsRenderer ) {
 			this.effectsRenderer.setContext( ctx );
@@ -323,6 +344,14 @@ class LayerRenderer {
 	/** Draw a text box shape (rectangle with multi-line text) */
 	drawTextBox( layer, options ) {
 		if ( this.textBoxRenderer ) { this.textBoxRenderer.setContext( this.ctx ); this.textBoxRenderer.draw( layer, this._prepareRenderOptions( options ) ); }
+	}
+
+	/** Draw a callout shape (speech bubble with tail and text) */
+	drawCallout( layer, options ) {
+		if ( this.calloutRenderer ) {
+			this.calloutRenderer.setContext( this.ctx );
+			this.calloutRenderer.draw( layer, this._prepareRenderOptions( options ) );
+		}
 	}
 
 	/** Draw a circle shape */
@@ -742,6 +771,9 @@ class LayerRenderer {
 				break;
 			case 'textbox':
 				this.drawTextBox( layer, options );
+				break;
+			case 'callout':
+				this.drawCallout( layer, options );
 				break;
 			case 'rectangle':
 			case 'rect':

@@ -76,7 +76,7 @@
 			 * @type {string[]}
 			 */
 			this.supportedTools = opts.supportedTools || [
-				'arrow', 'text', 'textbox', 'rectangle', 'circle',
+				'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
 				'ellipse', 'line', 'polygon', 'star', 'path'
 			];
 		}

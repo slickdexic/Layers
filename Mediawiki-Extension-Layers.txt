@@ -6,14 +6,14 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Pvodrazka]]
-|version         = 1.4.0
-|update          = 2025-12-31
+|version         = 1.4.2
+|update          = 2026-01-02
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|<annotation>|<canvas>|<drawing>|<image editor>|<image markup>|<non-destructive>}}
-|mediawiki       = >= 1.39
+|mediawiki       = >= 1.44
 |php             = >= 8.1
 |needs-updatephp = yes
 |rights          = {{bulleted list|createlayers|editlayers|managelayerlibrary}}
@@ -47,9 +47,9 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.4.0
+| 1.44+ || <code>main</code> || 1.4.2
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.4.0-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.4.2-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}

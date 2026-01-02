@@ -15,7 +15,7 @@
 	 * @type {string[]}
 	 */
 	const SUPPORTED_TOOLS = [
-		'arrow', 'text', 'textbox', 'rectangle', 'circle',
+		'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
 		'ellipse', 'line', 'polygon', 'star', 'path'
 	];
 
@@ -90,6 +90,61 @@
 					fontFamily: 'Arial, sans-serif',
 					padding: 8,
 					cornerRadius: 4
+				}
+			}
+		],
+		callout: [
+			{
+				id: 'builtin-callout-speech',
+				name: 'Speech Bubble',
+				builtIn: true,
+				style: {
+					fill: '#ffffff',
+					stroke: '#000000',
+					strokeWidth: 2,
+					fontSize: 14,
+					fontFamily: 'Arial, sans-serif',
+					padding: 12,
+					cornerRadius: 12,
+					tailDirection: 'bottom',
+					tailPosition: 0.3,
+					tailSize: 20
+				}
+			},
+			{
+				id: 'builtin-callout-thought',
+				name: 'Thought Bubble',
+				builtIn: true,
+				style: {
+					fill: '#f0f0f0',
+					stroke: '#666666',
+					strokeWidth: 1,
+					fontSize: 12,
+					fontFamily: 'Arial, sans-serif',
+					fontStyle: 'italic',
+					padding: 10,
+					cornerRadius: 15,
+					tailDirection: 'bottom',
+					tailPosition: 0.2,
+					tailSize: 15
+				}
+			},
+			{
+				id: 'builtin-callout-shout',
+				name: 'Shout',
+				builtIn: true,
+				style: {
+					fill: '#ffff00',
+					stroke: '#ff0000',
+					strokeWidth: 3,
+					fontSize: 18,
+					fontFamily: 'Arial, sans-serif',
+					fontWeight: 'bold',
+					padding: 15,
+					cornerRadius: 8,
+					tailDirection: 'bottom',
+					tailPosition: 0.5,
+					tailSize: 25
 				}
 			}
 		],

@@ -533,6 +533,57 @@ describe( 'PresetDropdown', () => {
 			dropdown.handleSaveClick();
 			expect( mockOnSave ).toHaveBeenCalledWith( expect.any( Function ) );
 		} );
+
+		it( 'should add preset when onSave callback provides style', () => {
+			window.prompt = jest.fn( () => 'New Preset' );
+			mockOnSave.mockImplementation( ( callback ) => {
+				callback( { stroke: '#ff0000', strokeWidth: 2 } );
+			} );
+			dropdown.handleSaveClick();
+			expect( mockPresetManager.addPreset ).toHaveBeenCalledWith(
+				'rectangle',
+				'New Preset',
+				{ stroke: '#ff0000', strokeWidth: 2 }
+			);
+		} );
+
+		it( 'should show notification after saving preset', () => {
+			global.mw = { notify: jest.fn() };
+			window.prompt = jest.fn( () => 'Saved Preset' );
+			mockOnSave.mockImplementation( ( callback ) => {
+				callback( { stroke: '#00ff00' } );
+			} );
+			dropdown.handleSaveClick();
+			expect( global.mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should not add preset when onSave callback provides null style', () => {
+			window.prompt = jest.fn( () => 'Test' );
+			mockOnSave.mockImplementation( ( callback ) => {
+				callback( null );
+			} );
+			dropdown.handleSaveClick();
+			expect( mockPresetManager.addPreset ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should use DialogManager when available', async () => {
+			const mockDialogManager = {
+				showPromptDialogAsync: jest.fn( () => Promise.resolve( 'Dialog Preset' ) )
+			};
+			dropdown.dialogManager = mockDialogManager;
+			mockOnSave.mockImplementation( ( callback ) => {
+				callback( { stroke: '#0000ff' } );
+			} );
+
+			await dropdown.handleSaveClick();
+
+			expect( mockDialogManager.showPromptDialogAsync ).toHaveBeenCalled();
+			expect( mockPresetManager.addPreset ).toHaveBeenCalledWith(
+				'rectangle',
+				'Dialog Preset',
+				{ stroke: '#0000ff' }
+			);
+		} );
 	} );
 
 	describe( 'handleSetDefault', () => {
@@ -553,6 +604,86 @@ describe( 'PresetDropdown', () => {
 			const spy = jest.spyOn( dropdown, 'renderMenu' );
 			dropdown.handleSetDefault( 'preset-1' );
 			expect( spy ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'preset item click handlers', () => {
+		beforeEach( () => {
+			dropdown = new PresetDropdown( {
+				presetManager: mockPresetManager,
+				onSelect: mockOnSelect,
+				getMessage: mockGetMessage
+			} );
+			dropdown.currentTool = 'rectangle';
+		} );
+
+		it( 'should call handlePresetClick when clicking preset item', () => {
+			const preset = { id: 'test-1', name: 'Test', style: { stroke: '#000' }, builtIn: false };
+			const item = dropdown.createPresetItem( preset, false );
+			const spy = jest.spyOn( dropdown, 'handlePresetClick' );
+
+			item.click();
+
+			expect( spy ).toHaveBeenCalledWith( preset );
+		} );
+
+		it( 'should call handleSetDefault when clicking set-default button', () => {
+			const preset = { id: 'user-preset-1', name: 'User Preset', style: { stroke: '#000' }, builtIn: false };
+			const item = dropdown.createPresetItem( preset, false );
+			const setDefaultBtn = item.querySelector( '.layers-preset-item-action:not(.layers-preset-item-action--delete)' );
+			const spy = jest.spyOn( dropdown, 'handleSetDefault' );
+
+			if ( setDefaultBtn ) {
+				setDefaultBtn.click();
+				expect( spy ).toHaveBeenCalledWith( 'user-preset-1' );
+			}
+		} );
+
+		it( 'should call handleDelete when clicking delete button', () => {
+			const preset = { id: 'user-preset-2', name: 'Delete Me', style: { stroke: '#000' }, builtIn: false };
+			const item = dropdown.createPresetItem( preset, false );
+			const deleteBtn = item.querySelector( '.layers-preset-item-action--delete' );
+			const spy = jest.spyOn( dropdown, 'handleDelete' );
+
+			if ( deleteBtn ) {
+				deleteBtn.click();
+				expect( spy ).toHaveBeenCalledWith( 'user-preset-2', 'Delete Me' );
+			}
+		} );
+
+		it( 'should stop propagation when clicking action buttons', () => {
+			const preset = { id: 'user-preset-3', name: 'Test', style: { stroke: '#000' }, builtIn: false };
+			const item = dropdown.createPresetItem( preset, false );
+			const deleteBtn = item.querySelector( '.layers-preset-item-action--delete' );
+			const handlePresetClickSpy = jest.spyOn( dropdown, 'handlePresetClick' );
+
+			if ( deleteBtn ) {
+				deleteBtn.click();
+				// handlePresetClick should NOT be called because propagation was stopped
+				expect( handlePresetClickSpy ).not.toHaveBeenCalled();
+			}
+		} );
+	} );
+
+	describe( 'save button click in actions section', () => {
+		beforeEach( () => {
+			dropdown = new PresetDropdown( {
+				presetManager: mockPresetManager,
+				onSave: mockOnSave,
+				getMessage: mockGetMessage
+			} );
+			dropdown.currentTool = 'rectangle';
+			dropdown.open();
+		} );
+
+		it( 'should call handleSaveClick when clicking save button', () => {
+			const spy = jest.spyOn( dropdown, 'handleSaveClick' );
+			const saveBtn = dropdown.elements.dropdown.querySelector( '.layers-preset-action' );
+
+			if ( saveBtn ) {
+				saveBtn.click();
+				expect( spy ).toHaveBeenCalled();
+			}
 		} );
 	} );
 

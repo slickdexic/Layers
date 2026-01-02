@@ -8,9 +8,9 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.4.1-REL1_43",
+	"version": "1.4.2",
 	"requires": {
-		"MediaWiki": ">= 1.43.0"
+		"MediaWiki": ">= 1.44.0"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
@@ -166,6 +166,7 @@
 				"ArrowRenderer.js",
 				"TextRenderer.js",
 				"TextBoxRenderer.js",
+				"CalloutRenderer.js",
 				"ShapeRenderer.js",
 				"EffectsRenderer.js",
 				"LayerRenderer.js"
@@ -325,6 +326,7 @@
 				"layers-tool-select",
 				"layers-tool-text",
 				"layers-tool-textbox",
+				"layers-tool-callout",
 				"layers-tool-pen",
 				"layers-tool-arrow",
 				"layers-tool-rectangle",
@@ -405,6 +407,14 @@
 				"layers-section-text",
 				"layers-section-text-shadow",
 				"layers-section-alignment",
+				"layers-section-callout",
+				"layers-prop-tail-direction",
+				"layers-prop-tail-position",
+				"layers-prop-tail-size",
+				"layers-tail-bottom",
+				"layers-tail-top",
+				"layers-tail-left",
+				"layers-tail-right",
 				"layers-prop-font-family",
 				"layers-prop-bold",
 				"layers-prop-italic",

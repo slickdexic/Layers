@@ -254,6 +254,7 @@
 					return null;
 				case 'rectangle':
 				case 'textbox':
+				case 'callout':
 				case 'image': {
 					rectX = layer.x || 0;
 					rectY = layer.y || 0;

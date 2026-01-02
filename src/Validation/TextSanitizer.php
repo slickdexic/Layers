@@ -21,6 +21,10 @@ class TextSanitizer {
 	/**
 	 * Sanitize user text input
 	 *
+	 * Note: This method does NOT HTML-encode the output because the data
+	 * is stored as JSON in the database. HTML encoding should only happen
+	 * at render time when outputting to HTML context.
+	 *
 	 * @param string $text Raw text input
 	 * @return string Sanitized text
 	 */
@@ -30,8 +34,11 @@ class TextSanitizer {
 			$text = substr( $text, 0, self::MAX_TEXT_LENGTH );
 		}
 
-		// Strip HTML tags and decode entities
+		// Strip HTML tags
 		$text = strip_tags( $text );
+
+		// Decode any HTML entities that might have been passed in
+		// (e.g., from copy-paste of HTML content)
 		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
 		// Remove dangerous protocols
@@ -40,8 +47,8 @@ class TextSanitizer {
 		// Remove event handlers and JavaScript
 		$text = $this->removeEventHandlers( $text );
 
-		// Re-encode for safe output
-		$text = htmlspecialchars( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		// Do NOT re-encode with htmlspecialchars - this is JSON storage, not HTML output
+		// HTML encoding should happen at render time only
 
 		return trim( $text );
 	}

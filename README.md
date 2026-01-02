@@ -2,17 +2,17 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.0%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-7%2C881%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-8%2C000%2B%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.4.1-REL1_43 (January 2026)  
+> **Version:** 1.4.2 (January 2026)  
 > **Status:** ✅ Production-ready  
-> **Requires:** MediaWiki 1.43+, PHP 8.1+
+> **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
-> **For MediaWiki 1.44+:** Use the [`main` branch](https://github.com/slickdexic/Layers/tree/main).  
+> **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
 > **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).
 
 ---
@@ -236,10 +236,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 7,881 passing |
-| Statement coverage | 94.0% |
-| Branch coverage | 82.9% |
-| Test suites | 137 |
+| Jest tests | 7,940 passing |
+| Statement coverage | 93.4% |
+| Branch coverage | 82.5% |
+| Test suites | 138 |
 
 **Security:**
 
@@ -260,6 +260,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
+- ⚠️ **ServerLogger unused** - debug logging module is loaded but never called (dead code)
 
 ---
 
@@ -284,13 +285,13 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 105 | ✅ |
-| Total JS lines | ~55,000 | ✅ Well under 75K target |
-| ES6 classes | 93 | ✅ |
-| God classes (>1000 lines) | 11 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 7,881 | ✅ |
+| Total JS lines | ~56,000 | ✅ Well under 75K target |
+| ES6 classes | 94 | ✅ |
+| God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
+| Tests passing | 7,940 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.0% | ✅ Excellent |
-| Branch coverage | 82.9% | ✅ |
+| Statement coverage | 93.4% | ✅ Excellent |
+| Branch coverage | 82.5% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

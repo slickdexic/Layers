@@ -283,12 +283,28 @@ class ApiFallback {
 
 		this.debugLog( 'API fallback proceeding for filename:', filename, ', reason:', check.reason );
 
-		// Fetch layer data via API
-		api.get( {
+		// Extract set name from data-layers-intent (if it's not just 'on')
+		// This ensures we fetch the correct named layer set, not just the default
+		const intent = img.getAttribute( 'data-layers-intent' ) || '';
+		const setName = ( intent && intent !== 'on' && intent !== 'none' && intent !== 'off' )
+			? intent
+			: null;
+
+		// Build API request params
+		const apiParams = {
 			action: 'layersinfo',
 			format: 'json',
 			filename: filename
-		} ).then( ( data ) => {
+		};
+
+		// Only add setname if it's a specific named set (not default)
+		if ( setName ) {
+			apiParams.setname = setName;
+			this.debugLog( 'Requesting specific layer set:', setName );
+		}
+
+		// Fetch layer data via API
+		api.get( apiParams ).then( ( data ) => {
 			try {
 				if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
 					return;

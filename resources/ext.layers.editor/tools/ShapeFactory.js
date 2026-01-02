@@ -302,6 +302,54 @@
 		}
 
 		/**
+		 * Create a callout (chat bubble) layer
+		 * Callout combines textbox properties with a tail/pointer
+		 *
+		 * @param {Object} point Starting point
+		 * @return {Object} Callout layer object
+		 */
+		createCallout( point ) {
+			const style = this.getCurrentStyle();
+			const layer = {
+				type: 'callout',
+				x: point.x,
+				y: point.y,
+				width: 0,
+				height: 0,
+				// Text properties
+				text: '',
+				fontSize: style.fontSize || 16,
+				fontFamily: style.fontFamily || 'Arial, sans-serif',
+				fontWeight: 'normal',
+				fontStyle: 'normal',
+				color: style.color || '#000000',
+				textAlign: 'left',
+				verticalAlign: 'top',
+				lineHeight: 1.2,
+				// Text stroke (outline)
+				textStrokeWidth: 0,
+				textStrokeColor: '#000000',
+				// Text drop shadow
+				textShadow: false,
+				textShadowColor: 'rgba(0,0,0,0.5)',
+				textShadowBlur: 4,
+				textShadowOffsetX: 2,
+				textShadowOffsetY: 2,
+				// Shape properties
+				stroke: style.color || '#000000',
+				strokeWidth: style.strokeWidth || 1,
+				fill: style.fill || '#ffffff',
+				cornerRadius: 8,
+				padding: 12,
+				// Callout-specific properties
+				tailDirection: 'bottom',
+				tailPosition: 0.5,
+				tailSize: 20
+			};
+			return this.applyShadow( layer, style );
+		}
+
+		/**
 		 * Create a layer by type
 		 *
 		 * @param {string} type Layer type
@@ -334,6 +382,8 @@
 					return this.createText( point, opts.text );
 				case 'textbox':
 					return this.createTextBox( point );
+				case 'callout':
+					return this.createCallout( point );
 				default:
 					return null;
 			}
@@ -436,6 +486,7 @@
 			switch ( layer.type ) {
 				case 'rectangle':
 				case 'textbox':
+				case 'callout':
 					return layer.width > min && layer.height > min;
 				case 'circle':
 					return layer.radius > min;

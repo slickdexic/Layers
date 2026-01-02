@@ -41,10 +41,6 @@ This directory contains technical documentation for the Layers MediaWiki extensi
 - [layers-all-troubleshooting.md](layers-all-troubleshooting.md) - Troubleshooting guide for layer visibility issues
 - [POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md](POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md) - Boolean serialization bug analysis
 
-### Pending Feature Requests
-- [FEATURE_REQUEST_TEXT_IMPROVEMENTS.md](FEATURE_REQUEST_TEXT_IMPROVEMENTS.md) - Enhanced text layer capabilities
-- [FEATURE_REQUEST_LAYERSLINK_RETURN.md](FEATURE_REQUEST_LAYERSLINK_RETURN.md) - Navigation mode enhancements
-
 ### Planning
 - [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) - Active feature proposals and ideas
 - [RELEASE_GUIDE.md](RELEASE_GUIDE.md) - Release checklist and process

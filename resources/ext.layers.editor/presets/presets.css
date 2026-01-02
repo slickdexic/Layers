@@ -224,54 +224,146 @@
 	text-align: center;
 }
 
-/* Dark theme support */
-@media ( prefers-color-scheme: dark ) {
-	.layers-preset-button {
+/* ==========================================================================
+   Vector 2022 Night Mode / Dark Theme Support
+   Follows MediaWiki recommendations for night mode compatibility
+   ========================================================================== */
+
+/* Forced night mode - user explicitly selected dark theme */
+@media screen {
+	html.skin-theme-clientpref-night .layers-preset-button {
 		background: #27292d;
 		border-color: #72777d;
 		color: #eaecf0;
 	}
 
-	.layers-preset-button:hover:not( :disabled ) {
+	html.skin-theme-clientpref-night .layers-preset-button:hover:not( :disabled ) {
 		background: #3a3d43;
 		border-color: #a2a9b1;
 	}
 
-	.layers-preset-menu {
+	html.skin-theme-clientpref-night .layers-preset-menu {
 		background: #27292d;
 		border-color: #72777d;
 	}
 
-	.layers-preset-item:hover {
+	html.skin-theme-clientpref-night .layers-preset-item:hover {
 		background: #3a3d43;
 	}
 
-	.layers-preset-item--default {
+	html.skin-theme-clientpref-night .layers-preset-item:focus {
+		background: #3a3d43;
+	}
+
+	html.skin-theme-clientpref-night .layers-preset-item--default {
 		background: #1e2024;
 	}
 
-	.layers-preset-name {
+	html.skin-theme-clientpref-night .layers-preset-name {
 		color: #eaecf0;
 	}
 
-	.layers-preset-item--builtin .layers-preset-name {
+	html.skin-theme-clientpref-night .layers-preset-item--builtin .layers-preset-name {
 		color: #a2a9b1;
 	}
 
-	.layers-preset-divider {
+	html.skin-theme-clientpref-night .layers-preset-divider {
 		border-top-color: #3a3d43;
 	}
 
-	.layers-preset-action {
+	html.skin-theme-clientpref-night .layers-preset-action {
 		color: #69f;
 	}
 
-	.layers-preset-action:hover {
+	html.skin-theme-clientpref-night .layers-preset-action:hover {
 		background: #3a3d43;
 	}
 
-	.layers-preset-empty {
+	html.skin-theme-clientpref-night .layers-preset-empty {
 		color: #a2a9b1;
+	}
+
+	html.skin-theme-clientpref-night .layers-preset-item-action {
+		color: #a2a9b1;
+	}
+
+	html.skin-theme-clientpref-night .layers-preset-item-action:hover {
+		background: #4a4d53;
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-night .layers-preset-item-action--delete:hover {
+		background: rgba( 255, 107, 107, 0.2 );
+		color: #ff6b6b;
+	}
+}
+
+/* Automatic mode - follows OS dark mode preference */
+@media screen and ( prefers-color-scheme: dark ) {
+	html.skin-theme-clientpref-os .layers-preset-button {
+		background: #27292d;
+		border-color: #72777d;
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-button:hover:not( :disabled ) {
+		background: #3a3d43;
+		border-color: #a2a9b1;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-menu {
+		background: #27292d;
+		border-color: #72777d;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-item:hover {
+		background: #3a3d43;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-item:focus {
+		background: #3a3d43;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-item--default {
+		background: #1e2024;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-name {
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-item--builtin .layers-preset-name {
+		color: #a2a9b1;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-divider {
+		border-top-color: #3a3d43;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-action {
+		color: #69f;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-action:hover {
+		background: #3a3d43;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-empty {
+		color: #a2a9b1;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-item-action {
+		color: #a2a9b1;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-item-action:hover {
+		background: #4a4d53;
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-os .layers-preset-item-action--delete:hover {
+		background: rgba( 255, 107, 107, 0.2 );
+		color: #ff6b6b;
 	}
 }
 
@@ -285,5 +377,97 @@
 	.layers-preset-item-action,
 	.layers-preset-action {
 		transition: none;
+	}
+}
+
+/* Windows High Contrast Mode Support
+ * Ensures preset UI elements remain visible with system high contrast colors
+ */
+@media ( forced-colors: active ) {
+	.layers-preset-button {
+		border: 1px solid ButtonText;
+		background: ButtonFace;
+		color: ButtonText;
+		forced-color-adjust: none;
+	}
+
+	.layers-preset-button:disabled {
+		border-color: GrayText;
+		color: GrayText;
+	}
+
+	.layers-preset-button:focus {
+		outline: 2px solid Highlight;
+		outline-offset: 1px;
+	}
+
+	.layers-preset-button:hover:not( :disabled ) {
+		outline: 2px solid Highlight;
+		outline-offset: 1px;
+	}
+
+	.layers-preset-menu {
+		border: 1px solid CanvasText;
+		background: Canvas;
+	}
+
+	.layers-preset-item {
+		color: CanvasText;
+	}
+
+	.layers-preset-item:hover,
+	.layers-preset-item:focus {
+		background: Highlight;
+		color: HighlightText;
+	}
+
+	.layers-preset-item--default {
+		border-left: 3px solid Highlight;
+	}
+
+	.layers-preset-name {
+		color: CanvasText;
+	}
+
+	.layers-preset-item:hover .layers-preset-name,
+	.layers-preset-item:focus .layers-preset-name {
+		color: HighlightText;
+	}
+
+	.layers-preset-swatch {
+		border: 2px solid CanvasText;
+	}
+
+	.layers-preset-star {
+		color: CanvasText;
+	}
+
+	.layers-preset-item-action {
+		background: ButtonFace;
+		border: 1px solid ButtonText;
+		color: ButtonText;
+	}
+
+	.layers-preset-item-action:hover {
+		background: Highlight;
+		color: HighlightText;
+		border-color: Highlight;
+	}
+
+	.layers-preset-divider {
+		border-top: 1px solid CanvasText;
+	}
+
+	.layers-preset-action {
+		color: LinkText;
+	}
+
+	.layers-preset-action:hover {
+		background: Highlight;
+		color: HighlightText;
+	}
+
+	.layers-preset-empty {
+		color: GrayText;
 	}
 }

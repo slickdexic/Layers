@@ -636,6 +636,7 @@ class TransformController {
 		switch ( layer.type ) {
 			case 'rectangle':
 			case 'textbox':
+			case 'callout':
 			case 'blur':
 			case 'circle':
 			case 'text':

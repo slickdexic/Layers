@@ -2,7 +2,45 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [Unreleased]
+## [1.4.2] - 2026-01-02
+
+### Fixed
+- **Vector 2022 Dark Mode Compatibility** — Editor now fully supports Vector 2022 skin's night mode (GitHub issue)
+  - Added comprehensive dark mode styles for the entire editor UI (toolbar, layer panel, properties panel, dialogs, canvas area)
+  - Follows MediaWiki's recommended approach using both class-based selectors (`html.skin-theme-clientpref-night`) and media queries (`@media (prefers-color-scheme: dark)` with `html.skin-theme-clientpref-os`)
+  - Uses CSS custom properties for consistent theming across all editor components
+  - Updated `editor-fixed.css` with ~550 lines of dark mode CSS
+  - Updated `presets.css` to use proper Vector 2022 night mode selectors
+  - Updated `modal.css` and `LayersLightbox.css` for dark mode support
+  - Dark theme uses professional dark colors: `#1a1a1a` (primary bg), `#27292d` (secondary), `#3a3d43` (tertiary), `#eaecf0` (text)
+- **Text with apostrophes showing HTML entities after save** — Text containing apostrophes (e.g., "I'M HERE") would display as `I&apos;M HERE` after saving and reopening the editor. The issue was that `TextSanitizer.php` was calling `htmlspecialchars()` before storing text in the JSON database. HTML encoding should only happen at render time, not storage time. Fixed by removing the `htmlspecialchars()` call from `sanitizeText()`.
+- **Wrong layer set displayed after editing via `layerslink=editor`** — When opening the editor via a `layerslink=editor` link for a specific layer set (e.g., `layers=anatomy`), then switching to edit a different set, saving, and closing, the article page would display the edited set instead of the set specified in the wikitext. Fixed `ApiFallback.js` to extract the `setname` from the `data-layers-intent` attribute and pass it to the API request.
+
+### Added
+- **Callout/Speech Bubble Tool** — New annotation layer type for creating chat bubbles and callouts
+  - Rounded rectangle container with configurable corner radius
+  - Triangular tail/pointer with 8 direction options (top, bottom, left, right, and corners)
+  - Configurable tail position (0-1 along edge) and tail size (5-100px)
+  - Full text support with alignment, font, and color controls
+  - Supports all standard layer effects: fill, stroke, opacity, shadow, blur fill
+  - Keyboard shortcut: `B`
+  - 29 new tests in `CalloutRenderer.test.js`
+  - New component: `resources/ext.layers.shared/CalloutRenderer.js`
+- **Windows High Contrast Mode Support** — Full support for `@media (forced-colors: active)` across all CSS files
+  - `editor-fixed.css`: Toolbar buttons, layer panel items, inputs, buttons, dialogs, canvas area, sliders, dropdowns
+  - `LayersLightbox.css`: Lightbox overlay, close button, loading states, error display
+  - `modal.css`: Modal overlay, header, title, close button, iframe border
+  - `presets.css`: Preset dropdowns, menu items, swatches, actions, dividers
+  - Uses system colors (ButtonText, Highlight, Canvas, etc.) for automatic adaptation to user's color scheme
+  - Added WCAG 1.4.11 Non-text Contrast (AA) compliance to ACCESSIBILITY.md
+- **Color Picker Hex Input** — Keyboard-accessible hex color input alongside the native color picker
+  - Users can type hex values directly (e.g., `#FF5500`) without using mouse
+  - Auto-adds `#` prefix when typing without it
+  - Real-time validation with visual feedback for invalid values
+  - Syncs bidirectionally with native color picker for consistent UX
+  - Live preview updates as you type valid colors
+  - Proper ARIA labels and keyboard focus management
+  - 11 new tests for hex input functionality
 
 ### Removed
 - **Blur Tool** — The standalone blur tool (`B` shortcut) has been removed as redundant

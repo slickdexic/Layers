@@ -23,7 +23,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 	/** @var array Supported layer types */
 	private const SUPPORTED_LAYER_TYPES = [
-		'text', 'textbox', 'arrow', 'rectangle', 'circle', 'ellipse',
+		'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
 		'polygon', 'star', 'line', 'path', 'image', 'group'
 	];
 
@@ -104,6 +104,10 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'verticalAlign' => 'string',
 		'padding' => 'numeric',
 		'lineHeight' => 'numeric',
+		// Callout/chat bubble properties
+		'tailDirection' => 'string',
+		'tailPosition' => 'numeric',
+		'tailSize' => 'numeric',
 		// Blur fill state preservation
 		'_previousFill' => 'string',
 		// Group layer properties
@@ -132,7 +136,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'textAlign' => [ 'left', 'center', 'right' ],
 		'verticalAlign' => [ 'top', 'middle', 'bottom' ],
 		'fontWeight' => [ 'normal', 'bold' ],
-		'fontStyle' => [ 'normal', 'italic' ]
+		'fontStyle' => [ 'normal', 'italic' ],
+		'tailDirection' => [ 'bottom', 'top', 'left', 'right', 'bottom-left', 'bottom-right', 'top-left', 'top-right' ]
 	];
 
 	/** @var array Numeric constraints */
@@ -157,7 +162,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'textShadowOffsetX' => [ 'min' => -100, 'max' => 100 ],
 		'textShadowOffsetY' => [ 'min' => -100, 'max' => 100 ],
 		'lineHeight' => [ 'min' => 0.5, 'max' => 5 ],
-		'cornerRadius' => [ 'min' => 0, 'max' => 500 ]
+		'cornerRadius' => [ 'min' => 0, 'max' => 500 ],
+		'tailPosition' => [ 'min' => 0, 'max' => 1 ],
+		'tailSize' => [ 'min' => 5, 'max' => 100 ]
 	];
 
 	/** @var int Maximum points in a path/polygon */

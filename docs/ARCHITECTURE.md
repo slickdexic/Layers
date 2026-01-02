@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** December 31, 2025  
-**Version:** 1.3.3
+**Last Updated:** January 1, 2026  
+**Version:** 1.4.1
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -18,36 +18,45 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (December 2025)
+## Codebase Statistics (January 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | 102 |
+| Total JS files | **104** |
 | Viewer module | ~750 lines |
 | Shared module | ~6,200 lines |
-| Editor module | ~47,700 lines |
-| Total JS lines | ~54,700 |
-| ES6 classes | 83 |
+| Editor module | ~48,000 lines |
+| Total JS lines | **~55,000** |
+| ES6 classes | **94** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | 93.8% stmt, 82.5% branch, 91.6% func |
-| Jest tests | **7,805** |
+| Test coverage | **94.4% stmt, 83.4% branch, 91.8% func** |
+| Jest tests | **8,051** (138 suites) |
 | PHPUnit test files | 19 |
-| God classes (>1000 lines) | **11** (all delegated) |
-| Drawing tools | 12 |
-| eslint-disable comments | 13 ✅ (below <15 target) |
+| God classes (>1000 lines) | **12** (all delegated except PropertiesForm) |
+| Drawing tools | **11** (blur tool deprecated) |
+| eslint-disable comments | **8** ✅ (below <15 target) |
 
 ---
 
 ### Recent Architecture Changes
 
+### January 2026: v1.4.0-v1.4.1
+
+**v1.4.0-v1.4.1 - Major Feature Release:**
+- Curved arrows with Bézier curves (FR-4 complete)
+- Live color picker preview (FR-9 complete)
+- Live article preview without page edit (FR-10 complete)
+- Real-time property panel updates during drag/resize
+- eslint-disable count reduced from 13 to 8
+- Toolbar dropdown grouping for tool organization
+
 ### December 2025: Layer Grouping & Folders
 
 **v1.2.13-v1.2.16 - Layer Grouping Feature:**
-- New GroupManager.js (1,140 lines) for folder/grouping operations
+- New GroupManager.js (1,132 lines) for folder/grouping operations
 - FolderOperationsController for folder create/delete, visibility toggle
 - SetSelectorController for named layer set management
-- omitProperty utility for clean property removal (replacing eslint-disable patterns)
-- eslint-disable count reduced from 17 to 13
+- omitProperty utility for clean property removal
 
 **v1.2.8 - Blur Fill Bug Fix:**
 - Fixed coordinate transformation issues for blur fill
@@ -61,19 +70,20 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 ### Known Technical Debt
 
 **11 files exceed 1,000 lines (god classes) - all use delegation patterns:**
-- LayerPanel.js (2,140) - facade with 9 controllers
+- LayerPanel.js (2,141) - facade with 9 controllers
 - CanvasManager.js (1,877) - facade with 10+ controllers
-- Toolbar.js (1,556) - UI controls consolidation
-- LayersEditor.js (1,465) - main entry point/orchestrator
+- Toolbar.js (1,652) - UI controls consolidation
+- LayersEditor.js (1,475) - main entry point/orchestrator
 - SelectionManager.js (1,359) - delegates to SelectionState, MarqueeSelection
-- ToolManager.js (1,261) - tool delegation pattern
-- CanvasRenderer.js (1,242) - delegates to SelectionRenderer
-- **ArrowRenderer.js (1,200)** - rendering logic (grew with curved arrows in v1.3.3)
+- ArrowRenderer.js (1,310) - rendering logic (grew with curved arrows in v1.3.3)
+- ToolManager.js (1,214) - tool delegation pattern
 - APIManager.js (1,182) - API integration layer
 - GroupManager.js (1,132) - layer grouping operations (new in v1.2.13)
-- **ToolbarStyleControls.js (1,013)** - style controls (grew with live preview in v1.3.3)
+- CanvasRenderer.js (1,105) - delegates to SelectionRenderer
+- ToolbarStyleControls.js (1,014) - style controls (grew with live preview in v1.3.3)
+- PropertiesForm.js (1,011) - layer properties panel (NO delegation - needs refactoring)
 
-**Note:** All god classes use delegation patterns. Code quality is maintained with 93.8% test coverage.
+**Note:** 11 god classes use delegation patterns. PropertiesForm.js (1,011 lines) has NO delegation and needs refactoring. Code quality is maintained with 94.4% test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 
