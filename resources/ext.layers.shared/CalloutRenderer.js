@@ -169,6 +169,349 @@
 		// ========================================================================
 
 		/**
+		 * Calculate the closest point on the rectangle perimeter to a given point.
+		 * Used for the draggable tail feature to find where the tail attaches.
+		 *
+		 * @private
+		 * @param {number} px - Point x coordinate
+		 * @param {number} py - Point y coordinate
+		 * @param {number} x - Rectangle x
+		 * @param {number} y - Rectangle y
+		 * @param {number} width - Rectangle width
+		 * @param {number} height - Rectangle height
+		 * @param {number} cornerRadius - Corner radius to avoid
+		 * @return {Object} Object with edge ('top', 'bottom', 'left', 'right'), baseX, baseY
+		 */
+		getClosestPerimeterPoint( px, py, x, y, width, height, cornerRadius ) {
+			const r = Math.min( cornerRadius, Math.min( width, height ) / 2 );
+			const centerX = x + width / 2;
+			const centerY = y + height / 2;
+
+			// Direction from center to the tip
+			const dx = px - centerX;
+			const dy = py - centerY;
+
+			// Handle case where tip is at center
+			if ( Math.abs( dx ) < 0.1 && Math.abs( dy ) < 0.1 ) {
+				return { edge: 'bottom', baseX: centerX, baseY: y + height, tangentX: 1, tangentY: 0 };
+			}
+
+			// Define the 4 corner arc centers
+			const corners = [
+				{ cx: x + r, cy: y + r, name: 'tl', startAngle: Math.PI, endAngle: 1.5 * Math.PI },
+				{ cx: x + width - r, cy: y + r, name: 'tr', startAngle: 1.5 * Math.PI, endAngle: 2 * Math.PI },
+				{ cx: x + width - r, cy: y + height - r, name: 'br', startAngle: 0, endAngle: 0.5 * Math.PI },
+				{ cx: x + r, cy: y + height - r, name: 'bl', startAngle: 0.5 * Math.PI, endAngle: Math.PI }
+			];
+
+			// Define the 4 straight edges (between corners)
+			const edges = [
+				{ name: 'top', x1: x + r, y1: y, x2: x + width - r, y2: y, tangentX: 1, tangentY: 0 },
+				{ name: 'right', x1: x + width, y1: y + r, x2: x + width, y2: y + height - r, tangentX: 0, tangentY: 1 },
+				{ name: 'bottom', x1: x + width - r, y1: y + height, x2: x + r, y2: y + height, tangentX: -1, tangentY: 0 },
+				{ name: 'left', x1: x, y1: y + height - r, x2: x, y2: y + r, tangentX: 0, tangentY: -1 }
+			];
+
+			let bestDist = Infinity;
+			let bestPoint = { edge: 'bottom', baseX: centerX, baseY: y + height, tangentX: 1, tangentY: 0 };
+
+			// Check straight edges
+			for ( const edge of edges ) {
+				// Skip degenerate edges (when corner radius fills entire edge)
+				if ( edge.x1 === edge.x2 && edge.y1 === edge.y2 ) {
+					continue;
+				}
+
+				// Project point onto line segment
+				const edgeDx = edge.x2 - edge.x1;
+				const edgeDy = edge.y2 - edge.y1;
+				const edgeLen = Math.sqrt( edgeDx * edgeDx + edgeDy * edgeDy );
+
+				if ( edgeLen < 1 ) {
+					continue;
+				}
+
+				const t = Math.max( 0, Math.min( 1,
+					( ( px - edge.x1 ) * edgeDx + ( py - edge.y1 ) * edgeDy ) / ( edgeLen * edgeLen )
+				) );
+
+				const closestX = edge.x1 + t * edgeDx;
+				const closestY = edge.y1 + t * edgeDy;
+				const dist = Math.sqrt( ( px - closestX ) * ( px - closestX ) + ( py - closestY ) * ( py - closestY ) );
+
+				if ( dist < bestDist ) {
+					bestDist = dist;
+					bestPoint = {
+						edge: edge.name,
+						baseX: closestX,
+						baseY: closestY,
+						tangentX: edge.tangentX,
+						tangentY: edge.tangentY
+					};
+				}
+			}
+
+			// Check corner arcs (only if radius > 0)
+			if ( r > 0.5 ) {
+				for ( const corner of corners ) {
+					// Find closest point on arc: project tip onto arc
+					const toDx = px - corner.cx;
+					const toDy = py - corner.cy;
+					const toAngle = Math.atan2( toDy, toDx );
+
+					// Normalize angle to [0, 2*PI)
+					let normAngle = toAngle;
+					if ( normAngle < 0 ) {
+						normAngle += 2 * Math.PI;
+					}
+
+					// Check if angle is within the arc's range
+					let startNorm = corner.startAngle;
+					let endNorm = corner.endAngle;
+					if ( startNorm < 0 ) {
+						startNorm += 2 * Math.PI;
+					}
+					if ( endNorm < 0 ) {
+						endNorm += 2 * Math.PI;
+					}
+					if ( endNorm < startNorm ) {
+						endNorm += 2 * Math.PI;
+					}
+					if ( normAngle < startNorm ) {
+						normAngle += 2 * Math.PI;
+					}
+
+					// Clamp angle to arc range
+					let clampedAngle;
+					if ( normAngle >= startNorm && normAngle <= endNorm ) {
+						clampedAngle = toAngle;
+					} else {
+						// Use whichever endpoint is closer
+						const distToStart = Math.abs( normAngle - startNorm );
+						const distToEnd = Math.abs( normAngle - endNorm );
+						clampedAngle = distToStart < distToEnd ? corner.startAngle : corner.endAngle;
+					}
+
+					const closestX = corner.cx + r * Math.cos( clampedAngle );
+					const closestY = corner.cy + r * Math.sin( clampedAngle );
+					const dist = Math.sqrt( ( px - closestX ) * ( px - closestX ) + ( py - closestY ) * ( py - closestY ) );
+
+					if ( dist < bestDist ) {
+						bestDist = dist;
+						// Tangent is perpendicular to radius (90 degrees counterclockwise)
+						bestPoint = {
+							edge: corner.name,
+							baseX: closestX,
+							baseY: closestY,
+							tangentX: -Math.sin( clampedAngle ),
+							tangentY: Math.cos( clampedAngle )
+						};
+					}
+				}
+			}
+
+			return bestPoint;
+		}
+
+		/**
+		 * Get tail coordinates from a draggable tip position.
+		 * Calculates the base attachment point on the perimeter and tail width.
+		 * Uses tangent-aware placement for smooth blending with corners.
+		 *
+		 * @private
+		 * @param {number} x - Rectangle x
+		 * @param {number} y - Rectangle y
+		 * @param {number} width - Rectangle width
+		 * @param {number} height - Rectangle height
+		 * @param {number} tipX - Tail tip X position (relative to layer origin)
+		 * @param {number} tipY - Tail tip Y position (relative to layer origin)
+		 * @param {number} cornerRadius - Corner radius to avoid
+		 * @return {Object} Object with base1, base2, tip, edge
+		 */
+		getTailFromTipPosition( x, y, width, height, tipX, tipY, cornerRadius ) {
+			// Get the closest point on the perimeter (including corners)
+			const perimeter = this.getClosestPerimeterPoint( tipX, tipY, x, y, width, height, cornerRadius );
+			const r = Math.min( cornerRadius, Math.min( width, height ) / 2 );
+
+			// Calculate tail base width based on distance from tip to base
+			const dist = Math.sqrt(
+				( tipX - perimeter.baseX ) * ( tipX - perimeter.baseX ) +
+				( tipY - perimeter.baseY ) * ( tipY - perimeter.baseY )
+			);
+
+			// Base width scales with distance but capped at reasonable limits
+			const minDim = Math.min( width, height );
+			const minBaseWidth = Math.max( 8, minDim * 0.08 );
+			const maxBaseWidth = Math.min( 30, minDim * 0.3 );
+			const baseWidth = Math.max( minBaseWidth, Math.min( maxBaseWidth, dist * 0.3 ) );
+			const halfBase = baseWidth / 2;
+
+			let edge = perimeter.edge;
+			let base1, base2;
+
+			// For corners, offset along the arc (angularly) to keep base points ON the arc
+			if ( r > 0 && ( edge === 'tl' || edge === 'tr' || edge === 'br' || edge === 'bl' ) ) {
+				// Get corner center and arc range
+				const cornerData = {
+					tl: { cx: x + r, cy: y + r, startAngle: Math.PI, endAngle: 1.5 * Math.PI },
+					tr: { cx: x + width - r, cy: y + r, startAngle: -Math.PI / 2, endAngle: 0 },
+					br: { cx: x + width - r, cy: y + height - r, startAngle: 0, endAngle: Math.PI / 2 },
+					bl: { cx: x + r, cy: y + height - r, startAngle: Math.PI / 2, endAngle: Math.PI }
+				};
+				const corner = cornerData[ edge ];
+
+				// Calculate angular offset for half the base width
+				// Arc length = r * angle, so angle = arcLength / r
+				const angularOffset = halfBase / r;
+
+				// Current angle of the base point on the arc
+				let baseAngle = Math.atan2( perimeter.baseY - corner.cy, perimeter.baseX - corner.cx );
+
+				// Normalize baseAngle to be within [startAngle, startAngle + 2π)
+				const TWO_PI = 2 * Math.PI;
+				while ( baseAngle < corner.startAngle - 0.001 ) {
+					baseAngle += TWO_PI;
+				}
+				while ( baseAngle > corner.startAngle + TWO_PI ) {
+					baseAngle -= TWO_PI;
+				}
+
+				// Calculate base point angles
+				const base1Angle = baseAngle - angularOffset;
+				const base2Angle = baseAngle + angularOffset;
+
+				// Check if both base points are within the arc range
+				const tolerance = 0.05;
+				const base1InArc = base1Angle >= corner.startAngle - tolerance && base1Angle <= corner.endAngle + tolerance;
+				const base2InArc = base2Angle >= corner.startAngle - tolerance && base2Angle <= corner.endAngle + tolerance;
+
+				if ( base1InArc && base2InArc ) {
+					// Both points on arc - use angular offset
+					base1 = {
+						x: corner.cx + r * Math.cos( base1Angle ),
+						y: corner.cy + r * Math.sin( base1Angle )
+					};
+					base2 = {
+						x: corner.cx + r * Math.cos( base2Angle ),
+						y: corner.cy + r * Math.sin( base2Angle )
+					};
+				} else {
+					// One or both points extend beyond the arc - snap to adjacent straight edge
+					// Determine which straight edge to use based on which side extends past
+					if ( !base1InArc && base1Angle < corner.startAngle ) {
+						// base1 extends past start of arc
+						edge = this._getEdgeBeforeCorner( edge );
+					} else if ( !base2InArc && base2Angle > corner.endAngle ) {
+						// base2 extends past end of arc
+						edge = this._getEdgeAfterCorner( edge );
+					} else {
+						// Fallback: use edge closest to tip
+						const distToStart = Math.abs( baseAngle - corner.startAngle );
+						const distToEnd = Math.abs( baseAngle - corner.endAngle );
+						edge = distToStart < distToEnd ?
+							this._getEdgeBeforeCorner( perimeter.edge ) :
+							this._getEdgeAfterCorner( perimeter.edge );
+					}
+
+					// Recalculate base using straight edge tangent
+					const straightEdgeTangents = {
+						top: { tx: 1, ty: 0, baseY: y },
+						bottom: { tx: -1, ty: 0, baseY: y + height },
+						left: { tx: 0, ty: -1, baseX: x },
+						right: { tx: 0, ty: 1, baseX: x + width }
+					};
+					const edgeData = straightEdgeTangents[ edge ];
+					const tx = edgeData.tx;
+					const ty = edgeData.ty;
+
+					// Project base point onto the straight edge
+					let baseX = perimeter.baseX;
+					let baseY = perimeter.baseY;
+					if ( edgeData.baseY !== undefined ) {
+						baseY = edgeData.baseY;
+						baseX = Math.max( x + r, Math.min( x + width - r, baseX ) );
+					} else {
+						baseX = edgeData.baseX;
+						baseY = Math.max( y + r, Math.min( y + height - r, baseY ) );
+					}
+
+					base1 = { x: baseX - tx * halfBase, y: baseY - ty * halfBase };
+					base2 = { x: baseX + tx * halfBase, y: baseY + ty * halfBase };
+				}
+			} else {
+				// For straight edges, use tangent-based offset (original approach)
+				const tx = perimeter.tangentX || 0;
+				const ty = perimeter.tangentY || 0;
+
+				base1 = {
+					x: perimeter.baseX - tx * halfBase,
+					y: perimeter.baseY - ty * halfBase
+				};
+				base2 = {
+					x: perimeter.baseX + tx * halfBase,
+					y: perimeter.baseY + ty * halfBase
+				};
+			}
+
+			// Determine winding order based on which side of base the tip is on
+			// Cross product: if positive, tip is to the left of base1→base2, swap
+			const crossZ = ( base2.x - base1.x ) * ( tipY - base1.y ) -
+				( base2.y - base1.y ) * ( tipX - base1.x );
+
+			if ( crossZ < 0 ) {
+				return {
+					base1: base2,
+					base2: base1,
+					tip: { x: tipX, y: tipY },
+					edge
+				};
+			}
+
+			return {
+				base1,
+				base2,
+				tip: { x: tipX, y: tipY },
+				edge
+			};
+		}
+
+		/**
+		 * Get the straight edge that comes before a corner in the path drawing order.
+		 *
+		 * @private
+		 * @param {string} corner - Corner identifier (tl, tr, br, bl)
+		 * @return {string} The edge before this corner
+		 */
+		_getEdgeBeforeCorner( corner ) {
+			// Path order: top → tr → right → br → bottom → bl → left → tl → top
+			const mapping = {
+				tr: 'top',
+				br: 'right',
+				bl: 'bottom',
+				tl: 'left'
+			};
+			return mapping[ corner ] || 'top';
+		}
+
+		/**
+		 * Get the straight edge that comes after a corner in the path drawing order.
+		 *
+		 * @private
+		 * @param {string} corner - Corner identifier (tl, tr, br, bl)
+		 * @return {string} The edge after this corner
+		 */
+		_getEdgeAfterCorner( corner ) {
+			// Path order: top → tr → right → br → bottom → bl → left → tl → top
+			const mapping = {
+				tr: 'right',
+				br: 'bottom',
+				bl: 'left',
+				tl: 'top'
+			};
+			return mapping[ corner ] || 'bottom';
+		}
+
+		/**
 		 * Get tail position coordinates based on direction and position.
 		 * Uses tangent-aware calculations to ensure tail blends smoothly with corners.
 		 *
@@ -289,23 +632,30 @@
 
 		/**
 		 * Draw the callout path (rounded rectangle with tail)
+		 * Supports two modes:
+		 * 1. Legacy mode: uses tailDirection, tailPosition, tailSize
+		 * 2. Draggable mode: uses tailTipX, tailTipY for direct positioning
 		 *
 		 * @param {number} x - X position
 		 * @param {number} y - Y position
 		 * @param {number} width - Width
 		 * @param {number} height - Height
 		 * @param {number} cornerRadius - Corner radius
-		 * @param {string} tailDirection - Direction of the tail
-		 * @param {number} tailPosition - Position along edge (0-1)
-		 * @param {number} tailSize - Size of the tail
+		 * @param {string} tailDirection - Direction of the tail (legacy mode)
+		 * @param {number} tailPosition - Position along edge (0-1) (legacy mode)
+		 * @param {number} tailSize - Size of the tail (legacy mode)
 		 * @param {CanvasRenderingContext2D} [context] - Optional context
+		 * @param {string} [tailStyle='triangle'] - Style of the tail (triangle, curved, line)
+		 * @param {number} [tailTipX] - Tail tip X for draggable mode
+		 * @param {number} [tailTipY] - Tail tip Y for draggable mode
 		 */
-		drawCalloutPath( x, y, width, height, cornerRadius, tailDirection, tailPosition, tailSize, context ) {
+		drawCalloutPath( x, y, width, height, cornerRadius, tailDirection, tailPosition, tailSize, context, tailStyle, tailTipX, tailTipY ) {
 			const ctx = context || this.ctx;
+			const style = tailStyle || 'triangle';
 
 			// Validate inputs - abort silently if invalid to prevent canvas corruption
 			if ( !isFinite( x ) || !isFinite( y ) || !isFinite( width ) || !isFinite( height ) ||
-				!isFinite( cornerRadius ) || !isFinite( tailSize ) ) {
+				!isFinite( cornerRadius ) ) {
 				ctx.beginPath(); // Start empty path to avoid errors
 				return;
 			}
@@ -322,12 +672,35 @@
 			const maxRadius = Math.min( width, height ) / 2;
 			const r = Math.max( 0, Math.min( cornerRadius, maxRadius ) );
 
-			// Clamp tail size to reasonable range
-			const maxTailSize = Math.min( width * 0.8, height * 0.8 );
-			const actualTailSize = Math.max( 0, Math.min( tailSize, maxTailSize ) );
+			// Determine if using draggable mode (has tailTipX/tailTipY)
+			const useDraggableMode = typeof tailTipX === 'number' && typeof tailTipY === 'number' &&
+				isFinite( tailTipX ) && isFinite( tailTipY );
 
-			// Get tail coordinates - already clamped to safe zones
-			const tail = this.getTailCoordinates( x, y, width, height, tailDirection, tailPosition, actualTailSize, r );
+			let tail;
+			let edge;
+
+			if ( useDraggableMode ) {
+				// Draggable mode - calculate tail from tip position
+				tail = this.getTailFromTipPosition( x, y, width, height, tailTipX, tailTipY, r );
+				edge = tail.edge;
+			} else {
+				// Legacy mode - use direction/position/size
+				// Clamp tail size to reasonable range
+				const maxTailSize = Math.min( width * 0.8, height * 0.8 );
+				const actualTailSize = Math.max( 0, Math.min( tailSize || 20, maxTailSize ) );
+				tail = this.getTailCoordinates( x, y, width, height, tailDirection || 'bottom', tailPosition || 0.5, actualTailSize, r );
+
+				// Map direction to edge
+				if ( tailDirection === 'top' || tailDirection === 'top-left' || tailDirection === 'top-right' ) {
+					edge = 'top';
+				} else if ( tailDirection === 'left' ) {
+					edge = 'left';
+				} else if ( tailDirection === 'right' ) {
+					edge = 'right';
+				} else {
+					edge = 'bottom';
+				}
+			}
 
 			// Validate tail coordinates
 			if ( !tail || !tail.base1 || !tail.base2 || !tail.tip ||
@@ -344,6 +717,48 @@
 				return;
 			}
 
+			// Helper to draw tail segment based on style
+			const drawTailSegment = () => {
+				switch ( style ) {
+					case 'curved':
+						// Curved tail using quadratic Bezier - smooth speech bubble look
+						// Calculate control point for curve (perpendicular to base midpoint)
+						{
+							const baseMidX = ( tail.base1.x + tail.base2.x ) / 2;
+							const baseMidY = ( tail.base1.y + tail.base2.y ) / 2;
+							// Control point is between base midpoint and tip, offset perpendicular
+							const ctrlX = baseMidX + ( tail.tip.x - baseMidX ) * 0.3;
+							const ctrlY = baseMidY + ( tail.tip.y - baseMidY ) * 0.3;
+							ctx.quadraticCurveTo( ctrlX, ctrlY, tail.tip.x, tail.tip.y );
+							// Return curve from tip
+							const ctrlX2 = baseMidX + ( tail.tip.x - baseMidX ) * 0.3;
+							const ctrlY2 = baseMidY + ( tail.tip.y - baseMidY ) * 0.3;
+							ctx.quadraticCurveTo( ctrlX2, ctrlY2, tail.base1.x, tail.base1.y );
+						}
+						break;
+
+					case 'line':
+						// Simple line pointer - just a single line to tip and back
+						// First go to the midpoint of the base
+						{
+							const midX = ( tail.base1.x + tail.base2.x ) / 2;
+							const midY = ( tail.base1.y + tail.base2.y ) / 2;
+							ctx.lineTo( midX, midY );
+							ctx.lineTo( tail.tip.x, tail.tip.y );
+							ctx.lineTo( midX, midY );
+						}
+						break;
+
+					case 'triangle':
+					default:
+						// Classic triangle tail (default)
+						ctx.lineTo( tail.base2.x, tail.base2.y );
+						ctx.lineTo( tail.tip.x, tail.tip.y );
+						ctx.lineTo( tail.base1.x, tail.base1.y );
+						break;
+				}
+			};
+
 			ctx.beginPath();
 
 			// Use simpler path if corner radius is 0
@@ -352,87 +767,181 @@
 				ctx.moveTo( x, y );
 
 				// Top edge with optional tail
-				if ( tailDirection === 'top' || tailDirection === 'top-left' || tailDirection === 'top-right' ) {
+				if ( edge === 'top' ) {
 					ctx.lineTo( tail.base2.x, tail.base2.y );
-					ctx.lineTo( tail.tip.x, tail.tip.y );
-					ctx.lineTo( tail.base1.x, tail.base1.y );
+					drawTailSegment();
 				}
 				ctx.lineTo( x + width, y );
 
 				// Right edge with optional tail
-				if ( tailDirection === 'right' ) {
+				if ( edge === 'right' ) {
 					ctx.lineTo( tail.base2.x, tail.base2.y );
-					ctx.lineTo( tail.tip.x, tail.tip.y );
-					ctx.lineTo( tail.base1.x, tail.base1.y );
+					drawTailSegment();
 				}
 				ctx.lineTo( x + width, y + height );
 
 				// Bottom edge with optional tail
-				if ( tailDirection === 'bottom' || tailDirection === 'bottom-left' || tailDirection === 'bottom-right' ) {
+				if ( edge === 'bottom' ) {
 					ctx.lineTo( tail.base2.x, tail.base2.y );
-					ctx.lineTo( tail.tip.x, tail.tip.y );
-					ctx.lineTo( tail.base1.x, tail.base1.y );
+					drawTailSegment();
 				}
 				ctx.lineTo( x, y + height );
 
 				// Left edge with optional tail
-				if ( tailDirection === 'left' ) {
+				if ( edge === 'left' ) {
 					ctx.lineTo( tail.base2.x, tail.base2.y );
-					ctx.lineTo( tail.tip.x, tail.tip.y );
-					ctx.lineTo( tail.base1.x, tail.base1.y );
+					drawTailSegment();
 				}
 
 				ctx.closePath();
 				return;
 			}
 
+			// Helper: draw tail at current position, ending at base1
+			const insertTail = () => {
+				ctx.lineTo( tail.base2.x, tail.base2.y );
+				drawTailSegment();
+			};
+
+			// Helper: draw corner arc, splitting it if the tail is on this corner
+			const drawCorner = ( cx, cy, startAngle, endAngle, cornerName ) => {
+				if ( edge === cornerName ) {
+					// Tail is on this corner - need to split the arc
+					// Calculate angles for base points relative to corner center
+					const raw1 = Math.atan2( tail.base1.y - cy, tail.base1.x - cx );
+					const raw2 = Math.atan2( tail.base2.y - cy, tail.base2.x - cx );
+
+					// Normalize angles to arc range [startAngle, startAngle + 2π)
+					// This ensures both angles are on the same "branch" for comparison
+					const TWO_PI = 2 * Math.PI;
+					const normalizeToArc = ( angle ) => {
+						let a = angle;
+						while ( a < startAngle - 0.001 ) {
+							a += TWO_PI;
+						}
+						while ( a >= startAngle + TWO_PI ) {
+							a -= TWO_PI;
+						}
+						return a;
+					};
+
+					const base1Angle = normalizeToArc( raw1 );
+					const base2Angle = normalizeToArc( raw2 );
+
+					// Check if base points are within the arc range [startAngle, endAngle]
+					const tolerance = 0.01;
+					const arcLength = endAngle - startAngle;
+					const base1Offset = base1Angle - startAngle;
+					const base2Offset = base2Angle - startAngle;
+					const base1InArc = base1Offset >= -tolerance && base1Offset <= arcLength + tolerance;
+					const base2InArc = base2Offset >= -tolerance && base2Offset <= arcLength + tolerance;
+
+					if ( !base1InArc || !base2InArc ) {
+						// One or both base points are outside the arc - just draw the full arc
+						ctx.arc( cx, cy, r, startAngle, endAngle, false );
+						return;
+					}
+
+					// Both base points are on the arc
+					// Determine drawing order by offset from startAngle (smaller offset = first on path)
+					let firstAngle, secondAngle, firstBase, secondBase;
+
+					if ( base1Offset < base2Offset ) {
+						firstAngle = base1Angle;
+						secondAngle = base2Angle;
+						firstBase = tail.base1;
+						secondBase = tail.base2;
+					} else {
+						firstAngle = base2Angle;
+						secondAngle = base1Angle;
+						firstBase = tail.base2;
+						secondBase = tail.base1;
+					}
+
+					// Draw: arc from start to first base point
+					if ( firstAngle > startAngle + tolerance ) {
+						ctx.arc( cx, cy, r, startAngle, firstAngle, false );
+					}
+
+					// Draw tail: first base → tip → second base
+					ctx.lineTo( firstBase.x, firstBase.y );
+					ctx.lineTo( tail.tip.x, tail.tip.y );
+					ctx.lineTo( secondBase.x, secondBase.y );
+
+					// Continue arc from second base to end
+					if ( endAngle > secondAngle + tolerance ) {
+						ctx.arc( cx, cy, r, secondAngle, endAngle, false );
+					}
+				} else {
+					// Normal corner - full arc
+					ctx.arc( cx, cy, r, startAngle, endAngle, false );
+				}
+			};
+
 			// Rounded rectangle with tail
 			ctx.moveTo( x + r, y );
 
 			// Top edge
-			if ( tailDirection === 'top' || tailDirection === 'top-left' || tailDirection === 'top-right' ) {
-				ctx.lineTo( tail.base2.x, tail.base2.y );
-				ctx.lineTo( tail.tip.x, tail.tip.y );
-				ctx.lineTo( tail.base1.x, tail.base1.y );
+			if ( edge === 'top' ) {
+				insertTail();
 			}
 			ctx.lineTo( x + width - r, y );
 
-			// Top-right corner
-			ctx.arcTo( x + width, y, x + width, y + r, r );
+			// Top-right corner (arc from -90° to 0°)
+			drawCorner( x + width - r, y + r, -Math.PI / 2, 0, 'tr' );
 
 			// Right edge
-			if ( tailDirection === 'right' ) {
-				ctx.lineTo( tail.base2.x, tail.base2.y );
-				ctx.lineTo( tail.tip.x, tail.tip.y );
-				ctx.lineTo( tail.base1.x, tail.base1.y );
+			if ( edge === 'right' ) {
+				insertTail();
 			}
 			ctx.lineTo( x + width, y + height - r );
 
-			// Bottom-right corner
-			ctx.arcTo( x + width, y + height, x + width - r, y + height, r );
+			// Bottom-right corner (arc from 0° to 90°)
+			drawCorner( x + width - r, y + height - r, 0, Math.PI / 2, 'br' );
 
 			// Bottom edge
-			if ( tailDirection === 'bottom' || tailDirection === 'bottom-left' || tailDirection === 'bottom-right' ) {
-				ctx.lineTo( tail.base2.x, tail.base2.y );
-				ctx.lineTo( tail.tip.x, tail.tip.y );
-				ctx.lineTo( tail.base1.x, tail.base1.y );
+			if ( edge === 'bottom' ) {
+				insertTail();
 			}
 			ctx.lineTo( x + r, y + height );
 
-			// Bottom-left corner
-			ctx.arcTo( x, y + height, x, y + height - r, r );
+			// Bottom-left corner (arc from 90° to 180°)
+			drawCorner( x + r, y + height - r, Math.PI / 2, Math.PI, 'bl' );
 
 			// Left edge
-			if ( tailDirection === 'left' ) {
-				ctx.lineTo( tail.base2.x, tail.base2.y );
-				ctx.lineTo( tail.tip.x, tail.tip.y );
-				ctx.lineTo( tail.base1.x, tail.base1.y );
+			if ( edge === 'left' ) {
+				insertTail();
 			}
 			ctx.lineTo( x, y + r );
 
-			// Top-left corner
-			ctx.arcTo( x, y, x + r, y, r );
+			// Top-left corner (arc from 180° to 270°)
+			drawCorner( x + r, y + r, Math.PI, 1.5 * Math.PI, 'tl' );
 
+			ctx.closePath();
+		}
+
+		/**
+		 * Draw a rounded rectangle manually (for environments without roundRect)
+		 *
+		 * @private
+		 * @param {CanvasRenderingContext2D} ctx - Canvas context
+		 * @param {number} x - X position
+		 * @param {number} y - Y position
+		 * @param {number} width - Width
+		 * @param {number} height - Height
+		 * @param {number} r - Corner radius
+		 */
+		_drawRoundedRect( ctx, x, y, width, height, r ) {
+			ctx.beginPath();
+			ctx.moveTo( x + r, y );
+			ctx.lineTo( x + width - r, y );
+			ctx.arcTo( x + width, y, x + width, y + r, r );
+			ctx.lineTo( x + width, y + height - r );
+			ctx.arcTo( x + width, y + height, x + width - r, y + height, r );
+			ctx.lineTo( x + r, y + height );
+			ctx.arcTo( x, y + height, x, y + height - r, r );
+			ctx.lineTo( x, y + r );
+			ctx.arcTo( x, y, x + r, y, r );
 			ctx.closePath();
 		}
 
@@ -506,11 +1015,19 @@
 			const tailDirection = layer.tailDirection || 'bottom';
 			const tailPosition = typeof layer.tailPosition === 'number' ? layer.tailPosition : 0.5;
 			let tailSize = layer.tailSize || 20;
+			const tailStyle = layer.tailStyle || 'triangle';
+
+			// Draggable tail tip coordinates (takes precedence over direction/position/size)
+			let tailTipX = typeof layer.tailTipX === 'number' ? layer.tailTipX : null;
+			let tailTipY = typeof layer.tailTipY === 'number' ? layer.tailTipY : null;
 
 			if ( !opts.scaled ) {
 				strokeW = strokeW * scale.avg;
 				cornerRadius = cornerRadius * scale.avg;
 				tailSize = tailSize * scale.avg;
+				// NOTE: tailTipX/tailTipY are NOT scaled here because they come from
+				// the resize handler in world coordinates, not layer local coordinates.
+				// They're already in the correct screen space.
 			}
 
 			// Ensure minimum dimensions for stable rendering
@@ -556,8 +1073,17 @@
 			if ( hasRotation ) {
 				this.ctx.translate( x + width / 2, y + height / 2 );
 				this.ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+				// tailTipX/tailTipY are already in local coords (relative to center)
+				// No transform needed - they work directly with the rotated coordinate system
 				x = -width / 2;
 				y = -height / 2;
+			} else if ( tailTipX !== null && tailTipY !== null ) {
+				// Not rotated, but tailTipX/tailTipY are relative to center
+				// Convert to absolute coordinates for the path drawing
+				const centerX = originalX + width / 2;
+				const centerY = originalY + height / 2;
+				tailTipX = centerX + tailTipX;
+				tailTipY = centerY + tailTipY;
 			}
 
 			const spread = this.getShadowSpread( layer, shadowScale );
@@ -565,7 +1091,7 @@
 			// Helper to draw the callout path
 			const drawPath = ( ctx ) => {
 				const targetCtx = ctx || this.ctx;
-				this.drawCalloutPath( x, y, width, height, cornerRadius, tailDirection, tailPosition, tailSize, targetCtx );
+				this.drawCalloutPath( x, y, width, height, cornerRadius, tailDirection, tailPosition, tailSize, targetCtx, tailStyle, tailTipX, tailTipY );
 			};
 
 			// Handle blur fill
@@ -598,12 +1124,12 @@
 					blurBounds = { x: originalX, y: boundsY, width: width, height: boundsHeight };
 				}
 
+				this.ctx.globalAlpha = baseOpacity * fillOpacity;
 				this.effectsRenderer.drawBlurFill(
 					layer,
-					blurBounds,
 					drawPath,
-					this.ctx,
-					fillOpacity * baseOpacity
+					blurBounds,
+					opts
 				);
 			}
 
