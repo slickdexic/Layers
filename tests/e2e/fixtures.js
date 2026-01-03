@@ -63,10 +63,12 @@ class LayersEditorPage {
 			saveButton: '.save-button',
 			cancelButton: '.cancel-button',
 			
-			// Tools - all 11 layer types
+			// Tools - all 12 layer types (callout added in v1.4.2, blur removed)
 			pointerTool: '[data-tool="pointer"], .tool-pointer',
 			selectTool: '[data-tool="select"], .tool-select',
 			textTool: '[data-tool="text"], .tool-text',
+			textboxTool: '[data-tool="textbox"], .tool-textbox',
+			calloutTool: '[data-tool="callout"], .tool-callout',
 			rectangleTool: '[data-tool="rectangle"], .tool-rectangle',
 			circleTool: '[data-tool="circle"], .tool-circle',
 			ellipseTool: '[data-tool="ellipse"], .tool-ellipse',
@@ -75,7 +77,7 @@ class LayersEditorPage {
 			polygonTool: '[data-tool="polygon"], .tool-polygon',
 			starTool: '[data-tool="star"], .tool-star',
 			pathTool: '[data-tool="path"], .tool-path, [data-tool="pen"], .tool-pen',
-			blurTool: '[data-tool="blur"], .tool-blur',
+			penTool: '[data-tool="pen"], .tool-pen',
 			
 			// Layer panel items - exclude background layer from count
 			layerItem: '.layer-item:not(.background-layer-item)',
@@ -84,6 +86,32 @@ class LayersEditorPage {
 			layerLock: '.layer-lock-toggle',
 			deleteLayerBtn: '.delete-layer-btn, [data-action="delete-layer"]'
 		};
+		
+		// Tool keyboard shortcuts (used by selectTool for dropdown tools)
+		// Updated for v1.4.2+ toolbar with dropdown grouping
+		this.toolShortcuts = {
+			pointer: 'v',
+			select: 'v',
+			text: 't',
+			textbox: 'x',
+			callout: 'b',
+			rectangle: 'r',
+			circle: 'c',
+			ellipse: 'e',
+			arrow: 'a',
+			line: 'l',
+			polygon: 'y',
+			star: 's',
+			path: 'p',
+			pen: 'p'
+		};
+		
+		// Tools that are inside dropdowns (v1.4.2+)
+		this.dropdownTools = new Set( [
+			'text', 'textbox', 'callout',
+			'rectangle', 'circle', 'ellipse', 'polygon', 'star',
+			'arrow', 'line'
+		] );
 	}
 
 	/**
@@ -130,8 +158,26 @@ class LayersEditorPage {
 
 	/**
 	 * Select a tool
+	 * 
+	 * For tools inside dropdowns (v1.4.2+), uses keyboard shortcuts
+	 * which is more reliable than trying to click hidden dropdown items.
+	 * For standalone tools (pointer, pen), clicks the button directly.
 	 */
 	async selectTool( toolName ) {
+		// First, click on canvas to ensure it has focus for keyboard shortcuts
+		await this.clickCanvas( 10, 10 );
+		await this.page.waitForTimeout( 100 );
+		
+		// Use keyboard shortcut for dropdown tools (more reliable)
+		const shortcut = this.toolShortcuts[ toolName ];
+		if ( shortcut ) {
+			await this.page.keyboard.press( shortcut );
+			// Wait for tool to be selected
+			await this.page.waitForTimeout( 100 );
+			return;
+		}
+		
+		// Fallback to clicking for standalone tools
 		const selector = this.selectors[ `${ toolName }Tool` ];
 		if ( !selector ) {
 			throw new Error( `Unknown tool: ${ toolName }` );

@@ -115,14 +115,16 @@ describeKeyboard( 'Keyboard Shortcuts', () => {
 			expect( pathActive ).not.toBeNull();
 		} );
 
-		test( 'B key activates blur tool', async ( { page } ) => {
+		test( 'B key activates callout tool', async ( { page } ) => {
 			await page.keyboard.press( 'b' );
 			await page.waitForTimeout( 200 );
 
-			const blurActive = await page.$(
-				'[data-tool="blur"].active, .tool-blur[aria-pressed="true"]'
+			// Callout is in text dropdown - check trigger has data-tool="callout"
+			const calloutActive = await page.$(
+				'[data-tool="callout"].active, .tool-callout[aria-pressed="true"], ' +
+				'.tool-dropdown-trigger[data-tool="callout"].active'
 			);
-			expect( blurActive ).not.toBeNull();
+			expect( calloutActive ).not.toBeNull();
 		} );
 	} );
 
