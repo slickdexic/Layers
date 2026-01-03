@@ -108,6 +108,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'tailDirection' => 'string',
 		'tailPosition' => 'numeric',
 		'tailSize' => 'numeric',
+		'tailStyle' => 'string',
+		'tailTipX' => 'numeric',
+		'tailTipY' => 'numeric',
 		// Blur fill state preservation
 		'_previousFill' => 'string',
 		// Group layer properties
@@ -137,7 +140,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'verticalAlign' => [ 'top', 'middle', 'bottom' ],
 		'fontWeight' => [ 'normal', 'bold' ],
 		'fontStyle' => [ 'normal', 'italic' ],
-		'tailDirection' => [ 'bottom', 'top', 'left', 'right', 'bottom-left', 'bottom-right', 'top-left', 'top-right' ]
+		'tailDirection' => [ 'bottom', 'top', 'left', 'right', 'bottom-left', 'bottom-right', 'top-left', 'top-right' ],
+		'tailStyle' => [ 'triangle', 'curved', 'line' ]
 	];
 
 	/** @var array Numeric constraints */

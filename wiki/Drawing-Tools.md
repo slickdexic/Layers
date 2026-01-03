@@ -1,6 +1,6 @@
 # Drawing Tools
 
-Layers provides 14 professional drawing tools for comprehensive image annotation.
+Layers provides 12 professional drawing tools for comprehensive image annotation.
 
 ---
 
@@ -11,6 +11,7 @@ Layers provides 14 professional drawing tools for comprehensive image annotation
 | **Pointer** | `V` | ➡️ | Selection | Select, move, resize, and rotate layers |
 | **Text** | `T` | T | Annotation | Single-line text labels |
 | **Text Box** | `X` | 📝 | Annotation | Multi-line text with container |
+| **Callout** | `B` | 💬 | Annotation | Speech bubbles with draggable tail |
 | **Pen** | `P` | ✏️ | Drawing | Freehand path drawing |
 | **Rectangle** | `R` | ▢ | Shape | Rectangles and squares |
 | **Circle** | `C` | ○ | Shape | Perfect circles |
@@ -108,6 +109,35 @@ Multi-line text with a styled container — perfect for callouts and information
 - Stroke color and width
 - Fill color with transparency
 - All standard shape effects
+
+### Callout Tool (B)
+
+Create speech bubbles and callouts with a draggable tail pointer.
+
+**Properties:**
+| Property | Options | Default |
+|----------|---------|---------|
+| Corner Radius | 0-50px | 10px |
+| Tail Style | Triangle, Curved, Line | Triangle |
+| Fill | Any color or `blur` | #ffffff |
+| Stroke | Color and width | #000000, 2px |
+
+**Tail Styles:**
+```
+Triangle:  ▼ Classic speech bubble pointer (default)
+Curved:    ⌒ Smooth Bézier curves for organic look
+Line:      │ Simple single-line pointer
+```
+
+**Draggable Tail (v1.4.3+):**
+- Select the callout to see the purple tail handle
+- Drag the handle to reposition the tail tip anywhere
+- Tail can attach to any edge (top, bottom, left, right) or rounded corner
+- Tail follows the callout when rotated
+
+**Text Properties:**
+- Same as Text Box (font, alignment, padding, etc.)
+- Multi-line text with word wrap
 
 ---
 
@@ -313,9 +343,10 @@ Any filled shape can use **blur fill** instead of a solid color — creating a "
 |------|------|
 | Quick label | Text (T) |
 | Paragraph/callout | Text Box (X) |
+| Speech bubble | Callout (B) |
 | Point to something | Arrow (A) |
 | Highlight area | Rectangle (R) with semi-transparent fill |
-| Blur background | Blur (B) |
+| Blur background | Any shape with `fill: blur` |
 | Freehand annotation | Pen (P) |
 
 ---

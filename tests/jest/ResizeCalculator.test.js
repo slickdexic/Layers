@@ -680,4 +680,152 @@ describe( 'ResizeCalculator', () => {
 			expect( result.radius ).toBeDefined();
 		} );
 	} );
+
+	describe( 'calculateCalloutTailResize', () => {
+		it( 'should move existing tail tip position', () => {
+			const callout = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				tailTipX: 100,
+				tailTipY: 130
+			};
+			const result = ResizeCalculator.calculateCalloutTailResize( callout, 10, 20 );
+			expect( result.tailTipX ).toBe( 110 );
+			expect( result.tailTipY ).toBe( 150 );
+		} );
+
+		it( 'should calculate default tip from bottom direction when no tailTip set', () => {
+			const callout = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				tailDirection: 'bottom',
+				tailPosition: 0.5,
+				tailSize: 20
+			};
+			// Default bottom tip in world space: x + width * 0.5 = 100, y + height + tailSize = 130
+			// Center is at (100, 80). So local coords: (0, 50)
+			// After delta of (15, 25), local coords become (15, 75)
+			const result = ResizeCalculator.calculateCalloutTailResize( callout, 15, 25 );
+			expect( result.tailTipX ).toBe( 0 + 15 );  // local X
+			expect( result.tailTipY ).toBe( 50 + 25 ); // local Y
+		} );
+
+		it( 'should calculate default tip from top direction', () => {
+			const callout = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				tailDirection: 'top',
+				tailPosition: 0.5,
+				tailSize: 20
+			};
+			// Default top tip in world space: x + width * 0.5 = 100, y - tailSize = 30
+			// Center is at (100, 80). So local coords: (0, -50)
+			const result = ResizeCalculator.calculateCalloutTailResize( callout, 0, 0 );
+			expect( result.tailTipX ).toBe( 0 );
+			expect( result.tailTipY ).toBe( -50 );
+		} );
+
+		it( 'should calculate default tip from left direction', () => {
+			const callout = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				tailDirection: 'left',
+				tailPosition: 0.5,
+				tailSize: 20
+			};
+			// Default left tip in world space: x - tailSize = 30, y + height * 0.5 = 80
+			// Center is at (100, 80). So local coords: (-70, 0)
+			const result = ResizeCalculator.calculateCalloutTailResize( callout, 0, 0 );
+			expect( result.tailTipX ).toBe( -70 );
+			expect( result.tailTipY ).toBe( 0 );
+		} );
+
+		it( 'should calculate default tip from right direction', () => {
+			const callout = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				tailDirection: 'right',
+				tailPosition: 0.5,
+				tailSize: 20
+			};
+			// Default right tip in world space: x + width + tailSize = 170, y + height * 0.5 = 80
+			// Center is at (100, 80). So local coords: (70, 0)
+			const result = ResizeCalculator.calculateCalloutTailResize( callout, 0, 0 );
+			expect( result.tailTipX ).toBe( 70 );
+			expect( result.tailTipY ).toBe( 0 );
+		} );
+
+		it( 'should dispatch to calculateCalloutTailResize for tailTip handle on callout', () => {
+			const callout = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				tailTipX: 0,   // Local coords: center of shape
+				tailTipY: 50  // 50px below center (at bottom edge + some)
+			};
+			const result = ResizeCalculator.calculateResize( callout, 'tailTip', 10, 20 );
+			expect( result.tailTipX ).toBe( 10 );
+			expect( result.tailTipY ).toBe( 70 );
+		} );
+
+		it( 'should apply rotation when calculating default tip from legacy properties', () => {
+			// Rotated callout - legacy tip is converted to local coords (no world-space rotation needed)
+			const callout = {
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 100,
+				height: 50,
+				rotation: 90, // 90 degrees
+				tailDirection: 'bottom',
+				tailPosition: 0.5,
+				tailSize: 20
+			};
+			// Without rotation: tipX = 100 + 100*0.5 = 150, tipY = 100 + 50 + 20 = 170
+			// Center is at (150, 125)
+			// Local coords: (0, 45) - these are stored in local space, not rotated to world
+			const result = ResizeCalculator.calculateCalloutTailResize( callout, 0, 0 );
+			expect( result.tailTipX ).toBeCloseTo( 0, 0 );
+			expect( result.tailTipY ).toBeCloseTo( 45, 0 );
+		} );
+
+		it( 'should convert world delta to local delta when rotated and tailTipX/tailTipY set', () => {
+			// When explicit tailTip coordinates are set in local space,
+			// world deltas must be un-rotated before applying
+			const callout = {
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 100,
+				height: 50,
+				rotation: 90,
+				tailTipX: 0,   // Local coords
+				tailTipY: 45
+			};
+			// World delta (10, 20) with 90° rotation un-rotates to local delta (20, -10)
+			// cos(-90°) = 0, sin(-90°) = -1
+			// localDX = 10 * 0 - 20 * (-1) = 20
+			// localDY = 10 * (-1) + 20 * 0 = -10
+			const result = ResizeCalculator.calculateCalloutTailResize( callout, 10, 20 );
+			expect( result.tailTipX ).toBeCloseTo( 0 + 20, 0 );
+			expect( result.tailTipY ).toBeCloseTo( 45 + ( -10 ), 0 );
+		} );
+	} );
 } );

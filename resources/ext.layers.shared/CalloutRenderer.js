@@ -803,6 +803,43 @@
 				drawTailSegment();
 			};
 
+			// Helper: draw the tail shape based on style, given first and second base points
+			const drawTailShape = ( firstBase, secondBase ) => {
+				switch ( style ) {
+					case 'curved':
+						// Curved tail using quadratic Bezier
+						{
+							const baseMidX = ( firstBase.x + secondBase.x ) / 2;
+							const baseMidY = ( firstBase.y + secondBase.y ) / 2;
+							const ctrlX = baseMidX + ( tail.tip.x - baseMidX ) * 0.3;
+							const ctrlY = baseMidY + ( tail.tip.y - baseMidY ) * 0.3;
+							ctx.lineTo( firstBase.x, firstBase.y );
+							ctx.quadraticCurveTo( ctrlX, ctrlY, tail.tip.x, tail.tip.y );
+							ctx.quadraticCurveTo( ctrlX, ctrlY, secondBase.x, secondBase.y );
+						}
+						break;
+
+					case 'line':
+						// Line pointer - single line to tip from midpoint
+						{
+							const midX = ( firstBase.x + secondBase.x ) / 2;
+							const midY = ( firstBase.y + secondBase.y ) / 2;
+							ctx.lineTo( midX, midY );
+							ctx.lineTo( tail.tip.x, tail.tip.y );
+							ctx.lineTo( midX, midY );
+						}
+						break;
+
+					case 'triangle':
+					default:
+						// Classic triangle tail
+						ctx.lineTo( firstBase.x, firstBase.y );
+						ctx.lineTo( tail.tip.x, tail.tip.y );
+						ctx.lineTo( secondBase.x, secondBase.y );
+						break;
+				}
+			};
+
 			// Helper: draw corner arc, splitting it if the tail is on this corner
 			const drawCorner = ( cx, cy, startAngle, endAngle, cornerName ) => {
 				if ( edge === cornerName ) {
@@ -863,10 +900,8 @@
 						ctx.arc( cx, cy, r, startAngle, firstAngle, false );
 					}
 
-					// Draw tail: first base → tip → second base
-					ctx.lineTo( firstBase.x, firstBase.y );
-					ctx.lineTo( tail.tip.x, tail.tip.y );
-					ctx.lineTo( secondBase.x, secondBase.y );
+					// Draw tail using the style-aware helper
+					drawTailShape( firstBase, secondBase );
 
 					// Continue arc from second base to end
 					if ( endAngle > secondAngle + tolerance ) {

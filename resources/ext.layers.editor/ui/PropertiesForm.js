@@ -810,14 +810,12 @@
 				addInput( { label: t( 'layers-prop-padding', 'Padding' ), type: 'number', value: layer.padding || 8, min: 0, max: 100, step: 1, prop: 'padding', onChange: function ( v ) { editor.updateLayer( layer.id, { padding: Math.max( 0, Math.min( 100, parseInt( v, 10 ) ) ) } ); } } );
 				// Callout tail section (after text properties for logical grouping with visual characteristics)
 				addSection( t( 'layers-section-callout', 'Callout Tail' ), 'callout' );
-				addSelect( { label: t( 'layers-prop-tail-direction', 'Tail Direction' ), value: layer.tailDirection || 'bottom', options: [
-					{ value: 'bottom', text: t( 'layers-tail-bottom', 'Bottom' ) },
-					{ value: 'top', text: t( 'layers-tail-top', 'Top' ) },
-					{ value: 'left', text: t( 'layers-tail-left', 'Left' ) },
-					{ value: 'right', text: t( 'layers-tail-right', 'Right' ) }
-				], onChange: function ( v ) { editor.updateLayer( layer.id, { tailDirection: v } ); } } );
-				addSliderInput( { label: t( 'layers-prop-tail-position', 'Tail Position' ), value: Math.round( ( layer.tailPosition || 0.5 ) * 100 ), min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { tailPosition: v / 100 } ); } } );
-				addInput( { label: t( 'layers-prop-tail-size', 'Tail Size' ), type: 'number', value: layer.tailSize || 20, min: 5, max: 60, step: 1, prop: 'tailSize', onChange: function ( v ) { editor.updateLayer( layer.id, { tailSize: Math.max( 5, Math.min( 60, parseInt( v, 10 ) ) ) } ); } } );
+				addSelect( { label: t( 'layers-prop-tail-style', 'Tail Style' ), value: layer.tailStyle || 'triangle', options: [
+					{ value: 'triangle', text: t( 'layers-tail-style-triangle', 'Triangle' ) },
+					{ value: 'curved', text: t( 'layers-tail-style-curved', 'Curved' ) },
+					{ value: 'line', text: t( 'layers-tail-style-line', 'Line' ) }
+				], onChange: function ( v ) { editor.updateLayer( layer.id, { tailStyle: v } ); } } );
+				// Note: Tail position is controlled by dragging the green diamond handle on the canvas
 				break;
 			case ( LAYER_TYPES.CIRCLE || 'circle' ):
 				addInput( { label: t( 'layers-prop-radius', 'Radius' ), type: 'number', value: Math.round( layer.radius || DEFAULTS.RADIUS || 50 ), step: 1, prop: 'radius', onChange: function ( v ) { editor.updateLayer( layer.id, { radius: Math.round( parseFloat( v ) ) } ); } } );

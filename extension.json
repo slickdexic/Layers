@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.4.2",
+	"version": "1.4.3",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -408,6 +408,10 @@
 				"layers-section-text-shadow",
 				"layers-section-alignment",
 				"layers-section-callout",
+				"layers-prop-tail-style",
+				"layers-tail-style-triangle",
+				"layers-tail-style-curved",
+				"layers-tail-style-line",
 				"layers-prop-tail-direction",
 				"layers-prop-tail-position",
 				"layers-prop-tail-size",

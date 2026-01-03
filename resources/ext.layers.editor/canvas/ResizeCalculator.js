@@ -37,6 +37,13 @@
 		) {
 			modifiers = modifiers || {};
 
+			// Special handling for callout tail tip
+			if ( handleType === 'tailTip' && originalLayer.type === 'callout' ) {
+				return ResizeCalculator.calculateCalloutTailResize(
+					originalLayer, deltaX, deltaY
+				);
+			}
+
 			switch ( originalLayer.type ) {
 				case 'rectangle':
 				case 'textbox':
@@ -816,6 +823,97 @@
 			// Clamp font size to reasonable bounds (6-500)
 			newFontSize = Math.max( 6, Math.min( 500, newFontSize ) );
 			updates.fontSize = Math.round( newFontSize );
+
+			return updates;
+		}
+
+		/**
+		 * Calculate callout tail tip resize adjustments.
+		 * Moves the tail tip to the new position based on drag delta.
+		 *
+		 * tailTipX/tailTipY are stored in LOCAL coordinates (relative to callout center,
+		 * in unrotated space). This means the tail rotates with the callout body.
+		 *
+		 * @param {Object} originalLayer Original layer properties
+		 * @param {number} deltaX Delta X movement in world coordinates
+		 * @param {number} deltaY Delta Y movement in world coordinates
+		 * @return {Object} Updates object with new tailTipX/tailTipY coordinates
+		 */
+		static calculateCalloutTailResize( originalLayer, deltaX, deltaY ) {
+			const updates = {};
+
+			const x = originalLayer.x || 0;
+			const y = originalLayer.y || 0;
+			const width = originalLayer.width || 100;
+			const height = originalLayer.height || 60;
+			const rotation = originalLayer.rotation || 0;
+
+			// Get current tip position in LOCAL coordinates (relative to center)
+			let currentLocalTipX, currentLocalTipY;
+
+			if ( typeof originalLayer.tailTipX === 'number' &&
+				typeof originalLayer.tailTipY === 'number' ) {
+				// Already in local coordinates
+				currentLocalTipX = originalLayer.tailTipX;
+				currentLocalTipY = originalLayer.tailTipY;
+			} else {
+				// Calculate default tip position from legacy properties
+				// These are calculated in local space relative to the callout
+				const tailDirection = originalLayer.tailDirection || 'bottom';
+				const tailPosition = typeof originalLayer.tailPosition === 'number' ?
+					originalLayer.tailPosition : 0.5;
+				const tailSize = originalLayer.tailSize || 20;
+
+				// Calculate tip in world space (unrotated)
+				let worldTipX, worldTipY;
+				switch ( tailDirection ) {
+					case 'top':
+					case 'top-left':
+					case 'top-right':
+						worldTipX = x + width * tailPosition;
+						worldTipY = y - tailSize;
+						break;
+					case 'bottom':
+					case 'bottom-left':
+					case 'bottom-right':
+						worldTipX = x + width * tailPosition;
+						worldTipY = y + height + tailSize;
+						break;
+					case 'left':
+						worldTipX = x - tailSize;
+						worldTipY = y + height * tailPosition;
+						break;
+					case 'right':
+						worldTipX = x + width + tailSize;
+						worldTipY = y + height * tailPosition;
+						break;
+					default:
+						worldTipX = x + width * 0.5;
+						worldTipY = y + height + tailSize;
+				}
+
+				// Convert to local coordinates (relative to center)
+				const centerX = x + width / 2;
+				const centerY = y + height / 2;
+				currentLocalTipX = worldTipX - centerX;
+				currentLocalTipY = worldTipY - centerY;
+			}
+
+			// Convert world delta to local delta (un-rotate if layer is rotated)
+			let localDeltaX = deltaX;
+			let localDeltaY = deltaY;
+
+			if ( rotation !== 0 ) {
+				const rad = -rotation * Math.PI / 180; // Negative to un-rotate
+				const cos = Math.cos( rad );
+				const sin = Math.sin( rad );
+				localDeltaX = deltaX * cos - deltaY * sin;
+				localDeltaY = deltaX * sin + deltaY * cos;
+			}
+
+			// Apply local delta to get new local position
+			updates.tailTipX = currentLocalTipX + localDeltaX;
+			updates.tailTipY = currentLocalTipY + localDeltaY;
 
 			return updates;
 		}

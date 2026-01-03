@@ -4,6 +4,27 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.4.3 (January 3, 2026)
+
+### Added
+- **Draggable Callout Tail** — Callout tail can now be positioned by dragging the tip directly on the canvas
+  - Tail tip position stored in local coordinates for proper rotation support
+  - Tail can attach to any edge (top, bottom, left, right) or corner arc
+  - Purple handle appears when callout is selected for easy tail repositioning
+- **Tail Styles** — Three tail style options for callouts
+  - Triangle: Classic speech bubble pointer (default)
+  - Curved: Smooth quadratic Bézier curves for organic look
+  - Line: Simple single-line pointer
+  - Styles work correctly on both straight edges and rounded corners
+
+### Fixed
+- **Corner Arc Tail Rendering** — Tail now renders correctly when positioned on rounded corners
+  - Proper angle normalization ensures symmetric behavior at all four corners
+  - Arc splitting algorithm correctly handles all tail positions along corner radii
+- **Tail Style on Corners** — Line and curved tail styles now render correctly when tail is on a corner arc
+
+---
+
 ## Version 1.4.2 (January 2, 2026)
 
 ### Added

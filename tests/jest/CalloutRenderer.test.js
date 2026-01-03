@@ -33,6 +33,7 @@ function createMockContext() {
 		closePath: jest.fn(),
 		moveTo: jest.fn(),
 		lineTo: jest.fn(),
+		arc: jest.fn(),
 		arcTo: jest.fn(),
 		fill: jest.fn(),
 		stroke: jest.fn(),
@@ -784,7 +785,8 @@ describe( 'CalloutRenderer', () => {
 			renderer.draw( layer );
 
 			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
-			const blurBounds = mockEffectsRenderer.drawBlurFill.mock.calls[ 0 ][ 1 ];
+			// bounds is the 3rd argument (index 2): drawBlurFill(layer, drawPathFn, bounds, options)
+			const blurBounds = mockEffectsRenderer.drawBlurFill.mock.calls[ 0 ][ 2 ];
 			expect( blurBounds ).toHaveProperty( 'x' );
 			expect( blurBounds ).toHaveProperty( 'y' );
 			expect( blurBounds ).toHaveProperty( 'width' );
@@ -811,7 +813,8 @@ describe( 'CalloutRenderer', () => {
 			renderer.draw( layer );
 
 			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
-			const blurBounds = mockEffectsRenderer.drawBlurFill.mock.calls[ 0 ][ 1 ];
+			// bounds is the 3rd argument (index 2): drawBlurFill(layer, drawPathFn, bounds, options)
+			const blurBounds = mockEffectsRenderer.drawBlurFill.mock.calls[ 0 ][ 2 ];
 			// Top tail should shift bounds Y up
 			expect( blurBounds.y ).toBeLessThan( 50 );
 		} );
@@ -1027,7 +1030,7 @@ describe( 'CalloutRenderer', () => {
 
 			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'left', 0.5, 20 );
 
-			expect( ctx.arcTo ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalled();
 			expect( ctx.closePath ).toHaveBeenCalled();
 		} );
 
@@ -1037,7 +1040,7 @@ describe( 'CalloutRenderer', () => {
 
 			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'right', 0.5, 20 );
 
-			expect( ctx.arcTo ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalled();
 			expect( ctx.closePath ).toHaveBeenCalled();
 		} );
 
@@ -1047,7 +1050,7 @@ describe( 'CalloutRenderer', () => {
 
 			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'top', 0.5, 20 );
 
-			expect( ctx.arcTo ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalled();
 		} );
 
 		test( 'should draw rounded path with bottom-left tail', () => {
@@ -1056,7 +1059,7 @@ describe( 'CalloutRenderer', () => {
 
 			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'bottom-left', 0.5, 20 );
 
-			expect( ctx.arcTo ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalled();
 		} );
 
 		test( 'should draw rounded path with bottom-right tail', () => {
@@ -1065,7 +1068,7 @@ describe( 'CalloutRenderer', () => {
 
 			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'bottom-right', 0.5, 20 );
 
-			expect( ctx.arcTo ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalled();
 		} );
 
 		test( 'should draw rounded path with top-left tail', () => {
@@ -1074,7 +1077,7 @@ describe( 'CalloutRenderer', () => {
 
 			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'top-left', 0.5, 20 );
 
-			expect( ctx.arcTo ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalled();
 		} );
 
 		test( 'should draw rounded path with top-right tail', () => {
@@ -1083,7 +1086,120 @@ describe( 'CalloutRenderer', () => {
 
 			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'top-right', 0.5, 20 );
 
-			expect( ctx.arcTo ).toHaveBeenCalled();
+			expect( ctx.arc ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'tail styles', () => {
+		test( 'should draw triangle tail style (default)', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'bottom', 0.5, 20, ctx, 'triangle' );
+
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw curved tail style with quadratic curves', () => {
+			const ctx = createMockContext();
+			ctx.quadraticCurveTo = jest.fn();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'bottom', 0.5, 20, ctx, 'curved' );
+
+			expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw line tail style', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'bottom', 0.5, 20, ctx, 'line' );
+
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		// Note: 'none' tail style was removed - use textbox layer type if no tail is needed
+
+		test( 'should use tailStyle from layer in draw method', () => {
+			const ctx = createMockContext();
+			ctx.quadraticCurveTo = jest.fn();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 150,
+				height: 80,
+				fill: '#ffffff',
+				stroke: '#000000',
+				tailStyle: 'curved',
+				tailDirection: 'bottom',
+				tailSize: 20
+			};
+
+			renderer.draw( layer );
+
+			expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+		} );
+
+		test( 'should default to triangle when tailStyle not specified', () => {
+			const ctx = createMockContext();
+			ctx.quadraticCurveTo = jest.fn();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 150,
+				height: 80,
+				fill: '#ffffff',
+				stroke: '#000000',
+				// no tailStyle specified
+				tailDirection: 'bottom',
+				tailSize: 20
+			};
+
+			renderer.draw( layer );
+
+			// Should NOT use quadraticCurveTo (triangle uses lineTo)
+			expect( ctx.quadraticCurveTo ).not.toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw curved tail on left direction', () => {
+			const ctx = createMockContext();
+			ctx.quadraticCurveTo = jest.fn();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'left', 0.5, 20, ctx, 'curved' );
+
+			expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw line tail on top direction', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			renderer.drawCalloutPath( 0, 0, 200, 100, 10, 'top', 0.5, 20, ctx, 'line' );
+
+			expect( ctx.lineTo ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw curved tail with zero corner radius', () => {
+			const ctx = createMockContext();
+			ctx.quadraticCurveTo = jest.fn();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			renderer.drawCalloutPath( 0, 0, 200, 100, 0, 'bottom', 0.5, 20, ctx, 'curved' );
+
+			expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
 		} );
 	} );
 

@@ -17,6 +17,7 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 | `V` | Pointer | Select, move, resize, rotate layers |
 | `T` | Text | Add single-line text labels |
 | `X` | Text Box | Add multi-line text with container |
+| `B` | Callout | Speech bubbles with draggable tail |
 | `P` | Pen | Freehand path drawing |
 | `R` | Rectangle | Draw rectangles |
 | `C` | Circle | Draw circles |

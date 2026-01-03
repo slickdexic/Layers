@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.4.2 (January 2026)  
+> **Version:** 1.4.3 (January 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -27,7 +27,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - ✅ Original images preserved (non-destructive)
 - ✅ Modern, intuitive editor UI
-- ✅ 11 drawing tools with customizable properties
+- ✅ 12 drawing tools with customizable properties
 - ✅ Multiple named layer sets per image with version history
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
 
@@ -35,13 +35,14 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 ## Features
 
-### Drawing Tools (11 Available)
+### Drawing Tools (12 Available)
 
 | Tool          | Shortcut | Purpose                                      |
 | ------------- | -------- | -------------------------------------------- |
 | Pointer       | V        | Select, move, resize, rotate layers          |
 | Text          | T        | Add text labels                              |
 | Text Box      | X        | Multi-line text in container                 |
+| Callout       | B        | Speech bubbles with draggable tail           |
 | Pen           | P        | Freehand drawing                             |
 | Rectangle     | R        | Draw rectangles                              |
 | Circle        | C        | Draw circles                                 |

@@ -137,9 +137,24 @@
 				// Pass world-space bounds for correct hit testing coordinate calculation
 				this.drawSelectionHandles( localBounds, layer, true, bounds, isKeyObject );
 				this.drawRotationHandle( localBounds, layer, true, bounds );
+
+				// Restore context before drawing callout tail handle (it handles its own transforms)
+				this.ctx.restore();
+
+				// For callouts, draw tail tip handle (drawn in world space)
+				if ( layer.type === 'callout' ) {
+					this.drawCalloutTailHandle( layer, bounds, isKeyObject );
+				}
+
+				return;
 			} else {
 				this.drawSelectionHandles( bounds, layer, false, bounds, isKeyObject );
 				this.drawRotationHandle( bounds, layer, false, bounds );
+
+				// For callouts, draw tail tip handle
+				if ( layer.type === 'callout' ) {
+					this.drawCalloutTailHandle( layer, bounds, isKeyObject );
+				}
 			}
 
 			this.ctx.restore();
@@ -341,6 +356,147 @@
 				rotation: 0,
 				isLine: true,
 				isControl: true
+			} );
+		}
+
+		/**
+		 * Draw a tail tip handle for callout layers
+		 * The tail handle allows users to drag the tail tip to any position.
+		 *
+		 * @param {Object} layer - The callout layer
+		 * @param {Object} bounds - Layer bounds
+		 * @param {boolean} isKeyObject - Whether this is the key object
+		 */
+		drawCalloutTailHandle( layer, bounds, isKeyObject ) {
+			const handleSize = this.handleSize;
+
+			// Get tail tip position
+			let tipX, tipY;
+
+			// tailTipX/tailTipY are stored in LOCAL coordinates (relative to callout center)
+			// so they rotate with the shape. We need to convert to world coords for display.
+			const hasExplicitTip = typeof layer.tailTipX === 'number' && typeof layer.tailTipY === 'number';
+
+			if ( hasExplicitTip ) {
+				// Use explicit tip position - stored relative to callout center in local space
+				tipX = layer.tailTipX;
+				tipY = layer.tailTipY;
+			} else {
+				// Calculate default tip position from tailDirection/tailPosition/tailSize
+				// These are in local space relative to layer bounds
+				const tailDirection = layer.tailDirection || 'bottom';
+				const tailPosition = typeof layer.tailPosition === 'number' ? layer.tailPosition : 0.5;
+				const tailSize = layer.tailSize || 20;
+
+				const x = bounds.x;
+				const y = bounds.y;
+				const width = bounds.width;
+				const height = bounds.height;
+
+				// Calculate tip position based on direction (in world space for unrotated)
+				switch ( tailDirection ) {
+					case 'top':
+					case 'top-left':
+					case 'top-right':
+						tipX = x + width * tailPosition;
+						tipY = y - tailSize;
+						break;
+					case 'bottom':
+					case 'bottom-left':
+					case 'bottom-right':
+						tipX = x + width * tailPosition;
+						tipY = y + height + tailSize;
+						break;
+					case 'left':
+						tipX = x - tailSize;
+						tipY = y + height * tailPosition;
+						break;
+					case 'right':
+						tipX = x + width + tailSize;
+						tipY = y + height * tailPosition;
+						break;
+					default:
+						tipX = x + width * 0.5;
+						tipY = y + height + tailSize;
+				}
+			}
+
+			// For explicit tailTipX/tailTipY (local coords) or legacy positions, apply rotation
+			if ( layer.rotation ) {
+				const centerX = bounds.x + bounds.width / 2;
+				const centerY = bounds.y + bounds.height / 2;
+				const rad = layer.rotation * Math.PI / 180;
+				const cos = Math.cos( rad );
+				const sin = Math.sin( rad );
+
+				if ( hasExplicitTip ) {
+					// tailTipX/tailTipY are relative to center in local space
+					// Rotate to get world position
+					tipX = centerX + ( layer.tailTipX * cos - layer.tailTipY * sin );
+					tipY = centerY + ( layer.tailTipX * sin + layer.tailTipY * cos );
+				} else {
+					// Legacy: rotate around center
+					const dx = tipX - centerX;
+					const dy = tipY - centerY;
+					tipX = centerX + ( dx * cos - dy * sin );
+					tipY = centerY + ( dx * sin + dy * cos );
+				}
+			} else if ( hasExplicitTip ) {
+				// No rotation - tailTipX/tailTipY are relative to center
+				const centerX = bounds.x + bounds.width / 2;
+				const centerY = bounds.y + bounds.height / 2;
+				tipX = centerX + layer.tailTipX;
+				tipY = centerY + layer.tailTipY;
+			}
+
+			// Draw a line from the callout center to the tail tip (visual connection)
+			const centerX = bounds.x + bounds.width / 2;
+			const centerY = bounds.y + bounds.height / 2;
+
+			this.ctx.save();
+			this.ctx.strokeStyle = '#4caf50'; // Green for tail control
+			this.ctx.lineWidth = 1;
+			this.ctx.setLineDash( [ 4, 4 ] );
+			this.ctx.beginPath();
+			this.ctx.moveTo( centerX, centerY );
+			this.ctx.lineTo( tipX, tipY );
+			this.ctx.stroke();
+			this.ctx.restore();
+
+			// Draw diamond-shaped tail handle (different from square resize handles and circular control handles)
+			this.ctx.save();
+			this.ctx.fillStyle = '#4caf50'; // Green for tail control
+			if ( isKeyObject ) {
+				this.ctx.strokeStyle = '#ff9800';
+				this.ctx.lineWidth = 3;
+			} else {
+				this.ctx.strokeStyle = this.handleBorderColor;
+				this.ctx.lineWidth = 1;
+			}
+			this.ctx.setLineDash( [] );
+
+			// Draw diamond shape
+			const diamondSize = handleSize * 0.7;
+			this.ctx.beginPath();
+			this.ctx.moveTo( tipX, tipY - diamondSize );
+			this.ctx.lineTo( tipX + diamondSize, tipY );
+			this.ctx.lineTo( tipX, tipY + diamondSize );
+			this.ctx.lineTo( tipX - diamondSize, tipY );
+			this.ctx.closePath();
+			this.ctx.fill();
+			this.ctx.stroke();
+			this.ctx.restore();
+
+			// Register tail handle for hit testing
+			this.selectionHandles.push( {
+				type: 'tailTip',
+				x: tipX - handleSize / 2,
+				y: tipY - handleSize / 2,
+				width: handleSize,
+				height: handleSize,
+				layerId: layer.id,
+				rotation: 0,
+				isCalloutTail: true
 			} );
 		}
 

@@ -2,6 +2,29 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.4.3] - 2026-01-03
+
+### Added
+- **Draggable Callout Tail** — Callout tail can now be positioned by dragging the tip directly on the canvas
+  - Tail tip position stored in local coordinates for proper rotation support
+  - Tail can attach to any edge (top, bottom, left, right) or corner arc
+  - Purple handle appears when callout is selected for easy tail repositioning
+  - Throttled rendering for smooth drag performance
+- **Tail Styles** — Three tail style options for callouts: triangle (default), curved, and line
+  - Triangle: Classic speech bubble pointer
+  - Curved: Smooth quadratic Bézier curves for organic look
+  - Line: Simple single-line pointer
+  - Styles work correctly on both straight edges and rounded corners
+
+### Fixed
+- **Corner Arc Tail Rendering** — Tail now renders correctly when positioned on rounded corners
+  - Proper angle normalization ensures symmetric behavior at all four corners
+  - Arc splitting algorithm correctly handles all tail positions along corner radii
+  - No more visual artifacts (gaps, double tails, or misaligned segments)
+- **Tail Style on Corners** — Line and curved tail styles now render correctly when tail is on a corner arc (previously defaulted to triangle)
+
+---
+
 ## [1.4.2] - 2026-01-02
 
 ### Fixed
