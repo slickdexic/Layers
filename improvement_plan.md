@@ -13,16 +13,17 @@ The extension is **production-ready** with layer grouping feature complete. Most
 
 **E2E test coverage significantly expanded** (1,201 → 2,618 lines, +118%) with comprehensive tests for named sets, layer groups, and keyboard shortcuts.
 
-**Current Rating: 8.5/10** (down from 8.7 due to 13th god class)
+**Current Rating: 8.6/10** (improved from 8.5 due to coverage gains)
 
 **Recent Improvements (January 2026):**
+- ✅ **SelectionRenderer.js coverage improved** - 66% → ~90% (+29 tests for callout tail, groups, edge cases)
 - ✅ **PropertiesForm.js refactored** - Extracted PropertyBuilders.js, reduced from 1,009 to 914 lines
 - ✅ **Callout/Speech Bubble Tool** (v1.4.2) - Full draggable tail support with 3 styles
 - ✅ **Dead code removed** - ServerLogger.js (198 lines) + ApiLayersLog.php deleted
 - ✅ **CalloutRenderer.js coverage improved** - 62.42% → 90.05% (+38 tests for geometry methods)
-- ✅ **PropertiesForm.js coverage improved** - 58.6% → 72.85% function coverage (+39 tests)
+- ✅ **PropertiesForm.js coverage improved** - 58.6% → 82.45% function coverage (+39 tests)
 - ✅ **PresetDropdown.js coverage improved** - 75% → 90.62% function coverage (+25 tests)
-- ✅ **Test count increased** - 7,940 → 8,067 tests (+127)
+- ✅ **Test count increased** - 8,155 → 8,184 tests (+29)
 
 **Remaining Issues:**
 - ⏳ **12 god classes** - All use delegation patterns now; CalloutRenderer.js (1,290) is largest without extraction candidates
@@ -35,7 +36,7 @@ The extension is **production-ready** with layer grouping feature complete. Most
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping + curved arrows + callouts |
 | **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
-| **Testing** | ✅ Excellent | 8,067 tests (138 suites), 93.99% statement, 82.93% branch, 91.9% function coverage |
+| **Testing** | ✅ Excellent | 8,184 tests (139 suites), 94.48% statement, 82.90% branch, 92.77% function coverage |
 | **ES6 Migration** | ✅ Complete | 97 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Clean | 0 TODO comments, 0 dead code |
 | **God Classes** | ⏳ Monitoring | 12 files >1,000 lines (all with delegation patterns) |
