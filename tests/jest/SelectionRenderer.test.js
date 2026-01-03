@@ -26,6 +26,7 @@ describe( 'SelectionRenderer', () => {
 			translate: jest.fn(),
 			rotate: jest.fn(),
 			setLineDash: jest.fn(),
+			closePath: jest.fn(),
 			fillStyle: '',
 			strokeStyle: '',
 			lineWidth: 1
@@ -411,6 +412,435 @@ describe( 'SelectionRenderer', () => {
 			// E edge should be at midpoint of right edge
 			expect( e.x ).toBe( 300 - handleSize / 2 ); // 100 + 200
 			expect( e.y ).toBe( 150 - handleSize / 2 ); // 100 + 100/2
+		} );
+	} );
+
+	describe( 'drawCalloutTailHandle', () => {
+		test( 'should create tailTip handle for callout with default tail', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			expect( renderer.selectionHandles.length ).toBe( 1 );
+			const handle = renderer.selectionHandles[ 0 ];
+			expect( handle.type ).toBe( 'tailTip' );
+			expect( handle.isCalloutTail ).toBe( true );
+			expect( handle.layerId ).toBe( 'callout1' );
+		} );
+
+		test( 'should position tail at bottom by default', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				x: 100, y: 100,
+				width: 200, height: 100
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// Default: bottom center, tailSize=20
+			// tipY = y + height + tailSize = 100 + 100 + 20 = 220
+			// tipX = x + width * 0.5 = 100 + 100 = 200
+			expect( handle.x ).toBe( 200 - handleSize / 2 );
+			expect( handle.y ).toBe( 220 - handleSize / 2 );
+		} );
+
+		test( 'should use explicit tailTipX/tailTipY when set', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailTipX: 50,
+				tailTipY: 80
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// Explicit tip is relative to center (200, 150)
+			// tipX = 200 + 50 = 250, tipY = 150 + 80 = 230
+			expect( handle.x ).toBe( 250 - handleSize / 2 );
+			expect( handle.y ).toBe( 230 - handleSize / 2 );
+		} );
+
+		test( 'should rotate explicit tailTip with layer rotation', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailTipX: 50,
+				tailTipY: 0,
+				rotation: 90
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			// After 90 degree rotation, (50, 0) becomes (0, 50)
+			// Center is (200, 150), so tip is at (200 + 0, 150 + 50) = (200, 200)
+			expect( handle ).toBeDefined();
+			expect( handle.type ).toBe( 'tailTip' );
+		} );
+
+		test( 'should handle tailDirection top', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'top',
+				tailPosition: 0.5,
+				tailSize: 30
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// tipX = 100 + 200 * 0.5 = 200
+			// tipY = 100 - 30 = 70
+			expect( handle.x ).toBe( 200 - handleSize / 2 );
+			expect( handle.y ).toBe( 70 - handleSize / 2 );
+		} );
+
+		test( 'should handle tailDirection left', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'left',
+				tailPosition: 0.5,
+				tailSize: 25
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// tipX = 100 - 25 = 75
+			// tipY = 100 + 100 * 0.5 = 150
+			expect( handle.x ).toBe( 75 - handleSize / 2 );
+			expect( handle.y ).toBe( 150 - handleSize / 2 );
+		} );
+
+		test( 'should handle tailDirection right', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'right',
+				tailPosition: 0.5,
+				tailSize: 25
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// tipX = 100 + 200 + 25 = 325
+			// tipY = 100 + 100 * 0.5 = 150
+			expect( handle.x ).toBe( 325 - handleSize / 2 );
+			expect( handle.y ).toBe( 150 - handleSize / 2 );
+		} );
+
+		test( 'should handle tailDirection top-left', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'top-left',
+				tailPosition: 0.25,
+				tailSize: 20
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// tipX = 100 + 200 * 0.25 = 150
+			// tipY = 100 - 20 = 80
+			expect( handle.x ).toBe( 150 - handleSize / 2 );
+			expect( handle.y ).toBe( 80 - handleSize / 2 );
+		} );
+
+		test( 'should handle tailDirection top-right', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'top-right',
+				tailPosition: 0.75,
+				tailSize: 20
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// tipX = 100 + 200 * 0.75 = 250
+			// tipY = 100 - 20 = 80
+			expect( handle.x ).toBe( 250 - handleSize / 2 );
+			expect( handle.y ).toBe( 80 - handleSize / 2 );
+		} );
+
+		test( 'should handle tailDirection bottom-left', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'bottom-left',
+				tailPosition: 0.25,
+				tailSize: 20
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// tipX = 100 + 200 * 0.25 = 150
+			// tipY = 100 + 100 + 20 = 220
+			expect( handle.x ).toBe( 150 - handleSize / 2 );
+			expect( handle.y ).toBe( 220 - handleSize / 2 );
+		} );
+
+		test( 'should handle tailDirection bottom-right', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'bottom-right',
+				tailPosition: 0.75,
+				tailSize: 20
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			const handleSize = renderer.handleSize;
+			// tipX = 100 + 200 * 0.75 = 250
+			// tipY = 100 + 100 + 20 = 220
+			expect( handle.x ).toBe( 250 - handleSize / 2 );
+			expect( handle.y ).toBe( 220 - handleSize / 2 );
+		} );
+
+		test( 'should rotate legacy tail position with layer rotation', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'bottom',
+				tailPosition: 0.5,
+				tailSize: 20,
+				rotation: 180
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			const handle = renderer.selectionHandles[ 0 ];
+			expect( handle ).toBeDefined();
+			expect( handle.type ).toBe( 'tailTip' );
+		} );
+
+		test( 'should draw dashed line from center to tail tip', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout',
+				tailDirection: 'bottom'
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [ 4, 4 ] );
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+			expect( mockCtx.lineTo ).toHaveBeenCalled();
+			expect( mockCtx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw diamond-shaped handle', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout'
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, false );
+
+			// Diamond is drawn with moveTo, 3 lineTo, closePath
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+			expect( mockCtx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'should use key object style when isKeyObject', () => {
+			const layer = {
+				id: 'callout1',
+				type: 'callout'
+			};
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			renderer.drawCalloutTailHandle( layer, bounds, true );
+
+			// When key object, strokeStyle should be orange
+			expect( mockCtx.strokeStyle ).toBe( '#ff9800' );
+		} );
+	} );
+
+	describe( 'group layer handling', () => {
+		test( 'should skip drawing handles for group layers', () => {
+			const groupLayer = { id: 'group1', type: 'group', name: 'My Group' };
+			mockLayers.push( groupLayer );
+
+			renderer.drawSelectionIndicators( 'group1' );
+
+			// Group layers should not get handles
+			expect( renderer.selectionHandles ).toEqual( [] );
+		} );
+	} );
+
+	describe( 'missing context handling', () => {
+		test( 'should not draw when context is null', () => {
+			renderer.ctx = null;
+			renderer.drawSelectionIndicators( 'layer1' );
+
+			expect( renderer.selectionHandles ).toEqual( [] );
+		} );
+
+		test( 'drawMarqueeBox should not draw when context is null', () => {
+			renderer.ctx = null;
+			renderer.drawMarqueeBox( { x: 0, y: 0, width: 100, height: 100 } );
+
+			expect( mockCtx.save ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'missing bounds handling', () => {
+		test( 'should handle layer with no bounds', () => {
+			// Add a layer that returns null bounds
+			const unboundedLayer = { id: 'unbounded', type: 'unknown' };
+			mockLayers.push( unboundedLayer );
+
+			renderer.drawSelectionIndicators( 'unbounded' );
+
+			expect( renderer.selectionHandles ).toEqual( [] );
+		} );
+	} );
+
+	describe( 'rotated layer handling', () => {
+		test( 'should apply rotation transform for rotated layers', () => {
+			// Add a rotated rectangle layer
+			const rotatedLayer = {
+				id: 'rotated1',
+				type: 'rectangle',
+				x: 100, y: 100,
+				width: 200, height: 100,
+				rotation: 45
+			};
+			mockLayers.push( rotatedLayer );
+
+			renderer.drawSelectionIndicators( 'rotated1' );
+
+			expect( mockCtx.translate ).toHaveBeenCalled();
+			expect( mockCtx.rotate ).toHaveBeenCalled();
+			// Should have 9 handles (8 resize + 1 rotation)
+			expect( renderer.selectionHandles.length ).toBe( 9 );
+		} );
+
+		test( 'should draw callout tail handle for rotated callouts', () => {
+			// Add a rotated callout layer
+			const rotatedCallout = {
+				id: 'rotatedCallout1',
+				type: 'callout',
+				x: 100, y: 100,
+				width: 200, height: 100,
+				rotation: 90
+			};
+			mockLayers.push( rotatedCallout );
+
+			// Update getLayerBounds to handle callout
+			renderer.getLayerBounds = ( layer ) => {
+				if ( layer.type === 'callout' ) {
+					return { x: layer.x, y: layer.y, width: layer.width, height: layer.height };
+				}
+				return null;
+			};
+
+			renderer.drawSelectionIndicators( 'rotatedCallout1' );
+
+			// Should have resize handles + rotation + tail tip
+			const tailHandle = renderer.selectionHandles.find( ( h ) => h.type === 'tailTip' );
+			expect( tailHandle ).toBeDefined();
+			expect( tailHandle.isCalloutTail ).toBe( true );
+		} );
+	} );
+
+	describe( 'key object styling', () => {
+		test( 'should use orange border for key object handles', () => {
+			renderer.drawMultiSelectionIndicators( [ 'layer1', 'layer2' ], 'layer1' );
+
+			// Should set strokeStyle to orange for key object
+			expect( mockCtx.strokeStyle ).toBe( '#ffffff' ); // Last call, non-key object
+		} );
+
+		test( 'should use thicker border for key object', () => {
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			const layer = { id: 'test', rotation: 0 };
+			renderer.drawSelectionHandles( bounds, layer, false, bounds, true );
+
+			// Key object should have lineWidth 3
+			expect( mockCtx.lineWidth ).toBe( 3 );
+		} );
+
+		test( 'should use normal border for non-key object', () => {
+			const bounds = { x: 100, y: 100, width: 200, height: 100 };
+			const layer = { id: 'test', rotation: 0 };
+			renderer.drawSelectionHandles( bounds, layer, false, bounds, false );
+
+			// Non-key object should have lineWidth 1
+			expect( mockCtx.lineWidth ).toBe( 1 );
+		} );
+
+		test( 'should style line handles differently for key object', () => {
+			const layer = { id: 'line1', type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 };
+			renderer.drawLineSelectionIndicators( layer, true );
+
+			// Key object line should have lineWidth 3
+			expect( mockCtx.lineWidth ).toBe( 3 );
+		} );
+	} );
+
+	describe( 'constructor edge cases', () => {
+		test( 'should handle empty config', () => {
+			const emptyRenderer = new SelectionRenderer( {} );
+			expect( emptyRenderer.ctx ).toBeNull();
+			expect( emptyRenderer.getLayerById( 'any' ) ).toBeNull();
+			expect( emptyRenderer.getLayerBounds( {} ) ).toBeNull();
+		} );
+
+		test( 'should use default functions when not provided', () => {
+			const minimalRenderer = new SelectionRenderer( { ctx: mockCtx } );
+			expect( minimalRenderer.getLayerById( 'test' ) ).toBeNull();
+			expect( minimalRenderer.getLayerBounds( {} ) ).toBeNull();
+		} );
+	} );
+
+	describe( 'line layer edge cases', () => {
+		test( 'should add control handle for arrow layers', () => {
+			const arrowLayer = { id: 'arrow1', type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			renderer.drawLineSelectionIndicators( arrowLayer, false );
+
+			// Should have 2 endpoint handles + 1 control handle
+			expect( renderer.selectionHandles.length ).toBe( 3 );
+			const controlHandle = renderer.selectionHandles.find( ( h ) => h.type === 'control' );
+			expect( controlHandle ).toBeDefined();
+			expect( controlHandle.isControl ).toBe( true );
+		} );
+
+		test( 'should not add control handle for line layers', () => {
+			const lineLayer = { id: 'line1', type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 };
+			renderer.drawLineSelectionIndicators( lineLayer, false );
+
+			// Should have only 2 endpoint handles
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+			const controlHandle = renderer.selectionHandles.find( ( h ) => h.type === 'control' );
+			expect( controlHandle ).toBeUndefined();
 		} );
 	} );
 } );
