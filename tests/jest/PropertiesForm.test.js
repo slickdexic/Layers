@@ -21,6 +21,9 @@ describe( 'PropertiesForm', () => {
 	let mockEditor;
 	let registerCleanup;
 
+	// Load PropertyBuilders once for all tests
+	const PropertyBuilders = require( '../../resources/ext.layers.editor/ui/PropertyBuilders.js' );
+
 	beforeEach( () => {
 		jest.useFakeTimers();
 
@@ -73,7 +76,9 @@ describe( 'PropertiesForm', () => {
 					MAX_STAR_POINTS: 20
 				}
 			},
-			UI: {}
+			UI: {
+				PropertyBuilders: PropertyBuilders
+			}
 		};
 
 		// Also set legacy global for compatibility
