@@ -286,6 +286,7 @@
 				"ui/TextEffectsControls.js",
 				"ui/ArrowStyleControl.js",
 				"ui/ConfirmDialog.js",
+				"ui/PropertyBuilders.js",
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",
 				"ui/LayerDragDrop.js",
