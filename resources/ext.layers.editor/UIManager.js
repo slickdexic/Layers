@@ -47,7 +47,10 @@
 		this.revNameInputEl = null;
 		this.zoomReadoutEl = null;
 
-		/** @type {Set<number>} Tracked timeout IDs for cleanup */
+		/**
+		 * Tracked timeout IDs for cleanup
+		 * @type {Set<number>}
+		 */
 		this.activeTimeouts = new Set();
 
 		// Initialize EventTracker for memory-safe event listener management

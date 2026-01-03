@@ -20,7 +20,10 @@
 			this.notificationContainer = null;
 			this.debugMode = false;
 			this.globalListeners = [];
-			/** @type {Set<number>} Tracked timeout IDs for cleanup */
+			/**
+			 * Tracked timeout IDs for cleanup
+			 * @type {Set<number>}
+			 */
 			this.activeTimeouts = new Set();
 
 			// Initialize error container
