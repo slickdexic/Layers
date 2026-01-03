@@ -10,7 +10,7 @@
  *   2. Or add to jsconfig.json: { "include": ["resources/**/*", "types/**/*"] }
  *
  * @module LayersTypes
- * @version 1.4.0
+ * @version 1.4.3
  */
 
 // =============================================================================
@@ -23,6 +23,7 @@
 type LayerType =
 	| 'text'
 	| 'textbox'
+	| 'callout'
 	| 'arrow'
 	| 'rectangle'
 	| 'circle'
@@ -33,6 +34,16 @@ type LayerType =
 	| 'path'
 	| 'blur'
 	| 'image';
+
+/**
+ * Callout tail direction options
+ */
+type TailDirection = 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+/**
+ * Callout tail style options
+ */
+type TailStyle = 'triangle' | 'curved' | 'line';
 
 /**
  * Arrow style (head placement)
@@ -346,6 +357,32 @@ interface StarProperties {
 }
 
 /**
+ * Callout/speech bubble properties
+ */
+interface CalloutProperties {
+	/** Tail direction (top, bottom, left, right, or corner variants) */
+	tailDirection?: TailDirection;
+
+	/** Tail position along edge (0-1) */
+	tailPosition?: number;
+
+	/** Tail size in pixels */
+	tailSize?: number;
+
+	/** Tail style (triangle, curved, line) */
+	tailStyle?: TailStyle;
+
+	/** Local X coordinate of tail tip (for draggable tail) */
+	tailTipLocalX?: number;
+
+	/** Local Y coordinate of tail tip (for draggable tail) */
+	tailTipLocalY?: number;
+
+	/** Whether tail tip is being dragged */
+	tailTipDragging?: boolean;
+}
+
+/**
  * Blur effect properties
  */
 interface BlurProperties {
@@ -402,6 +439,7 @@ interface Layer extends
 	CircleProperties,
 	PathProperties,
 	StarProperties,
+	CalloutProperties,
 	BlurProperties,
 	GroupProperties,
 	ImageProperties {

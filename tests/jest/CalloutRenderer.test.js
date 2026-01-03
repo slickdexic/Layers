@@ -1335,4 +1335,482 @@ describe( 'CalloutRenderer', () => {
 			expect( renderer.hasShadowEnabled( { shadow: {} } ) ).toBeTruthy();
 		} );
 	} );
+
+	describe( 'getClosestPerimeterPoint', () => {
+		test( 'should return bottom edge for tip at center', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Tip at center of rectangle (100, 50, 200, 100)
+			// Center is at (200, 100)
+			const result = renderer.getClosestPerimeterPoint( 200, 100, 100, 50, 200, 100, 10 );
+
+			expect( result.edge ).toBe( 'bottom' );
+			expect( result.baseX ).toBe( 200 );
+			expect( result.baseY ).toBe( 150 );
+		} );
+
+		test( 'should find closest point on bottom edge', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle at (0, 0, 100, 50), corner radius 5
+			// Tip below the rectangle at (50, 100)
+			const result = renderer.getClosestPerimeterPoint( 50, 100, 0, 0, 100, 50, 5 );
+
+			expect( result.edge ).toBe( 'bottom' );
+			expect( result.baseX ).toBe( 50 );
+			expect( result.baseY ).toBe( 50 );
+		} );
+
+		test( 'should find closest point on top edge', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle at (0, 50, 100, 50), corner radius 5
+			// Tip above the rectangle at (50, 0)
+			const result = renderer.getClosestPerimeterPoint( 50, 0, 0, 50, 100, 50, 5 );
+
+			expect( result.edge ).toBe( 'top' );
+			expect( result.baseX ).toBe( 50 );
+			expect( result.baseY ).toBe( 50 );
+		} );
+
+		test( 'should find closest point on left edge', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle at (50, 0, 100, 50), corner radius 5
+			// Tip to the left at (0, 25)
+			const result = renderer.getClosestPerimeterPoint( 0, 25, 50, 0, 100, 50, 5 );
+
+			expect( result.edge ).toBe( 'left' );
+			expect( result.baseX ).toBe( 50 );
+			expect( result.baseY ).toBe( 25 );
+		} );
+
+		test( 'should find closest point on right edge', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle at (0, 0, 100, 50), corner radius 5
+			// Tip to the right at (200, 25)
+			const result = renderer.getClosestPerimeterPoint( 200, 25, 0, 0, 100, 50, 5 );
+
+			expect( result.edge ).toBe( 'right' );
+			expect( result.baseX ).toBe( 100 );
+			expect( result.baseY ).toBe( 25 );
+		} );
+
+		test( 'should handle corner arcs with significant radius', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle at (0, 0, 100, 100), corner radius 20
+			// Tip near bottom-right corner
+			const result = renderer.getClosestPerimeterPoint( 110, 110, 0, 0, 100, 100, 20 );
+
+			// Should find closest point on corner arc
+			expect( result.edge ).toBe( 'br' );
+			expect( result.baseX ).toBeGreaterThan( 80 );
+			expect( result.baseY ).toBeGreaterThan( 80 );
+		} );
+
+		test( 'should handle corner with tip near top-left', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle at (0, 0, 100, 100), corner radius 20
+			// Tip near top-left corner
+			const result = renderer.getClosestPerimeterPoint( -20, -20, 0, 0, 100, 100, 20 );
+
+			// Should find closest point on tl corner arc
+			expect( result.edge ).toBe( 'tl' );
+		} );
+
+		test( 'should handle corner with tip near top-right', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle at (0, 0, 100, 100), corner radius 20
+			// Tip near top-right corner
+			const result = renderer.getClosestPerimeterPoint( 120, -20, 0, 0, 100, 100, 20 );
+
+			expect( result.edge ).toBe( 'tr' );
+		} );
+
+		test( 'should handle corner with tip near bottom-left', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle at (0, 0, 100, 100), corner radius 20
+			// Tip near bottom-left corner
+			const result = renderer.getClosestPerimeterPoint( -20, 120, 0, 0, 100, 100, 20 );
+
+			expect( result.edge ).toBe( 'bl' );
+		} );
+
+		test( 'should handle zero corner radius', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Rectangle with no rounded corners
+			const result = renderer.getClosestPerimeterPoint( 150, 150, 0, 0, 100, 100, 0 );
+
+			// Should find closest edge point
+			expect( [ 'bottom', 'right' ] ).toContain( result.edge );
+		} );
+
+		test( 'should handle very large corner radius', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Corner radius larger than half the dimensions (will be clamped)
+			const result = renderer.getClosestPerimeterPoint( 50, 200, 0, 0, 100, 100, 100 );
+
+			expect( result ).toBeDefined();
+			expect( result.baseY ).toBeLessThanOrEqual( 100 );
+		} );
+
+		test( 'should skip degenerate edges', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Very small rectangle where corner radius fills entire edges
+			const result = renderer.getClosestPerimeterPoint( 50, 100, 0, 0, 20, 20, 10 );
+
+			expect( result ).toBeDefined();
+		} );
+
+		test( 'should return tangent vectors for corners', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			const result = renderer.getClosestPerimeterPoint( 110, 110, 0, 0, 100, 100, 20 );
+
+			// Corners should have tangent vectors
+			expect( result.tangentX ).toBeDefined();
+			expect( result.tangentY ).toBeDefined();
+		} );
+	} );
+
+	describe( 'getTailFromTipPosition', () => {
+		test( 'should calculate tail for tip below rectangle', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			const result = renderer.getTailFromTipPosition( 0, 0, 200, 100, 100, 200, 10 );
+
+			expect( result.edge ).toBe( 'bottom' );
+			expect( result.tip ).toBeDefined();
+			expect( result.base1 ).toBeDefined();
+			expect( result.base2 ).toBeDefined();
+		} );
+
+		test( 'should calculate tail for tip to the right', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			const result = renderer.getTailFromTipPosition( 0, 0, 100, 200, 200, 100, 10 );
+
+			expect( result.edge ).toBe( 'right' );
+		} );
+
+		test( 'should calculate tail for tip above rectangle', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			const result = renderer.getTailFromTipPosition( 0, 100, 200, 100, 100, -50, 10 );
+
+			expect( result.edge ).toBe( 'top' );
+		} );
+
+		test( 'should calculate tail for tip to the left', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			const result = renderer.getTailFromTipPosition( 100, 0, 100, 200, -50, 100, 10 );
+
+			expect( result.edge ).toBe( 'left' );
+		} );
+
+		test( 'should handle corner attachment', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Large corner radius, tip near corner
+			const result = renderer.getTailFromTipPosition( 0, 0, 100, 100, 130, 130, 20 );
+
+			// Should attach to bottom-right corner
+			expect( result.edge ).toBe( 'br' );
+		} );
+
+		test( 'should scale base width with distance', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Short distance tail
+			const shortResult = renderer.getTailFromTipPosition( 0, 0, 200, 100, 100, 120, 10 );
+
+			// Long distance tail
+			const longResult = renderer.getTailFromTipPosition( 0, 0, 200, 100, 100, 300, 10 );
+
+			// Base1 and base2 define the base width
+			const shortWidth = Math.abs( shortResult.base1.x - shortResult.base2.x ) +
+				Math.abs( shortResult.base1.y - shortResult.base2.y );
+			const longWidth = Math.abs( longResult.base1.x - longResult.base2.x ) +
+				Math.abs( longResult.base1.y - longResult.base2.y );
+
+			// Long tail should have wider base (up to cap)
+			expect( longWidth ).toBeGreaterThanOrEqual( shortWidth );
+		} );
+
+		test( 'should handle all corner positions', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Top-left corner
+			const tlResult = renderer.getTailFromTipPosition( 0, 0, 100, 100, -30, -30, 20 );
+			expect( tlResult.edge ).toBe( 'tl' );
+
+			// Top-right corner
+			const trResult = renderer.getTailFromTipPosition( 0, 0, 100, 100, 130, -30, 20 );
+			expect( trResult.edge ).toBe( 'tr' );
+
+			// Bottom-left corner
+			const blResult = renderer.getTailFromTipPosition( 0, 0, 100, 100, -30, 130, 20 );
+			expect( blResult.edge ).toBe( 'bl' );
+		} );
+	} );
+
+	describe( '_getEdgeBeforeCorner and _getEdgeAfterCorner', () => {
+		test( 'should return correct edge before top-left corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeBeforeCorner( 'tl' ) ).toBe( 'left' );
+		} );
+
+		test( 'should return correct edge before top-right corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeBeforeCorner( 'tr' ) ).toBe( 'top' );
+		} );
+
+		test( 'should return correct edge before bottom-right corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeBeforeCorner( 'br' ) ).toBe( 'right' );
+		} );
+
+		test( 'should return correct edge before bottom-left corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeBeforeCorner( 'bl' ) ).toBe( 'bottom' );
+		} );
+
+		test( 'should return default edge for unknown corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeBeforeCorner( 'invalid' ) ).toBe( 'top' );
+		} );
+
+		test( 'should return correct edge after top-left corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeAfterCorner( 'tl' ) ).toBe( 'top' );
+		} );
+
+		test( 'should return correct edge after top-right corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeAfterCorner( 'tr' ) ).toBe( 'right' );
+		} );
+
+		test( 'should return correct edge after bottom-right corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeAfterCorner( 'br' ) ).toBe( 'bottom' );
+		} );
+
+		test( 'should return correct edge after bottom-left corner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeAfterCorner( 'bl' ) ).toBe( 'left' );
+		} );
+
+		test( 'should return default edge for unknown corner in _getEdgeAfterCorner', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			expect( renderer._getEdgeAfterCorner( 'invalid' ) ).toBe( 'bottom' );
+		} );
+	} );
+
+	describe( '_drawRoundedRect', () => {
+		test( 'should draw rounded rectangle path', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			renderer._drawRoundedRect( ctx, 0, 0, 100, 50, 10 );
+
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.arcTo ).toHaveBeenCalledTimes( 4 );
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle zero radius', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			renderer._drawRoundedRect( ctx, 0, 0, 100, 50, 0 );
+
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.closePath ).toHaveBeenCalled();
+		} );
+
+		test( 'should clamp radius to half of minimum dimension', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Radius larger than half the height (25)
+			renderer._drawRoundedRect( ctx, 0, 0, 100, 50, 100 );
+
+			// Should not throw and should still create path
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.arcTo ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'drawCalloutPath with tip position', () => {
+		test( 'should draw callout with custom tip position', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Draw callout with custom tip position
+			renderer.drawCalloutPath(
+				0, 0, 200, 100, 10,
+				null, null, 20, ctx,
+				'triangle', 100, 200 // tipX, tipY
+			);
+
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle tip position at each edge', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Tip below (bottom edge)
+			renderer.drawCalloutPath( 0, 0, 100, 100, 10, null, null, 20, ctx, 'triangle', 50, 150 );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+
+			jest.clearAllMocks();
+
+			// Tip above (top edge)
+			renderer.drawCalloutPath( 0, 100, 100, 100, 10, null, null, 20, ctx, 'triangle', 50, 0 );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+
+			jest.clearAllMocks();
+
+			// Tip to right (right edge)
+			renderer.drawCalloutPath( 0, 0, 100, 100, 10, null, null, 20, ctx, 'triangle', 150, 50 );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+
+			jest.clearAllMocks();
+
+			// Tip to left (left edge)
+			renderer.drawCalloutPath( 50, 0, 100, 100, 10, null, null, 20, ctx, 'triangle', 0, 50 );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle tip position at corners', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Tip at bottom-right corner
+			renderer.drawCalloutPath( 0, 0, 100, 100, 20, null, null, 20, ctx, 'triangle', 130, 130 );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+
+			jest.clearAllMocks();
+
+			// Tip at top-left corner
+			renderer.drawCalloutPath( 0, 0, 100, 100, 20, null, null, 20, ctx, 'triangle', -30, -30 );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'draw with tailTipX/tailTipY', () => {
+		test( 'should render callout with custom tail tip position', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 20,
+				tailStyle: 'triangle',
+				tailTipX: 150, // Custom tip position
+				tailTipY: 250,
+				fill: '#ffffff'
+			};
+
+			renderer.draw( layer, { scale: 1 } );
+
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle tailTipX/tailTipY with all corners', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer
+			} );
+
+			// Test tip near each corner
+			const corners = [
+				{ tipX: -30, tipY: -30 }, // near top-left
+				{ tipX: 230, tipY: -30 }, // near top-right
+				{ tipX: 230, tipY: 230 }, // near bottom-right
+				{ tipX: -30, tipY: 230 } // near bottom-left
+			];
+
+			for ( const corner of corners ) {
+				jest.clearAllMocks();
+				const layer = {
+					type: 'callout',
+					x: 50,
+					y: 50,
+					width: 200,
+					height: 100,
+					cornerRadius: 20,
+					tailSize: 20,
+					tailStyle: 'triangle',
+					tailTipX: corner.tipX,
+					tailTipY: corner.tipY,
+					fill: '#ffffff'
+				};
+
+				renderer.draw( layer, { scale: 1 } );
+				expect( ctx.beginPath ).toHaveBeenCalled();
+			}
+		} );
+	} );
 } );
