@@ -42,19 +42,23 @@ cd Layers
 
 ---
 
-## Install Dependencies
+## Install Dependencies (Optional - Development Only)
+
+The extension works out of the box without any dependency installation. The following commands are **only needed for development and testing**:
 
 ```bash
 cd extensions/Layers
 
-# PHP dependencies (required)
-composer install --no-dev
+# PHP development tools (linting, static analysis, unit tests)
+composer install
 
-# JavaScript dependencies (optional, for development)
+# JavaScript development tools (linting, unit tests, build tools)
 npm install
 ```
 
-> **Windows Users:** If you encounter issues with `composer`, you may have a Python package named "composer" shadowing PHP Composer. Use `php composer.phar install` instead, or use the Docker-based test commands: `npm run test:php:docker`.
+> **Note:** If you just want to use the extension, skip this section entirely. These dependencies are only required if you plan to run tests, contribute code, or use the development tools.
+
+> **Windows Users:** If you encounter issues with `composer`, you may have a Python package named "composer" shadowing PHP Composer. Use `php composer.phar install` instead.
 
 ---
 
@@ -130,9 +134,10 @@ To upgrade to a new version:
 ```bash
 cd extensions/Layers
 git pull origin main
-composer install --no-dev
 php maintenance/run.php update.php
 ```
+
+> **Note:** If you previously installed development dependencies, you may also want to run `composer install` and `npm install` to update them.
 
 Always check the [CHANGELOG](https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md) for breaking changes before upgrading.
 

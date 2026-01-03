@@ -178,9 +178,9 @@ You can also link directly to the editor via URL:
 cd extensions
 git clone https://github.com/slickdexic/Layers.git
 cd Layers
-composer install
-npm install
 ```
+
+> **Note:** `composer install` and `npm install` are **optional** — only needed for development/testing. The extension works without them.
 
 Add to `LocalSettings.php`:
 
@@ -385,7 +385,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 1. Fork the repository
 2. Create a feature branch
-3. Run `npm install && composer install`
+3. Install dev dependencies: `npm install && composer install`
 4. Make changes and add tests
 5. Run `npm test && npm run test:php`
 6. Submit a pull request
