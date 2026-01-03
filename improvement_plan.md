@@ -16,6 +16,8 @@ The extension is **production-ready** with layer grouping feature complete. Most
 **Current Rating: 8.7/10** (improved from 8.6 due to PropertiesForm.js coverage reaching 82.45%)
 
 **Recent Improvements (January 2026):**
+- ✅ **Keyboard shortcut bug fixed** - `B` key now correctly selects Callout tool (was mapped to Blur)
+- ✅ **ShapeFactory.js coverage improved** - 72.38% → 86.66% branch coverage (+10 tests for callout creation)
 - ✅ **PropertiesForm.js function coverage** - 72.85% → 82.45% (above 80% threshold)
 - ✅ **ToolbarStyleControls.js coverage improved** - 77.35% → 86.79% function coverage (+19 tests)
 - ✅ **SelectionRenderer.js coverage improved** - 66% → ~90% (+29 tests for callout tail, groups, edge cases)
@@ -24,7 +26,7 @@ The extension is **production-ready** with layer grouping feature complete. Most
 - ✅ **Dead code removed** - ServerLogger.js (198 lines) + ApiLayersLog.php deleted
 - ✅ **CalloutRenderer.js coverage improved** - 62.42% → 90.05% (+38 tests for geometry methods)
 - ✅ **PresetDropdown.js coverage improved** - 75% → 90.62% function coverage (+25 tests)
-- ✅ **Test count increased** - 8,155 → 8,203 tests (+48)
+- ✅ **Test count increased** - 8,155 → 8,214 tests (+59)
 
 **Remaining Issues:**
 - ⏳ **12 god classes** - All use delegation patterns now; CalloutRenderer.js (1,290) is largest without extraction candidates
@@ -37,7 +39,7 @@ The extension is **production-ready** with layer grouping feature complete. Most
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping + curved arrows + callouts |
 | **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
-| **Testing** | ✅ Excellent | 8,203 tests (139 suites), 94.57% statement, 83.07% branch, 92.94% function coverage |
+| **Testing** | ✅ Excellent | 8,214 tests (139 suites), 94.58% statement, 83.08% branch, 92.94% function coverage |
 | **ES6 Migration** | ✅ Complete | 97 classes, 0 prototype patterns |
 | **Code Hygiene** | ✅ Clean | 0 TODO comments, 0 dead code |
 | **God Classes** | ⏳ Monitoring | 12 files >1,000 lines (all with delegation patterns) |

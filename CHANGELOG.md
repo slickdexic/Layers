@@ -17,6 +17,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Styles work correctly on both straight edges and rounded corners
 
 ### Fixed
+- **B Key Shortcut Mapping** — The `B` key now correctly selects the Callout tool (was incorrectly mapped to Blur tool)
 - **Corner Arc Tail Rendering** — Tail now renders correctly when positioned on rounded corners
   - Proper angle normalization ensures symmetric behavior at all four corners
   - Arc splitting algorithm correctly handles all tail positions along corner radii
