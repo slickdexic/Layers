@@ -736,8 +736,15 @@ class LayersEditor {
 				Object.assign( layer, changes );
 				this.stateManager.set( 'layers', layers );
 
-				if ( this.canvasManager ) {
-					this.canvasManager.redraw();
+				// Throttle redraw to prevent canvas crashes during rapid property changes
+				if ( !this._updateLayerRenderScheduled ) {
+					this._updateLayerRenderScheduled = true;
+					window.requestAnimationFrame( () => {
+						this._updateLayerRenderScheduled = false;
+						if ( this.canvasManager ) {
+							this.canvasManager.redraw();
+						}
+					} );
 				}
 				this.markDirty();
 				this.saveState( 'Update layer' );

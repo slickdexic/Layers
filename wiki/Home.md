@@ -16,18 +16,24 @@
 
 | 🎨 **Professional Tools** | 🔒 **Non-Destructive** | ♿ **Accessible** |
 |---------------------------|------------------------|------------------|
-| 11 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
+| 12 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
 
 ---
 
-## 🆕 What's New in v1.4.2
+## 🆕 What's New in v1.4.3
+
+- **Draggable Callout Tail** — Position the callout tail by dragging the tip directly on the canvas
+- **Tail Styles** — Three options: triangle (classic), curved (smooth Bézier), and line (simple pointer)
+- **Corner Arc Tail Rendering** — Tail now renders correctly when positioned on rounded corners
+- **8,000+ tests passing** — 94% statement coverage
+
+### Previous v1.4.2 Highlights
 
 - **Callout/Speech Bubble Tool** — New annotation type for chat bubbles and callouts with configurable tail direction
 - **Vector 2022 Dark Mode** — Full support for MediaWiki's Vector 2022 skin night mode
 - **Windows High Contrast Mode** — WCAG 1.4.11 compliance for forced-colors mode
 - **Color Picker Hex Input** — Keyboard-accessible hex color input field
 - **Toolbar Dropdown Grouping** — Text, shapes, and lines grouped into dropdown menus for cleaner UI
-- **8,000+ tests passing** — 94% statement coverage
 
 ### Previous v1.4.0 Highlights
 
@@ -106,10 +112,10 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.4.0 |
-| **Version (REL1_43)** | 1.4.0-REL1_43 |
+| **Version (main)** | 1.4.3 |
+| **Version (REL1_43)** | 1.4.3-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | December 31, 2025 |
+| **Release Date** | January 3, 2026 |
 | **Test Suites** | 136 |
 | **Total Tests** | 7,923 |
 | **Code Coverage** | 94% |

@@ -65,9 +65,14 @@ class TransformController {
 		this.originalMultiLayerStates = null;
 		this.showDragPreview = false;
 
-		// Throttling for transform events
+		// Throttling for transform events and render
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;
+		this._resizeRenderScheduled = false;
+		this._pendingResizeLayer = null;
+		this._dragRenderScheduled = false;
+		this._rotationRenderScheduled = false;
+		this._pendingRotationLayer = null;
 	}
 
 	// ==================== Resize Operations ====================
@@ -111,8 +116,12 @@ class TransformController {
 		let deltaY = point.y - this.dragStartPoint.y;
 
 		// If layer has rotation, transform the delta into the layer's local coordinate system
+		// Exception: control handles (arrows) and tailTip handles (callouts) work in world space
 		const rotation = layer.rotation || 0;
-		if ( rotation !== 0 ) {
+		const handleType = this.resizeHandle ? this.resizeHandle.type : '';
+		const skipRotation = handleType === 'control' || handleType === 'tailTip';
+
+		if ( rotation !== 0 && !skipRotation ) {
 			const rotRad = -rotation * Math.PI / 180;
 			const cos = Math.cos( rotRad );
 			const sin = Math.sin( rotRad );
@@ -157,9 +166,18 @@ class TransformController {
 				layer.innerRadius = layer.radius * 0.5;
 			}
 
-			// Re-render and emit live-transform event
-			this.manager.renderLayers( this.manager.editor.layers );
-			this.emitTransforming( layer );
+			// Throttle rendering using requestAnimationFrame to prevent lag during rapid drag
+			this._pendingResizeLayer = layer;
+			if ( !this._resizeRenderScheduled ) {
+				this._resizeRenderScheduled = true;
+				window.requestAnimationFrame( () => {
+					this._resizeRenderScheduled = false;
+					if ( this._pendingResizeLayer ) {
+						this.manager.renderLayers( this.manager.editor.layers );
+						this.emitTransforming( this._pendingResizeLayer );
+					}
+				} );
+			}
 		}
 	}
 
@@ -476,9 +494,18 @@ class TransformController {
 		// Apply rotation
 		layer.rotation = ( this.originalLayerState.rotation || 0 ) + degrees;
 
-		// Re-render and emit live-transform event
-		this.manager.renderLayers( this.manager.editor.layers );
-		this.emitTransforming( layer );
+		// Throttle rendering using requestAnimationFrame to prevent lag during rapid rotation
+		this._pendingRotationLayer = layer;
+		if ( !this._rotationRenderScheduled ) {
+			this._rotationRenderScheduled = true;
+			window.requestAnimationFrame( () => {
+				this._rotationRenderScheduled = false;
+				if ( this._pendingRotationLayer ) {
+					this.manager.renderLayers( this.manager.editor.layers );
+					this.emitTransforming( this._pendingRotationLayer );
+				}
+			} );
+		}
 	}
 
 	/**
@@ -618,8 +645,14 @@ class TransformController {
 			this.emitTransforming( active );
 		}
 
-		// Re-render (this can be slow for complex layers with shadows)
-		this.manager.renderLayers( this.manager.editor.layers );
+		// Throttle rendering using requestAnimationFrame to prevent lag during rapid drag
+		if ( !this._dragRenderScheduled ) {
+			this._dragRenderScheduled = true;
+			window.requestAnimationFrame( () => {
+				this._dragRenderScheduled = false;
+				this.manager.renderLayers( this.manager.editor.layers );
+			} );
+		}
 	}
 
 	/**

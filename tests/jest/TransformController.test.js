@@ -13,6 +13,12 @@ global.window.Layers = global.window.Layers || {};
 global.window.Layers.Canvas = global.window.Layers.Canvas || {};
 global.window.Layers.Canvas.ResizeCalculator = ResizeCalculator;
 
+// Mock requestAnimationFrame to execute callbacks synchronously for testing
+global.window.requestAnimationFrame = ( callback ) => {
+	callback();
+	return 0;
+};
+
 describe( 'TransformController', () => {
 	let controller;
 	let mockManager;
