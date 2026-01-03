@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 3, 2026  
+**Last Updated:** January 4, 2026  
 **Status:** ✅ No Critical Issues - Production Ready  
 **Version:** 1.4.3  
 **Goal:** World-class, production-ready MediaWiki extension
@@ -13,16 +13,16 @@ The extension is **production-ready** with layer grouping feature complete. Most
 
 **E2E test coverage significantly expanded** (1,201 → 2,618 lines, +118%) with comprehensive tests for named sets, layer groups, and keyboard shortcuts.
 
-**Current Rating: 8.6/10** (improved from 8.5 due to coverage gains)
+**Current Rating: 8.7/10** (improved from 8.6 due to PropertiesForm.js coverage reaching 82.45%)
 
 **Recent Improvements (January 2026):**
+- ✅ **PropertiesForm.js function coverage** - 72.85% → 82.45% (above 80% threshold)
 - ✅ **ToolbarStyleControls.js coverage improved** - 77.35% → 86.79% function coverage (+19 tests)
 - ✅ **SelectionRenderer.js coverage improved** - 66% → ~90% (+29 tests for callout tail, groups, edge cases)
 - ✅ **PropertiesForm.js refactored** - Extracted PropertyBuilders.js, reduced from 1,009 to 914 lines
 - ✅ **Callout/Speech Bubble Tool** (v1.4.2) - Full draggable tail support with 3 styles
 - ✅ **Dead code removed** - ServerLogger.js (198 lines) + ApiLayersLog.php deleted
 - ✅ **CalloutRenderer.js coverage improved** - 62.42% → 90.05% (+38 tests for geometry methods)
-- ✅ **PropertiesForm.js coverage improved** - 58.6% → 82.45% function coverage (+39 tests)
 - ✅ **PresetDropdown.js coverage improved** - 75% → 90.62% function coverage (+25 tests)
 - ✅ **Test count increased** - 8,155 → 8,203 tests (+48)
 
@@ -667,12 +667,11 @@ All dialogs now use DialogManager with fallbacks.
 
 The Layers extension is **fully functional and production-ready**. Technical debt is manageable with 12 god classes, ALL using delegation patterns. CalloutRenderer.js (1,290 lines) was added for the speech bubble feature. PropertiesForm.js was refactored to 914 lines with delegation to PropertyBuilders.js.
 
-**Honest Rating: 8.6/10**
+**Honest Rating: 8.7/10**
 
 Deductions:
 - -0.5 for 12 god classes (28% of codebase)
 - -0.5 for mobile UI not responsive (basic touch works)
-- -0.2 for PropertiesForm.js function coverage at 72.85% (below 80%)
 - -0.2 for some files approaching 1,000 line threshold
 
 ### What Would Improve the Rating
@@ -682,7 +681,7 @@ Deductions:
 | ✅ Remove ServerLogger.js dead code | +0.1 (DONE) |
 | ✅ Refactor PropertiesForm.js with delegation | +0.25 (DONE) |
 | ✅ Improve CalloutRenderer.js coverage to 85%+ | +0.1 (DONE - 90.05%) |
-| ⏳ Improve PropertiesForm.js function coverage to 80%+ | +0.1 (at 72.85%) |
+| ✅ Improve PropertiesForm.js function coverage to 80%+ | +0.1 (DONE - 82.45%) |
 | ✅ Improve PresetDropdown.js function coverage to 80%+ | +0.05 (DONE - 90.62%) |
 | Mobile-responsive UI | +0.5 |
 | Reduce god classes (refactor 2-3 largest) | +0.35 |
@@ -695,6 +694,6 @@ Deductions:
 
 ---
 
-*Plan updated: January 3, 2026*  
-*Status: ✅ **Production-ready** - Technical debt manageable, 8,067 tests passing, 13 god classes (2 without proper delegation)*  
+*Plan updated: January 4, 2026*  
+*Status: ✅ **Production-ready** - Technical debt manageable, 8,203 tests passing, 12 god classes (all with delegation patterns)*  
 *Version: 1.4.3*
