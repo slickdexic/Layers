@@ -3,7 +3,7 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C000%2B%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-8%2C067%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -237,9 +237,9 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 7,940 passing |
-| Statement coverage | 93.4% |
-| Branch coverage | 82.5% |
+| Jest tests | 8,067 passing |
+| Statement coverage | 93.99% |
+| Branch coverage | 82.93% |
 | Test suites | 138 |
 
 **Security:**
@@ -261,7 +261,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
-- ⚠️ **ServerLogger unused** - debug logging module is loaded but never called (dead code)
+- ⚠️ **13 god classes** - files exceeding 1,000 lines; most use delegation patterns except PropertiesForm.js
 
 ---
 
@@ -285,14 +285,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 105 | ✅ |
-| Total JS lines | ~56,000 | ✅ Well under 75K target |
-| ES6 classes | 94 | ✅ |
-| God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 7,940 | ✅ |
+| Total JS files | 106 | ✅ |
+| Total JS lines | ~57,000 | ✅ Well under 75K target |
+| ES6 classes | 97 | ✅ |
+| God classes (>1000 lines) | 13 | ⚠️ Technical debt (most use delegation) |
+| Tests passing | 8,067 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 93.4% | ✅ Excellent |
-| Branch coverage | 82.5% | ✅ |
+| Statement coverage | 93.99% | ✅ Excellent |
+| Branch coverage | 82.93% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

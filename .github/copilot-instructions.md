@@ -74,7 +74,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `LayerItemFactory.js` (~299 lines) - layer list item DOM creation
     - `LayerListRenderer.js` - layer list rendering
     - `LayerDragDrop.js` - drag and drop reordering
-    - `PropertiesForm.js` - layer properties panel
+    - `PropertiesForm.js` (~914 lines) - layer properties panel factory, delegates to PropertyBuilders
+    - `PropertyBuilders.js` (~819 lines) - reusable property group builders (dimensions, text, alignment, etc.)
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
     - `PresetStyleManager.js` (~275 lines) - preset dropdown UI integration (extracted from ToolbarStyleControls)
@@ -88,7 +89,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 11 files exceed 1,000 lines (LayerPanel, CanvasManager, Toolbar, LayersEditor, SelectionManager, ToolManager, CanvasRenderer, ArrowRenderer, APIManager, GroupManager, ToolbarStyleControls) - all use delegation patterns, see improvement_plan.md
+  - **God classes:** 12 files exceed 1,000 lines (LayerPanel, CanvasManager, Toolbar, LayersEditor, SelectionManager, ArrowRenderer, CalloutRenderer, ToolManager, APIManager, GroupManager, CanvasRenderer, ToolbarStyleControls) - all use delegation patterns, see improvement_plan.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.
