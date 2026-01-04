@@ -757,57 +757,10 @@
 				Builders.addDimensions( ctx, { cornerRadius: true, maxCornerRadius: 100 } );
 				// Text properties (same as textbox)
 				addSection( t( 'layers-section-text', 'Text' ), 'text' );
-<<<<<<< HEAD
-				addInput( { label: t( 'layers-prop-text', 'Text' ), type: 'textarea', value: layer.text || '', maxLength: 5000, rows: 5, wide: true, onChange: function ( v ) { editor.updateLayer( layer.id, { text: v } ); } } );
-				// Font family dropdown
-				( function () {
-					const defaultFonts = mw.config.get( 'LayersDefaultFonts' ) || [ 'Arial', 'Roboto', 'Noto Sans', 'Times New Roman', 'Courier New' ];
-					const fontOptions = defaultFonts.map( function ( font ) {
-						return { value: font, text: font };
-					} );
-					addSelect( { label: t( 'layers-prop-font-family', 'Font' ), value: layer.fontFamily || 'Arial, sans-serif', options: fontOptions, onChange: function ( v ) { editor.updateLayer( layer.id, { fontFamily: v } ); } } );
-				}() );
-				addInput( { label: t( 'layers-prop-font-size', 'Font Size' ), type: 'number', value: layer.fontSize || 16, min: 6, max: 200, step: 1, prop: 'fontSize', onChange: function ( v ) { const fs = Math.max( 6, Math.min( 200, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { fontSize: fs } ); } } );
-				// Bold and Italic toggles
-				addCheckbox( { label: t( 'layers-prop-bold', 'Bold' ), value: layer.fontWeight === 'bold', onChange: function ( checked ) { editor.updateLayer( layer.id, { fontWeight: checked ? 'bold' : 'normal' } ); } } );
-				addCheckbox( { label: t( 'layers-prop-italic', 'Italic' ), value: layer.fontStyle === 'italic', onChange: function ( checked ) { editor.updateLayer( layer.id, { fontStyle: checked ? 'italic' : 'normal' } ); } } );
-				addColorPicker( { label: t( 'layers-prop-text-color', 'Text Color' ), value: layer.color || '#000000', property: 'color', onChange: function ( newColor ) { editor.updateLayer( layer.id, { color: newColor } ); } } );
-				addInput( { label: t( 'layers-prop-text-stroke-width', 'Text Stroke Width' ), type: 'number', value: layer.textStrokeWidth || 0, min: 0, max: 20, step: 0.5, prop: 'textStrokeWidth', onChange: function ( v ) { editor.updateLayer( layer.id, { textStrokeWidth: Math.max( 0, Math.min( 20, parseFloat( v ) ) ) } ); } } );
-				addColorPicker( { label: t( 'layers-prop-text-stroke-color', 'Text Stroke Color' ), value: layer.textStrokeColor || '#000000', property: 'textStrokeColor', onChange: function ( newColor ) { editor.updateLayer( layer.id, { textStrokeColor: newColor } ); } } );
-				// Text shadow section
-				addSection( t( 'layers-section-text-shadow', 'Text Shadow' ), 'text-shadow' );
-				addCheckbox( { label: t( 'layers-prop-text-shadow', 'Enable Text Shadow' ), value: layer.textShadow === true, onChange: function ( checked ) { editor.updateLayer( layer.id, { textShadow: checked } ); } } );
-				addColorPicker( { label: t( 'layers-prop-text-shadow-color', 'Shadow Color' ), value: layer.textShadowColor || 'rgba(0,0,0,0.5)', property: 'textShadowColor', onChange: function ( newColor ) { editor.updateLayer( layer.id, { textShadowColor: newColor } ); } } );
-				addInput( { label: t( 'layers-prop-text-shadow-blur', 'Shadow Blur' ), type: 'number', value: layer.textShadowBlur || 4, min: 0, max: 50, step: 1, prop: 'textShadowBlur', onChange: function ( v ) { editor.updateLayer( layer.id, { textShadowBlur: Math.max( 0, Math.min( 50, parseFloat( v ) ) ) } ); } } );
-				addInput( { label: t( 'layers-prop-text-shadow-offset-x', 'Shadow Offset X' ), type: 'number', value: layer.textShadowOffsetX || 2, min: -100, max: 100, step: 1, prop: 'textShadowOffsetX', onChange: function ( v ) { editor.updateLayer( layer.id, { textShadowOffsetX: Math.max( -100, Math.min( 100, parseFloat( v ) ) ) } ); } } );
-				addInput( { label: t( 'layers-prop-text-shadow-offset-y', 'Shadow Offset Y' ), type: 'number', value: layer.textShadowOffsetY || 2, min: -100, max: 100, step: 1, prop: 'textShadowOffsetY', onChange: function ( v ) { editor.updateLayer( layer.id, { textShadowOffsetY: Math.max( -100, Math.min( 100, parseFloat( v ) ) ) } ); } } );
-				// Alignment section
-				addSection( t( 'layers-section-alignment', 'Alignment' ), 'alignment' );
-				addSelect( { label: t( 'layers-prop-text-align', 'Horizontal Align' ), value: layer.textAlign || 'left', options: [
-					{ value: 'left', text: t( 'layers-align-left', 'Left' ) },
-					{ value: 'center', text: t( 'layers-align-center', 'Center' ) },
-					{ value: 'right', text: t( 'layers-align-right', 'Right' ) }
-				], onChange: function ( v ) { editor.updateLayer( layer.id, { textAlign: v } ); } } );
-				addSelect( { label: t( 'layers-prop-vertical-align', 'Vertical Align' ), value: layer.verticalAlign || 'top', options: [
-					{ value: 'top', text: t( 'layers-align-top', 'Top' ) },
-					{ value: 'middle', text: t( 'layers-align-middle', 'Middle' ) },
-					{ value: 'bottom', text: t( 'layers-align-bottom', 'Bottom' ) }
-				], onChange: function ( v ) { editor.updateLayer( layer.id, { verticalAlign: v } ); } } );
-				addInput( { label: t( 'layers-prop-padding', 'Padding' ), type: 'number', value: layer.padding || 8, min: 0, max: 100, step: 1, prop: 'padding', onChange: function ( v ) { editor.updateLayer( layer.id, { padding: Math.max( 0, Math.min( 100, parseInt( v, 10 ) ) ) } ); } } );
-				// Callout tail section (after text properties for logical grouping with visual characteristics)
-				addSection( t( 'layers-section-callout', 'Callout Tail' ), 'callout' );
-				addSelect( { label: t( 'layers-prop-tail-style', 'Tail Style' ), value: layer.tailStyle || 'triangle', options: [
-					{ value: 'triangle', text: t( 'layers-tail-style-triangle', 'Triangle' ) },
-					{ value: 'curved', text: t( 'layers-tail-style-curved', 'Curved' ) },
-					{ value: 'line', text: t( 'layers-tail-style-line', 'Line' ) }
-				], onChange: function ( v ) { editor.updateLayer( layer.id, { tailStyle: v } ); } } );
-				// Note: Tail position is controlled by dragging the green diamond handle on the canvas
-=======
 				Builders.addTextProperties( ctx );
 				Builders.addTextShadowSection( ctx );
 				Builders.addAlignmentSection( ctx );
 				Builders.addCalloutTailSection( ctx );
->>>>>>> main
 				break;
 
 			case ( LAYER_TYPES.CIRCLE || 'circle' ):
