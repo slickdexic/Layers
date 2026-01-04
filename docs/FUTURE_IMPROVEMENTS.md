@@ -2,33 +2,13 @@
 
 This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
 
-**Last Updated:** January 6, 2025
+**Last Updated:** January 4, 2026
 
 ---
 
 ## Active Proposals
 
-### 1. Chat Bubble / Speech Balloon Tool
-
-**Priority:** MEDIUM  
-**Complexity:** Medium  
-**Status:** ⏳ Proposed
-
-A text box variant designed for speech/thought bubbles and diagram callouts.
-
-**Features:**
-- All text box properties (alignment, padding, font)
-- Configurable tail/pointer (position, style, direction)
-- Preset shapes: rounded rectangle, cloud (thought), oval, circle
-- Leader line/arrow for pointing to targets
-
-**Use Case:** Comic-style annotations, dialogue callouts, instructional content, diagram labeling.
-
-**Effort:** 2-3 weeks
-
----
-
-### 2. Inline Canvas Text Editing (FR-8)
+### 1. Inline Canvas Text Editing (FR-8)
 
 **Priority:** HIGH  
 **Complexity:** High  
@@ -117,6 +97,7 @@ The following features have been completed and archived:
 
 | Feature | Version | Notes |
 |---------|---------|-------|
+| Callout/Speech Bubble Tool | v1.4.2-1.4.3 | Draggable tail, 3 tail styles (triangle, curved, line), corner arc support |
 | Toolbar Dropdown Grouping (FR-5) | v1.5.0 | Grouped tools with MRU, keyboard nav |
 | Curved Arrows (FR-4) | v1.3.3 | Bézier curves with control point |
 | Live Color Preview (FR-9) | v1.3.3 | Real-time canvas preview |

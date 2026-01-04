@@ -1,0 +1,87 @@
+{| class="wikitable" style="float:right; margin-left:1em; width:300px;"
+! colspan="2" | layer_assets table
+|-
+| '''Extension''' || [[Extension:Layers]]
+|-
+| '''Description''' || Stores shared layer assets such as imported images and patterns.
+|}
+
+The '''layer_assets''' table stores shared assets for the [[Extension:Layers|Layers]] extension. Assets are referenced by layers across multiple layer sets, enabling efficient storage and reuse.
+
+== Table Structure ==
+
+{| class="wikitable"
+! Column !! Type !! Nullable !! Default !! Description
+|-
+| <code>la_id</code> || int unsigned || No || Auto-increment || Primary key, unique identifier
+|-
+| <code>la_hash</code> || varchar(64) || No || — || SHA-256 hash of the asset content (for deduplication)
+|-
+| <code>la_type</code> || varchar(20) || No || — || Asset type: "image", "pattern", etc.
+|-
+| <code>la_mime</code> || varchar(50) || No || — || MIME type (e.g., "image/png", "image/jpeg")
+|-
+| <code>la_size</code> || int unsigned || No || — || Asset size in bytes
+|-
+| <code>la_data</code> || mediumblob || No || — || Binary asset data (base64-decoded)
+|-
+| <code>la_user_id</code> || int unsigned || No || — || User ID who uploaded the asset
+|-
+| <code>la_timestamp</code> || binary(14) || No || — || When the asset was uploaded
+|-
+| <code>la_original_name</code> || varchar(255) || Yes || NULL || Original filename (for reference only)
+|}
+
+== Indexes ==
+
+{| class="wikitable"
+! Index Name !! Columns !! Type !! Purpose
+|-
+| PRIMARY || <code>la_id</code> || Primary || Unique row identifier
+|-
+| <code>la_hash_idx</code> || <code>la_hash</code> || Unique || Deduplication — same content is stored once
+|-
+| <code>la_user_idx</code> || <code>la_user_id</code> || Index || Query assets by uploader
+|-
+| <code>la_type_idx</code> || <code>la_type</code> || Index || Query assets by type
+|}
+
+== Asset Types ==
+
+{| class="wikitable"
+! Type !! Description !! Max Size
+|-
+| <code>image</code> || Imported images (photos, diagrams) || Configurable via <code>$wgLayersMaxImageBytes</code> (default: 1MB)
+|-
+| <code>pattern</code> || Fill patterns || 100KB
+|}
+
+== How Assets Are Used ==
+
+When a user imports an external image into the layer editor:
+
+# Image is validated (size, type, dimensions)
+# SHA-256 hash is computed
+# If hash exists in <code>layer_assets</code>, the existing <code>la_id</code> is reused
+# If new, asset is stored and <code>la_id</code> is returned
+# Layer's <code>src</code> field stores <code>asset:{la_id}</code> instead of base64 data
+
+This approach:
+* '''Reduces storage''': Identical images uploaded by different users are stored once
+* '''Speeds up API''': Layer data JSON is smaller (references instead of embedded data)
+* '''Enables cleanup''': Orphaned assets can be identified and removed
+
+== Size Limits ==
+
+* <code>$wgLayersMaxImageBytes</code> — Maximum size per imported image (default: 1MB)
+* <code>$wgLayersMaxBytes</code> — Maximum total layer set JSON size (default: 2MB)
+
+== Related Tables ==
+
+* [[Extension:Layers/layer_sets table|layer_sets]] — Stores layer data that references assets
+* [[Extension:Layers/layer_set_usage table|layer_set_usage]] — Tracks article usage
+
+== See Also ==
+
+* [[Extension:Layers]] — Parent extension documentation
+* [[Extension:Layers#Configuration]] — Configuration parameters

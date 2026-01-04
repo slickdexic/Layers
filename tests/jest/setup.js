@@ -260,3 +260,21 @@ global.createMockEditor = function () {
         offsetY: 0
     };
 };
+
+// Initialize PropertyBuilders for PropertiesForm tests
+// This must happen after window.Layers is set up
+( function () {
+    // Ensure Layers namespace exists
+    if ( typeof window !== 'undefined' ) {
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+
+        // Load PropertyBuilders module
+        try {
+            const PropertyBuilders = require( '../../resources/ext.layers.editor/ui/PropertyBuilders.js' );
+            window.Layers.UI.PropertyBuilders = PropertyBuilders;
+        } catch ( e ) {
+            // PropertyBuilders not found, tests will use fallback
+        }
+    }
+}() );

@@ -5,7 +5,7 @@
  * Layer drag-and-drop reordering controller
  */
 
-const { LayerDragDrop } = require( '../../../resources/ext.layers.editor/ui/LayerDragDrop.js' );
+const LayerDragDrop = require( '../../../resources/ext.layers.editor/ui/LayerDragDrop.js' );
 
 describe( 'LayerDragDrop', () => {
 	let layerList;

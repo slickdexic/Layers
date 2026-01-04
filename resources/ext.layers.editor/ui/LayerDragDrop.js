@@ -596,6 +596,6 @@
 
 	// CommonJS export for testing
 	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = { LayerDragDrop };
+		module.exports = LayerDragDrop;
 	}
 }() );

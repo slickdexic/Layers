@@ -190,7 +190,7 @@
 				this.toolbar.selectTool( 'star' );
 				break;
 			case 'b':
-				this.toolbar.selectTool( 'blur' );
+				this.toolbar.selectTool( 'callout' );
 				break;
 			case 'a':
 				this.toolbar.selectTool( 'arrow' );
@@ -323,7 +323,7 @@
 			{ key: 'S', description: 'Star Tool', category: 'tools' },
 			{ key: 'A', description: 'Arrow Tool', category: 'tools' },
 			{ key: 'L', description: 'Line Tool', category: 'tools' },
-			{ key: 'B', description: 'Blur Tool', category: 'tools' },
+			{ key: 'B', description: 'Callout Tool', category: 'tools' },
 
 			// View shortcuts
 			{ key: '+/=', description: 'Zoom In', category: 'view' },

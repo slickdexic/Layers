@@ -1047,4 +1047,60 @@ describe( 'TransformController', () => {
 			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
 		} );
 	} );
+
+	describe( 'smart guides snapping during drag', () => {
+		let smartGuidesController;
+
+		beforeEach( () => {
+			smartGuidesController = {
+				enabled: true,
+				calculateSnappedPosition: jest.fn( ( layer, x, y ) => ( { x: x + 5, y: y + 3 } ) )
+			};
+			mockManager.smartGuidesController = smartGuidesController;
+			mockManager.gridSnapEnabled = false;
+		} );
+
+		it( 'should apply smart guides snapping when grid snap is disabled', () => {
+			// Use testLayer which is already in mockEditor.layers
+			mockManager.selectedLayerIds = [ 'layer1' ];
+
+			controller.startDrag( { x: 100, y: 100 } );
+
+			expect( controller.isDragging ).toBe( true );
+			expect( controller.originalLayerState ).toEqual( testLayer );
+		} );
+
+		it( 'should use smart guides controller when available and enabled', () => {
+			mockManager.selectedLayerIds = [ 'layer1' ];
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 110, y: 110 } );
+
+			// Smart guides should have been consulted
+			expect( smartGuidesController.calculateSnappedPosition ).toHaveBeenCalled();
+		} );
+
+		it( 'should not use smart guides when disabled', () => {
+			smartGuidesController.enabled = false;
+			mockManager.selectedLayerIds = [ 'layer1' ];
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 110, y: 110 } );
+
+			// Smart guides should NOT be consulted since disabled
+			expect( smartGuidesController.calculateSnappedPosition ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should prefer grid snap over smart guides when grid snap is enabled', () => {
+			mockManager.snapToGrid = true;
+			mockManager.gridSize = 10;
+			mockManager.selectedLayerIds = [ 'layer1' ];
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 110, y: 110 } );
+
+			// Smart guides should NOT be used since grid snap takes precedence
+			expect( smartGuidesController.calculateSnappedPosition ).not.toHaveBeenCalled();
+		} );
+	} );
 } );

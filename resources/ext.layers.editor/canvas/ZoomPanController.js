@@ -34,6 +34,7 @@
 			this.zoomAnimationStartTime = 0;
 			this.zoomAnimationStartZoom = 1.0;
 			this.zoomAnimationTargetZoom = 1.0;
+			this.animationFrameId = null; // Track rAF for cleanup
 		}
 
 		/**
@@ -192,8 +193,8 @@
 			this.setZoomDirect( currentZoom );
 
 			if ( progress < 1.0 ) {
-				// Continue animation
-				requestAnimationFrame( () => this.animateZoom() );
+				// Continue animation - store frame ID for cleanup
+				this.animationFrameId = requestAnimationFrame( () => this.animateZoom() );
 			} else {
 				// Animation complete
 				this.isAnimatingZoom = false;
@@ -346,9 +347,16 @@
 		 * Clean up resources
 		 */
 		destroy() {
+			// Cancel any pending animation frame to prevent memory leak
+			if ( this.animationFrameId ) {
+				cancelAnimationFrame( this.animationFrameId );
+				this.animationFrameId = null;
+			}
+
 			// Clear panning state
 			this.isPanning = false;
 			this.panStart = null;
+			this.isAnimatingZoom = false;
 
 			// Clear reference
 			this.manager = null;

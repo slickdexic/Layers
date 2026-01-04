@@ -763,5 +763,85 @@ describe( 'DrawingController', () => {
 			// Radius would be ~2.83, below minimum of 5
 			expect( layer ).toBeNull();
 		} );
+
+		it( 'should complete a full textbox drawing cycle', () => {
+			const style = {
+				fontSize: 18,
+				fontFamily: 'Georgia',
+				color: '#333333',
+				fill: '#ffffcc',
+				strokeWidth: 2
+			};
+
+			controller.startDrawing( { x: 50, y: 50 }, 'textbox', style );
+			expect( controller.isDrawing ).toBe( true );
+			expect( controller.tempLayer.type ).toBe( 'textbox' );
+			expect( controller.tempLayer.fontSize ).toBe( 18 );
+			expect( controller.tempLayer.fontFamily ).toBe( 'Georgia' );
+			expect( controller.tempLayer.color ).toBe( '#333333' );
+			expect( controller.tempLayer.fill ).toBe( '#ffffcc' );
+			expect( controller.tempLayer.strokeWidth ).toBe( 2 );
+			expect( controller.tempLayer.textAlign ).toBe( 'left' );
+			expect( controller.tempLayer.verticalAlign ).toBe( 'top' );
+			expect( controller.tempLayer.padding ).toBe( 8 );
+
+			controller.continueDrawing( { x: 200, y: 150 } );
+			expect( controller.tempLayer.width ).toBe( 150 );
+			expect( controller.tempLayer.height ).toBe( 100 );
+
+			const layer = controller.finishDrawing( { x: 200, y: 150 }, 'textbox' );
+			expect( layer ).not.toBeNull();
+			expect( layer.type ).toBe( 'textbox' );
+		} );
+
+		it( 'should use default textbox styles when not provided', () => {
+			controller.startDrawing( { x: 10, y: 10 }, 'textbox', {} );
+
+			expect( controller.tempLayer.fontSize ).toBe( 16 );
+			expect( controller.tempLayer.fontFamily ).toBe( 'Arial, sans-serif' );
+			expect( controller.tempLayer.color ).toBe( '#000000' );
+			expect( controller.tempLayer.fill ).toBe( '#ffffff' );
+			expect( controller.tempLayer.strokeWidth ).toBe( 1 );
+		} );
+
+		it( 'should complete a full callout drawing cycle', () => {
+			const style = {
+				fontSize: 14,
+				fontFamily: 'Verdana',
+				color: '#0066cc',
+				fill: '#e6f2ff',
+				strokeWidth: 1.5
+			};
+
+			controller.startDrawing( { x: 100, y: 100 }, 'callout', style );
+			expect( controller.isDrawing ).toBe( true );
+			expect( controller.tempLayer.type ).toBe( 'callout' );
+			expect( controller.tempLayer.fontSize ).toBe( 14 );
+			expect( controller.tempLayer.fontFamily ).toBe( 'Verdana' );
+			expect( controller.tempLayer.color ).toBe( '#0066cc' );
+			expect( controller.tempLayer.fill ).toBe( '#e6f2ff' );
+			expect( controller.tempLayer.strokeWidth ).toBe( 1.5 );
+			expect( controller.tempLayer.textAlign ).toBe( 'center' );
+			expect( controller.tempLayer.verticalAlign ).toBe( 'middle' );
+
+			controller.continueDrawing( { x: 250, y: 200 } );
+			expect( controller.tempLayer.width ).toBe( 150 );
+			expect( controller.tempLayer.height ).toBe( 100 );
+
+			const layer = controller.finishDrawing( { x: 250, y: 200 }, 'callout' );
+			expect( layer ).not.toBeNull();
+			expect( layer.type ).toBe( 'callout' );
+		} );
+
+		it( 'should use default callout styles when not provided', () => {
+			controller.startDrawing( { x: 10, y: 10 }, 'callout', {} );
+
+			expect( controller.tempLayer.fontSize ).toBe( 16 );
+			expect( controller.tempLayer.fontFamily ).toBe( 'Arial, sans-serif' );
+			expect( controller.tempLayer.color ).toBe( '#000000' );
+			expect( controller.tempLayer.strokeWidth ).toBe( 1 );
+			expect( controller.tempLayer.textAlign ).toBe( 'center' );
+			expect( controller.tempLayer.verticalAlign ).toBe( 'middle' );
+		} );
 	} );
 } );

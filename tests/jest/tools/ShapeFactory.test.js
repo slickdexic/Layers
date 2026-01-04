@@ -570,6 +570,115 @@ describe( 'ShapeFactory', () => {
 		} );
 	} );
 
+	describe( 'createCallout', () => {
+		it( 'should create a callout layer with default properties', () => {
+			const callout = factory.createCallout( { x: 100, y: 200 } );
+
+			expect( callout.type ).toBe( 'callout' );
+			expect( callout.x ).toBe( 100 );
+			expect( callout.y ).toBe( 200 );
+			expect( callout.width ).toBe( 0 );
+			expect( callout.height ).toBe( 0 );
+		} );
+
+		it( 'should include text properties', () => {
+			const callout = factory.createCallout( { x: 0, y: 0 } );
+
+			expect( callout.text ).toBe( '' );
+			expect( callout.fontSize ).toBe( 16 );
+			expect( callout.fontFamily ).toBe( 'Arial' );
+			expect( callout.fontWeight ).toBe( 'normal' );
+			expect( callout.fontStyle ).toBe( 'normal' );
+			expect( callout.textAlign ).toBe( 'left' );
+			expect( callout.verticalAlign ).toBe( 'top' );
+			expect( callout.lineHeight ).toBe( 1.2 );
+		} );
+
+		it( 'should include text stroke and shadow properties', () => {
+			const callout = factory.createCallout( { x: 0, y: 0 } );
+
+			expect( callout.textStrokeWidth ).toBe( 0 );
+			expect( callout.textStrokeColor ).toBe( '#000000' );
+			expect( callout.textShadow ).toBe( false );
+			expect( callout.textShadowColor ).toBe( 'rgba(0,0,0,0.5)' );
+			expect( callout.textShadowBlur ).toBe( 4 );
+			expect( callout.textShadowOffsetX ).toBe( 2 );
+			expect( callout.textShadowOffsetY ).toBe( 2 );
+		} );
+
+		it( 'should include shape properties from style', () => {
+			const callout = factory.createCallout( { x: 0, y: 0 } );
+
+			expect( callout.stroke ).toBe( '#ff0000' ); // from mock style
+			expect( callout.strokeWidth ).toBe( 3 ); // from mock style
+			expect( callout.fill ).toBe( '#00ff00' ); // from mock style
+			expect( callout.cornerRadius ).toBe( 8 );
+			expect( callout.padding ).toBe( 12 );
+		} );
+
+		it( 'should include callout-specific tail properties', () => {
+			const callout = factory.createCallout( { x: 0, y: 0 } );
+
+			expect( callout.tailDirection ).toBe( 'bottom' );
+			expect( callout.tailPosition ).toBe( 0.5 );
+			expect( callout.tailSize ).toBe( 20 );
+		} );
+
+		it( 'should apply shadow properties when enabled', () => {
+			mockStyleManager.get.mockReturnValue( {
+				color: '#000000',
+				fill: '#ffffff',
+				strokeWidth: 1,
+				shadow: true,
+				shadowColor: '#333333',
+				shadowBlur: 10,
+				shadowOffsetX: 5,
+				shadowOffsetY: 5
+			} );
+
+			const callout = factory.createCallout( { x: 0, y: 0 } );
+
+			expect( callout.shadow ).toBe( true );
+			expect( callout.shadowColor ).toBe( '#333333' );
+		} );
+
+		it( 'should use default values when style properties are missing', () => {
+			mockStyleManager.get.mockReturnValue( {} );
+
+			const callout = factory.createCallout( { x: 50, y: 75 } );
+
+			expect( callout.fontSize ).toBe( 16 );
+			expect( callout.fontFamily ).toBe( 'Arial, sans-serif' );
+			expect( callout.color ).toBe( '#000000' );
+			expect( callout.stroke ).toBe( '#000000' );
+			expect( callout.strokeWidth ).toBe( 1 );
+			expect( callout.fill ).toBe( '#ffffff' );
+		} );
+	} );
+
+	describe( 'create - callout type', () => {
+		it( 'should create callout via create switch', () => {
+			const layer = factory.create( 'callout', { x: 25, y: 50 } );
+
+			expect( layer.type ).toBe( 'callout' );
+			expect( layer.x ).toBe( 25 );
+			expect( layer.y ).toBe( 50 );
+			expect( layer.tailDirection ).toBe( 'bottom' );
+		} );
+	} );
+
+	describe( 'hasValidSize - edge cases', () => {
+		it( 'should return true for unknown layer types (default case)', () => {
+			const unknownLayer = { type: 'future-shape', x: 0, y: 0 };
+			expect( factory.hasValidSize( unknownLayer ) ).toBe( true );
+		} );
+
+		it( 'should return true for callout type', () => {
+			const calloutLayer = { type: 'callout', width: 100, height: 50 };
+			expect( factory.hasValidSize( calloutLayer ) ).toBe( true );
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export ShapeFactory class', () => {
 			expect( typeof ShapeFactory ).toBe( 'function' );

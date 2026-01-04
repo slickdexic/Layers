@@ -28,8 +28,13 @@
 					'savefailed': 'layers-save-failed',
 					'dbschema-missing': 'layers-db-error',
 					'permission-denied': 'layers-permission-denied',
+					'permissiondenied': 'layers-permission-denied',
 					'network-error': 'layers-network-error',
-					'timeout': 'layers-timeout-error'
+					'timeout': 'layers-timeout-error',
+					// Session/token errors - user needs to refresh or log in again
+					'badtoken': 'layers-session-expired',
+					'assertuserfailed': 'layers-session-expired',
+					'assertbotfailed': 'layers-session-expired'
 				},
 				// Default fallback messages
 				defaults: {

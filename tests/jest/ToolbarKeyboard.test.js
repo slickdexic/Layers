@@ -92,7 +92,8 @@ describe( 'ToolbarKeyboard', function () {
 			{ key: 'e', tool: 'ellipse' },
 			{ key: 's', tool: 'star' },
 			{ key: 'a', tool: 'arrow' },
-			{ key: 'l', tool: 'line' }
+			{ key: 'l', tool: 'line' },
+			{ key: 'b', tool: 'callout' }
 		];
 
 		toolShortcuts.forEach( ( { key, tool } ) => {

@@ -62,6 +62,18 @@ class RateLimiter {
 				// Separate limit for library managers
 				'managelayerlibrary' => [ 200, 3600 ],
 			],
+			'editlayers-delete' => [
+				// 20 deletes per hour for users (lower than save since deletes are destructive)
+				'user' => [ 20, 3600 ],
+				// 3 deletes per hour for new users (very restrictive)
+				'newbie' => [ 3, 3600 ],
+				// 30 deletes per hour for autoconfirmed
+				'autoconfirmed' => [ 30, 3600 ],
+				// Higher but limited rate for privileged users
+				'sysop' => [ 50, 3600 ],
+				// Separate limit for library managers
+				'managelayerlibrary' => [ 100, 3600 ],
+			],
 			'editlayers-render' => [
 				// 100 renders per hour
 				'user' => [ 100, 3600 ],

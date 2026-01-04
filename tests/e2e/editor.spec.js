@@ -171,15 +171,7 @@ describeEditor( 'Layers Editor', () => {
 			expect( newCount ).toBe( initialCount + 1 );
 		} );
 
-		test( 'can create blur layer', async () => {
-			const initialCount = await editorPage.getLayerCount();
-			
-			await editorPage.selectTool( 'blur' );
-			await editorPage.drawOnCanvas( 100, 100, 300, 150 );
-			
-			const newCount = await editorPage.getLayerCount();
-			expect( newCount ).toBe( initialCount + 1 );
-		} );
+		// Note: Blur tool was removed in v1.4.2. Use fill='blur' on any shape instead.
 
 		test( 'can create path layer with pen tool', async ( { page } ) => {
 			const initialCount = await editorPage.getLayerCount();

@@ -1,0 +1,64 @@
+{| class="wikitable" style="float:right; margin-left:1em; width:300px;"
+! colspan="2" | layer_set_usage table
+|-
+| '''Extension''' || [[Extension:Layers]]
+|-
+| '''Description''' || Tracks which wiki articles embed images with layer sets.
+|}
+
+The '''layer_set_usage''' table tracks article usage for the [[Extension:Layers|Layers]] extension. This enables cache invalidation when layer data changes and provides usage statistics.
+
+== Table Structure ==
+
+{| class="wikitable"
+! Column !! Type !! Nullable !! Default !! Description
+|-
+| <code>lsu_id</code> || int unsigned || No || Auto-increment || Primary key, unique identifier
+|-
+| <code>lsu_page_id</code> || int unsigned || No || — || Page ID of the article using the layered image
+|-
+| <code>lsu_file_name</code> || varchar(255) || No || — || Filename of the layered image (e.g., "Example.jpg")
+|-
+| <code>lsu_set_name</code> || varchar(50) || No || 'default' || Named layer set being used
+|-
+| <code>lsu_timestamp</code> || binary(14) || No || — || When the usage was recorded
+|}
+
+== Indexes ==
+
+{| class="wikitable"
+! Index Name !! Columns !! Type !! Purpose
+|-
+| PRIMARY || <code>lsu_id</code> || Primary || Unique row identifier
+|-
+| <code>lsu_page_file_idx</code> || <code>lsu_page_id</code>, <code>lsu_file_name</code>, <code>lsu_set_name</code> || Unique || Prevent duplicate entries, fast lookup
+|-
+| <code>lsu_file_idx</code> || <code>lsu_file_name</code> || Index || Find all pages using a specific image
+|}
+
+== Usage ==
+
+This table is populated automatically when:
+* An article is parsed that contains <code><nowiki>[[File:Example.jpg|layers=setname]]</nowiki></code>
+* The parser hook <code>ParserMakeImageParams</code> detects the <code>layers</code> parameter
+
+The table enables:
+* '''Cache invalidation''': When layer data changes, all pages using that layer set can be purged
+* '''Usage statistics''': Track which images have active layer annotations
+* '''Orphan detection''': Find layer sets that are no longer used by any article
+
+== Cleanup ==
+
+Entries are automatically removed when:
+* A page is deleted
+* An image is deleted (via <code>FileDeleteComplete</code> hook)
+* The <code>layers</code> parameter is removed from a page during re-parse
+
+== Related Tables ==
+
+* [[Extension:Layers/layer_sets table|layer_sets]] — Stores the actual layer data
+* [[Extension:Layers/layer_assets table|layer_assets]] — Stores shared layer assets
+
+== See Also ==
+
+* [[Extension:Layers]] — Parent extension documentation

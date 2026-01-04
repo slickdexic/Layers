@@ -59,6 +59,8 @@ See [`improvement_plan.md`](improvement_plan.md) for refactoring guidance.
 
 ## Install
 
+These are development dependencies for testing and linting. **Not required** to use the extension.
+
 - npm install
 - composer install
 

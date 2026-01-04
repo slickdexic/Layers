@@ -7,6 +7,7 @@ use ApiUsageException;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
+use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
@@ -111,7 +112,7 @@ class ApiLayersSave extends ApiBase {
 			$fileName = $requestedFilename;
 			$data = $params['data'];
 			$rawSetName = $params['setname'] ?? 'default';
-			$setName = $this->sanitizeSetName( $rawSetName );
+			$setName = SetNameSanitizer::sanitize( $rawSetName );
 
 			// Log set name processing via MediaWiki's debug log
 			$this->getLogger()->debug(
@@ -331,40 +332,6 @@ class ApiLayersSave extends ApiBase {
 	 */
 	protected function createRateLimiter(): RateLimiter {
 		return new RateLimiter();
-	}
-
-	/**
-	 * Sanitize a user-supplied layer set name while allowing multilingual scripts.
-	 *
-	 * @param string $rawSetName
-	 * @return string
-	 */
-	protected function sanitizeSetName( string $rawSetName ): string {
-		$setName = trim( $rawSetName );
-
-		// Remove control chars and path separators to avoid traversal and logging issues
-		$setName = preg_replace( '/[\x00-\x1F\x7F\/\\\\]/u', '', $setName );
-
-		// Allow any letter/number from any script plus underscore, dash, and spaces
-		$unicodeSafe = preg_replace( '/[^\p{L}\p{N}_\-\s]/u', '', $setName );
-
-		if ( $unicodeSafe === null ) {
-			// Fallback for environments without unicode PCRE support
-			$unicodeSafe = preg_replace( '/[^a-zA-Z0-9_\-\s]/', '', $setName );
-		}
-		$setName = $unicodeSafe ?? '';
-
-		// Collapse repeated whitespace
-		$setName = preg_replace( '/\s+/u', ' ', $setName );
-
-		// Enforce database column limit with multibyte-aware substring when possible
-		if ( function_exists( 'mb_substr' ) ) {
-			$setName = mb_substr( $setName, 0, 255 );
-		} else {
-			$setName = substr( $setName, 0, 255 );
-		}
-
-		return $setName === '' ? 'default' : $setName;
 	}
 
 	/**

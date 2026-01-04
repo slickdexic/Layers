@@ -502,6 +502,14 @@ class CanvasManager {
 		// Resize canvas to fit container
 		this.resizeCanvas();
 
+		// Notify user that background image failed to load
+		if ( typeof mw !== 'undefined' && mw.notify ) {
+			const message = window.layersMessages
+				? window.layersMessages.get( 'layers-background-load-error', 'Background image could not be loaded. You can still add annotations.' )
+				: 'Background image could not be loaded. You can still add annotations.';
+			mw.notify( message, { type: 'warn' } );
+		}
+
 		// Render any existing layers
 		if ( this.editor && this.editor.layers ) {
 			this.renderLayers( this.editor.layers );

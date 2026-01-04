@@ -33,7 +33,8 @@ cd /path/to/mediawiki/extensions
 git clone https://github.com/slickdexic/Layers.git
 cd Layers
 
-# Install dependencies
+# Install development dependencies
+# (These are only needed for testing/development, not for using the extension)
 composer install
 npm install
 

@@ -1872,6 +1872,371 @@ describe( 'ToolbarStyleControls', () => {
 				// Text layers use fill for stroke color
 				expect( mockCanvasManager.layers[ 0 ].fill ).toBe( '#ff0000' );
 			} );
+
+			it( 'should return early when canvasManager is null', () => {
+				mockToolbar.editor = { canvasManager: null };
+
+				expect( () => {
+					styleControls.applyColorPreview( 'stroke', '#ff0000' );
+				} ).not.toThrow();
+			} );
+		} );
+	} );
+
+	describe( 'eventTracker integration', () => {
+		it( 'should use eventTracker.add when eventTracker is available', () => {
+			// Create controls with a mocked EventTracker
+			const mockAdd = jest.fn();
+			const mockDestroy = jest.fn();
+			const MockEventTracker = jest.fn( () => ( {
+				add: mockAdd,
+				destroy: mockDestroy
+			} ) );
+
+			// Save original
+			const origEventTracker = window.Layers.Utils.EventTracker;
+			window.Layers.Utils.EventTracker = MockEventTracker;
+
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+			require( '../../resources/ext.layers.editor/ui/TextEffectsControls.js' );
+			window.Layers.UI.ArrowStyleControl = MockArrowStyleControl;
+			window.Layers.UI.ColorPickerDialog = jest.fn();
+			window.Layers.UI.ColorPickerDialog.updateColorButton = jest.fn();
+
+			const FreshControls = require( '../../resources/ext.layers.editor/ToolbarStyleControls.js' );
+			const controls = new FreshControls( { toolbar: mockToolbar } );
+
+			// Add a listener
+			const element = document.createElement( 'button' );
+			const handler = jest.fn();
+			controls.addListener( element, 'click', handler );
+
+			expect( mockAdd ).toHaveBeenCalledWith( element, 'click', handler, undefined );
+
+			// Verify destroy cleans up EventTracker
+			controls.destroy();
+			expect( mockDestroy ).toHaveBeenCalled();
+
+			// Restore
+			window.Layers.Utils.EventTracker = origEventTracker;
+		} );
+	} );
+
+	describe( 'color preview callbacks', () => {
+		let FreshToolbarStyleControls;
+		let mockCreateColorControl;
+		let capturedStrokeConfig;
+		let capturedFillConfig;
+
+		beforeEach( () => {
+			jest.resetModules();
+
+			window.Layers = window.Layers || {};
+			window.Layers.Utils = window.Layers.Utils || {};
+			window.Layers.UI = window.Layers.UI || {};
+
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+			require( '../../resources/ext.layers.editor/ui/TextEffectsControls.js' );
+
+			window.Layers.UI.ColorPickerDialog = jest.fn();
+			window.Layers.UI.ColorPickerDialog.updateColorButton = jest.fn();
+			window.Layers.UI.ArrowStyleControl = MockArrowStyleControl;
+
+			// Capture the configs passed to createColorControl
+			mockCreateColorControl = jest.fn().mockImplementation( ( config ) => {
+				if ( config.type === 'stroke' ) {
+					capturedStrokeConfig = config;
+				} else if ( config.type === 'fill' ) {
+					capturedFillConfig = config;
+				}
+				return {
+					container: document.createElement( 'div' ),
+					button: document.createElement( 'button' )
+				};
+			} );
+
+			window.Layers.UI.ColorControlFactory = function () {
+				this.createColorControl = mockCreateColorControl;
+				this.updateColorButtonDisplay = jest.fn();
+			};
+
+			FreshToolbarStyleControls = require( '../../resources/ext.layers.editor/ToolbarStyleControls.js' );
+		} );
+
+		it( 'should invoke onColorPreview callback for stroke color', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.applyColorPreview = jest.fn();
+			controls.create();
+
+			// Invoke the onColorPreview callback
+			expect( capturedStrokeConfig.onColorPreview ).toBeDefined();
+			capturedStrokeConfig.onColorPreview( '#ff0000', false );
+
+			expect( controls.applyColorPreview ).toHaveBeenCalledWith( 'stroke', '#ff0000' );
+
+			controls.destroy();
+		} );
+
+		it( 'should invoke onColorPreview callback for stroke with isNone=true', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.applyColorPreview = jest.fn();
+			controls.create();
+
+			capturedStrokeConfig.onColorPreview( '#ff0000', true );
+
+			expect( controls.applyColorPreview ).toHaveBeenCalledWith( 'stroke', 'transparent' );
+
+			controls.destroy();
+		} );
+
+		it( 'should invoke onColorPreview callback for fill color', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.applyColorPreview = jest.fn();
+			controls.create();
+
+			expect( capturedFillConfig.onColorPreview ).toBeDefined();
+			capturedFillConfig.onColorPreview( '#00ff00', false );
+
+			expect( controls.applyColorPreview ).toHaveBeenCalledWith( 'fill', '#00ff00' );
+
+			controls.destroy();
+		} );
+
+		it( 'should invoke onColorPreview callback for fill with isNone=true', () => {
+			const controls = new FreshToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.applyColorPreview = jest.fn();
+			controls.create();
+
+			capturedFillConfig.onColorPreview( '#00ff00', true );
+
+			expect( controls.applyColorPreview ).toHaveBeenCalledWith( 'fill', 'transparent' );
+
+			controls.destroy();
+		} );
+	} );
+
+	describe( 'fallback color control onPreview', () => {
+		beforeEach( () => {
+			styleControls.colorFactory = null;
+		} );
+
+		it( 'should invoke onPreview handler in fallback color picker', () => {
+			// Create controls without colorFactory
+			styleControls.create();
+
+			// Mock openColorPicker to capture the options
+			let capturedOptions;
+			styleControls.openColorPicker = jest.fn().mockImplementation( ( btn, color, opts ) => {
+				capturedOptions = opts;
+			} );
+
+			// Click stroke color button
+			styleControls.strokeColorButton.click();
+
+			// Verify onPreview was passed
+			expect( capturedOptions.onPreview ).toBeDefined();
+
+			// Mock applyColorPreview
+			styleControls.applyColorPreview = jest.fn();
+
+			// Invoke the onPreview callback
+			capturedOptions.onPreview( '#ff0000' );
+
+			expect( styleControls.applyColorPreview ).toHaveBeenCalledWith( 'stroke', '#ff0000' );
+		} );
+
+		it( 'should handle none preview value in fallback', () => {
+			styleControls.create();
+
+			let capturedOptions;
+			styleControls.openColorPicker = jest.fn().mockImplementation( ( btn, color, opts ) => {
+				capturedOptions = opts;
+			} );
+
+			styleControls.strokeColorButton.click();
+			styleControls.applyColorPreview = jest.fn();
+
+			// Invoke with 'none' value - the onPreview callback passes 'transparent' when none is true
+			capturedOptions.onPreview( 'none' );
+
+			// When none === true, applyColorPreview is called with 'transparent' (see line 341-342)
+			expect( styleControls.applyColorPreview ).toHaveBeenCalledWith( 'stroke', 'transparent' );
+		} );
+	} );
+
+	describe( 'registerDialogCleanup callback', () => {
+		it( 'should call registerDialogCleanup when opening color picker', () => {
+			const mockRegister = jest.fn();
+			const toolbarWithRegister = {
+				...mockToolbar,
+				registerDialogCleanup: mockRegister
+			};
+
+			const controls = new ToolbarStyleControls( { toolbar: toolbarWithRegister } );
+			controls.create();
+
+			// Mock ColorPickerDialog
+			const mockPickerOpen = jest.fn();
+			const MockColorPicker = jest.fn().mockImplementation( ( config ) => {
+				// Call registerCleanup if provided
+				if ( config.registerCleanup ) {
+					config.registerCleanup( () => {} );
+				}
+				return { open: mockPickerOpen };
+			} );
+			window.Layers.UI.ColorPickerDialog = MockColorPicker;
+
+			// Open color picker
+			controls.openColorPicker( document.createElement( 'button' ), '#000000', {} );
+
+			// registerCleanup should have been invoked
+			expect( mockRegister ).toHaveBeenCalled();
+
+			controls.destroy();
+		} );
+	} );
+
+	describe( 'updateForTool without arrowStyleControl', () => {
+		it( 'should use direct arrowContainer visibility when arrowStyleControl is null', () => {
+			styleControls.create();
+
+			// Null out arrowStyleControl to test fallback
+			styleControls.arrowStyleControl = null;
+			// Also null out presetStyleManager to avoid unrelated errors
+			styleControls.presetStyleManager = null;
+
+			// For arrow tool, container should be visible
+			styleControls.updateForTool( 'arrow' );
+			expect( styleControls.arrowContainer.style.display ).toBe( 'block' );
+
+			// For other tools, container should be hidden
+			styleControls.updateForTool( 'rectangle' );
+			expect( styleControls.arrowContainer.style.display ).toBe( 'none' );
+		} );
+	} );
+
+	describe( 'updateForTool with contextAware', () => {
+		it( 'should call updateContextVisibility when contextAwareEnabled', () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+
+			// Mock presetStyleManager to avoid errors
+			styleControls.presetStyleManager = { setCurrentTool: jest.fn(), destroy: jest.fn() };
+
+			// Spy on updateContextVisibility
+			const spy = jest.spyOn( styleControls, 'updateContextVisibility' );
+
+			styleControls.updateForTool( 'rectangle' );
+
+			expect( spy ).toHaveBeenCalledWith( 'rectangle' );
+
+			spy.mockRestore();
+		} );
+
+		it( 'should not call updateContextVisibility when contextAwareEnabled is false', () => {
+			styleControls.contextAwareEnabled = false;
+			styleControls.create();
+
+			// Mock presetStyleManager to avoid errors
+			styleControls.presetStyleManager = { setCurrentTool: jest.fn(), destroy: jest.fn() };
+
+			const spy = jest.spyOn( styleControls, 'updateContextVisibility' );
+
+			styleControls.updateForTool( 'rectangle' );
+
+			expect( spy ).not.toHaveBeenCalled();
+
+			spy.mockRestore();
+		} );
+	} );
+
+	describe( 'updateContextVisibility fillControl branches', () => {
+		beforeEach( () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+		} );
+
+		it( 'should add context-hidden to fillControl for pen tool', () => {
+			if ( styleControls.fillControl && styleControls.fillControl.container ) {
+				styleControls.updateContextVisibility( 'pen' );
+				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
+			}
+		} );
+
+		it( 'should add context-hidden to fillControl for arrow tool', () => {
+			if ( styleControls.fillControl && styleControls.fillControl.container ) {
+				styleControls.updateContextVisibility( 'arrow' );
+				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
+			}
+		} );
+
+		it( 'should remove context-hidden from fillControl for circle tool', () => {
+			if ( styleControls.fillControl && styleControls.fillControl.container ) {
+				// First hide it
+				styleControls.updateContextVisibility( 'pen' );
+				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
+
+				// Then show for circle
+				styleControls.updateContextVisibility( 'circle' );
+				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( false );
+			}
+		} );
+
+		it( 'should remove context-hidden from fillControl for ellipse tool', () => {
+			if ( styleControls.fillControl && styleControls.fillControl.container ) {
+				styleControls.updateContextVisibility( 'pen' );
+				styleControls.updateContextVisibility( 'ellipse' );
+				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( false );
+			}
+		} );
+	} );
+
+	describe( 'showAllControls fillControl branch', () => {
+		it( 'should remove context-hidden from fillControl.container', () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+
+			// First hide with pen tool
+			if ( styleControls.fillControl && styleControls.fillControl.container ) {
+				styleControls.updateContextVisibility( 'pen' );
+				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
+
+				// Show all
+				styleControls.showAllControls();
+				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( false );
+			}
+		} );
+	} );
+
+	describe( 'hideControlsForSelectedLayers fillControl branch', () => {
+		it( 'should add context-hidden to fillControl.container when layers selected', () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+
+			if ( styleControls.fillControl && styleControls.fillControl.container ) {
+				styleControls.hideControlsForSelectedLayers( [ { id: '1', type: 'rectangle' } ] );
+				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
+			}
+		} );
+	} );
+
+	describe( 'setupValidation with textEffectsControls', () => {
+		it( 'should call textEffectsControls.setupValidation when available', () => {
+			styleControls.create();
+
+			const mockValidator = {
+				createInputValidator: jest.fn().mockReturnValue( {} )
+			};
+
+			// Spy on textEffectsControls.setupValidation
+			const spy = jest.spyOn( styleControls.textEffectsControls, 'setupValidation' );
+
+			styleControls.setupValidation( mockValidator );
+
+			expect( spy ).toHaveBeenCalledWith( mockValidator, expect.any( Array ) );
+
+			spy.mockRestore();
 		} );
 	} );
 } );
