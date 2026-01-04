@@ -636,6 +636,12 @@
 
 		if ( data.layerssave && data.layerssave.success ) {
 			this.editor.stateManager.markClean();
+
+			// Clear the FreshnessChecker cache for this file so FR-10 will check
+			// the API for fresh data when the user views the page after saving.
+			// This prevents stale sessionStorage cache from causing reinitialization to be skipped.
+			this.clearFreshnessCache();
+
 			const successMsg = this.getMessage( 'layers-save-success' );
 			mw.notify( successMsg, { type: 'success' } );
 			// Announce for screen readers
@@ -1159,6 +1165,59 @@
 
 	getMessage( key, fallback = '' ) {
 		return window.layersMessages.get( key, fallback );
+	}
+
+	/**
+	 * Clear the FreshnessChecker sessionStorage cache for this file.
+	 *
+	 * This ensures that when the user views the page after saving,
+	 * FR-10 will make a fresh API call to check for updates rather than
+	 * using potentially stale cached revision information.
+	 *
+	 * @private
+	 */
+	clearFreshnessCache() {
+		try {
+			const filename = this.editor.filename;
+			if ( !filename ) {
+				return;
+			}
+
+			// FreshnessChecker uses keys like: "layers-fresh-Filename:setname"
+			const STORAGE_KEY_PREFIX = 'layers-fresh-';
+			const normalizedFilename = ( filename || '' ).replace( /\s+/g, '_' );
+
+			// Clear cache for all known set names
+			const namedSets = this.editor.stateManager.get( 'namedSets' ) || [];
+			const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+
+			// Build list of set names to clear
+			const setNames = new Set( [ 'default', currentSetName ] );
+			namedSets.forEach( ( set ) => {
+				if ( set && set.name ) {
+					setNames.add( set.name );
+				}
+			} );
+
+			// Clear cache for each set name
+			setNames.forEach( ( setName ) => {
+				const key = STORAGE_KEY_PREFIX + normalizedFilename + ':' + setName;
+				try {
+					sessionStorage.removeItem( key );
+				} catch ( e ) {
+					// Ignore sessionStorage errors
+				}
+			} );
+
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+				mw.log( '[APIManager] Cleared freshness cache for:', filename );
+			}
+		} catch ( e ) {
+			// Ignore errors - cache clearing is best-effort
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[APIManager] Failed to clear freshness cache:', e.message );
+			}
+		}
 	}
 
 	/**

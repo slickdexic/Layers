@@ -4,7 +4,6 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiUsageException;
-use MediaWiki\Deferred\DeferredUpdates;
 use MediaWiki\Deferred\HTMLCacheUpdateJob;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
@@ -483,52 +482,48 @@ class ApiLayersSave extends ApiBase {
 	 * 2. All pages embedding this file via [[File:X.jpg|layers=on]] are purged
 	 *    so they re-render with the new layer data instead of stale cached content
 	 *
-	 * This uses MediaWiki's deferred updates system to perform cache invalidation
-	 * after the API response is sent, avoiding blocking the save operation.
+	 * This performs cache invalidation synchronously to ensure it completes
+	 * before the user navigates away from the editor.
 	 *
 	 * @param Title $fileTitle The title of the file whose layers were saved
 	 */
 	protected function invalidateCachesForFile( Title $fileTitle ): void {
-		// Schedule cache invalidation as a deferred update
-		// This runs after the response is sent, keeping save operations fast
-		DeferredUpdates::addCallableUpdate( function () use ( $fileTitle ) {
-			try {
-				// 1. Purge the File: page itself
-				$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $fileTitle );
-				if ( $wikiPage->exists() ) {
-					$wikiPage->doPurge();
-				}
-
-				// 2. Purge all pages that embed this file (backlinks)
-				// This handles pages using [[File:X.jpg|layers=on]]
-				$services = MediaWikiServices::getInstance();
-				$jobQueueGroup = $services->getJobQueueGroup();
-
-				// Queue HTMLCacheUpdateJob to purge all pages linking to this file
-				// This is the standard MediaWiki approach for file-related cache invalidation
-				$job = new HTMLCacheUpdateJob(
-					$fileTitle,
-					[
-						'table' => 'imagelinks',
-						'recursive' => true,
-					]
-				);
-				$jobQueueGroup->push( $job );
-
-				$this->getLogger()->debug(
-					'Cache invalidation queued for file: {filename}',
-					[ 'filename' => $fileTitle->getText() ]
-				);
-			} catch ( \Throwable $e ) {
-				// Log but don't fail the save operation
-				$this->getLogger()->warning(
-					'Failed to invalidate caches for file: {filename}, error: {error}',
-					[
-						'filename' => $fileTitle->getText(),
-						'error' => $e->getMessage()
-					]
-				);
+		try {
+			// 1. Purge the File: page itself (synchronous)
+			$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $fileTitle );
+			if ( $wikiPage->exists() ) {
+				$wikiPage->doPurge();
 			}
-		} );
+
+			// 2. Purge all pages that embed this file (backlinks)
+			// This handles pages using [[File:X.jpg|layers=on]]
+			$services = MediaWikiServices::getInstance();
+			$jobQueueGroup = $services->getJobQueueGroup();
+
+			// Queue HTMLCacheUpdateJob to purge all pages linking to this file
+			// This is the standard MediaWiki approach for file-related cache invalidation
+			$job = new HTMLCacheUpdateJob(
+				$fileTitle,
+				[
+					'table' => 'imagelinks',
+					'recursive' => true,
+				]
+			);
+			$jobQueueGroup->push( $job );
+
+			$this->getLogger()->debug(
+				'Cache invalidation completed for file: {filename}',
+				[ 'filename' => $fileTitle->getText() ]
+			);
+		} catch ( \Throwable $e ) {
+			// Log but don't fail the save operation
+			$this->getLogger()->warning(
+				'Failed to invalidate caches for file: {filename}, error: {error}',
+				[
+					'filename' => $fileTitle->getText(),
+					'error' => $e->getMessage()
+				]
+			);
+		}
 	}
 }
