@@ -43,6 +43,9 @@
 			this.resizeObserver = null;
 			this.rAFId = null;
 			this.boundWindowResize = null;
+			// Store original image styles for restoration on destroy
+			this.originalImageVisibility = null;
+			this.originalImageOpacity = null;
 
 			this.init();
 		}
@@ -125,6 +128,12 @@
 			// Ensure the image element has a style object (may be missing in tests)
 			if ( !this.imageElement.style ) {
 				return;
+			}
+
+			// Store original styles for restoration on destroy (only once)
+			if ( this.originalImageVisibility === null ) {
+				this.originalImageVisibility = this.imageElement.style.visibility || '';
+				this.originalImageOpacity = this.imageElement.style.opacity || '';
 			}
 
 			// Apply background visibility (default: true)
@@ -269,6 +278,16 @@
 			if ( this.renderer ) {
 				this.renderer.destroy();
 				this.renderer = null;
+			}
+			// Restore original image visibility/opacity before removing canvas
+			// This prevents the image from staying hidden when viewer is reinitialized
+			if ( this.imageElement && this.imageElement.style ) {
+				if ( this.originalImageVisibility !== null ) {
+					this.imageElement.style.visibility = this.originalImageVisibility;
+				}
+				if ( this.originalImageOpacity !== null ) {
+					this.imageElement.style.opacity = this.originalImageOpacity;
+				}
 			}
 			// Remove the canvas from the DOM to prevent duplicate overlays
 			// when viewer is reinitialized with fresh data (FR-10)
