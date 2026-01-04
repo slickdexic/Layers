@@ -121,7 +121,7 @@
 		 * Apply background visibility and opacity settings to the image element
 		 */
 		applyBackgroundSettings() {
-			if ( !this.imageElement || !this.layerData ) {
+			if ( !this.imageElement ) {
 				return;
 			}
 
@@ -136,11 +136,20 @@
 				this.originalImageOpacity = this.imageElement.style.opacity || '';
 			}
 
-			// Apply background visibility (default: true)
+			// If no layer data, ensure image is visible (fail-safe)
+			if ( !this.layerData ) {
+				this.imageElement.style.visibility = 'visible';
+				this.imageElement.style.opacity = '1';
+				return;
+			}
+
+			// Apply background visibility (default: true/visible)
+			// Handle all possible representations from API (boolean, integer, string)
 			const bgVisible = this.layerData.backgroundVisible;
 			
-			// Check if background should be hidden
-			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
+			// Background should be hidden ONLY if explicitly set to a falsy representation
+			// Default behavior (undefined/null/missing) is to show the background
+			const isHidden = bgVisible === false || bgVisible === 0 || bgVisible === '0' || bgVisible === 'false';
 			
 			// Apply background opacity (default: 1.0)
 			let bgOpacity = 1.0;
@@ -161,6 +170,7 @@
 				this.imageElement.style.opacity = '0';
 			} else {
 				// Show the image with configured opacity
+				// Explicitly set to 'visible' to override any CSS that might hide it
 				this.imageElement.style.visibility = 'visible';
 				this.imageElement.style.opacity = String( bgOpacity );
 			}
@@ -207,12 +217,22 @@
 		 * Load the image and set up resize observers
 		 */
 		loadImageAndRender() {
-			// Wait for image to load if not already loaded
-			if ( this.imageElement.complete ) {
+			// Ensure background settings are applied when image loads
+			// This handles cases where image visibility might be affected by loading state
+			const applySettingsAndRender = () => {
+				// Re-apply background settings to ensure visibility is correct
+				// This is needed because some browsers/MediaWiki versions may
+				// reset styles during image load
+				this.applyBackgroundSettings();
 				this.resizeCanvasAndRender();
+			};
+
+			// Wait for image to load if not already loaded
+			if ( this.imageElement.complete && this.imageElement.naturalWidth > 0 ) {
+				applySettingsAndRender();
 			} else {
 				this.imageElement.addEventListener( 'load', () => {
-					this.resizeCanvasAndRender();
+					applySettingsAndRender();
 				} );
 			}
 
