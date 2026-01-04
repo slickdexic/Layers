@@ -2,7 +2,28 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.4.4-REL1_43] - 2026-01-04
+## [1.4.5] - 2026-01-05
+
+### Added
+- **InstantCommons/Foreign File Support** — Full support for files from Wikimedia Commons and other foreign repositories (GitHub issue #34)
+  - Foreign files (ForeignAPIFile, ForeignDBFile) are now detected and handled correctly
+  - Added `isForeignFile()` detection method across all 11 PHP files that access layer data
+  - Added `getFileSha1()` helper that generates stable fallback identifiers (`foreign_` + sha1(filename)) for files without SHA1
+  - Editor now uses `Special:Redirect/file` URLs to load foreign images, avoiding CORS issues with direct Commons URLs
+  - Layer sets can be saved, loaded, renamed, and deleted for foreign files
+  - All database operations use consistent fallback SHA1 for foreign files
+  - Affected files: `ApiLayersInfo.php`, `ApiLayersSave.php`, `ApiLayersDelete.php`, `ApiLayersRename.php`, `LayerInjector.php`, `ThumbnailProcessor.php`, `LayeredFileRenderer.php`, `ImageLinkProcessor.php`, `Hooks.php`, `LayersFileTransform.php`, `ThumbnailRenderer.php`, `EditLayersAction.php`, `WikitextHooks.php`
+- **Dynamic CSP for Foreign Files** — Content Security Policy is dynamically updated to include foreign file origins (e.g., `https://upload.wikimedia.org`) when editing foreign files, allowing the editor to load images without CSP violations
+
+### Fixed
+- **Foreign file layerslink URL generation** — For foreign files from InstantCommons, the `layerslink=editor` parameter now correctly generates local File: page URLs with `action=editlayers` rather than potentially broken foreign file title URLs
+- **Special:Redirect/file URL generation** — Fixed `EditLayersAction::getLocalRedirectUrl()` to use `$file->getName()` instead of `$title->getPrefixedDBkey()` to avoid including the "File:" namespace prefix which broke the redirect URL
+- **Filename normalization in wikitext parsing** — Fixed `WikitextHooks.php` to normalize filenames (spaces to underscores) when building the queue for `layers=` and `layerslink=` parameters, ensuring consistent queue lookups
+- **MediaWiki 1.44 Title class namespace** — Fixed `ThumbnailProcessor.php` to use `MediaWiki\Title\Title` namespace for MW 1.44+ compatibility
+
+---
+
+## [1.4.4] - 2026-01-04
 
 ### Fixed
 - **FR-10 Live Preview: Duplicate layer rendering after save** — After saving layers in the editor, both old and new layer sets would render simultaneously on the article page until refresh. Fixed by properly removing the canvas element from the DOM in `LayersViewer.destroy()`.

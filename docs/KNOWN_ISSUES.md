@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 3, 2026  
-**Version:** 1.4.3
+**Last Updated:** January 4, 2026  
+**Version:** 1.4.5
 
 This document lists known functionality issues and their current status.
 
@@ -14,7 +14,7 @@ This document lists known functionality issues and their current status.
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (Stability) | 6 | ⚠️ 12 god classes + 2 remaining issues |
 | P2 (Code Quality) | 2 | ✅ ESLint disables reduced to 8 |
-| Feature Gaps | 4 | ⏳ Planned |
+| Feature Gaps | 3 | ⏳ Planned (InstantCommons now supported) |
 
 ---
 

@@ -283,7 +283,7 @@ class ImageLinkProcessor {
 		}
 
 		$filename = $file->getName();
-		$sha1 = $file->getSha1();
+		$sha1 = $this->getFileSha1( $file );
 
 		// Get the layer set from database
 		// Use getLatestLayerSet with optional setName filter
@@ -408,7 +408,7 @@ class ImageLinkProcessor {
 		}
 
 		$filename = $file->getName();
-		$sha1 = $file->getSha1();
+		$sha1 = $this->getFileSha1( $file );
 
 		// 'on' or 'all' => show default set
 		if ( $param === 'on' || $param === 'all' ) {
@@ -537,6 +537,24 @@ class ImageLinkProcessor {
 	private function applyLayersLink( string $html, $file, string $linkType, ?string $setName ): string {
 		$filename = $file->getName();
 		$title = $file->getTitle();
+
+		// For foreign files, $file->getTitle() might not work correctly for local URLs.
+		// Ensure we have a valid local File: title for building the editor URL.
+		if ( !$title ) {
+			$title = \Title::makeTitleSafe( NS_FILE, $filename );
+		} elseif ( $this->isForeignFile( $file ) ) {
+			// Foreign files may have a title that doesn't produce correct local URLs
+			// Create a local File: title for the editor link
+			$localTitle = \Title::makeTitleSafe( NS_FILE, $filename );
+			if ( $localTitle ) {
+				$title = $localTitle;
+			}
+		}
+
+		if ( !$title ) {
+			$this->logDebug( "applyLayersLink: Could not resolve title for $filename" );
+			return $html;
+		}
 
 		if ( $this->paramExtractor->isEditorLink( $linkType ) ) {
 			// Build base editor URL parameters
@@ -690,5 +708,53 @@ class ImageLinkProcessor {
 		);
 
 		return $html;
+	}
+
+	/**
+	 * Get a stable SHA1 identifier for a file.
+	 *
+	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
+	 * we generate a stable fallback identifier based on the filename.
+	 *
+	 * @param mixed $file File object
+	 * @return string SHA1 hash or fallback identifier
+	 */
+	private function getFileSha1( $file ): string {
+		$sha1 = $file->getSha1();
+		if ( !empty( $sha1 ) ) {
+			return $sha1;
+		}
+
+		// Check if this is a foreign file
+		if ( $this->isForeignFile( $file ) ) {
+			// Use a hash of the filename as a fallback (prefixed for clarity)
+			return 'foreign_' . sha1( $file->getName() );
+		}
+
+		return $sha1 ?? '';
+	}
+
+	/**
+	 * Check if a file is from a foreign repository (like InstantCommons)
+	 *
+	 * @param mixed $file File object
+	 * @return bool True if the file is from a foreign repository
+	 */
+	private function isForeignFile( $file ): bool {
+		// Check if file is a ForeignAPIFile or ForeignDBFile
+		$className = get_class( $file );
+		if ( strpos( $className, 'Foreign' ) !== false ) {
+			return true;
+		}
+
+		// Check if the file's repository is not local
+		if ( method_exists( $file, 'getRepo' ) ) {
+			$repo = $file->getRepo();
+			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

@@ -73,9 +73,39 @@ class Hooks {
 							}
 						}
 
+						// Check for foreign file and get its URL origin for CSP
+						$foreignOrigin = '';
+						try {
+							$services = \MediaWiki\MediaWikiServices::getInstance();
+							$repoGroup = $services->getRepoGroup();
+							$fileObj = $repoGroup ? $repoGroup->findFile( $title->getText() ) : null;
+							if ( $fileObj && self::isForeignFile( $fileObj ) ) {
+								// Get the file URL and extract its origin
+								$fileUrl = $fileObj->getUrl();
+								if ( $fileUrl ) {
+									$parsed = parse_url( $fileUrl );
+									if ( $parsed && !empty( $parsed['host'] ) ) {
+										$scheme = $parsed['scheme'] ?? 'https';
+										$foreignOrigin = $scheme . '://' . $parsed['host'];
+										$logger->debug( 'Layers: Foreign file detected, adding CSP origin: ' . $foreignOrigin );
+									}
+								}
+							}
+						} catch ( \Throwable $e3 ) {
+							$logger->debug( 'Layers: Could not detect foreign file origin: ' . $e3->getMessage() );
+						}
+
 						$policy = [];
 						$policy[] = "default-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
-						$policy[] = "img-src 'self' data: blob:" . ( $serverOrigin ? " $serverOrigin" : '' );
+						// Add foreign file origin to img-src if detected
+						$imgSrcOrigins = "'self' data: blob:";
+						if ( $serverOrigin ) {
+							$imgSrcOrigins .= " $serverOrigin";
+						}
+						if ( $foreignOrigin ) {
+							$imgSrcOrigins .= " $foreignOrigin";
+						}
+						$policy[] = "img-src $imgSrcOrigins";
 						// Allow inline styles used by MW/OOUI
 						$policy[] = "style-src 'self' 'unsafe-inline'";
 						// MediaWiki core generates inline scripts
@@ -257,7 +287,7 @@ class Hooks {
 
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
-			$db->deleteLayerSetsForImage( $file->getName(), $file->getSha1() );
+			$db->deleteLayerSetsForImage( $file->getName(), self::getFileSha1( $file ) );
 		} catch ( Exception $e ) {
 			// Log error but don't break deletion
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
@@ -383,7 +413,7 @@ class Hooks {
 			}
 
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
-			$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), $fileObj->getSha1() );
+			$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), self::getFileSha1( $fileObj ) );
 
 			$names = [];
 			foreach ( $layerSets as $layerSet ) {
@@ -446,5 +476,53 @@ class Hooks {
 			}
 			return '';
 		}
+	}
+
+	/**
+	 * Get a stable SHA1 identifier for a file (static version).
+	 *
+	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
+	 * we generate a stable fallback identifier based on the filename.
+	 *
+	 * @param mixed $file File object
+	 * @return string SHA1 hash or fallback identifier
+	 */
+	private static function getFileSha1( $file ): string {
+		$sha1 = $file->getSha1();
+		if ( !empty( $sha1 ) ) {
+			return $sha1;
+		}
+
+		// Check if this is a foreign file
+		if ( self::isForeignFile( $file ) ) {
+			// Use a hash of the filename as a fallback (prefixed for clarity)
+			return 'foreign_' . sha1( $file->getName() );
+		}
+
+		return $sha1 ?? '';
+	}
+
+	/**
+	 * Check if a file is from a foreign repository (like InstantCommons)
+	 *
+	 * @param mixed $file File object
+	 * @return bool True if the file is from a foreign repository
+	 */
+	private static function isForeignFile( $file ): bool {
+		// Check if file is a ForeignAPIFile or ForeignDBFile
+		$className = get_class( $file );
+		if ( strpos( $className, 'Foreign' ) !== false ) {
+			return true;
+		}
+
+		// Check if the file's repository is not local
+		if ( method_exists( $file, 'getRepo' ) ) {
+			$repo = $file->getRepo();
+			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
