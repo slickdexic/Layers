@@ -270,6 +270,13 @@
 				this.renderer.destroy();
 				this.renderer = null;
 			}
+			// Remove the canvas from the DOM to prevent duplicate overlays
+			// when viewer is reinitialized with fresh data (FR-10)
+			if ( this.canvas && this.canvas.parentNode ) {
+				this.canvas.parentNode.removeChild( this.canvas );
+			}
+			this.canvas = null;
+			this.ctx = null;
 		}
 
 		/**
