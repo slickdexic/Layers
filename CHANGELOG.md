@@ -2,6 +2,20 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.4.4-REL1_43] - 2026-01-04
+
+### Fixed
+- **FR-10 Live Preview: Duplicate layer rendering after save** — After saving layers in the editor, both old and new layer sets would render simultaneously on the article page until refresh. Fixed by properly removing the canvas element from the DOM in `LayersViewer.destroy()`.
+- **FR-10 Live Preview: Base image not visible after save** — After saving layers, the base image would become invisible while layers rendered correctly. Fixed by:
+  - Storing and restoring original image visibility/opacity styles in `LayersViewer`
+  - Clearing the FreshnessChecker sessionStorage cache on save to ensure fresh API data is fetched
+  - Re-applying background settings after image load completes
+  - Adding fail-safe to show image when no layer data is present
+- **FR-10 Live Preview: Stale layer data after save** — The sessionStorage cache in FreshnessChecker could return stale revision info, causing reinitializeViewer to be skipped. Fixed by clearing the cache in `APIManager.handleSaveSuccess()`.
+- **Cache invalidation timing** — Changed server-side cache invalidation from deferred to synchronous execution in `ApiLayersSave.php` to prevent race conditions where users navigate before cache purge completes.
+
+---
+
 ## [1.4.3] - 2026-01-03
 
 ### Added
