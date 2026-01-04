@@ -312,6 +312,10 @@ class WikitextHooks {
 		// Get both set name and link type from queue
 		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
 
+		// DEBUG: Log queue state for debugging foreign file issues
+		self::log( "onThumbnailBeforeProduceHTML: filename=$filename, linkType=" . ( $fileParams['linkType'] ?? 'null' ) );
+		self::log( "Queue state for $filename: " . json_encode( self::$fileLinkTypes[$filename] ?? [] ) );
+
 		// Convert false to empty array for processor compatibility (MW 1.39-1.43 LTS compat)
 		$linkAttribsForProcessor = $linkAttribsIsArray ? $linkAttribs : [];
 
@@ -567,7 +571,9 @@ class WikitextHooks {
 			self::log( "File pattern matched $fileMatchCount times" );
 			if ( $fileMatchCount ) {
 				foreach ( $matches as $match ) {
-					$filename = trim( $match[1][0] );
+					// Normalize filename: replace spaces with underscores to match MediaWiki internal naming
+					// This ensures queue lookups work correctly when ThumbnailBeforeProduceHTML is called
+					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
 					// Use full match offset ($match[0][1]) not filename offset ($match[1][1])
 					// This ensures consistent offset comparison with layersMap
 					$offset = $match[0][1];
@@ -594,7 +600,8 @@ class WikitextHooks {
 			self::log( "Layers regex matched $matchCount times" );
 			if ( $matchCount ) {
 				foreach ( $allMatches as $match ) {
-					$filename = trim( $match[1][0] );
+					// Normalize filename: replace spaces with underscores
+					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
 					$offset = $match[0][1];
 					$layersValue = trim( $match[2][0] );
 
@@ -655,7 +662,8 @@ class WikitextHooks {
 			self::log( "Layerslink regex matched $linkMatchCount times" );
 			if ( $linkMatchCount ) {
 				foreach ( $linkMatches as $match ) {
-					$filename = trim( $match[1][0] );
+					// Normalize filename: replace spaces with underscores
+					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
 					$offset = $match[0][1];
 					$linkValue = strtolower( trim( $match[2][0] ) );
 					// Validate against allowed values

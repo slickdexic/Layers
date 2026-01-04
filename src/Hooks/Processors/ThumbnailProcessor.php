@@ -6,6 +6,7 @@ use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 /**
  * Handles thumbnail-related layer injection logic.
@@ -68,10 +69,11 @@ class ThumbnailProcessor {
 		?string $setNameFromQueue = null,
 		?string $linkTypeFromQueue = null
 	): bool {
-		$fileName = ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() )
-			? $thumbnail->getFile()->getName()
-			: 'unknown';
-		$this->log( "ThumbnailBeforeProduceHTML for: $fileName" );
+		$file = ( method_exists( $thumbnail, 'getFile' ) ) ? $thumbnail->getFile() : null;
+		$fileName = $file ? $file->getName() : 'unknown';
+		$isForeign = $file && $this->isForeignFile( $file );
+		$this->log( "ThumbnailBeforeProduceHTML for: $fileName (foreign=" . ( $isForeign ? 'yes' : 'no' ) . ")" );
+		$this->log( "linkTypeFromQueue=" . ( $linkTypeFromQueue ?? 'null' ) . ", setNameFromQueue=" . ( $setNameFromQueue ?? 'null' ) );
 
 		// Extract layer data and flag from transform params
 		[ $layerData, $layersFlag ] = $this->extractLayerDataFromThumbnail( $thumbnail );
@@ -276,6 +278,14 @@ class ThumbnailProcessor {
 			}
 
 			$filename = $file->getName();
+			$sha1 = $file->getSha1();
+
+			// For foreign files without SHA1, use fallback identifier
+			if ( empty( $sha1 ) && $this->isForeignFile( $file ) ) {
+				$sha1 = 'foreign_' . sha1( $filename );
+				$this->log( "Using fallback SHA1 for foreign file: $filename" );
+			}
+
 			$isDefaultSet = $layersFlag === null || in_array( $layersFlag, [ 'on', 'all', 'true' ], true );
 			$this->log( sprintf(
 				'fetchLayersFromDatabase: filename=%s, layersFlag=%s, isDefaultSet=%s',
@@ -285,8 +295,8 @@ class ThumbnailProcessor {
 			) );
 
 			$layerSet = $isDefaultSet
-				? $db->getLatestLayerSet( $filename, $file->getSha1() )
-				: $db->getLayerSetByName( $filename, $file->getSha1(), $layersFlag );
+				? $db->getLatestLayerSet( $filename, $sha1 )
+				: $db->getLayerSetByName( $filename, $sha1, $layersFlag );
 
 			$this->log( 'fetchLayersFromDatabase: layerSet returned = ' . ( $layerSet ? 'yes' : 'no' ) );
 
@@ -516,6 +526,24 @@ class ThumbnailProcessor {
 		$filename = $file->getName();
 		$title = $file->getTitle();
 
+		// For foreign files, $file->getTitle() might not work correctly for local URLs.
+		// Ensure we have a valid local File: title for building the editor URL.
+		if ( !$title ) {
+			$title = Title::makeTitleSafe( NS_FILE, $filename );
+		} elseif ( $this->isForeignFile( $file ) ) {
+			// Foreign files may have a title that doesn't produce correct local URLs
+			// Create a local File: title for the editor link
+			$localTitle = Title::makeTitleSafe( NS_FILE, $filename );
+			if ( $localTitle ) {
+				$title = $localTitle;
+			}
+		}
+
+		if ( !$title ) {
+			$this->log( "applyLayersLink: Could not resolve title for $filename" );
+			return;
+		}
+
 		$setNameStr = $setName ?? 'null';
 		$this->log( "applyLayersLink: file=$filename, linkType=$linkType, setName=$setNameStr" );
 
@@ -592,5 +620,34 @@ class ThumbnailProcessor {
 
 			$this->log( "Applied viewer deep link: $viewerUrl" );
 		}
+	}
+
+	/**
+	 * Check if a file is from a foreign repository (like InstantCommons)
+	 *
+	 * @param mixed $file File object
+	 * @return bool True if the file is from a foreign repository
+	 */
+	private function isForeignFile( $file ): bool {
+		// Check for ForeignAPIFile or ForeignDBFile
+		if ( $file instanceof \ForeignAPIFile || $file instanceof \ForeignDBFile ) {
+			return true;
+		}
+
+		// Check using class name (for namespaced classes)
+		$className = get_class( $file );
+		if ( strpos( $className, 'Foreign' ) !== false ) {
+			return true;
+		}
+
+		// Check if the file's repo is foreign
+		if ( method_exists( $file, 'getRepo' ) ) {
+			$repo = $file->getRepo();
+			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

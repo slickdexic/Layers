@@ -130,11 +130,26 @@ class EditLayersAction extends \Action {
 
 		// Init config via JS config vars; module will bootstrap itself
 		$fileUrl = $this->getPublicImageUrl( $file );
+		$isForeign = $this->isForeignFile( $file );
+
+		// DEBUG: Log what URL we're generating for debugging
+		if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+			$logger->debug( sprintf(
+				'EditLayersAction: file=%s, class=%s, isForeign=%s, url=%s',
+				$file->getName(),
+				get_class( $file ),
+				$isForeign ? 'yes' : 'no',
+				$fileUrl
+			) );
+		}
+
 		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
 		$out->addJsConfigVars( [
 			'wgLayersEditorInit' => [
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
+				'debug_isForeign' => $isForeign, // DEBUG: Include in JS config for inspection
 				'initialSetName' => $initialSetName !== '' ? $initialSetName : null,
 				'autoCreate' => $autoCreate,
 				'returnToUrl' => $returnToUrl,
@@ -158,12 +173,55 @@ class EditLayersAction extends \Action {
 	}
 
 	/**
+	 * Check if a file is from a foreign repository (like InstantCommons)
+	 *
+	 * @param mixed $file File object
+	 * @return bool True if the file is from a foreign repository
+	 */
+	private function isForeignFile( $file ): bool {
+		// Check for ForeignAPIFile or ForeignDBFile
+		if ( $file instanceof \ForeignAPIFile || $file instanceof \ForeignDBFile ) {
+			return true;
+		}
+
+		// Check using class name (for namespaced classes)
+		$className = get_class( $file );
+		if ( strpos( $className, 'Foreign' ) !== false ) {
+			return true;
+		}
+
+		// Check if the file's repo is foreign
+		if ( method_exists( $file, 'getRepo' ) ) {
+			$repo = $file->getRepo();
+			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Resolve a best-effort public URL for the image, with a robust fallback for private repos.
+	 *
+	 * For foreign files (InstantCommons, etc.), we prefer the local Special:Redirect/file
+	 * proxy to avoid CORS issues when loading images into the canvas editor.
 	 *
 	 * @param mixed $file
 	 * @return string
 	 */
 	private function getPublicImageUrl( $file ): string {
+		$isForeign = $this->isForeignFile( $file );
+
+		// For foreign files, prefer local redirect to avoid CORS issues
+		if ( $isForeign ) {
+			$redirectUrl = $this->getLocalRedirectUrl( $file );
+			if ( $redirectUrl !== '' ) {
+				return $redirectUrl;
+			}
+		}
+
+		// For local files, try direct URL first (fastest)
 		try {
 			if ( method_exists( $file, 'getFullUrl' ) ) {
 				$direct = $file->getFullUrl();
@@ -176,20 +234,42 @@ class EditLayersAction extends \Action {
 		}
 
 		// Fallback via Special:Redirect/file
-		try {
-			$title = method_exists( $file, 'getTitle' ) ? $file->getTitle() : null;
-			if ( $title && \class_exists( '\\SpecialPage' ) ) {
-				$param = 'file/' . $title->getPrefixedDBkey();
-				$spTitle = \call_user_func( [ '\\SpecialPage', 'getTitleFor' ], 'Redirect', $param );
-				if ( $spTitle ) {
-					return $spTitle->getLocalURL();
-				}
-			}
-		} catch ( \Throwable $e ) {
-			// last resort below
+		$redirectUrl = $this->getLocalRedirectUrl( $file );
+		if ( $redirectUrl !== '' ) {
+			return $redirectUrl;
 		}
 
 		return method_exists( $file, 'getUrl' ) ? (string)$file->getUrl() : '';
+	}
+
+	/**
+	 * Get a local redirect URL for a file via Special:Redirect/file
+	 *
+	 * @param mixed $file File object
+	 * @return string Local redirect URL or empty string if unavailable
+	 */
+	private function getLocalRedirectUrl( $file ): string {
+		try {
+			// Use the file's name directly (without namespace prefix)
+			// Special:Redirect/file expects just the filename, not File:Filename
+			$filename = method_exists( $file, 'getName' ) ? $file->getName() : null;
+			if ( $filename && \class_exists( '\\SpecialPage' ) ) {
+				$param = 'file/' . $filename;
+				$spTitle = \call_user_func( [ '\\SpecialPage', 'getTitleFor' ], 'Redirect', $param );
+				if ( $spTitle ) {
+					$url = $spTitle->getLocalURL();
+					// DEBUG: Log the redirect URL
+					if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+						$logger->debug( sprintf( 'getLocalRedirectUrl: filename=%s, url=%s', $filename, $url ) );
+					}
+					return $url;
+				}
+			}
+		} catch ( \Throwable $e ) {
+			// Return empty string on failure
+		}
+		return '';
 	}
 
 	/**

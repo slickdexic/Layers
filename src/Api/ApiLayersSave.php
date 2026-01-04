@@ -247,9 +247,35 @@ class ApiLayersSave extends ApiBase {
 			// SHA1: Ensures layers are associated with specific file version
 			// MIME: Allows future filtering (e.g., only allow layers on images)
 			// If file is replaced, SHA1 changes, creating logical separation
+			$sha1 = $file->getSha1();
+			$mimeType = $file->getMimeType();
+
+			// Log file metadata for debugging (especially for foreign files)
+			$isForeign = $this->isForeignFile( $file );
+			$this->getLogger()->info( 'Layers: File metadata', [
+				'filename' => $fileDbKey,
+				'sha1' => $sha1 ?: '(empty)',
+				'sha1Length' => strlen( $sha1 ?? '' ),
+				'mime' => $mimeType,
+				'isForeign' => $isForeign ? 'yes' : 'no',
+				'fileClass' => get_class( $file )
+			] );
+
+			// For foreign files, if SHA1 is not available, generate a stable identifier
+			// based on the filename. This allows layers to work with foreign files
+			// that don't expose SHA1 via the API.
+			if ( empty( $sha1 ) && $isForeign ) {
+				// Use a hash of the filename as a fallback (prefixed for clarity)
+				$sha1 = 'foreign_' . sha1( $fileDbKey );
+				$this->getLogger()->warning( 'Layers: Using fallback SHA1 for foreign file', [
+					'filename' => $fileDbKey,
+					'fallbackSha1' => $sha1
+				] );
+			}
+
 			$imgMetadata = [
-				'mime' => $file->getMimeType(),
-				'sha1' => $file->getSha1(),
+				'mime' => $mimeType,
+				'sha1' => $sha1,
 			];
 
 			// DATABASE SAVE: Persist layer set with automatic versioning
@@ -525,5 +551,34 @@ class ApiLayersSave extends ApiBase {
 				]
 			);
 		}
+	}
+
+	/**
+	 * Check if a file is from a foreign repository (like InstantCommons)
+	 *
+	 * @param mixed $file File object
+	 * @return bool True if the file is from a foreign repository
+	 */
+	private function isForeignFile( $file ): bool {
+		// Check for ForeignAPIFile or ForeignDBFile
+		if ( $file instanceof \ForeignAPIFile || $file instanceof \ForeignDBFile ) {
+			return true;
+		}
+
+		// Check using class name (for namespaced classes)
+		$className = get_class( $file );
+		if ( strpos( $className, 'Foreign' ) !== false ) {
+			return true;
+		}
+
+		// Check if the file's repo is foreign
+		if ( method_exists( $file, 'getRepo' ) ) {
+			$repo = $file->getRepo();
+			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
