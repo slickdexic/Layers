@@ -165,6 +165,11 @@ class EditLayersAction extends \Action {
 			'wgLayersDefaultSetName' => $config->get( 'LayersDefaultSetName' ),
 		] );
 
+		// Add CSP header for foreign files to allow loading from their origin
+		if ( $isForeign ) {
+			$this->addForeignFileCsp( $out, $file, $config );
+		}
+
 		// Add basic HTML content to ensure page has content
 		$out->addHTML( '<div id="layers-editor-container"></div>' );
 
@@ -270,6 +275,78 @@ class EditLayersAction extends \Action {
 			// Return empty string on failure
 		}
 		return '';
+	}
+
+	/**
+	 * Add Content Security Policy header for foreign files
+	 *
+	 * When editing a foreign file (from InstantCommons, etc.), we need to allow
+	 * the browser to load images from the foreign origin.
+	 *
+	 * @param mixed $out OutputPage
+	 * @param mixed $file File object
+	 * @param mixed $config Main config
+	 */
+	private function addForeignFileCsp( $out, $file, $config ): void {
+		try {
+			// Get the file URL and extract its origin
+			$fileUrl = $file->getUrl();
+			if ( !$fileUrl ) {
+				return;
+			}
+
+			$parsed = parse_url( $fileUrl );
+			if ( !$parsed || empty( $parsed['host'] ) ) {
+				return;
+			}
+
+			$scheme = $parsed['scheme'] ?? 'https';
+			$foreignOrigin = $scheme . '://' . $parsed['host'];
+
+			// Get server origin for local resources
+			$serverUrl = $config->get( 'Server' );
+			$serverOrigin = '';
+			if ( $serverUrl ) {
+				if ( strpos( $serverUrl, '//' ) === 0 ) {
+					$isHttps = isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on';
+					$serverOrigin = ( $isHttps ? 'https:' : 'http:' ) . $serverUrl;
+				} else {
+					$serverOrigin = $serverUrl;
+				}
+			}
+
+			// Build CSP policy
+			$policy = [];
+			$policy[] = "default-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
+			$policy[] = "img-src 'self' data: blob: $foreignOrigin" . ( $serverOrigin ? " $serverOrigin" : '' );
+			$policy[] = "style-src 'self' 'unsafe-inline'";
+			$policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
+			$policy[] = "connect-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
+			$policy[] = "font-src 'self' data:";
+			$policy[] = "object-src 'none'";
+			$policy[] = "base-uri 'self'";
+
+			$header = 'Content-Security-Policy: ' . implode( '; ', $policy );
+
+			// Try different methods to set the header
+			if ( method_exists( $out, 'addExtraHeader' ) ) {
+				$out->addExtraHeader( $header );
+			} elseif ( function_exists( 'header' ) && !headers_sent() ) {
+				header( $header );
+			}
+
+			// Log for debugging
+			if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->debug( 'EditLayersAction: Added CSP for foreign origin: ' . $foreignOrigin );
+			}
+		} catch ( \Throwable $e ) {
+			// Silently fail - CSP is a security enhancement, not critical
+			if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->warning( 'EditLayersAction: Failed to add CSP: ' . $e->getMessage() );
+			}
+		}
 	}
 
 	/**
