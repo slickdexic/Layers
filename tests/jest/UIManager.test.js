@@ -305,12 +305,14 @@ describe( 'UIManager', () => {
 			expect( closeBtn.getAttribute( 'aria-label' ) ).toBeTruthy();
 		} );
 
-		it( 'should have close button with × text', () => {
+		it( 'should have close button with SVG icon', () => {
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
 
 			const closeBtn = uiManager.container.querySelector( '.layers-header-close' );
-			expect( closeBtn.textContent ).toBe( '×' );
+			const svg = closeBtn.querySelector( 'svg' );
+			expect( svg ).toBeTruthy();
+			expect( svg.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 		} );
 	} );
 

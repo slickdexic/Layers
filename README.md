@@ -3,7 +3,7 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C067%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-8%2C214%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -229,7 +229,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~10,100 lines across 31 files
-- **Frontend:** HTML5 Canvas editor with 105 JS files (~55,000 lines), 93 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 107 JS files (~57,600 lines), 97 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -237,10 +237,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 8,067 passing |
-| Statement coverage | 93.99% |
-| Branch coverage | 82.93% |
-| Test suites | 138 |
+| Jest tests | 8,214 passing |
+| Statement coverage | 94.09% |
+| Branch coverage | 82.69% |
+| Test suites | 139 |
 
 **Security:**
 
@@ -261,7 +261,13 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
-- ⚠️ **13 god classes** - files exceeding 1,000 lines; most use delegation patterns except PropertiesForm.js
+- ⚠️ **12 god classes** - files exceeding 1,000 lines; all use delegation patterns
+
+**Known issues identified in January 2026 critical review:**
+
+- ⚠️ **ApiLayersDelete.php missing rate limiting** - unlike save endpoint, delete has no rate limiting
+- ⚠️ **DEBUG logging in production** - 6 debug statements in blur fill code execute on every render
+- ⚠️ **Background image load failure silent** - user not notified if background fails to load
 
 ---
 
@@ -285,14 +291,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 106 | ✅ |
-| Total JS lines | ~57,000 | ✅ Well under 75K target |
+| Total JS files | 107 | ✅ |
+| Total JS lines | ~57,600 | ✅ Well under 75K target |
 | ES6 classes | 97 | ✅ |
-| God classes (>1000 lines) | 13 | ⚠️ Technical debt (most use delegation) |
-| Tests passing | 8,067 | ✅ |
+| God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
+| Tests passing | 8,214 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 93.99% | ✅ Excellent |
-| Branch coverage | 82.93% | ✅ |
+| Statement coverage | 94.09% | ✅ Excellent |
+| Branch coverage | 82.69% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

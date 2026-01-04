@@ -998,8 +998,9 @@
 			try {
 				this._drawInternal( layer, options );
 			} catch ( e ) {
-				if ( typeof console !== 'undefined' && console.error ) {
-					console.error( 'CalloutRenderer.draw error:', e );
+				// SECURITY FIX: Use mw.log instead of console.error to avoid leaking info
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+					mw.log.error( 'CalloutRenderer.draw error:', e.message || e );
 				}
 				// Ensure context is restored if error occurred after save
 				try {

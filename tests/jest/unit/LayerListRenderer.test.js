@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const { LayerListRenderer } = require( '../../../resources/ext.layers.editor/ui/LayerListRenderer.js' );
+const LayerListRenderer = require( '../../../resources/ext.layers.editor/ui/LayerListRenderer.js' );
 
 describe( 'LayerListRenderer', () => {
 	let renderer;

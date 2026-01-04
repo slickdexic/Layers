@@ -6,8 +6,8 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Pvodrazka]]
-|version         = 1.4.3
-|update          = 2026-01-03
+|version         = 1.4.2
+|update          = 2026-01-02
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
@@ -33,7 +33,7 @@
 |hook10          = ParserMakeImageParams
 |hook11          = SkinTemplateNavigation::Universal
 |hook12          = ThumbnailBeforeProduceHTML
-|description     = A professional-grade, non-destructive image annotation system with 12 drawing tools, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
+|description     = A professional-grade, non-destructive image annotation system with 14 drawing tools, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
 }}
 
 The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
@@ -52,9 +52,9 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.4.3
+| 1.44+ || <code>main</code> || 1.4.2
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.4.3-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.4.2-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}
@@ -146,8 +146,6 @@ Control how users interact with layered images using the <code>layerslink</code>
 |-
 | Text Box || {{key press|X}} || Advanced Text || Word wrap, alignment, padding, corner radius
 |-
-| Callout || {{key press|B}} || Speech Bubbles || Draggable tail, 3 tail styles, rounded corners
-|-
 | Pen || {{key press|P}} || Freehand || Smooth paths, adjustable stroke
 |-
 | Rectangle || {{key press|R}} || Basic Shape || Adjustable stroke, fill, corner radius
@@ -160,16 +158,16 @@ Control how users interact with layered images using the <code>layerslink</code>
 |-
 | Star || {{key press|S}} || Complex Shape || Configurable points and radii
 |-
-| Arrow || {{key press|A}} || Annotations || Configurable head types, curved paths, line styles
+| Arrow || {{key press|A}} || Annotations || Configurable head types and line styles
 |-
 | Line || {{key press|L}} || Annotations || Simple lines with adjustable stroke
 |-
-| Blur || — || Privacy/Focus || Non-destructive blur fill on any shape
+| Blur || {{key press|B}} || Privacy/Focus || Non-destructive background blurring
 |}
 
 == Technical Details ==
-* '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~57k lines).
-* '''Stability:''' 8,214 Jest tests across 139 test suites achieving 94.09% statement coverage.
+* '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~54k lines).
+* '''Stability:''' 7,923 Jest tests across 136 test suites achieving 94.3% statement coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

@@ -358,19 +358,39 @@ body.layers-editor-open .mw-body-content {
 
 /* Header close button */
 .layers-header-close {
-	background: transparent;
+	background: rgba( 255, 255, 255, 0.1 );
 	border: 0;
 	color: #fff;
-	font-size: 1.25em;
-	line-height: 1;
-	width: 32px;
-	height: 32px;
-	border-radius: 4px;
+	width: 36px;
+	height: 36px;
+	border-radius: 6px;
 	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
 .layers-header-close:hover {
-	background: rgba( 255, 255, 255, 0.1 );
+	background: #dc3545;
+	transform: scale( 1.05 );
+}
+
+.layers-header-close:focus {
+	outline: 2px solid #fff;
+	outline-offset: 2px;
+	background: rgba( 255, 255, 255, 0.2 );
+}
+
+.layers-header-close:active {
+	background: #c82333;
+	transform: scale( 0.95 );
+}
+
+.layers-header-close svg {
+	width: 20px;
+	height: 20px;
+	stroke: currentcolor;
 }
 
 /* Content area - horizontal layout for layer panel and canvas */

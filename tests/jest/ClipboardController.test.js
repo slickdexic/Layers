@@ -389,4 +389,82 @@ describe('ClipboardController', () => {
             expect(clipboardController.canvasManager).toBeNull();
         });
     });
+
+    describe('edge cases and fallback branches', () => {
+        test('should use setSelectedLayerIds when available on paste', () => {
+            mockCanvasManager.setSelectedLayerIds = jest.fn();
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            const pastedIds = clipboardController.paste();
+
+            expect(mockCanvasManager.setSelectedLayerIds).toHaveBeenCalledWith(pastedIds);
+        });
+
+        test('should fallback to direct assignment when setSelectedLayerIds is unavailable on paste', () => {
+            // Ensure setSelectedLayerIds is not available
+            delete mockCanvasManager.setSelectedLayerIds;
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            const pastedIds = clipboardController.paste();
+
+            // Should set selectedLayerId and selectedLayerIds directly
+            expect(mockCanvasManager.selectedLayerId).toBe(pastedIds[pastedIds.length - 1]);
+            expect(mockCanvasManager.selectedLayerIds).toEqual(pastedIds);
+        });
+
+        test('should set lastSelectedId on selectionManager when available on paste', () => {
+            mockCanvasManager.selectionManager = { lastSelectedId: null };
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            const pastedIds = clipboardController.paste();
+
+            expect(mockCanvasManager.selectionManager.lastSelectedId).toBe(pastedIds[pastedIds.length - 1]);
+        });
+
+        test('should use stateManager.set when available during cut', () => {
+            mockEditor.stateManager = {
+                set: jest.fn(),
+                getLayers: jest.fn(() => [])
+            };
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+
+            clipboardController.cutSelected();
+
+            expect(mockEditor.stateManager.set).toHaveBeenCalledWith('layers', expect.any(Array));
+        });
+
+        test('should fallback to direct layers assignment when stateManager unavailable during cut', () => {
+            // Ensure stateManager is not available
+            delete mockEditor.stateManager;
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            const originalLayers = mockEditor.layers.slice();
+
+            clipboardController.cutSelected();
+
+            // Should have removed layer1 directly
+            expect(mockEditor.layers.length).toBe(originalLayers.length - 1);
+            expect(mockEditor.layers.find(l => l.id === 'layer1')).toBeUndefined();
+        });
+
+        test('should use getSelectedLayerIds when available during copy', () => {
+            mockCanvasManager.getSelectedLayerIds = jest.fn(() => ['layer1', 'layer2']);
+
+            const count = clipboardController.copySelected();
+
+            expect(mockCanvasManager.getSelectedLayerIds).toHaveBeenCalled();
+            expect(count).toBe(2);
+        });
+
+        test('should use getSelectedLayerIds when available during cut', () => {
+            mockCanvasManager.getSelectedLayerIds = jest.fn(() => ['layer1']);
+
+            const count = clipboardController.cutSelected();
+
+            expect(mockCanvasManager.getSelectedLayerIds).toHaveBeenCalled();
+            expect(count).toBe(1);
+        });
+    });
 });

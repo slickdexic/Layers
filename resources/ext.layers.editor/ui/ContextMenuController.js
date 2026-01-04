@@ -228,6 +228,24 @@
 			}
 			this.activeContextMenu = null;
 		}
+
+		/**
+		 * Clean up resources and event listeners
+		 */
+		destroy() {
+			// Close any open menu (which also removes its event listeners)
+			this.closeLayerContextMenu();
+
+			// Clear references
+			this.editor = null;
+			this.msg = null;
+			this.getSelectedLayerIds = null;
+			this.selectLayer = null;
+			this.createGroupFromSelection = null;
+			this.ungroupLayer = null;
+			this.deleteLayer = null;
+			this.editLayerName = null;
+		}
 	}
 
 	// Export to namespace

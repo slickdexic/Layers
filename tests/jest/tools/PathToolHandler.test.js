@@ -324,6 +324,141 @@ describe( 'PathToolHandler', () => {
 		} );
 	} );
 
+	describe( 'edge cases and fallback branches', () => {
+		it( 'should not render preview when pathPoints is empty', () => {
+			// Ensure no points
+			expect( handler.pathPoints ).toHaveLength( 0 );
+			renderCalled = false;
+
+			// Call renderPreview directly with empty points
+			handler.renderPreview();
+
+			// Should call render callback but not draw anything
+			expect( renderCalled ).toBe( true );
+			// Canvas operations should not be called since pathPoints is empty
+			expect( mockCanvasManager.ctx.moveTo ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not throw when canvasManager.ctx is null during renderPreview', () => {
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.canvasManager.ctx = null;
+			renderCalled = false;
+
+			expect( () => handler.renderPreview() ).not.toThrow();
+			expect( renderCalled ).toBe( true );
+		} );
+
+		it( 'should not throw when canvasManager is null during renderPreview', () => {
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.canvasManager = null;
+			renderCalled = false;
+
+			expect( () => handler.renderPreview() ).not.toThrow();
+			expect( renderCalled ).toBe( true );
+		} );
+
+		it( 'should not call renderCallback in cancel when renderCallback is null', () => {
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.renderCallback = null;
+
+			expect( () => handler.cancel() ).not.toThrow();
+			expect( handler.pathPoints ).toEqual( [] );
+		} );
+
+		it( 'should use default stroke color when style.color is undefined', () => {
+			handler.styleManager = {
+				get: jest.fn( () => ( {
+					strokeWidth: 3,
+					fill: '#00ff00'
+					// color is undefined
+				} ) )
+			};
+
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.handlePoint( { x: 200, y: 100 } );
+			handler.handlePoint( { x: 200, y: 200 } );
+			handler.complete();
+
+			expect( addedLayers ).toHaveLength( 1 );
+			expect( addedLayers[ 0 ].stroke ).toBe( '#000000' );
+		} );
+
+		it( 'should use default strokeWidth when style.strokeWidth is undefined', () => {
+			handler.styleManager = {
+				get: jest.fn( () => ( {
+					color: '#ff0000',
+					fill: '#00ff00'
+					// strokeWidth is undefined
+				} ) )
+			};
+
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.handlePoint( { x: 200, y: 100 } );
+			handler.handlePoint( { x: 200, y: 200 } );
+			handler.complete();
+
+			expect( addedLayers ).toHaveLength( 1 );
+			expect( addedLayers[ 0 ].strokeWidth ).toBe( 2 );
+		} );
+
+		it( 'should use default fill when style.fill is undefined', () => {
+			handler.styleManager = {
+				get: jest.fn( () => ( {
+					color: '#ff0000',
+					strokeWidth: 3
+					// fill is undefined
+				} ) )
+			};
+
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.handlePoint( { x: 200, y: 100 } );
+			handler.handlePoint( { x: 200, y: 200 } );
+			handler.complete();
+
+			expect( addedLayers ).toHaveLength( 1 );
+			expect( addedLayers[ 0 ].fill ).toBe( 'transparent' );
+		} );
+
+		it( 'should not create layer when addLayerCallback is null', () => {
+			handler.addLayerCallback = null;
+
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.handlePoint( { x: 200, y: 100 } );
+			handler.handlePoint( { x: 200, y: 200 } );
+			handler.complete();
+
+			expect( addedLayers ).toHaveLength( 0 );
+			// Should still reset
+			expect( handler.pathPoints ).toEqual( [] );
+		} );
+
+		it( 'should use fallback colors in renderPreview when style values are undefined', () => {
+			handler.styleManager = {
+				get: jest.fn( () => ( {} ) ) // Empty style object
+			};
+
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.handlePoint( { x: 200, y: 100 } );
+			handler.renderPreview();
+
+			// Should use fallback color #000000
+			expect( mockCanvasManager.ctx.strokeStyle ).toBe( '#000000' );
+			expect( mockCanvasManager.ctx.fillStyle ).toBe( '#000000' );
+			expect( mockCanvasManager.ctx.lineWidth ).toBe( 2 );
+		} );
+
+		it( 'should handle renderPreview when renderCallback is null but has points', () => {
+			handler.handlePoint( { x: 100, y: 100 } );
+			handler.handlePoint( { x: 200, y: 100 } );
+			handler.renderCallback = null;
+
+			// Should not throw and still draw preview
+			expect( () => handler.renderPreview() ).not.toThrow();
+			// Canvas drawing should still happen
+			expect( mockCanvasManager.ctx.moveTo ).toHaveBeenCalled();
+		} );
+	} );
+
 	describe( 'integration: closing path', () => {
 		it( 'should close path when clicking near start with more than 2 points', () => {
 			// Create a triangle-ish path

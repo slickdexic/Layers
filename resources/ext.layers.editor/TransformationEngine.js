@@ -39,6 +39,7 @@
 			this.zoomAnimationStartTime = 0;
 			this.zoomAnimationStartZoom = 1.0;
 			this.zoomAnimationTargetZoom = 1.0;
+			this.animationFrameId = null; // Track rAF for cleanup
 
 			// Viewport bounds for culling
 			this.viewportBounds = { x: 0, y: 0, width: 0, height: 0 };
@@ -317,8 +318,8 @@
 		this.setZoomDirect( currentZoom );
 
 		if ( progress < 1.0 ) {
-			// Continue animation
-			requestAnimationFrame( this.animateZoom.bind( this ) );
+			// Continue animation - store frame ID for cleanup
+			this.animationFrameId = requestAnimationFrame( this.animateZoom.bind( this ) );
 		} else {
 			// Animation complete
 			this.isAnimatingZoom = false;
@@ -620,6 +621,11 @@
 	 * Clean up resources
 	 */
 	destroy() {
+		// Cancel any pending animation frame to prevent memory leak
+		if ( this.animationFrameId ) {
+			cancelAnimationFrame( this.animationFrameId );
+			this.animationFrameId = null;
+		}
 		this.canvas = null;
 		this.editor = null;
 		this.config = null;

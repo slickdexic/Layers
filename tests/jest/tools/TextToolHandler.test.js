@@ -230,6 +230,29 @@ describe( 'TextToolHandler', () => {
 			expect( handler.textEditor ).toBeNull();
 			expect( addedLayers ).toHaveLength( 0 );
 		} );
+
+		it( 'should finish editing on blur event (clicking away)', () => {
+			const point = { x: 50, y: 75 };
+			handler.showTextEditor( point );
+			handler.textEditor.value = 'Blur test';
+
+			const event = new FocusEvent( 'blur' );
+			handler.textEditor.dispatchEvent( event );
+
+			expect( addedLayers ).toHaveLength( 1 );
+			expect( addedLayers[ 0 ].text ).toBe( 'Blur test' );
+		} );
+
+		it( 'should not create layer when blur with empty text', () => {
+			const point = { x: 50, y: 75 };
+			handler.showTextEditor( point );
+			handler.textEditor.value = '';
+
+			const event = new FocusEvent( 'blur' );
+			handler.textEditor.dispatchEvent( event );
+
+			expect( addedLayers ).toHaveLength( 0 );
+		} );
 	} );
 
 	describe( '_getCurrentStyle fallbacks', () => {

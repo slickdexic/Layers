@@ -11,8 +11,8 @@ This document lists known functionality issues and their current status.
 
 | Category | Count | Status |
 |----------|-------|--------|
-| P0 (Critical Bugs) | **0** | ✅ **None** |
-| P1 (Stability) | 4 | ⚠️ 12 god classes (all with delegation) |
+| P0 (Critical Bugs) | **0** | ✅ All resolved |
+| P1 (Stability) | 6 | ⚠️ 12 god classes + 2 remaining issues |
 | P2 (Code Quality) | 2 | ✅ ESLint disables reduced to 8 |
 | Feature Gaps | 4 | ⏳ Planned |
 
@@ -20,17 +20,57 @@ This document lists known functionality issues and their current status.
 
 ## ✅ P0 Issues - ALL RESOLVED
 
-### P0.NEW LayerPanel.js Status - ACCEPTABLE
+### P0.NEW ApiLayersDelete.php Missing Rate Limiting - FIXED ✅
 
-**Status:** Acceptable  
-**Verified:** December 31, 2025
+**Status:** ✅ FIXED (January 3, 2026)  
+**Severity:** HIGH  
+**File:** `src/Api/ApiLayersDelete.php`
 
-LayerPanel.js is **2,140 lines** (previously incorrectly documented as 2,572). While exceeding the 2,000 line soft target, the file:
-- Delegates to 9 specialized controllers
-- Has 88% test coverage
-- Uses clear separation of concerns
+**Problem:** Unlike `ApiLayersSave.php` which implements rate limiting via `RateLimiter::checkRateLimit()`, the delete endpoint had no rate limiting.
 
-**Decision:** No urgent refactoring required. The file is well-structured.
+**Solution Applied:**
+- Added rate limiting using `editlayers-delete` action
+- Added default rate limits to `RateLimiter.php` (20 deletes/hour for users, 3 for newbies)
+- Matches the pattern used in ApiLayersSave.php
+
+---
+
+## ⚠️ P1 Issues - 2 REMAINING
+
+### P1.NEW1 DEBUG Logging in Production Code - NO ACTION NEEDED ✅
+
+**Status:** ✅ Re-evaluated - Not an Issue  
+**Files:** `EffectsRenderer.js`, PHP processors
+
+**Re-evaluation:** These use proper logging mechanisms:
+- JavaScript: `mw.log()` only outputs when debug mode is enabled
+- PHP: `logDebug()` uses PSR-3 logging gated by MediaWiki configuration
+
+This is good practice for troubleshooting, not a bug.
+
+### P1.NEW2 Duplicate sanitizeSetName() (DRY Violation) - FIXED ✅
+
+**Status:** ✅ FIXED (January 3, 2026)  
+**Files:** `ApiLayersSave.php`, `ApiLayersDelete.php`, `ApiLayersRename.php`
+
+**Solution Applied:**
+- Created `src/Validation/SetNameSanitizer.php` with static `sanitize()` method
+- Updated all 3 API files to use the shared class
+- Removed ~90 lines of duplicate code
+
+### P1.NEW3 APIManager.js CSRF Token Not Refreshed During Retries
+
+**Status:** ⚠️ Not Fixed  
+**File:** `resources/ext.layers.editor/APIManager.js`
+
+The save retry logic doesn't refresh the CSRF token, which may cause failures if session expires during retries.
+
+### P1.NEW4 Background Image Load Failure Silent
+
+**Status:** ⚠️ Not Fixed  
+**File:** `resources/ext.layers.editor/CanvasManager.js`
+
+When background image loading fails, the error is only logged but no user notification is shown.
 
 ---
 
@@ -279,15 +319,15 @@ The extension is feature-rich with 11 drawing tools (blur tool deprecated), laye
 
 ## Test Coverage Status
 
-### Overall Coverage (January 6, 2026)
+### Overall Coverage (January 3, 2026)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 8,155 | - | ✅ |
-| Statement coverage | 94.4% | 85%+ | ✅ Excellent |
-| Branch coverage | 83.4% | 75%+ | ✅ |
-| Function coverage | 91.8% | 80%+ | ✅ |
-| Line coverage | 94.7% | 85%+ | ✅ |
+| Tests passing | 8,214 | - | ✅ |
+| Statement coverage | 94.09% | 85%+ | ✅ Excellent |
+| Branch coverage | 82.69% | 75%+ | ✅ |
+| Function coverage | 92.67% | 80%+ | ✅ |
+| Line coverage | 94.24% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -300,12 +340,15 @@ The extension is feature-rich with 11 drawing tools (blur tool deprecated), laye
 
 ### Files With Coverage Issues ⚠️
 
-No files currently have coverage issues. All major files meet the 80% function coverage threshold.
+**None.** All major files meet or exceed coverage thresholds.
+
+**Note on SelectionRenderer.js:** Aggregated coverage reports show ~66% for this file, but running its tests in isolation confirms **98.85% statement, 92.79% branch, 100% function coverage**. This is a Jest coverage aggregation artifact, not a real coverage gap. The file has 64 comprehensive tests.
 
 ### Files Recently Improved ✅
 
 | File | Statement | Branch | Status |
 |------|-----------|--------|--------|
+| SelectionRenderer.js | 98.85% (isolated) | 92.79% | ✅ Validated - 66% in aggregate was artifact |
 | CalloutRenderer.js | 90.05% | 85.0% | ✅ Improved from 62.42% |
 | PropertiesForm.js | 96.44% | 82.45% func | ✅ Function coverage improved 72.85% → 82.45% |
 | LayerDragDrop.js | 100% | 87.7% | ✅ Improved from 68.9% |
@@ -360,4 +403,4 @@ If you encounter issues:
 ---
 
 *Document updated: January 4, 2026*  
-*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (94.58%, 8,214 tests).*
+*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (94.09%, 8,214 tests). No coverage gaps.*

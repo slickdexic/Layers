@@ -32,6 +32,52 @@
 	}
 
 	/**
+	 * Arrow geometry constants
+	 *
+	 * These ratios were empirically determined to produce visually pleasing arrow heads.
+	 * They are multiplied by the arrowSize parameter to scale proportionally.
+	 *
+	 * Geometry reference:
+	 * - The arrow "barb" is the diagonal line extending from the tip
+	 * - The "chevron" is the notch cut into the back of pointed arrow heads
+	 * - "Head depth" is how far back from the tip the arrow head extends
+	 */
+	const ARROW_GEOMETRY = {
+		/**
+		 * Barb length ratio: how far the arrow barbs extend diagonally from the tip.
+		 * Value of 1.56 creates a balanced, sharp appearance.
+		 * Increasing makes the head more elongated; decreasing makes it stubbier.
+		 */
+		BARB_LENGTH_RATIO: 1.56,
+
+		/**
+		 * Barb width ratio: spread of the arrow head perpendicular to the shaft.
+		 * Value of 0.8 provides good visibility without being too wide.
+		 * This affects how "pointed" vs "spread" the arrowhead appears.
+		 */
+		BARB_WIDTH_RATIO: 0.8,
+
+		/**
+		 * Chevron depth ratio: depth of the notch in chevron/pointed arrow heads.
+		 * Value of 0.52 creates a classic "notched" arrowhead look.
+		 * Set to 0 for a flat-backed arrow head; higher values make deeper notches.
+		 */
+		CHEVRON_DEPTH_RATIO: 0.52,
+
+		/**
+		 * Head depth ratio: how far the arrow head extends back from the tip.
+		 * Value of 1.3 ensures the head is prominent but not overwhelming.
+		 */
+		HEAD_DEPTH_RATIO: 1.3,
+
+		/**
+		 * Barb thickness ratio: thickness of barb lines relative to shaft.
+		 * Value of 1.5 makes barbs slightly thicker than the shaft for visibility.
+		 */
+		BARB_THICKNESS_RATIO: 1.5
+	};
+
+	/**
 	 * ArrowRenderer class - Renders arrow shapes on canvas
 	 */
 	class ArrowRenderer {
@@ -225,9 +271,9 @@
 
 			const effectiveHeadScale = headScale || 1.0;
 			const barbAngle = Math.PI / 6;
-			const barbLength = arrowSize * 1.56 * effectiveHeadScale;
-			const barbWidth = arrowSize * 0.8;
-			const chevronDepth = arrowSize * 0.52 * effectiveHeadScale;
+			const barbLength = arrowSize * ARROW_GEOMETRY.BARB_LENGTH_RATIO * effectiveHeadScale;
+			const barbWidth = arrowSize * ARROW_GEOMETRY.BARB_WIDTH_RATIO;
+			const chevronDepth = arrowSize * ARROW_GEOMETRY.CHEVRON_DEPTH_RATIO * effectiveHeadScale;
 			const tailExtra = ( tailWidth || 0 ) / 2;
 
 			if ( arrowStyle === 'none' ) {
@@ -238,7 +284,7 @@
 				return vertices;
 			}
 
-			const headDepth = arrowSize * 1.3 * effectiveHeadScale;
+			const headDepth = arrowSize * ARROW_GEOMETRY.HEAD_DEPTH_RATIO * effectiveHeadScale;
 			const headBaseX = x2 - cos * headDepth;
 			const headBaseY = y2 - sin * headDepth;
 
@@ -250,7 +296,7 @@
 			const rightBarbCos = Math.cos( rightBarbAngle );
 			const rightBarbSin = Math.sin( rightBarbAngle );
 
-			const barbThickness = halfShaft * 1.5;
+			const barbThickness = halfShaft * ARROW_GEOMETRY.BARB_THICKNESS_RATIO;
 
 			if ( arrowStyle === 'single' ) {
 				this._buildSingleHeadVertices(
@@ -562,11 +608,11 @@
 			const vertices = [];
 			const effectiveHeadScale = headScale || 1.0;
 			const barbAngle = Math.PI / 6; // 30 degrees
-			const barbLength = arrowSize * 1.56 * effectiveHeadScale;
-			const barbWidth = arrowSize * 0.8;
-			const barbThickness = halfShaft * 1.5;
-			const chevronDepth = arrowSize * 0.52 * effectiveHeadScale;
-			const headDepth = arrowSize * 1.3 * effectiveHeadScale;
+			const barbLength = arrowSize * ARROW_GEOMETRY.BARB_LENGTH_RATIO * effectiveHeadScale;
+			const barbWidth = arrowSize * ARROW_GEOMETRY.BARB_WIDTH_RATIO;
+			const barbThickness = halfShaft * ARROW_GEOMETRY.BARB_THICKNESS_RATIO;
+			const chevronDepth = arrowSize * ARROW_GEOMETRY.CHEVRON_DEPTH_RATIO * effectiveHeadScale;
+			const headDepth = arrowSize * ARROW_GEOMETRY.HEAD_DEPTH_RATIO * effectiveHeadScale;
 
 			const cos = Math.cos( angle );
 			const sin = Math.sin( angle );
@@ -761,7 +807,7 @@
 			const endAngle = this.getBezierTangent( 1, x1, y1, cx, cy, x2, y2 );
 
 			const effectiveHeadScale = headScale || 1.0;
-			const headDepth = arrowSize * 1.3 * effectiveHeadScale;
+			const headDepth = arrowSize * ARROW_GEOMETRY.HEAD_DEPTH_RATIO * effectiveHeadScale;
 
 			const spread = this.getShadowSpread( layer, shadowScale );
 
@@ -1021,7 +1067,7 @@
 		drawArrowHead( tipX, tipY, angle, size, headScale, headType, color, opacity, strokeColor, strokeWidth, strokeOpacity ) {
 			const effectiveSize = size * headScale;
 			const barbAngle = Math.PI / 6; // 30 degrees
-			const barbLength = effectiveSize * 1.56;
+			const barbLength = effectiveSize * ARROW_GEOMETRY.BARB_LENGTH_RATIO;
 
 			this.ctx.save();
 			this.ctx.translate( tipX, tipY );
@@ -1037,7 +1083,7 @@
 
 			if ( headType === 'chevron' ) {
 				// Chevron has inward notch
-				const notchDepth = effectiveSize * 0.52;
+				const notchDepth = effectiveSize * ARROW_GEOMETRY.CHEVRON_DEPTH_RATIO;
 				this.ctx.lineTo( -notchDepth, 0 );
 			} else if ( headType === 'standard' ) {
 				// Standard has inner barb

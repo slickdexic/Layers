@@ -1134,6 +1134,19 @@
 		}
 
 		const code = error.error.code || '';
+
+		// Session/token errors should NOT be retried - user needs to refresh page
+		const nonRetryableCodes = [
+			'badtoken',
+			'assertuserfailed',
+			'assertbotfailed',
+			'permissiondenied',
+			'permission-denied'
+		];
+		if ( nonRetryableCodes.includes( code ) ) {
+			return false;
+		}
+
 		const retryableCodes = [
 			'internal_api_error',
 			'apierror-timeout',

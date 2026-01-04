@@ -3,6 +3,8 @@
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
+use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
@@ -16,6 +18,7 @@ use Psr\Log\LoggerInterface;
  * SECURITY:
  * - Requires 'editlayers' permission
  * - Requires CSRF token
+ * - Rate limited via MediaWiki's rate limiter ($wgRateLimits['editlayers-delete'])
  * - Only owner (first revision creator) or sysop can delete
  * - Validates file exists before attempting delete
  *
@@ -38,7 +41,7 @@ class ApiLayersDelete extends ApiBase {
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
 		$requestedFilename = $params['filename'];
-		$setName = $this->sanitizeSetName( $params['setname'] );
+		$setName = SetNameSanitizer::sanitize( $params['setname'] );
 
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );
@@ -83,6 +86,16 @@ class ApiLayersDelete extends ApiBase {
 
 			if ( !$isOwner && !$isAdmin ) {
 				$this->dieWithError( 'layers-delete-permission-denied', 'permissiondenied' );
+			}
+
+			// RATE LIMITING: Prevent abuse by limiting delete operations per user
+			// Uses MediaWiki's core rate limiter via User::pingLimiter()
+			// Configure in LocalSettings.php:
+			//   $wgRateLimits['editlayers-delete']['user'] = [ 20, 3600 ]; // 20 deletes per hour
+			//   $wgRateLimits['editlayers-delete']['newbie'] = [ 3, 3600 ]; // stricter for new users
+			$rateLimiter = $this->createRateLimiter();
+			if ( !$rateLimiter->checkRateLimit( $user, 'delete' ) ) {
+				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
 			}
 
 			// Perform the delete
@@ -168,39 +181,6 @@ class ApiLayersDelete extends ApiBase {
 	}
 
 	/**
-	 * Sanitize a user-supplied layer set name.
-	 *
-	 * @param string $rawSetName
-	 * @return string
-	 */
-	protected function sanitizeSetName( string $rawSetName ): string {
-		$setName = trim( $rawSetName );
-
-		// Remove control chars and path separators
-		$setName = preg_replace( '/[\x00-\x1F\x7F\/\\\\]/u', '', $setName );
-
-		// Allow letter/number from any script plus underscore, dash, spaces
-		$unicodeSafe = preg_replace( '/[^\p{L}\p{N}_\-\s]/u', '', $setName );
-
-		if ( $unicodeSafe === null ) {
-			$unicodeSafe = preg_replace( '/[^a-zA-Z0-9_\-\s]/', '', $setName );
-		}
-		$setName = $unicodeSafe ?? '';
-
-		// Collapse repeated whitespace
-		$setName = preg_replace( '/\s+/u', ' ', $setName );
-
-		// Enforce limit
-		if ( function_exists( 'mb_substr' ) ) {
-			$setName = mb_substr( $setName, 0, 255 );
-		} else {
-			$setName = substr( $setName, 0, 255 );
-		}
-
-		return $setName === '' ? 'default' : $setName;
-	}
-
-	/**
 	 * Lazily resolve the Layers-specific logger.
 	 */
 	protected function getLogger(): LoggerInterface {
@@ -208,5 +188,12 @@ class ApiLayersDelete extends ApiBase {
 			$this->logger = MediaWikiServices::getInstance()->get( 'LayersLogger' );
 		}
 		return $this->logger;
+	}
+
+	/**
+	 * Factory for RateLimiter to allow overrides in tests.
+	 */
+	protected function createRateLimiter(): RateLimiter {
+		return new RateLimiter();
 	}
 }

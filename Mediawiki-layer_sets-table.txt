@@ -1,0 +1,84 @@
+{| class="wikitable" style="float:right; margin-left:1em; width:300px;"
+! colspan="2" | layer_sets table
+|-
+| '''Extension''' || [[Extension:Layers]]
+|-
+| '''Description''' || Stores layer set revisions. Each row represents a single revision of a named layer set for an image file.
+|}
+
+The '''layer_sets''' table stores layer set revisions for the [[Extension:Layers|Layers]] extension. Multiple revisions can exist per set name, enabling version history.
+
+== Table Structure ==
+
+{| class="wikitable"
+! Column !! Type !! Nullable !! Default !! Description
+|-
+| <code>ls_id</code> || int unsigned || No || Auto-increment || Primary key, unique identifier for each revision
+|-
+| <code>ls_file_name</code> || varchar(255) || No || — || Target filename (e.g., "Example.jpg")
+|-
+| <code>ls_name</code> || varchar(50) || No || 'default' || Named set identifier (e.g., "default", "anatomy-labels")
+|-
+| <code>ls_user_id</code> || int unsigned || No || — || User ID who created this revision
+|-
+| <code>ls_timestamp</code> || binary(14) || No || — || MediaWiki timestamp when revision was saved
+|-
+| <code>ls_revision</code> || int unsigned || No || — || Revision number within the named set (1, 2, 3...)
+|-
+| <code>ls_data</code> || mediumblob || No || — || JSON-encoded layer data (validated, sanitized)
+|}
+
+== Indexes ==
+
+{| class="wikitable"
+! Index Name !! Columns !! Type !! Purpose
+|-
+| PRIMARY || <code>ls_id</code> || Primary || Unique row identifier
+|-
+| <code>ls_file_name_idx</code> || <code>ls_file_name</code>, <code>ls_name</code>, <code>ls_revision</code> || Unique || Fast lookup by file and set name, ensures unique revisions
+|-
+| <code>ls_user_idx</code> || <code>ls_user_id</code> || Index || Query sets by user
+|-
+| <code>ls_timestamp_idx</code> || <code>ls_timestamp</code> || Index || Query sets by date
+|}
+
+== Data Format ==
+
+The <code>ls_data</code> column contains a JSON structure:
+
+<syntaxhighlight lang="json">
+{
+  "revision": 1,
+  "schema": 1,
+  "created": "2026-01-03T12:00:00Z",
+  "layers": [
+    {
+      "id": "layer-abc123",
+      "type": "rectangle",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "fill": "#ff0000",
+      "stroke": "#000000",
+      "strokeWidth": 2
+    }
+  ]
+}
+</syntaxhighlight>
+
+== Revision Limits ==
+
+* Maximum revisions per named set: configurable via <code>$wgLayersMaxRevisionsPerSet</code> (default: 50)
+* Older revisions are automatically pruned when limit is exceeded
+* Maximum named sets per image: configurable via <code>$wgLayersMaxNamedSets</code> (default: 15)
+
+== Related Tables ==
+
+* [[Extension:Layers/layer_assets table|layer_assets]] — Stores shared layer assets (images, patterns)
+* [[Extension:Layers/layer_set_usage table|layer_set_usage]] — Tracks which articles use layer sets
+
+== See Also ==
+
+* [[Extension:Layers]] — Parent extension documentation
+* [[Extension:Layers#Configuration]] — Configuration parameters

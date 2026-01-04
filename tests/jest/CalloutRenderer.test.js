@@ -719,7 +719,7 @@ describe( 'CalloutRenderer', () => {
 
 		test( 'should handle errors in draw gracefully', () => {
 			const ctx = createMockContext();
-			const consoleError = jest.spyOn( console, 'error' ).mockImplementation( () => {} );
+			const mwLogError = jest.spyOn( mw.log, 'error' ).mockImplementation( () => {} );
 			const renderer = new window.Layers.CalloutRenderer( ctx );
 
 			// Force an error by making save throw
@@ -738,9 +738,9 @@ describe( 'CalloutRenderer', () => {
 
 			// Should not throw
 			expect( () => renderer.draw( layer ) ).not.toThrow();
-			expect( consoleError ).toHaveBeenCalled();
+			expect( mwLogError ).toHaveBeenCalled();
 
-			consoleError.mockRestore();
+			mwLogError.mockRestore();
 		} );
 
 		test( 'should handle scaled option correctly', () => {

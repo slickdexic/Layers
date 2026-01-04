@@ -18,6 +18,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Fixed
 - **B Key Shortcut Mapping** — The `B` key now correctly selects the Callout tool (was incorrectly mapped to Blur tool)
+- **Console.error Security Issue** — Replaced `console.error` with `mw.log.error` in CalloutRenderer.js error handling to follow MediaWiki security best practices (prevents potential information disclosure in production)
 - **Corner Arc Tail Rendering** — Tail now renders correctly when positioned on rounded corners
   - Proper angle normalization ensures symmetric behavior at all four corners
   - Arc splitting algorithm correctly handles all tail positions along corner radii
