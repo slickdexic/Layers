@@ -52,79 +52,14 @@ class Hooks {
 			if ( $title && $title->inNamespace( NS_FILE ) ) {
 				if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
 					$logger->info( 'Layers: Adding editor module for file page' );
-									$out->addModules( 'ext.layers.editor' );
+					$out->addModules( 'ext.layers.editor' );
 
-					// Add a strict Content Security Policy to reduce XSS risk in the editor UI.
-					// Note: MediaWiki may already send a site-wide CSP.
-					// Here we add a page-level header conservatively.
-					try {
-						// Get server config to allow cross-origin access when accessing via different hostname
-						$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
-						$serverUrl = $config->get( 'Server' );
-						// Extract origin from server URL (handles protocol-relative URLs)
-						$serverOrigin = '';
-						if ( $serverUrl ) {
-							// If protocol-relative, use current protocol
-							if ( strpos( $serverUrl, '//' ) === 0 ) {
-								$isHttps = isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on';
-								$serverOrigin = ( $isHttps ? 'https:' : 'http:' ) . $serverUrl;
-							} else {
-								$serverOrigin = $serverUrl;
-							}
-						}
-
-						// Check for foreign file and get its URL origin for CSP
-						$foreignOrigin = '';
-						try {
-							$services = \MediaWiki\MediaWikiServices::getInstance();
-							$repoGroup = $services->getRepoGroup();
-							$fileObj = $repoGroup ? $repoGroup->findFile( $title->getText() ) : null;
-							if ( $fileObj && self::isForeignFile( $fileObj ) ) {
-								// Get the file URL and extract its origin
-								$fileUrl = $fileObj->getUrl();
-								if ( $fileUrl ) {
-									$parsed = parse_url( $fileUrl );
-									if ( $parsed && !empty( $parsed['host'] ) ) {
-										$scheme = $parsed['scheme'] ?? 'https';
-										$foreignOrigin = $scheme . '://' . $parsed['host'];
-										$logger->debug( 'Layers: Foreign file detected, adding CSP origin: ' . $foreignOrigin );
-									}
-								}
-							}
-						} catch ( \Throwable $e3 ) {
-							$logger->debug( 'Layers: Could not detect foreign file origin: ' . $e3->getMessage() );
-						}
-
-						$policy = [];
-						$policy[] = "default-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
-						// Add foreign file origin to img-src if detected
-						$imgSrcOrigins = "'self' data: blob:";
-						if ( $serverOrigin ) {
-							$imgSrcOrigins .= " $serverOrigin";
-						}
-						if ( $foreignOrigin ) {
-							$imgSrcOrigins .= " $foreignOrigin";
-						}
-						$policy[] = "img-src $imgSrcOrigins";
-						// Allow inline styles used by MW/OOUI
-						$policy[] = "style-src 'self' 'unsafe-inline'";
-						// MediaWiki core generates inline scripts
-						$policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
-						$policy[] = "connect-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
-						$policy[] = "font-src 'self' data:";
-						$policy[] = "object-src 'none'";
-						$policy[] = "base-uri 'self'";
-						// Note: frame-ancestors directive is ignored when delivered via meta element
-						$header = 'Content-Security-Policy: ' . implode( '; ', $policy );
-						if ( method_exists( $out, 'addExtraHeader' ) ) {
-							$out->addExtraHeader( $header );
-						} elseif ( method_exists( $out, 'addMeta' ) ) {
-							// Fallback for older MW: send as meta http-equiv
-							$out->addMeta( 'http:Content-Security-Policy', implode( '; ', $policy ) );
-						}
-					} catch ( \Throwable $e2 ) {
-						$logger->warning( 'Layers: Failed to set CSP header: ' . $e2->getMessage() );
-					}
+					// Note: We no longer add CSP here because:
+					// 1. MediaWiki handles site-wide CSP configuration
+					// 2. The editor action (?action=editlayers) has its own CSP handling
+					// 3. File pages may contain template images from foreign sources
+					//    (e.g., Commons via InstantCommons) that we can't enumerate
+					// 4. Adding restrictive CSP here was blocking template images (Issue #34)
 				}
 			}
 		} catch ( \Throwable $e ) {

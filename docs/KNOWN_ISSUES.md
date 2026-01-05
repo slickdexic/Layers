@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** January 5, 2026  
-**Version:** 1.4.6
+**Version:** 1.4.7
 
 This document lists known functionality issues and their current status.
 
@@ -19,6 +19,27 @@ This document lists known functionality issues and their current status.
 ---
 
 ## ✅ P0 Issues - ALL RESOLVED
+
+### P0.NEW3 Template Images Not Displaying on File Pages - FIXED ✅
+
+**Status:** ✅ FIXED (January 5, 2026)  
+**Severity:** HIGH  
+**File:** `src/Hooks.php`  
+**GitHub Issue:** #34 (regression from v1.4.5)
+
+**Problem:** On File: description pages, template images from Commons (like `File:Ambox important.svg` used in Information/Imbox templates) were not displaying. The main file image displayed correctly, but template images showed as empty boxes.
+
+**Root Cause:** The `onBeforePageDisplay` hook was adding a restrictive Content Security Policy (CSP) on File: namespace pages. This CSP only included:
+- `'self'` (the local wiki)
+- The foreign origin of the main file being viewed (if from Commons)
+
+However, it did not include origins for OTHER foreign images that appear in templates on the page.
+
+**Solution Applied:**
+- Removed the CSP from `onBeforePageDisplay` for File: pages
+- CSP is still properly applied in `EditLayersAction.php` for the actual editor (`?action=editlayers`)
+- File description pages now rely on MediaWiki's site-wide CSP configuration
+- Template images from Commons now display correctly
 
 ### P0.NEW ApiLayersDelete.php Missing Rate Limiting - FIXED ✅
 

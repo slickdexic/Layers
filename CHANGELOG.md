@@ -2,6 +2,17 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.4.7] - 2026-01-05
+
+### Fixed
+- **Template Images Not Displaying on File Pages (GitHub issue #34 regression)** — Removed overly restrictive Content Security Policy from file description pages
+  - The CSP was blocking template images from Commons (e.g., `File:Ambox important.svg` used in Information/Imbox templates)
+  - The CSP only included the main file's origin but not other foreign origins used by templates on the page
+  - CSP is now only applied in the editor action (`?action=editlayers`) where it's properly scoped
+  - File description pages now rely on MediaWiki's site-wide CSP configuration
+
+---
+
 ## [1.4.6] - 2026-01-05
 
 ### Added
