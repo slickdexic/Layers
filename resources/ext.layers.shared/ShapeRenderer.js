@@ -22,10 +22,18 @@
 	'use strict';
 
 	/**
-	 * Epsilon value for scale operations to prevent divide-by-zero
-	 * @constant {number}
+	 * Get SCALE_EPSILON from MathUtils namespace (with fallback)
+	 *
+	 * @private
+	 * @return {number} Scale epsilon value
 	 */
-	const SCALE_EPSILON = 0.0001;
+	function getScaleEpsilon() {
+		if ( typeof window !== 'undefined' && window.Layers && window.Layers.MathUtils && window.Layers.MathUtils.MATH ) {
+			return window.Layers.MathUtils.MATH.SCALE_EPSILON;
+		}
+		// Fallback if MathUtils not loaded
+		return 0.0001;
+	}
 
 	/**
 	 * Get clampOpacity from MathUtils namespace
@@ -563,6 +571,7 @@
 			const opts = options || {};
 			const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
 			const shadowScale = opts.shadowScale || scale;
+			const scaleEpsilon = getScaleEpsilon();
 
 			const x = layer.x || 0;
 			const y = layer.y || 0;
@@ -604,7 +613,7 @@
 							if ( hasRotation ) {
 								ctx.rotate( rotationRad );
 							}
-							ctx.scale( Math.max( effectiveRadiusX, SCALE_EPSILON ), Math.max( effectiveRadiusY, SCALE_EPSILON ) );
+							ctx.scale( Math.max( effectiveRadiusX, scaleEpsilon ), Math.max( effectiveRadiusY, scaleEpsilon ) );
 							ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
 							ctx.restore();
 						}
@@ -625,7 +634,7 @@
 							if ( hasRotation ) {
 								ctx.rotate( rotationRad );
 							}
-							ctx.scale( Math.max( radiusX, SCALE_EPSILON ), Math.max( radiusY, SCALE_EPSILON ) );
+							ctx.scale( Math.max( radiusX, scaleEpsilon ), Math.max( radiusY, scaleEpsilon ) );
 							ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
 							ctx.restore();
 						}
@@ -654,7 +663,7 @@
 					if ( hasRotation ) {
 						context.rotate( rotationRad );
 					}
-					context.scale( Math.max( radiusX, SCALE_EPSILON ), Math.max( radiusY, SCALE_EPSILON ) );
+					context.scale( Math.max( radiusX, scaleEpsilon ), Math.max( radiusY, scaleEpsilon ) );
 					context.arc( 0, 0, 1, 0, 2 * Math.PI );
 					context.restore();
 				}

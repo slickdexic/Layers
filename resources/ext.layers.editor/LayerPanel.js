@@ -6,10 +6,16 @@
 	'use strict';
 
 	/**
-	 * Epsilon value for integer detection (is-integer checks)
-	 * @constant {number}
+	 * Get INTEGER_EPSILON from MathUtils namespace (with fallback)
+	 * @return {number}
 	 */
-	const INTEGER_EPSILON = 1e-9;
+	function getIntegerEpsilon() {
+		if ( window.Layers && window.Layers.MathUtils && window.Layers.MathUtils.MATH ) {
+			return window.Layers.MathUtils.MATH.INTEGER_EPSILON;
+		}
+		// Fallback if MathUtils not loaded
+		return 1e-9;
+	}
 
 	/**
 	 * Helper to get a class from namespace or global fallback (lazy evaluation)
@@ -1849,7 +1855,7 @@
 				}
 				if ( String( decimalsAttr ) === '1' ) {
 					const r = Math.round( n * 10 ) / 10;
-					const isInt = Math.abs( r - Math.round( r ) ) < INTEGER_EPSILON;
+					const isInt = Math.abs( r - Math.round( r ) ) < getIntegerEpsilon();
 					return isInt ? String( Math.round( r ) ) : r.toFixed( 1 );
 				}
 				// Default: round to whole numbers for clean display
