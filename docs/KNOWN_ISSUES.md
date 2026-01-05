@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 5, 2026  
-**Version:** 1.4.7
+**Last Updated:** January 4, 2026  
+**Version:** 1.4.8
 
 This document lists known functionality issues and their current status.
 
@@ -12,8 +12,8 @@ This document lists known functionality issues and their current status.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
-| P1 (Stability) | 6 | ⚠️ 12 god classes + 2 remaining issues |
-| P2 (Code Quality) | 2 | ✅ ESLint disables reduced to 8 |
+| P1 (Stability) | 0 | ✅ All memory leaks fixed |
+| P2 (Code Quality) | 2 | ✅ ESLint disables at 8, magic numbers replaced |
 | Feature Gaps | 2 | ✅ InstantCommons & TIFF support added |
 
 ---
@@ -111,6 +111,18 @@ This is good practice for troubleshooting, not a bug.
 - Added `mw.notify()` call in `handleImageLoadError()` method
 - Users now see "Background image could not be loaded. You can still add annotations." message
 - Uses i18n message key `layers-background-load-error`
+
+### P1.NEW5 ContextMenuController Memory Leak
+
+**Status:** ✅ FIXED (January 4, 2026)  
+**File:** `resources/ext.layers.editor/ui/ContextMenuController.js`
+
+**Problem:** When a context menu was opened and then closed (or `destroy()` was called), the `click` and `keydown` event listeners added to `document` were not being removed, causing a memory leak.
+
+**Solution Applied:**
+- Handler references now stored as instance properties (`_boundCloseHandler`, `_boundEscHandler`)
+- Handlers are properly removed in `closeLayerContextMenu()` method
+- Added 3 new tests to verify memory leak prevention
 
 ---
 

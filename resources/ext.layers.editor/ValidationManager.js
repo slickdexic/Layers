@@ -258,3 +258,8 @@ if ( typeof window !== 'undefined' ) {
 	window.Layers.Validation = window.Layers.Validation || {};
 	window.Layers.Validation.Manager = ValidationManager;
 }
+
+// CommonJS export for Jest testing
+if ( typeof module !== 'undefined' && module.exports ) {
+	module.exports = ValidationManager;
+}
