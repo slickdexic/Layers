@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 4, 2026  
+**Review Date:** January 5, 2026  
 **Version:** 1.4.8  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
@@ -154,10 +154,9 @@ Basic touch handling exists (touch-to-mouse conversion, pinch-to-zoom, double-ta
 
 `LayersConstants.js` (360 lines) provides comprehensive constants, but some files still use hardcoded values:
 - `TextRenderer.js:194` - font size `16`
-- `ResizeCalculator.js:601+` - `0.0001` epsilon values
 - Various animation delays
 
-**Note:** Infrastructure exists; adoption is gradual.
+**Note:** Infrastructure exists; adoption is gradual. MATH constants (SCALE_EPSILON, INTEGER_EPSILON) have been consolidated into MathUtils.MATH and are now the single source of truth.
 
 ### LOW Priority Issues
 
@@ -193,6 +192,7 @@ Same regex is tested with `.test()` then captured with `.exec()`, compiling the 
 | TransformationEngine memory leak | ✅ FIXED | Added cancelAnimationFrame in destroy() |
 | ZoomPanController memory leak | ✅ FIXED | Same fix applied |
 | ContextMenuController destroy() | ✅ FIXED | Added proper destroy() method |
+| MATH constants duplication | ✅ FIXED | Consolidated in MathUtils.MATH (Jan 5, 2026) |
 
 ---
 

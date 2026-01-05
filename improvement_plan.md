@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 4, 2026  
+**Last Updated:** January 5, 2026  
 **Status:** ✅ Production-Ready  
 **Version:** 1.4.8  
 **Goal:** World-class, production-ready MediaWiki extension
@@ -32,7 +32,7 @@ The extension is **production-ready** and actively maintained. A critical code r
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping + curved arrows + callouts |
 | **Security** | ✅ Excellent | CSRF, rate limiting, validation on all endpoints |
-| **Testing** | ✅ Excellent | 8,300 tests, 94.60% statement coverage |
+| **Testing** | ✅ Excellent | 8,304 tests, 94.62% statement coverage |
 | **ES6 Migration** | ✅ Complete | 94+ classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Debt | 12 files >1,000 lines (all with delegation patterns) |
 | **Memory Leaks** | ✅ Resolved | All identified leaks fixed (Jan 4, 2026) |
@@ -148,16 +148,22 @@ Monitor these files to prevent additional god classes:
 
 ### P2.2 Magic Number Adoption
 
-**Status:** ⚠️ LOW PRIORITY  
-**Effort:** 2-3 days
+**Status:** ⚠️ LOW PRIORITY (Partially Complete)  
+**Effort:** 2-3 days remaining
 
-`LayersConstants.js` (360 lines) provides comprehensive constants. Gradual adoption:
+`LayersConstants.js` (368 lines) provides comprehensive constants. Gradual adoption in progress:
+
+**✅ Completed (January 5, 2026):**
+- MATH constants (SCALE_EPSILON, INTEGER_EPSILON) consolidated in `MathUtils.MATH`
+- Removed duplicate definitions from ShapeRenderer.js, PropertiesForm.js, LayerPanel.js
+- LayersConstants.MATH now references MathUtils.MATH as single source of truth
+
+**Still Available for Adoption:**
 
 | File | Magic Number | Constant Available |
 |------|-------------|-------------------|
 | TextRenderer.js:194 | `16` | `DEFAULTS.LAYER.FONT_SIZE` ✅ |
 | ShapeFactory.js:624-625 | `100`, `50` | `DEFAULTS.SIZES.*` ✅ |
-| ResizeCalculator.js:601+ | `0.0001` | Could add `EPSILON` |
 
 ### P2.3 Architecture Documentation
 
