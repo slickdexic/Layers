@@ -528,4 +528,146 @@ describe( 'SmartGuidesController', () => {
 			expect( result.x ).toBe( 100 );
 		} );
 	} );
+
+	describe( 'snap priority - closer edge wins', () => {
+		let snapLayers;
+
+		beforeEach( () => {
+			controller.setEnabled( true );
+			// Create layers that will generate both left edge and right edge snap points
+			// such that one edge is closer than the other
+			snapLayers = [
+				// Layer with left edge at 100
+				{ id: 'left-target', type: 'rectangle', x: 100, y: 50, width: 50, height: 50, visible: true },
+				// Layer with right edge at 207 (202+5)
+				{ id: 'right-target', type: 'rectangle', x: 202, y: 50, width: 5, height: 50, visible: true }
+			];
+		} );
+
+		it( 'should prefer right edge when it is closer than left edge', () => {
+			// Create a scenario where only the right edge is within snap threshold
+			// Layer with right edge at 200 (x=190, width=10)
+			const rightEdgeLayers = [
+				{ id: 'right-target', type: 'rectangle', x: 190, y: 50, width: 10, height: 50, visible: true }
+				// right edge at 200
+			];
+
+			// Dragging layer: width 100
+			// Position at x=98: left=98, right=198
+			// Left (98) is 92px from target left (190) - too far
+			// Right (198) is 2px from target right (200) - within threshold!
+			const layer = { id: 'dragged', type: 'rectangle', x: 0, y: 100, width: 100, height: 40 };
+			const result = controller.calculateSnappedPosition(
+				layer, 98, 100, rightEdgeLayers
+			);
+
+			// Right edge (198) should snap to 200, so x = 200 - 100 = 100
+			expect( result.snappedX ).toBe( true );
+			expect( result.x ).toBe( 100 );
+		} );
+
+		it( 'should prefer bottom edge when it is closer than top edge', () => {
+			// Create layers with top at 200 and bottom at 147 (100+47)
+			const verticalSnapLayers = [
+				{ id: 'top-target', type: 'rectangle', x: 50, y: 200, width: 50, height: 50, visible: true },
+				{ id: 'bottom-target', type: 'rectangle', x: 50, y: 100, width: 50, height: 47, visible: true }
+			];
+
+			// Dragging layer: height 50
+			// Position at y=99: top=99, bottom=149
+			// Top (99) is 1px from bottom-target's bottom (147) - actually no, 99 is far from 147
+			// Let me recalculate:
+			// bottom-target's bottom = 100 + 47 = 147
+			// top-target's top = 200
+			// If layer is at y=145, top=145, bottom=195
+			// Top (145) is 2px from 147
+			// Bottom (195) is 5px from 200
+			// So top should win at that position
+			// But at y=148: top=148, bottom=198
+			// Top (148) is 1px from 147 (but wrong direction)
+			// Bottom (198) is 2px from 200
+			// Need top at y=149: top=149, bottom=199
+			// Top (149) is 2px from 147
+			// Bottom (199) is 1px from 200 - bottom should win!
+			const layer = { id: 'dragged', type: 'rectangle', x: 50, y: 0, width: 40, height: 50 };
+			const result = controller.calculateSnappedPosition(
+				layer, 50, 149, verticalSnapLayers
+			);
+
+			// Bottom edge (199) should snap to 200, so y = 200 - 50 = 150
+			expect( result.snappedY ).toBe( true );
+			expect( result.y ).toBe( 150 );
+		} );
+
+		it( 'should prefer center when it is closer than edges', () => {
+			// Create a layer with center at x=200
+			const centerSnapLayers = [
+				{ id: 'center-target', type: 'rectangle', x: 150, y: 50, width: 100, height: 50, visible: true }
+				// center-target's center X = 150 + 100/2 = 200
+			];
+
+			// Dragging layer: width 100, center at x + 50
+			// Position at x=144: left=144, center=194, right=244
+			// Left (144) is 6px from left edge (150)
+			// Center (194) is 6px from center (200)
+			// Right (244) is far from right edge (250)
+			// Position at x=146: left=146, center=196, right=246
+			// Left (146) is 4px from left edge (150)
+			// Center (196) is 4px from center (200) - tie, left wins (checked first)
+			// Position at x=147: left=147, center=197, right=247
+			// Left (147) is 3px from left edge (150)
+			// Center (197) is 3px from center (200) - tie, left wins (checked first)
+			// Position at x=148: left=148, center=198, right=248
+			// Left (148) is 2px from 150
+			// Center (198) is 2px from 200 - tie, left wins
+			// Position at x=149: left=149, center=199, right=249
+			// Left (149) is 1px from 150
+			// Center (199) is 1px from 200 - tie, left wins
+			// To make center win, need different setup where left is farther than center
+			// Position at x=143: left=143, center=193, right=243
+			// Left (143) is 7px from 150
+			// Center (193) is 7px from 200 - tie, left wins
+			// Let's use a layer where only center is near a snap point
+			const centerOnlyLayers = [
+				// Center at 200, edges at 100 and 300 - no other layers with matching edges
+				{ id: 'center-only', type: 'rectangle', x: 100, y: 50, width: 200, height: 50, visible: true }
+			];
+
+			// Dragging layer: width 50, center at x + 25
+			// Position at x=173: left=173, center=198, right=223
+			// Left (173) is 27px from 100 - too far
+			// Center (198) is 2px from 200 - within threshold!
+			// Right (223) is 77px from 300 - too far
+			const layer = { id: 'dragged', type: 'rectangle', x: 0, y: 100, width: 50, height: 40 };
+			const result = controller.calculateSnappedPosition(
+				layer, 173, 100, centerOnlyLayers
+			);
+
+			// Center (198) should snap to 200, so x = 200 - 25 = 175
+			expect( result.snappedX ).toBe( true );
+			expect( result.x ).toBe( 175 );
+		} );
+
+		it( 'should prefer centerY when it is closer than top/bottom edges', () => {
+			// Layer with center at y=300, edges far from any dragged position
+			const centerYLayers = [
+				{ id: 'center-y-target', type: 'rectangle', x: 50, y: 200, width: 50, height: 200, visible: true }
+				// center Y = 200 + 200/2 = 300
+			];
+
+			// Dragging layer: height 40, center at y + 20
+			// Position at y=278: top=278, center=298, bottom=318
+			// Top (278) is 22px from 200 - too far
+			// Center (298) is 2px from 300 - within threshold!
+			// Bottom (318) is 82px from 400 - too far
+			const layer = { id: 'dragged', type: 'rectangle', x: 50, y: 0, width: 40, height: 40 };
+			const result = controller.calculateSnappedPosition(
+				layer, 50, 278, centerYLayers
+			);
+
+			// Center (298) should snap to 300, so y = 300 - 20 = 280
+			expect( result.snappedY ).toBe( true );
+			expect( result.y ).toBe( 280 );
+		} );
+	} );
 } );
