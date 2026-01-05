@@ -16,7 +16,10 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Removed duplicate constant definitions from `ShapeRenderer.js`, `PropertiesForm.js`, `LayerPanel.js`
   - `LayersConstants.MATH` now references `MathUtils.MATH` for backward compatibility
   - Updated `types/layers.d.ts` with Constants namespace definitions
-- **Test Count** — 8,304 tests passing
+- **Test Coverage Enhancement** — Added tests for MATH constant fallback branches
+  - LayersConstants branch coverage improved from 30% to 65%
+  - New tests verify fallback behavior when MathUtils unavailable
+- **Test Count** — 8,311 tests passing (up from 8,304)
 
 ---
 

@@ -233,5 +233,20 @@ describe( 'MathUtils', () => {
 			expect( keys ).toContain( 'degreesToRadians' );
 			expect( keys ).toContain( 'radiansToDegrees' );
 		} );
+
+		it( 'should export to window.Layers namespace in browser environment', () => {
+			// This tests the browser export path (line 91-93)
+			expect( window.Layers ).toBeDefined();
+			expect( window.Layers.MathUtils ).toBeDefined();
+			expect( window.Layers.MathUtils.clampOpacity ).toBe( MathUtils.clampOpacity );
+			expect( window.Layers.MathUtils.MATH ).toBe( MathUtils.MATH );
+		} );
+
+		it( 'should have consistent exports between CommonJS and window namespace', () => {
+			// Verify the same object is exported to both environments
+			expect( window.Layers.MathUtils.clamp ).toBe( MathUtils.clamp );
+			expect( window.Layers.MathUtils.degreesToRadians ).toBe( MathUtils.degreesToRadians );
+			expect( window.Layers.MathUtils.radiansToDegrees ).toBe( MathUtils.radiansToDegrees );
+		} );
 	} );
 } );
