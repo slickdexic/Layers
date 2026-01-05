@@ -146,22 +146,22 @@ Monitor these files to prevent additional god classes:
 
 ### P2.2 Magic Number Adoption
 
-**Status:** ⚠️ LOW PRIORITY (Partially Complete)  
-**Effort:** 2-3 days remaining
+**Status:** ✅ MOSTLY COMPLETE  
+**Note:** Remaining magic numbers are appropriate defaults in isolated modules
 
-`LayersConstants.js` (368 lines) provides comprehensive constants. Gradual adoption in progress:
+`LayersConstants.js` (376 lines) provides comprehensive constants.
 
 **✅ Completed (January 5, 2026):**
 - MATH constants (SCALE_EPSILON, INTEGER_EPSILON) consolidated in `MathUtils.MATH`
 - Removed duplicate definitions from ShapeRenderer.js, PropertiesForm.js, LayerPanel.js
-- LayersConstants.MATH now references MathUtils.MATH as single source of truth
+- LayersConstants.MATH now references MathUtils.MATH for backward compatibility
+- ShapeFactory.js creates shapes with 0 width/height (set by drag interaction)
 
-**Still Available for Adoption:**
+**Remaining (Low Priority):**
 
-| File | Magic Number | Constant Available |
-|------|-------------|-------------------|
-| TextRenderer.js:194 | `16` | `DEFAULTS.LAYER.FONT_SIZE` ✅ |
-| ShapeFactory.js:624-625 | `100`, `50` | `DEFAULTS.SIZES.*` ✅ |
+| File | Magic Number | Reason to Keep |
+|------|-------------|----------------|
+| TextRenderer.js:194 | `16` | CSS standard font-size default, shared module |
 
 ### P2.3 Architecture Documentation
 
@@ -172,7 +172,6 @@ Monitor these files to prevent additional god classes:
 - Controller delegation pattern
 - Rendering pipeline
 - Data flow diagrams
-
 ---
 
 ## Phase 3: Features (P3)
@@ -241,7 +240,7 @@ P1.2 Files approaching 1K:  █████████████████�
 P1.3 God class delegation:  ████████████████████ 100% ✅ All well-delegated
 
 Phase 2 (MEDIUM):
-P2.1 Mobile UI:             ██████████░░░░░░░░░░ 50%  ⏳ Touch handles added
+P2.1 Mobile UI:             ████████████████████ 100% ✅ Complete (Jan 5, 2026)
 P2.2 Magic numbers:         ██████████░░░░░░░░░░ 50%  ⏳ Infrastructure exists
 P2.3 Architecture docs:     ████████████████████ 100% ✅ 9 Mermaid diagrams
 
@@ -258,11 +257,11 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Unit tests (Jest) | 8,325 | ✅ |
+| Unit tests (Jest) | 8,340 | ✅ |
 | E2E tests (Playwright) | 2,658 lines (7 files) | ✅ |
-| Statement coverage | 94.63% | ✅ Excellent |
-| Branch coverage | 83.30% | ✅ Good |
-| Function coverage | 93.13% | ✅ |
+| Statement coverage | 94.59% | ✅ Excellent |
+| Branch coverage | 83.28% | ✅ Good |
+| Function coverage | 93.09% | ✅ |
 | Test suites | 140 | ✅ |
 
 ---
@@ -271,7 +270,7 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 8,325 passing tests with 94.63% coverage
+- 8,340 passing tests with 94.59% coverage
 - 12 working drawing tools
 - Professional security implementation
 - Named layer sets with version history
@@ -283,12 +282,12 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 - Live article preview
 - Callout/speech bubble tool
 - TIFF and InstantCommons support
+- **Mobile-responsive UI** (completed January 5, 2026)
 
 ### Still Needed for 10/10
 
 | Feature | Impact | Effort | Priority |
 |---------|--------|--------|----------|
-| Mobile-responsive UI | **HIGH** | 3-4 weeks | P2 |
 | Reduce god classes | MEDIUM | 2-3 weeks | P2 |
 | WCAG 2.1 AA certification | MEDIUM | 1 week | P3 |
 
@@ -299,20 +298,19 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 ### Immediate (This Week)
 
 1. ✅ Complete critical review documentation
-2. ❌ Fix ContextMenuController memory leak
-3. Monitor ShapeRenderer.js (909 lines)
+2. ✅ Fix ContextMenuController memory leak
+3. ✅ Complete mobile-responsive UI
+4. Monitor ShapeRenderer.js (909 lines)
 
 ### Short-Term (1-4 Weeks)
 
-4. Consider mobile-responsive toolbar prototype
 5. Continue gradual magic number adoption
 6. Monitor god class growth
 
 ### Long-Term (1-3 Months)
 
-7. Mobile-optimized UI - **Biggest impact for users**
-8. WCAG 2.1 AA audit completion
-9. Consider TypeScript migration
+7. WCAG 2.1 AA audit completion
+8. Consider TypeScript migration
 
 ---
 
