@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-8%2C000%2B%20Passing-brightgreen" alt="8,000+ Tests">
+  <img src="https://img.shields.io/badge/Tests-8%2C304%20Passing-brightgreen" alt="8,304 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -20,27 +20,35 @@
 
 ---
 
-## 🆕 What's New in v1.4.3
+## 🆕 What's New in v1.4.8
+
+- **Memory Leak Fix** — Fixed ContextMenuController memory leak where document event listeners were not removed
+- **Math Constants Consolidated** — `MathUtils.MATH` provides single source of truth for SCALE_EPSILON and INTEGER_EPSILON
+- **TypeScript Definitions Updated** — Added Constants namespace definitions
+- **8,304 tests passing** — 94.62% statement coverage
+
+### Previous v1.4.5-1.4.7 Highlights
+
+- **InstantCommons Support** — Full support for files from Wikimedia Commons and other foreign repositories
+- **TIFF Image Support** — TIFF format images work correctly in editor and viewer
+- **Template Images Fix** — Removed overly restrictive CSP that was blocking template images on File pages
+- **FR-10 Live Preview Fixes** — Multiple fixes for live preview duplicate rendering and stale data issues
+
+### Previous v1.4.3 Highlights
 
 - **Draggable Callout Tail** — Position the callout tail by dragging the tip directly on the canvas
 - **Tail Styles** — Three options: triangle (classic), curved (smooth Bézier), and line (simple pointer)
 - **Corner Arc Tail Rendering** — Tail now renders correctly when positioned on rounded corners
-- **8,000+ tests passing** — 94% statement coverage
 
-### Previous v1.4.2 Highlights
+### Previous v1.4.0-1.4.2 Highlights
 
 - **Callout/Speech Bubble Tool** — New annotation type for chat bubbles and callouts with configurable tail direction
 - **Vector 2022 Dark Mode** — Full support for MediaWiki's Vector 2022 skin night mode
 - **Windows High Contrast Mode** — WCAG 1.4.11 compliance for forced-colors mode
 - **Color Picker Hex Input** — Keyboard-accessible hex color input field
-- **Toolbar Dropdown Grouping** — Text, shapes, and lines grouped into dropdown menus for cleaner UI
-
-### Previous v1.4.0 Highlights
-
 - **Curved Arrows (FR-4)** — Arrows now support curved paths via draggable control point
 - **Live Color Picker Preview (FR-9)** — Canvas updates in real-time during color selection
 - **Live Article Preview (FR-10)** — Layer changes visible immediately after saving
-- **Reduced Motion Support** — Respects `prefers-reduced-motion` accessibility preference
 
 ### Previous v1.3 Highlights
 
@@ -112,15 +120,15 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.4.3 |
-| **Version (REL1_43)** | 1.4.3-REL1_43 |
+| **Version (main)** | 1.4.8 |
+| **Version (REL1_43)** | 1.4.8-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 3, 2026 |
-| **Test Suites** | 136 |
-| **Total Tests** | 7,923 |
+| **Release Date** | January 5, 2026 |
+| **Test Suites** | 140 |
+| **Total Tests** | 8,304 |
 | **Code Coverage** | 94% |
-| **JavaScript Files** | 102 |
-| **ES6 Classes** | 83 |
+| **JavaScript Files** | 105 |
+| **ES6 Classes** | 94 |
 
 ---
 
