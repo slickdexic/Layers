@@ -39,7 +39,13 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Proper ARIA attributes (`aria-expanded`, `aria-label`) for accessibility
   - Dark mode support for collapse button
   - 6 new tests for mobile collapse functionality
-- **Test Count** — 8,331 tests passing (up from 8,304)
+- **Mobile Keyboard Handling** — Text input now handles on-screen keyboard properly
+  - Added Visual Viewport API integration to detect keyboard appearance
+  - Text input scrolls into view when keyboard would obscure it
+  - Mobile-optimized input attributes: `inputmode`, `enterkeyhint`, `autocomplete`
+  - Input auto-capitalizes sentences for better mobile UX
+  - 9 new tests for keyboard handling
+- **Test Count** — 8,340 tests passing (up from 8,304)
 
 ---
 

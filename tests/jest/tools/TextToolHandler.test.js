@@ -312,4 +312,118 @@ describe( 'TextToolHandler', () => {
 			expect( container ).toBe( document.body );
 		} );
 	} );
+
+	describe( 'mobile keyboard handling', () => {
+		it( 'should set mobile-friendly input attributes', () => {
+			handler.showTextEditor( { x: 100, y: 100 } );
+
+			const input = handler.textEditor;
+			expect( input.getAttribute( 'inputmode' ) ).toBe( 'text' );
+			expect( input.getAttribute( 'enterkeyhint' ) ).toBe( 'done' );
+			expect( input.getAttribute( 'autocomplete' ) ).toBe( 'off' );
+			expect( input.getAttribute( 'autocorrect' ) ).toBe( 'off' );
+			expect( input.getAttribute( 'autocapitalize' ) ).toBe( 'sentences' );
+		} );
+
+		it( 'should store original point for keyboard adjustment', () => {
+			const point = { x: 150, y: 200 };
+			handler.showTextEditor( point );
+
+			expect( handler._originalPoint ).toEqual( point );
+		} );
+
+		it( 'should setup keyboard handler when visualViewport available', () => {
+			// Mock visualViewport
+			const mockVisualViewport = {
+				addEventListener: jest.fn(),
+				removeEventListener: jest.fn(),
+				height: 800,
+				offsetTop: 0
+			};
+			window.visualViewport = mockVisualViewport;
+
+			handler.showTextEditor( { x: 100, y: 100 } );
+
+			expect( mockVisualViewport.addEventListener ).toHaveBeenCalledWith(
+				'resize',
+				expect.any( Function )
+			);
+			expect( mockVisualViewport.addEventListener ).toHaveBeenCalledWith(
+				'scroll',
+				expect.any( Function )
+			);
+
+			// Cleanup
+			delete window.visualViewport;
+		} );
+
+		it( 'should remove keyboard handler on hide', () => {
+			const mockVisualViewport = {
+				addEventListener: jest.fn(),
+				removeEventListener: jest.fn(),
+				height: 800,
+				offsetTop: 0
+			};
+			window.visualViewport = mockVisualViewport;
+
+			handler.showTextEditor( { x: 100, y: 100 } );
+			handler.hideTextEditor();
+
+			expect( mockVisualViewport.removeEventListener ).toHaveBeenCalledWith(
+				'resize',
+				expect.any( Function )
+			);
+			expect( mockVisualViewport.removeEventListener ).toHaveBeenCalledWith(
+				'scroll',
+				expect.any( Function )
+			);
+			expect( handler._viewportHandler ).toBeNull();
+			expect( handler._originalPoint ).toBeNull();
+
+			// Cleanup
+			delete window.visualViewport;
+		} );
+
+		it( 'should clear original point on hide', () => {
+			handler.showTextEditor( { x: 100, y: 100 } );
+			expect( handler._originalPoint ).toBeDefined();
+
+			handler.hideTextEditor();
+			expect( handler._originalPoint ).toBeNull();
+		} );
+
+		it( 'should handle missing visualViewport gracefully', () => {
+			// Ensure visualViewport is not defined
+			delete window.visualViewport;
+
+			expect( () => {
+				handler.showTextEditor( { x: 100, y: 100 } );
+			} ).not.toThrow();
+
+			expect( handler._viewportHandler ).toBeUndefined();
+		} );
+
+		it( '_adjustForKeyboard should handle missing input gracefully', () => {
+			expect( () => {
+				handler._adjustForKeyboard( null );
+			} ).not.toThrow();
+		} );
+
+		it( '_adjustForKeyboard should handle missing visualViewport gracefully', () => {
+			delete window.visualViewport;
+			const input = document.createElement( 'input' );
+
+			expect( () => {
+				handler._adjustForKeyboard( input );
+			} ).not.toThrow();
+		} );
+
+		it( '_removeKeyboardHandler should handle missing handler gracefully', () => {
+			handler._viewportHandler = null;
+
+			expect( () => {
+				handler._removeKeyboardHandler();
+			} ).not.toThrow();
+		} );
+	} );
 } );
