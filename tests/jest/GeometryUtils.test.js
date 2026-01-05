@@ -316,6 +316,34 @@ describe( 'GeometryUtils', () => {
 			expect( bounds.height ).toBe( 80 );
 		} );
 
+		it( 'should use points array for star when valid', () => {
+			const layer = { type: 'star', points: [ { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 80 } ] };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 0 );
+			expect( bounds.y ).toBe( 0 );
+			expect( bounds.width ).toBe( 100 );
+			expect( bounds.height ).toBe( 80 );
+		} );
+
+		it( 'should fallback to radius for star with insufficient points', () => {
+			const layer = { type: 'star', x: 100, y: 100, radius: 25, points: [ { x: 0, y: 0 }, { x: 10, y: 10 } ] };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			// Should use radius fallback since points.length < 3
+			expect( bounds.x ).toBe( 75 );
+			expect( bounds.y ).toBe( 75 );
+			expect( bounds.width ).toBe( 50 );
+			expect( bounds.height ).toBe( 50 );
+		} );
+
+		it( 'should fallback to radius for polygon with empty points array', () => {
+			const layer = { type: 'polygon', x: 50, y: 50, radius: 20, points: [] };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 30 );
+			expect( bounds.y ).toBe( 30 );
+			expect( bounds.width ).toBe( 40 );
+			expect( bounds.height ).toBe( 40 );
+		} );
+
 		it( 'should handle rectangle layer with bounds', () => {
 			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
 			expect( GeometryUtils.getLayerBoundsForType( layer ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );

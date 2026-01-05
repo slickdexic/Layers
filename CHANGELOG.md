@@ -19,7 +19,13 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Test Coverage Enhancement** — Added tests for MATH constant fallback branches
   - LayersConstants branch coverage improved from 30% to 65%
   - New tests verify fallback behavior when MathUtils unavailable
-- **Test Count** — 8,311 tests passing (up from 8,304)
+- **Mobile Responsive CSS** — Enhanced mobile experience with responsive breakpoints
+  - Added 768px and 480px responsive breakpoints for toolbar
+  - Touch device detection using `pointer: coarse` media query
+  - 44px minimum touch targets for buttons (WCAG 2.5.5 compliant)
+  - Scrollable toolbar with horizontal overflow on small screens
+  - Compact layer panel on mobile (160px height on small screens)
+- **Test Count** — 8,314 tests passing (up from 8,304)
 
 ---
 
