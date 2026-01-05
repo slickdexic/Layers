@@ -101,6 +101,7 @@ describe( 'LayersConstants', () => {
 			expect( LayersConstants.DEFAULTS.SIZES.ARROW_SIZE ).toBe( 10 );
 			expect( LayersConstants.DEFAULTS.SIZES.STAR_POINTS ).toBe( 5 );
 			expect( LayersConstants.DEFAULTS.SIZES.SELECTION_HANDLE_SIZE ).toBe( 8 );
+			expect( LayersConstants.DEFAULTS.SIZES.SELECTION_HANDLE_SIZE_TOUCH ).toBe( 14 );
 			expect( LayersConstants.DEFAULTS.SIZES.ROTATION_HANDLE_DISTANCE ).toBe( 25 );
 		} );
 

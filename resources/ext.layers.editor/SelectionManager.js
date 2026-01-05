@@ -510,6 +510,35 @@
 		}
 
 		/**
+		 * Check if device has coarse pointer (touch device)
+		 *
+		 * @private
+		 * @return {boolean} True if touch/coarse pointer device
+		 */
+		_isTouchDevice() {
+			if ( typeof window !== 'undefined' && window.matchMedia ) {
+				return window.matchMedia( '(pointer: coarse)' ).matches;
+			}
+			return false;
+		}
+
+		/**
+		 * Get appropriate handle size based on device type
+		 *
+		 * @private
+		 * @return {number} Handle size in pixels
+		 */
+		_getHandleSize() {
+			const Constants = window.Layers && window.Layers.Constants;
+			if ( this._isTouchDevice() ) {
+				return ( Constants && Constants.DEFAULTS && Constants.DEFAULTS.SIZES ) ?
+					Constants.DEFAULTS.SIZES.SELECTION_HANDLE_SIZE_TOUCH : 14;
+			}
+			return ( Constants && Constants.DEFAULTS && Constants.DEFAULTS.SIZES ) ?
+				Constants.DEFAULTS.SIZES.SELECTION_HANDLE_SIZE : 8;
+		}
+
+		/**
 		 * Create handles from bounds (minimal fallback for tests)
 		 *
 		 * @param {Object} bounds Bounds object
@@ -517,7 +546,7 @@
 		 * @return {Array} Handle objects
 		 */
 		_createHandlesFromBounds( bounds, isSingle ) {
-			const handleSize = 8;
+			const handleSize = this._getHandleSize();
 			const handles = [
 				{ x: bounds.x, y: bounds.y, type: 'nw' },
 				{ x: bounds.x + bounds.width, y: bounds.y, type: 'ne' },

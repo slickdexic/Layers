@@ -130,7 +130,7 @@ Monitor these files to prevent additional god classes:
 
 ### P2.1 Mobile-Optimized UI
 
-**Status:** ⚠️ PARTIAL (40% complete)  
+**Status:** ⚠️ PARTIAL (50% complete)  
 **Priority:** HIGH (Opens to 50% more users)  
 **Effort:** 2-3 weeks remaining
 
@@ -142,10 +142,10 @@ Monitor these files to prevent additional god classes:
 - ✅ Responsive toolbar layout (768px and 480px breakpoints) - January 5, 2026
 - ✅ Touch-friendly button sizes (44px minimum touch targets)
 - ✅ Coarse pointer detection with larger hit areas
+- ✅ Touch-friendly selection handles (14px on touch vs 8px on mouse) - January 5, 2026
 
 **Still Needed:**
 - Collapsible layer panel on mobile
-- Touch-friendly selection handles (larger hit areas for resize/rotate)
 - On-screen keyboard handling for text input
 
 ### P2.2 Magic Number Adoption
@@ -245,7 +245,7 @@ P1.2 Files approaching 1K:  █████████████████�
 P1.3 God class delegation:  ████████████████████ 100% ✅ All well-delegated
 
 Phase 2 (MEDIUM):
-P2.1 Mobile UI:             ████████░░░░░░░░░░░░ 40%  ⏳ Responsive CSS added
+P2.1 Mobile UI:             ██████████░░░░░░░░░░ 50%  ⏳ Touch handles added
 P2.2 Magic numbers:         ██████████░░░░░░░░░░ 50%  ⏳ Infrastructure exists
 P2.3 Architecture docs:     ████████████████████ 100% ✅ 9 Mermaid diagrams
 
@@ -262,7 +262,7 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Unit tests (Jest) | 8,314 | ✅ |
+| Unit tests (Jest) | 8,325 | ✅ |
 | E2E tests (Playwright) | 2,658 lines (7 files) | ✅ |
 | Statement coverage | 94.63% | ✅ Excellent |
 | Branch coverage | 83.30% | ✅ Good |
@@ -275,7 +275,7 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 8,314 passing tests with 94.63% coverage
+- 8,325 passing tests with 94.63% coverage
 - 12 working drawing tools
 - Professional security implementation
 - Named layer sets with version history

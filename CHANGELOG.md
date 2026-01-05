@@ -25,7 +25,12 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - 44px minimum touch targets for buttons (WCAG 2.5.5 compliant)
   - Scrollable toolbar with horizontal overflow on small screens
   - Compact layer panel on mobile (160px height on small screens)
-- **Test Count** — 8,314 tests passing (up from 8,304)
+- **Touch-Adaptive Selection Handles** — Selection handles now auto-size for touch devices
+  - Added `SELECTION_HANDLE_SIZE_TOUCH` constant (14px, up from 8px for mouse)
+  - `SelectionHandles` and `SelectionManager` detect touch devices via `pointer: coarse`
+  - Larger handles make resize/rotate easier on tablets and phones
+  - 11 new tests for touch detection and handle sizing
+- **Test Count** — 8,325 tests passing (up from 8,304)
 
 ---
 

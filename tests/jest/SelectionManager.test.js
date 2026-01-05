@@ -1723,4 +1723,85 @@ describe('SelectionManager', () => {
             expect(ids).toEqual(['child1', 'child2']);
         });
     });
+
+    describe('touch device detection', () => {
+        test('should detect non-touch device when matchMedia returns false', () => {
+            window.matchMedia = jest.fn().mockReturnValue({ matches: false });
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const result = selectionManager._isTouchDevice();
+
+            expect(result).toBe(false);
+            expect(window.matchMedia).toHaveBeenCalledWith('(pointer: coarse)');
+        });
+
+        test('should detect touch device when matchMedia returns true', () => {
+            window.matchMedia = jest.fn().mockReturnValue({ matches: true });
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const result = selectionManager._isTouchDevice();
+
+            expect(result).toBe(true);
+        });
+
+        test('should return false when matchMedia is unavailable', () => {
+            const originalMatchMedia = window.matchMedia;
+            delete window.matchMedia;
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const result = selectionManager._isTouchDevice();
+
+            expect(result).toBe(false);
+            window.matchMedia = originalMatchMedia;
+        });
+
+        test('should return 8px handle size for mouse devices', () => {
+            window.matchMedia = jest.fn().mockReturnValue({ matches: false });
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const size = selectionManager._getHandleSize();
+
+            expect(size).toBe(8);
+        });
+
+        test('should return 14px handle size for touch devices', () => {
+            window.matchMedia = jest.fn().mockReturnValue({ matches: true });
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const size = selectionManager._getHandleSize();
+
+            expect(size).toBe(14);
+        });
+
+        test('should use touch handle size from Constants when available', () => {
+            window.matchMedia = jest.fn().mockReturnValue({ matches: true });
+            window.Layers = window.Layers || {};
+            window.Layers.Constants = {
+                DEFAULTS: {
+                    SIZES: {
+                        SELECTION_HANDLE_SIZE: 8,
+                        SELECTION_HANDLE_SIZE_TOUCH: 16
+                    }
+                }
+            };
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const size = selectionManager._getHandleSize();
+
+            expect(size).toBe(16);
+        });
+
+        test('should create handles with appropriate size for touch devices', () => {
+            window.matchMedia = jest.fn().mockReturnValue({ matches: true });
+            mockCanvasManager.layers = [{ id: 'layer1', type: 'rectangle', x: 0, y: 0, width: 100, height: 100 }];
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const bounds = { x: 0, y: 0, width: 100, height: 100 };
+            const handles = selectionManager._createHandlesFromBounds(bounds, true);
+
+            // Check that handles use larger size (14px default for touch)
+            expect(handles[0].rect.width).toBeGreaterThanOrEqual(14);
+            expect(handles[0].rect.height).toBeGreaterThanOrEqual(14);
+        });
+    });
 });
