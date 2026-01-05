@@ -319,6 +319,8 @@
 	"layers-context-duplicate": "Duplicate",
 	"layers-context-delete": "Delete",
 	"layers-panel-subtitle-updated": "Drag to reorder • Double-click name to rename",
+	"layers-panel-expand": "Expand panel",
+	"layers-panel-collapse": "Collapse panel",
 	"layers-prop-text-align": "Text Align",
 	"layers-prop-vertical-align": "Vertical Align",
 	"layers-prop-padding": "Padding",

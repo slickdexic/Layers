@@ -9,6 +9,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Event handlers (`closeHandler`, `escHandler`) now stored as instance properties and properly cleaned up
   - Added cleanup in `closeLayerContextMenu()` method
   - 3 new tests added to verify memory leak prevention
+- **ARCHITECTURE.md Mermaid Diagram** — Fixed parse error on GitHub caused by `style` node ID
+  - Renamed node from `style["StyleController"]` to `styleCtrl["StyleController"]`
+  - `style` is a reserved keyword in Mermaid syntax
 
 ### Improved
 - **Magic Number Constants** — Consolidated mathematical constants into single source of truth
@@ -30,7 +33,13 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - `SelectionHandles` and `SelectionManager` detect touch devices via `pointer: coarse`
   - Larger handles make resize/rotate easier on tablets and phones
   - 11 new tests for touch detection and handle sizing
-- **Test Count** — 8,325 tests passing (up from 8,304)
+- **Collapsible Layer Panel (Mobile)** — Layer panel can now be collapsed on mobile to maximize canvas space
+  - Added collapse/expand toggle button (visible only on screens ≤768px)
+  - Collapsed state hides layer list and properties, showing only header
+  - Proper ARIA attributes (`aria-expanded`, `aria-label`) for accessibility
+  - Dark mode support for collapse button
+  - 6 new tests for mobile collapse functionality
+- **Test Count** — 8,331 tests passing (up from 8,304)
 
 ---
 

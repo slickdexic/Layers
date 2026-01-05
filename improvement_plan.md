@@ -22,22 +22,22 @@ The extension is **production-ready** and actively maintained. A critical code r
 
 **⚠️ Known Technical Debt:**
 - ⚠️ **12 god classes** (30% of JS codebase) - All use delegation patterns
-- ⚠️ **Mobile UI not responsive** - Basic touch works, but toolbar not mobile-optimized
+- ⚠️ **Mobile UI 70% complete** - Responsive toolbar, touch handles, collapsible panel done
 
 ---
 
-## Current State (January 4, 2026)
+## Current State (January 5, 2026)
 
 | Area | Status | Details |
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping + curved arrows + callouts |
 | **Security** | ✅ Excellent | CSRF, rate limiting, validation on all endpoints |
-| **Testing** | ✅ Excellent | 8,304 tests, 94.62% statement coverage |
+| **Testing** | ✅ Excellent | 8,331 tests, 94.63% statement coverage |
 | **ES6 Migration** | ✅ Complete | 94+ classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Debt | 12 files >1,000 lines (all with delegation patterns) |
 | **Memory Leaks** | ✅ Resolved | All identified leaks fixed (Jan 4, 2026) |
-| **Mobile Support** | ⚠️ Partial | Touch works, but UI not responsive |
-| **Codebase Size** | ✅ Healthy | ~57,950 lines (105 files), well under 75K target |
+| **Mobile Support** | ⚠️ 70% | Responsive toolbar, touch handles, collapsible panel |
+| **Codebase Size** | ✅ Healthy | ~58,000 lines (105 files), well under 75K target |
 
 ---
 
@@ -130,9 +130,9 @@ Monitor these files to prevent additional god classes:
 
 ### P2.1 Mobile-Optimized UI
 
-**Status:** ⚠️ PARTIAL (50% complete)  
+**Status:** ⚠️ PARTIAL (70% complete)  
 **Priority:** HIGH (Opens to 50% more users)  
-**Effort:** 2-3 weeks remaining
+**Effort:** 1-2 weeks remaining
 
 **Already Implemented:**
 - ✅ Touch-to-mouse event conversion
@@ -143,9 +143,9 @@ Monitor these files to prevent additional god classes:
 - ✅ Touch-friendly button sizes (44px minimum touch targets)
 - ✅ Coarse pointer detection with larger hit areas
 - ✅ Touch-friendly selection handles (14px on touch vs 8px on mouse) - January 5, 2026
+- ✅ Collapsible layer panel on mobile (collapse/expand toggle button) - January 5, 2026
 
 **Still Needed:**
-- Collapsible layer panel on mobile
 - On-screen keyboard handling for text input
 
 ### P2.2 Magic Number Adoption

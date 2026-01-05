@@ -305,6 +305,8 @@
 	"layers-context-duplicate": "Context menu item for duplicating selected layers",
 	"layers-context-delete": "Context menu item for deleting selected layers",
 	"layers-panel-subtitle-updated": "Updated subtitle text for the layers panel explaining double-click to rename",
+	"layers-panel-expand": "Accessibility label for button to expand the collapsed layer panel on mobile",
+	"layers-panel-collapse": "Accessibility label for button to collapse the layer panel on mobile",
 	"layers-data-too-large": "Error shown when the layer JSON payload exceeds a configured byte size limit. $1 is the byte limit.",
 	"layers-invalid-data": "Error shown when the posted layer JSON fails validation",
 	"layers-load-error": "Error shown when loading existing layer data fails",

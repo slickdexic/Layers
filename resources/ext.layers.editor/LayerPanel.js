@@ -494,6 +494,27 @@
 		}
 
 		/**
+		 * Toggle the mobile collapsed state of the panel
+		 * Only effective when viewport is at mobile width (768px or less)
+		 */
+		toggleMobileCollapse() {
+			const isCollapsed = this.container.classList.toggle( 'layers-panel-collapsed' );
+			if ( this.collapseBtn ) {
+				const icon = this.collapseBtn.querySelector( '.collapse-icon' );
+				if ( icon ) {
+					icon.textContent = isCollapsed ? '▲' : '▼';
+				}
+				this.collapseBtn.setAttribute( 'aria-expanded', String( !isCollapsed ) );
+				this.collapseBtn.setAttribute(
+					'aria-label',
+					isCollapsed ?
+						this.msg( 'layers-panel-expand', 'Expand panel' ) :
+						this.msg( 'layers-panel-collapse', 'Collapse panel' )
+				);
+			}
+		}
+
+		/**
 		 * Helper function to set multiple attributes on an element
 		 *
 		 * @param {Element} element Target element
@@ -612,6 +633,23 @@
 			titleLeft.appendChild( title );
 
 			titleRow.appendChild( titleLeft );
+
+			// Mobile collapse toggle button (only visible on mobile)
+			const collapseBtn = document.createElement( 'button' );
+			collapseBtn.className = 'layers-panel-collapse-btn';
+			collapseBtn.type = 'button';
+			collapseBtn.setAttribute( 'aria-label', this.msg( 'layers-panel-expand', 'Expand panel' ) );
+			collapseBtn.setAttribute( 'aria-expanded', 'true' );
+			const collapseIcon = document.createElement( 'span' );
+			collapseIcon.className = 'collapse-icon';
+			collapseIcon.textContent = '▼';
+			collapseBtn.appendChild( collapseIcon );
+			this.addTargetListener( collapseBtn, 'click', () => {
+				this.toggleMobileCollapse();
+			} );
+			this.collapseBtn = collapseBtn;
+			titleRow.appendChild( collapseBtn );
+
 			header.appendChild( titleRow );
 
 			const subtitle = document.createElement( 'div' );

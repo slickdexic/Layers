@@ -980,6 +980,11 @@ body.layers-editor-open .mw-body-content {
 	min-height: 28px;
 }
 
+/* Hide mobile collapse button on desktop */
+.layers-panel-collapse-btn {
+	display: none;
+}
+
 .layers-panel-header h3 {
 	margin: 0;
 	font-size: 0.85em;
@@ -2286,6 +2291,48 @@ body.layers-editor-open .mw-body-content {
 		width: 44px;
 		height: 44px;
 	}
+
+	/* Mobile panel collapse button - only visible on mobile */
+	.layers-panel-collapse-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		background: transparent;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		cursor: pointer;
+		padding: 0;
+		transition: background-color 0.2s, transform 0.2s;
+		touch-action: manipulation;
+	}
+
+	.layers-panel-collapse-btn:hover,
+	.layers-panel-collapse-btn:focus {
+		background-color: rgba( 0, 0, 0, 0.05 );
+	}
+
+	.layers-panel-collapse-btn .collapse-icon {
+		font-size: 0.75em;
+		color: #333;
+		transition: transform 0.2s;
+	}
+
+	/* Collapsed state for layer panel on mobile */
+	.layers-panel.layers-panel-collapsed {
+		height: 48px;
+		overflow: hidden;
+	}
+
+	.layers-panel.layers-panel-collapsed .layers-panel-inner,
+	.layers-panel.layers-panel-collapsed .layers-panel-subtitle {
+		display: none;
+	}
+
+	.layers-panel.layers-panel-collapsed .layers-panel-header {
+		padding-bottom: 0;
+	}
 }
 
 /* Small mobile breakpoint */
@@ -2975,6 +3022,20 @@ body.layers-resize-cursor {
 
 	html.skin-theme-clientpref-night .layers-panel-divider:hover::after {
 		background: var( --layers-accent );
+	}
+
+	/* Mobile collapse button dark mode */
+	html.skin-theme-clientpref-night .layers-panel-collapse-btn {
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel-collapse-btn:hover,
+	html.skin-theme-clientpref-night .layers-panel-collapse-btn:focus {
+		background-color: rgba( 255, 255, 255, 0.1 );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel-collapse-btn .collapse-icon {
+		color: var( --layers-text-primary );
 	}
 
 	/* Layer items */

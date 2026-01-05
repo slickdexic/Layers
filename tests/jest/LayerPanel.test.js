@@ -1282,3 +1282,120 @@ describe('LayerPanel module exports', () => {
         expect(container.querySelector('.layers-properties')).toBeTruthy();
     });
 });
+
+describe('LayerPanel mobile collapse toggle', () => {
+    let mockEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        window.Layers.UI.IconFactory = mockIconFactory;
+
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((element, event, handler, options) => {
+                element.addEventListener(event, handler, options);
+                this.listeners.push({ element, event, handler, options });
+                return { element, event, handler, options };
+            });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-panel-container"></div>';
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+
+        const mockSM = new StateManager();
+        mockSM.set('layers', []);
+        mockSM.set('selectedLayerIds', []);
+        mockEditor = { stateManager: mockSM, container: document.body };
+    });
+
+    test('toggleMobileCollapse should add collapsed class', () => {
+        const container = document.getElementById('test-panel-container');
+        const LayerPanel = window.Layers.UI.LayerPanel;
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        expect(container.classList.contains('layers-panel-collapsed')).toBe(false);
+
+        panel.toggleMobileCollapse();
+
+        expect(container.classList.contains('layers-panel-collapsed')).toBe(true);
+    });
+
+    test('toggleMobileCollapse should toggle collapsed class on second call', () => {
+        const container = document.getElementById('test-panel-container');
+        const LayerPanel = window.Layers.UI.LayerPanel;
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.toggleMobileCollapse();
+        expect(container.classList.contains('layers-panel-collapsed')).toBe(true);
+
+        panel.toggleMobileCollapse();
+        expect(container.classList.contains('layers-panel-collapsed')).toBe(false);
+    });
+
+    test('toggleMobileCollapse should update icon text', () => {
+        const container = document.getElementById('test-panel-container');
+        const LayerPanel = window.Layers.UI.LayerPanel;
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const icon = panel.collapseBtn?.querySelector('.collapse-icon');
+
+        // Initial state: expanded (▼)
+        expect(icon?.textContent).toBe('▼');
+
+        panel.toggleMobileCollapse();
+        // Collapsed state: (▲)
+        expect(icon?.textContent).toBe('▲');
+
+        panel.toggleMobileCollapse();
+        // Expanded again: (▼)
+        expect(icon?.textContent).toBe('▼');
+    });
+
+    test('toggleMobileCollapse should update aria-expanded attribute', () => {
+        const container = document.getElementById('test-panel-container');
+        const LayerPanel = window.Layers.UI.LayerPanel;
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        expect(panel.collapseBtn?.getAttribute('aria-expanded')).toBe('true');
+
+        panel.toggleMobileCollapse();
+        expect(panel.collapseBtn?.getAttribute('aria-expanded')).toBe('false');
+
+        panel.toggleMobileCollapse();
+        expect(panel.collapseBtn?.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    test('collapse button should have proper aria-label', () => {
+        const container = document.getElementById('test-panel-container');
+        const LayerPanel = window.Layers.UI.LayerPanel;
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // Initial label should indicate expand action (panel starts expanded)
+        const initialLabel = panel.collapseBtn?.getAttribute('aria-label');
+        expect(initialLabel).toContain('Expand');
+
+        panel.toggleMobileCollapse();
+        // After collapsing, label should indicate expand
+        expect(panel.collapseBtn?.getAttribute('aria-label')).toContain('Expand');
+    });
+
+    test('collapse button should exist in panel', () => {
+        const container = document.getElementById('test-panel-container');
+        const LayerPanel = window.Layers.UI.LayerPanel;
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        expect(panel.collapseBtn).toBeDefined();
+        expect(panel.collapseBtn.classList.contains('layers-panel-collapse-btn')).toBe(true);
+    });
+});
