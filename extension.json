@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.4.4-REL1_43",
+        "version": "1.4.6-REL1_43",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -608,10 +608,13 @@
 
 				"layers-validation-layer-invalid",
 				"layers-validation-id-required",
+				"layers-delete",
 				"layers-delete-set",
 				"layers-delete-set-tooltip",
 				"layers-delete-set-confirm",
 				"layers-delete-set-success",
+				"layers-confirm-delete-title",
+				"layers-confirm-clear-title",
 				"layers-delete-failed",
 				"layers-delete-permission-denied",
 				"layers-delete-default-set",

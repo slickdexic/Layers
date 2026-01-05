@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 3, 2026  
+**Last Updated:** January 4, 2026  
 **Status:** ✅ Critical Issues Resolved  
-**Version:** 1.4.3  
+**Version:** 1.4.4  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
@@ -15,6 +15,7 @@ The extension is **production-ready** and actively improving. A critical code re
 
 **✅ Issues Fixed (January 2026 Critical Review Session):**
 - ✅ **P0: ApiLayersDelete.php missing rate limiting** - FIXED: Added rate limiting
+- ✅ **P0: ApiLayersRename.php missing rate limiting** - FIXED: Added rate limiting (January 4, 2026)
 - ✅ **P1: Duplicate sanitizeSetName()** - FIXED: Extracted to SetNameSanitizer.php
 - ✅ **P1: Session/CSRF handling** - FIXED: Added explicit session error handling, i18n message
 - ✅ **P1: Background image load failure** - FIXED: Added user notification with mw.notify()
@@ -43,7 +44,8 @@ The extension is **production-ready** and actively improving. A critical code re
 - ✅ **CalloutRenderer.js coverage improved** - 62.42% → 90.05% (+38 tests)
 - ✅ **PathToolHandler coverage improved** - 77.04% → 91.8% (+11 tests)
 - ✅ **ClipboardController coverage improved** - 76.38% → 84.72% (+8 tests)
-- ✅ **Test count increased** - 8,294 tests (140 suites)
+- ✅ **Test count increased** - 8,300 tests (140 suites)
+- ✅ **TIFF/non-web format support** - ImageLoader.js auto-detects and uses MW thumbnails
 
 **Remaining Issues:**
 - ⏳ **12 god classes** - All use delegation patterns; CalloutRenderer.js (1,290) is largest
@@ -51,18 +53,19 @@ The extension is **production-ready** and actively improving. A critical code re
 
 ---
 
-## Current State (January 3, 2026)
+## Current State (January 4, 2026)
 
 | Area | Status | Details |
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping + curved arrows + callouts |
-| **Security** | ✅ Resolved | All known security issues fixed; localStorage validation added |
-| **Testing** | ✅ Excellent | 8,294 tests (140 suites), 94.67% statement coverage |
-| **ES6 Migration** | ✅ Complete | 97 classes, 0 prototype patterns |
+| **Security** | ✅ Resolved | All known security issues fixed; rate limiting on all write endpoints |
+| **Testing** | ✅ Excellent | 8,300 tests (140 suites), 94.62% statement coverage |
+| **ES6 Migration** | ✅ Complete | 94 classes, 0 prototype patterns |
 | **Code Hygiene** | ⚠️ Minor | Magic numbers, silent catches (P1) |
 | **God Classes** | ⏳ Monitoring | 12 files >1,000 lines (all with delegation patterns) |
 | **Memory Management** | ✅ Fixed | Animation frames properly cancelled in destroy() |
-| **Codebase Size** | ✅ Healthy | ~57,600 lines (107 files), well under 75K target |
+| **Codebase Size** | ✅ Healthy | ~57,850 lines (105 files), well under 75K target |
+| **TIFF Support** | ✅ Implemented | Auto-detects non-web formats, uses MW thumbnails |
 
 ---
 

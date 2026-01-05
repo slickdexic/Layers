@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 3, 2026  
-**Version:** 1.4.3  
+**Review Date:** January 4, 2026  
+**Version:** 1.4.4  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -16,8 +16,8 @@ The extension is **fully functional and production-ready** with professional sec
 
 **Key Strengths:**
 
-- ✅ **8,294 unit tests passing** (0 failures, 140 test suites)
-- ✅ **94.67% statement coverage, 83.47% branch coverage**
+- ✅ **8,300 unit tests passing** (0 failures, 140 test suites)
+- ✅ **94.62% statement coverage, 83.39% branch coverage**
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 12 working drawing tools with named layer sets and callouts
 - ✅ Layer grouping/folders feature complete
@@ -25,6 +25,7 @@ The extension is **fully functional and production-ready** with professional sec
 - ✅ Modal editor mode for iframe editing (Page Forms support)
 - ✅ **Curved arrows with Bézier curves** (v1.3.3+)
 - ✅ **Live color preview** (v1.3.3+)
+- ✅ **TIFF/non-web format support** - Auto-uses MediaWiki thumbnails
 - ✅ **Zero PHP warnings** - All phpcs warnings fixed
 - ✅ **Memory leaks fixed** - All requestAnimationFrame calls properly cancelled
 
@@ -38,13 +39,14 @@ The extension is **fully functional and production-ready** with professional sec
 - ✅ **ArrowRenderer magic numbers** - Documented with ARROW_GEOMETRY constants
 - ✅ **SetNameSanitizer tests** - 30+ PHPUnit test cases
 - ✅ **SetSelectorController tests** - 53 Jest tests, branch coverage 75%→89.65%
+- ✅ **ApiLayersRename.php rate limiting added** - Now matches other API endpoints (January 4, 2026)
 
 **Re-evaluated (Not Issues):**
 - ✅ **DEBUG logging** - Uses proper PSR-3 logDebug() and mw.log() gated by configuration
 
 **Remaining Minor Issues (P2/P3):**
 
-- ⚠️ **12 god classes (>1,000 lines)** - 29% of codebase in 12 files (all have delegation patterns)
+- ⚠️ **12 god classes (>1,000 lines)** - 28% of codebase in 12 files (all have delegation patterns)
 - ⚠️ **Mobile UI not responsive** - basic touch works, but toolbar needs optimization
 - ⚠️ **Magic number adoption** - Infrastructure exists (LayersConstants.js), gradual adoption needed
 
@@ -58,19 +60,19 @@ All metrics collected directly from the codebase via automated tooling.
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Total JS files | **107** | - | ✅ Feature-rich |
-| Total JS lines | **~57,600** | <75,000 | ✅ Under target |
-| ES6 classes | **97** | 70+ | ✅ |
+| Total JS files | **105** | - | ✅ Feature-rich |
+| Total JS lines | **~57,850** | <75,000 | ✅ Under target |
+| ES6 classes | **94** | 70+ | ✅ |
 | Files >1,000 lines | **12** | 0 | ⏳ Managed with delegation |
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disable comments | **8** | <15 | ✅ Below target |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **8,294** | - | ✅ 140 test suites |
+| Jest tests passing | **8,300** | - | ✅ 140 test suites |
 | E2E tests (Playwright) | **2,658 lines** | - | ✅ 7 test files |
-| Statement coverage | **94.67%** | 85%+ | ✅ Excellent |
-| Branch coverage | **83.47%** | 75%+ | ✅ Good |
-| Function coverage | **93.11%** | 80%+ | ✅ |
-| Line coverage | **94.82%** | 85%+ | ✅ |
+| Statement coverage | **94.62%** | 85%+ | ✅ Excellent |
+| Branch coverage | **83.39%** | 75%+ | ✅ Good |
+| Function coverage | **93.09%** | 80%+ | ✅ |
+| Line coverage | **94.77%** | 85%+ | ✅ |
 
 ### Files Over 1,000 Lines (God Classes)
 

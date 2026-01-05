@@ -57,9 +57,11 @@ class ApiLayersDelete extends ApiBase {
 				);
 			}
 
-			// Validate filename
+			// Validate filename - Title must be valid and in File namespace
+			// Note: We do NOT check $title->exists() because foreign files
+			// (from InstantCommons) don't have local wiki pages
 			$title = Title::newFromText( $requestedFilename, NS_FILE );
-			if ( !$title || !$title->exists() ) {
+			if ( !$title || $title->getNamespace() !== NS_FILE ) {
 				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
 			}
 
@@ -69,12 +71,51 @@ class ApiLayersDelete extends ApiBase {
 				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
 			}
 
-			$imgName = $file->getName();
-			$sha1 = $this->getFileSha1( $file );
+			// Use DB key form for consistency with ApiLayersSave
+			// This ensures layers saved on foreign files can be deleted correctly
+			$imgName = $title->getDBkey();
+			$sha1 = $this->getFileSha1( $file, $imgName );
 
-			// Check if the layer set exists
+			// Debug logging for SHA1 lookup
+			$isForeign = $this->isForeignFile( $file );
+			$fileSha1 = $file->getSha1();
+			$this->getLogger()->info( 'Layers delete: looking for layer set', [
+				'imgName' => $imgName,
+				'setName' => $setName,
+				'lookupSha1' => $sha1,
+				'fileSha1' => $fileSha1 ?: '(empty)',
+				'isForeign' => $isForeign ? 'yes' : 'no',
+				'fileClass' => get_class( $file )
+			] );
+
+			// Check if the layer set exists with expected SHA1
 			$layerSet = $db->getLayerSetByName( $imgName, $sha1, $setName );
 			if ( !$layerSet ) {
+				// SHA1 mismatch fallback: for foreign files, the SHA1 may have been
+				// saved before InstantCommons support was added. Try to find the
+				// actual SHA1 used in the database.
+				$storedSha1 = $db->findSetSha1( $imgName, $setName );
+				if ( $storedSha1 !== null && $storedSha1 !== $sha1 ) {
+					$this->getLogger()->info( 'Layers delete: SHA1 mismatch, using stored value', [
+						'imgName' => $imgName,
+						'setName' => $setName,
+						'expectedSha1' => $sha1,
+						'storedSha1' => $storedSha1
+					] );
+					$sha1 = $storedSha1;
+					$layerSet = $db->getLayerSetByName( $imgName, $sha1, $setName );
+				}
+			}
+
+			if ( !$layerSet ) {
+				// Log debug info for troubleshooting SHA1 mismatch issues
+				$this->getLogger()->warning( 'Layers delete: set not found', [
+					'imgName' => $imgName,
+					'setName' => $setName,
+					'lookupSha1' => $sha1,
+					'isForeign' => $isForeign ? 'yes' : 'no',
+					'fileSha1' => $fileSha1 ?: '(empty)'
+				] );
 				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
 			}
 
@@ -202,11 +243,13 @@ class ApiLayersDelete extends ApiBase {
 	 *
 	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
 	 * we generate a stable fallback identifier based on the filename.
+	 * Uses the DB key form for consistency with ApiLayersSave.php.
 	 *
 	 * @param mixed $file File object
+	 * @param string $imgName The image name (DB key form) to use for fallback hash
 	 * @return string SHA1 hash or fallback identifier
 	 */
-	private function getFileSha1( $file ): string {
+	private function getFileSha1( $file, string $imgName ): string {
 		$sha1 = $file->getSha1();
 		if ( !empty( $sha1 ) ) {
 			return $sha1;
@@ -214,8 +257,8 @@ class ApiLayersDelete extends ApiBase {
 
 		// Check if this is a foreign file
 		if ( $this->isForeignFile( $file ) ) {
-			// Use a hash of the filename as a fallback (prefixed for clarity)
-			return 'foreign_' . sha1( $file->getName() );
+			// Use a hash of the DB key for consistency with ApiLayersSave
+			return 'foreign_' . sha1( $imgName );
 		}
 
 		return $sha1 ?? '';

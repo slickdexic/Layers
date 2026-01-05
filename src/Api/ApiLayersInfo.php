@@ -66,14 +66,32 @@ class ApiLayersInfo extends ApiBase {
 			$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
 		}
 
-		$normalizedName = str_replace( ' ', '_', $file->getName() );
+		// Use DB key form for consistency with ApiLayersSave
+		// This ensures layers saved on foreign files can be loaded correctly
+		$normalizedName = $title->getDBkey();
 
 		// Capture original image dimensions for client-side scaling
 		$origWidth = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : null;
 		$origHeight = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : null;
 
 		$db = $this->getLayersDatabase();
-		$fileSha1 = $this->getFileSha1( $file );
+		$fileSha1 = $this->getFileSha1( $file, $normalizedName );
+
+		// SHA1 mismatch fallback: for foreign files, the SHA1 may have been
+		// saved before InstantCommons support was added. Try to find the
+		// actual SHA1 used in the database.
+		if ( $setName && $this->isForeignFile( $file ) ) {
+			$storedSha1 = $db->findSetSha1( $normalizedName, $setName );
+			if ( $storedSha1 !== null && $storedSha1 !== $fileSha1 ) {
+				$this->getLogger()->info( 'Layers info: SHA1 mismatch, using stored value', [
+					'imgName' => $normalizedName,
+					'setName' => $setName,
+					'expectedSha1' => $fileSha1,
+					'storedSha1' => $storedSha1
+				] );
+				$fileSha1 = $storedSha1;
+			}
+		}
 
 		if ( $layerSetId ) {
 			// Get specific layer set by ID
@@ -97,7 +115,7 @@ class ApiLayersInfo extends ApiBase {
 			];
 		} elseif ( $setName ) {
 			// Get specific named set
-			$layerSet = $db->getLayerSetByName( $file->getName(), $fileSha1, $setName );
+			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName );
 
 			if ( !$layerSet ) {
 				$result = [
@@ -123,18 +141,18 @@ class ApiLayersInfo extends ApiBase {
 			}
 
 			// Get revision history for this specific named set
-			$setRevisions = $db->getSetRevisions( $file->getName(), $fileSha1, $setName, $limit );
+			$setRevisions = $db->getSetRevisions( $normalizedName, $fileSha1, $setName, $limit );
 			$setRevisions = $this->enrichWithUserNames( $setRevisions );
 			$result['set_revisions'] = $setRevisions;
 		} else {
 			// Get latest layer set for this file (default behavior)
 			// Try default set first, then fall back to any latest
 			$defaultSetName = $this->getConfig()->get( 'LayersDefaultSetName' );
-			$layerSet = $db->getLayerSetByName( $file->getName(), $fileSha1, $defaultSetName );
+			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $defaultSetName );
 
 			if ( !$layerSet ) {
 				// Fall back to latest of any set
-				$layerSet = $db->getLatestLayerSet( $file->getName(), $fileSha1 );
+				$layerSet = $db->getLatestLayerSet( $normalizedName, $fileSha1 );
 			}
 
 			if ( !$layerSet ) {
@@ -171,12 +189,12 @@ class ApiLayersInfo extends ApiBase {
 			$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;
 			if ( $currentSetName ) {
 				// Use set-specific revisions
-				$allLayerSets = $db->getSetRevisions( $file->getName(), $fileSha1, $currentSetName, $limit );
+				$allLayerSets = $db->getSetRevisions( $normalizedName, $fileSha1, $currentSetName, $limit );
 			} else {
 				// Fallback for backwards compatibility - get all revisions
 				$fetchLimit = min( $limit + 1, 201 );
 				$allLayerSets = $db->getLayerSetsForImageWithOptions(
-					$file->getName(),
+					$normalizedName,
 					$fileSha1,
 					[
 						'sort' => 'ls_revision',
@@ -197,7 +215,7 @@ class ApiLayersInfo extends ApiBase {
 
 		// Always include named_sets summary (except for specific layersetid lookup)
 		if ( !$layerSetId ) {
-			$namedSets = $db->getNamedSetsForImage( $file->getName(), $fileSha1 );
+			$namedSets = $db->getNamedSetsForImage( $normalizedName, $fileSha1 );
 			$namedSets = $this->enrichNamedSetsWithUserNames( $namedSets );
 			$result['named_sets'] = $namedSets;
 		}
@@ -460,11 +478,13 @@ class ApiLayersInfo extends ApiBase {
 	 *
 	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
 	 * we generate a stable fallback identifier based on the filename.
+	 * Uses the DB key form for consistency with ApiLayersSave.php.
 	 *
 	 * @param mixed $file File object
+	 * @param string $imgName The image name (DB key form) to use for fallback hash
 	 * @return string SHA1 hash or fallback identifier
 	 */
-	private function getFileSha1( $file ): string {
+	private function getFileSha1( $file, string $imgName ): string {
 		$sha1 = $file->getSha1();
 		if ( !empty( $sha1 ) ) {
 			return $sha1;
@@ -472,8 +492,8 @@ class ApiLayersInfo extends ApiBase {
 
 		// Check if this is a foreign file
 		if ( $this->isForeignFile( $file ) ) {
-			// Use a hash of the filename as a fallback (prefixed for clarity)
-			return 'foreign_' . sha1( $file->getName() );
+			// Use a hash of the DB key for consistency with ApiLayersSave
+			return 'foreign_' . sha1( $imgName );
 		}
 
 		return $sha1 ?? '';

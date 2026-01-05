@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.4.6] - 2026-01-05
+
+### Added
+- **TIFF Image Support** — Full support for TIFF format images in the editor and viewer
+  - TIFF files are now correctly identified and loaded using MediaWiki thumbnail URLs
+  - `ImageLoader.js` detects non-web formats (TIFF, BMP, etc.) and automatically uses `Special:Redirect/file` with width parameter
+  - Background images render correctly for TIFF files in both editor and article pages
+- **SHA1 Fallback Lookup** — Added `findSetSha1()` method in `LayersDatabase.php` to find layer sets saved before InstantCommons support was added
+  - Handles migration scenarios where SHA1 format changed from empty to `foreign_` prefix
+  - API endpoints now gracefully fall back to stored SHA1 when expected SHA1 doesn't match
+
+### Fixed
+- **Foreign File Delete/Rename Failing** — Fixed `ApiLayersDelete.php` and `ApiLayersRename.php` to not require local wiki page existence for foreign files
+  - Changed validation from `$title->exists()` to `$title->getNamespace() !== NS_FILE`
+  - Foreign files from InstantCommons don't have local pages, so the old check always failed
+- **Delete Confirmation Dialog Button Label** — Added missing `layers-delete` i18n key for the confirmation dialog button
+- **CanvasRenderer TIFF Support** — Enhanced `getImageFormat()` to detect TIFF files from both extension and MIME type
+
+---
+
 ## [1.4.5] - 2026-01-05
 
 ### Added

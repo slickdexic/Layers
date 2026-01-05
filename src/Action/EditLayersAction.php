@@ -212,15 +212,20 @@ class EditLayersAction extends \Action {
 	 * For foreign files (InstantCommons, etc.), we prefer the local Special:Redirect/file
 	 * proxy to avoid CORS issues when loading images into the canvas editor.
 	 *
+	 * For TIFF and other non-web-native formats, we request a thumbnail instead of
+	 * the original file since browsers cannot render TIFF directly.
+	 *
 	 * @param mixed $file
 	 * @return string
 	 */
 	private function getPublicImageUrl( $file ): string {
 		$isForeign = $this->isForeignFile( $file );
+		$filename = method_exists( $file, 'getName' ) ? $file->getName() : '';
+		$needsThumbnail = $this->isNonWebFormat( $filename );
 
-		// For foreign files, prefer local redirect to avoid CORS issues
-		if ( $isForeign ) {
-			$redirectUrl = $this->getLocalRedirectUrl( $file );
+		// For foreign files OR non-web formats (TIFF, etc.), use redirect with optional width
+		if ( $isForeign || $needsThumbnail ) {
+			$redirectUrl = $this->getLocalRedirectUrl( $file, $needsThumbnail );
 			if ( $redirectUrl !== '' ) {
 				return $redirectUrl;
 			}
@@ -238,8 +243,8 @@ class EditLayersAction extends \Action {
 			// ignore and try fallback
 		}
 
-		// Fallback via Special:Redirect/file
-		$redirectUrl = $this->getLocalRedirectUrl( $file );
+		// Fallback via Special:Redirect/file (still needs thumbnail for TIFF)
+		$redirectUrl = $this->getLocalRedirectUrl( $file, $needsThumbnail );
 		if ( $redirectUrl !== '' ) {
 			return $redirectUrl;
 		}
@@ -250,10 +255,14 @@ class EditLayersAction extends \Action {
 	/**
 	 * Get a local redirect URL for a file via Special:Redirect/file
 	 *
+	 * For TIFF and other non-web-native formats, we add a width parameter
+	 * to request a thumbnail that browsers can actually render.
+	 *
 	 * @param mixed $file File object
+	 * @param bool $needsThumbnail Whether to request a thumbnail (for TIFF, etc.)
 	 * @return string Local redirect URL or empty string if unavailable
 	 */
-	private function getLocalRedirectUrl( $file ): string {
+	private function getLocalRedirectUrl( $file, bool $needsThumbnail = false ): string {
 		try {
 			// Use the file's name directly (without namespace prefix)
 			// Special:Redirect/file expects just the filename, not File:Filename
@@ -262,11 +271,22 @@ class EditLayersAction extends \Action {
 				$param = 'file/' . $filename;
 				$spTitle = \call_user_func( [ '\\SpecialPage', 'getTitleFor' ], 'Redirect', $param );
 				if ( $spTitle ) {
-					$url = $spTitle->getLocalURL();
+					// For TIFF and other non-web formats, request a large thumbnail
+					// MediaWiki will generate a PNG/JPEG that browsers can render
+					if ( $needsThumbnail ) {
+						$url = $spTitle->getLocalURL( [ 'width' => 2048 ] );
+					} else {
+						$url = $spTitle->getLocalURL();
+					}
 					// DEBUG: Log the redirect URL
 					if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-						$logger->debug( sprintf( 'getLocalRedirectUrl: filename=%s, url=%s', $filename, $url ) );
+						$logger->debug( sprintf(
+							'getLocalRedirectUrl: filename=%s, needsThumbnail=%s, url=%s',
+							$filename,
+							$needsThumbnail ? 'yes' : 'no',
+							$url
+						) );
 					}
 					return $url;
 				}
@@ -275,6 +295,21 @@ class EditLayersAction extends \Action {
 			// Return empty string on failure
 		}
 		return '';
+	}
+
+	/**
+	 * Check if a filename has a non-web-native format extension
+	 *
+	 * Non-web formats (TIFF, PSD, XCF, etc.) cannot be rendered directly
+	 * by browsers and need to be converted to a thumbnail first.
+	 *
+	 * @param string $filename The filename to check
+	 * @return bool True if the file has a non-web-native extension
+	 */
+	private function isNonWebFormat( string $filename ): bool {
+		$nonWebFormats = [ 'tif', 'tiff', 'xcf', 'psd', 'ai', 'eps', 'pdf' ];
+		$ext = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
+		return in_array( $ext, $nonWebFormats, true );
 	}
 
 	/**

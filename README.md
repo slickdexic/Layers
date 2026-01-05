@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C214%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-8%2C300%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.4.3 (January 2026)  
+> **Version:** 1.4.4 (January 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.43.x, PHP 8.1+
 >
@@ -228,8 +228,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~10,100 lines across 31 files
-- **Frontend:** HTML5 Canvas editor with 107 JS files (~57,600 lines), 97 ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~8,200 lines across 32 files
+- **Frontend:** HTML5 Canvas editor with 105 JS files (~57,850 lines), 94 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -237,10 +237,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 8,214 passing |
-| Statement coverage | 94.09% |
-| Branch coverage | 82.69% |
-| Test suites | 139 |
+| Jest tests | 8,294 passing |
+| Statement coverage | 94.67% |
+| Branch coverage | 83.47% |
+| Test suites | 140 |
 
 **Security:**
 
@@ -265,9 +265,10 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 
 **Known issues identified in January 2026 critical review:**
 
-- ⚠️ **ApiLayersDelete.php missing rate limiting** - unlike save endpoint, delete has no rate limiting
-- ⚠️ **DEBUG logging in production** - 6 debug statements in blur fill code execute on every render
-- ⚠️ **Background image load failure silent** - user not notified if background fails to load
+All HIGH priority issues have been resolved:
+- ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints
+- ✅ **Background image load failure** - user now notified via mw.notify()
+- ✅ **DEBUG logging** - uses proper mw.log() which is gated by debug mode
 
 ---
 
@@ -291,14 +292,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 107 | ✅ |
-| Total JS lines | ~57,600 | ✅ Well under 75K target |
-| ES6 classes | 97 | ✅ |
+| Total JS files | 105 | ✅ |
+| Total JS lines | ~57,850 | ✅ Well under 75K target |
+| ES6 classes | 94 | ✅ |
 | God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 8,214 | ✅ |
+| Tests passing | 8,294 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.09% | ✅ Excellent |
-| Branch coverage | 82.69% | ✅ |
+| Statement coverage | 94.67% | ✅ Excellent |
+| Branch coverage | 83.47% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

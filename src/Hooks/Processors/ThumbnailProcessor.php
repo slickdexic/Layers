@@ -6,13 +6,7 @@ use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
-
-// MW 1.44+ uses namespaced Title, MW 1.43 and earlier use global \Title
-if ( class_exists( 'MediaWiki\\Title\\Title' ) ) {
-	class_alias( 'MediaWiki\\Title\\Title', 'MediaWiki\\Extension\\Layers\\Hooks\\Processors\\TitleCompat' );
-} else {
-	class_alias( 'Title', 'MediaWiki\\Extension\\Layers\\Hooks\\Processors\\TitleCompat' );
-}
+use MediaWiki\Title\Title;
 
 /**
  * Handles thumbnail-related layer injection logic.
@@ -535,11 +529,11 @@ class ThumbnailProcessor {
 		// For foreign files, $file->getTitle() might not work correctly for local URLs.
 		// Ensure we have a valid local File: title for building the editor URL.
 		if ( !$title ) {
-			$title = TitleCompat::makeTitleSafe( NS_FILE, $filename );
+			$title = Title::makeTitleSafe( NS_FILE, $filename );
 		} elseif ( $this->isForeignFile( $file ) ) {
 			// Foreign files may have a title that doesn't produce correct local URLs
 			// Create a local File: title for the editor link
-			$localTitle = TitleCompat::makeTitleSafe( NS_FILE, $filename );
+			$localTitle = Title::makeTitleSafe( NS_FILE, $filename );
 			if ( $localTitle ) {
 				$title = $localTitle;
 			}

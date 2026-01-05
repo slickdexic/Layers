@@ -994,4 +994,32 @@ class LayersDatabase {
 		} ) ) );
 		return $filtered ?: [ $normalized ];
 	}
+
+	/**
+	 * Find the SHA1 hash used for a layer set by image name and set name.
+	 * This is useful for SHA1 mismatch issues with foreign files.
+	 *
+	 * @param string $imgName Image name
+	 * @param string $setName Named set name
+	 * @return string|null The SHA1 hash used in the database, or null if not found
+	 */
+	public function findSetSha1( string $imgName, string $setName ): ?string {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return null;
+		}
+
+		$row = $dbr->selectRow(
+			'layer_sets',
+			[ 'ls_img_sha1' ],
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_name' => $setName
+			],
+			__METHOD__,
+			[ 'LIMIT' => 1 ]
+		);
+
+		return $row ? $row->ls_img_sha1 : null;
+	}
 }

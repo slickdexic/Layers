@@ -1,6 +1,7 @@
 # InstantCommons / Foreign File Support
 
 **Added in:** v1.4.5 (January 2026)  
+**Updated:** v1.4.6 (January 2026) — TIFF support, SHA1 fallback lookup  
 **GitHub Issue:** #34
 
 This document describes the Layers extension's support for files from foreign repositories such as Wikimedia Commons via InstantCommons.
@@ -14,6 +15,20 @@ The Layers extension now fully supports annotating files from foreign repositori
 - Create, edit, save, and delete layer annotations on Commons files
 - Use `layers=` and `layerslink=` wikitext parameters with foreign files
 - Link directly to the editor for foreign files
+- Annotate non-web image formats (TIFF, BMP) using automatic thumbnail conversion
+
+---
+
+## Supported File Formats
+
+In addition to standard web formats (JPEG, PNG, GIF, WebP, SVG), the extension now supports:
+
+| Format | Extension | Notes |
+|--------|-----------|-------|
+| TIFF | `.tif`, `.tiff` | Common on Wikimedia Commons for archival images |
+| BMP | `.bmp` | Converted via MediaWiki thumbnails |
+
+Non-web formats are automatically loaded using MediaWiki's `Special:Redirect/file` endpoint with a width parameter, which returns a web-compatible thumbnail.
 
 ---
 
@@ -32,9 +47,11 @@ The extension detects foreign files using the `isForeignFile()` helper method, w
 Foreign files often don't provide a SHA1 hash via the API. The extension handles this by:
 
 1. First attempting to get the native SHA1: `$file->getSha1()`
-2. If empty and the file is foreign, generating a stable fallback: `'foreign_' . sha1($file->getName())`
+2. If empty and the file is foreign, generating a stable fallback: `'foreign_' . sha1($title->getDBkey())`
 
 This ensures consistent database lookups across all operations.
+
+**Migration Note:** For layer sets saved before v1.4.5 (which may have used empty SHA1), the API endpoints now include a fallback lookup via `LayersDatabase::findSetSha1()` that searches by image name and set name only, then uses whatever SHA1 is stored in the database.
 
 ### Content Security Policy (CSP)
 
