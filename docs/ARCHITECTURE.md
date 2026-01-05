@@ -143,7 +143,7 @@ graph TB
         clipboard["ClipboardController"]
         interaction["InteractionController"]
         render["RenderCoordinator"]
-        style["StyleController"]
+        styleCtrl["StyleController"]
         guides["SmartGuidesController"]
         alignment["AlignmentController"]
     end
