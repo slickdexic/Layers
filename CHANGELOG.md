@@ -2,6 +2,113 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.4.9] - 2026-01-05
+
+### Fixed
+- **LayerRenderer Memory Leak** — Added LRU cache eviction to `_imageCache` with 50 entry limit
+  - Previously unbounded Map would grow indefinitely with image layers
+  - Cache now evicts oldest entries when limit exceeded, using Map iteration order for LRU semantics
+  - 2 new tests for cache eviction and entry refresh behavior
+- **CanvasManager Async Race Condition** — Added `isDestroyed` flag to guard async callbacks
+  - `handleImageLoaded` now returns early if component was destroyed during image load
+  - Prevents "setting property of null" errors after editor close
+  - 3 new tests for isDestroyed flag initialization and behavior
+- **SelectionManager Infinite Recursion** — Added visited Set to `_getGroupDescendantIds()`
+  - Prevents stack overflow when circular group references exist (corrupted data)
+  - 2 new tests for circular and self-referencing group edge cases
+- **Export Filename Sanitization** — Added `sanitizeFilename()` helper in APIManager
+  - Removes Windows-forbidden characters: `< > : " / \ | ? *`
+  - Strips control characters and leading/trailing dots/whitespace
+  - Truncates to 200 characters, preserves user-provided extensions
+  - 6 new tests for sanitization edge cases
+- **LayerPanel Event Listener Accumulation** — Converted direct listeners to event delegation
+  - Moved keyboard reordering (ArrowUp/Down on grab area) from LayerListRenderer to LayerItemEvents
+  - Moved folder expand/collapse click from LayerListRenderer to LayerItemEvents
+  - Prevents listener accumulation when layer items are recreated during re-render
+  - Event delegation uses single listener on container instead of per-item listeners
+  - 5 new tests for delegation behavior
+- **APIManager Request Race Condition** — Added request tracking with auto-abort for API calls
+  - `loadRevisionById` and `loadLayersBySetName` now abort pending requests of same type
+  - Prevents out-of-order response handling when users switch sets/revisions quickly
+  - Uses `pendingRequests` Map to track jqXHR by operation type
+  - Aborted requests are silently ignored instead of showing error notifications
+  - 6 new tests for request tracking and abort behavior
+- **State Mutation Pattern** — Fixed in-place array mutation in LayersEditor and LayerSetManager
+  - Changed `namedSets.push(...)` to immutable pattern `[...existingNamedSets, newSet]`
+  - Ensures state management with reference equality checks works correctly
+- **CanvasManager Text Layer Bounds** — Added null checks for canvas context in text bounds calculation
+  - `_getRawLayerBounds()` now returns fallback bounds when `this.ctx` is null
+  - Prevents errors when called before canvas initialization or after destroy
+  - 2 new tests for null context fallback behavior
+- **LayerRenderer Sub-Renderer Cleanup** — Added proper cleanup for all 8 sub-renderers in `destroy()`
+  - Calls `destroy()` on sub-renderers that have the method (shadowRenderer, arrowRenderer, etc.)
+  - Nulls out all sub-renderer references to prevent memory leaks
+  - 2 new tests for sub-renderer cleanup behavior
+- **Layer Update Immutability** — Changed `updateLayer()` to use immutable update pattern
+  - Creates new layer object and new array instead of mutating in place
+  - Ensures state management with reference equality checks works correctly
+  - 2 new tests for immutable update behavior
+- **Zoom Animation Cleanup** — Reset zoom animation properties in CanvasManager `destroy()`
+  - Clears `zoomAnimationStartTime`, `zoomAnimationStartZoom`, `zoomAnimationTargetZoom`
+  - Prevents stale animation state after editor close
+- **Revision Reload Notification** — Show user notification when revision list refresh fails
+  - Changed silent failure to subtle warning notification
+  - Added new i18n key `layers-revision-reload-failed`
+
+### Improved
+- **Background Opacity Performance** — Slider now uses `redrawOptimized()` for RAF-batched redraws
+  - Prevents multiple synchronous redraws per frame during slider drag
+- **Test Count** — 8,377 tests passing (up from 8,346), 39 new tests for bug fixes
+
+---
+
+## [1.4.8] - 2026-01-05
+
+### Fixed
+- **ContextMenuController Memory Leak** — Fixed memory leak where document event listeners were not removed when context menu was closed
+  - Event handlers (`closeHandler`, `escHandler`) now stored as instance properties and properly cleaned up
+  - Added cleanup in `closeLayerContextMenu()` method
+  - 3 new tests added to verify memory leak prevention
+- **ARCHITECTURE.md Mermaid Diagram** — Fixed parse error on GitHub caused by `style` node ID
+  - Renamed node from `style["StyleController"]` to `styleCtrl["StyleController"]`
+  - `style` is a reserved keyword in Mermaid syntax
+
+### Improved
+- **Magic Number Constants** — Consolidated mathematical constants into single source of truth
+  - Added `MathUtils.MATH` namespace with `SCALE_EPSILON` (0.0001) and `INTEGER_EPSILON` (1e-9)
+  - Removed duplicate constant definitions from `ShapeRenderer.js`, `PropertiesForm.js`, `LayerPanel.js`
+  - `LayersConstants.MATH` now references `MathUtils.MATH` for backward compatibility
+  - Updated `types/layers.d.ts` with Constants namespace definitions
+- **Test Coverage Enhancement** — Added tests for MATH constant fallback branches
+  - LayersConstants branch coverage improved from 30% to 65%
+  - New tests verify fallback behavior when MathUtils unavailable
+- **Mobile Responsive CSS** — Enhanced mobile experience with responsive breakpoints
+  - Added 768px and 480px responsive breakpoints for toolbar
+  - Touch device detection using `pointer: coarse` media query
+  - 44px minimum touch targets for buttons (WCAG 2.5.5 compliant)
+  - Scrollable toolbar with horizontal overflow on small screens
+  - Compact layer panel on mobile (160px height on small screens)
+- **Touch-Adaptive Selection Handles** — Selection handles now auto-size for touch devices
+  - Added `SELECTION_HANDLE_SIZE_TOUCH` constant (14px, up from 8px for mouse)
+  - `SelectionHandles` and `SelectionManager` detect touch devices via `pointer: coarse`
+  - Larger handles make resize/rotate easier on tablets and phones
+  - 11 new tests for touch detection and handle sizing
+- **Collapsible Layer Panel (Mobile)** — Layer panel can now be collapsed on mobile to maximize canvas space
+  - Added collapse/expand toggle button (visible only on screens ≤768px)
+  - Collapsed state hides layer list and properties, showing only header
+  - Proper ARIA attributes (`aria-expanded`, `aria-label`) for accessibility
+  - Dark mode support for collapse button
+  - 6 new tests for mobile collapse functionality
+- **Mobile Keyboard Handling** — Text input now handles on-screen keyboard properly
+  - Added Visual Viewport API integration to detect keyboard appearance
+  - Text input scrolls into view when keyboard would obscure it
+  - Mobile-optimized input attributes: `inputmode`, `enterkeyhint`, `autocomplete`
+  - Input auto-capitalizes sentences for better mobile UX
+  - 9 new tests for keyboard handling
+- **Test Count** — 8,340 tests passing (up from 8,304)
+
+---
+
 ## [1.4.7] - 2026-01-05
 
 ### Fixed

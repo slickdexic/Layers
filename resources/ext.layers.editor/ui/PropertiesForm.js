@@ -8,6 +8,18 @@
 ( function () {
 	'use strict';
 
+	/**
+	 * Get INTEGER_EPSILON from MathUtils namespace (with fallback)
+	 * @return {number}
+	 */
+	function getIntegerEpsilon() {
+		if ( window.Layers && window.Layers.MathUtils && window.Layers.MathUtils.MATH ) {
+			return window.Layers.MathUtils.MATH.INTEGER_EPSILON;
+		}
+		// Fallback if MathUtils not loaded
+		return 1e-9;
+	}
+
 	// Import UI components (available from Layers namespace or legacy global)
 	const ColorPickerDialog = ( window.Layers && window.Layers.UI && window.Layers.UI.ColorPickerDialog ) ||
 		window.ColorPickerDialog;
@@ -49,7 +61,7 @@
 		if ( typeof num !== 'number' || isNaN( num ) ) {
 			return '';
 		}
-		const isInt = Math.abs( num - Math.round( num ) ) < 1e-9;
+		const isInt = Math.abs( num - Math.round( num ) ) < getIntegerEpsilon();
 		return isInt ? String( Math.round( num ) ) : num.toFixed( 1 );
 	}
 
@@ -262,7 +274,7 @@
 						}
 						if ( opts.decimals === 1 ) {
 							n = Math.round( n * 10 ) / 10;
-							const isInteger = Math.abs( n - Math.round( n ) ) < 1e-9;
+							const isInteger = Math.abs( n - Math.round( n ) ) < getIntegerEpsilon();
 							const s = isInteger ? String( Math.round( n ) ) : n.toFixed( 1 );
 							if ( input.value !== s ) {
 								input.value = s;
@@ -575,7 +587,7 @@
 				num = Math.max( opts.min || 0, Math.min( opts.max || 100, num ) );
 				if ( ( parseFloat( opts.step || 1 ) ) < 1 ) {
 					num = Math.round( num * 10 ) / 10;
-					const isInt = Math.abs( num - Math.round( num ) ) < 1e-9;
+					const isInt = Math.abs( num - Math.round( num ) ) < getIntegerEpsilon();
 					numberInput.value = isInt ? String( Math.round( num ) ) : num.toFixed( 1 );
 				} else {
 					numberInput.value = String( num );

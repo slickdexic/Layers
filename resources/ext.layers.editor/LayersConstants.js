@@ -80,7 +80,23 @@
 				ARROW_SIZE: 10,
 				STAR_POINTS: 5,
 				SELECTION_HANDLE_SIZE: 8,
+				SELECTION_HANDLE_SIZE_TOUCH: 14,
 				ROTATION_HANDLE_DISTANCE: 25
+			}
+		},
+
+		// Mathematical constants - references MathUtils.MATH for single source of truth
+		// These are re-exported here for convenience and backward compatibility
+		MATH: {
+			/** Epsilon for canvas scale operations (prevent divide-by-zero) */
+			get SCALE_EPSILON() {
+				return ( window.Layers && window.Layers.MathUtils && window.Layers.MathUtils.MATH ) ?
+					window.Layers.MathUtils.MATH.SCALE_EPSILON : 0.0001;
+			},
+			/** Epsilon for integer detection (is-integer checks) */
+			get INTEGER_EPSILON() {
+				return ( window.Layers && window.Layers.MathUtils && window.Layers.MathUtils.MATH ) ?
+					window.Layers.MathUtils.MATH.INTEGER_EPSILON : 1e-9;
 			}
 		},
 

@@ -511,6 +511,30 @@ body.layers-editor-open .mw-body-content {
 	justify-content: center;
 }
 
+/* Touch device optimizations */
+@media ( pointer: coarse ) {
+	.toolbar-button {
+		min-width: 44px;
+		height: 44px;
+		touch-action: manipulation;
+	}
+
+	.layer-item {
+		min-height: 48px;
+		touch-action: manipulation;
+	}
+
+	.layer-item-actions button {
+		min-width: 36px;
+		min-height: 36px;
+	}
+
+	/* Larger selection handles for touch */
+	.layers-canvas-container {
+		touch-action: none;
+	}
+}
+
 /* SVG icons in toolbar buttons */
 .toolbar-button svg {
 	width: 22px;
@@ -954,6 +978,11 @@ body.layers-editor-open .mw-body-content {
 	align-items: center;
 	justify-content: space-between;
 	min-height: 28px;
+}
+
+/* Hide mobile collapse button on desktop */
+.layers-panel-collapse-btn {
+	display: none;
 }
 
 .layers-panel-header h3 {
@@ -2198,6 +2227,45 @@ body.layers-editor-open .mw-body-content {
 }
 
 @media ( max-width: 768px ) {
+	/* Mobile toolbar improvements */
+	.layers-toolbar {
+		padding: 6px 8px;
+		gap: 4px;
+		flex-wrap: wrap;
+		justify-content: flex-start;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.toolbar-group {
+		gap: 2px;
+		padding: 0 4px;
+		flex-shrink: 0;
+	}
+
+	.toolbar-button {
+		min-width: 40px;
+		height: 40px;
+		padding: 8px;
+		touch-action: manipulation;
+	}
+
+	/* Increase touch targets for mobile */
+	.toolbar-button svg {
+		width: 22px;
+		height: 22px;
+	}
+
+	/* Hide less critical style controls on very small screens */
+	.style-control-item label {
+		font-size: 0.65em;
+	}
+
+	/* Stack the editor layout vertically */
+	.layers-inspector-inner {
+		flex-direction: column;
+	}
+
 	.layers-panel {
 		width: 100%;
 		height: 200px;
@@ -2210,8 +2278,101 @@ body.layers-editor-open .mw-body-content {
 		padding: 10px;
 	}
 
-	.layers-inspector-inner {
-		grid-template-columns: 1fr;
+	/* Improve header on mobile */
+	.layers-header {
+		padding: 8px 12px;
+	}
+
+	.layers-header-title {
+		font-size: 0.8em;
+	}
+
+	.layers-header-close {
+		width: 44px;
+		height: 44px;
+	}
+
+	/* Mobile panel collapse button - only visible on mobile */
+	.layers-panel-collapse-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		background: transparent;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		cursor: pointer;
+		padding: 0;
+		transition: background-color 0.2s, transform 0.2s;
+		touch-action: manipulation;
+	}
+
+	.layers-panel-collapse-btn:hover,
+	.layers-panel-collapse-btn:focus {
+		background-color: rgba( 0, 0, 0, 0.05 );
+	}
+
+	.layers-panel-collapse-btn .collapse-icon {
+		font-size: 0.75em;
+		color: #333;
+		transition: transform 0.2s;
+	}
+
+	/* Collapsed state for layer panel on mobile */
+	.layers-panel.layers-panel-collapsed {
+		height: 48px;
+		overflow: hidden;
+	}
+
+	.layers-panel.layers-panel-collapsed .layers-panel-inner,
+	.layers-panel.layers-panel-collapsed .layers-panel-subtitle {
+		display: none;
+	}
+
+	.layers-panel.layers-panel-collapsed .layers-panel-header {
+		padding-bottom: 0;
+	}
+}
+
+/* Small mobile breakpoint */
+@media ( max-width: 480px ) {
+	.layers-toolbar {
+		padding: 4px;
+		gap: 2px;
+	}
+
+	.toolbar-group:not( :last-child ) {
+		border-right: 0;
+		padding-right: 2px;
+	}
+
+	/* Hide toolbar separators on small screens */
+	.toolbar-separator {
+		display: none;
+	}
+
+	/* Compact style controls */
+	.style-controls-row {
+		gap: 4px;
+	}
+
+	.style-control-item {
+		gap: 1px;
+	}
+
+	/* Reduce panel height on small screens */
+	.layers-panel {
+		height: 160px;
+	}
+
+	/* Compact layer list items */
+	.layer-item {
+		padding: 6px 8px;
+	}
+
+	.layer-item-text {
+		font-size: 0.85em;
 	}
 }
 
@@ -2861,6 +3022,20 @@ body.layers-resize-cursor {
 
 	html.skin-theme-clientpref-night .layers-panel-divider:hover::after {
 		background: var( --layers-accent );
+	}
+
+	/* Mobile collapse button dark mode */
+	html.skin-theme-clientpref-night .layers-panel-collapse-btn {
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel-collapse-btn:hover,
+	html.skin-theme-clientpref-night .layers-panel-collapse-btn:focus {
+		background-color: rgba( 255, 255, 255, 0.1 );
+	}
+
+	html.skin-theme-clientpref-night .layers-panel-collapse-btn .collapse-icon {
+		color: var( --layers-text-primary );
 	}
 
 	/* Layer items */

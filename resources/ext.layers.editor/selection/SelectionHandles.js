@@ -16,16 +16,32 @@
 		 * Create a SelectionHandles instance
 		 *
 		 * @param {Object} options Configuration options
-		 * @param {number} [options.handleSize=8] Size of handle rectangles
+		 * @param {number} [options.handleSize=8] Size of handle rectangles (auto-detects touch)
 		 * @param {number} [options.rotationHandleOffset=20] Offset for rotation handle above selection
 		 */
 		constructor( options = {} ) {
 			this.options = options;
-			this.handleSize = options.handleSize || 8;
+			this.handleSize = options.handleSize || this._getDefaultHandleSize();
 			this.rotationHandleOffset = options.rotationHandleOffset || 20;
 
 			// Current handles
 			this.handles = [];
+		}
+
+		/**
+		 * Get default handle size based on device type
+		 *
+		 * @private
+		 * @return {number} Handle size in pixels (14 for touch, 8 for mouse)
+		 */
+		_getDefaultHandleSize() {
+			// Check for coarse pointer (touch device)
+			if ( typeof window !== 'undefined' && window.matchMedia ) {
+				if ( window.matchMedia( '(pointer: coarse)' ).matches ) {
+					return 14;
+				}
+			}
+			return 8;
 		}
 
 		/**

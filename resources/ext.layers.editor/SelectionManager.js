@@ -204,6 +204,14 @@
 		}
 
 		/**
+		 * Maximum recursion depth for group traversal (prevents infinite loops on corrupted data)
+		 * @type {number}
+		 */
+		static get MAX_GROUP_DEPTH() {
+			return 10;
+		}
+
+		/**
 		 * Get all descendant IDs of a group (recursive)
 		 *
 		 * @param {string} groupId Group layer ID
@@ -222,13 +230,22 @@
 				return this.canvasManager.editor.groupManager.getGroupChildren( groupId, true );
 			}
 
-			// Fallback: manually traverse
-			const traverse = ( parentId ) => {
+			// Fallback: manually traverse with visited set to prevent infinite recursion
+			const visited = new Set();
+			const traverse = ( parentId, depth = 0 ) => {
+				// Guard against infinite recursion from circular references or excessive depth
+				if ( visited.has( parentId ) || depth > SelectionManager.MAX_GROUP_DEPTH ) {
+					return;
+				}
+				visited.add( parentId );
+
 				const parent = this.getLayerById( parentId );
 				if ( parent && parent.type === 'group' && Array.isArray( parent.children ) ) {
 					parent.children.forEach( ( childId ) => {
-						ids.push( childId );
-						traverse( childId ); // Recurse for nested groups
+						if ( !visited.has( childId ) ) {
+							ids.push( childId );
+							traverse( childId, depth + 1 ); // Recurse for nested groups
+						}
 					} );
 				}
 			};
@@ -510,6 +527,35 @@
 		}
 
 		/**
+		 * Check if device has coarse pointer (touch device)
+		 *
+		 * @private
+		 * @return {boolean} True if touch/coarse pointer device
+		 */
+		_isTouchDevice() {
+			if ( typeof window !== 'undefined' && window.matchMedia ) {
+				return window.matchMedia( '(pointer: coarse)' ).matches;
+			}
+			return false;
+		}
+
+		/**
+		 * Get appropriate handle size based on device type
+		 *
+		 * @private
+		 * @return {number} Handle size in pixels
+		 */
+		_getHandleSize() {
+			const Constants = window.Layers && window.Layers.Constants;
+			if ( this._isTouchDevice() ) {
+				return ( Constants && Constants.DEFAULTS && Constants.DEFAULTS.SIZES ) ?
+					Constants.DEFAULTS.SIZES.SELECTION_HANDLE_SIZE_TOUCH : 14;
+			}
+			return ( Constants && Constants.DEFAULTS && Constants.DEFAULTS.SIZES ) ?
+				Constants.DEFAULTS.SIZES.SELECTION_HANDLE_SIZE : 8;
+		}
+
+		/**
 		 * Create handles from bounds (minimal fallback for tests)
 		 *
 		 * @param {Object} bounds Bounds object
@@ -517,7 +563,7 @@
 		 * @return {Array} Handle objects
 		 */
 		_createHandlesFromBounds( bounds, isSingle ) {
-			const handleSize = 8;
+			const handleSize = this._getHandleSize();
 			const handles = [
 				{ x: bounds.x, y: bounds.y, type: 'nw' },
 				{ x: bounds.x + bounds.width, y: bounds.y, type: 'ne' },

@@ -10,7 +10,7 @@
  *   2. Or add to jsconfig.json: { "include": ["resources/**/*", "types/**/*"] }
  *
  * @module LayersTypes
- * @version 1.4.3
+ * @version 1.4.8
  */
 
 // =============================================================================
@@ -777,6 +777,42 @@ declare namespace Layers {
 		}
 
 		function getClass(namespacePath: string, globalName: string): any;
+	}
+
+	/**
+	 * Constants namespace - shared constants used throughout the extension
+	 * @since 1.4.8
+	 */
+	namespace Constants {
+		/** Mathematical constants for precision calculations */
+		const MATH: {
+			/** Epsilon for canvas scale operations to prevent divide-by-zero (0.0001) */
+			SCALE_EPSILON: number;
+			/** Epsilon for integer detection checks (1e-9) */
+			INTEGER_EPSILON: number;
+		};
+
+		/** Default layer values */
+		const DEFAULTS: {
+			LAYER: {
+				FONT_SIZE: number;
+				STROKE_WIDTH: number;
+				OPACITY: number;
+				ROTATION: number;
+			};
+			SIZES: {
+				RECTANGLE_WIDTH: number;
+				RECTANGLE_HEIGHT: number;
+				CIRCLE_RADIUS: number;
+			};
+		};
+
+		/** UI-related constants */
+		const UI: {
+			GRID_SIZE: number;
+			ANIMATION_DURATION: number;
+			HANDLE_SIZE: number;
+		};
 	}
 
 	namespace Shared {

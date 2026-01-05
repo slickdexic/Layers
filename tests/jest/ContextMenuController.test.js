@@ -395,6 +395,77 @@ describe( 'ContextMenuController', () => {
 		} );
 	} );
 
+	describe( 'memory leak prevention', () => {
+		it( 'should clean up document event listeners when menu is closed', ( done ) => {
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			// Verify handlers are stored
+			expect( controller._boundEscHandler ).toBeTruthy();
+
+			// Close the menu
+			controller.closeLayerContextMenu();
+
+			// Verify handlers are cleaned up
+			expect( controller._boundCloseHandler ).toBeNull();
+			expect( controller._boundEscHandler ).toBeNull();
+
+			// Wait for click handler timeout, then verify no error on body click
+			setTimeout( () => {
+				expect( () => document.body.click() ).not.toThrow();
+				done();
+			}, 10 );
+		} );
+
+		it( 'should clean up event listeners on destroy even with open menu', ( done ) => {
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			// Verify menu is open
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+			expect( controller._boundEscHandler ).toBeTruthy();
+
+			// Destroy controller while menu is open
+			controller.destroy();
+
+			// Verify cleanup happened
+			expect( controller._boundCloseHandler ).toBeNull();
+			expect( controller._boundEscHandler ).toBeNull();
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeFalsy();
+
+			// Wait and verify no orphaned listeners cause errors
+			setTimeout( () => {
+				expect( () => {
+					document.body.click();
+					document.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape' } ) );
+				} ).not.toThrow();
+				done();
+			}, 10 );
+		} );
+
+		it( 'should not leak handlers when opening multiple menus', ( done ) => {
+			// Open first menu
+			const mockEvent1 = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent1 );
+			const firstEscHandler = controller._boundEscHandler;
+
+			// Open second menu (should close first and clean up its handlers)
+			const mockEvent2 = createMockEvent( 'layer2' );
+			controller.handleLayerContextMenu( mockEvent2 );
+
+			// Should have new handlers, not accumulating old ones
+			expect( controller._boundEscHandler ).not.toBe( firstEscHandler );
+			expect( controller._boundEscHandler ).toBeTruthy();
+
+			// Only one menu should exist
+			expect( document.querySelectorAll( '.layers-context-menu' ).length ).toBe( 1 );
+
+			setTimeout( () => {
+				done();
+			}, 10 );
+		} );
+	} );
+
 	describe( 'menu item interactions', () => {
 		it( 'should highlight menu item on mouseenter', () => {
 			const mockEvent = createMockEvent( 'layer1' );

@@ -216,9 +216,37 @@ describe( 'MathUtils', () => {
 			expect( typeof MathUtils.radiansToDegrees ).toBe( 'function' );
 		} );
 
-		it( 'should have exactly 4 exported functions', () => {
+		it( 'should export MATH constants', () => {
+			expect( typeof MathUtils.MATH ).toBe( 'object' );
+			expect( typeof MathUtils.MATH.SCALE_EPSILON ).toBe( 'number' );
+			expect( typeof MathUtils.MATH.INTEGER_EPSILON ).toBe( 'number' );
+			expect( MathUtils.MATH.SCALE_EPSILON ).toBe( 0.0001 );
+			expect( MathUtils.MATH.INTEGER_EPSILON ).toBe( 1e-9 );
+		} );
+
+		it( 'should have exactly 5 exports (4 functions + MATH)', () => {
 			const keys = Object.keys( MathUtils );
-			expect( keys.length ).toBe( 4 );
+			expect( keys.length ).toBe( 5 );
+			expect( keys ).toContain( 'MATH' );
+			expect( keys ).toContain( 'clampOpacity' );
+			expect( keys ).toContain( 'clamp' );
+			expect( keys ).toContain( 'degreesToRadians' );
+			expect( keys ).toContain( 'radiansToDegrees' );
+		} );
+
+		it( 'should export to window.Layers namespace in browser environment', () => {
+			// This tests the browser export path (line 91-93)
+			expect( window.Layers ).toBeDefined();
+			expect( window.Layers.MathUtils ).toBeDefined();
+			expect( window.Layers.MathUtils.clampOpacity ).toBe( MathUtils.clampOpacity );
+			expect( window.Layers.MathUtils.MATH ).toBe( MathUtils.MATH );
+		} );
+
+		it( 'should have consistent exports between CommonJS and window namespace', () => {
+			// Verify the same object is exported to both environments
+			expect( window.Layers.MathUtils.clamp ).toBe( MathUtils.clamp );
+			expect( window.Layers.MathUtils.degreesToRadians ).toBe( MathUtils.degreesToRadians );
+			expect( window.Layers.MathUtils.radiansToDegrees ).toBe( MathUtils.radiansToDegrees );
 		} );
 	} );
 } );

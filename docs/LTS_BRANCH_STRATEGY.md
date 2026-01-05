@@ -8,8 +8,8 @@ This document outlines the support strategy for MediaWiki LTS branches.
 
 | Branch | MediaWiki Version | Current Version | Status |
 |--------|------------------|-----------------|--------|
-| `main` | 1.44+ | 1.3.0 | Active Development |
-| `REL1_43` | 1.43.x | 1.3.0-REL1_43 | LTS (until Dec 2027) |
+| `main` | 1.44+ | 1.4.9 | Active Development |
+| `REL1_43` | 1.43.x | 1.4.9-REL1_43 | LTS (until Dec 2027) |
 | `REL1_39` | 1.39.x - 1.42.x | 1.1.14 | Community Maintained (EOL Dec 31, 2025) |
 
 ---

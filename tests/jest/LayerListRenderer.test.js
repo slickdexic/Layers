@@ -301,27 +301,27 @@ describe( 'LayerListRenderer', () => {
 			expect( nameEl.textContent ).toBe( 'Custom Name' );
 		} );
 
-		test( 'should attach keyboard handler to grab area when onMoveLayer provided', () => {
+		// NOTE: Keyboard layer reordering is now handled via event delegation in LayerItemEvents.
+		// Arrow key events on .layer-grab-area elements trigger onMoveLayer callback via delegation.
+		// These tests verify the grab area structure - event handling tests are in LayerItemEvents.test.js.
+
+		test( 'should create grab area with correct class for event delegation', () => {
 			const layer = { id: 'layer_1', type: 'text' };
 			const item = renderer.createLayerItem( layer, 0 );
 			const grabArea = item.querySelector( '.layer-grab-area' );
 
-			// Simulate ArrowUp keydown
-			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp' } );
-			grabArea.dispatchEvent( event );
-
-			expect( mockOnMoveLayer ).toHaveBeenCalledWith( 'layer_1', -1 );
+			expect( grabArea ).toBeTruthy();
+			expect( grabArea.className ).toBe( 'layer-grab-area' );
+			expect( grabArea.getAttribute( 'tabindex' ) ).toBe( '0' );
 		} );
 
-		test( 'should handle ArrowDown for moving layer down', () => {
-			const layer = { id: 'layer_1', type: 'text' };
+		test( 'should create grab area with ARIA attributes for accessibility', () => {
+			const layer = { id: 'layer_1', type: 'text', name: 'Test Layer' };
 			const item = renderer.createLayerItem( layer, 0 );
 			const grabArea = item.querySelector( '.layer-grab-area' );
 
-			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown' } );
-			grabArea.dispatchEvent( event );
-
-			expect( mockOnMoveLayer ).toHaveBeenCalledWith( 'layer_1', 1 );
+			expect( grabArea.getAttribute( 'role' ) ).toBe( 'button' );
+			expect( grabArea.getAttribute( 'aria-label' ) ).toContain( 'Test Layer' );
 		} );
 	} );
 

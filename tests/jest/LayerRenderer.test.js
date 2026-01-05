@@ -2271,6 +2271,65 @@ describe( 'LayerRenderer', () => {
 			expect( img ).toBeDefined();
 			expect( renderer._imageCache.size ).toBe( 1 );
 		} );
+
+		test( 'evicts oldest entries when cache exceeds MAX_IMAGE_CACHE_SIZE', () => {
+			// MAX_IMAGE_CACHE_SIZE is 50
+			const maxSize = 50;
+
+			// Fill the cache to max capacity
+			for ( let i = 0; i < maxSize; i++ ) {
+				const layer = {
+					id: `image-${ i }`,
+					src: `data:image/png;base64,test${ i }`
+				};
+				renderer._getImageElement( layer );
+			}
+
+			expect( renderer._imageCache.size ).toBe( maxSize );
+			expect( renderer._imageCache.has( 'image-0' ) ).toBe( true );
+
+			// Add one more, which should evict the oldest (image-0)
+			const newLayer = {
+				id: 'image-new',
+				src: 'data:image/png;base64,testnew'
+			};
+			renderer._getImageElement( newLayer );
+
+			expect( renderer._imageCache.size ).toBe( maxSize );
+			expect( renderer._imageCache.has( 'image-0' ) ).toBe( false );
+			expect( renderer._imageCache.has( 'image-new' ) ).toBe( true );
+			expect( renderer._imageCache.has( 'image-1' ) ).toBe( true );
+		} );
+
+		test( 'refreshes entry position when accessed', () => {
+			// Fill cache with 50 images
+			const maxSize = 50;
+			for ( let i = 0; i < maxSize; i++ ) {
+				const layer = {
+					id: `image-${ i }`,
+					src: `data:image/png;base64,test${ i }`
+				};
+				renderer._getImageElement( layer );
+			}
+
+			// Access image-0 to refresh its position (make it recent)
+			const oldestLayer = {
+				id: 'image-0',
+				src: 'data:image/png;base64,test0'
+			};
+			renderer._getImageElement( oldestLayer );
+
+			// Add a new image - should evict image-1 now (the new oldest)
+			const newLayer = {
+				id: 'image-new',
+				src: 'data:image/png;base64,testnew'
+			};
+			renderer._getImageElement( newLayer );
+
+			expect( renderer._imageCache.has( 'image-0' ) ).toBe( true ); // Still present (was refreshed)
+			expect( renderer._imageCache.has( 'image-1' ) ).toBe( false ); // Evicted (was oldest)
+			expect( renderer._imageCache.has( 'image-new' ) ).toBe( true );
+		} );
 	} );
 
 	describe( '_drawImagePlaceholder', () => {
@@ -2355,6 +2414,36 @@ describe( 'LayerRenderer', () => {
 
 			// destroy() nulls out the cache
 			expect( renderer._imageCache ).toBeNull();
+		} );
+
+		test( 'calls destroy on sub-renderers that have the method', () => {
+			// Set up mock sub-renderers with destroy methods
+			const mockShadowDestroy = jest.fn();
+			const mockShapeDestroy = jest.fn();
+			renderer.shadowRenderer = { destroy: mockShadowDestroy };
+			renderer.shapeRenderer = { destroy: mockShapeDestroy };
+			renderer.textRenderer = { someOtherMethod: jest.fn() }; // No destroy method
+
+			renderer.destroy();
+
+			expect( mockShadowDestroy ).toHaveBeenCalled();
+			expect( mockShapeDestroy ).toHaveBeenCalled();
+			expect( renderer.shadowRenderer ).toBeNull();
+			expect( renderer.shapeRenderer ).toBeNull();
+			expect( renderer.textRenderer ).toBeNull();
+		} );
+
+		test( 'nulls out all sub-renderer references', () => {
+			renderer.destroy();
+
+			expect( renderer.shadowRenderer ).toBeNull();
+			expect( renderer.arrowRenderer ).toBeNull();
+			expect( renderer.textRenderer ).toBeNull();
+			expect( renderer.polygonStarRenderer ).toBeNull();
+			expect( renderer.shapeRenderer ).toBeNull();
+			expect( renderer.textBoxRenderer ).toBeNull();
+			expect( renderer.calloutRenderer ).toBeNull();
+			expect( renderer.effectsRenderer ).toBeNull();
 		} );
 	} );
 

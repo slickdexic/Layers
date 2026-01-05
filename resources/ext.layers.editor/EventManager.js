@@ -1,25 +1,46 @@
 /**
  * Event Manager for Layers Editor
  * Centralized event handling and management
+ *
+ * @class EventManager
  */
 class EventManager {
+	/**
+	 * Create an EventManager instance
+	 *
+	 * @param {Object} editor - Reference to the LayersEditor instance
+	 */
 	constructor( editor ) {
 		this.editor = editor;
 		this.listeners = [];
 		this.setupGlobalHandlers();
 	}
 
+	/**
+	 * Register an event listener and track it for cleanup
+	 *
+	 * @param {EventTarget} target - The event target (window, document, or element)
+	 * @param {string} type - The event type (e.g., 'click', 'keydown')
+	 * @param {Function} handler - The event handler function
+	 * @param {Object} [options] - Event listener options
+	 */
 	registerListener( target, type, handler, options ) {
 		target.addEventListener( type, handler, options );
 		this.listeners.push( { target, type, handler, options } );
 	}
 
+	/**
+	 * Set up global event handlers for window and document
+	 */
 	setupGlobalHandlers() {
 		this.registerListener( window, 'resize', this.handleResize.bind( this ) );
 		this.registerListener( window, 'beforeunload', this.handleBeforeUnload.bind( this ) );
 		this.registerListener( document, 'keydown', this.handleKeyDown.bind( this ) );
 	}
 
+	/**
+	 * Handle window resize events
+	 */
 	handleResize() {
 		// Handle window resize
 		if ( this.editor.canvasManager && typeof this.editor.canvasManager.resizeCanvas === 'function' ) {
@@ -27,6 +48,11 @@ class EventManager {
 		}
 	}
 
+	/**
+	 * Handle beforeunload event to warn about unsaved changes
+	 *
+	 * @param {BeforeUnloadEvent} e - The beforeunload event
+	 */
 	handleBeforeUnload( e ) {
 		// Check isDirty using the method, not property
 		if ( this.editor && typeof this.editor.isDirty === 'function' && this.editor.isDirty() ) {
@@ -35,6 +61,11 @@ class EventManager {
 		}
 	}
 
+	/**
+	 * Handle global keyboard shortcuts
+	 *
+	 * @param {KeyboardEvent} e - The keydown event
+	 */
 	handleKeyDown( e ) {
 		// Ignore if user is typing in an input field
 		if ( this.isInputElement( e.target ) ) {
@@ -71,6 +102,12 @@ class EventManager {
 		}
 	}
 
+	/**
+	 * Check if an element is an input element (input, textarea, or contentEditable)
+	 *
+	 * @param {Element} element - The DOM element to check
+	 * @return {boolean} True if the element is an input element
+	 */
 	isInputElement( element ) {
 		const tagName = element.tagName;
 		return tagName === 'INPUT' ||
@@ -78,6 +115,9 @@ class EventManager {
 			element.contentEditable === 'true';
 	}
 
+	/**
+	 * Handle undo keyboard shortcut (Ctrl+Z)
+	 */
 	handleUndo() {
 		if ( this.editor && typeof this.editor.undo === 'function' ) {
 			if ( this.editor.undo() ) {
@@ -93,6 +133,9 @@ class EventManager {
 		}
 	}
 
+	/**
+	 * Handle redo keyboard shortcut (Ctrl+Y or Ctrl+Shift+Z)
+	 */
 	handleRedo() {
 		if ( this.editor && typeof this.editor.redo === 'function' ) {
 			if ( this.editor.redo() ) {
@@ -108,6 +151,10 @@ class EventManager {
 		}
 	}
 
+	/**
+	 * Clean up all registered event listeners
+	 * Called when the editor is destroyed to prevent memory leaks
+	 */
 	destroy() {
 		this.listeners.forEach( listener => {
 			listener.target.removeEventListener( listener.type, listener.handler, listener.options );
@@ -121,4 +168,9 @@ if ( typeof window !== 'undefined' ) {
 	window.Layers = window.Layers || {};
 	window.Layers.Core = window.Layers.Core || {};
 	window.Layers.Core.EventManager = EventManager;
+}
+
+// CommonJS export for Jest testing
+if ( typeof module !== 'undefined' && module.exports ) {
+	module.exports = EventManager;
 }

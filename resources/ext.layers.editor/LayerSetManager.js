@@ -463,17 +463,17 @@
 					}
 				}
 
-				// Add to named sets list
+				// Add to named sets list (use immutable pattern for state tracking)
 				const userName = ( typeof mw !== 'undefined' && mw.config ) ?
 					mw.config.get( 'wgUserName' ) : 'Anonymous';
-				namedSets.push( {
+				const updatedNamedSets = [ ...namedSets, {
 					name: trimmedName,
 					revision_count: 0,
 					latest_revision: null,
 					latest_timestamp: null,
 					latest_user_name: userName
-				} );
-				this.stateManager.set( 'namedSets', namedSets );
+				} ];
+				this.stateManager.set( 'namedSets', updatedNamedSets );
 
 				// Rebuild selector
 				this.buildSetSelector();

@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 1, 2026  
-**Version:** 1.4.1
+**Last Updated:** January 5, 2026  
+**Version:** 1.4.8
 
 This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
 
@@ -18,21 +18,21 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (January 2026)
+## Codebase Statistics (January 5, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **104** |
-| Viewer module | ~750 lines |
-| Shared module | ~6,200 lines |
-| Editor module | ~48,000 lines |
-| Total JS lines | **~55,000** |
-| ES6 classes | **94** |
+| Total JS files | **107** |
+| Viewer module | ~850 lines |
+| Shared module | ~6,500 lines |
+| Editor module | ~50,900 lines |
+| Total JS lines | **~58,300** |
+| ES6 classes | **94+** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **94.4% stmt, 83.4% branch, 91.8% func** |
-| Jest tests | **8,051** (138 suites) |
+| Test coverage | **94.6% stmt, 83.3% branch, 93.1% func** |
+| Jest tests | **8,342** (140 suites) |
 | PHPUnit test files | 19 |
-| God classes (>1000 lines) | **12** (all delegated except PropertiesForm) |
+| God classes (>1000 lines) | **12** (all use delegation patterns) |
 | Drawing tools | **11** (blur tool deprecated) |
 | eslint-disable comments | **8** ✅ (below <15 target) |
 
@@ -40,7 +40,13 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ### Recent Architecture Changes
 
-### January 2026: v1.4.0-v1.4.1
+### January 2026: v1.4.0-v1.4.8
+
+**v1.4.8 - Mobile UI Polish:**
+- Collapsible layer panel for mobile (toggle button, collapsed state)
+- On-screen keyboard handling for text input (Visual Viewport API)
+- Touch-friendly selection handles (14px on touch vs 8px on mouse)
+- Responsive toolbar with 768px and 480px breakpoints
 
 **v1.4.0-v1.4.1 - Major Feature Release:**
 - Curved arrows with Bézier curves (FR-4 complete)
@@ -69,21 +75,21 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ### Known Technical Debt
 
-**11 files exceed 1,000 lines (god classes) - all use delegation patterns:**
-- LayerPanel.js (2,141) - facade with 9 controllers
-- CanvasManager.js (1,877) - facade with 10+ controllers
-- Toolbar.js (1,652) - UI controls consolidation
-- LayersEditor.js (1,475) - main entry point/orchestrator
-- SelectionManager.js (1,359) - delegates to SelectionState, MarqueeSelection
-- ArrowRenderer.js (1,310) - rendering logic (grew with curved arrows in v1.3.3)
+**12 files exceed 1,000 lines (god classes) - all use delegation patterns:**
+- LayerPanel.js (2,191) - facade with 9 controllers
+- CanvasManager.js (1,934) - facade with 10+ controllers
+- Toolbar.js (1,658) - UI controls consolidation
+- LayersEditor.js (1,482) - main entry point/orchestrator
+- SelectionManager.js (1,388) - delegates to SelectionState, MarqueeSelection
+- ArrowRenderer.js (1,356) - rendering logic (grew with curved arrows in v1.3.3)
+- CalloutRenderer.js (1,291) - rendering logic
+- APIManager.js (1,254) - API integration layer
 - ToolManager.js (1,214) - tool delegation pattern
-- APIManager.js (1,182) - API integration layer
 - GroupManager.js (1,132) - layer grouping operations (new in v1.2.13)
-- CanvasRenderer.js (1,105) - delegates to SelectionRenderer
+- CanvasRenderer.js (1,113) - delegates to SelectionRenderer
 - ToolbarStyleControls.js (1,014) - style controls (grew with live preview in v1.3.3)
-- PropertiesForm.js (1,011) - layer properties panel (NO delegation - needs refactoring)
 
-**Note:** 11 god classes use delegation patterns. PropertiesForm.js (1,011 lines) has NO delegation and needs refactoring. Code quality is maintained with 94.4% test coverage.
+**Note:** All 12 god classes use delegation patterns. Code quality is maintained with 94.6% test coverage. Files approaching the limit (ShapeRenderer at 924 lines) are monitored.
 
 See [improvement_plan.md](../improvement_plan.md) for remediation plan.
 
@@ -143,7 +149,7 @@ graph TB
         clipboard["ClipboardController"]
         interaction["InteractionController"]
         render["RenderCoordinator"]
-        style["StyleController"]
+        styleCtrl["StyleController"]
         guides["SmartGuidesController"]
         alignment["AlignmentController"]
     end
@@ -955,6 +961,120 @@ $wgRateLimits['editlayers-save']['newbie'] = [5, 3600];
 | editlayers | users | Edit existing layers |
 | createlayers | autoconfirmed | Create new layer sets |
 | managelayerlibrary | sysop | Library management |
+
+---
+
+## Key Architectural Decisions
+
+This section documents important design decisions and their rationale.
+
+### 1. Facade Pattern for Large Files
+
+**Decision:** Large manager classes (CanvasManager, LayerPanel, etc.) act as facades delegating to specialized controllers.
+
+**Rationale:**
+- Allows files to exceed 1,000 lines without becoming monolithic
+- Each controller is independently testable (90%+ coverage achieved)
+- New features can be added by creating new controllers without modifying the facade
+- Controller extraction can happen incrementally as areas grow
+
+**Example:**
+```javascript
+// CanvasManager delegates to specialized controllers
+class CanvasManager {
+    zoomIn() { this.zoomPanController.zoomIn(); }
+    copySelection() { this.clipboardController.copy(); }
+    calculateSnappedPosition() { this.smartGuidesController.calculateSnappedPosition(); }
+}
+```
+
+**Files using this pattern:**
+| Facade | Lines | Delegates to |
+|--------|-------|--------------|
+| CanvasManager | 1,934 | 10+ controllers (ZoomPan, Transform, HitTest, etc.) |
+| LayerPanel | 2,191 | 9 controllers (DragDrop, ContextMenu, LayerItemFactory, etc.) |
+| SelectionManager | 1,388 | SelectionState, MarqueeSelection, SelectionHandles |
+| ToolManager | 1,214 | Tool handlers (TextToolHandler, PathToolHandler, etc.) |
+
+### 2. Shared Rendering Module
+
+**Decision:** Renderer classes (ShapeRenderer, ArrowRenderer, etc.) live in `ext.layers.shared/` and are used by both the viewer and editor.
+
+**Rationale:**
+- Guarantees visual consistency between viewer and editor
+- Reduces bundle size (shared code loaded once)
+- Bug fixes benefit both modules automatically
+- New layer types only need one renderer implementation
+
+### 3. ES6 Class-Only Policy
+
+**Decision:** All modules use ES6 classes with no prototype-based patterns.
+
+**Rationale:**
+- Consistent patterns across 94+ classes
+- Easier for new contributors (human and AI)
+- Better tooling support (IDE autocompletion, type inference)
+- Cleaner constructor/method syntax
+
+**Implementation:** ESLint enforces `prefer-const`, `no-var`. All module migrations completed December 2025.
+
+### 4. Boolean Serialization Workaround
+
+**Decision:** API converts boolean `false` to integer `0` before JSON serialization.
+
+**Rationale:** MediaWiki's API drops `false` values during serialization. This caused a critical bug where `backgroundVisible: false` was lost, making backgrounds always visible.
+
+**Implementation:**
+```php
+// ApiLayersInfo.php
+$layer['visible'] = (int)$layer['visible'];  // true→1, false→0
+```
+
+```javascript
+// JavaScript must handle both types
+if (visible !== false && visible !== 0) { /* visible */ }
+```
+
+**Documentation:** See [POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md](./POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md).
+
+### 5. Mobile-First Touch Support
+
+**Decision:** Implement touch events with progressive enhancement rather than touch-only mobile mode.
+
+**Rationale:**
+- Works on hybrid devices (Surface, iPad with keyboard)
+- Single codebase for all form factors
+- Touch events converted to mouse events for consistent handling
+
+**Key Features:**
+- Visual Viewport API for keyboard detection
+- Touch-to-mouse event conversion with proper coordinate handling
+- Larger touch targets (14px handles vs 8px mouse)
+- Collapsible panels for small screens
+
+### 6. Controller Initialization Pattern
+
+**Decision:** Controllers receive a reference to their parent manager and expose methods callable via delegation.
+
+**Rationale:**
+- Avoids circular dependencies
+- Controllers can access parent's state without tight coupling
+- Parent can swap controller implementations if needed
+- Enables testing with mock managers
+
+**Pattern:**
+```javascript
+class SmartGuidesController {
+    constructor(canvasManager) {
+        this.manager = canvasManager;
+    }
+    
+    calculateSnappedPosition(layer, x, y, layers) {
+        const zoom = this.manager.zoom;  // Access parent state
+        // ... implementation
+    }
+}
+```
 
 ---
 

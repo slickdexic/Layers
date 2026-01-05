@@ -10,6 +10,27 @@
 	'use strict';
 
 	/**
+	 * Mathematical constants used across the Layers extension.
+	 *
+	 * @namespace MATH
+	 */
+	const MATH = {
+		/**
+		 * Epsilon for canvas scale operations to prevent divide-by-zero.
+		 * Used in ctx.scale() calls where zero would cause rendering issues.
+		 * @constant {number}
+		 */
+		SCALE_EPSILON: 0.0001,
+
+		/**
+		 * Epsilon for integer detection (is-integer checks).
+		 * Used to determine if a floating-point value should be rounded to an integer.
+		 * @constant {number}
+		 */
+		INTEGER_EPSILON: 1e-9
+	};
+
+	/**
 	 * Clamp an opacity value to the valid range [0, 1].
 	 *
 	 * @param {*} value - Value to clamp
@@ -59,6 +80,7 @@
 
 	// Create the MathUtils object
 	const MathUtils = {
+		MATH,
 		clampOpacity,
 		clamp,
 		degreesToRadians,

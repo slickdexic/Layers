@@ -6,6 +6,18 @@
 	'use strict';
 
 	/**
+	 * Get INTEGER_EPSILON from MathUtils namespace (with fallback)
+	 * @return {number}
+	 */
+	function getIntegerEpsilon() {
+		if ( window.Layers && window.Layers.MathUtils && window.Layers.MathUtils.MATH ) {
+			return window.Layers.MathUtils.MATH.INTEGER_EPSILON;
+		}
+		// Fallback if MathUtils not loaded
+		return 1e-9;
+	}
+
+	/**
 	 * Helper to get a class from namespace or global fallback (lazy evaluation)
 	 * Prefers window.Layers.* namespace, falls back to window.* for compatibility
 	 *
@@ -482,6 +494,27 @@
 		}
 
 		/**
+		 * Toggle the mobile collapsed state of the panel
+		 * Only effective when viewport is at mobile width (768px or less)
+		 */
+		toggleMobileCollapse() {
+			const isCollapsed = this.container.classList.toggle( 'layers-panel-collapsed' );
+			if ( this.collapseBtn ) {
+				const icon = this.collapseBtn.querySelector( '.collapse-icon' );
+				if ( icon ) {
+					icon.textContent = isCollapsed ? '▲' : '▼';
+				}
+				this.collapseBtn.setAttribute( 'aria-expanded', String( !isCollapsed ) );
+				this.collapseBtn.setAttribute(
+					'aria-label',
+					isCollapsed ?
+						this.msg( 'layers-panel-expand', 'Expand panel' ) :
+						this.msg( 'layers-panel-collapse', 'Collapse panel' )
+				);
+			}
+		}
+
+		/**
 		 * Helper function to set multiple attributes on an element
 		 *
 		 * @param {Element} element Target element
@@ -600,6 +633,23 @@
 			titleLeft.appendChild( title );
 
 			titleRow.appendChild( titleLeft );
+
+			// Mobile collapse toggle button (only visible on mobile)
+			const collapseBtn = document.createElement( 'button' );
+			collapseBtn.className = 'layers-panel-collapse-btn';
+			collapseBtn.type = 'button';
+			collapseBtn.setAttribute( 'aria-label', this.msg( 'layers-panel-expand', 'Expand panel' ) );
+			collapseBtn.setAttribute( 'aria-expanded', 'true' );
+			const collapseIcon = document.createElement( 'span' );
+			collapseIcon.className = 'collapse-icon';
+			collapseIcon.textContent = '▼';
+			collapseBtn.appendChild( collapseIcon );
+			this.addTargetListener( collapseBtn, 'click', () => {
+				this.toggleMobileCollapse();
+			} );
+			this.collapseBtn = collapseBtn;
+			titleRow.appendChild( collapseBtn );
+
 			header.appendChild( titleRow );
 
 			const subtitle = document.createElement( 'div' );
@@ -756,7 +806,9 @@
 						onToggleLock: ( layerId ) => this.toggleLayerLock( layerId ),
 						onDelete: ( layerId ) => this.deleteLayer( layerId ),
 						onNameClick: ( layerId, nameEl ) => this.handleNameClick( layerId, nameEl ),
-						onEditName: ( layerId, nameEl ) => this.editLayerName( layerId, nameEl )
+						onEditName: ( layerId, nameEl ) => this.editLayerName( layerId, nameEl ),
+						onToggleGroupExpand: ( layerId ) => this.toggleGroupExpand( layerId ),
+						onMoveLayer: ( layerId, direction ) => this.moveLayer( layerId, direction )
 					},
 					addTargetListener: this.addTargetListener.bind( this )
 				} );
@@ -1843,7 +1895,7 @@
 				}
 				if ( String( decimalsAttr ) === '1' ) {
 					const r = Math.round( n * 10 ) / 10;
-					const isInt = Math.abs( r - Math.round( r ) ) < 1e-9;
+					const isInt = Math.abs( r - Math.round( r ) ) < getIntegerEpsilon();
 					return isInt ? String( Math.round( r ) ) : r.toFixed( 1 );
 				}
 				// Default: round to whole numbers for clean display

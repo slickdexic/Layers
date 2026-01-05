@@ -89,6 +89,16 @@
 			input.style.background = 'white';
 			input.style.zIndex = '1001';
 
+			// Mobile keyboard optimization
+			input.setAttribute( 'inputmode', 'text' );
+			input.setAttribute( 'enterkeyhint', 'done' );
+			input.setAttribute( 'autocomplete', 'off' );
+			input.setAttribute( 'autocorrect', 'off' );
+			input.setAttribute( 'autocapitalize', 'sentences' );
+
+			// Store original position for keyboard adjustment
+			this._originalPoint = { x: point.x, y: point.y };
+
 			// Handle keyboard events
 			input.addEventListener( 'keydown', ( e ) => {
 				if ( e.key === 'Enter' ) {
@@ -108,6 +118,10 @@
 			container.appendChild( input );
 
 			this.textEditor = input;
+
+			// Setup mobile keyboard viewport handling
+			this._setupKeyboardHandler( input );
+
 			input.focus();
 		}
 
@@ -133,9 +147,75 @@
 		}
 
 		/**
+		 * Setup handler for mobile virtual keyboard viewport changes
+		 * Uses the Visual Viewport API to detect keyboard appearance
+		 *
+		 * @private
+		 * @param {HTMLInputElement} input The text input element
+		 */
+		_setupKeyboardHandler( input ) {
+			// Visual Viewport API for detecting mobile keyboard
+			if ( typeof window !== 'undefined' && window.visualViewport ) {
+				this._viewportHandler = () => {
+					this._adjustForKeyboard( input );
+				};
+				window.visualViewport.addEventListener( 'resize', this._viewportHandler );
+				window.visualViewport.addEventListener( 'scroll', this._viewportHandler );
+			}
+		}
+
+		/**
+		 * Adjust text input position when mobile keyboard appears
+		 * Ensures the input stays visible above the keyboard
+		 *
+		 * @private
+		 * @param {HTMLInputElement} input The text input element
+		 */
+		_adjustForKeyboard( input ) {
+			if ( !input || !window.visualViewport || !this._originalPoint ) {
+				return;
+			}
+
+			const viewport = window.visualViewport;
+			const inputRect = input.getBoundingClientRect();
+			const viewportBottom = viewport.offsetTop + viewport.height;
+
+			// Check if input is obscured by keyboard (below visible viewport)
+			if ( inputRect.bottom > viewportBottom ) {
+				// Scroll the input into view with some padding
+				const padding = 20;
+				const scrollAmount = inputRect.bottom - viewportBottom + padding;
+
+				// Use scrollIntoView for a smooth experience
+				input.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+
+				// Alternative: adjust container scroll if scrollIntoView doesn't work well
+				const container = this._getEditorContainer();
+				if ( container && container.scrollTop !== undefined ) {
+					container.scrollTop += scrollAmount;
+				}
+			}
+		}
+
+		/**
+		 * Remove keyboard viewport handler
+		 *
+		 * @private
+		 */
+		_removeKeyboardHandler() {
+			if ( this._viewportHandler && window.visualViewport ) {
+				window.visualViewport.removeEventListener( 'resize', this._viewportHandler );
+				window.visualViewport.removeEventListener( 'scroll', this._viewportHandler );
+				this._viewportHandler = null;
+			}
+			this._originalPoint = null;
+		}
+
+		/**
 		 * Hide and remove the text editor
 		 */
 		hideTextEditor() {
+			this._removeKeyboardHandler();
 			if ( this.textEditor ) {
 				if ( this.textEditor.parentNode ) {
 					this.textEditor.parentNode.removeChild( this.textEditor );

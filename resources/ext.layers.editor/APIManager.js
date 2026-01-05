@@ -38,11 +38,56 @@
 		this.retryDelay = 1000; // Start with 1 second
 		this.activeTimeouts = new Set(); // Track active timeouts for cleanup
 		
+		// Track pending API requests by operation type for abort handling
+		// Keys: 'loadRevision', 'loadSetByName', etc.
+		// Values: jqXHR object (has abort() method)
+		this.pendingRequests = new Map();
+		
 		// Initialize error handler (extracted for separation of concerns)
 		this.errorHandler = new APIErrorHandler( {
 			editor: editor
 		} );
 		this.errorHandler.setEnableSaveButtonCallback( () => this.enableSaveButton() );
+	}
+
+	/**
+	 * Abort any pending request for the given operation type and track the new one.
+	 * This prevents out-of-order completion when user switches sets/revisions quickly.
+	 *
+	 * @param {string} operationType - Key identifying the operation (e.g., 'loadRevision')
+	 * @param {Object} jqXHR - jQuery XHR object with abort() method
+	 * @private
+	 */
+	_trackRequest( operationType, jqXHR ) {
+		// Abort any existing request for this operation type
+		const existing = this.pendingRequests.get( operationType );
+		if ( existing && typeof existing.abort === 'function' ) {
+			existing.abort();
+		}
+		this.pendingRequests.set( operationType, jqXHR );
+	}
+
+	/**
+	 * Clear the tracked request for an operation type (call on success or handled error).
+	 *
+	 * @param {string} operationType - Key identifying the operation
+	 * @private
+	 */
+	_clearRequest( operationType ) {
+		this.pendingRequests.delete( operationType );
+	}
+
+	/**
+	 * Abort all pending requests (for cleanup on destroy).
+	 * @private
+	 */
+	_abortAllRequests() {
+		for ( const jqXHR of this.pendingRequests.values() ) {
+			if ( jqXHR && typeof jqXHR.abort === 'function' ) {
+				jqXHR.abort();
+			}
+		}
+		this.pendingRequests.clear();
 	}
 
 	/**
@@ -313,13 +358,19 @@
 		return new Promise( ( resolve, reject ) => {
 			this.editor.uiManager.showSpinner( this.getMessage( 'layers-loading' ) );
 
-			this.api.get( {
+			const jqXHR = this.api.get( {
 				action: 'layersinfo',
 				filename: this.editor.filename,
 				layersetid: revisionId,
 				format: 'json',
 				formatversion: 2
-			} ).then( ( data ) => {
+			} );
+
+			// Track request to abort any pending load if user switches quickly
+			this._trackRequest( 'loadRevision', jqXHR );
+
+			jqXHR.then( ( data ) => {
+				this._clearRequest( 'loadRevision' );
 				this.editor.uiManager.hideSpinner();
 				if ( data.layersinfo && data.layersinfo.layerset ) {
 					this.extractLayerSetData( data.layersinfo.layerset );
@@ -356,6 +407,11 @@
 					reject( new Error( 'Revision not found' ) );
 				}
 			} ).catch( ( code, result ) => {
+				this._clearRequest( 'loadRevision' );
+				// Ignore aborted requests (user switched before this completed)
+				if ( code === 'http' && result && result.textStatus === 'abort' ) {
+					return;
+				}
 				this.editor.uiManager.hideSpinner();
 				const errorMsg = result && result.error && result.error.info
 					? result.error.info
@@ -381,13 +437,19 @@
 
 			this.editor.uiManager.showSpinner( this.getMessage( 'layers-loading' ) );
 
-			this.api.get( {
+			const jqXHR = this.api.get( {
 				action: 'layersinfo',
 				filename: this.editor.filename,
 				setname: setName,
 				format: 'json',
 				formatversion: 2
-			} ).then( ( data ) => {
+			} );
+
+			// Track request to abort any pending load if user switches sets quickly
+			this._trackRequest( 'loadSetByName', jqXHR );
+
+			jqXHR.then( ( data ) => {
+				this._clearRequest( 'loadSetByName' );
 				this.editor.uiManager.hideSpinner();
 
 				if ( !data || !data.layersinfo ) {
@@ -470,6 +532,11 @@
 				} );
 
 			} ).catch( ( code, result ) => {
+				this._clearRequest( 'loadSetByName' );
+				// Ignore aborted requests (user switched before this completed)
+				if ( code === 'http' && result && result.textStatus === 'abort' ) {
+					return;
+				}
 				this.editor.uiManager.hideSpinner();
 				const standardizedError = this.handleError(
 					{ error: { code: code, info: result && result.error && result.error.info } },
@@ -726,7 +793,13 @@
 			if ( typeof mw !== 'undefined' && mw.log ) {
 				mw.log.warn( '[APIManager] reloadRevisions error:', error );
 			}
-			// Ignore reload errors
+			// Show subtle notification for revision reload failures
+			if ( typeof mw !== 'undefined' && mw.notify ) {
+				mw.notify(
+					this.getMessage( 'layers-revision-reload-failed', 'Could not refresh revision list' ),
+					{ type: 'warn', autoHide: true, autoHideSeconds: 3 }
+				);
+			}
 		} );
 	}
 
@@ -1077,6 +1150,26 @@
 	 * @param {Object} options - Export options (see exportAsImage)
 	 * @param {string} options.filename - Custom filename (optional)
 	 */
+	/**
+	 * Sanitize a filename by removing/replacing characters that are problematic for filesystems
+	 *
+	 * @param {string} name - Filename to sanitize
+	 * @return {string} Sanitized filename
+	 */
+	sanitizeFilename( name ) {
+		if ( typeof name !== 'string' ) {
+			return 'image';
+		}
+		// Replace filesystem-problematic characters with underscores
+		// Windows forbidden: < > : " / \ | ? *
+		// Also remove control characters (via code point ranges) and leading/trailing whitespace
+		return name
+			// eslint-disable-next-line no-control-regex
+			.replace( /[<>:"/\\|?*\x00-\x1f]/g, '_' )
+			.replace( /^[\s.]+|[\s.]+$/g, '' )
+			.substring( 0, 200 ) || 'image';
+	}
+
 	downloadAsImage( options = {} ) {
 		const filename = this.editor.stateManager.get( 'filename' ) || 'image';
 		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
@@ -1088,7 +1181,17 @@
 		const ext = format === 'jpeg' ? '.jpg' : '.png';
 		// Format: ImageName-LayerSetName.ext (omit -default for default set)
 		const setNamePart = currentSetName === 'default' ? '' : `-${ currentSetName }`;
-		const downloadName = options.filename || `${ baseName }${ setNamePart }${ ext }`;
+		// Sanitize the final filename to prevent filesystem issues
+		// If user provided a filename with extension, use it as-is (after sanitizing); otherwise add extension
+		let downloadName;
+		if ( options.filename ) {
+			const sanitized = this.sanitizeFilename( options.filename );
+			// Don't add extension if user already provided one
+			const hasExt = /\.(png|jpg|jpeg)$/i.test( sanitized );
+			downloadName = hasExt ? sanitized : sanitized + ext;
+		} else {
+			downloadName = this.sanitizeFilename( `${ baseName }${ setNamePart }` ) + ext;
+		}
 
 		this.editor.uiManager.showSpinner();
 
@@ -1227,10 +1330,9 @@
 		// Clear all pending timeouts
 		this._clearAllTimeouts();
 		
-		// Abort any pending API requests if possible
-		if ( this.api && typeof this.api.abort === 'function' ) {
-			this.api.abort();
-		}
+		// Abort all tracked pending API requests
+		this._abortAllRequests();
+		
 		if ( this.errorHandler ) {
 			this.errorHandler.destroy();
 		}

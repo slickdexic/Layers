@@ -101,6 +101,7 @@ describe( 'LayersConstants', () => {
 			expect( LayersConstants.DEFAULTS.SIZES.ARROW_SIZE ).toBe( 10 );
 			expect( LayersConstants.DEFAULTS.SIZES.STAR_POINTS ).toBe( 5 );
 			expect( LayersConstants.DEFAULTS.SIZES.SELECTION_HANDLE_SIZE ).toBe( 8 );
+			expect( LayersConstants.DEFAULTS.SIZES.SELECTION_HANDLE_SIZE_TOUCH ).toBe( 14 );
 			expect( LayersConstants.DEFAULTS.SIZES.ROTATION_HANDLE_DISTANCE ).toBe( 25 );
 		} );
 
@@ -109,6 +110,63 @@ describe( 'LayersConstants', () => {
 			expect( Object.isFrozen( LayersConstants.DEFAULTS.LAYER ) ).toBe( true );
 			expect( Object.isFrozen( LayersConstants.DEFAULTS.COLORS ) ).toBe( true );
 			expect( Object.isFrozen( LayersConstants.DEFAULTS.SIZES ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'MATH', () => {
+		it( 'should provide SCALE_EPSILON from MathUtils when available', () => {
+			// MathUtils should already be loaded in test environment
+			expect( LayersConstants.MATH.SCALE_EPSILON ).toBe( 0.0001 );
+		} );
+
+		it( 'should provide INTEGER_EPSILON from MathUtils when available', () => {
+			expect( LayersConstants.MATH.INTEGER_EPSILON ).toBe( 1e-9 );
+		} );
+
+		it( 'should return fallback SCALE_EPSILON when MathUtils unavailable', () => {
+			// Temporarily remove MathUtils to test fallback
+			const originalMathUtils = window.Layers.MathUtils;
+			delete window.Layers.MathUtils;
+
+			// Re-require to get fresh getters (they check at runtime)
+			expect( LayersConstants.MATH.SCALE_EPSILON ).toBe( 0.0001 );
+
+			// Restore
+			window.Layers.MathUtils = originalMathUtils;
+		} );
+
+		it( 'should return fallback INTEGER_EPSILON when MathUtils unavailable', () => {
+			// Temporarily remove MathUtils to test fallback
+			const originalMathUtils = window.Layers.MathUtils;
+			delete window.Layers.MathUtils;
+
+			expect( LayersConstants.MATH.INTEGER_EPSILON ).toBe( 1e-9 );
+
+			// Restore
+			window.Layers.MathUtils = originalMathUtils;
+		} );
+
+		it( 'should return fallback when Layers namespace is missing', () => {
+			// Temporarily remove entire Layers namespace
+			const originalLayers = window.Layers;
+			delete window.Layers;
+
+			// Re-require the module to test full fallback path
+			// Since the module is already loaded, we test the getter logic directly
+			// The getters in the already-loaded module will check window.Layers at runtime
+			// We need to reload the module to properly test this edge case
+			jest.resetModules();
+
+			// Reload just LayersConstants without MathUtils
+			require( '../../resources/ext.layers.editor/LayersConstants.js' );
+			const FreshConstants = window.Layers.Constants;
+
+			// Should still return the fallback values
+			expect( FreshConstants.MATH.SCALE_EPSILON ).toBe( 0.0001 );
+			expect( FreshConstants.MATH.INTEGER_EPSILON ).toBe( 1e-9 );
+
+			// Restore
+			window.Layers = originalLayers;
 		} );
 	} );
 

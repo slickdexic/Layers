@@ -4,6 +4,76 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.4.8 (January 5, 2026)
+
+### Fixed
+- **ContextMenuController Memory Leak** — Fixed memory leak where document event listeners were not removed when context menu was closed
+  - Event handlers (`closeHandler`, `escHandler`) now stored as instance properties and properly cleaned up
+  - Added cleanup in `closeLayerContextMenu()` method
+  - 3 new tests added to verify memory leak prevention
+
+### Improved
+- **Magic Number Constants** — Consolidated mathematical constants into single source of truth
+  - Added `MathUtils.MATH` namespace with `SCALE_EPSILON` (0.0001) and `INTEGER_EPSILON` (1e-9)
+  - Removed duplicate constant definitions from `ShapeRenderer.js`, `PropertiesForm.js`, `LayerPanel.js`
+  - `LayersConstants.MATH` now references `MathUtils.MATH` for backward compatibility
+  - Updated `types/layers.d.ts` with Constants namespace definitions
+- **Test Count** — 8,304 tests passing
+
+---
+
+## Version 1.4.7 (January 5, 2026)
+
+### Fixed
+- **Template Images Not Displaying on File Pages** — Removed overly restrictive Content Security Policy from file description pages
+  - The CSP was blocking template images from Commons (e.g., `File:Ambox important.svg` used in Information/Imbox templates)
+  - CSP is now only applied in the editor action (`?action=editlayers`) where it's properly scoped
+
+---
+
+## Version 1.4.6 (January 5, 2026)
+
+### Added
+- **TIFF Image Support** — Full support for TIFF format images in the editor and viewer
+  - TIFF files are now correctly identified and loaded using MediaWiki thumbnail URLs
+  - `ImageLoader.js` detects non-web formats (TIFF, BMP, etc.) and automatically uses `Special:Redirect/file`
+- **SHA1 Fallback Lookup** — Added `findSetSha1()` method in `LayersDatabase.php` to find layer sets saved before InstantCommons support
+
+### Fixed
+- **Foreign File Delete/Rename Failing** — Fixed validation to not require local wiki page existence for foreign files
+- **Delete Confirmation Dialog Button Label** — Added missing `layers-delete` i18n key
+- **CanvasRenderer TIFF Support** — Enhanced `getImageFormat()` to detect TIFF files
+
+---
+
+## Version 1.4.5 (January 5, 2026)
+
+### Added
+- **InstantCommons/Foreign File Support** — Full support for files from Wikimedia Commons and other foreign repositories (GitHub issue #34)
+  - Foreign files (ForeignAPIFile, ForeignDBFile) are now detected and handled correctly
+  - Added `isForeignFile()` detection method across all 11 PHP files that access layer data
+  - Added `getFileSha1()` helper that generates stable fallback identifiers
+  - Editor now uses `Special:Redirect/file` URLs to load foreign images
+- **Dynamic CSP for Foreign Files** — CSP dynamically includes foreign file origins when editing
+
+### Fixed
+- **Foreign file layerslink URL generation** — Correctly generates local File: page URLs with `action=editlayers`
+- **Special:Redirect/file URL generation** — Fixed to use `$file->getName()` instead of prefixed key
+- **Filename normalization in wikitext parsing** — Normalized filenames (spaces to underscores) for consistent lookups
+- **MediaWiki 1.44 Title class namespace** — Fixed `ThumbnailProcessor.php` for MW 1.44+ compatibility
+
+---
+
+## Version 1.4.4 (January 4, 2026)
+
+### Fixed
+- **FR-10 Live Preview: Duplicate layer rendering after save** — Fixed by properly removing canvas in `LayersViewer.destroy()`
+- **FR-10 Live Preview: Base image not visible after save** — Fixed by storing/restoring original image styles
+- **FR-10 Live Preview: Stale layer data after save** — Fixed by clearing sessionStorage cache in `APIManager.handleSaveSuccess()`
+- **Cache invalidation timing** — Changed server-side cache invalidation from deferred to synchronous
+
+---
+
 ## Version 1.4.3 (January 3, 2026)
 
 ### Added

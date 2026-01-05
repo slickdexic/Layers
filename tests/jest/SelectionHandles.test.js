@@ -341,4 +341,32 @@ describe( 'SelectionHandles', () => {
 			expect( handles.handles ).toEqual( [] );
 		} );
 	} );
+
+	describe( 'touch device detection', () => {
+		it( 'should use 8px handle size for mouse devices', () => {
+			window.matchMedia = jest.fn().mockReturnValue( { matches: false } );
+			const mouseHandles = new SelectionHandles();
+			expect( mouseHandles.handleSize ).toBe( 8 );
+		} );
+
+		it( 'should use 14px handle size for touch devices', () => {
+			window.matchMedia = jest.fn().mockReturnValue( { matches: true } );
+			const touchHandles = new SelectionHandles();
+			expect( touchHandles.handleSize ).toBe( 14 );
+		} );
+
+		it( 'should use provided handleSize option over auto-detect', () => {
+			window.matchMedia = jest.fn().mockReturnValue( { matches: true } );
+			const customHandles = new SelectionHandles( { handleSize: 20 } );
+			expect( customHandles.handleSize ).toBe( 20 );
+		} );
+
+		it( 'should fall back to 8px when matchMedia unavailable', () => {
+			const originalMatchMedia = window.matchMedia;
+			delete window.matchMedia;
+			const fallbackHandles = new SelectionHandles();
+			expect( fallbackHandles.handleSize ).toBe( 8 );
+			window.matchMedia = originalMatchMedia;
+		} );
+	} );
 } );

@@ -344,7 +344,12 @@
 			if ( this.editor && this.editor.stateManager ) {
 				this.editor.stateManager.set( 'backgroundOpacity', Math.max( 0, Math.min( 1, opacity ) ) );
 				if ( this.editor.canvasManager ) {
-					this.editor.canvasManager.redraw();
+					// Use optimized redraw for slider interactions to avoid performance issues
+					if ( this.editor.canvasManager.redrawOptimized ) {
+						this.editor.canvasManager.redrawOptimized();
+					} else {
+						this.editor.canvasManager.redraw();
+					}
 				}
 			}
 		}

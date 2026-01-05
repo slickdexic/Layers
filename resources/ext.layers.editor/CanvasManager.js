@@ -117,6 +117,7 @@ class CanvasManager {
 		this.currentTool = 'pointer';
 		this.isDrawing = false;
 		this.startPoint = null;
+		this.isDestroyed = false; // Guard for async callbacks after destruction
 
 		// Note: Performance optimizations like dirty region tracking and layer caching
 		// can be added in RenderCoordinator.js when needed. See improvement_plan.md #0.2
@@ -464,6 +465,11 @@ class CanvasManager {
 	 * @param {Object} info - Load info (width, height, source, etc.)
 	 */
 	handleImageLoaded ( image, info ) {
+		// Guard against callbacks after destruction (async race condition)
+		if ( this.isDestroyed ) {
+			return;
+		}
+
 		this.backgroundImage = image;
 
 		// Pass image to renderer
@@ -1072,11 +1078,27 @@ class CanvasManager {
 	_getRawLayerBounds ( layer ) {
 		// Handle text layers specially - they need canvas context for measurement
 		if ( layer && layer.type === 'text' ) {
+			// Guard: text measurement requires canvas context
+			if ( !this.ctx ) {
+				// Fallback to basic bounds without text measurement
+				return {
+					x: layer.x || 0,
+					y: layer.y || 0,
+					width: layer.width || 100,
+					height: layer.height || 20
+				};
+			}
 			const canvasWidth = this.canvas ? this.canvas.width : 0;
 			const TextUtils = getClass( 'Utils.Text', 'TextUtils' );
 			const textMetrics = TextUtils ? TextUtils.measureTextLayer( layer, this.ctx, canvasWidth ) : null;
 			if ( !textMetrics ) {
-				return null;
+				// Fallback to layer's own bounds if TextUtils unavailable
+				return {
+					x: layer.x || 0,
+					y: layer.y || 0,
+					width: layer.width || 100,
+					height: layer.height || 20
+				};
 			}
 			return {
 				x: textMetrics.originX,
@@ -1852,6 +1874,9 @@ class CanvasManager {
 	}
 
 	destroy () {
+		// Set destroyed flag first to prevent async callbacks from running
+		this.isDestroyed = true;
+
 		// Cancel any pending animation frame to prevent memory leaks
 		if ( this.animationFrameId ) {
 			window.cancelAnimationFrame( this.animationFrameId );
@@ -1908,6 +1933,11 @@ class CanvasManager {
 
 		// Clear clipboard
 		this.clipboard = [];
+
+		// Reset zoom animation state
+		this.zoomAnimationStartTime = 0;
+		this.zoomAnimationStartZoom = 1.0;
+		this.zoomAnimationTargetZoom = 1.0;
 
 		// Clear references
 		this.canvas = null;
