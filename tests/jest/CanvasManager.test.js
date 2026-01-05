@@ -387,6 +387,38 @@ describe( 'CanvasManager', () => {
 			expect( global.TextUtils.measureTextLayer ).toHaveBeenCalled();
 			expect( bounds ).toBeDefined();
 		} );
+
+		it( 'should return fallback bounds for text layer when ctx is null', () => {
+			// Temporarily null out the context
+			const originalCtx = canvasManager.ctx;
+			canvasManager.ctx = null;
+
+			const layer = { type: 'text', x: 50, y: 75, width: 150, height: 30, text: 'Hello' };
+			const bounds = canvasManager.getLayerBounds( layer );
+
+			expect( bounds ).toBeDefined();
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 75 );
+			expect( bounds.width ).toBe( 150 );
+			expect( bounds.height ).toBe( 30 );
+
+			// Restore context
+			canvasManager.ctx = originalCtx;
+		} );
+
+		it( 'should use default dimensions for text layer fallback when not specified', () => {
+			const originalCtx = canvasManager.ctx;
+			canvasManager.ctx = null;
+
+			const layer = { type: 'text', x: 10, y: 20, text: 'Hello' };
+			const bounds = canvasManager.getLayerBounds( layer );
+
+			expect( bounds ).toBeDefined();
+			expect( bounds.width ).toBe( 100 ); // default
+			expect( bounds.height ).toBe( 20 ); // default
+
+			canvasManager.ctx = originalCtx;
+		} );
 	} );
 
 	describe( 'canvas pool management', () => {

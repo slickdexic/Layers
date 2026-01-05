@@ -204,6 +204,14 @@
 		}
 
 		/**
+		 * Maximum recursion depth for group traversal (prevents infinite loops on corrupted data)
+		 * @type {number}
+		 */
+		static get MAX_GROUP_DEPTH() {
+			return 10;
+		}
+
+		/**
 		 * Get all descendant IDs of a group (recursive)
 		 *
 		 * @param {string} groupId Group layer ID
@@ -222,13 +230,22 @@
 				return this.canvasManager.editor.groupManager.getGroupChildren( groupId, true );
 			}
 
-			// Fallback: manually traverse
-			const traverse = ( parentId ) => {
+			// Fallback: manually traverse with visited set to prevent infinite recursion
+			const visited = new Set();
+			const traverse = ( parentId, depth = 0 ) => {
+				// Guard against infinite recursion from circular references or excessive depth
+				if ( visited.has( parentId ) || depth > SelectionManager.MAX_GROUP_DEPTH ) {
+					return;
+				}
+				visited.add( parentId );
+
 				const parent = this.getLayerById( parentId );
 				if ( parent && parent.type === 'group' && Array.isArray( parent.children ) ) {
 					parent.children.forEach( ( childId ) => {
-						ids.push( childId );
-						traverse( childId ); // Recurse for nested groups
+						if ( !visited.has( childId ) ) {
+							ids.push( childId );
+							traverse( childId, depth + 1 ); // Recurse for nested groups
+						}
 					} );
 				}
 			};

@@ -896,6 +896,59 @@ describe( 'APIManager', function () {
 		} );
 	} );
 
+	describe( 'sanitizeFilename', function () {
+		it( 'should return "image" for non-string input', function () {
+			expect( apiManager.sanitizeFilename( null ) ).toBe( 'image' );
+			expect( apiManager.sanitizeFilename( undefined ) ).toBe( 'image' );
+			expect( apiManager.sanitizeFilename( 123 ) ).toBe( 'image' );
+			expect( apiManager.sanitizeFilename( {} ) ).toBe( 'image' );
+		} );
+
+		it( 'should replace Windows forbidden characters with underscores', function () {
+			const result = apiManager.sanitizeFilename( 'file<name>:test"path/back\\pipe|question?star*' );
+
+			expect( result ).not.toContain( '<' );
+			expect( result ).not.toContain( '>' );
+			expect( result ).not.toContain( ':' );
+			expect( result ).not.toContain( '"' );
+			expect( result ).not.toContain( '/' );
+			expect( result ).not.toContain( '\\' );
+			expect( result ).not.toContain( '|' );
+			expect( result ).not.toContain( '?' );
+			expect( result ).not.toContain( '*' );
+		} );
+
+		it( 'should strip leading/trailing dots and whitespace', function () {
+			expect( apiManager.sanitizeFilename( '  filename  ' ) ).toBe( 'filename' );
+			expect( apiManager.sanitizeFilename( '...filename...' ) ).toBe( 'filename' );
+			expect( apiManager.sanitizeFilename( ' . filename . ' ) ).toBe( 'filename' );
+		} );
+
+		it( 'should truncate to 200 characters', function () {
+			const longName = 'a'.repeat( 250 );
+			const result = apiManager.sanitizeFilename( longName );
+
+			expect( result.length ).toBe( 200 );
+		} );
+
+		it( 'should return "image" for empty result after sanitization', function () {
+			expect( apiManager.sanitizeFilename( '...' ) ).toBe( 'image' );
+			expect( apiManager.sanitizeFilename( '   ' ) ).toBe( 'image' );
+		} );
+
+		it( 'should replace all forbidden characters with underscores', function () {
+			// Characters are replaced, not removed
+			const result = apiManager.sanitizeFilename( '<>:"/\\|?*' );
+			expect( result ).toBe( '_________' );
+		} );
+
+		it( 'should preserve valid characters', function () {
+			const result = apiManager.sanitizeFilename( 'My-Image_2024 (final)' );
+
+			expect( result ).toBe( 'My-Image_2024 (final)' );
+		} );
+	} );
+
 	describe( 'handleSaveError', function () {
 		it( 'should log detailed error information', function () {
 			apiManager.handleSaveError( { code: 'savefailed', info: 'Database error' } );
@@ -1168,12 +1221,67 @@ describe( 'APIManager', function () {
 			expect( apiManager.errorHandler ).toBeNull();
 		} );
 
-		it( 'should call abort if available', function () {
-			apiManager.api.abort = jest.fn();
+		it( 'should abort all pending requests', function () {
+			const mockAbort1 = jest.fn();
+			const mockAbort2 = jest.fn();
+			apiManager.pendingRequests.set( 'loadRevision', { abort: mockAbort1 } );
+			apiManager.pendingRequests.set( 'loadSetByName', { abort: mockAbort2 } );
 
 			apiManager.destroy();
 
-			expect( apiManager.api ).toBeNull(); // Was set to null after abort
+			expect( mockAbort1 ).toHaveBeenCalled();
+			expect( mockAbort2 ).toHaveBeenCalled();
+			expect( apiManager.pendingRequests.size ).toBe( 0 );
+		} );
+
+		it( 'should clear pending requests map', function () {
+			apiManager.pendingRequests.set( 'test', { abort: jest.fn() } );
+
+			apiManager.destroy();
+
+			expect( apiManager.pendingRequests.size ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'request tracking', function () {
+		it( 'should track new requests', function () {
+			const mockJqXHR = { abort: jest.fn() };
+
+			apiManager._trackRequest( 'testOp', mockJqXHR );
+
+			expect( apiManager.pendingRequests.get( 'testOp' ) ).toBe( mockJqXHR );
+		} );
+
+		it( 'should abort existing request when tracking new one of same type', function () {
+			const oldRequest = { abort: jest.fn() };
+			const newRequest = { abort: jest.fn() };
+
+			apiManager._trackRequest( 'testOp', oldRequest );
+			apiManager._trackRequest( 'testOp', newRequest );
+
+			expect( oldRequest.abort ).toHaveBeenCalled();
+			expect( apiManager.pendingRequests.get( 'testOp' ) ).toBe( newRequest );
+		} );
+
+		it( 'should clear request after completion', function () {
+			const mockJqXHR = { abort: jest.fn() };
+			apiManager._trackRequest( 'testOp', mockJqXHR );
+
+			apiManager._clearRequest( 'testOp' );
+
+			expect( apiManager.pendingRequests.has( 'testOp' ) ).toBe( false );
+		} );
+
+		it( 'should not throw when clearing non-existent request', function () {
+			expect( () => apiManager._clearRequest( 'nonexistent' ) ).not.toThrow();
+		} );
+
+		it( 'should handle request without abort method gracefully', function () {
+			const mockJqXHR = {}; // No abort method
+			apiManager._trackRequest( 'testOp', mockJqXHR );
+
+			// Should not throw when tracking another request that needs to abort the old one
+			expect( () => apiManager._trackRequest( 'testOp', { abort: jest.fn() } ) ).not.toThrow();
 		} );
 	} );
 

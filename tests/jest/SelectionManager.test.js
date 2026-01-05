@@ -1722,6 +1722,42 @@ describe('SelectionManager', () => {
             expect(mockGroupManager.getGroupChildren).toHaveBeenCalledWith('group1', true);
             expect(ids).toEqual(['child1', 'child2']);
         });
+
+        test('should handle circular parent references without infinite loop', () => {
+            // Create a pathological case where groups reference each other
+            mockCanvasManager.layers = [
+                { id: 'group1', type: 'group', children: ['group2', 'child1'] },
+                { id: 'group2', type: 'group', children: ['group1', 'child2'] }, // circular!
+                { id: 'child1', type: 'rectangle' },
+                { id: 'child2', type: 'circle' }
+            ];
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            // Should not hang or throw - should handle the circular reference gracefully
+            const ids = selectionManager._getGroupDescendantIds('group1');
+
+            // Should find all unique IDs without duplicates or infinite recursion
+            expect(ids).toContain('group2');
+            expect(ids).toContain('child1');
+            expect(ids).toContain('child2');
+            // group1 is the root, so it shouldn't be in its own descendants
+            expect(ids).not.toContain('group1');
+        });
+
+        test('should handle self-referencing group without infinite loop', () => {
+            // Edge case: group references itself
+            mockCanvasManager.layers = [
+                { id: 'group1', type: 'group', children: ['group1', 'child1'] }, // self-reference!
+                { id: 'child1', type: 'rectangle' }
+            ];
+            selectionManager = new SelectionManager(mockCanvasManager);
+
+            const ids = selectionManager._getGroupDescendantIds('group1');
+
+            expect(ids).toContain('child1');
+            // Should not include group1 again (would be infinite loop)
+            expect(ids.filter(id => id === 'group1').length).toBeLessThanOrEqual(1);
+        });
     });
 
     describe('touch device detection', () => {

@@ -215,23 +215,34 @@ describe( 'LayerItemEvents', () => {
 			} );
 		} );
 
-		it( 'should focus previous layer on ArrowUp', () => {
-			const grabArea2 = layerList.querySelector( '.layer-item[data-layer-id="layer2"] .layer-grab-area' );
-			grabArea2.focus();
+		// NOTE: When focused on .layer-grab-area, ArrowUp/Down triggers layer reordering (onMoveLayer),
+		// not navigation. Navigation happens when focused on other layer item elements.
+		// The reordering behavior is tested in "keyboard layer reordering delegation" describe block.
+
+		it( 'should navigate to previous layer on ArrowUp when not on grab area', () => {
+			// Focus on the layer item itself (not grab area) by using a non-grab-area element
+			const nameEl = layerList.querySelector( '.layer-item[data-layer-id="layer2"] .layer-name' );
+			nameEl.contentEditable = 'false';
+			nameEl.setAttribute( 'tabindex', '0' );
+			nameEl.focus();
 
 			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp', bubbles: true } );
-			grabArea2.dispatchEvent( event );
+			Object.defineProperty( event, 'preventDefault', { value: jest.fn() } );
+			nameEl.dispatchEvent( event );
 
 			const grabArea1 = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-grab-area' );
 			expect( document.activeElement ).toBe( grabArea1 );
 		} );
 
-		it( 'should focus next layer on ArrowDown', () => {
-			const grabArea1 = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-grab-area' );
-			grabArea1.focus();
+		it( 'should navigate to next layer on ArrowDown when not on grab area', () => {
+			const nameEl = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-name' );
+			nameEl.contentEditable = 'false';
+			nameEl.setAttribute( 'tabindex', '0' );
+			nameEl.focus();
 
 			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown', bubbles: true } );
-			grabArea1.dispatchEvent( event );
+			Object.defineProperty( event, 'preventDefault', { value: jest.fn() } );
+			nameEl.dispatchEvent( event );
 
 			const grabArea2 = layerList.querySelector( '.layer-item[data-layer-id="layer2"] .layer-grab-area' );
 			expect( document.activeElement ).toBe( grabArea2 );
@@ -244,7 +255,7 @@ describe( 'LayerItemEvents', () => {
 			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp', bubbles: true } );
 			grabArea1.dispatchEvent( event );
 
-			// Should stay focused on first item
+			// Should stay focused on first item (onMoveLayer may be called but no navigation happens)
 			expect( document.activeElement ).toBe( grabArea1 );
 		} );
 
@@ -255,7 +266,7 @@ describe( 'LayerItemEvents', () => {
 			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown', bubbles: true } );
 			grabArea3.dispatchEvent( event );
 
-			// Should stay focused on last item
+			// Should stay focused on last item (onMoveLayer may be called but no navigation happens)
 			expect( document.activeElement ).toBe( grabArea3 );
 		} );
 
@@ -679,6 +690,107 @@ describe( 'LayerItemEvents', () => {
 
 			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown', bubbles: true } );
 			expect( () => grabArea.dispatchEvent( event ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'folder expand/collapse delegation', () => {
+		beforeEach( () => {
+			// Add an expand toggle button to a layer item
+			const item = layerList.querySelector( '.layer-item[data-layer-id="layer1"]' );
+			const expandToggle = document.createElement( 'button' );
+			expandToggle.className = 'layer-expand-toggle';
+			expandToggle.setAttribute( 'aria-expanded', 'true' );
+			item.insertBefore( expandToggle, item.firstChild );
+
+			callbacks.onToggleGroupExpand = jest.fn();
+
+			instance = new LayerItemEvents( {
+				layerList: layerList,
+				getLayers: () => mockLayers,
+				callbacks: callbacks
+			} );
+		} );
+
+		it( 'should call onToggleGroupExpand when clicking expand toggle', () => {
+			const expandToggle = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-expand-toggle' );
+			const event = new MouseEvent( 'click', { bubbles: true } );
+			expandToggle.dispatchEvent( event );
+
+			expect( callbacks.onToggleGroupExpand ).toHaveBeenCalledWith( 'layer1' );
+		} );
+
+		it( 'should not call onSelect when clicking expand toggle', () => {
+			const expandToggle = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-expand-toggle' );
+			const event = new MouseEvent( 'click', { bubbles: true } );
+			expandToggle.dispatchEvent( event );
+
+			expect( callbacks.onSelect ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'keyboard layer reordering delegation', () => {
+		beforeEach( () => {
+			callbacks.onMoveLayer = jest.fn();
+
+			instance = new LayerItemEvents( {
+				layerList: layerList,
+				getLayers: () => mockLayers,
+				callbacks: callbacks
+			} );
+		} );
+
+		it( 'should call onMoveLayer with direction -1 on ArrowUp from grab area', () => {
+			const grabArea = layerList.querySelector( '.layer-item[data-layer-id="layer2"] .layer-grab-area' );
+			grabArea.focus();
+
+			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp', bubbles: true } );
+			grabArea.dispatchEvent( event );
+
+			expect( callbacks.onMoveLayer ).toHaveBeenCalledWith( 'layer2', -1 );
+		} );
+
+		it( 'should call onMoveLayer with direction 1 on ArrowDown from grab area', () => {
+			const grabArea = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-grab-area' );
+			grabArea.focus();
+
+			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown', bubbles: true } );
+			grabArea.dispatchEvent( event );
+
+			expect( callbacks.onMoveLayer ).toHaveBeenCalledWith( 'layer1', 1 );
+		} );
+
+		it( 'should not call onMoveLayer when onMoveLayer callback not provided', () => {
+			// Create new instance without onMoveLayer callback
+			instance.destroy();
+			const callbacksWithoutMove = { ...callbacks };
+			delete callbacksWithoutMove.onMoveLayer;
+
+			instance = new LayerItemEvents( {
+				layerList: layerList,
+				getLayers: () => mockLayers,
+				callbacks: callbacksWithoutMove
+			} );
+
+			const grabArea = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-grab-area' );
+			grabArea.focus();
+
+			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown', bubbles: true } );
+			// Should not throw
+			expect( () => grabArea.dispatchEvent( event ) ).not.toThrow();
+		} );
+
+		it( 'should navigate (not reorder) when arrow key pressed on non-grab-area element', () => {
+			// When pressing arrow on a layer item but NOT the grab area, should navigate
+			const nameEl = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-name' );
+			nameEl.contentEditable = 'false'; // Not editable
+			nameEl.focus();
+
+			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown', bubbles: true } );
+			Object.defineProperty( event, 'preventDefault', { value: jest.fn() } );
+			nameEl.dispatchEvent( event );
+
+			// Should not call onMoveLayer since focus is not on grab area
+			expect( callbacks.onMoveLayer ).not.toHaveBeenCalled();
 		} );
 	} );
 } );

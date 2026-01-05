@@ -1,6 +1,6 @@
 # Layers Extension Documentation
 
-**Last Updated:** January 3, 2026
+**Last Updated:** January 5, 2026
 
 This directory contains technical documentation for the Layers MediaWiki extension. For user-facing documentation, see the [wiki/](../wiki/) directory.
 
@@ -31,6 +31,7 @@ This directory contains technical documentation for the Layers MediaWiki extensi
 ### Features
 - [NAMED_LAYER_SETS.md](NAMED_LAYER_SETS.md) - Multiple named annotation sets per image
 - [WIKITEXT_USAGE.md](WIKITEXT_USAGE.md) - Wikitext syntax for embedding layers
+- [SHAPE_LIBRARY_PROPOSAL.md](SHAPE_LIBRARY_PROPOSAL.md) - **NEW** Built-in shape library feature proposal
 
 ### Quality & Standards
 - [ACCESSIBILITY.md](ACCESSIBILITY.md) - ARIA roles, keyboard navigation, screen reader support
@@ -43,6 +44,7 @@ This directory contains technical documentation for the Layers MediaWiki extensi
 
 ### Planning
 - [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) - Active feature proposals and ideas
+- [SHAPE_LIBRARY_PROPOSAL.md](SHAPE_LIBRARY_PROPOSAL.md) - Shape library feature proposal (v1.5.0)
 - [RELEASE_GUIDE.md](RELEASE_GUIDE.md) - Release checklist and process
 
 ---

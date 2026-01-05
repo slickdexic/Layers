@@ -2,6 +2,66 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.4.9] - 2026-01-05
+
+### Fixed
+- **LayerRenderer Memory Leak** — Added LRU cache eviction to `_imageCache` with 50 entry limit
+  - Previously unbounded Map would grow indefinitely with image layers
+  - Cache now evicts oldest entries when limit exceeded, using Map iteration order for LRU semantics
+  - 2 new tests for cache eviction and entry refresh behavior
+- **CanvasManager Async Race Condition** — Added `isDestroyed` flag to guard async callbacks
+  - `handleImageLoaded` now returns early if component was destroyed during image load
+  - Prevents "setting property of null" errors after editor close
+  - 3 new tests for isDestroyed flag initialization and behavior
+- **SelectionManager Infinite Recursion** — Added visited Set to `_getGroupDescendantIds()`
+  - Prevents stack overflow when circular group references exist (corrupted data)
+  - 2 new tests for circular and self-referencing group edge cases
+- **Export Filename Sanitization** — Added `sanitizeFilename()` helper in APIManager
+  - Removes Windows-forbidden characters: `< > : " / \ | ? *`
+  - Strips control characters and leading/trailing dots/whitespace
+  - Truncates to 200 characters, preserves user-provided extensions
+  - 6 new tests for sanitization edge cases
+- **LayerPanel Event Listener Accumulation** — Converted direct listeners to event delegation
+  - Moved keyboard reordering (ArrowUp/Down on grab area) from LayerListRenderer to LayerItemEvents
+  - Moved folder expand/collapse click from LayerListRenderer to LayerItemEvents
+  - Prevents listener accumulation when layer items are recreated during re-render
+  - Event delegation uses single listener on container instead of per-item listeners
+  - 5 new tests for delegation behavior
+- **APIManager Request Race Condition** — Added request tracking with auto-abort for API calls
+  - `loadRevisionById` and `loadLayersBySetName` now abort pending requests of same type
+  - Prevents out-of-order response handling when users switch sets/revisions quickly
+  - Uses `pendingRequests` Map to track jqXHR by operation type
+  - Aborted requests are silently ignored instead of showing error notifications
+  - 6 new tests for request tracking and abort behavior
+- **State Mutation Pattern** — Fixed in-place array mutation in LayersEditor and LayerSetManager
+  - Changed `namedSets.push(...)` to immutable pattern `[...existingNamedSets, newSet]`
+  - Ensures state management with reference equality checks works correctly
+- **CanvasManager Text Layer Bounds** — Added null checks for canvas context in text bounds calculation
+  - `_getRawLayerBounds()` now returns fallback bounds when `this.ctx` is null
+  - Prevents errors when called before canvas initialization or after destroy
+  - 2 new tests for null context fallback behavior
+- **LayerRenderer Sub-Renderer Cleanup** — Added proper cleanup for all 8 sub-renderers in `destroy()`
+  - Calls `destroy()` on sub-renderers that have the method (shadowRenderer, arrowRenderer, etc.)
+  - Nulls out all sub-renderer references to prevent memory leaks
+  - 2 new tests for sub-renderer cleanup behavior
+- **Layer Update Immutability** — Changed `updateLayer()` to use immutable update pattern
+  - Creates new layer object and new array instead of mutating in place
+  - Ensures state management with reference equality checks works correctly
+  - 2 new tests for immutable update behavior
+- **Zoom Animation Cleanup** — Reset zoom animation properties in CanvasManager `destroy()`
+  - Clears `zoomAnimationStartTime`, `zoomAnimationStartZoom`, `zoomAnimationTargetZoom`
+  - Prevents stale animation state after editor close
+- **Revision Reload Notification** — Show user notification when revision list refresh fails
+  - Changed silent failure to subtle warning notification
+  - Added new i18n key `layers-revision-reload-failed`
+
+### Improved
+- **Background Opacity Performance** — Slider now uses `redrawOptimized()` for RAF-batched redraws
+  - Prevents multiple synchronous redraws per frame during slider drag
+- **Test Count** — 8,377 tests passing (up from 8,346), 39 new tests for bug fixes
+
+---
+
 ## [1.4.8] - 2026-01-05
 
 ### Fixed

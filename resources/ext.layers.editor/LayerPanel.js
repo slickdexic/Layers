@@ -806,7 +806,9 @@
 						onToggleLock: ( layerId ) => this.toggleLayerLock( layerId ),
 						onDelete: ( layerId ) => this.deleteLayer( layerId ),
 						onNameClick: ( layerId, nameEl ) => this.handleNameClick( layerId, nameEl ),
-						onEditName: ( layerId, nameEl ) => this.editLayerName( layerId, nameEl )
+						onEditName: ( layerId, nameEl ) => this.editLayerName( layerId, nameEl ),
+						onToggleGroupExpand: ( layerId ) => this.toggleGroupExpand( layerId ),
+						onMoveLayer: ( layerId, direction ) => this.moveLayer( layerId, direction )
 					},
 					addTargetListener: this.addTargetListener.bind( this )
 				} );

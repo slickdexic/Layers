@@ -628,17 +628,17 @@ class LayersEditor {
 		this.stateManager.set( 'currentLayerSetId', null );
 		this.stateManager.set( 'hasUnsavedChanges', true );
 
-		// Add to named sets list
-		const namedSets = this.stateManager.get( 'namedSets' ) || [];
+		// Add to named sets list (use immutable pattern for state tracking)
+		const existingNamedSets = this.stateManager.get( 'namedSets' ) || [];
 		const userName = mw.config.get( 'wgUserName' ) || 'Anonymous';
-		namedSets.push( {
+		const updatedNamedSets = [ ...existingNamedSets, {
 			name: setName,
 			revision_count: 0,
 			latest_revision: null,
 			latest_timestamp: null,
 			latest_user_name: userName
-		} );
-		this.stateManager.set( 'namedSets', namedSets );
+		} ];
+		this.stateManager.set( 'namedSets', updatedNamedSets );
 
 		// Update UI
 		if ( this.canvasManager ) {
@@ -731,10 +731,16 @@ class LayersEditor {
 			changes = this.validationManager.sanitizeLayerData( changes );
 
 			const layers = this.stateManager.get( 'layers' ) || [];
-			const layer = layers.find( ( l ) => l.id === layerId );
-			if ( layer ) {
-				Object.assign( layer, changes );
-				this.stateManager.set( 'layers', layers );
+			const layerIndex = layers.findIndex( ( l ) => l.id === layerId );
+			if ( layerIndex !== -1 ) {
+				// Use immutable update pattern - create new layer object and new array
+				const updatedLayer = { ...layers[ layerIndex ], ...changes };
+				const updatedLayers = [
+					...layers.slice( 0, layerIndex ),
+					updatedLayer,
+					...layers.slice( layerIndex + 1 )
+				];
+				this.stateManager.set( 'layers', updatedLayers );
 
 				// Throttle redraw to prevent canvas crashes during rapid property changes
 				if ( !this._updateLayerRenderScheduled ) {

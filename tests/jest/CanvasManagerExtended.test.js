@@ -420,6 +420,44 @@ describe( 'CanvasManager Extended Coverage', () => {
 			canvasManager.handleImageLoaded( mockImage, { width: 800, height: 600 } );
 			expect( canvasManager.resizeCanvas ).toHaveBeenCalled();
 		} );
+
+		it( 'should return early if isDestroyed is true', () => {
+			const mockImage = { width: 800, height: 600 };
+			// Set initial state to track if it gets modified
+			canvasManager.backgroundImage = null;
+			canvasManager.isDestroyed = true;
+
+			canvasManager.handleImageLoaded( mockImage, { width: 800, height: 600 } );
+
+			// Should not set backgroundImage when destroyed (remains null)
+			expect( canvasManager.backgroundImage ).toBeNull();
+			expect( canvasManager.renderer.setBackgroundImage ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'isDestroyed flag', () => {
+		it( 'should initialize isDestroyed to false', () => {
+			// Create a fresh instance to test initialization
+			const freshCanvas = document.createElement( 'canvas' );
+			const freshMockEditor = {
+				stateManager: {
+					get: jest.fn().mockReturnValue( null )
+				},
+				layers: [],
+				errorLog: jest.fn()
+			};
+			const freshManager = new CanvasManager( freshCanvas, freshMockEditor );
+
+			expect( freshManager.isDestroyed ).toBe( false );
+
+			freshManager.destroy();
+		} );
+
+		it( 'should set isDestroyed to true on destroy', () => {
+			expect( canvasManager.isDestroyed ).toBeFalsy();
+			canvasManager.destroy();
+			expect( canvasManager.isDestroyed ).toBe( true );
+		} );
 	} );
 
 	describe( 'handleImageLoadError', () => {

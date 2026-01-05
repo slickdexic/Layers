@@ -9,18 +9,20 @@
 
 ## Executive Summary
 
-The extension is **production-ready** and actively maintained. A critical code review on January 4, 2026 identified remaining issues that have been documented. All P0 issues have been resolved.
+The extension is **production-ready** and actively maintained. A comprehensive critical code review on January 5, 2026 identified 23 issues across 6 major files. Most P0 issues have been resolved, with 3 new HIGH priority issues identified.
 
-**Current Rating: 8.7/10**
+**Current Rating: 8.5/10**
 
 **✅ Issues Fixed (January 2026):**
-- ✅ All P0 security and stability issues resolved
-- ✅ Rate limiting on all write API endpoints
+- ✅ All rate limiting issues resolved
 - ✅ Memory leaks fixed (animation frames, timers, context menu)
 - ✅ TIFF and InstantCommons support added
 - ✅ Template images CSP issue fixed
 
-**⚠️ Known Technical Debt:**
+**🚨 Newly Identified (January 5, 2026):**
+- ⚠️ **LayerRenderer unbounded image cache** (memory leak potential)
+- ⚠️ **LayerPanel event listener accumulation** (memory leak on re-renders)
+- ⚠️ **APIManager missing request abort** (race condition potential)
 - ⚠️ **12 god classes** (30% of JS codebase) - All use delegation patterns
 
 ---
@@ -31,12 +33,12 @@ The extension is **production-ready** and actively maintained. A critical code r
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 12 tools + layer grouping + curved arrows + callouts |
 | **Security** | ✅ Excellent | CSRF, rate limiting, validation on all endpoints |
-| **Testing** | ✅ Excellent | 8,340 tests, 94.59% statement coverage |
+| **Testing** | ✅ Excellent | 8,346 tests, 94.69% statement coverage |
 | **ES6 Migration** | ✅ Complete | 94+ classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Debt | 12 files >1,000 lines (all with delegation patterns) |
-| **Memory Leaks** | ✅ Resolved | All identified leaks fixed (Jan 4, 2026) |
-| **Mobile Support** | ✅ Complete | Responsive, touch handles, collapsible panel, keyboard |
-| **Codebase Size** | ✅ Healthy | ~58,100 lines (105 files), well under 75K target |
+| **Memory Leaks** | ⚠️ Partial | Animation frame leaks fixed, image cache unbounded |
+| **Mobile Support** | ⚠️ Basic | Touch works, UI not responsive |
+| **Codebase Size** | ✅ Healthy | ~58,260 lines (107 files), well under 75K target |
 
 ---
 
@@ -51,9 +53,9 @@ The extension is **production-ready** and actively maintained. A critical code r
 
 ---
 
-## Phase 0: Critical Issues (P0) - ✅ ALL RESOLVED
+## Phase 0: Critical Issues (P0) - ✅ MOSTLY RESOLVED
 
-All P0 issues have been resolved:
+All previously identified P0 issues have been resolved. New issues identified in Jan 5 review are tracked below.
 
 | Issue | Status | Resolution |
 |-------|--------|------------|
@@ -68,60 +70,85 @@ All P0 issues have been resolved:
 
 ---
 
-## Phase 1: High Priority Issues (P1)
+## Phase 1: High Priority Issues (P1) - 🚨 NEW ISSUES IDENTIFIED
 
-### P1.1 ContextMenuController Memory Leak
+### P1.1 LayerRenderer.js Unbounded Image Cache
+
+**Status:** 🚨 NEW (January 5, 2026)  
+**Severity:** HIGH  
+**File:** `resources/ext.layers.shared/LayerRenderer.js` (lines 465-475)
+
+**Problem:** The `_imageCache` Map grows unboundedly as new image layers are added. Over a long editing session with many image layers, this causes memory bloat and potential browser slowdown.
+
+**Suggested Fix:** Implement LRU cache with max size:
+```javascript
+const MAX_CACHE_SIZE = 50;
+if (this._imageCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = this._imageCache.keys().next().value;
+    this._imageCache.delete(firstKey);
+}
+```
+
+### P1.2 LayerPanel.js Event Listener Accumulation
+
+**Status:** 🚨 NEW (January 5, 2026)  
+**Severity:** HIGH  
+**File:** `resources/ext.layers.editor/LayerPanel.js`
+
+**Problem:** The `addLayerItemEventListeners` function adds event listeners to layer items, but when the layer list is re-rendered, new elements get new listeners without cleaning old ones. The `data-has-listeners` attribute check is fragile as elements may be recreated on render.
+
+**Suggested Fix:** Use event delegation on the layer list container instead of individual item listeners.
+
+### P1.3 APIManager.js Missing Request Abort
+
+**Status:** 🚨 NEW (January 5, 2026)  
+**Severity:** MEDIUM-HIGH  
+**File:** `resources/ext.layers.editor/APIManager.js`
+
+**Problem:** `loadLayerSet()`, `loadNamedSet()`, and `loadRevision()` don't track or abort pending API requests. If user switches sets quickly, multiple concurrent requests could complete out of order, causing state inconsistencies.
+
+**Suggested Fix:** Track active XHR handles and abort previous requests when a new one starts.
+
+### P1.4 ContextMenuController Memory Leak
 
 **Status:** ✅ FIXED (January 4, 2026)  
 **Severity:** MEDIUM  
 **File:** `resources/ext.layers.editor/ui/ContextMenuController.js`
 
-**Problem:** When a context menu was open and `destroy()` was called, the `closeHandler` and `escHandler` event listeners added to `document` were not removed.
+**Solution Applied:** Handler references stored as instance properties and removed in `closeLayerContextMenu()`.
 
-**Solution Applied:** Handler references stored as instance properties (`_boundCloseHandler`, `_boundEscHandler`) and removed in `closeLayerContextMenu()`:
-
-```javascript
-// Handlers now stored and cleaned up properly
-this._boundCloseHandler = closeHandler;
-this._boundEscHandler = escHandler;
-
-// Removed in closeLayerContextMenu():
-document.removeEventListener('click', this._boundCloseHandler);
-document.removeEventListener('keydown', this._boundEscHandler);
-```
-
-**Tests Added:** 3 new tests in `ContextMenuController.test.js` covering memory leak prevention.
-
-### P1.2 Files Approaching 1,000 Lines
+### P1.5 Files Approaching 1,000 Lines
 
 Monitor these files to prevent additional god classes:
 
 | File | Lines | Risk |
 |------|-------|------|
-| ShapeRenderer.js | **909** | ⚠️ MEDIUM - Approaching limit |
+| ResizeCalculator.js | **934** | ⚠️ HIGH - Approaching limit |
+| PropertiesForm.js | **926** | ⚠️ MEDIUM |
+| ShapeRenderer.js | **924** | ⚠️ MEDIUM |
 | LayersValidator.js | **853** | ✅ OK |
 | LayerRenderer.js | **845** | ✅ OK |
 
-### P1.3 God Class Status
+### P1.6 God Class Status
 
 12 files exceed 1,000 lines. All use delegation patterns:
 
 | File | Lines | Pattern | Status |
 |------|-------|---------|--------|
-| **LayerPanel.js** | **2,141** | Facade → 9 controllers | ⚠️ At 2K limit |
+| **LayerPanel.js** | **2,191** | Facade → 9 controllers | 🚨 Over 2K limit |
 | **CanvasManager.js** | **1,934** | Facade → 10+ controllers | ⚠️ Approaching 2K |
 | Toolbar.js | 1,658 | UI consolidation | ✅ OK |
 | LayersEditor.js | 1,482 | Orchestrator → managers | ✅ OK |
-| SelectionManager.js | 1,359 | Facade → selection helpers | ✅ OK |
+| **SelectionManager.js** | **1,388** | Facade → selection helpers | ⚠️ Could extract group logic |
 | ArrowRenderer.js | 1,356 | Rendering (curved arrows) | ✅ OK |
 | CalloutRenderer.js | 1,291 | Rendering (callouts) | ✅ OK |
-| APIManager.js | 1,254 | APIErrorHandler | ✅ OK |
+| **APIManager.js** | **1,254** | APIErrorHandler | ⚠️ Could extract request handling |
 | ToolManager.js | 1,214 | Facade → tool handlers | ✅ OK |
 | GroupManager.js | 1,132 | v1.2.13 | ✅ OK |
 | CanvasRenderer.js | 1,113 | SelectionRenderer | ✅ OK |
 | ToolbarStyleControls.js | 1,014 | Style controls | ✅ OK |
 
-**Total in god classes: ~17,148 lines** (30% of JS codebase)
+**Total in god classes: ~17,556 lines** (30% of JS codebase)
 
 ---
 
@@ -129,7 +156,7 @@ Monitor these files to prevent additional god classes:
 
 ### P2.1 Mobile-Optimized UI
 
-**Status:** ✅ COMPLETE (January 5, 2026)  
+**Status:** ⚠️ PARTIAL (Basic touch works, UI not responsive)  
 **Priority:** HIGH (Opens to 50% more users)  
 
 **Implemented:**
@@ -137,37 +164,37 @@ Monitor these files to prevent additional god classes:
 - ✅ Pinch-to-zoom gesture
 - ✅ Double-tap to toggle zoom
 - ✅ Touch handlers in CanvasEvents.js and LayerPanel.js
-- ✅ Responsive toolbar layout (768px and 480px breakpoints) - January 5, 2026
-- ✅ Touch-friendly button sizes (44px minimum touch targets)
-- ✅ Coarse pointer detection with larger hit areas
-- ✅ Touch-friendly selection handles (14px on touch vs 8px on mouse) - January 5, 2026
-- ✅ Collapsible layer panel on mobile (collapse/expand toggle button) - January 5, 2026
-- ✅ On-screen keyboard handling for text input (Visual Viewport API) - January 5, 2026
 
-### P2.2 Magic Number Adoption
+**Still Missing:**
+- ❌ Responsive toolbar layout (768px and 480px breakpoints)
+- ❌ Collapsible layer panel on mobile
+- ❌ Touch-friendly selection handles (larger hit areas)
+- ❌ On-screen keyboard handling for text input
 
-**Status:** ✅ MOSTLY COMPLETE  
-**Note:** Remaining magic numbers are appropriate defaults in isolated modules
+### P2.2 MEDIUM Priority Issues from Code Review
 
-`LayersConstants.js` (376 lines) provides comprehensive constants.
+8 MEDIUM priority issues identified in January 5 review:
 
-**✅ Completed (January 5, 2026):**
-- MATH constants (SCALE_EPSILON, INTEGER_EPSILON) consolidated in `MathUtils.MATH`
-- Removed duplicate definitions from ShapeRenderer.js, PropertiesForm.js, LayerPanel.js
-- LayersConstants.MATH now references MathUtils.MATH for backward compatibility
-- ShapeFactory.js creates shapes with 0 width/height (set by drag interaction)
+| Issue | File | Description | Effort |
+|-------|------|-------------|--------|
+| Export filename not sanitized | APIManager.js | Special chars in filenames not escaped | 15 min |
+| Potential infinite recursion | SelectionManager.js | `_getGroupDescendantIds` has no depth limit | 30 min |
+| Destroyed state check missing | CanvasManager.js | Async callbacks may fire after destroy | 30 min |
+| Background opacity no debounce | LayerPanel.js | Slider causes excessive redraws | 30 min |
+| State mutation pattern | LayersEditor.js | Array modified in place vs new array | 30 min |
+| Text layer bounds fragile | CanvasManager.js | Missing null checks | 15 min |
+| Sub-renderers not cleaned | LayerRenderer.js | destroy() doesn't clean sub-renderers | 30 min |
+| Star points property conflict | LayerRenderer.js | `points` used for count and array | 1 hr |
 
-**Remaining (Low Priority):**
+### P2.3 LOW Priority Issues
 
-| File | Magic Number | Reason to Keep |
-|------|-------------|----------------|
-| TextRenderer.js:194 | `16` | CSS standard font-size default, shared module |
+12 LOW priority issues identified - see codebase_review.md for full list.
 
-### P2.3 Architecture Documentation
+### P2.4 Architecture Documentation
 
 **Status:** ✅ COMPLETE
 
-`docs/ARCHITECTURE.md` contains 9 Mermaid diagrams with ASCII fallbacks:
+`docs/ARCHITECTURE.md` contains 9 Mermaid diagrams with ASCII fallbacks.
 - High-level module architecture
 - Controller delegation pattern
 - Rendering pipeline
@@ -235,14 +262,18 @@ Layer changes visible on article pages immediately after saving.
 Phase 0 (CRITICAL):         ████████████████████ 100% ✅ All resolved
 
 Phase 1 (HIGH):
-P1.1 ContextMenuController: ████████████████████ 100% ✅ Fixed (Jan 4, 2026)
-P1.2 Files approaching 1K:  ██████████████████░░ 90%  ⚠️ ShapeRenderer at 909 lines
-P1.3 God class delegation:  ████████████████████ 100% ✅ All well-delegated
+P1.1 LayerRenderer cache:   ░░░░░░░░░░░░░░░░░░░░ 0%   🚨 NEW - unbounded cache
+P1.2 LayerPanel listeners:  ░░░░░░░░░░░░░░░░░░░░ 0%   🚨 NEW - event accumulation
+P1.3 APIManager abort:      ░░░░░░░░░░░░░░░░░░░░ 0%   🚨 NEW - race conditions
+P1.4 ContextMenuController: ████████████████████ 100% ✅ Fixed (Jan 4, 2026)
+P1.5 Files approaching 1K:  ██████████████████░░ 90%  ⚠️ 3 files at 920+ lines
+P1.6 God class delegation:  ████████████████████ 100% ✅ All well-delegated
 
 Phase 2 (MEDIUM):
-P2.1 Mobile UI:             ████████████████████ 100% ✅ Complete (Jan 5, 2026)
-P2.2 Magic numbers:         ██████████░░░░░░░░░░ 50%  ⏳ Infrastructure exists
-P2.3 Architecture docs:     ████████████████████ 100% ✅ 9 Mermaid diagrams
+P2.1 Mobile UI:             ██████████░░░░░░░░░░ 50%  ⚠️ Touch works, UI not responsive
+P2.2 Medium priority fixes: ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ 8 issues identified
+P2.3 Low priority fixes:    ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ 12 issues identified
+P2.4 Architecture docs:     ████████████████████ 100% ✅ 9 Mermaid diagrams
 
 Phase 3 (LOW):
 P3.1 TypeScript:            █░░░░░░░░░░░░░░░░░░░ 5%   ⏳ Low Priority
@@ -257,10 +288,10 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Unit tests (Jest) | 8,340 | ✅ |
+| Unit tests (Jest) | 8,346 | ✅ |
 | E2E tests (Playwright) | 2,658 lines (7 files) | ✅ |
-| Statement coverage | 94.59% | ✅ Excellent |
-| Branch coverage | 83.28% | ✅ Good |
+| Statement coverage | 94.69% | ✅ Excellent |
+| Branch coverage | 83.35% | ✅ Good |
 | Function coverage | 93.09% | ✅ |
 | Test suites | 140 | ✅ |
 
@@ -270,7 +301,7 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 8,340 passing tests with 94.59% coverage
+- 8,346 passing tests with 94.69% coverage
 - 12 working drawing tools
 - Professional security implementation
 - Named layer sets with version history
@@ -282,12 +313,15 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 - Live article preview
 - Callout/speech bubble tool
 - TIFF and InstantCommons support
-- **Mobile-responsive UI** (completed January 5, 2026)
 
 ### Still Needed for 10/10
 
 | Feature | Impact | Effort | Priority |
 |---------|--------|--------|----------|
+| Fix unbounded image cache | HIGH | 1 hour | P1 |
+| Fix event listener accumulation | HIGH | 2 hours | P1 |
+| Add request abort handling | MEDIUM | 2 hours | P1 |
+| Mobile-responsive UI | MEDIUM | 3-4 weeks | P2 |
 | Reduce god classes | MEDIUM | 2-3 weeks | P2 |
 | WCAG 2.1 AA certification | MEDIUM | 1 week | P3 |
 
@@ -299,18 +333,21 @@ P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░�
 
 1. ✅ Complete critical review documentation
 2. ✅ Fix ContextMenuController memory leak
-3. ✅ Complete mobile-responsive UI
-4. Monitor ShapeRenderer.js (909 lines)
+3. 🚨 Fix LayerRenderer unbounded image cache
+4. 🚨 Fix LayerPanel event listener accumulation
+5. Monitor files approaching 1K lines (3 files at 920+)
 
 ### Short-Term (1-4 Weeks)
 
-5. Continue gradual magic number adoption
-6. Monitor god class growth
+6. Add request abort handling to APIManager
+7. Fix remaining 8 MEDIUM priority issues
+8. Continue god class monitoring
 
 ### Long-Term (1-3 Months)
 
-7. WCAG 2.1 AA audit completion
-8. Consider TypeScript migration
+9. Mobile-responsive toolbar and layer panel
+10. WCAG 2.1 AA audit completion
+11. Consider TypeScript migration
 
 ---
 
@@ -344,17 +381,18 @@ All user-facing dialogs must:
 
 ## Summary
 
-The Layers extension is **production-ready** with excellent test coverage and security. Technical debt is managed with 12 god classes using delegation patterns. One minor memory leak remains in ContextMenuController.
+The Layers extension is **production-ready** with excellent test coverage and security. Technical debt is managed with 12 god classes using delegation patterns. Three new HIGH priority issues were identified in the January 5, 2026 critical review that should be addressed.
 
-**Honest Rating: 8.7/10**
+**Honest Rating: 8.5/10**
 
 Deductions:
 - -0.5 for 12 god classes (30% of codebase)
-- -0.4 for mobile UI not responsive
-- -0.4 for remaining magic numbers
+- -0.5 for mobile UI not fully responsive
+- -0.3 for unbounded image cache (memory leak)
+- -0.2 for missing request abort handling
 
 ---
 
-*Plan updated: January 4, 2026*  
-*Status: ✅ **Production-ready** - All P0 issues resolved, 8,303 tests passing*  
+*Plan updated: January 5, 2026*  
+*Status: ⚠️ **Production-ready with new issues identified** - 3 HIGH priority issues found*  
 *Version: 1.4.8*

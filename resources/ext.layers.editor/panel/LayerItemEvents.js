@@ -23,8 +23,8 @@
 		 * @param {Function} config.callbacks.onToggleVisibility Called when visibility is toggled
 		 * @param {Function} config.callbacks.onToggleLock Called when lock is toggled
 		 * @param {Function} config.callbacks.onDelete Called when delete is requested
-		 * @param {Function} config.callbacks.onEditName Called when name editing starts
-		 * @param {Function} [config.addTargetListener] Optional event listener registration function
+		 * @param {Function} config.callbacks.onEditName Called when name editing starts	 * @param {Function} [config.callbacks.onToggleGroupExpand] Called when folder expand/collapse toggle is clicked
+	 * @param {Function} [config.callbacks.onMoveLayer] Called when layer is reordered via keyboard (layerId, direction)		 * @param {Function} [config.addTargetListener] Optional event listener registration function
 		 */
 		constructor( config ) {
 			this.config = config || {};
@@ -97,8 +97,12 @@
 			const lockBtn = target.closest( '.layer-lock' );
 			const deleteBtn = target.closest( '.layer-delete' );
 			const nameEl = target.closest( '.layer-name' );
+			const expandToggle = target.closest( '.layer-expand-toggle' );
 
-			if ( visibilityBtn ) {
+			if ( expandToggle ) {
+				e.stopPropagation(); // Don't select the layer
+				this.triggerCallback( 'onToggleGroupExpand', layerId );
+			} else if ( visibilityBtn ) {
 				this.triggerCallback( 'onToggleVisibility', layerId );
 			} else if ( lockBtn ) {
 				this.triggerCallback( 'onToggleLock', layerId );
@@ -138,17 +142,28 @@
 				return;
 			}
 
+			// Check if focused on a grab area - arrow keys reorder the layer
+			const isOnGrabArea = target.classList && target.classList.contains( 'layer-grab-area' );
+
 			switch ( e.key ) {
 				case 'ArrowUp':
 					e.preventDefault();
-					if ( currentIndex > 0 ) {
+					if ( isOnGrabArea ) {
+						// Reorder layer up
+						this.triggerCallback( 'onMoveLayer', layerId, -1 );
+					} else if ( currentIndex > 0 ) {
+						// Navigate to previous layer
 						this.focusLayerAtIndex( currentIndex - 1 );
 					}
 					break;
 
 				case 'ArrowDown':
 					e.preventDefault();
-					if ( currentIndex < layers.length - 1 ) {
+					if ( isOnGrabArea ) {
+						// Reorder layer down
+						this.triggerCallback( 'onMoveLayer', layerId, 1 );
+					} else if ( currentIndex < layers.length - 1 ) {
+						// Navigate to next layer
 						this.focusLayerAtIndex( currentIndex + 1 );
 					}
 					break;

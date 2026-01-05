@@ -360,6 +360,27 @@ describe( 'LayersEditor Core', () => {
 
 			expect( editor.layers[ 0 ].radius ).toBe( 50 );
 		} );
+
+		it( 'should create new array reference (immutable update)', () => {
+			const layerId = editor.layers[ 0 ].id;
+			const originalLayers = editor.stateManager.get( 'layers' );
+
+			editor.updateLayer( layerId, { x: 100 } );
+
+			const updatedLayers = editor.stateManager.get( 'layers' );
+			expect( updatedLayers ).not.toBe( originalLayers );
+		} );
+
+		it( 'should create new layer object reference (immutable update)', () => {
+			const layerId = editor.layers[ 0 ].id;
+			const originalLayer = editor.layers[ 0 ];
+
+			editor.updateLayer( layerId, { x: 100 } );
+
+			const updatedLayer = editor.layers[ 0 ];
+			expect( updatedLayer ).not.toBe( originalLayer );
+			expect( updatedLayer.x ).toBe( 100 );
+		} );
 	} );
 
 	describe( 'removeLayer', () => {

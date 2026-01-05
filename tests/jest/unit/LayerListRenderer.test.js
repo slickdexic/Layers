@@ -344,39 +344,25 @@ describe( 'LayerListRenderer', () => {
 			expect( grabArea.querySelector( 'svg' ) ).not.toBeNull();
 		} );
 
-		it( 'should handle ArrowUp keydown', () => {
+		// NOTE: Arrow key reordering is now handled via event delegation in LayerItemEvents.
+		// These tests verify the grab area structure - event handling tests are in LayerItemEvents.test.js.
+
+		it( 'should be focusable via tabindex for keyboard navigation', () => {
 			const layer = { id: '1', type: 'rectangle' };
 			const grabArea = renderer._createGrabArea( layer, 'Test Layer', mockMsg );
-			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp' } );
-			Object.defineProperty( event, 'preventDefault', { value: jest.fn() } );
-			grabArea.dispatchEvent( event );
-			expect( mockOnMoveLayer ).toHaveBeenCalledWith( '1', -1 );
+			expect( grabArea.getAttribute( 'tabindex' ) ).toBe( '0' );
 		} );
 
-		it( 'should handle ArrowDown keydown', () => {
+		it( 'should have role button for accessibility', () => {
 			const layer = { id: '1', type: 'rectangle' };
 			const grabArea = renderer._createGrabArea( layer, 'Test Layer', mockMsg );
-			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown' } );
-			Object.defineProperty( event, 'preventDefault', { value: jest.fn() } );
-			grabArea.dispatchEvent( event );
-			expect( mockOnMoveLayer ).toHaveBeenCalledWith( '1', 1 );
+			expect( grabArea.getAttribute( 'role' ) ).toBe( 'button' );
 		} );
 
-		it( 'should not call onMoveLayer for other keys', () => {
+		it( 'should include keyboard hint in title', () => {
 			const layer = { id: '1', type: 'rectangle' };
 			const grabArea = renderer._createGrabArea( layer, 'Test Layer', mockMsg );
-			const event = new KeyboardEvent( 'keydown', { key: 'Enter' } );
-			grabArea.dispatchEvent( event );
-			expect( mockOnMoveLayer ).not.toHaveBeenCalled();
-		} );
-
-		it( 'should not add keydown listener when onMoveLayer is null', () => {
-			renderer.onMoveLayer = null;
-			const layer = { id: '1', type: 'rectangle' };
-			const grabArea = renderer._createGrabArea( layer, 'Test Layer', mockMsg );
-			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp' } );
-			// Should not throw
-			expect( () => grabArea.dispatchEvent( event ) ).not.toThrow();
+			expect( grabArea.title ).toContain( 'Use arrow keys to navigate' );
 		} );
 	} );
 
@@ -665,17 +651,14 @@ describe( 'LayerListRenderer', () => {
 			expect( toggle.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
 		} );
 
-		it( 'should call onToggleGroupExpand when clicked', () => {
-			const onToggle = jest.fn();
-			renderer.onToggleGroupExpand = onToggle;
+		// NOTE: Click handler for expand/collapse is now handled via event delegation in LayerItemEvents.
+		// These tests verify the toggle structure - event handling tests are in LayerItemEvents.test.js.
 
+		it( 'should have layer-expand-toggle class for event delegation', () => {
 			const layer = { id: 'folder-1', type: 'group' };
 			const t = ( key, fallback ) => fallback;
 			const toggle = renderer._createExpandToggle( layer, true, t );
-
-			toggle.click();
-
-			expect( onToggle ).toHaveBeenCalledWith( 'folder-1' );
+			expect( toggle.className ).toBe( 'layer-expand-toggle' );
 		} );
 
 		it( 'should use fallback text when IconFactory not available', () => {

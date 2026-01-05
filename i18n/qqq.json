@@ -402,6 +402,7 @@
 	"layers-concurrent-edit-detected": "Warning shown when another user has modified the same layer set concurrently",
 	"layers-invalid-revision": "Error shown when an invalid revision number is specified",
 	"layers-revision-load-failed": "Error shown when loading a specific revision fails. $1 is the revision number.",
+	"layers-revision-reload-failed": "Warning shown when refreshing the revision list after a save fails",
 	"layers-backup-created": "Notification shown when an automatic backup revision is created",
 	"layers-recovery-mode": "Warning shown when the editor enters recovery mode due to errors",
 	"layers-browser-compatibility": "Warning shown when the user's browser may not support all features",

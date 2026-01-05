@@ -448,6 +448,14 @@ class LayerRenderer {
 	}
 
 	/**
+	 * Maximum number of images to cache (LRU eviction when exceeded)
+	 * @type {number}
+	 */
+	static get MAX_IMAGE_CACHE_SIZE() {
+		return 50;
+	}
+
+	/**
 	 * Get or create cached image element for a layer
 	 *
 	 * @param {Object} layer - Image layer
@@ -467,7 +475,17 @@ class LayerRenderer {
 		}
 
 		if ( this._imageCache.has( cacheKey ) ) {
-			return this._imageCache.get( cacheKey );
+			// Move to end for LRU tracking (delete and re-add)
+			const img = this._imageCache.get( cacheKey );
+			this._imageCache.delete( cacheKey );
+			this._imageCache.set( cacheKey, img );
+			return img;
+		}
+
+		// Evict oldest entry if cache is full (LRU eviction)
+		if ( this._imageCache.size >= LayerRenderer.MAX_IMAGE_CACHE_SIZE ) {
+			const oldestKey = this._imageCache.keys().next().value;
+			this._imageCache.delete( oldestKey );
 		}
 
 		// Create new image element and start loading
@@ -814,6 +832,26 @@ class LayerRenderer {
 	 * Clean up resources
 	 */
 	destroy() {
+		// Clean up sub-renderers that have destroy methods
+		const subRenderers = [
+			'shadowRenderer',
+			'arrowRenderer',
+			'textRenderer',
+			'polygonStarRenderer',
+			'shapeRenderer',
+			'textBoxRenderer',
+			'calloutRenderer',
+			'effectsRenderer'
+		];
+
+		for ( const rendererName of subRenderers ) {
+			if ( this[ rendererName ] && typeof this[ rendererName ].destroy === 'function' ) {
+				this[ rendererName ].destroy();
+			}
+			this[ rendererName ] = null;
+		}
+
+		// Clean up own resources
 		this.ctx = null;
 		this.config = null;
 		this.backgroundImage = null;

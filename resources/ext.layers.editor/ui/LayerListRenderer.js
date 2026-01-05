@@ -240,16 +240,9 @@
 			grabArea.setAttribute( 'aria-label', layerName + ' - ' + grabTitle );
 			// Size is controlled by CSS - no inline styles needed
 
-			// Keyboard reordering
-			if ( this.onMoveLayer ) {
-				grabArea.addEventListener( 'keydown', ( e ) => {
-					if ( e.key === 'ArrowUp' || e.key === 'ArrowDown' ) {
-						e.preventDefault();
-						const direction = e.key === 'ArrowUp' ? -1 : 1;
-						this.onMoveLayer( layer.id, direction );
-					}
-				} );
-			}
+			// NOTE: Keyboard reordering is now handled via event delegation in LayerItemEvents.
+			// Arrow key events on .layer-grab-area elements trigger onMoveLayer callback.
+			// This avoids listener accumulation when layer items are recreated.
 
 			// Use folder icon for groups, grab dots for regular layers
 			if ( isGroup ) {
@@ -545,13 +538,9 @@
 				toggle.style.width = '20px';
 			}
 
-			// Add click handler to toggle expanded state
-			if ( this.onToggleGroupExpand ) {
-				toggle.addEventListener( 'click', ( e ) => {
-					e.stopPropagation(); // Don't select the layer
-					this.onToggleGroupExpand( layer.id );
-				} );
-			}
+			// NOTE: Click handler for expand/collapse is now handled via event delegation
+			// in LayerItemEvents. Clicks on .layer-expand-toggle trigger onToggleGroupExpand.
+			// This avoids listener accumulation when layer items are recreated.
 
 			return toggle;
 		}
