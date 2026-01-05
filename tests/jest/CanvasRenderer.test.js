@@ -746,7 +746,8 @@ describe('CanvasRenderer', () => {
 
             renderer.drawBackgroundImage();
 
-            expect(ctx.drawImage).toHaveBeenCalledWith(img, 0, 0);
+            // drawImage is called with canvas dimensions to scale the image to fit
+            expect(ctx.drawImage).toHaveBeenCalledWith(img, 0, 0, expect.any(Number), expect.any(Number));
         });
 
         test('should draw checker pattern underneath when opacity < 1', () => {

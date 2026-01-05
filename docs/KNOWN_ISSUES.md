@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 4, 2026  
-**Version:** 1.4.5
+**Last Updated:** January 5, 2026  
+**Version:** 1.4.6
 
 This document lists known functionality issues and their current status.
 
@@ -14,7 +14,7 @@ This document lists known functionality issues and their current status.
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (Stability) | 6 | ⚠️ 12 god classes + 2 remaining issues |
 | P2 (Code Quality) | 2 | ✅ ESLint disables reduced to 8 |
-| Feature Gaps | 3 | ⏳ Planned (InstantCommons now supported) |
+| Feature Gaps | 2 | ✅ InstantCommons & TIFF support added |
 
 ---
 
@@ -33,9 +33,22 @@ This document lists known functionality issues and their current status.
 - Added default rate limits to `RateLimiter.php` (20 deletes/hour for users, 3 for newbies)
 - Matches the pattern used in ApiLayersSave.php
 
+### P0.NEW2 ApiLayersRename.php Missing Rate Limiting - FIXED ✅
+
+**Status:** ✅ FIXED (January 4, 2026)  
+**Severity:** HIGH  
+**File:** `src/Api/ApiLayersRename.php`
+
+**Problem:** The rename endpoint had no rate limiting, allowing potential abuse.
+
+**Solution Applied:**
+- Added rate limiting using `editlayers-rename` action
+- Added `createRateLimiter()` factory method matching other API endpoints
+- Added default rate limits to `RateLimiter.php` (20 renames/hour for users, 3 for newbies)
+
 ---
 
-## ⚠️ P1 Issues - 2 REMAINING
+## ⚠️ P1 Issues - ALL RESOLVED ✅
 
 ### P1.NEW1 DEBUG Logging in Production Code - NO ACTION NEEDED ✅
 
@@ -60,17 +73,23 @@ This is good practice for troubleshooting, not a bug.
 
 ### P1.NEW3 APIManager.js CSRF Token Not Refreshed During Retries
 
-**Status:** ⚠️ Not Fixed  
+**Status:** ✅ FIXED (January 3, 2026)  
 **File:** `resources/ext.layers.editor/APIManager.js`
 
-The save retry logic doesn't refresh the CSRF token, which may cause failures if session expires during retries.
+**Solution Applied:**
+- Session/token errors (badtoken, assertuserfailed, assertbotfailed) are now detected and NOT retried
+- User receives explicit error message to refresh page when session expires
+- Uses `isRetryableError()` method to distinguish between retryable (network) and non-retryable (session) errors
 
 ### P1.NEW4 Background Image Load Failure Silent
 
-**Status:** ⚠️ Not Fixed  
+**Status:** ✅ FIXED (January 3, 2026)  
 **File:** `resources/ext.layers.editor/CanvasManager.js`
 
-When background image loading fails, the error is only logged but no user notification is shown.
+**Solution Applied:**
+- Added `mw.notify()` call in `handleImageLoadError()` method
+- Users now see "Background image could not be loaded. You can still add annotations." message
+- Uses i18n message key `layers-background-load-error`
 
 ---
 
@@ -123,28 +142,27 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 ## ⚠️ P1 Issues (Stability)
 
-### P1.1 God Classes (12 files >1,000 lines)
+### P1.1 God Classes (12 files ≥1,000 lines)
 
 **Status:** Stable - 12 files exceed 1,000 lines  
-**Severity:** MEDIUM - Reduced from 13 (PropertiesForm.js refactored)
+**Severity:** MEDIUM - All use proper delegation patterns
 
 | File | Lines | Delegation Pattern | Status |
 |------|-------|-------------------|--------|
 | **LayerPanel.js** | **2,141** | ✅ 9 controllers | ⚠️ At limit |
-| CanvasManager.js | 1,885 | ✅ 10+ controllers | ✅ OK |
+| CanvasManager.js | 1,893 | ✅ 10+ controllers | ✅ OK |
 | Toolbar.js | 1,658 | ✅ 4 modules | ✅ OK |
 | LayersEditor.js | 1,482 | ✅ 3 modules | ✅ OK |
 | SelectionManager.js | 1,359 | ✅ 3 modules | ✅ OK |
-| ArrowRenderer.js | 1,310 | ✅ Rendering (curved arrows) | ✅ OK |
-| **CalloutRenderer.js** | **1,290** | ✅ Rendering (callouts) | ✅ OK |
+| ArrowRenderer.js | 1,356 | ✅ Rendering (curved arrows) | ✅ OK |
+| CalloutRenderer.js | 1,291 | ✅ Rendering (callouts) | ✅ OK |
+| APIManager.js | 1,254 | ✅ APIErrorHandler | ✅ OK |
 | ToolManager.js | 1,214 | ✅ 2 handlers | ✅ OK |
-| APIManager.js | 1,182 | ✅ APIErrorHandler | ✅ OK |
 | GroupManager.js | 1,132 | v1.2.13 | ✅ OK |
 | CanvasRenderer.js | 1,105 | ✅ SelectionRenderer | ✅ OK |
 | ToolbarStyleControls.js | 1,014 | ✅ Style controls (live preview) | ✅ OK |
-| PropertiesForm.js | 914 | ✅ PropertyBuilders | ✅ OK |
 
-**Total in god classes:** ~15,867 lines (28% of JS codebase)
+**Total in god classes:** ~16,899 lines (29% of JS codebase)
 
 **Note:** CalloutRenderer.js (1,290 lines) is a new god class added in v1.4.2 for the callout/speech bubble feature. PropertiesForm.js now delegates to PropertyBuilders.js (914 lines). ArrowRenderer.js grew due to curved arrow feature (v1.3.3).
 
@@ -319,15 +337,15 @@ The extension is feature-rich with 11 drawing tools (blur tool deprecated), laye
 
 ## Test Coverage Status
 
-### Overall Coverage (January 3, 2026)
+### Overall Coverage (January 4, 2026)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 8,214 | - | ✅ |
-| Statement coverage | 94.09% | 85%+ | ✅ Excellent |
-| Branch coverage | 82.69% | 75%+ | ✅ |
-| Function coverage | 92.67% | 80%+ | ✅ |
-| Line coverage | 94.24% | 85%+ | ✅ |
+| Tests passing | 8,300 | - | ✅ |
+| Statement coverage | 94.62% | 85%+ | ✅ Excellent |
+| Branch coverage | 83.39% | 75%+ | ✅ |
+| Function coverage | 93.09% | 80%+ | ✅ |
+| Line coverage | 94.77% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -403,4 +421,4 @@ If you encounter issues:
 ---
 
 *Document updated: January 4, 2026*  
-*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (94.09%, 8,214 tests). No coverage gaps.*
+*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (94.62%, 8,300 tests). No coverage gaps.*

@@ -96,6 +96,18 @@ class RateLimiter {
 				'sysop' => [ 50, 3600 ],
 				'managelayerlibrary' => [ 100, 3600 ],
 			],
+			'editlayers-rename' => [
+				// 20 renames per hour for users (same as delete since it's a metadata change)
+				'user' => [ 20, 3600 ],
+				// 3 renames per hour for new users (restrictive)
+				'newbie' => [ 3, 3600 ],
+				// 30 renames per hour for autoconfirmed
+				'autoconfirmed' => [ 30, 3600 ],
+				// Higher but limited rate for privileged users
+				'sysop' => [ 50, 3600 ],
+				// Separate limit for library managers
+				'managelayerlibrary' => [ 100, 3600 ],
+			],
 		];
 
 		// Use configured limits or fall back to defaults

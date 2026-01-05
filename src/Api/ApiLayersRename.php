@@ -3,6 +3,7 @@
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
@@ -68,9 +69,11 @@ class ApiLayersRename extends ApiBase {
 				);
 			}
 
-			// Validate filename
+			// Validate filename - Title must be valid and in File namespace
+			// Note: We do NOT check $title->exists() because foreign files
+			// (from InstantCommons) don't have local wiki pages
 			$title = Title::newFromText( $requestedFilename, NS_FILE );
-			if ( !$title || !$title->exists() ) {
+			if ( !$title || $title->getNamespace() !== NS_FILE ) {
 				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
 			}
 
@@ -80,11 +83,29 @@ class ApiLayersRename extends ApiBase {
 				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
 			}
 
-			$imgName = $file->getName();
-			$sha1 = $this->getFileSha1( $file );
+			// Use DB key form for consistency with ApiLayersSave
+			// This ensures layers saved on foreign files can be renamed correctly
+			$imgName = $title->getDBkey();
+			$sha1 = $this->getFileSha1( $file, $imgName );
 
 			// Check if the source layer set exists
 			$layerSet = $db->getLayerSetByName( $imgName, $sha1, $oldName );
+			if ( !$layerSet ) {
+				// SHA1 mismatch fallback: for foreign files, the SHA1 may have been
+				// saved before InstantCommons support was added.
+				$storedSha1 = $db->findSetSha1( $imgName, $oldName );
+				if ( $storedSha1 !== null && $storedSha1 !== $sha1 ) {
+					$this->getLogger()->info( 'Layers rename: SHA1 mismatch, using stored value', [
+						'imgName' => $imgName,
+						'oldName' => $oldName,
+						'expectedSha1' => $sha1,
+						'storedSha1' => $storedSha1
+					] );
+					$sha1 = $storedSha1;
+					$layerSet = $db->getLayerSetByName( $imgName, $sha1, $oldName );
+				}
+			}
+
 			if ( !$layerSet ) {
 				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
 			}
@@ -102,6 +123,16 @@ class ApiLayersRename extends ApiBase {
 
 			if ( !$isOwner && !$isAdmin ) {
 				$this->dieWithError( 'layers-rename-permission-denied', 'permissiondenied' );
+			}
+
+			// RATE LIMITING: Prevent abuse by limiting rename operations per user
+			// Uses MediaWiki's core rate limiter via User::pingLimiter()
+			// Configure in LocalSettings.php:
+			//   $wgRateLimits['editlayers-rename']['user'] = [ 20, 3600 ]; // 20 renames per hour
+			//   $wgRateLimits['editlayers-rename']['newbie'] = [ 3, 3600 ]; // stricter for new users
+			$rateLimiter = $this->createRateLimiter();
+			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
+				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
 			}
 
 			// Perform the rename
@@ -217,15 +248,24 @@ class ApiLayersRename extends ApiBase {
 	}
 
 	/**
+	 * Factory for RateLimiter to allow overrides in tests.
+	 */
+	protected function createRateLimiter(): RateLimiter {
+		return new RateLimiter();
+	}
+
+	/**
 	 * Get a stable SHA1 identifier for a file.
 	 *
 	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
 	 * we generate a stable fallback identifier based on the filename.
+	 * Uses the DB key form for consistency with ApiLayersSave.php.
 	 *
 	 * @param mixed $file File object
+	 * @param string $imgName The image name (DB key form) to use for fallback hash
 	 * @return string SHA1 hash or fallback identifier
 	 */
-	private function getFileSha1( $file ): string {
+	private function getFileSha1( $file, string $imgName ): string {
 		$sha1 = $file->getSha1();
 		if ( !empty( $sha1 ) ) {
 			return $sha1;
@@ -233,8 +273,8 @@ class ApiLayersRename extends ApiBase {
 
 		// Check if this is a foreign file
 		if ( $this->isForeignFile( $file ) ) {
-			// Use a hash of the filename as a fallback (prefixed for clarity)
-			return 'foreign_' . sha1( $file->getName() );
+			// Use a hash of the DB key for consistency with ApiLayersSave
+			return 'foreign_' . sha1( $imgName );
 		}
 
 		return $sha1 ?? '';

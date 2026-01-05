@@ -471,9 +471,24 @@ class CanvasManager {
 			this.renderer.setBackgroundImage( this.backgroundImage );
 		}
 
-		// Set canvas size to match the image
-		this.canvas.width = info.width || image.width || 800;
-		this.canvas.height = info.height || image.height || 600;
+		// Set canvas size: prefer base dimensions (original file size) if available,
+		// otherwise use loaded image dimensions.
+		// This is critical for formats like TIFF where we load a thumbnail but
+		// need to use the original file's coordinate space for layer positioning.
+		if ( this.baseWidth && this.baseHeight && this.baseWidth > 0 && this.baseHeight > 0 ) {
+			// Use base dimensions from API (original file size)
+			this.canvas.width = this.baseWidth;
+			this.canvas.height = this.baseHeight;
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log( '[CanvasManager] Using base dimensions for canvas: ' +
+					this.baseWidth + 'x' + this.baseHeight +
+					' (loaded image: ' + ( info.width || image.width ) + 'x' + ( info.height || image.height ) + ')' );
+			}
+		} else {
+			// Fall back to loaded image dimensions
+			this.canvas.width = info.width || image.width || 800;
+			this.canvas.height = info.height || image.height || 600;
+		}
 
 		// Resize canvas display to fit container
 		this.resizeCanvas();
@@ -1518,14 +1533,40 @@ class CanvasManager {
 	/**
 	 * Set the base dimensions that layers were created against.
 	 * Used for scaling layers when the canvas size differs from the original.
+	 *
+	 * IMPORTANT: This also resizes the canvas logical dimensions to match.
+	 * This ensures layers are created at coordinates that match the original
+	 * image dimensions, regardless of what thumbnail size was loaded.
+	 * This is critical for formats like TIFF where we load a thumbnail but
+	 * need to store layers at the original file's coordinate space.
+	 *
 	 * @param {number} width - Original image width
 	 * @param {number} height - Original image height
 	 */
 	setBaseDimensions ( width, height ) {
 		this.baseWidth = width || null;
 		this.baseHeight = height || null;
-		// Trigger resize to apply proper scaling
+
+		// Resize canvas logical dimensions to match base dimensions
+		// This ensures layers are created at the correct coordinate space
+		if ( this.canvas && width && height && width > 0 && height > 0 ) {
+			// Only resize if dimensions differ significantly (avoid unnecessary redraws)
+			if ( this.canvas.width !== width || this.canvas.height !== height ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log( '[CanvasManager] Resizing canvas from ' +
+						this.canvas.width + 'x' + this.canvas.height +
+						' to base dimensions ' + width + 'x' + height );
+				}
+				this.canvas.width = width;
+				this.canvas.height = height;
+			}
+		}
+
+		// Trigger resize to apply proper CSS scaling
 		this.resizeCanvas();
+
+		// Redraw to ensure background image scales correctly
+		this.redraw();
 	}
 
 	/**

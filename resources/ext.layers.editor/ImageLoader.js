@@ -5,6 +5,7 @@
  * - Loading background images from multiple sources (config, page, MediaWiki API)
  * - Fallback to test images when actual image unavailable
  * - Cross-origin handling
+ * - TIFF/non-web-format handling via MediaWiki thumbnails
  *
  * @class ImageLoader
  */
@@ -31,6 +32,14 @@
 	const PLACEHOLDER_SIZE = { width: 800, height: 600 };
 
 	/**
+	 * File extensions that browsers cannot natively render
+	 * These formats require using MediaWiki's thumbnail API instead of direct URLs
+	 *
+	 * @type {string[]}
+	 */
+	const NON_WEB_FORMATS = [ 'tif', 'tiff', 'xcf', 'psd', 'ai', 'eps', 'pdf' ];
+
+	/**
 	 * Safe logging helper that checks if mw.log is available
 	 *
 	 * @param {string} message - Message to log
@@ -40,6 +49,20 @@
 		if ( typeof mw !== 'undefined' && mw.log && typeof mw.log.warn === 'function' ) {
 			mw.log.warn( message );
 		}
+	}
+
+	/**
+	 * Check if a filename has a non-web-native format extension
+	 *
+	 * @param {string} filename - Filename to check
+	 * @return {boolean} True if the file format requires thumbnail conversion
+	 */
+	function isNonWebFormat( filename ) {
+		if ( !filename ) {
+			return false;
+		}
+		const ext = filename.split( '.' ).pop().toLowerCase();
+		return NON_WEB_FORMATS.indexOf( ext ) !== -1;
 	}
 
 	/**
@@ -96,13 +119,22 @@
 			const imageUrls = [];
 			const filename = this.filename;
 			const currentOrigin = window.location.origin;
+			const needsThumbnail = isNonWebFormat( filename );
+
+			// For TIFF/non-web formats, log that we're using special handling
+			if ( needsThumbnail && filename ) {
+				safeLogWarn( '[ImageLoader] Using thumbnail for non-web format: ' + filename );
+			}
 
 			// Priority 1: Use the specific background image URL from config
+			// This is highest priority as it's explicitly set
 			if ( this.backgroundImageUrl ) {
 				imageUrls.push( this.backgroundImageUrl );
 			}
 
 			// Priority 2: Try to find the current page image (same-origin, most reliable)
+			// This is especially important for TIFF files from InstantCommons because
+			// the File: page already has a rendered thumbnail that works
 			const pageImages = document.querySelectorAll(
 				'.mw-file-element img, .fullImageLink img, .filehistory img, img[src*="' + filename + '"]'
 			);
@@ -113,7 +145,26 @@
 				}
 			}
 
-			// Priority 3: Try MediaWiki patterns using CURRENT ORIGIN first (avoids CORS)
+			// Priority 3 (for TIFF/non-web formats): Use thumbnail API
+			// This is a fallback if we can't find a page image
+			// Note: For InstantCommons, this may not work due to CORS or redirect issues
+			if ( needsThumbnail && filename && typeof mw !== 'undefined' && mw.config ) {
+				const scriptPath = mw.config.get( 'wgScriptPath' ) || '';
+				const encodedFilename = encodeURIComponent( filename );
+				// Request a large thumbnail (2048px) to preserve detail for annotations
+				// MediaWiki will generate a PNG/JPEG that browsers can render
+				const thumbWidth = 2048;
+				
+				if ( scriptPath ) {
+					// Use Special:Redirect/file with width parameter for thumbnail
+					imageUrls.push(
+						currentOrigin + scriptPath + '/index.php?title=Special:Redirect/file/' +
+						encodedFilename + '&width=' + thumbWidth
+					);
+				}
+			}
+
+			// Priority 4: Try MediaWiki patterns using CURRENT ORIGIN first (avoids CORS)
 			// This handles the case where wgServer differs from the access URL
 			if ( filename ) {
 				const encodedFilename = encodeURIComponent( filename );

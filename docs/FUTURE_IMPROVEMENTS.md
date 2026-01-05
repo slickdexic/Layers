@@ -8,7 +8,37 @@ This document tracks **active** feature ideas for the Layers extension. For comp
 
 ## Active Proposals
 
-### 1. Inline Canvas Text Editing (FR-8)
+### 1. TIFF Image Support (FR-11) - PARTIALLY IMPLEMENTED ✅
+
+**Priority:** HIGH  
+**Complexity:** Medium  
+**Status:** ✅ Basic support implemented (January 4, 2026)
+
+Enable layers editing on TIFF images. Browsers don't natively support TIFF rendering, so we use MediaWiki's thumbnail API.
+
+**What's Implemented:**
+- ✅ ImageLoader.js detects TIFF, XCF, PSD, PDF, EPS, AI files
+- ✅ Automatically requests a 2048px thumbnail from MediaWiki
+- ✅ Falls back to thumbnail URL before trying direct file URL
+- ✅ 6 unit tests added for TIFF handling
+
+**How It Works:**
+1. ImageLoader detects non-web-native file extensions (tif, tiff, xcf, psd, ai, eps, pdf)
+2. Adds thumbnail URL with `&width=2048` parameter as first priority
+3. MediaWiki's Special:Redirect/file handler returns a PNG/JPEG thumbnail
+4. Canvas can now render the image for annotation
+
+**Remaining Work:**
+- Test with actual TIFF files on a live wiki
+- Verify coordinate mapping works correctly for large TIFFs
+- Consider making thumbnail size configurable
+- Add user notification when using thumbnail mode
+
+**Effort:** Remaining work ~1 week
+
+---
+
+### 2. Inline Canvas Text Editing (FR-8)
 
 **Priority:** HIGH  
 **Complexity:** High  

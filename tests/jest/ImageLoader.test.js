@@ -186,6 +186,64 @@ describe( 'ImageLoader', () => {
 
 			document.body.removeChild( container );
 		} );
+
+		it( 'should add thumbnail URL first for TIFF files', () => {
+			const loader = new ImageLoader( { filename: 'Diagram.tif' } );
+
+			const urls = loader.buildUrlList();
+
+			// First URL should be the thumbnail URL with width parameter
+			expect( urls[ 0 ] ).toContain( 'Special:Redirect/file/Diagram.tif' );
+			expect( urls[ 0 ] ).toContain( 'width=2048' );
+		} );
+
+		it( 'should add thumbnail URL first for TIFF files (uppercase extension)', () => {
+			const loader = new ImageLoader( { filename: 'Diagram.TIFF' } );
+
+			const urls = loader.buildUrlList();
+
+			// First URL should be the thumbnail URL with width parameter
+			expect( urls[ 0 ] ).toContain( 'width=2048' );
+		} );
+
+		it( 'should NOT add thumbnail URL first for regular image formats', () => {
+			const loader = new ImageLoader( { filename: 'Photo.jpg' } );
+
+			const urls = loader.buildUrlList();
+
+			// Regular images should not have width parameter in first URL
+			// (unless backgroundImageUrl is set, which it isn't here)
+			const hasWidthParam = urls.length > 0 && urls[ 0 ].includes( 'width=' );
+			expect( hasWidthParam ).toBe( false );
+		} );
+
+		it( 'should handle other non-web formats like XCF', () => {
+			const loader = new ImageLoader( { filename: 'Artwork.xcf' } );
+
+			const urls = loader.buildUrlList();
+
+			// Should use thumbnail for GIMP files too
+			expect( urls[ 0 ] ).toContain( 'width=2048' );
+		} );
+
+		it( 'should handle PDF files', () => {
+			const loader = new ImageLoader( { filename: 'Document.pdf' } );
+
+			const urls = loader.buildUrlList();
+
+			// Should use thumbnail for PDF files
+			expect( urls[ 0 ] ).toContain( 'width=2048' );
+		} );
+
+		it( 'should log when using thumbnail for non-web format', () => {
+			const loader = new ImageLoader( { filename: 'Diagram.tif' } );
+
+			loader.buildUrlList();
+
+			expect( window.mw.log.warn ).toHaveBeenCalledWith(
+				'[ImageLoader] Using thumbnail for non-web format: Diagram.tif'
+			);
+		} );
 	} );
 
 	describe( 'isSameOrigin', () => {

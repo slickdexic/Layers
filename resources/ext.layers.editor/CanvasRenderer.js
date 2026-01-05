@@ -276,7 +276,15 @@
 			}
 
 			this.ctx.globalAlpha = opacity;
-			this.ctx.drawImage( this.backgroundImage, 0, 0 );
+
+			// Scale the background image to fit the canvas dimensions.
+			// This is critical when the loaded image (e.g., a thumbnail) has different
+			// dimensions than the canvas (which uses original file dimensions).
+			// For TIFF files, we load a 2048px thumbnail but the canvas is sized to
+			// the original file dimensions (e.g., 567x925).
+			const canvasW = this.canvas.width / this.zoom;
+			const canvasH = this.canvas.height / this.zoom;
+			this.ctx.drawImage( this.backgroundImage, 0, 0, canvasW, canvasH );
 			this.ctx.restore();
 		}
 
