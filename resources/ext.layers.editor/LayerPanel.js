@@ -6,6 +6,12 @@
 	'use strict';
 
 	/**
+	 * Epsilon value for integer detection (is-integer checks)
+	 * @constant {number}
+	 */
+	const INTEGER_EPSILON = 1e-9;
+
+	/**
 	 * Helper to get a class from namespace or global fallback (lazy evaluation)
 	 * Prefers window.Layers.* namespace, falls back to window.* for compatibility
 	 *
@@ -1843,7 +1849,7 @@
 				}
 				if ( String( decimalsAttr ) === '1' ) {
 					const r = Math.round( n * 10 ) / 10;
-					const isInt = Math.abs( r - Math.round( r ) ) < 1e-9;
+					const isInt = Math.abs( r - Math.round( r ) ) < INTEGER_EPSILON;
 					return isInt ? String( Math.round( r ) ) : r.toFixed( 1 );
 				}
 				// Default: round to whole numbers for clean display

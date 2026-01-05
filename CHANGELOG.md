@@ -2,6 +2,22 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.4.8] - 2026-01-04
+
+### Fixed
+- **ContextMenuController Memory Leak** — Fixed memory leak where document event listeners were not removed when context menu was closed
+  - Event handlers (`closeHandler`, `escHandler`) now stored as instance properties and properly cleaned up
+  - Added cleanup in `closeLayerContextMenu()` method
+  - 3 new tests added to verify memory leak prevention
+
+### Improved
+- **Magic Number Constants** — Replaced hardcoded epsilon values with named constants for better maintainability
+  - Added `MATH.SCALE_EPSILON` (0.0001) and `MATH.INTEGER_EPSILON` (1e-9) to `LayersConstants.js`
+  - Updated `ShapeRenderer.js` (3 occurrences), `PropertiesForm.js` (3 occurrences), `LayerPanel.js` (1 occurrence)
+- **Test Count** — 8,303 tests passing (up from 8,300 with new memory leak prevention tests)
+
+---
+
 ## [1.4.7] - 2026-01-05
 
 ### Fixed

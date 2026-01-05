@@ -22,6 +22,12 @@
 	'use strict';
 
 	/**
+	 * Epsilon value for scale operations to prevent divide-by-zero
+	 * @constant {number}
+	 */
+	const SCALE_EPSILON = 0.0001;
+
+	/**
 	 * Get clampOpacity from MathUtils namespace
 	 *
 	 * @private
@@ -598,7 +604,7 @@
 							if ( hasRotation ) {
 								ctx.rotate( rotationRad );
 							}
-							ctx.scale( Math.max( effectiveRadiusX, 0.0001 ), Math.max( effectiveRadiusY, 0.0001 ) );
+							ctx.scale( Math.max( effectiveRadiusX, SCALE_EPSILON ), Math.max( effectiveRadiusY, SCALE_EPSILON ) );
 							ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
 							ctx.restore();
 						}
@@ -619,7 +625,7 @@
 							if ( hasRotation ) {
 								ctx.rotate( rotationRad );
 							}
-							ctx.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
+							ctx.scale( Math.max( radiusX, SCALE_EPSILON ), Math.max( radiusY, SCALE_EPSILON ) );
 							ctx.arc( 0, 0, 1, 0, 2 * Math.PI );
 							ctx.restore();
 						}
@@ -648,7 +654,7 @@
 					if ( hasRotation ) {
 						context.rotate( rotationRad );
 					}
-					context.scale( Math.max( radiusX, 0.0001 ), Math.max( radiusY, 0.0001 ) );
+					context.scale( Math.max( radiusX, SCALE_EPSILON ), Math.max( radiusY, SCALE_EPSILON ) );
 					context.arc( 0, 0, 1, 0, 2 * Math.PI );
 					context.restore();
 				}

@@ -84,6 +84,14 @@
 			}
 		},
 
+		// Mathematical constants
+		MATH: {
+			/** Epsilon for canvas scale operations (prevent divide-by-zero) */
+			SCALE_EPSILON: 0.0001,
+			/** Epsilon for integer detection (is-integer checks) */
+			INTEGER_EPSILON: 1e-9
+		},
+
 		// Canvas and UI constants
 		UI: {
 			GRID_SIZE: 20,

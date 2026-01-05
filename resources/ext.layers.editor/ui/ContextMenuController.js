@@ -39,6 +39,10 @@
 			this.editLayerName = options.editLayerName;
 
 			this.activeContextMenu = null;
+
+			// Store bound handlers for proper cleanup (prevents memory leak)
+			this._boundCloseHandler = null;
+			this._boundEscHandler = null;
 		}
 
 		/**
@@ -198,31 +202,39 @@
 			document.body.appendChild( menu );
 			this.activeContextMenu = menu;
 
-			// Close menu when clicking outside
-			const closeHandler = ( evt ) => {
+			// Close menu when clicking outside - store reference for cleanup
+			this._boundCloseHandler = ( evt ) => {
 				if ( !menu.contains( evt.target ) ) {
 					this.closeLayerContextMenu();
-					document.removeEventListener( 'click', closeHandler );
 				}
 			};
 			setTimeout( () => {
-				document.addEventListener( 'click', closeHandler );
+				document.addEventListener( 'click', this._boundCloseHandler );
 			}, 0 );
 
-			// Close on Escape
-			const escHandler = ( evt ) => {
+			// Close on Escape - store reference for cleanup
+			this._boundEscHandler = ( evt ) => {
 				if ( evt.key === 'Escape' ) {
 					this.closeLayerContextMenu();
-					document.removeEventListener( 'keydown', escHandler );
 				}
 			};
-			document.addEventListener( 'keydown', escHandler );
+			document.addEventListener( 'keydown', this._boundEscHandler );
 		}
 
 		/**
 		 * Close the active layer context menu if open
 		 */
 		closeLayerContextMenu() {
+			// Remove document event listeners to prevent memory leaks
+			if ( this._boundCloseHandler ) {
+				document.removeEventListener( 'click', this._boundCloseHandler );
+				this._boundCloseHandler = null;
+			}
+			if ( this._boundEscHandler ) {
+				document.removeEventListener( 'keydown', this._boundEscHandler );
+				this._boundEscHandler = null;
+			}
+
 			if ( this.activeContextMenu && this.activeContextMenu.parentNode ) {
 				this.activeContextMenu.parentNode.removeChild( this.activeContextMenu );
 			}
