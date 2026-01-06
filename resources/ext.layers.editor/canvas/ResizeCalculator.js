@@ -50,6 +50,7 @@
 				case 'callout':
 				case 'blur':
 				case 'image':
+				case 'customShape':
 					return ResizeCalculator.calculateRectangleResize(
 						originalLayer, handleType, deltaX, deltaY, modifiers
 					);

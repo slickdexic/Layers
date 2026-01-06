@@ -65,9 +65,11 @@ describe( 'StateManager', () => {
 			expect( stateManager.isLocked ).toBe( false );
 		} );
 
-		it( 'should have initial history entry', () => {
-			expect( stateManager.state.history.length ).toBe( 1 );
-			expect( stateManager.state.historyIndex ).toBe( 0 );
+		it( 'should have empty history (disabled - HistoryManager handles undo/redo)', () => {
+			// StateManager's internal history is now disabled for performance.
+			// LayersEditor.undo() uses HistoryManager, not StateManager.
+			expect( stateManager.state.history.length ).toBe( 0 );
+			expect( stateManager.state.historyIndex ).toBe( -1 );
 		} );
 	} );
 
@@ -747,22 +749,27 @@ describe( 'StateManager', () => {
 		} );
 	} );
 
-	describe( 'history operations', () => {
+	describe( 'history operations (DISABLED - HistoryManager handles undo/redo)', () => {
+		// NOTE: StateManager's internal history is disabled for performance.
+		// LayersEditor uses HistoryManager for undo/redo, not StateManager.
+		// These tests verify that saveToHistory/undo/redo are no-ops.
+
 		describe( 'saveToHistory', () => {
-			it( 'should save current state to history', () => {
+			it( 'should be a no-op (history disabled)', () => {
 				stateManager.addLayer( { id: 'layer1' } );
-				// addLayer already saves to history
-				expect( stateManager.state.history.length ).toBeGreaterThan( 1 );
+				// addLayer calls saveToHistory but it's disabled
+				expect( stateManager.state.history.length ).toBe( 0 );
 			} );
 
-			it( 'should limit history size', () => {
+			it( 'should not accumulate history entries', () => {
 				stateManager.state.maxHistorySize = 3;
 
 				for ( let i = 0; i < 5; i++ ) {
 					stateManager.saveToHistory( 'action' + i );
 				}
 
-				expect( stateManager.state.history.length ).toBeLessThanOrEqual( 3 );
+				// History stays empty because saveToHistory is disabled
+				expect( stateManager.state.history.length ).toBe( 0 );
 			} );
 		} );
 
@@ -772,25 +779,17 @@ describe( 'StateManager', () => {
 				stateManager.addLayer( { id: 'layer2', type: 'circle' } );
 			} );
 
-			it( 'should restore previous state', () => {
-				const layerCountBefore = stateManager.state.layers.length;
-				stateManager.undo();
-
-				expect( stateManager.state.layers.length ).toBeLessThan( layerCountBefore );
-			} );
-
-			it( 'should return true on success', () => {
-				const result = stateManager.undo();
-
-				expect( result ).toBe( true );
-			} );
-
-			it( 'should return false if at beginning of history', () => {
-				// Undo everything
-				while ( stateManager.undo() ) { /* empty */ }
-
+			it( 'should return false (history disabled)', () => {
+				// Undo should return false because history is empty
 				const result = stateManager.undo();
 				expect( result ).toBe( false );
+			} );
+
+			it( 'should not modify layers', () => {
+				const layerCountBefore = stateManager.state.layers.length;
+				stateManager.undo();
+				// Layer count unchanged because undo is a no-op
+				expect( stateManager.state.layers.length ).toBe( layerCountBefore );
 			} );
 		} );
 
@@ -798,27 +797,18 @@ describe( 'StateManager', () => {
 			beforeEach( () => {
 				stateManager.addLayer( { id: 'layer1', type: 'rectangle' } );
 				stateManager.addLayer( { id: 'layer2', type: 'circle' } );
-				stateManager.undo();
 			} );
 
-			it( 'should restore next state', () => {
+			it( 'should return false (history disabled)', () => {
+				const result = stateManager.redo();
+				expect( result ).toBe( false );
+			} );
+
+			it( 'should not modify layers', () => {
 				const layerCountBefore = stateManager.state.layers.length;
 				stateManager.redo();
-
-				expect( stateManager.state.layers.length ).toBeGreaterThan( layerCountBefore );
-			} );
-
-			it( 'should return true on success', () => {
-				const result = stateManager.redo();
-
-				expect( result ).toBe( true );
-			} );
-
-			it( 'should return false if at end of history', () => {
-				stateManager.redo(); // Go to end
-				const result = stateManager.redo();
-
-				expect( result ).toBe( false );
+				// Layer count unchanged because redo is a no-op
+				expect( stateManager.state.layers.length ).toBe( layerCountBefore );
 			} );
 		} );
 	} );

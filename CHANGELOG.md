@@ -2,6 +2,39 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.4.10-REL1_43] - 2026-01-06
+
+### Changed
+- **Wikitext Parameter Renamed** — `layerset=` is now the primary parameter for displaying layers in wikitext
+  - `layerset=on` is now the preferred syntax (e.g., `[[File:Example.jpg|layerset=on]]`)
+  - `layers=` and `layer=` remain fully supported for backwards compatibility
+  - All existing wikitext using `layers=` will continue to work unchanged
+  - Updated regex patterns to match `layerset=`, `layers=`, and `layer=`
+  - Thank you to Yaron Koran for suggesting this improvement
+
+### Removed
+- **Redundant Shapes from Custom Shape Tool** — Removed 4 shapes that duplicate existing dedicated tools:
+  - `geometric/pentagon`, `geometric/hexagon`, `geometric/octagon` — Use the Polygon tool instead (can create any n-sided polygon)
+  - `symbols/star` — Use the dedicated Star tool instead
+  - Geometric shapes remaining: triangle, triangle-right, cross, trapezoid, parallelogram
+
+### Improved
+- **Drag Performance** — Fixed canvas sluggishness when dragging layers
+  - Moved `emitTransforming()` inside `requestAnimationFrame` callback in `TransformController.handleDrag()`
+  - Now matches the optimized pattern used by resize and rotation handlers
+  - Eliminates redundant UI updates during rapid mouse movements
+
+### Documentation
+- Updated `docs/WIKITEXT_USAGE.md` with new `layerset=` syntax
+- Updated `.github/copilot-instructions.md` with new parameter documentation
+- Updated wiki files with new syntax examples
+
+### Tests
+- **Test Count** — 8,522 tests passing
+- Updated `ShapeLibraryData.test.js` to reflect removed shapes
+
+---
+
 ## [1.4.9] - 2026-01-05
 
 ### Fixed

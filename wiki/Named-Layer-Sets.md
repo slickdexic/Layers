@@ -77,24 +77,26 @@ Each named set maintains its own revision history:
 ### Basic Syntax
 
 ```wikitext
-[[File:Diagram.png|layers=setname]]
+[[File:Diagram.png|layerset=setname]]
 ```
+
+> **Note:** `layers=` is also supported for backwards compatibility.
 
 ### Examples
 
 ```wikitext
 <!-- Default set -->
-[[File:Heart.png|layers=on]]
-[[File:Heart.png|layers=default]]
+[[File:Heart.png|layerset=on]]
+[[File:Heart.png|layerset=default]]
 
 <!-- Named sets -->
-[[File:Heart.png|layers=anatomy]]
-[[File:Heart.png|layers=blood-flow]]
-[[File:Heart.png|layers=quiz]]
+[[File:Heart.png|layerset=anatomy]]
+[[File:Heart.png|layerset=blood-flow]]
+[[File:Heart.png|layerset=quiz]]
 
 <!-- Disable layers -->
-[[File:Heart.png|layers=off]]
-[[File:Heart.png|layers=none]]
+[[File:Heart.png|layerset=off]]
+[[File:Heart.png|layerset=none]]
 ```
 
 ### With Other Parameters
@@ -102,7 +104,7 @@ Each named set maintains its own revision history:
 Named sets work with all standard image parameters:
 
 ```wikitext
-[[File:Diagram.png|thumb|300px|left|layers=anatomy|Anatomical diagram with labels]]
+[[File:Diagram.png|thumb|300px|left|layerset=anatomy|Anatomical diagram with labels]]
 ```
 
 ---
@@ -152,7 +154,7 @@ Every image has a `default` set:
 
 - Created automatically on first save
 - Cannot be deleted from the UI
-- Used when `layers=on` is specified
+- Used when `layerset=on` is specified
 - Always available as a fallback
 
 ---

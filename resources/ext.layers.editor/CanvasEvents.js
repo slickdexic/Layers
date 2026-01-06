@@ -317,16 +317,13 @@
 				return;
 			}
 
-			// Selection shortcuts
+			// Selection shortcuts (clipboard operations, select all)
+			// Note: Ctrl+Z/Y undo/redo, Ctrl+D duplicate, and Delete are handled by EventManager
 			if ( e.ctrlKey || e.metaKey ) {
 				switch ( e.key.toLowerCase() ) {
 					case 'a':
 						e.preventDefault();
 						cm.selectAll();
-						break;
-					case 'd':
-						e.preventDefault();
-						cm.deselectAll();
 						break;
 					case 'c':
 						e.preventDefault();
@@ -339,17 +336,6 @@
 					case 'x':
 						e.preventDefault();
 						cm.cutSelected();
-						break;
-					case 'z':
-						e.preventDefault();
-						// Route through editor's HistoryManager for single source of truth
-						if ( cm.editor && typeof cm.editor.redo === 'function' ) {
-							if ( e.shiftKey ) {
-								cm.editor.redo();
-							} else {
-								cm.editor.undo();
-							}
-						}
 						break;
 					case '=':
 					case '+':
@@ -367,11 +353,7 @@
 				}
 			}
 
-			// Delete selected objects
-			if ( e.key === 'Delete' || e.key === 'Backspace' ) {
-				e.preventDefault();
-				cm.deleteSelected();
-			}
+			// Note: Delete/Backspace is handled by EventManager to avoid duplicate handlers
 
 			// Pan shortcuts with arrow keys
 			if ( !e.ctrlKey && !e.metaKey ) {

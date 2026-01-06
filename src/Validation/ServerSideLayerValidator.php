@@ -24,7 +24,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	/** @var array Supported layer types */
 	private const SUPPORTED_LAYER_TYPES = [
 		'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
-		'polygon', 'star', 'line', 'path', 'image', 'group'
+		'polygon', 'star', 'line', 'path', 'image', 'group', 'customShape'
 	];
 
 	/** @var array Allowed properties and their types */
@@ -116,7 +116,13 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		// Group layer properties
 		'children' => 'array',
 		'expanded' => 'boolean',
-		'parentGroup' => 'string'
+		'parentGroup' => 'string',
+		// Custom shape properties
+		'shapeId' => 'string',
+		'shapeData' => 'array',
+		'path' => 'string',
+		'viewBox' => 'array',
+		'fillRule' => 'string'
 	];
 
 	/** @var array Value constraints for enum-like properties */
@@ -140,6 +146,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'verticalAlign' => [ 'top', 'middle', 'bottom' ],
 		'fontWeight' => [ 'normal', 'bold' ],
 		'fontStyle' => [ 'normal', 'italic' ],
+		'fillRule' => [ 'nonzero', 'evenodd' ],
 		'tailDirection' => [ 'bottom', 'top', 'left', 'right', 'bottom-left', 'bottom-right', 'top-left', 'top-right' ],
 		'tailStyle' => [ 'triangle', 'curved', 'line' ]
 	];
@@ -380,7 +387,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
-		if ( in_array( $property, [ 'id', 'type', 'fontFamily' ], true ) ) {
+		if ( in_array( $property, [ 'id', 'type', 'fontFamily', 'shapeId' ], true ) ) {
 			// Identifiers - sanitize
 			$sanitized = $this->textSanitizer->sanitizeIdentifier( $value );
 			if ( $property === 'fontFamily' && !in_array( $sanitized, $this->config['defaultFonts'], true ) ) {
@@ -389,7 +396,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
-		if ( in_array( $property, [ 'blendMode', 'arrowhead', 'arrowStyle', 'arrowHeadType' ], true ) ) {
+		if ( in_array( $property, [ 'blendMode', 'arrowhead', 'arrowStyle', 'arrowHeadType',
+			'textAlign', 'verticalAlign', 'fontWeight', 'fontStyle', 'fillRule' ], true ) ) {
 			// Constrained values
 			if ( isset( self::VALUE_CONSTRAINTS[$property] ) ) {
 				if ( !in_array( $value, self::VALUE_CONSTRAINTS[$property], true ) ) {
@@ -397,6 +405,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				}
 			}
 			return [ 'valid' => true, 'value' => $value ];
+		}
+
+		// SVG path data validation (for custom shapes)
+		if ( $property === 'path' ) {
+			return $this->validateSvgPath( $value );
 		}
 
 		// Colors
@@ -453,6 +466,44 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		}
 
 		// Basic validation passed - accept the value
+		return [ 'valid' => true, 'value' => $value ];
+	}
+
+	/**
+	 * Validate SVG path data for custom shapes
+	 *
+	 * Security-critical: Only allow safe SVG path commands and numeric values.
+	 * This prevents XSS attacks through path data.
+	 *
+	 * @param string $value The SVG path data string
+	 * @return array Validation result
+	 */
+	private function validateSvgPath( string $value ): array {
+		// Maximum path length (paths can be large for complex shapes)
+		$maxLength = 10000;
+		if ( strlen( $value ) > $maxLength ) {
+			return [ 'valid' => false, 'error' => "Path data too long (max {$maxLength} characters)" ];
+		}
+
+		// Security: Strict whitelist of allowed characters
+		// Only SVG path commands (M,L,H,V,C,S,Q,T,A,Z) and numeric values
+		// This MUST reject: < > & " ' ; : ( ) javascript script on* etc.
+		if ( !preg_match( '/^[MmLlHhVvCcSsQqTtAaZz0-9\s,.\-+eE]+$/', $value ) ) {
+			return [ 'valid' => false, 'error' => 'Invalid characters in path data' ];
+		}
+
+		// Path must start with a move command
+		if ( !preg_match( '/^\s*[Mm]/', $value ) ) {
+			return [ 'valid' => false, 'error' => 'Path must start with M or m command' ];
+		}
+
+		// Limit number of commands to prevent DoS
+		$commandCount = preg_match_all( '/[MmLlHhVvCcSsQqTtAaZz]/', $value );
+		$maxCommands = 1000;
+		if ( $commandCount > $maxCommands ) {
+			return [ 'valid' => false, 'error' => "Too many path commands (max {$maxCommands})" ];
+		}
+
 		return [ 'valid' => true, 'value' => $value ];
 	}
 
@@ -571,6 +622,31 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $validChildren ];
 		}
 
+		if ( $property === 'viewBox' ) {
+			// ViewBox must be array of 4 numeric values: [x, y, width, height]
+			if ( count( $value ) !== 4 ) {
+				return [ 'valid' => false, 'error' => 'ViewBox must have exactly 4 values' ];
+			}
+
+			$validViewBox = [];
+			foreach ( $value as $i => $num ) {
+				if ( !is_numeric( $num ) ) {
+					return [ 'valid' => false, 'error' => 'ViewBox values must be numeric' ];
+				}
+				$numValue = (float)$num;
+				if ( !is_finite( $numValue ) ) {
+					return [ 'valid' => false, 'error' => 'Invalid viewBox value' ];
+				}
+				// Width and height (indices 2 and 3) must be positive
+				if ( $i >= 2 && $numValue <= 0 ) {
+					return [ 'valid' => false, 'error' => 'ViewBox width/height must be positive' ];
+				}
+				$validViewBox[] = $numValue;
+			}
+
+			return [ 'valid' => true, 'value' => $validViewBox ];
+		}
+
 		return [ 'valid' => true, 'value' => $value ];
 	}
 
@@ -669,6 +745,22 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 					return [ 'valid' => false, 'error' => 'Group children must be an array' ];
 				}
 				break;
+
+			case 'customShape':
+				// Custom shapes require a shapeId OR embedded shapeData
+				$hasShapeId = isset( $layer['shapeId'] ) && !empty( $layer['shapeId'] );
+				$hasShapeData = isset( $layer['shapeData'] ) && is_array( $layer['shapeData'] );
+				if ( !$hasShapeId && !$hasShapeData ) {
+					return [ 'valid' => false, 'error' => 'customShape layer must have shapeId or shapeData' ];
+				}
+				// Validate embedded shapeData if present
+				if ( $hasShapeData ) {
+					$shapeDataValidation = $this->validateShapeData( $layer['shapeData'] );
+					if ( !$shapeDataValidation['valid'] ) {
+						return $shapeDataValidation;
+					}
+				}
+				break;
 		}
 
 		return [ 'valid' => true ];
@@ -724,5 +816,79 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	 */
 	public function isLayerTypeSupported( string $type ): bool {
 		return in_array( $type, self::SUPPORTED_LAYER_TYPES, true );
+	}
+
+	/**
+	 * Validate embedded shape data for customShape layers
+	 *
+	 * This provides server-side validation of SVG path data to ensure
+	 * only safe drawing commands are allowed.
+	 *
+	 * @param array $shapeData The embedded shape data
+	 * @return array Validation result with 'valid' and optionally 'error'
+	 */
+	private function validateShapeData( array $shapeData ): array {
+		// Required: path data
+		if ( !isset( $shapeData['path'] ) || !is_string( $shapeData['path'] ) ) {
+			return [ 'valid' => false, 'error' => 'shapeData must have a path string' ];
+		}
+
+		$path = $shapeData['path'];
+
+		// Path length limit
+		if ( strlen( $path ) > 10000 ) {
+			return [ 'valid' => false, 'error' => 'Shape path data too long (max 10KB)' ];
+		}
+
+		// SECURITY: Strict whitelist of allowed characters in SVG path data
+		// Only path commands (M, L, H, V, C, S, Q, T, A, Z) and numbers allowed
+		// This makes script injection impossible
+		$validPathPattern = '/^[MmLlHhVvCcSsQqTtAaZz0-9\s,.\-+eE]+$/';
+		if ( !preg_match( $validPathPattern, $path ) ) {
+			return [ 'valid' => false, 'error' => 'Shape path contains invalid characters' ];
+		}
+
+		// Path must start with a move command
+		$trimmedPath = ltrim( $path );
+		if ( strlen( $trimmedPath ) === 0 || ( $trimmedPath[0] !== 'M' && $trimmedPath[0] !== 'm' ) ) {
+			return [ 'valid' => false, 'error' => 'Shape path must start with moveto command' ];
+		}
+
+		// Command count limit (prevent DoS via extremely complex paths)
+		$commandCount = preg_match_all( '/[MmLlHhVvCcSsQqTtAaZz]/', $path );
+		if ( $commandCount > 2000 ) {
+			return [ 'valid' => false, 'error' => 'Shape path has too many commands (max 2000)' ];
+		}
+
+		// Required: viewBox array
+		if ( !isset( $shapeData['viewBox'] ) || !is_array( $shapeData['viewBox'] ) ) {
+			return [ 'valid' => false, 'error' => 'shapeData must have a viewBox array' ];
+		}
+
+		$viewBox = $shapeData['viewBox'];
+		if ( count( $viewBox ) !== 4 ) {
+			return [ 'valid' => false, 'error' => 'viewBox must have exactly 4 values' ];
+		}
+
+		foreach ( $viewBox as $val ) {
+			if ( !is_numeric( $val ) ) {
+				return [ 'valid' => false, 'error' => 'viewBox values must be numeric' ];
+			}
+		}
+
+		// viewBox width and height must be positive
+		if ( (float)$viewBox[2] <= 0 || (float)$viewBox[3] <= 0 ) {
+			return [ 'valid' => false, 'error' => 'viewBox width and height must be positive' ];
+		}
+
+		// Optional: fillRule validation
+		if ( isset( $shapeData['fillRule'] ) ) {
+			$validFillRules = [ 'nonzero', 'evenodd' ];
+			if ( !in_array( $shapeData['fillRule'], $validFillRules, true ) ) {
+				return [ 'valid' => false, 'error' => 'Invalid fillRule value' ];
+			}
+		}
+
+		return [ 'valid' => true ];
 	}
 }

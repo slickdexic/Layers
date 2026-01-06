@@ -836,6 +836,10 @@
 					this.ctx.stroke();
 					this.ctx.restore();
 					break;
+				case 'customShape':
+					// Use rectangular bounding box for glow effect
+					this.ctx.strokeRect( layer.x || 0, layer.y || 0, layer.width || 0, layer.height || 0 );
+					break;
 				// Add others as needed
 			}
 		}

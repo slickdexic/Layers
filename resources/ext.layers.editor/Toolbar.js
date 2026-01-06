@@ -442,6 +442,14 @@
 				// Callout/Chat Bubble tool - Speech bubble with tail
 				callout: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+			</svg>`,
+
+				// Custom Shape Library - Grid of shapes
+				customShapes: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="3" y="3" width="7" height="7"/>
+				<rect x="14" y="3" width="7" height="7"/>
+				<polygon points="6.5 21 3 14 10 14 6.5 21"/>
+				<circle cx="17.5" cy="17.5" r="3.5"/>
 			</svg>`
 			};
 		}
@@ -657,6 +665,12 @@
 				} );
 			}
 
+			// Create Shape Library button
+			const shapeLibraryButton = this.createShapeLibraryButton( icons );
+			if ( shapeLibraryButton ) {
+				toolGroup.appendChild( shapeLibraryButton );
+			}
+
 			// Render additional standalone tools (pen, blur)
 			additionalTools.forEach( ( tool ) => {
 				const button = this.createToolButton( tool );
@@ -692,6 +706,143 @@
 			}
 
 			return button;
+		}
+
+		/**
+		 * Create the Shape Library button with dropdown panel
+		 *
+		 * @param {Object} icons - The toolbar icons object
+		 * @return {HTMLElement|null} The button container element or null if dependencies unavailable
+		 */
+		createShapeLibraryButton( icons ) {
+			const ShapeLibraryPanel = getClass( 'ShapeLibrary.ShapeLibraryPanel', 'ShapeLibraryPanel' );
+			const ShapeLibraryManager = getClass( 'ShapeLibrary.ShapeLibraryManager', 'ShapeLibraryManager' );
+			const ShapeLibraryData = getClass( 'ShapeLibrary.ShapeLibraryData', 'ShapeLibraryData' );
+
+			if ( !ShapeLibraryPanel || !ShapeLibraryManager || !ShapeLibraryData ) {
+				// Dependencies not available
+				return null;
+			}
+
+			// Create container for button and panel
+			const container = document.createElement( 'div' );
+			container.className = 'shape-library-container';
+			container.style.position = 'relative';
+			container.style.display = 'inline-block';
+
+			// Create the button
+			const button = document.createElement( 'button' );
+			button.className = 'toolbar-button tool-button shape-library-button';
+			button.innerHTML = icons.customShapes;
+			const title = this.msg( 'layers-shape-library', 'Shape Library' );
+			button.title = title;
+			button.setAttribute( 'aria-label', title );
+			button.setAttribute( 'aria-expanded', 'false' );
+			button.setAttribute( 'aria-haspopup', 'true' );
+			button.type = 'button';
+
+			// Initialize shape library manager with data
+			const manager = new ShapeLibraryManager();
+			manager.setShapeData( ShapeLibraryData );
+
+			// Create the panel
+			const panel = new ShapeLibraryPanel( {
+				manager: manager,
+				onSelect: ( shapeData ) => {
+					this.handleShapeLibrarySelect( shapeData );
+					this.hideShapeLibraryPanel();
+				},
+				msg: this.msg.bind( this )
+			} );
+
+			// Store references
+			this.shapeLibraryPanel = panel;
+			this.shapeLibraryButton = button;
+			this.shapeLibraryContainer = container;
+
+			// Add click handler to toggle panel
+			button.addEventListener( 'click', () => {
+				this.toggleShapeLibraryPanel();
+			} );
+
+			// Close panel when clicking outside
+			document.addEventListener( 'click', ( e ) => {
+				if ( this.shapeLibraryPanelVisible &&
+					!container.contains( e.target ) ) {
+					this.hideShapeLibraryPanel();
+				}
+			} );
+
+			// Close panel on Escape key
+			document.addEventListener( 'keydown', ( e ) => {
+				if ( e.key === 'Escape' && this.shapeLibraryPanelVisible ) {
+					this.hideShapeLibraryPanel();
+					button.focus();
+				}
+			} );
+
+			container.appendChild( button );
+			container.appendChild( panel.getElement() );
+			panel.hide(); // Start hidden
+
+			return container;
+		}
+
+		/**
+		 * Toggle the shape library panel visibility
+		 */
+		toggleShapeLibraryPanel() {
+			if ( this.shapeLibraryPanelVisible ) {
+				this.hideShapeLibraryPanel();
+			} else {
+				this.showShapeLibraryPanel();
+			}
+		}
+
+		/**
+		 * Show the shape library panel
+		 */
+		showShapeLibraryPanel() {
+			if ( this.shapeLibraryPanel ) {
+				this.shapeLibraryPanel.show();
+				this.shapeLibraryPanelVisible = true;
+				if ( this.shapeLibraryButton ) {
+					this.shapeLibraryButton.setAttribute( 'aria-expanded', 'true' );
+					this.shapeLibraryButton.classList.add( 'active' );
+				}
+			}
+		}
+
+		/**
+		 * Hide the shape library panel
+		 */
+		hideShapeLibraryPanel() {
+			if ( this.shapeLibraryPanel ) {
+				this.shapeLibraryPanel.hide();
+				this.shapeLibraryPanelVisible = false;
+				if ( this.shapeLibraryButton ) {
+					this.shapeLibraryButton.setAttribute( 'aria-expanded', 'false' );
+					this.shapeLibraryButton.classList.remove( 'active' );
+				}
+			}
+		}
+
+		/**
+		 * Handle selection of a shape from the library
+		 *
+		 * @param {Object} shapeData - The selected shape data
+		 */
+		handleShapeLibrarySelect( shapeData ) {
+			if ( !shapeData ) {
+				return;
+			}
+
+			// Notify editor to create a custom shape layer
+			if ( this.editor && typeof this.editor.createCustomShapeLayer === 'function' ) {
+				this.editor.createCustomShapeLayer( shapeData );
+			} else if ( this.onShapeLibrarySelect ) {
+				this.onShapeLibrarySelect( shapeData );
+			}
 		}
 
 		createStyleGroup() {

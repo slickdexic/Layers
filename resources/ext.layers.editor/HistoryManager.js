@@ -187,9 +187,28 @@
 		}
 
 		/**
+		 * Get efficient cloning utility from namespace
+		 *
+		 * @private
+		 * @return {Function|null} The cloneLayersEfficient function or null
+		 */
+		_getCloneLayersEfficient() {
+			if ( typeof window !== 'undefined' &&
+				window.Layers &&
+				window.Layers.Utils &&
+				typeof window.Layers.Utils.cloneLayersEfficient === 'function' ) {
+				return window.Layers.Utils.cloneLayersEfficient;
+			}
+			return null;
+		}
+
+		/**
 		 * Get snapshot of current layers
 		 *
-		 * @return {Array} Deep copy of layers array
+		 * Uses efficient cloning that preserves references to immutable large data
+		 * (image src, SVG path) to avoid expensive JSON serialization of 500KB+ strings.
+		 *
+		 * @return {Array} Deep copy of layers array (with immutable data by reference)
 		 */
 		getLayersSnapshot() {
 			const editor = this.getEditor();
@@ -203,6 +222,13 @@
 				layers = this.canvasManager.layers;
 			}
 
+			// Use efficient cloning if available (preserves src/path by reference)
+			const cloneLayersEfficient = this._getCloneLayersEfficient();
+			if ( cloneLayersEfficient ) {
+				return cloneLayersEfficient( layers || [] );
+			}
+
+			// Fallback to JSON cloning
 			return JSON.parse( JSON.stringify( layers || [] ) );
 		}
 
@@ -218,6 +244,7 @@
 
 			this.historyIndex--;
 			const state = this.history[ this.historyIndex ];
+
 			this.restoreState( state );
 			this.updateUndoRedoButtons();
 
@@ -265,15 +292,23 @@
 		 * @param {Object} state State object to restore
 		 */
 		restoreState( state ) {
-			// Restore layers to either editor.layers or canvasManager.layers
-			const restored = JSON.parse( JSON.stringify( state.layers ) );
+			// Restore layers using efficient cloning if available
+			const cloneLayersEfficient = this._getCloneLayersEfficient();
+			const restored = cloneLayersEfficient ?
+				cloneLayersEfficient( state.layers ) :
+				JSON.parse( JSON.stringify( state.layers ) );
 
 			const editor = this.getEditor();
 			const canvasMgr = this.getCanvasManager();
 
-			// Restore layers via StateManager
+			// Track whether StateManager is used (determines if we need explicit renderLayerList)
+			let usedStateManager = false;
+
+			// Restore layers via StateManager (this triggers the 'layers' listener
+			// which already calls renderLayerList(), so we don't call it explicitly)
 			if ( editor && editor.stateManager ) {
 				editor.stateManager.set( 'layers', restored );
+				usedStateManager = true;
 			} else if ( editor ) {
 				editor.layers = restored;
 			} else if ( this.canvasManager ) {
@@ -295,9 +330,10 @@
 				canvasMgr.renderLayers( restored );
 			}
 
-			// Update layer panel directly without going through StateManager again
-			// (we already set layers via stateManager.set above, so this avoids double-update)
-			if ( editor && editor.layerPanel &&
+			// Only call renderLayerList explicitly when StateManager was NOT used.
+			// When StateManager IS used, the 'layers' subscription in LayerPanel already
+			// triggers renderLayerList(), so calling it again would cause double-update.
+			if ( !usedStateManager && editor && editor.layerPanel &&
 				typeof editor.layerPanel.renderLayerList === 'function' ) {
 				editor.layerPanel.renderLayerList();
 			}

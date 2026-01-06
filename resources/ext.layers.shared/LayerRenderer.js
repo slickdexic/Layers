@@ -548,6 +548,117 @@ class LayerRenderer {
 		this.ctx.restore();
 	}
 
+	/**
+	 * Draw a custom shape layer using SVG path data
+	 *
+	 * @param {Object} layer - Custom shape layer with path, viewBox, x, y, width, height
+	 * @param {Object} [options] - Rendering options
+	 */
+	drawCustomShape( layer, options ) {
+		if ( !layer.path || !layer.viewBox ) {
+			return;
+		}
+
+		const opts = this._prepareRenderOptions( options );
+		const scale = opts.scale;
+
+		// Get CustomShapeRenderer from namespace
+		const CustomShapeRenderer = ( typeof window !== 'undefined' &&
+			window.Layers &&
+			window.Layers.ShapeLibrary &&
+			window.Layers.ShapeLibrary.CustomShapeRenderer ) ?
+			window.Layers.ShapeLibrary.CustomShapeRenderer : null;
+
+		if ( CustomShapeRenderer ) {
+			// Use dedicated custom shape renderer
+			if ( !this._customShapeRenderer ) {
+				this._customShapeRenderer = new CustomShapeRenderer();
+			}
+
+			// Get shape data
+			const shapeData = {
+				id: layer.shapeId,
+				path: layer.path,
+				viewBox: layer.viewBox,
+				fillRule: layer.fillRule
+			};
+
+			this._customShapeRenderer.render( this.ctx, shapeData, layer, scale );
+			return;
+		}
+
+		// Fallback: basic Path2D rendering
+		const x = ( layer.x || 0 ) * scale.sx;
+		const y = ( layer.y || 0 ) * scale.sy;
+		const width = ( layer.width || 100 ) * scale.sx;
+		const height = ( layer.height || 100 ) * scale.sy;
+
+		const viewBox = layer.viewBox;
+		const viewBoxWidth = viewBox[ 2 ];
+		const viewBoxHeight = viewBox[ 3 ];
+
+		// Calculate scale to fit viewBox into layer dimensions
+		const scaleX = width / viewBoxWidth;
+		const scaleY = height / viewBoxHeight;
+
+		this.ctx.save();
+
+		// Apply opacity
+		if ( layer.opacity !== undefined && layer.opacity !== 1 ) {
+			this.ctx.globalAlpha = layer.opacity;
+		}
+
+		// Position and scale the path
+		this.ctx.translate( x, y );
+		this.ctx.scale( scaleX, scaleY );
+
+		// Apply rotation around center
+		if ( layer.rotation ) {
+			const centerX = viewBoxWidth / 2;
+			const centerY = viewBoxHeight / 2;
+			this.ctx.translate( centerX, centerY );
+			this.ctx.rotate( layer.rotation * Math.PI / 180 );
+			this.ctx.translate( -centerX, -centerY );
+		}
+
+		// Create Path2D
+		try {
+			const path = new Path2D( layer.path );
+
+			// Apply shadow if enabled
+			const shadowScale = opts.shadowScale || { sx: 1, sy: 1, avg: 1 };
+			if ( this.shadowRenderer && this.shadowRenderer.hasShadowEnabled( layer ) ) {
+				this.shadowRenderer.applyShadow( layer, shadowScale );
+			}
+
+			// Fill
+			if ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' ) {
+				this.ctx.fillStyle = layer.fill;
+				const fillRule = layer.fillRule || 'nonzero';
+				this.ctx.fill( path, fillRule );
+			}
+
+			// Stroke
+			if ( layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
+				this.ctx.strokeStyle = layer.stroke;
+				this.ctx.lineWidth = ( layer.strokeWidth || 2 ) / Math.min( scaleX, scaleY );
+				this.ctx.stroke( path );
+			}
+
+			// Clear shadow
+			if ( this.shadowRenderer ) {
+				this.shadowRenderer.clearShadow();
+			}
+		} catch ( e ) {
+			// Invalid path - draw error placeholder
+			this.ctx.strokeStyle = '#f00';
+			this.ctx.lineWidth = 2;
+			this.ctx.strokeRect( 0, 0, viewBoxWidth, viewBoxHeight );
+		}
+
+		this.ctx.restore();
+	}
+
 	/** Draw a text layer */
 	drawText( layer, options ) {
 		if ( this.textRenderer ) { this.textRenderer.setContext( this.ctx ); this.textRenderer.draw( layer, this._prepareRenderOptions( options ) ); }
@@ -821,6 +932,9 @@ class LayerRenderer {
 			case 'image':
 				this.drawImage( layer, options );
 				break;
+			case 'customShape':
+				this.drawCustomShape( layer, options );
+				break;
 		}
 	}
 
@@ -841,7 +955,8 @@ class LayerRenderer {
 			'shapeRenderer',
 			'textBoxRenderer',
 			'calloutRenderer',
-			'effectsRenderer'
+			'effectsRenderer',
+			'_customShapeRenderer'
 		];
 
 		for ( const rendererName of subRenderers ) {

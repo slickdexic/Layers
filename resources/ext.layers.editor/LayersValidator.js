@@ -69,7 +69,7 @@
 				// Layer type whitelist (must match server-side validation)
 				validTypes: [
 					'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
-					'polygon', 'star', 'line', 'path', 'blur', 'image', 'group'
+					'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape'
 				],
 
 				// Coordinate limits

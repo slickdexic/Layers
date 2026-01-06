@@ -222,7 +222,7 @@ class WikitextHooks {
 
 	/**
 	 * Handle wikitext after parsing to find and replace layer image syntax
-	 * This catches [[File:Example.jpg|layers=on]] after MediaWiki has processed it
+	 * This catches [[File:Example.jpg|layerset=on]] (or layers= for backwards compatibility)
 	 *
 	 * @param mixed $parser
 	 * @param string &$text
@@ -267,7 +267,7 @@ class WikitextHooks {
 	 */
 	public static function onParserFirstCallInit( $parser ): bool {
 		// Parser functions are currently disabled to avoid magic word conflicts
-		// The extension works through the layers= parameter in file syntax instead
+		// The extension works through the layerset= parameter in file syntax instead
 		// To enable parser functions, define magic words in i18n and uncomment below:
 		// $parser->setFunctionHook( 'layeredfile', [ self::class, 'renderLayeredFile' ], \Parser::SFH_OBJECT_ARGS );
 		return true;
@@ -275,7 +275,7 @@ class WikitextHooks {
 
 	/**
 	 * Render a file with layers
-	 * Usage: {{#layeredfile:ImageTest02.jpg|500px|layers=on|caption}}
+	 * Usage: {{#layeredfile:ImageTest02.jpg|500px|layerset=on|caption}}
 	 *
 	 * @param mixed $parser The parser object
 	 * @param mixed $frame The frame object
@@ -366,21 +366,27 @@ class WikitextHooks {
 			unset( $params['layerslink'] );
 		}
 
-		// Normalize alias 'layer' to 'layers'
-		if ( !isset( $params['layers'] ) && isset( $params['layer'] ) ) {
-			$params['layers'] = $params['layer'];
-			unset( $params['layer'] );
+		// Normalize aliases: 'layer', 'layers' -> 'layerset' (layerset is primary)
+		// 'layerset' is the preferred parameter, 'layers' and 'layer' are for backwards compatibility
+		if ( !isset( $params['layerset'] ) ) {
+			if ( isset( $params['layers'] ) ) {
+				$params['layerset'] = $params['layers'];
+				unset( $params['layers'] );
+			} elseif ( isset( $params['layer'] ) ) {
+				$params['layerset'] = $params['layer'];
+				unset( $params['layer'] );
+			}
 		}
 
-		if ( !isset( $params['layers'] ) ) {
+		if ( !isset( $params['layerset'] ) ) {
 			return true;
 		}
 
 		// Ensure we have a File object
 		$file = self::ensureFileObject( $file, $title );
 
-		// Normalize the layers parameter value
-		$layersRaw = self::normalizeLayersParam( $params['layers'] );
+		// Normalize the layerset parameter value
+		$layersRaw = self::normalizeLayersParam( $params['layerset'] );
 
 		// Handle disabled layers
 		if ( $layersRaw === false || $layersRaw === 'none' || $layersRaw === 'off' ) {
@@ -418,7 +424,7 @@ class WikitextHooks {
 		}
 
 		// Finalize params
-		$params['layers'] = 'on';
+		$params['layerset'] = 'on';
 		if ( isset( $params['layerData'] ) && is_array( $params['layerData'] ) ) {
 			$params['layersjson'] = json_encode( $params['layerData'], JSON_UNESCAPED_UNICODE );
 		}
@@ -427,7 +433,7 @@ class WikitextHooks {
 		}
 
 		self::log( sprintf(
-			'Processed layers param: hasData=%s, hasSetId=%s',
+			'Processed layerset param: hasData=%s, hasSetId=%s',
 			isset( $params['layerData'] ) ? 'yes' : 'no',
 			isset( $params['layerSetId'] ) ? 'yes' : 'no'
 		) );
@@ -544,8 +550,8 @@ class WikitextHooks {
 
 	/**
 	 * Hook: ParserBeforeInternalParse
-	 * Scan the raw wikitext for layers= parameters as a fallback when
-	 * parameter registration hooks don't work properly.
+	 * Scan the raw wikitext for layerset= (or layers= for backwards compatibility)
+	 * parameters as a fallback when parameter registration hooks don't work properly.
 	 *
 	 * @param mixed $parser Parser instance
 	 * @param string &$text Wikitext being parsed (by reference)
@@ -564,7 +570,7 @@ class WikitextHooks {
 			self::log( "ParserBeforeInternalParse: text length=$textLen, preview: $preview" );
 
 			// First, find ALL File: usages to establish the complete render order
-			// This captures [[File:name.ext...]] patterns (with or without layers=)
+			// This captures [[File:name.ext...]] patterns (with or without layerset=)
 			$allFilesPattern = '/\[\[File:([^|\]]+)(?:\|[^\]]*?)?\]\]/i';
 			$allFileMatches = [];
 			$fileMatchCount = preg_match_all( $allFilesPattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
@@ -586,18 +592,19 @@ class WikitextHooks {
 				return $a['offset'] - $b['offset'];
 			} );
 
-					// Now extract layers= values with their offsets
-			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layers?\s*=\s*([^|\]]+)/i';
+				// Now extract layerset=/layers= values with their offsets
+			// Matches: layerset=, layers=, layer= (backwards compatibility)
+			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?(?:layerset|layers?)\s*=\s*([^|\]]+)/i';
 			// filename => [offset => value, ...]
 			$layersMap = [];
-			self::log( 'Running layers regex on text: ' . substr( $text, 0, 200 ) );
+			self::log( 'Running layerset/layers regex on text: ' . substr( $text, 0, 200 ) );
 			$matchCount = preg_match_all(
 				$fileLayersPattern,
 				$text,
 				$allMatches,
 				PREG_SET_ORDER | PREG_OFFSET_CAPTURE
 			);
-			self::log( "Layers regex matched $matchCount times" );
+			self::log( "Layerset/layers regex matched $matchCount times" );
 			if ( $matchCount ) {
 				foreach ( $allMatches as $match ) {
 					// Normalize filename: replace spaces with underscores
@@ -612,7 +619,7 @@ class WikitextHooks {
 				}
 			}
 
-			// Build queues with correct positions (null for files without layers= at that position)
+			// Build queues with correct positions (null for files without layerset/layers= at that position)
 			foreach ( $allFileMatches as $fileMatch ) {
 				$filename = $fileMatch['filename'];
 				$offset = $fileMatch['offset'];
@@ -622,7 +629,7 @@ class WikitextHooks {
 					self::$fileSetNames[$filename] = [];
 				}
 
-				// Check if this occurrence has a layers= value
+				// Check if this occurrence has a layerset= or layers= value
 				$layersValue = null;
 				if ( isset( $layersMap[$filename] ) ) {
 					// Find the layers value that matches this occurrence's offset exactly
@@ -640,12 +647,12 @@ class WikitextHooks {
 					$isBoolean = in_array( $normalized, [ 'on', 'off', 'none', 'true', 'false', 'all' ], true );
 					self::$fileSetNames[$filename][] = $isBoolean ? $normalized : $layersValue;
 					$queueLen = count( self::$fileSetNames[$filename] );
-					self::log( "Detected layers=$layersValue for $filename (occurrence #$queueLen)" );
+					self::log( "Detected layerset=$layersValue for $filename (occurrence #$queueLen)" );
 				} else {
 					// Add null placeholder to keep queue aligned with render order
 					self::$fileSetNames[$filename][] = null;
 									$queueLen = count( self::$fileSetNames[$filename] );
-					self::log( "No layers param for $filename (occurrence #$queueLen, placeholder added)" );
+					self::log( "No layerset/layers param for $filename (occurrence #$queueLen, placeholder added)" );
 				}
 			}
 
@@ -714,14 +721,14 @@ class WikitextHooks {
 				}
 			}
 
-			// Strip layers= and layer= from wikitext to prevent caption leakage
-			// Pattern matches: |layers=value or |layer=value (with optional whitespace)
+			// Strip layerset=, layers=, and layer= from wikitext to prevent caption leakage
+			// Pattern matches: |layerset=value, |layers=value, or |layer=value (with optional whitespace)
 			$text = preg_replace(
-				'/\|layers?\s*=\s*[^|\]]+/i',
+				'/\|(?:layerset|layers?)\s*=\s*[^|\]]+/i',
 				'',
 				$text
 			);
-			self::log( 'Stripped layers/layer parameters from wikitext' );
+			self::log( 'Stripped layerset/layers/layer parameters from wikitext' );
 		} catch ( \Throwable $e ) {
 			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
 		}

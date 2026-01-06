@@ -690,17 +690,8 @@ describe( 'CanvasEvents', () => {
 			expect( mockCanvasManager.selectAll ).toHaveBeenCalled();
 		} );
 
-		it( 'should deselect all with Ctrl+D', () => {
-			const event = {
-				target: { tagName: 'CANVAS' },
-				key: 'd',
-				ctrlKey: true,
-				preventDefault: jest.fn()
-			};
-			canvasEvents.handleKeyDown( event );
-
-			expect( mockCanvasManager.deselectAll ).toHaveBeenCalled();
-		} );
+		// Note: Ctrl+D is now handled by EventManager for duplicate (not deselect)
+		// This test is removed as CanvasEvents no longer handles Ctrl+D
 
 		it( 'should copy with Ctrl+C', () => {
 			const event = {
@@ -738,31 +729,8 @@ describe( 'CanvasEvents', () => {
 			expect( mockCanvasManager.cutSelected ).toHaveBeenCalled();
 		} );
 
-		it( 'should undo with Ctrl+Z', () => {
-			const event = {
-				target: { tagName: 'CANVAS' },
-				key: 'z',
-				ctrlKey: true,
-				shiftKey: false,
-				preventDefault: jest.fn()
-			};
-			canvasEvents.handleKeyDown( event );
-
-			expect( mockCanvasManager.editor.undo ).toHaveBeenCalled();
-		} );
-
-		it( 'should redo with Ctrl+Shift+Z', () => {
-			const event = {
-				target: { tagName: 'CANVAS' },
-				key: 'z',
-				ctrlKey: true,
-				shiftKey: true,
-				preventDefault: jest.fn()
-			};
-			canvasEvents.handleKeyDown( event );
-
-			expect( mockCanvasManager.editor.redo ).toHaveBeenCalled();
-		} );
+		// Note: Ctrl+Z/Y undo/redo is handled by EventManager to avoid duplicate handlers
+		// CanvasEvents no longer handles these shortcuts
 
 		it( 'should zoom in with Ctrl++', () => {
 			const event = {
@@ -812,29 +780,8 @@ describe( 'CanvasEvents', () => {
 			expect( mockCanvasManager.resetZoom ).toHaveBeenCalled();
 		} );
 
-		it( 'should delete selected with Delete key', () => {
-			const event = {
-				target: { tagName: 'CANVAS' },
-				key: 'Delete',
-				ctrlKey: false,
-				preventDefault: jest.fn()
-			};
-			canvasEvents.handleKeyDown( event );
-
-			expect( mockCanvasManager.deleteSelected ).toHaveBeenCalled();
-		} );
-
-		it( 'should delete selected with Backspace key', () => {
-			const event = {
-				target: { tagName: 'CANVAS' },
-				key: 'Backspace',
-				ctrlKey: false,
-				preventDefault: jest.fn()
-			};
-			canvasEvents.handleKeyDown( event );
-
-			expect( mockCanvasManager.deleteSelected ).toHaveBeenCalled();
-		} );
+		// Note: Delete/Backspace are now handled by EventManager to avoid duplicate handlers
+		// These tests are removed as CanvasEvents no longer handles Delete/Backspace
 
 		it( 'should pan up with ArrowUp', () => {
 			mockCanvasManager.panY = 0;

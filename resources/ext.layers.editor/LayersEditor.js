@@ -717,6 +717,96 @@ class LayersEditor {
 	}
 
 	/**
+	 * Create a custom shape layer from shape library data
+	 *
+	 * @param {Object} shapeData - Shape data from the shape library
+	 * @param {string} shapeData.id - Shape ID (e.g., 'arrows/right')
+	 * @param {string} shapeData.path - SVG path data
+	 * @param {number[]} shapeData.viewBox - ViewBox [x, y, width, height]
+	 * @param {string} [shapeData.nameKey] - i18n key for shape name
+	 */
+	createCustomShapeLayer ( shapeData ) {
+		if ( !shapeData || !shapeData.path || !shapeData.viewBox ) {
+			if ( this.debug ) {
+				this.errorLog( 'createCustomShapeLayer: Invalid shape data', shapeData );
+			}
+			return;
+		}
+
+		const viewBox = shapeData.viewBox;
+		const viewBoxWidth = viewBox[ 2 ];
+		const viewBoxHeight = viewBox[ 3 ];
+
+		// Get canvas center for placement
+		const canvasEl = this.canvasManager ? this.canvasManager.canvas : null;
+		const canvasWidth = canvasEl ? canvasEl.width : 800;
+		const canvasHeight = canvasEl ? canvasEl.height : 600;
+
+		// Calculate position accounting for zoom/pan
+		let centerX = canvasWidth / 2;
+		let centerY = canvasHeight / 2;
+
+		if ( this.canvasManager ) {
+			// zoom, panX, panY are stored directly on canvasManager, not on zoomPanController
+			const zoom = this.canvasManager.zoom || 1;
+			const panX = this.canvasManager.panX || 0;
+			const panY = this.canvasManager.panY || 0;
+			// Convert canvas center to world coordinates
+			centerX = ( centerX - panX ) / zoom;
+			centerY = ( centerY - panY ) / zoom;
+		}
+
+		// Default size (scale to ~100px while preserving aspect ratio)
+		const targetSize = 100;
+		const aspectRatio = viewBoxWidth / viewBoxHeight;
+		let width, height;
+
+		if ( aspectRatio >= 1 ) {
+			width = targetSize;
+			height = targetSize / aspectRatio;
+		} else {
+			height = targetSize;
+			width = targetSize * aspectRatio;
+		}
+
+		// Get current style settings from toolbar
+		let stroke = '#000000';
+		let fill = 'transparent';
+		let strokeWidth = 2;
+
+		if ( this.toolbar && this.toolbar.styleControls ) {
+			const styleOpts = this.toolbar.styleControls.getStyleOptions();
+			stroke = styleOpts.stroke || styleOpts.color || stroke;
+			fill = styleOpts.fill || fill;
+			strokeWidth = styleOpts.strokeWidth || strokeWidth;
+		}
+
+		// Create the layer data
+		const layerData = {
+			type: 'customShape',
+			shapeId: shapeData.id,
+			path: shapeData.path,
+			viewBox: shapeData.viewBox,
+			x: centerX - width / 2,
+			y: centerY - height / 2,
+			width: width,
+			height: height,
+			stroke: stroke,
+			fill: fill,
+			strokeWidth: strokeWidth,
+			fillRule: shapeData.fillRule || 'nonzero',
+			name: shapeData.nameKey ?
+				this.msg( shapeData.nameKey, shapeData.id.split( '/' ).pop() ) :
+				shapeData.id.split( '/' ).pop()
+		};
+
+		this.addLayer( layerData );
+
+		// Switch to pointer tool after adding shape so user can interact with it
+		this.setCurrentTool( 'pointer' );
+	}
+
+	/**
 	 * Update an existing layer with new data
 	 * @param {string} layerId - ID of the layer to update
 	 * @param {Object} changes - Changes to apply to the layer

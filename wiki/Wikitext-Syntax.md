@@ -6,11 +6,13 @@ Complete reference for using Layers in wikitext.
 
 ## Basic Syntax
 
-Add the `layers` parameter to any file link to display annotations:
+Add the `layerset` parameter to any file link to display annotations:
 
 ```wikitext
-[[File:Example.jpg|layers=on]]
+[[File:Example.jpg|layerset=on]]
 ```
+
+> **Note:** `layers=` is also supported for backwards compatibility. Both parameters work identically.
 
 ---
 
@@ -28,61 +30,61 @@ Add the `layers` parameter to any file link to display annotations:
 
 ```wikitext
 <!-- Enable default layers -->
-[[File:Diagram.png|layers=on]]
+[[File:Diagram.png|layerset=on]]
 
 <!-- Explicit default set -->
-[[File:Diagram.png|layers=default]]
+[[File:Diagram.png|layerset=default]]
 
 <!-- Named set -->
-[[File:Heart.png|layers=anatomy]]
-[[File:Heart.png|layers=blood-flow]]
+[[File:Heart.png|layerset=anatomy]]
+[[File:Heart.png|layerset=blood-flow]]
 
 <!-- Disable layers (image only) -->
-[[File:Diagram.png|layers=off]]
-[[File:Diagram.png|layers=none]]
+[[File:Diagram.png|layerset=off]]
+[[File:Diagram.png|layerset=none]]
 ```
 
 ---
 
 ## Combining with Image Parameters
 
-The `layers` parameter works with all standard MediaWiki image parameters:
+The `layerset` parameter works with all standard MediaWiki image parameters:
 
 ### Thumbnails
 
 ```wikitext
-[[File:Diagram.png|thumb|layers=on|Diagram with annotations]]
-[[File:Diagram.png|thumb|300px|layers=anatomy|Anatomical labels]]
+[[File:Diagram.png|thumb|layerset=on|Diagram with annotations]]
+[[File:Diagram.png|thumb|300px|layerset=anatomy|Anatomical labels]]
 ```
 
 ### Alignment
 
 ```wikitext
-[[File:Diagram.png|left|layers=on]]
-[[File:Diagram.png|center|layers=on]]
-[[File:Diagram.png|right|layers=on]]
+[[File:Diagram.png|left|layerset=on]]
+[[File:Diagram.png|center|layerset=on]]
+[[File:Diagram.png|right|layerset=on]]
 ```
 
 ### Size
 
 ```wikitext
-[[File:Diagram.png|200px|layers=on]]
-[[File:Diagram.png|300x200px|layers=on]]
-[[File:Diagram.png|upright=1.5|layers=on]]
+[[File:Diagram.png|200px|layerset=on]]
+[[File:Diagram.png|300x200px|layerset=on]]
+[[File:Diagram.png|upright=1.5|layerset=on]]
 ```
 
 ### Border and Framing
 
 ```wikitext
-[[File:Diagram.png|border|layers=on]]
-[[File:Diagram.png|frame|layers=on|Caption text]]
-[[File:Diagram.png|frameless|layers=on]]
+[[File:Diagram.png|border|layerset=on]]
+[[File:Diagram.png|frame|layerset=on|Caption text]]
+[[File:Diagram.png|frameless|layerset=on]]
 ```
 
 ### Complete Example
 
 ```wikitext
-[[File:Human_Heart.png|thumb|400px|right|border|layers=anatomy|
+[[File:Human_Heart.png|thumb|400px|right|border|layerset=anatomy|
 Human heart with anatomical labels]]
 ```
 
@@ -94,7 +96,7 @@ Human heart with anatomical labels]]
 
 Control what happens when users click on layered images with the `layerslink` parameter:
 
-> **Note:** `layerslink` must be used together with `layers`. It controls the click behavior for images that have layers enabled. Without `layers=on` or `layers=<setname>`, the `layerslink` parameter has no effect.
+> **Note:** `layerslink` must be used together with `layerset`. It controls the click behavior for images that have layers enabled. Without `layerset=on` or `layerset=<setname>`, the `layerslink` parameter has no effect.
 
 | Value | Effect |
 |-------|--------|
@@ -112,19 +114,19 @@ Control what happens when users click on layered images with the `layerslink` pa
 ```wikitext
 <!-- Click opens the layer editor with the 'anatomy' set -->
 <!-- Closing the editor returns you to THIS page -->
-[[File:Diagram.png|layers=anatomy|layerslink=editor]]
+[[File:Diagram.png|layerset=anatomy|layerslink=editor]]
 
 <!-- Click opens the layer editor with the default set -->
-[[File:Diagram.png|layers=on|layerslink=editor]]
+[[File:Diagram.png|layerset=on|layerslink=editor]]
 
 <!-- Click opens fullscreen lightbox viewer -->
-[[File:Diagram.png|layers=anatomy|layerslink=viewer]]
+[[File:Diagram.png|layerset=anatomy|layerslink=viewer]]
 
 <!-- Lightbox is an alias for viewer -->
-[[File:Diagram.png|layers=anatomy|layerslink=lightbox]]
+[[File:Diagram.png|layerset=anatomy|layerslink=lightbox]]
 
 <!-- Default behavior: click goes to File page -->
-[[File:Diagram.png|layers=anatomy]]
+[[File:Diagram.png|layerset=anatomy]]
 ```
 
 ### Advanced Editor Modes (v1.2.5+)
@@ -133,10 +135,10 @@ For additional control over editor behavior:
 
 ```wikitext
 <!-- Opens editor in a new browser tab -->
-[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
+[[File:Diagram.png|layerset=anatomy|layerslink=editor-newtab]]
 
 <!-- Opens editor in modal overlay (no navigation) -->
-[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
+[[File:Diagram.png|layerset=anatomy|layerslink=editor-modal]]
 ```
 
 **Modal Mode** is ideal for Page Forms because:
@@ -154,13 +156,13 @@ For additional control over editor behavior:
 
 **Educational content** — Let students view annotations in a lightbox:
 ```wikitext
-[[File:Cell_Diagram.png|thumb|300px|layers=organelles|layerslink=viewer|
+[[File:Cell_Diagram.png|thumb|300px|layerset=organelles|layerslink=viewer|
 Click to view labeled organelles]]
 ```
 
 **Collaborative editing** — Direct users to the editor:
 ```wikitext
-[[File:Project_Map.png|thumb|400px|layers=draft|layerslink=editor|
+[[File:Project_Map.png|thumb|400px|layerset=draft|layerslink=editor|
 Click to add your annotations]]
 ```
 
@@ -179,7 +181,7 @@ You can link directly to the editor with a specific layer set pre-loaded using U
 Supported URL parameters:
 - `setname` — Layer set name to load
 - `layerset` — Alias for `setname`
-- `layers` — Alias for `setname`
+- `layers` — Alias for `setname` (backwards compatibility)
 
 ---
 
@@ -193,7 +195,7 @@ Add to the file description:
 
 ```wikitext
 == With Annotations ==
-[[File:{{PAGENAME}}|600px|layers=on]]
+[[File:{{PAGENAME}}|600px|layerset=on]]
 ```
 
 ### Show multiple layer sets
@@ -202,10 +204,10 @@ Add to the file description:
 == Annotation Sets ==
 
 === Anatomical Labels ===
-[[File:{{PAGENAME}}|500px|layers=anatomy]]
+[[File:{{PAGENAME}}|500px|layerset=anatomy]]
 
 === Blood Flow ===
-[[File:{{PAGENAME}}|500px|layers=blood-flow]]
+[[File:{{PAGENAME}}|500px|layerset=blood-flow]]
 ```
 
 ---
@@ -217,7 +219,7 @@ Add to the file description:
 Create `Template:LayeredImage`:
 
 ```wikitext
-<includeonly>[[File:{{{1}}}|{{{size|400px}}}|{{{align|center}}}|layers={{{set|on}}}|{{{caption|}}}]]</includeonly>
+<includeonly>[[File:{{{1}}}|{{{size|400px}}}|{{{align|center}}}|layerset={{{set|on}}}|{{{caption|}}}]]</includeonly>
 <noinclude>
 == Usage ==
 <code><nowiki>{{LayeredImage|Filename.png|size=300px|set=anatomy|caption=Description}}</nowiki></code>
@@ -240,9 +242,9 @@ Usage:
 
 ```wikitext
 <gallery mode="packed" heights=200>
-File:Image1.png|layers=on|First image
-File:Image2.png|layers=labels|Second image
-File:Image3.png|layers=off|Third image (no layers)
+File:Image1.png|layerset=on|First image
+File:Image2.png|layerset=labels|Second image
+File:Image3.png|layerset=off|Third image (no layers)
 </gallery>
 ```
 
@@ -255,16 +257,16 @@ File:Image3.png|layers=off|Third image (no layers)
 Using ParserFunctions extension:
 
 ```wikitext
-[[File:Diagram.png|400px|layers={{#if:{{#username}}|on|off}}]]
+[[File:Diagram.png|400px|layerset={{#if:{{#username}}|on|off}}]]
 ```
 
 ### Different sets for different contexts
 
 ```wikitext
 {{#switch: {{{level|basic}}}
- | basic = [[File:Diagram.png|layers=overview]]
- | advanced = [[File:Diagram.png|layers=detailed]]
- | expert = [[File:Diagram.png|layers=technical]]
+ | basic = [[File:Diagram.png|layerset=overview]]
+ | advanced = [[File:Diagram.png|layerset=detailed]]
+ | expert = [[File:Diagram.png|layerset=technical]]
 }}
 ```
 
@@ -278,7 +280,7 @@ If a named set doesn't exist, **no layers are displayed** (silent failure). The 
 
 ```wikitext
 <!-- If "nonexistent" set doesn't exist, shows image only -->
-[[File:Diagram.png|layers=nonexistent]]
+[[File:Diagram.png|layerset=nonexistent]]
 ```
 
 ### Case Sensitivity
@@ -286,19 +288,31 @@ If a named set doesn't exist, **no layers are displayed** (silent failure). The 
 Set names are **case-sensitive**:
 
 ```wikitext
-[[File:Diagram.png|layers=Anatomy]]   <!-- Different from -->
-[[File:Diagram.png|layers=anatomy]]   <!-- this -->
+[[File:Diagram.png|layerset=Anatomy]]   <!-- Different from -->
+[[File:Diagram.png|layerset=anatomy]]   <!-- this -->
 ```
 
 ### Parameter Order
 
-The `layers` parameter can appear anywhere in the parameter list:
+The `layerset` parameter can appear anywhere in the parameter list:
 
 ```wikitext
 <!-- These are equivalent -->
-[[File:Diagram.png|layers=on|thumb|300px]]
-[[File:Diagram.png|thumb|layers=on|300px]]
-[[File:Diagram.png|thumb|300px|layers=on]]
+[[File:Diagram.png|layerset=on|thumb|300px]]
+[[File:Diagram.png|thumb|layerset=on|300px]]
+[[File:Diagram.png|thumb|300px|layerset=on]]
+```
+
+---
+
+## Backwards Compatibility
+
+The `layers=` parameter is still fully supported for backwards compatibility:
+
+```wikitext
+<!-- These are equivalent -->
+[[File:Diagram.png|layerset=on]]
+[[File:Diagram.png|layers=on]]
 ```
 
 ---
@@ -308,11 +322,12 @@ The `layers` parameter can appear anywhere in the parameter list:
 | Wikitext | Result |
 |----------|--------|
 | `[[File:X.png]]` | Image only, no layers |
-| `[[File:X.png\|layers=on]]` | Image + default layers |
-| `[[File:X.png\|layers=default]]` | Image + default layers |
-| `[[File:X.png\|layers=anatomy]]` | Image + "anatomy" layers |
-| `[[File:X.png\|layers=off]]` | Image only, explicitly no layers |
-| `[[File:X.png\|layers=none]]` | Image only, explicitly no layers |
+| `[[File:X.png\|layerset=on]]` | Image + default layers |
+| `[[File:X.png\|layerset=default]]` | Image + default layers |
+| `[[File:X.png\|layerset=anatomy]]` | Image + "anatomy" layers |
+| `[[File:X.png\|layerset=off]]` | Image only, explicitly no layers |
+| `[[File:X.png\|layerset=none]]` | Image only, explicitly no layers |
+| `[[File:X.png\|layers=on]]` | Image + default layers (backwards compatible) |
 
 ---
 
@@ -327,7 +342,7 @@ The `layers` parameter can appear anywhere in the parameter list:
 ### Wrong layers showing
 
 1. **Verify set name** — Ensure you're using the correct named set
-2. **Check for typos** — `layers=anotomy` ≠ `layers=anatomy`
+2. **Check for typos** — `layerset=anotomy` ≠ `layerset=anatomy`
 3. **Clear cache** — Purge the page: add `?action=purge` to URL
 
 ### Layers parameter ignored

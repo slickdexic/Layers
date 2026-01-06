@@ -128,6 +128,7 @@
 				case 'textbox':
 				case 'blur':
 				case 'image':
+				case 'customShape':
 					return {
 						x: layer.x || 0,
 						y: layer.y || 0,

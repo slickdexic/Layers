@@ -86,14 +86,16 @@ With a layer selected:
 To show your annotations in a wiki article:
 
 ```wikitext
-[[File:Example.jpg|layers=on]]
+[[File:Example.jpg|layerset=on]]
 ```
 
 Or use a specific named layer set:
 
 ```wikitext
-[[File:Example.jpg|layers=anatomy]]
+[[File:Example.jpg|layerset=anatomy]]
 ```
+
+> **Note:** `layers=` is also supported for backwards compatibility.
 
 ---
 

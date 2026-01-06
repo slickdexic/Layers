@@ -51,26 +51,8 @@
 	 */
 	handleCtrlShortcuts( e, key ) {
 		switch ( key ) {
-			case 'z':
-				e.preventDefault();
-				if ( e.shiftKey ) {
-					this.editor.redo();
-				} else {
-					this.editor.undo();
-				}
-				break;
-			case 'y':
-				e.preventDefault();
-				this.editor.redo();
-				break;
-			case 's':
-				e.preventDefault();
-				this.editor.save();
-				break;
-			case 'd':
-				e.preventDefault();
-				this.editor.duplicateSelected();
-				break;
+			// Note: Ctrl+Z/Y undo/redo, Ctrl+S save, and Ctrl+D duplicate are handled
+			// by EventManager to avoid duplicate handlers. Only toolbar-specific shortcuts here.
 			case 'g':
 				e.preventDefault();
 				if ( e.shiftKey ) {

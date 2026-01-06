@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.4.9-REL1_43",
+	"version": "1.4.10-REL1_43"
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -169,7 +169,8 @@
 				"CalloutRenderer.js",
 				"ShapeRenderer.js",
 				"EffectsRenderer.js",
-				"LayerRenderer.js"
+				"LayerRenderer.js",
+				"CustomShapeRenderer.js"
 			]
 		},
 		"ext.layers": {
@@ -239,6 +240,10 @@
 				"GeometryUtils.js",
 				"ErrorHandler.js",
 				"LayersConstants.js",
+				"shapeLibrary/ShapePathValidator.js",
+				"shapeLibrary/ShapeLibraryData.js",
+				"shapeLibrary/ShapeLibraryManager.js",
+				"shapeLibrary/ShapeLibraryPanel.js",
 				"selection/SelectionState.js",
 				"selection/MarqueeSelection.js",
 				"selection/SelectionHandles.js",
@@ -316,7 +321,8 @@
 			],
 			"styles": [
 				"editor-fixed.css",
-				"presets/presets.css"
+				"presets/presets.css",
+				"shapeLibrary/ShapeLibraryPanel.css"
 			],
 			"messages": [
 				"layers-editor-title",
@@ -712,7 +718,66 @@
 				"layers-context-ungroup",
 				"layers-context-rename",
 				"layers-context-duplicate",
-				"layers-context-delete"
+				"layers-context-delete",
+
+				"layers-shape-library",
+				"layers-shape-search-placeholder",
+				"layers-shape-search-aria",
+				"layers-shape-grid-aria",
+				"layers-shape-recent",
+				"layers-shape-toggle-favorite",
+				"layers-shape-favorites",
+				"layers-shape-no-results",
+				"layers-shape-loading",
+				"layers-tool-custom-shape",
+				"layers-shape-category-arrows",
+				"layers-shape-category-flowchart",
+				"layers-shape-category-callouts",
+				"layers-shape-category-geometric",
+				"layers-shape-category-symbols",
+				"layers-shape-category-decorative",
+				"layers-shape-arrow-right",
+				"layers-shape-arrow-left",
+				"layers-shape-arrow-up",
+				"layers-shape-arrow-down",
+				"layers-shape-arrow-double-h",
+				"layers-shape-chevron-right",
+				"layers-shape-arrow-curved",
+				"layers-shape-process",
+				"layers-shape-process-rounded",
+				"layers-shape-decision",
+				"layers-shape-terminator",
+				"layers-shape-data",
+				"layers-shape-document",
+				"layers-shape-database",
+				"layers-shape-connector",
+				"layers-shape-speech-rect",
+				"layers-shape-speech-round",
+				"layers-shape-thought",
+				"layers-shape-callout-left",
+				"layers-shape-callout-right",
+				"layers-shape-triangle",
+				"layers-shape-triangle-right",
+				"layers-shape-pentagon",
+				"layers-shape-hexagon",
+				"layers-shape-octagon",
+				"layers-shape-cross",
+				"layers-shape-trapezoid",
+				"layers-shape-parallelogram",
+				"layers-shape-checkmark",
+				"layers-shape-xmark",
+				"layers-shape-warning",
+				"layers-shape-info",
+				"layers-shape-question",
+				"layers-shape-star-5",
+				"layers-shape-heart",
+				"layers-shape-lightning",
+				"layers-shape-banner",
+				"layers-shape-shield",
+				"layers-shape-seal",
+				"layers-shape-bracket-left",
+				"layers-shape-bracket-right",
+				"layers-shape-flag"
 			]
 		}
 	},
