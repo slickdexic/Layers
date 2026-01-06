@@ -24,9 +24,9 @@ Technical architecture of the Layers extension for developers.
 │  ┌──────────────────┐    ┌──────────────────────────────────┐   │
 │  │   Layers PHP     │    │      Layers JavaScript           │   │
 │  │                  │    │                                   │   │
-│  │  • API Modules   │◄───┤  • Editor (38K lines)            │   │
-│  │  • Hooks         │    │  • Viewer (610 lines)            │   │
-│  │  • Database      │    │  • Shared (5K lines)             │   │
+│  │  • API Modules   │◄───┤  • Editor (~56K lines)            │   │
+│  │  • Hooks         │    │  • Viewer (~610 lines)            │   │
+│  │  • Database      │    │  • Shared (~5K lines)             │   │
 │  │  • Validation    │    │                                   │   │
 │  │  • Security      │    │                                   │   │
 │  └────────┬─────────┘    └──────────────────────────────────┘   │
@@ -161,7 +161,7 @@ Validated Output
 ├───────────────────────┬────────────────────┬───────────────────┤
 │   ext.layers          │  ext.layers.shared │  ext.layers.editor│
 │   (Viewer Entry)      │  (Shared Code)     │  (Full Editor)    │
-│   ~610 lines          │  ~5K lines         │  ~38K lines       │
+│   ~610 lines          │  ~5K lines         │  ~56K lines       │
 ├───────────────────────┴────────────────────┴───────────────────┤
 │                                                                 │
 │  Viewer loads: ext.layers + ext.layers.shared                  │
@@ -297,12 +297,12 @@ await api.postWithToken('csrf', {
 
 | Metric | Value |
 |--------|-------|
-| Total JavaScript Files | 85+ |
-| Total Lines of Code | ~44K |
-| ES6 Classes | 76+ |
-| Test Files | 107 |
-| Test Cases | 5,437 |
-| Code Coverage | ~94% |
+| Total JavaScript Files | 112 |
+| Total Lines of Code | ~61K |
+| ES6 Classes | 94+ |
+| Test Files | 145 |
+| Test Cases | 8,522 |
+| Code Coverage | ~94.6% |
 
 ---
 

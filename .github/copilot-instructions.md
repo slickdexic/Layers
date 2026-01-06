@@ -338,3 +338,22 @@ Database
   - Validates: new name format (alphanumeric, hyphens, underscores, 1-50 chars), no conflicts, cannot rename to 'default'
 
 Keep this doc aligned with code. When you change public behavior (API, schema, messages), update this file and add tests where feasible.
+## 12) Documentation update checklist
+
+**IMPORTANT:** Before committing changes that affect version, metrics, features, or API, consult `docs/DOCUMENTATION_UPDATE_GUIDE.md` for the complete checklist of files that must be updated.
+
+Key documents that frequently need updates:
+- `README.md` — Main project documentation
+- `Mediawiki-Extension-Layers.txt` — MediaWiki.org extension page content
+- `CHANGELOG.md` + `wiki/Changelog.md` — Version history (must mirror each other)
+- `wiki/Home.md` — GitHub Wiki homepage with metrics
+- `codebase_review.md` and `improvement_plan.md` — Technical assessment documents
+- `wiki/*.md` — Various wiki documentation pages
+
+Common metrics to keep synchronized:
+- Test count (currently 8,522 tests, 145 suites)
+- Coverage (94.6% statement, 83.3% branch)
+- JavaScript file count (112 files, ~61,122 lines)
+- PHP file count (32 files, ~11,327 lines)
+- Drawing tool count (13 tools)
+- Version number (1.5.0-beta.3)

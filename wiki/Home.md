@@ -121,14 +121,14 @@ See [[Changelog]] for full details.
 | Metric | Value |
 |--------|-------|
 | **Version (main)** | 1.5.0-beta.3 |
-| **Version (REL1_43)** | 1.4.10-REL1_43 |
+| **Version (REL1_43)** | 1.5.0-beta.3-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 6, 2026 |
 | **Test Suites** | 145 |
 | **Total Tests** | 8,522 |
-| **Code Coverage** | 95% |
-| **JavaScript Files** | 110 |
-| **ES6 Classes** | 97 |
+| **Code Coverage** | 94.6% |
+| **JavaScript Files** | 112 |
+| **ES6 Classes** | 94+ |
 
 ---
 
