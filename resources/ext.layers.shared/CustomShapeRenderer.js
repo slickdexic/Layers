@@ -75,8 +75,9 @@ class CustomShapeRenderer {
 	 */
 	render( ctx, shapeData, layer, _options = {} ) {
 		if ( !shapeData || !shapeData.path || !shapeData.viewBox ) {
-			// eslint-disable-next-line no-console
-			console.warn( 'CustomShapeRenderer: Invalid shape data', shapeData );
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( 'CustomShapeRenderer: Invalid shape data' );
+			}
 			return;
 		}
 

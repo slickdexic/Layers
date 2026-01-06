@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-8%2C522%20Passing-brightgreen" alt="8,522 Tests">
+  <img src="https://img.shields.io/badge/Tests-8%2C537%20Passing-brightgreen" alt="8,537 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -20,12 +20,19 @@
 
 ---
 
-## 🆕 What's New in v1.5.0-beta.3
+## 🆕 What's New in v1.5.0-beta.4
+
+- **Simplified Permissions** — Consolidated `createlayers` into `editlayers` — users with `editlayers` can now create and edit layer sets
+- **Layer Lock Fixed** — Locked layers now properly prevent dragging, resizing, rotating, and deletion; folder locks cascade to children
+- **8,537 tests passing** — 95% statement coverage
+
+### Previous v1.5.0-beta.3 Highlights
 
 - **`layerset=` Parameter** — The wikitext parameter is now `layerset=on` (or `layerset=setname`), with `layers=` still supported for backwards compatibility
-- **Custom Shape Tool (v1.5.0)** — Built-in shape library with searchable categories (arrows, symbols, geometric shapes)
-- **Drag Performance Fix** — Smoother layer dragging with improved rAF handling
-- **8,522 tests passing** — 95% statement coverage
+- **"Edit Layers" → "Edit layers"** — Changed to sentence case per MediaWiki UI conventions
+- **New Layer Set Starts Blank** — Creating a new named layer set now starts with an empty canvas
+- **Cancel Button Removed** — The X close button already provides this functionality
+- **Custom Shape Tool (v1.5.0)** — Built-in shape library with searchable categories
 
 ### Previous v1.4.8 Highlights
 
@@ -120,15 +127,15 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.0-beta.3 |
-| **Version (REL1_43)** | 1.4.10-REL1_43 |
+| **Version (main)** | 1.5.0-beta.4 |
+| **Version (REL1_43)** | 1.5.0-beta.4-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 6, 2026 |
 | **Test Suites** | 145 |
 | **Total Tests** | 8,522 |
-| **Code Coverage** | 95% |
-| **JavaScript Files** | 110 |
-| **ES6 Classes** | 97 |
+| **Code Coverage** | 94.6% |
+| **JavaScript Files** | 112 |
+| **ES6 Classes** | 94+ |
 
 ---
 

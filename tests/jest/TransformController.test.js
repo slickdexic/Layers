@@ -1103,4 +1103,187 @@ describe( 'TransformController', () => {
 			expect( smartGuidesController.calculateSnappedPosition ).not.toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'layer lock protection', () => {
+		let lockedLayer;
+		let unlockedLayer;
+		let lockedFolder;
+		let childOfLockedFolder;
+
+		beforeEach( () => {
+			lockedLayer = {
+				id: 'locked1',
+				type: 'rectangle',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 100,
+				locked: true
+			};
+
+			unlockedLayer = {
+				id: 'unlocked1',
+				type: 'rectangle',
+				x: 200,
+				y: 200,
+				width: 100,
+				height: 100,
+				locked: false
+			};
+
+			lockedFolder = {
+				id: 'folder1',
+				type: 'group',
+				locked: true,
+				children: [ 'child1' ]
+			};
+
+			childOfLockedFolder = {
+				id: 'child1',
+				type: 'rectangle',
+				x: 300,
+				y: 300,
+				width: 50,
+				height: 50,
+				locked: false,
+				parentGroup: 'folder1'
+			};
+
+			mockEditor.layers = [ lockedLayer, unlockedLayer, lockedFolder, childOfLockedFolder ];
+		} );
+
+		describe( 'isLayerEffectivelyLocked', () => {
+			it( 'should return true for directly locked layer', () => {
+				expect( controller.isLayerEffectivelyLocked( lockedLayer ) ).toBe( true );
+			} );
+
+			it( 'should return false for unlocked layer', () => {
+				expect( controller.isLayerEffectivelyLocked( unlockedLayer ) ).toBe( false );
+			} );
+
+			it( 'should return true for child of locked folder', () => {
+				expect( controller.isLayerEffectivelyLocked( childOfLockedFolder ) ).toBe( true );
+			} );
+
+			it( 'should return false for null layer', () => {
+				expect( controller.isLayerEffectivelyLocked( null ) ).toBe( false );
+			} );
+
+			it( 'should handle circular parent references gracefully', () => {
+				const circularLayer = {
+					id: 'circular',
+					type: 'rectangle',
+					parentGroup: 'circular',
+					locked: false
+				};
+				mockEditor.layers.push( circularLayer );
+
+				// Should not infinite loop and should return false
+				expect( controller.isLayerEffectivelyLocked( circularLayer ) ).toBe( false );
+			} );
+		} );
+
+		describe( 'startDrag with locked layers', () => {
+			it( 'should prevent drag on locked layer', () => {
+				mockManager.selectedLayerIds = [ 'locked1' ];
+				mockManager.getSelectedLayerId = () => 'locked1';
+
+				controller.startDrag( { x: 100, y: 100 } );
+
+				expect( controller.isDragging ).toBe( false );
+			} );
+
+			it( 'should allow drag on unlocked layer', () => {
+				mockManager.selectedLayerIds = [ 'unlocked1' ];
+				mockManager.getSelectedLayerId = () => 'unlocked1';
+
+				controller.startDrag( { x: 100, y: 100 } );
+
+				expect( controller.isDragging ).toBe( true );
+			} );
+
+			it( 'should prevent drag on child of locked folder', () => {
+				mockManager.selectedLayerIds = [ 'child1' ];
+				mockManager.getSelectedLayerId = () => 'child1';
+
+				controller.startDrag( { x: 100, y: 100 } );
+
+				expect( controller.isDragging ).toBe( false );
+			} );
+
+			it( 'should prevent drag when all selected layers are locked', () => {
+				mockManager.selectedLayerIds = [ 'locked1', 'child1' ];
+
+				controller.startDrag( { x: 100, y: 100 } );
+
+				expect( controller.isDragging ).toBe( false );
+			} );
+
+			it( 'should allow drag when at least one layer is unlocked in multi-selection', () => {
+				mockManager.selectedLayerIds = [ 'locked1', 'unlocked1' ];
+
+				controller.startDrag( { x: 100, y: 100 } );
+
+				expect( controller.isDragging ).toBe( true );
+			} );
+		} );
+
+		describe( 'startResize with locked layers', () => {
+			it( 'should prevent resize on locked layer', () => {
+				mockManager.selectedLayerIds = [ 'locked1' ];
+				mockManager.getSelectedLayerId = () => 'locked1';
+
+				controller.startResize( { type: 'se' }, { x: 100, y: 100 } );
+
+				expect( controller.isResizing ).toBe( false );
+			} );
+
+			it( 'should allow resize on unlocked layer', () => {
+				mockManager.selectedLayerIds = [ 'unlocked1' ];
+				mockManager.getSelectedLayerId = () => 'unlocked1';
+
+				controller.startResize( { type: 'se' }, { x: 100, y: 100 } );
+
+				expect( controller.isResizing ).toBe( true );
+			} );
+		} );
+
+		describe( 'startRotation with locked layers', () => {
+			it( 'should prevent rotation on locked layer', () => {
+				mockManager.selectedLayerIds = [ 'locked1' ];
+				mockManager.getSelectedLayerId = () => 'locked1';
+
+				controller.startRotation( { x: 100, y: 100 } );
+
+				expect( controller.isRotating ).toBe( false );
+			} );
+
+			it( 'should allow rotation on unlocked layer', () => {
+				mockManager.selectedLayerIds = [ 'unlocked1' ];
+				mockManager.getSelectedLayerId = () => 'unlocked1';
+
+				controller.startRotation( { x: 100, y: 100 } );
+
+				expect( controller.isRotating ).toBe( true );
+			} );
+		} );
+
+		describe( 'handleDrag with locked layers in multi-selection', () => {
+			it( 'should skip locked layers when moving multi-selection', () => {
+				mockManager.selectedLayerIds = [ 'locked1', 'unlocked1' ];
+				mockManager.getSelectedLayerId = () => 'unlocked1';
+
+				controller.startDrag( { x: 200, y: 200 } );
+				controller.handleDrag( { x: 210, y: 210 } );
+
+				// Unlocked layer should have been updated
+				expect( unlockedLayer.x ).toBe( 210 );
+				expect( unlockedLayer.y ).toBe( 210 );
+
+				// Locked layer should NOT have been updated
+				expect( lockedLayer.x ).toBe( 50 );
+				expect( lockedLayer.y ).toBe( 50 );
+			} );
+		} );
+	} );
 } );

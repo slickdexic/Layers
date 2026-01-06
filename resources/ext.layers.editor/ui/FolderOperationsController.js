@@ -36,6 +36,42 @@
 		}
 
 		/**
+		 * Check if a layer is effectively locked (directly or via parent folder)
+		 *
+		 * @param {Object} layer Layer to check
+		 * @return {boolean} True if layer is locked or in a locked folder
+		 */
+		isLayerEffectivelyLocked( layer ) {
+			if ( !layer ) {
+				return false;
+			}
+
+			// Check if layer is directly locked
+			if ( layer.locked === true ) {
+				return true;
+			}
+
+			// Check if any parent folder is locked
+			let parentId = layer.parentGroup;
+			const layers = this.editor && this.editor.layers ? this.editor.layers : [];
+			const visited = new Set();
+
+			while ( parentId && !visited.has( parentId ) ) {
+				visited.add( parentId );
+				const parent = layers.find( ( l ) => l.id === parentId );
+				if ( !parent ) {
+					break;
+				}
+				if ( parent.locked === true ) {
+					return true;
+				}
+				parentId = parent.parentGroup;
+			}
+
+			return false;
+		}
+
+		/**
 		 * Create a folder (group) - can be empty or include selected layers
 		 *
 		 * @return {Object|null} The created folder layer or null on failure
@@ -91,6 +127,17 @@
 			const layer = this.editor.getLayerById( layerId );
 
 			if ( !layer ) {
+				return;
+			}
+
+			// Prevent deletion of locked layers
+			if ( this.isLayerEffectivelyLocked( layer ) ) {
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify(
+						this.msg( 'layers-layer-locked-warning', 'Cannot modify a locked layer' ),
+						{ type: 'warn' }
+					);
+				}
 				return;
 			}
 

@@ -119,12 +119,13 @@ describe( 'CustomShapeRenderer', () => {
 	describe( 'render()', () => {
 		it( 'should handle missing shape data gracefully', () => {
 			const ctx = createMockContext();
-			const consoleSpy = jest.spyOn( console, 'warn' ).mockImplementation();
+			// Use mw.log.warn spy since the code uses MediaWiki logging
+			const mwLogSpy = jest.spyOn( mw.log, 'warn' ).mockImplementation();
 
 			renderer.render( ctx, null, {} );
-			expect( consoleSpy ).toHaveBeenCalled();
+			expect( mwLogSpy ).toHaveBeenCalled();
 
-			consoleSpy.mockRestore();
+			mwLogSpy.mockRestore();
 		} );
 
 		it( 'should apply layer position and scale', () => {

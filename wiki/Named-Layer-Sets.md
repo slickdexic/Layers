@@ -141,7 +141,7 @@ In the editor, click the layer set dropdown to see:
 
 | Action | Required Right |
 |--------|----------------|
-| Create set | `createlayers` |
+| Create set | `editlayers` |
 | Edit set | `editlayers` |
 | Delete set | Owner OR `delete` right (admin) |
 | Rename set | Owner OR `delete` right (admin) |

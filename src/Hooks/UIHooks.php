@@ -188,7 +188,7 @@ class UIHooks {
 		// Create edit layers tab data
 		$editLayersTab = [
 			'class' => $isSelected ? 'selected' : false,
-			'text' => ( \function_exists( 'wfMessage' ) ? \wfMessage( 'layers-editor-title' )->text() : 'Edit Layers' ),
+			'text' => ( \function_exists( 'wfMessage' ) ? \wfMessage( 'layers-editor-title' )->text() : 'Edit layers' ),
 			'href' => self::getEditLayersURL( $title ),
 			'context' => 'main',
 		];

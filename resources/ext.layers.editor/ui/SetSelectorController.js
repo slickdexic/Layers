@@ -282,6 +282,10 @@
 				this.editor.stateManager.set( 'setRevisions', [] ); // No revisions yet
 				this.editor.stateManager.set( 'isDirty', true );
 
+				// Clear existing layers - new set starts blank
+				this.editor.stateManager.set( 'layers', [] );
+				this.editor.stateManager.set( 'selectedLayerIds', [] );
+
 				// Add to namedSets array so it's tracked properly
 				const updatedSets = [ ...namedSets, {
 					name: newName,
@@ -291,6 +295,16 @@
 					latest_user_name: mw.config.get( 'wgUserName' )
 				} ];
 				this.editor.stateManager.set( 'namedSets', updatedSets );
+			}
+
+			// Render empty canvas for new set
+			if ( this.editor.canvasManager && typeof this.editor.canvasManager.renderLayers === 'function' ) {
+				this.editor.canvasManager.renderLayers( [] );
+			}
+
+			// Update layer panel to reflect empty state
+			if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateList === 'function' ) {
+				this.editor.layerPanel.updateList();
 			}
 
 			// Add to set selector and select it

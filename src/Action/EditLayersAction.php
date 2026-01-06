@@ -83,21 +83,8 @@ class EditLayersAction extends \Action {
 		}
 
 		// Check if auto-create is requested (for layerslink=editor to non-existent sets)
+		// Auto-create is allowed for any user with editlayers permission (already checked above)
 		$autoCreate = $request->getBool( 'autocreate' );
-		// Also check for createlayers permission if auto-create is requested
-		$canCreateLayers = false;
-		if ( $autoCreate ) {
-			if ( $services && method_exists( $services, 'getPermissionManager' ) ) {
-				$permManager = $services->getPermissionManager();
-				$canCreateLayers = $permManager->userHasRight( $user, 'createlayers' );
-			} elseif ( method_exists( $user, 'isAllowed' ) ) {
-				$canCreateLayers = $user->isAllowed( 'createlayers' );
-			}
-			// Only allow auto-create if user has createlayers permission
-			if ( !$canCreateLayers ) {
-				$autoCreate = false;
-			}
-		}
 
 		// Get return URL for editor-return mode
 		$returnTo = $request->getText( 'returnto', '' );
@@ -121,7 +108,7 @@ class EditLayersAction extends \Action {
 		$out->setPageTitle(
 			( function_exists( 'wfMessage' )
 				? wfMessage( 'layers-editor-title' )->text()
-				: 'Edit Layers'
+				: 'Edit layers'
 			) . ': ' . $file->getName()
 		);
 

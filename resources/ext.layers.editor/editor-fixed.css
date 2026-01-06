@@ -2696,9 +2696,8 @@ body.layers-resize-cursor {
 		color: GrayText;
 	}
 
-	/* Save and Cancel buttons - primary actions */
-	.save-button,
-	.cancel-button {
+	/* Save button - primary action */
+	.save-button {
 		border: 2px solid ButtonText;
 	}
 

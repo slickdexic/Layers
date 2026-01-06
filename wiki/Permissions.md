@@ -8,9 +8,8 @@ Configure user permissions for the Layers extension.
 
 | Right | Description | Actions Enabled |
 |-------|-------------|-----------------|
-| `editlayers` | Edit existing layer sets | Modify layers, save revisions |
-| `createlayers` | Create new layer sets | Create first revision of a set |
-| `managelayerlibrary` | Manage layer library | Administrative functions |
+| `editlayers` | Create and edit layer sets | Open editor, create sets, modify layers, save revisions |
+| `managelayerlibrary` | Manage layer library | Administrative functions (future feature) |
 
 ---
 
@@ -25,10 +24,8 @@ $wgGroupPermissions['*']['editlayers'] = false;
 // Logged-in users
 $wgGroupPermissions['user']['editlayers'] = true;
 
-// Autoconfirmed users (met age/edit thresholds)
-$wgGroupPermissions['autoconfirmed']['createlayers'] = true;
-
 // Administrators
+$wgGroupPermissions['sysop']['editlayers'] = true;
 $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
 ```
 
@@ -39,24 +36,12 @@ $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
 ### Standard Wiki (Default)
 
 Most wikis can use the default configuration:
-- All logged-in users can edit existing layers
-- Autoconfirmed users can create new layer sets
-- Admins have full control
+- All logged-in users can create and edit layers
+- Admins have full control including library management
 
 ```php
 wfLoadExtension( 'Layers' );
 // No additional configuration needed
-```
-
-### Open Wiki
-
-Allow all registered users to create and edit:
-
-```php
-wfLoadExtension( 'Layers' );
-
-$wgGroupPermissions['user']['editlayers'] = true;
-$wgGroupPermissions['user']['createlayers'] = true;
 ```
 
 ### Restricted Wiki
@@ -68,11 +53,9 @@ wfLoadExtension( 'Layers' );
 
 // Remove default permissions
 $wgGroupPermissions['user']['editlayers'] = false;
-$wgGroupPermissions['autoconfirmed']['createlayers'] = false;
 
 // Create a dedicated group
 $wgGroupPermissions['layer-editors']['editlayers'] = true;
-$wgGroupPermissions['layer-editors']['createlayers'] = true;
 ```
 
 Add users to the group via `Special:UserRights`.
@@ -86,27 +69,8 @@ wfLoadExtension( 'Layers' );
 
 $wgGroupPermissions['*']['editlayers'] = false;
 $wgGroupPermissions['user']['editlayers'] = false;
-$wgGroupPermissions['autoconfirmed']['editlayers'] = false;
-$wgGroupPermissions['autoconfirmed']['createlayers'] = false;
 
 $wgGroupPermissions['sysop']['editlayers'] = true;
-$wgGroupPermissions['sysop']['createlayers'] = true;
-```
-
-### Educational Wiki
-
-Teachers can create, students can edit:
-
-```php
-wfLoadExtension( 'Layers' );
-
-// Students (regular users) can edit existing layers
-$wgGroupPermissions['user']['editlayers'] = true;
-
-// Only teachers can create new layer sets
-$wgGroupPermissions['user']['createlayers'] = false;
-$wgGroupPermissions['teacher']['createlayers'] = true;
-$wgGroupPermissions['teacher']['editlayers'] = true;
 ```
 
 ---
@@ -115,17 +79,10 @@ $wgGroupPermissions['teacher']['editlayers'] = true;
 
 ### Editing Layers
 
-To edit existing layer sets:
+To create or edit layer sets:
 - User must have `editlayers` right
 - User must have read access to the file
 - User must not be rate-limited
-
-### Creating Layer Sets
-
-To create new layer sets:
-- User must have `createlayers` right
-- User must have `editlayers` right
-- User must have read access to the file
 
 ### Deleting Layer Sets
 
@@ -166,11 +123,7 @@ $wgRateLimits['editlayers-create']['user'] = [ 10, 3600 ]; // 10 per hour
 $user = $this->getUser();
 
 if ( $user->isAllowed( 'editlayers' ) ) {
-    // User can edit layers
-}
-
-if ( $user->isAllowed( 'createlayers' ) ) {
-    // User can create layer sets
+    // User can create and edit layers
 }
 ```
 
@@ -198,13 +151,12 @@ if ( response.query.userinfo.rights.includes( 'editlayers' ) ) {
 
 ## UI Visibility
 
-The "Edit Layers" tab is shown based on permissions:
+The "Edit layers" tab is shown based on permissions:
 
 | Condition | Tab Shown | Tab Clickable |
 |-----------|-----------|---------------|
 | No `editlayers` right | No | — |
-| Has `editlayers` but no `createlayers` | Yes | Yes (can edit existing) |
-| Has both rights | Yes | Yes (full access) |
+| Has `editlayers` right | Yes | Yes (full access) |
 
 ---
 
@@ -248,7 +200,7 @@ Blocked users cannot edit layers, even if they have `editlayers` right.
 
 ## Troubleshooting
 
-### "Edit Layers" tab not visible
+### "Edit layers" tab not visible
 
 1. Check `$wgGroupPermissions` in LocalSettings.php
 2. Verify user is logged in (if required)

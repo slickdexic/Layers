@@ -105,6 +105,42 @@ class TransformController {
 		return JSON.parse( JSON.stringify( layer ) );
 	}
 
+	/**
+	 * Check if a layer is effectively locked (directly or via parent folder)
+	 *
+	 * @param {Object} layer - Layer to check
+	 * @return {boolean} True if layer is locked or in a locked folder
+	 */
+	isLayerEffectivelyLocked( layer ) {
+		if ( !layer ) {
+			return false;
+		}
+
+		// Check if layer is directly locked
+		if ( layer.locked === true ) {
+			return true;
+		}
+
+		// Check if any parent folder is locked
+		let parentId = layer.parentGroup;
+		const layers = this.manager.editor.layers || [];
+		const visited = new Set();
+
+		while ( parentId && !visited.has( parentId ) ) {
+			visited.add( parentId );
+			const parent = layers.find( ( l ) => l.id === parentId );
+			if ( !parent ) {
+				break;
+			}
+			if ( parent.locked === true ) {
+				return true;
+			}
+			parentId = parent.parentGroup;
+		}
+
+		return false;
+	}
+
 	// ==================== Resize Operations ====================
 
 	/**
@@ -114,12 +150,19 @@ class TransformController {
 	 * @param {Object} startPoint The starting mouse point
 	 */
 	startResize( handle, startPoint ) {
+		// Get the layer first to check lock status
+		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
+
+		// Prevent resize on locked layers
+		if ( this.isLayerEffectivelyLocked( layer ) ) {
+			return;
+		}
+
 		this.isResizing = true;
 		this.resizeHandle = handle;
 		this.dragStartPoint = startPoint;
 
 		// Get rotation for proper cursor
-		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		const rotation = layer ? layer.rotation : 0;
 		this.manager.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
 
@@ -472,6 +515,14 @@ class TransformController {
 	 * @param {Object} point Starting mouse point
 	 */
 	startRotation ( point ) {
+		// Get the layer first to check lock status
+		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
+
+		// Prevent rotation on locked layers
+		if ( this.isLayerEffectivelyLocked( layer ) ) {
+			return;
+		}
+
 		this.isRotating = true;
 		this.manager.canvas.style.cursor = 'grabbing';
 		if ( point ) {
@@ -479,7 +530,6 @@ class TransformController {
 		}
 
 		// Store original layer state using efficient cloning
-		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( layer ) {
 			this.originalLayerState = this._cloneLayer( layer );
 		}
@@ -572,12 +622,36 @@ class TransformController {
 	 * @param {Object} startPoint Starting mouse point
 	 */
 	startDrag ( startPoint ) {
+		// Check if any selected layer is locked
+		const selectedIds = this.manager.getSelectedLayerIds();
+
+		// For single selection, check if layer is locked
+		if ( selectedIds.length <= 1 ) {
+			const singleLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
+			if ( this.isLayerEffectivelyLocked( singleLayer ) ) {
+				return;
+			}
+		} else {
+			// For multi-selection, check if ALL selected layers are locked
+			// If any are unlocked, we allow drag but skip the locked ones in handleDrag
+			let allLocked = true;
+			for ( let i = 0; i < selectedIds.length; i++ ) {
+				const layer = this.manager.editor.getLayerById( selectedIds[ i ] );
+				if ( !this.isLayerEffectivelyLocked( layer ) ) {
+					allLocked = false;
+					break;
+				}
+			}
+			if ( allLocked ) {
+				return;
+			}
+		}
+
 		this.isDragging = true;
 		this.dragStartPoint = startPoint;
 		this.manager.canvas.style.cursor = 'move';
 
 		// Store original layer state(s)
-		const selectedIds = this.manager.getSelectedLayerIds();
 		if ( selectedIds.length > 1 ) {
 			// Multi-selection: store all selected layer states using efficient cloning
 			this.originalMultiLayerStates = {};
@@ -615,7 +689,8 @@ class TransformController {
 		if ( dragSelectedIds.length > 1 ) {
 			for ( let i = 0; i < dragSelectedIds.length; i++ ) {
 				const multiLayer = this.manager.editor.getLayerById( dragSelectedIds[ i ] );
-				if ( multiLayer ) {
+				// Skip locked layers in multi-selection
+				if ( multiLayer && !this.isLayerEffectivelyLocked( multiLayer ) ) {
 					layersToMove.push( multiLayer );
 				}
 			}

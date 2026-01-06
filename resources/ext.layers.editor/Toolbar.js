@@ -1447,17 +1447,12 @@
 		saveButton.title = t( 'layers-save-changes', 'Save Changes' ) + ' (Ctrl+S)';
 		actionGroup.appendChild( saveButton );
 
-		const cancelButton = document.createElement( 'button' );
-		cancelButton.className = 'toolbar-button cancel-button';
-		cancelButton.textContent = t( 'layers-editor-cancel', 'Cancel' );
-		cancelButton.title = t( 'layers-cancel-changes', 'Cancel Changes' ) + ' (Escape)';
-		actionGroup.appendChild( cancelButton );
+		// Cancel button removed - X close button provides same functionality
 
 		this.container.appendChild( actionGroup );
 
 		// Store references
 		this.saveButton = saveButton;
-		this.cancelButton = cancelButton;
 		this.importButton = importButton;
 		this.importInput = importInput;
 		this.exportButton = exportButton;
@@ -1524,9 +1519,7 @@
 			}
 		} );
 
-		this.addListener( this.cancelButton, 'click', () => {
-			this.editor.cancel( true );
-		} );
+		// Cancel button listener removed - X close button provides same functionality
 
 		// Import JSON - delegate to ImportExportManager
 		this.addListener( this.importButton, 'click', () => {

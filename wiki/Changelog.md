@@ -4,16 +4,55 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.0-beta.3-REL1_43 (January 6, 2026)
+## Version 1.5.0-beta.4 (January 6, 2026)
 
 ### Changed
+- **Simplified Permissions** — Consolidated `createlayers` into `editlayers`
+  - Users with `editlayers` can now create and edit layer sets
+  - Simpler permission model per community feedback
+
+### Fixed
+- **Layer Lock Now Works** — Fixed layer locking feature that was completely broken
+  - Locked layers can no longer be dragged, resized, or rotated
+  - Locked layers can no longer be deleted
+  - Folder locking now affects all child layers — if a folder is locked, all layers inside are effectively locked
+
+### Documentation
+- Updated all documentation to reflect simplified permissions model
+
+### Tests
+- 8,537 tests passing (up from 8,522)
+- Added 15 new tests for layer lock protection
+
+---
+
+## Version 1.5.0-beta.3 (January 6, 2026)
+
+### Changed
+- **"Edit Layers" → "Edit layers"** — Changed to sentence case per MediaWiki UI conventions
+  - Thank you to Yaron Koran for the feedback
 - **Wikitext Parameter Renamed** — `layerset=` is now the primary parameter for displaying layers in wikitext
   - `layerset=on` is now the preferred syntax (e.g., `[[File:Example.jpg|layerset=on]]`)
   - `layers=` and `layer=` remain fully supported for backwards compatibility
   - All existing wikitext using `layers=` will continue to work unchanged
   - Thank you to Yaron Koran for suggesting this improvement
+- **Simplified Permissions** — Consolidated `createlayers` into `editlayers`
+  - Users with `editlayers` can now create and edit layer sets
+  - Simpler permission model per community feedback
+
+### Fixed
+- **Layer Lock Now Works** — Fixed layer locking feature that was completely broken
+  - Locked layers can no longer be dragged, resized, or rotated
+  - Locked layers can no longer be deleted
+  - Folder locking now affects all child layers — if a folder is locked, all layers inside are effectively locked
+- **New Layer Set Starts Blank** — Creating a new named layer set now starts with an empty canvas
+  - Previously, new sets would retain layers from the previous set
+  - Clearer UX: new sets are truly new, not copies
 
 ### Removed
+- **Cancel Button** — Removed redundant Cancel button from toolbar
+  - The X close button already provides this functionality
+  - Simplifies the interface per community feedback
 - **Redundant Shapes from Custom Shape Tool** — Removed 4 shapes that duplicate existing dedicated tools:
   - `geometric/pentagon`, `geometric/hexagon`, `geometric/octagon` — Use the Polygon tool instead
   - `symbols/star` — Use the dedicated Star tool instead
