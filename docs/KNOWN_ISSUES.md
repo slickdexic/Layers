@@ -261,7 +261,7 @@ Remaining deprecated items (all are legitimate fallbacks):
 **Current:** ~55,000 lines (106 files)  
 **Target:** <75,000 lines
 
-The extension is feature-rich with 11 drawing tools (blur tool deprecated), layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
+The extension is feature-rich with 13 drawing tools (pointer, text, textbox, callout, pen, rectangle, circle, ellipse, polygon, star, arrow, line, custom shape), layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
 
 ---
 

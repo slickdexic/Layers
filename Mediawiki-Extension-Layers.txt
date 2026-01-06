@@ -5,7 +5,7 @@
 |type1           = media
 |type2           = interface
 |type3           = api
-|author          = [[User:Pvodrazka|Pvodrazka]]
+|author          = [[User:Pvodrazka|Paul Vodrazka]]
 |version         = 1.5.0-beta.3
 |update          = 2026-01-06
 |download        = {{GithubDownload|slickdexic|Layers}}
@@ -33,7 +33,7 @@
 |hook10          = ParserMakeImageParams
 |hook11          = SkinTemplateNavigation::Universal
 |hook12          = ThumbnailBeforeProduceHTML
-|description     = A professional-grade, non-destructive image annotation system with 12 drawing tools, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
+|description     = A professional-grade, non-destructive image annotation system with 13 drawing tools, curved arrows, live preview, layer folders, style presets, named layer sets, custom shape library, and full keyboard accessibility.
 }}
 
 The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
@@ -41,7 +41,7 @@ The '''Layers''' extension is a modern, non-destructive image annotation and edi
 All edits are stored as validated JSON and rendered client-side for precise positioning. The system fully integrates into MediaWiki's file pages and parser. Click the {{key press|'''Edit Layers'''}} tab on any image's <code>File:</code> page to access the editor.
 
 == Why Layers? ==
-* '''Professional Tools:''' 12 drawing tools, style presets, and industry-standard alignment—everything needed to annotate like a pro.
+* '''Professional Tools:''' 13 drawing tools, style presets, and industry-standard alignment—everything needed to annotate like a pro.
 * '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
 * '''Accessible:''' WCAG 2.1 compliant with full keyboard navigation, screen reader support, and high-contrast indicators.
 
@@ -132,8 +132,10 @@ Control how users interact with layered images using the <code>layerslink</code>
 
 '''Example usage:'''
 <syntaxhighlight lang="wikitext">
-[[File:Anatomy.png|thumb|layers=anatomy|layerslink=viewer]]
-[[File:Diagram.png|thumb|layers=labels|layerslink=editor]]
+[[File:Anatomy.png|thumb|layerset=anatomy|layerslink=viewer]]
+[[File:Diagram.png|thumb|layerset=labels|layerslink=editor]]
+'layers=' was changed to 'layerset=' to be more consistent with the terminology used in the editor.
+'layers=' is still supported for backwards compatibility.
 </syntaxhighlight>
 
 == Drawing Tools ==
