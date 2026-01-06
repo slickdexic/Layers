@@ -158,6 +158,10 @@
 				case 'star':
 					return this.isPointInPolygonOrStar( point, layer );
 
+				case 'customShape':
+					// Custom shapes use bounding box hit testing
+					return this.isPointInRectangleLayer( point, layer );
+
 				default:
 					return false;
 			}

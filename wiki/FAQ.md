@@ -41,29 +41,31 @@ Layers works best in modern browsers:
 
 ### How do I show layers in a wiki article?
 
-Add the `layers` parameter to your file link:
+Add the `layerset` parameter to your file link:
 
 ```wikitext
-[[File:Example.jpg|layers=on]]
+[[File:Example.jpg|layerset=on]]
 ```
+
+> **Note:** `layers=` is also supported for backwards compatibility.
 
 ### Can I have multiple sets of annotations?
 
 Yes! Named layer sets allow multiple independent annotation sets per image:
 
 ```wikitext
-[[File:Diagram.png|layers=anatomy]]
-[[File:Diagram.png|layers=measurements]]
+[[File:Diagram.png|layerset=anatomy]]
+[[File:Diagram.png|layerset=measurements]]
 ```
 
 See [[Named Layer Sets]] for details.
 
 ### How do I hide layers?
 
-Use `layers=off` or `layers=none`:
+Use `layerset=off` or `layerset=none`:
 
 ```wikitext
-[[File:Example.jpg|layers=off]]
+[[File:Example.jpg|layerset=off]]
 ```
 
 ### Can I copy layers between images?

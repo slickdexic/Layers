@@ -73,6 +73,36 @@ class TransformController {
 		this._dragRenderScheduled = false;
 		this._rotationRenderScheduled = false;
 		this._pendingRotationLayer = null;
+
+		// Cache efficient cloning function reference
+		this._cloneLayerEfficient = null;
+	}
+
+	/**
+	 * Clone a layer efficiently (preserves src/path by reference)
+	 *
+	 * @private
+	 * @param {Object} layer - Layer to clone
+	 * @return {Object} Cloned layer
+	 */
+	_cloneLayer( layer ) {
+		// Lazy-load efficient cloning function
+		if ( !this._cloneLayerEfficient ) {
+			if ( typeof window !== 'undefined' &&
+				window.Layers &&
+				window.Layers.Utils &&
+				typeof window.Layers.Utils.cloneLayerEfficient === 'function' ) {
+				this._cloneLayerEfficient = window.Layers.Utils.cloneLayerEfficient;
+			}
+		}
+
+		// Use efficient cloning if available
+		if ( this._cloneLayerEfficient ) {
+			return this._cloneLayerEfficient( layer );
+		}
+
+		// Fallback to JSON cloning
+		return JSON.parse( JSON.stringify( layer ) );
 	}
 
 	// ==================== Resize Operations ====================
@@ -93,9 +123,9 @@ class TransformController {
 		const rotation = layer ? layer.rotation : 0;
 		this.manager.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
 
-		// Store original layer state
+		// Store original layer state using efficient cloning
 		if ( layer ) {
-			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
+			this.originalLayerState = this._cloneLayer( layer );
 		}
 	}
 
@@ -448,10 +478,10 @@ class TransformController {
 			this.dragStartPoint = point;
 		}
 
-		// Store original layer state
+		// Store original layer state using efficient cloning
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( layer ) {
-			this.originalLayerState = JSON.parse( JSON.stringify( layer ) );
+			this.originalLayerState = this._cloneLayer( layer );
 		}
 	}
 
@@ -549,21 +579,20 @@ class TransformController {
 		// Store original layer state(s)
 		const selectedIds = this.manager.getSelectedLayerIds();
 		if ( selectedIds.length > 1 ) {
-			// Multi-selection: store all selected layer states
+			// Multi-selection: store all selected layer states using efficient cloning
 			this.originalMultiLayerStates = {};
 			for ( let i = 0; i < selectedIds.length; i++ ) {
 				const layerId = selectedIds[ i ];
 				const multiLayer = this.manager.editor.getLayerById( layerId );
 				if ( multiLayer ) {
-					this.originalMultiLayerStates[ layerId ] =
-						JSON.parse( JSON.stringify( multiLayer ) );
+					this.originalMultiLayerStates[ layerId ] = this._cloneLayer( multiLayer );
 				}
 			}
 		} else {
-			// Single selection: store single layer state
+			// Single selection: store single layer state using efficient cloning
 			const singleLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 			if ( singleLayer ) {
-				this.originalLayerState = JSON.parse( JSON.stringify( singleLayer ) );
+				this.originalLayerState = this._cloneLayer( singleLayer );
 			}
 		}
 	}
@@ -639,18 +668,21 @@ class TransformController {
 			this.updateLayerPosition( layerToMove, originalState, adjustedDeltaX, adjustedDeltaY );
 		}
 
-		// Emit live-transform event BEFORE rendering (so UI updates while render is processing)
-		const active = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
-		if ( active ) {
-			this.emitTransforming( active );
-		}
-
-		// Throttle rendering using requestAnimationFrame to prevent lag during rapid drag
+		// Throttle rendering AND UI updates using requestAnimationFrame to prevent lag during rapid drag
+		// Both render and emitTransforming are batched together (like handleResize)
+		this._pendingDragLayerId = this.manager.getSelectedLayerId();
 		if ( !this._dragRenderScheduled ) {
 			this._dragRenderScheduled = true;
 			window.requestAnimationFrame( () => {
 				this._dragRenderScheduled = false;
 				this.manager.renderLayers( this.manager.editor.layers );
+				// Emit transform event after render (inside rAF to reduce per-frame work)
+				if ( this._pendingDragLayerId ) {
+					const active = this.manager.editor.getLayerById( this._pendingDragLayerId );
+					if ( active ) {
+						this.emitTransforming( active );
+					}
+				}
 			} );
 		}
 	}
@@ -677,6 +709,7 @@ class TransformController {
 			case 'polygon':
 			case 'star':
 			case 'image':
+			case 'customShape':
 				layer.x = ( originalState.x || 0 ) + deltaX;
 				layer.y = ( originalState.y || 0 ) + deltaY;
 				break;
@@ -755,6 +788,10 @@ class TransformController {
 	 * expensive rendering operations. The receiving handler (syncPropertiesFromLayer)
 	 * only updates a few input values, which is very fast.
 	 *
+	 * Performance: Creates a lightweight copy of the layer, omitting large data
+	 * like base64 image sources (layer.src) and SVG paths (layer.path) to avoid
+	 * expensive JSON serialization during rapid drag/resize operations.
+	 *
 	 * @param {Object} layer The layer object to serialize and emit
 	 * @param {boolean} [_force=false] Deprecated parameter, kept for compatibility
 	 */
@@ -768,9 +805,31 @@ class TransformController {
 		const target = ( this.manager.editor && this.manager.editor.container ) ||
 			this.manager.container || document;
 		try {
+			// Create a lightweight copy, omitting large data (base64 src, SVG paths)
+			// The properties panel only needs geometry/style properties, not the data
+			const lightweightLayer = {};
+			for ( const key in layer ) {
+				if ( Object.prototype.hasOwnProperty.call( layer, key ) ) {
+					// Skip large binary/path data - not needed for UI updates
+					if ( key === 'src' || key === 'path' ) {
+						continue;
+					}
+					// Shallow copy simple values and arrays (like viewBox, points)
+					const value = layer[ key ];
+					if ( Array.isArray( value ) ) {
+						lightweightLayer[ key ] = value.slice();
+					} else if ( typeof value === 'object' && value !== null ) {
+						// For nested objects, do a shallow clone
+						lightweightLayer[ key ] = Object.assign( {}, value );
+					} else {
+						lightweightLayer[ key ] = value;
+					}
+				}
+			}
+
 			const detail = {
 				id: layer.id,
-				layer: JSON.parse( JSON.stringify( layer ) )
+				layer: lightweightLayer
 			};
 			const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
 			target.dispatchEvent( evt );

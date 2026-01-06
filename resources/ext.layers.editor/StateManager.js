@@ -549,27 +549,23 @@ class StateManager {
 
 	/**
 	 * History management
+	 *
+	 * NOTE: StateManager's internal history is DISABLED because LayersEditor
+	 * uses HistoryManager for undo/redo. StateManager.undo()/redo() are never
+	 * called in the codebase, so saveToHistory was wasting CPU cycles cloning
+	 * the entire layers array (including 500KB+ image data) on every change.
+	 *
+	 * Performance impact: Cloning a 1MB layer set 50 times = 50MB memory overhead.
 	 */
-	saveToHistory( action ) {
+	saveToHistory( /* action */ ) {
+		// Disabled - HistoryManager handles undo/redo
+		// See comment above for rationale
+		return;
+
+		// Original code (kept for reference, unreachable):
 		// Remove any history after current index (for when we're not at the end)
-		this.state.history = this.state.history.slice( 0, this.state.historyIndex + 1 );
-
-		// Add new state to history
-		const stateSnapshot = {
-			action: action,
-			timestamp: Date.now(),
-			layers: JSON.parse( JSON.stringify( this.state.layers ) ),
-			selectedLayerIds: this.state.selectedLayerIds.slice()
-		};
-
-		this.state.history.push( stateSnapshot );
-		this.state.historyIndex = this.state.history.length - 1;
-
-		// Limit history size
-		if ( this.state.history.length > this.state.maxHistorySize ) {
-			this.state.history.shift();
-			this.state.historyIndex--;
-		}
+		// this.state.history = this.state.history.slice( 0, this.state.historyIndex + 1 );
+		// ... etc
 	}
 
 	undo() {

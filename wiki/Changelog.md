@@ -4,6 +4,27 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.0-beta.3 (January 6, 2026)
+
+### Changed
+- **Wikitext Parameter Renamed** — `layerset=` is now the primary parameter for displaying layers in wikitext
+  - `layerset=on` is now the preferred syntax (e.g., `[[File:Example.jpg|layerset=on]]`)
+  - `layers=` and `layer=` remain fully supported for backwards compatibility
+  - All existing wikitext using `layers=` will continue to work unchanged
+  - Thank you to Yaron Koran for suggesting this improvement
+
+### Removed
+- **Redundant Shapes from Custom Shape Tool** — Removed 4 shapes that duplicate existing dedicated tools:
+  - `geometric/pentagon`, `geometric/hexagon`, `geometric/octagon` — Use the Polygon tool instead
+  - `symbols/star` — Use the dedicated Star tool instead
+
+### Improved
+- **Drag Performance** — Fixed canvas sluggishness when dragging layers
+  - Moved `emitTransforming()` inside `requestAnimationFrame` callback
+  - Eliminates redundant UI updates during rapid mouse movements
+
+---
+
 ## Version 1.4.8 (January 5, 2026)
 
 ### Fixed

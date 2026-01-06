@@ -168,7 +168,7 @@ Solutions for common issues with the Layers extension.
 
 ### Layers Not Showing in Articles
 
-**Symptoms:** `[[File:X.png|layers=on]]` shows image without layers.
+**Symptoms:** `[[File:X.png|layerset=on]]` shows image without layers.
 
 **Solutions:**
 
@@ -179,7 +179,7 @@ Solutions for common issues with the Layers extension.
 
 2. **Check set name:**
    - Names are case-sensitive
-   - `layers=anatomy` ≠ `layers=Anatomy`
+   - `layerset=anatomy` ≠ `layerset=Anatomy`
 
 3. **Purge the page:**
    - Add `?action=purge` to the URL

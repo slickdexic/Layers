@@ -47,9 +47,19 @@ describe( 'EventManager', () => {
 			expect( Array.isArray( eventManager.listeners ) ).toBe( true );
 		} );
 
-		it( 'should set up global handlers', () => {
+		it( 'should set up global handlers when setupGlobalHandlers is called', () => {
+			// setupGlobalHandlers is called by LayersEditor.init(), not constructor
+			// to support the stub fallback pattern
+			eventManager.setupGlobalHandlers();
 			// Should have registered resize, beforeunload, and keydown
 			expect( eventManager.listeners.length ).toBeGreaterThanOrEqual( 3 );
+		} );
+
+		it( 'should prevent double-registration of global handlers', () => {
+			eventManager.setupGlobalHandlers();
+			const firstCount = eventManager.listeners.length;
+			eventManager.setupGlobalHandlers(); // Call again
+			expect( eventManager.listeners.length ).toBe( firstCount );
 		} );
 	} );
 

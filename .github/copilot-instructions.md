@@ -144,12 +144,12 @@ The named layer sets feature allows multiple named annotation sets per image, ea
 - **Limits**: Up to 15 named sets per image, 50 revisions per set (configurable)
 - **Default Behavior**: If setname not provided, defaults to 'default' set
 - **Migration**: Existing layer sets were migrated to ls_name='default'
-- **Wikitext Syntax**:
-  - `[[File:Example.jpg|layers=on]]` - Show default layer set
-  - `[[File:Example.jpg|layers=setname]]` - Show specific named set (e.g., `layers=anatomy`)
-  - `[[File:Example.jpg|layers=none]]` or `layers=off` - Explicitly disable layers
+- **Wikitext Syntax** (use `layerset=` as primary; `layers=` supported for backwards compatibility):
+  - `[[File:Example.jpg|layerset=on]]` - Show default layer set
+  - `[[File:Example.jpg|layerset=setname]]` - Show specific named set (e.g., `layerset=anatomy`)
+  - `[[File:Example.jpg|layerset=none]]` or `layerset=off` - Explicitly disable layers
   - If the named set doesn't exist, no layers are displayed (silent failure)
-- **File: pages**: Layers are NOT auto-displayed; explicit `layers=on` or `layers=setname` is required
+- **File: pages**: Layers are NOT auto-displayed; explicit `layerset=on` or `layerset=setname` is required
 
 See `docs/NAMED_LAYER_SETS.md` for full architecture documentation.
 

@@ -57,6 +57,40 @@ class InteractionController {
 		this.isDraggingGuide = false;
 		this.dragGuideOrientation = null; // 'h' | 'v'
 		this.dragGuidePos = 0;
+
+		// Cache efficient cloning function reference
+		this._cloneLayerEfficient = null;
+	}
+
+	/**
+	 * Clone a layer efficiently (preserves src/path by reference)
+	 *
+	 * @private
+	 * @param {Object} layer - Layer to clone
+	 * @return {Object} Cloned layer
+	 */
+	_cloneLayer( layer ) {
+		if ( !layer ) {
+			return null;
+		}
+
+		// Lazy-load efficient cloning function
+		if ( !this._cloneLayerEfficient ) {
+			if ( typeof window !== 'undefined' &&
+				window.Layers &&
+				window.Layers.Utils &&
+				typeof window.Layers.Utils.cloneLayerEfficient === 'function' ) {
+				this._cloneLayerEfficient = window.Layers.Utils.cloneLayerEfficient;
+			}
+		}
+
+		// Use efficient cloning if available
+		if ( this._cloneLayerEfficient ) {
+			return this._cloneLayerEfficient( layer );
+		}
+
+		// Fallback to JSON cloning
+		return JSON.parse( JSON.stringify( layer ) );
 	}
 
 	// =========================================================================
@@ -116,7 +150,7 @@ class InteractionController {
 		this.isDragging = true;
 		this.startPoint = { x: point.x, y: point.y };
 		this.dragStartPoint = { x: point.x, y: point.y };
-		this.originalLayerState = originalState ? JSON.parse( JSON.stringify( originalState ) ) : null;
+		this.originalLayerState = this._cloneLayer( originalState );
 		this.showDragPreview = true;
 	}
 
@@ -164,7 +198,7 @@ class InteractionController {
 		this.resizeHandle = handle;
 		this.startPoint = { x: point.x, y: point.y };
 		this.dragStartPoint = { x: point.x, y: point.y };
-		this.originalLayerState = originalState ? JSON.parse( JSON.stringify( originalState ) ) : null;
+		this.originalLayerState = this._cloneLayer( originalState );
 	}
 
 	/**
@@ -210,7 +244,7 @@ class InteractionController {
 		this.isRotating = true;
 		this.startPoint = { x: point.x, y: point.y };
 		this.dragStartPoint = { x: point.x, y: point.y };
-		this.originalLayerState = originalState ? JSON.parse( JSON.stringify( originalState ) ) : null;
+		this.originalLayerState = this._cloneLayer( originalState );
 	}
 
 	/**

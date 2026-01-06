@@ -147,7 +147,7 @@ describe( 'LayersValidator', () => {
 	describe( 'validateLayerType', () => {
 		const validTypes = [
 			'text', 'arrow', 'rectangle', 'circle', 'ellipse',
-			'polygon', 'star', 'line', 'path', 'blur'
+			'polygon', 'star', 'line', 'path', 'blur', 'customShape'
 		];
 
 		validTypes.forEach( type => {

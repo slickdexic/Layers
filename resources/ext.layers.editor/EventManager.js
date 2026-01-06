@@ -13,7 +13,8 @@ class EventManager {
 	constructor( editor ) {
 		this.editor = editor;
 		this.listeners = [];
-		this.setupGlobalHandlers();
+		this._handlersSetup = false;
+		// Note: setupGlobalHandlers is called by LayersEditor.init() to support stub fallback
 	}
 
 	/**
@@ -31,8 +32,15 @@ class EventManager {
 
 	/**
 	 * Set up global event handlers for window and document
+	 * Guarded against double-registration
 	 */
 	setupGlobalHandlers() {
+		// Prevent double-registration (could be called from constructor and LayersEditor.init)
+		if ( this._handlersSetup ) {
+			return;
+		}
+		this._handlersSetup = true;
+
 		this.registerListener( window, 'resize', this.handleResize.bind( this ) );
 		this.registerListener( window, 'beforeunload', this.handleBeforeUnload.bind( this ) );
 		this.registerListener( document, 'keydown', this.handleKeyDown.bind( this ) );
@@ -73,17 +81,18 @@ class EventManager {
 		}
 
 		const ctrlOrCmd = e.ctrlKey || e.metaKey;
+		const key = e.key.toLowerCase();
 
 		switch ( true ) {
-			case ctrlOrCmd && e.key === 'z' && !e.shiftKey:
+			case ctrlOrCmd && key === 'z' && !e.shiftKey:
 				e.preventDefault();
 				this.handleUndo();
 				break;
-			case ctrlOrCmd && ( e.key === 'y' || ( e.key === 'z' && e.shiftKey ) ):
+			case ctrlOrCmd && ( key === 'y' || ( key === 'z' && e.shiftKey ) ):
 				e.preventDefault();
 				this.handleRedo();
 				break;
-			case ctrlOrCmd && e.key === 's':
+			case ctrlOrCmd && key === 's':
 				e.preventDefault();
 				this.editor.save();
 				break;
@@ -91,7 +100,7 @@ class EventManager {
 				e.preventDefault();
 				this.editor.deleteSelected();
 				break;
-			case ctrlOrCmd && e.key === 'd':
+			case ctrlOrCmd && key === 'd':
 				e.preventDefault();
 				this.editor.duplicateSelected();
 				break;

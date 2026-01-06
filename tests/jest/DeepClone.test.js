@@ -471,4 +471,158 @@ describe( 'DeepClone', () => {
 			global.structuredClone = originalStructuredClone;
 		} );
 	} );
+
+	describe( 'cloneLayerEfficient', () => {
+		let cloneLayerEfficient, cloneLayersEfficient;
+
+		beforeEach( () => {
+			jest.resetModules();
+			global.window = { Layers: {} };
+			const freshModule = require( '../../resources/ext.layers.shared/DeepClone.js' );
+			cloneLayerEfficient = freshModule.cloneLayerEfficient;
+			cloneLayersEfficient = freshModule.cloneLayersEfficient;
+		} );
+
+		it( 'should return null for null input', () => {
+			expect( cloneLayerEfficient( null ) ).toBe( null );
+		} );
+
+		it( 'should return null for undefined input', () => {
+			expect( cloneLayerEfficient( undefined ) ).toBe( null );
+		} );
+
+		it( 'should clone simple layer properties', () => {
+			const layer = {
+				id: 'layer1',
+				type: 'rectangle',
+				x: 100,
+				y: 200,
+				width: 50,
+				height: 50
+			};
+			const cloned = cloneLayerEfficient( layer );
+
+			expect( cloned ).toEqual( layer );
+			expect( cloned ).not.toBe( layer );
+		} );
+
+		it( 'should preserve src property by reference (not deep clone)', () => {
+			const largeBase64 = 'data:image/png;base64,' + 'A'.repeat( 10000 );
+			const layer = {
+				id: 'image1',
+				type: 'image',
+				src: largeBase64,
+				x: 0,
+				y: 0,
+				width: 100,
+				height: 100
+			};
+			const cloned = cloneLayerEfficient( layer );
+
+			// src should be the same reference (not a deep copy)
+			expect( cloned.src ).toBe( layer.src );
+			// Other properties should be cloned
+			expect( cloned.id ).toBe( layer.id );
+		} );
+
+		it( 'should preserve path property by reference (customShape)', () => {
+			const svgPath = 'M0,0 L100,0 L100,100 L0,100 Z';
+			const layer = {
+				id: 'shape1',
+				type: 'customShape',
+				path: svgPath,
+				viewBox: [ 0, 0, 100, 100 ],
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 100
+			};
+			const cloned = cloneLayerEfficient( layer );
+
+			// path should be the same reference (not a deep copy)
+			expect( cloned.path ).toBe( layer.path );
+			// viewBox should be a shallow copy
+			expect( cloned.viewBox ).toEqual( layer.viewBox );
+			expect( cloned.viewBox ).not.toBe( layer.viewBox );
+		} );
+
+		it( 'should deep clone points array for path layers', () => {
+			const layer = {
+				id: 'path1',
+				type: 'path',
+				points: [ { x: 0, y: 0 }, { x: 100, y: 50 }, { x: 50, y: 100 } ]
+			};
+			const cloned = cloneLayerEfficient( layer );
+
+			// Points should be deep cloned
+			expect( cloned.points ).toEqual( layer.points );
+			expect( cloned.points ).not.toBe( layer.points );
+			expect( cloned.points[ 0 ] ).not.toBe( layer.points[ 0 ] );
+		} );
+
+		it( 'should handle layer with both src and path (edge case)', () => {
+			const layer = {
+				id: 'combo1',
+				type: 'customShape',
+				src: 'data:image/png;base64,test',
+				path: 'M0,0 L10,10',
+				x: 0,
+				y: 0
+			};
+			const cloned = cloneLayerEfficient( layer );
+
+			expect( cloned.src ).toBe( layer.src );
+			expect( cloned.path ).toBe( layer.path );
+			expect( cloned.x ).toBe( layer.x );
+		} );
+	} );
+
+	describe( 'cloneLayersEfficient', () => {
+		let cloneLayersEfficient;
+
+		beforeEach( () => {
+			jest.resetModules();
+			global.window = { Layers: {} };
+			const freshModule = require( '../../resources/ext.layers.shared/DeepClone.js' );
+			cloneLayersEfficient = freshModule.cloneLayersEfficient;
+		} );
+
+		it( 'should return empty array for null input', () => {
+			expect( cloneLayersEfficient( null ) ).toEqual( [] );
+		} );
+
+		it( 'should return empty array for non-array input', () => {
+			expect( cloneLayersEfficient( 'not an array' ) ).toEqual( [] );
+		} );
+
+		it( 'should clone array of layers', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle', x: 0, y: 0 },
+				{ id: 'layer2', type: 'circle', x: 100, y: 100 }
+			];
+			const cloned = cloneLayersEfficient( layers );
+
+			expect( cloned ).toEqual( layers );
+			expect( cloned ).not.toBe( layers );
+			expect( cloned[ 0 ] ).not.toBe( layers[ 0 ] );
+			expect( cloned[ 1 ] ).not.toBe( layers[ 1 ] );
+		} );
+
+		it( 'should preserve references to immutable data in array', () => {
+			const largeBase64 = 'data:image/png;base64,' + 'A'.repeat( 10000 );
+			const layers = [
+				{ id: 'image1', type: 'image', src: largeBase64, x: 0, y: 0 },
+				{ id: 'shape1', type: 'customShape', path: 'M0,0 L10,10', x: 50, y: 50 }
+			];
+			const cloned = cloneLayersEfficient( layers );
+
+			// src and path should be the same references
+			expect( cloned[ 0 ].src ).toBe( layers[ 0 ].src );
+			expect( cloned[ 1 ].path ).toBe( layers[ 1 ].path );
+		} );
+
+		it( 'should handle empty array', () => {
+			expect( cloneLayersEfficient( [] ) ).toEqual( [] );
+		} );
+	} );
 } );
