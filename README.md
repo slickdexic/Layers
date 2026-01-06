@@ -231,8 +231,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,150 lines across 32 files
-- **Frontend:** HTML5 Canvas editor with 107 JS files (~58,260 lines), 94 ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,327 lines across 32 files
+- **Frontend:** HTML5 Canvas editor with 112 JS files (~61,122 lines), 94 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -240,10 +240,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 8,346 passing |
-| Statement coverage | 94.69% |
-| Branch coverage | 83.35% |
-| Test suites | 140 |
+| Jest tests | 8,522 passing |
+| Statement coverage | 94.6% |
+| Branch coverage | 83.3% |
+| Test suites | 145 |
 
 **Security:**
 
@@ -296,14 +296,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 107 | ✅ |
-| Total JS lines | ~58,260 | ✅ Well under 75K target |
+| Total JS files | 112 | ✅ |
+| Total JS lines | ~61,122 | ✅ Well under 75K target |
 | ES6 classes | 94 | ✅ |
 | God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 8,346 | ✅ |
+| Tests passing | 8,522 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.69% | ✅ Excellent |
-| Branch coverage | 83.35% | ✅ |
+| Statement coverage | 94.6% | ✅ Excellent |
+| Branch coverage | 83.3% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
