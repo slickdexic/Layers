@@ -6,7 +6,7 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.0-beta.3
+|version         = 1.5.0-beta.4
 |update          = 2026-01-06
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -19,7 +19,7 @@
 |table1          = layer_assets
 |table2          = layer_set_usage
 |table3          = layer_sets
-|rights          = {{bulleted list|createlayers|editlayers|managelayerlibrary}}
+|rights          = {{bulleted list|editlayers|managelayerlibrary}}
 |parameters      = {{bulleted list|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet}}
 |hook1           = BeforePageDisplay
 |hook2           = BitmapHandlerTransform
@@ -38,7 +38,7 @@
 
 The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
 
-All edits are stored as validated JSON and rendered client-side for precise positioning. The system fully integrates into MediaWiki's file pages and parser. Click the {{key press|'''Edit Layers'''}} tab on any image's <code>File:</code> page to access the editor.
+All edits are stored as validated JSON and rendered client-side for precise positioning. The system fully integrates into MediaWiki's file pages and parser. Click the {{key press|'''Edit layers'''}} tab on any image's <code>File:</code> page to access the editor.
 
 == Why Layers? ==
 * '''Professional Tools:''' 13 drawing tools, style presets, and industry-standard alignment—everything needed to annotate like a pro.
@@ -52,9 +52,9 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.0-beta.3
+| 1.44+ || <code>main</code> || 1.5.0-beta.4
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.0-beta.3-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.0-beta.4-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}

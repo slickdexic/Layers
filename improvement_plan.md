@@ -2,7 +2,7 @@
 
 **Last Updated:** January 6, 2026  
 **Status:** ✅ Production-Ready  
-**Version:** 1.5.0-beta.3  
+**Version:** 1.5.0-beta.4  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---

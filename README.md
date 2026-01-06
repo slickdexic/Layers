@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C522%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-8%2C537%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.0-beta.3 (January 2026)  
+> **Version:** 1.5.0-beta.4 (January 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -217,7 +217,6 @@ $wgLayersMaxImageBytes = 1048576;      // 1 MB for imported images
 
 // Permissions
 $wgGroupPermissions['user']['editlayers'] = true;
-$wgGroupPermissions['autoconfirmed']['createlayers'] = true;
 $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
 
 // Rate limits (optional)
@@ -240,7 +239,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 8,522 passing |
+| Jest tests | 8,537 passing |
 | Statement coverage | 94.6% |
 | Branch coverage | 83.3% |
 | Test suites | 145 |
@@ -300,7 +299,7 @@ npm run test:js -- --coverage
 | Total JS lines | ~61,122 | ✅ Well under 75K target |
 | ES6 classes | 94 | ✅ |
 | God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 8,522 | ✅ |
+| Tests passing | 8,537 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 94.6% | ✅ Excellent |
 | Branch coverage | 83.3% | ✅ |

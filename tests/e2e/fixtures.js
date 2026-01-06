@@ -61,7 +61,7 @@ class LayersEditorPage {
 			layerPanel: '.layers-panel, .layer-panel',
 			// Actual button classes from Toolbar.js
 			saveButton: '.save-button',
-			cancelButton: '.cancel-button',
+			// cancelButton removed - X close button provides same functionality
 			
 			// Tools - all 12 layer types (callout added in v1.4.2, blur removed)
 			pointerTool: '[data-tool="pointer"], .tool-pointer',
@@ -244,10 +244,10 @@ class LayersEditorPage {
 	}
 
 	/**
-	 * Cancel and close editor
+	 * Cancel and close editor (uses X close button)
 	 */
 	async cancel() {
-		await this.page.click( this.selectors.cancelButton );
+		await this.page.click( '.layers-header-close' );
 	}
 
 	/**

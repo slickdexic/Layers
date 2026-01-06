@@ -240,8 +240,8 @@ $wgLayersMaxBytes = 4 * 1024 * 1024;  // 4MB
 ```
 
 Permissions (see `extension.json`):
-- Rights: 'editlayers', 'createlayers', 'managelayerlibrary'
-- Defaults: anonymous: editlayers=false; user: editlayers=true; autoconfirmed: createlayers=true; sysop: all true
+- Rights: 'editlayers', 'managelayerlibrary'
+- Defaults: anonymous: editlayers=false; user: editlayers=true; sysop: all true
 
 Rate limits (MediaWiki core RateLimits; used by `RateLimiter` via pingLimiter):
 - Keys: 'editlayers-save', 'editlayers-render', 'editlayers-create'
@@ -356,4 +356,4 @@ Common metrics to keep synchronized:
 - JavaScript file count (112 files, ~61,122 lines)
 - PHP file count (32 files, ~11,327 lines)
 - Drawing tool count (13 tools)
-- Version number (1.5.0-beta.3)
+- Version number (1.5.0-beta.4)

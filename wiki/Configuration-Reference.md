@@ -325,9 +325,8 @@ $wgRateLimits['key']['group'] = [ $count, $seconds ];
 
 | Right | Description |
 |-------|-------------|
-| `editlayers` | Edit existing layer sets |
-| `createlayers` | Create new layer sets |
-| `managelayerlibrary` | Manage the layer library |
+| `editlayers` | Create and edit layer sets |
+| `managelayerlibrary` | Manage the layer library (future feature) |
 
 ### Default Configuration
 
@@ -335,7 +334,6 @@ $wgRateLimits['key']['group'] = [ $count, $seconds ];
 // From extension.json defaults
 $wgGroupPermissions['*']['editlayers'] = false;        // Anonymous: no
 $wgGroupPermissions['user']['editlayers'] = true;      // Logged in: yes
-$wgGroupPermissions['autoconfirmed']['createlayers'] = true;
 $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
 ```
 
@@ -345,13 +343,11 @@ $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
 ```php
 $wgGroupPermissions['user']['editlayers'] = false;
 $wgGroupPermissions['autoconfirmed']['editlayers'] = true;
-$wgGroupPermissions['autoconfirmed']['createlayers'] = true;
 ```
 
 **Open (anyone can view, registered can edit):**
 ```php
 $wgGroupPermissions['user']['editlayers'] = true;
-$wgGroupPermissions['user']['createlayers'] = true;
 ```
 
 **Very restrictive (only specific group):**
@@ -359,7 +355,6 @@ $wgGroupPermissions['user']['createlayers'] = true;
 $wgGroupPermissions['*']['editlayers'] = false;
 $wgGroupPermissions['user']['editlayers'] = false;
 $wgGroupPermissions['layer-editors']['editlayers'] = true;
-$wgGroupPermissions['layer-editors']['createlayers'] = true;
 ```
 
 ---
@@ -394,7 +389,6 @@ $wgLayersDefaultFonts = [
 
 // Permissions
 $wgGroupPermissions['user']['editlayers'] = true;
-$wgGroupPermissions['autoconfirmed']['createlayers'] = true;
 $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
 
 // Rate limiting

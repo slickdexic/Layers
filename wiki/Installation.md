@@ -16,8 +16,8 @@ This guide covers downloading, configuring, and setting up the Layers extension 
 
 | MediaWiki Version | Branch | Current Version |
 |-------------------|--------|-----------------|
-| 1.44+ | `main` | 1.5.0-beta.3 |
-| 1.43.x | `REL1_43` | 1.5.0-beta.3-REL1_43 |
+| 1.44+ | `main` | 1.5.0-beta.4 |
+| 1.43.x | `REL1_43` | 1.5.0-beta.4-REL1_43 |
 | 1.39.x - 1.42.x | `REL1_39` | 1.1.14 (community maintained) |
 
 > **Note:** MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_39 branch is now community maintained. Users on MW 1.39-1.42 should upgrade to MW 1.43+ and use the REL1_43 branch for continued support.
@@ -72,7 +72,6 @@ wfLoadExtension( 'Layers' );
 
 // Grant permissions (adjust as needed)
 $wgGroupPermissions['user']['editlayers'] = true;
-$wgGroupPermissions['autoconfirmed']['createlayers'] = true;
 $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
 ```
 

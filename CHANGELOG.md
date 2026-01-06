@@ -2,17 +2,69 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.0-beta.4] - 2026-01-06
+
+### Changed
+- **Simplified Permissions** — Consolidated `createlayers` into `editlayers`
+  - Removed redundant `createlayers` right
+  - Users with `editlayers` can now create and edit layer sets (previously required both rights)
+  - `managelayerlibrary` retained for future asset library feature
+  - Simpler permission model per community feedback
+
+### Fixed
+- **Layer Lock Now Works** — Fixed layer locking feature that was completely broken
+  - Locked layers can no longer be dragged, resized, or rotated
+  - Locked layers can no longer be deleted via keyboard (Delete/Backspace) or panel button
+  - Folder locking now affects all child layers — if a folder is locked, all layers inside are effectively locked
+  - Added `isLayerEffectivelyLocked()` helper that checks both direct lock and parent folder lock
+  - Added 15 new tests for lock protection
+  - Added i18n message `layers-layer-locked-warning` for lock feedback
+
+### Documentation
+- Updated all documentation to reflect simplified permissions model
+- Updated test count to 8,537 across all documentation files
+
+### Tests
+- **Test Count** — 8,537 tests passing (up from 8,522)
+- Added 15 new tests for layer lock protection in `TransformController.test.js`
+
+---
+
 ## [1.5.0-beta.3] - 2026-01-06
 
 ### Changed
+- **"Edit Layers" → "Edit layers"** — Changed to sentence case per MediaWiki UI conventions
+  - Updated i18n messages and all hardcoded fallback strings
+  - Thank you to Yaron Koran for the feedback
 - **Wikitext Parameter Renamed** — `layerset=` is now the primary parameter for displaying layers in wikitext
   - `layerset=on` is now the preferred syntax (e.g., `[[File:Example.jpg|layerset=on]]`)
   - `layers=` and `layer=` remain fully supported for backwards compatibility
   - All existing wikitext using `layers=` will continue to work unchanged
   - Updated regex patterns to match `layerset=`, `layers=`, and `layer=`
   - Thank you to Yaron Koran for suggesting this improvement
+- **Simplified Permissions** — Consolidated `createlayers` into `editlayers`
+  - Removed redundant `createlayers` right
+  - Users with `editlayers` can now create and edit layer sets (previously required both rights)
+  - `managelayerlibrary` retained for future asset library feature
+  - Simpler permission model per community feedback
+
+### Fixed
+- **Layer Lock Now Works** — Fixed layer locking feature that was completely broken
+  - Locked layers can no longer be dragged, resized, or rotated
+  - Locked layers can no longer be deleted via keyboard (Delete/Backspace) or panel button
+  - Folder locking now affects all child layers — if a folder is locked, all layers inside are effectively locked
+  - Added `isLayerEffectivelyLocked()` helper that checks both direct lock and parent folder lock
+  - Added 15 new tests for lock protection
+  - Added i18n message `layers-layer-locked-warning` for lock feedback
+- **New Layer Set Starts Blank** — Creating a new named layer set now starts with an empty canvas
+  - Previously, new sets would retain layers from the previous set
+  - Clearer UX: new sets are truly new, not copies
+- **Console Warning Fix** — Changed `console.warn` to `mw.log.warn` in zoom handler for MediaWiki compliance
 
 ### Removed
+- **Cancel Button** — Removed redundant Cancel button from toolbar
+  - The X close button already provides this functionality
+  - Simplifies the interface per community feedback
 - **Redundant Shapes from Custom Shape Tool** — Removed 4 shapes that duplicate existing dedicated tools:
   - `geometric/pentagon`, `geometric/hexagon`, `geometric/octagon` — Use the Polygon tool instead (can create any n-sided polygon)
   - `symbols/star` — Use the dedicated Star tool instead
@@ -25,12 +77,14 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Eliminates redundant UI updates during rapid mouse movements
 
 ### Documentation
+- Added `docs/YARON_FEEDBACK.md` documenting community feedback for future improvements
 - Updated `docs/WIKITEXT_USAGE.md` with new `layerset=` syntax
 - Updated `.github/copilot-instructions.md` with new parameter documentation
 - Updated wiki files with new syntax examples
 
 ### Tests
-- **Test Count** — 8,522 tests passing
+- **Test Count** — 8,537 tests passing
+- Added 15 new tests for layer lock protection in `TransformController.test.js`
 - Updated `ShapeLibraryData.test.js` to reflect removed shapes
 
 ---

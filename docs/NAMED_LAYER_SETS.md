@@ -361,7 +361,7 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 1. **Set Name Validation**: Strict character whitelist prevents XSS/injection
 2. **Per-Image Limits**: Prevent storage abuse via named set limits
 3. **Revision Pruning**: Automatic cleanup prevents unbounded growth
-4. **Permission Checks**: Creating new named sets requires `createlayers` right
+4. **Permission Checks**: Creating and editing layer sets requires `editlayers` right
 5. **Rate Limiting**: Apply existing rate limits to set creation
 
 ---

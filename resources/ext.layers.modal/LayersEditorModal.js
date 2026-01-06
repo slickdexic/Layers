@@ -66,7 +66,7 @@
 				this.overlay.className = 'layers-editor-modal-overlay';
 				this.overlay.setAttribute( 'role', 'dialog' );
 				this.overlay.setAttribute( 'aria-modal', 'true' );
-				this.overlay.setAttribute( 'aria-label', getMessage( 'layers-editor-modal-title', 'Edit Layers' ) );
+				this.overlay.setAttribute( 'aria-label', getMessage( 'layers-editor-modal-title', 'Edit layers' ) );
 
 				// Create header with close button
 				const header = document.createElement( 'div' );
@@ -74,7 +74,7 @@
 
 				const title = document.createElement( 'span' );
 				title.className = 'layers-editor-modal-title';
-				title.textContent = getMessage( 'layers-editor-modal-title', 'Edit Layers' ) + ': ' + filename;
+				title.textContent = getMessage( 'layers-editor-modal-title', 'Edit layers' ) + ': ' + filename;
 				header.appendChild( title );
 
 				const closeBtn = document.createElement( 'button' );
@@ -125,7 +125,7 @@
 				// Announce to screen readers
 				if ( window.layersAnnouncer ) {
 					window.layersAnnouncer.announce(
-						getMessage( 'layers-editor-modal-title', 'Edit Layers' ) + ' opened'
+						getMessage( 'layers-editor-modal-title', 'Edit layers' ) + ' opened'
 					);
 				}
 			} );

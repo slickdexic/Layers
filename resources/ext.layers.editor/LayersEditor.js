@@ -1077,13 +1077,67 @@ class LayersEditor {
 	deleteSelected () {
 		const selectedIds = this.getSelectedLayerIds();
 		if ( selectedIds.length > 0 ) {
-			// Delete all selected layers
-			selectedIds.forEach( id => this.removeLayer( id ) );
+			// Filter out locked layers - they cannot be deleted
+			const deletableIds = selectedIds.filter( id => {
+				const layer = this.getLayerById( id );
+				return layer && !this.isLayerEffectivelyLocked( layer );
+			} );
+
+			// If all selected layers are locked, show warning
+			if ( deletableIds.length === 0 && selectedIds.length > 0 ) {
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify(
+						mw.message( 'layers-layer-locked-warning' ).text() ||
+							'Cannot modify a locked layer',
+						{ type: 'warn' }
+					);
+				}
+				return;
+			}
+
+			// Delete only unlocked layers
+			deletableIds.forEach( id => this.removeLayer( id ) );
 			// Clear selection through CanvasManager (updates StateManager)
 			if ( this.canvasManager ) {
 				this.canvasManager.deselectAll();
 			}
 		}
+	}
+
+	/**
+	 * Check if a layer is effectively locked (directly or via parent folder)
+	 *
+	 * @param {Object} layer - Layer to check
+	 * @return {boolean} True if layer is locked or in a locked folder
+	 */
+	isLayerEffectivelyLocked ( layer ) {
+		if ( !layer ) {
+			return false;
+		}
+
+		// Check if layer is directly locked
+		if ( layer.locked === true ) {
+			return true;
+		}
+
+		// Check if any parent folder is locked
+		let parentId = layer.parentGroup;
+		const layers = this.layers || [];
+		const visited = new Set();
+
+		while ( parentId && !visited.has( parentId ) ) {
+			visited.add( parentId );
+			const parent = layers.find( l => l.id === parentId );
+			if ( !parent ) {
+				break;
+			}
+			if ( parent.locked === true ) {
+				return true;
+			}
+			parentId = parent.parentGroup;
+		}
+
+		return false;
 	}
 
 	/**

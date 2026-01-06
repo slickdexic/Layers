@@ -488,7 +488,7 @@ describe( 'LayersEditorModal', () => {
 
 			// The overlay title should use fallback text
 			const title = modal.overlay.querySelector( '.layers-editor-modal-title' );
-			expect( title.textContent ).toContain( 'Edit Layers' );
+			expect( title.textContent ).toContain( 'Edit layers' );
 
 			modal.close( false );
 			await openPromise;

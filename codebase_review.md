@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** January 6, 2026  
-**Version:** 1.5.0-beta.3  
+**Version:** 1.5.0-beta.4  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -16,7 +16,7 @@ The extension is **fully functional and production-ready** with professional sec
 
 **Key Strengths:**
 
-- ✅ **8,522 unit tests passing** (0 failures, 145 test suites)
+- ✅ **8,537 unit tests passing** (0 failures, 145 test suites)
 - ✅ **94.6% statement coverage, 83.3% branch coverage**
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation)
 - ✅ 13 working drawing tools with named layer sets and callouts
@@ -50,7 +50,7 @@ All metrics collected directly from the codebase via automated tooling.
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disable comments | **9** | <15 | ✅ Below target |
 | Stylelint errors | **0** | 0 | ✅ |
-| Jest tests passing | **8,522** | - | ✅ 145 test suites |
+| Jest tests passing | **8,537** | - | ✅ 145 test suites |
 | Statement coverage | **94.6%** | 85%+ | ✅ Excellent |
 | Branch coverage | **83.3%** | 75%+ | ✅ Good |
 | Function coverage | **93.09%** | 80%+ | ✅ |

@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.0-beta.3",
+	"version": "1.5.0-beta.4",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -390,6 +390,7 @@
 				"layers-layer-toggle-lock-key",
 				"layers-delete-layer-button",
 				"layers-delete-confirm",
+				"layers-layer-locked-warning",
 				"layers-delete-folder-title",
 				"layers-delete-folder-message",
 				"layers-delete-folder-keep-children",
@@ -783,7 +784,6 @@
 	},
 	"AvailableRights": [
 		"editlayers",
-		"createlayers",
 		"managelayerlibrary"
 	],
 	"GroupPermissions": {
@@ -793,12 +793,8 @@
 		"user": {
 			"editlayers": true
 		},
-		"autoconfirmed": {
-			"createlayers": true
-		},
 		"sysop": {
 			"editlayers": true,
-			"createlayers": true,
 			"managelayerlibrary": true
 		}
 	}

@@ -6,9 +6,9 @@ Solutions for common issues with the Layers extension.
 
 ## Installation Issues
 
-### "Edit Layers" Tab Not Visible
+### "Edit layers" Tab Not Visible
 
-**Symptoms:** No "Edit Layers" tab appears on File: pages.
+**Symptoms:** No "Edit layers" tab appears on File: pages.
 
 **Solutions:**
 
