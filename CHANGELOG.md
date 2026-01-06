@@ -2,7 +2,7 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.4.10-REL1_43] - 2026-01-06
+## [1.5.0-beta.3-REL1_43] - 2026-01-06
 
 ### Changed
 - **Wikitext Parameter Renamed** — `layerset=` is now the primary parameter for displaying layers in wikitext

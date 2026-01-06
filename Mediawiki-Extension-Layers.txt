@@ -6,7 +6,7 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.4.10-REL1_43
+|version         = 1.5.0-beta.3-REL1_43
 |update          = 2026-01-06
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -166,7 +166,7 @@ Control how users interact with layered images using the <code>layerslink</code>
 |-
 | Line || {{key press|L}} || Annotations || Simple lines with adjustable stroke
 |-
-| Blur || — || Privacy/Focus || Non-destructive blur fill on any shape
+| Custom Shape || — || Shape Library || Arrows, symbols, flowchart shapes, and more
 |}
 
 == Technical Details ==

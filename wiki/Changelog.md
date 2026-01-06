@@ -4,7 +4,7 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.4.10-REL1_43 (January 6, 2026)
+## Version 1.5.0-beta.3-REL1_43 (January 6, 2026)
 
 ### Changed
 - **Wikitext Parameter Renamed** — `layerset=` is now the primary parameter for displaying layers in wikitext
