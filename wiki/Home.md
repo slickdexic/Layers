@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-8%2C304%20Passing-brightgreen" alt="8,304 Tests">
+  <img src="https://img.shields.io/badge/Tests-8%2C522%20Passing-brightgreen" alt="8,522 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -16,18 +16,18 @@
 
 | 🎨 **Professional Tools** | 🔒 **Non-Destructive** | ♿ **Accessible** |
 |---------------------------|------------------------|------------------|
-| 12 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
+| 13 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
 
 ---
 
-## 🆕 What's New in v1.4.8
+## 🆕 What's New in v1.5.0-beta.3
 
-- **Memory Leak Fix** — Fixed ContextMenuController memory leak where document event listeners were not removed
-- **Math Constants Consolidated** — `MathUtils.MATH` provides single source of truth for SCALE_EPSILON and INTEGER_EPSILON
-- **TypeScript Definitions Updated** — Added Constants namespace definitions
-- **8,304 tests passing** — 94.62% statement coverage
+- **`layerset=` Parameter** — The wikitext parameter is now `layerset=on` (or `layerset=setname`), with `layers=` still supported for backwards compatibility
+- **Custom Shape Tool (v1.5.0)** — Built-in shape library with searchable categories (arrows, symbols, geometric shapes)
+- **Drag Performance Fix** — Smoother layer dragging with improved rAF handling
+- **8,522 tests passing** — 95% statement coverage
 
-### Previous v1.4.5-1.4.7 Highlights
+### Previous v1.4.8 Highlights
 
 - **InstantCommons Support** — Full support for files from Wikimedia Commons and other foreign repositories
 - **TIFF Image Support** — TIFF format images work correctly in editor and viewer
@@ -83,7 +83,7 @@ See [[Changelog]] for full details.
 - [[Configuration Reference]] — All configuration parameters explained
 
 ### User Guide
-- [[Drawing Tools]] — Complete guide to all 11 tools
+- [[Drawing Tools]] — Complete guide to all 13 tools
 - [[Keyboard Shortcuts]] — Master the keyboard for faster editing
 - [[Style Presets]] — Save and reuse style configurations
 - [[Named Layer Sets]] — Multiple annotation sets per image
@@ -120,15 +120,15 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.4.8 |
-| **Version (REL1_43)** | 1.4.8-REL1_43 |
+| **Version (main)** | 1.5.0-beta.3 |
+| **Version (REL1_43)** | 1.4.10-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 5, 2026 |
-| **Test Suites** | 140 |
-| **Total Tests** | 8,304 |
-| **Code Coverage** | 94% |
-| **JavaScript Files** | 105 |
-| **ES6 Classes** | 94 |
+| **Release Date** | January 6, 2026 |
+| **Test Suites** | 145 |
+| **Total Tests** | 8,522 |
+| **Code Coverage** | 95% |
+| **JavaScript Files** | 110 |
+| **ES6 Classes** | 97 |
 
 ---
 

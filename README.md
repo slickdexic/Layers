@@ -27,7 +27,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - ✅ Original images preserved (non-destructive)
 - ✅ Modern, intuitive editor UI
-- ✅ 12 drawing tools with customizable properties
+- ✅ 13 drawing tools with customizable properties
 - ✅ Multiple named layer sets per image with version history
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
 
@@ -35,7 +35,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 ## Features
 
-### Drawing Tools (12 Available)
+### Drawing Tools (13 Available)
 
 | Tool          | Shortcut | Purpose                                      |
 | ------------- | -------- | -------------------------------------------- |
@@ -51,6 +51,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Star          | S        | Draw star shapes                             |
 | Arrow         | A        | Annotation arrows                            |
 | Line          | L        | Straight lines                               |
+| Custom Shape  | —        | Built-in shape library (arrows, symbols, etc.) |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers).
 
@@ -124,18 +125,20 @@ Layer changes are visible on article pages immediately after saving, without nee
 ## Wikitext Integration
 
 ```wikitext
-[[File:MyImage.jpg|500px|layers=on|Annotated image]]     <!-- Default layer set -->
-[[File:MyImage.jpg|500px|layers=anatomy|Anatomy labels]] <!-- Named set -->
-[[File:MyImage.jpg|500px|layers=none]]                   <!-- No layers -->
+[[File:MyImage.jpg|500px|layerset=on|Annotated image]]     <!-- Default layer set -->
+[[File:MyImage.jpg|500px|layerset=anatomy|Anatomy labels]] <!-- Named set -->
+[[File:MyImage.jpg|500px|layerset=none]]                   <!-- No layers -->
 ```
+
+> **Note:** As of v1.5.0, `layerset=` is the preferred parameter name. The older `layers=` syntax remains fully supported for backwards compatibility.
 
 ### Deep Linking (v1.2.0+)
 
 Control what happens when users click on layered images:
 
 ```wikitext
-[[File:Diagram.png|layers=anatomy|layerslink=editor]]  <!-- Click opens editor -->
-[[File:Diagram.png|layers=anatomy|layerslink=viewer]]  <!-- Click opens lightbox -->
+[[File:Diagram.png|layerset=anatomy|layerslink=editor]]  <!-- Click opens editor -->
+[[File:Diagram.png|layerset=anatomy|layerslink=viewer]]  <!-- Click opens lightbox -->
 ```
 
 | Value | Effect |
@@ -151,7 +154,7 @@ You can also link directly to the editor via URL:
 /wiki/File:Example.jpg?action=editlayers&setname=anatomy&returnto=Main_Page
 ```
 
-> **Note:** On File: pages, layers are NOT auto-displayed. You must explicitly use `layers=on` or `layers=setname`.
+> **Note:** On File: pages, layers are NOT auto-displayed. You must explicitly use `layerset=on` or `layerset=setname`.
 
 ---
 

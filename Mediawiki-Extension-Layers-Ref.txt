@@ -41,7 +41,7 @@ The '''Layers''' extension is a modern, non-destructive image annotation and edi
 All edits are stored as validated JSON and rendered client-side for precise positioning. The system fully integrates into MediaWiki's file pages and parser. Click the {{key press|'''Edit Layers'''}} tab on any image's <code>File:</code> page to access the editor.
 
 == Why Layers? ==
-* '''Professional Tools:''' 12 drawing tools, style presets, and industry-standard alignment—everything needed to annotate like a pro.
+* '''Professional Tools:''' 13 drawing tools, style presets, and industry-standard alignment—everything needed to annotate like a pro.
 * '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
 * '''Accessible:''' WCAG 2.1 compliant with full keyboard navigation, screen reader support, and high-contrast indicators.
 

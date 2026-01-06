@@ -1,6 +1,6 @@
 # Drawing Tools
 
-Layers provides 12 professional drawing tools for comprehensive image annotation.
+Layers provides 13 professional drawing tools for comprehensive image annotation.
 
 ---
 
@@ -18,6 +18,7 @@ Layers provides 12 professional drawing tools for comprehensive image annotation
 | **Ellipse** | `E` | ⬭ | Shape | Ovals with independent radii |
 | **Polygon** | `Y` | ⬡ | Shape | Multi-sided polygons |
 | **Star** | `S` | ★ | Shape | Star shapes |
+| **Custom Shape** | — | 📎 | Shape | Built-in shape library |
 | **Arrow** | `A` | ➔ | Line | Arrows with customizable heads |
 | **Line** | `L` | ╱ | Line | Straight lines |
 
@@ -330,6 +331,33 @@ Any filled shape can use **blur fill** instead of a solid color — creating a "
 
 ---
 
+## Custom Shape Tool (v1.5.0+)
+
+Access a built-in library of pre-made shapes organized by category.
+
+### How to Use
+1. Click the **Custom Shape** tool in the toolbar (or use the toolbar dropdown)
+2. Browse categories or use the search box to find shapes
+3. Click a shape to select it
+4. Click and drag on the canvas to place the shape
+
+### Shape Categories
+| Category | Contents |
+|----------|----------|
+| **Arrows** | Curved arrows, block arrows, chevrons, pointers |
+| **Symbols** | Checkmarks, crosses, hearts, warning signs |
+| **Geometric** | Triangles, parallelograms, trapezoids, crosses |
+| **Callouts** | Speech bubbles, thought clouds, banners |
+| **Flowchart** | Process, decision, terminal, document shapes |
+
+### Tips
+- Use the **search box** to quickly find shapes by name
+- Recently used shapes appear at the top for quick access
+- Custom shapes support all standard styling (stroke, fill, blur, shadow, etc.)
+- Shapes are rendered as vector paths, so they scale without quality loss
+
+---
+
 ## Tips
 
 ### Drawing Efficiently
@@ -348,6 +376,7 @@ Any filled shape can use **blur fill** instead of a solid color — creating a "
 | Highlight area | Rectangle (R) with semi-transparent fill |
 | Blur background | Any shape with `fill: blur` |
 | Freehand annotation | Pen (P) |
+| Decorative arrow | Custom Shape (arrows category) |
 
 ---
 
