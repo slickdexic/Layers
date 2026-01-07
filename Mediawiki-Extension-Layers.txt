@@ -86,9 +86,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! Right !! Description !! Default Groups
 |-
-| <code>editlayers</code> || Edit existing layer sets || <code>user</code>
-|-
-| <code>createlayers</code> || Create new layer sets || <code>autoconfirmed</code>
+| <code>editlayers</code> || Create and edit layer sets || <code>user</code>
 |-
 | <code>managelayerlibrary</code> || Manage global layer library || <code>sysop</code>
 |}
@@ -171,7 +169,7 @@ Control how users interact with layered images using the <code>layerslink</code>
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~61k lines).
-* '''Stability:''' 8,522 Jest tests across 145 test suites achieving 94.6% statement coverage.
+* '''Stability:''' 8,537 Jest tests across 145 test suites achieving 94.6% statement coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 
