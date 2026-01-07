@@ -1300,4 +1300,81 @@ describe('HistoryManager', () => {
             expect(canvasMgr.layers[0].x).toBe(10);
         });
     });
+
+    describe('isDestroyed guard', () => {
+        test('should prevent operations after destroy', () => {
+            const canvasMgr = {
+                layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
+            };
+            const hm = new HistoryManager(canvasMgr);
+            
+            // Add initial state
+            hm.saveState('initial');
+            expect(hm.history.length).toBe(1);
+            
+            // Destroy
+            hm.destroy();
+            expect(hm.isDestroyed).toBe(true);
+            
+            // Attempt to save state after destroy - should be no-op
+            hm.history = []; // Reset to verify no new entries
+            hm.saveState('should not save');
+            expect(hm.history.length).toBe(0);
+        });
+
+        test('should prevent undo after destroy', () => {
+            const canvasMgr = {
+                layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
+            };
+            const hm = new HistoryManager(canvasMgr);
+            
+            hm.saveState('state 1');
+            hm.saveState('state 2');
+            expect(hm.historyIndex).toBe(1);
+            
+            hm.destroy();
+            
+            // Reset history to verify undo doesn't work
+            hm.history = [{ layers: [] }, { layers: [] }];
+            hm.historyIndex = 1;
+            const result = hm.undo();
+            
+            expect(result).toBe(false);
+        });
+
+        test('should prevent redo after destroy', () => {
+            const canvasMgr = {
+                layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
+            };
+            const hm = new HistoryManager(canvasMgr);
+            
+            hm.saveState('state 1');
+            hm.saveState('state 2');
+            hm.undo();
+            expect(hm.historyIndex).toBe(0);
+            
+            hm.destroy();
+            
+            // Reset history to verify redo doesn't work
+            hm.history = [{ layers: [] }, { layers: [] }];
+            hm.historyIndex = 0;
+            const result = hm.redo();
+            
+            expect(result).toBe(false);
+        });
+
+        test('should set isDestroyed flag on construction', () => {
+            const hm = new HistoryManager({ layers: [] });
+            expect(hm.isDestroyed).toBe(false);
+        });
+
+        test('should clear editor reference on destroy', () => {
+            const editor = { stateManager: { getLayers: () => [] } };
+            const hm = new HistoryManager(editor);
+            expect(hm.editor).toBe(editor);
+            
+            hm.destroy();
+            expect(hm.editor).toBeNull();
+        });
+    });
 });

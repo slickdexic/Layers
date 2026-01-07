@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-8%2C551%20Passing-brightgreen" alt="8,551 Tests">
+  <img src="https://img.shields.io/badge/Tests-8%2C677%20Passing-brightgreen" alt="8,677 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -20,13 +20,24 @@
 
 ---
 
-## 🆕 What's New in v1.5.0
+## 🆕 What's New in v1.5.2
+
+- **Improved Test Coverage** — Added 114 new tests targeting low-coverage modules
+- **8,677 tests passing** — 94.55% statement coverage, 83.19% branch coverage (up from 8,563 tests, 94.05% stmt, 82.62% branch)
+- **Enhanced Quality** — Tests added to LayersEditor, APIManager, GroupManager, ShapeLibraryManager, LayerRenderer, Toolbar, CanvasManager
+- **Documentation Updates** — All documentation synchronized with latest metrics
+
+### Previous v1.5.1 Highlights
+
+- **Double-Headed Curved Arrow Rendering Fixed** — Fixed crossover artifact in double-headed curved arrows
+- **Tail Width Control Visibility** — Tail Width control now properly hides when Arrow Ends is set to "Double"
+
+### Previous v1.5.0 Highlights
 
 - **Layer Set List on File Pages** — File: pages now show a collapsible "Layer Annotations" section listing all named sets with author, revision count, and direct edit links
 - **Simplified Permissions** — Consolidated `createlayers` into `editlayers` — users with `editlayers` can now create and edit layer sets
 - **Layer Lock Fixed** — Locked layers now properly prevent dragging, resizing, rotating, and deletion; folder locks cascade to children
 - **ImageLayerRenderer Extraction** — Improved code architecture with dedicated image rendering module
-- **8,551 tests passing** — 94.6% statement coverage, 83.3% branch coverage
 
 ### Previous v1.5.0-beta Highlights
 
@@ -129,14 +140,15 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.0-beta.4 |
-| **Version (REL1_43)** | 1.5.0-beta.4-REL1_43 |
+| **Version (main)** | 1.5.2 |
+| **Version (REL1_43)** | 1.5.1-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 6, 2026 |
-| **Test Suites** | 145 |
-| **Total Tests** | 8,522 |
-| **Code Coverage** | 94.6% |
-| **JavaScript Files** | 112 |
+| **Release Date** | January 7, 2026 |
+| **Test Suites** | 146 |
+| **Total Tests** | 8,677 |
+| **Statement Coverage** | 94.55% |
+| **Branch Coverage** | 83.19% |
+| **JavaScript Files** | 113 |
 | **ES6 Classes** | 94+ |
 
 ---

@@ -367,6 +367,7 @@
 	"layers-rename-set-prompt": "Enter new name for this layer set:",
 	"layers-rename-set-success": "Layer set renamed from \"$1\" to \"$2\"",
 	"layers-rename-failed": "Failed to rename layer set",
+	"layers-reload-warning": "Layer list may need manual refresh",
 	"layers-rename-permission-denied": "You do not have permission to rename this layer set. Only the creator or an administrator can rename it.",
 	"layers-cannot-rename-default": "The default layer set cannot be renamed",
 	"layers-cannot-rename-to-default": "Cannot rename to 'default' - that name is reserved",

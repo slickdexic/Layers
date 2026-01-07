@@ -1940,4 +1940,285 @@ describe( 'Toolbar', function () {
 			}
 		} );
 	} );
+
+	// ========================================================================
+	// Shape Library Tests
+	// ========================================================================
+
+	describe( 'Shape Library', function () {
+		beforeEach( function () {
+			container = document.createElement( 'div' );
+			document.body.appendChild( container );
+			mockEditor.canvasManager = {
+				alignmentController: {},
+				smartGuidesController: { setEnabled: jest.fn() }
+			};
+			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		it( 'should toggle shape library panel visibility', function () {
+			// Mock the panel
+			toolbar.shapeLibraryPanel = {
+				show: jest.fn(),
+				hide: jest.fn()
+			};
+			toolbar.shapeLibraryButton = document.createElement( 'button' );
+			toolbar.shapeLibraryPanelVisible = false;
+
+			// Show panel
+			toolbar.toggleShapeLibraryPanel();
+			expect( toolbar.shapeLibraryPanel.show ).toHaveBeenCalled();
+			expect( toolbar.shapeLibraryPanelVisible ).toBe( true );
+
+			// Hide panel
+			toolbar.toggleShapeLibraryPanel();
+			expect( toolbar.shapeLibraryPanel.hide ).toHaveBeenCalled();
+			expect( toolbar.shapeLibraryPanelVisible ).toBe( false );
+		} );
+
+		it( 'should show shape library panel and update button state', function () {
+			toolbar.shapeLibraryPanel = {
+				show: jest.fn(),
+				hide: jest.fn()
+			};
+			toolbar.shapeLibraryButton = document.createElement( 'button' );
+
+			toolbar.showShapeLibraryPanel();
+
+			expect( toolbar.shapeLibraryPanel.show ).toHaveBeenCalled();
+			expect( toolbar.shapeLibraryPanelVisible ).toBe( true );
+			expect( toolbar.shapeLibraryButton.getAttribute( 'aria-expanded' ) ).toBe( 'true' );
+			expect( toolbar.shapeLibraryButton.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		it( 'should hide shape library panel and update button state', function () {
+			toolbar.shapeLibraryPanel = {
+				show: jest.fn(),
+				hide: jest.fn()
+			};
+			toolbar.shapeLibraryButton = document.createElement( 'button' );
+			toolbar.shapeLibraryPanelVisible = true;
+			toolbar.shapeLibraryButton.classList.add( 'active' );
+
+			toolbar.hideShapeLibraryPanel();
+
+			expect( toolbar.shapeLibraryPanel.hide ).toHaveBeenCalled();
+			expect( toolbar.shapeLibraryPanelVisible ).toBe( false );
+			expect( toolbar.shapeLibraryButton.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
+			expect( toolbar.shapeLibraryButton.classList.contains( 'active' ) ).toBe( false );
+		} );
+
+		it( 'should handle shape library selection with editor callback', function () {
+			mockEditor.createCustomShapeLayer = jest.fn();
+			const shapeData = { id: 'test-shape', path: 'M0,0 L10,10' };
+
+			toolbar.handleShapeLibrarySelect( shapeData );
+
+			expect( mockEditor.createCustomShapeLayer ).toHaveBeenCalledWith( shapeData );
+		} );
+
+		it( 'should use onShapeLibrarySelect callback when editor callback unavailable', function () {
+			mockEditor.createCustomShapeLayer = undefined;
+			toolbar.onShapeLibrarySelect = jest.fn();
+			const shapeData = { id: 'test-shape', path: 'M0,0 L10,10' };
+
+			toolbar.handleShapeLibrarySelect( shapeData );
+
+			expect( toolbar.onShapeLibrarySelect ).toHaveBeenCalledWith( shapeData );
+		} );
+
+		it( 'should handle null shapeData gracefully', function () {
+			mockEditor.createCustomShapeLayer = jest.fn();
+
+			expect( () => {
+				toolbar.handleShapeLibrarySelect( null );
+			} ).not.toThrow();
+			expect( mockEditor.createCustomShapeLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not crash when panel is null', function () {
+			toolbar.shapeLibraryPanel = null;
+			toolbar.shapeLibraryButton = null;
+
+			expect( () => {
+				toolbar.showShapeLibraryPanel();
+			} ).not.toThrow();
+
+			expect( () => {
+				toolbar.hideShapeLibraryPanel();
+			} ).not.toThrow();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - Fallback branches for missing ToolDropdown
+	// ========================================================================
+
+	describe( 'Toolbar fallback rendering without ToolDropdown', () => {
+		let toolbar, mockEditor;
+
+		beforeEach( () => {
+			// Mock the editor and required services
+			mockEditor = {
+				selectTool: jest.fn(),
+				setCurrentTool: jest.fn(), // Add missing method
+				stateManager: {
+					get: jest.fn(),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				},
+				eventManager: {
+					emit: jest.fn(),
+					on: jest.fn()
+				},
+				canvasManager: {
+					redraw: jest.fn()
+				}
+			};
+
+			// Remove ToolDropdown from window.Layers to test fallback
+			const originalLayers = window.Layers;
+			delete window.Layers;
+			window.Layers = {
+				UI: {} // ToolDropdown deliberately undefined
+			};
+
+			const container = document.createElement( 'div' );
+			toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container,
+				onToolSelect: jest.fn()
+			} );
+
+			// Restore window.Layers after toolbar instantiation
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should render text tools as individual buttons when ToolDropdown unavailable', () => {
+			const textButtons = toolbar.container.querySelectorAll( '[data-tool="text"]' );
+			expect( textButtons.length ).toBeGreaterThan( 0 );
+
+			// Should have created standalone text button instead of dropdown
+			const textButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.dataset.tool === 'text' );
+			expect( textButton ).toBeTruthy();
+		} );
+
+		it( 'should render shape tools as individual buttons when ToolDropdown unavailable', () => {
+			// Should have individual shape tool buttons
+			const rectButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.dataset.tool === 'rectangle' );
+			expect( rectButton ).toBeTruthy();
+
+			const circleButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.dataset.tool === 'circle' );
+			expect( circleButton ).toBeTruthy();
+		} );
+
+		it( 'should render line tools as individual buttons when ToolDropdown unavailable', () => {
+			// Should have individual line tool buttons
+			const arrowButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.dataset.tool === 'arrow' );
+			expect( arrowButton ).toBeTruthy();
+
+			const lineButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.dataset.tool === 'line' );
+			expect( lineButton ).toBeTruthy();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - ColorPickerDialog fallback
+	// ========================================================================
+
+	describe( 'updateColorButtonPreview fallback', () => {
+		let toolbar, mockEditor;
+
+		beforeEach( () => {
+			mockEditor = {
+				selectTool: jest.fn(),
+				setCurrentTool: jest.fn(), // Add missing method
+				stateManager: {
+					get: jest.fn(),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				},
+				eventManager: {
+					emit: jest.fn(),
+					on: jest.fn()
+				}
+			};
+
+			const container = document.createElement( 'div' );
+			toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container,
+				onToolSelect: jest.fn()
+			} );
+		} );
+
+		it( 'should use fallback implementation when ColorPickerDialog unavailable', () => {
+			// Remove ColorPickerDialog
+			const originalLayers = window.Layers;
+			delete window.Layers;
+			window.Layers = { UI: {} };
+
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, '#ff0000' );
+
+			// Should apply background color
+			expect( btn.style.background ).toBe( 'rgb(255, 0, 0)' );
+			expect( btn.title ).toBe( '#ff0000' );
+
+			// Restore
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should handle transparent color in fallback', () => {
+			// Remove ColorPickerDialog
+			const originalLayers = window.Layers;
+			delete window.Layers;
+			window.Layers = { UI: {} };
+
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, 'transparent', 'No color' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'No color' );
+
+			// Restore
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should handle none color in fallback', () => {
+			// Remove ColorPickerDialog
+			const originalLayers = window.Layers;
+			delete window.Layers;
+			window.Layers = { UI: {} };
+
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, 'none' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.style.background ).toBe( '' );
+
+			// Restore
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should use previewTemplate in fallback aria-label', () => {
+			// Remove ColorPickerDialog
+			const originalLayers = window.Layers;
+			delete window.Layers;
+			window.Layers = { UI: {} };
+
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, '#00ff00', 'Transparent', 'Selected: $1' );
+
+			expect( btn.getAttribute( 'aria-label' ) ).toBe( 'Selected: #00ff00' );
+
+			// Restore
+			window.Layers = originalLayers;
+		} );
+	} );
 } );

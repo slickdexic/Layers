@@ -307,6 +307,31 @@ describe( 'AccessibilityAnnouncer', () => {
 			expect( announcer.politeRegion ).toBeNull();
 			expect( announcer.assertiveRegion ).toBeNull();
 		} );
+
+		it( 'should clear pending timeout on destroy', () => {
+			announcer.init();
+			// Start an announcement (which schedules a timeout)
+			announcer.announce( 'Test message' );
+			// Verify pending timeout is set
+			expect( announcer.pendingTimeoutId ).not.toBeNull();
+			// Destroy before timeout fires
+			announcer.destroy();
+			// Verify timeout was cleared
+			expect( announcer.pendingTimeoutId ).toBeNull();
+		} );
+
+		it( 'should not throw when timeout fires after destroy', () => {
+			announcer.init();
+			const politeRegion = announcer.politeRegion;
+			// Start an announcement
+			announcer.announce( 'Test message' );
+			// Destroy immediately (before timeout fires)
+			announcer.destroy();
+			// Run all timers - should not throw
+			expect( () => jest.runAllTimers() ).not.toThrow();
+			// Region should not have been updated (it was removed)
+			expect( politeRegion.parentNode ).toBeNull();
+		} );
 	} );
 
 	describe( 'pending announcements', () => {

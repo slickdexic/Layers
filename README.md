@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C551%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-8%2C677%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.0 (January 2026)  
+> **Version:** 1.5.2 (January 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.43.x, PHP 8.1+
 >
@@ -230,8 +230,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,327 lines across 32 files
-- **Frontend:** HTML5 Canvas editor with 112 JS files (~61,122 lines), 94 ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,519 lines across 32 files
+- **Frontend:** HTML5 Canvas editor with 113 JS files (~61,480 lines), 94 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 
@@ -239,10 +239,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 8,537 passing |
-| Statement coverage | 93.7% |
-| Branch coverage | 82.4% |
-| Test suites | 145 |
+| Jest tests | 8,677 passing |
+| Statement coverage | 94.55% |
+| Branch coverage | 83.19% |
+| Test suites | 146 |
 
 **Security:**
 
@@ -270,7 +270,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 All HIGH priority issues have been resolved:
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints
 - ✅ **Background image load failure** - user now notified via mw.notify()
-- ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up
+- ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up (RAF cleanup improved in TransformController/RenderCoordinator)
 - ✅ **DEBUG logging** - uses proper mw.log() which is gated by debug mode
 
 ---
@@ -295,14 +295,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 112 | ✅ |
-| Total JS lines | ~61,300 | ✅ Well under 75K target |
+| Total JS files | 113 | ✅ |
+| Total JS lines | ~61,480 | ✅ Well under 75K target |
 | ES6 classes | 94 | ✅ |
 | God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 8,537 | ✅ |
+| Tests passing | 8,677 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 93.7% | ✅ Excellent |
-| Branch coverage | 82.4% | ✅ |
+| Statement coverage | 94.55% | ✅ Excellent |
+| Branch coverage | 83.19% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

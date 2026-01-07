@@ -1425,4 +1425,305 @@ describe( 'CanvasManager', () => {
 			expect( canvasManager.rectsIntersect( rect1, rect2 ) ).toBe( false );
 		} );
 	} );
+
+	// ========================================================================
+	// Coverage Tests - Fallback event handlers and error branches
+	// ========================================================================
+
+	describe( 'setupEventHandlers fallback path', () => {
+		it( 'should use fallback event handlers when CanvasEvents unavailable', () => {
+			// Setup window.Layers namespace if needed
+			if ( !window.Layers ) {
+				window.Layers = {};
+			}
+			if ( !window.Layers.Canvas ) {
+				window.Layers.Canvas = {};
+			}
+
+			// Remove CanvasEvents to trigger fallback
+			const originalCanvasEvents = window.Layers.Canvas.Events;
+			delete window.Layers.Canvas.Events;
+
+			// Also remove global.CanvasEvents to ensure fallback
+			const originalGlobalEvents = global.CanvasEvents;
+			delete global.CanvasEvents;
+
+			const testCanvas = document.createElement( 'canvas' );
+			testCanvas.getContext = jest.fn().mockReturnValue( mockContext );
+			const testEditor = {
+				stateManager: {
+					get: jest.fn().mockReturnValue( [] ),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				}
+			};
+
+			const manager = new CanvasManager( {
+				canvas: testCanvas,
+				editor: testEditor
+			} );
+
+			// Should have created fallback event object
+			expect( manager.events ).toBeTruthy();
+			expect( typeof manager.events.destroy ).toBe( 'function' );
+
+			// Should have attached event listeners
+			expect( manager.__mousedownHandler ).toBeDefined();
+			expect( manager.__mousemoveHandler ).toBeDefined();
+			expect( manager.__mouseupHandler ).toBeDefined();
+
+			// Test destroy removes listeners
+			manager.events.destroy();
+			expect( manager.__mousedownHandler ).toBeNull();
+			expect( manager.__mousemoveHandler ).toBeNull();
+			expect( manager.__mouseupHandler ).toBeNull();
+
+			// Restore
+			window.Layers.Canvas.Events = originalCanvasEvents;
+			global.CanvasEvents = originalGlobalEvents;
+		} );
+
+		it( 'should handle CanvasEvents initialization error gracefully', () => {
+			// Setup namespace
+			if ( !window.Layers ) {
+				window.Layers = {};
+			}
+			if ( !window.Layers.Canvas ) {
+				window.Layers.Canvas = {};
+			}
+
+			// Mock CanvasEvents to throw during construction
+			const originalCanvasEvents = window.Layers.Canvas.Events;
+			window.Layers.Canvas.Events = jest.fn().mockImplementation( () => {
+				throw new Error( 'CanvasEvents init failed' );
+			} );
+
+			const testCanvas = document.createElement( 'canvas' );
+			testCanvas.getContext = jest.fn().mockReturnValue( mockContext );
+			const testEditor = {
+				stateManager: {
+					get: jest.fn().mockReturnValue( [] ),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				}
+			};
+
+			// Should not throw
+			expect( () => {
+				const manager = new CanvasManager( {
+					canvas: testCanvas,
+					editor: testEditor
+				} );
+				expect( manager.events ).toBeNull();
+			} ).not.toThrow();
+
+			// Restore
+			window.Layers.Canvas.Events = originalCanvasEvents;
+		} );
+
+		it( 'should handle missing handleMouseDown gracefully in fallback', () => {
+			// Setup namespace
+			if ( !window.Layers ) {
+				window.Layers = {};
+			}
+			if ( !window.Layers.Canvas ) {
+				window.Layers.Canvas = {};
+			}
+
+			const originalCanvasEvents = window.Layers.Canvas.Events;
+			delete window.Layers.Canvas.Events;
+
+			const originalGlobalEvents = global.CanvasEvents;
+			delete global.CanvasEvents;
+
+			const testCanvas = document.createElement( 'canvas' );
+			testCanvas.getContext = jest.fn().mockReturnValue( mockContext );
+			const testEditor = {
+				stateManager: {
+					get: jest.fn().mockReturnValue( [] ),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				}
+			};
+
+			const manager = new CanvasManager( {
+				canvas: testCanvas,
+				editor: testEditor
+			} );
+
+			// Remove the handler methods
+			delete manager.handleMouseDown;
+			delete manager.handleMouseMove;
+			delete manager.handleMouseUp;
+
+			// Should not throw when calling event handlers
+			expect( () => {
+				manager.__mousedownHandler( { clientX: 0, clientY: 0 } );
+				manager.__mousemoveHandler( { clientX: 10, clientY: 10 } );
+				manager.__mouseupHandler( { clientX: 10, clientY: 10 } );
+			} ).not.toThrow();
+
+			// Restore
+			window.Layers.Canvas.Events = originalCanvasEvents;
+			global.CanvasEvents = originalGlobalEvents;
+		} );
+
+		it( 'should not create fallback handlers when canvas lacks addEventListener', () => {
+			// Setup namespace
+			if ( !window.Layers ) {
+				window.Layers = {};
+			}
+			if ( !window.Layers.Canvas ) {
+				window.Layers.Canvas = {};
+			}
+
+			const originalCanvasEvents = window.Layers.Canvas.Events;
+			delete window.Layers.Canvas.Events;
+
+			const originalGlobalEvents = global.CanvasEvents;
+			delete global.CanvasEvents;
+
+			// Mock canvas without addEventListener
+			const testCanvas = {
+				getContext: jest.fn().mockReturnValue( mockContext ),
+				width: 800,
+				height: 600
+			};
+			const testEditor = {
+				stateManager: {
+					get: jest.fn().mockReturnValue( [] ),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				}
+			};
+
+			const manager = new CanvasManager( {
+				canvas: testCanvas,
+				editor: testEditor
+			} );
+
+			// Should have event object but no handlers attached
+			expect( manager.events ).toBeTruthy();
+			expect( manager.__mousedownHandler ).toBeUndefined();
+
+			// Restore
+			window.Layers.Canvas.Events = originalCanvasEvents;
+			global.CanvasEvents = originalGlobalEvents;
+		} );
+	} );
+
+	describe( 'error handling in fallback event cleanup', () => {
+		it( 'should handle removeEventListener errors gracefully', () => {
+			const originalLayers = window.Layers;
+			delete window.Layers;
+			window.Layers = {};
+
+			// Mock canvas that throws on removeEventListener
+			const errorCanvas = {
+				addEventListener: jest.fn(),
+				removeEventListener: jest.fn().mockImplementation( () => {
+					throw new Error( 'removeEventListener failed' );
+				} ),
+				getContext: jest.fn().mockReturnValue( mockContext ),
+				getBoundingClientRect: jest.fn().mockReturnValue( {
+					left: 0, top: 0, width: 800, height: 600
+				} ),
+				width: 800,
+				height: 600
+			};
+
+			const testEditor = {
+				stateManager: {
+					get: jest.fn().mockReturnValue( [] ),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				}
+			};
+
+			const manager = new CanvasManager( {
+				canvas: errorCanvas,
+				editor: testEditor
+			} );
+
+			// Should not throw when destroying with errors
+			expect( () => {
+				manager.events.destroy();
+			} ).not.toThrow();
+
+			// Restore
+			window.Layers = originalLayers;
+		} );
+	} );
+
+	describe( 'StateManager delegation', () => {
+		it( 'should return empty array from getSelectedLayerIds when no StateManager', () => {
+			const noStateManager = new CanvasManager( {
+				canvas: mockCanvas,
+				editor: {} // No stateManager
+			} );
+
+			expect( noStateManager.getSelectedLayerIds() ).toEqual( [] );
+		} );
+
+		it( 'should return null from getSelectedLayerId when no selection', () => {
+			canvasManager.editor.stateManager.get = jest.fn().mockReturnValue( [] );
+
+			expect( canvasManager.getSelectedLayerId() ).toBeNull();
+		} );
+
+		it( 'should not throw setSelectedLayerIds when no StateManager', () => {
+			const noStateManager = new CanvasManager( {
+				canvas: mockCanvas,
+				editor: {}
+			} );
+
+			expect( () => {
+				noStateManager.setSelectedLayerIds( [ 'layer1' ] );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle null ids in setSelectedLayerIds', () => {
+			canvasManager.setSelectedLayerIds( null );
+
+			expect( canvasManager.editor.stateManager.set ).toHaveBeenCalledWith(
+				'selectedLayerIds',
+				[]
+			);
+		} );
+
+		it( 'should not throw subscribeToState when no StateManager', () => {
+			const noStateManager = new CanvasManager( {
+				canvas: mockCanvas,
+				editor: {}
+			} );
+
+			expect( () => {
+				noStateManager.subscribeToState();
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'findClass error handling', () => {
+		it( 'should handle globalThis access error gracefully', () => {
+			// Create manager which triggers findClass during init
+			const originalLayers = window.Layers;
+			
+			// Create a scenario where global access might fail
+			delete window.Layers;
+			window.Layers = {
+				Canvas: {},
+				Core: {}
+			};
+
+			expect( () => {
+				new CanvasManager( {
+					canvas: mockCanvas,
+					editor: mockEditor
+				} );
+			} ).not.toThrow();
+
+			// Restore
+			window.Layers = originalLayers;
+		} );
+	} );
 } );

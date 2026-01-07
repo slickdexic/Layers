@@ -875,8 +875,12 @@
 					// Reload to switch to another set or show empty state
 					this.loadLayers().then( () => {
 						resolve( data.layersdelete );
-					} ).catch( () => {
+					} ).catch( ( reloadErr ) => {
 						// Even if reload fails, the delete succeeded
+						if ( typeof mw !== 'undefined' && mw.log ) {
+							mw.log.warn( '[APIManager] Reload after delete failed:', reloadErr );
+						}
+						mw.notify( this.getMessage( 'layers-reload-warning', 'Layer list may need manual refresh' ), { type: 'warn' } );
 						resolve( data.layersdelete );
 					} );
 				} else {
@@ -1019,8 +1023,12 @@
 					// Reload to refresh set list
 					this.loadLayers().then( () => {
 						resolve( data.layersrename );
-					} ).catch( () => {
+					} ).catch( ( reloadErr ) => {
 						// Even if reload fails, the rename succeeded
+						if ( typeof mw !== 'undefined' && mw.log ) {
+							mw.log.warn( '[APIManager] Reload after rename failed:', reloadErr );
+						}
+						mw.notify( this.getMessage( 'layers-reload-warning', 'Layer list may need manual refresh' ), { type: 'warn' } );
 						resolve( data.layersrename );
 					} );
 				} else {
@@ -1098,6 +1106,12 @@
 				exportCanvas.width = exportWidth;
 				exportCanvas.height = exportHeight;
 				const ctx = exportCanvas.getContext( '2d' );
+
+				// Check if canvas context creation failed (e.g., browser OOM, canvas too large)
+				if ( !ctx ) {
+					reject( new Error( 'Failed to create canvas context for export' ) );
+					return;
+				}
 
 				// Draw background if requested and available
 				// For PNG exports with hidden background, leave transparent (don't fill)

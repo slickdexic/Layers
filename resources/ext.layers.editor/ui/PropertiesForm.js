@@ -358,6 +358,12 @@
 		if ( input.type === 'checkbox' ) {
 			input.checked = !!opts.value;
 		}
+		// Handle disabled state
+		if ( opts.disabled ) {
+			input.disabled = true;
+			input.classList.add( 'disabled' );
+			wrapper.classList.add( 'property-field--disabled' );
+		}
 		wrapper.appendChild( labelEl );
 		wrapper.appendChild( input );
 		wrapper.appendChild( errorIndicator );

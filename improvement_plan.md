@@ -2,37 +2,40 @@
 
 **Last Updated:** January 7, 2026  
 **Status:** ✅ Production-Ready  
-**Version:** 1.5.0  
+**Version:** 1.5.2  
 **Goal:** World-class, production-ready MediaWiki extension
 
 ---
 
 ## Executive Summary
 
-The extension is **production-ready** and actively maintained. A comprehensive critical code review on January 6-7, 2026 confirmed stable operation with excellent test coverage. Technical debt is managed but present.
+The extension is **production-ready** and actively maintained. A comprehensive critical code review on January 7, 2026 confirmed stable operation with excellent test coverage. Technical debt is managed but present.
 
-**Current Rating: 8.75/10**
+**Current Rating: 8.5/10**
 
 **✅ Strengths:**
-- 8,551 unit tests passing with 94.6% statement coverage
+- 8,563 unit tests passing with 93.8% statement coverage, 82.4% branch coverage
 - All 13 drawing tools fully functional
-- Professional security (CSRF, rate limiting, validation on all endpoints)
+- Professional security (CSRF, rate limiting, validation on all 4 API endpoints)
 - Zero critical bugs or security vulnerabilities
 - Layer Set List on File pages for discoverability
+- WCAG 2.5.5 compliant touch targets (44×44px minimum)
 
 **⚠️ Technical Debt:**
 - 12 god classes (28% of JS codebase) - all use delegation patterns
-- 7 files in 800-999 line range (no files at risk of becoming god classes)
+- 7 files in 800-999 line range approaching god class threshold
 
-**✅ Recent Improvements (January 6-7, 2026):**
+**✅ Recent Improvements (January 7, 2026):**
+- Fixed double-headed curved arrow crossover rendering artifact
+- Fixed tail width control visibility for double-headed arrows
+- Fixed TransformController.js RAF scheduling cleanup bug
+- Fixed RenderCoordinator.js setTimeout fallback tracking
 - Added Layer Set List on File pages (implements Yaron feedback request #4)
 - Extracted `ImageLayerRenderer.js` (280 lines) from `LayerRenderer.js`
 - LayerRenderer.js reduced from 998 to 867 lines (no longer at risk)
 - Simplified permissions: consolidated `createlayers` into `editlayers`
 - Fixed layer locking feature with 15 new tests
-- Added 23 new tests (8,545 → 8,551), improving coverage
-- Verified comprehensive mobile CSS (768px + 480px breakpoints already implemented)
-- Fixed all PHP code style warnings (line length, comment placement, line endings)
+- Fixed PHP code style errors (line endings)
 
 ---
 
@@ -41,12 +44,12 @@ The extension is **production-ready** and actively maintained. A comprehensive c
 | Area | Status | Details |
 |------|--------|--------|
 | **Functionality** | ✅ Complete | 13 tools + layer grouping + curved arrows + callouts |
-| **Security** | ✅ Excellent | CSRF, rate limiting, validation on all endpoints |
-| **Testing** | ✅ Excellent | 8,551 tests, 94.6% statement coverage, 83.3% branch |
-| **ES6 Migration** | ✅ Complete | 95+ classes, 0 prototype patterns |
+| **Security** | ✅ Excellent | CSRF, rate limiting, validation on all 4 endpoints |
+| **Testing** | ✅ Excellent | 8,563 tests, 93.8% statement coverage, 82.4% branch |
+| **ES6 Migration** | ✅ Complete | 94+ classes, 0 prototype patterns |
 | **God Classes** | ⚠️ Debt | 12 files >1,000 lines (all with delegation patterns) |
-| **Mobile Support** | ✅ Complete | 768px + 480px responsive breakpoints, touch-friendly |
-| **Codebase Size** | ✅ Healthy | ~61,452 JS lines (113 files), well under 75K target |
+| **Mobile Support** | ✅ Complete | WCAG 2.5.5 touch targets, 768px + 480px responsive CSS |
+| **Codebase Size** | ✅ Healthy | ~61,480 JS lines (113 files), well under 75K target |
 | **PHP Backend** | ✅ Healthy | ~11,519 lines (32 files), 0 errors |
 
 ---
@@ -78,6 +81,8 @@ All P0 issues have been resolved. The extension is production-ready.
 | SelectionManager infinite recursion | ✅ FIXED | Added visited Set |
 | Export filename sanitization | ✅ FIXED | Added sanitizeFilename() helper |
 | console.warn in CustomShapeRenderer | ✅ FIXED | Changed to mw.log.warn() |
+| TransformController RAF cleanup | ✅ FIXED | Added RAF flag reset in destroy() (Jan 6) |
+| RenderCoordinator setTimeout fallback | ✅ FIXED | Added fallbackTimeoutId tracking (Jan 6) |
 
 ---
 
@@ -101,10 +106,10 @@ Monitor these files to prevent additional god classes:
 
 | File | Lines | Risk | Trend |
 |------|-------|------|-------|
+| TransformController.js | 987 | ⚠️ MEDIUM | +10 (RAF fix) |
 | ResizeCalculator.js | 935 | ⚠️ MEDIUM | Stable |
 | PropertiesForm.js | 926 | ⚠️ MEDIUM | Stable |
 | ShapeRenderer.js | 924 | ⚠️ MEDIUM | Stable |
-| TransformController.js | 901 | ⚠️ MEDIUM | Stable |
 | **LayerRenderer.js** | **867** | ✅ RESOLVED | Extracted |
 | LayersValidator.js | 853 | ✅ OK | Stable |
 | PropertyBuilders.js | 819 | ✅ OK | Stable |
@@ -117,8 +122,8 @@ Monitor these files to prevent additional god classes:
 |------|-------|---------|--------|
 | **LayerPanel.js** | **2,193** | Facade → 9 controllers | 🚨 Over 2K limit |
 | **CanvasManager.js** | **1,964** | Facade → 10+ controllers | ⚠️ Approaching 2K |
-| Toolbar.js | 1,809 | UI consolidation | ✅ OK |
-| LayersEditor.js | 1,578 | Orchestrator → managers | ✅ OK |
+| Toolbar.js | 1,802 | UI consolidation | ✅ OK |
+| LayersEditor.js | 1,632 | Orchestrator → managers | ✅ OK |
 | SelectionManager.js | 1,405 | Facade → selection helpers | ✅ OK |
 | ArrowRenderer.js | 1,356 | Rendering (curved arrows) | ✅ OK |
 | APIManager.js | 1,356 | APIErrorHandler | ✅ OK |
@@ -128,7 +133,7 @@ Monitor these files to prevent additional god classes:
 | CanvasRenderer.js | 1,117 | SelectionRenderer | ✅ OK |
 | ToolbarStyleControls.js | 1,014 | Style controls | ✅ OK |
 
-**Total in god classes: ~17,429 lines** (28% of JS codebase)
+**Total in god classes: ~17,476 lines** (28% of JS codebase)
 
 ### P1.4 Timer Cleanup Consistency
 
@@ -280,12 +285,13 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Unit tests (Jest) | 8,537 | ✅ |
+| Unit tests (Jest) | 8,563 | ✅ |
 | E2E tests (Playwright) | 2,658 lines (7 files) | ✅ |
-| Statement coverage | 93.7% | ✅ Excellent |
+| Statement coverage | 93.8% | ✅ Excellent |
 | Branch coverage | 82.4% | ✅ Good |
 | Function coverage | 92.7% | ✅ |
-| Test suites | 145 | ✅ |
+| Line coverage | 93.9% | ✅ |
+| Test suites | 146 | ✅ |
 
 ---
 
@@ -293,7 +299,7 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 8,522 passing tests with 94.6% coverage
+- 8,563 passing tests with 93.8% statement coverage
 - 13 working drawing tools
 - Professional security implementation
 - Named layer sets with version history
@@ -305,15 +311,22 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 - Live article preview
 - Callout/speech bubble tool
 - TIFF and InstantCommons support
+- ✅ LayerRenderer.js reduced from 998 to 867 lines
+- ✅ HistoryManager isDestroyed guard (prevents post-destroy operations)
+- ✅ APIManager canvas export null context check
+- ✅ parseMWTimestamp edge case validation (length check)
+- ✅ Reload failure user notifications (mw.notify)
+- ✅ AccessibilityAnnouncer timer tracking (pendingTimeoutId cleanup)
+- ✅ Double bootstrap prevention (EditorBootstrap)
+- ✅ WCAG 2.5.5 touch targets (44×44px minimum for mobile)
+- ✅ Double-headed curved arrow crossover fixed (v1.5.1)
 
 ### Still Needed for 10/10
 
 | Feature | Impact | Effort | Priority |
 |---------|--------|--------|----------|
-| Prevent LayerRenderer from crossing 1K | HIGH | 2 hours | P1 |
-| Mobile-responsive toolbar | MEDIUM | 2-3 weeks | P2 |
 | Reduce LayerPanel.js below 2K | MEDIUM | 1 week | P2 |
-| WCAG 2.1 AA certification | MEDIUM | 1 week | P3 |
+| Improve branch coverage to 85%+ | MEDIUM | 2-3 weeks | P2 |
 
 ---
 
@@ -323,19 +336,26 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 1. ✅ Complete critical review documentation
 2. ✅ Fix console.warn in CustomShapeRenderer
-3. Monitor LayerRenderer.js (998 lines) for any additions
+3. ✅ Fix TransformController.js RAF cleanup bug
+4. ✅ Fix RenderCoordinator setTimeout fallback tracking
+5. ✅ Add HistoryManager isDestroyed guard
+6. ✅ Add APIManager exportAsImage canvas context null check
+7. ✅ Fix parseMWTimestamp edge case for short timestamps
+8. ✅ Add user notification on reload failure after delete/rename
 
 ### Short-Term (1-4 Weeks)
 
-4. Continue monitoring files approaching 1K lines
-5. Consider extracting logic from LayerPanel.js
-6. Address timer cleanup in AccessibilityAnnouncer if time permits
+9. Continue monitoring files approaching 1K lines (4 files in 920-987 range)
+10. Consider extracting logic from LayerPanel.js (2,193 lines)
+11. ✅ Timer cleanup in AccessibilityAnnouncer complete
+12. ✅ WCAG 2.5.5 touch targets implemented
+11. ✅ Timer cleanup in AccessibilityAnnouncer complete
 
 ### Long-Term (1-3 Months)
 
-7. Mobile-responsive toolbar and layer panel
-8. WCAG 2.1 AA audit completion
-9. Consider TypeScript migration
+12. Mobile-responsive toolbar and layer panel UX improvements
+13. WCAG 2.1 AA audit completion
+10. Consider TypeScript migration
 
 ---
 
@@ -375,12 +395,12 @@ The Layers extension is **production-ready** with excellent test coverage and se
 
 Deductions:
 - -0.5 for 12 god classes (28% of codebase)
-- -0.5 for mobile UI not fully responsive
-- -0.3 for 7 files approaching 1K threshold
-- -0.2 for minor timer cleanup inconsistencies
+- -0.4 for 7 files approaching 1K threshold
+- -0.3 for branch coverage at 82.4% (target: 85%+)
+- -0.3 for mobile toolbar UX not fully optimized
 
 ---
 
-*Plan updated: January 6, 2026*  
+*Plan updated: January 7, 2026*  
 *Status: ✅ **Production-ready** - No critical issues*  
-*Version: 1.5.0-beta.4*
+*Version: 1.5.1*

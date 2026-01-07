@@ -628,6 +628,37 @@ describe( 'EditorBootstrap', () => {
 
 			delete window.LayersEditor;
 		} );
+
+		it( 'should skip creation when editor instance already exists', () => {
+			const mockLayersEditor = jest.fn();
+			window.LayersEditor = mockLayersEditor;
+			window.Layers = {
+				Constants: {},
+				Canvas: {
+					Manager: function () {}
+				},
+				Core: {
+					Editor: mockLayersEditor
+				}
+			};
+
+			// Set existing editor instance
+			window.layersEditorInstance = { existing: true };
+
+			EditorBootstrap.init();
+			const hookListener = mockHookAdd.mock.calls[ 0 ][ 0 ];
+
+			hookListener( { filename: 'test.jpg', container: document.body } );
+
+			// LayersEditor should NOT have been called since instance exists
+			expect( mockLayersEditor ).not.toHaveBeenCalled();
+			expect( mw.log ).toHaveBeenCalledWith(
+				expect.stringContaining( 'Editor already exists' )
+			);
+
+			delete window.LayersEditor;
+			delete window.layersEditorInstance;
+		} );
 	} );
 
 	describe( 'global error handlers', () => {

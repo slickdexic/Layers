@@ -947,6 +947,17 @@ class TransformController {
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;
 
+		// Clear RAF scheduling flags to prevent callbacks after destroy
+		// (callbacks check these flags before executing)
+		this._resizeRenderScheduled = false;
+		this._rotationRenderScheduled = false;
+		this._dragRenderScheduled = false;
+
+		// Clear pending layer references for RAF callbacks
+		this._pendingResizeLayer = null;
+		this._pendingRotationLayer = null;
+		this._pendingDragLayerId = null;
+
 		// Clear transform state
 		this.isResizing = false;
 		this.isRotating = false;

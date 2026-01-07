@@ -351,9 +351,9 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (currently 8,563 tests, 146 suites)
-- Coverage (94.6% statement, 83.3% branch)
+- Test count (currently 8,677 tests, 146 suites)
+- Coverage (94.55% statement, 83.19% branch)
 - JavaScript file count (113 files, ~61,452 lines)
 - PHP file count (32 files, ~11,519 lines)
 - Drawing tool count (13 tools)
-- Version number (1.5.1-REL1_43)
+- Version number (1.5.2-REL1_43)
