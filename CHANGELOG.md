@@ -2,6 +2,25 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.1] - 2026-01-07
+
+### Fixed
+- **Double-Headed Curved Arrow Rendering** — Fixed crossover artifact in double-headed curved arrows
+  - Curved shaft path now correctly connects top-to-top and bottom-to-bottom between heads
+  - Fixed vertex order issue caused by inverted perpendicular direction on backward-facing tail head
+  - Both main path and shadow path render correctly without crossing
+  - All three head types (pointed, chevron, standard) work correctly
+- **Tail Width Control Visibility** — Tail Width control now properly hides when Arrow Ends is set to "Double"
+  - Previously the control remained visible even though it had no effect
+  - Properties panel now refreshes when arrow style changes
+  - tailWidth is automatically reset to 0 when switching to double-headed mode
+
+### Tests
+- **Test Count** — 8,563 tests passing (146 suites)
+- **Coverage** — 94.6% statement, 83.3% branch
+
+---
+
 ## [1.5.0] - 2026-01-07
 
 ### Added

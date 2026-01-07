@@ -4,6 +4,23 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.1 (January 7, 2026)
+
+### Fixed
+- **Double-Headed Curved Arrow Rendering** — Fixed crossover artifact in double-headed curved arrows
+  - Curved shaft path now correctly connects top-to-top and bottom-to-bottom between heads
+  - Fixed vertex order issue caused by inverted perpendicular direction on backward-facing tail head
+  - All three head types (pointed, chevron, standard) work correctly
+- **Tail Width Control Visibility** — Tail Width control now properly hides when Arrow Ends is set to "Double"
+  - Previously the control remained visible even though it had no effect
+  - Properties panel now refreshes when arrow style changes
+
+### Tests
+- 8,563 tests passing (146 suites)
+- 94.6% statement coverage, 83.3% branch coverage
+
+---
+
 ## Version 1.5.0 (January 7, 2026)
 
 ### Added
