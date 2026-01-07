@@ -45,6 +45,11 @@
 			}
 
 			// MediaWiki binary(14) format: YYYYMMDDHHmmss
+			// Validate length before parsing to avoid Invalid Date
+			if ( mwTimestamp.length < 14 ) {
+				return new Date();
+			}
+
 			const year = parseInt( mwTimestamp.substring( 0, 4 ), 10 );
 			const month = parseInt( mwTimestamp.substring( 4, 6 ), 10 ) - 1; // JS months are 0-indexed
 			const day = parseInt( mwTimestamp.substring( 6, 8 ), 10 );

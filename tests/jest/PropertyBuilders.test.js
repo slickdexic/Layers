@@ -512,7 +512,7 @@ describe( 'PropertyBuilders', () => {
 		} );
 
 		test( 'tail width onChange should update layer', () => {
-			const ctx = createMockContext( { type: 'arrow', tailWidth: 0 } );
+			const ctx = createMockContext( { type: 'arrow', tailWidth: 0, arrowStyle: 'single' } );
 			ctx.addSliderInput = jest.fn();
 			const Builders = window.Layers.UI.PropertyBuilders;
 
@@ -530,6 +530,48 @@ describe( 'PropertyBuilders', () => {
 			);
 		} );
 
+		test( 'tail width should be hidden when arrowStyle is double', () => {
+			const ctx = createMockContext( { type: 'arrow', arrowStyle: 'double', tailWidth: 0 } );
+			ctx.addSliderInput = jest.fn();
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addArrowProperties( ctx );
+
+			const widthCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Tail Width'
+			);
+			// Tail width control should not be rendered when arrowStyle is double
+			expect( widthCall ).toBeUndefined();
+		} );
+
+		test( 'tail width should be shown when arrowStyle is single', () => {
+			const ctx = createMockContext( { type: 'arrow', arrowStyle: 'single', tailWidth: 5 } );
+			ctx.addSliderInput = jest.fn();
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addArrowProperties( ctx );
+
+			const widthCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Tail Width'
+			);
+			expect( widthCall ).toBeDefined();
+			expect( widthCall[ 0 ].value ).toBe( 5 );
+		} );
+
+		test( 'tail width should be shown when arrowStyle is none', () => {
+			const ctx = createMockContext( { type: 'arrow', arrowStyle: 'none', tailWidth: 10 } );
+			ctx.addSliderInput = jest.fn();
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addArrowProperties( ctx );
+
+			const widthCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Tail Width'
+			);
+			expect( widthCall ).toBeDefined();
+			expect( widthCall[ 0 ].value ).toBe( 10 );
+		} );
+
 		test( 'arrow ends onChange should update layer', () => {
 			const ctx = createMockContext( { type: 'arrow', arrowStyle: 'single' } );
 			ctx.addSliderInput = jest.fn();
@@ -545,7 +587,26 @@ describe( 'PropertyBuilders', () => {
 			onChange( 'double' );
 			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
 				'test-layer-1',
-				{ arrowStyle: 'double' }
+				{ arrowStyle: 'double', tailWidth: 0 }
+			);
+		} );
+
+		test( 'arrow ends onChange to single should not affect tailWidth', () => {
+			const ctx = createMockContext( { type: 'arrow', arrowStyle: 'double' } );
+			ctx.addSliderInput = jest.fn();
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addArrowProperties( ctx );
+
+			const endsCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Arrow Ends'
+			);
+			const onChange = endsCall[ 0 ].onChange;
+
+			onChange( 'single' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ arrowStyle: 'single' }
 			);
 		} );
 

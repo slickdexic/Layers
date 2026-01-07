@@ -1,55 +1,98 @@
 # Documentation Update Guide
 
-**Last Updated:** January 6, 2026
+**Last Updated:** January 7, 2026
 
-This guide ensures all documentation stays synchronized when making changes to the Layers extension. Use this checklist before every commit that affects version, metrics, or features.
+This guide ensures all documentation stays synchronized when making changes to the Layers extension. **This is a MANDATORY checklist before every release.**
+
+> ⚠️ **CRITICAL:** Version 1.5.1 was released with outdated documentation in wiki/Home.md, wiki/Installation.md, and Mediawiki-Extension-Layers.txt. This guide exists to prevent that from happening again.
 
 ---
 
-## Pre-Commit Documentation Checklist
+## 🔴 MANDATORY Release Checklist
 
-### 1. Version Changes
+Before EVERY release, run this verification script to identify stale documentation:
 
-When updating the version number, update **ALL** of these files:
+```bash
+# Run from extension root directory
+VERSION=$(grep '"version"' extension.json | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+echo "Current version: $VERSION"
+echo ""
+echo "=== Files that should contain version $VERSION ==="
+grep -rn --include="*.md" --include="*.txt" --include="*.json" "1\.[0-9]\.[0-9]" . \
+  | grep -v node_modules | grep -v vendor | grep -v CHANGELOG \
+  | grep -v "wiki/Changelog" | grep -v coverage | head -30
+```
+
+### Quick Version Grep Commands
+
+```bash
+# Find files with OLD version (replace X.X.X with old version)
+grep -rn --include="*.md" --include="*.txt" "1.5.0" . | grep -v node_modules | grep -v vendor | grep -v CHANGELOG
+
+# Verify all files have CURRENT version
+grep -rn --include="*.md" --include="*.txt" "1.5.1" . | grep -v node_modules | grep -v vendor
+```
+
+---
+
+## 📋 The "12 Files" Rule
+
+**TWELVE files must be updated for every version change.** No exceptions.
+
+| # | File | What to Update | Verification |
+|---|------|----------------|--------------|
+| 1 | `extension.json` | `"version"` field | Source of truth |
+| 2 | `package.json` | `"version"` field | `grep version package.json` |
+| 3 | `README.md` | Version line, metrics | `grep -n "Version:" README.md` |
+| 4 | `CHANGELOG.md` | New version section | `head -20 CHANGELOG.md` |
+| 5 | `Mediawiki-Extension-Layers.txt` | `\|version =`, test counts | `grep -n "version\|Stability" Mediawiki-Extension-Layers.txt` |
+| 6 | `wiki/Home.md` | "What's New", Project Status table | `grep -n "Version\|Tests" wiki/Home.md` |
+| 7 | `wiki/Installation.md` | Branch version table | `grep -n "main\|REL1_43" wiki/Installation.md` |
+| 8 | `wiki/Changelog.md` | Mirror of CHANGELOG.md | `head -30 wiki/Changelog.md` |
+| 9 | `codebase_review.md` | Version header, metrics | `grep -n "Version" codebase_review.md` |
+| 10 | `improvement_plan.md` | Version header | `grep -n "Version" improvement_plan.md` |
+| 11 | `docs/KNOWN_ISSUES.md` | Version header | `grep -n "Version" docs/KNOWN_ISSUES.md` |
+| 12 | `.github/copilot-instructions.md` | Version number (if present) | `grep -n "1\.[0-9]\.[0-9]" .github/copilot-instructions.md` |
+
+---
+
+## 📊 The "6 Test Count Files" Rule
+
+**SIX files contain test counts/coverage.** When tests change, update ALL of them.
 
 | File | What to Update |
 |------|----------------|
-| `extension.json` | `"version"` field |
-| `package.json` | `"version"` field |
-| `README.md` | Version badge and "Version:" line |
-| `CHANGELOG.md` | Add new version section at top |
-| `Mediawiki-Extension-Layers.txt` | `|version =` and `|update =` fields |
-| `docs/KNOWN_ISSUES.md` | `**Version:**` in header |
-| `codebase_review.md` | `**Version:**` in header |
-| `improvement_plan.md` | `**Version:**` in header |
-| `wiki/Home.md` | Version badges and "Project Status" table |
-| `wiki/Installation.md` | Branch version table |
-| `wiki/Changelog.md` | Add new version section (mirrors CHANGELOG.md) |
-| `.github/copilot-instructions.md` | Version references if any |
-
-### 2. Test Count / Coverage Changes
-
-When test counts or coverage percentages change, update:
-
-| File | What to Update |
-|------|----------------|
-| `README.md` | Coverage badge, test count in "Quality Metrics" table |
-| `Mediawiki-Extension-Layers.txt` | "Technical Details" section: test count, coverage |
-| `docs/KNOWN_ISSUES.md` | "Test Coverage Status" section |
-| `codebase_review.md` | All test/coverage metrics throughout |
+| `README.md` | Badge + "Quality Metrics" table |
+| `Mediawiki-Extension-Layers.txt` | "Technical Details" section |
+| `wiki/Home.md` | Badge + "Project Status" table |
+| `codebase_review.md` | Multiple metrics sections |
 | `improvement_plan.md` | "Test Summary" section |
-| `wiki/Home.md` | Project Status table (tests, coverage) |
-| `wiki/Architecture-Overview.md` | "Code Metrics" table |
-| `wiki/Testing-Guide.md` | Coverage thresholds if changed |
+| `.github/copilot-instructions.md` | Test count in architecture section |
 
-### 3. Drawing Tools Changes
+### Get Current Metrics
 
-When adding or removing drawing tools:
+```bash
+# Run tests with coverage and capture output
+npm run test:js -- --coverage 2>&1 | tee /tmp/test-output.txt
+
+# Extract key metrics
+grep "Test Suites:" /tmp/test-output.txt
+grep "Tests:" /tmp/test-output.txt  
+grep "Statements" /tmp/test-output.txt
+```
+
+---
+
+## 🛠️ Feature-Specific Updates
+
+### Drawing Tools Changes
+
+When adding or removing drawing tools, update these 8 files:
 
 | File | What to Update |
 |------|----------------|
 | `README.md` | Drawing Tools table |
-| `Mediawiki-Extension-Layers.txt` | "Drawing Tools" table, description |
+| `Mediawiki-Extension-Layers.txt` | "Drawing Tools" table, description count |
 | `wiki/Home.md` | Highlights section if applicable |
 | `wiki/Drawing-Tools.md` | Complete tool documentation |
 | `wiki/Quick-Start-Guide.md` | Tool count mentions |
@@ -57,33 +100,16 @@ When adding or removing drawing tools:
 | `wiki/Keyboard-Shortcuts.md` | New shortcuts if any |
 | `.github/copilot-instructions.md` | Tool list in architecture section |
 
-### 4. File Count / Line Count Changes
-
-When JavaScript or PHP files are added/removed:
-
-| File | What to Update |
-|------|----------------|
-| `README.md` | Architecture section (file counts, line counts) |
-| `codebase_review.md` | JavaScript/PHP summary tables |
-| `improvement_plan.md` | Current State table |
-| `wiki/Home.md` | Project Status table |
-| `wiki/Architecture-Overview.md` | Code Metrics table, directory structure |
-| `.github/copilot-instructions.md` | File line counts in architecture section |
-
-### 5. API Changes
-
-When modifying API endpoints:
+### API Changes
 
 | File | What to Update |
 |------|----------------|
 | `wiki/API-Reference.md` | Full API documentation |
 | `.github/copilot-instructions.md` | API contracts section |
-| `docs/API.md` | If exists, detailed API docs |
+| `docs/API.md` | Detailed API docs |
 | `README.md` | API overview if mentioned |
 
-### 6. Configuration Changes
-
-When adding/removing configuration options:
+### Configuration Changes
 
 | File | What to Update |
 |------|----------------|
@@ -94,9 +120,7 @@ When adding/removing configuration options:
 | `.github/copilot-instructions.md` | Configuration section |
 | `README.md` | Configuration section |
 
-### 7. Permission Changes
-
-When modifying user rights:
+### Permission Changes
 
 | File | What to Update |
 |------|----------------|
@@ -106,140 +130,92 @@ When modifying user rights:
 | `Mediawiki-Extension-Layers.txt` | `|rights =` list |
 | `README.md` | Permissions section if mentioned |
 
-### 8. Wikitext Syntax Changes
-
-When changing wikitext parameters:
-
-| File | What to Update |
-|------|----------------|
-| `wiki/Wikitext-Syntax.md` | Full syntax documentation |
-| `wiki/Quick-Start-Guide.md` | Basic examples |
-| `Mediawiki-Extension-Layers.txt` | Example usage |
-| `README.md` | Wikitext examples |
-| `docs/WIKITEXT_USAGE.md` | Detailed documentation |
-| `.github/copilot-instructions.md` | Wikitext syntax section |
-
 ---
 
-## Document Categories
+## ✅ Step-by-Step Release Procedure
 
-### Primary Documents (Always Check)
+Work through this checklist **in order** for every release:
 
-These documents are referenced most often and should always be accurate:
-
-1. **`README.md`** — Main project documentation, first thing users see
-2. **`Mediawiki-Extension-Layers.txt`** — MediaWiki.org extension page content
-3. **`CHANGELOG.md`** — Version history
-4. **`wiki/Home.md`** — GitHub Wiki homepage
-
-### Review Documents (Check After Major Changes)
-
-These documents provide technical details and should be updated for significant changes:
-
-1. **`codebase_review.md`** — Technical assessment with metrics
-2. **`improvement_plan.md`** — Development roadmap
-3. **`docs/KNOWN_ISSUES.md`** — Issue tracking
-4. **`.github/copilot-instructions.md`** — AI contributor instructions
-
-### Wiki Documents (Check for Feature/Tool Changes)
-
-These are synced to GitHub Wiki:
-
-| Document | Update When |
-|----------|-------------|
-| `wiki/Installation.md` | Version changes, requirements change |
-| `wiki/Quick-Start-Guide.md` | Tool changes, UI changes |
-| `wiki/Drawing-Tools.md` | Any tool addition/modification |
-| `wiki/Keyboard-Shortcuts.md` | New shortcuts added |
-| `wiki/Configuration-Reference.md` | Config options change |
-| `wiki/Permissions.md` | Rights change |
-| `wiki/Wikitext-Syntax.md` | Parser syntax changes |
-| `wiki/API-Reference.md` | API changes |
-| `wiki/Architecture-Overview.md` | Major architecture changes |
-| `wiki/Testing-Guide.md` | Test infrastructure changes |
-| `wiki/FAQ.md` | Common questions change |
-| `wiki/Troubleshooting.md` | New issues discovered |
-| `wiki/Changelog.md` | Every release (mirrors CHANGELOG.md) |
-
----
-
-## Quick Metrics Reference
-
-To gather current metrics, run these commands:
-
-```bash
-# Test count and coverage
-npm run test:js -- --coverage 2>&1 | grep -E "Test Suites:|Tests:|Statements"
-
-# JavaScript file count
-find resources -name "*.js" -not -path "*/dist/*" | wc -l
-
-# JavaScript line count (approximate)
-find resources -name "*.js" -not -path "*/dist/*" -exec cat {} + | wc -l
-
-# PHP file count
-find src -name "*.php" | wc -l
-
-# PHP line count (approximate)
-find src -name "*.php" -exec cat {} + | wc -l
+```
+□ 1. Update extension.json version
+□ 2. Update package.json version  
+□ 3. Add CHANGELOG.md entry at top
+□ 4. Copy CHANGELOG entry to wiki/Changelog.md
+□ 5. Run tests: npm run test:js -- --coverage
+□ 6. Record metrics: _____ tests, ___% statement coverage
+□ 7. Update README.md (version line, badge, metrics table)
+□ 8. Update Mediawiki-Extension-Layers.txt (|version=, |update=, test count)
+□ 9. Update wiki/Home.md (What's New section, Project Status table)
+□ 10. Update wiki/Installation.md (branch version table)
+□ 11. Update codebase_review.md (version header, metrics)
+□ 12. Update improvement_plan.md (version header)
+□ 13. Update docs/KNOWN_ISSUES.md (version header)
+□ 14. VERIFY: grep -r "OLD_VERSION" --include="*.md" . | grep -v node_modules
+□ 15. Commit: git commit -m "docs: update documentation for vX.Y.Z"
 ```
 
 ---
 
-## Automation Recommendations
+## 🚫 Common Mistakes to Avoid
 
-### GitHub Actions
-
-The `wiki-sync.yml` workflow automatically syncs `wiki/` to GitHub Wiki on:
-- Releases
-- Changes to `wiki/**` files
-
-### Pre-Commit Hook (Optional)
-
-Add to `.git/hooks/pre-commit`:
-
-```bash
-#!/bin/bash
-# Remind to check documentation
-echo "📝 Documentation Reminder:"
-echo "   Have you updated README.md, wiki/*, and Mediawiki-Extension-Layers.txt?"
-echo "   See docs/DOCUMENTATION_UPDATE_GUIDE.md for the full checklist."
-echo ""
-```
+| Mistake | Consequence | Prevention |
+|---------|-------------|------------|
+| Updating README.md but not wiki/Home.md | Conflicting version info | Always update together |
+| Updating CHANGELOG.md but not wiki/Changelog.md | Wiki shows old info | They must mirror each other |
+| Updating test count in one file only | 5 other files are wrong | Use the "6 files" list |
+| Updating version in extension.json only | 11 other files are wrong | Use the "12 files" list |
+| Forgetting Mediawiki-Extension-Layers.txt | MediaWiki.org page is stale | It's file #5 in checklist |
+| Releasing without grep verification | Old versions slip through | Always run step #14 |
 
 ---
 
-## Common Mistakes to Avoid
+## 🤖 For AI Assistants (Copilot/Claude)
 
-1. **Updating README.md but forgetting wiki/Home.md** — They have overlapping content
-2. **Updating CHANGELOG.md but not wiki/Changelog.md** — They should mirror each other
-3. **Changing test counts in one file** — Test counts appear in 6+ documents
-4. **Adding a tool without updating Drawing-Tools.md** — Users won't know about it
-5. **Updating version in extension.json only** — Version appears in 12+ places
-6. **Changing wikitext syntax without updating examples** — Examples will be wrong
+When a user asks to update documentation or prepare a release:
 
----
+1. **ALWAYS** check extension.json for the canonical version
+2. **NEVER** update only one or two files — use the "12 files" rule
+3. **ALWAYS** run grep verification for the old version number
+4. **ALWAYS** update wiki/Home.md when updating README.md
+5. **ALWAYS** update wiki/Changelog.md when updating CHANGELOG.md
+6. **ALWAYS** update Mediawiki-Extension-Layers.txt — it's often forgotten
 
-## Template: Release Documentation Update
-
-When preparing a release, work through this order:
-
-1. ✅ Update `extension.json` version
-2. ✅ Update `package.json` version
-3. ✅ Add CHANGELOG.md entry
-4. ✅ Copy CHANGELOG.md entry to wiki/Changelog.md
-5. ✅ Run tests and note final counts: `npm run test:js -- --coverage`
-6. ✅ Update README.md (version, metrics)
-7. ✅ Update Mediawiki-Extension-Layers.txt (version, date, metrics)
-8. ✅ Update wiki/Home.md (version, metrics)
-9. ✅ Update wiki/Installation.md (version table)
-10. ✅ Update codebase_review.md (version, date, metrics)
-11. ✅ Update improvement_plan.md (version, status)
-12. ✅ Update docs/KNOWN_ISSUES.md (version, metrics)
-13. ✅ Grep for old version number: `grep -r "1.4.8" --include="*.md"`
-14. ✅ Commit with message: `docs: update documentation for vX.Y.Z release`
+When asked for a code review or metrics update:
+- Run `npm run test:js -- --coverage` to get real numbers
+- Update ALL 6 test count files, not just one
 
 ---
 
-*Guide created: January 6, 2026*  
-*Maintainer: GitHub Copilot (Claude Opus 4.5)*
+## 📁 Document Categories Quick Reference
+
+### Primary (Must Always Be Accurate)
+1. `README.md` — First thing users see
+2. `Mediawiki-Extension-Layers.txt` — MediaWiki.org page source
+3. `CHANGELOG.md` — Version history
+4. `wiki/Home.md` — GitHub Wiki homepage
+
+### Secondary (Update for Major Changes)
+1. `codebase_review.md` — Technical assessment
+2. `improvement_plan.md` — Development roadmap  
+3. `docs/KNOWN_ISSUES.md` — Issue tracking
+4. `.github/copilot-instructions.md` — AI contributor instructions
+
+### Wiki (Auto-synced to GitHub Wiki)
+- `wiki/Installation.md` — Setup instructions
+- `wiki/Changelog.md` — Version history mirror
+- `wiki/Drawing-Tools.md` — Tool documentation
+- `wiki/Configuration-Reference.md` — Config options
+- Others as needed
+
+---
+
+## 📜 History
+
+| Date | Event |
+|------|-------|
+| January 7, 2026 | Guide enhanced after v1.5.1 was released with stale wiki docs |
+| January 6, 2026 | Guide created to document update procedures |
+
+---
+
+*This guide is referenced by `.github/copilot-instructions.md` section 12.*

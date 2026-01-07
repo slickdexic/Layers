@@ -1047,4 +1047,89 @@ describe( 'GroupManager', () => {
 			expect( typeof GroupManager ).toBe( 'function' );
 		} );
 	} );
+
+	// ========================================================================
+	// removeFromCurrentGroup Tests
+	// ========================================================================
+
+	describe( 'removeFromCurrentGroup', () => {
+		let groupManager;
+		let mockStateManager;
+		let mockEditor;
+
+		beforeEach( () => {
+			mockStateManager = {
+				get: jest.fn(),
+				set: jest.fn()
+			};
+			mockEditor = {
+				stateManager: mockStateManager
+			};
+			groupManager = new GroupManager( {
+				editor: mockEditor
+			} );
+		} );
+
+		it( 'should return empty array when stateManager is null and no layers passed', () => {
+			const gm = new GroupManager( {} );
+			// Ensure stateManager is truly null
+			gm._stateManager = null;
+			gm.editor = null;
+
+			const result = gm.removeFromCurrentGroup( 'layer-1' );
+
+			expect( result ).toEqual( [] );
+		} );
+
+		it( 'should return layers unchanged when layer not found', () => {
+			const layers = [
+				{ id: 'layer-1', type: 'text' },
+				{ id: 'layer-2', type: 'rectangle' }
+			];
+
+			const result = groupManager.removeFromCurrentGroup( 'nonexistent', layers );
+
+			expect( result ).toEqual( layers );
+		} );
+
+		it( 'should return layers unchanged when layer has no parentGroup', () => {
+			const layers = [
+				{ id: 'layer-1', type: 'text' },
+				{ id: 'layer-2', type: 'rectangle' }
+			];
+
+			const result = groupManager.removeFromCurrentGroup( 'layer-1', layers );
+
+			expect( result ).toEqual( layers );
+		} );
+
+		it( 'should remove layer from its parent group', () => {
+			const layers = [
+				{ id: 'group-1', type: 'group', children: [ 'layer-1', 'layer-2' ] },
+				{ id: 'layer-1', type: 'text', parentGroup: 'group-1' },
+				{ id: 'layer-2', type: 'rectangle', parentGroup: 'group-1' }
+			];
+
+			const result = groupManager.removeFromCurrentGroup( 'layer-1', layers );
+
+			// Group should no longer have layer-1 in children
+			const group = result.find( ( l ) => l.id === 'group-1' );
+			expect( group.children ).toEqual( [ 'layer-2' ] );
+
+			// Layer should no longer have parentGroup
+			const layer = result.find( ( l ) => l.id === 'layer-1' );
+			expect( layer.parentGroup ).toBeUndefined();
+		} );
+
+		it( 'should get layers from stateManager when no layers passed', () => {
+			const layers = [ { id: 'layer-1', type: 'text' } ];
+			mockStateManager.get.mockReturnValue( layers );
+
+			const result = groupManager.removeFromCurrentGroup( 'layer-1' );
+
+			expect( mockStateManager.get ).toHaveBeenCalledWith( 'layers' );
+			// Layer has no parentGroup, so returns unchanged
+			expect( result ).toEqual( layers );
+		} );
+	} );
 } );

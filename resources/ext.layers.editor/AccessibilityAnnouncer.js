@@ -24,6 +24,7 @@
 			this.assertiveRegion = null;
 			this.initialized = false;
 			this.pendingAnnouncements = [];
+			this.pendingTimeoutId = null; // Track setTimeout for cleanup
 		}
 
 		/**
@@ -118,11 +119,21 @@
 				return;
 			}
 
+			// Clear any pending timeout to avoid overlapping announcements
+			if ( this.pendingTimeoutId ) {
+				clearTimeout( this.pendingTimeoutId );
+				this.pendingTimeoutId = null;
+			}
+
 			// Clear and re-announce to trigger screen reader
 			// Using a slight delay ensures the change is detected
 			region.textContent = '';
-			setTimeout( () => {
-				region.textContent = message;
+			this.pendingTimeoutId = setTimeout( () => {
+				this.pendingTimeoutId = null;
+				// Guard against destroyed state
+				if ( region && region.parentNode ) {
+					region.textContent = message;
+				}
 			}, 50 );
 		}
 
@@ -191,6 +202,11 @@
 		 * Clean up and remove live regions
 		 */
 		destroy() {
+			// Clear any pending timeout
+			if ( this.pendingTimeoutId ) {
+				clearTimeout( this.pendingTimeoutId );
+				this.pendingTimeoutId = null;
+			}
 			if ( this.politeRegion && this.politeRegion.parentNode ) {
 				this.politeRegion.parentNode.removeChild( this.politeRegion );
 			}

@@ -953,4 +953,278 @@ describe( 'LayersEditor Coverage Extension', () => {
 			expect( true ).toBe( true );
 		} );
 	} );
+
+	// ========================================================================
+	// createCustomShapeLayer Tests
+	// ========================================================================
+
+	describe( 'createCustomShapeLayer', () => {
+		beforeEach( () => {
+			editor = new LayersEditor( {
+				filename: 'Test.jpg',
+				imageUrl: '/test.jpg'
+			} );
+			editor.addLayer = jest.fn();
+			editor.setCurrentTool = jest.fn();
+			editor.toolbar = {
+				selectTool: jest.fn(),
+				setActiveTool: jest.fn()
+			};
+		} );
+
+		test( 'rejects invalid shape data - null', () => {
+			editor.createCustomShapeLayer( null );
+			expect( editor.addLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'rejects invalid shape data - missing path', () => {
+			editor.createCustomShapeLayer( { viewBox: [ 0, 0, 100, 100 ] } );
+			expect( editor.addLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'rejects invalid shape data - missing viewBox', () => {
+			editor.createCustomShapeLayer( { path: 'M0,0 L10,10' } );
+			expect( editor.addLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'creates layer with valid shape data', () => {
+			const shapeData = {
+				id: 'test/star',
+				path: 'M50,0 L61,35 L98,35 L68,57 L79,91 L50,70 L21,91 L32,57 L2,35 L39,35 Z',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				type: 'customShape',
+				shapeId: 'test/star',
+				path: shapeData.path
+			} ) );
+		} );
+
+		test( 'calculates correct dimensions for square viewBox', () => {
+			const shapeData = {
+				id: 'test/square',
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				width: 100,
+				height: 100
+			} ) );
+		} );
+
+		test( 'calculates correct dimensions for wide viewBox', () => {
+			const shapeData = {
+				id: 'test/wide',
+				path: 'M0,0 L200,0 L200,100 L0,100 Z',
+				viewBox: [ 0, 0, 200, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			// Aspect ratio 2:1, target size 100
+			// width = 100, height = 50
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				width: 100,
+				height: 50
+			} ) );
+		} );
+
+		test( 'calculates correct dimensions for tall viewBox', () => {
+			const shapeData = {
+				id: 'test/tall',
+				path: 'M0,0 L100,0 L100,200 L0,200 Z',
+				viewBox: [ 0, 0, 100, 200 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			// Aspect ratio 0.5:1, target size 100
+			// height = 100, width = 50
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				width: 50,
+				height: 100
+			} ) );
+		} );
+
+		test( 'applies style from toolbar styleControls', () => {
+			editor.toolbar.styleControls = {
+				getStyleOptions: jest.fn( () => ( {
+					stroke: '#ff0000',
+					fill: '#00ff00',
+					strokeWidth: 5
+				} ) )
+			};
+
+			const shapeData = {
+				id: 'test/styled',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				stroke: '#ff0000',
+				fill: '#00ff00',
+				strokeWidth: 5
+			} ) );
+		} );
+
+		test( 'uses default styles when toolbar styleControls unavailable', () => {
+			editor.toolbar.styleControls = null;
+
+			const shapeData = {
+				id: 'test/default',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				stroke: '#000000',
+				fill: 'transparent',
+				strokeWidth: 2
+			} ) );
+		} );
+
+		test( 'respects fillRule from shape data', () => {
+			const shapeData = {
+				id: 'test/evenodd',
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fillRule: 'evenodd'
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				fillRule: 'evenodd'
+			} ) );
+		} );
+
+		test( 'defaults fillRule to nonzero', () => {
+			const shapeData = {
+				id: 'test/default-fill',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				fillRule: 'nonzero'
+			} ) );
+		} );
+
+		test( 'uses nameKey for localized name when provided', () => {
+			editor.msg = jest.fn( ( key, fallback ) => 'Localized Star' );
+
+			const shapeData = {
+				id: 'shapes/star',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ],
+				nameKey: 'layers-shape-star'
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.msg ).toHaveBeenCalledWith( 'layers-shape-star', 'star' );
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				name: 'Localized Star'
+			} ) );
+		} );
+
+		test( 'extracts name from id when nameKey not provided', () => {
+			const shapeData = {
+				id: 'category/subcategory/myshape',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				name: 'myshape'
+			} ) );
+		} );
+
+		test( 'accounts for zoom and pan when positioning', () => {
+			editor.canvasManager = {
+				canvas: { width: 800, height: 600 },
+				zoom: 2,
+				panX: 100,
+				panY: 50
+			};
+
+			const shapeData = {
+				id: 'test/positioned',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			// Canvas center: 400, 300
+			// World coords: (400 - 100) / 2 = 150, (300 - 50) / 2 = 125
+			// Shape position: 150 - 50, 125 - 50 = 100, 75
+			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
+				x: 100,
+				y: 75
+			} ) );
+		} );
+
+		test( 'switches to pointer tool after adding shape', () => {
+			const shapeData = {
+				id: 'test/shape',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			editor.createCustomShapeLayer( shapeData );
+
+			expect( editor.setCurrentTool ).toHaveBeenCalledWith( 'pointer' );
+		} );
+
+		test( 'handles missing canvasManager gracefully', () => {
+			editor.canvasManager = null;
+
+			const shapeData = {
+				id: 'test/no-canvas',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			expect( () => {
+				editor.createCustomShapeLayer( shapeData );
+			} ).not.toThrow();
+
+			expect( editor.addLayer ).toHaveBeenCalled();
+		} );
+
+		test( 'handles canvasManager without zoom/pan values', () => {
+			editor.canvasManager = {
+				canvas: { width: 800, height: 600 }
+				// No zoom, panX, panY
+			};
+
+			const shapeData = {
+				id: 'test/no-zoom',
+				path: 'M0,0 L10,10',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			expect( () => {
+				editor.createCustomShapeLayer( shapeData );
+			} ).not.toThrow();
+
+			expect( editor.addLayer ).toHaveBeenCalled();
+		} );
+	} );
 } );

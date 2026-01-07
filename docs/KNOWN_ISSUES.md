@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 5, 2026  
-**Version:** 1.4.8
+**Last Updated:** January 7, 2026  
+**Version:** 1.5.2
 
 This document lists known functionality issues and their current status.
 
@@ -13,7 +13,7 @@ This document lists known functionality issues and their current status.
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (Stability) | 0 | ✅ All memory leaks fixed |
-| P2 (Code Quality) | 2 | ✅ ESLint disables at 8, magic numbers replaced |
+| P2 (Code Quality) | 2 | ✅ ESLint disables at 9, magic numbers replaced |
 | Feature Gaps | 2 | ✅ InstantCommons & TIFF support added |
 
 ---
@@ -182,22 +182,22 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 | File | Lines | Delegation Pattern | Status |
 |------|-------|-------------------|--------|
-| **LayerPanel.js** | **2,141** | ✅ 9 controllers | ⚠️ At limit |
-| CanvasManager.js | 1,893 | ✅ 10+ controllers | ✅ OK |
-| Toolbar.js | 1,658 | ✅ 4 modules | ✅ OK |
-| LayersEditor.js | 1,482 | ✅ 3 modules | ✅ OK |
-| SelectionManager.js | 1,359 | ✅ 3 modules | ✅ OK |
-| ArrowRenderer.js | 1,356 | ✅ Rendering (curved arrows) | ✅ OK |
+| **LayerPanel.js** | **2,193** | ✅ 9 controllers | ⚠️ Exceeds 2K |
+| CanvasManager.js | 1,964 | ✅ 10+ controllers | ⚠️ Approaching 2K |
+| Toolbar.js | 1,802 | ✅ 4 modules | ✅ OK |
+| LayersEditor.js | 1,632 | ✅ 3 modules | ✅ OK |
+| SelectionManager.js | 1,405 | ✅ 3 modules | ✅ OK |
+| APIManager.js | 1,370 | ✅ APIErrorHandler | ✅ OK |
 | CalloutRenderer.js | 1,291 | ✅ Rendering (callouts) | ✅ OK |
-| APIManager.js | 1,254 | ✅ APIErrorHandler | ✅ OK |
+| ArrowRenderer.js | 1,288 | ✅ Rendering (curved arrows) | ✅ OK |
 | ToolManager.js | 1,214 | ✅ 2 handlers | ✅ OK |
 | GroupManager.js | 1,132 | v1.2.13 | ✅ OK |
-| CanvasRenderer.js | 1,105 | ✅ SelectionRenderer | ✅ OK |
+| CanvasRenderer.js | 1,117 | ✅ SelectionRenderer | ✅ OK |
 | ToolbarStyleControls.js | 1,014 | ✅ Style controls (live preview) | ✅ OK |
 
-**Total in god classes:** ~16,899 lines (29% of JS codebase)
+**Total in god classes:** ~17,420 lines (28% of JS codebase)
 
-**Note:** CalloutRenderer.js (1,290 lines) is a new god class added in v1.4.2 for the callout/speech bubble feature. PropertiesForm.js now delegates to PropertyBuilders.js (914 lines). ArrowRenderer.js grew due to curved arrow feature (v1.3.3).
+**Note:** CalloutRenderer.js (1,291 lines) is a new god class added in v1.4.2 for the callout/speech bubble feature. PropertiesForm.js now delegates to PropertyBuilders.js (833 lines). ArrowRenderer.js grew due to curved arrow feature (v1.3.3).
 
 ### P1.2 Dead Code: ServerLogger.js - RESOLVED ✅
 
@@ -453,5 +453,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 6, 2026*  
-*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (93.7%, 8,537 tests). No coverage gaps.*
+*Document updated: January 7, 2026*  
+*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (93.8%, 8,563 tests). No coverage gaps.*

@@ -1487,6 +1487,63 @@ describe( 'APIManager', function () {
 
 			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
 		} );
+
+		it( 'should still resolve if reload after rename fails', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { success: 1, oldname: 'old', newname: 'new' }
+			} );
+			// Simulate reload failure
+			apiManager.loadLayers = jest.fn().mockRejectedValue( new Error( 'Reload failed' ) );
+
+			const result = await apiManager.renameLayerSet( 'old', 'new' );
+
+			// Should still succeed since rename itself worked
+			expect( result.success ).toBe( 1 );
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle unexpected response (no success)', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { unexpected: 'data' }
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'new' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should handle permission denied in catch block', async function () {
+			// Use Promise.reject with two-argument pattern like mw.Api
+			apiManager.api.postWithToken = jest.fn().mockImplementation( () => {
+				return Promise.reject( 'permissiondenied', { error: { info: 'Not allowed' } } );
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'new' ) )
+				.rejects.toThrow();
+
+			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle setnameexists error code', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				error: { code: 'setnameexists', info: 'Set name already exists' }
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'new' ) )
+				.rejects.toThrow();
+
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should update state manager with new set name', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { success: 1, oldname: 'old', newname: 'new' }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			await apiManager.renameLayerSet( 'old', 'new' );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'new' );
+		} );
 	} );
 
 	describe( 'loadLayersBySetName', function () {

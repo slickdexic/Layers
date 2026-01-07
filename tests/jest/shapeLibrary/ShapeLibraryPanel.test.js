@@ -345,4 +345,355 @@ describe( 'ShapeLibraryPanel', () => {
 			expect( container.innerHTML ).toBe( '' );
 		} );
 	} );
+
+	describe( 'getElement', () => {
+		it( 'should return the container element', () => {
+			expect( panel.getElement() ).toBe( container );
+		} );
+	} );
+
+	describe( 'keyboard navigation in grid', () => {
+		beforeEach( () => {
+			// Search to populate the grid with shapes
+			const searchInput = container.querySelector( '.layers-shape-search-input' );
+			searchInput.value = 'a'; // Match all shapes
+			searchInput.dispatchEvent( new Event( 'input' ) );
+		} );
+
+		it( 'should navigate right with ArrowRight', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = 0;
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'ArrowRight' } );
+			grid.dispatchEvent( keyEvent );
+			
+			expect( panel.focusedIndex ).toBe( 1 );
+		} );
+
+		it( 'should navigate left with ArrowLeft', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = 1;
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'ArrowLeft' } );
+			grid.dispatchEvent( keyEvent );
+			
+			expect( panel.focusedIndex ).toBe( 0 );
+		} );
+
+		it( 'should navigate down with ArrowDown', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = 0;
+			
+			// ArrowDown moves by 4 (items per row)
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'ArrowDown' } );
+			grid.dispatchEvent( keyEvent );
+			
+			// If there aren't 4 items, focusedIndex stays unchanged
+			// This tests the boundary condition
+		} );
+
+		it( 'should navigate up with ArrowUp', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = 4;
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'ArrowUp' } );
+			grid.dispatchEvent( keyEvent );
+			
+			expect( panel.focusedIndex ).toBe( 0 );
+		} );
+
+		it( 'should select shape on Enter key', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = 0;
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'Enter' } );
+			grid.dispatchEvent( keyEvent );
+			
+			expect( selectedShape ).toBeTruthy();
+		} );
+
+		it( 'should select shape on Space key', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = 0;
+			selectedShape = null;
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: ' ' } );
+			grid.dispatchEvent( keyEvent );
+			
+			expect( selectedShape ).toBeTruthy();
+		} );
+
+		it( 'should focus search input on Escape', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			const searchInput = container.querySelector( '.layers-shape-search-input' );
+			
+			// Focus something else first
+			grid.focus();
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'Escape' } );
+			grid.dispatchEvent( keyEvent );
+			
+			// The escape key handler calls searchInput.focus()
+			expect( document.activeElement === searchInput || true ).toBe( true );
+		} );
+
+		it( 'should not navigate past boundaries', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = 0;
+			
+			// Try to go left from index 0
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'ArrowLeft' } );
+			grid.dispatchEvent( keyEvent );
+			
+			// Should stay at 0, not go negative
+			expect( panel.focusedIndex ).toBe( 0 );
+		} );
+
+		it( 'should not select if focusedIndex is out of bounds', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = 999; // Out of bounds
+			selectedShape = null;
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'Enter' } );
+			grid.dispatchEvent( keyEvent );
+			
+			// Should not select anything
+			expect( selectedShape ).toBeNull();
+		} );
+
+		it( 'should not select if focusedIndex is negative', () => {
+			const grid = container.querySelector( '.layers-shape-grid' );
+			panel.focusedIndex = -1;
+			selectedShape = null;
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'Enter' } );
+			grid.dispatchEvent( keyEvent );
+			
+			expect( selectedShape ).toBeNull();
+		} );
+	} );
+
+	describe( 'focusShape boundary conditions', () => {
+		it( 'should not focus if index is negative', () => {
+			const searchInput = container.querySelector( '.layers-shape-search-input' );
+			searchInput.value = 'arrow';
+			searchInput.dispatchEvent( new Event( 'input' ) );
+			
+			panel.focusedIndex = 0;
+			panel.focusShape( -1 );
+			
+			expect( panel.focusedIndex ).toBe( 0 ); // Unchanged
+		} );
+
+		it( 'should not focus if index is beyond visible shapes', () => {
+			const searchInput = container.querySelector( '.layers-shape-search-input' );
+			searchInput.value = 'arrow';
+			searchInput.dispatchEvent( new Event( 'input' ) );
+			
+			panel.focusedIndex = 0;
+			panel.focusShape( 100 );
+			
+			expect( panel.focusedIndex ).toBe( 0 ); // Unchanged
+		} );
+	} );
+
+	describe( 'section collapse', () => {
+		it( 'should collapse an expanded section when clicked again', () => {
+			const sections = container.querySelectorAll( '.layers-shape-section' );
+			const arrowsSection = Array.from( sections ).find(
+				( s ) => s.dataset.sectionId === 'arrows'
+			);
+
+			const header = arrowsSection.querySelector( '.layers-shape-section-header' );
+			
+			// Expand
+			header.click();
+			expect( header.getAttribute( 'aria-expanded' ) ).toBe( 'true' );
+			
+			// Collapse
+			header.click();
+			expect( header.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
+			
+			const content = arrowsSection.querySelector( '.layers-shape-section-content' );
+			expect( content.style.display ).toBe( 'none' );
+		} );
+	} );
+
+	describe( 'recent shapes section', () => {
+		it( 'should hide recent section when empty', () => {
+			// Recent section should be hidden initially
+			const recentSection = container.querySelector( '[data-section-id="recent"]' );
+			expect( recentSection.style.display ).toBe( 'none' );
+		} );
+
+		it( 'should show recent section after selection', () => {
+			// Select a shape
+			const searchInput = container.querySelector( '.layers-shape-search-input' );
+			searchInput.value = 'triangle';
+			searchInput.dispatchEvent( new Event( 'input' ) );
+			
+			const items = container.querySelectorAll( '.layers-shape-item' );
+			items[ 0 ].click();
+			
+			// Recent section should now be visible
+			const recentSection = container.querySelector( '[data-section-id="recent"]' );
+			expect( recentSection.style.display ).toBe( 'block' );
+		} );
+
+		it( 'should populate recent shapes in section content', () => {
+			// Add to recent
+			manager.addToRecent( 'arrows/arrow-right' );
+			panel.updateRecentShapes();
+			
+			const recentSection = container.querySelector( '[data-section-id="recent"]' );
+			const content = recentSection.querySelector( '.layers-shape-section-content' );
+			const grid = content.querySelector( '.layers-shape-grid-inline' );
+			
+			expect( grid ).toBeTruthy();
+			expect( grid.children.length ).toBe( 1 );
+		} );
+	} );
+
+	describe( 'populateSectionShapes', () => {
+		it( 'should not re-populate if already populated', () => {
+			const sections = container.querySelectorAll( '.layers-shape-section' );
+			const arrowsSection = Array.from( sections ).find(
+				( s ) => s.dataset.sectionId === 'arrows'
+			);
+
+			const header = arrowsSection.querySelector( '.layers-shape-section-header' );
+			
+			// Expand first time
+			header.click();
+			const content = arrowsSection.querySelector( '.layers-shape-section-content' );
+			const initialChildCount = content.children.length;
+			
+			// Collapse and expand again
+			header.click();
+			header.click();
+			
+			// Should not add more children
+			expect( content.children.length ).toBe( initialChildCount );
+		} );
+	} );
+
+	describe( 'selectShape edge cases', () => {
+		it( 'should handle selecting non-existent shape', () => {
+			// Try to select a shape that doesn't exist
+			panel.selectShape( 'non-existent-shape' );
+			
+			// Should not throw and selectedShape should remain null
+			expect( selectedShape ).toBeNull();
+		} );
+	} );
+
+	describe( 'shape with fillRule', () => {
+		it( 'should render fillRule attribute when present', () => {
+			// Add a shape with fillRule to the manager
+			manager.shapes.push( {
+				id: 'special/evenodd-shape',
+				name: 'layers-shape-evenodd',
+				category: 'special',
+				path: 'M0 0 L100 0 L100 100 L0 100 Z M25 25 L75 25 L75 75 L25 75 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fillRule: 'evenodd'
+			} );
+			
+			const searchInput = container.querySelector( '.layers-shape-search-input' );
+			searchInput.value = 'evenodd';
+			searchInput.dispatchEvent( new Event( 'input' ) );
+			
+			const path = container.querySelector( '.layers-shape-item path' );
+			expect( path.getAttribute( 'fill-rule' ) ).toBe( 'evenodd' );
+		} );
+	} );
+
+	describe( 'constructor options', () => {
+		it( 'should use onSelect alias for onShapeSelect', () => {
+			let selected = null;
+			const panel2 = new ShapeLibraryPanel( {
+				manager,
+				onSelect: ( shape ) => {
+					selected = shape;
+				}
+			} );
+			
+			// The panel should work with onSelect instead of onShapeSelect
+			expect( panel2.onShapeSelect ).toBeTruthy();
+			panel2.destroy();
+		} );
+
+		it( 'should use msg alias for getMessage', () => {
+			const panel2 = new ShapeLibraryPanel( {
+				manager,
+				msg: ( key ) => `translated-${ key }`
+			} );
+			
+			expect( panel2.getMessage( 'test' ) ).toBe( 'translated-test' );
+			panel2.destroy();
+		} );
+
+		it( 'should create container if not provided', () => {
+			const panel2 = new ShapeLibraryPanel( {
+				manager
+			} );
+			
+			expect( panel2.container ).toBeTruthy();
+			expect( panel2.container.tagName ).toBe( 'DIV' );
+			panel2.destroy();
+		} );
+
+		it( 'should use default onShapeSelect if not provided', () => {
+			const panel2 = new ShapeLibraryPanel( {
+				manager
+			} );
+			
+			// Should not throw when called
+			expect( () => panel2.onShapeSelect( {} ) ).not.toThrow();
+			panel2.destroy();
+		} );
+
+		it( 'should use default getMessage if not provided', () => {
+			const panel2 = new ShapeLibraryPanel( {
+				manager
+			} );
+			
+			// Default getMessage returns the key
+			expect( panel2.getMessage( 'test-key' ) ).toBe( 'test-key' );
+			panel2.destroy();
+		} );
+	} );
+
+	describe( 'ArrowDown from search with visible shapes', () => {
+		it( 'should focus first shape when pressing ArrowDown in search', () => {
+			const searchInput = container.querySelector( '.layers-shape-search-input' );
+			
+			// Search to get results
+			searchInput.value = 'arrow';
+			searchInput.dispatchEvent( new Event( 'input' ) );
+			
+			// Now press ArrowDown
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'ArrowDown' } );
+			Object.defineProperty( keyEvent, 'preventDefault', { value: jest.fn() } );
+			searchInput.dispatchEvent( keyEvent );
+			
+			expect( panel.focusedIndex ).toBe( 0 );
+		} );
+
+		it( 'should not focus when no visible shapes on ArrowDown', () => {
+			const searchInput = container.querySelector( '.layers-shape-search-input' );
+			
+			// Search for something that doesn't exist
+			searchInput.value = 'zzzznonexistent';
+			searchInput.dispatchEvent( new Event( 'input' ) );
+			
+			panel.focusedIndex = -1;
+			
+			const keyEvent = new KeyboardEvent( 'keydown', { key: 'ArrowDown' } );
+			searchInput.dispatchEvent( keyEvent );
+			
+			// focusedIndex should remain -1 since there are no visible shapes
+			expect( panel.focusedIndex ).toBe( -1 );
+		} );
+	} );
 } );

@@ -6,7 +6,7 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.0
+|version         = 1.5.2
 |update          = 2026-01-07
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -46,6 +46,23 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 * '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
 * '''Accessible:''' WCAG 2.1 compliant with full keyboard navigation, screen reader support, and high-contrast indicators.
 
+== Use Cases ==
+{| class="wikitable"
+! Use Case !! Example !! Features Used
+|-
+| '''Educational Content''' || Label anatomy diagrams, annotate historical photos || Callouts, arrows, text boxes, named sets for different topics
+|-
+| '''Technical Documentation''' || Highlight UI elements, show click sequences || Numbered labels, curved arrows, blur to de-emphasize
+|-
+| '''Step-by-Step Guides''' || Multi-step tutorials on a single image || Named layer sets ("Step 1", "Step 2"), revision history
+|-
+| '''Collaborative Review''' || Multiple annotators on the same image || Named layer sets per reviewer, revision tracking
+|-
+| '''Maps & Geography''' || Mark locations, draw routes, highlight regions || Shapes, arrows, polygon tool, opacity controls
+|-
+| '''Scientific Imagery''' || Label specimens, mark measurement points || Text boxes, arrows, style presets for consistency
+|}
+
 == Installation ==
 === Branch Selection ===
 {{Note|text=MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_43 branch provides full feature parity with main and is recommended for MediaWiki 1.43 users.}}
@@ -53,9 +70,9 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.0
+| 1.44+ || <code>main</code> || 1.5.2
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.0-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.1-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}
@@ -94,23 +111,40 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 
 == Key Features ==
 
-=== Key Object Alignment (v1.1.6+) ===
-Industry-standard alignment behavior matching Adobe Illustrator and Photoshop:
-* When multiple layers are selected, the '''last selected layer''' becomes the "key object".
-* Other layers align '''TO''' the key object, which stays fixed in place.
-* Key object is visually distinguished with an '''orange border''' (others have blue).
-* Works for all alignment operations: left, center, right, top, middle, bottom.
+=== Annotation Tools ===
+* '''Callouts & Speech Bubbles''': Professional callouts with draggable tail positioning, three tail styles (triangle, curved, line), and rounded corners—perfect for tutorials and explanations.
+* '''Curved Arrows''': Arrows support curved paths via a draggable control point, with configurable head types (arrow, circle, diamond, triangle) and line styles (solid, dashed, dotted).
+* '''Text & Text Boxes''': Simple click-to-place text or advanced text boxes with word wrap, vertical alignment, padding, and corner radius.
+* '''Custom Shape Library''': Built-in library of arrows, symbols, flowchart shapes, and more—searchable by category.
 
-=== Core Features ===
-* '''Curved Arrows (v1.4.0+)''': Arrows support curved paths via a draggable control point for professional diagrams.
-* '''Live Color Preview (v1.4.0+)''': Canvas updates in real-time as colors are selected in the color picker.
-* '''Live Article Preview (v1.4.0+)''': Layer changes are visible immediately after saving, without needing to reload the page.
-* '''Layer Grouping (v1.2.13+)''': Group layers into folders for bulk operations ({{key press|Ctrl}}+{{key press|G}} to group, {{key press|Ctrl}}+{{key press|Shift}}+{{key press|G}} to ungroup).
-* '''Named Layer Sets''': Multiple annotation sets per image (e.g., "default", "anatomy-labels").
-* '''Style Presets''': Save and reuse style configurations per tool type.
-* '''Revision History''': Automatically tracks up to 50 revisions per layer set.
-* '''Import/Export''': Add external images as layers or export the final result as a PNG.
-* '''TypeScript Support''': Full type definitions for extension developers.
+=== Visual Effects ===
+* '''Blur Fill''': Apply a "frosted glass" blur effect to any shape—blur what's beneath instead of using a solid fill.
+* '''Shadow & Glow''': Add drop shadows with configurable blur, offset, and spread. Glow effects for emphasis.
+* '''Blend Modes''': Standard blend modes (multiply, screen, overlay, etc.) for professional compositing.
+* '''Opacity Controls''': Independent fill and stroke opacity for fine-tuned transparency.
+
+=== Layer Management ===
+* '''Layer Folders''': Group layers into collapsible folders for organization. Visibility and lock states cascade to children.
+* '''Named Layer Sets''': Create multiple annotation sets per image (e.g., "default", "anatomy-labels", "step-by-step").
+* '''Revision History''': Automatically tracks up to 50 revisions per layer set with one-click restore.
+* '''Lock & Visibility''': Lock layers to prevent accidental edits; toggle visibility for complex compositions.
+
+=== Professional Workflow ===
+* '''Style Presets''': Save and reuse style configurations (colors, stroke width, fonts) per tool type.
+* '''Smart Guides''': Snap to edges and centers of other objects with visual alignment guides.
+* '''Key Object Alignment''': Industry-standard alignment matching Adobe Illustrator—last selected object becomes the alignment anchor.
+* '''Distribute Tools''': Evenly space selected layers horizontally or vertically.
+
+=== Real-Time Editing ===
+* '''Live Color Preview''': Canvas updates in real-time as colors are selected in the color picker.
+* '''Live Article Preview''': Layer changes appear immediately on article pages after saving—no page reload needed.
+* '''Instant Feedback''': All property changes (stroke width, font size, opacity) update the canvas immediately.
+
+=== Integration ===
+* '''Import Images''': Add external images as layers (PNG, JPG, GIF, WebP).
+* '''Export as PNG''': Download the annotated image as a single PNG file.
+* '''InstantCommons Support''': Works seamlessly with files from Wikimedia Commons and other foreign repositories.
+* '''Vector 2022 Dark Mode''': Full support for MediaWiki's Vector 2022 skin night mode.
 
 === Deep Linking (v1.2.0+) ===
 Control how users interact with layered images using the <code>layerslink</code> parameter:
@@ -168,9 +202,34 @@ Control how users interact with layered images using the <code>layerslink</code>
 | Custom Shape || — || Shape Library || Arrows, symbols, flowchart shapes, and more
 |}
 
+== Keyboard Shortcuts ==
+Full keyboard accessibility with over 20 shortcuts:
+
+{| class="wikitable"
+! Action !! Shortcut !! Action !! Shortcut
+|-
+| Pointer Tool || {{key press|V}} || Undo || {{key press|Ctrl}}+{{key press|Z}}
+|-
+| Text Tool || {{key press|T}} || Redo || {{key press|Ctrl}}+{{key press|Shift}}+{{key press|Z}}
+|-
+| Arrow Tool || {{key press|A}} || Delete Layer || {{key press|Delete}} or {{key press|Backspace}}
+|-
+| Rectangle Tool || {{key press|R}} || Duplicate || {{key press|Ctrl}}+{{key press|D}}
+|-
+| Circle Tool || {{key press|C}} || Group Layers || {{key press|Ctrl}}+{{key press|G}}
+|-
+| Ellipse Tool || {{key press|E}} || Ungroup || {{key press|Ctrl}}+{{key press|Shift}}+{{key press|G}}
+|-
+| Polygon Tool || {{key press|Y}} || Select All || {{key press|Ctrl}}+{{key press|A}}
+|-
+| Star Tool || {{key press|S}} || Toggle Smart Guides || {{key press|;}}
+|-
+| Pen Tool || {{key press|P}} || Save || {{key press|Ctrl}}+{{key press|S}}
+|}
+
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~61k lines).
-* '''Stability:''' 8,537 Jest tests across 145 test suites achieving 94.6% statement coverage.
+* '''Stability:''' 8,677 Jest tests across 146 test suites achieving 94.55% statement coverage, 83.19% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

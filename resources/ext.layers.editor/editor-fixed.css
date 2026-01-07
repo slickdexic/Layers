@@ -525,8 +525,8 @@ body.layers-editor-open .mw-body-content {
 	}
 
 	.layer-item-actions button {
-		min-width: 36px;
-		min-height: 36px;
+		min-width: 44px; /* WCAG 2.5.5: minimum touch target size */
+		min-height: 44px;
 	}
 
 	/* Larger selection handles for touch */
@@ -2220,8 +2220,8 @@ body.layers-editor-open .mw-body-content {
 	}
 
 	.toolbar-button {
-		min-width: 34px;
-		height: 34px;
+		min-width: 44px; /* WCAG 2.5.5: minimum touch target size */
+		height: 44px;
 		padding: 8px 10px;
 	}
 }
@@ -2244,8 +2244,8 @@ body.layers-editor-open .mw-body-content {
 	}
 
 	.toolbar-button {
-		min-width: 40px;
-		height: 40px;
+		min-width: 44px; /* WCAG 2.5.5: minimum touch target size */
+		height: 44px;
 		padding: 8px;
 		touch-action: manipulation;
 	}

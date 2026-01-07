@@ -303,4 +303,197 @@ describe( 'ShapeLibraryManager', () => {
 			} );
 		} );
 	} );
+
+	// ========================================================================
+	// Coverage Tests - Edge cases for low coverage branches
+	// ========================================================================
+
+	describe( 'coverage - null shapeData branches', () => {
+		let noDataManager;
+
+		beforeEach( () => {
+			noDataManager = new ShapeLibraryManager();
+			// Do NOT call setShapeData - leave shapeData null
+		} );
+
+		it( 'should return early from buildSearchIndex when shapeData is null', () => {
+			// buildSearchIndex is called during setShapeData
+			// If we call it manually on a manager without shapeData, it should return early
+			noDataManager.buildSearchIndex();
+
+			expect( noDataManager.searchIndex.size ).toBe( 0 );
+		} );
+
+		it( 'should return empty array from getCategories when shapeData is null', () => {
+			const categories = noDataManager.getCategories();
+
+			expect( categories ).toEqual( [] );
+		} );
+
+		it( 'should return empty array from getShapesByCategory when shapeData is null', () => {
+			const shapes = noDataManager.getShapesByCategory( 'arrows' );
+
+			expect( shapes ).toEqual( [] );
+		} );
+
+		it( 'should return null from getShapeById when shapeData is null and not in cache', () => {
+			const shape = noDataManager.getShapeById( 'some-shape-id' );
+
+			expect( shape ).toBeNull();
+		} );
+
+		it( 'should return empty array from search when shapeData is null', () => {
+			const results = noDataManager.search( 'arrow' );
+
+			expect( results ).toEqual( [] );
+		} );
+	} );
+
+	describe( 'coverage - toggleFavorite max limit', () => {
+		it( 'should return false from toggleFavorite when at max favorites and trying to add new', () => {
+			// Set low maxFavorites for testing
+			const limitedManager = new ShapeLibraryManager( { maxFavorites: 2 } );
+			limitedManager.setShapeData( ShapeLibraryData );
+
+			// Add 2 favorites (at max)
+			limitedManager.toggleFavorite( 'arrows/right' );
+			limitedManager.toggleFavorite( 'geometric/triangle' );
+
+			// Try to add a third - should return false
+			const result = limitedManager.toggleFavorite( 'geometric/square' );
+
+			expect( result ).toBe( false );
+			expect( limitedManager.favoriteShapes.size ).toBe( 2 );
+			expect( limitedManager.isFavorite( 'geometric/square' ) ).toBe( false );
+		} );
+
+		it( 'should still allow removing favorite when at max', () => {
+			const limitedManager = new ShapeLibraryManager( { maxFavorites: 2 } );
+			limitedManager.setShapeData( ShapeLibraryData );
+
+			limitedManager.toggleFavorite( 'arrows/right' );
+			limitedManager.toggleFavorite( 'geometric/triangle' );
+
+			// Remove one - should work
+			const result = limitedManager.toggleFavorite( 'arrows/right' );
+
+			expect( result ).toBe( false ); // returns false when removing
+			expect( limitedManager.favoriteShapes.size ).toBe( 1 );
+		} );
+	} );
+
+	describe( 'coverage - addFavorite and removeFavorite', () => {
+		it( 'should add favorite via addFavorite method', () => {
+			const result = manager.addFavorite( 'arrows/right' );
+
+			expect( result ).toBe( true );
+			expect( manager.isFavorite( 'arrows/right' ) ).toBe( true );
+		} );
+
+		it( 'should return false from addFavorite when at max', () => {
+			const limitedManager = new ShapeLibraryManager( { maxFavorites: 1 } );
+			limitedManager.setShapeData( ShapeLibraryData );
+
+			limitedManager.addFavorite( 'arrows/right' );
+			const result = limitedManager.addFavorite( 'geometric/triangle' );
+
+			expect( result ).toBe( false );
+			expect( limitedManager.favoriteShapes.size ).toBe( 1 );
+		} );
+
+		it( 'should save to storage when adding favorite', () => {
+			manager.addFavorite( 'arrows/right' );
+
+			expect( localStorageMock.setItem ).toHaveBeenCalled();
+		} );
+
+		it( 'should remove favorite via removeFavorite method', () => {
+			manager.addFavorite( 'arrows/right' );
+			manager.removeFavorite( 'arrows/right' );
+
+			expect( manager.isFavorite( 'arrows/right' ) ).toBe( false );
+		} );
+
+		it( 'should save to storage when removing favorite', () => {
+			manager.addFavorite( 'arrows/right' );
+			localStorageMock.setItem.mockClear();
+
+			manager.removeFavorite( 'arrows/right' );
+
+			expect( localStorageMock.setItem ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'coverage - getStats without shapeData', () => {
+		it( 'should return stats with zero shapes when shapeData is null', () => {
+			const noDataManager = new ShapeLibraryManager();
+			// Do NOT set shapeData
+
+			const stats = noDataManager.getStats();
+
+			expect( stats.totalShapes ).toBe( 0 );
+			expect( stats.categoryCount ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'coverage - storage edge cases', () => {
+		it( 'should handle localStorage with invalid recent data type', () => {
+			localStorageMock.store[ 'layers-shape-library' ] = JSON.stringify( {
+				recent: 'not-an-array',
+				favorites: []
+			} );
+
+			const newManager = new ShapeLibraryManager();
+
+			// Should not crash, recent should remain empty
+			expect( newManager.recentShapes ).toEqual( [] );
+		} );
+
+		it( 'should handle localStorage with invalid favorites data type', () => {
+			localStorageMock.store[ 'layers-shape-library' ] = JSON.stringify( {
+				recent: [],
+				favorites: 'not-an-array'
+			} );
+
+			const newManager = new ShapeLibraryManager();
+
+			// Should not crash, favorites should remain empty
+			expect( newManager.favoriteShapes.size ).toBe( 0 );
+		} );
+
+		it( 'should limit loaded recent shapes to maxRecent', () => {
+			const manyRecent = Array.from( { length: 20 }, ( _, i ) => `shape-${ i }` );
+			localStorageMock.store[ 'layers-shape-library' ] = JSON.stringify( {
+				recent: manyRecent,
+				favorites: []
+			} );
+
+			const newManager = new ShapeLibraryManager( { maxRecent: 5 } );
+
+			expect( newManager.recentShapes.length ).toBe( 5 );
+		} );
+
+		it( 'should limit loaded favorites to maxFavorites', () => {
+			const manyFavorites = Array.from( { length: 100 }, ( _, i ) => `shape-${ i }` );
+			localStorageMock.store[ 'layers-shape-library' ] = JSON.stringify( {
+				recent: [],
+				favorites: manyFavorites
+			} );
+
+			const newManager = new ShapeLibraryManager( { maxFavorites: 10 } );
+
+			expect( newManager.favoriteShapes.size ).toBe( 10 );
+		} );
+
+		it( 'should handle localStorage setItem failure silently', () => {
+			localStorageMock.setItem.mockImplementation( () => {
+				throw new Error( 'Storage quota exceeded' );
+			} );
+
+			// Should not throw
+			expect( () => {
+				manager.addToRecent( 'arrows/right' );
+			} ).not.toThrow();
+		} );
+	} );
 } );

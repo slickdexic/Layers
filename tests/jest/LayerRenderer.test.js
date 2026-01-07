@@ -297,6 +297,26 @@ describe( 'LayerRenderer', () => {
 				renderer.withLocalAlpha( 0.5, null );
 			} ).not.toThrow();
 		} );
+
+		test( 'drawCallout delegates to calloutRenderer when available', () => {
+			const mockDraw = jest.fn();
+			const mockSetContext = jest.fn();
+			renderer.calloutRenderer = {
+				setContext: mockSetContext,
+				draw: mockDraw
+			};
+			const layer = { type: 'callout', x: 10, y: 20, width: 100, height: 50, text: 'Hello' };
+			renderer.drawCallout( layer );
+			expect( mockSetContext ).toHaveBeenCalledWith( ctx );
+			expect( mockDraw ).toHaveBeenCalled();
+		} );
+
+		test( 'drawCallout does nothing when no calloutRenderer', () => {
+			renderer.calloutRenderer = null;
+			expect( () => {
+				renderer.drawCallout( { type: 'callout', x: 10, y: 20, width: 100, height: 50, text: 'Hello' } );
+			} ).not.toThrow();
+		} );
 	} );
 
 	// ========================================================================
@@ -1088,6 +1108,42 @@ describe( 'LayerRenderer', () => {
 		test( 'dispatches to drawText for text type', () => {
 			const spy = jest.spyOn( renderer, 'drawText' );
 			const layer = { type: 'text', x: 10, y: 20, text: 'Hello' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'dispatches to drawTextBox for textbox type', () => {
+			const spy = jest.spyOn( renderer, 'drawTextBox' );
+			const layer = { type: 'textbox', x: 10, y: 20, width: 100, height: 50, text: 'Hello' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'dispatches to drawCallout for callout type', () => {
+			const spy = jest.spyOn( renderer, 'drawCallout' );
+			const layer = { type: 'callout', x: 10, y: 20, width: 100, height: 50, text: 'Hello' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'dispatches to drawImage for image type', () => {
+			const spy = jest.spyOn( renderer, 'drawImage' );
+			const layer = { type: 'image', x: 10, y: 20, width: 100, height: 50, src: 'data:image/png;base64,xyz' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'dispatches to drawCustomShape for customShape type', () => {
+			const spy = jest.spyOn( renderer, 'drawCustomShape' );
+			const layer = { type: 'customShape', x: 10, y: 20, width: 100, height: 50, path: 'M0,0 L10,10' };
 
 			renderer.drawLayer( layer );
 
@@ -2283,6 +2339,13 @@ describe( 'LayerRenderer', () => {
 			} ).not.toThrow();
 		} );
 
+		test( 'drawCallout does nothing when calloutRenderer is null', () => {
+			renderer.calloutRenderer = null;
+			expect( () => {
+				renderer.drawCallout( { type: 'callout', x: 10, y: 20, width: 100, height: 50, text: 'Hello' } );
+			} ).not.toThrow();
+		} );
+
 		test( 'drawCircle does nothing when shapeRenderer is null', () => {
 			renderer.shapeRenderer = null;
 			expect( () => {
@@ -2594,6 +2657,17 @@ describe( 'LayerRenderer', () => {
 
 			testRenderer.destroy();
 		} );
+
+		test( 'constructor handles missing CalloutRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			testRenderer.calloutRenderer = null;
+
+			expect( () => {
+				testRenderer.drawCallout( { type: 'callout', x: 10, y: 20, width: 100, height: 50, text: 'Test' } );
+			} ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
 	} );
 
 	// ========================================================================
@@ -2761,6 +2835,277 @@ describe( 'LayerRenderer', () => {
 
 			// Should not throw
 			expect( () => renderer.drawImage( layer ) ).not.toThrow();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - Additional branches for drawCustomShape
+	// ========================================================================
+
+	describe( 'drawCustomShape coverage', () => {
+		test( 'applies rotation when layer has rotation', () => {
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000',
+				rotation: 45
+			};
+
+			ctx.translate.mockClear();
+			ctx.rotate.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			// Should apply rotation transforms
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		test( 'applies stroke when layer has stroke and valid path', () => {
+			// Mock Path2D to not throw
+			const mockPath = {};
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => mockPath );
+
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				stroke: '#000000',
+				strokeWidth: 3
+			};
+
+			ctx.stroke.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			expect( ctx.strokeStyle ).toBe( '#000000' );
+			expect( ctx.stroke ).toHaveBeenCalled();
+
+			// Restore
+			global.Path2D = originalPath2D;
+		} );
+
+		test( 'applies shadow when shadowRenderer available and shadow enabled', () => {
+			// Mock Path2D to not throw
+			const mockPath = {};
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => mockPath );
+
+			const mockShadowRenderer = {
+				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				applyShadow: jest.fn(),
+				clearShadow: jest.fn()
+			};
+			renderer.shadowRenderer = mockShadowRenderer;
+
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 5
+			};
+
+			renderer.drawCustomShape( layer );
+
+			expect( mockShadowRenderer.hasShadowEnabled ).toHaveBeenCalledWith( layer );
+			expect( mockShadowRenderer.applyShadow ).toHaveBeenCalled();
+			expect( mockShadowRenderer.clearShadow ).toHaveBeenCalled();
+
+			// Restore
+			global.Path2D = originalPath2D;
+		} );
+
+		test( 'draws error placeholder for invalid path', () => {
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'INVALID PATH DATA %%%',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000'
+			};
+
+			// Mock Path2D to throw an error for invalid paths
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => {
+				throw new Error( 'Invalid path' );
+			} );
+
+			ctx.strokeRect.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			// Should draw red error rectangle
+			expect( ctx.strokeStyle ).toBe( '#f00' );
+			expect( ctx.strokeRect ).toHaveBeenCalledWith( 0, 0, 100, 100 );
+
+			// Restore
+			global.Path2D = originalPath2D;
+		} );
+
+		test( 'skips fill when fill is transparent', () => {
+			// Mock Path2D to not throw
+			const mockPath = {};
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => mockPath );
+
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: 'transparent',
+				stroke: '#000000'
+			};
+
+			ctx.fill.mockClear();
+			ctx.stroke.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			// Fill should NOT be called because fill is transparent
+			expect( ctx.fill ).not.toHaveBeenCalled();
+			// But stroke should be called
+			expect( ctx.stroke ).toHaveBeenCalled();
+
+			// Restore
+			global.Path2D = originalPath2D;
+		} );
+
+		test( 'skips fill when fill is none', () => {
+			// Mock Path2D to not throw
+			const mockPath = {};
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => mockPath );
+
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: 'none',
+				stroke: '#000000'
+			};
+
+			ctx.fill.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			expect( ctx.fill ).not.toHaveBeenCalled();
+
+			// Restore
+			global.Path2D = originalPath2D;
+		} );
+
+		test( 'skips stroke when stroke is transparent', () => {
+			// Mock Path2D to not throw
+			const mockPath = {};
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => mockPath );
+
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000',
+				stroke: 'transparent'
+			};
+
+			ctx.stroke.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			expect( ctx.stroke ).not.toHaveBeenCalled();
+
+			// Restore
+			global.Path2D = originalPath2D;
+		} );
+
+		test( 'defaults strokeWidth to 2 when not specified', () => {
+			// Mock Path2D to not throw
+			const mockPath = {};
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => mockPath );
+
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				stroke: '#000000'
+				// No strokeWidth specified
+			};
+
+			renderer.drawCustomShape( layer );
+
+			// Default lineWidth calculation: 2 / Math.min(scaleX, scaleY)
+			// With 100x50 layer and 100x100 viewBox, scaleX = 1, scaleY = 0.5
+			// lineWidth = 2 / 0.5 = 4
+			expect( ctx.lineWidth ).toBeDefined();
+
+			// Restore
+			global.Path2D = originalPath2D;
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - drawLayerWithBlurBlend fallback
+	// ========================================================================
+
+	describe( 'drawLayerWithBlurBlend coverage', () => {
+		test( 'falls back to normal drawing when effectsRenderer is null', () => {
+			renderer.effectsRenderer = null;
+
+			// Spy on the internal method
+			const drawSpy = jest.spyOn( renderer, '_drawLayerByType' );
+
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				blendMode: 'blur'
+			};
+
+			renderer.drawLayerWithBlurBlend( layer );
+
+			// Should fall back to normal drawing
+			expect( drawSpy ).toHaveBeenCalledWith( layer, undefined );
+
+			drawSpy.mockRestore();
 		} );
 	} );
 } );

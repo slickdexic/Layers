@@ -31,6 +31,7 @@ class RenderCoordinator {
 		// Render state
 		this.pendingRedraw = false;
 		this.animationFrameId = null;
+		this.fallbackTimeoutId = null; // For environments without rAF
 		this.isDestroyed = false;
 
 		// Dirty region tracking (for future partial redraw optimization)
@@ -95,8 +96,8 @@ class RenderCoordinator {
 		if ( typeof window !== 'undefined' && window.requestAnimationFrame ) {
 			this.animationFrameId = window.requestAnimationFrame( this._boundRenderFrame );
 		} else {
-			// Fallback for environments without rAF
-			setTimeout( this._boundRenderFrame, this.targetFrameTime );
+			// Fallback for environments without rAF (track ID for cleanup)
+			this.fallbackTimeoutId = setTimeout( this._boundRenderFrame, this.targetFrameTime );
 		}
 
 		return this;
@@ -113,6 +114,7 @@ class RenderCoordinator {
 
 		this.pendingRedraw = false;
 		this.animationFrameId = null;
+		this.fallbackTimeoutId = null;
 
 		// Track frame timing for metrics
 		if ( this.enableMetrics && timestamp ) {
@@ -313,6 +315,10 @@ class RenderCoordinator {
 				window.cancelAnimationFrame( this.animationFrameId );
 			}
 			this.animationFrameId = null;
+		}
+		if ( this.fallbackTimeoutId !== null ) {
+			clearTimeout( this.fallbackTimeoutId );
+			this.fallbackTimeoutId = null;
 		}
 		this.pendingRedraw = false;
 		return this;

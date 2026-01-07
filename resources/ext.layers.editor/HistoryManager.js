@@ -98,6 +98,9 @@
 			// Alias array used in older tests (must reference the same array)
 			this.batchOperations = this.batchChanges;
 			this.batchStartSnapshot = null;
+
+			// Destruction flag - prevents operations after cleanup
+			this.isDestroyed = false;
 		}
 
 		/**
@@ -147,6 +150,10 @@
 		 * @param {string} description Optional description of the change
 		 */
 		saveState( description ) {
+			if ( this.isDestroyed ) {
+				return;
+			}
+
 			if ( this.batchMode ) {
 				this.batchChanges.push( {
 					layers: this.getLayersSnapshot(),
@@ -238,7 +245,7 @@
 		 * @return {boolean} True if undo was performed
 		 */
 		undo() {
-			if ( !this.canUndo() ) {
+			if ( this.isDestroyed || !this.canUndo() ) {
 				return false;
 			}
 
@@ -257,7 +264,7 @@
 		 * @return {boolean} True if redo was performed
 		 */
 		redo() {
-			if ( !this.canRedo() ) {
+			if ( this.isDestroyed || !this.canRedo() ) {
 				return false;
 			}
 
@@ -643,6 +650,9 @@
 		 * Clean up resources and clear state
 		 */
 		destroy() {
+			// Mark as destroyed to prevent further operations
+			this.isDestroyed = true;
+
 			// Clear history
 			this.clearHistory();
 			this.history = [];
@@ -653,6 +663,7 @@
 			// Clear references
 			this.canvasManager = null;
 			this.config = null;
+			this.editor = null;
 		}
 	}
 

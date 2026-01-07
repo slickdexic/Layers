@@ -344,6 +344,7 @@
 	"layers-rename-set-prompt": "Prompt message asking user to enter new name for a layer set",
 	"layers-rename-set-success": "Success notification after renaming a layer set. $1 is old name, $2 is new name.",
 	"layers-rename-failed": "Error shown when layer set rename fails",
+	"layers-reload-warning": "Warning shown when layer list reload fails after a successful operation",
 	"layers-rename-permission-denied": "Error shown when user lacks permission to rename a layer set (not owner or admin)",
 	"layers-cannot-rename-default": "Error shown when user tries to rename the default layer set which is not allowed",
 	"layers-cannot-rename-to-default": "Error shown when user tries to rename a set to 'default' which is reserved",

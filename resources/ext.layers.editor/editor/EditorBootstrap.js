@@ -177,6 +177,14 @@
 		let hookDependencyRetries = 0;
 
 		const hookListener = function ( config ) {
+			// Prevent double instantiation if editor already exists
+			if ( window.layersEditorInstance ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log( '[EditorBootstrap] Editor already exists, skipping creation' );
+				}
+				return;
+			}
+
 			// Verify dependencies before creating editor
 			if ( !areEditorDependenciesReady() ) {
 				hookDependencyRetries++;

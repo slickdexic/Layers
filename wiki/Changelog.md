@@ -4,6 +4,24 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.2 (January 7, 2026)
+
+### Tests
+- **Improved Coverage** — Added 114 new tests targeting low-coverage modules
+  - Test Count: 8,677 tests passing (146 suites), up from 8,563
+  - Statement Coverage: 94.55%, up from 94.05%
+  - Branch Coverage: 83.19%, up from 82.62%
+  - Files enhanced: LayersEditor, APIManager, GroupManager, ShapeLibraryManager, LayerRenderer, Toolbar, CanvasManager
+  - Coverage improvements focused on fallback branches, error handling, and edge cases
+
+### Changed
+- **Documentation Updates** — Updated all documentation files with latest metrics
+  - Updated version numbers across 12 mandatory files
+  - Synchronized test counts and coverage metrics in 6 documentation files
+  - Prepared for point release with comprehensive documentation review
+
+---
+
 ## Version 1.5.1 (January 7, 2026)
 
 ### Fixed
