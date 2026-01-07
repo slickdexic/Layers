@@ -73,7 +73,10 @@ class ThumbnailProcessor {
 		$fileName = $file ? $file->getName() : 'unknown';
 		$isForeign = $file && $this->isForeignFile( $file );
 		$this->log( "ThumbnailBeforeProduceHTML for: $fileName (foreign=" . ( $isForeign ? 'yes' : 'no' ) . ")" );
-		$this->log( "linkTypeFromQueue=" . ( $linkTypeFromQueue ?? 'null' ) . ", setNameFromQueue=" . ( $setNameFromQueue ?? 'null' ) );
+		$this->log(
+			"linkTypeFromQueue=" . ( $linkTypeFromQueue ?? 'null' ) .
+			", setNameFromQueue=" . ( $setNameFromQueue ?? 'null' )
+		);
 
 		// Extract layer data and flag from transform params
 		[ $layerData, $layersFlag ] = $this->extractLayerDataFromThumbnail( $thumbnail );

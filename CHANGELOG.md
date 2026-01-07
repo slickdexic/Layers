@@ -2,25 +2,46 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.0-beta.4] - 2026-01-06
+## [1.5.0] - 2026-01-07
+
+### Added
+- **Layer Set List on File Pages** — File: pages now show available layer annotations
+  - Collapsible "Layer Annotations" section appears below file info
+  - Shows all named sets with author, revision count, and last modified date
+  - "Edit" link opens the editor for each set directly
+  - Usage hint displays wikitext syntax for embedding layers
+  - Full dark mode support for Vector 2022
+  - Implements Yaron's feedback request #4
+
+### Refactored
+- **ImageLayerRenderer Extraction** — Extracted image layer rendering from LayerRenderer.js
+  - New `ImageLayerRenderer.js` (~280 lines) with LRU caching
+  - Reduced LayerRenderer.js from 998 to 867 lines
+  - Added 6 new tests for image delegation
 
 ### Changed
 - **Simplified Permissions** — Consolidated `createlayers` into `editlayers`
   - Removed redundant `createlayers` right
-  - Users with `editlayers` can now create and edit layer sets (previously required both rights)
+  - Users with `editlayers` can now create and edit layer sets
   - `managelayerlibrary` retained for future asset library feature
-  - Simpler permission model per community feedback
 
 ### Fixed
 - **Layer Lock Now Works** — Fixed layer locking feature that was completely broken
-  - Locked layers can no longer be dragged, resized, or rotated
-  - Locked layers can no longer be deleted via keyboard (Delete/Backspace) or panel button
-  - Folder locking now affects all child layers — if a folder is locked, all layers inside are effectively locked
-  - Added `isLayerEffectivelyLocked()` helper that checks both direct lock and parent folder lock
-  - Added 15 new tests for lock protection
-  - Added i18n message `layers-layer-locked-warning` for lock feedback
+  - Locked layers can no longer be dragged, resized, rotated, or deleted
+  - Folder locking now affects all child layers
+  - Added `isLayerEffectivelyLocked()` helper and 15 new tests
 
 ### Documentation
+- Updated all documentation with current metrics
+- Marked Layer Set List as implemented in YARON_FEEDBACK.md
+
+### Tests
+- **Test Count** — 8,551 tests passing (146 suites)
+- **Coverage** — 94.6% statement, 83.3% branch
+
+---
+
+## [1.5.0-beta.4] - 2026-01-06
 - Updated all documentation to reflect simplified permissions model
 - Updated test count to 8,537 across all documentation files
 

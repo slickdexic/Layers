@@ -374,11 +374,11 @@ The extension is feature-rich with 13 drawing tools (pointer, text, textbox, cal
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 8,522 | - | ✅ |
-| Statement coverage | 94.6% | 85%+ | ✅ Excellent |
-| Branch coverage | 83.3% | 75%+ | ✅ |
-| Function coverage | 93.09% | 80%+ | ✅ |
-| Line coverage | 94.75% | 85%+ | ✅ |
+| Tests passing | 8,537 | - | ✅ |
+| Statement coverage | 93.7% | 85%+ | ✅ Excellent |
+| Branch coverage | 82.4% | 75%+ | ✅ |
+| Function coverage | 92.7% | 80%+ | ✅ |
+| Line coverage | 93.9% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -454,4 +454,4 @@ If you encounter issues:
 ---
 
 *Document updated: January 6, 2026*  
-*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (94.6%, 8,522 tests). No coverage gaps.*
+*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (93.7%, 8,537 tests). No coverage gaps.*

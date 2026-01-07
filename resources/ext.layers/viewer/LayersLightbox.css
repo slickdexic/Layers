@@ -285,3 +285,170 @@
 		background: rgba( 255, 107, 107, 0.15 );
 	}
 }
+
+/* ==========================================================================
+   File Page Layer Sets Section
+   Shown on File: pages to list available layer annotation sets
+   ========================================================================== */
+
+.layers-filepage-section {
+	margin-top: 1.5em;
+	margin-bottom: 1em;
+	border: 1px solid #a2a9b1;
+	border-radius: 4px;
+	padding: 0;
+}
+
+.layers-filepage-header {
+	margin: 0;
+	padding: 0.5em 1em;
+	font-size: 1.1em;
+	font-weight: bold;
+	background: #f8f9fa;
+	border-bottom: 1px solid #a2a9b1;
+	cursor: pointer;
+	text-align: left;
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+	width: 100%;
+}
+
+/* Collapse/expand indicator arrow */
+.layers-filepage-header::before {
+	content: '▶';
+	font-size: 0.6em;
+	transition: transform 0.2s ease;
+	color: #54595d;
+	flex-shrink: 0;
+}
+
+/* Rotate arrow when expanded */
+.layers-filepage-section:not( .mw-collapsed ) .layers-filepage-header::before {
+	transform: rotate( 90deg );
+}
+
+.layers-filepage-header:hover {
+	background: #eaecf0;
+}
+
+.layers-filepage-table {
+	margin: 0;
+	width: 100%;
+	border: 0;
+	border-collapse: collapse;
+}
+
+.layers-filepage-table th {
+	background: #eaecf0;
+	text-align: left;
+	padding: 0.5em 0.75em;
+	font-weight: 600;
+}
+
+.layers-filepage-table td {
+	padding: 0.5em 0.75em;
+	border-top: 1px solid #c8ccd1;
+}
+
+.layers-filepage-table tr:first-child td {
+	border-top: 0;
+}
+
+.layers-filepage-revisions {
+	text-align: center;
+}
+
+.layers-filepage-actions {
+	white-space: nowrap;
+}
+
+.layers-filepage-actions a {
+	margin-right: 0.75em;
+}
+
+.layers-filepage-actions a:last-child {
+	margin-right: 0;
+}
+
+.layers-filepage-hint {
+	padding: 0.75em 1em;
+	margin: 0;
+	background: #f8f9fa;
+	border-top: 1px solid #c8ccd1;
+	color: #54595d;
+}
+
+/* Dark mode support for File page section */
+@media screen {
+	html.skin-theme-clientpref-night .layers-filepage-section {
+		border-color: #72777d;
+	}
+
+	html.skin-theme-clientpref-night .layers-filepage-header {
+		background: #27292d;
+		border-color: #72777d;
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-night .layers-filepage-header::before {
+		color: #a2a9b1;
+	}
+
+	html.skin-theme-clientpref-night .layers-filepage-header:hover {
+		background: #3c4043;
+	}
+
+	html.skin-theme-clientpref-night .layers-filepage-table th {
+		background: #2c2f33;
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-night .layers-filepage-table td {
+		border-color: #54595d;
+		color: #c8ccd1;
+	}
+
+	html.skin-theme-clientpref-night .layers-filepage-hint {
+		background: #27292d;
+		border-color: #54595d;
+		color: #a2a9b1;
+	}
+}
+
+/* OS preference dark mode */
+@media screen and ( prefers-color-scheme: dark ) {
+	html.skin-theme-clientpref-os .layers-filepage-section {
+		border-color: #72777d;
+	}
+
+	html.skin-theme-clientpref-os .layers-filepage-header {
+		background: #27292d;
+		border-color: #72777d;
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-os .layers-filepage-header::before {
+		color: #a2a9b1;
+	}
+
+	html.skin-theme-clientpref-os .layers-filepage-header:hover {
+		background: #3c4043;
+	}
+
+	html.skin-theme-clientpref-os .layers-filepage-table th {
+		background: #2c2f33;
+		color: #eaecf0;
+	}
+
+	html.skin-theme-clientpref-os .layers-filepage-table td {
+		border-color: #54595d;
+		color: #c8ccd1;
+	}
+
+	html.skin-theme-clientpref-os .layers-filepage-hint {
+		background: #27292d;
+		border-color: #54595d;
+		color: #a2a9b1;
+	}
+}

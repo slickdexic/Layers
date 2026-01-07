@@ -598,5 +598,14 @@
 	"apihelp-layerssave-param-data": "JSON-encoded array of layer objects to persist.",
 	"apihelp-layerssave-param-setname": "Optional short label shown in the revision picker.",
 	"apihelp-layerssave-param-token": "CSRF token obtained via action=query&meta=tokens.",
-	"apihelp-layerssave-example-1": "Save layers for a file (CSRF token required): action=layerssave&filename=Example.jpg&data=[…]&token=…"
+	"apihelp-layerssave-example-1": "Save layers for a file (CSRF token required): action=layerssave&filename=Example.jpg&data=[…]&token=…",
+
+	"layers-filepage-section-title": "Layer Annotations",
+	"layers-filepage-set-name": "Set Name",
+	"layers-filepage-author": "Author",
+	"layers-filepage-revisions": "Revisions",
+	"layers-filepage-last-modified": "Last Modified",
+	"layers-filepage-edit": "Edit",
+	"layers-filepage-view": "View",
+	"layers-filepage-usage-hint": "To display layers on a page, use: [[File:Example.jpg|layerset=setname]]"
 }

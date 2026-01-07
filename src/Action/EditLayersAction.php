@@ -136,7 +136,8 @@ class EditLayersAction extends \Action {
 			'wgLayersEditorInit' => [
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
-				'debug_isForeign' => $isForeign, // DEBUG: Include in JS config for inspection
+			// DEBUG: Include in JS config for inspection
+			'debug_isForeign' => $isForeign,
 				'initialSetName' => $initialSetName !== '' ? $initialSetName : null,
 				'autoCreate' => $autoCreate,
 				'returnToUrl' => $returnToUrl,

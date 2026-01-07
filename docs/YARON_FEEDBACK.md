@@ -35,18 +35,27 @@ Removed the Cancel button from the toolbar since the X close button already prov
 
 ---
 
-### 📋 Layer Set List on File Pages
+### 📋 Layer Set List on File Pages ✅ IMPLEMENTED
 **Suggestion:** Show a list of available layer sets directly on the File: page, not just in the editor.
 
-**Decision:** Good idea for v1.6.0 or later.
+**Decision:** Implemented in v1.5.0-beta.5.
 
-**Implementation notes:**
-- Add a new section below the file description showing named sets
-- Show: set name, author, revision count, last modified
-- Provide quick links to view/edit each set
-- Could use a collapsible section if there are many sets
+**Implementation:**
+- Added `ImagePageAfterImageLinks` hook to show layer sets on File: pages
+- Collapsible section appears below file info when layer sets exist
+- Shows: set name, author, revision count, last modified date
+- "Edit" link opens the editor for each set with `?action=editlayers&setname=...`
+- Includes usage hint showing wikitext syntax: `[[File:Example.jpg|layerset=setname]]`
+- Full dark mode support for Vector 2022
 
-**Priority:** Medium - would improve discoverability of layer sets
+**Files Modified:**
+- `extension.json` - registered `ImagePageAfterImageLinks` hook
+- `src/Hooks/UIHooks.php` - added `onImagePageAfterImageLinks()`, `enrichNamedSetsWithUserNames()`, `buildLayerSetsSection()`
+- `i18n/en.json` - added 8 new message keys (`layers-filepage-*`)
+- `i18n/qqq.json` - added translator documentation
+- `resources/ext.layers/viewer/LayersLightbox.css` - added File page section styles
+
+**Priority:** Completed - improves discoverability of layer sets
 
 ---
 
