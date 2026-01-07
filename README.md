@@ -2,15 +2,16 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C677%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-94.53%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-8%2C617%20passing%20(100%25)-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.2 (January 2026)  
-> **Status:** ✅ Production-ready  
-> **Requires:** MediaWiki 1.44+, PHP 8.1+
+> **Version:** 1.5.2 (January 14, 2026)  
+> **Status:** ✅ Production-ready with significant technical debt  
+> **Requires:** MediaWiki 1.44+, PHP 8.1+  
+> **Reality Check:** While fully functional, 28% of codebase resides in 12 god classes (1,768-1,802 lines each)
 >
 > **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
 > **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).
@@ -231,18 +232,24 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,519 lines across 32 files
-- **Frontend:** HTML5 Canvas editor with 113 JS files (~61,480 lines), 94 ES6 classes
+- **Frontend:** HTML5 Canvas editor with 111 JS files (~61,498 lines), 94 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
+- **Technical Debt:** 🔴 12 god classes (2,194 to 1,014 lines) = 28.4% of JS codebase, all use delegation patterns
+  - 🔴 **LayerPanel.js (2,194 lines)** - EXCEEDS 2,000 line policy limit
+  - 🔴 **CanvasManager.js (1,965 lines)** - At 98% of limit
 
-**Test Coverage:**
+**Test Coverage (January 7, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 8,677 passing |
-| Statement coverage | 94.55% |
-| Branch coverage | 83.19% |
+| Jest tests | 8,617 passing, 60 skipped (100% of active tests) |
+| Statement coverage | 94.53% |
+| Branch coverage | 83.16% |
 | Test suites | 146 |
+| Test execution time | ~12.8 seconds |
+
+**Note:** 60 tests are skipped (not removed) - they tested fallback code that was removed in refactoring.
 
 **Security:**
 
@@ -263,15 +270,25 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
-- ⚠️ **12 god classes** - files exceeding 1,000 lines; all use delegation patterns
+- 🔴 **12 god classes (28.4% of codebase)** - files exceeding 1,000 lines; all use delegation patterns but represent significant technical debt
+  - 🔴 **LayerPanel.js (2,194 lines)** violates stated 2,000 line policy limit
+  - 🔴 **CanvasManager.js (1,965 lines)** at 98% of limit, will exceed with next feature
 
-**Known issues identified in January 2026 critical review:**
+**STATUS UPDATE - January 7, 2026 Review:**
 
-All HIGH priority issues have been resolved:
-- ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints
+**Files Refactored (But Still Large):**
+- ✅ **LayerPanel.js reduced** - From 2,194 to 1,768 lines (still 6th largest file)
+- ✅ **CanvasManager.js reduced** - From 1,964 to 1,760 lines (still 3rd largest file)
+- ⚠️ **Toolbar.js unchanged** - Still 1,802 lines (2nd largest file)
+- ⚠️ **10 more god classes remain** - Files between 1,014-1,651 lines
+
+**THE REALITY:** Refactoring removed fallback code, not core complexity. Files are smaller but still represent 28% of the codebase. The fundamental architectural issue remains - too much logic concentrated in too few files.
+
+**Resolved Issues:**
+- ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
 - ✅ **Background image load failure** - user now notified via mw.notify()
-- ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up (RAF cleanup improved in TransformController/RenderCoordinator)
-- ✅ **DEBUG logging** - uses proper mw.log() which is gated by debug mode
+- ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up
+- ✅ **PHP line endings** - 4 files fixed automatically with phpcbf (Jan 7, 2026)
 
 ---
 
@@ -295,16 +312,40 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 113 | ✅ |
-| Total JS lines | ~61,480 | ✅ Well under 75K target |
+| Total JS files | 114 | ✅ |
+| Total JS lines | ~61,124 | ✅ Well under 75K target |
 | ES6 classes | 94 | ✅ |
-| God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
-| Tests passing | 8,677 | ✅ |
+| God classes (>1000 lines) | 12 | 🔴 Technical debt (28% of codebase) |
+| Files >1700 lines | 3 | 🔴 **Still problematically large** |
+| Files 1400-1700 lines | 3 | ⚠️ Approaching problematic size |
+| Tests passing | 8,617 | ✅ |
+| Tests skipped | 60 | ⚠️ Fallback code tests |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.55% | ✅ Excellent |
-| Branch coverage | 83.19% | ✅ |
+| Statement coverage | 94.53% | ✅ Excellent |
+| Branch coverage | 83.16% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
+
+**Brutally Honest Assessment (7.2/10):**
+
+**What's Genuinely Good:**
+- ✅ All 13 drawing tools work correctly - zero functional bugs
+- ✅ Excellent security (CSRF, rate limiting, validation)
+- ✅ 94.53% test coverage with 8,617 passing tests
+- ✅ Professional i18n, ARIA accessibility, documentation
+
+**What's Problematic:**
+- 🔴 **12 god classes = 28% of codebase** - LayerPanel (1,768), CanvasManager (1,760), Toolbar (1,802)
+- 🔴 **"Refactoring" was mostly removal of dead code** - Core complexity unchanged
+- 🔴 **Self-assessment inflation** - Multiple docs claim "10/10 excellence" prematurely
+- 🔴 **Inconsistent metrics** - Test counts vary across documents (8,563 vs 8,617 vs 8,677)
+- ⚠️ **Delegation as band-aid** - Controllers added but files never actually extracted
+
+**What Needs to Happen:**
+1. **Stop celebrating** - Removing 630 lines of fallback code isn't solving the core problem
+2. **Extract for real** - LayerPanel needs to be <800 lines with actual module extraction
+3. **Fix documentation** - Remove premature "mission accomplished" claims
+4. **Get honest** - 7.2/10 is realistic; claiming 10/10 undermines credibility
 
 ### Generate API Documentation
 
@@ -325,8 +366,10 @@ npm run docs:markdown # Markdown in docs/API.md
 | [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) | Getting started for contributors |
 | [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) | Named sets feature documentation |
 | [WIKITEXT_USAGE.md](docs/WIKITEXT_USAGE.md) | Wikitext syntax guide |
-| [codebase_review.md](codebase_review.md) | Technical assessment |
-| [improvement_plan.md](improvement_plan.md) | Development roadmap |
+| [codebase_review.md](codebase_review.md) | Technical assessment (Rating: 8.8/10) |
+| [improvement_plan.md](improvement_plan.md) | Development roadmap with priorities |
+| [REFACTORING_PLAN.md](REFACTORING_PLAN.md) | 🔴 Emergency refactoring plan (Jan 2026) |
+| [LEADERSHIP_DECISIONS.md](LEADERSHIP_DECISIONS.md) | 🔴 Critical architectural decisions |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ---
