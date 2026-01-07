@@ -428,17 +428,20 @@
 			}
 		} );
 
-		ctx.addInput( {
-			label: t( 'layers-prop-tail-width', 'Tail Width' ),
-			type: 'number',
-			value: layer.tailWidth || 0,
-			min: 0,
-			max: 100,
-			step: 1,
-			onChange: function ( v ) {
-				editor.updateLayer( layer.id, { tailWidth: parseFloat( v ) } );
-			}
-		} );
+		// Only show tail width for single-headed arrows (not double or none)
+		if ( layer.arrowStyle !== 'double' ) {
+			ctx.addInput( {
+				label: t( 'layers-prop-tail-width', 'Tail Width' ),
+				type: 'number',
+				value: layer.tailWidth || 0,
+				min: 0,
+				max: 100,
+				step: 1,
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, { tailWidth: parseFloat( v ) } );
+				}
+			} );
+		}
 
 		ctx.addSelect( {
 			label: t( 'layers-prop-arrow-ends', 'Arrow Ends' ),
@@ -449,7 +452,18 @@
 				{ value: 'none', text: t( 'layers-arrow-none', 'Line only' ) }
 			],
 			onChange: function ( v ) {
-				editor.updateLayer( layer.id, { arrowStyle: v } );
+				// When switching to double, reset tailWidth to 0 since it's not used
+				const updates = { arrowStyle: v };
+				if ( v === 'double' ) {
+					updates.tailWidth = 0;
+				}
+				editor.updateLayer( layer.id, updates );
+				// Refresh properties panel to show/hide tail width control based on arrowStyle
+				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+					setTimeout( function () {
+						editor.layerPanel.updatePropertiesPanel( layer.id );
+					}, 0 );
+				}
 			}
 		} );
 
