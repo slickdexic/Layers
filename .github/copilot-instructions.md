@@ -46,7 +46,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Shared modules (`resources/ext.layers.shared/`): Used by both editor and viewer for consistent behavior:
     - `DeepClone.js` - Object cloning utilities including `omitProperty(obj, propName)` for creating copies without specific properties (avoids eslint-disable for destructuring)
     - `LayerDataNormalizer.js` (~229 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
-    - `LayerRenderer.js` (~821 lines), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,310 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines), `EffectsRenderer.js` (~538 lines)
+    - `LayerRenderer.js` (~867 lines), `ImageLayerRenderer.js` (~280 lines - extracted image caching/rendering), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,310 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines), `EffectsRenderer.js` (~538 lines)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~370 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `SmartGuidesController.js` (~568 lines) - smart guides and snap alignment
@@ -351,9 +351,9 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (currently 8,522 tests, 145 suites)
+- Test count (currently 8,551 tests, 146 suites)
 - Coverage (94.6% statement, 83.3% branch)
-- JavaScript file count (112 files, ~61,122 lines)
-- PHP file count (32 files, ~11,327 lines)
+- JavaScript file count (113 files, ~61,452 lines)
+- PHP file count (32 files, ~11,519 lines)
 - Drawing tool count (13 tools)
-- Version number (1.5.0-beta.4)
+- Version number (1.5.0)

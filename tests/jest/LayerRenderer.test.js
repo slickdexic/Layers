@@ -2109,99 +2109,45 @@ describe( 'LayerRenderer', () => {
 	// ========================================================================
 	// Image Layer Tests
 	// ========================================================================
+	// Note: Detailed image loading/caching tests are in ImageLayerRenderer.test.js
+	// These tests verify LayerRenderer correctly delegates to ImageLayerRenderer
 
 	describe( 'drawImage', () => {
-		test( 'draws image with basic properties', () => {
-			// Create a mock image that is already loaded
-			const mockImg = {
-				complete: true,
-				naturalWidth: 200,
-				naturalHeight: 150
-			};
-			renderer._imageCache = new Map();
-			renderer._imageCache.set( 'test-layer', mockImg );
-
-			renderer.drawImage( {
+		test( 'delegates to imageLayerRenderer', () => {
+			const layer = {
 				id: 'test-layer',
 				src: 'data:image/png;base64,test',
 				x: 50,
 				y: 60,
 				width: 200,
 				height: 150
-			} );
+			};
 
-			expect( ctx.save ).toHaveBeenCalled();
-			expect( ctx.drawImage ).toHaveBeenCalledWith( mockImg, 50, 60, 200, 150 );
-			expect( ctx.restore ).toHaveBeenCalled();
+			// Should not throw when delegating
+			expect( () => {
+				renderer.drawImage( layer );
+			} ).not.toThrow();
 		} );
 
-		test( 'applies opacity to image', () => {
-			const mockImg = {
-				complete: true,
-				naturalWidth: 100,
-				naturalHeight: 100
-			};
-			renderer._imageCache = new Map();
-			renderer._imageCache.set( 'opacity-layer', mockImg );
+		test( 'handles null imageLayerRenderer gracefully', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			testRenderer.imageLayerRenderer = null;
 
-			renderer.drawImage( {
-				id: 'opacity-layer',
-				src: 'data:image/png;base64,test',
-				x: 0,
-				y: 0,
-				width: 100,
-				height: 100,
-				opacity: 0.5
-			} );
+			// Should not throw even when imageLayerRenderer is null
+			expect( () => {
+				testRenderer.drawImage( {
+					id: 'null-test',
+					src: 'data:image/png;base64,test',
+					x: 0,
+					y: 0
+				} );
+			} ).not.toThrow();
 
-			expect( ctx.globalAlpha ).toBe( 0.5 );
-		} );
-
-		test( 'applies rotation to image', () => {
-			const mockImg = {
-				complete: true,
-				naturalWidth: 100,
-				naturalHeight: 100
-			};
-			renderer._imageCache = new Map();
-			renderer._imageCache.set( 'rotated-layer', mockImg );
-
-			renderer.drawImage( {
-				id: 'rotated-layer',
-				src: 'data:image/png;base64,test',
-				x: 0,
-				y: 0,
-				width: 100,
-				height: 100,
-				rotation: 45
-			} );
-
-			expect( ctx.translate ).toHaveBeenCalledTimes( 2 );
-			expect( ctx.rotate ).toHaveBeenCalledWith( 45 * Math.PI / 180 );
-		} );
-
-		test( 'uses natural dimensions when width/height not specified', () => {
-			const mockImg = {
-				complete: true,
-				naturalWidth: 300,
-				naturalHeight: 200
-			};
-			renderer._imageCache = new Map();
-			renderer._imageCache.set( 'natural-layer', mockImg );
-
-			renderer.drawImage( {
-				id: 'natural-layer',
-				src: 'data:image/png;base64,test',
-				x: 10,
-				y: 20
-			} );
-
-			expect( ctx.drawImage ).toHaveBeenCalledWith( mockImg, 10, 20, 300, 200 );
+			testRenderer.destroy();
 		} );
 
 		test( 'draws placeholder when image is not loaded', () => {
-			renderer._imageCache = new Map();
-
+			// A new image layer will initially not be loaded
 			renderer.drawImage( {
 				id: 'loading-layer',
 				src: 'data:image/png;base64,test',
@@ -2225,173 +2171,54 @@ describe( 'LayerRenderer', () => {
 				height: 80
 			} );
 
-			// Should draw placeholder when no src
+			// Should not draw image when no src
 			expect( ctx.drawImage ).not.toHaveBeenCalled();
 		} );
 	} );
 
-	describe( '_getImageElement', () => {
-		test( 'returns null for layer without src', () => {
-			const result = renderer._getImageElement( { id: 'test' } );
-			expect( result ).toBeNull();
+	// ========================================================================
+	// ImageLayerRenderer Delegation Tests
+	// ========================================================================
+	// Note: The image loading tests have been moved to ImageLayerRenderer.test.js
+	// These tests verify the delegation from LayerRenderer to ImageLayerRenderer
+
+	describe( 'imageLayerRenderer delegation', () => {
+		test( 'imageLayerRenderer is created on construction', () => {
+			expect( renderer.imageLayerRenderer ).toBeDefined();
 		} );
 
-		test( 'creates new image element and caches it', () => {
+		test( 'drawImage delegates to imageLayerRenderer', () => {
 			const layer = {
-				id: 'new-image',
-				src: 'data:image/png;base64,iVBORw0KGgo='
-			};
-
-			const img = renderer._getImageElement( layer );
-
-			expect( img ).toBeDefined();
-			expect( img.src ).toBe( layer.src );
-			expect( renderer._imageCache.has( 'new-image' ) ).toBe( true );
-		} );
-
-		test( 'returns cached image on subsequent calls', () => {
-			const layer = {
-				id: 'cached-image',
-				src: 'data:image/png;base64,test'
-			};
-
-			const img1 = renderer._getImageElement( layer );
-			const img2 = renderer._getImageElement( layer );
-
-			expect( img1 ).toBe( img2 );
-		} );
-
-		test( 'uses src substring as fallback cache key', () => {
-			const layer = {
-				src: 'data:image/png;base64,verylongsrcstringthatwillbetruncated'
-			};
-
-			const img = renderer._getImageElement( layer );
-
-			expect( img ).toBeDefined();
-			expect( renderer._imageCache.size ).toBe( 1 );
-		} );
-
-		test( 'evicts oldest entries when cache exceeds MAX_IMAGE_CACHE_SIZE', () => {
-			// MAX_IMAGE_CACHE_SIZE is 50
-			const maxSize = 50;
-
-			// Fill the cache to max capacity
-			for ( let i = 0; i < maxSize; i++ ) {
-				const layer = {
-					id: `image-${ i }`,
-					src: `data:image/png;base64,test${ i }`
-				};
-				renderer._getImageElement( layer );
-			}
-
-			expect( renderer._imageCache.size ).toBe( maxSize );
-			expect( renderer._imageCache.has( 'image-0' ) ).toBe( true );
-
-			// Add one more, which should evict the oldest (image-0)
-			const newLayer = {
-				id: 'image-new',
-				src: 'data:image/png;base64,testnew'
-			};
-			renderer._getImageElement( newLayer );
-
-			expect( renderer._imageCache.size ).toBe( maxSize );
-			expect( renderer._imageCache.has( 'image-0' ) ).toBe( false );
-			expect( renderer._imageCache.has( 'image-new' ) ).toBe( true );
-			expect( renderer._imageCache.has( 'image-1' ) ).toBe( true );
-		} );
-
-		test( 'refreshes entry position when accessed', () => {
-			// Fill cache with 50 images
-			const maxSize = 50;
-			for ( let i = 0; i < maxSize; i++ ) {
-				const layer = {
-					id: `image-${ i }`,
-					src: `data:image/png;base64,test${ i }`
-				};
-				renderer._getImageElement( layer );
-			}
-
-			// Access image-0 to refresh its position (make it recent)
-			const oldestLayer = {
-				id: 'image-0',
-				src: 'data:image/png;base64,test0'
-			};
-			renderer._getImageElement( oldestLayer );
-
-			// Add a new image - should evict image-1 now (the new oldest)
-			const newLayer = {
-				id: 'image-new',
-				src: 'data:image/png;base64,testnew'
-			};
-			renderer._getImageElement( newLayer );
-
-			expect( renderer._imageCache.has( 'image-0' ) ).toBe( true ); // Still present (was refreshed)
-			expect( renderer._imageCache.has( 'image-1' ) ).toBe( false ); // Evicted (was oldest)
-			expect( renderer._imageCache.has( 'image-new' ) ).toBe( true );
-		} );
-	} );
-
-	describe( '_drawImagePlaceholder', () => {
-		test( 'draws dashed rectangle placeholder', () => {
-			const layer = {
+				id: 'test-image',
+				type: 'image',
+				src: 'data:image/png;base64,iVBORw0KGgo=',
 				x: 10,
 				y: 20,
 				width: 100,
 				height: 80
 			};
-			const scale = { sx: 1, sy: 1 };
 
-			renderer._drawImagePlaceholder( layer, scale );
-
-			expect( ctx.save ).toHaveBeenCalled();
-			expect( ctx.setLineDash ).toHaveBeenCalledWith( [ 5, 5 ] );
-			expect( ctx.strokeRect ).toHaveBeenCalledWith( 10, 20, 100, 80 );
-			expect( ctx.restore ).toHaveBeenCalled();
+			// Should not throw
+			expect( () => {
+				renderer.drawImage( layer );
+			} ).not.toThrow();
 		} );
 
-		test( 'draws diagonal lines as loading indicator', () => {
-			const layer = {
-				x: 0,
-				y: 0,
-				width: 100,
-				height: 100
-			};
-			const scale = { sx: 1, sy: 1 };
+		test( 'setContext propagates to imageLayerRenderer', () => {
+			const newCtx = createMockContext();
+			renderer.setContext( newCtx );
 
-			renderer._drawImagePlaceholder( layer, scale );
-
-			// Should draw X pattern
-			expect( ctx.beginPath ).toHaveBeenCalled();
-			expect( ctx.moveTo ).toHaveBeenCalled();
-			expect( ctx.lineTo ).toHaveBeenCalled();
-			expect( ctx.stroke ).toHaveBeenCalled();
+			expect( renderer.imageLayerRenderer.ctx ).toBe( newCtx );
 		} );
 
-		test( 'applies scale factors', () => {
-			const layer = {
-				x: 10,
-				y: 20,
-				width: 100,
-				height: 80
-			};
-			const scale = { sx: 2, sy: 1.5 };
+		test( 'destroy cleans up imageLayerRenderer', () => {
+			// Create a fresh renderer to avoid afterEach conflicts
+			const testRenderer = new LayerRenderer( ctx );
+			expect( testRenderer.imageLayerRenderer ).toBeDefined();
 
-			renderer._drawImagePlaceholder( layer, scale );
+			testRenderer.destroy();
 
-			expect( ctx.strokeRect ).toHaveBeenCalledWith( 20, 30, 200, 120 );
-		} );
-
-		test( 'uses default dimensions when not specified', () => {
-			const layer = {
-				x: 0,
-				y: 0
-			};
-			const scale = { sx: 1, sy: 1 };
-
-			renderer._drawImagePlaceholder( layer, scale );
-
-			expect( ctx.strokeRect ).toHaveBeenCalledWith( 0, 0, 100, 100 );
+			expect( testRenderer.imageLayerRenderer ).toBeNull();
 		} );
 	} );
 
@@ -2405,17 +2232,6 @@ describe( 'LayerRenderer', () => {
 	} );
 
 	describe( 'destroy', () => {
-		test( 'clears image cache', () => {
-			// Add an image to cache
-			renderer._imageCache = new Map();
-			renderer._imageCache.set( 'test', new Image() );
-
-			renderer.destroy();
-
-			// destroy() nulls out the cache
-			expect( renderer._imageCache ).toBeNull();
-		} );
-
 		test( 'calls destroy on sub-renderers that have the method', () => {
 			// Set up mock sub-renderers with destroy methods
 			const mockShadowDestroy = jest.fn();
@@ -2444,6 +2260,7 @@ describe( 'LayerRenderer', () => {
 			expect( renderer.textBoxRenderer ).toBeNull();
 			expect( renderer.calloutRenderer ).toBeNull();
 			expect( renderer.effectsRenderer ).toBeNull();
+			expect( renderer.imageLayerRenderer ).toBeNull();
 		} );
 	} );
 
@@ -2629,7 +2446,7 @@ describe( 'LayerRenderer', () => {
 	// Image Loading Callback Tests
 	// ========================================================================
 
-	describe( 'image loading callbacks', () => {
+	describe( 'image loading callbacks (via ImageLayerRenderer)', () => {
 		let originalWindow;
 
 		beforeEach( () => {
@@ -2640,76 +2457,64 @@ describe( 'LayerRenderer', () => {
 			global.window = originalWindow;
 		} );
 
-		test( '_getImageElement uses onImageLoad callback when available', () => {
+		test( 'imageLayerRenderer uses onImageLoad callback when available', () => {
 			const onImageLoadMock = jest.fn();
 			const rendererWithCallback = new LayerRenderer( ctx, { onImageLoad: onImageLoadMock } );
-			const layer = { id: 'test-image', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' };
 
-			const img = rendererWithCallback._getImageElement( layer );
+			// Verify the imageLayerRenderer was configured with the callback
+			expect( rendererWithCallback.imageLayerRenderer ).toBeDefined();
+			expect( rendererWithCallback.imageLayerRenderer.onImageLoad ).toBe( onImageLoadMock );
 
-			// Trigger the onload callback
-			img.onload();
-
-			expect( onImageLoadMock ).toHaveBeenCalled();
 			rendererWithCallback.destroy();
 		} );
 
-		test( '_getImageElement falls back to global requestRedraw when no callback', () => {
-			const requestRedrawMock = jest.fn();
-			// Set up window.Layers.requestRedraw for the fallback
-			if ( !global.window.Layers ) {
-				global.window.Layers = {};
-			}
-			global.window.Layers.requestRedraw = requestRedrawMock;
+		test( 'drawImage delegates to imageLayerRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			const layer = { id: 'test-image', type: 'image', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', x: 10, y: 20, width: 100, height: 50 };
 
-			// Create renderer without onImageLoad callback
-			const rendererNoCallback = new LayerRenderer( ctx, { onImageLoad: null } );
-			const layer = { id: 'test-fallback-image', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' };
+			// The imageLayerRenderer should be initialized
+			expect( testRenderer.imageLayerRenderer ).toBeDefined();
 
-			const img = rendererNoCallback._getImageElement( layer );
+			// Drawing should not throw
+			expect( () => {
+				testRenderer.drawImage( layer );
+			} ).not.toThrow();
 
-			// Trigger the onload callback
-			img.onload();
-
-			expect( requestRedrawMock ).toHaveBeenCalled();
-
-			// Cleanup
-			delete global.window.Layers.requestRedraw;
-			rendererNoCallback.destroy();
+			testRenderer.destroy();
 		} );
 
-		test( '_getImageElement handles image load error gracefully', () => {
-			// Mock mw.log.warn
-			const originalMw = global.window.mw;
-			const warnMock = jest.fn();
-			global.mw = { log: { warn: warnMock } };
+		test( 'imageLayerRenderer draws placeholder when image not ready', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			const layer = { id: 'placeholder-test', type: 'image', src: 'data:image/png;base64,test', x: 0, y: 0, width: 50, height: 50 };
 
-			const rendererForError = new LayerRenderer( ctx, {} );
-			const layer = { id: 'error-image', src: 'invalid-src' };
+			// Drawing should show placeholder (dashed rect with diagonal lines)
+			testRenderer.drawImage( layer );
 
-			const img = rendererForError._getImageElement( layer );
+			// Should have drawn the placeholder
+			expect( ctx.setLineDash ).toHaveBeenCalled();
+			expect( ctx.strokeRect ).toHaveBeenCalled();
 
-			// Trigger the onerror callback
-			img.onerror();
-
-			expect( warnMock ).toHaveBeenCalledWith( '[LayerRenderer] Failed to load image layer:', 'error-image' );
-
-			global.mw = originalMw;
-			rendererForError.destroy();
+			testRenderer.destroy();
 		} );
 
-		test( '_getImageElement returns null when no src', () => {
-			const result = renderer._getImageElement( { id: 'no-src' } );
-			expect( result ).toBeNull();
+		test( 'setContext propagates to imageLayerRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			const newCtx = createMockContext();
+
+			testRenderer.setContext( newCtx );
+
+			expect( testRenderer.imageLayerRenderer.ctx ).toBe( newCtx );
+
+			testRenderer.destroy();
 		} );
 
-		test( '_getImageElement returns cached image on second call', () => {
-			const layer = { id: 'cached-image', src: 'data:image/png;base64,test' };
+		test( 'destroy cleans up imageLayerRenderer', () => {
+			const testRenderer = new LayerRenderer( ctx );
+			expect( testRenderer.imageLayerRenderer ).toBeDefined();
 
-			const img1 = renderer._getImageElement( layer );
-			const img2 = renderer._getImageElement( layer );
+			testRenderer.destroy();
 
-			expect( img1 ).toBe( img2 );
+			expect( testRenderer.imageLayerRenderer ).toBeNull();
 		} );
 	} );
 
@@ -2824,6 +2629,138 @@ describe( 'LayerRenderer', () => {
 			renderer._drawRectPath( layer, scale, ctxNoRoundRect );
 
 			expect( ctxNoRoundRect.rect ).toHaveBeenCalledWith( 10, 20, 100, 50 );
+		} );
+	} );
+
+	describe( 'drawCustomShape', () => {
+		test( 'returns early if layer has no path', () => {
+			const layer = { viewBox: [ 0, 0, 100, 100 ] };
+			ctx.save.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			// Should not call save since it returns early
+			expect( ctx.save ).not.toHaveBeenCalled();
+		} );
+
+		test( 'returns early if layer has no viewBox', () => {
+			const layer = { path: 'M0,0 L100,100' };
+			ctx.save.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			// Should not call save since it returns early
+			expect( ctx.save ).not.toHaveBeenCalled();
+		} );
+
+		test( 'renders custom shape with path and viewBox using fallback', () => {
+			// Ensure CustomShapeRenderer is not available to trigger fallback
+			const originalShapeLibrary = window.Layers && window.Layers.ShapeLibrary;
+			if ( window.Layers ) {
+				window.Layers.ShapeLibrary = undefined;
+			}
+
+			const layer = {
+				type: 'customShape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 L0,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000',
+				stroke: '#000000',
+				strokeWidth: 2,
+				opacity: 0.8
+			};
+
+			ctx.save.mockClear();
+			ctx.restore.mockClear();
+
+			renderer.drawCustomShape( layer );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+
+			// Restore
+			if ( window.Layers && originalShapeLibrary ) {
+				window.Layers.ShapeLibrary = originalShapeLibrary;
+			}
+		} );
+
+		test( 'uses CustomShapeRenderer when available', () => {
+			const mockCustomRenderer = {
+				render: jest.fn()
+			};
+			const MockCustomShapeRenderer = jest.fn().mockImplementation( () => mockCustomRenderer );
+
+			// Set up mock CustomShapeRenderer
+			window.Layers = window.Layers || {};
+			window.Layers.ShapeLibrary = {
+				CustomShapeRenderer: MockCustomShapeRenderer
+			};
+
+			const layer = {
+				type: 'customShape',
+				shapeId: 'test-shape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				path: 'M0,0 L100,0 L100,100 Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fillRule: 'evenodd'
+			};
+
+			// Create fresh renderer to pick up the mock
+			const freshRenderer = new LayerRenderer( ctx );
+			freshRenderer.drawCustomShape( layer );
+
+			expect( mockCustomRenderer.render ).toHaveBeenCalled();
+
+			// Clean up
+			delete window.Layers.ShapeLibrary;
+		} );
+	} );
+
+	describe( 'drawImage delegation', () => {
+		test( 'delegates to ImageLayerRenderer when available', () => {
+			const mockImageRenderer = {
+				setContext: jest.fn(),
+				draw: jest.fn()
+			};
+
+			// Inject mock ImageLayerRenderer
+			renderer.imageLayerRenderer = mockImageRenderer;
+
+			const layer = {
+				type: 'image',
+				src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50
+			};
+
+			renderer.drawImage( layer );
+
+			expect( mockImageRenderer.setContext ).toHaveBeenCalledWith( ctx );
+			expect( mockImageRenderer.draw ).toHaveBeenCalledWith( layer, expect.any( Object ) );
+		} );
+
+		test( 'does nothing when ImageLayerRenderer is not available', () => {
+			// Ensure imageLayerRenderer is not set
+			renderer.imageLayerRenderer = null;
+
+			const layer = {
+				type: 'image',
+				src: 'data:image/png;base64,test',
+				x: 10,
+				y: 20
+			};
+
+			// Should not throw
+			expect( () => renderer.drawImage( layer ) ).not.toThrow();
 		} );
 	} );
 } );

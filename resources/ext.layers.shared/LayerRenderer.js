@@ -50,6 +50,10 @@
 	const EffectsRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.EffectsRenderer ) ||
 		( typeof require !== 'undefined' ? require( './EffectsRenderer.js' ) : null );
 
+	// Get ImageLayerRenderer - it should be loaded before this module
+	const ImageLayerRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ImageLayerRenderer ) ||
+		( typeof require !== 'undefined' ? require( './ImageLayerRenderer.js' ) : null );
+
 	/**
 	 * LayerRenderer class - Renders individual layer shapes on a canvas
 	 */
@@ -159,6 +163,16 @@ class LayerRenderer {
 		} else {
 			this.effectsRenderer = null;
 		}
+
+		// Create ImageLayerRenderer instance for image layer operations
+		if ( ImageLayerRenderer ) {
+			this.imageLayerRenderer = new ImageLayerRenderer( ctx, {
+				shadowRenderer: this.shadowRenderer,
+				onImageLoad: this.onImageLoad
+			} );
+		} else {
+			this.imageLayerRenderer = null;
+		}
 	}
 
 	// ========================================================================
@@ -194,6 +208,9 @@ class LayerRenderer {
 		}
 		if ( this.effectsRenderer ) {
 			this.effectsRenderer.setContext( ctx );
+		}
+		if ( this.imageLayerRenderer ) {
+			this.imageLayerRenderer.setContext( ctx );
 		}
 	}
 
@@ -391,161 +408,16 @@ class LayerRenderer {
 
 	/**
 	 * Draw an image layer
+	 * Delegates to ImageLayerRenderer for caching and rendering
 	 *
 	 * @param {Object} layer - Image layer with src, x, y, width, height properties
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawImage( layer, options ) {
-		const opts = this._prepareRenderOptions( options );
-		const scale = opts.scale;
-
-		// Get the cached image, or load it if not cached
-		const img = this._getImageElement( layer );
-		if ( !img || !img.complete ) {
-			// Image not ready yet - draw a placeholder
-			this._drawImagePlaceholder( layer, scale );
-			return;
+		if ( this.imageLayerRenderer ) {
+			this.imageLayerRenderer.setContext( this.ctx );
+			this.imageLayerRenderer.draw( layer, this._prepareRenderOptions( options ) );
 		}
-
-		// Calculate scaled position and dimensions
-		const x = ( layer.x || 0 ) * scale.sx;
-		const y = ( layer.y || 0 ) * scale.sy;
-		const width = ( layer.width || img.naturalWidth ) * scale.sx;
-		const height = ( layer.height || img.naturalHeight ) * scale.sy;
-
-		this.ctx.save();
-
-		// Apply opacity if specified
-		if ( layer.opacity !== undefined && layer.opacity !== 1 ) {
-			this.ctx.globalAlpha = layer.opacity;
-		}
-
-		// Apply rotation if specified
-		if ( layer.rotation ) {
-			const centerX = x + width / 2;
-			const centerY = y + height / 2;
-			this.ctx.translate( centerX, centerY );
-			this.ctx.rotate( layer.rotation * Math.PI / 180 );
-			this.ctx.translate( -centerX, -centerY );
-		}
-
-		// Apply shadow if enabled
-		// Use shadowScale from options if provided (for viewer scaling), otherwise use 1:1 scale
-		const shadowScale = opts.shadowScale || { sx: 1, sy: 1, avg: 1 };
-		if ( this.shadowRenderer && this.shadowRenderer.hasShadowEnabled( layer ) ) {
-			this.shadowRenderer.applyShadow( layer, shadowScale );
-		}
-
-		// Draw the image
-		this.ctx.drawImage( img, x, y, width, height );
-
-		// Clear shadow after drawing
-		if ( this.shadowRenderer ) {
-			this.shadowRenderer.clearShadow();
-		}
-
-		this.ctx.restore();
-	}
-
-	/**
-	 * Maximum number of images to cache (LRU eviction when exceeded)
-	 * @type {number}
-	 */
-	static get MAX_IMAGE_CACHE_SIZE() {
-		return 50;
-	}
-
-	/**
-	 * Get or create cached image element for a layer
-	 *
-	 * @param {Object} layer - Image layer
-	 * @return {HTMLImageElement|null} - Image element or null if not available
-	 */
-	_getImageElement( layer ) {
-		if ( !layer.src ) {
-			return null;
-		}
-
-		// Use layer id as cache key
-		const cacheKey = layer.id || layer.src.substring( 0, 50 );
-
-		// Check if we have a cached image
-		if ( !this._imageCache ) {
-			this._imageCache = new Map();
-		}
-
-		if ( this._imageCache.has( cacheKey ) ) {
-			// Move to end for LRU tracking (delete and re-add)
-			const img = this._imageCache.get( cacheKey );
-			this._imageCache.delete( cacheKey );
-			this._imageCache.set( cacheKey, img );
-			return img;
-		}
-
-		// Evict oldest entry if cache is full (LRU eviction)
-		if ( this._imageCache.size >= LayerRenderer.MAX_IMAGE_CACHE_SIZE ) {
-			const oldestKey = this._imageCache.keys().next().value;
-			this._imageCache.delete( oldestKey );
-		}
-
-		// Create new image element and start loading
-		const img = new Image();
-		this._imageCache.set( cacheKey, img );
-
-		// Store reference to this for closure
-		const self = this;
-
-		// Request redraw when image loads
-		img.onload = () => {
-			// Use the configured callback (preferred)
-			if ( self.onImageLoad && typeof self.onImageLoad === 'function' ) {
-				self.onImageLoad();
-			}
-			// Fallback to global requestRedraw if available
-			else if ( typeof window !== 'undefined' && window.Layers && window.Layers.requestRedraw ) {
-				window.Layers.requestRedraw();
-			}
-		};
-
-		// Handle load errors gracefully
-		img.onerror = () => {
-			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[LayerRenderer] Failed to load image layer:', cacheKey );
-			}
-		};
-
-		// Set src after handlers to ensure events fire
-		img.src = layer.src;
-
-		return img;
-	}
-
-	/**
-	 * Draw a placeholder while image is loading
-	 *
-	 * @param {Object} layer - Image layer
-	 * @param {Object} scale - Scale factors
-	 */
-	_drawImagePlaceholder( layer, scale ) {
-		const x = ( layer.x || 0 ) * scale.sx;
-		const y = ( layer.y || 0 ) * scale.sy;
-		const width = ( layer.width || 100 ) * scale.sx;
-		const height = ( layer.height || 100 ) * scale.sy;
-
-		this.ctx.save();
-		this.ctx.strokeStyle = '#888';
-		this.ctx.lineWidth = 1;
-		this.ctx.setLineDash( [ 5, 5 ] );
-		this.ctx.strokeRect( x, y, width, height );
-
-		// Draw loading indicator (diagonal lines)
-		this.ctx.beginPath();
-		this.ctx.moveTo( x, y );
-		this.ctx.lineTo( x + width, y + height );
-		this.ctx.moveTo( x + width, y );
-		this.ctx.lineTo( x, y + height );
-		this.ctx.stroke();
-		this.ctx.restore();
 	}
 
 	/**
@@ -956,6 +828,7 @@ class LayerRenderer {
 			'textBoxRenderer',
 			'calloutRenderer',
 			'effectsRenderer',
+			'imageLayerRenderer',
 			'_customShapeRenderer'
 		];
 
@@ -973,10 +846,6 @@ class LayerRenderer {
 		this.canvas = null;
 		this.baseWidth = null;
 		this.baseHeight = null;
-		if ( this._imageCache ) {
-			this._imageCache.clear();
-			this._imageCache = null;
-		}
 	}
 }
 

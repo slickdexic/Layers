@@ -4,25 +4,35 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.0-beta.4 (January 6, 2026)
+## Version 1.5.0 (January 7, 2026)
+
+### Added
+- **Layer Set List on File Pages** — File: pages now show available layer annotations
+  - Collapsible "Layer Annotations" section appears below file info
+  - Shows all named sets with author, revision count, and last modified date
+  - "Edit" link opens the editor for each set directly
+  - Usage hint displays wikitext syntax for embedding layers
+  - Full dark mode support for Vector 2022
+  - Implements Yaron's feedback request #4
+
+### Refactored
+- **ImageLayerRenderer Extraction** — Extracted image layer rendering from LayerRenderer.js
+  - New `ImageLayerRenderer.js` (~280 lines) with LRU caching
+  - Reduced LayerRenderer.js from 998 to 867 lines
 
 ### Changed
 - **Simplified Permissions** — Consolidated `createlayers` into `editlayers`
   - Users with `editlayers` can now create and edit layer sets
-  - Simpler permission model per community feedback
+  - `managelayerlibrary` retained for future asset library feature
 
 ### Fixed
 - **Layer Lock Now Works** — Fixed layer locking feature that was completely broken
-  - Locked layers can no longer be dragged, resized, or rotated
-  - Locked layers can no longer be deleted
-  - Folder locking now affects all child layers — if a folder is locked, all layers inside are effectively locked
-
-### Documentation
-- Updated all documentation to reflect simplified permissions model
+  - Locked layers can no longer be dragged, resized, rotated, or deleted
+  - Folder locking now affects all child layers
 
 ### Tests
-- 8,537 tests passing (up from 8,522)
-- Added 15 new tests for layer lock protection
+- 8,551 tests passing (146 suites)
+- 94.6% statement coverage, 83.3% branch coverage
 
 ---
 

@@ -313,8 +313,13 @@ class WikitextHooks {
 		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
 
 		// DEBUG: Log queue state for debugging foreign file issues
-		self::log( "onThumbnailBeforeProduceHTML: filename=$filename, linkType=" . ( $fileParams['linkType'] ?? 'null' ) );
-		self::log( "Queue state for $filename: " . json_encode( self::$fileLinkTypes[$filename] ?? [] ) );
+		self::log(
+			"onThumbnailBeforeProduceHTML: filename=$filename, linkType=" .
+			( $fileParams['linkType'] ?? 'null' )
+		);
+		self::log(
+			"Queue state for $filename: " . json_encode( self::$fileLinkTypes[$filename] ?? [] )
+		);
 
 		// Convert false to empty array for processor compatibility (MW 1.39-1.43 LTS compat)
 		$linkAttribsForProcessor = $linkAttribsIsArray ? $linkAttribs : [];

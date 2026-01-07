@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-8%2C537%20Passing-brightgreen" alt="8,537 Tests">
+  <img src="https://img.shields.io/badge/Tests-8%2C551%20Passing-brightgreen" alt="8,551 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -20,13 +20,15 @@
 
 ---
 
-## 🆕 What's New in v1.5.0-beta.4
+## 🆕 What's New in v1.5.0
 
+- **Layer Set List on File Pages** — File: pages now show a collapsible "Layer Annotations" section listing all named sets with author, revision count, and direct edit links
 - **Simplified Permissions** — Consolidated `createlayers` into `editlayers` — users with `editlayers` can now create and edit layer sets
 - **Layer Lock Fixed** — Locked layers now properly prevent dragging, resizing, rotating, and deletion; folder locks cascade to children
-- **8,537 tests passing** — 95% statement coverage
+- **ImageLayerRenderer Extraction** — Improved code architecture with dedicated image rendering module
+- **8,551 tests passing** — 94.6% statement coverage, 83.3% branch coverage
 
-### Previous v1.5.0-beta.3 Highlights
+### Previous v1.5.0-beta Highlights
 
 - **`layerset=` Parameter** — The wikitext parameter is now `layerset=on` (or `layerset=setname`), with `layers=` still supported for backwards compatibility
 - **"Edit Layers" → "Edit layers"** — Changed to sentence case per MediaWiki UI conventions

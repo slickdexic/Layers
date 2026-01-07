@@ -594,5 +594,14 @@
 	"apihelp-layerssave-param-data": "Parameter documentation string for the data payload parameter",
 	"apihelp-layerssave-param-setname": "Parameter documentation string for the optional setname parameter",
 	"apihelp-layerssave-param-token": "Parameter documentation string for the CSRF token parameter",
-	"apihelp-layerssave-example-1": "API help example for saving layers with action=layerssave; includes required filename, data JSON, and CSRF token"
+	"apihelp-layerssave-example-1": "API help example for saving layers with action=layerssave; includes required filename, data JSON, and CSRF token",
+
+	"layers-filepage-section-title": "Title for the collapsible section on File: pages listing available layer annotation sets",
+	"layers-filepage-set-name": "Table header for the set name column in the File page layer sets list",
+	"layers-filepage-author": "Table header for the author/creator column in the File page layer sets list",
+	"layers-filepage-revisions": "Table header for the revision count column in the File page layer sets list",
+	"layers-filepage-last-modified": "Table header for the last modified date column in the File page layer sets list",
+	"layers-filepage-edit": "Link text for editing a layer set from the File page list",
+	"layers-filepage-view": "Link text for viewing/previewing a layer set from the File page list",
+	"layers-filepage-usage-hint": "Hint text shown below the layer sets table explaining wikitext syntax to display layers"
 }

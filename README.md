@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C537%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-8%2C551%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.0-beta.4 (January 2026)  
+> **Version:** 1.5.0 (January 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -240,8 +240,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 | Metric | Value |
 |--------|-------|
 | Jest tests | 8,537 passing |
-| Statement coverage | 94.6% |
-| Branch coverage | 83.3% |
+| Statement coverage | 93.7% |
+| Branch coverage | 82.4% |
 | Test suites | 145 |
 
 **Security:**
@@ -296,13 +296,13 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 112 | ✅ |
-| Total JS lines | ~61,122 | ✅ Well under 75K target |
+| Total JS lines | ~61,300 | ✅ Well under 75K target |
 | ES6 classes | 94 | ✅ |
 | God classes (>1000 lines) | 12 | ⚠️ Technical debt (all use delegation) |
 | Tests passing | 8,537 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.6% | ✅ Excellent |
-| Branch coverage | 83.3% | ✅ |
+| Statement coverage | 93.7% | ✅ Excellent |
+| Branch coverage | 82.4% | ✅ |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
