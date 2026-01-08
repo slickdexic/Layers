@@ -862,6 +862,13 @@ class CanvasManager {
 				layer.y1 = ( originalState.y1 || 0 ) + deltaY;
 				layer.x2 = ( originalState.x2 || 0 ) + deltaX;
 				layer.y2 = ( originalState.y2 || 0 ) + deltaY;
+				// Move control point with the arrow (for curved arrows)
+				if ( originalState.controlX !== undefined ) {
+					layer.controlX = originalState.controlX + deltaX;
+				}
+				if ( originalState.controlY !== undefined ) {
+					layer.controlY = originalState.controlY + deltaY;
+				}
 				break;
 			case 'path':
 				if ( layer.points && originalState.points ) {

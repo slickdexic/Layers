@@ -156,6 +156,13 @@
 					layer.y1 = ( layer.y1 || 0 ) + deltaY;
 					layer.x2 = ( layer.x2 || 0 ) + deltaX;
 					layer.y2 = ( layer.y2 || 0 ) + deltaY;
+					// Move control point with the arrow (for curved arrows)
+					if ( layer.controlX !== undefined ) {
+						layer.controlX = layer.controlX + deltaX;
+					}
+					if ( layer.controlY !== undefined ) {
+						layer.controlY = layer.controlY + deltaY;
+					}
 					break;
 
 				case 'path':
