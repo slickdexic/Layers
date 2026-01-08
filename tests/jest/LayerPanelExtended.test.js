@@ -60,6 +60,10 @@ describe( 'LayerPanel Extended', () => {
 		const LayerItemFactory = require( '../../resources/ext.layers.editor/ui/LayerItemFactory.js' );
 		window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
+		// Load LayerListRenderer for layer list rendering
+		const LayerListRenderer = require( '../../resources/ext.layers.editor/ui/LayerListRenderer.js' );
+		window.Layers.UI.LayerListRenderer = LayerListRenderer;
+
 		// Load FolderOperationsController for folder operations
 		const FolderOperationsController = require( '../../resources/ext.layers.editor/ui/FolderOperationsController.js' );
 		window.Layers.UI.FolderOperationsController = FolderOperationsController;
@@ -112,21 +116,23 @@ describe( 'LayerPanel Extended', () => {
 	} );
 
 	describe( 'reorderLayers', () => {
-		it( 'should use StateManager.reorderLayer when available', () => {
-			mockStateManager.reorderLayer = jest.fn().mockReturnValue( true );
+		it( 'should delegate to dragDropController when available', () => {
+			const mockDragDrop = {
+				reorderLayers: jest.fn()
+			};
 
 			const panel = new LayerPanel( {
 				container: container,
 				editor: mockEditor
 			} );
 
+			panel.dragDropController = mockDragDrop;
 			panel.reorderLayers( 'layer1', 'layer2' );
 
-			expect( mockStateManager.reorderLayer ).toHaveBeenCalledWith( 'layer1', 'layer2' );
-			expect( mockEditor.canvasManager.redraw ).toHaveBeenCalled();
+			expect( mockDragDrop.reorderLayers ).toHaveBeenCalledWith( 'layer1', 'layer2' );
 		} );
 
-		it( 'should fall back to manual reordering when StateManager method not available', () => {
+		it( 'should do nothing when dragDropController is not available', () => {
 			const layers = [
 				{ id: 'layer1', type: 'rectangle' },
 				{ id: 'layer2', type: 'circle' },
@@ -134,37 +140,17 @@ describe( 'LayerPanel Extended', () => {
 			];
 			mockStateManager.set( 'layers', layers );
 
-			// Set reorderLayer to undefined to trigger fallback path
-			mockStateManager.reorderLayer = undefined;
-
 			const panel = new LayerPanel( {
 				container: container,
 				editor: mockEditor
 			} );
 
-			// Move layer1 to position of layer3
+			panel.dragDropController = null;
+
+			// Without controller, reorderLayers does nothing
 			panel.reorderLayers( 'layer1', 'layer3' );
 
-			const newLayers = mockStateManager.get( 'layers' );
-			expect( newLayers[ 2 ].id ).toBe( 'layer1' );
-			expect( mockEditor.saveState ).toHaveBeenCalledWith( 'Reorder Layers' );
-		} );
-
-		it( 'should not reorder when layer IDs not found', () => {
-			const layers = [
-				{ id: 'layer1', type: 'rectangle' },
-				{ id: 'layer2', type: 'circle' }
-			];
-			mockStateManager.set( 'layers', layers );
-
-			const panel = new LayerPanel( {
-				container: container,
-				editor: mockEditor
-			} );
-
-			panel.reorderLayers( 'nonexistent', 'layer2' );
-
-			// Layers should be unchanged
+			// Layers should be unchanged since delegation is required
 			const currentLayers = mockStateManager.get( 'layers' );
 			expect( currentLayers ).toEqual( layers );
 		} );
@@ -296,92 +282,23 @@ describe( 'LayerPanel Extended', () => {
 	} );
 
 	describe( 'createConfirmDialog', () => {
-		it( 'should create dialog overlay and dialog elements when ConfirmDialog not available', () => {
-			const panel = new LayerPanel( {
-				container: container,
-				editor: mockEditor
-			} );
+		let mockConfirmDialogShow;
 
-			const onConfirm = jest.fn();
-			panel.createConfirmDialog( 'Test message', onConfirm );
-
-			expect( document.querySelector( '.layers-modal-overlay' ) ).toBeTruthy();
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeTruthy();
-		} );
-
-		it( 'should call onConfirm when confirm button clicked', () => {
-			const panel = new LayerPanel( {
-				container: container,
-				editor: mockEditor
-			} );
-
-			const onConfirm = jest.fn();
-			panel.createConfirmDialog( 'Test message', onConfirm );
-
-			const confirmBtn = document.querySelector( '.layers-btn-danger' );
-			confirmBtn.click();
-
-			expect( onConfirm ).toHaveBeenCalled();
-			// Dialog should be removed
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeFalsy();
-		} );
-
-		it( 'should close dialog when cancel button clicked', () => {
-			const panel = new LayerPanel( {
-				container: container,
-				editor: mockEditor
-			} );
-
-			panel.createConfirmDialog( 'Test message', jest.fn() );
-
-			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
-			cancelBtn.click();
-
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeFalsy();
-		} );
-
-		it( 'should close dialog on Escape key', () => {
-			const panel = new LayerPanel( {
-				container: container,
-				editor: mockEditor
-			} );
-
-			panel.createConfirmDialog( 'Test message', jest.fn() );
-
-			const event = new KeyboardEvent( 'keydown', { key: 'Escape' } );
-			document.dispatchEvent( event );
-
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeFalsy();
-		} );
-
-		it( 'should trap focus within dialog on Tab', () => {
-			const panel = new LayerPanel( {
-				container: container,
-				editor: mockEditor
-			} );
-
-			panel.createConfirmDialog( 'Test message', jest.fn() );
-
-			const dialog = document.querySelector( '.layers-modal-dialog' );
-			const buttons = dialog.querySelectorAll( 'button' );
-			const lastButton = buttons[ buttons.length - 1 ];
-
-			lastButton.focus();
-
-			const event = new KeyboardEvent( 'keydown', { key: 'Tab', bubbles: true } );
-			Object.defineProperty( event, 'shiftKey', { value: false } );
-			document.dispatchEvent( event );
-
-			// Focus should wrap (behavior verified by no error)
-		} );
-
-		it( 'should use ConfirmDialog.show when available', () => {
-			const mockConfirmDialog = {
-				show: jest.fn()
+		beforeEach( () => {
+			// Mock ConfirmDialog.show for all tests
+			mockConfirmDialogShow = jest.fn();
+			window.Layers.UI.ConfirmDialog = {
+				show: mockConfirmDialogShow
 			};
-			window.Layers.UI.ConfirmDialog = mockConfirmDialog;
+		} );
 
-			// Reload LayerPanel with ConfirmDialog available
+		afterEach( () => {
+			// Clean up the mock
+			delete window.Layers.UI.ConfirmDialog;
+		} );
+
+		it( 'should delegate to ConfirmDialog.show when available', () => {
+			// Reset modules to pick up the mock
 			jest.resetModules();
 			require( '../../resources/ext.layers.editor/LayerPanel.js' );
 			const LP = window.Layers.UI.LayerPanel;
@@ -394,7 +311,66 @@ describe( 'LayerPanel Extended', () => {
 			const onConfirm = jest.fn();
 			panel.createConfirmDialog( 'Test message', onConfirm );
 
-			expect( mockConfirmDialog.show ).toHaveBeenCalled();
+			expect( mockConfirmDialogShow ).toHaveBeenCalled();
+			const callArgs = mockConfirmDialogShow.mock.calls[ 0 ][ 0 ];
+			expect( callArgs.message ).toBe( 'Test message' );
+			expect( callArgs.onConfirm ).toBe( onConfirm );
+		} );
+
+		it( 'should pass strings configuration to ConfirmDialog', () => {
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/LayerPanel.js' );
+			const LP = window.Layers.UI.LayerPanel;
+
+			const panel = new LP( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			panel.createConfirmDialog( 'Test message', jest.fn() );
+
+			expect( mockConfirmDialogShow ).toHaveBeenCalled();
+			const callArgs = mockConfirmDialogShow.mock.calls[ 0 ][ 0 ];
+			expect( callArgs.strings ).toBeDefined();
+			expect( callArgs.strings.title ).toBeDefined();
+			expect( callArgs.strings.cancel ).toBeDefined();
+			expect( callArgs.strings.confirm ).toBeDefined();
+		} );
+
+		it( 'should register cleanup callback with ConfirmDialog', () => {
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/LayerPanel.js' );
+			const LP = window.Layers.UI.LayerPanel;
+
+			const panel = new LP( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			panel.createConfirmDialog( 'Test message', jest.fn() );
+
+			expect( mockConfirmDialogShow ).toHaveBeenCalled();
+			const callArgs = mockConfirmDialogShow.mock.calls[ 0 ][ 0 ];
+			expect( typeof callArgs.registerCleanup ).toBe( 'function' );
+		} );
+
+		it( 'should do nothing if ConfirmDialog is not available', () => {
+			// Remove the mock to simulate ConfirmDialog not being available
+			delete window.Layers.UI.ConfirmDialog;
+
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/LayerPanel.js' );
+			const LP = window.Layers.UI.LayerPanel;
+
+			const panel = new LP( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			// Should not throw
+			expect( () => {
+				panel.createConfirmDialog( 'Test message', jest.fn() );
+			} ).not.toThrow();
 		} );
 	} );
 
@@ -919,21 +895,43 @@ describe( 'LayerPanel Extended', () => {
 	} );
 
 	describe( 'deleteLayer', () => {
+		let mockConfirmDialogShow;
+		let capturedOnConfirm;
+
+		beforeEach( () => {
+			// Mock ConfirmDialog.show to capture the onConfirm callback
+			mockConfirmDialogShow = jest.fn( ( options ) => {
+				capturedOnConfirm = options.onConfirm;
+			} );
+			window.Layers.UI.ConfirmDialog = {
+				show: mockConfirmDialogShow
+			};
+		} );
+
+		afterEach( () => {
+			delete window.Layers.UI.ConfirmDialog;
+			capturedOnConfirm = null;
+		} );
+
 		it( 'should show confirmation dialog when deleting layer', () => {
 			const layers = [
 				{ id: 'layer1', type: 'rectangle' }
 			];
 			mockStateManager.set( 'layers', layers );
 
-			const panel = new LayerPanel( {
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/LayerPanel.js' );
+			const LP = window.Layers.UI.LayerPanel;
+
+			const panel = new LP( {
 				container: container,
 				editor: mockEditor
 			} );
 
 			panel.deleteLayer( 'layer1' );
 
-			// Should show confirmation dialog
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeTruthy();
+			// Should delegate to ConfirmDialog.show
+			expect( mockConfirmDialogShow ).toHaveBeenCalled();
 		} );
 
 		it( 'should call editor.removeLayer when confirmed', () => {
@@ -942,37 +940,43 @@ describe( 'LayerPanel Extended', () => {
 			];
 			mockStateManager.set( 'layers', layers );
 
-			const panel = new LayerPanel( {
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/LayerPanel.js' );
+			const LP = window.Layers.UI.LayerPanel;
+
+			const panel = new LP( {
 				container: container,
 				editor: mockEditor
 			} );
 
 			panel.deleteLayer( 'layer1' );
 
-			// Click confirm button
-			const confirmBtn = document.querySelector( '.layers-btn-danger' );
-			confirmBtn.click();
+			// Simulate user clicking confirm
+			if ( capturedOnConfirm ) {
+				capturedOnConfirm();
+			}
 
 			expect( mockEditor.removeLayer ).toHaveBeenCalledWith( 'layer1' );
 		} );
 
-		it( 'should not delete when cancelled', () => {
+		it( 'should not delete if confirm callback is not invoked', () => {
 			const layers = [
 				{ id: 'layer1', type: 'rectangle' }
 			];
 			mockStateManager.set( 'layers', layers );
 
-			const panel = new LayerPanel( {
+			jest.resetModules();
+			require( '../../resources/ext.layers.editor/LayerPanel.js' );
+			const LP = window.Layers.UI.LayerPanel;
+
+			const panel = new LP( {
 				container: container,
 				editor: mockEditor
 			} );
 
 			panel.deleteLayer( 'layer1' );
 
-			// Click cancel button
-			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
-			cancelBtn.click();
-
+			// Don't invoke capturedOnConfirm - simulates user cancelling
 			expect( mockEditor.removeLayer ).not.toHaveBeenCalled();
 		} );
 	} );
