@@ -2,7 +2,31 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.2-REL1_43] - 2026-01-07
+## [1.5.3] - 2026-01-09
+
+### Added
+- **Shape Library with 374 Shapes** — Comprehensive built-in shape library with searchable categories
+  - 10 categories: Arrows, Basic Shapes, Callouts, Flowchart, ISO 7010 Mandatory, ISO 7010 Prohibition, ISO 7010 Warning, Math, Miscellaneous, Stars & Banners
+  - Professional ISO 7010 safety symbols (warning, prohibition, mandatory signs)
+  - All shapes render as crisp SVG vectors that scale without quality loss
+  - Search by name or browse by category
+  - **More shapes to come soon!**
+
+### Fixed
+- **Shape Rendering Performance** — Fixed critical performance issue with custom shape rendering
+  - Added pending load tracking to prevent duplicate image loads during drag/resize
+  - Eliminated cascade of async loads that caused canvas white screen crashes
+  - Shape images now cache efficiently with compact cache keys
+  - Smooth dragging and resizing for all custom shapes
+
+### Changed
+- **Aspect Ratio for Images/Shapes** — Images and custom shapes now maintain aspect ratio by default
+  - Hold Shift to allow free-form resizing (inverted from standard shapes)
+  - Matches expected behavior for imported images and library shapes
+
+---
+
+## [1.5.2] - 2026-01-07
 
 ### Tests
 - **Improved Coverage** — Added 114 new tests targeting low-coverage modules
@@ -14,13 +38,13 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Changed
 - **Documentation Updates** — Updated all documentation files with latest metrics
-  - Updated version numbers across mandatory files
-  - Synchronized test counts and coverage metrics in documentation files
+  - Updated version numbers across 12 mandatory files
+  - Synchronized test counts and coverage metrics in 6 documentation files
   - Prepared for point release with comprehensive documentation review
 
 ---
 
-## [1.5.1-REL1_43] - 2026-01-07
+## [1.5.1] - 2026-01-07
 
 ### Fixed
 - **Double-Headed Curved Arrow Rendering** — Fixed crossover artifact in double-headed curved arrows
@@ -39,11 +63,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ---
 
-<<<<<<< HEAD
-## [1.5.0-REL1_43] - 2026-01-07
-=======
 ## [1.5.0] - 2026-01-07
->>>>>>> main
 
 ### Added
 - **Layer Set List on File Pages** — File: pages now show available layer annotations

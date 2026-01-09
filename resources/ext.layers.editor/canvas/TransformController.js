@@ -210,8 +210,13 @@ class TransformController {
 		deltaY = Math.max( -maxDelta, Math.min( maxDelta, deltaY ) );
 
 		// Get modifier keys from the event
+		// For image and customShape layers, invert the shift key behavior:
+		// - Default: proportional (preserve aspect ratio)
+		// - Shift held: allow free resize (break aspect ratio)
+		const isImageOrShape = layer.type === 'image' || layer.type === 'customShape';
+		const shiftPressed = event && event.shiftKey;
 		const modifiers = {
-			proportional: event && event.shiftKey,
+			proportional: isImageOrShape ? !shiftPressed : shiftPressed,
 			fromCenter: event && event.altKey
 		};
 

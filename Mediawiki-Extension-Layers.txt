@@ -6,8 +6,8 @@
 |type2           = interface
 |type3           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.2
-|update          = 2026-01-07
+|version         = 1.5.3
+|update          = 2026-01-09
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
@@ -34,7 +34,7 @@
 |hook11          = ParserMakeImageParams
 |hook12          = SkinTemplateNavigation::Universal
 |hook13          = ThumbnailBeforeProduceHTML
-|description     = A professional-grade, non-destructive image annotation system with 13 drawing tools, curved arrows, live preview, layer folders, style presets, named layer sets, custom shape library, and full keyboard accessibility.
+|description     = A professional-grade, non-destructive image annotation system with 13 drawing tools, 374 built-in shapes, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
 }}
 
 The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
@@ -70,9 +70,9 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.2
+| 1.44+ || <code>main</code> || 1.5.3
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.2-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.3-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}
@@ -115,7 +115,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 * '''Callouts & Speech Bubbles''': Professional callouts with draggable tail positioning, three tail styles (triangle, curved, line), and rounded corners—perfect for tutorials and explanations.
 * '''Curved Arrows''': Arrows support curved paths via a draggable control point, with configurable head types (arrow, circle, diamond, triangle) and line styles (solid, dashed, dotted).
 * '''Text & Text Boxes''': Simple click-to-place text or advanced text boxes with word wrap, vertical alignment, padding, and corner radius.
-* '''Custom Shape Library''': Built-in library of arrows, symbols, flowchart shapes, and more—searchable by category.
+* '''Shape Library (374 Shapes)''': Built-in library with 10 categories including arrows, basic shapes, callouts, flowchart, ISO 7010 safety symbols, math, and more. All shapes render as crisp SVG vectors. ''More shapes to come soon!''
 
 === Visual Effects ===
 * '''Blur Fill''': Apply a "frosted glass" blur effect to any shape—blur what's beneath instead of using a solid fill.

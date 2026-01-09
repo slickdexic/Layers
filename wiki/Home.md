@@ -20,7 +20,16 @@
 
 ---
 
-## 🆕 What's New in v1.5.2
+## 🆕 What's New in v1.5.3
+
+- **Shape Library with 374 Shapes** — Comprehensive built-in shape library with 10 searchable categories
+  - Arrows, Basic Shapes, Callouts, Flowchart, ISO 7010 Safety Symbols (mandatory, prohibition, warning), Math, Miscellaneous, Stars & Banners
+  - All shapes render as crisp SVG vectors that scale without quality loss
+  - *More shapes to come soon!*
+- **Shape Rendering Performance** — Fixed critical performance issue preventing canvas crashes during drag/resize
+- **Aspect Ratio for Images/Shapes** — Images and custom shapes maintain aspect ratio by default (Shift to override)
+
+### Previous v1.5.2 Highlights
 
 - **Improved Test Coverage** — Added 114 new tests targeting low-coverage modules
 - **8,677 tests passing** — 94.55% statement coverage, 83.19% branch coverage (up from 8,563 tests, 94.05% stmt, 82.62% branch)

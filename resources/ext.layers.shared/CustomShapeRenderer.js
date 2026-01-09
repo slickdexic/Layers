@@ -1,9 +1,10 @@
 /* eslint-env node */
 /**
- * CustomShapeRenderer - Renders validated SVG path data to canvas
+ * CustomShapeRenderer - Renders SVG shapes to canvas
  *
- * Uses the Path2D API for efficient path rendering with full styling support.
- * All paths are validated before rendering through ShapePathValidator.
+ * Supports two rendering modes:
+ * 1. Complete SVG markup (new format) - renders via Image for pixel-perfect quality
+ * 2. Path2D API (legacy format) - for shapes defined with just path data
  *
  * @class
  */
@@ -22,6 +23,23 @@ class CustomShapeRenderer {
 		 * @type {Map<string, Path2D>}
 		 */
 		this.pathCache = new Map();
+
+		/**
+		 * Cache for SVG Image objects keyed by SVG string hash
+		 *
+		 * @private
+		 * @type {Map<string, HTMLImageElement>}
+		 */
+		this.svgImageCache = new Map();
+
+		/**
+		 * Set of cache keys currently being loaded
+		 * Prevents duplicate loads during async image creation
+		 *
+		 * @private
+		 * @type {Set<string>}
+		 */
+		this.pendingLoads = new Set();
 
 		/**
 		 * Maximum cache size
@@ -66,15 +84,42 @@ class CustomShapeRenderer {
 	/**
 	 * Render a custom shape layer to the canvas
 	 *
+	 * Supports three formats:
+	 * 1. Complete SVG string (new format) - rendered via Image for native quality
+	 * 2. Multi-path shapes (legacy compound) - uses paths array
+	 * 3. Single-path shapes (legacy) - uses Path2D
+	 *
 	 * @param {CanvasRenderingContext2D} ctx - Canvas context
-	 * @param {Object} shapeData - Shape definition from library (path, viewBox, fillRule)
+	 * @param {Object} shapeData - Shape definition from library
+	 * @param {string} [shapeData.svg] - Complete SVG markup string (new format)
+	 * @param {string} [shapeData.path] - Single path (legacy format)
+	 * @param {Array} [shapeData.paths] - Multi-path array [{path, fill, stroke, strokeWidth, fillRule}]
+	 * @param {number[]} shapeData.viewBox - ViewBox [x, y, width, height]
 	 * @param {Object} layer - Layer data (position, size, styling)
 	 * @param {Object} [_options] - Render options (reserved for future use)
 	 * @param {boolean} [_options.isSelected] - Whether layer is selected
 	 * @param {number} [_options.scale] - Canvas scale factor
 	 */
 	render( ctx, shapeData, layer, _options = {} ) {
-		if ( !shapeData || !shapeData.path || !shapeData.viewBox ) {
+		if ( !shapeData ) {
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( 'CustomShapeRenderer: Missing shape data' );
+			}
+			return;
+		}
+
+		// New format: complete SVG string - render as Image
+		if ( shapeData.svg ) {
+			return this.renderSVG( ctx, shapeData, layer, _options );
+		}
+
+		// Legacy: multi-path shapes
+		if ( shapeData.paths && Array.isArray( shapeData.paths ) ) {
+			return this.renderMultiPath( ctx, shapeData, layer, _options );
+		}
+
+		// Legacy: single-path shapes
+		if ( !shapeData.path || !shapeData.viewBox ) {
 			if ( typeof mw !== 'undefined' && mw.log ) {
 				mw.log.warn( 'CustomShapeRenderer: Invalid shape data' );
 			}
@@ -108,8 +153,14 @@ class CustomShapeRenderer {
 		// Offset by viewBox origin
 		ctx.translate( -viewBox[ 0 ], -viewBox[ 1 ] );
 
-		// Apply fill
-		if ( layer.fill && layer.fill !== 'none' && layer.fill !== 'transparent' ) {
+		// For stroke-only shapes, set line properties
+		if ( shapeData.strokeOnly ) {
+			ctx.lineCap = 'round';
+			ctx.lineJoin = 'round';
+		}
+
+		// Apply fill (skip for stroke-only shapes)
+		if ( !shapeData.strokeOnly && layer.fill && layer.fill !== 'none' && layer.fill !== 'transparent' ) {
 			ctx.fillStyle = layer.fill;
 			ctx.globalAlpha = this.getOpacity( layer.fillOpacity, layer.opacity );
 			ctx.fill( path, shapeData.fillRule || 'nonzero' );
@@ -119,9 +170,229 @@ class CustomShapeRenderer {
 		if ( layer.stroke && layer.stroke !== 'none' && layer.stroke !== 'transparent' ) {
 			ctx.strokeStyle = layer.stroke;
 			// Adjust stroke width for scale
-			ctx.lineWidth = ( layer.strokeWidth || 1 ) / Math.min( scaleX, scaleY );
+			ctx.lineWidth = ( layer.strokeWidth || ( shapeData.strokeOnly ? 2 : 1 ) ) / Math.min( scaleX, scaleY );
 			ctx.globalAlpha = this.getOpacity( layer.strokeOpacity, layer.opacity );
 			ctx.stroke( path );
+		}
+
+		ctx.restore();
+	}
+
+	/**
+	 * Render a complete SVG markup string to canvas via Image
+	 *
+	 * This method uses the browser's native SVG renderer for pixel-perfect quality.
+	 * The SVG is converted to a data URL, loaded as an Image, and drawn to canvas.
+	 *
+	 * @private
+	 * @param {CanvasRenderingContext2D} ctx - Canvas context
+	 * @param {Object} shapeData - Shape definition with svg string
+	 * @param {Object} layer - Layer data
+	 * @param {Object} [_options] - Render options
+	 */
+	renderSVG( ctx, shapeData, layer, _options = {} ) {
+		const layerWidth = layer.width || 100;
+		const layerHeight = layer.height || 100;
+		const layerX = layer.x || 0;
+		const layerY = layer.y || 0;
+
+		// Build a compact cache key from shape ID and style properties.
+		// Do NOT use the full SVG string - it can be thousands of characters
+		// and Map key comparison would be O(n) on every lookup.
+		// Do NOT include size - SVGs scale perfectly.
+		const shapeId = shapeData.id || layer.shapeId || layer.id || '';
+		const stroke = layer.stroke || '';
+		const fill = layer.fill || '';
+		const strokeWidth = layer.strokeWidth || '';
+		const cacheKey = `${ shapeId }|${ stroke }|${ fill }|${ strokeWidth }`;
+
+		// Check if we have a cached image FIRST, before doing any string manipulation
+		if ( this.svgImageCache.has( cacheKey ) ) {
+			// Draw the cached image - this is the fast path
+			// No LRU reordering - not worth the overhead for ~100 items
+			this.drawSVGImage( ctx, this.svgImageCache.get( cacheKey ), layer );
+			return;
+		}
+
+		// If already loading this shape, just draw placeholder and wait
+		// This prevents a cascade of duplicate loads during drag/resize
+		if ( this.pendingLoads.has( cacheKey ) ) {
+			ctx.save();
+			ctx.strokeStyle = '#ccc';
+			ctx.lineWidth = 1;
+			ctx.setLineDash( [ 4, 4 ] );
+			ctx.strokeRect( layerX, layerY, layerWidth, layerHeight );
+			ctx.restore();
+			return;
+		}
+
+		// Mark as loading to prevent duplicate requests
+		this.pendingLoads.add( cacheKey );
+
+		// Cache miss - need to create the image (slow path, only happens once per shape)
+		// Apply stroke color by replacing currentColor in SVG
+		let svgString = shapeData.svg;
+		if ( layer.stroke && layer.stroke !== 'none' ) {
+			svgString = svgString.replace( /stroke="currentColor"/g, `stroke="${ layer.stroke }"` );
+		}
+		if ( layer.fill && layer.fill !== 'none' && layer.fill !== 'transparent' ) {
+			svgString = svgString.replace( /fill="currentColor"/g, `fill="${ layer.fill }"` );
+		}
+
+		// Apply stroke width if specified
+		if ( layer.strokeWidth ) {
+			svgString = svgString.replace( /stroke-width="[^"]*"/g, `stroke-width="${ layer.strokeWidth }"` );
+		}
+
+		// Convert SVG to data URL
+		const svgBlob = new Blob( [ svgString ], { type: 'image/svg+xml;charset=utf-8' } );
+		const url = URL.createObjectURL( svgBlob );
+
+		// Create image and draw when loaded
+		const img = new Image();
+		img.onload = () => {
+			// Remove from pending
+			this.pendingLoads.delete( cacheKey );
+
+			// Cache the loaded image
+			if ( this.svgImageCache.size >= this.maxCacheSize ) {
+				const oldestKey = this.svgImageCache.keys().next().value;
+				this.svgImageCache.delete( oldestKey );
+			}
+			this.svgImageCache.set( cacheKey, img );
+
+			// Draw the image
+			this.drawSVGImage( ctx, img, layer );
+
+			// Clean up blob URL
+			URL.revokeObjectURL( url );
+
+			// Request re-render if we have a callback
+			if ( _options.onLoad ) {
+				_options.onLoad();
+			}
+		};
+		img.onerror = () => {
+			// Remove from pending on error too
+			this.pendingLoads.delete( cacheKey );
+			URL.revokeObjectURL( url );
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( 'CustomShapeRenderer: Failed to load SVG as image' );
+			}
+		};
+		img.src = url;
+
+		// Draw placeholder rectangle while loading
+		ctx.save();
+		ctx.strokeStyle = '#ccc';
+		ctx.lineWidth = 1;
+		ctx.setLineDash( [ 4, 4 ] );
+		ctx.strokeRect( layerX, layerY, layerWidth, layerHeight );
+		ctx.restore();
+	}
+
+	/**
+	 * Draw an SVG image to canvas with layer transforms
+	 *
+	 * @private
+	 * @param {CanvasRenderingContext2D} ctx - Canvas context
+	 * @param {HTMLImageElement} img - Loaded image
+	 * @param {Object} layer - Layer data
+	 */
+	drawSVGImage( ctx, img, layer ) {
+		const layerWidth = layer.width || 100;
+		const layerHeight = layer.height || 100;
+		const layerX = layer.x || 0;
+		const layerY = layer.y || 0;
+
+		ctx.save();
+
+		// Apply opacity
+		if ( layer.opacity !== undefined ) {
+			ctx.globalAlpha = layer.opacity;
+		}
+
+		// Apply rotation if present
+		if ( layer.rotation ) {
+			const centerX = layerX + layerWidth / 2;
+			const centerY = layerY + layerHeight / 2;
+			ctx.translate( centerX, centerY );
+			ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			ctx.translate( -centerX, -centerY );
+		}
+
+		// Draw the image scaled to layer dimensions
+		ctx.drawImage( img, layerX, layerY, layerWidth, layerHeight );
+
+		ctx.restore();
+	}
+
+	/**
+	 * Render a multi-path shape (compound shapes like safety signs)
+	 *
+	 * Each path in the paths array is rendered in order with its own styling.
+	 * This enables shapes like warning signs (yellow triangle + black symbol).
+	 *
+	 * @private
+	 * @param {CanvasRenderingContext2D} ctx - Canvas context
+	 * @param {Object} shapeData - Shape definition with paths array
+	 * @param {Object} layer - Layer data
+	 * @param {Object} [_options] - Render options
+	 */
+	renderMultiPath( ctx, shapeData, layer, _options = {} ) {
+		if ( !shapeData.viewBox ) {
+			return;
+		}
+
+		const viewBox = shapeData.viewBox;
+		const scaleX = ( layer.width || 100 ) / viewBox[ 2 ];
+		const scaleY = ( layer.height || 100 ) / viewBox[ 3 ];
+
+		ctx.save();
+
+		// Apply layer position
+		ctx.translate( layer.x || 0, layer.y || 0 );
+
+		// Apply rotation if present
+		if ( layer.rotation ) {
+			const centerX = ( layer.width || 100 ) / 2;
+			const centerY = ( layer.height || 100 ) / 2;
+			ctx.translate( centerX, centerY );
+			ctx.rotate( ( layer.rotation * Math.PI ) / 180 );
+			ctx.translate( -centerX, -centerY );
+		}
+
+		// Apply scale to fit viewBox into layer dimensions
+		ctx.scale( scaleX, scaleY );
+
+		// Offset by viewBox origin
+		ctx.translate( -viewBox[ 0 ], -viewBox[ 1 ] );
+
+		// Render each path in order
+		const layerOpacity = layer.opacity !== undefined ? layer.opacity : 1;
+
+		for ( const pathDef of shapeData.paths ) {
+			if ( !pathDef.path ) {
+				continue;
+			}
+
+			const path2d = this.getPath2D( pathDef.path );
+			const fillRule = pathDef.fillRule || 'nonzero';
+
+			// Apply fill if specified
+			if ( pathDef.fill && pathDef.fill !== 'none' && pathDef.fill !== 'transparent' ) {
+				ctx.fillStyle = pathDef.fill;
+				ctx.globalAlpha = layerOpacity;
+				ctx.fill( path2d, fillRule );
+			}
+
+			// Apply stroke if specified
+			if ( pathDef.stroke && pathDef.stroke !== 'none' && pathDef.stroke !== 'transparent' ) {
+				ctx.strokeStyle = pathDef.stroke;
+				ctx.lineWidth = ( pathDef.strokeWidth || 2 ) / Math.min( scaleX, scaleY );
+				ctx.globalAlpha = layerOpacity;
+				ctx.stroke( path2d );
+			}
 		}
 
 		ctx.restore();

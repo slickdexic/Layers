@@ -972,7 +972,7 @@ describe('LayerPanel', () => {
             expect(mockDragDrop.reorderLayers).toHaveBeenCalledWith('layer1', 'layer2');
         });
 
-        test('should reorder via stateManager.reorderLayer when available', () => {
+        test('should do nothing when dragDropController is not available', () => {
             const container = document.getElementById('layers-panel-container');
             const panel = new LayerPanel({
                 container: container,
@@ -983,100 +983,49 @@ describe('LayerPanel', () => {
             mockStateManager.reorderLayer = jest.fn().mockReturnValue(true);
             mockEditor.canvasManager = { redraw: jest.fn() };
 
+            // With no controller, reorderLayers does nothing
             panel.reorderLayers('layer1', 'layer2');
 
-            expect(mockStateManager.reorderLayer).toHaveBeenCalledWith('layer1', 'layer2');
-            expect(mockEditor.canvasManager.redraw).toHaveBeenCalled();
+            // The method delegates to controller only, so no direct calls expected
+            expect(mockStateManager.reorderLayer).not.toHaveBeenCalled();
         });
+    });
 
-        test('should use legacy fallback when stateManager.reorderLayer unavailable', () => {
+    describe('setupDragAndDrop', () => {
+        test('should initialize dragDropController when LayerDragDrop is available', () => {
+            // Ensure LayerDragDrop controller is available
+            window.Layers = window.Layers || {};
+            window.Layers.UI = window.Layers.UI || {};
+            
+            const mockDragDropClass = jest.fn().mockImplementation(() => ({
+                reorderLayers: jest.fn()
+            }));
+            window.Layers.UI.LayerDragDrop = mockDragDropClass;
+
             const container = document.getElementById('layers-panel-container');
             const panel = new LayerPanel({
                 container: container,
                 editor: mockEditor
             });
 
-            panel.dragDropController = null;
-            // Mock reorderLayer to be unavailable (undefined) to trigger legacy fallback
-            mockStateManager.reorderLayer = undefined;
-            
-            const layers = [
-                { id: 'layer1', type: 'rectangle' },
-                { id: 'layer2', type: 'circle' },
-                { id: 'layer3', type: 'text' }
-            ];
-            mockStateManager.set('layers', layers);
-            mockEditor.canvasManager = { redraw: jest.fn() };
-            mockEditor.saveState = jest.fn();
-
-            // Moving layer1 to layer3's position inserts layer1 at layer3's original index
-            panel.reorderLayers('layer1', 'layer3');
-
-            const newLayers = mockStateManager.get('layers');
-            // After removing layer1 from position 0 and inserting at layer3's position (index 2),
-            // we get: layer2, layer3, layer1 -> but since we spliced from 0 first, target shifts
-            // Actually: remove layer1 (idx 0) -> [layer2, layer3], insert at idx 2 (which becomes end) -> [layer2, layer3, layer1]
-            // But the code inserts at targetIndex which was 2, but after removing draggedIndex=0, 
-            // the arrays shift. Let me check the code again... it splices then inserts at targetIndex.
-            // layers = [l1, l2, l3], splice(0,1) -> [l2, l3], splice(2, 0, l1) -> [l2, l3, l1]
-            expect(newLayers[0].id).toBe('layer2');
-            expect(newLayers[1].id).toBe('layer3');
-            expect(newLayers[2].id).toBe('layer1');
-            expect(mockEditor.saveState).toHaveBeenCalledWith('Reorder Layers');
+            // dragDropController should be set up during construction via setupDragAndDrop
+            expect(panel.dragDropController).toBeDefined();
         });
-    });
 
-    describe('setupDragAndDrop fallback', () => {
-        test('should setup dragstart handler in fallback mode', () => {
-            // Ensure no LayerDragDrop controller is available
+        test('should not crash when LayerDragDrop is not available', () => {
             window.Layers = window.Layers || {};
             window.Layers.UI = window.Layers.UI || {};
             window.Layers.UI.LayerDragDrop = null;
 
             const container = document.getElementById('layers-panel-container');
-            const panel = new LayerPanel({
-                container: container,
-                editor: mockEditor
-            });
-
-            mockStateManager.set('layers', [{ id: 'test-layer', type: 'rectangle' }]);
-            panel.renderLayerList();
-
-            const layerItem = panel.layerList.querySelector('.layer-item');
-            if (layerItem) {
-                // Create dragstart event
-                const dragEvent = new Event('dragstart', { bubbles: true });
-                dragEvent.dataTransfer = {
-                    setData: jest.fn()
-                };
-
-                layerItem.dispatchEvent(dragEvent);
-
-                expect(layerItem.classList.contains('dragging')).toBe(true);
-            }
-        });
-
-        test('should setup dragend handler in fallback mode', () => {
-            window.Layers.UI.LayerDragDrop = null;
-
-            const container = document.getElementById('layers-panel-container');
-            const panel = new LayerPanel({
-                container: container,
-                editor: mockEditor
-            });
-
-            mockStateManager.set('layers', [{ id: 'test-layer', type: 'rectangle' }]);
-            panel.renderLayerList();
-
-            const layerItem = panel.layerList.querySelector('.layer-item');
-            if (layerItem) {
-                layerItem.classList.add('dragging');
-                
-                const dragEvent = new Event('dragend', { bubbles: true });
-                layerItem.dispatchEvent(dragEvent);
-
-                expect(layerItem.classList.contains('dragging')).toBe(false);
-            }
+            
+            // Should not throw
+            expect(() => {
+                new LayerPanel({
+                    container: container,
+                    editor: mockEditor
+                });
+            }).not.toThrow();
         });
     });
 

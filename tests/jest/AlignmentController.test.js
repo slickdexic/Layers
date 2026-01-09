@@ -158,6 +158,40 @@ describe( 'AlignmentController', () => {
 			expect( layer.y2 ).toBe( 90 );
 		} );
 
+		it( 'should move arrow with control point by delta', () => {
+			// Arrow with a curve control point (curved arrow)
+			const layer = {
+				type: 'arrow',
+				x1: 10,
+				y1: 20,
+				x2: 100,
+				y2: 80,
+				controlX: 55,
+				controlY: 30
+			};
+			controller.moveLayer( layer, 5, 10 );
+			expect( layer.x1 ).toBe( 15 );
+			expect( layer.y1 ).toBe( 30 );
+			expect( layer.x2 ).toBe( 105 );
+			expect( layer.y2 ).toBe( 90 );
+			// Control point should also move
+			expect( layer.controlX ).toBe( 60 );
+			expect( layer.controlY ).toBe( 40 );
+		} );
+
+		it( 'should move arrow without control point by delta', () => {
+			// Straight arrow (no control point)
+			const layer = { type: 'arrow', x1: 10, y1: 20, x2: 100, y2: 80 };
+			controller.moveLayer( layer, 5, 10 );
+			expect( layer.x1 ).toBe( 15 );
+			expect( layer.y1 ).toBe( 30 );
+			expect( layer.x2 ).toBe( 105 );
+			expect( layer.y2 ).toBe( 90 );
+			// Control point should remain undefined
+			expect( layer.controlX ).toBeUndefined();
+			expect( layer.controlY ).toBeUndefined();
+		} );
+
 		it( 'should move path by delta', () => {
 			const layer = {
 				type: 'path',

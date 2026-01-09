@@ -65,7 +65,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
   - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
-  - UI: `Toolbar.js` (~1,652 lines), `LayerPanel.js` (~2,141 lines - delegates to 9 controllers), plus editor CSS (`editor-fixed.css` with full Vector 2022 dark mode support)
+  - UI: `Toolbar.js` (~1,652 lines), `LayerPanel.js` (~1,806 lines - delegates to 9 controllers), plus editor CSS (`editor-fixed.css` with full Vector 2022 dark mode support)
   - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js and UIManager.js for separation of concerns:
     - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
     - `FolderOperationsController.js` (~383 lines) - folder create/delete, layer visibility toggle, ungroup operations
@@ -352,8 +352,9 @@ Key documents that frequently need updates:
 
 Common metrics to keep synchronized:
 - Test count (currently 8,677 tests, 146 suites)
-- Coverage (94.55% statement, 83.19% branch)
+- Coverage (94.6% statement, 83.3% branch)
 - JavaScript file count (113 files, ~61,452 lines)
 - PHP file count (32 files, ~11,519 lines)
 - Drawing tool count (13 tools)
-- Version number (1.5.2-REL1_43)
+- Shape library count (374 shapes in 10 categories)
+- Version number (1.5.3)

@@ -1048,6 +1048,13 @@
 			if ( typeof layer.y2 === 'number' ) {
 				layer.y2 = originalLayer.y2 + deltaY;
 			}
+			// Move control point with the arrow (for curved arrows)
+			if ( typeof originalLayer.controlX === 'number' ) {
+				layer.controlX = originalLayer.controlX + deltaX;
+			}
+			if ( typeof originalLayer.controlY === 'number' ) {
+				layer.controlY = originalLayer.controlY + deltaY;
+			}
 			if ( layer.points && originalLayer.points ) {
 				layer.points = originalLayer.points.map( ( point ) => ( {
 					x: point.x + deltaX,

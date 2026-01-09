@@ -896,83 +896,7 @@
 				this.layerListRenderer.render();
 				// Always render background layer item at the bottom
 				this.renderBackgroundLayerItem();
-				return;
 			}
-
-			// Fallback: inline implementation
-			const layers = this.getVisibleLayers();
-			const listContainer = this.layerList;
-
-			// Map existing DOM items by ID (exclude background layer item)
-			const existingItems = {};
-			const domItems = listContainer.querySelectorAll( '.layer-item:not(.background-layer-item)' );
-			for ( let i = 0; i < domItems.length; i++ ) {
-				existingItems[ domItems[ i ].dataset.layerId ] = domItems[ i ];
-			}
-
-			if ( layers.length === 0 ) {
-				// Handle empty state - preserve background layer item
-				const bgItem = listContainer.querySelector( '.background-layer-item' );
-				while ( listContainer.firstChild ) {
-					listContainer.removeChild( listContainer.firstChild );
-				}
-				const empty = document.createElement( 'div' );
-				empty.className = 'layers-empty';
-				empty.textContent = this.msg( 'layers-empty', 'No layers yet. Choose a tool to begin.' );
-				listContainer.appendChild( empty );
-				// Re-add background layer item if it existed, or create it
-				if ( bgItem ) {
-					listContainer.appendChild( bgItem );
-				} else {
-					this.renderBackgroundLayerItem();
-				}
-				return;
-			}
-
-			// Remove empty message if present
-			const emptyMsg = listContainer.querySelector( '.layers-empty' );
-			if ( emptyMsg ) {
-				listContainer.removeChild( emptyMsg );
-			}
-
-			// First pass: Remove items that are no longer in the layer list
-			const newLayerIds = layers.map( ( l ) => String( l.id ) );
-			for ( const id in existingItems ) {
-				if ( newLayerIds.indexOf( id ) === -1 ) {
-					listContainer.removeChild( existingItems[ id ] );
-				}
-			}
-
-			// Second pass: Create or update items and ensure order
-			let previousSibling = null;
-			layers.forEach( ( layer, index ) => {
-				const layerId = String( layer.id );
-				let item = existingItems[ layerId ];
-
-				if ( !item ) {
-					// Create new
-					item = this.createLayerItem( layer, index );
-					existingItems[ layerId ] = item; // Add to map
-				} else {
-					// Update existing
-					this.updateLayerItem( item, layer, index );
-				}
-
-				// Ensure position
-				if ( index === 0 ) {
-					if ( listContainer.firstChild !== item ) {
-						listContainer.insertBefore( item, listContainer.firstChild );
-					}
-				} else {
-					if ( previousSibling.nextSibling !== item ) {
-						listContainer.insertBefore( item, previousSibling.nextSibling );
-					}
-				}
-				previousSibling = item;
-			} );
-
-			// Ensure background layer item is rendered at the bottom
-			this.renderBackgroundLayerItem();
 		}
 
 		/**
@@ -981,178 +905,9 @@
 		 * provides controls for background visibility and opacity.
 		 */
 		renderBackgroundLayerItem() {
-			// Delegate to BackgroundLayerController if available
+			// Delegate to BackgroundLayerController
 			if ( this.backgroundLayerController ) {
 				this.backgroundLayerController.render();
-				return;
-			}
-
-			// Fallback: inline implementation (kept for backwards compatibility)
-			const listContainer = this.layerList;
-			let bgItem = listContainer.querySelector( '.background-layer-item' );
-
-			if ( !bgItem ) {
-				bgItem = this.createBackgroundLayerItem();
-				listContainer.appendChild( bgItem );
-			} else {
-				this.updateBackgroundLayerItem( bgItem );
-			}
-		}
-
-		/**
-		 * Create the background layer item DOM element
-		 *
-		 * @return {HTMLElement} Background layer item element
-		 */
-		createBackgroundLayerItem() {
-			const t = this.msg.bind( this );
-			const item = document.createElement( 'div' );
-			item.className = 'layer-item background-layer-item';
-			item.dataset.layerId = '__background__';
-
-			// ARIA attributes
-			item.setAttribute( 'role', 'option' );
-			item.setAttribute( 'aria-selected', 'false' );
-			item.setAttribute( 'aria-label', t( 'layers-background-layer', 'Background Image' ) );
-
-			// Background icon (image icon)
-			const iconArea = document.createElement( 'div' );
-			iconArea.className = 'layer-background-icon';
-			iconArea.style.cssText = 'width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;';
-			const iconSvg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
-			iconSvg.setAttribute( 'width', '20' );
-			iconSvg.setAttribute( 'height', '20' );
-			iconSvg.setAttribute( 'viewBox', '0 0 24 24' );
-			iconSvg.setAttribute( 'fill', 'none' );
-			iconSvg.setAttribute( 'stroke', '#666' );
-			iconSvg.setAttribute( 'stroke-width', '2' );
-			iconSvg.setAttribute( 'aria-hidden', 'true' );
-			// Image icon path (landscape with mountains)
-			const path = document.createElementNS( 'http://www.w3.org/2000/svg', 'path' );
-			path.setAttribute( 'd', 'M3 5h18v14H3V5zm0 14l5-6 3 4 4-5 6 7' );
-			path.setAttribute( 'stroke-linecap', 'round' );
-			path.setAttribute( 'stroke-linejoin', 'round' );
-			iconSvg.appendChild( path );
-			// Sun circle
-			const circle = document.createElementNS( 'http://www.w3.org/2000/svg', 'circle' );
-			circle.setAttribute( 'cx', '16' );
-			circle.setAttribute( 'cy', '9' );
-			circle.setAttribute( 'r', '2' );
-			iconSvg.appendChild( circle );
-			iconArea.appendChild( iconSvg );
-
-			// Visibility toggle
-			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
-			const visibilityBtn = document.createElement( 'button' );
-			visibilityBtn.className = 'layer-visibility background-visibility';
-			visibilityBtn.type = 'button';
-			const bgVisible = this.getBackgroundVisible();
-			if ( IconFactory ) {
-				visibilityBtn.appendChild( IconFactory.createEyeIcon( bgVisible ) );
-			}
-			visibilityBtn.title = t( 'layers-toggle-visibility', 'Toggle visibility' );
-			visibilityBtn.setAttribute( 'aria-label', t( 'layers-background-visibility', 'Toggle background visibility' ) );
-			visibilityBtn.setAttribute( 'aria-pressed', bgVisible ? 'true' : 'false' );
-
-			this.addTargetListener( visibilityBtn, 'click', ( e ) => {
-				e.stopPropagation();
-				this.toggleBackgroundVisibility();
-			} );
-
-			// Name label
-			const name = document.createElement( 'span' );
-			name.className = 'layer-name background-name';
-			name.textContent = t( 'layers-background-layer', 'Background Image' );
-			// Not editable for background
-			name.contentEditable = false;
-			name.style.cursor = 'default';
-
-			// Opacity slider container
-			const opacityContainer = document.createElement( 'div' );
-			opacityContainer.className = 'background-opacity-container';
-			opacityContainer.style.cssText = 'display: flex; align-items: center; gap: 4px; margin-left: auto;';
-
-			const opacityLabel = document.createElement( 'span' );
-			opacityLabel.className = 'background-opacity-label';
-			opacityLabel.style.cssText = 'font-size: 11px; color: #666; min-width: 32px; text-align: right;';
-			const currentOpacity = this.getBackgroundOpacity();
-			opacityLabel.textContent = Math.round( currentOpacity * 100 ) + '%';
-
-			const opacitySlider = document.createElement( 'input' );
-			opacitySlider.type = 'range';
-			opacitySlider.className = 'background-opacity-slider';
-			opacitySlider.min = '0';
-			opacitySlider.max = '100';
-			opacitySlider.value = String( Math.round( currentOpacity * 100 ) );
-			opacitySlider.title = t( 'layers-background-opacity', 'Background Opacity' );
-			opacitySlider.setAttribute( 'aria-label', t( 'layers-background-opacity', 'Background Opacity' ) );
-			opacitySlider.style.cssText = 'width: 60px; cursor: pointer;';
-
-			this.addTargetListener( opacitySlider, 'input', ( e ) => {
-				const value = parseInt( e.target.value, 10 ) / 100;
-				opacityLabel.textContent = Math.round( value * 100 ) + '%';
-				this.setBackgroundOpacity( value );
-			} );
-
-			opacityContainer.appendChild( opacitySlider );
-			opacityContainer.appendChild( opacityLabel );
-
-			// Lock icon (always locked, not interactive)
-			const lockIcon = document.createElement( 'div' );
-			lockIcon.className = 'layer-lock background-lock';
-			lockIcon.style.cssText = 'width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; opacity: 0.5;';
-			lockIcon.title = t( 'layers-background-locked', 'Background is always locked' );
-			if ( IconFactory ) {
-				lockIcon.appendChild( IconFactory.createLockIcon( true ) );
-			}
-
-			item.appendChild( iconArea );
-			item.appendChild( visibilityBtn );
-			item.appendChild( name );
-			item.appendChild( opacityContainer );
-			item.appendChild( lockIcon );
-
-			return item;
-		}
-
-		/**
-		 * Update the background layer item to reflect current state
-		 *
-		 * @param {HTMLElement} [item] The background layer item element (optional - will be found if not provided)
-		 */
-		updateBackgroundLayerItem( item ) {
-			// If no item provided, find it
-			if ( !item && this.layerList ) {
-				item = this.layerList.querySelector( '.background-layer-item' );
-			}
-
-			// If still no item, nothing to update
-			if ( !item ) {
-				return;
-			}
-
-			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
-			const bgVisible = this.getBackgroundVisible();
-			const bgOpacity = this.getBackgroundOpacity();
-
-			// Update visibility icon
-			const visibilityBtn = item.querySelector( '.background-visibility' );
-			if ( visibilityBtn && IconFactory ) {
-				while ( visibilityBtn.firstChild ) {
-					visibilityBtn.removeChild( visibilityBtn.firstChild );
-				}
-				visibilityBtn.appendChild( IconFactory.createEyeIcon( bgVisible ) );
-				visibilityBtn.setAttribute( 'aria-pressed', bgVisible ? 'true' : 'false' );
-			}
-
-			// Update opacity slider and label
-			const opacitySlider = item.querySelector( '.background-opacity-slider' );
-			const opacityLabel = item.querySelector( '.background-opacity-label' );
-			if ( opacitySlider && document.activeElement !== opacitySlider ) {
-				opacitySlider.value = String( Math.round( bgOpacity * 100 ) );
-			}
-			if ( opacityLabel ) {
-				opacityLabel.textContent = Math.round( bgOpacity * 100 ) + '%';
 			}
 		}
 
@@ -1934,7 +1689,7 @@
 				return;
 			}
 
-			// Use extracted LayerDragDrop component if available
+			// Use extracted LayerDragDrop component
 			const LayerDragDrop = getClass( 'UI.LayerDragDrop', 'LayerDragDrop' );
 			if ( LayerDragDrop ) {
 				this.dragDropController = new LayerDragDrop( {
@@ -1943,34 +1698,7 @@
 					renderLayerList: this.renderLayerList.bind( this ),
 					addTargetListener: this.addTargetListener.bind( this )
 				} );
-				return;
 			}
-
-			// Fallback: inline implementation
-			this.addTargetListener( this.layerList, 'dragstart', ( e ) => {
-				const li = e.target.closest( '.layer-item' );
-				if ( li ) {
-					e.dataTransfer.setData( 'text/plain', li.dataset.layerId );
-					li.classList.add( 'dragging' );
-				}
-			} );
-			this.addTargetListener( this.layerList, 'dragend', ( e ) => {
-				const li = e.target.closest( '.layer-item' );
-				if ( li ) {
-					li.classList.remove( 'dragging' );
-				}
-			} );
-			this.addTargetListener( this.layerList, 'dragover', ( e ) => {
-				e.preventDefault();
-			} );
-			this.addTargetListener( this.layerList, 'drop', ( e ) => {
-				e.preventDefault();
-				const draggedId = e.dataTransfer.getData( 'text/plain' );
-				const targetItem = e.target.closest( '.layer-item' );
-				if ( targetItem && draggedId && draggedId !== targetItem.dataset.layerId ) {
-					this.reorderLayers( draggedId, targetItem.dataset.layerId );
-				}
-			} );
 		}
 
 		/**
@@ -1983,49 +1711,6 @@
 			// Delegate to LayerDragDrop controller if available
 			if ( this.dragDropController && typeof this.dragDropController.reorderLayers === 'function' ) {
 				this.dragDropController.reorderLayers( draggedId, targetId );
-				return;
-			}
-
-			// Fallback: Use StateManager's reorderLayer method if available
-			if ( this.editor.stateManager && this.editor.stateManager.reorderLayer ) {
-				const result = this.editor.stateManager.reorderLayer( draggedId, targetId );
-				if ( result ) {
-					if ( this.editor.canvasManager ) {
-						this.editor.canvasManager.redraw();
-					}
-					this.renderLayerList();
-				}
-				return;
-			}
-
-			// Legacy fallback (when StateManager doesn't have reorderLayer)
-			const layers = this.getLayers().slice(); // Make a copy to modify
-			let draggedIndex = -1;
-			let targetIndex = -1;
-			let i;
-			for ( i = 0; i < layers.length; i++ ) {
-				if ( layers[ i ].id === draggedId ) {
-					draggedIndex = i;
-					break;
-				}
-			}
-			for ( i = 0; i < layers.length; i++ ) {
-				if ( layers[ i ].id === targetId ) {
-					targetIndex = i;
-					break;
-				}
-			}
-			if ( draggedIndex !== -1 && targetIndex !== -1 ) {
-				const draggedLayer = layers.splice( draggedIndex, 1 )[ 0 ];
-				layers.splice( targetIndex, 0, draggedLayer );
-				if ( this.editor.stateManager ) {
-					this.editor.stateManager.set( 'layers', layers );
-				}
-				if ( this.editor.canvasManager ) {
-					this.editor.canvasManager.redraw();
-				}
-				this.renderLayerList();
-				this.editor.saveState( 'Reorder Layers' );
 			}
 		}
 
@@ -2038,7 +1723,7 @@
 		createConfirmDialog( message, onConfirm ) {
 			const t = this.msg.bind( this );
 
-			// Use extracted ConfirmDialog component if available
+			// Use extracted ConfirmDialog component
 			const ConfirmDialog = getClass( 'UI.ConfirmDialog', 'ConfirmDialog' );
 			if ( ConfirmDialog ) {
 				ConfirmDialog.show( {
@@ -2053,79 +1738,7 @@
 						this.registerDialogCleanup( cleanup );
 					}
 				} );
-				return;
 			}
-
-			// Fallback: inline dialog implementation
-			const overlay = document.createElement( 'div' );
-			overlay.className = 'layers-modal-overlay';
-			overlay.setAttribute( 'role', 'presentation' );
-
-			const dialog = document.createElement( 'div' );
-			dialog.className = 'layers-modal-dialog';
-			dialog.setAttribute( 'role', 'alertdialog' );
-			dialog.setAttribute( 'aria-modal', 'true' );
-			dialog.setAttribute( 'aria-label', t( 'layers-confirm-title', 'Confirmation' ) );
-
-			const text = document.createElement( 'p' );
-			text.textContent = message;
-			dialog.appendChild( text );
-
-			const buttons = document.createElement( 'div' );
-			buttons.className = 'layers-modal-buttons';
-
-			const cancelBtn = document.createElement( 'button' );
-			cancelBtn.textContent = t( 'layers-cancel', 'Cancel' );
-			cancelBtn.className = 'layers-btn layers-btn-secondary';
-
-			const confirmBtn = document.createElement( 'button' );
-			confirmBtn.textContent = t( 'layers-confirm', 'Confirm' );
-			confirmBtn.className = 'layers-btn layers-btn-danger';
-
-			buttons.appendChild( cancelBtn );
-			buttons.appendChild( confirmBtn );
-			dialog.appendChild( buttons );
-
-			document.body.appendChild( overlay );
-			document.body.appendChild( dialog );
-
-			const cleanup = () => {
-				if ( overlay.parentNode ) {
-					overlay.parentNode.removeChild( overlay );
-				}
-				if ( dialog.parentNode ) {
-					dialog.parentNode.removeChild( dialog );
-				}
-				document.removeEventListener( 'keydown', handleKey );
-			};
-
-			const handleKey = ( e ) => {
-				if ( e.key === 'Escape' ) {
-					cleanup();
-				} else if ( e.key === 'Tab' ) {
-					const focusable = dialog.querySelectorAll( 'button' );
-					if ( focusable.length ) {
-						const first = focusable[ 0 ];
-						const last = focusable[ focusable.length - 1 ];
-						if ( e.shiftKey && document.activeElement === first ) {
-							e.preventDefault();
-							last.focus();
-						} else if ( !e.shiftKey && document.activeElement === last ) {
-							e.preventDefault();
-							first.focus();
-						}
-					}
-				}
-			};
-			document.addEventListener( 'keydown', handleKey );
-
-			cancelBtn.addEventListener( 'click', cleanup );
-			confirmBtn.addEventListener( 'click', () => {
-				cleanup();
-				onConfirm();
-			} );
-
-			confirmBtn.focus();
 		}
 
 		/**

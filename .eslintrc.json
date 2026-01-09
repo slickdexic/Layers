@@ -20,6 +20,7 @@
 		"append_canvas_manager.js",
 		"test_load.js",
 		"resources/dist/",
+		"resources/ext.layers.editor/shapeLibrary/scripts/",
 		"node_modules/",
 		"vendor/",
 		"docs/api/",

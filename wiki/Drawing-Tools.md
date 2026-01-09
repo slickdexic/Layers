@@ -333,7 +333,7 @@ Any filled shape can use **blur fill** instead of a solid color — creating a "
 
 ## Custom Shape Tool (v1.5.0+)
 
-Access a built-in library of pre-made shapes organized by category.
+Access a built-in library of **374 pre-made shapes** organized by category. *More shapes to come soon!*
 
 ### How to Use
 1. Click the **Custom Shape** tool in the toolbar (or use the toolbar dropdown)
@@ -345,10 +345,15 @@ Access a built-in library of pre-made shapes organized by category.
 | Category | Contents |
 |----------|----------|
 | **Arrows** | Curved arrows, block arrows, chevrons, pointers |
-| **Symbols** | Checkmarks, crosses, hearts, warning signs |
-| **Geometric** | Triangles, parallelograms, trapezoids, crosses |
+| **Basic Shapes** | Triangles, parallelograms, trapezoids, crosses |
 | **Callouts** | Speech bubbles, thought clouds, banners |
 | **Flowchart** | Process, decision, terminal, document shapes |
+| **ISO 7010 Mandatory** | Blue circular mandatory action signs |
+| **ISO 7010 Prohibition** | Red circular prohibition signs |
+| **ISO 7010 Warning** | Yellow triangular warning signs |
+| **Math** | Mathematical symbols and operators |
+| **Miscellaneous** | Hearts, stars, decorative elements |
+| **Stars & Banners** | Star shapes, ribbons, award badges |
 
 ### Tips
 - Use the **search box** to quickly find shapes by name

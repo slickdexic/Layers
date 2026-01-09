@@ -24,7 +24,13 @@ class ValidationManager {
 		for ( const key in layerData ) {
 			if ( Object.prototype.hasOwnProperty.call( layerData, key ) ) {
 				if ( typeof layerData[ key ] === 'string' ) {
-					sanitized[ key ] = this.sanitizeString( layerData[ key ] );
+					// SVG strings need special handling - they contain valid < and > characters
+					// Security is handled server-side in ServerSideLayerValidator::validateSvgString()
+					if ( key === 'svg' ) {
+						sanitized[ key ] = this.sanitizeSvgString( layerData[ key ] );
+					} else {
+						sanitized[ key ] = this.sanitizeString( layerData[ key ] );
+					}
 				} else if ( Array.isArray( layerData[ key ] ) ) {
 					// Preserve array type (important for points array in path layers)
 					sanitized[ key ] = layerData[ key ].map( item => this.sanitizeLayerData( item ) );
@@ -36,6 +42,22 @@ class ValidationManager {
 			}
 		}
 		return sanitized;
+	}
+
+	/**
+	 * Sanitize SVG string input
+	 * Preserves < and > for valid SVG markup but removes dangerous content
+	 */
+	sanitizeSvgString( input ) {
+		if ( typeof input !== 'string' ) {
+			return '';
+		}
+		// Remove dangerous content but preserve valid SVG markup
+		return input
+			.replace( /<\s*script/gi, '' ) // Remove script tags
+			.replace( /javascript:/gi, '' ) // Remove javascript: URLs
+			.replace( /on\w+\s*=/gi, '' ) // Remove event handlers
+			.trim();
 	}
 
 	/**
