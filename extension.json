@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.2",
+	"version": "1.5.3",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -242,10 +242,6 @@
 				"GeometryUtils.js",
 				"ErrorHandler.js",
 				"LayersConstants.js",
-				"shapeLibrary/ShapePathValidator.js",
-				"shapeLibrary/ShapeLibraryData.js",
-				"shapeLibrary/ShapeLibraryManager.js",
-				"shapeLibrary/ShapeLibraryPanel.js",
 				"selection/SelectionState.js",
 				"selection/MarqueeSelection.js",
 				"selection/SelectionHandles.js",
@@ -323,8 +319,7 @@
 			],
 			"styles": [
 				"editor-fixed.css",
-				"presets/presets.css",
-				"shapeLibrary/ShapeLibraryPanel.css"
+				"presets/presets.css"
 			],
 			"messages": [
 				"layers-editor-title",
@@ -780,7 +775,35 @@
 				"layers-shape-seal",
 				"layers-shape-bracket-left",
 				"layers-shape-bracket-right",
-				"layers-shape-flag"
+				"layers-shape-flag",
+				"layers-shape-library-title",
+				"layers-shape-library-search",
+				"layers-shape-library-count",
+				"layers-shape-library-empty",
+				"layers-shape-library-not-loaded",
+				"layers-shape-library-button",
+				"layers-shape-library-tooltip",
+				"layers-close"
+			]
+		},
+		"ext.layers.shapeLibrary": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [
+				"mediawiki.util"
+			],
+			"scripts": [
+				"ShapeLibraryData.js",
+				"ShapeLibraryPanel.js"
+			],
+			"messages": [
+				"layers-shape-library-title",
+				"layers-shape-library-search",
+				"layers-shape-library-count",
+				"layers-shape-library-empty",
+				"layers-shape-library-not-loaded",
+				"layers-close"
 			]
 		}
 	},

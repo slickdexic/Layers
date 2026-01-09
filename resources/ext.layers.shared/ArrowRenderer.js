@@ -413,29 +413,42 @@
 			const effectiveHeadScale = 1.0;
 			const arrowSize = barbLength / ( ARROW_GEOMETRY.BARB_LENGTH_RATIO * effectiveHeadScale );
 
-			// Build tail head vertices (pointing backwards, right-to-left order)
-			// This returns vertices from bottom-shaft → tip → top-shaft
+			// For a double-headed arrow, we need to trace a continuous outline:
+			// 1. Start at tail's TOP edge connection
+			// 2. Go around tail tip to tail's BOTTOM edge
+			// 3. Connect to front's BOTTOM edge
+			// 4. Go around front tip to front's TOP edge
+			// 5. Close back to tail's TOP (first vertex)
+
+			// Build tail head vertices (pointing backwards at angle+PI)
+			// For angle+PI, perpSin is negated vs angle:
+			//   - isLeftToRight=true gives: LEFT first (+perpSin) → tip → RIGHT (-perpSin)
+			//   - With perpSin negative (angle+PI): LEFT = negative Y = UP = TOP
+			// So tail outputs: [TOP → tip → BOTTOM]
 			const tailHeadVertices = this._buildHeadVertices(
-				x1, y1, angle + Math.PI, halfShaft, arrowSize, effectiveHeadScale, headType, false
+				x1, y1, angle + Math.PI, halfShaft, arrowSize, effectiveHeadScale, headType, true
 			);
 
-			// Build front head vertices (left-to-right order)
-			// This returns vertices from top-shaft → tip → bottom-shaft
+			// Build front head vertices (pointing forwards at angle)
+			// For angle, perpSin is positive (for rightward arrow):
+			//   - isLeftToRight=true gives: LEFT first (+perpSin) → tip → RIGHT (-perpSin)
+			//   - With perpSin positive: LEFT = positive Y = DOWN = BOTTOM
+			// So front outputs: [BOTTOM → tip → TOP]
 			const frontHeadVertices = this._buildHeadVertices(
 				x2, y2, angle, halfShaft, arrowSize, effectiveHeadScale, headType, true
 			);
 
-			// Add tail head vertices
+			// Path flow: tail [TOP → BOTTOM] + front [BOTTOM → TOP] + close [TOP → TOP]
+			// This creates a proper closed outline without crossover
 			for ( const v of tailHeadVertices ) {
 				vertices.push( v );
 			}
 
-			// Add front head vertices (they connect via the shaft)
 			for ( const v of frontHeadVertices ) {
 				vertices.push( v );
 			}
 
-			// Polygon closes automatically back to first vertex
+			// Polygon auto-closes from front's TOP back to tail's TOP (first vertex)
 		}
 
 		// ========================================================================

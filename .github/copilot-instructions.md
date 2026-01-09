@@ -356,4 +356,5 @@ Common metrics to keep synchronized:
 - JavaScript file count (113 files, ~61,452 lines)
 - PHP file count (32 files, ~11,519 lines)
 - Drawing tool count (13 tools)
-- Version number (1.5.2)
+- Shape library count (374 shapes in 10 categories)
+- Version number (1.5.3)

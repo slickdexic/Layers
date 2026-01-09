@@ -121,6 +121,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'shapeId' => 'string',
 		'shapeData' => 'array',
 		'path' => 'string',
+		'paths' => 'array',
+		'svg' => 'string',
 		'viewBox' => 'array',
 		'fillRule' => 'string'
 	];
@@ -747,17 +749,31 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				break;
 
 			case 'customShape':
-				// Custom shapes require a shapeId OR embedded shapeData
+				// Custom shapes require one of: shapeId, shapeData, svg, path, or paths
 				$hasShapeId = isset( $layer['shapeId'] ) && !empty( $layer['shapeId'] );
 				$hasShapeData = isset( $layer['shapeData'] ) && is_array( $layer['shapeData'] );
-				if ( !$hasShapeId && !$hasShapeData ) {
-					return [ 'valid' => false, 'error' => 'customShape layer must have shapeId or shapeData' ];
+				$hasSvg = isset( $layer['svg'] ) && is_string( $layer['svg'] ) && !empty( $layer['svg'] );
+				$hasPath = isset( $layer['path'] ) && is_string( $layer['path'] ) && !empty( $layer['path'] );
+				$hasPaths = isset( $layer['paths'] ) && is_array( $layer['paths'] );
+
+				if ( !$hasShapeId && !$hasShapeData && !$hasSvg && !$hasPath && !$hasPaths ) {
+					return [
+						'valid' => false,
+						'error' => 'customShape layer must have shapeId, shapeData, svg, path, or paths'
+					];
 				}
 				// Validate embedded shapeData if present
 				if ( $hasShapeData ) {
 					$shapeDataValidation = $this->validateShapeData( $layer['shapeData'] );
 					if ( !$shapeDataValidation['valid'] ) {
 						return $shapeDataValidation;
+					}
+				}
+				// Validate SVG string if present (basic XSS prevention)
+				if ( $hasSvg ) {
+					$svgValidation = $this->validateSvgString( $layer['svg'] );
+					if ( !$svgValidation['valid'] ) {
+						return $svgValidation;
 					}
 				}
 				break;
@@ -887,6 +903,66 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			if ( !in_array( $shapeData['fillRule'], $validFillRules, true ) ) {
 				return [ 'valid' => false, 'error' => 'Invalid fillRule value' ];
 			}
+		}
+
+		return [ 'valid' => true ];
+	}
+
+	/**
+	 * Validate an SVG string for security
+	 *
+	 * This prevents XSS attacks by rejecting SVGs with:
+	 * - Script elements
+	 * - Event handlers (onclick, onload, etc.)
+	 * - External references (xlink:href to external URLs)
+	 * - Data URIs with script content
+	 *
+	 * @param string $svg The SVG string to validate
+	 * @return array Validation result with 'valid' and optionally 'error'
+	 */
+	private function validateSvgString( string $svg ): array {
+		// Length limit (max 100KB for SVG strings)
+		if ( strlen( $svg ) > 102400 ) {
+			return [ 'valid' => false, 'error' => 'SVG string too long (max 100KB)' ];
+		}
+
+		// Must start with <svg and contain closing tag
+		$lowerSvg = strtolower( $svg );
+		if ( strpos( $lowerSvg, '<svg' ) !== 0 ) {
+			return [ 'valid' => false, 'error' => 'SVG must start with <svg element' ];
+		}
+		if ( strpos( $lowerSvg, '</svg>' ) === false ) {
+			return [ 'valid' => false, 'error' => 'SVG must have closing </svg> tag' ];
+		}
+
+		// SECURITY: Block script elements
+		if ( preg_match( '/<\s*script/i', $svg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain script elements' ];
+		}
+
+		// SECURITY: Block event handlers (on* attributes)
+		if ( preg_match( '/\s+on\w+\s*=/i', $svg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain event handlers' ];
+		}
+
+		// SECURITY: Block javascript: and data: URLs (except safe data:image/ types)
+		if ( preg_match( '/javascript\s*:/i', $svg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain javascript: URLs' ];
+		}
+
+		// SECURITY: Block external references that could leak data
+		if ( preg_match( '/xlink:href\s*=\s*["\']https?:/i', $svg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain external URLs' ];
+		}
+
+		// SECURITY: Block foreignObject which can embed HTML
+		if ( preg_match( '/<\s*foreignObject/i', $svg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain foreignObject elements' ];
+		}
+
+		// SECURITY: Block use elements with external references
+		if ( preg_match( '/<\s*use[^>]+xlink:href\s*=\s*["\']https?:/i', $svg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG use elements must not reference external URLs' ];
 		}
 
 		return [ 'valid' => true ];

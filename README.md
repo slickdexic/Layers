@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.2 (January 7, 2026)  
+> **Version:** 1.5.3 (January 9, 2026)  
 > **Status:** ✅ Production-ready (Rating: 8.0/10)  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+  
 > **Technical Debt:** 12 god classes (1,014-2,193 lines) with proper delegation patterns
@@ -52,9 +52,9 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Star          | S        | Draw star shapes                             |
 | Arrow         | A        | Annotation arrows                            |
 | Line          | L        | Straight lines                               |
-| Custom Shape  | —        | Built-in shape library (arrows, symbols, etc.) |
+| Custom Shape  | —        | 374 built-in shapes (arrows, ISO signs, flowchart, and more!) |
 
-> **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers).
+> **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers). *More shapes to come soon!*
 
 ### Blur Fill Mode (v1.2.6+)
 

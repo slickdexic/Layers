@@ -719,14 +719,24 @@ class LayersEditor {
 	/**
 	 * Create a custom shape layer from shape library data
 	 *
+	 * Supports both single-path shapes (legacy) and multi-path compound shapes.
+	 * Multi-path shapes (like safety signs) have colors baked into the path data.
+	 *
 	 * @param {Object} shapeData - Shape data from the shape library
 	 * @param {string} shapeData.id - Shape ID (e.g., 'arrows/right')
-	 * @param {string} shapeData.path - SVG path data
+	 * @param {string} [shapeData.svg] - Complete SVG markup string (new format)
+	 * @param {string} [shapeData.path] - SVG path data (single-path shapes)
+	 * @param {Array} [shapeData.paths] - Multi-path array [{path, fill, stroke}]
 	 * @param {number[]} shapeData.viewBox - ViewBox [x, y, width, height]
 	 * @param {string} [shapeData.nameKey] - i18n key for shape name
 	 */
 	createCustomShapeLayer ( shapeData ) {
-		if ( !shapeData || !shapeData.path || !shapeData.viewBox ) {
+		// Validate: need svg, path, or paths array
+		const hasSvg = shapeData && shapeData.svg;
+		const hasPath = shapeData && shapeData.path;
+		const hasPaths = shapeData && shapeData.paths && Array.isArray( shapeData.paths );
+
+		if ( !shapeData || !shapeData.viewBox || ( !hasSvg && !hasPath && !hasPaths ) ) {
 			if ( this.debug ) {
 				this.errorLog( 'createCustomShapeLayer: Invalid shape data', shapeData );
 			}
@@ -769,36 +779,82 @@ class LayersEditor {
 			width = targetSize * aspectRatio;
 		}
 
-		// Get current style settings from toolbar
-		let stroke = '#000000';
-		let fill = 'transparent';
-		let strokeWidth = 2;
-
-		if ( this.toolbar && this.toolbar.styleControls ) {
-			const styleOpts = this.toolbar.styleControls.getStyleOptions();
-			stroke = styleOpts.stroke || styleOpts.color || stroke;
-			fill = styleOpts.fill || fill;
-			strokeWidth = styleOpts.strokeWidth || strokeWidth;
-		}
-
 		// Create the layer data
 		const layerData = {
 			type: 'customShape',
 			shapeId: shapeData.id,
-			path: shapeData.path,
 			viewBox: shapeData.viewBox,
 			x: centerX - width / 2,
 			y: centerY - height / 2,
 			width: width,
 			height: height,
-			stroke: stroke,
-			fill: fill,
-			strokeWidth: strokeWidth,
-			fillRule: shapeData.fillRule || 'nonzero',
 			name: shapeData.nameKey ?
 				this.msg( shapeData.nameKey, shapeData.id.split( '/' ).pop() ) :
 				shapeData.id.split( '/' ).pop()
 		};
+
+		// Handle multi-path vs single-path vs SVG shapes
+		if ( hasSvg ) {
+			// New SVG format - store the complete SVG markup
+			layerData.svg = shapeData.svg;
+
+			// Get current style settings from toolbar
+			let toolbarStroke = '#000000';
+			let toolbarStrokeWidth = 2;
+
+			if ( this.toolbar && this.toolbar.styleControls ) {
+				const styleOpts = this.toolbar.styleControls.getStyleOptions();
+				toolbarStroke = styleOpts.stroke || styleOpts.color || toolbarStroke;
+				toolbarStrokeWidth = styleOpts.strokeWidth || toolbarStrokeWidth;
+			}
+
+			// Use shape's default colors or toolbar settings
+			layerData.stroke = shapeData.defaultStroke || toolbarStroke;
+			layerData.fill = shapeData.defaultFill || 'none';
+			layerData.strokeWidth = shapeData.defaultStrokeWidth || toolbarStrokeWidth;
+		} else if ( hasPaths ) {
+			// Multi-path compound shapes (e.g., safety signs)
+			// Colors are baked into the paths array - don't override with toolbar
+			layerData.paths = shapeData.paths;
+			layerData.isMultiPath = true;
+		} else {
+			// Single-path shapes (legacy format)
+			layerData.path = shapeData.path;
+			layerData.strokeOnly = shapeData.strokeOnly || false;
+			layerData.fillRule = shapeData.fillRule || 'nonzero';
+
+			// Get current style settings from toolbar as fallbacks
+			let toolbarStroke = '#000000';
+			let toolbarFill = 'transparent';
+			let toolbarStrokeWidth = 2;
+
+			if ( this.toolbar && this.toolbar.styleControls ) {
+				const styleOpts = this.toolbar.styleControls.getStyleOptions();
+				toolbarStroke = styleOpts.stroke || styleOpts.color || toolbarStroke;
+				toolbarFill = styleOpts.fill || toolbarFill;
+				toolbarStrokeWidth = styleOpts.strokeWidth || toolbarStrokeWidth;
+			}
+
+			// Determine fill and stroke based on shape type
+			// Priority: shape defaults > toolbar settings > hardcoded defaults
+			let stroke, fill, strokeWidth;
+
+			if ( shapeData.strokeOnly ) {
+				// Stroke-only icons: no fill, use shape's stroke color or toolbar
+				fill = 'transparent';
+				stroke = shapeData.defaultStroke || toolbarStroke;
+				strokeWidth = shapeData.strokeWidth || toolbarStrokeWidth;
+			} else {
+				// Filled shapes: use shape's default colors if provided
+				fill = shapeData.defaultFill || toolbarFill;
+				stroke = shapeData.defaultStroke || toolbarStroke;
+				strokeWidth = toolbarStrokeWidth;
+			}
+
+			layerData.stroke = stroke;
+			layerData.fill = fill;
+			layerData.strokeWidth = strokeWidth;
+		}
 
 		this.addLayer( layerData );
 

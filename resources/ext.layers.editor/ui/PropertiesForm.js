@@ -819,8 +819,12 @@
 				break;
 		}
 
-		// Appearance (not applicable to image layers)
-		if ( layer.type !== 'image' ) {
+		// Appearance section
+		// Hide for: image layers, SVG symbols (layer.svg), and multi-path shapes (layer.paths)
+		// These have baked-in colors that can't be changed via stroke/fill controls.
+		// Basic path shapes (layer.path without layer.svg) still use configurable stroke/fill.
+		const hasBakedInColors = layer.svg || ( layer.paths && Array.isArray( layer.paths ) );
+		if ( layer.type !== 'image' && !hasBakedInColors ) {
 			addSection( t( 'layers-section-appearance', 'Appearance' ), 'appearance' );
 			if ( layer.type !== 'text' ) {
 				addColorPicker( { label: t( 'layers-prop-stroke-color', 'Stroke Color' ), value: layer.stroke, property: 'stroke', onChange: function ( newColor ) { editor.updateLayer( layer.id, { stroke: newColor } ); } } );

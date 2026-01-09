@@ -427,7 +427,12 @@ class LayerRenderer {
 	 * @param {Object} [options] - Rendering options
 	 */
 	drawCustomShape( layer, options ) {
-		if ( !layer.path || !layer.viewBox ) {
+		// Support SVG string, single-path (layer.path) and multi-path (layer.paths) shapes
+		const hasSvg = layer.svg && typeof layer.svg === 'string';
+		const hasPath = layer.path && layer.viewBox;
+		const hasPaths = layer.paths && Array.isArray( layer.paths ) && layer.viewBox;
+
+		if ( !hasSvg && !hasPath && !hasPaths ) {
 			return;
 		}
 
@@ -447,15 +452,29 @@ class LayerRenderer {
 				this._customShapeRenderer = new CustomShapeRenderer();
 			}
 
-			// Get shape data
+			// Get shape data - support SVG, single-path and multi-path
 			const shapeData = {
 				id: layer.shapeId,
-				path: layer.path,
 				viewBox: layer.viewBox,
 				fillRule: layer.fillRule
 			};
 
-			this._customShapeRenderer.render( this.ctx, shapeData, layer, scale );
+			// Add svg, paths, or path depending on format
+			if ( hasSvg ) {
+				shapeData.svg = layer.svg;
+			} else if ( hasPaths ) {
+				shapeData.paths = layer.paths;
+			} else {
+				shapeData.path = layer.path;
+			}
+
+			// For SVG shapes, request re-render when image loads
+			const renderOptions = { scale };
+			if ( hasSvg && this.onImageLoad ) {
+				renderOptions.onLoad = this.onImageLoad;
+			}
+
+			this._customShapeRenderer.render( this.ctx, shapeData, layer, renderOptions );
 			return;
 		}
 
