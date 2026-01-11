@@ -242,4 +242,82 @@ describe( 'MessageHelper', function () {
 			expect( window.layersMessages instanceof MessageHelper ).toBe( true );
 		} );
 	} );
+
+	describe( 'getColorPickerStrings', function () {
+		it( 'should return all required color picker string keys', function () {
+			const strings = messageHelper.getColorPickerStrings();
+
+			expect( strings ).toHaveProperty( 'title' );
+			expect( strings ).toHaveProperty( 'standard' );
+			expect( strings ).toHaveProperty( 'saved' );
+			expect( strings ).toHaveProperty( 'customSection' );
+			expect( strings ).toHaveProperty( 'none' );
+			expect( strings ).toHaveProperty( 'emptySlot' );
+			expect( strings ).toHaveProperty( 'cancel' );
+			expect( strings ).toHaveProperty( 'apply' );
+			expect( strings ).toHaveProperty( 'transparent' );
+			expect( strings ).toHaveProperty( 'swatchTemplate' );
+			expect( strings ).toHaveProperty( 'previewTemplate' );
+		} );
+
+		it( 'should return localized strings from mw.message', function () {
+			// Add color picker messages to mock
+			const colorPickerMessages = {
+				'layers-color-picker-title': 'Choose color',
+				'layers-color-picker-standard': 'Standard colors',
+				'layers-color-picker-saved': 'Saved colors',
+				'layers-color-picker-custom-section': 'Custom color',
+				'layers-color-picker-none': 'No fill (transparent)',
+				'layers-color-picker-empty-slot': 'Empty slot - colors will be saved here automatically',
+				'layers-color-picker-cancel': 'Cancel',
+				'layers-color-picker-apply': 'Apply',
+				'layers-color-picker-transparent': 'Transparent',
+				'layers-color-picker-color-swatch': 'Set color to $1',
+				'layers-color-picker-color-preview': 'Current color: $1'
+			};
+
+			global.mw.message = jest.fn( function ( key ) {
+				const text = colorPickerMessages[ key ];
+				return {
+					text: function () {
+						return text || key;
+					},
+					exists: text !== undefined
+				};
+			} );
+
+			const strings = messageHelper.getColorPickerStrings();
+
+			expect( strings.title ).toBe( 'Choose color' );
+			expect( strings.apply ).toBe( 'Apply' );
+			expect( strings.cancel ).toBe( 'Cancel' );
+			expect( strings.transparent ).toBe( 'Transparent' );
+		} );
+
+		it( 'should provide fallback values when messages not found', function () {
+			// Mock mw.message to return message doesn't exist
+			global.mw.message = jest.fn( function () {
+				return {
+					text: function () {
+						return '';
+					},
+					exists: false
+				};
+			} );
+
+			const strings = messageHelper.getColorPickerStrings();
+
+			// Should still have all required keys (with fallback values)
+			expect( typeof strings.title ).toBe( 'string' );
+			expect( typeof strings.apply ).toBe( 'string' );
+		} );
+
+		it( 'should be callable on the singleton instance', function () {
+			const singleton = window.layersMessages;
+			expect( typeof singleton.getColorPickerStrings ).toBe( 'function' );
+
+			const strings = singleton.getColorPickerStrings();
+			expect( strings ).toHaveProperty( 'title' );
+		} );
+	} );
 } );

@@ -245,12 +245,63 @@ describe( 'CanvasManager', () => {
 			LIMITS: { MAX_CANVAS_POOL_SIZE: 5 }
 		};
 
+		// Mock StyleController for style options tests
+		global.StyleController = jest.fn( () => ( {
+			updateStyleOptions: jest.fn( ( options ) => {
+				// Return merged style object like the real controller
+				return {
+					color: options.color || '#000000',
+					fill: options.fill || null,
+					strokeWidth: options.strokeWidth || 2,
+					fontSize: options.fontSize || 16,
+					fontFamily: options.fontFamily || 'Arial, sans-serif',
+					...options
+				};
+			} ),
+			applyToLayer: jest.fn( ( layer, style ) => {
+				// Apply style to layer like the real controller
+				if ( style.color ) {
+					if ( layer.type === 'text' ) {
+						layer.fill = style.color;
+					} else {
+						layer.stroke = style.color;
+					}
+				}
+				if ( style.fill && layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
+					layer.fill = style.fill;
+				}
+				if ( style.strokeWidth && layer.type !== 'text' ) {
+					layer.strokeWidth = style.strokeWidth;
+				}
+				if ( layer.type === 'text' ) {
+					if ( style.fontSize ) layer.fontSize = style.fontSize;
+					if ( style.fontFamily ) layer.fontFamily = style.fontFamily;
+					if ( style.textStrokeColor ) layer.textStrokeColor = style.textStrokeColor;
+					if ( style.textStrokeWidth ) layer.textStrokeWidth = style.textStrokeWidth;
+				}
+				if ( style.shadow ) {
+					layer.shadow = style.shadow;
+					if ( style.shadowColor ) layer.shadowColor = style.shadowColor;
+					if ( style.shadowBlur ) layer.shadowBlur = style.shadowBlur;
+					if ( style.shadowOffsetX !== undefined ) layer.shadowOffsetX = style.shadowOffsetX;
+					if ( style.shadowOffsetY !== undefined ) layer.shadowOffsetY = style.shadowOffsetY;
+				}
+			} ),
+			getCurrentStyle: jest.fn( () => ( { color: '#000000', strokeWidth: 2 } ) ),
+			setCurrentStyle: jest.fn()
+		} ) );
+
 		// Create CanvasManager with config
 		canvasManager = new CanvasManager( {
 			container: mockContainer,
 			editor: mockEditor,
 			canvas: mockCanvas
 		} );
+
+		// Ensure styleController is set up
+		if ( !canvasManager.styleController ) {
+			canvasManager.styleController = new global.StyleController();
+		}
 	} );
 
 	afterEach( () => {
@@ -1096,93 +1147,24 @@ describe( 'CanvasManager', () => {
 		} );
 	} );
 
-	describe( 'updateStyleOptions fallback path', () => {
+	describe( 'updateStyleOptions without StyleController', () => {
 		beforeEach( () => {
-			// Remove styleController to test fallback path
+			// Remove styleController to test behavior without it
 			canvasManager.styleController = null;
 		} );
 
-		it( 'should apply color to stroke for non-text layers', () => {
-			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
-			canvasManager.updateStyleOptions( { color: '#ff0000' } );
-			expect( mockEditor.layers[ 0 ].stroke ).toBe( '#ff0000' );
-		} );
-
-		it( 'should apply color to fill for text layers', () => {
-			mockEditor.stateManager.get.mockReturnValue( [ 'layer3' ] );
-			canvasManager.updateStyleOptions( { color: '#0000ff' } );
-			expect( mockEditor.layers[ 2 ].fill ).toBe( '#0000ff' );
-		} );
-
-		it( 'should apply fill to non-text, non-line, non-arrow layers', () => {
-			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
-			canvasManager.updateStyleOptions( { fill: '#00ff00' } );
-			expect( mockEditor.layers[ 0 ].fill ).toBe( '#00ff00' );
-		} );
-
-		it( 'should not apply fill to text layers', () => {
-			const originalFill = mockEditor.layers[ 2 ].fill;
-			mockEditor.stateManager.get.mockReturnValue( [ 'layer3' ] );
-			canvasManager.updateStyleOptions( { fill: '#00ff00' } );
-			// Text layer should not get fill from fill option (only from color)
-			expect( mockEditor.layers[ 2 ].fill ).not.toBe( '#00ff00' );
-		} );
-
-		it( 'should apply strokeWidth to non-text layers', () => {
-			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
-			canvasManager.updateStyleOptions( { strokeWidth: 5 } );
-			expect( mockEditor.layers[ 0 ].strokeWidth ).toBe( 5 );
-		} );
-
-		it( 'should not apply strokeWidth to text layers', () => {
-			mockEditor.stateManager.get.mockReturnValue( [ 'layer3' ] );
-			canvasManager.updateStyleOptions( { strokeWidth: 5 } );
-			expect( mockEditor.layers[ 2 ].strokeWidth ).toBeUndefined();
-		} );
-
-		it( 'should apply text-specific properties to text layers', () => {
-			mockEditor.stateManager.get.mockReturnValue( [ 'layer3' ] );
-			canvasManager.updateStyleOptions( {
-				fontSize: 24,
-				fontFamily: 'Helvetica',
-				textStrokeColor: '#333',
-				textStrokeWidth: 2
-			} );
-			expect( mockEditor.layers[ 2 ].fontSize ).toBe( 24 );
-			expect( mockEditor.layers[ 2 ].fontFamily ).toBe( 'Helvetica' );
-			expect( mockEditor.layers[ 2 ].textStrokeColor ).toBe( '#333' );
-			expect( mockEditor.layers[ 2 ].textStrokeWidth ).toBe( 2 );
-		} );
-
-		it( 'should apply shadow properties when shadow is enabled', () => {
-			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
-			canvasManager.updateStyleOptions( {
-				shadow: true,
-				shadowColor: '#000000',
-				shadowBlur: 10,
-				shadowOffsetX: 5,
-				shadowOffsetY: 5
-			} );
-			expect( mockEditor.layers[ 0 ].shadow ).toBe( true );
-			expect( mockEditor.layers[ 0 ].shadowColor ).toBe( '#000000' );
-			expect( mockEditor.layers[ 0 ].shadowBlur ).toBe( 10 );
-			expect( mockEditor.layers[ 0 ].shadowOffsetX ).toBe( 5 );
-			expect( mockEditor.layers[ 0 ].shadowOffsetY ).toBe( 5 );
-		} );
-
-		it( 'should preserve existing style when updating partial options', () => {
-			canvasManager.currentStyle = { color: '#ff0000', strokeWidth: 3 };
-			canvasManager.updateStyleOptions( { color: '#0000ff' } );
-			expect( canvasManager.currentStyle.color ).toBe( '#0000ff' );
-			expect( canvasManager.currentStyle.strokeWidth ).toBe( 3 );
-		} );
-
-		it( 'should handle undefined currentStyle gracefully', () => {
-			canvasManager.currentStyle = undefined;
+		it( 'should not throw when styleController is unavailable', () => {
 			expect( () => {
 				canvasManager.updateStyleOptions( { color: '#ff0000' } );
 			} ).not.toThrow();
-			expect( canvasManager.currentStyle.color ).toBe( '#ff0000' );
+		} );
+
+		it( 'should not modify layers when styleController is unavailable', () => {
+			const originalStroke = mockEditor.layers[ 0 ].stroke;
+			mockEditor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.updateStyleOptions( { color: '#ff0000' } );
+			// Layer should not be modified - StyleController handles all styling
+			expect( mockEditor.layers[ 0 ].stroke ).toBe( originalStroke );
 		} );
 	} );
 

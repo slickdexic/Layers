@@ -59,7 +59,13 @@
 		// Blend mode
 		'blendMode',
 		// Opacity
-		'opacity'
+		'opacity',
+		// Dimension
+		'endStyle', 'textPosition', 'extensionLength', 'extensionGap',
+		'tickSize', 'unit', 'scale', 'showUnit', 'showBackground', 'backgroundColor',
+		'precision', 'toleranceType', 'toleranceValue', 'toleranceUpper', 'toleranceLower',
+		// Marker
+		'style', 'size', 'fontSizeAdjust', 'hasArrow', 'arrowStyle'
 	];
 
 	/**
@@ -212,7 +218,10 @@
 				'polygon': 'polygon',
 				'star': 'star',
 				'path': 'path',
-				'rectangle': 'rectangle'
+				'rectangle': 'rectangle',
+				'dimension': 'dimension',
+				'marker': 'marker',
+				'callout': 'callout'
 			};
 
 			const toolType = typeMapping[ layerType ] || layerType;
@@ -230,6 +239,16 @@
 				return;
 			}
 
+			// Determine the layer type we're applying to (for tool-specific defaults)
+			let layerType = null;
+			if ( this.selectedLayers && this.selectedLayers.length > 0 ) {
+				layerType = this.selectedLayers[ 0 ].type;
+			}
+
+			// Get the canvas manager for updating tool-specific defaults
+			const canvasManager = this.toolbar && this.toolbar.editor ?
+				this.toolbar.editor.canvasManager : null;
+
 			// If we have selected layers, apply to them via the editor
 			if ( this.selectedLayers && this.selectedLayers.length > 0 && this.toolbar && this.toolbar.editor ) {
 				this.toolbar.editor.applyToSelection( ( layer ) => {
@@ -240,6 +259,24 @@
 						}
 					} );
 				} );
+
+				// Update tool-specific defaults for modality (future drawings use these settings)
+				if ( canvasManager ) {
+					if ( layerType === 'dimension' && canvasManager.updateDimensionDefaults ) {
+						canvasManager.updateDimensionDefaults( style );
+					} else if ( layerType === 'marker' && canvasManager.updateMarkerDefaults ) {
+						canvasManager.updateMarkerDefaults( style );
+					}
+				}
+			} else if ( canvasManager && this.toolbar ) {
+				// No selection - update tool-specific defaults based on current tool
+				// This enables preset modality: selecting a preset before drawing uses those settings
+				const currentTool = this.toolbar.currentTool;
+				if ( currentTool === 'dimension' && canvasManager.updateDimensionDefaults ) {
+					canvasManager.updateDimensionDefaults( style );
+				} else if ( currentTool === 'marker' && canvasManager.updateMarkerDefaults ) {
+					canvasManager.updateMarkerDefaults( style );
+				}
 			}
 
 			// Also update the toolbar controls for future drawings
@@ -253,7 +290,21 @@
 		 */
 		getStyleFromSelection() {
 			if ( this.selectedLayers && this.selectedLayers.length > 0 ) {
-				const layer = this.selectedLayers[ 0 ];
+				// IMPORTANT: Fetch fresh layer data from state, not stale reference
+				// The editor uses immutable updates, so this.selectedLayers[0] may be
+				// outdated after property changes. We need to get the current layer
+				// from the editor's state to capture recent changes.
+				const layerId = this.selectedLayers[ 0 ].id;
+				let layer = this.selectedLayers[ 0 ]; // fallback to cached reference
+
+				// Try to get fresh layer data from editor
+				if ( this.toolbar && this.toolbar.editor && typeof this.toolbar.editor.getLayerById === 'function' ) {
+					const freshLayer = this.toolbar.editor.getLayerById( layerId );
+					if ( freshLayer ) {
+						layer = freshLayer;
+					}
+				}
+
 				const style = {};
 
 				// Extract all style properties from the layer

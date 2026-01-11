@@ -419,15 +419,22 @@
 			// Get current style from callback
 			this.onSave( ( style ) => {
 				if ( style ) {
-					const preset = this.presetManager.addPreset(
+					const result = this.presetManager.addPreset(
 						this.currentTool,
 						name.trim(),
 						style
 					);
-					if ( preset ) {
+					if ( result && result.error === 'duplicate' ) {
+						// Show error for duplicate name
+						this.showNotification(
+							this.getMessage( 'layers-presets-name-exists', 'A preset named "$1" already exists' )
+								.replace( '$1', result.existingName ),
+							'error'
+						);
+					} else if ( result ) {
 						this.showNotification(
 							this.getMessage( 'layers-presets-saved' )
-								.replace( '$1', preset.name )
+								.replace( '$1', result.name )
 						);
 					}
 				}

@@ -474,6 +474,9 @@
 					this.editor.stateManager.set( 'layers', [] );
 					this.editor.stateManager.set( 'currentLayerSetId', null );
 					this.editor.stateManager.set( 'setRevisions', [] );
+					// Initialize background settings for new layer sets
+					this.editor.stateManager.set( 'backgroundVisible', true );
+					this.editor.stateManager.set( 'backgroundOpacity', 1.0 );
 				}
 
 				// Update current set name in state FIRST (before building selectors)
@@ -550,6 +553,7 @@
 	saveLayers() {
 		return new Promise( ( resolve, reject ) => {
 			if ( !this.validateBeforeSave() ) {
+				mw.notify( 'Save failed: validation error. Check browser console (F12) for details.', { type: 'error' } );
 				reject( new Error( 'Validation failed' ) );
 				return;
 			}
@@ -561,6 +565,7 @@
 			const layersJson = JSON.stringify( this.editor.stateManager.get( 'layers' ) || [] );
 
 			if ( !this.checkSizeLimit( layersJson ) ) {
+				mw.log.error( '[APIManager] saveLayers: data too large' );
 				this.editor.uiManager.hideSpinner();
 				reject( new Error( 'Data too large' ) );
 				return;
@@ -572,21 +577,25 @@
 
 	validateBeforeSave() {
 		const layers = this.editor.stateManager.get( 'layers' ) || [];
+		
 		const LayersValidator = getClass( 'Validation.LayersValidator', 'LayersValidator' );
-		if ( LayersValidator ) {
-			const validator = new LayersValidator();
-			const validationResult = validator.validateLayers( layers, 100 );
-
-			if ( !validationResult.isValid ) {
-				validator.showValidationErrors( validationResult.errors, 'save' );
-				return false;
-			}
-
-			if ( validationResult.warnings && validationResult.warnings.length > 0 ) {
-				const warningMsg = 'Warnings: ' + validationResult.warnings.join( '; ' );
-				mw.notify( warningMsg, { type: 'warn' } );
-			}
+		if ( !LayersValidator ) {
+			return true;
 		}
+		
+		const validator = new LayersValidator();
+		const validationResult = validator.validateLayers( layers, 100 );
+
+		if ( !validationResult.isValid ) {
+			validator.showValidationErrors( validationResult.errors, 'save' );
+			return false;
+		}
+
+		if ( validationResult.warnings && validationResult.warnings.length > 0 ) {
+			const warningMsg = 'Warnings: ' + validationResult.warnings.join( '; ' );
+			mw.notify( warningMsg, { type: 'warn' } );
+		}
+		
 		return true;
 	}
 

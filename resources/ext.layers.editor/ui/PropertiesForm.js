@@ -538,7 +538,8 @@
 		labelEl.setAttribute( 'for', inputId );
 		const input = document.createElement( 'input' );
 		input.type = 'checkbox';
-		input.checked = !!opts.value;
+		// Support both 'checked' and 'value' properties for backward compatibility
+		input.checked = !!( opts.checked !== undefined ? opts.checked : opts.value );
 		input.id = inputId;
 		input.addEventListener( 'change', function () {
 			opts.onChange( input.checked );
@@ -817,14 +818,22 @@
 			case 'blur':
 				Builders.addBlurProperties( ctx );
 				break;
+
+			case 'marker':
+				Builders.addMarkerProperties( ctx );
+				break;
+
+			case 'dimension':
+				Builders.addDimensionProperties( ctx );
+				break;
 		}
 
 		// Appearance section
-		// Hide for: image layers, SVG symbols (layer.svg), and multi-path shapes (layer.paths)
-		// These have baked-in colors that can't be changed via stroke/fill controls.
+		// Hide for: image layers, SVG symbols (layer.svg), multi-path shapes (layer.paths), dimension layers, and marker layers
+		// These have baked-in colors, don't use fill at all, or have their own color controls.
 		// Basic path shapes (layer.path without layer.svg) still use configurable stroke/fill.
 		const hasBakedInColors = layer.svg || ( layer.paths && Array.isArray( layer.paths ) );
-		if ( layer.type !== 'image' && !hasBakedInColors ) {
+		if ( layer.type !== 'image' && layer.type !== 'dimension' && layer.type !== 'marker' && !hasBakedInColors ) {
 			addSection( t( 'layers-section-appearance', 'Appearance' ), 'appearance' );
 			if ( layer.type !== 'text' ) {
 				addColorPicker( { label: t( 'layers-prop-stroke-color', 'Stroke Color' ), value: layer.stroke, property: 'stroke', onChange: function ( newColor ) { editor.updateLayer( layer.id, { stroke: newColor } ); } } );

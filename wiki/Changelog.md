@@ -4,6 +4,39 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.4 (January 11, 2026)
+
+### Added
+- **Marker Tool** — New annotation tool for numbered/lettered sequence markers
+  - Styles: Circled numbers (①②③), Letters (A B C), Parentheses ((1)(2)(3)), Plain (1. 2. 3.), Circled letters (Ⓐ Ⓑ Ⓒ)
+  - Optional arrow/leader lines pointing to target locations
+  - Auto-numbering for sequential markers
+  - Full shadow support with all shadow controls
+  - Keyboard shortcut: M
+
+- **Dimension Tool** — Technical measurement annotation tool
+  - End styles: Arrow, Tick, Dot, None
+  - Text positions: Above, Below, Center
+  - Orientation: Free, Horizontal, Vertical
+  - Tolerance display: Symmetric (±), Deviation (+/-), Limits (min-max), Basic
+  - Configurable units, scale, and precision
+  - Extension lines with adjustable length
+  - Keyboard shortcut: D
+
+### Fixed
+- **Marker Shadow Controls** — Shadow offset, spread, and blur now properly affect marker layers
+  - MarkerRenderer now integrates with ShadowRenderer for consistent shadow rendering
+
+### Changed
+- **CanvasManager.js Refactored** — Reduced from 2,072 to 1,927 lines (now under 2K limit)
+  - Removed deprecated fallback code and dead branches
+
+### Tests
+- **Test Count** — 8,603 tests passing (144 suites)
+- **Coverage** — 94.53% statement, 83.16% branch
+
+---
+
 ## Version 1.5.3 (January 9, 2026)
 
 ### Added

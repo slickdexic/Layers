@@ -13,14 +13,28 @@
 	'use strict';
 
 	/**
-	 * Shape library categories
+	 * Shape library categories with hierarchical structure
+	 *
+	 * Categories can be:
+	 * - Top-level parent categories with subcategories (isParent: true)
+	 * - Subcategories within a parent (parentId: 'parent-id')
+	 * - Standalone categories (neither isParent nor parentId)
 	 *
 	 * @type {Object[]}
 	 */
 	const CATEGORIES = [
+		// ISO 7010 parent category
+		{
+			id: 'iso7010',
+			name: 'ISO 7010',
+			isParent: true,
+			color: '#333333',
+			description: 'International safety signs standard'
+		},
 		{
 			id: 'iso7010-w',
 			name: 'Warning Signs',
+			parentId: 'iso7010',
 			prefix: 'W',
 			color: '#F9A800',
 			description: 'ISO 7010 yellow triangle warning signs'
@@ -28,6 +42,7 @@
 		{
 			id: 'iso7010-p',
 			name: 'Prohibition Signs',
+			parentId: 'iso7010',
 			prefix: 'P',
 			color: '#b71f2e',
 			description: 'ISO 7010 red circle prohibition signs'
@@ -35,6 +50,7 @@
 		{
 			id: 'iso7010-m',
 			name: 'Mandatory Signs',
+			parentId: 'iso7010',
 			prefix: 'M',
 			color: '#24578e',
 			description: 'ISO 7010 blue circle mandatory action signs'
@@ -42,6 +58,7 @@
 		{
 			id: 'iso7010-e',
 			name: 'Emergency Signs',
+			parentId: 'iso7010',
 			prefix: 'E',
 			color: '#008855',
 			description: 'ISO 7010 green emergency and escape signs'
@@ -49,10 +66,12 @@
 		{
 			id: 'iso7010-f',
 			name: 'Fire Signs',
+			parentId: 'iso7010',
 			prefix: 'F',
 			color: '#a92121',
 			description: 'ISO 7010 red fire protection signs'
 		},
+		// ANSI Safety - standalone category (no subcategories yet)
 		{
 			id: 'ansi',
 			name: 'ANSI Safety',

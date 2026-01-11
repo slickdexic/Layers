@@ -151,7 +151,7 @@ describe( 'PresetManager', () => {
 		} );
 
 		it( 'should set as default if option is provided', () => {
-			const preset = manager.addPreset( 'arrow', 'Default Arrow', { stroke: '#000' }, {
+			const preset = manager.addPreset( 'arrow', 'My Custom Arrow', { stroke: '#000' }, {
 				setAsDefault: true
 			} );
 

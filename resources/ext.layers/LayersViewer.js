@@ -90,11 +90,36 @@
 		 * @private
 		 */
 		fallbackNormalize() {
-			if ( !this.layerData || !this.layerData.layers ) {
+			if ( !this.layerData ) {
 				return;
 			}
 
-			const booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked', 'preserveAspectRatio' ];
+			// Normalize top-level backgroundVisible (API returns 0/1 integers)
+			// This MUST happen even if there are no layers
+			const bgVal = this.layerData.backgroundVisible;
+			if ( bgVal !== undefined ) {
+				if ( bgVal === '0' || bgVal === 'false' || bgVal === 0 || bgVal === false ) {
+					this.layerData.backgroundVisible = false;
+				} else if ( bgVal === '' || bgVal === '1' || bgVal === 'true' || bgVal === 1 || bgVal === true ) {
+					this.layerData.backgroundVisible = true;
+				}
+			}
+
+			// Normalize backgroundOpacity to number
+			const bgOpacity = this.layerData.backgroundOpacity;
+			if ( bgOpacity !== undefined && typeof bgOpacity === 'string' ) {
+				const parsed = parseFloat( bgOpacity );
+				if ( !isNaN( parsed ) ) {
+					this.layerData.backgroundOpacity = parsed;
+				}
+			}
+
+			// Normalize layer properties if layers exist
+			if ( !this.layerData.layers ) {
+				return;
+			}
+
+			const booleanProps = [ 'shadow', 'textShadow', 'glow', 'visible', 'locked', 'preserveAspectRatio', 'hasArrow' ];
 
 			this.layerData.layers.forEach( ( layer ) => {
 				// Normalize boolean properties
@@ -146,11 +171,16 @@
 			// Apply background visibility (default: true/visible)
 			// Handle all possible representations from API (boolean, integer, string)
 			const bgVisible = this.layerData.backgroundVisible;
+
+			// Debug logging to trace background visibility issues
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+				mw.log( '[LayersViewer] applyBackgroundSettings: bgVisible=', bgVisible, 'type=', typeof bgVisible );
+			}
 			
 			// Background should be hidden ONLY if explicitly set to a falsy representation
 			// Default behavior (undefined/null/missing) is to show the background
 			const isHidden = bgVisible === false || bgVisible === 0 || bgVisible === '0' || bgVisible === 'false';
-			
+
 			// Apply background opacity (default: 1.0)
 			let bgOpacity = 1.0;
 			const rawOpacity = this.layerData.backgroundOpacity;
@@ -198,9 +228,6 @@
 				baseWidth: this.baseWidth,
 				baseHeight: this.baseHeight,
 				onImageLoad: () => {
-					if ( typeof mw !== 'undefined' && mw.log ) {
-						mw.log( '[LayersViewer] onImageLoad callback triggered, calling renderLayers()' );
-					}
 					this.renderLayers();
 				}
 			} );
@@ -369,15 +396,37 @@
 				return blend && blend !== 'normal' && blend !== 'source-over';
 			} );
 
+			// Track whether we successfully drew the background to canvas
+			let backgroundDrawn = false;
+
 			if ( hasBlendMode ) {
-				// Draw background image onto canvas so blend modes work
-				this.drawBackgroundOnCanvas();
+				// Only draw background if the image is fully loaded
+				// This prevents hiding the DOM image before we have content to show
+				const imageReady = this.imageElement &&
+					this.imageElement.complete &&
+					this.imageElement.naturalWidth > 0;
+
+				if ( imageReady ) {
+					// Draw background image onto canvas so blend modes work
+					this.drawBackgroundOnCanvas();
+					backgroundDrawn = true;
+				}
+				// If image not ready, leave DOM image visible - it will be drawn
+				// when loadImageAndRender triggers after image load completes
 			}
 
 			// Render layers from bottom to top so top-most (index 0 in editor) is drawn last.
 			for ( let i = layers.length - 1; i >= 0; i-- ) {
 				const layer = layers[ i ];
 				this.renderLayer( layer );
+			}
+
+			// Hide DOM image AFTER all layers are rendered, but ONLY if:
+			// 1. We have blend modes that require the background on canvas
+			// 2. We successfully drew the background to the canvas
+			// This prevents the flash where image disappears before canvas is ready
+			if ( hasBlendMode && backgroundDrawn && this.imageElement && this.imageElement.style ) {
+				this.imageElement.style.visibility = 'hidden';
 			}
 		}
 
@@ -428,11 +477,8 @@
 			this.ctx.drawImage( this.imageElement, 0, 0, this.canvas.width, this.canvas.height );
 			this.ctx.restore();
 
-			// Hide the DOM image element since we're drawing it on canvas
-			// This prevents double-rendering
-			if ( this.imageElement.style ) {
-				this.imageElement.style.visibility = 'hidden';
-			}
+			// Note: DOM image hiding is now done in renderLayers() AFTER all layers
+			// are rendered to prevent the flash where image disappears before canvas is ready
 		}
 
 		/**
@@ -598,6 +644,29 @@
 			// Blur radius - must be scaled for blur layers and blur fill
 			if ( typeof L.blurRadius === 'number' ) {
 				L.blurRadius = L.blurRadius * scaleAvg;
+			}
+			// Dimension-specific properties (extension lines, ticks)
+			if ( typeof L.extensionLength === 'number' ) {
+				L.extensionLength = L.extensionLength * scaleAvg;
+			}
+			if ( typeof L.extensionGap === 'number' ) {
+				L.extensionGap = L.extensionGap * scaleAvg;
+			}
+			if ( typeof L.tickSize === 'number' ) {
+				L.tickSize = L.tickSize * scaleAvg;
+			}
+			// Marker-specific properties
+			if ( typeof L.size === 'number' ) {
+				L.size = L.size * scaleAvg;
+			}
+			if ( typeof L.arrowX === 'number' ) {
+				L.arrowX = L.arrowX * sx;
+			}
+			if ( typeof L.arrowY === 'number' ) {
+				L.arrowY = L.arrowY * sy;
+			}
+			if ( typeof L.fontSizeAdjust === 'number' ) {
+				L.fontSizeAdjust = L.fontSizeAdjust * scaleAvg;
 			}
 			if ( Array.isArray( L.points ) ) {
 				const pts = [];

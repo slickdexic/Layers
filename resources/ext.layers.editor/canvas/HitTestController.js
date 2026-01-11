@@ -162,12 +162,96 @@
 					// Custom shapes use bounding box hit testing
 					return this.isPointInRectangleLayer( point, layer );
 
+				case 'marker':
+					// Markers use circular hit testing based on size
+					return this.isPointInMarker( point, layer );
+
+				case 'dimension':
+					// Dimensions use line-based hit testing
+					return this.isPointNearDimension( point, layer );
+
 				default:
 					return false;
 			}
 		}
 
 		// ==================== Shape-Specific Hit Tests ====================
+
+		/**
+		 * Test if point is in a marker layer (circle centered at x,y)
+		 *
+		 * @param {Object} point Point with x, y
+		 * @param {Object} layer Marker layer
+		 * @return {boolean} True if hit
+		 */
+		isPointInMarker( point, layer ) {
+			const x = layer.x || 0;
+			const y = layer.y || 0;
+			const size = layer.size || 24;
+			const radius = size / 2 + 5; // Add tolerance
+
+			const dx = point.x - x;
+			const dy = point.y - y;
+			const distance = Math.sqrt( dx * dx + dy * dy );
+
+			if ( distance <= radius ) {
+				return true;
+			}
+
+			// Also check if point is near the arrow line
+			if ( layer.hasArrow && layer.arrowX !== undefined && layer.arrowY !== undefined ) {
+				const arrowDist = this.pointToLineDistance( point.x, point.y, x, y, layer.arrowX, layer.arrowY );
+				return arrowDist <= 8;
+			}
+
+			return false;
+		}
+
+		/**
+		 * Test if point is near a dimension layer (line between x1,y1 and x2,y2)
+		 *
+		 * @param {Object} point Point with x, y
+		 * @param {Object} layer Dimension layer
+		 * @return {boolean} True if hit
+		 */
+		isPointNearDimension( point, layer ) {
+			const x1 = layer.x1 || 0;
+			const y1 = layer.y1 || 0;
+			const x2 = layer.x2 || 0;
+			const y2 = layer.y2 || 0;
+
+			const distance = this.pointToLineDistance( point.x, point.y, x1, y1, x2, y2 );
+			return distance <= 10;
+		}
+
+		/**
+		 * Calculate distance from point to line segment
+		 *
+		 * @param {number} px Point X
+		 * @param {number} py Point Y
+		 * @param {number} x1 Line start X
+		 * @param {number} y1 Line start Y
+		 * @param {number} x2 Line end X
+		 * @param {number} y2 Line end Y
+		 * @return {number} Distance from point to line
+		 */
+		pointToLineDistance( px, py, x1, y1, x2, y2 ) {
+			const dx = x2 - x1;
+			const dy = y2 - y1;
+			const lengthSq = dx * dx + dy * dy;
+
+			if ( lengthSq === 0 ) {
+				return Math.sqrt( ( px - x1 ) * ( px - x1 ) + ( py - y1 ) * ( py - y1 ) );
+			}
+
+			let t = ( ( px - x1 ) * dx + ( py - y1 ) * dy ) / lengthSq;
+			t = Math.max( 0, Math.min( 1, t ) );
+
+			const projX = x1 + t * dx;
+			const projY = y1 + t * dy;
+
+			return Math.sqrt( ( px - projX ) * ( px - projX ) + ( py - projY ) * ( py - projY ) );
+		}
 
 		/**
 		 * Test if point is in a rectangle or blur layer

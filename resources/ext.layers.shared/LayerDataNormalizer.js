@@ -29,7 +29,8 @@
 		'glow',
 		'visible',
 		'locked',
-		'preserveAspectRatio'
+		'preserveAspectRatio',
+		'hasArrow'
 	];
 
 	/**
@@ -46,7 +47,9 @@
 		'strokeWidth', 'fontSize', 'lineHeight', 'padding', 'cornerRadius',
 		'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'shadowSpread',
 		'textShadowBlur', 'textShadowOffsetX', 'textShadowOffsetY',
-		'textStrokeWidth', 'arrowSize'
+		'textStrokeWidth', 'arrowSize',
+		// Marker properties
+		'size', 'arrowX', 'arrowY', 'fontSizeAdjust'
 	];
 
 	/**
@@ -187,7 +190,10 @@
 		 * Normalize a layer data structure (with layers array inside)
 		 *
 		 * Handles the common case where layer data is wrapped:
-		 * { layers: [...], baseWidth: N, baseHeight: N }
+		 * { layers: [...], baseWidth: N, baseHeight: N, backgroundVisible: bool }
+		 *
+		 * Also normalizes top-level properties like backgroundVisible which
+		 * come from the API as integers (0/1) due to PHP serialization.
 		 *
 		 * @param {Object} layerData - Layer data object with layers array
 		 * @returns {Object} The same object (for chaining)
@@ -197,8 +203,29 @@
 				return layerData;
 			}
 
+			// Normalize layers array
 			if ( Array.isArray( layerData.layers ) ) {
 				LayerDataNormalizer.normalizeLayers( layerData.layers );
+			}
+
+			// Normalize top-level backgroundVisible (API returns 0/1 integers)
+			// This is the same pattern as layer-level boolean properties
+			const bgVal = layerData.backgroundVisible;
+			if ( bgVal !== undefined ) {
+				if ( bgVal === '0' || bgVal === 'false' || bgVal === 0 || bgVal === false ) {
+					layerData.backgroundVisible = false;
+				} else if ( bgVal === '' || bgVal === '1' || bgVal === 'true' || bgVal === 1 || bgVal === true ) {
+					layerData.backgroundVisible = true;
+				}
+			}
+
+			// Normalize backgroundOpacity to number
+			const bgOpacity = layerData.backgroundOpacity;
+			if ( bgOpacity !== undefined && typeof bgOpacity === 'string' ) {
+				const parsed = parseFloat( bgOpacity );
+				if ( !isNaN( parsed ) ) {
+					layerData.backgroundOpacity = parsed;
+				}
 			}
 
 			return layerData;

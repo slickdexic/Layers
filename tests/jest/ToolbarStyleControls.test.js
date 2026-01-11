@@ -1701,17 +1701,20 @@ describe( 'ToolbarStyleControls', () => {
 				}
 			} );
 
-			it( 'should hide presets when layers are selected', () => {
+			it( 'should keep presets visible when layers are selected (for saving as preset)', () => {
 				const selectedLayers = [
 					{ id: 'arrow-1', type: 'arrow' },
 					{ id: 'rect-1', type: 'rectangle' }
 				];
 
 				if ( styleControls.presetContainer ) {
+					// Start with presets hidden (simulates switching to pointer tool)
+					styleControls.presetContainer.classList.add( 'context-hidden' );
+
 					styleControls.updateContextForSelectedLayers( selectedLayers );
 
-					// Presets hidden because Properties panel has them
-					expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( true );
+					// Presets should be SHOWN so users can save layer styles as presets
+					expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( false );
 				}
 			} );
 

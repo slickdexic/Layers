@@ -142,6 +142,18 @@
 				category: 'annotation',
 				createsLayer: true
 			} );
+
+			this.register( 'marker', {
+				cursor: 'crosshair',
+				category: 'annotation',
+				createsLayer: true
+			} );
+
+			this.register( 'dimension', {
+				cursor: 'crosshair',
+				category: 'annotation',
+				createsLayer: true
+			} );
 		}
 
 		/**

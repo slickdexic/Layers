@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 7, 2026  
-**Version:** 1.5.2
+**Last Updated:** January 11, 2026  
+**Version:** 1.5.3
 
 This document lists known functionality issues and their current status.
 
@@ -175,27 +175,31 @@ The EffectsRenderer.drawBlurFill method attempts to handle both editor mode (wit
 
 ## ⚠️ P1 Issues (Stability)
 
-### P1.1 God Classes (12 files ≥1,000 lines)
+### P1.1 God Classes (16 files ≥1,000 lines)
 
-**Status:** Stable - 12 files exceed 1,000 lines  
+**Status:** Stable - 16 files exceed 1,000 lines (verified January 11, 2026)  
 **Severity:** MEDIUM - All use proper delegation patterns
 
 | File | Lines | Delegation Pattern | Status |
 |------|-------|-------------------|--------|
-| **LayerPanel.js** | **2,193** | ✅ 9 controllers | ⚠️ Exceeds 2K |
-| CanvasManager.js | 1,964 | ✅ 10+ controllers | ⚠️ Approaching 2K |
-| Toolbar.js | 1,802 | ✅ 4 modules | ✅ OK |
-| LayersEditor.js | 1,632 | ✅ 3 modules | ✅ OK |
-| SelectionManager.js | 1,405 | ✅ 3 modules | ✅ OK |
-| APIManager.js | 1,370 | ✅ APIErrorHandler | ✅ OK |
+| **ShapeLibraryData.js** | **3,176** | Generated data | ✅ OK (generated) |
+| **CanvasManager.js** | **2,072** | ✅ 10+ controllers | 🔴 Exceeds 2K |
+| LayerPanel.js | 1,806 | ✅ 9 controllers | ✅ OK |
+| Toolbar.js | 1,788 | ✅ 4 modules | ✅ OK |
+| LayersEditor.js | 1,690 | ✅ 3 modules | ✅ OK |
+| SelectionManager.js | 1,419 | ✅ 3 modules | ✅ OK |
+| APIManager.js | 1,379 | ✅ APIErrorHandler | ✅ OK |
+| ArrowRenderer.js | 1,301 | ✅ Rendering (curved arrows) | ✅ OK |
 | CalloutRenderer.js | 1,291 | ✅ Rendering (callouts) | ✅ OK |
-| ArrowRenderer.js | 1,288 | ✅ Rendering (curved arrows) | ✅ OK |
-| ToolManager.js | 1,214 | ✅ 2 handlers | ✅ OK |
+| **PropertyBuilders.js** | **1,250** | UI builders | ⚠️ NEW |
+| ToolManager.js | 1,219 | ✅ 2 handlers | ✅ OK |
+| CanvasRenderer.js | 1,137 | ✅ SelectionRenderer | ✅ OK |
 | GroupManager.js | 1,132 | v1.2.13 | ✅ OK |
-| CanvasRenderer.js | 1,117 | ✅ SelectionRenderer | ✅ OK |
-| ToolbarStyleControls.js | 1,014 | ✅ Style controls (live preview) | ✅ OK |
+| **TransformController.js** | **1,097** | Canvas transforms | ⚠️ NEW |
+| **ResizeCalculator.js** | **1,090** | Shape calculations | ⚠️ NEW |
+| ToolbarStyleControls.js | 1,035 | ✅ Style controls | ✅ OK |
 
-**Total in god classes:** ~17,420 lines (28% of JS codebase)
+**Total in god classes:** ~21,582 lines (32% of JS codebase)
 
 **Note:** CalloutRenderer.js (1,291 lines) is a new god class added in v1.4.2 for the callout/speech bubble feature. PropertiesForm.js now delegates to PropertyBuilders.js (833 lines). ArrowRenderer.js grew due to curved arrow feature (v1.3.3).
 
@@ -258,7 +262,7 @@ Remaining deprecated items (all are legitimate fallbacks):
 ### P2.5 Codebase Size
 
 **Status:** ✅ Healthy  
-**Current:** ~55,000 lines (106 files)  
+**Current:** ~67,347 JS lines (115 files), ~8,801 PHP lines (32 files)  
 **Target:** <75,000 lines
 
 The extension is feature-rich with 13 drawing tools (pointer, text, textbox, callout, pen, rectangle, circle, ellipse, polygon, star, arrow, line, custom shape), layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
@@ -370,15 +374,15 @@ The extension is feature-rich with 13 drawing tools (pointer, text, textbox, cal
 
 ## Test Coverage Status
 
-### Overall Coverage (January 6, 2026)
+### Overall Coverage (January 11, 2026)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | 8,537 | - | ✅ |
-| Statement coverage | 93.7% | 85%+ | ✅ Excellent |
-| Branch coverage | 82.4% | 75%+ | ✅ |
-| Function coverage | 92.7% | 80%+ | ✅ |
-| Line coverage | 93.9% | 85%+ | ✅ |
+| Tests passing | 8,619 | - | ✅ |
+| Statement coverage | 94.53% | 85%+ | ✅ Excellent |
+| Branch coverage | 83.16% | 75%+ | ✅ |
+| Function coverage | 93.23% | 80%+ | ✅ |
+| Line coverage | 94.67% | 85%+ | ✅ |
 
 ### Files With Good Coverage ✅
 
@@ -453,5 +457,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 7, 2026*  
-*Status: ✅ 12 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (93.8%, 8,563 tests). No coverage gaps.*
+*Document updated: January 11, 2026*  
+*Status: ✅ 16 god classes (all with proper delegation). Extension is production-ready with excellent test coverage (94.53%, 8,619 tests). No coverage gaps.*

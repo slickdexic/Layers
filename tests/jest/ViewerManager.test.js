@@ -1596,5 +1596,186 @@ describe( 'ViewerManager', () => {
 				expect( checkedImages ).toHaveLength( 2 );
 			} );
 		} );
+
+		describe( 'refreshAllViewers', () => {
+			let manager;
+			let mockFreshnessChecker;
+
+			beforeEach( () => {
+				mockFreshnessChecker = {
+					checkMultipleFreshness: jest.fn( () => Promise.resolve( new Map() ) ),
+					clearCache: jest.fn()
+				};
+
+				window.Layers = {
+					Viewer: {
+						LayersViewer: mockLayersViewer,
+						FreshnessChecker: jest.fn( () => mockFreshnessChecker )
+					}
+				};
+
+				ViewerManager = require( '../../resources/ext.layers/viewer/ViewerManager.js' );
+				manager = new ViewerManager( {
+					debug: false,
+					urlParser: mockUrlParser,
+					freshnessChecker: mockFreshnessChecker
+				} );
+			} );
+
+			it( 'should return 0 when no viewers exist', async () => {
+				document.body.innerHTML = '<div><img src="test.jpg"></div>';
+
+				const count = await manager.refreshAllViewers();
+
+				expect( count ).toBe( 0 );
+			} );
+
+			it( 'should clear freshness cache for each viewer', async () => {
+				const mockDestroy = jest.fn();
+				const mockViewer = { destroy: mockDestroy };
+
+				document.body.innerHTML = `
+					<div style="position: relative">
+						<img 
+							data-file-name="test.jpg"
+							data-layer-setname="default"
+							src="test.jpg"
+						>
+					</div>
+				`;
+
+				const img = document.querySelector( 'img' );
+				img.layersViewer = mockViewer;
+
+				mockApi.get.mockResolvedValue( {
+					layersinfo: {
+						layerset: {
+							data: { layers: [ { id: '1', type: 'text' } ] },
+							baseWidth: 800,
+							baseHeight: 600
+						}
+					}
+				} );
+
+				await manager.refreshAllViewers();
+
+				expect( mockFreshnessChecker.clearCache ).toHaveBeenCalledWith( 'test.jpg', 'default' );
+			} );
+
+			it( 'should fetch fresh data and reinitialize viewers', async () => {
+				const mockDestroy = jest.fn();
+				const mockViewer = { destroy: mockDestroy };
+
+				document.body.innerHTML = `
+					<div style="position: relative">
+						<img 
+							data-file-name="refresh-test.jpg"
+							src="test.jpg"
+						>
+					</div>
+				`;
+
+				const img = document.querySelector( 'img' );
+				img.layersViewer = mockViewer;
+
+				mockApi.get.mockResolvedValue( {
+					layersinfo: {
+						layerset: {
+							data: { 
+								layers: [ { id: '1', type: 'marker' } ],
+								backgroundVisible: true,
+								backgroundOpacity: 1.0
+							},
+							baseWidth: 800,
+							baseHeight: 600
+						}
+					}
+				} );
+
+				const count = await manager.refreshAllViewers();
+
+				expect( count ).toBe( 1 );
+				expect( mockDestroy ).toHaveBeenCalled();
+				expect( mockLayersViewer ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle API errors gracefully', async () => {
+				const mockViewer = { destroy: jest.fn() };
+
+				document.body.innerHTML = `
+					<div style="position: relative">
+						<img 
+							data-file-name="error-test.jpg"
+							src="test.jpg"
+						>
+					</div>
+				`;
+
+				const img = document.querySelector( 'img' );
+				img.layersViewer = mockViewer;
+
+				mockApi.get.mockRejectedValue( new Error( 'Network error' ) );
+
+				const count = await manager.refreshAllViewers();
+
+				expect( count ).toBe( 0 );
+			} );
+
+			it( 'should handle missing layerset in API response', async () => {
+				const mockViewer = { destroy: jest.fn() };
+
+				document.body.innerHTML = `
+					<div style="position: relative">
+						<img 
+							data-file-name="no-layers.jpg"
+							src="test.jpg"
+						>
+					</div>
+				`;
+
+				const img = document.querySelector( 'img' );
+				img.layersViewer = mockViewer;
+
+				mockApi.get.mockResolvedValue( {
+					layersinfo: {}
+				} );
+
+				const count = await manager.refreshAllViewers();
+
+				expect( count ).toBe( 0 );
+			} );
+
+			it( 'should refresh multiple viewers in parallel', async () => {
+				const mockDestroy1 = jest.fn();
+				const mockDestroy2 = jest.fn();
+
+				document.body.innerHTML = `
+					<div style="position: relative">
+						<img data-file-name="file1.jpg" src="test1.jpg">
+						<img data-file-name="file2.jpg" src="test2.jpg">
+					</div>
+				`;
+
+				const imgs = document.querySelectorAll( 'img' );
+				imgs[ 0 ].layersViewer = { destroy: mockDestroy1 };
+				imgs[ 1 ].layersViewer = { destroy: mockDestroy2 };
+
+				mockApi.get.mockResolvedValue( {
+					layersinfo: {
+						layerset: {
+							data: { layers: [ { id: '1', type: 'text' } ] },
+							baseWidth: 800,
+							baseHeight: 600
+						}
+					}
+				} );
+
+				const count = await manager.refreshAllViewers();
+
+				expect( count ).toBe( 2 );
+				expect( mockDestroy1 ).toHaveBeenCalled();
+				expect( mockDestroy2 ).toHaveBeenCalled();
+			} );
+		} );
 	} );
 } );

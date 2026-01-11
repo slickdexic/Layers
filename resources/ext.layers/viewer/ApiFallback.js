@@ -325,10 +325,20 @@ class ApiFallback {
 					return;
 				}
 
+				// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
+				let bgVisible = true;
+				if ( ls.data.backgroundVisible !== undefined ) {
+					const bgVal = ls.data.backgroundVisible;
+					bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
+				}
+
 				const payload = {
 					layers: layersArr,
 					baseWidth: ls.baseWidth || img.naturalWidth || img.width || null,
-					baseHeight: ls.baseHeight || img.naturalHeight || img.height || null
+					baseHeight: ls.baseHeight || img.naturalHeight || img.height || null,
+					backgroundVisible: bgVisible,
+					backgroundOpacity: ls.data.backgroundOpacity !== undefined
+						? parseFloat( ls.data.backgroundOpacity ) : 1.0
 				};
 
 				this.viewerManager.initializeViewer( img, payload );

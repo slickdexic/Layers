@@ -245,10 +245,14 @@ class ApiLayersInfo extends ApiBase {
 			}
 
 			// Preserve layer-level boolean properties
-			if ( isset( $result['layerset']['data']['layers'] ) && is_array( $result['layerset']['data']['layers'] ) ) {
+			if ( isset( $result['layerset']['data']['layers'] )
+			&& is_array( $result['layerset']['data']['layers'] )
+		) {
 				foreach ( $result['layerset']['data']['layers'] as &$layer ) {
 					// Convert boolean properties to integers for proper serialization
-					$booleanProps = [ 'visible', 'locked', 'shadow', 'glow', 'textShadow', 'preserveAspectRatio' ];
+					$booleanProps = [
+						'visible', 'locked', 'shadow', 'glow', 'textShadow', 'preserveAspectRatio', 'hasArrow'
+					];
 					foreach ( $booleanProps as $prop ) {
 						if ( array_key_exists( $prop, $layer ) ) {
 							$layer[$prop] = $layer[$prop] ? 1 : 0;

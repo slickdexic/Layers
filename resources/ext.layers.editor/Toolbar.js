@@ -311,8 +311,19 @@
 			}
 		}
 
-		// Get color picker strings
+		/**
+		 * Get color picker strings for i18n
+		 * Delegates to MessageHelper singleton for shared i18n strings
+		 *
+		 * @return {Object} Color picker string map
+		 */
 		getColorPickerStrings() {
+			// Use shared MessageHelper singleton if available
+			if ( typeof window !== 'undefined' && window.layersMessages &&
+				typeof window.layersMessages.getColorPickerStrings === 'function' ) {
+				return window.layersMessages.getColorPickerStrings();
+			}
+			// Fallback to local implementation
 			const t = this.msg.bind( this );
 			return {
 				title: t( 'layers-color-picker-title', 'Choose color' ),
@@ -442,6 +453,24 @@
 				// Callout/Chat Bubble tool - Speech bubble with tail
 				callout: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+			</svg>`,
+
+				// Number Marker tool - Circled number with optional arrow
+				marker: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="12" cy="10" r="7"/>
+				<text x="12" y="13" font-size="9" font-weight="bold" text-anchor="middle" fill="${stroke}" stroke="none">1</text>
+				<line x1="12" y1="17" x2="12" y2="22" stroke="${stroke}"/>
+				<polyline points="9,19 12,22 15,19" stroke="${stroke}" fill="none"/>
+			</svg>`,
+
+				// Dimension tool - Measurement line with extension lines
+				dimension: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<line x1="4" y1="12" x2="20" y2="12"/>
+				<line x1="4" y1="8" x2="4" y2="16"/>
+				<line x1="20" y1="8" x2="20" y2="16"/>
+				<polyline points="7,10 4,12 7,14" fill="none"/>
+				<polyline points="17,10 20,12 17,14" fill="none"/>
+				<text x="12" y="9" font-size="6" text-anchor="middle" fill="${stroke}" stroke="none">50</text>
 			</svg>`,
 
 				// Custom Shape Library - Grid of shapes
@@ -576,6 +605,12 @@
 				{ id: 'callout', icon: icons.callout, title: t( 'layers-tool-callout', 'Callout Tool' ), key: 'B', isSvg: true }
 			];
 
+			// Annotation tools group (markers, dimensions)
+			const annotationTools = [
+				{ id: 'marker', icon: icons.marker, title: t( 'layers-tool-marker', 'Marker Tool' ), key: 'M', isSvg: true },
+				{ id: 'dimension', icon: icons.dimension, title: t( 'layers-tool-dimension', 'Dimension Tool' ), key: 'D', isSvg: true }
+			];
+
 			// Shape tools group
 			const shapeTools = [
 				{ id: 'rectangle', icon: icons.rectangle, title: t( 'layers-tool-rectangle', 'Rectangle Tool' ), key: 'R', isSvg: true },
@@ -665,6 +700,25 @@
 				} );
 			}
 
+			// Create Annotation dropdown (markers, dimensions)
+			if ( ToolDropdown ) {
+				const annotationDropdown = new ToolDropdown( {
+					groupId: 'annotation',
+					groupLabel: t( 'layers-tool-group-annotation', 'Annotation Tools' ),
+					tools: annotationTools,
+					defaultTool: 'marker',
+					onToolSelect: ( toolId ) => this.selectTool( toolId ),
+					msg: t
+				} );
+				toolGroup.appendChild( annotationDropdown.create() );
+				this.toolDropdowns.push( annotationDropdown );
+			} else {
+				// Fallback: render as individual buttons
+				annotationTools.forEach( ( tool ) => {
+					toolGroup.appendChild( this.createToolButton( tool ) );
+				} );
+			}
+
 			// Render additional standalone tools (pen, blur)
 			additionalTools.forEach( ( tool ) => {
 				const button = this.createToolButton( tool );
@@ -716,8 +770,7 @@
 			// Load the shape library module if not already loaded
 			mw.loader.using( 'ext.layers.shapeLibrary' ).then( () => {
 				if ( !window.Layers || !window.Layers.ShapeLibraryPanel ) {
-					// eslint-disable-next-line no-console
-					console.error( 'Shape library module not available' );
+					mw.log.error( 'Shape library module not available' );
 					return;
 				}
 

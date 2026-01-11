@@ -104,6 +104,7 @@ class ViewerManager {
 	 */
 	initializeViewer ( img, layerData ) {
 		if ( img.layersViewer ) {
+			this.debugLog( 'initializeViewer: skipping, viewer already exists' );
 			return false;
 		}
 
@@ -113,6 +114,13 @@ class ViewerManager {
 			if ( Array.isArray( data ) ) {
 				data = { layers: data };
 			}
+
+			this.debugLog( 'initializeViewer: creating viewer with data:', {
+				layerCount: data.layers ? data.layers.length : 0,
+				backgroundVisible: data.backgroundVisible,
+				baseWidth: data.baseWidth,
+				baseHeight: data.baseHeight
+			} );
 
 			const container = this.ensurePositionedContainer( img );
 			const LayersViewer = getClass( 'Viewer.LayersViewer', 'LayersViewer' );
@@ -170,6 +178,128 @@ class ViewerManager {
 			this.debugWarn( 'Viewer reinit error:', e );
 			return false;
 		}
+	}
+
+	/**
+	 * Refresh all viewers on the page by fetching fresh data from the API.
+	 *
+	 * This is called when the modal editor closes after saving to ensure
+	 * all viewers display the latest layer data without requiring a page refresh.
+	 *
+	 * @return {Promise<number>} Promise resolving to number of viewers refreshed
+	 */
+	refreshAllViewers() {
+		this.debugLog( 'refreshAllViewers: starting' );
+
+		// Find all images with layer viewers
+		const viewerImages = Array.prototype.slice.call(
+			document.querySelectorAll( 'img' )
+		).filter( ( img ) => img.layersViewer );
+
+		if ( viewerImages.length === 0 ) {
+			this.debugLog( 'refreshAllViewers: no viewers found' );
+			return Promise.resolve( 0 );
+		}
+
+		this.debugLog( 'refreshAllViewers: found', viewerImages.length, 'viewers' );
+
+		// Clear freshness cache for all images to force API fetch
+		if ( this.freshnessChecker ) {
+			viewerImages.forEach( ( img ) => {
+				const filename = img.getAttribute( 'data-file-name' );
+				const setName = img.getAttribute( 'data-layer-setname' ) || 'default';
+				if ( filename ) {
+					this.freshnessChecker.clearCache( filename, setName );
+				}
+			} );
+		}
+
+		// Fetch fresh data for each viewer via API
+		if ( typeof mw === 'undefined' || !mw.Api ) {
+			this.debugWarn( 'refreshAllViewers: mw.Api not available' );
+			return Promise.resolve( 0 );
+		}
+
+		const api = new mw.Api();
+		const self = this;
+		let refreshCount = 0;
+
+		const refreshPromises = viewerImages.map( ( img ) => {
+			const filename = this.extractFilenameFromImg( img );
+			const setName = img.getAttribute( 'data-layer-setname' ) || img.getAttribute( 'data-layers-intent' ) || 'default';
+
+			if ( !filename ) {
+				return Promise.resolve( false );
+			}
+
+			const params = {
+				action: 'layersinfo',
+				format: 'json',
+				filename: filename
+			};
+			if ( setName && setName !== 'on' && setName !== 'default' ) {
+				params.setname = setName;
+			}
+
+			return api.get( params ).then( ( data ) => {
+				try {
+					if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
+						self.debugLog( 'refreshAllViewers: no layerset for', filename );
+						return false;
+					}
+
+					const layerset = data.layersinfo.layerset;
+					let layersArr = null;
+
+					if ( layerset && layerset.data ) {
+						const arrTag = Object.prototype.toString.call( layerset.data.layers );
+						if ( layerset.data.layers && arrTag === '[object Array]' ) {
+							layersArr = layerset.data.layers;
+						} else if ( Array.isArray( layerset.data ) ) {
+							layersArr = layerset.data;
+						}
+					}
+
+					if ( !layersArr ) {
+						layersArr = [];
+					}
+
+					// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
+					let bgVisible = true;
+					if ( layerset.data && layerset.data.backgroundVisible !== undefined ) {
+						const bgVal = layerset.data.backgroundVisible;
+						bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
+					}
+
+					const payload = {
+						layers: layersArr,
+						baseWidth: layerset.baseWidth || img.naturalWidth || img.width || null,
+						baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null,
+						backgroundVisible: bgVisible,
+						backgroundOpacity: layerset.data && layerset.data.backgroundOpacity !== undefined
+							? parseFloat( layerset.data.backgroundOpacity ) : 1.0
+					};
+
+					const success = self.reinitializeViewer( img, payload );
+					if ( success ) {
+						refreshCount++;
+						self.debugLog( 'refreshAllViewers: refreshed viewer for', filename );
+					}
+					return success;
+				} catch ( e ) {
+					self.debugWarn( 'refreshAllViewers: error processing', filename, e );
+					return false;
+				}
+			} ).catch( ( apiErr ) => {
+				self.debugWarn( 'refreshAllViewers: API error for', filename, apiErr );
+				return false;
+			} );
+		} );
+
+		return Promise.all( refreshPromises ).then( () => {
+			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'viewers' );
+			return refreshCount;
+		} );
 	}
 
 	/**
@@ -381,12 +511,20 @@ class ViewerManager {
 						return;
 					}
 
+					// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
+					let bgVisible = true;
+					if ( layerset.data.backgroundVisible !== undefined ) {
+						const bgVal = layerset.data.backgroundVisible;
+						bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
+					}
+
 					const payload = {
 						layers: layersArr,
 						baseWidth: layerset.baseWidth || img.naturalWidth || img.width || null,
 						baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null,
-						backgroundVisible: layerset.data.backgroundVisible !== undefined ? layerset.data.backgroundVisible : true,
-						backgroundOpacity: layerset.data.backgroundOpacity !== undefined ? layerset.data.backgroundOpacity : 1.0
+						backgroundVisible: bgVisible,
+						backgroundOpacity: layerset.data.backgroundOpacity !== undefined
+							? parseFloat( layerset.data.backgroundOpacity ) : 1.0
 					};
 
 						const success = self.initializeViewer( img, payload );

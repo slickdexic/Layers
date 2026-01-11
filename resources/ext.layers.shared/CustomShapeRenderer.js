@@ -200,11 +200,11 @@ class CustomShapeRenderer {
 		// Do NOT use the full SVG string - it can be thousands of characters
 		// and Map key comparison would be O(n) on every lookup.
 		// Do NOT include size - SVGs scale perfectly.
+		// Do NOT include strokeWidth - we don't modify stroke-width in SVG shapes.
 		const shapeId = shapeData.id || layer.shapeId || layer.id || '';
 		const stroke = layer.stroke || '';
 		const fill = layer.fill || '';
-		const strokeWidth = layer.strokeWidth || '';
-		const cacheKey = `${ shapeId }|${ stroke }|${ fill }|${ strokeWidth }`;
+		const cacheKey = `${ shapeId }|${ stroke }|${ fill }`;
 
 		// Check if we have a cached image FIRST, before doing any string manipulation
 		if ( this.svgImageCache.has( cacheKey ) ) {
@@ -239,10 +239,12 @@ class CustomShapeRenderer {
 			svgString = svgString.replace( /fill="currentColor"/g, `fill="${ layer.fill }"` );
 		}
 
-		// Apply stroke width if specified
-		if ( layer.strokeWidth ) {
-			svgString = svgString.replace( /stroke-width="[^"]*"/g, `stroke-width="${ layer.strokeWidth }"` );
-		}
+		// NOTE: We intentionally do NOT override stroke-width here.
+		// SVG shapes from the library have their stroke-width values designed
+		// to scale correctly with the viewBox. Replacing them with layer.strokeWidth
+		// (which defaults to 2) would make the strokes appear pencil-thin.
+		// The stroke-width in the SVG coordinate system scales proportionally
+		// when the image is drawn to the layer dimensions.
 
 		// Convert SVG to data URL
 		const svgBlob = new Blob( [ svgString ], { type: 'image/svg+xml;charset=utf-8' } );

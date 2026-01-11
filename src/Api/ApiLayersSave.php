@@ -4,7 +4,6 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiUsageException;
-use MediaWiki\Deferred\HTMLCacheUpdateJob;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
@@ -515,27 +514,33 @@ class ApiLayersSave extends ApiBase {
 	 */
 	protected function invalidateCachesForFile( Title $fileTitle ): void {
 		try {
+			$services = MediaWikiServices::getInstance();
+
 			// 1. Purge the File: page itself (synchronous)
-			$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $fileTitle );
+			$wikiPage = $services->getWikiPageFactory()->newFromTitle( $fileTitle );
 			if ( $wikiPage->exists() ) {
 				$wikiPage->doPurge();
 			}
 
-			// 2. Purge all pages that embed this file (backlinks)
+			// 2. Purge all pages that embed this file using BacklinkCache
 			// This handles pages using [[File:X.jpg|layers=on]]
-			$services = MediaWikiServices::getInstance();
-			$jobQueueGroup = $services->getJobQueueGroup();
+			try {
+				$backlinkCache = $services->getBacklinkCacheFactory()->getBacklinkCache( $fileTitle );
+				$backlinkTitles = $backlinkCache->getLinkPages( 'imagelinks', null, 100 );
 
-			// Queue HTMLCacheUpdateJob to purge all pages linking to this file
-			// This is the standard MediaWiki approach for file-related cache invalidation
-			$job = new HTMLCacheUpdateJob(
-				$fileTitle,
-				[
-					'table' => 'imagelinks',
-					'recursive' => true,
-				]
-			);
-			$jobQueueGroup->push( $job );
+				foreach ( $backlinkTitles as $backlinkTitle ) {
+					$backlinkPage = $services->getWikiPageFactory()->newFromTitle( $backlinkTitle );
+					if ( $backlinkPage->exists() ) {
+						$backlinkPage->doPurge();
+					}
+				}
+			} catch ( \Throwable $e ) {
+				// Fallback: try to at least purge parser cache
+				$this->getLogger()->debug(
+					'Backlink purge failed, using fallback: {error}',
+					[ 'error' => $e->getMessage() ]
+				);
+			}
 
 			$this->getLogger()->debug(
 				'Cache invalidation completed for file: {filename}',

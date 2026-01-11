@@ -3,15 +3,15 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94.53%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C677%20passing%20(100%25)-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-8%2C603%20passing%20(100%25)-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.3 (January 9, 2026)  
+> **Version:** 1.5.4 (January 11, 2026)  
 > **Status:** ✅ Production-ready (Rating: 8.0/10)  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+  
-> **Technical Debt:** 12 god classes (1,014-2,193 lines) with proper delegation patterns
+> **Technical Debt:** 16 god classes (1,035-3,176 lines) with proper delegation patterns
 >
 > **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
 > **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).
@@ -28,7 +28,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - ✅ Original images preserved (non-destructive)
 - ✅ Modern, intuitive editor UI
-- ✅ 13 drawing tools with customizable properties
+- ✅ **15 drawing tools** with customizable properties
 - ✅ Multiple named layer sets per image with version history
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
 
@@ -36,7 +36,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 ## Features
 
-### Drawing Tools (13 Available)
+### Drawing Tools (15 Available)
 
 | Tool          | Shortcut | Purpose                                      |
 | ------------- | -------- | -------------------------------------------- |
@@ -52,6 +52,8 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Star          | S        | Draw star shapes                             |
 | Arrow         | A        | Annotation arrows                            |
 | Line          | L        | Straight lines                               |
+| **Marker**    | M        | Numbered/lettered markers with optional arrows |
+| **Dimension** | D        | Technical measurement annotations            |
 | Custom Shape  | —        | 374 built-in shapes (arrows, ISO signs, flowchart, and more!) |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers). *More shapes to come soon!*
@@ -231,8 +233,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,519 lines across 32 files
-- **Frontend:** HTML5 Canvas editor with 115 JS files (~61,866 lines), 95+ ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,595 lines across 32 files
+- **Frontend:** HTML5 Canvas editor with 113 JS files (~63,914 lines), 95+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** 12 god classes (1,014-2,193 lines) = 30% of JS codebase, all use delegation patterns
@@ -243,7 +245,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 8,670 passing (100%) |
+| Jest tests | 8,476 passing (100%) |
 | Statement coverage | 94.53% |
 | Branch coverage | 83.16% |
 | Test suites | 146 |
@@ -297,11 +299,11 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 115 | ✅ |
-| Total JS lines | ~61,866 | ✅ Well under 75K target |
+| Total JS files | 113 | ✅ |
+| Total JS lines | ~63,914 | ✅ Well under 75K target |
 | ES6 classes | 95+ | ✅ |
 | God classes (>1000 lines) | 12 | ⚠️ Managed with delegation |
-| Tests passing | 8,670 | ✅ |
+| Tests passing | 8,476 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 94.53% | ✅ Excellent |
 | Branch coverage | 83.16% | ✅ Good |
@@ -313,7 +315,7 @@ For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 **What's Good:**
 - ✅ All 13 drawing tools work correctly - zero functional bugs
 - ✅ Excellent security (CSRF, rate limiting, validation)
-- ✅ 93.94% test coverage with 8,670 passing tests
+- ✅ 94.53% test coverage with 8,476 passing tests
 - ✅ Professional i18n, ARIA accessibility, documentation
 - ✅ No lazy code patterns (no empty catches, no console.log, no TODO/FIXME)
 

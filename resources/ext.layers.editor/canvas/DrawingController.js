@@ -84,6 +84,12 @@ class DrawingController {
 			case 'arrow':
 				this.startArrowTool( point, style );
 				break;
+			case 'marker':
+				this.startMarkerTool( point, style );
+				break;
+			case 'dimension':
+				this.startDimensionTool( point, style );
+				break;
 			default:
 				// Unknown tool - do nothing
 				break;
@@ -269,6 +275,91 @@ class DrawingController {
 	}
 
 	/**
+	 * Start marker tool - places a numbered marker at the click point
+	 * Markers are placed immediately on click (not drag-created)
+	 *
+	 * @param {Object} point - Starting point
+	 * @param {Object} style - Style options (includes markerDefaults)
+	 */
+	startMarkerTool( point, style ) {
+		// Get next marker value from existing layers
+		const layers = this.canvasManager && this.canvasManager.layers ?
+			this.canvasManager.layers : [];
+		const MarkerRenderer = ( typeof window !== 'undefined' &&
+			window.Layers && window.Layers.MarkerRenderer ) ?
+			window.Layers.MarkerRenderer : null;
+
+		const nextValue = MarkerRenderer ?
+			MarkerRenderer.getNextValue( layers ) : 1;
+
+		this.tempLayer = {
+			type: 'marker',
+			x: point.x,
+			y: point.y,
+			value: nextValue,
+			style: style.style || 'circled',
+			size: style.size || 24,
+			fontSizeAdjust: style.fontSizeAdjust || 0,
+			fontFamily: style.fontFamily || 'Arial, sans-serif',
+			fontWeight: 'bold',
+			fill: style.fill || '#ffffff',
+			stroke: style.stroke || style.color || '#000000',
+			strokeWidth: style.strokeWidth || 2,
+			color: style.color || '#000000',
+			hasArrow: style.hasArrow || false,
+			arrowX: point.x,
+			arrowY: point.y + 50,
+			arrowStyle: style.arrowStyle || 'arrow',
+			visible: true,
+			locked: false,
+			opacity: 1,
+			name: 'Marker ' + nextValue
+		};
+	}
+
+	/**
+	 * Start dimension tool
+	 *
+	 * @param {Object} point - Starting point
+	 * @param {Object} style - Style options
+	 */
+	startDimensionTool( point, style ) {
+		this.tempLayer = {
+			type: 'dimension',
+			x1: point.x,
+			y1: point.y,
+			x2: point.x,
+			y2: point.y,
+			stroke: style.stroke || style.color || '#000000',
+			strokeWidth: style.strokeWidth || 1,
+			fontSize: style.fontSize || 12,
+			fontFamily: style.fontFamily || 'Arial, sans-serif',
+			color: style.color || '#000000',
+			endStyle: style.endStyle || 'arrow',
+			textPosition: style.textPosition || 'above',
+			extensionLength: style.extensionLength || 10,
+			extensionGap: style.extensionGap || 3,
+			arrowSize: style.arrowSize || 8,
+			tickSize: style.tickSize || 6,
+			unit: style.unit || 'px',
+			scale: style.scale || 1,
+			showUnit: style.showUnit !== false,
+			showBackground: style.showBackground !== false,
+			backgroundColor: style.backgroundColor || '#ffffff',
+			precision: style.precision !== undefined ? style.precision : 0,
+			toleranceType: style.toleranceType || 'none',
+			toleranceValue: style.toleranceValue || 0,
+			toleranceUpper: style.toleranceUpper || 0,
+			toleranceLower: style.toleranceLower || 0,
+			text: '', // Empty = auto-calculate
+			visible: true,
+			locked: false,
+			opacity: 1,
+			name: 'Dimension'
+		};
+	}
+
+	/**
 	 * Start circle tool
 	 *
 	 * @param {Object} point - Starting point
@@ -446,6 +537,17 @@ class DrawingController {
 				this.tempLayer.x2 = point.x;
 				this.tempLayer.y2 = point.y;
 				break;
+			case 'marker':
+				// Dragging while placing a marker sets the arrow target position
+				this.tempLayer.hasArrow = true;
+				this.tempLayer.arrowX = point.x;
+				this.tempLayer.arrowY = point.y;
+				break;
+			case 'dimension':
+				// Dragging extends the dimension line endpoint
+				this.tempLayer.x2 = point.x;
+				this.tempLayer.y2 = point.y;
+				break;
 			case 'path':
 				// Add point to path for pen tool
 				this.tempLayer.points.push( point );
@@ -520,6 +622,27 @@ class DrawingController {
 				layer.x2 = point.x;
 				layer.y2 = point.y;
 				break;
+			case 'marker':
+				// Marker position is already set; finalize arrow if dragged
+				{
+					const markerDx = point.x - layer.x;
+					const markerDy = point.y - layer.y;
+					const distance = Math.sqrt( markerDx * markerDx + markerDy * markerDy );
+					// Only enable arrow if user dragged more than 20px
+					if ( distance > 20 ) {
+						layer.hasArrow = true;
+						layer.arrowX = point.x;
+						layer.arrowY = point.y;
+					} else {
+						layer.hasArrow = false;
+					}
+				}
+				break;
+			case 'dimension':
+				// Finalize dimension endpoint
+				layer.x2 = point.x;
+				layer.y2 = point.y;
+				break;
 			case 'path':
 				// Path is already complete
 				break;
@@ -567,8 +690,21 @@ class DrawingController {
 				return length >= this.MIN_LINE_LENGTH;
 			}
 
+			case 'dimension': {
+				const dimLength = Math.sqrt(
+					Math.pow( layer.x2 - layer.x1, 2 ) +
+					Math.pow( layer.y2 - layer.y1, 2 )
+				);
+				// Dimensions need a minimum length to be useful
+				return dimLength >= this.MIN_LINE_LENGTH;
+			}
+
 			case 'path':
 				return layer.points && layer.points.length >= this.MIN_PATH_POINTS;
+
+			case 'marker':
+				// Markers are always valid (single click creates them)
+				return true;
 
 			default:
 				return true;
@@ -595,6 +731,8 @@ class DrawingController {
 			case 'star':
 			case 'line':
 			case 'arrow':
+			case 'marker':
+			case 'dimension':
 				return 'crosshair';
 			case 'text':
 				return 'text';
@@ -612,7 +750,7 @@ class DrawingController {
 	isDrawingTool ( tool ) {
 		const drawingTools = [
 			'text', 'textbox', 'callout', 'pen', 'rectangle', 'circle',
-			'ellipse', 'polygon', 'star', 'line', 'arrow'
+			'ellipse', 'polygon', 'star', 'line', 'arrow', 'marker', 'dimension'
 		];
 		return drawingTools.indexOf( tool ) !== -1;
 	}

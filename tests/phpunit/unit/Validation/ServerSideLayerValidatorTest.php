@@ -479,4 +479,112 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$types = $validator->getSupportedLayerTypes();
 		$this->assertContains( 'group', $types );
 	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateCustomShapeWithSvg() {
+		$validator = $this->createValidator();
+
+		// This mimics what the JavaScript client sends for a shape library SVG symbol
+		$layer = [
+			'id' => 'layer_1',
+			'type' => 'customShape',
+			'shapeId' => 'iso7010-w/iso_7010_w001',
+			'viewBox' => [ 0, 0, 600, 524 ],
+			'x' => 100,
+			'y' => 100,
+			'width' => 200,
+			'height' => 175,
+			'name' => 'W001',
+			'svg' => '<svg viewBox="0 0 600 524" xmlns="http://www.w3.org/2000/svg">' .
+				'<path d="m300 16 284 492h-568z" fill="#F9A800" stroke-linejoin="round" ' .
+				'stroke="#000" stroke-width="32"/>' .
+				'<path d="m337 192a37 37 0 0 0-74 0l11 143a26 26 0 0 0 52 0m12 85a38 38 0 1 1 0-1"/>' .
+				'</svg>',
+			'stroke' => '#000000',
+			'fill' => 'none'
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'customShape with SVG should validate: ' .
+			implode( '; ', $result->getErrors() ) );
+		$data = $result->getData();
+		$this->assertEquals( 'customShape', $data['type'] );
+		$this->assertEquals( 'iso7010-w/iso_7010_w001', $data['shapeId'] );
+		$this->assertEquals( [ 0, 0, 600, 524 ], $data['viewBox'] );
+		$this->assertStringContainsString( '<svg', $data['svg'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateCustomShapeWithIsMultiPath() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'layer_2',
+			'type' => 'customShape',
+			'shapeId' => 'safety/warning',
+			'viewBox' => [ 0, 0, 100, 100 ],
+			'x' => 50,
+			'y' => 50,
+			'width' => 100,
+			'height' => 100,
+			'name' => 'Warning Sign',
+			'paths' => [
+				[ 'path' => 'M0,0 L50,100 L100,0 Z', 'fill' => '#ff0000' ],
+				[ 'path' => 'M25,25 L50,75 L75,25 Z', 'fill' => '#ffffff' ]
+			],
+			'isMultiPath' => true
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'customShape with paths and isMultiPath should validate: ' .
+			implode( '; ', $result->getErrors() ) );
+		$data = $result->getData();
+		$this->assertTrue( $data['isMultiPath'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateCustomShapeWithStrokeOnly() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'layer_3',
+			'type' => 'customShape',
+			'shapeId' => 'icons/arrow',
+			'viewBox' => [ 0, 0, 24, 24 ],
+			'x' => 10,
+			'y' => 10,
+			'width' => 48,
+			'height' => 48,
+			'name' => 'Arrow Icon',
+			'path' => 'M12,4 L20,12 L12,20 M4,12 L20,12',
+			'stroke' => '#000000',
+			'fill' => 'transparent',
+			'strokeOnly' => true
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'customShape with strokeOnly should validate: ' .
+			implode( '; ', $result->getErrors() ) );
+		$data = $result->getData();
+		$this->assertTrue( $data['strokeOnly'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::getSupportedLayerTypes
+	 */
+	public function testGetSupportedLayerTypesIncludesCustomShape() {
+		$validator = $this->createValidator();
+
+		$types = $validator->getSupportedLayerTypes();
+		$this->assertContains( 'customShape', $types );
+	}
 }

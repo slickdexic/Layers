@@ -479,7 +479,7 @@ describe('LayersEditor navigation methods', () => {
         // Can't easily test location.href assignment in JSDOM, but can verify getUrl was called correctly
         editorInstance.navigateBackToFileWithName('Test.png');
         
-        expect(window.mw.util.getUrl).toHaveBeenCalledWith('File:Test.png');
+        expect(window.mw.util.getUrl).toHaveBeenCalledWith('File:Test.png', { layers: 'on' });
     });
 
     test('navigateBackToFileWithName should check returnToUrl config', () => {

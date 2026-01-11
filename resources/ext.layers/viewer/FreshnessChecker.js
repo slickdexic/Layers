@@ -225,14 +225,20 @@
 
 							// If stale, extract full layer data for re-initialization
 							if ( inlineRevision < latestRevision && layerset.data ) {
+								// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
+								let bgVisible = true;
+								if ( layerset.data.backgroundVisible !== undefined ) {
+									const bgVal = layerset.data.backgroundVisible;
+									bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
+								}
+
 								layerData = {
 									layers: layerset.data.layers || [],
 									baseWidth: layerset.baseWidth,
 									baseHeight: layerset.baseHeight,
-									backgroundVisible: layerset.data.backgroundVisible !== undefined
-										? layerset.data.backgroundVisible : true,
+									backgroundVisible: bgVisible,
 									backgroundOpacity: layerset.data.backgroundOpacity !== undefined
-										? layerset.data.backgroundOpacity : 1.0
+										? parseFloat( layerset.data.backgroundOpacity ) : 1.0
 								};
 							}
 						}

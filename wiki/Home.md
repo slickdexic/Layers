@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-8%2C677%20Passing-brightgreen" alt="8,677 Tests">
-  <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
+  <img src="https://img.shields.io/badge/Tests-8%2C603%20Passing-brightgreen" alt="8,603 Tests">
+  <img src="https://img.shields.io/badge/Coverage-94.53%25-brightgreen" alt="94.53% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -16,20 +16,26 @@
 
 | 🎨 **Professional Tools** | 🔒 **Non-Destructive** | ♿ **Accessible** |
 |---------------------------|------------------------|------------------|
-| 13 drawing tools, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
+| **15 drawing tools**, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
 
 ---
 
-## 🆕 What's New in v1.5.3
+## 🆕 What's New in v1.5.4
 
-- **Shape Library with 374 Shapes** — Comprehensive built-in shape library with 10 searchable categories
-  - Arrows, Basic Shapes, Callouts, Flowchart, ISO 7010 Safety Symbols (mandatory, prohibition, warning), Math, Miscellaneous, Stars & Banners
-  - All shapes render as crisp SVG vectors that scale without quality loss
-  - *More shapes to come soon!*
-- **Shape Rendering Performance** — Fixed critical performance issue preventing canvas crashes during drag/resize
-- **Aspect Ratio for Images/Shapes** — Images and custom shapes maintain aspect ratio by default (Shift to override)
+- **Marker Tool** — New annotation tool for numbered/lettered sequence markers
+  - Styles: Circled (①②③), Letters (A B C), Parentheses ((1)(2)(3)), Plain (1. 2. 3.)
+  - Optional arrow/leader lines pointing to target locations
+  - Full shadow support with all shadow controls
 
-### Previous v1.5.2 Highlights
+- **Dimension Tool** — Technical measurement annotation tool
+  - End styles: Arrow, Tick, Dot, None
+  - Tolerance display: Symmetric (±), Deviation (+/-), Limits
+  - Configurable units, scale, and precision
+
+- **Marker Shadow Fix** — Shadow controls now properly affect marker layers
+- **CanvasManager Refactored** — Reduced from 2,072 to 1,927 lines
+
+### Previous v1.5.3 Highlights
 
 - **Improved Test Coverage** — Added 114 new tests targeting low-coverage modules
 - **8,677 tests passing** — 94.55% statement coverage, 83.19% branch coverage (up from 8,563 tests, 94.05% stmt, 82.62% branch)
@@ -149,15 +155,15 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.2 |
-| **Version (REL1_43)** | 1.5.1-REL1_43 |
+| **Version (main)** | 1.5.3 |
+| **Version (REL1_43)** | 1.5.3-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 7, 2026 |
-| **Test Suites** | 146 |
-| **Total Tests** | 8,677 |
-| **Statement Coverage** | 94.55% |
-| **Branch Coverage** | 83.19% |
-| **JavaScript Files** | 113 |
+| **Release Date** | January 11, 2026 |
+| **Test Suites** | 142 |
+| **Total Tests** | 8,619 |
+| **Statement Coverage** | 94.53% |
+| **Branch Coverage** | 83.16% |
+| **JavaScript Files** | 115 |
 | **ES6 Classes** | 94+ |
 
 ---

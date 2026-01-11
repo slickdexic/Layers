@@ -112,6 +112,11 @@
 						if ( tc ) {
 							tc.startRotation( point );
 						}
+					} else if ( handleHit.type === 'arrowTip' && handleHit.isMarker ) {
+						// Special handling for marker arrow tip - start arrow drag
+						if ( tc ) {
+							tc.startArrowTipDrag( handleHit, cm.startPoint || point );
+						}
 					} else {
 						if ( tc ) {
 							tc.startResize( handleHit, cm.startPoint || point );
@@ -190,6 +195,11 @@
 			}
 
 			const tc = cm.transformController;
+			if ( tc && tc.isArrowTipDragging && tc.dragStartPoint ) {
+				tc.handleArrowTipDrag( point );
+				return;
+			}
+
 			if ( tc && tc.isResizing && tc.resizeHandle && tc.dragStartPoint ) {
 				try {
 					tc.handleResize( point, e );
@@ -212,8 +222,8 @@
 				return;
 			}
 
-			// Always update cursor when not actively resizing/rotating/dragging
-			const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging );
+			// Always update cursor when not actively resizing/rotating/dragging/arrow-tip-dragging
+			const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging || tc.isArrowTipDragging );
 			if ( !isTransforming ) {
 				cm.updateCursor( point );
 			}
@@ -263,6 +273,11 @@
 			}
 
 			const tc = cm.transformController;
+			if ( tc && tc.isArrowTipDragging ) {
+				tc.finishArrowTipDrag();
+				return;
+			}
+
 			if ( tc && tc.isResizing ) {
 				tc.finishResize();
 				return;
@@ -293,8 +308,8 @@
 		handleWheel( e ) {
 			const cm = this.cm;
 			const tc = cm.transformController;
-			// Don't zoom when resizing, rotating, dragging or panning
-			const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging );
+			// Don't zoom when resizing, rotating, dragging, arrow-tip-dragging or panning
+			const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging || tc.isArrowTipDragging );
 			if ( isTransforming || cm.isPanning ) {
 				e.preventDefault();
 				return;

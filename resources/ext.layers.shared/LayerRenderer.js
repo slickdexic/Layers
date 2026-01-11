@@ -54,6 +54,14 @@
 	const ImageLayerRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.ImageLayerRenderer ) ||
 		( typeof require !== 'undefined' ? require( './ImageLayerRenderer.js' ) : null );
 
+	// Get MarkerRenderer - it should be loaded before this module
+	const MarkerRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.MarkerRenderer ) ||
+		( typeof require !== 'undefined' ? require( './MarkerRenderer.js' ) : null );
+
+	// Get DimensionRenderer - it should be loaded before this module
+	const DimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.DimensionRenderer ) ||
+		( typeof require !== 'undefined' ? require( './DimensionRenderer.js' ) : null );
+
 	/**
 	 * LayerRenderer class - Renders individual layer shapes on a canvas
 	 */
@@ -173,6 +181,22 @@ class LayerRenderer {
 		} else {
 			this.imageLayerRenderer = null;
 		}
+
+		// Create MarkerRenderer instance for marker/number sequence operations
+		if ( MarkerRenderer ) {
+			this.markerRenderer = new MarkerRenderer( ctx, {
+				shadowRenderer: this.shadowRenderer
+			} );
+		} else {
+			this.markerRenderer = null;
+		}
+
+		// Create DimensionRenderer instance for dimension/measurement operations
+		if ( DimensionRenderer ) {
+			this.dimensionRenderer = new DimensionRenderer( ctx );
+		} else {
+			this.dimensionRenderer = null;
+		}
 	}
 
 	// ========================================================================
@@ -211,6 +235,12 @@ class LayerRenderer {
 		}
 		if ( this.imageLayerRenderer ) {
 			this.imageLayerRenderer.setContext( ctx );
+		}
+		if ( this.markerRenderer ) {
+			this.markerRenderer.setContext( ctx );
+		}
+		if ( this.dimensionRenderer ) {
+			this.dimensionRenderer.setContext( ctx );
 		}
 	}
 
@@ -555,6 +585,22 @@ class LayerRenderer {
 		if ( this.textRenderer ) { this.textRenderer.setContext( this.ctx ); this.textRenderer.draw( layer, this._prepareRenderOptions( options ) ); }
 	}
 
+	/** Draw a marker layer (numbered/lettered annotation with optional arrow) */
+	drawMarker( layer, options ) {
+		if ( this.markerRenderer ) {
+			this.markerRenderer.setContext( this.ctx );
+			this.markerRenderer.draw( layer, this._prepareRenderOptions( options ) );
+		}
+	}
+
+	/** Draw a dimension layer (measurement annotation with extension lines) */
+	drawDimension( layer, options ) {
+		if ( this.dimensionRenderer ) {
+			this.dimensionRenderer.setContext( this.ctx );
+			this.dimensionRenderer.draw( layer, this._prepareRenderOptions( options ) );
+		}
+	}
+
 	// ========================================================================
 	// Blur Blend Mode Support
 	// ========================================================================
@@ -826,6 +872,12 @@ class LayerRenderer {
 			case 'customShape':
 				this.drawCustomShape( layer, options );
 				break;
+			case 'marker':
+				this.drawMarker( layer, options );
+				break;
+			case 'dimension':
+				this.drawDimension( layer, options );
+				break;
 		}
 	}
 
@@ -848,6 +900,8 @@ class LayerRenderer {
 			'calloutRenderer',
 			'effectsRenderer',
 			'imageLayerRenderer',
+			'markerRenderer',
+			'dimensionRenderer',
 			'_customShapeRenderer'
 		];
 
