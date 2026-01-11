@@ -10,8 +10,13 @@ namespace MediaWiki\Extension\Layers\Validation;
  */
 class ColorValidator {
 
-	/** @var array Valid CSS named colors */
+	/**
+	 * Valid CSS named colors
+	 * @var array
+	 */
 	private const NAMED_COLORS = [
+		// SVG standard: no fill/stroke
+		'none',
 		'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black',
 		'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood', 'cadetblue', 'chartreuse',
 		'chocolate', 'coral', 'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue',

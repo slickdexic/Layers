@@ -58,6 +58,7 @@ class TransformController {
 		this.isResizing = false;
 		this.isRotating = false;
 		this.isDragging = false;
+		this.isArrowTipDragging = false;
 
 		this.resizeHandle = null;
 		this.dragStartPoint = null;
@@ -155,6 +156,12 @@ class TransformController {
 
 		// Prevent resize on locked layers
 		if ( this.isLayerEffectivelyLocked( layer ) ) {
+			return;
+		}
+
+		// Prevent resize on marker layers - use properties panel instead
+		// This avoids accidental resizing when trying to reposition the marker
+		if ( layer && layer.type === 'marker' ) {
 			return;
 		}
 
@@ -793,8 +800,16 @@ class TransformController {
 				layer.x = ( originalState.x || 0 ) + deltaX;
 				layer.y = ( originalState.y || 0 ) + deltaY;
 				break;
+			case 'marker':
+				// Move marker center position only - arrow position is independent
+				layer.x = ( originalState.x || 0 ) + deltaX;
+				layer.y = ( originalState.y || 0 ) + deltaY;
+				// Arrow position (arrowX, arrowY) is NOT moved with the marker
+				// This allows users to reposition the marker balloon and arrow independently
+				break;
 			case 'line':
 			case 'arrow':
+			case 'dimension':
 				layer.x1 = ( originalState.x1 || 0 ) + deltaX;
 				layer.y1 = ( originalState.y1 || 0 ) + deltaY;
 				layer.x2 = ( originalState.x2 || 0 ) + deltaX;
@@ -854,6 +869,95 @@ class TransformController {
 				this.manager.editor.saveState( 'Move layer' );
 			} else if ( this.manager && typeof this.manager.saveState === 'function' ) {
 				this.manager.saveState( 'Move layer' );
+			}
+		}
+	}
+
+	// ==================== Arrow Tip Dragging ====================
+
+	/**
+	 * Start dragging the arrow tip of a marker layer
+	 *
+	 * @param {Object} handle The arrowTip handle
+	 * @param {Object} startPoint The starting mouse point
+	 */
+	startArrowTipDrag( handle, startPoint ) {
+		const layer = this.manager.editor.getLayerById( handle.layerId );
+
+		// Prevent drag on locked layers
+		if ( this.isLayerEffectivelyLocked( layer ) ) {
+			return;
+		}
+
+		this.isArrowTipDragging = true;
+		this.dragStartPoint = startPoint;
+		this.arrowTipLayerId = handle.layerId;
+		this.manager.canvas.style.cursor = 'move';
+
+		// Store original layer state
+		if ( layer ) {
+			this.originalLayerState = this._cloneLayer( layer );
+		}
+	}
+
+	/**
+	 * Handle arrow tip dragging during mouse move
+	 *
+	 * @param {Object} point Current mouse point
+	 */
+	handleArrowTipDrag( point ) {
+		if ( !this.isArrowTipDragging || !this.arrowTipLayerId ) {
+			return;
+		}
+
+		const layer = this.manager.editor.getLayerById( this.arrowTipLayerId );
+		if ( !layer ) {
+			return;
+		}
+
+		// Update arrow position directly to mouse point
+		this.manager.editor.updateLayer( this.arrowTipLayerId, {
+			arrowX: point.x,
+			arrowY: point.y
+		} );
+
+		this.showDragPreview = true;
+
+		// Emit transform event for live properties panel update
+		this.emitTransforming( layer );
+
+		// Render layers
+		this.manager.renderLayers( this.manager.editor.layers );
+	}
+
+	/**
+	 * Finish the arrow tip drag operation
+	 */
+	finishArrowTipDrag() {
+		const hadMovement = this.showDragPreview;
+
+		// Emit final transform event
+		if ( hadMovement && this.arrowTipLayerId ) {
+			const layer = this.manager.editor.getLayerById( this.arrowTipLayerId );
+			if ( layer ) {
+				this.emitTransforming( layer, true );
+			}
+		}
+
+		this.isArrowTipDragging = false;
+		this.arrowTipLayerId = null;
+		this.showDragPreview = false;
+		this.originalLayerState = null;
+		this.dragStartPoint = null;
+
+		// Reset cursor
+		this.manager.canvas.style.cursor = this.manager.getToolCursor( this.manager.currentTool );
+
+		// Mark dirty and save state
+		if ( hadMovement ) {
+			this.manager.editor.markDirty();
+			if ( this.manager.editor && typeof this.manager.editor.saveState === 'function' ) {
+				this.manager.editor.saveState( 'Move arrow tip' );
 			}
 		}
 	}
@@ -923,10 +1027,10 @@ class TransformController {
 	/**
 	 * Check if any transform operation is active
 	 *
-	 * @return {boolean} True if resizing, rotating, or dragging
+	 * @return {boolean} True if resizing, rotating, dragging, or arrow-tip-dragging
 	 */
 	isTransforming () {
-		return this.isResizing || this.isRotating || this.isDragging;
+		return this.isResizing || this.isRotating || this.isDragging || this.isArrowTipDragging;
 	}
 
 	/**
@@ -939,6 +1043,7 @@ class TransformController {
 			isResizing: this.isResizing,
 			isRotating: this.isRotating,
 			isDragging: this.isDragging,
+			isArrowTipDragging: this.isArrowTipDragging,
 			resizeHandle: this.resizeHandle,
 			showDragPreview: this.showDragPreview
 		};

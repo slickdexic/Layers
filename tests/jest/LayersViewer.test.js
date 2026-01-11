@@ -1788,5 +1788,63 @@ describe( 'LayersViewer', () => {
 			expect( viewer ).toBeDefined();
 			expect( viewer.layerData.layers ).toBeUndefined();
 		} );
+
+		test( 'should normalize backgroundVisible in fallback when shared normalizer unavailable', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			// Temporarily remove the shared normalizer
+			const originalNormalizer = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			// Test with integer 0 (from PHP API serialization)
+			const layerData = {
+				layers: [
+					{ id: 'layer1', type: 'rectangle' }
+				],
+				backgroundVisible: 0,
+				backgroundOpacity: '0.5'
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Restore the normalizer
+			window.Layers.LayerDataNormalizer = originalNormalizer;
+
+			// backgroundVisible should be normalized to boolean false
+			expect( viewer.layerData.backgroundVisible ).toBe( false );
+			// backgroundOpacity should be normalized to number
+			expect( viewer.layerData.backgroundOpacity ).toBe( 0.5 );
+		} );
+
+		test( 'should normalize backgroundVisible=1 to true in fallback', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			// Temporarily remove the shared normalizer
+			const originalNormalizer = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const layerData = {
+				layers: [],
+				backgroundVisible: 1
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Restore the normalizer
+			window.Layers.LayerDataNormalizer = originalNormalizer;
+
+			// backgroundVisible should be normalized to boolean true
+			expect( viewer.layerData.backgroundVisible ).toBe( true );
+		} );
 	} );
 } );

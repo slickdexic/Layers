@@ -16,7 +16,7 @@
 	 */
 	const SUPPORTED_TOOLS = [
 		'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
-		'ellipse', 'line', 'polygon', 'star', 'path'
+		'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker'
 	];
 
 	/**
@@ -230,7 +230,138 @@
 				}
 			}
 		],
-		path: []
+		path: [],
+		dimension: [
+			{
+				id: 'builtin-dimension-default',
+				name: 'Default',
+				builtIn: true,
+				style: {
+					stroke: '#000000',
+					strokeWidth: 1,
+					color: '#000000',
+					fontSize: 12,
+					fontFamily: 'Arial, sans-serif',
+					endStyle: 'arrow',
+					textPosition: 'above',
+					extensionLength: 10,
+					arrowSize: 8,
+					showBackground: true,
+					backgroundColor: '#ffffff'
+				}
+			},
+			{
+				id: 'builtin-dimension-technical',
+				name: 'Technical Drawing',
+				builtIn: true,
+				style: {
+					stroke: '#000000',
+					strokeWidth: 0.5,
+					color: '#000000',
+					fontSize: 10,
+					fontFamily: 'Arial, sans-serif',
+					endStyle: 'arrow',
+					textPosition: 'above',
+					extensionLength: 8,
+					arrowSize: 6,
+					showBackground: false
+				}
+			},
+			{
+				id: 'builtin-dimension-bold',
+				name: 'Bold',
+				builtIn: true,
+				style: {
+					stroke: '#cc0000',
+					strokeWidth: 2,
+					color: '#cc0000',
+					fontSize: 16,
+					fontFamily: 'Arial, sans-serif',
+					endStyle: 'arrow',
+					textPosition: 'above',
+					extensionLength: 12,
+					arrowSize: 10,
+					showBackground: true,
+					backgroundColor: '#ffffff'
+				}
+			},
+			{
+				id: 'builtin-dimension-tick',
+				name: 'Tick Marks',
+				builtIn: true,
+				style: {
+					stroke: '#000000',
+					strokeWidth: 1,
+					color: '#000000',
+					fontSize: 12,
+					fontFamily: 'Arial, sans-serif',
+					endStyle: 'tick',
+					textPosition: 'above',
+					extensionLength: 10,
+					tickSize: 8,
+					showBackground: true,
+					backgroundColor: '#ffffff'
+				}
+			}
+		],
+		marker: [
+			{
+				id: 'builtin-marker-circled',
+				name: 'Circled Number',
+				builtIn: true,
+				style: {
+					style: 'circled',
+					size: 24,
+					fill: '#ffffff',
+					stroke: '#000000',
+					strokeWidth: 2,
+					color: '#000000',
+					fontSizeAdjust: 0
+				}
+			},
+			{
+				id: 'builtin-marker-red',
+				name: 'Red Marker',
+				builtIn: true,
+				style: {
+					style: 'circled',
+					size: 28,
+					fill: '#cc0000',
+					stroke: '#ffffff',
+					strokeWidth: 2,
+					color: '#ffffff',
+					fontSizeAdjust: 2
+				}
+			},
+			{
+				id: 'builtin-marker-letter',
+				name: 'Letter (A, B, C)',
+				builtIn: true,
+				style: {
+					style: 'letter-circled',
+					size: 24,
+					fill: '#4a90d9',
+					stroke: '#ffffff',
+					strokeWidth: 2,
+					color: '#ffffff',
+					fontSizeAdjust: 0
+				}
+			},
+			{
+				id: 'builtin-marker-plain',
+				name: 'Plain Number',
+				builtIn: true,
+				style: {
+					style: 'plain',
+					size: 20,
+					fill: 'transparent',
+					stroke: 'transparent',
+					strokeWidth: 0,
+					color: '#000000',
+					fontSizeAdjust: 4
+				}
+			}
+		]
 	};
 
 	/**

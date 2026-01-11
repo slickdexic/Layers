@@ -1,8 +1,8 @@
 # Post-Mortem: Background Visibility Bug
 
-**Date:** December 21, 2025  
+**Date:** December 21, 2025 (updated January 11, 2026)  
 **Severity:** High (Data integrity issue)  
-**Status:** RESOLVED  
+**Status:** RESOLVED (FOURTH occurrence fixed January 11, 2026)  
 **Time to Resolution:** Multiple debugging sessions over several days
 
 ---
@@ -13,7 +13,68 @@ A subtle type coercion bug between PHP and JavaScript caused the background laye
 
 > "Background saved as hidden → displays correctly hidden on article page → returns to editor showing as visible"
 
-This bug resurfaced **three times** during debugging because the root cause (PHP integer vs JavaScript boolean comparison) was obscured by multiple layers of abstraction and incorrect assumptions about where the failure occurred.
+This bug resurfaced **FOUR times** during debugging because the root cause (PHP integer vs JavaScript boolean comparison) was obscured by multiple layers of abstraction and incorrect assumptions about where the failure occurred.
+
+---
+
+## Fourth Occurrence: Viewer Initialization on Page Return (January 2026)
+
+### The Bug
+
+After editing layers and returning to the article page, **ALL images** on the page would render their layer annotations correctly, but the base image (background) would not display - appearing as if hidden, even when `backgroundVisible` should be `true`.
+
+### Root Cause
+
+The **viewer initialization code paths** were reading `backgroundVisible` from the API response **without normalizing** the integer 0/1 to boolean. There were **FOUR separate locations** in the viewer code that had this bug:
+
+1. `ViewerManager.refreshAllViewers()` - Used when modal editor closes
+2. `ViewerManager.initializeLargeImages()` - Used for large layer sets fetched via API
+3. `FreshnessChecker.checkFreshness()` - Used for live preview/freshness checking
+4. `ApiFallback.processCandidate()` - Used for API fallback initialization
+
+### The Broken Code Pattern
+
+```javascript
+// ALL FOUR LOCATIONS HAD THIS PATTERN:
+const payload = {
+    layers: layersArr,
+    backgroundVisible: layerset.data.backgroundVisible !== undefined 
+        ? layerset.data.backgroundVisible : true,  // BUG: passes integer 0/1 directly!
+    backgroundOpacity: layerset.data.backgroundOpacity !== undefined 
+        ? layerset.data.backgroundOpacity : 1.0
+};
+```
+
+### The Fix
+
+```javascript
+// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
+let bgVisible = true;
+if ( layerset.data.backgroundVisible !== undefined ) {
+    const bgVal = layerset.data.backgroundVisible;
+    bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
+}
+
+const payload = {
+    layers: layersArr,
+    backgroundVisible: bgVisible,  // Now properly normalized
+    backgroundOpacity: layerset.data.backgroundOpacity !== undefined
+        ? parseFloat( layerset.data.backgroundOpacity ) : 1.0
+};
+```
+
+### Files Modified (Fourth Fix)
+
+| File | Change |
+|------|--------|
+| `resources/ext.layers/viewer/ViewerManager.js` | Fixed `refreshAllViewers()` and `initializeLargeImages()` |
+| `resources/ext.layers/viewer/FreshnessChecker.js` | Fixed `checkFreshness()` |
+| `resources/ext.layers/viewer/ApiFallback.js` | Fixed `processCandidate()` |
+| `resources/ext.layers/LayersViewer.js` | Fixed `fallbackNormalize()` for inline data |
+
+### Key Lesson
+
+**Every code path that reads API data must normalize boolean values.** The editor code was fixed, but the viewer code had the same pattern in multiple places. When adding new code paths that read from the API, always normalize at the point of reading.
 
 ---
 
@@ -206,6 +267,8 @@ getBackgroundVisible() {
 
 ## Files Modified
 
+### Original Fix (December 2025)
+
 | File | Change |
 |------|--------|
 | `resources/ext.layers.editor/APIManager.js` | Normalize `backgroundVisible` to boolean in `extractLayerSetData()` |
@@ -214,6 +277,15 @@ getBackgroundVisible() {
 | `extension.json` | Add missing `ui/BackgroundLayerController.js` to ResourceLoader |
 | `tests/jest/APIManager.test.js` | Add tests for integer 0/1 normalization |
 | `tests/jest/BackgroundLayerController.test.js` | Add tests for integer 0/1 handling |
+
+### Fourth Fix (January 2026)
+
+| File | Change |
+|------|--------|
+| `resources/ext.layers/viewer/ViewerManager.js` | Normalize in `refreshAllViewers()` and `initializeLargeImages()` |
+| `resources/ext.layers/viewer/FreshnessChecker.js` | Normalize in `checkFreshness()` |
+| `resources/ext.layers/viewer/ApiFallback.js` | Normalize in `processCandidate()` |
+| `resources/ext.layers/LayersViewer.js` | Normalize in `fallbackNormalize()` |
 
 ---
 

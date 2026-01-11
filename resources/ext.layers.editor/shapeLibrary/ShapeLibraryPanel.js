@@ -200,7 +200,7 @@
 	};
 
 	/**
-	 * Build the category list
+	 * Build the category list with hierarchical structure
 	 *
 	 * @private
 	 */
@@ -210,7 +210,197 @@
 
 		this.categoryList.innerHTML = '';
 
-		categories.forEach( function ( cat ) {
+		// Track expanded parent categories
+		if ( !this.expandedParents ) {
+			this.expandedParents = { iso7010: true }; // Default ISO 7010 expanded
+		}
+
+		// Separate parent categories, subcategories, and standalone categories
+		const parentCategories = categories.filter( function ( cat ) {
+			return cat.isParent === true;
+		} );
+		const subcategories = categories.filter( function ( cat ) {
+			return cat.parentId;
+		} );
+		const standaloneCategories = categories.filter( function ( cat ) {
+			return !cat.isParent && !cat.parentId;
+		} );
+
+		// Helper to count shapes in a parent category (sum of all subcategories)
+		const getParentShapeCount = function ( parentId ) {
+			return subcategories
+				.filter( function ( sub ) {
+					return sub.parentId === parentId;
+				} )
+				.reduce( function ( total, sub ) {
+					return total + window.Layers.ShapeLibrary.getShapesByCategory( sub.id ).length;
+				}, 0 );
+		};
+
+		// Render parent categories with their children
+		parentCategories.forEach( function ( parent ) {
+			const childCategories = subcategories.filter( function ( sub ) {
+				return sub.parentId === parent.id;
+			} );
+			const totalCount = getParentShapeCount( parent.id );
+			const isExpanded = self.expandedParents[ parent.id ];
+
+			// Parent header (collapsible)
+			const parentItem = document.createElement( 'div' );
+			parentItem.className = 'layers-shape-library-parent';
+			parentItem.dataset.parent = parent.id;
+			parentItem.style.cssText = `
+				display: flex;
+				align-items: center;
+				width: 100%;
+				padding: 10px 12px;
+				background: var(--background-color-interactive, #eaecf0);
+				border: none;
+				text-align: left;
+				cursor: pointer;
+				font-size: 13px;
+				color: var(--color-base, #202122);
+				border-bottom: 1px solid var(--border-color-base, #a2a9b1);
+				user-select: none;
+			`;
+
+			// Expand/collapse arrow
+			const arrow = document.createElement( 'span' );
+			arrow.className = 'layers-category-arrow';
+			arrow.textContent = isExpanded ? '▼' : '▶';
+			arrow.style.cssText = `
+				width: 16px;
+				font-size: 10px;
+				margin-right: 6px;
+				color: var(--color-subtle, #72777d);
+			`;
+
+			// Color indicator
+			const indicator = document.createElement( 'span' );
+			indicator.style.cssText = `
+				width: 12px;
+				height: 12px;
+				border-radius: 2px;
+				margin-right: 8px;
+				background: ${ parent.color };
+			`;
+
+			// Text container
+			const textContainer = document.createElement( 'span' );
+			textContainer.style.cssText = `
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+			`;
+
+			const nameSpan = document.createElement( 'span' );
+			nameSpan.textContent = parent.name;
+			nameSpan.style.fontWeight = '600';
+
+			const countSpan = document.createElement( 'span' );
+			countSpan.textContent = mw.message( 'layers-shape-library-count', totalCount ).text();
+			countSpan.style.cssText = `
+				font-size: 11px;
+				color: var(--color-subtle, #72777d);
+			`;
+
+			textContainer.appendChild( nameSpan );
+			textContainer.appendChild( countSpan );
+
+			parentItem.appendChild( arrow );
+			parentItem.appendChild( indicator );
+			parentItem.appendChild( textContainer );
+
+			// Click to toggle expand/collapse
+			parentItem.addEventListener( 'click', function () {
+				self.expandedParents[ parent.id ] = !self.expandedParents[ parent.id ];
+				self.buildCategories();
+			} );
+
+			self.categoryList.appendChild( parentItem );
+
+			// Child container
+			const childContainer = document.createElement( 'div' );
+			childContainer.className = 'layers-shape-library-children';
+			childContainer.dataset.parentId = parent.id;
+			childContainer.style.cssText = `
+				display: ${ isExpanded ? 'block' : 'none' };
+			`;
+
+			// Render child categories
+			childCategories.forEach( function ( cat ) {
+				const count = window.Layers.ShapeLibrary.getShapesByCategory( cat.id ).length;
+
+				const item = document.createElement( 'button' );
+				item.className = 'layers-shape-library-category';
+				item.dataset.category = cat.id;
+				item.style.cssText = `
+					display: flex;
+					align-items: center;
+					width: 100%;
+					padding: 8px 12px 8px 34px;
+					border: none;
+					background: transparent;
+					text-align: left;
+					cursor: pointer;
+					font-size: 13px;
+					color: var(--color-base, #202122);
+					transition: background 0.15s;
+				`;
+
+				// Color indicator
+				const childIndicator = document.createElement( 'span' );
+				childIndicator.style.cssText = `
+					width: 10px;
+					height: 10px;
+					border-radius: 2px;
+					margin-right: 8px;
+					background: ${ cat.color };
+				`;
+
+				// Text container
+				const childTextContainer = document.createElement( 'span' );
+				childTextContainer.style.cssText = `
+					flex: 1;
+					display: flex;
+					flex-direction: column;
+				`;
+
+				const childNameSpan = document.createElement( 'span' );
+				childNameSpan.textContent = cat.name;
+				childNameSpan.style.fontWeight = '500';
+
+				const childCountSpan = document.createElement( 'span' );
+				childCountSpan.textContent = mw.message( 'layers-shape-library-count', count ).text();
+				childCountSpan.style.cssText = `
+					font-size: 11px;
+					color: var(--color-subtle, #72777d);
+				`;
+
+				childTextContainer.appendChild( childNameSpan );
+				childTextContainer.appendChild( childCountSpan );
+
+				item.appendChild( childIndicator );
+				item.appendChild( childTextContainer );
+
+				// Active state
+				if ( cat.id === self.activeCategory ) {
+					item.style.background = 'var(--background-color-interactive-subtle, #eaecf0)';
+				}
+
+				item.addEventListener( 'click', function ( e ) {
+					e.stopPropagation(); // Don't trigger parent collapse
+					self.selectCategory( cat.id );
+				} );
+
+				childContainer.appendChild( item );
+			} );
+
+			self.categoryList.appendChild( childContainer );
+		} );
+
+		// Render standalone categories (not part of any parent)
+		standaloneCategories.forEach( function ( cat ) {
 			const count = window.Layers.ShapeLibrary.getShapesByCategory( cat.id ).length;
 
 			const item = document.createElement( 'button' );
@@ -349,7 +539,19 @@
 				align-items: center;
 				justify-content: center;
 			`;
-			preview.innerHTML = shape.svg;
+			// Make SVG IDs unique to prevent conflicts when multiple shapes
+			// use the same ID for clipPath, gradients, etc.
+			const uniqueId = 'shape-' + shape.id + '-';
+			let svgContent = shape.svg;
+			// Replace id="..." with unique version
+			svgContent = svgContent.replace( /\bid="([^"]+)"/g, 'id="' + uniqueId + '$1"' );
+			// Replace url(#...) references with unique version
+			svgContent = svgContent.replace( /url\(#([^)]+)\)/g, 'url(#' + uniqueId + '$1)' );
+			// Replace xlink:href="#..." references with unique version
+			svgContent = svgContent.replace( /xlink:href="#([^"]+)"/g, 'xlink:href="#' + uniqueId + '$1"' );
+			// Replace href="#..." references (without xlink prefix)
+			svgContent = svgContent.replace( /\bhref="#([^"]+)"/g, 'href="#' + uniqueId + '$1"' );
+			preview.innerHTML = svgContent;
 
 			// Scale SVG to fit
 			const svg = preview.querySelector( 'svg' );

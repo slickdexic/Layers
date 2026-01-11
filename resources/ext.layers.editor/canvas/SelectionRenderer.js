@@ -114,6 +114,20 @@
 				return;
 			}
 
+			// Special handling for dimension: use line endpoint handles like arrow
+			if ( layer.type === 'dimension' ) {
+				this.drawDimensionSelectionIndicators( layer, isKeyObject );
+				this.ctx.restore();
+				return;
+			}
+
+			// Special handling for marker: circular selection around the marker
+			if ( layer.type === 'marker' ) {
+				this.drawMarkerSelectionIndicators( layer, isKeyObject );
+				this.ctx.restore();
+				return;
+			}
+
 			const bounds = this.getLayerBounds( layer );
 			if ( !bounds ) {
 				this.ctx.restore();
@@ -286,6 +300,155 @@
 			// For arrows with control points, draw a curve control handle
 			if ( layer.type === 'arrow' ) {
 				this.drawCurveControlHandle( layer, x1, y1, x2, y2, handleSize, isKeyObject );
+			}
+		}
+
+		/**
+		 * Draw selection indicators for marker layers - circular selection around the marker
+		 * If the marker has an arrow, also show the arrow endpoint handle.
+		 *
+		 * @param {Object} layer - The marker layer
+		 * @param {boolean} [isKeyObject=false] - Whether this is the key object
+		 */
+		drawMarkerSelectionIndicators( layer, isKeyObject ) {
+			const handleSize = this.handleSize;
+			const markerSize = layer.size || 24;
+			const markerRadius = markerSize / 2;
+			const mx = layer.x || 0;
+			const my = layer.y || 0;
+
+			// Key object styling
+			if ( isKeyObject ) {
+				this.ctx.strokeStyle = '#ff9800'; // Orange border for key object
+				this.ctx.lineWidth = 3;
+			} else {
+				this.ctx.strokeStyle = this.lineColor;
+				this.ctx.lineWidth = 1.5;
+			}
+			this.ctx.setLineDash( [ 4, 4 ] );
+
+			// Draw circular selection around the marker
+			this.ctx.beginPath();
+			this.ctx.arc( mx, my, markerRadius + 4, 0, 2 * Math.PI );
+			this.ctx.stroke();
+			this.ctx.setLineDash( [] );
+
+			// Draw center handle for moving the marker
+			this.ctx.fillStyle = this.handleColor;
+			this.ctx.strokeStyle = isKeyObject ? '#ff9800' : this.handleBorderColor;
+			this.ctx.lineWidth = isKeyObject ? 3 : 1;
+
+			// Draw circular center handle
+			this.ctx.beginPath();
+			this.ctx.arc( mx, my, handleSize / 2 - 1, 0, 2 * Math.PI );
+			this.ctx.fill();
+			this.ctx.stroke();
+
+			// Register center handle
+			this.selectionHandles.push( {
+				type: 'move',
+				x: mx - handleSize / 2,
+				y: my - handleSize / 2,
+				width: handleSize,
+				height: handleSize,
+				layerId: layer.id,
+				rotation: 0,
+				isMarker: true
+			} );
+
+			// If marker has an arrow, draw and register the arrow endpoint handle
+			if ( layer.hasArrow && layer.arrowX !== undefined && layer.arrowY !== undefined ) {
+				const arrowX = layer.arrowX;
+				const arrowY = layer.arrowY;
+
+				// Draw dashed line showing the arrow connection
+				this.ctx.strokeStyle = '#666';
+				this.ctx.lineWidth = 1;
+				this.ctx.setLineDash( [ 3, 3 ] );
+				this.ctx.beginPath();
+				this.ctx.moveTo( mx, my );
+				this.ctx.lineTo( arrowX, arrowY );
+				this.ctx.stroke();
+				this.ctx.setLineDash( [] );
+
+				// Draw arrow endpoint handle (diamond shape for distinction)
+				this.ctx.fillStyle = '#ff5722'; // Orange-red for arrow point
+				this.ctx.strokeStyle = isKeyObject ? '#ff9800' : this.handleBorderColor;
+				this.ctx.lineWidth = isKeyObject ? 3 : 1;
+
+				this.ctx.save();
+				this.ctx.translate( arrowX, arrowY );
+				this.ctx.rotate( Math.PI / 4 ); // 45° rotation for diamond
+				this.ctx.fillRect( -handleSize / 2 + 1, -handleSize / 2 + 1, handleSize - 2, handleSize - 2 );
+				this.ctx.strokeRect( -handleSize / 2 + 1, -handleSize / 2 + 1, handleSize - 2, handleSize - 2 );
+				this.ctx.restore();
+
+				// Register arrow endpoint handle
+				this.selectionHandles.push( {
+					type: 'arrowTip',
+					x: arrowX - handleSize / 2,
+					y: arrowY - handleSize / 2,
+					width: handleSize,
+					height: handleSize,
+					layerId: layer.id,
+					rotation: 0,
+					isMarker: true,
+					isArrowTip: true
+				} );
+			}
+		}
+
+		/**
+		 * Draw selection indicators for dimension layers - endpoint handles like arrow
+		 * Dimensions use line-style endpoints at x1,y1 and x2,y2.
+		 *
+		 * @param {Object} layer - The dimension layer
+		 * @param {boolean} [isKeyObject=false] - Whether this is the key object
+		 */
+		drawDimensionSelectionIndicators( layer, isKeyObject ) {
+			const handleSize = this.handleSize;
+
+			const x1 = layer.x1 || 0;
+			const y1 = layer.y1 || 0;
+			const x2 = layer.x2 || 0;
+			const y2 = layer.y2 || 0;
+
+			// Key object styling
+			if ( isKeyObject ) {
+				this.ctx.fillStyle = this.handleColor;
+				this.ctx.strokeStyle = '#ff9800';
+				this.ctx.lineWidth = 3;
+			} else {
+				this.ctx.fillStyle = this.handleColor;
+				this.ctx.strokeStyle = this.handleBorderColor;
+				this.ctx.lineWidth = 1;
+			}
+			this.ctx.setLineDash( [] );
+
+			// Draw and register endpoint handles at the actual coordinates
+			const endpoints = [
+				{ x: x1, y: y1, type: 'w' },  // Start point
+				{ x: x2, y: y2, type: 'e' }   // End point
+			];
+
+			for ( let i = 0; i < endpoints.length; i++ ) {
+				const ep = endpoints[ i ];
+
+				// Draw the handle
+				this.ctx.fillRect( ep.x - handleSize / 2, ep.y - handleSize / 2, handleSize, handleSize );
+				this.ctx.strokeRect( ep.x - handleSize / 2, ep.y - handleSize / 2, handleSize, handleSize );
+
+				// Register handle for hit testing
+				this.selectionHandles.push( {
+					type: ep.type,
+					x: ep.x - handleSize / 2,
+					y: ep.y - handleSize / 2,
+					width: handleSize,
+					height: handleSize,
+					layerId: layer.id,
+					rotation: 0,
+					isDimension: true
+				} );
 			}
 		}
 

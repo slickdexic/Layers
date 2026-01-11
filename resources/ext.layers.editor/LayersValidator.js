@@ -69,7 +69,8 @@
 				// Layer type whitelist (must match server-side validation)
 				validTypes: [
 					'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
-					'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape'
+					'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape', 'marker',
+					'dimension'
 				],
 
 				// Coordinate limits
@@ -335,6 +336,10 @@
 				if ( layer[ field ] !== undefined ) {
 					// Special case: 'blur' is a valid fill value (blur fill effect)
 					if ( field === 'fill' && layer[ field ] === 'blur' ) {
+						return;
+					}
+					// Special case: 'none' is valid for fill and stroke (SVG standard)
+					if ( ( field === 'fill' || field === 'stroke' ) && layer[ field ] === 'none' ) {
 						return;
 					}
 					if ( !this.isValidColor( layer[ field ] ) ) {

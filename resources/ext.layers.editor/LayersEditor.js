@@ -798,20 +798,19 @@ class LayersEditor {
 			// New SVG format - store the complete SVG markup
 			layerData.svg = shapeData.svg;
 
-			// Get current style settings from toolbar
+			// Get current style settings from toolbar for stroke color only
 			let toolbarStroke = '#000000';
-			let toolbarStrokeWidth = 2;
 
 			if ( this.toolbar && this.toolbar.styleControls ) {
 				const styleOpts = this.toolbar.styleControls.getStyleOptions();
 				toolbarStroke = styleOpts.stroke || styleOpts.color || toolbarStroke;
-				toolbarStrokeWidth = styleOpts.strokeWidth || toolbarStrokeWidth;
 			}
 
 			// Use shape's default colors or toolbar settings
+			// NOTE: We do NOT set strokeWidth for SVG shapes - the stroke widths are
+			// baked into the SVG and scale correctly with the viewBox.
 			layerData.stroke = shapeData.defaultStroke || toolbarStroke;
 			layerData.fill = shapeData.defaultFill || 'none';
-			layerData.strokeWidth = shapeData.defaultStrokeWidth || toolbarStrokeWidth;
 		} else if ( hasPaths ) {
 			// Multi-path compound shapes (e.g., safety signs)
 			// Colors are baked into the paths array - don't override with toolbar
@@ -1317,9 +1316,10 @@ class LayersEditor {
 				return;
 			}
 
-			// Default: navigate to File: page
+			// Default: navigate to File: page with layers=on to trigger layer viewer
 			if ( filename && mw && mw.util && typeof mw.util.getUrl === 'function' ) {
-				const url = mw.util.getUrl( 'File:' + filename );
+				// Include layers=on so initializeFilePageFallback() fetches and displays layers
+				const url = mw.util.getUrl( 'File:' + filename, { layers: 'on' } );
 				window.location.href = url;
 				return;
 			}
@@ -1339,11 +1339,13 @@ class LayersEditor {
 	save () {
 		const layers = this.stateManager.get( 'layers' ) || [];
 
-		if ( !this.validationManager.validateLayers( layers ) ) {
+		const validationResult = this.validationManager.validateLayers( layers );
+		
+		if ( validationResult && !validationResult.isValid ) {
 			const validationMsg = window.layersMessages ?
 				window.layersMessages.get( 'layers-save-validation-error', 'Layer validation failed' ) :
 				'Layer validation failed';
-			mw.notify( validationMsg, { type: 'error' } );
+			mw.notify( validationMsg + ': ' + ( validationResult.errors || [] ).join( '; ' ), { type: 'error' } );
 			return;
 		}
 
@@ -1361,7 +1363,7 @@ class LayersEditor {
 				const defaultErrorMsg = window.layersMessages ?
 					window.layersMessages.get( 'layers-save-error', 'Failed to save layers' ) :
 					'Failed to save layers';
-				const errorMsg = error.info || defaultErrorMsg;
+				const errorMsg = error.info || error.message || defaultErrorMsg;
 				mw.notify( errorMsg, { type: 'error' } );
 			} );
 	}

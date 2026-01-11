@@ -74,7 +74,7 @@ describe('LayersEditor UI Methods', () => {
 
         mockValidationManager = {
             sanitizeLayerData: jest.fn((data) => data),
-            validateLayers: jest.fn().mockReturnValue({ valid: true, errors: [] }),
+            validateLayers: jest.fn().mockReturnValue({ isValid: true, errors: [] }),
             checkBrowserCompatibility: jest.fn().mockReturnValue(true)
         };
 
@@ -863,7 +863,7 @@ describe('LayersEditor Save/Cancel Workflows', () => {
 
         const mockValidationManager = {
             sanitizeLayerData: jest.fn((data) => data),
-            validateLayers: jest.fn().mockReturnValue({ valid: true, errors: [] }),
+            validateLayers: jest.fn().mockReturnValue({ isValid: true, errors: [] }),
             checkBrowserCompatibility: jest.fn().mockReturnValue(true)
         };
 
@@ -1037,7 +1037,7 @@ describe('LayersEditor Layer Operations', () => {
                     },
                     ValidationManager: {
                         sanitizeLayerData: jest.fn(d => d),
-                        validateLayers: jest.fn().mockReturnValue({ valid: true }),
+                        validateLayers: jest.fn().mockReturnValue({ isValid: true }),
                         checkBrowserCompatibility: jest.fn().mockReturnValue(true)
                     }
                 };
@@ -1072,7 +1072,7 @@ describe('LayersEditor Layer Operations', () => {
         });
         window.Layers.Validation.Manager = jest.fn().mockReturnValue({
             sanitizeLayerData: jest.fn(d => d),
-            validateLayers: jest.fn().mockReturnValue({ valid: true }),
+            validateLayers: jest.fn().mockReturnValue({ isValid: true }),
             checkBrowserCompatibility: jest.fn().mockReturnValue(true)
         });
         window.Layers.Canvas.Manager = jest.fn().mockReturnValue({

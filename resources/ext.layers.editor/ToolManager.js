@@ -222,10 +222,15 @@ class ToolManager {
 				return 'crosshair';
 			case 'rectangle':
 			case 'textbox':
+			case 'callout':
 			case 'circle':
 			case 'ellipse':
+			case 'polygon':
+			case 'star':
 			case 'line':
 			case 'arrow':
+			case 'marker':
+			case 'dimension':
 				return 'crosshair';
 			case 'text':
 				return 'text';

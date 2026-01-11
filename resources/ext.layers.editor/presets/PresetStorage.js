@@ -44,7 +44,13 @@
 		// Blend mode
 		'blendMode',
 		// Opacity
-		'opacity'
+		'opacity',
+		// Dimension
+		'endStyle', 'textPosition', 'extensionLength', 'extensionGap',
+		'tickSize', 'unit', 'scale', 'showUnit', 'showBackground', 'backgroundColor',
+		'precision', 'toleranceType', 'toleranceValue', 'toleranceUpper', 'toleranceLower',
+		// Marker
+		'style', 'size', 'fontSizeAdjust', 'hasArrow', 'arrowStyle'
 	];
 
 	/**
@@ -77,7 +83,7 @@
 			 */
 			this.supportedTools = opts.supportedTools || [
 				'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
-				'ellipse', 'line', 'polygon', 'star', 'path'
+				'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker'
 			];
 		}
 

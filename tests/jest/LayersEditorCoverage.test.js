@@ -79,7 +79,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 		};
 
 		mockValidationManager = {
-			validateLayers: jest.fn( () => ( { valid: true } ) ),
+			validateLayers: jest.fn( () => ( { isValid: true, errors: [], warnings: [] } ) ),
 			checkBrowserCompatibility: jest.fn( () => true ),
 			sanitizeLayerData: jest.fn( ( data ) => data )
 		};
@@ -807,7 +807,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 			editor.navigateBackToFile();
 
-			expect( window.mw.util.getUrl ).toHaveBeenCalledWith( 'File:Test.jpg' );
+			expect( window.mw.util.getUrl ).toHaveBeenCalledWith( 'File:Test.jpg', { layers: 'on' } );
 
 			window.location = originalLocation;
 		} );
@@ -816,7 +816,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 	describe( 'save', () => {
 		it( 'should validate layers before saving', () => {
 			mockStateManager.get.mockReturnValue( [ { id: 'layer1', type: 'rectangle' } ] );
-			mockValidationManager.validateLayers.mockReturnValue( true );
+			mockValidationManager.validateLayers.mockReturnValue( { isValid: true, errors: [], warnings: [] } );
 
 			editor = new LayersEditor( {
 				filename: 'Test.jpg',
@@ -831,7 +831,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 		it( 'should not save when validation fails', () => {
 			mockStateManager.get.mockReturnValue( [ { id: 'layer1' } ] );
-			mockValidationManager.validateLayers.mockReturnValue( false );
+			mockValidationManager.validateLayers.mockReturnValue( { isValid: false, errors: [ 'Validation failed' ], warnings: [] } );
 
 			editor = new LayersEditor( {
 				filename: 'Test.jpg',

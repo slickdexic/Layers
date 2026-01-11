@@ -127,6 +127,30 @@
 		}
 
 		/**
+		 * Get color picker dialog strings (shared by Toolbar, ToolbarStyleControls, ColorControlFactory)
+		 *
+		 * This eliminates code duplication by providing a single source for color picker i18n strings.
+		 *
+		 * @return {Object} Color picker string map with keys: title, standard, saved, customSection,
+		 *                  none, emptySlot, cancel, apply, transparent, swatchTemplate, previewTemplate
+		 */
+		getColorPickerStrings() {
+			return {
+				title: this.get( 'layers-color-picker-title', 'Choose color' ),
+				standard: this.get( 'layers-color-picker-standard', 'Standard colors' ),
+				saved: this.get( 'layers-color-picker-saved', 'Saved colors' ),
+				customSection: this.get( 'layers-color-picker-custom-section', 'Custom color' ),
+				none: this.get( 'layers-color-picker-none', 'No fill (transparent)' ),
+				emptySlot: this.get( 'layers-color-picker-empty-slot', 'Empty slot - colors will be saved here automatically' ),
+				cancel: this.get( 'layers-color-picker-cancel', 'Cancel' ),
+				apply: this.get( 'layers-color-picker-apply', 'Apply' ),
+				transparent: this.get( 'layers-color-picker-transparent', 'Transparent' ),
+				swatchTemplate: this.get( 'layers-color-picker-color-swatch', 'Set color to $1' ),
+				previewTemplate: this.get( 'layers-color-picker-color-preview', 'Current color: $1' )
+			};
+		}
+
+		/**
 		 * Clear the message cache
 		 *
 		 * Useful when language settings change or for testing

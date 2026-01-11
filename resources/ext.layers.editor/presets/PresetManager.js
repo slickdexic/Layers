@@ -269,6 +269,17 @@
 				return null;
 			}
 
+			// Check for duplicate name (case-insensitive)
+			const trimmedName = name.trim().toLowerCase();
+			const existingPresets = this.getPresetsForTool( tool );
+			const duplicate = existingPresets.find(
+				( p ) => p.name.toLowerCase() === trimmedName
+			);
+			if ( duplicate ) {
+				// Return special error object so caller can show appropriate message
+				return { error: 'duplicate', existingName: duplicate.name };
+			}
+
 			const opts = options || {};
 			const id = this.generateId( tool, name );
 
@@ -489,7 +500,7 @@
 			}
 			return [
 				'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
-				'ellipse', 'line', 'polygon', 'star', 'path'
+				'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker'
 			];
 		}
 

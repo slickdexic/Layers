@@ -64,10 +64,17 @@
 
 		/**
 		 * Get color picker strings for i18n
+		 * Delegates to MessageHelper singleton for shared i18n strings
 		 *
 		 * @return {Object} Color picker string map
 		 */
 		getColorPickerStrings() {
+			// Use shared MessageHelper singleton if available
+			if ( typeof window !== 'undefined' && window.layersMessages &&
+				typeof window.layersMessages.getColorPickerStrings === 'function' ) {
+				return window.layersMessages.getColorPickerStrings();
+			}
+			// Fallback to local implementation
 			return {
 				title: this.msg( 'layers-color-picker-title', 'Choose color' ),
 				standard: this.msg( 'layers-color-picker-standard', 'Standard colors' ),

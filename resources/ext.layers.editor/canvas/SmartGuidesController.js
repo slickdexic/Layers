@@ -224,6 +224,33 @@
 					}
 					return null;
 
+				case 'marker':
+					{
+						const size = layer.size || 24;
+						const halfSize = size / 2;
+						return {
+							x: ( layer.x || 0 ) - halfSize,
+							y: ( layer.y || 0 ) - halfSize,
+							width: size,
+							height: size
+						};
+					}
+
+				case 'dimension':
+					{
+						const dimX1 = layer.x1 || 0;
+						const dimY1 = layer.y1 || 0;
+						const dimX2 = layer.x2 || 0;
+						const dimY2 = layer.y2 || 0;
+						const padding = ( layer.extensionLength || 10 ) + 10;
+						return {
+							x: Math.min( dimX1, dimX2 ) - padding,
+							y: Math.min( dimY1, dimY2 ) - padding,
+							width: Math.abs( dimX2 - dimX1 ) + padding * 2,
+							height: Math.abs( dimY2 - dimY1 ) + padding * 2
+						};
+					}
+
 				default:
 					return null;
 			}

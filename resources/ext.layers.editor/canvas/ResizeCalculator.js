@@ -80,6 +80,14 @@
 					return ResizeCalculator.calculateTextResize(
 						originalLayer, handleType, deltaX, deltaY
 					);
+				case 'marker':
+					return ResizeCalculator.calculateMarkerResize(
+						originalLayer, handleType, deltaX, deltaY
+					);
+				case 'dimension':
+					return ResizeCalculator.calculateDimensionResize(
+						originalLayer, handleType, deltaX, deltaY
+					);
 				default:
 					return null;
 			}
@@ -601,6 +609,10 @@
 			const x2 = originalLayer.x2 || 0;
 			const y2 = originalLayer.y2 || 0;
 
+			// Check for orientation constraint on dimension layers
+			const orientation = originalLayer.orientation;
+			const isConstrained = orientation === 'horizontal' || orientation === 'vertical';
+
 			// Calculate line angle for transforms
 			const dx = x2 - x1;
 			const dy = y2 - y1;
@@ -612,13 +624,37 @@
 			switch ( handleType ) {
 				case 'w':
 					// Move start point (x1, y1)
-					updates.x1 = x1 + deltaX;
-					updates.y1 = y1 + deltaY;
+					if ( isConstrained ) {
+						// Constrained: only move along allowed axis
+						if ( orientation === 'horizontal' ) {
+							updates.x1 = x1 + deltaX;
+							// y1 stays same (horizontal line)
+						} else {
+							// vertical
+							updates.y1 = y1 + deltaY;
+							// x1 stays same (vertical line)
+						}
+					} else {
+						updates.x1 = x1 + deltaX;
+						updates.y1 = y1 + deltaY;
+					}
 					break;
 				case 'e':
 					// Move end point (x2, y2)
-					updates.x2 = x2 + deltaX;
-					updates.y2 = y2 + deltaY;
+					if ( isConstrained ) {
+						// Constrained: only move along allowed axis
+						if ( orientation === 'horizontal' ) {
+							updates.x2 = x2 + deltaX;
+							// y2 stays same (horizontal line)
+						} else {
+							// vertical
+							updates.y2 = y2 + deltaY;
+							// x2 stays same (vertical line)
+						}
+					} else {
+						updates.x2 = x2 + deltaX;
+						updates.y2 = y2 + deltaY;
+					}
 					break;
 				case 'control': {
 					// Move curve control point
@@ -824,6 +860,125 @@
 			// Clamp font size to reasonable bounds (6-500)
 			newFontSize = Math.max( 6, Math.min( 500, newFontSize ) );
 			updates.fontSize = Math.round( newFontSize );
+
+			return updates;
+		}
+
+		/**
+		 * Calculate marker resize (scale the size property)
+		 *
+		 * @param {Object} originalLayer Original marker layer
+		 * @param {string} handleType Handle being dragged
+		 * @param {number} deltaX Delta X movement
+		 * @param {number} deltaY Delta Y movement
+		 * @return {Object} Updates object with new size
+		 */
+		static calculateMarkerResize(
+			originalLayer, handleType, deltaX, deltaY
+		) {
+			const updates = {};
+			const originalSize = originalLayer.size || 24;
+
+			// Calculate size change based on diagonal movement
+			const diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
+			const sizeChange = diagonalDelta * 0.5;
+
+			// Determine if we're growing or shrinking based on handle direction
+			let isGrowing = false;
+			switch ( handleType ) {
+				case 'se':
+				case 'e':
+				case 's':
+					isGrowing = ( deltaX > 0 || deltaY > 0 );
+					break;
+				case 'nw':
+				case 'w':
+				case 'n':
+					isGrowing = ( deltaX < 0 || deltaY < 0 );
+					break;
+				case 'ne':
+					isGrowing = ( deltaX > 0 || deltaY < 0 );
+					break;
+				case 'sw':
+					isGrowing = ( deltaX < 0 || deltaY > 0 );
+					break;
+			}
+
+			let newSize = originalSize;
+			if ( isGrowing ) {
+				newSize += sizeChange;
+			} else {
+				newSize -= sizeChange;
+			}
+
+			// Clamp size to reasonable bounds (10-200)
+			newSize = Math.max( 10, Math.min( 200, newSize ) );
+			updates.size = Math.round( newSize );
+
+			return updates;
+		}
+
+		/**
+		 * Calculate dimension resize (move endpoints)
+		 *
+		 * For dimensions, corner handles move the corresponding endpoint.
+		 * This allows repositioning the measurement points.
+		 *
+		 * @param {Object} originalLayer Original dimension layer
+		 * @param {string} handleType Handle being dragged
+		 * @param {number} deltaX Delta X movement
+		 * @param {number} deltaY Delta Y movement
+		 * @return {Object} Updates object with new x1/y1 or x2/y2
+		 */
+		static calculateDimensionResize(
+			originalLayer, handleType, deltaX, deltaY
+		) {
+			const updates = {};
+			const x1 = originalLayer.x1 || 0;
+			const y1 = originalLayer.y1 || 0;
+			const x2 = originalLayer.x2 || 0;
+			const y2 = originalLayer.y2 || 0;
+
+			// Check for orientation constraint
+			const orientation = originalLayer.orientation;
+			const isHorizontal = orientation === 'horizontal';
+			const isVertical = orientation === 'vertical';
+
+			// Constrain deltas based on orientation
+			const constrainedDeltaX = isVertical ? 0 : deltaX;
+			const constrainedDeltaY = isHorizontal ? 0 : deltaY;
+
+			// Move endpoints based on which handle is dragged
+			switch ( handleType ) {
+				case 'nw':
+				case 'w':
+				case 'sw':
+					// These handles move the start point (x1, y1)
+					updates.x1 = x1 + constrainedDeltaX;
+					updates.y1 = y1 + constrainedDeltaY;
+					break;
+				case 'ne':
+				case 'e':
+				case 'se':
+					// These handles move the end point (x2, y2)
+					updates.x2 = x2 + constrainedDeltaX;
+					updates.y2 = y2 + constrainedDeltaY;
+					break;
+				case 'n':
+					// Top handle - move both Y values up (only if not horizontal)
+					if ( !isHorizontal ) {
+						updates.y1 = y1 + deltaY;
+						updates.y2 = y2 + deltaY;
+					}
+					break;
+				case 's':
+					// Bottom handle - move both Y values down (only if not horizontal)
+					if ( !isHorizontal ) {
+						updates.y1 = y1 + deltaY;
+						updates.y2 = y2 + deltaY;
+					}
+					break;
+			}
 
 			return updates;
 		}

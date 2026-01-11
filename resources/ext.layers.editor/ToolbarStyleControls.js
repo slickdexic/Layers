@@ -427,10 +427,17 @@ class ToolbarStyleControls {
 
 	/**
 	 * Get color picker strings for i18n
+	 * Delegates to MessageHelper singleton for shared i18n strings
 	 *
 	 * @return {Object} Color picker string map
 	 */
 	getColorPickerStrings() {
+		// Use shared MessageHelper singleton if available
+		if ( typeof window !== 'undefined' && window.layersMessages &&
+			typeof window.layersMessages.getColorPickerStrings === 'function' ) {
+			return window.layersMessages.getColorPickerStrings();
+		}
+		// Fallback to local implementation
 		return {
 			title: this.msg( 'layers-color-picker-title', 'Choose color' ),
 			standard: this.msg( 'layers-color-picker-standard', 'Standard colors' ),
@@ -649,7 +656,13 @@ class ToolbarStyleControls {
 			strokeOnlyTools.includes( toolId ) ||
 			toolId === 'textbox' ||
 			toolId === 'callout';
-		const showPresets = toolId !== 'pointer';
+
+		// Show presets for all tools except pointer (unless layers are selected)
+		// When layers are selected, always show presets so user can save/apply
+		const hasSelection = this.presetStyleManager &&
+			this.presetStyleManager.selectedLayers &&
+			this.presetStyleManager.selectedLayers.length > 0;
+		const showPresets = toolId !== 'pointer' || hasSelection;
 
 		// Apply visibility with CSS classes for smooth transitions
 		if ( this.mainStyleRow ) {
@@ -806,10 +819,13 @@ class ToolbarStyleControls {
 			return;
 		}
 
-		// Apply stroke color
-		if ( style.stroke !== undefined ) {
-			this.strokeColorValue = style.stroke;
-			this.strokeColorNone = ( style.stroke === 'none' || style.stroke === 'transparent' );
+		// Apply stroke color (from 'stroke' or 'color' property)
+		// Dimension presets may have both: stroke=line color, color=text color
+		// Use stroke if available, fall back to color for compatibility
+		const strokeValue = style.stroke !== undefined ? style.stroke : style.color;
+		if ( strokeValue !== undefined ) {
+			this.strokeColorValue = strokeValue;
+			this.strokeColorNone = ( strokeValue === 'none' || strokeValue === 'transparent' );
 			if ( this.strokeColorButton && this.toolbar ) {
 				this.toolbar.updateColorButtonDisplay(
 					this.strokeColorButton,
@@ -867,6 +883,8 @@ class ToolbarStyleControls {
 		// Stroke
 		style.stroke = this.strokeColorNone ? 'transparent' : this.strokeColorValue;
 		style.strokeWidth = this.currentStrokeWidth;
+		// Also provide 'color' for tools that use it (dimension, text)
+		style.color = this.strokeColorNone ? 'transparent' : this.strokeColorValue;
 
 		// Fill
 		style.fill = this.fillColorNone ? 'transparent' : this.fillColorValue;
@@ -924,6 +942,8 @@ class ToolbarStyleControls {
 	 * Controls are redundant because the Properties panel in the Layer Manager
 	 * provides all the same controls for editing selected layers.
 	 *
+	 * NOTE: Preset dropdown stays visible to allow saving selected layer style as preset
+	 *
 	 * @param {Array} _selectedLayers Array of selected layer objects (unused)
 	 */
 	hideControlsForSelectedLayers( _selectedLayers ) {
@@ -932,9 +952,10 @@ class ToolbarStyleControls {
 			this.mainStyleRow.classList.add( 'context-hidden' );
 		}
 
-		// Hide presets when layers are selected (can apply from Properties panel)
+		// SHOW preset dropdown when layers are selected
+		// Users need it to save layer styles as presets or apply presets to selection
 		if ( this.presetContainer ) {
-			this.presetContainer.classList.add( 'context-hidden' );
+			this.presetContainer.classList.remove( 'context-hidden' );
 		}
 
 		// Hide fill control

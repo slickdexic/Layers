@@ -24,7 +24,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	/** @var array Supported layer types */
 	private const SUPPORTED_LAYER_TYPES = [
 		'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
-		'polygon', 'star', 'line', 'path', 'image', 'group', 'customShape'
+		'polygon', 'star', 'line', 'path', 'image', 'group', 'customShape', 'marker',
+		'dimension'
 	];
 
 	/** @var array Allowed properties and their types */
@@ -124,7 +125,35 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'paths' => 'array',
 		'svg' => 'string',
 		'viewBox' => 'array',
-		'fillRule' => 'string'
+		'fillRule' => 'string',
+		'isMultiPath' => 'boolean',
+		'strokeOnly' => 'boolean',
+		// Marker properties
+		'value' => 'numeric',
+		'style' => 'string',
+		'size' => 'numeric',
+		'hasArrow' => 'boolean',
+		'arrowX' => 'numeric',
+		'arrowY' => 'numeric',
+		// Dimension properties
+		'endStyle' => 'string',
+		'textPosition' => 'string',
+		'extensionLength' => 'numeric',
+		'extensionGap' => 'numeric',
+		'tickSize' => 'numeric',
+		'unit' => 'string',
+		'scale' => 'numeric',
+		'showUnit' => 'boolean',
+		'showBackground' => 'boolean',
+		'backgroundColor' => 'color',
+		'precision' => 'numeric',
+		'orientation' => 'string',
+		'textDirection' => 'string',
+		// Dimension tolerance properties (stored as strings for user-entered values like "+0.2")
+		'toleranceType' => 'string',
+		'toleranceValue' => 'string',
+		'toleranceUpper' => 'string',
+		'toleranceLower' => 'string'
 	];
 
 	/** @var array Value constraints for enum-like properties */
@@ -142,7 +171,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			'normal'
 		],
 		'arrowhead' => [ 'none', 'arrow', 'circle', 'diamond', 'triangle' ],
-		'arrowStyle' => [ 'single', 'double', 'none' ],
+		'arrowStyle' => [ 'single', 'double', 'none', 'arrow', 'dot' ],
 		'arrowHeadType' => [ 'pointed', 'chevron', 'standard' ],
 		'textAlign' => [ 'left', 'center', 'right' ],
 		'verticalAlign' => [ 'top', 'middle', 'bottom' ],
@@ -150,7 +179,16 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'fontStyle' => [ 'normal', 'italic' ],
 		'fillRule' => [ 'nonzero', 'evenodd' ],
 		'tailDirection' => [ 'bottom', 'top', 'left', 'right', 'bottom-left', 'bottom-right', 'top-left', 'top-right' ],
-		'tailStyle' => [ 'triangle', 'curved', 'line' ]
+		'tailStyle' => [ 'triangle', 'curved', 'line' ],
+		// Marker styles
+		'style' => [ 'circled', 'parentheses', 'plain', 'letter', 'letter-circled' ],
+		// Dimension end styles and text positions
+		'endStyle' => [ 'arrow', 'tick', 'dot', 'none' ],
+		'textPosition' => [ 'above', 'below', 'center' ],
+		'orientation' => [ 'free', 'horizontal', 'vertical' ],
+		'textDirection' => [ 'auto', 'auto-reversed', 'horizontal' ],
+		// Dimension tolerance types
+		'toleranceType' => [ 'none', 'symmetric', 'deviation', 'limits', 'basic' ]
 	];
 
 	/** @var array Numeric constraints */
@@ -177,7 +215,16 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'lineHeight' => [ 'min' => 0.5, 'max' => 5 ],
 		'cornerRadius' => [ 'min' => 0, 'max' => 500 ],
 		'tailPosition' => [ 'min' => 0, 'max' => 1 ],
-		'tailSize' => [ 'min' => 5, 'max' => 100 ]
+		'tailSize' => [ 'min' => 5, 'max' => 100 ],
+		// Marker constraints
+		'value' => [ 'min' => 1, 'max' => 999 ],
+		'size' => [ 'min' => 10, 'max' => 200 ],
+		// Dimension constraints
+		'extensionLength' => [ 'min' => 0, 'max' => 100 ],
+		'extensionGap' => [ 'min' => 0, 'max' => 50 ],
+		'tickSize' => [ 'min' => 2, 'max' => 50 ],
+		'scale' => [ 'min' => 0.001, 'max' => 1000 ],
+		'precision' => [ 'min' => 0, 'max' => 6 ]
 	];
 
 	/** @var int Maximum points in a path/polygon */
@@ -352,9 +399,28 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				return $this->validateBooleanProperty( $value );
 			case 'array':
 				return $this->validateArrayProperty( $property, $value );
+			case 'color':
+				return $this->validateColorProperty( $value );
 			default:
 				return [ 'valid' => false, 'error' => "Unknown property type: $expectedType" ];
 		}
+	}
+
+	/**
+	 * Validate color property
+	 *
+	 * @param mixed $value Property value
+	 * @return array Validation result
+	 */
+	private function validateColorProperty( $value ): array {
+		if ( !is_string( $value ) ) {
+			return [ 'valid' => false, 'error' => 'Color must be a string' ];
+		}
+		if ( !$this->colorValidator->isSafeColor( $value ) ) {
+			return [ 'valid' => false, 'error' => 'Unsafe color value' ];
+		}
+		$sanitized = $this->colorValidator->sanitizeColor( $value );
+		return [ 'valid' => true, 'value' => $sanitized ];
 	}
 
 	/**
@@ -374,7 +440,20 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return $this->validateImageSrc( $value );
 		}
 
-		// Length check for regular strings
+		// Special handling for SVG strings (can be up to 100KB)
+		// Must be checked BEFORE the generic length limit
+		if ( $property === 'svg' ) {
+			return $this->validateSvgString( $value );
+		}
+
+		// SVG path data validation (for custom shapes)
+		// Must be checked BEFORE the generic length limit
+		if ( $property === 'path' ) {
+			return $this->validateSvgPath( $value );
+		}
+
+		// Length check for regular strings (1000 chars)
+		// Note: svg and path have their own length limits above
 		if ( strlen( $value ) > 1000 ) {
 			return [ 'valid' => false, 'error' => 'String too long' ];
 		}
@@ -409,11 +488,6 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $value ];
 		}
 
-		// SVG path data validation (for custom shapes)
-		if ( $property === 'path' ) {
-			return $this->validateSvgPath( $value );
-		}
-
 		// Colors
 		$colorProps = [
 			'color', 'stroke', 'fill', 'textStrokeColor', 'textShadowColor', 'shadowColor', '_previousFill'
@@ -422,6 +496,10 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			// Special case: 'blur' is a valid fill value (blur fill effect)
 			if ( $property === 'fill' && $value === 'blur' ) {
 				return [ 'valid' => true, 'value' => 'blur' ];
+			}
+			// Special case: 'none' is valid for fill and stroke (SVG standard)
+			if ( ( $property === 'fill' || $property === 'stroke' ) && $value === 'none' ) {
+				return [ 'valid' => true, 'value' => 'none' ];
 			}
 			if ( !$this->colorValidator->isSafeColor( $value ) ) {
 				return [ 'valid' => false, 'error' => 'Unsafe color value' ];
@@ -694,6 +772,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 			case 'line':
 			case 'arrow':
+			case 'dimension':
 				if ( !isset( $layer['x1'] ) || !isset( $layer['y1'] ) ||
 					 !isset( $layer['x2'] ) || !isset( $layer['y2'] ) ) {
 					return [ 'valid' => false, 'error' => "$type layer must have x1, y1, x2, y2" ];
@@ -965,6 +1044,6 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => false, 'error' => 'SVG use elements must not reference external URLs' ];
 		}
 
-		return [ 'valid' => true ];
+		return [ 'valid' => true, 'value' => $svg ];
 	}
 }

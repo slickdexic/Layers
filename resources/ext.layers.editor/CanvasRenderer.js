@@ -840,6 +840,26 @@
 					// Use rectangular bounding box for glow effect
 					this.ctx.strokeRect( layer.x || 0, layer.y || 0, layer.width || 0, layer.height || 0 );
 					break;
+				case 'marker': {
+					// Use circular bounding for marker glow effect
+					const markerRadius = ( layer.size || 24 ) / 2;
+					this.ctx.beginPath();
+					this.ctx.arc( layer.x || 0, layer.y || 0, markerRadius, 0, 2 * Math.PI );
+					this.ctx.stroke();
+					break;
+				}
+				case 'dimension': {
+					// Use line-based glow for dimension
+					const dimX1 = layer.x1 || 0;
+					const dimY1 = layer.y1 || 0;
+					const dimX2 = layer.x2 || 0;
+					const dimY2 = layer.y2 || 0;
+					this.ctx.beginPath();
+					this.ctx.moveTo( dimX1, dimY1 );
+					this.ctx.lineTo( dimX2, dimY2 );
+					this.ctx.stroke();
+					break;
+				}
 				// Add others as needed
 			}
 		}

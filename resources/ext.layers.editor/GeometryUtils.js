@@ -321,6 +321,49 @@
 						height: radiusFallback * 2
 					};
 				}
+				case 'marker': {
+					// Marker is a circle centered at x,y with size as diameter
+					// If it has an arrow, include the arrow endpoint in bounds
+					const markerSize = layer.size || 24;
+					const markerRadius = markerSize / 2;
+					const mx = layer.x || 0;
+					const my = layer.y || 0;
+
+					if ( layer.hasArrow && layer.arrowX !== undefined && layer.arrowY !== undefined ) {
+						// Include both marker circle and arrow endpoint
+						const minX = Math.min( mx - markerRadius, layer.arrowX );
+						const minY = Math.min( my - markerRadius, layer.arrowY );
+						const maxX = Math.max( mx + markerRadius, layer.arrowX );
+						const maxY = Math.max( my + markerRadius, layer.arrowY );
+						return {
+							x: minX,
+							y: minY,
+							width: maxX - minX,
+							height: maxY - minY
+						};
+					}
+
+					// Just the marker circle
+					return {
+						x: mx - markerRadius,
+						y: my - markerRadius,
+						width: markerSize,
+						height: markerSize
+					};
+				}
+				case 'dimension': {
+					// Dimension is a line from x1,y1 to x2,y2 (like arrow)
+					const dx1 = layer.x1 !== undefined ? layer.x1 : ( layer.x || 0 );
+					const dy1 = layer.y1 !== undefined ? layer.y1 : ( layer.y || 0 );
+					const dx2 = layer.x2 !== undefined ? layer.x2 : ( layer.x || 0 );
+					const dy2 = layer.y2 !== undefined ? layer.y2 : ( layer.y || 0 );
+					return {
+						x: Math.min( dx1, dx2 ),
+						y: Math.min( dy1, dy2 ),
+						width: Math.max( Math.abs( dx2 - dx1 ), 1 ),
+						height: Math.max( Math.abs( dy2 - dy1 ), 1 )
+					};
+				}
 				default: {
 					// Default fallback for unknown types
 					rectX = layer.x || 0;

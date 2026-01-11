@@ -64,7 +64,7 @@ describe( 'LayersEditor Extended', () => {
 		};
 		mockValidationManager = {
 			sanitizeLayerData: jest.fn( ( data ) => data ),
-			validateLayers: jest.fn().mockReturnValue( true ),
+			validateLayers: jest.fn().mockReturnValue( { isValid: true } ),
 			checkBrowserCompatibility: jest.fn().mockReturnValue( true )
 		};
 		mockCanvasManager = {
@@ -721,7 +721,7 @@ describe( 'LayersEditor Extended', () => {
 			} catch ( e ) {
 				// Expected in JSDOM
 			}
-			expect( mockGetUrl ).toHaveBeenCalledWith( 'File:Test.jpg' );
+			expect( mockGetUrl ).toHaveBeenCalledWith( 'File:Test.jpg', { layers: 'on' } );
 		} );
 
 		it( 'should handle errors gracefully', () => {
@@ -757,7 +757,7 @@ describe( 'LayersEditor Extended', () => {
 			} catch ( e ) {
 				// Expected in JSDOM
 			}
-			expect( mockGetUrl ).toHaveBeenCalledWith( 'File:Other.jpg' );
+			expect( mockGetUrl ).toHaveBeenCalledWith( 'File:Other.jpg', { layers: 'on' } );
 		} );
 
 		it( 'should handle null filename gracefully', () => {
@@ -877,7 +877,7 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		it( 'should show error if validation fails', () => {
-			mockValidationManager.validateLayers.mockReturnValue( false );
+			mockValidationManager.validateLayers.mockReturnValue( { isValid: false, errors: [ 'Validation failed' ] } );
 			editor.addLayer( { type: 'rectangle' } );
 
 			editor.save();
