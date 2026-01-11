@@ -2,6 +2,42 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.4] - 2026-01-11
+
+### Added
+- **Marker Tool** — New annotation tool for numbered/lettered sequence markers
+  - Styles: Circled numbers (①②③), Letters (A B C), Parentheses ((1)(2)(3)), Plain (1. 2. 3.), Circled letters (Ⓐ Ⓑ Ⓒ)
+  - Optional arrow/leader lines pointing to target locations
+  - Auto-numbering for sequential markers
+  - Full shadow support with all shadow controls
+  - Keyboard shortcut: M
+
+- **Dimension Tool** — Technical measurement annotation tool
+  - End styles: Arrow, Tick, Dot, None
+  - Text positions: Above, Below, Center
+  - Orientation: Free, Horizontal, Vertical
+  - Tolerance display: Symmetric (±), Deviation (+/-), Limits (min-max), Basic
+  - Configurable units, scale, and precision
+  - Extension lines with adjustable length
+  - Keyboard shortcut: D
+
+### Fixed
+- **Marker Shadow Controls** — Shadow offset, spread, and blur now properly affect marker layers
+  - MarkerRenderer now integrates with ShadowRenderer for consistent shadow rendering
+  - All shadow properties (shadowColor, shadowBlur, shadowOffsetX/Y, shadowSpread) work correctly
+
+### Changed
+- **CanvasManager.js Refactored** — Reduced from 2,072 to 1,927 lines (now under 2K limit)
+  - Removed deprecated fallback code and dead branches
+  - No functionality changes, all tests passing
+
+### Tests
+- **Test Count** — 8,603 tests passing (144 suites)
+- **Coverage** — 94.53% statement, 83.16% branch
+- Added 42 new tests for Marker and Dimension renderers
+
+---
+
 ## [1.5.3] - 2026-01-09
 
 ### Added

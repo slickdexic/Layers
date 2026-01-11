@@ -3,13 +3,13 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94.53%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C599%20passing%20(100%25)-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-8%2C603%20passing%20(100%25)-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.3 (January 11, 2026)  
-> **Status:** ✅ Production-ready (Rating: 7.5/10)  
+> **Version:** 1.5.4 (January 11, 2026)  
+> **Status:** ✅ Production-ready (Rating: 8.0/10)  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+  
 > **Technical Debt:** 16 god classes (1,035-3,176 lines) with proper delegation patterns
 >
@@ -28,7 +28,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - ✅ Original images preserved (non-destructive)
 - ✅ Modern, intuitive editor UI
-- ✅ 13 drawing tools with customizable properties
+- ✅ **15 drawing tools** with customizable properties
 - ✅ Multiple named layer sets per image with version history
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
 
@@ -36,7 +36,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 ## Features
 
-### Drawing Tools (13 Available)
+### Drawing Tools (15 Available)
 
 | Tool          | Shortcut | Purpose                                      |
 | ------------- | -------- | -------------------------------------------- |
@@ -52,6 +52,8 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Star          | S        | Draw star shapes                             |
 | Arrow         | A        | Annotation arrows                            |
 | Line          | L        | Straight lines                               |
+| **Marker**    | M        | Numbered/lettered markers with optional arrows |
+| **Dimension** | D        | Technical measurement annotations            |
 | Custom Shape  | —        | 374 built-in shapes (arrows, ISO signs, flowchart, and more!) |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers). *More shapes to come soon!*
