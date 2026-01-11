@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 11, 2026 (Comprehensive Critical Review)  
-**Version:** 1.5.3  
+**Review Date:** January 11, 2026 (Updated with Marker/Dimension Tools)  
+**Version:** 1.5.4  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -16,10 +16,10 @@ The extension is **functional and production-ready** with good security and test
 
 **Key Strengths (Verified):**
 
-- ✅ **8,619 unit tests passing (100%)** — verified January 11, 2026
+- ✅ **8,603 unit tests passing (100%)** — verified January 11, 2026
 - ✅ **94.53% statement coverage, 83.16% branch coverage** — verified from coverage-summary.json
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation on all 4 API endpoints)
-- ✅ 13 working drawing tools with named layer sets and callouts
+- ✅ **15 working drawing tools** including Marker and Dimension annotation tools
 - ✅ **Zero critical security vulnerabilities**
 - ✅ **No empty catch blocks** - all errors properly logged
 - ✅ **No production console.log usage** - all logging uses mw.log
@@ -45,14 +45,14 @@ All metrics collected directly from the codebase via terminal commands.
 
 | Metric | Verified Value | Previously Claimed | Discrepancy |
 |--------|----------------|-------------------|-------------|
-| Total JS files | **115** | 113 | +2 files |
-| Total JS lines | **~67,201** | 63,914 | +3,287 lines (5.1% underreported) |
+| Total JS files | **111** | 113 | Resources only |
+| Total JS lines | **~66,594** | 63,914 | Current verified count |
 | Files >1,000 lines | **16** | 12 | **+4 god classes hidden** |
-| Files >2,000 lines | **1** | 1 | ✅ Fixed (CanvasManager now 1,927) |
+| Files >2,000 lines | **1** | 1 | ShapeLibraryData.js (generated) |
 | ESLint errors | **0** | 0 | ✅ Accurate |
 | ESLint disable comments | **9** | 9 | ✅ Accurate |
 | Stylelint errors | **0** | 0 | ✅ Accurate |
-| Jest tests passing | **8,599** | 8,476-8,619 | Inconsistent claims |
+| Jest tests passing | **8,603** | 8,619 | 144 test suites |
 | Statement coverage | **94.53%** | 94.53% | ✅ Accurate |
 | Branch coverage | **83.16%** | 83.16% | ✅ Accurate |
 
@@ -177,9 +177,9 @@ The PHP backend is well-secured. All known security issues have been resolved.
 
 ## Feature Completeness
 
-### Drawing Tools (13 Available) ✅
+### Drawing Tools (15 Available) ✅
 
-All tools working: Pointer, Text, Text Box, Callout, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Custom Shapes (374 shapes)
+All tools working: Pointer, Text, Text Box, Callout, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, **Marker**, **Dimension**, Custom Shapes (374 shapes)
 
 ### Advanced Features ✅
 
@@ -206,7 +206,8 @@ All tools working: Pointer, Text, Text Box, Callout, Pen, Rectangle, Circle, Ell
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Tests passing | **8,619** | - | ✅ |
+| Tests passing | **8,603** | - | ✅ |
+| Test suites | **144** | - | ✅ |
 | Statement coverage | **94.53%** | 85%+ | ✅ Excellent |
 | Branch coverage | **83.16%** | 75%+ | ✅ Good |
 | Function coverage | **93.23%** | 80%+ | ✅ |
@@ -220,7 +221,7 @@ The test coverage is genuinely excellent. This is one of the project's strongest
 
 ### Immediate (P0)
 
-1. **Fix CanvasManager.js** — At 2,072 lines, it exceeds the 2,000 line limit. Extract more logic to controllers.
+1. **✅ CanvasManager.js FIXED** — Reduced from 2,072 to 1,927 lines, now under 2K limit
 2. **Update all documentation** — Correct the false metrics throughout docs (this review is the first step)
 3. **Acknowledge all 16 god classes** — Stop hiding 4 god classes from the inventory
 
