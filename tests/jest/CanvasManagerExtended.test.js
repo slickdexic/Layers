@@ -201,180 +201,9 @@ describe( 'CanvasManager Extended Coverage', () => {
 		jest.clearAllMocks();
 	} );
 
-	describe( 'loadBackgroundImageFallback', () => {
-		it( 'should build URL list from background URL and page images', () => {
-			// Mock document.querySelectorAll to return some images
-			const mockImg1 = { src: 'http://example.com/image1.png' };
-			const mockImg2 = { src: 'http://example.com/image2.png' };
-			const originalQuerySelectorAll = document.querySelectorAll;
-			document.querySelectorAll = jest.fn( () => [ mockImg1, mockImg2 ] );
-
-			canvasManager.config.backgroundImageUrl = 'http://example.com/bg.png';
-			canvasManager.tryLoadImageFallback = jest.fn();
-
-			canvasManager.loadBackgroundImageFallback();
-
-			expect( canvasManager.tryLoadImageFallback ).toHaveBeenCalled();
-			const urls = canvasManager.tryLoadImageFallback.mock.calls[ 0 ][ 0 ];
-			expect( urls ).toContain( 'http://example.com/bg.png' );
-			expect( urls ).toContain( 'http://example.com/image1.png' );
-			expect( urls ).toContain( 'http://example.com/image2.png' );
-
-			document.querySelectorAll = originalQuerySelectorAll;
-		} );
-
-		it( 'should deduplicate URLs', () => {
-			const mockImg = { src: 'http://example.com/bg.png' };
-			const originalQuerySelectorAll = document.querySelectorAll;
-			document.querySelectorAll = jest.fn( () => [ mockImg ] );
-
-			canvasManager.config.backgroundImageUrl = 'http://example.com/bg.png';
-			canvasManager.tryLoadImageFallback = jest.fn();
-
-			canvasManager.loadBackgroundImageFallback();
-
-			const urls = canvasManager.tryLoadImageFallback.mock.calls[ 0 ][ 0 ];
-			const bgCount = urls.filter( ( u ) => u === 'http://example.com/bg.png' ).length;
-			expect( bgCount ).toBe( 1 );
-
-			document.querySelectorAll = originalQuerySelectorAll;
-		} );
-
-		it( 'should add MediaWiki redirect URL when mw config available', () => {
-			const originalQuerySelectorAll = document.querySelectorAll;
-			document.querySelectorAll = jest.fn( () => [] );
-
-			// Mock mw.config
-			window.mw = {
-				config: {
-					get: jest.fn( ( key ) => {
-						if ( key === 'wgServer' ) {
-							return 'https://wiki.example.com';
-						}
-						if ( key === 'wgScriptPath' ) {
-							return '/w';
-						}
-						return null;
-					} )
-				}
-			};
-
-			canvasManager.tryLoadImageFallback = jest.fn();
-			canvasManager.loadBackgroundImageFallback();
-
-			const urls = canvasManager.tryLoadImageFallback.mock.calls[ 0 ][ 0 ];
-			expect( urls.some( ( u ) => u.includes( 'Special:Redirect/file/' ) ) ).toBe( true );
-
-			document.querySelectorAll = originalQuerySelectorAll;
-			delete window.mw;
-		} );
-
-		it( 'should not call tryLoadImageFallback when no URLs found', () => {
-			const originalQuerySelectorAll = document.querySelectorAll;
-			document.querySelectorAll = jest.fn( () => [] );
-
-			canvasManager.config.backgroundImageUrl = null;
-			delete window.mw;
-			canvasManager.tryLoadImageFallback = jest.fn();
-
-			canvasManager.loadBackgroundImageFallback();
-
-			expect( canvasManager.tryLoadImageFallback ).not.toHaveBeenCalled();
-
-			document.querySelectorAll = originalQuerySelectorAll;
-		} );
-	} );
-
-	describe( 'tryLoadImageFallback', () => {
-		it( 'should call handleImageLoadError when all URLs exhausted', () => {
-			canvasManager.handleImageLoadError = jest.fn();
-			canvasManager.tryLoadImageFallback( [], 0 );
-			expect( canvasManager.handleImageLoadError ).toHaveBeenCalled();
-		} );
-
-		it( 'should call handleImageLoadError when index exceeds urls length', () => {
-			canvasManager.handleImageLoadError = jest.fn();
-			canvasManager.tryLoadImageFallback( [ 'url1' ], 5 );
-			expect( canvasManager.handleImageLoadError ).toHaveBeenCalled();
-		} );
-
-		it( 'should create Image and set src', () => {
-			const urls = [ 'http://example.com/test.png' ];
-			const originalImage = window.Image;
-
-			let createdImage = null;
-			window.Image = function () {
-				createdImage = { onload: null, onerror: null, src: null, crossOrigin: null };
-				return createdImage;
-			};
-
-			canvasManager.tryLoadImageFallback( urls, 0 );
-
-			expect( createdImage ).not.toBeNull();
-			expect( createdImage.crossOrigin ).toBe( 'anonymous' );
-			expect( createdImage.src ).toBe( 'http://example.com/test.png' );
-
-			window.Image = originalImage;
-		} );
-
-		it( 'should call handleImageLoaded on image load success', () => {
-			const urls = [ 'http://example.com/test.png' ];
-			const originalImage = window.Image;
-
-			let createdImage = null;
-			window.Image = function () {
-				createdImage = {
-					onload: null,
-					onerror: null,
-					src: null,
-					crossOrigin: null,
-					width: 640,
-					height: 480
-				};
-				return createdImage;
-			};
-
-			canvasManager.handleImageLoaded = jest.fn();
-			canvasManager.tryLoadImageFallback( urls, 0 );
-
-			// Simulate load
-			createdImage.onload();
-
-			expect( canvasManager.handleImageLoaded ).toHaveBeenCalledWith(
-				createdImage,
-				expect.objectContaining( {
-					width: 640,
-					height: 480,
-					source: 'fallback'
-				} )
-			);
-
-			window.Image = originalImage;
-		} );
-
-		it( 'should try next URL on image load error', () => {
-			const urls = [ 'http://example.com/bad.png', 'http://example.com/good.png' ];
-			const originalImage = window.Image;
-
-			let imageCount = 0;
-			let lastImage = null;
-			window.Image = function () {
-				imageCount++;
-				lastImage = { onload: null, onerror: null, src: null, crossOrigin: null };
-				return lastImage;
-			};
-
-			canvasManager.tryLoadImageFallback( urls, 0 );
-
-			// First image fails
-			lastImage.onerror();
-
-			expect( imageCount ).toBe( 2 );
-			expect( lastImage.src ).toBe( 'http://example.com/good.png' );
-
-			window.Image = originalImage;
-		} );
-	} );
+	// NOTE: loadBackgroundImageFallback and tryLoadImageFallback tests removed
+	// These methods were deprecated and removed from CanvasManager.js
+	// ImageLoader.js handles all image loading in production
 
 	describe( 'handleImageLoaded', () => {
 		beforeEach( () => {
@@ -426,6 +255,9 @@ describe( 'CanvasManager Extended Coverage', () => {
 			// Set initial state to track if it gets modified
 			canvasManager.backgroundImage = null;
 			canvasManager.isDestroyed = true;
+
+			// Clear mock to track calls from this test only
+			canvasManager.renderer.setBackgroundImage.mockClear();
 
 			canvasManager.handleImageLoaded( mockImage, { width: 800, height: 600 } );
 
@@ -873,12 +705,10 @@ describe( 'CanvasManager Extended Coverage', () => {
 	} );
 
 	describe( 'setupEventHandlers', () => {
-		it( 'should log error when CanvasEvents not found', () => {
-			// Remove CanvasEvents from namespace
-			const originalCanvasEvents = window.Layers && window.Layers.Canvas && window.Layers.Canvas.Events;
-			if ( window.Layers && window.Layers.Canvas ) {
-				delete window.Layers.Canvas.Events;
-			}
+		it( 'should log error when ImageLoader not found', () => {
+			// Remove ImageLoader to test the error logging
+			const originalImageLoader = global.ImageLoader;
+			delete global.ImageLoader;
 
 			window.mw = {
 				log: {
@@ -894,13 +724,11 @@ describe( 'CanvasManager Extended Coverage', () => {
 			} );
 
 			expect( window.mw.log.error ).toHaveBeenCalledWith(
-				'Layers: CanvasEvents module not found'
+				'Layers: ImageLoader not found - check extension.json dependencies'
 			);
 
 			newManager.destroy();
-			if ( window.Layers && window.Layers.Canvas ) {
-				window.Layers.Canvas.Events = originalCanvasEvents;
-			}
+			global.ImageLoader = originalImageLoader;
 			delete window.mw;
 		} );
 	} );
@@ -1025,70 +853,13 @@ describe( 'CanvasManager Extended Coverage', () => {
 			expect( canvasManager.renderLayers ).toHaveBeenCalled();
 		} );
 
-		it( 'should use fallback style logic when styleController unavailable', () => {
+		it( 'should log error when styleController unavailable', () => {
 			canvasManager.styleController = null;
-			canvasManager.currentStyle = { color: '#000000' };
+			window.mw = { log: { error: jest.fn() } };
 
 			canvasManager.updateStyleOptions( { fill: '#ffffff' } );
 
-			expect( canvasManager.currentStyle.fill ).toBe( '#ffffff' );
-			expect( canvasManager.currentStyle.color ).toBe( '#000000' );
-		} );
-	} );
-
-	describe( 'image loading', () => {
-		it( 'should try loading next URL on error', () => {
-			const urls = [ 'url1.jpg', 'url2.jpg', 'url3.jpg' ];
-			const mockImage = {
-				addEventListener: jest.fn(),
-				removeEventListener: jest.fn(),
-				dispatchEvent: jest.fn()
-			};
-			let errorHandler;
-
-			// Mock Image constructor
-			const originalImage = global.Image;
-			global.Image = jest.fn().mockImplementation( () => {
-				const img = {
-					set onload( fn ) { this._onload = fn; },
-					set onerror( fn ) { errorHandler = fn; }
-				};
-				return img;
-			} );
-
-			canvasManager.tryLoadImageFallback( urls, 0 );
-
-			// Trigger error to try next URL
-			if ( errorHandler ) {
-				errorHandler();
-			}
-
-			global.Image = originalImage;
-		} );
-
-		it( 'should handle tryLoadImageFallback when index exceeds urls length', () => {
-			canvasManager.handleImageLoadError = jest.fn();
-
-			canvasManager.tryLoadImageFallback( [ 'url1.jpg' ], 10 );
-
-			expect( canvasManager.handleImageLoadError ).toHaveBeenCalled();
-		} );
-
-		it( 'should call handleImageLoadError on exception', () => {
-			canvasManager.handleImageLoadError = jest.fn();
-			window.mw = { log: { error: jest.fn() } };
-
-			// Force an error by passing invalid data
-			const originalImage = global.Image;
-			global.Image = jest.fn().mockImplementation( () => {
-				throw new Error( 'Image constructor error' );
-			} );
-
-			canvasManager.tryLoadImageFallback( [ 'url.jpg' ], 0 );
-
-			expect( canvasManager.handleImageLoadError ).toHaveBeenCalled();
-
-			global.Image = originalImage;
+			expect( window.mw.log.error ).toHaveBeenCalled();
 			delete window.mw;
 		} );
 	} );

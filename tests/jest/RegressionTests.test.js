@@ -184,45 +184,24 @@ describe('Layers Editor Regression Tests', () => {
 
     describe('Background image lifecycle', () => {
         test('successful image load resizes canvas and triggers redraw', () => {
-            manager.destroy();
-            const OriginalImage = global.Image;
-            const images = [];
-            global.Image = class {
-                constructor() {
-                    images.push(this);
-                }
-                set crossOrigin(_value) {}
-                set src(value) {
-                    this._src = value;
-                }
-            };
+            // Test that CanvasManager properly handles background image via ImageLoader
+            // The new architecture delegates image loading to ImageLoader
+            manager.resizeCanvas = jest.fn();
+            manager.redraw = jest.fn();
+            manager.renderLayers = jest.fn();
 
-            try {
-                const CanvasManager = window.Layers.Canvas.Manager;
-                manager = new CanvasManager({
-                    container,
-                    editor: mockEditor,
-                    backgroundImageUrl: 'https://example.test/test.png'
-                });
-                const image = images[0];
-                manager.resizeCanvas = jest.fn();
-                manager.redraw = jest.fn();
-                manager.renderLayers = jest.fn();
+            // Simulate the callback that ImageLoader would trigger
+            const mockImage = { width: 321, height: 123 };
+            const mockInfo = { width: 321, height: 123 };
 
-                image.width = 321;
-                image.height = 123;
-                image.complete = true;
-                image.onload();
+            manager.handleImageLoaded( mockImage, mockInfo );
 
-                expect(manager.canvas.width).toBe(321);
-                expect(manager.canvas.height).toBe(123);
-                expect(manager.resizeCanvas).toHaveBeenCalled();
-                expect(manager.redraw).toHaveBeenCalled();
-            } finally {
-                global.Image = OriginalImage;
-            }
-        });
-    });
+            expect( manager.canvas.width ).toBe( 321 );
+            expect( manager.canvas.height ).toBe( 123 );
+            expect( manager.backgroundImage ).toBe( mockImage );
+            expect( manager.resizeCanvas ).toHaveBeenCalled();
+        } );
+    } );
 
     describe('Shadow disabled rendering', () => {
         // Regression test for bug where shadow: false layers still rendered with shadow

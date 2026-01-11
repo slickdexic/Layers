@@ -161,6 +161,44 @@ class CanvasManager {
 			fill: ( defaults && defaults.COLORS ) ? defaults.COLORS.FILL : 'transparent'
 		};
 
+		// Tool-specific style defaults (persist between drawings)
+		// These are updated when layer properties are modified
+		this.dimensionDefaults = {
+			endStyle: 'arrow',
+			textPosition: 'above',
+			extensionLength: 10,
+			extensionGap: 3,
+			arrowSize: 8,
+			tickSize: 6,
+			showBackground: true,
+			backgroundColor: '#ffffff',
+			showUnit: true,
+			unit: 'px',
+			scale: 1,
+			precision: 0,
+			toleranceType: 'none',
+			toleranceValue: 0,
+			toleranceUpper: 0,
+			toleranceLower: 0,
+			// Colors are stored here for persistence (stroke=line, color=text)
+			stroke: null,
+			color: null,
+			fontSize: null,
+			strokeWidth: null
+		};
+
+		this.markerDefaults = {
+			style: 'circled',
+			size: 24,
+			fontSizeAdjust: 0,
+			fill: '#ffffff',
+			stroke: '#000000',
+			strokeWidth: 2,
+			color: '#000000',
+			hasArrow: false,
+			arrowStyle: 'arrow'
+		};
+
 		// Zoom and pan functionality
 		this.zoom = 1.0;
 		this.minZoom = uiConsts ? uiConsts.MIN_ZOOM : 0.1;
@@ -447,15 +485,12 @@ class CanvasManager {
 			} );
 			this.imageLoader.load();
 		} else {
+			// ImageLoader should always be available via extension.json
+			// If not, log error and proceed without background image
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
-				mw.log.error( 'Layers: CanvasEvents module not found' );
+				mw.log.error( 'Layers: ImageLoader not found - check extension.json dependencies' );
 			}
-			// Fallback for test environments without ImageLoader
-			// @deprecated This path should not be reached in production
-			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-				mw.log.warn( '[CanvasManager] ImageLoader not found, using deprecated fallback' );
-			}
-			this.loadBackgroundImageFallback();
+			this.handleImageLoadError();
 		}
 	}
 
@@ -538,178 +573,85 @@ class CanvasManager {
 	}
 
 	/**
-	 * @deprecated Fallback image loading - no longer used in production.
-	 * ImageLoader is guaranteed to be loaded via extension.json.
-	 * Kept for backward compatibility and test coverage.
-	 * @private
-	 */
-	loadBackgroundImageFallback () {
-		const filename = this.editor.filename;
-		const backgroundImageUrl = this.config.backgroundImageUrl;
-
-		// Build URL list
-		const imageUrls = [];
-		if ( backgroundImageUrl ) {
-			imageUrls.push( backgroundImageUrl );
-		}
-
-		// Try page images
-		const pageImages = document.querySelectorAll(
-			'.mw-file-element img, .fullImageLink img, .filehistory img, img[src*="' + filename + '"]'
-		);
-		for ( let i = 0; i < pageImages.length; i++ ) {
-			const imgSrc = pageImages[ i ].src;
-			if ( imgSrc && imageUrls.indexOf( imgSrc ) === -1 ) {
-				imageUrls.push( imgSrc );
-			}
-		}
-
-		// Try MediaWiki URLs
-		if ( filename && typeof mw !== 'undefined' && mw.config ) {
-			const server = mw.config.get( 'wgServer' );
-			const scriptPath = mw.config.get( 'wgScriptPath' );
-			if ( server && scriptPath ) {
-				imageUrls.push(
-					server + scriptPath + '/index.php?title=Special:Redirect/file/' +
-					encodeURIComponent( filename )
-				);
-			}
-		}
-
-		// Try loading
-		if ( imageUrls.length > 0 ) {
-			this.tryLoadImageFallback( imageUrls, 0 );
-		}
-		// If no URLs found, just leave the canvas in its current state.
-		// This matches the original behavior where image loading was asynchronous
-		// and the canvas wasn't modified until an image actually loaded/failed.
-	}
-
-	/**
-	 * Try to load images from a list of URLs sequentially.
-	 * @param {string[]} urls
-	 * @param {number} index
-	 */
-	tryLoadImageFallback ( urls, index ) {
-		if ( !Array.isArray( urls ) || urls.length === 0 || index >= urls.length ) {
-			if ( typeof this.handleImageLoadError === 'function' ) {
-				this.handleImageLoadError();
-			}
-			return;
-		}
-
-		const url = urls[ index ];
-		try {
-			const img = new Image();
-			img.crossOrigin = 'anonymous';
-			img.onload = () => {
-				if ( typeof this.handleImageLoaded === 'function' ) {
-					this.handleImageLoaded( img, { width: img.width, height: img.height, source: 'fallback' } );
-				}
-			};
-			img.onerror = () => {
-				this.tryLoadImageFallback( urls, index + 1 );
-			};
-			img.src = url;
-		} catch ( e ) {
-			if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
-				mw.log.error( 'Layers: tryLoadImageFallback error - ' + ( e && e.message ) );
-			}
-			if ( typeof this.handleImageLoadError === 'function' ) {
-				this.handleImageLoadError();
-			}
-		}
-	}
-
-	/**
 	 * Update current style options and apply to selected layers.
-	 * Delegates to StyleController when available.
+	 * Delegates to StyleController.
 	 *
 	 * @param {Object} options - Style options to update
 	 */
 	updateStyleOptions ( options ) {
-		if ( this.styleController && typeof this.styleController.updateStyleOptions === 'function' ) {
-			const next = this.styleController.updateStyleOptions( options );
-			// IMPORTANT: Also sync to this.currentStyle so new drawings use updated styles
-			this.currentStyle = next;
-			// Live-apply style updates to selected layers using styleController
-			const ids = this.getSelectedLayerIds();
-			if ( ids && ids.length && this.editor ) {
-				for ( let i = 0; i < ids.length; i++ ) {
-					const layer = this.editor.getLayerById( ids[ i ] );
-					if ( layer && typeof this.styleController.applyToLayer === 'function' ) {
-						this.styleController.applyToLayer( layer, next );
-					}
-				}
-				this.renderLayers( this.editor.layers );
+		if ( !this.styleController || typeof this.styleController.updateStyleOptions !== 'function' ) {
+			// StyleController should always be available via extension.json
+			if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+				mw.log.error( 'Layers: StyleController not available - check extension.json dependencies' );
 			}
 			return;
 		}
-		// Fallback to legacy logic if styleController is not available
-		this.currentStyle = this.currentStyle || {};
-		const prev = this.currentStyle;
-		const has = function ( v ) { return v !== undefined && v !== null; };
-		const next = {
-			color: has( options.color ) ? options.color : prev.color,
-			fill: has( options.fill ) ? options.fill : prev.fill,
-			strokeWidth: has( options.strokeWidth ) ? options.strokeWidth : prev.strokeWidth,
-			fontSize: has( options.fontSize ) ? options.fontSize : prev.fontSize,
-			fontFamily: has( options.fontFamily ) ? options.fontFamily : prev.fontFamily || 'Arial, sans-serif',
-			textStrokeColor: has( options.textStrokeColor ) ? options.textStrokeColor : prev.textStrokeColor,
-			textStrokeWidth: has( options.textStrokeWidth ) ? options.textStrokeWidth : prev.textStrokeWidth,
-			textShadow: has( options.textShadow ) ? options.textShadow : prev.textShadow,
-			textShadowColor: has( options.textShadowColor ) ? options.textShadowColor : prev.textShadowColor,
-			arrowStyle: has( options.arrowStyle ) ? options.arrowStyle : prev.arrowStyle,
-			shadow: has( options.shadow ) ? options.shadow : prev.shadow,
-			shadowColor: has( options.shadowColor ) ? options.shadowColor : prev.shadowColor,
-			shadowBlur: has( options.shadowBlur ) ? options.shadowBlur : prev.shadowBlur,
-			shadowOffsetX: has( options.shadowOffsetX ) ? options.shadowOffsetX : prev.shadowOffsetX,
-			shadowOffsetY: has( options.shadowOffsetY ) ? options.shadowOffsetY : prev.shadowOffsetY
-		};
+
+		const next = this.styleController.updateStyleOptions( options );
+		// Sync to this.currentStyle so new drawings use updated styles
 		this.currentStyle = next;
-		const applyToLayer = function ( layer ) {
-			if ( !layer ) return;
-			if ( next.color ) {
-				if ( layer.type === 'text' ) {
-					layer.fill = next.color;
-				} else {
-					layer.stroke = next.color;
-				}
-			}
-			if ( next.fill ) {
-				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
-					layer.fill = next.fill;
-				}
-			}
-			if ( next.strokeWidth ) {
-				if ( layer.type !== 'text' ) {
-					layer.strokeWidth = next.strokeWidth;
-				}
-			}
-			if ( layer.type === 'text' ) {
-				layer.fontSize = next.fontSize || layer.fontSize || 16;
-				layer.fontFamily = next.fontFamily || layer.fontFamily;
-				if ( next.textStrokeColor ) layer.textStrokeColor = next.textStrokeColor;
-				if ( next.textStrokeWidth ) layer.textStrokeWidth = next.textStrokeWidth;
-			}
-			if ( next.shadow ) {
-				layer.shadow = next.shadow;
-				if ( next.shadowColor ) layer.shadowColor = next.shadowColor;
-				if ( next.shadowBlur ) layer.shadowBlur = next.shadowBlur;
-				if ( next.shadowOffsetX !== undefined ) layer.shadowOffsetX = next.shadowOffsetX;
-				if ( next.shadowOffsetY !== undefined ) layer.shadowOffsetY = next.shadowOffsetY;
-			}
-		};
-		// Use canvasManager's getSelectedLayerIds which queries stateManager
+
+		// Live-apply style updates to selected layers
 		const ids = this.getSelectedLayerIds();
 		if ( ids && ids.length && this.editor ) {
 			for ( let i = 0; i < ids.length; i++ ) {
 				const layer = this.editor.getLayerById( ids[ i ] );
-				if ( layer ) applyToLayer( layer );
+				if ( layer && typeof this.styleController.applyToLayer === 'function' ) {
+					this.styleController.applyToLayer( layer, next );
+				}
 			}
 			this.renderLayers( this.editor.layers );
 		}
 	}
+
+	/**
+	 * Update dimension tool defaults from a layer's properties.
+	 * Call this when dimension layer properties are modified to persist settings.
+	 *
+	 * @param {Object} props - Dimension properties to persist
+	 */
+	updateDimensionDefaults( props ) {
+		if ( !props ) {
+			return;
+		}
+		const dimensionProps = [
+			'endStyle', 'textPosition', 'extensionLength', 'extensionGap',
+			'arrowSize', 'tickSize', 'showBackground', 'backgroundColor',
+			'showUnit', 'unit', 'scale', 'precision',
+			// Tolerance settings
+			'toleranceType', 'toleranceValue', 'toleranceUpper', 'toleranceLower',
+			// Colors and sizing
+			'stroke', 'color', 'fontSize', 'strokeWidth'
+		];
+		dimensionProps.forEach( ( prop ) => {
+			if ( props[ prop ] !== undefined ) {
+				this.dimensionDefaults[ prop ] = props[ prop ];
+			}
+		} );
+	}
+
+	/**
+	 * Update marker tool defaults from a layer's properties.
+	 * Call this when marker layer properties are modified to persist settings.
+	 *
+	 * @param {Object} props - Marker properties to persist
+	 */
+	updateMarkerDefaults( props ) {
+		if ( !props ) {
+			return;
+		}
+		const markerProps = [
+			'style', 'size', 'fontSizeAdjust',
+			'fill', 'stroke', 'strokeWidth', 'color',
+			'hasArrow', 'arrowStyle'
+		];
+		markerProps.forEach( ( prop ) => {
+			if ( props[ prop ] !== undefined ) {
+				this.markerDefaults[ prop ] = props[ prop ];
+			}
+		} );
+	}
+
 	hitTestSelectionHandles ( point ) {
 		if ( this.hitTestController ) {
 			return this.hitTestController.hitTestSelectionHandles( point );
@@ -916,7 +858,8 @@ class CanvasManager {
 				this.canvas.style.cursor = 'pointer';
 			}
 		} else {
-			this.canvas.style.cursor = 'crosshair';
+			// Default cursor when in pointer mode with nothing hovered
+			this.canvas.style.cursor = 'default';
 		}
 	}
 
@@ -1678,7 +1621,14 @@ class CanvasManager {
 
 	startDrawing ( point ) {
 		// Use current style options if available
-		const style = this.currentStyle || {};
+		let style = { ...( this.currentStyle || {} ) };
+
+		// Merge tool-specific defaults for dimension and marker tools
+		if ( this.currentTool === 'dimension' && this.dimensionDefaults ) {
+			style = { ...style, ...this.dimensionDefaults };
+		} else if ( this.currentTool === 'marker' && this.markerDefaults ) {
+			style = { ...style, ...this.markerDefaults };
+		}
 
 		// Delegate to DrawingController
 		if ( this.drawingController ) {
@@ -1717,9 +1667,11 @@ class CanvasManager {
 			this.tempLayer = null;
 			if ( layerData ) {
 				this.editor.addLayer( layerData );
-				if ( typeof this.editor.setCurrentTool === 'function' ) {
-					this.editor.setCurrentTool( 'pointer' );
-				}
+			}
+			// Always reset to pointer tool after drawing finishes
+			// (whether or not a layer was created)
+			if ( typeof this.editor.setCurrentTool === 'function' ) {
+				this.editor.setCurrentTool( 'pointer' );
 			}
 			this.renderLayers( this.editor.layers );
 		} else if ( typeof mw !== 'undefined' && mw.log ) {
@@ -1781,7 +1733,11 @@ class CanvasManager {
 
 		} catch ( error ) {
 			if ( this.editor && this.editor.errorLog ) {
-				this.editor.errorLog( 'Canvas redraw failed:', error );
+				// Capture detailed error info for debugging
+				const errorInfo = error instanceof Error ?
+					{ message: error.message, stack: error.stack } :
+					( typeof error === 'object' ? JSON.stringify( error ) : String( error ) );
+				this.editor.errorLog( 'Canvas redraw failed:', errorInfo );
 			}
 		}
 	}

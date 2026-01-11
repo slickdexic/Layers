@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-8%2C677%20Passing-brightgreen" alt="8,677 Tests">
-  <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
+  <img src="https://img.shields.io/badge/Tests-8%2C599%20Passing-brightgreen" alt="8,599 Tests">
+  <img src="https://img.shields.io/badge/Coverage-94.53%25-brightgreen" alt="94.53% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -149,15 +149,15 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.2 |
-| **Version (REL1_43)** | 1.5.1-REL1_43 |
+| **Version (main)** | 1.5.3 |
+| **Version (REL1_43)** | 1.5.3-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 7, 2026 |
-| **Test Suites** | 146 |
-| **Total Tests** | 8,677 |
-| **Statement Coverage** | 94.55% |
-| **Branch Coverage** | 83.19% |
-| **JavaScript Files** | 113 |
+| **Release Date** | January 11, 2026 |
+| **Test Suites** | 142 |
+| **Total Tests** | 8,619 |
+| **Statement Coverage** | 94.53% |
+| **Branch Coverage** | 83.16% |
+| **JavaScript Files** | 115 |
 | **ES6 Classes** | 94+ |
 
 ---
