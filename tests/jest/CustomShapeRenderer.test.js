@@ -562,10 +562,12 @@ describe( 'CustomShapeRenderer', () => {
 
 			renderer.renderWithEffects( mockCtx, shapeData, layer );
 
+			// renderWithEffects now delegates to render() - shadows handled in drawSVGImage
 			expect( mockCtx.shadowColor ).toBe( '' );
 		} );
 
-		test( 'applies shadow when enabled', () => {
+		test( 'delegates to render for shadow handling', () => {
+			// renderWithEffects now just calls render() - shadows are handled in drawSVGImage
 			const shapeData = {
 				path: 'M0,0 L100,100',
 				viewBox: [ 0, 0, 100, 100 ]
@@ -579,30 +581,179 @@ describe( 'CustomShapeRenderer', () => {
 				shadowOffsetY: 20
 			};
 
-			renderer.renderWithEffects( mockCtx, shapeData, layer );
+			// Should not throw
+			expect( () => renderer.renderWithEffects( mockCtx, shapeData, layer ) ).not.toThrow();
+		} );
+	} );
 
-			expect( mockCtx.shadowColor ).toBe( '#ff0000' );
-			expect( mockCtx.shadowBlur ).toBe( 15 );
-			expect( mockCtx.shadowOffsetX ).toBe( 10 );
-			expect( mockCtx.shadowOffsetY ).toBe( 20 );
+	describe( 'drawSVGImage with shadow', () => {
+		test( 'applies simple shadow (no spread) when shadow enabled', () => {
+			const mockImg = {};
+			const layer = {
+				x: 50,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowColor: '#ff0000',
+				shadowBlur: 15,
+				shadowOffsetX: 10,
+				shadowOffsetY: 20
+			};
+
+			// Track shadow properties set during drawing
+			let shadowColorDuringDraw = null;
+			let shadowBlurDuringDraw = null;
+			const originalDrawImage = mockCtx.drawImage;
+			mockCtx.drawImage = jest.fn( () => {
+				// Capture values at draw time
+				shadowColorDuringDraw = mockCtx.shadowColor;
+				shadowBlurDuringDraw = mockCtx.shadowBlur;
+			} );
+
+			renderer.drawSVGImage( mockCtx, mockImg, layer );
+
+			expect( shadowColorDuringDraw ).toBe( '#ff0000' );
+			expect( shadowBlurDuringDraw ).toBe( 15 );
+			// After draw completes, shadow is cleared
+			expect( mockCtx.shadowColor ).toBe( 'transparent' );
+
+			mockCtx.drawImage = originalDrawImage;
 		} );
 
-		test( 'uses default shadow values', () => {
-			const shapeData = {
-				path: 'M0,0 L100,100',
-				viewBox: [ 0, 0, 100, 100 ]
-			};
+		test( 'uses default shadow values when not specified', () => {
+			const mockImg = {};
 			const layer = {
-				fill: '#000',
 				shadow: true
 			};
 
-			renderer.renderWithEffects( mockCtx, shapeData, layer );
+			let shadowColorDuringDraw = null;
+			let shadowBlurDuringDraw = null;
+			mockCtx.drawImage = jest.fn( () => {
+				shadowColorDuringDraw = mockCtx.shadowColor;
+				shadowBlurDuringDraw = mockCtx.shadowBlur;
+			} );
 
-			expect( mockCtx.shadowColor ).toBe( 'rgba(0, 0, 0, 0.5)' );
-			expect( mockCtx.shadowBlur ).toBe( 10 );
-			expect( mockCtx.shadowOffsetX ).toBe( 5 );
-			expect( mockCtx.shadowOffsetY ).toBe( 5 );
+			renderer.drawSVGImage( mockCtx, mockImg, layer );
+
+			expect( shadowColorDuringDraw ).toBe( 'rgba(0, 0, 0, 0.5)' );
+			expect( shadowBlurDuringDraw ).toBe( 10 );
+		} );
+
+		test( 'clears shadow after drawing', () => {
+			const mockImg = {};
+			const layer = {
+				shadow: true
+			};
+
+			renderer.drawSVGImage( mockCtx, mockImg, layer );
+
+			// After restore, shadow should be cleared
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'handles shadow with spread using offscreen canvas technique', () => {
+			const mockImg = {};
+			const layer = {
+				x: 50,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowSpread: 10,
+				shadowColor: '#000000',
+				shadowBlur: 5
+			};
+
+			// Add missing methods to mockCtx for spread shadow
+			mockCtx.setTransform = jest.fn();
+			mockCtx.getTransform = jest.fn().mockReturnValue( { e: 0, f: 0 } );
+			mockCtx.canvas = { width: 800, height: 600 };
+
+			// Mock document.createElement to track offscreen canvas creation
+			const mockTempCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				setTransform: jest.fn(),
+				translate: jest.fn(),
+				beginPath: jest.fn(),
+				rect: jest.fn(),
+				fill: jest.fn(),
+				drawImage: jest.fn(),
+				globalCompositeOperation: '',
+				shadowColor: '',
+				shadowBlur: 0,
+				shadowOffsetX: 0,
+				shadowOffsetY: 0,
+				fillStyle: ''
+			};
+			const mockTempCanvas = {
+				width: 0,
+				height: 0,
+				getContext: jest.fn().mockReturnValue( mockTempCtx )
+			};
+			const originalCreateElement = global.document.createElement;
+			global.document.createElement = jest.fn( ( tag ) => {
+				if ( tag === 'canvas' ) {
+					return mockTempCanvas;
+				}
+				return originalCreateElement.call( document, tag );
+			} );
+
+			// Should not throw with spread shadow
+			expect( () => renderer.drawSVGImage( mockCtx, mockImg, layer ) ).not.toThrow();
+
+			global.document.createElement = originalCreateElement;
+		} );
+	} );
+
+	describe( 'hasShadowEnabled', () => {
+		test( 'returns true for shadow=true boolean', () => {
+			expect( renderer.hasShadowEnabled( { shadow: true } ) ).toBe( true );
+		} );
+
+		test( 'returns true for shadow="true" string', () => {
+			expect( renderer.hasShadowEnabled( { shadow: 'true' } ) ).toBe( true );
+		} );
+
+		test( 'returns true for shadow=1 integer', () => {
+			expect( renderer.hasShadowEnabled( { shadow: 1 } ) ).toBe( true );
+		} );
+
+		test( 'returns true for shadow="1" string', () => {
+			expect( renderer.hasShadowEnabled( { shadow: '1' } ) ).toBe( true );
+		} );
+
+		test( 'returns true for shadow object', () => {
+			expect( renderer.hasShadowEnabled( { shadow: { color: '#000' } } ) ).toBe( true );
+		} );
+
+		test( 'returns false for shadow=false', () => {
+			expect( renderer.hasShadowEnabled( { shadow: false } ) ).toBe( false );
+		} );
+
+		test( 'returns false for missing shadow property', () => {
+			expect( renderer.hasShadowEnabled( {} ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'getShadowSpread', () => {
+		test( 'returns shadowSpread value when set', () => {
+			expect( renderer.getShadowSpread( { shadowSpread: 10 } ) ).toBe( 10 );
+		} );
+
+		test( 'returns 0 for non-positive shadowSpread', () => {
+			expect( renderer.getShadowSpread( { shadowSpread: 0 } ) ).toBe( 0 );
+			expect( renderer.getShadowSpread( { shadowSpread: -5 } ) ).toBe( 0 );
+		} );
+
+		test( 'returns spread from nested shadow object', () => {
+			expect( renderer.getShadowSpread( { shadow: { spread: 15 } } ) ).toBe( 15 );
+		} );
+
+		test( 'returns 0 when no spread specified', () => {
+			expect( renderer.getShadowSpread( {} ) ).toBe( 0 );
+			expect( renderer.getShadowSpread( { shadow: true } ) ).toBe( 0 );
 		} );
 	} );
 

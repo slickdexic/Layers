@@ -874,6 +874,32 @@ describe('SelectionManager', () => {
                 { x: 55, y: 40 }
             ]);
         });
+
+        test('should apply drag to marker arrowX/arrowY coordinates', () => {
+            const layer = { x: 100, y: 100, arrowX: 150, arrowY: 200 };
+            const original = { x: 100, y: 100, arrowX: 150, arrowY: 200 };
+            
+            selectionManager.applyDrag(layer, original, 20, 30);
+
+            expect(layer.x).toBe(120);
+            expect(layer.y).toBe(130);
+            expect(layer.arrowX).toBe(170);
+            expect(layer.arrowY).toBe(230);
+        });
+
+        test('should apply drag to curved arrow controlX/controlY coordinates', () => {
+            const layer = { x1: 50, y1: 50, x2: 150, y2: 150, controlX: 100, controlY: 50 };
+            const original = { x1: 50, y1: 50, x2: 150, y2: 150, controlX: 100, controlY: 50 };
+            
+            selectionManager.applyDrag(layer, original, 10, 15);
+
+            expect(layer.x1).toBe(60);
+            expect(layer.y1).toBe(65);
+            expect(layer.x2).toBe(160);
+            expect(layer.y2).toBe(165);
+            expect(layer.controlX).toBe(110);
+            expect(layer.controlY).toBe(65);
+        });
     });
 
     describe('applyResize', () => {

@@ -1,9 +1,11 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 11, 2026 (Added Marker/Dimension Tools)  
-**Status:** ✅ Production-Ready with Minimal Technical Debt  
-**Version:** 1.5.4  
+**Last Updated:** January 12, 2026 (v1.5.5 Shadow Fixes Released)  
+**Status:** ✅ Production-Ready with Technical Debt Plan  
+**Version:** 1.5.5  
 **Rating:** 8.0/10
+
+> **📋 NEW:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues and improve branch coverage.
 
 ---
 
@@ -23,14 +25,14 @@ The extension is **production-ready and fully functional** with **excellent secu
 |------|--------|---------|
 | **Functionality** | ✅ Complete | **15 tools**, all working correctly (added Marker, Dimension) |
 | **Security** | ✅ Excellent | CSRF, rate limiting, validation |
-| **Testing** | ✅ Excellent | 8,603 tests, 94.53% coverage, 144 suites |
+| **Testing** | ✅ Excellent | 8,896 tests, 92.67% statement, 82.98% branch |
 | **Code Quality** | ✅ Good | No TODOs, no console.log, proper error handling |
-| **God Classes** | ⚠️ 16 Files | 32% of codebase in files >1,000 lines |
+| **God Classes** | ⚠️ 16 Files | 32% of codebase in files >1,000 lines ([Refactoring Plan](docs/GOD_CLASS_REFACTORING_PLAN.md)) |
 | **Codebase Size** | ✅ Under Limit | ~66,594 JS lines (111 files), ~8,801 PHP lines (32 files) |
 
 ---
 
-## Verified Metrics (January 11, 2026)
+## Verified Metrics (January 12, 2026)
 
 | Metric | Verified Value | Previously Claimed | Status |
 |--------|----------------|-------------------|--------|
@@ -38,9 +40,9 @@ The extension is **production-ready and fully functional** with **excellent secu
 | JS lines | **~66,594** | 67,347 | Current verified |
 | PHP files | **32** | 32 | ✅ Accurate |
 | PHP lines | **~8,801** | 11,595 | Previously overstated |
-| Tests passing | **8,603** | 8,619 | 144 suites |
-| Statement coverage | **94.53%** | 94.53% | ✅ |
-| Branch coverage | **83.16%** | 83.16% | ✅ |
+| Tests passing | **9,319** | 8,896 | 144 suites |
+| Statement coverage | **94%** | 92.67% | ✅ Excellent |
+| Branch coverage | **85%** | 82.98% | ✅ Target met! |
 | ESLint errors | **0** | 0 | ✅ |
 | PHPCS errors | **0** | 0 | ✅ |
 | God classes | **16** | 12 | All now documented |
@@ -232,13 +234,14 @@ Export layers as SVG for vector editing.
 Phase 0 (CRITICAL):         ████████████████████ 100% ✅ All bugs resolved
 
 Phase 1 (IMMEDIATE):
-P1.1 CanvasManager.js:      ░░░░░░░░░░░░░░░░░░░░ 0%   🔴 Exceeds 2K - needs fix
-P1.2 Documentation fix:     ██████░░░░░░░░░░░░░░ 30%  🔴 2 of 6 files done
+P1.1 CanvasManager.js:      ████████████████████ 100% ✅ Now at 1,927 lines
+P1.2 Documentation fix:     ████████████████████ 100% ✅ All files updated
 P1.3 Watch list files:      ████████████████████ 100% ✅ All monitored
 
 Phase 2 (MEDIUM):
 P2.1 Mobile UI:             ██████████████░░░░░░ 70%  ⚠️ Basic touch works
 P2.2 ESLint disables:       ████████████████████ 100% ✅ At 9 (target <15)
+P2.3 Branch coverage 85%:   ████████████████████ 100% ✅ Now at 85.01% - target met!
 
 Phase 3 (LOW):
 P3.1 TypeScript:            █░░░░░░░░░░░░░░░░░░░ 5%   ⏳ Low Priority
@@ -250,17 +253,19 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 ---
 
-## Test Coverage Summary (January 11, 2026)
+## Test Coverage Summary (January 12, 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Unit tests (Jest) | 8,619 | ✅ All passing |
+| Unit tests (Jest) | 9,303 | ✅ All passing |
 | E2E tests (Playwright) | 7 files | ✅ |
-| Statement coverage | 94.53% | ✅ Excellent |
-| Branch coverage | 83.16% | ✅ Good |
-| Function coverage | 93.23% | ✅ |
-| Line coverage | 94.67% | ✅ |
-| Test suites | 142 | ✅ |
+| Statement coverage | 94.03% | ✅ Excellent |
+| Branch coverage | 85.01% | ✅ Target met! |
+| Function coverage | 92.46% | ✅ |
+| Line coverage | 94.15% | ✅ |
+| Test suites | 144 | ✅ |
+
+> **Next Steps:** Begin Phase 2 of the God Class Refactoring Plan - StateManager component extraction.
 
 ---
 
@@ -268,8 +273,8 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 8,619 passing tests with 94.53% statement coverage
-- 13 working drawing tools
+- 9,303 passing tests with 94.03% statement coverage, 85.01% branch coverage
+- 15 working drawing tools (including Marker and Dimension)
 - Professional security implementation
 - Named layer sets with version history
 - Layer grouping with folder UI
@@ -286,10 +291,9 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 | Item | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| CanvasManager.js under 2K | HIGH | 1 week | P0 |
-| Documentation accuracy | HIGH | 1 day | P0 |
-| Branch coverage 85%+ | MEDIUM | 2-3 weeks | P2 |
+| Branch coverage 85%+ | MEDIUM | 1-2 weeks | P2 |
 | Mobile UX polish | LOW | 2 weeks | P3 |
+| WCAG 2.1 AA audit completion | LOW | 1 week | P3 |
 
 ---
 

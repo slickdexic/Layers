@@ -159,6 +159,16 @@ describe( 'RevisionManager', () => {
 			const result = revisionManager.parseMWTimestamp( 12345 );
 			expect( result instanceof Date ).toBe( true );
 		} );
+
+		it( 'should return current date for timestamp too short', () => {
+			// Timestamps must be at least 14 characters (YYYYMMDDHHmmss)
+			const result = revisionManager.parseMWTimestamp( '2025121714' );
+			expect( result instanceof Date ).toBe( true );
+			// Should return current date, not parse the short string
+			const now = new Date();
+			// Check that it's within a second of now
+			expect( Math.abs( result.getTime() - now.getTime() ) ).toBeLessThan( 1000 );
+		} );
 	} );
 
 	describe( 'getMessage', () => {

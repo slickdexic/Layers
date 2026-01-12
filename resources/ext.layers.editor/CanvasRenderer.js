@@ -413,18 +413,13 @@
 				}
 			}
 
-			// Shadow
-			if ( layer.shadow ) {
-				this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
-				this.ctx.shadowBlur = Math.round( layer.shadowBlur || 8 );
-				this.ctx.shadowOffsetX = Math.round( layer.shadowOffsetX || 2 );
-				this.ctx.shadowOffsetY = Math.round( layer.shadowOffsetY || 2 );
-			} else {
-				this.ctx.shadowColor = 'transparent';
-				this.ctx.shadowBlur = 0;
-				this.ctx.shadowOffsetX = 0;
-				this.ctx.shadowOffsetY = 0;
-			}
+			// NOTE: Shadow is handled by individual renderers (MarkerRenderer, ShapeRenderer, etc.)
+			// using the offscreen drawSpreadShadow technique for proper fill+stroke shadow.
+			// Do NOT apply shadow here - it would cause stroke shadow to render on top of fill.
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 
 			try {
 				this.drawLayer( layer );

@@ -496,5 +496,33 @@ describe( 'LayersEditorModal', () => {
 			// Restore mw.message
 			window.mw.message = originalMessage;
 		} );
+
+		it( 'should return fallback when message does not exist', async () => {
+			// Mock mw.message to return a message that doesn't exist
+			const originalMessage = window.mw.message;
+			window.mw.message = jest.fn( () => ( {
+				exists: () => false,
+				text: () => 'This should not be used'
+			} ) );
+
+			// Reload module to pick up the change
+			jest.resetModules();
+			delete window.Layers;
+			require( '../../resources/ext.layers.modal/LayersEditorModal.js' );
+			const ModalClass = window.Layers.Modal.LayersEditorModal;
+
+			const modal = new ModalClass();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			// The overlay title should use fallback text since message doesn't exist
+			const title = modal.overlay.querySelector( '.layers-editor-modal-title' );
+			expect( title.textContent ).toContain( 'Edit layers' );
+
+			modal.close( false );
+			await openPromise;
+
+			// Restore mw.message
+			window.mw.message = originalMessage;
+		} );
 	} );
 } );

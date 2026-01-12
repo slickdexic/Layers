@@ -473,9 +473,9 @@
 			// Handle multiple possible types from JSON (boolean, string, number, empty string)
 			const hasTextShadow = layer.textShadow === true || layer.textShadow === 'true' || layer.textShadow === 1 || layer.textShadow === '1';
 			const textShadowColor = layer.textShadowColor || 'rgba(0,0,0,0.5)';
-			const textShadowBlur = ( layer.textShadowBlur || 4 ) * shadowScale.avg;
-			const textShadowOffsetX = ( layer.textShadowOffsetX || 2 ) * shadowScale.avg;
-			const textShadowOffsetY = ( layer.textShadowOffsetY || 2 ) * shadowScale.avg;
+			const textShadowBlur = ( typeof layer.textShadowBlur === 'number' ? layer.textShadowBlur : 4 ) * shadowScale.avg;
+			const textShadowOffsetX = ( typeof layer.textShadowOffsetX === 'number' ? layer.textShadowOffsetX : 2 ) * shadowScale.avg;
+			const textShadowOffsetY = ( typeof layer.textShadowOffsetY === 'number' ? layer.textShadowOffsetY : 2 ) * shadowScale.avg;
 
 			// Draw each line (clipped to box)
 			for ( let i = 0; i < lines.length; i++ ) {

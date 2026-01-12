@@ -446,4 +446,119 @@ describe( 'ImageLayerRenderer', () => {
 			shadowRenderer.destroy();
 		} );
 	} );
+
+	describe( 'image load callbacks', () => {
+		it( 'should use onImageLoad callback when set', () => {
+			const onImageLoadCallback = jest.fn();
+			const testRenderer = new ImageLayerRenderer( mockCtx, {
+				onImageLoad: onImageLoadCallback
+			} );
+
+			let capturedOnload;
+			global.Image = class {
+				constructor() {
+					this.complete = false;
+					this.naturalWidth = 100;
+					this.naturalHeight = 100;
+				}
+
+				set src( value ) {
+					this._src = value;
+					// Trigger onload immediately for testing
+					if ( this.onload ) {
+						capturedOnload = this.onload;
+						this.onload();
+					}
+				}
+
+				get src() {
+					return this._src;
+				}
+			};
+
+			const layer = {
+				id: 'callback-test',
+				src: 'data:image/png;base64,test'
+			};
+
+			testRenderer._getImageElement( layer );
+
+			expect( onImageLoadCallback ).toHaveBeenCalled();
+			testRenderer.destroy();
+		} );
+
+		it( 'should fallback to window.Layers.requestRedraw when no callback set', () => {
+			const requestRedrawSpy = jest.fn();
+			global.window.Layers = { requestRedraw: requestRedrawSpy };
+
+			const testRenderer = new ImageLayerRenderer( mockCtx, {} );
+
+			global.Image = class {
+				constructor() {
+					this.complete = false;
+					this.naturalWidth = 100;
+					this.naturalHeight = 100;
+				}
+
+				set src( value ) {
+					this._src = value;
+					// Trigger onload immediately for testing
+					if ( this.onload ) {
+						this.onload();
+					}
+				}
+
+				get src() {
+					return this._src;
+				}
+			};
+
+			const layer = {
+				id: 'fallback-test',
+				src: 'data:image/png;base64,test'
+			};
+
+			testRenderer._getImageElement( layer );
+
+			expect( requestRedrawSpy ).toHaveBeenCalled();
+			testRenderer.destroy();
+		} );
+
+		it( 'should log warning on image load error', () => {
+			const testRenderer = new ImageLayerRenderer( mockCtx, {} );
+
+			global.Image = class {
+				constructor() {
+					this.complete = false;
+					this.naturalWidth = 0;
+					this.naturalHeight = 0;
+				}
+
+				set src( value ) {
+					this._src = value;
+					// Trigger onerror for testing
+					if ( this.onerror ) {
+						this.onerror();
+					}
+				}
+
+				get src() {
+					return this._src;
+				}
+			};
+
+			const layer = {
+				id: 'error-test',
+				src: 'data:image/png;base64,bad-data'
+			};
+
+			testRenderer._getImageElement( layer );
+
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				'[ImageLayerRenderer] Failed to load image layer:',
+				'error-test'
+			);
+			testRenderer.destroy();
+		} );
+	} );
 } );

@@ -129,13 +129,15 @@
 		 * Draw a marker layer
 		 *
 		 * @param {Object} layer - Marker layer object
-		 * @param {Object} [_options] - Rendering options (reserved for future use)
+		 * @param {Object} [options] - Rendering options
+		 * @param {Object} [options.shadowScale] - Scale factors for shadow rendering
 		 */
-		draw( layer, _options ) {
+		draw( layer, options ) {
 			if ( !this.ctx || !layer ) {
 				return;
 			}
 
+			const opts = options || {};
 			const ctx = this.ctx;
 			const x = layer.x || 0;
 			const y = layer.y || 0;
@@ -164,28 +166,60 @@
 			}
 
 			// Apply opacity
-			if ( typeof layer.opacity === 'number' ) {
-				ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
-			}
+			const baseOpacity = typeof layer.opacity === 'number' ?
+				Math.max( 0, Math.min( 1, layer.opacity ) ) : 1;
+			ctx.globalAlpha = baseOpacity;
 
-			// Apply shadow if enabled
+			// Check for shadow with spread support
 			const hasShadow = this.shadowRenderer &&
 				this.shadowRenderer.hasShadowEnabled( layer );
-			if ( hasShadow ) {
-				this.shadowRenderer.applyShadow( layer, { sx: 1, sy: 1, avg: 1 } );
-			}
-
-			// Draw arrow/leader line first (behind marker)
-			if ( layer.hasArrow && layer.arrowX !== undefined && layer.arrowY !== undefined ) {
-				this._drawArrow( layer, x, y, radius );
-			}
+			// Use shadowScale from options for proper scaling on article pages
+			const shadowScale = opts.shadowScale || { sx: 1, sy: 1, avg: 1 };
+			const spread = hasShadow && this.shadowRenderer.getShadowSpread ?
+				this.shadowRenderer.getShadowSpread( layer, shadowScale ) : 0;
 
 			// Draw marker circle/shape
 			const needsCircle = style === MARKER_STYLES.CIRCLED ||
 				style === MARKER_STYLES.LETTER_CIRCLED;
+			const hasArrow = layer.hasArrow && layer.arrowX !== undefined && layer.arrowY !== undefined;
+
+			// Draw shadow for marker using offscreen canvas
+			// Pattern: draw fill shadow, then stroke shadow (if applicable) separately
+			if ( hasShadow && this.shadowRenderer.drawSpreadShadow ) {
+				const hasFill = fill && fill !== 'none' && fill !== 'transparent';
+				const hasStroke = stroke && stroke !== 'none' && strokeWidth > 0;
+				const expandedRadius = radius + spread;
+
+				// Draw fill shadow for circle (including visual area under stroke)
+				if ( needsCircle && ( hasFill || hasStroke ) ) {
+					// For shadow, include the full visual area (fill + half stroke width)
+					const fillShadowRadius = expandedRadius + ( hasStroke ? strokeWidth / 2 : 0 );
+					this.shadowRenderer.drawSpreadShadow( layer, shadowScale, spread, ( tempCtx ) => {
+						tempCtx.beginPath();
+						tempCtx.arc( x, y, fillShadowRadius, 0, Math.PI * 2 );
+						// Note: do NOT call fill() here - drawSpreadShadow handles it
+					}, baseOpacity );
+				}
+
+				// Draw arrow shadow (stroked shape with round caps)
+				if ( hasArrow ) {
+					const effectiveStrokeWidth = strokeWidth + ( spread > 0 ? spread * 2 : 0 );
+					this.shadowRenderer.drawSpreadShadowStroke( layer, shadowScale, effectiveStrokeWidth, ( tempCtx ) => {
+						this._drawArrowPathOnly( tempCtx, layer, x, y, radius );
+					}, baseOpacity );
+				}
+			} else if ( hasShadow && !needsCircle ) {
+				// For non-circled markers (text only), use simple shadow
+				this.shadowRenderer.applyShadow( layer, shadowScale );
+			}
+
+			// Draw arrow/leader line first (behind marker) - NO shadow here
+			if ( hasArrow ) {
+				this._drawArrow( layer, x, y, radius );
+			}
 
 			if ( needsCircle ) {
-				// Draw filled circle
+				// Draw filled circle (shadow already handled above)
 				ctx.beginPath();
 				ctx.arc( x, y, radius, 0, Math.PI * 2 );
 
@@ -296,6 +330,67 @@
 			}
 
 			ctx.restore();
+		}
+
+		/**
+		 * Draw arrow path only (no stroke) for shadow rendering with drawSpreadShadowStroke
+		 *
+		 * This defines the arrow path using the same geometry as _drawArrow.
+		 * The caller (drawSpreadShadowStroke) will handle the actual stroke.
+		 *
+		 * @param {CanvasRenderingContext2D} tempCtx - Temp context for shadow
+		 * @param {Object} layer - Marker layer
+		 * @param {number} markerX - Marker center X
+		 * @param {number} markerY - Marker center Y
+		 * @param {number} radius - Marker radius
+		 * @private
+		 */
+		_drawArrowPathOnly( tempCtx, layer, markerX, markerY, radius ) {
+			const targetX = layer.arrowX;
+			const targetY = layer.arrowY;
+			const arrowStyle = layer.arrowStyle || DEFAULTS.arrowStyle;
+
+			// Calculate angle from marker to target
+			const dx = targetX - markerX;
+			const dy = targetY - markerY;
+			const angle = Math.atan2( dy, dx );
+			const distance = Math.sqrt( dx * dx + dy * dy );
+
+			// Start point is on the edge of the marker circle
+			const startX = markerX + Math.cos( angle ) * radius;
+			const startY = markerY + Math.sin( angle ) * radius;
+
+			// Arrow size scales with marker size
+			const size = radius * 2;
+			const arrowLength = Math.max( 8, Math.min( 20, size * 0.4 ) );
+
+			// Set round caps/joins to match actual arrow rendering
+			tempCtx.lineCap = 'round';
+			tempCtx.lineJoin = 'round';
+
+			// Define the main arrow line path
+			tempCtx.beginPath();
+			tempCtx.moveTo( startX, startY );
+			tempCtx.lineTo( targetX, targetY );
+			// Note: do NOT stroke here - drawSpreadShadowStroke handles it
+
+			// Define arrowhead path
+			if ( arrowStyle === 'arrow' && distance > radius + arrowLength ) {
+				const arrowAngle = Math.PI / 6; // 30 degrees
+
+				// Continue the path with arrowhead lines
+				tempCtx.moveTo( targetX, targetY );
+				tempCtx.lineTo(
+					targetX - arrowLength * Math.cos( angle - arrowAngle ),
+					targetY - arrowLength * Math.sin( angle - arrowAngle )
+				);
+				tempCtx.moveTo( targetX, targetY );
+				tempCtx.lineTo(
+					targetX - arrowLength * Math.cos( angle + arrowAngle ),
+					targetY - arrowLength * Math.sin( angle + arrowAngle )
+				);
+			}
+			// Note: dot style uses fill, which would need separate handling
 		}
 
 		/**

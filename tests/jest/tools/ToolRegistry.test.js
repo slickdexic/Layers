@@ -176,6 +176,10 @@ describe( 'ToolRegistry', () => {
 		it( 'should return false for non-selection tools', () => {
 			expect( registry.isSelectionTool( 'pen' ) ).toBe( false );
 		} );
+
+		it( 'should return false for unregistered tools', () => {
+			expect( registry.isSelectionTool( 'unknown-tool' ) ).toBe( false );
+		} );
 	} );
 
 	describe( 'getToolsByCategory', () => {
@@ -282,6 +286,7 @@ describe( 'ToolRegistry', () => {
 		beforeEach( () => {
 			registry.register( 'pointer', { createsLayer: false } );
 			registry.register( 'rectangle', { createsLayer: true } );
+			registry.register( 'defaultCreates', { category: 'test' } ); // No explicit createsLayer - defaults to true
 		} );
 
 		it( 'should return true for tools that create layers', () => {
@@ -290,6 +295,14 @@ describe( 'ToolRegistry', () => {
 
 		it( 'should return false for tools that do not create layers', () => {
 			expect( registry.createsLayer( 'pointer' ) ).toBe( false );
+		} );
+
+		it( 'should default to true when createsLayer is not explicitly set', () => {
+			expect( registry.createsLayer( 'defaultCreates' ) ).toBe( true );
+		} );
+
+		it( 'should return false for unregistered tools', () => {
+			expect( registry.createsLayer( 'unknown' ) ).toBe( false );
 		} );
 	} );
 
@@ -373,6 +386,59 @@ describe( 'ToolRegistry', () => {
 		it( 'should allow creating new instances', () => {
 			const instance = new ToolRegistry();
 			expect( instance ).toBeInstanceOf( ToolRegistry );
+		} );
+	} );
+
+	describe( 'getDisplayName with layersMessages', () => {
+		let savedLayersMessages;
+
+		beforeEach( () => {
+			savedLayersMessages = window.layersMessages;
+			registry.register( 'testtool', { cursor: 'default' } );
+		} );
+
+		afterEach( () => {
+			if ( savedLayersMessages ) {
+				window.layersMessages = savedLayersMessages;
+			} else {
+				delete window.layersMessages;
+			}
+		} );
+
+		it( 'should use layersMessages when available and returns a value', () => {
+			window.layersMessages = {
+				get: jest.fn().mockReturnValue( 'Custom Display Name' )
+			};
+
+			expect( registry.getDisplayName( 'testtool' ) ).toBe( 'Custom Display Name' );
+			expect( window.layersMessages.get ).toHaveBeenCalledWith( 'layers-tool-testtool', '' );
+		} );
+
+		it( 'should fall back to capitalized name when layersMessages.get returns empty', () => {
+			window.layersMessages = {
+				get: jest.fn().mockReturnValue( '' )
+			};
+
+			expect( registry.getDisplayName( 'testtool' ) ).toBe( 'Testtool' );
+		} );
+	} );
+
+	describe( 'getCategories', () => {
+		it( 'should return all registered categories', () => {
+			registry.clear();
+			registry.register( 'pen', { category: 'drawing' } );
+			registry.register( 'rectangle', { category: 'shapes' } );
+			registry.register( 'arrow', { category: 'lines' } );
+
+			const categories = registry.getCategories();
+			expect( categories ).toContain( 'drawing' );
+			expect( categories ).toContain( 'shapes' );
+			expect( categories ).toContain( 'lines' );
+		} );
+
+		it( 'should return empty array when no tools registered', () => {
+			registry.clear();
+			expect( registry.getCategories() ).toEqual( [] );
 		} );
 	} );
 } );

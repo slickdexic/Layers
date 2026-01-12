@@ -1150,6 +1150,24 @@ describe( 'LayerRenderer', () => {
 			expect( spy ).toHaveBeenCalledWith( layer, undefined );
 		} );
 
+		test( 'dispatches to drawMarker for marker type', () => {
+			const spy = jest.spyOn( renderer, 'drawMarker' );
+			const layer = { type: 'marker', x: 100, y: 100, arrowX: 150, arrowY: 150, markerNumber: 1 };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
+		test( 'dispatches to drawDimension for dimension type', () => {
+			const spy = jest.spyOn( renderer, 'drawDimension' );
+			const layer = { type: 'dimension', x1: 10, y1: 20, x2: 100, y2: 20, value: '50', unit: 'px' };
+
+			renderer.drawLayer( layer );
+
+			expect( spy ).toHaveBeenCalledWith( layer, undefined );
+		} );
+
 		test( 'passes options to draw methods', () => {
 			const spy = jest.spyOn( renderer, 'drawRectangle' );
 			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
@@ -2795,6 +2813,75 @@ describe( 'LayerRenderer', () => {
 			// Clean up
 			delete window.Layers.ShapeLibrary;
 		} );
+
+		test( 'uses svg property when available in customShape', () => {
+			const mockCustomRenderer = {
+				render: jest.fn()
+			};
+			const MockCustomShapeRenderer = jest.fn().mockImplementation( () => mockCustomRenderer );
+
+			window.Layers = window.Layers || {};
+			window.Layers.ShapeLibrary = {
+				CustomShapeRenderer: MockCustomShapeRenderer
+			};
+
+			const layer = {
+				type: 'customShape',
+				shapeId: 'svg-shape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				svg: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			const freshRenderer = new LayerRenderer( ctx );
+			freshRenderer.drawCustomShape( layer );
+
+			expect( mockCustomRenderer.render ).toHaveBeenCalled();
+			const call = mockCustomRenderer.render.mock.calls[ 0 ];
+			// shapeData (arg 2) should have svg property
+			expect( call[ 1 ].svg ).toBe( layer.svg );
+
+			delete window.Layers.ShapeLibrary;
+		} );
+
+		test( 'uses paths property when available in customShape', () => {
+			const mockCustomRenderer = {
+				render: jest.fn()
+			};
+			const MockCustomShapeRenderer = jest.fn().mockImplementation( () => mockCustomRenderer );
+
+			window.Layers = window.Layers || {};
+			window.Layers.ShapeLibrary = {
+				CustomShapeRenderer: MockCustomShapeRenderer
+			};
+
+			const layer = {
+				type: 'customShape',
+				shapeId: 'multi-path-shape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				paths: [
+					{ d: 'M0,0 L50,50', fill: '#ff0000' },
+					{ d: 'M50,50 L100,0', fill: '#00ff00' }
+				],
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			const freshRenderer = new LayerRenderer( ctx );
+			freshRenderer.drawCustomShape( layer );
+
+			expect( mockCustomRenderer.render ).toHaveBeenCalled();
+			const call = mockCustomRenderer.render.mock.calls[ 0 ];
+			// shapeData (arg 2) should have paths property
+			expect( call[ 1 ].paths ).toEqual( layer.paths );
+
+			delete window.Layers.ShapeLibrary;
+		} );
 	} );
 
 	describe( 'drawImage delegation', () => {
@@ -3106,6 +3193,110 @@ describe( 'LayerRenderer', () => {
 			expect( drawSpy ).toHaveBeenCalledWith( layer, undefined );
 
 			drawSpy.mockRestore();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - Renderer null checks
+	// ========================================================================
+
+	describe( 'renderer null checks', () => {
+		test( 'shadowRenderer property exists after construction', () => {
+			// ShadowRenderer is loaded in test environment
+			expect( renderer ).toHaveProperty( 'shadowRenderer' );
+		} );
+
+		test( 'arrowRenderer property exists after construction', () => {
+			expect( renderer ).toHaveProperty( 'arrowRenderer' );
+		} );
+
+		test( 'textRenderer property exists after construction', () => {
+			expect( renderer ).toHaveProperty( 'textRenderer' );
+		} );
+
+		test( 'shapeRenderer property exists after construction', () => {
+			expect( renderer ).toHaveProperty( 'shapeRenderer' );
+		} );
+	} );
+
+	describe( 'drawMarker method', () => {
+		test( 'should draw marker layer when markerRenderer available', () => {
+			renderer.markerRenderer = {
+				setContext: jest.fn(),
+				draw: jest.fn()
+			};
+
+			const layer = { type: 'marker', x: 100, y: 100, value: 1, style: 'circled' };
+			renderer.drawMarker( layer, {} );
+
+			expect( renderer.markerRenderer.setContext ).toHaveBeenCalledWith( ctx );
+			expect( renderer.markerRenderer.draw ).toHaveBeenCalled();
+		} );
+
+		test( 'should do nothing when markerRenderer is null', () => {
+			renderer.markerRenderer = null;
+
+			const layer = { type: 'marker', x: 100, y: 100 };
+			expect( () => renderer.drawMarker( layer, {} ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'drawDimension method', () => {
+		test( 'should draw dimension layer when dimensionRenderer available', () => {
+			renderer.dimensionRenderer = {
+				setContext: jest.fn(),
+				draw: jest.fn()
+			};
+
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100 };
+			renderer.drawDimension( layer, {} );
+
+			expect( renderer.dimensionRenderer.setContext ).toHaveBeenCalledWith( ctx );
+			expect( renderer.dimensionRenderer.draw ).toHaveBeenCalled();
+		} );
+
+		test( 'should do nothing when dimensionRenderer is null', () => {
+			renderer.dimensionRenderer = null;
+
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100 };
+			expect( () => renderer.drawDimension( layer, {} ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'hasBlurBlendMode method', () => {
+		test( 'should return true for blur blendMode', () => {
+			const layer = { type: 'rectangle', blendMode: 'blur' };
+			expect( renderer.hasBlurBlendMode( layer ) ).toBe( true );
+		} );
+
+		test( 'should return true for blur blend', () => {
+			const layer = { type: 'rectangle', blend: 'blur' };
+			expect( renderer.hasBlurBlendMode( layer ) ).toBe( true );
+		} );
+
+		test( 'should return false for other blend modes', () => {
+			const layer = { type: 'rectangle', blendMode: 'multiply' };
+			expect( renderer.hasBlurBlendMode( layer ) ).toBe( false );
+		} );
+
+		test( 'should return false for no blend mode', () => {
+			const layer = { type: 'rectangle' };
+			expect( renderer.hasBlurBlendMode( layer ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'drawLayerWithBlurBlend with effectsRenderer', () => {
+		test( 'should use effectsRenderer when available', () => {
+			renderer.effectsRenderer = {
+				setContext: jest.fn(),
+				drawBlurWithShape: jest.fn()
+			};
+
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blendMode: 'blur' };
+			renderer.drawLayerWithBlurBlend( layer, {} );
+
+			expect( renderer.effectsRenderer.setContext ).toHaveBeenCalledWith( ctx );
+			expect( renderer.effectsRenderer.drawBlurWithShape ).toHaveBeenCalled();
 		} );
 	} );
 } );

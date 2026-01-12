@@ -381,9 +381,9 @@ class ToolManager {
 			// Apply shadow properties from currentStyle
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+			shadowBlur: typeof this.currentStyle.shadowBlur === 'number' ? this.currentStyle.shadowBlur : 8,
+			shadowOffsetX: typeof this.currentStyle.shadowOffsetX === 'number' ? this.currentStyle.shadowOffsetX : 2,
+			shadowOffsetY: typeof this.currentStyle.shadowOffsetY === 'number' ? this.currentStyle.shadowOffsetY : 2
 		};
 	}
 
@@ -435,9 +435,9 @@ class ToolManager {
 			fill: this.currentStyle.fill,
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+			shadowBlur: typeof this.currentStyle.shadowBlur === 'number' ? this.currentStyle.shadowBlur : 8,
+			shadowOffsetX: typeof this.currentStyle.shadowOffsetX === 'number' ? this.currentStyle.shadowOffsetX : 2,
+			shadowOffsetY: typeof this.currentStyle.shadowOffsetY === 'number' ? this.currentStyle.shadowOffsetY : 2
 		};
 	}
 
@@ -474,9 +474,9 @@ class ToolManager {
 			padding: 8,
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+			shadowBlur: typeof this.currentStyle.shadowBlur === 'number' ? this.currentStyle.shadowBlur : 8,
+			shadowOffsetX: typeof this.currentStyle.shadowOffsetX === 'number' ? this.currentStyle.shadowOffsetX : 2,
+			shadowOffsetY: typeof this.currentStyle.shadowOffsetY === 'number' ? this.currentStyle.shadowOffsetY : 2
 		};
 	}
 
@@ -518,9 +518,9 @@ class ToolManager {
 			fill: this.currentStyle.fill,
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+			shadowBlur: typeof this.currentStyle.shadowBlur === 'number' ? this.currentStyle.shadowBlur : 8,
+			shadowOffsetX: typeof this.currentStyle.shadowOffsetX === 'number' ? this.currentStyle.shadowOffsetX : 2,
+			shadowOffsetY: typeof this.currentStyle.shadowOffsetY === 'number' ? this.currentStyle.shadowOffsetY : 2
 		};
 	}
 
@@ -562,9 +562,9 @@ class ToolManager {
 			fill: this.currentStyle.fill,
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+			shadowBlur: typeof this.currentStyle.shadowBlur === 'number' ? this.currentStyle.shadowBlur : 8,
+			shadowOffsetX: typeof this.currentStyle.shadowOffsetX === 'number' ? this.currentStyle.shadowOffsetX : 2,
+			shadowOffsetY: typeof this.currentStyle.shadowOffsetY === 'number' ? this.currentStyle.shadowOffsetY : 2
 		};
 	}
 
@@ -608,9 +608,9 @@ class ToolManager {
 			strokeWidth: this.currentStyle.strokeWidth,
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+			shadowBlur: typeof this.currentStyle.shadowBlur === 'number' ? this.currentStyle.shadowBlur : 8,
+			shadowOffsetX: typeof this.currentStyle.shadowOffsetX === 'number' ? this.currentStyle.shadowOffsetX : 2,
+			shadowOffsetY: typeof this.currentStyle.shadowOffsetY === 'number' ? this.currentStyle.shadowOffsetY : 2
 		};
 	}
 
@@ -756,9 +756,9 @@ class ToolManager {
 			fill: this.currentStyle.fill,
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+			shadowBlur: typeof this.currentStyle.shadowBlur === 'number' ? this.currentStyle.shadowBlur : 8,
+			shadowOffsetX: typeof this.currentStyle.shadowOffsetX === 'number' ? this.currentStyle.shadowOffsetX : 2,
+			shadowOffsetY: typeof this.currentStyle.shadowOffsetY === 'number' ? this.currentStyle.shadowOffsetY : 2
 		};
 	}
 
@@ -801,9 +801,9 @@ class ToolManager {
 			fill: this.currentStyle.fill,
 			shadow: this.currentStyle.shadow || false,
 			shadowColor: this.currentStyle.shadowColor || '#000000',
-			shadowBlur: this.currentStyle.shadowBlur || 8,
-			shadowOffsetX: this.currentStyle.shadowOffsetX || 2,
-			shadowOffsetY: this.currentStyle.shadowOffsetY || 2
+			shadowBlur: typeof this.currentStyle.shadowBlur === 'number' ? this.currentStyle.shadowBlur : 8,
+			shadowOffsetX: typeof this.currentStyle.shadowOffsetX === 'number' ? this.currentStyle.shadowOffsetX : 2,
+			shadowOffsetY: typeof this.currentStyle.shadowOffsetY === 'number' ? this.currentStyle.shadowOffsetY : 2
 		};
 	}
 

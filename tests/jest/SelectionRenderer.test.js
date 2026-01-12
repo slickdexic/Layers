@@ -843,4 +843,167 @@ describe( 'SelectionRenderer', () => {
 			expect( controlHandle ).toBeUndefined();
 		} );
 	} );
+
+	describe( 'marker selection indicators', () => {
+		test( 'should draw circular selection around marker', () => {
+			const markerLayer = { id: 'marker1', type: 'marker', x: 100, y: 100, size: 32 };
+			renderer.drawMarkerSelectionIndicators( markerLayer, false );
+
+			// Should draw arc for circular selection
+			expect( mockCtx.arc ).toHaveBeenCalled();
+			expect( mockCtx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'should use default size 24 when not specified', () => {
+			const markerLayer = { id: 'marker1', type: 'marker', x: 50, y: 50 };
+			renderer.drawMarkerSelectionIndicators( markerLayer, false );
+
+			expect( mockCtx.arc ).toHaveBeenCalled();
+			// First arc call is for selection circle, radius = 24/2 + 4 = 16
+			const firstArcCall = mockCtx.arc.mock.calls[ 0 ];
+			expect( firstArcCall[ 2 ] ).toBe( 16 ); // radius
+		} );
+
+		test( 'should register center move handle for marker', () => {
+			const markerLayer = { id: 'marker1', type: 'marker', x: 100, y: 100, size: 24 };
+			renderer.drawMarkerSelectionIndicators( markerLayer, false );
+
+			expect( renderer.selectionHandles.length ).toBeGreaterThanOrEqual( 1 );
+			const moveHandle = renderer.selectionHandles.find( ( h ) => h.type === 'move' );
+			expect( moveHandle ).toBeDefined();
+			expect( moveHandle.isMarker ).toBe( true );
+			expect( moveHandle.layerId ).toBe( 'marker1' );
+		} );
+
+		test( 'should draw arrow endpoint handle when marker has arrow', () => {
+			const markerLayer = {
+				id: 'marker1',
+				type: 'marker',
+				x: 100,
+				y: 100,
+				size: 24,
+				hasArrow: true,
+				arrowX: 200,
+				arrowY: 150
+			};
+			renderer.drawMarkerSelectionIndicators( markerLayer, false );
+
+			// Should have 2 handles: center move + arrow tip
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+			const arrowTipHandle = renderer.selectionHandles.find( ( h ) => h.type === 'arrowTip' );
+			expect( arrowTipHandle ).toBeDefined();
+			expect( arrowTipHandle.isArrowTip ).toBe( true );
+			expect( arrowTipHandle.isMarker ).toBe( true );
+		} );
+
+		test( 'should draw dashed line connecting marker to arrow endpoint', () => {
+			const markerLayer = {
+				id: 'marker1',
+				type: 'marker',
+				x: 100,
+				y: 100,
+				hasArrow: true,
+				arrowX: 200,
+				arrowY: 200
+			};
+			renderer.drawMarkerSelectionIndicators( markerLayer, false );
+
+			// Check for dashed line
+			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [ 3, 3 ] );
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 100, 100 );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 200, 200 );
+		} );
+
+		test( 'should not draw arrow handle when hasArrow is false', () => {
+			const markerLayer = {
+				id: 'marker1',
+				type: 'marker',
+				x: 100,
+				y: 100,
+				hasArrow: false
+			};
+			renderer.drawMarkerSelectionIndicators( markerLayer, false );
+
+			// Should have only 1 handle (center move)
+			expect( renderer.selectionHandles.length ).toBe( 1 );
+			const arrowTipHandle = renderer.selectionHandles.find( ( h ) => h.type === 'arrowTip' );
+			expect( arrowTipHandle ).toBeUndefined();
+		} );
+
+		test( 'should use orange style for key object marker', () => {
+			const markerLayer = { id: 'marker1', type: 'marker', x: 100, y: 100 };
+			renderer.drawMarkerSelectionIndicators( markerLayer, true );
+
+			// Key object should have orange stroke and lineWidth 3
+			expect( mockCtx.strokeStyle ).toBe( '#ff9800' );
+			expect( mockCtx.lineWidth ).toBe( 3 );
+		} );
+
+		test( 'should handle marker with missing coordinates as 0', () => {
+			const markerLayer = { id: 'marker1', type: 'marker' };
+			renderer.drawMarkerSelectionIndicators( markerLayer, false );
+
+			// Should still register handle at 0,0
+			const moveHandle = renderer.selectionHandles.find( ( h ) => h.type === 'move' );
+			expect( moveHandle ).toBeDefined();
+		} );
+	} );
+
+	describe( 'dimension selection indicators', () => {
+		test( 'should draw endpoint handles at x1,y1 and x2,y2', () => {
+			const dimensionLayer = { id: 'dim1', type: 'dimension', x1: 50, y1: 100, x2: 200, y2: 100 };
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Should have 2 endpoint handles
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+			const handles = renderer.selectionHandles;
+			expect( handles[ 0 ].type ).toBe( 'w' );
+			expect( handles[ 1 ].type ).toBe( 'e' );
+			expect( handles[ 0 ].isDimension ).toBe( true );
+			expect( handles[ 1 ].isDimension ).toBe( true );
+		} );
+
+		test( 'should draw fillRect and strokeRect for dimension handles', () => {
+			const dimensionLayer = { id: 'dim1', type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 0 };
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Should call fillRect and strokeRect for each endpoint (2 times each)
+			expect( mockCtx.fillRect ).toHaveBeenCalledTimes( 2 );
+			expect( mockCtx.strokeRect ).toHaveBeenCalledTimes( 2 );
+		} );
+
+		test( 'should use orange style for key object dimension', () => {
+			const dimensionLayer = { id: 'dim1', type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 50 };
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, true );
+
+			expect( mockCtx.strokeStyle ).toBe( '#ff9800' );
+			expect( mockCtx.lineWidth ).toBe( 3 );
+		} );
+
+		test( 'should use default border style for non-key dimension', () => {
+			const dimensionLayer = { id: 'dim1', type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 100 };
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Non-key should have lineWidth 1
+			expect( mockCtx.lineWidth ).toBe( 1 );
+		} );
+
+		test( 'should handle dimension with missing coordinates as 0', () => {
+			const dimensionLayer = { id: 'dim1', type: 'dimension' };
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Should have 2 handles at (0,0) and (0,0)
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+			const handles = renderer.selectionHandles;
+			expect( handles[ 0 ].layerId ).toBe( 'dim1' );
+		} );
+
+		test( 'should set empty line dash for dimension handles', () => {
+			const dimensionLayer = { id: 'dim1', type: 'dimension', x1: 10, y1: 20, x2: 110, y2: 20 };
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Should reset line dash to solid
+			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [] );
+		} );
+	} );
 } );

@@ -423,6 +423,110 @@ describe( 'GeometryUtils', () => {
 			expect( bounds.width ).toBe( 50 );
 			expect( bounds.height ).toBe( 50 );
 		} );
+
+		it( 'should return bounds for marker without arrow', () => {
+			const layer = { type: 'marker', x: 100, y: 100, size: 32 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 84 ); // 100 - 16 (radius)
+			expect( bounds.y ).toBe( 84 );
+			expect( bounds.width ).toBe( 32 );
+			expect( bounds.height ).toBe( 32 );
+		} );
+
+		it( 'should use default size 24 for marker without size', () => {
+			const layer = { type: 'marker', x: 50, y: 50 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 38 ); // 50 - 12 (radius)
+			expect( bounds.y ).toBe( 38 );
+			expect( bounds.width ).toBe( 24 );
+			expect( bounds.height ).toBe( 24 );
+		} );
+
+		it( 'should include arrow endpoint in marker bounds when hasArrow is true', () => {
+			const layer = {
+				type: 'marker',
+				x: 100,
+				y: 100,
+				size: 24,
+				hasArrow: true,
+				arrowX: 200,
+				arrowY: 150
+			};
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			// Min X is 100 - 12 (marker radius) = 88
+			// Max X is arrowX = 200
+			// Min Y is 100 - 12 = 88
+			// Max Y is arrowY = 150
+			expect( bounds.x ).toBe( 88 );
+			expect( bounds.y ).toBe( 88 );
+			expect( bounds.width ).toBe( 112 ); // 200 - 88
+			expect( bounds.height ).toBe( 62 ); // 150 - 88
+		} );
+
+		it( 'should handle marker with arrow pointing before the marker', () => {
+			const layer = {
+				type: 'marker',
+				x: 100,
+				y: 100,
+				size: 20,
+				hasArrow: true,
+				arrowX: 50,
+				arrowY: 50
+			};
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			// Arrow is before marker, so minX = arrowX = 50, minY = arrowY = 50
+			// maxX = 100 + 10 = 110, maxY = 100 + 10 = 110
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 50 );
+			expect( bounds.width ).toBe( 60 ); // 110 - 50
+			expect( bounds.height ).toBe( 60 );
+		} );
+
+		it( 'should return bounds for dimension layer', () => {
+			const layer = { type: 'dimension', x1: 50, y1: 100, x2: 200, y2: 100 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 100 );
+			expect( bounds.width ).toBe( 150 ); // 200 - 50
+			expect( bounds.height ).toBe( 1 ); // min height of 1
+		} );
+
+		it( 'should return bounds for diagonal dimension layer', () => {
+			const layer = { type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 80 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 0 );
+			expect( bounds.y ).toBe( 0 );
+			expect( bounds.width ).toBe( 100 );
+			expect( bounds.height ).toBe( 80 );
+		} );
+
+		it( 'should handle dimension with reversed coordinates', () => {
+			const layer = { type: 'dimension', x1: 200, y1: 150, x2: 50, y2: 30 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 50 ); // min(200, 50)
+			expect( bounds.y ).toBe( 30 ); // min(150, 30)
+			expect( bounds.width ).toBe( 150 ); // |200 - 50|
+			expect( bounds.height ).toBe( 120 ); // |150 - 30|
+		} );
+
+		it( 'should use x,y fallback for dimension without x1,y1,x2,y2', () => {
+			const layer = { type: 'dimension', x: 100, y: 100 };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			// When x1,x2 both fall back to x, width = max(|0|, 1) = 1
+			expect( bounds.x ).toBe( 100 );
+			expect( bounds.y ).toBe( 100 );
+			expect( bounds.width ).toBe( 1 );
+			expect( bounds.height ).toBe( 1 );
+		} );
+
+		it( 'should use 0 for dimension without any coordinates', () => {
+			const layer = { type: 'dimension' };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 0 );
+			expect( bounds.y ).toBe( 0 );
+			expect( bounds.width ).toBe( 1 );
+			expect( bounds.height ).toBe( 1 );
+		} );
 	} );
 
 	describe( 'computeAxisAlignedBounds', () => {

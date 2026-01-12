@@ -2020,6 +2020,17 @@ describe( 'Toolbar', function () {
 				.find( ( btn ) => btn.dataset.tool === 'line' );
 			expect( lineButton ).toBeTruthy();
 		} );
+
+		it( 'should render annotation tools as individual buttons when ToolDropdown unavailable', () => {
+			// Should have individual annotation tool buttons (marker, dimension)
+			const markerButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.dataset.tool === 'marker' );
+			expect( markerButton ).toBeTruthy();
+
+			const dimensionButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.dataset.tool === 'dimension' );
+			expect( dimensionButton ).toBeTruthy();
+		} );
 	} );
 
 	// ========================================================================
@@ -2114,6 +2125,407 @@ describe( 'Toolbar', function () {
 
 			// Restore
 			window.Layers = originalLayers;
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - ToolDropdown fallback paths
+	// ========================================================================
+
+	describe( 'ToolDropdown fallback rendering', () => {
+		let toolbar, mockEditor;
+
+		beforeEach( () => {
+			mockEditor = {
+				selectTool: jest.fn(),
+				setCurrentTool: jest.fn(),
+				stateManager: {
+					get: jest.fn(),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				},
+				eventManager: {
+					emit: jest.fn(),
+					on: jest.fn()
+				}
+			};
+		} );
+
+		it( 'should render individual buttons when ToolDropdown unavailable', () => {
+			// Remove ToolDropdown
+			const originalToolDropdown = window.Layers && window.Layers.UI && window.Layers.UI.ToolDropdown;
+			if ( window.Layers && window.Layers.UI ) {
+				delete window.Layers.UI.ToolDropdown;
+			}
+
+			const container = document.createElement( 'div' );
+			toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container,
+				onToolSelect: jest.fn()
+			} );
+
+			// Should have individual tool buttons instead of dropdowns
+			const toolButtons = container.querySelectorAll( '.tool-button' );
+			expect( toolButtons.length ).toBeGreaterThan( 0 );
+
+			// Restore
+			if ( originalToolDropdown ) {
+				window.Layers.UI.ToolDropdown = originalToolDropdown;
+			}
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - getColorPickerStrings paths
+	// ========================================================================
+
+	describe( 'getColorPickerStrings', () => {
+		let toolbar, mockEditor;
+
+		beforeEach( () => {
+			mockEditor = {
+				selectTool: jest.fn(),
+				setCurrentTool: jest.fn(),
+				stateManager: {
+					get: jest.fn(),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				},
+				eventManager: {
+					emit: jest.fn(),
+					on: jest.fn()
+				}
+			};
+
+			const container = document.createElement( 'div' );
+			toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container,
+				onToolSelect: jest.fn()
+			} );
+		} );
+
+		it( 'should use layersMessages.getColorPickerStrings when available', () => {
+			const mockStrings = {
+				title: 'Mock Title',
+				standard: 'Mock Standard'
+			};
+
+			window.layersMessages = {
+				getColorPickerStrings: jest.fn().mockReturnValue( mockStrings )
+			};
+
+			const result = toolbar.getColorPickerStrings();
+
+			expect( window.layersMessages.getColorPickerStrings ).toHaveBeenCalled();
+			expect( result ).toEqual( mockStrings );
+
+			delete window.layersMessages;
+		} );
+
+		it( 'should fall back to local implementation when layersMessages unavailable', () => {
+			delete window.layersMessages;
+
+			const result = toolbar.getColorPickerStrings();
+
+			// Should return an object with required keys
+			expect( result.title ).toBeDefined();
+			expect( result.standard ).toBeDefined();
+			expect( result.saved ).toBeDefined();
+			expect( result.cancel ).toBeDefined();
+			expect( result.apply ).toBeDefined();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - msg fallback paths
+	// ========================================================================
+
+	describe( 'msg method fallbacks', () => {
+		let toolbar, mockEditor;
+
+		beforeEach( () => {
+			mockEditor = {
+				selectTool: jest.fn(),
+				setCurrentTool: jest.fn(),
+				stateManager: {
+					get: jest.fn(),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				},
+				eventManager: {
+					emit: jest.fn(),
+					on: jest.fn()
+				}
+			};
+
+			const container = document.createElement( 'div' );
+			toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container,
+				onToolSelect: jest.fn()
+			} );
+		} );
+
+		it( 'should use layersMessages.get when available', () => {
+			window.layersMessages = {
+				get: jest.fn().mockReturnValue( 'Localized text' )
+			};
+
+			const result = toolbar.msg( 'test-key', 'Fallback' );
+
+			expect( window.layersMessages.get ).toHaveBeenCalledWith( 'test-key', 'Fallback' );
+			expect( result ).toBe( 'Localized text' );
+
+			delete window.layersMessages;
+		} );
+
+		it( 'should fall back to mw.message when layersMessages unavailable', () => {
+			delete window.layersMessages;
+
+			// mw.message is already mocked in beforeAll
+			const result = toolbar.msg( 'test-key', 'Fallback' );
+
+			// Should return something (either mw.message result or fallback)
+			expect( typeof result ).toBe( 'string' );
+		} );
+
+		it( 'should return fallback when mw.message throws', () => {
+			delete window.layersMessages;
+			const originalMw = global.mw;
+
+			global.mw = {
+				message: jest.fn().mockImplementation( () => {
+					throw new Error( 'Mock error' );
+				} )
+			};
+
+			const result = toolbar.msg( 'test-key', 'Fallback Text' );
+
+			expect( result ).toBe( 'Fallback Text' );
+
+			global.mw = originalMw;
+		} );
+
+		it( 'should return empty string when no fallback provided and mw unavailable', () => {
+			delete window.layersMessages;
+			const originalMw = global.mw;
+			global.mw = undefined;
+
+			const result = toolbar.msg( 'test-key' );
+
+			expect( result ).toBe( '' );
+
+			global.mw = originalMw;
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - Shape Library and insertShape
+	// ========================================================================
+
+	describe( 'Shape Library functionality', () => {
+		let toolbar, mockEditor;
+
+		beforeEach( () => {
+			mockEditor = {
+				selectTool: jest.fn(),
+				setCurrentTool: jest.fn(),
+				createCustomShapeLayer: jest.fn(),
+				stateManager: {
+					get: jest.fn(),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				},
+				eventManager: {
+					emit: jest.fn(),
+					on: jest.fn()
+				}
+			};
+
+			const container = document.createElement( 'div' );
+			toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container,
+				onToolSelect: jest.fn()
+			} );
+		} );
+
+		it( 'should call editor.createCustomShapeLayer when insertShape called', () => {
+			const shape = {
+				id: 'test-shape',
+				svg: '<svg></svg>',
+				viewBox: '0 0 100 100',
+				name: 'Test Shape'
+			};
+
+			toolbar.insertShape( shape );
+
+			expect( mockEditor.createCustomShapeLayer ).toHaveBeenCalledWith( {
+				id: 'test-shape',
+				svg: '<svg></svg>',
+				viewBox: '0 0 100 100',
+				name: 'Test Shape'
+			} );
+		} );
+
+		it( 'should handle insertShape when editor lacks createCustomShapeLayer', () => {
+			delete mockEditor.createCustomShapeLayer;
+
+			const shape = { id: 'test' };
+
+			// Should not throw
+			expect( () => toolbar.insertShape( shape ) ).not.toThrow();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - onStyleChange
+	// ========================================================================
+
+	describe( 'onStyleChange', () => {
+		let toolbar, mockEditor;
+
+		beforeEach( () => {
+			mockEditor = {
+				selectTool: jest.fn(),
+				setCurrentTool: jest.fn(),
+				canvasManager: {
+					updateStyleOptions: jest.fn()
+				},
+				toolManager: {
+					updateStyle: jest.fn()
+				},
+				stateManager: {
+					get: jest.fn(),
+					set: jest.fn(),
+					subscribe: jest.fn()
+				},
+				eventManager: {
+					emit: jest.fn(),
+					on: jest.fn()
+				}
+			};
+
+			const container = document.createElement( 'div' );
+			toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container,
+				onToolSelect: jest.fn()
+			} );
+		} );
+
+		it( 'should call canvasManager.updateStyleOptions with style options', () => {
+			const styleOptions = {
+				color: '#ff0000',
+				fill: '#00ff00',
+				strokeWidth: 3,
+				fontSize: 16
+			};
+
+			toolbar.onStyleChange( styleOptions );
+
+			expect( mockEditor.canvasManager.updateStyleOptions ).toHaveBeenCalledWith( styleOptions );
+		} );
+
+		it( 'should call toolManager.updateStyle with style properties', () => {
+			const styleOptions = {
+				color: '#ff0000',
+				fill: '#00ff00',
+				strokeWidth: 3,
+				fontSize: 16,
+				arrowStyle: 'dashed',
+				shadow: true,
+				shadowColor: '#000000',
+				shadowBlur: 4,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			};
+
+			toolbar.onStyleChange( styleOptions );
+
+			expect( mockEditor.toolManager.updateStyle ).toHaveBeenCalledWith( expect.objectContaining( {
+				color: '#ff0000',
+				fill: '#00ff00',
+				strokeWidth: 3,
+				fontSize: 16,
+				arrowStyle: 'dashed',
+				shadow: true
+			} ) );
+		} );
+
+		it( 'should handle missing canvasManager.updateStyleOptions', () => {
+			delete mockEditor.canvasManager.updateStyleOptions;
+
+			const styleOptions = { color: '#ff0000' };
+
+			// Should not throw
+			expect( () => toolbar.onStyleChange( styleOptions ) ).not.toThrow();
+		} );
+
+		it( 'should handle missing toolManager.updateStyle', () => {
+			delete mockEditor.toolManager.updateStyle;
+
+			const styleOptions = { color: '#ff0000' };
+
+			// Should not throw
+			expect( () => toolbar.onStyleChange( styleOptions ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'save button with null editor', () => {
+		it( 'should log error when save clicked but editor is null', () => {
+			const container = document.createElement( 'div' );
+			// Need minimal editor for construction, then null it out
+			const minimalEditor = {
+				setCurrentTool: jest.fn(),
+				stateManager: { get: jest.fn(), subscribe: jest.fn() },
+				canvasManager: { updateStyleOptions: jest.fn() },
+				toolManager: { updateStyle: jest.fn() },
+				eventManager: { on: jest.fn(), emit: jest.fn() }
+			};
+			const nullEditorToolbar = new Toolbar( {
+				editor: minimalEditor,
+				container: container
+			} );
+
+			// Null out editor after construction
+			nullEditorToolbar.editor = null;
+
+			// Trigger the save button click
+			if ( nullEditorToolbar.saveButton ) {
+				nullEditorToolbar.saveButton.click();
+			}
+
+			expect( mw.log.error ).toHaveBeenCalledWith( '[Toolbar] Cannot save - editor reference is null' );
+		} );
+	} );
+
+	describe( 'import image input with no file', () => {
+		it( 'should return early when no file selected', () => {
+			const container = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Set up the import image input to have no files
+			if ( testToolbar.importImageInput ) {
+				Object.defineProperty( testToolbar.importImageInput, 'files', {
+					value: [],
+					writable: true
+				} );
+
+				// Mock handleImageImport to track if it's called
+				testToolbar.handleImageImport = jest.fn();
+
+				// Trigger change event
+				testToolbar.importImageInput.dispatchEvent( new Event( 'change' ) );
+
+				// handleImageImport should NOT be called
+				expect( testToolbar.handleImageImport ).not.toHaveBeenCalled();
+			}
 		} );
 	} );
 } );

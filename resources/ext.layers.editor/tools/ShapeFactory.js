@@ -58,9 +58,9 @@
 		applyShadow( layer, style ) {
 			layer.shadow = style.shadow || false;
 			layer.shadowColor = style.shadowColor || '#000000';
-			layer.shadowBlur = style.shadowBlur || 8;
-			layer.shadowOffsetX = style.shadowOffsetX || 2;
-			layer.shadowOffsetY = style.shadowOffsetY || 2;
+			layer.shadowBlur = typeof style.shadowBlur === 'number' ? style.shadowBlur : 8;
+			layer.shadowOffsetX = typeof style.shadowOffsetX === 'number' ? style.shadowOffsetX : 2;
+			layer.shadowOffsetY = typeof style.shadowOffsetY === 'number' ? style.shadowOffsetY : 2;
 			return layer;
 		}
 

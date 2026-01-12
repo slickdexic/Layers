@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.53%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-8%2C603%20passing%20(100%25)-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-9%2C319%20passing%20(100%25)-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.4 (January 11, 2026)  
+> **Version:** 1.5.5 (January 12, 2026)  
 > **Status:** ✅ Production-ready (Rating: 8.0/10)  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+  
 > **Technical Debt:** 16 god classes (1,035-3,176 lines) with proper delegation patterns
@@ -241,14 +241,14 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
   - LayerPanel.js (2,193 lines) - largest file, at 2K limit
   - CanvasManager.js (1,964 lines) - at 98% of limit
 
-**Test Coverage (January 7, 2026):**
+**Test Coverage (January 12, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 8,476 passing (100%) |
-| Statement coverage | 94.53% |
-| Branch coverage | 83.16% |
-| Test suites | 146 |
+| Jest tests | 9,319 passing (100%) |
+| Statement coverage | 94% |
+| Branch coverage | 85.01% |
+| Test suites | 144 |
 
 **Security:**
 
@@ -302,27 +302,27 @@ npm run test:js -- --coverage
 | Total JS files | 113 | ✅ |
 | Total JS lines | ~63,914 | ✅ Well under 75K target |
 | ES6 classes | 95+ | ✅ |
-| God classes (>1000 lines) | 12 | ⚠️ Managed with delegation |
-| Tests passing | 8,476 | ✅ |
+| God classes (>1000 lines) | 16 | ⚠️ Managed with delegation |
+| Tests passing | 9,319 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.53% | ✅ Excellent |
-| Branch coverage | 83.16% | ✅ Good |
+| Statement coverage | 94% | ✅ Excellent |
+| Branch coverage | 85.01% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
 **Rating: 8.0/10**
 
 **What's Good:**
-- ✅ All 13 drawing tools work correctly - zero functional bugs
+- ✅ All 15 drawing tools work correctly - zero functional bugs
 - ✅ Excellent security (CSRF, rate limiting, validation)
-- ✅ 94.53% test coverage with 8,476 passing tests
+- ✅ 94% test coverage with 9,319 passing tests
 - ✅ Professional i18n, ARIA accessibility, documentation
 - ✅ No lazy code patterns (no empty catches, no console.log, no TODO/FIXME)
 
 **What Could Be Improved:**
 - ⚠️ 12 god classes with proper delegation - manageable but not ideal
 - ⚠️ LayerPanel.js at 2,193 lines (at soft limit)
-- ⚠️ Branch coverage at 83.16% (target: 85%+)
+- ✅ Branch coverage at 85.01% (target met!)
 
 ### Generate API Documentation
 

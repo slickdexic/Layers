@@ -97,6 +97,15 @@ class ShadowRenderer {
 		const scaleY = scale.sy || 1;
 		const scaleAvg = scale.avg || 1;
 
+		// Helper to parse numeric values (handles strings like "0")
+		const parseNum = ( val, defaultVal ) => {
+			if ( val === undefined || val === null ) {
+				return defaultVal;
+			}
+			const num = Number( val );
+			return Number.isNaN( num ) ? defaultVal : num;
+		};
+
 		// Check for explicit disable
 		const shadowExplicitlyDisabled = layer.shadow === false ||
 			layer.shadow === 'false' ||
@@ -113,15 +122,15 @@ class ShadowRenderer {
 		} else if ( shadowExplicitlyEnabled ) {
 			// Flat format: shadow properties directly on layer
 			this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
-			this.ctx.shadowBlur = ( typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8 ) * scaleAvg;
-			this.ctx.shadowOffsetX = ( typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2 ) * scaleX;
-			this.ctx.shadowOffsetY = ( typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2 ) * scaleY;
+			this.ctx.shadowBlur = parseNum( layer.shadowBlur, 8 ) * scaleAvg;
+			this.ctx.shadowOffsetX = parseNum( layer.shadowOffsetX, 2 ) * scaleX;
+			this.ctx.shadowOffsetY = parseNum( layer.shadowOffsetY, 2 ) * scaleY;
 		} else if ( typeof layer.shadow === 'object' && layer.shadow ) {
 			// Legacy nested format: shadow: {color, blur, offsetX, offsetY}
 			this.ctx.shadowColor = layer.shadow.color || 'rgba(0,0,0,0.4)';
-			this.ctx.shadowBlur = ( typeof layer.shadow.blur === 'number' ? layer.shadow.blur : 8 ) * scaleAvg;
-			this.ctx.shadowOffsetX = ( typeof layer.shadow.offsetX === 'number' ? layer.shadow.offsetX : 2 ) * scaleX;
-			this.ctx.shadowOffsetY = ( typeof layer.shadow.offsetY === 'number' ? layer.shadow.offsetY : 2 ) * scaleY;
+			this.ctx.shadowBlur = parseNum( layer.shadow.blur, 8 ) * scaleAvg;
+			this.ctx.shadowOffsetX = parseNum( layer.shadow.offsetX, 2 ) * scaleX;
+			this.ctx.shadowOffsetY = parseNum( layer.shadow.offsetY, 2 ) * scaleY;
 		}
 		// If shadow is undefined/null, no shadow is applied (canvas defaults)
 	}
@@ -218,13 +227,24 @@ class ShadowRenderer {
 		const scaleY = scale.sy || 1;
 		const scaleAvg = scale.avg || 1;
 
-		return {
-			offsetX: ( typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2 ) * scaleX,
-			offsetY: ( typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2 ) * scaleY,
-			blur: ( typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8 ) * scaleAvg,
+		// Parse values - handle both numbers and numeric strings, use defaults only for undefined/null
+		const parseNum = ( val, defaultVal ) => {
+			if ( val === undefined || val === null ) {
+				return defaultVal;
+			}
+			const num = Number( val );
+			return Number.isNaN( num ) ? defaultVal : num;
+		};
+
+		// DEBUG: Log shadow params to verify code is executing
+		const result = {
+			offsetX: parseNum( layer.shadowOffsetX, 2 ) * scaleX,
+			offsetY: parseNum( layer.shadowOffsetY, 2 ) * scaleY,
+			blur: parseNum( layer.shadowBlur, 8 ) * scaleAvg,
 			color: layer.shadowColor || 'rgba(0,0,0,0.4)',
 			offscreenOffset: 10000
 		};
+		return result;
 	}
 
 	// ========================================================================

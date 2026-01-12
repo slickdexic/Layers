@@ -703,4 +703,53 @@ describe( 'FolderOperationsController', () => {
 			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeFalsy();
 		} );
 	} );
+
+	describe( 'isLayerEffectivelyLocked', () => {
+		it( 'should return false for null layer', () => {
+			expect( controller.isLayerEffectivelyLocked( null ) ).toBe( false );
+		} );
+
+		it( 'should return true when layer is directly locked', () => {
+			const lockedLayer = { id: 'locked1', type: 'rectangle', locked: true };
+			expect( controller.isLayerEffectivelyLocked( lockedLayer ) ).toBe( true );
+		} );
+
+		it( 'should return false when layer is not locked', () => {
+			const unlockedLayer = { id: 'unlocked1', type: 'rectangle', locked: false };
+			expect( controller.isLayerEffectivelyLocked( unlockedLayer ) ).toBe( false );
+		} );
+
+		it( 'should return true when parent folder is locked', () => {
+			// Set up layers with a locked parent folder
+			const lockedFolder = { id: 'locked-folder', type: 'group', locked: true, children: [ 'child-layer' ] };
+			const childLayer = { id: 'child-layer', type: 'rectangle', parentGroup: 'locked-folder' };
+			mockEditor.layers = [ lockedFolder, childLayer ];
+
+			expect( controller.isLayerEffectivelyLocked( childLayer ) ).toBe( true );
+		} );
+
+		it( 'should return false when parent folder is not locked', () => {
+			const unlockedFolder = { id: 'unlocked-folder', type: 'group', locked: false, children: [ 'child-layer' ] };
+			const childLayer = { id: 'child-layer', type: 'rectangle', parentGroup: 'unlocked-folder' };
+			mockEditor.layers = [ unlockedFolder, childLayer ];
+
+			expect( controller.isLayerEffectivelyLocked( childLayer ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'deleteLayer with locked layer', () => {
+		it( 'should show warning and return when deleting a locked layer', () => {
+			const lockedLayer = { id: 'locked-layer', type: 'rectangle', locked: true };
+			mockEditor.getLayerById.mockReturnValue( lockedLayer );
+			mockEditor.layers = [ lockedLayer ];
+
+			controller.deleteLayer( 'locked-layer', jest.fn() );
+
+			expect( mw.notify ).toHaveBeenCalledWith(
+				'Cannot modify a locked layer',
+				{ type: 'warn' }
+			);
+			expect( mockEditor.removeLayer ).not.toHaveBeenCalled();
+		} );
+	} );
 } );

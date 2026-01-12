@@ -514,4 +514,35 @@ describe( 'InteractionController', () => {
 			expect( controller.isDragging ).toBe( false );
 		} );
 	} );
+
+	describe( '_cloneLayer', () => {
+		it( 'should return null for null input', () => {
+			expect( controller._cloneLayer( null ) ).toBeNull();
+		} );
+
+		it( 'should use efficient cloning when available', () => {
+			const mockCloneFn = jest.fn( ( layer ) => ( { ...layer, cloned: true } ) );
+			window.Layers = { Utils: { cloneLayerEfficient: mockCloneFn } };
+
+			const layer = { id: 'test', type: 'rectangle' };
+			// Clear cached function
+			controller._cloneLayerEfficient = null;
+
+			const result = controller._cloneLayer( layer );
+
+			expect( mockCloneFn ).toHaveBeenCalledWith( layer );
+			expect( result.cloned ).toBe( true );
+		} );
+
+		it( 'should fall back to JSON cloning when efficient function unavailable', () => {
+			delete window.Layers;
+			controller._cloneLayerEfficient = null;
+
+			const layer = { id: 'test', type: 'circle', x: 100 };
+			const result = controller._cloneLayer( layer );
+
+			expect( result ).toEqual( layer );
+			expect( result ).not.toBe( layer ); // Different object reference
+		} );
+	} );
 } );

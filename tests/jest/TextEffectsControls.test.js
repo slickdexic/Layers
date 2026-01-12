@@ -102,6 +102,30 @@ describe( 'TextEffectsControls', () => {
 			// The addListener was called with the event handler
 			expect( mockAddListener ).toHaveBeenCalled();
 		} );
+
+		it( 'should call notifyStyleChange on change event', () => {
+			// Spy on notifyStyleChange
+			const notifySpy = jest.spyOn( textEffects, 'notifyStyleChange' );
+
+			textEffects.createFontSizeControl();
+
+			// Trigger the change event by finding the callback and invoking it
+			// Find the call that registered the change listener on fontSizeInput
+			const changeCall = mockAddListener.mock.calls.find(
+				call => call[ 0 ] === textEffects.fontSizeInput && call[ 1 ] === 'change'
+			);
+
+			expect( changeCall ).toBeDefined();
+
+			// Invoke the callback
+			if ( changeCall && changeCall[ 2 ] ) {
+				changeCall[ 2 ]();
+			}
+
+			expect( notifySpy ).toHaveBeenCalled();
+
+			notifySpy.mockRestore();
+		} );
 	} );
 
 	describe( 'createTextStrokeControl', () => {

@@ -936,6 +936,58 @@ describe( 'LayersViewer', () => {
 
 			expect( scaled.blurRadius ).toBe( 30 ); // 12 * 2.5
 		} );
+
+		test( 'should scale dimension layer properties', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = createSampleLayerData();
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			const layer = {
+				type: 'dimension',
+				extensionLength: 10,
+				extensionGap: 5,
+				tickSize: 8
+			};
+
+			const scaled = viewer.scaleLayerCoordinates( layer, 2, 3, 2.5 );
+
+			expect( scaled.extensionLength ).toBe( 25 ); // 10 * 2.5
+			expect( scaled.extensionGap ).toBe( 12.5 ); // 5 * 2.5
+			expect( scaled.tickSize ).toBe( 20 ); // 8 * 2.5
+		} );
+
+		test( 'should scale marker layer properties', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = createSampleLayerData();
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			const layer = {
+				type: 'marker',
+				size: 24,
+				arrowX: 100,
+				arrowY: 50,
+				fontSizeAdjust: 4
+			};
+
+			const scaled = viewer.scaleLayerCoordinates( layer, 2, 3, 2.5 );
+
+			expect( scaled.size ).toBe( 60 ); // 24 * 2.5
+			expect( scaled.arrowX ).toBe( 200 ); // 100 * 2
+			expect( scaled.arrowY ).toBe( 150 ); // 50 * 3
+			expect( scaled.fontSizeAdjust ).toBe( 10 ); // 4 * 2.5
+		} );
 	} );
 
 	describe( 'drawBackgroundOnCanvas', () => {
@@ -1244,12 +1296,9 @@ describe( 'LayersViewer', () => {
 			expect( () => viewer.renderLayers() ).not.toThrow();
 		} );
 
-		test( 'should apply shadow settings when hasShadowEnabled returns true', () => {
+		test( 'should delegate shadow rendering to individual renderers', () => {
 			const container = createMockContainer();
 			const imageElement = createMockImageElement();
-
-			// Make hasShadowEnabled return true
-			mockLayerRenderer.hasShadowEnabled.mockReturnValue( true );
 
 			const layerData = {
 				baseWidth: 1600,
@@ -1278,11 +1327,9 @@ describe( 'LayersViewer', () => {
 				layerData: layerData
 			} );
 
-			expect( mockLayerRenderer.hasShadowEnabled ).toHaveBeenCalled();
+			// Shadow is handled by individual renderers (ShapeRenderer, MarkerRenderer, etc.)
+			// via drawSpreadShadow, not at the viewer level
 			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalled();
-
-			// Reset mock
-			mockLayerRenderer.hasShadowEnabled.mockReturnValue( false );
 		} );
 
 		test( 'should use default shadow values when not specified', () => {
@@ -1510,6 +1557,40 @@ describe( 'LayersViewer', () => {
 			// Opacity should be set to full (1) when visible
 			expect( imageElement.style.opacity ).toBe( '1' );
 		} );
+
+		test( 'should return early when imageElement is null', () => {
+			const container = document.createElement( 'div' );
+
+			// Create viewer without imageElement
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement: null,
+				layerData: {
+					layers: [],
+					backgroundVisible: false,
+					backgroundOpacity: 0.5
+				}
+			} );
+
+			// Should not throw - just returns early
+			expect( viewer.imageElement ).toBeNull();
+		} );
+
+		test( 'should make image visible when layerData is null', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+			imageElement.style.visibility = 'hidden';
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: null
+			} );
+
+			// When layerData is null, image should be visible (fail-safe)
+			expect( imageElement.style.visibility ).toBe( 'visible' );
+			expect( imageElement.style.opacity ).toBe( '1' );
+		} );
 	} );
 
 	describe( 'normalizeLayerData', () => {
@@ -1605,6 +1686,20 @@ describe( 'LayersViewer', () => {
 			} );
 
 			expect( viewer.layerData.layers ).toBeUndefined();
+		} );
+
+		test( 'should handle null layerData gracefully', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: null
+			} );
+
+			// When layerData is null, it defaults to empty array
+			expect( viewer.layerData ).toEqual( [] );
 		} );
 
 		test( 'should normalize all supported boolean properties', () => {

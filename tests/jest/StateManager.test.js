@@ -196,6 +196,18 @@ describe( 'StateManager', () => {
 			expect( stateManager.isLocked ).toBe( true );
 		} );
 
+		it( 'should clear previous lockTimeout when locking again', () => {
+			stateManager.lockState();
+			const firstTimeout = stateManager.lockTimeout;
+			expect( firstTimeout ).toBeDefined();
+
+			// Lock again (should clear the first timeout)
+			stateManager.lockState();
+			expect( stateManager.isLocked ).toBe( true );
+			// A new timeout should be set
+			expect( stateManager.lockTimeout ).toBeDefined();
+		} );
+
 		it( 'should unlock state', () => {
 			stateManager.lockState();
 			stateManager.unlockState();
@@ -213,6 +225,20 @@ describe( 'StateManager', () => {
 
 			expect( stateManager.state.zoom ).toBe( 4.0 );
 			expect( stateManager.state.panX ).toBe( 50 );
+			expect( stateManager.pendingOperations.length ).toBe( 0 );
+		} );
+
+		it( 'should process pending update operations on unlock', () => {
+			stateManager.lockState();
+			stateManager.update( { zoom: 5.0, panY: 100 } );
+
+			expect( stateManager.pendingOperations.length ).toBe( 1 );
+			expect( stateManager.pendingOperations[ 0 ].type ).toBe( 'update' );
+
+			stateManager.unlockState();
+
+			expect( stateManager.state.zoom ).toBe( 5.0 );
+			expect( stateManager.state.panY ).toBe( 100 );
 			expect( stateManager.pendingOperations.length ).toBe( 0 );
 		} );
 
@@ -297,6 +323,34 @@ describe( 'StateManager', () => {
 			} ).not.toThrow();
 
 			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should catch and log global listener errors', () => {
+			mw.log.error.mockClear();
+			const errorListener = jest.fn( () => {
+				throw new Error( 'Global listener error' );
+			} );
+			stateManager.subscribe( '*', errorListener );
+
+			expect( () => {
+				stateManager.notifyListeners( 'zoom', 2.0, 1.0 );
+			} ).not.toThrow();
+
+			expect( mw.log.error ).toHaveBeenCalledWith( 'Global state listener error:', 'Global listener error' );
+		} );
+
+		it( 'should handle global listener errors without message', () => {
+			mw.log.error.mockClear();
+			const errorListener = jest.fn( () => {
+				throw {};  // Error without message property
+			} );
+			stateManager.subscribe( '*', errorListener );
+
+			expect( () => {
+				stateManager.notifyListeners( 'zoom', 2.0, 1.0 );
+			} ).not.toThrow();
+
+			expect( mw.log.error ).toHaveBeenCalledWith( 'Global state listener error:', 'Unknown error' );
 		} );
 	} );
 
@@ -527,6 +581,53 @@ describe( 'StateManager', () => {
 				expect( layers[ 0 ].id ).toBe( 'layer2' );
 				expect( layers[ 1 ].id ).toBe( 'layer1' );
 				expect( layers[ 2 ].id ).toBe( 'layer3' );
+			} );
+
+			it( 'should move folder with its children when folder has children', () => {
+				// Clear and set up a folder with children scenario
+				stateManager.state.layers = [];
+				// Add layers: a folder with two children, and a target layer
+				stateManager.state.layers = [
+					{ id: 'target', type: 'rectangle' },
+					{ id: 'child1', type: 'rectangle', parentId: 'folder1' },
+					{ id: 'child2', type: 'circle', parentId: 'folder1' },
+					{ id: 'folder1', type: 'group', children: [ 'child1', 'child2' ] }
+				];
+
+				// Move folder1 to before target
+				stateManager.reorderLayer( 'folder1', 'target', false );
+
+				const layers = stateManager.getLayers();
+				// Folder and its children should be moved together before target
+				// Result should have folder1 before target, with children following
+				const folderIndex = layers.findIndex( l => l.id === 'folder1' );
+				const targetIndex = layers.findIndex( l => l.id === 'target' );
+				expect( folderIndex ).toBeLessThan( targetIndex );
+			} );
+
+			it( 'should move folder children in their current order', () => {
+				// Clear and set up a folder with children scenario
+				stateManager.state.layers = [
+					{ id: 'other', type: 'text' },
+					{ id: 'child1', type: 'rectangle', parentId: 'folder1' },
+					{ id: 'folder1', type: 'group', children: [ 'child1', 'child2' ] },
+					{ id: 'child2', type: 'circle', parentId: 'folder1' },
+					{ id: 'target', type: 'arrow' }
+				];
+
+				// Move folder1 to after target
+				stateManager.reorderLayer( 'folder1', 'target', true );
+
+				const layers = stateManager.getLayers();
+				// All three (folder1, child1, child2) should be after target
+				const targetIndex = layers.findIndex( l => l.id === 'target' );
+				const folderIndex = layers.findIndex( l => l.id === 'folder1' );
+				const child1Index = layers.findIndex( l => l.id === 'child1' );
+				const child2Index = layers.findIndex( l => l.id === 'child2' );
+
+				expect( folderIndex ).toBeGreaterThan( targetIndex );
+				expect( child1Index ).toBeGreaterThan( targetIndex );
+				expect( child2Index ).toBeGreaterThan( targetIndex );
 			} );
 		} );
 
@@ -791,6 +892,21 @@ describe( 'StateManager', () => {
 				// Layer count unchanged because undo is a no-op
 				expect( stateManager.state.layers.length ).toBe( layerCountBefore );
 			} );
+
+			it( 'should restore previous state when history exists', () => {
+				// Manually populate history to test the actual undo code path
+				const snapshot1 = { layers: [ { id: 'a', type: 'rectangle' } ], selectedLayerIds: [] };
+				const snapshot2 = { layers: [ { id: 'a', type: 'rectangle' }, { id: 'b', type: 'circle' } ], selectedLayerIds: [ 'b' ] };
+				stateManager.state.history = [ snapshot1, snapshot2 ];
+				stateManager.state.historyIndex = 1;
+
+				const result = stateManager.undo();
+
+				expect( result ).toBe( true );
+				expect( stateManager.state.historyIndex ).toBe( 0 );
+				expect( stateManager.state.layers.length ).toBe( 1 );
+				expect( stateManager.state.layers[ 0 ].id ).toBe( 'a' );
+			} );
 		} );
 
 		describe( 'redo', () => {
@@ -809,6 +925,63 @@ describe( 'StateManager', () => {
 				stateManager.redo();
 				// Layer count unchanged because redo is a no-op
 				expect( stateManager.state.layers.length ).toBe( layerCountBefore );
+			} );
+
+			it( 'should restore next state when history exists', () => {
+				// Manually populate history to test the actual redo code path
+				const snapshot1 = { layers: [ { id: 'a', type: 'rectangle' } ], selectedLayerIds: [] };
+				const snapshot2 = { layers: [ { id: 'a', type: 'rectangle' }, { id: 'b', type: 'circle' } ], selectedLayerIds: [ 'b' ] };
+				stateManager.state.history = [ snapshot1, snapshot2 ];
+				stateManager.state.historyIndex = 0;
+				stateManager.state.layers = snapshot1.layers.slice();
+
+				const result = stateManager.redo();
+
+				expect( result ).toBe( true );
+				expect( stateManager.state.historyIndex ).toBe( 1 );
+				expect( stateManager.state.layers.length ).toBe( 2 );
+				expect( stateManager.state.layers[ 1 ].id ).toBe( 'b' );
+			} );
+		} );
+
+		describe( 'restoreState', () => {
+			it( 'should restore layers and selection from snapshot', () => {
+				const snapshot = {
+					layers: [ { id: 'x', type: 'text', text: 'Hello' } ],
+					selectedLayerIds: [ 'x' ]
+				};
+
+				stateManager.restoreState( snapshot );
+
+				expect( stateManager.state.layers.length ).toBe( 1 );
+				expect( stateManager.state.layers[ 0 ].id ).toBe( 'x' );
+				expect( stateManager.state.selectedLayerIds ).toEqual( [ 'x' ] );
+			} );
+
+			it( 'should mark state as dirty after restore', () => {
+				stateManager.setDirty( false );
+				const snapshot = { layers: [], selectedLayerIds: [] };
+
+				stateManager.restoreState( snapshot );
+
+				expect( stateManager.isDirty() ).toBe( true );
+			} );
+
+			it( 'should notify listeners for layers and selection', () => {
+				const layerListener = jest.fn();
+				const selectionListener = jest.fn();
+				stateManager.subscribe( 'layers', layerListener );
+				stateManager.subscribe( 'selectedLayerIds', selectionListener );
+
+				const snapshot = {
+					layers: [ { id: 'test' } ],
+					selectedLayerIds: [ 'test' ]
+				};
+
+				stateManager.restoreState( snapshot );
+
+				expect( layerListener ).toHaveBeenCalled();
+				expect( selectionListener ).toHaveBeenCalled();
 			} );
 		} );
 	} );

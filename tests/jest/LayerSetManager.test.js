@@ -653,6 +653,115 @@ describe( 'LayerSetManager', () => {
 			global.mw = originalMw;
 			noMwManager.destroy();
 		} );
+
+		it( 'should return fallback when mw.message throws exception', () => {
+			const originalLayersMessages = global.layersMessages;
+			delete global.layersMessages;
+
+			mw.message.mockImplementation( () => {
+				throw new Error( 'mw.message failed' );
+			} );
+
+			const result = layerSetManager.getMessage( 'test-key', 'fallback-value' );
+
+			expect( result ).toBe( 'fallback-value' );
+
+			global.layersMessages = originalLayersMessages;
+		} );
+	} );
+
+	describe( 'parseMWTimestamp', () => {
+		it( 'should return current date for null timestamp', () => {
+			const before = Date.now();
+			const result = layerSetManager.parseMWTimestamp( null );
+			const after = Date.now();
+
+			expect( result ).toBeInstanceOf( Date );
+			expect( result.getTime() ).toBeGreaterThanOrEqual( before );
+			expect( result.getTime() ).toBeLessThanOrEqual( after );
+		} );
+
+		it( 'should return current date for non-string timestamp', () => {
+			const before = Date.now();
+			const result = layerSetManager.parseMWTimestamp( 12345 );
+			const after = Date.now();
+
+			expect( result ).toBeInstanceOf( Date );
+			expect( result.getTime() ).toBeGreaterThanOrEqual( before );
+			expect( result.getTime() ).toBeLessThanOrEqual( after );
+		} );
+
+		it( 'should return current date for timestamp shorter than 14 chars', () => {
+			const before = Date.now();
+			const result = layerSetManager.parseMWTimestamp( '2024010112' ); // Only 10 chars
+			const after = Date.now();
+
+			expect( result ).toBeInstanceOf( Date );
+			expect( result.getTime() ).toBeGreaterThanOrEqual( before );
+			expect( result.getTime() ).toBeLessThanOrEqual( after );
+		} );
+
+		it( 'should parse valid MediaWiki timestamp', () => {
+			// YYYYMMDDHHmmss format
+			const result = layerSetManager.parseMWTimestamp( '20240315143025' );
+
+			expect( result ).toBeInstanceOf( Date );
+			expect( result.getFullYear() ).toBe( 2024 );
+			expect( result.getMonth() ).toBe( 2 ); // 0-indexed, so March = 2
+			expect( result.getDate() ).toBe( 15 );
+			expect( result.getHours() ).toBe( 14 );
+			expect( result.getMinutes() ).toBe( 30 );
+			expect( result.getSeconds() ).toBe( 25 );
+		} );
+	} );
+
+	describe( 'showConfirmDialog', () => {
+		it( 'should use dialogManager when available', async () => {
+			const mockDialogManager = {
+				showConfirmDialog: jest.fn().mockResolvedValue( true )
+			};
+			layerSetManager.editor = { dialogManager: mockDialogManager };
+
+			const result = await layerSetManager.showConfirmDialog( {
+				message: 'Are you sure?',
+				title: 'Confirm'
+			} );
+
+			expect( mockDialogManager.showConfirmDialog ).toHaveBeenCalledWith( {
+				message: 'Are you sure?',
+				title: 'Confirm'
+			} );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should fall back to native confirm when dialogManager unavailable', async () => {
+			layerSetManager.editor = null;
+			const originalConfirm = window.confirm;
+			window.confirm = jest.fn().mockReturnValue( true );
+
+			const result = await layerSetManager.showConfirmDialog( {
+				message: 'Are you sure?'
+			} );
+
+			expect( window.confirm ).toHaveBeenCalledWith( 'Are you sure?' );
+			expect( result ).toBe( true );
+
+			window.confirm = originalConfirm;
+		} );
+
+		it( 'should return false from native confirm when declined', async () => {
+			layerSetManager.editor = {};
+			const originalConfirm = window.confirm;
+			window.confirm = jest.fn().mockReturnValue( false );
+
+			const result = await layerSetManager.showConfirmDialog( {
+				message: 'Delete item?'
+			} );
+
+			expect( result ).toBe( false );
+
+			window.confirm = originalConfirm;
+		} );
 	} );
 
 	describe( 'debugLog', () => {

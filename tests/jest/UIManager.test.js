@@ -773,6 +773,36 @@ describe( 'UIManager', () => {
 
 			expect( () => uiManager.destroy() ).not.toThrow();
 		} );
+
+		it( 'should clear activeTimeouts when destroying', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+
+			// Add some tracked timeouts
+			const clearTimeoutSpy = jest.spyOn( global, 'clearTimeout' );
+			uiManager.activeTimeouts = new Set( [ 100, 200, 300 ] );
+
+			uiManager.destroy();
+
+			expect( clearTimeoutSpy ).toHaveBeenCalledWith( 100 );
+			expect( clearTimeoutSpy ).toHaveBeenCalledWith( 200 );
+			expect( clearTimeoutSpy ).toHaveBeenCalledWith( 300 );
+			clearTimeoutSpy.mockRestore();
+		} );
+
+		it( 'should call eventTracker.destroy when destroying', () => {
+			const uiManager = new UIManager( mockEditor );
+			uiManager.createInterface();
+
+			// Create mock event tracker
+			const mockDestroy = jest.fn();
+			uiManager.eventTracker = { destroy: mockDestroy };
+
+			uiManager.destroy();
+
+			expect( mockDestroy ).toHaveBeenCalled();
+			expect( uiManager.eventTracker ).toBeNull();
+		} );
 	} );
 
 	describe( 'keyboard handling', () => {
@@ -1439,6 +1469,26 @@ describe( 'UIManager', () => {
 
 			const uiManager = new UIManager( mockEditor );
 			expect( uiManager ).toBeDefined();
+		} );
+
+		it( 'should use window.Layers.Utils namespace when available', () => {
+			const originalLayers = window.Layers;
+			window.Layers = { Utils: { TestUtil: class {} } };
+
+			const uiManager = new UIManager( mockEditor );
+			expect( uiManager ).toBeDefined();
+
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should use window.Layers.Core namespace when available', () => {
+			const originalLayers = window.Layers;
+			window.Layers = { Core: { TestCore: class {} } };
+
+			const uiManager = new UIManager( mockEditor );
+			expect( uiManager ).toBeDefined();
+
+			window.Layers = originalLayers;
 		} );
 	} );
 

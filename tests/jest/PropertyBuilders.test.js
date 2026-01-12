@@ -1004,6 +1004,1204 @@ describe( 'PropertyBuilders', () => {
 		} );
 	} );
 
+	describe( 'addMarkerProperties', () => {
+		test( 'should have addMarkerProperties method', () => {
+			const Builders = window.Layers.UI.PropertyBuilders;
+			expect( typeof Builders.addMarkerProperties ).toBe( 'function' );
+		} );
+
+		test( 'should add marker controls with section', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				value: 1,
+				style: 'circled',
+				size: 24
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			expect( ctx.addSection ).toHaveBeenCalled();
+			expect( ctx.addInput ).toHaveBeenCalled();
+			expect( ctx.addSelect ).toHaveBeenCalled();
+			expect( ctx.addCheckbox ).toHaveBeenCalled();
+			expect( ctx.addColorPicker ).toHaveBeenCalled();
+		} );
+
+		test( 'value input should update layer and name', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				value: 1,
+				name: 'Marker 1'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const valueCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'value'
+			);
+			const onChange = valueCall[ 0 ].onChange;
+
+			onChange( '5' );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				expect.objectContaining( { value: '5' } )
+			);
+		} );
+
+		test( 'value input should not change name if custom name set', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				value: 1,
+				name: 'Custom Name'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const valueCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'value'
+			);
+			const onChange = valueCall[ 0 ].onChange;
+
+			onChange( '5' );
+
+			// Should only have value, not name in the update
+			const callArgs = ctx.editor.updateLayer.mock.calls[ 0 ][ 1 ];
+			expect( callArgs.value ).toBe( '5' );
+			expect( callArgs.name ).toBeUndefined();
+		} );
+
+		test( 'empty value should default to 1', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				value: 1,
+				name: 'Marker 1'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const valueCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'value'
+			);
+			const onChange = valueCall[ 0 ].onChange;
+
+			onChange( '  ' );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				expect.objectContaining( { value: '1' } )
+			);
+		} );
+
+		test( 'style select should update layer', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				style: 'circled'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const styleCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].value === 'circled'
+			);
+			const onChange = styleCall[ 0 ].onChange;
+
+			onChange( 'letter' );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ style: 'letter' }
+			);
+		} );
+
+		test( 'size input should clamp to valid range', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				size: 24
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const sizeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'size'
+			);
+			const onChange = sizeCall[ 0 ].onChange;
+
+			// Test clamping to max (200)
+			onChange( '500' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ size: 200 }
+			);
+		} );
+
+		test( 'size input should clamp to min (10)', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				size: 24
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const sizeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'size'
+			);
+			const onChange = sizeCall[ 0 ].onChange;
+
+			onChange( '5' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ size: 10 }
+			);
+		} );
+
+		test( 'fontSizeAdjust input should clamp to valid range', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				fontSizeAdjust: 0
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const adjustCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'fontSizeAdjust'
+			);
+			const onChange = adjustCall[ 0 ].onChange;
+
+			// Test clamping to max (20)
+			onChange( '50' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontSizeAdjust: 20 }
+			);
+		} );
+
+		test( 'strokeWidth input should round to 0.5 increments', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				strokeWidth: 2
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const strokeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'strokeWidth'
+			);
+			const onChange = strokeCall[ 0 ].onChange;
+
+			onChange( '3.3' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ strokeWidth: 3.5 }
+			);
+		} );
+
+		test( 'hasArrow checkbox should enable arrow with default position', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				hasArrow: false,
+				x: 100,
+				y: 100
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const arrowCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'hasArrow'
+			);
+			const onChange = arrowCall[ 0 ].onChange;
+
+			onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				expect.objectContaining( {
+					hasArrow: true,
+					arrowX: 100,
+					arrowY: 150
+				} )
+			);
+		} );
+
+		test( 'hasArrow checkbox should not set default position if already set', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				hasArrow: false,
+				x: 100,
+				y: 100,
+				arrowX: 200,
+				arrowY: 200
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			const arrowCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'hasArrow'
+			);
+			const onChange = arrowCall[ 0 ].onChange;
+
+			onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ hasArrow: true }
+			);
+		} );
+
+		test( 'color pickers should update layer', () => {
+			const ctx = createMockContext( {
+				type: 'marker',
+				color: '#000000',
+				fill: '#ffffff',
+				stroke: '#000000'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addMarkerProperties( ctx );
+
+			// Text color
+			const textColorCall = ctx.addColorPicker.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'color'
+			);
+			textColorCall[ 0 ].onChange( '#ff0000' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ color: '#ff0000' }
+			);
+
+			// Fill color
+			const fillCall = ctx.addColorPicker.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'fill'
+			);
+			fillCall[ 0 ].onChange( '#00ff00' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fill: '#00ff00' }
+			);
+
+			// Stroke color
+			const strokeCall = ctx.addColorPicker.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'stroke'
+			);
+			strokeCall[ 0 ].onChange( '#0000ff' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ stroke: '#0000ff' }
+			);
+		} );
+	} );
+
+	describe( 'addDimensionProperties', () => {
+		test( 'should have addDimensionProperties method', () => {
+			const Builders = window.Layers.UI.PropertyBuilders;
+			expect( typeof Builders.addDimensionProperties ).toBe( 'function' );
+		} );
+
+		test( 'should add dimension controls with section', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				text: '25.4 mm',
+				fontSize: 12
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			expect( ctx.addSection ).toHaveBeenCalled();
+			expect( ctx.addInput ).toHaveBeenCalled();
+			expect( ctx.addSelect ).toHaveBeenCalled();
+			expect( ctx.addCheckbox ).toHaveBeenCalled();
+			expect( ctx.addColorPicker ).toHaveBeenCalled();
+		} );
+
+		test( 'dimension value input should update text property', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				text: '25 mm'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const textCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'text'
+			);
+			const onChange = textCall[ 0 ].onChange;
+
+			onChange( '50 mm' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ text: '50 mm' }
+			);
+		} );
+
+		test( 'empty dimension value should set undefined', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				text: '25 mm'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const textCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'text'
+			);
+			const onChange = textCall[ 0 ].onChange;
+
+			onChange( '' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ text: undefined }
+			);
+		} );
+
+		test( 'fontSize input should clamp to valid range', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				fontSize: 12
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const fontCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'fontSize'
+			);
+			const onChange = fontCall[ 0 ].onChange;
+
+			// Test clamping to min (6)
+			onChange( '3' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontSize: 6 }
+			);
+		} );
+
+		test( 'strokeWidth input should round to 0.5 increments', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				strokeWidth: 1
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const strokeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'strokeWidth'
+			);
+			const onChange = strokeCall[ 0 ].onChange;
+
+			onChange( '2.3' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ strokeWidth: 2.5 }
+			);
+		} );
+
+		test( 'orientation change to horizontal should align y2 to y1', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				orientation: 'free',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 150
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const orientCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].value === 'free'
+			);
+			const onChange = orientCall[ 0 ].onChange;
+
+			onChange( 'horizontal' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ orientation: 'horizontal', y2: 100 }
+			);
+		} );
+
+		test( 'orientation change to vertical should align x2 to x1', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				orientation: 'free',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 150
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const orientCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].value === 'free'
+			);
+			const onChange = orientCall[ 0 ].onChange;
+
+			onChange( 'vertical' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ orientation: 'vertical', x2: 100 }
+			);
+		} );
+
+		test( 'endStyle select should update layer', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				endStyle: 'arrow'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const endCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].options && call[ 0 ].options.some( ( o ) => o.value === 'tick' )
+			);
+			const onChange = endCall[ 0 ].onChange;
+
+			onChange( 'tick' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ endStyle: 'tick' }
+			);
+		} );
+
+		test( 'textPosition select should update layer', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				textPosition: 'above'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const posCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].options && call[ 0 ].options.some( ( o ) => o.value === 'below' )
+			);
+			const onChange = posCall[ 0 ].onChange;
+
+			onChange( 'below' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ textPosition: 'below' }
+			);
+		} );
+
+		test( 'textDirection select should update layer', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				textDirection: 'auto'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			// Find the textDirection select by looking for the one with 'auto-reversed' option
+			const dirCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].options && call[ 0 ].options.some( ( o ) => o.value === 'auto-reversed' )
+			);
+			const onChange = dirCall[ 0 ].onChange;
+
+			onChange( 'horizontal' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ textDirection: 'horizontal' }
+			);
+		} );
+
+		test( 'extensionLength input should clamp to valid range', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				extensionLength: 10
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const extCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'extensionLength'
+			);
+			const onChange = extCall[ 0 ].onChange;
+
+			// Test clamping to max (100)
+			onChange( '200' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ extensionLength: 100 }
+			);
+		} );
+
+		test( 'showBackground checkbox should update layer', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				showBackground: true
+			} );
+			ctx.editor.layerPanel = {
+				updatePropertiesPanel: jest.fn()
+			};
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const bgCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'showBackground'
+			);
+			const onChange = bgCall[ 0 ].onChange;
+
+			onChange( false );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ showBackground: false }
+			);
+		} );
+
+		test( 'backgroundColor color picker should update layer when showBackground is true', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				showBackground: true,
+				backgroundColor: '#ffffff'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const bgColorCall = ctx.addColorPicker.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'backgroundColor'
+			);
+			expect( bgColorCall ).toBeDefined();
+
+			bgColorCall[ 0 ].onChange( '#f0f0f0' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ backgroundColor: '#f0f0f0' }
+			);
+		} );
+
+		test( 'backgroundColor color picker should not appear when showBackground is false', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				showBackground: false
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const bgColorCall = ctx.addColorPicker.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'backgroundColor'
+			);
+			expect( bgColorCall ).toBeUndefined();
+		} );
+
+		test( 'toleranceType select should update layer and refresh panel', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				toleranceType: 'none'
+			} );
+			ctx.editor.layerPanel = {
+				updatePropertiesPanel: jest.fn()
+			};
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const tolCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].options && call[ 0 ].options.some( ( o ) => o.value === 'symmetric' )
+			);
+			const onChange = tolCall[ 0 ].onChange;
+
+			onChange( 'symmetric' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ toleranceType: 'symmetric' }
+			);
+		} );
+
+		test( 'toleranceValue input should appear for symmetric type', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				toleranceType: 'symmetric',
+				toleranceValue: '0.1'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const tolValCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'toleranceValue'
+			);
+			expect( tolValCall ).toBeDefined();
+
+			tolValCall[ 0 ].onChange( '0.2' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ toleranceValue: '0.2' }
+			);
+		} );
+
+		test( 'toleranceUpper and toleranceLower should appear for deviation type', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				toleranceType: 'deviation',
+				toleranceUpper: '+0.1',
+				toleranceLower: '-0.1'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const upperCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'toleranceUpper'
+			);
+			const lowerCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'toleranceLower'
+			);
+
+			expect( upperCall ).toBeDefined();
+			expect( lowerCall ).toBeDefined();
+
+			upperCall[ 0 ].onChange( '+0.2' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ toleranceUpper: '+0.2' }
+			);
+
+			lowerCall[ 0 ].onChange( '-0.2' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ toleranceLower: '-0.2' }
+			);
+		} );
+
+		test( 'toleranceUpper and toleranceLower should appear for limits type', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				toleranceType: 'limits',
+				toleranceUpper: '25.5',
+				toleranceLower: '25.3'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const upperCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'toleranceUpper'
+			);
+			const lowerCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'toleranceLower'
+			);
+
+			expect( upperCall ).toBeDefined();
+			expect( lowerCall ).toBeDefined();
+		} );
+
+		test( 'tolerance inputs should not appear for none type', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				toleranceType: 'none'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const tolValCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'toleranceValue'
+			);
+			const upperCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'toleranceUpper'
+			);
+			const lowerCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'toleranceLower'
+			);
+
+			expect( tolValCall ).toBeUndefined();
+			expect( upperCall ).toBeUndefined();
+			expect( lowerCall ).toBeUndefined();
+		} );
+
+		test( 'marker size should appear for arrow end style', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				endStyle: 'arrow',
+				arrowSize: 8
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const sizeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'arrowSize'
+			);
+			expect( sizeCall ).toBeDefined();
+
+			sizeCall[ 0 ].onChange( '12' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ arrowSize: 12 }
+			);
+		} );
+
+		test( 'tick size should appear for tick end style', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				endStyle: 'tick',
+				tickSize: 6
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const sizeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'tickSize'
+			);
+			expect( sizeCall ).toBeDefined();
+
+			sizeCall[ 0 ].onChange( '10' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ tickSize: 10 }
+			);
+		} );
+
+		test( 'marker size should not appear for none end style', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				endStyle: 'none'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const arrowSizeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'arrowSize'
+			);
+			const tickSizeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'tickSize'
+			);
+
+			expect( arrowSizeCall ).toBeUndefined();
+			expect( tickSizeCall ).toBeUndefined();
+		} );
+
+		test( 'color pickers should update layer', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				color: '#000000',
+				stroke: '#000000'
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			// Text color
+			const textColorCall = ctx.addColorPicker.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'color'
+			);
+			textColorCall[ 0 ].onChange( '#ff0000' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ color: '#ff0000' }
+			);
+
+			// Stroke color
+			const strokeCall = ctx.addColorPicker.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'stroke'
+			);
+			strokeCall[ 0 ].onChange( '#0000ff' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ stroke: '#0000ff' }
+			);
+		} );
+	} );
+
+	describe( 'addTextProperties edge cases', () => {
+		test( 'should use single-line input when useTextarea is false', () => {
+			const ctx = createMockContext( { type: 'text', text: 'Hello' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx, { useTextarea: false } );
+
+			const textCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Text'
+			);
+			expect( textCall[ 0 ].type ).toBe( 'text' );
+			expect( textCall[ 0 ].maxLength ).toBe( 1000 );
+		} );
+
+		test( 'font size onChange should clamp to valid range', () => {
+			const ctx = createMockContext( { type: 'textbox', fontSize: 16 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx, { maxFontSize: 100 } );
+
+			const fontCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'fontSize'
+			);
+			const onChange = fontCall[ 0 ].onChange;
+
+			// Test clamping to max
+			onChange( '200' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontSize: 100 }
+			);
+
+			// Test clamping to min
+			onChange( '2' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontSize: 6 }
+			);
+		} );
+
+		test( 'bold checkbox onChange should toggle fontWeight', () => {
+			const ctx = createMockContext( { type: 'textbox', fontWeight: 'normal' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+
+			const boldCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Bold'
+			);
+			const onChange = boldCall[ 0 ].onChange;
+
+			onChange( true );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontWeight: 'bold' }
+			);
+
+			onChange( false );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontWeight: 'normal' }
+			);
+		} );
+
+		test( 'italic checkbox onChange should toggle fontStyle', () => {
+			const ctx = createMockContext( { type: 'textbox', fontStyle: 'normal' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+
+			const italicCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Italic'
+			);
+			const onChange = italicCall[ 0 ].onChange;
+
+			onChange( true );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontStyle: 'italic' }
+			);
+
+			onChange( false );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontStyle: 'normal' }
+			);
+		} );
+
+		test( 'font family onChange should update layer', () => {
+			const ctx = createMockContext( { type: 'textbox', fontFamily: 'Arial' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+
+			const fontCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Font'
+			);
+			const onChange = fontCall[ 0 ].onChange;
+
+			onChange( 'Times New Roman' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ fontFamily: 'Times New Roman' }
+			);
+		} );
+	} );
+
+	describe( 'addAlignmentSection edge cases', () => {
+		test( 'padding onChange should clamp to valid range', () => {
+			const ctx = createMockContext( { type: 'textbox', padding: 8 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addAlignmentSection( ctx );
+
+			const paddingCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'padding'
+			);
+			const onChange = paddingCall[ 0 ].onChange;
+
+			// Test clamping to max (100)
+			onChange( '200' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ padding: 100 }
+			);
+
+			// Test clamping to min (0)
+			onChange( '-10' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ padding: 0 }
+			);
+		} );
+	} );
+
+	describe( 'addPosition edge cases', () => {
+		test( 'y position onChange should update layer', () => {
+			const ctx = createMockContext( { x: 100, y: 200 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addPosition( ctx );
+
+			const yCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'y'
+			);
+			const onChange = yCall[ 0 ].onChange;
+
+			onChange( '250' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ y: 250 }
+			);
+		} );
+
+		test( 'rotation onChange should update layer and round value', () => {
+			const ctx = createMockContext( { rotation: 0 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addPosition( ctx );
+
+			const rotCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'rotation'
+			);
+			const onChange = rotCall[ 0 ].onChange;
+
+			onChange( '45.7' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ rotation: 46 }
+			);
+		} );
+	} );
+
+	describe( 'addEndpoints edge cases', () => {
+		test( 'y1 onChange should update layer', () => {
+			const ctx = createMockContext( { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addEndpoints( ctx );
+
+			const y1Call = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'y1'
+			);
+			const onChange = y1Call[ 0 ].onChange;
+
+			onChange( '25' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ y1: 25 }
+			);
+		} );
+
+		test( 'x2 onChange should update layer', () => {
+			const ctx = createMockContext( { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addEndpoints( ctx );
+
+			const x2Call = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'x2'
+			);
+			const onChange = x2Call[ 0 ].onChange;
+
+			onChange( '150' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ x2: 150 }
+			);
+		} );
+
+		test( 'y2 onChange should update layer', () => {
+			const ctx = createMockContext( { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addEndpoints( ctx );
+
+			const y2Call = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'y2'
+			);
+			const onChange = y2Call[ 0 ].onChange;
+
+			onChange( '150' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ y2: 150 }
+			);
+		} );
+	} );
+
+	describe( 'addArrowProperties edge cases', () => {
+		test( 'head type onChange should update layer', () => {
+			const ctx = createMockContext( { type: 'arrow', arrowHeadType: 'pointed' } );
+			ctx.addSliderInput = jest.fn();
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addArrowProperties( ctx );
+
+			const typeCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Head Type'
+			);
+			const onChange = typeCall[ 0 ].onChange;
+
+			onChange( 'chevron' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ arrowHeadType: 'chevron' }
+			);
+		} );
+
+		test( 'arrow ends onChange should refresh properties panel', () => {
+			const ctx = createMockContext( { type: 'arrow', arrowStyle: 'single' } );
+			ctx.addSliderInput = jest.fn();
+			ctx.editor.layerPanel = {
+				updatePropertiesPanel: jest.fn()
+			};
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addArrowProperties( ctx );
+
+			const endsCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Arrow Ends'
+			);
+			const onChange = endsCall[ 0 ].onChange;
+
+			// Use fake timers to test setTimeout
+			jest.useFakeTimers();
+			onChange( 'double' );
+			jest.runAllTimers();
+			jest.useRealTimers();
+
+			expect( ctx.editor.layerPanel.updatePropertiesPanel ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'addEllipseProperties edge cases', () => {
+		test( 'height onChange should update both height and radiusY', () => {
+			const ctx = createMockContext( { type: 'ellipse', width: 200, height: 100 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addEllipseProperties( ctx );
+
+			const heightCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Height'
+			);
+			const onChange = heightCall[ 0 ].onChange;
+
+			onChange( '200' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ height: 200, radiusY: 100 }
+			);
+		} );
+	} );
+
+	describe( 'addStarProperties edge cases', () => {
+		test( 'outer radius onChange should round value', () => {
+			const ctx = createMockContext( { type: 'star', outerRadius: 50 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addStarProperties( ctx );
+
+			const outerCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Outer Radius'
+			);
+			const onChange = outerCall[ 0 ].onChange;
+
+			onChange( '75.7' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ outerRadius: 76 }
+			);
+		} );
+
+		test( 'point radius onChange should clamp to valid range', () => {
+			const ctx = createMockContext( { type: 'star', pointRadius: 0 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addStarProperties( ctx );
+
+			const pointCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Point Radius'
+			);
+			const onChange = pointCall[ 0 ].onChange;
+
+			// Test clamping to min (0)
+			onChange( '-10' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ pointRadius: 0 }
+			);
+		} );
+
+		test( 'valley radius onChange should clamp to valid range', () => {
+			const ctx = createMockContext( { type: 'star', valleyRadius: 0 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addStarProperties( ctx );
+
+			const valleyCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Valley Radius'
+			);
+			const onChange = valleyCall[ 0 ].onChange;
+
+			// Test clamping to min (0)
+			onChange( '-10' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ valleyRadius: 0 }
+			);
+		} );
+	} );
+
+	describe( 'addPolygonProperties edge cases', () => {
+		test( 'corner radius onChange should clamp to valid range', () => {
+			const ctx = createMockContext( { type: 'polygon', cornerRadius: 0 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addPolygonProperties( ctx );
+
+			const cornerCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Corner Radius'
+			);
+			const onChange = cornerCall[ 0 ].onChange;
+
+			// Test clamping to min (0)
+			onChange( '-10' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ cornerRadius: 0 }
+			);
+		} );
+	} );
+
 	describe( 'message helper fallback', () => {
 		test( 'should use fallback when layersMessages not available', () => {
 			// Temporarily remove layersMessages
@@ -1018,6 +2216,64 @@ describe( 'PropertyBuilders', () => {
 
 			// Restore
 			window.layersMessages = original;
+		} );
+
+		test( 'should use fallback when layersMessages.get is not a function', () => {
+			const original = window.layersMessages;
+			window.layersMessages = {};
+
+			const ctx = createMockContext( { width: 200, height: 100 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			// Should not throw
+			expect( () => Builders.addDimensions( ctx ) ).not.toThrow();
+
+			// Restore
+			window.layersMessages = original;
+		} );
+	} );
+
+	describe( 'getConstants edge cases', () => {
+		test( 'should handle missing Layers.Constants gracefully', () => {
+			const original = window.Layers.Constants;
+			delete window.Layers.Constants;
+
+			const ctx = createMockContext( { type: 'circle', radius: 50 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			// Should not throw and use fallback values
+			expect( () => Builders.addCircleRadius( ctx ) ).not.toThrow();
+
+			// Restore
+			window.Layers.Constants = original;
+		} );
+
+		test( 'should handle missing DEFAULTS gracefully in polygon', () => {
+			const original = window.Layers.Constants;
+			window.Layers.Constants = { LAYER_TYPES: {}, LIMITS: {} };
+
+			const ctx = createMockContext( { type: 'polygon', sides: 6 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			// Should not throw and use fallback values
+			expect( () => Builders.addPolygonProperties( ctx ) ).not.toThrow();
+
+			// Restore
+			window.Layers.Constants = original;
+		} );
+
+		test( 'should handle missing LIMITS gracefully in star', () => {
+			const original = window.Layers.Constants;
+			window.Layers.Constants = { LAYER_TYPES: {}, DEFAULTS: {} };
+
+			const ctx = createMockContext( { type: 'star', points: 5 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			// Should not throw and use fallback values
+			expect( () => Builders.addStarProperties( ctx ) ).not.toThrow();
+
+			// Restore
+			window.Layers.Constants = original;
 		} );
 	} );
 } );

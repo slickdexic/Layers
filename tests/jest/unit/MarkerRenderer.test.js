@@ -233,6 +233,9 @@ describe( 'MarkerRenderer', () => {
 		it( 'should apply shadow when shadowRenderer is provided and shadow is enabled', () => {
 			const shadowRenderer = {
 				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				getShadowSpread: jest.fn().mockReturnValue( 0 ),
+				drawSpreadShadow: jest.fn(),
+				drawSpreadShadowStroke: jest.fn(),
 				applyShadow: jest.fn(),
 				clearShadow: jest.fn()
 			};
@@ -248,22 +251,131 @@ describe( 'MarkerRenderer', () => {
 				shadowColor: 'rgba(0,0,0,0.5)',
 				shadowBlur: 10,
 				shadowOffsetX: 5,
-				shadowOffsetY: 5
+				shadowOffsetY: 5,
+				fill: '#ffffff',
+				stroke: '#000000',
+				strokeWidth: 2
 			};
 
 			renderer.draw( layer );
 
 			expect( shadowRenderer.hasShadowEnabled ).toHaveBeenCalledWith( layer );
-			expect( shadowRenderer.applyShadow ).toHaveBeenCalledWith(
-				layer,
-				{ sx: 1, sy: 1, avg: 1 }
-			);
+			// For circled markers, drawSpreadShadow should be called with combined shadow
+			// (circle + stroke are rendered as one combined shape for shadow)
+			expect( shadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
 			expect( shadowRenderer.clearShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply shadow with spread when shadowSpread > 0', () => {
+			const shadowRenderer = {
+				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				getShadowSpread: jest.fn().mockReturnValue( 5 ),
+				drawSpreadShadow: jest.fn(),
+				drawSpreadShadowStroke: jest.fn(),
+				applyShadow: jest.fn(),
+				clearShadow: jest.fn()
+			};
+
+			renderer = new MarkerRenderer( ctx, { shadowRenderer } );
+
+			const layer = {
+				type: 'marker',
+				x: 100,
+				y: 100,
+				value: 1,
+				size: 24,
+				shadow: true,
+				shadowSpread: 5,
+				fill: '#ffffff',
+				stroke: '#000000',
+				strokeWidth: 2
+			};
+
+			renderer.draw( layer );
+
+			expect( shadowRenderer.getShadowSpread ).toHaveBeenCalled();
+			// drawSpreadShadow should be called with spread > 0
+			expect( shadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+			// Verify the expanded radius includes spread
+			const drawSpreadCall = shadowRenderer.drawSpreadShadow.mock.calls[ 0 ];
+			expect( drawSpreadCall[ 2 ] ).toBe( 5 ); // spread parameter
+		} );
+
+		it( 'should include arrow in combined shadow when hasArrow is true', () => {
+			const shadowRenderer = {
+				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				getShadowSpread: jest.fn().mockReturnValue( 3 ),
+				drawSpreadShadow: jest.fn(),
+				drawSpreadShadowStroke: jest.fn(),
+				applyShadow: jest.fn(),
+				clearShadow: jest.fn()
+			};
+
+			renderer = new MarkerRenderer( ctx, { shadowRenderer } );
+
+			const layer = {
+				type: 'marker',
+				x: 100,
+				y: 100,
+				value: 1,
+				size: 24,
+				shadow: true,
+				shadowSpread: 3,
+				fill: '#ffffff',
+				stroke: '#000000',
+				strokeWidth: 2,
+				hasArrow: true,
+				arrowX: 200,
+				arrowY: 150,
+				arrowStyle: 'arrow'
+			};
+
+			renderer.draw( layer );
+
+			// Circle fill shadow should use drawSpreadShadow
+			expect( shadowRenderer.drawSpreadShadow ).toHaveBeenCalled();
+
+			// Arrow stroke shadow should use drawSpreadShadowStroke
+			expect( shadowRenderer.drawSpreadShadowStroke ).toHaveBeenCalled();
+
+			// Verify the circle shadow callback defines path without calling fill
+			const circleCall = shadowRenderer.drawSpreadShadow.mock.calls[ 0 ];
+			const circleCallback = circleCall[ 3 ];
+			const tempCtx = {
+				beginPath: jest.fn(),
+				arc: jest.fn(),
+				fill: jest.fn(),
+				moveTo: jest.fn(),
+				lineTo: jest.fn(),
+				closePath: jest.fn()
+			};
+			circleCallback( tempCtx );
+			expect( tempCtx.arc ).toHaveBeenCalled();
+			// Callback should NOT call fill - drawSpreadShadow handles it
+			expect( tempCtx.fill ).not.toHaveBeenCalled();
+
+			// Verify the arrow shadow callback defines path
+			const arrowCall = shadowRenderer.drawSpreadShadowStroke.mock.calls[ 0 ];
+			const arrowCallback = arrowCall[ 3 ];
+			const arrowTempCtx = {
+				beginPath: jest.fn(),
+				moveTo: jest.fn(),
+				lineTo: jest.fn(),
+				stroke: jest.fn(),
+				lineCap: 'butt',
+				lineJoin: 'miter'
+			};
+			arrowCallback( arrowTempCtx );
+			expect( arrowTempCtx.moveTo ).toHaveBeenCalled();
+			expect( arrowTempCtx.lineTo ).toHaveBeenCalled();
+			// Callback should NOT call stroke - drawSpreadShadowStroke handles it
+			expect( arrowTempCtx.stroke ).not.toHaveBeenCalled();
 		} );
 
 		it( 'should not apply shadow when shadow is disabled', () => {
 			const shadowRenderer = {
 				hasShadowEnabled: jest.fn().mockReturnValue( false ),
+				getShadowSpread: jest.fn().mockReturnValue( 0 ),
 				applyShadow: jest.fn(),
 				clearShadow: jest.fn()
 			};

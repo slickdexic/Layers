@@ -526,4 +526,95 @@ describe( 'LayerDataNormalizer', () => {
 			} );
 		} );
 	} );
+
+	describe( 'normalizeLayerData', () => {
+		test( 'should normalize backgroundVisible from integer 0 to boolean false', () => {
+			const layerData = { backgroundVisible: 0, layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( false );
+		} );
+
+		test( 'should normalize backgroundVisible from integer 1 to boolean true', () => {
+			const layerData = { backgroundVisible: 1, layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( true );
+		} );
+
+		test( 'should normalize backgroundVisible from string "0" to boolean false', () => {
+			const layerData = { backgroundVisible: '0', layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( false );
+		} );
+
+		test( 'should normalize backgroundVisible from string "1" to boolean true', () => {
+			const layerData = { backgroundVisible: '1', layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( true );
+		} );
+
+		test( 'should normalize backgroundVisible from string "false" to boolean false', () => {
+			const layerData = { backgroundVisible: 'false', layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( false );
+		} );
+
+		test( 'should normalize backgroundVisible from string "true" to boolean true', () => {
+			const layerData = { backgroundVisible: 'true', layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( true );
+		} );
+
+		test( 'should normalize backgroundVisible from empty string to boolean true', () => {
+			const layerData = { backgroundVisible: '', layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( true );
+		} );
+
+		test( 'should preserve boolean true for backgroundVisible', () => {
+			const layerData = { backgroundVisible: true, layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( true );
+		} );
+
+		test( 'should preserve boolean false for backgroundVisible', () => {
+			const layerData = { backgroundVisible: false, layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundVisible ).toBe( false );
+		} );
+
+		test( 'should normalize backgroundOpacity from string to number', () => {
+			const layerData = { backgroundOpacity: '0.75', layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundOpacity ).toBe( 0.75 );
+		} );
+
+		test( 'should preserve numeric backgroundOpacity', () => {
+			const layerData = { backgroundOpacity: 0.5, layers: [] };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.backgroundOpacity ).toBe( 0.5 );
+		} );
+
+		test( 'should handle layers array and normalize each layer', () => {
+			const layerData = {
+				backgroundVisible: 1,
+				layers: [
+					{ id: 'layer1', visible: '1', locked: 0 },
+					{ id: 'layer2', visible: 'false', locked: '1' }
+				]
+			};
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+
+			expect( result.backgroundVisible ).toBe( true );
+			expect( result.layers[ 0 ].visible ).toBe( true );
+			expect( result.layers[ 0 ].locked ).toBe( false );
+			expect( result.layers[ 1 ].visible ).toBe( false );
+			expect( result.layers[ 1 ].locked ).toBe( true );
+		} );
+
+		test( 'should not add layers array if not provided', () => {
+			const layerData = { backgroundVisible: true };
+			const result = LayerDataNormalizer.normalizeLayerData( layerData );
+			expect( result.layers ).toBeUndefined();
+		} );
+	} );
 } );

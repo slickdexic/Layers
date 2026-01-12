@@ -249,6 +249,30 @@ describe( 'SmartGuidesController', () => {
 			expect( bounds ).toEqual( { x: 20, y: 30, width: 100, height: 50 } );
 		} );
 
+		it( 'should calculate bounds for textbox layer', () => {
+			const layer = { type: 'textbox', x: 30, y: 40, width: 150, height: 60 };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: 30, y: 40, width: 150, height: 60 } );
+		} );
+
+		it( 'should calculate bounds for blur layer', () => {
+			const layer = { type: 'blur', x: 25, y: 35, width: 80, height: 40 };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: 25, y: 35, width: 80, height: 40 } );
+		} );
+
+		it( 'should calculate bounds for image layer', () => {
+			const layer = { type: 'image', x: 10, y: 15, width: 200, height: 150 };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: 10, y: 15, width: 200, height: 150 } );
+		} );
+
+		it( 'should calculate bounds for customShape layer', () => {
+			const layer = { type: 'customShape', x: 50, y: 60, width: 120, height: 90 };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: 50, y: 60, width: 120, height: 90 } );
+		} );
+
 		it( 'should return null for path with no points', () => {
 			const layer = { type: 'path', points: [] };
 			expect( controller.calculateBounds( layer ) ).toBeNull();
@@ -257,6 +281,62 @@ describe( 'SmartGuidesController', () => {
 		it( 'should return null for path without points array', () => {
 			const layer = { type: 'path' };
 			expect( controller.calculateBounds( layer ) ).toBeNull();
+		} );
+
+		it( 'should calculate bounds for marker layer', () => {
+			const layer = { type: 'marker', x: 100, y: 100, size: 32 };
+			const bounds = controller.calculateBounds( layer );
+			// Marker is centered at x,y with size as diameter
+			expect( bounds ).toEqual( { x: 84, y: 84, width: 32, height: 32 } );
+		} );
+
+		it( 'should use default size 24 for marker without size', () => {
+			const layer = { type: 'marker', x: 50, y: 50 };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: 38, y: 38, width: 24, height: 24 } );
+		} );
+
+		it( 'should handle marker with missing x,y as 0', () => {
+			const layer = { type: 'marker' };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds ).toEqual( { x: -12, y: -12, width: 24, height: 24 } );
+		} );
+
+		it( 'should calculate bounds for dimension layer', () => {
+			const layer = { type: 'dimension', x1: 50, y1: 100, x2: 200, y2: 100 };
+			const bounds = controller.calculateBounds( layer );
+			// Dimension includes padding for extension lines (extensionLength + 10)
+			expect( bounds.x ).toBe( 30 ); // 50 - 20
+			expect( bounds.y ).toBe( 80 ); // 100 - 20
+			expect( bounds.width ).toBe( 190 ); // 150 + 40
+			expect( bounds.height ).toBe( 40 ); // 0 + 40
+		} );
+
+		it( 'should calculate bounds for diagonal dimension layer', () => {
+			const layer = { type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 80 };
+			const bounds = controller.calculateBounds( layer );
+			expect( bounds.x ).toBe( -20 );
+			expect( bounds.y ).toBe( -20 );
+			expect( bounds.width ).toBe( 140 ); // 100 + 40
+			expect( bounds.height ).toBe( 120 ); // 80 + 40
+		} );
+
+		it( 'should handle dimension with custom extensionLength', () => {
+			const layer = { type: 'dimension', x1: 50, y1: 50, x2: 150, y2: 50, extensionLength: 20 };
+			const bounds = controller.calculateBounds( layer );
+			// Padding = 20 + 10 = 30
+			expect( bounds.x ).toBe( 20 ); // 50 - 30
+			expect( bounds.width ).toBe( 160 ); // 100 + 60
+		} );
+
+		it( 'should handle dimension with missing coordinates as 0', () => {
+			const layer = { type: 'dimension' };
+			const bounds = controller.calculateBounds( layer );
+			// All coords default to 0, padding = 20
+			expect( bounds.x ).toBe( -20 );
+			expect( bounds.y ).toBe( -20 );
+			expect( bounds.width ).toBe( 40 );
+			expect( bounds.height ).toBe( 40 );
 		} );
 	} );
 
@@ -287,6 +367,27 @@ describe( 'SmartGuidesController', () => {
 
 			expect( snapPoints.horizontal.length ).toBe( 6 ); // 2 visible layers * 3
 			expect( snapPoints.vertical.length ).toBe( 6 );
+		} );
+
+		it( 'should skip layers with null bounds', () => {
+			// Mock getLayerBounds to return null for layer1
+			const originalGetLayerBounds = mockCanvasManager.getLayerBounds;
+			mockCanvasManager.getLayerBounds = jest.fn( ( layer ) => {
+				if ( layer.id === 'layer1' ) {
+					return null;
+				}
+				return originalGetLayerBounds( layer );
+			} );
+
+			controller.invalidateCache();
+			const snapPoints = controller.buildSnapPoints( mockLayers, [] );
+
+			// Should only have points from layer2 and layer3
+			expect( snapPoints.horizontal.length ).toBe( 6 ); // 2 layers with valid bounds * 3
+			expect( snapPoints.vertical.length ).toBe( 6 );
+
+			// Restore original
+			mockCanvasManager.getLayerBounds = originalGetLayerBounds;
 		} );
 
 		it( 'should cache results', () => {
@@ -668,6 +769,164 @@ describe( 'SmartGuidesController', () => {
 			// Center (298) should snap to 300, so y = 300 - 20 = 280
 			expect( result.snappedY ).toBe( true );
 			expect( result.y ).toBe( 280 );
+		} );
+
+		it( 'should handle line layer type in calculateSnappedPosition', () => {
+			const otherLayers = [
+				{ id: 'target', type: 'rectangle', x: 100, y: 100, width: 50, height: 50, visible: true }
+			];
+
+			// Test with a line layer - just verify it doesn't crash
+			const lineLayer = { id: 'line1', type: 'line', x1: 0, y1: 0, x2: 50, y2: 50 };
+			const result = controller.calculateSnappedPosition(
+				lineLayer, 95, 95, otherLayers
+			);
+
+			// Should return a valid result with x, y properties
+			expect( result ).toHaveProperty( 'x' );
+			expect( result ).toHaveProperty( 'y' );
+			expect( result ).toHaveProperty( 'snappedX' );
+			expect( result ).toHaveProperty( 'snappedY' );
+		} );
+
+		it( 'should handle arrow layer type in calculateSnappedPosition', () => {
+			const otherLayers = [
+				{ id: 'target', type: 'rectangle', x: 100, y: 100, width: 50, height: 50, visible: true }
+			];
+
+			// Test with an arrow layer - just verify it doesn't crash
+			const arrowLayer = { id: 'arrow1', type: 'arrow', x1: 0, y1: 0, x2: 60, y2: 60 };
+			const result = controller.calculateSnappedPosition(
+				arrowLayer, 98, 98, otherLayers
+			);
+
+			// Should return a valid result with x, y properties
+			expect( result ).toHaveProperty( 'x' );
+			expect( result ).toHaveProperty( 'y' );
+			expect( result ).toHaveProperty( 'snappedX' );
+			expect( result ).toHaveProperty( 'snappedY' );
+		} );
+
+		it( 'should use proposedBounds for arrow layer when bounds are available', () => {
+			// Mock getLayerBounds to return bounds for arrow layers
+			const originalGetLayerBounds = controller.manager.getLayerBounds;
+			controller.manager.getLayerBounds = jest.fn( ( layer ) => {
+				if ( layer.type === 'arrow' || layer.type === 'line' ) {
+					// Return bounds calculated from x1/y1/x2/y2
+					const minX = Math.min( layer.x1 || 0, layer.x2 || 0 );
+					const minY = Math.min( layer.y1 || 0, layer.y2 || 0 );
+					const maxX = Math.max( layer.x1 || 0, layer.x2 || 0 );
+					const maxY = Math.max( layer.y1 || 0, layer.y2 || 0 );
+					return {
+						x: minX,
+						y: minY,
+						width: maxX - minX,
+						height: maxY - minY
+					};
+				}
+				return originalGetLayerBounds( layer );
+			} );
+
+			const otherLayers = [
+				{ id: 'target', type: 'rectangle', x: 100, y: 100, width: 50, height: 50, visible: true }
+			];
+
+			// Test arrow layer snapping with bounds
+			const arrowLayer = { id: 'arrow1', type: 'arrow', x1: 0, y1: 0, x2: 60, y2: 40 };
+			const result = controller.calculateSnappedPosition(
+				arrowLayer, 98, 98, otherLayers
+			);
+
+			// Should return snapped position
+			expect( result ).toHaveProperty( 'x' );
+			expect( result ).toHaveProperty( 'y' );
+			// Arrow should snap to target rectangle edge
+			expect( result.snappedX ).toBe( true );
+
+			// Restore original
+			controller.manager.getLayerBounds = originalGetLayerBounds;
+		} );
+
+		it( 'should use proposedBounds for line layer when bounds are available', () => {
+			// Mock getLayerBounds to return bounds for line layers
+			const originalGetLayerBounds = controller.manager.getLayerBounds;
+			controller.manager.getLayerBounds = jest.fn( ( layer ) => {
+				if ( layer.type === 'line' ) {
+					return {
+						x: Math.min( layer.x1, layer.x2 ),
+						y: Math.min( layer.y1, layer.y2 ),
+						width: Math.abs( layer.x2 - layer.x1 ),
+						height: Math.abs( layer.y2 - layer.y1 )
+					};
+				}
+				return originalGetLayerBounds( layer );
+			} );
+
+			const otherLayers = [
+				{ id: 'target', type: 'rectangle', x: 100, y: 100, width: 50, height: 50, visible: true }
+			];
+
+			// Test line layer snapping with bounds
+			const lineLayer = { id: 'line1', type: 'line', x1: 0, y1: 0, x2: 50, y2: 50 };
+			const result = controller.calculateSnappedPosition(
+				lineLayer, 98, 98, otherLayers
+			);
+
+			// Should return valid result
+			expect( result ).toHaveProperty( 'x' );
+			expect( result ).toHaveProperty( 'y' );
+			expect( result.snappedX ).toBe( true );
+
+			// Restore original
+			controller.manager.getLayerBounds = originalGetLayerBounds;
+		} );
+
+		it( 'should return unsnapped position when layer has no bounds', () => {
+			// Create a layer type that might not have bounds
+			const unknownLayer = { id: 'unknown', type: 'unknown-type' };
+			const result = controller.calculateSnappedPosition(
+				unknownLayer, 50, 50, []
+			);
+
+			expect( result.x ).toBe( 50 );
+			expect( result.y ).toBe( 50 );
+			expect( result.snappedX ).toBe( false );
+			expect( result.snappedY ).toBe( false );
+		} );
+
+		it( 'should exclude multi-selected layers from snap points', () => {
+			// Setup multi-selection scenario
+			controller.manager.selectionManager = {
+				selectedLayerIds: [ 'layer1', 'layer2' ]
+			};
+
+			const layers = [
+				{ id: 'layer1', type: 'rectangle', x: 100, y: 100, width: 50, height: 50, visible: true },
+				{ id: 'layer2', type: 'rectangle', x: 200, y: 100, width: 50, height: 50, visible: true },
+				{ id: 'layer3', type: 'rectangle', x: 300, y: 100, width: 50, height: 50, visible: true }
+			];
+
+			// Drag layer1 - should not snap to layer2 (also selected) but can snap to layer3
+			const draggedLayer = layers[ 0 ];
+			const result = controller.calculateSnappedPosition(
+				draggedLayer, 298, 100, layers
+			);
+
+			// Should snap to layer3's left edge (300), not layer2
+			expect( result.snappedX ).toBe( true );
+			expect( result.x ).toBe( 300 );
+		} );
+	} );
+
+	describe( 'render', () => {
+		it( 'should return early when manager is null', () => {
+			controller.manager = null;
+			const mockCtx = { save: jest.fn(), restore: jest.fn() };
+
+			// Should not throw
+			expect( () => controller.render( mockCtx ) ).not.toThrow();
+			// save should not be called since we returned early
+			expect( mockCtx.save ).not.toHaveBeenCalled();
 		} );
 	} );
 } );

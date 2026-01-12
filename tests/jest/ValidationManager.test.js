@@ -766,4 +766,48 @@ describe( 'ValidationManager', () => {
 			expect( result.isValid ).toBe( true );
 		} );
 	} );
+
+	describe( 'edge case coverage', () => {
+		test( 'should handle top-level array in sanitizeLayerData', () => {
+			const input = [
+				{ text: '<script>test</script>' },
+				{ name: 'valid' }
+			];
+			const result = manager.sanitizeLayerData( input );
+			expect( Array.isArray( result ) ).toBe( true );
+			expect( result ).toHaveLength( 2 );
+			expect( result[ 0 ].text ).not.toContain( '<' );
+		} );
+
+		test( 'should sanitize svg property specially in sanitizeLayerData', () => {
+			const input = {
+				svg: '<svg><script>evil()</script><path d="M0 0 L10 10"/></svg>'
+			};
+			const result = manager.sanitizeLayerData( input );
+			// SVG sanitization removes <script but preserves valid SVG structure
+			// The sanitizer replaces /<\s*script/gi with '' leaving just >evil()
+			expect( result.svg ).not.toMatch( /<\s*script/i );
+			expect( result.svg ).toContain( '<svg>' );
+			expect( result.svg ).toContain( '<path' );
+		} );
+
+		test( 'should handle non-string input in sanitizeSvgString', () => {
+			const result = manager.sanitizeSvgString( 123 );
+			expect( result ).toBe( '' );
+		} );
+
+		test( 'should handle canvas context creation error in checkBrowserCompatibility', () => {
+			// Mock canvas to throw
+			const originalCreateElement = global.document.createElement;
+			global.document.createElement = jest.fn( () => {
+				throw new Error( 'Canvas not supported' );
+			} );
+
+			const result = manager.checkBrowserCompatibility();
+			expect( result ).toBe( false );
+
+			// Restore
+			global.document.createElement = originalCreateElement;
+		} );
+	} );
 } );

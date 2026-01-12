@@ -39,6 +39,14 @@ describe( 'ArrowStyleControl', () => {
 			defaultControl.destroy();
 		} );
 
+		it( 'should use fallback msg function when not provided', () => {
+			const defaultControl = new ArrowStyleControl();
+			// The fallback msgFn returns fallback or key
+			expect( defaultControl.msg( 'test-key', 'Test Fallback' ) ).toBe( 'Test Fallback' );
+			expect( defaultControl.msg( 'test-key' ) ).toBe( 'test-key' );
+			defaultControl.destroy();
+		} );
+
 		it( 'should store config references', () => {
 			expect( control.msgFn ).toBe( mockConfig.msg );
 			expect( control.addListenerFn ).toBe( mockConfig.addListener );
@@ -60,6 +68,19 @@ describe( 'ArrowStyleControl', () => {
 			const handler = jest.fn();
 			control.addListener( element, 'click', handler );
 			expect( mockConfig.addListener ).toHaveBeenCalledWith( element, 'click', handler, undefined );
+		} );
+
+		it( 'should use addEventListener directly when addListenerFn is null', () => {
+			// Test the fallback path when addListenerFn is explicitly null
+			const testControl = new ArrowStyleControl( { msg: jest.fn() } );
+			// Override addListenerFn to null to hit the fallback branch
+			testControl.addListenerFn = null;
+			const element = document.createElement( 'div' );
+			const handler = jest.fn();
+			testControl.addListener( element, 'click', handler );
+			element.click();
+			expect( handler ).toHaveBeenCalled();
+			testControl.destroy();
 		} );
 
 		it( 'should use addEventListener directly when addListenerFn delegates', () => {

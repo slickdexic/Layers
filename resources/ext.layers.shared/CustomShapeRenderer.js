@@ -210,7 +210,7 @@ class CustomShapeRenderer {
 		if ( this.svgImageCache.has( cacheKey ) ) {
 			// Draw the cached image - this is the fast path
 			// No LRU reordering - not worth the overhead for ~100 items
-			this.drawSVGImage( ctx, this.svgImageCache.get( cacheKey ), layer );
+			this.drawSVGImage( ctx, this.svgImageCache.get( cacheKey ), layer, _options );
 			return;
 		}
 
@@ -264,7 +264,7 @@ class CustomShapeRenderer {
 			this.svgImageCache.set( cacheKey, img );
 
 			// Draw the image
-			this.drawSVGImage( ctx, img, layer );
+			this.drawSVGImage( ctx, img, layer, _options );
 
 			// Clean up blob URL
 			URL.revokeObjectURL( url );
@@ -294,25 +294,30 @@ class CustomShapeRenderer {
 	}
 
 	/**
-	 * Draw an SVG image to canvas with layer transforms
+	 * Draw an SVG image to canvas with layer transforms and shadow support
 	 *
 	 * @private
 	 * @param {CanvasRenderingContext2D} ctx - Canvas context
 	 * @param {HTMLImageElement} img - Loaded image
 	 * @param {Object} layer - Layer data
+	 * @param {Object} [options] - Render options including scale
 	 */
-	drawSVGImage( ctx, img, layer ) {
+	drawSVGImage( ctx, img, layer, options = {} ) {
 		const layerWidth = layer.width || 100;
 		const layerHeight = layer.height || 100;
 		const layerX = layer.x || 0;
 		const layerY = layer.y || 0;
 
+		// Get shadow scale factor (used on article pages for proper scaling)
+		// Prefer shadowScale over scale for consistency with other renderers
+		const shadowScale = options.shadowScale || options.scale || { sx: 1, sy: 1, avg: 1 };
+		const scaleAvg = shadowScale.avg || 1;
+
 		ctx.save();
 
 		// Apply opacity
-		if ( layer.opacity !== undefined ) {
-			ctx.globalAlpha = layer.opacity;
-		}
+		const baseOpacity = layer.opacity !== undefined ? layer.opacity : 1;
+		ctx.globalAlpha = baseOpacity;
 
 		// Apply rotation if present
 		if ( layer.rotation ) {
@@ -323,9 +328,180 @@ class CustomShapeRenderer {
 			ctx.translate( -centerX, -centerY );
 		}
 
+		// Apply shadow if enabled
+		if ( this.hasShadowEnabled( layer ) ) {
+			// Get unscaled values, then apply scale for article page rendering
+			const spreadUnscaled = this.getShadowSpread( layer );
+			const shadowColor = layer.shadowColor || 'rgba(0, 0, 0, 0.5)';
+			// Use typeof check to allow 0 values (|| treats 0 as falsy)
+			const blurUnscaled = typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 10;
+			const offsetXUnscaled = typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 0;
+			const offsetYUnscaled = typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 0;
+
+			// Apply scale to shadow properties (important for article page viewing)
+			const spread = spreadUnscaled * scaleAvg;
+			const shadowBlur = blurUnscaled * scaleAvg;
+			const shadowOffsetX = offsetXUnscaled * ( shadowScale.sx || scaleAvg );
+			const shadowOffsetY = offsetYUnscaled * ( shadowScale.sy || scaleAvg );
+
+			if ( spread > 0 ) {
+				// For spread shadows, we need to draw an expanded shape behind the image
+				// Use a rect slightly larger than the image as the shadow source
+				this.drawSpreadShadowForImage(
+					ctx, img, layer,
+					layerX, layerY, layerWidth, layerHeight,
+					spread, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY,
+					baseOpacity
+				);
+			} else {
+				// Simple shadow - just apply CSS shadow properties
+				ctx.shadowColor = shadowColor;
+				ctx.shadowBlur = shadowBlur;
+				ctx.shadowOffsetX = shadowOffsetX;
+				ctx.shadowOffsetY = shadowOffsetY;
+			}
+		}
+
 		// Draw the image scaled to layer dimensions
 		ctx.drawImage( img, layerX, layerY, layerWidth, layerHeight );
 
+		// Clear shadow
+		ctx.shadowColor = 'transparent';
+		ctx.shadowBlur = 0;
+		ctx.shadowOffsetX = 0;
+		ctx.shadowOffsetY = 0;
+
+		ctx.restore();
+	}
+
+	/**
+	 * Check if shadow is enabled for a layer
+	 *
+	 * @private
+	 * @param {Object} layer - Layer data
+	 * @returns {boolean} True if shadow is enabled
+	 */
+	hasShadowEnabled( layer ) {
+		return layer.shadow === true ||
+			layer.shadow === 'true' ||
+			layer.shadow === 1 ||
+			layer.shadow === '1' ||
+			( typeof layer.shadow === 'object' && !!layer.shadow );
+	}
+
+	/**
+	 * Get shadow spread value from layer
+	 *
+	 * @private
+	 * @param {Object} layer - Layer data
+	 * @returns {number} Spread value in pixels
+	 */
+	getShadowSpread( layer ) {
+		if ( typeof layer.shadowSpread === 'number' && layer.shadowSpread > 0 ) {
+			return layer.shadowSpread;
+		}
+		if ( layer.shadow && typeof layer.shadow === 'object' &&
+			typeof layer.shadow.spread === 'number' && layer.shadow.spread > 0 ) {
+			return layer.shadow.spread;
+		}
+		return 0;
+	}
+
+	/**
+	 * Draw spread shadow for an image using offscreen canvas technique
+	 *
+	 * @private
+	 * @param {CanvasRenderingContext2D} ctx - Canvas context
+	 * @param {HTMLImageElement} img - Image to draw
+	 * @param {Object} layer - Layer data
+	 * @param {number} x - X position
+	 * @param {number} y - Y position
+	 * @param {number} width - Width
+	 * @param {number} height - Height
+	 * @param {number} spread - Spread amount
+	 * @param {string} shadowColor - Shadow color
+	 * @param {number} shadowBlur - Shadow blur
+	 * @param {number} offsetX - Shadow X offset
+	 * @param {number} offsetY - Shadow Y offset
+	 * @param {number} opacity - Opacity
+	 */
+	drawSpreadShadowForImage( ctx, img, layer, x, y, width, height, spread, shadowColor, shadowBlur, offsetX, offsetY, opacity ) {
+		// Use dilation technique for uniform spread on all edges (including angled ones).
+		// Instead of scaling (which only works for axis-aligned shapes), we draw the image
+		// multiple times at offset positions around a circle. This creates uniform perpendicular
+		// distance from all edges, matching CSS box-shadow spread behavior.
+
+		const FAR_OFFSET_X = 5000;
+		const FAR_OFFSET_Y = spread + shadowBlur + Math.abs( offsetY ) + 100;
+		const canvasWidth = ctx.canvas ? ctx.canvas.width : 1600;
+		const canvasHeight = ctx.canvas ? ctx.canvas.height : 1200;
+
+		// Create temporary canvas for the dilated shape
+		const tempCanvas = document.createElement( 'canvas' );
+		tempCanvas.width = canvasWidth + FAR_OFFSET_X + shadowBlur + Math.abs( offsetX ) + spread * 2;
+		tempCanvas.height = canvasHeight + FAR_OFFSET_Y + shadowBlur + Math.abs( offsetY ) + spread * 2;
+		const tempCtx = tempCanvas.getContext( '2d' );
+
+		if ( !tempCtx ) {
+			// Fallback to simple shadow
+			ctx.shadowColor = shadowColor;
+			ctx.shadowBlur = shadowBlur;
+			ctx.shadowOffsetX = offsetX;
+			ctx.shadowOffsetY = offsetY;
+			return;
+		}
+
+		// Copy transform (excluding rotation which is already applied)
+		const currentTransform = ctx.getTransform ? ctx.getTransform() : null;
+		if ( currentTransform ) {
+			tempCtx.setTransform( 1, 0, 0, 1, currentTransform.e, currentTransform.f );
+		}
+
+		// Shift by FAR_OFFSET in both X and Y to prevent clipping
+		tempCtx.translate( FAR_OFFSET_X, FAR_OFFSET_Y );
+
+		// Set up shadow with compensated offset for both axes
+		tempCtx.shadowColor = shadowColor;
+		tempCtx.shadowBlur = shadowBlur;
+		tempCtx.shadowOffsetX = offsetX - FAR_OFFSET_X;
+		tempCtx.shadowOffsetY = offsetY - FAR_OFFSET_Y;
+
+		// DILATION: Draw the image multiple times at offset positions around a circle
+		// to create uniform spread on all edges (works correctly for angled shapes like triangles).
+		// Number of samples increases with spread size for smooth edges.
+		const numSamples = Math.max( 16, Math.ceil( spread * 1.5 ) );
+
+		for ( let i = 0; i < numSamples; i++ ) {
+			const angle = ( i / numSamples ) * 2 * Math.PI;
+			const dx = Math.cos( angle ) * spread;
+			const dy = Math.sin( angle ) * spread;
+			tempCtx.drawImage( img, x + dx, y + dy, width, height );
+		}
+
+		// Also draw at center to fill any gaps
+		tempCtx.drawImage( img, x, y, width, height );
+
+		// Erase the dilated shape (leaving only its shadow)
+		tempCtx.globalCompositeOperation = 'destination-out';
+		tempCtx.shadowColor = 'transparent';
+		tempCtx.shadowBlur = 0;
+		tempCtx.shadowOffsetX = 0;
+		tempCtx.shadowOffsetY = 0;
+
+		// Erase using the same dilation pattern
+		for ( let i = 0; i < numSamples; i++ ) {
+			const angle = ( i / numSamples ) * 2 * Math.PI;
+			const dx = Math.cos( angle ) * spread;
+			const dy = Math.sin( angle ) * spread;
+			tempCtx.drawImage( img, x + dx, y + dy, width, height );
+		}
+		tempCtx.drawImage( img, x, y, width, height );
+
+		// Draw shadow to main canvas
+		ctx.save();
+		ctx.setTransform( 1, 0, 0, 1, 0, 0 );
+		ctx.globalAlpha = opacity;
+		ctx.drawImage( tempCanvas, 0, 0 );
 		ctx.restore();
 	}
 
@@ -403,27 +579,17 @@ class CustomShapeRenderer {
 	/**
 	 * Render with shadow effects
 	 *
+	 * Note: Shadows are now handled directly in drawSVGImage() with proper spread support.
+	 * This method is kept for backwards compatibility with any code that calls it directly.
+	 *
 	 * @param {CanvasRenderingContext2D} ctx - Canvas context
 	 * @param {Object} shapeData - Shape definition from library
 	 * @param {Object} layer - Layer data
 	 * @param {Object} [options] - Render options
 	 */
 	renderWithEffects( ctx, shapeData, layer, options = {} ) {
-		if ( !layer.shadow ) {
-			return this.render( ctx, shapeData, layer, options );
-		}
-
-		ctx.save();
-
-		// Apply shadow
-		ctx.shadowColor = layer.shadowColor || 'rgba(0, 0, 0, 0.5)';
-		ctx.shadowBlur = layer.shadowBlur || 10;
-		ctx.shadowOffsetX = layer.shadowOffsetX || 5;
-		ctx.shadowOffsetY = layer.shadowOffsetY || 5;
-
-		this.render( ctx, layer, shapeData, options );
-
-		ctx.restore();
+		// Shadows are now handled in drawSVGImage, so just delegate to render
+		return this.render( ctx, shapeData, layer, options );
 	}
 
 	/**

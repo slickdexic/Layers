@@ -358,6 +358,21 @@ describe( 'ToolbarStyleControls', () => {
 			styleControls.getColorPickerStrings();
 			expect( mockMsg ).toHaveBeenCalled();
 		} );
+
+		it( 'should use window.layersMessages when available', () => {
+			const mockStrings = { title: 'Test Title', standard: 'Standard' };
+			window.layersMessages = {
+				getColorPickerStrings: jest.fn( () => mockStrings )
+			};
+
+			const strings = styleControls.getColorPickerStrings();
+
+			expect( window.layersMessages.getColorPickerStrings ).toHaveBeenCalled();
+			expect( strings ).toBe( mockStrings );
+
+			// Cleanup
+			delete window.layersMessages;
+		} );
 	} );
 
 	describe( 'openColorPicker', () => {

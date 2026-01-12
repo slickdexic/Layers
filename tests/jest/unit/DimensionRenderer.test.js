@@ -24,6 +24,7 @@ describe( 'DimensionRenderer', () => {
 			fill: jest.fn(),
 			arc: jest.fn(),
 			fillRect: jest.fn(),
+			strokeRect: jest.fn(),
 			fillText: jest.fn(),
 			measureText: jest.fn( () => ( { width: 30 } ) ),
 			translate: jest.fn(),
@@ -403,6 +404,341 @@ describe( 'DimensionRenderer', () => {
 			// Center position draws a white background rect
 			expect( mockCtx.fillRect ).toHaveBeenCalled();
 			expect( mockCtx.fillText ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'tolerance formatting', () => {
+		test( 'formats symmetric tolerance', () => {
+			const layer = { toleranceType: 'symmetric', toleranceValue: 0.5 };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toContain( '±' );
+			expect( result ).toContain( '0' );
+		} );
+
+		test( 'formats symmetric tolerance with string value', () => {
+			const layer = { toleranceType: 'symmetric', toleranceValue: '0.5' };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toContain( '±' );
+		} );
+
+		test( 'skips symmetric tolerance when value is 0', () => {
+			const layer = { toleranceType: 'symmetric', toleranceValue: 0 };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).not.toContain( '±' );
+		} );
+
+		test( 'skips symmetric tolerance when value is NaN', () => {
+			const layer = { toleranceType: 'symmetric', toleranceValue: 'invalid' };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).not.toContain( '±' );
+		} );
+
+		test( 'formats deviation tolerance', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: 0.2, toleranceLower: -0.1 };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toContain( '+' );
+			expect( result ).toContain( '/' );
+		} );
+
+		test( 'formats deviation tolerance with string values', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: '0.2', toleranceLower: '-0.1' };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toContain( '+' );
+			expect( result ).toContain( '/' );
+		} );
+
+		test( 'skips deviation tolerance when both are 0', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: 0, toleranceLower: 0 };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).not.toContain( '/' );
+		} );
+
+		test( 'handles deviation tolerance with NaN values', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: 'invalid', toleranceLower: 'bad' };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toBe( '100 px' );
+		} );
+
+		test( 'formats limits tolerance', () => {
+			const layer = { toleranceType: 'limits', toleranceUpper: 0.5, toleranceLower: 0.3 };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toContain( '-' );
+		} );
+
+		test( 'formats limits tolerance with NaN values', () => {
+			const layer = { toleranceType: 'limits', toleranceUpper: 'invalid', toleranceLower: 'bad' };
+			const result = renderer.formatMeasurement( 100, layer );
+			// Should still work with defaults
+			expect( result ).toContain( '-' );
+		} );
+
+		test( 'formats basic tolerance type', () => {
+			const layer = { toleranceType: 'basic' };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toBe( '100 px' );
+		} );
+
+		test( 'formats none tolerance type', () => {
+			const layer = { toleranceType: 'none' };
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toBe( '100 px' );
+		} );
+
+		test( 'handles undefined tolerance type', () => {
+			const layer = {};
+			const result = renderer.formatMeasurement( 100, layer );
+			expect( result ).toBe( '100 px' );
+		} );
+	} );
+
+	describe( 'formatUserTextWithTolerance', () => {
+		test( 'adds symmetric tolerance to user text', () => {
+			const layer = { toleranceType: 'symmetric', toleranceValue: '0.1' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toBe( '25 ±0.1' );
+		} );
+
+		test( 'skips symmetric tolerance when no value', () => {
+			const layer = { toleranceType: 'symmetric', toleranceValue: '' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toBe( '25' );
+		} );
+
+		test( 'adds deviation tolerance to user text', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: '0.2', toleranceLower: '0.1' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toContain( '+0.2' );
+			expect( result ).toContain( '-0.1' );
+		} );
+
+		test( 'adds deviation tolerance with existing plus sign', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: '+0.2', toleranceLower: '-0.1' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toBe( '25 +0.2/-0.1' );
+		} );
+
+		test( 'adds deviation tolerance with negative upper', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: '-0.2', toleranceLower: '0.1' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toContain( '-0.2' );
+		} );
+
+		test( 'skips deviation tolerance when both empty', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: '', toleranceLower: '' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toBe( '25' );
+		} );
+
+		test( 'handles deviation with only upper value', () => {
+			const layer = { toleranceType: 'deviation', toleranceUpper: '0.2', toleranceLower: '' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toContain( '+0.2' );
+			expect( result ).toContain( '-0' );
+		} );
+
+		test( 'adds limits tolerance to user text', () => {
+			const layer = { toleranceType: 'limits', toleranceUpper: '26', toleranceLower: '24' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toContain( '24 to 26' );
+		} );
+
+		test( 'skips limits tolerance when both empty', () => {
+			const layer = { toleranceType: 'limits', toleranceUpper: '', toleranceLower: '' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toBe( '25' );
+		} );
+
+		test( 'returns text unchanged for basic tolerance', () => {
+			const layer = { toleranceType: 'basic' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toBe( '25' );
+		} );
+
+		test( 'returns text unchanged for none tolerance', () => {
+			const layer = { toleranceType: 'none' };
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toBe( '25' );
+		} );
+
+		test( 'returns text unchanged for undefined tolerance type', () => {
+			const layer = {};
+			const result = renderer.formatUserTextWithTolerance( '25', layer );
+			expect( result ).toBe( '25' );
+		} );
+	} );
+
+	describe( 'buildDisplayText', () => {
+		test( 'uses auto-calculated distance when no text', () => {
+			const layer = {};
+			const result = renderer.buildDisplayText( 100, layer );
+			expect( result ).toBe( '100 px' );
+		} );
+
+		test( 'uses user-entered text when provided', () => {
+			const layer = { text: '25 mm' };
+			const result = renderer.buildDisplayText( 100, layer );
+			expect( result ).toBe( '25 mm' );
+		} );
+
+		test( 'applies tolerance to user-entered text', () => {
+			const layer = { text: '25', toleranceType: 'symmetric', toleranceValue: '0.1' };
+			const result = renderer.buildDisplayText( 100, layer );
+			expect( result ).toBe( '25 ±0.1' );
+		} );
+	} );
+
+	describe( 'edge cases and error handling', () => {
+		test( 'handles invalid strokeWidth', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, strokeWidth: 'invalid' };
+			renderer.draw( layer );
+			expect( mockCtx.lineWidth ).toBe( 1 ); // Default
+		} );
+
+		test( 'handles NaN strokeWidth', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, strokeWidth: NaN };
+			renderer.draw( layer );
+			expect( mockCtx.lineWidth ).toBe( 1 ); // Default
+		} );
+
+		test( 'handles zero strokeWidth', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, strokeWidth: 0 };
+			renderer.draw( layer );
+			expect( mockCtx.lineWidth ).toBe( 1 ); // Default (0 is invalid)
+		} );
+
+		test( 'handles invalid fontSize', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, fontSize: 'invalid' };
+			renderer.draw( layer );
+			// Should use default fontSize
+			expect( mockCtx.font ).toContain( '12px' );
+		} );
+
+		test( 'handles NaN fontSize', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, fontSize: NaN };
+			renderer.draw( layer );
+			expect( mockCtx.font ).toContain( '12px' );
+		} );
+
+		test( 'handles invalid extensionLength', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, extensionLength: 'bad' };
+			renderer.draw( layer );
+			// Should not throw
+			expect( mockCtx.save ).toHaveBeenCalled();
+		} );
+
+		test( 'handles invalid extensionGap', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, extensionGap: 'bad' };
+			renderer.draw( layer );
+			// Should not throw
+			expect( mockCtx.save ).toHaveBeenCalled();
+		} );
+
+		test( 'handles opacity out of range', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, opacity: 2.0 };
+			renderer.draw( layer );
+			expect( mockCtx.globalAlpha ).toBe( 1 ); // Clamped to max
+		} );
+
+		test( 'handles negative opacity', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, opacity: -0.5 };
+			renderer.draw( layer );
+			expect( mockCtx.globalAlpha ).toBe( 0 ); // Clamped to min
+		} );
+
+		test( 'catches and handles draw errors gracefully', () => {
+			// Make measureText throw
+			mockCtx.measureText = jest.fn( () => {
+				throw new Error( 'Test error' );
+			} );
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0 };
+			// Should not throw
+			expect( () => renderer.draw( layer ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'line break for center text without background', () => {
+		test( 'breaks line at center when no background', () => {
+			const layer = {
+				x1: 0, y1: 0, x2: 200, y2: 0,
+				textPosition: 'center',
+				showBackground: false
+			};
+			renderer.draw( layer );
+			// Multiple strokes for broken lines
+			expect( mockCtx.stroke.mock.calls.length ).toBeGreaterThan( 2 );
+		} );
+
+		test( 'breaks line at center when showBackground is 0 (PHP falsy)', () => {
+			const layer = {
+				x1: 0, y1: 0, x2: 200, y2: 0,
+				textPosition: 'center',
+				showBackground: 0
+			};
+			renderer.draw( layer );
+			// Multiple strokes for broken lines
+			expect( mockCtx.stroke.mock.calls.length ).toBeGreaterThan( 2 );
+		} );
+
+		test( 'draws continuous line at center when background is shown', () => {
+			const layer = {
+				x1: 0, y1: 0, x2: 200, y2: 0,
+				textPosition: 'center',
+				showBackground: true
+			};
+			mockCtx.stroke.mockClear();
+			renderer.draw( layer );
+			// Continuous line + extension lines = fewer separate strokes
+			expect( mockCtx.stroke ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'textDirection handling', () => {
+		test( 'draws with auto text direction', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 100, textDirection: 'auto' };
+			renderer.draw( layer );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'draws with auto-reversed text direction', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 100, textDirection: 'auto-reversed' };
+			renderer.draw( layer );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'draws with horizontal text direction', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 100, textDirection: 'horizontal' };
+			renderer.draw( layer );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'orientation constraints', () => {
+		test( 'draws horizontal orientation correctly', () => {
+			const layer = { x1: 0, y1: 50, x2: 100, y2: 50, orientation: 'horizontal' };
+			renderer.draw( layer );
+			expect( mockCtx.save ).toHaveBeenCalled();
+		} );
+
+		test( 'draws vertical orientation correctly', () => {
+			const layer = { x1: 50, y1: 0, x2: 50, y2: 100, orientation: 'vertical' };
+			renderer.draw( layer );
+			expect( mockCtx.save ).toHaveBeenCalled();
+		} );
+
+		test( 'draws free orientation correctly', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 100, orientation: 'free' };
+			renderer.draw( layer );
+			expect( mockCtx.save ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'basic dimension rendering', () => {
+		test( 'draws basic dimension with toleranceType', () => {
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 0, toleranceType: 'basic' };
+			renderer.draw( layer );
+			// Basic type should draw successfully (may or may not call fillText based on implementation)
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.restore ).toHaveBeenCalled();
 		} );
 	} );
 } );

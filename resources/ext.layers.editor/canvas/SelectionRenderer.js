@@ -400,7 +400,7 @@
 
 		/**
 		 * Draw selection indicators for dimension layers - endpoint handles like arrow
-		 * Dimensions use line-style endpoints at x1,y1 and x2,y2.
+		 * Dimensions use line-style endpoints at the actual dimension line (offset from measurement points).
 		 *
 		 * @param {Object} layer - The dimension layer
 		 * @param {boolean} [isKeyObject=false] - Whether this is the key object
@@ -412,6 +412,30 @@
 			const y1 = layer.y1 || 0;
 			const x2 = layer.x2 || 0;
 			const y2 = layer.y2 || 0;
+
+			// Calculate the angle and perpendicular direction (same as DimensionRenderer)
+			const dx = x2 - x1;
+			const dy = y2 - y1;
+			const angle = Math.atan2( dy, dx );
+			const perpX = -Math.sin( angle );
+			const perpY = Math.cos( angle );
+
+			// Get extension line parameters (match DimensionRenderer defaults)
+			let extensionLength = layer.extensionLength;
+			if ( typeof extensionLength !== 'number' || isNaN( extensionLength ) ) {
+				extensionLength = 10; // DEFAULTS.extensionLength from DimensionRenderer
+			}
+			let extensionGap = layer.extensionGap;
+			if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
+				extensionGap = 3; // DEFAULTS.extensionGap from DimensionRenderer
+			}
+
+			// Calculate dimension line offset (same formula as DimensionRenderer)
+			const offsetDistance = extensionGap + extensionLength / 2;
+			const dimX1 = x1 + perpX * offsetDistance;
+			const dimY1 = y1 + perpY * offsetDistance;
+			const dimX2 = x2 + perpX * offsetDistance;
+			const dimY2 = y2 + perpY * offsetDistance;
 
 			// Key object styling
 			if ( isKeyObject ) {
@@ -425,10 +449,10 @@
 			}
 			this.ctx.setLineDash( [] );
 
-			// Draw and register endpoint handles at the actual coordinates
+			// Draw and register endpoint handles at the actual dimension line coordinates
 			const endpoints = [
-				{ x: x1, y: y1, type: 'w' },  // Start point
-				{ x: x2, y: y2, type: 'e' }   // End point
+				{ x: dimX1, y: dimY1, type: 'w' },  // Start point of dimension line
+				{ x: dimX2, y: dimY2, type: 'e' }   // End point of dimension line
 			];
 
 			for ( let i = 0; i < endpoints.length; i++ ) {

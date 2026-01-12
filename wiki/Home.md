@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-8%2C603%20Passing-brightgreen" alt="8,603 Tests">
-  <img src="https://img.shields.io/badge/Coverage-94.53%25-brightgreen" alt="94.53% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C319%20Passing-brightgreen" alt="9,319 Tests">
+  <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,7 +20,21 @@
 
 ---
 
-## 🆕 What's New in v1.5.4
+## 🆕 What's New in v1.5.5
+
+- **Custom Shape Shadow Fixes** — Multiple shadow rendering issues resolved
+  - Shadow blur at 0 no longer incorrectly defaults to 8
+  - Shadow spread uniformly extends around all edges (dilation technique)
+  - Shadow spread scales correctly on article pages
+
+- **Marker Shadow Scaling** — Marker shadows scale correctly on article pages
+
+- **Dimension Layer Improvements**
+  - Shadow controls removed from properties (not applicable)
+  - Selection handles now appear at arrow/tick endpoints
+  - Hit testing works on the visible dimension line
+
+### Previous v1.5.4 Highlights
 
 - **Marker Tool** — New annotation tool for numbered/lettered sequence markers
   - Styles: Circled (①②③), Letters (A B C), Parentheses ((1)(2)(3)), Plain (1. 2. 3.)
@@ -38,7 +52,7 @@
 ### Previous v1.5.3 Highlights
 
 - **Improved Test Coverage** — Added 114 new tests targeting low-coverage modules
-- **8,677 tests passing** — 94.55% statement coverage, 83.19% branch coverage (up from 8,563 tests, 94.05% stmt, 82.62% branch)
+- **9,303 tests passing** — 94.03% statement coverage, 85.01% branch coverage
 - **Enhanced Quality** — Tests added to LayersEditor, APIManager, GroupManager, ShapeLibraryManager, LayerRenderer, Toolbar, CanvasManager
 - **Documentation Updates** — All documentation synchronized with latest metrics
 
@@ -155,14 +169,14 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.3 |
-| **Version (REL1_43)** | 1.5.3-REL1_43 |
+| **Version (main)** | 1.5.5 |
+| **Version (REL1_43)** | 1.5.5-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 11, 2026 |
-| **Test Suites** | 142 |
-| **Total Tests** | 8,619 |
-| **Statement Coverage** | 94.53% |
-| **Branch Coverage** | 83.16% |
+| **Release Date** | January 12, 2026 |
+| **Test Suites** | 144 |
+| **Total Tests** | 9,319 |
+| **Statement Coverage** | 94% |
+| **Branch Coverage** | 85% |
 | **JavaScript Files** | 115 |
 | **ES6 Classes** | 94+ |
 

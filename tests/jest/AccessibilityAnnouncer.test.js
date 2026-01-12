@@ -352,4 +352,120 @@ describe( 'AccessibilityAnnouncer', () => {
 			freshAnnouncer.destroy();
 		} );
 	} );
+
+	describe( 'edge cases', () => {
+		it( 'should return early if init is called twice', () => {
+			const freshAnnouncer = new AccessibilityAnnouncer();
+			freshAnnouncer.init();
+			const politeRegion1 = freshAnnouncer.politeRegion;
+
+			// Call init again
+			freshAnnouncer.init();
+
+			// Should still have the same region (not recreated)
+			expect( freshAnnouncer.politeRegion ).toBe( politeRegion1 );
+			freshAnnouncer.destroy();
+		} );
+
+		it( 'should handle announce when region is null', () => {
+			const freshAnnouncer = new AccessibilityAnnouncer();
+			freshAnnouncer.init();
+
+			// Simulate region being null (edge case after destroy)
+			freshAnnouncer.politeRegion = null;
+			freshAnnouncer.assertiveRegion = null;
+
+			// Should not throw when region is null
+			expect( () => {
+				freshAnnouncer.announce( 'Test' );
+				jest.runAllTimers();
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle announce when not initialized and body not available', () => {
+			// Save original body
+			const originalBody = document.body;
+
+			// Create a fresh announcer
+			const freshAnnouncer = new AccessibilityAnnouncer();
+			freshAnnouncer.initialized = false;
+
+			// Mock document.body to null temporarily
+			Object.defineProperty( document, 'body', {
+				value: null,
+				writable: true,
+				configurable: true
+			} );
+
+			// Add event listener spy
+			const addEventListenerSpy = jest.spyOn( document, 'addEventListener' );
+
+			// Announce should queue and set up DOMContentLoaded listener
+			freshAnnouncer.announce( 'Test message' );
+
+			expect( freshAnnouncer.pendingAnnouncements.length ).toBe( 1 );
+			expect( addEventListenerSpy ).toHaveBeenCalledWith(
+				'DOMContentLoaded',
+				expect.any( Function ),
+				{ once: true }
+			);
+
+			// Restore body
+			Object.defineProperty( document, 'body', {
+				value: originalBody,
+				writable: true,
+				configurable: true
+			} );
+
+			addEventListenerSpy.mockRestore();
+		} );
+
+		it( 'should not set textContent when region parentNode is null during timeout', () => {
+			const freshAnnouncer = new AccessibilityAnnouncer();
+			freshAnnouncer.init();
+
+			// Get reference to polite region
+			const politeRegion = freshAnnouncer.politeRegion;
+
+			// Remove the region from DOM (but don't destroy the announcer)
+			politeRegion.parentNode.removeChild( politeRegion );
+
+			// Now announce - the setTimeout callback should check parentNode
+			freshAnnouncer.announce( 'Test message' );
+
+			// Run timers - callback should skip setting textContent since parentNode is null
+			jest.runAllTimers();
+
+			// Verify textContent was NOT set (the branch was hit)
+			expect( politeRegion.textContent ).toBe( '' );
+
+			// Cleanup
+			freshAnnouncer.destroy();
+		} );
+
+		it( 'should not announce for empty layer name in announceLayerSelection', () => {
+			const freshAnnouncer = new AccessibilityAnnouncer();
+			freshAnnouncer.init();
+
+			// Call with empty string
+			freshAnnouncer.announceLayerSelection( '' );
+			jest.runAllTimers();
+
+			// Should not have announced anything
+			expect( freshAnnouncer.politeRegion.textContent ).toBe( '' );
+
+			freshAnnouncer.destroy();
+		} );
+
+		it( 'should clear politeRegion in clear() when it exists', () => {
+			const freshAnnouncer = new AccessibilityAnnouncer();
+			// Don't init - politeRegion is null
+			freshAnnouncer.initialized = true;
+			freshAnnouncer.politeRegion = null;
+			freshAnnouncer.assertiveRegion = null;
+
+			// Should not throw when regions are null
+			expect( () => freshAnnouncer.clear() ).not.toThrow();
+		} );
+	} );
 } );
