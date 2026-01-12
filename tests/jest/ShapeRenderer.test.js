@@ -1123,4 +1123,37 @@ describe( 'ShapeRenderer', () => {
 			expect( ctx.fill ).not.toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'getShadowSpread', () => {
+		it( 'should return 0 when shadow is not enabled', () => {
+			const layer = { shadow: false };
+			const result = shapeRenderer.getShadowSpread( layer );
+			expect( result ).toBe( 0 );
+		} );
+
+		it( 'should return 0 when shadowSpread is undefined', () => {
+			const layer = { shadow: true };
+			const result = shapeRenderer.getShadowSpread( layer );
+			expect( result ).toBe( 0 );
+		} );
+
+		it( 'should return 0 when shadowSpread is 0', () => {
+			const layer = { shadow: true, shadowSpread: 0 };
+			const result = shapeRenderer.getShadowSpread( layer );
+			expect( result ).toBe( 0 );
+		} );
+
+		it( 'should return spread value when shadowSpread is positive', () => {
+			const layer = { shadow: true, shadowSpread: 10 };
+			const result = shapeRenderer.getShadowSpread( layer );
+			expect( result ).toBe( 10 );
+		} );
+
+		it( 'should apply scale to shadowSpread', () => {
+			const layer = { shadow: true, shadowSpread: 10 };
+			const scale = { avg: 2 };
+			const result = shapeRenderer.getShadowSpread( layer, scale );
+			expect( result ).toBe( 20 );
+		} );
+	} );
 } );

@@ -753,5 +753,41 @@ describe( 'ToolDropdown', () => {
 
 			expect( trigger.getAttribute( 'aria-keyshortcuts' ) ).toBe( 'R' );
 		} );
+
+		test( 'should handle Tab key to close dropdown', () => {
+			const dropdown = new ToolDropdown( {
+				groupId: 'shapes',
+				tools: mockTools,
+				onToolSelect: mockOnToolSelect
+			} );
+
+			dropdown.create();
+			dropdown.open();
+			expect( dropdown.isOpen ).toBe( true );
+
+			const event = new KeyboardEvent( 'keydown', { key: 'Tab' } );
+			document.dispatchEvent( event );
+
+			expect( dropdown.isOpen ).toBe( false );
+		} );
+
+		test( 'should ignore keydown events when closed', () => {
+			const dropdown = new ToolDropdown( {
+				groupId: 'shapes',
+				tools: mockTools,
+				onToolSelect: mockOnToolSelect
+			} );
+
+			dropdown.create();
+			// Don't open the dropdown
+			expect( dropdown.isOpen ).toBe( false );
+
+			// Dispatch a keydown - should be ignored since dropdown is closed
+			const event = new KeyboardEvent( 'keydown', { key: 'ArrowDown' } );
+			document.dispatchEvent( event );
+
+			// Dropdown should still be closed
+			expect( dropdown.isOpen ).toBe( false );
+		} );
 	} );
 } );

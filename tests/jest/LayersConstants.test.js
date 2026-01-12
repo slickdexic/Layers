@@ -499,4 +499,48 @@ describe( 'LayersConstants', () => {
 			expect( LayersConstants.TOOLS.POINTER ).toBe( originalValue );
 		} );
 	} );
+
+	describe( 'MATH getters with fallback', () => {
+		let savedMathUtils;
+
+		beforeEach( () => {
+			// Save original MathUtils
+			savedMathUtils = window.Layers.MathUtils;
+		} );
+
+		afterEach( () => {
+			// Restore original MathUtils
+			window.Layers.MathUtils = savedMathUtils;
+		} );
+
+		it( 'should return default SCALE_EPSILON when MathUtils not available', () => {
+			delete window.Layers.MathUtils;
+			expect( LayersConstants.MATH.SCALE_EPSILON ).toBe( 0.0001 );
+		} );
+
+		it( 'should return default INTEGER_EPSILON when MathUtils not available', () => {
+			delete window.Layers.MathUtils;
+			expect( LayersConstants.MATH.INTEGER_EPSILON ).toBe( 1e-9 );
+		} );
+
+		it( 'should use MathUtils SCALE_EPSILON when available', () => {
+			window.Layers.MathUtils = {
+				MATH: {
+					SCALE_EPSILON: 0.001,
+					INTEGER_EPSILON: 1e-10
+				}
+			};
+			expect( LayersConstants.MATH.SCALE_EPSILON ).toBe( 0.001 );
+		} );
+
+		it( 'should use MathUtils INTEGER_EPSILON when available', () => {
+			window.Layers.MathUtils = {
+				MATH: {
+					SCALE_EPSILON: 0.001,
+					INTEGER_EPSILON: 1e-10
+				}
+			};
+			expect( LayersConstants.MATH.INTEGER_EPSILON ).toBe( 1e-10 );
+		} );
+	} );
 } );

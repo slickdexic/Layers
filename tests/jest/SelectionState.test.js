@@ -304,6 +304,14 @@ describe( 'SelectionState', () => {
 			// Should not crash, selection should be cleared
 			expect( selectionState.getSelectionCount() ).toBe( 1 );
 		} );
+
+		it( 'should use fallback values when state properties are missing', () => {
+			// Restore with empty state object - should use fallbacks
+			selectionState.restoreState( {}, false );
+			expect( selectionState.getSelectedIds() ).toEqual( [] );
+			expect( selectionState.getLastSelectedId() ).toBeNull();
+			expect( selectionState.isMultiSelectMode() ).toBe( false );
+		} );
 	} );
 
 	describe( 'destroy', () => {
@@ -314,6 +322,34 @@ describe( 'SelectionState', () => {
 			expect( selectionState.selectedLayerIds ).toEqual( [] );
 			expect( selectionState.lastSelectedId ).toBeNull();
 			expect( selectionState.multiSelectMode ).toBe( false );
+		} );
+	} );
+
+	describe( 'edge cases', () => {
+		it( 'should return empty array when getLayersArray is not a function', () => {
+			// Create a SelectionState without getLayersArray option
+			const noFuncState = new SelectionState( {} );
+			const result = noFuncState.getLayersArray();
+			expect( result ).toEqual( [] );
+		} );
+
+		it( 'should return empty array when getLayersArray function returns null', () => {
+			// Create a SelectionState with getLayersArray that returns null
+			const nullReturningState = new SelectionState( {
+				getLayersArray: () => null
+			} );
+			const result = nullReturningState.getLayersArray();
+			expect( result ).toEqual( [] );
+			nullReturningState.destroy();
+		} );
+
+		it( 'should set lastSelectedId to null when setSelectedIds is called with empty array', () => {
+			selectionState.selectLayer( 'layer1' );
+			expect( selectionState.getLastSelectedId() ).toBe( 'layer1' );
+
+			// Now set empty selection
+			selectionState.setSelectedIds( [] );
+			expect( selectionState.getLastSelectedId() ).toBeNull();
 		} );
 	} );
 } );

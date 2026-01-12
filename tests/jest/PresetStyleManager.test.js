@@ -502,5 +502,360 @@ describe( 'PresetStyleManager', () => {
 			expect( mockPresetDropdown.setLayerType ).toHaveBeenCalledWith( null );
 			// setTool should not be called (currentTool is falsy)
 		} );
+
+		it( 'should return early when no presetDropdown (line 193)', () => {
+			// Don't create dropdown - test early return path
+			manager.selectedLayers = [];
+
+			// Should not throw when no dropdown exists
+			expect( () => manager.updateForSelection( [] ) ).not.toThrow();
+			expect( () => manager.updateForSelection( [ { id: '1', type: 'text' } ] ) ).not.toThrow();
+		} );
+
+		it( 'should handle marker layer type', () => {
+			manager.createPresetDropdown();
+			manager.updateForSelection( [ { id: '1', type: 'marker' } ] );
+
+			expect( mockPresetDropdown.setLayerType ).toHaveBeenCalledWith( 'marker' );
+		} );
+
+		it( 'should handle dimension layer type', () => {
+			manager.createPresetDropdown();
+			manager.updateForSelection( [ { id: '1', type: 'dimension' } ] );
+
+			expect( mockPresetDropdown.setLayerType ).toHaveBeenCalledWith( 'dimension' );
+		} );
+
+		it( 'should handle callout layer type', () => {
+			manager.createPresetDropdown();
+			manager.updateForSelection( [ { id: '1', type: 'callout' } ] );
+
+			expect( mockPresetDropdown.setLayerType ).toHaveBeenCalledWith( 'callout' );
+		} );
+
+		it( 'should use layer type as-is when not in mapping', () => {
+			manager.createPresetDropdown();
+			manager.updateForSelection( [ { id: '1', type: 'custom-shape' } ] );
+
+			expect( mockPresetDropdown.setLayerType ).toHaveBeenCalledWith( 'custom-shape' );
+		} );
+	} );
+
+	describe( 'applyPresetToSelection with dimension/marker defaults', () => {
+		it( 'should update dimension defaults when canvasManager available', () => {
+			const mockCanvasManager = {
+				updateDimensionDefaults: jest.fn()
+			};
+
+			// Create toolbar with editor that has canvasManager
+			const toolbarWithCanvas = {
+				currentTool: 'dimension',
+				editor: {
+					applyToSelection: jest.fn(),
+					canvasManager: mockCanvasManager
+				}
+			};
+
+			const managerWithCanvas = new PresetStyleManager( {
+				toolbar: toolbarWithCanvas,
+				msg: ( key, fallback ) => fallback || key,
+				getStyleOptions: mockGetStyleOptions,
+				applyStyle: mockApplyStyle
+			} );
+
+			// Set up dimension layer selection
+			managerWithCanvas.selectedLayers = [ { id: '1', type: 'dimension' } ];
+
+			// Apply preset style
+			const style = { stroke: '#ff0000', fontSize: 14 };
+			managerWithCanvas.applyPresetToSelection( style );
+
+			expect( mockCanvasManager.updateDimensionDefaults ).toHaveBeenCalledWith( style );
+
+			managerWithCanvas.destroy();
+		} );
+
+		it( 'should update marker defaults when canvasManager available', () => {
+			const mockCanvasManager = {
+				updateMarkerDefaults: jest.fn()
+			};
+
+			// Create toolbar with editor that has canvasManager
+			const toolbarWithCanvas = {
+				currentTool: 'marker',
+				editor: {
+					applyToSelection: jest.fn(),
+					canvasManager: mockCanvasManager
+				}
+			};
+
+			const managerWithCanvas = new PresetStyleManager( {
+				toolbar: toolbarWithCanvas,
+				msg: ( key, fallback ) => fallback || key,
+				getStyleOptions: mockGetStyleOptions,
+				applyStyle: mockApplyStyle
+			} );
+
+			// Set up marker layer selection
+			managerWithCanvas.selectedLayers = [ { id: '1', type: 'marker' } ];
+
+			// Apply preset style
+			const style = { fill: '#00ff00', fontSize: 16 };
+			managerWithCanvas.applyPresetToSelection( style );
+
+			expect( mockCanvasManager.updateMarkerDefaults ).toHaveBeenCalledWith( style );
+
+			managerWithCanvas.destroy();
+		} );
+
+		it( 'should update tool defaults when no selection but tool is dimension', () => {
+			const mockCanvasManager = {
+				updateDimensionDefaults: jest.fn()
+			};
+
+			// Create toolbar with editor that has canvasManager and dimension tool active
+			const toolbarWithCanvas = {
+				currentTool: 'dimension',
+				editor: {
+					applyToSelection: jest.fn(),
+					canvasManager: mockCanvasManager
+				}
+			};
+
+			const managerWithCanvas = new PresetStyleManager( {
+				toolbar: toolbarWithCanvas,
+				msg: ( key, fallback ) => fallback || key,
+				getStyleOptions: mockGetStyleOptions,
+				applyStyle: mockApplyStyle
+			} );
+
+			// No selection
+			managerWithCanvas.selectedLayers = [];
+
+			// Apply preset style (should update defaults for tool)
+			const style = { stroke: '#0000ff', fontSize: 12 };
+			managerWithCanvas.applyPresetToSelection( style );
+
+			expect( mockCanvasManager.updateDimensionDefaults ).toHaveBeenCalledWith( style );
+
+			managerWithCanvas.destroy();
+		} );
+
+		it( 'should update tool defaults when no selection but tool is marker', () => {
+			const mockCanvasManager = {
+				updateMarkerDefaults: jest.fn()
+			};
+
+			// Create toolbar with editor that has canvasManager and marker tool active
+			const toolbarWithCanvas = {
+				currentTool: 'marker',
+				editor: {
+					applyToSelection: jest.fn(),
+					canvasManager: mockCanvasManager
+				}
+			};
+
+			const managerWithCanvas = new PresetStyleManager( {
+				toolbar: toolbarWithCanvas,
+				msg: ( key, fallback ) => fallback || key,
+				getStyleOptions: mockGetStyleOptions,
+				applyStyle: mockApplyStyle
+			} );
+
+			// No selection
+			managerWithCanvas.selectedLayers = [];
+
+			// Apply preset style (should update defaults for tool)
+			const style = { fill: '#ff00ff', markerNumber: 5 };
+			managerWithCanvas.applyPresetToSelection( style );
+
+			expect( mockCanvasManager.updateMarkerDefaults ).toHaveBeenCalledWith( style );
+
+			managerWithCanvas.destroy();
+		} );
+
+		it( 'should not update defaults when layer type is not marker or dimension', () => {
+			const mockCanvasManager = {
+				updateDimensionDefaults: jest.fn(),
+				updateMarkerDefaults: jest.fn()
+			};
+
+			const toolbarWithCanvas = {
+				currentTool: 'rectangle',
+				editor: {
+					applyToSelection: jest.fn(),
+					canvasManager: mockCanvasManager
+				}
+			};
+
+			const managerWithCanvas = new PresetStyleManager( {
+				toolbar: toolbarWithCanvas,
+				msg: ( key, fallback ) => fallback || key,
+				getStyleOptions: mockGetStyleOptions,
+				applyStyle: mockApplyStyle
+			} );
+
+			// Rectangle layer selected
+			managerWithCanvas.selectedLayers = [ { id: '1', type: 'rectangle' } ];
+
+			const style = { fill: '#000000' };
+			managerWithCanvas.applyPresetToSelection( style );
+
+			expect( mockCanvasManager.updateDimensionDefaults ).not.toHaveBeenCalled();
+			expect( mockCanvasManager.updateMarkerDefaults ).not.toHaveBeenCalled();
+
+			managerWithCanvas.destroy();
+		} );
+
+		it( 'should handle canvasManager without updateDimensionDefaults method', () => {
+			const mockCanvasManager = {
+				// No updateDimensionDefaults method
+			};
+
+			const toolbarWithCanvas = {
+				currentTool: 'dimension',
+				editor: {
+					applyToSelection: jest.fn(),
+					canvasManager: mockCanvasManager
+				}
+			};
+
+			const managerWithCanvas = new PresetStyleManager( {
+				toolbar: toolbarWithCanvas,
+				msg: ( key, fallback ) => fallback || key,
+				getStyleOptions: mockGetStyleOptions,
+				applyStyle: mockApplyStyle
+			} );
+
+			managerWithCanvas.selectedLayers = [ { id: '1', type: 'dimension' } ];
+
+			// Should not throw even if method is missing
+			expect( () => managerWithCanvas.applyPresetToSelection( { stroke: '#fff' } ) ).not.toThrow();
+
+			managerWithCanvas.destroy();
+		} );
+
+		it( 'should handle canvasManager without updateMarkerDefaults method', () => {
+			const mockCanvasManager = {
+				// No updateMarkerDefaults method
+			};
+
+			const toolbarWithCanvas = {
+				currentTool: 'marker',
+				editor: {
+					applyToSelection: jest.fn(),
+					canvasManager: mockCanvasManager
+				}
+			};
+
+			const managerWithCanvas = new PresetStyleManager( {
+				toolbar: toolbarWithCanvas,
+				msg: ( key, fallback ) => fallback || key,
+				getStyleOptions: mockGetStyleOptions,
+				applyStyle: mockApplyStyle
+			} );
+
+			managerWithCanvas.selectedLayers = [ { id: '1', type: 'marker' } ];
+
+			// Should not throw even if method is missing
+			expect( () => managerWithCanvas.applyPresetToSelection( { fill: '#fff' } ) ).not.toThrow();
+
+			managerWithCanvas.destroy();
+		} );
+	} );
+
+	describe( 'getStyleFromSelection with fresh layer data', () => {
+		it( 'should get fresh layer data from editor when available', () => {
+			const freshLayer = {
+				id: 'layer-1',
+				type: 'rectangle',
+				stroke: '#updated',
+				fill: '#fresh'
+			};
+
+			const editorWithGetLayer = {
+				applyToSelection: jest.fn(),
+				getLayerById: jest.fn( () => freshLayer )
+			};
+
+			const managerWithEditor = new PresetStyleManager( {
+				toolbar: {
+					currentTool: 'rectangle',
+					editor: editorWithGetLayer
+				},
+				msg: ( key, fallback ) => fallback || key
+			} );
+
+			managerWithEditor.selectedLayers = [ {
+				id: 'layer-1',
+				type: 'rectangle',
+				stroke: '#stale',
+				fill: '#old'
+			} ];
+
+			const style = managerWithEditor.getStyleFromSelection();
+
+			expect( editorWithGetLayer.getLayerById ).toHaveBeenCalledWith( 'layer-1' );
+			expect( style.stroke ).toBe( '#updated' );
+			expect( style.fill ).toBe( '#fresh' );
+
+			managerWithEditor.destroy();
+		} );
+
+		it( 'should fall back to cached layer when getLayerById returns null', () => {
+			const editorWithGetLayer = {
+				applyToSelection: jest.fn(),
+				getLayerById: jest.fn( () => null )
+			};
+
+			const managerWithEditor = new PresetStyleManager( {
+				toolbar: {
+					currentTool: 'rectangle',
+					editor: editorWithGetLayer
+				},
+				msg: ( key, fallback ) => fallback || key
+			} );
+
+			managerWithEditor.selectedLayers = [ {
+				id: 'layer-1',
+				type: 'rectangle',
+				stroke: '#cached',
+				fill: '#fallback'
+			} ];
+
+			const style = managerWithEditor.getStyleFromSelection();
+
+			expect( style.stroke ).toBe( '#cached' );
+			expect( style.fill ).toBe( '#fallback' );
+
+			managerWithEditor.destroy();
+		} );
+
+		it( 'should use cached layer when editor lacks getLayerById', () => {
+			const editorWithoutGetLayer = {
+				applyToSelection: jest.fn()
+				// No getLayerById method
+			};
+
+			const managerWithEditor = new PresetStyleManager( {
+				toolbar: {
+					currentTool: 'rectangle',
+					editor: editorWithoutGetLayer
+				},
+				msg: ( key, fallback ) => fallback || key
+			} );
+
+			managerWithEditor.selectedLayers = [ {
+				id: 'layer-1',
+				type: 'rectangle',
+				stroke: '#cached-only'
+			} ];
+
+			const style = managerWithEditor.getStyleFromSelection();
+
+			expect( style.stroke ).toBe( '#cached-only' );
+
+			managerWithEditor.destroy();
+		} );
 	} );
 } );

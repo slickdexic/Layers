@@ -290,6 +290,54 @@ describe( 'DialogManager', () => {
 			// Should not throw
 			expect( () => cancelBtn.click() ).not.toThrow();
 		} );
+
+		it( 'should trap Tab focus at last element', () => {
+			dialogManager.showPromptDialog( {
+				onConfirm: jest.fn()
+			} );
+
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+
+			// Focus confirm button (last focusable)
+			confirmBtn.focus();
+
+			// Tab should wrap to input (first focusable)
+			const tabEvent = new KeyboardEvent( 'keydown', { key: 'Tab', bubbles: true } );
+			Object.defineProperty( tabEvent, 'preventDefault', { value: jest.fn() } );
+			document.dispatchEvent( tabEvent );
+
+			expect( tabEvent.preventDefault ).toHaveBeenCalled();
+
+			// Clean up
+			cancelBtn.click();
+		} );
+
+		it( 'should trap Shift+Tab focus at first element', () => {
+			dialogManager.showPromptDialog( {
+				onConfirm: jest.fn()
+			} );
+
+			const input = document.querySelector( '.layers-modal-input' );
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+
+			// Focus input (first focusable)
+			input.focus();
+
+			// Shift+Tab should wrap to confirm button (last focusable)
+			const tabEvent = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				shiftKey: true,
+				bubbles: true
+			} );
+			Object.defineProperty( tabEvent, 'preventDefault', { value: jest.fn() } );
+			document.dispatchEvent( tabEvent );
+
+			expect( tabEvent.preventDefault ).toHaveBeenCalled();
+
+			// Clean up
+			cancelBtn.click();
+		} );
 	} );
 
 	describe( 'showKeyboardShortcutsDialog', () => {
@@ -843,6 +891,31 @@ describe( 'DialogManager', () => {
 
 			// Tab should wrap to input (first focusable)
 			const tabEvent = new KeyboardEvent( 'keydown', { key: 'Tab', bubbles: true } );
+			Object.defineProperty( tabEvent, 'preventDefault', { value: jest.fn() } );
+			document.dispatchEvent( tabEvent );
+
+			expect( tabEvent.preventDefault ).toHaveBeenCalled();
+
+			// Clean up
+			cancelBtn.click();
+		} );
+
+		it( 'should trap Shift+Tab focus at first element', () => {
+			dialogManager.showPromptDialogAsync( {} );
+
+			const input = document.querySelector( '.layers-modal-input' );
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			const confirmBtn = document.querySelector( '.layers-btn-primary' );
+
+			// Focus input (first focusable)
+			input.focus();
+
+			// Shift+Tab should wrap to confirm button (last focusable)
+			const tabEvent = new KeyboardEvent( 'keydown', {
+				key: 'Tab',
+				shiftKey: true,
+				bubbles: true
+			} );
 			Object.defineProperty( tabEvent, 'preventDefault', { value: jest.fn() } );
 			document.dispatchEvent( tabEvent );
 

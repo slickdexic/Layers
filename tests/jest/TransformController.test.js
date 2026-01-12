@@ -937,6 +937,102 @@ describe( 'TransformController', () => {
 			// Events are now emitted synchronously
 			expect( dispatchSpy ).toHaveBeenCalled();
 		} );
+
+		it( 'should skip src and path properties in lightweight copy', () => {
+			const dispatchSpy = jest.spyOn( mockEditor.container, 'dispatchEvent' );
+			const layerWithLargeData = {
+				id: 'image1',
+				type: 'image',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==',
+				path: 'M 0 0 L 100 100 L 200 0 Z'
+			};
+
+			controller.emitTransforming( layerWithLargeData );
+
+			expect( dispatchSpy ).toHaveBeenCalled();
+			const event = dispatchSpy.mock.calls[ 0 ][ 0 ];
+			expect( event.detail.layer.id ).toBe( 'image1' );
+			expect( event.detail.layer.x ).toBe( 100 );
+			expect( event.detail.layer.width ).toBe( 200 );
+			// src and path should NOT be in the lightweight copy
+			expect( event.detail.layer.src ).toBeUndefined();
+			expect( event.detail.layer.path ).toBeUndefined();
+		} );
+
+		it( 'should clone array properties in lightweight copy', () => {
+			const dispatchSpy = jest.spyOn( mockEditor.container, 'dispatchEvent' );
+			const originalPoints = [ { x: 0, y: 0 }, { x: 100, y: 50 }, { x: 200, y: 0 } ];
+			const layerWithArray = {
+				id: 'polygon1',
+				type: 'polygon',
+				x: 50,
+				y: 50,
+				points: originalPoints,
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			controller.emitTransforming( layerWithArray );
+
+			expect( dispatchSpy ).toHaveBeenCalled();
+			const event = dispatchSpy.mock.calls[ 0 ][ 0 ];
+			expect( event.detail.layer.points ).toEqual( originalPoints );
+			expect( event.detail.layer.viewBox ).toEqual( [ 0, 0, 100, 100 ] );
+			// Should be cloned, not the same reference
+			expect( event.detail.layer.points ).not.toBe( originalPoints );
+			expect( event.detail.layer.viewBox ).not.toBe( layerWithArray.viewBox );
+		} );
+
+		it( 'should shallow clone nested object properties in lightweight copy', () => {
+			const dispatchSpy = jest.spyOn( mockEditor.container, 'dispatchEvent' );
+			const originalMeta = { author: 'test', created: Date.now() };
+			const layerWithNested = {
+				id: 'layer1',
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				customData: originalMeta,
+				strokeStyle: { color: '#ff0000', width: 2 }
+			};
+
+			controller.emitTransforming( layerWithNested );
+
+			expect( dispatchSpy ).toHaveBeenCalled();
+			const event = dispatchSpy.mock.calls[ 0 ][ 0 ];
+			expect( event.detail.layer.customData ).toEqual( originalMeta );
+			expect( event.detail.layer.strokeStyle ).toEqual( { color: '#ff0000', width: 2 } );
+			// Should be cloned, not the same reference
+			expect( event.detail.layer.customData ).not.toBe( originalMeta );
+			expect( event.detail.layer.strokeStyle ).not.toBe( layerWithNested.strokeStyle );
+		} );
+
+		it( 'should call layersErrorHandler when event dispatch fails', () => {
+			const mockErrorHandler = {
+				handleError: jest.fn()
+			};
+			window.layersErrorHandler = mockErrorHandler;
+
+			// Make dispatchEvent throw an error
+			mockEditor.container.dispatchEvent = jest.fn().mockImplementation( () => {
+				throw new Error( 'Test dispatch error' );
+			} );
+
+			controller.emitTransforming( testLayer );
+
+			expect( mockErrorHandler.handleError ).toHaveBeenCalledWith(
+				expect.any( Error ),
+				'TransformController.emitTransformEvent',
+				'canvas'
+			);
+
+			// Clean up
+			delete window.layersErrorHandler;
+		} );
 	} );
 
 	// ==================== Integration Tests ====================
@@ -1046,6 +1142,232 @@ describe( 'TransformController', () => {
 			// Restore
 			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
 		} );
+
+		it( 'should return null from calculateCircleResize when ResizeCalculator unavailable', () => {
+			const savedCalc = global.window.Layers.Canvas.ResizeCalculator;
+			delete global.window.Layers.Canvas.ResizeCalculator;
+
+			const result = controller.calculateCircleResize(
+				{ type: 'circle', x: 50, y: 50, radius: 30 }, 'e', 10, 0
+			);
+
+			expect( result ).toBeNull();
+			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
+		} );
+
+		it( 'should return empty object from calculateEllipseResize when ResizeCalculator unavailable', () => {
+			const savedCalc = global.window.Layers.Canvas.ResizeCalculator;
+			delete global.window.Layers.Canvas.ResizeCalculator;
+
+			const result = controller.calculateEllipseResize(
+				{ type: 'ellipse', x: 50, y: 50, radiusX: 40, radiusY: 30 }, 'e', 10, 0
+			);
+
+			expect( result ).toEqual( {} );
+			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
+		} );
+
+		it( 'should return empty object from calculatePolygonResize when ResizeCalculator unavailable', () => {
+			const savedCalc = global.window.Layers.Canvas.ResizeCalculator;
+			delete global.window.Layers.Canvas.ResizeCalculator;
+
+			const result = controller.calculatePolygonResize(
+				{ type: 'polygon', x: 50, y: 50, radius: 30 }, 'e', 10, 0
+			);
+
+			expect( result ).toEqual( {} );
+			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
+		} );
+
+		it( 'should return empty object from calculateLineResize when ResizeCalculator unavailable', () => {
+			const savedCalc = global.window.Layers.Canvas.ResizeCalculator;
+			delete global.window.Layers.Canvas.ResizeCalculator;
+
+			const result = controller.calculateLineResize(
+				{ type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 }, 'e', 10, 10
+			);
+
+			expect( result ).toEqual( {} );
+			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
+		} );
+
+		it( 'should return null from calculatePathResize when ResizeCalculator unavailable', () => {
+			const savedCalc = global.window.Layers.Canvas.ResizeCalculator;
+			delete global.window.Layers.Canvas.ResizeCalculator;
+
+			const result = controller.calculatePathResize(
+				{ type: 'path', points: [ { x: 0, y: 0 }, { x: 50, y: 50 } ] }, 'se', 10, 10
+			);
+
+			expect( result ).toBeNull();
+			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
+		} );
+
+		it( 'should return empty object from calculateTextResize when ResizeCalculator unavailable', () => {
+			const savedCalc = global.window.Layers.Canvas.ResizeCalculator;
+			delete global.window.Layers.Canvas.ResizeCalculator;
+
+			const result = controller.calculateTextResize(
+				{ type: 'text', x: 50, y: 50, fontSize: 16 }, 'se', 10, 10
+			);
+
+			expect( result ).toEqual( {} );
+			global.window.Layers.Canvas.ResizeCalculator = savedCalc;
+		} );
+	} );
+
+	describe( 'updateLayerPosition edge cases', () => {
+		it( 'should update marker layer position', () => {
+			const layer = {
+				type: 'marker',
+				x: 100,
+				y: 100,
+				arrowX: 150,
+				arrowY: 80
+			};
+			const original = { x: 100, y: 100, arrowX: 150, arrowY: 80 };
+
+			controller.updateLayerPosition( layer, original, 20, 30 );
+
+			// Marker center should move
+			expect( layer.x ).toBe( 120 );
+			expect( layer.y ).toBe( 130 );
+			// Arrow position should NOT move (independent positioning)
+			expect( layer.arrowX ).toBe( 150 );
+			expect( layer.arrowY ).toBe( 80 );
+		} );
+
+		it( 'should update curved arrow with controlX/controlY', () => {
+			const layer = {
+				type: 'arrow',
+				x1: 0,
+				y1: 0,
+				x2: 100,
+				y2: 100,
+				controlX: 50,
+				controlY: 0
+			};
+			const original = {
+				x1: 0,
+				y1: 0,
+				x2: 100,
+				y2: 100,
+				controlX: 50,
+				controlY: 0
+			};
+
+			controller.updateLayerPosition( layer, original, 10, 20 );
+
+			expect( layer.x1 ).toBe( 10 );
+			expect( layer.y1 ).toBe( 20 );
+			expect( layer.x2 ).toBe( 110 );
+			expect( layer.y2 ).toBe( 120 );
+			// Control point should also move
+			expect( layer.controlX ).toBe( 60 );
+			expect( layer.controlY ).toBe( 20 );
+		} );
+
+		it( 'should update dimension layer position', () => {
+			const layer = {
+				type: 'dimension',
+				x1: 0,
+				y1: 0,
+				x2: 200,
+				y2: 0
+			};
+			const original = { x1: 0, y1: 0, x2: 200, y2: 0 };
+
+			controller.updateLayerPosition( layer, original, 15, 25 );
+
+			expect( layer.x1 ).toBe( 15 );
+			expect( layer.y1 ).toBe( 25 );
+			expect( layer.x2 ).toBe( 215 );
+			expect( layer.y2 ).toBe( 25 );
+		} );
+
+		it( 'should update customShape layer position', () => {
+			const layer = {
+				type: 'customShape',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 100
+			};
+			const original = { x: 50, y: 50 };
+
+			controller.updateLayerPosition( layer, original, 25, 35 );
+
+			expect( layer.x ).toBe( 75 );
+			expect( layer.y ).toBe( 85 );
+		} );
+
+		it( 'should update image layer position', () => {
+			const layer = {
+				type: 'image',
+				x: 100,
+				y: 200,
+				width: 300,
+				height: 400
+			};
+			const original = { x: 100, y: 200 };
+
+			controller.updateLayerPosition( layer, original, -10, -20 );
+
+			expect( layer.x ).toBe( 90 );
+			expect( layer.y ).toBe( 180 );
+		} );
+	} );
+
+	describe( 'saveState fallback paths', () => {
+		it( 'should use manager.saveState when editor.saveState is unavailable on finishResize', () => {
+			// Remove editor.saveState
+			delete mockEditor.saveState;
+			mockManager.saveState = jest.fn();
+
+			controller.startResize( { type: 'se' }, { x: 300, y: 250 } );
+			controller.finishResize();
+
+			expect( mockManager.saveState ).toHaveBeenCalledWith( 'Resize layer' );
+		} );
+
+		it( 'should use manager.saveState when editor.saveState is unavailable on finishRotation', () => {
+			delete mockEditor.saveState;
+			mockManager.saveState = jest.fn();
+
+			controller.startRotation( { x: 300, y: 100 } );
+			controller.finishRotation();
+
+			expect( mockManager.saveState ).toHaveBeenCalledWith( 'Rotate layer' );
+		} );
+
+		it( 'should use manager.saveState when editor.saveState is unavailable on finishDrag', () => {
+			delete mockEditor.saveState;
+			mockManager.saveState = jest.fn();
+
+			controller.startDrag( { x: 150, y: 150 } );
+			controller.handleDrag( { x: 200, y: 200 } );
+			controller.finishDrag();
+
+			expect( mockManager.saveState ).toHaveBeenCalledWith( 'Move layer' );
+		} );
+	} );
+
+	describe( 'handleDrag with missing originalState', () => {
+		it( 'should skip layer when originalMultiLayerStates does not have entry', () => {
+			const layer2 = { id: 'layer2', type: 'circle', x: 200, y: 200, radius: 30 };
+			mockEditor.layers.push( layer2 );
+			mockManager.selectedLayerIds = [ 'layer1', 'layer2' ];
+
+			controller.startDrag( { x: 150, y: 150 } );
+			// Manually remove one layer's original state to simulate the edge case
+			delete controller.originalMultiLayerStates.layer2;
+
+			controller.handleDrag( { x: 200, y: 200 } );
+
+			// layer1 should move, layer2 should not (no originalState)
+			expect( testLayer.x ).toBe( 150 );
+			expect( layer2.x ).toBe( 200 ); // Unchanged
+		} );
 	} );
 
 	describe( 'smart guides snapping during drag', () => {
@@ -1101,6 +1423,18 @@ describe( 'TransformController', () => {
 
 			// Smart guides should NOT be used since grid snap takes precedence
 			expect( smartGuidesController.calculateSnappedPosition ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should clear smart guides on finishDrag', () => {
+			smartGuidesController.clearGuides = jest.fn();
+			mockManager.selectedLayerIds = [ 'layer1' ];
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 110, y: 110 } );
+			controller.finishDrag();
+
+			// clearGuides should be called when smart guides controller is available
+			expect( smartGuidesController.clearGuides ).toHaveBeenCalled();
 		} );
 	} );
 
@@ -1181,6 +1515,17 @@ describe( 'TransformController', () => {
 				// Should not infinite loop and should return false
 				expect( controller.isLayerEffectivelyLocked( circularLayer ) ).toBe( false );
 			} );
+
+			it( 'should return false when parentGroup references non-existent folder', () => {
+				const orphanLayer = {
+					id: 'orphan',
+					type: 'rectangle',
+					parentGroup: 'nonexistent-folder',
+					locked: false
+				};
+				// Don't add the parent folder to mockEditor.layers
+				expect( controller.isLayerEffectivelyLocked( orphanLayer ) ).toBe( false );
+			} );
 		} );
 
 		describe( 'startDrag with locked layers', () => {
@@ -1238,6 +1583,23 @@ describe( 'TransformController', () => {
 				expect( controller.isResizing ).toBe( false );
 			} );
 
+			it( 'should prevent resize on marker layer', () => {
+				const markerLayer = {
+					id: 'marker1',
+					type: 'marker',
+					x: 100,
+					y: 100,
+					locked: false
+				};
+				mockEditor.layers = [ markerLayer ];
+				mockManager.selectedLayerIds = [ 'marker1' ];
+				mockManager.getSelectedLayerId = () => 'marker1';
+
+				controller.startResize( { type: 'se' }, { x: 100, y: 100 } );
+
+				expect( controller.isResizing ).toBe( false );
+			} );
+
 			it( 'should allow resize on unlocked layer', () => {
 				mockManager.selectedLayerIds = [ 'unlocked1' ];
 				mockManager.getSelectedLayerId = () => 'unlocked1';
@@ -1283,6 +1645,189 @@ describe( 'TransformController', () => {
 				// Locked layer should NOT have been updated
 				expect( lockedLayer.x ).toBe( 50 );
 				expect( lockedLayer.y ).toBe( 50 );
+			} );
+		} );
+	} );
+
+	// ==================== Arrow Tip Dragging (Marker Tool) ====================
+	describe( 'Arrow tip dragging for markers', () => {
+		let controller;
+		let mockManager;
+		let mockMarkerLayer;
+
+		beforeEach( () => {
+			mockMarkerLayer = {
+				id: 'marker-1',
+				type: 'marker',
+				x: 100,
+				y: 100,
+				arrowX: 150,
+				arrowY: 150,
+				width: 30,
+				height: 30,
+				locked: false
+			};
+
+			mockManager = {
+				editor: {
+					getLayerById: jest.fn( ( id ) => {
+						if ( id === 'marker-1' ) {
+							return mockMarkerLayer;
+						}
+						return null;
+					} ),
+					layers: [ mockMarkerLayer ],
+					updateLayer: jest.fn( ( id, updates ) => {
+						Object.assign( mockMarkerLayer, updates );
+					} ),
+					markDirty: jest.fn(),
+					saveState: jest.fn()
+				},
+				canvas: { style: { cursor: '' } },
+				renderLayers: jest.fn(),
+				getToolCursor: jest.fn( () => 'default' ),
+				currentTool: 'select',
+				eventManager: {
+					emit: jest.fn()
+				}
+			};
+
+			controller = new TransformController( mockManager );
+		} );
+
+		describe( 'startArrowTipDrag', () => {
+			it( 'should start arrow tip drag for unlocked marker', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				const startPoint = { x: 150, y: 150 };
+
+				controller.startArrowTipDrag( handle, startPoint );
+
+				expect( controller.isArrowTipDragging ).toBe( true );
+				expect( controller.arrowTipLayerId ).toBe( 'marker-1' );
+				expect( controller.dragStartPoint ).toEqual( startPoint );
+				expect( mockManager.canvas.style.cursor ).toBe( 'move' );
+			} );
+
+			it( 'should not start arrow tip drag for locked marker', () => {
+				mockMarkerLayer.locked = true;
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				const startPoint = { x: 150, y: 150 };
+
+				controller.startArrowTipDrag( handle, startPoint );
+
+				expect( controller.isArrowTipDragging ).toBe( false );
+			} );
+
+			it( 'should store original layer state for undo', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				const startPoint = { x: 150, y: 150 };
+
+				controller.startArrowTipDrag( handle, startPoint );
+
+				expect( controller.originalLayerState ).toBeDefined();
+				expect( controller.originalLayerState.id ).toBe( 'marker-1' );
+				expect( controller.originalLayerState.arrowX ).toBe( 150 );
+			} );
+		} );
+
+		describe( 'handleArrowTipDrag', () => {
+			it( 'should update arrow position during drag', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				controller.startArrowTipDrag( handle, { x: 150, y: 150 } );
+
+				controller.handleArrowTipDrag( { x: 200, y: 180 } );
+
+				expect( mockManager.editor.updateLayer ).toHaveBeenCalledWith( 'marker-1', {
+					arrowX: 200,
+					arrowY: 180
+				} );
+				expect( mockManager.renderLayers ).toHaveBeenCalled();
+			} );
+
+			it( 'should not update if not in arrow tip drag mode', () => {
+				controller.handleArrowTipDrag( { x: 200, y: 180 } );
+
+				expect( mockManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should not update if layer no longer exists', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				controller.startArrowTipDrag( handle, { x: 150, y: 150 } );
+
+				// Simulate layer being deleted
+				mockManager.editor.getLayerById = jest.fn( () => null );
+
+				controller.handleArrowTipDrag( { x: 200, y: 180 } );
+
+				expect( mockManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should emit transforming event during drag', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				controller.startArrowTipDrag( handle, { x: 150, y: 150 } );
+
+				// Mock dispatchEvent to capture events
+				const mockDispatch = jest.fn();
+				mockManager.editor.container = { dispatchEvent: mockDispatch };
+
+				controller.handleArrowTipDrag( { x: 200, y: 180 } );
+
+				// Check that CustomEvent was dispatched
+				expect( mockDispatch ).toHaveBeenCalled();
+				const event = mockDispatch.mock.calls[ 0 ][ 0 ];
+				expect( event.type ).toBe( 'layers:transforming' );
+				expect( event.detail.layer ).toBeDefined();
+			} );
+		} );
+
+		describe( 'finishArrowTipDrag', () => {
+			it( 'should finish drag and save state when there was movement', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				controller.startArrowTipDrag( handle, { x: 150, y: 150 } );
+				controller.handleArrowTipDrag( { x: 200, y: 180 } );
+
+				controller.finishArrowTipDrag();
+
+				expect( controller.isArrowTipDragging ).toBe( false );
+				expect( controller.arrowTipLayerId ).toBeNull();
+				expect( mockManager.editor.markDirty ).toHaveBeenCalled();
+				expect( mockManager.editor.saveState ).toHaveBeenCalledWith( 'Move arrow tip' );
+			} );
+
+			it( 'should not save state if there was no movement', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				controller.startArrowTipDrag( handle, { x: 150, y: 150 } );
+
+				// Finish without any handleArrowTipDrag calls
+				controller.finishArrowTipDrag();
+
+				expect( mockManager.editor.markDirty ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should reset cursor on finish', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				controller.startArrowTipDrag( handle, { x: 150, y: 150 } );
+				controller.handleArrowTipDrag( { x: 200, y: 180 } );
+
+				controller.finishArrowTipDrag();
+
+				expect( mockManager.getToolCursor ).toHaveBeenCalled();
+				expect( mockManager.canvas.style.cursor ).toBe( 'default' );
+			} );
+
+			it( 'should dispatch final transform event if there was movement', () => {
+				const handle = { layerId: 'marker-1', type: 'arrowTip' };
+				controller.startArrowTipDrag( handle, { x: 150, y: 150 } );
+
+				// Mock dispatchEvent to capture events
+				const mockDispatch = jest.fn();
+				mockManager.editor.container = { dispatchEvent: mockDispatch };
+
+				controller.handleArrowTipDrag( { x: 200, y: 180 } );
+				controller.finishArrowTipDrag();
+
+				// Check that CustomEvent was dispatched multiple times (during drag and finish)
+				expect( mockDispatch.mock.calls.length ).toBeGreaterThanOrEqual( 2 );
 			} );
 		} );
 	} );

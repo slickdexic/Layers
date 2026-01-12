@@ -475,6 +475,33 @@ describe( 'BackgroundLayerController', () => {
 
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'backgroundOpacity', 0.5 );
 		} );
+
+		it( 'should use direct addEventListener when addTargetListener not provided', () => {
+			// Create controller without addTargetListener
+			const controllerWithoutTracker = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+				// No addTargetListener provided
+			} );
+			controllerWithoutTracker.render();
+
+			// Visibility button should still work via direct addEventListener
+			mockStateManager._stateMap.set( 'backgroundVisible', true );
+			const visBtn = mockLayerList.querySelector( '.background-visibility' );
+
+			visBtn.click();
+
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', false );
+
+			// Opacity slider should also work via direct addEventListener
+			const opacitySlider = mockLayerList.querySelector( '.background-opacity-slider' );
+			if ( opacitySlider ) {
+				opacitySlider.value = '75';
+				opacitySlider.dispatchEvent( new Event( 'input' ) );
+				expect( mockStateManager.set ).toHaveBeenCalledWith( 'backgroundOpacity', 0.75 );
+			}
+		} );
 	} );
 
 	describe( 'module exports', () => {

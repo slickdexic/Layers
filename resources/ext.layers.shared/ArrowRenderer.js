@@ -158,9 +158,9 @@
 
 				if ( layer.shadow === true || layer.shadow === 'true' || layer.shadow === 1 ) {
 					this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
-					this.ctx.shadowBlur = ( layer.shadowBlur || 8 ) * scaleAvg;
-					this.ctx.shadowOffsetX = ( layer.shadowOffsetX || 2 ) * scaleX;
-					this.ctx.shadowOffsetY = ( layer.shadowOffsetY || 2 ) * scaleY;
+					this.ctx.shadowBlur = ( typeof layer.shadowBlur === 'number' ? layer.shadowBlur : 8 ) * scaleAvg;
+					this.ctx.shadowOffsetX = ( typeof layer.shadowOffsetX === 'number' ? layer.shadowOffsetX : 2 ) * scaleX;
+					this.ctx.shadowOffsetY = ( typeof layer.shadowOffsetY === 'number' ? layer.shadowOffsetY : 2 ) * scaleY;
 				}
 			}
 		}

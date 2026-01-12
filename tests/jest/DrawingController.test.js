@@ -843,5 +843,246 @@ describe( 'DrawingController', () => {
 			expect( controller.tempLayer.textAlign ).toBe( 'center' );
 			expect( controller.tempLayer.verticalAlign ).toBe( 'middle' );
 		} );
+
+		it( 'should complete a full marker drawing cycle', () => {
+			const style = {
+				style: 'square',
+				size: 32,
+				fontFamily: 'Georgia',
+				fill: '#ffff00',
+				stroke: '#333333',
+				color: '#333333',
+				strokeWidth: 3
+			};
+
+			controller.startDrawing( { x: 100, y: 100 }, 'marker', style );
+			expect( controller.isDrawing ).toBe( true );
+			expect( controller.tempLayer.type ).toBe( 'marker' );
+			expect( controller.tempLayer.style ).toBe( 'square' );
+			expect( controller.tempLayer.size ).toBe( 32 );
+			expect( controller.tempLayer.fontFamily ).toBe( 'Georgia' );
+			expect( controller.tempLayer.fill ).toBe( '#ffff00' );
+			expect( controller.tempLayer.stroke ).toBe( '#333333' );
+			expect( controller.tempLayer.strokeWidth ).toBe( 3 );
+			expect( controller.tempLayer.hasArrow ).toBe( false );
+			expect( controller.tempLayer.value ).toBe( 1 );
+
+			// Drag to set arrow position
+			controller.continueDrawing( { x: 200, y: 200 } );
+			expect( controller.tempLayer.hasArrow ).toBe( true );
+			expect( controller.tempLayer.arrowX ).toBe( 200 );
+			expect( controller.tempLayer.arrowY ).toBe( 200 );
+
+			const layer = controller.finishDrawing( { x: 200, y: 200 }, 'marker' );
+			expect( layer ).not.toBeNull();
+			expect( layer.type ).toBe( 'marker' );
+			expect( layer.hasArrow ).toBe( true );
+		} );
+
+		it( 'should use default marker styles when not provided', () => {
+			controller.startDrawing( { x: 10, y: 10 }, 'marker', {} );
+
+			expect( controller.tempLayer.style ).toBe( 'circled' );
+			expect( controller.tempLayer.size ).toBe( 24 );
+			expect( controller.tempLayer.fontFamily ).toBe( 'Arial, sans-serif' );
+			expect( controller.tempLayer.fill ).toBe( '#ffffff' );
+			expect( controller.tempLayer.stroke ).toBe( '#000000' );
+			expect( controller.tempLayer.strokeWidth ).toBe( 2 );
+			expect( controller.tempLayer.hasArrow ).toBe( false );
+		} );
+
+		it( 'should create marker without arrow for small drag', () => {
+			controller.startDrawing( { x: 100, y: 100 }, 'marker', {} );
+			controller.continueDrawing( { x: 105, y: 105 } ); // Only 7px drag
+
+			const layer = controller.finishDrawing( { x: 105, y: 105 }, 'marker' );
+			expect( layer ).not.toBeNull();
+			expect( layer.hasArrow ).toBe( false );
+		} );
+
+		it( 'should complete a full dimension drawing cycle', () => {
+			const style = {
+				stroke: '#0000ff',
+				strokeWidth: 2,
+				fontSize: 14,
+				fontFamily: 'Courier New',
+				color: '#0000ff',
+				endStyle: 'tick',
+				textPosition: 'center'
+			};
+
+			controller.startDrawing( { x: 50, y: 100 }, 'dimension', style );
+			expect( controller.isDrawing ).toBe( true );
+			expect( controller.tempLayer.type ).toBe( 'dimension' );
+			expect( controller.tempLayer.stroke ).toBe( '#0000ff' );
+			expect( controller.tempLayer.strokeWidth ).toBe( 2 );
+			expect( controller.tempLayer.fontSize ).toBe( 14 );
+			expect( controller.tempLayer.fontFamily ).toBe( 'Courier New' );
+			expect( controller.tempLayer.endStyle ).toBe( 'tick' );
+			expect( controller.tempLayer.textPosition ).toBe( 'center' );
+
+			// Drag to extend dimension
+			controller.continueDrawing( { x: 200, y: 100 } );
+			expect( controller.tempLayer.x2 ).toBe( 200 );
+			expect( controller.tempLayer.y2 ).toBe( 100 );
+
+			const layer = controller.finishDrawing( { x: 200, y: 100 }, 'dimension' );
+			expect( layer ).not.toBeNull();
+			expect( layer.type ).toBe( 'dimension' );
+			expect( layer.x1 ).toBe( 50 );
+			expect( layer.x2 ).toBe( 200 );
+		} );
+
+		it( 'should use default dimension styles when not provided', () => {
+			controller.startDrawing( { x: 10, y: 10 }, 'dimension', {} );
+
+			expect( controller.tempLayer.stroke ).toBe( '#000000' );
+			expect( controller.tempLayer.strokeWidth ).toBe( 1 );
+			expect( controller.tempLayer.fontSize ).toBe( 12 );
+			expect( controller.tempLayer.fontFamily ).toBe( 'Arial, sans-serif' );
+			expect( controller.tempLayer.endStyle ).toBe( 'arrow' );
+			expect( controller.tempLayer.textPosition ).toBe( 'above' );
+			expect( controller.tempLayer.extensionLength ).toBe( 10 );
+		} );
+
+		it( 'should reject dimension with insufficient length', () => {
+			controller.startDrawing( { x: 100, y: 100 }, 'dimension', {} );
+			controller.continueDrawing( { x: 102, y: 102 } );
+
+			const layer = controller.finishDrawing( { x: 102, y: 102 }, 'dimension' );
+			// Length ~2.83, below MIN_LINE_LENGTH of 5
+			expect( layer ).toBeNull();
+		} );
+	} );
+
+	describe( 'marker and dimension tool methods', () => {
+		const point = { x: 50, y: 50 };
+		const style = { color: '#00ff00', strokeWidth: 2 };
+
+		describe( 'startMarkerTool', () => {
+			it( 'should create marker layer with initial value of 1', () => {
+				controller.startMarkerTool( point, style );
+
+				expect( controller.tempLayer.type ).toBe( 'marker' );
+				expect( controller.tempLayer.x ).toBe( 50 );
+				expect( controller.tempLayer.y ).toBe( 50 );
+				expect( controller.tempLayer.value ).toBe( 1 );
+			} );
+
+			it( 'should use style stroke color fallback to color', () => {
+				controller.startMarkerTool( point, { color: '#ff0000' } );
+
+				expect( controller.tempLayer.stroke ).toBe( '#ff0000' );
+				expect( controller.tempLayer.color ).toBe( '#ff0000' );
+			} );
+
+			it( 'should set hasArrow style from options', () => {
+				controller.startMarkerTool( point, { ...style, hasArrow: true } );
+
+				expect( controller.tempLayer.hasArrow ).toBe( true );
+			} );
+
+			it( 'should use MarkerRenderer.getNextValue when available', () => {
+				// Mock MarkerRenderer in window.Layers
+				const mockGetNextValue = jest.fn( () => 5 );
+				window.Layers = {
+					MarkerRenderer: {
+						getNextValue: mockGetNextValue
+					}
+				};
+
+				mockCanvasManager.layers = [ { type: 'marker', value: 1 }, { type: 'marker', value: 2 } ];
+				controller.startMarkerTool( point, style );
+
+				expect( mockGetNextValue ).toHaveBeenCalledWith( mockCanvasManager.layers );
+				expect( controller.tempLayer.value ).toBe( 5 );
+
+				delete window.Layers;
+			} );
+
+			it( 'should default to 1 when no canvasManager layers', () => {
+				mockCanvasManager.layers = undefined;
+				controller.startMarkerTool( point, style );
+
+				expect( controller.tempLayer.value ).toBe( 1 );
+			} );
+
+			it( 'should set initial arrowX and arrowY offset from marker', () => {
+				controller.startMarkerTool( point, style );
+
+				expect( controller.tempLayer.arrowX ).toBe( 50 );
+				expect( controller.tempLayer.arrowY ).toBe( 100 ); // y + 50
+			} );
+		} );
+
+		describe( 'startDimensionTool', () => {
+			it( 'should create dimension layer with same start/end point', () => {
+				controller.startDimensionTool( point, style );
+
+				expect( controller.tempLayer.type ).toBe( 'dimension' );
+				expect( controller.tempLayer.x1 ).toBe( 50 );
+				expect( controller.tempLayer.y1 ).toBe( 50 );
+				expect( controller.tempLayer.x2 ).toBe( 50 );
+				expect( controller.tempLayer.y2 ).toBe( 50 );
+			} );
+
+			it( 'should use stroke from style.stroke', () => {
+				controller.startDimensionTool( point, { stroke: '#0000ff' } );
+
+				expect( controller.tempLayer.stroke ).toBe( '#0000ff' );
+			} );
+
+			it( 'should fall back stroke to style.color', () => {
+				controller.startDimensionTool( point, { color: '#00ff00' } );
+
+				expect( controller.tempLayer.stroke ).toBe( '#00ff00' );
+			} );
+		} );
+
+		describe( 'isDrawingTool for marker and dimension', () => {
+			it( 'should return true for marker tool', () => {
+				expect( controller.isDrawingTool( 'marker' ) ).toBe( true );
+			} );
+
+			it( 'should return true for dimension tool', () => {
+				expect( controller.isDrawingTool( 'dimension' ) ).toBe( true );
+			} );
+		} );
+
+		describe( 'isValidShape for marker and dimension', () => {
+			it( 'should always validate marker as valid', () => {
+				expect( controller.isValidShape( { type: 'marker', x: 0, y: 0 } ) ).toBe( true );
+			} );
+
+			it( 'should validate dimension with sufficient length', () => {
+				expect( controller.isValidShape( {
+					type: 'dimension',
+					x1: 0,
+					y1: 0,
+					x2: 10,
+					y2: 0
+				} ) ).toBe( true );
+			} );
+
+			it( 'should reject dimension with insufficient length', () => {
+				expect( controller.isValidShape( {
+					type: 'dimension',
+					x1: 0,
+					y1: 0,
+					x2: 2,
+					y2: 2
+				} ) ).toBe( false ); // ~2.83 length
+			} );
+		} );
+
+		describe( 'getToolCursor for marker and dimension', () => {
+			it( 'should return crosshair for marker tool', () => {
+				expect( controller.getToolCursor( 'marker' ) ).toBe( 'crosshair' );
+			} );
+
+			it( 'should return crosshair for dimension tool', () => {
+				expect( controller.getToolCursor( 'dimension' ) ).toBe( 'crosshair' );
+			} );
+		} );
 	} );
 } );

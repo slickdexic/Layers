@@ -85,6 +85,20 @@ describe( 'ResizeCalculator', () => {
 			const result = ResizeCalculator.calculateResize( layer, 'se', 10, 10, {} );
 			expect( result ).not.toBeNull();
 		} );
+
+		it( 'should dispatch to calculateMarkerResize for marker', () => {
+			const layer = { type: 'marker', x: 50, y: 50, size: 24, value: 1 };
+			const result = ResizeCalculator.calculateResize( layer, 'se', 10, 10, {} );
+			expect( result ).not.toBeNull();
+			expect( result.size ).toBeDefined();
+		} );
+
+		it( 'should dispatch to calculateDimensionResize for dimension', () => {
+			const layer = { type: 'dimension', x1: 0, y1: 50, x2: 100, y2: 50 };
+			const result = ResizeCalculator.calculateResize( layer, 'e', 20, 0, {} );
+			expect( result ).not.toBeNull();
+			expect( result.x2 ).toBeDefined();
+		} );
 	} );
 
 	describe( 'calculateRectangleResize - proportional scaling', () => {
@@ -406,6 +420,44 @@ describe( 'ResizeCalculator', () => {
 				expect( result.y1 ).toBeUndefined();
 				expect( result.x2 ).toBeUndefined();
 				expect( result.y2 ).toBeUndefined();
+			} );
+		} );
+
+		describe( 'constrained resize on vertical lines', () => {
+			// Vertical line with orientation constraint
+			const verticalLine = { type: 'line', x1: 100, y1: 0, x2: 100, y2: 100, orientation: 'vertical' };
+
+			it( 'should constrain W handle to vertical axis (move y1 only)', () => {
+				// For vertical orientation, only deltaY should affect y1
+				const result = ResizeCalculator.calculateLineResize( verticalLine, 'w', 10, 25, 0, 0 );
+				expect( result.y1 ).toBe( 25 ); // y1 should move by deltaY
+				expect( result.x1 ).toBeUndefined(); // x1 should not be in updates
+			} );
+
+			it( 'should constrain E handle to vertical axis (move y2 only)', () => {
+				// For vertical orientation, only deltaY should affect y2
+				const result = ResizeCalculator.calculateLineResize( verticalLine, 'e', 15, 30, 0, 0 );
+				expect( result.y2 ).toBe( 130 ); // y2 (100) + deltaY (30) = 130
+				expect( result.x2 ).toBeUndefined(); // x2 should not be in updates
+			} );
+		} );
+
+		describe( 'constrained resize on horizontal lines', () => {
+			// Horizontal line with orientation constraint
+			const horizontalLine = { type: 'line', x1: 0, y1: 100, x2: 100, y2: 100, orientation: 'horizontal' };
+
+			it( 'should constrain W handle to horizontal axis (move x1 only)', () => {
+				// For horizontal orientation, only deltaX should affect x1
+				const result = ResizeCalculator.calculateLineResize( horizontalLine, 'w', -20, 15, 0, 0 );
+				expect( result.x1 ).toBe( -20 ); // x1 (0) + deltaX (-20) = -20
+				expect( result.y1 ).toBeUndefined(); // y1 should not be in updates
+			} );
+
+			it( 'should constrain E handle to horizontal axis (move x2 only)', () => {
+				// For horizontal orientation, only deltaX should affect x2
+				const result = ResizeCalculator.calculateLineResize( horizontalLine, 'e', 30, 10, 0, 0 );
+				expect( result.x2 ).toBe( 130 ); // x2 (100) + deltaX (30) = 130
+				expect( result.y2 ).toBeUndefined(); // y2 should not be in updates
 			} );
 		} );
 	} );
@@ -826,6 +878,180 @@ describe( 'ResizeCalculator', () => {
 			const result = ResizeCalculator.calculateCalloutTailResize( callout, 10, 20 );
 			expect( result.tailTipX ).toBeCloseTo( 0 + 20, 0 );
 			expect( result.tailTipY ).toBeCloseTo( 45 + ( -10 ), 0 );
+		} );
+
+		it( 'should use default bottom position for unknown tail direction', () => {
+			const callout = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				tailDirection: 'invalid', // Unknown direction - falls to default case
+				tailPosition: 0.5,
+				tailSize: 20
+			};
+			// Default case: bottom position
+			// worldTipX = x + width * 0.5 = 100, worldTipY = y + height + tailSize = 130
+			// Center is at (100, 80). So local coords: (0, 50)
+			const result = ResizeCalculator.calculateCalloutTailResize( callout, 0, 0 );
+			expect( result.tailTipX ).toBe( 0 );
+			expect( result.tailTipY ).toBe( 50 );
+		} );
+	} );
+
+	describe( 'calculateMarkerResize', () => {
+		it( 'should increase size when dragging SE handle outward', () => {
+			const layer = { type: 'marker', size: 30 };
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'se', 10, 10 );
+			expect( result.size ).toBeGreaterThan( 30 );
+		} );
+
+		it( 'should decrease size when dragging SE handle inward', () => {
+			const layer = { type: 'marker', size: 30 };
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'se', -10, -10 );
+			expect( result.size ).toBeLessThan( 30 );
+		} );
+
+		it( 'should increase size when dragging NW handle inward (toward center)', () => {
+			const layer = { type: 'marker', size: 30 };
+			// NW handle: negative delta means dragging toward center = growing
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'nw', -10, -10 );
+			expect( result.size ).toBeGreaterThan( 30 );
+		} );
+
+		it( 'should decrease size when dragging NW handle outward', () => {
+			const layer = { type: 'marker', size: 30 };
+			// NW handle: positive delta means dragging away = shrinking
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'nw', 10, 10 );
+			expect( result.size ).toBeLessThan( 30 );
+		} );
+
+		it( 'should handle NE handle correctly', () => {
+			const layer = { type: 'marker', size: 30 };
+			// NE: positive X means growing, negative Y means growing
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'ne', 10, -10 );
+			expect( result.size ).toBeGreaterThan( 30 );
+		} );
+
+		it( 'should handle SW handle correctly', () => {
+			const layer = { type: 'marker', size: 30 };
+			// SW: negative X means growing, positive Y means growing
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'sw', -10, 10 );
+			expect( result.size ).toBeGreaterThan( 30 );
+		} );
+
+		it( 'should use default size when not specified', () => {
+			const layer = { type: 'marker' };
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'se', 10, 10 );
+			// Default size is 24, result should be > 24
+			expect( result.size ).toBeGreaterThan( 24 );
+		} );
+
+		it( 'should clamp size to minimum 10', () => {
+			const layer = { type: 'marker', size: 15 };
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'se', -50, -50 );
+			expect( result.size ).toBe( 10 );
+		} );
+
+		it( 'should clamp size to maximum 200', () => {
+			const layer = { type: 'marker', size: 190 };
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'se', 100, 100 );
+			expect( result.size ).toBe( 200 );
+		} );
+
+		it( 'should round size to integer', () => {
+			const layer = { type: 'marker', size: 30 };
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'se', 5, 5 );
+			expect( Number.isInteger( result.size ) ).toBe( true );
+		} );
+
+		it( 'should handle E handle (east only)', () => {
+			const layer = { type: 'marker', size: 30 };
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'e', 10, 0 );
+			expect( result.size ).toBeGreaterThan( 30 );
+		} );
+
+		it( 'should handle W handle (west only)', () => {
+			const layer = { type: 'marker', size: 30 };
+			const result = ResizeCalculator.calculateMarkerResize( layer, 'w', -10, 0 );
+			expect( result.size ).toBeGreaterThan( 30 );
+		} );
+	} );
+
+	describe( 'calculateDimensionResize', () => {
+		it( 'should move x2,y2 when dragging E handle', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100 };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'e', 50, 10 );
+			expect( result.x2 ).toBe( 250 );
+			expect( result.y2 ).toBe( 110 );
+		} );
+
+		it( 'should move x1,y1 when dragging W handle', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100 };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'w', -30, 10 );
+			expect( result.x1 ).toBe( 70 );
+			expect( result.y1 ).toBe( 110 );
+		} );
+
+		it( 'should move x2,y2 when dragging SE handle', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 150 };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'se', 20, 30 );
+			expect( result.x2 ).toBe( 220 );
+			expect( result.y2 ).toBe( 180 );
+		} );
+
+		it( 'should move x1,y1 when dragging NW handle', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 150 };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'nw', -20, -30 );
+			expect( result.x1 ).toBe( 80 );
+			expect( result.y1 ).toBe( 70 );
+		} );
+
+		it( 'should constrain to horizontal when orientation=horizontal', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100, orientation: 'horizontal' };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'e', 50, 30 );
+			// Y should not change due to horizontal constraint
+			expect( result.x2 ).toBe( 250 );
+			expect( result.y2 ).toBe( 100 ); // unchanged
+		} );
+
+		it( 'should constrain to vertical when orientation=vertical', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 100, y2: 200, orientation: 'vertical' };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'e', 50, 30 );
+			// X should not change due to vertical constraint
+			expect( result.x2 ).toBe( 100 ); // unchanged
+			expect( result.y2 ).toBe( 230 );
+		} );
+
+		it( 'should move both Y values when dragging N handle', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100 };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'n', 0, -20 );
+			expect( result.y1 ).toBe( 80 );
+			expect( result.y2 ).toBe( 80 );
+		} );
+
+		it( 'should move both Y values when dragging S handle', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100 };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 's', 0, 30 );
+			expect( result.y1 ).toBe( 130 );
+			expect( result.y2 ).toBe( 130 );
+		} );
+
+		it( 'should not move Y values for N handle when horizontal orientation', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100, orientation: 'horizontal' };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'n', 0, -20 );
+			// Should not have y1 or y2 in updates
+			expect( result.y1 ).toBeUndefined();
+			expect( result.y2 ).toBeUndefined();
+		} );
+
+		it( 'should use default coordinates when not specified', () => {
+			const layer = { type: 'dimension' };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'e', 50, 10 );
+			// Default x2 is 0, so new x2 should be 50
+			expect( result.x2 ).toBe( 50 );
+			expect( result.y2 ).toBe( 10 );
 		} );
 	} );
 } );

@@ -261,7 +261,7 @@
 		ctx.addInput( {
 			label: t( 'layers-prop-text-shadow-offset-x', 'Shadow Offset X' ),
 			type: 'number',
-			value: layer.textShadowOffsetX || 2,
+			value: typeof layer.textShadowOffsetX === 'number' ? layer.textShadowOffsetX : 2,
 			min: -100,
 			max: 100,
 			step: 1,
@@ -276,7 +276,7 @@
 		ctx.addInput( {
 			label: t( 'layers-prop-text-shadow-offset-y', 'Shadow Offset Y' ),
 			type: 'number',
-			value: layer.textShadowOffsetY || 2,
+			value: typeof layer.textShadowOffsetY === 'number' ? layer.textShadowOffsetY : 2,
 			min: -100,
 			max: 100,
 			step: 1,

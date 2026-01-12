@@ -1067,4 +1067,196 @@ describe('CanvasRenderer', () => {
             expect(result).toBeNull();
         });
     });
+
+    describe('drawGlow', () => {
+        test('should draw circular glow for marker type', () => {
+            const markerLayer = {
+                type: 'marker',
+                x: 100,
+                y: 100,
+                size: 30,
+                glow: true
+            };
+
+            renderer.drawGlow(markerLayer);
+
+            expect(ctx.save).toHaveBeenCalled();
+            expect(ctx.beginPath).toHaveBeenCalled();
+            expect(ctx.arc).toHaveBeenCalledWith(100, 100, 15, 0, 2 * Math.PI);
+            expect(ctx.stroke).toHaveBeenCalled();
+            expect(ctx.restore).toHaveBeenCalled();
+        });
+
+        test('should draw line-based glow for dimension type', () => {
+            const dimensionLayer = {
+                type: 'dimension',
+                x1: 50,
+                y1: 50,
+                x2: 200,
+                y2: 100,
+                glow: true
+            };
+
+            renderer.drawGlow(dimensionLayer);
+
+            expect(ctx.save).toHaveBeenCalled();
+            expect(ctx.beginPath).toHaveBeenCalled();
+            expect(ctx.moveTo).toHaveBeenCalledWith(50, 50);
+            expect(ctx.lineTo).toHaveBeenCalledWith(200, 100);
+            expect(ctx.stroke).toHaveBeenCalled();
+            expect(ctx.restore).toHaveBeenCalled();
+        });
+
+        test('should use default size for marker without size property', () => {
+            const markerLayer = {
+                type: 'marker',
+                x: 100,
+                y: 100,
+                glow: true
+            };
+
+            renderer.drawGlow(markerLayer);
+
+            // Default size is 24, so radius is 12
+            expect(ctx.arc).toHaveBeenCalledWith(100, 100, 12, 0, 2 * Math.PI);
+        });
+
+        test('should use default coordinates for dimension without coords', () => {
+            const dimensionLayer = {
+                type: 'dimension',
+                glow: true
+            };
+
+            renderer.drawGlow(dimensionLayer);
+
+            expect(ctx.moveTo).toHaveBeenCalledWith(0, 0);
+            expect(ctx.lineTo).toHaveBeenCalledWith(0, 0);
+        });
+
+        test('should draw strokeRect for customShape type', () => {
+            const customShapeLayer = {
+                type: 'customShape',
+                x: 50,
+                y: 60,
+                width: 100,
+                height: 80,
+                glow: true
+            };
+
+            renderer.drawGlow(customShapeLayer);
+
+            expect(ctx.strokeRect).toHaveBeenCalledWith(50, 60, 100, 80);
+        });
+
+        test('should draw strokeRect for rectangle type', () => {
+            const rectLayer = {
+                type: 'rectangle',
+                x: 10,
+                y: 20,
+                width: 150,
+                height: 100,
+                glow: true
+            };
+
+            renderer.drawGlow(rectLayer);
+
+            expect(ctx.strokeRect).toHaveBeenCalled();
+        });
+    });
+
+    describe('getBackgroundVisible', () => {
+        test('should return true when no editor', () => {
+            renderer.editor = null;
+            expect(renderer.getBackgroundVisible()).toBe(true);
+        });
+
+        test('should return true when no stateManager', () => {
+            renderer.editor = {};
+            expect(renderer.getBackgroundVisible()).toBe(true);
+        });
+
+        test('should return true when backgroundVisible is undefined', () => {
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => undefined)
+                }
+            };
+            expect(renderer.getBackgroundVisible()).toBe(true);
+        });
+
+        test('should return false when backgroundVisible is false', () => {
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => false)
+                }
+            };
+            expect(renderer.getBackgroundVisible()).toBe(false);
+        });
+
+        test('should return true when backgroundVisible is true', () => {
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => true)
+                }
+            };
+            expect(renderer.getBackgroundVisible()).toBe(true);
+        });
+    });
+
+    describe('getBackgroundOpacity', () => {
+        test('should return 1 when no editor', () => {
+            renderer.editor = null;
+            expect(renderer.getBackgroundOpacity()).toBe(1);
+        });
+
+        test('should return 1 when no stateManager', () => {
+            renderer.editor = {};
+            expect(renderer.getBackgroundOpacity()).toBe(1);
+        });
+
+        test('should return 1 when opacity is undefined', () => {
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => undefined)
+                }
+            };
+            expect(renderer.getBackgroundOpacity()).toBe(1);
+        });
+
+        test('should return clamped value when opacity is valid', () => {
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => 0.5)
+                }
+            };
+            expect(renderer.getBackgroundOpacity()).toBe(0.5);
+        });
+
+        test('should clamp opacity to 0 when negative', () => {
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => -0.5)
+                }
+            };
+            expect(renderer.getBackgroundOpacity()).toBe(0);
+        });
+
+        test('should clamp opacity to 1 when greater than 1', () => {
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => 1.5)
+                }
+            };
+            expect(renderer.getBackgroundOpacity()).toBe(1);
+        });
+
+        test('should return 1 when opacity is NaN', () => {
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => NaN)
+                }
+            };
+            expect(renderer.getBackgroundOpacity()).toBe(1);
+        });
+    });
 });

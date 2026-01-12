@@ -186,6 +186,13 @@ describe( 'ToolManager', () => {
 			} );
 		} );
 
+		it( 'should return crosshair for annotation tools', () => {
+			const annotationTools = [ 'marker', 'dimension', 'callout', 'polygon', 'star', 'textbox' ];
+			annotationTools.forEach( tool => {
+				expect( toolManager.getToolCursor( tool ) ).toBe( 'crosshair' );
+			} );
+		} );
+
 		it( 'should return text cursor for text tool', () => {
 			expect( toolManager.getToolCursor( 'text' ) ).toBe( 'text' );
 		} );
@@ -1790,6 +1797,251 @@ describe( 'ToolManager', () => {
 			expect( tm.pathToolHandler ).toBeInstanceOf( MockPathToolHandler );
 
 			window.Layers = originalLayers;
+		} );
+	} );
+
+	describe( 'handler null fallbacks', () => {
+		it( 'should set textToolHandler to null when TextToolHandler not available', () => {
+			jest.resetModules();
+
+			const originalLayers = window.Layers;
+			window.Layers = { Tools: {} }; // No TextToolHandler
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.textToolHandler ).toBeNull();
+
+			window.Layers = originalLayers;
+		} );
+
+		it( 'should set pathToolHandler to null when PathToolHandler not available', () => {
+			jest.resetModules();
+
+			const originalLayers = window.Layers;
+			window.Layers = { Tools: {} }; // No PathToolHandler
+
+			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
+			const tm = new FreshToolManager( {}, mockCanvasManager );
+
+			expect( tm.pathToolHandler ).toBeNull();
+
+			window.Layers = originalLayers;
+		} );
+	} );
+
+	describe( 'layersAnnouncer integration', () => {
+		it( 'should announce tool change when layersAnnouncer is available', () => {
+			const mockAnnouncer = { announceTool: jest.fn() };
+			window.layersAnnouncer = mockAnnouncer;
+
+			toolManager.setTool( 'rectangle' );
+
+			expect( mockAnnouncer.announceTool ).toHaveBeenCalled();
+
+			delete window.layersAnnouncer;
+		} );
+
+		it( 'should not throw when layersAnnouncer is not available', () => {
+			delete window.layersAnnouncer;
+
+			expect( () => toolManager.setTool( 'circle' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'startTool with text', () => {
+		it( 'should delegate text tool to textToolHandler when available', () => {
+			toolManager.textToolHandler = {
+				startTextInput: jest.fn(),
+				hideTextEditor: jest.fn(),
+				start: jest.fn()
+			};
+
+			toolManager.startTool( { x: 100, y: 100 } );
+			// Text tool uses handleTextClick which may need current tool set
+			toolManager.setTool( 'text' );
+			toolManager.startTool( { x: 100, y: 100 } );
+
+			// This tests the delegation path
+			expect( toolManager.textToolHandler.start ).toHaveBeenCalledWith( { x: 100, y: 100 } );
+		} );
+	} );
+
+	describe( 'startTool with path', () => {
+		it( 'should delegate path tool to pathToolHandler when available', () => {
+			toolManager.pathToolHandler = {
+				handlePoint: jest.fn().mockReturnValue( false )
+			};
+			toolManager.setTool( 'path' );
+			
+			// handlePathPoint checks for pathToolHandler first
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+
+			expect( toolManager.pathToolHandler.handlePoint ).toHaveBeenCalled();
+		} );
+
+		it( 'should set isDrawing based on pathToolHandler result', () => {
+			toolManager.pathToolHandler = {
+				handlePoint: jest.fn().mockReturnValue( true ) // completed
+			};
+			toolManager.setTool( 'path' );
+			toolManager.isDrawing = true;
+			
+			toolManager.handlePathPoint( { x: 100, y: 100 } );
+
+			expect( toolManager.isDrawing ).toBe( false );
+		} );
+	} );
+
+	describe( 'updateTool when not drawing', () => {
+		it( 'should return early when isDrawing is false', () => {
+			toolManager.isDrawing = false;
+			toolManager.setTool( 'rectangle' );
+			
+			// Should not throw and should return early
+			expect( () => toolManager.updateTool( { x: 100, y: 100 } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'finishTool when not drawing', () => {
+		it( 'should return early when isDrawing is false', () => {
+			toolManager.isDrawing = false;
+			toolManager.setTool( 'rectangle' );
+			
+			// Should not throw and should return early
+			expect( () => toolManager.finishTool( { x: 100, y: 100 } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'getToolDisplayName fallback', () => {
+		it( 'should use ToolRegistry when available', () => {
+			toolManager.toolRegistry = {
+				getDisplayName: jest.fn().mockReturnValue( 'Rectangle Tool' )
+			};
+
+			const name = toolManager.getToolDisplayName( 'rectangle' );
+
+			expect( name ).toBe( 'Rectangle Tool' );
+		} );
+
+		it( 'should use i18n fallback when ToolRegistry unavailable', () => {
+			toolManager.toolRegistry = null;
+			window.layersMessages = {
+				get: jest.fn().mockReturnValue( 'Rect' )
+			};
+
+			const name = toolManager.getToolDisplayName( 'rectangle' );
+
+			expect( name ).toBe( 'Rect' );
+
+			delete window.layersMessages;
+		} );
+
+		it( 'should use capitalized fallback when no ToolRegistry or i18n', () => {
+			toolManager.toolRegistry = null;
+			delete window.layersMessages;
+
+			const name = toolManager.getToolDisplayName( 'rectangle' );
+
+			expect( name ).toBe( 'Rectangle' );
+		} );
+	} );
+
+	describe( 'ShapeFactory delegation', () => {
+		it( 'should use shapeFactory.createRectangle when available', () => {
+			const mockRect = { type: 'rectangle', x: 50, y: 50, width: 100, height: 100 };
+			toolManager.shapeFactory = {
+				createRectangle: jest.fn().mockReturnValue( mockRect )
+			};
+
+			toolManager.startRectangleTool( { x: 50, y: 50 } );
+
+			expect( toolManager.shapeFactory.createRectangle ).toHaveBeenCalledWith( { x: 50, y: 50 } );
+			expect( toolManager.tempLayer ).toBe( mockRect );
+		} );
+
+		it( 'should use shapeFactory.createPath when available', () => {
+			const mockPath = { type: 'path', points: [{ x: 10, y: 20 }] };
+			toolManager.shapeFactory = {
+				createPath: jest.fn().mockReturnValue( mockPath )
+			};
+
+			toolManager.startPenDrawing( { x: 10, y: 20 } );
+
+			expect( toolManager.shapeFactory.createPath ).toHaveBeenCalledWith( { x: 10, y: 20 } );
+			expect( toolManager.tempLayer ).toBe( mockPath );
+		} );
+
+		it( 'should use shapeFactory.createEllipse when available', () => {
+			const mockEllipse = { type: 'ellipse', x: 30, y: 40 };
+			toolManager.shapeFactory = {
+				createEllipse: jest.fn().mockReturnValue( mockEllipse )
+			};
+
+			toolManager.startEllipseTool( { x: 30, y: 40 } );
+
+			expect( toolManager.shapeFactory.createEllipse ).toHaveBeenCalledWith( { x: 30, y: 40 } );
+			expect( toolManager.tempLayer ).toBe( mockEllipse );
+		} );
+
+		it( 'should use shapeFactory.createCircle when available', () => {
+			const mockCircle = { type: 'circle', x: 50, y: 60 };
+			toolManager.shapeFactory = {
+				createCircle: jest.fn().mockReturnValue( mockCircle )
+			};
+
+			toolManager.startCircleTool( { x: 50, y: 60 } );
+
+			expect( toolManager.shapeFactory.createCircle ).toHaveBeenCalledWith( { x: 50, y: 60 } );
+			expect( toolManager.tempLayer ).toBe( mockCircle );
+		} );
+
+		it( 'should use shapeFactory.createLine when available', () => {
+			const mockLine = { type: 'line', x1: 10, y1: 20 };
+			toolManager.shapeFactory = {
+				createLine: jest.fn().mockReturnValue( mockLine )
+			};
+
+			toolManager.startLineTool( { x: 10, y: 20 } );
+
+			expect( toolManager.shapeFactory.createLine ).toHaveBeenCalledWith( { x: 10, y: 20 } );
+			expect( toolManager.tempLayer ).toBe( mockLine );
+		} );
+
+		it( 'should use shapeFactory.createArrow when available', () => {
+			const mockArrow = { type: 'arrow', x1: 10, y1: 20 };
+			toolManager.shapeFactory = {
+				createArrow: jest.fn().mockReturnValue( mockArrow )
+			};
+
+			toolManager.startArrowTool( { x: 10, y: 20 } );
+
+			expect( toolManager.shapeFactory.createArrow ).toHaveBeenCalledWith( { x: 10, y: 20 } );
+			expect( toolManager.tempLayer ).toBe( mockArrow );
+		} );
+
+		it( 'should use shapeFactory.createPolygon when available', () => {
+			const mockPoly = { type: 'polygon', x: 10, y: 20 };
+			toolManager.shapeFactory = {
+				createPolygon: jest.fn().mockReturnValue( mockPoly )
+			};
+
+			toolManager.startPolygonTool( { x: 10, y: 20 } );
+
+			expect( toolManager.shapeFactory.createPolygon ).toHaveBeenCalledWith( { x: 10, y: 20 } );
+			expect( toolManager.tempLayer ).toBe( mockPoly );
+		} );
+
+		it( 'should use shapeFactory.createStar when available', () => {
+			const mockStar = { type: 'star', x: 10, y: 20 };
+			toolManager.shapeFactory = {
+				createStar: jest.fn().mockReturnValue( mockStar )
+			};
+
+			toolManager.startStarTool( { x: 10, y: 20 } );
+
+			expect( toolManager.shapeFactory.createStar ).toHaveBeenCalledWith( { x: 10, y: 20 } );
+			expect( toolManager.tempLayer ).toBe( mockStar );
 		} );
 	} );
 } );

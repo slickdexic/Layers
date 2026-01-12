@@ -152,6 +152,20 @@ describe('ClipboardController', () => {
             expect(clipboardController.clipboard.length).toBe(1);
             expect(clipboardController.clipboard[0].id).toBe('layer2');
         });
+
+        test('should use getSelectedLayerIds method when available', () => {
+            // Add getSelectedLayerIds method to canvasManager
+            mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue(['layer1', 'layer2']);
+
+            const count = clipboardController.copySelected();
+
+            expect(mockCanvasManager.getSelectedLayerIds).toHaveBeenCalled();
+            expect(count).toBe(2);
+            expect(clipboardController.clipboard.length).toBe(2);
+
+            // Clean up
+            delete mockCanvasManager.getSelectedLayerIds;
+        });
     });
 
     describe('paste', () => {
@@ -465,6 +479,85 @@ describe('ClipboardController', () => {
 
             expect(mockCanvasManager.getSelectedLayerIds).toHaveBeenCalled();
             expect(count).toBe(1);
+        });
+
+        test('should fall back to selectedLayerIds when getSelectedLayerIds is not available', () => {
+            // Remove getSelectedLayerIds to test fallback path
+            delete mockCanvasManager.getSelectedLayerIds;
+            mockCanvasManager.selectedLayerIds = ['layer1', 'layer2'];
+
+            const count = clipboardController.copySelected();
+
+            expect(count).toBe(2);
+        });
+
+        test('should not offset x1/y1/x2/y2 when layer does not have those properties', () => {
+            // layer1 is a rectangle without x1/y1/x2/y2
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            clipboardController.paste();
+
+            const pastedLayer = mockEditor.layers[0];
+            // Should have x/y offset but not x1/y1/x2/y2 (they shouldn't exist)
+            expect(pastedLayer.x).toBe(120); // 100 + 20
+            expect(pastedLayer.y).toBe(120);
+            expect(pastedLayer.x1).toBeUndefined();
+            expect(pastedLayer.y1).toBeUndefined();
+            expect(pastedLayer.x2).toBeUndefined();
+            expect(pastedLayer.y2).toBeUndefined();
+        });
+
+        test('should handle layer without points property', () => {
+            // layer1 is a rectangle without points
+            mockCanvasManager.selectedLayerIds = ['layer1'];
+            clipboardController.copySelected();
+
+            clipboardController.paste();
+
+            const pastedLayer = mockEditor.layers[0];
+            expect(pastedLayer.points).toBeUndefined();
+        });
+
+        test('should skip layer with null x/y', () => {
+            // Add a layer with undefined x/y
+            mockLayers.push({
+                id: 'layer-no-xy',
+                type: 'text',
+                text: 'Hello',
+                visible: true,
+                locked: false
+            });
+            mockCanvasManager.selectedLayerIds = ['layer-no-xy'];
+            clipboardController.copySelected();
+
+            // Should not throw
+            expect(() => clipboardController.paste()).not.toThrow();
+        });
+
+        test('should handle line layer with zero coordinates using fallback', () => {
+            // Add a line layer with x1=0, y1=0, x2=0, y2=0
+            mockLayers.push({
+                id: 'line-zero',
+                type: 'line',
+                x1: 0,
+                y1: 0,
+                x2: 0,
+                y2: 0,
+                visible: true
+            });
+            mockCanvasManager.selectedLayerIds = ['line-zero'];
+            clipboardController.copySelected();
+
+            const pastedIds = clipboardController.paste();
+
+            expect(pastedIds).toHaveLength(1);
+            const pastedLine = mockLayers.find(l => l.id === pastedIds[0]);
+            // Zero coords should be offset by PASTE_OFFSET (20) using fallback
+            expect(pastedLine.x1).toBe(20);
+            expect(pastedLine.y1).toBe(20);
+            expect(pastedLine.x2).toBe(20);
+            expect(pastedLine.y2).toBe(20);
         });
     });
 });

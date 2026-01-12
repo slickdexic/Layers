@@ -992,4 +992,225 @@ describe('HitTestController', () => {
             expect(hitTestController.manager).toBeNull();
         });
     });
+
+    describe('isPointInMarker', () => {
+        test('should detect point inside marker circle', () => {
+            const markerLayer = {
+                id: 'marker1',
+                type: 'marker',
+                x: 100,
+                y: 100,
+                size: 30,
+                visible: true
+            };
+
+            // Point at center
+            expect(hitTestController.isPointInMarker({ x: 100, y: 100 }, markerLayer)).toBe(true);
+
+            // Point just inside radius + tolerance (radius 15 + tolerance 5 = 20)
+            expect(hitTestController.isPointInMarker({ x: 115, y: 100 }, markerLayer)).toBe(true);
+        });
+
+        test('should detect point outside marker circle', () => {
+            const markerLayer = {
+                id: 'marker1',
+                type: 'marker',
+                x: 100,
+                y: 100,
+                size: 30,
+                visible: true
+            };
+
+            // Point clearly outside
+            expect(hitTestController.isPointInMarker({ x: 200, y: 200 }, markerLayer)).toBe(false);
+        });
+
+        test('should use default size when not specified', () => {
+            const markerLayer = {
+                id: 'marker1',
+                type: 'marker',
+                x: 100,
+                y: 100,
+                visible: true
+            };
+
+            // Default size 24, radius 12 + tolerance 5 = 17
+            expect(hitTestController.isPointInMarker({ x: 116, y: 100 }, markerLayer)).toBe(true);
+        });
+
+        test('should detect point near arrow line when marker has arrow', () => {
+            const markerLayer = {
+                id: 'marker1',
+                type: 'marker',
+                x: 100,
+                y: 100,
+                size: 30,
+                hasArrow: true,
+                arrowX: 200,
+                arrowY: 100,
+                visible: true
+            };
+
+            // Point on arrow line (between marker center and arrow endpoint)
+            expect(hitTestController.isPointInMarker({ x: 150, y: 100 }, markerLayer)).toBe(true);
+        });
+
+        test('should not detect point far from arrow line', () => {
+            const markerLayer = {
+                id: 'marker1',
+                type: 'marker',
+                x: 100,
+                y: 100,
+                size: 30,
+                hasArrow: true,
+                arrowX: 200,
+                arrowY: 100,
+                visible: true
+            };
+
+            // Point far from both marker and arrow line
+            expect(hitTestController.isPointInMarker({ x: 150, y: 50 }, markerLayer)).toBe(false);
+        });
+    });
+
+    describe('isPointNearDimension', () => {
+        test('should detect point near dimension line', () => {
+            const dimensionLayer = {
+                id: 'dim1',
+                type: 'dimension',
+                x1: 100,
+                y1: 100,
+                x2: 300,
+                y2: 100,
+                visible: true
+            };
+
+            // Point on the line
+            expect(hitTestController.isPointNearDimension({ x: 200, y: 100 }, dimensionLayer)).toBe(true);
+
+            // Point slightly above (within tolerance of 10)
+            expect(hitTestController.isPointNearDimension({ x: 200, y: 105 }, dimensionLayer)).toBe(true);
+        });
+
+        test('should not detect point far from dimension line', () => {
+            const dimensionLayer = {
+                id: 'dim1',
+                type: 'dimension',
+                x1: 100,
+                y1: 100,
+                x2: 300,
+                y2: 100,
+                visible: true
+            };
+
+            // Point far from the line
+            expect(hitTestController.isPointNearDimension({ x: 200, y: 150 }, dimensionLayer)).toBe(false);
+        });
+
+        test('should use default coordinates when not specified', () => {
+            const dimensionLayer = {
+                id: 'dim1',
+                type: 'dimension',
+                visible: true
+            };
+
+            // Point at origin (default coords are 0,0 to 0,0)
+            expect(hitTestController.isPointNearDimension({ x: 0, y: 0 }, dimensionLayer)).toBe(true);
+        });
+    });
+
+    describe('pointToLineDistance', () => {
+        test('should calculate zero distance for point on line', () => {
+            const distance = hitTestController.pointToLineDistance(50, 50, 0, 0, 100, 100);
+            expect(distance).toBeCloseTo(0, 5);
+        });
+
+        test('should calculate perpendicular distance from point to line', () => {
+            // Horizontal line from (0,0) to (100,0)
+            // Point at (50, 10) should be 10 units away
+            const distance = hitTestController.pointToLineDistance(50, 10, 0, 0, 100, 0);
+            expect(distance).toBeCloseTo(10, 5);
+        });
+
+        test('should calculate distance to endpoint when projection is outside segment', () => {
+            // Line from (0,0) to (100,0)
+            // Point at (-10, 0) should be 10 units from start
+            const distance = hitTestController.pointToLineDistance(-10, 0, 0, 0, 100, 0);
+            expect(distance).toBeCloseTo(10, 5);
+        });
+
+        test('should handle zero-length line (point)', () => {
+            // Both endpoints at same location
+            const distance = hitTestController.pointToLineDistance(10, 10, 50, 50, 50, 50);
+            // Distance should be to the point itself
+            expect(distance).toBeGreaterThan(0);
+        });
+
+        test('should calculate distance for diagonal line', () => {
+            // Line from (0,0) to (10,10), point at (0,10)
+            // Perpendicular distance from (0,10) to diagonal line
+            const distance = hitTestController.pointToLineDistance(0, 10, 0, 0, 10, 10);
+            expect(distance).toBeCloseTo(Math.sqrt(50), 5); // ~7.07
+        });
+    });
+
+    describe('isPointInLayer - marker and dimension', () => {
+        test('should detect point inside marker via isPointInLayer', () => {
+            const markerLayer = {
+                id: 'marker1',
+                type: 'marker',
+                x: 100,
+                y: 100,
+                size: 30,
+                visible: true
+            };
+
+            // Point at center
+            expect(hitTestController.isPointInLayer({ x: 100, y: 100 }, markerLayer)).toBe(true);
+        });
+
+        test('should detect point outside marker via isPointInLayer', () => {
+            const markerLayer = {
+                id: 'marker1',
+                type: 'marker',
+                x: 100,
+                y: 100,
+                size: 30,
+                visible: true
+            };
+
+            // Point far away
+            expect(hitTestController.isPointInLayer({ x: 200, y: 200 }, markerLayer)).toBe(false);
+        });
+
+        test('should detect point on dimension via isPointInLayer', () => {
+            const dimensionLayer = {
+                id: 'dim1',
+                type: 'dimension',
+                x1: 100,
+                y1: 100,
+                x2: 200,
+                y2: 100,
+                visible: true
+            };
+
+            // Point on the line
+            expect(hitTestController.isPointInLayer({ x: 150, y: 100 }, dimensionLayer)).toBe(true);
+        });
+
+        test('should detect point off dimension via isPointInLayer', () => {
+            const dimensionLayer = {
+                id: 'dim1',
+                type: 'dimension',
+                x1: 100,
+                y1: 100,
+                x2: 200,
+                y2: 100,
+                visible: true
+            };
+
+            // Point far from line
+            expect(hitTestController.isPointInLayer({ x: 150, y: 200 }, dimensionLayer)).toBe(false);
+        });
+    });
 });

@@ -525,20 +525,14 @@
 				}
 			}
 
-			// Apply shadow at the context level (matching editor behavior)
-			// This ensures ALL layer types (including image) get shadows applied
+			// NOTE: Shadow is handled by individual renderers (MarkerRenderer, ShapeRenderer, etc.)
+			// using the offscreen drawSpreadShadow technique for proper fill+stroke shadow.
+			// Do NOT apply shadow here - it would cause stroke shadow to render on top of fill.
 			const shadowScale = { sx: sx, sy: sy, avg: scaleAvg };
-			if ( this.renderer && this.renderer.hasShadowEnabled( layer ) ) {
-				this.ctx.shadowColor = layer.shadowColor || 'rgba(0,0,0,0.4)';
-				this.ctx.shadowBlur = Math.round( ( layer.shadowBlur || 8 ) * scaleAvg );
-				this.ctx.shadowOffsetX = Math.round( ( layer.shadowOffsetX || 2 ) * sx );
-				this.ctx.shadowOffsetY = Math.round( ( layer.shadowOffsetY || 2 ) * sy );
-			} else {
-				this.ctx.shadowColor = 'transparent';
-				this.ctx.shadowBlur = 0;
-				this.ctx.shadowOffsetX = 0;
-				this.ctx.shadowOffsetY = 0;
-			}
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 
 			// Delegate rendering to the shared LayerRenderer
 			// Using scaled=true since we pre-scaled the coordinates

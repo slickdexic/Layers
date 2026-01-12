@@ -499,7 +499,7 @@ class LayerRenderer {
 			}
 
 			// For SVG shapes, request re-render when image loads
-			const renderOptions = { scale };
+			const renderOptions = { scale, shadowScale: opts.shadowScale || scale };
 			if ( hasSvg && this.onImageLoad ) {
 				renderOptions.onLoad = this.onImageLoad;
 			}

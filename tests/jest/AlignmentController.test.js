@@ -139,6 +139,30 @@ describe( 'AlignmentController', () => {
 			expect( bounds.right ).toBe( 100 );
 			expect( bounds.bottom ).toBe( 80 );
 		} );
+
+		it( 'should return zero bounds for path with empty points array', () => {
+			const path = {
+				type: 'path',
+				points: []
+			};
+			const bounds = controller.getLayerBounds( path );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.top ).toBe( 0 );
+			expect( bounds.right ).toBe( 0 );
+			expect( bounds.bottom ).toBe( 0 );
+		} );
+
+		it( 'should return zero bounds for path with undefined points', () => {
+			const path = {
+				type: 'path'
+				// points is undefined
+			};
+			const bounds = controller.getLayerBounds( path );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.top ).toBe( 0 );
+			expect( bounds.right ).toBe( 0 );
+			expect( bounds.bottom ).toBe( 0 );
+		} );
 	} );
 
 	describe( 'moveLayer', () => {
@@ -266,6 +290,16 @@ describe( 'AlignmentController', () => {
 	} );
 
 	describe( 'alignRight - key object mode', () => {
+		it( 'should do nothing when less than 2 layers selected', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const originalX = mockLayers[ 0 ].x;
+
+			controller.alignRight();
+
+			expect( mockLayers[ 0 ].x ).toBe( originalX );
+			expect( mockCanvasManager.renderLayers ).not.toHaveBeenCalled();
+		} );
+
 		it( 'should align layers to key object right edge', () => {
 			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1', 'layer2', 'layer3' ] );
 			mockCanvasManager.selectionManager.lastSelectedId = 'layer2'; // Key object at x=50, width=80, right=130
@@ -293,6 +327,16 @@ describe( 'AlignmentController', () => {
 	} );
 
 	describe( 'alignTop - key object mode', () => {
+		it( 'should do nothing when less than 2 layers selected', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const originalY = mockLayers[ 0 ].y;
+
+			controller.alignTop();
+
+			expect( mockLayers[ 0 ].y ).toBe( originalY );
+			expect( mockCanvasManager.renderLayers ).not.toHaveBeenCalled();
+		} );
+
 		it( 'should align layers to key object top edge', () => {
 			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1', 'layer2', 'layer3' ] );
 			mockCanvasManager.selectionManager.lastSelectedId = 'layer2'; // Key object at y=100
@@ -347,6 +391,17 @@ describe( 'AlignmentController', () => {
 	} );
 
 	describe( 'alignCenterH - key object mode', () => {
+		it( 'should do nothing when less than 2 layers selected', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const originalX = mockLayers[ 0 ].x;
+
+			controller.alignCenterH();
+
+			// Layer should not change
+			expect( mockLayers[ 0 ].x ).toBe( originalX );
+			expect( mockCanvasManager.renderLayers ).not.toHaveBeenCalled();
+		} );
+
 		it( 'should align layers to key object horizontal center', () => {
 			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1', 'layer2' ] );
 			mockCanvasManager.selectionManager.lastSelectedId = 'layer2'; // Key object centerX = 50 + 40 = 90
@@ -526,6 +581,52 @@ describe( 'AlignmentController', () => {
 			const avail = controller.getAvailability();
 			expect( avail.align ).toBe( true );
 			expect( avail.distribute ).toBe( true );
+		} );
+	} );
+
+	describe( 'getCombinedBounds', () => {
+		it( 'should return zero bounds for empty layers array', () => {
+			const bounds = controller.getCombinedBounds( [] );
+			expect( bounds ).toEqual( {
+				left: 0,
+				top: 0,
+				right: 0,
+				bottom: 0,
+				width: 0,
+				height: 0
+			} );
+		} );
+
+		it( 'should return zero bounds for null layers', () => {
+			const bounds = controller.getCombinedBounds( null );
+			expect( bounds ).toEqual( {
+				left: 0,
+				top: 0,
+				right: 0,
+				bottom: 0,
+				width: 0,
+				height: 0
+			} );
+		} );
+
+		it( 'should return combined bounds for multiple layers', () => {
+			const layers = [
+				{ type: 'rectangle', x: 10, y: 20, width: 50, height: 30 },
+				{ type: 'rectangle', x: 100, y: 50, width: 40, height: 40 }
+			];
+			const bounds = controller.getCombinedBounds( layers );
+			expect( bounds.left ).toBe( 10 );
+			expect( bounds.top ).toBe( 20 );
+			expect( bounds.right ).toBe( 140 ); // 100 + 40
+			expect( bounds.bottom ).toBe( 90 ); // 50 + 40
+		} );
+	} );
+
+	describe( 'getSelectedLayers - null editor', () => {
+		it( 'should return empty array when editor is null', () => {
+			controller.editor = null;
+			const layers = controller.getSelectedLayers();
+			expect( layers ).toEqual( [] );
 		} );
 	} );
 

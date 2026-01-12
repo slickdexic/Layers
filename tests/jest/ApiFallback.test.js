@@ -639,6 +639,165 @@ describe( 'ApiFallback', () => {
 				} )
 			);
 		} );
+
+		it( 'should normalize backgroundVisible false to false', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1', type: 'text' } ],
+							backgroundVisible: false
+						}
+					}
+				}
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
+				img,
+				expect.objectContaining( {
+					backgroundVisible: false
+				} )
+			);
+		} );
+
+		it( 'should normalize backgroundVisible 0 to false', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1', type: 'text' } ],
+							backgroundVisible: 0
+						}
+					}
+				}
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
+				img,
+				expect.objectContaining( {
+					backgroundVisible: false
+				} )
+			);
+		} );
+
+		it( 'should normalize backgroundVisible string "0" to false', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1', type: 'text' } ],
+							backgroundVisible: '0'
+						}
+					}
+				}
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
+				img,
+				expect.objectContaining( {
+					backgroundVisible: false
+				} )
+			);
+		} );
+
+		it( 'should normalize backgroundVisible string "false" to false', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1', type: 'text' } ],
+							backgroundVisible: 'false'
+						}
+					}
+				}
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
+				img,
+				expect.objectContaining( {
+					backgroundVisible: false
+				} )
+			);
+		} );
+
+		it( 'should parse backgroundOpacity from data', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1', type: 'text' } ],
+							backgroundOpacity: '0.75'
+						}
+					}
+				}
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
+				img,
+				expect.objectContaining( {
+					backgroundOpacity: 0.75
+				} )
+			);
+		} );
+
+		it( 'should handle processing error gracefully', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			// This will cause an error when accessing .data
+			mockViewerManager.initializeViewer.mockImplementation( () => {
+				throw new Error( 'Processing error' );
+			} );
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1', type: 'text' } ]
+						}
+					}
+				}
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			// Should log the processing error
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ApiFallback]',
+				'API fallback processing error:',
+				expect.any( Error )
+			);
+		} );
 	} );
 
 	describe( 'initialize', () => {
@@ -703,6 +862,32 @@ describe( 'ApiFallback', () => {
 				'candidates=',
 				expect.any( Number )
 			);
+		} );
+
+		it( 'should handle initialization errors gracefully', () => {
+			// Force mw.loader.using to throw
+			mockMw.loader.using.mockImplementation( () => {
+				throw new Error( 'Module load failed' );
+			} );
+
+			expect( () => fallback.initialize() ).not.toThrow();
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ApiFallback]',
+				'API fallback initialization failed:',
+				'Module load failed'
+			);
+		} );
+
+		it( 'should not run when mw.loader is undefined', () => {
+			delete mockMw.loader;
+
+			expect( () => fallback.initialize() ).not.toThrow();
+		} );
+
+		it( 'should not run when mw.loader.using is not a function', () => {
+			mockMw.loader.using = null;
+
+			expect( () => fallback.initialize() ).not.toThrow();
 		} );
 	} );
 

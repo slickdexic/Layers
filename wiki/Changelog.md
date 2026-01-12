@@ -4,6 +4,30 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.5 (January 12, 2026)
+
+### Fixed
+- **Custom Shape Shadow Rendering** — Multiple shadow rendering issues fixed
+  - Shadow blur at 0 no longer defaults to 8 (uses proper `typeof` check)
+  - Shadow spread now uniformly extends around all edges using dilation technique
+  - Shadow spread now scales correctly on article pages (non-editor views)
+
+- **Marker Shadow Scaling** — Marker shadows now scale correctly on article pages
+  - MarkerRenderer now uses `shadowScale` from render options instead of hardcoded values
+
+- **Dimension Layer Improvements**
+  - Removed shadow controls from dimension properties (shadows not applicable to dimensions)
+  - Fixed selection handles and hit testing to target actual dimension line position
+  - Selection handles now appear at arrow/tick endpoints instead of extension line tips
+  - Click detection works on the visible dimension line, not the measurement points
+
+### Tests
+- **Test Count** — 9,319 tests passing (144 suites)
+- **Coverage** — Maintained 94%+ statement coverage
+- Added extensive tests for shadow rendering, hit testing, and properties forms
+
+---
+
 ## Version 1.5.4 (January 11, 2026)
 
 ### Added

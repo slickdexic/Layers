@@ -4374,4 +4374,173 @@ describe( 'PropertiesForm', () => {
 			}
 		} );
 	} );
+
+	describe( 'marker layer form', () => {
+		test( 'should create marker layer form with marker properties section', () => {
+			const layer = {
+				id: 'marker-1',
+				type: 'marker',
+				x: 100,
+				y: 100,
+				value: '1',
+				style: 'circled',
+				size: 24
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Should have marker properties section
+			const sections = form.querySelectorAll( '.property-section' );
+			const sectionLabels = Array.from( sections ).map( ( s ) => s.querySelector( '.property-section-header' )?.textContent || '' );
+			expect( sectionLabels.some( ( l ) => l.includes( 'Marker' ) ) ).toBe( true );
+		} );
+
+		test( 'should have value input for marker layer', () => {
+			const layer = {
+				id: 'marker-1',
+				type: 'marker',
+				x: 100,
+				y: 100,
+				value: '5',
+				style: 'circled',
+				size: 24
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find text input with value prop or placeholder mentioning marker value
+			const inputs = form.querySelectorAll( 'input[type="text"]' );
+			const valueInput = Array.from( inputs ).find( ( input ) =>
+				input.value === '5' || input.placeholder?.includes( '1A' )
+			);
+			expect( valueInput ).toBeTruthy();
+		} );
+
+		test( 'should have style select for marker layer', () => {
+			const layer = {
+				id: 'marker-1',
+				type: 'marker',
+				x: 100,
+				y: 100,
+				value: '1',
+				style: 'circled',
+				size: 24
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const selects = form.querySelectorAll( 'select' );
+			// Should have at least one select for marker style
+			expect( selects.length ).toBeGreaterThan( 0 );
+
+			// One select should have circled option
+			const hasCircledOption = Array.from( selects ).some( ( select ) => {
+				const options = Array.from( select.options );
+				return options.some( ( opt ) => opt.value === 'circled' );
+			} );
+			expect( hasCircledOption ).toBe( true );
+		} );
+
+		test( 'should not show appearance section for marker layer', () => {
+			const layer = {
+				id: 'marker-1',
+				type: 'marker',
+				x: 100,
+				y: 100,
+				value: '1',
+				style: 'circled',
+				size: 24
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Marker layers should not have appearance section (stroke/fill)
+			const sections = form.querySelectorAll( '.property-section' );
+			const sectionLabels = Array.from( sections ).map( ( s ) => s.querySelector( '.property-section-header' )?.textContent || '' );
+			expect( sectionLabels.some( ( l ) => l.toLowerCase().includes( 'appearance' ) ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'dimension layer form', () => {
+		test( 'should create dimension layer form with dimension properties section', () => {
+			const layer = {
+				id: 'dimension-1',
+				type: 'dimension',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 100,
+				text: '100 mm',
+				fontSize: 12,
+				color: '#000000',
+				stroke: '#000000'
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Should have dimension properties section
+			const sections = form.querySelectorAll( '.property-section' );
+			const sectionLabels = Array.from( sections ).map( ( s ) => s.querySelector( '.property-section-header' )?.textContent || '' );
+			expect( sectionLabels.some( ( l ) => l.includes( 'Dimension' ) ) ).toBe( true );
+		} );
+
+		test( 'should have value/text input for dimension layer', () => {
+			const layer = {
+				id: 'dimension-1',
+				type: 'dimension',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 100,
+				text: '25.4 mm',
+				fontSize: 12
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find text input with value
+			const inputs = form.querySelectorAll( 'input[type="text"]' );
+			const valueInput = Array.from( inputs ).find( ( input ) =>
+				input.value === '25.4 mm' || input.placeholder?.includes( 'mm' )
+			);
+			expect( valueInput ).toBeTruthy();
+		} );
+
+		test( 'should have font size input for dimension layer', () => {
+			const layer = {
+				id: 'dimension-1',
+				type: 'dimension',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 100,
+				text: '100 mm',
+				fontSize: 14
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find number input for font size
+			const numberInputs = form.querySelectorAll( 'input[type="number"]' );
+			const fontSizeInput = Array.from( numberInputs ).find( ( input ) => {
+				const parent = input.closest( '.form-row' ) || input.parentElement;
+				const label = parent?.querySelector( 'label' );
+				return label?.textContent?.toLowerCase().includes( 'font' ) ||
+					input.dataset.prop === 'fontSize';
+			} );
+			expect( fontSizeInput ).toBeTruthy();
+		} );
+
+		test( 'should not show appearance section for dimension layer', () => {
+			const layer = {
+				id: 'dimension-1',
+				type: 'dimension',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 100,
+				text: '100 mm',
+				fontSize: 12
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Dimension layers should not have appearance section (has own color controls)
+			const sections = form.querySelectorAll( '.property-section' );
+			const sectionLabels = Array.from( sections ).map( ( s ) => s.querySelector( '.property-section-header' )?.textContent || '' );
+			expect( sectionLabels.some( ( l ) => l.toLowerCase().includes( 'appearance' ) ) ).toBe( false );
+		} );
+	} );
 } );

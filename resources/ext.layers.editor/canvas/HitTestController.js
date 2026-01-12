@@ -209,6 +209,7 @@
 
 		/**
 		 * Test if point is near a dimension layer (line between x1,y1 and x2,y2)
+		 * The actual dimension line is offset from the measurement points by the extension lines
 		 *
 		 * @param {Object} point Point with x, y
 		 * @param {Object} layer Dimension layer
@@ -220,7 +221,32 @@
 			const x2 = layer.x2 || 0;
 			const y2 = layer.y2 || 0;
 
-			const distance = this.pointToLineDistance( point.x, point.y, x1, y1, x2, y2 );
+			// Calculate the angle and perpendicular direction
+			const dx = x2 - x1;
+			const dy = y2 - y1;
+			const angle = Math.atan2( dy, dx );
+			const perpX = -Math.sin( angle );
+			const perpY = Math.cos( angle );
+
+			// Get extension line parameters (match DimensionRenderer defaults)
+			let extensionLength = layer.extensionLength;
+			if ( typeof extensionLength !== 'number' || isNaN( extensionLength ) ) {
+				extensionLength = 10; // DEFAULTS.extensionLength from DimensionRenderer
+			}
+			let extensionGap = layer.extensionGap;
+			if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
+				extensionGap = 3; // DEFAULTS.extensionGap from DimensionRenderer
+			}
+
+			// Calculate dimension line offset (same formula as DimensionRenderer)
+			const offsetDistance = extensionGap + extensionLength / 2;
+			const dimX1 = x1 + perpX * offsetDistance;
+			const dimY1 = y1 + perpY * offsetDistance;
+			const dimX2 = x2 + perpX * offsetDistance;
+			const dimY2 = y2 + perpY * offsetDistance;
+
+			// Test distance to the actual dimension line
+			const distance = this.pointToLineDistance( point.x, point.y, dimX1, dimY1, dimX2, dimY2 );
 			return distance <= 10;
 		}
 

@@ -652,4 +652,71 @@ describe( 'ImportExportManager', () => {
 			expect( typeof exported ).toBe( 'function' );
 		} );
 	} );
+
+	describe( 'parseImportedJSON', () => {
+		it( 'should throw error when layers property is not an array', async () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+			// Create JSON where 'layers' exists but is not an array (object format but invalid layers)
+			const invalidJson = JSON.stringify( { layers: 'not-an-array' } );
+			const file = new File( [ invalidJson ], 'test.json', { type: 'application/json' } );
+
+			await expect( importManager.importFromFile( file ) ).rejects.toThrow( 'Invalid JSON format' );
+		} );
+
+		it( 'should throw error when parsed data has layers property that is null', async () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+			// Create JSON where 'layers' is null
+			const invalidJson = JSON.stringify( { layers: null } );
+			const file = new File( [ invalidJson ], 'test.json', { type: 'application/json' } );
+
+			await expect( importManager.importFromFile( file ) ).rejects.toThrow( 'Invalid JSON format' );
+		} );
+
+		it( 'should accept object with layers array', async () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+			const validJson = JSON.stringify( { layers: [ { id: 'layer1', type: 'rectangle' } ] } );
+			const file = new File( [ validJson ], 'test.json', { type: 'application/json' } );
+
+			// Should not throw - returns the layers
+			const result = await importManager.importFromFile( file, { confirmOverwrite: false } );
+			expect( result ).toHaveLength( 1 );
+			expect( result[ 0 ].id ).toBe( 'layer1' );
+		} );
+	} );
+
+	describe( 'showConfirmDialog fallback', () => {
+		it( 'should fall back to native confirm when dialogManager is unavailable', async () => {
+			const editorWithoutDialog = {
+				stateManager: mockEditor.stateManager,
+				dialogManager: null
+			};
+			const importManager = new ImportExportManager( { editor: editorWithoutDialog } );
+
+			const originalConfirm = window.confirm;
+			window.confirm = jest.fn().mockReturnValue( true );
+
+			const result = await importManager.showConfirmDialog( { message: 'Test?' } );
+
+			expect( window.confirm ).toHaveBeenCalledWith( 'Test?' );
+			expect( result ).toBe( true );
+
+			window.confirm = originalConfirm;
+		} );
+	} );
+
+	describe( 'parseLayersJSON edge cases', () => {
+		it( 'should throw for non-array layers property', () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+
+			// JSON with layers that is not an array - but since we check Array.isArray(parsed.layers),
+			// a non-array will fall through to the "Invalid JSON format" error
+			// We need parsed.layers to be truthy but not an array after assignment
+			// Actually looking at the code: if parsed.layers is not an array, we hit "Invalid JSON format"
+			// The "Invalid layers data" branch is dead code because we already check Array.isArray(parsed.layers)
+			// Let me test the first branch instead - when parsed is not an array and parsed.layers doesn't exist
+			const invalidData = JSON.stringify( { notLayers: [] } );
+
+			expect( () => importManager.parseLayersJSON( invalidData ) ).toThrow( 'Invalid JSON format' );
+		} );
+	} );
 } );

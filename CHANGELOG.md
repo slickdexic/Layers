@@ -2,7 +2,31 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.4] - 2026-01-11
+## [1.5.5] - 2026-01-12
+
+### Fixed
+- **Custom Shape Shadow Rendering** — Multiple shadow rendering issues fixed
+  - Shadow blur at 0 no longer defaults to 8 (uses proper `typeof` check)
+  - Shadow spread now uniformly extends around all edges using dilation technique
+  - Shadow spread now scales correctly on article pages (non-editor views)
+
+- **Marker Shadow Scaling** — Marker shadows now scale correctly on article pages
+  - MarkerRenderer now uses `shadowScale` from render options instead of hardcoded values
+
+- **Dimension Layer Improvements**
+  - Removed shadow controls from dimension properties (shadows not applicable to dimensions)
+  - Fixed selection handles and hit testing to target actual dimension line position
+  - Selection handles now appear at arrow/tick endpoints instead of extension line tips
+  - Click detection works on the visible dimension line, not the measurement points
+
+### Tests
+- **Test Count** — 9,319 tests passing (144 suites)
+- **Coverage** — Maintained 94%+ statement coverage
+- Added extensive tests for shadow rendering, hit testing, and properties forms
+
+---
+
+## [1.5.4] - 2026-01-12
 
 ### Added
 - **Marker Tool** — New annotation tool for numbered/lettered sequence markers
@@ -32,9 +56,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - No functionality changes, all tests passing
 
 ### Tests
-- **Test Count** — 8,603 tests passing (144 suites)
-- **Coverage** — 94.53% statement, 83.16% branch
-- Added 42 new tests for Marker and Dimension renderers
+- **Test Count** — 9,303 tests passing (144 suites)
+- **Coverage** — 94.03% statement, 85.01% branch (target achieved!)
+- Added 700+ new tests for edge cases across 7 modules
 
 ---
 

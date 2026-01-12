@@ -268,6 +268,41 @@ describe('LayerPanel', () => {
         });
     });
 
+    describe('getSelectedLayerIds', () => {
+        test('should return selected layer IDs from stateManager', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            mockStateManager.set('selectedLayerIds', ['layer1', 'layer2']);
+
+            expect(panel.getSelectedLayerIds()).toEqual(['layer1', 'layer2']);
+        });
+
+        test('should return empty array when no stateManager', () => {
+            const container = document.getElementById('layers-panel-container');
+            const editorNoStateManager = { ...mockEditor, stateManager: null };
+            const panel = new LayerPanel({
+                container: container,
+                editor: editorNoStateManager
+            });
+
+            expect(panel.getSelectedLayerIds()).toEqual([]);
+        });
+
+        test('should return empty array when editor not available', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: null
+            });
+
+            expect(panel.getSelectedLayerIds()).toEqual([]);
+        });
+    });
+
     describe('subscribeToState', () => {
         test('should subscribe to layers changes', () => {
             const container = document.getElementById('layers-panel-container');
@@ -1346,5 +1381,975 @@ describe('LayerPanel mobile collapse toggle', () => {
 
         expect(panel.collapseBtn).toBeDefined();
         expect(panel.collapseBtn.classList.contains('layers-panel-collapse-btn')).toBe(true);
+    });
+});
+
+describe('LayerPanel getLayerDepth fallback', () => {
+    let LayerPanel;
+    let mockEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        const mockSM = new StateManager();
+        // Create layers with parentGroup chain for depth testing
+        mockSM.set('layers', [
+            { id: 'group1', type: 'group', expanded: true },
+            { id: 'child1', type: 'rectangle', parentGroup: 'group1' },
+            { id: 'group2', type: 'group', parentGroup: 'group1', expanded: true },
+            { id: 'grandchild', type: 'circle', parentGroup: 'group2' }
+        ]);
+        mockSM.set('selectedLayerIds', []);
+
+        // Editor WITHOUT groupManager to trigger fallback path
+        mockEditor = {
+            stateManager: mockSM,
+            container: document.body,
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should calculate depth 0 for top-level layer', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const depth = panel.getLayerDepth('group1');
+        expect(depth).toBe(0);
+    });
+
+    test('should calculate depth 1 for direct child', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const depth = panel.getLayerDepth('child1');
+        expect(depth).toBe(1);
+    });
+
+    test('should calculate depth 2 for grandchild', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const depth = panel.getLayerDepth('grandchild');
+        expect(depth).toBe(2);
+    });
+
+    test('should return 0 for non-existent layer', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const depth = panel.getLayerDepth('nonexistent');
+        expect(depth).toBe(0);
+    });
+
+    test('should use GroupManager when available', () => {
+        const container = document.getElementById('test-container');
+        const mockGroupManager = { getLayerDepth: jest.fn(() => 5) };
+        mockEditor.groupManager = mockGroupManager;
+        
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        const depth = panel.getLayerDepth('child1');
+        
+        expect(mockGroupManager.getLayerDepth).toHaveBeenCalledWith('child1');
+        expect(depth).toBe(5);
+    });
+});
+
+describe('LayerPanel getVisibleLayers with collapsed groups', () => {
+    let LayerPanel;
+    let mockEditor;
+    let mockStateManager;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        mockStateManager = new StateManager();
+        
+        mockEditor = {
+            stateManager: mockStateManager,
+            container: document.body,
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should hide children of collapsed groups', () => {
+        mockStateManager.set('layers', [
+            { id: 'group1', type: 'group', expanded: false },
+            { id: 'child1', type: 'rectangle', parentGroup: 'group1' },
+            { id: 'top-level', type: 'circle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const visible = panel.getVisibleLayers();
+        expect(visible.length).toBe(2);
+        expect(visible.map(l => l.id)).toContain('group1');
+        expect(visible.map(l => l.id)).toContain('top-level');
+        expect(visible.map(l => l.id)).not.toContain('child1');
+    });
+
+    test('should hide grandchildren when ancestor is collapsed', () => {
+        mockStateManager.set('layers', [
+            { id: 'group1', type: 'group', expanded: false },
+            { id: 'group2', type: 'group', parentGroup: 'group1', expanded: true },
+            { id: 'grandchild', type: 'rectangle', parentGroup: 'group2' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const visible = panel.getVisibleLayers();
+        expect(visible.length).toBe(1);
+        expect(visible[0].id).toBe('group1');
+    });
+
+    test('should show all layers when no groups are collapsed', () => {
+        mockStateManager.set('layers', [
+            { id: 'group1', type: 'group', expanded: true },
+            { id: 'child1', type: 'rectangle', parentGroup: 'group1' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const visible = panel.getVisibleLayers();
+        expect(visible.length).toBe(2);
+    });
+
+    test('should return empty array for empty layers', () => {
+        mockStateManager.set('layers', []);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const visible = panel.getVisibleLayers();
+        expect(visible).toEqual([]);
+    });
+});
+
+describe('LayerPanel createLayerItem/updateLayerItem fallback', () => {
+    let LayerPanel;
+    let mockEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        // Don't set LayerItemFactory to test fallback paths
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        const mockSM = new StateManager();
+        mockSM.set('layers', []);
+        mockSM.set('selectedLayerIds', []);
+
+        mockEditor = {
+            stateManager: mockSM,
+            container: document.body,
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should create minimal layer item when LayerItemFactory unavailable', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        panel.layerItemFactory = null; // Force fallback
+
+        const layer = { id: 'test-layer', type: 'rectangle' };
+        const item = panel.createLayerItem(layer, 0);
+
+        expect(item.className).toBe('layer-item');
+        expect(item.dataset.layerId).toBe('test-layer');
+        expect(item.dataset.index).toBe('0');
+    });
+
+    test('should update layer item with basic info when factory unavailable', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        panel.layerItemFactory = null; // Force fallback
+
+        const item = document.createElement('div');
+        const layer = { id: 'updated-layer', type: 'circle' };
+        panel.updateLayerItem(item, layer, 5);
+
+        expect(item.dataset.layerId).toBe('updated-layer');
+        expect(item.dataset.index).toBe('5');
+    });
+
+    test('should return type as default layer name when factory unavailable', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        panel.layerItemFactory = null; // Force fallback
+
+        const layer = { id: 'test', type: 'arrow' };
+        const name = panel.getDefaultLayerName(layer);
+
+        expect(name).toBe('arrow');
+    });
+
+    test('should return Layer for layer without type', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        panel.layerItemFactory = null; // Force fallback
+
+        const layer = { id: 'test' };
+        const name = panel.getDefaultLayerName(layer);
+
+        expect(name).toBe('Layer');
+    });
+});
+
+describe('LayerPanel selectLayer ctrl-toggle behavior', () => {
+    let LayerPanel;
+    let mockEditor;
+    let mockStateManager;
+    let mockCanvasManager;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        mockStateManager = new StateManager();
+        mockStateManager.set('layers', [
+            { id: 'layer1', type: 'rectangle' },
+            { id: 'layer2', type: 'circle' },
+            { id: 'layer3', type: 'arrow' }
+        ]);
+        mockStateManager.set('selectedLayerIds', ['layer1', 'layer2']);
+
+        mockCanvasManager = {
+            setSelectedLayerIds: jest.fn(),
+            renderLayers: jest.fn(),
+            drawMultiSelectionIndicators: jest.fn(),
+            selectionManager: {
+                lastSelectedId: 'layer2'
+            }
+        };
+
+        mockEditor = {
+            stateManager: mockStateManager,
+            container: document.body,
+            canvasManager: mockCanvasManager,
+            layers: [],
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should add layer to selection on ctrl-click when not selected', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.selectLayer('layer3', false, true); // ctrlKey = true
+
+        const selectedIds = mockStateManager.get('selectedLayerIds');
+        expect(selectedIds).toContain('layer1');
+        expect(selectedIds).toContain('layer2');
+        expect(selectedIds).toContain('layer3');
+    });
+
+    test('should remove layer from selection on ctrl-click when already selected', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.selectLayer('layer2', false, true); // ctrlKey = true, layer2 is already selected
+
+        const selectedIds = mockStateManager.get('selectedLayerIds');
+        expect(selectedIds).toContain('layer1');
+        expect(selectedIds).not.toContain('layer2');
+    });
+
+    test('should update lastSelectedId when deselecting clicked layer', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.selectLayer('layer2', false, true); // Deselect layer2
+
+        // lastSelectedId should be updated to remaining selection
+        expect(mockCanvasManager.selectionManager.lastSelectedId).toBe('layer1');
+    });
+
+    test('should set lastSelectedId to null when all deselected', () => {
+        mockStateManager.set('selectedLayerIds', ['layer1']);
+        
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.selectLayer('layer1', false, true); // Deselect the only selected layer
+
+        expect(mockCanvasManager.selectionManager.lastSelectedId).toBe(null);
+    });
+});
+
+describe('LayerPanel selectLayerRange', () => {
+    let LayerPanel;
+    let mockEditor;
+    let mockStateManager;
+    let mockCanvasManager;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        mockStateManager = new StateManager();
+
+        mockCanvasManager = {
+            setSelectedLayerIds: jest.fn(),
+            renderLayers: jest.fn(),
+            drawMultiSelectionIndicators: jest.fn()
+        };
+
+        mockEditor = {
+            stateManager: mockStateManager,
+            container: document.body,
+            canvasManager: mockCanvasManager,
+            layers: [],
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should do nothing for empty layers', () => {
+        mockStateManager.set('layers', []);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.selectLayerRange('layer1');
+
+        expect(mockStateManager.get('selectedLayerIds')).toEqual([]);
+    });
+
+    test('should select single layer when no previous selection', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', type: 'rectangle' },
+            { id: 'layer2', type: 'circle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // Mock selectLayer to check it gets called
+        panel.selectLayer = jest.fn();
+        panel.selectLayerRange('layer1');
+
+        expect(panel.selectLayer).toHaveBeenCalledWith('layer1');
+    });
+
+    test('should select range between last selected and clicked layer', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', type: 'rectangle' },
+            { id: 'layer2', type: 'circle' },
+            { id: 'layer3', type: 'arrow' },
+            { id: 'layer4', type: 'text' }
+        ]);
+        mockStateManager.set('selectedLayerIds', ['layer1']);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.selectLayerRange('layer3');
+
+        const selectedIds = mockStateManager.get('selectedLayerIds');
+        expect(selectedIds).toContain('layer1');
+        expect(selectedIds).toContain('layer2');
+        expect(selectedIds).toContain('layer3');
+        expect(selectedIds).not.toContain('layer4');
+    });
+
+    test('should select range in reverse direction', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', type: 'rectangle' },
+            { id: 'layer2', type: 'circle' },
+            { id: 'layer3', type: 'arrow' }
+        ]);
+        mockStateManager.set('selectedLayerIds', ['layer3']);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.selectLayerRange('layer1');
+
+        const selectedIds = mockStateManager.get('selectedLayerIds');
+        expect(selectedIds.length).toBe(3);
+        expect(selectedIds).toContain('layer1');
+        expect(selectedIds).toContain('layer2');
+        expect(selectedIds).toContain('layer3');
+    });
+
+    test('should fallback to single select when clicked layer not found', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', type: 'rectangle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', ['layer1']);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.selectLayer = jest.fn();
+        panel.selectLayerRange('nonexistent');
+
+        expect(panel.selectLayer).toHaveBeenCalledWith('nonexistent');
+    });
+});
+
+describe('LayerPanel syncPropertiesFromLayer', () => {
+    let LayerPanel;
+    let mockEditor;
+    let mockStateManager;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        mockStateManager = new StateManager();
+        mockStateManager.set('layers', []);
+        mockStateManager.set('selectedLayerIds', []);
+
+        mockEditor = {
+            stateManager: mockStateManager,
+            container: document.body,
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should do nothing when layer is null', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // Should not throw
+        expect(() => panel.syncPropertiesFromLayer(null)).not.toThrow();
+    });
+
+    test('should do nothing when propertiesPanel is null', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        panel.propertiesPanel = null;
+
+        // Should not throw
+        expect(() => panel.syncPropertiesFromLayer({ id: 'layer1' })).not.toThrow();
+    });
+
+    test('should update inputs with data-prop attributes', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // Create mock inputs in properties panel
+        const input = document.createElement('input');
+        input.setAttribute('data-prop', 'width');
+        const form = document.createElement('form');
+        form.className = 'layer-properties-form';
+        form.appendChild(input);
+        panel.propertiesPanel.querySelector('.properties-content').appendChild(form);
+
+        const layer = { id: 'layer1', type: 'rectangle', width: 150 };
+        panel.syncPropertiesFromLayer(layer);
+
+        expect(input.value).toBe('150');
+    });
+
+    test('should format values with 1 decimal when data-decimals=1', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const input = document.createElement('input');
+        input.setAttribute('data-prop', 'opacity');
+        input.setAttribute('data-decimals', '1');
+        const form = document.createElement('form');
+        form.className = 'layer-properties-form';
+        form.appendChild(input);
+        panel.propertiesPanel.querySelector('.properties-content').appendChild(form);
+
+        const layer = { id: 'layer1', type: 'rectangle', opacity: 0.5 };
+        panel.syncPropertiesFromLayer(layer);
+
+        expect(input.value).toBe('0.5');
+    });
+
+    test('should not update input that is currently focused', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const input = document.createElement('input');
+        input.setAttribute('data-prop', 'width');
+        input.value = '999'; // User is typing
+        const form = document.createElement('form');
+        form.className = 'layer-properties-form';
+        form.appendChild(input);
+        panel.propertiesPanel.querySelector('.properties-content').appendChild(form);
+
+        // Focus the input
+        document.body.appendChild(input);
+        input.focus();
+
+        const layer = { id: 'layer1', type: 'rectangle', width: 150 };
+        panel.syncPropertiesFromLayer(layer);
+
+        // Value should not change because input is focused
+        expect(input.value).toBe('999');
+    });
+
+    test('should handle ellipse width using radiusX fallback', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const input = document.createElement('input');
+        input.setAttribute('data-prop', 'width');
+        const form = document.createElement('form');
+        form.className = 'layer-properties-form';
+        form.appendChild(input);
+        panel.propertiesPanel.querySelector('.properties-content').appendChild(form);
+
+        // Ellipse without explicit width, but with radiusX
+        const layer = { id: 'layer1', type: 'ellipse', radiusX: 50 };
+        panel.syncPropertiesFromLayer(layer);
+
+        expect(input.value).toBe('100'); // radiusX * 2
+    });
+
+    test('should handle ellipse height using radiusY fallback', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const input = document.createElement('input');
+        input.setAttribute('data-prop', 'height');
+        const form = document.createElement('form');
+        form.className = 'layer-properties-form';
+        form.appendChild(input);
+        panel.propertiesPanel.querySelector('.properties-content').appendChild(form);
+
+        // Ellipse without explicit height, but with radiusY
+        const layer = { id: 'layer1', type: 'ellipse', radiusY: 30 };
+        panel.syncPropertiesFromLayer(layer);
+
+        expect(input.value).toBe('60'); // radiusY * 2
+    });
+
+    test('should skip input without data-prop attribute', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const input = document.createElement('input');
+        // No data-prop attribute
+        input.value = 'original';
+        const form = document.createElement('form');
+        form.className = 'layer-properties-form';
+        form.appendChild(input);
+        panel.propertiesPanel.querySelector('.properties-content').appendChild(form);
+
+        const layer = { id: 'layer1', type: 'rectangle', width: 150 };
+        panel.syncPropertiesFromLayer(layer);
+
+        expect(input.value).toBe('original');
+    });
+});
+
+describe('LayerPanel toggleGroupExpand fallback', () => {
+    let LayerPanel;
+    let mockEditor;
+    let mockStateManager;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        mockStateManager = new StateManager();
+        mockStateManager.set('layers', [
+            { id: 'group1', type: 'group', expanded: true }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        mockEditor = {
+            stateManager: mockStateManager,
+            container: document.body,
+            saveState: jest.fn(),
+            getLayerById: jest.fn((id) => mockStateManager.get('layers').find(l => l.id === id))
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should use GroupManager when available', () => {
+        const mockGroupManager = { toggleExpanded: jest.fn() };
+        mockEditor.groupManager = mockGroupManager;
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.toggleGroupExpand('group1');
+
+        expect(mockGroupManager.toggleExpanded).toHaveBeenCalledWith('group1');
+    });
+
+    test('should toggle expanded directly when GroupManager unavailable', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        panel.renderLayerList = jest.fn();
+
+        const layer = mockStateManager.get('layers')[0];
+        expect(layer.expanded).toBe(true);
+
+        panel.toggleGroupExpand('group1');
+
+        // expanded should now be false
+        expect(layer.expanded).toBe(false);
+        expect(panel.renderLayerList).toHaveBeenCalled();
+    });
+
+    test('should toggle from false to true', () => {
+        mockStateManager.set('layers', [
+            { id: 'group1', type: 'group', expanded: false }
+        ]);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        panel.renderLayerList = jest.fn();
+
+        const layer = mockStateManager.get('layers')[0];
+        expect(layer.expanded).toBe(false);
+
+        panel.toggleGroupExpand('group1');
+
+        // expanded should now be truthy (expanded === false evaluates to true)
+        expect(layer.expanded).toBe(true);
+    });
+
+    test('should do nothing for non-group layers', () => {
+        mockStateManager.set('layers', [
+            { id: 'rect1', type: 'rectangle' }
+        ]);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        panel.renderLayerList = jest.fn();
+
+        panel.toggleGroupExpand('rect1');
+
+        // renderLayerList should not be called for non-group
+        expect(panel.renderLayerList).not.toHaveBeenCalled();
+    });
+});
+
+describe('LayerPanel createPropertiesForm fallback', () => {
+    let LayerPanel;
+    let mockEditor;
+    let mockStateManager;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        // Don't set PropertiesForm to test fallback
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        mockStateManager = new StateManager();
+        mockStateManager.set('layers', []);
+        mockStateManager.set('selectedLayerIds', []);
+
+        mockEditor = {
+            stateManager: mockStateManager,
+            container: document.body,
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should create fallback form when PropertiesForm unavailable', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const layer = { id: 'layer1', type: 'rectangle' };
+        const form = panel.createPropertiesForm(layer);
+
+        expect(form.className).toBe('layer-properties-form');
+        expect(form.querySelector('p').textContent).toContain('unavailable');
+    });
+
+    test('should use PropertiesForm.create when available', () => {
+        window.Layers.UI.PropertiesForm = {
+            create: jest.fn(() => {
+                const form = document.createElement('form');
+                form.className = 'custom-form';
+                return form;
+            })
+        };
+
+        // Re-require to pick up the mock
+        jest.resetModules();
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const layer = { id: 'layer1', type: 'rectangle' };
+        const form = panel.createPropertiesForm(layer);
+
+        expect(form.className).toBe('custom-form');
+        expect(window.Layers.UI.PropertiesForm.create).toHaveBeenCalled();
+    });
+});
+
+describe('LayerPanel handleNameClick', () => {
+    let LayerPanel;
+    let mockEditor;
+    let mockStateManager;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        mockStateManager = new StateManager();
+        mockStateManager.set('layers', [{ id: 'layer1', type: 'rectangle' }]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        mockEditor = {
+            stateManager: mockStateManager,
+            container: document.body,
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should enter edit mode when layer is already selected and only selection', () => {
+        mockStateManager.set('selectedLayerIds', ['layer1']);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const nameEl = document.createElement('span');
+        panel.editLayerName = jest.fn();
+
+        panel.handleNameClick('layer1', nameEl);
+
+        expect(panel.editLayerName).toHaveBeenCalledWith('layer1', nameEl);
+    });
+
+    test('should select layer first when not already selected', () => {
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const nameEl = document.createElement('span');
+        panel.selectLayer = jest.fn();
+
+        panel.handleNameClick('layer1', nameEl);
+
+        expect(panel.selectLayer).toHaveBeenCalledWith('layer1', false, false);
+    });
+
+    test('should select layer when multiple layers are selected', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', type: 'rectangle' },
+            { id: 'layer2', type: 'circle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', ['layer1', 'layer2']);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const nameEl = document.createElement('span');
+        panel.selectLayer = jest.fn();
+
+        panel.handleNameClick('layer1', nameEl);
+
+        // Should select (not edit) because multiple layers selected
+        expect(panel.selectLayer).toHaveBeenCalledWith('layer1', false, false);
     });
 });

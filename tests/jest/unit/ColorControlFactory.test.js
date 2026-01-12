@@ -107,6 +107,24 @@ describe( 'ColorControlFactory', () => {
 			expect( mockMsgFn ).toHaveBeenCalledWith( 'layers-color-picker-standard', 'Standard colors' );
 			expect( mockMsgFn ).toHaveBeenCalledWith( 'layers-color-picker-saved', 'Saved colors' );
 		} );
+
+		it( 'should use window.layersMessages when available', () => {
+			const mockStrings = {
+				title: 'Mock Title',
+				standard: 'Mock Standard',
+				saved: 'Mock Saved'
+			};
+			window.layersMessages = {
+				getColorPickerStrings: jest.fn( () => mockStrings )
+			};
+
+			const strings = factory.getColorPickerStrings();
+			expect( window.layersMessages.getColorPickerStrings ).toHaveBeenCalled();
+			expect( strings ).toBe( mockStrings );
+
+			// Clean up
+			delete window.layersMessages;
+		} );
 	} );
 
 	describe( 'createColorControl', () => {

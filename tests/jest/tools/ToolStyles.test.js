@@ -599,6 +599,32 @@ describe( 'ToolStyles', () => {
 		} );
 	} );
 
+	describe( 'applyToLayer position edge cases', () => {
+		it( 'should skip x when currentStyle.x is undefined', () => {
+			const layer = { type: 'rectangle' };
+			// Don't set x in style
+			styles.update( { y: 200 } );
+			delete styles.currentStyle.x;
+
+			styles.applyToLayer( layer, { includePosition: true } );
+
+			expect( layer.x ).toBeUndefined();
+			expect( layer.y ).toBe( 200 );
+		} );
+
+		it( 'should skip y when currentStyle.y is undefined', () => {
+			const layer = { type: 'rectangle' };
+			// Set x but not y
+			styles.update( { x: 100 } );
+			delete styles.currentStyle.y;
+
+			styles.applyToLayer( layer, { includePosition: true } );
+
+			expect( layer.x ).toBe( 100 );
+			expect( layer.y ).toBeUndefined();
+		} );
+	} );
+
 	describe( 'destroy', () => {
 		it( 'should clear all listeners', () => {
 			const listener = jest.fn();

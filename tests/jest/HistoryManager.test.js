@@ -1377,4 +1377,105 @@ describe('HistoryManager', () => {
             expect(hm.editor).toBeNull();
         });
     });
+
+    describe('_getCloneLayersEfficient', () => {
+        test('should return null when window.Layers is not defined', () => {
+            const originalLayers = window.Layers;
+            delete window.Layers;
+            
+            const hm = new HistoryManager({ layers: [] });
+            expect(hm._getCloneLayersEfficient()).toBeNull();
+            
+            window.Layers = originalLayers;
+        });
+
+        test('should return null when window.Layers.Utils is not defined', () => {
+            const originalLayers = window.Layers;
+            window.Layers = {};
+            
+            const hm = new HistoryManager({ layers: [] });
+            expect(hm._getCloneLayersEfficient()).toBeNull();
+            
+            window.Layers = originalLayers;
+        });
+
+        test('should return null when cloneLayersEfficient is not a function', () => {
+            const originalLayers = window.Layers;
+            window.Layers = { Utils: { cloneLayersEfficient: 'not a function' } };
+            
+            const hm = new HistoryManager({ layers: [] });
+            expect(hm._getCloneLayersEfficient()).toBeNull();
+            
+            window.Layers = originalLayers;
+        });
+
+        test('should return cloneLayersEfficient when available', () => {
+            const originalLayers = window.Layers;
+            const mockCloneFn = jest.fn();
+            window.Layers = { Utils: { cloneLayersEfficient: mockCloneFn } };
+            
+            const hm = new HistoryManager({ layers: [] });
+            expect(hm._getCloneLayersEfficient()).toBe(mockCloneFn);
+            
+            window.Layers = originalLayers;
+        });
+    });
+
+    describe('getLayersSnapshot', () => {
+        test('should use cloneLayersEfficient when available', () => {
+            const originalLayers = window.Layers;
+            const clonedLayers = [{ id: 'cloned' }];
+            const mockCloneFn = jest.fn().mockReturnValue(clonedLayers);
+            window.Layers = { Utils: { cloneLayersEfficient: mockCloneFn } };
+            
+            const testLayers = [{ id: '1', type: 'rect' }];
+            const hm = new HistoryManager({ layers: testLayers });
+            const snapshot = hm.getLayersSnapshot();
+            
+            expect(mockCloneFn).toHaveBeenCalledWith(testLayers);
+            expect(snapshot).toBe(clonedLayers);
+            
+            window.Layers = originalLayers;
+        });
+
+        test('should fall back to JSON cloning when cloneLayersEfficient is not available', () => {
+            const originalLayers = window.Layers;
+            delete window.Layers;
+            
+            const testLayers = [{ id: '1', type: 'rect', x: 100 }];
+            const hm = new HistoryManager({ layers: testLayers });
+            const snapshot = hm.getLayersSnapshot();
+            
+            // Should be a deep copy
+            expect(snapshot).toEqual(testLayers);
+            expect(snapshot).not.toBe(testLayers);
+            expect(snapshot[0]).not.toBe(testLayers[0]);
+            
+            window.Layers = originalLayers;
+        });
+
+        test('should handle empty layers array', () => {
+            const originalLayers = window.Layers;
+            delete window.Layers;
+            
+            const hm = new HistoryManager({ layers: [] });
+            const snapshot = hm.getLayersSnapshot();
+            
+            expect(snapshot).toEqual([]);
+            
+            window.Layers = originalLayers;
+        });
+
+        test('should handle undefined layers by returning empty array', () => {
+            const originalLayers = window.Layers;
+            delete window.Layers;
+            
+            const hm = new HistoryManager({ layers: undefined });
+            const snapshot = hm.getLayersSnapshot();
+            
+            expect(snapshot).toEqual([]);
+            
+            window.Layers = originalLayers;
+        });
+    });
 });

@@ -504,5 +504,48 @@ describe('ZoomPanController', () => {
             // Should not throw
             expect(() => zoomPanController.updateCanvasTransform()).not.toThrow();
         });
+
+        test('should handle missing updateZoomReadout in resetZoom', () => {
+            mockEditor.updateZoomReadout = undefined;
+            mockEditor.updateStatus = undefined;
+
+            // Set zoom to something other than 1
+            mockCanvasManager.zoom = 1.5;
+
+            // resetZoom should not throw when these functions are missing
+            expect(() => zoomPanController.resetZoom()).not.toThrow();
+        });
+    });
+
+    describe('destroy', () => {
+        test('should cancel pending animation frame if present', () => {
+            const mockCancelAnimationFrame = jest.spyOn(global, 'cancelAnimationFrame');
+
+            // Set up a pending animation frame
+            zoomPanController.animationFrameId = 123;
+
+            zoomPanController.destroy();
+
+            expect(mockCancelAnimationFrame).toHaveBeenCalledWith(123);
+            expect(zoomPanController.animationFrameId).toBeNull();
+            expect(zoomPanController.manager).toBeNull();
+            expect(zoomPanController.isPanning).toBe(false);
+
+            mockCancelAnimationFrame.mockRestore();
+        });
+
+        test('should not call cancelAnimationFrame if no pending frame', () => {
+            const mockCancelAnimationFrame = jest.spyOn(global, 'cancelAnimationFrame');
+
+            // No pending animation frame
+            zoomPanController.animationFrameId = null;
+
+            zoomPanController.destroy();
+
+            expect(mockCancelAnimationFrame).not.toHaveBeenCalled();
+            expect(zoomPanController.manager).toBeNull();
+
+            mockCancelAnimationFrame.mockRestore();
+        });
     });
 });

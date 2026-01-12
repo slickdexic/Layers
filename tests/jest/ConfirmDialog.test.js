@@ -357,12 +357,127 @@ describe( 'ConfirmDialog', () => {
 		} );
 	} );
 
+	describe( 'edge cases', () => {
+		it( 'should handle close when keydownHandler is null', () => {
+			const dialog = new ConfirmDialog( {
+				message: 'Test'
+			} );
+			dialog.open();
+			// Manually set keydownHandler to null to simulate edge case
+			dialog.keydownHandler = null;
+
+			// Should not throw
+			expect( () => dialog.close() ).not.toThrow();
+		} );
+
+		it( 'should handle close when previouslyFocused is null', () => {
+			const dialog = new ConfirmDialog( {
+				message: 'Test'
+			} );
+			dialog.open();
+			// Manually set previouslyFocused to null
+			dialog.previouslyFocused = null;
+
+			// Should not throw
+			expect( () => dialog.close() ).not.toThrow();
+		} );
+
+		it( 'should handle close when previouslyFocused has no focus method', () => {
+			const dialog = new ConfirmDialog( {
+				message: 'Test'
+			} );
+			dialog.open();
+			// Set previouslyFocused to an object without focus method
+			dialog.previouslyFocused = { id: 'no-focus' };
+
+			// Should not throw
+			expect( () => dialog.close() ).not.toThrow();
+		} );
+
+		it( 'should use default onConfirm when not provided', () => {
+			const dialog = new ConfirmDialog( {
+				message: 'Test'
+				// onConfirm not provided
+			} );
+			dialog.open();
+
+			// Should not throw when clicking confirm (default function runs)
+			const confirmBtn = document.querySelector( '.layers-btn-danger' );
+			expect( () => confirmBtn.click() ).not.toThrow();
+		} );
+
+		it( 'should use default onCancel when not provided', () => {
+			const dialog = new ConfirmDialog( {
+				message: 'Test'
+				// onCancel not provided
+			} );
+			dialog.open();
+
+			// Should not throw when clicking cancel (default function runs)
+			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
+			expect( () => cancelBtn.click() ).not.toThrow();
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export ConfirmDialog for Node.js', () => {
 			const exported = require( '../../resources/ext.layers.editor/ui/ConfirmDialog.js' );
 			expect( typeof exported ).toBe( 'function' );
 			expect( typeof exported.simpleConfirm ).toBe( 'function' );
 			expect( typeof exported.show ).toBe( 'function' );
+		} );
+	} );
+
+	describe( 'static show factory', () => {
+		it( 'should create and open a dialog', () => {
+			const onConfirm = jest.fn();
+			const dialog = ConfirmDialog.show( {
+				message: 'Factory test',
+				onConfirm
+			} );
+
+			expect( dialog ).toBeInstanceOf( ConfirmDialog );
+			expect( document.querySelector( '.layers-modal-dialog' ) ).not.toBeNull();
+
+			dialog.close();
+		} );
+	} );
+
+	describe( 'showConfirmNative / simpleConfirm', () => {
+		it( 'should use window.confirm when available', () => {
+			const originalConfirm = window.confirm;
+			window.confirm = jest.fn().mockReturnValue( true );
+
+			const result = ConfirmDialog.simpleConfirm( 'Native confirm test' );
+
+			expect( window.confirm ).toHaveBeenCalledWith( 'Native confirm test' );
+			expect( result ).toBe( true );
+
+			window.confirm = originalConfirm;
+		} );
+
+		it( 'should return true when window.confirm is not available and log', () => {
+			const originalConfirm = window.confirm;
+			delete window.confirm;
+
+			const logger = jest.fn();
+			const result = ConfirmDialog.simpleConfirm( 'No confirm available', logger );
+
+			expect( result ).toBe( true );
+			expect( logger ).toHaveBeenCalled();
+
+			window.confirm = originalConfirm;
+		} );
+
+		it( 'should return true silently when window.confirm and logger not available', () => {
+			const originalConfirm = window.confirm;
+			delete window.confirm;
+
+			const result = ConfirmDialog.simpleConfirm( 'No confirm or logger' );
+
+			expect( result ).toBe( true );
+
+			window.confirm = originalConfirm;
 		} );
 	} );
 } );
