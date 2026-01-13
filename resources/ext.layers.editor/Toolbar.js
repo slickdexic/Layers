@@ -571,6 +571,14 @@
 				<line x1="12" y1="15" x2="12" y2="3"/>
 			</svg>`,
 
+				// Export SVG - Download icon with SVG badge
+				exportSVG: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+				<polyline points="7 10 12 15 17 10"/>
+				<line x1="12" y1="15" x2="12" y2="3"/>
+				<text x="17" y="8" font-size="6" font-weight="bold" fill="currentColor" stroke="none">SVG</text>
+			</svg>`,
+
 				// Import Image - Image icon with plus badge (add image layer)
 				importImage: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
 				<rect x="2" y="2" width="16" height="16" rx="2" ry="2"/>
@@ -1394,9 +1402,17 @@
 		const exportImageButton = document.createElement( 'button' );
 		exportImageButton.className = 'toolbar-button export-image-button';
 		exportImageButton.innerHTML = icons.exportImage;
-		exportImageButton.title = t( 'layers-export-image-tooltip', 'Download the image with annotations' );
-		exportImageButton.setAttribute( 'aria-label', t( 'layers-export-image', 'Export as Image' ) );
+		exportImageButton.title = t( 'layers-export-image-tooltip', 'Download the image with annotations (PNG)' );
+		exportImageButton.setAttribute( 'aria-label', t( 'layers-export-image', 'Export as PNG' ) );
 		actionGroup.appendChild( exportImageButton );
+
+		// Export as SVG button (icon-only with tooltip)
+		const exportSVGButton = document.createElement( 'button' );
+		exportSVGButton.className = 'toolbar-button export-svg-button';
+		exportSVGButton.innerHTML = icons.exportSVG;
+		exportSVGButton.title = t( 'layers-export-svg-tooltip', 'Download as editable vector SVG' );
+		exportSVGButton.setAttribute( 'aria-label', t( 'layers-export-svg', 'Export as SVG' ) );
+		actionGroup.appendChild( exportSVGButton );
 
 		// Import Image Layer button + hidden file input (icon-only with tooltip)
 		const importImageButton = document.createElement( 'button' );
@@ -1443,6 +1459,7 @@
 		this.importInput = importInput;
 		this.exportButton = exportButton;
 		this.exportImageButton = exportImageButton;
+		this.exportSVGButton = exportSVGButton;
 		this.importImageButton = importImageButton;
 		this.importImageInput = importImageInput;
 	}
@@ -1543,6 +1560,14 @@
 			if ( this.editor && this.editor.apiManager &&
 				typeof this.editor.apiManager.downloadAsImage === 'function' ) {
 				this.editor.apiManager.downloadAsImage( { format: 'png' } );
+			}
+		} );
+
+		// Export as SVG - download layers as editable vector file
+		this.addListener( this.exportSVGButton, 'click', () => {
+			if ( this.editor && this.editor.apiManager &&
+				typeof this.editor.apiManager.downloadAsSVG === 'function' ) {
+				this.editor.apiManager.downloadAsSVG();
 			}
 		} );
 

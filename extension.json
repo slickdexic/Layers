@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.6",
+	"version": "1.5.7",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -299,6 +299,7 @@
 				"presets/PresetStorage.js",
 				"presets/PresetManager.js",
 				"presets/PresetDropdown.js",
+				"export/SVGExporter.js",
 				"panel/LayerItemEvents.js",
 				"TextUtils.js",
 				"CanvasManager.js",
@@ -646,6 +647,10 @@
 				"layers-export-image-tooltip",
 				"layers-export-success",
 				"layers-export-failed",
+				"layers-export-svg",
+				"layers-export-svg-tooltip",
+				"layers-export-svg-success",
+				"layers-export-svg-failed",
 				"layers-import-image",
 				"layers-import-image-tooltip",
 				"layers-import-image-too-large",

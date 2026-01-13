@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.7] - 2026-01-21
+
+### Added
+- **SVG Export** — New feature to export layer annotations as editable vector graphics
+  - Export button added to toolbar alongside existing image export
+  - Generates clean SVG with proper XML structure and namespaces
+  - Supports all layer types: rectangles, circles, ellipses, lines, arrows, polygons, stars, paths, text, textboxes, images, and custom shapes
+  - Arrow markers use proper SVG `<marker>` definitions for correct rendering
+  - Rotation handled via `<g>` transform groups
+  - Dashed/dotted line styles preserved with `stroke-dasharray`
+  - Text styling preserved: font, size, weight, style, stroke, alignment
+  - Hidden layers automatically excluded from export
+  - XSS-safe with proper XML character escaping
+
+### Tests
+- **Test Count** — 9,433 tests passing (146 suites)
+- Added comprehensive SVGExporter test suite with 57 tests covering all layer types
+
+---
+
 ## [1.5.6] - 2026-01-20
 
 ### Fixed

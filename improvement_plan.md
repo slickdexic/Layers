@@ -208,7 +208,7 @@ Allow users to specify custom fonts.
 ### P3.5 SVG Export
 
 Export layers as SVG for vector editing.  
-**Status:** Not started  
+**Status:** ✅ Complete (v1.5.7)  
 **Effort:** 1 week
 
 ---
@@ -217,6 +217,7 @@ Export layers as SVG for vector editing.
 
 | Feature | Version | Status |
 |---------|---------|--------|
+| SVG Export | v1.5.7 | ✅ |
 | Curved Arrows | v1.3.3 | ✅ |
 | Toolbar Dropdown Grouping | v1.4.2 | ✅ |
 | Callout/Speech Bubble Tool | v1.4.2 | ✅ |
@@ -248,16 +249,16 @@ P3.1 TypeScript:            █░░░░░░░░░░░░░░░░�
 P3.2 WCAG Audit:            ███████████████████░ 95%  ⏳ Nearly complete
 P3.3 Gradient Fills:        ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
-P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
+P3.5 SVG Export:            ████████████████████ 100% ✅ Complete!
 ```
 
 ---
 
-## Test Coverage Summary (January 20, 2026)
+## Test Coverage Summary (January 21, 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Unit tests (Jest) | 9,376 | ✅ All passing |
+| Unit tests (Jest) | 9,433 | ✅ All passing |
 | E2E tests (Playwright) | 7 files | ✅ |
 | Statement coverage | 95.16% | ✅ Excellent |
 | Branch coverage | 85.17% | ✅ Target exceeded! |
