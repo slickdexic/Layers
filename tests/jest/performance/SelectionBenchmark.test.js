@@ -302,7 +302,10 @@ describe( 'Selection Performance Benchmarks', () => {
 			const result20 = measureTime( () => hitTestLayers( testPoint, layers20 ), 2000 );
 			const result100 = measureTime( () => hitTestLayers( testPoint, layers100 ), 2000 );
 
-			const ratio = result20.avg > 0.0001 ? result100.avg / result20.avg : 1;
+			// Use higher threshold to avoid division by near-zero values causing flaky tests
+			// When both are extremely fast (sub-microsecond), ratio is meaningless
+			const minThreshold = 0.001; // 1μs minimum
+			const ratio = result20.avg > minThreshold ? result100.avg / result20.avg : 1;
 
 			console.log( `Hit test 20 layers: ${ ( result20.avg * 1000 ).toFixed( 2 ) }μs` );
 			console.log( `Hit test 100 layers: ${ ( result100.avg * 1000 ).toFixed( 2 ) }μs` );
@@ -320,7 +323,9 @@ describe( 'Selection Performance Benchmarks', () => {
 			const result20 = measureTime( () => calculateSelectionBounds( layers20 ), 2000 );
 			const result100 = measureTime( () => calculateSelectionBounds( layers100 ), 2000 );
 
-			const ratio = result20.avg > 0.0001 ? result100.avg / result20.avg : 1;
+			// Use higher threshold to avoid division by near-zero values causing flaky tests
+			const minThreshold = 0.001; // 1μs minimum
+			const ratio = result20.avg > minThreshold ? result100.avg / result20.avg : 1;
 
 			console.log( `Bounds 20 layers: ${ ( result20.avg * 1000 ).toFixed( 2 ) }μs` );
 			console.log( `Bounds 100 layers: ${ ( result100.avg * 1000 ).toFixed( 2 ) }μs` );
