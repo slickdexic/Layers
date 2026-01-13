@@ -1,9 +1,9 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 12, 2026 (v1.5.5 Shadow Fixes Released)  
+**Last Updated:** January 20, 2026 (ShapeLibraryPanel fixes + dependency updates)  
 **Status:** ✅ Production-Ready with Technical Debt Plan  
 **Version:** 1.5.5  
-**Rating:** 8.0/10
+**Rating:** 8.5/10
 
 > **📋 NEW:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues and improve branch coverage.
 
@@ -25,7 +25,7 @@ The extension is **production-ready and fully functional** with **excellent secu
 |------|--------|---------|
 | **Functionality** | ✅ Complete | **15 tools**, all working correctly (added Marker, Dimension) |
 | **Security** | ✅ Excellent | CSRF, rate limiting, validation |
-| **Testing** | ✅ Excellent | 8,896 tests, 92.67% statement, 82.98% branch |
+| **Testing** | ✅ Excellent | 9,376 tests, 95.16% statement, 85.17% branch |
 | **Code Quality** | ✅ Good | No TODOs, no console.log, proper error handling |
 | **God Classes** | ⚠️ 16 Files | 32% of codebase in files >1,000 lines ([Refactoring Plan](docs/GOD_CLASS_REFACTORING_PLAN.md)) |
 | **Codebase Size** | ✅ Under Limit | ~66,594 JS lines (111 files), ~8,801 PHP lines (32 files) |
@@ -40,9 +40,9 @@ The extension is **production-ready and fully functional** with **excellent secu
 | JS lines | **~66,594** | 67,347 | Current verified |
 | PHP files | **32** | 32 | ✅ Accurate |
 | PHP lines | **~8,801** | 11,595 | Previously overstated |
-| Tests passing | **9,319** | 8,896 | 144 suites |
-| Statement coverage | **94%** | 92.67% | ✅ Excellent |
-| Branch coverage | **85%** | 82.98% | ✅ Target met! |
+| Tests passing | **9,376** | 9,319 | 145 suites |
+| Statement coverage | **95.16%** | 94% | ✅ Excellent |
+| Branch coverage | **85.17%** | 85% | ✅ Target exceeded! |
 | ESLint errors | **0** | 0 | ✅ |
 | PHPCS errors | **0** | 0 | ✅ |
 | God classes | **16** | 12 | All now documented |
@@ -253,17 +253,17 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 ---
 
-## Test Coverage Summary (January 12, 2026)
+## Test Coverage Summary (January 20, 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Unit tests (Jest) | 9,303 | ✅ All passing |
+| Unit tests (Jest) | 9,376 | ✅ All passing |
 | E2E tests (Playwright) | 7 files | ✅ |
-| Statement coverage | 94.03% | ✅ Excellent |
-| Branch coverage | 85.01% | ✅ Target met! |
-| Function coverage | 92.46% | ✅ |
-| Line coverage | 94.15% | ✅ |
-| Test suites | 144 | ✅ |
+| Statement coverage | 95.16% | ✅ Excellent |
+| Branch coverage | 85.17% | ✅ Target exceeded! |
+| Function coverage | 93.52% | ✅ |
+| Line coverage | 95.29% | ✅ |
+| Test suites | 145 | ✅ |
 
 > **Next Steps:** Begin Phase 2 of the God Class Refactoring Plan - StateManager component extraction.
 
@@ -273,7 +273,7 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 ### Already Have ✅
 
-- 9,303 passing tests with 94.03% statement coverage, 85.01% branch coverage
+- 9,376 passing tests with 95.16% statement coverage, 85.17% branch coverage
 - 15 working drawing tools (including Marker and Dimension)
 - Professional security implementation
 - Named layer sets with version history
@@ -291,7 +291,6 @@ P3.5 SVG Export:            ░░░░░░░░░░░░░░░░░�
 
 | Item | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| Branch coverage 85%+ | MEDIUM | 1-2 weeks | P2 |
 | Mobile UX polish | LOW | 2 weeks | P3 |
 | WCAG 2.1 AA audit completion | LOW | 1 week | P3 |
 
