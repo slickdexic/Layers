@@ -358,4 +358,4 @@ Common metrics to keep synchronized:
 - God class count (16 files >1,000 lines)
 - Drawing tool count (15 tools)
 - Shape library count (374 shapes in 10 categories)
-- Version number (1.5.5)
+- Version number (1.5.6)

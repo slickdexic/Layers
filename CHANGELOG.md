@@ -2,6 +2,29 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.6] - 2026-01-20
+
+### Fixed
+- **ShapeLibraryPanel Memory Leak Prevention** — Comprehensive cleanup improvements
+  - Added `isDestroyed` check to `open()` to prevent DOM access after destruction
+  - Added null checks in `close()` for overlay and panel to handle edge cases gracefully
+  - Store bound event handlers for proper removal in `destroy()`
+  - Fixed method name in tests: `truncateName` (was incorrectly `_truncateName`)
+
+### Changed
+- **Dependencies Updated**
+  - @types/node: 25.0.3 → 25.0.6
+  - @babel/preset-env: 7.28.5 → 7.28.6
+  - mediawiki/minus-x: 1.1.1 → 2.0.0 (PHP 8.4 compatible)
+  - mediawiki/mediawiki-codesniffer: 41.0.0 → 49.0.0 (PHP 8.4 compatible)
+
+### Tests
+- **Test Count** — 9,376 tests passing (145 suites)
+- **Coverage** — 95.16% statement, 85.17% branch, 93.52% function, 95.29% line
+- Added comprehensive ShapeLibraryPanel test suite with 57 tests
+
+---
+
 ## [1.5.5] - 2026-01-12
 
 ### Fixed
