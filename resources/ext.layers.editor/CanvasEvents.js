@@ -72,6 +72,12 @@
 
 		handleMouseDown( e ) {
 			const cm = this.cm;
+
+			// Block interactions during API loading to prevent race conditions
+			if ( cm.interactionController && cm.interactionController.shouldBlockInteraction() ) {
+				return;
+			}
+
 			const point = cm.getMousePoint( e );
 			cm.startPoint = point;
 			cm.dragStartPoint = point;

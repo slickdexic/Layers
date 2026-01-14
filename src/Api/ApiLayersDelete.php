@@ -142,7 +142,7 @@ class ApiLayersDelete extends ApiBase {
 			// Perform the delete
 			$rowsDeleted = $db->deleteNamedSet( $imgName, $sha1, $setName );
 
-			if ( $rowsDeleted < 0 ) {
+			if ( $rowsDeleted === null ) {
 				$this->getLogger()->error( 'Failed to delete layer set', [
 					'filename' => $requestedFilename,
 					'setname' => $setName,

@@ -128,6 +128,7 @@
 	"layers-prop-marker-size": "Marker Size",
 	"layers-prop-font-size-adjust": "Font Size Adjust",
 	"layers-prop-marker-arrow": "Show Arrow",
+	"layers-marker-name": "Marker $1",
 	"layers-marker-autonumber": "Auto-number",
 	"layers-marker-autonumber-tooltip": "Auto-increment marker values and keep tool active for placing multiple markers",
 	"layers-marker-style-circled": "Circled (①②③)",

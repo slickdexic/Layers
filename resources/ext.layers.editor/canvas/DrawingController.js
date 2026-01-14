@@ -314,7 +314,9 @@ class DrawingController {
 			visible: true,
 			locked: false,
 			opacity: 1,
-			name: 'Marker ' + nextValue
+			name: ( typeof mw !== 'undefined' && mw.message )
+				? mw.message( 'layers-marker-name', nextValue ).text()
+				: 'Marker ' + nextValue
 		};
 	}
 

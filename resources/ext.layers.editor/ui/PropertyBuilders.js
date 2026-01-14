@@ -853,8 +853,8 @@
 				const val = v.trim() || '1';
 				// Update name only if it's the default pattern
 				const updates = { value: val };
-				if ( !layer.name || layer.name.startsWith( 'Marker ' ) ) {
-					updates.name = 'Marker ' + val;
+				if ( !layer.name || layer.name.startsWith( 'Marker ' ) || layer.name.match( /^Marker\s/ ) ) {
+					updates.name = t( 'layers-marker-name', val );
 				}
 				editor.updateLayer( layer.id, updates );
 			}

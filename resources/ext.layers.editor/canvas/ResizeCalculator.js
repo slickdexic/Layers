@@ -475,34 +475,46 @@
 		/**
 		 * Calculate ellipse resize adjustments
 		 *
+		 * For ellipses, the opposite edge stays fixed (like rectangles).
+		 * This is achieved by adjusting both the center position and the radius.
+		 *
 		 * @param {Object} originalLayer Original layer properties
 		 * @param {string} handleType Handle being dragged
 		 * @param {number} deltaX Delta X movement
 		 * @param {number} deltaY Delta Y movement
-		 * @return {Object} Updates object with new radiusX/radiusY
+		 * @return {Object} Updates object with new x, y, radiusX, radiusY
 		 */
 		static calculateEllipseResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
 			const updates = {};
+			const origX = originalLayer.x || 0;
+			const origY = originalLayer.y || 0;
 			const origRX = originalLayer.radiusX || 1;
 			const origRY = originalLayer.radiusY || 1;
 
 			// Edge handles: adjust only the corresponding axis
-			if ( handleType === 'e' || handleType === 'w' ) {
-				updates.radiusX = Math.max(
-					5,
-					origRX + ( handleType === 'e' ? deltaX : -deltaX )
-				);
-			}
-			if ( handleType === 'n' || handleType === 's' ) {
-				updates.radiusY = Math.max(
-					5,
-					origRY + ( handleType === 's' ? deltaY : -deltaY )
-				);
+			// Move center by half the delta to keep opposite edge fixed
+			if ( handleType === 'e' ) {
+				// Dragging east: increase radiusX, shift center east
+				updates.radiusX = Math.max( 5, origRX + deltaX );
+				updates.x = origX + deltaX / 2;
+			} else if ( handleType === 'w' ) {
+				// Dragging west: increase radiusX, shift center west
+				updates.radiusX = Math.max( 5, origRX - deltaX );
+				updates.x = origX + deltaX / 2;
+			} else if ( handleType === 's' ) {
+				// Dragging south: increase radiusY, shift center south
+				updates.radiusY = Math.max( 5, origRY + deltaY );
+				updates.y = origY + deltaY / 2;
+			} else if ( handleType === 'n' ) {
+				// Dragging north: increase radiusY, shift center north
+				updates.radiusY = Math.max( 5, origRY - deltaY );
+				updates.y = origY + deltaY / 2;
 			}
 
 			// Corner handles: adjust both axes simultaneously
+			// Move center diagonally to keep opposite corner fixed
 			if ( handleType === 'ne' || handleType === 'nw' ||
 				handleType === 'se' || handleType === 'sw' ) {
 				// Determine direction for X axis (e = right side, w = left side)
@@ -512,6 +524,9 @@
 
 				updates.radiusX = Math.max( 5, origRX + ( xSign * deltaX ) );
 				updates.radiusY = Math.max( 5, origRY + ( ySign * deltaY ) );
+				// Shift center to keep opposite corner fixed
+				updates.x = origX + deltaX / 2;
+				updates.y = origY + deltaY / 2;
 			}
 
 			return updates;

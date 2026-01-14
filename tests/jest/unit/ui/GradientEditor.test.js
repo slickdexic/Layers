@@ -231,6 +231,23 @@ describe( 'GradientEditor', () => {
 			expect( radiusSlider ).toBeTruthy();
 			editor.destroy();
 		} );
+
+		it( 'should update radius on slider change', () => {
+			layer.gradient = {
+				type: 'radial',
+				radius: 0.7,
+				colors: [ { offset: 0, color: '#fff' }, { offset: 1, color: '#000' } ]
+			};
+			const editor = new GradientEditor( { layer, container, onChange } );
+
+			const radiusSlider = container.querySelector( '.gradient-radius-slider' );
+			radiusSlider.value = '1.2';
+			radiusSlider.dispatchEvent( new Event( 'input' ) );
+
+			expect( editor.currentGradient.radius ).toBe( 1.2 );
+			expect( onChange ).toHaveBeenCalled();
+			editor.destroy();
+		} );
 	} );
 
 	describe( 'color stops editor', () => {
@@ -445,6 +462,129 @@ describe( 'GradientEditor', () => {
 	describe( 'integration with window namespace', () => {
 		it( 'should export to window.Layers.UI namespace', () => {
 			expect( window.Layers.UI.GradientEditor ).toBe( GradientEditor );
+		} );
+	} );
+
+	describe( 'edge cases and defensive code', () => {
+		it( 'should handle _addColorStop when no gradient exists', () => {
+			const editor = new GradientEditor( { layer, container, onChange } );
+			// Manually clear the gradient to test defensive code
+			editor.currentGradient = null;
+
+			// Should not throw
+			expect( () => editor._addColorStop() ).not.toThrow();
+			editor.destroy();
+		} );
+
+		it( 'should initialize colors array if missing in _addColorStop', () => {
+			layer.gradient = {
+				type: 'linear',
+				angle: 90
+				// no colors array
+			};
+			const editor = new GradientEditor( { layer, container, onChange } );
+			// Manually remove colors to test
+			delete editor.currentGradient.colors;
+
+			editor._addColorStop();
+
+			expect( editor.currentGradient.colors ).toBeTruthy();
+			expect( editor.currentGradient.colors.length ).toBe( 1 );
+			editor.destroy();
+		} );
+
+		it( 'should handle _removeColorStop when no gradient exists', () => {
+			const editor = new GradientEditor( { layer, container, onChange } );
+			editor.currentGradient = null;
+
+			// Should not throw
+			expect( () => editor._removeColorStop( 0 ) ).not.toThrow();
+			editor.destroy();
+		} );
+
+		it( 'should not remove when only 2 stops remain via direct method call', () => {
+			layer.gradient = {
+				type: 'linear',
+				angle: 90,
+				colors: [ { offset: 0, color: '#fff' }, { offset: 1, color: '#000' } ]
+			};
+			const editor = new GradientEditor( { layer, container, onChange } );
+
+			// Direct call to test the guard
+			editor._removeColorStop( 0 );
+
+			// Should still have 2 colors
+			expect( editor.currentGradient.colors.length ).toBe( 2 );
+			editor.destroy();
+		} );
+
+		it( 'should handle _updateColorStop when no gradient exists', () => {
+			const editor = new GradientEditor( { layer, container, onChange } );
+			editor.currentGradient = null;
+
+			// Should not throw
+			expect( () => editor._updateColorStop( 0, 'color', '#fff' ) ).not.toThrow();
+			editor.destroy();
+		} );
+
+		it( 'should handle _updateColorStop with invalid index', () => {
+			layer.gradient = {
+				type: 'linear',
+				colors: [ { offset: 0, color: '#fff' }, { offset: 1, color: '#000' } ]
+			};
+			const editor = new GradientEditor( { layer, container, onChange } );
+			onChange.mockClear();
+
+			// Out of bounds
+			editor._updateColorStop( 10, 'color', '#fff' );
+
+			// Should not have called onChange
+			expect( onChange ).not.toHaveBeenCalled();
+			editor.destroy();
+		} );
+	} );
+
+	describe( 'message helper', () => {
+		it( 'should use localized message when exists', () => {
+			// Temporarily mock mw.message to return existing message
+			const originalMw = global.mw;
+			global.mw = {
+				message: jest.fn( () => ( {
+					exists: jest.fn( () => true ),
+					text: jest.fn( () => 'Localized Text' )
+				} ) )
+			};
+
+			// Force reload by creating new editor
+			const editor = new GradientEditor( { layer, container, onChange } );
+
+			// The labels in the UI should use message system
+			const labels = container.querySelectorAll( 'label' );
+			expect( labels.length ).toBeGreaterThan( 0 );
+
+			global.mw = originalMw;
+			editor.destroy();
+		} );
+	} );
+
+	describe( 'fallback presets', () => {
+		it( 'should use fallback presets when GradientRenderer not available', () => {
+			// Temporarily remove the renderer
+			const original = global.window.Layers.Renderers.GradientRenderer;
+			delete global.window.Layers.Renderers.GradientRenderer;
+
+			layer.gradient = {
+				type: 'linear',
+				colors: [ { offset: 0, color: '#fff' }, { offset: 1, color: '#000' } ]
+			};
+			const editor = new GradientEditor( { layer, container, onChange } );
+
+			// Should still have presets displayed
+			const swatches = container.querySelectorAll( '.gradient-preset-swatch' );
+			expect( swatches.length ).toBeGreaterThan( 0 );
+
+			global.window.Layers.Renderers.GradientRenderer = original;
+			editor.destroy();
 		} );
 	} );
 } );

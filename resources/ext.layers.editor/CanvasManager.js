@@ -153,6 +153,12 @@ class CanvasManager {
 		const uiConsts = ( typeof LayersConstants !== 'undefined' ) ? LayersConstants.UI : null;
 		const limits = ( typeof LayersConstants !== 'undefined' ) ? LayersConstants.LIMITS : null;
 
+		// Default canvas dimensions (used as fallback when image dimensions unavailable)
+		this.defaultCanvasWidth = ( limits && limits.DEFAULT_CANVAS_WIDTH ) ?
+			limits.DEFAULT_CANVAS_WIDTH : 800;
+		this.defaultCanvasHeight = ( limits && limits.DEFAULT_CANVAS_HEIGHT ) ?
+			limits.DEFAULT_CANVAS_HEIGHT : 600;
+
 		this.currentStyle = {
 			color: ( defaults && defaults.COLORS ) ? defaults.COLORS.STROKE : '#000000',
 			strokeWidth: ( defaults && defaults.LAYER ) ? defaults.LAYER.STROKE_WIDTH : 2,
@@ -227,6 +233,9 @@ class CanvasManager {
 		// Canvas pooling for temporary canvas operations to prevent memory leaks
 		this.canvasPool = [];
 		this.maxPoolSize = limits ? limits.MAX_CANVAS_POOL_SIZE : 5;
+
+		// Track state subscriptions for cleanup
+		this.stateUnsubscribers = [];
 
 		this.init();
 	}
@@ -428,13 +437,18 @@ class CanvasManager {
 		}
 
 		// Subscribe to selection changes to trigger re-render and toolbar update
-		this.editor.stateManager.subscribe( 'selectedLayerIds', ( selectedIds ) => {
+		const unsubscribe = this.editor.stateManager.subscribe( 'selectedLayerIds', ( selectedIds ) => {
 			this.selectionHandles = [];
 			this.renderLayers( this.editor.layers );
 
 			// Notify toolbar of selection change for presets
 			this.notifyToolbarOfSelection( selectedIds );
 		} );
+
+		// Track unsubscriber for cleanup in destroy()
+		if ( unsubscribe && typeof unsubscribe === 'function' ) {
+			this.stateUnsubscribers.push( unsubscribe );
+		}
 	}
 
 	/**
@@ -528,8 +542,10 @@ class CanvasManager {
 			}
 		} else {
 			// Fall back to loaded image dimensions
-			this.canvas.width = info.width || image.width || 800;
-			this.canvas.height = info.height || image.height || 600;
+			const defaultWidth = this.defaultCanvasWidth || 800;
+			const defaultHeight = this.defaultCanvasHeight || 600;
+			this.canvas.width = info.width || image.width || defaultWidth;
+			this.canvas.height = info.height || image.height || defaultHeight;
 		}
 
 		// Resize canvas display to fit container
@@ -546,15 +562,20 @@ class CanvasManager {
 	 * Handle image load error from ImageLoader
 	 */
 	handleImageLoadError () {
+		// Guard against callbacks after destruction (async race condition)
+		if ( this.isDestroyed ) {
+			return;
+		}
+
 		// Create a simple background directly on canvas when all load attempts fail
 		this.backgroundImage = null;
 		if ( this.renderer ) {
 			this.renderer.setBackgroundImage( null );
 		}
 
-		// Set default canvas size
-		this.canvas.width = 800;
-		this.canvas.height = 600;
+		// Set default canvas size from constants
+		this.canvas.width = this.defaultCanvasWidth || 800;
+		this.canvas.height = this.defaultCanvasHeight || 600;
 
 		// Resize canvas to fit container
 		this.resizeCanvas();
@@ -1901,6 +1922,22 @@ class CanvasManager {
 				this[ name ] = null;
 			}
 		}, this );
+
+		// Unsubscribe from state manager to prevent memory leaks
+		if ( this.stateUnsubscribers && this.stateUnsubscribers.length > 0 ) {
+			this.stateUnsubscribers.forEach( ( unsub ) => {
+				if ( typeof unsub === 'function' ) {
+					try {
+						unsub();
+					} catch ( e ) {
+						if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+							mw.log.warn( '[CanvasManager] Error unsubscribing:', e.message );
+						}
+					}
+				}
+			} );
+			this.stateUnsubscribers = [];
+		}
 
 		// Clear canvas pool to prevent memory leaks
 		if ( this.canvasPool && this.canvasPool.length > 0 ) {
