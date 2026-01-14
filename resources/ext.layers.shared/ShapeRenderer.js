@@ -65,6 +65,7 @@
 		 * @param {Object} [config.shadowRenderer] - ShadowRenderer instance for shadow operations
 		 * @param {Object} [config.polygonStarRenderer] - PolygonStarRenderer instance for polygon/star shapes
 		 * @param {Object} [config.effectsRenderer] - EffectsRenderer instance for blur fill
+		 * @param {Object} [config.gradientRenderer] - GradientRenderer instance for gradient fills
 		 */
 		constructor( ctx, config ) {
 			this.ctx = ctx;
@@ -72,6 +73,7 @@
 			this.shadowRenderer = this.config.shadowRenderer || null;
 			this.polygonStarRenderer = this.config.polygonStarRenderer || null;
 			this.effectsRenderer = this.config.effectsRenderer || null;
+			this.gradientRenderer = this.config.gradientRenderer || null;
 		}
 
 		/**
@@ -90,6 +92,15 @@
 		 */
 		setEffectsRenderer( effectsRenderer ) {
 			this.effectsRenderer = effectsRenderer;
+		}
+
+		/**
+		 * Set the gradient renderer instance
+		 *
+		 * @param {Object} gradientRenderer - GradientRenderer instance
+		 */
+		setGradientRenderer( gradientRenderer ) {
+			this.gradientRenderer = gradientRenderer;
 		}
 
 		/**
@@ -114,6 +125,47 @@
 			if ( this.polygonStarRenderer ) {
 				this.polygonStarRenderer.setContext( ctx );
 			}
+		}
+
+		// ========================================================================
+		// Fill Helper Methods
+		// ========================================================================
+
+		/**
+		 * Apply fill style to context (gradient or solid color)
+		 *
+		 * Checks if the layer has a gradient definition and applies it if available,
+		 * otherwise falls back to solid fill color.
+		 *
+		 * @param {Object} layer - Layer with fill and optional gradient properties
+		 * @param {Object} bounds - Bounding box for gradient calculation { x, y, width, height }
+		 * @param {Object} [opts] - Options including scale
+		 * @return {boolean} True if gradient was applied, false for solid fill
+		 */
+		applyFillStyle( layer, bounds, opts ) {
+			// Extract scale factor - opts.scale may be an object {sx, sy, avg} or a number
+			let scaleFactor = 1;
+			if ( opts && opts.scale ) {
+				if ( typeof opts.scale === 'number' ) {
+					scaleFactor = opts.scale;
+				} else if ( typeof opts.scale.avg === 'number' ) {
+					scaleFactor = opts.scale.avg;
+				}
+			}
+
+			// Check for gradient fill first
+			if ( this.gradientRenderer ) {
+				const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
+				if ( GradientRenderer && GradientRenderer.hasGradient( layer ) ) {
+					return this.gradientRenderer.applyFill( layer, bounds, { scale: scaleFactor } );
+				}
+			}
+
+			// Fallback to solid fill
+			if ( layer.fill && layer.fill !== 'none' && layer.fill !== 'transparent' && layer.fill !== 'blur' ) {
+				this.ctx.fillStyle = layer.fill;
+			}
+			return false;
 		}
 
 		// ========================================================================
@@ -392,8 +444,14 @@
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			// Check for gradient fill using static method if available
+			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
+			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
+
+			// Bounds for gradient calculation
+			const fillBounds = { x: x, y: y, width: width, height: height };
 
 			// Draw fill
 			if ( hasFill ) {
@@ -408,8 +466,8 @@
 						opts
 					);
 				} else if ( !isBlurFill ) {
-					// Regular color fill
-					this.ctx.fillStyle = layer.fill;
+					// Apply gradient or solid fill
+					this.applyFillStyle( layer, fillBounds, opts );
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					drawRectPath();
 					this.ctx.fill();
@@ -515,8 +573,14 @@
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			// Check for gradient fill
+			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
+			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
+
+			// Bounds for gradient calculation
+			const fillBounds = { x: cx - radius, y: cy - radius, width: radius * 2, height: radius * 2 };
 
 			// Helper to draw circle path
 			const drawCirclePath = ( ctx ) => {
@@ -533,13 +597,13 @@
 					this.effectsRenderer.drawBlurFill(
 						layer,
 						drawCirclePath,
-						{ x: cx - radius, y: cy - radius, width: radius * 2, height: radius * 2 },
+						fillBounds,
 						opts
 					);
 				} else if ( !isBlurFill ) {
-					// Regular color fill
+					// Apply gradient or solid fill
 					drawCirclePath();
-					this.ctx.fillStyle = layer.fill;
+					this.applyFillStyle( layer, fillBounds, opts );
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.ctx.fill();
 				}
@@ -648,8 +712,14 @@
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			// Check for gradient fill
+			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
+			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
+
+			// Bounds for gradient calculation
+			const fillBounds = { x: x - radiusX, y: y - radiusY, width: radiusX * 2, height: radiusY * 2 };
 
 			// Helper to draw ellipse path
 			const drawEllipsePath = ( ctx ) => {
@@ -677,13 +747,13 @@
 					this.effectsRenderer.drawBlurFill(
 						layer,
 						drawEllipsePath,
-						{ x: x - radiusX, y: y - radiusY, width: radiusX * 2, height: radiusY * 2 },
+						fillBounds,
 						opts
 					);
 				} else if ( !isBlurFill ) {
-					// Regular color fill
+					// Apply gradient or solid fill
 					drawEllipsePath();
-					this.ctx.fillStyle = layer.fill;
+					this.applyFillStyle( layer, fillBounds, opts );
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.ctx.fill();
 				}

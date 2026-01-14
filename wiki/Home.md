@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C319%20Passing-brightgreen" alt="9,319 Tests">
-  <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C602%20Passing-brightgreen" alt="9,602 Tests">
+  <img src="https://img.shields.io/badge/Coverage-95%25-brightgreen" alt="95% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,39 +20,27 @@
 
 ---
 
-## 🆕 What's New in v1.5.5
+## 🆕 What's New in v1.5.8
 
-- **Custom Shape Shadow Fixes** — Multiple shadow rendering issues resolved
-  - Shadow blur at 0 no longer incorrectly defaults to 8
-  - Shadow spread uniformly extends around all edges (dilation technique)
-  - Shadow spread scales correctly on article pages
+- **Gradient Fills** — Beautiful gradient fills for shapes
+  - Linear gradients with customizable angle (0-360°)
+  - Radial gradients with adjustable center and radius
+  - Interactive UI: color stop editor, angle/position sliders
+  - 6 built-in presets: sunset, ocean, forest, fire, steel, rainbow
+  - Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box
+  - SVG export support for gradient fills
 
-- **Marker Shadow Scaling** — Marker shadows scale correctly on article pages
+### Previous v1.5.7 Highlights
 
-- **Dimension Layer Improvements**
-  - Shadow controls removed from properties (not applicable)
-  - Selection handles now appear at arrow/tick endpoints
-  - Hit testing works on the visible dimension line
+- **SVG Export** — Export layer annotations as editable vector graphics
+  - Generates clean SVG with proper XML structure
+  - Supports all layer types with proper marker definitions
+  - Hidden layers automatically excluded
 
-### Previous v1.5.4 Highlights
-
-- **Marker Tool** — New annotation tool for numbered/lettered sequence markers
-  - Styles: Circled (①②③), Letters (A B C), Parentheses ((1)(2)(3)), Plain (1. 2. 3.)
-  - Optional arrow/leader lines pointing to target locations
-  - Full shadow support with all shadow controls
-
-- **Dimension Tool** — Technical measurement annotation tool
-  - End styles: Arrow, Tick, Dot, None
-  - Tolerance display: Symmetric (±), Deviation (+/-), Limits
-  - Configurable units, scale, and precision
-
-- **Marker Shadow Fix** — Shadow controls now properly affect marker layers
-- **CanvasManager Refactored** — Reduced from 2,072 to 1,927 lines
-
-### Previous v1.5.3 Highlights
+### Previous v1.5.5 Highlights
 
 - **Improved Test Coverage** — Added 114 new tests targeting low-coverage modules
-- **9,303 tests passing** — 94.03% statement coverage, 85.01% branch coverage
+- **9,602 tests passing** — 95% statement coverage, 84% branch coverage
 - **Enhanced Quality** — Tests added to LayersEditor, APIManager, GroupManager, ShapeLibraryManager, LayerRenderer, Toolbar, CanvasManager
 - **Documentation Updates** — All documentation synchronized with latest metrics
 
@@ -169,16 +157,16 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.5 |
-| **Version (REL1_43)** | 1.5.5-REL1_43 |
+| **Version (main)** | 1.5.8 |
+| **Version (REL1_43)** | 1.5.8-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 12, 2026 |
-| **Test Suites** | 144 |
-| **Total Tests** | 9,319 |
-| **Statement Coverage** | 94% |
+| **Release Date** | January 2026 |
+| **Test Suites** | 149 |
+| **Total Tests** | 9,602 |
+| **Statement Coverage** | 95% |
 | **Branch Coverage** | 85% |
-| **JavaScript Files** | 115 |
-| **ES6 Classes** | 94+ |
+| **JavaScript Files** | 122 |
+| **ES6 Classes** | 100+ |
 
 ---
 

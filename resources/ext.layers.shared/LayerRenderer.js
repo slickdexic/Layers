@@ -62,6 +62,10 @@
 	const DimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.DimensionRenderer ) ||
 		( typeof require !== 'undefined' ? require( './DimensionRenderer.js' ) : null );
 
+	// Get GradientRenderer - it should be loaded before this module
+	const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer ) ||
+		( typeof require !== 'undefined' ? require( './GradientRenderer.js' ) : null );
+
 	/**
 	 * LayerRenderer class - Renders individual layer shapes on a canvas
 	 */
@@ -123,13 +127,29 @@ class LayerRenderer {
 			if ( this.polygonStarRenderer ) {
 				this.shapeRenderer.setPolygonStarRenderer( this.polygonStarRenderer );
 			}
+			// Wire up GradientRenderer for gradient fill support
+			if ( GradientRenderer ) {
+				this.gradientRenderer = new GradientRenderer( ctx );
+				this.shapeRenderer.setGradientRenderer( this.gradientRenderer );
+				// Also wire to PolygonStarRenderer
+				if ( this.polygonStarRenderer && this.polygonStarRenderer.setGradientRenderer ) {
+					this.polygonStarRenderer.setGradientRenderer( this.gradientRenderer );
+				}
+			} else {
+				this.gradientRenderer = null;
+			}
 		} else {
 			this.shapeRenderer = null;
+			this.gradientRenderer = null;
 		}
 
 		// Create TextBoxRenderer instance for text box shape operations
 		if ( TextBoxRenderer ) {
 			this.textBoxRenderer = new TextBoxRenderer( ctx, { shadowRenderer: this.shadowRenderer } );
+			// Wire up GradientRenderer for gradient fill support
+			if ( this.gradientRenderer ) {
+				this.textBoxRenderer.setGradientRenderer( this.gradientRenderer );
+			}
 		} else {
 			this.textBoxRenderer = null;
 		}
@@ -241,6 +261,9 @@ class LayerRenderer {
 		}
 		if ( this.dimensionRenderer ) {
 			this.dimensionRenderer.setContext( ctx );
+		}
+		if ( this.gradientRenderer ) {
+			this.gradientRenderer.setContext( ctx );
 		}
 	}
 

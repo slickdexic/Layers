@@ -51,6 +51,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'color' => 'string',
 		'stroke' => 'string',
 		'fill' => 'string',
+		// Gradient fill (object with type, colors, angle, etc.)
+		'gradient' => 'array',
 		'strokeWidth' => 'numeric',
 		'opacity' => 'numeric',
 		'fillOpacity' => 'numeric',
@@ -727,7 +729,97 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $validViewBox ];
 		}
 
+		if ( $property === 'gradient' ) {
+			return $this->validateGradient( $value );
+		}
+
 		return [ 'valid' => true, 'value' => $value ];
+	}
+
+	/**
+	 * Validate a gradient definition
+	 *
+	 * @param array $gradient Gradient data to validate
+	 * @return array Validation result with 'valid', 'value' or 'error' keys
+	 */
+	private function validateGradient( array $gradient ): array {
+		$validGradient = [];
+
+		// Validate type (required, must be 'linear' or 'radial')
+		if ( !isset( $gradient['type'] ) || !in_array( $gradient['type'], [ 'linear', 'radial' ], true ) ) {
+			return [ 'valid' => false, 'error' => 'Gradient type must be "linear" or "radial"' ];
+		}
+		$validGradient['type'] = $gradient['type'];
+
+		// Validate colors array (required, at least 2 color stops)
+		if ( !isset( $gradient['colors'] ) || !is_array( $gradient['colors'] ) || count( $gradient['colors'] ) < 2 ) {
+			return [ 'valid' => false, 'error' => 'Gradient must have at least 2 color stops' ];
+		}
+
+		// Cap at reasonable max (10 color stops should be plenty)
+		if ( count( $gradient['colors'] ) > 10 ) {
+			return [ 'valid' => false, 'error' => 'Too many gradient color stops' ];
+		}
+
+		$validColors = [];
+		foreach ( $gradient['colors'] as $stop ) {
+			if ( !is_array( $stop ) ) {
+				continue;
+			}
+			if ( !isset( $stop['offset'] ) || !isset( $stop['color'] ) ) {
+				continue;
+			}
+			if ( !is_numeric( $stop['offset'] ) || !is_string( $stop['color'] ) ) {
+				continue;
+			}
+
+			$offset = (float)$stop['offset'];
+			// Clamp to 0-1 range
+			$offset = max( 0, min( 1, $offset ) );
+
+			// Validate color (basic check for hex, rgb, rgba, named)
+			$color = trim( $stop['color'] );
+			if ( strlen( $color ) > 50 ) {
+				$color = substr( $color, 0, 50 );
+			}
+			// Strip dangerous characters (allow only safe CSS color chars)
+			$color = preg_replace( '/[^a-zA-Z0-9#(),.\s]/', '', $color );
+
+			$validColors[] = [
+				'offset' => $offset,
+				'color' => $color
+			];
+		}
+
+		if ( count( $validColors ) < 2 ) {
+			return [ 'valid' => false, 'error' => 'Gradient must have at least 2 valid color stops' ];
+		}
+		$validGradient['colors'] = $validColors;
+
+		// Validate angle for linear gradients (optional, 0-360)
+		if ( isset( $gradient['angle'] ) && is_numeric( $gradient['angle'] ) ) {
+			$angle = (float)$gradient['angle'];
+			// Normalize to 0-360 range
+			$angle = fmod( $angle, 360 );
+			if ( $angle < 0 ) {
+				$angle += 360;
+			}
+			$validGradient['angle'] = $angle;
+		}
+
+		// Validate radial gradient center (optional, 0-1 for normalized coords)
+		if ( isset( $gradient['centerX'] ) && is_numeric( $gradient['centerX'] ) ) {
+			$validGradient['centerX'] = max( 0, min( 1, (float)$gradient['centerX'] ) );
+		}
+		if ( isset( $gradient['centerY'] ) && is_numeric( $gradient['centerY'] ) ) {
+			$validGradient['centerY'] = max( 0, min( 1, (float)$gradient['centerY'] ) );
+		}
+		if ( isset( $gradient['radius'] ) && is_numeric( $gradient['radius'] ) ) {
+			// Radius can be 0-1 (normalized) or larger for edge-to-edge
+			$validGradient['radius'] = max( 0, min( 2, (float)$gradient['radius'] ) );
+		}
+
+		return [ 'valid' => true, 'value' => $validGradient ];
 	}
 
 	/**

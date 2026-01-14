@@ -468,6 +468,24 @@ class ApiLayersInfo extends ApiBase {
 	}
 
 	/**
+	 * Resolve the Layers-specific logger.
+	 *
+	 * @return \Psr\Log\LoggerInterface Logger instance
+	 */
+	protected function getLogger(): \Psr\Log\LoggerInterface {
+		return MediaWikiServices::getInstance()->get( 'LayersLogger' );
+	}
+
+	/**
+	 * Get a read database connection.
+	 *
+	 * @return \Wikimedia\Rdbms\IDatabase Database connection
+	 */
+	protected function getDB(): \Wikimedia\Rdbms\IDatabase {
+		return MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
+	}
+
+	/**
 	 * Build a Title object for the provided filename. Extracted for easier testing.
 	 *
 	 * @param string $filename

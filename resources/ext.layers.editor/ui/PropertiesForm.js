@@ -876,9 +876,53 @@
 				if ( isBlurFill ) {
 					addInput( { label: t( 'layers-prop-blur-radius', 'Blur Radius' ), type: 'number', value: layer.blurRadius || 12, min: 1, max: 64, step: 1, onChange: function ( v ) { const br = Math.max( 1, Math.min( 64, parseInt( v, 10 ) || 12 ) ); editor.updateLayer( layer.id, { blurRadius: br } ); } } );
 				}
-				// Color fill (only shown when blur fill is disabled)
+				// Gradient/Color fill (only shown when blur fill is disabled)
 				if ( !isBlurFill ) {
-					addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
+					// Use GradientEditor component for full gradient support
+					const GradientEditor = ( typeof window !== 'undefined' && window.Layers && window.Layers.UI && window.Layers.UI.GradientEditor ) ?
+						window.Layers.UI.GradientEditor : null;
+
+					if ( GradientEditor ) {
+						// Create container for gradient editor
+						const gradientContainer = document.createElement( 'div' );
+						gradientContainer.className = 'property-field property-field--wide';
+
+						// Create gradient editor instance
+						const gradientEditorInstance = new GradientEditor( {
+							layer: layer,
+							container: gradientContainer,
+							onChange: function ( updates ) {
+								// When gradient changes, update layer
+								if ( updates.gradient ) {
+									editor.updateLayer( layer.id, { gradient: updates.gradient } );
+								} else if ( updates.gradient === null ) {
+									// Switching to solid - remove gradient property
+									editor.updateLayer( layer.id, { gradient: null } );
+								}
+							},
+							onFillTypeChange: function () {
+								// Refresh properties panel when switching between solid/gradient
+								if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+									setTimeout( function () {
+										editor.layerPanel.updatePropertiesPanel( layer.id );
+									}, 0 );
+								}
+							}
+						} );
+
+						// Store instance for cleanup (optional)
+						gradientContainer._gradientEditor = gradientEditorInstance;
+
+						form.appendChild( gradientContainer );
+
+						// Show solid color picker only when not using gradient
+						if ( !layer.gradient ) {
+							addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
+						}
+					} else {
+						// Fallback: simple color picker if GradientEditor not available
+						addColorPicker( { label: t( 'layers-prop-fill-color', 'Fill Color' ), value: layer.fill, property: 'fill', onChange: function ( newColor ) { editor.updateLayer( layer.id, { fill: newColor } ); } } );
+					}
 				}
 				addSliderInput( { label: t( 'layers-prop-fill-opacity', 'Fill Opacity' ), value: ( layer.fillOpacity != null ) ? Math.round( layer.fillOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { fillOpacity: v / 100 } ); } } );
 			}

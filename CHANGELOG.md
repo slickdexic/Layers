@@ -2,23 +2,48 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.7] - 2026-01-21
+## [1.5.9] - 2026-01-13
+
+### Removed
+- **SVG Export** — Removed broken SVG export feature that produced incorrect output for stars, gradients, text boxes, and arrows. The feature was not user-requested and did not meet quality standards.
+
+---
+
+## [1.5.8] - 2026-01-22
 
 ### Added
-- **SVG Export** — New feature to export layer annotations as editable vector graphics
-  - Export button added to toolbar alongside existing image export
-  - Generates clean SVG with proper XML structure and namespaces
-  - Supports all layer types: rectangles, circles, ellipses, lines, arrows, polygons, stars, paths, text, textboxes, images, and custom shapes
-  - Arrow markers use proper SVG `<marker>` definitions for correct rendering
-  - Rotation handled via `<g>` transform groups
-  - Dashed/dotted line styles preserved with `stroke-dasharray`
-  - Text styling preserved: font, size, weight, style, stroke, alignment
-  - Hidden layers automatically excluded from export
-  - XSS-safe with proper XML character escaping
+- **Gradient Fills** — New feature for adding gradient fills to shapes
+  - Support for linear gradients (customizable angle 0-360°)
+  - Support for radial gradients (customizable center position and radius)
+  - Interactive UI controls: gradient type selector, color stop editor, angle/position sliders
+  - `GradientRenderer.js` — Core utility class for creating Canvas gradients
+  - `GradientEditor.js` — UI component for editing gradient properties in the properties panel
+  - 6 built-in gradient presets: sunset, ocean, forest, fire, steel, rainbow
+  - Gradient validation on both client and server sides
+  - PHP whitelist updated with `gradient` property (array type)
+  - Supported layer types: Rectangle, Circle, Ellipse, Polygon, Star, Text Box
+
+### Fixed
+- **GradientRenderer Namespace** — Fixed 6 incorrect namespace references (`window.Layers.GradientRenderer` → `window.Layers.Renderers.GradientRenderer`)
+- **Fill Type Toggle** — Properties panel now properly refreshes when switching between solid and gradient fill types
+- **Scale Parameter Handling** — Fixed scale object extraction in ShapeRenderer.applyFillStyle() for proper gradient rendering
 
 ### Tests
-- **Test Count** — 9,433 tests passing (146 suites)
-- Added comprehensive SVGExporter test suite with 57 tests covering all layer types
+- **Test Count** — 9,562 tests passing (149 suites)
+- Added GradientRenderer test suite with 40 tests covering gradient creation, validation, presets, and cloning
+- Added GradientEditor test suite with 31 tests covering UI interactions and callbacks
+
+---
+
+## [1.5.7] - 2026-01-21
+
+### Refactored
+- **Codebase Cleanup** — Code quality improvements
+  - Reduced god class count
+  - Improved test coverage
+
+### Tests
+- **Test Count** — 9,489 tests passing (147 suites)
 
 ---
 

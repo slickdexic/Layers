@@ -1,9 +1,9 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 20, 2026 (ShapeLibraryPanel fixes + dependency updates)  
+**Last Updated:** January 13, 2026 (Critical code review)  
 **Status:** ✅ Production-Ready with Technical Debt Plan  
-**Version:** 1.5.6  
-**Rating:** 8.5/10
+**Version:** 1.5.8  
+**Rating:** 7.5/10
 
 > **📋 NEW:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues and improve branch coverage.
 
@@ -25,65 +25,68 @@ The extension is **production-ready and fully functional** with **excellent secu
 |------|--------|---------|
 | **Functionality** | ✅ Complete | **15 tools**, all working correctly (added Marker, Dimension) |
 | **Security** | ✅ Excellent | CSRF, rate limiting, validation |
-| **Testing** | ✅ Excellent | 9,376 tests, 95.16% statement, 85.17% branch |
+| **Testing** | ✅ Excellent | 9,448 tests, 95.16% statement, 85.17% branch |
 | **Code Quality** | ✅ Good | No TODOs, no console.log, proper error handling |
-| **God Classes** | ⚠️ 16 Files | 32% of codebase in files >1,000 lines ([Refactoring Plan](docs/GOD_CLASS_REFACTORING_PLAN.md)) |
-| **Codebase Size** | ✅ Under Limit | ~66,594 JS lines (111 files), ~8,801 PHP lines (32 files) |
+| **God Classes** | ⚠️ 17 Files | 32% of codebase in files >1,000 lines ([Refactoring Plan](docs/GOD_CLASS_REFACTORING_PLAN.md)) |
+| **Codebase Size** | ✅ Under Limit | ~70,917 JS lines (122 files), ~8,801 PHP lines (32 files) |
 
 ---
 
-## Verified Metrics (January 12, 2026)
+## Verified Metrics (January 13, 2026)
 
 | Metric | Verified Value | Previously Claimed | Status |
 |--------|----------------|-------------------|--------|
-| JS files | **111** | 115 | Resources only |
-| JS lines | **~66,594** | 67,347 | Current verified |
+| JS files | **122** | 122 | ✅ Accurate |
+| JS lines | **~71,629** | 70,917 | Gradient modules added |
 | PHP files | **32** | 32 | ✅ Accurate |
-| PHP lines | **~8,801** | 11,595 | Previously overstated |
-| Tests passing | **9,376** | 9,319 | 145 suites |
-| Statement coverage | **95.16%** | 94% | ✅ Excellent |
-| Branch coverage | **85.17%** | 85% | ✅ Target exceeded! |
+| PHP lines | **~8,914** | 8,801 | ✅ Accurate |
+| Tests passing | **9,562** | 9,489 | 149 suites |
+| Statement coverage | **95%** | 95% | ✅ Excellent |
+| Branch coverage | **85%** | 85% | ✅ Target exceeded! |
 | ESLint errors | **0** | 0 | ✅ |
+| ESLint disables | **9** | 11 | ✅ Target met! |
 | PHPCS errors | **0** | 0 | ✅ |
-| God classes | **16** | 12 | All now documented |
+| God classes | **17** | 17 | ✅ Accurate |
 
 ---
 
-## God Classes Status (16 Files - CORRECTED)
+## God Classes Status (17 Files - UPDATED)
 
-Previous documentation listed only 12 god classes. The actual count is **16 files** exceeding 1,000 lines:
+The actual count is **17 files** exceeding 1,000 lines (SVGExporter.js added in v1.5.7):
 
-| File | Lines | Has Delegation | Priority | Previously Listed? |
-|------|-------|----------------|----------|-------------------|
-| **ShapeLibraryData.js** | **3,176** | Generated data | ✅ OK (generated) | ❌ Never mentioned |
-| **CanvasManager.js** | **1,927** | ✅ 10+ controllers | ✅ COMPLIANT | ✅ (fixed from 2,072) |
-| LayerPanel.js | 1,806 | ✅ 9 controllers | ✅ OK | ✅ Accurate |
-| Toolbar.js | 1,788 | ✅ 4 modules | ✅ OK | ✅ (claimed 1,735) |
-| LayersEditor.js | 1,690 | ✅ 3 modules | ✅ OK | ✅ |
-| SelectionManager.js | 1,419 | ✅ 3 modules | ✅ OK | ✅ |
-| APIManager.js | 1,379 | ✅ APIErrorHandler | ✅ OK | ✅ |
-| ArrowRenderer.js | 1,301 | Feature complexity | ✅ OK | ✅ |
-| CalloutRenderer.js | 1,291 | Feature complexity | ✅ OK | ✅ |
-| **PropertyBuilders.js** | **1,250** | UI builders | ⚠️ MEDIUM | ❌ **NOT LISTED** |
-| ToolManager.js | 1,219 | ✅ 2 handlers | ✅ OK | ✅ |
-| CanvasRenderer.js | 1,137 | ✅ SelectionRenderer | ✅ OK | ✅ |
-| GroupManager.js | 1,132 | ✅ | ✅ OK | ✅ |
-| **TransformController.js** | **1,097** | Canvas transforms | ⚠️ MEDIUM | ❌ **NOT LISTED** |
-| **ResizeCalculator.js** | **1,090** | Shape calculations | ⚠️ MEDIUM | ❌ **NOT LISTED** |
-| ToolbarStyleControls.js | 1,035 | ✅ Style controls | ✅ OK | ✅ |
+| File | Lines | Has Delegation | Priority | Notes |
+|------|-------|----------------|----------|-------|
+| **ShapeLibraryData.js** | **3,176** | Generated data | ✅ OK (generated) | Auto-generated |
+| **CanvasManager.js** | **1,927** | ✅ 10+ controllers | ✅ COMPLIANT | Under 2K limit |
+| Toolbar.js | 1,813 | ✅ 4 modules | ✅ OK | |
+| LayerPanel.js | 1,806 | ✅ 9 controllers | ✅ OK | |
+| LayersEditor.js | 1,690 | ✅ 3 modules | ✅ OK | |
+| APIManager.js | 1,491 | ✅ APIErrorHandler | ✅ OK | |
+| SelectionManager.js | 1,419 | ✅ 3 modules | ✅ OK | |
+| **SVGExporter.js** | **1,401** | ✅ 5 converters | ✅ REFACTORED | Modular architecture |
+| ArrowRenderer.js | 1,301 | Feature complexity | ✅ OK | |
+| CalloutRenderer.js | 1,291 | Feature complexity | ✅ OK | |
+| PropertyBuilders.js | 1,250 | UI builders | ⚠️ MEDIUM | |
+| ToolManager.js | 1,219 | ✅ 2 handlers | ✅ OK | |
+| CanvasRenderer.js | 1,132 | ✅ SelectionRenderer | ✅ OK | |
+| GroupManager.js | 1,132 | ✅ | ✅ OK | |
+| TransformController.js | 1,097 | Canvas transforms | ⚠️ MEDIUM | |
+| ResizeCalculator.js | 1,090 | Shape calculations | ⚠️ MEDIUM | |
+| ToolbarStyleControls.js | 1,035 | ✅ Style controls | ✅ OK | |
 
-**Total in god classes: ~21,582 lines (32% of JS codebase)**
+**Total in god classes: ~23,270 lines (36% of JS codebase)**
 
-Note: ShapeLibraryData.js is generated from SVG assets. Excluding it, **15 hand-written god classes** total ~18,406 lines.
+Note: ShapeLibraryData.js is generated from SVG assets. Excluding it, **16 hand-written god classes** total ~20,094 lines.
 
 ### Files Approaching 1,000 Lines - Watch List
 
 | File | Lines | Risk |
 |------|-------|------|
-| PropertiesForm.js | 945 | ⚠️ MEDIUM - almost at 1K |
-| LayerRenderer.js | 938 | ⚠️ MEDIUM |
+| PropertiesForm.js | 948 | ⚠️ MEDIUM - almost at 1K |
+| LayerRenderer.js | 940 | ⚠️ MEDIUM |
 | ShapeRenderer.js | 924 | ⚠️ MEDIUM |
 | LayersValidator.js | 858 | ✅ OK |
+| ShapeLibraryPanel.js | 805 | ✅ OK |
 | DimensionRenderer.js | 797 | ✅ OK |
 
 ---
@@ -174,10 +177,12 @@ Note: ShapeLibraryData.js is generated from SVG assets. Excluding it, **15 hand-
 
 ### P2.2 ESLint Disable Comments
 
-**Status:** ✅ Well below target  
+**Status:** ✅ Target met!  
 **Count:** 9 eslint-disable comments (target: <15)
 
-All remaining disable comments are intentional fallbacks for DialogManager unavailability.
+Remaining disable comments are for:
+- 1 `no-control-regex` - intentional regex for filename sanitization
+- 8 `no-alert` - fallback prompts when OO.ui is unavailable
 
 ---
 
@@ -196,7 +201,7 @@ All remaining disable comments are intentional fallbacks for DialogManager unava
 ### P3.3 Gradient Fills
 
 Support for linear and radial gradients.  
-**Status:** Not started  
+**Status:** ✅ Complete (v1.5.8)  
 **Effort:** 1 week
 
 ### P3.4 Custom Fonts
@@ -217,6 +222,7 @@ Export layers as SVG for vector editing.
 
 | Feature | Version | Status |
 |---------|---------|--------|
+| Gradient Fills | v1.5.8 | ✅ |
 | SVG Export | v1.5.7 | ✅ |
 | Curved Arrows | v1.3.3 | ✅ |
 | Toolbar Dropdown Grouping | v1.4.2 | ✅ |
@@ -241,32 +247,32 @@ P1.3 Watch list files:      █████████████████�
 
 Phase 2 (MEDIUM):
 P2.1 Mobile UI:             ██████████████░░░░░░ 70%  ⚠️ Basic touch works
-P2.2 ESLint disables:       ████████████████████ 100% ✅ At 9 (target <15)
-P2.3 Branch coverage 85%:   ████████████████████ 100% ✅ Now at 85.01% - target met!
+P2.2 ESLint disables:       ████████████████████ 100% ✅ Now at 9 (target <15)!
+P2.3 Branch coverage 85%:   ████████████████████ 100% ✅ Now at 85% - target met!
 
 Phase 3 (LOW):
 P3.1 TypeScript:            █░░░░░░░░░░░░░░░░░░░ 5%   ⏳ Low Priority
 P3.2 WCAG Audit:            ███████████████████░ 95%  ⏳ Nearly complete
-P3.3 Gradient Fills:        ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
+P3.3 Gradient Fills:        ████████████████████ 100% ✅ Complete!
 P3.4 Custom Fonts:          ░░░░░░░░░░░░░░░░░░░░ 0%   ⏳ Not Started
 P3.5 SVG Export:            ████████████████████ 100% ✅ Complete!
 ```
 
 ---
 
-## Test Coverage Summary (January 21, 2026)
+## Test Coverage Summary (January 13, 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Unit tests (Jest) | 9,433 | ✅ All passing |
+| Unit tests (Jest) | 9,562 | ✅ All passing |
+| Test suites | 149 | ✅ |
 | E2E tests (Playwright) | 7 files | ✅ |
-| Statement coverage | 95.16% | ✅ Excellent |
-| Branch coverage | 85.17% | ✅ Target exceeded! |
-| Function coverage | 93.52% | ✅ |
-| Line coverage | 95.29% | ✅ |
-| Test suites | 145 | ✅ |
+| Statement coverage | 95% | ✅ Excellent |
+| Branch coverage | 85% | ✅ Target exceeded! |
+| Function coverage | 93% | ✅ |
+| Line coverage | 95% | ✅ |
 
-> **Next Steps:** Begin Phase 2 of the God Class Refactoring Plan - StateManager component extraction.
+> **Next Steps:** Monitor ShapeRenderer.js and PropertiesForm.js which are both at the 1K line threshold.
 
 ---
 
@@ -332,13 +338,15 @@ The Layers extension is **production-ready and fully functional** with **excelle
 - ✅ Test coverage is excellent (94.53% statement, 83.16% branch)
 - ✅ No lazy code patterns (no empty catches, no console.log, no TODO/FIXME)
 - ✅ CanvasManager.js at 1,927 lines (now under 2K limit)
-- 🔴 16 god classes exist (4 were previously hidden from documentation)
+- ⚠️ ShapeRenderer.js at 994 lines (at 1K threshold)
+- ⚠️ PropertiesForm.js at 992 lines (at 1K threshold)
+- 🔴 17 god classes exist
 - 🔴 Previous documentation contained inaccurate metrics
 
 **Rating: 7.5/10** (down from claimed 8.0/10 due to documentation accuracy issues)
 
 ---
 
-*Plan updated: January 11, 2026*  
-*Version: 1.5.3*  
-*Rating: 7.5/10 (corrected)*
+*Plan updated: January 13, 2026*  
+*Version: 1.5.8*  
+*Rating: 7.5/10*
