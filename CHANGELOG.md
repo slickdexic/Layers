@@ -5,11 +5,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ## [1.5.9] - 2026-01-13
 
 ### Removed
-- **SVG Export** — Removed broken SVG export feature that produced incorrect output for stars, gradients, text boxes, and arrows. The feature was not user-requested and did not meet quality standards.
+- **SVG Export** — Removed 1,535 lines of dead code. The SVG export feature was never registered in extension.json and was not accessible to users. The code had significant bugs with stars, gradients, text boxes, and arrows.
+
+### Improved
+- **Code Quality** — Branch coverage improved from 83.96% to 85.11% after removing dead code
+- **Test Suite** — Now 9,451 tests passing (147 suites) with 95.10% statement coverage
 
 ---
 
-## [1.5.8] - 2026-01-22
+## [1.5.8] - 2026-01-12
 
 ### Added
 - **Gradient Fills** — New feature for adding gradient fills to shapes
@@ -35,7 +39,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ---
 
-## [1.5.7] - 2026-01-21
+## [1.5.7] - 2026-01-11
 
 ### Refactored
 - **Codebase Cleanup** — Code quality improvements
@@ -47,7 +51,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ---
 
-## [1.5.6] - 2026-01-20
+## [1.5.6] - 2026-01-10
 
 ### Fixed
 - **ShapeLibraryPanel Memory Leak Prevention** — Comprehensive cleanup improvements

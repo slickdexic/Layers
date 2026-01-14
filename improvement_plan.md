@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 13, 2026 (Critical code review)  
+**Last Updated:** January 13, 2026 (v1.5.9 release)  
 **Status:** ✅ Production-Ready with Technical Debt Plan  
-**Version:** 1.5.8  
+**Version:** 1.5.9  
 **Rating:** 7.5/10
 
 > **📋 NEW:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues and improve branch coverage.
@@ -25,10 +25,10 @@ The extension is **production-ready and fully functional** with **excellent secu
 |------|--------|---------|
 | **Functionality** | ✅ Complete | **15 tools**, all working correctly (added Marker, Dimension) |
 | **Security** | ✅ Excellent | CSRF, rate limiting, validation |
-| **Testing** | ✅ Excellent | 9,448 tests, 95.16% statement, 85.17% branch |
+| **Testing** | ✅ Excellent | 9,451 tests, 95.10% statement, 85.11% branch |
 | **Code Quality** | ✅ Good | No TODOs, no console.log, proper error handling |
-| **God Classes** | ⚠️ 17 Files | 32% of codebase in files >1,000 lines ([Refactoring Plan](docs/GOD_CLASS_REFACTORING_PLAN.md)) |
-| **Codebase Size** | ✅ Under Limit | ~70,917 JS lines (122 files), ~8,801 PHP lines (32 files) |
+| **God Classes** | ✅ 16 Files | 31% of codebase in files >1,000 lines ([Refactoring Plan](docs/GOD_CLASS_REFACTORING_PLAN.md)) |
+| **Codebase Size** | ✅ Under Limit | ~68,785 JS lines (115 files), ~8,914 PHP lines (32 files) |
 
 ---
 
@@ -36,17 +36,17 @@ The extension is **production-ready and fully functional** with **excellent secu
 
 | Metric | Verified Value | Previously Claimed | Status |
 |--------|----------------|-------------------|--------|
-| JS files | **122** | 122 | ✅ Accurate |
-| JS lines | **~71,629** | 70,917 | Gradient modules added |
+| JS files | **115** | 122 | ✅ Reduced (dead code removed) |
+| JS lines | **~68,785** | 70,917 | ✅ Reduced (SVGExporter removed) |
 | PHP files | **32** | 32 | ✅ Accurate |
 | PHP lines | **~8,914** | 8,801 | ✅ Accurate |
-| Tests passing | **9,562** | 9,489 | 149 suites |
-| Statement coverage | **95%** | 95% | ✅ Excellent |
-| Branch coverage | **85%** | 85% | ✅ Target exceeded! |
+| Tests passing | **9,451** | 9,562 | 147 suites (dead tests removed) |
+| Statement coverage | **95.10%** | 95% | ✅ Excellent |
+| Branch coverage | **85.11%** | 85% | ✅ Target exceeded! |
 | ESLint errors | **0** | 0 | ✅ |
 | ESLint disables | **9** | 11 | ✅ Target met! |
 | PHPCS errors | **0** | 0 | ✅ |
-| God classes | **17** | 17 | ✅ Accurate |
+| God classes | **16** | 17 | ✅ Reduced (SVGExporter removed) |
 
 ---
 
@@ -63,7 +63,6 @@ The actual count is **17 files** exceeding 1,000 lines (SVGExporter.js added in 
 | LayersEditor.js | 1,690 | ✅ 3 modules | ✅ OK | |
 | APIManager.js | 1,491 | ✅ APIErrorHandler | ✅ OK | |
 | SelectionManager.js | 1,419 | ✅ 3 modules | ✅ OK | |
-| **SVGExporter.js** | **1,401** | ✅ 5 converters | ✅ REFACTORED | Modular architecture |
 | ArrowRenderer.js | 1,301 | Feature complexity | ✅ OK | |
 | CalloutRenderer.js | 1,291 | Feature complexity | ✅ OK | |
 | PropertyBuilders.js | 1,250 | UI builders | ⚠️ MEDIUM | |
@@ -74,17 +73,17 @@ The actual count is **17 files** exceeding 1,000 lines (SVGExporter.js added in 
 | ResizeCalculator.js | 1,090 | Shape calculations | ⚠️ MEDIUM | |
 | ToolbarStyleControls.js | 1,035 | ✅ Style controls | ✅ OK | |
 
-**Total in god classes: ~23,270 lines (36% of JS codebase)**
+**Total in god classes: ~21,869 lines (32% of JS codebase)**
 
-Note: ShapeLibraryData.js is generated from SVG assets. Excluding it, **16 hand-written god classes** total ~20,094 lines.
+Note: ShapeLibraryData.js is generated from SVG assets. Excluding it, **15 hand-written god classes** total ~18,693 lines.
 
 ### Files Approaching 1,000 Lines - Watch List
 
 | File | Lines | Risk |
 |------|-------|------|
-| PropertiesForm.js | 948 | ⚠️ MEDIUM - almost at 1K |
-| LayerRenderer.js | 940 | ⚠️ MEDIUM |
-| ShapeRenderer.js | 924 | ⚠️ MEDIUM |
+| ShapeRenderer.js | 994 | ⚠️ MEDIUM - at 1K threshold |
+| PropertiesForm.js | 992 | ⚠️ MEDIUM - at 1K threshold |
+| LayerRenderer.js | 867 | ✅ OK |
 | LayersValidator.js | 858 | ✅ OK |
 | ShapeLibraryPanel.js | 805 | ✅ OK |
 | DimensionRenderer.js | 797 | ✅ OK |

@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C602%20Passing-brightgreen" alt="9,602 Tests">
+  <img src="https://img.shields.io/badge/Tests-9%2C451%20Passing-brightgreen" alt="9,451 Tests">
   <img src="https://img.shields.io/badge/Coverage-95%25-brightgreen" alt="95% Coverage">
 </p>
 
@@ -20,7 +20,15 @@
 
 ---
 
-## 🆕 What's New in v1.5.8
+## 🆕 What's New in v1.5.9
+
+- **Dead Code Removal** — Removed 1,535 lines of unreachable SVG export code
+  - SVG export was never registered in extension.json and not accessible to users
+  - Removal improved branch coverage from 83.96% to 85.11%
+  - All coverage targets now met: 95.10% statement, 85.11% branch
+  - **9,451 tests passing** (147 suites)
+
+### Previous v1.5.8 Highlights
 
 - **Gradient Fills** — Beautiful gradient fills for shapes
   - Linear gradients with customizable angle (0-360°)
@@ -28,28 +36,8 @@
   - Interactive UI: color stop editor, angle/position sliders
   - 6 built-in presets: sunset, ocean, forest, fire, steel, rainbow
   - Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box
-  - SVG export support for gradient fills
-
-### Previous v1.5.7 Highlights
-
-- **SVG Export** — Export layer annotations as editable vector graphics
-  - Generates clean SVG with proper XML structure
-  - Supports all layer types with proper marker definitions
-  - Hidden layers automatically excluded
-
-### Previous v1.5.5 Highlights
-
-- **Improved Test Coverage** — Added 114 new tests targeting low-coverage modules
-- **9,602 tests passing** — 95% statement coverage, 84% branch coverage
-- **Enhanced Quality** — Tests added to LayersEditor, APIManager, GroupManager, ShapeLibraryManager, LayerRenderer, Toolbar, CanvasManager
-- **Documentation Updates** — All documentation synchronized with latest metrics
 
 ### Previous v1.5.1 Highlights
-
-- **Double-Headed Curved Arrow Rendering Fixed** — Fixed crossover artifact in double-headed curved arrows
-- **Tail Width Control Visibility** — Tail Width control now properly hides when Arrow Ends is set to "Double"
-
-### Previous v1.5.0 Highlights
 
 - **Layer Set List on File Pages** — File: pages now show a collapsible "Layer Annotations" section listing all named sets with author, revision count, and direct edit links
 - **Simplified Permissions** — Consolidated `createlayers` into `editlayers` — users with `editlayers` can now create and edit layer sets

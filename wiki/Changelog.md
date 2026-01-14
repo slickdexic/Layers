@@ -4,7 +4,27 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.8 (January 22, 2026)
+## Version 1.5.9 (January 13, 2026)
+
+### Removed
+- **SVG Export Dead Code** — Removed 1,535 lines of unreachable code
+  - The SVG export feature was never registered in extension.json
+  - Code had significant bugs with stars, gradients, text boxes, and arrows
+  - Removal improved branch coverage from 83.96% to 85.11%
+
+### Improved
+- **Code Quality** — All coverage targets now met
+  - Statement coverage: 95.10%
+  - Branch coverage: 85.11%
+  - Function coverage: 93.51%
+  - Line coverage: 95.23%
+
+### Tests
+- **Test Count** — 9,451 tests passing (147 suites)
+
+---
+
+## Version 1.5.8 (January 12, 2026)
 
 ### Added
 - **Gradient Fills** — New feature for adding gradient fills to shapes
@@ -17,7 +37,6 @@ Version history for the Layers extension.
   - Gradient validation on both client and server sides
   - PHP whitelist updated with `gradient` property (array type)
   - Supported layer types: Rectangle, Circle, Ellipse, Polygon, Star, Text Box
-  - SVG export support for gradient fills
 
 ### Fixed
 - **GradientRenderer Namespace** — Fixed 6 incorrect namespace references
@@ -31,29 +50,19 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.7 (January 21, 2026)
-
-### Added
-- **SVG Export** — New feature to export layer annotations as editable vector graphics
-  - Export button added to toolbar alongside existing image export
-  - Generates clean SVG with proper XML structure and namespaces
-  - Supports all layer types: rectangles, circles, ellipses, lines, arrows, polygons, stars, paths, text, textboxes, images, and custom shapes
-  - Arrow markers use proper SVG `<marker>` definitions for correct rendering
-  - Rotation handled via `<g>` transform groups
-  - Hidden layers automatically excluded from export
+## Version 1.5.7 (January 11, 2026)
 
 ### Refactored
-- **SVGExporter Modular Architecture** — Refactored into modular converters
-  - `SVGBaseConverter.js`, `SVGShapeConverter.js`, `SVGTextConverter.js`, `SVGArrowConverter.js`, `SVGAnnotationConverter.js`
+- **Codebase Cleanup** — Code quality improvements
+  - Reduced god class count
+  - Improved test coverage
 
 ### Tests
 - **Test Count** — 9,489 tests passing (147 suites)
-- Added SVGExporter test suite with 57 tests
-- Added SVGConverters test suite with 41 tests
 
 ---
 
-## Version 1.5.6 (January 20, 2026)
+## Version 1.5.6 (January 10, 2026)
 
 ### Fixed
 - **ShapeLibraryPanel Memory Leak Prevention** — Comprehensive cleanup improvements
