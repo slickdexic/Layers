@@ -360,7 +360,7 @@ Key documents that frequently need updates:
 
 Common metrics to keep synchronized:
 - Test count (currently 9,451 tests, 147 suites)
-- Coverage (94% statement, 84% branch)
+- Coverage (95% statement, 85% branch)
 - JavaScript file count (115 files, ~68,785 lines)
 - PHP file count (32 files, ~8,891 lines)
 - God class count (16 files >1,000 lines)

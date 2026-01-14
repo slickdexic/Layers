@@ -39,8 +39,7 @@ The extension is **functional and production-ready** with excellent security and
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| **Branch coverage 83.96% (below 85% target)** | 🟡 MEDIUM | ⚠️ NEEDS IMPROVEMENT |
-| **16 god classes** | 🟡 MEDIUM | Documented |
+| **16 god classes** | 🟡 MEDIUM | Documented, all with delegation |
 | **2 files at 1K threshold** | 🟡 MEDIUM | Watch list |
 
 ---
@@ -219,18 +218,18 @@ All tools working: Pointer, Text, Text Box, Callout, Pen, Rectangle, Circle, Ell
 
 ## Test Coverage Status
 
-### Current Coverage (Verified January 13, 2026)
+### Current Coverage (Verified January 13, 2026 - Post v1.5.9)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | Tests passing | **9,451** | - | ✅ |
 | Test suites | **147** | - | ✅ |
-| Statement coverage | **94.34%** | 85%+ | ✅ Excellent |
-| Branch coverage | **83.96%** | 85%+ | 🔴 Below target |
-| Function coverage | **93.25%** | 80%+ | ✅ |
-| Line coverage | **94.46%** | 85%+ | ✅ |
+| Statement coverage | **95.10%** | 85%+ | ✅ Excellent |
+| Branch coverage | **85.11%** | 85%+ | ✅ Target met! |
+| Function coverage | **93.51%** | 80%+ | ✅ |
+| Line coverage | **95.23%** | 85%+ | ✅ |
 
-**Note:** Branch coverage at 83.96% is slightly below the 85% target. This needs improvement.
+**Note:** Removing SVG export dead code improved all coverage metrics. Branch coverage now exceeds target.
 
 ---
 
@@ -241,12 +240,12 @@ All tools working: Pointer, Text, Text Box, Callout, Pen, Rectangle, Circle, Ell
 1. ✅ **DELETED:** `resources/ext.layers.editor/export/SVGExporter.js` (1,535 lines dead code)
 2. ✅ **DELETED:** `tests/jest/SVGExporter.test.js` (80 dead tests)
 3. ✅ **UPDATED:** extension.json version to 1.5.9
+4. ✅ **ACHIEVED:** Branch coverage now 85.11% (was 83.96% before cleanup)
 
 ### Short-Term (P1) - 1-4 Weeks
 
-4. **Improve branch coverage** from 83.96% to 85%+ target
-5. **Watch ShapeRenderer.js** (994 lines) — at 1K threshold, consider splitting
-6. **Watch PropertiesForm.js** (992 lines) — at 1K threshold, consider splitting
+5. **Watch ShapeRenderer.js** (994 lines) — at 1K threshold, consider splitting if it grows
+6. **Watch PropertiesForm.js** (992 lines) — at 1K threshold, consider splitting if it grows
 
 ### Medium-Term (P2) - 1-3 Months
 
