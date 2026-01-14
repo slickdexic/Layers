@@ -20,6 +20,9 @@ describe( 'DrawingController', () => {
 		// Create mock canvas manager
 		mockCanvasManager = {
 			renderer: mockRenderer,
+			editor: {
+				layers: []
+			},
 			createTextInputModal: jest.fn( () => {
 				const modal = document.createElement( 'div' );
 				const textInput = document.createElement( 'input' );
@@ -991,17 +994,17 @@ describe( 'DrawingController', () => {
 					}
 				};
 
-				mockCanvasManager.layers = [ { type: 'marker', value: 1 }, { type: 'marker', value: 2 } ];
+				mockCanvasManager.editor.layers = [ { type: 'marker', value: 1 }, { type: 'marker', value: 2 } ];
 				controller.startMarkerTool( point, style );
 
-				expect( mockGetNextValue ).toHaveBeenCalledWith( mockCanvasManager.layers );
+				expect( mockGetNextValue ).toHaveBeenCalledWith( mockCanvasManager.editor.layers );
 				expect( controller.tempLayer.value ).toBe( 5 );
 
 				delete window.Layers;
 			} );
 
-			it( 'should default to 1 when no canvasManager layers', () => {
-				mockCanvasManager.layers = undefined;
+			it( 'should default to 1 when no canvasManager editor layers', () => {
+				mockCanvasManager.editor.layers = undefined;
 				controller.startMarkerTool( point, style );
 
 				expect( controller.tempLayer.value ).toBe( 1 );

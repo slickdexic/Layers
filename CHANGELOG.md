@@ -2,6 +2,36 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.10] - 2026-01-14
+
+### Added
+- **Marker Auto-Number** — New feature for placing multiple markers quickly
+  - Added "Auto-number" checkbox in toolbar when marker tool is selected
+  - When enabled, marker values auto-increment (1→2→3... or A→B→C...) using existing `MarkerRenderer.getNextValue()` logic
+  - Tool remains active after placing a marker, allowing rapid sequential placement
+  - New `addLayerWithoutSelection()` method to support continuous marker placement
+  - New i18n messages: `layers-marker-autonumber`, `layers-marker-autonumber-tooltip`
+  - UI supports both light and dark modes (Vector 2022 compatible)
+
+### Fixed
+- **Arrow Fill Inconsistency** — Arrows now properly support fill colors for fat/storage arrow styles
+  - Fixed `updateContextVisibility()` to show fill control for arrow tool
+  - Fixed `applyColorPreview()` to apply fill color to arrow layers
+- **Marker Incrementing Bug** — Fixed markers showing same value (1,1,1) instead of incrementing
+  - Fixed `DrawingController.startMarkerTool()` to use correct layers path (`editor.layers`)
+- **Marker Controls Visibility** — Fixed auto-number checkbox disappearing after first marker
+  - Added CSS rule for `.style-control:not(.context-hidden)` visibility
+  - Use `addLayerWithoutSelection()` in auto-number mode to keep controls visible
+
+### Tests
+- **Test Count** — 9,460 tests passing (147 suites)
+- Added 4 CanvasManager tests for autoNumber property and finishDrawing behavior
+- Added 5 ToolbarStyleControls tests for marker controls UI and visibility
+- Fixed 3 arrow fill tests (StyleController, ToolbarStyleControls)
+- Updated DrawingController tests for new `editor.layers` path
+
+---
+
 ## [1.5.9] - 2026-01-13
 
 ### Removed

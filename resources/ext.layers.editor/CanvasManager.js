@@ -196,7 +196,8 @@ class CanvasManager {
 			strokeWidth: 2,
 			color: '#000000',
 			hasArrow: false,
-			arrowStyle: 'arrow'
+			arrowStyle: 'arrow',
+			autoNumber: false  // When true, marker tool stays active and auto-increments
 		};
 
 		// Zoom and pan functionality
@@ -643,7 +644,7 @@ class CanvasManager {
 		const markerProps = [
 			'style', 'size', 'fontSizeAdjust',
 			'fill', 'stroke', 'strokeWidth', 'color',
-			'hasArrow', 'arrowStyle'
+			'hasArrow', 'arrowStyle', 'autoNumber'
 		];
 		markerProps.forEach( ( prop ) => {
 			if ( props[ prop ] !== undefined ) {
@@ -1663,15 +1664,31 @@ class CanvasManager {
 	finishDrawing ( point ) {
 		// Delegate to DrawingController
 		if ( this.drawingController ) {
-			const layerData = this.drawingController.finishDrawing( point, this.currentTool );
+			const currentTool = this.currentTool;
+			const layerData = this.drawingController.finishDrawing( point, currentTool );
 			this.tempLayer = null;
+			// Check if marker autonumber mode is enabled
+			// If so, stay on marker tool instead of switching to pointer
+			const isMarkerAutoNumber = currentTool === 'marker' &&
+				this.markerDefaults &&
+				this.markerDefaults.autoNumber;
+
 			if ( layerData ) {
-				this.editor.addLayer( layerData );
+				// When auto-number is enabled, don't select the new layer
+				// so the toolbar controls stay visible for continued drawing
+				if ( isMarkerAutoNumber ) {
+					this.editor.addLayerWithoutSelection( layerData );
+				} else {
+					this.editor.addLayer( layerData );
+				}
 			}
-			// Always reset to pointer tool after drawing finishes
-			// (whether or not a layer was created)
-			if ( typeof this.editor.setCurrentTool === 'function' ) {
-				this.editor.setCurrentTool( 'pointer' );
+
+			if ( !isMarkerAutoNumber ) {
+				// Reset to pointer tool after drawing finishes
+				// (whether or not a layer was created)
+				if ( typeof this.editor.setCurrentTool === 'function' ) {
+					this.editor.setCurrentTool( 'pointer' );
+				}
 			}
 			this.renderLayers( this.editor.layers );
 		} else if ( typeof mw !== 'undefined' && mw.log ) {

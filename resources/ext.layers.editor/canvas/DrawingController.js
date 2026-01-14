@@ -283,8 +283,9 @@ class DrawingController {
 	 */
 	startMarkerTool( point, style ) {
 		// Get next marker value from existing layers
-		const layers = this.canvasManager && this.canvasManager.layers ?
-			this.canvasManager.layers : [];
+		// Layers are on editor.layers, not canvasManager.layers
+		const layers = this.canvasManager && this.canvasManager.editor && this.canvasManager.editor.layers ?
+			this.canvasManager.editor.layers : [];
 		const MarkerRenderer = ( typeof window !== 'undefined' &&
 			window.Layers && window.Layers.MarkerRenderer ) ?
 			window.Layers.MarkerRenderer : null;
@@ -469,6 +470,8 @@ class DrawingController {
 	 * @param {Object} style - Style options
 	 */
 	startArrowTool ( point, style ) {
+		const fillColor = ( style && style.fill !== undefined && style.fill !== null ) ?
+			style.fill : 'transparent';
 		this.tempLayer = {
 			type: 'arrow',
 			x1: point.x,
@@ -477,8 +480,13 @@ class DrawingController {
 			y2: point.y,
 			stroke: style.color || '#000000',
 			strokeWidth: style.strokeWidth || 2,
-			arrowSize: 10,
-			arrowStyle: style.arrowStyle || 'single'
+			fill: fillColor,
+			arrowSize: style.arrowSize !== undefined ? style.arrowSize : 10,
+			arrowStyle: style.arrowStyle || 'single',
+			arrowhead: style.arrowhead || 'arrow',
+			arrowHeadType: style.arrowHeadType,
+			headScale: style.headScale,
+			tailWidth: style.tailWidth
 		};
 	}
 

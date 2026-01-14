@@ -4,6 +4,24 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.10 (January 14, 2026)
+
+### Added
+- **Marker Auto-Number** — New feature for placing multiple markers quickly
+  - "Auto-number" checkbox in toolbar when marker tool is selected
+  - Marker values auto-increment (1→2→3... or A→B→C...)
+  - Tool remains active after placing a marker for rapid sequential placement
+
+### Fixed
+- **Arrow Fill** — Arrows now properly support fill colors for fat/storage styles
+- **Marker Incrementing** — Fixed markers showing same value instead of incrementing
+- **Marker Controls** — Fixed auto-number checkbox disappearing after first marker
+
+### Tests
+- **Test Count** — 9,460 tests passing (147 suites)
+
+---
+
 ## Version 1.5.9 (January 13, 2026)
 
 ### Removed

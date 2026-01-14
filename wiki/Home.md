@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C451%20Passing-brightgreen" alt="9,451 Tests">
+  <img src="https://img.shields.io/badge/Tests-9%2C460%20Passing-brightgreen" alt="9,460 Tests">
   <img src="https://img.shields.io/badge/Coverage-95%25-brightgreen" alt="95% Coverage">
 </p>
 
@@ -20,13 +20,19 @@
 
 ---
 
-## 🆕 What's New in v1.5.9
+## 🆕 What's New in v1.5.10
+
+- **Marker Auto-Number** — New feature for placing multiple markers quickly
+  - "Auto-number" checkbox in toolbar when marker tool is selected
+  - Marker values auto-increment (1→2→3... or A→B→C...)
+  - Tool remains active after placing a marker for rapid sequential placement
+- **Arrow Fill Fix** — Arrows now properly support fill colors for fat/storage styles
+- **9,460 tests passing** (147 suites)
+
+### Previous v1.5.9 Highlights
 
 - **Dead Code Removal** — Removed 1,535 lines of unreachable SVG export code
-  - SVG export was never registered in extension.json and not accessible to users
-  - Removal improved branch coverage from 83.96% to 85.11%
-  - All coverage targets now met: 95.10% statement, 85.11% branch
-  - **9,451 tests passing** (147 suites)
+- All coverage targets now met: 95.10% statement, 85.11% branch
 
 ### Previous v1.5.8 Highlights
 

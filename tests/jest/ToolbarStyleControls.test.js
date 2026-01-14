@@ -2182,10 +2182,10 @@ describe( 'ToolbarStyleControls', () => {
 			}
 		} );
 
-		it( 'should add context-hidden to fillControl for arrow tool', () => {
-			if ( styleControls.fillControl && styleControls.fillControl.container ) {
-				styleControls.updateContextVisibility( 'arrow' );
-				expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( true );
+it( 'should show fillControl for arrow tool (arrows support fill)', () => {
+		if ( styleControls.fillControl && styleControls.fillControl.container ) {
+			styleControls.updateContextVisibility( 'arrow' );
+			expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( false );
 			}
 		} );
 
@@ -2255,6 +2255,99 @@ describe( 'ToolbarStyleControls', () => {
 			expect( spy ).toHaveBeenCalledWith( mockValidator, expect.any( Array ) );
 
 			spy.mockRestore();
+		} );
+	} );
+
+	describe( 'createMarkerControls', () => {
+		let mockEditor;
+		let mockCanvasManager;
+
+		beforeEach( () => {
+			mockCanvasManager = {
+				layers: [],
+				markerDefaults: { autoNumber: false },
+				updateMarkerDefaults: jest.fn( function ( props ) {
+					Object.assign( this.markerDefaults, props );
+				} ),
+				getSelectedLayerIds: jest.fn().mockReturnValue( [] ),
+				renderLayers: jest.fn()
+			};
+			mockEditor = {
+				canvasManager: mockCanvasManager,
+				layers: [],
+				getLayerById: jest.fn()
+			};
+			mockToolbar.editor = mockEditor;
+		} );
+
+		it( 'should create marker container with auto-number checkbox', () => {
+			styleControls.create();
+
+			expect( styleControls.markerContainer ).toBeDefined();
+			expect( styleControls.markerAutoNumberCheckbox ).toBeDefined();
+			expect( styleControls.markerContainer.classList.contains( 'style-control' ) ).toBe( true );
+			expect( styleControls.markerContainer.classList.contains( 'marker-control' ) ).toBe( true );
+		} );
+
+		it( 'should update canvasManager markerDefaults when checkbox is changed', () => {
+			styleControls.create();
+
+			// Checkbox should initially be unchecked
+			expect( styleControls.markerAutoNumberCheckbox.checked ).toBe( false );
+
+			// Simulate checking the checkbox
+			styleControls.markerAutoNumberCheckbox.checked = true;
+			styleControls.markerAutoNumberCheckbox.dispatchEvent( new Event( 'change' ) );
+
+			// CanvasManager's updateMarkerDefaults should have been called
+			expect( mockCanvasManager.updateMarkerDefaults ).toHaveBeenCalledWith( { autoNumber: true } );
+			expect( mockCanvasManager.markerDefaults.autoNumber ).toBe( true );
+
+			// Simulate unchecking
+			styleControls.markerAutoNumberCheckbox.checked = false;
+			styleControls.markerAutoNumberCheckbox.dispatchEvent( new Event( 'change' ) );
+
+			expect( mockCanvasManager.updateMarkerDefaults ).toHaveBeenCalledWith( { autoNumber: false } );
+			expect( mockCanvasManager.markerDefaults.autoNumber ).toBe( false );
+		} );
+
+		it( 'should show marker controls when marker tool is selected', () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+
+			// First set to another tool
+			styleControls.updateContextVisibility( 'rectangle' );
+			expect( styleControls.markerContainer.classList.contains( 'context-hidden' ) ).toBe( true );
+
+			// Now select marker tool
+			styleControls.updateContextVisibility( 'marker' );
+			expect( styleControls.markerContainer.classList.contains( 'context-hidden' ) ).toBe( false );
+		} );
+
+		it( 'should hide marker controls for non-marker tools', () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+
+			// Show marker controls first
+			styleControls.updateContextVisibility( 'marker' );
+			expect( styleControls.markerContainer.classList.contains( 'context-hidden' ) ).toBe( false );
+
+			// Switch to another tool
+			styleControls.updateContextVisibility( 'arrow' );
+			expect( styleControls.markerContainer.classList.contains( 'context-hidden' ) ).toBe( true );
+		} );
+
+		it( 'should hide marker controls when hideControlsForSelectedLayers is called', () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+
+			// Show marker controls
+			styleControls.updateContextVisibility( 'marker' );
+			expect( styleControls.markerContainer.classList.contains( 'context-hidden' ) ).toBe( false );
+
+			// Hide for selected layers
+			styleControls.hideControlsForSelectedLayers( [ { id: '1', type: 'marker' } ] );
+			expect( styleControls.markerContainer.classList.contains( 'context-hidden' ) ).toBe( true );
 		} );
 	} );
 } );

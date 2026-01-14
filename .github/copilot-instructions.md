@@ -359,7 +359,7 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (currently 9,451 tests, 147 suites)
+- Test count (currently 9,460 tests, 147 suites)
 - Coverage (95% statement, 85% branch)
 - JavaScript file count (115 files, ~68,785 lines)
 - PHP file count (32 files, ~8,891 lines)
@@ -367,4 +367,4 @@ Common metrics to keep synchronized:
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (374 shapes in 10 categories)
-- Version number (1.5.9)
+- Version number (1.5.10)

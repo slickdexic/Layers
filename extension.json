@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.9",
+	"version": "1.5.10",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -737,6 +737,8 @@
 				"layers-prop-marker-size",
 				"layers-prop-font-size-adjust",
 				"layers-prop-marker-arrow",
+				"layers-marker-autonumber",
+				"layers-marker-autonumber-tooltip",
 				"layers-marker-style-circled",
 				"layers-marker-style-parentheses",
 				"layers-marker-style-plain",

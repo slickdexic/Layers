@@ -277,6 +277,14 @@
 				} else if ( currentTool === 'marker' && canvasManager.updateMarkerDefaults ) {
 					canvasManager.updateMarkerDefaults( style );
 				}
+				
+				// CRITICAL: Also update the generic CanvasManager style directly.
+				// This ensures properties NOT managed by the toolbar controls (like arrowhead, arrowSize)
+				// are seeded into CanvasManager.currentStyle and persisted by the improved StyleController,
+				// rather than being lost when the ToolbarStyleControls round-trip the style.
+				if ( canvasManager.updateStyleOptions ) {
+					canvasManager.updateStyleOptions( style );
+				}
 			}
 
 			// Also update the toolbar controls for future drawings
