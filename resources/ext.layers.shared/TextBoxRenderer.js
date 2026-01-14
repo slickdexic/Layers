@@ -49,6 +49,7 @@
 			this.config = config || {};
 			this.shadowRenderer = this.config.shadowRenderer || null;
 			this.effectsRenderer = this.config.effectsRenderer || null;
+			this.gradientRenderer = this.config.gradientRenderer || null;
 		}
 
 		/**
@@ -67,6 +68,15 @@
 		 */
 		setEffectsRenderer( effectsRenderer ) {
 			this.effectsRenderer = effectsRenderer;
+		}
+
+		/**
+		 * Set the gradient renderer instance
+		 *
+		 * @param {Object} gradientRenderer - GradientRenderer instance
+		 */
+		setGradientRenderer( gradientRenderer ) {
+			this.gradientRenderer = gradientRenderer;
 		}
 
 		/**
@@ -358,13 +368,26 @@
 			// Note: fillOpacity was already calculated above for blur fill handling
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			// Note: isBlurFill was already calculated above
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			// Check for gradient fill
+			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
+			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
+
+			// Bounds for gradient calculation
+			const fillBounds = { x: x, y: y, width: width, height: height };
 
 			// Draw fill (blur fill is handled earlier, after rotation transform is applied)
 			if ( hasFill && !isBlurFill ) {
-				// Regular color fill
-				this.ctx.fillStyle = layer.fill;
+				// Try gradient fill first
+				let usedGradient = false;
+				if ( hasGradient && this.gradientRenderer ) {
+					usedGradient = this.gradientRenderer.applyFill( layer, fillBounds, { scale: scale.avg || 1 } );
+				}
+				// Fallback to solid color fill
+				if ( !usedGradient && layer.fill ) {
+					this.ctx.fillStyle = layer.fill;
+				}
 				this.ctx.globalAlpha = baseOpacity * fillOpacity;
 				drawRectPath();
 				this.ctx.fill();

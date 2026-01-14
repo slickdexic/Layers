@@ -401,8 +401,14 @@
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			// Check for gradient fill
+			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
+			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
+
+			// Bounds for gradient calculation
+			const fillBounds = { x: x - radius, y: y - radius, width: radius * 2, height: radius * 2 };
 
 			// Draw fill
 			if ( hasFill ) {
@@ -412,13 +418,17 @@
 					this.shapeRenderer.effectsRenderer.drawBlurFill(
 						layer,
 						drawPolygonPath,
-						{ x: x - radius, y: y - radius, width: radius * 2, height: radius * 2 },
+						fillBounds,
 						opts
 					);
 				} else if ( !isBlurFill ) {
-					// Regular color fill
+					// Apply gradient or solid fill
 					drawPolygonPath();
-					this.ctx.fillStyle = layer.fill;
+					if ( this.shapeRenderer && this.shapeRenderer.applyFillStyle ) {
+						this.shapeRenderer.applyFillStyle( layer, fillBounds, opts );
+					} else {
+						this.ctx.fillStyle = layer.fill;
+					}
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.ctx.fill();
 				}
@@ -584,8 +594,14 @@
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			// Check for gradient fill
+			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
+			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
+
+			// Bounds for gradient calculation
+			const fillBounds = { x: x - outerRadius, y: y - outerRadius, width: outerRadius * 2, height: outerRadius * 2 };
 
 			// Draw fill
 			if ( hasFill ) {
@@ -595,13 +611,17 @@
 					this.shapeRenderer.effectsRenderer.drawBlurFill(
 						layer,
 						drawStarPath,
-						{ x: x - outerRadius, y: y - outerRadius, width: outerRadius * 2, height: outerRadius * 2 },
+						fillBounds,
 						opts
 					);
 				} else if ( !isBlurFill ) {
-					// Regular color fill
+					// Apply gradient or solid fill
 					drawStarPath();
-					this.ctx.fillStyle = layer.fill;
+					if ( this.shapeRenderer && this.shapeRenderer.applyFillStyle ) {
+						this.shapeRenderer.applyFillStyle( layer, fillBounds, opts );
+					} else {
+						this.ctx.fillStyle = layer.fill;
+					}
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.ctx.fill();
 				}
