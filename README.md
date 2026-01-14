@@ -2,14 +2,14 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-9%2C319%20passing%20(100%25)-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-9%2C460%20passing%20(100%25)-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.5 (January 12, 2026)  
-> **Status:** ✅ Production-ready (Rating: 8.0/10)  
+> **Version:** 1.5.10 (January 13, 2026)  
+> **Status:** ✅ Production-ready (Rating: 7.5/10)  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+  
 > **Technical Debt:** 16 god classes (1,035-3,176 lines) with proper delegation patterns
 >
@@ -69,6 +69,17 @@ Fill: blur  →  Blurs content beneath the shape
 Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box, Arrow (v1.2.7+)
 
 > **Note:** All blur fill coordinate bugs have been fixed as of v1.2.8. The feature is production-ready.
+
+### Gradient Fills (v1.5.8+)
+
+Shapes can be filled with beautiful linear or radial gradients:
+
+- **Linear Gradients**: Customizable angle (0-360°) for directional color transitions
+- **Radial Gradients**: Adjustable center position and radius for circular color spreads
+- **Color Stops**: Add multiple color stops to create complex gradient effects
+- **Built-in Presets**: 6 presets included (sunset, ocean, forest, fire, steel, rainbow)
+
+Supported on: Rectangle, Circle, Ellipse, Polygon, Star, Text Box
 
 ### Curved Arrows (v1.3.3+)
 
@@ -233,22 +244,22 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,595 lines across 32 files
-- **Frontend:** HTML5 Canvas editor with 113 JS files (~63,914 lines), 95+ ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~8,914 lines across 32 files
+- **Frontend:** HTML5 Canvas editor with 122 JS files (~71,629 lines), 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** 12 god classes (1,014-2,193 lines) = 30% of JS codebase, all use delegation patterns
-  - LayerPanel.js (2,193 lines) - largest file, at 2K limit
-  - CanvasManager.js (1,964 lines) - at 98% of limit
+- **Technical Debt:** 17 god classes (1,035-3,176 lines) = 32% of JS codebase, all use delegation patterns
+  - ShapeLibraryData.js (3,176 lines) - generated shape definitions, exempt from limit
+  - LayerPanel.js (1,806 lines) - delegates to 9 controllers
 
-**Test Coverage (January 12, 2026):**
+**Test Coverage (January 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 9,319 passing (100%) |
-| Statement coverage | 94% |
-| Branch coverage | 85.01% |
-| Test suites | 144 |
+| Jest tests | 9,602 passing (100%) |
+| Statement coverage | 95% |
+| Branch coverage | 85% |
+| Test suites | 149 |
 
 **Security:**
 
@@ -269,7 +280,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
-- ⚠️ **12 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
+- ⚠️ **17 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
 
 **Resolved Issues:**
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
@@ -299,13 +310,13 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 113 | ✅ |
-| Total JS lines | ~63,914 | ✅ Well under 75K target |
-| ES6 classes | 95+ | ✅ |
-| God classes (>1000 lines) | 16 | ⚠️ Managed with delegation |
-| Tests passing | 9,319 | ✅ |
+| Total JS files | 122 | ✅ |
+| Total JS lines | ~71,629 | ✅ Under 75K target |
+| ES6 classes | 100+ | ✅ |
+| God classes (>1000 lines) | 17 | ⚠️ Managed with delegation |
+| Tests passing | 9,562 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94% | ✅ Excellent |
+| Statement coverage | 95% | ✅ Excellent |
 | Branch coverage | 85.01% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).

@@ -195,6 +195,10 @@ class ToolbarStyleControls {
 		this.arrowStyleSelect = this.arrowStyleControl.arrowStyleSelect;
 		styleGroup.appendChild( this.arrowContainer );
 
+		// Marker autonumber control (visible only when marker tool is selected)
+		this.markerContainer = this.createMarkerControls();
+		styleGroup.appendChild( this.markerContainer );
+
 		// Apply initial visibility based on default tool (pointer = hidden)
 		if ( this.contextAwareEnabled ) {
 			this.updateContextVisibility( 'pointer' );
@@ -204,6 +208,51 @@ class ToolbarStyleControls {
 		this.notifyStyleChange();
 
 		return styleGroup;
+	}
+
+	/**
+	 * Create marker-specific controls (autonumber checkbox)
+	 *
+	 * @return {HTMLElement} The marker controls container
+	 */
+	createMarkerControls() {
+		const container = document.createElement( 'div' );
+		container.className = 'style-control marker-control context-hidden';
+
+		// Create label wrapper for checkbox
+		const label = document.createElement( 'label' );
+		label.className = 'marker-autonumber-label';
+		label.title = this.msg( 'layers-marker-autonumber-tooltip', 'Auto-increment marker values and keep tool active' );
+
+		// Create checkbox
+		const checkbox = document.createElement( 'input' );
+		checkbox.type = 'checkbox';
+		checkbox.className = 'marker-autonumber-checkbox';
+		checkbox.id = 'layers-marker-autonumber';
+		checkbox.checked = false;
+		this.markerAutoNumberCheckbox = checkbox;
+
+		// Create label text
+		const labelText = document.createElement( 'span' );
+		labelText.textContent = this.msg( 'layers-marker-autonumber', 'Auto-number' );
+
+		label.appendChild( checkbox );
+		label.appendChild( labelText );
+		container.appendChild( label );
+
+		// Handle checkbox change
+		this.addListener( checkbox, 'change', () => {
+			const enabled = checkbox.checked;
+			// Update marker defaults in canvas manager
+			if ( this.toolbar && this.toolbar.editor && this.toolbar.editor.canvasManager ) {
+				const canvasManager = this.toolbar.editor.canvasManager;
+				if ( canvasManager.updateMarkerDefaults ) {
+					canvasManager.updateMarkerDefaults( { autoNumber: enabled } );
+				}
+			}
+		} );
+
+		return container;
 	}
 
 	/**
@@ -562,9 +611,9 @@ class ToolbarStyleControls {
 					layer.stroke = color;
 				}
 			} else if ( colorType === 'fill' ) {
-				// Fill applies to shapes (not text, line, arrow)
-				// Note: textbox and callout support fill for background color
-				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
+				// Fill applies to shapes (not text or line)
+				// Note: textbox, callout, and arrows support fill
+				if ( layer.type !== 'text' && layer.type !== 'line' ) {
 					layer.fill = color;
 				}
 			}
@@ -647,8 +696,9 @@ class ToolbarStyleControls {
 		this.currentToolContext = toolId;
 
 		// Define tool categories for context-aware visibility
-		const drawingTools = [ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'blur' ];
-		const strokeOnlyTools = [ 'pen', 'arrow' ];
+		const drawingTools = [ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'arrow', 'blur' ];
+		// Arrows now support fill, so they're in drawingTools
+		const strokeOnlyTools = [ 'pen' ];
 
 		// Determine what controls should be visible
 		// textbox shows stroke/fill, text tool only shows text-specific controls
@@ -681,12 +731,21 @@ class ToolbarStyleControls {
 			}
 		}
 
-		// Show/hide fill color based on tool (pen and arrow don't use fill)
+		// Show/hide fill color based on tool (pen doesn't use fill)
 		if ( this.fillControl && this.fillControl.container ) {
 			if ( strokeOnlyTools.includes( toolId ) ) {
 				this.fillControl.container.classList.add( 'context-hidden' );
 			} else {
 				this.fillControl.container.classList.remove( 'context-hidden' );
+			}
+		}
+
+		// Show/hide marker-specific controls (autonumber checkbox)
+		if ( this.markerContainer ) {
+			if ( toolId === 'marker' ) {
+				this.markerContainer.classList.remove( 'context-hidden' );
+			} else {
+				this.markerContainer.classList.add( 'context-hidden' );
 			}
 		}
 	}
@@ -961,6 +1020,11 @@ class ToolbarStyleControls {
 		// Hide fill control
 		if ( this.fillControl && this.fillControl.container ) {
 			this.fillControl.container.classList.add( 'context-hidden' );
+		}
+
+		// Hide marker controls (autonumber is for tool mode only)
+		if ( this.markerContainer ) {
+			this.markerContainer.classList.add( 'context-hidden' );
 		}
 
 		// Hide text effects controls

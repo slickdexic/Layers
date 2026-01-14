@@ -2,6 +2,108 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.10] - 2026-01-14
+
+### Added
+- **Marker Auto-Number** — New feature for placing multiple markers quickly
+  - Added "Auto-number" checkbox in toolbar when marker tool is selected
+  - When enabled, marker values auto-increment (1→2→3... or A→B→C...) using existing `MarkerRenderer.getNextValue()` logic
+  - Tool remains active after placing a marker, allowing rapid sequential placement
+  - New `addLayerWithoutSelection()` method to support continuous marker placement
+  - New i18n messages: `layers-marker-autonumber`, `layers-marker-autonumber-tooltip`
+  - UI supports both light and dark modes (Vector 2022 compatible)
+
+### Fixed
+- **Arrow Fill Inconsistency** — Arrows now properly support fill colors for fat/storage arrow styles
+  - Fixed `updateContextVisibility()` to show fill control for arrow tool
+  - Fixed `applyColorPreview()` to apply fill color to arrow layers
+- **Marker Incrementing Bug** — Fixed markers showing same value (1,1,1) instead of incrementing
+  - Fixed `DrawingController.startMarkerTool()` to use correct layers path (`editor.layers`)
+- **Marker Controls Visibility** — Fixed auto-number checkbox disappearing after first marker
+  - Added CSS rule for `.style-control:not(.context-hidden)` visibility
+  - Use `addLayerWithoutSelection()` in auto-number mode to keep controls visible
+
+### Tests
+- **Test Count** — 9,460 tests passing (147 suites)
+- Added 4 CanvasManager tests for autoNumber property and finishDrawing behavior
+- Added 5 ToolbarStyleControls tests for marker controls UI and visibility
+- Fixed 3 arrow fill tests (StyleController, ToolbarStyleControls)
+- Updated DrawingController tests for new `editor.layers` path
+
+---
+
+## [1.5.9] - 2026-01-13
+
+### Removed
+- **SVG Export** — Removed 1,535 lines of dead code. The SVG export feature was never registered in extension.json and was not accessible to users. The code had significant bugs with stars, gradients, text boxes, and arrows.
+
+### Improved
+- **Code Quality** — Branch coverage improved from 83.96% to 85.11% after removing dead code
+- **Test Suite** — Now 9,451 tests passing (147 suites) with 95.10% statement coverage
+
+---
+
+## [1.5.8] - 2026-01-12
+
+### Added
+- **Gradient Fills** — New feature for adding gradient fills to shapes
+  - Support for linear gradients (customizable angle 0-360°)
+  - Support for radial gradients (customizable center position and radius)
+  - Interactive UI controls: gradient type selector, color stop editor, angle/position sliders
+  - `GradientRenderer.js` — Core utility class for creating Canvas gradients
+  - `GradientEditor.js` — UI component for editing gradient properties in the properties panel
+  - 6 built-in gradient presets: sunset, ocean, forest, fire, steel, rainbow
+  - Gradient validation on both client and server sides
+  - PHP whitelist updated with `gradient` property (array type)
+  - Supported layer types: Rectangle, Circle, Ellipse, Polygon, Star, Text Box
+
+### Fixed
+- **GradientRenderer Namespace** — Fixed 6 incorrect namespace references (`window.Layers.GradientRenderer` → `window.Layers.Renderers.GradientRenderer`)
+- **Fill Type Toggle** — Properties panel now properly refreshes when switching between solid and gradient fill types
+- **Scale Parameter Handling** — Fixed scale object extraction in ShapeRenderer.applyFillStyle() for proper gradient rendering
+
+### Tests
+- **Test Count** — 9,562 tests passing (149 suites)
+- Added GradientRenderer test suite with 40 tests covering gradient creation, validation, presets, and cloning
+- Added GradientEditor test suite with 31 tests covering UI interactions and callbacks
+
+---
+
+## [1.5.7] - 2026-01-11
+
+### Refactored
+- **Codebase Cleanup** — Code quality improvements
+  - Reduced god class count
+  - Improved test coverage
+
+### Tests
+- **Test Count** — 9,489 tests passing (147 suites)
+
+---
+
+## [1.5.6] - 2026-01-10
+
+### Fixed
+- **ShapeLibraryPanel Memory Leak Prevention** — Comprehensive cleanup improvements
+  - Added `isDestroyed` check to `open()` to prevent DOM access after destruction
+  - Added null checks in `close()` for overlay and panel to handle edge cases gracefully
+  - Store bound event handlers for proper removal in `destroy()`
+  - Fixed method name in tests: `truncateName` (was incorrectly `_truncateName`)
+
+### Changed
+- **Dependencies Updated**
+  - @types/node: 25.0.3 → 25.0.6
+  - @babel/preset-env: 7.28.5 → 7.28.6
+  - mediawiki/minus-x: 1.1.1 → 2.0.0 (PHP 8.4 compatible)
+  - mediawiki/mediawiki-codesniffer: 41.0.0 → 49.0.0 (PHP 8.4 compatible)
+
+### Tests
+- **Test Count** — 9,376 tests passing (145 suites)
+- **Coverage** — 95.16% statement, 85.17% branch, 93.52% function, 95.29% line
+- Added comprehensive ShapeLibraryPanel test suite with 57 tests
+
+---
+
 ## [1.5.5] - 2026-01-12
 
 ### Fixed

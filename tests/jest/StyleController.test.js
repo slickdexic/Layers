@@ -142,10 +142,10 @@ describe('StyleController', () => {
 			expect(layer.fill).toBeUndefined();
 		});
 
-		test('does not apply fill to arrow layers', () => {
+		test('applies fill to arrow layers (arrows support fill for fat/storage arrows)', () => {
 			const layer = { type: 'arrow' };
 			sc.applyToLayer(layer, { fill: '#ffffff' });
-			expect(layer.fill).toBeUndefined();
+			expect(layer.fill).toBe('#ffffff');
 		});
 
 		test('does not apply strokeWidth to text layers', () => {

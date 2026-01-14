@@ -1813,6 +1813,72 @@ describe( 'CanvasManager', () => {
 			expect( canvasManager.markerDefaults.size ).toBe( 32 );
 			expect( canvasManager.markerDefaults.hasArrow ).toBe( true );
 		} );
+
+		it( 'should update autoNumber property', () => {
+			canvasManager.markerDefaults = { autoNumber: false };
+			canvasManager.updateMarkerDefaults( { autoNumber: true } );
+			expect( canvasManager.markerDefaults.autoNumber ).toBe( true );
+		} );
+	} );
+
+	describe( 'finishDrawing with marker autonumber', () => {
+		it( 'should switch to pointer after drawing when autoNumber is false', () => {
+			canvasManager.currentTool = 'marker';
+			canvasManager.markerDefaults = { autoNumber: false };
+			canvasManager.drawingController = {
+				finishDrawing: jest.fn( () => ( { type: 'marker', value: 1 } ) )
+			};
+			canvasManager.editor = {
+				addLayer: jest.fn(),
+				addLayerWithoutSelection: jest.fn(),
+				setCurrentTool: jest.fn(),
+				layers: []
+			};
+			canvasManager.renderer = { redraw: jest.fn() };
+
+			canvasManager.finishDrawing( { x: 100, y: 100 } );
+
+			expect( canvasManager.editor.setCurrentTool ).toHaveBeenCalledWith( 'pointer' );
+		} );
+
+		it( 'should NOT switch to pointer after drawing when marker autoNumber is true', () => {
+			canvasManager.currentTool = 'marker';
+			canvasManager.markerDefaults = { autoNumber: true };
+			canvasManager.drawingController = {
+				finishDrawing: jest.fn( () => ( { type: 'marker', value: 1 } ) )
+			};
+			canvasManager.editor = {
+				addLayer: jest.fn(),
+				addLayerWithoutSelection: jest.fn(),
+				setCurrentTool: jest.fn(),
+				layers: []
+			};
+			canvasManager.renderer = { redraw: jest.fn() };
+
+			canvasManager.finishDrawing( { x: 100, y: 100 } );
+
+			expect( canvasManager.editor.setCurrentTool ).not.toHaveBeenCalled();
+			expect( canvasManager.editor.addLayerWithoutSelection ).toHaveBeenCalled();
+		} );
+
+		it( 'should still switch to pointer for other tools even when marker autoNumber is true', () => {
+			canvasManager.currentTool = 'rectangle';
+			canvasManager.markerDefaults = { autoNumber: true };
+			canvasManager.drawingController = {
+				finishDrawing: jest.fn( () => ( { type: 'rectangle', width: 100, height: 50 } ) )
+			};
+			canvasManager.editor = {
+				addLayer: jest.fn(),
+				addLayerWithoutSelection: jest.fn(),
+				setCurrentTool: jest.fn(),
+				layers: []
+			};
+			canvasManager.renderer = { redraw: jest.fn() };
+
+			canvasManager.finishDrawing( { x: 100, y: 100 } );
+
+			expect( canvasManager.editor.setCurrentTool ).toHaveBeenCalledWith( 'pointer' );
+		} );
 	} );
 
 	describe( 'hitTestSelectionHandles delegation', () => {

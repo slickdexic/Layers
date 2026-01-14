@@ -178,8 +178,8 @@
 				y1: point.y,
 				x2: point.x,
 				y2: point.y,
-				// Arrows are filled polygons - use stroke color as fill
-				fill: style.color,
+				// Use fill if provided, otherwise default to stroke color (legacy behavior)
+				fill: ( style.fill && style.fill !== 'transparent' ) ? style.fill : style.color,
 				stroke: style.color,
 				strokeWidth: style.strokeWidth,
 				arrowStyle: style.arrowStyle || 'single',

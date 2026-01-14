@@ -468,6 +468,7 @@ body.layers-editor-open .mw-body-content {
 
 .style-group.context-aware .style-controls-row:not( .context-hidden ),
 .style-group.context-aware .style-control-item:not( .context-hidden ),
+.style-group.context-aware .style-control:not( .context-hidden ),
 .style-group.context-aware .preset-dropdown-container:not( .context-hidden ) {
 	opacity: 1;
 	max-width: 400px;
@@ -494,6 +495,30 @@ body.layers-editor-open .mw-body-content {
 	outline: 0;
 	border-color: #80bdff;
 	box-shadow: 0 0 0 2px rgba( 0, 123, 255, 0.1 );
+}
+
+/* Marker tool specific controls */
+.style-control.marker-control {
+	display: flex;
+	align-items: center;
+	padding: 0 8px;
+}
+
+.style-control.marker-control .marker-autonumber-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	font-size: 0.8125em;
+	color: #333;
+	white-space: nowrap;
+}
+
+.style-control.marker-control .marker-autonumber-checkbox {
+	width: 16px;
+	height: 16px;
+	cursor: pointer;
+	accent-color: #0d6efd;
 }
 
 .toolbar-button {
@@ -2928,6 +2953,11 @@ body.layers-resize-cursor {
 		color: var( --layers-text-primary );
 	}
 
+	/* Marker autonumber control dark mode */
+	html.skin-theme-clientpref-night .style-control.marker-control .marker-autonumber-label {
+		color: var( --layers-text-primary );
+	}
+
 	/* Tool dropdown */
 	html.skin-theme-clientpref-night .tool-dropdown-menu {
 		background: var( --layers-bg-secondary );
@@ -3470,6 +3500,11 @@ body.layers-resize-cursor {
 	html.skin-theme-clientpref-os .style-control-item .stroke-width-input {
 		background: var( --layers-bg-tertiary );
 		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	/* Marker autonumber control OS dark mode */
+	html.skin-theme-clientpref-os .style-control.marker-control .marker-autonumber-label {
 		color: var( --layers-text-primary );
 	}
 

@@ -84,23 +84,73 @@
 			this.currentStyle = this.currentStyle || {};
 			const prev = this.currentStyle;
 
-			const next = {
-				color: isDefined( options.color ) ? options.color : prev.color,
-				fill: isDefined( options.fill ) ? options.fill : prev.fill,
-				strokeWidth: isDefined( options.strokeWidth ) ? options.strokeWidth : prev.strokeWidth,
-				fontSize: isDefined( options.fontSize ) ? options.fontSize : prev.fontSize,
-				fontFamily: isDefined( options.fontFamily ) ? options.fontFamily : prev.fontFamily || 'Arial, sans-serif',
-				textStrokeColor: isDefined( options.textStrokeColor ) ? options.textStrokeColor : prev.textStrokeColor,
-				textStrokeWidth: isDefined( options.textStrokeWidth ) ? options.textStrokeWidth : prev.textStrokeWidth,
-				textShadow: isDefined( options.textShadow ) ? options.textShadow : prev.textShadow,
-				textShadowColor: isDefined( options.textShadowColor ) ? options.textShadowColor : prev.textShadowColor,
-				arrowStyle: isDefined( options.arrowStyle ) ? options.arrowStyle : prev.arrowStyle,
-				shadow: isDefined( options.shadow ) ? options.shadow : prev.shadow,
-				shadowColor: isDefined( options.shadowColor ) ? options.shadowColor : prev.shadowColor,
-				shadowBlur: isDefined( options.shadowBlur ) ? options.shadowBlur : prev.shadowBlur,
-				shadowOffsetX: isDefined( options.shadowOffsetX ) ? options.shadowOffsetX : prev.shadowOffsetX,
-				shadowOffsetY: isDefined( options.shadowOffsetY ) ? options.shadowOffsetY : prev.shadowOffsetY
-			};
+			// Start with previous style to preserve unmanaged properties (like arrowhead, arrowSize)
+			const next = Object.assign( {}, prev );
+
+			// Update managed properties if defined in options
+			if ( isDefined( options.color ) ) {
+				next.color = options.color;
+			}
+			if ( isDefined( options.fill ) ) {
+				next.fill = options.fill;
+			}
+			if ( isDefined( options.strokeWidth ) ) {
+				next.strokeWidth = options.strokeWidth;
+			}
+			if ( isDefined( options.fontSize ) ) {
+				next.fontSize = options.fontSize;
+			}
+			if ( isDefined( options.fontFamily ) ) {
+				next.fontFamily = options.fontFamily;
+			}
+			if ( isDefined( options.textStrokeColor ) ) {
+				next.textStrokeColor = options.textStrokeColor;
+			}
+			if ( isDefined( options.textStrokeWidth ) ) {
+				next.textStrokeWidth = options.textStrokeWidth;
+			}
+			if ( isDefined( options.textShadow ) ) {
+				next.textShadow = options.textShadow;
+			}
+			if ( isDefined( options.textShadowColor ) ) {
+				next.textShadowColor = options.textShadowColor;
+			}
+			if ( isDefined( options.arrowStyle ) ) {
+				next.arrowStyle = options.arrowStyle;
+			}
+			// Allow unmanaged properties to be set via options too
+			// This allows PresetStyleManager to inject properties like arrowhead
+			Object.keys( options ).forEach( ( k ) => {
+				// Skip properties we already handled specifically if we want specific logic,
+				// but for now, simple overwrite for others is fine.
+				// We exclude the ones above only if we wanted custom logic, but we don't.
+				// However, to be safe and cleaner, let's just merge options onto next.
+				if ( isDefined( options[ k ] ) ) {
+					next[ k ] = options[ k ];
+				}
+			} );
+
+			// Basic shadow properties mapping
+			if ( isDefined( options.shadow ) ) {
+				next.shadow = options.shadow;
+			}
+			if ( isDefined( options.shadowColor ) ) {
+				next.shadowColor = options.shadowColor;
+			}
+			if ( isDefined( options.shadowBlur ) ) {
+				next.shadowBlur = options.shadowBlur;
+			}
+			if ( isDefined( options.shadowOffsetX ) ) {
+				next.shadowOffsetX = options.shadowOffsetX;
+			}
+			if ( isDefined( options.shadowOffsetY ) ) {
+				next.shadowOffsetY = options.shadowOffsetY;
+			}
+
+			// Ensure essential defaults
+			if ( !next.fontFamily ) {
+				next.fontFamily = DEFAULT_STYLE.fontFamily;
+			}
 
 			this.currentStyle = next;
 			return next;
@@ -126,9 +176,11 @@
 				}
 			}
 
-			// Apply fill (not for text, line, or arrow)
+			// Apply fill (not for text or line)
+			// Text uses fill for text color; line has no fill.
+			// Arrows DO support fill (e.g. storage arrows, fat arrows), so we allow it there.
 			if ( next.fill ) {
-				if ( layer.type !== 'text' && layer.type !== 'line' && layer.type !== 'arrow' ) {
+				if ( layer.type !== 'text' && layer.type !== 'line' ) {
 					layer.fill = next.fill;
 				}
 			}

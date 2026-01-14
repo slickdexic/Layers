@@ -717,6 +717,31 @@ class LayersEditor {
 	}
 
 	/**
+	 * Add a new layer without selecting it
+	 * Used for marker auto-number mode where the tool should stay active
+	 * @param {Object} layerData - Layer data object
+	 */
+	addLayerWithoutSelection ( layerData ) {
+		layerData = this.validationManager.sanitizeLayerData( layerData );
+		layerData.id = this.apiManager.generateLayerId();
+		layerData.visible = layerData.visible !== false;
+
+		const layers = this.stateManager.get( 'layers' ) || [];
+		layers.unshift( layerData );
+		this.stateManager.set( 'layers', layers );
+
+		if ( this.canvasManager ) {
+			this.canvasManager.renderLayers( layers );
+		}
+		// Update layer panel without selecting the new layer
+		if ( this.layerPanel ) {
+			this.layerPanel.updateLayerList( layers );
+		}
+		this.markDirty();
+		this.saveState( 'Add layer' );
+	}
+
+	/**
 	 * Create a custom shape layer from shape library data
 	 *
 	 * Supports both single-path shapes (legacy) and multi-path compound shapes.

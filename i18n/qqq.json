@@ -127,6 +127,8 @@
 	"layers-prop-marker-size": "Property label for marker circle size in pixels",
 	"layers-prop-font-size-adjust": "Property label for adjusting font size relative to marker size (-10 to +20)",
 	"layers-prop-marker-arrow": "Property label for showing/hiding the marker arrow",
+	"layers-marker-autonumber": "Toolbar checkbox label for marker autonumber mode",
+	"layers-marker-autonumber-tooltip": "Tooltip for marker autonumber checkbox explaining the feature",
 	"layers-marker-style-circled": "Marker style option - number in a circle",
 	"layers-marker-style-parentheses": "Marker style option - number in parentheses",
 	"layers-marker-style-plain": "Marker style option - plain number with period",

@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.5-REL1_43",
+	"version": "1.5.10-REL1_43",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -162,6 +162,7 @@
 				"DeepClone.js",
 				"BoundsCalculator.js",
 				"PolygonGeometry.js",
+				"GradientRenderer.js",
 				"ShadowRenderer.js",
 				"PolygonStarRenderer.js",
 				"ArrowRenderer.js",
@@ -292,6 +293,7 @@
 				"ui/ArrowStyleControl.js",
 				"ui/ConfirmDialog.js",
 				"ui/PropertyBuilders.js",
+				"ui/GradientEditor.js",
 				"ui/PropertiesForm.js",
 				"ui/LayerListRenderer.js",
 				"ui/LayerDragDrop.js",
@@ -735,6 +737,8 @@
 				"layers-prop-marker-size",
 				"layers-prop-font-size-adjust",
 				"layers-prop-marker-arrow",
+				"layers-marker-autonumber",
+				"layers-marker-autonumber-tooltip",
 				"layers-marker-style-circled",
 				"layers-marker-style-parentheses",
 				"layers-marker-style-plain",

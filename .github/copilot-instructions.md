@@ -46,7 +46,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Shared modules (`resources/ext.layers.shared/`): Used by both editor and viewer for consistent behavior:
     - `DeepClone.js` - Object cloning utilities including `omitProperty(obj, propName)` for creating copies without specific properties (avoids eslint-disable for destructuring)
     - `LayerDataNormalizer.js` (~229 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
-    - `LayerRenderer.js` (~867 lines), `ImageLayerRenderer.js` (~280 lines - extracted image caching/rendering), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,310 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines), `EffectsRenderer.js` (~538 lines), `MarkerRenderer.js` (~502 lines - numbered/letter markers with shadow support), `DimensionRenderer.js` (~797 lines - technical measurement annotations)
+    - `GradientRenderer.js` (~340 lines) - Gradient fill utility for creating linear/radial Canvas gradients from layer definitions. Static `hasGradient()` check, `createGradient()` method, 6 built-in presets (sunset, ocean, forest, fire, steel, rainbow), validation and cloning utilities.
+    - `LayerRenderer.js` (~867 lines), `ImageLayerRenderer.js` (~280 lines - extracted image caching/rendering), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,310 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines - now with gradient fill support), `EffectsRenderer.js` (~538 lines), `MarkerRenderer.js` (~502 lines - numbered/letter markers with shadow support), `DimensionRenderer.js` (~797 lines - technical measurement annotations)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~370 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `SmartGuidesController.js` (~568 lines) - smart guides and snap alignment
@@ -76,6 +77,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `LayerDragDrop.js` - drag and drop reordering
     - `PropertiesForm.js` (~914 lines) - layer properties panel factory, delegates to PropertyBuilders
     - `PropertyBuilders.js` (~1,250 lines) - reusable property group builders (dimensions, text, alignment, etc.) [GOD CLASS]
+    - `GradientEditor.js` (~350 lines) - gradient fill editor UI with color stops, type selection, angle/position sliders
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
     - `PresetStyleManager.js` (~275 lines) - preset dropdown UI integration (extracted from ToolbarStyleControls)
@@ -184,6 +186,12 @@ Layer objects are a sanitized subset of the client model. Common fields (whiteli
 - id (string), type (enum: text, textbox, arrow, rectangle, circle, ellipse, polygon, star, line, path, blur, image)
 - Geometry: x, y, width, height, radius, radiusX, radiusY, x1, y1, x2, y2, rotation (numbers in safe ranges)
 - Style: stroke, fill (color or 'blur'), color, opacity/fillOpacity/strokeOpacity (0..1), strokeWidth, blurRadius (1-64, for blur fill), blendMode or blend (mapped), fontFamily, fontSize, fontWeight (normal|bold), fontStyle (normal|italic)
+- **Gradient fill**: gradient (object) - alternative to solid fill color
+  - gradient.type: 'linear' or 'radial' (required)
+  - gradient.colors: Array<{offset: 0-1, color: string}> (required, min 2, max 10 stops)
+  - gradient.angle: 0-360 (optional, for linear gradients)
+  - gradient.centerX, gradient.centerY: 0-1 (optional, for radial gradients, normalized position)
+  - gradient.radius: 0-2 (optional, for radial gradients, normalized)
 - Arrow/line: arrowhead (none|arrow|circle|diamond|triangle), arrowStyle (solid|dashed|dotted), arrowSize
 - Text: text (sanitized), textStrokeColor, textStrokeWidth, textShadow (bool), textShadowColor, textShadowBlur, textShadowOffsetX, textShadowOffsetY
 - Text box: textAlign (left|center|right), verticalAlign (top|middle|bottom), padding, lineHeight, cornerRadius
@@ -351,11 +359,12 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (currently 9,319 tests, 144 suites)
-- Coverage (94% statement, 85% branch)
-- JavaScript file count (111 files, ~66,594 lines)
-- PHP file count (32 files, ~8,801 lines)
+- Test count (currently 9,460 tests, 147 suites)
+- Coverage (95% statement, 85% branch)
+- JavaScript file count (115 files, ~68,785 lines)
+- PHP file count (32 files, ~8,891 lines)
 - God class count (16 files >1,000 lines)
+- ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (374 shapes in 10 categories)
-- Version number (1.5.5)
+- Version number (1.5.10)
