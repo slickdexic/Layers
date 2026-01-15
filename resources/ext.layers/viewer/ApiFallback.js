@@ -256,6 +256,23 @@ class ApiFallback {
 			return;
 		}
 
+		// Skip images with layerslink (viewer/editor) - these are handled by click handlers
+		// and should only display layers via the lightbox/editor, not on the thumbnail
+		// unless the server explicitly injected inline data (which means the set exists)
+		if ( img.hasAttribute( 'data-layers-link' ) ) {
+			const linkType = img.getAttribute( 'data-layers-link' );
+			this.debugLog( 'Skipping image with data-layers-link:', linkType );
+			return;
+		}
+
+		// Also check parent anchor for data-layers-link
+		const anchor = img.closest( 'a' );
+		if ( anchor && anchor.hasAttribute( 'data-layers-link' ) ) {
+			const linkType = anchor.getAttribute( 'data-layers-link' );
+			this.debugLog( 'Skipping image inside link with data-layers-link:', linkType );
+			return;
+		}
+
 		// Check for explicit no-layers intent early
 		if ( img.hasAttribute( 'data-layers-intent' ) ) {
 			const intentEarly = ( img.getAttribute( 'data-layers-intent' ) || '' ).toLowerCase();
@@ -283,12 +300,44 @@ class ApiFallback {
 
 		this.debugLog( 'API fallback proceeding for filename:', filename, ', reason:', check.reason );
 
-		// Extract set name from data-layers-intent (if it's not just 'on')
-		// This ensures we fetch the correct named layer set, not just the default
-		const intent = img.getAttribute( 'data-layers-intent' ) || '';
-		const setName = ( intent && intent !== 'on' && intent !== 'none' && intent !== 'off' )
-			? intent
-			: null;
+		// Extract set name from multiple sources (in priority order):
+		// 1. data-layers-setname on the anchor (set by layerslink=viewer)
+		// 2. data-layers-intent on the image (if it's a specific set name, not 'on')
+		// 3. layers= parameter from the href (if it's a specific set name, not 'on'/'true'/etc)
+		let setName = null;
+
+		// Check anchor's data-layers-setname first (reuse anchor from above)
+		if ( anchor ) {
+			const anchorSetName = anchor.getAttribute( 'data-layers-setname' );
+			if ( anchorSetName && anchorSetName !== '' ) {
+				setName = anchorSetName;
+				this.debugLog( 'Using set name from anchor data-layers-setname:', setName );
+			}
+		}
+
+		// Fallback to data-layers-intent
+		if ( !setName ) {
+			const intent = img.getAttribute( 'data-layers-intent' ) || '';
+			if ( intent && intent !== 'on' && intent !== 'none' && intent !== 'off' ) {
+				setName = intent;
+				this.debugLog( 'Using set name from data-layers-intent:', setName );
+			}
+		}
+
+		// Fallback to extracting from href layers= parameter
+		if ( !setName && anchor ) {
+			const href = anchor.getAttribute( 'href' ) || '';
+			const m = href.match( /[?&#]layers=([^&#]+)/i );
+			if ( m && m[ 1 ] ) {
+				const hrefVal = decodeURIComponent( m[ 1 ] );
+				// Only use if it's NOT a boolean-like value (on, true, 1, yes, all, default)
+				const lowerVal = hrefVal.toLowerCase();
+				if ( ![ 'on', 'true', '1', 'yes', 'all', 'default' ].includes( lowerVal ) ) {
+					setName = hrefVal;
+					this.debugLog( 'Using set name from href layers= parameter:', setName );
+				}
+			}
+		}
 
 		// Build API request params
 		const apiParams = {
