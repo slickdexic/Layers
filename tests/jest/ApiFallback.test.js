@@ -499,6 +499,42 @@ describe( 'ApiFallback', () => {
 			expect( mockMw.log ).toHaveBeenCalled();
 		} );
 
+		it( 'should skip images with data-layers-link attribute (viewer/lightbox)', () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-link', 'viewer' );
+
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
+			expect( mockMw.log ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip images with data-layers-link attribute (editor)', () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-link', 'editor' );
+
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
+			expect( mockMw.log ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip images inside anchors with data-layers-link', () => {
+			const anchor = document.createElement( 'a' );
+			anchor.setAttribute( 'data-layers-link', 'viewer' );
+			const img = document.createElement( 'img' );
+			anchor.appendChild( img );
+			document.body.appendChild( anchor );
+
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
+			expect( mockMw.log ).toHaveBeenCalled();
+
+			// Cleanup
+			document.body.removeChild( anchor );
+		} );
+
 		it( 'should skip images when filename cannot be inferred', () => {
 			mockUrlParser.inferFilename.mockReturnValue( null );
 			mockMw.config.get.mockReturnValue( 0 );
@@ -530,6 +566,86 @@ describe( 'ApiFallback', () => {
 				format: 'json',
 				filename: 'Test.jpg'
 			} );
+		} );
+
+		it( 'should extract set name from anchor data-layers-setname', () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			const anchor = document.createElement( 'a' );
+			anchor.setAttribute( 'data-layers-setname', 'mysetname' );
+			const img = document.createElement( 'img' );
+			anchor.appendChild( img );
+			document.body.appendChild( anchor );
+
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			expect( mockApi.get ).toHaveBeenCalledWith( {
+				action: 'layersinfo',
+				format: 'json',
+				filename: 'Test.jpg',
+				setname: 'mysetname'
+			} );
+
+			document.body.removeChild( anchor );
+		} );
+
+		it( 'should extract set name from href layers= parameter', () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			const anchor = document.createElement( 'a' );
+			anchor.setAttribute( 'href', '/wiki/File:Test.jpg?layers=0002' );
+			const img = document.createElement( 'img' );
+			anchor.appendChild( img );
+			document.body.appendChild( anchor );
+
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			expect( mockApi.get ).toHaveBeenCalledWith( {
+				action: 'layersinfo',
+				format: 'json',
+				filename: 'Test.jpg',
+				setname: '0002'
+			} );
+
+			document.body.removeChild( anchor );
+		} );
+
+		it( 'should NOT use set name from href when value is boolean-like (on)', () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			const anchor = document.createElement( 'a' );
+			anchor.setAttribute( 'href', '/wiki/File:Test.jpg?layers=on' );
+			const img = document.createElement( 'img' );
+			anchor.appendChild( img );
+			document.body.appendChild( anchor );
+
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			expect( mockApi.get ).toHaveBeenCalledWith( {
+				action: 'layersinfo',
+				format: 'json',
+				filename: 'Test.jpg'
+			} );
+
+			document.body.removeChild( anchor );
+		} );
+
+		it( 'should prioritize anchor data-layers-setname over href', () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			const anchor = document.createElement( 'a' );
+			anchor.setAttribute( 'href', '/wiki/File:Test.jpg?layers=fromhref' );
+			anchor.setAttribute( 'data-layers-setname', 'fromattribute' );
+			const img = document.createElement( 'img' );
+			anchor.appendChild( img );
+			document.body.appendChild( anchor );
+
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			expect( mockApi.get ).toHaveBeenCalledWith( {
+				action: 'layersinfo',
+				format: 'json',
+				filename: 'Test.jpg',
+				setname: 'fromattribute'
+			} );
+
+			document.body.removeChild( anchor );
 		} );
 
 		it( 'should initialize viewer when API returns layers', async () => {
