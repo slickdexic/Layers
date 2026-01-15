@@ -42,6 +42,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Tests
 - **Test Count** — 9,469 tests passing (147 suites)
+- Added PHPUnit tests for `LayersContinuationTrait` (14 test methods covering pagination parsing and formatting)
 - Added PHPUnit tests for `StaticLoggerAwareTrait` (10 test methods covering static logger injection and log methods)
 - Added PHPUnit tests for `ForeignFileHelperTrait` (8 test methods covering foreign file detection and SHA1 fallback)
 - Added PHPUnit tests for `ApiLayersRename` set name validation (12 test methods covering valid/invalid patterns)

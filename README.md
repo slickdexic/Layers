@@ -257,7 +257,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 | Metric | Value |
 |--------|-------|
 | Jest tests | 9,469 passing (100%) |
-| PHPUnit tests | 24 test files |
+| PHPUnit tests | 25 test files |
 | Statement coverage | 95% |
 | Branch coverage | 85% |
 | Test suites | 147 |

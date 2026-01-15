@@ -240,7 +240,8 @@ tests/phpunit/
     │   ├── ApiLayersRenameValidationTest.php
     │   ├── ApiLayersSaveTest.php
     │   ├── ApiLayersSaveGuardsTest.php
-    │   └── ForeignFileHelperTraitTest.php
+    │   ├── ForeignFileHelperTraitTest.php
+    │   └── LayersContinuationTraitTest.php
     ├── Database/
     │   └── LayersDatabaseTest.php
     ├── Hooks/
