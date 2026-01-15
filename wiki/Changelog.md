@@ -16,9 +16,16 @@ Version history for the Layers extension.
 - **Arrow Fill** — Arrows now properly support fill colors for fat/storage styles
 - **Marker Incrementing** — Fixed markers showing same value instead of incrementing
 - **Marker Controls** — Fixed auto-number checkbox disappearing after first marker
+- **Ellipse Resize** — Fixed ellipse resize to keep opposite edge fixed
+
+### Refactored
+- **ForeignFileHelperTrait** — Extracted duplicate code from 4 API modules into shared trait
+  - Eliminates ~90 lines of duplicated code
+  - Consistent InstantCommons/foreign file handling across all API endpoints
 
 ### Tests
-- **Test Count** — 9,460 tests passing (147 suites)
+- **Test Count** — 9,469 tests passing (147 suites)
+- Added PHPUnit tests for ForeignFileHelperTrait and ApiLayersRename validation
 
 ---
 
